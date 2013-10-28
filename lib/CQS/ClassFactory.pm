@@ -28,7 +28,6 @@ sub instantiate {
   $location = $location . ".pm";
 
   require $location;
-
   return $class->new(@_);
 }
 
