@@ -5,7 +5,7 @@ use strict;
 use warnings;
 
 sub new {
-  require "GATK/Mutect.pm";
+  require "GATK/MuTect.pm";
   my $class = "GATK::Mutect";
   return $class->new();
 }
