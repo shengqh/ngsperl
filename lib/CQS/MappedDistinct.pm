@@ -43,7 +43,10 @@ echo CQSMappedDistinct=`date`
   for my $sampleName ( sort keys %firstFiles ) {
     my $firstFile  = $firstFiles{$sampleName}->[0];
     my $secondFile = $secondFiles{$sampleName}->[0];
-    print SH "mono-sgen $cqsFile mapped_distinct $option --file1 $firstFile --name1 $firstSuffix --file2 $secondFile --name2 $secondSuffix -o .
+    my $firstoutput = $resultDir . "/" . $firstSuffix . $sampleName . ".distinct.count";
+    my $secondoutput = $resultDir . "/" . $secondSuffix . $sampleName . ".distinct.count";
+    
+    print SH "mono-sgen $cqsFile mapped_distinct $option --inputfile1 $firstFile --outputfile1 $firstoutput --inputfile2 $secondFile --outputfile2 $secondoutput
 ";
   }
   print SH "
@@ -64,35 +67,19 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $fasta_format = $config->{$section}{fasta_format};
-  if ( !defined $fasta_format ) {
-    $fasta_format = 0;
-  }
-
   my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my $firstSuffix  = $config->{$section}{first_suffix}  or die "define ${section}::first_suffix first";
+  my $secondSuffix = $config->{$section}{second_suffix} or die "define ${section}::second_suffix first";
 
   my $result = {};
-  for my $sampleName ( keys %rawFiles ) {
-    my $curDir = $resultDir . "/$sampleName";
-
-    my @bamFiles = @{ $rawFiles{$sampleName} };
-    my $bamFile  = $bamFiles[0];
-    my $fileName = basename($bamFile);
-
+  for my $sampleName (sort keys %rawFiles ) {
+    my $firstoutput = $resultDir . "/" . $firstSuffix . $sampleName . ".distinct.count";
+    my $secondoutput = $resultDir . "/" . $secondSuffix . $sampleName . ".distinct.count";
+    
     my @resultFiles = ();
-    my $countFile   = "${curDir}/${fileName}.count";
-    push( @resultFiles, $countFile );
-    push( @resultFiles, "${countFile}.mapped.xml" );
-    push( @resultFiles, "${curDir}/${fileName}.info" );
 
-    my $unmapped;
-    if ($fasta_format) {
-      $unmapped = change_extension( $countFile, ".unmapped.fasta" );
-    }
-    else {
-      $unmapped = change_extension( $countFile, ".unmapped.fastq" );
-    }
-    push( @resultFiles, $unmapped );
+    push( @resultFiles, $firstoutput );
+    push( @resultFiles, $secondoutput );
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
