@@ -27,7 +27,7 @@ sub instantiate {
   }
   $location = $location . ".pm";
 
-  print "require $location \n";
+  #print "require $location \n";
   require $location;
   return $class->new(@_);
 }
