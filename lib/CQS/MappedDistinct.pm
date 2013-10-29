@@ -38,6 +38,7 @@ sub perform {
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH "cd $resultDir
 echo CQSMappedDistinct=`date`
+
 ";
 
   for my $sampleName ( sort keys %firstFiles ) {
@@ -47,10 +48,12 @@ echo CQSMappedDistinct=`date`
     my $secondoutput = $secondSuffix . $sampleName . ".distinct.count";
     
     print SH "mono-sgen $cqsFile mapped_distinct $option --inputfile1 $firstFile --outputfile1 $firstoutput --inputfile2 $secondFile --outputfile2 $secondoutput
+
 ";
   }
   print SH "
 echo finished=`date`
+
 exit 1
 ";
   close(SH);
