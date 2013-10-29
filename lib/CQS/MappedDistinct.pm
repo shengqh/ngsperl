@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package CQS::CQSMappedCount;
+package CQS::MappedDistinct;
 
 use strict;
 use warnings;
