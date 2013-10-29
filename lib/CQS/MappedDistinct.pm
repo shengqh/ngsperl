@@ -43,8 +43,8 @@ echo CQSMappedDistinct=`date`
   for my $sampleName ( sort keys %firstFiles ) {
     my $firstFile  = $firstFiles{$sampleName}->[0];
     my $secondFile = $secondFiles{$sampleName}->[0];
-    my $firstoutput = $resultDir . "/" . $firstSuffix . $sampleName . ".distinct.count";
-    my $secondoutput = $resultDir . "/" . $secondSuffix . $sampleName . ".distinct.count";
+    my $firstoutput = $firstSuffix . $sampleName . ".distinct.count";
+    my $secondoutput = $secondSuffix . $sampleName . ".distinct.count";
     
     print SH "mono-sgen $cqsFile mapped_distinct $option --inputfile1 $firstFile --outputfile1 $firstoutput --inputfile2 $secondFile --outputfile2 $secondoutput
 ";
