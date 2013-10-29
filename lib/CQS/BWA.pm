@@ -75,6 +75,7 @@ $bwaaln_command2
 if [[ -s $saiFile1 && -s $saiFile2 && ! -s $samFile ]]; then
   echo aln=`date` 
   bwa sampe -r $tag $faFile $saiFile1 $saiFile2 $sampleFile1 $sampleFile2 > $samFile
+  rm $saiFile1 $saiFile2
 fi";
     }
     else {
@@ -83,6 +84,7 @@ fi";
 if [[ -s $saiFile1 && ! -s $samFile ]]; then
   echo aln=`date` 
   bwa samse -r $tag $faFile $saiFile1 $sampleFile1 > $samFile
+  rm $saiFile1
 fi";
     }
 

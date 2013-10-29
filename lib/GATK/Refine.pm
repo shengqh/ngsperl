@@ -115,6 +115,7 @@ fi
 if [[ -s $sortedFile && ! -s ${sortedFile}.bai ]]; then
   echo BamIndex=`date` 
   samtools index $sortedFile
+  rm $rmdupFile $recalFile $realignedFile
 fi
   
 echo finished=`date`
