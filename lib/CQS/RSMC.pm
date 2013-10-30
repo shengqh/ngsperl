@@ -106,7 +106,7 @@ cd $curDir
         $cmd = "samtools mpileup -f $fafile $mpileupParameter $normal $tumor | mono-sgen $rsmcfile all -t console $option -o $curDir";
       }
       else {
-        $cmd = "mono-sgen $rsmcfile all -t bam -f $fafile $option -b $normal,$tumor -o $curDir";
+        $cmd = "mono-sgen $rsmcfile all -t bam -f $fafile $option --normal $normal --tumor $tumor -o $curDir";
       }
 
       print OUT "
