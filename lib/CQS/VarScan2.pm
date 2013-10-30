@@ -105,6 +105,7 @@ fi
 
 if [ ! -s $snpvcf ]; then
   java -Xmx${gb}g -jar $varscan2_jar somatic $option $normal_mpileup $tumor_mpileup $groupName --output-vcf --somatic-p-value $somatic_p_value --min-coverage $min_coverage --strand-filter
+  rm $normal_mpileup $tumor_mpileup
 fi
 
 java -Xmx${gb}g -jar $varscan2_jar processSomatic $snpvcf --p-value $somatic_p_value
