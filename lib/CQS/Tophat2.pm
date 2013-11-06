@@ -101,13 +101,16 @@ if [ -s $tophat2file ]; then
   exit 1;
 fi
 
+echo tophat2_start=`date` 
+
 tophat2 $option $rgline $gtfstr -o . $bowtie2_index $samples
 
 samtools index $tophat2file
 
 $sortcmd
 
-1;
+echo finished=`date` 
+
 ";
     close(OUT);
 
