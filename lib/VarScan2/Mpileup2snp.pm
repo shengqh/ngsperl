@@ -45,7 +45,7 @@ sub perform {
   
     my $curDir      = create_directory_or_die( $resultDir . "/$sampleName" );
 
-    my $normal = $sampleFiles[0][0];
+    my $normal = $sampleFiles[0];
     my $snpvcf = "${sampleName}.snp.vcf";
     my $pbsName = "${sampleName}_vs2.pbs";
     my $pbsFile = "${pbsDir}/$pbsName";
