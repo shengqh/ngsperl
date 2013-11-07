@@ -31,23 +31,21 @@ sub perform {
   my $varscan2_jar = get_param_file( $config->{$section}{VarScan2_jar},  "VarScan2_jar",  1 );
   my $faFile     = get_param_file( $config->{$section}{fasta_file},  "fasta_file",  1 );
 
-  my $min_coverage    = $config->{$section}{min_coverage}    or die "min_coverage is not defined in $section!";
-  
+  my $mpileup_options = get_option($config, $section, "mpileup_options", "");
+  my $java_option = get_option($config, $section, "java_option", "");
+
   my %group_sample_map = %{$self->get_group_sample_map ($config, $section)};
 
   my $shfile = $pbsDir . "/${task_name}_vs2.sh";
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
 
-  $pbsDesc =~ /\=(\d+)gb/;
-  my $gb = $1;
-
   for my $groupName ( sort keys %group_sample_map ) {
     my @sampleFiles = @{ $group_sample_map{$groupName} };
   
     my $curDir      = create_directory_or_die( $resultDir . "/$groupName" );
 
-    my $normalfile = $sampleFiles[0][0];
+    my $normal = $sampleFiles[0][0];
     my $snpvcf = "${groupName}.snp.vcf";
     my $pbsName = "${groupName}_vs2.pbs";
     my $pbsFile = "${pbsDir}/$pbsName";
@@ -72,7 +70,7 @@ if [ ! -s ${normal}.bai ]; then
 fi
 
 if [ ! -s $snpvcf ]; then
-  samtools mpileup -q 20 -f $faFile $normal | java -Xmx${gb}g -jar $varscan2_jar mpileup2snp $option --output-vcf $snpvcf
+  samtools mpileup $mpileup_options -f $faFile $normal | java $java_option -jar $varscan2_jar mpileup2snp $option --output-vcf $snpvcf
 fi
 
 echo finished=`date` \n";
