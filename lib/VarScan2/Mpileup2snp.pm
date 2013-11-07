@@ -34,25 +34,25 @@ sub perform {
   my $mpileup_options = get_option($config, $section, "mpileup_options", "");
   my $java_option = get_option($config, $section, "java_option", "");
 
-  my %group_sample_map = %{$self->get_group_sample_map ($config, $section)};
+  my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $pbsDir . "/${task_name}_vs2.sh";
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
 
-  for my $groupName ( sort keys %group_sample_map ) {
-    my @sampleFiles = @{ $group_sample_map{$groupName} };
+  for my $sampleName ( sort keys %rawFiles ) {
+    my @sampleFiles = @{ $rawFiles{$sampleName} };
   
-    my $curDir      = create_directory_or_die( $resultDir . "/$groupName" );
+    my $curDir      = create_directory_or_die( $resultDir . "/$sampleName" );
 
     my $normal = $sampleFiles[0][0];
-    my $snpvcf = "${groupName}.snp.vcf";
-    my $pbsName = "${groupName}_vs2.pbs";
+    my $snpvcf = "${sampleName}.snp.vcf";
+    my $pbsName = "${sampleName}_vs2.pbs";
     my $pbsFile = "${pbsDir}/$pbsName";
 
     print SH "\$MYCMD ./$pbsName \n";
 
-    my $log = "${logDir}/${groupName}_vs2.log";
+    my $log = "${logDir}/${sampleName}_vs2.log";
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
@@ -90,18 +90,20 @@ echo finished=`date` \n";
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
+  
+  die("unimplemented!");
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $groups = get_raw_files( $config, $section, "groups" );
+  my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
-  for my $groupName ( keys %{$groups} ) {
+  for my $sampleName ( keys %rawFiles ) {
     my @resultFiles = ();
-    my $curDir      = $resultDir . "/$groupName";
-    my $snpvcf = "${groupName}.snp.vcf";
+    my $curDir      = $resultDir . "/$sampleName";
+    my $snpvcf = "${sampleName}.snp.vcf";
     push( @resultFiles, "$curDir/${snpvcf}.Somatic.hc" );
-    $result->{$groupName} = filter_array( \@resultFiles, $pattern );
+    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
 }
