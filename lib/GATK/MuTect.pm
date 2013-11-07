@@ -47,10 +47,7 @@ sub perform {
     @chromosomes = ("");
   }
 
-  my $java_option = $config->{$section}{java_option};
-  if ( !defined $java_option ) {
-    $java_option = "";
-  }
+  my $java_option = get_option($config, $section, "java_option", "");
 
   my %group_sample_map = %{$self->get_group_sample_map ($config, $section)};
 

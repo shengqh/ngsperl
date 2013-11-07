@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package VarScan2::SomaticMutation;
+package VarScan2::Mpileup2snp;
 
 use strict;
 use warnings;
@@ -18,7 +18,7 @@ our @ISA = qw(CQS::AbstractSomaticMutation);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "VarScan2::SomaticMutation";
+  $self->{_name} = "VarScan2::Mpileup2snp";
   bless $self, $class;
   return $self;
 }
@@ -32,8 +32,7 @@ sub perform {
   my $faFile     = get_param_file( $config->{$section}{fasta_file},  "fasta_file",  1 );
 
   my $min_coverage    = $config->{$section}{min_coverage}    or die "min_coverage is not defined in $section!";
-  my $somatic_p_value = $config->{$section}{somatic_p_value} or die "somatic_p_value is not defined in $section!";
-
+  
   my %group_sample_map = %{$self->get_group_sample_map ($config, $section)};
 
   my $shfile = $pbsDir . "/${task_name}_vs2.sh";
@@ -45,27 +44,11 @@ sub perform {
 
   for my $groupName ( sort keys %group_sample_map ) {
     my @sampleFiles = @{ $group_sample_map{$groupName} };
-    my $sampleCount = scalar(@sampleFiles);
-
-    if ( $sampleCount != 2 ) {
-      die "SampleFile should be normal,tumor paired.";
-    }
-
+  
     my $curDir      = create_directory_or_die( $resultDir . "/$groupName" );
 
-    my $normal = $sampleFiles[0][1];
-    my $tumor  = $sampleFiles[1][1];
-    
     my $normalfile = $sampleFiles[0][0];
-    my $tumorfile  = $sampleFiles[1][0];
-
-    my $normal_mpileup = "${normalfile}.mpileup";
-    my $tumor_mpileup  = "${tumorfile}.mpileup";
-
     my $snpvcf = "${groupName}.snp.vcf";
-    my $passinput = "${groupName}.somatic.pass.avinput";
-    my $annovar   = "${groupName}.somatic.pass.annovar";
-
     my $pbsName = "${groupName}_vs2.pbs";
     my $pbsFile = "${pbsDir}/$pbsName";
 
@@ -84,31 +67,13 @@ echo varscan2=`date`
 
 cd $curDir
 
-
 if [ ! -s ${normal}.bai ]; then
   samtools index ${normal}
 fi
 
-if [ ! -s ${tumor}.bai ]; then
-  samtools index ${tumor}
-fi
-
-if [ ! -s $normal_mpileup ]; then
-  echo NORMAL_MPILEUP=`date`
-  samtools mpileup -q 20 -f $faFile $normal > $normal_mpileup
-fi
-
-if [ ! -s $tumor_mpileup ]; then
-  echo TUMOR_MPILEUP=`date`
-  samtools mpileup -q 20 -f $faFile $tumor > $tumor_mpileup
-fi
-
 if [ ! -s $snpvcf ]; then
-  java -Xmx${gb}g -jar $varscan2_jar somatic $option $normal_mpileup $tumor_mpileup $groupName --output-vcf --somatic-p-value $somatic_p_value --min-coverage $min_coverage --strand-filter
-  rm $normal_mpileup $tumor_mpileup
+  samtools mpileup -q 20 -f $faFile $normal | java -Xmx${gb}g -jar $varscan2_jar mpileup2snp $option --output-vcf $snpvcf
 fi
-
-java -Xmx${gb}g -jar $varscan2_jar processSomatic $snpvcf --p-value $somatic_p_value
 
 echo finished=`date` \n";
     close OUT;
