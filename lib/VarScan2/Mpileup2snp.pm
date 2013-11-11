@@ -70,7 +70,7 @@ if [ ! -s ${normal}.bai ]; then
 fi
 
 if [ ! -s $snpvcf ]; then
-  samtools mpileup $mpileup_options -f $faFile $normal | java $java_option -jar $varscan2_jar mpileup2snp $option --output-vcf $snpvcf
+  samtools mpileup $mpileup_options -f $faFile $normal | java $java_option -jar $varscan2_jar mpileup2snp $option --output-vcf 1 > $snpvcf
 fi
 
 echo finished=`date` \n";
