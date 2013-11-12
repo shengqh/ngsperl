@@ -30,6 +30,7 @@ sub perform {
   $option = $option . " --keep-fasta-order";
 
   my $sort_by_query = get_option_value( $config->{$section}{sort_by_query}, 0 );
+  my $rename_bam    = get_option_value( $config->{$section}{rename_bam},    0 );
 
   my $bowtie2_index = $config->{$section}{bowtie2_index} or die "define ${section}::bowtie2_index first";
   my %fqFiles = %{ get_raw_files( $config, $section ) };
@@ -52,7 +53,7 @@ sub perform {
   }
 
   if ( defined $transcript_gtf_index && !$has_index_file ) {
-    die "transcript_gtf_index $transcript_gtf_index defined but not exists!";
+    print "transcript_gtf_index $transcript_gtf_index defined but not exists, you may run the script once to cache the index.\n";
   }
 
   my $shfile = $pbsDir . "/${task_name}_th2.sh";
@@ -81,10 +82,8 @@ sub perform {
       $gtfstr = "--transcriptome-index=$transcript_gtf_index";
     }
 
-    my $sortcmd = "";
-    if ($sort_by_query) {
-      $sortcmd = "samtools sort -n -@ $threadcount accepted_hits.bam ${sampleName}.sortedname";
-    }
+    my $sort_cmd = $sort_by_query ? "samtools sort -n -@ $threadcount accepted_hits.bam ${sampleName}.sortedname" : "";
+    my $rename_bam_cmd = $rename_bam ? "mv accepted_hits.bam ${sampleName}.bam\nmv accepted_hits.bam.bai ${sampleName}.bam.bai" : "";
 
     open( OUT, ">$pbsFile" ) or die $!;
 
@@ -107,7 +106,9 @@ tophat2 $option $rgline $gtfstr -o . $bowtie2_index $samples
 
 samtools index $tophat2file
 
-$sortcmd
+$sort_cmd
+
+$rename_bam_cmd
 
 echo finished=`date` 
 
@@ -134,11 +135,17 @@ sub result {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
   my $sort_by_query = get_option_value( $config->{$section}{sort_by_query}, 0 );
+  my $rename_bam    = get_option_value( $config->{$section}{rename_bam},    0 );
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
     my @resultFiles = ();
-    push( @resultFiles, "${resultDir}/${sampleName}/accepted_hits.bam" );
+    if($rename_bam){
+      push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}.bam" );
+    }
+    else{
+      push( @resultFiles, "${resultDir}/${sampleName}/accepted_hits.bam" );
+    }
 
     if ($sort_by_query) {
       push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}.sortedname.bam" );
