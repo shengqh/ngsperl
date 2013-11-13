@@ -52,6 +52,10 @@ sub filter_array {
     }
   }
 
+  if(scalar(@filteredFiles) == 0){
+    my $str = join(', ', @{$sourceFiles});
+    warn("No file in array [$str] matched with pattern $pattern, empty array returned.");
+  }
   return \@filteredFiles;
 }
 

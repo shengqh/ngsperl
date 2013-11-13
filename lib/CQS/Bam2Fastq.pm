@@ -26,13 +26,9 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $ispaired = $config->{$section}{ispaired};
-  if ( !defined $ispaired ) {
-    $ispaired = 0;
-  }
+  my $ispaired = get_option_value( $config, $section, "ispaired", 0 );
 
   my $cqstools = $config->{$section}{cqstools} or die "define ${section}::cqstools first";
-  my $samtools = $config->{$section}{samtools} or die "define ${section}::samtools first";
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -53,37 +49,8 @@ sub perform {
 
     open( OUT, ">$pbsFile" ) or die $!;
 
-    if ($ispaired) {
-      my $fastq      = $sampleName . ".fastq";
-      my $fastq1     = $sampleName . ".1.fastq";
-      my $fastq2     = $sampleName . ".2.fastq";
-      my $finalFile1 = $fastq1 . ".gz";
-      my $finalFile2 = $fastq2 . ".gz";
-      print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
-
-$path_file
-
-cd $resultDir
-
-echo started=`date`
-
-if [ ! -s $finalFile1 ]; then
-  mono-sgen $cqstools bam2fastq $option -i $bamfile -o $fastq -p -s $samtools
-  gzip $fastq1
-  gzip $fastq2
-fi
-
-echo finished=`date`
-
-exit 1 
-";
-    }
-    else {
-      my $fastq     = $sampleName . ".fastq";
-      my $finalFile = $fastq . ".gz";
-      print OUT "$pbsDesc
+    my $finalFile = $ispaired ? $sampleName . ".1.fastq.gz" : $sampleName . ".fastq.gz";
+    print OUT "$pbsDesc
 #PBS -o $log
 #PBS -j oe
 
@@ -94,16 +61,13 @@ cd $resultDir
 echo started=`date`
 
 if [ ! -s $finalFile ]; then
-  mono-sgen $cqstools bam2fastq $option -i $bamfile -o $fastq -s $samtools
-  gzip $fastq
+  mono-sgen $cqstools bam2fastq $option -i $bamfile -o $finalFile
 fi
 
 echo finished=`date`
 
 exit 1 
 ";
-    }
-
     close OUT;
 
     print "$pbsFile created \n";
@@ -124,10 +88,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $ispaired = $config->{$section}{ispaired};
-  if ( !defined $ispaired ) {
-    $ispaired = 0;
-  }
+  my $ispaired = get_option( $config, $section, "ispaired");
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 

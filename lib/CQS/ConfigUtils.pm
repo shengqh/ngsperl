@@ -25,14 +25,15 @@ sub get_option {
   die "no section $section found!" if !defined $config->{$section};
 
   my $result = $config->{$section}{$key};
-  if(!defined $result){
-    if (!defined $default){
-      die "Define ${section}::${key} first!"
-    }else{
+  if ( !defined $result ) {
+    if ( !defined $default ) {
+      die "Define ${section}::${key} first!";
+    }
+    else {
       $result = $default;
     }
   }
-  
+
   return ($result);
 }
 
@@ -41,8 +42,8 @@ sub get_parameter {
 
   die "no section $section found!" if !defined $config->{$section};
 
-  my $task_name = get_option($config, "general", "task_name");
-  
+  my $task_name = get_option( $config, "general", "task_name" );
+
   my $path_file = get_param_file( $config->{general}{path_file}, "path_file", 0 );
   if ( defined $path_file && -e $path_file ) {
     $path_file = "source $path_file";
@@ -51,13 +52,13 @@ sub get_parameter {
     $path_file = "";
   }
 
-  my $refPbs     = get_option($config, $section, "pbs");
-  my $target_dir = get_option($config, $section, "target_dir");
+  my $refPbs     = get_option( $config, $section, "pbs" );
+  my $target_dir = get_option( $config, $section, "target_dir" );
   my ( $logDir, $pbsDir, $resultDir ) = init_dir($target_dir);
   my ($pbsDesc) = get_pbs_desc($refPbs);
 
-  my $option    = get_option($config, $section, "option", "");
-  my $sh_direct = get_option($config, $section, "sh_direct", 0);
+  my $option    = get_option( $config, $section, "option",    "" );
+  my $sh_direct = get_option( $config, $section, "sh_direct", 0 );
 
   return ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct );
 }
@@ -148,26 +149,47 @@ sub do_get_raw_files {
   }
 
   if ( defined $config->{$section}{$mapname_ref} ) {
+    my $refmap         = {};
     my $refSectionName = $config->{$section}{$mapname_ref};
     if ( ref($refSectionName) eq 'ARRAY' ) {
-      my @parts = @{$refSectionName};
-      if ( scalar(@parts) == 2 ) {
-        $pattern        = $parts[1];
-        $refSectionName = $parts[0];
+      my @parts      = @{$refSectionName};
+      my $partlength = scalar(@parts);
+      for ( my $index = 0 ; $index < $partlength ; ) {
+        if ( !defined $config->{ $parts[$index] } ) {
+          die "undefined section $parts[$index]";
+        }
+
+        if ( $index == ( $partlength - 1 ) || defined $config->{ $parts[ $index + 1 ] } ) {
+          $refmap->{ $parts[$index] } = $pattern;
+          $index++;
+        }
+        else {
+          $refmap->{ $parts[$index] } = $parts[ $index + 1 ];
+          $index += 2;
+        }
       }
-      else {
-        $refSectionName = $parts[0];
-      }
-    }
-    die "section $refSectionName was not defined!" if !defined $config->{$refSectionName};
-    if ( defined $config->{$refSectionName}{class} ) {
-      my $myclass = instantiate( $config->{$refSectionName}{class} );
-      return ( $myclass->result( $config, $refSectionName, $pattern ), 0 );
     }
     else {
-      my ( $result, $issource ) = do_get_raw_files( $config, $refSectionName, 1 );
-      return ( $result, 0 );
+      $refmap->{$refSectionName} = $pattern;
     }
+
+    my %result = ();
+    for my $refsec ( keys %{$refmap} ) {
+      my $pat   = $refmap->{$refsec};
+      my %myres = ();
+      if ( defined $config->{$refsec}{class} ) {
+        my $myclass = instantiate( $config->{$refsec}{class} );
+        %myres = %{ $myclass->result( $config, $refsec, $pat ) };
+      }
+      else {
+        my ( $res, $issource ) = do_get_raw_files( $config, $refsec, 1 );
+        %myres = %{$res};
+      }
+      @result{ keys %myres } = values %myres;
+    }
+
+    my $final = \%result;
+    return ( $final, 0 );
   }
 
   if ($returnself) {
@@ -181,7 +203,7 @@ sub do_get_raw_files {
 sub get_raw_files {
   my ( $config, $section, $mapname, $pattern ) = @_;
   my ( $result, $issource ) = do_get_raw_files( $config, $section, 0, $mapname, $pattern );
-  return $result;
+  return ($result);
 }
 
 #return raw files and if the raw files are extracted from source directly
@@ -200,12 +222,12 @@ sub get_run_command {
   }
 }
 
-sub get_option_value{
-  my ($value, $defaultValue) = @_;
-  if(!defined $value){
+sub get_option_value {
+  my ( $value, $defaultValue ) = @_;
+  if ( !defined $value ) {
     return ($defaultValue);
   }
-  else{
+  else {
     return ($value);
   }
 }
