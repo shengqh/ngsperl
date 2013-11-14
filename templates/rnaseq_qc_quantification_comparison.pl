@@ -5,32 +5,32 @@ use warnings;
 use CQS::ClassFactory;
 use CQS::FileUtils;
 
-my $target_dir     = create_directory_or_die("/scratch/cqs/shengq1/rnaseq/pipeline");
+my $target_dir = create_directory_or_die("/scratch/cqs/shengq1/rnaseq/pipeline");
 
-my $transcript_gtf = "/data/cqs/guoy1/reference/annotation2/mm10/Mus_musculus.GRCm38.68.gtf";
-my $transcript_gtf_index = "/scratch/cqs/shengq1/gtfindex/mm10_GRCm38.68";
-my $fasta_file     = "/data/cqs/guoy1/reference/mm10/bowtie2_index/mm10.fa";
-my $bowtie2_index = "/data/cqs/guoy1/reference/mm10/bowtie2_index/mm10";
-my $name_map_file = "/data/cqs/shengq1/reference/mm10/mm10.gene.map";
+my $transcript_gtf       = "/scratch/cqs/shengq1/references/mm10/Mus_musculus.GRCm38.73.gtf";
+my $transcript_gtf_index = "/scratch/cqs/shengq1/references/mm10/gtfindex/Mus_musculus.GRCm38.73";
+my $fasta_file           = "/data/cqs/guoy1/reference/mm10/bowtie2_index/mm10.fa";
+my $bowtie2_index        = "/data/cqs/guoy1/reference/mm10/bowtie2_index/mm10";
+my $name_map_file        = "/data/cqs/shengq1/reference/mm10/mm10.gene.map";
 
-my $cqstools       = "/home/shengq1/cqstools/CQS.Tools.exe";
+my $cqstools = "/home/shengq1/cqstools/CQS.Tools.exe";
 
 my $email = "quanhu.sheng\@vanderbilt.edu";
 my $task  = "pipeline";
 
 my $config = {
-  general    => { task_name => $task },
-files => {
-  "S1" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s1_sequence.txt"],
-  "S2" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s2_sequence.txt"],
-  "S3" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s3_sequence.txt"],
-  "S4" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s4_sequence.txt"],
-  "S5" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s5_sequence.txt"],
-  "S6" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s6_sequence.txt"],
-},
+  general => { task_name => $task },
+  files   => {
+    "S1" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s1_sequence.txt"],
+    "S2" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s2_sequence.txt"],
+    "S3" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s3_sequence.txt"],
+    "S4" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s4_sequence.txt"],
+    "S5" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s5_sequence.txt"],
+    "S6" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s6_sequence.txt"],
+  },
   groups => {
-    "G1" => ["S1", "S2", "S3"],
-    "G2" => ["S4", "S5", "S6"],
+    "G1" => [ "S1", "S2", "S3" ],
+    "G2" => [ "S4", "S5", "S6" ],
   },
   pairs  => { "G2_vs_G1" => [ "G1", "G2" ] },
   fastqc => {
@@ -48,16 +48,16 @@ files => {
     },
   },
   tophat2 => {
-    class         => "Tophat2",
-    perform       => 1,
-    target_dir    => "${target_dir}/tophat2",
-    option        => "--segment-length 25 -r 0 -p 6",
-    source_ref    => "files",
-    bowtie2_index => $bowtie2_index,
-  transcript_gtf => $transcript_gtf,
+    class                => "Tophat2",
+    perform              => 1,
+    target_dir           => "${target_dir}/tophat2",
+    option               => "--segment-length 25 -r 0 -p 6",
+    source_ref           => "files",
+    bowtie2_index        => $bowtie2_index,
+    transcript_gtf       => $transcript_gtf,
     transcript_gtf_index => $transcript_gtf_index,
-    sh_direct     => 1,
-    pbs           => {
+    sh_direct            => 1,
+    pbs                  => {
       "email"    => $email,
       "nodes"    => "1:ppn=6",
       "walltime" => "72",
