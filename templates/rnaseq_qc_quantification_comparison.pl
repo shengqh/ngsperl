@@ -7,8 +7,8 @@ use CQS::FileUtils;
 
 my $target_dir = create_directory_or_die("/scratch/cqs/shengq1/rnaseq/pipeline");
 
-my $transcript_gtf       = "/scratch/cqs/shengq1/references/mm10/Mus_musculus.GRCm38.73.gtf";
-my $transcript_gtf_index = "/scratch/cqs/shengq1/references/mm10/gtfindex/Mus_musculus.GRCm38.73";
+my $transcript_gtf       = "/data/cqs/guoy1/reference/annotation2/mm10/Mus_musculus.GRCm38.68_chr1-22-X-Y-M.gtf";
+my $transcript_gtf_index = "/scratch/cqs/shengq1/references/mm10/gtfindex/Mus_musculus.GRCm38.68";
 my $fasta_file           = "/data/cqs/guoy1/reference/mm10/bowtie2_index/mm10.fa";
 my $bowtie2_index        = "/data/cqs/guoy1/reference/mm10/bowtie2_index/mm10";
 my $name_map_file        = "/data/cqs/shengq1/reference/mm10/mm10.gene.map";
