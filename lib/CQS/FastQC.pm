@@ -69,6 +69,9 @@ echo finished=`date`
     print "$pbsFile created \n";
   }
 
+  print SH "cd $resultDir
+qcimg2pdf.sh -o $task_name
+";
   close(SH);
 
   if ( is_linux() ) {
