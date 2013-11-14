@@ -65,6 +65,22 @@ my $config = {
       "mem"      => "30gb"
     },
   },
+  rnaseqc => {
+    class          => "RNASeQC",
+    perform        => 1,
+    target_dir     => "${target_dir}/RNASeQC",
+    option         => "",
+    fasta_file     => $fasta_file,
+    transcript_gtf => $transcript_gtf,
+    jar            => "/home/shengq1/local/bin/RNA-SeQC_v1.1.7.jar",
+    source_ref     => "tophat2",
+    pbs            => {
+      "email"    => $email,
+      "nodes"    => "1:ppn=1",
+      "walltime" => "72",
+      "mem"      => "40gb"
+    },
+  },
   cuffdiff => {
     class          => "Cuffdiff",
     perform        => 1,
