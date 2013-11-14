@@ -82,6 +82,7 @@ sub perform {
       $gtfstr = "--transcriptome-index=$transcript_gtf_index";
     }
 
+    my $final = $rename_bam ? "${sampleName}.bam" : "accepted_hits.bam";
     my $sort_cmd = $sort_by_query ? "samtools sort -n -@ $threadcount accepted_hits.bam ${sampleName}.sortedname" : "";
     my $rename_bam_cmd = $rename_bam ? "mv accepted_hits.bam ${sampleName}.bam\nmv accepted_hits.bam.bai ${sampleName}.bam.bai" : "";
 
@@ -95,8 +96,8 @@ $path_file
 
 cd $curDir 
 
-if [ -s $tophat2file ]; then
-  echo job has already been done. if you want to do again, delete ${curDir}/${tophat2file} and submit job again.
+if [ -s $final ]; then
+  echo job has already been done. if you want to do again, delete ${curDir}/${final} and submit job again.
   exit 1;
 fi
 
