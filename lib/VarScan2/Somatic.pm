@@ -104,7 +104,6 @@ fi
 
 if [ ! -s $snpvcf ]; then
   java $java_option -jar $varscan2_jar somatic $option $normal_mpileup $tumor_mpileup $groupName --output-vcf --somatic-p-value $somatic_p_value
-  rm $normal_mpileup $tumor_mpileup
 fi
 
 java $java_option -jar $varscan2_jar processSomatic $snpvcf --p-value $somatic_p_value
