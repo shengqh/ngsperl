@@ -27,7 +27,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  $option = $option . " --keep-fasta-order";
+  $option = $option . " --keep-fasta-order --no-coverage-search";
 
   my $sort_by_query = get_option_value( $config->{$section}{sort_by_query}, 0 );
   my $rename_bam    = get_option_value( $config->{$section}{rename_bam},    0 );
