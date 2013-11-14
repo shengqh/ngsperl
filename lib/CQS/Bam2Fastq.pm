@@ -49,8 +49,7 @@ sub perform {
 
     open( OUT, ">$pbsFile" ) or die $!;
 
-    my $expectFile = $sampleName . ".fastq.gz";
-    my $finalFile = $ispaired ? $sampleName . ".1.fastq.gz" : $expectFile;
+    my $finalFile = $ispaired ? $sampleName . ".1.fastq.gz" : $sampleName . ".fastq.gz";
     print OUT "$pbsDesc
 #PBS -o $log
 #PBS -j oe
@@ -62,7 +61,7 @@ cd $resultDir
 echo started=`date`
 
 if [ ! -s $finalFile ]; then
-  mono-sgen $cqstools bam2fastq $option -i $bamfile -o $expectFile
+  mono-sgen $cqstools bam2fastq $option -i $bamfile -o $sampleName
 fi
 
 echo finished=`date`
