@@ -28,6 +28,10 @@ sub perform {
 
   my $ispaired = get_option_value( $config, $section, "ispaired", 0 );
 
+  my $sort_before_convert = get_option_value( $config, $section, "sort_before_convert", 0 );
+  my $sort_thread         = get_option_value( $config, $section, "sort_thread",         0 );
+  my $sortoption = $sort_thread < 2 ? "" : "-@ $sort_thread";
+
   my $cqstools = $config->{$section}{cqstools} or die "define ${section}::cqstools first";
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
@@ -50,6 +54,18 @@ sub perform {
     open( OUT, ">$pbsFile" ) or die $!;
 
     my $finalFile = $ispaired ? $sampleName . ".1.fastq.gz" : $sampleName . ".fastq.gz";
+    my $convertCmd;
+
+    if ($sort_before_convert) {
+      my $sourceFile = "${sampleName}.sortname.bam";
+      $convertCmd = "samtools sort $option -n $sortoption $bamfile ${sampleName}.sortname
+  mono-sgen $cqstools bam2fastq $option -i $sourceFile -o $sampleName 
+  rm $sourceFile";
+    }
+    else {
+      $convertCmd = "mono-sgen $cqstools bam2fastq $option -i $bamfile -o $sampleName ";
+    }
+
     print OUT "$pbsDesc
 #PBS -o $log
 #PBS -j oe
@@ -61,7 +77,7 @@ cd $resultDir
 echo started=`date`
 
 if [ ! -s $finalFile ]; then
-  mono-sgen $cqstools bam2fastq $option -i $bamfile -o $sampleName
+  $convertCmd
 fi
 
 echo finished=`date`
@@ -88,7 +104,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $ispaired = get_option( $config, $section, "ispaired");
+  my $ispaired = get_option( $config, $section, "ispaired" );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
