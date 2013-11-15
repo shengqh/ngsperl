@@ -32,6 +32,9 @@ sub perform {
   my $sort_thread         = get_option( $config, $section, "sort_thread",         0 );
   my $sortoption = $sort_thread < 2 ? "" : "-@ $sort_thread";
 
+  print "sort_before_convert = $sort_before_convert\n";
+  print "sort_thread = $sort_thread\n";
+
   my $cqstools = $config->{$section}{cqstools} or die "define ${section}::cqstools first";
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
