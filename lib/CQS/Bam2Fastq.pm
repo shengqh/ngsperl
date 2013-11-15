@@ -28,8 +28,8 @@ sub perform {
 
   my $ispaired = get_option( $config, $section, "ispaired", 0 );
 
-  my $sort_before_convert = get_option( $config, $section, "sort_before_convert", 0 );
-  my $sort_thread         = get_option( $config, $section, "sort_thread",         0 );
+  my $sort_before_convert = get_option( $config, $section, "sort_before_convert" );
+  my $sort_thread         = get_option( $config, $section, "sort_thread");
   my $sortoption = $sort_thread < 2 ? "" : "-@ $sort_thread";
 
   print "sort_before_convert = $sort_before_convert\n";
