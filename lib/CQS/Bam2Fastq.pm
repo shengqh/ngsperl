@@ -26,10 +26,10 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $ispaired = get_option_value( $config, $section, "ispaired", 0 );
+  my $ispaired = get_option( $config, $section, "ispaired", 0 );
 
-  my $sort_before_convert = get_option_value( $config, $section, "sort_before_convert", 0 );
-  my $sort_thread         = get_option_value( $config, $section, "sort_thread",         0 );
+  my $sort_before_convert = get_option( $config, $section, "sort_before_convert", 0 );
+  my $sort_thread         = get_option( $config, $section, "sort_thread",         0 );
   my $sortoption = $sort_thread < 2 ? "" : "-@ $sort_thread";
 
   my $cqstools = $config->{$section}{cqstools} or die "define ${section}::cqstools first";
