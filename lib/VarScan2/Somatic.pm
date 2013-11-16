@@ -103,7 +103,7 @@ if [ ! -s $tumor_mpileup ]; then
 fi
 
 if [ ! -s $snpvcf ]; then
-  java $java_option -jar $varscan2_jar somatic $option $normal_mpileup $tumor_mpileup $groupName --output-vcf --somatic-p-value $somatic_p_value
+  java $java_option -jar $varscan2_jar somatic $normal_mpileup $tumor_mpileup $groupName $option --output-vcf --somatic-p-value $somatic_p_value
 fi
 
 java $java_option -jar $varscan2_jar processSomatic $snpvcf --p-value $somatic_p_value
