@@ -104,10 +104,10 @@ cd $curDir
 
       my $cmd;
       if ( defined $mpileupParameter ) {
-        $cmd = "samtools mpileup -f $fafile $mpileupParameter $normal $tumor | mono-sgen $rsmcfile all -t console $option -o $curDir/$groupName";
+        $cmd = "samtools mpileup -f $fafile $mpileupParameter $normal $tumor | mono-sgen $rsmcfile all -t console $option -o ${curDir}/${groupName}";
       }
       else {
-        $cmd = "mono-sgen $rsmcfile all -t bam -f $fafile $option --normal $normal --tumor $tumor -o $groupName";
+        $cmd = "mono-sgen $rsmcfile all -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${curDir}/${groupName}";
       }
 
       print OUT "
@@ -129,7 +129,7 @@ $cmd
 echo finished=`date` \n";
     }
     else {
-      print OUT "mono-sgen $rsmcfile all -t mpileup -m $sampleFiles[0] $option -o $groupName";
+      print OUT "mono-sgen $rsmcfile all -t mpileup -m $sampleFiles[0] $option -o ${curDir}/${groupName}";
     }
 
     close OUT;
