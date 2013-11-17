@@ -61,8 +61,12 @@ sub perform {
 
     if ($sort_before_convert) {
       my $sourceFile = "${sampleName}.sortname.bam";
-      $convertCmd = "samtools sort $option -n $sortoption $bamfile ${sampleName}.sortname
+      $convertCmd = "  if [ ! -s $sourceFile ]; then
+    samtools sort $option -n $sortoption $bamfile ${sampleName}.sortname
+  fi
+  
   mono-sgen $cqstools bam2fastq $option -i $sourceFile -o $sampleName 
+  
   if [ -s $finalFile ]; then
     rm $sourceFile
   fi";
