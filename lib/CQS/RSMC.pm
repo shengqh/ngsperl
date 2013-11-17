@@ -100,16 +100,22 @@ cd $curDir
 
       my $normal = $sampleFiles[0];
       my $tumor  = $sampleFiles[1];
+      my $final = "${groupName}.tsv";
 
       my $cmd;
       if ( defined $mpileupParameter ) {
         $cmd = "samtools mpileup -f $fafile $mpileupParameter $normal $tumor | mono-sgen $rsmcfile all -t console $option -o $curDir/$groupName";
       }
       else {
-        $cmd = "mono-sgen $rsmcfile all -t bam -f $fafile $option --normal $normal --tumor $tumor -o $curDir/$groupName";
+        $cmd = "mono-sgen $rsmcfile all -t bam -f $fafile $option --normal $normal --tumor $tumor -o $groupName";
       }
 
       print OUT "
+if [ -s $final ]; then
+  echo job has already been done. if you want to do again, delete ${curDir}/${final} and submit job again.
+  exit 1;
+fi      
+      
 if [ ! -s ${normal}.bai ]; then
   samtools index ${normal}
 fi
@@ -123,7 +129,7 @@ $cmd
 echo finished=`date` \n";
     }
     else {
-      print OUT "mono-sgen $rsmcfile all -t mpileup -m $sampleFiles[0] $option -o $curDir/$groupName";
+      print OUT "mono-sgen $rsmcfile all -t mpileup -m $sampleFiles[0] $option -o $groupName";
     }
 
     close OUT;
