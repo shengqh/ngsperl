@@ -63,7 +63,9 @@ sub perform {
       my $sourceFile = "${sampleName}.sortname.bam";
       $convertCmd = "samtools sort $option -n $sortoption $bamfile ${sampleName}.sortname
   mono-sgen $cqstools bam2fastq $option -i $sourceFile -o $sampleName 
-  rm $sourceFile";
+  if [ -s $finalFile ]; then
+    rm $sourceFile
+  fi";
     }
     else {
       $convertCmd = "mono-sgen $cqstools bam2fastq $option -i $bamfile -o $sampleName ";
