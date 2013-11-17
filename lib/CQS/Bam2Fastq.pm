@@ -61,7 +61,7 @@ sub perform {
 
     if ($sort_before_convert) {
       my $sourceFile = "${sampleName}.sortname.bam";
-      $convertCmd = "  if [ ! -s $sourceFile ]; then
+      $convertCmd = "if [ ! -s $sourceFile ]; then
     samtools sort $option -n $sortoption $bamfile ${sampleName}.sortname
   fi
   
