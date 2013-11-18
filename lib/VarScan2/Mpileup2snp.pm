@@ -100,7 +100,7 @@ sub result {
     my @resultFiles = ();
     my $curDir      = $resultDir . "/$sampleName";
     my $snpvcf = "${sampleName}.snp.vcf";
-    push( @resultFiles, "$curDir/${snpvcf}.Somatic.hc" );
+    push( @resultFiles, "$curDir/${snpvcf}" );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
