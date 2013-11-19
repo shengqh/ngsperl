@@ -29,8 +29,10 @@ sub perform {
   my $ispaired = get_option( $config, $section, "ispaired", 0 );
 
   my $sort_before_convert = get_option( $config, $section, "sort_before_convert" );
-  my $sort_thread         = get_option( $config, $section, "sort_thread");
+  my $sort_thread         = get_option( $config, $section, "sort_thread" );
   my $sortoption = $sort_thread < 2 ? "" : "-@ $sort_thread";
+
+  my $unmapped_only = get_option( $config, $section, "unmapped_only", 0 );
 
   print "sort_before_convert = $sort_before_convert\n";
   print "sort_thread = $sort_thread\n";
@@ -57,12 +59,20 @@ sub perform {
     open( OUT, ">$pbsFile" ) or die $!;
 
     my $finalFile = $ispaired ? $sampleName . ".1.fastq.gz" : $sampleName . ".fastq.gz";
-    my $convertCmd;
+    my $convertCmd = "";
 
     if ($sort_before_convert) {
       my $sourceFile = "${sampleName}.sortname.bam";
+      my $sortCmd;
+      if ($unmapped_only) {
+        $sortCmd = "samtools view -b -f 4 $bamfile | samtools sort $option -n $sortoption - ${sampleName}.sortname";
+      }
+      else {
+        $sortCmd = "samtools sort $option -n $sortoption $bamfile ${sampleName}.sortname";
+      }
+
       $convertCmd = "if [ ! -s $sourceFile ]; then
-    samtools sort $option -n $sortoption $bamfile ${sampleName}.sortname
+    $sortCmd
   fi
   
   mono-sgen $cqstools bam2fastq $option -i $sourceFile -o $sampleName 
@@ -72,7 +82,15 @@ sub perform {
   fi";
     }
     else {
-      $convertCmd = "mono-sgen $cqstools bam2fastq $option -i $bamfile -o $sampleName ";
+      if ($unmapped_only) {
+        my $unmapped_bam = "${sampleName}.unmapped.bam";
+        $convertCmd = "samtools view -b -f 4 $bamfile > $unmapped_bam
+  mono-sgen $cqstools bam2fastq $option -i $unmapped_bam -o $sampleName
+  rm $unmapped_bam ";
+      }
+      else {
+        $convertCmd = "mono-sgen $cqstools bam2fastq $option -i $bamfile -o $sampleName ";
+      }
     }
 
     print OUT "$pbsDesc
