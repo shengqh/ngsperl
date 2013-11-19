@@ -33,6 +33,10 @@ sub perform {
   my $sortoption = $sort_thread < 2 ? "" : "-@ $sort_thread";
 
   my $unmapped_only = get_option( $config, $section, "unmapped_only", 0 );
+  my $unzipped      = get_option( $config, $section, "unzipped",      0 );
+  if ($unzipped) {
+    $option = $option . " -u";
+  }
 
   print "sort_before_convert = $sort_before_convert\n";
   print "sort_thread = $sort_thread\n";
@@ -58,7 +62,10 @@ sub perform {
 
     open( OUT, ">$pbsFile" ) or die $!;
 
-    my $finalFile = $ispaired ? $sampleName . ".1.fastq.gz" : $sampleName . ".fastq.gz";
+    my $finalFile = $ispaired ? $sampleName . ".1.fastq" : $sampleName . ".fastq";
+    if ( !$unzipped ) {
+      $finalFile = $finalFile . ".gz";
+    }
     my $convertCmd = "";
 
     if ($sort_before_convert) {
@@ -131,7 +138,8 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $ispaired = get_option( $config, $section, "ispaired" );
+  my $ispaired = get_option( $config, $section, "ispaired", 0 );
+  my $unzipped = get_option( $config, $section, "unzipped", 0 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -140,11 +148,22 @@ sub result {
 
     my @resultFiles = ();
     if ($ispaired) {
-      push( @resultFiles, $resultDir . "/" . $sampleName . ".1.fastq.gz" );
-      push( @resultFiles, $resultDir . "/" . $sampleName . ".2.fastq.gz" );
+      if ($unzipped) {
+        push( @resultFiles, $resultDir . "/" . $sampleName . ".1.fastq" );
+        push( @resultFiles, $resultDir . "/" . $sampleName . ".2.fastq" );
+      }
+      else {
+        push( @resultFiles, $resultDir . "/" . $sampleName . ".1.fastq.gz" );
+        push( @resultFiles, $resultDir . "/" . $sampleName . ".2.fastq.gz" );
+      }
     }
     else {
-      push( @resultFiles, $resultDir . "/" . $sampleName . ".fastq.gz" );
+      if ($unzipped) {
+        push( @resultFiles, $resultDir . "/" . $sampleName . ".fastq" );
+      }
+      else {
+        push( @resultFiles, $resultDir . "/" . $sampleName . ".fastq.gz" );
+      }
     }
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
