@@ -22,24 +22,6 @@ sub new {
   return $self;
 }
 
-sub get_bwa_aln_command {
-  my ( $sampleFile, $option, $faFile, $indent ) = @_;
-
-  if ( !defined($indent) ) {
-    $indent = "";
-  }
-
-  my ( $sampleName, $directories, $suffix ) = fileparse($sampleFile);
-  my $saiFile = $sampleName . ".sai";
-
-  my $command = "${indent}if [ ! -s $saiFile ]; then
-${indent}  echo sai=`date` 
-${indent}  bwa aln $option $faFile $sampleFile >$saiFile 
-${indent}fi";
-
-  return ( $command, $saiFile );
-}
-
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -59,32 +41,22 @@ sub perform {
     my $bamFile     = $sampleName . ".bam";
     my $tag         = get_bam_tag($sampleName);
 
-    my $bwa_indent  = "";
     my $sampleFile1 = $sampleFiles[0];
-    my ( $bwaaln_command1, $saiFile1 ) = get_bwa_aln_command( $sampleFile1, $option, $faFile, $bwa_indent );
 
     my $bwa_aln_command;
     if ( scalar(@sampleFiles) == 2 ) {
       my $sampleFile2 = $sampleFiles[1];
-      my ( $bwaaln_command2, $saiFile2 ) = get_bwa_aln_command( $sampleFile2, $option, $faFile, $bwa_indent );
-
-      $bwa_aln_command = "$bwaaln_command1
-
-$bwaaln_command2
-
-if [[ -s $saiFile1 && -s $saiFile2 && ! -s $samFile ]]; then
-  echo aln=`date` 
-  bwa sampe -r $tag $faFile $saiFile1 $saiFile2 $sampleFile1 $sampleFile2 > $samFile
-  rm $saiFile1 $saiFile2
+      $bwa_aln_command = "
+if [ ! -s $samFile ]; then
+  echo bwa_mem=`date` 
+  bwa mem $option -r $tag $faFile $sampleFile1 $sampleFile2 > $samFile
 fi";
     }
     else {
-      $bwa_aln_command = "$bwaaln_command1
-
-if [[ -s $saiFile1 && ! -s $samFile ]]; then
-  echo aln=`date` 
-  bwa samse -r $tag $faFile $saiFile1 $sampleFile1 > $samFile
-  rm $saiFile1
+      $bwa_aln_command = "
+if [ ! -s $samFile ]; then
+  echo bwa_mem=`date` 
+  bwa mem $option -r $tag $faFile $sampleFile1 > $samFile
 fi";
     }
 
