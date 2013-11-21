@@ -49,14 +49,14 @@ sub perform {
       $bwa_aln_command = "
 if [ ! -s $samFile ]; then
   echo bwa_mem=`date` 
-  bwa mem $option -r $tag $faFile $sampleFile1 $sampleFile2 > $samFile
+  bwa mem $option -R $tag $faFile $sampleFile1 $sampleFile2 > $samFile
 fi";
     }
     else {
       $bwa_aln_command = "
 if [ ! -s $samFile ]; then
   echo bwa_mem=`date` 
-  bwa mem $option -r $tag $faFile $sampleFile1 > $samFile
+  bwa mem $option -R $tag $faFile $sampleFile1 > $samFile
 fi";
     }
 
