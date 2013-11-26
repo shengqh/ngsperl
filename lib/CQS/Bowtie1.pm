@@ -28,10 +28,8 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $bowtie1_index = $config->{$section}{bowtie1_index} or die "define ${section}::bowtie1_index first";
-  my $samonly = $config->{$section}{samonly};
-  if ( !defined $samonly ) {
-    $samonly = 0;
-  }
+  my $samonly = get_option( $config, $section, "samonly", 0 );
+  my $sortbam = get_option( $config, $section, "sortbam", 1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -47,8 +45,16 @@ sub perform {
     my $indent = "";
     my $tag    = "--sam-RG ID:$sampleName --sam-RG LB:$sampleName --sam-RG SM:$sampleName --sam-RG PL:ILLUMINA";
 
-    my $fastqs = join( ',', @sampleFiles );
-    my $bowtie1_aln_command = "bowtie $option -S $bowtie1_index $tag $fastqs -S $samFile";
+    my $bowtie1_aln_command;
+    if ( $sampleFiles[0] =~ /.gz$/ ) {
+      if(scalar(@sampleFiles) == 1){
+        $bowtie1_aln_command = "zcat $sampleFiles[0] | bowtie $option -S $bowtie1_index $tag -S $samFile -"
+      }
+    }
+    else {
+      my $fastqs = join( ',', @sampleFiles );
+      $bowtie1_aln_command = "bowtie $option -S $bowtie1_index $tag -S $samFile $fastqs";
+    }
 
     my $pbsName = "${sampleName}_bt1.pbs";
     my $pbsFile = "${pbsDir}/$pbsName";
@@ -86,10 +92,18 @@ fi
 $bowtie1_aln_command
 
 if [ -s $samFile ]; then
-  samtools view -S -b $samFile | samtools sort - $sampleName
+";
+      if ($sortbam) {
+        print OUT "samtools view -S -b $samFile | samtools sort - $sampleName
   samtools index $bamFile 
-  samtools flagstat $bamFile > ${bamFile}.stat 
-  rm $samFile
+  samtools flagstat $bamFile > ${bamFile}.stat
+";
+      }
+      else {
+        print OUT "samtools view -S -b $samFile > ${sampleName}.bam
+";
+      }
+      print OUT "  rm $samFile
 fi
 ";
     }
