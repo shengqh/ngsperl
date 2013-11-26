@@ -27,26 +27,26 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $samonly = $config->{$section}{samonly};
-  if ( !defined $samonly ) {
-    $samonly = 0;
-  }
+  my $samformat = get_option( $config, $section, "samformat", 1 );
+  my $samonly   = get_option( $config, $section, "samonly",   0 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
   for my $sampleName ( sort keys %rawFiles ) {
-    my $samFile = $sampleName . ".sam";
-    my $bamFile     = $sampleName . ".bam";
-
-    my $curDir  = $resultDir . "/$sampleName";
+    my $curDir = $resultDir . "/$sampleName";
 
     my $finalFile;
-    if ($samonly) {
-      $finalFile = $samFile;
+    if ($samformat) {
+      if ($samonly) {
+        $finalFile = $sampleName . ".sam";
+      }
+      else {
+        $finalFile = $sampleName . ".bam";
+      }
     }
     else {
-      $finalFile = $bamFile;
+      $finalFile = $sampleName . ".out";
     }
     my @resultFiles = ();
     push( @resultFiles, $curDir . "/" . $finalFile );
