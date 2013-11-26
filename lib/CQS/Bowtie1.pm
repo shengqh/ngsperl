@@ -49,6 +49,22 @@ sub perform {
     if ( $sampleFiles[0] =~ /.gz$/ ) {
       if(scalar(@sampleFiles) == 1){
         $bowtie1_aln_command = "zcat $sampleFiles[0] | bowtie $option -S $tag $bowtie1_index - $samFile"
+      }else{
+        my $f1 = $sampleFiles[0];
+        my $f2 = $sampleFiles[1];
+        
+        $bowtie1_aln_command = "
+mkfifo ${f1}.fifo
+zcat $f1 > ${f1}.fifo &
+
+mkfifo ${f2}.fifo
+zcat $f2 > ${f2}.fifo &
+        
+bowtie $option -S $tag $bowtie1_index ${f1}.fifo,${f2}.fifo $samFile
+ 
+rm ${f1}.fifo
+rm ${f2}.fifo
+";
       }
     }
     else {
