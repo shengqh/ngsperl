@@ -48,12 +48,12 @@ sub perform {
     my $bowtie1_aln_command;
     if ( $sampleFiles[0] =~ /.gz$/ ) {
       if(scalar(@sampleFiles) == 1){
-        $bowtie1_aln_command = "zcat $sampleFiles[0] | bowtie $option -S $bowtie1_index $tag -S $samFile -"
+        $bowtie1_aln_command = "zcat $sampleFiles[0] | bowtie $option -S $tag $bowtie1_index - $samFile"
       }
     }
     else {
       my $fastqs = join( ',', @sampleFiles );
-      $bowtie1_aln_command = "bowtie $option -S $bowtie1_index $tag -S $samFile $fastqs";
+      $bowtie1_aln_command = "bowtie $option -S $tag $bowtie1_index $fastqs $samFile ";
     }
 
     my $pbsName = "${sampleName}_bt1.pbs";
