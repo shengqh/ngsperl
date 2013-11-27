@@ -26,8 +26,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $submit = get_submit($sh_direct);
-
   my $genome2bit = get_param_file( $config->{$section}{genome2bit}, "genome2bit", 1 );
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
