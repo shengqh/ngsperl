@@ -47,7 +47,7 @@ sub perform {
 
     open( OUT, ">$pbsFile" ) or die $!;
 
-    my $finalFile = $ispaired ? $sampleName . ".1.fastq" : $sampleName . ".fastq";
+    my $finalFile = $ispaired ? $sampleName . "_1.fastq" : $sampleName . ".fastq";
     print OUT "$pbsDesc
 #PBS -o $log
 #PBS -j oe
@@ -59,7 +59,7 @@ cd $resultDir
 echo started=`date`
 
 if [ ! -s $finalFile ]; then
-  bam2fastq -o ${sampleName}.#.fastq $bamfile
+  bam2fastq -o ${sampleName}#.fastq $bamfile
 fi
 
 echo finished=`date`
