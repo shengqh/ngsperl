@@ -34,6 +34,8 @@ sub perform {
   print SH get_run_command($sh_direct) . "\n";
 
   for my $sampleName ( sort keys %rawFiles ) {
+    my $curDir      = create_directory_or_die( $resultDir . "/$sampleName" );
+
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $bamfile     = $sampleFiles[0];
 
@@ -41,7 +43,7 @@ sub perform {
     my $pbsFile = "${pbsDir}/$pbsName";
 
     my $iniFile = "${sampleName}.ini";
-    open( INI, ">${resultDir}/${iniFile}" ) or die "Cannot create ${resultDir}/${iniFile}";
+    open( INI, ">${$curDir}/${iniFile}" ) or die "Cannot create ${$curDir}/${iniFile}";
     print INI "
 BANDWIDTH=3
 CONVERSION=T>C
@@ -76,7 +78,7 @@ OUTPUT_CLUSTERS_FILE=${sampleName}.cluster.tsv
 #PBS -o $log
 #PBS -j oe
 
-cd $resultDir
+cd $curDir
 
 echo PARalyzer_started=`date`
 
