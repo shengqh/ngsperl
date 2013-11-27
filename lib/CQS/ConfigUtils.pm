@@ -218,6 +218,16 @@ sub get_run_command {
     return ("MYCMD=\"bash\" \n");
   }
   else {
+    return ("MYCMD=\"qsub\" \n");
+  }
+}
+
+sub get_run_command_old {
+  my $sh_direct = shift;
+  if ($sh_direct) {
+    return ("MYCMD=\"bash\" \n");
+  }
+  else {
     return ("type -P qsub &>/dev/null && MYCMD=\"qsub\" || MYCMD=\"bash\" \n");
   }
 }
