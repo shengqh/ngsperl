@@ -43,7 +43,7 @@ sub perform {
     my $pbsFile = "${pbsDir}/$pbsName";
 
     my $iniFile = "${sampleName}.ini";
-    open( INI, ">${$curDir}/${iniFile}" ) or die "Cannot create ${$curDir}/${iniFile}";
+    open( INI, ">${curDir}/${iniFile}" ) or die "Cannot create ${curDir}/${iniFile}";
     print INI "
 BANDWIDTH=3
 CONVERSION=T>C
