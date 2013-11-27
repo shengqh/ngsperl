@@ -27,6 +27,7 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $ispaired = get_option( $config, $section, "ispaired", 0 );
+  my $unzipped = get_option( $config, $section, "unzipped", 0 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -48,6 +49,10 @@ sub perform {
     open( OUT, ">$pbsFile" ) or die $!;
 
     my $finalFile = $ispaired ? $sampleName . "_1.fastq" : $sampleName . ".fastq";
+    if(!$unzipped){
+      $finalFile = $finalFile . ".gz";
+    }
+    
     print OUT "$pbsDesc
 #PBS -o $log
 #PBS -j oe
@@ -60,6 +65,16 @@ echo started=`date`
 
 if [ ! -s $finalFile ]; then
   bam2fastq -o ${sampleName}#.fastq $bamfile
+";
+    if(!$unzipped){
+      if($ispaired){
+        print OUT "  gzip ${sampleName}_1.fastq
+  gzip ${sampleName}_2.fastq ";
+      }else{
+        print OUT "  gzip ${sampleName}.fastq";
+      }
+    }
+    print OUT "
 fi
 
 echo finished=`date`
@@ -97,12 +112,12 @@ sub result {
     my @resultFiles = ();
     if ($ispaired) {
       if ($unzipped) {
-        push( @resultFiles, $resultDir . "/" . $sampleName . ".1.fastq" );
-        push( @resultFiles, $resultDir . "/" . $sampleName . ".2.fastq" );
+        push( @resultFiles, $resultDir . "/" . $sampleName . "_1.fastq" );
+        push( @resultFiles, $resultDir . "/" . $sampleName . "_2.fastq" );
       }
       else {
-        push( @resultFiles, $resultDir . "/" . $sampleName . ".1.fastq.gz" );
-        push( @resultFiles, $resultDir . "/" . $sampleName . ".2.fastq.gz" );
+        push( @resultFiles, $resultDir . "/" . $sampleName . "_1.fastq.gz" );
+        push( @resultFiles, $resultDir . "/" . $sampleName . "_2.fastq.gz" );
       }
     }
     else {
