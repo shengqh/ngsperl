@@ -59,7 +59,7 @@ cd $resultDir
 echo started=`date`
 
 if [ ! -s $finalFile ]; then
-  bam2fastq -o ${sampleName}.#.fastq
+  bam2fastq -o ${sampleName}.#.fastq $bamfile
 fi
 
 echo finished=`date`
