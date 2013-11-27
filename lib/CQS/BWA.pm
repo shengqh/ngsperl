@@ -27,6 +27,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
+  $option = $option . " -M";
+  
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
