@@ -64,7 +64,7 @@ GENOME_2BIT_FILE=$genome2bit
 
 OUTPUT_DISTRIBUTIONS_FILE=${sampleName}.distribution.csv
 OUTPUT_GROUPS_FILE=${sampleName}.groups.csv
-OUTPUT_CLUSTERS_FILE=${sampleName}.cluster.tsv
+OUTPUT_CLUSTERS_FILE=${sampleName}.cluster.csv
     
 ";
     close(INI);
