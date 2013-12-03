@@ -26,10 +26,10 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $adapt     = get_option($config, $section, "adaptor");
-  my $extension = get_option($config, $section, "extension");
-  my $gzipped = get_option($config, $section, "gzipped", 1);
-  
+  my $adapt     = get_option( $config, $section, "adaptor" );
+  my $extension = get_option( $config, $section, "extension" );
+  my $gzipped   = get_option( $config, $section, "gzipped", 1 );
+
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $pbsDir . "/${task_name}_cutadapt.sh";
@@ -38,14 +38,14 @@ sub perform {
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
-    
-    my $finalName = $sampleName . $extension;
-    my $finalShortName  = $sampleName . ".short" . $extension;
-    my $finalUntrimName  = $sampleName . ".untrimmed" . $extension;
-    
-    my $finalFile   = $gzipped? "${finalName}.gz" : $finalName;
-    my $finalShortFile   = $gzipped? "${finalShortName}.gz" : $finalShortName;
-    my $finalUntrimFile   = $gzipped? "${finalUntrimName}.gz" : $finalUntrimName;
+
+    my $finalName       = $sampleName . $extension;
+    my $finalShortName  = $finalName . ".short";
+    my $finalUntrimName = $finalName . ".untrimmed";
+
+    my $finalFile       = $gzipped ? "${finalName}.gz"       : $finalName;
+    my $finalShortFile  = $gzipped ? "${finalShortName}.gz"  : $finalShortName;
+    my $finalUntrimFile = $gzipped ? "${finalUntrimName}.gz" : $finalUntrimName;
 
     my $pbsName = "${sampleName}_cut.pbs";
     my $pbsFile = "${pbsDir}/$pbsName";
@@ -74,15 +74,15 @@ fi
     }
     else {
       my $outputFiles = "";
-      my $shortFiles = "";
+      my $shortFiles  = "";
       my $untrimFiles = "";
       for my $sampleFile (@sampleFiles) {
-        my $fileName = basename($sampleFile);
+        my $fileName   = basename($sampleFile);
         my $outputFile = change_extension( $fileName, $extension );
-        my $shortFile = $outputFile . ".short";
+        my $shortFile  = $outputFile . ".short";
         my $untrimFile = $outputFile . ".untrimed";
         $outputFiles = $outputFiles . " " . $outputFile;
-        $shortFiles = $shortFiles . " " . $shortFile;
+        $shortFiles  = $shortFiles . " " . $shortFile;
         $untrimFiles = $untrimFiles . " " . $untrimFile;
         print OUT "cutadapt $sampleFile $option -a $adapt -o $outputFile --too-short-output=$shortFile --untrimmed-output=$untrimFile \n";
       }
@@ -97,7 +97,7 @@ rm $untrimFiles
 ";
 
     }
-    if($gzipped){
+    if ($gzipped) {
       print OUT "
 gzip $finalName
 gzip $finalShortName
@@ -131,19 +131,19 @@ sub result {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $extension = $config->{$section}{extension} or die "define ${section}::extension first";
-  my $gzipped = get_option($config, $section, "gzipped", 1);
+  my $gzipped = get_option( $config, $section, "gzipped", 1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my $finalName = $sampleName . $extension;
-    my $finalShortName  = $sampleName . ".short" . $extension;
-    my $finalUntrimName  = $sampleName . ".untrimmed" . $extension;
-    
-    my $finalFile   = $gzipped? "${finalName}.gz" : $finalName;
-    my $finalShortFile   = $gzipped? "${finalShortName}.gz" : $finalShortName;
-    my $finalUntrimFile   = $gzipped? "${finalUntrimName}.gz" : $finalUntrimName;
+    my $finalName       = $sampleName . $extension;
+    my $finalShortName  = $finalName . ".short";
+    my $finalUntrimName = $finalName . ".untrimmed";
+
+    my $finalFile       = $gzipped ? "${finalName}.gz"       : $finalName;
+    my $finalShortFile  = $gzipped ? "${finalShortName}.gz"  : $finalShortName;
+    my $finalUntrimFile = $gzipped ? "${finalUntrimName}.gz" : $finalUntrimName;
 
     my @resultFiles = ();
     push( @resultFiles, $resultDir . "/" . $finalFile );
