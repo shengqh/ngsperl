@@ -91,7 +91,7 @@ fi
         if ($fileName =~ /.fastq$/){
            $fileName = change_extension( $fileName, "" );
         }
-        my $outputFile = change_extension( $fileName, $extension );
+        my $outputFile = $fileName . $extension;
         $outputFiles = $outputFiles . " " . $outputFile;
         print OUT "mono-sgen $cqstools fastq_identical -i $sampleFile $minlen -o $outputFile \n";
       }
