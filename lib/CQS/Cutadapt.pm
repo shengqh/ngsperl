@@ -26,8 +26,9 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $adapt     = $config->{$section}{adaptor}   or die "define ${section}::adaptor first";
-  my $extension = $config->{$section}{extension} or die "define ${section}::extension first";
+  my $adapt     = get_option($config, $section, "adaptor");
+  my $extension = get_option($config, $section, "extension");
+  my $gzipped = get_option($config, $section, "gzipped", 1);
   
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -37,9 +38,14 @@ sub perform {
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my $finalFile   = $sampleName . $extension;
-    my $finalShortFile  = $sampleName . ".short" . $extension;
-    my $finalUntrimFile  = $sampleName . ".untrimmed" . $extension;
+    
+    my $finalName = $sampleName . $extension;
+    my $finalShortName  = $sampleName . ".short" . $extension;
+    my $finalUntrimName  = $sampleName . ".untrimmed" . $extension;
+    
+    my $finalFile   = $gzipped? "${finalName}.gz" : $finalName;
+    my $finalShortFile   = $gzipped? "${finalShortName}.gz" : $finalShortName;
+    my $finalUntrimFile   = $gzipped? "${finalUntrimName}.gz" : $finalUntrimName;
 
     my $pbsName = "${sampleName}_cut.pbs";
     my $pbsFile = "${pbsDir}/$pbsName";
@@ -58,13 +64,13 @@ $path_file
 cd $resultDir
 
 if [ -s $finalFile ];then
-  echo job has already been done. if you want to do again, delete ${resultDir}/${finalFile} and submit job again.
+  echo job has already been done. if you want to do again, delete ${resultDir}/$finalFile and submit job again.
   exit 1;
 fi
 
 ";
     if ( scalar(@sampleFiles) == 1 ) {
-      print OUT "cutadapt $sampleFiles[0] $option -a $adapt -o $finalFile --too-short-output=$finalShortFile --untrimmed-output=$finalUntrimFile \n";
+      print OUT "cutadapt $sampleFiles[0] $option -a $adapt -o $finalName --too-short-output=$finalShortName --untrimmed-output=$finalUntrimName \n";
     }
     else {
       my $outputFiles = "";
@@ -82,12 +88,20 @@ fi
       }
 
       print OUT "
-cat $outputFiles > $finalFile
+cat $outputFiles > $finalName
 rm $outputFiles
-cat $shortFiles > $finalShortFile
+cat $shortFiles > $finalShortName
 rm $shortFiles
-cat $untrimFiles > $finalUntrimFile
+cat $untrimFiles > $finalUntrimName
 rm $untrimFiles
+";
+
+    }
+    if($gzipped){
+      print OUT "
+gzip $finalName
+gzip $finalShortName
+gzip $finalUntrimName
 ";
     }
     print OUT "
@@ -117,14 +131,20 @@ sub result {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $extension = $config->{$section}{extension} or die "define ${section}::extension first";
+  my $gzipped = get_option($config, $section, "gzipped", 1);
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my $finalFile   = $sampleName . $extension;
-    my $finalShortFile  = $sampleName . ".short" . $extension;
-    my $finalUntrimFile  = $sampleName . ".untrimmed" . $extension;
+    my $finalName = $sampleName . $extension;
+    my $finalShortName  = $sampleName . ".short" . $extension;
+    my $finalUntrimName  = $sampleName . ".untrimmed" . $extension;
+    
+    my $finalFile   = $gzipped? "${finalName}.gz" : $finalName;
+    my $finalShortFile   = $gzipped? "${finalShortName}.gz" : $finalShortName;
+    my $finalUntrimFile   = $gzipped? "${finalUntrimName}.gz" : $finalUntrimName;
+
     my @resultFiles = ();
     push( @resultFiles, $resultDir . "/" . $finalFile );
     push( @resultFiles, $resultDir . "/" . $finalShortFile );
