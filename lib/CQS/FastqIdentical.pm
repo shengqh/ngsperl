@@ -87,7 +87,7 @@ fi
         my $fileName = basename($sampleFile);
         my $outputFile = change_extension( $fileName, $extension );
         $outputFiles = $outputFiles . " " . $outputFile;
-        print OUT "mono-sgen $cqstools fastq_identical -i $sampleFiles[0] $minlen -o $outputFile \n";
+        print OUT "mono-sgen $cqstools fastq_identical -i $sampleFile $minlen -o $outputFile \n";
       }
 
       if ($merge_result) {
