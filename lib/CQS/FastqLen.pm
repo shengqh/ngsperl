@@ -41,6 +41,9 @@ sub perform {
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
+    
+    my $joinFiles = join(@sampleFiles, ",");
+    
     my $sampleFile  = $sampleFiles[0];
     my $filename    = basename($sampleFile);
     my $finalFile   = $filename . ".len";
@@ -66,7 +69,7 @@ if [ -s $finalFile ]; then
   exit 1;
 fi
 
-mono-sgen $cqstools fastq_len -i $sampleFile -o $finalFile
+mono-sgen $cqstools fastq_len -i $joinFiles -o $finalFile
 
 echo finished=`date`
 
