@@ -44,6 +44,8 @@ sub perform {
     
     my $joinFiles = join(',', @sampleFiles);
     
+    print "joinFiles=" . $joinFiles;
+    
     my $sampleFile  = $sampleFiles[0];
     my $filename    = basename($sampleFile);
     my $finalFile   = $filename . ".len";
