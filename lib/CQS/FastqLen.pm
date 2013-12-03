@@ -42,9 +42,7 @@ sub perform {
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     
-    my $joinFiles = merge_string(';', @sampleFiles);
-    
-    die $joinFiles;
+    my $joinFiles = join(',', @sampleFiles);
     
     my $sampleFile  = $sampleFiles[0];
     my $filename    = basename($sampleFile);
