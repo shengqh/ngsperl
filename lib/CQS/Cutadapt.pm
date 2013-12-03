@@ -38,6 +38,8 @@ sub perform {
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $finalFile   = $sampleName . $extension;
+    my $finalShortFile  = $sampleName . ".short" . $extension;
+    my $finalUntrimFile  = $sampleName . ".untrimmed" . $extension;
 
     my $pbsName = "${sampleName}_cut.pbs";
     my $pbsFile = "${pbsDir}/$pbsName";
@@ -62,21 +64,30 @@ fi
 
 ";
     if ( scalar(@sampleFiles) == 1 ) {
-      print OUT "cutadapt $sampleFiles[0] $option -a $adapt -o $finalFile \n";
+      print OUT "cutadapt $sampleFiles[0] $option -a $adapt -o $finalFile --too-short-output=$finalShortFile --untrimmed-output=$finalUntrimFile \n";
     }
     else {
       my $outputFiles = "";
+      my $shortFiles = "";
+      my $untrimFiles = "";
       for my $sampleFile (@sampleFiles) {
         my $fileName = basename($sampleFile);
         my $outputFile = change_extension( $fileName, $extension );
+        my $shortFile = $outputFile . ".short";
+        my $untrimFile = $outputFile . ".untrimed";
         $outputFiles = $outputFiles . " " . $outputFile;
-        print OUT "cutadapt $sampleFile $option -a $adapt -o $outputFile \n";
+        $shortFiles = $shortFiles . " " . $shortFile;
+        $untrimFiles = $untrimFiles . " " . $untrimFile;
+        print OUT "cutadapt $sampleFile $option -a $adapt -o $outputFile --too-short-output=$shortFile --untrimmed-output=$untrimFile \n";
       }
 
       print OUT "
 cat $outputFiles > $finalFile
- 
 rm $outputFiles
+cat $shortFiles > $finalShortFile
+rm $shortFiles
+cat $untrimFiles > $finalUntrimFile
+rm $untrimFiles
 ";
     }
     print OUT "
@@ -112,8 +123,12 @@ sub result {
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
     my $finalFile   = $sampleName . $extension;
+    my $finalShortFile  = $sampleName . ".short" . $extension;
+    my $finalUntrimFile  = $sampleName . ".untrimmed" . $extension;
     my @resultFiles = ();
     push( @resultFiles, $resultDir . "/" . $finalFile );
+    push( @resultFiles, $resultDir . "/" . $finalShortFile );
+    push( @resultFiles, $resultDir . "/" . $finalUntrimFile );
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
