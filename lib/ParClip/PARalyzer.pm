@@ -27,6 +27,7 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $genome2bit = get_param_file( $config->{$section}{genome2bit}, "genome2bit", 1 );
+  my $mirna_db = get_param_file( $config->{$section}{mirna_db}, "mirna_db", 1 );
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $pbsDir . "/${task_name}_pz.sh";
@@ -61,10 +62,12 @@ ADDITIONAL_NUCLEOTIDES_BEYOND_SIGNAL=5
 
 BOWTIE_FILE=$bamfile
 GENOME_2BIT_FILE=$genome2bit
+FIND_MIRNA_SEEDMATCHES=$mirna_db
 
 OUTPUT_DISTRIBUTIONS_FILE=${sampleName}.distribution.csv
 OUTPUT_GROUPS_FILE=${sampleName}.groups.csv
 OUTPUT_CLUSTERS_FILE=${sampleName}.cluster.csv
+OUTPUT_MIRNA_TARGETS_FILE=${sampleName}.target.csv
     
 ";
     close(INI);
