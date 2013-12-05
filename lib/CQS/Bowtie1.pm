@@ -114,7 +114,7 @@ $bowtie1_aln_command
 if [ -s $samFile ]; then
 ";
         if ($sortbam) {
-          print OUT "samtools view -S -b $samFile | samtools sort - $sampleName
+          print OUT "  samtools view -S -b $samFile | samtools sort - $sampleName
   samtools index $bamFile 
   samtools flagstat $bamFile > ${bamFile}.stat
 ";
