@@ -28,26 +28,21 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $markDuplicates_jar = get_param_file( $config->{$section}{markDuplicates_jar}, "markDuplicates_jar", 1 );
-  my $thread_count       = $config->{$section}{thread_count};
+  my $thread_count = $config->{$section}{thread_count};
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $pbsDir . "/${task_name}_rf.sh";
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  if ($sh_direct) {
-    print SH "export MYCMD=\"bash\" \n";
-  }
-  else {
-    print SH "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
-  }
+  print SH get_run_command($sh_direct) . "\n";
 
   for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles   = @{ $rawFiles{$sampleName} };
-    my $sampleFile    = $sampleFiles[0];
-    
-    my $rmdupFile     = change_extension( $sampleName, ".rmdup.bam" );
-    my $sortedPrefix  = change_extension( $rmdupFile, "_sorted" );
-    my $sortedFile    = $sortedPrefix . ".bam";
+    my @sampleFiles = @{ $rawFiles{$sampleName} };
+    my $sampleFile  = $sampleFiles[0];
+
+    my $rmdupFile    = $sampleName . ".rmdup.bam";
+    my $sortedPrefix = $sampleName . ".rmdup_sorted";
+    my $sortedFile   = $sortedPrefix . ".bam";
 
     my $pbsName = "${sampleName}_rf.pbs";
     my $pbsFile = "${pbsDir}/$pbsName";
@@ -113,16 +108,11 @@ sub result {
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my $sampleFile    = $sampleFiles[0];
-    
-    my $rmdupFile     = change_extension( $sampleName, ".rmdup.bam" );
-    my $sortedPrefix  = change_extension( $rmdupFile, "_sorted" );
-    my $sortedFile    = $sortedPrefix . ".bam";
+    my $sortedFile   = $sampleName . ".rmdup_sorted.bam";
 
     my @resultFiles = ();
     push( @resultFiles, "${resultDir}/${sampleName}/${sortedFile}" );
-    
+
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
