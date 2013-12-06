@@ -32,7 +32,7 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $pbsDir . "/${task_name}_rf.sh";
+  my $shfile = $pbsDir . "/${task_name}_rd.sh";
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
 
@@ -44,10 +44,10 @@ sub perform {
     my $sortedPrefix = $sampleName . ".rmdup_sorted";
     my $sortedFile   = $sortedPrefix . ".bam";
 
-    my $pbsName = "${sampleName}_rf.pbs";
+    my $pbsName = "${sampleName}_rd.pbs";
     my $pbsFile = "${pbsDir}/$pbsName";
     my $curDir  = create_directory_or_die( $resultDir . "/$sampleName" );
-    my $log     = "${logDir}/${sampleName}_rf.log";
+    my $log     = "${logDir}/${sampleName}_rd.log";
 
     print SH "\$MYCMD ./$pbsName \n";
 
