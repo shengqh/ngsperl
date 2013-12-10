@@ -13,15 +13,14 @@ library("reshape")
 library("ggplot2")
 library("grid")
 
-data[is.na(data)] <- 0
-data<-round(data)
-
 hmcols <- colorRampPalette(c("green", "black", "red"))(256)
 
 countData<-data
 while(! is.numeric(countData[1,1])){
 	countData<-countData[,c(2:ncol(countData))]
 }
+countData[is.na(countData)] <- 0
+countData<-round(countData)
 
 pairnames=names(pairs)
 pairname=pairnames[1]
