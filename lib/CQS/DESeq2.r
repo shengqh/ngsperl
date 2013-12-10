@@ -13,6 +13,8 @@ library("reshape")
 library("ggplot2")
 library("grid")
 
+data[is.na(data)] <- 0
+
 hmcols <- colorRampPalette(c("green", "black", "red"))(256)
 
 hasname <- (! is.numeric(data[1,1]))
