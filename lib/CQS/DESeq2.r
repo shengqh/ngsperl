@@ -16,8 +16,12 @@ library("grid")
 hmcols <- colorRampPalette(c("green", "black", "red"))(256)
 
 countData<-data
+index<-1
+indecies<-c()
 while(! is.numeric(countData[1,1])){
 	countData<-countData[,c(2:ncol(countData))]
+	indecies<-c(indecies, index)
+	index<-index+1
 }
 countData[is.na(countData)] <- 0
 countData<-round(countData)
@@ -62,8 +66,8 @@ for(pairname in pairnames){
 	
 	select<- (!is.na(res$padj)) & (res$padj<0.05) & ((res$log2FoldChange >= 1) | (res$log2FoldChange <= -1))
 	
-	if(hasname){
-		tbb<-cbind(data[,1,drop=F], pairCountData, res)
+	if(length(indecies) > 0){
+		tbb<-cbind(data[,indecies,drop=F], pairCountData, res)
 	}else{
 		tbb<-cbind(pairCountData, res)
 	}
