@@ -18,11 +18,9 @@ data<-round(data)
 
 hmcols <- colorRampPalette(c("green", "black", "red"))(256)
 
-hasname <- (! is.numeric(data[1,1]))
-if(hasname){
-	countData<-data[,c(2:ncol(data))]
-}else{
-	countData<-data
+countData<-data
+while(! is.numeric(countData[1,1])){
+	countData<-countData[,c(2:ncol(countData))]
 }
 
 pairnames=names(pairs)
