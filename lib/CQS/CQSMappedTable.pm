@@ -91,17 +91,17 @@ sub result {
   if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
     my $groups = get_raw_files( $config, $section, "groups" );
     for my $groupName ( sort keys %{$groups} ) {
-      my $filelist   = "${pbsDir}/${prefix}${task_name}_${groupName}${suffix}_mt.filelist";
       my $resultFile = "${resultDir}/${prefix}${task_name}_${groupName}${suffix}.count";
-      push( @resultFiles, $filelist );
+      my $filelist   = "${pbsDir}/${prefix}${task_name}_${groupName}${suffix}_mt.filelist";
       push( @resultFiles, $resultFile );
+      push( @resultFiles, $filelist );
     }
   }
   else {
-    my $filelist   = "${pbsDir}/${prefix}${task_name}${suffix}_mt.filelist";
     my $resultFile = "${resultDir}/${prefix}${task_name}${suffix}.count";
-    push( @resultFiles, $filelist );
+    my $filelist   = "${pbsDir}/${prefix}${task_name}${suffix}_mt.filelist";
     push( @resultFiles, $resultFile );
+    push( @resultFiles, $filelist );
   }
 
   $result->{$task_name} = filter_array( \@resultFiles, $pattern );
