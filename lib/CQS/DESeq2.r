@@ -14,6 +14,7 @@ library("ggplot2")
 library("grid")
 
 data[is.na(data)] <- 0
+data<-round(data)
 
 hmcols <- colorRampPalette(c("green", "black", "red"))(256)
 
