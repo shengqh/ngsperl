@@ -29,9 +29,11 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $pairs = get_raw_files( $config, $section );
+  my $totalPair = scalar(keys %{$pairs});
+  if(0 == $totalPair){
+    die "No pair defined!";
+  }
   
-  print "Pairs = ", %{$pairs};
-
   my $groups = get_raw_files( $config, $section, "groups" );
 
   my $countfile = parse_param_file( $config, $section, "countfile", 1 );
@@ -57,7 +59,6 @@ data<-read.table(\"$countfile\",row.names=1, header=T, check.names=F)
 pairs=list(
 ";
   my $first = 0;
-  my $totalGroup = scalar(keys %{$pairs});
   for my $pairName ( sort keys %{$pairs} ) {
     $first ++;
     my @groupNames = @{ $pairs->{$pairName} };
@@ -71,7 +72,7 @@ pairs=list(
     my $s1 = $tpgroups{$g1};
     my $s2 = $tpgroups{$g2};
     print RF "  \"$pairName\" = list(\"$g1\" = c($s1), \"$g2\" = c($s2))";
-    if ( $first != $totalGroup) {
+    if ( $first != $totalPair) {
       print RF ", \n";
     }
     else{
