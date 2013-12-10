@@ -29,6 +29,8 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $pairs = get_raw_files( $config, $section );
+  
+  print %{$pairs};
 
   my $groups = get_raw_files( $config, $section, "groups" );
 
