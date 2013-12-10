@@ -30,7 +30,7 @@ sub perform {
 
   my $pairs = get_raw_files( $config, $section );
   
-  print %{$pairs};
+  print "Pairs = ", %{$pairs};
 
   my $groups = get_raw_files( $config, $section, "groups" );
 
