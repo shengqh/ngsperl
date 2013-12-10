@@ -29,15 +29,8 @@ sub perform {
 
   my $cqsFile = get_param_file( $config->{$section}{cqs_tools}, "cqs_tools", 1 );
 
-  my $prefix = $config->{$section}{prefix};
-  if ( !defined $prefix ) {
-    $prefix = "";
-  }
-
-  my $suffix = $config->{$section}{suffix};
-  if ( !defined $suffix ) {
-    $suffix = "";
-  }
+  my $prefix = get_option( $config, $section, "prefix", "" );
+  my $suffix = get_option( $config, $section, "suffix", "" );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
   my $shfile = $pbsDir . "/${prefix}${task_name}${suffix}_mt.sh";
@@ -89,14 +82,27 @@ sub result {
   my ( $self, $config, $section, $pattern ) = @_;
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
+  my $prefix = get_option( $config, $section, "prefix", "" );
+  my $suffix = get_option( $config, $section, "suffix", "" );
+
   my $result = {};
-  my ( $resultFile, $newoption ) = get_result( $task_name, $option );
-  $resultFile = $resultDir . "/" . $resultFile;
-  my $filelist = $resultDir . "/${task_name}.filelist";
 
   my @resultFiles = ();
-  push( @resultFiles, $resultFile );
-  push( @resultFiles, $filelist );
+  if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
+    my $groups = get_raw_files( $config, $section, "groups" );
+    for my $groupName ( sort keys %{$groups} ) {
+      my $filelist   = "${pbsDir}/${prefix}${task_name}_${groupName}${suffix}_mt.filelist";
+      my $resultFile = "${resultDir}/${prefix}${task_name}_${groupName}${suffix}.count";
+      push( @resultFiles, $filelist );
+      push( @resultFiles, $resultFile );
+    }
+  }
+  else {
+    my $filelist   = "${pbsDir}/${prefix}${task_name}${suffix}_mt.filelist";
+    my $resultFile = "${resultDir}/${prefix}${task_name}${suffix}.count";
+    push( @resultFiles, $filelist );
+    push( @resultFiles, $resultFile );
+  }
 
   $result->{$task_name} = filter_array( \@resultFiles, $pattern );
 
