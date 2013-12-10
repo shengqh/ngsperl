@@ -28,7 +28,7 @@ sub perform {
 
   my $adapt     = get_option( $config, $section, "adaptor" );
   my $extension = get_option( $config, $section, "extension" );
-  my $gzipped   = get_option( $config, $section, "gzipped", 1 );
+  my $gzipped   = get_option( $config, $section, "gzipped", 0 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -137,18 +137,20 @@ sub result {
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my $finalName       = $sampleName . $extension;
-    my $finalShortName  = $finalName . ".short";
-    my $finalUntrimName = $finalName . ".untrimmed";
+    my $finalName = $sampleName . $extension;
 
-    my $finalFile       = $gzipped ? "${finalName}.gz"       : $finalName;
-    my $finalShortFile  = $gzipped ? "${finalShortName}.gz"  : $finalShortName;
-    my $finalUntrimFile = $gzipped ? "${finalUntrimName}.gz" : $finalUntrimName;
+    my $finalFile = $gzipped ? "${finalName}.gz" : $finalName;
 
     my @resultFiles = ();
     push( @resultFiles, $resultDir . "/" . $finalFile );
-    push( @resultFiles, $resultDir . "/" . $finalShortFile );
-    push( @resultFiles, $resultDir . "/" . $finalUntrimFile );
+    if ( $option !~ "-M" ) {
+      my $finalShortName  = $finalName . ".short";
+      my $finalUntrimName = $finalName . ".untrimmed";
+      my $finalShortFile  = $gzipped ? "${finalShortName}.gz" : $finalShortName;
+      my $finalUntrimFile = $gzipped ? "${finalUntrimName}.gz" : $finalUntrimName;
+      push( @resultFiles, $resultDir . "/" . $finalShortFile );
+      push( @resultFiles, $resultDir . "/" . $finalUntrimFile );
+    }
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
