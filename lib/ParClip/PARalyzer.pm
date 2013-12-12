@@ -117,9 +117,10 @@ sub result {
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
     my @resultFiles = ();
-    push( @resultFiles, "${resultDir}/${sampleName}.distribution.csv" );
-    push( @resultFiles, "${resultDir}/${sampleName}.groups.csv" );
-    push( @resultFiles, "${resultDir}/${sampleName}.cluster.csv" );
+    push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}.cluster.csv" );
+    push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}.distribution.csv" );
+    push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}.groups.csv" );
+    push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}.target.csv" );
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
