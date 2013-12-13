@@ -28,7 +28,7 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $cqsFile   = get_param_file( $config->{$section}{cqstools},  "cqstools",  1 );
-  my $gffFile   = get_param_file( $config->{$section}{gff_file},   "gff_file",   1 );
+  my $corFiles   = $config->{$section}{coordinate_files} or die "define coordinate_files (array) in section $section first!";
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -39,8 +39,10 @@ sub perform {
     my @bamFiles  = @{ $rawFiles{$sampleName} };
     my $bamFile   = $bamFiles[0];
     my $annFile = change_extension($bamFile, ".ann.csv");
+    
+    my $cfiles = join(@{$corFiles}, ',');
 
-    print SH "mono-sgen $cqsFile paralyzer_annotation $option -i $bamFile -g $gffFile -o $annFile
+    print SH "mono-sgen $cqsFile paralyzer_annotation $option -i $bamFile -c $cfiles -o $annFile
 ";
   }
   close(SH);
