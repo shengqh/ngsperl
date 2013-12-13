@@ -40,7 +40,7 @@ sub perform {
     my $bamFile   = $bamFiles[0];
     my $annFile = change_extension($bamFile, ".ann.csv");
     
-    my $cfiles = join(@{$corFiles}, ',');
+    my $cfiles = merge_string(',', @{$corFiles});
 
     print SH "mono-sgen $cqsFile paralyzer_annotation $option -i $bamFile -c $cfiles -o $annFile
 ";
