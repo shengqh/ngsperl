@@ -45,12 +45,7 @@ sub perform {
 
   my $shfile = $pbsDir . "/${task_name}_IQB.sh";
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  if ($sh_direct) {
-    print SH "export MYCMD=\"bash\" \n";
-  }
-  else {
-    print SH "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
-  }
+  print SH get_run_command($sh_direct) . "\n";
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
@@ -79,7 +74,7 @@ fi
 
 ";
     if ( scalar(@sampleFiles) == 1 ) {
-      print OUT "mono-sgen $cqstools fastq_identical -i $sampleFiles[0] $minlen -o $finalFile \n";
+      print OUT "mono-sgen $cqstools fastq_identical $option -i $sampleFiles[0] $minlen -o $finalFile \n";
     }
     else {
       my $outputFiles = "";
