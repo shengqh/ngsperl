@@ -38,10 +38,7 @@ sub perform {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     
     my $joinFiles = join(',', @sampleFiles);
-    
-    my $sampleFile  = $sampleFiles[0];
-    my $filename    = basename($sampleFile);
-    my $finalFile   = $filename . ".len";
+    my $finalFile   = $sampleName . ".len";
 
     my $pbsName = "${sampleName}_flen.pbs";
     my $pbsFile = "${pbsDir}/$pbsName";
@@ -95,10 +92,7 @@ sub result {
 
   my $result = {};
   for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my $sampleFile  = $sampleFiles[0];
-    my $filename    = basename($sampleFile);
-    my $finalFile   = $resultDir . "/" . $filename . ".len";
+    my $finalFile   = $resultDir . "/" . $sampleName . ".len";
 
     my @resultFiles = ();
 
