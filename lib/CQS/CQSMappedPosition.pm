@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "CQSMappedPosition";
+  $self->{_name} = "CQS::CQSMappedPosition";
   bless $self, $class;
   return $self;
 }
