@@ -27,7 +27,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my $rawFiles = get_raw_files( $config, $section );
   my $groups = get_raw_files( $config, $section, "groups" );
   my $pairs = get_raw_files( $config, $section, "pairs" );
   my $rockhopper_jar = get_param_file( $config->{$section}{rockhopper_jar}, "rockhopper_jar", 1 );
@@ -41,7 +41,6 @@ sub perform {
     foreach my $sampleName ( sort @samples ) {
       my @fastqFiles = @{ $rawFiles->{$sampleName} };
       push( @gfiles, join('%', @fastqFiles) );
-      my $group_index = $groupName . "_" . $index;
     }
     $tpgroups{$groupName} = join( ",", @gfiles );
   }
