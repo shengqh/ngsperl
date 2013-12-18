@@ -78,7 +78,7 @@ if [ -s gene_exp.diff ];then
   exit 1;
 fi
 
-java $java_option -cp $rockhopper_jar RockHopper -g $genome_dir -L $labels -o $curDir $fastqstrs
+java $java_option -cp $rockhopper_jar Rockhopper -g $genome_dir -L $labels -o $curDir $fastqstrs
 
 echo finished=`date`
 
