@@ -45,9 +45,9 @@ sub perform {
     $tpgroups{$groupName} = join( ",", @gfiles );
   }
 
-  my $shfile = $pbsDir . "/${task_name}.submit";
+  my $shfile = $pbsDir . "/${task_name}.sh";
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print get_run_command($sh_direct), "\n";
+  print SH get_run_command($sh_direct), "\n";
 
   for my $pairName ( sort keys %{$pairs} ) {
     my @groupNames = @{ $pairs->{$pairName} };
