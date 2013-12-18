@@ -86,12 +86,6 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $extension = $config->{$section}{extension} or die "define ${section}::extension first";
-  my $merge_result = $config->{$section}{merge_result};
-  if ( !defined $merge_result ) {
-    $merge_result = 0;
-  }
-
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
