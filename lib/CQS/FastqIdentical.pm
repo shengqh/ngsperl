@@ -26,13 +26,11 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $cqstools  = $config->{$section}{cqstools}  or die "define ${section}::cqstools first";
-  my $extension = $config->{$section}{extension} or die "define ${section}::extension first";
+  my $cqstools  = get_param_file($config->{$section}{cqstools}, "cqstools", 1);
+  my $extension = get_option($config, $section, "extension");
 
-  my $merge_result = $config->{$section}{merge_result};
-  if ( !defined $merge_result ) {
-    $merge_result = 0;
-  }
+  my $merge_result = get_option( $config, $section, "merge_result", 0 );
+
   my $minlen = $config->{$section}{minlen};
   if ( defined $minlen ) {
     $minlen = "-l $minlen";
@@ -80,11 +78,11 @@ fi
       my $outputFiles = "";
       for my $sampleFile (@sampleFiles) {
         my $fileName = basename($sampleFile);
-        if ($fileName =~ /.gz$/){
-           $fileName = change_extension( $fileName, "" );
+        if ( $fileName =~ /.gz$/ ) {
+          $fileName = change_extension( $fileName, "" );
         }
-        if ($fileName =~ /.fastq$/){
-           $fileName = change_extension( $fileName, "" );
+        if ( $fileName =~ /.fastq$/ ) {
+          $fileName = change_extension( $fileName, "" );
         }
         my $outputFile = $fileName . $extension;
         $outputFiles = $outputFiles . " " . $outputFile;
@@ -125,11 +123,8 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $extension = $config->{$section}{extension} or die "define ${section}::extension first";
-  my $merge_result = $config->{$section}{merge_result};
-  if ( !defined $merge_result ) {
-    $merge_result = 0;
-  }
+  my $extension = get_option($config, $section, "extension");
+  my $merge_result = get_option( $config, $section, "merge_result", 0 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
