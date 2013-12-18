@@ -55,9 +55,7 @@ cd $resultDir
 
 ";
     for my $sampleFile (@sampleFiles) {
-      my $sname    = basename($sampleFile);
-      my $trimFile = $sname . $extension;
-
+      my $trimFile = get_trim_file( $sampleFile, $extension );
       print OUT "if [ ! -s $trimFile ]; then
   mono-sgen $cqstools fastq_trimmer $option -i $sampleFile -o $trimFile 
 fi
@@ -84,6 +82,17 @@ exit 1
   #`qsub $pbsFile`;
 }
 
+sub get_trim_file {
+  my ( $sampleFile, $extension ) = @_;
+  my $fileName = basename($sampleFile);
+  if ( $fileName =~ /.gz$/ ) {
+    $fileName = change_extension( $fileName, "" );
+  }
+  $fileName = change_extension( $fileName, "" );
+  my $result = $fileName . $extension;
+  return ($result);
+}
+
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
@@ -99,8 +108,7 @@ sub result {
     my @resultFiles = ();
 
     for my $sampleFile (@sampleFiles) {
-      my $sname    = basename($sampleFile);
-      my $trimFile = $sname . $extension;
+      my $trimFile = get_trim_file( $sampleFile, $extension );
       push( @resultFiles, "${resultDir}/${trimFile}" );
     }
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
