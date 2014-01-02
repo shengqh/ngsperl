@@ -73,8 +73,8 @@ sub perform {
 
 cd $curDir
 
-if [ -s gene_exp.diff ];then
-  echo job has already been done. if you want to do again, delete ${curDir}/gene_exp.diff and submit job again.
+if [ -s summary.txt ];then
+  echo job has already been done. if you want to do again, delete ${curDir}/summary.txt and submit job again.
   exit 1;
 fi
 
