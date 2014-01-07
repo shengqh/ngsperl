@@ -85,6 +85,7 @@ sub perform {
 
       my $out     = "${groupName}${chrstr}.somatic.out";
       my $vcf     = "${groupName}${chrstr}.somatic.vcf";
+      my $cov     = "${groupName}${chrstr}.somatic.coverage";
       my $passvcf = "${groupName}${chrstr}.somatic.pass.vcf";
       my $log     = "${logDir}/${groupName}${chrstr}_mt.log";
 
@@ -108,7 +109,7 @@ if [ ! -s ${tumor}.bai ]; then
 fi
 
 if [ ! -s $vcf ]; then
-  java $java_option -jar $muTect_jar $option $chroption --analysis_type MuTect --reference_sequence $faFile --cosmic $cosmicfile --dbsnp $dbsnpfile --input_file:normal $normal --input_file:tumor $tumor -o $out --vcf $vcf --enable_extended_output
+  java $java_option -jar $muTect_jar $option $chroption --analysis_type MuTect --reference_sequence $faFile --cosmic $cosmicfile --dbsnp $dbsnpfile --input_file:normal $normal --input_file:tumor $tumor -o $out --vcf $vcf -cov $cov --enable_extended_output
 fi 
 
 if [[ -s $vcf && ! -s $passvcf ]]; then
