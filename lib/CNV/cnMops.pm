@@ -134,11 +134,10 @@ sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
-  my $callFile = "${task_name}.call";
 
-  my $result = {};
-  push( @resultFiles, $resultDir . "/" . $callFile );
-  $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+  my $result = {
+    $task_name => [ $resultDir . "/${task_name}.call"]
+  };
   
   return $result;
 }
