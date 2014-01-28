@@ -52,7 +52,9 @@ sub perform {
   open( R, ">$rfile" ) or die "Cannot create $rfile";
   print R "setwd(\"$resultDir\")
 callfile<-\"$callFile\"
-prefix<-\"$task_name\"\n";
+prefix<-\"$task_name\"
+pairmode<-\"$pairmode\"
+";
   if ( defined $bedfile ) {
     print R "hasbed<-1
 bedfile<-\"$bedfile\"
