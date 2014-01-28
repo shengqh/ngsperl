@@ -9,6 +9,7 @@ use CQS::DNASeq;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
+use CQS::ClassFactory;
 
 require Exporter;
 
@@ -219,122 +220,8 @@ python $conifer plotcalls --input $hdf5File --calls $callFile --output call_imag
 
 sub cnmops {
   my ( $config, $section ) = @_;
-
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option ) = get_parameter( $config, $section );
-  my $bedfile = $config->{$section}{bedfile};
-
-  my $isbamsorted = $config->{$section}{isbamsorted};
-  if ( !defined($isbamsorted) ) {
-    $isbamsorted = 0;
-  }
-
-  my $pairmode = $config->{$section}{pairmode};
-  if ( !defined($pairmode) ) {
-    $pairmode = "unpaired";
-  }
-
-  my $callFile = "${task_name}.call";
-
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
-
-  my $rfile = $resultDir . "/cnmops_${task_name}.r";
-  open( R, ">$rfile" ) or die "Cannot create $rfile";
-  print R "library(cn.mops) \n";
-  print R "setwd(\"$resultDir\") \n";
-  print R "SampleNames <- c( \n";
-  my $isfirst = 1;
-  for my $sampleName ( sort keys %rawFiles ) {
-    if ($isfirst) {
-      print R "\"$sampleName\"\n";
-      $isfirst = 0;
-    }
-    else {
-      print R ",\"$sampleName\"\n";
-    }
-  }
-  print R ") \n";
-  print R "BAMFiles <- c( \n";
-
-  $isfirst = 1;
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my $bamFile     = $sampleFiles[0];
-
-    if ( !$isbamsorted ) {
-      ( $bamFile, my $bamSorted ) = get_sorted_bam($bamFile);
-    }
-
-    if ($isfirst) {
-      print R "\"$bamFile\"\n";
-      $isfirst = 0;
-    }
-    else {
-      print R ",\"$bamFile\"\n";
-    }
-  }
-  print R ") \n";
-
-  if ( defined $bedfile ) {
-    print R "
-segments <- read.table(\"$bedfile\", sep=\"\\t\", as.is=TRUE, header=T) 
-gr <- GRanges(segments[,1], IRanges(segments[,2],segments[,3]), gene=segments[,4]) 
-x <- getSegmentReadCountsFromBAM(BAMFiles, GR=gr, sampleNames=SampleNames, mode=\"$pairmode\") 
-save(x, file=\"${task_name}_x_getSegmentReadCountsFromBAM.Rdata\") 
-resCNMOPS <- exomecn.mops(x) 
-save(resCNMOPS, file=\"${task_name}_resCNMOPS_exomecn.mops.Rdata\")
-";
-  }
-  else {
-    print R "
-x <- getReadCountsFromBAM(BAMFiles, sampleNames=SampleNames, mode=\"$pairmode\") 
-save(x, file=\"${task_name}_x_getReadCountsFromBAM.Rdata\") 
-resCNMOPS <- cn.mops(x) 
-save(resCNMOPS, file=\"${task_name}_resCNMOPS_cn.mops.Rdata\") 
-";
-  }
-
-  print R "
-cnvs<-resCNMOPS\@cnvs 
-d<-cbind(substring(as.character(cnvs\@elementMetadata\@listData\$sampleName),2), 
-         as.character(cnvs\@seqnames),  
-         as.character(cnvs\@ranges\@start), 
-         as.character(as.numeric(cnvs\@ranges\@start) + as.numeric(cnvs\@ranges\@width) - 1), 
-         as.character(cnvs\@ranges\@width), 
-         as.character(cnvs\@elementMetadata\@listData\$CN), 
-         as.character(cnvs\@elementMetadata\@listData\$median), 
-         as.character(cnvs\@elementMetadata\@listData\$mean)) 
-colnames(d)<-c(\"sample\",\"chr\",\"start\",\"end\", \"length\",\"type\",\"median\",\"mean\") 
-d<-d[order(d[,\"sample\"], as.numeric(d[,\"chr\"]), as.numeric(d[,\"start\"])),] 
-d[,\"chr\"]<-paste0(\"chr\",d[,\"chr\"]) 
-d[,\"type\"]<-apply(d,1,function(x){ 
-  if(as.numeric(x[\"median\"]) < 0){ 
-    return (\"DELETION\") 
-  }else{ 
-    return (\"DUPLICATION\") 
-  } 
-}) 
-write.table(d, file=\"$callFile\",sep=\"\\t\",col.names=T,row.names=F,quote=F) 
-";
-  close R;
-
-  my $pbsFile = "${pbsDir}/cnmops_${task_name}.pbs";
-  my $log     = "${logDir}/cnmops_${task_name}.log";
-
-  open( OUT, ">$pbsFile" ) or die $!;
-  print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
-
-$path_file
-
-cd $pbsDir
-echo cnmops=`date`
-R --vanilla < $rfile 
-echo finished=`date`
-";
-  close OUT;
-
-  print "$pbsFile created\n";
+  my $obj = instantiate("CNV::cnMops");
+  $obj->perform( $config, $section );
 }
 
 sub freec {
