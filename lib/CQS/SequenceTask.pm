@@ -52,9 +52,8 @@ $path_file
 
 echo sequenceTaskStart=`date` 
 ";
-    for my $task (@tasks){
-      print "task " . $task . " ...\n";
-      my $tasksection = $config->{$task};
+    for my $tasksection (@tasks){
+      print "task " . $tasksection . " ...\n";
       my $pbsfiles = getPbsFiles($config, $tasksection);
       for my $sample (sort keys %{$pbsfiles}){
         print OUT "bash " . $pbsfiles->{$sample} . "\n";
