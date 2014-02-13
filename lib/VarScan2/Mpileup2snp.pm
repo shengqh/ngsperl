@@ -19,7 +19,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "VarScan2::Mpileup2snp";
-  $self->{_suffix} = "_vs2snp";
+  $self->{_suffix} = "_vs2";
   bless $self, $class;
   return $self;
 }
