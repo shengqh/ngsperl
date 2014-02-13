@@ -18,7 +18,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "SequenceTask";
+  $self->{_name}   = "SequenceTask";
   $self->{_suffix} = "_st";
   bless $self, $class;
   return $self;
@@ -31,20 +31,33 @@ sub perform {
 
   my %fqFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $self->taskfile($pbsDir, $task_name);
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
-
   for my $taskName ( sort keys %fqFiles ) {
-    my @tasks = @{ $fqFiles{$taskName} };
-    
-    my $pbsName = $self->pbsname($taskName);
-    my $pbsFile = $pbsDir . "/$pbsName";
-    my $log     = $self->logname($logDir, $taskName);
+    my $shfile = $self->taskfile( $pbsDir, $taskName );
+    open( SH, ">$shfile" ) or die "Cannot create $shfile";
+    print SH get_run_command($sh_direct);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    
-    print OUT "$pbsDesc
+    my @tasks = @{ $fqFiles{$taskName} };
+
+    my $samples = {};
+    my $taskpbs = {};
+    for my $tasksection (@tasks) {
+      print "task " . $tasksection . " ...\n";
+      my $pbsfiles = getPbsFiles( $config, $tasksection );
+      $taskpbs->{$tasksection} = $pbsfiles;
+      for my $sample ( sort keys %{$pbsfiles} ) {
+        $samples->{$sample} = 1;
+      }
+    }
+
+    for my $sample ( sort keys %{$samples} ) {
+
+      my $pbsName = $self->pbsname($sample);
+      my $pbsFile = $pbsDir . "/$pbsName";
+      my $log     = $self->logname( $logDir, $sample );
+
+      open( OUT, ">$pbsFile" ) or die $!;
+
+      print OUT "$pbsDesc
 #PBS -o $log
 #PBS -j oe
 
@@ -52,30 +65,29 @@ $path_file
 
 echo sequenceTaskStart=`date` 
 ";
-    for my $tasksection (@tasks){
-      print "task " . $tasksection . " ...\n";
-      my $pbsfiles = getPbsFiles($config, $tasksection);
-      for my $sample (sort keys %{$pbsfiles}){
-        print OUT "bash " . $pbsfiles->{$sample} . "\n";
+      for my $tasksection (@tasks) {
+        print "task " . $tasksection . " ...\n";
+        my $pbsfiles = $taskpbs->{$tasksection};
+        if ( exists $pbsfiles->{$sample} ) {
+          print OUT "bash " . $pbsfiles->{$sample} . "\n";
+        }
       }
-    }
 
-print OUT "
+      print OUT "
 echo sequenceTaskEnd=`date` 
 ";
-    close(OUT);
+      close(OUT);
 
-    print SH "\$MYCMD ./$pbsName \n";
-    print "$pbsFile created\n";
+      print SH "\$MYCMD ./$pbsName \n";
+      print "$pbsFile created\n";
+    }
+    print SH "exit 0\n";
+    close(SH);
+
+    if ( is_linux() ) {
+      chmod 0755, $shfile;
+    }
   }
-  print SH "exit 0\n";
-  close(SH);
-
-  if ( is_linux() ) {
-    chmod 0755, $shfile;
-  }
-
-  print "!!!shell file $shfile created, you can run this shell file to submit all tasks.\n";
 }
 
 1;
