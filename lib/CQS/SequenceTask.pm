@@ -66,7 +66,7 @@ $path_file
 echo sequenceTaskStart=`date` 
 ";
       for my $tasksection (@tasks) {
-        print "task " . $tasksection . " ...\n";
+        #print "task " . $tasksection . " ...\n";
         my $pbsfiles = $taskpbs->{$tasksection};
         if ( exists $pbsfiles->{$sample} ) {
           print OUT "bash " . $pbsfiles->{$sample} . "\n";
