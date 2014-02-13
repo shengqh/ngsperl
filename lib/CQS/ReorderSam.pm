@@ -27,8 +27,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-    my $faFile         = get_param_file( $config->{$section}{fasta_file},     "fasta_file",     1 );
-  my $jar            = get_param_file( $config->{$section}{jar},            "jar",            1 );
+  my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
+  my $jar    = get_param_file( $config->{$section}{jar},        "jar",        1 );
 
   my $shfile = $pbsDir . "/${task_name}_reorder.sh";
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
@@ -97,7 +97,7 @@ sub result {
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my $finalFile = "${sampleName}.reordered.bam";
+    my $finalFile   = "${sampleName}.reordered.bam";
     my @resultFiles = ();
     push( @resultFiles, "${resultDir}/${sampleName}/${finalFile}" );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );

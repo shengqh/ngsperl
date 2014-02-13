@@ -17,7 +17,8 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "Sortbam";
+  $self->{_name}   = "Sortbam";
+  $self->{_suffix} = "_sort";
   bless $self, $class;
   return $self;
 }
@@ -29,7 +30,7 @@ sub perform {
 
   my $sort_by_query = get_option_value( $config->{$section}{sort_by_query}, 0 );
 
-  my $shfile = $pbsDir . "/${task_name}_sort.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
 
@@ -40,9 +41,9 @@ sub perform {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $sampleFile  = $sampleFiles[0];
 
-    my $pbsName = "${sampleName}_sort.pbs";
+    my $pbsName = $self->pbsname($sampleName);
     my $pbsFile = $pbsDir . "/$pbsName";
-    my $log     = $logDir . "/${sampleName}_sort.log";
+    my $log     = $self->logname( $logDir, $sampleName );
 
     open( OUT, ">$pbsFile" ) or die $!;
 

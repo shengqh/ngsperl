@@ -17,7 +17,8 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "Tophat2";
+  $self->{_name}   = "Tophat2";
+  $self->{_suffix} = "_th2";
   bless $self, $class;
   return $self;
 }
@@ -56,7 +57,7 @@ sub perform {
     print "transcript_gtf_index $transcript_gtf_index defined but not exists, you may run the script once to cache the index.\n";
   }
 
-  my $shfile = $pbsDir . "/${task_name}_th2.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
 
@@ -66,9 +67,9 @@ sub perform {
     my @sampleFiles = @{ $fqFiles{$sampleName} };
     my $samples = join( " ", @sampleFiles );
 
-    my $pbsName = "${sampleName}_th2.pbs";
+    my $pbsName = $self->pbsname($sampleName);
     my $pbsFile = $pbsDir . "/$pbsName";
-    my $log     = $logDir . "/${sampleName}_th2.log";
+    my $log     = $self->logname( $logDir, $sampleName );
 
     my $curDir      = create_directory_or_die( $resultDir . "/$sampleName" );
     my $rgline      = "--rg-id $sampleName --rg-sample $sampleName --rg-library $sampleName";
@@ -82,9 +83,9 @@ sub perform {
       $gtfstr = "--transcriptome-index=$transcript_gtf_index";
     }
 
-    my $final = $rename_bam ? "${sampleName}.bam" : "accepted_hits.bam";
-    my $sort_cmd = $sort_by_query ? "samtools sort -n -@ $threadcount accepted_hits.bam ${sampleName}.sortedname" : "";
-    my $rename_bam_cmd = $rename_bam ? "mv accepted_hits.bam ${sampleName}.bam\nmv accepted_hits.bam.bai ${sampleName}.bam.bai" : "";
+    my $final          = $rename_bam    ? "${sampleName}.bam"                                                                      : "accepted_hits.bam";
+    my $sort_cmd       = $sort_by_query ? "samtools sort -n -@ $threadcount accepted_hits.bam ${sampleName}.sortedname"            : "";
+    my $rename_bam_cmd = $rename_bam    ? "mv accepted_hits.bam ${sampleName}.bam\nmv accepted_hits.bam.bai ${sampleName}.bam.bai" : "";
 
     open( OUT, ">$pbsFile" ) or die $!;
 
@@ -141,10 +142,10 @@ sub result {
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
     my @resultFiles = ();
-    if($rename_bam){
+    if ($rename_bam) {
       push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}.bam" );
     }
-    else{
+    else {
       push( @resultFiles, "${resultDir}/${sampleName}/accepted_hits.bam" );
     }
 

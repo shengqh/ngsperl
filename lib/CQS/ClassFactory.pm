@@ -8,7 +8,7 @@ require Exporter;
 
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(instantiate performTask performConfig performTrace)] );
+our %EXPORT_TAGS = ( 'all' => [qw(instantiate performTask performConfig performTrace getPbsFiles)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -37,6 +37,13 @@ sub performTask {
   my $classname = $config->{$section}{class} or die "No class defined in section $section.";
   my $obj = instantiate($classname);
   $obj->perform( $config, $section );
+}
+
+sub getPbsFiles {
+  my ( $config, $section ) = @_;
+  my $classname = $config->{$section}{class} or die "No class defined in section $section.";
+  my $obj = instantiate($classname);
+  $obj->pbsfiles( $config, $section );
 }
 
 sub performConfig {

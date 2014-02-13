@@ -17,7 +17,8 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "HTSeqCount";
+  $self->{_name}   = "HTSeqCount";
+  $self->{_suffix} = "_ht";
   bless $self, $class;
   return $self;
 }
@@ -27,11 +28,11 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $gffFile  = get_param_file( $config->{$section}{gff_file},  "gff_file",  1 );
+  my $gffFile = get_param_file( $config->{$section}{gff_file}, "gff_file", 1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $pbsDir . "/${task_name}_ht.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
 
@@ -40,12 +41,11 @@ sub perform {
     my $bamFile   = $bamFiles[0];
     my $countFile = "${sampleName}.count";
 
-    my $pbsName = "${sampleName}_ht.pbs";
+    my $pbsName = $self->pbsname($sampleName);
     my $pbsFile = "${pbsDir}/$pbsName";
+    my $log     = $self->logname( $logDir, $sampleName );
 
     print SH "\$MYCMD ./$pbsName \n";
-
-    my $log = "${logDir}/${sampleName}_ht.log";
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
@@ -95,7 +95,7 @@ sub result {
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
     my @resultFiles = ();
-    my $countFile   =  "${resultDir}/${sampleName}.count";
+    my $countFile   = "${resultDir}/${sampleName}.count";
     push( @resultFiles, $countFile );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
