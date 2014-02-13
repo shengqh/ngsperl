@@ -3,6 +3,7 @@ package CQS::Task;
 
 use strict;
 use warnings;
+use CQS::ConfigUtils;
 
 sub new {
   my ($class) = @_;
