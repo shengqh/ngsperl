@@ -18,6 +18,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "CQS::CQSMappedPosition";
+  $self->{_suffix} = "_mp";
   bless $self, $class;
   return $self;
 }

@@ -18,6 +18,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "CQS::ParalyzerClusterAnnotator";
+  $self->{_suffix} = "_an";
   bless $self, $class;
   return $self;
 }

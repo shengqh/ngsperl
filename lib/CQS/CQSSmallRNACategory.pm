@@ -18,6 +18,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "CQSSmallRNACategory";
+  $self->{_suffix} = "_cat";
   bless $self, $class;
   return $self;
 }

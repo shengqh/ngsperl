@@ -18,6 +18,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "Cuffmerge";
+  $self->{_suffix} = "_cmerge";
   bless $self, $class;
   return $self;
 }

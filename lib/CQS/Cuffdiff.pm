@@ -17,6 +17,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "Cuffdiff";
+  $self->{_suffix} = "_cdiff";
   bless $self, $class;
   return $self;
 }

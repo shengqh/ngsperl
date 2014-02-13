@@ -18,6 +18,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "ReorderSam";
+  $self->{_suffix} = "_ro";
   bless $self, $class;
   return $self;
 }

@@ -18,6 +18,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "CQSMappedTable";
+  $self->{_suffix} = "_mt";
   bless $self, $class;
   return $self;
 }

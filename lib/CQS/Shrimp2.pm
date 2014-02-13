@@ -18,6 +18,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "Shrimp2";
+  $self->{_suffix} = "_srp2";
   bless $self, $class;
   return $self;
 }
@@ -37,14 +38,9 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section, "source", ".fastq\$" ) };
 
-  my $shfile = $pbsDir . "/${task_name}_shrimp2.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  if ($sh_direct) {
-    print SH "export MYCMD=\"bash\" \n";
-  }
-  else {
-    print SH "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
-  }
+  print SH get_run_command($sh_direct);
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{$rawFiles{$sampleName}};
@@ -54,12 +50,12 @@ sub perform {
     my $samFile    = $sampleName . ".sam";
     my $bamFile    = $sampleName . ".bam";
 
-    my $pbsName = "${sampleName}_srp2.pbs";
-    my $pbsFile = "${pbsDir}/$pbsName";
+    my $pbsName = $self->pbsname($sampleName);
+    my $pbsFile = $pbsDir . "/$pbsName";
+    my $log     = $self->logname( $logDir, $sampleName );
 
     print SH "\$MYCMD ./$pbsName \n";
 
-    my $log    = "${logDir}/${sampleName}_srp2.log";
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
     open( OUT, ">$pbsFile" ) or die $!;

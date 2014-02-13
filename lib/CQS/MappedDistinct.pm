@@ -18,6 +18,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "MappedDistinct";
+  $self->{_suffix} = "_dt";
   bless $self, $class;
   return $self;
 }

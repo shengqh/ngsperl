@@ -17,7 +17,8 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "CNV::cnMops";
+  $self->{_name}   = "CNV::cnMops";
+  $self->{_suffix} = "_cnmops";
   bless $self, $class;
   return $self;
 }
@@ -59,10 +60,11 @@ pairmode<-\"$pairmode\"
     print R "hasbed<-1
 bedfile<-\"$bedfile\"
 ";
-  }else{
+  }
+  else {
     print R "hasbed<-0\n";
   }
-  
+
   print R "SampleNames <- c( \n";
   my $isfirst = 1;
   for my $sampleName ( sort keys %rawFiles ) {
@@ -112,9 +114,9 @@ BAMFiles <- c(
   close(RT);
   close R;
 
-  my $pbsFile = "${pbsDir}/cnmops_${task_name}.pbs";
-  my $log     = "${logDir}/cnmops_${task_name}.log";
-
+  my $pbsName = $self->pbsname($task_name);
+  my $pbsFile = $pbsDir . "/$pbsName";
+  my $log     = $self->logname( $logDir, $task_name );
   open( OUT, ">$pbsFile" ) or die $!;
   print OUT "$pbsDesc
 #PBS -o $log
@@ -137,10 +139,8 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $result = {
-    $task_name => [ $resultDir . "/${task_name}.call"]
-  };
-  
+  my $result = { $task_name => [ $resultDir . "/${task_name}.call" ] };
+
   return $result;
 }
 

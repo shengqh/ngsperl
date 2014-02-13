@@ -18,6 +18,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "Picard::MarkDuplicates";
+  $self->{_suffix} = "_rd";
   bless $self, $class;
   return $self;
 }

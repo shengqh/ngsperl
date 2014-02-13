@@ -18,6 +18,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "CQSPileup";
+  $self->{_suffix} = "_pl";
   bless $self, $class;
   return $self;
 }

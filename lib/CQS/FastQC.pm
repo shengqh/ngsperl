@@ -17,7 +17,8 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "FastQC";
+  $self->{_name}   = "FastQC";
+  $self->{_suffix} = "_fq";
   bless $self, $class;
   return $self;
 }
@@ -28,10 +29,9 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
-
-  my $shfile = $pbsDir . "/${task_name}_fq.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct) . "\n";
+  print SH get_run_command($sh_direct);
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
@@ -39,12 +39,11 @@ sub perform {
     my $samples     = join( ' ', @sampleFiles );
     my $curDir      = create_directory_or_die( $resultDir . "/$sampleName" );
 
-    my $pbsName = "${sampleName}_fq.pbs";
-    my $pbsFile = "${pbsDir}/$pbsName";
+    my $pbsName = $self->pbsname($sampleName);
+    my $pbsFile = $pbsDir . "/$pbsName";
+    my $log     = $self->logname( $logDir, $sampleName );
 
     print SH "\$MYCMD ./$pbsName \n";
-
-    my $log = "${logDir}/${sampleName}_fq.log";
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc

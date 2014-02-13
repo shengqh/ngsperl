@@ -18,6 +18,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "GATK::Refine";
+  $self->{_suffix} = "_rf";
   bless $self, $class;
   return $self;
 }

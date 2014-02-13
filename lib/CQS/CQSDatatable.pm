@@ -18,7 +18,8 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "CQSDatatable";
-  bless $self, $class;
+$self->{_suffix} = "_tb";
+    bless $self, $class;
   return $self;
 }
 

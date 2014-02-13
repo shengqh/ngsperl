@@ -17,6 +17,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "FastqIdentical";
+  $self->{_suffix} = "_IQR";
   bless $self, $class;
   return $self;
 }

@@ -19,6 +19,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "DESeq2";
+  $self->{_suffix} = "_de2";
   bless $self, $class;
   return $self;
 }
