@@ -19,6 +19,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "VarScan2::Somatic";
+  $self->{_suffix} = "_vs2";
   bless $self, $class;
   return $self;
 }
@@ -36,7 +37,7 @@ sub perform {
 
   my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
 
-  my $shfile = $pbsDir . "/${task_name}_vs2.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
 
@@ -65,12 +66,11 @@ sub perform {
     my $passinput = "${groupName}.somatic.pass.avinput";
     my $annovar   = "${groupName}.somatic.pass.annovar";
 
-    my $pbsName = "${groupName}_vs2.pbs";
-    my $pbsFile = "${pbsDir}/$pbsName";
+    my $pbsName = $self->pbsname($groupName);
+    my $pbsFile = $pbsDir . "/$pbsName";
+    my $log     = $self->logname( $logDir, $groupName );
 
     print SH "\$MYCMD ./$pbsName \n";
-
-    my $log = "${logDir}/${groupName}_vs2.log";
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc

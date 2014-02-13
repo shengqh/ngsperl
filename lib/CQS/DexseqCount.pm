@@ -18,6 +18,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "DexseqCount";
+  $self->{_suffix} = "_dt";
   bless $self, $class;
   return $self;
 }
@@ -32,7 +33,7 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $pbsDir . "/${task_name}_dt.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
 
@@ -43,12 +44,11 @@ sub perform {
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
-    my $pbsName = "${sampleName}_dt.pbs";
-    my $pbsFile = "${pbsDir}/$pbsName";
+    my $pbsName = $self->pbsname($sampleName);
+    my $pbsFile = $pbsDir . "/$pbsName";
+    my $log     = $self->logname( $logDir, $sampleName );
 
     print SH "\$MYCMD ./$pbsName \n";
-
-    my $log = "${logDir}/${sampleName}_dt.log";
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc

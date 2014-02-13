@@ -18,6 +18,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "Annovar";
+  $self->{_suffix} = "_ann";
   bless $self, $class;
   return $self;
 }
@@ -41,22 +42,16 @@ sub perform {
 
   my $rawFiles = get_raw_files( $config, $section );
 
-  my $shfile = $pbsDir . "/${task_name}_ann.submit";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  if ($sh_direct) {
-    print SH "export MYCMD=\"bash\" \n";
-  }
-  else {
-    print SH "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
-  }
+  print SH get_run_command($sh_direct);
 
   for my $sampleName ( sort keys %{$rawFiles} ) {
     my @sampleFiles = @{ $rawFiles->{$sampleName} };
 
-    my $pbsName = "${sampleName}_ann.pbs";
-
+    my $pbsName = $self->pbsname($sampleName);
     my $pbsFile = $pbsDir . "/$pbsName";
-    my $log     = $logDir . "/${sampleName}_ann.log";
+    my $log     = $self->logname( $logDir, $sampleName );
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
