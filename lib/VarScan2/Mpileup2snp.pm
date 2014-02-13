@@ -19,6 +19,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "VarScan2::Mpileup2snp";
+  $self->{_suffix} = "_vs2snp";
   bless $self, $class;
   return $self;
 }
@@ -36,7 +37,7 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $pbsDir . "/${task_name}_vs2.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
 
@@ -47,12 +48,12 @@ sub perform {
 
     my $normal = $sampleFiles[0];
     my $snpvcf = "${sampleName}.snp.vcf";
-    my $pbsName = "${sampleName}_vs2.pbs";
-    my $pbsFile = "${pbsDir}/$pbsName";
+
+    my $pbsName = $self->pbsname($sampleName);
+    my $pbsFile = $pbsDir . "/$pbsName";
+    my $log     = $self->logname( $logDir, $sampleName );
 
     print SH "\$MYCMD ./$pbsName \n";
-
-    my $log = "${logDir}/${sampleName}_vs2.log";
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
