@@ -63,7 +63,7 @@ sub perform {
 
   my ($result, $newoption) = get_result($task_name, $option);
 
-  my $shfile = $pbsDir . "/${task_name}_tb.sh";
+  my $shfile = $self->taskfile($pbsDir, $task_name);
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH "
 cd $resultDir
@@ -76,20 +76,14 @@ mono-sgen $cqsFile data_table $newoption -l $filelist $mapoption
   print "!!!shell file $shfile created, you can run this shell file to run cqs_datatable task.\n";
 }
 
-sub result {
-  my ( $self, $config, $section, $pattern ) = @_;
+
+sub pbsfiles {
+  my ( $self, $config, $section ) = @_;
+
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $result     = {};
-  my ($resultFile, $newoption) = get_result($task_name, $option);
-  $resultFile = $resultDir . "/" . $resultFile;
-  my $filelist   = $resultDir . "/${task_name}.filelist";
-
-  my @resultFiles = ();
-  push( @resultFiles, $resultFile );
-  push( @resultFiles, $filelist );
-
-  $result->{$task_name} = filter_array( \@resultFiles, $pattern );
+  my $result = {};
+  $result->{$task_name} = $self->taskfile($pbsDir, $task_name);
 
   return $result;
 }
