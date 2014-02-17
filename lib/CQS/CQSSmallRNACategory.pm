@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "CQSSmallRNACategory";
+  $self->{_name}   = "CQSSmallRNACategory";
   $self->{_suffix} = "_cat";
   bless $self, $class;
   return $self;
@@ -49,9 +49,9 @@ sub perform {
 
   my $groups = get_raw_files( $config, $section, "groups" );
 
-  my $shfile = $pbsDir . "/${task_name}_cat.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command(1) . "\n";
+  print SH get_run_command($sh_direct);
 
   my $filelist = "${pbsDir}/${task_name}_cat.filelist";
   open( FL, ">$filelist" ) or die "Cannot create $filelist";
@@ -74,9 +74,9 @@ sub perform {
   }
   close(FL);
 
-  my $pbsName = "${task_name}_cat.pbs";
-  my $pbsFile = "${pbsDir}/${pbsName}";
-  my $log     = "${logDir}/${task_name}_cat.log";
+  my $pbsName = $self->pbsname($task_name);
+  my $pbsFile = $pbsDir . "/$pbsName";
+  my $log     = $self->logname( $logDir, $task_name );
   open( OUT, ">$pbsFile" ) or die $!;
   print OUT "$pbsDesc
 #PBS -o $log
@@ -123,6 +123,19 @@ sub result {
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
+  return $result;
+}
+
+sub pbsfiles {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+
+  my $result  = {};
+  my $pbsName = $self->pbsname($task_name);
+  my $pbsFile = $pbsDir . "/$pbsName";
+  $result->{$task_name} = $pbsFile;
+
   return $result;
 }
 

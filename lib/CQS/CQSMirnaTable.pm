@@ -42,7 +42,7 @@ sub perform {
     $suffix = "";
   }
 
-  my $shfile = $pbsDir . "/${prefix}${task_name}${suffix}_mt.sh";
+  my $shfile = $pbsDir . "/${prefix}${task_name}${suffix}" . $self->{_suffix} . ".sh";
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH "
 cd $resultDir
@@ -114,6 +114,21 @@ sub result {
     push( @resultFiles, $filelist );
   }
   $result->{$task_name} = filter_array( \@resultFiles, $pattern );
+
+  return $result;
+}
+
+
+sub pbsfiles {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+
+  my $prefix = get_option( $config, $section, "prefix", "" );
+  my $suffix = get_option( $config, $section, "suffix", "" );
+
+  my $result = {};
+  $result->{$task_name} = $pbsDir . "/${prefix}${task_name}${suffix}" . $self->{_suffix} . ".sh";
 
   return $result;
 }

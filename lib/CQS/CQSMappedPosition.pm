@@ -56,7 +56,7 @@ sub perform {
 
   my ( $result, $newoption ) = get_result( $task_name, $option );
 
-  my $shfile = $pbsDir . "/${task_name}_mp.sh";
+  my $shfile = $pbsDir . "/${task_name}" . $self->{_suffix} . ".sh";
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH "
 cd $resultDir
@@ -83,6 +83,17 @@ sub result {
   push( @resultFiles, $filelist );
 
   $result->{$task_name} = filter_array( \@resultFiles, $pattern );
+
+  return $result;
+}
+
+sub pbsfiles {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+
+  my $result = {};
+  $result->{$task_name} = $pbsDir . "/${task_name}" . $self->{_suffix} . ".sh";
 
   return $result;
 }
