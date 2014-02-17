@@ -43,7 +43,10 @@ sub perform {
     for my $tasksection (@tasks) {
       print "task " . $tasksection . " ...\n";
       my $pbsfiles = getPbsFiles( $config, $tasksection );
-      CORE::dump($pbsfiles);
+      for my $sample ( sort keys %{$pbsfiles} ) {
+        print "\t", $sample, " => ", $pbsfiles->{$sample} , "\n";
+        $samples->{$sample} = 1;
+      }
       
       $taskpbs->{$tasksection} = $pbsfiles;
       for my $sample ( sort keys %{$pbsfiles} ) {
