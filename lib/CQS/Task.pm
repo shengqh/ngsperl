@@ -56,7 +56,7 @@ sub getfile {
     $hassuffix = 1;
   }
 
-  return $dir . "/" . getname( $name, $extension, $hassuffix );
+  return $dir . "/" . $self->getname( $name, $extension, $hassuffix );
 }
 
 sub pbsname {
