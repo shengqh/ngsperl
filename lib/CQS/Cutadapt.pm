@@ -33,9 +33,9 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $pbsDir . "/${task_name}_cutadapt.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct) . "\n";
+  print SH get_run_command($sh_direct);
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
@@ -48,12 +48,11 @@ sub perform {
     my $finalShortFile  = $gzipped ? "${finalShortName}.gz"  : $finalShortName;
     my $finalUntrimFile = $gzipped ? "${finalUntrimName}.gz" : $finalUntrimName;
 
-    my $pbsName = "${sampleName}_cut.pbs";
-    my $pbsFile = "${pbsDir}/$pbsName";
+    my $pbsName = $self->pbsname($sampleName);
+    my $pbsFile = $pbsDir . "/$pbsName";
+    my $log     = $self->logname( $logDir, $sampleName );
 
     print SH "\$MYCMD ./$pbsName \n";
-
-    my $log = "${logDir}/${sampleName}_cut.log";
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
