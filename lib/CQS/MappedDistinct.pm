@@ -8,11 +8,11 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use CQS::CombinedTask;
 
-our @ISA = qw(CQS::Task);
+our @ISA = qw(CQS::CombinedTask);
 
 sub new {
   my ($class) = @_;
@@ -35,7 +35,7 @@ sub perform {
   my $firstSuffix  = $config->{$section}{first_suffix}  or die "define ${section}::first_suffix first";
   my $secondSuffix = $config->{$section}{second_suffix} or die "define ${section}::second_suffix first";
 
-  my $shfile = $pbsDir . "/${task_name}_dt.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH "cd $resultDir
 echo CQSMappedDistinct=`date`

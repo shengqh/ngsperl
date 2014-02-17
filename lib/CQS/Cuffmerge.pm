@@ -8,16 +8,16 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use CQS::CombinedTask;
 
-our @ISA = qw(CQS::Task);
+our @ISA = qw(CQS::CombinedTask);
 
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "Cuffmerge";
+  $self->{_name}   = "Cuffmerge";
   $self->{_suffix} = "_cmerge";
   bless $self, $class;
   return $self;
@@ -33,14 +33,15 @@ sub get_assemblies_file {
   }
 
   my $cufflinks_gtf = get_raw_files( $config, $section, "source", ".gtf\$" );
-  
+
   #print_hash($cufflinks_gtf);
-  
+
   $result = $target_dir . "/assemblies.txt";
   open( OUT, ">$result" ) or die $!;
-  
+
   foreach my $k ( sort keys %{$cufflinks_gtf} ) {
-    my @gtfs = @{$cufflinks_gtf->{$k}}; 
+    my @gtfs = @{ $cufflinks_gtf->{$k} };
+
     #print "$gtfs[0]\n";
     print OUT "$gtfs[0]\n";
   }
@@ -64,8 +65,9 @@ sub perform {
 
   my $assembliesfile = get_assemblies_file( $config, $section, $resultDir );
 
-  my $pbsFile = $pbsDir . "/${task_name}_cmerge.pbs";
-  my $log     = $logDir . "/${task_name}_cmerge.log";
+  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
+  my $pbsName = basename($pbsFile);
+  my $log     = $self->logfile( $logDir, $task_name );
 
   open( OUT, ">$pbsFile" ) or die $!;
   print OUT "$pbsDesc
@@ -95,9 +97,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $result = {
-    $task_name => [ $resultDir . "/merged.gtf" ]
-  };
+  my $result = { $task_name => [ $resultDir . "/merged.gtf" ] };
 
   return $result;
 }

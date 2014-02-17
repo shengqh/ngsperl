@@ -17,7 +17,7 @@ our @ISA = qw(CQS::AbstractBowtie);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "Bowtie1";
+  $self->{_name}   = "Bowtie1";
   $self->{_suffix} = "_bt1";
   bless $self, $class;
   return $self;
@@ -33,7 +33,7 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $pbsDir . "/${task_name}_bt1.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . " \n";
 
@@ -77,10 +77,10 @@ rm ${f2}.fifo
         $bowtie1_aln_command = "bowtie $option -S $tag $bowtie1_index $fastqs $samFile ";
       }
 
-      my $pbsName = "${sampleName}_bt1.pbs";
-      my $pbsFile = "${pbsDir}/$pbsName";
+      my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
+      my $pbsName = basename($pbsFile);
+      my $log     = $self->logfile( $logDir, $sampleName );
       my $curDir  = create_directory_or_die( $resultDir . "/$sampleName" );
-      my $log     = "${logDir}/${sampleName}_bt1.log";
 
       print SH "\$MYCMD ./$pbsName \n";
 
@@ -180,10 +180,11 @@ rm ${f2}.fifo
         $bowtie1_aln_command = "bowtie $option $bowtie1_index $fastqs $finalFile ";
       }
 
-      my $pbsName = "${sampleName}_bt1.pbs";
-      my $pbsFile = "${pbsDir}/$pbsName";
+      my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
+      my $pbsName = basename($pbsFile);
+      my $log     = $self->logfile( $logDir, $sampleName );
+
       my $curDir  = create_directory_or_die( $resultDir . "/$sampleName" );
-      my $log     = "${logDir}/${sampleName}_bt1.log";
 
       print SH "\$MYCMD ./$pbsName \n";
 
@@ -221,4 +222,5 @@ exit 1;
 
   print "!!!shell file $shfile created, you can run this shell file to submit all tasks.\n";
 }
+
 1;

@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "DexseqCount";
+  $self->{_name}   = "DexseqCount";
   $self->{_suffix} = "_dt";
   bless $self, $class;
   return $self;
@@ -28,8 +28,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $dexseqFile  = get_param_file( $config->{$section}{dexseq_count}, "dexseq_count", 1 );
-  my $gffFile  = get_param_file( $config->{$section}{gff_file},  "gff_file",  1 );
+  my $dexseqFile = get_param_file( $config->{$section}{dexseq_count}, "dexseq_count", 1 );
+  my $gffFile    = get_param_file( $config->{$section}{gff_file},     "gff_file",     1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -44,10 +44,10 @@ sub perform {
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
-    my $pbsName = $self->pbsname($sampleName);
-    my $pbsFile = $pbsDir . "/$pbsName";
-    my $log     = $self->logname( $logDir, $sampleName );
-
+    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $sampleName );
+    
     print SH "\$MYCMD ./$pbsName \n";
 
     open( OUT, ">$pbsFile" ) or die $!;

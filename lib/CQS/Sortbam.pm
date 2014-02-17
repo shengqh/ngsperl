@@ -41,9 +41,9 @@ sub perform {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $sampleFile  = $sampleFiles[0];
 
-    my $pbsName = $self->pbsname($sampleName);
-    my $pbsFile = $pbsDir . "/$pbsName";
-    my $log     = $self->logname( $logDir, $sampleName );
+    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $sampleName );
 
     open( OUT, ">$pbsFile" ) or die $!;
 

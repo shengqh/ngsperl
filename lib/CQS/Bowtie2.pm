@@ -36,7 +36,7 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $pbsDir . "/${task_name}_bt2.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct), "\n";
 
@@ -54,10 +54,11 @@ sub perform {
     my $index_command = get_index_command( $bamFile, $indent );
     my $stat_command = get_stat_command( $bamFile, $indent );
 
-    my $pbsName = "${sampleName}_bt2.pbs";
-    my $pbsFile = "${pbsDir}/$pbsName";
+    my $pbsName = $self->pbsname($sampleName);
+    my $pbsFile = $pbsDir . "/$pbsName";
+    my $log     = $self->logfile( $logDir, $sampleName );
+
     my $curDir  = create_directory_or_die( $resultDir . "/$sampleName" );
-    my $log     = "${logDir}/${sampleName}_bt2.log";
 
     print SH "\$MYCMD ./$pbsName \n";
 

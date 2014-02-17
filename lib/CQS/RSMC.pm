@@ -68,7 +68,7 @@ sub perform {
     %group_sample_map = %{$rawFiles};
   }
 
-  my $shfile = $pbsDir . "/${task_name}_rs.submit";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
 
@@ -77,11 +77,12 @@ sub perform {
     my $sampleCount = scalar(@sampleFiles);
     my $curDir      = create_directory_or_die( $resultDir . "/$groupName" );
 
-    my $pbsName = "${groupName}_rs.pbs";
-    my $pbsFile = "${pbsDir}/$pbsName";
+    my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $groupName );
+
     print SH "\$MYCMD ./$pbsName \n";
 
-    my $log = "${logDir}/${groupName}_rs.log";
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
 #PBS -o $log
@@ -160,6 +161,23 @@ sub result {
     my $curDir      = $resultDir . "/$groupName";
     push( @resultFiles, "$curDir/${groupName}.somatic.pass.vcf" );
     $result->{$groupName} = filter_array( \@resultFiles, $pattern );
+  }
+  return $result;
+}
+
+
+sub pbsfiles {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+
+  my $pairs = get_raw_files( $config, $section, "groups" );
+
+  my $result = {};
+  for my $pairName ( sort keys %{$pairs} ) {
+    my $pbsName = $self->pbsname($pairName);
+    my $pbsFile = $pbsDir . "/$pbsName";
+    $result->{$pairName} = $pbsFile;
   }
   return $result;
 }

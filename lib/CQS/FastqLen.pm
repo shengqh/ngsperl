@@ -41,12 +41,11 @@ sub perform {
     my $joinFiles = join(',', @sampleFiles);
     my $finalFile   = $sampleName . ".len";
 
-    my $pbsName = "${sampleName}_flen.pbs";
-    my $pbsFile = "${pbsDir}/$pbsName";
-
+    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $sampleName );
+    
     print SH "\$MYCMD ./$pbsName \n";
-
-    my $log = "${logDir}/${sampleName}_flen.log";
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc

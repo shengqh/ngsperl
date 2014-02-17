@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "Cufflinks";
+  $self->{_name}   = "Cufflinks";
   $self->{_suffix} = "_clinks";
   bless $self, $class;
   return $self;
@@ -36,23 +36,16 @@ sub perform {
 
   my %tophat2map = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $pbsDir . "/${task_name}.submit";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  if ($sh_direct) {
-    print SH "export MYCMD=\"bash\" \n";
-  }
-  else {
-    print SH "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
-  }
 
   for my $sampleName ( sort keys %tophat2map ) {
     my @tophat2Files = @{ $tophat2map{$sampleName} };
     my $tophat2File  = $tophat2Files[0];
 
-    my $pbsName = "${sampleName}_clinks.pbs";
-    my $pbsFile = $pbsDir . "/$pbsName";
-
-    my $log    = $logDir . "/${sampleName}_clinks.log";
+    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $sampleName );
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
     open( OUT, ">$pbsFile" ) or die $!;

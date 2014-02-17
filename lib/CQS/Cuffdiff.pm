@@ -16,7 +16,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "Cuffdiff";
+  $self->{_name}   = "Cuffdiff";
   $self->{_suffix} = "_cdiff";
   bless $self, $class;
   return $self;
@@ -59,14 +59,9 @@ sub perform {
   }
   close(MAP);
 
-  my $shfile = $pbsDir . "/${task_name}.submit";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  if ($sh_direct) {
-    print SH "export MYCMD=\"bash\" \n";
-  }
-  else {
-    print SH "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
-  }
+  print SH get_run_command($sh_direct);
 
   for my $pairName ( sort keys %{$pairs} ) {
     my @groupNames = @{ $pairs->{$pairName} };
@@ -76,10 +71,9 @@ sub perform {
     }
     my $bamstrs = join( " ", @bams );
 
-    my $pbsName = "${pairName}_cdiff.pbs";
-
-    my $pbsFile = $pbsDir . "/$pbsName";
-    my $log     = $logDir . "/${pairName}_cdiff.log";
+    my $pbsFile = $self->pbsfile( $pbsDir, $pairName );
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $pairName );
 
     my $curDir = create_directory_or_die( $resultDir . "/$pairName" );
 
@@ -163,6 +157,20 @@ sub result {
     push( @resultFiles, $resultDir . "/${task_name}_group_sample.map" );
 
     $result->{$pairName} = filter_array( \@resultFiles, $pattern );
+  }
+  return $result;
+}
+
+sub pbsfiles {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+
+  my $pairs = get_raw_files( $config, $section, "pairs" );
+
+  my $result = {};
+  for my $pairName ( sort keys %{$pairs} ) {
+    $result->{$pairName} = $self->pbsfile( $pbsDir, $pairName );
   }
   return $result;
 }

@@ -8,10 +8,10 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::Task;
 use CQS::NGSCommon;
+use CQS::CombinedTask;
 
-our @ISA = qw(CQS::Task);
+our @ISA = qw(CQS::CombinedTask);
 
 my $directory;
 
@@ -95,7 +95,7 @@ pairs=list(
   close(RT);
   close(RF);
 
-  my $shfile = $pbsDir . "/${task_name}_de2.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH "cd $resultDir
 R --vanilla -f $rfile

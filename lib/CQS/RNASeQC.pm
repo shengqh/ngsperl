@@ -8,16 +8,16 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use CQS::CombinedTask;
 
-our @ISA = qw(CQS::Task);
+our @ISA = qw(CQS::CombinedTask);
 
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "RNASeQC";
+  $self->{_name}   = "RNASeQC";
   $self->{_suffix} = "_qc";
   bless $self, $class;
   return $self;
@@ -45,10 +45,9 @@ sub perform {
   }
   close(MAP);
 
-  my $pbsName = "${task_name}_qc.pbs";
-  my $pbsFile = $pbsDir . "/$pbsName";
-
-  my $log = $logDir . "/${task_name}_qc.log";
+  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
+  my $pbsName = basename($pbsFile);
+  my $log     = $self->logfile( $logDir, $task_name );
 
   open( OUT, ">$pbsFile" ) or die $!;
   print OUT "$pbsDesc

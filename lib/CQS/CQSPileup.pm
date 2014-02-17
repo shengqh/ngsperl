@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "CQSPileup";
+  $self->{_name}   = "CQSPileup";
   $self->{_suffix} = "_pl";
   bless $self, $class;
   return $self;
@@ -39,7 +39,7 @@ sub perform {
     %seqCountFiles = %{ get_raw_files( $config, $section, "seqcount" ) };
   }
 
-  my $shfile = $pbsDir . "/${task_name}_pl.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
 
@@ -58,12 +58,10 @@ sub perform {
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
-    my $pbsName = "${sampleName}_pl.pbs";
-    my $pbsFile = "${pbsDir}/$pbsName";
-
+    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $sampleName );
     print SH "\$MYCMD ./$pbsName \n";
-
-    my $log = "${logDir}/${sampleName}_pl.log";
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc

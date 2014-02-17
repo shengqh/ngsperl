@@ -8,11 +8,11 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use CQS::CombinedTask;
 
-our @ISA = qw(CQS::Task);
+our @ISA = qw(CQS::CombinedTask);
 
 sub new {
   my ($class) = @_;
@@ -53,7 +53,7 @@ sub perform {
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
 
-  my $filelist = "${pbsDir}/${task_name}_cat.filelist";
+  my $filelist = $self->getfile( $pbsDir, $task_name, ".filelist" );
   open( FL, ">$filelist" ) or die "Cannot create $filelist";
   for my $groupName ( sort keys %{$groups} ) {
     my @samples = @{ $groups->{$groupName} };
@@ -74,9 +74,10 @@ sub perform {
   }
   close(FL);
 
-  my $pbsName = $self->pbsname($task_name);
-  my $pbsFile = $pbsDir . "/$pbsName";
-  my $log     = $self->logname( $logDir, $task_name );
+  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
+  my $pbsName = basename($pbsFile);
+  my $log     = $self->logfile( $logDir, $task_name );
+
   open( OUT, ">$pbsFile" ) or die $!;
   print OUT "$pbsDesc
 #PBS -o $log
@@ -123,19 +124,6 @@ sub result {
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
-  return $result;
-}
-
-sub pbsfiles {
-  my ( $self, $config, $section ) = @_;
-
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
-
-  my $result  = {};
-  my $pbsName = $self->pbsname($task_name);
-  my $pbsFile = $pbsDir . "/$pbsName";
-  $result->{$task_name} = $pbsFile;
-
   return $result;
 }
 

@@ -29,6 +29,7 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
+
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
@@ -39,9 +40,9 @@ sub perform {
     my $samples     = join( ' ', @sampleFiles );
     my $curDir      = create_directory_or_die( $resultDir . "/$sampleName" );
 
-    my $pbsName = $self->pbsname($sampleName);
-    my $pbsFile = $pbsDir . "/$pbsName";
-    my $log     = $self->logname( $logDir, $sampleName );
+    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $sampleName );
 
     print SH "\$MYCMD ./$pbsName \n";
 

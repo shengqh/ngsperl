@@ -8,33 +8,33 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use CQS::CombinedTask;
 
-our @ISA = qw(CQS::Task);
+our @ISA = qw(CQS::CombinedTask);
 
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "CQSDatatable";
-$self->{_suffix} = "_tb";
-    bless $self, $class;
+  $self->{_name}   = "CQSDatatable";
+  $self->{_suffix} = "_tb";
+  bless $self, $class;
   return $self;
 }
 
-sub get_result{
+sub get_result {
   my ( $task_name, $option ) = @_;
 
   my $result;
-  if($option =~ /-o\s+(\S+)/){
+  if ( $option =~ /-o\s+(\S+)/ ) {
     $result = $1;
   }
-  else{
+  else {
     $result = $task_name . ".count";
     $option = $option . " -o " . $result;
   }
-  return ($result, $option);
+  return ( $result, $option );
 }
 
 sub perform {
@@ -46,13 +46,13 @@ sub perform {
   my $mapFile = get_param_file( $config->{$section}{name_map_file}, "name_map_file", 0 );
 
   my $mapoption = "";
-  if (defined $mapFile) {
+  if ( defined $mapFile ) {
     $mapoption = "-m $mapFile";
   }
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $filelist = $pbsDir . "/${task_name}.filelist";
+  my $filelist = $self->getfile( $pbsDir, $task_name, ".filelist" );
   open( FL, ">$filelist" ) or die "Cannot create $filelist";
   for my $sampleName ( sort keys %rawFiles ) {
     my @bamFiles = @{ $rawFiles{$sampleName} };
@@ -61,9 +61,9 @@ sub perform {
   }
   close(FL);
 
-  my ($result, $newoption) = get_result($task_name, $option);
+  my ( $result, $newoption ) = get_result( $task_name, $option );
 
-  my $shfile = $self->taskfile($pbsDir, $task_name);
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH "
 cd $resultDir
@@ -76,14 +76,21 @@ mono-sgen $cqsFile data_table $newoption -l $filelist $mapoption
   print "!!!shell file $shfile created, you can run this shell file to run cqs_datatable task.\n";
 }
 
-
-sub pbsfiles {
-  my ( $self, $config, $section ) = @_;
-
+sub result {
+  my ( $self, $config, $section, $pattern ) = @_;
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $result = {};
-  $result->{$task_name} = $self->taskfile($pbsDir, $task_name);
+  my ( $resultFile, $newoption ) = get_result( $task_name, $option );
+  $resultFile = $resultDir . "/" . $resultFile;
+
+  my $filelist = $pbsDir . "/" . $self->getname($task_name, ".filelist");
+
+  my @resultFiles = ();
+  push( @resultFiles, $resultFile );
+  push( @resultFiles, $filelist );
+
+  $result->{$task_name} = filter_array( \@resultFiles, $pattern );
 
   return $result;
 }

@@ -18,6 +18,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "Bacteria::RockHopper";
+  $self->{_pbskey} = "pairs";
   bless $self, $class;
   return $self;
 }
@@ -28,39 +29,38 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $rawFiles = get_raw_files( $config, $section );
-  my $groups = get_raw_files( $config, $section, "groups" );
-  my $pairs = get_raw_files( $config, $section, "pairs" );
+  my $groups   = get_raw_files( $config, $section, "groups" );
+  my $pairs    = get_raw_files( $config, $section, "pairs" );
   my $rockhopper_jar = get_param_file( $config->{$section}{rockhopper_jar}, "rockhopper_jar", 1 );
-  my $genome_dir = get_option( $config, $section, "genome_dir", 1 );
-  my $java_option = get_option($config, $section, "java_option", "");
+  my $genome_dir  = get_option( $config, $section, "genome_dir",  1 );
+  my $java_option = get_option( $config, $section, "java_option", "" );
 
-  my %tpgroups         = ();
+  my %tpgroups = ();
   for my $groupName ( sort keys %{$groups} ) {
     my @samples = @{ $groups->{$groupName} };
     my @gfiles  = ();
     foreach my $sampleName ( sort @samples ) {
       my @fastqFiles = @{ $rawFiles->{$sampleName} };
-      push( @gfiles, join('%', @fastqFiles) );
+      push( @gfiles, join( '%', @fastqFiles ) );
     }
     $tpgroups{$groupName} = join( ",", @gfiles );
   }
 
-  my $shfile = $pbsDir . "/${task_name}.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct), "\n";
 
   for my $pairName ( sort keys %{$pairs} ) {
     my @groupNames = @{ $pairs->{$pairName} };
-    my @fastqs       = ();
+    my @fastqs     = ();
     foreach my $groupName (@groupNames) {
       push( @fastqs, $tpgroups{$groupName} );
     }
     my $fastqstrs = join( " ", @fastqs );
 
-    my $pbsName = "${pairName}_rh.pbs";
-
-    my $pbsFile = $pbsDir . "/$pbsName";
-    my $log     = $logDir . "/${pairName}_rh.log";
+    my $pbsFile = $self->pbsfile( $pbsDir, $pairName );
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $pairName );
 
     my $curDir = create_directory_or_die( $resultDir . "/$pairName" );
 
@@ -110,9 +110,20 @@ sub result {
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
-  
-  die "Unfinished.";
-  
+
+  my $rawFiles = get_raw_files( $config, $section );
+  my $groups   = get_raw_files( $config, $section, "groups" );
+  my $pairs    = get_raw_files( $config, $section, "pairs" );
+  my $genome_name = get_option( $config, $section, "genome_name", 1 );
+
+  for my $pairName ( sort keys %{$pairs} ) {
+    my $curDir      = $resultDir . "/$pairName";
+    my @resultFiles = ();
+    push( @resultFiles, $curDir . "/" . $genome_name . "_operons.txt" );
+    push( @resultFiles, $curDir . "/" . $genome_name . "_transcripts.txt" );
+    $result->{$pairName} = filter_array( \@resultFiles, $pattern );
+  }
+
   return $result;
 }
 

@@ -49,9 +49,9 @@ sub perform {
   for my $sampleName ( sort keys %{$rawFiles} ) {
     my @sampleFiles = @{ $rawFiles->{$sampleName} };
 
-    my $pbsName = $self->pbsname($sampleName);
-    my $pbsFile = $pbsDir . "/$pbsName";
-    my $log     = $self->logname( $logDir, $sampleName );
+    my $pbsFile = $self->pbsfile($pbsDir, $sampleName);
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $sampleName );
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 

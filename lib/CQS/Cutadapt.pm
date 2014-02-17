@@ -16,7 +16,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "Cutadapt";
+  $self->{_name}   = "Cutadapt";
   $self->{_suffix} = "_cut";
   bless $self, $class;
   return $self;
@@ -48,10 +48,10 @@ sub perform {
     my $finalShortFile  = $gzipped ? "${finalShortName}.gz"  : $finalShortName;
     my $finalUntrimFile = $gzipped ? "${finalUntrimName}.gz" : $finalUntrimName;
 
-    my $pbsName = $self->pbsname($sampleName);
-    my $pbsFile = $pbsDir . "/$pbsName";
-    my $log     = $self->logname( $logDir, $sampleName );
-
+    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $sampleName );
+    
     print SH "\$MYCMD ./$pbsName \n";
 
     open( OUT, ">$pbsFile" ) or die $!;

@@ -32,18 +32,18 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $pbsDir . "/${task_name}_ft.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct) . "\n";
+  print SH get_run_command($sh_direct);
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
 
-    my $pbsName = "${sampleName}_ft.pbs";
-    my $pbsFile = "${pbsDir}/$pbsName";
-
+    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $sampleName );
+    
     print SH "\$MYCMD ./$pbsName \n";
-    my $log = "${logDir}/${sampleName}_ft.log";
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc

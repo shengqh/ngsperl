@@ -68,7 +68,7 @@ sub perform {
 
     my $pbsName = $self->pbsname($groupName);
     my $pbsFile = $pbsDir . "/$pbsName";
-    my $log     = $self->logname( $logDir, $groupName );
+    my $log     = $self->logfile( $logDir, $groupName );
 
     print SH "\$MYCMD ./$pbsName \n";
 

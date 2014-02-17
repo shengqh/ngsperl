@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "CNV::Conifer";
+  $self->{_name}   = "CNV::Conifer";
   $self->{_suffix} = "_conifer";
   bless $self, $class;
   return $self;
@@ -38,7 +38,7 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $pbsDir . "/${task_name}_rpkm.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
 
@@ -51,7 +51,7 @@ sub perform {
 
     print SH "\$MYCMD ./$pbsName \n";
 
-    my $log = "${logDir}/${sampleName}_rpkm.log";
+    my $log     = "${logDir}/${sampleName}_rpkm.log";
     my $bamFile = $sampleFiles[0];
 
     if ( !$isbamsorted ) {
@@ -89,12 +89,12 @@ echo finished=`date`
     chmod 0755, $shfile;
   }
 
-  my $pbsName   = "${task_name}_after_rpkm.pbs";
-  my $pbsFile   = "${pbsDir}/$pbsName";
+  my $pbsFile   = $self->pbsfile( $pbsDir, $task_name . "_after_rpkm" );
+  my $pbsName   = basename($pbsFile);
   my $hdf5File  = "${task_name}.hdf5";
   my $svalsFile = "${task_name}.svals";
   my $plotFile  = "${task_name}.png";
-  my $sdFile  = "${task_name}.sd";
+  my $sdFile    = "${task_name}.sd";
   my $callFile  = "${task_name}.call";
 
   my $log = "${logDir}/${task_name}_after_rpkm.log";
@@ -132,10 +132,25 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $result = {
-    $task_name => [ $resultDir . "/${task_name}.call"]
-  };
-  
+  my $result = { $task_name => [ $resultDir . "/${task_name}.call" ] };
+
+  return $result;
+}
+
+sub pbsfiles {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+
+  my %fqFiles = %{ get_raw_files( $config, $section ) };
+
+  my $result = {};
+  for my $sampleName ( sort keys %fqFiles ) {
+    $result->{$sampleName} = $self->pbsfile( $pbsDir, $sampleName );
+  }
+
+  $result->{$task_name} = $self->pbsfile( $pbsDir, $task_name . "_after_rpkm" );
+
   return $result;
 }
 

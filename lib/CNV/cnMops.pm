@@ -8,11 +8,11 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use CQS::CombinedTask;
 
-our @ISA = qw(CQS::Task);
+our @ISA = qw(CQS::CombinedTask);
 
 sub new {
   my ($class) = @_;
@@ -114,9 +114,10 @@ BAMFiles <- c(
   close(RT);
   close R;
 
-  my $pbsName = $self->pbsname($task_name);
-  my $pbsFile = $pbsDir . "/$pbsName";
-  my $log     = $self->logname( $logDir, $task_name );
+  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
+  my $pbsName = basename($pbsFile);
+  my $log     = $self->logfile( $logDir, $task_name );
+
   open( OUT, ">$pbsFile" ) or die $!;
   print OUT "$pbsDesc
 #PBS -o $log

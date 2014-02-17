@@ -31,7 +31,7 @@ sub perform {
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $jar    = get_param_file( $config->{$section}{jar},        "jar",        1 );
 
-  my $shfile = $pbsDir . "/${task_name}_reorder.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
 
@@ -41,9 +41,9 @@ sub perform {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $sampleFile  = $sampleFiles[0];
 
-    my $pbsName = "${sampleName}_ro.pbs";
-    my $pbsFile = $pbsDir . "/$pbsName";
-    my $log     = $logDir . "/${sampleName}_ro.log";
+    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $sampleName );
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
     open( OUT, ">$pbsFile" ) or die $!;

@@ -34,7 +34,7 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $pbsDir . "/${task_name}_bwa.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
 
@@ -63,10 +63,11 @@ if [ ! -s $samFile ]; then
 fi";
     }
 
-    my $pbsName = "${sampleName}_bwa.pbs";
-    my $pbsFile = "${pbsDir}/$pbsName";
+    my $pbsFile = $self->pbsfile($pbsDir, $sampleName);
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $sampleName );
+
     my $curDir  = create_directory_or_die( $resultDir . "/$sampleName" );
-    my $log     = "${logDir}/${sampleName}_bwa.log";
 
     print SH "\$MYCMD ./$pbsName \n";
 

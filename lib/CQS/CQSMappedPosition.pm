@@ -8,11 +8,11 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use CQS::CombinedTask;
 
-our @ISA = qw(CQS::Task);
+our @ISA = qw(CQS::CombinedTask);
 
 sub new {
   my ($class) = @_;
@@ -45,7 +45,8 @@ sub perform {
   my $cqsFile = get_param_file( $config->{$section}{cqs_tools}, "cqs_tools", 1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
-  my $filelist = $pbsDir . "/${task_name}_mp.filelist";
+  
+  my $filelist = $pbsDir . "/" . $self->getname($task_name, ".filelist");
   open( FL, ">$filelist" ) or die "Cannot create $filelist";
   for my $sampleName ( sort keys %rawFiles ) {
     my @bamFiles = @{ $rawFiles{$sampleName} };
@@ -56,7 +57,7 @@ sub perform {
 
   my ( $result, $newoption ) = get_result( $task_name, $option );
 
-  my $shfile = $pbsDir . "/${task_name}" . $self->{_suffix} . ".sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH "
 cd $resultDir
@@ -76,24 +77,14 @@ sub result {
   my $result = {};
   my ( $resultFile, $newoption ) = get_result( $task_name, $option );
   $resultFile = $resultDir . "/" . $resultFile;
-  my $filelist = $resultDir . "/${task_name}_mp.filelist";
+
+  my $filelist = $pbsDir . "/" . $self->getname($task_name, ".filelist");
 
   my @resultFiles = ();
   push( @resultFiles, $resultFile );
   push( @resultFiles, $filelist );
 
   $result->{$task_name} = filter_array( \@resultFiles, $pattern );
-
-  return $result;
-}
-
-sub pbsfiles {
-  my ( $self, $config, $section ) = @_;
-
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
-
-  my $result = {};
-  $result->{$task_name} = $pbsDir . "/${task_name}" . $self->{_suffix} . ".sh";
 
   return $result;
 }
