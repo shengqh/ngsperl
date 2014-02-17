@@ -41,7 +41,7 @@ sub perform {
     my $samples = {};
     my $taskpbs = {};
     for my $tasksection (@tasks) {
-      print "task " . $tasksection . " ...\n";
+      #print "task " . $tasksection . " ...\n";
       my $pbsfiles = getPbsFiles( $config, $tasksection );
       $taskpbs->{$tasksection} = $pbsfiles;
       for my $sample ( sort keys %{$pbsfiles} ) {
@@ -50,10 +50,10 @@ sub perform {
     }
 
     for my $sample ( sort keys %{$samples} ) {
-
-      my $pbsName = $self->pbsname($sample);
+      my $taskSample = $taskName . "_" .$sample;
+      my $pbsName = $taskName . "_" . $self->pbsname($taskSample);
       my $pbsFile = $pbsDir . "/$pbsName";
-      my $log     = $self->logname( $logDir, $sample );
+      my $log     = $self->logname( $logDir, $taskSample );
 
       open( OUT, ">$pbsFile" ) or die $!;
 
