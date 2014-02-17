@@ -51,7 +51,7 @@ sub perform {
 
     for my $sample ( sort keys %{$samples} ) {
       my $taskSample = $taskName . "_" .$sample;
-      my $pbsName = $taskName . "_" . $self->pbsname($taskSample);
+      my $pbsName = $self->pbsname($taskSample);
       my $pbsFile = $pbsDir . "/$pbsName";
       my $log     = $self->logname( $logDir, $taskSample );
 
