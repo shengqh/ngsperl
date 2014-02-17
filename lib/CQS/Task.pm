@@ -88,7 +88,7 @@ sub pbsfiles {
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
   my $result = {};
-  if ( $self->{_pbskey} == "" ) {
+  if ( $self->{_pbskey} eq "" ) {
     $result->{$task_name} = $self->pbsfile( $pbsDir, $task_name );
   }
   else {
