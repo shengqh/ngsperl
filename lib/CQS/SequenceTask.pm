@@ -41,10 +41,10 @@ sub perform {
     my $samples = {};
     my $taskpbs = {};
     for my $tasksection (@tasks) {
-      print "task " . $tasksection . " ...\n";
+      #print "task " . $tasksection . " ...\n";
       my $pbsfiles = getPbsFiles( $config, $tasksection );
       for my $sample ( sort keys %{$pbsfiles} ) {
-        print "\t", $sample, " => ", $pbsfiles->{$sample}, "\n";
+        #print "\t", $sample, " => ", $pbsfiles->{$sample}, "\n";
         $samples->{$sample} = 1;
       }
 
@@ -127,10 +127,10 @@ sub pbsfiles {
     my $samples = {};
     my $taskpbs = {};
     for my $tasksection (@tasks) {
-      print "task " . $tasksection . " ...\n";
+      #print "task " . $tasksection . " ...\n";
       my $pbsfiles = getPbsFiles( $config, $tasksection );
       for my $sample ( sort keys %{$pbsfiles} ) {
-        print "\t", $sample, " => ", $pbsfiles->{$sample}, "\n";
+        #print "\t", $sample, " => ", $pbsfiles->{$sample}, "\n";
         $samples->{$sample} = 1;
       }
 
