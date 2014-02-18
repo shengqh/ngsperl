@@ -81,14 +81,14 @@ echo sequenceTaskStart=`date`
           if ( ref($samplepbs) eq 'ARRAY' ) {
             for my $pbs ( @{$samplepbs} ) {
               if ( !-e $pbs ) {
-                die "File not exists " . $pbs . "\n";
+                die "Task " . $tasksection . ", file not exists " . $pbs . "\n";
               }
               print OUT "bash " . $pbs . "\n";
             }
           }
           else {
             if ( !-e $samplepbs ) {
-              die "File not exists " . $samplepbs . "\n";
+              die "Task " . $tasksection . ", file not exists " . $samplepbs . "\n";
             }
             print OUT "bash " . $samplepbs . "\n";
           }
