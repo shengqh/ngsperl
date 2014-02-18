@@ -10,9 +10,9 @@ use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::StringUtils;
-use CQS::CombinedTask;
+use CQS::UniqueTask;
 
-our @ISA = qw(CQS::CombinedTask);
+our @ISA = qw(CQS::UniqueTask);
 
 sub new {
   my ($class) = @_;

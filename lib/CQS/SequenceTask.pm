@@ -75,8 +75,17 @@ echo sequenceTaskStart=`date`
 
         #print "task " . $tasksection . " ...\n";
         my $pbsfiles = $taskpbs->{$tasksection};
+
         if ( exists $pbsfiles->{$sample} ) {
-          print OUT "bash " . $pbsfiles->{$sample} . "\n";
+          my $samplepbs = $pbsfiles->{$sample};
+          if ( ref($samplepbs) eq 'ARRAY' ) {
+            for my $pbs (@{$samplepbs}){
+              print OUT "bash " . $pbs . "\n";
+            }
+          }
+          else {
+            print OUT "bash " . $samplepbs . "\n";
+          }
         }
       }
 
@@ -130,7 +139,7 @@ sub pbsfiles {
       $result->{$taskSample} = $self->pbsfile( $pbsDir, $taskSample );
     }
   }
-  
+
   return $result;
 }
 1;

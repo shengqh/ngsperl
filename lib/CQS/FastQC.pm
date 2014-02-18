@@ -30,9 +30,11 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
+  my $shfile = $self->pbsfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  print SH get_run_command(1);
+  
+  my $result = $self->result($config, $section);
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
@@ -43,6 +45,9 @@ sub perform {
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
+    
+    my @expectresult = @{$result->{$sampleName}};
+    my $expectname = $expectresult[0];
 
     print SH "\$MYCMD ./$pbsName \n";
 
@@ -54,6 +59,11 @@ sub perform {
 $path_file
 
 echo fastqc=`date`
+
+if [ -e $expectname ]; then
+  echo job has already been done. if you want to do again, delete ${curDir}/${expectname} and submit job again.
+  exit 1;
+fi
 
 fastqc $option -t $sampleCount -o $curDir $samples
 

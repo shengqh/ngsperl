@@ -18,7 +18,7 @@ our @ISA = qw(CQS::AbstractSomaticMutation);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "VarScan2::Mpileup2snp";
+  $self->{_name}   = "VarScan2::Mpileup2snp";
   $self->{_suffix} = "_vs2";
   bless $self, $class;
   return $self;
@@ -29,28 +29,28 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $varscan2_jar = get_param_file( $config->{$section}{VarScan2_jar},  "VarScan2_jar",  1 );
-  my $faFile     = get_param_file( $config->{$section}{fasta_file},  "fasta_file",  1 );
+  my $varscan2_jar = get_param_file( $config->{$section}{VarScan2_jar}, "VarScan2_jar", 1 );
+  my $faFile       = get_param_file( $config->{$section}{fasta_file},   "fasta_file",   1 );
 
-  my $mpileup_options = get_option($config, $section, "mpileup_options", "");
-  my $java_option = get_option($config, $section, "java_option", "");
+  my $mpileup_options = get_option( $config, $section, "mpileup_options", "" );
+  my $java_option     = get_option( $config, $section, "java_option",     "" );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
-
+  
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
-  
-    my $curDir      = create_directory_or_die( $resultDir . "/$sampleName" );
+
+    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
     my $normal = $sampleFiles[0];
     my $snpvcf = "${sampleName}.snp.vcf";
 
-    my $pbsName = $self->pbsname($sampleName);
-    my $pbsFile = $pbsDir . "/$pbsName";
+    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
+    my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
 
     print SH "\$MYCMD ./$pbsName \n";
@@ -91,7 +91,7 @@ echo finished=`date` \n";
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
-  
+
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
@@ -100,7 +100,7 @@ sub result {
   for my $sampleName ( keys %rawFiles ) {
     my @resultFiles = ();
     my $curDir      = $resultDir . "/$sampleName";
-    my $snpvcf = "${sampleName}.snp.vcf";
+    my $snpvcf      = "${sampleName}.snp.vcf";
     push( @resultFiles, "$curDir/${snpvcf}" );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }

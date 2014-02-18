@@ -8,17 +8,16 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::Task;
+use CQS::PairTask;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 
-our @ISA = qw(CQS::Task);
+our @ISA = qw(CQS::PairTask);
 
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name} = "Bacteria::RockHopper";
-  $self->{_pbskey} = "pairs";
   bless $self, $class;
   return $self;
 }

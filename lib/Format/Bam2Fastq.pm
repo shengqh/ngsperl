@@ -16,7 +16,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "Format::Bam2Fastq";
+  $self->{_name}   = "Format::Bam2Fastq";
   $self->{_suffix} = "_b2q";
   bless $self, $class;
   return $self;
@@ -32,7 +32,7 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $pbsDir . "/${task_name}_b2q.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
 
@@ -40,20 +40,19 @@ sub perform {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $bamfile     = $sampleFiles[0];
 
-    my $pbsName = "${sampleName}_b2q.pbs";
-    my $pbsFile = "${pbsDir}/$pbsName";
+    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $sampleName );
 
     print SH "\$MYCMD ./$pbsName \n";
-
-    my $log = "${logDir}/${sampleName}_b2q.log";
 
     open( OUT, ">$pbsFile" ) or die $!;
 
     my $finalFile = $ispaired ? $sampleName . "_1.fastq" : $sampleName . ".fastq";
-    if(!$unzipped){
+    if ( !$unzipped ) {
       $finalFile = $finalFile . ".gz";
     }
-    
+
     print OUT "$pbsDesc
 #PBS -o $log
 #PBS -j oe
@@ -67,11 +66,12 @@ echo started=`date`
 if [ ! -s $finalFile ]; then
   bam2fastq -o ${sampleName}#.fastq $bamfile
 ";
-    if(!$unzipped){
-      if($ispaired){
+    if ( !$unzipped ) {
+      if ($ispaired) {
         print OUT "  gzip ${sampleName}_1.fastq
   gzip ${sampleName}_2.fastq ";
-      }else{
+      }
+      else {
         print OUT "  gzip ${sampleName}.fastq";
       }
     }

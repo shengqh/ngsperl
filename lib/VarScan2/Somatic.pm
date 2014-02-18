@@ -66,8 +66,8 @@ sub perform {
     my $passinput = "${groupName}.somatic.pass.avinput";
     my $annovar   = "${groupName}.somatic.pass.annovar";
 
-    my $pbsName = $self->pbsname($groupName);
-    my $pbsFile = $pbsDir . "/$pbsName";
+    my $pbsFile = $self->pbsfile($pbsDir, $groupName);
+    my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $groupName );
 
     print SH "\$MYCMD ./$pbsName \n";

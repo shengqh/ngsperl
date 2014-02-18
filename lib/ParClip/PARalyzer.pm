@@ -31,7 +31,7 @@ sub perform {
   my $mirna_db = get_param_file( $config->{$section}{mirna_db}, "mirna_db", 1 );
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $pbsDir . "/${task_name}_pz.sh";
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
 
@@ -41,8 +41,9 @@ sub perform {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $bamfile     = $sampleFiles[0];
 
-    my $pbsName = "${sampleName}_pz.pbs";
-    my $pbsFile = "${pbsDir}/$pbsName";
+    my $pbsFile = $self->pbsfile($pbsDir, $sampleName);
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $sampleName );
 
     my $iniFile = "${sampleName}.ini";
     open( INI, ">${curDir}/${iniFile}" ) or die "Cannot create ${curDir}/${iniFile}";
@@ -74,8 +75,6 @@ OUTPUT_MIRNA_TARGETS_FILE=${sampleName}.target.csv
     close(INI);
 
     print SH "\$MYCMD ./$pbsName \n";
-
-    my $log = "${logDir}/${sampleName}_pz.log";
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc

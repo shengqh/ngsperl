@@ -10,17 +10,15 @@ use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::StringUtils;
-use CQS::CombinedTask;
+use CQS::UniqueTask;
 
-our @ISA = qw(CQS::CombinedTask);
+our @ISA = qw(CQS::UniqueTask);
 
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name}        = "CQSMirnaTable";
   $self->{_suffix}      = "_mt";
-  $self->{_task_prefix} = "";
-  $self->{_task_suffix} = "";
   bless $self, $class;
   return $self;
 }

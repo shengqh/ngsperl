@@ -8,10 +8,10 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::Task;
+use CQS::PairTask;
 use CQS::NGSCommon;
 
-our @ISA = qw(CQS::Task);
+our @ISA = qw(CQS::PairTask);
 
 sub new {
   my ($class) = @_;
@@ -157,20 +157,6 @@ sub result {
     push( @resultFiles, $resultDir . "/${task_name}_group_sample.map" );
 
     $result->{$pairName} = filter_array( \@resultFiles, $pattern );
-  }
-  return $result;
-}
-
-sub pbsfiles {
-  my ( $self, $config, $section ) = @_;
-
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
-
-  my $pairs = get_raw_files( $config, $section, "pairs" );
-
-  my $result = {};
-  for my $pairName ( sort keys %{$pairs} ) {
-    $result->{$pairName} = $self->pbsfile( $pbsDir, $pairName );
   }
   return $result;
 }

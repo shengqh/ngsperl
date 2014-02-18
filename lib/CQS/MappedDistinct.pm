@@ -10,14 +10,14 @@ use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::StringUtils;
-use CQS::CombinedTask;
+use CQS::UniqueTask;
 
-our @ISA = qw(CQS::CombinedTask);
+our @ISA = qw(CQS::UniqueTask);
 
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "MappedDistinct";
+  $self->{_name}   = "MappedDistinct";
   $self->{_suffix} = "_dt";
   bless $self, $class;
   return $self;
@@ -35,19 +35,26 @@ sub perform {
   my $firstSuffix  = $config->{$section}{first_suffix}  or die "define ${section}::first_suffix first";
   my $secondSuffix = $config->{$section}{second_suffix} or die "define ${section}::second_suffix first";
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
+  my $shfile = $self->pbsfile( $pbsDir, $task_name );
+  my $log = $self->logfile( $logDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH "cd $resultDir
+  print SH "$pbsDesc
+#PBS -o $log
+#PBS -j oe
+
+$path_file
+cd $resultDir
+
 echo CQSMappedDistinct=`date`
 
 ";
 
   for my $sampleName ( sort keys %firstFiles ) {
-    my $firstFile  = $firstFiles{$sampleName}->[0];
-    my $secondFile = $secondFiles{$sampleName}->[0];
-    my $firstoutput = $firstSuffix . $sampleName . ".distinct.count";
+    my $firstFile    = $firstFiles{$sampleName}->[0];
+    my $secondFile   = $secondFiles{$sampleName}->[0];
+    my $firstoutput  = $firstSuffix . $sampleName . ".distinct.count";
     my $secondoutput = $secondSuffix . $sampleName . ".distinct.count";
-    
+
     print SH "mono-sgen $cqsFile mapped_distinct $option --inputfile1 $firstFile --outputfile1 $firstoutput --inputfile2 $secondFile --outputfile2 $secondoutput
 
 ";
@@ -59,11 +66,7 @@ exit 1
 ";
   close(SH);
 
-  if ( is_linux() ) {
-    chmod 0755, $shfile;
-  }
-
-  print "!!!shell file $shfile created, you can run this shell file to submit all trna_count tasks.\n";
+  print "!!!pbs file $shfile created, you can run this shell file to run all MappedDistinct tasks.\n";
 }
 
 sub result {
@@ -76,10 +79,10 @@ sub result {
   my $secondSuffix = $config->{$section}{second_suffix} or die "define ${section}::second_suffix first";
 
   my $result = {};
-  for my $sampleName (sort keys %rawFiles ) {
-    my $firstoutput = $resultDir . "/" . $firstSuffix . $sampleName . ".distinct.count";
+  for my $sampleName ( sort keys %rawFiles ) {
+    my $firstoutput  = $resultDir . "/" . $firstSuffix . $sampleName . ".distinct.count";
     my $secondoutput = $resultDir . "/" . $secondSuffix . $sampleName . ".distinct.count";
-    
+
     my @resultFiles = ();
 
     push( @resultFiles, $firstoutput );

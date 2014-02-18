@@ -10,9 +10,9 @@ use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::StringUtils;
-use CQS::CombinedTask;
+use CQS::UniqueTask;
 
-our @ISA = qw(CQS::CombinedTask);
+our @ISA = qw(CQS::UniqueTask);
 
 sub new {
   my ($class) = @_;
@@ -33,8 +33,17 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
+  my $shfile = $self->pbsfile( $pbsDir, $task_name );
+  my $log = $self->logfile( $logDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
+  print SH "$pbsDesc
+#PBS -o $log
+#PBS -j oe
+
+$path_file
+cd $resultDir
+
+";
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @bamFiles  = @{ $rawFiles{$sampleName} };
@@ -48,11 +57,7 @@ sub perform {
   }
   close(SH);
 
-  if ( is_linux() ) {
-    chmod 0755, $shfile;
-  }
-
-  print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->name() . " tasks.\n";
+  print "!!!pbs file $shfile created.\n";
 }
 
 sub result {

@@ -17,15 +17,15 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "GATK::SNPIndel";
+  $self->{_name}   = "GATK::SNPIndel";
   $self->{_suffix} = "_snp";
   bless $self, $class;
   return $self;
 }
 
-sub getGroupSampleMap{
-  my ($config, $section ) = @_;
-  
+sub getGroupSampleMap {
+  my ( $config, $section ) = @_;
+
   my $rawFiles = get_raw_files( $config, $section );
   my %group_sample_map = ();
   if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
@@ -45,7 +45,7 @@ sub getGroupSampleMap{
     %group_sample_map = %{$rawFiles};
   }
 
-  return (\%group_sample_map)
+  return ( \%group_sample_map );
 }
 
 sub perform {
@@ -84,10 +84,13 @@ sub perform {
 "--filterExpression \"QD<2.0\" --filterName \"QD\" --filterExpression \"ReadPosRankSum<-20.0\" --filterName \"ReadPosRankSum\" --filterExpression \"InbreedingCoeff < -0.8\" --filterName \"InbreedingCoeff\" --filterExpression \"FS > 200.0\" --filterName \"FS\"";
   }
 
-  my %group_sample_map = %{getGroupSampleMap($config, $section)};
-  my $shfile = $pbsDir . "/${task_name}_snp.sh";
+  my %group_sample_map = %{ getGroupSampleMap( $config, $section ) };
+
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
+  print SH get_run_command($sh_direct) . "\n";
+
+  #print SH "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
 
   for my $groupName ( sort keys %group_sample_map ) {
     my $curDir       = create_directory_or_die( $resultDir . "/$groupName" );
@@ -105,13 +108,12 @@ sub perform {
     my $snpFilterOut = $groupName . "_snp_filtered.vcf";
     my $snpPass      = $groupName . "_snp_filtered.pass.vcf";
 
-    my $pbsName = "${groupName}_snp.pbs";
+    my $pbsFile = $self->pbsfile( $pbsDir, $groupName . "_snp" );
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $groupName . "_snp" );
 
     print SH "\$MYCMD ./$pbsName \n";
 
-    my $log = "${logDir}/${groupName}_snp.log";
-
-    my $pbsFile = "${pbsDir}/$pbsName";
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "
 $pbsDesc
@@ -142,13 +144,12 @@ echo finished=`date`
     my $indelFilteredOut = $groupName . "_indel_filtered.vcf";
     my $indelPass        = $groupName . "_indel_filtered.pass.vcf";
 
-    $pbsName = "${groupName}_id.pbs";
+    $pbsFile = $self->pbsfile( $pbsDir, $groupName . "_id" );
+    $pbsName = basename($pbsFile);
+    $log     = $self->logfile( $logDir, $groupName . "_id" );
 
     print SH "\$MYCMD ./$pbsName \n";
 
-    $log = "${logDir}/${groupName}_id.log";
-
-    $pbsFile = "${pbsDir}/$pbsName";
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "
 $pbsDesc
@@ -189,7 +190,7 @@ sub result {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
   my $result = {};
 
-  my %group_sample_map = %{getGroupSampleMap($config, $section)};
+  my %group_sample_map = %{ getGroupSampleMap( $config, $section ) };
   for my $groupName ( sort keys %group_sample_map ) {
     my $curDir      = $resultDir . "/$groupName";
     my $snpPass     = $groupName . "_snp_filtered.pass.vcf";
@@ -197,8 +198,31 @@ sub result {
     my @resultFiles = ();
     push( @resultFiles, "${curDir}/${snpPass}" );
     push( @resultFiles, "${curDir}/${indelPass}" );
-    $result->{$groupName} = filter_array(\@resultFiles, $pattern);
+    $result->{$groupName} = filter_array( \@resultFiles, $pattern );
   }
+  return $result;
+}
+
+sub pbsfiles {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+
+  my $result = {};
+  if ( $self->{_pbskey} eq "" ) {
+    $result->{$task_name} = $self->pbsfile( $pbsDir, $task_name );
+  }
+  else {
+    my %group_sample_map = %{ getGroupSampleMap( $config, $section ) };
+
+    for my $sampleName ( sort keys %group_sample_map ) {
+      my @resultFiles = ();
+      push( @resultFiles, $self->pbsfile( $pbsDir, $sampleName . "_snp" ) );
+      push( @resultFiles, $self->pbsfile( $pbsDir, $sampleName . "_id" ) );
+      $result->{$sampleName} = \@resultFiles;
+    }
+  }
+
   return $result;
 }
 

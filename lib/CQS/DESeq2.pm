@@ -9,9 +9,9 @@ use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::NGSCommon;
-use CQS::CombinedTask;
+use CQS::UniqueTask;
 
-our @ISA = qw(CQS::CombinedTask);
+our @ISA = qw(CQS::UniqueTask);
 
 my $directory;
 
@@ -52,6 +52,8 @@ sub perform {
 
   my $rfile = $resultDir . "/${task_name}.r";
   open( RF, ">$rfile" ) or die "Cannot create $rfile";
+  open RT, "<$rtemplate" or die $!;
+
   print RF "
 setwd(\"$resultDir\")  
   
@@ -82,7 +84,6 @@ pairs=list(
   }
   print RF ") \n\n";
 
-  open RT, "<$rtemplate" or die $!;
   while (<RT>) {
     if ( $_ =~ '^#' ) {
       next;
