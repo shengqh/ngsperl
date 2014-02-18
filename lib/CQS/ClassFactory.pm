@@ -52,6 +52,10 @@ sub performConfig {
     if ( !defined $pattern || $section =~ m/$pattern/ ) {
       my $classname = $config->{$section}{class};
       if ( defined $classname ) {
+        if ( $classname eq "CQS::SequenceTask" || $classname eq "SequenceTask" ) {
+          next;
+        }
+
         my $perform;
         if ( defined $force && $force ) {
           $perform = 1;
@@ -64,6 +68,30 @@ sub performConfig {
           print "Preforming $section by $classname \n";
           my $obj = instantiate($classname);
           $obj->perform( $config, $section );
+        }
+      }
+    }
+  }
+
+  foreach my $section ( keys %{$config} ) {
+    if ( !defined $pattern || $section =~ m/$pattern/ ) {
+      my $classname = $config->{$section}{class};
+      if ( defined $classname ) {
+        if ( $classname eq "CQS::SequenceTask" || $classname eq "SequenceTask" ) {
+
+          my $perform;
+          if ( defined $force && $force ) {
+            $perform = 1;
+          }
+          else {
+            $perform = $config->{$section}{perform};
+          }
+
+          if ( defined $perform && $perform ) {
+            print "Preforming $section by $classname \n";
+            my $obj = instantiate($classname);
+            $obj->perform( $config, $section );
+          }
         }
       }
     }
