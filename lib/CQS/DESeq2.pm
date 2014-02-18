@@ -96,14 +96,24 @@ pairs=list(
   close(RT);
   close(RF);
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH "cd $resultDir
+  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
+  my $pbsName = basename($pbsFile);
+  my $log     = $self->logfile( $logDir, $task_name );
+
+  open( OUT, ">$pbsFile" ) or die $!;
+  print OUT "$pbsDesc
+#PBS -o $log
+#PBS -j oe
+
+$path_file
+
+cd $resultDir
+
 R --vanilla -f $rfile
 ";
-  close(SH);
+  close(OUT);
 
-  print "!!!shell file $shfile created, you can run this shell file to do calculation.\n";
+  print "!!!shell file $pbsFile created.\n";
 }
 
 sub result {

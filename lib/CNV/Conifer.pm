@@ -46,12 +46,12 @@ sub perform {
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
 
-    my $pbsName = "${sampleName}_rpkm.pbs";
-    my $pbsFile = "${pbsDir}/$pbsName";
+    my $pbsFile = $self->pbsfile($pbsDir, $sampleName);
+    my $pbsName = basename($pbsFile);
+    my $log     = $self->logfile( $logDir, $sampleName );
 
     print SH "\$MYCMD ./$pbsName \n";
 
-    my $log     = "${logDir}/${sampleName}_rpkm.log";
     my $bamFile = $sampleFiles[0];
 
     if ( !$isbamsorted ) {

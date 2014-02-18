@@ -63,17 +63,25 @@ sub perform {
 
   my ( $result, $newoption ) = get_result( $task_name, $option );
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH "
+  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
+  my $pbsName = basename($pbsFile);
+  my $log     = $self->logfile( $logDir, $task_name );
+
+  open( OUT, ">$pbsFile" ) or die $!;
+  print OUT "$pbsDesc
+#PBS -o $log
+#PBS -j oe
+
+$path_file
+
 cd $resultDir
 
 mono-sgen $cqsFile data_table $newoption -l $filelist $mapoption
 ";
 
-  close SH;
+  close OUT;
 
-  print "!!!shell file $shfile created, you can run this shell file to run cqs_datatable task.\n";
+  print "!!!shell file $pbsFile created.\n";
 }
 
 sub result {
