@@ -161,6 +161,22 @@ my $config = {
       "mem"      => "10gb"
     },
   },
+  sequence_task => {
+    class      => "SequenceTask",
+    perform    => 1,
+    target_dir => "${target_dir}/sequencetask",
+    source     => {
+      "sample"  => [ "fastqc",  "tophat2",  "sortbam",   "htseqcount" ],
+      "task" => [ "rnaseqc", "cuffdiff", "genetable", "deseq2" ],
+    },
+    sh_direct => 0,
+    pbs       => {
+      "email"    => $email,
+      "nodes"    => "1:ppn=8",
+      "walltime" => "72",
+      "mem"      => "30gb"
+    }
+  }
 };
 
 performConfig($config);
