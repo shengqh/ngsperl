@@ -69,7 +69,7 @@ pairs=list(
     my $ispaired = 0;
     if ( scalar(@groupNames) == 3 ) {
       $ispaired = $groupNames[2] eq "paired";
-      @groupNames = @groupNames[ 1 .. 2 ];
+      @groupNames = @groupNames[ 0 .. 1 ];
     }
 
     if ( scalar(@groupNames) != 2 ) {
