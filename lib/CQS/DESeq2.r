@@ -1,9 +1,9 @@
 ##predefined_condition_begin
-# setwd("H:/shengquanhu/projects/chenxi/20131017_chenxi_rnaseq_smad4/deseq2/result")  
-# data<-read.table("H:/shengquanhu/projects/chenxi/20131017_chenxi_rnaseq_smad4/genetable/result/smad4_gene.count",row.names=1, header=T, check.names=F)
-# pairs=list(
-# 	"KO_vs_WT" = list("WT" = c("2288-RDB-81","2288-RDB-83","2288-RDB-85"), "KO" = c("2288-RDB-82","2288-RDB-84","2288-RDB-86"), "paired" = TRUE) 
-# )
+setwd("H:/shengquanhu/projects/chenxi/20131017_chenxi_rnaseq_smad4/deseq2/result")  
+data<-read.table("H:/shengquanhu/projects/chenxi/20131017_chenxi_rnaseq_smad4/genetable/result/smad4_gene.count",row.names=1, header=T, check.names=F)
+pairs=list(
+	"KO_vs_WT" = list("WT" = c("2288-RDB-81","2288-RDB-83","2288-RDB-85"), "KO" = c("2288-RDB-82","2288-RDB-84","2288-RDB-86"), "paired" = TRUE) 
+)
 ##predefined_condition_end
 
 library("DESeq2")
@@ -74,7 +74,36 @@ for(pairname in pairnames){
 	rownames(pairColData)<-colnames(pairCountData)
 	pairColors<-as.matrix(data.frame(Group=c(rep("red", ncol(c1)), rep("blue", ncol(c2)))))
 
-	#some basic information
+  #different expression analysis
+	if(ispaired){
+	  dds=DESeqDataSetFromMatrix(countData = pairCountData,
+	                             colData = pairColData,
+	                             design = ~ paired + condition)
+	}else{
+	  dds=DESeqDataSetFromMatrix(countData = pairCountData,
+	                             colData = pairColData,
+	                             design = ~ condition)
+	}
+	
+	dds <- DESeq(dds)
+	res<-results(dds,cooksCutoff=FALSE)
+	
+	select<- (!is.na(res$padj)) & (res$padj<0.05) & ((res$log2FoldChange >= 1) | (res$log2FoldChange <= -1))
+	
+	if(length(indecies) > 0){
+	  tbb<-cbind(data[,indecies,drop=F], pairCountData, res)
+	}else{
+	  tbb<-cbind(pairCountData, res)
+	}
+	tbbselect<-tbb[select,,drop=F]
+	
+	tbb<-tbb[order(tbb$padj),,drop=F]
+	write.csv(as.data.frame(tbb),paste0(pairname, "_DESeq2.csv"))
+	
+	tbbselect<-tbbselect[order(tbbselect$padj),,drop=F]
+	write.csv(as.data.frame(tbbselect),paste0(pairname, "_DESeq2_sig.csv"))
+	
+	#some basic graph
 	dds=DESeqDataSetFromMatrix(countData = pairCountData,
 							              colData = pairColData,
                             design = ~1)
@@ -98,7 +127,7 @@ for(pairname in pairnames){
 	vsdiqr<-apply(assayvsd, 1, IQR)
 	assayvsd<-assayvsd[order(vsdiqr, decreasing=T),]
 
-	rldmatrix=as.matrix(assay(rld))
+	rldmatrix=as.matrix(assayvsd)
 	
 	#draw pca graph
 	png(filename=paste0(pairname, "_DESeq2-vsd-pca.png"), width=3000, height=3000, res=300)
@@ -126,32 +155,4 @@ for(pairname in pairnames){
 		dev.off()
 	}
 	
-	#different expression analysis
-	if(ispaired){
-		dds=DESeqDataSetFromMatrix(countData = pairCountData,
-			colData = pairColData,
-			design = ~ paired + condition)
-	}else{
-		dds=DESeqDataSetFromMatrix(countData = pairCountData,
-			colData = pairColData,
-			design = ~ condition)
-	}
-	
-	dds <- DESeq(dds)
-	res<-results(dds,cooksCutoff=FALSE)
-	
-	select<- (!is.na(res$padj)) & (res$padj<0.05) & ((res$log2FoldChange >= 1) | (res$log2FoldChange <= -1))
-	
-	if(length(indecies) > 0){
-		tbb<-cbind(data[,indecies,drop=F], pairCountData, res)
-	}else{
-		tbb<-cbind(pairCountData, res)
-	}
-	tbbselect<-tbb[select,,drop=F]
-	
-	tbb<-tbb[order(tbb$padj),,drop=F]
-	write.csv(as.data.frame(tbb),paste0(pairname, "_DESeq2.csv"))
-	
-	tbbselect<-tbbselect[order(tbbselect$padj),,drop=F]
-	write.csv(as.data.frame(tbbselect),paste0(pairname, "_DESeq2_sig.csv"))
 }
