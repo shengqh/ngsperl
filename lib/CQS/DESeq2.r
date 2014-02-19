@@ -33,13 +33,14 @@ for(pairname in pairnames){
 	str(pairname)
 	gs=pairs[[pairname]]
 	gnames=names(gs)
-	g1name=gnames[1]
-	g2name=gnames[2]
 	if(length(gnames) > 2){
 		ispaired<-unlist(gs[3])
 	}else{
 		ispaired<-FALSE
 	}
+	gnames<-gnames[1:2]
+	g1name=gnames[1]
+	g2name=gnames[2]
 	g1=gs[[g1name]]
 	g2=gs[[g2name]]
 	c1=countData[,colnames(countData) %in% g1,drop=F]
@@ -62,19 +63,20 @@ for(pairname in pairnames){
 		}
 	}
 	
-	pairCountData=cbind(c1, c2)
+	pairCountData<-cbind(c1, c2)
+  pairCountData<-pairCountData[apply(pairCountData, 1, max) > 0,]
 	
 	if(ispaired){
-		pairColData=data.frame(condition=factor(c(rep(g1name, ncol(c1)), rep(g2name, ncol(c2))), levels=gnames), paired=factor(c(rep(paste0("S", c(1:ncol(c1))),2))))
+		pairColData=data.frame(condition=factor(c(rep(g1name, ncol(c1)), rep(g2name, ncol(c2))), levels=gnames[1:2]), paired=factor(c(rep(paste0("S", c(1:ncol(c1))),2))))
 	}else{
-		pairColData=data.frame(condition=factor(c(rep(g1name, ncol(c1)), rep(g2name, ncol(c2))), levels=gnames))
+		pairColData=data.frame(condition=factor(c(rep(g1name, ncol(c1)), rep(g2name, ncol(c2))), levels=gnames[1:2]))
 	}
 	rownames(pairColData)<-colnames(pairCountData)
 	pairColors<-as.matrix(data.frame(Group=c(rep("red", ncol(c1)), rep("blue", ncol(c2)))))
 
 	#some basic information
 	dds=DESeqDataSetFromMatrix(countData = pairCountData,
-							colData = pairColData,
+							              colData = pairColData,
                             design = ~1)
 
 	colnames(dds)<-colnames(pairCountData)
@@ -91,7 +93,7 @@ for(pairname in pairnames){
 	rsdata<-melt(rldmatrix)
 	colnames(rsdata)<-c("Gene", "Sample", "VSD")
 	png(filename=paste0(pairname, "_DESeq2-vsd-density.png"), width=4000, height=3000, res=300)
-	g<-ggplot(rsdata) + geom_density(aes(x=logCount, colour=Sample)) + xlab("DESeq2 Variance Stabilizing Transformed Value")
+	g<-ggplot(rsdata) + geom_density(aes(x=VSD, colour=Sample)) + xlab("DESeq2 Variance Stabilizing Transformed Value")
 	print(g)
 	dev.off()
 	
@@ -113,9 +115,9 @@ for(pairname in pairnames){
 	dev.off()
 	
 	#draw heatmap
-	rldselect<-rldmatrix[1:200,,drop=F]
+	rldselect<-rldmatrix[1:500,,drop=F]
 	if(nrow(rldselect) > 2){
-		png(filename=paste0(pairname, ".heatmap.png"), width=3000, height =3000, res=300)
+		png(filename=paste0(pairname, "_DESeq2-vsd-heatmap.png"), width=3000, height =3000, res=300)
 		heatmap3(rldselect, col = hmcols, ColSideColors = pairColors, margins=c(12,5), scale="r", dist=dist, labRow="",
 				legendfun=function() showLegend(legend=paste0("Group ", gnames),col=c("red","blue"),cex=1.5,x="center"))
 		dev.off()
