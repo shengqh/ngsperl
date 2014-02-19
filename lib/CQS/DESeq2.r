@@ -82,8 +82,7 @@ for(pairname in pairnames){
 	colnames(dds)<-colnames(pairCountData)
   
 	#draw density graph
-	rld<-log2(counts(dds,normalized=TRUE) + 1)
-	rldmatrix=as.matrix(assay(rld))
+	rldmatrix<-as.matrix(log2(counts(dds,normalized=FALSE) + 1))
 	rsdata<-melt(rldmatrix)
 	colnames(rsdata)<-c("Gene", "Sample", "log2Count")
 	png(filename=paste0(pairname, "_DESeq2-log2-density.png"), width=4000, height=3000, res=300)
