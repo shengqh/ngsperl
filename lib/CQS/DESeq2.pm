@@ -18,7 +18,7 @@ my $directory;
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "DESeq2";
+  $self->{_name}   = "DESeq2";
   $self->{_suffix} = "_de2";
   bless $self, $class;
   return $self;
@@ -30,11 +30,11 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $pairs = get_raw_files( $config, $section );
-  my $totalPair = scalar(keys %{$pairs});
-  if(0 == $totalPair){
+  my $totalPair = scalar( keys %{$pairs} );
+  if ( 0 == $totalPair ) {
     die "No pair defined!";
   }
-  
+
   my $groups = get_raw_files( $config, $section, "groups" );
 
   my $countfile = parse_param_file( $config, $section, "countfile", 1 );
@@ -63,8 +63,14 @@ pairs=list(
 ";
   my $first = 0;
   for my $pairName ( sort keys %{$pairs} ) {
-    $first ++;
+    $first++;
     my @groupNames = @{ $pairs->{$pairName} };
+
+    my $ispaired = 0;
+    if ( scalar(@groupNames) == 3 ) {
+      $ispaired = $groupNames[2] eq "paired";
+      @groupNames = @groupNames[ 1 .. 2 ];
+    }
 
     if ( scalar(@groupNames) != 2 ) {
       die "Comparison in pair $pairName should contains and only contains two groups!";
@@ -74,11 +80,17 @@ pairs=list(
     my $g2 = $groupNames[1];
     my $s1 = $tpgroups{$g1};
     my $s2 = $tpgroups{$g2};
-    print RF "  \"$pairName\" = list(\"$g1\" = c($s1), \"$g2\" = c($s2))";
-    if ( $first != $totalPair) {
+    if ($ispaired) {
+      print RF "  \"$pairName\" = list(\"$g1\" = c($s1), \"$g2\" = c($s2), \"paired\" = TRUE)";
+    }
+    else {
+      print RF "  \"$pairName\" = list(\"$g1\" = c($s1), \"$g2\" = c($s2))";
+    }
+
+    if ( $first != $totalPair ) {
       print RF ", \n";
     }
-    else{
+    else {
       print RF " \n";
     }
   }
