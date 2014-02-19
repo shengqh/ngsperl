@@ -80,6 +80,18 @@ for(pairname in pairnames){
                             design = ~1)
 
 	colnames(dds)<-colnames(pairCountData)
+  
+	#draw density graph
+	rld<-log2(counts(dds,normalized=TRUE) + 1)
+	rldmatrix=as.matrix(assay(rld))
+	rsdata<-melt(rldmatrix)
+	colnames(rsdata)<-c("Gene", "Sample", "log2Count")
+	png(filename=paste0(pairname, "_DESeq2-log2-density.png"), width=4000, height=3000, res=300)
+	g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + xlab("DESeq2 log2 transformed count")
+	print(g)
+	dev.off()
+	
+	#varianceStabilizingTransformation
 	vsd <- varianceStabilizingTransformation(dds, blind=TRUE)
 	assayvsd<-assay(vsd)
 	write.csv(assayvsd, file=paste0(pairname, "_DESeq2-vsd.csv"))
@@ -87,15 +99,7 @@ for(pairname in pairnames){
 	vsdiqr<-apply(assayvsd, 1, IQR)
 	assayvsd<-assayvsd[order(vsdiqr, decreasing=T),]
 
-	rldmatrix<-as.matrix(assayvsd)
-	
-	#draw density graph
-	rsdata<-melt(rldmatrix)
-	colnames(rsdata)<-c("Gene", "Sample", "VSD")
-	png(filename=paste0(pairname, "_DESeq2-vsd-density.png"), width=4000, height=3000, res=300)
-	g<-ggplot(rsdata) + geom_density(aes(x=VSD, colour=Sample)) + xlab("DESeq2 Variance Stabilizing Transformed Value")
-	print(g)
-	dev.off()
+	rldmatrix=as.matrix(assay(rld))
 	
 	#draw pca graph
 	png(filename=paste0(pairname, "_DESeq2-vsd-pca.png"), width=3000, height=3000, res=300)
