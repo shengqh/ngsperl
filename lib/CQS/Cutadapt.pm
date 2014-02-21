@@ -29,7 +29,7 @@ sub perform {
 
   my $adapt     = get_option( $config, $section, "adaptor" );
   my $extension = get_option( $config, $section, "extension" );
-  my $gzipped   = get_option( $config, $section, "gzipped", 0 );
+  my $gzipped   = get_option( $config, $section, "gzipped", 1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
