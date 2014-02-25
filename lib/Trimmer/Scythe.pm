@@ -29,6 +29,7 @@ sub perform {
 
   my $faFile = get_param_file( $config->{$section}{adapter_file}, "adapter_file", 1 );
   my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my $sickleoption = get_option( $config, $section, "sickleoption", "" );
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
@@ -53,17 +54,59 @@ $path_file
 cd $resultDir
 
 ";
-    for my $sampleFile (@sampleFiles) {
-      my $sname = basename($sampleFile);
-      if($sname =~ ".gz\$"){
-        $sname =  substr $sname, 1, -3;
-      }
-      my $trimFile = change_extension( $sname, "_trim.fastq" );
-      my $finalFile = $trimFile . ".gz";
 
-      print OUT "if [ ! -s $finalFile ]; then
-  scythe $option -a $faFile $sampleFile > $trimFile
-  gzip $trimFile
+    if ( scalar(@sampleFiles) == 2 ) {
+      my $sample1 = $sampleFiles[0];
+      my $sample2 = $sampleFiles[1];
+
+      my $trim1 = $sampleName . "_1_scythe.fastq";
+      my $trim2 = $sampleName . "_1_scythe.fastq";
+
+      my $trim11 = $sampleName . "_1_scythe_sickle.fastq";
+      my $trim22 = $sampleName . "_2_scythe_sickle.fastq";
+
+      my $finalFile1 = $trim11 . ".gz";
+      my $finalFile2 = $trim22 . ".gz";
+
+      print OUT "
+if [ ! -s $finalFile1 ]; then
+  if [ ! -s $trim1 ]; then
+    scythe $option -a $faFile -o $trim1 $sample1
+  fi
+
+  if [ ! -s $trim2 ]; then
+    scythe $option -a $faFile -o $trim2 $sample2
+  fi
+
+  sickle $sickleoption pe -f $trim1 -r $trim2 -o $trim11 -p $trim22
+
+  gzip $trim11
+  gzip $trim22
+  
+  rm $trim1 $trim2
+fi
+";
+    }
+    else {
+      my $sample1 = $sampleFiles[0];
+
+      my $trim1 = $sampleName . "_scythe.fastq";
+
+      my $trim11 = $sampleName . "_scythe_sickle.fastq";
+
+      my $finalFile1 = $trim11 . ".gz";
+
+      print OUT "
+if [ ! -s $finalFile1 ]; then
+  if [ ! -s $trim1 ]; then
+    scythe $option -a $faFile -o $trim1 $sample1
+  fi
+
+  sickle $sickleoption se -f $trim1 -o $trim11
+
+  gzip $trim11
+  
+  rm $trim1
 fi
 ";
     }
@@ -83,7 +126,7 @@ exit 1
     chmod 0755, $shfile;
   }
 
-  print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name}  . " tasks.\n";
+  print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
 
   #`qsub $pbsFile`;
 }
@@ -100,15 +143,22 @@ sub result {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my @resultFiles = ();
 
-    for my $sampleFile (@sampleFiles) {
-      my $sname = basename($sampleFile);
-      if($sname =~ ".gz\$"){
-        $sname =  substr $sname, 1, -3;
-      }
-      my $trimFile = change_extension( $sname, "_trim.fastq" );
-      my $finalFile = $trimFile . ".gz";
-      push( @resultFiles, "${resultDir}/${finalFile}" );
+    if ( scalar(@sampleFiles) == 2 ) {
+      my $trim11 = $sampleName . "_1_scythe_sickle.fastq";
+      my $trim22 = $sampleName . "_2_scythe_sickle.fastq";
+
+      my $finalFile1 = $trim11 . ".gz";
+      my $finalFile2 = $trim22 . ".gz";
+
+      push( @resultFiles, "${resultDir}/${finalFile1}" );
+      push( @resultFiles, "${resultDir}/${finalFile2}" );
     }
+    else {
+      my $trim11 = $sampleName . "_scythe_sickle.fastq";
+      my $finalFile1 = $trim11 . ".gz";
+      push( @resultFiles, "${resultDir}/${finalFile1}" );
+    }
+    
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
