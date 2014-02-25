@@ -60,7 +60,7 @@ cd $resultDir
       my $sample2 = $sampleFiles[1];
 
       my $trim1 = $sampleName . "_1_scythe.fastq";
-      my $trim2 = $sampleName . "_1_scythe.fastq";
+      my $trim2 = $sampleName . "_2_scythe.fastq";
 
       my $trim11 = $sampleName . "_1_scythe_sickle.fastq";
       my $trim22 = $sampleName . "_2_scythe_sickle.fastq";
