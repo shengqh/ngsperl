@@ -55,6 +55,9 @@ cd $resultDir
 ";
     for my $sampleFile (@sampleFiles) {
       my $sname = basename($sampleFile);
+      if($sname =~ ".gz\$"){
+        $sname =  substr $sname, 1, -3;
+      }
       my $trimFile = change_extension( $sname, "_trim.fastq" );
       my $finalFile = $trimFile . ".gz";
 
