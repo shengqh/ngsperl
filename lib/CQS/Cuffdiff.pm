@@ -10,6 +10,7 @@ use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::PairTask;
 use CQS::NGSCommon;
+use Data::Dumper;
 
 our @ISA = qw(CQS::PairTask);
 
@@ -33,6 +34,8 @@ sub perform {
 
   my $rawFiles = get_raw_files( $config, $section );
 
+  print Dumper($rawFiles);
+
   my $groups = get_raw_files( $config, $section, "groups" );
 
   my $pairs = get_raw_files( $config, $section, "pairs" );
@@ -48,7 +51,6 @@ sub perform {
     my @gfiles  = ();
     my $index   = 0;
     foreach my $sampleName ( sort @samples ) {
-      print $sampleName, "\n";
       my @bamFiles = @{ $rawFiles->{$sampleName} };
       push( @gfiles, $bamFiles[0] );
       my $group_index = $groupName . "_" . $index;
