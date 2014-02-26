@@ -27,7 +27,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $faFile = get_param_file( $config->{$section}{adapter_file}, "adapter_file", 1 );
   my %rawFiles = %{ get_raw_files( $config, $section ) };
   
   my $qual_type = get_option($config, $section, "qual_type");
