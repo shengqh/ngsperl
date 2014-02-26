@@ -48,6 +48,7 @@ sub perform {
     my @gfiles  = ();
     my $index   = 0;
     foreach my $sampleName ( sort @samples ) {
+      print $sampleName, "\n";
       my @bamFiles = @{ $rawFiles->{$sampleName} };
       push( @gfiles, $bamFiles[0] );
       my $group_index = $groupName . "_" . $index;
