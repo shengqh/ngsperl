@@ -27,6 +27,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
+  my $selfname = $self->{_name};
+
   my $faFile = get_param_file( $config->{$section}{adapter_file}, "adapter_file", 1 );
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -51,6 +53,8 @@ sub perform {
 $path_file
 
 cd $resultDir
+
+echo scythe_start=`date` 
 
 ";
 

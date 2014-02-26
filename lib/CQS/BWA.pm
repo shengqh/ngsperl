@@ -28,6 +28,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
+  my $selfname = $self->{_name};
+  
   $option = $option . " -M";
   
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
@@ -80,8 +82,10 @@ $path_file
 
 cd $curDir
 
+echo bwa_start=`date`
+
 if [ -s $bamFile ]; then
-  echo job has already been done. if you want to do again, delete $bamFile and submit job again.
+  echo job $selfname has already been done. if you want to do again, delete $bamFile and submit job again.
   exit 0
 fi
 

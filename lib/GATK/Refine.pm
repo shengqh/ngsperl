@@ -78,6 +78,8 @@ $path_file
 
 cd $curDir
 
+echo GATKRefine_start=`date` 
+
 if [ -s $sortedFile ]; then
   echo job has already been done. if you want to do again, delete $sortedFile and submit job again.
   exit 0
