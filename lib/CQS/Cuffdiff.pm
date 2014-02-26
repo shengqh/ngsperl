@@ -70,7 +70,7 @@ sub perform {
   for my $pairName ( sort keys %{$pairs} ) {
     my ( $ispaired, $gNames ) = get_pair_groups( $pairs, $pairName );
     
-    print Dumper($gNames);
+    #print Dumper($gNames);
     
     my @groupNames = @{$gNames};
     my @bams       = ();
