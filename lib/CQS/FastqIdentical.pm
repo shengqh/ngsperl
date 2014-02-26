@@ -77,14 +77,7 @@ fi
     else {
       my $outputFiles = "";
       for my $sampleFile (@sampleFiles) {
-        my $fileName = basename($sampleFile);
-        if ( $fileName =~ /.gz$/ ) {
-          $fileName = change_extension( $fileName, "" );
-        }
-        if ( $fileName =~ /.fastq$/ ) {
-          $fileName = change_extension( $fileName, "" );
-        }
-        my $outputFile = $fileName . $extension;
+        my $outputFile = change_extension_gzipped(basename($sampleFile), $extension);
         $outputFiles = $outputFiles . " " . $outputFile;
         print OUT "mono-sgen $cqstools fastq_identical -i $sampleFile $minlen -o $outputFile \n";
       }

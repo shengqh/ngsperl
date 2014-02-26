@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Trimmer::Scythe;
+package Trimmer::Sickle;
 
 use strict;
 use warnings;
@@ -16,8 +16,8 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Trimmer::Scythe";
-  $self->{_suffix} = "_scy";
+  $self->{_name}   = "Trimmer::Sickle";
+  $self->{_suffix} = "_sic";
   bless $self, $class;
   return $self;
 }
@@ -58,21 +58,15 @@ cd $resultDir
       my $sample1 = $sampleFiles[0];
       my $sample2 = $sampleFiles[1];
 
-      my $trim1 = change_extension_gzipped(basename($sample1), "_scythe.fastq");
-      my $trim2 = change_extension_gzipped(basename($sample2), "_scythe.fastq");
+      my $trim1 = change_extension_gzipped(basename($sample1), "_sickle.fastq");
+      my $trim2 = change_extension_gzipped(basename($sample2), "_sickle.fastq");
 
       my $finalFile1 = $trim1 . ".gz";
       my $finalFile2 = $trim2 . ".gz";
 
       print OUT "
 if [ ! -s $finalFile1 ]; then
-  if [ ! -s $trim1 ]; then
-    scythe $option -a $faFile -o $trim1 $sample1
-  fi
-
-  if [ ! -s $trim2 ]; then
-    scythe $option -a $faFile -o $trim2 $sample2
-  fi
+  sickle $option pe -f $sample1 -r $sample2 -o $trim1 -p $trim2
 
   gzip $trim1
   gzip $trim2
@@ -82,15 +76,13 @@ fi
     else {
       my $sample1 = $sampleFiles[0];
 
-      my $trim1 = change_extension_gzipped(basename($sample1), "_scythe.fastq");
+      my $trim1 = change_extension_gzipped(basename($sample1), "_sickle.fastq");
 
       my $finalFile1 = $trim1 . ".gz";
 
       print OUT "
 if [ ! -s $finalFile1 ]; then
-  if [ ! -s $trim1 ]; then
-    scythe $option -a $faFile -o $trim1 $sample1
-  fi
+  sickle $option se -f $sample1 -o $trim1
 
   gzip $trim1
 fi
@@ -133,8 +125,8 @@ sub result {
       my $sample1 = $sampleFiles[0];
       my $sample2 = $sampleFiles[1];
 
-      my $trim1 = change_extension_gzipped(basename($sample1), "_scythe.fastq");
-      my $trim2 = change_extension_gzipped(basename($sample2), "_scythe.fastq");
+      my $trim1 = change_extension_gzipped(basename($sample1), "_sickle.fastq");
+      my $trim2 = change_extension_gzipped(basename($sample2), "_sickle.fastq");
 
       my $finalFile1 = $trim1 . ".gz";
       my $finalFile2 = $trim2 . ".gz";
@@ -145,7 +137,7 @@ sub result {
     else {
       my $sample1 = $sampleFiles[0];
 
-      my $trim1 = change_extension_gzipped(basename($sample1), "_scythe.fastq");
+      my $trim1 = change_extension_gzipped(basename($sample1), "_sickle.fastq");
 
       my $finalFile1 = $trim1 . ".gz";
 
