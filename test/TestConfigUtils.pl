@@ -120,3 +120,15 @@ ok(
   )
 );
 
+my $pairs = {
+  "HiSeq_vs_MiSeq" => {
+    groups => [ "MiSeq", "HiSeq" ],
+    paired => 1
+  }
+};
+
+my ( $ispaired, $gNames ) = get_pair_groups( $pairs, "HiSeq_vs_MiSeq" );
+ok($ispaired);
+
+ok( eq_deeply( $gNames, [ "MiSeq", "HiSeq" ] ) );
+

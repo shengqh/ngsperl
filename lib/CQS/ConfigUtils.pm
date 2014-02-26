@@ -247,20 +247,20 @@ sub get_option_value {
 
 sub get_pair_groups {
   my ( $pairs, $pairName ) = @_;
-  my @GroupNames;
-  my $ispaired;
+  my $groupNames;
+  my $ispaired = 0;
   my $tmpGroupNames = $pairs->{$pairName};
   if ( ref($tmpGroupNames) eq 'HASH' ) {
-    @GroupNames = $tmpGroupNames->{"groups"};
+    $groupNames = $tmpGroupNames->{"groups"};
     $ispaired   = $tmpGroupNames->{"paired"};
   }
   else {
-    @GroupNames = @{$tmpGroupNames};
+    $groupNames = $tmpGroupNames;
   }
   if ( !defined $ispaired ) {
     $ispaired = 0;
   }
-  return ( $ispaired, \@GroupNames );
+  return ( $ispaired, $groupNames );
 }
 
 1;
