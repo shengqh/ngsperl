@@ -78,6 +78,11 @@ $path_file
 
 cd $curDir
 
+if [ -s $sortedFile ]; then
+  echo job has already been done. if you want to do again, delete $sortedFile and submit job again.
+  exit 0
+fi
+
 if [ ! -s $intervalFile ]; then
   echo RealignerTargetCreator=`date` 
   java $option -jar $gatk_jar -T RealignerTargetCreator -I $sampleFile -R $faFile $knownvcf -nt $thread_count -o $intervalFile
