@@ -170,6 +170,9 @@ sub do_get_raw_files {
       }
     }
     else {
+      if ( !defined $config->{$refSectionName} ) {
+        die "undefined section $refSectionName";
+      }
       $refmap->{$refSectionName} = $pattern;
     }
 
@@ -247,7 +250,7 @@ sub get_pair_groups {
   my @GroupNames;
   my $ispaired;
   my $tmpGroupNames = $pairs->{$pairName};
-  if ( ref($tmpGroupNames) eq ref {} ) {
+  if ( ref($tmpGroupNames) eq 'HASH' ) {
     @GroupNames = $tmpGroupNames->{"groups"};
     $ispaired   = $tmpGroupNames->{"paired"};
   }
@@ -257,7 +260,7 @@ sub get_pair_groups {
   if ( !defined $ispaired ) {
     $ispaired = 0;
   }
-  return ( \@GroupNames, $ispaired );
+  return ( $ispaired, \@GroupNames );
 }
 
 1;

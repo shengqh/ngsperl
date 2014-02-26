@@ -28,9 +28,13 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $transcript_gtf = parse_param_file( $config, $section, "transcript_gtf", 1 );
+  my $transcript_gtf;
 
-  my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
+  #= parse_param_file( $config, $section, "transcript_gtf", 1 );
+
+  my $faFile;
+
+  # = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
 
   my $rawFiles = get_raw_files( $config, $section );
   print Dumper($rawFiles);
@@ -68,7 +72,7 @@ sub perform {
   print SH get_run_command($sh_direct);
 
   for my $pairName ( sort keys %{$pairs} ) {
-    my $gNames     = get_pair_groups( $pairs, $pairName );
+    my ( $ispaired, $gNames ) = get_pair_groups( $pairs, $pairName );
     my @groupNames = @{$gNames};
     my @bams       = ();
     foreach my $groupName (@groupNames) {
