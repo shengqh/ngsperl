@@ -33,12 +33,13 @@ sub perform {
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
 
   my $rawFiles = get_raw_files( $config, $section );
-
   print Dumper($rawFiles);
 
   my $groups = get_raw_files( $config, $section, "groups" );
+  print Dumper($groups);
 
   my $pairs = get_raw_files( $config, $section, "pairs" );
+  print Dumper($pairs);
 
   my $mapfile = $resultDir . "/${task_name}_group_sample.map";
   open( MAP, ">$mapfile" ) or die "Cannot create $mapfile";
