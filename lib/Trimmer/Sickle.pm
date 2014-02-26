@@ -55,6 +55,8 @@ $path_file
 
 cd $resultDir
 
+echo sickle_start=`date`
+
 ";
 
     if ( scalar(@sampleFiles) == 2 ) {
