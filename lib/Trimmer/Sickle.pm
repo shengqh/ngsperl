@@ -29,6 +29,10 @@ sub perform {
 
   my $faFile = get_param_file( $config->{$section}{adapter_file}, "adapter_file", 1 );
   my %rawFiles = %{ get_raw_files( $config, $section ) };
+  
+  my $qual_type = get_option($config, $section, "qual_type");
+  
+  $option = $option . " -t " . $qual_type; 
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
