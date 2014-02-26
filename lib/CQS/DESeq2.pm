@@ -64,14 +64,8 @@ pairs=list(
   my $first = 0;
   for my $pairName ( sort keys %{$pairs} ) {
     $first++;
-    my @groupNames = @{ $pairs->{$pairName} };
-
-    my $ispaired = 0;
-    if ( scalar(@groupNames) == 3 ) {
-      $ispaired = $groupNames[2] eq "paired";
-      @groupNames = @groupNames[ 0 .. 1 ];
-    }
-
+    my ( $gNames, $ispaired ) = get_pair_groups( $pairs, $pairName );
+    my @groupNames = @{$gNames};
     if ( scalar(@groupNames) != 2 ) {
       die "Comparison in pair $pairName should contains and only contains two groups!";
     }

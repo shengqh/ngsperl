@@ -13,7 +13,7 @@ use CQS::CQSDebug;
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(get_option get_parameter get_param_file parse_param_file get_raw_files get_raw_files2 get_run_command get_option_value)] );
+our %EXPORT_TAGS = ( 'all' => [qw(get_option get_parameter get_param_file parse_param_file get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -240,6 +240,24 @@ sub get_option_value {
   else {
     return ($value);
   }
+}
+
+sub get_pair_groups {
+  my ( $pairs, $pairName ) = @_;
+  my @GroupNames;
+  my $ispaired;
+  my $tmpGroupNames = $pairs->{$pairName};
+  if ( ref($tmpGroupNames) eq ref {} ) {
+    @GroupNames = $tmpGroupNames->{"groups"};
+    $ispaired   = $tmpGroupNames->{"paired"};
+  }
+  else {
+    @GroupNames = @{$tmpGroupNames};
+  }
+  if ( !defined $ispaired ) {
+    $ispaired = 0;
+  }
+  return ( \@GroupNames, $ispaired );
 }
 
 1;

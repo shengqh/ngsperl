@@ -64,7 +64,8 @@ sub perform {
   print SH get_run_command($sh_direct);
 
   for my $pairName ( sort keys %{$pairs} ) {
-    my @groupNames = @{ $pairs->{$pairName} };
+    my $gNames     = get_pair_groups( $pairs, $pairName );
+    my @groupNames = @{$gNames};
     my @bams       = ();
     foreach my $groupName (@groupNames) {
       push( @bams, $tpgroups{$groupName} );
