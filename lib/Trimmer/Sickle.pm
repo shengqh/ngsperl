@@ -63,16 +63,18 @@ cd $resultDir
 
       my $trim1 = change_extension_gzipped(basename($sample1), "_sickle.fastq");
       my $trim2 = change_extension_gzipped(basename($sample2), "_sickle.fastq");
+      my $trim3 = $sampleName . "_singles_sickle.fastq";
 
       my $finalFile1 = $trim1 . ".gz";
       my $finalFile2 = $trim2 . ".gz";
 
       print OUT "
 if [ ! -s $finalFile1 ]; then
-  sickle pe $option -f $sample1 -r $sample2 -o $trim1 -p $trim2
+  sickle pe $option -f $sample1 -r $sample2 -o $trim1 -p $trim2 -s $trim3
 
   gzip $trim1
   gzip $trim2
+  rm $trim3
 fi
 ";
     }
