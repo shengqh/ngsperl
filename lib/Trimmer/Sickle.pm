@@ -69,7 +69,7 @@ cd $resultDir
 
       print OUT "
 if [ ! -s $finalFile1 ]; then
-  sickle $option pe -f $sample1 -r $sample2 -o $trim1 -p $trim2
+  sickle pe $option -f $sample1 -r $sample2 -o $trim1 -p $trim2
 
   gzip $trim1
   gzip $trim2
@@ -85,7 +85,7 @@ fi
 
       print OUT "
 if [ ! -s $finalFile1 ]; then
-  sickle $option se -f $sample1 -o $trim1
+  sickle se $option -f $sample1 -o $trim1
 
   gzip $trim1
 fi
