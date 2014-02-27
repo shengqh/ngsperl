@@ -119,6 +119,7 @@ fi
 if [[ -s $sortedFile && ! -s ${sortedFile}.bai ]]; then
   echo BamIndex=`date` 
   samtools index $sortedFile
+  samtools flagstat $sortedFile > ${sortedFile}.stat
   rm $rmdupFile $recalFile $realignedFile
 fi
   
