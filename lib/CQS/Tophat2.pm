@@ -112,6 +112,8 @@ $sort_cmd
 
 $rename_bam_cmd
 
+samtools flagstat $final > ${final}.stat 
+
 echo finished=`date` 
 
 ";
