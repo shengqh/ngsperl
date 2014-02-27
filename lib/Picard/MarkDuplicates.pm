@@ -80,7 +80,7 @@ fi
 if [[ -s $sortedFile && ! -s ${sortedFile}.bai ]]; then
   echo BamIndex=`date` 
   samtools index $sortedFile
-  samtools flagstag $sortedFile > ${sortedFile}.stat
+  samtools flagstat $sortedFile > ${sortedFile}.stat
   rm $rmdupFile
 fi
   
