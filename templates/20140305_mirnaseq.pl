@@ -8,6 +8,7 @@ use CQS::ConfigUtils;
 use CQS::ClassFactory;
 
 my $root     = "/scratch/cqs/shengq1/mirna/20140305_pipeline";
+
 my $cqstools = "/home/shengq1/cqstools/CQS.Tools.exe";
 
 my $hg19_mrna_gff     = "/data/cqs/shengq1/reference/miRBase20/hsa.gff3";
