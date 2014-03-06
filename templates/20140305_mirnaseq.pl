@@ -7,7 +7,7 @@ use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
 
-my $root     = "/scratch/cqs/shengq1/mirna/20140305_pipeline";
+my $root = "/scratch/cqs/shengq1/mirna/20140305_pipeline";
 
 my $cqstools = "/home/shengq1/cqstools/CQS.Tools.exe";
 
@@ -63,7 +63,10 @@ my $def = {
 
 my $cur_target_dir = create_directory_or_die( $def->{target_dir} );
 my $config         = {
-  general  => { "task_name" => $def->{task_name}, },
+  general => {
+    task_name => $def->{task_name},
+    path_file => "/home/shengq1/local/bin/path.txt",
+  },
   cutadapt => {
     class      => "Cutadapt",
     perform    => 1,
