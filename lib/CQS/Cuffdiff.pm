@@ -98,14 +98,14 @@ cd $curDir
 
 if [ -s gene_exp.diff ];then
   echo job has already been done. if you want to do again, delete ${curDir}/gene_exp.diff and submit job again.
-  exit 1;
+  exit 0;
 fi
 
 cuffdiff $option -o . -L $labels -b $faFile $transcript_gtf $bamstrs
 
 echo finished=`date`
 
-exit 1
+exit 0
 ";
 
     close(OUT);
@@ -115,7 +115,7 @@ exit 1
     print SH "\$MYCMD ./$pbsName \n";
   }
 
-  print SH "exit 1\n";
+  print SH "exit 0\n";
   close(SH);
 
   my $sigfile = $pbsDir . "/${task_name}_sig.pl";

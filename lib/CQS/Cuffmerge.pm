@@ -84,7 +84,7 @@ cuffmerge $option $gtfparam -s $faFile -o . $assembliesfile
 
 echo finished=`date`
 
-exit 1
+exit 0
 ";
 
   close(OUT);

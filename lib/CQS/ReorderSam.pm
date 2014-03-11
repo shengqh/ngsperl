@@ -61,17 +61,17 @@ cd $curDir
 if [ -s $finalFile ]; then
   if [ ! -s ${finalFile}.bai ]; then
     samtools index $finalFile
-    exit 1;
+    exit 0;
   fi
   echo job has already been done. if you want to do again, delete ${curDir}/${finalFile} and submit job again.
-  exit 1;
+  exit 0;
 fi
 
 java -jar $jar I=${sampleFile} O=${finalFile} R=${faFile}
 
 samtools index $finalFile
 
-exit 1;
+exit 0;
 ";
     close(OUT);
 

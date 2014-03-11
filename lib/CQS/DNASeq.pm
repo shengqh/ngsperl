@@ -181,7 +181,7 @@ $stat_command
 
 echo finished=`date`
 
-exit 1 
+exit 0 
 ";
 
     close OUT;
@@ -296,7 +296,7 @@ $inserts_command
 
 echo finished=`date`
 
-exit 1;
+exit 0;
 ";
 
     close OUT;
@@ -420,7 +420,7 @@ $refine_command
   
 echo finished=`date`
 
-exit 1;
+exit 0;
 ";
 
     close OUT;

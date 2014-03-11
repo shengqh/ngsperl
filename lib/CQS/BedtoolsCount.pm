@@ -67,7 +67,7 @@ bedtools multicov -bams $bamFile -bed $bedFile | awk '{print(\$4 \"\\t\" \$1 \":
 
 echo finished=`date`
 
-exit 1 
+exit 0 
 ";
 
     close OUT;

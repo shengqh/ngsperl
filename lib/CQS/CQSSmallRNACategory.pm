@@ -93,7 +93,7 @@ mono-sgen $cqsFile smallrna_group -i $filelist -o $resultDir
 
 echo finished=`date`
 
-exit 1 
+exit 0 
 ";
   close(OUT);
   print SH "\$MYCMD ./$pbsName \n";

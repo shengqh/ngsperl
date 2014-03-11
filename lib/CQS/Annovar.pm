@@ -116,7 +116,7 @@ fi
     print OUT "
 echo finished=`date`
 
-exit 1
+exit 0
 ";
     close(OUT);
 
@@ -124,7 +124,7 @@ exit 1
 
     print SH "\$MYCMD ./$pbsName \n";
   }
-  print SH "exit 1\n";
+  print SH "exit 0\n";
   close(SH);
 
   if ( is_linux() ) {

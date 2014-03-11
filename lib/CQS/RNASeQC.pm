@@ -62,9 +62,14 @@ echo RNASeQC=`date`
  
 java -jar $jar $option -s $mapfile -t $transcript_gtf -r $faFile -o .
 
+rm refGene.txt*
+rm exons.rpkm.gct
+rm */*.tmp.txt*
+rm */*/perBaseDoC.out
+
 echo finished=`date`
 
-exit 1
+exit 0
 ";
   close(OUT);
 

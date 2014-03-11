@@ -62,7 +62,7 @@ echo fastqc=`date`
 
 if [ -e $expectname ]; then
   echo job has already been done. if you want to do again, delete ${curDir}/${expectname} and submit job again.
-  exit 1;
+  exit 0;
 fi
 
 fastqc $option -t $sampleCount -o $curDir $samples

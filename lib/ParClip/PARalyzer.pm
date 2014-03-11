@@ -89,7 +89,7 @@ PARalyzer $iniFile
 
 echo PARalyzer_finished=`date`
 
-exit 1 
+exit 0 
 ";
 
     close OUT;

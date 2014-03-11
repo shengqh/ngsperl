@@ -62,7 +62,7 @@ echo CQSMappedDistinct=`date`
   print SH "
 echo finished=`date`
 
-exit 1
+exit 0
 ";
   close(SH);
 

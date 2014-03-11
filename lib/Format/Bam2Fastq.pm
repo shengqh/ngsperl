@@ -80,7 +80,7 @@ fi
 
 echo finished=`date`
 
-exit 1 
+exit 0 
 ";
     close OUT;
 

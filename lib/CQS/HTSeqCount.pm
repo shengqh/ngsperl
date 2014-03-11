@@ -67,7 +67,7 @@ samtools view $bamFile | htseq-count -q -m intersection-nonempty -s no -i gene_i
 
 echo finished=`date`
 
-exit 1 
+exit 0 
 ";
 
     close OUT;

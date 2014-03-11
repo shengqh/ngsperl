@@ -106,7 +106,7 @@ mono-sgen $cqsFile mapped_count $option --samtools $samtools -i $bamFile -g $gff
 
 echo finished=`date`
 
-exit 1 
+exit 0 
 ";
 
     close OUT;

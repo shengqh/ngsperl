@@ -132,7 +132,7 @@ fi
       print OUT "
 echo finished=`date`
 
-exit 1;
+exit 0;
 ";
 
       close OUT;
@@ -206,7 +206,7 @@ $bowtie1_aln_command
 
 echo finished=`date`
 
-exit 1;
+exit 0;
 ";
 
       close OUT;

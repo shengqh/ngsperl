@@ -115,7 +115,7 @@ cd $curDir
       print OUT "
 if [ -s $final ]; then
   echo job has already been done. if you want to do again, delete ${curDir}/${final} and submit job again.
-  exit 1;
+  exit 0;
 fi      
       
 if [ ! -s ${normal}.bai ]; then

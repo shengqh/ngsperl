@@ -101,7 +101,7 @@ mono-sgen $cqsFile mirna_count $option --samtools $samtools -i $bamFile -g $gffF
 
 echo finished=`date`
 
-exit 1 
+exit 0 
 ";
 
     close OUT;

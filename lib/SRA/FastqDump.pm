@@ -69,7 +69,7 @@ fi
 
 echo finished=`date`
 
-exit 1 
+exit 0 
 ";
     }
     else {
@@ -90,7 +90,7 @@ fi
 
 echo finished=`date`
 
-exit 1 
+exit 0 
 ";
     }
 

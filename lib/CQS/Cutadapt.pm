@@ -65,7 +65,7 @@ cd $resultDir
 
 if [ -s $finalFile ];then
   echo job has already been done. if you want to do again, delete ${resultDir}/$finalFile and submit job again.
-  exit 1;
+  exit 0;
 fi
 
 ";
@@ -107,7 +107,7 @@ gzip $finalUntrimName
     print OUT "
 echo finished=`date`
 
-exit 1 
+exit 0 
 ";
 
     close OUT;
