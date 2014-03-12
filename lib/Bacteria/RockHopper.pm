@@ -45,6 +45,21 @@ sub perform {
     $tpgroups{$groupName} = join( ",", @gfiles );
   }
 
+  my $mapfile = $self->getfile( $resultDir, $task_name, ".map" );
+  open( MAP, ">$mapfile" ) or die "Cannot create $mapfile";
+  for my $groupName ( sort keys %{$groups} ) {
+    my @samples = @{ $groups->{$groupName} };
+    foreach my $sampleName ( sort @samples ) {
+      my @fastqFiles = @{ $rawFiles->{$sampleName} };
+      foreach my $fastq ( sort @fastqFiles ) {
+        my $fname = basename($fastq);
+        $fname = change_extension( $fname, "" );
+        print MAP "$groupName\t$sampleName\t$fname\n";
+      }
+    }
+  }
+  close(MAP);
+
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct), "\n";
@@ -122,6 +137,10 @@ sub result {
     push( @resultFiles, $curDir . "/" . $genome_name . "_transcripts.txt" );
     $result->{$pairName} = filter_array( \@resultFiles, $pattern );
   }
+  my $mapfile = $self->getfile( $resultDir, $task_name, ".map" );
+  my @resultFiles = ();
+  push( @resultFiles, $mapfile );
+  $result->{$task_name} = filter_array( \@resultFiles, $pattern );
 
   return $result;
 }
