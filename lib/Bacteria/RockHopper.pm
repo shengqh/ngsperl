@@ -47,6 +47,7 @@ sub perform {
 
   my $mapfile = $self->getfile( $resultDir, $task_name, ".map" );
   open( MAP, ">$mapfile" ) or die "Cannot create $mapfile";
+  print MAP "Fastq\tSample\tGroup\n";
   for my $groupName ( sort keys %{$groups} ) {
     my @samples = @{ $groups->{$groupName} };
     foreach my $sampleName ( sort @samples ) {
@@ -54,7 +55,7 @@ sub perform {
       foreach my $fastq ( sort @fastqFiles ) {
         my $fname = basename($fastq);
         $fname = change_extension( $fname, "" );
-        print MAP "$groupName\t$sampleName\t$fname\n";
+        print MAP "$fname\t$sampleName\t$groupName\n";
       }
     }
   }
