@@ -40,10 +40,11 @@ sub perform {
 
   for my $pairName ( sort keys %{$pairs} ) {
     my ( $ispaired, $gNames ) = get_pair_groups( $pairs, $pairName );
+    
     my @groupNames = @{$gNames};
 
-    my $controlTag = $tagDirectories{ $groupNames[0] };
-    my $sampleTag  = $tagDirectories{ $groupNames[1] };
+    my $controlTag = $tagDirectories{ $groupNames[0] }[0];
+    my $sampleTag  = $tagDirectories{ $groupNames[1] }[0];
 
     my $pbsFile = $self->pbsfile( $pbsDir, $pairName );
     my $pbsName = basename($pbsFile);
@@ -63,7 +64,7 @@ cd $curDir
 
 echo homer_FindPeaks_start=`date` 
 
-findPeaks $sampleTag -i $controlTag -o ${curDir}/${pairName}
+findPeaks $sampleTag -i $controlTag -o ./$pairName
 
 echo homer_FindPeaks_finished=`date` 
 
