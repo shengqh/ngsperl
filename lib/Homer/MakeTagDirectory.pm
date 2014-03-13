@@ -28,23 +28,31 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %bamFiles = %{ get_raw_files( $config, $section ) };
-
+  my $rawFiles = get_raw_files( $config, $section );
+  my $groups = get_raw_files( $config, $section, "groups" );
+  
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
 
   my $threadcount = get_pbs_thread( $config->{$section}{pbs} );
 
-  for my $sampleName ( sort keys %bamFiles ) {
-    my @sampleFiles = @{ $bamFiles{$sampleName} };
-    my $samples = join( " ", @sampleFiles );
+  for my $groupName ( sort keys %{$groups} ) {
+    my @samples = @{ $groups->{$groupName} };
+    my @gfiles  = ();
+    foreach my $sampleName ( sort @samples ) {
+      my @bamFiles = @{ $rawFiles->{$sampleName} };
+      foreach my $bam (@bamFiles){
+        push( @gfiles, $bam );
+      }
+    }
+    my $bams = join( " ", @gfiles );
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
+    my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
     my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
+    my $log     = $self->logfile( $logDir, $groupName );
 
-    my $curDir      = create_directory_or_die( $resultDir . "/$sampleName" );
+    my $curDir      = create_directory_or_die( $resultDir . "/$groupName" );
 
     open( OUT, ">$pbsFile" ) or die $!;
 
@@ -58,11 +66,12 @@ cd $curDir
 
 echo homer_MakeTagDirectory_start=`date` 
 
-makeTagDirectory $curDir $samples
+makeTagDirectory $curDir $bams
 
 echo homer_MakeTagDirectory_finished=`date` 
 
 ";
+
     close(OUT);
 
     print SH "\$MYCMD ./$pbsName \n";
@@ -83,13 +92,13 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my $groups = get_raw_files( $config, $section, "groups" );
 
   my $result = {};
-  for my $sampleName ( keys %rawFiles ) {
+  for my $groupName ( sort keys %{$groups} ) {
     my @resultFiles = ();
-    push( @resultFiles, "${resultDir}/${sampleName}" );
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    push( @resultFiles, "${resultDir}/${groupName}" );
+    $result->{$groupName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
 }
