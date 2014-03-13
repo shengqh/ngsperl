@@ -31,7 +31,7 @@ sub perform {
   my %tagDirectories = %{ get_raw_files( $config, $section ) };
 
   my $pairs = get_raw_files( $config, $section, "pairs" );
-  
+
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
@@ -41,15 +41,15 @@ sub perform {
   for my $pairName ( sort keys %{$pairs} ) {
     my ( $ispaired, $gNames ) = get_pair_groups( $pairs, $pairName );
     my @groupNames = @{$gNames};
-    
-    my $controlTag = $tagDirectories{$groupNames[0]}
-    my $sampleTag = $tagDirectories{$groupNames[1]}
+
+    my $controlTag = $tagDirectories{ $groupNames[0] };
+    my $sampleTag  = $tagDirectories{ $groupNames[1] };
 
     my $pbsFile = $self->pbsfile( $pbsDir, $pairName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $pairName );
 
-    my $curDir      = create_directory_or_die( $resultDir . "/$pairName" );
+    my $curDir = create_directory_or_die( $resultDir . "/$pairName" );
 
     open( OUT, ">$pbsFile" ) or die $!;
 
