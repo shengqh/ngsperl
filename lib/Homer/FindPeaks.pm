@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Homer::MakeTagDirectory;
+package Homer::FindPeaks;
 
 use strict;
 use warnings;
@@ -17,8 +17,8 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Homer::MakeTagDirectory";
-  $self->{_suffix} = "_mtd";
+  $self->{_name}   = "Homer::FindPeaks";
+  $self->{_suffix} = "_fp";
   bless $self, $class;
   return $self;
 }
@@ -28,8 +28,9 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $rawFiles = get_raw_files( $config, $section );
-  my $groups = get_raw_files( $config, $section, "groups" );
+  my %tagDirectories = %{ get_raw_files( $config, $section ) };
+
+  my $pairs = get_raw_files( $config, $section, "pairs" );
   
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
@@ -37,22 +38,18 @@ sub perform {
 
   my $threadcount = get_pbs_thread( $config->{$section}{pbs} );
 
-  for my $groupName ( sort keys %{$groups} ) {
-    my @samples = @{ $groups->{$groupName} };
-    my @gfiles  = ();
-    foreach my $sampleName ( sort @samples ) {
-      my @bamFiles = @{ $rawFiles->{$sampleName} };
-      foreach my $bam (@bamFiles){
-        push( @gfiles, $bam );
-      }
-    }
-    my $bams = join( " ", @gfiles );
+  for my $pairName ( sort keys %{$pairs} ) {
+    my ( $ispaired, $gNames ) = get_pair_groups( $pairs, $pairName );
+    my @groupNames = @{$gNames};
+    
+    my $controlTag = $tagDirectories{$groupNames[0]}
+    my $sampleTag = $tagDirectories{$groupNames[1]}
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
+    my $pbsFile = $self->pbsfile( $pbsDir, $pairName );
     my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $groupName );
+    my $log     = $self->logfile( $logDir, $pairName );
 
-    my $curDir      = create_directory_or_die( $resultDir . "/$groupName" );
+    my $curDir      = create_directory_or_die( $resultDir . "/$pairName" );
 
     open( OUT, ">$pbsFile" ) or die $!;
 
@@ -64,11 +61,11 @@ $path_file
 
 cd $curDir 
 
-echo homer_MakeTagDirectory_start=`date` 
+echo homer_FindPeaks_start=`date` 
 
-makeTagDirectory $curDir $bams
+findPeaks $sampleTag -i $controlTag -o ${curDir}/${pairName}
 
-echo homer_MakeTagDirectory_finished=`date` 
+echo homer_FindPeaks_finished=`date` 
 
 exit 0
 
@@ -94,13 +91,13 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $groups = get_raw_files( $config, $section, "groups" );
+  my $pairs = get_raw_files( $config, $section, "pairs" );
 
   my $result = {};
-  for my $groupName ( sort keys %{$groups} ) {
+  for my $pairName ( sort keys %{$pairs} ) {
     my @resultFiles = ();
-    push( @resultFiles, "${resultDir}/${groupName}" );
-    $result->{$groupName} = filter_array( \@resultFiles, $pattern );
+    push( @resultFiles, "${resultDir}/${pairName}" );
+    $result->{$pairName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
 }
