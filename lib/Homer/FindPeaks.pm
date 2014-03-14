@@ -51,6 +51,7 @@ sub perform {
     my $log     = $self->logfile( $logDir, $pairName );
 
     my $curDir = create_directory_or_die( $resultDir . "/$pairName" );
+    my $finalFile = $pairName . ".tsv";
 
     open( OUT, ">$pbsFile" ) or die $!;
 
@@ -64,7 +65,12 @@ cd $curDir
 
 echo homer_FindPeaks_start=`date` 
 
-findPeaks $sampleTag -i $controlTag -o ./$pairName
+if [ -s $finalFile ];then
+  echo job has already been done. if you want to do again, delete ${curDir}/${finalFile} and submit job again.
+  exit 0;
+fi
+
+findPeaks $sampleTag -i $controlTag -o $finalFile
 
 echo homer_FindPeaks_finished=`date` 
 
@@ -97,7 +103,7 @@ sub result {
   my $result = {};
   for my $pairName ( sort keys %{$pairs} ) {
     my @resultFiles = ();
-    push( @resultFiles, "${resultDir}/${pairName}" );
+    push( @resultFiles, "${resultDir}/${pairName}.tsv" );
     $result->{$pairName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
