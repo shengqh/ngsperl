@@ -50,7 +50,6 @@ sub perform {
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $pairName );
 
-    my $curDir = create_directory_or_die( $resultDir . "/$pairName" );
     my $finalFile = $pairName . ".tsv";
 
     open( OUT, ">$pbsFile" ) or die $!;
@@ -61,12 +60,12 @@ sub perform {
 
 $path_file
 
-cd $curDir 
+cd $resultDir 
 
 echo homer_FindPeaks_start=`date` 
 
 if [ -s $finalFile ];then
-  echo job has already been done. if you want to do again, delete ${curDir}/${finalFile} and submit job again.
+  echo job has already been done. if you want to do again, delete ${resultDir}/${finalFile} and submit job again.
   exit 0;
 fi
 
