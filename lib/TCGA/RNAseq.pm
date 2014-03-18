@@ -136,7 +136,7 @@ echo 18. Exon counts
 $bedtoolsbin/coverageBed -split -abam ${sampleName}.bam -b ${tcgabin}/composite_exons.bed | perl ${tcgabin}/normalizeBedToolsExonQuant.pl ${tcgabin}/composite_exons.bed> ${sampleName}.bt.exon_quantification.txt 2> ${sampleName}.bt_exon_quantification.log
 
 echo 19. Cleanup large intermediate output
-rm alignments.bam working/phred33_alignments.bam working/rg_alignments.bam working/sorted_by_chr_read.bam working/transcriptome_alignments.bam working/transcriptome_alignments_filtered.bam working/prep_1.fastq working/prep_2.fastq > working/cleanup.log
+#rm alignments.bam working/phred33_alignments.bam working/rg_alignments.bam working/sorted_by_chr_read.bam working/transcriptome_alignments.bam working/transcriptome_alignments_filtered.bam working/prep_1.fastq working/prep_2.fastq > working/cleanup.log
 
 echo finished=`date`
 
