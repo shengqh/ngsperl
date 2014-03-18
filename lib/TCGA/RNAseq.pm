@@ -32,7 +32,7 @@ sub perform {
   my $picardbin = get_option($config, $section, "picard_dir");
   my $bedtoolsbin = get_option($config, $section, "bedtools_dir");
   my $tcgabin = get_option($config, $section, "tcga_bin_dir");
-  my $ubujar = "${tcgabin}/ubu.jar";
+  my $ubujar = "${tcgabin}/ubu-1.0.jar";
     
   my $mapslice_version = get_option($config, $section, "mapslice_version", "2");
   my $mapsplicebin;
