@@ -83,22 +83,22 @@ if [ ! -d working ]; then
 fi 
 
 echo 1. Format fastq 1 for Mapsplice
-java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample1 --out working/prep_1.fastq > working/mapsplice_prep1.log
+java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample1 --out working/prep_1.fastq
 
 echo 2. Format fastq 2 for Mapsplice
-java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample2 --out working/prep_2.fastq > working/mapsplice_prep2.log
+java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample2 --out working/prep_2.fastq
 
 echo 3. Mapsplice
-python $mapsplicebin/mapsplice_multi_thread.py --fusion --all-chromosomes-files ${tcgabin}/hg19_M_rCRS/hg19_M_rCRS.fa --pairend -X 8 -Q fq --chromosome-files-dir ${tcgabin}/hg19_M_rCRS/chromosomes --Bowtieidx ${tcgabin}/hg19_M_rCRS/ebwt/humanchridx_M_rCRS -1 working/prep_1.fastq -2 working/prep_2.fastq -o . 2> working/mapsplice.log
+python $mapsplicebin/mapsplice_multi_thread.py --fusion --all-chromosomes-files ${tcgabin}/hg19_M_rCRS/hg19_M_rCRS.fa --pairend -X 8 -Q fq --chromosome-files-dir ${tcgabin}/hg19_M_rCRS/chromosomes --Bowtieidx ${tcgabin}/hg19_M_rCRS/ebwt/humanchridx_M_rCRS -1 working/prep_1.fastq -2 working/prep_2.fastq -o . 
 
 echo 4. Add read groups
-java -Xmx2G -jar $picardbin/AddOrReplaceReadGroups.jar INPUT=alignments.bam OUTPUT=working/rg_alignments.bam RGSM=$sampleName RGID=$sampleName RGLB=TruSeq RGPL=illumina RGPU=$sampleName VALIDATION_STRINGENCY=SILENT TMP_DIR=./add_rg_tag_tmp > working/add_rg_tag.log 2> working/add_rg_tag.log
+java -Xmx2G -jar $picardbin/AddOrReplaceReadGroups.jar INPUT=alignments.bam OUTPUT=working/rg_alignments.bam RGSM=$sampleName RGID=$sampleName RGLB=TruSeq RGPL=illumina RGPU=$sampleName VALIDATION_STRINGENCY=SILENT TMP_DIR=./add_rg_tag_tmp
 
 echo 5. Convert back to phred33
-java -Xmx512M $ubuoption sam-convert --phred64to33 --in working/rg_alignments.bam -out working/phred33_alignments.bam > working/sam_convert.log 2> working/sam_convert.log
+java -Xmx512M $ubuoption sam-convert --phred64to33 --in working/rg_alignments.bam -out working/phred33_alignments.bam
 
 echo 6. Sort by coordinate
-$samtools sort working/phred33_alignments.bam ${sampleName}.bam
+$samtools sort working/phred33_alignments.bam ${sampleName}
 
 echo 7. Flagstat 
 $samtools flagstat ${sampleName}.bam > ${sampleName}.bam.flagstat 
@@ -107,19 +107,19 @@ echo 8. Index
 $samtools index ${sampleName}.bam
 
 echo 9. Sort by chromosome, then read id
-perl ${tcgabin}/sort_bam_by_reference_and_name.pl --input ${sampleName}.bam -output working/sorted_by_chr_read.bam --temp-dir . -samtools $samtools > working/sorted_by_chr_read.log 2>working/sorted_by_chr_read.log
+perl ${tcgabin}/sort_bam_by_reference_and_name.pl --input ${sampleName}.bam -output working/sorted_by_chr_read.bam --temp-dir . -samtools $samtools
 
 echo 10. Translate to transcriptome coords
-java -Xms3G -Xmx3G $ubuoption sam-xlate --bed ${tcgabin}/unc_hg19.bed -in working/sorted_by_chr_read.bam --out working/transcriptome_alignments.bam -order ${tcgabin}/rsem_ref/hg19_M_rCRS_ref.transcripts.fa --xgtags --reverse >working/genome_to_transcriptome.log 2> working/genome_to_transcriptome.log
+java -Xms3G -Xmx3G $ubuoption sam-xlate --bed ${tcgabin}/unc_hg19.bed -in working/sorted_by_chr_read.bam --out working/transcriptome_alignments.bam -order ${tcgabin}/rsem_ref/hg19_M_rCRS_ref.transcripts.fa --xgtags --reverse
 
 echo 11. Filter indels, large inserts, zero mapping quality from transcriptome bam
-java -Xmx512M $ubuoption sam-filter --in working/transcriptome_alignments.bam -out working/transcriptome_alignments_filtered.bam --strip-indels --max-insert 10000 --mapq 1 > working/sam_filter.log 2> working/sam_filter.log
+java -Xmx512M $ubuoption sam-filter --in working/transcriptome_alignments.bam -out working/transcriptome_alignments_filtered.bam --strip-indels --max-insert 10000 --mapq
 
 echo 12. RSEM
-$tcgabin/rsem-1.1.13/rsem-calculate-expression --gcr-output-file --paired-end --bam --estimate-rspd -p 8 working/transcriptome_alignments_filtered.bam $tcgabin/rsem_ref/hg19_M_rCRS_ref ${sampleName}.rsem > working/rsem.log 2> working/rsem.log
+$tcgabin/rsem-1.1.13/rsem-calculate-expression --gcr-output-file --paired-end --bam --estimate-rspd -p 8 working/transcriptome_alignments_filtered.bam $tcgabin/rsem_ref/hg19_M_rCRS_ref ${sampleName}.rsem
 
 echo 13. Strip trailing tabs from rsem.isoforms.results
-perl ${tcgabin}/strip_trailing_tabs.pl --input ${sampleName}.rsem.isoforms.results --temp working/orig.isoforms.results > working/trim_isoform_tabs.log 2>working/trim_isoform_tabs.log 
+perl ${tcgabin}/strip_trailing_tabs.pl --input ${sampleName}.rsem.isoforms.results --temp working/orig.isoforms.results
 
 echo 14. Prune isoforms from gene quant file 
 mv ${sampleName}.rsem.genes.results orig.genes.results; sed /^uc0/d orig.genes.results > ${sampleName}.rsem.genes.results
@@ -131,13 +131,13 @@ echo 16. Normalize isoform quant
 perl ${tcgabin}/quartile_norm.pl -c 2 -q 75 -t 300 -o ${sampleName}.rsem.isoforms.normalized_results ${sampleName}.rsem.isoforms.results
 
 echo 17. Junction counts
-java -Xmx512M $ubuoption sam-junc --junctions ${sampleName}.splice_junctions.txt --in ${sampleName}.bam --out ${sampleName}.junction_quantification.txt >${sampleName}.junction_quantification.log 2> ${sampleName}.junction_quantification.log
+java -Xmx512M $ubuoption sam-junc --junctions ${sampleName}.splice_junctions.txt --in ${sampleName}.bam --out ${sampleName}.junction_quantification.txt
 
 echo 18. Exon counts
-$bedtoolsbin/coverageBed -split -abam ${sampleName}.bam -b ${tcgabin}/composite_exons.bed | perl ${tcgabin}/normalizeBedToolsExonQuant.pl ${tcgabin}/composite_exons.bed> ${sampleName}.bt.exon_quantification.txt 2> ${sampleName}.bt_exon_quantification.log
+$bedtoolsbin/coverageBed -split -abam ${sampleName}.bam -b ${tcgabin}/composite_exons.bed | perl ${tcgabin}/normalizeBedToolsExonQuant.pl ${tcgabin}/composite_exons.bed
 
 echo 19. Cleanup large intermediate output
-#rm alignments.bam working/phred33_alignments.bam working/rg_alignments.bam working/sorted_by_chr_read.bam working/transcriptome_alignments.bam working/transcriptome_alignments_filtered.bam working/prep_1.fastq working/prep_2.fastq > working/cleanup.log
+#rm alignments.bam working/phred33_alignments.bam working/rg_alignments.bam working/sorted_by_chr_read.bam working/transcriptome_alignments.bam working/transcriptome_alignments_filtered.bam working/prep_1.fastq working/prep_2.fastq
 
 echo finished=`date`
 
