@@ -111,7 +111,7 @@ echo 10. Translate to transcriptome coords
 java -Xms3G -Xmx3G $ubuoption sam-xlate --bed ${tcgabin}/unc_hg19.bed -in working/sorted_by_chr_read.bam --out working/transcriptome_alignments.bam -order ${tcgabin}/rsem_ref/hg19_M_rCRS_ref.transcripts.fa --xgtags --reverse
 
 echo 11. Filter indels, large inserts, zero mapping quality from transcriptome bam
-java -Xmx512M $ubuoption sam-filter --in working/transcriptome_alignments.bam -out working/transcriptome_alignments_filtered.bam --strip-indels --max-insert 10000 --mapq
+java -Xmx512M $ubuoption sam-filter --in working/transcriptome_alignments.bam -out working/transcriptome_alignments_filtered.bam --strip-indels --max-insert 10000 --mapq 1
 
 echo 12. RSEM
 $tcgabin/rsem-1.1.13/rsem-calculate-expression --gcr-output-file --paired-end --bam --estimate-rspd -p 8 working/transcriptome_alignments_filtered.bam $tcgabin/rsem_ref/hg19_M_rCRS_ref ${sampleName}.rsem
