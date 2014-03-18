@@ -62,6 +62,8 @@ sub perform {
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
     
+    my $curDir  = create_directory_or_die( $resultDir . "/$sampleName" );
+    
     print SH "\$MYCMD ./$pbsName \n";
 
     open( OUT, ">$pbsFile" ) or die $!;
@@ -71,9 +73,11 @@ sub perform {
 
 $path_file
 
-cd $resultDir
+cd $curDir
 
-mkdir working
+if [ ! -d working ]; then
+  mkdir working
+fi 
 
 #1. Format fastq 1 for Mapsplice
 java -Xmx512M -jar $ubujar fastq-format --phred33to64 --strip --suffix /1 -in $sample1 --out working/prep_1.fastq > working/mapsplice_prep1.log
