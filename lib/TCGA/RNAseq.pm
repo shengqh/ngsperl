@@ -16,7 +16,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "TCGA::RNAseq";
+  $self->{_name}   = "TCGA::RNAseq";
   $self->{_suffix} = "_tcgar";
   bless $self, $class;
   return $self;
@@ -28,34 +28,32 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
-  
-  my $picardbin = get_option($config, $section, "picard_dir");
-  my $bedtoolsbin = get_option($config, $section, "bedtools_dir");
-  my $tcgabin = get_option($config, $section, "tcga_bin_dir");
-  my $ubujar = "${tcgabin}/ubu-1.0.jar";
-  my $joptjar = "${tcgabin}/jopt-simple-4.6.jar";
+
+  my $picardbin   = get_option( $config, $section, "picard_dir" );
+  my $bedtoolsbin = get_option( $config, $section, "bedtools_dir" );
+  my $tcgabin     = get_option( $config, $section, "tcga_bin_dir" );
+  my $ubujar      = "${tcgabin}/ubu-1.0.jar";
+  my $joptjar     = "${tcgabin}/jopt-simple-4.6.jar";
   my $samtoolsjar = "${picardbin}/sam-1.90.jar";
-  my $ubuoption = "-cp ${ubujar}:${joptjar}:${samtoolsjar} edu.unc.bioinf.ubu.Ubu";
-    
-  my $mapslice_version = get_option($config, $section, "mapslice_version", "2");
+  my $ubuoption   = "-cp ${ubujar}:${joptjar}:${samtoolsjar} edu.unc.bioinf.ubu.Ubu";
+  my $samtools    = "${tcgabin}/samtools-0.1.19/samtools";
+  my $mapslice_version = get_option( $config, $section, "mapslice_version", "2" );
   my $mapsplicebin;
-  my $samtools;
-  if($mapslice_version eq "1" || $mapslice_version == 1){
-    $mapsplicebin = "${tcgabin}/MapSplice_multi_threads_2.0.1.9/bin";
-     $samtools = "${tcgabin}/MapSplice_multi_threads_2.0.1.9/samtools-0.1.9/samtools";
-  }else{
+  if ( $mapslice_version eq "1" || $mapslice_version == 1 ) {
     $mapsplicebin = "${tcgabin}/MapSplice_multithreads_12_07/bin";
-    $samtools = "${tcgabin}/MapSplice_multithreads_12_07/samtools-0.1.9/samtools";
   }
-    
+  else {
+    $mapsplicebin = "${tcgabin}/MapSplice_multi_threads_2.0.1.9/bin";
+  }
+
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
-    
-    if(scalar(@sampleFiles) != 2){
+
+    if ( scalar(@sampleFiles) != 2 ) {
       die "only pair-end data allowed, error sample: " . $sampleName;
     }
     my $sample1 = $sampleFiles[0];
@@ -64,9 +62,9 @@ sub perform {
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
-    
-    my $curDir  = create_directory_or_die( $resultDir . "/$sampleName" );
-    
+
+    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
+
     print SH "\$MYCMD ./$pbsName \n";
 
     open( OUT, ">$pbsFile" ) or die $!;
