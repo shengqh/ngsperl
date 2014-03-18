@@ -72,9 +72,7 @@ $path_file
 
 cd $resultDir
 
-if [ ! -e working ]; then;
-  mkdir working
-fi
+mkdir working
 
 #1. Format fastq 1 for Mapsplice
 java -Xmx512M -jar $ubujar fastq-format --phred33to64 --strip --suffix /1 –in $sample1 --out working/prep_1.fastq > working/mapsplice_prep1.log
