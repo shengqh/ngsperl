@@ -114,7 +114,7 @@ echo 11. Filter indels, large inserts, zero mapping quality from transcriptome b
 java -Xmx512M $ubuoption sam-filter --in working/transcriptome_alignments.bam -out working/transcriptome_alignments_filtered.bam --strip-indels --max-insert 10000 --mapq 1
 
 echo 12. RSEM
-$tcgabin/rsem-1.1.13/rsem-calculate-expression --gcr-output-file --paired-end --bam --estimate-rspd -p 8 working/transcriptome_alignments_filtered.bam $tcgabin/rsem_ref/hg19_M_rCRS_ref ${sampleName}.rsem
+$tcgabin/rsem_ref/rsem/rsem-calculate-expression --gcr-output-file --paired-end --bam --estimate-rspd -p 8 working/transcriptome_alignments_filtered.bam $tcgabin/rsem_ref/hg19_M_rCRS_ref ${sampleName}.rsem
 
 echo 13. Strip trailing tabs from rsem.isoforms.results
 perl ${tcgabin}/strip_trailing_tabs.pl --input ${sampleName}.rsem.isoforms.results --temp working/orig.isoforms.results
