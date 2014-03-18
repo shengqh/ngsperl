@@ -88,7 +88,7 @@ echo 2. Format fastq 2 for Mapsplice
 java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample2 --out working/prep_2.fastq > working/mapsplice_prep2.log
 
 echo 3. Mapsplice
-python $mapsplicebin/mapsplice_multi_thread.py --fusion --all-chromosomes-files ${tcgabin}/hg19_M_rCRS/hg19_M_rCRS.fa --pairend -X 8 -Q fq --chromosome-files-dir ${tcgabin}/hg19_M_rCRS/chromosomes --Bowtieidx ${tcgabin}/hg19_M_rCRS/ebwt/humanchridx_M_rCRS -1 working/prep_1.fastq -2 working/prep_2.fastq -o $sampleName 2> working/mapsplice.log
+python $mapsplicebin/mapsplice_multi_thread.py --fusion --all-chromosomes-files ${tcgabin}/hg19_M_rCRS/hg19_M_rCRS.fa --pairend -X 8 -Q fq --chromosome-files-dir ${tcgabin}/hg19_M_rCRS/chromosomes --Bowtieidx ${tcgabin}/hg19_M_rCRS/ebwt/humanchridx_M_rCRS -1 working/prep_1.fastq -2 working/prep_2.fastq -o . 2> working/mapsplice.log
 
 echo 4. Add read groups
 java -Xmx2G -jar $picardbin/AddOrReplaceReadGroups.jar INPUT=alignments.bam OUTPUT=working/rg_alignments.bam RGSM=$sampleName RGID=$sampleName RGLB=TruSeq RGPL=illumina RGPU=$sampleName VALIDATION_STRINGENCY=SILENT TMP_DIR=./add_rg_tag_tmp > working/add_rg_tag.log 2> working/add_rg_tag.log
