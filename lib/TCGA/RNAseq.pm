@@ -36,14 +36,15 @@ sub perform {
     
   my $mapslice_version = get_option($config, $section, "mapslice_version", "2");
   my $mapsplicebin;
+  my $samtools;
   if($mapslice_version eq "1" || $mapslice_version == 1){
-    $mapsplicebin = "${tcgabin}/MapSplice_multi_threads_2.0.1.9/bin"
+    $mapsplicebin = "${tcgabin}/MapSplice_multi_threads_2.0.1.9/bin";
+     $samtools = "${tcgabin}/MapSplice_multi_threads_2.0.1.9/samtools-0.1.9/samtools";
   }else{
-    $mapsplicebin = "${tcgabin}/MapSplice_multithreads_12_07/bin"
+    $mapsplicebin = "${tcgabin}/MapSplice_multithreads_12_07/bin";
+    $samtools = "${tcgabin}/MapSplice_multithreads_12_07/samtools-0.1.9/samtools";
   }
-  
-  my $samtools = "$mapsplicebin/samtools-0.1.9/samtools";
-  
+    
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
