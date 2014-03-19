@@ -151,6 +151,11 @@ sub do_get_raw_files {
   if ( defined $config->{$section}{$mapname_ref} ) {
     my $refmap         = {};
     my $refSectionName = $config->{$section}{$mapname_ref};
+    
+    if ( ref($refSectionName) eq 'HASH' ) {
+      return ( $refSectionName, 1 )
+    }
+    
     if ( ref($refSectionName) eq 'ARRAY' ) {
       my @parts      = @{$refSectionName};
       my $partlength = scalar(@parts);
