@@ -9,8 +9,8 @@ use CQS::SystemUtils;
 use CQS::SomaticMutation;
 use CQS::ClassFactory;
 
-#my $target_dir = create_directory_or_die("/scratch/cqs/shengq1/pipelines/Bacteria-pipeline");
-my $target_dir = "e:/temp";
+my $target_dir = create_directory_or_die("/scratch/cqs/shengq1/pipelines/Bacteria-pipeline");
+#my $target_dir = "e:/temp";
 
 my $email          = "quanhu.sheng\@vanderbilt.edu";
 my $cqstools       = "/home/shengq1/cqstools/CQS.Tools.exe";
