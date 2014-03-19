@@ -145,7 +145,7 @@ my $config = {
       "mem"      => "10gb"
     },
   },
-  deseq2 => {
+  deseq2 => { 
     class         => "DESeq2",
     perform       => 1,
     target_dir    => "${target_dir}/deseq2",
