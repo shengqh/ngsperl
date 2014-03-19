@@ -36,15 +36,7 @@ sub perform {
   my $ubuoption   = "-cp ${tcgabin}/ubu-1.0.jar:${tcgabin}/jopt-simple-4.6.jar:${tcgabin}/commons-collections-3.2.1.jar:${picardbin}/sam-1.90.jar edu.unc.bioinf.ubu.Ubu";
   
   my $samtools    = "${tcgabin}/samtools-0.1.19/samtools";
-  my $mapslice_version = get_option( $config, $section, "mapslice_version", "2" );
-
-  my $mapsplicebin;
-  if ( $mapslice_version eq "1" || $mapslice_version == 1 ) {
-    $mapsplicebin = "${tcgabin}/MapSplice_multithreads_12_07/bin";
-  }
-  else {
-    $mapsplicebin = "${tcgabin}/MapSplice_multi_threads_2.0.1.9/bin";
-  }
+  my $mapsplicebin = "${tcgabin}/MapSplice_multithreads_12_07/bin";
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
@@ -114,7 +106,7 @@ echo 11. Filter indels, large inserts, zero mapping quality from transcriptome b
 java -Xmx512M $ubuoption sam-filter --in working/transcriptome_alignments.bam -out working/transcriptome_alignments_filtered.bam --strip-indels --max-insert 10000 --mapq 1
 
 echo 12. RSEM
-$tcgabin/rsem_ref/rsem/rsem-calculate-expression --keep-intermediate-files --paired-end --bam --estimate-rspd -p 8 working/transcriptome_alignments_filtered.bam $tcgabin/rsem_ref/hg19_M_rCRS_ref ${sampleName}.rsem
+$tcgabin/rsem_ref/rsem/rsem-calculate-expression --paired-end --bam --estimate-rspd -p 8 working/transcriptome_alignments_filtered.bam $tcgabin/rsem_ref/hg19_M_rCRS_ref ${sampleName}.rsem
 
 echo 13. Strip trailing tabs from rsem.isoforms.results
 perl ${tcgabin}/strip_trailing_tabs.pl --input ${sampleName}.rsem.isoforms.results --temp working/orig.isoforms.results
