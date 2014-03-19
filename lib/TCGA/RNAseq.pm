@@ -66,7 +66,7 @@ rm $sample1name
     }
     if($sample2 =~ /\.gz$/){
       $sample2name = "working/data_2.fastq";
-      $sample1command = "gunzip -d -c $sample2 > $sample2name
+      $sample2command = "gunzip -d -c $sample2 > $sample2name
 java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample2name --out working/prep_2.fastq
 rm $sample2name
 ";
