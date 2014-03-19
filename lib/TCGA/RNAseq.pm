@@ -59,8 +59,7 @@ sub perform {
       $sample1name = "working/data_1.fastq";
       $sample1command = "gunzip -d -c $sample1 > $sample1name
 java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample1name --out working/prep_1.fastq
-rm $sample1name
-";
+rm $sample1name";
     }else{
       $sample1command = "java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample1name --out working/prep_1.fastq";
     }
@@ -68,8 +67,7 @@ rm $sample1name
       $sample2name = "working/data_2.fastq";
       $sample2command = "gunzip -d -c $sample2 > $sample2name
 java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample2name --out working/prep_2.fastq
-rm $sample2name
-";
+rm $sample2name";
     }else{
       $sample2command = "java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample2name --out working/prep_2.fastq";
     }
