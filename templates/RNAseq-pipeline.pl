@@ -5,13 +5,15 @@ use warnings;
 use CQS::ClassFactory;
 use CQS::FileUtils;
 
-my $target_dir = create_directory_or_die("/scratch/cqs/shengq1/rnaseq/pipeline2");
+my $target_dir = create_directory_or_die("/scratch/cqs/shengq1/pipelines/RNAseq-pipeline");
 
 my $fasta_file           = "/data/cqs/guoy1/reference/mm10/bowtie2_index/mm10.fa";
 my $bowtie2_index        = "/data/cqs/guoy1/reference/mm10/bowtie2_index/mm10";
 my $transcript_gtf       = "/data/cqs/guoy1/reference/annotation2/mm10/Mus_musculus.GRCm38.68_chr1-22-X-Y-M.gtf";
 my $transcript_gtf_index = "/scratch/cqs/shengq1/references/mm10/gtfindex/Mus_musculus.GRCm38.68";
-my $name_map_file        = "/data/cqs/shengq1/reference/mm10/mm10.gene.map";
+my $dexseq_gff           = "/data/cqs/guoy1/reference/annotation2/mm10/Mus_musculus.GRCm38.74_chr1-19-X-Y-M.dexseq.gff";
+my $dexseqpy             = "/home/shengq1/pylibs/bin/dexseq_count.py";
+my $name_map_file        = "/data/cqs/guoy1/reference/annotation2/mm10/Mus_musculus.GRCm38.74_chr1-19-X-Y-M.map";
 my $files                = {
   "S1" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s1_sequence.txt"],
   "S2" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s2_sequence.txt"],
@@ -159,13 +161,46 @@ my $config = {
       "mem"      => "10gb"
     },
   },
+  dexseqcount => {
+    class        => "DexseqCount",
+    perform      => 1,
+    target_dir   => "${target_dir}/dexseqcount",
+    option       => "",
+    source_ref   => "tophat2",
+    gff_file     => $transcript_gtf,
+    dexseq_count => $dexseqpy,
+    sh_direct    => 0,
+    pbs          => {
+      "email"    => $email,
+      "nodes"    => "1:ppn=1",
+      "walltime" => "72",
+      "mem"      => "40gb"
+    },
+  },
+  exontable => {
+    class         => "CQSDatatable",
+    perform       => 1,
+    target_dir    => "${target_dir}/exontable",
+    option        => "-p ENS --noheader -o ${task}_exon.count",
+    name_map_file => $name_map_file,
+    source_ref    => "dexseqcount",
+    cqs_tools     => $cqstools,
+    sh_direct     => 0,
+    pbs           => {
+      "email"    => $email,
+      "nodes"    => "1:ppn=1",
+      "walltime" => "10",
+      "mem"      => "10gb"
+    },
+  },
+
   sequence_task => {
     class      => "SequenceTask",
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     source     => {
-      "sample" => [ "fastqc",  "tophat2",  "sortbam",   "htseqcount" ],
-      "task"   => [ "rnaseqc", "cuffdiff", "genetable", "deseq2" ],
+      "sample" => [ "fastqc",  "tophat2",  "sortbam",   "htseqcount", "dexseqcount" ],
+      "task"   => [ "rnaseqc", "cuffdiff", "genetable", "deseq2", "exontable" ],
     },
     sh_direct => 0,
     pbs       => {
