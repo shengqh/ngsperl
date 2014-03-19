@@ -36,7 +36,6 @@ my $groups = {
   "isdGisdI_plgt_hmuO" => [ "2763-EPS-07", "2763-EPS-08", "2763-EPS-09" ],
   "isdGisdI_plgt_mhuD" => [ "2763-EPS-11", "2763-EPS-12", "2763-EPS-14" ],
 };
-
 my $pairs = {
   "IsdI" => [ "isdGisdI_plgt", "isdGisdI_plgt_IsdI" ],
   "hmuO" => [ "isdGisdI_plgt", "isdGisdI_plgt_hmuO" ],
