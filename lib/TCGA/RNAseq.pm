@@ -53,21 +53,25 @@ sub perform {
     
     my $sample1name = $sample1;
     my $sample2name = $sample2;
-    my $sample1command = "java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample1name --out working/prep_1.fastq";
-    my $sample2command = "java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample2name --out working/prep_2.fastq";
+    my $sample1command;
+    my $sample2command;
     if($sample1 =~ /\.gz$/){
       $sample1name = "working/data_1.fastq";
       $sample1command = "gunzip -d -c $sample1 > $sample1name
-$sample1command
+java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample1name --out working/prep_1.fastq
 rm $sample1name
 ";
+    }else{
+      $sample1command = "java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample1name --out working/prep_1.fastq";
     }
     if($sample2 =~ /\.gz$/){
       $sample2name = "working/data_2.fastq";
       $sample1command = "gunzip -d -c $sample2 > $sample2name
-$sample2command
+java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample2name --out working/prep_2.fastq
 rm $sample2name
 ";
+    }else{
+      $sample2command = "java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample2name --out working/prep_2.fastq";
     }
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
