@@ -202,7 +202,7 @@ my $config = {
       "sample" => [ "fastqc",  "tophat2",  "sortbam",   "htseqcount", "dexseqcount" ],
       "task"   => [ "rnaseqc", "cuffdiff", "genetable", "deseq2", "exontable" ],
     },
-    sh_direct => 0,
+    sh_direct => 1,
     pbs       => {
       "email"    => $email,
       "nodes"    => "1:ppn=8",
