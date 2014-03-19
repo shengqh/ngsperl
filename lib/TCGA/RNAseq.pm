@@ -50,6 +50,25 @@ sub perform {
     }
     my $sample1 = $sampleFiles[0];
     my $sample2 = $sampleFiles[1];
+    
+    my $sample1name = $sample1;
+    my $sample2name = $sample2;
+    my $sample1command = "java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample1name --out working/prep_1.fastq";
+    my $sample2command = "java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample2name --out working/prep_2.fastq";
+    if($sample1 =~ /\.gz$/){
+      $sample1name = "working/data_1.fastq";
+      $sample1command = "gunzip -d -c $sample1 > $sample1name
+$sample1command
+rm $sample1name
+";
+    }
+    if($sample2 =~ /\.gz$/){
+      $sample2name = "working/data_2.fastq";
+      $sample1command = "gunzip -d -c $sample2 > $sample2name
+$sample2command
+rm $sample2name
+";
+    }
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
@@ -73,10 +92,10 @@ if [ ! -d working ]; then
 fi 
 
 echo 1. Format fastq 1 for Mapsplice
-java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample1 --out working/prep_1.fastq
+$sample1command
 
 echo 2. Format fastq 2 for Mapsplice
-java -Xmx512M $ubuoption fastq-format --phred33to64 --strip --suffix /1 -in $sample2 --out working/prep_2.fastq
+$sample2command
 
 echo 3. Mapsplice
 python $mapsplicebin/mapsplice_multi_thread.py --fusion --all-chromosomes-files ${tcgabin}/hg19_M_rCRS/hg19_M_rCRS.fa --pairend -X 8 -Q fq --chromosome-files-dir ${tcgabin}/hg19_M_rCRS/chromosomes --Bowtieidx ${tcgabin}/hg19_M_rCRS/ebwt/humanchridx_M_rCRS -1 working/prep_1.fastq -2 working/prep_2.fastq -o . 
