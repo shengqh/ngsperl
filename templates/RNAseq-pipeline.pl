@@ -12,33 +12,31 @@ my $bowtie2_index        = "/data/cqs/guoy1/reference/mm10/bowtie2_index/mm10";
 my $transcript_gtf       = "/data/cqs/guoy1/reference/annotation2/mm10/Mus_musculus.GRCm38.68_chr1-22-X-Y-M.gtf";
 my $transcript_gtf_index = "/scratch/cqs/shengq1/references/mm10/gtfindex/Mus_musculus.GRCm38.68";
 my $name_map_file        = "/data/cqs/shengq1/reference/mm10/mm10.gene.map";
-
+my $files                = {
+  "S1" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s1_sequence.txt"],
+  "S2" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s2_sequence.txt"],
+  "S3" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s3_sequence.txt"],
+  "S4" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s4_sequence.txt"],
+  "S5" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s5_sequence.txt"],
+  "S6" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s6_sequence.txt"],
+};
+my $groups = {
+  "G1" => [ "S1", "S2", "S3" ],
+  "G2" => [ "S4", "S5", "S6" ],
+};
+my $pairs    = { "G2_vs_G1" => [ "G1", "G2" ] };
 my $cqstools = "/home/shengq1/cqstools/CQS.Tools.exe";
-
-my $email = "quanhu.sheng\@vanderbilt.edu";
-my $task  = "pipeline";
+my $email    = "quanhu.sheng\@vanderbilt.edu";
+my $task     = "pipeline";
 
 my $config = {
   general => { task_name => $task },
-  files   => {
-    "S1" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s1_sequence.txt"],
-    "S2" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s2_sequence.txt"],
-    "S3" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s3_sequence.txt"],
-    "S4" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s4_sequence.txt"],
-    "S5" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s5_sequence.txt"],
-    "S6" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s6_sequence.txt"],
-  },
-  groups => {
-    "G1" => [ "S1", "S2", "S3" ],
-    "G2" => [ "S4", "S5", "S6" ],
-  },
-  pairs  => { "G2_vs_G1" => [ "G1", "G2" ] },
-  fastqc => {
+  fastqc  => {
     class      => "FastQC",
     perform    => 1,
     target_dir => "${target_dir}/fastqc",
     option     => "",
-    source_ref => "files",
+    source     => $files,
     sh_direct  => 0,
     pbs        => {
       "email"    => $email,
@@ -52,7 +50,7 @@ my $config = {
     perform              => 1,
     target_dir           => "${target_dir}/tophat2",
     option               => "--segment-length 25 -r 0 -p 6",
-    source_ref           => "files",
+    source               => $files,
     bowtie2_index        => $bowtie2_index,
     transcript_gtf       => $transcript_gtf,
     transcript_gtf_index => $transcript_gtf_index,
@@ -88,8 +86,8 @@ my $config = {
     option         => "-p 8 -u -N",
     transcript_gtf => $transcript_gtf,
     source_ref     => "tophat2",
-    groups_ref     => "groups",
-    pairs_ref      => "pairs",
+    groups         => $groups,
+    pairs          => $pairs,
     fasta_file     => $fasta_file,
     sh_direct      => 1,
     pbs            => {
@@ -145,13 +143,13 @@ my $config = {
       "mem"      => "10gb"
     },
   },
-  deseq2 => { 
+  deseq2 => {
     class         => "DESeq2",
     perform       => 1,
     target_dir    => "${target_dir}/deseq2",
     option        => "",
-    source_ref    => "pairs",
-    groups_ref    => "groups",
+    source        => $pairs,
+    groups        => $groups,
     countfile_ref => "genetable",
     sh_direct     => 1,
     pbs           => {
@@ -166,8 +164,8 @@ my $config = {
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     source     => {
-      "sample"  => [ "fastqc",  "tophat2",  "sortbam",   "htseqcount" ],
-      "task" => [ "rnaseqc", "cuffdiff", "genetable", "deseq2" ],
+      "sample" => [ "fastqc",  "tophat2",  "sortbam",   "htseqcount" ],
+      "task"   => [ "rnaseqc", "cuffdiff", "genetable", "deseq2" ],
     },
     sh_direct => 0,
     pbs       => {
