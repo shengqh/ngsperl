@@ -194,7 +194,7 @@ my $config = {
     },
   },
 
-  sequence_task => {
+  sequencetask => {
     class      => "SequenceTask",
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",

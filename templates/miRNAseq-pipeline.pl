@@ -310,10 +310,10 @@ my $config         = {
       "mem"      => "40gb"
     },
   },
-  overall => {
+  sequencetask => {
     class      => "CQS::SequenceTask",
     perform    => 1,
-    target_dir => "${cur_target_dir}/overall",
+    target_dir => "${cur_target_dir}/sequencetask",
     option     => "",
     source     => {
       individual => [

@@ -124,11 +124,10 @@ my $config = {
       "mem"      => "10gb"
     },
   },
-
-  overall => {
+  sequencetask => {
     class      => "CQS::SequenceTask",
     perform    => 1,
-    target_dir => "${target_dir}/overall",
+    target_dir => "${target_dir}/sequencetask",
     option     => "",
     source     => { individual => [ "fastqc", "trimmer", "fastqlen", "bowtie2", "rockhopper", ], },
     sh_direct  => 1,
