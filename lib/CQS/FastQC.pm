@@ -61,7 +61,7 @@ $path_file
 echo fastqc=`date`
 
 if [ -e $expectname ]; then
-  echo job has already been done. if you want to do again, delete ${curDir}/${expectname} and submit job again.
+  echo job has already been done. if you want to do again, delete ${expectname} and submit job again.
   exit 0;
 fi
 
