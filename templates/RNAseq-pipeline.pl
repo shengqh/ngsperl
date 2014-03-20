@@ -81,6 +81,51 @@ my $config = {
       "mem"      => "40gb"
     },
   },
+  cufflinks => {
+    class          => "Cufflinks",
+    perform        => 1,
+    target_dir     => "${target_dir}/cufflinks",
+    option         => "-p 8 -u -N",
+    transcript_gtf => $transcript_gtf,
+    source_ref     => "tophat2",
+    sh_direct      => 1,
+    pbs            => {
+      "email"    => $email,
+      "nodes"    => "1:ppn=8",
+      "walltime" => "72",
+      "mem"      => "10gb"
+    },
+  },
+  cuffmerge => {
+    class      => "Cuffmerge",
+    perform    => 1,
+    target_dir => "${target_dir}/cuffmerge",
+    option     => "-p 8",
+    source_ref => "cufflinks",
+    sh_direct  => 1,
+    pbs        => {
+      "email"    => $email,
+      "nodes"    => "1:ppn=8",
+      "walltime" => "72",
+      "mem"      => "40gb"
+    },
+  },
+  cufflinks_cuffdiff => {
+    class              => "Cuffdiff",
+    perform            => 1,
+    target_dir         => "${target_dir}/cufflinks_cuffdiff",
+    option             => "-p 8 -u -N",
+    transcript_gtf_ref => "cuffmerge",
+    source_ref         => "tophat2",
+    groups             => $groups,
+    pairs              => $pairs,
+    pbs                => {
+      "email"    => $email,
+      "nodes"    => "1:ppn=8",
+      "walltime" => "720",
+      "mem"      => "40gb"
+    },
+  },
   cuffdiff => {
     class          => "Cuffdiff",
     perform        => 1,
@@ -193,14 +238,13 @@ my $config = {
       "mem"      => "10gb"
     },
   },
-
   sequencetask => {
     class      => "SequenceTask",
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     source     => {
-      "sample" => [ "fastqc",  "tophat2",  "sortbam",   "htseqcount", "dexseqcount" ],
-      "task"   => [ "rnaseqc", "cuffdiff", "genetable", "deseq2", "exontable" ],
+      "sample" => [ "fastqc",  "tophat2",   "cufflinks",          "sortbam",  "htseqcount", "dexseqcount" ],
+      "task"   => [ "rnaseqc", "cuffmerge", "cufflinks_cuffdiff", "cuffdiff", "genetable",  "deseq2", "exontable" ],
     },
     sh_direct => 1,
     pbs       => {
