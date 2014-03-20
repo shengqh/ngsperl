@@ -119,6 +119,8 @@ my $config = {
     source_ref         => "tophat2",
     groups             => $groups,
     pairs              => $pairs,
+    fasta_file         => $fasta_file,
+    sh_direct          => 1,
     pbs                => {
       "email"    => $email,
       "nodes"    => "1:ppn=8",
