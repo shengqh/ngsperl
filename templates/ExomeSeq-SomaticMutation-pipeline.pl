@@ -8,9 +8,7 @@ use CQS::ClassFactory;
 
 my $vangard = "template";
 
-my $target_dir = create_directory_or_die("/scratch/cqs/shengq1/temp/exome_somatic_mutation");
-
-my $bwa_dir = "${target_dir}/bwa_refine";
+my $target_dir = create_directory_or_die("/scratch/cqs/shengq1/pipelines/ExomeSeq-SomaticMutation-pipeline");
 
 my $fasta_file           = "/data/cqs/guoy1/reference/hg19/bwa_index_0.7.4/hg19_chr.fa";
 my $transcript_gtf       = "/scratch/cqs/shengq1/references/hg19/Homo_sapiens.GRCh37.73.gtf";
@@ -27,13 +25,13 @@ my $email = "quanhu.sheng\@vanderbilt.edu";
 my $config = {
   general    => { task_name => "${vangard}" },
   fastqfiles => {
-    "2055-PM-00" => [ "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-0_1.fastq.gz",  "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-0_2.fastq.gz" ],
-    "2055-PM-01" => [ "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-1_1.fastq.gz",  "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-1_2.fastq.gz" ],
-    "2055-PM-02" => [ "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-2_1.fastq.gz",  "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-2_2.fastq.gz" ],
+    "2055-PM-00" => [ "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-0_1.fastq.gz", "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-0_2.fastq.gz" ],
+    "2055-PM-01" => [ "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-1_1.fastq.gz", "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-1_2.fastq.gz" ],
+    "2055-PM-02" => [ "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-2_1.fastq.gz", "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-2_2.fastq.gz" ],
   },
-  groups => { #should be normal, tumor pair
-    "P4413_1_NL"       => [ "2055-PM-00", "2055-PM-01" ],
-    "P4413_2_SEV_D"    => [ "2055-PM-00", "2055-PM-02" ],
+  groups => {    #should be normal, tumor pair
+    "P4413_1_NL"    => [ "2055-PM-00", "2055-PM-01" ],
+    "P4413_2_SEV_D" => [ "2055-PM-00", "2055-PM-02" ],
   },
   fastqc => {
     class      => "FastQC",
@@ -87,7 +85,7 @@ my $config = {
     class       => "MuTect",
     perform     => 1,
     target_dir  => "${target_dir}/muTect",
-    option      => "", #don't use thread mode, it may cause dead-lock
+    option      => "",                                                                        #don't use thread mode, it may cause dead-lock
     source_ref  => "refine",
     groups_ref  => "groups",
     java_option => "-Xmx40g",
@@ -111,8 +109,8 @@ my $config = {
     source_ref => [ "muTect", ".pass.vcf\$" ],
     annovar_db => $annovar_db,
     buildver   => "hg19",
-    cqstools   => $cqstools, #use cqstools to generate final excel report file
-    affy_file  => "/data/cqs/shengq1/reference/affy/HG-U133_Plus_2.na33.annot.csv", #use affy file to get gene description information
+    cqstools   => $cqstools,                                                           #use cqstools to generate final excel report file
+    affy_file  => "/data/cqs/shengq1/reference/affy/HG-U133_Plus_2.na33.annot.csv",    #use affy file to get gene description information
     sh_direct  => 0,
     isvcf      => 1,
     pbs        => {
@@ -120,6 +118,23 @@ my $config = {
       "nodes"    => "1:ppn=1",
       "walltime" => "72",
       "mem"      => "10gb"
+    },
+  },
+  sequencetask => {
+    class      => "CQS::SequenceTask",
+    perform    => 1,
+    target_dir => "${target_dir}/sequencetask",
+    option     => "",
+    source     => {
+      individual => [ "fastqc", "bwa", "refine", "bowtie2", "rockhopper", ],
+      pair       => [ "muTect", "annovar_mutect" ],
+    },
+    sh_direct => 1,
+    pbs       => {
+      "email"    => $email,
+      "nodes"    => "1:ppn=8",
+      "walltime" => "72",
+      "mem"      => "40gb"
     },
   },
 };
