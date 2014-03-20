@@ -38,7 +38,7 @@ my $files = {
   "Sample5" => ["/gpfs21/scratch/cqs/shengq1/vangard/VANGARD00055_guoyan_mirna_v2/data/Sample5_12.fastq.gz"],
 };
 
-my $groups = { "Sample" => [ "Sample1", "Sample1", "Sample1", "Sample1", "Sample1" ] };
+my $groups = { "Sample" => [ "Sample1", "Sample2", "Sample3", "Sample4", "Sample5" ] };
 
 my $config = {
   general => {
