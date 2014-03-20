@@ -102,6 +102,7 @@ my $config = {
     target_dir => "${target_dir}/cuffmerge",
     option     => "-p 8",
     source_ref => "cufflinks",
+    fasta_file => $fasta_file,
     sh_direct  => 1,
     pbs        => {
       "email"    => $email,
