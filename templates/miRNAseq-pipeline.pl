@@ -7,7 +7,7 @@ use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
 
-my $root = "/scratch/cqs/shengq1/mirna/20140305_pipeline";
+my $root = "/scratch/cqs/shengq1/pipelines/miRNAseq-pipeline";
 
 my $cqstools = "/home/shengq1/cqstools/CQS.Tools.exe";
 
