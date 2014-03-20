@@ -67,10 +67,12 @@ sub perform {
 
   for my $pairName ( sort keys %{$pairs} ) {
     my @groupNames = @{ $pairs->{$pairName} };
-    my @fastqs     = ();
-    foreach my $groupName (@groupNames) {
-      push( @fastqs, $tpgroups{$groupName} );
+    if ( scalar(@groupNames) != 2 ) {
+      die $pairName . " should include and only include two groups, currently is [" . join( ", ", @groupNames );
     }
+    my @fastqs = ();
+    push( @fastqs, $tpgroups{ $groupNames[1] } );
+    push( @fastqs, $tpgroups{ $groupNames[0] } );
     my $fastqstrs = join( " ", @fastqs );
 
     my $pbsFile = $self->pbsfile( $pbsDir, $pairName );
@@ -79,7 +81,7 @@ sub perform {
 
     my $curDir = create_directory_or_die( $resultDir . "/$pairName" );
 
-    my $labels = join( ",", @groupNames );
+    my $labels = $groupNames[1] . "," . $groupNames[0];
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
