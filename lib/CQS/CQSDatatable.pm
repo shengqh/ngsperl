@@ -42,7 +42,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $cqsFile = get_param_file( $config->{$section}{cqs_tools},     "cqs_tools",     1 );
+  my $cqsFile = get_cqstools( $config, $section, 1 );
   my $mapFile = get_param_file( $config->{$section}{name_map_file}, "name_map_file", 0 );
 
   my $mapoption = "";
@@ -92,7 +92,7 @@ sub result {
   my ( $resultFile, $newoption ) = get_result( $task_name, $option );
   $resultFile = $resultDir . "/" . $resultFile;
 
-  my $filelist = $pbsDir . "/" . $self->getname($task_name, ".filelist");
+  my $filelist = $pbsDir . "/" . $self->getname( $task_name, ".filelist" );
 
   my @resultFiles = ();
   push( @resultFiles, $resultFile );

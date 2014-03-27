@@ -28,7 +28,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $cqsFile  = get_param_file( $config->{$section}{cqs_tools}, "cqs_tools", 1 );
+  my $cqsFile = get_cqstools( $config, $section, 1 );
   my $samtools = get_param_file( $config->{$section}{samtools},  "samtools",  1 );
   my $gffFile  = get_param_file( $config->{$section}{gff_file},  "gff_file",  1 );
   my $fastaFile  = get_param_file( $config->{$section}{fasta_file},  "fasta_file",  0 );

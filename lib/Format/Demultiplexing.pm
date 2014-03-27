@@ -30,7 +30,7 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
   my %mapFiles = %{ get_raw_files( $config, $section, "maps" ) };
-  my $cqsFile = get_param_file( $config->{$section}{cqs_tools}, "cqs_tools", 1 );
+  my $cqsFile = get_cqstools( $config, $section, 1 );
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";

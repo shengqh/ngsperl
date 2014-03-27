@@ -37,7 +37,7 @@ sub perform {
     $isvcf = 0;
   }
 
-  my $cqstools = get_param_file( $config->{$section}{cqstools},  "cqstools",  0 );
+  my $cqstools = get_cqstools( $config, $section, 0 );
   my $affyFile = get_param_file( $config->{$section}{affy_file}, "affy_file", 0 );
 
   my $rawFiles = get_raw_files( $config, $section );
@@ -140,7 +140,7 @@ sub result {
 
   my $buildver = $config->{$section}{buildver} or die "buildver is not defined in $section";
   my $rawFiles = get_raw_files( $config, $section );
-  my $cqstools = get_param_file( $config->{$section}{cqs_tools}, "cqs_tools", 0 );
+  my $cqstools = get_cqstools( $config, $section, 0 );
 
   my $result = {};
   for my $sampleName ( sort keys %{$rawFiles} ) {

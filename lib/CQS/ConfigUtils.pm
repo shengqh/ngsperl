@@ -13,7 +13,7 @@ use CQS::CQSDebug;
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(get_option get_parameter get_param_file parse_param_file get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups)] );
+our %EXPORT_TAGS = ( 'all' => [qw(get_option get_parameter get_param_file parse_param_file get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_cqstools)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -90,6 +90,15 @@ sub get_param_file {
     }
   }
   return ($result);
+}
+
+sub get_cqstools {
+  my ( $config, $section, $required ) = @_;
+  my $cqsFile = get_param_file( $config->{$section}{cqs_tools}, "cqs_tools", 0 );
+  if ( !defined $cqsFile ) {
+    $cqsFile = get_param_file( $config->{$section}{cqstools}, "cqstools", $required );
+  }
+  return ($cqsFile)
 }
 
 sub parse_param_file {
