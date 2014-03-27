@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use File::Basename;
 use Data::Table;
+use String::Util;
 use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
@@ -96,13 +97,16 @@ sub result {
     my $table = Data::Table::fromTSV( $mapfile, 0 );
     if ( $table->nofCol() == 3 ) {
       foreach my $i ( 0 .. $table->lastRow ) {
-        $result->{ $table->elm( $i, 2 ) } = [ $resultDir . "/" . $table->elm( $i, 1 ) ];
+        my $name     = trim( $table->elm( $i, 2 ) );
+        my $filename = trim( $table->elm( $i, 1 ) );
+        $result->{$name} = [ $resultDir . "/" . $filename ];
       }
     }
     else {
       foreach my $i ( 0 .. $table->lastRow ) {
-        my $name = change_extension_gzipped( $table->elm( $i, 1 ) );
-        $result->{$name} = [ $resultDir . "/" . $table->elm( $i, 1 ) ];
+        my $filename = trim( $table->elm( $i, 1 ) );
+        my $name = change_extension_gzipped($filename);
+        $result->{$name} = [ $resultDir . "/" . $filename ];
       }
     }
   }
