@@ -126,7 +126,7 @@ my $config = {
     target_dir => "${target_dir}/sequencetask",
     option     => "",
     source     => {
-      individual => [ "fastqc", "bwa", "refine", "bowtie2", "rockhopper", ],
+      individual => [ "fastqc", "bwa", "refine" ],
       pair       => [ "muTect", "annovar_mutect" ],
     },
     sh_direct => 1,
