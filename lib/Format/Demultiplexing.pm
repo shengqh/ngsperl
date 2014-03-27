@@ -96,13 +96,13 @@ sub result {
     my $table = Data::Table::fromTSV( $mapfile, 0 );
     if ( $table->nofCol() == 3 ) {
       foreach my $i ( 0 .. $table->lastRow ) {
-        $result->{ $table->elm( $i, 2 ) } = $resultDir . "/" . $table->elm( $i, 1 );
+        $result->{ $table->elm( $i, 2 ) } = [ $resultDir . "/" . $table->elm( $i, 1 ) ];
       }
     }
     else {
       foreach my $i ( 0 .. $table->lastRow ) {
         my $name = change_extension_gzipped( $table->elm( $i, 1 ) );
-        $result->{$name} = $resultDir . "/" . $table->elm( $i, 1 );
+        $result->{$name} = [ $resultDir . "/" . $table->elm( $i, 1 ) ];
       }
     }
   }
