@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use File::Basename;
 use Data::Table;
-use String::Util;
+use String::Util qw(trim);
 use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
