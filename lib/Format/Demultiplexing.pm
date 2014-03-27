@@ -86,7 +86,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %mapFiles = %{ get_raw_files( $config, $section, "map" ) };
+  my %mapFiles = %{ get_raw_files( $config, $section, "maps" ) };
 
   my $result = {};
   for my $sampleName ( keys %mapFiles ) {
