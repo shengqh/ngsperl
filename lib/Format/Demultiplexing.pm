@@ -94,7 +94,7 @@ sub result {
     my $mapfile = $maps[0];
 
     my $table = Data::Table::fromTSV( $mapfile, 0 );
-    if ( $table->nofcol() == 3 ) {
+    if ( $table->nofCol() == 3 ) {
       foreach my $i ( 0 .. $table->lastRow ) {
         $result->{ $table->elm( $i, 3 ) } = $resultDir . "/" . $table->elm( $i, 2 );
       }
