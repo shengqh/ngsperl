@@ -47,17 +47,35 @@ sub perform {
     $pdfoption = "--pdf";
   }
 
-  my $groups = get_raw_files( $config, $section, "groups" );
-
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
 
   my $filelist = $self->getfile( $pbsDir, $task_name, ".filelist" );
   open( FL, ">$filelist" ) or die "Cannot create $filelist";
-  for my $groupName ( sort keys %{$groups} ) {
-    my @samples = @{ $groups->{$groupName} };
-    for my $sampleName ( sort @samples ) {
+
+  if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
+    my $groups = get_raw_files( $config, $section, "groups" );
+    for my $groupName ( sort keys %{$groups} ) {
+      my @samples = @{ $groups->{$groupName} };
+      for my $sampleName ( sort @samples ) {
+        my @smallRNAFiles = @{ $rawFiles{$sampleName} };
+        my $smallRNAFile  = $smallRNAFiles[0];
+
+        my $mirnaFileOption = "";
+        if ($hasMiRNA) {
+          my @miRNAs = @{ $miRNAFiles{$sampleName} };
+          my $miRNA  = $miRNAs[0];
+
+          $mirnaFileOption = "\t" . $miRNA;
+        }
+
+        print FL $groupName, "\t", $sampleName, "\t", $smallRNAFile, $mirnaFileOption, "\n";
+      }
+    }
+  }
+  else {
+    for my $sampleName ( sort keys %rawFiles ) {
       my @smallRNAFiles = @{ $rawFiles{$sampleName} };
       my $smallRNAFile  = $smallRNAFiles[0];
 
@@ -69,7 +87,7 @@ sub perform {
         $mirnaFileOption = "\t" . $miRNA;
       }
 
-      print FL $groupName, "\t", $sampleName, "\t", $smallRNAFile, $mirnaFileOption, "\n";
+      print FL $task_name, "\t", $sampleName, "\t", $smallRNAFile, $mirnaFileOption, "\n";
     }
   }
   close(FL);
