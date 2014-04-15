@@ -53,11 +53,17 @@ sub perform {
   my $rfile = $resultDir . "/${task_name}.r";
   open( RF, ">$rfile" ) or die "Cannot create $rfile";
   open RT, "<$rtemplate" or die $!;
-
+  
+  my $readfunc;
+  if($countfile =~ /csv$/){
+    $readfunc = "read.csv"
+  }else{
+    $readfunc = "read.table"
+  }
   print RF "
 setwd(\"$resultDir\")  
   
-data<-read.table(\"$countfile\",row.names=1, header=T, check.names=F)
+data<-${readfunc}(\"$countfile\",row.names=1, header=T, check.names=F)
 
 pairs=list(
 ";

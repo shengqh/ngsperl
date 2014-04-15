@@ -56,7 +56,9 @@ for(pairname in pairnames){
 		warning(paste0("There are only ", ncol(c2), " samples in group ", g2name, " but ", length(g2), " required!"))
 		next
 	}
-	
+  c1<-c1[,g1]
+  c2<-c2[,g2]
+  
 	if(ispaired){
 		if(ncol(c2) != ncol(c1)){
 			warning(paste0("Data not paired, there are ", ncol(c2), " samples in group ", g2name, " but ", ncol(c1), " samples in group ", g1name))
@@ -68,7 +70,8 @@ for(pairname in pairnames){
   pairCountData<-pairCountData[apply(pairCountData, 1, max) > 0,]
 	
 	if(ispaired){
-		pairColData=data.frame(condition=factor(c(rep(g1name, ncol(c1)), rep(g2name, ncol(c2))), levels=gnames[1:2]), paired=factor(c(rep(paste0("S", c(1:ncol(c1))),2))))
+    colnames(pairCountData)<-unlist(lapply(c(1:ncol(pairCountData)), function(i){paste0(pairColData$paired[i], "_", colnames(pairCountData)[i])}))
+    pairColData=data.frame(condition=factor(c(rep(g1name, ncol(c1)), rep(g2name, ncol(c2))), levels=gnames[1:2]), paired=factor(c(rep(paste0("S", c(1:ncol(c1))),2))))
 	}else{
 		pairColData=data.frame(condition=factor(c(rep(g1name, ncol(c1)), rep(g2name, ncol(c2))), levels=gnames[1:2]))
 	}

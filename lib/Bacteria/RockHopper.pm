@@ -88,14 +88,18 @@ sub perform {
 #PBS -o $log
 #PBS -j oe
 
-cd $curDir
-
-if [ -s summary.txt ];then
+if [ -s ${curDir}/summary.txt ];then
   echo job has already been done. if you want to do again, delete ${curDir}/summary.txt and submit job again.
   exit 0;
 fi
 
-java $java_option -cp $rockhopper_jar Rockhopper $option -g $genome_dir -L $labels -o $curDir $fastqstrs
+cd $curDir
+
+java $java_option -cp $rockhopper_jar Rockhopper $option -g $genome_dir -L $labels -o . $fastqstrs
+
+if [ -e intermediary ]; then
+  rm -rf intermediary
+fi
 
 echo finished=`date`
 

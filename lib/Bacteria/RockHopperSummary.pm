@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package CQS::RockhopperSummary;
+package Bacteria::RockHopperSummary;
 
 use strict;
 use warnings;
@@ -17,7 +17,7 @@ our @ISA = qw(CQS::UniqueTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "CQS::RockhopperSummary";
+  $self->{_name}   = "Bacteria::RockHopperSummary";
   $self->{_suffix} = "_rs";
   bless $self, $class;
   return $self;
