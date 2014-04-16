@@ -161,10 +161,10 @@ for(pairname in pairnames){
       gsColors<-as.matrix(data.frame(Group=c(rep("red", ncol(c1)), rep("blue", ncol(c2))),
               Sample=c(rep(htColors, 2))))
       heatmap3(rldselect, col = hmcols, ColSideColors = gsColors, margins=c(12,5), scale="r", dist=dist, labRow="",
-          legendfun=function() showLegend(legend=paste0("Group ", gnames),col=c("red","blue"),cex=1.5,x="center"))
+          legendfun=function() showLegend(legend=paste0("Group ", gnames),col=c("red","blue"),cex=1.0,x="center"))
     }else{
       heatmap3(rldselect, col = hmcols, ColSideColors = pairColors, margins=c(12,5), scale="r", dist=dist, labRow="",
-          legendfun=function() showLegend(legend=paste0("Group ", gnames),col=c("red","blue"),cex=1.5,x="center"))
+          legendfun=function() showLegend(legend=paste0("Group ", gnames),col=c("red","blue"),cex=1.0,x="center"))
     }
     dev.off()
 	}
