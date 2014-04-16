@@ -156,9 +156,17 @@ for(pairname in pairnames){
 	rldselect<-rldmatrix[1:500,,drop=F]
 	if(nrow(rldselect) > 2){
 		png(filename=paste0(pairname, "_DESeq2-vsd-heatmap.png"), width=3000, height =3000, res=300)
-		heatmap3(rldselect, col = hmcols, ColSideColors = pairColors, margins=c(12,5), scale="r", dist=dist, labRow="",
-				legendfun=function() showLegend(legend=paste0("Group ", gnames),col=c("red","blue"),cex=1.5,x="center"))
-		dev.off()
+    if(ispaired){
+      htColors<-rainbow(ncol(c1))
+      gsColors<-as.matrix(data.frame(Group=c(rep("red", ncol(c1)), rep("blue", ncol(c2))),
+              Sample=c(rep(htColors, 2))))
+      heatmap3(rldselect, col = hmcols, ColSideColors = gsColors, margins=c(12,5), scale="r", dist=dist, labRow="",
+          legendfun=function() showLegend(legend=paste0("Group ", gnames),col=c("red","blue"),cex=1.5,x="center"))
+    }else{
+      heatmap3(rldselect, col = hmcols, ColSideColors = pairColors, margins=c(12,5), scale="r", dist=dist, labRow="",
+          legendfun=function() showLegend(legend=paste0("Group ", gnames),col=c("red","blue"),cex=1.5,x="center"))
+    }
+    dev.off()
 	}
 	
 }
