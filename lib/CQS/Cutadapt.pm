@@ -37,21 +37,24 @@ sub perform {
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
 
+  my $shortLimited = $option =~ /-m\s+\d+/;
+  my $longLimited  = $option =~ /-M\s+\d+/;
+
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
 
-    my $finalName       = $sampleName . $extension;
-    my $finalShortName  = $finalName . ".short";
-    my $finalUntrimName = $finalName . ".untrimmed";
+    my $finalName      = $sampleName . $extension;
+    my $finalShortName = $finalName . ".short";
+    my $finalLongName  = $finalName . ".long";
 
-    my $finalFile       = $gzipped ? "${finalName}.gz"       : $finalName;
-    my $finalShortFile  = $gzipped ? "${finalShortName}.gz"  : $finalShortName;
-    my $finalUntrimFile = $gzipped ? "${finalUntrimName}.gz" : $finalUntrimName;
+    my $finalFile      = $gzipped ? "${finalName}.gz"      : $finalName;
+    my $finalShortFile = $gzipped ? "${finalShortName}.gz" : $finalShortName;
+    my $finalLongFile  = $gzipped ? "${finalLongName}.gz"  : $finalLongName;
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
-    
+
     print SH "\$MYCMD ./$pbsName \n";
 
     open( OUT, ">$pbsFile" ) or die $!;
@@ -69,40 +72,71 @@ if [ -s $finalFile ];then
 fi
 
 ";
+
     if ( scalar(@sampleFiles) == 1 ) {
-      print OUT "cutadapt $sampleFiles[0] $option -a $adapt -o $finalName --too-short-output=$finalShortName --untrimmed-output=$finalUntrimName \n";
+      print OUT "cutadapt $sampleFiles[0] $option -a $adapt -o $finalName";
+      if ($shortLimited) {
+        print OUT " --too-short-output=$finalShortName";
+      }
+      if ($longLimited) {
+        print OUT " --too-long-output=$finalLongFile";
+      }
+      print OUT "\n";
     }
     else {
       my $outputFiles = "";
       my $shortFiles  = "";
-      my $untrimFiles = "";
+      my $longFiles   = "";
       for my $sampleFile (@sampleFiles) {
         my $fileName   = basename($sampleFile);
         my $outputFile = change_extension( $fileName, $extension );
         my $shortFile  = $outputFile . ".short";
-        my $untrimFile = $outputFile . ".untrimed";
+        my $longFile   = $outputFile . ".long";
         $outputFiles = $outputFiles . " " . $outputFile;
         $shortFiles  = $shortFiles . " " . $shortFile;
-        $untrimFiles = $untrimFiles . " " . $untrimFile;
-        print OUT "cutadapt $sampleFile $option -a $adapt -o $outputFile --too-short-output=$shortFile --untrimmed-output=$untrimFile \n";
-      }
+        $longFiles   = $longFiles . " " . $longFile;
+        print OUT "cutadapt $sampleFile $option -a $adapt -o $outputFile";
 
-      print OUT "
+        if ($shortLimited) {
+          print OUT " --too-short-output=$shortFile";
+        }
+        if ($longLimited) {
+          print OUT " --too-long-output=$longFile";
+        }
+        print OUT "\n";
+        print OUT "
 cat $outputFiles > $finalName
 rm $outputFiles
-cat $shortFiles > $finalShortName
-rm $shortFiles
-cat $untrimFiles > $finalUntrimName
-rm $untrimFiles
 ";
 
+        if ($shortLimited) {
+          print OUT "
+cat $shortFiles > $finalShortName
+rm $shortFiles
+";
+        }
+        if ($longLimited) {
+          print OUT "
+cat $shortFiles > $finalLongName
+rm $shortFiles
+";
+        }
+      }
     }
     if ($gzipped) {
       print OUT "
 gzip $finalName
-gzip $finalShortName
-gzip $finalUntrimName
 ";
+      if ($shortLimited) {
+        print OUT "
+gzip $finalShortName
+";
+      }
+      if ($longLimited) {
+        print OUT "
+gzip $finalLongName
+";
+      }
     }
     print OUT "
 echo finished=`date`
@@ -132,6 +166,8 @@ sub result {
 
   my $extension = $config->{$section}{extension} or die "define ${section}::extension first";
   my $gzipped = get_option( $config, $section, "gzipped", 1 );
+  my $shortLimited = $option =~ /-m\s+\d+/;
+  my $longLimited  = $option =~ /-M\s+\d+/;
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -143,13 +179,17 @@ sub result {
 
     my @resultFiles = ();
     push( @resultFiles, $resultDir . "/" . $finalFile );
-    if ( $option !~ "-M" ) {
-      my $finalShortName  = $finalName . ".short";
-      my $finalUntrimName = $finalName . ".untrimmed";
-      my $finalShortFile  = $gzipped ? "${finalShortName}.gz" : $finalShortName;
-      my $finalUntrimFile = $gzipped ? "${finalUntrimName}.gz" : $finalUntrimName;
+
+    if ($shortLimited) {
+      my $finalShortName = $finalName . ".short";
+      my $finalShortFile = $gzipped ? "${finalShortName}.gz" : $finalShortName;
       push( @resultFiles, $resultDir . "/" . $finalShortFile );
-      push( @resultFiles, $resultDir . "/" . $finalUntrimFile );
+    }
+
+    if ($longLimited) {
+      my $finalLongName = $finalName . ".long";
+      my $finalLongFile = $gzipped ? "${finalLongName}.gz" : $finalLongName;
+      push( @resultFiles, $resultDir . "/" . $finalLongFile );
     }
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
