@@ -70,9 +70,9 @@ for(pairname in pairnames){
   pairCountData<-pairCountData[apply(pairCountData, 1, max) > 0,]
 	
 	if(ispaired){
-    colnames(pairCountData)<-unlist(lapply(c(1:ncol(pairCountData)), function(i){paste0(pairColData$paired[i], "_", colnames(pairCountData)[i])}))
     pairColData=data.frame(condition=factor(c(rep(g1name, ncol(c1)), rep(g2name, ncol(c2))), levels=gnames[1:2]), paired=factor(c(rep(paste0("S", c(1:ncol(c1))),2))))
-	}else{
+    colnames(pairCountData)<-unlist(lapply(c(1:ncol(pairCountData)), function(i){paste0(pairColData$paired[i], "_", colnames(pairCountData)[i])}))
+  }else{
 		pairColData=data.frame(condition=factor(c(rep(g1name, ncol(c1)), rep(g2name, ncol(c2))), levels=gnames[1:2]))
 	}
 	rownames(pairColData)<-colnames(pairCountData)
