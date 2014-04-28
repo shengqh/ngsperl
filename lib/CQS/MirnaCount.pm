@@ -124,11 +124,6 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $fasta_format = $config->{$section}{fasta_format};
-  if ( !defined $fasta_format ) {
-    $fasta_format = 0;
-  }
-
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
@@ -145,13 +140,7 @@ sub result {
     push( @resultFiles, "${countFile}.mapped.xml" );
     push( @resultFiles, "${curDir}/${fileName}.info" );
 
-    my $unmapped;
-    if ($fasta_format) {
-      $unmapped = change_extension( $countFile, ".unmapped.fasta" );
-    }
-    else {
-      $unmapped = change_extension( $countFile, ".unmapped.fastq" );
-    }
+    my $unmapped = change_extension( $countFile, ".unmapped.fastq.gz" );
     push( @resultFiles, $unmapped );
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );

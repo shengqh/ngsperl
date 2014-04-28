@@ -152,10 +152,10 @@ sub result {
 
     my $unmapped;
     if ($fasta_format) {
-      $unmapped = change_extension( $countFile, ".unmapped.fasta" );
+      $unmapped = change_extension( $countFile, ".unmapped.fasta.gz" );
     }
     else {
-      $unmapped = change_extension( $countFile, ".unmapped.fastq" );
+      $unmapped = change_extension( $countFile, ".unmapped.fastq.gz" );
     }
     push( @resultFiles, $unmapped );
 
