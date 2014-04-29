@@ -40,6 +40,7 @@ sub perform {
   my $bedfile = $config->{$section}{bedfile};
 
   my $rawFiles = get_raw_files( $config, $section );
+  print(%{$rawFiles}, "\n");
   my $groups = get_raw_files( $config, $section, "groups" );
 
   my $shfile = $pbsDir . "/${task_name}.sh";
