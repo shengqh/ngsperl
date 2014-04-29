@@ -40,7 +40,6 @@ sub perform {
   my $bedfile = $config->{$section}{bedfile};
 
   my $rawFiles = get_raw_files( $config, $section );
-  print(%{$rawFiles}, "\n");
   my $groups = get_raw_files( $config, $section, "groups" );
 
   my $shfile = $pbsDir . "/${task_name}.sh";
@@ -49,18 +48,16 @@ sub perform {
 
   for my $groupName ( sort keys %{$groups} ) {
     my @samples = @{ $groups->{$groupName} };
-    print(@samples, "\n");
-
     my $bamFile;
     my $bamFile2;
     if ( scalar(@samples) > 1 ) {
-      $bamFile2 = $rawFiles->{ $samples[1] }[1];    #control
-      $bamFile  = $rawFiles->{ $samples[2] }[1];    #sample
+      $bamFile2 = $rawFiles->{ $samples[0] }[0];    #control
+      $bamFile  = $rawFiles->{ $samples[1] }[0];    #sample
       print ($bamFile2, "\n");
       print ($bamFile, "\n");
     }
     else {
-      my $bamFile = $rawFiles->{ $samples[1] }[1];    #sample
+      my $bamFile = $rawFiles->{ $samples[0] }[0];    #sample
     }
 
     my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
