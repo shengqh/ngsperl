@@ -48,7 +48,7 @@ sub perform {
 
   for my $groupName ( sort keys %{$groups} ) {
     my @samples = @{ $groups->{$groupName} };
-    print(@samples);
+    print(@samples, "\n");
 
     my $bamFile;
     my $bamFile2;
