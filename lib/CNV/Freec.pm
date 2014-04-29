@@ -56,6 +56,8 @@ sub perform {
     if ( scalar(@samples) > 1 ) {
       $bamFile2 = $rawFiles->{ $samples[1] }[1];    #control
       $bamFile  = $rawFiles->{ $samples[2] }[1];    #sample
+      print ($bamFile2, "\n");
+      print ($bamFile, "\n");
     }
     else {
       my $bamFile = $rawFiles->{ $samples[1] }[1];    #sample
