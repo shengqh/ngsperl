@@ -53,8 +53,6 @@ sub perform {
     if ( scalar(@samples) > 1 ) {
       $bamFile2 = $rawFiles->{ $samples[0] }[0];    #control
       $bamFile  = $rawFiles->{ $samples[1] }[0];    #sample
-      print ($bamFile2, "\n");
-      print ($bamFile, "\n");
     }
     else {
       my $bamFile = $rawFiles->{ $samples[0] }[0];    #sample
@@ -72,22 +70,23 @@ sub perform {
     open( CON, ">$configFile" ) or die $!;
 
     print CON "[general] 
-chrLenFile = $chrLenFile 
-ploidy = $ploidy 
-coefficientOfVariation = $coefficientOfVariation 
-chrFiles = $chrFiles 
+chrLenFile=$chrLenFile 
+ploidy=$ploidy 
+coefficientOfVariation=$coefficientOfVariation 
+chrFiles=$chrFiles
+BedGraphOutput=TRUE
 
 [sample]
-mateFile = $bamFile 
-inputFormat  = $inputFormat 
-mateOrientation = $mateOrientation 
+mateFile=$bamFile 
+inputFormat=$inputFormat 
+mateOrientation=$mateOrientation 
 
 ";
     if ( defined $bamFile2 ) {
       print CON "[control] 
-mateFile = $bamFile2 
-inputFormat  = $inputFormat 
-mateOrientation = $mateOrientation 
+mateFile=$bamFile2 
+inputFormat=$inputFormat 
+mateOrientation=$mateOrientation 
 
 ";
 
