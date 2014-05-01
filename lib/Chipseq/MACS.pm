@@ -46,7 +46,7 @@ sub perform {
     my @groupNames = @{$gNames};
     
     print $pairName, "\n";
-    print Dumper(@groupNames);
+    print $groupNames[0], "\t", $groupNames[1], "\n";
     print "-----\n";
     
     #print Dumper($rawFiles->{$groupNames[0]});
