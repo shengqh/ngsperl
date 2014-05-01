@@ -45,8 +45,7 @@ sub perform {
     my ( $ispaired, $gNames ) = get_pair_groups( $pairs, $pairName );
     my @groupNames = @{$gNames};
     
-    print $pairName, "\n";
-    print $groupNames[0], "\t", $groupNames[1], "\n";
+    print $pairName, ":", $groupNames[0], "\t", $groupNames[1], "\n";
     print "-----\n";
     
     #print Dumper($rawFiles->{$groupNames[0]});
