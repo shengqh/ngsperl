@@ -87,7 +87,7 @@ sub result {
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my $finalFile = "${$sampleName}.filtered.bam";
+    my $finalFile = "${sampleName}.filtered.bam";
 
     my @resultFiles = ();
     push( @resultFiles, "${resultDir}/${finalFile}" );
