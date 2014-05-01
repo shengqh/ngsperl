@@ -47,8 +47,8 @@ sub perform {
     
     print Dumper(@groupNames);
     
-    print Dumper($rawFiles->{$groupNames[0]});
-    print Dumper($rawFiles->{$groupNames[1]});
+    #print Dumper($rawFiles->{$groupNames[0]});
+    #print Dumper($rawFiles->{$groupNames[1]});
     
     my $control=$rawFiles->{$groupNames[0]}[0];
     my $sample=$rawFiles->{$groupNames[1]}[0];
