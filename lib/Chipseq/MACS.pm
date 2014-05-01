@@ -48,7 +48,7 @@ sub perform {
     my $control=$rawFiles->{$groupNames[0]}[0];
     my $sample=$rawFiles->{$groupNames[1]}[0];
     
-    #print Dumper($gNames);
+    print Dumper($gNames);
     
     my $pbsFile = $self->pbsfile( $pbsDir, $pairName );
     my $pbsName = basename($pbsFile);
