@@ -45,10 +45,11 @@ sub perform {
     my ( $ispaired, $gNames ) = get_pair_groups( $pairs, $pairName );
     my @groupNames = @{$gNames};
     
+    print Dumper($rawFiles->{$groupNames[0]});
+    print Dumper($rawFiles->{$groupNames[1]});
+    
     my $control=$rawFiles->{$groupNames[0]}[0];
     my $sample=$rawFiles->{$groupNames[1]}[0];
-    
-    print Dumper($gNames);
     
     my $pbsFile = $self->pbsfile( $pbsDir, $pairName );
     my $pbsName = basename($pbsFile);
