@@ -29,13 +29,13 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $rawFiles = get_raw_files( $config, $section );
-  #print Dumper($rawFiles);
+  print Dumper($rawFiles);
 
   my $groups = get_raw_files( $config, $section, "groups" );
-  #print Dumper($groups);
+  print Dumper($groups);
 
   my $pairs = get_raw_files( $config, $section, "pairs" );
-  #print Dumper($pairs);
+  print Dumper($pairs);
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
