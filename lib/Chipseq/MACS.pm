@@ -44,15 +44,13 @@ sub perform {
   for my $pairName ( sort keys %{$pairs} ) {
     my ( $ispaired, $gNames ) = get_pair_groups( $pairs, $pairName );
     my @groupNames = @{$gNames};
+    my $groupControl = $groups->{$groupNames[0]};
+    my $groupSample = $groups->{$groupNames[1]};
     
-    print $pairName, ":", $groupNames[0], "\t", $groupNames[1], "\n";
-    print "-----\n";
-    
-    #print Dumper($rawFiles->{$groupNames[0]});
-    #print Dumper($rawFiles->{$groupNames[1]});
-    
-    my $control=$rawFiles->{$groupNames[0]}[0];
-    my $sample=$rawFiles->{$groupNames[1]}[0];
+    my $control=$rawFiles->{$groupControl->[0]}[0];
+    my $sample=$rawFiles->{$groupSample->[0]}[0];
+
+    print $pairName, ": ", $sample, " vs ", $control, "\n";
     
     my $pbsFile = $self->pbsfile( $pbsDir, $pairName );
     my $pbsName = basename($pbsFile);
