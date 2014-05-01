@@ -37,24 +37,6 @@ sub perform {
   my $pairs = get_raw_files( $config, $section, "pairs" );
   #print Dumper($pairs);
 
-  my %tpgroups         = ();
-  my %group_sample_map = ();
-  for my $groupName ( sort keys %{$groups} ) {
-    my @samples = @{ $groups->{$groupName} };
-    my @gfiles  = ();
-    my $index   = 0;
-    foreach my $sampleName ( sort @samples ) {
-      my @bamFiles = @{ $rawFiles->{$sampleName} };
-      push( @gfiles, $bamFiles[0] );
-      my $group_index = $groupName . "_" . $index;
-      print MAP $group_index . "\t" . $sampleName . "\t" . $groupName . "_" . $sampleName . "\t" . $groupName . "\t" . $index . "\n";
-      $group_sample_map{$group_index} = $sampleName;
-      $index = $index + 1;
-    }
-    $tpgroups{$groupName} = join( ",", @gfiles );
-  }
-  close(MAP);
-
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
