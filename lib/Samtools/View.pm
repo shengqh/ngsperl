@@ -44,7 +44,7 @@ sub perform {
 
     open( OUT, ">$pbsFile" ) or die $!;
 
-    my $finalFile = "${$sampleName}.filtered.bam";
+    my $finalFile = "${sampleName}.filtered.bam";
 
     print OUT "$pbsDesc
 #PBS -o $log
