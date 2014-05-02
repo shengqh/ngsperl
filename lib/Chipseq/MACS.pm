@@ -107,10 +107,8 @@ sub result {
   for my $pairName ( sort keys %{$pairs} ) {
     my $curDir      = $resultDir . "/$pairName";
     my @resultFiles = ();
-    push( @resultFiles, $curDir . "/gene_exp.diff" );
-    push( @resultFiles, $curDir . "/genes.read_group_tracking" );
-    push( @resultFiles, $curDir . "/splicing.diff" );
-    push( @resultFiles, $resultDir . "/${task_name}_group_sample.map" );
+    push( @resultFiles, $curDir . "/${pairName}_peaks.bed" );
+    push( @resultFiles, $curDir . "/${pairName}_MACS_wiggle/treat" );
 
     $result->{$pairName} = filter_array( \@resultFiles, $pattern );
   }
