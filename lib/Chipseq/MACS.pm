@@ -76,7 +76,7 @@ fi
 
 echo MACS_start=`date`
 
-macs14 $option -t $sample -c $control -n $pairName
+macs14 $option -t $sample -c $control -n $pairName --call-subpeaks
 
 echo MACS_end=`date`
 
