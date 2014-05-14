@@ -33,11 +33,13 @@ sub perform {
   my $ploidy                 = $config->{$section}{ploidy}                 or die "define ${section}::ploidy first, such as 2";
   my $coefficientOfVariation = $config->{$section}{coefficientOfVariation} or die "define ${section}::coefficientOfVariation first, such as 0.05";
   my $inputFormat            = $config->{$section}{inputFormat}            or die "define ${section}::inputFormat first";
-  my $mateOrientation        = $config->{$section}{mateOrientation}
+
+  my $mateOrientation = $config->{$section}{mateOrientation}
     or die "define ${section}::mateOrientation first";    #0 (for single ends), RF (Illumina mate-pairs), FR (Illumina paired-ends), FF (SOLiD mate-pairs)
   my $maxThreads = $config->{$section}{maxThreads} or die "define ${section}::maxThreads first";
 
-  my $bedfile = $config->{$section}{bedfile};
+  my $snpFile = parse_param_file( $config, $section, "SNPfile", 0 );
+  my $bedfile = parse_param_file( $config, $section, "bedfile", 0 );
 
   my $rawFiles = get_raw_files( $config, $section );
   my $groups = get_raw_files( $config, $section, "groups" );
@@ -89,12 +91,16 @@ inputFormat=$inputFormat
 mateOrientation=$mateOrientation 
 
 ";
-
     }
 
     if ( defined $bedfile ) {
       print CON "[target] \n\n";
       print CON "captureRegions = $bedfile \n\n";
+    }
+
+    if ( defined $snpFile ) {
+      print CON "[BAF] \n\n";
+      print CON "SNPfile = $snpFile \n\n";
     }
 
     close(CON);
