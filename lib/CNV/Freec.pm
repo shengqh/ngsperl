@@ -94,13 +94,17 @@ mateOrientation=$mateOrientation
     }
 
     if ( defined $bedfile ) {
-      print CON "[target] \n\n";
-      print CON "captureRegions = $bedfile \n\n";
+      print CON "[target]
+captureRegions = $bedfile
+
+";
     }
 
     if ( defined $snpFile ) {
-      print CON "[BAF] \n\n";
-      print CON "SNPfile = $snpFile \n\n";
+      print CON "[BAF]
+SNPfile = $snpFile
+
+";
     }
 
     close(CON);
