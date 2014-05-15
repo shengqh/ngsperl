@@ -156,7 +156,7 @@ sub performPileup {
   my $snpFile = parse_param_file( $config, $section, "SNPfile", 1 );
   my $bedfile = parse_param_file( $config, $section, "bedfile", 0 );
 
-  my $fastaFile = parse_param_file( $config, $section, "fastaFile", 1 );
+  my $fastaFile = parse_param_file( $config, $section, "fasta_file", 1 );
 
   my $rawFiles = get_raw_files( $config, $section );
   my $groups = get_raw_files( $config, $section, "groups" );
