@@ -204,12 +204,16 @@ echo freec_start=`date`
 ";
 
     print OUT "
-samtools mpileup -A -f $fastaFile $bamFile1 | gzip > $pileup1
+if [ ! -s $pileup1 ]; then
+  samtools mpileup -A -f $fastaFile $bamFile1 | gzip > $pileup1
+fi
 ";
 
     if ( defined $pileup2 ) {
       print OUT "
-samtools mpileup -A -f $fastaFile $bamFile2 | gzip > $pileup2
+if [ ! -s $pileup2 ]; then
+  samtools mpileup -A -f $fastaFile $bamFile2 | gzip > $pileup2
+fi
 ";
     }
 
