@@ -61,14 +61,14 @@ sub performBAM {
 
   for my $groupName ( sort keys %{$groups} ) {
     my @samples = @{ $groups->{$groupName} };
-    my $bamFile;
+    my $bamFile1;
     my $bamFile2;
     if ( scalar(@samples) > 1 ) {
       $bamFile2 = $rawFiles->{ $samples[0] }[0];    #control
-      $bamFile  = $rawFiles->{ $samples[1] }[0];    #sample
+      $bamFile1 = $rawFiles->{ $samples[1] }[0];    #sample
     }
     else {
-      my $bamFile = $rawFiles->{ $samples[0] }[0];    #sample
+      $bamFile1 = $rawFiles->{ $samples[0] }[0];    #sample
     }
 
     my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
@@ -106,7 +106,7 @@ chrFiles=$chrFiles
 BedGraphOutput=TRUE
 
 [sample]
-mateFile=$bamFile 
+mateFile=$bamFile1 
 inputFormat=$inputFormat 
 mateOrientation=$mateOrientation 
 
@@ -167,17 +167,19 @@ sub performPileup {
 
   for my $groupName ( sort keys %{$groups} ) {
     my @samples = @{ $groups->{$groupName} };
-    my $bamFile;
+    my $bamFile1;
     my $bamFile2;
-    my $pileup1 = $samples[0] . ".pileup.gz";
+    my $pileup1;
     my $pileup2;
     if ( scalar(@samples) > 1 ) {
       $bamFile2 = $rawFiles->{ $samples[0] }[0];    #control
-      $pileup2  = $samples[1] . ".pileup.gz";
-      $bamFile  = $rawFiles->{ $samples[1] }[0];    #sample
+      $pileup2  = $samples[0] . ".pileup.gz";
+      $bamFile1 = $rawFiles->{ $samples[1] }[0];    #sample
+      $pileup1  = $samples[1] . ".pileup.gz";
     }
     else {
-      my $bamFile = $rawFiles->{ $samples[0] }[0];    #sample
+      $bamFile1 = $rawFiles->{ $samples[0] }[0];    #sample
+      $pileup1  = $samples[0] . ".pileup.gz";
     }
 
     my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
@@ -202,7 +204,7 @@ echo freec_start=`date`
 ";
 
     print OUT "
-samtools mpileup -A -f $fastaFile $bamFile | gzip > $pileup1
+samtools mpileup -A -f $fastaFile $bamFile1 | gzip > $pileup1
 ";
 
     if ( defined $pileup2 ) {
