@@ -48,7 +48,6 @@ sub performBAM {
 
   my $mateOrientation = $config->{$section}{mateOrientation}
     or die "define ${section}::mateOrientation first";    #0 (for single ends), RF (Illumina mate-pairs), FR (Illumina paired-ends), FF (SOLiD mate-pairs)
-  my $maxThreads = $config->{$section}{maxThreads} or die "define ${section}::maxThreads first";
 
   my $bedfile = parse_param_file( $config, $section, "bedfile", 0 );
 
@@ -151,7 +150,6 @@ sub performPileup {
 
   my $mateOrientation = $config->{$section}{mateOrientation}
     or die "define ${section}::mateOrientation first";    #0 (for single ends), RF (Illumina mate-pairs), FR (Illumina paired-ends), FF (SOLiD mate-pairs)
-  my $maxThreads = $config->{$section}{maxThreads} or die "define ${section}::maxThreads first";
 
   my $snpFile = parse_param_file( $config, $section, "SNPfile", 1 );
   my $bedfile = parse_param_file( $config, $section, "bedfile", 0 );
