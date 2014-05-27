@@ -81,7 +81,7 @@ cd $curDir
       my $passinput;
       if ($isvcf) {
         $passinput = change_extension( $filename, ".avinput" );
-        $vcf = "convert2annovar.pl -format vcf4old ${sampleFile} > $passinput ";
+        $vcf = "convert2annovar.pl -format vcf4old ${sampleFile} | cut -f1-7 > $passinput ";
       }
       else {
         $passinput = $sampleFile;
