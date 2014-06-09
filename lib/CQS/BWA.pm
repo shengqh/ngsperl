@@ -95,7 +95,7 @@ $bwa_aln_command
 
 if [ -s $samFile ]; then
   java -jar $addOrReplaceReadGroups_jar I=$samFile O=$rgSamFile ID=$sampleName LD=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA
-  samtools view -S -b $samFile | samtools sort - $sampleName
+  samtools view -S -b $rgSamFile | samtools sort - $sampleName
   samtools index $bamFile 
   samtools flagstat $bamFile > ${bamFile}.stat 
   rm $samFile $rgSamFile
