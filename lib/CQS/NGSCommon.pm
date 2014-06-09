@@ -20,7 +20,7 @@ use Cwd;
 
 sub get_bam_tag {
   my ($sampleName) = @_;
-  my $tag = "'\@RG\tID:$sampleName\tLB:$sampleName\tSM:$sampleName\tPL:ILLUMINA'";
+  my $tag = "'\@RG ID:$sampleName LB:$sampleName SM:$sampleName PL:ILLUMINA'";
   return ($tag);
 }
 
