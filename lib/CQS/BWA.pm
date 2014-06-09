@@ -44,7 +44,7 @@ sub perform {
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $samFile     = $sampleName . ".sam";
-    #my $rgSamFile     = $sampleName . ".rg.sam";
+    my $rgSamFile     = $sampleName . ".rg.sam";
     my $bamFile     = $sampleName . ".bam";
     my $tag         = get_bam_tag($sampleName);
 
@@ -56,14 +56,14 @@ sub perform {
       $bwa_aln_command = "
 if [ ! -s $samFile ]; then
   echo bwa_mem=`date` 
-  bwa mem $option -R $tag $faFile $sampleFile1 $sampleFile2 > $samFile
+  bwa mem $option $faFile $sampleFile1 $sampleFile2 > $samFile
 fi";
     }
     else {
       $bwa_aln_command = "
 if [ ! -s $samFile ]; then
   echo bwa_mem=`date` 
-  bwa mem $option -R $tag $faFile $sampleFile1 > $samFile
+  bwa mem $option $faFile $sampleFile1 > $samFile
 fi";
     }
 
@@ -94,10 +94,11 @@ fi
 $bwa_aln_command
 
 if [ -s $samFile ]; then
+  java -jar $addOrReplaceReadGroups_jar I=$samFile O=$rgSamFile ID=$sampleName LD=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA
   samtools view -S -b $samFile | samtools sort - $sampleName
   samtools index $bamFile 
   samtools flagstat $bamFile > ${bamFile}.stat 
-  rm $samFile
+  rm $samFile $rgSamFile
 fi
   
 echo finished=`date`
