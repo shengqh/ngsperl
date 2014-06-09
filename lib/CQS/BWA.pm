@@ -33,6 +33,7 @@ sub perform {
   $option = $option . " -M";
   
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
+  my $addOrReplaceReadGroups_jar = get_param_file( $config->{$section}{addOrReplaceReadGroups_jar}, "addOrReplaceReadGroups_jar", 1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -43,6 +44,7 @@ sub perform {
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $samFile     = $sampleName . ".sam";
+    #my $rgSamFile     = $sampleName . ".rg.sam";
     my $bamFile     = $sampleName . ".bam";
     my $tag         = get_bam_tag($sampleName);
 
