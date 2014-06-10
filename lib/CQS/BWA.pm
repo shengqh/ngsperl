@@ -96,7 +96,7 @@ if [ ! -s $samFile ]; then
 fi
 
 if [ -s $samFile ]; then
-  java -jar $addOrReplaceReadGroups_jar I=$samFile O=$rgSamFile ID=$sampleName LD=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA
+  java -jar $addOrReplaceReadGroups_jar I=$samFile O=$rgSamFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA
   if [ -s $rgSamFile ]; then
     samtools view -S -b $rgSamFile | samtools sort - $sampleName
     samtools index $bamFile 
