@@ -2,7 +2,9 @@
 #  setwd("H:/shengquanhu/projects/chenxi/20131017_chenxi_rnaseq_smad4/deseq2/result")  
 #  data<-read.table("H:/shengquanhu/projects/chenxi/20131017_chenxi_rnaseq_smad4/genetable/result/smad4_gene.count",row.names=1, header=T, check.names=F)
 #  pairs=list(
-#  	"KO_vs_WT" = list("WT" = c("2288-RDB-81","2288-RDB-83","2288-RDB-85"), "KO" = c("2288-RDB-82","2288-RDB-84","2288-RDB-86"), "paired" = TRUE), 
+#  	"KO_vs_WT" = list("WT" = c("2288-RDB-81","2288-RDB-83","2288-RDB-85"), 
+#                     "KO" = c("2288-RDB-82","2288-RDB-84","2288-RDB-86"), 
+#                     "paired" = c("S1", "S2", "S3")), 
 #    "KO_vs_WT_unpair" = list("WT" = c("2288-RDB-81","2288-RDB-83","2288-RDB-85"), "KO" = c("2288-RDB-82","2288-RDB-84","2288-RDB-86")) 
 # )
 ##predefined_condition_end
@@ -37,7 +39,8 @@ for(pairname in pairnames){
   gs=pairs[[pairname]]
   gnames=names(gs)
   if(length(gnames) > 2){
-    ispaired<-unlist(gs[3])
+    ispaired<-TRUE
+    pairsamplenames<-unlist(gs[3])
   }else{
     ispaired<-FALSE
   }
@@ -66,10 +69,29 @@ for(pairname in pairnames){
       warning(paste0("Data not paired, there are ", ncol(c2), " samples in group ", g2name, " but ", ncol(c1), " samples in group ", g1name))
       next
     }
+
+    if(ncol(c2) != length(pairsamplenames)){
+      warning(paste0("Name not paired with sample, there are ", ncol(c2), " samples in group ", g2name, " but ", length(pairsamplenames), " names defined"))
+      next
+    }
     
     spcorr<-unlist(lapply(c(1:length(g1)), function(x){
               cor(c1[,x], c2[,x],method="spearman")
             }))
+            
+
+    sptable<-data.frame(Name=pairsamplenames, Spcorr=spcorr)
+    write.csv(sptable, file=paste0(pairname, "_Spearman.csv"), row.names=FALSE)
+    
+    lapply(c(1:length(g1)), function(x){
+      log2c1<-log2(c1[,x]+1)
+      log2c2<-log2(c2[,x]+1)
+      png(paste0(pairname, "_Spearman_", pairsamplenames[x], ".png"), width=2000, height=2000, res=300)
+      plot(log2c1, log2c2, xlab=paste0(g1[x], " [log2(Count + 1)]"), ylab=paste0(g2[x], " [log2(Count + 1)]"))
+      text(3,15,paste0("SpearmanCorr=", sprintf("%0.3f", cor(c1[,x], c2[,x],method="spearman")) ))
+      dev.off()
+    })
+    
     pairedspearman[[pairname]]<-spcorr
   }
   
@@ -77,7 +99,7 @@ for(pairname in pairnames){
   pairCountData<-pairCountData[apply(pairCountData, 1, max) > 0,]
   
   if(ispaired){
-    pairColData=data.frame(condition=factor(c(rep(g1name, ncol(c1)), rep(g2name, ncol(c2))), levels=gnames[1:2]), paired=factor(c(rep(paste0("S", c(1:ncol(c1))),2))))
+    pairColData=data.frame(condition=factor(c(rep(g1name, ncol(c1)), rep(g2name, ncol(c2))), levels=gnames[1:2]), paired=factor(c(rep(pairsamplenames,2))))
     colnames(pairCountData)<-unlist(lapply(c(1:ncol(pairCountData)), function(i){paste0(pairColData$paired[i], "_", colnames(pairCountData)[i])}))
   }else{
     pairColData=data.frame(condition=factor(c(rep(g1name, ncol(c1)), rep(g2name, ncol(c2))), levels=gnames[1:2]))

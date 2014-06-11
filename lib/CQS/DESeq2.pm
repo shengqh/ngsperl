@@ -27,10 +27,14 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my (
+    $task_name, $path_file, $pbsDesc, $target_dir, $logDir,
+    $pbsDir,    $resultDir, $option,  $sh_direct
+    )
+    = get_parameter( $config, $section );
 
-  my $pairs = get_raw_files( $config, $section );
-  my $totalPair = scalar( keys %{$pairs} );
+  my $comparisons = get_raw_files( $config, $section );
+  my $totalPair = scalar( keys %{$comparisons} );
   if ( 0 == $totalPair ) {
     die "No pair defined!";
   }
@@ -53,12 +57,13 @@ sub perform {
   my $rfile = $resultDir . "/${task_name}.r";
   open( RF, ">$rfile" ) or die "Cannot create $rfile";
   open RT, "<$rtemplate" or die $!;
-  
+
   my $readfunc;
-  if($countfile =~ /csv$/){
-    $readfunc = "read.csv"
-  }else{
-    $readfunc = "read.table"
+  if ( $countfile =~ /csv$/ ) {
+    $readfunc = "read.csv";
+  }
+  else {
+    $readfunc = "read.table";
   }
   print RF "
 setwd(\"$resultDir\")  
@@ -68,23 +73,31 @@ data<-${readfunc}(\"$countfile\",row.names=1, header=T, check.names=F)
 pairs=list(
 ";
   my $first = 0;
-  for my $pairName ( sort keys %{$pairs} ) {
+  for my $comparisonName ( sort keys %{$comparisons} ) {
     $first++;
-    my ($ispaired, $gNames) = get_pair_groups( $pairs, $pairName );
+    my ( $pairedSampleNames, $gNames ) =
+      get_pair_groups_names( $comparisons, $comparisonName );
     my @groupNames = @{$gNames};
     if ( scalar(@groupNames) != 2 ) {
-      die "Comparison in pair $pairName should contains and only contains two groups!";
+      die
+"Comparison of $comparisonName should contains and only contains two groups!";
     }
 
     my $g1 = $groupNames[0];
     my $g2 = $groupNames[1];
     my $s1 = $tpgroups{$g1};
     my $s2 = $tpgroups{$g2};
-    if ($ispaired) {
-      print RF "  \"$pairName\" = list(\"$g1\" = c($s1), \"$g2\" = c($s2), \"paired\" = TRUE)";
+    if ( defined $pairedSampleNames ) {
+      my $pairnames =  "\"" . join( "\",\"",  @{$pairedSampleNames}) . "\"";
+      print RF
+"  \"$comparisonName\" = list(\"$g1\" = c($s1), 
+    \"$g2\" = c($s2), 
+    \"paired\" = c($pairnames))";
     }
     else {
-      print RF "  \"$pairName\" = list(\"$g1\" = c($s1), \"$g2\" = c($s2))";
+      print RF
+        "  \"$comparisonName\" = list(\"$g1\" = c($s1), 
+            \"$g2\" = c($s2))";
     }
 
     if ( $first != $totalPair ) {
@@ -131,16 +144,20 @@ R --vanilla -f $rfile
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my (
+    $task_name, $path_file, $pbsDesc, $target_dir, $logDir,
+    $pbsDir,    $resultDir, $option,  $sh_direct
+    )
+    = get_parameter( $config, $section );
 
-  my $pairs = get_raw_files( $config, $section );
+  my $comparisons = get_raw_files( $config, $section );
 
   my $result = {};
-  for my $pairName ( sort keys %{$pairs} ) {
+  for my $comparisonName ( sort keys %{$comparisons} ) {
     my @resultFiles = ();
-    push( @resultFiles, $resultDir . "/${pairName}.csv" );
-    push( @resultFiles, $resultDir . "/${pairName}.png" );
-    $result->{$pairName} = filter_array( \@resultFiles, $pattern );
+    push( @resultFiles, $resultDir . "/${comparisonName}.csv" );
+    push( @resultFiles, $resultDir . "/${comparisonName}.png" );
+    $result->{$comparisonName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
 }
