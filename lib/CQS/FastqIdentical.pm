@@ -30,8 +30,6 @@ sub perform {
   my $cqstools  = get_cqstools( $config, $section, 1 );
   my $extension = get_option($config, $section, "extension");
 
-  my $merge_result = get_option( $config, $section, "merge_result", 0 );
-
   my $minlen = $config->{$section}{minlen};
   if ( defined $minlen ) {
     $minlen = "-l $minlen";
@@ -81,14 +79,6 @@ fi
         $outputFiles = $outputFiles . " " . $outputFile;
         print OUT "mono-sgen $cqstools fastq_identical -i $sampleFile $minlen -o $outputFile \n";
       }
-
-      if ($merge_result) {
-        print OUT "
-cat $outputFiles > $finalFile
- 
-rm $outputFiles
-";
-      }
     }
     print OUT "
 echo finished=`date`
@@ -127,7 +117,7 @@ sub result {
     my $finalFile   = $resultDir . "/" . $sampleName . $extension;
     my @resultFiles = ();
 
-    if ( scalar(@sampleFiles) == 1 || $merge_result ) {
+    if ( scalar(@sampleFiles) == 1 ) {
       push( @resultFiles, $finalFile );
       push( @resultFiles, change_extension( $finalFile, ".dupcount" ) );
     }
