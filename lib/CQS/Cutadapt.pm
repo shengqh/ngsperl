@@ -79,7 +79,7 @@ fi
         print OUT " --too-short-output=$finalShortName";
       }
       if ($longLimited) {
-        print OUT " --too-long-output=$finalLongFile";
+        print OUT " --too-long-output=$finalLongName";
       }
       print OUT "\n";
     }
@@ -117,8 +117,8 @@ rm $shortFiles
         }
         if ($longLimited) {
           print OUT "
-cat $shortFiles > $finalLongName
-rm $shortFiles
+cat $longFiles > $finalLongName
+rm $longFiles
 ";
         }
       }
