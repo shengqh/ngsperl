@@ -46,6 +46,9 @@ sub perform {
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
 
+  my $listfile = $self->getname( $pbsDir, $task_name, ".list", 0 );
+  open( LT, ">$listfile" ) or die "Cannot create $listfile";
+
   for my $sampleName ( sort keys %{$rawFiles} ) {
     my @sampleFiles = @{ $rawFiles->{$sampleName} };
 
@@ -112,6 +115,8 @@ if [[ -s $final && ! -s $excel ]]; then
 fi
 ";
       }
+      
+      print LT "$result\n";
     }
     print OUT "
 echo finished=`date`
@@ -123,7 +128,10 @@ exit 0
     print "$pbsFile created. \n";
 
     print SH "\$MYCMD ./$pbsName \n";
+    
   }
+  close(LT);
+
   print SH "exit 0\n";
   close(SH);
 
