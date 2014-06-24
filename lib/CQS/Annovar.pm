@@ -46,7 +46,7 @@ sub perform {
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
 
-  my $listfile = $self->getfile( $pbsDir, $task_name, ".list", 0 );
+  my $listfile = $self->getfile( $resultDir, $task_name, ".list", 0 );
   open( LT, ">$listfile" ) or die "Cannot create $listfile";
 
   for my $sampleName ( sort keys %{$rawFiles} ) {
