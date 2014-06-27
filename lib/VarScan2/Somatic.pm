@@ -63,8 +63,7 @@ sub perform {
     my $tumor_mpileup  = "${tumorfile}.mpileup";
 
     my $snpvcf    = "${groupName}.snp.vcf";
-    my $passinput = "${groupName}.somatic.pass.avinput";
-    my $annovar   = "${groupName}.somatic.pass.annovar";
+    my $indelvcf    = "${groupName}.indel.vcf";
 
     my $pbsFile = $self->pbsfile($pbsDir, $groupName);
     my $pbsName = basename($pbsFile);
@@ -107,6 +106,7 @@ if [ ! -s $snpvcf ]; then
 fi
 
 java $java_option -jar $varscan2_jar processSomatic $snpvcf --p-value $somatic_p_value
+java $java_option -jar $varscan2_jar processSomatic $indelvcf --p-value $somatic_p_value
 
 echo finished=`date`
 ";
@@ -136,6 +136,8 @@ sub result {
     my @resultFiles = ();
     my $curDir      = $resultDir . "/$groupName";
     my $snpvcf      = "${groupName}.snp.vcf";
+    my $indelvcf    = "${groupName}.indel.vcf";
+    push( @resultFiles, "$curDir/${snpvcf}.Somatic.hc" );
     push( @resultFiles, "$curDir/${snpvcf}.Somatic.hc" );
     $result->{$groupName} = filter_array( \@resultFiles, $pattern );
   }
