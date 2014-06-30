@@ -82,26 +82,25 @@ echo varscan2=`date`
 
 cd $curDir
 
-
-if [ ! -s ${normal}.bai ]; then
-  samtools index ${normal}
-fi
-
-if [ ! -s ${tumor}.bai ]; then
-  samtools index ${tumor}
-fi
-
-if [ ! -s $normal_mpileup ]; then
-  echo NORMAL_MPILEUP=`date`
-  samtools mpileup $mpileup_options -f $faFile $normal > $normal_mpileup
-fi
-
-if [ ! -s $tumor_mpileup ]; then
-  echo TUMOR_MPILEUP=`date`
-  samtools mpileup $mpileup_options -f $faFile $tumor > $tumor_mpileup
-fi
-
 if [ ! -s $snpvcf ]; then
+  if [ ! -s ${normal}.bai ]; then
+    samtools index ${normal}
+  fi
+
+  if [ ! -s ${tumor}.bai ]; then
+    samtools index ${tumor}
+  fi
+
+  if [ ! -s $normal_mpileup ]; then
+    echo NORMAL_MPILEUP=`date`
+    samtools mpileup $mpileup_options -f $faFile $normal > $normal_mpileup
+  fi
+
+  if [ ! -s $tumor_mpileup ]; then
+    echo TUMOR_MPILEUP=`date`
+    samtools mpileup $mpileup_options -f $faFile $tumor > $tumor_mpileup
+  fi
+  
   java $java_option -jar $varscan2_jar somatic $normal_mpileup $tumor_mpileup $groupName $option --output-vcf --somatic-p-value $somatic_p_value
 fi
 
