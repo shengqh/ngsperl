@@ -31,6 +31,14 @@ sub perform {
 
   my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
 
+  my $minimum_depth = $config->{$section}{minimum_depth};
+  my $cqsFile;
+  my $cqscommand = "";
+  if(defined $minimum_depth){
+    $cqsFile = get_cqstools( $config, $section, 1 );
+    $cqscommand = " | mono $cqsFile depth_processor -d $minimum_depth"
+  }
+
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
@@ -65,7 +73,7 @@ echo depth=`date`
 cd $curDir
 
 if [ ! -s $depth ]; then
-    samtools depth $option $samples > $depth
+    samtools depth $option $samples $cqscommand > $depth
 fi
 
 echo finished=`date`
