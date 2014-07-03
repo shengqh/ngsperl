@@ -12,8 +12,6 @@ use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 
-our @ISA = qw(CQS::AbstractSomaticMutation);
-
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
