@@ -39,7 +39,11 @@ sub perform {
 
   for my $groupName ( sort keys %group_sample_map ) {
     my @sampleFiles = @{ $group_sample_map{$groupName} };
-    my $samples = join( " ", @sampleFiles );
+    my $sampleCount = scalar(@sampleFiles);
+    my $samples = "";
+    for (my $index = 0; $index < $sampleCount; $index ++) {
+      $samples = $samples . " " . $sampleFiles[$index][0];
+    }
 
     my $curDir = create_directory_or_die( $resultDir . "/$groupName" );
     
