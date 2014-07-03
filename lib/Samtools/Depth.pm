@@ -36,7 +36,7 @@ sub perform {
   my $cqscommand = "";
   if(defined $minimum_depth){
     $cqsFile = get_cqstools( $config, $section, 1 );
-    $cqscommand = " | mono $cqsFile depth_processor -d $minimum_depth"
+    $cqscommand = " | mono $cqsFile depth_filter -d $minimum_depth"
   }
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
