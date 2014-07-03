@@ -60,7 +60,7 @@ sub perform {
 
 $path_file 
 
-echo mpileup=`date` 
+echo depth=`date` 
 
 cd $curDir
 
