@@ -4,6 +4,11 @@ package CQS::GroupTask;
 use strict;
 use warnings;
 use CQS::Task;
+use CQS::ConfigUtils;
+use CQS::SystemUtils;
+use CQS::FileUtils;
+use CQS::NGSCommon;
+use CQS::StringUtils;
 
 our @ISA = qw(CQS::Task);
 
