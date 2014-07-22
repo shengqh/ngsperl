@@ -41,9 +41,12 @@ for(pairname in pairnames){
   if(length(gnames) > 2){
     ispaired<-TRUE
     pairsamplenames<-unlist(gs[3])
+    cat("Paired data!")
   }else{
     ispaired<-FALSE
+    cat("Not paired data!")
   }
+  
   gnames<-gnames[1:2]
   g1name=gnames[1]
   g2name=gnames[2]
@@ -126,7 +129,9 @@ for(pairname in pairnames){
   select<- (!is.na(res$padj)) & (res$padj<0.05) & ((res$log2FoldChange >= 1) | (res$log2FoldChange <= -1))
   
   if(length(indecies) > 0){
-    tbb<-cbind(data[,indecies,drop=F], pairCountData, res)
+    inddata<-data[,indecies,drop=F]
+    cat(paste0(nrow(inddata)), " : ", nrow(pairCountData), " : ", nrow(res), "\n")
+    tbb<-cbind(inddata, pairCountData, res)
   }else{
     tbb<-cbind(pairCountData, res)
   }
