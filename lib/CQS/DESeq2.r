@@ -41,10 +41,10 @@ for(pairname in pairnames){
   if(length(gnames) > 2){
     ispaired<-TRUE
     pairsamplenames<-unlist(gs[3])
-    cat("Paired data!")
+    cat("Paired data!\n")
   }else{
     ispaired<-FALSE
-    cat("Not paired data!")
+    cat("Not paired data!\n")
   }
   
   gnames<-gnames[1:2]
@@ -99,7 +99,8 @@ for(pairname in pairnames){
   }
   
   pairCountData<-cbind(c1, c2)
-  pairCountData<-pairCountData[apply(pairCountData, 1, max) > 0,]
+  notEmptyData<-apply(pairCountData, 1, max) > 0
+  pairCountData<-pairCountData[notEmptyData,]
   
   if(ispaired){
     pairColData=data.frame(condition=factor(c(rep(g1name, ncol(c1)), rep(g2name, ncol(c2))), levels=gnames[1:2]), paired=factor(c(rep(pairsamplenames,2))))
@@ -129,7 +130,7 @@ for(pairname in pairnames){
   select<- (!is.na(res$padj)) & (res$padj<0.05) & ((res$log2FoldChange >= 1) | (res$log2FoldChange <= -1))
   
   if(length(indecies) > 0){
-    inddata<-data[,indecies,drop=F]
+    inddata<-data[notEmptyData,indecies,drop=F]
     cat(paste0(nrow(inddata)), " : ", nrow(pairCountData), " : ", nrow(res), "\n")
     tbb<-cbind(inddata, pairCountData, res)
   }else{
