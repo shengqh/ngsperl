@@ -188,7 +188,8 @@ for(pairname in pairnames){
   dev.off()
   
   #draw heatmap
-  rldselect<-rldmatrix[1:500,,drop=F]
+  mincount<-min(500, nrow(rldmatrix))
+  rldselect<-rldmatrix[1:mincount,,drop=F]
   htfile<-paste0(pairname, "_DESeq2-vsd-heatmap.png")
   if(!file.exists(htfile)){
     if(nrow(rldselect) > 2){
