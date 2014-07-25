@@ -96,8 +96,8 @@ sub result {
   my ( $self, $config, $section, $pattern ) = @_;
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $prefix = get_option( $config, $section, "prefix", "" );
-  my $suffix = get_option( $config, $section, "suffix", "" );
+  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
+  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
   my $result = {};
 
