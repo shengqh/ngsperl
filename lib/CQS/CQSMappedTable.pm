@@ -117,6 +117,8 @@ sub result {
     my $filelist   = $self->getfile( $pbsDir,    ${task_name}, ".filelist", 0 );
     my $outputfile = $self->getfile( $resultDir, ${task_name}, ".count",    0 );
 
+  print ($outputfile);
+  
     push( @resultFiles, $outputfile );
     push( @resultFiles, $filelist );
   }
