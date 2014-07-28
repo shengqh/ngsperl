@@ -52,7 +52,15 @@ sub performBAM {
   my $bedfile = parse_param_file( $config, $section, "bedfile", 0 );
 
   my $rawFiles = get_raw_files( $config, $section );
-  my $groups = get_raw_files( $config, $section, "groups" );
+  my $groups;
+  if(defined $config->{$section}{"groups"}){
+    $groups = get_raw_files( $config, $section, "groups" );
+  }else{
+    $groups = {};
+    for my $sampleName (sort keys %{$rawFiles}){
+      $groups->{$sampleName} = $rawFiles->{$sampleName};
+    } 
+  }
 
   my $shfile = $pbsDir . "/${task_name}.sh";
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
