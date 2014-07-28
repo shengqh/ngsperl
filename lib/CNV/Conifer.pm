@@ -70,10 +70,8 @@ $path_file
 
 cd $resultDir
 
-echo rpkm=`date`
-
 if [ ! -s $rpkm ]; then
-  echo conifer=`date`
+  echo conifer_RPKM=`date`
   python $conifer rpkm --probes $bedfile --input $bamFile --output $rpkm 
 fi
 
