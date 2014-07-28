@@ -59,7 +59,7 @@ sub performBAM {
   else {
     $groups = {};
     for my $sampleName ( sort keys %{$rawFiles} ) {
-      $groups->{$sampleName} = $rawFiles->{$sampleName};
+      $groups->{$sampleName} = [$sampleName];
     }
   }
 
