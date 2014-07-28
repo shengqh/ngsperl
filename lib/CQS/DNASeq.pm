@@ -450,73 +450,8 @@ sub bowtie2 {
 
 sub samtools_index {
   my ( $config, $section ) = @_;
-
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option ) = get_parameter( $config, $section );
-
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
-
-  my $isbamsorted = $config->{$section}{isbamsorted};
-  if ( !defined($isbamsorted) ) {
-    $isbamsorted = 0;
-  }
-
-  my $shfile = $pbsDir . "/${task_name}_index.sh";
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
-
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-
-    my $pbsName = "${sampleName}_index.pbs";
-    my $pbsFile = "${pbsDir}/$pbsName";
-
-    print SH "\$MYCMD ./$pbsName \n";
-
-    my $log = "${logDir}/${sampleName}_index.log";
-
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
-
-$path_file
-
-echo index=`date`
-";
-
-    my $bamFile = $sampleFiles[0];
-
-    my $bamSortedFile;
-    if ($isbamsorted) {
-      $bamSortedFile = $bamFile;
-    }
-    else {
-      ( $bamSortedFile, my $bamSorted ) = get_sorted_bam($bamFile);
-      print OUT "if [ ! -s $bamSortedFile ]; then\n";
-      print OUT "  echo samtools_sort=`date`\n";
-      print OUT "  samtools sort $bamFile $bamSorted \n";
-      print OUT "fi\n";
-    }
-
-    my $bamIndexFile = $bamSortedFile . ".bai";
-    print OUT "if [ ! -s $bamIndexFile ]; then
-  echo samtools_index=`date`
-  samtools index $bamSortedFile 
-fi
-
-echo finished=`date`
-";
-    close OUT;
-
-    print "$pbsFile created\n";
-  }
-  close(SH);
-
-  if ( is_linux() ) {
-    chmod 0755, $shfile;
-  }
-
-  print "!!!shell file $shfile created, you can run this shell file to submit all samtools index tasks.\n";
+  my $obj = instantiate("Samtools::Index");
+  $obj->perform( $config, $section );
 }
 
 sub refine_bam_file {
