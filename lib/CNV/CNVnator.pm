@@ -117,8 +117,8 @@ sub result {
     my $rootFile    = $sampleName . ".root";
     my $callFile    = $sampleName . ".call";
     my @resultFiles = ();
-    push( @resultFiles, $curDir . "/" . $rootFile );
     push( @resultFiles, $curDir . "/" . $callFile );
+    push( @resultFiles, $curDir . "/" . $rootFile );
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
