@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my $snpFile = parse_param_file( $config, $section, "SNPfile", 1 );
+  my $snpFile = parse_param_file( $config, $section, "SNPfile", 0 );
   if ( defined $snpFile ) {
     $self->performPileup( $config, $section );
   }
