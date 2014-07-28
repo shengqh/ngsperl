@@ -46,8 +46,10 @@ sub performBAM {
   my $coefficientOfVariation = $config->{$section}{coefficientOfVariation} or die "define ${section}::coefficientOfVariation first, such as 0.05";
   my $inputFormat            = $config->{$section}{inputFormat}            or die "define ${section}::inputFormat first";
 
-  my $mateOrientation = $config->{$section}{mateOrientation}
-    or die "define ${section}::mateOrientation first";    #0 (for single ends), RF (Illumina mate-pairs), FR (Illumina paired-ends), FF (SOLiD mate-pairs)
+  my $mateOrientation = $config->{$section}{mateOrientation};
+  if(!defined $mateOrientation){
+    die "define ${section}::mateOrientation first";    #0 (for single ends), RF (Illumina mate-pairs), FR (Illumina paired-ends), FF (SOLiD mate-pairs)
+  }
 
   my $bedfile = parse_param_file( $config, $section, "bedfile", 0 );
 
