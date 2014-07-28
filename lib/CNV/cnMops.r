@@ -58,7 +58,7 @@ if(hasbed){
 }
 save(resCNMOPS, file=resfile)
 cnvs<-resCNMOPS@cnvs
-d<-cbind(substring(as.character(cnvs@elementMetadata@listData$sampleName),2),
+d<-cbind(as.character(cnvs@elementMetadata@listData$sampleName),
          as.character(cnvs@seqnames),
          as.character(cnvs@ranges@start),
          as.character(as.numeric(cnvs@ranges@start) + as.numeric(cnvs@ranges@width) - 1),
