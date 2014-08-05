@@ -79,7 +79,7 @@ fi
 
 echo shapeit_start=`date` 
 
-shapeit $option $source_option -M $map -o $phase_file $sample_file
+shapeit $option $source_option -M $map -O $phase_file $sample_file
 
 echo finished=`date` 
 
