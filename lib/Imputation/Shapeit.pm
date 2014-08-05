@@ -28,17 +28,19 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $inputMap = get_param_file( $config->{$section}{input_map}, "${section}::input_map", 1 );
-
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %mapFiles = %{ get_raw_files( $config, $section, "map_file" ) };
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $sample      = $sampleFiles[0];
+    
+    my @mapFiles = @{ $mapFiles{$sampleName} };
+    my $map = $mapFiles[0];
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
@@ -77,7 +79,7 @@ fi
 
 echo shapeit_start=`date` 
 
-shapeit $option $source_option -M $inputMap -o $phase_file $sample_file
+shapeit $option $source_option -M $map -o $phase_file $sample_file
 
 echo finished=`date` 
 
