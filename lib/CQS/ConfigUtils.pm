@@ -13,7 +13,8 @@ use CQS::CQSDebug;
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(get_option get_parameter get_param_file parse_param_file get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools)] );
+our %EXPORT_TAGS =
+  ( 'all' => [qw(get_option get_parameter get_param_file parse_param_file get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -44,7 +45,10 @@ sub get_parameter {
 
   my $task_name = get_option( $config, "general", "task_name" );
 
-  my $path_file = get_param_file( $config->{general}{path_file}, "path_file", 0 );
+  my $path_file = get_param_file( $config->{$section}{path_file}, "path_file", 0 );
+  if ( !defined $path_file ) {
+    $path_file = get_param_file( $config->{general}{path_file}, "path_file", 0 );
+  }
   if ( defined $path_file && -e $path_file ) {
     $path_file = "source $path_file";
   }
@@ -98,14 +102,14 @@ sub get_cqstools {
   if ( !defined $cqsFile ) {
     $cqsFile = get_param_file( $config->{$section}{cqstools}, "cqstools", $required );
   }
-  return ($cqsFile)
+  return ($cqsFile);
 }
 
 sub parse_param_file {
   my ( $config, $section, $key, $required ) = @_;
 
   die "section $section was not defined!" if !defined $config->{$section};
-  die "parameter key must be defined!" if !defined $key;
+  die "parameter key must be defined!"    if !defined $key;
 
   if ( defined $config->{$section}{$key} ) {
     return $config->{$section}{$key};
@@ -160,11 +164,11 @@ sub do_get_raw_files {
   if ( defined $config->{$section}{$mapname_ref} ) {
     my $refmap         = {};
     my $refSectionName = $config->{$section}{$mapname_ref};
-    
+
     if ( ref($refSectionName) eq 'HASH' ) {
-      return ( $refSectionName, 1 )
+      return ( $refSectionName, 1 );
     }
-    
+
     if ( ref($refSectionName) eq 'ARRAY' ) {
       my @parts      = @{$refSectionName};
       my $partlength = scalar(@parts);
@@ -262,7 +266,7 @@ sub get_option_value {
 sub get_pair_groups {
   my ( $pairs, $pairName ) = @_;
   my $groupNames;
-  my $ispaired = 0;
+  my $ispaired      = 0;
   my $tmpGroupNames = $pairs->{$pairName};
   if ( ref($tmpGroupNames) eq 'HASH' ) {
     $groupNames = $tmpGroupNames->{"groups"};
@@ -283,15 +287,14 @@ sub get_pair_groups_names {
   my $pairedNames;
   my $tmpGroupNames = $pairs->{$pairName};
   if ( ref($tmpGroupNames) eq 'HASH' ) {
-    $groupNames = $tmpGroupNames->{"groups"};
-    $pairedNames   = $tmpGroupNames->{"paired"};
+    $groupNames  = $tmpGroupNames->{"groups"};
+    $pairedNames = $tmpGroupNames->{"paired"};
   }
   else {
     $groupNames = $tmpGroupNames;
   }
   return ( $pairedNames, $groupNames );
 }
-
 
 1;
 
