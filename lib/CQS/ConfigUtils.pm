@@ -58,9 +58,7 @@ sub get_parameter {
 
   my $refPbs     = get_option( $config, $section, "pbs" );
   my $target_dir = get_option( $config, $section, "target_dir" );
-  print $target_dir . "\n";
-  $target_dir =~ s[/$][];
-  print $target_dir . "\n";
+  $target_dir =~ s/\/\//\//g;
   my ( $logDir, $pbsDir, $resultDir ) = init_dir($target_dir);
   my ($pbsDesc) = get_pbs_desc($refPbs);
 
