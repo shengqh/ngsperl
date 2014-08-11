@@ -32,9 +32,9 @@ sub perform {
   my $gzipped   = get_option( $config, $section, "gzipped", 1 );
   
   if($gzipped && $extension =~ /\.gz$/){
-    print $extension . "\n"; 
+    #print $extension . "\n"; 
     $extension =~ s/\.gz$//g;
-    print $extension . "\n"; 
+    #print $extension . "\n"; 
   }
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
@@ -174,9 +174,7 @@ sub result {
   my $gzipped = get_option( $config, $section, "gzipped", 1 );
   
   if($gzipped && $extension =~ /\.gz$/){
-    print $extension . "\n"; 
     $extension =~ s/\.gz$//g;
-    print $extension . "\n"; 
   }
   
   my $shortLimited = $option =~ /-m\s+\d+/;
