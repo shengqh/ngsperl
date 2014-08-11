@@ -172,6 +172,13 @@ sub result {
 
   my $extension = $config->{$section}{extension} or die "define ${section}::extension first";
   my $gzipped = get_option( $config, $section, "gzipped", 1 );
+  
+  if($gzipped && $extension =~ /\.gz$/){
+    print $extension . "\n"; 
+    $extension =~ s/\.gz$//g;
+    print $extension . "\n"; 
+  }
+  
   my $shortLimited = $option =~ /-m\s+\d+/;
   my $longLimited  = $option =~ /-M\s+\d+/;
 
