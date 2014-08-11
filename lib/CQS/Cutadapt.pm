@@ -32,7 +32,9 @@ sub perform {
   my $gzipped   = get_option( $config, $section, "gzipped", 1 );
   
   if($gzipped && $extension =~ /\.gz$/){
+    print $extension . "\n"; 
     $extension =~ s/\.gz$//g;
+    print $extension . "\n"; 
   }
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
