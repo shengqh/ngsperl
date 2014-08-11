@@ -29,7 +29,10 @@ sub perform {
 
   my $adapt     = get_option( $config, $section, "adaptor" );
   my $extension = get_option( $config, $section, "extension" );
-  my $gzipped   = get_option( $config, $section, "gzipped", 1 );
+  my $gzipped = $extension =~ /\.gz$/;
+  if($gzipped){
+    $extension =~ s/\.gz$//g;
+  }
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -164,8 +167,12 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $extension = $config->{$section}{extension} or die "define ${section}::extension first";
-  my $gzipped = get_option( $config, $section, "gzipped", 1 );
+  my $extension = get_option( $config, $section, "extension" );
+  my $gzipped = $extension =~ /\.gz$/;
+  if($gzipped){
+    $extension =~ s/\.gz$//g;
+  }
+
   my $shortLimited = $option =~ /-m\s+\d+/;
   my $longLimited  = $option =~ /-M\s+\d+/;
 
