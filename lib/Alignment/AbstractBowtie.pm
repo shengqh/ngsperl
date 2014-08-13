@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package CQS::AbstractBowtie;
+package Alignment::AbstractBowtie;
 
 use strict;
 use warnings;

@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package CQS::Shrimp2;
+package Alignment::Shrimp2;
 
 use strict;
 use warnings;
