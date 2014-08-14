@@ -51,8 +51,6 @@ sub perform {
       $samples = $samples . " " . $sampleFiles[$index][1];
     }
 
-    my $curDir = create_directory_or_die( $resultDir . "/$groupName" );
-    
     my $depth = "${groupName}.depth";
 
     my $pbsFile = $self->pbsfile($pbsDir, $groupName);
@@ -70,7 +68,7 @@ $path_file
 
 echo depth=`date` 
 
-cd $curDir
+cd $resultDir
 
 if [ ! -s $depth ]; then
     samtools depth $option $samples $cqscommand > $depth
