@@ -3,7 +3,7 @@ package CQS::FastQC;
 
 use strict;
 use warnings;
-use QualityControl::FastQC;
+use QC::FastQC;
 
 our @ISA = qw(QualityControl::FastQC);
 

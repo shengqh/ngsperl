@@ -3,7 +3,7 @@ package CQS::RNASeQC;
 
 use strict;
 use warnings;
-use QualityControl::RNASeQC;
+use QC::RNASeQC;
 
 our @ISA = qw(QualityControl::RNASeQC);
 
