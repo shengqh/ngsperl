@@ -2,9 +2,9 @@ NGSPERL : A semi-automated framework for large scale next generation sequencing 
 ==========
 * [Introduction](#Introduction)
 * [Download and install](#download)
+* [Framework](#framework)
 * [Quick Start](#example)
-* [Usage](#usage)
-* [Report](#report)
+* [Modules](#module)
 
 <a name="Introduction"/>
 # Introduction #
@@ -13,82 +13,120 @@ High-throughput sequencing technologies have been widely used in the research fi
 <a name="download"/>
 # Download and install #
 You can download NGSPERL package from [github](https://github.com/shengqh/ngsperl/). Assume you download the NGSPERL package to "/home/user/ngsperl", add "/home/user/ngsperl/lib" into your your perl library path.
+
+<a name="framework"/>
+# Framework
+Our object oriented module-based framework includes three parts: modules, configurations, and a module parser. Each task in the pipeline will be implemented as a module. A configuration will be used for each specific research project which includes multiple tasks with user-defined parameters. A module parser will be used to parse the configuration to generate PBS scripts. Corresponding Linux shell scripts will also be generated for submitting the PBS scripts to the Linux cluster for lengthy tasks or running the PBS scripts directly for shorter tasks based on user choice.  
+
+In order to allow the module integration, each module must implement three functions: result, perform, and pbsfiles. 
+
+The function result will provide the expected result files as if the task were executed.
+ 
+The function perform is used to generate the corresponding PBS scripts based on user-defined parameters. Once two tasks are joined together in configuration, the downstream task will take the expected result files of the upstream task as the input parameters. The results from multiple tasks can also be used as input files in downstream tasks which makes the framework more flexible.
+The function pbsfiles will return the file names of the corresponding PBS scripts that function perform generated. With function pbsfiles, the user can merge multiple shorter tasks into a single task through module "SequenceTask", then submit the PBS script of this single task to the Linux cluster. This feature is very useful for a pipeline with many quick tasks, such as smallRNA sequencing data analysis. 
+
+Once the required tools are implemented as modules, for each real project, a Perl configuration structure will be defined to join those tools together. Then a module parser will parse this configuration and generate individual PBS scripts for each task. A shell script will also be generated to help the user submit multiple PBS scripts to the cluster or execute those PBS scripts sequentially. 
   
 <a name="example"/>
 # Quick start
 
-Here we show the most basic steps for a validation procedure. You need to create a target directory used to store the GEO data. Here, we assume the target directory is your work directory.
+The following code indicates a configuration of the simplest differentially expressed gene comparison. A tophat2 task is followed by a cuffdiff task. After executing the configuration script, the PBS scripts for both tophat2 and cuffdiff tasks will be generated under the user defined directory. Then the user can submit the generated tophat2 PBS scripts to the cluster first and submit cuffdiff PBS scripts after the tophat2 tasks are finished and the tophat2 results are validated.
 
-	library(DupChecker)
-	geoDownload(datasets = c("GSE14333", "GSE13067", "GSE17538"), targetDir=getwd())
-	datafile<-buildFileTable(rootDir=getwd(), filePattern="cel$")
-	result<-validateFile(datafile)
-	if(result$hasdup){
-  		duptable<-result$duptable
-  		write.csv(duptable, file="duptable.csv")
-	}
+	#!/usr/bin/perl
+	use strict;
+	use warnings;
+	use CQS::ClassFactory;
+	use CQS::FileUtils;
+	my $target_dir           = create_directory_or_die("pipeline2");
+	my $fasta_file           = "bowtie2_index/mm10.fa";
+	my $bowtie2_index        = "bowtie2_index/mm10";
+	my $transcript_gtf       = "Mus_musculus.GRCm38.68_chr1-22-X-Y-M.gtf";
+	my $transcript_gtf_index = "Mus_musculus.GRCm38.68";
+	my $email                = "quanhu.sheng\@vanderbilt.edu";
+	my $task                 = "pipeline";
+	my $config               = {
+  		general => { task_name => $task },
+  		files   => {
+		    "S1" => ["rawdata/s1_sequence.txt"],
+		    "S2" => ["rawdata/s2_sequence.txt"],
+	    	"S3" => ["rawdata/s3_sequence.txt"],
+	    	"S4" => ["rawdata/s4_sequence.txt"],
+	    	"S5" => ["rawdata/s5_sequence.txt"],
+	    	"S6" => ["rawdata/s6_sequence.txt"],
+  		},
+  		groups => {
+	    	"G1" => [ "S1", "S2", "S3" ],
+		    "G2" => [ "S4", "S5", "S6" ],
+  		},
+	  	pairs   => { "G2_vs_G1" => [ "G1", "G2" ] },
+  		tophat2 => {
+		    class                => "Alignment::Tophat2",
+    		perform              => 1,
+		    target_dir           => "${target_dir}/tophat2",
+		    option               => "--segment-length 25 -r 0 -p 6",
+		    source_ref           => "files",
+		    bowtie2_index        => $bowtie2_index,
+		    transcript_gtf       => $transcript_gtf,
+		    transcript_gtf_index => $transcript_gtf_index,
+		    rename_bam           => 1,
+		    sh_direct            => 1,
+		    pbs                  => {
+    			"email"    => $email,
+    	  		"nodes"    => "1:ppn=6",
+    	  		"walltime" => "72",
+    	  		"mem"      => "30gb"
+    		},
+  		},
+  		cuffdiff => {
+    		class          => "Cufflinks::Cuffdiff",
+    		perform        => 1,
+    		target_dir     => "${target_dir}/cuffdiff",
+    		option         => "-p 8 -u -N",
+    		transcript_gtf => $transcript_gtf,
+    		source_ref     => "tophat2",
+    		groups_ref     => "groups",
+    		pairs_ref      => "pairs",
+    		fasta_file     => $fasta_file,
+    		sh_direct      => 1,
+    		pbs            => {
+    	  		"email"    => $email,
+				"nodes"    => "1:ppn=8",
+    	  		"walltime" => "720",
+    	  		"mem"      => "40gb"
+    		},
+  		},
+	};
+	performConfig($config);
 
-<a name="usage"/>
-# Usage
-##GEO/ArrayExpress data download
-Firstly, function geoDownload/arrayExpressDownload will download raw data from ncbi/EBI 
-ftp server based on datasets user provided. Once the compressed raw data is downloaded, 
-CEL files will be extracted from compressed raw data. 
+<a name="module"/>
+# Implemented Modules
 
-If the download or decompress cost too much time in R environment, user may download 
-the GEO/ArrayExpress raw data and decompress the data to individual CEL files using other 
-tools. The reason that we expect the CEL file not compressed CEL file is the compressed 
-files from same CEL file but by different compress softwares may have different MD5 fingerprint.
-
-The following code will download two datasets from ArrayExpress system and three datasets 
-from GEO system. It may cost a few minutes to a few hours based your network performance.
-
-	library(DupChecker)
-
-	#download from ArrayExpress system
-	datatable<-arrayExpress(datasets = c("E-TABM-158", "E-TABM-43"), targetDir=getwd()))
-	datatable
-
-	#Or download from GEO system
-	datatable<-geoDownload(datasets = c("GSE14333", "GSE13067", "GSE17538"), targetDir=getwd())
-	datatable
-
-The datatable is a data frame containing dataset name and how many CEL files 
-in that dataset.
-
-##Build file table
-
-Secondly, function buildFileTable will try to find all files in the subdirectories 
-under root directories user provided. The result data frame contains two columns, 
-dataset and filename. Here, rootDir can also be an array of directories. 
-
-	datafile<-buildFileTable(rootDir=getwd(), filePattern="cel$")
-	datafile
-
-##Validate file redundancy
-
-The function validateFile will calculate MD5 fingerprint for each file in table and 
-then check to see if any two files have same MD5 fingerprint. The files with same 
-fingerprint will be treated as duplication. The function will return a table contains 
-all duplicated files and datasets.
-
-	result<-validateFile(datafile)
-	if(result$hasdup){
-  		duptable<-result$duptable
-  		write.csv(duptable, file="duptable.csv")
-	}
-
-<a name="report"/>
-#Report
-Table 1. Illustration of summary table generated by DupChecker for duplication among GSE13067, GSE14333, and GSE17538 data sets.
-
-| MD5 | GSE13067(64/74) | GSE14333(231/290) | GSE17538(167/244) |
-|-----|-----------------|-------------------|-------------------|
-| 001ddd757f185561c9ff9b4e95563372 |	|	GSM358397.CEL |	GSM437169.CEL |
-| 00b2e2290a924fc2d67b40c097687404 |	|	GSM358503.CEL |	GSM437210.CEL |
-| 012ed9083b8f1b2ae828af44dbab29f0 |	GSM327335 |	GSM358620.CEL|	|
-| 023c4e4f9ebfc09b838a22f2a7bdaa59 |	|	GSM358441.CEL |	GSM437117.CEL |
+| Module | Software | Description |
+|--------|----------|-------------|
+|Format::Demultiplex|cqstools fastq_demultiplex|Demultiplexing the fastq file based on barcodes|
 
 
-
+CQS::FastqTrimmer	cqstools fastq_trimmer	Trimming 'N' from both 5' and 3' terminal of reads
+QC::FastQC	fastqc	Quality control of fastq file
+Trimmer::Cutadapt	cutadapt	Removing adapter sequences from reads
+Alignment::BWA	bwa	Bwa genome mapping algorithm
+Alignment::Bowtie1	bowtie1	Bowtie1 genome mapping algorithm
+Alignment::Bowtie2	bowtie2	Bowtie2 genome mapping algorithm
+Alignment::Tophat2	tophat2	Tophat2 RNAseq data assembler
+QC::RNASeQC	RNASeQC	Quality control of bam file
+Cufflinks::Cufflinks
+Cufflinks::Cuffmerge
+Cufflinks::Cuffdiff	cufflinks
+cuffmerge
+cuffdiff	Transcript assembly, differential expression, and differential regulation for RNA-Seq
+Count::HTSeqCount	HTSeq-count	Counting gene reads
+Count::DexseqCount	DEXSeq	Count exon reads
+CQS::CQSDatatable	cqstools data_table	Build count table from multiple counting result
+Comparison::DESeq2	DESeq2	Differential expression comparison of count data
+GATK::Refine	gatk	Realignment, base calibration and removing duplication
+GATK::MuTect	mutect	Somatic mutation caller
+GATK::SNPIndel	gatk	SNP, indel caller
+VarScan2::Mpileup2snp	Varscan2	SNP caller
+VarScan2::Somatic	Varscan2	Somatic mutation caller
+Annotation::Annovar	annovar	Annotating SNP, indel and somatic mutation
 
