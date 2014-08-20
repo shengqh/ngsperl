@@ -85,6 +85,7 @@ echo impute2_start=`date`
 if [ -s $tmpFile ]; then
   cat $tmpFile >> $gen_file
 fi
+
 ";
       $start = $end + 1;
     }
