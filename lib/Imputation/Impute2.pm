@@ -82,7 +82,7 @@ echo impute2_start=`date`
       my $end = $start + $interval - 1;
       my $tmpFile = $sampleName . "_" . $start . ".tmp";
       $cat_command = $cat_command . $tmpFile . " ";
-      print OUT "impute2 -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o Pietenpol_p53.22.gen \n";
+      print OUT "impute2 -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile \n";
       $start = $end + 1;
     }
 
