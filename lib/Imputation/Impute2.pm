@@ -57,7 +57,6 @@ sub perform {
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
     my $gen_file  = "${sampleName}.gen";
-    my $cat_command ="cat ";
 
     open( OUT, ">$pbsFile" ) or die $!;
 
@@ -81,15 +80,18 @@ echo impute2_start=`date`
     while($start < $maxChromosomeLength){
       my $end = $start + $interval - 1;
       my $tmpFile = $sampleName . "_" . $start . ".tmp";
-      $cat_command = $cat_command . $tmpFile . " ";
-      print OUT "impute2 -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile \n";
+      print OUT "impute2 -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
+      
+      if [ -s $tmpFile ]; then
+        cat $tmpFile >> $gen_file
+      fi
+\n";
       $start = $end + 1;
     }
 
     print OUT "
 
-$cat_command > $gen_file
-rm *.tmp
+rm ${sampleName}*.tmp*
 echo finished=`date` 
 
 ";
