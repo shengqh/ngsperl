@@ -82,10 +82,10 @@ echo impute2_start=`date`
       my $tmpFile = $sampleName . "_" . $start . ".tmp";
       print OUT "impute2 -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
       
-      if [ -s $tmpFile ]; then
-        cat $tmpFile >> $gen_file
-      fi
-\n";
+if [ -s $tmpFile ]; then
+  cat $tmpFile >> $gen_file
+fi
+";
       $start = $end + 1;
     }
 
