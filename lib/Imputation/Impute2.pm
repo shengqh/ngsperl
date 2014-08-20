@@ -34,7 +34,7 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
   my %mapFiles = %{ get_raw_files( $config, $section, "map_file" ) };
-  my %haptoFiles = %{ get_raw_files( $config, $section, "hapto_file" ) };
+  my %haploFiles = %{ get_raw_files( $config, $section, "haplo_file" ) };
   
   my $maxChromosomeLength = get_option($config, $section, "max_chromosome_length");
   my $interval = get_option($config, $section, "interval");
@@ -46,9 +46,9 @@ sub perform {
     my @mapFiles = @{ $mapFiles{$sampleName} };
     my $map = $mapFiles[0];
     
-    my @haptoFiles = @{ $haptoFiles{$sampleName} };
-    my $haptoFile = $haptoFiles[0];
-    my $legendFile = change_extension($haptoFile, ".legend");
+    my @haploFiles = @{ $haploFiles{$sampleName} };
+    my $haploFile = $haploFiles[0];
+    my $legendFile = change_extension($haploFile, ".legend");
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
@@ -82,7 +82,7 @@ echo impute2_start=`date`
       my $end = $start + $interval;
       my $tmpFile = $sampleName . "_" . $start . ".tmp";
       $cat_command = $cat_command . $tmpFile . " ";
-      print OUT "impute2 -known_haps_g $sample -m $map -int $start $end -h $haptoFile -l $legendFile -o Pietenpol_p53.22.gen \n";
+      print OUT "impute2 -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o Pietenpol_p53.22.gen \n";
       $start = $end + 1;
     }
 
