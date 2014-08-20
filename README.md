@@ -112,9 +112,9 @@ The following code indicates a configuration of the simplest differentially expr
 |Alignment::Bowtie2   |	bowtie2|	Bowtie2 genome mapping algorithm|
 |Alignment::Tophat2   |	tophat2|	Tophat2 RNAseq data assembler|
 |QC::RNASeQC          |	RNASeQC|	Quality control of bam file|
-|Cufflinks::Cufflinks |cufflinks||
+|Cufflinks::Cufflinks |cufflinks|Transcript assembly, differential expression, and differential regulation for RNA-Seq|
 |Cufflinks::Cuffmerge |cuffmerge||
-|Cufflinks::Cuffdiff  |cuffdiff|	Transcript assembly, differential expression, and differential regulation for RNA-Seq|
+|Cufflinks::Cuffdiff  |cuffdiff|	|
 |Count::HTSeqCount    |	HTSeq-count|	Counting gene reads|
 |Count::DexseqCount   |	DEXSeq|	Count exon reads|
 |CQS::CQSDatatable    |	cqstools data_table|	Build count table from multiple counting result|
