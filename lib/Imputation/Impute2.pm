@@ -129,6 +129,7 @@ echo finished=`date`
 ";
       if($isfirst){
         print MSH "cat $tmpFile > $gen_file \n";
+        $isfirst = 0;
       }else{
         print MSH "cat $tmpFile >> $gen_file \n";
       }
