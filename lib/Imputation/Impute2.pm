@@ -23,6 +23,17 @@ sub new {
   return $self;
 }
 
+sub containPosition {
+  my ( $positions, $start, $end ) = @_;
+  for my $position ( @{$positions} ) {
+    if ( $position >= $start && $position <= $end ) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -32,36 +43,62 @@ sub perform {
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
-  my %mapFiles = %{ get_raw_files( $config, $section, "map_file" ) };
+  my $mergefile = $self->taskfile( $pbsDir, $task_name . "_merge" );
+  open( MSH, ">$mergefile" ) or die "Cannot create $mergefile";
+
+  my %rawFiles   = %{ get_raw_files( $config, $section ) };
+  my %mapFiles   = %{ get_raw_files( $config, $section, "map_file" ) };
   my %haploFiles = %{ get_raw_files( $config, $section, "haplo_file" ) };
-  
-  my $maxChromosomeLength = get_option($config, $section, "max_chromosome_length");
-  my $interval = get_option($config, $section, "interval");
+  my %pedFiles   = %{ get_raw_files( $config, $section, "ped_file" ) };
+
+  my $maxChromosomeLength = get_option( $config, $section, "max_chromosome_length" );
+  my $interval            = get_option( $config, $section, "interval" );
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $sample      = $sampleFiles[0];
-    
-    my @mapFiles = @{ $mapFiles{$sampleName} };
-    my $map = $mapFiles[0];
-    
-    my @haploFiles = @{ $haploFiles{$sampleName} };
-    my $haploFile = $haploFiles[0];
-    my $legendFile = change_extension($haploFile, ".legend");
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
+    my @mapFiles = @{ $mapFiles{$sampleName} };
+    my $map      = $mapFiles[0];
+
+    my @haploFiles = @{ $haploFiles{$sampleName} };
+    my $haploFile  = $haploFiles[0];
+    my $legendFile = change_extension( $haploFile, ".legend" );
+
+    my @peds   = @{ $pedFiles{$sampleName} };
+    my $ped    = $peds[0];
+    my $pedmap = change_extension( $ped, ".map" );
+
+    my @positions;
+    open( INFILE, "<", $pedmap ) or die("Couldn't open $pedmap for reading!\n");
+
+    while (<INFILE>) {
+      push @positions, ( split( /\s+/, $_ ) )[3];
+    }
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
-    my $gen_file  = "${sampleName}.gen";
-    my $gen_file_tmp  = "${sampleName}.tmp";
+    my $gen_file = "${sampleName}.gen";
 
-    open( OUT, ">$pbsFile" ) or die $!;
+    my $start = 1;
+    while ( $start < $maxChromosomeLength ) {
+      my $end = $start + $interval - 1;
 
-    print OUT "$pbsDesc
+      if ( !containPosition( \@positions, $start, $end ) ) {
+        next;
+      }
+
+      my $cursample = $sampleName . "_" . $start;
+
+      my $pbsFile = $self->pbsfile( $pbsDir, $cursample );
+      my $pbsName = basename($pbsFile);
+      my $log     = $self->logfile( $logDir, $cursample );
+
+      my $tmpFile = "${cursample}.tmp";
+
+      open( OUT, ">$pbsFile" ) or die $!;
+
+      print OUT "$pbsDesc
 #PBS -o $log
 #PBS -j oe
 
@@ -74,37 +111,31 @@ if [ -s $gen_file ]; then
   exit 0;
 fi
 
-echo impute2_start=`date` 
-";
-
-    my $start = 1;
-    while($start < $maxChromosomeLength){
-      my $end = $start + $interval - 1;
-      my $tmpFile = $sampleName . "_" . $start . ".tmp";
-      print OUT "impute2 -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
-      
 if [ -s $tmpFile ]; then
-  cat $tmpFile >> $gen_file_tmp
-else
-  rm ${tmpFile}*
+  echo job has already been done. if you want to do again, delete $curDir/$tmpFile and submit job again.
+  exit 0;
 fi
 
-";
-      $start = $end + 1;
-    }
+echo impute2_start=`date` 
 
-    print OUT "
-mv $gen_file_tmp $gen_file
+impute2 -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
+
 echo finished=`date` 
 
 ";
-    close(OUT);
+      print MSH "cat $tmpFile >> $gen_file \n";
+      $start = $end + 1;
 
-    print SH "\$MYCMD ./$pbsName \n";
-    print "$pbsFile created\n";
+      close(OUT);
+
+      print SH "\$MYCMD ./$pbsName \n";
+      print "$pbsFile created\n";
+    }
   }
   print SH "exit 0\n";
   close(SH);
+
+  close(MSH);
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
