@@ -57,6 +57,7 @@ sub perform {
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
     my $gen_file  = "${sampleName}.gen";
+    my $gen_file_tmp  = "${sampleName}.tmp";
 
     open( OUT, ">$pbsFile" ) or die $!;
 
@@ -83,7 +84,9 @@ echo impute2_start=`date`
       print OUT "impute2 -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
       
 if [ -s $tmpFile ]; then
-  cat $tmpFile >> $gen_file
+  cat $tmpFile >> $gen_file_tmp
+else
+  rm ${tmpFile}*
 fi
 
 ";
@@ -91,8 +94,7 @@ fi
     }
 
     print OUT "
-
-rm ${sampleName}*.tmp*
+mv $gen_file_tmp $gen_file
 echo finished=`date` 
 
 ";
