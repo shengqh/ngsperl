@@ -80,6 +80,8 @@ sub perform {
 
     my $gen_file = "${sampleName}.gen";
 
+    print MSH "cd $curDir \n";
+
     my $start = 1;
     while ( $start < $maxChromosomeLength ) {
       my $end = $start + $interval - 1;
