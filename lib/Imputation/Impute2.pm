@@ -85,6 +85,7 @@ sub perform {
       my $end = $start + $interval - 1;
 
       if ( !containPosition( \@positions, $start, $end ) ) {
+        $start = $end + 1;
         next;
       }
 
