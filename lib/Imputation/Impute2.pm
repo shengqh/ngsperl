@@ -83,6 +83,7 @@ sub perform {
     print MSH "cd $curDir \n";
 
     my $start = 1;
+    my $isfirst = 1;
     while ( $start < $maxChromosomeLength ) {
       my $end = $start + $interval - 1;
 
@@ -126,7 +127,11 @@ impute2 -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendF
 echo finished=`date` 
 
 ";
-      print MSH "cat $tmpFile >> $gen_file \n";
+      if($isfirst){
+        print MSH "cat $tmpFile > $gen_file \n";
+      }else{
+        print MSH "cat $tmpFile >> $gen_file \n";
+      }
       $start = $end + 1;
 
       close(OUT);
