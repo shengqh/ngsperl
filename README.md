@@ -101,32 +101,28 @@ The following code indicates a configuration of the simplest differentially expr
 <a name="module"/>
 # Implemented Modules
 
-| Module | Software | Description |
-|--------|----------|-------------|
-|Format::Demultiplex|cqstools fastq_demultiplex|Demultiplexing the fastq file based on barcodes|
-
-
-CQS::FastqTrimmer	cqstools fastq_trimmer	Trimming 'N' from both 5' and 3' terminal of reads
-QC::FastQC	fastqc	Quality control of fastq file
-Trimmer::Cutadapt	cutadapt	Removing adapter sequences from reads
-Alignment::BWA	bwa	Bwa genome mapping algorithm
-Alignment::Bowtie1	bowtie1	Bowtie1 genome mapping algorithm
-Alignment::Bowtie2	bowtie2	Bowtie2 genome mapping algorithm
-Alignment::Tophat2	tophat2	Tophat2 RNAseq data assembler
-QC::RNASeQC	RNASeQC	Quality control of bam file
-Cufflinks::Cufflinks
-Cufflinks::Cuffmerge
-Cufflinks::Cuffdiff	cufflinks
-cuffmerge
-cuffdiff	Transcript assembly, differential expression, and differential regulation for RNA-Seq
-Count::HTSeqCount	HTSeq-count	Counting gene reads
-Count::DexseqCount	DEXSeq	Count exon reads
-CQS::CQSDatatable	cqstools data_table	Build count table from multiple counting result
-Comparison::DESeq2	DESeq2	Differential expression comparison of count data
-GATK::Refine	gatk	Realignment, base calibration and removing duplication
-GATK::MuTect	mutect	Somatic mutation caller
-GATK::SNPIndel	gatk	SNP, indel caller
-VarScan2::Mpileup2snp	Varscan2	SNP caller
-VarScan2::Somatic	Varscan2	Somatic mutation caller
-Annotation::Annovar	annovar	Annotating SNP, indel and somatic mutation
+|Module               |Software                        |Description                                         |
+|---                  |---                             |---                                                 |
+|Format::Demultiplex  |cqstools fastq_demultiplex      |Demultiplexing the fastq file based on barcodes     |
+|CQS::FastqTrimmer    |cqstools fastq_trimmer          |Trimming 'N' from both 5' and 3' terminal of reads  |
+|QC::FastQC           |fastqc                          |Quality control of fastq file                       |
+|Trimmer::Cutadapt    |cutadapt                        |Removing adapter sequences from reads               |
+|Alignment::BWA       |bwa                             |Bwa genome mapping algorithm                        |
+|Alignment::Bowtie1   |bowtie1|Bowtie1 genome mapping algorithm|
+|Alignment::Bowtie2   |	bowtie2|	Bowtie2 genome mapping algorithm|
+|Alignment::Tophat2   |	tophat2|	Tophat2 RNAseq data assembler|
+|QC::RNASeQC          |	RNASeQC|	Quality control of bam file|
+|Cufflinks::Cufflinks |cufflinks||
+|Cufflinks::Cuffmerge |cuffmerge||
+|Cufflinks::Cuffdiff  |cuffdiff|	Transcript assembly, differential expression, and differential regulation for RNA-Seq|
+|Count::HTSeqCount    |	HTSeq-count|	Counting gene reads|
+|Count::DexseqCount   |	DEXSeq|	Count exon reads|
+|CQS::CQSDatatable    |	cqstools data_table|	Build count table from multiple counting result|
+|Comparison::DESeq2   |	DESeq2|	Differential expression comparison of count data|
+|GATK::Refine         |	gatk|	Realignment, base calibration and removing duplication|
+|GATK::MuTect         |	mutect|	Somatic mutation caller|
+|GATK::SNPIndel       |	gatk|	SNP, indel caller|
+|VarScan2::Mpileup2snp|	Varscan2|	SNP caller|
+|VarScan2::Somatic    |	Varscan2|	Somatic mutation caller|
+|Annotation::Annovar  |	annovar|	Annotating SNP, indel and somatic mutation|
 
