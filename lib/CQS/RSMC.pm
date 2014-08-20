@@ -36,6 +36,11 @@ sub perform {
     $option = $option . " --rnaediting --rnaediting_db $rnaediting_db ";
   }
 
+  my $annovar_buildver = $config->{$section}{annovar_buildver};
+  if ( defined $annovar_buildver ) {
+    $option = $option . " --annovar --annovar_buildver $annovar_buildver ";
+  }
+
   my $rawFiles = get_raw_files( $config, $section );
 
   my %group_sample_map = ();
