@@ -65,7 +65,7 @@ if [ -e $expectname ]; then
   exit 0;
 fi
 
-fastqc $option -t $sampleCount -o $curDir $samples
+fastqc $option --extract -t $sampleCount -o $curDir $samples
 
 echo finished=`date`
 ";
