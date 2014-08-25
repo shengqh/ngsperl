@@ -17,8 +17,8 @@ our @ISA = qw(CQS::UniqueTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}        = "CQSMirnaTable";
-  $self->{_suffix}      = "_mt";
+  $self->{_name}   = "CQSMirnaTable";
+  $self->{_suffix} = "_mt";
   bless $self, $class;
   return $self;
 }
@@ -105,16 +105,20 @@ sub result {
   if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
     my $groups = get_raw_files( $config, $section, "groups" );
     for my $groupName ( sort keys %{$groups} ) {
-      my $filelist   = $self->getfile( $pbsDir,    "${task_name}_${groupName}", ".filelist", 0 );
-      my $outputfile = $self->getfile( $resultDir, "${task_name}_${groupName}", ".count",    0 );
+      my $outputfile = $self->getfile( $resultDir, "${task_name}_${groupName}", ".count",      0 );
+      my $isomirfile = $self->getfile( $resultDir, "${task_name}_${groupName}", ".isomir.tsv", 0 );
+      my $filelist   = $self->getfile( $pbsDir,    "${task_name}_${groupName}", ".filelist",   0 );
       push( @resultFiles, $outputfile );
+      push( @resultFiles, $isomirfile );
       push( @resultFiles, $filelist );
     }
   }
   else {
-    my $filelist   = $self->getfile( $pbsDir,    ${task_name}, ".filelist", 0 );
-    my $outputfile = $self->getfile( $resultDir, ${task_name}, ".count",    0 );
+    my $outputfile = $self->getfile( $resultDir, ${task_name}, ".count",      0 );
+    my $isomirfile = $self->getfile( $resultDir, ${task_name}, ".isomir.tsv", 0 );
+    my $filelist   = $self->getfile( $pbsDir,    ${task_name}, ".filelist",   0 );
     push( @resultFiles, $outputfile );
+    push( @resultFiles, $isomirfile );
     push( @resultFiles, $filelist );
   }
   $result->{$task_name} = filter_array( \@resultFiles, $pattern );
