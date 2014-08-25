@@ -102,7 +102,7 @@ sub result {
       if ( $name =~ /gz$/ ) {
         $name = change_extension( $name, "" );
       }
-      $name = change_extension( $name, "_fastqc" );
+      $name = change_extension( $name, "_fastqc.html" );
       push( @resultFiles, "${resultDir}/${sampleName}/${name}" );
     }
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
