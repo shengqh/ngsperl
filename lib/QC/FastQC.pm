@@ -23,6 +23,22 @@ sub new {
   return $self;
 }
 
+sub parsePairedSamples {
+  my ($samples)   = @_;
+  my @sampleFiles = @{$samples};
+  my @result      = ();
+  for my $sample (@sampleFiles) {
+    if ( $sample =~ /,/ ) {
+      my @files = split( ',', $sample );
+      for my $file (@files) {
+        push( @result, $file );
+      }
+    }
+  }
+
+  return @result;
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -33,11 +49,13 @@ sub perform {
   my $shfile = $self->pbsfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command(1);
-  
-  my $result = $self->result($config, $section);
+
+  my $result = $self->result( $config, $section );
 
   for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
+    my @originalFiles = @{ $rawFiles{$sampleName} };
+    my @sampleFiles = parsePairedSamples(\@originalFiles);
+
     my $sampleCount = scalar(@sampleFiles);
     my $samples     = join( ' ', @sampleFiles );
     my $curDir      = create_directory_or_die( $resultDir . "/$sampleName" );
@@ -45,9 +63,9 @@ sub perform {
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
-    
-    my @expectresult = @{$result->{$sampleName}};
-    my $expectname = $expectresult[0];
+
+    my @expectresult = @{ $result->{$sampleName} };
+    my $expectname   = $expectresult[0];
 
     print SH "\$MYCMD ./$pbsName \n";
 
@@ -95,7 +113,8 @@ sub result {
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
+    my @originalFiles = @{ $rawFiles{$sampleName} };
+    my @sampleFiles = parsePairedSamples(\@originalFiles);
     my @resultFiles = ();
     for my $sampleFile (@sampleFiles) {
       my $name = basename($sampleFile);
