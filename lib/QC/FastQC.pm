@@ -34,6 +34,9 @@ sub parsePairedSamples {
         push( @result, $file );
       }
     }
+    else {
+      push( @result, $sample );
+    }
   }
 
   return @result;
@@ -54,7 +57,7 @@ sub perform {
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @originalFiles = @{ $rawFiles{$sampleName} };
-    my @sampleFiles = parsePairedSamples(\@originalFiles);
+    my @sampleFiles   = parsePairedSamples( \@originalFiles );
 
     my $sampleCount = scalar(@sampleFiles);
     my $samples     = join( ' ', @sampleFiles );
@@ -114,8 +117,8 @@ sub result {
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
     my @originalFiles = @{ $rawFiles{$sampleName} };
-    my @sampleFiles = parsePairedSamples(\@originalFiles);
-    my @resultFiles = ();
+    my @sampleFiles   = parsePairedSamples( \@originalFiles );
+    my @resultFiles   = ();
     for my $sampleFile (@sampleFiles) {
       my $name = basename($sampleFile);
       if ( $name =~ /gz$/ ) {
