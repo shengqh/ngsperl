@@ -5,6 +5,6 @@ use strict;
 use warnings;
 use QC::FastQC;
 
-our @ISA = qw(QualityControl::FastQC);
+our @ISA = qw(QC::FastQC);
 
 1;
