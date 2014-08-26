@@ -92,9 +92,9 @@ if [[ -s $vcf && ! -s $passvcf ]]; then
   echo \"##INFO=<ID=LOD,Number=1,Type=Float,Description=\\\"Log of (likelihood tumor event is real / likelihood event is sequencing error )\\\">\" >> $passvcf
   awk 'BEGIN{info=0}{if (\$1 ~ /^##INFO/) {info=1;} if(info) {print;}}' $vcf | grep \"^#\" >> $passvcf
   grep -v \"^##\" $out | awk -vCOLM=t_lod_fstar 'NR==1 { for (i = 1; i <= NF; i++) { if (\$i == COLM) { cidx = i; } } } NR > 1 {print \";LOD=\"\$cidx}' > ${out}.lod
-  grep -v \"^##\" $vcf | cut -f1-8 > ${vcf}.first
+  grep -v \"^#\" $vcf | cut -f1-8 > ${vcf}.first
   paste -d \"\" ${vcf}.first ${out}.lod > ${vcf}.first_lod
-  grep -v \"^##\" $vcf | cut -f9- > ${vcf}.second
+  grep -v \"^#\" $vcf | cut -f9- > ${vcf}.second
   paste ${vcf}.first_lod ${vcf}.second | grep -v \"^#CHROM\" | grep -v REJECT >> $passvcf
   rm ${out}.lod ${vcf}.first ${vcf}.first_lod ${vcf}.second
 fi
