@@ -55,7 +55,7 @@ echo index=`date`
 ";
 
     my $bamFile = $sampleFiles[0];
-    my $nameFile = $sampleName + ".pmnames";
+    my $nameFile = $sampleName . ".pmnames";
 
     print OUT "if [ ! -s $nameFile ]; then
   echo samtools_PerfectMappedReadNames=`date`
