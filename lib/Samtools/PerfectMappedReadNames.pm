@@ -51,7 +51,8 @@ sub perform {
 
 $path_file
 
-echo index=`date`
+cd $resultDir
+
 ";
 
     my $bamFile = $sampleFiles[0];
@@ -60,9 +61,8 @@ echo index=`date`
     print OUT "if [ ! -s $nameFile ]; then
   echo samtools_PerfectMappedReadNames=`date`
   samtools view $bamFile | grep \"NM:i:0\" | cut -f1 > $nameFile
+  echo finished=`date`
 fi
-
-echo finished=`date`
 ";
     close OUT;
 
