@@ -92,7 +92,7 @@ sub result {
 
   my $result = {};
   for my $sampleName ( sort keys %rawFiles ) {
-    my $nameFile = $sampleName + ".pmnames";
+    my $nameFile = $resultDir . "/" . $sampleName + ".pmnames";
 
     my @resultFiles = ();
     push( @resultFiles, $nameFile );
