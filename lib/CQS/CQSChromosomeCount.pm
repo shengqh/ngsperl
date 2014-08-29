@@ -102,6 +102,7 @@ exit 0
 
     print "$pbsFile created \n";
   }
+  
   close(SH);
 
   if ( is_linux() ) {
