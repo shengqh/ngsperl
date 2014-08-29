@@ -38,6 +38,11 @@ sub perform {
     %seqCountFiles = %{ get_raw_files( $config, $section, "seqcount" ) };
   }
 
+  my %pmNameFiles = ();
+  if ( defined $config->{$section}{"perfect_mapped_name"} || defined $config->{$section}{"perfect_mapped_name_ref"} ) {
+    %pmNameFiles = %{ get_raw_files( $config, $section, "perfect_mapped_name" ) };
+  }
+
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
@@ -53,6 +58,13 @@ sub perform {
       my @seqcounts = @{ $seqCountFiles{$sampleName} };
       my $seqcount  = $seqcounts[0];
       $seqcountFile = " -c $seqcount";
+    }
+
+    my $pmNameFile = "";
+    if ( defined $pmNameFiles{$sampleName} ) {
+      my @pmNames = @{ $pmNameFiles{$sampleName} };
+      my $pmname  = $pmNames[0];
+      $pmNameFile = " -n $pmname";
     }
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
@@ -79,7 +91,7 @@ fi
 
 echo CQSChromosomeCount=`date` 
 
-mono-sgen $cqsFile chromosome_count $option --samtools $samtools -i $bamFile -o $countFile $seqcountFile
+mono-sgen $cqsFile chromosome_count $option $pmNameFile --samtools $samtools -i $bamFile -o $countFile $seqcountFile
 
 echo finished=`date`
 
