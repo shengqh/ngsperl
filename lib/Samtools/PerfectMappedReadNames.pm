@@ -75,7 +75,7 @@ fi
     chmod 0755, $shfile;
   }
 
-  print "!!!shell file $shfile created, you can run this shell file to submit all VarScan2 tasks.\n";
+  print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
 }
 
 sub result {

@@ -91,7 +91,7 @@ exit 0;
     chmod 0755, $shfile;
   }
 
-  print "!!!shell file $shfile created, you can run this shell file to submit all tasks.\n";
+  print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . "tasks.\n";
 }
 
 sub result {
