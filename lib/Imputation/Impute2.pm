@@ -128,10 +128,10 @@ echo finished=`date`
 
 ";
       if($isfirst){
-        print MSH "awk '/^[^-]/ {print}' $tmpFile > $gen_file \n";
+        print MSH "grep -v \"^---\" $tmpFile > $gen_file \n";
         $isfirst = 0;
       }else{
-        print MSH "awk '/^[^-]/ {print}' $tmpFile >> $gen_file \n";
+        print MSH "grep -v \"^---\" $tmpFile >> $gen_file \n";
       }
       $start = $end + 1;
 
