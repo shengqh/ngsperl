@@ -43,7 +43,7 @@ sub perform {
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
 
-  my $mergefile = $self->taskfile( $pbsDir, $task_name . "_merge" );
+  my $mergefile = $self->taskfile( $resultDir, $task_name . "_merge" );
   open( MSH, ">$mergefile" ) or die "Cannot create $mergefile";
 
   my %rawFiles   = %{ get_raw_files( $config, $section ) };
