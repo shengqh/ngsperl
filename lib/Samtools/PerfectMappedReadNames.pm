@@ -85,11 +85,6 @@ sub result {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $isbamsorted = $config->{$section}{isbamsorted};
-  if ( !defined($isbamsorted) ) {
-    $isbamsorted = 0;
-  }
-
   my $result = {};
   for my $sampleName ( sort keys %rawFiles ) {
     my $nameFile = $resultDir . "/" . $sampleName . ".pmnames";
