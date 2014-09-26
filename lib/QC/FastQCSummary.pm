@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package QC::FastQC;
+package QC::FastQCSummary;
 
 use strict;
 use warnings;
@@ -17,8 +17,8 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "FastQC";
-  $self->{_suffix} = "_fq";
+  $self->{_name}   = "FastQCSummary";
+  $self->{_suffix} = "_fqs";
   bless $self, $class;
   return $self;
 }
@@ -56,10 +56,9 @@ sub perform {
   my $result = $self->result( $config, $section );
 
   for my $sampleName ( sort keys %rawFiles ) {
-    my @originalFiles = @{ $rawFiles{$sampleName} };
-    my @sampleFiles   = parsePairedSamples( \@originalFiles );
+    my @dirs = @{ $rawFiles{$sampleName} };
 
-    my $sampleCount = scalar(@sampleFiles);
+    my $sampleCount = scalar(@dirs);
     my $samples     = join( ' ', @sampleFiles );
     my $curDir      = create_directory_or_die( $resultDir . "/$sampleName" );
 
