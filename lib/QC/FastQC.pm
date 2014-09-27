@@ -49,7 +49,14 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $self->pbsfile( $pbsDir, $task_name );
+  my $summaryfile = $self->taskfile( $pbsDir, $task_name . "_summary" );
+  open( SH, ">$summaryfile" ) or die "Cannot create $summaryfile";
+  print SH "cd $resultDir
+qcimg2pdf.sh -o $task_name
+";
+  close(SH);
+
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command(1);
 
@@ -95,9 +102,6 @@ echo finished=`date`
     print "$pbsFile created \n";
   }
 
-  print SH "cd $resultDir
-qcimg2pdf.sh -o $task_name
-";
   close(SH);
 
   if ( is_linux() ) {
