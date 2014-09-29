@@ -74,7 +74,7 @@ setwd(\"$resultDir\")
   
 data<-${readfunc}(\"$countfile\",row.names=1, header=T, check.names=F)
 
-showLabelInPCA<-${$showLabelInPCA}
+showLabelInPCA<-${showLabelInPCA}
 
 comparisons=list(";
   my $first = 0;
