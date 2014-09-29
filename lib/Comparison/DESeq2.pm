@@ -27,11 +27,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my (
-    $task_name, $path_file, $pbsDesc, $target_dir, $logDir,
-    $pbsDir,    $resultDir, $option,  $sh_direct
-    )
-    = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $comparisons = get_raw_files( $config, $section );
   my $totalPair = scalar( keys %{$comparisons} );
@@ -40,6 +36,12 @@ sub perform {
   }
 
   my $groups = get_raw_files( $config, $section, "groups" );
+  
+  my $paired = defined $config->{$section}{"groupids"};
+  my $groupIds = {};
+  if ( $paired ) {
+    $groupIds = get_raw_files( $config, $section, "groupids" );
+  }
 
   my $countfile = parse_param_file( $config, $section, "countfile", 1 );
 
@@ -70,42 +72,55 @@ setwd(\"$resultDir\")
   
 data<-${readfunc}(\"$countfile\",row.names=1, header=T, check.names=F)
 
-pairs=list(
+designFiles<-c(
 ";
   my $first = 0;
   for my $comparisonName ( sort keys %{$comparisons} ) {
     $first++;
-    my ( $pairedSampleNames, $gNames ) =
-      get_pair_groups_names( $comparisons, $comparisonName );
+    
+    my $gNames = $comparisons->{$comparisonName};
     my @groupNames = @{$gNames};
     if ( scalar(@groupNames) != 2 ) {
-      die
-"Comparison of $comparisonName should contains and only contains two groups!";
+      die "Comparison of $comparisonName should contains and only contains two groups!";
     }
 
     my $g1 = $groupNames[0];
     my $g2 = $groupNames[1];
-    my $s1 = $tpgroups{$g1};
-    my $s2 = $tpgroups{$g2};
-    if ( defined $pairedSampleNames ) {
-      my $pairnames =  "\"" . join( "\",\"",  @{$pairedSampleNames}) . "\"";
-      print RF
-"  \"$comparisonName\" = list(\"$g1\" = c($s1), 
-    \"$g2\" = c($s2), 
-    \"paired\" = c($pairnames))";
-    }
-    else {
-      print RF
-        "  \"$comparisonName\" = list(\"$g1\" = c($s1), 
-            \"$g2\" = c($s2))";
-    }
+    my @s1 = @{$groups->{$g1}};
+    my @s2 = @{$groups->{$g2}};
 
-    if ( $first != $totalPair ) {
-      print RF ", \n";
+    my $filename = "${comparisonName}.design";
+    print RF "
+    \"$filename\",";
+    
+    my $cdfile = $resultDir . "/$filename";
+    open( CD, ">$cdfile" ) or die "Cannot create $cdfile";
+    if($paired){
+      my @id1 = @{$groupIds->{$g1}};
+      my @id2 = @{$groupIds->{$g2}};
+      print CD "Sample\tPaired\tCondition\n";
+      for my $i (0 .. $#s1){
+        my $sname = $s1[$i];
+        my $id = $id1[$i];
+        print CD "${sname}\t${id}\t${g1}\n";
+      }
+      for my $i (0 .. $#s2){
+        my $sname = $s2[$i];
+        my $id = $id2[$i];
+        print CD "${sname}\t${id}\t${g2}\n";
+      }
+    }else{
+      print CD "Sample\tCondition\n";
+      for my $i (0 .. $#s1){
+        my $sname = $s1[$i];
+        print CD "${sname}\t${g1}\n";
+      }
+      for my $i (0 .. $#s2){
+        my $sname = $s2[$i];
+        print CD "${sname}\t${g2}\n";
+      }
     }
-    else {
-      print RF " \n";
-    }
+    close (CD);
   }
   print RF ") \n\n";
 
@@ -144,11 +159,7 @@ R --vanilla -f $rfile
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my (
-    $task_name, $path_file, $pbsDesc, $target_dir, $logDir,
-    $pbsDir,    $resultDir, $option,  $sh_direct
-    )
-    = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $comparisons = get_raw_files( $config, $section );
 
