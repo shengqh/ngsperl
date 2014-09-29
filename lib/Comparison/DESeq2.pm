@@ -90,8 +90,11 @@ designFiles<-c(
     my @s2 = @{$groups->{$g2}};
 
     my $filename = "${comparisonName}.design";
-    print RF "
-    \"$filename\",";
+    if($first != 1){
+      print RF ",";
+    }
+    print RF "\"$filename\"
+";
     
     my $cdfile = $resultDir . "/$filename";
     open( CD, ">$cdfile" ) or die "Cannot create $cdfile";
