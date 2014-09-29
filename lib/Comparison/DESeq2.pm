@@ -72,8 +72,7 @@ setwd(\"$resultDir\")
   
 data<-${readfunc}(\"$countfile\",row.names=1, header=T, check.names=F)
 
-pairs=list(
-";
+pairs=list(";
   my $first = 0;
   for my $comparisonName ( sort keys %{$comparisons} ) {
     $first++;
@@ -127,7 +126,8 @@ pairs=list(
     }
     close (CD);
   }
-  print RF ") \n\n";
+  print RF "
+) \n\n";
 
   while (<RT>) {
     if ( $_ =~ '^#' ) {
