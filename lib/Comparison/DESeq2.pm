@@ -49,6 +49,8 @@ sub perform {
   if ( !-e $rtemplate ) {
     die "File not found : " . $rtemplate;
   }
+  
+  my $showLabelInPCA = get_option($config, $section, "showLabelInPCA", 1);
 
   my %tpgroups = ();
   for my $groupName ( sort keys %{$groups} ) {
@@ -71,6 +73,8 @@ sub perform {
 setwd(\"$resultDir\")  
   
 data<-${readfunc}(\"$countfile\",row.names=1, header=T, check.names=F)
+
+showLabelInPCA<-${$showLabelInPCA}
 
 comparisons=list(";
   my $first = 0;
