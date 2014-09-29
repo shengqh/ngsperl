@@ -72,7 +72,7 @@ setwd(\"$resultDir\")
   
 data<-${readfunc}(\"$countfile\",row.names=1, header=T, check.names=F)
 
-designFiles<-c(
+pairs=list(
 ";
   my $first = 0;
   for my $comparisonName ( sort keys %{$comparisons} ) {
@@ -91,10 +91,12 @@ designFiles<-c(
 
     my $filename = "${comparisonName}.design";
     if($first != 1){
-      print RF ",";
+    print RF ",
+  \"${comparisonName}\" = \"$filename\"";
+    }else{
+    print RF "
+  \"${comparisonName}\" = \"$filename\"";
     }
-    print RF "\"$filename\"
-";
     
     my $cdfile = $resultDir . "/$filename";
     open( CD, ">$cdfile" ) or die "Cannot create $cdfile";
