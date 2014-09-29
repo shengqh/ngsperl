@@ -91,10 +91,10 @@ pairs=list(";
     my $filename = "${comparisonName}.design";
     if($first != 1){
     print RF ",
-  \"${comparisonName}\" = \"$filename\"";
+  \"${comparisonName}\" = [\"$filename\", \"$g1\"]";
     }else{
     print RF "
-  \"${comparisonName}\" = \"$filename\"";
+  \"${comparisonName}\" = \"$filename\", \"$g1\"]";
     }
     
     my $cdfile = $resultDir . "/$filename";
