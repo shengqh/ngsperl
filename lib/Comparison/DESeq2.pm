@@ -90,12 +90,10 @@ pairs=list(";
 
     my $filename = "${comparisonName}.design";
     if($first != 1){
-    print RF ",
-  \"${comparisonName}\" = [\"$filename\", \"$g1\"]";
-    }else{
-    print RF "
-  \"${comparisonName}\" = [\"$filename\", \"$g1\"]";
+      print RF ","
     }
+    print RF "
+  \"${comparisonName}\" = c(\"$filename\", \"$g1\", \"$g2\")";
     
     my $cdfile = $resultDir . "/$filename";
     open( CD, ">$cdfile" ) or die "Cannot create $cdfile";
