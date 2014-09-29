@@ -94,7 +94,7 @@ pairs=list(";
   \"${comparisonName}\" = [\"$filename\", \"$g1\"]";
     }else{
     print RF "
-  \"${comparisonName}\" = \"$filename\", \"$g1\"]";
+  \"${comparisonName}\" = [\"$filename\", \"$g1\"]";
     }
     
     my $cdfile = $resultDir . "/$filename";
