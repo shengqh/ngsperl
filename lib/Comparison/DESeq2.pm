@@ -72,7 +72,7 @@ setwd(\"$resultDir\")
   
 data<-${readfunc}(\"$countfile\",row.names=1, header=T, check.names=F)
 
-pairs=list(";
+comparisons=list(";
   my $first = 0;
   for my $comparisonName ( sort keys %{$comparisons} ) {
     $first++;
