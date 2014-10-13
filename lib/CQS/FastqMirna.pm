@@ -112,7 +112,7 @@ sub result {
 
   my $result = {};
   for my $sampleName ( sort keys %rawFiles ) {
-    my $finalFile = $sampleName . $extension;
+    my $finalFile = $resultDir . "/" . $sampleName . $extension;
 
     my @resultFiles = ();
     push( @resultFiles, $finalFile );
