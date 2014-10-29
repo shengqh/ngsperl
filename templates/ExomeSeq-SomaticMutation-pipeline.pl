@@ -140,5 +140,6 @@ my $config = {
 };
 
 performConfig($config);
+performTask($config, "annovar_mutect");
 
 1;

@@ -31,6 +31,10 @@ my $cqstools = "/home/shengq1/cqstools/CQS.Tools.exe";
 my $email    = "quanhu.sheng\@vanderbilt.edu";
 my $task     = "pipeline";
 
+my $def = {
+  tophat_option => "--segment-length 25 -r 0 -p 6",
+};
+
 my $config = {
   general => { task_name => $task },
   fastqc  => {
@@ -51,7 +55,7 @@ my $config = {
     class                => "Tophat2",
     perform              => 1,
     target_dir           => "${target_dir}/tophat2",
-    option               => "--segment-length 25 -r 0 -p 6",
+    option               => $def->{tophat_option},
     source               => $files,
     bowtie2_index        => $bowtie2_index,
     transcript_gtf       => $transcript_gtf,
