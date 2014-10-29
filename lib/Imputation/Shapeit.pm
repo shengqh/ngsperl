@@ -33,7 +33,7 @@ sub perform {
   print SH get_run_command($sh_direct);
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
-  my %mapFiles = %{ get_raw_files( $config, $section, "map_file" ) };
+  my %mapFiles = %{ get_raw_files( $config, $section, "genetic_map_file" ) };
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
@@ -54,9 +54,13 @@ sub perform {
       my $bim = change_extension( $sample, ".bim" );
       $source_option = "-B $sample $bim $fam";
     }
-    else {
-      my $map = change_extension( $sample, ".map" );
-      $source_option = "-P $sample $map";
+    elsif ( $sample =~ /ped$/ ){
+      my $ped_map = change_extension( $sample, ".map" );
+      $source_option = "-P $sample $ped_map";
+    }
+    else{
+      my $gen_sample = change_extension( $sample, ".sample" );
+      $source_option = "-G $sample $gen_sample";
     }
 
     my $phase_file  = "${sampleName}.phased";
