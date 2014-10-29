@@ -166,24 +166,6 @@ echo finished=`date`
   print "!!!shell file $shfile created, you can run this shell file to submit all tasks.\n";
 }
 
-sub result {
-  my ( $self, $config, $section, $pattern ) = @_;
-
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
-
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
-
-  my $result = {};
-  for my $sampleName ( keys %rawFiles ) {
-    my @resultFiles = ();
-
-    push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}.gen" );
-
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
-  }
-  return $result;
-}
-
 sub perform_direct {
   my ( $self, $config, $section ) = @_;
 
@@ -197,9 +179,8 @@ sub perform_direct {
   open( MSH, ">$mergefile" ) or die "Cannot create $mergefile";
 
   my %rawFiles   = %{ get_raw_files( $config, $section ) };
-  my %mapFiles   = %{ get_raw_files( $config, $section, "map_file" ) };
+  my %mapFiles   = %{ get_raw_files( $config, $section, "genetic_map_file" ) };
   my %haploFiles = %{ get_raw_files( $config, $section, "haplo_file" ) };
-  my %pedFiles   = %{ get_raw_files( $config, $section, "ped_file" ) };
 
   my $maxChromosomeLength = get_option( $config, $section, "max_chromosome_length" );
   my $interval            = get_option( $config, $section, "interval" );
@@ -215,12 +196,8 @@ sub perform_direct {
     my $haploFile  = $haploFiles[0];
     my $legendFile = change_extension( $haploFile, ".legend" );
 
-    my @peds   = @{ $pedFiles{$sampleName} };
-    my $ped    = $peds[0];
-    my $pedmap = change_extension( $ped, ".map" );
-
     my @positions;
-    open( INFILE, "<", $pedmap ) or die("Couldn't open $pedmap for reading!\n");
+    open( INFILE, "<", $sample ) or die("Couldn't open $sample for reading!\n");
 
     while (<INFILE>) {
       push @positions, ( split( /\s+/, $_ ) )[3];
@@ -272,7 +249,7 @@ fi
 
 echo impute2_start=`date` 
 
-impute2 -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
+impute2 -g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
 
 echo finished=`date` 
 
@@ -303,7 +280,7 @@ echo finished=`date`
   print "!!!shell file $shfile created, you can run this shell file to submit all tasks.\n";
 }
 
-sub perform_result {
+sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
