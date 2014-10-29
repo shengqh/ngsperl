@@ -200,7 +200,7 @@ sub perform_direct {
     open( INFILE, "<", $sample ) or die("Couldn't open $sample for reading!\n");
 
     while (<INFILE>) {
-      push @positions, ( split( /\s+/, $_ ) )[3];
+      push @positions, ( split( /\s+/, $_ ) )[2];
     }
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
