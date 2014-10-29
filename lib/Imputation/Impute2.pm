@@ -86,7 +86,7 @@ sub perform_phased {
     open( INFILE, "<", $gen ) or die("Couldn't open $gen for reading!\n");
 
     while (<INFILE>) {
-      push @positions, ( split( /\s+/, $_ ) )[3];
+      push @positions, ( split( /\s+/, $_ ) )[2];
     }
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
