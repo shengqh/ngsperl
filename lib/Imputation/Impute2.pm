@@ -249,7 +249,7 @@ fi
 
 echo impute2_start=`date` 
 
-impute2 -g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
+impute2 $option -g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
 
 echo finished=`date` 
 
