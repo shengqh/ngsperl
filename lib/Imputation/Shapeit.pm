@@ -63,7 +63,7 @@ sub perform {
       $source_option = "-G $sample $gen_sample";
     }
 
-    my $phase_file  = "${sampleName}.phased";
+    my $phase_file  = "${sampleName}.haps";
     my $sample_file = "${sampleName}.sample";
 
     open( OUT, ">$pbsFile" ) or die $!;
@@ -114,7 +114,7 @@ sub result {
   for my $sampleName ( keys %rawFiles ) {
     my @resultFiles = ();
 
-    push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}.phased" );
+    push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}.haps" );
     push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}.sample" );
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
