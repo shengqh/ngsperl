@@ -92,8 +92,10 @@ sub perform_phased {
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
     my $gen_file = "${sampleName}.gen";
+    my $gen_tmp_file = "${sampleName}.gen.tmp";
 
     print MSH "cd $curDir \n";
+    print MSH "if [[ !-s $gen_file ]]; then \n";
 
     my $start = 1;
     my $isfirst = 1;
@@ -141,10 +143,10 @@ echo finished=`date`
 
 ";
       if($isfirst){
-        print MSH "grep -v \"^---\" $tmpFile > $gen_file \n";
+        print MSH "  grep -v \"^---\" $tmpFile > $gen_tmp_file \n";
         $isfirst = 0;
       }else{
-        print MSH "grep -v \"^---\" $tmpFile >> $gen_file \n";
+        print MSH "  grep -v \"^---\" $tmpFile >> $gen_tmp_file \n";
       }
       $start = $end + 1;
 
@@ -153,6 +155,9 @@ echo finished=`date`
       print SH "\$MYCMD ./$pbsName \n";
       print "$pbsFile created\n";
     }
+    
+    print MSH "  mv $gen_tmp_file $gen_file \n";
+    print MSH "fi \n\n";
   }
   print SH "exit 0\n";
   close(SH);
