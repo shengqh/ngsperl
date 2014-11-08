@@ -63,7 +63,6 @@ sub perform_phased {
   my %rawFiles   = %{ get_raw_files( $config, $section ) };
   my %mapFiles   = %{ get_raw_files( $config, $section, "genetic_map_file" ) };
   my %haploFiles = %{ get_raw_files( $config, $section, "haplo_file" ) };
-  my %genFiles   = %{ get_raw_files( $config, $section, "gen_file" ) };
 
   my $maxChromosomeLength = get_option( $config, $section, "max_chromosome_length" );
   my $interval            = get_option( $config, $section, "interval" );
@@ -79,11 +78,8 @@ sub perform_phased {
     my $haploFile  = $haploFiles[0];
     my $legendFile = change_extension( $haploFile, ".legend" );
 
-    my @gens   = @{ $genFiles{$sampleName} };
-    my $gen    = $gens[0];
-
     my @positions;
-    open( INFILE, "<", $gen ) or die("Couldn't open $gen for reading!\n");
+    open( INFILE, "<", $sample ) or die("Couldn't open $sample for reading!\n");
 
     while (<INFILE>) {
       push @positions, ( split( /\s+/, $_ ) )[2];
@@ -137,7 +133,7 @@ fi
 
 echo impute2_start=`date` 
 
-impute2 -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
+impute2 $option -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
 
 echo finished=`date` 
 
