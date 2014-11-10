@@ -133,7 +133,7 @@ fi
 
 echo impute2_start=`date` 
 
-impute2 $option -use_prephased_g -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
+impute2 $option -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
 
 echo finished=`date` 
 
