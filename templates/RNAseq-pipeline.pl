@@ -97,7 +97,7 @@ my $config = {
     },
   },
   cufflinks => {
-    class          => "Cufflinks",
+    class          => "Cufflinks::Cufflinks",
     perform        => 1,
     target_dir     => "$def->{target_dir}/cufflinks",
     option         => $def->{cufflinks_options},
@@ -112,12 +112,13 @@ my $config = {
     },
   },
   cuffmerge => {
-    class      => "Cuffmerge",
+    class      => "Cufflinks::Cuffmerge",
     perform    => 1,
     target_dir => "$def->{target_dir}/cuffmerge",
     option     => "-p 8",
     source_ref => "cufflinks",
     fasta_file => $def->{genome_fasta},
+    transcript_gtf => $def->{transcript_gtf},
     sh_direct  => 1,
     pbs        => {
       "email"    => $def->{email},
@@ -127,7 +128,7 @@ my $config = {
     },
   },
   cufflinks_cuffdiff => {
-    class              => "Cuffdiff",
+    class              => "Cufflinks::Cuffdiff",
     perform            => 1,
     target_dir         => "$def->{target_dir}/cufflinks_cuffdiff",
     option             => "-p 8 -u -N",
@@ -274,6 +275,7 @@ my $config = {
   }
 };
 
-performConfig($config);
+#performConfig($config);
+performTask($config, "cuffmerge");
 
 1;
