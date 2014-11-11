@@ -2,11 +2,9 @@
 use strict;
 use warnings;
 
-use CQS::QC;
 use CQS::DNASeq;
 use CQS::FileUtils;
 use CQS::SystemUtils;
-use CQS::SomaticMutation;
 use CQS::ClassFactory;
 
 my $target_dir = create_directory_or_die("/scratch/cqs/shengq1/pipelines/Bacteria-pipeline");
@@ -46,7 +44,7 @@ my $pairs = {
 my $config = {
   general => { task_name => "bacteria-pipeline" },
   fastqc  => {
-    class      => "FastQC",
+    class      => "QC::FastQC",
     perform    => 1,
     target_dir => "${target_dir}/fastqc",
     option     => "",
@@ -76,7 +74,7 @@ my $config = {
     },
   },
   fastqlen => {
-    class      => "FastqLen",
+    class      => "CQS::FastqLen",
     perform    => 1,
     target_dir => "${target_dir}/trimlen",
     option     => "",
@@ -91,7 +89,7 @@ my $config = {
     },
   },
   bowtie2 => {
-    class         => "Bowtie2",
+    class         => "Alignment::Bowtie2",
     perform       => 1,
     target_dir    => "${target_dir}/bowtie2",
     source_ref    => "trimmer",
