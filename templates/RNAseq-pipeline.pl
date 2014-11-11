@@ -8,7 +8,7 @@ use CQS::FileUtils;
 my $def = {
 
   #general settings
-  target_dir => create_directory_or_die("/scratch/cqs/shengq1/pipelines/RNAseq-pipeline"),
+  target_dir => create_directory_or_die("/scratch/cqs/shengq1/pipelines/RNAseq-pipeline-test"),
   email      => "quanhu.sheng\@vanderbilt.edu",
   task       => "pipeline",
 
@@ -49,7 +49,7 @@ my $def = {
 my $config = {
   general => { task_name => $def->{task} },
   fastqc  => {
-    class      => "FastQC",
+    class      => "QC::FastQC",
     perform    => 1,
     target_dir => "$def->{target_dir}/fastqc",
     option     => "",
@@ -63,7 +63,7 @@ my $config = {
     },
   },
   tophat2 => {
-    class                => "Tophat2",
+    class                => "Alignment::Tophat2",
     perform              => 1,
     target_dir           => "$def->{target_dir}/tophat2",
     option               => $def->{tophat_option},
@@ -81,7 +81,7 @@ my $config = {
     },
   },
   rnaseqc => {
-    class          => "RNASeQC",
+    class          => "QC::RNASeQC",
     perform        => 1,
     target_dir     => "$def->{target_dir}/RNASeQC",
     option         => "",
@@ -146,7 +146,7 @@ my $config = {
     },
   },
   cuffdiff => {
-    class          => "Cuffdiff",
+    class          => "Cufflinks::Cuffdiff",
     perform        => 1,
     target_dir     => "$def->{target_dir}/cuffdiff",
     option         => "-p 8 -u -N",
@@ -164,7 +164,7 @@ my $config = {
     },
   },
   sortbam => {
-    class         => "Sortbam",
+    class         => "Samtools::Sort",
     perform       => 1,
     target_dir    => "$def->{target_dir}/sortname",
     option        => "",
@@ -179,7 +179,7 @@ my $config = {
     },
   },
   htseqcount => {
-    class      => "HTSeqCount",
+    class      => "Count::HTSeqCount",
     perform    => 1,
     target_dir => "$def->{target_dir}/htseqcount",
     option     => "",
@@ -194,7 +194,7 @@ my $config = {
     },
   },
   genetable => {
-    class         => "CQSDatatable",
+    class         => "CQS::CQSDatatable",
     perform       => 1,
     target_dir    => "$def->{target_dir}/genetable",
     option        => "-p ENS --noheader -o $def->{task}_gene.count",
@@ -210,7 +210,7 @@ my $config = {
     },
   },
   deseq2 => {
-    class         => "DESeq2",
+    class         => "Comparison::DESeq2",
     perform       => 1,
     target_dir    => "$def->{target_dir}/deseq2",
     option        => "",
@@ -226,7 +226,7 @@ my $config = {
     },
   },
   dexseqcount => {
-    class        => "DexseqCount",
+    class        => "Count::DexseqCount",
     perform      => 1,
     target_dir   => "$def->{target_dir}/dexseqcount",
     option       => "",
@@ -242,7 +242,7 @@ my $config = {
     },
   },
   exontable => {
-    class         => "CQSDatatable",
+    class         => "CQS::CQSDatatable",
     perform       => 1,
     target_dir    => "$def->{target_dir}/exontable",
     option        => "-p ENS --noheader -o $def->{task}_exon.count",
@@ -258,7 +258,7 @@ my $config = {
     },
   },
   sequencetask => {
-    class      => "SequenceTask",
+    class      => "CQS::SequenceTask",
     perform    => 1,
     target_dir => "$def->{target_dir}/sequencetask",
     source     => {
