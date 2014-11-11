@@ -15,7 +15,7 @@ my $def = {
   #software settings
   dexseqpy => "/home/shengq1/pylibs/bin/dexseq_count.py",
   cqstools => "/home/shengq1/cqstools/CQS.Tools.exe",
-  rnaseqc => "/home/shengq1/local/bin/RNA-SeQC_v1.1.7.jar",
+  rnaseqc  => "/home/shengq1/local/bin/RNA-SeQC_v1.1.7.jar",
 
   #databases
   genome_fasta         => "/data/cqs/guoy1/reference/mm10/bowtie2_index/mm10.fa",
@@ -41,7 +41,7 @@ my $def = {
   pairs => { "G2_vs_G1" => [ "G1", "G2" ] },
 
   #software options
-  tophat_option => "--segment-length 25 -r 0 -p 6",
+  tophat_option     => "--segment-length 25 -r 0 -p 6",
   cufflinks_options => "-p 8 -u -N",
 
 };
@@ -112,15 +112,15 @@ my $config = {
     },
   },
   cuffmerge => {
-    class      => "Cufflinks::Cuffmerge",
-    perform    => 1,
-    target_dir => "$def->{target_dir}/cuffmerge",
-    option     => "-p 8",
-    source_ref => "cufflinks",
-    fasta_file => $def->{genome_fasta},
+    class          => "Cufflinks::Cuffmerge",
+    perform        => 1,
+    target_dir     => "$def->{target_dir}/cuffmerge",
+    option         => "-p 8",
+    source_ref     => "cufflinks",
+    fasta_file     => $def->{genome_fasta},
     transcript_gtf => $def->{transcript_gtf},
-    sh_direct  => 1,
-    pbs        => {
+    sh_direct      => 1,
+    pbs            => {
       "email"    => $def->{email},
       "nodes"    => "1:ppn=8",
       "walltime" => "72",
@@ -262,8 +262,9 @@ my $config = {
     perform    => 1,
     target_dir => "$def->{target_dir}/sequencetask",
     source     => {
-      "sample" => [ "fastqc",  "tophat2",   "cufflinks",          "sortbam",  "htseqcount", "dexseqcount" ],
-      "task"   => [ "rnaseqc", "cuffmerge", "cufflinks_cuffdiff", "cuffdiff", "genetable",  "deseq2", "exontable" ],
+      "step1" => [ "fastqc",             "tophat2",   "cufflinks", "sortbam", "htseqcount", "dexseqcount" ],
+      "step2" => [ "cuffmerge",          "genetable", "exontable", "rnaseqc" ],
+      "step3" => [ "cufflinks_cuffdiff", "cuffdiff",  "deseq2" ],
     },
     sh_direct => 1,
     pbs       => {
@@ -275,7 +276,7 @@ my $config = {
   }
 };
 
-#performConfig($config);
-performTask($config, "cuffmerge");
+performConfig($config);
+#performTask( $config, "cuffmerge" );
 
 1;
