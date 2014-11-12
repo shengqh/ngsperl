@@ -193,7 +193,7 @@ for(comparisonName in comparisonNames){
         heatmap3(rldselect, col = hmcols, ColSideColors = gsColors, margins=c(12,5), scale="r", dist=dist, labRow="", 
             legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
       }else{
-        heatmap3(rldselect, col = hmcols, ColSideColors = pairColors, margins=c(12,5), scale="r", dist=dist, labRow="",
+        heatmap3(rldselect, col = hmcols, ColSideColors = conditionColors, margins=c(12,5), scale="r", dist=dist, labRow="",
             legendfun=function() showLegend(legend=paste0("Group ", gnames),col=c("red","blue"),cex=1.0,x="center"))
       }
       dev.off()
