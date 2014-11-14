@@ -91,7 +91,7 @@ sub perform_phased {
     my $gen_tmp_file = "${sampleName}.gen.tmp";
 
     print MSH "cd $curDir \n";
-    print MSH "if [[ !-s $gen_file ]]; then \n";
+    print MSH "if [[ ! -s $gen_file ]]; then \n";
 
     my $start = 1;
     my $isfirst = 1;
