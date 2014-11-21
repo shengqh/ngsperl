@@ -38,13 +38,14 @@ sub perform {
   my ( $self, $config, $section ) = @_;
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
-  
-  my $isPhased = get_option($config, $section, "isPhased", 0);
-  
-  if($isPhased){
-    perform_phased($self, $config, $section);
-  }else{
-    perform_direct($self, $config, $section);
+
+  my $isPhased = get_option( $config, $section, "isPhased", 0 );
+
+  if ($isPhased) {
+    perform_phased( $self, $config, $section );
+  }
+  else {
+    perform_direct( $self, $config, $section );
   }
 }
 
@@ -63,47 +64,37 @@ sub perform_phased {
   my %rawFiles   = %{ get_raw_files( $config, $section ) };
   my %mapFiles   = %{ get_raw_files( $config, $section, "genetic_map_file" ) };
   my %haploFiles = %{ get_raw_files( $config, $section, "haplo_file" ) };
-
-  my $maxChromosomeLength = get_option( $config, $section, "max_chromosome_length" );
-  my $interval            = get_option( $config, $section, "interval" );
+  my %rangeFiles = %{ get_raw_files( $config, $section, "range_file" ) };
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $sample      = $sampleFiles[0];
 
-    my @mapFiles = @{ $mapFiles{$sampleName} };
-    my $map      = $mapFiles[0];
+    my @mFiles = @{ $mapFiles{$sampleName} };
+    my $map    = $mFiles[0];
 
-    my @haploFiles = @{ $haploFiles{$sampleName} };
-    my $haploFile  = $haploFiles[0];
+    my @hFiles     = @{ $haploFiles{$sampleName} };
+    my $haploFile  = $hFiles[0];
     my $legendFile = change_extension( $haploFile, ".legend" );
 
-    my @positions;
-    open( INFILE, "<", $sample ) or die("Couldn't open $sample for reading!\n");
-
-    while (<INFILE>) {
-      push @positions, ( split( /\s+/, $_ ) )[2];
-    }
+    my @rFiles    = @{ $rangeFiles{$sampleName} };
+    my $rangeFile = $rFiles[0];
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
-    my $gen_file = "${sampleName}.gen";
+    my $gen_file     = "${sampleName}.gen";
     my $gen_tmp_file = "${sampleName}.gen.tmp";
 
     print MSH "cd $curDir \n";
     print MSH "if [[ ! -s $gen_file ]]; then \n";
 
-    my $start = 1;
+    open( INFILE, "<", $rangeFile ) or die("Couldn't open $rangeFile for reading!\n");
     my $isfirst = 1;
-    while ( $start < $maxChromosomeLength ) {
-      my $end = $start + $interval - 1;
+    while (<INFILE>) {
+      my $start = ( split( /\s+/, $_ ) )[0];
+      my $end   = ( split( /\s+/, $_ ) )[1];
 
-      if ( !containPosition( \@positions, $start, $end ) ) {
-        $start = $end + 1;
-        next;
-      }
-
-      my $cursample = $sampleName . "_" . $start;
+      my $cursample = $sampleName . "_" . $start . "_" . $end;
 
       my $pbsFile = $self->pbsfile( $pbsDir, $cursample );
       my $pbsName = basename($pbsFile);
@@ -135,13 +126,14 @@ echo impute2_start=`date`
 
 impute2 $option -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
 
-echo finished=`date` 
+echo finished=`date`
 
 ";
-      if($isfirst){
+      if ($isfirst) {
         print MSH "  grep -v \"^---\" $tmpFile > $gen_tmp_file \n";
         $isfirst = 0;
-      }else{
+      }
+      else {
         print MSH "  grep -v \"^---\" $tmpFile >> $gen_tmp_file \n";
       }
       $start = $end + 1;
@@ -151,7 +143,7 @@ echo finished=`date`
       print SH "\$MYCMD ./$pbsName \n";
       print "$pbsFile created\n";
     }
-    
+
     print MSH "  mv $gen_tmp_file $gen_file \n";
     print MSH "fi \n\n";
   }
@@ -182,27 +174,21 @@ sub perform_direct {
   my %rawFiles   = %{ get_raw_files( $config, $section ) };
   my %mapFiles   = %{ get_raw_files( $config, $section, "genetic_map_file" ) };
   my %haploFiles = %{ get_raw_files( $config, $section, "haplo_file" ) };
-
-  my $maxChromosomeLength = get_option( $config, $section, "max_chromosome_length" );
-  my $interval            = get_option( $config, $section, "interval" );
+  my %rangeFiles = %{ get_raw_files( $config, $section, "range_file" ) };
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $sample      = $sampleFiles[0];
 
-    my @mapFiles = @{ $mapFiles{$sampleName} };
-    my $map      = $mapFiles[0];
+    my @mFiles = @{ $mapFiles{$sampleName} };
+    my $map      = $mFiles[0];
 
-    my @haploFiles = @{ $haploFiles{$sampleName} };
-    my $haploFile  = $haploFiles[0];
+    my @hFiles = @{ $haploFiles{$sampleName} };
+    my $haploFile  = $hFiles[0];
     my $legendFile = change_extension( $haploFile, ".legend" );
 
-    my @positions;
-    open( INFILE, "<", $sample ) or die("Couldn't open $sample for reading!\n");
-
-    while (<INFILE>) {
-      push @positions, ( split( /\s+/, $_ ) )[2];
-    }
+    my @rFiles    = @{ $rangeFiles{$sampleName} };
+    my $rangeFile = $rFiles[0];
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
@@ -210,15 +196,11 @@ sub perform_direct {
 
     print MSH "cd $curDir \n";
 
-    my $start = 1;
+    open( INFILE, "<", $rangeFile ) or die("Couldn't open $rangeFile for reading!\n");
     my $isfirst = 1;
-    while ( $start < $maxChromosomeLength ) {
-      my $end = $start + $interval - 1;
-
-      if ( !containPosition( \@positions, $start, $end ) ) {
-        $start = $end + 1;
-        next;
-      }
+    while (<INFILE>) {
+      my $start = ( split( /\s+/, $_ ) )[0];
+      my $end   = ( split( /\s+/, $_ ) )[1];
 
       my $cursample = $sampleName . "_" . $start;
 
@@ -255,10 +237,11 @@ impute2 $option -g $sample -m $map -int $start $end -h $haploFile -l $legendFile
 echo finished=`date` 
 
 ";
-      if($isfirst){
+      if ($isfirst) {
         print MSH "grep -v \"^---\" $tmpFile > $gen_file \n";
         $isfirst = 0;
-      }else{
+      }
+      else {
         print MSH "grep -v \"^---\" $tmpFile >> $gen_file \n";
       }
       $start = $end + 1;
