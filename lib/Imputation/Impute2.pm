@@ -130,11 +130,11 @@ echo finished=`date`
 
 ";
       if ($isfirst) {
-        print MSH "  grep -v \"^---\" $tmpFile > $gen_tmp_file \n";
+        print MSH "  cat $tmpFile > $gen_tmp_file \n";
         $isfirst = 0;
       }
       else {
-        print MSH "  grep -v \"^---\" $tmpFile >> $gen_tmp_file \n";
+        print MSH "  cat $tmpFile >> $gen_tmp_file \n";
       }
       $start = $end + 1;
 
@@ -144,6 +144,8 @@ echo finished=`date`
       print "$pbsFile created\n";
     }
 
+    close(INFILE);
+    
     print MSH "  mv $gen_tmp_file $gen_file \n";
     print MSH "fi \n\n";
   }
@@ -202,7 +204,7 @@ sub perform_direct {
       my $start = ( split( /\s+/, $_ ) )[0];
       my $end   = ( split( /\s+/, $_ ) )[1];
 
-      my $cursample = $sampleName . "_" . $start;
+      my $cursample = $sampleName . "_" . $start . "_" . $end;
 
       my $pbsFile = $self->pbsfile( $pbsDir, $cursample );
       my $pbsName = basename($pbsFile);
@@ -238,11 +240,11 @@ echo finished=`date`
 
 ";
       if ($isfirst) {
-        print MSH "grep -v \"^---\" $tmpFile > $gen_file \n";
+        print MSH "cat $tmpFile > $gen_file \n";
         $isfirst = 0;
       }
       else {
-        print MSH "grep -v \"^---\" $tmpFile >> $gen_file \n";
+        print MSH "cat $tmpFile >> $gen_file \n";
       }
       $start = $end + 1;
 
@@ -270,12 +272,31 @@ sub result {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %rangeFiles = %{ get_raw_files( $config, $section, "range_file" ) };
 
   my $result = {};
-  for my $sampleName ( keys %rawFiles ) {
+  for my $sampleName ( sort keys %rawFiles ) {
     my @resultFiles = ();
 
-    push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}.gen" );
+    my @sampleFiles = @{ $rawFiles{$sampleName} };
+    my $sample      = $sampleFiles[0];
+
+    my @rFiles    = @{ $rangeFiles{$sampleName} };
+    my $rangeFile = $rFiles[0];
+
+    open( INFILE, "<", $rangeFile ) or die("Couldn't open $rangeFile for reading!\n");
+    my $isfirst = 1;
+    while (<INFILE>) {
+      my $start = ( split( /\s+/, $_ ) )[0];
+      my $end   = ( split( /\s+/, $_ ) )[1];
+
+      my $cursample = $sampleName . "_" . $start . "_" . $end;
+
+      my $tmpFile = "${cursample}.tmp";
+
+      push( @resultFiles, "${resultDir}/${sampleName}/${tmpFile}" );
+    }
+    close(INFILE);
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
