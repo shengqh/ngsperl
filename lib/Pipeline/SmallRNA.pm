@@ -118,7 +118,7 @@ sub getConfig{
 			class        => "CQS::FastqMirna",
 			perform      => 1,
 			target_dir   => $def->{target_dir} . "/identical_NTA",
-			option       => "",
+			option       => "-l " . $def->{min_read_length},
 			source_ref   => [ "identical", ".fastq.gz\$" ],
 			seqcount_ref => [ "identical", ".dupcount\$" ],
 			cqstools     => $def->{cqstools},
