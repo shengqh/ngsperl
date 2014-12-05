@@ -192,7 +192,7 @@ sub getConfig{
 			perform    => 1,
 			target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_miRNA_table",
 			option     => "",
-			source_ref => [ "bowtie1_genome_1mm_NTA_mirna_count", ".mapped.xml" ],
+			source_ref => [ "bowtie1_genome_1mm_NTA_miRNA_count", ".mapped.xml" ],
 			cqs_tools  => $def->{cqstools},
 			prefix     => "miRNA_1mm_NTA_",
 			sh_direct  => 1,
