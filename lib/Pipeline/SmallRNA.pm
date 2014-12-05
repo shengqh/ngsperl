@@ -365,7 +365,7 @@ sub getConfig{
 			perform    => 1,
 			target_dir => $def->{target_dir} . "/bowtie1_genome_pmnames",
 			option     => "",
-			source_ref => "bowtie1_genome_cutadapt_topN_1mm",
+			source_ref => "bowtie1_genome_1mm",
 			sh_direct  => 1,
 			pbs        => {
 				"email"    => $def->{email},
