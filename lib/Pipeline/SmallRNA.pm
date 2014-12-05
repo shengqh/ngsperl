@@ -167,10 +167,10 @@ sub getConfig{
 				"mem"      => "40gb"
 			},
 		},
-		bowtie1_genome_1mm_NTA_mirna_count => {
+		bowtie1_genome_1mm_NTA_miRNA_count => {
 			class           => "MirnaCount",
 			perform         => 1,
-			target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_mirna_count",
+			target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_miRNA_count",
 			option          => $def->{mirnacount_option},
 			source_ref      => "bowtie1_genome_1mm_NTA",
 			fastq_files_ref => "identical_NTA",
@@ -187,10 +187,10 @@ sub getConfig{
 				"mem"      => "40gb"
 			},
 		},
-		bowtie1_genome_1mm_NTA_mirna_table => {
+		bowtie1_genome_1mm_NTA_miRNA_table => {
 			class      => "CQS::CQSMirnaNTATable",
 			perform    => 1,
-			target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_mirna_table",
+			target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_miRNA_table",
 			option     => "",
 			source_ref => [ "bowtie1_genome_1mm_NTA_mirna_count", ".mapped.xml" ],
 			cqs_tools  => $def->{cqstools},
