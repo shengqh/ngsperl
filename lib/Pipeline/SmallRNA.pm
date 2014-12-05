@@ -25,7 +25,7 @@ sub getConfig{
 	my $config = {
 		general => { "task_name" => $def->{task_name}, },
 		files   => $def->{files},
-		trimmer => {
+		fastq_remove_N => {
 			class      => "CQS::FastqTrimmer",
 			perform    => 1,
 			target_dir => $def->{target_dir} . "/fastq_remove_N",
@@ -41,12 +41,12 @@ sub getConfig{
 				"mem"      => "10gb"
 			},
 		},
-		fastqc_pre => {
+		fastqc_pre_trim => {
 			class      => "QC::FastQC",
 			perform    => 1,
 			target_dir => $def->{target_dir} . "/fastqc_pre_trim",
 			option     => "",
-			source_ref => "trimmer",
+			source_ref => "fastq_remove_N",
 			pbs        => {
 				"email"    => $def->{email},
 				"nodes"    => "1:ppn=1",
@@ -58,8 +58,8 @@ sub getConfig{
 			class      => "Cutadapt",
 			perform    => 1,
 			target_dir => $def->{target_dir} . "/cutadapt",
-			option     => "-O 10 -m ",
-			source_ref => "trimmer",
+			option     => "-O 10 -m " . $def->{min_read_length},
+			source_ref => "fastq_remove_N",
 			adaptor    => "TGGAATTCTCGGGTGCCAAGG",
 			extension  => "_clipped.fastq",
 			sh_direct  => 1,
@@ -70,7 +70,7 @@ sub getConfig{
 				"mem"      => "20gb"
 			},
 		},
-		fastqc_post => {
+		fastqc_post_trim => {
 			class      => "QC::FastQC",
 			perform    => 1,
 			target_dir => $def->{target_dir} . "/fastqc_post_trim",
@@ -83,7 +83,7 @@ sub getConfig{
 				"mem"      => "10gb"
 			},
 		},
-		fastqlen => {
+		fastq_len => {
 			class      => "FastqLen",
 			perform    => 1,
 			target_dir => $def->{target_dir} . "/fastq_len",
@@ -133,10 +133,10 @@ sub getConfig{
 		},
 
 		#not identical, for IGV
-		bowtie1_genome_cutadapt_topN_1mm_notidentical => {
+		bowtie1_genome_1mm_notidentical => {
 			class         => "Bowtie1",
 			perform       => 1,
-			target_dir    => $def->{target_dir} . "/topN_bowtie1_genome_cutadapt_1mm_notidentical",
+			target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm_notidentical",
 			option        => $def->{bowtie1_option_1mm},
 			source_ref    => [ "cutadapt", ".fastq.gz\$" ],
 			bowtie1_index => $def->{bowtie1_index},
@@ -151,10 +151,10 @@ sub getConfig{
 		},
 
 		#1 mismatch search, NTA
-		bowtie1_genome_cutadapt_topN_1mm_NTA => {
+		bowtie1_genome_1mm_NTA => {
 			class         => "Bowtie1",
 			perform       => 1,
-			target_dir    => $def->{target_dir} . "/topN_bowtie1_genome_cutadapt_1mm_NTA",
+			target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm_NTA",
 			option        => $def->{bowtie1_option_1mm},
 			source_ref    => [ "identical_NTA", ".fastq.gz\$" ],
 			bowtie1_index => $def->{bowtie1_index},
@@ -167,12 +167,12 @@ sub getConfig{
 				"mem"      => "40gb"
 			},
 		},
-		mirna_1mm_count_NTA => {
+		bowtie1_genome_1mm_NTA_mirna_count => {
 			class           => "MirnaCount",
 			perform         => 1,
-			target_dir      => $def->{target_dir} . "/topN_bowtie1_genome_cutadapt_1mm_NTA_mirna_count",
+			target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_mirna_count",
 			option          => $def->{mirnacount_option},
-			source_ref      => "bowtie1_genome_cutadapt_topN_1mm_NTA",
+			source_ref      => "bowtie1_1mm_NTA",
 			fastq_files_ref => "identical_NTA",
 			seqcount_ref    => [ "identical_NTA", ".dupcount\$" ],
 			cqs_tools       => $def->{cqstools},
@@ -187,12 +187,12 @@ sub getConfig{
 				"mem"      => "40gb"
 			},
 		},
-		miRNA_1mm_table_NTA => {
+		bowtie1_genome_1mm_NTA_mirna_table => {
 			class      => "CQS::CQSMirnaNTATable",
 			perform    => 1,
-			target_dir => $def->{target_dir} . "/topN_bowtie1_genome_cutadapt_1mm_NTA_mirna_table",
+			target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_mirna_table",
 			option     => "",
-			source_ref => [ "mirna_1mm_count_NTA", ".mapped.xml" ],
+			source_ref => [ "bowtie1_genome_1mm_NTA_mirna_count", ".mapped.xml" ],
 			cqs_tools  => $def->{cqstools},
 			prefix     => "miRNA_1mm_NTA_",
 			sh_direct  => 1,
@@ -205,10 +205,10 @@ sub getConfig{
 		},
 
 		#1 mismatch search
-		bowtie1_genome_cutadapt_topN_1mm => {
+		bowtie1_genome_1mm => {
 			class         => "Bowtie1",
 			perform       => 1,
-			target_dir    => $def->{target_dir} . "/topN_bowtie1_genome_cutadapt_1mm",
+			target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm",
 			option        => $def->{bowtie1_option_1mm},
 			source_ref    => [ "identical", ".fastq.gz\$" ],
 			bowtie1_index => $def->{bowtie1_index},
@@ -221,12 +221,12 @@ sub getConfig{
 				"mem"      => "40gb"
 			},
 		},
-		miRNA_1mm_count_overlap => {
+		bowtie1_genome_1mm_miRNA_overlap => {
 			class           => "CQSMappedCount",
 			perform         => 1,
-			target_dir      => $def->{target_dir} . "/topN_bowtie1_genome_cutadapt_1mm_count_miRNA_overlap",
+			target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_miRNA_overlap",
 			option          => $def->{mirna_overlap_count_option},
-			source_ref      => "bowtie1_genome_cutadapt_topN_1mm",
+			source_ref      => "bowtie1_genome_1mm",
 			fastq_files_ref => "identical",
 			seqcount_ref    => [ "identical", ".dupcount\$" ],
 			cqs_tools       => $def->{cqstools},
@@ -241,12 +241,12 @@ sub getConfig{
 				"mem"      => "20gb"
 			},
 		},
-		miRNA_1mm_overlap_position => {
+		bowtie1_genome_1mm_miRNA_overlap_position => {
 			class      => "CQSMappedPosition",
 			perform    => 1,
-			target_dir => $def->{target_dir} . "/topN_bowtie1_genome_cutadapt_1mm_count_miRNA_overlap_position",
+			target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_miRNA_overlap_position",
 			option     => "-o " . $def->{task_name} . "_miRNA.position",
-			source_ref => "miRNA_1mm_count_overlap",
+			source_ref => "bowtie1_genome_1mm_miRNA_overlap",
 			cqs_tools  => $def->{cqstools},
 			sh_direct  => 1,
 			pbs        => {
@@ -256,12 +256,12 @@ sub getConfig{
 				"mem"      => "10gb"
 			},
 		},
-		tRNA_1mm_count => {
+		bowtie1_genome_1mm_tRNA_count => {
 			class           => "CQSMappedCount",
 			perform         => 1,
-			target_dir      => $def->{target_dir} . "/topN_bowtie1_genome_cutadapt_1mm_count_tRNA",
+			target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_tRNA_count",
 			option          => $def->{trnacount_option},
-			source_ref      => "bowtie1_genome_cutadapt_topN_1mm",
+			source_ref      => "bowtie1_genome_1mm",
 			fastq_files_ref => "identical",
 			seqcount_ref    => [ "identical", ".dupcount\$" ],
 			cqs_tools       => $def->{cqstools},
@@ -276,12 +276,12 @@ sub getConfig{
 				"mem"      => "20gb"
 			},
 		},
-		tRNA_1mm_table => {
+		bowtie1_genome_1mm_tRNA_table => {
 			class      => "CQSMappedTable",
 			perform    => 1,
-			target_dir => $def->{target_dir} . "/topN_bowtie1_genome_cutadapt_1mm_count_tRNA_table",
+			target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_tRNA_table",
 			option     => "",
-			source_ref => [ "tRNA_1mm_count", ".xml" ],
+			source_ref => [ "bowtie1_genome_1mm_tRNA_count", ".xml" ],
 			cqs_tools  => $def->{cqstools},
 			prefix     => "tRNA_1mm_",
 			sh_direct  => 1,
@@ -292,12 +292,12 @@ sub getConfig{
 				"mem"      => "10gb"
 			},
 		},
-		tRNA_1mm_position => {
+		bowtie1_genome_1mm_tRNA_position => {
 			class      => "CQSMappedPosition",
 			perform    => 1,
-			target_dir => $def->{target_dir} . "/topN_bowtie1_genome_cutadapt_1mm_count_tRNA_position",
+			target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_tRNA_position",
 			option     => "-o " . $def->{task_name} . "_tRNA.position",
-			source_ref => "tRNA_1mm_count",
+			source_ref => "bowtie1_genome_1mm_tRNA_count",
 			cqs_tools  => $def->{cqstools},
 			sh_direct  => 1,
 			pbs        => {
@@ -307,12 +307,12 @@ sub getConfig{
 				"mem"      => "10gb"
 			},
 		},
-		smallRNA_1mm_count => {
+		bowtie1_genome_1mm_smallRNA_count => {
 			class           => "CQSMappedCount",
 			perform         => 1,
-			target_dir      => $def->{target_dir} . "/topN_bowtie1_genome_cutadapt_1mm_count_smallRNA",
+			target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_smallRNA_count",
 			option          => $def->{trnacount_option},
-			source_ref      => "bowtie1_genome_cutadapt_topN_1mm",
+			source_ref      => "bowtie1_genome_1mm",
 			fastq_files_ref => "identical",
 			seqcount_ref    => [ "identical", ".dupcount\$" ],
 			cqs_tools       => $def->{cqstools},
@@ -326,12 +326,12 @@ sub getConfig{
 				"mem"      => "20gb"
 			},
 		},
-		smallRNA_1mm_table => {
+		bowtie1_genome_1mm_smallRNA_table => {
 			class      => "CQSMappedTable",
 			perform    => 1,
-			target_dir => $def->{target_dir} . "/topN_bowtie1_genome_cutadapt_1mm_count_smallRNA_table",
+			target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_smallRNA_table",
 			option     => "",
-			source_ref => [ "smallRNA_1mm_count", ".xml" ],
+			source_ref => [ "bowtie1_genome_1mm_smallRNA_count", ".xml" ],
 			cqs_tools  => $def->{cqstools},
 			prefix     => "smallRNA_1mm_",
 			sh_direct  => 1,
@@ -342,13 +342,13 @@ sub getConfig{
 				"mem"      => "10gb"
 			},
 		},
-		smallRNA_1mm_NTA_category => {
+		bowtie1_genome_1mm_NTA_smallRNA_category => {
 			class           => "CQSSmallRNACategory",
 			perform         => 1,
-			target_dir      => $def->{target_dir} . "/topN_bowtie1_genome_cutadapt_1mm_NTA_smallRNA_category",
+			target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_category",
 			option          => "",
-			source_ref      => [ "smallRNA_1mm_count", ".mapped.xml\$" ],
-			mirna_count_ref => [ "mirna_1mm_count_NTA", ".mapped.xml\$" ],
+			source_ref      => [ "bowtie1_genome_1mm_smallRNA_count", ".mapped.xml\$" ],
+			mirna_count_ref => [ "bowtie1_genome_1mm_NTA_mirna_count", ".mapped.xml\$" ],
 			cqs_tools       => $def->{cqstools},
 			sh_direct       => 1,
 			pbs             => {
@@ -360,10 +360,10 @@ sub getConfig{
 		},
 
 		#2 perfect match search to mirbase only
-		bowtie1_genome_cutadapt_topN_genome_pmnames => {
+		bowtie1_genome_pmnames => {
 			class      => "Samtools::PerfectMappedReadNames",
 			perform    => 1,
-			target_dir => $def->{target_dir} . "/topN_bowtie1_genome_cutadapt_pmnames",
+			target_dir => $def->{target_dir} . "/bowtie1_genome_pmnames",
 			option     => "",
 			source_ref => "bowtie1_genome_cutadapt_topN_1mm",
 			sh_direct  => 1,
@@ -374,13 +374,13 @@ sub getConfig{
 				"mem"      => "40gb"
 			},
 		},
-		bowtie1_genome_cutadapt_topN_miRbase_pm => {
+		bowtie1_miRbase_pm => {
 			class         => "Alignment::Bowtie1",
 			perform       => 1,
-			target_dir    => $def->{target_dir} . "/topN_bowtie1_genome_cutadapt_miRbase_pm",
+			target_dir    => $def->{target_dir} . "/bowtie1_miRbase_pm",
 			option        => $def->{bowtie1_option_pm},
 			source_ref    => [ "identical", ".fastq.gz\$" ],
-			bowtie1_index => "/data/cqs/shengq1/reference/miRBase21/bowtie_index_1.0.1/mature.dna",
+			bowtie1_index => $def->{bowtie1_miRBase_index},
 			samonly       => 0,
 			sh_direct     => 1,
 			pbs           => {
@@ -390,14 +390,14 @@ sub getConfig{
 				"mem"      => "40gb"
 			},
 		},
-		chromosome_count => {
+		bowtie1_miRbase_pm_count => {
 			class                   => "CQS::CQSChromosomeCount",
 			perform                 => 1,
-			target_dir              => $def->{target_dir} . "/topN_bowtie1_genome_cutadapt_miRbase_pm_count",
+			target_dir              => $def->{target_dir} . "/bowtie1_miRbase_pm_count",
 			option                  => "",
-			source_ref              => "bowtie1_genome_cutadapt_topN_miRbase_pm",
+			source_ref              => "bowtie1_miRbase_pm",
 			seqcount_ref            => [ "identical", ".dupcount\$" ],
-			perfect_mapped_name_ref => "bowtie1_genome_cutadapt_topN_genome_pmnames",
+			perfect_mapped_name_ref => "bowtie1_genome_pmnames",
 			cqs_tools               => $def->{cqstools},
 			samtools                => $def->{samtools},
 			sh_direct               => 1,
@@ -408,12 +408,12 @@ sub getConfig{
 				"mem"      => "40gb"
 			},
 		},
-		chromosome_count_table => {
-			class      => "CQSChromosomeTable",
+		bowtie1_miRbase_pm_table => {
+			class      => "CQS::CQSChromosomeTable",
 			perform    => 1,
-			target_dir => $def->{target_dir} . "/topN_bowtie1_genome_cutadapt_miRbase_pm_table",
+			target_dir => $def->{target_dir} . "/bowtie1_miRbase_pm_table",
 			option     => "",
-			source_ref => [ "chromosome_count", ".xml" ],
+			source_ref => [ "bowtie1_miRbase_pm_count", ".xml" ],
 			cqs_tools  => $def->{cqstools},
 			prefix     => "miRBase_pm_",
 			sh_direct  => 1,
@@ -433,35 +433,37 @@ sub getConfig{
 				individual => [
 
 					#data preparation
-					"trimmer",   "fastqc_pre", "cutadapt", "fastqc_post", "fastqlen",
+					"fastq_remove_N",   "fastqc_pre_trim", "cutadapt", "fastqc_post_trim", "fastq_len",
 					"identical", "identical_NTA",
 
 					#NTA data analysis
-					"bowtie1_genome_cutadapt_topN_1mm_NTA", "mirna_1mm_count_NTA",
+					"bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_NTA_miRNA_count",
 
 					#non-NTA count
-					"bowtie1_genome_cutadapt_topN_1mm", "miRNA_1mm_count_overlap",
-					"tRNA_1mm_count",                   "smallRNA_1mm_count",
+					"bowtie1_genome_1mm", "bowtie1_genome_1mm_miRNA_overlap",
+					"bowtie1_genome_1mm_tRNA_count",                   "bowtie1_genome_1mm_smallRNA_count",
 
 					#miRBase analysis
-					"bowtie1_genome_cutadapt_topN_genome_pmnames",
-					"bowtie1_genome_cutadapt_topN_miRbase_pm", "chromosome_count",
+					"bowtie1_genome_pmnames",
+					"bowtie1_miRbase_pm", "bowtie1_miRbase_pm_count",
 
 					#for IGV
-					"bowtie1_genome_cutadapt_topN_1mm_notidentical",
+					"bowtie1_genome_1mm_notidentical",
 				],
 				summary => [
 
 					#NTA table
-					"miRNA_1mm_table_NTA",
+					"bowtie1_genome_1mm_NTA_miRNA_table",
 
 					#non-NTA table and graph
-					"miRNA_1mm_overlap_position", "tRNA_1mm_table",
-					"smallRNA_1mm_table",         "smallRNA_1mm_NTA_category",
-					"tRNA_1mm_position",
+					"bowtie1_genome_1mm_NTA_miRNA_position", 
+					"bowtie1_genome_1mm_NTA_tRNA_table",
+					"bowtie1_genome_1mm_NTA_smallRNA_table",         
+					"bowtie1_genome_1mm_NTA_smallRNA_category",
+					"bowtie1_genome_1mm_tRNA_position", 
 
 					#miRBase
-					"chromosome_count_table"
+					"bowtie1_miRbase_pm_table"
 				],
 			},
 			sh_direct => 0,
