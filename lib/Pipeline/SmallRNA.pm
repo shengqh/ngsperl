@@ -452,15 +452,15 @@ sub getConfig{
 				],
 				summary => [
 
-					#NTA table
-					"bowtie1_genome_1mm_NTA_miRNA_table",
-
 					#non-NTA table and graph
 					"bowtie1_genome_1mm_miRNA_overlap_position", 
-					"bowtie1_genome_1mm_NTA_tRNA_table",
-					"bowtie1_genome_1mm_NTA_smallRNA_table",         
-					"bowtie1_genome_1mm_NTA_smallRNA_category",
+					"bowtie1_genome_1mm_tRNA_table",
+					"bowtie1_genome_1mm_smallRNA_table",         
 					"bowtie1_genome_1mm_tRNA_position", 
+
+					#NTA table
+					"bowtie1_genome_1mm_NTA_miRNA_table",
+					"bowtie1_genome_1mm_NTA_smallRNA_category",
 
 					#miRBase
 					"bowtie1_miRbase_pm_table"
