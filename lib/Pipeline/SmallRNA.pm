@@ -394,7 +394,7 @@ sub getConfig{
 			class                   => "CQS::CQSChromosomeCount",
 			perform                 => 1,
 			target_dir              => $def->{target_dir} . "/bowtie1_miRbase_pm_count",
-			option                  => "",
+			option                  => $def->{mirbase_count_option},
 			source_ref              => "bowtie1_miRbase_pm",
 			seqcount_ref            => [ "identical", ".dupcount\$" ],
 			perfect_mapped_name_ref => "bowtie1_genome_pmnames",
