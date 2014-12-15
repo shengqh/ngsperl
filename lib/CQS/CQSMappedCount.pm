@@ -61,8 +61,7 @@ sub perform {
   for my $sampleName ( sort keys %rawFiles ) {
     my @bamFiles  = @{ $rawFiles{$sampleName} };
     my $bamFile   = $bamFiles[0];
-    my $fileName  = basename($bamFile);
-    my $countFile = $fileName . ".count";
+    my $countFile = $sampleName . ".count";
 
     my $seqcountFile = "";
     if ( defined $seqCountFiles{$sampleName} ) {
@@ -141,14 +140,12 @@ sub result {
     my $curDir = $resultDir . "/$sampleName";
 
     my @bamFiles = @{ $rawFiles{$sampleName} };
-    my $bamFile  = $bamFiles[0];
-    my $fileName = basename($bamFile);
 
     my @resultFiles = ();
-    my $countFile   = "${curDir}/${fileName}.count";
+    my $countFile   = "${curDir}/${sampleName}.count";
     push( @resultFiles, $countFile );
     push( @resultFiles, "${countFile}.mapped.xml" );
-    push( @resultFiles, "${curDir}/${fileName}.info" );
+    push( @resultFiles, "${curDir}/${sampleName}.info" );
 
     my $unmapped;
     if ($fasta_format) {
