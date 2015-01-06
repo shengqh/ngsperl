@@ -14,7 +14,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS =
-  ( 'all' => [qw(get_option get_parameter get_param_file parse_param_file get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools)] );
+  ( 'all' => [qw(get_option get_cluster get_parameter get_param_file parse_param_file get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -38,6 +38,20 @@ sub get_option {
   return ($result);
 }
 
+sub get_cluster {
+  my ( $config, $section ) = @_;
+
+  my $cluster_name = get_option_value($config->{$section}{cluster}, "torque");
+  my $cluster;
+  if($cluster_name eq "slurm"){
+  	$cluster = instantiate("CQS::ClusterSLURM");
+  }else{
+  	$cluster = instantiate("CQS::ClusterTorque");
+  }
+  
+  return ($cluster);
+}
+
 sub get_parameter {
   my ( $config, $section ) = @_;
 
@@ -45,13 +59,7 @@ sub get_parameter {
 
   my $task_name = get_option( $config, "general", "task_name" );
   
-  my $cluster_name = get_option_value($config->{$section}{cluster}, "torque");
-  my $cluster;
-  if($cluster_name eq "torque"){
-  	$cluster = instantiate("CQS::ClusterTorque");
-  }else{
-  	$cluster = instantiate("CQS::ClusterSLURM");
-  }
+  my $cluster = get_cluster(@_);
   
   my $path_file = get_param_file( $config->{$section}{path_file}, "path_file", 0 );
   if ( !defined $path_file ) {
@@ -73,6 +81,12 @@ sub get_parameter {
 
   my $option    = get_option( $config, $section, "option",    "" );
   my $sh_direct = get_option( $config, $section, "sh_direct", 0 );
+  
+  if($sh_direct){
+  	$sh_direct = "bash";
+  }else{
+  	$sh_direct = $cluster->get_submit_command();
+  }
 
   return ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct );
 }
@@ -245,12 +259,7 @@ sub get_raw_files2 {
 
 sub get_run_command {
   my $sh_direct = shift;
-  if ($sh_direct) {
-    return ("MYCMD=\"bash\" \n");
-  }
-  else {
-    return ("MYCMD=\"qsub\" \n");
-  }
+  return ("MYCMD=\"$sh_direct\" \n");
 }
 
 sub get_run_command_old {

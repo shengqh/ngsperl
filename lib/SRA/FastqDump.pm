@@ -32,6 +32,8 @@ sub perform {
     $ispaired = 0;
   }
 
+  my $cluster = get_cluster($config, $section);
+	
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
@@ -45,6 +47,7 @@ sub perform {
     my $pbsFile = $self->pbsfile($pbsDir, $sampleName);
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
+    my $logdesp = $cluster->get_log_desc($log);
 
     print SH "\$MYCMD ./$pbsName \n";
 
@@ -53,9 +56,9 @@ sub perform {
     if ($ispaired) {
       my $fastq1     = $sampleName . "_1.fastq.gz";
       my $fastq2     = $sampleName . "_2.fastq.gz";
+      
       print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
+$logdesp
 
 $path_file
 
@@ -75,8 +78,7 @@ exit 0
     else {
       my $fastq     = $sampleName . ".fastq.gz";
       print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
+$logdesp
 
 $path_file
 
