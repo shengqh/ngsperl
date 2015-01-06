@@ -44,7 +44,15 @@ sub get_parameter {
   die "no section $section found!" if !defined $config->{$section};
 
   my $task_name = get_option( $config, "general", "task_name" );
-
+  
+  my $cluster_name = get_option_value($config->{$section}{cluster}, "torque");
+  my $cluster;
+  if($cluster_name eq "torque"){
+  	$cluster = instantiate("CQS::ClusterTorque");
+  }else{
+  	$cluster = instantiate("CQS::ClusterSLURM");
+  }
+  
   my $path_file = get_param_file( $config->{$section}{path_file}, "path_file", 0 );
   if ( !defined $path_file ) {
     $path_file = get_param_file( $config->{general}{path_file}, "path_file", 0 );
@@ -61,7 +69,7 @@ sub get_parameter {
   $target_dir =~ s|//|/|g;
   $target_dir =~ s|/$||g;
   my ( $logDir, $pbsDir, $resultDir ) = init_dir($target_dir);
-  my ($pbsDesc) = get_pbs_desc($refPbs);
+  my ($pbsDesc) = $cluster->get_cluster_desc($refPbs);
 
   my $option    = get_option( $config, $section, "option",    "" );
   my $sh_direct = get_option( $config, $section, "sh_direct", 0 );
