@@ -61,6 +61,7 @@ qcimg2pdf.sh -o $task_name
   print SH get_run_command(1);
 
   my $result = $self->result( $config, $section );
+  my $cluster = get_cluster($config, $section);
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @originalFiles = @{ $rawFiles{$sampleName} };
@@ -73,6 +74,7 @@ qcimg2pdf.sh -o $task_name
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
+    my $logdesc = $cluster->get_log_desc($log);
 
     my @expectresult = @{ $result->{$sampleName} };
     my $expectname   = $expectresult[0];
@@ -81,8 +83,7 @@ qcimg2pdf.sh -o $task_name
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
+$logdesc
 
 $path_file
 
