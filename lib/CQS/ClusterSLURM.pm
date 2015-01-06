@@ -47,8 +47,18 @@ sub get_cluster_desc {
   die "Assign email address in hash (\"email\" => \"youremail\") and pass hash as parameter to get_cluster_desc" if ( $email eq "" );
 
   if ( $ntasks eq "" ) {
-  	$ntasks = $nodes;
-  	$nodes = "1";
+  	my $pos = index($nodes, ":");
+  	if($pos >= 0){
+  	  $ntasks = substr($nodes, $pos+1);
+  	  $nodes = substr($nodes, 0, $pos);
+  	  $pos = index($ntasks, "ppn=");
+  	  if($pos >= 0){
+  	  	$ntasks = substr($ntaskt, $pos+4);
+  	  }
+  	}else{
+	  $nodes = "1";
+	  $ntasks = $nodes;
+  	}
   }
   
   $mem =~ s/mb/M/g;
