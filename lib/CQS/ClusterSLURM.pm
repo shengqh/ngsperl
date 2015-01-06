@@ -53,7 +53,7 @@ sub get_cluster_desc {
   	  $nodes = substr($nodes, 0, $pos);
   	  $pos = index($ntasks, "ppn=");
   	  if($pos >= 0){
-  	  	$ntasks = substr($ntaskt, $pos+4);
+  	  	$ntasks = substr($ntasks, $pos+4);
   	  }
   	}else{
 	  $nodes = "1";
