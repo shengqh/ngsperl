@@ -62,6 +62,7 @@ sub get_cluster_desc {
   }
   
   $mem =~ s/mb/M/g;
+  $mem =~ s/gb/G/g;
 
   my $pbsDesc = <<SBATCH;
 #!/bin/bash
