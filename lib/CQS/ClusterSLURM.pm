@@ -10,7 +10,7 @@ our @ISA = qw(CQS::ClusterScript);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "ClusterSLURM";
+  $self->{_name} = "CQS::ClusterSLURM";
   bless $self, $class;
   return $self;
 }
@@ -22,7 +22,7 @@ sub get_cluster_desc {
   my $nodes    = "1";
   my $ntasks   = "";
 
-  my ($pbsParamHashRef, $pbsfile) = @_;
+  my ($self, $pbsParamHashRef) = @_;
   if ( defined $pbsParamHashRef ) {
     my %hash = %{$pbsParamHashRef};
     foreach ( keys %hash ) {
@@ -61,7 +61,6 @@ sub get_cluster_desc {
 #SBATCH --ntasks=$ntasks
 #SBATCH --time=$walltime
 #SBATCH --mem=$mem
-#SBATCH -o $pbsfile
 SBATCH
 
   return ($pbsDesc);
@@ -69,7 +68,7 @@ SBATCH
 
 
 sub get_log_desc {
-  my ($pbsfile) = @_;
+  my ($self, $pbsfile) = @_;
   
   my $result = <<SBATCH;
 #SBATCH -o $pbsfile

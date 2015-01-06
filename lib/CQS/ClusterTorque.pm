@@ -10,7 +10,7 @@ our @ISA = qw(CQS::ClusterScript);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "ClusterTorque";
+  $self->{_name} = "CQS::ClusterTorque";
   bless $self, $class;
   return $self;
 }
@@ -21,7 +21,7 @@ sub get_cluster_desc {
   my $mem      = "15000mb";
   my $nodes    = "1";
 
-  my ($pbsParamHashRef) = @_;
+  my ($self, $pbsParamHashRef) = @_;
   if ( defined $pbsParamHashRef ) {
     my %hash = %{$pbsParamHashRef};
     foreach ( keys %hash ) {
@@ -62,7 +62,7 @@ PBS
 }
 
 sub get_log_desc {
-  my ($pbsfile) = @_;
+  my ($self, $pbsfile) = @_;
   
   my $result = <<PBS;
 #PBS -o $pbsfile
