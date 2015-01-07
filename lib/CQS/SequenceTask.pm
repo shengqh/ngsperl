@@ -30,6 +30,7 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %fqFiles = %{ get_raw_files( $config, $section ) };
+  my $cluster = get_cluster($config, $section);
 
   for my $taskName ( sort keys %fqFiles ) {
     my $shfile = $self->taskfile( $pbsDir, $taskName );
@@ -60,12 +61,12 @@ sub perform {
       my $pbsFile = $self->pbsfile( $pbsDir, $taskSample );
       my $pbsName = basename($pbsFile);
       my $log     = $self->logfile( $logDir, $taskSample );
+      my $logdesp = $cluster->get_log_desc($log);
 
       open( OUT, ">$pbsFile" ) or die $!;
 
       print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
+$logdesp
 
 $path_file
 

@@ -426,6 +426,7 @@ sub getConfig{
 		},
 		sequencetask => {
 			class      => "CQS::SequenceTask",
+			cluster    => "slurm",
 			perform    => 1,
 			target_dir => $def->{target_dir} . "/sequencetask",
 			option     => "",
