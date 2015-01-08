@@ -61,7 +61,7 @@ sub get_cluster_desc {
   	}
   }
   
-  if(!($walltime =~ /:/)){
+  if(index($walltime, ':') == -1){
   	$walltime = $walltime + ":00:00";
   }
   
