@@ -61,6 +61,10 @@ sub get_cluster_desc {
   	}
   }
   
+  if(!($walltime =~ /:/)){
+  	$walltime = $walltime + ":00:00";
+  }
+  
   $mem =~ s/mb/M/g;
   $mem =~ s/gb/G/g;
 
