@@ -62,7 +62,7 @@ sub get_cluster_desc {
   }
   
   if(index($walltime, ':') == -1){
-  	$walltime = $walltime + ":00:00";
+  	$walltime = $walltime . ":00:00";
   }
   
   $mem =~ s/mb/M/g;
