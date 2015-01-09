@@ -54,6 +54,18 @@ sub getConfig{
 				"mem"      => "10gb"
 			},
 		},
+		fastqc_pre_trim_summary => {
+			class      => "QC::FastQCSummary",
+			perform    => 1,
+			target_dir => $def->{target_dir} . "/fastqc_pre_trim",
+			option     => "",
+			pbs        => {
+				"email"    => $def->{email},
+				"nodes"    => "1:ppn=1",
+				"walltime" => "2",
+				"mem"      => "10gb"
+			},
+		},
 		cutadapt => {
 			class      => "Cutadapt",
 			perform    => 1,
@@ -76,6 +88,18 @@ sub getConfig{
 			target_dir => $def->{target_dir} . "/fastqc_post_trim",
 			option     => "",
 			source_ref => [ "cutadapt", ".fastq.gz" ],
+			pbs        => {
+				"email"    => $def->{email},
+				"nodes"    => "1:ppn=1",
+				"walltime" => "2",
+				"mem"      => "10gb"
+			},
+		},
+		fastqc_post_trim_summary => {
+			class      => "QC::FastQCSummary",
+			perform    => 1,
+			target_dir => $def->{target_dir} . "/fastqc_post_trim",
+			option     => "",
 			pbs        => {
 				"email"    => $def->{email},
 				"nodes"    => "1:ppn=1",
@@ -452,6 +476,9 @@ sub getConfig{
 					"bowtie1_genome_1mm_notidentical",
 				],
 				summary => [
+				  #QC
+          "fastqc_pre_trim_summary",
+          "fastqc_post_trim_summary",
 
 					#non-NTA table and graph
 					"bowtie1_genome_1mm_miRNA_overlap_position", 
