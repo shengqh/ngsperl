@@ -102,11 +102,12 @@ sub perform_phased {
 
       my $tmpFile = "${cursample}.tmp";
 
-      open( OUT, ">$pbsFile" ) or die $!;
+    my $cluster = get_cluster( $config, $section );
+    my $log_desc = $cluster->get_log_desc($log);
 
-      print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
+    open( OUT, ">$pbsFile" ) or die $!;
+    print OUT "$pbsDesc
+$log_desc
 
 $path_file
 

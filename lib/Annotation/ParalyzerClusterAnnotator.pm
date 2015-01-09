@@ -17,7 +17,7 @@ our @ISA = qw(CQS::UniqueTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "CQS::ParalyzerClusterAnnotator";
+  $self->{_name}   = "CQS::ParalyzerClusterAnnotator";
   $self->{_suffix} = "_an";
   bless $self, $class;
   return $self;
@@ -28,17 +28,20 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $cqsFile   = get_cqstools( $config, $section, 1 );
-  my $corFiles   = $config->{$section}{coordinate_files} or die "define coordinate_files (array) in section $section first!";
+  my $cqsFile = get_cqstools( $config, $section, 1 );
+  my $corFiles = $config->{$section}{coordinate_files} or die "define coordinate_files (array) in section $section first!";
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $self->pbsfile( $pbsDir, $task_name );
+  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
   my $log = $self->logfile( $logDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH "$pbsDesc
-#PBS -o $log
-#PBS -j oe
+
+  my $cluster = get_cluster( $config, $section );
+  my $log_desc = $cluster->get_log_desc($log);
+
+  open( OUT, ">$pbsFile" ) or die $!;
+  print OUT "$pbsDesc
+$log_desc
 
 $path_file
 cd $resultDir
@@ -46,18 +49,18 @@ cd $resultDir
 ";
 
   for my $sampleName ( sort keys %rawFiles ) {
-    my @bamFiles  = @{ $rawFiles{$sampleName} };
-    my $bamFile   = $bamFiles[0];
-    my $annFile = change_extension($bamFile, ".ann.csv");
-    
-    my $cfiles = merge_string(',', @{$corFiles});
+    my @bamFiles = @{ $rawFiles{$sampleName} };
+    my $bamFile  = $bamFiles[0];
+    my $annFile  = change_extension( $bamFile, ".ann.csv" );
 
-    print SH "mono-sgen $cqsFile paralyzer_annotation $option -i $bamFile -c $cfiles -o $annFile
+    my $cfiles = merge_string( ',', @{$corFiles} );
+
+    print OUT "mono-sgen $cqsFile paralyzer_annotation $option -i $bamFile -c $cfiles -o $annFile
 ";
   }
-  close(SH);
+  close(OUT);
 
-  print "!!!pbs file $shfile created.\n";
+  print "!!!pbs file $pbsFile created.\n";
 }
 
 sub result {
@@ -74,9 +77,9 @@ sub result {
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my @bamFiles  = @{ $rawFiles{$sampleName} };
-    my $bamFile   = $bamFiles[0];
-    my $annFile = change_extension($bamFile, ".ann.csv");
+    my @bamFiles = @{ $rawFiles{$sampleName} };
+    my $bamFile  = $bamFiles[0];
+    my $annFile  = change_extension( $bamFile, ".ann.csv" );
 
     my @resultFiles = ();
     push( @resultFiles, $annFile );

@@ -84,10 +84,12 @@ rm ${f2}.fifo
 
       print SH "\$MYCMD ./$pbsName \n";
 
+      my $cluster = get_cluster( $config, $section );
+      my $log_desc = $cluster->get_log_desc($log);
+
       open( OUT, ">$pbsFile" ) or die $!;
       print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
+$log_desc
 
 $path_file
 
@@ -184,7 +186,7 @@ rm ${f2}.fifo
       my $pbsName = basename($pbsFile);
       my $log     = $self->logfile( $logDir, $sampleName );
 
-      my $curDir  = create_directory_or_die( $resultDir . "/$sampleName" );
+      my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
       print SH "\$MYCMD ./$pbsName \n";
 

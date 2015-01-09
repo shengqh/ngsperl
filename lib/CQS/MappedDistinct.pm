@@ -35,12 +35,15 @@ sub perform {
   my $firstSuffix  = $config->{$section}{first_suffix}  or die "define ${section}::first_suffix first";
   my $secondSuffix = $config->{$section}{second_suffix} or die "define ${section}::second_suffix first";
 
-  my $shfile = $self->pbsfile( $pbsDir, $task_name );
+  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
   my $log = $self->logfile( $logDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH "$pbsDesc
-#PBS -o $log
-#PBS -j oe
+
+  my $cluster = get_cluster( $config, $section );
+  my $log_desc = $cluster->get_log_desc($log);
+
+  open( OUT, ">$pbsFile" ) or die $!;
+  print OUT "$pbsDesc
+$log_desc
 
 $path_file
 cd $resultDir
@@ -55,18 +58,18 @@ echo CQSMappedDistinct=`date`
     my $firstoutput  = $firstSuffix . $sampleName . ".distinct.count";
     my $secondoutput = $secondSuffix . $sampleName . ".distinct.count";
 
-    print SH "mono-sgen $cqsFile mapped_distinct $option --inputfile1 $firstFile --outputfile1 $firstoutput --inputfile2 $secondFile --outputfile2 $secondoutput
+    print OUT "mono-sgen $cqsFile mapped_distinct $option --inputfile1 $firstFile --outputfile1 $firstoutput --inputfile2 $secondFile --outputfile2 $secondoutput
 
 ";
   }
-  print SH "
+  print OUT "
 echo finished=`date`
 
 exit 0
 ";
-  close(SH);
+  close(OUT);
 
-  print "!!!pbs file $shfile created, you can run this shell file to run all MappedDistinct tasks.\n";
+  print "!!!pbs file $pbsFile created, you can run this shell file to run all MappedDistinct tasks.\n";
 }
 
 sub result {

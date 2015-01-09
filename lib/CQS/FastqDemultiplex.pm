@@ -16,7 +16,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "CQS::FastqDemultiplex";
+  $self->{_name}   = "CQS::FastqDemultiplex";
   $self->{_suffix} = "_dm";
   bless $self, $class;
   return $self;
@@ -42,13 +42,15 @@ sub perform {
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
-    
+
     print SH "\$MYCMD ./$pbsName \n";
+
+    my $cluster = get_cluster( $config, $section );
+    my $log_desc = $cluster->get_log_desc($log);
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
+$log_desc
 
 $path_file
 
@@ -56,7 +58,7 @@ cd $resultDir
 
 ";
     for my $sampleFile (@sampleFiles) {
-print OUT "mono-sgen $cqstools fastq_demultiplex $option -i $sampleFile -m $mapfile -o ${sampleName}_ 
+      print OUT "mono-sgen $cqstools fastq_demultiplex $option -i $sampleFile -m $mapfile -o ${sampleName}_ 
 ";
     }
     print OUT "

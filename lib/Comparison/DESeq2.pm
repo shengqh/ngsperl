@@ -36,10 +36,10 @@ sub perform {
   }
 
   my $groups = get_raw_files( $config, $section, "groups" );
-  
-  my $paired = defined $config->{$section}{"groupids"};
+
+  my $paired   = defined $config->{$section}{"groupids"};
   my $groupIds = {};
-  if ( $paired ) {
+  if ($paired) {
     $groupIds = get_raw_files( $config, $section, "groupids" );
   }
 
@@ -49,8 +49,8 @@ sub perform {
   if ( !-e $rtemplate ) {
     die "File not found : " . $rtemplate;
   }
-  
-  my $showLabelInPCA = get_option($config, $section, "showLabelInPCA", 1);
+
+  my $showLabelInPCA = get_option( $config, $section, "showLabelInPCA", 1 );
 
   my %tpgroups = ();
   for my $groupName ( sort keys %{$groups} ) {
@@ -80,8 +80,8 @@ comparisons=list(";
   my $first = 0;
   for my $comparisonName ( sort keys %{$comparisons} ) {
     $first++;
-    
-    my $gNames = $comparisons->{$comparisonName};
+
+    my $gNames     = $comparisons->{$comparisonName};
     my @groupNames = @{$gNames};
     if ( scalar(@groupNames) != 2 ) {
       die "Comparison of $comparisonName should contains and only contains two groups!";
@@ -89,44 +89,45 @@ comparisons=list(";
 
     my $g1 = $groupNames[0];
     my $g2 = $groupNames[1];
-    my @s1 = @{$groups->{$g1}};
-    my @s2 = @{$groups->{$g2}};
+    my @s1 = @{ $groups->{$g1} };
+    my @s2 = @{ $groups->{$g2} };
 
     my $filename = "${comparisonName}.design";
-    if($first != 1){
-      print RF ","
+    if ( $first != 1 ) {
+      print RF ",";
     }
     print RF "
   \"${comparisonName}\" = c(\"$filename\", \"$g1\", \"$g2\")";
-    
+
     my $cdfile = $resultDir . "/$filename";
     open( CD, ">$cdfile" ) or die "Cannot create $cdfile";
-    if($paired){
-      my @id1 = @{$groupIds->{$g1}};
-      my @id2 = @{$groupIds->{$g2}};
+    if ($paired) {
+      my @id1 = @{ $groupIds->{$g1} };
+      my @id2 = @{ $groupIds->{$g2} };
       print CD "Sample\tPaired\tCondition\n";
-      for my $i (0 .. $#s1){
+      for my $i ( 0 .. $#s1 ) {
         my $sname = $s1[$i];
-        my $id = $id1[$i];
+        my $id    = $id1[$i];
         print CD "${sname}\t${id}\t${g1}\n";
       }
-      for my $i (0 .. $#s2){
+      for my $i ( 0 .. $#s2 ) {
         my $sname = $s2[$i];
-        my $id = $id2[$i];
+        my $id    = $id2[$i];
         print CD "${sname}\t${id}\t${g2}\n";
       }
-    }else{
+    }
+    else {
       print CD "Sample\tCondition\n";
-      for my $i (0 .. $#s1){
+      for my $i ( 0 .. $#s1 ) {
         my $sname = $s1[$i];
         print CD "${sname}\t${g1}\n";
       }
-      for my $i (0 .. $#s2){
+      for my $i ( 0 .. $#s2 ) {
         my $sname = $s2[$i];
         print CD "${sname}\t${g2}\n";
       }
     }
-    close (CD);
+    close(CD);
   }
   print RF "
 ) \n\n";
@@ -147,10 +148,12 @@ comparisons=list(";
   my $pbsName = basename($pbsFile);
   my $log     = $self->logfile( $logDir, $task_name );
 
+  my $cluster = get_cluster( $config, $section );
+  my $log_desc = $cluster->get_log_desc($log);
+
   open( OUT, ">$pbsFile" ) or die $!;
   print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
+$log_desc
 
 $path_file
 

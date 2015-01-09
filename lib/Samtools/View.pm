@@ -42,13 +42,14 @@ sub perform {
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
 
-    open( OUT, ">$pbsFile" ) or die $!;
-
     my $finalFile = "${sampleName}.filtered.bam";
 
+    my $cluster = get_cluster( $config, $section );
+    my $log_desc = $cluster->get_log_desc($log);
+
+    open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
+$log_desc
 
 $path_file
 

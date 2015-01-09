@@ -17,7 +17,7 @@ our @ISA = qw(Alignment::AbstractBowtie);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "Bowtie2";
+  $self->{_name}   = "Bowtie2";
   $self->{_suffix} = "_bt2";
   bless $self, $class;
   return $self;
@@ -58,15 +58,16 @@ sub perform {
     my $pbsFile = $pbsDir . "/$pbsName";
     my $log     = $self->logfile( $logDir, $sampleName );
 
-    my $curDir  = create_directory_or_die( $resultDir . "/$sampleName" );
+    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
     print SH "\$MYCMD ./$pbsName \n";
 
+    my $cluster = get_cluster( $config, $section );
+    my $log_desc = $cluster->get_log_desc($log);
+
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
-
+$log_desc
 $path_file
 
 cd $curDir

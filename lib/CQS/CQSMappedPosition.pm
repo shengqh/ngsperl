@@ -17,7 +17,7 @@ our @ISA = qw(CQS::UniqueTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "CQS::CQSMappedPosition";
+  $self->{_name}   = "CQS::CQSMappedPosition";
   $self->{_suffix} = "_mp";
   bless $self, $class;
   return $self;
@@ -45,8 +45,8 @@ sub perform {
   my $cqsFile = get_cqstools( $config, $section, 1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
-  
-  my $filelist = $pbsDir . "/" . $self->getname($task_name, ".filelist");
+
+  my $filelist = $pbsDir . "/" . $self->getname( $task_name, ".filelist" );
   open( FL, ">$filelist" ) or die "Cannot create $filelist";
   for my $sampleName ( sort keys %rawFiles ) {
     my @bamFiles = @{ $rawFiles{$sampleName} };
@@ -61,10 +61,12 @@ sub perform {
   my $pbsName = basename($pbsFile);
   my $log     = $self->logfile( $logDir, $task_name );
 
+  my $cluster = get_cluster( $config, $section );
+  my $log_desc = $cluster->get_log_desc($log);
+
   open( OUT, ">$pbsFile" ) or die $!;
   print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
+$log_desc
 
 $path_file
 
@@ -86,7 +88,7 @@ sub result {
   my ( $resultFile, $newoption ) = get_result( $task_name, $option );
   $resultFile = $resultDir . "/" . $resultFile;
 
-  my $filelist = $pbsDir . "/" . $self->getname($task_name, ".filelist");
+  my $filelist = $pbsDir . "/" . $self->getname( $task_name, ".filelist" );
 
   my @resultFiles = ();
   push( @resultFiles, $resultFile );

@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "Shrimp2";
+  $self->{_name}   = "Shrimp2";
   $self->{_suffix} = "_srp2";
   bless $self, $class;
   return $self;
@@ -43,8 +43,8 @@ sub perform {
   print SH get_run_command($sh_direct);
 
   for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{$rawFiles{$sampleName}};
-    my $sampleFile =  $sampleFiles[0];
+    my @sampleFiles = @{ $rawFiles{$sampleName} };
+    my $sampleFile  = $sampleFiles[0];
 
     my $shrimpFile = $sampleName . ".shrimp";
     my $samFile    = $sampleName . ".sam";
@@ -58,12 +58,12 @@ sub perform {
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
+    my $cluster = get_cluster( $config, $section );
+    my $log_desc = $cluster->get_log_desc($log);
+
     open( OUT, ">$pbsFile" ) or die $!;
-
     print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
-
+$log_desc
 $path_file
 
 echo shrimp2=`date`

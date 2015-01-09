@@ -12,7 +12,7 @@ use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 
-our @ISA = qw(CQS::Task);
+our @ISA = qw(CQS::UniqueTask);
 
 sub new {
   my ($class) = @_;
@@ -28,18 +28,29 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $summaryfile = $self->taskfile( $pbsDir, $task_name . "_summary" );
-  open( SH, ">$summaryfile" ) or die "Cannot create $summaryfile";
-  print SH "cd $resultDir
+  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
+  my $pbsName = basename($pbsFile);
+  my $log     = $self->logfile( $logDir, $task_name );
+
+  my $cluster = get_cluster($config, $section);
+  my $log_desc = $cluster->get_log_desc($log);
+
+  open( OUT, ">$pbsFile" ) or die $!;
+  print OUT "$pbsDesc
+$log_desc
+
+$path_file
+
+cd $resultDir
 qcimg2pdf.sh -o $task_name
 ";
-  close(SH);
+  close(OUT);
 
   if ( is_linux() ) {
-    chmod 0755, $summaryfile;
+    chmod 0755, $pbsFile;
   }
 
-  print "!!!shell file $summaryfile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
+  print "!!!shell file $pbsFile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
 }
 
 sub result {

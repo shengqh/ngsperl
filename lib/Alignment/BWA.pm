@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "BWA";
+  $self->{_name}   = "BWA";
   $self->{_suffix} = "_bwa";
   bless $self, $class;
   return $self;
@@ -29,9 +29,9 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $selfname = $self->{_name};
-  
+
   $option = $option . " -M";
-  
+
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $addOrReplaceReadGroups_jar = get_param_file( $config->{$section}{addOrReplaceReadGroups_jar}, "addOrReplaceReadGroups_jar", 1 );
 
@@ -44,7 +44,7 @@ sub perform {
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $samFile     = $sampleName . ".sam";
-    my $rgSamFile     = $sampleName . ".rg.sam";
+    my $rgSamFile   = $sampleName . ".rg.sam";
     my $bamFile     = $sampleName . ".bam";
     my $tag         = get_bam_tag($sampleName);
 
@@ -67,19 +67,20 @@ if [ ! -s $samFile ]; then
 fi";
     }
 
-    my $pbsFile = $self->pbsfile($pbsDir, $sampleName);
+    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
 
-    my $curDir  = create_directory_or_die( $resultDir . "/$sampleName" );
+    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
     print SH "\$MYCMD ./$pbsName \n";
 
+    my $cluster = get_cluster( $config, $section );
+    my $log_desc = $cluster->get_log_desc($log);
+
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
-
+$log_desc
 $path_file
 
 cd $curDir

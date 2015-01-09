@@ -17,7 +17,7 @@ our @ISA = qw(CQS::PairTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "Bacteria::RockHopper";
+  $self->{_name}   = "Bacteria::RockHopper";
   $self->{_suffix} = "_rh";
   bless $self, $class;
   return $self;
@@ -84,10 +84,12 @@ sub perform {
 
     my $labels = $groupNames[1] . "," . $groupNames[0];
 
+    my $cluster = get_cluster( $config, $section );
+    my $log_desc = $cluster->get_log_desc($log);
+
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
+$log_desc
 
 if [ -s ${curDir}/summary.txt ];then
   echo job has already been done. if you want to do again, delete ${curDir}/summary.txt and submit job again.

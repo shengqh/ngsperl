@@ -29,12 +29,15 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $rawFiles = get_raw_files( $config, $section );
+
   #print Dumper($rawFiles);
 
   my $groups = get_raw_files( $config, $section, "groups" );
+
   #print Dumper($groups);
 
   my $pairs = get_raw_files( $config, $section, "pairs" );
+
   #print Dumper($pairs);
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
@@ -43,15 +46,15 @@ sub perform {
 
   for my $pairName ( sort keys %{$pairs} ) {
     my ( $ispaired, $gNames ) = get_pair_groups( $pairs, $pairName );
-    my @groupNames = @{$gNames};
-    my $groupControl = $groups->{$groupNames[0]};
-    my $groupSample = $groups->{$groupNames[1]};
-    
-    my $control=$rawFiles->{$groupControl->[0]}[0];
-    my $sample=$rawFiles->{$groupSample->[0]}[0];
+    my @groupNames   = @{$gNames};
+    my $groupControl = $groups->{ $groupNames[0] };
+    my $groupSample  = $groups->{ $groupNames[1] };
+
+    my $control = $rawFiles->{ $groupControl->[0] }[0];
+    my $sample  = $rawFiles->{ $groupSample->[0] }[0];
 
     #print $pairName, ": ", $sample, " vs ", $control, "\n";
-    
+
     my $pbsFile = $self->pbsfile( $pbsDir, $pairName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $pairName );
@@ -60,10 +63,12 @@ sub perform {
 
     my $labels = join( ",", @groupNames );
 
+    my $cluster = get_cluster( $config, $section );
+    my $log_desc = $cluster->get_log_desc($log);
+
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
+$log_desc
 
 $path_file
 
