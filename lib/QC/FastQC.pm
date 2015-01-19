@@ -58,7 +58,7 @@ qcimg2pdf.sh -o $task_name
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command(1);
+  print SH get_run_command($sh_direct);
 
   my $result = $self->result( $config, $section );
   my $cluster = get_cluster($config, $section);
