@@ -267,6 +267,7 @@ my $config = {
       "step3" => [ "cufflinks_cuffdiff", "cuffdiff",  "deseq2" ],
     },
     sh_direct => 1,
+    cluster   => "slurm",
     pbs       => {
       "email"    => $def->{email},
       "nodes"    => "1:ppn=8",
@@ -277,6 +278,7 @@ my $config = {
 };
 
 performConfig($config);
+
 #performTask( $config, "cuffmerge" );
 
 1;

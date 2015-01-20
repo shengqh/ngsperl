@@ -120,14 +120,53 @@ my $config = {
       "mem"      => "10gb"
     },
   },
+  varscan2 => {
+    class           => "VarScan2::Somatic",
+    perform         => 1,
+    target_dir      => "${target_dir}/varscan2",
+    option          => "--min-coverage 10",
+    mpileup_options => "-A -q 20 -Q 20",
+    java_option     => "-Xmx40g",
+    source_ref      => "refine",
+    groups_ref      => "groups",
+    fasta_file      => $fasta_file,
+    somatic_p_value => 0.05,
+    sh_direct       => 1,
+    VarScan2_jar    => "/home/shengq1/local/bin/VarScan.v2.3.5.jar",
+    pbs             => {
+      "email"    => $email,
+      "nodes"    => "1:ppn=1",
+      "walltime" => "72",
+      "mem"      => "40gb"
+    },
+  },
+  annovar_varscan2 => {
+    class      => "Annovar",
+    perform    => 1,
+    target_dir => "${target_dir}/varscan2",
+    source_ref => "varscan2",
+    option     => $annovar_param,
+    annovar_db => $annovar_db,
+    buildver   => "hg19",
+    sh_direct  => 1,
+    isvcf      => 1,
+    pbs        => {
+      "email"    => $email,
+      "nodes"    => "1:ppn=1",
+      "walltime" => "72",
+      "mem"      => "10gb"
+    },
+  },
+
   sequencetask => {
     class      => "CQS::SequenceTask",
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",
     source     => {
-      individual => [ "fastqc", "bwa", "refine" ],
-      pair       => [ "muTect", "annovar_mutect" ],
+      individual => [ "fastqc",   "bwa", "refine" ],
+      pair1      => [ "muTect",   "annovar_mutect" ],
+      pair2      => [ "varscan2", "annovar_varscan2" ],
     },
     sh_direct => 1,
     pbs       => {
@@ -140,6 +179,6 @@ my $config = {
 };
 
 performConfig($config);
-performTask($config, "annovar_mutect");
+performTask( $config, "annovar_mutect" );
 
 1;
