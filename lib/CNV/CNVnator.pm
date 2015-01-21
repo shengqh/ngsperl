@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $binsize        = $config->{$section}{binsize}        or die "define ${section}::binsize first";
   my $chromosome_dir = $config->{$section}{chromosome_dir} or die "define ${section}::chromosome_dir first";
@@ -59,7 +59,6 @@ sub perform {
     my $rootFile = $sampleName . ".root";
     my $callFile = $sampleName . ".call";
 
-    my $cluster = get_cluster( $config, $section );
     my $log_desc = $cluster->get_log_desc($log);
 
     open( OUT, ">$pbsFile" ) or die $!;

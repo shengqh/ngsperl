@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $sort_by_query = get_option_value( $config->{$section}{sort_by_query}, 0 );
 
@@ -60,7 +60,6 @@ sub perform {
 samtools index $finalFile";
     }
 
-    my $cluster = get_cluster( $config, $section );
     my $log_desc = $cluster->get_log_desc($log);
 
     open( OUT, ">$pbsFile" ) or die $!;

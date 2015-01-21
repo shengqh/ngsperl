@@ -38,7 +38,7 @@ sub perform {
 sub performBAM {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $chrLenFile             = $config->{$section}{chrLenFile}             or die "define ${section}::chrLenFile first";
   my $chrFiles               = $config->{$section}{chrFiles}               or die "define ${section}::chrFiles first, it is the path of directory contains chromosome fasta files";
@@ -90,7 +90,6 @@ sub performBAM {
     my $configName = "${groupName}.conf";
     my $configFile = ${curDir} . "/$configName";
 
-    my $cluster = get_cluster( $config, $section );
     my $log_desc = $cluster->get_log_desc($log);
 
     open( OUT, ">$pbsFile" ) or die $!;

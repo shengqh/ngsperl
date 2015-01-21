@@ -41,7 +41,14 @@ sub get_option {
 sub get_cluster {
   my ( $config, $section ) = @_;
 
-  my $cluster_name = get_option_value($config->{$section}{cluster}, "torque");
+  my $cluster_name;
+  if(defined $config->{$section}{cluster}){
+    $cluster_name = get_option_value($config->{$section}{cluster}, "torque");
+  }
+  else{
+    $cluster_name = get_option_value($config->{general}{cluster}, "torque");
+  }
+  
   my $cluster;
   if($cluster_name eq "slurm"){
   	$cluster = instantiate("CQS::ClusterSLURM");
@@ -88,7 +95,7 @@ sub get_parameter {
   	$sh_direct = $cluster->get_submit_command();
   }
 
-  return ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct );
+  return ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster );
 }
 
 #get parameter which indicates a file. If required, not defined or not exists, die. If defined but not exists, die.

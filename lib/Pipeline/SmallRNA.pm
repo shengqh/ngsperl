@@ -24,11 +24,14 @@ sub getConfig {
 
   my $cluster = $def->{cluster};
   if ( !defined $cluster ) {
-    $cluster = "torque";
+    $cluster = "slurm";
   }
 
   my $config = {
-    general        => { "task_name" => $def->{task_name}, },
+    general => {
+      task_name => $def->{task_name},
+      cluster   => $cluster
+    },
     files          => $def->{files},
     fastq_remove_N => {
       class      => "CQS::FastqTrimmer",

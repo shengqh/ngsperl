@@ -25,15 +25,13 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $ispaired = $config->{$section}{ispaired};
   if ( !defined $ispaired ) {
     $ispaired = 0;
   }
 
-  my $cluster = get_cluster($config, $section);
-	
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );

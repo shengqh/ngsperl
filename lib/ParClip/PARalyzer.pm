@@ -25,7 +25,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $genome2bit = get_param_file( $config->{$section}{genome2bit}, "genome2bit", 1 );
   my $mirna_db = get_param_file( $config->{$section}{mirna_db}, "mirna_db", 1 );
@@ -76,7 +76,6 @@ OUTPUT_MIRNA_TARGETS_FILE=${sampleName}.target.csv
 
     print SH "\$MYCMD ./$pbsName \n";
 
-    my $cluster = get_cluster( $config, $section );
     my $log_desc = $cluster->get_log_desc($log);
 
     open( OUT, ">$pbsFile" ) or die $!;

@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $shrimp2_index = $config->{$section}{shrimp2_index} or die "define ${section}::shrimp2_index first";
   die "shrimp2_index ${shrimp2_index}.genome not exist" if ( !-e "${shrimp2_index}.genome" );
@@ -58,7 +58,6 @@ sub perform {
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
-    my $cluster = get_cluster( $config, $section );
     my $log_desc = $cluster->get_log_desc($log);
 
     open( OUT, ">$pbsFile" ) or die $!;

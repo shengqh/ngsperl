@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $bedfile = $config->{$section}{bedfile};
 
@@ -118,7 +118,6 @@ BAMFiles <- c(
   my $pbsName = basename($pbsFile);
   my $log     = $self->logfile( $logDir, $task_name );
 
-  my $cluster = get_cluster( $config, $section );
   my $log_desc = $cluster->get_log_desc($log);
 
   open( OUT, ">$pbsFile" ) or die $!;

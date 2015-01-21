@@ -25,7 +25,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $cqstools = get_cqstools( $config, $section, 1 );
   my $extension = get_option( $config, $section, "extension" );
@@ -42,13 +42,14 @@ sub perform {
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
+
+    my $log_desc = $cluster->get_log_desc($log);
     
     print SH "\$MYCMD ./$pbsName \n";
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
+$log_desc
 
 $path_file
 

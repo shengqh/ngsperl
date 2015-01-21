@@ -45,7 +45,7 @@ sub parsePairedSamples {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -61,7 +61,6 @@ qcimg2pdf.sh -o $task_name
   print SH get_run_command($sh_direct);
 
   my $result = $self->result( $config, $section );
-  my $cluster = get_cluster($config, $section);
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @originalFiles = @{ $rawFiles{$sampleName} };

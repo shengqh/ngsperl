@@ -37,7 +37,7 @@ sub containPosition {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $isPhased = get_option( $config, $section, "isPhased", 0 );
 
@@ -52,7 +52,7 @@ sub perform {
 sub perform_phased {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
@@ -102,11 +102,10 @@ sub perform_phased {
 
       my $tmpFile = "${cursample}.tmp";
 
-    my $cluster = get_cluster( $config, $section );
-    my $log_desc = $cluster->get_log_desc($log);
+      my $log_desc = $cluster->get_log_desc($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
+      open( OUT, ">$pbsFile" ) or die $!;
+      print OUT "$pbsDesc
 $log_desc
 
 $path_file
@@ -146,7 +145,7 @@ echo finished=`date`
     }
 
     close(INFILE);
-    
+
     print MSH "  mv $gen_tmp_file $gen_file \n";
     print MSH "fi \n\n";
   }
@@ -165,7 +164,7 @@ echo finished=`date`
 sub perform_direct {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
@@ -184,9 +183,9 @@ sub perform_direct {
     my $sample      = $sampleFiles[0];
 
     my @mFiles = @{ $mapFiles{$sampleName} };
-    my $map      = $mFiles[0];
+    my $map    = $mFiles[0];
 
-    my @hFiles = @{ $haploFiles{$sampleName} };
+    my @hFiles     = @{ $haploFiles{$sampleName} };
     my $haploFile  = $hFiles[0];
     my $legendFile = change_extension( $haploFile, ".legend" );
 
@@ -211,13 +210,14 @@ sub perform_direct {
       my $pbsName = basename($pbsFile);
       my $log     = $self->logfile( $logDir, $cursample );
 
+      my $log_desc = $cluster->get_log_desc($log);
+
       my $tmpFile = "${cursample}.tmp";
 
       open( OUT, ">$pbsFile" ) or die $!;
 
       print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
+$log_desc
 
 $path_file
 

@@ -27,7 +27,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $muTect_jar = get_param_file( $config->{$section}{muTect_jar},  "muTect_jar",  1 );
   my $faFile     = get_param_file( $config->{$section}{fasta_file},  "fasta_file",  1 );
@@ -64,7 +64,6 @@ sub perform {
     my $vcf     = "${groupName}.somatic.vcf";
     my $passvcf = "${groupName}.somatic.pass.vcf";
 
-    my $cluster = get_cluster( $config, $section );
     my $log_desc = $cluster->get_log_desc($log);
 
     open( OUT, ">$pbsFile" ) or die $!;

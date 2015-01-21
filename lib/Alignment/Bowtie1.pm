@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $bowtie1_index = $config->{$section}{bowtie1_index} or die "define ${section}::bowtie1_index first";
   my $samformat = get_option( $config, $section, "samformat", 1 );
@@ -84,7 +84,6 @@ rm ${f2}.fifo
 
       print SH "\$MYCMD ./$pbsName \n";
 
-      my $cluster = get_cluster( $config, $section );
       my $log_desc = $cluster->get_log_desc($log);
 
       open( OUT, ">$pbsFile" ) or die $!;
