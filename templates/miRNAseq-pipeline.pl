@@ -44,6 +44,7 @@ my $config = {
   general => {
     task_name => $task_name,
     path_file => "/home/shengq1/local/bin/path.txt",
+    cluster   => "slurm",               #"slurm" or "torque"
   },
   cutadapt => {
     class      => "Cutadapt",

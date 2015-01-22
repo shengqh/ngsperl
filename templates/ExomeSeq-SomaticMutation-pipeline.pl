@@ -23,7 +23,10 @@ my $cqstools = "/home/shengq1/cqstools/CQS.Tools.exe";
 my $email = "quanhu.sheng\@vanderbilt.edu";
 
 my $config = {
-  general    => { task_name => "${vangard}" },
+  general => {
+    task_name => "${vangard}",
+    cluster   => "slurm",        #"slurm" or "torque"
+  },
   fastqfiles => {
     "2055-PM-00" => [ "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-0_1.fastq.gz", "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-0_2.fastq.gz" ],
     "2055-PM-01" => [ "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-1_1.fastq.gz", "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-1_2.fastq.gz" ],

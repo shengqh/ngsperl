@@ -24,8 +24,11 @@ my $email    = "quanhu.sheng\@vanderbilt.edu";
 my $task     = "pipeline";
 
 my $config = {
-  general => { task_name => $task },
-  fastqc  => {
+  general => {
+    task_name => $task,
+    cluster   => "slurm",    #"slurm" or "torque"
+  },
+  fastqc => {
     class      => "FastQC",
     perform    => 1,
     target_dir => "${target_dir}/fastqc",

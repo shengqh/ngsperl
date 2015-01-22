@@ -8,6 +8,7 @@ use CQS::SystemUtils;
 use CQS::ClassFactory;
 
 my $target_dir = create_directory_or_die("/scratch/cqs/shengq1/pipelines/Bacteria-pipeline");
+
 #my $target_dir = "e:/temp";
 
 my $email          = "quanhu.sheng\@vanderbilt.edu";
@@ -42,8 +43,11 @@ my $pairs = {
 };
 
 my $config = {
-  general => { task_name => "bacteria-pipeline" },
-  fastqc  => {
+  general => {
+    task_name => "bacteria-pipeline",
+    cluster   => "slurm",               #"slurm" or "torque"
+  },
+  fastqc => {
     class      => "QC::FastQC",
     perform    => 1,
     target_dir => "${target_dir}/fastqc",
@@ -63,7 +67,7 @@ my $config = {
     target_dir => "${target_dir}/trimmer",
     option     => "-n",
     extension  => "_trim.fastq",
-    source_ref     => $fastqfiles,
+    source_ref => $fastqfiles,
     cqstools   => $cqstools,
     sh_direct  => 1,
     pbs        => {

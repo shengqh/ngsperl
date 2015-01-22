@@ -47,8 +47,11 @@ my $def = {
 };
 
 my $config = {
-  general => { task_name => $def->{task} },
-  fastqc  => {
+  general => {
+    task_name => $def->{task},
+    cluster   => "slurm",        #"slurm" or "torque"
+  },
+  fastqc => {
     class      => "QC::FastQC",
     perform    => 1,
     target_dir => "$def->{target_dir}/fastqc",
