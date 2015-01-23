@@ -43,17 +43,17 @@ sub get_cluster {
 
   my $cluster_name;
   if(defined $config->{$section}{cluster}){
-    $cluster_name = get_option_value($config->{$section}{cluster}, "torque");
+    $cluster_name = get_option_value($config->{$section}{cluster}, "slurm");
   }
   else{
-    $cluster_name = get_option_value($config->{general}{cluster}, "torque");
+    $cluster_name = get_option_value($config->{general}{cluster}, "slurm");
   }
   
   my $cluster;
-  if($cluster_name eq "slurm"){
-  	$cluster = instantiate("CQS::ClusterSLURM");
-  }else{
+  if($cluster_name eq "torque"){
   	$cluster = instantiate("CQS::ClusterTorque");
+  }else{
+  	$cluster = instantiate("CQS::ClusterSLURM");
   }
   
   return ($cluster);
