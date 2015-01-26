@@ -91,20 +91,23 @@ if [ -s $bamFile ]; then
   exit 0
 fi
 
-if [ ! -s $samFile ]; then
+if [ ! -s $rgSamFile ]; then
   $bwa_aln_command
+
+  if [ -s $samFile ]; then
+    java -jar $addOrReplaceReadGroups_jar I=$samFile O=$rgSamFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA
+    if [ -s $rgSamFile ]; then
+      rm $samFile
+    fi
+  fi
 fi
 
-if [ -s $samFile ]; then
-  java -jar $addOrReplaceReadGroups_jar I=$samFile O=$rgSamFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA
-  if [ -s $rgSamFile ]; then
-    rm $samFile
-    samtools view -S -b $rgSamFile | samtools sort - $sampleName
-    if [ -s $bamFile ]; then
-      samtools index $bamFile 
-      samtools flagstat $bamFile > ${bamFile}.stat 
-      rm $rgSamFile
-    fi
+if [ -s $rgSamFile ]; then
+  samtools view -S -b $rgSamFile | samtools sort - $sampleName
+  if [ -s $bamFile ]; then
+    samtools index $bamFile 
+    samtools flagstat $bamFile > ${bamFile}.stat 
+    rm $rgSamFile
   fi
 fi
   
