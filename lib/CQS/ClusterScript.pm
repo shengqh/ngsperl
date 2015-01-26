@@ -50,7 +50,7 @@ sub get_cluster_thread {
     }
   }
   
-  return $ntasks
+  return ($ntasks);
 }
 
 sub get_cluster_desc {
