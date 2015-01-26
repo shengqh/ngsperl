@@ -117,15 +117,18 @@ if [ -s $samFile ]; then
 ";
         if ($sortbam) {
           print OUT "  samtools view -S -b $samFile | samtools sort - $sampleName
-  samtools index $bamFile 
-  samtools flagstat $bamFile > ${bamFile}.stat
+  if[ -s $bamFile ]; then
+    samtools index $bamFile 
+    samtools flagstat $bamFile > ${bamFile}.stat
 ";
         }
         else {
           print OUT "samtools view -S -b $samFile > ${sampleName}.bam
+  if[ -s $bamFile ]; then
 ";
         }
-        print OUT "  rm $samFile
+        print OUT "    rm $samFile
+  fi
 fi
 ";
       }

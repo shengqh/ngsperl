@@ -98,10 +98,13 @@ fi
 if [ -s $samFile ]; then
   java -jar $addOrReplaceReadGroups_jar I=$samFile O=$rgSamFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA
   if [ -s $rgSamFile ]; then
+    rm $samFile
     samtools view -S -b $rgSamFile | samtools sort - $sampleName
-    samtools index $bamFile 
-    samtools flagstat $bamFile > ${bamFile}.stat 
-    rm $samFile $rgSamFile
+    if [ -s $bamFile ]; then
+      samtools index $bamFile 
+      samtools flagstat $bamFile > ${bamFile}.stat 
+      rm $rgSamFile
+    fi
   fi
 fi
   
