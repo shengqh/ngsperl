@@ -95,7 +95,9 @@ sub get_parameter {
   	$sh_direct = $cluster->get_submit_command();
   }
 
-  return ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster );
+  my $thread = $cluster->get_cluster_thread($refPbs);
+  
+  return ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread );
 }
 
 #get parameter which indicates a file. If required, not defined or not exists, die. If defined but not exists, die.
