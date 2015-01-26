@@ -17,6 +17,42 @@ sub name {
   return $self->{_name};
 }
 
+sub get_cluster_thread {
+  my $nodes    = "1";
+  my $ntasks   = "";
+
+  my ( $self, $pbsParamHashRef ) = @_;
+  if ( defined $pbsParamHashRef ) {
+    my %hash = %{$pbsParamHashRef};
+    foreach ( keys %hash ) {
+      if ( $_ eq "nodes" ) {
+        $nodes = $hash{$_};
+      }
+      elsif ( $_ eq "ntasks" ) {
+        $ntasks = $hash{$_};
+      }
+    }
+  }
+
+  if ( $ntasks eq "" ) {
+    my $pos = index( $nodes, ":" );
+    if ( $pos >= 0 ) {
+      $ntasks = substr( $nodes, $pos + 1 );
+      $nodes = substr( $nodes, 0, $pos );
+      $pos = index( $ntasks, "ppn=" );
+      if ( $pos >= 0 ) {
+        $ntasks = substr( $ntasks, $pos + 4 );
+      }
+    }
+    else {
+      $nodes  = "1";
+      $ntasks = $nodes;
+    }
+  }
+  
+  return $ntasks
+}
+
 sub get_cluster_desc {
 }
 

@@ -22,7 +22,7 @@ sub get_cluster_desc {
   my $nodes    = "1";
   my $ntasks   = "";
 
-  my ($self, $pbsParamHashRef) = @_;
+  my ( $self, $pbsParamHashRef ) = @_;
   if ( defined $pbsParamHashRef ) {
     my %hash = %{$pbsParamHashRef};
     foreach ( keys %hash ) {
@@ -43,28 +43,29 @@ sub get_cluster_desc {
       }
     }
   }
-  
+
   die "Assign email address in hash (\"email\" => \"youremail\") and pass hash as parameter to get_cluster_desc" if ( $email eq "" );
 
   if ( $ntasks eq "" ) {
-  	my $pos = index($nodes, ":");
-  	if($pos >= 0){
-  	  $ntasks = substr($nodes, $pos+1);
-  	  $nodes = substr($nodes, 0, $pos);
-  	  $pos = index($ntasks, "ppn=");
-  	  if($pos >= 0){
-  	  	$ntasks = substr($ntasks, $pos+4);
-  	  }
-  	}else{
-	  $nodes = "1";
-	  $ntasks = $nodes;
-  	}
+    my $pos = index( $nodes, ":" );
+    if ( $pos >= 0 ) {
+      $ntasks = substr( $nodes, $pos + 1 );
+      $nodes = substr( $nodes, 0, $pos );
+      $pos = index( $ntasks, "ppn=" );
+      if ( $pos >= 0 ) {
+        $ntasks = substr( $ntasks, $pos + 4 );
+      }
+    }
+    else {
+      $nodes  = "1";
+      $ntasks = $nodes;
+    }
   }
-  
-  if(index($walltime, ':') == -1){
-  	$walltime = $walltime . ":00:00";
+
+  if ( index( $walltime, ':' ) == -1 ) {
+    $walltime = $walltime . ":00:00";
   }
-  
+
   $mem =~ s/mb/M/g;
   $mem =~ s/gb/G/g;
 
@@ -81,14 +82,13 @@ SBATCH
   return ($pbsDesc);
 }
 
-
 sub get_log_desc {
-  my ($self, $pbsfile) = @_;
-  
+  my ( $self, $pbsfile ) = @_;
+
   my $result = <<SBATCH;
 #SBATCH -o $pbsfile
 SBATCH
-  
+
   return ($result);
 }
 
