@@ -53,18 +53,16 @@ sub perform {
     my $bwa_aln_command;
     if ( scalar(@sampleFiles) == 2 ) {
       my $sampleFile2 = $sampleFiles[1];
-      $bwa_aln_command = "
-if [ ! -s $samFile ]; then
-  echo bwa_mem=`date` 
-  bwa mem $option $faFile $sampleFile1 $sampleFile2 > $samFile
-fi";
+      $bwa_aln_command = "  if [ ! -s $samFile ]; then
+    echo bwa_mem=`date` 
+    bwa mem $option $faFile $sampleFile1 $sampleFile2 > $samFile
+  fi";
     }
     else {
-      $bwa_aln_command = "
-if [ ! -s $samFile ]; then
-  echo bwa_mem=`date` 
-  bwa mem $option $faFile $sampleFile1 > $samFile
-fi";
+      $bwa_aln_command = "  if [ ! -s $samFile ]; then
+    echo bwa_mem=`date` 
+    bwa mem $option $faFile $sampleFile1 > $samFile
+  fi";
     }
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
