@@ -31,6 +31,12 @@ sub perform {
   my $selfname = $self->{_name};
 
   $option = $option . " -M";
+  
+  if(! $option =~ "-t"){
+    if($thread > 1){
+      $option = $option . " -t " . $thread;
+    }
+  }
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $addOrReplaceReadGroups_jar = get_param_file( $config->{$section}{addOrReplaceReadGroups_jar}, "addOrReplaceReadGroups_jar", 1 );
