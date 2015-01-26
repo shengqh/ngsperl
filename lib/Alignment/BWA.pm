@@ -40,6 +40,8 @@ sub perform {
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
+  
+  my $thread = $cluster->get_cluster_thread($config, $section);
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
@@ -101,7 +103,7 @@ if [ ! -s $rgSamFile ]; then
 fi
 
 if [ -s $rgSamFile ]; then
-  samtools view -S -b $rgSamFile | samtools sort - $sampleName
+  samtools view -S -b $rgSamFile | samtools sort -@ $thread - $sampleName
   if [ -s $bamFile ]; then
     samtools index $bamFile 
     samtools flagstat $bamFile > ${bamFile}.stat 
