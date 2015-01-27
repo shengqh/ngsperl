@@ -35,7 +35,7 @@ sub perform {
   my $dbsnpfile  = get_param_file( $config->{$section}{dbsnp_file},  "dbsnp_file",  1 );
   
   my $java = get_java($config, $section);
-  cat("java=", $java, "\n");
+  print "java=" . $java . "\n";
 
   my $java_option = get_option( $config, $section, "java_option", "" );
 
