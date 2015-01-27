@@ -14,7 +14,8 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS =
-  ( 'all' => [qw(get_option get_cluster get_parameter get_param_file parse_param_file get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools)] );
+  ( 'all' => [qw(get_option get_java get_cluster get_parameter get_param_file parse_param_file get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools)]
+  );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -42,21 +43,40 @@ sub get_cluster {
   my ( $config, $section ) = @_;
 
   my $cluster_name;
-  if(defined $config->{$section}{cluster}){
-    $cluster_name = get_option_value($config->{$section}{cluster}, "slurm");
+  if ( defined $config->{$section}{cluster} ) {
+    $cluster_name = get_option_value( $config->{$section}{cluster}, "slurm" );
   }
-  else{
-    $cluster_name = get_option_value($config->{general}{cluster}, "slurm");
+  else {
+    $cluster_name = get_option_value( $config->{general}{cluster}, "slurm" );
   }
-  
+
   my $cluster;
-  if($cluster_name eq "torque"){
-  	$cluster = instantiate("CQS::ClusterTorque");
-  }else{
-  	$cluster = instantiate("CQS::ClusterSLURM");
+  if ( $cluster_name eq "torque" ) {
+    $cluster = instantiate("CQS::ClusterTorque");
   }
-  
+  else {
+    $cluster = instantiate("CQS::ClusterSLURM");
+  }
+
   return ($cluster);
+}
+
+sub get_value_in_section_or_general {
+  my ( $config, $section, $name, $defaultvalue ) = @_;
+
+  my $result;
+  if ( defined $config->{$section}{$name} ) {
+    $result = get_option_value( $config->{$section}{$name}, $defaultvalue );
+  }
+  else {
+    $result = get_option_value( $config->{general}{$name}, $defaultvalue );
+  }
+
+  return ($result);
+}
+sub get_java {
+  my ( $config, $section ) = @_;
+  return ( get_value_in_section_or_general( $config, $section, "java", "java" ) );
 }
 
 sub get_parameter {
@@ -65,9 +85,9 @@ sub get_parameter {
   die "no section $section found!" if !defined $config->{$section};
 
   my $task_name = get_option( $config, "general", "task_name" );
-  
+
   my $cluster = get_cluster(@_);
-  
+
   my $path_file = get_param_file( $config->{$section}{path_file}, "path_file", 0 );
   if ( !defined $path_file ) {
     $path_file = get_param_file( $config->{general}{path_file}, "path_file", 0 );
@@ -88,15 +108,16 @@ sub get_parameter {
 
   my $option    = get_option( $config, $section, "option",    "" );
   my $sh_direct = get_option( $config, $section, "sh_direct", 0 );
-  
-  if($sh_direct){
-  	$sh_direct = "bash";
-  }else{
-  	$sh_direct = $cluster->get_submit_command();
+
+  if ($sh_direct) {
+    $sh_direct = "bash";
+  }
+  else {
+    $sh_direct = $cluster->get_submit_command();
   }
 
   my $thread = $cluster->get_cluster_thread($refPbs);
-  
+
   return ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread );
 }
 
@@ -142,7 +163,7 @@ sub parse_param_file {
   my ( $config, $section, $key, $required ) = @_;
 
   die "section $section was not defined!" if !defined $config->{$section};
-  die "parameter key must be defined!"    if !defined $key;
+  die "parameter key must be defined!" if !defined $key;
 
   if ( defined $config->{$section}{$key} ) {
     return $config->{$section}{$key};

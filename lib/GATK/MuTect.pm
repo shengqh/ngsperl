@@ -33,6 +33,8 @@ sub perform {
   my $faFile     = get_param_file( $config->{$section}{fasta_file},  "fasta_file",  1 );
   my $cosmicfile = get_param_file( $config->{$section}{cosmic_file}, "cosmic_file", 1 );
   my $dbsnpfile  = get_param_file( $config->{$section}{dbsnp_file},  "dbsnp_file",  1 );
+  
+  my $java = get_java($config, $section);
 
   my $java_option = get_option( $config, $section, "java_option", "" );
 
@@ -85,7 +87,7 @@ if [ ! -s ${tumor}.bai ]; then
 fi
 
 if [ ! -s $vcf ]; then
-  java $java_option -jar $muTect_jar $option --analysis_type MuTect --reference_sequence $faFile --cosmic $cosmicfile --dbsnp $dbsnpfile --input_file:normal $normal --input_file:tumor $tumor -o $out --vcf $vcf --enable_extended_output
+  $java $java_option -jar $muTect_jar $option --analysis_type MuTect --reference_sequence $faFile --cosmic $cosmicfile --dbsnp $dbsnpfile --input_file:normal $normal --input_file:tumor $tumor -o $out --vcf $vcf --enable_extended_output
 fi 
 
 if [[ -s $vcf && ! -s $passvcf ]]; then
