@@ -99,7 +99,7 @@ fi
 
 if [[ -s $realignedFile && ! -s $grpFile ]]; then
   echo BaseRecalibrator=`date` 
-  java $option -jar $gatk_jar -T BaseRecalibrator -rf BadCigar -R $faFile -I $realignedFile $knownsitesvcf -o $grpFile -plots ${grpFile}.pdf
+  java $option -jar $gatk_jar -T BaseRecalibrator -rf BadCigar -R $faFile -I $realignedFile $knownsitesvcf -o $grpFile
 fi
 
 if [[ -s $grpFile && ! -s $recalFile ]]; then
