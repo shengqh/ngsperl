@@ -3,6 +3,7 @@ package Comparison::DESeq2;
 
 use strict;
 use warnings;
+use Data::Dumper;
 use File::Basename;
 use CQS::PBS;
 use CQS::ConfigUtils;
@@ -36,12 +37,6 @@ sub perform {
   }
 
   my $groups = get_raw_files( $config, $section, "groups" );
-
-  my $paired   = defined $config->{$section}{"groupids"};
-  my $groupIds = {};
-  if ($paired) {
-    $groupIds = get_raw_files( $config, $section, "groupids" );
-  }
 
   my $countfile = parse_param_file( $config, $section, "countfile", 1 );
 
@@ -81,12 +76,28 @@ comparisons=list(";
   for my $comparisonName ( sort keys %{$comparisons} ) {
     $first++;
 
-    my $gNames     = $comparisons->{$comparisonName};
-    my @groupNames = @{$gNames};
+    my $gNames = $comparisons->{$comparisonName};
+    my @groupNames;
+    
+    my $paired = 0;
+    my $groupIds = {};
+    if ( ref $gNames eq ref {} ) {
+      @groupNames = @{$gNames->{groups}};
+      $paired = defined $gNames->{paired};
+      if($paired){
+        $groupIds = $gNames->{paired};
+      }
+    }
+    else {
+      @groupNames = @{$gNames};
+    }
+    
+    print(Dumper(@groupNames));
+    
     if ( scalar(@groupNames) != 2 ) {
       die "Comparison of $comparisonName should contains and only contains two groups!";
     }
-
+    
     my $g1 = $groupNames[0];
     my $g2 = $groupNames[1];
     my @s1 = @{ $groups->{$g1} };
@@ -102,17 +113,15 @@ comparisons=list(";
     my $cdfile = $resultDir . "/$filename";
     open( CD, ">$cdfile" ) or die "Cannot create $cdfile";
     if ($paired) {
-      my @id1 = @{ $groupIds->{$g1} };
-      my @id2 = @{ $groupIds->{$g2} };
       print CD "Sample\tPaired\tCondition\n";
       for my $i ( 0 .. $#s1 ) {
         my $sname = $s1[$i];
-        my $id    = $id1[$i];
+        my $id    = $groupIds->[$i];
         print CD "${sname}\t${id}\t${g1}\n";
       }
       for my $i ( 0 .. $#s2 ) {
         my $sname = $s2[$i];
-        my $id    = $id2[$i];
+        my $id    = $groupIds->[$i];
         print CD "${sname}\t${id}\t${g2}\n";
       }
     }

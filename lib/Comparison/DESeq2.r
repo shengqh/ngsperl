@@ -60,28 +60,30 @@ for(comparisonName in comparisonNames){
   }
   comparisonData<-comparisonData[,as.character(designData$Sample)]
   
-#   if(ispaired){
-#     pairedNames = unique(designData$Paired)
-#     
-#     spcorr<-unlist(lapply(c(1:length(g1)), function(x){
-#               cor(c1[,x], c2[,x],method="spearman")
-#             }))
-#             
-# 
-#     sptable<-data.frame(Name=pairsamplenames, Spcorr=spcorr)
-#     write.csv(sptable, file=paste0(pairname, "_Spearman.csv"), row.names=FALSE)
-#     
-#     lapply(c(1:length(g1)), function(x){
-#       log2c1<-log2(c1[,x]+1)
-#       log2c2<-log2(c2[,x]+1)
-#       png(paste0(pairname, "_Spearman_", pairsamplenames[x], ".png"), width=2000, height=2000, res=300)
-#       plot(log2c1, log2c2, xlab=paste0(g1[x], " [log2(Count + 1)]"), ylab=paste0(g2[x], " [log2(Count + 1)]"))
-#       text(3,15,paste0("SpearmanCorr=", sprintf("%0.3f", cor(c1[,x], c2[,x],method="spearman")) ))
-#       dev.off()
-#     })
-#     
-#     pairedspearman[[pairname]]<-spcorr
-#   }
+  if(ispaired){
+    pairedSamples = unique(designData$Paired)
+    
+    spcorr<-unlist(lapply(c(1:length(pairedSamples)), function(x){
+      samples<-designData$Sample[designData$Paired==pairedSamples[x]]
+              cor(comparisonData[,samples[1]],comparisonData[,samples[2]],method="spearman")
+            }))
+            
+
+    sptable<-data.frame(Name=pairedSamples, Spcorr=spcorr)
+    write.csv(sptable, file=paste0(comparisonName, "_Spearman.csv"), row.names=FALSE)
+    
+    lapply(c(1:length(pairedSamples)), function(x){
+      samples<-designData$Sample[designData$Paired==pairedSamples[x]]
+      log2c1<-log2(comparisonData[,samples[1]]+1)
+      log2c2<-log2(comparisonData[,samples[2]]+1)
+      png(paste0(comparisonName, "_Spearman_", pairedSamples[x], ".png"), width=2000, height=2000, res=300)
+      plot(log2c1, log2c2, xlab=paste0(samples[1], " [log2(Count + 1)]"), ylab=paste0(samples[2], " [log2(Count + 1)]"))
+      text(3,15,paste0("SpearmanCorr=", sprintf("%0.3f", spcorr[x])))
+      dev.off()
+    })
+    
+    pairedspearman[[comparisonName]]<-spcorr
+  }
   
   notEmptyData<-apply(comparisonData, 1, max) > 0
   comparisonData<-comparisonData[notEmptyData,]
@@ -199,10 +201,10 @@ for(comparisonName in comparisonNames){
       dev.off()
     }
 }
-# 
-# if(length(pairedspearman) > 0){
-#   #draw pca graph
-#   png(filename=paste0("spearman.png"), width=1000 * length(pairedspearman), height=2000, res=300)
-#   boxplot(pairedspearman)
-#   dev.off()
-# }
+
+if(length(pairedspearman) > 0){
+  #draw pca graph
+  png(filename=paste0("spearman.png"), width=1000 * length(pairedspearman), height=2000, res=300)
+  boxplot(pairedspearman)
+  dev.off()
+}
