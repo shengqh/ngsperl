@@ -137,8 +137,8 @@ sub result {
     my $curDir      = $resultDir . "/$groupName";
     my $snpvcf      = "${groupName}.snp.vcf";
     my $indelvcf    = "${groupName}.indel.vcf";
-    push( @resultFiles, "$curDir/${snpvcf}.Somatic.hc" );
-    push( @resultFiles, "$curDir/${indelvcf}.Somatic.hc" );
+    push( @resultFiles, "$curDir/${snpvcf}.Somatic.hc.vcf" );
+    push( @resultFiles, "$curDir/${indelvcf}.Somatic.hc.vcf" );
     $result->{$groupName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
