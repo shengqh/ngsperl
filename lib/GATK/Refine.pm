@@ -26,13 +26,12 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my @vcfFiles = @{ $config->{$section}{vcf_files} } or die "Define vcf_files in section $section first.";
   my $gatk_jar           = get_param_file( $config->{$section}{gatk_jar},           "gatk_jar",           1 );
   my $markDuplicates_jar = get_param_file( $config->{$section}{markDuplicates_jar}, "markDuplicates_jar", 1 );
-  my $thread_count       = $config->{$section}{thread_count};
 
   my $knownvcf      = "";
   my $knownsitesvcf = "";
@@ -88,7 +87,7 @@ fi
 
 if [ ! -s $intervalFile ]; then
   echo RealignerTargetCreator=`date` 
-  java $option -jar $gatk_jar -T RealignerTargetCreator -I $sampleFile -R $faFile $knownvcf -nt $thread_count -o $intervalFile
+  java $option -jar $gatk_jar -T RealignerTargetCreator -I $sampleFile -R $faFile $knownvcf -nt $thread -o $intervalFile
 fi
 
 if [[ -s $intervalFile && ! -s $realignedFile ]]; then
@@ -114,7 +113,7 @@ fi
 
 if [[ -s $rmdupFile && ! -s $sortedFile ]]; then
   echo BamSort=`date` 
-  samtools sort $rmdupFile $sortedPrefix 
+  samtools sort -@ $thread -m 4G $rmdupFile $sortedPrefix 
 fi
 
 if [[ -s $sortedFile && ! -s ${sortedFile}.bai ]]; then
