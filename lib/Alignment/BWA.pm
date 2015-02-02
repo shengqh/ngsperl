@@ -51,6 +51,7 @@ sub perform {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $samFile     = $sampleName . ".sam";
     my $rgSamFile   = $sampleName . ".rg.sam";
+    my $rgBamFile   = $sampleName . ".rg.bam";
     my $bamFile     = $sampleName . ".bam";
     my $tag         = get_bam_tag($sampleName);
 
@@ -59,16 +60,10 @@ sub perform {
     my $bwa_aln_command;
     if ( scalar(@sampleFiles) == 2 ) {
       my $sampleFile2 = $sampleFiles[1];
-      $bwa_aln_command = "if [ ! -s $samFile ]; then
-    echo bwa_mem=`date` 
-    bwa mem $option $faFile $sampleFile1 $sampleFile2 > $samFile
-  fi";
+      $bwa_aln_command = "bwa mem $option $faFile $sampleFile1 $sampleFile2 > $samFile";
     }
     else {
-      $bwa_aln_command = "if [ ! -s $samFile ]; then
-    echo bwa_mem=`date` 
-    bwa mem $option $faFile $sampleFile1 > $samFile
-  fi";
+      $bwa_aln_command = "bwa mem $option $faFile $sampleFile1 > $samFile";
     }
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
@@ -95,23 +90,35 @@ if [ -s $bamFile ]; then
   exit 0
 fi
 
-if [ ! -s $rgSamFile ]; then
-  $bwa_aln_command
+if [ ! -s $rgBamFile ]; then
+  if [ ! -s $rgSamFile ]; then
+    if [ ! -s $samFile ]; then
+      echo bwa_mem=`date`
+      $bwa_aln_command
+    fi
+    
+    if [ -s $samFile ]; then
+      java -jar $addOrReplaceReadGroups_jar I=$samFile O=$rgSamFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA
+      if [ -s $rgSamFile ]; then
+        rm $samFile
+      fi
+    fi
+  fi
 
-  if [ -s $samFile ]; then
-    java -jar $addOrReplaceReadGroups_jar I=$samFile O=$rgSamFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA
-    if [ -s $rgSamFile ]; then
-      rm $samFile
+  if [ -s $rgSamFile ]; then
+    samtools view -S -b $rgSamFile > $rgBamFile
+    if [ -s $rgBamFile ]; then
+      rm $rgSamFile
     fi
   fi
 fi
 
-if [ -s $rgSamFile ]; then
-  samtools view -S -b $rgSamFile | samtools sort -@ $thread - $sampleName
+if [ -s $rgBamFile ]; then
+  samtools sort -@ $thread -m 4G $rgBamFile $sampleName
   if [ -s $bamFile ]; then
     samtools index $bamFile 
     samtools flagstat $bamFile > ${bamFile}.stat 
-    rm $rgSamFile
+    rm $rgBamFile
   fi
 fi
   
