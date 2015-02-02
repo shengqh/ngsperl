@@ -135,10 +135,8 @@ sub result {
   for my $groupName ( keys %{$groups} ) {
     my @resultFiles = ();
     my $curDir      = $resultDir . "/$groupName";
-    my $snpvcf      = "${groupName}.snp.vcf";
-    my $indelvcf    = "${groupName}.indel.vcf";
-    push( @resultFiles, "$curDir/${snpvcf}.Somatic.hc.vcf" );
-    push( @resultFiles, "$curDir/${indelvcf}.Somatic.hc.vcf" );
+    push( @resultFiles, "$curDir/${groupName}.snp.Somatic.hc.vcf" );
+    push( @resultFiles, "$curDir/${groupName}.indel.Somatic.hc.vcf" );
     $result->{$groupName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
