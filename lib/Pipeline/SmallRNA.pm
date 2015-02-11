@@ -234,7 +234,7 @@ sub getConfig {
       fastq_files_ref => "identical_NTA",
       seqcount_ref    => [ "identical_NTA", ".dupcount\$" ],
       cqs_tools       => $def->{cqstools},
-      coordinate_file => $def->{coordinate_file},
+      coordinate_file => $def->{coordinate},
       fasta_file      => $def->{coordinate_fasta},
       samtools        => $def->{samtools},
       sh_direct       => 1,
