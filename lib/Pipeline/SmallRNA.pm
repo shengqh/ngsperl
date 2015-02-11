@@ -37,9 +37,9 @@ sub getConfig {
     $source_ref = "fastq_remove_N";
   }
 
-  my $adaptor = $def->{adaptor};
-  if ( !defined $adaptor ) {
-    $adaptor = "TGGAATTCTCGGGTGCCAAGG";
+  my $adapter = $def->{adapter};
+  if ( !defined $adapter ) {
+    $adapter = "TGGAATTCTCGGGTGCCAAGG";
   }
 
   my $config = {
@@ -98,7 +98,7 @@ sub getConfig {
       target_dir => $def->{target_dir} . "/cutadapt",
       option     => "-O 10 -m " . $def->{min_read_length},
       source_ref => $source_ref,
-      adaptor    => $adaptor,
+      adapter    => $adapter,
       extension  => "_clipped.fastq",
       sh_direct  => 1,
       cluster    => $cluster,
