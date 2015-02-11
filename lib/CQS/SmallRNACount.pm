@@ -98,7 +98,7 @@ fi
 
 echo MirnaCount=`date` 
 
-mono-sgen $cqsFile smallrna_count $option --samtools $samtools -i $bamFile -g $coordinate_file -o $countFile $seqcountFile $fastqFile
+mono-sgen $cqsFile smallrna_count $option --samtools $samtools -i $bamFile -g $coordinate_file $seqcountFile $fastqFile -o $countFile
 
 echo finished=`date`
 
