@@ -31,14 +31,14 @@ sub getConfig {
   if ( !defined $fastq_remove_N ) {
     $fastq_remove_N = 1;
   }
-  
+
   my $source_ref = "files";
-  if($fastq_remove_N){
+  if ($fastq_remove_N) {
     $source_ref = "fastq_remove_N";
   }
-  
+
   my $adaptor = $def->{adaptor};
-  if(!defined $adaptor){
+  if ( !defined $adaptor ) {
     $adaptor = "TGGAATTCTCGGGTGCCAAGG";
   }
 
@@ -234,8 +234,8 @@ sub getConfig {
       fastq_files_ref => "identical_NTA",
       seqcount_ref    => [ "identical_NTA", ".dupcount\$" ],
       cqs_tools       => $def->{cqstools},
-      coordinate_file        => $def->{smallrna_coordinate},
-      fasta_file      => $def->{smallrna_fasta},
+      coordinate_file => $def->{coordinate},
+      fasta_file      => $def->{coordinate_fasta},
       samtools        => $def->{samtools},
       sh_direct       => 1,
       cluster         => $cluster,
