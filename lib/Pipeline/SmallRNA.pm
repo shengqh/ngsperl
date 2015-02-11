@@ -27,6 +27,21 @@ sub getConfig {
     $cluster = "slurm";
   }
 
+  my $fastq_remove_N = $def->{fastq_remove_N};
+  if ( !defined $fastq_remove_N ) {
+    $fastq_remove_N = 1;
+  }
+  
+  my $source_ref = "files";
+  if($fastq_remove_N){
+    $source_ref = "fastq_remove_N";
+  }
+  
+  my $adaptor = $def->{adaptor};
+  if(!defined $adaptor){
+    $adaptor = "TGGAATTCTCGGGTGCCAAGG";
+  }
+
   my $config = {
     general => {
       task_name => $def->{task_name},
@@ -35,7 +50,7 @@ sub getConfig {
     files          => $def->{files},
     fastq_remove_N => {
       class      => "CQS::FastqTrimmer",
-      perform    => 1,
+      perform    => $fastq_remove_N,
       target_dir => $def->{target_dir} . "/fastq_remove_N",
       option     => "-n -z",
       extension  => "_trim.fastq.gz",
@@ -55,7 +70,7 @@ sub getConfig {
       perform    => 1,
       target_dir => $def->{target_dir} . "/fastqc_pre_trim",
       option     => "",
-      source_ref => "fastq_remove_N",
+      source_ref => $source_ref,
       cluster    => $cluster,
       pbs        => {
         "email"    => $def->{email},
@@ -82,8 +97,8 @@ sub getConfig {
       perform    => 1,
       target_dir => $def->{target_dir} . "/cutadapt",
       option     => "-O 10 -m " . $def->{min_read_length},
-      source_ref => "fastq_remove_N",
-      adaptor    => "TGGAATTCTCGGGTGCCAAGG",
+      source_ref => $source_ref,
+      adaptor    => $adaptor,
       extension  => "_clipped.fastq",
       sh_direct  => 1,
       cluster    => $cluster,
@@ -206,6 +221,27 @@ sub getConfig {
       pbs           => {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=" . $def->{max_thread},
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    },
+    bowtie1_genome_1mm_NTA_smallRNA_count => {
+      class           => "CQS::SmallRNACount",
+      perform         => 1,
+      target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_count",
+      option          => $def->{mirnacount_option},
+      source_ref      => "bowtie1_genome_1mm_NTA",
+      fastq_files_ref => "identical_NTA",
+      seqcount_ref    => [ "identical_NTA", ".dupcount\$" ],
+      cqs_tools       => $def->{cqstools},
+      coordinate_file        => $def->{smallrna_coordinate},
+      fasta_file      => $def->{smallrna_fasta},
+      samtools        => $def->{samtools},
+      sh_direct       => 1,
+      cluster         => $cluster,
+      pbs             => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
         "walltime" => "72",
         "mem"      => "40gb"
       },
@@ -495,7 +531,9 @@ sub getConfig {
           "identical",      "identical_NTA",
 
           #NTA data analysis
-          "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_NTA_miRNA_count",
+          "bowtie1_genome_1mm_NTA",
+          "bowtie1_genome_1mm_NTA_smallRNA_count",
+          "bowtie1_genome_1mm_NTA_miRNA_count",
 
           #non-NTA count
           "bowtie1_genome_1mm",            "bowtie1_genome_1mm_miRNA_overlap",

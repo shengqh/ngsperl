@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "SmallRNACount";
+  $self->{_name}   = "SmallRNACount";
   $self->{_suffix} = "_sc";
   bless $self, $class;
   return $self;
@@ -29,12 +29,12 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $cqsFile = get_cqstools( $config, $section, 1 );
-  my $samtools = get_param_file( $config->{$section}{samtools},  "samtools",  1 );
-  my $bedFile  = get_param_file( $config->{$section}{gff_file},  "bed_file",  1 );
-  my $fastaFile  = get_param_file( $config->{$section}{fasta_file},  "fasta_file",  0 );
-  
-  if(defined $fastaFile){
-    $option = $option . " -f $fastaFile";    
+  my $samtools        = get_param_file( $config->{$section}{samtools},        "samtools",        1 );
+  my $coordinate_file = get_param_file( $config->{$section}{coordinate_file}, "coordinate_file", 1 );
+  my $fastaFile       = get_param_file( $config->{$section}{fasta_file},      "fasta_file",      0 );
+
+  if ( defined $fastaFile ) {
+    $option = $option . " -f $fastaFile";
   }
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
@@ -78,7 +78,7 @@ sub perform {
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
-    
+
     print SH "\$MYCMD ./$pbsName \n";
 
     my $log_desc = $cluster->get_log_desc($log);
@@ -98,7 +98,7 @@ fi
 
 echo MirnaCount=`date` 
 
-mono-sgen $cqsFile smallrna_count $option --samtools $samtools -i $bamFile -g $bedFile -o $countFile $seqcountFile $fastqFile
+mono-sgen $cqsFile smallrna_count $option --samtools $samtools -i $bamFile -g $coordinate_file -o $countFile $seqcountFile $fastqFile
 
 echo finished=`date`
 
