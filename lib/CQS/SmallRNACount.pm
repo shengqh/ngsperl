@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package CQS::MirnaCount;
+package CQS::SmallRNACount;
 
 use strict;
 use warnings;
