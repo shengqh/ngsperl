@@ -42,6 +42,11 @@ sub getConfig {
     $adapter = "TGGAATTCTCGGGTGCCAAGG";
   }
 
+  my $performNewSmallRNACount = 0;
+  if ( defined $def->{coordinate} ) {
+    $performNewSmallRNACount = 1;
+  }
+
   my $config = {
     general => {
       task_name => $def->{task_name},
@@ -227,7 +232,7 @@ sub getConfig {
     },
     bowtie1_genome_1mm_NTA_smallRNA_count => {
       class           => "CQS::SmallRNACount",
-      perform         => 1,
+      perform         => $performNewSmallRNACount,
       target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_count",
       option          => $def->{mirnacount_option},
       source_ref      => "bowtie1_genome_1mm_NTA",
