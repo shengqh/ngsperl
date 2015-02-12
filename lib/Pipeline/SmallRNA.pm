@@ -554,8 +554,8 @@ sub getConfig {
 
           #NTA data analysis
           "bowtie1_genome_1mm_NTA",
-          "bowtie1_genome_1mm_NTA_smallRNA_count",
-          "bowtie1_genome_1mm_NTA_smallRNA_table",
+          #"bowtie1_genome_1mm_NTA_smallRNA_count",
+          #"bowtie1_genome_1mm_NTA_smallRNA_table",
           "bowtie1_genome_1mm_NTA_miRNA_count",
           "bowtie1_genome_1mm_NTA_miRNA_table",
 
