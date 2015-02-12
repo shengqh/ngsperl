@@ -104,7 +104,7 @@ fi
         $outputFiles = $outputFiles . " " . $outputFile;
         $shortFiles  = $shortFiles . " " . $shortFile;
         $longFiles   = $longFiles . " " . $longFile;
-        print OUT "cutadapt $sampleFile $option -a $adapt -o $outputFile";
+        print OUT "cutadapt $sampleFile $option -a $adapter -o $outputFile";
 
         if ($shortLimited) {
           print OUT " --too-short-output=$shortFile";
