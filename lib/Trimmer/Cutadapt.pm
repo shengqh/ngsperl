@@ -27,14 +27,16 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $adapt     = get_option( $config, $section, "adaptor" );
+  my $adapter   = get_option( $config, $section, "adapter" );
   my $extension = get_option( $config, $section, "extension" );
   my $gzipped   = get_option( $config, $section, "gzipped", 1 );
-  
-  if($gzipped && $extension =~ /\.gz$/){
-    #print $extension . "\n"; 
+
+  if ( $gzipped && $extension =~ /\.gz$/ ) {
+
+    #print $extension . "\n";
     $extension =~ s/\.gz$//g;
-    #print $extension . "\n"; 
+
+    #print $extension . "\n";
   }
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
@@ -81,7 +83,7 @@ fi
 ";
 
     if ( scalar(@sampleFiles) == 1 ) {
-      print OUT "cutadapt $sampleFiles[0] $option -a $adapt -o $finalName";
+      print OUT "cutadapt $sampleFiles[0] $option -a $adapter -o $finalName";
       if ($shortLimited) {
         print OUT " --too-short-output=$finalShortName";
       }
@@ -173,11 +175,11 @@ sub result {
 
   my $extension = $config->{$section}{extension} or die "define ${section}::extension first";
   my $gzipped = get_option( $config, $section, "gzipped", 1 );
-  
-  if($gzipped && $extension =~ /\.gz$/){
+
+  if ( $gzipped && $extension =~ /\.gz$/ ) {
     $extension =~ s/\.gz$//g;
   }
-  
+
   my $shortLimited = $option =~ /-m\s+\d+/;
   my $longLimited  = $option =~ /-M\s+\d+/;
 
