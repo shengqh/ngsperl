@@ -251,7 +251,7 @@ sub getConfig {
         "mem"      => "40gb"
       },
     },
-    bowtie1_genome_1mm_NTA_miRNA_table => {
+    bowtie1_genome_1mm_NTA_smallRNA_table => {
       class      => "CQS::SmallRNATable",
       perform    => $performNewSmallRNACount,
       target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_table",
@@ -555,8 +555,9 @@ sub getConfig {
           #NTA data analysis
           "bowtie1_genome_1mm_NTA",
           "bowtie1_genome_1mm_NTA_smallRNA_count",
-          "bowtie1_genome_1mm_NTA_miRNA_table",
+          "bowtie1_genome_1mm_NTA_smallRNA_table",
           "bowtie1_genome_1mm_NTA_miRNA_count",
+          "bowtie1_genome_1mm_NTA_miRNA_table",
 
           #non-NTA count
           "bowtie1_genome_1mm",            "bowtie1_genome_1mm_miRNA_overlap",
