@@ -28,13 +28,29 @@ sub getConfig {
   }
 
   my $fastq_remove_N = $def->{fastq_remove_N};
-  if ( !defined $fastq_remove_N ) {
-    $fastq_remove_N = 1;
-  }
+  my @individual     = [
 
+    #data preparation
+    "fastqc_pre_trim", "cutadapt", "fastqc_post_trim", "fastq_len",
+    "identical",       "identical_NTA",
+
+    #NTA data analysis
+    "bowtie1_genome_1mm_NTA",
+    "bowtie1_genome_1mm_NTA_smallRNA_count",
+
+    #miRBase analysis
+    "bowtie1_genome_pmnames",
+    "bowtie1_miRbase_pm", "bowtie1_miRbase_pm_count",
+
+    #for IGV
+    "bowtie1_genome_1mm_notidentical",
+  ];
   my $source_ref = "files";
-  if ($fastq_remove_N) {
-    $source_ref = "fastq_remove_N";
+
+  if ( !defined $fastq_remove_N || $fastq_remove_N ) {
+    $fastq_remove_N = 1;
+    @individual     = ( "fastq_remove_N", @individual );
+    $source_ref     = "fastq_remove_N";
   }
 
   my $adapter = $def->{adapter};
@@ -269,204 +285,19 @@ sub getConfig {
       },
     },
     bowtie1_genome_1mm_NTA_smallRNA_category => {
-      class           => "CQS::SmallRNACategory",
-      perform         => $performNewSmallRNACount,
-      target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_category",
-      option          => "",
-      source_ref      => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info\$" ],
-      cqs_tools       => $def->{cqstools},
-      sh_direct       => 1,
-      cluster         => $cluster,
-      pbs             => {
+      class      => "CQS::SmallRNACategory",
+      perform    => $performNewSmallRNACount,
+      target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_category",
+      option     => "",
+      source_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info\$" ],
+      cqs_tools  => $def->{cqstools},
+      sh_direct  => 1,
+      cluster    => $cluster,
+      pbs        => {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
         "walltime" => "72",
         "mem"      => "40gb"
-      },
-    },
-    bowtie1_genome_1mm_NTA_miRNA_count => {
-      class           => "MirnaCount",
-      perform         => 1,
-      target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_miRNA_count",
-      option          => $def->{mirnacount_option},
-      source_ref      => "bowtie1_genome_1mm_NTA",
-      fastq_files_ref => "identical_NTA",
-      seqcount_ref    => [ "identical_NTA", ".dupcount\$" ],
-      cqs_tools       => $def->{cqstools},
-      gff_file        => $def->{mirna_coordinate},
-      fasta_file      => $def->{mirna_fasta},
-      samtools        => $def->{samtools},
-      sh_direct       => 1,
-      cluster         => $cluster,
-      pbs             => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    },
-    bowtie1_genome_1mm_NTA_miRNA_table => {
-      class      => "CQS::CQSMirnaNTATable",
-      perform    => 1,
-      target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_miRNA_table",
-      option     => "",
-      source_ref => [ "bowtie1_genome_1mm_NTA_miRNA_count", ".mapped.xml" ],
-      cqs_tools  => $def->{cqstools},
-      prefix     => "miRNA_1mm_NTA_",
-      sh_direct  => 1,
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "10",
-        "mem"      => "10gb"
-      },
-    },
-
-    #1 mismatch search
-    bowtie1_genome_1mm => {
-      class         => "Bowtie1",
-      perform       => 1,
-      target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm",
-      option        => $def->{bowtie1_option_1mm},
-      source_ref    => [ "identical", ".fastq.gz\$" ],
-      bowtie1_index => $def->{bowtie1_index},
-      samonly       => 0,
-      sh_direct     => 1,
-      cluster       => $cluster,
-      pbs           => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=" . $def->{max_thread},
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    },
-    bowtie1_genome_1mm_miRNA_overlap => {
-      class           => "CQSMappedCount",
-      perform         => 1,
-      target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_miRNA_overlap",
-      option          => $def->{mirna_overlap_count_option},
-      source_ref      => "bowtie1_genome_1mm",
-      fastq_files_ref => "identical",
-      seqcount_ref    => [ "identical", ".dupcount\$" ],
-      cqs_tools       => $def->{cqstools},
-      gff_file        => $def->{mirna_coordinate},
-      fasta_file      => $def->{mirna_fasta},
-      samtools        => $def->{samtools},
-      sh_direct       => 1,
-      cluster         => $cluster,
-      pbs             => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "20gb"
-      },
-    },
-    bowtie1_genome_1mm_miRNA_overlap_position => {
-      class      => "CQSMappedPosition",
-      perform    => 1,
-      target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_miRNA_overlap_position",
-      option     => "-o " . $def->{task_name} . "_miRNA.position",
-      source_ref => "bowtie1_genome_1mm_miRNA_overlap",
-      cqs_tools  => $def->{cqstools},
-      sh_direct  => 1,
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "10",
-        "mem"      => "10gb"
-      },
-    },
-    bowtie1_genome_1mm_tRNA_count => {
-      class           => "CQSMappedCount",
-      perform         => 1,
-      target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_tRNA_count",
-      option          => $def->{smallrnacount_option},
-      source_ref      => "bowtie1_genome_1mm",
-      fastq_files_ref => "identical",
-      seqcount_ref    => [ "identical", ".dupcount\$" ],
-      cqs_tools       => $def->{cqstools},
-      gff_file        => $def->{trna_coordinate},
-      fasta_file      => $def->{trna_fasta},
-      samtools        => $def->{samtools},
-      sh_direct       => 1,
-      cluster         => $cluster,
-      pbs             => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "20gb"
-      },
-    },
-    bowtie1_genome_1mm_tRNA_table => {
-      class      => "CQSMappedTable",
-      perform    => 1,
-      target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_tRNA_table",
-      option     => "",
-      source_ref => [ "bowtie1_genome_1mm_tRNA_count", ".xml" ],
-      cqs_tools  => $def->{cqstools},
-      prefix     => "tRNA_1mm_",
-      sh_direct  => 1,
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "10",
-        "mem"      => "10gb"
-      },
-    },
-    bowtie1_genome_1mm_tRNA_position => {
-      class      => "CQSMappedPosition",
-      perform    => 1,
-      target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_tRNA_position",
-      option     => "-o " . $def->{task_name} . "_tRNA.position",
-      source_ref => "bowtie1_genome_1mm_tRNA_count",
-      cqs_tools  => $def->{cqstools},
-      sh_direct  => 1,
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "10",
-        "mem"      => "10gb"
-      },
-    },
-    bowtie1_genome_1mm_smallRNA_count => {
-      class           => "CQSMappedCount",
-      perform         => 1,
-      target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_smallRNA_count",
-      option          => $def->{smallrnacount_option},
-      source_ref      => "bowtie1_genome_1mm",
-      fastq_files_ref => "identical",
-      seqcount_ref    => [ "identical", ".dupcount\$" ],
-      cqs_tools       => $def->{cqstools},
-      gff_file        => $def->{smallrna_coordinate},
-      samtools        => $def->{samtools},
-      sh_direct       => 1,
-      cluster         => $cluster,
-      pbs             => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "20gb"
-      },
-    },
-    bowtie1_genome_1mm_smallRNA_table => {
-      class      => "CQSMappedTable",
-      perform    => 1,
-      target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_smallRNA_table",
-      option     => "",
-      source_ref => [ "bowtie1_genome_1mm_smallRNA_count", ".xml" ],
-      cqs_tools  => $def->{cqstools},
-      prefix     => "smallRNA_1mm_",
-      sh_direct  => 1,
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "10",
-        "mem"      => "10gb"
       },
     },
 
@@ -545,44 +376,15 @@ sub getConfig {
       target_dir => $def->{target_dir} . "/sequencetask",
       option     => "",
       source     => {
-        individual => [
-
-          #data preparation
-          "fastq_remove_N", "fastqc_pre_trim", "cutadapt", "fastqc_post_trim", "fastq_len",
-          "identical",      "identical_NTA",
-
-          #NTA data analysis
-          "bowtie1_genome_1mm_NTA",
-          #"bowtie1_genome_1mm_NTA_smallRNA_count",
-          "bowtie1_genome_1mm_NTA_miRNA_count",
-          "bowtie1_genome_1mm_NTA_miRNA_table",
-
-          #non-NTA count
-          "bowtie1_genome_1mm",            "bowtie1_genome_1mm_miRNA_overlap",
-          "bowtie1_genome_1mm_tRNA_count", "bowtie1_genome_1mm_smallRNA_count",
-
-          #miRBase analysis
-          "bowtie1_genome_pmnames",
-          "bowtie1_miRbase_pm", "bowtie1_miRbase_pm_count",
-
-          #for IGV
-          "bowtie1_genome_1mm_notidentical",
-        ],
-        summary => [
+        individual => \@individual,
+        summary    => [
 
           #QC
           "fastqc_pre_trim_summary",
           "fastqc_post_trim_summary",
 
-          #non-NTA table and graph
-          "bowtie1_genome_1mm_miRNA_overlap_position",
-          "bowtie1_genome_1mm_tRNA_table",
-          "bowtie1_genome_1mm_smallRNA_table",
-          "bowtie1_genome_1mm_tRNA_position",
-
           #NTA table
-          "bowtie1_genome_1mm_NTA_miRNA_table",
-          #"bowtie1_genome_1mm_NTA_smallRNA_table",
+          "bowtie1_genome_1mm_NTA_smallRNA_table",
           "bowtie1_genome_1mm_NTA_smallRNA_category",
 
           #miRBase
