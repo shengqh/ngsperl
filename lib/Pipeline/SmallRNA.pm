@@ -469,23 +469,6 @@ sub getConfig {
         "mem"      => "10gb"
       },
     },
-    bowtie1_genome_1mm_NTA_smallRNA_category => {
-      class           => "CQSSmallRNACategory",
-      perform         => 1,
-      target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_category",
-      option          => "",
-      source_ref      => [ "bowtie1_genome_1mm_smallRNA_count", ".mapped.xml\$" ],
-      mirna_count_ref => [ "bowtie1_genome_1mm_NTA_miRNA_count", ".mapped.xml\$" ],
-      cqs_tools       => $def->{cqstools},
-      sh_direct       => 1,
-      cluster         => $cluster,
-      pbs             => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    },
 
     #2 perfect match search to mirbase only
     bowtie1_genome_pmnames => {
@@ -571,8 +554,6 @@ sub getConfig {
           #NTA data analysis
           "bowtie1_genome_1mm_NTA",
           #"bowtie1_genome_1mm_NTA_smallRNA_count",
-          #"bowtie1_genome_1mm_NTA_smallRNA_table",
-          #"bowtie1_genome_1mm_NTA_smallRNA_category","
           "bowtie1_genome_1mm_NTA_miRNA_count",
           "bowtie1_genome_1mm_NTA_miRNA_table",
 
@@ -601,6 +582,7 @@ sub getConfig {
 
           #NTA table
           "bowtie1_genome_1mm_NTA_miRNA_table",
+          #"bowtie1_genome_1mm_NTA_smallRNA_table",
           "bowtie1_genome_1mm_NTA_smallRNA_category",
 
           #miRBase
