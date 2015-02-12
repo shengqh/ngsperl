@@ -67,7 +67,7 @@ cd $resultDir
       close(FL);
 
       print OUT "
-mono-sgen $cqsFile mirna_nta_table $option -o $outputname -l $filelist
+mono-sgen $cqsFile smallrna_table $option -o $outputname -l $filelist
 ";
     }
   }
@@ -85,7 +85,7 @@ mono-sgen $cqsFile mirna_nta_table $option -o $outputname -l $filelist
     close(FL);
 
     print OUT "
-mono-sgen $cqsFile mirna_nta_table $option -o $outputname -l $filelist
+mono-sgen $cqsFile smallrna_table $option -o $outputname -l $filelist
 ";
   }
   close OUT;
