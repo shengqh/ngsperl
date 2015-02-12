@@ -268,6 +268,22 @@ sub getConfig {
         "mem"      => "10gb"
       },
     },
+    bowtie1_genome_1mm_NTA_smallRNA_category => {
+      class           => "CQS::SmallRNACategory",
+      perform         => $performNewSmallRNACount,
+      target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_category",
+      option          => "",
+      source_ref      => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info\$" ],
+      cqs_tools       => $def->{cqstools},
+      sh_direct       => 1,
+      cluster         => $cluster,
+      pbs             => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    },
     bowtie1_genome_1mm_NTA_miRNA_count => {
       class           => "MirnaCount",
       perform         => 1,
@@ -556,6 +572,7 @@ sub getConfig {
           "bowtie1_genome_1mm_NTA",
           #"bowtie1_genome_1mm_NTA_smallRNA_count",
           #"bowtie1_genome_1mm_NTA_smallRNA_table",
+          #"bowtie1_genome_1mm_NTA_smallRNA_category","
           "bowtie1_genome_1mm_NTA_miRNA_count",
           "bowtie1_genome_1mm_NTA_miRNA_table",
 
