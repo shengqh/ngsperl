@@ -39,8 +39,8 @@ sub getConfig {
     "bowtie1_genome_1mm_NTA_smallRNA_count",
 
     #miRBase analysis
-    "bowtie1_genome_pmnames",
-    "bowtie1_miRbase_pm", "bowtie1_miRbase_pm_count",
+    #    "bowtie1_genome_pmnames",
+    #    "bowtie1_miRbase_pm", "bowtie1_miRbase_pm_count",
 
     #for IGV
     "bowtie1_genome_1mm_notidentical",
@@ -302,74 +302,74 @@ sub getConfig {
     },
 
     #2 perfect match search to mirbase only
-    bowtie1_genome_pmnames => {
-      class      => "Samtools::PerfectMappedReadNames",
-      perform    => 1,
-      target_dir => $def->{target_dir} . "/bowtie1_genome_pmnames",
-      option     => "",
-      source_ref => "bowtie1_genome_1mm",
-      sh_direct  => 1,
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=" . $def->{max_thread},
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    },
-    bowtie1_miRbase_pm => {
-      class         => "Alignment::Bowtie1",
-      perform       => 1,
-      target_dir    => $def->{target_dir} . "/bowtie1_miRbase_pm",
-      option        => $def->{bowtie1_option_pm},
-      source_ref    => [ "identical", ".fastq.gz\$" ],
-      bowtie1_index => $def->{bowtie1_miRBase_index},
-      samonly       => 0,
-      sh_direct     => 1,
-      cluster       => $cluster,
-      pbs           => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=" . $def->{max_thread},
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    },
-    bowtie1_miRbase_pm_count => {
-      class                   => "CQS::CQSChromosomeCount",
-      perform                 => 1,
-      target_dir              => $def->{target_dir} . "/bowtie1_miRbase_pm_count",
-      option                  => $def->{mirbase_count_option},
-      source_ref              => "bowtie1_miRbase_pm",
-      seqcount_ref            => [ "identical", ".dupcount\$" ],
-      perfect_mapped_name_ref => "bowtie1_genome_pmnames",
-      cqs_tools               => $def->{cqstools},
-      samtools                => $def->{samtools},
-      sh_direct               => 1,
-      cluster                 => $cluster,
-      pbs                     => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    },
-    bowtie1_miRbase_pm_table => {
-      class      => "CQS::CQSChromosomeTable",
-      perform    => 1,
-      target_dir => $def->{target_dir} . "/bowtie1_miRbase_pm_table",
-      option     => "",
-      source_ref => [ "bowtie1_miRbase_pm_count", ".xml" ],
-      cqs_tools  => $def->{cqstools},
-      prefix     => "miRBase_pm_",
-      sh_direct  => 1,
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "10",
-        "mem"      => "10gb"
-      },
-    },
+    #    bowtie1_genome_pmnames => {
+    #      class      => "Samtools::PerfectMappedReadNames",
+    #      perform    => 1,
+    #      target_dir => $def->{target_dir} . "/bowtie1_genome_pmnames",
+    #      option     => "",
+    #      source_ref => "bowtie1_genome_1mm_NTA",
+    #      sh_direct  => 1,
+    #      cluster    => $cluster,
+    #      pbs        => {
+    #        "email"    => $def->{email},
+    #        "nodes"    => "1:ppn=" . $def->{max_thread},
+    #        "walltime" => "72",
+    #        "mem"      => "40gb"
+    #      },
+    #    },
+    #    bowtie1_miRbase_pm => {
+    #      class         => "Alignment::Bowtie1",
+    #      perform       => 1,
+    #      target_dir    => $def->{target_dir} . "/bowtie1_miRbase_pm",
+    #      option        => $def->{bowtie1_option_pm},
+    #      source_ref    => [ "identical", ".fastq.gz\$" ],
+    #      bowtie1_index => $def->{bowtie1_miRBase_index},
+    #      samonly       => 0,
+    #      sh_direct     => 1,
+    #      cluster       => $cluster,
+    #      pbs           => {
+    #        "email"    => $def->{email},
+    #        "nodes"    => "1:ppn=" . $def->{max_thread},
+    #        "walltime" => "72",
+    #        "mem"      => "40gb"
+    #      },
+    #    },
+    #    bowtie1_miRbase_pm_count => {
+    #      class                   => "CQS::CQSChromosomeCount",
+    #      perform                 => 1,
+    #      target_dir              => $def->{target_dir} . "/bowtie1_miRbase_pm_count",
+    #      option                  => $def->{mirbase_count_option},
+    #      source_ref              => "bowtie1_miRbase_pm",
+    #      seqcount_ref            => [ "identical", ".dupcount\$" ],
+    #      perfect_mapped_name_ref => "bowtie1_genome_pmnames",
+    #      cqs_tools               => $def->{cqstools},
+    #      samtools                => $def->{samtools},
+    #      sh_direct               => 1,
+    #      cluster                 => $cluster,
+    #      pbs                     => {
+    #        "email"    => $def->{email},
+    #        "nodes"    => "1:ppn=1",
+    #        "walltime" => "72",
+    #        "mem"      => "40gb"
+    #      },
+    #    },
+    #    bowtie1_miRbase_pm_table => {
+    #      class      => "CQS::CQSChromosomeTable",
+    #      perform    => 1,
+    #      target_dir => $def->{target_dir} . "/bowtie1_miRbase_pm_table",
+    #      option     => "",
+    #      source_ref => [ "bowtie1_miRbase_pm_count", ".xml" ],
+    #      cqs_tools  => $def->{cqstools},
+    #      prefix     => "miRBase_pm_",
+    #      sh_direct  => 1,
+    #      cluster    => $cluster,
+    #      pbs        => {
+    #        "email"    => $def->{email},
+    #        "nodes"    => "1:ppn=1",
+    #        "walltime" => "10",
+    #        "mem"      => "10gb"
+    #      },
+    #    },
     sequencetask => {
       class      => "CQS::SequenceTask",
       perform    => 1,
@@ -388,7 +388,7 @@ sub getConfig {
           "bowtie1_genome_1mm_NTA_smallRNA_category",
 
           #miRBase
-          "bowtie1_miRbase_pm_table"
+          #          "bowtie1_miRbase_pm_table"
         ],
       },
       sh_direct => 0,
