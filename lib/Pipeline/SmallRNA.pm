@@ -376,7 +376,7 @@ sub getConfig {
       target_dir => $def->{target_dir} . "/sequencetask",
       option     => "",
       source     => {
-        individual => \@individual,
+        individual => @individual,
         summary    => [
 
           #QC
