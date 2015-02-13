@@ -49,7 +49,7 @@ sub getConfig {
 
   if ( !defined $fastq_remove_N || $fastq_remove_N ) {
     $fastq_remove_N = 1;
-    @individual     = ( "fastq_remove_N", @individual );
+    unshift @individual, "fastq_remove_N";
     $source_ref     = "fastq_remove_N";
   }
 
