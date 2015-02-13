@@ -34,6 +34,9 @@ sub instantiate {
 
 sub performTask {
   my ( $config, $section ) = @_;
+  if ( !defined $config->{$section} ) {
+    die "No section $section defined.";
+  }
   my $classname = $config->{$section}{class} or die "No class defined in section $section.";
   my $obj = instantiate($classname);
   $obj->perform( $config, $section );
@@ -41,6 +44,9 @@ sub performTask {
 
 sub getPbsFiles {
   my ( $config, $section ) = @_;
+  if ( !defined $config->{$section} ) {
+    die "No section $section defined.";
+  }
   my $classname = $config->{$section}{class} or die "No class defined in section $section.";
   my $obj = instantiate($classname);
   $obj->pbsfiles( $config, $section );
