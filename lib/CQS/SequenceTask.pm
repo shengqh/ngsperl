@@ -30,6 +30,9 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %fqFiles = %{ get_raw_files( $config, $section ) };
+  
+  CORE::dump(%fqFiles);
+  
   my $cluster = get_cluster($config, $section);
 
   for my $taskName ( sort keys %fqFiles ) {
