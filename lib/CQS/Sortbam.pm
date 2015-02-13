@@ -8,3 +8,4 @@ use Samtools::Sort;
 our @ISA = qw(Samtools::Sort);
 
 1;
+
