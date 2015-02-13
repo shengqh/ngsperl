@@ -31,7 +31,7 @@ sub perform {
 
   my %fqFiles = %{ get_raw_files( $config, $section ) };
   
-  CORE::dump(%fqFiles);
+  CORE::dump(\%fqFiles);
   
   my $cluster = get_cluster($config, $section);
 
