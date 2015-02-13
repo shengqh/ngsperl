@@ -424,3 +424,5 @@ sub performSmallRNATask {
 
   1;
 }
+
+1;
