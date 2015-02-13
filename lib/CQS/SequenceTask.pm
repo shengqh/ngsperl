@@ -4,6 +4,7 @@ package CQS::SequenceTask;
 use strict;
 use warnings;
 use File::Basename;
+use Data::Dumper;
 use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
@@ -31,7 +32,7 @@ sub perform {
 
   my %fqFiles = %{ get_raw_files( $config, $section ) };
   
-  CORE::dump(\%fqFiles);
+  print Dumper(\%fqFiles);
   
   my $cluster = get_cluster($config, $section);
 
