@@ -32,7 +32,7 @@ sub perform {
 
   my %fqFiles = %{ get_raw_files( $config, $section ) };
   
-  print Dumper(\%fqFiles);
+  #print Dumper(\%fqFiles);
   
   my $cluster = get_cluster($config, $section);
 
