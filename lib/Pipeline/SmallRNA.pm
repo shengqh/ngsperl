@@ -28,7 +28,7 @@ sub getConfig {
   }
 
   my $fastq_remove_N = $def->{fastq_remove_N};
-  my @individual     = [
+  my @individual     = (
 
     #data preparation
     "fastqc_pre_trim", "cutadapt", "fastqc_post_trim", "fastq_len",
@@ -44,7 +44,8 @@ sub getConfig {
 
     #for IGV
     "bowtie1_genome_1mm_notidentical",
-  ];
+  );
+  
   my $source_ref = "files";
 
   if ( !defined $fastq_remove_N || $fastq_remove_N ) {
