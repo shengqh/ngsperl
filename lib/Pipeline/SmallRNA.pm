@@ -39,7 +39,7 @@ sub getConfig {
     "bowtie1_genome_1mm_NTA_smallRNA_count",
 
     #miRBase analysis
-    "bowtie1_genome_pmnames",
+    "bowtie1_genome_1mm_NTA_pmnames",
     "bowtie1_miRbase_pm", "bowtie1_miRbase_pm_count",
 
     #for IGV
