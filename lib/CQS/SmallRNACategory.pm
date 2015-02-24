@@ -106,7 +106,7 @@ $path_file
 
 cd $resultDir
 
-echo CQSSmallRNACategory=`date` 
+echo SmallRNACategory=`date` 
 
 mono-sgen $cqsFile smallrna_group -i $filelist -o $resultDir
 
