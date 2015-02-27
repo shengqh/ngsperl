@@ -64,7 +64,7 @@ fi
 
 echo HTSeqCount=`date`
 
-samtools view $bamFile | htseq-count -q -m intersection-nonempty -s no -i gene_id - $gffFile > $countFile
+samtools view $bamFile | htseq-count $option -q -m intersection-nonempty -s no -i gene_id - $gffFile > $countFile
 
 echo finished=`date`
 
