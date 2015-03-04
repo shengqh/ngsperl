@@ -96,7 +96,7 @@ if [ -s $countFile ]; then
   exit 0
 fi
 
-echo MirnaCount=`date` 
+echo SmallRNACount=`date` 
 
 mono-sgen $cqsFile smallrna_count $option --samtools $samtools -i $bamFile -g $coordinate_file $seqcountFile $fastqFile -o $countFile
 
