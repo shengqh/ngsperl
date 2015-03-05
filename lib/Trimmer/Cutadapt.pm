@@ -109,11 +109,13 @@ fi
 
 ";
       if ( $shortLimited || $longLimited ) {
+        my $temp1name = $sampleName . ".1.tmp.fastq";
+        my $temp2name = $sampleName . ".2.tmp.fastq";
 
         #https://cutadapt.readthedocs.org/en/stable/guide.html#illumina-truseq
-        print OUT "cutadapt $option -a $adapter -o tmp.1.fastq -p tmp.2.fastq $read1file $read2file \n";
-        print OUT "cutadapt $option -a $adapter -o $read2name -p $read1name tmp.2.fastq tmp.1.fastq \n";
-        print OUT "rm tmp.2.fastq tmp.1.fastq \n";
+        print OUT "cutadapt $option -a $adapter -o $temp1name -p $temp2name $read1file $read2file \n";
+        print OUT "cutadapt $option -a $adapter -o $read2name -p $read1name $temp2name $temp1name \n";
+        print OUT "rm $temp2name $temp1name \n";
       }
       else {
         print OUT "cutadapt $option -a $adapter -o $read1name $read1file \n";
