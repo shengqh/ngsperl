@@ -31,6 +31,8 @@ sub perform {
   my $gffFile = get_param_file( $config->{$section}{gff_file}, "gff_file", 1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my $ispaired = get_option_value( $config->{$section}{ispairend}, "ispairend", 0 );
+  my $ispairoption = $ispaired ? " -bf 1 " : "";
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
@@ -44,7 +46,7 @@ sub perform {
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
-    
+
     print SH "\$MYCMD ./$pbsName \n";
 
     my $log_desc = $cluster->get_log_desc($log);
@@ -64,7 +66,7 @@ fi
 
 echo HTSeqCount=`date`
 
-samtools view $bamFile | htseq-count $option -q -m intersection-nonempty -s no -i gene_id - $gffFile > $countFile
+samtools view $ispairoption $bamFile | htseq-count $option -q -m intersection-nonempty -s no -i gene_id - $gffFile > $countFile
 
 echo finished=`date`
 
