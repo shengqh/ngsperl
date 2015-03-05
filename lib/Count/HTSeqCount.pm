@@ -32,7 +32,7 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
   my $ispaired = get_option_value( $config->{$section}{ispairend}, "ispairend", 0 );
-  my $ispairoption = $ispaired ? " -bf 1 " : "";
+  my $ispairoption = $ispaired ? " -f 1 " : "";
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
