@@ -123,13 +123,13 @@ sub result {
 
     if ( scalar(@sampleFiles) == 1 ) {
       my $trimFile = $sampleName . $extension;
-      push( @resultFiles, ${resultDir} / ${trimFile} );
+      push( @resultFiles, "${resultDir}/${trimFile}" );
     }
     else {
       my $trim1file = $sampleName . ".1" . $extension;
       my $trim2file = $sampleName . ".2" . $extension;
-      push( @resultFiles, ${resultDir} / ${trim1file} );
-      push( @resultFiles, ${resultDir} / ${trim2file} );
+      push( @resultFiles, "${resultDir}/${trim1file}" );
+      push( @resultFiles, "${resultDir}/${trim2file}" );
     }
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
