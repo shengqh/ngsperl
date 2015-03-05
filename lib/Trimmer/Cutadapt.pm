@@ -111,13 +111,13 @@ fi
       if ( $shortLimited || $longLimited ) {
 
         #https://cutadapt.readthedocs.org/en/stable/guide.html#illumina-truseq
-        print OUT "cutadapt $option -a $adapter -o tmp.1.fastq -p tmp.2.fastq $read1file $read2file";
-        print OUT "cutadapt $option -a $adapter -o $read2name -p $read1name tmp.2.fastq tmp.1.fastq";
-        print OUT "rm tmp.2.fastq tmp.1.fastq";
+        print OUT "cutadapt $option -a $adapter -o tmp.1.fastq -p tmp.2.fastq $read1file $read2file \n";
+        print OUT "cutadapt $option -a $adapter -o $read2name -p $read1name tmp.2.fastq tmp.1.fastq \n";
+        print OUT "rm tmp.2.fastq tmp.1.fastq \n";
       }
       else {
-        print OUT "cutadapt $option -a $adapter -o $read1name $read1file";
-        print OUT "cutadapt $option -a $adapter -o $read2name $read2file";
+        print OUT "cutadapt $option -a $adapter -o $read1name $read1file \n";
+        print OUT "cutadapt $option -a $adapter -o $read2name $read2file \n";
       }
     }
     print OUT "
