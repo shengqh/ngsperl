@@ -16,7 +16,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "CQS::FastqTrimmer";
+  $self->{_name}   = "CQS::FastqTrimmer";
   $self->{_suffix} = "_ft";
   bless $self, $class;
   return $self;
@@ -42,7 +42,7 @@ sub perform {
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
-    
+
     print SH "\$MYCMD ./$pbsName \n";
 
     my $log_desc = $cluster->get_log_desc($log);
@@ -56,13 +56,25 @@ $path_file
 cd $resultDir
 
 ";
-    for my $sampleFile (@sampleFiles) {
-      my $trimFile = get_trim_file( $sampleFile, $extension );
+    if ( scalar(@sampleFiles) == 1 ) {
+      my $sampleFile = $sampleFiles[0];
+      my $trimFile   = $sampleName . $extension;
       print OUT "if [ ! -s $trimFile ]; then
   mono-sgen $cqstools fastq_trimmer $option -i $sampleFile -o $trimFile 
 fi
 ";
     }
+    else {
+      my $read1file = $sampleFiles[0];
+      my $read2file = $sampleFiles[1];
+      my $trim1file = $sampleName . ".1" . $extension;
+      my $trim2file = $sampleName . ".2" . $extension;
+      print OUT "if [ ! -s $trim1file ]; then
+  mono-sgen $cqstools fastq_trimmer $option -i $read1file,$read2file -o $trim1file,$trim2file 
+fi
+";
+    }
+
     print OUT "
 echo finished=`date`
 
@@ -109,9 +121,15 @@ sub result {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my @resultFiles = ();
 
-    for my $sampleFile (@sampleFiles) {
-      my $trimFile = get_trim_file( $sampleFile, $extension );
-      push( @resultFiles, "${resultDir}/${trimFile}" );
+    if ( scalar(@sampleFiles) == 1 ) {
+      my $trimFile = $sampleName . $extension;
+      push( @resultFiles, ${resultDir} / ${trimFile} );
+    }
+    else {
+      my $trim1file = $sampleName . ".1" . $extension;
+      my $trim2file = $sampleName . ".2" . $extension;
+      push( @resultFiles, ${resultDir} / ${trim1file} );
+      push( @resultFiles, ${resultDir} / ${trim2file} );
     }
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
