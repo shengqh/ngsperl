@@ -122,12 +122,12 @@ sub result {
     my @resultFiles = ();
 
     if ( scalar(@sampleFiles) == 1 ) {
-      my $trimFile = $sampleName . $extension;
+      my $trimFile = get_trim_file($sampleFiles[0], $extension);
       push( @resultFiles, "${resultDir}/${trimFile}" );
     }
     else {
-      my $trim1file = $sampleName . ".1" . $extension;
-      my $trim2file = $sampleName . ".2" . $extension;
+      my $trim1file = get_trim_file($sampleFiles[0], $extension);
+      my $trim2file = get_trim_file($sampleFiles[1], $extension);
       push( @resultFiles, "${resultDir}/${trim1file}" );
       push( @resultFiles, "${resultDir}/${trim2file}" );
     }
