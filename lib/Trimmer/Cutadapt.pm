@@ -49,15 +49,6 @@ sub perform {
   my $longLimited  = $option =~ /-M\s+\d+/;
 
   for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-
-    my $finalName      = $sampleName . $extension;
-    my $finalShortName = $finalName . ".short";
-    my $finalLongName  = $finalName . ".long";
-
-    my $finalFile      = $gzipped ? "${finalName}.gz"      : $finalName;
-    my $finalShortFile = $gzipped ? "${finalShortName}.gz" : $finalShortName;
-    my $finalLongFile  = $gzipped ? "${finalLongName}.gz"  : $finalLongName;
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
@@ -74,77 +65,59 @@ $log_desc
 $path_file
 
 cd $resultDir
+";
 
+    my @sampleFiles = @{ $rawFiles{$sampleName} };
+    if ( scalar(@sampleFiles) == 1 ) {
+      my $finalName      = $sampleName . $extension;
+      my $finalShortName = $finalName . ".short";
+      my $finalLongName  = $finalName . ".long";
+
+      my $finalFile      = $gzipped ? "${finalName}.gz"      : $finalName;
+      my $finalShortFile = $gzipped ? "${finalShortName}.gz" : $finalShortName;
+      my $finalLongFile  = $gzipped ? "${finalLongName}.gz"  : $finalLongName;
+
+      print OUT "
 if [ -s $finalFile ];then
   echo job has already been done. if you want to do again, delete ${resultDir}/$finalFile and submit job again.
   exit 0;
 fi
 
 ";
-
-    if ( scalar(@sampleFiles) == 1 ) {
-      print OUT "cutadapt $sampleFiles[0] $option -a $adapter -o $finalName";
+      print OUT "cutadapt $option -a $adapter -o $finalFile ";
       if ($shortLimited) {
-        print OUT " --too-short-output=$finalShortName";
+        print OUT " --too-short-output=$finalShortFile";
       }
       if ($longLimited) {
-        print OUT " --too-long-output=$finalLongName";
+        print OUT " --too-long-output=$finalLongFile";
       }
-      print OUT "\n";
+      print OUT " $sampleFiles[0] \n";
     }
     else {
-      my $outputFiles = "";
-      my $shortFiles  = "";
-      my $longFiles   = "";
-      for my $sampleFile (@sampleFiles) {
-        my $fileName   = basename($sampleFile);
-        my $outputFile = change_extension( $fileName, $extension );
-        my $shortFile  = $outputFile . ".short";
-        my $longFile   = $outputFile . ".long";
-        $outputFiles = $outputFiles . " " . $outputFile;
-        $shortFiles  = $shortFiles . " " . $shortFile;
-        $longFiles   = $longFiles . " " . $longFile;
-        print OUT "cutadapt $sampleFile $option -a $adapter -o $outputFile";
 
-        if ($shortLimited) {
-          print OUT " --too-short-output=$shortFile";
-        }
-        if ($longLimited) {
-          print OUT " --too-long-output=$longFile";
-        }
-        print OUT "\n";
-        print OUT "
-cat $outputFiles > $finalName
-rm $outputFiles
-";
+      #pair-end data
+      my $read1file = $sampleFiles[0];
+      my $read2file = $sampleFiles[1];
+      my $read1name = $sampleName . ".1.fastq.gz";
+      my $read2name = $sampleName . ".2.fastq.gz";
 
-        if ($shortLimited) {
-          print OUT "
-cat $shortFiles > $finalShortName
-rm $shortFiles
-";
-        }
-        if ($longLimited) {
-          print OUT "
-cat $longFiles > $finalLongName
-rm $longFiles
-";
-        }
-      }
-    }
-    if ($gzipped) {
       print OUT "
-gzip $finalName
+if [ -s $read1name ];then
+  echo job has already been done. if you want to do again, delete ${resultDir}/$read1name and submit job again.
+  exit 0;
+fi
+
 ";
-      if ($shortLimited) {
-        print OUT "
-gzip $finalShortName
-";
+      if ( $shortLimited || $longLimited ) {
+
+        #https://cutadapt.readthedocs.org/en/stable/guide.html#illumina-truseq
+        print OUT "cutadapt $option -a $adapter -o tmp.1.fastq -p tmp.2.fastq $read1file $read2file";
+        print OUT "cutadapt $option -a $adapter -o $read2name -p $read1name tmp.2.fastq tmp.1.fastq";
+        print OUT "rm tmp.2.fastq tmp.1.fastq";
       }
-      if ($longLimited) {
-        print OUT "
-gzip $finalLongName
-";
+      else {
+        print OUT "cutadapt $option -a $adapter -o $read1name $read1file";
+        print OUT "cutadapt $option -a $adapter -o $read2name $read2file";
       }
     }
     print OUT "
@@ -185,27 +158,38 @@ sub result {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $result = {};
+  my $result      = {};
+  my @resultFiles = ();
+
   for my $sampleName ( keys %rawFiles ) {
-    my $finalName = $sampleName . $extension;
-
-    my $finalFile = $gzipped ? "${finalName}.gz" : $finalName;
-
-    my @resultFiles = ();
-    push( @resultFiles, $resultDir . "/" . $finalFile );
-
-    if ($shortLimited) {
+    my @sampleFiles = @{ $rawFiles{$sampleName} };
+    if ( scalar(@sampleFiles) == 1 ) {
+      my $finalName      = $sampleName . $extension;
       my $finalShortName = $finalName . ".short";
+      my $finalLongName  = $finalName . ".long";
+
+      my $finalFile      = $gzipped ? "${finalName}.gz"      : $finalName;
       my $finalShortFile = $gzipped ? "${finalShortName}.gz" : $finalShortName;
-      push( @resultFiles, $resultDir . "/" . $finalShortFile );
-    }
+      my $finalLongFile  = $gzipped ? "${finalLongName}.gz"  : $finalLongName;
 
-    if ($longLimited) {
-      my $finalLongName = $finalName . ".long";
-      my $finalLongFile = $gzipped ? "${finalLongName}.gz" : $finalLongName;
-      push( @resultFiles, $resultDir . "/" . $finalLongFile );
-    }
+      push( @resultFiles, $resultDir . "/" . $finalFile );
 
+      if ($shortLimited) {
+        push( @resultFiles, $resultDir . "/" . $finalShortFile );
+      }
+      if ($longLimited) {
+        push( @resultFiles, $resultDir . "/" . $finalLongFile );
+      }
+    }
+    else {
+
+      #pair-end data
+      my $read1name = $sampleName . ".1.fastq.gz";
+      my $read2name = $sampleName . ".2.fastq.gz";
+
+      push( @resultFiles, $resultDir . "/" . $read1name );
+      push( @resultFiles, $resultDir . "/" . $read2name );
+    }
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
