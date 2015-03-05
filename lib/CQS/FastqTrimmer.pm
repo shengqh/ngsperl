@@ -58,7 +58,7 @@ cd $resultDir
 ";
     if ( scalar(@sampleFiles) == 1 ) {
       my $sampleFile = $sampleFiles[0];
-      my $trimFile   = $sampleName . $extension;
+      my $trimFile   = get_trim_file($sampleFile, $extension);
       print OUT "if [ ! -s $trimFile ]; then
   mono-sgen $cqstools fastq_trimmer $option -i $sampleFile -o $trimFile 
 fi
@@ -67,8 +67,8 @@ fi
     else {
       my $read1file = $sampleFiles[0];
       my $read2file = $sampleFiles[1];
-      my $trim1file = $sampleName . ".1" . $extension;
-      my $trim2file = $sampleName . ".2" . $extension;
+      my $trim1file = get_trim_file($read1file, $extension);
+      my $trim2file = get_trim_file($read2file, $extension);
       print OUT "if [ ! -s $trim1file ]; then
   mono-sgen $cqstools fastq_trimmer $option -i $read1file,$read2file -o $trim1file,$trim2file 
 fi
