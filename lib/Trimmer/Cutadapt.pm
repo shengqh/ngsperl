@@ -161,10 +161,11 @@ sub result {
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $result      = {};
-  my @resultFiles = ();
 
   for my $sampleName ( keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
+
+    my @resultFiles = ();
     if ( scalar(@sampleFiles) == 1 ) {
       my $finalName      = $sampleName . $extension;
       my $finalShortName = $finalName . ".short";
