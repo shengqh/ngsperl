@@ -77,7 +77,7 @@ fi
 
 echo STAR_start=`date` 
 
-STAR $option ---outSAMattrRGline $rgline --runThreadN $thread --genomeDir $genome_dir --readFilesIn $samples $uncompress --outFileNamePrefix ${sampleName}_ $output_format  
+STAR $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $genome_dir --readFilesIn $samples $uncompress --outFileNamePrefix ${sampleName}_ $output_format  
 
 samtools index $final
 
