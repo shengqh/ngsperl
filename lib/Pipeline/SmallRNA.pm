@@ -251,7 +251,7 @@ sub getConfig {
       class           => "CQS::SmallRNACount",
       perform         => $performNewSmallRNACount,
       target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_count",
-      option          => $def->{mirnacount_option},
+      option          => $def->{smallrnacount_option},
       source_ref      => "bowtie1_genome_1mm_NTA",
       fastq_files_ref => "identical_NTA",
       seqcount_ref    => [ "identical_NTA", ".dupcount\$" ],
