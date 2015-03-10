@@ -60,7 +60,7 @@ sub perform {
     }
 
     for my $sample ( sort keys %{$samples} ) {
-      my $taskSample = $taskName . "_" . $sample;
+      my $taskSample = $sample . "_" . $taskName;
 
       my $pbsFile = $self->pbsfile( $pbsDir, $taskSample );
       my $pbsName = basename($pbsFile);
@@ -146,7 +146,7 @@ sub pbsfiles {
     }
 
     for my $sample ( sort keys %{$samples} ) {
-      my $taskSample = $taskName . "_" . $sample;
+      my $taskSample = $sample . "_" . $taskName;
       $result->{$taskSample} = $self->pbsfile( $pbsDir, $taskSample );
     }
   }
