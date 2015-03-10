@@ -45,13 +45,13 @@ sub getConfig {
     #for IGV
     "bowtie1_genome_1mm_notidentical",
   );
-  
+
   my $source_ref = "files";
 
   if ( !defined $fastq_remove_N || $fastq_remove_N ) {
     $fastq_remove_N = 1;
     unshift @individual, "fastq_remove_N";
-    $source_ref     = "fastq_remove_N";
+    $source_ref = "fastq_remove_N";
   }
 
   my $adapter = $def->{adapter};
@@ -377,8 +377,8 @@ sub getConfig {
       target_dir => $def->{target_dir} . "/sequencetask",
       option     => "",
       source     => {
-        individual => \@individual,
-        summary    => [
+        one => \@individual,
+        all => [
 
           #QC
           "fastqc_pre_trim_summary",
