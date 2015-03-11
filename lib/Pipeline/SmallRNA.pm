@@ -7,6 +7,7 @@ use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
+use Data::Dumper;
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -411,6 +412,11 @@ sub performSmallRNA {
 
   my $config = getConfig($def);
 
+  my $configFile = $def->{target_dir} . "/" . $def->{task_name} . ".config";
+  open( SH, ">$configFile" ) or die "Cannot create $configFile";
+  print SH Dumper($config);
+  close(SH);
+  
   performConfig($config);
 
   return $config;
