@@ -39,7 +39,7 @@ sub perform {
   }
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
-  my $addOrReplaceReadGroups_jar = get_param_file( $config->{$section}{addOrReplaceReadGroups_jar}, "addOrReplaceReadGroups_jar", 1 );
+  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -98,7 +98,7 @@ if [ ! -s $rgBamFile ]; then
     fi
     
     if [ -s $samFile ]; then
-      java -jar $addOrReplaceReadGroups_jar I=$samFile O=$rgSamFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA
+      java -jar $picard_jar AddOrReplaceReadGroups I=$samFile O=$rgSamFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA
       if [ -s $rgSamFile ]; then
         rm $samFile
       fi
