@@ -132,3 +132,31 @@ ok($ispaired);
 
 ok( eq_deeply( $gNames, [ "MiSeq", "HiSeq" ] ) );
 
+my $config2 = {
+  general    => { task_name => "Task" },
+  cufflink => {
+    class      => "Cufflinks",
+    target_dir => "cufflink",
+    source_config_ref => [$config, "tophat2", $config, "tophat2_2" ],
+    pbs        => {
+      "email"    => $email,
+      "nodes"    => "1:ppn=1",
+      "walltime" => "72",
+      "mem"      => "40gb"
+    },
+  },
+};
+
+$files = get_raw_files( $config2, "cufflink" );
+ok(
+  eq_deeply(
+    $files,
+    {
+      "P2177-01" => ['tophat2/result/P2177-01/accepted_hits.bam'],
+      "P2177-02" => ['tophat2/result/P2177-02/accepted_hits.bam'],
+      "P2177-03" => ['tophat2_2/result/P2177-03/accepted_hits.bam'],
+      "P2177-04" => ['tophat2_2/result/P2177-04/accepted_hits.bam']
+    }
+  )
+);
+

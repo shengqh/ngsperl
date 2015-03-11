@@ -11,7 +11,7 @@ use CQS::ClassFactory;
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(performSmallRNA performSmallRNATask)] );
+our %EXPORT_TAGS = ( 'all' => [qw(getConfig performSmallRNA performSmallRNATask)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -413,7 +413,7 @@ sub performSmallRNA {
 
   performConfig($config);
 
-  1;
+  return $config;
 }
 
 sub performSmallRNATask {
@@ -423,7 +423,7 @@ sub performSmallRNATask {
 
   performTask( $config, $task );
 
-  1;
+  return $config;
 }
 
 1;

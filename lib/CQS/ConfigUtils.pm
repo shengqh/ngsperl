@@ -13,9 +13,10 @@ use CQS::CQSDebug;
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS =
-  ( 'all' => [qw(get_option get_java get_cluster get_parameter get_param_file parse_param_file get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools)]
-  );
+our %EXPORT_TAGS = (
+  'all' => [
+    qw(get_option get_java get_cluster get_parameter get_param_file parse_param_file get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools)]
+);
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -74,6 +75,7 @@ sub get_value_in_section_or_general {
 
   return ($result);
 }
+
 sub get_java {
   my ( $config, $section ) = @_;
   return ( get_value_in_section_or_general( $config, $section, "java", "java" ) );
@@ -209,55 +211,95 @@ sub do_get_raw_files {
   if ( !defined $mapname ) {
     $mapname = "source";
   }
-  my $mapname_ref = $mapname . "_ref";
+  my $mapname_ref        = $mapname . "_ref";
+  my $mapname_config_ref = $mapname . "_config_ref";
 
   if ( defined $config->{$section}{$mapname} ) {
     return ( $config->{$section}{$mapname}, 1 );
   }
 
-  if ( defined $config->{$section}{$mapname_ref} ) {
-    my $refmap         = {};
-    my $refSectionName = $config->{$section}{$mapname_ref};
+  if ( defined $config->{$section}{$mapname_ref} || defined $config->{$section}{$mapname_config_ref} ) {
+    my $refmap = {};
+    if ( defined $config->{$section}{$mapname_ref} ) {
 
-    if ( ref($refSectionName) eq 'HASH' ) {
-      return ( $refSectionName, 1 );
-    }
+      #in same config
+      my $targetSection = $config->{$section}{$mapname_ref};
 
-    if ( ref($refSectionName) eq 'ARRAY' ) {
-      my @parts      = @{$refSectionName};
-      my $partlength = scalar(@parts);
-      for ( my $index = 0 ; $index < $partlength ; ) {
-        if ( !defined $config->{ $parts[$index] } ) {
-          die "undefined section $parts[$index]";
-        }
+      if ( ref($targetSection) eq 'HASH' ) {
+        return ( $targetSection, 1 );
+      }
 
-        if ( $index == ( $partlength - 1 ) || defined $config->{ $parts[ $index + 1 ] } ) {
-          $refmap->{ $parts[$index] } = $pattern;
-          $index++;
+      if ( ref($targetSection) eq 'ARRAY' ) {
+        my @parts      = @{$targetSection};
+        my $partlength = scalar(@parts);
+        for ( my $index = 0 ; $index < $partlength ; ) {
+          if ( !defined $config->{ $parts[$index] } ) {
+            die "undefined section $parts[$index]";
+          }
+
+          if ( $index == ( $partlength - 1 ) || defined $config->{ $parts[ $index + 1 ] } ) {
+            $refmap->{ $parts[$index] } = { config => $config, pattern => $pattern };
+            $index++;
+          }
+          else {
+            $refmap->{ $parts[$index] } = { config => $config, pattern => $parts[ $index + 1 ] };
+            $index += 2;
+          }
         }
-        else {
-          $refmap->{ $parts[$index] } = $parts[ $index + 1 ];
-          $index += 2;
+      }
+      else {
+        if ( !defined $config->{$targetSection} ) {
+          die "undefined section $targetSection";
         }
+        $refmap->{$targetSection} = { config => $config, pattern => $pattern };
       }
     }
     else {
-      if ( !defined $config->{$refSectionName} ) {
-        die "undefined section $refSectionName";
+
+      #in another config, has to be array
+      my $refSectionName = $config->{$section}{$mapname_config_ref};
+      if ( !( ref($refSectionName) eq 'ARRAY' ) ) {
+        die "$mapname_config_ref has to be defined as ARRAY with [config, section, pattern]";
       }
-      $refmap->{$refSectionName} = $pattern;
+      my @parts      = @{$refSectionName};
+      my $partlength = scalar(@parts);
+      for ( my $index = 0 ; $index < $partlength - 1 ; ) {
+        my $targetConfig  = $parts[$index];
+        my $targetSection = $parts[ $index + 1 ];
+
+        if ( !( ref($targetConfig) eq 'HASH' ) ) {
+          die
+"$mapname_config_ref has to be defined as ARRAY with [config1, section1, pattern1,config2, section2, pattern2] or [config1, section1,config2, section2] format. config should be hash and section should be string";
+        }
+
+        if ( !defined $targetConfig->{$targetSection} ) {
+          die "undefined section $targetSection in $mapname_config_ref of $section";
+        }
+
+        if ( $index == ( $partlength - 2 ) || ref( $parts[ $index + 2 ] ) eq 'HASH' ) {
+          $refmap->{$targetSection} = { config => $targetConfig, pattern => $pattern };
+          $index += 2;
+        }
+        else {
+          $refmap->{$targetSection} = { config => $targetConfig, pattern => $parts[ $index + 2 ] };
+          $index += 3;
+        }
+      }
     }
 
     my %result = ();
     for my $refsec ( keys %{$refmap} ) {
-      my $pat   = $refmap->{$refsec};
+      my $values       = $refmap->{$refsec};
+      my $targetConfig = $values->{config};
+      my $pattern      = $values->{pattern};
+
       my %myres = ();
-      if ( defined $config->{$refsec}{class} ) {
-        my $myclass = instantiate( $config->{$refsec}{class} );
-        %myres = %{ $myclass->result( $config, $refsec, $pat ) };
+      if ( defined $targetConfig->{$refsec}{class} ) {
+        my $myclass = instantiate( $targetConfig->{$refsec}{class} );
+        %myres = %{ $myclass->result( $targetConfig, $refsec, $pattern ) };
       }
       else {
-        my ( $res, $issource ) = do_get_raw_files( $config, $refsec, 1 );
+        my ( $res, $issource ) = do_get_raw_files( $targetConfig, $refsec, 1 );
         %myres = %{$res};
       }
       @result{ keys %myres } = values %myres;
@@ -271,7 +313,7 @@ sub do_get_raw_files {
     return ( $config->{$section}, 0 );
   }
   else {
-    die "define $mapname or $mapname_ref for $section";
+    die "define $mapname or $mapname_ref or $mapname_config_ref for $section";
   }
 }
 
