@@ -12,13 +12,13 @@ use Data::Dumper;
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(getConfig performSmallRNA performSmallRNATask)] );
+our %EXPORT_TAGS = ( 'all' => [qw(getSmallRNAConfig performSmallRNA performSmallRNATask)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
-sub getConfig {
+sub getSmallRNAConfig {
   my ($def) = @_;
 
   create_directory_or_die( $def->{target_dir} );
@@ -410,7 +410,7 @@ sub getConfig {
 sub performSmallRNA {
   my ($def) = @_;
 
-  my $config = getConfig($def);
+  my $config = getSmallRNAConfig($def);
 
   my $configFile = $def->{target_dir} . "/" . $def->{task_name} . ".config";
   open( SH, ">$configFile" ) or die "Cannot create $configFile";
@@ -425,7 +425,7 @@ sub performSmallRNA {
 sub performSmallRNATask {
   my ( $def, $task ) = @_;
 
-  my $config = getConfig($def);
+  my $config = getSmallRNAConfig($def);
 
   performTask( $config, $task );
 
