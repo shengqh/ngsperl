@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "CQSMappedCount";
+  $self->{_name}   = "CQSMappedCount";
   $self->{_suffix} = "_ct";
   bless $self, $class;
   return $self;
@@ -45,12 +45,18 @@ sub perform {
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my %seqCountFiles = ();
-  if ( defined $config->{$section}{"seqcount"} || defined $config->{$section}{"seqcount_ref"} ) {
+  if ( defined $config->{$section}{"seqcount"}
+    || defined $config->{$section}{"seqcount_ref"}
+    || defined $config->{$section}{"seqcount_config_ref"} )
+  {
     %seqCountFiles = %{ get_raw_files( $config, $section, "seqcount" ) };
   }
 
   my %fastqFiles = ();
-  if ( defined $config->{$section}{"fastq_files"} || defined $config->{$section}{"fastq_files_ref"} ) {
+  if ( defined $config->{$section}{"fastq_files"}
+    || defined $config->{$section}{"fastq_files_ref"}
+    || defined $config->{$section}{"fastq_files_config_ref"} )
+  {
     %fastqFiles = %{ get_raw_files( $config, $section, "fastq_files" ) };
   }
 
@@ -79,7 +85,7 @@ sub perform {
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
-    my $pbsFile = $self->pbsfile($pbsDir, $sampleName);
+    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
 
