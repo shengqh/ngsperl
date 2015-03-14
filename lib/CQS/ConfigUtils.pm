@@ -304,10 +304,10 @@ sub do_get_raw_files {
       }
 
       my $refcount = keys %myres;
-      for my $key ( keys %myres ) {
-        my $values = $myres{$key};
-        if ( scalar( @{$values} ) > 0 ) {
-          $result{key} = $values;
+      for my $mykey ( keys %myres ) {
+        my $myvalues = $myres{$mykey};
+        if ( scalar( @{$myvalues} ) > 0 ) {
+          $result{$mykey} = $myvalues;
         }
       }
     }
