@@ -302,7 +302,11 @@ sub do_get_raw_files {
         my ( $res, $issource ) = do_get_raw_files( $targetConfig, $refsec, 1 );
         %myres = %{$res};
       }
-      @result{ keys %myres } = values %myres;
+
+      my $refcount = keys %myres;
+      if ( $refcount > 0 ) {
+        @result{ keys %myres } = values %myres;
+      }
     }
 
     my $final = \%result;
