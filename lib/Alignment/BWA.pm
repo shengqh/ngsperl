@@ -38,7 +38,10 @@ sub perform {
     }
   }
 
-  my $bwa_index = $config->{$section}{bwa_index} or die "define ${section}::bwa_index first";
+  my $bwa_index = $config->{$section}{bwa_index};
+  if ( !defined $bwa_index ) {
+    $bwa_index = $config->{$section}{fasta_file} or die "define ${section}::bwa_index first";
+  }
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
