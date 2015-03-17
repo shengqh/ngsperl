@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "GATK::Refine";
+  $self->{_name}   = "GATK::Refine";
   $self->{_suffix} = "_rf";
   bless $self, $class;
   return $self;
@@ -30,10 +30,10 @@ sub perform {
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my @vcfFiles = @{ $config->{$section}{vcf_files} } or die "Define vcf_files in section $section first.";
-  my $gatk_jar           = get_param_file( $config->{$section}{gatk_jar},           "gatk_jar",           1 );
-  my $markDuplicates_jar = get_param_file( $config->{$section}{markDuplicates_jar}, "markDuplicates_jar", 1 );
+  my $gatk_jar   = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
+  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
 
-  my $gatk_option           = get_option( $config, $section, "gatk_option", "");
+  my $gatk_option = get_option( $config, $section, "gatk_option", "" );
 
   my $knownvcf      = "";
   my $knownsitesvcf = "";
@@ -50,10 +50,10 @@ sub perform {
   print SH get_run_command($sh_direct) . "\n";
 
   for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles   = @{ $rawFiles{$sampleName} };
-    my $sampleFile    = $sampleFiles[0];
+    my @sampleFiles    = @{ $rawFiles{$sampleName} };
+    my $sampleFile     = $sampleFiles[0];
     my $sampleFileName = basename($sampleFile);
-    
+
     my $intervalFile  = $sampleFileName . ".intervals";
     my $realignedFile = change_extension( $sampleFileName, ".realigned.bam" );
     my $grpFile       = $realignedFile . ".grp";
@@ -62,11 +62,11 @@ sub perform {
     my $sortedPrefix  = change_extension( $rmdupFile, "_sorted" );
     my $sortedFile    = $sortedPrefix . ".bam";
 
-    my $pbsFile = $self->pbsfile($pbsDir, $sampleName);
+    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
 
-    my $curDir  = create_directory_or_die( $resultDir . "/$sampleName" );
+    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
     print SH "\$MYCMD ./$pbsName \n";
 
@@ -110,7 +110,7 @@ fi
 
 if [[ -s $recalFile && ! -s $rmdupFile ]]; then
   echo RemoveDuplicate=`date` 
-  java $option -jar $markDuplicates_jar I=$recalFile O=$rmdupFile M=${rmdupFile}.matrix VALIDATION_STRINGENCY=SILENT ASSUME_SORTED=true REMOVE_DUPLICATES=true
+  java $option -jar $picard_jar MarkDuplicates I=$recalFile O=$rmdupFile M=${rmdupFile}.matrix VALIDATION_STRINGENCY=SILENT ASSUME_SORTED=true REMOVE_DUPLICATES=true
 fi
 
 if [[ -s $rmdupFile && ! -s $sortedFile ]]; then
@@ -152,11 +152,11 @@ sub result {
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my $sampleFile  = $sampleFiles[0];
+    my @sampleFiles    = @{ $rawFiles{$sampleName} };
+    my $sampleFile     = $sampleFiles[0];
     my $sampleFileName = basename($sampleFile);
-    my $sortedFile  = change_extension( $sampleFileName, ".realigned.recal.rmdup_sorted.bam" );
-    my @resultFiles = ();
+    my $sortedFile     = change_extension( $sampleFileName, ".realigned.recal.rmdup_sorted.bam" );
+    my @resultFiles    = ();
     push( @resultFiles, "${resultDir}/${sampleName}/${sortedFile}" );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
