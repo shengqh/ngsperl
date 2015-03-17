@@ -38,7 +38,7 @@ sub perform {
     }
   }
 
-  my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
+  my $bwa_index =  get_param_file( $config->{$section}{bwa_index}, "bwa_index", 1 );
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
@@ -60,10 +60,10 @@ sub perform {
     my $bwa_aln_command;
     if ( scalar(@sampleFiles) == 2 ) {
       my $sampleFile2 = $sampleFiles[1];
-      $bwa_aln_command = "bwa mem $option $faFile $sampleFile1 $sampleFile2 > $samFile";
+      $bwa_aln_command = "bwa mem $option $bwa_index $sampleFile1 $sampleFile2 > $samFile";
     }
     else {
-      $bwa_aln_command = "bwa mem $option $faFile $sampleFile1 > $samFile";
+      $bwa_aln_command = "bwa mem $option $bwa_index $sampleFile1 > $samFile";
     }
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
