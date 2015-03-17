@@ -31,14 +31,14 @@ sub perform {
   my $selfname = $self->{_name};
 
   $option = $option . " -M";
-  
-  if(! ($option =~ /-t/)){
-    if($thread > 1){
+
+  if ( !( $option =~ /-t/ ) ) {
+    if ( $thread > 1 ) {
       $option = $option . " -t " . $thread;
     }
   }
 
-  my $bwa_index =  get_param_file( $config->{$section}{bwa_index}, "bwa_index", 1 );
+  my $bwa_index = $config->{$section}{bwa_index} or die "define ${section}::bwa_index first";
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
@@ -46,7 +46,7 @@ sub perform {
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
-  
+
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $samFile     = $sampleName . ".sam";
