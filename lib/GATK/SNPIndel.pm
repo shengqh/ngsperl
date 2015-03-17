@@ -51,7 +51,7 @@ sub getGroupSampleMap {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $faFile   = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
@@ -127,7 +127,7 @@ cd $curDir
 echo SNP=`date` 
 
 if [ ! -s $snpOut ]; then
-  java $java_option -jar $gatk_jar -T UnifiedGenotyper $option -R $faFile -I $listfilename $knownvcf --out $snpOut -metrics $snpStat -glm SNP
+  java $java_option -jar $gatk_jar -T UnifiedGenotyper $option -nct $thread -R $faFile -I $listfilename $knownvcf --out $snpOut -metrics $snpStat -glm SNP
 fi
 
 java $java_option -jar $gatk_jar -T VariantFiltration $filter_snp_option -R $faFile -o $snpFilterOut --variant $snpOut 
