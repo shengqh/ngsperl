@@ -113,7 +113,9 @@ sub result {
   for my $sampleName ( keys %rawFiles ) {
     my @resultFiles = ();
     my $final = $sort_by_coordinate ? $sampleName . "_Aligned.sortedByCoord.out.bam" : $sampleName . "_Aligned.out.bam";
+    my $tab = $sampleName . "_SJ.out.tab";
     push( @resultFiles, "${resultDir}/${sampleName}/${final}" );
+    push( @resultFiles, "${resultDir}/${sampleName}/${tab}" );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
