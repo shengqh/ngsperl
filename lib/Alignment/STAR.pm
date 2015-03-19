@@ -35,7 +35,8 @@ sub perform {
   my $sort_by_coordinate = get_option( $config, $section, "sort_by_coordinate", 0 );
   my $output_format = $sort_by_coordinate ? "--outSAMtype BAM SortedByCoordinate" : "--outSAMtype BAM Unsorted";
 
-  my $genome_dir = $config->{$section}{genome_dir} or die "define ${section}::genome_dir first";
+  my $genome_dir = parse_param_file($config, $section, "genome_dir", 1);
+
   my %fqFiles = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
