@@ -39,7 +39,7 @@ sub perform {
   my $log     = $self->logfile( $logDir, $task_name );
 
   my $log_desc = $cluster->get_log_desc($log);
-  
+
   my $final = $resultDir . "/" . $task_name . ".tab";
 
   open( OUT, ">$pbsFile" ) or die $!;
@@ -60,15 +60,13 @@ echo STARIndex=`date`
 
   for my $sampleName ( sort keys %sjdbFiles ) {
     my @sjdbs = @{ $sjdbFiles{$sampleName} };
-    for my $sjdb (@sjdbs){
-      if($sjdb =~ /tab\$/){
-        print OUT "awk 'BEGIN {OFS=\"\t\"; strChar[0]=\".\"; strChar[1]=\"+\"; strChar[2]=\"-\";} {if($5>0){print $1,$2,$3,strChar[$4]}}' $sjdb >> $final"
-      }
+    for my $sjdb (@sjdbs) {
+      print OUT "awk 'BEGIN {OFS=\"\t\"; strChar[0]=\".\"; strChar[1]=\"+\"; strChar[2]=\"-\";} {if($5>0){print $1,$2,$3,strChar[$4]}}' $sjdb >> $final";
     }
   }
-  
+
   print OUT "STAR $option --runThreadN $thread --runMode genomeGenerate --genomeDir . --genomeFastaFiles $faFile --sjdbGTFfile $transcript_gtf --sjdbFileChrStartEnd $final \n";
-  
+
   print OUT "echo finished=`date`
 
 exit 0
