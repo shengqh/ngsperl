@@ -51,7 +51,7 @@ $path_file
 cd $resultDir
 
 if [ -s $final ]; then
-  echo job has already been done. if you want to do again, delete ${resultDir}/${final} and submit job again.
+  echo job has already been done. if you want to do again, delete ${final} and submit job again.
   exit 0;
 fi
 
