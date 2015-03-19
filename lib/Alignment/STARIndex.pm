@@ -65,7 +65,7 @@ echo STARIndex=`date`
     }
   }
 
-  print OUT "#STAR $option --runThreadN $thread --runMode genomeGenerate --genomeDir . --genomeFastaFiles $faFile --sjdbGTFfile $transcript_gtf --sjdbFileChrStartEnd $final \n";
+  print OUT "STAR $option --runThreadN $thread --runMode genomeGenerate --genomeDir . --genomeFastaFiles $faFile --sjdbGTFfile $transcript_gtf --sjdbFileChrStartEnd $final \n";
 
   print OUT "echo finished=`date`
 
