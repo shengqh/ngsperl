@@ -52,14 +52,13 @@ sub perform {
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles    = @{ $rawFiles{$sampleName} };
     my $sampleFile     = $sampleFiles[0];
-    my $sampleFileName = basename($sampleFile);
 
-    my $intervalFile  = $sampleFileName . ".intervals";
-    my $realignedFile = change_extension( $sampleFileName, ".realigned.bam" );
+    my $rmdupFile     = $sampleName . ".rmdup.bam";
+    my $intervalFile  = change_extension($rmdupFile, ".intervals");
+    my $realignedFile = change_extension( $rmdupFile, ".realigned.bam" );
     my $grpFile       = $realignedFile . ".grp";
     my $recalFile     = change_extension( $realignedFile, ".recal.bam" );
-    my $rmdupFile     = change_extension( $recalFile, ".rmdup.bam" );
-    my $sortedPrefix  = change_extension( $rmdupFile, "_sorted" );
+    my $sortedPrefix  = change_extension( $recalFile, ".sorted" );
     my $sortedFile    = $sortedPrefix . ".bam";
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
@@ -87,9 +86,14 @@ if [ -s $sortedFile ]; then
   exit 0
 fi
 
-if [ ! -s $intervalFile ]; then
+if [ ! -s $rmdupFile ]; then
+  echo RemoveDuplicate=`date` 
+  java $option -jar $picard_jar MarkDuplicates I=$sampleFile O=$rmdupFile M=${rmdupFile}.matrix VALIDATION_STRINGENCY=SILENT ASSUME_SORTED=true REMOVE_DUPLICATES=true
+fi
+
+if [[ -s $rmdupFile && ! -s $intervalFile ]]; then
   echo RealignerTargetCreator=`date` 
-  java $option -jar $gatk_jar -T RealignerTargetCreator $gatk_option -I $sampleFile -R $faFile $knownvcf -nt $thread -o $intervalFile
+  java $option -jar $gatk_jar -T RealignerTargetCreator $gatk_option -I $rmdupFile -R $faFile $knownvcf -nt $thread -o $intervalFile
 fi
 
 if [[ -s $intervalFile && ! -s $realignedFile ]]; then
@@ -108,21 +112,16 @@ if [[ -s $grpFile && ! -s $recalFile ]]; then
   java $option -jar $gatk_jar -T PrintReads -rf BadCigar -R $faFile -I $realignedFile -BQSR $grpFile -o $recalFile 
 fi
 
-if [[ -s $recalFile && ! -s $rmdupFile ]]; then
-  echo RemoveDuplicate=`date` 
-  java $option -jar $picard_jar MarkDuplicates I=$recalFile O=$rmdupFile M=${rmdupFile}.matrix VALIDATION_STRINGENCY=SILENT ASSUME_SORTED=true REMOVE_DUPLICATES=true
-fi
-
-if [[ -s $rmdupFile && ! -s $sortedFile ]]; then
+if [[ -s $recalFile && ! -s $sortedFile ]]; then
   echo BamSort=`date` 
-  samtools sort -@ $thread -m 4G $rmdupFile $sortedPrefix 
+  samtools sort -@ $thread -m 4G $recalFile $sortedPrefix 
 fi
 
 if [[ -s $sortedFile && ! -s ${sortedFile}.bai ]]; then
   echo BamIndex=`date` 
   samtools index $sortedFile
   samtools flagstat $sortedFile > ${sortedFile}.stat
-  rm $rmdupFile $recalFile $realignedFile
+  #rm $rmdupFile $realignedFile $recalFile
 fi
   
 echo finished=`date`
@@ -152,10 +151,7 @@ sub result {
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my @sampleFiles    = @{ $rawFiles{$sampleName} };
-    my $sampleFile     = $sampleFiles[0];
-    my $sampleFileName = basename($sampleFile);
-    my $sortedFile     = change_extension( $sampleFileName, ".realigned.recal.rmdup_sorted.bam" );
+    my $sortedFile     = $sampleName . ".rmdup.realigned.recal.sorted.bam";
     my @resultFiles    = ();
     push( @resultFiles, "${resultDir}/${sampleName}/${sortedFile}" );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
