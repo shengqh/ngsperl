@@ -105,7 +105,7 @@ if [ ! -s $rmdupFile ]; then
 fi
 
 if [ ! -s $splitFile ]; then
-  echo MarkDuplicates=`date` 
+  echo SplitNCigarReads=`date` 
   java $option -jar $gatk_jar -T SplitNCigarReads -R $faFile -I $rmdupFile -o $splitFile -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60 -U ALLOW_N_CIGAR_READS
 fi
 
