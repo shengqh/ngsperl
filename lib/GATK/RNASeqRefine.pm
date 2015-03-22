@@ -70,7 +70,7 @@ sub perform {
     my $splitFile    = change_extension( $rmdupFile, ".split.bam" );
     my $grpFile      = $splitFile . ".grp";
     my $recalFile    = change_extension( $splitFile, ".recal.bam" );
-    my $sortedPrefix = change_extension( $recalFile, "_sorted" );
+    my $sortedPrefix = change_extension( $recalFile, ".sorted" );
     my $sortedFile   = $sortedPrefix . ".bam";
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
@@ -128,7 +128,7 @@ if [[ -s $sortedFile && ! -s ${sortedFile}.bai ]]; then
   echo BamIndex=`date` 
   samtools index $sortedFile
   samtools flagstat $sortedFile > ${sortedFile}.stat
-  rm $presortedFile $rmdupFile $splitFile $recalFile
+  #rm $presortedFile $rmdupFile $splitFile $recalFile
 fi
   
 echo finished=`date`
