@@ -35,6 +35,8 @@ sub perform {
 
   my $gatk_option = get_option( $config, $section, "gatk_option", "" );
 
+  my $sorted = get_option( $config, $section, "sorted", 0 );
+
   my $knownvcf      = "";
   my $knownsitesvcf = "";
 
@@ -54,12 +56,22 @@ sub perform {
     my $sampleFile     = $sampleFiles[0];
     my $sampleFileName = basename($sampleFile);
 
-    my $rmdupFile     = $sampleName . ".rmdup.bam";
-    my $splitFile = change_extension($rmdupFile, ".split.bam");
-    my $grpFile       = $splitFile . ".grp";
-    my $recalFile     = change_extension( $splitFile, ".recal.bam" );
-    my $sortedPrefix  = change_extension( $recalFile, "_sorted" );
-    my $sortedFile    = $sortedPrefix . ".bam";
+    my $inputFile     = $sampleFile;
+    my $presortedFile = "";
+    my $sortCmd       = "";
+    if ( !$sorted ) {
+      my $presortedPrefix = $sampleName . "_sorted";
+      $presortedFile = $presortedPrefix . ".bam";
+      $sortCmd       = "samtools sort -@ $thread -m 4G $sampleFile $presortedPrefix";
+      $inputFile     = $presortedFile;
+    }
+
+    my $rmdupFile    = $sampleName . ".rmdup.bam";
+    my $splitFile    = change_extension( $rmdupFile, ".split.bam" );
+    my $grpFile      = $splitFile . ".grp";
+    my $recalFile    = change_extension( $splitFile, ".recal.bam" );
+    my $sortedPrefix = change_extension( $recalFile, "_sorted" );
+    my $sortedFile   = $sortedPrefix . ".bam";
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
@@ -88,7 +100,8 @@ fi
 
 if [ ! -s $rmdupFile ]; then
   echo MarkDuplicates=`date` 
-  java $option -jar $picard_jar MarkDuplicates I=$sampleFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
+  $sortCmd
+  java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
 fi
 
 if [ ! -s $splitFile ]; then
@@ -115,7 +128,7 @@ if [[ -s $sortedFile && ! -s ${sortedFile}.bai ]]; then
   echo BamIndex=`date` 
   samtools index $sortedFile
   samtools flagstat $sortedFile > ${sortedFile}.stat
-  rm $rmdupFile $splitFile $recalFile
+  rm $presortedFile $rmdupFile $splitFile $recalFile
 fi
   
 echo finished=`date`
@@ -145,8 +158,8 @@ sub result {
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my $sortedFile     = $sampleName . ".rmdup.split.recal_sorted.bam";
-    my @resultFiles    = ();
+    my $sortedFile  = $sampleName . ".rmdup.split.recal_sorted.bam";
+    my @resultFiles = ();
     push( @resultFiles, "${resultDir}/${sampleName}/${sortedFile}" );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
