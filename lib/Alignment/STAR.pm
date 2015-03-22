@@ -32,10 +32,19 @@ sub perform {
     $option = $option . "  --outSAMprimaryFlag AllBestScore";
   }
 
-  my $sort_by_coordinate = get_option( $config, $section, "sort_by_coordinate", 0 );
-  my $output_format = $sort_by_coordinate ? "--outSAMtype BAM SortedByCoordinate" : "--outSAMtype BAM Unsorted";
-
-  my $genome_dir = parse_param_file($config, $section, "genome_dir", 1);
+  my $output_sort_by_coordinate = get_option( $config, $section, "output_sort_by_coordinate", 0 );
+  my $output_unsorted           = get_option( $config, $section, "output_unsorted",           0 );
+  if ( !$output_sort_by_coordinate && !$output_unsorted ) {
+    $output_unsorted = 1;
+  }
+  my $output_format = "--outSAMtype BAM";
+  if ($output_sort_by_coordinate) {
+    $output_format = $output_format . " SortedByCoordinate";
+  }
+  if ($output_unsorted) {
+    $output_format = $output_format . " Unsorted";
+  }
+  my $genome_dir = parse_param_file( $config, $section, "genome_dir", 1 );
 
   my %fqFiles = %{ get_raw_files( $config, $section ) };
 
@@ -59,7 +68,7 @@ sub perform {
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
     my $rgline = "ID:$sampleName SM:$sampleName LB:$sampleName";
 
-    my $final = $sort_by_coordinate ? $sampleName . "_Aligned.sortedByCoord.out.bam" : $sampleName . "_Aligned.out.bam";
+    my $final = $output_sort_by_coordinate ? $sampleName . "_Aligned.sortedByCoord.out.bam" : $sampleName . "_Aligned.out.bam";
 
     my $log_desc = $cluster->get_log_desc($log);
 
@@ -112,10 +121,21 @@ sub result {
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my @resultFiles = ();
-    my $final = $sort_by_coordinate ? $sampleName . "_Aligned.sortedByCoord.out.bam" : $sampleName . "_Aligned.out.bam";
+    my @resultFiles               = ();
+    my $output_sort_by_coordinate = get_option( $config, $section, "output_sort_by_coordinate", 0 );
+    my $output_unsorted           = get_option( $config, $section, "output_unsorted", 0 );
+    if ( !$output_sort_by_coordinate && !$output_unsorted ) {
+      $output_unsorted = 1;
+    }
     my $tab = $sampleName . "_SJ.out.tab";
-    push( @resultFiles, "${resultDir}/${sampleName}/${final}" );
+    if ($output_sort_by_coordinate) {
+      push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}_Aligned.sortedByCoord.out.bam" );
+
+    }
+    if ($output_unsorted) {
+      push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}_Aligned.out.bam" );
+
+    }
     push( @resultFiles, "${resultDir}/${sampleName}/${tab}" );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
