@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $rsmcfile = get_param_file( $config->{$section}{execute_file}, "execute_file", 1 );
   my $source_type = $config->{$section}{source_type} or die "source_type is not defined in $section";
@@ -115,7 +115,7 @@ cd $curDir
         $cmd = "samtools mpileup -f $fafile $mpileupParameter $normal $tumor | mono-sgen $rsmcfile all -t console $option -o ${curDir}/${groupName}";
       }
       else {
-        $cmd = "mono-sgen $rsmcfile all -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${curDir}/${groupName}";
+        $cmd = "mono-sgen $rsmcfile all -c $thread -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${curDir}/${groupName}";
       }
 
       print OUT "
