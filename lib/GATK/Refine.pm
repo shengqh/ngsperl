@@ -45,6 +45,8 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
+  my $sorted = get_option( $config, $section, "sorted", 0 );
+
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
@@ -53,13 +55,21 @@ sub perform {
     my @sampleFiles    = @{ $rawFiles{$sampleName} };
     my $sampleFile     = $sampleFiles[0];
 
+    my $inputFile     = $sampleFile;
+    my $presortedFile = "";
+    my $sortCmd       = "";
+    if ( !$sorted ) {
+      my $presortedPrefix = $sampleName . ".sorted";
+      $presortedFile = $presortedPrefix . ".bam";
+      $sortCmd       = "samtools sort -@ $thread -m 4G $sampleFile $presortedPrefix";
+      $inputFile     = $presortedFile;
+    }
+
     my $rmdupFile     = $sampleName . ".rmdup.bam";
     my $intervalFile  = change_extension($rmdupFile, ".intervals");
     my $realignedFile = change_extension( $rmdupFile, ".realigned.bam" );
     my $grpFile       = $realignedFile . ".grp";
     my $recalFile     = change_extension( $realignedFile, ".recal.bam" );
-    my $sortedPrefix  = change_extension( $recalFile, ".sorted" );
-    my $sortedFile    = $sortedPrefix . ".bam";
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
@@ -81,15 +91,15 @@ cd $curDir
 
 echo GATKRefine_start=`date` 
 
-if [ -s $sortedFile ]; then
-  echo job has already been done. if you want to do again, delete $sortedFile and submit job again.
+if [ -s $recalFile ]; then
+  echo job has already been done. if you want to do again, delete $recalFile and submit job again.
   exit 0
 fi
 
 if [ ! -s $rmdupFile ]; then
-  echo RemoveDuplicate=`date` 
-  java $option -jar $picard_jar MarkDuplicates I=$sampleFile O=$rmdupFile M=${rmdupFile}.matrix VALIDATION_STRINGENCY=SILENT ASSUME_SORTED=true REMOVE_DUPLICATES=true
-  samtools index $rmdupFile
+  echo MarkDuplicates=`date` 
+  $sortCmd
+  java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
 fi
 
 if [[ -s $rmdupFile && ! -s $intervalFile ]]; then
@@ -113,16 +123,11 @@ if [[ -s $grpFile && ! -s $recalFile ]]; then
   java $option -jar $gatk_jar -T PrintReads -rf BadCigar -R $faFile -I $realignedFile -BQSR $grpFile -o $recalFile 
 fi
 
-if [[ -s $recalFile && ! -s $sortedFile ]]; then
-  echo BamSort=`date` 
-  samtools sort -@ $thread -m 4G $recalFile $sortedPrefix 
-fi
-
-if [[ -s $sortedFile && ! -s ${sortedFile}.bai ]]; then
+if [[ -s $recalFile && ! -s ${recalFile}.bai ]]; then
   echo BamIndex=`date` 
-  samtools index $sortedFile
-  samtools flagstat $sortedFile > ${sortedFile}.stat
-  #rm $rmdupFile $realignedFile $recalFile
+  samtools index $recalFile
+  samtools flagstat $recalFile > ${recalFile}.stat
+  rm $presortedFile $rmdupFile $realignedFile
 fi
   
 echo finished=`date`
