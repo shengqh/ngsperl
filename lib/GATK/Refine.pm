@@ -89,6 +89,7 @@ fi
 if [ ! -s $rmdupFile ]; then
   echo RemoveDuplicate=`date` 
   java $option -jar $picard_jar MarkDuplicates I=$sampleFile O=$rmdupFile M=${rmdupFile}.matrix VALIDATION_STRINGENCY=SILENT ASSUME_SORTED=true REMOVE_DUPLICATES=true
+  samtools index $rmdupFile
 fi
 
 if [[ -s $rmdupFile && ! -s $intervalFile ]]; then
