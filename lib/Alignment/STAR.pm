@@ -66,7 +66,7 @@ sub perform {
     my $log     = $self->logfile( $logDir, $sampleName );
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
-    my $rgline = "ID:$sampleName SM:$sampleName LB:$sampleName PL:ILLUMINA";
+    my $rgline = "ID:$sampleName SM:$sampleName LB:$sampleName PL:ILLUMINA PU:ILLUMINA";
 
     my $final = $output_sort_by_coordinate ? $sampleName . "_Aligned.sortedByCoord.out.bam" : $sampleName . "_Aligned.out.bam";
 
