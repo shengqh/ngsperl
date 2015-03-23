@@ -66,7 +66,7 @@ sub perform {
     my $log     = $self->logfile( $logDir, $sampleName );
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
-    my $rgline = "ID:$sampleName SM:$sampleName LB:$sampleName";
+    my $rgline = "--outSAMattrRGline ID:$sampleName --outSAMattrRGline SM:$sampleName --outSAMattrRGline LB:$sampleName";
 
     my $final = $output_sort_by_coordinate ? $sampleName . "_Aligned.sortedByCoord.out.bam" : $sampleName . "_Aligned.out.bam";
 
@@ -87,7 +87,7 @@ fi
 
 echo STAR_start=`date` 
 
-STAR $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $genome_dir --readFilesIn $samples $uncompress --outFileNamePrefix ${sampleName}_ $output_format  
+STAR $option $rgline --runThreadN $thread --genomeDir $genome_dir --readFilesIn $samples $uncompress --outFileNamePrefix ${sampleName}_ $output_format  
 
 samtools index $final
 
