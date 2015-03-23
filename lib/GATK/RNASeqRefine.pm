@@ -60,7 +60,7 @@ sub perform {
     my $presortedFile = "";
     my $sortCmd       = "";
     if ( !$sorted ) {
-      my $presortedPrefix = $sampleName . "_sorted";
+      my $presortedPrefix = $sampleName . ".sorted";
       $presortedFile = $presortedPrefix . ".bam";
       $sortCmd       = "samtools sort -@ $thread -m 4G $sampleFile $presortedPrefix";
       $inputFile     = $presortedFile;
@@ -70,8 +70,6 @@ sub perform {
     my $splitFile    = change_extension( $rmdupFile, ".split.bam" );
     my $grpFile      = $splitFile . ".grp";
     my $recalFile    = change_extension( $splitFile, ".recal.bam" );
-    my $sortedPrefix = change_extension( $recalFile, ".sorted" );
-    my $sortedFile   = $sortedPrefix . ".bam";
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
@@ -93,8 +91,8 @@ cd $curDir
 
 echo GATKRNASeqRefine_start=`date` 
 
-if [ -s $sortedFile ]; then
-  echo job has already been done. if you want to do again, delete $sortedFile and submit job again.
+if [ -s $recalFile ]; then
+  echo job has already been done. if you want to do again, delete $recalFile and submit job again.
   exit 0
 fi
 
@@ -119,16 +117,11 @@ if [[ -s $splitFile && -s $grpFile && ! -s $recalFile ]]; then
   java $option -jar $gatk_jar -T PrintReads -rf BadCigar -R $faFile -I $splitFile -BQSR $grpFile -o $recalFile 
 fi
 
-if [[ -s $recalFile && ! -s $sortedFile ]]; then
-  echo BamSort=`date` 
-  samtools sort -@ $thread -m 4G $recalFile $sortedPrefix 
-fi
-
-if [[ -s $sortedFile && ! -s ${sortedFile}.bai ]]; then
+if [[ -s $recalFile && ! -s ${recalFile}.bai ]]; then
   echo BamIndex=`date` 
-  samtools index $sortedFile
-  samtools flagstat $sortedFile > ${sortedFile}.stat
-  #rm $presortedFile $rmdupFile $splitFile $recalFile
+  samtools index $recalFile
+  samtools flagstat $recalFile > ${recalFile}.stat
+  #rm $presortedFile $rmdupFile $splitFile
 fi
   
 echo finished=`date`
@@ -158,7 +151,7 @@ sub result {
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my $sortedFile  = $sampleName . ".rmdup.split.recal_sorted.bam";
+    my $sortedFile  = $sampleName . ".rmdup.split.recal.bam";
     my @resultFiles = ();
     push( @resultFiles, "${resultDir}/${sampleName}/${sortedFile}" );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
