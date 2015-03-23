@@ -121,7 +121,7 @@ if [[ -s $recalFile && ! -s ${recalFile}.bai ]]; then
   echo BamIndex=`date` 
   samtools index $recalFile
   samtools flagstat $recalFile > ${recalFile}.stat
-  #rm $presortedFile $rmdupFile $splitFile
+  rm $presortedFile $rmdupFile $splitFile
 fi
   
 echo finished=`date`
