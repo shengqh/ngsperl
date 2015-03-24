@@ -104,12 +104,12 @@ fi
 
 if [ ! -s $splitFile ]; then
   echo SplitNCigarReads=`date` 
-  java $option -jar $gatk_jar -T SplitNCigarReads -R $faFile -I $rmdupFile -o $splitFile -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60 -U ALLOW_N_CIGAR_READS
+  java $option -jar $gatk_jar -T SplitNCigarReads -R $faFile -I $rmdupFile -o $splitFile -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60 -U ALLOW_N_CIGAR_READS -fixMisencodedQuals
 fi
 
 if [[ -s $splitFile && ! -s $grpFile ]]; then
   echo BaseRecalibrator=`date` 
-  java $option -jar $gatk_jar -T BaseRecalibrator -rf BadCigar -R $faFile -I $splitFile $knownsitesvcf -o $grpFile -fixMisencodedQuals
+  java $option -jar $gatk_jar -T BaseRecalibrator -rf BadCigar -R $faFile -I $splitFile $knownsitesvcf -o $grpFile
 fi
 
 if [[ -s $splitFile && -s $grpFile && ! -s $recalFile ]]; then
