@@ -66,10 +66,10 @@ sub perform {
       $inputFile     = $presortedFile;
     }
 
-    my $rmdupFile    = $sampleName . ".rmdup.bam";
-    my $splitFile    = change_extension( $rmdupFile, ".split.bam" );
-    my $grpFile      = $splitFile . ".grp";
-    my $recalFile    = change_extension( $splitFile, ".recal.bam" );
+    my $rmdupFile = $sampleName . ".rmdup.bam";
+    my $splitFile = $sampleName . ".rmdup.split.bam";
+    my $grpFile   = $splitFile . ".grp";
+    my $recalFile = $sampleName . ".rmdup.split.recal.bam";
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
@@ -121,7 +121,7 @@ if [[ -s $recalFile && ! -s ${recalFile}.bai ]]; then
   echo BamIndex=`date` 
   samtools index $recalFile
   samtools flagstat $recalFile > ${recalFile}.stat
-  rm $presortedFile $rmdupFile $splitFile
+  rm $presortedFile $rmdupFile ${sampleName}.rmdup.bai ${rmdupFile}.metrics $splitFile ${sampleName}.rmdup.split.bai $grpFile
 fi
   
 echo finished=`date`

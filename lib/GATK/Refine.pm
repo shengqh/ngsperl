@@ -66,10 +66,10 @@ sub perform {
     }
 
     my $rmdupFile     = $sampleName . ".rmdup.bam";
-    my $intervalFile  = change_extension($rmdupFile, ".intervals");
-    my $realignedFile = change_extension( $rmdupFile, ".realigned.bam" );
+    my $intervalFile  = $sampleName . ".rmdup.intervals";
+    my $realignedFile = $sampleName . ".rmdup.realigned.bam";
     my $grpFile       = $realignedFile . ".grp";
-    my $recalFile     = change_extension( $realignedFile, ".recal.bam" );
+    my $recalFile     = $sampleName . ".rmdup.realigned.recal.bam";
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
@@ -127,7 +127,7 @@ if [[ -s $recalFile && ! -s ${recalFile}.bai ]]; then
   echo BamIndex=`date` 
   samtools index $recalFile
   samtools flagstat $recalFile > ${recalFile}.stat
-  rm $presortedFile $rmdupFile $realignedFile
+  rm $presortedFile $rmdupFile ${sampleName}.rmdup.bai ${rmdupFile}.metrics $realignedFile ${sampleName}.rmdup.realigned.bai $grpFile
 fi
   
 echo finished=`date`
@@ -157,9 +157,9 @@ sub result {
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my $sortedFile     = $sampleName . ".rmdup.realigned.recal.sorted.bam";
+    my $recalFile     = $sampleName . ".rmdup.realigned.recal.bam";
     my @resultFiles    = ();
-    push( @resultFiles, "${resultDir}/${sampleName}/${sortedFile}" );
+    push( @resultFiles, "${resultDir}/${sampleName}/${recalFile}" );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
