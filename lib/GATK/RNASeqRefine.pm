@@ -36,6 +36,8 @@ sub perform {
   my $gatk_option = get_option( $config, $section, "gatk_option", "" );
 
   my $sorted = get_option( $config, $section, "sorted", 0 );
+  
+  my $replaceReadGroup = get_option( $config, $section, "replace_read_group", 0 );
 
   my $knownvcf      = "";
   my $knownsitesvcf = "";
@@ -69,6 +71,17 @@ sub perform {
     my $rmdupFile = $sampleName . ".rmdup.bam";
     my $splitFile = $sampleName . ".rmdup.split.bam";
     my $grpFile   = $splitFile . ".grp";
+    
+    
+    my $recalInput = $splitFile;
+    my $replaceCmd = "";
+    my $replacedFile = "";
+    if($replaceReadGroup){
+      $replacedFile = $sampleName . ".rmdup.split.rgreplaced.bam";
+      $replaceCmd = "java -jar $picard_jar AddOrReplaceReadGroups I=$splitFile O=$replacedFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA";
+      $recalInput = $replacedFile;
+    }
+    
     my $recalFile = $sampleName . ".rmdup.split.recal.bam";
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
@@ -109,19 +122,20 @@ fi
 
 if [[ -s $splitFile && ! -s $grpFile ]]; then
   echo BaseRecalibrator=`date` 
-  java $option -jar $gatk_jar -T BaseRecalibrator -rf BadCigar -R $faFile -I $splitFile $knownsitesvcf -o $grpFile
+  $replaceCmd
+  java $option -jar $gatk_jar -T BaseRecalibrator -rf BadCigar -R $faFile -I $recalInput $knownsitesvcf -o $grpFile
 fi
 
-if [[ -s $splitFile && -s $grpFile && ! -s $recalFile ]]; then
+if [[ -s $recalInput && -s $grpFile && ! -s $recalFile ]]; then
   echo PrintReads=`date`
-  java $option -jar $gatk_jar -T PrintReads -rf BadCigar -R $faFile -I $splitFile -BQSR $grpFile -o $recalFile 
+  java $option -jar $gatk_jar -T PrintReads -rf BadCigar -R $faFile -I $recalInput -BQSR $grpFile -o $recalFile 
 fi
 
 if [[ -s $recalFile && ! -s ${recalFile}.bai ]]; then
   echo BamIndex=`date` 
   samtools index $recalFile
   samtools flagstat $recalFile > ${recalFile}.stat
-  rm $presortedFile $rmdupFile ${sampleName}.rmdup.bai ${rmdupFile}.metrics $splitFile ${sampleName}.rmdup.split.bai $grpFile
+  rm $presortedFile $rmdupFile ${sampleName}.rmdup.bai ${rmdupFile}.metrics $splitFile ${sampleName}.rmdup.split.bai $replacedFile $grpFile
 fi
   
 echo finished=`date`
