@@ -69,18 +69,18 @@ sub perform {
     }
 
     my $rmdupFile = $sampleName . ".rmdup.bam";
-    my $splitFile = $sampleName . ".rmdup.split.bam";
-    my $grpFile   = $splitFile . ".grp";
-    
-    
-    my $recalInput = $splitFile;
+
+    my $splitInput = $rmdupFile;
     my $replaceCmd = "";
     my $replacedFile = "";
     if($replaceReadGroup){
-      $replacedFile = $sampleName . ".rmdup.split.rgreplaced.bam";
-      $replaceCmd = "java -jar $picard_jar AddOrReplaceReadGroups I=$splitFile O=$replacedFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA";
-      $recalInput = $replacedFile;
+      $replacedFile = $sampleName . ".rmdup.rgreplaced.bam";
+      $replaceCmd = "java -jar $picard_jar AddOrReplaceReadGroups I=$rmdupFile O=$replacedFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA";
+      $splitInput = $replacedFile;
     }
+
+    my $splitFile = $sampleName . ".rmdup.split.bam";
+    my $grpFile   = $splitFile . ".grp";
     
     my $recalFile = $sampleName . ".rmdup.split.recal.bam";
 
@@ -117,25 +117,25 @@ fi
 
 if [ ! -s $splitFile ]; then
   echo SplitNCigarReads=`date` 
-  java $option -jar $gatk_jar -T SplitNCigarReads -R $faFile -I $rmdupFile -o $splitFile -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60 -U ALLOW_N_CIGAR_READS -fixMisencodedQuals
+  $replaceCmd
+  java $option -jar $gatk_jar -T SplitNCigarReads -R $faFile -I $splitInput -o $splitFile -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60 -U ALLOW_N_CIGAR_READS -fixMisencodedQuals
 fi
 
 if [[ -s $splitFile && ! -s $grpFile ]]; then
   echo BaseRecalibrator=`date` 
-  $replaceCmd
-  java $option -jar $gatk_jar -T BaseRecalibrator -rf BadCigar -R $faFile -I $recalInput $knownsitesvcf -o $grpFile
+  java $option -jar $gatk_jar -T BaseRecalibrator -rf BadCigar -R $faFile -I $splitFile $knownsitesvcf -o $grpFile
 fi
 
-if [[ -s $recalInput && -s $grpFile && ! -s $recalFile ]]; then
+if [[ -s $splitFile && -s $grpFile && ! -s $recalFile ]]; then
   echo PrintReads=`date`
-  java $option -jar $gatk_jar -T PrintReads -rf BadCigar -R $faFile -I $recalInput -BQSR $grpFile -o $recalFile 
+  java $option -jar $gatk_jar -T PrintReads -rf BadCigar -R $faFile -I $splitFile -BQSR $grpFile -o $recalFile 
 fi
 
 if [[ -s $recalFile && ! -s ${recalFile}.bai ]]; then
   echo BamIndex=`date` 
   samtools index $recalFile
   samtools flagstat $recalFile > ${recalFile}.stat
-  rm $presortedFile $rmdupFile ${sampleName}.rmdup.bai ${rmdupFile}.metrics $splitFile ${sampleName}.rmdup.split.bai $replacedFile $grpFile
+  rm $presortedFile $rmdupFile ${sampleName}.rmdup.bai ${rmdupFile}.metrics $replacedFile $splitFile ${sampleName}.rmdup.split.bai $grpFile
 fi
   
 echo finished=`date`
