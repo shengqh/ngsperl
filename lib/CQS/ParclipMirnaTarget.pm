@@ -33,7 +33,7 @@ sub perform {
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file (genome fasta file)", 1 );
   
   my %rawFiles = %{ get_raw_files( $config, $section ) };
-  my %utr3Files = %{ get_raw_files( $config, $section, "utr3_count_xml" ) };
+  my %targetFiles = %{ get_raw_files( $config, $section, "target" ) };
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
@@ -43,7 +43,7 @@ sub perform {
     my $xmlFile   = $rawFiles{$sampleName}->[0];
     my $finalFile = $sampleName . ".miRNA.target.tsv";
     
-    my $utr3xml = $utr3Files{$sampleName}->[0];
+    my $targetXml = $targetFiles{$sampleName}->[0];
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
@@ -68,7 +68,7 @@ fi
 
 echo ParclipMirnaTarget=`date` 
 
-mono-sgen $cqsFile parclip_mirna_target $option -i $xmlFile -u $utr3xml -r $refgeneFile -g $faFile -o $finalFile
+mono-sgen $cqsFile parclip_mirna_target $option -i $xmlFile -t $targetXml -r $refgeneFile -g $faFile -o $finalFile
 
 echo finished=`date`
 
