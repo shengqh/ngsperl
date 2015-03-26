@@ -58,6 +58,7 @@ sub perform {
     my $sampleFile     = $sampleFiles[0];
     my $sampleFileName = basename($sampleFile);
 
+    my $rmFiles = "";
     my $inputFile     = $sampleFile;
     my $presortedFile = "";
     my $sortCmd       = "";
@@ -66,6 +67,7 @@ sub perform {
       $presortedFile = $presortedPrefix . ".bam";
       $sortCmd       = "samtools sort -@ $thread -m 4G $sampleFile $presortedPrefix";
       $inputFile     = $presortedFile;
+      $rmFiles = $presortedFile;
     }
 
     my $rmdupFile = $sampleName . ".rmdup.bam";
@@ -77,6 +79,7 @@ sub perform {
       $replacedFile = $sampleName . ".rmdup.rgreplaced.bam";
       $replaceCmd = "java -jar $picard_jar AddOrReplaceReadGroups I=$rmdupFile O=$replacedFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA; samtools index $replacedFile";
       $splitInput = $replacedFile;
+      $rmFiles = $rmFiles . " " . $replacedFile . " " . $replacedFile . ".bai";
     }
 
     my $splitFile = $sampleName . ".rmdup.split.bam";
@@ -135,7 +138,7 @@ if [[ -s $recalFile && ! -s ${recalFile}.bai ]]; then
   echo BamIndex=`date` 
   samtools index $recalFile
   samtools flagstat $recalFile > ${recalFile}.stat
-  rm $presortedFile $rmdupFile ${sampleName}.rmdup.bai ${rmdupFile}.metrics $replacedFile $splitFile ${sampleName}.rmdup.split.bai $grpFile
+  rm $rmFiles $rmdupFile ${sampleName}.rmdup.bai ${rmdupFile}.metrics $splitFile ${sampleName}.rmdup.split.bai $grpFile
 fi
   
 echo finished=`date`
