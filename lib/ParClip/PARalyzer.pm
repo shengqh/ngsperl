@@ -103,9 +103,11 @@ cd $curDir
 
 echo PARalyzer_started=`date`
 
+$bam2sam
+
 PARalyzer $memory $iniFile
 
-rmcmd
+$rmcmd
 
 echo PARalyzer_finished=`date`
 
