@@ -26,6 +26,9 @@ sub perform {
   my ( $self, $config, $section ) = @_;
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $memory ) = get_parameter( $config, $section );
+  
+    print "mem=$memory \n";
+  
 
   my $genome2bit = get_param_file( $config->{$section}{genome2bit}, "genome2bit", 1 );
   my $mirna_db = get_param_file( $config->{$section}{mirna_db}, "mirna_db", 1 );
