@@ -99,8 +99,8 @@ sub result {
     my $xmlFile = $t2cFile . ".xml";
 
     my @resultFiles = ();
-    push( @resultFiles, $t2cFile );
-    push( @resultFiles, $xmlFile );
+    push( @resultFiles, $resultDir. "/" . $t2cFile );
+    push( @resultFiles, $resultDir. "/" . $xmlFile );
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
