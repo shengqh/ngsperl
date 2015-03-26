@@ -102,7 +102,7 @@ sub result {
     my $finalFile = $sampleName . ".miRNA.target.tsv";
 
     my @resultFiles = ();
-    push( @resultFiles, $finalFile );
+    push( @resultFiles, $resultDir. "/" . $finalFile );
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
