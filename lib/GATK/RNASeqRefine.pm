@@ -75,7 +75,7 @@ sub perform {
     my $replacedFile = "";
     if($replaceReadGroup){
       $replacedFile = $sampleName . ".rmdup.rgreplaced.bam";
-      $replaceCmd = "java -jar $picard_jar AddOrReplaceReadGroups I=$rmdupFile O=$replacedFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA";
+      $replaceCmd = "java -jar $picard_jar AddOrReplaceReadGroups I=$rmdupFile O=$replacedFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA; samtools index $replacedFile";
       $splitInput = $replacedFile;
     }
 
