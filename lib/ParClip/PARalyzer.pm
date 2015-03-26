@@ -25,7 +25,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $memory ) = get_parameter( $config, $section );
 
   my $genome2bit = get_param_file( $config->{$section}{genome2bit}, "genome2bit", 1 );
   my $mirna_db = get_param_file( $config->{$section}{mirna_db}, "mirna_db", 1 );
@@ -40,6 +40,11 @@ sub perform {
 
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $bamfile     = $sampleFiles[0];
+    
+    my $fileType = "BOWTIE_FILE";
+    if( ($bamfile =~ /bam$/) || ($bamfile =~ /sam$/)){
+      $fileType = "SAM_FILE";
+    }
 
     my $pbsFile = $self->pbsfile($pbsDir, $sampleName);
     my $pbsName = basename($pbsFile);
@@ -62,7 +67,7 @@ MAXIMUM_NUMBER_OF_NON_CONVERSION_MISMATCHES=0
 
 ADDITIONAL_NUCLEOTIDES_BEYOND_SIGNAL=5
 
-BOWTIE_FILE=$bamfile
+$fileType=$bamfile
 GENOME_2BIT_FILE=$genome2bit
 FIND_MIRNA_SEEDMATCHES=$mirna_db
 
@@ -86,7 +91,7 @@ cd $curDir
 
 echo PARalyzer_started=`date`
 
-PARalyzer $iniFile
+PARalyzer $memory $iniFile
 
 echo PARalyzer_finished=`date`
 
