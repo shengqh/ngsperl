@@ -16,7 +16,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "ParClip::PARalyzer";
+  $self->{_name}   = "ParClip::PARalyzer";
   $self->{_suffix} = "_pz";
   bless $self, $class;
   return $self;
@@ -26,9 +26,9 @@ sub perform {
   my ( $self, $config, $section ) = @_;
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
-  
+
   my $genome2bit = get_param_file( $config->{$section}{genome2bit}, "genome2bit", 1 );
-  my $mirna_db = get_param_file( $config->{$section}{mirna_db}, "mirna_db", 1 );
+  my $mirna_db   = get_param_file( $config->{$section}{mirna_db},   "mirna_db",   1 );
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
@@ -36,17 +36,27 @@ sub perform {
   print SH get_run_command($sh_direct) . "\n";
 
   for my $sampleName ( sort keys %rawFiles ) {
-    my $curDir      = create_directory_or_die( $resultDir . "/$sampleName" );
+    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $bamfile     = $sampleFiles[0];
-    
-    my $fileType = "BOWTIE_FILE";
-    if( ($bamfile =~ /bam$/) || ($bamfile =~ /sam$/)){
+
+    my $fileType  = "BOWTIE_FILE";
+    my $bam2sam   = "";
+    my $rmcmd     = "";
+    my $inputFile = $bamfile;
+    if ( $bamfile =~ /bam$/ ) {
+      $fileType  = "SAM_FILE";
+      $inputFile = "${sampleName}.sam";
+      $bam2sam   = "samtools view -h -o $inputFile $bamfile";
+      $rmcmd = "rm $inputFile ";
+    }
+
+    if ( $bamfile =~ /sam$/ ) {
       $fileType = "SAM_FILE";
     }
 
-    my $pbsFile = $self->pbsfile($pbsDir, $sampleName);
+    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
 
@@ -67,7 +77,7 @@ MAXIMUM_NUMBER_OF_NON_CONVERSION_MISMATCHES=0
 
 ADDITIONAL_NUCLEOTIDES_BEYOND_SIGNAL=5
 
-$fileType=$bamfile
+$fileType=$inputFile
 GENOME_2BIT_FILE=$genome2bit
 FIND_MIRNA_SEEDMATCHES=$mirna_db
 
@@ -92,6 +102,8 @@ cd $curDir
 echo PARalyzer_started=`date`
 
 PARalyzer $memory $iniFile
+
+rmcmd
 
 echo PARalyzer_finished=`date`
 
