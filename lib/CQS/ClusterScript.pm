@@ -69,6 +69,7 @@ sub get_cluster_memory {
   $result =~ s/mb/M/g;
   $result =~ s/gb/G/g;
   
+  print "mem=$result \n";
   return ($result);
 }
 
