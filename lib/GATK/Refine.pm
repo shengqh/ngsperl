@@ -108,7 +108,7 @@ fi
 if [[ -s $intervalFile && ! -s $realignedFile ]]; then
   echo IndelRealigner=`date` 
   #InDel parameter referenced: http://www.broadinstitute.org/gatk/guide/tagged?tag=local%20realignment
-  java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner -I $sampleFile -R $faFile -targetIntervals $intervalFile $knownvcf --consensusDeterminationModel KNOWNS_ONLY -LOD 0.4 -o $realignedFile 
+  java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner -fixMisencodedQuals -I $rmdupFile -R $faFile -targetIntervals $intervalFile $knownvcf --consensusDeterminationModel KNOWNS_ONLY -LOD 0.4 -o $realignedFile 
 fi
 
 if [[ -s $realignedFile && ! -s $grpFile ]]; then
