@@ -48,7 +48,9 @@ sub perform {
     if ( $bamfile =~ /bam$/ ) {
       $fileType  = "SAM_FILE";
       $inputFile = "${sampleName}.sam";
-      $bam2sam   = "samtools view -h -o $inputFile $bamfile";
+      $bam2sam   = "if [ ! -s $inputFile ]; then
+  samtools view -h -o $inputFile $bamfile
+fi";
       $rmcmd = "rm $inputFile ";
     }
 
