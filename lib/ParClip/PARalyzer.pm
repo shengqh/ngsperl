@@ -105,6 +105,11 @@ cd $curDir
 
 echo PARalyzer_started=`date`
 
+if [ -s ${sampleName}.target.csv ]; then
+  echo job has already been done. if you want to do again, delete ${sampleName}.target.csv and submit job again.
+  exit 0
+fi
+
 $bam2sam
 
 PARalyzer $memory $iniFile
