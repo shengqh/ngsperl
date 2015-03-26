@@ -49,7 +49,7 @@ sub perform {
       $fileType  = "SAM_FILE";
       $inputFile = "${sampleName}.sam";
       $bam2sam   = "if [ ! -s $inputFile ]; then
-  samtools view -h -o $inputFile $bamfile
+  samtools view -h -F 4 -o $inputFile $bamfile
 fi";
       $rmcmd = "rm $inputFile ";
     }
