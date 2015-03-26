@@ -51,7 +51,9 @@ sub perform {
       $bam2sam   = "if [ ! -s $inputFile ]; then
   samtools view -h -F 4 -o $inputFile $bamfile
 fi";
-      $rmcmd = "rm $inputFile ";
+      $rmcmd = "if [ -s ${sampleName}.target.csv ];
+  rm $inputFile 
+fi";
     }
 
     if ( $bamfile =~ /sam$/ ) {
