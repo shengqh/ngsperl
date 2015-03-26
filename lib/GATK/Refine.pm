@@ -33,8 +33,6 @@ sub perform {
   my $gatk_jar   = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
 
-  my $gatk_option = get_option( $config, $section, "gatk_option", "" );
-
   my $knownvcf      = "";
   my $knownsitesvcf = "";
 
@@ -104,18 +102,18 @@ fi
 
 if [[ -s $rmdupFile && ! -s $intervalFile ]]; then
   echo RealignerTargetCreator=`date` 
-  java $option -jar $gatk_jar -T RealignerTargetCreator $gatk_option -I $rmdupFile -R $faFile $knownvcf -nt $thread -o $intervalFile
+  java $option -jar $gatk_jar -T RealignerTargetCreator -fixMisencodedQuals -I $rmdupFile -R $faFile $knownvcf -nt $thread -o $intervalFile
 fi
 
 if [[ -s $intervalFile && ! -s $realignedFile ]]; then
   echo IndelRealigner=`date` 
   #InDel parameter referenced: http://www.broadinstitute.org/gatk/guide/tagged?tag=local%20realignment
-  java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $gatk_option -I $sampleFile -R $faFile -targetIntervals $intervalFile $knownvcf --consensusDeterminationModel KNOWNS_ONLY -LOD 0.4 -o $realignedFile 
+  java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner -I $sampleFile -R $faFile -targetIntervals $intervalFile $knownvcf --consensusDeterminationModel KNOWNS_ONLY -LOD 0.4 -o $realignedFile 
 fi
 
 if [[ -s $realignedFile && ! -s $grpFile ]]; then
   echo BaseRecalibrator=`date` 
-  java $option -jar $gatk_jar -T BaseRecalibrator -rf BadCigar -R $faFile -I $realignedFile $knownsitesvcf -o $grpFile -fixMisencodedQuals
+  java $option -jar $gatk_jar -T BaseRecalibrator -rf BadCigar -R $faFile -I $realignedFile $knownsitesvcf -o $grpFile
 fi
 
 if [[ -s $grpFile && ! -s $recalFile ]]; then
