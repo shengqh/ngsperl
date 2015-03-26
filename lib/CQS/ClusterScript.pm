@@ -53,6 +53,25 @@ sub get_cluster_thread {
   return ($ntasks);
 }
 
+sub get_cluster_memory {
+  my $result    = "10G";
+
+  my ( $self, $pbsParamHashRef ) = @_;
+  if ( defined $pbsParamHashRef ) {
+    my %hash = %{$pbsParamHashRef};
+    foreach ( keys %hash ) {
+      if ( $_ eq "mem" ) {
+        $result = $hash{$_};
+      }
+    }
+  }
+  
+  $result =~ s/mb/M/g;
+  $result =~ s/gb/G/g;
+  
+  return ($result);
+}
+
 sub get_cluster_desc {
 }
 
