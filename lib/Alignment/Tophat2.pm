@@ -33,7 +33,7 @@ sub perform {
   my $sort_by_query = get_option( $config, $section, "sort_by_query", 0 );
   my $rename_bam    = get_option( $config, $section, "rename_bam",    0 );
 
-  my $bowtie2_index = $config->{$section}{bowtie2_index} or die "define ${section}::bowtie2_index first";
+  my $bowtie2_index = get_option( $config, $section, "bowtie2_index");
   my %fqFiles = %{ get_raw_files( $config, $section ) };
 
   my $transcript_gtf = get_param_file( $config->{$section}{transcript_gtf}, "${section}::transcript_gtf", 0 );
