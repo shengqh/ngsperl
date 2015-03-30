@@ -34,12 +34,13 @@ sub perform {
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my %seqCountFiles = ();
-  if ( defined $config->{$section}{"seqcount"} || defined $config->{$section}{"seqcount_ref"} ) {
+  if ( has_raw_files($config, $section, "seqcount")) {
     %seqCountFiles = %{ get_raw_files( $config, $section, "seqcount" ) };
   }
 
+
   my %pmNameFiles = ();
-  if ( defined $config->{$section}{"perfect_mapped_name"} || defined $config->{$section}{"perfect_mapped_name_ref"} ) {
+  if ( has_raw_files($config, $section, "perfect_mapped_name")) {
     %pmNameFiles = %{ get_raw_files( $config, $section, "perfect_mapped_name" ) };
   }
 

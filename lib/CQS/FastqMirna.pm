@@ -33,7 +33,7 @@ sub perform {
   my $extension = get_option( $config, $section, "extension" );
 
   my %seqCountFiles = ();
-  if ( defined $config->{$section}{"seqcount"} || defined $config->{$section}{"seqcount_ref"} ) {
+  if ( has_raw_files( $config, $section, "seqcount" ) ) {
     %seqCountFiles = %{ get_raw_files( $config, $section, "seqcount" ) };
   }
 

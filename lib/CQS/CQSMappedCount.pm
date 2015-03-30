@@ -45,21 +45,14 @@ sub perform {
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my %seqCountFiles = ();
-  if ( defined $config->{$section}{"seqcount"}
-    || defined $config->{$section}{"seqcount_ref"}
-    || defined $config->{$section}{"seqcount_config_ref"} )
-  {
+  if ( has_raw_files( $config, $section, "seqcount" ) ) {
     %seqCountFiles = %{ get_raw_files( $config, $section, "seqcount" ) };
   }
 
   my %fastqFiles = ();
-  if ( defined $config->{$section}{"fastq_files"}
-    || defined $config->{$section}{"fastq_files_ref"}
-    || defined $config->{$section}{"fastq_files_config_ref"} )
-  {
+  if ( has_raw_files( $config, $section, "fastq_files" ) ) {
     %fastqFiles = %{ get_raw_files( $config, $section, "fastq_files" ) };
   }
-
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";

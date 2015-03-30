@@ -30,22 +30,9 @@ sub perform {
 
   my $cqsFile = get_cqstools( $config, $section, 1 );
 
-  my %rawFiles   = %{ get_raw_files( $config, $section ) };
-  my $hasMiRNA   = 0;
-  my %miRNAFiles = ();
-  if ( defined $config->{$section}{"mirna_count"} || defined $config->{$section}{"mirna_count_ref"} ) {
-    %miRNAFiles = %{ get_raw_files( $config, $section, "mirna_count" ) };
-    $hasMiRNA = 1;
-  }
+  my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $ispdf = $config->{$section}{pdfgraph};
-  if ( !defined $ispdf ) {
-    $ispdf = 0;
-  }
-  my $pdfoption = "";
-  if ($ispdf) {
-    $pdfoption = "--pdf";
-  }
+  my $pdfoption = get_option( $config, $section, "pdfgraph", 0 ) ? "--pdf" : "";
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
@@ -62,15 +49,7 @@ sub perform {
         my @smallRNAFiles = @{ $rawFiles{$sampleName} };
         my $smallRNAFile  = $smallRNAFiles[0];
 
-        my $mirnaFileOption = "";
-        if ($hasMiRNA) {
-          my @miRNAs = @{ $miRNAFiles{$sampleName} };
-          my $miRNA  = $miRNAs[0];
-
-          $mirnaFileOption = "\t" . $miRNA;
-        }
-
-        print FL $groupName, "\t", $sampleName, "\t", $smallRNAFile, $mirnaFileOption, "\n";
+        print FL $groupName, "\t", $sampleName, "\t", $smallRNAFile, "\n";
       }
     }
   }
@@ -79,15 +58,7 @@ sub perform {
       my @smallRNAFiles = @{ $rawFiles{$sampleName} };
       my $smallRNAFile  = $smallRNAFiles[0];
 
-      my $mirnaFileOption = "";
-      if ($hasMiRNA) {
-        my @miRNAs = @{ $miRNAFiles{$sampleName} };
-        my $miRNA  = $miRNAs[0];
-
-        $mirnaFileOption = "\t" . $miRNA;
-      }
-
-      print FL $task_name, "\t", $sampleName, "\t", $smallRNAFile, $mirnaFileOption, "\n";
+      print FL $task_name, "\t", $sampleName, "\t", $smallRNAFile, "\n";
     }
   }
   close(FL);
