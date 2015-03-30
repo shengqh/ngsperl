@@ -40,12 +40,12 @@ sub perform {
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my %seqCountFiles = ();
-  if ( defined $config->{$section}{"seqcount"} || defined $config->{$section}{"seqcount_ref"} ) {
+  if ( has_raw_files($config, $section, "seqcount")) {
     %seqCountFiles = %{ get_raw_files( $config, $section, "seqcount" ) };
   }
 
   my %fastqFiles = ();
-  if ( defined $config->{$section}{"fastq_files"} || defined $config->{$section}{"fastq_files_ref"} ) {
+  if ( has_raw_files($config, $section, "fastq_files")) {
     %fastqFiles = %{ get_raw_files( $config, $section, "fastq_files" ) };
   }
 

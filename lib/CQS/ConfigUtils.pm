@@ -15,7 +15,7 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(get_option get_java get_cluster get_parameter get_param_file parse_param_file get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools)]
+    qw(get_option get_java get_cluster get_parameter get_param_file parse_param_file has_raw_files get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools)]
 );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
@@ -202,6 +202,19 @@ sub parse_param_file {
   }
 
   return undef;
+}
+
+sub has_raw_files{
+  my ( $config, $section, $mapname ) = @_;
+
+  if ( !defined $mapname ) {
+    $mapname = "source";
+  }
+
+  my $mapname_ref        = $mapname . "_ref";
+  my $mapname_config_ref = $mapname . "_config_ref";
+
+  return (defined $config->{$section}{$mapname}) || (defined $config->{$section}{$mapname_ref}) ||(defined $config->{$section}{$mapname_config_ref});
 }
 
 sub do_get_raw_files {
