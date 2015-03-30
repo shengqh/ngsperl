@@ -26,10 +26,9 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
-  my $markDuplicates_jar = get_param_file( $config->{$section}{markDuplicates_jar}, "markDuplicates_jar", 1 );
-  my $thread_count = $config->{$section}{thread_count};
+  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -70,7 +69,7 @@ fi
 
 if [ ! -s $rmdupFile ]; then
   echo RemoveDuplicate=`date` 
-  java $option -jar $markDuplicates_jar I=$sampleFile O=$rmdupFile M=${rmdupFile}.matrix VALIDATION_STRINGENCY=SILENT ASSUME_SORTED=true REMOVE_DUPLICATES=true
+  java $option -jar $picard_jar MarkDuplicates I=$sampleFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
 fi
 
 if [[ -s $rmdupFile && ! -s $sortedFile ]]; then

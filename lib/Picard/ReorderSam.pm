@@ -29,7 +29,7 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
-  my $jar    = get_param_file( $config->{$section}{jar},        "jar",        1 );
+  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
@@ -68,7 +68,7 @@ if [ -s $finalFile ]; then
   exit 0;
 fi
 
-java -jar $jar I=${sampleFile} O=${finalFile} R=${faFile}
+java -jar $picard_jar ReorderSam I=${sampleFile} O=${finalFile} R=${faFile}
 
 samtools index $finalFile
 

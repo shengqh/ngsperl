@@ -32,8 +32,8 @@ sub perform {
 
   my %firstFiles = %{ get_raw_files( $config, $section ) };
   my %secondFiles = %{ get_raw_files( $config, $section, "second" ) };
-  my $firstSuffix  = $config->{$section}{first_suffix}  or die "define ${section}::first_suffix first";
-  my $secondSuffix = $config->{$section}{second_suffix} or die "define ${section}::second_suffix first";
+  my $firstSuffix  = get_option($config, $section, "first_suffix");
+  my $secondSuffix = get_option($config, $section, "second_suffix");
 
   my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
   my $log = $self->logfile( $logDir, $task_name );
