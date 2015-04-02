@@ -119,9 +119,11 @@ if [ ! -s $snpOut ]; then
   java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $listfilename -stand_call_conf 20.0 -stand_emit_conf 20.0 -d dnsnp_file $compvcf --out $snpOut -dontUseSoftClippedBases -nct $thread
 fi
 
-java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $snpOut $rnafilter -filterName FS -filter \"FS > 30.0\" -filterName QD -filter \"QD < 2.0\" -o $snpFilterOut 
+if [ -s $snpOut ]; then
+  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $snpOut $rnafilter -filterName FS -filter \"FS > 30.0\" -filterName QD -filter \"QD < 2.0\" -o $snpFilterOut 
 
-cat $snpFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $snpPass 
+  cat $snpFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $snpPass
+fi 
 
 echo finished=`date`
 ";
