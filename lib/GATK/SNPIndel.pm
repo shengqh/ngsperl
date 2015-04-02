@@ -56,12 +56,12 @@ sub perform {
   my $faFile   = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
 
-  my $dbsnp = get_param_file( $config->{$section}{dbsnp_vcf},   "dbsnp_vcf",   1 );
-  my $compvcf = get_param_file( $config->{$section}{comparison_vcf},   "comparison_vcf",  0 );
-  
-  my $rnafilter =get_option($config, $section, "is_rna")?"-window 35 -cluster 3 ":"";
-  
-  if(defined $compvcf){
+  my $dbsnp   = get_param_file( $config->{$section}{dbsnp_vcf},      "dbsnp_vcf",      1 );
+  my $compvcf = get_param_file( $config->{$section}{comparison_vcf}, "comparison_vcf", 0 );
+
+  my $rnafilter = get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3 " : "";
+
+  if ( -e $compvcf ) {
     $compvcf = "-comp " . $compvcf;
   }
 
@@ -94,9 +94,9 @@ sub perform {
     my $snpFilterOut = $groupName . "_snp_filtered.vcf";
     my $snpPass      = $groupName . "_snp_filtered.pass.vcf";
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $groupName . "_snp" );
+    my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
     my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $groupName . "_snp" );
+    my $log     = $self->logfile( $logDir, $groupName );
 
     print SH "\$MYCMD ./$pbsName \n";
 
