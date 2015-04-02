@@ -130,7 +130,7 @@ for(comparisonName in comparisonNames){
   
   cat("DESeq2 finished.\n")
   
-  select<- (!is.na(res$padj)) & (res$padj<pvalue) & ((res$log2FoldChange >= log2(foldChange)) | (res$log2FoldChange <= -log2(foldChange)))
+  select<-(!is.na(res$padj)) & (res$padj<pvalue) & ((res$log2FoldChange >= log2(foldChange)) | (res$log2FoldChange <= -log2(foldChange)))
   
   if(length(indecies) > 0){
     inddata<-data[notEmptyData,indecies,drop=F]
@@ -204,7 +204,7 @@ for(comparisonName in comparisonNames){
   dev.off()
   
   #draw heatmap
-  drawHCA(paste0(comparisonName,"_gene500", rldmatrix[1:min(500, nrow(rldmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
+  drawHCA(paste0(comparisonName,"_gene500"), rldmatrix[1:min(500, nrow(rldmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
 
   if(showDEGeneCluster){
 	  siggenes<-rownames(rldmatrix) %in% rownames(tbbselect)
@@ -212,7 +212,7 @@ for(comparisonName in comparisonNames){
 	  drawHCA(paste0(comparisonName,"_geneNotDE"), rldmatrix[!siggenes,,drop=F], ispaired, designData, conditionColors, gnames)
   }
 
-  drawHCA(paste0(comparisonName,"_geneAll", rldmatrix, ispaired, designData, conditionColors, gnames)
+  drawHCA(paste0(comparisonName,"_geneAll"), rldmatrix, ispaired, designData, conditionColors, gnames)
 }
 
 if(length(pairedspearman) > 0){
