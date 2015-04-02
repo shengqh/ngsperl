@@ -45,10 +45,10 @@ sub perform {
     die "File not found : " . $rtemplate;
   }
 
-  my $showLabelInPCA = get_option( $config, $section, "showLabelInPCA", 1 );
-  my $showDEGeneCluster = get_option( $config, $section, "showLabelInPCA", 0 );
+  my $showLabelInPCA = get_option( $config, $section, "show_label_PCA", 1 );
+  my $showDEGeneCluster = get_option( $config, $section, "show_DE_gene_cluster", 0 );
   my $pvalue = get_option( $config, $section, "pvalue", 0.05 );
-  my $foldChange = get_option( $config, $section, "foldChange", 2.0 );
+  my $foldChange = get_option( $config, $section, "fold_change", 2.0 );
 
   my %tpgroups = ();
   for my $groupName ( sort keys %{$groups} ) {
@@ -72,9 +72,10 @@ setwd(\"$resultDir\")
   
 data<-${readfunc}(\"$countfile\",row.names=1, header=T, check.names=F)
 
-showLabelInPCA<-${showLabelInPCA}
-showDEGeneCluster<-${showDEGeneCluster}
-pvalue<-${pvalue}
+showLabelInPCA<-$showLabelInPCA
+showDEGeneCluster<-$showDEGeneCluster
+pvalue<-$pvalue
+foldChange<-$foldChange
 
 comparisons=list(";
   my $first = 0;
