@@ -116,7 +116,7 @@ cd $curDir
 echo SNP=`date` 
 
 if [ ! -s $snpOut ]; then
-  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $listfilename -stand_call_conf 20.0 -stand_emit_conf 20.0 -d dnsnp_file $compvcf --out $snpOut -dontUseSoftClippedBases -nct $thread
+  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $listfilename -stand_call_conf 20.0 -stand_emit_conf 20.0 -D dnsnp_file $compvcf --out $snpOut -dontUseSoftClippedBases -nct $thread
 fi
 
 if [ -s $snpOut ]; then
