@@ -41,6 +41,38 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
   }
 }
 
+drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData){
+  png(filename=paste0(prefix, "_DESeq2-vsd-pca.png"), width=3000, height=3000, res=300)
+  pca<-prcomp(t(rldmatrix))
+  supca<-summary(pca)$importance
+  pcadata<-data.frame(pca$x)
+  pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
+  
+  if(showLabelInPCA){
+    g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=row.names(pcadata))) + 
+      geom_text(vjust=-0.6, size=4) +
+      geom_point(col=conditionColors, size=4) + 
+      scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
+      scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
+      geom_hline(aes(0), size=.2) + 
+      geom_vline(aes(0), size=.2) + 
+      xlab(pcalabs[1]) + ylab(pcalabs[2])
+  }else{
+    g <- ggplot(pcadata, aes(x=PC1, y=PC2, color=designData$Condition)) + 
+      geom_point(size=4) + 
+      labs(color = "Group") +
+      scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) + 
+      scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
+      geom_hline(aes(0), size=.2) + 
+      geom_vline(aes(0), size=.2) +
+      xlab(pcalabs[1]) + ylab(pcalabs[2]) + 
+      theme(legend.position="top")
+  }
+  
+  print(g)
+  dev.off()
+}
+
 countData<-data
 index<-1
 indecies<-c()
@@ -80,6 +112,8 @@ for(comparisonName in comparisonNames){
   comparisonData<-comparisonData[,as.character(designData$Sample)]
   
   if(ispaired){
+    dir.create("spearman", showWarnings = FALSE)
+    
     pairedSamples = unique(designData$Paired)
     
     spcorr<-unlist(lapply(c(1:length(pairedSamples)), function(x){
@@ -95,7 +129,7 @@ for(comparisonName in comparisonNames){
       samples<-designData$Sample[designData$Paired==pairedSamples[x]]
       log2c1<-log2(comparisonData[,samples[1]]+1)
       log2c2<-log2(comparisonData[,samples[2]]+1)
-      png(paste0(comparisonName, "_Spearman_", pairedSamples[x], ".png"), width=2000, height=2000, res=300)
+      png(paste0("spearman/", comparisonName, "_Spearman_", pairedSamples[x], ".png"), width=2000, height=2000, res=300)
       plot(log2c1, log2c2, xlab=paste0(samples[1], " [log2(Count + 1)]"), ylab=paste0(samples[2], " [log2(Count + 1)]"))
       text(3,15,paste0("SpearmanCorr=", sprintf("%0.3f", spcorr[x])))
       dev.off()
@@ -170,44 +204,20 @@ for(comparisonName in comparisonNames){
   assayvsd<-assayvsd[order(vsdiqr, decreasing=T),]
   
   rldmatrix=as.matrix(assayvsd)
+
+  siggenes<-rownames(rldmatrix) %in% rownames(tbbselect)
   
   #draw pca graph
-  png(filename=paste0(comparisonName, "_DESeq2-vsd-pca.png"), width=3000, height=3000, res=300)
-  pca<-prcomp(t(rldmatrix))
-  supca<-summary(pca)$importance
-  pcadata<-data.frame(pca$x)
-  pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
-  
-  if(showLabelInPCA){
-    g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=row.names(pcadata))) + 
-      geom_text(vjust=-0.6, size=4) +
-      geom_point(col=conditionColors, size=4) + 
-      scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
-      scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
-      geom_hline(aes(0), size=.2) + 
-      geom_vline(aes(0), size=.2) + 
-      xlab(pcalabs[1]) + ylab(pcalabs[2])
-  }else{
-    g <- ggplot(pcadata, aes(x=PC1, y=PC2, color=designData$Condition)) + 
-      geom_point(size=4) + 
-      labs(color = "Group") +
-      scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) + 
-      scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
-      geom_hline(aes(0), size=.2) + 
-      geom_vline(aes(0), size=.2) +
-      xlab(pcalabs[1]) + ylab(pcalabs[2]) + 
-      theme(legend.position="top")
+  drawPCA(paste0(comparisonName,"_geneAll"), rldmatrix, showLabelInPCA, designData)
+  if(showDEGeneCluster){
+    drawPCA(paste0(comparisonName,"_geneNotDE"), rldmatrix[!siggenes,,drop=F], showLabelInPCA, designData)
   }
-      
-  print(g)
-  dev.off()
   
   #draw heatmap
   drawHCA(paste0(comparisonName,"_gene500"), rldmatrix[1:min(500, nrow(rldmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
 
   if(showDEGeneCluster){
-	  siggenes<-rownames(rldmatrix) %in% rownames(tbbselect)
-	  drawHCA(paste0(comparisonName,"_geneDE"), rldmatrix[siggenes,,drop=F], ispaired, designData, conditionColors, gnames)
+	  drawHCA(paste0(comparisonName,"_geneDE"), , ispaired, designData, conditionColors, gnames)
 	  drawHCA(paste0(comparisonName,"_geneNotDE"), rldmatrix[!siggenes,,drop=F], ispaired, designData, conditionColors, gnames)
   }
 
