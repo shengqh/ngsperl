@@ -73,7 +73,7 @@ sub perform {
     $java_option = "";
   }
 
-  my %group_sample_map = %{ getGroupSampleMap( $config, $section ) };
+  my %bamFiles = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
@@ -81,25 +81,20 @@ sub perform {
 
   #print SH "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
 
-  for my $groupName ( sort keys %group_sample_map ) {
-    my $curDir       = create_directory_or_die( $resultDir . "/$groupName" );
-    my $listfilename = "${groupName}.list";
-    my $listfile     = $curDir . "/$listfilename";
-    open( LIST, ">$listfile" ) or die "Cannot create $listfile";
-    my @sampleFiles = @{ $group_sample_map{$groupName} };
-    foreach my $sampleFile (@sampleFiles) {
-      print LIST $sampleFile . "\n";
-    }
-    close(LIST);
+  for my $sampleName ( sort keys %bamFiles ) {
+    my @sampleFiles = @{ $bamFiles{$sampleName} };
+    my $bamFile = $sampleFiles[0];
 
-    my $snpOut       = $groupName . "_snp.vcf";
-    my $snpStat      = $groupName . "_snp.stat";
-    my $snpFilterOut = $groupName . "_snp_filtered.vcf";
-    my $snpPass      = $groupName . "_snp_filtered.pass.vcf";
+    my $curDir       = create_directory_or_die( $resultDir . "/$sampleName" );
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
+    my $snpOut       = $sampleName . "_snp.vcf";
+    my $snpStat      = $sampleName . "_snp.stat";
+    my $snpFilterOut = $sampleName . "_snp_filtered.vcf";
+    my $snpPass      = $sampleName . "_snp_filtered.pass.vcf";
+
+    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $groupName );
+    my $log     = $self->logfile( $logDir, $sampleName );
 
     print SH "\$MYCMD ./$pbsName \n";
 
@@ -116,7 +111,7 @@ cd $curDir
 echo SNP=`date` 
 
 if [ ! -s $snpOut ]; then
-  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $listfilename -stand_call_conf 20.0 -stand_emit_conf 20.0 -D dnsnp_file $compvcf --out $snpOut -dontUseSoftClippedBases -nct $thread
+  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -stand_call_conf 20.0 -stand_emit_conf 20.0 -D dnsnp_file $compvcf --out $snpOut -dontUseSoftClippedBases -nct $thread
 fi
 
 if [ -s $snpOut ]; then
