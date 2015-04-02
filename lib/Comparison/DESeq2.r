@@ -1,18 +1,16 @@
 ##predefined_condition_begin
-#setwd("H:/shengquanhu/projects/smallRNA/20140926_bingshan_smallRNA_human/topN_bowtie1_genome_cutadapt_1mm_count_miRNA_table_deseq2/result")  
+#setwd("/scratch/cqs/shengq1/rnaseq/20150226_bojana_FFPE_FF/hiseq/star_deseq2/result")  
 #  
-#data<-read.table("H:/shengquanhu/projects/smallRNA/20140926_bingshan_smallRNA_human/topN_bowtie1_genome_cutadapt_1mm_count_miRNA_table/result/miRNA_1mm_bingshan_smallRNA_human.count",row.names=1, header=T, check.names=F)
+#data<-read.table("/scratch/cqs/shengq1/rnaseq/20150226_bojana_FFPE_FF/hiseq/star_genetable/result/FFPE_FF_HiSeq_gene.count",row.names=1, header=T, check.names=F)
 #
-#comparisons=list(
-#  "metastasis_vs_normal" = c("metastasis_vs_normal.design", "normal", "metastasis"),
-#  "metastasis_vs_tumor" = c("metastasis_vs_tumor.design", "tumor", "metastasis"),
-#  "tumor_vs_normal" = c("tumor_vs_normal.design", "normal", "tumor")
-#)
-# 
 #showLabelInPCA<-1
-#showDEGeneCluster<-0
+#showDEGeneCluster<-1
 #pvalue<-0.05
 #foldChange<-2
+#
+#comparisons=list(
+#  "HiSeq_FFPE2_VS_FF2_NoMismatch" = c("HiSeq_FFPE2_VS_FF2_NoMismatch.design", "HiSeq_FF_NoMismatch", "HiSeq_FFPE_NoMismatch")
+#) 
 #
 ##predefined_condition_end
 
@@ -36,8 +34,8 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
     }else{
       gsColors = conditionaColors;
     }
-    heatmap3(rldselect, col = hmcols, ColSideColors = gsColors, margins=c(12,5), scale="r", dist=dist, 
-    				 main=paste0("Hierarchical Cluster Using ", nrow(rldselect), " Genes"), labRow="", cexCol=cexCol, 
+    heatmap3(rldselect, col = hmcols, ColSideColors = gsColors, margins=c(12,5), scale="r", dist=dist, labRow="",
+    				 main=paste0("Hierarchical Cluster Using ", nrow(rldselect), " Genes"),  cexCol=cexCol, 
              legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
     dev.off()
   }
