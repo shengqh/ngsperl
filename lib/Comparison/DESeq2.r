@@ -9,7 +9,10 @@
 #  "tumor_vs_normal" = c("tumor_vs_normal.design", "normal", "tumor")
 #)
 # 
-#showLabelInPCA<-true
+#showLabelInPCA<-1
+#showDEGeneCluster<-0
+#pvalue<-0.05
+#foldChange<-2
 #
 ##predefined_condition_end
 
@@ -21,6 +24,23 @@ library("ggplot2")
 library("grid")
 
 hmcols <- colorRampPalette(c("green", "black", "red"))(256)
+
+drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnames){
+  htfile<-paste0(prefix, "_DESeq2-vsd-heatmap.png")
+  if(nrow(rldselect) > 2){
+    png(filename=htfile, width=3000, height =3000, res=300)
+    cexCol = max(1.0, 0.2 + 1/log10(ncol(rldselect)))
+    if(ispaired){
+      htColors<-rainbow(length(unique(designData$Paired)))
+      gsColors<-as.matrix(data.frame(Group=conditionColors, Sample=htColors[designData$Paired]))
+    }else{
+      gsColors = conditionaColors;
+    }
+    heatmap3(rldselect, col = hmcols, ColSideColors = gsColors, margins=c(12,5), scale="r", dist=dist, main=paste0("Hierarchical Cluster Using ", nrow(rldselect), " Genes"), cexCol=cexCol, 
+             legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
+    dev.off()
+  }
+}
 
 countData<-data
 index<-1
@@ -110,7 +130,7 @@ for(comparisonName in comparisonNames){
   
   cat("DESeq2 finished.\n")
   
-  select<- (!is.na(res$padj)) & (res$padj<0.05) & ((res$log2FoldChange >= 1) | (res$log2FoldChange <= -1))
+  select<- (!is.na(res$padj)) & (res$padj<pvalue) & ((res$log2FoldChange >= log2(foldChange)) | (res$log2FoldChange <= -log2(foldChange)))
   
   if(length(indecies) > 0){
     inddata<-data[notEmptyData,indecies,drop=F]
@@ -184,22 +204,15 @@ for(comparisonName in comparisonNames){
   dev.off()
   
   #draw heatmap
-  mincount<-min(500, nrow(rldmatrix))
-  rldselect<-rldmatrix[1:mincount,,drop=F]
-  htfile<-paste0(comparisonName, "_DESeq2-vsd-heatmap.png")
-    if(nrow(rldselect) > 2){
-      png(filename=htfile, width=3000, height =3000, res=300)
-      if(ispaired){
-        htColors<-rainbow(length(unique(designData$Paired)))
-        gsColors<-as.matrix(data.frame(Group=conditionColors, Sample=htColors[designData$Paired]))
-        heatmap3(rldselect, col = hmcols, ColSideColors = gsColors, margins=c(12,5), scale="r", dist=dist, labRow="", 
-            legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
-      }else{
-        heatmap3(rldselect, col = hmcols, ColSideColors = conditionColors, margins=c(12,5), scale="r", dist=dist, labRow="",
-            legendfun=function() showLegend(legend=paste0("Group ", gnames),col=c("red","blue"),cex=1.0,x="center"))
-      }
-      dev.off()
-    }
+  drawHCA(paste0(comparisonName,"_gene500", rldmatrix[1:min(500, nrow(rldmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
+
+  if(showDEGeneCluster){
+	  siggenes<-rownames(rldmatrix) %in% rownames(tbbselect)
+	  drawHCA(paste0(comparisonName,"_geneDE"), rldmatrix[siggenes,,drop=F], ispaired, designData, conditionColors, gnames)
+	  drawHCA(paste0(comparisonName,"_geneNotDE"), rldmatrix[!siggenes,,drop=F], ispaired, designData, conditionColors, gnames)
+  }
+
+  drawHCA(paste0(comparisonName,"_geneAll", rldmatrix, ispaired, designData, conditionColors, gnames)
 }
 
 if(length(pairedspearman) > 0){
