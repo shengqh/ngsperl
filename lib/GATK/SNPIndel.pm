@@ -61,8 +61,11 @@ sub perform {
 
   my $rnafilter = get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3 " : "";
 
-  if ( -e $compvcf ) {
+  if ( defined $compvcf ) {
     $compvcf = "-comp " . $compvcf;
+  }
+  else {
+    $compvcf = "";
   }
 
   my $java_option = $config->{$section}{java_option};
