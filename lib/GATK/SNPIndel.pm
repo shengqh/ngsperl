@@ -56,32 +56,18 @@ sub perform {
   my $faFile   = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
 
-  my @vcfFiles = @{ $config->{$section}{vcf_files} };
-  my $knownvcf = "";
-  foreach my $vcf (@vcfFiles) {
-    if ( $knownvcf eq "" ) {
-      $knownvcf = "-D $vcf";
-    }
-    else {
-      $knownvcf = $knownvcf . " -comp $vcf";
-    }
+  my $dbsnp = get_param_file( $config->{$section}{dbsnp_vcf},   "dbsnp_vcf",   1 );
+  my $compvcf = get_param_file( $config->{$section}{comparison_vcf},   "comparison_vcf",  0 );
+  
+  my $rnafilter =get_option($config, $section, "is_rna")?"-window 35 -cluster 3 ":"";
+  
+  if(defined $compvcf){
+    $compvcf = "-comp " . $compvcf;
   }
 
   my $java_option = $config->{$section}{java_option};
   if ( !defined $java_option ) {
     $java_option = "";
-  }
-
-  my $filter_snp_option = $config->{$section}{filter_snp_option};
-  if ( !defined $filter_snp_option ) {
-    $filter_snp_option =
-"--filterExpression \"QD<2.0\" --filterName \"QD\" --filterExpression \"MQ<40.0\" --filterName \"MQ\" --filterExpression \"FS >60.0\" --filterName \"FS\" --filterExpression \"HaplotypeScore >13.0\" --filterName \"HaplotypeScore\" --filterExpression \"MQRankSum<-12.5\" --filterName \"MQRankSum\" --filterExpression \"ReadPosRankSum<-8.0\" --filterName \"ReadPosRankSum\"";
-  }
-
-  my $filter_indel_option = $config->{$section}{filter_indel_option};
-  if ( !defined $filter_indel_option ) {
-    $filter_indel_option =
-"--filterExpression \"QD<2.0\" --filterName \"QD\" --filterExpression \"ReadPosRankSum<-20.0\" --filterName \"ReadPosRankSum\" --filterExpression \"InbreedingCoeff < -0.8\" --filterName \"InbreedingCoeff\" --filterExpression \"FS > 200.0\" --filterName \"FS\"";
   }
 
   my %group_sample_map = %{ getGroupSampleMap( $config, $section ) };
@@ -127,53 +113,16 @@ cd $curDir
 echo SNP=`date` 
 
 if [ ! -s $snpOut ]; then
-  java $java_option -jar $gatk_jar -T UnifiedGenotyper $option -nct $thread -R $faFile -I $listfilename $knownvcf --out $snpOut -metrics $snpStat -glm SNP
+  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $listfilename -stand_call_conf 20.0 -stand_emit_conf 20.0 -d dnsnp_file $compvcf --out $snpOut -dontUseSoftClippedBases -nct $thread
 fi
 
-java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration $filter_snp_option -R $faFile -o $snpFilterOut --variant $snpOut 
+java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $snpOut $rnafilter -filterName FS -filter \"FS > 30.0\" -filterName QD -filter \"QD < 2.0\" -o $snpFilterOut 
 
 cat $snpFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $snpPass 
 
 echo finished=`date`
 ";
     close OUT;
-    print "$pbsFile created\n";
-
-    my $indelOut         = $groupName . "_indel.vcf";
-    my $indelStat        = $groupName . "_indel.stat";
-    my $indelFilteredOut = $groupName . "_indel_filtered.vcf";
-    my $indelPass        = $groupName . "_indel_filtered.pass.vcf";
-
-    $pbsFile = $self->pbsfile( $pbsDir, $groupName . "_id" );
-    $pbsName = basename($pbsFile);
-    $log     = $self->logfile( $logDir, $groupName . "_id" );
-
-    print SH "\$MYCMD ./$pbsName \n";
-
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "
-$pbsDesc
-#PBS -o $log
-#PBS -j oe
-
-$path_file
-
-cd $curDir
-
-echo InDel=`date` 
-
-if [ ! -s $indelOut ]; then
-  java -jar $java_option $gatk_jar $option -T UnifiedGenotyper -R $faFile -I $listfilename $knownvcf --out $indelOut -metrics $indelStat -glm INDEL
-fi
-
-java $java_option -jar $gatk_jar -T VariantFiltration $filter_indel_option -R $faFile -o $indelFilteredOut --variant $indelOut
-
-cat $indelFilteredOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $indelPass 
-
-echo finished=`date`
-";
-    close OUT;
-
     print "$pbsFile created\n";
   }
   close(SH);
