@@ -9,6 +9,7 @@ use CQS::PBS;
 use CQS::ClassFactory;
 use CQS::StringUtils;
 use CQS::CQSDebug;
+use Data::Dumper;
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -299,6 +300,8 @@ sub do_get_raw_files {
           $index += 3;
         }
       }
+      
+      print Dumper($refmap);
     }
 
     my %result = ();
