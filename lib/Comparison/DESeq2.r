@@ -42,14 +42,17 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
 }
 
 drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors){
-  png(filename=paste0(prefix, "_DESeq2-vsd-pca.png"), width=3000, height=3000, res=300)
+  filename<-paste0(prefix, "_DESeq2-vsd-pca.png")
+  cat("saving PCA to ", filename, "\n")
+  png(filename=filename, width=3000, height=3000, res=300)
   pca<-prcomp(t(rldmatrix))
   supca<-summary(pca)$importance
   pcadata<-data.frame(pca$x)
   pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
+  pcadata["sample"]<-row.names(pcadata)
   
   if(showLabelInPCA){
-    g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=row.names(pcadata))) + 
+    g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
       geom_text(vjust=-0.6, size=4) +
       geom_point(col=conditionColors, size=4) + 
       scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
@@ -58,8 +61,8 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors
       geom_vline(aes(0), size=.2) + 
       xlab(pcalabs[1]) + ylab(pcalabs[2])
   }else{
-    g <- ggplot(pcadata, aes(x=PC1, y=PC2, color=designData$Condition)) + 
-      geom_point(size=4) + 
+    g <- ggplot(pcadata, aes(x=PC1, y=PC2)) + 
+      geom_point(col=conditionColors, size=4) + 
       labs(color = "Group") +
       scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) + 
       scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
@@ -147,38 +150,6 @@ for(comparisonName in comparisonNames){
   rownames(designData)<-colnames(comparisonData)
   conditionColors<-as.matrix(data.frame(Group=c("red", "blue")[designData$Condition]))
   
-  #different expression analysis
-  if(ispaired){
-    dds=DESeqDataSetFromMatrix(countData = comparisonData,
-        colData = designData,
-        design = ~ Paired + Condition)
-  }else{
-    dds=DESeqDataSetFromMatrix(countData = comparisonData,
-        colData = designData,
-        design = ~ Condition)
-  }
-  
-  dds <- DESeq(dds)
-  res<-results(dds,cooksCutoff=FALSE)
-  
-  cat("DESeq2 finished.\n")
-  
-  select<-(!is.na(res$padj)) & (res$padj<pvalue) & ((res$log2FoldChange >= log2(foldChange)) | (res$log2FoldChange <= -log2(foldChange)))
-  
-  if(length(indecies) > 0){
-    inddata<-data[notEmptyData,indecies,drop=F]
-    tbb<-cbind(inddata, comparisonData, res)
-  }else{
-    tbb<-cbind(comparisonData, res)
-  }
-  tbbselect<-tbb[select,,drop=F]
-  
-  tbb<-tbb[order(tbb$padj),,drop=F]
-  write.csv(as.data.frame(tbb),paste0(comparisonName, "_DESeq2.csv"))
-  
-  tbbselect<-tbbselect[order(tbbselect$padj),,drop=F]
-  write.csv(as.data.frame(tbbselect),paste0(comparisonName, "_DESeq2_sig.csv"))
-  
   #some basic graph
   dds=DESeqDataSetFromMatrix(countData = comparisonData,
       colData = designData,
@@ -205,25 +176,55 @@ for(comparisonName in comparisonNames){
   
   rldmatrix=as.matrix(assayvsd)
 
-  siggenes<-rownames(rldmatrix) %in% rownames(tbbselect)
-  
   #draw pca graph
   drawPCA(paste0(comparisonName,"_geneAll"), rldmatrix, showLabelInPCA, designData, conditionColors)
-  if(showDEGeneCluster){
-    drawPCA(paste0(comparisonName,"_geneNotDE"), rldmatrix[!siggenes,,drop=F], showLabelInPCA, designData, conditionColors)
-  }
   
   #draw heatmap
   drawHCA(paste0(comparisonName,"_gene500"), rldmatrix[1:min(500, nrow(rldmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
-
+  drawHCA(paste0(comparisonName,"_geneAll"), rldmatrix, ispaired, designData, conditionColors, gnames)
+  
+  #different expression analysis
+  if(ispaired){
+    dds=DESeqDataSetFromMatrix(countData = comparisonData,
+                               colData = designData,
+                               design = ~ Paired + Condition)
+  }else{
+    dds=DESeqDataSetFromMatrix(countData = comparisonData,
+                               colData = designData,
+                               design = ~ Condition)
+  }
+  
+  dds <- DESeq(dds)
+  res<-results(dds,cooksCutoff=FALSE)
+  
+  cat("DESeq2 finished.\n")
+  
+  select<-(!is.na(res$padj)) & (res$padj<pvalue) & ((res$log2FoldChange >= log2(foldChange)) | (res$log2FoldChange <= -log2(foldChange)))
+  
+  if(length(indecies) > 0){
+    inddata<-data[notEmptyData,indecies,drop=F]
+    tbb<-cbind(inddata, comparisonData, res)
+  }else{
+    tbb<-cbind(comparisonData, res)
+  }
+  tbbselect<-tbb[select,,drop=F]
+  
+  tbb<-tbb[order(tbb$padj),,drop=F]
+  write.csv(as.data.frame(tbb),paste0(comparisonName, "_DESeq2.csv"))
+  
+  tbbselect<-tbbselect[order(tbbselect$padj),,drop=F]
+  write.csv(as.data.frame(tbbselect),paste0(comparisonName, "_DESeq2_sig.csv"))
+  
   if(showDEGeneCluster){
+    siggenes<-rownames(rldmatrix) %in% rownames(tbbselect)
+
+    drawPCA(paste0(comparisonName,"_geneNotDE"), rldmatrix[!siggenes,,drop=F], showLabelInPCA, designData, conditionColors)
 	  drawHCA(paste0(comparisonName,"_geneDE"), , ispaired, designData, conditionColors, gnames)
 	  nonDEmatrix<-rldmatrix[!siggenes,,drop=F]
 	  drawHCA(paste0(comparisonName,"_geneAllNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames)
 	  drawHCA(paste0(comparisonName,"_gene500NotDE"), nonDEmatrix[1:min(500, nrow(rldmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
   }
 
-  drawHCA(paste0(comparisonName,"_geneAll"), rldmatrix, ispaired, designData, conditionColors, gnames)
 }
 
 if(length(pairedspearman) > 0){
