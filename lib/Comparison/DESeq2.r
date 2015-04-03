@@ -41,7 +41,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
   }
 }
 
-drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData){
+drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors){
   png(filename=paste0(prefix, "_DESeq2-vsd-pca.png"), width=3000, height=3000, res=300)
   pca<-prcomp(t(rldmatrix))
   supca<-summary(pca)$importance
@@ -208,9 +208,9 @@ for(comparisonName in comparisonNames){
   siggenes<-rownames(rldmatrix) %in% rownames(tbbselect)
   
   #draw pca graph
-  drawPCA(paste0(comparisonName,"_geneAll"), rldmatrix, showLabelInPCA, designData)
+  drawPCA(paste0(comparisonName,"_geneAll"), rldmatrix, showLabelInPCA, designData, conditionColors)
   if(showDEGeneCluster){
-    drawPCA(paste0(comparisonName,"_geneNotDE"), rldmatrix[!siggenes,,drop=F], showLabelInPCA, designData)
+    drawPCA(paste0(comparisonName,"_geneNotDE"), rldmatrix[!siggenes,,drop=F], showLabelInPCA, designData, conditionColors)
   }
   
   #draw heatmap
