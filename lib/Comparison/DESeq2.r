@@ -32,7 +32,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
       htColors<-rainbow(length(unique(designData$Paired)))
       gsColors<-as.matrix(data.frame(Group=conditionColors, Sample=htColors[designData$Paired]))
     }else{
-      gsColors = conditionaColors;
+      gsColors = conditionColors;
     }
     heatmap3(rldselect, col = hmcols, ColSideColors = gsColors, margins=c(12,5), scale="r", dist=dist, labRow="",
     				 main=paste0("Hierarchical Cluster Using ", nrow(rldselect), " Genes"),  cexCol=cexCol, 
