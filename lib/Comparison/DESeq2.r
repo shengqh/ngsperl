@@ -34,8 +34,21 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
     }else{
       gsColors = conditionColors;
     }
-    heatmap3(rldselect, col = hmcols, ColSideColors = gsColors, margins=c(12,5), scale="r", dist=dist, labRow="",
-    				 main=paste0("Hierarchical Cluster Using ", nrow(rldselect), " Genes"),  cexCol=cexCol, 
+    if(nrow(rldselect) > 15000){
+      showRowDendro = F
+    }else{
+      showRowDendro = T
+    }
+    heatmap3(rldselect, 
+             col = hmcols, 
+             ColSideColors = gsColors, 
+             margins=c(12,5), 
+             scale="r", 
+             dist=dist, 
+             labRow="",
+    				 main=paste0("Hierarchical Cluster Using ", nrow(rldselect), " Genes"),  
+             cexCol=cexCol, 
+    				 showRowDendro = showRowDendro,
              legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
     dev.off()
   }
