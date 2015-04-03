@@ -253,11 +253,11 @@ sub do_get_raw_files {
           }
 
           if ( $index == ( $partlength - 1 ) || defined $config->{ $parts[ $index + 1 ] } ) {
-            $refmap->{ $parts[$index] } = { config => $config, pattern => $pattern };
+            $refmap->{ $index} = { config => $config, section => $parts[$index], pattern => $pattern };
             $index++;
           }
           else {
-            $refmap->{ $parts[$index] } = { config => $config, pattern => $parts[ $index + 1 ] };
+            $refmap->{ $index } = { config => $config, section => $parts[$index], pattern => $parts[ $index + 1 ] };
             $index += 2;
           }
         }
@@ -266,7 +266,7 @@ sub do_get_raw_files {
         if ( !defined $config->{$targetSection} ) {
           die "undefined section $targetSection";
         }
-        $refmap->{$targetSection} = { config => $config, pattern => $pattern };
+        $refmap->{1} = { config => $config, section => $targetSection, pattern => $pattern };
       }
     }
     else {
@@ -292,31 +292,32 @@ sub do_get_raw_files {
         }
 
         if ( $index == ( $partlength - 2 ) || ref( $parts[ $index + 2 ] ) eq 'HASH' ) {
-          $refmap->{$targetSection} = { config => $targetConfig, pattern => $pattern };
+          $refmap->{$index } = { config => $targetConfig, section => $targetSection, pattern => $pattern };
           $index += 2;
         }
         else {
-          $refmap->{$targetSection} = { config => $targetConfig, pattern => $parts[ $index + 2 ] };
+          $refmap->{$index} = { config => $targetConfig, section => $targetSection, pattern => $parts[ $index + 2 ] };
           $index += 3;
         }
       }
       
-      print Dumper($refmap);
+      #print Dumper($refmap);
     }
 
     my %result = ();
-    for my $refsec ( keys %{$refmap} ) {
-      my $values       = $refmap->{$refsec};
+    for my $index ( keys %{$refmap} ) {
+      my $values       = $refmap->{$index};
       my $targetConfig = $values->{config};
+      my $section = $values->{section};
       my $pattern      = $values->{pattern};
 
       my %myres = ();
-      if ( defined $targetConfig->{$refsec}{class} ) {
-        my $myclass = instantiate( $targetConfig->{$refsec}{class} );
-        %myres = %{ $myclass->result( $targetConfig, $refsec, $pattern ) };
+      if ( defined $targetConfig->{$section}{class} ) {
+        my $myclass = instantiate( $targetConfig->{$section}{class} );
+        %myres = %{ $myclass->result( $targetConfig, $section, $pattern ) };
       }
       else {
-        my ( $res, $issource ) = do_get_raw_files( $targetConfig, $refsec, 1 );
+        my ( $res, $issource ) = do_get_raw_files( $targetConfig, $section, 1 );
         %myres = %{$res};
       }
 
