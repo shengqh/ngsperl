@@ -166,8 +166,7 @@ sub pbsfiles {
 
     for my $sampleName ( sort keys %group_sample_map ) {
       my @resultFiles = ();
-      push( @resultFiles, $self->pbsfile( $pbsDir, $sampleName . "_snp" ) );
-      push( @resultFiles, $self->pbsfile( $pbsDir, $sampleName . "_id" ) );
+      push( @resultFiles, $self->pbsfile( $pbsDir, $sampleName ) );
       $result->{$sampleName} = \@resultFiles;
     }
   }
