@@ -232,10 +232,10 @@ for(comparisonName in comparisonNames){
     siggenes<-rownames(rldmatrix) %in% rownames(tbbselect)
 
     drawPCA(paste0(comparisonName,"_geneNotDE"), rldmatrix[!siggenes,,drop=F], showLabelInPCA, designData, conditionColors)
-	  drawHCA(paste0(comparisonName,"_geneDE"), , ispaired, designData, conditionColors, gnames)
-	  nonDEmatrix<-rldmatrix[!siggenes,,drop=F]
-	  drawHCA(paste0(comparisonName,"_geneAllNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames)
-	  drawHCA(paste0(comparisonName,"_gene500NotDE"), nonDEmatrix[1:min(500, nrow(rldmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
+    drawHCA(paste0(comparisonName,"_geneDE"), , ispaired, designData, conditionColors, gnames)
+    onDEmatrix<-rldmatrix[!siggenes,,drop=F]
+    drawHCA(paste0(comparisonName,"_geneAllNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames)
+    drawHCA(paste0(comparisonName,"_gene500NotDE"), nonDEmatrix[1:min(500, nrow(rldmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
   }
 
 }
