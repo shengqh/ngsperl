@@ -218,7 +218,9 @@ for(comparisonName in comparisonNames){
 
   if(showDEGeneCluster){
 	  drawHCA(paste0(comparisonName,"_geneDE"), , ispaired, designData, conditionColors, gnames)
-	  drawHCA(paste0(comparisonName,"_geneNotDE"), rldmatrix[!siggenes,,drop=F], ispaired, designData, conditionColors, gnames)
+	  nonDEmatrix<-rldmatrix[!siggenes,,drop=F]
+	  drawHCA(paste0(comparisonName,"_geneAllNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames)
+	  drawHCA(paste0(comparisonName,"_gene500NotDE"), nonDEmatrix[1:min(500, nrow(rldmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
   }
 
   drawHCA(paste0(comparisonName,"_geneAll"), rldmatrix, ispaired, designData, conditionColors, gnames)
