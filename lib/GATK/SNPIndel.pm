@@ -143,10 +143,8 @@ sub result {
   for my $groupName ( sort keys %group_sample_map ) {
     my $curDir      = $resultDir . "/$groupName";
     my $snpPass     = $groupName . "_snp_filtered.pass.vcf";
-    my $indelPass   = $groupName . "_indel_filtered.pass.vcf";
     my @resultFiles = ();
     push( @resultFiles, "${curDir}/${snpPass}" );
-    push( @resultFiles, "${curDir}/${indelPass}" );
     $result->{$groupName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
