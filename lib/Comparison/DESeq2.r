@@ -21,6 +21,50 @@ library("reshape")
 library("ggplot2")
 library("grid")
 
+##Solving node stack overflow problem start###
+#when there are too many genes, drawing dendrogram may failed due to node stack overflow,
+#It could be solved by forcing stats:::plotNode to be run as interpreted code rather then byte-compiled code via a nasty hack.
+#http://stackoverflow.com/questions/16559250/error-in-heatmap-2-gplots/25877485#25877485
+
+# Convert a byte-compiled function to an interpreted-code function 
+unByteCode <- function(fun)
+{
+  FUN <- eval(parse(text=deparse(fun)))
+  environment(FUN) <- environment(fun)
+  FUN
+}
+
+# Replace function definition inside of a locked environment **HACK** 
+assignEdgewise <- function(name, env, value)
+{
+  unlockBinding(name, env=env)
+  assign( name, envir=env, value=value)
+  lockBinding(name, env=env)
+  invisible(value)
+}
+
+# Replace byte-compiled function in a locked environment with an interpreted-code
+# function
+unByteCodeAssign <- function(fun)
+{
+  name <- gsub('^.*::+','', deparse(substitute(fun)))
+  FUN <- unByteCode(fun)
+  retval <- assignEdgewise(name=name,
+                           env=environment(FUN),
+                           value=FUN
+  )
+  invisible(retval)
+}
+
+# Use the above functions to convert stats:::plotNode to interpreted-code:
+unByteCodeAssign(stats:::plotNode)
+
+# Now raise the interpreted code recursion limit (you may need to adjust this,
+#  decreasing if it uses to much memory, increasing if you get a recursion depth error ).
+options(expressions=5e4)
+
+##Solving node stack overflow problem end###
+
 hmcols <- colorRampPalette(c("green", "black", "red"))(256)
 
 drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnames){
@@ -36,21 +80,15 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
     }else{
       gsColors = conditionColors;
     }
-    if(genecount > 15000){
-      showRowDendro = F
-    }else{
-      showRowDendro = T
-    }
     heatmap3(rldselect, 
              col = hmcols, 
              ColSideColors = gsColors, 
              margins=c(12,5), 
              scale="r", 
              dist=dist, 
-             labRow="",
+             labRow=NA,
     				 main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
              cexCol=cexCol, 
-    				 showRowDendro = showRowDendro,
              legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
     dev.off()
   }
