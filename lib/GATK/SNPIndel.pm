@@ -87,10 +87,17 @@ sub perform {
 
     my $curDir       = create_directory_or_die( $resultDir . "/$sampleName" );
 
+    my $snvOut       = $sampleName . "_snv.vcf";
+
     my $snpOut       = $sampleName . "_snp.vcf";
     my $snpStat      = $sampleName . "_snp.stat";
     my $snpFilterOut = $sampleName . "_snp_filtered.vcf";
     my $snpPass      = $sampleName . "_snp_filtered.pass.vcf";
+
+    my $indelOut       = $sampleName . "_indel.vcf";
+    my $indelStat      = $sampleName . "_indel.stat";
+    my $indelFilterOut = $sampleName . "_indel_filtered.vcf";
+    my $indelPass      = $sampleName . "_indel_filtered.pass.vcf";
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
@@ -110,14 +117,18 @@ cd $curDir
 
 echo SNP=`date` 
 
-if [ ! -s $snpOut ]; then
-  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -stand_call_conf 20.0 -stand_emit_conf 20.0 -D $dbsnp $compvcf --out $snpOut -dontUseSoftClippedBases -nct $thread
+if [ ! -s $snvOut ]; then
+  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -stand_call_conf 20.0 -stand_emit_conf 20.0 -D $dbsnp $compvcf --out $snvOut -dontUseSoftClippedBases -nct $thread
 fi
 
-if [ -s $snpOut ]; then
-  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $snpOut $rnafilter -filterName FS -filter \"FS > 30.0\" -filterName QD -filter \"QD < 2.0\" -o $snpFilterOut 
-
+if [ -s $snvOut ]; then
+  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $snvOut -L 20  -selectType SNP -o $snpOut 
+  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $snpOut $rnafilter --filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" -filterName \"snp_filter\" -o $snpFilterOut 
   cat $snpFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $snpPass
+
+  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $snvOut -L 20  -selectType INDEL -o $indelOut 
+  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $indelOut $rnafilter --filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\" --filterName \"indel_filter\" -o $indelFilterOut 
+  cat $indelFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $indelPass
 fi 
 
 echo finished=`date`
@@ -139,13 +150,15 @@ sub result {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
   my $result = {};
 
-  my %group_sample_map = %{ getGroupSampleMap( $config, $section ) };
-  for my $groupName ( sort keys %group_sample_map ) {
-    my $curDir      = $resultDir . "/$groupName";
-    my $snpPass     = $groupName . "_snp_filtered.pass.vcf";
+  my %bamFiles = %{ get_raw_files( $config, $section ) };
+  for my $sampleName ( sort keys %bamFiles ) {
+    my $curDir      = $resultDir . "/$sampleName";
+    my $snpPass      = $sampleName . "_snp_filtered.pass.vcf";
+    my $indelPass      = $sampleName . "_indel_filtered.pass.vcf";
     my @resultFiles = ();
     push( @resultFiles, "${curDir}/${snpPass}" );
-    $result->{$groupName} = filter_array( \@resultFiles, $pattern );
+    push( @resultFiles, "${curDir}/${indelPass}" );
+    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
 }
