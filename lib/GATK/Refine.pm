@@ -32,7 +32,7 @@ sub perform {
   my @vcfFiles = @{ $config->{$section}{vcf_files} } or die "Define vcf_files in section $section first.";
   my $gatk_jar   = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
-  my $fixMisencodedQuals = get_option($config->{$section}{fixMisencodedQuals}, "fixMisencodedQuals", 0) ? "-fixMisencodedQuals":"";
+  my $fixMisencodedQuals = get_option($config, $section, "fixMisencodedQuals", 0) ? "-fixMisencodedQuals":"";
 
   my $knownvcf      = "";
   my $knownsitesvcf = "";
