@@ -120,7 +120,7 @@ echo SNP=`date`
 
 if [[ -s $snpOut && ! -s $indelOut ]]; then
   mv $snpOut $snvOut
-  if [ -s $snpStat]; then
+  if [ -s $snpStat ]; then
     mv $snpStat $snvStat
   fi 
 fi
