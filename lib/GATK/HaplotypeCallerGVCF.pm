@@ -43,7 +43,7 @@ sub perform {
 
   my $java_option = $config->{$section}{java_option};
   if ( !defined $java_option ) {
-    $java_option = "";
+    $java_option = "-Xmx${memory}";
   }
 
   my %bamFiles = %{ get_raw_files( $config, $section ) };
