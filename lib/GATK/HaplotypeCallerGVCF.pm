@@ -42,7 +42,7 @@ sub perform {
   }
 
   my $java_option = $config->{$section}{java_option};
-  if ( !defined $java_option ) {
+  if ( !defined $java_option || $java_option eq "" ) {
     $java_option = "-Xmx${memory}";
   }
 
@@ -56,12 +56,12 @@ sub perform {
 
   for my $sampleName ( sort keys %bamFiles ) {
     my @sampleFiles = @{ $bamFiles{$sampleName} };
-    my $bamFile = $sampleFiles[0];
+    my $bamFile     = $sampleFiles[0];
 
-    my $curDir       = create_directory_or_die( $resultDir . "/$sampleName" );
+    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
-    my $snvOut       = $sampleName . "_snv.gvcf";
-    my $snvStat      = $sampleName . "_snv.stat";
+    my $snvOut  = $sampleName . "_snv.gvcf";
+    my $snvStat = $sampleName . "_snv.stat";
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);

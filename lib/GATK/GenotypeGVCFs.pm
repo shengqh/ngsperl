@@ -38,7 +38,7 @@ sub perform {
   my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
 
   my $java_option = $config->{$section}{java_option};
-  if ( !defined $java_option ) {
+  if ( !defined $java_option || $java_option eq "" ) {
     $java_option = "-Xmx${memory}";
   }
 
@@ -49,7 +49,7 @@ sub perform {
   my $log     = $self->logfile( $logDir, $task_name );
 
   my $merged_file = $task_name . ".gvcf";
-  my $log_desc = $cluster->get_log_desc($log);
+  my $log_desc    = $cluster->get_log_desc($log);
 
   open( OUT, ">$pbsFile" ) or die $!;
   print OUT "$pbsDesc
