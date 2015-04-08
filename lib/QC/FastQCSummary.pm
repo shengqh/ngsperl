@@ -32,7 +32,7 @@ sub perform {
   my $pbsFile    = $self->pbsfile( $pbsDir, $task_name );
   my $pbsName    = basename($pbsFile);
   my $log        = $self->logfile( $logDir, $task_name );
-  my $cqstools   = get_param_file( $config, $section, "cqstools", 1 );
+  my $cqstools   = get_param_file( $config->{$section}{cqstools}, "cqstools", 1 );
   my $fastqc_dir = get_directory( $config, $section, "fastqc_dir", 0 );
   if ( !defined $fastqc_dir ) {
     $fastqc_dir = $resultDir;
