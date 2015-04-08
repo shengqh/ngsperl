@@ -48,7 +48,7 @@ sub perform {
   my $pbsName = basename($pbsFile);
   my $log     = $self->logfile( $logDir, $task_name );
 
-  my $merged_file = $task_name . "_merged.gvcf";
+  my $merged_file = $task_name . ".gvcf";
   my $log_desc = $cluster->get_log_desc($log);
 
   open( OUT, ">$pbsFile" ) or die $!;
@@ -70,7 +70,7 @@ java $java_option -jar $gatk_jar -T GenotypeGVCFs $option -R $faFile \\
     print OUT "  --variant $gvcfFile \\\n";
   }
 
-  print OUT "   -o $merged_file
+  print OUT "  -o $merged_file
 
 echo finished=`date`
 
@@ -87,7 +87,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $merged_file = $task_name . "_merged.gvcf";
+  my $merged_file = $task_name . ".gvcf";
   my $result = { $task_name => [ $resultDir . "/${merged_file}" ] };
 
   return $result;
