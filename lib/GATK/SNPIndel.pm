@@ -88,6 +88,7 @@ sub perform {
     my $curDir       = create_directory_or_die( $resultDir . "/$sampleName" );
 
     my $snvOut       = $sampleName . "_snv.vcf";
+    my $snvStat      = $sampleName . "_snv.stat";
 
     my $snpOut       = $sampleName . "_snp.vcf";
     my $snpStat      = $sampleName . "_snp.stat";
@@ -116,6 +117,13 @@ $path_file
 cd $curDir
 
 echo SNP=`date` 
+
+if [[ -s $snpOut && ! -s $indelOut ]]; then
+  mv $snpOut $snvOut
+  if [ -s $snpStat]; then
+    mv $snpStat $snvStat
+  fi 
+fi
 
 if [ ! -s $snvOut ]; then
   java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -stand_call_conf 20.0 -stand_emit_conf 20.0 -D $dbsnp $compvcf --out $snvOut -dontUseSoftClippedBases -nct $thread
