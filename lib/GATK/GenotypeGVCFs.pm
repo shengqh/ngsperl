@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $memory ) = get_parameter( $config, $section );
 
   my $dbsnp = get_param_file( $config->{$section}{dbsnp_vcf}, "dbsnp_vcf", 0 );
   my $dbsnpparam = "";
@@ -39,7 +39,7 @@ sub perform {
 
   my $java_option = $config->{$section}{java_option};
   if ( !defined $java_option ) {
-    $java_option = "";
+    $java_option = "-Xmx${memory}";
   }
 
   my %gvcfFiles = %{ get_raw_files( $config, $section ) };
