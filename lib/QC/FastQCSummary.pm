@@ -29,10 +29,14 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
-  my $pbsName = basename($pbsFile);
-  my $log     = $self->logfile( $logDir, $task_name );
-
+  my $pbsFile    = $self->pbsfile( $pbsDir, $task_name );
+  my $pbsName    = basename($pbsFile);
+  my $log        = $self->logfile( $logDir, $task_name );
+  my $cqstools   = get_param_file( $config, $section, "cqstools", 1 );
+  my $fastqc_dir = get_directory( $config, $section, "fastqc_dir", 0 );
+  if ( !defined $fastqc_dir ) {
+    $fastqc_dir = $resultDir;
+  }
   my $log_desc = $cluster->get_log_desc($log);
 
   open( OUT, ">$pbsFile" ) or die $!;
@@ -42,7 +46,10 @@ $log_desc
 $path_file
 
 cd $resultDir
-qcimg2pdf.sh -o $task_name
+
+qcimg2pdf.sh -i $fastqc_dir -o $task_name
+
+mono $cqstools fastqc_summary -i $fastqc_dir -o ${task_name}_summary.tsv 
 ";
   close(OUT);
 
