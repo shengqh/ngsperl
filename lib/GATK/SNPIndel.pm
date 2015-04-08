@@ -59,7 +59,7 @@ sub perform {
   my $dbsnp   = get_param_file( $config->{$section}{dbsnp_vcf},      "dbsnp_vcf",      1 );
   my $compvcf = get_param_file( $config->{$section}{comparison_vcf}, "comparison_vcf", 0 );
 
-  my $rnafilter = get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3 " : "";
+  my $rnafilter = get_option( $config, $section, "is_rna" ) ? "-stand_call_conf 20.0 -stand_emit_conf 20.0 -window 35 -cluster 3 -dontUseSoftClippedBases" : "-stand_call_conf 30.0 -stand_emit_conf 10.0";
 
   if ( defined $compvcf ) {
     $compvcf = "-comp " . $compvcf;
@@ -126,7 +126,7 @@ if [[ -s $snpOut && ! -s $indelOut ]]; then
 fi
 
 if [ ! -s $snvOut ]; then
-  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -stand_call_conf 20.0 -stand_emit_conf 20.0 -D $dbsnp $compvcf --out $snvOut -dontUseSoftClippedBases -nct $thread
+  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -stand_call_conf 20.0 -stand_emit_conf 20.0 -D $dbsnp $compvcf --out $snvOut -dontUseSoftClippedBases -nct $thread 
 fi
 
 if [ -s $snvOut ]; then
