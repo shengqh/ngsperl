@@ -130,11 +130,11 @@ if [ ! -s $snvOut ]; then
 fi
 
 if [ -s $snvOut ]; then
-  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $snvOut -L 20  -selectType SNP -o $snpOut 
+  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $snvOut -selectType SNP -o $snpOut 
   java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $snpOut $rnafilter --filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" -filterName \"snp_filter\" -o $snpFilterOut 
   cat $snpFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $snpPass
 
-  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $snvOut -L 20  -selectType INDEL -o $indelOut 
+  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $snvOut -selectType INDEL -o $indelOut 
   java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $indelOut $rnafilter --filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\" --filterName \"indel_filter\" -o $indelFilterOut 
   cat $indelFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $indelPass
 fi 
