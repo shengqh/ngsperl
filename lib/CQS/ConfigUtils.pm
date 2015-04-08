@@ -16,7 +16,7 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(get_option get_java get_cluster get_parameter get_param_file parse_param_file has_raw_files get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools)]
+    qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools)]
 );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
@@ -148,6 +148,38 @@ sub get_param_file {
       }
       elsif ( !is_debug() && !-e $file ) {
         die "$name $file defined but not exists!";
+      }
+    }
+  }
+  return ($result);
+}
+
+#get parameter which indicates a file. If required, not defined or not exists, die. If defined but not exists, die.
+#returned file either undefined or exists.
+sub get_directory {
+  my ( $config, $section, $name, $required ) = @_;
+
+  die "section $section was not defined!" if !defined $config->{$section};
+  die "parameter name must be defined!" if !defined $name;
+
+  my $result = $config->{$section}{$name};
+
+  if ($required) {
+    if ( !defined $result ) {
+      die "$name was not defined!";
+    }
+
+    if ( !is_debug() && !-e $result ) {
+      die "$name $result defined but not exists!";
+    }
+  }
+  else {
+    if ( defined($result) ) {
+      if ( $result eq "" ) {
+        undef($result);
+      }
+      elsif ( !is_debug() && !-e $result ) {
+        die "$name $result defined but not exists!";
       }
     }
   }
