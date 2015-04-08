@@ -158,8 +158,8 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $merged_file = $task_name . ".gvcf";
-  my $result = { $task_name => [ $resultDir . "/${merged_file}" ] };
+  my $recal_snp_indel_file = $task_name . ".recalibrated_variants.vcf";
+  my $result = { $task_name => [ $resultDir . "/${recal_snp_indel_file}" ] };
 
   return $result;
 }
