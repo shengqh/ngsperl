@@ -106,6 +106,7 @@ sub getSmallRNAConfig {
       class      => "QC::FastQCSummary",
       perform    => 1,
       target_dir => $def->{target_dir} . "/fastqc_pre_trim",
+      cqstools   => $def->{cqstools},
       option     => "",
       cluster    => $cluster,
       pbs        => {
@@ -150,6 +151,7 @@ sub getSmallRNAConfig {
       class      => "QC::FastQCSummary",
       perform    => 1,
       target_dir => $def->{target_dir} . "/fastqc_post_trim",
+      cqstools   => $def->{cqstools},
       option     => "",
       cluster    => $cluster,
       pbs        => {
