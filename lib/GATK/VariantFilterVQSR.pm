@@ -79,67 +79,67 @@ if [[ -s $merged_file && ! -s recalibrate_SNP.recal ]]; then
     -T VariantRecalibrator -nt $thread \\
     -R $faFile \\
     -input $merged_file \\
-    -resource:hapmap,known=false,training=true,truth=true,prior=15.0 $hapmap \\ 
-    -resource:omni,known=false,training=true,truth=true,prior=12.0 $omni \\ 
-    -resource:1000G,known=false,training=true,truth=false,prior=10.0 $g1000 \\ 
-    -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 $dbsnp \\ 
-    -an DP \\ 
-    -an QD \\ 
-    -an FS \\ 
-    -an SOR \\ 
+    -resource:hapmap,known=false,training=true,truth=true,prior=15.0 $hapmap \\
+    -resource:omni,known=false,training=true,truth=true,prior=12.0 $omni \\
+    -resource:1000G,known=false,training=true,truth=false,prior=10.0 $g1000 \\
+    -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 $dbsnp \\
+    -an DP \\
+    -an QD \\
+    -an FS \\
+    -an SOR \\
     -an MQ \\
-    -an MQRankSum \\ 
-    -an ReadPosRankSum \\ 
+    -an MQRankSum \\
+    -an ReadPosRankSum \\
     -an InbreedingCoeff \\
-    -mode SNP \\ 
-    -tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 90.0 \\ 
-    -recalFile recalibrate_SNP.recal \\ 
-    -tranchesFile recalibrate_SNP.tranches \\ 
+    -mode SNP \\
+    -tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 90.0 \\
+    -recalFile recalibrate_SNP.recal \\
+    -tranchesFile recalibrate_SNP.tranches \\
     -rscriptFile recalibrate_SNP_plots.R 
 fi
 
 if [[ -s recalibrate_SNP.recal && ! -s $recal_snp_file ]]; then
-  java $java_option -jar $gatk_jar \\ 
+  java $java_option -jar $gatk_jar \\
     -T ApplyRecalibration -nt $thread \\
-    -R $faFile \\ 
-    -input $merged_file \\ 
-    -mode SNP \\ 
-    --ts_filter_level 99.0 \\ 
-    -recalFile recalibrate_SNP.recal \\ 
-    -tranchesFile recalibrate_SNP.tranches \\ 
+    -R $faFile \\
+    -input $merged_file \\
+    -mode SNP \\
+    --ts_filter_level 99.0 \\
+    -recalFile recalibrate_SNP.recal \\
+    -tranchesFile recalibrate_SNP.tranches \\
     -o $recal_snp_file   
 fi
 
 if [[ -s $recal_snp_file && ! -s recalibrate_INDEL.recal ]]; then
-  java $java_option -jar $gatk_jar \\ 
+  java $java_option -jar $gatk_jar \\
     -T VariantRecalibrator -nt $thread \\
-    -R $faFile \\ 
-    -input $recal_snp_file \\ 
-    -resource:mills,known=true,training=true,truth=true,prior=12.0 $mills \\ 
+    -R $faFile \\
+    -input $recal_snp_file \\
+    -resource:mills,known=true,training=true,truth=true,prior=12.0 $mills \\
     -an QD \\
-    -an DP \\ 
-    -an FS \\ 
-    -an SOR \\ 
-    -an MQRankSum \\ 
-    -an ReadPosRankSum \\ 
+    -an DP \\
+    -an FS \\
+    -an SOR \\
+    -an MQRankSum \\
+    -an ReadPosRankSum \\
     -an InbreedingCoeff \\
     -mode INDEL \\
-    -tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 90.0 \\ 
-    --maxGaussians 4 \\ 
-    -recalFile recalibrate_INDEL.recal \\ 
-    -tranchesFile recalibrate_INDEL.tranches \\ 
+    -tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 90.0 \\
+    --maxGaussians 4 \\
+    -recalFile recalibrate_INDEL.recal \\
+    -tranchesFile recalibrate_INDEL.tranches \\
     -rscriptFile recalibrate_INDEL_plots.R 
 fi
 
 if [[ -s $recal_snp_file && -s recalibrate_INDEL.recal && ! -s $recal_snp_indel_file ]]; then
-  java $java_option -jar $gatk_jar \\ 
+  java $java_option -jar $gatk_jar \\
     -T ApplyRecalibration -nt $thread \\
-    -R $faFile \\ 
-    -input $recal_snp_file \\ 
-    -mode INDEL \\ 
-    --ts_filter_level 99.0 \\ 
-    -recalFile recalibrate_INDEL.recal \\ 
-    -tranchesFile recalibrate_INDEL.tranches \\ 
+    -R $faFile \\
+    -input $recal_snp_file \\
+    -mode INDEL \\
+    --ts_filter_level 99.0 \\
+    -recalFile recalibrate_INDEL.recal \\
+    -tranchesFile recalibrate_INDEL.tranches \\
     -o $recal_snp_indel_file 
 fi
 
