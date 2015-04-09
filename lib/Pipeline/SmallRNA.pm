@@ -380,8 +380,8 @@ sub getSmallRNAConfig {
       target_dir => $def->{target_dir} . "/sequencetask",
       option     => "",
       source     => {
-        one => \@individual,
-        all => [
+        step1 => \@individual,
+        step2 => [
 
           #QC
           "fastqc_pre_trim_summary",
