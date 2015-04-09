@@ -63,16 +63,18 @@ cd $resultDir
 
 echo GenotypeGVCFs=`date` 
 
-java $java_option -jar $gatk_jar -T GenotypeGVCFs $option -nt $thread -D $dbsnp -R $faFile \\
+if [ !-s $merged_file ]; then
+  java $java_option -jar $gatk_jar -T GenotypeGVCFs $option -nt $thread -D $dbsnp -R $faFile \\
 ";
 
   for my $sampleName ( sort keys %gvcfFiles ) {
     my @sampleFiles = @{ $gvcfFiles{$sampleName} };
     my $gvcfFile    = $sampleFiles[0];
-    print OUT "  --variant $gvcfFile \\\n";
+    print OUT "    --variant $gvcfFile \\\n";
   }
 
   print OUT "  -o $merged_file
+fi
   
 if [[ -s $merged_file && ! -s recalibrate_SNP.recal ]]; then
   java $java_option -jar $gatk_jar \\
