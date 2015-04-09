@@ -49,7 +49,7 @@ cd $resultDir
 
 qcimg2pdf.sh -i $fastqc_dir -o $task_name
 
-mono $cqstools fastqc_summary -i $fastqc_dir -o ${task_name}_summary.tsv 
+mono $cqstools fastqc_summary -i $fastqc_dir -o ${task_name}.FastQC.summary.tsv 
 ";
   close(OUT);
 
