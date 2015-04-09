@@ -61,9 +61,10 @@ $path_file
 
 cd $resultDir
 
-echo GenotypeGVCFs=`date` 
+echo VariantFilterVQSR=`date` 
 
 if [ ! -s $merged_file ]; then
+  echo GenotypeGVCFs=`date` 
   java $java_option -jar $gatk_jar -T GenotypeGVCFs $option -nt $thread -D $dbsnp -R $faFile \\
 ";
 
@@ -77,6 +78,7 @@ if [ ! -s $merged_file ]; then
 fi
   
 if [[ -s $merged_file && ! -s recalibrate_SNP.recal ]]; then
+  echo VariantRecalibratorSNP=`date` 
   java $java_option -jar $gatk_jar \\
     -T VariantRecalibrator -nt $thread \\
     -R $faFile \\
@@ -101,6 +103,7 @@ if [[ -s $merged_file && ! -s recalibrate_SNP.recal ]]; then
 fi
 
 if [[ -s recalibrate_SNP.recal && ! -s $recal_snp_file ]]; then
+  echo ApplyRecalibrationSNP=`date` 
   java $java_option -jar $gatk_jar \\
     -T ApplyRecalibration -nt $thread \\
     -R $faFile \\
@@ -113,6 +116,7 @@ if [[ -s recalibrate_SNP.recal && ! -s $recal_snp_file ]]; then
 fi
 
 if [[ -s $recal_snp_file && ! -s recalibrate_INDEL.recal ]]; then
+  echo VariantRecalibratorIndel=`date` 
   java $java_option -jar $gatk_jar \\
     -T VariantRecalibrator -nt $thread \\
     -R $faFile \\
@@ -134,6 +138,7 @@ if [[ -s $recal_snp_file && ! -s recalibrate_INDEL.recal ]]; then
 fi
 
 if [[ -s $recal_snp_file && -s recalibrate_INDEL.recal && ! -s $recal_snp_indel_file ]]; then
+  echo ApplyRecalibrationIndel=`date` 
   java $java_option -jar $gatk_jar \\
     -T ApplyRecalibration -nt $thread \\
     -R $faFile \\
