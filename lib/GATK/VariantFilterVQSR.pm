@@ -63,7 +63,7 @@ cd $resultDir
 
 echo GenotypeGVCFs=`date` 
 
-java $java_option -jar $gatk_jar -T GenotypeGVCFs $option -D $dbsnp -R $faFile \\
+java $java_option -jar $gatk_jar -T GenotypeGVCFs $option -nt $thread -D $dbsnp -R $faFile \\
 ";
 
   for my $sampleName ( sort keys %gvcfFiles ) {
