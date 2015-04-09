@@ -63,7 +63,7 @@ cd $resultDir
 
 echo GenotypeGVCFs=`date` 
 
-if [ !-s $merged_file ]; then
+if [[ ! -s $merged_file ]; then
   java $java_option -jar $gatk_jar -T GenotypeGVCFs $option -nt $thread -D $dbsnp -R $faFile \\
 ";
 
