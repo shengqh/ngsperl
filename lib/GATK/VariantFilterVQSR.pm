@@ -76,7 +76,7 @@ java $java_option -jar $gatk_jar -T GenotypeGVCFs $option -nt $thread -D $dbsnp 
   
 if [[ -s $merged_file && ! -s recalibrate_SNP.recal ]]; then
   java $java_option -jar $gatk_jar \\
-    -T VariantRecalibrator \\
+    -T VariantRecalibrator -nt $thread \\
     -R $faFile \\
     -input $merged_file \\
     -resource:hapmap,known=false,training=true,truth=true,prior=15.0 $hapmap \\ 
@@ -100,7 +100,7 @@ fi
 
 if [[ -s recalibrate_SNP.recal && ! -s $recal_snp_file ]]; then
   java $java_option -jar $gatk_jar \\ 
-    -T ApplyRecalibration \\
+    -T ApplyRecalibration -nt $thread \\
     -R $faFile \\ 
     -input $merged_file \\ 
     -mode SNP \\ 
@@ -112,7 +112,7 @@ fi
 
 if [[ -s $recal_snp_file && ! -s recalibrate_INDEL.recal ]]; then
   java $java_option -jar $gatk_jar \\ 
-    -T VariantRecalibrator \\
+    -T VariantRecalibrator -nt $thread \\
     -R $faFile \\ 
     -input $recal_snp_file \\ 
     -resource:mills,known=true,training=true,truth=true,prior=12.0 $mills \\ 
@@ -133,7 +133,7 @@ fi
 
 if [[ -s $recal_snp_file && -s recalibrate_INDEL.recal && ! -s $recal_snp_indel_file ]]; then
   java $java_option -jar $gatk_jar \\ 
-    -T ApplyRecalibration \\
+    -T ApplyRecalibration -nt $thread \\
     -R $faFile \\ 
     -input $recal_snp_file \\ 
     -mode INDEL \\ 
