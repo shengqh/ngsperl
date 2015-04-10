@@ -51,6 +51,7 @@ sub perform {
   my $merged_file = $task_name . ".vcf";
   my $recal_snp_file = $task_name . ".recal.snp.vcf";
   my $recal_snp_indel_file = $task_name . ".recalibrated_variants.vcf";
+  my $recal_snp_indel_pass_file = $task_name . ".recalibrated_variants.pass.vcf";
   my $log_desc    = $cluster->get_log_desc($log);
 
   open( OUT, ">$pbsFile" ) or die $!;
@@ -150,6 +151,11 @@ if [[ -s $recal_snp_file && -s recalibrate_INDEL.recal && ! -s $recal_snp_indel_
     -o $recal_snp_indel_file 
 fi
 
+if [[ -s $recal_snp_indel_file && ! -s $recal_snp_indel_pass_file ]]; then
+  grep -e \"^#\" $recal_snp_indel_file > $recal_snp_indel_pass_file
+  grep PASS $recal_snp_indel_file >> $recal_snp_indel_pass_file
+fi
+
 echo finished=`date`
 
 exit 0
@@ -165,8 +171,8 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $recal_snp_indel_file = $task_name . ".recalibrated_variants.vcf";
-  my $result = { $task_name => [ $resultDir . "/${recal_snp_indel_file}" ] };
+  my $recal_snp_indel_pass_file = $task_name . ".recalibrated_variants.pass.vcf";
+  my $result = { $task_name => [ $resultDir . "/${recal_snp_indel_pass_file}" ] };
 
   return $result;
 }
