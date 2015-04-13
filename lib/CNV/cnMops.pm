@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my $bedfile = $config->{$section}{bedfile};
 
@@ -55,6 +55,7 @@ sub perform {
 callfile<-\"$callFile\"
 prefix<-\"$task_name\"
 pairmode<-\"$pairmode\"
+parallel<-$thread
 ";
   if ( defined $bedfile ) {
     print R "hasbed<-1
