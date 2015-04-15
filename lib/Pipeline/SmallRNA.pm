@@ -186,7 +186,7 @@ sub getSmallRNAConfig {
     push @summary,    ("fastqc_summary");
   }
 
-  print SH Dumper($qc);
+  print Dumper($qc);
   
   $config->{ keys %{$qc} } = values %{$qc};
 
