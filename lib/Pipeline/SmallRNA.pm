@@ -186,6 +186,8 @@ sub getSmallRNAConfig {
     push @summary,    ("fastqc_summary");
   }
 
+  print SH Dumper($qc);
+  
   $config->{ keys %{$qc} } = values %{$qc};
 
   my $preparation = {
@@ -447,6 +449,7 @@ sub performSmallRNA {
   }
 
   my $config = getSmallRNAConfig($def);
+  
   if ($perform) {
 
     my $configFile = $def->{target_dir} . "/" . $def->{task_name} . ".config";
