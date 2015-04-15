@@ -148,7 +148,7 @@ sub getSmallRNAConfig {
         },
       }
     };
-    $source_ref = "cutadapt";
+    $source_ref = [ "cutadapt", ".fastq.gz" ];
     push @individual, ( "fastqc_pre_trim", "cutadapt", "fastqc_post_trim" );
     push @summary, ( "fastqc_pre_trim_summary", "fastqc_post_trim_summary" );
   }
@@ -159,7 +159,7 @@ sub getSmallRNAConfig {
         perform    => 1,
         target_dir => $def->{target_dir} . "/fastqc",
         option     => "",
-        source_ref => [ "cutadapt", ".fastq.gz" ],
+        source_ref => $source_ref,
         cluster    => $cluster,
         pbs        => {
           "email"    => $def->{email},
@@ -197,7 +197,7 @@ sub getSmallRNAConfig {
       perform    => 1,
       target_dir => $def->{target_dir} . "/fastq_len",
       option     => "",
-      source_ref => "cutadapt",
+      source_ref => $source_ref,
       cqstools   => $def->{cqstools},
       sh_direct  => 1,
       cluster    => $cluster,
@@ -213,7 +213,7 @@ sub getSmallRNAConfig {
       perform    => 1,
       target_dir => $def->{target_dir} . "/identical",
       option     => "",
-      source_ref => [ "cutadapt", ".fastq.gz" ],
+      source_ref => $source_ref,
       cqstools   => $def->{cqstools},
       extension  => "_clipped_identical.fastq.gz",
       sh_direct  => 1,
@@ -269,7 +269,7 @@ sub getSmallRNAConfig {
       perform       => 1,
       target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm_notidentical",
       option        => $def->{bowtie1_option_1mm},
-      source_ref    => [ "cutadapt", ".fastq.gz\$" ],
+      source_ref    => $source_ref,
       bowtie1_index => $def->{bowtie1_index},
       samonly       => 0,
       sh_direct     => 0,
