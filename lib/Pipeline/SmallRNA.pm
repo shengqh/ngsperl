@@ -8,6 +8,7 @@ use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
 use Data::Dumper;
+use Hash::Merge;
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -186,10 +187,7 @@ sub getSmallRNAConfig {
     push @summary,    ("fastqc_summary");
   }
 
-  my %qcs = %{$qc};
-  print Dumper(%qcs);
-  
-  $config->{ keys %qcs } = values %qcs;
+  $config = merge($config, $qc);
   
   print Dumper($config);
 
