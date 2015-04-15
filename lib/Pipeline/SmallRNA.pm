@@ -189,7 +189,9 @@ sub getSmallRNAConfig {
   my %qcs = %{$qc};
   print Dumper(%qcs);
   
-  $config->{ keys %{$qc} } = values %{$qc};
+  $config->{ keys %qcs } = values %qcs;
+  
+  print Dumper($config);
 
   my $preparation = {
     fastq_len => {
