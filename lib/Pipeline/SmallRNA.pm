@@ -8,7 +8,7 @@ use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
 use Data::Dumper;
-use Hash::Merge;
+use Hash::Merge qw( merge );
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -187,8 +187,8 @@ sub getSmallRNAConfig {
     push @summary,    ("fastqc_summary");
   }
 
-  $config = merge($config, $qc);
-  
+  $config = merge( $config, $qc );
+
   print Dumper($config);
 
   my $preparation = {
@@ -285,7 +285,7 @@ sub getSmallRNAConfig {
 
   push @individual, ( "fastq_len", "identical", "identical_NTA", "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_notidentical" );
 
-  $config->{ keys %{$preparation} } = values %{$preparation};
+  $config = merge( $config, $preparation );
 
   if ( defined $def->{coordinate} ) {
     push @individual, ( "bowtie1_genome_1mm_NTA_smallRNA_count", "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_miRbase_pm", "bowtie1_miRbase_pm_count" );
@@ -436,8 +436,7 @@ sub getSmallRNAConfig {
       }
     };
 
-    $config->{ keys %{$count} } = values %{$count};
-
+    $config = merge( $config, $count );
   }
 
   return ($config);
@@ -450,7 +449,7 @@ sub performSmallRNA {
   }
 
   my $config = getSmallRNAConfig($def);
-  
+
   if ($perform) {
 
     my $configFile = $def->{target_dir} . "/" . $def->{task_name} . ".config";
