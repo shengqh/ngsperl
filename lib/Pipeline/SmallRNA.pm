@@ -189,7 +189,7 @@ sub getSmallRNAConfig {
 
   $config = merge( $config, $qc );
 
-  print Dumper($config);
+  #print Dumper($config);
 
   my $preparation = {
     fastq_len => {
