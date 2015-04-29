@@ -225,6 +225,23 @@ sub getSmallRNAConfig {
         "mem"      => "20gb"
       },
     },
+    identical_sequence_table => {
+      class      => "CQS::SmallRNASequenceCountTable",
+      perform    => 1,
+      target_dir => $def->{target_dir} . "/identical_sequence_count_table",
+      option     => "",
+      source_ref => [ "identical", ".dupcount\$" ],
+      cqs_tools  => $def->{cqstools},
+      suffix     => "_sequence",
+      sh_direct  => 1,
+      cluster    => $cluster,
+      pbs        => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "10gb"
+      },
+    },
     identical_NTA => {
       class        => "CQS::FastqMirna",
       perform      => 1,
@@ -284,6 +301,7 @@ sub getSmallRNAConfig {
   };
 
   push @individual, ( "fastq_len", "identical", "identical_NTA", "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_notidentical" );
+  push @summary, ("identical_sequence_table");
 
   $config = merge( $config, $preparation );
 
