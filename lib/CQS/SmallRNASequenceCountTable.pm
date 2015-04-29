@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package CQS::SmallRNASequenceTable;
+package CQS::SmallRNASequenceCountTable;
 
 use strict;
 use warnings;
@@ -17,7 +17,7 @@ our @ISA = qw(CQS::UniqueTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "CQS::SmallRNASequenceTable";
+  $self->{_name}   = "CQS::SmallRNASequenceCountTable";
   $self->{_suffix} = "_srst";
   bless $self, $class;
   return $self;
