@@ -35,7 +35,6 @@ sub perform {
 
   my $mapfile = $resultDir . "/${task_name}_sample.list";
   open( MAP, ">$mapfile" ) or die "Cannot create $mapfile";
-  print MAP "SampleID\tBamFile\tNotes\n";
   for my $sampleName ( sort keys %{$rawfiles} ) {
     my @bamFiles = @{ $rawfiles->{$sampleName} };
     for my $bam (@bamFiles) {
