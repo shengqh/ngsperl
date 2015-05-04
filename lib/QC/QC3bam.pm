@@ -59,7 +59,7 @@ cd $resultDir
 
 echo QC3bam=`date`
  
-perl qc3_perl $option -m b -i $mapfile -g $transcript_gtf -o $resultDir
+perl $qc3_perl $option -m b -i $mapfile -g $transcript_gtf -o $resultDir
 
 echo finished=`date`
 
