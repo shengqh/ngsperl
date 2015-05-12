@@ -44,6 +44,7 @@ sub getSmallRNAConfig {
   my @summary    = ();
 
   my $source_ref = "files";
+  my $len_ref = "files";
   if ( !defined $fastq_remove_N || $fastq_remove_N ) {
     $config->{fastq_remove_N} = {
       class      => "CQS::FastqTrimmer",
@@ -63,6 +64,7 @@ sub getSmallRNAConfig {
       }
     };
     $source_ref = "fastq_remove_N";
+    $len_ref = "fastq_remove_N";
     push @individual, "fastq_remove_N";
   }
 
@@ -149,6 +151,7 @@ sub getSmallRNAConfig {
       }
     };
     $source_ref = [ "cutadapt", ".fastq.gz" ];
+    $len_ref = "cutadapt";
     push @individual, ( "fastqc_pre_trim", "cutadapt", "fastqc_post_trim" );
     push @summary, ( "fastqc_pre_trim_summary", "fastqc_post_trim_summary" );
   }
@@ -197,7 +200,7 @@ sub getSmallRNAConfig {
       perform    => 1,
       target_dir => $def->{target_dir} . "/fastq_len",
       option     => "",
-      source_ref => $source_ref,
+      source_ref => $len_ref,
       cqstools   => $def->{cqstools},
       sh_direct  => 1,
       cluster    => $cluster,
