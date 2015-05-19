@@ -143,8 +143,9 @@ countData<-round(countData)
 comparisonNames=names(comparisons)
 comparisonName=comparisonNames[1]
 
-pairedspearman<-list()
+dir.create("details", showWarnings = FALSE)
 
+pairedspearman<-list()
 for(comparisonName in comparisonNames){
   str(comparisonName)
   designFile=comparisons[[comparisonName]][1]
@@ -168,8 +169,6 @@ for(comparisonName in comparisonNames){
   comparisonData<-comparisonData[,as.character(designData$Sample)]
   
   if(ispaired){
-    dir.create("spearman", showWarnings = FALSE)
-    
     pairedSamples = unique(designData$Paired)
     
     spcorr<-unlist(lapply(c(1:length(pairedSamples)), function(x){
@@ -185,7 +184,7 @@ for(comparisonName in comparisonNames){
       samples<-designData$Sample[designData$Paired==pairedSamples[x]]
       log2c1<-log2(comparisonData[,samples[1]]+1)
       log2c2<-log2(comparisonData[,samples[2]]+1)
-      png(paste0("spearman/", comparisonName, "_Spearman_", pairedSamples[x], ".png"), width=2000, height=2000, res=300)
+      png(paste0("details/", comparisonName, "_Spearman_", pairedSamples[x], ".png"), width=2000, height=2000, res=300)
       plot(log2c1, log2c2, xlab=paste0(samples[1], " [log2(Count + 1)]"), ylab=paste0(samples[2], " [log2(Count + 1)]"))
       text(3,15,paste0("SpearmanCorr=", sprintf("%0.3f", spcorr[x])))
       dev.off()
@@ -218,6 +217,11 @@ for(comparisonName in comparisonNames){
   g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + xlab("DESeq2 log2 transformed count")
   print(g)
   dev.off()
+
+  png(filename=paste0(comparisonName, "_DESeq2-log2-density-individual.png"), width=4000, height=3000, res=300)
+  g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + facet_grid(Sample ~ .) + xlab("DESeq2 log2 transformed count")
+  print(g)
+  dev.off()
   
   #varianceStabilizingTransformation
   vsd <- varianceStabilizingTransformation(dds, blind=TRUE)
@@ -233,7 +237,7 @@ for(comparisonName in comparisonNames){
   drawPCA(paste0(comparisonName,"_geneAll"), rldmatrix, showLabelInPCA, designData, conditionColors)
   
   #draw heatmap
-  drawHCA(paste0(comparisonName,"_gene500"), rldmatrix[1:min(500, nrow(rldmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
+  #drawHCA(paste0(comparisonName,"_gene500"), rldmatrix[1:min(500, nrow(rldmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
   drawHCA(paste0(comparisonName,"_geneAll"), rldmatrix, ispaired, designData, conditionColors, gnames)
   
   #different expression analysis
@@ -278,7 +282,7 @@ for(comparisonName in comparisonNames){
     
     drawHCA(paste0(comparisonName,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames)
     drawHCA(paste0(comparisonName,"_geneAllNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames)
-    drawHCA(paste0(comparisonName,"_gene500NotDE"), nonDEmatrix[1:min(500, nrow(nonDEmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
+    #drawHCA(paste0(comparisonName,"_gene500NotDE"), nonDEmatrix[1:min(500, nrow(nonDEmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
   }
 }
 
