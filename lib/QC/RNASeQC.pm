@@ -26,11 +26,12 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $faFile         = get_param_file( $config->{$section}{fasta_file},     "fasta_file",     1 );
   my $jar            = get_param_file( $config->{$section}{jar},            "jar",            1 );
   my $transcript_gtf = get_param_file( $config->{$section}{transcript_gtf}, "transcript_gtf", 1 );
+  my $sorted = get_option_value($config->{$section}{sorted}, 1);
 
   my $rawfiles = get_raw_files( $config, $section );
 
@@ -60,7 +61,12 @@ $path_file
 cd $resultDir
 
 echo RNASeQC=`date`
- 
+
+if [ -s metrics.tsv ]; then
+  echo job has already been done. if you want to do again, delete ${resultDir}/metrics.tsv and submit job again.
+  exit 0;
+fi
+
 java -jar $jar $option -s $mapfile -t $transcript_gtf -ttype 2 -r $faFile -o .
 
 rm refGene.txt*
