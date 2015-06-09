@@ -62,7 +62,7 @@ cd $resultDir
       my $resultFile = change_extension( $sname, ".msgf.mzid" );
 
       print OUT "if [ ! -s $resultFile ]; then
-  java -Xmx$memory -jar $msgf_jar  -s $sampleFile -d $database -o $resultFile $option -mod $mod_file -n 1 -addFeatures 1 
+  java -Xmx$memory -jar $msgf_jar -s $sampleFile -d $database -mod $mod_file -thread $thread -o $resultFile $option -n 1 -addFeatures 1 
 fi
 ";
     }
