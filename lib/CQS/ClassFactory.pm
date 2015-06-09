@@ -19,7 +19,7 @@ sub instantiate {
   my $location;
   if ( $class =~ m'::' ) {
     $location = $class;
-    $location =~ s/::/\//;
+    $location =~ s/::/\//g;
   }
   else {
     $location = "CQS/" . $class;
