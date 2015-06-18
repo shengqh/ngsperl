@@ -57,7 +57,7 @@ $path_file
       my $resultFile = $sampleFile . ".peptides";
 
       print OUT "if [ ! -s $resultFile ]; then
-  mono $proteomicstools -i $sampleFile $sampleFile -$option
+  mono $proteomicstools -i $sampleFile $sampleFile $option
 fi
 ";
     }
