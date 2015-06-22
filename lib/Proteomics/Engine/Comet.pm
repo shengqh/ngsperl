@@ -63,7 +63,7 @@ cd $resultDir
 
       if($sname =~ /\.mgf$/i){
         my $proteomicstools = get_param_file( $config->{$section}{proteomicstools}, "proteomicstools", 1 );
-        my $titleformat = get_param_file( $config->{$section}{titleformat}, "titleformat", 1 );
+        my $titleformat = get_option( $config->{$section}, "titleformat");
         my $tempFile = $resultDir . "/" . change_extension( $sname, ".ms2");
         $sampleFile = $tempFile;
 print OUT "
