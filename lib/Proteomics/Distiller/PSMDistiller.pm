@@ -31,6 +31,8 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
+  my $rank2 = ( $option =~ /--rank2/ ) && ( $option =~ /Comet/ );
+
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
@@ -54,10 +56,10 @@ $path_file
 
 ";
     for my $sampleFile (@sampleFiles) {
-      my $resultFile = $sampleFile . ".peptides";
+      my $resultFile = $rank2 ? $sampleFile . ".rank2.peptides" : $sampleFile . ".peptides";
 
       print OUT "if [ ! -s $resultFile ]; then
-  mono $proteomicstools PSM_distiller -i $sampleFile $sampleFile $option
+  mono $proteomicstools PSM_distiller -i $sampleFile $sampleFile $option -o $resultFile
 fi
 ";
     }
@@ -90,12 +92,13 @@ sub result {
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
+  my $rank2 = ( $option =~ /--rank2/ ) && ( $option =~ /Comet/ );
   for my $sampleName ( keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my @resultFiles = ();
 
     for my $sampleFile (@sampleFiles) {
-      my $resultFile = $sampleFile . ".peptides";
+      my $resultFile = $rank2 ? $sampleFile . ".rank2.peptides" : $sampleFile . ".peptides";
       push( @resultFiles, "${resultFile}" );
     }
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
