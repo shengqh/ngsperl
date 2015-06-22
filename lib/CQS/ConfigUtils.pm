@@ -16,7 +16,8 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools)]
+    qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools)
+  ]
 );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
@@ -87,7 +88,10 @@ sub get_parameter {
 
   die "no section $section found!" if !defined $config->{$section};
 
-  my $task_name = get_option( $config, "general", "task_name" );
+  my $task_name = get_option( $config, $section, "task_name", "" );
+  if ( $task_name == "" ) {
+    $task_name = get_option( $config, "general", "task_name" );
+  }
 
   my $cluster = get_cluster(@_);
 
@@ -160,7 +164,7 @@ sub get_directory {
   my ( $config, $section, $name, $required ) = @_;
 
   die "section $section was not defined!" if !defined $config->{$section};
-  die "parameter name must be defined!" if !defined $name;
+  die "parameter name must be defined!"   if !defined $name;
 
   my $result = $config->{$section}{$name};
 
@@ -237,7 +241,7 @@ sub parse_param_file {
   return undef;
 }
 
-sub has_raw_files{
+sub has_raw_files {
   my ( $config, $section, $mapname ) = @_;
 
   if ( !defined $mapname ) {
@@ -247,7 +251,7 @@ sub has_raw_files{
   my $mapname_ref        = $mapname . "_ref";
   my $mapname_config_ref = $mapname . "_config_ref";
 
-  return (defined $config->{$section}{$mapname}) || (defined $config->{$section}{$mapname_ref}) ||(defined $config->{$section}{$mapname_config_ref});
+  return ( defined $config->{$section}{$mapname} ) || ( defined $config->{$section}{$mapname_ref} ) || ( defined $config->{$section}{$mapname_config_ref} );
 }
 
 sub do_get_raw_files {
@@ -285,11 +289,11 @@ sub do_get_raw_files {
           }
 
           if ( $index == ( $partlength - 1 ) || defined $config->{ $parts[ $index + 1 ] } ) {
-            $refmap->{ $index} = { config => $config, section => $parts[$index], pattern => $pattern };
+            $refmap->{$index} = { config => $config, section => $parts[$index], pattern => $pattern };
             $index++;
           }
           else {
-            $refmap->{ $index } = { config => $config, section => $parts[$index], pattern => $parts[ $index + 1 ] };
+            $refmap->{$index} = { config => $config, section => $parts[$index], pattern => $parts[ $index + 1 ] };
             $index += 2;
           }
         }
@@ -324,7 +328,7 @@ sub do_get_raw_files {
         }
 
         if ( $index == ( $partlength - 2 ) || ref( $parts[ $index + 2 ] ) eq 'HASH' ) {
-          $refmap->{$index } = { config => $targetConfig, section => $targetSection, pattern => $pattern };
+          $refmap->{$index} = { config => $targetConfig, section => $targetSection, pattern => $pattern };
           $index += 2;
         }
         else {
@@ -332,7 +336,7 @@ sub do_get_raw_files {
           $index += 3;
         }
       }
-      
+
       #print Dumper($refmap);
     }
 
@@ -340,7 +344,7 @@ sub do_get_raw_files {
     for my $index ( keys %{$refmap} ) {
       my $values       = $refmap->{$index};
       my $targetConfig = $values->{config};
-      my $section = $values->{section};
+      my $section      = $values->{section};
       my $pattern      = $values->{pattern};
 
       my %myres = ();
@@ -356,11 +360,11 @@ sub do_get_raw_files {
       my $refcount = keys %myres;
       for my $mykey ( keys %myres ) {
         my $myvalues = $myres{$mykey};
-        if ( (ref($myvalues) eq 'ARRAY')  && (scalar( @{$myvalues} ) > 0) ) {
+        if ( ( ref($myvalues) eq 'ARRAY' ) && ( scalar( @{$myvalues} ) > 0 ) ) {
           $result{$mykey} = $myvalues;
         }
-        
-        if((ref($myvalues) eq 'HASH')  && (scalar( keys %{$myvalues} ) > 0)){
+
+        if ( ( ref($myvalues) eq 'HASH' ) && ( scalar( keys %{$myvalues} ) > 0 ) ) {
           $result{$mykey} = $myvalues;
         }
       }
