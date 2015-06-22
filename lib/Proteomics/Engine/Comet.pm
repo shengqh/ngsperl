@@ -59,8 +59,8 @@ cd $resultDir
       my $sname = basename($sampleFile);
       my $resultFile = change_extension( $sname, ".pepXml" );
       
-      print OUT "if [ ! -s $resultFile ]; then
-";
+      print OUT "if [ ! -s $resultFile ]; then\n";
+
       if($sname =~ /mgf\$/){
         my $proteomicstools = get_param_file( $config->{$section}{proteomicstools}, "proteomicstools", 1 );
         my $titleformat = get_param_file( $config->{$section}{titleformat}, "titleformat", 1 );
@@ -70,9 +70,11 @@ print OUT "
   mono $proteomicstools MGF2MS2 -i $sampleFile -t $titleformat -o $tempFile
 ";
       }
-print OUT "
-  comet -P$param_file -D$database $sampleFile
-  RefreshParser $resultFile $database
+
+print OUT "  comet -P$param_file -D$database $sampleFile
+  if [ -s $resultFile ]; then
+    RefreshParser $resultFile $database
+  fi
 fi
 ";
     }
