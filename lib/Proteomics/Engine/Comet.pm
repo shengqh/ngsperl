@@ -66,8 +66,7 @@ cd $resultDir
         my $titleformat = get_option( $config, $section, "titleformat");
         my $tempFile = $resultDir . "/" . change_extension( $sname, ".ms2");
         $sampleFile = $tempFile;
-print OUT "
-  mono $proteomicstools MGF2MS2 -i $sampleFile -t $titleformat -o $tempFile
+print OUT "  mono $proteomicstools MGF2MS2 -i $sampleFile -t $titleformat -o $tempFile
 ";
       }
 
