@@ -89,7 +89,7 @@ sub get_parameter {
   die "no section $section found!" if !defined $config->{$section};
 
   my $task_name = get_option( $config, $section, "task_name", "" );
-  if ( $task_name == "" ) {
+  if ( $task_name eq "" ) {
     $task_name = get_option( $config, "general", "task_name" );
   }
 
