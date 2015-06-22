@@ -27,6 +27,7 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my $param_file = get_param_file( $config->{$section}{param_file}, "param_file", 1 );
+  my $database = get_param_file( $config->{$section}{database}, "database", 1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -57,9 +58,21 @@ cd $resultDir
     for my $sampleFile (@sampleFiles) {
       my $sname = basename($sampleFile);
       my $resultFile = change_extension( $sname, ".pepXml" );
-
+      
       print OUT "if [ ! -s $resultFile ]; then
+";
+      if($sname =~ /mgf\$/){
+        my $proteomicstools = get_param_file( $config->{$section}{proteomicstools}, "proteomicstools", 1 );
+        my $titleformat = get_param_file( $config->{$section}{titleformat}, "titleformat", 1 );
+        my $tempFile = $resultDir . "/" . change_extension( $sname, ".ms2");
+        $sampleFile = $tempFile;
+print OUT "
+  mono $proteomicstools MGF2MS2 -i $sampleFile -t $titleformat -o $tempFile
+";
+      }
+print OUT "
   comet -P$param_file $sampleFile
+  RefreshParser $resultFile $database
 fi
 ";
     }
