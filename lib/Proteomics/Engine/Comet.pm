@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Proteomics::Engine::MSGFPlus;
+package Proteomics::Engine::Comet;
 
 use strict;
 use warnings;
@@ -16,20 +16,17 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Proteomics::Engine::MSGFPlus";
-  $self->{_suffix} = "_msgf";
+  $self->{_name}   = "Proteomics::Engine::Comet";
+  $self->{_suffix} = "_comet";
   bless $self, $class;
   return $self;
 }
 
 sub perform {
   my ( $self, $config, $section ) = @_;
-
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
-  my $msgf_jar = get_param_file( $config->{$section}{msgf_jar}, "msgf_jar", 1 );
-  my $database = get_param_file( $config->{$section}{database}, "database", 1 );
-  my $mod_file = get_param_file( $config->{$section}{mod_file}, "mod_file", 1 );
+  my $param_file = get_param_file( $config->{$section}{param_file}, "param_file", 1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -59,10 +56,10 @@ cd $resultDir
 ";
     for my $sampleFile (@sampleFiles) {
       my $sname = basename($sampleFile);
-      my $resultFile = change_extension( $sname, ".msgf.mzid" );
+      my $resultFile = change_extension( $sname, ".pepXml" );
 
       print OUT "if [ ! -s $resultFile ]; then
-  java -Xmx$memory -jar $msgf_jar -s $sampleFile -d $database -mod $mod_file -thread $thread -o $resultFile $option
+  comet -P$param_file $sampleFile
 fi
 ";
     }
@@ -101,7 +98,7 @@ sub result {
 
     for my $sampleFile (@sampleFiles) {
       my $sname = basename($sampleFile);
-      my $resultFile = change_extension( $sname, ".msgf.mzid" );
+      my $resultFile = change_extension( $sname, ".pepXml" );
       push( @resultFiles, "${resultDir}/${resultFile}" );
     }
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
