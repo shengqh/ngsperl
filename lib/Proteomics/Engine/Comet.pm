@@ -28,6 +28,7 @@ sub perform {
 
   my $param_file = get_param_file( $config->{$section}{param_file}, "param_file", 1 );
   my $database   = get_param_file( $config->{$section}{database},   "database",   1 );
+  my $delete_temp_ms2 = get_option($config, $section, "delete_temp_ms2", 0); 
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -77,7 +78,7 @@ cd $resultDir
   fi
 ";
 
-      if ($ismgf) {
+      if ($ismgf && $delete_temp_ms2) {
         print OUT "  if [ -s $resultFile ]; then
     rm $tempFile
   fi
