@@ -68,8 +68,8 @@ cd $resultDir
       if ($ismgf) {
         my $proteomicstools = get_param_file( $config->{$section}{proteomicstools}, "proteomicstools", 1 );
         my $titleformat = get_option( $config, $section, "titleformat" );
-        $sampleFile = $tempFile;
         print OUT "  mono $proteomicstools MGF2MS2 -i $sampleFile -t $titleformat -o $tempFile\n";
+        $sampleFile = $tempFile;
       }
 
       print OUT "  comet -P$param_file -D$database $sampleFile
