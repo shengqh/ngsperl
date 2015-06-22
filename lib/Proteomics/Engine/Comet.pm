@@ -124,7 +124,7 @@ sub result {
 
     for my $sampleFile (@sampleFiles) {
       my $sname = basename($sampleFile);
-      my $resultFile = change_extension( $sname, ".pepXml" );
+      my $resultFile = change_extension( $sname, ".pep.xml" );
       push( @resultFiles, "${resultDir}/${resultFile}" );
     }
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
