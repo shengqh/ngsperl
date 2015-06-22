@@ -71,7 +71,7 @@ print OUT "
 ";
       }
 print OUT "
-  comet -P$param_file $sampleFile
+  comet -P$param_file -D$database $sampleFile
   RefreshParser $resultFile $database
 fi
 ";
