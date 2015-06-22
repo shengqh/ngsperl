@@ -68,7 +68,7 @@ cd $resultDir
       if ($ismgf) {
         my $proteomicstools = get_param_file( $config->{$section}{proteomicstools}, "proteomicstools", 1 );
         my $titleformat = get_option( $config, $section, "titleformat" );
-        print OUT "  if [ !-s $tempFile ]; then
+        print OUT "  if [ ! -s $tempFile ]; then
     mono $proteomicstools MGF2MS2 -i $sampleFile -t $titleformat -o $tempFile
   fi
 ";
