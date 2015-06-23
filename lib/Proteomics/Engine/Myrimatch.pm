@@ -47,7 +47,7 @@ sub readConfigurationFile {
 sub getExtension {
   my ( $self, $cfgfile ) = @_;
   my $mmconfig = $self->readConfigurationFile($cfgfile);
-  my $extension = ( ( $mmconfig->{OutputSuffix} ) ? $mmconfig->{OutputSuffix} : "" ) . ( ( $mmconfig->{OutputFormat} eq "pepXML" ) ? ".pepXml" : ".mzid" );
+  my $extension = ( ( $mmconfig->{OutputSuffix} ) ? $mmconfig->{OutputSuffix} : "" ) . ( ( $mmconfig->{OutputFormat} eq "pepXML" ) ? ".pepXML" : ".mzid" );
   return $extension;
 }
 
