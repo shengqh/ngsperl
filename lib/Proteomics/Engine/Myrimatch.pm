@@ -56,7 +56,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
   my $database   = get_param_file( $config->{$section}{database},   "database",   1 );
-  my $executable = get_param_file( $config->{$section}{executable}, "executable", 1 );
   my $cfgfile    = get_param_file( $config->{$section}{cfgfile},    "cfgfile",    1 );
 
   my $extension = $self->getExtension($cfgfile);
