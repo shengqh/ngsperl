@@ -38,6 +38,7 @@ sub perform {
   my $sorted = get_option( $config, $section, "sorted", 0 );
   
   my $replaceReadGroup = get_option( $config, $section, "replace_read_group", 0 );
+  my $reorderChromosome = get_option( $config, $section, "reorderChromosome", 0 );
 
   my $knownvcf      = "";
   my $knownsitesvcf = "";
@@ -81,7 +82,16 @@ sub perform {
       $splitInput = $replacedFile;
       $rmFiles = $rmFiles . " " . $replacedFile . " " . $replacedFile . ".bai";
     }
-
+    
+    my $reorderCmd = "";
+    my $reorderFile = "";
+    if($reorderChromosome){
+      $reorderFile = $sampleName . ".rmdup.reorder.bam";
+      $reorderCmd = "java -jar $picard_jar ReorderSam I=$splitInput O=$reorderFile REFERENCE=$faFile; samtools index $reorderFile";
+      $splitInput = $reorderFile;
+      $rmFiles = $rmFiles . " " . $reorderFile . " " . $reorderFile . ".bai";
+    }
+    
     my $splitFile = $sampleName . ".rmdup.split.bam";
     my $grpFile   = $splitFile . ".grp";
     
@@ -115,6 +125,7 @@ fi
 if [ ! -s $rmdupFile ]; then
   echo MarkDuplicates=`date` 
   $sortCmd
+  $reorderCmd
   java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
 fi
 
