@@ -78,7 +78,7 @@ sub perform {
     my $replacedFile = "";
     if($replaceReadGroup){
       $replacedFile = $sampleName . ".rmdup.rgreplaced.bam";
-      $replaceCmd = "java -jar $picard_jar AddOrReplaceReadGroups I=$rmdupFile O=$replacedFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA; samtools index $replacedFile";
+      $replaceCmd = "if [ ! -s $replacedFile]; then java -jar $picard_jar AddOrReplaceReadGroups I=$rmdupFile O=$replacedFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA; samtools index $replacedFile; fi;";
       $splitInput = $replacedFile;
       $rmFiles = $rmFiles . " " . $replacedFile . " " . $replacedFile . ".bai";
     }
@@ -87,7 +87,7 @@ sub perform {
     my $reorderFile = "";
     if($reorderChromosome){
       $reorderFile = $sampleName . ".rmdup.reorder.bam";
-      $reorderCmd = "java -jar $picard_jar ReorderSam I=$splitInput O=$reorderFile REFERENCE=$faFile; samtools index $reorderFile";
+      $reorderCmd = "if [ ! -s $reorderFile]; then java -jar $picard_jar ReorderSam I=$splitInput O=$reorderFile REFERENCE=$faFile; samtools index $reorderFile; fi;";
       $splitInput = $reorderFile;
       $rmFiles = $rmFiles . " " . $reorderFile . " " . $reorderFile . ".bai";
     }
