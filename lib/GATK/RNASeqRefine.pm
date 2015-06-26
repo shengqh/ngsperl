@@ -125,13 +125,13 @@ fi
 if [ ! -s $rmdupFile ]; then
   echo MarkDuplicates=`date` 
   $sortCmd
-  $reorderCmd
   java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
 fi
 
 if [ ! -s $splitFile ]; then
   echo SplitNCigarReads=`date` 
   $replaceCmd
+  $reorderCmd
   java $option -jar $gatk_jar -T SplitNCigarReads -R $faFile -I $splitInput -o $splitFile -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60 -U ALLOW_N_CIGAR_READS -fixMisencodedQuals
 fi
 
