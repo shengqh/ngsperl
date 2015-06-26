@@ -38,7 +38,7 @@ sub perform {
   my $sorted = get_option( $config, $section, "sorted", 0 );
   
   my $replaceReadGroup = get_option( $config, $section, "replace_read_group", 0 );
-  my $reorderChromosome = get_option( $config, $section, "reorderChromosome", 0 );
+  my $reorderChromosome = get_option( $config, $section, "reorder_chromosome", 0 );
 
   my $knownvcf      = "";
   my $knownsitesvcf = "";
