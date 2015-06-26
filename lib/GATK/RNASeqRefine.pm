@@ -36,9 +36,10 @@ sub perform {
   my $gatk_option = get_option( $config, $section, "gatk_option", "" );
 
   my $sorted = get_option( $config, $section, "sorted", 0 );
-  
-  my $replaceReadGroup = get_option( $config, $section, "replace_read_group", 0 );
-  my $reorderChromosome = get_option( $config, $section, "reorder_chromosome", 0 );
+
+  my $replaceReadGroup   = get_option( $config, $section, "replace_read_group", 0 );
+  my $reorderChromosome  = get_option( $config, $section, "reorder_chromosome", 0 );
+  my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals", 1 ) ? "" : "-fixMisencodedQuals";
 
   my $knownvcf      = "";
   my $knownsitesvcf = "";
@@ -59,7 +60,7 @@ sub perform {
     my $sampleFile     = $sampleFiles[0];
     my $sampleFileName = basename($sampleFile);
 
-    my $rmFiles = "";
+    my $rmFiles       = "";
     my $inputFile     = $sampleFile;
     my $presortedFile = "";
     my $sortCmd       = "";
@@ -68,33 +69,34 @@ sub perform {
       $presortedFile = $presortedPrefix . ".bam";
       $sortCmd       = "samtools sort -@ $thread -m 4G $sampleFile $presortedPrefix";
       $inputFile     = $presortedFile;
-      $rmFiles = $presortedFile;
+      $rmFiles       = $presortedFile;
     }
 
     my $rmdupFile = $sampleName . ".rmdup.bam";
 
-    my $splitInput = $rmdupFile;
-    my $replaceCmd = "";
+    my $splitInput   = $rmdupFile;
+    my $replaceCmd   = "";
     my $replacedFile = "";
-    if($replaceReadGroup){
+    if ($replaceReadGroup) {
       $replacedFile = $sampleName . ".rmdup.rgreplaced.bam";
-      $replaceCmd = "if [ ! -s $replacedFile]; then java -jar $picard_jar AddOrReplaceReadGroups I=$rmdupFile O=$replacedFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA; samtools index $replacedFile; fi;";
+      $replaceCmd =
+"if [ ! -s $replacedFile]; then java -jar $picard_jar AddOrReplaceReadGroups I=$rmdupFile O=$replacedFile ID=$sampleName LB=$sampleName SM=$sampleName PL=ILLUMINA PU=ILLUMINA; samtools index $replacedFile; fi;";
       $splitInput = $replacedFile;
-      $rmFiles = $rmFiles . " " . $replacedFile . " " . $replacedFile . ".bai";
+      $rmFiles    = $rmFiles . " " . $replacedFile . " " . $replacedFile . ".bai";
     }
-    
-    my $reorderCmd = "";
+
+    my $reorderCmd  = "";
     my $reorderFile = "";
-    if($reorderChromosome){
+    if ($reorderChromosome) {
       $reorderFile = $sampleName . ".rmdup.reorder.bam";
-      $reorderCmd = "if [ ! -s $reorderFile]; then java -jar $picard_jar ReorderSam I=$splitInput O=$reorderFile REFERENCE=$faFile; samtools index $reorderFile; fi;";
-      $splitInput = $reorderFile;
-      $rmFiles = $rmFiles . " " . $reorderFile . " " . $reorderFile . ".bai";
+      $reorderCmd  = "if [ ! -s $reorderFile]; then java -jar $picard_jar ReorderSam I=$splitInput O=$reorderFile REFERENCE=$faFile; samtools index $reorderFile; fi;";
+      $splitInput  = $reorderFile;
+      $rmFiles     = $rmFiles . " " . $reorderFile . " " . $reorderFile . ".bai";
     }
-    
+
     my $splitFile = $sampleName . ".rmdup.split.bam";
     my $grpFile   = $splitFile . ".grp";
-    
+
     my $recalFile = $sampleName . ".rmdup.split.recal.bam";
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
@@ -132,7 +134,7 @@ if [ ! -s $splitFile ]; then
   echo SplitNCigarReads=`date` 
   $replaceCmd
   $reorderCmd
-  java $option -jar $gatk_jar -T SplitNCigarReads -R $faFile -I $splitInput -o $splitFile -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60 -U ALLOW_N_CIGAR_READS -fixMisencodedQuals
+  java $option -jar $gatk_jar -T SplitNCigarReads -R $faFile -I $splitInput -o $splitFile -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60 -U ALLOW_N_CIGAR_READS $fixMisencodedQuals
 fi
 
 if [[ -s $splitFile && ! -s $grpFile ]]; then
