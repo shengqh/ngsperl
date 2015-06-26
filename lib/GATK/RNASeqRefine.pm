@@ -39,7 +39,7 @@ sub perform {
 
   my $replaceReadGroup   = get_option( $config, $section, "replace_read_group", 0 );
   my $reorderChromosome  = get_option( $config, $section, "reorder_chromosome", 0 );
-  my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals", 1 ) ? "" : "-fixMisencodedQuals";
+  my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals", 1 ) ? "-fixMisencodedQuals" : "";
 
   my $knownvcf      = "";
   my $knownsitesvcf = "";
