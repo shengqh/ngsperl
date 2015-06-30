@@ -83,7 +83,8 @@ if [[ -s $merged_file && ! -s recalibrate_SNP.recal ]]; then
   java $java_option -jar $gatk_jar \\
     -T VariantRecalibrator -nt $thread \\
     -R $faFile \\
-    -input $merged_file \\";
+    -input $merged_file \\
+";
 
   if($hapmap){
     print OUT "    -resource:hapmap,known=false,training=true,truth=true,prior=15.0 $hapmap \\
