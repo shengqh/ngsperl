@@ -104,6 +104,21 @@ sub result {
 
   my $result = {};
 
+  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  for my $sampleName ( sort keys %rawFiles ) {
+    my @listFiles = @{ $rawFiles{$sampleName} };
+    my $listFile  = $listFiles[0];
+    my @urls      = read_file( $listFile, chomp => 1 );
+    for my $url (@urls) {
+      my $filename   = basename($url);
+      my $resultfile = $resultDir . "/" . $filename;
+
+      my @resultFiles = ();
+      push( @resultFiles, $resultDir . "/${filename}" );
+      $result->{$filename} = filter_array( \@resultFiles, $pattern );
+    }
+  }
+
   return $result;
 }
 
