@@ -59,7 +59,9 @@ sub perform {
   my $dbsnp   = get_param_file( $config->{$section}{dbsnp_vcf},      "dbsnp_vcf",      1 );
   my $compvcf = get_param_file( $config->{$section}{comparison_vcf}, "comparison_vcf", 0 );
 
-  my $rnafilter = get_option( $config, $section, "is_rna" ) ? "-stand_call_conf 20.0 -stand_emit_conf 20.0 -window 35 -cluster 3 -dontUseSoftClippedBases" : "-stand_call_conf 30.0 -stand_emit_conf 10.0";
+  my $call_option = get_option( $config, $section, "is_rna" ) ? "-stand_emit_conf 10 -stand_call_conf 30":"-stand_emit_conf 20 -stand_call_conf 20"; 
+  my $snp_filter = get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3 -filterName FS -filter \"FS > 30.0\" -filterName QD -filter \"QD < 2.0\"" : "--filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" -filterName \"snp_filter\"";  
+  my $indel_filter = get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3 --filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\"" : "--filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\"";  
 
   if ( defined $compvcf ) {
     $compvcf = "-comp " . $compvcf;
@@ -126,16 +128,16 @@ if [[ -s $snpOut && ! -s $indelOut ]]; then
 fi
 
 if [ ! -s $snvOut ]; then
-  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -stand_call_conf 20.0 -stand_emit_conf 20.0 -D $dbsnp $compvcf --out $snvOut -dontUseSoftClippedBases -nct $thread 
+  java $java_option -jar $gatk_jar -T HaplotypeCaller $option --genotyping_mode DISCOVERY -dontUseSoftClippedBases $call_option -R $faFile -I $bamFile -D $dbsnp $compvcf --out $snvOut -nct $thread 
 fi
 
 if [ -s $snvOut ]; then
   java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $snvOut -selectType SNP -o $snpOut 
-  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $snpOut $rnafilter --filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" -filterName \"snp_filter\" -o $snpFilterOut 
+  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $snpOut $snp_filter -o $snpFilterOut 
   cat $snpFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $snpPass
 
   java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $snvOut -selectType INDEL -o $indelOut 
-  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $indelOut $rnafilter --filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\" --filterName \"indel_filter\" -o $indelFilterOut 
+  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $indelOut $indel_filter -o $indelFilterOut 
   cat $indelFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $indelPass
 fi 
 
