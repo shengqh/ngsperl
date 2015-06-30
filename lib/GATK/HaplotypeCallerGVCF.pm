@@ -60,7 +60,7 @@ sub perform {
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
-    my $snvOut  = $sampleName . "_snv.gvcf";
+    my $snvOut  = $sampleName . "_snv.g.vcf";
     my $snvStat = $sampleName . "_snv.stat";
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
@@ -82,7 +82,7 @@ cd $curDir
 echo HaplotypeCaller=`date`
 
 if [ ! -s $snvOut ]; then
-  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF --variant_index_type LINEAR --variant_index_parameter 128000 --out $snvOut
+  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF --out $snvOut
 fi
 
 echo finished=`date`
@@ -107,7 +107,7 @@ sub result {
   my %bamFiles = %{ get_raw_files( $config, $section ) };
   for my $sampleName ( sort keys %bamFiles ) {
     my $curDir      = $resultDir . "/$sampleName";
-    my $snvOut      = $sampleName . "_snv.gvcf";
+    my $snvOut      = $sampleName . "_snv.g.vcf";
     my @resultFiles = ();
     push( @resultFiles, "${curDir}/${snvOut}" );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
