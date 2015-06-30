@@ -59,9 +59,13 @@ sub perform {
   my $dbsnp   = get_param_file( $config->{$section}{dbsnp_vcf},      "dbsnp_vcf",      1 );
   my $compvcf = get_param_file( $config->{$section}{comparison_vcf}, "comparison_vcf", 0 );
 
-  my $call_option = get_option( $config, $section, "is_rna" ) ? "-stand_emit_conf 10 -stand_call_conf 30":"-stand_emit_conf 20 -stand_call_conf 20"; 
-  my $snp_filter = get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3 -filterName FS -filter \"FS > 30.0\" -filterName QD -filter \"QD < 2.0\"" : "--filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" -filterName \"snp_filter\"";  
-  my $indel_filter = get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3 --filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\"" : "--filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\"";  
+  my $call_option = get_option( $config, $section, "is_rna" ) ? "-stand_emit_conf 10 -stand_call_conf 30" : "-stand_emit_conf 20 -stand_call_conf 20";
+  my $snp_filter =
+    get_option( $config, $section, "is_rna" )
+    ? "-window 35 -cluster 3 -filterName FS -filter \"FS > 30.0\" -filterName QD -filter \"QD < 2.0\""
+    : "--filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" -filterName \"snp_filter\"";
+  my $indel_filter =
+    ( get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3" : "" ) . " --filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\" -filterName \"indel_filter\"";
 
   if ( defined $compvcf ) {
     $compvcf = "-comp " . $compvcf;
@@ -85,12 +89,12 @@ sub perform {
 
   for my $sampleName ( sort keys %bamFiles ) {
     my @sampleFiles = @{ $bamFiles{$sampleName} };
-    my $bamFile = $sampleFiles[0];
+    my $bamFile     = $sampleFiles[0];
 
-    my $curDir       = create_directory_or_die( $resultDir . "/$sampleName" );
+    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
-    my $snvOut       = $sampleName . "_snv.vcf";
-    my $snvStat      = $sampleName . "_snv.stat";
+    my $snvOut  = $sampleName . "_snv.vcf";
+    my $snvStat = $sampleName . "_snv.stat";
 
     my $snpOut       = $sampleName . "_snp.vcf";
     my $snpStat      = $sampleName . "_snp.stat";
@@ -163,8 +167,8 @@ sub result {
   my %bamFiles = %{ get_raw_files( $config, $section ) };
   for my $sampleName ( sort keys %bamFiles ) {
     my $curDir      = $resultDir . "/$sampleName";
-    my $snpPass      = $sampleName . "_snp_filtered.pass.vcf";
-    my $indelPass      = $sampleName . "_indel_filtered.pass.vcf";
+    my $snpPass     = $sampleName . "_snp_filtered.pass.vcf";
+    my $indelPass   = $sampleName . "_indel_filtered.pass.vcf";
     my @resultFiles = ();
     push( @resultFiles, "${curDir}/${snpPass}" );
     push( @resultFiles, "${curDir}/${indelPass}" );
