@@ -29,10 +29,10 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my $dbsnp = get_param_file( $config->{$section}{dbsnp_vcf}, "dbsnp_vcf", 1 );
-  my $hapmap = get_param_file( $config->{$section}{hapmap_vcf}, "hapmap_vcf", 1 );
-  my $omni = get_param_file( $config->{$section}{omni_vcf}, "omni_vcf", 1 );
-  my $g1000 = get_param_file( $config->{$section}{g1000_vcf}, "g1000_vcf", 1 );
-  my $mills = get_param_file( $config->{$section}{mills_vcf}, "mills_vcf", 1 );
+  my $hapmap = get_param_file( $config->{$section}{hapmap_vcf}, "hapmap_vcf", 0 );
+  my $omni = get_param_file( $config->{$section}{omni_vcf}, "omni_vcf", 0 );
+  my $g1000 = get_param_file( $config->{$section}{g1000_vcf}, "g1000_vcf", 0 );
+  my $mills = get_param_file( $config->{$section}{mills_vcf}, "mills_vcf", 0 );
 
   my $faFile   = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
@@ -83,11 +83,24 @@ if [[ -s $merged_file && ! -s recalibrate_SNP.recal ]]; then
   java $java_option -jar $gatk_jar \\
     -T VariantRecalibrator -nt $thread \\
     -R $faFile \\
-    -input $merged_file \\
-    -resource:hapmap,known=false,training=true,truth=true,prior=15.0 $hapmap \\
-    -resource:omni,known=false,training=true,truth=true,prior=12.0 $omni \\
-    -resource:1000G,known=false,training=true,truth=false,prior=10.0 $g1000 \\
-    -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 $dbsnp \\
+    -input $merged_file \\";
+
+  if($hapmap){
+    print OUT "    -resource:hapmap,known=false,training=true,truth=true,prior=15.0 $hapmap \\
+";
+  }
+
+  if($omni){
+    print OUT "    -resource:omni,known=false,training=true,truth=true,prior=12.0 $omni \\
+";
+  }
+    
+  if($g1000){
+    print OUT "    -resource:1000G,known=false,training=true,truth=false,prior=10.0 $g1000 \\
+";
+  }
+
+  print OUT "    -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 $dbsnp \\
     -an DP \\
     -an QD \\
     -an FS \\
@@ -115,7 +128,12 @@ if [[ -s recalibrate_SNP.recal && ! -s $recal_snp_file ]]; then
     -tranchesFile recalibrate_SNP.tranches \\
     -o $recal_snp_file   
 fi
+";
 
+  if(! $mills){
+    $recal_snp_indel_file = $recal_snp_file
+  }else{
+    print OUT "
 if [[ -s $recal_snp_file && ! -s recalibrate_INDEL.recal ]]; then
   echo VariantRecalibratorIndel=`date` 
   java $java_option -jar $gatk_jar \\
@@ -150,6 +168,10 @@ if [[ -s $recal_snp_file && -s recalibrate_INDEL.recal && ! -s $recal_snp_indel_
     -tranchesFile recalibrate_INDEL.tranches \\
     -o $recal_snp_indel_file 
 fi
+";
+  }
+  
+  print OUT "
 
 if [[ -s $recal_snp_indel_file && ! -s $recal_snp_indel_pass_file ]]; then
   grep -e \"^#\" $recal_snp_indel_file > $recal_snp_indel_pass_file
