@@ -69,6 +69,7 @@ echo Wget=`date`
         my $filename = basename($url);
         
         print OUT "if [ ! -s $filename ]; then
+  echo 'wget $url ...\n'
   wget $url
 fi
 
