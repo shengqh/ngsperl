@@ -33,6 +33,9 @@ sub perform {
 
   my $batch = get_option( $config, $section, "batch", 20 );
 
+  my $shfile = $self->taskfile( $pbsDir, $task_name );
+  open( SH, ">$shfile" ) or die "Cannot create $shfile";
+
   for my $sampleName ( sort keys %rawFiles ) {
     my @listFiles = @{ $rawFiles{$sampleName} };
     my $listFile  = $listFiles[0];
@@ -79,7 +82,11 @@ fi
       close(OUT);
       
       print "$pbsFile created\n";
+
+      print SH "\$MYCMD ./$pbsName \n";
     }
+    
+    close(SH);
   }
 }
 
