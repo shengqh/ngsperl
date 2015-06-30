@@ -35,6 +35,7 @@ sub perform {
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
+  print SH get_run_command($sh_direct) . "\n";
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @listFiles = @{ $rawFiles{$sampleName} };
