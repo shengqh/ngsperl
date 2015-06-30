@@ -74,10 +74,11 @@ echo Wget=`date`
 fi
 
 ";
-        
       }
        
       close(OUT);
+      
+      print "$pbsFile created\n";
     }
   }
 }
