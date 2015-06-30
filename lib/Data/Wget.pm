@@ -50,7 +50,7 @@ sub perform {
         $iend = $urlCount;
       }
 
-      my $name = "${sampleName}_${i}_${iend}";
+      my $name    = "${sampleName}_${i}_${iend}";
       my $pbsFile = $self->pbsfile( $pbsDir, $name );
       my $pbsName = basename($pbsFile);
       my $log     = $self->logfile( $logDir, $name );
@@ -69,9 +69,9 @@ echo Wget=`date`
 ";
 
       for ( my $j = $i ; $j < $iend ; $j++ ) {
-        my $url = $urls[$j];
+        my $url      = $urls[$j];
         my $filename = basename($url);
-        
+
         print OUT "if [ ! -s $filename ]; then
   echo 'wget $url ...\n'
   wget $url
@@ -79,15 +79,21 @@ fi
 
 ";
       }
-       
+
       close(OUT);
-      
+
       print "$pbsFile created\n";
 
       print SH "\$MYCMD ./$pbsName \n";
     }
-    
+
     close(SH);
+
+    if ( is_linux() ) {
+      chmod 0755, $shfile;
+    }
+
+    print "!!!shell file $shfile created, you can run this shell file to submit all ", $self->{_name}, " tasks.\n";
   }
 }
 
@@ -96,7 +102,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $result      = {};
+  my $result = {};
 
   return $result;
 }
