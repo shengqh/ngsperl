@@ -28,11 +28,11 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
-  my $dbsnp = get_param_file( $config->{$section}{dbsnp_vcf}, "dbsnp_vcf", 1 );
+  my $dbsnp  = get_param_file( $config->{$section}{dbsnp_vcf},  "dbsnp_vcf",  1 );
   my $hapmap = get_param_file( $config->{$section}{hapmap_vcf}, "hapmap_vcf", 0 );
-  my $omni = get_param_file( $config->{$section}{omni_vcf}, "omni_vcf", 0 );
-  my $g1000 = get_param_file( $config->{$section}{g1000_vcf}, "g1000_vcf", 0 );
-  my $mills = get_param_file( $config->{$section}{mills_vcf}, "mills_vcf", 0 );
+  my $omni   = get_param_file( $config->{$section}{omni_vcf},   "omni_vcf",   0 );
+  my $g1000  = get_param_file( $config->{$section}{g1000_vcf},  "g1000_vcf",  0 );
+  my $mills  = get_param_file( $config->{$section}{mills_vcf},  "mills_vcf",  0 );
 
   my $faFile   = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
@@ -48,11 +48,11 @@ sub perform {
   my $pbsName = basename($pbsFile);
   my $log     = $self->logfile( $logDir, $task_name );
 
-  my $merged_file = $task_name . ".vcf";
-  my $recal_snp_file = $task_name . ".recal.snp.vcf";
-  my $recal_snp_indel_file = $task_name . ".recalibrated_variants.vcf";
+  my $merged_file               = $task_name . ".vcf";
+  my $recal_snp_file            = $task_name . ".recal.snp.vcf";
+  my $recal_snp_indel_file      = $task_name . ".recalibrated_variants.vcf";
   my $recal_snp_indel_pass_file = $task_name . ".recalibrated_variants.pass.vcf";
-  my $log_desc    = $cluster->get_log_desc($log);
+  my $log_desc                  = $cluster->get_log_desc($log);
 
   open( OUT, ">$pbsFile" ) or die $!;
   print OUT "$pbsDesc
@@ -77,7 +77,10 @@ if [ ! -s $merged_file ]; then
 
   print OUT "  -o $merged_file
 fi
-  
+";
+
+  if ( $hapmap || $omni ) {
+    print OUT "
 if [[ -s $merged_file && ! -s recalibrate_SNP.recal ]]; then
   echo VariantRecalibratorSNP=`date` 
   java $java_option -jar $gatk_jar \\
@@ -86,22 +89,19 @@ if [[ -s $merged_file && ! -s recalibrate_SNP.recal ]]; then
     -input $merged_file \\
 ";
 
-  if($hapmap){
-    print OUT "    -resource:hapmap,known=false,training=true,truth=true,prior=15.0 $hapmap \\
-";
-  }
+    if ($hapmap) {
+      print OUT "    -resource:hapmap,known=false,training=true,truth=true,prior=15.0 $hapmap \n";
+    }
 
-  if($omni){
-    print OUT "    -resource:omni,known=false,training=true,truth=true,prior=12.0 $omni \\
-";
-  }
-    
-  if($g1000){
-    print OUT "    -resource:1000G,known=false,training=true,truth=false,prior=10.0 $g1000 \\
-";
-  }
+    if ($omni) {
+      print OUT "    -resource:omni,known=false,training=true,truth=true,prior=12.0 $omni \n";
+    }
 
-  print OUT "    -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 $dbsnp \\
+    if ($g1000) {
+      print OUT "    -resource:1000G,known=false,training=true,truth=false,prior=10.0 $g1000 \n";
+    }
+
+    print OUT "    -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 $dbsnp \\
     -an DP \\
     -an QD \\
     -an FS \\
@@ -131,10 +131,11 @@ if [[ -s recalibrate_SNP.recal && ! -s $recal_snp_file ]]; then
 fi
 ";
 
-  if(! $mills){
-    $recal_snp_indel_file = $recal_snp_file
-  }else{
-    print OUT "
+    if ( !$mills ) {
+      $recal_snp_indel_file = $recal_snp_file;
+    }
+    else {
+      print OUT "
 if [[ -s $recal_snp_file && ! -s recalibrate_INDEL.recal ]]; then
   echo VariantRecalibratorIndel=`date` 
   java $java_option -jar $gatk_jar \\
@@ -170,10 +171,9 @@ if [[ -s $recal_snp_file && -s recalibrate_INDEL.recal && ! -s $recal_snp_indel_
     -o $recal_snp_indel_file 
 fi
 ";
-  }
-  
-  print OUT "
+    }
 
+    print OUT "
 if [[ -s $recal_snp_indel_file && ! -s $recal_snp_indel_pass_file ]]; then
   grep -e \"^#\" $recal_snp_indel_file > $recal_snp_indel_pass_file
   grep PASS $recal_snp_indel_file >> $recal_snp_indel_pass_file
@@ -183,7 +183,18 @@ echo finished=`date`
 
 exit 0
 ";
+  }else{
+    print OUT "
+if [[ -s $merged_file && ! -s $recal_snp_indel_pass_file ]]; then
+  java $java_option -jar $gatk_jar -T VariantFiltration -R $faFile -V $merged_file -window 35 -cluster 3 -filterName FS -filter \"FS > 30.0\" -filterName QD -filter \"QD < 2.0\" -o $recal_snp_indel_pass_file 
+  grep PASS $recal_snp_indel_file >> $recal_snp_indel_pass_file
+fi
 
+echo finished=`date`
+
+exit 0
+"
+  }
   close(OUT);
 
   print "$pbsFile created\n";
