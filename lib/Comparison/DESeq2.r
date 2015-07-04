@@ -129,14 +129,15 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors
   dev.off()
 }
 
-countData<-data
-index<-1
-indecies<-c()
-while(! is.numeric(countData[1,1])){
-  countData<-countData[,c(2:ncol(countData))]
-  indecies<-c(indecies, index)
-  index<-index+1
+isDataNumeric = unlist(lapply(data[1,], function(x){is.numeric(x)}))
+index = 1
+while(!all(isDataNumeric[index:ncol(data)])){
+  index = index + 1
 }
+
+indecies<-c(1:(index-1))
+countData<-data[,c(index, ncol(data))]
+
 countData[is.na(countData)] <- 0
 countData<-round(countData)
 
