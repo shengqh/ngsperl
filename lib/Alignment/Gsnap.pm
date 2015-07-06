@@ -31,7 +31,7 @@ sub perform {
   my $selfname = $self->{_name};
 
     print $option;
-  if ( !( $option =~ /\-t/ ) ) {
+  if ( !( $option =~ / -t / ) ) {
     print "no thread defined";
     if ( $thread > 1 ) {
       $option = $option . " -t " . $thread;
