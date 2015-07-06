@@ -73,7 +73,12 @@ if [ -s $resultFile ]; then
   exit 0
 fi
 
-gsnap $option -D $gsnap_index_directory -d $gsnap_index_name -o $resultFile
+gsnap $option -D $gsnap_index_directory -d $gsnap_index_name -o $resultFile";
+
+  for my $sampleFile (@sampleFiles){
+    print OUT " $sampleFile";
+  }
+  print OUT "
   
 echo finished=`date`
 
