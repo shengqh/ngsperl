@@ -49,6 +49,7 @@ sub perform {
   my $showDEGeneCluster = get_option( $config, $section, "show_DE_gene_cluster", 0 );
   my $pvalue = get_option( $config, $section, "pvalue", 0.05 );
   my $foldChange = get_option( $config, $section, "fold_change", 2.0 );
+  my $minMedianInGroup = get_option( $config, $section, "min_median_read", 0 );
 
   my %tpgroups = ();
   for my $groupName ( sort keys %{$groups} ) {
@@ -76,6 +77,7 @@ showLabelInPCA<-$showLabelInPCA
 showDEGeneCluster<-$showDEGeneCluster
 pvalue<-$pvalue
 foldChange<-$foldChange
+minMedianInGroup<-$minMedianInGroup
 
 comparisons=list(";
   my $first = 0;
