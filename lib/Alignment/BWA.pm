@@ -32,7 +32,7 @@ sub perform {
 
   $option = $option . " -M";
 
-  if ( !( $option =~ /-t/ ) ) {
+  if ( !( $option =~ /\s-t\s/ ) ) {
     if ( $thread > 1 ) {
       $option = $option . " -t " . $thread;
     }
