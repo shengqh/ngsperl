@@ -236,7 +236,7 @@ for(comparisonName in comparisonNames){
   dev.off()
 
   png(filename=paste0(prefix, "_DESeq2-log2-density-individual.png"), width=4000, height=3000, res=300)
-  g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + facet_grid(Sample ~ .) + xlab("DESeq2 log2 transformed count")
+	g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + facet_wrap(~Sample, scales = "free") + xlab("DESeq2 log2 transformed count")
   print(g)
   dev.off()
   
