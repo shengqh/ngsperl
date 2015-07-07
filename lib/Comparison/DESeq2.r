@@ -169,6 +169,19 @@ for(comparisonName in comparisonNames){
   }
   comparisonData<-comparisonData[,as.character(designData$Sample)]
   
+  prefix<-comparisonName
+  if(minMedianInGroup > 0){
+    conds<-unique(designData$Condition)
+    data1<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[1]]]
+    data2<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[2]]]
+    med1<-apply(data1, 1, median) >= minMedianInGroup
+    med2<-apply(data2, 1, median) >= minMedianInGroup
+    med<-med1 | med2
+    comparisonData<-comparisonData[med,]
+    cat(nrow(comparisonData), " genes with minimum median count in group larger or equals than ", minMedianInGroup, "\n")
+    prefix<-paste0(comparisonName, "_min", minMedianInGroup)
+  }
+  
   if(ispaired){
     pairedSamples = unique(designData$Paired)
     
@@ -179,13 +192,13 @@ for(comparisonName in comparisonNames){
             
 
     sptable<-data.frame(Name=pairedSamples, Spcorr=spcorr)
-    write.csv(sptable, file=paste0(comparisonName, "_Spearman.csv"), row.names=FALSE)
+    write.csv(sptable, file=paste0(prefix, "_Spearman.csv"), row.names=FALSE)
     
     lapply(c(1:length(pairedSamples)), function(x){
       samples<-designData$Sample[designData$Paired==pairedSamples[x]]
       log2c1<-log2(comparisonData[,samples[1]]+1)
       log2c2<-log2(comparisonData[,samples[2]]+1)
-      png(paste0("details/", comparisonName, "_Spearman_", pairedSamples[x], ".png"), width=2000, height=2000, res=300)
+      png(paste0("details/", prefix, "_Spearman_", pairedSamples[x], ".png"), width=2000, height=2000, res=300)
       plot(log2c1, log2c2, xlab=paste0(samples[1], " [log2(Count + 1)]"), ylab=paste0(samples[2], " [log2(Count + 1)]"))
       text(3,15,paste0("SpearmanCorr=", sprintf("%0.3f", spcorr[x])))
       dev.off()
@@ -214,12 +227,12 @@ for(comparisonName in comparisonNames){
   rldmatrix<-as.matrix(log2(counts(dds,normalized=FALSE) + 1))
   rsdata<-melt(rldmatrix)
   colnames(rsdata)<-c("Gene", "Sample", "log2Count")
-  png(filename=paste0(comparisonName, "_DESeq2-log2-density.png"), width=4000, height=3000, res=300)
+  png(filename=paste0(prefix, "_DESeq2-log2-density.png"), width=4000, height=3000, res=300)
   g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + xlab("DESeq2 log2 transformed count")
   print(g)
   dev.off()
 
-  png(filename=paste0(comparisonName, "_DESeq2-log2-density-individual.png"), width=4000, height=3000, res=300)
+  png(filename=paste0(prefix, "_DESeq2-log2-density-individual.png"), width=4000, height=3000, res=300)
   g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + facet_grid(Sample ~ .) + xlab("DESeq2 log2 transformed count")
   print(g)
   dev.off()
@@ -227,7 +240,7 @@ for(comparisonName in comparisonNames){
   #varianceStabilizingTransformation
   vsd <- varianceStabilizingTransformation(dds, blind=TRUE)
   assayvsd<-assay(vsd)
-  write.csv(assayvsd, file=paste0(comparisonName, "_DESeq2-vsd.csv"))
+  write.csv(assayvsd, file=paste0(prefix, "_DESeq2-vsd.csv"))
   
   vsdiqr<-apply(assayvsd, 1, IQR)
   assayvsd<-assayvsd[order(vsdiqr, decreasing=T),]
@@ -235,11 +248,11 @@ for(comparisonName in comparisonNames){
   rldmatrix=as.matrix(assayvsd)
 
   #draw pca graph
-  drawPCA(paste0(comparisonName,"_geneAll"), rldmatrix, showLabelInPCA, designData, conditionColors)
+  drawPCA(paste0(prefix,"_geneAll"), rldmatrix, showLabelInPCA, designData, conditionColors)
   
   #draw heatmap
-  #drawHCA(paste0(comparisonName,"_gene500"), rldmatrix[1:min(500, nrow(rldmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
-  drawHCA(paste0(comparisonName,"_geneAll"), rldmatrix, ispaired, designData, conditionColors, gnames)
+  #drawHCA(paste0(prefix,"_gene500"), rldmatrix[1:min(500, nrow(rldmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
+  drawHCA(paste0(prefix,"_geneAll"), rldmatrix, ispaired, designData, conditionColors, gnames)
   
   #different expression analysis
   if(ispaired){
@@ -268,10 +281,10 @@ for(comparisonName in comparisonNames){
   tbbselect<-tbb[select,,drop=F]
   
   tbb<-tbb[order(tbb$padj),,drop=F]
-  write.csv(as.data.frame(tbb),paste0(comparisonName, "_DESeq2.csv"))
+  write.csv(as.data.frame(tbb),paste0(prefix, "_DESeq2.csv"))
   
   tbbselect<-tbbselect[order(tbbselect$padj),,drop=F]
-  write.csv(as.data.frame(tbbselect),paste0(comparisonName, "_DESeq2_sig.csv"))
+  write.csv(as.data.frame(tbbselect),paste0(prefix, "_DESeq2_sig.csv"))
   
   if(showDEGeneCluster){
     siggenes<-rownames(rldmatrix) %in% rownames(tbbselect)
@@ -279,17 +292,18 @@ for(comparisonName in comparisonNames){
     nonDEmatrix<-rldmatrix[!siggenes,,drop=F]
     DEmatrix<-rldmatrix[siggenes,,drop=F]
     
-    drawPCA(paste0(comparisonName,"_geneNotDE"), nonDEmatrix, showLabelInPCA, designData, conditionColors)
+    drawPCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, showLabelInPCA, designData, conditionColors)
     
-    drawHCA(paste0(comparisonName,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames)
-    drawHCA(paste0(comparisonName,"_geneAllNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames)
-    #drawHCA(paste0(comparisonName,"_gene500NotDE"), nonDEmatrix[1:min(500, nrow(nonDEmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
+    drawHCA(paste0(prefix,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames)
+    drawHCA(paste0(prefix,"_geneAllNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames)
+    #drawHCA(paste0(prefix,"_gene500NotDE"), nonDEmatrix[1:min(500, nrow(nonDEmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
   }
 }
 
 if(length(pairedspearman) > 0){
   #draw pca graph
-  png(filename=paste0("spearman.png"), width=1000 * length(pairedspearman), height=2000, res=300)
+  filename<-ifelse(minMedianInGroup > 0, paste0("spearman_min", minMedianInGroup, ".png"), "spearman.png")
+  png(filename=filename, width=1000 * length(pairedspearman), height=2000, res=300)
   boxplot(pairedspearman)
   dev.off()
 }
