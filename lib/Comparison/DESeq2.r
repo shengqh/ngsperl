@@ -170,6 +170,7 @@ for(comparisonName in comparisonNames){
   comparisonData<-comparisonData[,as.character(designData$Sample)]
   
   prefix<-comparisonName
+  curdata<-data
   if(minMedianInGroup > 0){
     conds<-unique(designData$Condition)
     data1<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[1]]]
@@ -180,6 +181,7 @@ for(comparisonName in comparisonNames){
     comparisonData<-comparisonData[med,]
     cat(nrow(comparisonData), " genes with minimum median count in group larger or equals than ", minMedianInGroup, "\n")
     prefix<-paste0(comparisonName, "_min", minMedianInGroup)
+    curdata<-data[med,]
   }
   
   if(ispaired){
@@ -209,6 +211,7 @@ for(comparisonName in comparisonNames){
   
   notEmptyData<-apply(comparisonData, 1, max) > 0
   comparisonData<-comparisonData[notEmptyData,]
+  curdata<-curdata[notEmptyData,]
   
   if(ispaired){
     colnames(comparisonData)<-unlist(lapply(c(1:ncol(comparisonData)), function(i){paste0(designData$Paired[i], "_", colnames(comparisonData)[i])}))
@@ -273,7 +276,7 @@ for(comparisonName in comparisonNames){
   select<-(!is.na(res$padj)) & (res$padj<pvalue) & ((res$log2FoldChange >= log2(foldChange)) | (res$log2FoldChange <= -log2(foldChange)))
   
   if(length(indecies) > 0){
-    inddata<-data[notEmptyData,indecies,drop=F]
+    inddata<-curdata[,indecies,drop=F]
     tbb<-cbind(inddata, comparisonData, res)
   }else{
     tbb<-cbind(comparisonData, res)
