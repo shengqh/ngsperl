@@ -296,9 +296,9 @@ for(comparisonName in comparisonNames){
     DEmatrix<-rldmatrix[siggenes,,drop=F]
     
     drawPCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, showLabelInPCA, designData, conditionColors)
+    drawHCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames)
     
     drawHCA(paste0(prefix,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames)
-    drawHCA(paste0(prefix,"_geneAllNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames)
     #drawHCA(paste0(prefix,"_gene500NotDE"), nonDEmatrix[1:min(500, nrow(nonDEmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
   }
 }
