@@ -228,7 +228,7 @@ sub getSmallRNAConfig {
         "mem"      => "20gb"
       },
     },
-    identical_sequence_table => {
+    identical_sequence_count_table => {
       class      => "CQS::SmallRNASequenceCountTable",
       perform    => 1,
       target_dir => $def->{target_dir} . "/identical_sequence_count_table",
@@ -304,7 +304,7 @@ sub getSmallRNAConfig {
   };
 
   push @individual, ( "fastq_len", "identical", "identical_NTA", "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_notidentical" );
-  push @summary, ("identical_sequence_table");
+  push @summary, ("identical_sequence_count_table");
 
   $config = merge( $config, $preparation );
 
