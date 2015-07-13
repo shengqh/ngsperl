@@ -117,8 +117,7 @@ if [[ -s $merged_file && ! -s recalibrate_SNP.recal ]]; then
     -mode SNP \\
     -tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 90.0 \\
     -recalFile recalibrate_SNP.recal \\
-    -tranchesFile recalibrate_SNP.tranches \\
-    -rscriptFile recalibrate_SNP_plots.R 
+    -tranchesFile recalibrate_SNP.tranches
 fi
 
 if [[ -s recalibrate_SNP.recal && ! -s $recal_snp_file ]]; then
@@ -158,8 +157,7 @@ if [[ -s $recal_snp_file && ! -s recalibrate_INDEL.recal ]]; then
     -tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 90.0 \\
     --maxGaussians 4 \\
     -recalFile recalibrate_INDEL.recal \\
-    -tranchesFile recalibrate_INDEL.tranches \\
-    -rscriptFile recalibrate_INDEL_plots.R 
+    -tranchesFile recalibrate_INDEL.tranches
 fi
 
 if [[ -s $recal_snp_file && -s recalibrate_INDEL.recal && ! -s $recal_snp_indel_file ]]; then
