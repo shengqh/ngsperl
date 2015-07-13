@@ -94,15 +94,15 @@ if [[ -s $merged_file && ! -s recalibrate_SNP.recal ]]; then
 ";
 
     if ($hapmap) {
-      print OUT "    -resource:hapmap,known=false,training=true,truth=true,prior=15.0 $hapmap \n";
+      print OUT "    -resource:hapmap,known=false,training=true,truth=true,prior=15.0 $hapmap \\\n";
     }
 
     if ($omni) {
-      print OUT "    -resource:omni,known=false,training=true,truth=true,prior=12.0 $omni \n";
+      print OUT "    -resource:omni,known=false,training=true,truth=true,prior=12.0 $omni \\\n";
     }
 
     if ($g1000) {
-      print OUT "    -resource:1000G,known=false,training=true,truth=false,prior=10.0 $g1000 \n";
+      print OUT "    -resource:1000G,known=false,training=true,truth=false,prior=10.0 $g1000 \\\n";
     }
 
     print OUT "    -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 $dbsnp \\
