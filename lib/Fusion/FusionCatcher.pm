@@ -38,7 +38,7 @@ sub perform {
 
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles    = @{ $rawFiles{$sampleName} };
-    my $files = join(@sampleFiles, ",");
+    my $files = join(",", @sampleFiles);
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
