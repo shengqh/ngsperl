@@ -61,6 +61,8 @@ cd $curDir
 echo FusionCatcher_start=`date` 
 
 fusioncatcher -d $data_dir -i $files -o .
+
+echo FusionCatcher_end=`date` 
 ";
 
     close OUT;
