@@ -60,7 +60,7 @@ cd $curDir
 
 echo FusionCatcher_start=`date` 
 
-fusion_catcher -d $data_dir -i $files -o .
+fusioncatcher -d $data_dir -i $files -o .
 ";
 
     close OUT;
