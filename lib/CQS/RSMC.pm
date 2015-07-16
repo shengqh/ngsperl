@@ -137,7 +137,7 @@ $cmd
 echo finished=`date` \n";
     }
     else {
-      print OUT "mono-sgen $rsmcfile all -t mpileup -m $sampleFiles[0] $option -o ${curDir}/${groupName}";
+      print OUT "mono-sgen $rsmcfile call -t mpileup -m $sampleFiles[0] $option -o ${curDir}/${groupName}";
     }
 
     close OUT;
