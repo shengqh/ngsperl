@@ -45,6 +45,8 @@ sub perform {
     my $log     = $self->logfile( $logDir, $sampleName );
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
+    
+    my $final = $curDir . "/final-list_candidate-fusion-genes.txt";
 
     print SH "\$MYCMD ./$pbsName \n";
 
@@ -55,6 +57,11 @@ sub perform {
 $log_desc
 
 $path_file
+
+if [ -s $final ]; then
+  echo job has already been done. if you want to do again, delete $final and submit job again.
+  exit 0
+fi
 
 cd $curDir
 
@@ -87,9 +94,11 @@ sub result {
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my $sortedFile  = $sampleName . ".rmdup.split.recal.bam";
+    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
+    
+    my $final =  $resultDir . "/${sampleName}/final-list_candidate-fusion-genes.txt";
     my @resultFiles = ();
-    push( @resultFiles, "${resultDir}/${sampleName}/${sortedFile}" );
+    push( @resultFiles, $final );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
