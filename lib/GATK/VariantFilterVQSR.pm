@@ -86,7 +86,7 @@ fi
   print OUT "
 if [ ! -s $dpFilterOut ]; then
   echo VariantFiltration=`date` 
-  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -filterName DP -filter \"DP >= $min_depth\" -V $merged_file -o $dpFilterOut
+  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -filterName LOWDP -filter \"DP >= $min_depth\" -V $merged_file -o $dpFilterOut
 fi 
 ";
 
