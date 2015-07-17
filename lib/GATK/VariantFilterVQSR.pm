@@ -37,18 +37,23 @@ sub perform {
   my $faFile   = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
 
+  my $min_mean_depth = get_option( $config, $section, "min_mean_depth", 3 );
+
   my $java_option = $config->{$section}{java_option};
   if ( !defined $java_option || $java_option eq "" ) {
     $java_option = "-Xmx${memory}";
   }
 
   my %gvcfFiles = %{ get_raw_files( $config, $section ) };
+  
+  my $min_depth = scalar( %gvcfFiles) * $min_mean_depth;
 
   my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
   my $pbsName = basename($pbsFile);
   my $log     = $self->logfile( $logDir, $task_name );
 
   my $merged_file = $task_name . ".vcf";
+  my $dpFilterOut = $task_name . "_dbFilter.vcf";
   my $snpPass     = $task_name . "_snp_filtered.pass.vcf";
   my $indelPass   = $task_name . "_indel_filtered.pass.vcf";
 
@@ -78,6 +83,12 @@ if [ ! -s $merged_file ]; then
   print OUT "  -o $merged_file
 fi
 ";
+  print OUT "
+if [ ! -s $dpFilterOut ]; then
+  echo VariantFiltration=`date` 
+  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -filterName DP -filter \"DP >= $min_depth\" -V $merged_file -o $dpFilterOut
+fi 
+";
 
   if ( $hapmap || $omni ) {
     my $recal_snp_file            = $task_name . ".recal.snp.vcf";
@@ -85,12 +96,12 @@ fi
     my $recal_snp_indel_pass_file = $task_name . ".recalibrated_variants.pass.vcf";
 
     print OUT "
-if [[ -s $merged_file && ! -s recalibrate_SNP.recal ]]; then
+if [[ -s $dpFilterOut && ! -s recalibrate_SNP.recal ]]; then
   echo VariantRecalibratorSNP=`date` 
   java $java_option -jar $gatk_jar \\
     -T VariantRecalibrator -nt $thread \\
     -R $faFile \\
-    -input $merged_file \\
+    -input $dpFilterOut \\
 ";
 
     if ($hapmap) {
@@ -202,11 +213,11 @@ exit 0
     my $indelFilterOut = $task_name . "_indel_filtered.vcf";
 
     print OUT "
-if [[ -s $merged_file && ! -s $snpPass ]]; then
-  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $merged_file -selectType SNP -o $snpOut 
+if [[ -s $dpFilterOut && ! -s $snpPass ]]; then
+  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $dpFilterOut -selectType SNP -o $snpOut 
   java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $snpOut $snp_filter -o $snpFilterOut 
   cat $snpFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $snpPass
-  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $merged_file -selectType INDEL -o $indelOut 
+  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $dpFilterOut -selectType INDEL -o $indelOut 
   java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $indelOut $indel_filter -o $indelFilterOut 
   cat $indelFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $indelPass
 fi
