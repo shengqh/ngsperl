@@ -46,7 +46,7 @@ sub perform {
 
   my %gvcfFiles = %{ get_raw_files( $config, $section ) };
   
-  my $min_depth = scalar( %gvcfFiles) * $min_mean_depth;
+  my $min_depth = scalar( keys %gvcfFiles) * $min_mean_depth;
 
   my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
   my $pbsName = basename($pbsFile);
