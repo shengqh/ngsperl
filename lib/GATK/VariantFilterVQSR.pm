@@ -34,6 +34,8 @@ sub perform {
   my $g1000  = get_param_file( $config->{$section}{g1000_vcf},  "g1000_vcf",  0 );
   my $mills  = get_param_file( $config->{$section}{mills_vcf},  "mills_vcf",  0 );
 
+  my $cqsFile = get_cqstools( $config, $section, 1 );
+
   my $faFile   = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
 
@@ -46,8 +48,6 @@ sub perform {
 
   my %gvcfFiles = %{ get_raw_files( $config, $section ) };
   
-  my $min_depth = scalar( keys %gvcfFiles) * $min_mean_depth;
-
   my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
   my $pbsName = basename($pbsFile);
   my $log     = $self->logfile( $logDir, $task_name );
@@ -85,8 +85,8 @@ fi
 ";
   print OUT "
 if [ ! -s $dpFilterOut ]; then
-  echo VariantFiltration=`date` 
-  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -filterName LOWDP -filter \"DP < $min_depth\" -V $merged_file -o $dpFilterOut
+  echo VCF_MinimumMedianDepth_Filter=`date` 
+  mono $cqsFile -i $merged_file -o $dpFilterOut -d $min_mean_depth
 fi 
 ";
 
