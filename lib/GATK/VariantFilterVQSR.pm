@@ -53,7 +53,7 @@ sub perform {
   my $log     = $self->logfile( $logDir, $task_name );
 
   my $merged_file = $task_name . ".vcf";
-  my $dpFilterOut = $task_name . "_dbFilter.vcf";
+  my $dpFilterOut = $task_name . "_depthFilter.vcf";
   my $snpPass     = $task_name . "_snp_filtered.pass.vcf";
   my $indelPass   = $task_name . "_indel_filtered.pass.vcf";
 
