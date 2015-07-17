@@ -86,7 +86,7 @@ fi
   print OUT "
 if [ ! -s $dpFilterOut ]; then
   echo VCF_MinimumMedianDepth_Filter=`date` 
-  mono $cqsFile -i $merged_file -o $dpFilterOut -d $min_mean_depth
+  mono $cqsFile vcf_filter -i $merged_file -o $dpFilterOut -d $min_mean_depth
 fi 
 ";
 
