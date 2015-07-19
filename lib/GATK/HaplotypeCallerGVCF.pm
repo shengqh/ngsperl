@@ -85,6 +85,11 @@ if [ ! -s $snvOut ]; then
   java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF --out $snvOut
 fi
 
+if [[ -s $snvOut && ! -s ${snvOut}.idx ]]; then
+  echo \"Error : no index file found!\"
+  rm $snvOut
+fi  
+
 echo finished=`date`
 ";
     close OUT;
