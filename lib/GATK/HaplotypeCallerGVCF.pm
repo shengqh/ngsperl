@@ -61,7 +61,7 @@ sub perform {
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
     my $snvOut  = $sampleName . "_snv.g.vcf";
-    my $snvOutTmp  = $sampleName . "_snv.g.vcf.tmp";
+    my $snvOutTmp  = $sampleName . "_snv.tmp.g.vcf";
     my $snvStat = $sampleName . "_snv.stat";
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
