@@ -86,7 +86,7 @@ if [ ! -s $snvOut ]; then
   java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF --out $snvOutTmp
 fi
 
-if [ -s $snvOutTmp && -s ${snvOutTmp}.idx ]; then
+if [[ -s $snvOutTmp && -s ${snvOutTmp}.idx ]]; then
   mv ${snvOutTmp}.idx ${snvOut}.idx
   mv $snvOutTmp $snvOut
 fi
