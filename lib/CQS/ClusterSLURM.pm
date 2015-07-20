@@ -72,7 +72,7 @@ sub get_cluster_desc {
   my $pbsDesc = <<SBATCH;
 #!/bin/bash
 #SBATCH --mail-user=$email
-#SBATCH --mail-type=FAIL
+#SBATCH --mail-type=ALL
 #SBATCH --nodes=$nodes
 #SBATCH --ntasks=$ntasks
 #SBATCH --time=$walltime
