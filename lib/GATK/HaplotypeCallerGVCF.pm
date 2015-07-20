@@ -61,6 +61,7 @@ sub perform {
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
     my $snvOut  = $sampleName . "_snv.g.vcf";
+    my $snvOutTmp  = $sampleName . "_snv.g.vcf.tmp";
     my $snvStat = $sampleName . "_snv.stat";
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
@@ -82,7 +83,12 @@ cd $curDir
 echo HaplotypeCaller=`date`
 
 if [ ! -s $snvOut ]; then
-  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF --out $snvOut
+  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF --out $snvOutTmp
+fi
+
+if [ -s $snvOutTmp && -s ${snvOutTmp}.idx ]; then
+  mv ${snvOutTmp}.idx ${snvOut}.idx
+  mv $snvOutTmp $snvOut
 fi
 
 if [[ -s $snvOut && ! -s ${snvOut}.idx ]]; then
