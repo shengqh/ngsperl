@@ -106,9 +106,10 @@ if [ ! -s $snvOut ]; then
     
     print OUT "  if [[ -s " . join(" && -s ", @gvcflist) . " ]]; then
     java $java_option -cp $gatk_jar org.broadinstitute.gatk.tools.CatVariants \\
-      -V " . join(" \\\n      -V ", @gvcflist) . "
-      -R $faFile
-      -out $snvOut
+      -V " . join(" \\\n      -V ", @gvcflist) . " \\
+      -R $faFile \\
+      -out $snvOut \\
+      -assumeSorted
   fi
 fi
 
