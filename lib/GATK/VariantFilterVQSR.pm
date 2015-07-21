@@ -136,7 +136,7 @@ if [[ -s recalibrate_SNP.recal && ! -s $recal_snp_file ]]; then
   java $java_option -jar $gatk_jar \\
     -T ApplyRecalibration -nt $thread \\
     -R $faFile \\
-    -input $merged_file \\
+    -input $dpFilterOut \\
     -mode SNP \\
     --ts_filter_level 99.0 \\
     -recalFile recalibrate_SNP.recal \\
