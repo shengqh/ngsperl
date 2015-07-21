@@ -37,6 +37,7 @@ sub perform {
   
   my @chrs = `cut -f1 $faiFile`;
   for my $chr (@chrs){
+    chomp($chr);
     print $chr . "\n";
   }
   
