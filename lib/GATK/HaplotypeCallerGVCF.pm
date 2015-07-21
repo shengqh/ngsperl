@@ -29,6 +29,17 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my $faFile   = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
+  
+  my $faiFile = "${faFile}.fai";
+  if( ! -e $faiFile){
+    die "File not exists " . $faiFile;
+  }
+  
+  my @chrs = `cut -f1 $faiFile`;
+  for my $chr (@chrs){
+    print $chr . "\n";
+  }
+  
   my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
 
   my $dbsnp   = get_param_file( $config->{$section}{dbsnp_vcf},      "dbsnp_vcf",      1 );
