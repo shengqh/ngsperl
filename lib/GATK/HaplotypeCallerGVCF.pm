@@ -23,6 +23,10 @@ sub new {
   return $self;
 }
 
+#The results from whole file and by chromosome may be different at BaseQRankSum, MQRankSum or ReadPosRankSum
+#< 1     1291126 .       G       A,<NON_REF>     6.79    .       BaseQRankSum=0.358;ClippingRankSum=0.358;DP=6;MLEAC=1,0;MLEAF=0.500,0.00;MQ=60.00;MQRankSum=0.358;ReadPosRankSum=-1.231 GT:AD:DP:GQ:PL:SB     0/1:3,2,0:5:34:34,0,59,43,65,109:2,1,1,1
+#> 1     1291126 .       G       A,<NON_REF>     6.79    .       BaseQRankSum=1.231;ClippingRankSum=0.358;DP=6;MLEAC=1,0;MLEAF=0.500,0.00;MQ=60.00;MQRankSum=0.358;ReadPosRankSum=-0.358 GT:AD:DP:GQ:PL:SB     0/1:3,2,0:5:34:34,0,59,43,65,109:2,1,1,1
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -47,6 +51,8 @@ sub perform {
 
   my $dbsnp   = get_param_file( $config->{$section}{dbsnp_vcf},      "dbsnp_vcf",      1 );
   my $compvcf = get_param_file( $config->{$section}{comparison_vcf}, "comparison_vcf", 0 );
+
+  my $by_chromosome = get_option( $config, $section, "by_chromosome", 0 );
 
   if ( defined $compvcf ) {
     $compvcf = "-comp " . $compvcf;
@@ -98,20 +104,29 @@ echo HaplotypeCaller=`date`
 
 if [ ! -s $snvOut ]; then
 ";
-    my @gvcflist = ();
-    for my $chr (@chrs) {
-      my $chrfile = $sampleName . "_snv.tmp." . $chr . ".g.vcf";
-      push( @gvcflist, $chrfile );
-      print OUT "  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF --out $chrfile
-";
-    }
 
-    print OUT "  if [[ -s " . join( " && -s ", @gvcflist ) . " ]]; then
+    if ($by_chromosome) {
+      my @gvcflist = ();
+      for my $chr (@chrs) {
+        my $chrfile = $sampleName . "_snv.tmp." . $chr . ".g.vcf";
+        push( @gvcflist, $chrfile );
+        print OUT "  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF --out $chrfile
+";
+      }
+
+      print OUT "  if [[ -s " . join( " && -s ", @gvcflist ) . " ]]; then
     java $java_option -cp $gatk_jar org.broadinstitute.gatk.tools.CatVariants \\
       -V " . join( " \\\n      -V ", @gvcflist ) . " \\
       -R $faFile \\
       -out $snvOut \\
-      -assumeSorted
+      -assumeSorted";
+    }
+    else {
+      print OUT "  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF --out $snvOut
+";
+    }
+
+    print OUT "
   fi
 fi
 
