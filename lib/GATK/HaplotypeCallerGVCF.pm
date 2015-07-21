@@ -32,17 +32,22 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
+  my $by_chromosome = get_option( $config, $section, "by_chromosome", 0 );
+
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
 
-  my $faiFile = "${faFile}.fai";
-  if ( !-e $faiFile ) {
-    die "File not exists " . $faiFile;
-  }
+  my @chrs = ();
+  if ($by_chromosome) {
+    my $faiFile = "${faFile}.fai";
+    if ( !-e $faiFile ) {
+      die "File not exists " . $faiFile;
+    }
 
-  my @chrs = `cut -f1 $faiFile`;
-  for my $chr (@chrs) {
-    chomp($chr);
-    print $chr . "\n";
+    @chrs = `cut -f1 $faiFile`;
+    for my $chr (@chrs) {
+      chomp($chr);
+      print $chr . "\n";
+    }
   }
 
   my $extension = get_option( $config, $section, "extension", ".g.vcf" );
@@ -51,8 +56,6 @@ sub perform {
 
   my $dbsnp   = get_param_file( $config->{$section}{dbsnp_vcf},      "dbsnp_vcf",      1 );
   my $compvcf = get_param_file( $config->{$section}{comparison_vcf}, "comparison_vcf", 0 );
-
-  my $by_chromosome = get_option( $config, $section, "by_chromosome", 0 );
 
   if ( defined $compvcf ) {
     $compvcf = "-comp " . $compvcf;
@@ -108,6 +111,7 @@ if [ ! -s $snvOut ]; then
     if ($by_chromosome) {
       my @gvcflist = ();
       for my $chr (@chrs) {
+        chomp($chr);
         my $chrfile = $sampleName . "_snv.tmp." . $chr . ".g.vcf";
         push( @gvcflist, $chrfile );
         print OUT "  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF --out $chrfile
