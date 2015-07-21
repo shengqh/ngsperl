@@ -47,7 +47,7 @@ sub perform {
   }
 
   my %gvcfFiles = %{ get_raw_files( $config, $section ) };
-  
+
   my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
   my $pbsName = basename($pbsFile);
   my $log     = $self->logfile( $logDir, $task_name );
@@ -237,8 +237,15 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $recal_snp_indel_pass_file = $task_name . ".recalibrated_variants.pass.vcf";
-  my $result = { $task_name => [ $resultDir . "/${recal_snp_indel_pass_file}" ] };
+  my $snpPass   = $task_name . "_snp_filtered.pass.vcf";
+  my $indelPass = $task_name . "_indel_filtered.pass.vcf";
+
+  my @resultFiles = ();
+  push( @resultFiles, $resultDir . "/" . $snpPass );
+  push( @resultFiles, $resultDir . "/" . $indelPass );
+
+  my $result = {};
+  $result->{$task_name} = filter_array( \@resultFiles, $pattern );
 
   return $result;
 }
