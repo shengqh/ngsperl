@@ -123,7 +123,8 @@ if [ ! -s $snvOut ]; then
       -V " . join( " \\\n      -V ", @gvcflist ) . " \\
       -R $faFile \\
       -out $snvOut \\
-      -assumeSorted";
+      -assumeSorted
+  fi";
     }
     else {
       print OUT "  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF --out $snvOut
@@ -131,7 +132,6 @@ if [ ! -s $snvOut ]; then
     }
 
     print OUT "
-  fi
 fi
 
 echo finished=`date`
