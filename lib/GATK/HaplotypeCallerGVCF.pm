@@ -95,18 +95,22 @@ cd $curDir
 echo HaplotypeCaller=`date`
 
 if [ ! -s $snvOut ]; then
-  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF --out $snvOutTmp
+";
+    my @gvcflist = ();
+    for my $chr (@chrs){
+      my $chrfile = $sampleName . "_snv.tmp." . $chr . ".g.vcf";
+      push(@gvcflist, $chrfile);
+      print OUT "  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF --out $chrfile
+";
+    }
+    
+    print OUT "  if [[ -s " . join(" && -s ", @gvcflist) . " ]]; then
+    java $java_option -cp $gatk_jar org.broadinstitute.gatk.tools.CatVariants
+      -V " . join("\\\n      -V ") . "
+      -R $faFile
+      -out $snvOut
+  fi
 fi
-
-if [[ -s $snvOutTmp && -s ${snvOutTmp}.idx ]]; then
-  mv ${snvOutTmp}.idx ${snvOut}.idx
-  mv $snvOutTmp $snvOut
-fi
-
-if [[ -s $snvOut && ! -s ${snvOut}.idx ]]; then
-  echo \"Error : no index file found!\"
-  rm $snvOut
-fi  
 
 echo finished=`date`
 ";
@@ -119,7 +123,7 @@ echo finished=`date`
     chmod 0755, $shfile;
   }
 
-  print "!!!shell file $shfile created, you can run this shell file to submit all GATK SnpInDel tasks.\n";
+  print "!!!shell file $shfile created, you can run this shell file to submit all tasks.\n";
 }
 
 sub result {
