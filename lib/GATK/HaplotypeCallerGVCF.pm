@@ -28,20 +28,22 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
-  my $faFile   = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
-  
+  my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
+
   my $faiFile = "${faFile}.fai";
-  if( ! -e $faiFile){
+  if ( !-e $faiFile ) {
     die "File not exists " . $faiFile;
   }
-  
+
   my @chrs = `cut -f1 $faiFile`;
-  for my $chr (@chrs){
+  for my $chr (@chrs) {
     chomp($chr);
     print $chr . "\n";
   }
-  
-  my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
+
+  my $extension = get_option( $config, $section, "extension", ".g.vcf" );
+
+  my $gatk_jar = get_param_file( $config->{$section}{gatk_jar}, "gatk_jar", 1 );
 
   my $dbsnp   = get_param_file( $config->{$section}{dbsnp_vcf},      "dbsnp_vcf",      1 );
   my $compvcf = get_param_file( $config->{$section}{comparison_vcf}, "comparison_vcf", 0 );
@@ -72,9 +74,9 @@ sub perform {
 
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
-    my $snvOut  = $sampleName . "_snv.g.vcf";
-    my $snvOutTmp  = $sampleName . "_snv.tmp.g.vcf";
-    my $snvStat = $sampleName . "_snv.stat";
+    my $snvOut    = $sampleName . "_snv" . $extension;
+    my $snvOutTmp = $sampleName . "_snv.tmp" . $extension;
+    my $snvStat   = $sampleName . "_snv.stat";
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
@@ -97,16 +99,16 @@ echo HaplotypeCaller=`date`
 if [ ! -s $snvOut ]; then
 ";
     my @gvcflist = ();
-    for my $chr (@chrs){
+    for my $chr (@chrs) {
       my $chrfile = $sampleName . "_snv.tmp." . $chr . ".g.vcf";
-      push(@gvcflist, $chrfile);
+      push( @gvcflist, $chrfile );
       print OUT "  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF --out $chrfile
 ";
     }
-    
-    print OUT "  if [[ -s " . join(" && -s ", @gvcflist) . " ]]; then
+
+    print OUT "  if [[ -s " . join( " && -s ", @gvcflist ) . " ]]; then
     java $java_option -cp $gatk_jar org.broadinstitute.gatk.tools.CatVariants \\
-      -V " . join(" \\\n      -V ", @gvcflist) . " \\
+      -V " . join( " \\\n      -V ", @gvcflist ) . " \\
       -R $faFile \\
       -out $snvOut \\
       -assumeSorted
@@ -132,10 +134,12 @@ sub result {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
   my $result = {};
 
+  my $extension = get_option( $config, $section, "extension", ".g.vcf" );
+
   my %bamFiles = %{ get_raw_files( $config, $section ) };
   for my $sampleName ( sort keys %bamFiles ) {
     my $curDir      = $resultDir . "/$sampleName";
-    my $snvOut      = $sampleName . "_snv.g.vcf";
+    my $snvOut      = $sampleName . "_snv" . $extension;
     my @resultFiles = ();
     push( @resultFiles, "${curDir}/${snvOut}" );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
