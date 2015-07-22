@@ -121,7 +121,6 @@ if [[ -s $dpFilterOut && ! -s recalibrate_SNP.recal ]]; then
     -an QD \\
     -an FS \\
     -an SOR \\
-    -an MQ \\
     -an MQRankSum \\
     -an ReadPosRankSum \\
     -an InbreedingCoeff \\
