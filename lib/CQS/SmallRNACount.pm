@@ -56,7 +56,8 @@ sub perform {
   for my $sampleName ( sort keys %rawFiles ) {
     my @bamFiles  = @{ $rawFiles{$sampleName} };
     my $bamFile   = $bamFiles[0];
-    my $countFile = $sampleName . ".count";
+    my $fileName  = basename($bamFile);
+    my $countFile = $fileName . ".count";
 
     my $seqcountFile = "";
     if ( defined $seqCountFiles{$sampleName} ) {
@@ -138,7 +139,7 @@ sub result {
 
     my @bamFiles = @{ $rawFiles{$sampleName} };
     my $bamFile  = $bamFiles[0];
-    my $fileName = $sampleName;
+    my $fileName = basename($bamFile);
 
     my @resultFiles = ();
     my $countFile   = "${curDir}/${fileName}.count";
