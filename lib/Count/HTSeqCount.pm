@@ -34,8 +34,8 @@ sub perform {
   my $ispaired = get_option_value( $config->{$section}{ispairend}, "ispairend", 0 );
   my $ispairoption = $ispaired ? "-f 1" : "";
 
-  my $isstranded = get_option_value( $config->{$section}{isstranded}, "isstranded", 0 );
-  my $isstrandedoption = $isstranded ? "-s yes" : "-s no";
+  my $stranded = get_option_value( $config->{$section}{stranded}, "stranded", "no" );
+  my $strandedoption = "-s " . $stranded;
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
@@ -69,7 +69,7 @@ fi
 
 echo HTSeqCount=`date`
 
-samtools view $ispairoption $bamFile | htseq-count $option -q -m intersection-nonempty $isstrandedoption -i gene_id - $gffFile > $countFile
+samtools view $ispairoption $bamFile | htseq-count $option -q -m intersection-nonempty $strandedoption -i gene_id - $gffFile > $countFile
 
 echo finished=`date`
 
