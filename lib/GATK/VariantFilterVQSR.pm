@@ -53,18 +53,18 @@ sub perform {
   my $log     = $self->logfile( $logDir, $task_name );
 
   my $merged_file = $task_name . ".vcf";
-  my $dpFilterOut = $task_name . "_depthFilter.vcf";
+  my $dpFilterOut = $task_name . ".depthFilter.vcf";
 
-  my $snpOut      = $task_name . "_snp.vcf";
-  my $snpCal      = $task_name . "_snp.cal";
-  my $snpTranches = $task_name . "_snp.tranche";
+  my $snpOut      = $task_name . ".snp.vcf";
+  my $snpCal      = $task_name . ".snp.cal";
+  my $snpTranches = $task_name . ".snp.tranche";
 
-  my $indelOut      = $task_name . "_indel.vcf";
-  my $indelCal      = $task_name . "_indel.cal";
-  my $indelTranches = $task_name . "_indel.tranche";
+  my $indelOut      = $task_name . ".indel.vcf";
+  my $indelCal      = $task_name . ".indel.cal";
+  my $indelTranches = $task_name . ".indel.tranche";
 
-  my $snpPass   = $task_name . "_snp_pass.vcf";
-  my $indelPass = $task_name . "_indel_pass.vcf";
+  my $snpPass   = $task_name . ".snp.pass.vcf";
+  my $indelPass = $task_name . ".indel.pass.vcf";
 
   my $log_desc = $cluster->get_log_desc($log);
 
@@ -155,7 +155,7 @@ fi
 ";
   }
   else {
-    my $snpFilterOut = $task_name . "_snp_filtered.vcf";
+    my $snpFilterOut = $task_name . ".snp.filtered.vcf";
 
     my $snp_filter =
       get_option( $config, $section, "is_rna" )
@@ -208,7 +208,7 @@ fi
 ";
   }
   else {
-    my $indelFilterOut = $task_name . "_indel_filtered.vcf";
+    my $indelFilterOut = $task_name . ".indel.filtered.vcf";
     my $indel_filter =
       ( get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3" : "" ) . " --filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\" -filterName \"indel_filter\"";
 
