@@ -54,8 +54,17 @@ sub perform {
 
   my $merged_file = $task_name . ".vcf";
   my $dpFilterOut = $task_name . "_depthFilter.vcf";
-  my $snpPass     = $task_name . "_snp_filtered.pass.vcf";
-  my $indelPass   = $task_name . "_indel_filtered.pass.vcf";
+
+  my $snpOut      = $task_name . "_snp.vcf";
+  my $snpCal      = $task_name . "_snp.cal";
+  my $snpTranches = $task_name . "_snp.tranche";
+
+  my $indelOut      = $task_name . "_indel.vcf";
+  my $indelCal      = $task_name . "_indel.cal";
+  my $indelTranches = $task_name . "_indel.tranche";
+
+  my $snpPass   = $task_name . "_snp_pass.vcf";
+  my $indelPass = $task_name . "_indel_pass.vcf";
 
   my $log_desc = $cluster->get_log_desc($log);
 
@@ -88,20 +97,21 @@ if [ ! -s $dpFilterOut ]; then
   echo VCF_MinimumMedianDepth_Filter=`date` 
   mono $cqsFile vcf_filter -i $merged_file -o $dpFilterOut -d $min_mean_depth
 fi 
+
+if [[ -s $dpFilterOut && ! -s $snpOut ]]; then
+  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $dpFilterOut -selectType SNP -o $snpOut 
+  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $dpFilterOut -selectType INDEL -o $indelOut 
+fi
 ";
 
   if ( $hapmap || $omni ) {
-    my $recal_snp_file            = $task_name . ".recal.snp.vcf";
-    my $recal_snp_indel_file      = $task_name . ".recalibrated_variants.vcf";
-    my $recal_snp_indel_pass_file = $task_name . ".recalibrated_variants.pass.vcf";
-
     print OUT "
-if [[ -s $dpFilterOut && ! -s recalibrate_SNP.recal ]]; then
+if [[ -s $snpOut && ! -s $snpCal ]]; then
   echo VariantRecalibratorSNP=`date` 
   java $java_option -jar $gatk_jar \\
     -T VariantRecalibrator -nt $thread \\
     -R $faFile \\
-    -input $dpFilterOut \\
+    -input $snpOut \\
 ";
 
     if ($hapmap) {
@@ -126,35 +136,48 @@ if [[ -s $dpFilterOut && ! -s recalibrate_SNP.recal ]]; then
     -an InbreedingCoeff \\
     -mode SNP \\
     -tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 90.0 \\
-    -recalFile recalibrate_SNP.recal \\
-    -tranchesFile recalibrate_SNP.tranches
+    -recalFile $snpCal \\
+    -tranchesFile $snpTranches
 fi
 
-if [[ -s recalibrate_SNP.recal && ! -s $recal_snp_file ]]; then
+if [[ -s recalibrate_SNP.recal && ! -s $snpPass ]]; then
   echo ApplyRecalibrationSNP=`date` 
   java $java_option -jar $gatk_jar \\
     -T ApplyRecalibration -nt $thread \\
     -R $faFile \\
-    -input $dpFilterOut \\
+    -input $snpOut \\
     -mode SNP \\
     --ts_filter_level 99.0 \\
-    -recalFile recalibrate_SNP.recal \\
-    -tranchesFile recalibrate_SNP.tranches \\
-    -o $recal_snp_file   
+    -recalFile $snpCal \\
+    -tranchesFile $snpTranches \\
+    -o $snpPass   
 fi
 ";
+  }
+  else {
+    my $snpFilterOut = $task_name . "_snp_filtered.vcf";
 
-    if ( !$mills ) {
-      $recal_snp_indel_file = $recal_snp_file;
-    }
-    else {
-      print OUT "
-if [[ -s $recal_snp_file && ! -s recalibrate_INDEL.recal ]]; then
+    my $snp_filter =
+      get_option( $config, $section, "is_rna" )
+      ? "-window 35 -cluster 3 -filterName FS -filter \"FS > 30.0\" -filterName QD -filter \"QD < 2.0\""
+      : "--filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" -filterName \"snp_filter\"";
+
+    print OUT "
+if [[ -s $snpOut && ! -s $snpPass ]]; then
+  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $snpOut $snp_filter -o $snpFilterOut 
+  cat $snpFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $snpPass
+fi
+"
+  }
+
+  if ($mills) {
+    print OUT "
+if [[ -s $indelOut && ! -s $indelCal ]]; then
   echo VariantRecalibratorIndel=`date` 
   java $java_option -jar $gatk_jar \\
     -T VariantRecalibrator -nt $thread \\
     -R $faFile \\
-    -input $recal_snp_file \\
+    -input $indelOut \\
     -resource:mills,known=true,training=true,truth=true,prior=12.0 $mills \\
     -an QD \\
     -an DP \\
@@ -166,66 +189,41 @@ if [[ -s $recal_snp_file && ! -s recalibrate_INDEL.recal ]]; then
     -mode INDEL \\
     -tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 90.0 \\
     --maxGaussians 4 \\
-    -recalFile recalibrate_INDEL.recal \\
-    -tranchesFile recalibrate_INDEL.tranches
+    -recalFile $indelCal \\
+    -tranchesFile $indelTranches
 fi
 
-if [[ -s $recal_snp_file && -s recalibrate_INDEL.recal && ! -s $recal_snp_indel_file ]]; then
+if [[ -s $indelOut && -s $indelCal && ! -s $indelPass ]]; then
   echo ApplyRecalibrationIndel=`date` 
   java $java_option -jar $gatk_jar \\
     -T ApplyRecalibration -nt $thread \\
     -R $faFile \\
-    -input $recal_snp_file \\
+    -input $indelOut \\
     -mode INDEL \\
     --ts_filter_level 99.0 \\
-    -recalFile recalibrate_INDEL.recal \\
-    -tranchesFile recalibrate_INDEL.tranches \\
-    -o $recal_snp_indel_file 
+    -recalFile $indelCal \\
+    -tranchesFile $indelTranches \\
+    -o $indelPass 
 fi
-";
-    }
-
-    print OUT "
-if [[ -s $recal_snp_indel_file && ! -s $recal_snp_indel_pass_file ]]; then
-  cat $recal_snp_indel_file | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $recal_snp_indel_pass_file
-  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $recal_snp_indel_pass_file -selectType SNP -o $snpPass 
-  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $recal_snp_indel_pass_file -selectType INDEL -o $indelPass 
-fi
-
-echo finished=`date`
-
-exit 0
 ";
   }
   else {
-    my $snp_filter =
-      get_option( $config, $section, "is_rna" )
-      ? "-window 35 -cluster 3 -filterName FS -filter \"FS > 30.0\" -filterName QD -filter \"QD < 2.0\""
-      : "--filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" -filterName \"snp_filter\"";
+    my $indelFilterOut = $task_name . "_indel_filtered.vcf";
     my $indel_filter =
       ( get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3" : "" ) . " --filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\" -filterName \"indel_filter\"";
 
-    my $snpOut       = $task_name . "_snp.vcf";
-    my $snpFilterOut = $task_name . "_snp_filtered.vcf";
-
-    my $indelOut       = $task_name . "_indel.vcf";
-    my $indelFilterOut = $task_name . "_indel_filtered.vcf";
-
     print OUT "
-if [[ -s $dpFilterOut && ! -s $snpPass ]]; then
-  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $dpFilterOut -selectType SNP -o $snpOut 
-  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $snpOut $snp_filter -o $snpFilterOut 
-  cat $snpFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $snpPass
-  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $dpFilterOut -selectType INDEL -o $indelOut 
+if [[ -s $indelOut && ! -s $snpPass ]]; then
   java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $indelOut $indel_filter -o $indelFilterOut 
   cat $indelFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $indelPass
 fi
-
+"
+  }
+  print OUT "
 echo finished=`date`
 
 exit 0
-"
-  }
+";
   close(OUT);
 
   print "$pbsFile created\n";
@@ -236,8 +234,8 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $snpPass   = $task_name . "_snp_filtered.pass.vcf";
-  my $indelPass = $task_name . "_indel_filtered.pass.vcf";
+  my $snpPass   = $task_name . "_snp_pass.vcf";
+  my $indelPass = $task_name . "_indel_pass.vcf";
 
   my @resultFiles = ();
   push( @resultFiles, $resultDir . "/" . $snpPass );
