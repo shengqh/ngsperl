@@ -99,8 +99,8 @@ if [ ! -s $dpFilterOut ]; then
 fi 
 
 if [[ -s $dpFilterOut && ! -s $snpOut ]]; then
-  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $dpFilterOut -selectType SNP -o $snpOut 
-  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $dpFilterOut -selectType INDEL -o $indelOut 
+  java $java_option -jar $gatk_jar -T SelectVariants -R $faFile -V $dpFilterOut -selectType SNP -o $snpOut 
+  java $java_option -jar $gatk_jar -T SelectVariants -R $faFile -V $dpFilterOut -selectType INDEL -o $indelOut 
 fi
 ";
 
