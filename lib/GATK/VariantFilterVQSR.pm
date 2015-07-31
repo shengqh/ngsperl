@@ -142,7 +142,7 @@ if [[ -s $snpOut && ! -s $snpCal ]]; then
     -tranchesFile $snpTranches
 fi
 
-if [[ -s recalibrate_SNP.recal && ! -s $snpPass ]]; then
+if [[ -s $snpCal && ! -s $snpPass ]]; then
   echo ApplyRecalibrationSNP=`date` 
   java $java_option -jar $gatk_jar \\
     -T ApplyRecalibration -nt $thread \\
