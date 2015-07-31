@@ -100,7 +100,7 @@ fi
 
 if [[ -s $result && ! -s $final ]]; then
   grep \"^##\" ${sampleFile} > ${final}.header
-  grep -v \"^##\" ${sampleFile} | cut -f8- > ${sampleFile}.clean
+  grep -v \"^##\" ${sampleFile} | cut -f7- > ${sampleFile}.clean
   grep -v \"^##\" ${result} > ${result}.clean
   paste ${result}.clean ${sampleFile}.clean > ${final}.data
   cat ${final}.header ${final}.data > $final
