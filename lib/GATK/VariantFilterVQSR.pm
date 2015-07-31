@@ -39,7 +39,7 @@ sub perform {
   my $faFile   = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
 
-  my $min_mean_depth = get_option( $config, $section, "min_mean_depth", 3 );
+  my $min_median_depth = get_option( $config, $section, "min_median_depth", 3 );
 
   my $java_option = $config->{$section}{java_option};
   if ( !defined $java_option || $java_option eq "" ) {
@@ -53,18 +53,20 @@ sub perform {
   my $log     = $self->logfile( $logDir, $task_name );
 
   my $merged_file = $task_name . ".vcf";
-  my $dpFilterOut = $task_name . ".depthFilter.vcf";
+  
+  my $dpname = $task_name . ".median" . $min_median_depth;
+  my $dpFilterOut = $dpname . ".vcf";
 
-  my $snpOut      = $task_name . ".snp.vcf";
-  my $snpCal      = $task_name . ".snp.cal";
-  my $snpTranches = $task_name . ".snp.tranche";
+  my $snpOut      = $dpname . ".snp.vcf";
+  my $snpCal      = $dpname . ".snp.cal";
+  my $snpTranches = $dpname . ".snp.tranche";
 
-  my $indelOut      = $task_name . ".indel.vcf";
-  my $indelCal      = $task_name . ".indel.cal";
-  my $indelTranches = $task_name . ".indel.tranche";
+  my $indelOut      = $dpname . ".indel.vcf";
+  my $indelCal      = $dpname . ".indel.cal";
+  my $indelTranches = $dpname . ".indel.tranche";
 
-  my $snpPass   = $task_name . ".snp.pass.vcf";
-  my $indelPass = $task_name . ".indel.pass.vcf";
+  my $snpPass   = $dpname . ".snp.pass.vcf";
+  my $indelPass = $dpname . ".indel.pass.vcf";
 
   my $log_desc = $cluster->get_log_desc($log);
 
@@ -95,7 +97,7 @@ fi
   print OUT "
 if [ ! -s $dpFilterOut ]; then
   echo VCF_MinimumMedianDepth_Filter=`date` 
-  mono $cqsFile vcf_filter -i $merged_file -o $dpFilterOut -d $min_mean_depth
+  mono $cqsFile vcf_filter -i $merged_file -o $dpFilterOut -d $min_median_depth
 fi 
 
 if [[ -s $dpFilterOut && ! -s $snpOut ]]; then
@@ -234,8 +236,11 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $snpPass   = $task_name . "_snp_pass.vcf";
-  my $indelPass = $task_name . "_indel_pass.vcf";
+  my $min_median_depth = get_option( $config, $section, "min_median_depth", 3 );
+  my $dpname = $task_name . ".median" . $min_median_depth;
+
+  my $snpPass   = $dpname . ".snp.pass.vcf";
+  my $indelPass = $dpname . ".indel.pass.vcf";
 
   my @resultFiles = ();
   push( @resultFiles, $resultDir . "/" . $snpPass );
