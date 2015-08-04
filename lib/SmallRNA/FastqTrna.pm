@@ -44,8 +44,8 @@ sub perform {
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $sampleFile  = $sampleFiles[0];
-    my $finalFile1  = $sampleName . ".40less" . $extension;
-    my $finalFile2  = $sampleName . ".40plus" . $extension;
+    my $finalFile1  = $sampleName . "_40less" . $extension;
+    my $finalFile2  = $sampleName . "_40plus" . $extension;
 
     my $seqcountFile = "";
     if ( defined $seqCountFiles{$sampleName} ) {
