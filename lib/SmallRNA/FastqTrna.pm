@@ -46,6 +46,7 @@ sub perform {
     my $sampleFile  = $sampleFiles[0];
     my $finalFile1  = $sampleName . "_40less" . $extension;
     my $finalFile2  = $sampleName . "_40plus" . $extension;
+    my $summaryFile = $sampleName . $extension . ".summary";
 
     my $seqcountFile = "";
     if ( defined $seqCountFiles{$sampleName} ) {
@@ -114,8 +115,9 @@ sub result {
 
   my $result = {};
   for my $sampleName ( sort keys %rawFiles ) {
-    my $finalFile1 = $resultDir . "/" . $sampleName . ".40less" . $extension;
-    my $finalFile2 = $resultDir . "/" . $sampleName . ".40plus" . $extension;
+    my $finalFile1  = $resultDir . "/" . $sampleName . ".40less" . $extension;
+    my $finalFile2  = $resultDir . "/" . $sampleName . ".40plus" . $extension;
+    my $summaryFile = $resultDir . "/" . $sampleName . $extension . ".summary";
 
     my @resultFiles = ();
     push( @resultFiles, $finalFile1 );
@@ -126,6 +128,8 @@ sub result {
     if ( defined $seqCountFiles{$sampleName} ) {
       push( @resultFiles, $finalFile2 . ".dupcount" );
     }
+    push( @resultFiles, $summaryFile );
+
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
