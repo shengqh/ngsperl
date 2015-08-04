@@ -78,7 +78,7 @@ fi
 
 echo FastqTrna=`date` 
 
-mono-sgen $cqsFile fastq_trna $option -i $sampleFile -l $finalFile1 -p $finalFile2 $seqcountFile
+mono-sgen $cqsFile fastq_trna $option -i $sampleFile -l $finalFile1 -p $finalFile2 -s $summaryFile $seqcountFile
 
 echo finished=`date`
 
