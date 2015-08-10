@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package CQS::RSMC;
+package CQS::Glmvc;
 
 use strict;
 use warnings;
@@ -17,8 +17,8 @@ our @ISA = qw(CQS::GroupTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "RSMC";
-  $self->{_suffix} = "_rs";
+  $self->{_name} = "Glmvc";
+  $self->{_suffix} = "_vc";
   bless $self, $class;
   return $self;
 }
@@ -28,7 +28,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
-  my $rsmcfile = get_param_file( $config->{$section}{execute_file}, "execute_file", 1 );
+  my $glmvcfile = get_param_file( $config->{$section}{execute_file}, "execute_file", 1 );
   my $source_type = $config->{$section}{source_type} or die "source_type is not defined in $section";
 
   my $rnaediting_db = $config->{$section}{rnaediting_db};
@@ -112,10 +112,10 @@ cd $curDir
 
       my $cmd;
       if ( defined $mpileupParameter ) {
-        $cmd = "samtools mpileup -f $fafile $mpileupParameter $normal $tumor | mono-sgen $rsmcfile all -t console $option -o ${curDir}/${groupName}";
+        $cmd = "samtools mpileup -f $fafile $mpileupParameter $normal $tumor | mono-sgen $glmvcfile all -t console $option -o ${curDir}/${groupName}";
       }
       else {
-        $cmd = "mono-sgen $rsmcfile all -c $thread -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${curDir}/${groupName}";
+        $cmd = "mono-sgen $glmvcfile all -c $thread -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${curDir}/${groupName}";
       }
 
       print OUT "
@@ -137,7 +137,7 @@ $cmd
 echo finished=`date` \n";
     }
     else {
-      print OUT "mono-sgen $rsmcfile call -t mpileup -m $sampleFiles[0] $option -o ${curDir}/${groupName}";
+      print OUT "mono-sgen $glmvcfile call -t mpileup -m $sampleFiles[0] $option -o ${curDir}/${groupName}";
     }
 
     close OUT;
@@ -151,7 +151,7 @@ echo finished=`date` \n";
     chmod 0755, $shfile;
   }
 
-  print "!!!shell file $shfile created, you can run this shell file to submit all RSMC tasks.\n";
+  print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
 }
 
 sub result {
