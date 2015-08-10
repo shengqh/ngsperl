@@ -96,7 +96,7 @@ $log_desc
 
 $path_file 
 
-echo RSMC=`date` 
+echo Glmvc=`date` 
 
 cd $curDir
 ";
@@ -115,7 +115,7 @@ cd $curDir
         $cmd = "samtools mpileup -f $fafile $mpileupParameter $normal $tumor | mono-sgen $glmvcfile all -t console $option -o ${curDir}/${groupName}";
       }
       else {
-        $cmd = "mono-sgen $glmvcfile all -c $thread -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${curDir}/${groupName}";
+        $cmd = "mono-sgen $glmvcfile call -c $thread -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${curDir}/${groupName}";
       }
 
       print OUT "
