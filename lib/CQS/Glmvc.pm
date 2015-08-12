@@ -33,17 +33,17 @@ sub perform {
 
   my $rnaediting_db = $config->{$section}{rnaediting_db};
   if ( defined $rnaediting_db ) {
-    $option = $option . " --rnaediting --rnaediting_db $rnaediting_db ";
+    $option = $option . " --rnaediting_db $rnaediting_db ";
   }
 
   my $annovar_buildver = $config->{$section}{annovar_buildver};
   if ( defined $annovar_buildver ) {
-    $option = $option . " --annovar --annovar_buildver $annovar_buildver ";
+    $option = $option . " --annovar_buildver $annovar_buildver ";
   }
   
   my $distance_exon_gtf = $config->{$section}{distance_exon_gtf};
   if ( defined $annovar_buildver ) {
-    $option = $option . " --distance --distance_exon_gtf $distance_exon_gtf ";
+    $option = $option . " --distance_exon_gtf $distance_exon_gtf ";
   }
   
   my $rawFiles = get_raw_files( $config, $section );
