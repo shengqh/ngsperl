@@ -17,7 +17,7 @@ our @ISA = qw(CQS::GroupTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "Glmvc";
+  $self->{_name}   = "Glmvc";
   $self->{_suffix} = "_vc";
   bless $self, $class;
   return $self;
@@ -31,7 +31,7 @@ sub perform {
   my $glmvcfile = get_param_file( $config->{$section}{execute_file}, "execute_file", 1 );
   my $source_type = $config->{$section}{source_type} or die "source_type is not defined in $section";
 
-  my $rnaediting_db = $config->{$section}{rnaediting_db};
+  my $rnaediting_db = get_directory( $config, $section, "rnaediting_db", 0 );
   if ( defined $rnaediting_db ) {
     $option = $option . " --rnaediting_db $rnaediting_db ";
   }
@@ -40,12 +40,14 @@ sub perform {
   if ( defined $annovar_buildver ) {
     $option = $option . " --annovar_buildver $annovar_buildver ";
   }
-  
-  my $distance_exon_gtf = $config->{$section}{distance_exon_gtf};
+
+  my $distance_exon_gtf = get_param_file( $config->{$section}{distance_exon_gtf}, "distance_exon_gtf", 0 );
   if ( defined $annovar_buildver ) {
     $option = $option . " --distance_exon_gtf $distance_exon_gtf ";
   }
-  
+
+  my $anno = defined $rnaediting_db || defined $annovar_buildver || defined $annovar_buildver;
+
   my $rawFiles = get_raw_files( $config, $section );
 
   my %group_sample_map = ();
@@ -113,7 +115,7 @@ cd $curDir
 
       my $normal = $sampleFiles[0];
       my $tumor  = $sampleFiles[1];
-      my $final = "${groupName}.tsv";
+      my $final  = $anno ? "${groupName}.annotation.tsv" : "${groupName}.tsv";
 
       my $cmd;
       if ( defined $mpileupParameter ) {
@@ -164,18 +166,26 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
+  my $rnaediting_db     = get_directory( $config, $section, "rnaediting_db", 0 );
+  my $annovar_buildver  = $config->{$section}{annovar_buildver};
+  my $distance_exon_gtf = get_param_file( $config->{$section}{distance_exon_gtf}, "distance_exon_gtf", 0 );
+  my $anno              = defined $rnaediting_db || defined $annovar_buildver || defined $annovar_buildver;
+
   my $groups = get_raw_files( $config, $section, "groups" );
 
   my $result = {};
   for my $groupName ( keys %{$groups} ) {
     my @resultFiles = ();
     my $curDir      = $resultDir . "/$groupName";
-    push( @resultFiles, "$curDir/${groupName}.somatic.pass.vcf" );
+    push( @resultFiles, "$curDir/${groupName}.vcf" );
+    push( @resultFiles, "$curDir/${groupName}.tsv" );
+    if ($anno) {
+      push( @resultFiles, "$curDir/${groupName}.annotation.tsv" );
+    }
     $result->{$groupName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
 }
-
 
 sub pbsfiles {
   my ( $self, $config, $section ) = @_;
