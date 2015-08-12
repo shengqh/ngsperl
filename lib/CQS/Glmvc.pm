@@ -40,7 +40,12 @@ sub perform {
   if ( defined $annovar_buildver ) {
     $option = $option . " --annovar --annovar_buildver $annovar_buildver ";
   }
-
+  
+  my $distance_exon_gtf = $config->{$section}{distance_exon_gtf};
+  if ( defined $annovar_buildver ) {
+    $option = $option . " --distance --distance_exon_gtf $distance_exon_gtf ";
+  }
+  
   my $rawFiles = get_raw_files( $config, $section );
 
   my %group_sample_map = ();
