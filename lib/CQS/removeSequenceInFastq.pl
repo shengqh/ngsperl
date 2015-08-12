@@ -3,8 +3,8 @@ use warnings;
 
 use File::Basename;
 
-my $sequenceToDel=$ARGV[0];
-my $outFile=$ARGV[1];
+my $outFile=$ARGV[0];
+my $sequenceToDel=$ARGV[1];
 my $fastqFile=$ARGV[2];
 
 #my $fastqFile = "/scratch/cqs/zhaos/temp/test.fastq";

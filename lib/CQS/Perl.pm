@@ -121,7 +121,7 @@ $path_file
 
 echo Perl=`date`
 cd $target_dir/result
-perl $perlFile $option $sampleName$output_ext $samples $parameterFile2 $parameterFile3 $parameterFile4 $parameterFile5
+perl $perlFile $sampleName$output_ext $option $samples $parameterFile2 $parameterFile3 $parameterFile4 $parameterFile5
 
 echo finished=`date`
 ";
