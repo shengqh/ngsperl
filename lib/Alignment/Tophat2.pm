@@ -33,16 +33,15 @@ sub perform {
   my $sort_by_query = get_option( $config, $section, "sort_by_query", 0 );
   my $rename_bam    = get_option( $config, $section, "rename_bam",    0 );
 
-  my $bowtie2_index = get_option( $config, $section, "bowtie2_index");
+  my $bowtie2_index = get_option( $config, $section, "bowtie2_index" );
   my %fqFiles = %{ get_raw_files( $config, $section ) };
 
   my $transcript_gtf = get_param_file( $config->{$section}{transcript_gtf}, "${section}::transcript_gtf", 0 );
-  my $transcript_gtf_index;
-  if ( defined $transcript_gtf ) {
-    $transcript_gtf_index = $config->{$section}{transcript_gtf_index};
+  my $transcript_gtf_index = $config->{$section}{transcript_gtf_index};
+  if ( !defined $transcript_gtf ) {
+    $transcript_gtf = get_param_file( $config->{general}{transcript_gtf}, "general::transcript_gtf", 0 );
   }
-  elsif ( defined $config->{general}{transcript_gtf} ) {
-    $transcript_gtf = get_param_file( $config->{general}{transcript_gtf}, "general::transcript_gtf", 1 );
+  if ( !defined $transcript_gtf_index ) {
     $transcript_gtf_index = $config->{general}{transcript_gtf_index};
   }
 
@@ -54,7 +53,12 @@ sub perform {
   }
 
   if ( defined $transcript_gtf_index && !$has_index_file ) {
-    print "transcript_gtf_index $transcript_gtf_index defined but not exists, you may run the script once to cache the index.\n";
+    if ($has_gtf_file) {
+      print "transcript_gtf_index $transcript_gtf_index defined but not exists, you may run the script once to cache the index.\n";
+    }
+    else {
+      die "transcript_gtf_index $transcript_gtf_index defined but not exists, and transcript_gtf is not defined.\n";
+    }
   }
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
