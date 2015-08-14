@@ -149,7 +149,7 @@ $cmd
       print OUT "mono-sgen $glmvcfile call -t mpileup -m $sampleFiles[0] $option -o ${curDir}/${groupName} \n";
     }
 
-    print OUT "grep -v \"^#\" $finalvcf | cut -f1 | uniq -c | awk '{print $2\"\t\"$1}' > ${finalvcf}.chromosome 
+    print OUT "grep -v \"^#\" $finalvcf | cut -f1 | uniq -c | awk '{print \$2\"\\t\"\$1}' > ${finalvcf}.chromosome 
     
 echo finished=`date`
 ";

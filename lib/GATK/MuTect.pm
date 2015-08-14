@@ -101,7 +101,7 @@ if [[ -s $vcf && ! -s $passvcf ]]; then
     grep -v \"^#\" $vcf | cut -f9- > ${vcf}.second
     paste ${vcf}.first_lod ${vcf}.second | grep -v \"^#CHROM\" | grep -v REJECT >> $passvcf
     rm ${out}.lod ${vcf}.first ${vcf}.first_lod ${vcf}.second
-    grep -v \"^#\" $passvcf | cut -f1 | uniq -c | awk '{print $2\"\t\"$1}' > ${passvcf}.chromosome
+    grep -v \"^#\" $passvcf | cut -f1 | uniq -c | awk '{print \$2\"\\t\"\$1}' > ${passvcf}.chromosome
     
   else
     grep -v REJECT $vcf > $passvcf
