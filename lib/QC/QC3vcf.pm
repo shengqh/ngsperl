@@ -60,7 +60,7 @@ cd $resultDir
 
 echo QC3bam=`date`
  
-perl $qc3_perl $option -m v -i $vcffile -a $annovarDB -o $resultFile -rp
+perl $qc3_perl $option -m v -i $vcffile -a $annovarDB -o $resultFile
 
 echo finished=`date`
 
