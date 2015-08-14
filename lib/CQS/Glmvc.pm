@@ -108,6 +108,8 @@ echo Glmvc=`date`
 cd $curDir
 ";
 
+    my $finalvcf = "${groupName}.vcf";
+
     if ($isbam) {
       if ( $sampleCount != 2 ) {
         die "SampleFile should be normal,tumor paired.";
@@ -141,11 +143,16 @@ fi
 
 $cmd
 
-echo finished=`date` \n";
+";
     }
     else {
-      print OUT "mono-sgen $glmvcfile call -t mpileup -m $sampleFiles[0] $option -o ${curDir}/${groupName}";
+      print OUT "mono-sgen $glmvcfile call -t mpileup -m $sampleFiles[0] $option -o ${curDir}/${groupName} \n";
     }
+
+    print OUT "grep -v \"^#\" $finalvcf | cut -f1 | uniq -c | awk '{print $2\"\t\"$1}' > ${finalvcf}.chromosome 
+    
+echo finished=`date`
+";
 
     close OUT;
 
