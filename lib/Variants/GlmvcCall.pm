@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package CQS::Glmvc;
+package Variants::GlmvcCall;
 
 use strict;
 use warnings;
@@ -17,8 +17,8 @@ our @ISA = qw(CQS::GroupTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Glmvc";
-  $self->{_suffix} = "_vc";
+  $self->{_name}   = "GlmvcCall";
+  $self->{_suffix} = "_gc";
   bless $self, $class;
   return $self;
 }
