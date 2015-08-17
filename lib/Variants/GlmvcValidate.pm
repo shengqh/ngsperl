@@ -50,7 +50,7 @@ sub perform {
     }
 
     my $groups = get_raw_files( $config, $section, "groups" );
-    for my $groupName ( sort keys %{$groups} ) {
+    for my $groupName ( sort keys %{$rawFiles} ) {
       my @samples = @{ $groups->{$groupName} };
       my @gfiles  = ();
       my $index   = 0;
@@ -154,15 +154,15 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $rawFiles = get_raw_files( $config, $section);
+  my $rawFiles = get_raw_files( $config, $section );
 
   my $result = {};
   for my $groupName ( keys %{$rawFiles} ) {
     my @resultFiles = ();
     my $curDir      = $resultDir . "/$groupName";
-    
+
     my $final = "$curDir/${groupName}.validation.candidates";
-    
+
     push( @resultFiles, "$final" );
     $result->{$groupName} = filter_array( \@resultFiles, $pattern );
   }
