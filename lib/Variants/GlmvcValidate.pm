@@ -105,10 +105,10 @@ cd $curDir
 
       my $cmd;
       if ( defined $mpileupParameter ) {
-        $cmd = "samtools mpileup -f $fafile $mpileupParameter $normal $tumor | mono-sgen $glmvcfile validate -t console $option -o ${curDir}/${groupName}.validation";
+        $cmd = "samtools mpileup -f $fafile $mpileupParameter $normal $tumor | mono-sgen $glmvcfile validate -t console $option -o ${curDir}/${groupName}.validation -v $validateFile";
       }
       else {
-        $cmd = "mono-sgen $glmvcfile validate -c $thread -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${curDir}/${groupName}.validation";
+        $cmd = "mono-sgen $glmvcfile validate -c $thread -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${curDir}/${groupName}.validation -v $validateFile";
       }
 
       print OUT "
@@ -130,7 +130,7 @@ $cmd
 ";
     }
     else {
-      print OUT "mono-sgen $glmvcfile validate -t mpileup -m $sampleFiles[0] $option -o ${curDir}/${groupName}.validation \n";
+      print OUT "mono-sgen $glmvcfile validate -t mpileup -m $sampleFiles[0] $option -o ${curDir}/${groupName}.validation -v $validateFile \n";
     }
 
     print OUT "echo finished=`date` \n";
