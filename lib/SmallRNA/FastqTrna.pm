@@ -115,8 +115,8 @@ sub result {
 
   my $result = {};
   for my $sampleName ( sort keys %rawFiles ) {
-    my $finalFile1  = $resultDir . "/" . $sampleName . ".40less" . $extension;
-    my $finalFile2  = $resultDir . "/" . $sampleName . ".40plus" . $extension;
+    my $finalFile1  = $resultDir . "/" . $sampleName . "_40less" . $extension;
+    my $finalFile2  = $resultDir . "/" . $sampleName . "_40plus" . $extension;
     my $summaryFile = $resultDir . "/" . $sampleName . $extension . ".summary";
 
     my @resultFiles = ();
