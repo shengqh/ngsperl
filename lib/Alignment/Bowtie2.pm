@@ -29,10 +29,7 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $bowtie2_index = $config->{$section}{bowtie2_index} or die "define ${section}::bowtie2_index first";
-  my $samonly = $config->{$section}{samonly};
-  if ( !defined $samonly ) {
-    $samonly = 0;
-  }
+  my $samonly = get_option($config, $section, "samonly", 0);
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 

@@ -44,8 +44,7 @@ sub perform {
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $sampleFile  = $sampleFiles[0];
-    my $finalFile1  = $sampleName . "_40less" . $extension;
-    my $finalFile2  = $sampleName . "_40plus" . $extension;
+    my $finalFile  = $sampleName . $extension;
     my $summaryFile = $sampleName . $extension . ".summary";
 
     my $seqcountFile = "";
@@ -71,14 +70,14 @@ $path_file
 
 cd $resultDir
 
-if [ -s $finalFile1 ]; then
-  echo job has already been done. if you want to do again, delete $finalFile1 and $finalFile2 and submit job again.
+if [ -s $finalFile ]; then
+  echo job has already been done. if you want to do again, delete $finalFile and submit job again.
   exit 0
 fi
 
 echo FastqTrna=`date` 
 
-mono-sgen $cqsFile fastq_trna $option -i $sampleFile -l $finalFile1 -p $finalFile2 -s $summaryFile $seqcountFile
+mono-sgen $cqsFile fastq_trna $option -i $sampleFile -o $finalFile -s $summaryFile $seqcountFile
 
 echo finished=`date`
 
@@ -115,18 +114,13 @@ sub result {
 
   my $result = {};
   for my $sampleName ( sort keys %rawFiles ) {
-    my $finalFile1  = $resultDir . "/" . $sampleName . "_40less" . $extension;
-    my $finalFile2  = $resultDir . "/" . $sampleName . "_40plus" . $extension;
+    my $finalFile  = $resultDir . "/" . $sampleName . $extension;
     my $summaryFile = $resultDir . "/" . $sampleName . $extension . ".summary";
 
     my @resultFiles = ();
-    push( @resultFiles, $finalFile1 );
+    push( @resultFiles, $finalFile );
     if ( defined $seqCountFiles{$sampleName} ) {
-      push( @resultFiles, $finalFile1 . ".dupcount" );
-    }
-    push( @resultFiles, $finalFile2 );
-    if ( defined $seqCountFiles{$sampleName} ) {
-      push( @resultFiles, $finalFile2 . ".dupcount" );
+      push( @resultFiles, $finalFile . ".dupcount" );
     }
     push( @resultFiles, $summaryFile );
 
