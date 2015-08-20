@@ -62,7 +62,7 @@ sub perform {
     print "$mpileupParameter \n";
     if ( defined $mpileupParameter ) {
       if ( ! ($mpileupParameter eq "") ) {
-        $mpileupParameter = "--mpileup " . $mpileupParameter;
+        $mpileupParameter = "--mpileup \"" . $mpileupParameter . "\"";
       }
     }
     print "$mpileupParameter \n";
