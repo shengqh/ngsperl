@@ -57,12 +57,12 @@ sub perform {
   my $isbam            = lc($source_type) eq "bam";
   if ($isbam) {
     $fafile = get_param_file( $config->{$section}{fasta_file}, "fasta_file (for mpileup)", 1 );
-    $mpileupParameter = $config->{$section}{mpileup_option};
+    my $mpileupOption = $config->{$section}{mpileup_option};
     
-    if ( defined $mpileupParameter ) {
-      print "$mpileupParameter \n";
-      if ( ! ($mpileupParameter eq "") ) {
-        $mpileupParameter = "--mpileup \"" . $mpileupParameter . "\"";
+    if ( defined $mpileupOption ) {
+      print "$mpileupOption \n";
+      if ( ! ($mpileupOption eq "") ) {
+        $mpileupParameter = "--mpileup \"" . $mpileupOption . "\"";
       }
       print "$mpileupParameter \n";
     }
@@ -122,7 +122,8 @@ cd $curDir
       my $normal = $sampleFiles[0];
       my $tumor  = $sampleFiles[1];
       my $final  = $anno ? "${groupName}.annotation.tsv" : "${groupName}.tsv";
-
+      
+      
       my $cmd = "mono-sgen $glmvcfile call -c $thread -t bam -f $fafile $option $mpileupParameter --normal $normal --tumor $tumor -o ${curDir}/${groupName}";
 
       print OUT "
