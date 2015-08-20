@@ -65,6 +65,7 @@ sub perform {
         $mpileupParameter = "--mpileup " . $mpileupParameter;
       }
     }
+    print "$mpileupParameter \n";
 
     my $groups = get_raw_files( $config, $section, "groups" );
     for my $groupName ( sort keys %{$groups} ) {
