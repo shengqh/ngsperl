@@ -59,13 +59,13 @@ sub perform {
     $fafile = get_param_file( $config->{$section}{fasta_file}, "fasta_file (for mpileup)", 1 );
     $mpileupParameter = $config->{$section}{mpileup_option};
     
-    print "$mpileupParameter \n";
     if ( defined $mpileupParameter ) {
+      print "$mpileupParameter \n";
       if ( ! ($mpileupParameter eq "") ) {
         $mpileupParameter = "--mpileup \"" . $mpileupParameter . "\"";
       }
+      print "$mpileupParameter \n";
     }
-    print "$mpileupParameter \n";
 
     my $groups = get_raw_files( $config, $section, "groups" );
     for my $groupName ( sort keys %{$groups} ) {
