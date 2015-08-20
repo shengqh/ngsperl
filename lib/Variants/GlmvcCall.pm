@@ -57,14 +57,11 @@ sub perform {
   my $isbam            = lc($source_type) eq "bam";
   if ($isbam) {
     $fafile = get_param_file( $config->{$section}{fasta_file}, "fasta_file (for mpileup)", 1 );
-    my $mpileupOption = $config->{$section}{mpileup_option};
-    
-    if ( defined $mpileupOption ) {
-      print "$mpileupOption \n";
-      if ( ! ($mpileupOption eq "") ) {
-        $mpileupParameter = "--mpileup \"" . $mpileupOption . "\"";
+    $mpileupParameter = $config->{$section}{mpileup_option};
+    if ( defined $mpileupParameter ) {
+      if ( $mpileupParameter eq "" ) {
+        undef($$mpileupParameter);
       }
-      print "$mpileupParameter \n";
     }
 
     my $groups = get_raw_files( $config, $section, "groups" );
@@ -122,9 +119,14 @@ cd $curDir
       my $normal = $sampleFiles[0];
       my $tumor  = $sampleFiles[1];
       my $final  = $anno ? "${groupName}.annotation.tsv" : "${groupName}.tsv";
-      
-      
-      my $cmd = "mono-sgen $glmvcfile call -c $thread -t bam -f $fafile $option $mpileupParameter --normal $normal --tumor $tumor -o ${curDir}/${groupName}";
+
+      my $cmd;
+      if ( defined $mpileupParameter ) {
+        $cmd = "samtools mpileup -f $fafile $mpileupParameter $normal $tumor | mono-sgen $glmvcfile all -t console $option -o ${curDir}/${groupName}";
+      }
+      else {
+        $cmd = "mono-sgen $glmvcfile call -c $thread -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${curDir}/${groupName}";
+      }
 
       print OUT "
 if [ -s $final ]; then
