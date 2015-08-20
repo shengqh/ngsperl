@@ -58,6 +58,8 @@ sub perform {
   if ($isbam) {
     $fafile = get_param_file( $config->{$section}{fasta_file}, "fasta_file (for mpileup)", 1 );
     $mpileupParameter = $config->{$section}{mpileup_option};
+    
+    print "$mpileupParameter \n";
     if ( defined $mpileupParameter ) {
       if ( ! ($mpileupParameter eq "") ) {
         $mpileupParameter = "--mpileup " . $mpileupParameter;
