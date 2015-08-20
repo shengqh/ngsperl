@@ -59,8 +59,8 @@ sub perform {
     $fafile = get_param_file( $config->{$section}{fasta_file}, "fasta_file (for mpileup)", 1 );
     $mpileupParameter = $config->{$section}{mpileup_option};
     if ( defined $mpileupParameter ) {
-      if ( $mpileupParameter eq "" ) {
-        undef($$mpileupParameter);
+      if ( ! ($mpileupParameter eq "") ) {
+        $mpileupParameter = "--mpileup " . $mpileupParameter;
       }
     }
 
@@ -120,13 +120,7 @@ cd $curDir
       my $tumor  = $sampleFiles[1];
       my $final  = $anno ? "${groupName}.annotation.tsv" : "${groupName}.tsv";
 
-      my $cmd;
-      if ( defined $mpileupParameter ) {
-        $cmd = "samtools mpileup -f $fafile $mpileupParameter $normal $tumor | mono-sgen $glmvcfile all -t console $option -o ${curDir}/${groupName}";
-      }
-      else {
-        $cmd = "mono-sgen $glmvcfile call -c $thread -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${curDir}/${groupName}";
-      }
+      my $cmd = "mono-sgen $glmvcfile call -c $thread -t bam -f $fafile $option $mpileupParameter --normal $normal --tumor $tumor -o ${curDir}/${groupName}";
 
       print OUT "
 if [ -s $final ]; then
