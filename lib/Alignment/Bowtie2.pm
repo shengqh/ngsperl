@@ -88,7 +88,7 @@ fi
 $bowtie2_aln_command
 
 if [ -s $samFile ]; then
-  samtools view -S -b $samFile | samtools sort - $sampleName
+  samtools view -S -b -F 256 $samFile | samtools sort - $sampleName
   if [ -s $bamFile ]; then
     samtools index $bamFile 
     samtools flagstat $bamFile > ${bamFile}.stat 
