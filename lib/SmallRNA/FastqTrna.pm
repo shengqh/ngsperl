@@ -32,6 +32,8 @@ sub perform {
   my %rawFiles = %{ get_raw_files( $config, $section ) };
   my $extension = get_option( $config, $section, "extension" );
 
+  my %ccaFiles = %{ get_raw_files( $config, $section, "ccaFile" ) };
+
   my %seqCountFiles = ();
   if ( has_raw_files( $config, $section, "seqcount" ) ) {
     %seqCountFiles = %{ get_raw_files( $config, $section, "seqcount" ) };
@@ -42,15 +44,15 @@ sub perform {
   print SH get_run_command($sh_direct) . "\n";
 
   for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my $sampleFile  = $sampleFiles[0];
-    my $finalFile  = $sampleName . $extension;
+    my $sampleFile = $rawFiles{$sampleName}->[0];
+    my $ccaFile    = $ccaFiles{$sampleName}->[0];
+
+    my $finalFile   = $sampleName . $extension;
     my $summaryFile = $sampleName . $extension . ".summary";
 
     my $seqcountFile = "";
     if ( defined $seqCountFiles{$sampleName} ) {
-      my @seqcounts = @{ $seqCountFiles{$sampleName} };
-      my $seqcount  = $seqcounts[0];
+      my $seqcount = $seqCountFiles{$sampleName}->[0];
       $seqcountFile = " -c $seqcount";
     }
 
@@ -114,7 +116,7 @@ sub result {
 
   my $result = {};
   for my $sampleName ( sort keys %rawFiles ) {
-    my $finalFile  = $resultDir . "/" . $sampleName . $extension;
+    my $finalFile   = $resultDir . "/" . $sampleName . $extension;
     my $summaryFile = $resultDir . "/" . $sampleName . $extension . ".summary";
 
     my @resultFiles = ();
