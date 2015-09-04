@@ -29,7 +29,6 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $cqsFile = get_cqstools( $config, $section, 1 );
-  my $samtools  = get_param_file( $config->{$section}{samtools},   "samtools",   1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -93,7 +92,7 @@ fi
 
 echo CQSChromosomeCount=`date` 
 
-mono-sgen $cqsFile chromosome_count $option $pmNameFile --samtools $samtools -i $bamFile -o $countFile $seqcountFile
+mono-sgen $cqsFile chromosome_count $option $pmNameFile -i $bamFile -o $countFile $seqcountFile
 
 echo finished=`date`
 
