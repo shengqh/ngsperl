@@ -324,7 +324,6 @@ sub getSmallRNAConfig {
         cqs_tools       => $def->{cqstools},
         coordinate_file => $def->{coordinate},
         fasta_file      => $def->{coordinate_fasta},
-        samtools        => $def->{samtools},
         sh_direct       => 1,
         cluster         => $cluster,
         pbs             => {
@@ -410,7 +409,6 @@ sub getSmallRNAConfig {
         seqcount_ref            => [ "identical", ".dupcount\$" ],
         perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
         cqs_tools               => $def->{cqstools},
-        samtools                => $def->{samtools},
         sh_direct               => 1,
         cluster                 => $cluster,
         pbs                     => {
