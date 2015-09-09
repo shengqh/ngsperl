@@ -29,7 +29,6 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $cqsFile = get_cqstools( $config, $section, 1 );
-  my $samtools        = get_param_file( $config->{$section}{samtools},        "samtools",        1 );
   my $coordinate_file = get_param_file( $config->{$section}{coordinate_file}, "coordinate_file", 1 );
   my $fastaFile       = get_param_file( $config->{$section}{fasta_file},      "fasta_file",      0 );
 
