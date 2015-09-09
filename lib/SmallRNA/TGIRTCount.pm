@@ -127,7 +127,6 @@ sub result {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
-  my $unmapped_fastq = $option =~ /--unmapped_fastq/;
 
   my %seqCountFiles = ();
   if ( defined $config->{$section}{"seqcount"} || defined $config->{$section}{"seqcount_ref"} ) {
@@ -138,23 +137,11 @@ sub result {
   for my $sampleName ( keys %rawFiles ) {
     my $curDir = $resultDir . "/$sampleName";
 
-    my @bamFiles = @{ $rawFiles{$sampleName} };
-    my $bamFile  = $bamFiles[0];
-    my $fileName = basename($bamFile);
-
     my @resultFiles = ();
-    my $countFile   = "${curDir}/${fileName}.count";
+    my $countFile   = "${curDir}/${sampleName}.count";
     push( @resultFiles, $countFile );
     push( @resultFiles, "${countFile}.mapped.xml" );
-    push( @resultFiles, "${curDir}/${fileName}.info" );
-
-    if ($unmapped_fastq) {
-      my $unmapped = change_extension( $countFile, ".unmapped.fastq.gz" );
-      push( @resultFiles, $unmapped );
-      if ( defined $seqCountFiles{$sampleName} ) {
-        push( @resultFiles, $unmapped . ".dupcount" );
-      }
-    }
+    push( @resultFiles, "${curDir}/${sampleName}.info" );
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
