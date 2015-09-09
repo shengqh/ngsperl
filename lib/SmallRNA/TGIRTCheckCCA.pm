@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package SmallRNA::CheckCCA;
+package SmallRNA::TGIRTCheckCCA;
 
 use strict;
 use warnings;
@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "CheckCCA";
+  $self->{_name}   = "TGIRTCheckCCA";
   $self->{_suffix} = "_cca";
   bless $self, $class;
   return $self;

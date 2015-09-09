@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package SmallRNA::FastqTrna;
+package SmallRNA::TGIRTNTA;
 
 use strict;
 use warnings;
@@ -17,8 +17,8 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "FastqTrna";
-  $self->{_suffix} = "_ft";
+  $self->{_name}   = "TGIRTNTA";
+  $self->{_suffix} = "_tt";
   bless $self, $class;
   return $self;
 }
@@ -79,7 +79,7 @@ fi
 
 echo FastqTrna=`date` 
 
-mono $cqsFile fastq_trna $option -i $sampleFile --ccaFile $ccaFile -o $finalFile -s $summaryFile $seqcountFile
+mono $cqsFile tgirt_nta $option -i $sampleFile --ccaFile $ccaFile -o $finalFile -s $summaryFile $seqcountFile
 
 echo finished=`date`
 
