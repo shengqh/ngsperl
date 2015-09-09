@@ -69,7 +69,7 @@ fi
 
 echo CheckCCA=`date` 
 
-mono $cqsFile check_cca $option -i $sampleFile -u $untrimmed -o $finalFile
+mono $cqsFile tgirt_checkcca $option -i $sampleFile -u $untrimmed -o $finalFile
 
 echo finished=`date`
 
