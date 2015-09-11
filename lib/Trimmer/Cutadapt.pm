@@ -107,6 +107,7 @@ if [ -s $read1name ];then
   exit 0;
 fi
 
+echo CUTADAPT_start=`date` 
 ";
       if ( $shortLimited || $longLimited ) {
         my $temp1name = $sampleName . ".1.tmp.fastq";
