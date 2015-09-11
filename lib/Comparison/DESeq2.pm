@@ -62,16 +62,19 @@ sub perform {
   open RT, "<$rtemplate" or die $!;
 
   my $readfunc;
+  my $readparam;
   if ( $countfile =~ /csv$/ ) {
     $readfunc = "read.csv";
+    $readparam = "";
   }
   else {
     $readfunc = "read.table";
+    $readparam = ", sep=\"\\t\"";
   }
   print RF "
 setwd(\"$resultDir\")  
   
-data<-${readfunc}(\"$countfile\",row.names=1, header=T, check.names=F)
+data<-${readfunc}(\"$countfile\",row.names=1, header=T, check.names=F $readparam)
 
 showLabelInPCA<-$showLabelInPCA
 showDEGeneCluster<-$showDEGeneCluster
