@@ -62,6 +62,8 @@ if [ -s $finalFile ]; then
   exit 0;
 fi
 
+echo FastqLen_start=`date` 
+
 mono-sgen $cqstools fastq_len -i $joinFiles -o $finalFile
 
 echo finished=`date`

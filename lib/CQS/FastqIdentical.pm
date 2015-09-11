@@ -69,6 +69,7 @@ if [ -s $finalFile ]; then
   exit 0;
 fi
 
+echo FastqIdentical_start=`date` 
 ";
     if ( scalar(@sampleFiles) == 1 ) {
       print OUT "mono-sgen $cqstools fastq_identical $option -i $sampleFiles[0] $minlen -o $finalFile \n";
