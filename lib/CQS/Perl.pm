@@ -10,6 +10,7 @@ use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::Task;
 use CQS::NGSCommon;
+use CQS::StringUtils;
 use File::Spec;
 
 our @ISA = qw(CQS::Task);
