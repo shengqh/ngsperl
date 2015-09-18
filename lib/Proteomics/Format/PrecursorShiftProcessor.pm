@@ -58,7 +58,7 @@ $path_file
 ";
     for my $sampleFile (@sampleFiles) {
       my $sampleBasename = basename($sampleFile);
-      my $resultFile = $resultDir . change_extension( $sampleBasename, ".shifted" . $shiftmass . "daltons.mgf" );
+      my $resultFile = $resultDir . "/" . change_extension( $sampleBasename, ".shifted" . $shiftmass . "daltons.mgf" );
 
       print OUT "if [ ! -s $resultFile ]; then
   mono $proteomicstools mgf_shift_precursor -i $sampleFile -t $titleformat -m $shiftmass -s $shiftscan -o $resultDir
@@ -101,7 +101,7 @@ sub result {
 
     for my $sampleFile (@sampleFiles) {
       my $sampleBasename = basename($sampleFile);
-      my $resultFile = $resultDir . change_extension( $sampleBasename, ".shifted" . $shiftmass . "daltons.mgf" );
+      my $resultFile = $resultDir . "/" . change_extension( $sampleBasename, ".shifted" . $shiftmass . "daltons.mgf" );
       push( @resultFiles, "${resultFile}" );
     }
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
