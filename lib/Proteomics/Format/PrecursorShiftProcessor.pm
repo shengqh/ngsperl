@@ -55,13 +55,15 @@ $log_desc
 
 $path_file
 
+cd $resultDir
+
 ";
     for my $sampleFile (@sampleFiles) {
       my $sampleBasename = basename($sampleFile);
-      my $resultFile = $resultDir . "/" . change_extension( $sampleBasename, ".shifted" . $shiftmass . "daltons.mgf" );
+      my $resultFile = change_extension( $sampleBasename, ".shifted" . $shiftmass . "daltons.mgf" );
 
       print OUT "if [ ! -s $resultFile ]; then
-  mono $proteomicstools mgf_shift_precursor -i $sampleFile -t $titleformat -m $shiftmass -s $shiftscan -o $resultDir
+  mono $proteomicstools mgf_shift_precursor -i $sampleFile -t $titleformat -m $shiftmass -s $shiftscan -o .
 fi
 ";
     }
