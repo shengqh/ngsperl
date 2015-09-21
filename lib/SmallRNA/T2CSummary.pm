@@ -57,6 +57,11 @@ $path_file
 
 cd $resultDir
 
+if [ -s $outputname ]; then
+  echo job has already been done. if you want to do again, delete $outputfile and submit job again.
+  exit 0;
+fi
+
 echo T2CSummary=`date`
 
 mono $cqsFile smallrna_t2c_summary $option -o $outputname -l $filelist
