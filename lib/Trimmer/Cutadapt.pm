@@ -83,6 +83,8 @@ if [ -s $finalFile ];then
   exit 0;
 fi
 
+echo cutadapt=`date` 
+
 ";
       print OUT "cutadapt $option -a $adapter -o $finalFile ";
       if ($shortLimited) {
