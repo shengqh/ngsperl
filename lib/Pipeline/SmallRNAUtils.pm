@@ -352,7 +352,7 @@ sub saveConfig {
     $configFile = $def->{target_dir} . '/' . $def->{task_name} . '.config';
   }
 
-  open( SH, ">$configFile" ) or die 'Cannot create $configFile';
+  open( SH, ">$configFile" ) or die "Cannot create $configFile";
   print SH Dumper($config);
   close(SH);
   print "Saved configuration file to " . $configFile . "\n";
