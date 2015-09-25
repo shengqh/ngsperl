@@ -13,7 +13,7 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(getSmallRNADefinition getPrepareConfig)] );
+our %EXPORT_TAGS = ( 'all' => [qw(getSmallRNADefinition getPrepareConfig saveConfig)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -87,9 +87,9 @@ sub getSmallRNADefinition {
 
 sub getPrepareConfig {
   my ($def) = @_;
-  
+
   #print Dumper($def);
-  
+
   create_directory_or_die( $def->{target_dir} );
 
   my $cluster = $def->{cluster};
@@ -339,6 +339,23 @@ sub getPrepareConfig {
   $config = merge( $config, $preparation );
 
   return ( $config, \@individual, \@summary, $cluster );
+}
+
+sub saveConfig {
+  my ( $def, $config ) = @_;
+
+  my $configFile;
+  if ( $def->{target_dir} =~ /\/$/ ) {
+    $configFile = $def->{target_dir} . $def->{task_name} . '.config';
+  }
+  else {
+    $configFile = $def->{target_dir} . '/' . $def->{task_name} . '.config';
+  }
+
+  open( SH, '>$configFile' ) or die 'Cannot create $configFile';
+  print SH Dumper($config);
+  close(SH);
+  print "Saved configuration file to " . $configFile . "\n";
 }
 
 1;
