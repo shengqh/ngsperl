@@ -117,12 +117,7 @@ sub performParclipSmallRNA {
   my $config = getParclipSmallRNAConfig($def);
 
   if ($perform) {
-
-    my $configFile = $def->{target_dir} . '/' . $def->{task_name} . '.config';
-    open( SH, '>$configFile' ) or die 'Cannot create $configFile';
-    print SH Dumper($config);
-    close(SH);
-    print "Save configuration file to " . $configFile . "\n";
+    saveConfig($def, $config);
 
     performConfig($config);
   }
