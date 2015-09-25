@@ -122,6 +122,7 @@ sub performParclipSmallRNA {
     open( SH, '>$configFile' ) or die 'Cannot create $configFile';
     print SH Dumper($config);
     close(SH);
+    print "Save configuration file to " . $configFile . "\n";
 
     performConfig($config);
   }
