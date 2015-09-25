@@ -14,7 +14,7 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(performParclipSmallRNA performParclipSmallRNATask)] );
+our %EXPORT_TAGS = ( 'all' => [qw(getParclipSmallRNAConfig performParclipSmallRNA performParclipSmallRNATask)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
