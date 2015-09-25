@@ -35,7 +35,7 @@ sub getParclipSmallRNAConfig {
       option                => '-y 0 -z 0 -Y 0 -Z 0 -m 1 -Q --trim-mismatch-score 0 --trim-indel-score 0 --mode ttoc-nonstranded --gunzip',
       gsnap_index_directory => $def->{gsnap_index_directory},
       gsnap_index_name      => $def->{gsnap_index_name},
-      source_ref            => [ 'identical_NTA', '.fastq.gz\$' ],
+      source_ref            => [ 'identical_NTA', '.fastq.gz$' ],
       sh_direct             => 0,
       cluster               => $cluster,
       pbs                   => {
@@ -51,7 +51,7 @@ sub getParclipSmallRNAConfig {
       target_dir      => $def->{target_dir} . '/gsnap_smallRNA_count',
       option          => '-s -e 4',
       source_ref      => 'gsnap',
-      seqcount_ref    => [ 'identical_NTA', '.dupcount\$' ],
+      seqcount_ref    => [ 'identical_NTA', '.dupcount$' ],
       coordinate_file => $def->{coordinate},
       fasta_file      => $def->{coordinate_fasta},
       cqs_tools       => $def->{cqstools},
