@@ -87,8 +87,8 @@ sub getSmallRNADefinition {
 
 sub getPrepareConfig {
   my ($def) = @_;
-
-  print $def->{target_dir};
+  
+  print Dumper($def);
   
   create_directory_or_die( $def->{target_dir} );
 
