@@ -88,6 +88,8 @@ sub getSmallRNADefinition {
 sub getPrepareConfig {
   my ($def) = @_;
 
+  print $def->{target_dir};
+  
   create_directory_or_die( $def->{target_dir} );
 
   my $cluster = $def->{cluster};
