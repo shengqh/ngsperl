@@ -301,6 +301,50 @@ for(comparisonName in comparisonNames){
     drawHCA(paste0(prefix,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames)
     #drawHCA(paste0(prefix,"_gene500NotDE"), nonDEmatrix[1:min(500, nrow(nonDEmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
   }
+  
+  #Top 25 Significant genes barplot
+  sigDiffNumber<-nrow(tbbselect)
+  if (sigDiffNumber>0) {
+	  if (sigDiffNumber>25) {
+		  print(paste0("More than 25 genes were significant. Only the top 25 genes will be used in barplot"))
+		  diffResultSig<-tbbselect[order(tbbselect$padj)[1:25],]
+	  } else {
+		  diffResultSig<-tbbselect
+	  }
+	  diffResultSig$Name<-sapply(strsplit(row.names(diffResultSig),";"),function(x) x[1])
+	  diffResultSig$Name <- factor(diffResultSig$Name, levels=diffResultSig$Name[order(diffResult$log2FoldChange)])
+	  
+	  png(filename=paste0(prefix, "_DESeq2_sig_barplot.png"), width=3000, height=3000, res=300)
+#	  pdf(paste0(prefix,"_DESeq2_sig_barplot.pdf"))
+	  p<-ggplot(diffResultSig,aes(x=Name,y=log2FoldChange,order=log2FoldChange))+geom_bar(stat="identity")+
+			  coord_flip()+
+#			geom_abline(slope=0,intercept=1,colour="red",linetype = 2)+
+			  scale_y_continuous(name=bquote(log[2]~Fold~Change))
+	  print(p)
+	  dev.off()
+  } else {
+	  print(paste0("No gene with adjusted p value less than ",pvalue," and fold change larger than ",foldChange))
+  }
+  
+  #volcano plot
+  changeColours<-c(grey="grey",green="green",red="red")
+  diffResult<-as.data.frame(tbb)
+  diffResult$log10BaseMean<-log10(diffResult$baseMean)
+  diffResult$colour<-"grey"
+  diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
+  diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"green"
+  png(filename=paste0(prefix, "_DESeq2_volcanoPlot.png"), width=3000, height=3000, res=300)
+#  pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"))
+  p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
+		  geom_point(aes(size=log10BaseMean,colour=colour))+
+		  scale_color_manual(values=changeColours,guide = FALSE)+
+		  scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))+
+		  scale_x_continuous(name=bquote(log[2]~Fold~Change))+
+		  geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
+		  geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
+		  guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))
+  print(p)
+  dev.off()
 }
 
 if(length(pairedspearman) > 0){
