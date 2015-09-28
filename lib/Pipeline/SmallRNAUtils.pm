@@ -97,8 +97,9 @@ sub getPrepareConfig {
     $cluster = "slurm";
   }
 
-  my $fastq_remove_N = $def->{fastq_remove_N};
-  my $run_cutadapt   = $def->{run_cutadapt};
+  my $fastq_remove_N   = $def->{fastq_remove_N};
+  my $run_cutadapt     = $def->{run_cutadapt};
+  my $remove_sequences = $def->{remove_sequences};
 
   my $config = {
     general => {
@@ -261,15 +262,31 @@ sub getPrepareConfig {
   $config = merge( $config, $qc );
 
   #print Dumper($config);
+  $config->{"fastq_len"} = {
+    class      => "FastqLen",
+    perform    => 1,
+    target_dir => $def->{target_dir} . "/fastq_len",
+    option     => "",
+    source_ref => $len_ref,
+    cqstools   => $def->{cqstools},
+    sh_direct  => 1,
+    cluster    => $cluster,
+    pbs        => {
+      "email"    => $def->{email},
+      "nodes"    => "1:ppn=1",
+      "walltime" => "24",
+      "mem"      => "20gb"
+    },
+  };
+  push @individual, ("fastq_len");
 
-  my $preparation = {
-    fastq_len => {
-      class      => "FastqLen",
+  if ( defined $remove_sequences ) {
+    $config->{"remove_sequences"} = {
+      class      => "CQS::Perl",
       perform    => 1,
-      target_dir => $def->{target_dir} . "/fastq_len",
+      target_dir => $def->{target_dir} . "/remove_sequences",
       option     => "",
-      source_ref => $len_ref,
-      cqstools   => $def->{cqstools},
+      source_ref => $source_ref,
       sh_direct  => 1,
       cluster    => $cluster,
       pbs        => {
@@ -278,7 +295,12 @@ sub getPrepareConfig {
         "walltime" => "24",
         "mem"      => "20gb"
       },
-    },
+    };
+    push @individual, ("remove_sequences");
+    $source_ref = [ "remove_sequences", ".fastq.gz" ];
+  }
+
+  my $preparation = {
     identical => {
       class      => "FastqIdentical",
       perform    => 1,
@@ -333,7 +355,7 @@ sub getPrepareConfig {
     },
   };
 
-  push @individual, ( "fastq_len", "identical", "identical_NTA" );
+  push @individual, ( "identical", "identical_NTA" );
   push @summary, ("identical_sequence_count_table");
 
   $config = merge( $config, $preparation );
