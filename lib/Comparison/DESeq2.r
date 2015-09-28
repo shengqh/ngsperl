@@ -20,6 +20,7 @@ library("lattice")
 library("reshape")
 library("ggplot2")
 library("grid")
+library("scales")
 
 ##Solving node stack overflow problem start###
 #when there are too many genes, drawing dendrogram may failed due to node stack overflow,
@@ -127,6 +128,15 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors
   
   print(g)
   dev.off()
+}
+
+#for volcano plot
+reverselog_trans <- function(base = exp(1)) {
+	trans <- function(x) -log(x, base)
+	inv <- function(x) base^(-x)
+	trans_new(paste0("reverselog-", format(base)), trans, inv, 
+			log_breaks(base = base), 
+			domain = c(1e-100, Inf))
 }
 
 isDataNumeric = unlist(lapply(data[1,], function(x){is.numeric(x)}))
