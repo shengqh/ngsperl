@@ -86,7 +86,7 @@ sub getSmallRNADefinition {
 }
 
 sub getPrepareConfig {
-  my ($def) = @_;
+  my ( $def, $hasNTA ) = @_;
 
   #print Dumper($def);
 
@@ -337,7 +337,13 @@ sub getPrepareConfig {
         "mem"      => "10gb"
       },
     },
-    identical_NTA => {
+  };
+
+  push @individual, ("identical");
+  push @summary,    ("identical_sequence_count_table");
+
+  if ( !defined $hasNTA || $hasNTA ) {
+    $preparation->{identical_NTA} = {
       class        => "CQS::FastqMirna",
       perform      => 1,
       target_dir   => $def->{target_dir} . "/identical_NTA",
@@ -354,11 +360,9 @@ sub getPrepareConfig {
         "walltime" => "24",
         "mem"      => "20gb"
       },
-    },
-  };
-
-  push @individual, ( "identical", "identical_NTA" );
-  push @summary, ("identical_sequence_count_table");
+    };
+    push @individual, ("identical_NTA");
+  }
 
   $config = merge( $config, $preparation );
 
