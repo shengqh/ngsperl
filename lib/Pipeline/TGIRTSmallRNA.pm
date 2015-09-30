@@ -111,8 +111,8 @@ sub getTGIRTSmallRNAConfig {
       fastq_files_ref    => "identical",
       seqcount_ref       => [ "identical", ".dupcount\$" ],
       cqs_tools          => $def->{cqstools},
-      coordinate_file    => $def->{coordinate_file},
-      fasta_file         => $def->{fasta_file},
+      coordinate_file    => $def->{coordinate},
+      fasta_file         => $def->{coordinate_fasta},
       sh_direct          => 1,
       pbs                => {
         "email"    => $def->{email},
