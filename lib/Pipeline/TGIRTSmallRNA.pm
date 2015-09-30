@@ -23,7 +23,7 @@ our $VERSION = '0.01';
 sub getTGIRTSmallRNAConfig {
   my ($def) = @_;
 
-  my ( $config, $individual_ref, $summary_ref, $cluster ) = getPrepareConfig($def);
+  my ( $config, $individual_ref, $summary_ref, $cluster ) = getPrepareConfig($def, 0);
   my @individual = @{$individual_ref};
   my @summary    = @{$summary_ref};
 
