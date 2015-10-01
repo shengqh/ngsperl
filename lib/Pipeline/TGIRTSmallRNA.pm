@@ -104,7 +104,7 @@ sub getTGIRTSmallRNAConfig {
     star_tgirt_count => {
       class              => "SmallRNA::TGIRTCount",
       perform            => 1,
-      target_dir         => $def->{target_dir} . "/tgirt_count",
+      target_dir         => $def->{target_dir} . "/star_tgirt_count",
       option             => "",
       source_ref         => [ "star_tRNA", "_Aligned.out.bam" ],
       other_smallrna_ref => [ "star_otherSmallRNA", "_Aligned.out.bam" ],
