@@ -17,7 +17,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name}   = "Proteomics::Format::Msconvert";
-  $self->{_suffix} = "mc";
+  $self->{_suffix} = "_mc";
   bless $self, $class;
   return $self;
 }
