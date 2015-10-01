@@ -285,7 +285,7 @@ sub getPrepareConfig {
       class      => "CQS::Perl",
       perform    => 1,
       target_dir => $def->{target_dir} . "/remove_sequences",
-      option     => "'CCACGTTCCCGTGG;ACAGTCCGACGATC'",
+      option     => "$remove_sequences",
       output_ext => "_clipped_removeSeq.fastq.gz",
       perlFile =>"removeSequenceInFastq.pl",
       source_ref => $source_ref,
