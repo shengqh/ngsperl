@@ -366,7 +366,7 @@ sub getPrepareConfig {
 
   $config = merge( $config, $preparation );
 
-  return ( $config, \@individual, \@summary, $cluster );
+  return ( $config, \@individual, \@summary, $cluster, $source_ref );
 }
 
 sub saveConfig {
