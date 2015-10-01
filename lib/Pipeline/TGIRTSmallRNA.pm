@@ -23,7 +23,7 @@ our $VERSION = '0.01';
 sub getTGIRTSmallRNAConfig {
   my ($def) = @_;
 
-  my ( $config, $individual_ref, $summary_ref, $cluster ) = getPrepareConfig($def, 0);
+  my ( $config, $individual_ref, $summary_ref, $cluster ) = getPrepareConfig( $def, 0 );
   my @individual = @{$individual_ref};
   my @summary    = @{$summary_ref};
 
@@ -121,6 +121,23 @@ sub getTGIRTSmallRNAConfig {
         "mem"      => "30gb"
       },
     },
+    star_tgirt_table => {
+      class      => "CQS::SmallRNATable",
+      perform    => 1,
+      target_dir => $def->{target_dir} . "/star_tgirt_table",
+      option     => "",
+      source_ref => [ "star_tgirt_count", ".mapped.xml" ],
+      cqs_tools  => $def->{cqstools},
+      prefix     => "tigrt_",
+      sh_direct  => 1,
+      cluster    => $cluster,
+      pbs        => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "10gb"
+      },
+    },
 
     star_tgirt_category => {
       class      => 'CQS::SmallRNACategory',
@@ -140,7 +157,7 @@ sub getTGIRTSmallRNAConfig {
   };
 
   push @individual, ( "check_cca", "fastq_trna", "star_tRNA", "star_otherSmallRNA", "star_tgirt_count" );
-  push @summary, ("star_tgirt_category");
+  push @summary, ( "star_tgirt_table", "star_tgirt_category" );
 
   $config = merge( $config, $tgirt );
   $config->{sequencetask} = {
