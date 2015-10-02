@@ -358,9 +358,9 @@ sub do_get_raw_files {
       else {
         my ( $res, $issource ) = do_get_raw_files( $targetConfig, $section, 1 );
         %myres = %{$res};
-
-        print Dumper(%myres);
       }
+        
+      print Dumper(%result);
 
       my $refcount = keys %myres;
       for my $mykey ( keys %myres ) {
