@@ -61,6 +61,7 @@ $path_file
       print OUT "if [ ! -s $resultFile ]; then
   mono $proteomicstools PSM_distiller -i $sampleFile $sampleFile $option -o $resultFile
 fi
+
 ";
     }
     print OUT "
