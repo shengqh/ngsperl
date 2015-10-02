@@ -339,7 +339,7 @@ sub do_get_raw_files {
       }
     }
 
-    print Dumper($refmap);
+    #print Dumper($refmap);
 
     my %result = ();
     for my $index ( keys %{$refmap} ) {
