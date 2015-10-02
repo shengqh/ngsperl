@@ -245,6 +245,61 @@ sub getSmallRNAConfig {
 			},
 
 			#unmapped reads to tRNA
+			bowtie1_tRNA_pm => {
+				pbs => {
+					'email'    => $def->{email},
+					'walltime' => '72',
+					'mem'      => '40gb',
+					'nodes'    => '1:ppn=8'
+				},
+				cluster    => 'slurm',
+				sh_direct  => 1,
+				perform    => 1,
+				target_dir => $def->{target_dir} . "/bowtie1_tRNA_pm",
+				samonly    => 0,
+				source_ref => 'unmappedReads',
+				bowtie1_index =>
+'/scratch/cqs/zhaos/vickers/reference/tRna/bowtie_index_1.1.2/trna',
+				option => '-a -m 100 --best --strata -v 0 -p 8',
+				class  => 'Alignment::Bowtie1'
+			},
+
+			'bowtie1_tRNA_pm_count' => {
+				pbs => {
+					'email'    => $def->{email},
+					'walltime' => '72',
+					'mem'      => '40gb',
+					'nodes'    => '1:ppn=1'
+				},
+				cluster   => 'slurm',
+				sh_direct => 1,
+				perform   => 1,
+				target_dir  => $def->{target_dir} . "/bowtie1_tRNA_pm_count",
+				option      => $def->{smallrnacount_option},
+				perfect_mapped_name_ref => 'pmNamefiles',
+				source_ref              => 'bowtie1_tRNA_pm',
+				cqs_tools    => '/home/shengq1/cqstools/CQS.Tools.exe',
+				seqcount_ref => "dupCountfiles",
+				class => 'CQS::CQSChromosomeCount'
+			},
+
+			'bowtie1_tRNA_pm_table' => {
+				pbs => {
+					'email'    => $def->{email},
+					'walltime' => '10',
+					'mem'      => '10gb',
+					'nodes'    => '1:ppn=1'
+				},
+				cluster    => 'slurm',
+				sh_direct  => 1,
+				perform    => 1,
+				target_dir   => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
+				source_ref => [ 'bowtie1_tRNA_pm_count', '.xml' ],
+				cqs_tools  => '/home/shengq1/cqstools/CQS.Tools.exe',
+				option    => '',
+				class     => 'CQS::CQSChromosomeTable',
+				prefix     => 'tRNA_pm_'
+			},
 			#unmapped reads to rRNA
 			#unmapped reads to sRNA
 			#unmapped reads to group1 bacterial
@@ -252,14 +307,14 @@ sub getSmallRNAConfig {
 
 			#DESeq2
 			top100Reads_deseq2 => {
-				class                => "Comparison::DESeq2",
-				perform              => 1,
-				target_dir           => $def->{target_dir} ."/top100Reads_deseq2",
-				option               => "",
-				source_ref           => "pairs",
-				groups_ref           => "groups",
-				countfile            => [ "identical_sequence_count_table", ".count\$" ],
-				sh_direct            => 1,
+				class      => "Comparison::DESeq2",
+				perform    => 1,
+				target_dir => $def->{target_dir} . "/top100Reads_deseq2",
+				option     => "",
+				source_ref => "pairs",
+				groups_ref => "groups",
+				countfile  => [ "identical_sequence_count_table", ".count\$" ],
+				sh_direct  => 1,
 				show_DE_gene_cluster => 1,
 				pvalue               => 0.05,
 				fold_change          => 1.5,
@@ -272,13 +327,14 @@ sub getSmallRNAConfig {
 				},
 			},
 			tRNA_deseq2 => {
-				class                => "Comparison::DESeq2",
-				perform              => 1,
-				target_dir           => $def->{target_dir} ."/tRNA_deseq2",
-				option               => "",
-				source_ref           => "pairs",
-				groups_ref           => "groups",
-				countfile            => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ],
+				class      => "Comparison::DESeq2",
+				perform    => 1,
+				target_dir => $def->{target_dir} . "/tRNA_deseq2",
+				option     => "",
+				source_ref => "pairs",
+				groups_ref => "groups",
+				countfile =>
+				  [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ],
 				sh_direct            => 1,
 				show_DE_gene_cluster => 1,
 				pvalue               => 0.05,
@@ -292,13 +348,14 @@ sub getSmallRNAConfig {
 				},
 			},
 			miRNA_deseq2 => {
-				class                => "Comparison::DESeq2",
-				perform              => 1,
-				target_dir           => $def->{target_dir} ."/miRNA_deseq2",
-				option               => "",
-				source_ref           => "pairs",
-				groups_ref           => "groups",
-				countfile            => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ],
+				class      => "Comparison::DESeq2",
+				perform    => 1,
+				target_dir => $def->{target_dir} . "/miRNA_deseq2",
+				option     => "",
+				source_ref => "pairs",
+				groups_ref => "groups",
+				countfile =>
+				  [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ],
 				sh_direct            => 1,
 				show_DE_gene_cluster => 1,
 				pvalue               => 0.05,
@@ -312,13 +369,14 @@ sub getSmallRNAConfig {
 				},
 			},
 			otherSmallRNA_deseq2 => {
-				class                => "Comparison::DESeq2",
-				perform              => 1,
-				target_dir           => $def->{target_dir} ."/otherSmallRNA_deseq2",
-				option               => "",
-				source_ref           => "pairs",
-				groups_ref           => "groups",
-				countfile            => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" ],
+				class      => "Comparison::DESeq2",
+				perform    => 1,
+				target_dir => $def->{target_dir} . "/otherSmallRNA_deseq2",
+				option     => "",
+				source_ref => "pairs",
+				groups_ref => "groups",
+				countfile =>
+				  [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" ],
 				sh_direct            => 1,
 				show_DE_gene_cluster => 1,
 				pvalue               => 0.05,
