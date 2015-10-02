@@ -358,9 +358,6 @@ sub do_get_raw_files {
         %myres = %{$res};
       }
         
-      print "--------------- $section, $mapname, $index ----------------\n";
-      print Dumper(%result);
-
       my $refcount = keys %myres;
       for my $mykey ( keys %myres ) {
         my $myvalues = $myres{$mykey};
@@ -390,6 +387,9 @@ sub do_get_raw_files {
         	}
         }
       }
+      
+      print "--------------- $section, $mapname, $index ----------------\n";
+      print Dumper(%result);
     }
 
     my $final = \%result;
