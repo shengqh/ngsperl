@@ -64,6 +64,7 @@ cd $resultDir
       print OUT "if [ ! -s $resultFile ]; then
   java -Xmx$memory -jar $msgf_jar -s $sampleFile -d $database -mod $mod_file -thread $thread -o $resultFile $option
 fi
+
 ";
     }
     print OUT "
