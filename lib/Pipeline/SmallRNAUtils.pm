@@ -100,7 +100,7 @@ sub getPrepareConfig {
   my $fastq_remove_N   = $def->{fastq_remove_N};
   my $run_cutadapt     = $def->{run_cutadapt};
   my $remove_sequences = $def->{remove_sequences};
-
+  
   my $config = {
     general => {
       task_name => $def->{task_name},
@@ -108,6 +108,14 @@ sub getPrepareConfig {
     },
     files => $def->{files}
   };
+
+  if(defined $def->{groups}){
+    $config->{groups} = $def->{groups};
+  }
+
+  if(defined $def->{pairs}){
+    $config->{pairs} = $def->{pairs};
+  }
 
   my @individual = ();
   my @summary    = ();
