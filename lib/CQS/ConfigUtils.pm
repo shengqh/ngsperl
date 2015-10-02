@@ -358,7 +358,7 @@ sub do_get_raw_files {
         %myres = %{$res};
       }
         
-      print "--------------- index $index ----------------\n";
+      print "--------------- $section, $mapname, $index ----------------\n";
       print Dumper(%result);
 
       my $refcount = keys %myres;
