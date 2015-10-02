@@ -132,7 +132,8 @@ sub getSmallRNAConfig {
           "mem"      => "40gb"
         },
       },
-
+		
+		
       #perfect match search to mirbase only
       bowtie1_genome_1mm_NTA_pmnames => {
         class      => "Samtools::PerfectMappedReadNames",
@@ -149,6 +150,27 @@ sub getSmallRNAConfig {
           "mem"      => "40gb"
         },
       },
+      
+    #extract unmapped reads
+	unmappedReads => {
+		class      => "CQS::Perl",
+		perform    => 1,
+		target_dir => $def->{target_dir}."/unmappedReads",
+		perlFile => "unmappedReadsToFastq.pl",
+		source_ref  => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
+		source2_ref => [ "bowtie1_genome_1mm_NTA_pmnames", ".pmnames\$" ],
+		source3_ref => [ "identical", ".fastq.gz\$" ],
+		output_ext  => "_clipped_identical.unmapped.fastq.gz",
+		sh_direct   => 1,
+		pbs         => {
+			"email"    => $def->{email},
+			"nodes"    => "1:ppn=1",
+			"walltime" => "1",
+			"mem"      => "10gb"
+		},
+	},
+	
+	#perfect match search to mirbase only
       bowtie1_miRbase_pm => {
         class         => "Alignment::Bowtie1",
         perform       => 1,
