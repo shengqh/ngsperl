@@ -380,6 +380,19 @@ sub getPrepareConfig {
 sub saveConfig {
   my ( $def, $config ) = @_;
 
+  my $defFile;
+  if ( $def->{target_dir} =~ /\/$/ ) {
+    $defFile = $def->{target_dir} . $def->{task_name} . '.def';
+  }
+  else {
+    $defFile = $def->{target_dir} . '/' . $def->{task_name} . '.def';
+  }
+
+  open( SH, ">$defFile" ) or die "Cannot create $defFile";
+  print SH Dumper($def);
+  close(SH);
+  print "Saved user definition file to " . $defFile . "\n";
+
   my $configFile;
   if ( $def->{target_dir} =~ /\/$/ ) {
     $configFile = $def->{target_dir} . $def->{task_name} . '.config';
