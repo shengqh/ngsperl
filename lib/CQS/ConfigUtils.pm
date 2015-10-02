@@ -352,8 +352,6 @@ sub do_get_raw_files {
       if ( defined $targetConfig->{$section}{class} ) {
         my $myclass = instantiate( $targetConfig->{$section}{class} );
         %myres = %{ $myclass->result( $targetConfig, $section, $pattern ) };
-        
-        print Dumper(%myres);
       }
       else {
         my ( $res, $issource ) = do_get_raw_files( $targetConfig, $section, 1 );
