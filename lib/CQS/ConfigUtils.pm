@@ -365,8 +365,9 @@ sub do_get_raw_files {
         	if(exists $result{$mykey}){
         		my $oldvalues = $result{$mykey};
         		if(ref($oldvalues) eq 'ARRAY'){
-        			print "merge ARRAY \n";
-        			$result{$mykey} = \(@{$oldvalues}, @{$myvalues});
+        			my @merged = (@{$oldvalues}, @{$myvalues});
+        			print "merged ARRAY ", Dumper(\@merged);
+        			$result{$mykey} = \@merged;
         		}else {
         			die "The source of $section->$mapname should be all HASH or all ARRAY";
         		}
