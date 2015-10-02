@@ -366,7 +366,7 @@ sub do_get_raw_files {
         		my $oldvalues = $result{$mykey};
         		if(ref($oldvalues) eq 'ARRAY'){
         			my @merged = (@{$oldvalues}, @{$myvalues});
-        			print "merged ARRAY ", Dumper(\@merged);
+        			#print "merged ARRAY ", Dumper(\@merged);
         			$result{$mykey} = \@merged;
         		}else {
         			die "The source of $section->$mapname should be all HASH or all ARRAY";
@@ -390,8 +390,8 @@ sub do_get_raw_files {
         }
       }
       
-      print "--------------- $section, $mapname, $index ----------------\n";
-      print Dumper(%result);
+      #print "--------------- $section, $mapname, $index ----------------\n";
+      #print Dumper(%result);
     }
 
     my $final = \%result;
