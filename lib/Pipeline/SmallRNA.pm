@@ -231,12 +231,7 @@ sub getSmallRNAConfig {
 
       #unmapped reads to tRNA
       bowtie1_tRNA_pm => {
-        pbs => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=8'
-        },
+        class         => 'Alignment::Bowtie1',
         cluster       => 'slurm',
         sh_direct     => 1,
         perform       => 1,
@@ -245,16 +240,16 @@ sub getSmallRNAConfig {
         source_ref    => 'unmappedReads',
         bowtie1_index => $def->{bowtie1_trna_index},
         option        => '-a -m 100 --best --strata -v 0 -p 8',
-        class         => 'Alignment::Bowtie1'
-      },
-
-      'bowtie1_tRNA_pm_count' => {
-        pbs => {
+        pbs           => {
           'email'    => $def->{email},
           'walltime' => '72',
           'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
-        },
+          'nodes'    => '1:ppn=8'
+        }
+      },
+
+      bowtie1_tRNA_pm_count => {
+        class                   => 'CQS::CQSChromosomeCount',
         cluster                 => 'slurm',
         sh_direct               => 1,
         perform                 => 1,
@@ -262,18 +257,18 @@ sub getSmallRNAConfig {
         option                  => $def->{smallrnacount_option},
         perfect_mapped_name_ref => 'pmNamefiles',
         source_ref              => 'bowtie1_tRNA_pm',
-        cqs_tools               => '/home/shengq1/cqstools/CQS.Tools.exe',
+        cqs_tools               => $def->{cqstools},
         seqcount_ref            => "dupCountfiles",
-        class                   => 'CQS::CQSChromosomeCount'
+        pbs                     => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
+        },
       },
 
       'bowtie1_tRNA_pm_table' => {
-        pbs => {
-          'email'    => $def->{email},
-          'walltime' => '10',
-          'mem'      => '10gb',
-          'nodes'    => '1:ppn=1'
-        },
+        class      => 'CQS::CQSChromosomeTable',
         cluster    => 'slurm',
         sh_direct  => 1,
         perform    => 1,
@@ -281,8 +276,13 @@ sub getSmallRNAConfig {
         source_ref => [ 'bowtie1_tRNA_pm_count', '.xml' ],
         cqs_tools  => '/home/shengq1/cqstools/CQS.Tools.exe',
         option     => '',
-        class      => 'CQS::CQSChromosomeTable',
-        prefix     => 'tRNA_pm_'
+        prefix     => 'tRNA_pm_',
+        pbs        => {
+          'email'    => $def->{email},
+          'walltime' => '10',
+          'mem'      => '10gb',
+          'nodes'    => '1:ppn=1'
+        },
       },
 
       #unmapped reads to rRNA
