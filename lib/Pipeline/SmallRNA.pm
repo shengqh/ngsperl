@@ -274,7 +274,7 @@ sub getSmallRNAConfig {
         perform    => 1,
         target_dir => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
         source_ref => [ 'bowtie1_tRNA_pm_count', '.xml' ],
-        cqs_tools  => '/home/shengq1/cqstools/CQS.Tools.exe',
+        cqs_tools  => $def->{cqstools},
         option     => '',
         prefix     => 'tRNA_pm_',
         pbs        => {
