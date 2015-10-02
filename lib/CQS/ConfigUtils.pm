@@ -10,6 +10,7 @@ use CQS::ClassFactory;
 use CQS::StringUtils;
 use CQS::CQSDebug;
 use Data::Dumper;
+use Hash::Merge qw( merge );
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -336,9 +337,9 @@ sub do_get_raw_files {
           $index += 3;
         }
       }
-
-      #print Dumper($refmap);
     }
+
+    #print Dumper($refmap);
 
     my %result = ();
     for my $index ( keys %{$refmap} ) {
@@ -356,18 +357,40 @@ sub do_get_raw_files {
         my ( $res, $issource ) = do_get_raw_files( $targetConfig, $section, 1 );
         %myres = %{$res};
       }
-
+        
       my $refcount = keys %myres;
       for my $mykey ( keys %myres ) {
         my $myvalues = $myres{$mykey};
         if ( ( ref($myvalues) eq 'ARRAY' ) && ( scalar( @{$myvalues} ) > 0 ) ) {
-          $result{$mykey} = $myvalues;
+        	if(exists $result{$mykey}){
+        		my $oldvalues = $result{$mykey};
+        		if(ref($oldvalues) eq 'ARRAY'){
+        			print "merge ARRAY \n";
+        			$result{$mykey} = \(@{$oldvalues}, @{$myvalues});
+        		}else {
+        			die "The source of $section->$mapname should be all HASH or all ARRAY";
+        		}
+        	}else{
+          	$result{$mykey} = $myvalues;
+        	}
         }
 
         if ( ( ref($myvalues) eq 'HASH' ) && ( scalar( keys %{$myvalues} ) > 0 ) ) {
-          $result{$mykey} = $myvalues;
+        	if(exists $result{$mykey}){
+        		my $oldvalues = $result{$mykey};
+        		if(ref($oldvalues) eq 'HASH'){
+        			$result{$mykey} = merge( $oldvalues, $myvalues);
+        		}else {
+        			die "The source of $section->$mapname should be all HASH or all ARRAY";
+        		}
+        	}else{
+          	$result{$mykey} = $myvalues;
+        	}
         }
       }
+      
+      print "--------------- $section, $mapname, $index ----------------\n";
+      print Dumper(%result);
     }
 
     my $final = \%result;
