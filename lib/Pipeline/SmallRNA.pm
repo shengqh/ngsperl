@@ -323,8 +323,7 @@ sub getSmallRNAConfig {
 				target_dir => $def->{target_dir} . "/bowtie1_rRNAL_pm",
 				samonly    => 0,
 				source_ref => 'unmappedReads',
-				bowtie1_index =>
-'/scratch/cqs/zhaos/vickers/reference/rRna/SILVA_123_LSURef_tax_silva',
+				bowtie1_index =>$def->{bowtie1_rRNAL_index},
 				option => '-a -m 100 --best --strata -v 0 -p 8',
 				class  => 'Alignment::Bowtie1'
 			},
@@ -341,10 +340,10 @@ sub getSmallRNAConfig {
 				perform   => 1,
 				target_dir  => $def->{target_dir} . "/bowtie1_rRNAL_pm_count",
 				option      => $def->{smallrnacount_option},
-				perfect_mapped_name_ref => 'pmNamefiles',
+				perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
 				source_ref              => 'bowtie1_rRNAL_pm',
-				cqs_tools   => '/home/shengq1/cqstools/CQS.Tools.exe',
-				seqcount_ref => "dupCountfiles",
+				cqs_tools   => $def->{cqstools},
+				seqcount_ref => [ "identical", ".dupcount\$" ],
 				'class' => 'CQS::CQSChromosomeCount'
 			},
 
@@ -360,7 +359,7 @@ sub getSmallRNAConfig {
 				perform    => 1,
 				target_dir   => $def->{target_dir} . "/bowtie1_rRNAL_pm_table",
 				source_ref => [ 'bowtie1_rRNAL_pm_count', '.xml' ],
-				cqs_tools  => '/home/shengq1/cqstools/CQS.Tools.exe',
+				cqs_tools  => $def->{cqstools},
 				option    => '',
 				class     => 'CQS::CQSChromosomeTable',
 				prefix    => 'rRNAL_pm_'
