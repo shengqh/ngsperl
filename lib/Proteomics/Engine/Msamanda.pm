@@ -63,6 +63,7 @@ cd $resultDir
 	      print OUT "if [ ! -s $resultFile ]; then
 	  mono $executable $sampleFile $database $cfgfile $resultFile
 	fi
+	
 	";
 	}
 

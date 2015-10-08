@@ -88,6 +88,7 @@ cd $resultDir
       print OUT "if [ ! -s $resultFile ]; then
   myrimatch -cfg $cfgfile -workdir $resultDir -cpus $thread -ProteinDatabase $database $sampleFile
 fi
+
 ";
     }
 
