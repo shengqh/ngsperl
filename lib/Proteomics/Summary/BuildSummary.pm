@@ -36,8 +36,6 @@ sub perform {
 
   my @lines = read_file( $parameterFile, chomp => 1 );
 
-  my $currentParamFile = $pbsDir . "/" . $task_name . ".param";
-  open( OUT, ">$currentParamFile" ) or die $!;
   my @dataset   = ();
   my $indataset = 0;
   for ( my $index = 0 ; $index < scalar(@lines) ; $index++ ) {
@@ -47,12 +45,57 @@ sub perform {
     elsif ( $lines[$index] =~ "</Dataset>" ) {
       $indataset = 0;
     }
-    elsif ( $indataset && $lines[$index] !~ "PathName" ) {
+    elsif ( !$indataset ) {
+      next;
+    }
+    elsif ( $lines[$index] =~ "PathName" ) {
+      next;
+    }
+    elsif ( $lines[$index] =~ "<Name>" ) {
+      next;
+    }
+    else {
       push( @dataset, $lines[$index] );
     }
   }
 
-  print @dataset;
+  my $currentParamFile = $pbsDir . "/" . $task_name . ".param";
+  open( OUT, ">$currentParamFile" ) or die $!;
+
+  for ( my $index = 0 ; $index < scalar(@lines) ; $index++ ) {
+    print OUT $lines[$index] . "\n";
+    if ( $lines[$index] =~ "<Datasets>" ) {
+      last;
+    }
+  }
+
+  #print @dataset;
+
+  for my $sampleName ( sort keys %rawFiles ) {
+    print OUT "    <Dataset>\n";
+    print OUT "      <Name>$sampleName</Name>\n";
+    foreach my $dsline (@dataset){
+      print OUT $dsline . "\n";
+    }
+    print OUT "      <PathNames>\n";
+    my @sampleFiles = @{ $rawFiles{$sampleName} };
+    for my $sampleFile (@sampleFiles) {
+      print OUT "        <PathName>$sampleFile</PathName>\n";
+    }
+    print OUT "      </PathNames>\n";
+    print OUT "    </Dataset>\n";
+  }
+
+  for ( my $index = 0 ; $index < scalar(@lines) ; $index++ ) {
+    if ( $lines[$index] =~ "</Datasets>" ) {
+      for ( my $nextindex = $index ; $nextindex < scalar(@lines) ; $nextindex++ ) {
+        print OUT $lines[$nextindex] . "\n";
+      }
+      last;
+    }
+  }
+
+  close(OUT);
 
   my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
   my $pbsName = basename($pbsFile);
@@ -65,13 +108,11 @@ sub perform {
 $log_desc
 
 $path_file
-";
 
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-  }
+echo buildsummary=`date`
 
-  print OUT "
+mono $proteomicstools buildsummary -i $currentParamFile 
+
 echo finished=`date`
 
 exit 0 
@@ -86,20 +127,11 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
-
-  my $result = {};
-  my $rank2 = ( $option =~ /--rank2/ ) && ( $option =~ /Comet/ );
-  for my $sampleName ( keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my @resultFiles = ();
-
-    for my $sampleFile (@sampleFiles) {
-      my $resultFile = $rank2 ? $sampleFile . ".rank2.peptides" : $sampleFile . ".peptides";
-      push( @resultFiles, "${resultFile}" );
-    }
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
-  }
+  my $result           = {};
+  my $currentParamFile = $pbsDir . "/" . $task_name . ".param";
+  my @resultFiles      = ();
+  push( @resultFiles, $currentParamFile );
+  $result->{$task_name} = filter_array( \@resultFiles, $pattern );
   return $result;
 }
 
