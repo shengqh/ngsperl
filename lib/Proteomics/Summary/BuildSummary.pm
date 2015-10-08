@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Proteomics::Distiller::BuildSummary;
+package Proteomics::Summary::BuildSummary;
 
 use strict;
 use warnings;
@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Proteomics::Distiller::BuildSummary";
+  $self->{_name}   = "Proteomics::Summary::BuildSummary";
   $self->{_suffix} = "_bs";
   bless $self, $class;
   return $self;
