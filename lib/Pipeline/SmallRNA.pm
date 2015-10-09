@@ -240,7 +240,7 @@ sub getSmallRNAConfig {
         target_dir    => $def->{target_dir} . "/bowtie1_tRNA_pm",
         samonly       => 0,
         source_ref    => 'unmappedReads',
-        bowtie1_index => $def->{bowtie1_trna_index},
+        bowtie1_index => $def->{bowtie1_tRNA_index},
         option        => $def->{bowtie1_option_pm},
         pbs           => {
           'email'    => $def->{email},
