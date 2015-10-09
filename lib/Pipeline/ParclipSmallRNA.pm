@@ -23,7 +23,7 @@ our $VERSION = '0.01';
 sub getParclipSmallRNAConfig {
   my ($def) = @_;
 
-  my ( $config, $individual_ref, $summary_ref, $cluster ) = getPrepareConfig($def, 1);
+  my ( $config, $individual_ref, $summary_ref, $cluster ) = getPrepareConfig( $def, 1 );
   my @individual = @{$individual_ref};
   my @summary    = @{$summary_ref};
 
@@ -80,10 +80,44 @@ sub getParclipSmallRNAConfig {
         'nodes'    => '1:ppn=1'
       },
     },
+    gsnap_smallRNA_table => {
+      class      => "CQS::SmallRNATable",
+      perform    => 1,
+      target_dir => $def->{target_dir} . "/gsnap_smallRNA_table",
+      option     => "",
+      source_ref => [ "gsnap_smallRNA_count", ".mapped.xml" ],
+      cqs_tools  => $def->{cqstools},
+      prefix     => "smallRNA_parclip_",
+      sh_direct  => 1,
+      cluster    => $cluster,
+      pbs        => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "10gb"
+      },
+    },
+    gsnap_smallRNA_category => {
+      class      => "CQS::SmallRNACategory",
+      perform    => 1,
+      target_dir => $def->{target_dir} . "/gsnap_smallRNA_category",
+      option     => "",
+      source_ref => [ "gsnap_smallRNA_count", ".info\$" ],
+      cqs_tools  => $def->{cqstools},
+      sh_direct  => 1,
+      cluster    => $cluster,
+      pbs        => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    },
+
   };
 
   push @individual, ( 'gsnap', 'gsnap_smallRNA_count' );
-  push @summary, ('gsnap_smallRNA_t2c_summary');
+  push @summary, ( 'gsnap_smallRNA_t2c_summary', "gsnap_smallRNA_table", "gsnap_smallRNA_category" );
 
   $config = merge( $config, $gsnap );
   $config->{sequencetask} = {
@@ -117,7 +151,7 @@ sub performParclipSmallRNA {
   my $config = getParclipSmallRNAConfig($def);
 
   if ($perform) {
-    saveConfig($def, $config);
+    saveConfig( $def, $config );
 
     performConfig($config);
   }
