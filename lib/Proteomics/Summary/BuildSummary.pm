@@ -109,6 +109,8 @@ $log_desc
 
 $path_file
 
+cd $resultDir
+
 echo buildsummary=`date`
 
 mono $proteomicstools buildsummary -i $currentParamFile 
