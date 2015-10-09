@@ -234,14 +234,14 @@ sub getSmallRNAConfig {
       #unmapped reads to tRNA
       bowtie1_tRNA_pm => {
         class         => 'Alignment::Bowtie1',
-        cluster       => 'slurm',
+        cluster       => $cluster,
         sh_direct     => 1,
         perform       => 1,
         target_dir    => $def->{target_dir} . "/bowtie1_tRNA_pm",
         samonly       => 0,
         source_ref    => 'unmappedReads',
         bowtie1_index => $def->{bowtie1_trna_index},
-        option        => '-a -m 100 --best --strata -v 0 -p 8',
+        option        => $def->{bowtie1_option_pm},
         pbs           => {
           'email'    => $def->{email},
           'walltime' => '72',
@@ -252,7 +252,7 @@ sub getSmallRNAConfig {
 
       bowtie1_tRNA_pm_count => {
         class                   => 'CQS::CQSChromosomeCount',
-        cluster                 => 'slurm',
+        cluster                 => $cluster,
         sh_direct               => 1,
         perform                 => 1,
         target_dir              => $def->{target_dir} . "/bowtie1_tRNA_pm_count",
@@ -271,7 +271,7 @@ sub getSmallRNAConfig {
 
       bowtie1_tRNA_pm_table => {
         class      => 'CQS::CQSChromosomeTable',
-        cluster    => 'slurm',
+        cluster    => $cluster,
         sh_direct  => 1,
         perform    => 1,
         target_dir => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
@@ -295,14 +295,14 @@ sub getSmallRNAConfig {
           'mem'      => '40gb',
           'nodes'    => '1:ppn=8'
         },
-        cluster       => 'slurm',
+        cluster       => $cluster,
         sh_direct     => 1,
         perform       => 1,
         target_dir    => $def->{target_dir} . "/bowtie1_rRNAL_pm",
         samonly       => 0,
         source_ref    => 'unmappedReads',
         bowtie1_index => $def->{bowtie1_rRNAL_index},
-        option        => '-a -m 100 --best --strata -v 0 -p 8',
+        option        => $def->{bowtie1_option_pm},
         class         => 'Alignment::Bowtie1'
       },
 
@@ -313,7 +313,7 @@ sub getSmallRNAConfig {
           'mem'      => '40gb',
           'nodes'    => '1:ppn=1'
         },
-        cluster                 => 'slurm',
+        cluster                 => $cluster,
         sh_direct               => 1,
         perform                 => 1,
         target_dir              => $def->{target_dir} . "/bowtie1_rRNAL_pm_count",
@@ -332,7 +332,7 @@ sub getSmallRNAConfig {
           'mem'      => '10gb',
           'nodes'    => '1:ppn=1'
         },
-        cluster    => 'slurm',
+        cluster    => $cluster,
         sh_direct  => 1,
         perform    => 1,
         target_dir => $def->{target_dir} . "/bowtie1_rRNAL_pm_table",
