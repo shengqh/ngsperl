@@ -65,11 +65,16 @@ sub perform {
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
 
-  my @sampleNames = sort keys %rawFiles;
-
+  my @sampleNames     = sort keys %rawFiles;
+  my $sampleNameCount = scalar(@sampleNames);
+  my $numlen     = length($sampleNameCount);
   my $sampleSize = $bin_size;
+  if ( $sampleSize > $sampleNameCount ) {
+    $sampleSize = $sampleNameCount;
+  }
+
   while ( $sampleSize <= scalar(@sampleNames) ) {
-    my $currentTaskName = $task_name . "_" . $sampleSize;
+    my $currentTaskName = sprintf( "${task_name}_%0${numlen}d", $sampleSize );
 
     my $currentParamFile = $resultDir . "/" . $currentTaskName . ".param";
     open( OUT, ">$currentParamFile" ) or die $!;
@@ -168,6 +173,7 @@ sub result {
   my $result = {};
 
   my $sampleNameCount = scalar( keys %rawFiles );
+  my $numlen          = length($sampleNameCount);
 
   my $sampleSize = $bin_size;
   if ( $sampleSize > $sampleNameCount ) {
@@ -175,7 +181,7 @@ sub result {
   }
   my @resultFiles = ();
   while ( $sampleSize <= $sampleNameCount ) {
-    my $currentTaskName = $task_name . "_" . $sampleSize;
+    my $currentTaskName = sprintf( "${task_name}_%0${numlen}d", $sampleSize );
 
     my $currentNoredundantFile = $resultDir . "/" . $currentTaskName . ".noredundant";
     push( @resultFiles, $currentNoredundantFile );
