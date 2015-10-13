@@ -33,6 +33,11 @@ sub perform {
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
   my $bin_size = get_option( $config, $section, "bin_size", 10 );
+  my $bins     = $config->{$section}{"bins"};
+  my @bins     = ();
+  if ( defined $bins ) {
+    @bins = @{$bins};
+  }
 
   my $parameterFile = get_param_file( $config->{$section}{parameter_file}, "parameter_file", 1 );
 
@@ -67,13 +72,22 @@ sub perform {
 
   my @sampleNames     = sort keys %rawFiles;
   my $sampleNameCount = scalar(@sampleNames);
-  my $numlen     = length($sampleNameCount);
-  my $sampleSize = $bin_size;
-  if ( $sampleSize > $sampleNameCount ) {
-    $sampleSize = $sampleNameCount;
-  }
+  my $numlen          = length($sampleNameCount);
 
-  while ( $sampleSize <= scalar(@sampleNames) ) {
+  my $index      = 0;
+  my $sampleSize = 0;
+
+  while ( $sampleSize <= $sampleNameCount ) {
+    if ( $index < scalar(@bins) ) {
+      $sampleSize = $bins[$index];
+      $index++;
+    }
+    else {
+      $sampleSize += $bin_size;
+    }
+    if ( $sampleSize > $sampleNameCount ) {
+      $sampleSize = $sampleNameCount;
+    }
     my $currentTaskName = sprintf( "${task_name}_%0${numlen}d", $sampleSize );
 
     my $currentParamFile = $resultDir . "/" . $currentTaskName . ".param";
@@ -146,11 +160,6 @@ exit 0
     if ( $sampleSize == scalar(@sampleNames) ) {
       last;
     }
-
-    $sampleSize += $bin_size;
-    if ( $sampleSize > scalar(@sampleNames) ) {
-      $sampleSize = scalar(@sampleNames);
-    }
   }
 
   close(SH);
@@ -168,19 +177,34 @@ sub result {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $bin_size = get_option( $config, $section, "bin_size", 10 );
+  my $bins     = $config->{$section}{"bins"};
+  my @bins     = ();
+  if ( defined $bins ) {
+    @bins = @{$bins};
+  }
+
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
-  my $result = {};
+  my $result      = {};
+  my @resultFiles = ();
 
   my $sampleNameCount = scalar( keys %rawFiles );
   my $numlen          = length($sampleNameCount);
 
-  my $sampleSize = $bin_size;
-  if ( $sampleSize > $sampleNameCount ) {
-    $sampleSize = $sampleNameCount;
-  }
-  my @resultFiles = ();
+  my $index      = 0;
+  my $sampleSize = 0;
+
   while ( $sampleSize <= $sampleNameCount ) {
+    if ( $index < scalar(@bins) ) {
+      $sampleSize = $bins[$index];
+      $index++;
+    }
+    else {
+      $sampleSize += $bin_size;
+    }
+    if ( $sampleSize > $sampleNameCount ) {
+      $sampleSize = $sampleNameCount;
+    }
     my $currentTaskName = sprintf( "${task_name}_%0${numlen}d", $sampleSize );
 
     my $currentNoredundantFile = $resultDir . "/" . $currentTaskName . ".noredundant";
