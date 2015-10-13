@@ -59,7 +59,7 @@ sub perform {
     }
   }
 
-  my $currentParamFile = $pbsDir . "/" . $task_name . ".param";
+  my $currentParamFile = $resultDir . "/" . $task_name . ".param";
   open( OUT, ">$currentParamFile" ) or die $!;
 
   for ( my $index = 0 ; $index < scalar(@lines) ; $index++ ) {
