@@ -102,6 +102,8 @@ sub perform {
   my $log     = $self->logfile( $logDir, $task_name );
 
   my $log_desc = $cluster->get_log_desc($log);
+  
+  my $resultFile = $resultDir . "/" . $task_name . ".noredundant";
 
   open( OUT, ">$pbsFile" ) or die $!;
   print OUT "$pbsDesc
@@ -113,7 +115,9 @@ cd $resultDir
 
 echo buildsummary=`date`
 
-mono $proteomicstools buildsummary -i $currentParamFile 
+if [ ! -s $resultFile ]; then
+  mono $proteomicstools buildsummary -i $currentParamFile 
+fi
 
 echo finished=`date`
 
