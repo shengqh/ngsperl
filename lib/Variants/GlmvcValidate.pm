@@ -31,6 +31,21 @@ sub perform {
   my $glmvcfile = get_param_file( $config->{$section}{execute_file}, "execute_file", 1 );
   my $source_type = $config->{$section}{source_type} or die "source_type is not defined in $section";
 
+  my $annovar_buildver = $config->{$section}{annovar_buildver};
+  if ( defined $annovar_buildver ) {
+    $option = $option . " --annovar_buildver $annovar_buildver ";
+    
+    my $annovar_protocol = $config->{$section}{annovar_protocol};
+    if ( defined $annovar_protocol ) {
+      $option = $option . " --annovar_protocol $annovar_protocol ";
+    }
+
+    my $annovar_operation = $config->{$section}{annovar_operation};
+    if ( defined $annovar_operation ) {
+      $option = $option . " --annovar_operation $annovar_operation ";
+    }
+  }
+
   my $rawFiles = get_raw_files( $config, $section );
 
   my $bamFiles = get_raw_files( $config, $section, "bam_files" );
@@ -108,7 +123,7 @@ cd $curDir
         $cmd = "samtools mpileup -f $fafile $mpileupParameter $normal $tumor | mono-sgen $glmvcfile validate -t console $option -o ${curDir}/${groupName}.validation -v $validateFile";
       }
       else {
-        $cmd = "mono-sgen $glmvcfile validate -c $thread -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${curDir}/${groupName}.validation -v $validateFile";
+        $cmd = "mono $glmvcfile validate -c $thread -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${curDir}/${groupName}.validation -v $validateFile";
       }
 
       print OUT "
