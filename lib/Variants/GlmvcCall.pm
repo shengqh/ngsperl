@@ -39,10 +39,20 @@ sub perform {
   my $annovar_buildver = $config->{$section}{annovar_buildver};
   if ( defined $annovar_buildver ) {
     $option = $option . " --annovar_buildver $annovar_buildver ";
+    
+    my $annovar_protocol = $config->{$section}{annovar_protocol};
+    if ( defined $annovar_protocol ) {
+      $option = $option . " --annovar_protocol $annovar_protocol ";
+    }
+
+    my $annovar_operation = $config->{$section}{annovar_operation};
+    if ( defined $annovar_operation ) {
+      $option = $option . " --annovar_operation $annovar_operation ";
+    }
   }
 
   my $distance_exon_gtf = get_param_file( $config->{$section}{distance_exon_gtf}, "distance_exon_gtf", 0 );
-  if ( defined $annovar_buildver ) {
+  if ( defined $distance_exon_gtf ) {
     $option = $option . " --distance_exon_gtf $distance_exon_gtf ";
   }
 
