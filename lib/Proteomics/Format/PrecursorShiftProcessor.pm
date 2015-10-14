@@ -27,6 +27,9 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
+  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
+  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+
   my $proteomicstools = get_param_file( $config->{$section}{proteomicstools}, "proteomicstools", 1 );
   my $shiftmass   = get_option( $config, $section, "shiftmass",   "-10" );
   my $shiftscan   = get_option( $config, $section, "shiftscan",   "10000000" );
