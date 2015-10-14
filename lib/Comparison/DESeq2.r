@@ -322,7 +322,7 @@ for(comparisonName in comparisonNames){
 		  diffResultSig<-tbbselect
 	  }
 	  diffResultSig$Name<-sapply(strsplit(row.names(diffResultSig),";"),function(x) x[1])
-	  diffResultSig$Name <- factor(diffResultSig$Name, levels=diffResultSig$Name[order(diffResult$log2FoldChange)])
+	  diffResultSig$Name <- factor(diffResultSig$Name, levels=diffResultSig$Name[order(diffResultSig$log2FoldChange)])
 	  
 	  png(filename=paste0(prefix, "_DESeq2_sig_barplot.png"), width=3000, height=3000, res=300)
 #	  pdf(paste0(prefix,"_DESeq2_sig_barplot.pdf"))
