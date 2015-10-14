@@ -55,6 +55,10 @@ sub perform {
   my ( $self, $config, $section ) = @_;
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  
+  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
+  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+  
   my $database   = get_param_file( $config->{$section}{database},   "database",   1 );
   my $cfgfile    = get_param_file( $config->{$section}{cfgfile},    "cfgfile",    1 );
 

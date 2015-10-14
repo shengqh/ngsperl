@@ -26,6 +26,9 @@ sub perform {
   my ( $self, $config, $section ) = @_;
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
+  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
+  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+
   my $param_file = get_param_file( $config->{$section}{param_file}, "param_file", 1 );
   my $database   = get_param_file( $config->{$section}{database},   "database",   1 );
   my $delete_temp_ms2 = get_option($config, $section, "delete_temp_ms2", 1); 
