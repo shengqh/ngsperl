@@ -139,12 +139,12 @@ fi
 
 if [[ -s $splitFile && ! -s $grpFile ]]; then
   echo BaseRecalibrator=`date` 
-  java $option -jar $gatk_jar -T BaseRecalibrator -rf BadCigar -R $faFile -I $splitFile $knownsitesvcf -o $grpFile
+  java $option -jar $gatk_jar -T BaseRecalibrator -nct $thread -rf BadCigar -R $faFile -I $splitFile $knownsitesvcf -o $grpFile
 fi
 
 if [[ -s $splitFile && -s $grpFile && ! -s $recalFile ]]; then
   echo PrintReads=`date`
-  java $option -jar $gatk_jar -T PrintReads -rf BadCigar -R $faFile -I $splitFile -BQSR $grpFile -o $recalFile 
+  java $option -jar $gatk_jar -T PrintReads -nct $thread -rf BadCigar -R $faFile -I $splitFile -BQSR $grpFile -o $recalFile 
 fi
 
 if [[ -s $recalFile && ! -s ${recalFile}.bai ]]; then

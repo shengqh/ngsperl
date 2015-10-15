@@ -103,7 +103,7 @@ fi
 
 if [[ -s $rmdupFile && ! -s $intervalFile ]]; then
   echo RealignerTargetCreator=`date` 
-  java $option -jar $gatk_jar -T RealignerTargetCreator $fixMisencodedQuals -I $rmdupFile -R $faFile $knownvcf -nt $thread -o $intervalFile
+  java $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $rmdupFile -R $faFile $knownvcf -o $intervalFile
 fi
 
 if [[ -s $intervalFile && ! -s $realignedFile ]]; then
@@ -114,12 +114,12 @@ fi
 
 if [[ -s $realignedFile && ! -s $grpFile ]]; then
   echo BaseRecalibrator=`date` 
-  java $option -jar $gatk_jar -T BaseRecalibrator -rf BadCigar -R $faFile -I $realignedFile $knownsitesvcf -o $grpFile
+  java $option -jar $gatk_jar -T BaseRecalibrator -nct $thread -rf BadCigar -R $faFile -I $realignedFile $knownsitesvcf -o $grpFile
 fi
 
 if [[ -s $grpFile && ! -s $recalFile ]]; then
   echo PrintReads=`date`
-  java $option -jar $gatk_jar -T PrintReads -rf BadCigar -R $faFile -I $realignedFile -BQSR $grpFile -o $recalFile 
+  java $option -jar $gatk_jar -T PrintReads -nct $thread -rf BadCigar -R $faFile -I $realignedFile -BQSR $grpFile -o $recalFile 
 fi
 
 if [[ -s $recalFile && ! -s ${recalFile}.bai ]]; then
