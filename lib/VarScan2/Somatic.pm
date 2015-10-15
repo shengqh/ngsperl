@@ -106,10 +106,10 @@ if [ ! -s $snpvcf ]; then
 fi
 
 java $java_option -jar $varscan2_jar processSomatic $snpvcf --p-value $somatic_p_value
-grep -v \"^#\" $snpvcf | cut -f1 | uniq -c | awk '{print $2\"\t\"$1}' > ${snpvcf}.chromosome
+grep -v \"^#\" $snpvcf | cut -f1 | uniq -c | awk '{print \$2\"\t\"\$1}' > ${snpvcf}.chromosome
 
 java $java_option -jar $varscan2_jar processSomatic $indelvcf --p-value $somatic_p_value
-grep -v \"^#\" $indelvcf | cut -f1 | uniq -c | awk '{print $2\"\t\"$1}' > ${indelvcf}.chromosome
+grep -v \"^#\" $indelvcf | cut -f1 | uniq -c | awk '{print \$2\"\t\"\$1}' > ${indelvcf}.chromosome
 
 echo finished=`date`
 ";
