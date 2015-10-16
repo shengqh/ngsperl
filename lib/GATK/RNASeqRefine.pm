@@ -147,9 +147,8 @@ if [[ -s $splitFile && -s $grpFile && ! -s $recalFile ]]; then
   java $option -jar $gatk_jar -T PrintReads -nct $thread -rf BadCigar -R $faFile -I $splitFile -BQSR $grpFile -o $recalFile 
 fi
 
-if [[ -s $recalFile && ! -s ${recalFile}.bai ]]; then
-  echo BamIndex=`date` 
-  samtools index $recalFile
+if [[ -s $recalFile && ! -s ${recalFile}.stat ]]; then
+  echo flagstat=`date` 
   samtools flagstat $recalFile > ${recalFile}.stat
   rm $rmFiles $rmdupFile ${sampleName}.rmdup.bai ${rmdupFile}.metrics $splitFile ${sampleName}.rmdup.split.bai $grpFile
 fi
