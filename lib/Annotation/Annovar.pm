@@ -95,7 +95,7 @@ cd $curDir
       print OUT "
 if [ ! -s $result ]; then 
   $vcf
-  table_annovar.pl $passinput $annovarDB $option --outfile $annovar 
+  table_annovar.pl $passinput $annovarDB $option --outfile $annovar --remove
 fi
 
 if [[ -s $result && ! -s $final ]]; then
