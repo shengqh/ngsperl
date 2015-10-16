@@ -95,7 +95,7 @@ echo Glmvc=`date`
 cd $curDir
 ";
 
-    my $final = "${groupName}.validation.candidates";
+    my $final = "${groupName}.validation.tsv";
     if ($isbam) {
       if ( $sampleCount != 2 ) {
         die "SampleFile should be normal,tumor paired for " . $groupName . ".";
@@ -161,7 +161,7 @@ sub result {
     my @resultFiles = ();
     my $curDir      = $resultDir . "/$groupName";
 
-    my $final = "$curDir/${groupName}.validation.candidates";
+    my $final = "$curDir/${groupName}.validation.tsv";
 
     push( @resultFiles, "$final" );
     $result->{$groupName} = filter_array( \@resultFiles, $pattern );
