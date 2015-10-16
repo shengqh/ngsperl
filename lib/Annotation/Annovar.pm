@@ -93,7 +93,7 @@ cd $curDir
       }
 
       print OUT "
-if [ ! -s $result ]; then 
+if [[ ! -s $result && ! -s $final ]]; then 
   $vcf
   table_annovar.pl $passinput $annovarDB $option --outfile $annovar --remove
 fi
@@ -169,7 +169,6 @@ sub result {
         push( @resultFiles, $curDir . "/$excel" );
       }
       push( @resultFiles, $curDir . "/$final" );
-      push( @resultFiles, $curDir . "/$result" );
     }
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
