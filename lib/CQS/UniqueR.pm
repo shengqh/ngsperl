@@ -45,7 +45,20 @@ sub perform {
 	}
 	my $rCode = get_option( $config, $section, "rCode","" );
 	my $output_file = get_option( $config, $section, "output_file", 0 );
-	
+    my $parameterFile1 = parse_param_file( $config, $section, "parameterFile1", 0 );
+    my $parameterFile2 = parse_param_file( $config, $section, "parameterFile2", 0 );
+    my $parameterFile3 = parse_param_file( $config, $section, "parameterFile3", 0 );
+    print "$parameterFile1\n";
+    if (!defined($parameterFile1)) {
+    	$parameterFile1="";
+    }
+    if (!defined($parameterFile2)) {
+        $parameterFile2="";
+    }
+    if (!defined($parameterFile3)) {
+        $parameterFile3="";
+    }
+    
 	my $rfile = $resultDir . "/${task_name}.r";
 	open( RF, ">$rfile" ) or die "Cannot create $rfile";
 	open RT, "<$rtemplate" or die $!;
@@ -71,7 +84,7 @@ $path_file
 
 cd $resultDir
 
-R --vanilla --slave -f $rfile $output_file $option
+R --vanilla --slave -f $rfile --args $output_file $option $parameterFile1 $parameterFile2 $parameterFile3
 
 echo finished=`date`
 ";
