@@ -218,9 +218,9 @@ sub getSmallRNAConfig {
         perform     => 1,
         target_dir  => $def->{target_dir} . "/unmappedReads",
         perlFile    => "unmappedReadsToFastq.pl",
-        source_ref  => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
-        source2_ref => [ "bowtie1_genome_1mm_NTA_pmnames", ".pmnames\$" ],
-        source3_ref => [ "identical", ".fastq.gz\$" ],
+        source_ref  => [ "identical", ".fastq.gz\$" ],
+        source2_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
+        source3_ref => [ "bowtie1_genome_1mm_NTA_pmnames", ".pmnames\$" ],
         output_ext  => "_clipped_identical.unmapped.fastq.gz",
         sh_direct   => 1,
         pbs         => {
@@ -398,7 +398,7 @@ sub getSmallRNAConfig {
         class      => 'CQS::CQSChromosomeTable',
         prefix     => 'rRNAS_pm_'
       },
-      
+
       #unmapped reads to group1 bacterial
       bowtie1_bacteria_group1_pm => {
         pbs => {
@@ -454,7 +454,7 @@ sub getSmallRNAConfig {
         class      => 'CQS::CQSChromosomeTable',
         prefix     => 'bacteria_group1_pm_'
       },
-      
+
       #unmapped reads to group2 bacterial
       bowtie1_bacteria_group2_pm => {
         pbs => {
@@ -510,13 +510,18 @@ sub getSmallRNAConfig {
         class      => 'CQS::CQSChromosomeTable',
         prefix     => 'bacteria_group2_pm_'
       },
-      
+
     };
 
     $config = merge( $config, $unmappedreads );
 
-    push @individual, ("unmappedReads", "bowtie1_tRNA_pm", "bowtie1_tRNA_pm_count", "bowtie1_rRNAL_pm", "bowtie1_rRNAL_pm_count", "bowtie1_rRNAS_pm", "bowtie1_rRNAS_pm_count","bowtie1_bacteria_group1_pm","bowtie1_bacteria_group1_pm_count","bowtie1_bacteria_group2_pm","bowtie1_bacteria_group2_pm_count");
-    push @summary, ("bowtie1_tRNA_pm_table", "bowtie1_rRNAL_pm_table", "bowtie1_rRNAS_pm_table","bowtie1_bacteria_group1_pm_table","bowtie1_bacteria_group2_pm_table");
+    push @individual,
+      (
+      "unmappedReads",                    "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",  "bowtie1_rRNAL_pm",
+      "bowtie1_rRNAL_pm_count",           "bowtie1_rRNAS_pm",           "bowtie1_rRNAS_pm_count", "bowtie1_bacteria_group1_pm",
+      "bowtie1_bacteria_group1_pm_count", "bowtie1_bacteria_group2_pm", "bowtie1_bacteria_group2_pm_count"
+      );
+    push @summary, ( "bowtie1_tRNA_pm_table", "bowtie1_rRNAL_pm_table", "bowtie1_rRNAS_pm_table", "bowtie1_bacteria_group1_pm_table", "bowtie1_bacteria_group2_pm_table" );
   }
 
   if ( defined $def->{pairs} ) {
