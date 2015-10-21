@@ -46,8 +46,9 @@ sub perform {
       my @sampleFiles = @{ $rawFiles{$sampleName} };
       my $samFile     = $sampleName . ".sam";
 
-      my $bowtiesam     = $samFile;
-      my $mappedonlycmd = "";
+      my $bowtiesam        = $samFile;
+      my $mappedonlycmd    = "";
+      my $mappedonlyoption = "";
       if ($mappedonly) {
         $bowtiesam     = $sampleName . ".all.sam";
         $mappedonlycmd = "
@@ -55,6 +56,7 @@ if [ -s $bowtiesam ]; then
   fisamtools view -F 4 $bowtiesam > $samFile
   rm $bowtiesam
 fi";
+        my $mappedonlyoption = "-F 4";
       }
 
       my $bamFile = $sampleName . ".bam";
@@ -65,9 +67,7 @@ fi";
       my $bowtie1_aln_command;
       if ( $sampleFiles[0] =~ /.gz$/ ) {
         if ( scalar(@sampleFiles) == 1 ) {
-          $bowtie1_aln_command = "zcat $sampleFiles[0] | bowtie $option -S $tag $bowtie1_index - $bowtiesam
-$mappedonlycmd
-";
+          $bowtie1_aln_command = "zcat $sampleFiles[0] | bowtie $option -S $tag $bowtie1_index - $bowtiesam";
         }
         else {
           my $f1 = $sampleFiles[0];
@@ -83,17 +83,12 @@ zcat $f2 > ${f2}.fifo &
 bowtie $option -S $tag $bowtie1_index ${f1}.fifo,${f2}.fifo $bowtiesam
  
 rm ${f1}.fifo
-rm ${f2}.fifo
-
-$mappedonlycmd
-";
+rm ${f2}.fifo";
         }
       }
       else {
         my $fastqs = join( ',', @sampleFiles );
-        $bowtie1_aln_command = "bowtie $option -S $tag $bowtie1_index $fastqs $bowtiesam 
-$mappedonlycmd
-";
+        $bowtie1_aln_command = "bowtie $option -S $tag $bowtie1_index $fastqs $bowtiesam";
       }
 
       my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
@@ -121,6 +116,8 @@ if [ -s $samFile ]; then
 fi
 
 $bowtie1_aln_command
+
+$mappedonlycmd
 ";
       }
       else {
@@ -132,21 +129,21 @@ fi
 
 $bowtie1_aln_command
 
-if [ -s $samFile ]; then
+if [ -s $bowtiesam ]; then
 ";
         if ($sortbam) {
-          print OUT "  samtools view -S -b $samFile | samtools sort - $sampleName
+          print OUT "  samtools view -S $mappedonlyoption -b $bowtiesam | samtools sort - $sampleName
   if [ -s $bamFile ]; then
     samtools index $bamFile 
     samtools flagstat $bamFile > ${bamFile}.stat
 ";
         }
         else {
-          print OUT "samtools view -S -b $samFile > ${sampleName}.bam
+          print OUT "samtools view -S $mappedonlyoption -b $bowtiesam > ${sampleName}.bam
   if [ -s $bamFile ]; then
 ";
         }
-        print OUT "    rm $samFile
+        print OUT "    rm $bowtiesam
   fi
 fi
 ";
