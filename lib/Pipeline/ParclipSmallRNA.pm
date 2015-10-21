@@ -155,6 +155,7 @@ sub getParclipSmallRNAConfig {
         bowtie1_index => $def->{bowtie1_index},
         samonly       => 0,
         sh_direct     => 1,
+        mappedonly    => 1,
         cluster       => $cluster,
         pbs           => {
           "email"    => $def->{email},
