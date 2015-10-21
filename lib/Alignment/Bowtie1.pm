@@ -29,7 +29,7 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $bowtie1_index = $config->{$section}{bowtie1_index} or die "define ${section}::bowtie1_index first";
-  my $samformat = get_option( $config, $section, "samformat", 1 );
+  my $samformat  = get_option( $config, $section, "samformat",  1 );
   my $mappedonly = get_option( $config, $section, "mappedonly", 0 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
@@ -45,19 +45,19 @@ sub perform {
     for my $sampleName ( sort keys %rawFiles ) {
       my @sampleFiles = @{ $rawFiles{$sampleName} };
       my $samFile     = $sampleName . ".sam";
-      
-      my $bowtiesam = $samFile;
+
+      my $bowtiesam     = $samFile;
       my $mappedonlycmd = "";
-      if($mappedonly){
-        $bowtiesam = $sampleName . ".all.sam";
+      if ($mappedonly) {
+        $bowtiesam     = $sampleName . ".all.sam";
         $mappedonlycmd = "
 if [ -s $bowtiesam ]; then
   fisamtools view -F 4 $bowtiesam > $samFile
   rm $bowtiesam
 fi";
       }
-      
-      my $bamFile     = $sampleName . ".bam";
+
+      my $bamFile = $sampleName . ".bam";
 
       my $indent = "";
       my $tag    = "--sam-RG ID:$sampleName --sam-RG LB:$sampleName --sam-RG SM:$sampleName --sam-RG PL:ILLUMINA";
@@ -95,7 +95,7 @@ $mappedonlycmd
 $mappedonlycmd
 ";
       }
-      
+
       my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
       my $pbsName = basename($pbsFile);
       my $log     = $self->logfile( $logDir, $sampleName );
