@@ -170,6 +170,7 @@ sub getParclipSmallRNAConfig {
         target_dir      => $def->{target_dir} . "/unmappedReads_bowtie1_genome_1mm_3utr_count",
         option          => "-m 0",
         source_ref      => [ "unmappedReads_bowtie1_genome_1mm", ".bam\$" ],
+        fastq_files_ref => [ "unmappedReads", ".fastq.gz\$" ],
         seqcount_ref    => [ "identical", ".dupcount\$" ],
         cqs_tools       => $def->{cqstools},
         coordinate_file => $def->{utr3_db},
