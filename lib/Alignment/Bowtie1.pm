@@ -30,6 +30,7 @@ sub perform {
 
   my $bowtie1_index = $config->{$section}{bowtie1_index} or die "define ${section}::bowtie1_index first";
   my $samformat = get_option( $config, $section, "samformat", 1 );
+  my $mappedonly = get_option( $config, $section, "mappedonly", 0 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -44,6 +45,15 @@ sub perform {
     for my $sampleName ( sort keys %rawFiles ) {
       my @sampleFiles = @{ $rawFiles{$sampleName} };
       my $samFile     = $sampleName . ".sam";
+      
+      my $bowtiesam = $samFile;
+      my $mappedonlycmd = "";
+      if($mappedonly){
+        $bowtiesam = $sampleName . ".all.sam";
+        $mappedonlycmd = "samtools view -F 4 $bowtiesam > $samFile
+rm $bowtiesam";
+      }
+      
       my $bamFile     = $sampleName . ".bam";
 
       my $indent = "";
@@ -52,7 +62,7 @@ sub perform {
       my $bowtie1_aln_command;
       if ( $sampleFiles[0] =~ /.gz$/ ) {
         if ( scalar(@sampleFiles) == 1 ) {
-          $bowtie1_aln_command = "zcat $sampleFiles[0] | bowtie $option -S $tag $bowtie1_index - $samFile";
+          $bowtie1_aln_command = "zcat $sampleFiles[0] | bowtie $option -S $tag $bowtie1_index - $bowtiesam";
         }
         else {
           my $f1 = $sampleFiles[0];
@@ -65,18 +75,22 @@ zcat $f1 > ${f1}.fifo &
 mkfifo ${f2}.fifo
 zcat $f2 > ${f2}.fifo &
         
-bowtie $option -S $tag $bowtie1_index ${f1}.fifo,${f2}.fifo $samFile
+bowtie $option -S $tag $bowtie1_index ${f1}.fifo,${f2}.fifo $bowtiesam
  
 rm ${f1}.fifo
 rm ${f2}.fifo
+
+$mappedonlycmd
 ";
         }
       }
       else {
         my $fastqs = join( ',', @sampleFiles );
-        $bowtie1_aln_command = "bowtie $option -S $tag $bowtie1_index $fastqs $samFile ";
+        $bowtie1_aln_command = "bowtie $option -S $tag $bowtie1_index $fastqs $bowtiesam 
+$mappedonlycmd
+";
       }
-
+      
       my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
       my $pbsName = basename($pbsFile);
       my $log     = $self->logfile( $logDir, $sampleName );
