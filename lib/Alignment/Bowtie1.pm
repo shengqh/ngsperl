@@ -56,7 +56,7 @@ if [ -s $bowtiesam ]; then
   fisamtools view -F 4 $bowtiesam > $samFile
   rm $bowtiesam
 fi";
-        my $mappedonlyoption = "-F 4";
+        $mappedonlyoption = "-F 4";
       }
 
       my $bamFile = $sampleName . ".bam";
