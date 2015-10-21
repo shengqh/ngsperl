@@ -12,8 +12,8 @@ my $outFile = $ARGV[0];
 #my $resultFolder=$ARGV[0];
 #my $sampleName=$ARGV[1];
 
-my $smallRNAreadsFile     = $ARGV[1];
-my $identicalFastqFile    = $ARGV[2];
+my $identicalFastqFile    = $ARGV[1];
+my $smallRNAreadsFile     = $ARGV[2];
 my $perfectmatchReadsFile = $ARGV[3];
 
 my %readsDel;
