@@ -50,8 +50,11 @@ sub perform {
       my $mappedonlycmd = "";
       if($mappedonly){
         $bowtiesam = $sampleName . ".all.sam";
-        $mappedonlycmd = "samtools view -F 4 $bowtiesam > $samFile
-rm $bowtiesam";
+        $mappedonlycmd = "
+if [ -s $bowtiesam ]; then
+  fisamtools view -F 4 $bowtiesam > $samFile
+  rm $bowtiesam
+fi";
       }
       
       my $bamFile     = $sampleName . ".bam";
