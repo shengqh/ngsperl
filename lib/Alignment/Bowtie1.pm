@@ -62,7 +62,9 @@ rm $bowtiesam";
       my $bowtie1_aln_command;
       if ( $sampleFiles[0] =~ /.gz$/ ) {
         if ( scalar(@sampleFiles) == 1 ) {
-          $bowtie1_aln_command = "zcat $sampleFiles[0] | bowtie $option -S $tag $bowtie1_index - $bowtiesam";
+          $bowtie1_aln_command = "zcat $sampleFiles[0] | bowtie $option -S $tag $bowtie1_index - $bowtiesam
+$mappedonlycmd
+";
         }
         else {
           my $f1 = $sampleFiles[0];
