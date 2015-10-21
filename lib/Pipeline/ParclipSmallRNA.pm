@@ -120,6 +120,91 @@ sub getParclipSmallRNAConfig {
   push @summary, ( 'gsnap_smallRNA_t2c_summary', "gsnap_smallRNA_table", "gsnap_smallRNA_category" );
 
   $config = merge( $config, $gsnap );
+
+  if ( defined $def->{search_3utr} && $def->{search_3utr} ) {
+    ( defined $def->{utr3_db} ) or die "utr3_db should be defined with search_3utr for parclip data analysis.";
+    ( -e $def->{utr3_db} ) or die "utr3_db defined but not exists : " . $def->{utr3_db};
+
+    my $unmappedreads = {
+
+      #extract unmapped reads
+      unmappedReads => {
+        class       => "CQS::Perl",
+        perform     => 1,
+        target_dir  => $def->{target_dir} . "/unmappedReads",
+        perlFile    => "unmappedReadsToFastq.pl",
+        source_ref  => [ "identical", ".fastq.gz\$" ],
+        source2_ref => [ "gsnap_smallRNA_count", ".mapped.xml" ],
+        output_ext  => "_clipped_identical.unmapped.fastq.gz",
+        sh_direct   => 1,
+        pbs         => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      },
+
+      #1 mismatch search
+      unmappedReads_bowtie1_genome_1mm => {
+        class         => "Bowtie1",
+        perform       => 1,
+        target_dir    => $def->{target_dir} . "/unmappedReads_bowtie1_genome_1mm",
+        option        => $def->{bowtie1_option_1mm},
+        source_ref    => [ "unmappedReads", ".fastq.gz\$" ],
+        bowtie1_index => $def->{bowtie1_index},
+        samonly       => 0,
+        sh_direct     => 1,
+        cluster       => $cluster,
+        pbs           => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=" . $def->{max_thread},
+          "walltime" => "72",
+          "mem"      => "40gb"
+        },
+      },
+      unmappedReads_bowtie1_genome_1mm_3utr_count => {
+        class           => "CQS::SmallRNACount",
+        perform         => 1,
+        target_dir      => $def->{target_dir} . "/unmappedReads_bowtie1_genome_1mm_3utr_count",
+        option          => "-m 0",
+        source_ref      => [ "unmappedReads_bowtie1_genome_1mm", ".bam\$" ],
+        fastq_files_ref => [ "unmappedReads", "fastq.gz\$" ],
+        seqcount_ref    => [ "unmappedReads", ".dupcount\$" ],
+        cqs_tools       => $def->{cqstools},
+        coordinate_file => $def->{utr3_db},
+        sh_direct       => 1,
+        pbs             => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "72",
+          "mem"      => "20gb"
+        },
+      },
+
+      #      unmappedReads_bowtie1_genome_1mm_3utr_count_target => {
+      #        class        => "CQS::ParclipMirnaTarget",
+      #        perform      => 1,
+      #        target_dir   => $def->{target_dir} . "/unmappedReads_bowtie1_genome_1mm_3utr_count_target",
+      #        option       => "",
+      #        source_ref   => [ "t2c", ".xml\$" ],
+      #        target_ref   => [ "utr3_count", ".xml\$" ],
+      #        fasta_file   => $def->{fasta_file},
+      #        refgene_file => $def->{refgene_file},
+      #        cqs_tools    => $def->{cqstools},
+      #        sh_direct    => 1,
+      #        pbs          => {
+      #          "email"    => $def->{email},
+      #          "nodes"    => "1:ppn=1",
+      #          "walltime" => "72",
+      #          "mem"      => "20gb"
+      #        },
+      #      },
+    };
+
+    push( @individual, ( 'unmappedReads', 'unmappedReads_bowtie1_genome_1mm', 'unmappedReads_bowtie1_genome_1mm_3utr_count' ) );
+    $config = merge( $config, $unmappedreads );
+  }
   $config->{sequencetask} = {
     class      => 'CQS::SequenceTask',
     perform    => 1,
