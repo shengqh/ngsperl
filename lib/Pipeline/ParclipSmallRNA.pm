@@ -67,7 +67,7 @@ sub getParclipSmallRNAConfig {
     gsnap_smallRNA_t2c => {
       class      => "CQS::ParclipT2CFinder",
       perform    => 1,
-      target_dir => $def->{target_dir} . "/t2c_finder",
+      target_dir => $def->{target_dir} . "/gsnap_smallRNA_t2c",
       option     => "-p 0.05 -e 0.013",
       source_ref => [ "gsnap_smallRNA_count", ".mapped.xml\$" ],
       cqs_tools  => $def->{cqstools},
@@ -82,7 +82,7 @@ sub getParclipSmallRNAConfig {
     gsnap_smallRNA_t2c_summary => {
       class      => 'SmallRNA::T2CSummary',
       perform    => 1,
-      target_dir => $def->{target_dir} . '/gsnap_smallRNA_t2c',
+      target_dir => $def->{target_dir} . '/gsnap_smallRNA_t2c_summary',
       option     => '',
       source_ref => [ 'gsnap_smallRNA_count', '.mapped.xml$' ],
       cqs_tools  => $def->{cqstools},
