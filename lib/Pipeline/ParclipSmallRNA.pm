@@ -82,7 +82,7 @@ sub getParclipSmallRNAConfig {
     gsnap_smallRNA_t2c_summary => {
       class      => 'SmallRNA::T2CSummary',
       perform    => 1,
-      target_dir => $def->{target_dir} . '/gsnap_smallRNA_t2c_summary',
+      target_dir => $def->{target_dir} . '/gsnap_smallRNA_t2c_table',
       option     => '',
       source_ref => [ 'gsnap_smallRNA_count', '.mapped.xml$' ],
       cqs_tools  => $def->{cqstools},
