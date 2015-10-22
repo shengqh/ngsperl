@@ -64,7 +64,7 @@ fi
 
 echo ParclipT2CFinder=`date` 
 
-mono-sgen $cqsFile parclip_t2c $option -i $xmlFile -o $t2cFile
+mono $cqsFile parclip_t2c $option -i $xmlFile -o $t2cFile
 
 echo finished=`date`
 

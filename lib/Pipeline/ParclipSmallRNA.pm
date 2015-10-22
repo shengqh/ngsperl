@@ -64,6 +64,21 @@ sub getParclipSmallRNAConfig {
         'nodes'    => '1:ppn=1'
       },
     },
+    gsnap_smallRNA_t2c => {
+      class      => "CQS::ParclipT2CFinder",
+      perform    => 1,
+      target_dir => $def->{target_dir} . "/t2c_finder",
+      option     => "-p 0.05 -e 0.013",
+      source_ref => [ "gsnap_smallRNA_count", ".mapped.xml\$" ],
+      cqs_tools  => $def->{cqstools},
+      sh_direct  => 1,
+      pbs        => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "72",
+        "mem"      => "20gb"
+      },
+    },
     gsnap_smallRNA_t2c_summary => {
       class      => 'SmallRNA::T2CSummary',
       perform    => 1,
