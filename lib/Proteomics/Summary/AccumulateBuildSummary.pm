@@ -43,7 +43,7 @@ sub perform {
       foreach my $sampleName (@sampleNames) {
         push( @samples, @{ $rawFiles{$sampleName} } );
       }
-      $rawFiles{$dsName} = \@samples;
+      $datasets{$dsName} = \@samples;
     }
   }
   else {
