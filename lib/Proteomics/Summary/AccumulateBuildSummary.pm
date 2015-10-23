@@ -34,6 +34,21 @@ sub perform {
   my $proteomicstools = get_param_file( $config->{$section}{proteomicstools}, "proteomicstools", 1 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %datasets;
+  if ( has_raw_files( $config, $section, "datasets" ) ) {
+    my %dss = %{ get_raw_files( $config, $section, "datasets" ) };
+    foreach my $dsName ( sort keys %dss ) {
+      my @sampleNames = @{ $dss{$dsName} };
+      my @samples     = ();
+      foreach my $sampleName (@sampleNames) {
+        push( @samples, @{ $rawFiles{$sampleName} } );
+      }
+      $rawFiles{$dsName} = \@samples;
+    }
+  }
+  else {
+    %datasets = %rawFiles;
+  }
 
   my $bin_size = get_option( $config, $section, "bin_size", 10 );
   my $bins     = $config->{$section}{"bins"};
@@ -73,7 +88,7 @@ sub perform {
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
 
-  my @sampleNames     = sort keys %rawFiles;
+  my @sampleNames     = sort keys %datasets;
   my $sampleNameCount = scalar(@sampleNames);
   my $numlen          = length($sampleNameCount);
 
@@ -110,7 +125,7 @@ sub perform {
         print OUT $dsline . "\n";
       }
       print OUT "      <PathNames>\n";
-      my @sampleFiles = @{ $rawFiles{$sampleName} };
+      my @sampleFiles = @{ $datasets{$sampleName} };
       for my $sampleFile (@sampleFiles) {
         print OUT "        <PathName>$sampleFile</PathName>\n";
       }
