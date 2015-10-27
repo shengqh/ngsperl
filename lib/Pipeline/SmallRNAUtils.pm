@@ -308,6 +308,37 @@ sub getPrepareConfig {
     };
     push @individual, ("remove_sequences");
     $source_ref = [ "remove_sequences", ".fastq.gz" ];
+    
+    $config->{"fastqc_post_remove"} = {
+        class      => "QC::FastQC",
+        perform    => 1,
+        target_dir => $def->{target_dir} . "/fastqc_post_remove",
+        option     => "",
+        source_ref => $source_ref,
+        cluster    => $cluster,
+        pbs        => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "2",
+          "mem"      => "10gb"
+        },
+      };
+      $config->{"fastqc_post_remove_summary"} = {
+        class      => "QC::FastQCSummary",
+        perform    => 1,
+        target_dir => $def->{target_dir} . "/fastqc_post_remove",
+        cqstools   => $def->{cqstools},
+        option     => "",
+        cluster    => $cluster,
+        pbs        => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "2",
+          "mem"      => "10gb"
+        },
+      };
+    push @individual, ( "fastqc_post_remove");
+    push @summary, ( "fastqc_post_remove_summary" );
   }
 
   my $preparation = {
