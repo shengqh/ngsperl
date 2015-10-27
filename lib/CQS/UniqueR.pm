@@ -46,7 +46,11 @@ sub perform {
 	if ( has_raw_files( $config, $section, "parameterSampleFile1" ) ) {
 		my %temp = %{ get_raw_files( $config, $section, "parameterSampleFile1" ) };
 		open( LIST, ">$resultDir/fileList1.txt" ) or die "Cannot create fileList1.txt";
-		print LIST  ${$temp{$_}}[0]."\t$_\n" for keys %temp;
+		foreach my $sampleName (keys %temp) {
+			foreach my $subSampleFile (@{$temp{$sampleName}}) {
+				print LIST  $subSampleFile."\t$sampleName\n";
+			}
+		}
 		$parameterSampleFiles1="fileList1.txt";
 		close(LIST);
 	}
@@ -54,7 +58,11 @@ sub perform {
 	if ( has_raw_files( $config, $section, "parameterSampleFile2" ) ) {
 		my %temp = %{ get_raw_files( $config, $section, "parameterSampleFile2" ) };
 		open( LIST, ">$resultDir/fileList2.txt" ) or die "Cannot create fileList2.txt";
-        print LIST  ${$temp{$_}}[0]."\t$_\n" for keys %temp;
+        foreach my $sampleName (keys %temp) {
+            foreach my $subSampleFile (@{$temp{$sampleName}}) {
+                print LIST  $subSampleFile."\t$sampleName\n";
+            }
+        }
         $parameterSampleFiles2="fileList2.txt";
         close(LIST);
 	}
@@ -62,7 +70,11 @@ sub perform {
 	if ( has_raw_files( $config, $section, "parameterSampleFile3" ) ) {
 		my %temp = %{ get_raw_files( $config, $section, "parameterSampleFile3" ) };
         open( LIST, ">$resultDir/fileList3.txt" ) or die "Cannot create fileList3.txt";
-        print LIST  ${$temp{$_}}[0]."\t$_\n" for keys %temp;
+        foreach my $sampleName (keys %temp) {
+            foreach my $subSampleFile (@{$temp{$sampleName}}) {
+                print LIST  $subSampleFile."\t$sampleName\n";
+            }
+        }
         $parameterSampleFiles3="fileList3.txt";
         close(LIST);
 	}
