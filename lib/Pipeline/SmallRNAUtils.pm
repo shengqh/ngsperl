@@ -347,9 +347,9 @@ sub getPrepareConfig {
 				target_dir         => $def->{target_dir} . "/fastqc_post_remove",
 				rtemplate          => "countInFastQcVis.R",
 				output_file        => ".countInFastQcVis.Result",
-				parameterFile1_ref => [ "fastqc_pre_trim_summary", ".reads.tsv\$" ],
-				parameterFile2_ref => [ "fastqc_post_trim_summary", ".reads.tsv\$" ],
-				parameterFile3_ref => [ "fastqc_post_remove_summary", ".reads.tsv\$" ],
+				parameterFile1_ref => [ "fastqc_pre_trim_summary", ".FastQC.reads.tsv\$" ],
+				parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.reads.tsv\$" ],
+				parameterFile3_ref => [ "fastqc_post_remove_summary", ".FastQC.reads.tsv\$" ],
 				sh_direct          => 1,
 				pbs                => {
 					"email"    => $def->{email},
