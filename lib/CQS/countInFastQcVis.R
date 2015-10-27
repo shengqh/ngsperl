@@ -15,8 +15,8 @@ count1<-read.delim(countInFastQcPreTrim,header=T)
 count2<-read.delim(countInFastQcPostTrim,header=T)
 count3<-read.delim(countInFastQcPostRemove,header=T)
 
-count1[,2]<-count1[,2]-count2[,2]
-count2[,2]<-count2[,2]-count3[,2]
+count1$Reads<-count1$Reads-count2$Reads
+count2$Reads<-count2$Reads-count3$Reads
 
 count1$Label="Removed by Trim"
 count2$Label="Removed by Removing Sequence"
