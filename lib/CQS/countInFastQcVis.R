@@ -1,7 +1,7 @@
 resultFile<-commandArgs()[7]
 countInFastQcPreTrim<-commandArgs()[8]
 countInFastQcPostTrim<-commandArgs()[9]
-countInFastQcPostRemove<-commandArgs()[9]
+countInFastQcPostRemove<-commandArgs()[10]
 
 library(ggplot2)
 library(reshape)
