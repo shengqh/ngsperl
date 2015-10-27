@@ -105,7 +105,7 @@ $path_file
 
 cd $resultDir
 
-R --vanilla --slave -f $rfile --args $output_file $option $parameterSampleFiles1 $parameterSampleFiles2 $parameterSampleFiles3 $parameterFile1 $parameterFile2 $parameterFile3
+R --vanilla --slave -f $rfile --args $task_name$output_file $option $parameterSampleFiles1 $parameterSampleFiles2 $parameterSampleFiles3 $parameterFile1 $parameterFile2 $parameterFile3
 
 echo finished=`date`
 ";
@@ -123,7 +123,7 @@ sub result {
 	my $result      = {};
 	my @resultFiles = ();
 
-	push( @resultFiles, "${resultDir}/${output_file}" );
+	push( @resultFiles, "${resultDir}/${task_name}${output_file}" );
 
 	$result->{$task_name} = filter_array( \@resultFiles, $pattern );
 	return $result;
