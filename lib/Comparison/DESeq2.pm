@@ -191,12 +191,14 @@ sub result {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $comparisons = get_raw_files( $config, $section );
-
+  my $minMedianInGroup = get_option( $config, $section, "min_median_read", 0 );
+  
   my $result = {};
   for my $comparisonName ( sort keys %{$comparisons} ) {
     my @resultFiles = ();
     push( @resultFiles, $resultDir . "/${comparisonName}.csv" );
     push( @resultFiles, $resultDir . "/${comparisonName}.png" );
+    push( @resultFiles, $resultDir . "/${comparisonName}_min/${minMedianInGroup}_DESeq2_sig.csv" );
     $result->{$comparisonName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;

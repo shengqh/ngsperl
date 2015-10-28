@@ -206,7 +206,7 @@ sub getSmallRNAConfig {
     push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_category", "bowtie1_miRbase_pm_table" );
     $config = merge( $config, $count );
   }
-
+  
   if ( defined $def->{search_unmapped_reads}
     && $def->{search_unmapped_reads} )
   {
@@ -641,6 +641,24 @@ sub getSmallRNAConfig {
           "mem"      => "10gb"
         },
       },
+      
+      	tRNAPositionVis => {
+        class          => "CQS::UniqueR",
+        perform        => 1,
+        target_dir     => $def->{target_dir} . "/tRNA_PositionVis",
+        rtemplate      => "tRNAPositionVis.R",
+        output_file    => ".tRNAPositionVis",
+        parameterSampleFile1_ref => "tRNAPositionfiles",
+        parameterSampleFile2_ref => "groups",
+        parameterSampleFile3_ref => [ "tRNA_deseq2", "_DESeq2_sig.csv\$" ],
+        sh_direct      => 1,
+        pbs            => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "1",
+            "mem"      => "10gb"
+        },
+    },
     };
 
     push @summary, ( "top100Reads_deseq2", "tRNA_deseq2", "miRNA_deseq2", "otherSmallRNA_deseq2" );
