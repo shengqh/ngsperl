@@ -199,7 +199,7 @@ sub result {
     push( @resultFiles, $resultDir . "/${comparisonName}.csv" );
     push( @resultFiles, $resultDir . "/${comparisonName}.png" );
 #    push( @resultFiles, $resultDir . "/${comparisonName}_min${minMedianInGroup}_DESeq2_sig.csv" );
-    push( @resultFiles, $resultDir . "/${comparisonName}_min_DESeq2_sig.csv" );
+#    push( @resultFiles, $resultDir . "/${comparisonName}_min_DESeq2_sig.csv" );
     $result->{$comparisonName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
