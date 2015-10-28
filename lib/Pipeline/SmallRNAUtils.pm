@@ -364,7 +364,7 @@ sub getPrepareConfig {
 
 	my $preparation = {
 		identical => {
-			class      => "FastqIdentical",
+			class      => "CQS::FastqIdentical",
 			perform    => 1,
 			target_dir => $def->{target_dir} . "/identical",
 			option     => "",
