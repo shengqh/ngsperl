@@ -47,6 +47,11 @@ $path_file
 
 cd $resultDir
 
+if [ -s ${task_name}.FastQC.summary.tsv ]; then
+  echo job has already been done. if you want to do again, delete ${resultDir}/${task_name}.FastQC.summary.tsv and submit job again.
+  exit 0;
+fi
+
 qcimg2pdf.sh -o $task_name
 
 mono $cqstools fastqc_summary -i $fastqc_dir -o ${task_name}.FastQC.summary.tsv 
