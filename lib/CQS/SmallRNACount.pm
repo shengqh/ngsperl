@@ -142,7 +142,9 @@ sub result {
 
     my @resultFiles = ();
     my $countFile   = "${curDir}/${fileName}.count";
+    my $tRNAPositionFile   = "${curDir}/${fileName}.tRNA.position";
     push( @resultFiles, $countFile );
+    push( @resultFiles, $tRNAPositionFile );
     push( @resultFiles, "${countFile}.mapped.xml" );
     push( @resultFiles, "${curDir}/${fileName}.info" );
 
