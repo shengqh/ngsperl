@@ -41,6 +41,7 @@ sub getSmallRNAConfig {
       bowtie1_index => $def->{bowtie1_index},
       samonly       => 0,
       sh_direct     => 1,
+      mappedonly    => 1,
       cluster       => $cluster,
       pbs           => {
         "email"    => $def->{email},
@@ -60,6 +61,7 @@ sub getSmallRNAConfig {
       bowtie1_index => $def->{bowtie1_index},
       samonly       => 0,
       sh_direct     => 0,
+      mappedonly    => 1,
       cluster       => $cluster,
       pbs           => {
         "email"    => $def->{email},
@@ -454,23 +456,23 @@ sub getSmallRNAConfig {
         class      => 'CQS::CQSChromosomeTable',
         prefix     => 'bacteria_group1_pm_'
       },
-    bowtie1_bacteria_group1_pm_table_vis => {
-        class       => "CQS::UniqueR",
-        perform     => 1,
-        target_dir  => $def->{target_dir} . "/bowtie1_bacteria_group1_pm_table",
-        rtemplate   => "group1MappingVis.R",
-        output_file => ".group1Mapping.Result",
-        parameterFile1_ref =>[ "bowtie1_bacteria_group1_pm_table", ".count\$" ],
-        parameterFile2=>$def->{bacteria_group1_log},
-        sh_direct => 1,
-        pbs       => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "1",
-            "mem"      => "10gb"
+      bowtie1_bacteria_group1_pm_table_vis => {
+        class              => "CQS::UniqueR",
+        perform            => 1,
+        target_dir         => $def->{target_dir} . "/bowtie1_bacteria_group1_pm_table",
+        rtemplate          => "group1MappingVis.R",
+        output_file        => ".group1Mapping.Result",
+        parameterFile1_ref => [ "bowtie1_bacteria_group1_pm_table", ".count\$" ],
+        parameterFile2     => $def->{bacteria_group1_log},
+        sh_direct          => 1,
+        pbs                => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
         },
-    },
-    
+      },
+
       #unmapped reads to group2 bacterial
       bowtie1_bacteria_group2_pm => {
         pbs => {
@@ -526,23 +528,23 @@ sub getSmallRNAConfig {
         class      => 'CQS::CQSChromosomeTable',
         prefix     => 'bacteria_group2_pm_'
       },
-      
-    bowtie1_bacteria_group2_pm_table_vis => {
-        class       => "CQS::UniqueR",
-        perform     => 1,
-        target_dir  => $def->{target_dir} . "/bowtie1_bacteria_group2_pm_table",
-        rtemplate   => "group2MappingVis.R",
-        output_file => ".group2Mapping.Result",
-        parameterFile1_ref =>[ "bowtie1_bacteria_group2_pm_table", ".count\$" ],
-        parameterFile2=>$def->{bacteria_group2_log},
-        sh_direct => 1,
-        pbs       => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "1",
-            "mem"      => "10gb"
+
+      bowtie1_bacteria_group2_pm_table_vis => {
+        class              => "CQS::UniqueR",
+        perform            => 1,
+        target_dir         => $def->{target_dir} . "/bowtie1_bacteria_group2_pm_table",
+        rtemplate          => "group2MappingVis.R",
+        output_file        => ".group2Mapping.Result",
+        parameterFile1_ref => [ "bowtie1_bacteria_group2_pm_table", ".count\$" ],
+        parameterFile2     => $def->{bacteria_group2_log},
+        sh_direct          => 1,
+        pbs                => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
         },
-    },
+      },
     };
 
     $config = merge( $config, $unmappedreads );
@@ -553,8 +555,11 @@ sub getSmallRNAConfig {
       "bowtie1_rRNAL_pm_count",           "bowtie1_rRNAS_pm",           "bowtie1_rRNAS_pm_count", "bowtie1_bacteria_group1_pm",
       "bowtie1_bacteria_group1_pm_count", "bowtie1_bacteria_group2_pm", "bowtie1_bacteria_group2_pm_count"
       );
-    push @summary, ( "bowtie1_tRNA_pm_table", "bowtie1_rRNAL_pm_table", "bowtie1_rRNAS_pm_table", "bowtie1_bacteria_group1_pm_table","bowtie1_bacteria_group1_pm_table_vis", 
-    "bowtie1_bacteria_group2_pm_table","bowtie1_bacteria_group2_pm_table_vis" );
+    push @summary,
+      (
+      "bowtie1_tRNA_pm_table",                "bowtie1_rRNAL_pm_table",           "bowtie1_rRNAS_pm_table", "bowtie1_bacteria_group1_pm_table",
+      "bowtie1_bacteria_group1_pm_table_vis", "bowtie1_bacteria_group2_pm_table", "bowtie1_bacteria_group2_pm_table_vis"
+      );
   }
 
   if ( defined $def->{pairs} ) {
