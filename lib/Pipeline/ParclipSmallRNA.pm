@@ -128,11 +128,10 @@ sub getParclipSmallRNAConfig {
         'nodes'    => '1:ppn=1'
       },
     },
-
   };
 
-  push @individual, ( 'gsnap', 'gsnap_smallRNA_count' );
-  push @summary, ( 'gsnap_smallRNA_t2c_summary', "gsnap_smallRNA_table", "gsnap_smallRNA_category" );
+  push @individual, ( 'gsnap', 'gsnap_smallRNA_count', 'gsnap_smallRNA_t2c' );
+  push @summary, ( 'gsnap_smallRNA_table', 'gsnap_smallRNA_category', 'gsnap_smallRNA_t2c_summary' );
 
   $config = merge( $config, $gsnap );
 
