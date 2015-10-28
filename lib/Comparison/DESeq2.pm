@@ -11,6 +11,7 @@ use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::UniqueTask;
+use CQS::StringUtils;
 
 our @ISA = qw(CQS::UniqueTask);
 
@@ -198,8 +199,7 @@ sub result {
     my @resultFiles = ();
     push( @resultFiles, $resultDir . "/${comparisonName}.csv" );
     push( @resultFiles, $resultDir . "/${comparisonName}.png" );
-#    push( @resultFiles, $resultDir . "/${comparisonName}_min${minMedianInGroup}_DESeq2_sig.csv" );
-#    push( @resultFiles, $resultDir . "/${comparisonName}_min_DESeq2_sig.csv" );
+    push( @resultFiles, $resultDir . "/${comparisonName}_min${minMedianInGroup}_DESeq2_sig.csv" );
     $result->{$comparisonName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
