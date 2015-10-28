@@ -93,7 +93,7 @@ tRNASigNum<-10
 if (is.null(tRNASigFileList)) {
 	tRNASigNames<-unique(positionRawAllSamplesMeanSample$Feature)[1:tRNASigNum]
 } else {
-	tRNASigFiles<-read.delim(tRNASigFileList,as.is=T,header=F,row.names=1)
+	tRNASigFiles<-read.delim(tRNASigFileList,as.is=T,header=F,row.names=2)
 	tRNASigNames<-NULL
 	for (tRNASigFileEach in tRNASigFiles[,1]) {
 		tRNASig<-read.csv(tRNASigFileEach,header=T,row.names=1)
