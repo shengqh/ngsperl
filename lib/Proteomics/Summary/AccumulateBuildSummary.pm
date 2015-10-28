@@ -64,6 +64,7 @@ sub perform {
   my @dataset   = ();
   my $indataset = 0;
   for ( my $index = 0 ; $index < scalar(@lines) ; $index++ ) {
+    $lines[$index] =~ s/\r//g;
     if ( $lines[$index] =~ "<Dataset>" ) {
       $indataset = 1;
     }
