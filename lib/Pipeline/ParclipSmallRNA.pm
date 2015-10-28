@@ -64,37 +64,6 @@ sub getParclipSmallRNAConfig {
         'nodes'    => '1:ppn=1'
       },
     },
-    gsnap_smallRNA_t2c => {
-      class      => "CQS::ParclipT2CFinder",
-      perform    => 1,
-      target_dir => $def->{target_dir} . "/gsnap_smallRNA_t2c",
-      option     => "-p 0.05 -e 0.013",
-      source_ref => [ "gsnap_smallRNA_count", ".mapped.xml\$" ],
-      cqs_tools  => $def->{cqstools},
-      sh_direct  => 1,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "20gb"
-      },
-    },
-    gsnap_smallRNA_t2c_summary => {
-      class      => 'SmallRNA::T2CSummary',
-      perform    => 1,
-      target_dir => $def->{target_dir} . '/gsnap_smallRNA_t2c_table',
-      option     => '',
-      source_ref => [ 'gsnap_smallRNA_count', '.mapped.xml$' ],
-      cqs_tools  => $def->{cqstools},
-      sh_direct  => 0,
-      cluster    => $cluster,
-      pbs        => {
-        'email'    => $def->{email},
-        'walltime' => '72',
-        'mem'      => '40gb',
-        'nodes'    => '1:ppn=1'
-      },
-    },
     gsnap_smallRNA_table => {
       class      => "CQS::SmallRNATable",
       perform    => 1,
@@ -126,6 +95,37 @@ sub getParclipSmallRNAConfig {
         "nodes"    => "1:ppn=1",
         "walltime" => "72",
         "mem"      => "40gb"
+      },
+    },
+    gsnap_smallRNA_t2c => {
+      class      => "CQS::ParclipT2CFinder",
+      perform    => 1,
+      target_dir => $def->{target_dir} . "/gsnap_smallRNA_t2c",
+      option     => "-p 0.05 -e 0.013",
+      source_ref => [ "gsnap_smallRNA_count", ".mapped.xml\$" ],
+      cqs_tools  => $def->{cqstools},
+      sh_direct  => 1,
+      pbs        => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "72",
+        "mem"      => "20gb"
+      },
+    },
+    gsnap_smallRNA_t2c_summary => {
+      class      => 'SmallRNA::T2CSummary',
+      perform    => 1,
+      target_dir => $def->{target_dir} . '/gsnap_smallRNA_t2c_table',
+      option     => '',
+      source_ref => [ 'gsnap_smallRNA_count', '.mapped.xml$' ],
+      cqs_tools  => $def->{cqstools},
+      sh_direct  => 0,
+      cluster    => $cluster,
+      pbs        => {
+        'email'    => $def->{email},
+        'walltime' => '72',
+        'mem'      => '40gb',
+        'nodes'    => '1:ppn=1'
       },
     },
 
@@ -198,27 +198,27 @@ sub getParclipSmallRNAConfig {
         },
       },
 
-      #      unmappedReads_bowtie1_genome_1mm_3utr_count_target => {
-      #        class        => "CQS::ParclipMirnaTarget",
-      #        perform      => 1,
-      #        target_dir   => $def->{target_dir} . "/unmappedReads_bowtie1_genome_1mm_3utr_count_target",
-      #        option       => "",
-      #        source_ref   => [ "t2c", ".xml\$" ],
-      #        target_ref   => [ "utr3_count", ".xml\$" ],
-      #        fasta_file   => $def->{fasta_file},
-      #        refgene_file => $def->{refgene_file},
-      #        cqs_tools    => $def->{cqstools},
-      #        sh_direct    => 1,
-      #        pbs          => {
-      #          "email"    => $def->{email},
-      #          "nodes"    => "1:ppn=1",
-      #          "walltime" => "72",
-      #          "mem"      => "20gb"
-      #        },
-      #      },
+      unmappedReads_bowtie1_genome_1mm_3utr_count_target => {
+        class        => "CQS::ParclipMirnaTarget",
+        perform      => 1,
+        target_dir   => $def->{target_dir} . "/unmappedReads_bowtie1_genome_1mm_3utr_count_target",
+        option       => "",
+        source_ref   => [ "gsnap_smallRNA_t2c", ".xml\$" ],
+        target_ref   => [ "unmappedReads_bowtie1_genome_1mm_3utr_count", ".xml\$" ],
+        fasta_file   => $def->{fasta_file},
+        refgene_file => $def->{refgene_file},
+        cqs_tools    => $def->{cqstools},
+        sh_direct    => 1,
+        pbs          => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "72",
+          "mem"      => "20gb"
+        },
+      },
     };
 
-    push( @individual, ( 'unmappedReads', 'unmappedReads_bowtie1_genome_1mm', 'unmappedReads_bowtie1_genome_1mm_3utr_count' ) );
+    push( @individual, ( 'unmappedReads', 'unmappedReads_bowtie1_genome_1mm', 'unmappedReads_bowtie1_genome_1mm_3utr_count', "unmappedReads_bowtie1_genome_1mm_3utr_count_target" ) );
     $config = merge( $config, $unmappedreads );
   }
   $config->{sequencetask} = {
