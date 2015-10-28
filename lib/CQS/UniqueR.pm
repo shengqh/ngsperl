@@ -106,7 +106,8 @@ sub perform {
 	my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
 	my $pbsName = basename($pbsFile);
 	my $log     = $self->logfile( $logDir, $task_name );
-
+    my $finalFile=$task_name.$output_file;
+    
 	my $log_desc = $cluster->get_log_desc($log);
 
 	open( OUT, ">$pbsFile" ) or die $!;
@@ -116,6 +117,11 @@ $log_desc
 $path_file
 
 cd $resultDir
+
+if [ -s $finalFile ]; then
+  echo job has already been done. if you want to do again, delete ${resultDir}/${finalFile} and submit job again.
+  exit 0;
+fi
 
 R --vanilla --slave -f $rfile --args $task_name$output_file $option $parameterSampleFiles1 $parameterSampleFiles2 $parameterSampleFiles3 $parameterFile1 $parameterFile2 $parameterFile3
 

@@ -108,6 +108,7 @@ sub perform {
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
+    my $finalFile=$sampleName.$output_ext;
 
     print SH "\$MYCMD ./$pbsName \n";
 
@@ -122,6 +123,12 @@ $path_file
 
 echo Perl=`date`
 cd $target_dir/result
+
+if [ -s $finalFile ]; then
+  echo job has already been done. if you want to do again, delete ${resultDir}/${finalFile} and submit job again.
+  exit 0;
+fi
+
 perl $perlFile $sampleName$output_ext $option $samples $parameterFile2 $parameterFile3 $parameterFile4 $parameterFile5
 
 echo finished=`date`
