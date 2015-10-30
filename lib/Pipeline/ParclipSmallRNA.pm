@@ -42,7 +42,7 @@ sub getParclipSmallRNAConfig {
         'email'    => $def->{email},
         'nodes'    => '1:ppn=' . $def->{max_thread},
         'walltime' => '72',
-        'mem'      => '40gb'
+        'mem'      => '80gb'
       }
     },
     gsnap_smallRNA_count => {
