@@ -49,6 +49,11 @@ sub perform {
     if ( defined $annovar_operation ) {
       $option = $option . " --annovar_operation $annovar_operation ";
     }
+
+    my $annovar_db = $config->{$section}{annovar_db};
+    if ( defined $annovar_db ) {
+      $option = $option . " --annovar_db $annovar_db ";
+    }
   }
 
   my $distance_exon_gtf = get_param_file( $config->{$section}{distance_exon_gtf}, "distance_exon_gtf", 0 );
