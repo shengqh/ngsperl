@@ -34,13 +34,17 @@ sub get_datasets {
       my @sampleNames = @{ $dss{$dsName} };
       my @samples     = ();
       foreach my $sampleName (@sampleNames) {
-        push( @samples, @{ $rawFiles{$sampleName} } );
+        if ( defined $rawFiles{$sampleName} ) {
+          push( @samples, @{ $rawFiles{$sampleName} } );
+        }
       }
-      $datasets{$dsName} = \@samples;
+      if ( scalar(@samples) > 0 ) {
+        $datasets{$dsName} = \@samples;
+      }
     }
-    
-    print "HasDatasets \n"; 
-    
+
+    print "HasDatasets \n";
+
   }
   else {
     %datasets = %rawFiles;
