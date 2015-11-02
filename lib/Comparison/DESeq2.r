@@ -145,7 +145,11 @@ while(!all(isDataNumeric[index:ncol(data)])){
   index = index + 1
 }
 
-indecies<-c(1:(index-1))
+if(index > 1){
+  indecies<-c(1:(index-1))
+}else{
+  indecies<-c()
+}
 countData<-data[,c(index:ncol(data))]
 
 countData[is.na(countData)] <- 0
