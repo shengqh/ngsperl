@@ -12,7 +12,7 @@ use CQS::FileUtils;
 use CQS::Task;
 use CQS::StringUtils;
 
-our @ISA = qw(CQS::Task);
+our @ISA = qw(CQS::AbstractBuildSummary);
 
 sub new {
   my ($class) = @_;
@@ -33,23 +33,6 @@ sub perform {
 
   my $proteomicstools = get_param_file( $config->{$section}{proteomicstools}, "proteomicstools", 1 );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
-  my %datasets;
-  if ( has_raw_files( $config, $section, "datasets" ) ) {
-    my %dss = %{ get_raw_files( $config, $section, "datasets" ) };
-    foreach my $dsName ( sort keys %dss ) {
-      my @sampleNames = @{ $dss{$dsName} };
-      my @samples     = ();
-      foreach my $sampleName (@sampleNames) {
-        push( @samples, @{ $rawFiles{$sampleName} } );
-      }
-      $datasets{$dsName} = \@samples;
-    }
-  }
-  else {
-    %datasets = %rawFiles;
-  }
-
   my $bin_size = get_option( $config, $section, "bin_size", 10 );
   my $bins     = $config->{$section}{"bins"};
   my @bins     = ();
@@ -57,33 +40,10 @@ sub perform {
     @bins = @{$bins};
   }
 
-  my $parameterFile = get_param_file( $config->{$section}{parameter_file}, "parameter_file", 1 );
-
-  my @lines = read_file( $parameterFile, chomp => 1 );
-
-  my @dataset   = ();
-  my $indataset = 0;
-  for ( my $index = 0 ; $index < scalar(@lines) ; $index++ ) {
-    $lines[$index] =~ s/\r//g;
-    if ( $lines[$index] =~ "<Dataset>" ) {
-      $indataset = 1;
-    }
-    elsif ( $lines[$index] =~ "</Dataset>" ) {
-      $indataset = 0;
-    }
-    elsif ( !$indataset ) {
-      next;
-    }
-    elsif ( $lines[$index] =~ "PathName" ) {
-      next;
-    }
-    elsif ( $lines[$index] =~ "<Name>" ) {
-      next;
-    }
-    else {
-      push( @dataset, $lines[$index] );
-    }
-  }
+  my ( $datasets, $lines, $dataset ) = get_datasets( $config, $section );
+  my %datasets = %{$datasets};
+  my @lines    = @{$lines};
+  my @dataset  = @{$dataset};
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";

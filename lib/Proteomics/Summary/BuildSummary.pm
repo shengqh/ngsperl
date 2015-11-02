@@ -12,7 +12,7 @@ use CQS::FileUtils;
 use CQS::UniqueTask;
 use CQS::StringUtils;
 
-our @ISA = qw(CQS::UniqueTask);
+our @ISA = qw(CQS::AbstractBuildSummary);
 
 sub new {
   my ($class) = @_;
@@ -33,34 +33,10 @@ sub perform {
 
   my $proteomicstools = get_param_file( $config->{$section}{proteomicstools}, "proteomicstools", 1 );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
-
-  my $parameterFile = get_param_file( $config->{$section}{parameter_file}, "parameter_file", 1 );
-
-  my @lines = read_file( $parameterFile, chomp => 1 );
-
-  my @dataset   = ();
-  my $indataset = 0;
-  for ( my $index = 0 ; $index < scalar(@lines) ; $index++ ) {
-    if ( $lines[$index] =~ "<Dataset>" ) {
-      $indataset = 1;
-    }
-    elsif ( $lines[$index] =~ "</Dataset>" ) {
-      $indataset = 0;
-    }
-    elsif ( !$indataset ) {
-      next;
-    }
-    elsif ( $lines[$index] =~ "PathName" ) {
-      next;
-    }
-    elsif ( $lines[$index] =~ "<Name>" ) {
-      next;
-    }
-    else {
-      push( @dataset, $lines[$index] );
-    }
-  }
+  my ( $datasets, $lines, $dataset ) = get_datasets( $config, $section );
+  my %datasets = %{$datasets};
+  my @lines    = @{$lines};
+  my @dataset  = @{$dataset};
 
   my $currentParamFile = $resultDir . "/" . $task_name . ".param";
   open( OUT, ">$currentParamFile" ) or die $!;
@@ -74,14 +50,14 @@ sub perform {
 
   #print @dataset;
 
-  for my $sampleName ( sort keys %rawFiles ) {
+  for my $sampleName ( sort keys %datasets ) {
     print OUT "    <Dataset>\n";
     print OUT "      <Name>$sampleName</Name>\n";
     foreach my $dsline (@dataset){
       print OUT $dsline . "\n";
     }
     print OUT "      <PathNames>\n";
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
+    my @sampleFiles = @{ $datasets{$sampleName} };
     for my $sampleFile (@sampleFiles) {
       print OUT "        <PathName>$sampleFile</PathName>\n";
     }
