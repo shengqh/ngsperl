@@ -38,6 +38,9 @@ sub get_datasets {
       }
       $datasets{$dsName} = \@samples;
     }
+    
+    print "HasDatasets \n"; 
+    
   }
   else {
     %datasets = %rawFiles;
