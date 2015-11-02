@@ -41,7 +41,7 @@ sub perform {
     @bins = @{$bins};
   }
 
-  my ( $datasets, $lines, $dataset ) = get_datasets( $config, $section );
+  my ( $datasets, $lines, $dataset ) = $self->get_datasets( $config, $section );
   my %datasets = %{$datasets};
   my @lines    = @{$lines};
   my @dataset  = @{$dataset};
