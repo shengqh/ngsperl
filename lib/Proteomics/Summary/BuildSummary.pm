@@ -12,7 +12,7 @@ use CQS::FileUtils;
 use CQS::UniqueTask;
 use CQS::StringUtils;
 
-our @ISA = qw(CQS::AbstractBuildSummary);
+our @ISA = qw(Proteomics::Summary::AbstractBuildSummary);
 
 sub new {
   my ($class) = @_;
