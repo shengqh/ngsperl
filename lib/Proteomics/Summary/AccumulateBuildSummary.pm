@@ -11,6 +11,7 @@ use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::Task;
 use CQS::StringUtils;
+use Proteomics::Summary::AbstractBuildSummary;
 
 our @ISA = qw(Proteomics::Summary::AbstractBuildSummary);
 
