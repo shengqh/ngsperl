@@ -65,6 +65,7 @@ cd $resultDir
       my $resultFile = change_extension( $sname, ".msgf.mzid" );
 
       print OUT "if [ ! -s $resultFile ]; then
+  echo processing $sampleFile
   java -Xmx$memory -jar $msgf_jar -s $sampleFile -d $database -mod $mod_file -thread $thread -o $resultFile $option
 fi
 
