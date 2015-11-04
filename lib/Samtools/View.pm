@@ -60,6 +60,7 @@ if [ -s $finalFile ]; then
 fi
 
 samtools view $option $sampleFile > $finalFile
+samtools index $finalFile
 
 exit 0;
 ";
