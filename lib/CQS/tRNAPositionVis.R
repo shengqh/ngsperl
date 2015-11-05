@@ -101,23 +101,36 @@ positionRawAllSamplesMeanSample$Feature<-gsub("tRNA:","",positionRawAllSamplesMe
 
 #significant tRNA names
 tRNASigNum<-10
+tRNASigFileName<-".significanttRNAPosition.pdf"
 if (is.null(tRNASigFileList)) {
-	tRNASigNames<-unique(positionRawAllSamplesMeanSample$Feature)[1:tRNASigNum]
+	temp<-tapply(positionRawAllSamplesMeanSample$CountPercentage,positionRawAllSamplesMeanSample$Feature,sum)
+	tRNASigNames<-names(rev(sort(temp)))[1:tRNASigNum]
+	tRNASigFileName<-".highesttRNAPosition.pdf"
 } else {
 	tRNASigFiles<-read.delim(tRNASigFileList,as.is=T,header=F,row.names=2)
 	tRNASigNames<-NULL
 	for (tRNASigFileEach in tRNASigFiles[,1]) {
 		tRNASig<-read.csv(tRNASigFileEach,header=T,row.names=1)
-		tRNASigNameEach<-row.names(tRNASig)
-		tRNASigNameEach<-sapply(strsplit(tRNASigNameEach,";"),function(x) x[1])
-		if (length(tRNASigNameEach)>as.integer(tRNASigNum/nrow(tRNASigFiles))) {tRNASigNameEach<-tRNASigNameEach[1:as.integer(tRNASigNum/nrow(tRNASigFiles))]}
-		tRNASigNames<-c(tRNASigNames,tRNASigNameEach)
+		if (nrow(tRNASig)==0) {
+			
+		} else {
+			tRNASigNameEach<-row.names(tRNASig)
+			tRNASigNameEach<-sapply(strsplit(tRNASigNameEach,";"),function(x) x[1])
+			if (length(tRNASigNameEach)>as.integer(tRNASigNum/nrow(tRNASigFiles))) {tRNASigNameEach<-tRNASigNameEach[1:as.integer(tRNASigNum/nrow(tRNASigFiles))]}
+			tRNASigNames<-c(tRNASigNames,tRNASigNameEach)
+		}
+	}
+	if (is.null(tRNASigNames)) {
+		print(paste0("No significant changed tRNA. Will plot ",tRNASigNum," tRNAs with highest reads"))
+		temp<-tapply(positionRawAllSamplesMeanSample$CountPercentage,positionRawAllSamplesMeanSample$Feature,sum)
+		tRNASigNames<-names(rev(sort(temp)))[1:tRNASigNum]
+		tRNASigFileName<-".highesttRNAPosition.pdf"
 	}
 }
 
 temp<-positionRawAllSamplesMeanSample[which(positionRawAllSamplesMeanSample$Feature %in% tRNASigNames),]
 m <- ggplot(temp, aes(x = Position,y=CountPercentage))
-pdf(paste0(resultFile,".significanttRNAPosition.pdf"),height=15,width=7)
+pdf(paste0(resultFile,tRNASigFileName),height=15,width=7)
 m + geom_bar(stat="identity")+facet_grid(Feature ~ Group)+
 		ylab("Read fraction (read counts/total reads)")+
 		theme(strip.text.y = element_text(size = 4))
