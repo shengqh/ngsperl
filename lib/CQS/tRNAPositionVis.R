@@ -36,12 +36,15 @@ positionRawAllSamples<-NULL
 for (i in 1:nrow(sampleTotRNAPositionFile)) {
 
 	positionRaw<-read.delim(sampleTotRNAPositionFile[i,1],header=T,as.is=T)
+	bamInfoFile<-gsub(".tRNA.position$",".info",sampleTotRNAPositionFile[i,1])
+	bamInfo<-read.delim(bamInfoFile,header=F,as.is=T,row.names=1)
+	totalReads<-as.integer(bamInfo["MappedReads",1]) #normlize by total mapped reads
 	
 	positionRaw$Group<-sampleToGroup[row.names(sampleTotRNAPositionFile)[i],1]
 	positionRaw$Sample<-row.names(sampleTotRNAPositionFile)[i]
 	
 	positionRaw$absCount<-positionRaw$Count*positionRaw$Percentage
-	positionRaw$CountPercentage<-positionRaw$absCount/sum(positionRaw$absCount)
+	positionRaw$CountPercentage<-positionRaw$absCount/totalReads  #normlize by total mapped reads
 	
 	temp<-grep("Undet|Pseudo",positionRaw$Feature)
 	if (length(temp)>0) {
