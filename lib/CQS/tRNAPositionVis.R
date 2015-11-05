@@ -69,9 +69,8 @@ for (groupNameEach in unique(positionRawAllSamples$Group)) {
 	positionRawAllSamplestRNAMeanSample<-rbind(positionRawAllSamplestRNAMeanSample,temp1)
 }
 write.csv(positionRawAllSamplestRNAMeanSample,paste0(resultFile,".alltRNAPosition.csv"))
-temp1<-which(nchar(positionRawAllSamplestRNAMeanSample$tRNA)==3)
-temp2<-grep("\\d",positionRawAllSamplestRNAMeanSample$tRNA,invert=T)
-positionRawAllSamplestRNAMeanSample3<-positionRawAllSamplestRNAMeanSample[intersect(temp1,temp2),]
+temp<-grep("^[A-Z][a-z][a-z]",positionRawAllSamplestRNAMeanSample$tRNA)
+positionRawAllSamplestRNAMeanSample3<-positionRawAllSamplestRNAMeanSample[temp,]
 write.csv(positionRawAllSamplestRNAMeanSample3,paste0(resultFile,".all3tRNAPosition.csv"))
 
 m <- ggplot(positionRawAllSamplestRNAMeanSample3, aes(x = Position,y=CountPercentage,fill=tRNA))
