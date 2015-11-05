@@ -68,8 +68,13 @@ for (groupNameEach in unique(positionRawAllSamples$Group)) {
 			summaryFun=mean)
 	positionRawAllSamplestRNAMeanSample<-rbind(positionRawAllSamplestRNAMeanSample,temp1)
 }
+write.csv(positionRawAllSamplestRNAMeanSample,paste0(resultFile,".alltRNAPosition.csv"))
+temp1<-which(nchar(positionRawAllSamplestRNAMeanSample$tRNA)==3)
+temp2<-grep("\\d",positionRawAllSamplestRNAMeanSample$tRNA,invert=T)
+positionRawAllSamplestRNAMeanSample3<-positionRawAllSamplestRNAMeanSample[intersect(temp1,temp2),]
+write.csv(positionRawAllSamplestRNAMeanSample3,paste0(resultFile,".all3tRNAPosition.csv"))
 
-m <- ggplot(positionRawAllSamplestRNAMeanSample, aes(x = Position,y=CountPercentage,fill=tRNA))
+m <- ggplot(positionRawAllSamplestRNAMeanSample3, aes(x = Position,y=CountPercentage,fill=tRNA))
 pdf(paste0(resultFile,".alltRNAPosition.pdf"),width=6,height=6)
 m + geom_bar(stat="identity")+facet_grid(Group ~ .) +
 		theme(legend.key.size = unit(0.4, "cm"))+
