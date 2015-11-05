@@ -198,7 +198,7 @@ sub getParclipSmallRNAConfig {
       },
 
       unmappedReads_bowtie1_genome_1mm_3utr_count_target => {
-        class        => "CQS::ParclipMirnaTarget",
+        class        => "CQS::ParclipTarget",
         perform      => 1,
         target_dir   => $def->{target_dir} . "/unmappedReads_bowtie1_genome_1mm_3utr_count_target",
         option       => "",
