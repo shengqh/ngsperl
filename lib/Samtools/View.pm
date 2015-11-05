@@ -31,6 +31,8 @@ sub perform {
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
+  
+  my $extension = get_option($config, $section, "extension", ".filtered.bam" );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -42,7 +44,7 @@ sub perform {
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
 
-    my $finalFile = "${sampleName}.filtered.bam";
+    my $finalFile = "${sampleName}${extension}";
 
     my $log_desc = $cluster->get_log_desc($log);
 
