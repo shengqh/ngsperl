@@ -288,6 +288,21 @@ sub getSmallRNAConfig {
 					'nodes'    => '1:ppn=1'
 				},
 			},
+			bowtie1_tRNA_pm_table_vis => {
+				class              => "CQS::UniqueR",
+				perform            => 1,
+				target_dir         => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
+				rtemplate          => "BacTrnaMappingVis.R",
+				output_file        => "BacTrnaVis.",
+				parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".count\$" ],
+				sh_direct          => 1,
+				pbs                => {
+					"email"    => $def->{email},
+					"nodes"    => "1:ppn=1",
+					"walltime" => "1",
+					"mem"      => "10gb"
+				},
+			},
 
 			#unmapped reads to rRNAL
 			bowtie1_rRNAL_pm => {
