@@ -46,15 +46,23 @@ library(cn.mops)
 resfile<-paste0(prefix, "_resCNMOPS_exomecn.mops.Rdata")
 if(hasbed){
 	segfile<-paste0(prefix, "_x_getSegmentReadCountsFromBAM.Rdata")
-	segments <- read.table(bedfile, sep="\t", as.is=TRUE, header=T)
-	gr <- GRanges(segments[,1], IRanges(segments[,2],segments[,3]), gene=segments[,4])
-	x <- getSegmentReadCountsFromBAM(BAMFiles, GR=gr, sampleNames=SampleNames, mode=pairmode, parallel=parallel)
-	save(x, file=segfile)
+	if(file.exists(segfile)){
+	  load(segfile)
+	}else{
+	  segments <- read.table(bedfile, sep="\t", as.is=TRUE, header=T)
+	  gr <- GRanges(segments[,1], IRanges(segments[,2],segments[,3]), gene=segments[,4])
+	  x <- getSegmentReadCountsFromBAM(BAMFiles, GR=gr, sampleNames=SampleNames, mode=pairmode, parallel=parallel)
+	  save(x, file=segfile)
+	}
 	resCNMOPS <- exomecn.mops(x)
 }else{
 	countfile<-paste0(prefix, "_x_getReadCountsFromBAM.Rdata")
-	x <- getReadCountsFromBAM(BAMFiles, sampleNames=SampleNames, mode=pairmode) 
-	save(x, file=countfile) 
+	if(file.exists(countfile)){
+	  load(countfile)
+	}else{ 
+	  x <- getReadCountsFromBAM(BAMFiles, sampleNames=SampleNames, mode=pairmode) 
+	  save(x, file=countfile)
+	} 
 	resCNMOPS <- cn.mops(x) 
 }
 save(resCNMOPS, file=resfile)
