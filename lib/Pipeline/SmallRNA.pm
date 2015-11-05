@@ -653,11 +653,11 @@ sub getSmallRNAConfig {
 		$config = merge( $config, $comparison );
 	}
 
-	if ( defined $def->{pairs} or defined $def->{trna_vis_group} ) {
+	if ( defined $def->{pairs} or defined $def->{tRNA_vis_group} ) {
 		my $trna_vis_groups;
 		my $trna_sig_result;
-		if ( defined $def->{trna_vis_group} ) {
-			$trna_vis_groups = $def->{trna_vis_group};
+		if ( defined $def->{tRNA_vis_group} ) {
+			$trna_vis_groups = $def->{tRNA_vis_group};
 		}
 		else {
 			$trna_vis_groups = $def->{groups};
