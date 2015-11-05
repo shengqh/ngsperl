@@ -293,7 +293,7 @@ sub getSmallRNAConfig {
 				perform            => 1,
 				target_dir         => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
 				rtemplate          => "BacTrnaMappingVis.R",
-				output_file        => "BacTrnaVis.",
+				output_file        => "",
 				parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".count\$" ],
 				sh_direct          => 1,
 				pbs                => {
@@ -572,7 +572,7 @@ sub getSmallRNAConfig {
 		  );
 		push @summary,
 		  (
-			"bowtie1_tRNA_pm_table",                "bowtie1_rRNAL_pm_table",           "bowtie1_rRNAS_pm_table", "bowtie1_bacteria_group1_pm_table",
+			"bowtie1_tRNA_pm_table",                "bowtie1_tRNA_pm_table_vis","bowtie1_rRNAL_pm_table",           "bowtie1_rRNAS_pm_table", "bowtie1_bacteria_group1_pm_table",
 			"bowtie1_bacteria_group1_pm_table_vis", "bowtie1_bacteria_group2_pm_table", "bowtie1_bacteria_group2_pm_table_vis"
 		  );
 	}
