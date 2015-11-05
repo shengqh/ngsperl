@@ -295,6 +295,7 @@ for(comparisonName in comparisonNames){
   }else{
     tbb<-cbind(comparisonData, res)
   }
+  tbb$FoldChange<-2^tbb$log2FoldChange
   tbbselect<-tbb[select,,drop=F]
   
   tbb<-tbb[order(tbb$padj),,drop=F]
