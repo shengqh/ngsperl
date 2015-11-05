@@ -33,6 +33,7 @@ sub perform {
   print SH get_run_command($sh_direct);
   
   my $extension = get_option($config, $section, "extension", ".filtered.bam" );
+  print "extension = $extension\n";
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
