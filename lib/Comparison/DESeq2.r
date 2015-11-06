@@ -97,7 +97,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
 
 drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors){
   filename<-paste0(prefix, "_DESeq2-vsd-pca.png")
-  genecount<-nrow(rldselect)
+  genecount<-nrow(rldmatrix)
   if(genecount > 2){
 	  cat("saving PCA to ", filename, "\n")
 	  png(filename=filename, width=3000, height=3000, res=300)
