@@ -97,37 +97,40 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
 
 drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors){
   filename<-paste0(prefix, "_DESeq2-vsd-pca.png")
-  cat("saving PCA to ", filename, "\n")
-  png(filename=filename, width=3000, height=3000, res=300)
-  pca<-prcomp(t(rldmatrix))
-  supca<-summary(pca)$importance
-  pcadata<-data.frame(pca$x)
-  pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
-  pcadata["sample"]<-row.names(pcadata)
-  
-  if(showLabelInPCA){
-    g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
-      geom_text(vjust=-0.6, size=4) +
-      geom_point(col=conditionColors, size=4) + 
-      scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
-      scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
-      geom_hline(aes(0), size=.2) + 
-      geom_vline(aes(0), size=.2) + 
-      xlab(pcalabs[1]) + ylab(pcalabs[2])
-  }else{
-    g <- ggplot(pcadata, aes(x=PC1, y=PC2)) + 
-      geom_point(col=conditionColors, size=4) + 
-      labs(color = "Group") +
-      scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) + 
-      scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
-      geom_hline(aes(0), size=.2) + 
-      geom_vline(aes(0), size=.2) +
-      xlab(pcalabs[1]) + ylab(pcalabs[2]) + 
-      theme(legend.position="top")
+  genecount<-nrow(rldselect)
+  if(genecount > 2){
+	  cat("saving PCA to ", filename, "\n")
+	  png(filename=filename, width=3000, height=3000, res=300)
+	  pca<-prcomp(t(rldmatrix))
+	  supca<-summary(pca)$importance
+	  pcadata<-data.frame(pca$x)
+	  pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
+	  pcadata["sample"]<-row.names(pcadata)
+	  
+	  if(showLabelInPCA){
+		  g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
+				  geom_text(vjust=-0.6, size=4) +
+				  geom_point(col=conditionColors, size=4) + 
+				  scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
+				  scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
+				  geom_hline(aes(0), size=.2) + 
+				  geom_vline(aes(0), size=.2) + 
+				  xlab(pcalabs[1]) + ylab(pcalabs[2])
+	  }else{
+		  g <- ggplot(pcadata, aes(x=PC1, y=PC2)) + 
+				  geom_point(col=conditionColors, size=4) + 
+				  labs(color = "Group") +
+				  scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) + 
+				  scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
+				  geom_hline(aes(0), size=.2) + 
+				  geom_vline(aes(0), size=.2) +
+				  xlab(pcalabs[1]) + ylab(pcalabs[2]) + 
+				  theme(legend.position="top")
+	  }
+	  
+	  print(g)
+	  dev.off()
   }
-  
-  print(g)
-  dev.off()
 }
 
 #for volcano plot
