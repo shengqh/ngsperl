@@ -10,6 +10,7 @@ tRNASigFileList<-commandArgs()[10]
 
 library(ggplot2)
 library(grid)
+print("Doing tRNA position visualization")
 
 summaryPositionInSamples<-function(positionData,positionKeyVar="PositionKey",
 		keepVar=c("Position","Group","tRNA","Count","CountPercentage"),
@@ -102,7 +103,7 @@ positionRawAllSamplesMeanSample$Feature<-gsub("tRNA:","",positionRawAllSamplesMe
 #significant tRNA names
 tRNASigNum<-10
 tRNASigFileName<-".significanttRNAPosition.pdf"
-if (is.null(tRNASigFileList)) {
+if (is.na(tRNASigFileList)) {
 	temp<-tapply(positionRawAllSamplesMeanSample$CountPercentage,positionRawAllSamplesMeanSample$Feature,sum)
 	tRNASigNames<-names(rev(sort(temp)))[1:tRNASigNum]
 	tRNASigFileName<-".highesttRNAPosition.pdf"
