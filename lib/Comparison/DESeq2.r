@@ -339,7 +339,8 @@ for(comparisonName in comparisonNames){
 	  p<-ggplot(diffResultSig,aes(x=Name,y=log2FoldChange,order=log2FoldChange))+geom_bar(stat="identity")+
 			  coord_flip()+
 #			geom_abline(slope=0,intercept=1,colour="red",linetype = 2)+
-			  scale_y_continuous(name=bquote(log[2]~Fold~Change))
+			  scale_y_continuous(name=bquote(log[2]~Fold~Change))+
+			  theme(axis.text = element_text(colour = "black"))
 	  print(p)
 	  dev.off()
   } else {
@@ -352,7 +353,7 @@ for(comparisonName in comparisonNames){
   diffResult$log10BaseMean<-log10(diffResult$baseMean)
   diffResult$colour<-"grey"
   diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
-  diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"green"
+  diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
   png(filename=paste0(prefix, "_DESeq2_volcanoPlot.png"), width=3000, height=3000, res=300)
 #  pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"))
   p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
@@ -362,7 +363,10 @@ for(comparisonName in comparisonNames){
 		  scale_x_continuous(name=bquote(log[2]~Fold~Change))+
 		  geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
 		  geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
-		  guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))
+		  guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
+		  theme_bw()+
+		  scale_size(range = c(2, 7))+
+		  theme(axis.text = element_text(colour = "black"))
   print(p)
   dev.off()
 }
