@@ -348,7 +348,7 @@ for(comparisonName in comparisonNames){
   }
   
   #volcano plot
-  changeColours<-c(grey="grey",green="green",red="red")
+  changeColours<-c(grey="grey",blue="blue",red="red")
   diffResult<-as.data.frame(tbb)
   diffResult$log10BaseMean<-log10(diffResult$baseMean)
   diffResult$colour<-"grey"
@@ -365,7 +365,7 @@ for(comparisonName in comparisonNames){
 		  geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
 		  guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
 		  theme_bw()+
-		  scale_size(range = c(2, 7))+
+		  scale_size(range = c(3, 7))+
 		  theme(axis.text = element_text(colour = "black"))
   print(p)
   dev.off()
