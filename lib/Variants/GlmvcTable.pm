@@ -62,7 +62,7 @@ if [ -s $final ]; then
   exit 0
 fi
 
-mono $glmvcfile -i $filelist -o $final
+mono $glmvcfile table -i $filelist -o $final
 ";
 
   close OUT;
