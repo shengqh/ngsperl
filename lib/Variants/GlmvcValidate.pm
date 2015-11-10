@@ -33,7 +33,7 @@ sub perform {
 
   my $rawFiles = get_raw_files( $config, $section );
 
-  my $bamFiles = get_raw_files( $config, $section, "bam_files" );
+  my $validateFiles = get_raw_files( $config, $section, "validation_files" );
 
   my %group_sample_map = ();
 
@@ -50,12 +50,12 @@ sub perform {
     }
 
     my $groups = get_raw_files( $config, $section, "groups" );
-    for my $groupName ( sort keys %{$rawFiles} ) {
+    for my $groupName ( sort keys %{$groups} ) {
       my @samples = @{ $groups->{$groupName} };
       my @gfiles  = ();
       my $index   = 0;
       foreach my $sampleName (@samples) {
-        my @sampleBamFiles = @{ $bamFiles->{$sampleName} };
+        my @sampleBamFiles = @{ $rawFiles->{$sampleName} };
         push( @gfiles, $sampleBamFiles[0] );
       }
       $group_sample_map{$groupName} = \@gfiles;
@@ -69,10 +69,20 @@ sub perform {
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
 
-  for my $groupName ( sort keys %{$rawFiles} ) {
-    my $validateFile = $rawFiles->{$groupName}[0];
-    my @sampleFiles  = @{ $group_sample_map{$groupName} };
-    my $sampleCount  = scalar(@sampleFiles);
+  for my $groupName ( sort keys %group_sample_map ) {
+    my $validateFile;
+    if ( ref($validateFiles) eq 'HASH' ) {
+      $validateFile = $validateFiles->{$groupName}[0];
+    }
+    elsif ( ref($validateFiles) eq 'ARRAY' ) {
+      $validateFile = $validateFiles->[0];
+    }
+    else {
+      $validateFile = $validateFiles;
+    }
+
+    my @sampleFiles = @{ $group_sample_map{$groupName} };
+    my $sampleCount = scalar(@sampleFiles);
 
     my $curDir = create_directory_or_die( $resultDir . "/$groupName" );
 
@@ -154,10 +164,18 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $rawFiles = get_raw_files( $config, $section );
+  my %group_sample_map = ();
+  my $source_type      = $config->{$section}{source_type} or die "source_type is not defined in $section";
+  my $isbam            = lc($source_type) eq "bam";
+  if ($isbam) {
+    %group_sample_map = %{ get_raw_files( $config, $section, "groups" ) };
+  }
+  else {
+    %group_sample_map = %{ get_raw_files( $config, $section ) };
+  }
 
   my $result = {};
-  for my $groupName ( keys %{$rawFiles} ) {
+  for my $groupName ( keys %group_sample_map ) {
     my @resultFiles = ();
     my $curDir      = $resultDir . "/$groupName";
 
