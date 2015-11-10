@@ -39,6 +39,11 @@ sub perform {
   if ( !defined($pairmode) ) {
     $pairmode = "unpaired";
   }
+  
+  my $refnames = $config->{$section}{refnames};
+  if(!defined $refnames){
+    $refnames = [];
+  }
 
   my $rtemplate = dirname(__FILE__) . "/cnMops.r";
   if ( !-e $rtemplate ) {
@@ -100,8 +105,22 @@ BAMFiles <- c(
     }
   }
   print R ")
-
 ";
+
+  $isfirst = 1;
+  print R "refnames<-c(";
+  for my $refName ( @{$refnames} ) {
+    if ($isfirst) {
+      print R "\"$refName\"";
+      $isfirst = 0;
+    }
+    else {
+      print R ",\"$refName\"";
+    }
+  }
+  print R ")
+";
+  
   open RT, "<$rtemplate" or die $!;
   while (<RT>) {
     if ( $_ =~ '^#' ) {

@@ -41,43 +41,71 @@
 #callfile<-"2110.call"
 #pairmode<-"paired"
 #parallel<-8
+#refnames<-c()
+
 
 library(cn.mops)
-resfile<-paste0(prefix, "_resCNMOPS_exomecn.mops.Rdata")
-if(hasbed){
-	segfile<-paste0(prefix, "_x_getSegmentReadCountsFromBAM.Rdata")
-	if(file.exists(segfile)){
-	  load(segfile)
-	}else{
-	  segments <- read.table(bedfile, sep="\t", as.is=TRUE, header=T)
-	  gr <- GRanges(segments[,1], IRanges(segments[,2],segments[,3]), gene=segments[,4])
-	  x <- getSegmentReadCountsFromBAM(BAMFiles, GR=gr, sampleNames=SampleNames, mode=pairmode, parallel=parallel)
-	  save(x, file=segfile)
-	}
-	resCNMOPS <- exomecn.mops(x)
+resfile<-paste0(prefix, "_resCNMOPS.cnmops.Rdata")
+
+if(length(refnames) > 0){
+  insample<-SampleNames %in% refnames
+  REFNames<-SampleNames[insample]
+  REFFiles<-BAMFiles[insample]
+  SAMNames<-SampleNames[!insample]
+  SAMFiles<-BAMFiles[!insample]
+  if(hasbed){
+    segfile<-paste0(prefix, "_getSegmentReadCountsFromBAM_ref.Rdata")
+    if(file.exists(segfile)){
+      load(segfile)
+    }else{
+      segments <- read.table(bedfile, sep="\t", as.is=TRUE, header=T)
+      gr <- GRanges(segments[,1], IRanges(segments[,2],segments[,3]), gene=segments[,4])
+      refdata <- getSegmentReadCountsFromBAM(REFFiles, GR=gr, sampleNames=REFNames, mode=pairmode, parallel=parallel)
+      samdata <- getSegmentReadCountsFromBAM(SAMFiles, GR=gr, sampleNames=SAMNames, mode=pairmode, parallel=parallel)
+      save(refdata, samdata, file=segfile)
+    }
+  }else{
+    countfile<-paste0(prefix, "_getReadCountsFromBAM_ref.Rdata")
+    if(file.exists(countfile)){
+      load(countfile)
+    }else{
+      refdata <- getReadCountsFromBAM(REFFiles, sampleNames=REFNames, mode=pairmode, parallel=parallel)
+      samdata <- getReadCountsFromBAM(SAMFiles, sampleNames=SAMNames, mode=pairmode, parallel=parallel)
+      save(refdata, samdata, file=countfile)
+    }
+  }
+  resCNMOPS<-referencecn.mops(samdata, refdata, upperThreshold=0.5, lowerThreshold=-0.5, segAlgorithm="fast")
+  resCNMOPS<-calcIntegerCopyNumbers(resCNMOPS)
 }else{
-	countfile<-paste0(prefix, "_x_getReadCountsFromBAM.Rdata")
-	if(file.exists(countfile)){
-	  load(countfile)
-	}else{ 
-	  x <- getReadCountsFromBAM(BAMFiles, sampleNames=SampleNames, mode=pairmode) 
-	  save(x, file=countfile)
-	} 
-	resCNMOPS <- cn.mops(x) 
+  if(hasbed){
+    segfile<-paste0(prefix, "_getSegmentReadCountsFromBAM.Rdata")
+    if(file.exists(segfile)){
+      load(segfile)
+    }else{
+      segments <- read.table(bedfile, sep="\t", as.is=TRUE, header=T)
+      gr <- GRanges(segments[,1], IRanges(segments[,2],segments[,3]), gene=segments[,4])
+      x <- getSegmentReadCountsFromBAM(BAMFiles, GR=gr, sampleNames=SampleNames, mode=pairmode, parallel=parallel)
+      save(refx, samx, file=segfile)
+    }
+    resCNMOPS<-exomecn.mops(x, upperThreshold=0.5, lowerThreshold=-0.5)
+    resCNMOPS<-calcIntegerCopyNumbers(resCNMOPS)
+  }else{
+    countfile<-paste0(prefix, "_getReadCountsFromBAM.Rdata")
+    if(file.exists(countfile)){
+      load(countfile)
+    }else{
+      x <- getReadCountsFromBAM(BAMFiles, sampleNames=SampleNames, mode=pairmode)
+      save(x, file=countfile)
+    }
+    resCNMOPS <- cn.mops(x) 
+    resCNMOPS <- calcIntegerCopyNumbers(resCNMOPS)
+  }
 }
+
+#load(resfile)
 save(resCNMOPS, file=resfile)
-cnvs<-resCNMOPS@cnvs
-d<-cbind(as.character(cnvs@elementMetadata@listData$sampleName),
-         as.character(cnvs@seqnames),
-         as.character(cnvs@ranges@start),
-         as.character(as.numeric(cnvs@ranges@start) + as.numeric(cnvs@ranges@width) - 1),
-         as.character(cnvs@ranges@width),
-         as.character(cnvs@elementMetadata@listData$CN),
-         as.character(cnvs@elementMetadata@listData$median),
-         as.character(cnvs@elementMetadata@listData$mean))
-colnames(d)<-c("sample","chr","start","end", "length","type","median","mean")
-d<-d[order(d[,"sample"], as.numeric(d[,"chr"]), as.numeric(d[,"start"])),]
-d[,"chr"]<-paste0("chr",d[,"chr"])
+
+d<-as.data.frame(cnvs(resCNMOPS))
 d[,"type"]<-apply(d,1,function(x){
   if(as.numeric(x["median"]) < 0){
     return ("DELETION")
@@ -85,4 +113,19 @@ d[,"type"]<-apply(d,1,function(x){
     return ("DUPLICATION")
   }
 })
+
+# locus<-data.frame(Title=paste0(d$sampleName, " ~ ", d$seqnames, ":", d$start, "-", d$end, " ~ ", d$type),
+#                   Filename=paste0(d$sampleName, "_", d$seqnames, "_", d$start, "_", d$end, ".png"))
+
+d<-d[order(d[,"sampleName"], as.numeric(d[,"seqnames"]), as.numeric(d[,"start"])),]
 write.table(d, file=callfile,sep="\t",col.names=T,row.names=F,quote=F)
+
+# dir.create("images", showWarnings = FALSE)
+# 
+# index<-9
+# for(index in c(1:nrow(locus))){
+#   png(filename=paste0("images/", locus$Filename[index]), width=2000, height=2000, res=300)
+#   plot(resCNMOPS, which=index, toFile=TRUE)
+#   grid.text(locus$Title[index], y=0.98)
+#   dev.off()
+# }
