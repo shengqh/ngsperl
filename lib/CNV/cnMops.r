@@ -120,6 +120,10 @@ d[,"type"]<-apply(d,1,function(x){
 d<-d[order(d[,"sampleName"], as.numeric(d[,"seqnames"]), as.numeric(d[,"start"])),]
 write.table(d, file=callfile,sep="\t",col.names=T,row.names=F,quote=F)
 
+locus<-d[,c("seqnames", "start", "end")]
+locus<-locus[order(d$seqnames, d$start),]
+write.table(locus, file=paste0(prefix, ".call.bed"), sep="\t", col.names=F, row.names=F,quote=F)
+
 # dir.create("images", showWarnings = FALSE)
 # 
 # index<-9
