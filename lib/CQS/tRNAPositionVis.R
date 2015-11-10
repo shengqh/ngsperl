@@ -10,6 +10,7 @@ tRNASigFileList<-commandArgs()[10]
 
 library(ggplot2)
 library(grid)
+print("Doing tRNA position visualization")
 
 summaryPositionInSamples<-function(positionData,positionKeyVar="PositionKey",
 		keepVar=c("Position","Group","tRNA","Count","CountPercentage"),
@@ -29,7 +30,7 @@ summaryPositionInSamples<-function(positionData,positionKeyVar="PositionKey",
 }
 
 sampleTotRNAPositionFile<-read.delim(tRNAPositionFileList,as.is=T,header=F,row.names=2)
-sampleToGroup<-read.delim(groupFileList,as.is=T,header=F,row.names=1)
+sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
 
 #All tRNA position distribution
 positionRawAllSamples<-NULL
@@ -40,7 +41,10 @@ for (i in 1:nrow(sampleTotRNAPositionFile)) {
 	bamInfo<-read.delim(bamInfoFile,header=F,as.is=T,row.names=1)
 	totalReads<-as.integer(bamInfo["MappedReads",1]) #normlize by total mapped reads
 	
-	positionRaw$Group<-sampleToGroup[row.names(sampleTotRNAPositionFile)[i],1]
+	#positionRaw$Group<-sampleToGroup[row.names(sampleTotRNAPositionFile)[i],1]
+	groupNames<-sampleToGroup[which(sampleToGroup[,1]==row.names(sampleTotRNAPositionFile)[i]),2]
+	positionRaw<-cbind(positionRaw,Group=rep(groupNames,each=nrow(positionRaw)))
+	
 	positionRaw$Sample<-row.names(sampleTotRNAPositionFile)[i]
 	
 	positionRaw$absCount<-positionRaw$Count*positionRaw$Percentage
@@ -53,6 +57,7 @@ for (i in 1:nrow(sampleTotRNAPositionFile)) {
 	
 	positionRawAllSamples<-rbind(positionRawAllSamples,positionRaw)
 }
+positionRawAllSamples$Group<-as.character(positionRawAllSamples$Group)
 positionRawAllSamples$tRNA<-substr(sapply(strsplit(positionRawAllSamples$Feature,"-"),function(x) x[2]),0,3)
 positionRawAllSamples$PositionKey1<-paste0(positionRawAllSamples$Feature,"_",positionRawAllSamples$Position)
 positionRawAllSamples$PositionKey2<-paste0(positionRawAllSamples$tRNA,"_",positionRawAllSamples$Position,"_",positionRawAllSamples$Sample)
@@ -97,23 +102,36 @@ positionRawAllSamplesMeanSample$Feature<-gsub("tRNA:","",positionRawAllSamplesMe
 
 #significant tRNA names
 tRNASigNum<-10
-if (is.null(tRNASigFileList)) {
-	tRNASigNames<-unique(positionRawAllSamplesMeanSample$Feature)[1:tRNASigNum]
+tRNASigFileName<-".significanttRNAPosition.pdf"
+if (is.na(tRNASigFileList)) {
+	temp<-tapply(positionRawAllSamplesMeanSample$CountPercentage,positionRawAllSamplesMeanSample$Feature,sum)
+	tRNASigNames<-names(rev(sort(temp)))[1:tRNASigNum]
+	tRNASigFileName<-".highesttRNAPosition.pdf"
 } else {
 	tRNASigFiles<-read.delim(tRNASigFileList,as.is=T,header=F,row.names=2)
 	tRNASigNames<-NULL
 	for (tRNASigFileEach in tRNASigFiles[,1]) {
 		tRNASig<-read.csv(tRNASigFileEach,header=T,row.names=1)
-		tRNASigNameEach<-row.names(tRNASig)
-		tRNASigNameEach<-sapply(strsplit(tRNASigNameEach,";"),function(x) x[1])
-		if (length(tRNASigNameEach)>as.integer(tRNASigNum/nrow(tRNASigFiles))) {tRNASigNameEach<-tRNASigNameEach[1:as.integer(tRNASigNum/nrow(tRNASigFiles))]}
-		tRNASigNames<-c(tRNASigNames,tRNASigNameEach)
+		if (nrow(tRNASig)==0) {
+			
+		} else {
+			tRNASigNameEach<-row.names(tRNASig)
+			tRNASigNameEach<-sapply(strsplit(tRNASigNameEach,";"),function(x) x[1])
+			if (length(tRNASigNameEach)>as.integer(tRNASigNum/nrow(tRNASigFiles))) {tRNASigNameEach<-tRNASigNameEach[1:as.integer(tRNASigNum/nrow(tRNASigFiles))]}
+			tRNASigNames<-c(tRNASigNames,tRNASigNameEach)
+		}
+	}
+	if (is.null(tRNASigNames)) {
+		print(paste0("No significant changed tRNA. Will plot ",tRNASigNum," tRNAs with highest reads"))
+		temp<-tapply(positionRawAllSamplesMeanSample$CountPercentage,positionRawAllSamplesMeanSample$Feature,sum)
+		tRNASigNames<-names(rev(sort(temp)))[1:tRNASigNum]
+		tRNASigFileName<-".highesttRNAPosition.pdf"
 	}
 }
 
 temp<-positionRawAllSamplesMeanSample[which(positionRawAllSamplesMeanSample$Feature %in% tRNASigNames),]
 m <- ggplot(temp, aes(x = Position,y=CountPercentage))
-pdf(paste0(resultFile,".significanttRNAPosition.pdf"),height=15,width=7)
+pdf(paste0(resultFile,tRNASigFileName),height=15,width=7)
 m + geom_bar(stat="identity")+facet_grid(Feature ~ Group)+
 		ylab("Read fraction (read counts/total reads)")+
 		theme(strip.text.y = element_text(size = 4))

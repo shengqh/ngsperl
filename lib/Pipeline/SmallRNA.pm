@@ -673,9 +673,10 @@ sub getSmallRNAConfig {
 		my $trna_sig_result;
 		if ( defined $def->{tRNA_vis_group} ) {
 			$trna_vis_groups = $def->{tRNA_vis_group};
-		}
-		else {
+		} else {
 			$trna_vis_groups = $def->{groups};
+		}
+		if (defined $def->{pairs}) {
 			$trna_sig_result = [ "tRNA_deseq2", "_DESeq2_sig.csv\$" ];
 		}
 		$config->{tRNA_PositionVis} = {

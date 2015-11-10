@@ -97,37 +97,40 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
 
 drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors){
   filename<-paste0(prefix, "_DESeq2-vsd-pca.png")
-  cat("saving PCA to ", filename, "\n")
-  png(filename=filename, width=3000, height=3000, res=300)
-  pca<-prcomp(t(rldmatrix))
-  supca<-summary(pca)$importance
-  pcadata<-data.frame(pca$x)
-  pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
-  pcadata["sample"]<-row.names(pcadata)
-  
-  if(showLabelInPCA){
-    g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
-      geom_text(vjust=-0.6, size=4) +
-      geom_point(col=conditionColors, size=4) + 
-      scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
-      scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
-      geom_hline(aes(0), size=.2) + 
-      geom_vline(aes(0), size=.2) + 
-      xlab(pcalabs[1]) + ylab(pcalabs[2])
-  }else{
-    g <- ggplot(pcadata, aes(x=PC1, y=PC2)) + 
-      geom_point(col=conditionColors, size=4) + 
-      labs(color = "Group") +
-      scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) + 
-      scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
-      geom_hline(aes(0), size=.2) + 
-      geom_vline(aes(0), size=.2) +
-      xlab(pcalabs[1]) + ylab(pcalabs[2]) + 
-      theme(legend.position="top")
+  genecount<-nrow(rldmatrix)
+  if(genecount > 2){
+	  cat("saving PCA to ", filename, "\n")
+	  png(filename=filename, width=3000, height=3000, res=300)
+	  pca<-prcomp(t(rldmatrix))
+	  supca<-summary(pca)$importance
+	  pcadata<-data.frame(pca$x)
+	  pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
+	  pcadata["sample"]<-row.names(pcadata)
+	  
+	  if(showLabelInPCA){
+		  g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
+				  geom_text(vjust=-0.6, size=4) +
+				  geom_point(col=conditionColors, size=4) + 
+				  scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
+				  scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
+				  geom_hline(aes(0), size=.2) + 
+				  geom_vline(aes(0), size=.2) + 
+				  xlab(pcalabs[1]) + ylab(pcalabs[2])
+	  }else{
+		  g <- ggplot(pcadata, aes(x=PC1, y=PC2)) + 
+				  geom_point(col=conditionColors, size=4) + 
+				  labs(color = "Group") +
+				  scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) + 
+				  scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
+				  geom_hline(aes(0), size=.2) + 
+				  geom_vline(aes(0), size=.2) +
+				  xlab(pcalabs[1]) + ylab(pcalabs[2]) + 
+				  theme(legend.position="top")
+	  }
+	  
+	  print(g)
+	  dev.off()
   }
-  
-  print(g)
-  dev.off()
 }
 
 #for volcano plot
@@ -313,6 +316,7 @@ for(comparisonName in comparisonNames){
     drawPCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, showLabelInPCA, designData, conditionColors)
     drawHCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames)
     
+	drawPCA(paste0(prefix,"_geneDE"),DEmatrix , showLabelInPCA, designData, conditionColors)
     drawHCA(paste0(prefix,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames)
     #drawHCA(paste0(prefix,"_gene500NotDE"), nonDEmatrix[1:min(500, nrow(nonDEmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
   }
@@ -335,7 +339,8 @@ for(comparisonName in comparisonNames){
 	  p<-ggplot(diffResultSig,aes(x=Name,y=log2FoldChange,order=log2FoldChange))+geom_bar(stat="identity")+
 			  coord_flip()+
 #			geom_abline(slope=0,intercept=1,colour="red",linetype = 2)+
-			  scale_y_continuous(name=bquote(log[2]~Fold~Change))
+			  scale_y_continuous(name=bquote(log[2]~Fold~Change))+
+			  theme(axis.text = element_text(colour = "black"))
 	  print(p)
 	  dev.off()
   } else {
@@ -343,12 +348,12 @@ for(comparisonName in comparisonNames){
   }
   
   #volcano plot
-  changeColours<-c(grey="grey",green="green",red="red")
+  changeColours<-c(grey="grey",blue="blue",red="red")
   diffResult<-as.data.frame(tbb)
   diffResult$log10BaseMean<-log10(diffResult$baseMean)
   diffResult$colour<-"grey"
   diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
-  diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"green"
+  diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
   png(filename=paste0(prefix, "_DESeq2_volcanoPlot.png"), width=3000, height=3000, res=300)
 #  pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"))
   p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
@@ -358,7 +363,10 @@ for(comparisonName in comparisonNames){
 		  scale_x_continuous(name=bquote(log[2]~Fold~Change))+
 		  geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
 		  geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
-		  guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))
+		  guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
+		  theme_bw()+
+		  scale_size(range = c(3, 7))+
+		  theme(axis.text = element_text(colour = "black"))
   print(p)
   dev.off()
 }
