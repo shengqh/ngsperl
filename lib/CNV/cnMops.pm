@@ -39,9 +39,9 @@ sub perform {
   if ( !defined($pairmode) ) {
     $pairmode = "unpaired";
   }
-  
+
   my $refnames = $config->{$section}{refnames};
-  if(!defined $refnames){
+  if ( !defined $refnames ) {
     $refnames = [];
   }
 
@@ -120,7 +120,7 @@ BAMFiles <- c(
   }
   print R ")
 ";
-  
+
   open RT, "<$rtemplate" or die $!;
   while (<RT>) {
     if ( $_ =~ '^#' ) {
@@ -161,7 +161,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $result = { $task_name => [ $resultDir . "/${task_name}.call" ] };
+  my $result = { $task_name => [ $resultDir . "/${task_name}.call", $resultDir . "/${task_name}.call.bed" ] };
 
   return $result;
 }
