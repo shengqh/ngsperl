@@ -72,7 +72,12 @@ sub perform {
   for my $groupName ( sort keys %group_sample_map ) {
     my $validateFile;
     if ( ref($validateFiles) eq 'HASH' ) {
-      $validateFile = $validateFiles->{$groupName}[0];
+      if ( defined $validateFiles->{$groupName} ) {
+        $validateFile = $validateFiles->{$groupName}[0];
+      }
+      else {
+        $validateFile = $validateFiles->{$task_name}[0];
+      }
     }
     elsif ( ref($validateFiles) eq 'ARRAY' ) {
       $validateFile = $validateFiles->[0];
