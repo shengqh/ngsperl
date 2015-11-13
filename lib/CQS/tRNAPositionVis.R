@@ -42,6 +42,9 @@ for (i in 1:nrow(sampleTotRNAPositionFile)) {
 	totalReads<-as.integer(bamInfo["MappedReads",1]) #normlize by total mapped reads
 	
 	#positionRaw$Group<-sampleToGroup[row.names(sampleTotRNAPositionFile)[i],1]
+	if (! (row.names(sampleTotRNAPositionFile)[i] %in% sampleToGroup[,1])) {
+		next;
+	}
 	groupNames<-sampleToGroup[which(sampleToGroup[,1]==row.names(sampleTotRNAPositionFile)[i]),2]
 	positionRaw<-cbind(positionRaw,Group=rep(groupNames,each=nrow(positionRaw)))
 	
@@ -125,13 +128,13 @@ if (is.na(tRNASigFileList)) {
 			print(paste0("No significant changed tRNA. Will plot ",tRNASigNum," tRNAs with highest reads"))
 			temp<-tapply(positionRawAllSamplesMeanSample$CountPercentage,positionRawAllSamplesMeanSample$Feature,sum)
 			tRNASigNames<-names(rev(sort(temp)))[1:tRNASigNum]
-			tRNASigFileName<-paste0(".",tRNASigFiles[i,2],".highesttRNAPosition.pdf")
+			tRNASigFileName<-paste0(".",row.names(tRNASigFiles)[i],".highesttRNAPosition.pdf")
 		} else {
 			tRNASigNameEach<-row.names(tRNASig)
 			tRNASigNameEach<-sapply(strsplit(tRNASigNameEach,";"),function(x) x[1])
 			if (length(tRNASigNameEach)>tRNASigNum) {tRNASigNameEach<-tRNASigNameEach[1:tRNASigNum]}
 			tRNASigNames<-tRNASigNameEach
-			tRNASigFileName<-paste0(".",tRNASigFiles[i,2],".significanttRNAPosition.pdf")
+			tRNASigFileName<-paste0(".",row.names(tRNASigFiles)[i],".significanttRNAPosition.pdf")
 		}
 		
 		temp<-positionRawAllSamplesMeanSample[which(positionRawAllSamplesMeanSample$Feature %in% tRNASigNames),]
