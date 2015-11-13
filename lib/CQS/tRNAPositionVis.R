@@ -102,39 +102,47 @@ positionRawAllSamplesMeanSample$Feature<-gsub("tRNA:","",positionRawAllSamplesMe
 
 #significant tRNA names
 tRNASigNum<-10
-tRNASigFileName<-".significanttRNAPosition.pdf"
 if (is.na(tRNASigFileList)) {
 	temp<-tapply(positionRawAllSamplesMeanSample$CountPercentage,positionRawAllSamplesMeanSample$Feature,sum)
 	tRNASigNames<-names(rev(sort(temp)))[1:tRNASigNum]
 	tRNASigFileName<-".highesttRNAPosition.pdf"
+
+	temp<-positionRawAllSamplesMeanSample[which(positionRawAllSamplesMeanSample$Feature %in% tRNASigNames),]
+	m <- ggplot(temp, aes(x = Position,y=CountPercentage))
+	pdf(paste0(resultFile,tRNASigFileName),height=15,width=7)
+	m + geom_bar(stat="identity")+facet_grid(Feature ~ Group)+
+			ylab("Read fraction (read counts/total reads)")+
+			theme(strip.text.y = element_text(size = 4))
+	dev.off()
+	
 } else {
 	tRNASigFiles<-read.delim(tRNASigFileList,as.is=T,header=F,row.names=2)
 	tRNASigNames<-NULL
-	for (tRNASigFileEach in tRNASigFiles[,1]) {
+	for (i in 1:nrow(tRNASigFiles)) {
+		tRNASigFileEach<-tRNASigFiles[i,1]
 		tRNASig<-read.csv(tRNASigFileEach,header=T,row.names=1)
 		if (nrow(tRNASig)==0) {
-			
+			print(paste0("No significant changed tRNA. Will plot ",tRNASigNum," tRNAs with highest reads"))
+			temp<-tapply(positionRawAllSamplesMeanSample$CountPercentage,positionRawAllSamplesMeanSample$Feature,sum)
+			tRNASigNames<-names(rev(sort(temp)))[1:tRNASigNum]
+			tRNASigFileName<-paste0(".",tRNASigFiles[i,2],".highesttRNAPosition.pdf")
 		} else {
 			tRNASigNameEach<-row.names(tRNASig)
 			tRNASigNameEach<-sapply(strsplit(tRNASigNameEach,";"),function(x) x[1])
-			if (length(tRNASigNameEach)>as.integer(tRNASigNum/nrow(tRNASigFiles))) {tRNASigNameEach<-tRNASigNameEach[1:as.integer(tRNASigNum/nrow(tRNASigFiles))]}
-			tRNASigNames<-c(tRNASigNames,tRNASigNameEach)
+			if (length(tRNASigNameEach)>tRNASigNum) {tRNASigNameEach<-tRNASigNameEach[1:tRNASigNum]}
+			tRNASigNames<-tRNASigNameEach
+			tRNASigFileName<-paste0(".",tRNASigFiles[i,2],".significanttRNAPosition.pdf")
 		}
-	}
-	if (is.null(tRNASigNames)) {
-		print(paste0("No significant changed tRNA. Will plot ",tRNASigNum," tRNAs with highest reads"))
-		temp<-tapply(positionRawAllSamplesMeanSample$CountPercentage,positionRawAllSamplesMeanSample$Feature,sum)
-		tRNASigNames<-names(rev(sort(temp)))[1:tRNASigNum]
-		tRNASigFileName<-".highesttRNAPosition.pdf"
+		
+		temp<-positionRawAllSamplesMeanSample[which(positionRawAllSamplesMeanSample$Feature %in% tRNASigNames),]
+		m <- ggplot(temp, aes(x = Position,y=CountPercentage))
+		pdf(paste0(resultFile,tRNASigFileName),height=15,width=7)
+		m + geom_bar(stat="identity")+facet_grid(Feature ~ Group)+
+				ylab("Read fraction (read counts/total reads)")+
+				theme(strip.text.y = element_text(size = 4))
+		dev.off()
 	}
 }
 
-temp<-positionRawAllSamplesMeanSample[which(positionRawAllSamplesMeanSample$Feature %in% tRNASigNames),]
-m <- ggplot(temp, aes(x = Position,y=CountPercentage))
-pdf(paste0(resultFile,tRNASigFileName),height=15,width=7)
-m + geom_bar(stat="identity")+facet_grid(Feature ~ Group)+
-		ylab("Read fraction (read counts/total reads)")+
-		theme(strip.text.y = element_text(size = 4))
-dev.off()
 
 
