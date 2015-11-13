@@ -32,7 +32,7 @@ sub getParclipSmallRNAConfig {
       class                 => 'Alignment::Gsnap',
       perform               => 1,
       target_dir            => $def->{target_dir} . '/gsnap',
-      option                => '-y 0 -z 0 -Y 0 -Z 0 -m 1 -Q --trim-mismatch-score 0 --trim-indel-score 0 --mode ttoc-nonstranded --gunzip',
+      option                => '-y 0 -z 0 -Y 0 -Z 0 -m 1 -Q --nofails --trim-mismatch-score 0 --trim-indel-score 0 --mode ttoc-nonstranded --gunzip',
       gsnap_index_directory => $def->{gsnap_index_directory},
       gsnap_index_name      => $def->{gsnap_index_name},
       source_ref            => [ 'identical_NTA', '.fastq.gz$' ],
