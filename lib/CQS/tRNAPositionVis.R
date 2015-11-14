@@ -104,6 +104,7 @@ for (groupNameEach in unique(positionRawAllSamples$Group)) {
 positionRawAllSamplesMeanSample$Feature<-gsub("tRNA:","",positionRawAllSamplesMeanSample$Feature)
 
 #significant tRNA names
+print("Doing tRNA position visualization for significant tRNAs")
 tRNASigNum<-10
 if (is.na(tRNASigFileList)) {
 	temp<-tapply(positionRawAllSamplesMeanSample$CountPercentage,positionRawAllSamplesMeanSample$Feature,sum)
@@ -138,12 +139,16 @@ if (is.na(tRNASigFileList)) {
 		}
 		
 		temp<-positionRawAllSamplesMeanSample[which(positionRawAllSamplesMeanSample$Feature %in% tRNASigNames),]
-		m <- ggplot(temp, aes(x = Position,y=CountPercentage))
-		pdf(paste0(resultFile,tRNASigFileName),height=15,width=7)
-		m + geom_bar(stat="identity")+facet_grid(Feature ~ Group)+
-				ylab("Read fraction (read counts/total reads)")+
-				theme(strip.text.y = element_text(size = 4))
-		dev.off()
+		if (nrow(temp)!=0) { #==0 means all significant tRNA has no position information (means they are not high abudance tRNA, not extracted position information by smallRNA count)
+			m <- ggplot(temp, aes(x = Position,y=CountPercentage))
+			pdf(paste0(resultFile,tRNASigFileName),height=15,width=7)
+			print(
+					m + geom_bar(stat="identity")+facet_grid(Feature ~ Group)+
+							ylab("Read fraction (read counts/total reads)")+
+							theme(strip.text.y = element_text(size = 4))
+			)
+			dev.off()
+		}
 	}
 }
 
