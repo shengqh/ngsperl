@@ -200,8 +200,8 @@ sub result {
   for my $groupName ( keys %{$groups} ) {
     my @resultFiles = ();
     my $curDir      = $resultDir . "/$groupName";
-    push( @resultFiles, "$curDir/${groupName}.vcf" );
     push( @resultFiles, "$curDir/${groupName}.tsv" );
+    push( @resultFiles, "$curDir/${groupName}.vcf" );
     if ($anno) {
       push( @resultFiles, "$curDir/${groupName}.annotation.tsv" );
     }
