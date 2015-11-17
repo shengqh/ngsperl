@@ -29,7 +29,6 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $glmvcfile = get_param_file( $config->{$section}{execute_file}, "execute_file", 1 );
-  my $source_type = $config->{$section}{source_type} or die "source_type is not defined in $section";
 
   my $rnaediting_db = get_directory( $config, $section, "rnaediting_db", 0 );
   if ( defined $rnaediting_db ) {
