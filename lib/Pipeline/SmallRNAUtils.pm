@@ -158,6 +158,7 @@ sub getPrepareConfig {
 				perform    => 1,
 				target_dir => $def->{target_dir} . "/fastqc_pre_trim",
 				option     => "",
+				sh_direct  => 1,
 				source_ref => $source_ref,
 				cluster    => $cluster,
 				pbs        => {
@@ -170,6 +171,7 @@ sub getPrepareConfig {
 			fastqc_pre_trim_summary => {
 				class      => "QC::FastQCSummary",
 				perform    => 1,
+				sh_direct  => 1,
 				target_dir => $def->{target_dir} . "/fastqc_pre_trim",
 				cqstools   => $def->{cqstools},
 				option     => "",
@@ -189,7 +191,7 @@ sub getPrepareConfig {
 				source_ref => $source_ref,
 				adapter    => $adapter,
 				extension  => "_clipped.fastq",
-				sh_direct  => 1,
+				sh_direct  => 0,
 				cluster    => $cluster,
 				pbs        => {
 					"email"    => $def->{email},
@@ -203,6 +205,7 @@ sub getPrepareConfig {
 				perform    => 1,
 				target_dir => $def->{target_dir} . "/fastqc_post_trim",
 				option     => "",
+				sh_direct  => 1,
 				source_ref => [ "cutadapt", ".fastq.gz" ],
 				cluster    => $cluster,
 				pbs        => {
@@ -215,6 +218,7 @@ sub getPrepareConfig {
 			fastqc_post_trim_summary => {
 				class      => "QC::FastQCSummary",
 				perform    => 1,
+				sh_direct  => 1,
 				target_dir => $def->{target_dir} . "/fastqc_post_trim",
 				cqstools   => $def->{cqstools},
 				option     => "",
@@ -237,6 +241,7 @@ sub getPrepareConfig {
 			fastqc => {
 				class      => "QC::FastQC",
 				perform    => 1,
+				sh_direct  => 1,
 				target_dir => $def->{target_dir} . "/fastqc",
 				option     => "",
 				source_ref => $source_ref,
@@ -251,6 +256,7 @@ sub getPrepareConfig {
 			fastqc_summary => {
 				class      => "QC::FastQCSummary",
 				perform    => 1,
+				sh_direct  => 1,
 				target_dir => $def->{target_dir} . "/fastqc",
 				cqstools   => $def->{cqstools},
 				option     => "",
