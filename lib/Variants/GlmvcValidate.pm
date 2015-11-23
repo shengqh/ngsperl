@@ -68,6 +68,7 @@ sub perform {
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
+  print SH "cd $pbsDir \n";
 
   for my $groupName ( sort keys %group_sample_map ) {
     my $validateFile;
