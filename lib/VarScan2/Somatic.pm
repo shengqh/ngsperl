@@ -92,17 +92,7 @@ if [ ! -s $snpvcf ]; then
     samtools index ${tumor}
   fi
 
-  if [ ! -s $normal_mpileup ]; then
-    echo NORMAL_MPILEUP=`date`
-    samtools mpileup $mpileup_options -f $faFile $normal > $normal_mpileup
-  fi
-
-  if [ ! -s $tumor_mpileup ]; then
-    echo TUMOR_MPILEUP=`date`
-    samtools mpileup $mpileup_options -f $faFile $tumor > $tumor_mpileup
-  fi
-  
-  java $java_option -jar $varscan2_jar somatic $normal_mpileup $tumor_mpileup $groupName $option --output-vcf --somatic-p-value $somatic_p_value
+  samtools mpileup -$mpileup_options -f $faFile $normal $tumor | java $java_option -jar $varscan2_jar somatic -mpileup 1 $groupName $option --output-vcf --somatic-p-value $somatic_p_value
 fi
 
 java $java_option -jar $varscan2_jar processSomatic $snpvcf --p-value $somatic_p_value
