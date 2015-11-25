@@ -11,6 +11,7 @@ use CQS::FileUtils;
 use CQS::GroupTask;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use Data::Dumper;
 
 our @ISA = qw(CQS::GroupTask);
 
@@ -33,6 +34,9 @@ sub perform {
   my $rawFiles = get_raw_files( $config, $section );
   my $bamFiles = get_raw_files( $config, $section, "bam_files" );
 
+  print Dumper($rawFiles);
+  print Dumper($bamFiles);
+
   my %group_sample_map = ();
   my %group_name_map   = ();
 
@@ -52,6 +56,9 @@ sub perform {
     $group_sample_map{$groupName} = \@gfiles;
     $group_name_map{$groupName}   = \@names;
   }
+
+  print Dumper(%group_name_map);
+  print Dumper(%group_sample_map);
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
