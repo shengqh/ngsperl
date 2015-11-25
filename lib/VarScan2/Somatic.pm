@@ -92,7 +92,7 @@ if [ ! -s $snpvcf ]; then
     samtools index ${tumor}
   fi
 
-  samtools mpileup -$mpileup_options -f $faFile $normal $tumor | java $java_option -jar $varscan2_jar somatic -mpileup 1 $groupName $option --output-vcf --somatic-p-value $somatic_p_value
+  samtools mpileup $mpileup_options -f $faFile $normal $tumor | java $java_option -jar $varscan2_jar somatic -mpileup 1 $groupName $option --output-vcf --somatic-p-value $somatic_p_value
 fi
 
 java $java_option -jar $varscan2_jar processSomatic $snpvcf --p-value $somatic_p_value
