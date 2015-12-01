@@ -32,7 +32,8 @@ sub perform {
   my @vcfFiles = @{ $config->{$section}{vcf_files} } or die "Define vcf_files in section $section first.";
   my $gatk_jar   = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
-  my $fixMisencodedQuals = get_option($config, $section, "fixMisencodedQuals", 0) ? "-fixMisencodedQuals":"";
+  my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals", 0 ) ? "-fixMisencodedQuals" : "";
+  my $baq = get_option( $config, $section, "samtools_baq_calibration", 0 );
 
   my $knownvcf      = "";
   my $knownsitesvcf = "";
@@ -51,8 +52,8 @@ sub perform {
   print SH get_run_command($sh_direct) . "\n";
 
   for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles    = @{ $rawFiles{$sampleName} };
-    my $sampleFile     = $sampleFiles[0];
+    my @sampleFiles = @{ $rawFiles{$sampleName} };
+    my $sampleFile  = $sampleFiles[0];
 
     my $inputFile     = $sampleFile;
     my $presortedFile = "";
@@ -69,6 +70,21 @@ sub perform {
     my $realignedFile = $sampleName . ".rmdup.realigned.bam";
     my $grpFile       = $realignedFile . ".grp";
     my $recalFile     = $sampleName . ".rmdup.realigned.recal.bam";
+
+    my $finalFile = $recalFile;
+    my $baqcmd    = "";
+    my $rmlist    = "";
+    if ($baq) {
+      $finalFile = $sampleName . ".rmdup.realigned.recal.baq.bam";
+      $baqcmd    = "
+if [[ -s $recalFile && ! -s $finalFile ]]; then
+  echo baq=`date` 
+  samtools calmd -Abr $recalFile $faFile > $finalFile
+  samtools index $finalFile
+fi      
+";
+      $rmlist = "$recalFile ${recalFile}.bai";
+    }
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
@@ -122,10 +138,12 @@ if [[ -s $grpFile && ! -s $recalFile ]]; then
   java $option -jar $gatk_jar -T PrintReads -nct $thread -rf BadCigar -R $faFile -I $realignedFile -BQSR $grpFile -o $recalFile 
 fi
 
-if [[ -s $recalFile && ! -s ${recalFile}.stat ]]; then
+$baqcmd
+
+if [[ -s $finalFile && ! -s ${finalFile}.stat ]]; then
   echo flagstat=`date` 
-  samtools flagstat $recalFile > ${recalFile}.stat
-  rm $presortedFile $rmdupFile ${sampleName}.rmdup.bai ${rmdupFile}.metrics $realignedFile ${sampleName}.rmdup.realigned.bai $grpFile
+  samtools flagstat $finalFile > ${finalFile}.stat
+  rm $presortedFile $rmdupFile ${sampleName}.rmdup.bai ${rmdupFile}.metrics $realignedFile ${sampleName}.rmdup.realigned.bai $grpFile $rmlist
 fi
   
 echo finished=`date`
@@ -152,12 +170,13 @@ sub result {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my $baq = get_option( $config, $section, "samtools_baq_calibration", 0 );
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my $recalFile     = $sampleName . ".rmdup.realigned.recal.bam";
-    my @resultFiles    = ();
-    push( @resultFiles, "${resultDir}/${sampleName}/${recalFile}" );
+    my $finalFile = $baq ? $sampleName . ".rmdup.realigned.recal.baq.bam" : $sampleName . ".rmdup.realigned.recal.bam";
+    my @resultFiles = ();
+    push( @resultFiles, "${resultDir}/${sampleName}/${finalFile}" );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
