@@ -40,6 +40,7 @@ sub perform {
   my $replaceReadGroup   = get_option( $config, $section, "replace_read_group", 0 );
   my $reorderChromosome  = get_option( $config, $section, "reorder_chromosome", 0 );
   my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals", 1 ) ? "-fixMisencodedQuals" : "";
+  my $baq = get_option( $config, $section, "samtools_baq_calibration", 0 );
 
   my $knownvcf      = "";
   my $knownsitesvcf = "";
@@ -99,6 +100,21 @@ sub perform {
 
     my $recalFile = $sampleName . ".rmdup.split.recal.bam";
 
+    my $finalFile = $recalFile;
+    my $baqcmd    = "";
+    my $rmlist    = "";
+    if ($baq) {
+      $finalFile = $sampleName . ".rmdup.split.recal.baq.bam";
+      $baqcmd    = "
+if [[ -s $recalFile && ! -s $finalFile ]]; then
+  echo baq=`date` 
+  samtools calmd -Abr $recalFile $faFile > $finalFile
+  samtools index $finalFile
+fi      
+";
+      $rmlist = "$recalFile ${recalFile}.bai";
+    }
+
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
@@ -147,10 +163,12 @@ if [[ -s $splitFile && -s $grpFile && ! -s $recalFile ]]; then
   java $option -jar $gatk_jar -T PrintReads -nct $thread -rf BadCigar -R $faFile -I $splitFile -BQSR $grpFile -o $recalFile 
 fi
 
-if [[ -s $recalFile && ! -s ${recalFile}.stat ]]; then
+$baqcmd
+
+if [[ -s $finalFile && ! -s ${finalFile}.stat ]]; then
   echo flagstat=`date` 
-  samtools flagstat $recalFile > ${recalFile}.stat
-  rm $rmFiles $rmdupFile ${sampleName}.rmdup.bai ${rmdupFile}.metrics $splitFile ${sampleName}.rmdup.split.bai $grpFile
+  samtools flagstat $finalFile > ${finalFile}.stat
+  rm $rmFiles $rmdupFile ${sampleName}.rmdup.bai ${rmdupFile}.metrics $splitFile ${sampleName}.rmdup.split.bai $grpFile $rmlist
 fi
   
 echo finished=`date`
@@ -177,12 +195,13 @@ sub result {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my $baq = get_option( $config, $section, "samtools_baq_calibration", 0 );
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my $sortedFile  = $sampleName . ".rmdup.split.recal.bam";
+    my $finalFile = $baq ? $sampleName . ".rmdup.split.recal.baq.bam" : $sampleName . ".rmdup.split.recal.bam";
     my @resultFiles = ();
-    push( @resultFiles, "${resultDir}/${sampleName}/${sortedFile}" );
+    push( @resultFiles, "${resultDir}/${sampleName}/${finalFile}" );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
