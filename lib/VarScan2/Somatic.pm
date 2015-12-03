@@ -69,6 +69,7 @@ sub perform {
     my $log     = $self->logfile( $logDir, $groupName );
 
     print SH "\$MYCMD ./$pbsName \n";
+    print SH "cd $pbsDir\n";
 
     my $log_desc = $cluster->get_log_desc($log);
 
