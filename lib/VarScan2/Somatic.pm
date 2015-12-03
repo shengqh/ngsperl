@@ -18,7 +18,7 @@ our @ISA = qw(CQS::AbstractSomaticMutation);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "VarScan2::Somatic";
+  $self->{_name}   = "VarScan2::Somatic";
   $self->{_suffix} = "_vs2";
   bless $self, $class;
   return $self;
@@ -32,8 +32,11 @@ sub perform {
   my $varscan2_jar = get_param_file( $config->{$section}{VarScan2_jar}, "VarScan2_jar", 1 );
   my $faFile       = get_param_file( $config->{$section}{fasta_file},   "fasta_file",   1 );
 
-  my $somatic_p_value = get_option($config, $section, "somatic_p_value", 0.05);
-  my $mpileup_options = get_option($config, $section, "mpileup_options", "");
+  my $somatic_p_value = get_option( $config, $section, "somatic_p_value", 0 );
+  if ( $somatic_p_value != 0 ) {
+    $option = $option + " --somatic-p-value $somatic_p_value";
+  }
+  my $mpileup_options = get_option( $config, $section, "mpileup_options", "" );
 
   my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
 
@@ -41,7 +44,7 @@ sub perform {
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
 
-  my $java_option = get_option($config, $section, "java_option", "");
+  my $java_option = get_option( $config, $section, "java_option", "" );
 
   for my $groupName ( sort keys %group_sample_map ) {
     my @sampleFiles = @{ $group_sample_map{$groupName} };
@@ -59,12 +62,13 @@ sub perform {
     my $normalfile = $sampleFiles[0][0];
     my $tumorfile  = $sampleFiles[1][0];
 
-    my $mpileup = "${groupName}.mpileup";
+    my $snpvcf   = "${groupName}.snp.vcf";
+    my $indelvcf = "${groupName}.indel.vcf";
 
-    my $snpvcf    = "${groupName}.snp.vcf";
-    my $indelvcf    = "${groupName}.indel.vcf";
+    my $normal_pileup = "samtools mpileup -q 1 -f $faFile $normal";
+    my $tumor_pileup  = "samtools mpileup -q 1 -f $faFile $tumor";
 
-    my $pbsFile = $self->pbsfile($pbsDir, $groupName);
+    my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $groupName );
 
@@ -90,12 +94,8 @@ if [ ! -s $snpvcf ]; then
   if [ ! -s ${tumor}.bai ]; then
     samtools index ${tumor}
   fi
-  
-  if [ ! -s $mpileup ]; then
-    samtools mpileup $mpileup_options -f $faFile $normal $tumor > $mpileup
-  fi
-  
-  java $java_option -jar $varscan2_jar somatic $mpileup $groupName -mpileup 1 $option --output-vcf --somatic-p-value $somatic_p_value
+
+  java $java_option -jar $varscan2_jar.jar somatic <($normal_pileup) <($tumor_pileup) $groupName $option --output-vcf 
 fi
 
 java $java_option -jar $varscan2_jar processSomatic $snpvcf --p-value $somatic_p_value
