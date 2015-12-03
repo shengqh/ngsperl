@@ -32,10 +32,6 @@ sub perform {
   my $varscan2_jar = get_param_file( $config->{$section}{VarScan2_jar}, "VarScan2_jar", 1 );
   my $faFile       = get_param_file( $config->{$section}{fasta_file},   "fasta_file",   1 );
 
-  my $somatic_p_value = get_option( $config, $section, "somatic_p_value", 0 );
-  if ( $somatic_p_value != 0 ) {
-    $option = $option + " --somatic-p-value $somatic_p_value";
-  }
   my $mpileup_options = get_option( $config, $section, "mpileup_options", "" );
 
   my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
@@ -95,13 +91,13 @@ if [ ! -s $snpvcf ]; then
     samtools index ${tumor}
   fi
 
-  java $java_option -jar $varscan2_jar.jar somatic <($normal_pileup) <($tumor_pileup) $groupName $option --output-vcf 
+  java $java_option -jar $varscan2_jar somatic <($normal_pileup) <($tumor_pileup) $groupName $option --output-vcf 
 fi
 
-java $java_option -jar $varscan2_jar processSomatic $snpvcf --p-value $somatic_p_value
+java $java_option -jar $varscan2_jar processSomatic $snpvcf
 grep -v \"^#\" $snpvcf | cut -f1 | uniq -c | awk '{print \$2\"\t\"\$1}' > ${snpvcf}.chromosome
 
-java $java_option -jar $varscan2_jar processSomatic $indelvcf --p-value $somatic_p_value
+java $java_option -jar $varscan2_jar processSomatic $indelvcf
 grep -v \"^#\" $indelvcf | cut -f1 | uniq -c | awk '{print \$2\"\t\"\$1}' > ${indelvcf}.chromosome
 
 echo finished=`date`
