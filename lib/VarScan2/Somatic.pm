@@ -39,6 +39,7 @@ sub perform {
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
+  print SH "cd $pbsDir\n";
 
   my $java_option = get_option( $config, $section, "java_option", "" );
 
@@ -69,7 +70,6 @@ sub perform {
     my $log     = $self->logfile( $logDir, $groupName );
 
     print SH "\$MYCMD ./$pbsName \n";
-    print SH "cd $pbsDir\n";
 
     my $log_desc = $cluster->get_log_desc($log);
 
