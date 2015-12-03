@@ -59,8 +59,7 @@ sub perform {
     my $normalfile = $sampleFiles[0][0];
     my $tumorfile  = $sampleFiles[1][0];
 
-    my $normal_mpileup = "${normalfile}.mpileup";
-    my $tumor_mpileup  = "${tumorfile}.mpileup";
+    my $mpileup = "${groupName}.mpileup";
 
     my $snpvcf    = "${groupName}.snp.vcf";
     my $indelvcf    = "${groupName}.indel.vcf";
@@ -91,8 +90,12 @@ if [ ! -s $snpvcf ]; then
   if [ ! -s ${tumor}.bai ]; then
     samtools index ${tumor}
   fi
-
-  samtools mpileup $mpileup_options -f $faFile $normal $tumor | java $java_option -jar $varscan2_jar somatic - $groupName -mpileup 1 $option --output-vcf --somatic-p-value $somatic_p_value
+  
+  if [ ! -s $mpileup ]; then
+    samtools mpileup $mpileup_options -f $faFile $normal $tumor > $mpileup
+  fi
+  
+  java $java_option -jar $varscan2_jar somatic $mpileup $groupName -mpileup 1 $option --output-vcf --somatic-p-value $somatic_p_value
 fi
 
 java $java_option -jar $varscan2_jar processSomatic $snpvcf --p-value $somatic_p_value
