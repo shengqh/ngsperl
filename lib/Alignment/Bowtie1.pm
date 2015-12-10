@@ -53,7 +53,7 @@ sub perform {
         $bowtiesam     = $sampleName . ".all.sam";
         $mappedonlycmd = "
 if [ -s $bowtiesam ]; then
-  fisamtools view -F 4 $bowtiesam > $samFile
+  samtools view -F 4 $bowtiesam > $samFile
   rm $bowtiesam
 fi";
         $mappedonlyoption = "-F 4";
@@ -132,7 +132,7 @@ $bowtie1_aln_command
 if [ -s $bowtiesam ]; then
 ";
         if ($sortbam) {
-          print OUT "  samtools view -S $mappedonlyoption -b $bowtiesam | samtools sort - $sampleName
+          print OUT "  samtools view -Shu $mappedonlyoption $bowtiesam | samtools sort -o $bamFile -
   if [ -s $bamFile ]; then
     samtools index $bamFile 
     samtools flagstat $bamFile > ${bamFile}.stat

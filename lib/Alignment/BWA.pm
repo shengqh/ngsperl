@@ -117,7 +117,7 @@ if [ ! -s $rgBamFile ]; then
 fi
 
 if [ -s $rgBamFile ]; then
-  samtools sort -@ $thread -m 4G $rgBamFile $sampleName
+  samtools sort -@ $thread -m 4G $rgBamFile -o $bamFile
   if [ -s $bamFile ]; then
     samtools index $bamFile 
     samtools flagstat $bamFile > ${bamFile}.stat 
