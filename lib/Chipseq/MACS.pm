@@ -80,7 +80,7 @@ fi
 
 echo MACS_start=`date`
 
-macs14 $option -t $sample -c $control -n $pairName
+macs $option -t $sample -c $control -n $pairName
 
 echo MACS_end=`date`
 
