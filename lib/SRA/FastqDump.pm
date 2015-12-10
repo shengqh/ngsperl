@@ -65,8 +65,11 @@ cd $resultDir
 echo started=`date`
 
 if [ ! -s $fastq1 ]; then
-  fastq-dump --split-3 --gzip $bamfile
+  ln -s $bamfile ${sampleName}.sra
+  fastq-dump --split-3 --gzip ${sampleName}.sra
+  rm ${sampleName}.sra
 fi
+
 
 echo finished=`date`
 
@@ -85,7 +88,9 @@ cd $resultDir
 echo started=`date`
 
 if [ ! -s $fastq ]; then
-  fastq-dump --gzip $bamfile
+  ln -s $bamfile ${sampleName}.sra
+  fastq-dump --gzip ${sampleName}.sra
+  rm ${sampleName}.sra
 fi
 
 echo finished=`date`
