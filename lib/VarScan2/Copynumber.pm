@@ -53,8 +53,8 @@ sub perform {
 
     my $curDir = create_directory_or_die( $resultDir . "/$groupName" );
 
-    my $normal = $sampleFiles[0][0];
-    my $tumor  = $sampleFiles[1][0];
+    my $normal = $sampleFiles[0][1];
+    my $tumor  = $sampleFiles[1][1];
 
     my $cpRawFile   = "${groupName}.copynumber";
     my $cpCallFile = "${groupName}.call";
