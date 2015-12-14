@@ -8,11 +8,11 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::PairTask;
+use CQS::GroupTask;
 use CQS::NGSCommon;
 use Data::Dumper;
 
-our @ISA = qw(CQS::PairTask);
+our @ISA = qw(CQS::GroupTask);
 
 sub new {
   my ($class) = @_;
@@ -28,40 +28,32 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $rawFiles = get_raw_files( $config, $section );
-
-  #print Dumper($rawFiles);
-
-  my $groups = get_raw_files( $config, $section, "groups" );
-
-  #print Dumper($groups);
-
-  my $pairs = get_raw_files( $config, $section, "pairs" );
-
-  #print Dumper($pairs);
+  my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
 
-  for my $pairName ( sort keys %{$pairs} ) {
-    my ( $ispaired, $gNames ) = get_pair_groups( $pairs, $pairName );
-    my @groupNames   = @{$gNames};
-    my $groupControl = $groups->{ $groupNames[0] };
-    my $groupSample  = $groups->{ $groupNames[1] };
+  for my $groupName ( sort keys %group_sample_map ) {
+    my @sampleFiles = @{ $group_sample_map{$groupName} };
+    my $sampleCount = scalar(@sampleFiles);
 
-    my $control = $rawFiles->{ $groupControl->[0] }[0];
-    my $sample  = $rawFiles->{ $groupSample->[0] }[0];
+    if ( $sampleCount != 2 ) {
+      die "SampleFile should be normal,tumor paired.";
+    }
 
-    #print $pairName, ": ", $sample, " vs ", $control, "\n";
+    my $curDir = create_directory_or_die( $resultDir . "/$groupName" );
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $pairName );
+    my $control = $sampleFiles[0][1];
+    my $sample  = $sampleFiles[1][1];
+
+    my $final  = "${groupName}_peaks.bed";
+
+    my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
     my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $pairName );
+    my $log     = $self->logfile( $logDir, $groupName );
 
-    my $curDir = create_directory_or_die( $resultDir . "/$pairName" );
-
-    my $labels = join( ",", @groupNames );
+    print SH "\$MYCMD ./$pbsName \n";
 
     my $log_desc = $cluster->get_log_desc($log);
 
@@ -69,18 +61,18 @@ sub perform {
     print OUT "$pbsDesc
 $log_desc
 
-$path_file
+$path_file 
 
 cd $curDir
 
-if [ -s gene_exp.diff ];then
-  echo job has already been done. if you want to do again, delete ${curDir}/gene_exp.diff and submit job again.
+if [ -s $final ];then
+  echo job has already been done. if you want to do again, delete ${curDir}/$final and submit job again.
   exit 0;
 fi
 
 echo MACS_start=`date`
 
-macs $option -t $sample -c $control -n $pairName
+macs $option -t $sample -c $control -n $groupName
 
 echo MACS_end=`date`
 
@@ -105,16 +97,16 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $pairs = get_raw_files( $config, $section, "pairs" );
+  my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
 
   my $result = {};
-  for my $pairName ( sort keys %{$pairs} ) {
-    my $curDir      = $resultDir . "/$pairName";
+  for my $groupName ( sort keys %group_sample_map ) {
+    my $curDir      = $resultDir . "/$groupName";
     my @resultFiles = ();
-    push( @resultFiles, $curDir . "/${pairName}_peaks.bed" );
-    push( @resultFiles, $curDir . "/${pairName}_MACS_wiggle/treat" );
+    push( @resultFiles, $curDir . "/${groupName}_peaks.bed" );
+    push( @resultFiles, $curDir . "/${groupName}_MACS_wiggle/treat" );
 
-    $result->{$pairName} = filter_array( \@resultFiles, $pattern );
+    $result->{$groupName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
 }
