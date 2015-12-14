@@ -28,11 +28,16 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
+  my $rtemplate = dirname(__FILE__) . "/Copynumber.r";
+  if ( !-e $rtemplate ) {
+    die "File not found : " . $rtemplate;
+  }
+
   my $varscan2_jar = get_param_file( $config->{$section}{VarScan2_jar}, "VarScan2_jar", 1 );
   my $faFile       = get_param_file( $config->{$section}{fasta_file},   "fasta_file",   1 );
 
   my $mpileup_options = get_option( $config, $section, "mpileup_options", "" );
-  my $call_options =  get_option( $config, $section, "call_options", "--amp-threshold 0.3 --del-threshold 0.3" );
+  my $call_options    = get_option( $config, $section, "call_options",    "--amp-threshold 0.3 --del-threshold 0.3" );
 
   my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
 
@@ -56,8 +61,22 @@ sub perform {
     my $normal = $sampleFiles[0][1];
     my $tumor  = $sampleFiles[1][1];
 
-    my $cpRawFile   = "${groupName}.copynumber";
+    my $cpRawFile  = "${groupName}.copynumber";
     my $cpCallFile = "${groupName}.call";
+    my $cpSegFile  = "${groupName}.segment";
+
+    my $rfile = $curDir . "/${groupName}.r";
+    open( RF, ">$rfile" ) or die "Cannot create $rfile";
+    print RF "setwd(\"$curDir\")  
+inputfile<-\"$cpCallFile\"
+outputfile<-\"$cpSegFile\"
+";
+    open RT, "<$rtemplate" or die $!;
+    while (<RT>) {
+      print RF $_;
+    }
+    close(RT);
+    close(RF);
 
     my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
     my $pbsName = basename($pbsFile);
@@ -93,6 +112,10 @@ if [[ -s $cpRawFile && ! -s $cpCallFile ]]; then
   java $java_option -jar $varscan2_jar copyCaller $cpRawFile $call_options --output-file $cpCallFile 
 fi
 
+if [[ -s $cpCallFile && ! -s $cpSegFile ]]; then
+  R --vanilla -f $rfile
+fi
+
 echo finished=`date`
 ";
     close OUT;
@@ -106,7 +129,7 @@ echo finished=`date`
     chmod 0755, $shfile;
   }
 
-  print "!!!shell file $shfile created, you can run this shell file to submit all VarScan2 tasks.\n";
+  print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{name} . " tasks.\n";
 }
 
 sub result {
@@ -120,7 +143,9 @@ sub result {
   for my $groupName ( keys %{$groups} ) {
     my @resultFiles = ();
     my $curDir      = $resultDir . "/$groupName";
+    push( @resultFiles, "$curDir/${groupName}.copynumber" );
     push( @resultFiles, "$curDir/${groupName}.call" );
+    push( @resultFiles, "$curDir/${groupName}.segment" );
     $result->{$groupName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
