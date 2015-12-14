@@ -29,6 +29,7 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
+  my $genome = get_option($config, $section, "genome");
   my $pipeline_dir = get_directory( $config, $section, "pipeline_dir", 1 );
   my $binding_site_file = parse_param_file( $config, $section, "binding_site_file", 1 );
 
@@ -79,7 +80,7 @@ fi
 echo BradnerRose2_start=`date`
 
 cd $pipeline_dir
-python ROSE2_main.py -i $binding_site_file -r $tumor -c $normal -o $curDir $option
+python ROSE2_main.py -g $genome -i $binding_site_file -r $tumor -c $normal -o $curDir $option
 
 echo end=`date`
 
