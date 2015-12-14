@@ -30,7 +30,7 @@ sub perform {
 
   my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
   my $pipeline_dir = get_directory( $config, $section, "pipeline_dir", 1 );
-  my $binding_site_file = get_param_file( $config, $section, "binding_site_file", 1 );
+  my $binding_site_file = parse_param_file( $config, $section, "binding_site_file", 1 );
 
   if ( $option == "" ) {
     $option = "-s 12500 -t 2500";
