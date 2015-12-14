@@ -56,9 +56,6 @@ sub perform {
     my $normal = $sampleFiles[0][1];
     my $tumor  = $sampleFiles[1][1];
 
-    my $normalfile = $sampleFiles[0][0];
-    my $tumorfile  = $sampleFiles[1][0];
-
     my $snpvcf   = "${groupName}.snp.vcf";
     my $indelvcf = "${groupName}.indel.vcf";
 
