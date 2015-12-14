@@ -36,7 +36,7 @@ sub perform {
   my $varscan2_jar = get_param_file( $config->{$section}{VarScan2_jar}, "VarScan2_jar", 1 );
   my $faFile       = get_param_file( $config->{$section}{fasta_file},   "fasta_file",   1 );
 
-  my $mpileup_options = get_option( $config, $section, "mpileup_options", "" );
+  my $mpileup_options = get_option( $config, $section, "mpileup_options", "-q 1" );
   my $call_options    = get_option( $config, $section, "call_options",    "--amp-threshold 0.3 --del-threshold 0.3" );
 
   my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
@@ -105,7 +105,7 @@ if [ ! -s $cpRawFile ]; then
     samtools index ${tumor}
   fi
 
-  samtools mpileup -q 1 -f $faFile $normal $tumor | awk 'NF==9 && \$4!=0' | java $java_option -jar $varscan2_jar copynumber - $groupName --mpileup 1 $option  
+  samtools mpileup $mpileup_options -f $faFile $normal $tumor | awk 'NF==9 && \$4!=0' | java $java_option -jar $varscan2_jar copynumber - $groupName --mpileup 1 $option  
 fi
 
 if [[ -s $cpRawFile && ! -s $cpCallFile ]]; then
@@ -129,7 +129,7 @@ echo finished=`date`
     chmod 0755, $shfile;
   }
 
-  print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{name} . " tasks.\n";
+  print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
 }
 
 sub result {
