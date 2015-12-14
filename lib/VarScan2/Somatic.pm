@@ -32,7 +32,7 @@ sub perform {
   my $varscan2_jar = get_param_file( $config->{$section}{VarScan2_jar}, "VarScan2_jar", 1 );
   my $faFile       = get_param_file( $config->{$section}{fasta_file},   "fasta_file",   1 );
 
-  my $mpileup_options = get_option( $config, $section, "mpileup_options", "" );
+  my $mpileup_options = get_option( $config, $section, "mpileup_options", "-q 1" );
 
   my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
 
@@ -59,8 +59,8 @@ sub perform {
     my $snpvcf   = "${groupName}.snp.vcf";
     my $indelvcf = "${groupName}.indel.vcf";
 
-    my $normal_pileup = "samtools mpileup -q 1 -f $faFile $normal";
-    my $tumor_pileup  = "samtools mpileup -q 1 -f $faFile $tumor";
+    my $normal_pileup = "samtools mpileup $mpileup_options -f $faFile $normal";
+    my $tumor_pileup  = "samtools mpileup $mpileup_options -f $faFile $tumor";
 
     my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
     my $pbsName = basename($pbsFile);
