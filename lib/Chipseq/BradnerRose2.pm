@@ -29,8 +29,8 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
-  my $pipeline_dir = get_directory( $self, $section, "pipeline_dir", 1 );
-  my $binding_site_file = get_param_file( $self, $section, "binding_site_file", 1 );
+  my $pipeline_dir = get_directory( $config, $section, "pipeline_dir", 1 );
+  my $binding_site_file = get_param_file( $config, $section, "binding_site_file", 1 );
 
   if ( $option == "" ) {
     $option = "-s 12500 -t 2500";
