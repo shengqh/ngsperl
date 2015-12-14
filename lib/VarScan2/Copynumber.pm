@@ -86,7 +86,7 @@ if [ ! -s $cpRawFile ]; then
     samtools index ${tumor}
   fi
 
-  samtools mpileup -q 1 -f $faFile $normal $tumor | awk 'NF==9 && \$4!=0' | java $java_option -jar $varscan2_jar copynumber $groupName $option 
+  samtools mpileup -q 1 -f $faFile $normal $tumor | awk 'NF==9 && \$4!=0' | java $java_option -jar $varscan2_jar copynumber $groupName --mpileup 1 $option  
 fi
 
 if [[ -s $cpRawFile && ! -s $cpCallFile ]]; then
