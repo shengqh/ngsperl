@@ -32,7 +32,7 @@ sub perform {
   my $pipeline_dir = get_directory( $config, $section, "pipeline_dir", 1 );
   my $binding_site_file = parse_param_file( $config, $section, "binding_site_file", 1 );
 
-  if ( $option == "" ) {
+  if ( $option eq "" ) {
     $option = "-s 12500 -t 2500";
   }
 
