@@ -12,7 +12,7 @@ use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 
-our @ISA = qw(CQS::AbstractSomaticMutation);
+our @ISA = qw(CQS::GroupTask);
 
 sub new {
   my ($class) = @_;
