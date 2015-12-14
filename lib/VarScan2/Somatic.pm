@@ -9,11 +9,11 @@ use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::Task;
-use CQS::AbstractSomaticMutation;
+use CQS::GroupTask;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 
-our @ISA = qw(CQS::AbstractSomaticMutation);
+our @ISA = qw(CQS::GroupTask);
 
 sub new {
   my ($class) = @_;

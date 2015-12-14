@@ -11,9 +11,9 @@ use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 use CQS::Fasta;
-use CQS::AbstractSomaticMutation;
+use CQS::GroupTask;
 
-our @ISA = qw(CQS::AbstractSomaticMutation);
+our @ISA = qw(CQS::GroupTask);
 
 sub new {
   my ($class) = @_;
