@@ -1,6 +1,6 @@
 library(DNAcopy)
-cn <- read.table(inputfile,header=F)
-CNA.object <-CNA( genomdat = cn[,6], chrom = cn[,1], maploc = cn[,2], data.type = 'logratio')
+cn <- read.table(inputfile, header=T, stringsAsFactors = F)
+CNA.object <-CNA( genomdat = cn$adjusted_log_ratio, chrom = cn$chrom, maploc = cn$chr_start, data.type = 'logratio')
 CNA.smoothed <- smooth.CNA(CNA.object)
 segs <- segment(CNA.smoothed, verbose=0, min.width=2)
 segs2 = segs$output
