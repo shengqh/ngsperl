@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package ATACseq::Bam2Bed;
+package ATACseq::BamToBed;
 
 use strict;
 use warnings;
@@ -16,7 +16,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "ATACseq::Bam2Bed";
+  $self->{_name}   = "ATACseq::BamToBed";
   $self->{_suffix} = "_b2b";
   bless $self, $class;
   return $self;
