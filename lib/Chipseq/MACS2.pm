@@ -82,6 +82,9 @@ exit 0
 
   print SH "exit 0\n";
   close(SH);
+  if ( is_linux() ) {
+    chmod 0755, $shfile;
+  }  
 
   print "!!!shell file $shfile created, you can run this shell file to submit tasks.\n";
 }
