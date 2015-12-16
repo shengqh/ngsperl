@@ -30,9 +30,6 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
-  if($option eq ""){
-    $option = "-f BED -g hs";
-  }
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
@@ -42,7 +39,7 @@ sub perform {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
 
-    my $samples  = join(@sampleFiles, " ");
+    my $samples  = join(" ", @sampleFiles);
 
     my $final  = "${sampleName}_peaks.bed";
 
