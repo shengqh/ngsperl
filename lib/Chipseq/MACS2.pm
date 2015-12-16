@@ -47,8 +47,6 @@ sub perform {
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $sampleName );
 
-    print SH "\$MYCMD ./$pbsName \n";
-
     my $log_desc = $cluster->get_log_desc($log);
 
     open( OUT, ">$pbsFile" ) or die $!;
@@ -59,14 +57,14 @@ $path_file
 
 cd $curDir
 
-if [ -s $final ];then
-  echo job has already been done. if you want to do again, delete ${curDir}/$final and submit job again.
-  exit 0;
-fi
-
 echo MACS2_start=`date`
 
-macs2 callpeak $option -t $samples -n $sampleName --outdir . 
+if [ ! -s ${sampleName}_peaks.narrowPeak ]; then
+  macs2 callpeak $option -t $samples -n $sampleName --outdir . 
+fi
+
+if [ ! -s 
+
 
 echo MACS2_end=`date`
 
