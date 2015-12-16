@@ -66,7 +66,7 @@ fi
 
 echo MACS2_start=`date`
 
-macs2 callpeak $option -t $samples -n $sampleName -B -q 0.01 --outdir . 
+macs2 callpeak $option -t $samples -n $sampleName --outdir . 
 
 echo MACS2_end=`date`
 
