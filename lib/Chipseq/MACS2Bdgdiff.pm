@@ -50,12 +50,12 @@ sub perform {
     }
 
     my @condition1        = @{ $group_sample_map{ $groupNames[0] } };
-    my $condition1treat   = filter_array( \@condition1, "_treat_pileup.bdg" )->[0];
-    my $condition1control = filter_array( \@condition1, "_control_lambda.bdg" )->[0];
+    my $condition1treat   = join(" ", @{filter_array( \@condition1, "_treat_pileup.bdg" )});
+    my $condition1control = join(" ", @{filter_array( \@condition1, "_control_lambda.bdg" )});
 
     my @condition2        = @{ $group_sample_map{ $groupNames[1] } };
-    my $condition2treat   = filter_array( \@condition2, "_treat_pileup.bdg" )->[0];
-    my $condition2control = filter_array( \@condition2, "_control_lambda.bdg" )->[0];
+    my $condition2treat   = join(" ", @{filter_array( \@condition2, "_treat_pileup.bdg" )});
+    my $condition2control = join(" ", @{filter_array( \@condition2, "_control_lambda.bdg" )});
 
     my $curDir = create_directory_or_die( $resultDir . "/$comparisonName" );
 

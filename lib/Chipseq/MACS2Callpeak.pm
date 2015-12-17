@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Chipseq::MACS2;
+package Chipseq::MACS2Callpeak;
 
 use strict;
 use warnings;
@@ -18,8 +18,8 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Chipseq::MACS2";
-  $self->{_suffix} = "_macs2";
+  $self->{_name}   = "Chipseq::MACS2Callpeak";
+  $self->{_suffix} = "_mc";
   bless $self, $class;
   return $self;
 }
@@ -60,7 +60,7 @@ cd $curDir
 echo MACS2_start=`date`
 
 if [ ! -s ${sampleName}_peaks.narrowPeak ]; then
-  macs2 callpeak $option -t $samples -n $sampleName --outdir . 
+  macs2 callpeak $option -t $samples -n $sampleName
 fi
 
 if [ ! -s 
@@ -98,7 +98,9 @@ sub result {
   for my $sampleName ( sort keys %group_sample_map ) {
     my $curDir      = $resultDir . "/$sampleName";
     my @resultFiles = ();
-    push( @resultFiles, $curDir . "/${sampleName}_peaks.bed" );
+    push( @resultFiles, $curDir . "/${sampleName}_treat_pileup.bdg" );
+    push( @resultFiles, $curDir . "/${sampleName}_control_lambda.bdg" );
+    push( @resultFiles, $curDir . "/${sampleName}_peaks.narrowPeak" );
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
