@@ -31,17 +31,23 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %group_sample_treat   = %{ $self->get_group_samplefile_map( $config, $section, "_treat_pileup.bdg" ) };
-  my %group_sample_control = %{ $self->get_group_samplefile_map( $config, $section, "_control_lambda.bdg" ) };
+  my %group_sample_treat;
+  my %group_sample_control;
+  my $comparisons;
+
+  if ( has_raw_files( $config, $section, "pairs" ) ) {
+    %group_sample_treat   = %{ $self->get_group_samplefile_map( $config, $section, "_treat_pileup.bdg" ) };
+    %group_sample_control = %{ $self->get_group_samplefile_map( $config, $section, "_control_lambda.bdg" ) };
+    $comparisons = get_raw_files( $config, $section, "pairs" );
+  }
+  else {
+    %group_sample_treat   = %{ get_raw_files( $config, $section, "_treat_pileup.bdg" ) };
+    %group_sample_control = %{ get_raw_files( $config, $section, "_control_lambda.bdg" ) };
+    $comparisons = get_raw_files( $config, $section, "groups" );
+  }
 
   print Dumper(%group_sample_treat);
   print Dumper(%group_sample_control);
-
-  my $comparisons = get_raw_files( $config, $section, "pairs" );
-  my $totalPair = scalar( keys %{$comparisons} );
-  if ( 0 == $totalPair ) {
-    die "No pair defined!";
-  }
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
