@@ -41,8 +41,8 @@ sub perform {
     $comparisons = get_raw_files( $config, $section, "pairs" );
   }
   else {
-    %group_sample_treat   = %{ get_raw_files( $config, $section, "_treat_pileup.bdg" ) };
-    %group_sample_control = %{ get_raw_files( $config, $section, "_control_lambda.bdg" ) };
+    %group_sample_treat   = %{ get_raw_files( $config, $section, "source", "_treat_pileup.bdg" ) };
+    %group_sample_control = %{ get_raw_files( $config, $section, "source", "_control_lambda.bdg" ) };
     $comparisons = get_raw_files( $config, $section, "groups" );
   }
 
