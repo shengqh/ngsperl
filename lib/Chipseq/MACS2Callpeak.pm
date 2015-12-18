@@ -29,7 +29,15 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ $self->get_group_sample_map( $config, $section ) };
+  my %rawFiles;
+
+  if ( defined $config->{$section}{"groups"} || defined $config->{$section}{"groups_ref"} || defined $config->{$section}{"groups_config_ref"} ) {
+    %rawFiles = %{ $self->get_group_sample_map( $config, $section ) };
+  }
+  else {
+    %rawFiles = %{ get_raw_files( $config, $section ) };
+  }
+
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
