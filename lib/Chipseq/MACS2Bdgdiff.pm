@@ -31,8 +31,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %group_sample_treat   = %{ $self->get_group_sample_map( $config, $section, "source", "_treat_pileup.bdg" ) };
-  my %group_sample_control = %{ $self->get_group_sample_map( $config, $section, "source", "_control_lambda.bdg" ) };
+  my %group_sample_treat   = %{ $self->get_group_sample_map( $config, $section, "_treat_pileup.bdg" ) };
+  my %group_sample_control = %{ $self->get_group_sample_map( $config, $section, "_control_lambda.bdg" ) };
 
   print Dumper(%group_sample_treat);
   print Dumper(%group_sample_control);
