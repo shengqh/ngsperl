@@ -32,7 +32,7 @@ sub perform {
   my %rawFiles;
 
   if ( defined $config->{$section}{"groups"} || defined $config->{$section}{"groups_ref"} || defined $config->{$section}{"groups_config_ref"} ) {
-    %rawFiles = %{ $self->get_group_sample_map( $config, $section ) };
+    %rawFiles = %{ $self->get_group_samplefile_map( $config, $section ) };
   }
   else {
     %rawFiles = %{ get_raw_files( $config, $section ) };
