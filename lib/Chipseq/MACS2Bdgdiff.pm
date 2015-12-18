@@ -54,10 +54,10 @@ sub perform {
       die "Comparison should be control,treatment paired.";
     }
 
-    my $condition1treat   = join( " ", $group_sample_treat{ $groupNames[0] }->[0] );
-    my $condition1control = join( " ", $group_sample_control{ $groupNames[0] }->[0] );
-    my $condition2treat   = join( " ", $group_sample_treat{ $groupNames[1] }->[0] );
-    my $condition2control = join( " ", $group_sample_control{ $groupNames[1] }->[0] );
+    my $condition1treat   = join( " ", $group_sample_treat{ $groupNames[0] } );
+    my $condition1control = join( " ", $group_sample_control{ $groupNames[0] } );
+    my $condition2treat   = join( " ", $group_sample_treat{ $groupNames[1] } );
+    my $condition2control = join( " ", $group_sample_control{ $groupNames[1] } );
 
     my $curDir = create_directory_or_die( $resultDir . "/$comparisonName" );
 
