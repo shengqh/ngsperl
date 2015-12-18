@@ -60,8 +60,6 @@ sub perform {
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $comparisonName );
 
-    print SH "\$MYCMD ./$pbsName \n";
-
     my $log_desc = $cluster->get_log_desc($log);
 
     my $final = "final";
