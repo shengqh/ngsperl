@@ -112,6 +112,7 @@ if (is.na(tRNASigFileList)) {
 	tRNASigFileName<-".highesttRNAPosition.pdf"
 
 	temp<-positionRawAllSamplesMeanSample[which(positionRawAllSamplesMeanSample$Feature %in% tRNASigNames),]
+	write.csv(positionRawAllSamplesMeanSample,paste0(resultFile,"tRNAPositionEach.csv"))
 	m <- ggplot(temp, aes(x = Position,y=CountPercentage))
 	pdf(paste0(resultFile,tRNASigFileName),height=15,width=7)
 	m + geom_bar(stat="identity")+facet_grid(Feature ~ Group)+
@@ -139,6 +140,7 @@ if (is.na(tRNASigFileList)) {
 		}
 		
 		temp<-positionRawAllSamplesMeanSample[which(positionRawAllSamplesMeanSample$Feature %in% tRNASigNames),]
+		write.csv(positionRawAllSamplesMeanSample,paste0(resultFile,"tRNAPositionEach.csv"))
 		if (nrow(temp)!=0) { #==0 means all significant tRNA has no position information (means they are not high abudance tRNA, not extracted position information by smallRNA count)
 			m <- ggplot(temp, aes(x = Position,y=CountPercentage))
 			pdf(paste0(resultFile,tRNASigFileName),height=15,width=7)
