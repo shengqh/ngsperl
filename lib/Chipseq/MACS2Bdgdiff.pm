@@ -34,8 +34,8 @@ sub perform {
   my %group_sample_treat   = %{ $self->get_group_sample_map( $config, $section, "_treat_pileup.bdg" ) };
   my %group_sample_control = %{ $self->get_group_sample_map( $config, $section, "_control_lambda.bdg" ) };
 
-  print Dumper(%group_sample_treat);
-  print Dumper(%group_sample_control);
+  #print Dumper(%group_sample_treat);
+  #print Dumper(%group_sample_control);
 
   my $comparisons = get_raw_files( $config, $section, "pairs" );
   my $totalPair = scalar( keys %{$comparisons} );
