@@ -80,7 +80,6 @@ if [ ! -s
 
 echo MACS2_end=`date`
 
-exit 0
 ";
 
     close(OUT);

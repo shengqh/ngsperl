@@ -79,6 +79,7 @@ if [ ! -s $final ]; then
 fi
 
 echo finished=`date`
+
 ";
     close OUT;
 

@@ -84,7 +84,6 @@ python ROSE2_main.py -g $genome -i $binding_site_file -r $tumor -c $normal -o $c
 
 echo end=`date`
 
-exit 0
 ";
 
     close(OUT);

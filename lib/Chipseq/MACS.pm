@@ -77,7 +77,6 @@ macs $option -t $sample -c $control -n $groupName
 
 echo MACS_end=`date`
 
-exit 0
 ";
 
     close(OUT);
