@@ -31,10 +31,12 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
-  
-  print Dumper( %group_sample_map);
-  
+  my %group_sample_treat   = %{ $self->get_group_sample_map( $config, $section, "source", "_treat_pileup.bdg" ) };
+  my %group_sample_control = %{ $self->get_group_sample_map( $config, $section, "source", "_control_lambda.bdg" ) };
+
+  print Dumper(%group_sample_treat);
+  print Dumper(%group_sample_control);
+
   my $comparisons = get_raw_files( $config, $section, "pairs" );
   my $totalPair = scalar( keys %{$comparisons} );
   if ( 0 == $totalPair ) {
@@ -52,13 +54,10 @@ sub perform {
       die "Comparison should be control,treatment paired.";
     }
 
-    my @condition1        = @{ $group_sample_map{ $groupNames[0] } };
-    my $condition1treat   = join(" ", @{filter_array( \@condition1, "_treat_pileup.bdg" )});
-    my $condition1control = join(" ", @{filter_array( \@condition1, "_control_lambda.bdg" )});
-
-    my @condition2        = @{ $group_sample_map{ $groupNames[1] } };
-    my $condition2treat   = join(" ", @{filter_array( \@condition2, "_treat_pileup.bdg" )});
-    my $condition2control = join(" ", @{filter_array( \@condition2, "_control_lambda.bdg" )});
+    my $condition1treat   = $group_sample_treat{ $groupNames[0] }->[0];
+    my $condition1control = $group_sample_control{ $groupNames[0] }->[0];
+    my $condition2treat   = $group_sample_treat{ $groupNames[1] }->[0];
+    my $condition2control = $group_sample_control{ $groupNames[1] }->[0];
 
     my $curDir = create_directory_or_die( $resultDir . "/$comparisonName" );
 
