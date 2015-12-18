@@ -69,7 +69,7 @@ sub perform {
 
     my $log_desc = $cluster->get_log_desc($log);
 
-    my $final = "";
+    my $final = "final";
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
