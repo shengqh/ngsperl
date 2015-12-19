@@ -154,5 +154,20 @@ if (is.na(tRNASigFileList)) {
 	}
 }
 
+#significant tRNA for each sample
+geneselected<-intersect(positionRawAllSamples$Feature,paste0("tRNA:",tRNASigNames))
+if (length(geneselected)>0) {
+	for (i in 1:length(geneselected)) {
+		temp<-positionRawAllSamples[which(positionRawAllSamples$Feature==geneselected[i]),]
+		m <- ggplot(temp, aes(x = Position,y=CountPercentage))
+		pdf(paste0(resultFile,tRNASigFileName,".",gsub("tRNA:","",geneselected[i]),".pdf"),height=7,width=7)
+		print(
+				m + geom_bar(stat="identity")+facet_wrap(~Sample)+
+						ylab("Read fraction (read counts/total reads)")+
+						theme(strip.text.y = element_text(size = 4))
+		)
+		dev.off()
+	}
+}
 
 
