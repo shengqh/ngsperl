@@ -29,6 +29,8 @@ sub perform {
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
+  my $blacklistfile = get_param_file( $config->{$section}{"blacklist_file"}, "blacklist_file", 0 );
+
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct) . "\n";
@@ -44,6 +46,11 @@ sub perform {
     print SH "\$MYCMD ./$pbsName \n";
 
     my $finalFile = $sampleName . ".shifted.bed";
+    my $pileup    = "";
+    if ( defined $blacklistfile ) {
+      $finalFile = $sampleName . ".shifted.confident.bed";
+      $pileup    = "| bedtools subtract -a - -b $blacklistfile";
+    }
 
     my $log_desc = $cluster->get_log_desc($log);
 
@@ -58,12 +65,13 @@ cd $resultDir
 echo started=`date`
 
 if [ ! -s $finalFile ]; then
-  bam2bed < $bamfile | awk 'BEGIN {OFS = \"\\t\"} ; {if (\$6 == \"+\") print \$1, \$2 + 4, \$3 + 4, \$4, \$5, \$6; else print \$1, \$2 - 5, \$3 - 5, \$4, \$5, \$6}' > $finalFile
+  bam2bed < $bamfile | awk 'BEGIN {OFS = \"\\t\"} ; {if (\$6 == \"+\") print \$1, \$2 + 4, \$3 + 4, \$4, \$5, \$6; else print \$1, \$2 - 5, \$3 - 5, \$4, \$5, \$6}' $pileup > $finalFile
 fi
 
 echo finished=`date`
 
-exit 0 
+exit 0
+ 
 ";
     close OUT;
 
@@ -86,11 +94,14 @@ sub result {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my $blacklistfile = get_param_file( $config->{$section}{"blacklist_file"}, "blacklist_file", 0 );
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
     my @resultFiles = ();
-    push( @resultFiles, "${resultDir}/${sampleName}.shifted.bed" );
+
+    my $finalFile = ( defined $blacklistfile ) ? $sampleName . ".shifted.confident.bed" : $sampleName . ".shifted.bed";
+    push( @resultFiles, "${resultDir}/${finalFile}" );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
