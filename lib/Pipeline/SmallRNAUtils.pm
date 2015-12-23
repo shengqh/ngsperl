@@ -243,6 +243,26 @@ sub getPrepareConfig {
     $len_ref = "cutadapt";
     push @individual, ( "fastqc_pre_trim", "cutadapt", "fastqc_post_trim" );
     push @summary, ( "fastqc_pre_trim_summary", "fastqc_post_trim_summary" );
+    
+    if ( !defined $remove_sequences ) {
+      $config->{"fastqc_count_vis"} = {
+        class              => "CQS::UniqueR",
+        perform            => 1,
+        target_dir         => $def->{target_dir} . "/fastqc_post_remove",
+        rtemplate          => "countInFastQcVis.R",
+        output_file        => ".countInFastQcVis.Result",
+        parameterFile1_ref => [ "fastqc_pre_trim_summary", ".FastQC.reads.tsv\$" ],
+        parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.reads.tsv\$" ],
+        sh_direct          => 1,
+        pbs                => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      };
+      push @summary, ("fastqc_count_vis");
+    }
   }
   else {
     $qc = {
