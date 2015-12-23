@@ -161,10 +161,13 @@ geneselected<-intersect(positionRawAllSamples$Feature,paste0("tRNA:",tRNASigName
 if (length(geneselected)>0) {
 	for (i in 1:length(geneselected)) {
 		temp<-positionRawAllSamples[which(positionRawAllSamples$Feature==geneselected[i]),]
-		m <- ggplot(temp, aes(x = Position,y=CountPercentage))
-		pdf(paste0(resultFile,tRNASigFileName,".",gsub("tRNA:","",geneselected[i]),".pdf"),height=7,width=7)
+		fileSize<-max(length(unique(temp$Sample))/25*2000,2000)
+		m <- ggplot(temp, aes(x = Position,ymin=0,ymax=CountPercentage))
+		png(paste0(resultFile,tRNASigFileName,".",gsub("tRNA:","",geneselected[i]),".png"),height=fileSize,width=fileSize,res=300)
 		print(
-				m + geom_bar(stat="identity")+facet_wrap(~Sample)+
+				m+geom_ribbon()+
+				#m + geom_polygon()+
+						facet_wrap(~Sample)+
 						ylab("Read fraction (read counts/total reads)")+
 						theme(strip.text.y = element_text(size = 4))
 		)
