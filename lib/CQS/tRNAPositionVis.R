@@ -115,9 +115,11 @@ if (is.na(tRNASigFileList)) {
 	write.csv(positionRawAllSamplesMeanSample,paste0(resultFile,"tRNAPositionEach.csv"))
 	m <- ggplot(temp, aes(x = Position,y=CountPercentage))
 	pdf(paste0(resultFile,tRNASigFileName),height=15,width=7)
-	m + geom_bar(stat="identity")+facet_grid(Feature ~ Group)+
+	print(
+			m + geom_bar(stat="identity")+facet_grid(Feature ~ Group)+
 			ylab("Read fraction (read counts/total reads)")+
 			theme(strip.text.y = element_text(size = 4))
+	)
 	dev.off()
 	
 } else {
