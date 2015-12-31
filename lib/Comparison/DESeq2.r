@@ -236,6 +236,8 @@ for(comparisonName in comparisonNames){
   rownames(designData)<-colnames(comparisonData)
   conditionColors<-as.matrix(data.frame(Group=c("red", "blue")[designData$Condition]))
   
+  write.csv(comparisonData, file=paste0(prefix, ".csv"))
+  
   #some basic graph
   dds=DESeqDataSetFromMatrix(countData = comparisonData,
       colData = designData,
@@ -252,7 +254,9 @@ for(comparisonName in comparisonNames){
   print(g)
   dev.off()
 
-  png(filename=paste0(prefix, "_DESeq2-log2-density-individual.png"), width=4000, height=3000, res=300)
+  width=max(4000, ncol(rldmatrix) * 40 + 1000)
+  height=max(3000, ncol(rldmatrix) * 40)
+  png(filename=paste0(prefix, "_DESeq2-log2-density-individual.png"), width=width, height=height, res=300)
 	g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + facet_wrap(~Sample, scales = "free") + xlab("DESeq2 log2 transformed count")
   print(g)
   dev.off()
