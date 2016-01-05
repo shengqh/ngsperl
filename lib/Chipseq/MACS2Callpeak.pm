@@ -75,8 +75,9 @@ if [ ! -s ${sampleName}_peaks.narrowPeak ]; then
   macs2 callpeak $option -t $samples -n $sampleName
 fi
 
-if [ ! -s 
-
+if [[ ! -s ${sampleName}_peaks.narrowPeak.bed && -s ${sampleName}_peaks.narrowPeak ]]; then
+  awk 'BEGIN {OFD=\"\\t\"}{print $1, $2, $3, $4, $5, $6}' ${sampleName}_peaks.narrowPeak > ${sampleName}_peaks.narrowPeak.bed
+fi 
 
 echo MACS2_end=`date`
 
@@ -111,6 +112,7 @@ sub result {
     push( @resultFiles, $curDir . "/${sampleName}_treat_pileup.bdg" );
     push( @resultFiles, $curDir . "/${sampleName}_control_lambda.bdg" );
     push( @resultFiles, $curDir . "/${sampleName}_peaks.narrowPeak" );
+    push( @resultFiles, $curDir . "/${sampleName}_peaks.narrowPeak.bed" );
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }
