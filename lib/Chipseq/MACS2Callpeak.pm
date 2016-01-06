@@ -76,10 +76,12 @@ if [ ! -s ${sampleName}_peaks.narrowPeak ]; then
 fi
 
 if [[ ! -s ${sampleName}_peaks.narrowPeak.bed && -s ${sampleName}_peaks.narrowPeak ]]; then
-  awk 'BEGIN {OFS=\"\\t\"}{print \$1, \$2, \$3, \$4, \$5, \$6}' ${sampleName}_peaks.narrowPeak > ${sampleName}_peaks.narrowPeak.bed
+  cut -f1-6 ${sampleName}_peaks.narrowPeak > ${sampleName}_peaks.narrowPeak.bed
 fi 
 
 echo MACS2_end=`date`
+
+exit 0;
 
 ";
 
