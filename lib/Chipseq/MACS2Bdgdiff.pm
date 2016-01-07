@@ -105,10 +105,12 @@ sub result {
   my $comparisons = get_raw_files( $config, $section, "groups" );
   my $result = {};
   for my $comparisonName ( sort keys %{$comparisons} ) {
+    my $curDir = $resultDir . "/$comparisonName";
+
     my @resultFiles = ();
-    push( @resultFiles, $resultDir . "/${comparisonName}_c3.0_common.bed" );
-    push( @resultFiles, $resultDir . "/${comparisonName}_cond1.bed" );
-    push( @resultFiles, $resultDir . "/${comparisonName}_cond2.bed" );
+    push( @resultFiles, $curDir . "/${comparisonName}_c3.0_common.bed" );
+    push( @resultFiles, $curDir . "/${comparisonName}_cond1.bed" );
+    push( @resultFiles, $curDir . "/${comparisonName}_cond2.bed" );
     $result->{$comparisonName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
