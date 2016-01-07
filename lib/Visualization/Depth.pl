@@ -78,7 +78,10 @@ open( BED, $bedFile ) or die "Cannot open file $bedFile";
 while (<BED>) {
   s/\r|\n//g;
   my ( $chr, $start, $end, $fileprefix ) = split "\t";
-  if ( defined $start && defined $end && defined $fileprefix ) {
+  if ( defined $start && defined $end ) {
+    if(!defined $fileprefix){
+      $fileprefix = "${chr}_${start}_${end}";
+    }
     print($fileprefix . "\n");
     my $cmd ="samtools depth -r ${chr}:${start}-${end} $bamFilesStr | sed -e \"s/\$/\t$fileprefix/g \" >> $dataFile"; 
     system($cmd);
