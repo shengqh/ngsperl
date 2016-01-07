@@ -87,7 +87,7 @@ cd $curDir
 ";
 
     for my $bedFile (@curBedFiles) {
-      open( IIN, $bedFile ) or die $!;
+      open( IIN, $bedFile ) or die "Cannot open file $bedFile";
       while (<IIN>) {
         s/\r|\n//g;
         my ( $chr, $start, $end ) = split "\t";
