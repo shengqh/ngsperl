@@ -83,7 +83,7 @@ while (<BED>) {
     print($cmd. "\n");
     system($cmd);
     #system("R --vanilla -f $r --args ${fileprefix}.depth ${fileprefix}.depth.png");
-    last;
+    #last;
   }
 }
 close BED;
