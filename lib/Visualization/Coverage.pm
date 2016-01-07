@@ -44,14 +44,21 @@ sub perform {
 
     my @curBedFiles = @{ $bedFiles->{$name} };
     my @curBamNames = @{ $groups->{$name} };
-
     my @curBamFiles = ();
     for my $bamName (@curBamNames) {
-      push( @curBamFiles, @{ $bamFiles->{$bamName} } );
+      push( @curBamFiles, $bamFiles->{$bamName}->[0] );
     }
-    my $curBamNameStr = join( ',', @curBamNames );
-    my $curBamFileStr = join( ',', @curBamFiles );
-
+    
+    my $bamCount = scalar(@curBamNames);
+    
+    my $configFile = $curDir . "/${name}.filelist";
+    open (CON, ">$configFile") or die "Cannot create $configFile";
+    print CON "Name\tFile\n";
+    for(my $index = 0; $index < $bamCount;$index++){
+      print CON $curBamNames[$index], "\t", $curBamFiles[$index], "\n";
+    }
+    close CON;
+    
     my $pbsFile = $self->pbsfile( $pbsDir, $name );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $name );
@@ -74,7 +81,7 @@ cd $curDir
 
     for my $bedFile (@curBedFiles) {
       print OUT "
-  drawcoverage -i $bedFile -n $curBamNameStr -f $curBamFileStr
+  drawcoverage -i $bedFile -c $configFile
 ";
     }
 
