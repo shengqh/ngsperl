@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Visualization::Coverage;
+package Visualization::Depth;
 
 use strict;
 use warnings;
@@ -20,8 +20,8 @@ my $directory;
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Visualization::Coverage";
-  $self->{_suffix} = "_vc";
+  $self->{_name}   = "Visualization::Depth";
+  $self->{_suffix} = "_vd";
   bless $self, $class;
   return $self;
 }
@@ -38,6 +38,9 @@ sub perform {
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
+
+  my $perl = dirname(__FILE__) . "/Depth.pl";
+
 
   for my $name ( sort keys %{$bedFiles} ) {
     my $curDir = create_directory_or_die( $resultDir . "/$name" );
@@ -56,13 +59,8 @@ sub perform {
     my $configFileName = "${name}.filelist";
     my $configFile     = $curDir . "/${configFileName}";
     open( CON, ">$configFile" ) or die "Cannot create $configFile";
-    print CON "Name\tFile\n";
-    my $cutindecies = "1,2";
-    my $curcutindex = 1;
     for ( my $index = 0 ; $index < $bamCount ; $index++ ) {
       print CON $curBamNames[$index], "\t", $curBamFiles[$index], "\n";
-      $curcutindex += 3;
-      $cutindecies = $cutindecies . "," . $curcutindex;
     }
     close CON;
 
@@ -80,22 +78,14 @@ $log_desc
 
 $path_file 
 
-echo coverage=`date` 
+echo depth=`date` 
 
 cd $curDir
 
 ";
 
     for my $bedFile (@curBedFiles) {
-      open( IIN, $bedFile ) or die "Cannot open file $bedFile";
-      while (<IIN>) {
-        s/\r|\n//g;
-        my ( $chr, $start, $end, $rangename ) = split "\t";
-        if ( defined $start && defined $end  && defined $rangename) {
-          print OUT "samtools mpileup -r ${chr}:${start}-${end} $curBamFileStr | cut -f${cutindecies} > ${rangename}.mpileup \n";
-        }
-      }
-      close IIN;
+      print OUT "perl $perl -b $bedFile -c $configFile \n";
     }
 
     print OUT "
