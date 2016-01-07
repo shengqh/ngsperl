@@ -67,6 +67,7 @@ while (<CON>) {
 }
 close CON;
 
+my $bamNamesStr = join( '\t', @bamNames );
 my $bamFilesStr = join( ' ', @bamFiles );
 
 open( BED, $bedFile ) or die "Cannot open file $bedFile";
@@ -74,9 +75,8 @@ while (<BED>) {
   s/\r|\n//g;
   my ( $chr, $start, $end, $fileprefix ) = split "\t";
   if ( defined $start && defined $end && defined $fileprefix ) {
-    my $cmd = "samtools depth -r ${chr}:${start}-${end} $bamFilesStr > ${fileprefix}.depth";
-    print $cmd . "\n";
-    `$cmd`;
+    `echo "chr\tposition\t${bamNamesStr}" > ${fileprefix}.depth`;
+    `samtools depth -r ${chr}:${start}-${end} $bamFilesStr >> ${fileprefix}.depth`;
     last;
   }
 }
