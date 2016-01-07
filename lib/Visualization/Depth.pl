@@ -82,9 +82,10 @@ while (<BED>) {
     my $cmd ="samtools depth -r ${chr}:${start}-${end} $bamFilesStr | sed -e \"s/\$/\t$fileprefix/g \" >> $dataFile"; 
     print($cmd. "\n");
     system($cmd);
-    #system("R --vanilla -f $r --args ${fileprefix}.depth ${fileprefix}.depth.png");
-    #last;
   }
 }
 close BED;
+
+system("R --vanilla -f $r --args $dataFile ${dataFile}.pdf");
+
 
