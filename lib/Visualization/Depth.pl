@@ -80,7 +80,7 @@ while (<BED>) {
     `printf "chr\tposition\t${bamNamesStr}\n" > ${fileprefix}.depth`;
     `samtools depth -r ${chr}:${start}-${end} $bamFilesStr >> ${fileprefix}.depth`;
     `R --vanilla -f $r --args ${fileprefix}.depth ${fileprefix}.depth.png`;
-    last;
+    #last;
   }
 }
 close BED;
