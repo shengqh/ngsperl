@@ -31,9 +31,9 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $bedFiles = get_raw_files($config, $section);
-  my $groups = get_raw_files($config, $section, "groups");
-  my $bamFiles = get_raw_files($config, $section, "bam_files");
+  my $bedFiles = get_raw_files( $config, $section );
+  my $groups   = get_raw_files( $config, $section, "groups" );
+  my $bamFiles = get_raw_files( $config, $section, "bam_files" );
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
@@ -43,14 +43,14 @@ sub perform {
     my $curDir = create_directory_or_die( $resultDir . "/$name" );
 
     my @curBedFiles = @{ $bedFiles->{$name} };
-    my @curBamNames = @{$groups->{$name}};
-    
+    my @curBamNames = @{ $groups->{$name} };
+
     my @curBamFiles = ();
-    for my $bamName (@curBamNames){
-      push(@curBamFiles, $bamFiles->{$bamName});
+    for my $bamName (@curBamNames) {
+      push( @curBamFiles, @{ $bamFiles->{$bamName} } );
     }
-    my $curBamNameStr = join(',', @curBamNames);
-    my $curBamFileStr = join(',', @curBamFiles);
+    my $curBamNameStr = join( ',', @curBamNames );
+    my $curBamFileStr = join( ',', @curBamFiles );
 
     my $pbsFile = $self->pbsfile( $pbsDir, $name );
     my $pbsName = basename($pbsFile);
@@ -72,8 +72,8 @@ cd $curDir
 
 ";
 
-    for my $bedFile (@curBedFiles){
-    print OUT "
+    for my $bedFile (@curBedFiles) {
+      print OUT "
   drawcoverage -i $bedFile -n $curBamNameStr -f $curBamFileStr
 ";
     }
