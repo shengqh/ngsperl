@@ -78,8 +78,8 @@ while (<BED>) {
   my ( $chr, $start, $end, $fileprefix ) = split "\t";
   if ( defined $start && defined $end && defined $fileprefix ) {
     `printf "chr\tposition\t${bamNamesStr}\n" > ${fileprefix}.depth`;
-    `samtools depth -r ${chr}:${start}-${end} $bamFilesStr >> ${fileprefix}.depth`;
-    `R --vanilla -f $r --args ${fileprefix}.depth ${fileprefix}.depth.png`;
+    system("samtools depth -r ${chr}:${start}-${end} $bamFilesStr >> ${fileprefix}.depth");
+    system("R --vanilla -f $r --args ${fileprefix}.depth ${fileprefix}.depth.png");
     #last;
   }
 }
