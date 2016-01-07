@@ -62,7 +62,7 @@ sub perform {
 
     my $log_desc = $cluster->get_log_desc($log);
 
-    my $final = "final";
+    my $final = "${comparisonName}_c3.0_common.bed";
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
@@ -102,11 +102,13 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $comparisons = get_raw_files( $config, $section, "pairs" );
+  my $comparisons = get_raw_files( $config, $section, "groups" );
   my $result = {};
   for my $comparisonName ( sort keys %{$comparisons} ) {
     my @resultFiles = ();
-    push( @resultFiles, $resultDir . "/${comparisonName}.csv" );
+    push( @resultFiles, $resultDir . "/${comparisonName}_c3.0_common.bed" );
+    push( @resultFiles, $resultDir . "/${comparisonName}_cond1.bed" );
+    push( @resultFiles, $resultDir . "/${comparisonName}_cond2.bed" );
     $result->{$comparisonName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
