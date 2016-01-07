@@ -51,7 +51,8 @@ sub perform {
     
     my $bamCount = scalar(@curBamNames);
     
-    my $configFile = $curDir . "/${name}.filelist";
+    my $configFileName = "${name}.filelist";
+    my $configFile = $curDir . "/${configFileName}";
     open (CON, ">$configFile") or die "Cannot create $configFile";
     print CON "Name\tFile\n";
     for(my $index = 0; $index < $bamCount;$index++){
@@ -81,7 +82,7 @@ cd $curDir
 
     for my $bedFile (@curBedFiles) {
       print OUT "
-  drawcoverage -i $bedFile -c $configFile
+  drawcoverage -i $bedFile -c $configFileName
 ";
     }
 
