@@ -75,7 +75,7 @@ while (<BED>) {
   s/\r|\n//g;
   my ( $chr, $start, $end, $fileprefix ) = split "\t";
   if ( defined $start && defined $end && defined $fileprefix ) {
-    `echo "chr\tposition\t${bamNamesStr}" > ${fileprefix}.depth`;
+    `printf "chr\tposition\t${bamNamesStr}" > ${fileprefix}.depth`;
     `samtools depth -r ${chr}:${start}-${end} $bamFilesStr >> ${fileprefix}.depth`;
     last;
   }
