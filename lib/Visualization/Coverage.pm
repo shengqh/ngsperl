@@ -48,18 +48,24 @@ sub perform {
     for my $bamName (@curBamNames) {
       push( @curBamFiles, $bamFiles->{$bamName}->[0] );
     }
-    
+
+    my $curBamFileStr = join( ' ', @curBamFiles );
+
     my $bamCount = scalar(@curBamNames);
-    
+
     my $configFileName = "${name}.filelist";
-    my $configFile = $curDir . "/${configFileName}";
-    open (CON, ">$configFile") or die "Cannot create $configFile";
+    my $configFile     = $curDir . "/${configFileName}";
+    open( CON, ">$configFile" ) or die "Cannot create $configFile";
     print CON "Name\tFile\n";
-    for(my $index = 0; $index < $bamCount;$index++){
+    my $cutindecies = "1,2";
+    my $curcutindex = 1;
+    for ( my $index = 0 ; $index < $bamCount ; $index++ ) {
       print CON $curBamNames[$index], "\t", $curBamFiles[$index], "\n";
+      $curcutindex += 3;
+      $cutindecies = $cutindecies . "," . $curcutindex;
     }
     close CON;
-    
+
     my $pbsFile = $self->pbsfile( $pbsDir, $name );
     my $pbsName = basename($pbsFile);
     my $log     = $self->logfile( $logDir, $name );
@@ -81,9 +87,15 @@ cd $curDir
 ";
 
     for my $bedFile (@curBedFiles) {
-      print OUT "
-  drawcoverage -i $bedFile -c $configFileName
+      open( IIN, $bedFile ) or die $!;
+      while (<IIN>) {
+        s/\r|\n//g;
+        my ( $chr, $start, $end ) = split "\t";
+        print OUT "
+  samtools mpileup -r ${chr}:${start}-${end} $curBamFileStr | cut -f${$cutindecies} > ${chr}_${start}_${end}.mpileup
 ";
+      }
+      close IIN;
     }
 
     print OUT "
