@@ -75,6 +75,8 @@ my $r = dirname(__FILE__) . "/Depth.r";
 my $dataFile = basename($bedFile) . ".depth";
 open( BED, $bedFile ) or die "Cannot open file $bedFile";
 `printf "Chr\tPosition\t${bamNamesStr}\tFile\n" > $dataFile`;
+
+my $keys = {};
 while (<BED>) {
   s/\r|\n//g;
   my ( $chr, $start, $end, $fileprefix ) = split "\t";
@@ -82,9 +84,16 @@ while (<BED>) {
     if(!defined $fileprefix){
       $fileprefix = "${chr}_${start}_${end}";
     }
+    
+    if( exists $keys->{$fileprefix}){
+      next;
+    }
+    
     print($fileprefix . "\n");
     my $cmd ="samtools depth -r ${chr}:${start}-${end} $bamFilesStr | sed -e \"s/\$/\t$fileprefix/g \" >> $dataFile"; 
     system($cmd);
+    
+    $keys->{$fileprefix} = 1;
   }
 }
 close BED;
