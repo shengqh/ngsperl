@@ -75,6 +75,7 @@ while (<BED>) {
   my ( $chr, $start, $end, $fileprefix ) = split "\t";
   if ( defined $start && defined $end && defined $fileprefix ) {
     print "samtools depth -r ${chr}:${start}-${end} $bamFilesStr | cut -f${cutindecies} > ${fileprefix}.depth \n";
+    last;
   }
 }
 close BED;
