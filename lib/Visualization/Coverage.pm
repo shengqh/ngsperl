@@ -90,10 +90,10 @@ cd $curDir
       open( IIN, $bedFile ) or die "Cannot open file $bedFile";
       while (<IIN>) {
         s/\r|\n//g;
-        my ( $chr, $start, $end ) = split "\t";
-        print OUT "
-  samtools mpileup -r ${chr}:${start}-${end} $curBamFileStr | cut -f${$cutindecies} > ${chr}_${start}_${end}.mpileup
-";
+        my ( $chr, $start, $end, $rangename ) = split "\t";
+        if ( defined $start && defined $end  && defined $rangename) {
+          print OUT "samtools mpileup -r ${chr}:${start}-${end} $curBamFileStr | cut -f${$cutindecies} > ${rangename}.mpileup \n";
+        }
       }
       close IIN;
     }
