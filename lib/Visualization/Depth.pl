@@ -80,6 +80,7 @@ while (<BED>) {
   my ( $chr, $start, $end, $fileprefix ) = split "\t";
   if ( defined $start && defined $end && defined $fileprefix ) {
     my $cmd ="samtools depth -r ${chr}:${start}-${end} $bamFilesStr | sed -i \"s/$/\t$fileprefix/g \" >> $dataFile"; 
+    print($cmd. "\n");
     system($cmd);
     #system("R --vanilla -f $r --args ${fileprefix}.depth ${fileprefix}.depth.png");
     last;
