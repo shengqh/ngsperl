@@ -79,7 +79,7 @@ while (<BED>) {
   s/\r|\n//g;
   my ( $chr, $start, $end, $fileprefix ) = split "\t";
   if ( defined $start && defined $end && defined $fileprefix ) {
-    system("samtools depth -r ${chr}:${start}-${end} $bamFilesStr | sed -i \"s/$/\t$fileprefix/\" >> $dataFile");
+    system("samtools depth -r ${chr}:${start}-${end} $bamFilesStr | sed -i \"s/$/\t$fileprefix/g \" >> $dataFile");
     #system("R --vanilla -f $r --args ${fileprefix}.depth ${fileprefix}.depth.png");
     #last;
   }
