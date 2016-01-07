@@ -109,8 +109,8 @@ sub result {
 
     my @resultFiles = ();
     push( @resultFiles, $curDir . "/${comparisonName}_c3.0_common.bed" );
-    push( @resultFiles, $curDir . "/${comparisonName}_cond1.bed" );
-    push( @resultFiles, $curDir . "/${comparisonName}_cond2.bed" );
+    push( @resultFiles, $curDir . "/${comparisonName}_c3.0_cond1.bed" );
+    push( @resultFiles, $curDir . "/${comparisonName}_c3.0_cond2.bed" );
     $result->{$comparisonName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;
