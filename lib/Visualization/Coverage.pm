@@ -92,7 +92,7 @@ cd $curDir
         s/\r|\n//g;
         my ( $chr, $start, $end, $rangename ) = split "\t";
         if ( defined $start && defined $end  && defined $rangename) {
-          print OUT "samtools mpileup -r ${chr}:${start}-${end} $curBamFileStr | cut -f${$cutindecies} > ${rangename}.mpileup \n";
+          print OUT "samtools mpileup -r ${chr}:${start}-${end} $curBamFileStr | cut -f${cutindecies} > ${rangename}.mpileup \n";
         }
       }
       close IIN;
