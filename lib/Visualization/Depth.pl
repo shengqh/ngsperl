@@ -72,14 +72,15 @@ my $bamFilesStr = join( ' ', @bamFiles );
 
 my $r = dirname(__FILE__) . "/Depth.r";
 
+my $dataFile = basename($bedFile) . ".depth";
 open( BED, $bedFile ) or die "Cannot open file $bedFile";
+`printf "Chr\tPosition\t${bamNamesStr}\tFile\n" > $dataFile`;
 while (<BED>) {
   s/\r|\n//g;
   my ( $chr, $start, $end, $fileprefix ) = split "\t";
   if ( defined $start && defined $end && defined $fileprefix ) {
-    `printf "chr\tposition\t${bamNamesStr}\n" > ${fileprefix}.depth`;
-    system("samtools depth -r ${chr}:${start}-${end} $bamFilesStr >> ${fileprefix}.depth");
-    system("R --vanilla -f $r --args ${fileprefix}.depth ${fileprefix}.depth.png");
+    system("samtools depth -r ${chr}:${start}-${end} $bamFilesStr | sed -i \"s/$/\t$fileprefix/\" >> $dataFile");
+    #system("R --vanilla -f $r --args ${fileprefix}.depth ${fileprefix}.depth.png");
     #last;
   }
 }
