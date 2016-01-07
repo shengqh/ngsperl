@@ -161,8 +161,11 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $result = { $task_name => [ $resultDir . "/${task_name}.call", $resultDir . "/${task_name}.call.bed" ] };
+  my @resultFiles = ();
+  push( @resultFiles, $resultDir . "/${task_name}.call" );
+  push( @resultFiles, $resultDir . "/${task_name}.call.bed" );
 
+  my $result = { $task_name => filter_array( \@resultFiles, $pattern ) };
   return $result;
 }
 
