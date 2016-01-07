@@ -70,6 +70,8 @@ close CON;
 my $bamNamesStr = join( '\\t', @bamNames );
 my $bamFilesStr = join( ' ', @bamFiles );
 
+my $r = dirname(__FILE__) . "/Depth.r";
+
 open( BED, $bedFile ) or die "Cannot open file $bedFile";
 while (<BED>) {
   s/\r|\n//g;
@@ -77,6 +79,7 @@ while (<BED>) {
   if ( defined $start && defined $end && defined $fileprefix ) {
     `printf "chr\tposition\t${bamNamesStr}\n" > ${fileprefix}.depth`;
     `samtools depth -r ${chr}:${start}-${end} $bamFilesStr >> ${fileprefix}.depth`;
+    `R --vanilla -f $r --args ${fileprefix}.depth ${fileprefix}.depth.png`;
     last;
   }
 }
