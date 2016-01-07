@@ -67,7 +67,7 @@ while (<CON>) {
 }
 close CON;
 
-my $bamNamesStr = join( '\t', @bamNames );
+my $bamNamesStr = join( '\\t', @bamNames );
 my $bamFilesStr = join( ' ', @bamFiles );
 
 open( BED, $bedFile ) or die "Cannot open file $bedFile";
