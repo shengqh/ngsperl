@@ -13,5 +13,7 @@ mdata<-melt(data, id=c("chr", "position"))
 
 colnames(mdata)<-c("Chr", "Position", "Sample", "Depth")
 
+png(outputFile, width=max(2000, 200 + 500 * (ncol(data) - 2)), height=2000, res=300)
 g<-ggplot(mdata, aes(x=Position, y=Depth, colour=Sample)) + geom_point() + stat_smooth() + facet_grid( . ~ Sample)
 print(g)
+dev.off()
