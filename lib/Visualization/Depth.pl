@@ -14,12 +14,13 @@ my $usage = "
 
 Synopsis:
 
-Depth -b bedFile -c configFile
+Depth -b bedFile -c configFile [-s]
 
 Options:
 
   -b|--bedFile            Input bed file, the forth column should be result file prefix
   -c|--configFile         Input file list with two columns: sample name and bam files
+  -s|--singlePdf          Output as single pdf (for small dataset)
   -h|--help               This page.
 ";
 
@@ -28,11 +29,13 @@ Getopt::Long::Configure('bundling');
 my $help;
 my $bedFile;
 my $configFile;
+my $singlePdf;
 
 GetOptions(
   'h|help'         => \$help,
   'b|bedFile=s'    => \$bedFile,
   'c|configFile=s' => \$configFile,
+  's|siglepdf'     => \$singlePdf,
 );
 
 if ( defined $help ) {
@@ -68,7 +71,7 @@ while (<CON>) {
 close CON;
 
 my $bamNamesStr = join( '\\t', @bamNames );
-my $bamFilesStr = join( ' ', @bamFiles );
+my $bamFilesStr = join( ' ',   @bamFiles );
 
 my $r = dirname(__FILE__) . "/Depth.r";
 
@@ -81,23 +84,24 @@ while (<BED>) {
   s/\r|\n//g;
   my ( $chr, $start, $end, $fileprefix ) = split "\t";
   if ( defined $start && defined $end ) {
-    if(!defined $fileprefix){
+    if ( !defined $fileprefix ) {
       $fileprefix = "${chr}_${start}_${end}";
     }
-    
-    if( exists $keys->{$fileprefix}){
+
+    if ( exists $keys->{$fileprefix} ) {
       next;
     }
-    
-    print($fileprefix . "\n");
-    my $cmd ="samtools depth -r ${chr}:${start}-${end} $bamFilesStr | sed -e \"s/\$/\t$fileprefix/g \" >> $dataFile"; 
+
+    print( $fileprefix . "\n" );
+    my $cmd = "samtools depth -r ${chr}:${start}-${end} $bamFilesStr | sed -e \"s/\$/\t$fileprefix/g \" >> $dataFile";
     system($cmd);
-    
+
     $keys->{$fileprefix} = 1;
   }
 }
 close BED;
 
-system("R --vanilla -f $r --args $dataFile ${dataFile}.pdf");
-
+my $singlePdfStr = ( defined $singlePdf ) ? 1 : 0;
+my $outputFile = ( defined $singlePdf ) ? "${dataFile}.pdf" : "";
+system("R --vanilla -f $r --args $singlePdfStr $dataFile ${dataFile}.pdf $outputFile");
 

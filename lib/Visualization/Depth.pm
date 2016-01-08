@@ -34,6 +34,7 @@ sub perform {
   my $bedFiles = get_raw_files( $config, $section );
   my $groups   = get_raw_files( $config, $section, "groups" );
   my $bamFiles = get_raw_files( $config, $section, "bam_files" );
+  my $singlepdf = get_option($config, $section, "singlepdf", 0) ? "-s":"";
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
@@ -85,7 +86,7 @@ cd $curDir
 ";
 
     for my $bedFile (@curBedFiles) {
-      print OUT "perl $perl -b $bedFile -c $configFile \n";
+      print OUT "perl $perl -b $bedFile -c $configFile $singlepdf \n";
     }
 
     print OUT "
