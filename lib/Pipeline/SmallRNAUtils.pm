@@ -99,7 +99,6 @@ sub getPrepareConfig {
 
   my $fastq_remove_N   = !defined $def->{fastq_remove_N}   || $def->{fastq_remove_N};
   my $run_cutadapt     = !defined $def->{run_cutadapt}     || $def->{run_cutadapt};
-  my $remove_sequences = !defined $def->{remove_sequences} || $def->{remove_sequences};
 
   my $config = {
     general => {
@@ -244,7 +243,7 @@ sub getPrepareConfig {
     push @individual, ( "fastqc_pre_trim", "cutadapt", "fastqc_post_trim" );
     push @summary, ( "fastqc_pre_trim_summary", "fastqc_post_trim_summary" );
     
-    if ( !defined $remove_sequences ) {
+    if ( !defined $def->{remove_sequences} ) {
       $config->{"fastqc_count_vis"} = {
         class              => "CQS::UniqueR",
         perform            => 1,
@@ -322,12 +321,12 @@ sub getPrepareConfig {
   };
   push @individual, ("fastq_len");
 
-  if ( defined $remove_sequences ) {
+  if ( defined $def->{remove_sequences} ) {
     $config->{"remove_sequences"} = {
       class      => "CQS::Perl",
       perform    => 1,
       target_dir => $def->{target_dir} . "/remove_sequences",
-      option     => "$remove_sequences",
+      option     => $def->{remove_sequences},
       output_ext => "_clipped_removeSeq.fastq.gz",
       perlFile   => "removeSequenceInFastq.pl",
       source_ref => $source_ref,
