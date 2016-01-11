@@ -62,7 +62,7 @@ $path_file
 
 cd $resultDir
 
-echo started=`date`
+echo bam2bed_started=`date`
 
 if [ ! -s $finalFile ]; then
   bam2bed < $bamfile | awk 'BEGIN {OFS = \"\\t\"} ; {if (\$6 == \"+\") print \$1, \$2 + 4, \$3 + 4, \$4, \$5, \$6; else print \$1, \$2 - 5, \$3 - 5, \$4, \$5, \$6}' $pileup > $finalFile
