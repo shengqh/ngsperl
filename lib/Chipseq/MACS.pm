@@ -29,7 +29,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
+  my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
@@ -97,7 +97,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
+  my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
 
   my $result = {};
   for my $groupName ( sort keys %group_sample_map ) {

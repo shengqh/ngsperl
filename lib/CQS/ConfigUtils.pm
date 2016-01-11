@@ -17,7 +17,7 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools)
+    qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map)
   ]
 );
 
@@ -357,39 +357,44 @@ sub do_get_raw_files {
         my ( $res, $issource ) = do_get_raw_files( $targetConfig, $section, 1 );
         %myres = %{$res};
       }
-        
+
       my $refcount = keys %myres;
       for my $mykey ( keys %myres ) {
         my $myvalues = $myres{$mykey};
         if ( ( ref($myvalues) eq 'ARRAY' ) && ( scalar( @{$myvalues} ) > 0 ) ) {
-        	if(exists $result{$mykey}){
-        		my $oldvalues = $result{$mykey};
-        		if(ref($oldvalues) eq 'ARRAY'){
-        			my @merged = (@{$oldvalues}, @{$myvalues});
-        			#print "merged ARRAY ", Dumper(\@merged);
-        			$result{$mykey} = \@merged;
-        		}else {
-        			die "The source of $section->$mapname should be all HASH or all ARRAY";
-        		}
-        	}else{
-          	$result{$mykey} = $myvalues;
-        	}
+          if ( exists $result{$mykey} ) {
+            my $oldvalues = $result{$mykey};
+            if ( ref($oldvalues) eq 'ARRAY' ) {
+              my @merged = ( @{$oldvalues}, @{$myvalues} );
+
+              #print "merged ARRAY ", Dumper(\@merged);
+              $result{$mykey} = \@merged;
+            }
+            else {
+              die "The source of $section->$mapname should be all HASH or all ARRAY";
+            }
+          }
+          else {
+            $result{$mykey} = $myvalues;
+          }
         }
 
         if ( ( ref($myvalues) eq 'HASH' ) && ( scalar( keys %{$myvalues} ) > 0 ) ) {
-        	if(exists $result{$mykey}){
-        		my $oldvalues = $result{$mykey};
-        		if(ref($oldvalues) eq 'HASH'){
-        			$result{$mykey} = merge( $oldvalues, $myvalues);
-        		}else {
-        			die "The source of $section->$mapname should be all HASH or all ARRAY";
-        		}
-        	}else{
-          	$result{$mykey} = $myvalues;
-        	}
+          if ( exists $result{$mykey} ) {
+            my $oldvalues = $result{$mykey};
+            if ( ref($oldvalues) eq 'HASH' ) {
+              $result{$mykey} = merge( $oldvalues, $myvalues );
+            }
+            else {
+              die "The source of $section->$mapname should be all HASH or all ARRAY";
+            }
+          }
+          else {
+            $result{$mykey} = $myvalues;
+          }
         }
       }
-      
+
       #print "--------------- $section, $mapname, $index ----------------\n";
       #print Dumper(%result);
     }
@@ -474,6 +479,63 @@ sub get_pair_groups_names {
     $groupNames = $tmpGroupNames;
   }
   return ( $pairedNames, $groupNames );
+}
+
+#Return
+#{
+#  groupName1 => [
+#    [sampleName1_1, sampleFile1_1_1, sampleFile1_1_2],
+#    [sampleName1_2, sampleFile1_2_1, sampleFile1_2_2],
+#  ],
+#  groupName2 => [
+#    [sampleName2_1, sampleFile2_1_1, sampleFile2_1_2],
+#    [sampleName2_2, sampleFile2_2_1, sampleFile2_2_2],
+#  ],
+#}
+sub get_group_sample_map {
+  my ( $config, $section, $samplePattern ) = @_;
+
+  my $rawFiles = get_raw_files( $config, $section, "source", $samplePattern );
+  my $groups = get_raw_files( $config, $section, "groups" );
+  my %group_sample_map = ();
+  for my $groupName ( sort keys %{$groups} ) {
+    my @samples = @{ $groups->{$groupName} };
+    my @gfiles  = ();
+    foreach my $sampleName (@samples) {
+      my @bamFiles = @{ $rawFiles->{$sampleName} };
+      my @sambam = ( $sampleName, @bamFiles );
+      push( @gfiles, \@sambam );
+    }
+    $group_sample_map{$groupName} = \@gfiles;
+  }
+
+  return \%group_sample_map;
+}
+
+#Return
+#{
+#  groupName1 => [sampleFile1_1_1, sampleFile1_1_2, sampleFile1_2_1, sampleFile1_2_2],
+#  groupName2 => [sampleFile2_1_1, sampleFile2_1_2, sampleFile2_2_1, sampleFile2_2_2],
+#}
+sub get_group_samplefile_map {
+  my ( $config, $section, $samplePattern ) = @_;
+
+  my $rawFiles = get_raw_files( $config, $section, "source", $samplePattern );
+  my $groups = get_raw_files( $config, $section, "groups" );
+  my %group_sample_map = ();
+  for my $groupName ( sort keys %{$groups} ) {
+    my @samples = @{ $groups->{$groupName} };
+    my @gfiles  = ();
+    foreach my $sampleName (@samples) {
+      my @bamFiles = @{ $rawFiles->{$sampleName} };
+      foreach my $bamFile (@bamFiles) {
+        push( @gfiles, $bamFile );
+      }
+    }
+    $group_sample_map{$groupName} = \@gfiles;
+  }
+
+  return \%group_sample_map;
 }
 
 1;

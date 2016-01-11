@@ -31,7 +31,7 @@ sub perform {
 
   my $faFile       = get_param_file( $config->{$section}{fasta_file},   "fasta_file",   1 );
 
-  my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
+  my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";

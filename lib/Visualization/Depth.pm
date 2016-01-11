@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Chipseq::MACS2Bdgdiff;
+package Visualization::Depth;
 
 use strict;
 use warnings;
@@ -20,8 +20,8 @@ my $directory;
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Chipseq::MACS2Bdgdiff";
-  $self->{_suffix} = "_mb";
+  $self->{_name}   = "Visualization::Depth";
+  $self->{_suffix} = "_vd";
   bless $self, $class;
   return $self;
 }
@@ -31,38 +31,47 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %group_sample_treat   = %{ get_raw_files( $config, $section, "source", "_treat_pileup.bdg" ) };
-  my %group_sample_control = %{ get_raw_files( $config, $section, "source", "_control_lambda.bdg" ) };
-  my $comparisons = get_raw_files( $config, $section, "groups" );
-
-  #print Dumper(%group_sample_treat);
-  #print Dumper(%group_sample_control);
+  my $bedFiles = get_raw_files( $config, $section );
+  my $groups   = get_raw_files( $config, $section, "groups" );
+  my $bamFiles = get_raw_files( $config, $section, "bam_files" );
+  my $singlepdf = get_option($config, $section, "singlepdf", 0) ? "-s":"";
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";
   print SH get_run_command($sh_direct);
 
-  for my $comparisonName ( sort keys %{$comparisons} ) {
-    my @groupNames = @{ $comparisons->{$comparisonName} };
-    my $groupCount = scalar(@groupNames);
-    if ( $groupCount != 2 ) {
-      die "Comparison should be control,treatment paired.";
+  my $perl = dirname(__FILE__) . "/Depth.pl";
+
+
+  for my $name ( sort keys %{$bedFiles} ) {
+    my $curDir = create_directory_or_die( $resultDir . "/$name" );
+
+    my @curBedFiles = @{ $bedFiles->{$name} };
+    my @curBamNames = @{ $groups->{$name} };
+    my @curBamFiles = ();
+    for my $bamName (@curBamNames) {
+      push( @curBamFiles, $bamFiles->{$bamName}->[0] );
     }
 
-    my $condition1treat   = $group_sample_treat{ $groupNames[0] }->[0];
-    my $condition1control = $group_sample_control{ $groupNames[0] }->[0];
-    my $condition2treat   = $group_sample_treat{ $groupNames[1] }->[0];
-    my $condition2control = $group_sample_control{ $groupNames[1] }->[0];
+    my $curBamFileStr = join( ' ', @curBamFiles );
 
-    my $curDir = create_directory_or_die( $resultDir . "/$comparisonName" );
+    my $bamCount = scalar(@curBamNames);
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $comparisonName );
+    my $configFileName = "${name}.filelist";
+    my $configFile     = $curDir . "/${configFileName}";
+    open( CON, ">$configFile" ) or die "Cannot create $configFile";
+    for ( my $index = 0 ; $index < $bamCount ; $index++ ) {
+      print CON $curBamNames[$index], "\t", $curBamFiles[$index], "\n";
+    }
+    close CON;
+
+    my $pbsFile = $self->pbsfile( $pbsDir, $name );
     my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $comparisonName );
+    my $log     = $self->logfile( $logDir, $name );
 
     my $log_desc = $cluster->get_log_desc($log);
 
-    my $final = "${comparisonName}_c3.0_common.bed";
+    #my $final = "${comparisonName}_c3.0_common.bed";
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
@@ -70,13 +79,17 @@ $log_desc
 
 $path_file 
 
-echo macs2_bdgdiff=`date` 
+echo depth=`date` 
 
 cd $curDir
 
-if [ ! -s $final ]; then
-  macs2 bdgdiff $option --t1 $condition1treat --t2 $condition2treat --c1 $condition1control --c2 $condition2control --o-prefix $comparisonName  
-fi
+";
+
+    for my $bedFile (@curBedFiles) {
+      print OUT "perl $perl -b $bedFile -c $configFile $singlepdf \n";
+    }
+
+    print OUT "
 
 echo finished=`date`
 
@@ -105,12 +118,10 @@ sub result {
   my $comparisons = get_raw_files( $config, $section, "groups" );
   my $result = {};
   for my $comparisonName ( sort keys %{$comparisons} ) {
-    my $curDir = $resultDir . "/$comparisonName";
-
     my @resultFiles = ();
-    push( @resultFiles, $curDir . "/${comparisonName}_c3.0_common.bed" );
-    push( @resultFiles, $curDir . "/${comparisonName}_c3.0_cond1.bed" );
-    push( @resultFiles, $curDir . "/${comparisonName}_c3.0_cond2.bed" );
+    push( @resultFiles, $resultDir . "/${comparisonName}_c3.0_common.bed" );
+    push( @resultFiles, $resultDir . "/${comparisonName}_cond1.bed" );
+    push( @resultFiles, $resultDir . "/${comparisonName}_cond2.bed" );
     $result->{$comparisonName} = filter_array( \@resultFiles, $pattern );
   }
   return $result;

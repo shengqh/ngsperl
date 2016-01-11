@@ -13,7 +13,7 @@ use CQS::NGSCommon;
 use CQS::StringUtils;
 use Data::Dumper;
 
-our @ISA = qw(CQS::GroupTask);
+our @ISA = qw(CQS::Task);
 
 sub new {
   my ($class) = @_;
@@ -28,7 +28,7 @@ sub get_current_raw_files {
   my ( $self, $config, $section ) = @_;
   my $rawFiles;
   if ( has_raw_files( $config, $section, "groups" ) ) {
-    $rawFiles = $self->get_group_samplefile_map( $config, $section );
+    $rawFiles = get_group_samplefile_map( $config, $section );
   }
   else {
     $rawFiles = get_raw_files( $config, $section );
@@ -75,10 +75,13 @@ if [ ! -s ${sampleName}_peaks.narrowPeak ]; then
   macs2 callpeak $option -t $samples -n $sampleName
 fi
 
-if [ ! -s 
-
+if [[ ! -s ${sampleName}_peaks.narrowPeak.bed && -s ${sampleName}_peaks.narrowPeak ]]; then
+  cut -f1-6 ${sampleName}_peaks.narrowPeak > ${sampleName}_peaks.narrowPeak.bed
+fi 
 
 echo MACS2_end=`date`
+
+exit 0;
 
 ";
 
@@ -111,6 +114,7 @@ sub result {
     push( @resultFiles, $curDir . "/${sampleName}_treat_pileup.bdg" );
     push( @resultFiles, $curDir . "/${sampleName}_control_lambda.bdg" );
     push( @resultFiles, $curDir . "/${sampleName}_peaks.narrowPeak" );
+    push( @resultFiles, $curDir . "/${sampleName}_peaks.narrowPeak.bed" );
 
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
   }

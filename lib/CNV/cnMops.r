@@ -121,6 +121,7 @@ d<-d[order(d[,"sampleName"], as.numeric(d[,"seqnames"]), as.numeric(d[,"start"])
 write.table(d, file=callfile,sep="\t",col.names=T,row.names=F,quote=F)
 
 locus<-d[,c("seqnames", "start", "end")]
+locus$name<-paste0(d$seqnames, "_", d$start, "_", d$end, "_", d$CN, "_", d$sampleName)
 locus<-locus[order(d$seqnames, d$start),]
 write.table(locus, file=paste0(prefix, ".call.bed"), sep="\t", col.names=F, row.names=F,quote=F)
 
