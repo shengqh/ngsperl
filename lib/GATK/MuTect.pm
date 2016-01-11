@@ -44,7 +44,7 @@ sub perform {
 
   my $java_option = get_option( $config, $section, "java_option", "" );
 
-  my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
+  my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
 
   my $shfile = $self->taskfile( $pbsDir, $task_name );
   open( SH, ">$shfile" ) or die "Cannot create $shfile";

@@ -29,7 +29,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %group_sample_map = %{ $self->get_group_sample_map( $config, $section ) };
+  my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
 
   my $minimum_depth = $config->{$section}{minimum_depth};
   my $cqsFile;
