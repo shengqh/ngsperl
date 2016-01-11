@@ -29,7 +29,7 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $bowtie2_index = $config->{$section}{bowtie2_index} or die "define ${section}::bowtie2_index first";
-  my $samonly = get_option($config, $section, "samonly", 0);
+  my $samonly = get_option( $config, $section, "samonly", 0 );
 
   my %rawFiles = %{ get_raw_files( $config, $section ) };
 
@@ -45,8 +45,15 @@ sub perform {
     my $indent = "";
     my $tag    = "--sam-RG ID:$sampleName --sam-RG LB:$sampleName --sam-RG SM:$sampleName --sam-RG PL:ILLUMINA";
 
-    my $fastqs = join( ',', @sampleFiles );
-    my $bowtie2_aln_command = "bowtie2 $option -x $bowtie2_index -U $fastqs $tag -S $samFile";
+    my $input = "";
+    if ( scalar(@sampleFiles) == 2 ) {    #pairend data
+      $input = "-1 " . $sampleFiles[0] . " -2 " . $sampleFiles[1];
+    }
+    else {
+      my $fastqs = join( ',', @sampleFiles );
+      $input = "-u " . $fastqs;
+    }
+    my $bowtie2_aln_command = "bowtie2 $option -x $bowtie2_index $input $tag -S $samFile";
 
     my $index_command = get_index_command( $bamFile, $indent );
     my $stat_command = get_stat_command( $bamFile, $indent );
