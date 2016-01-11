@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $bowtie2_index = $config->{$section}{bowtie2_index} or die "define ${section}::bowtie2_index first";
   my $samonly = get_option( $config, $section, "samonly", 0 );
@@ -53,7 +53,7 @@ sub perform {
       my $fastqs = join( ',', @sampleFiles );
       $input = "-u " . $fastqs;
     }
-    my $bowtie2_aln_command = "bowtie2 $option -x $bowtie2_index $input $tag -S $samFile";
+    my $bowtie2_aln_command = "bowtie2 -p $thread $option -x $bowtie2_index $input $tag -S $samFile";
 
     my $index_command = get_index_command( $bamFile, $indent );
     my $stat_command = get_stat_command( $bamFile, $indent );
