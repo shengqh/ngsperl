@@ -22,7 +22,7 @@ if (is.na(countInFastQcPostRemove)) {
 	
 	countForFigure<-rbind(count1,count2)
 	pdf(paste0(resultFile,".pdf"),width=14)
-	ggplot(countForFigure,aes(x=Sample,y=Reads,fill=Label))+geom_bar(stat="identity")+theme(axis.text.x = element_text(angle = 90, hjust = 1))
+	print(ggplot(countForFigure,aes(x=Sample,y=Reads,fill=Label))+geom_bar(stat="identity")+theme(axis.text.x = element_text(angle = 90, hjust = 1)))
 	dev.off()
 } else {
 	count1<-read.delim(countInFastQcPreTrim,header=T)
@@ -38,7 +38,7 @@ if (is.na(countInFastQcPostRemove)) {
 	
 	countForFigure<-rbind(count1,count2,count3)
 	pdf(paste0(resultFile,".pdf"),width=14)
-	ggplot(countForFigure,aes(x=Sample,y=Reads,fill=Label))+geom_bar(stat="identity")+theme(axis.text.x = element_text(angle = 90, hjust = 1))
+	print(ggplot(countForFigure,aes(x=Sample,y=Reads,fill=Label))+geom_bar(stat="identity")+theme(axis.text.x = element_text(angle = 90, hjust = 1)))
 	dev.off()
 }
 
