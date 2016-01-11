@@ -11,7 +11,7 @@ library(reshape)
 #countInFastQcPostRemove<-"/scratch/cqs/zhaos/vickers/20151017_3018-KCV-45-46/fastqc_post_remove/result/3018-KCV-45-46.FastQC.summary.reads.tsv"
 #resultFile<-"test"
 
-if (is.null(countInFastQcPostRemove)) {
+if (is.na(countInFastQcPostRemove)) {
 	count1<-read.delim(countInFastQcPreTrim,header=T)
 	count2<-read.delim(countInFastQcPostTrim,header=T)
 	
