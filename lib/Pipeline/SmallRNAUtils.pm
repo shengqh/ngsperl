@@ -247,7 +247,7 @@ sub getPrepareConfig {
       $config->{"fastqc_count_vis"} = {
         class              => "CQS::UniqueR",
         perform            => 1,
-        target_dir         => $def->{target_dir} . "/fastqc_post_remove",
+        target_dir         => $def->{target_dir} . "/fastqc_post_trim",
         rtemplate          => "countInFastQcVis.R",
         output_file        => ".countInFastQcVis.Result",
         parameterFile1_ref => [ "fastqc_pre_trim_summary", ".FastQC.reads.tsv\$" ],
