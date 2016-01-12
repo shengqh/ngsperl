@@ -94,7 +94,10 @@ while (<BED>) {
 
     print( $fileprefix . "\n" );
     my $cmd = "samtools depth -r ${chr}:${start}-${end} $bamFilesStr | sed -e \"s/\$/\t$fileprefix/g \" >> $dataFile";
-    `$cmd`;
+    my $returnCode = system( $cmd);
+    if($returnCode != 0){
+      die("Error return code = $returnCode, exit.");
+    }
 
     $keys->{$fileprefix} = 1;
   }
