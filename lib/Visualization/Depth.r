@@ -16,7 +16,7 @@ if(is.null(outputFile)){
 #outputFile<-""
 
 data<-read.table(inputFile, sep="\t", header=T, stringsAsFactors = F)
-files<-unique(data$File)[1:5]
+files<-unique(data$File)
 
 if(singlePdf){
   pdf(outputFile, onefile = T)
