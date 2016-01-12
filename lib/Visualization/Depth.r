@@ -10,10 +10,10 @@ if(is.null(outputFile)){
   outputFile = ""
 }
 
-setwd("H:/shengquanhu/projects/JonathanBrown/20151215_janathan_atacseq_fat/macs2bdgdiff_replicates_nomodel_depth/result/SQ_Visc_CHOW")
-inputFile<-"SQ_Visc_CHOW_c3.0_cond1.bed.depth"
-singlePdf<-FALSE
-outputFile<-""
+#setwd("H:/shengquanhu/projects/JonathanBrown/20151215_janathan_atacseq_fat/macs2bdgdiff_replicates_nomodel_depth/result/SQ_Visc_CHOW")
+#inputFile<-"SQ_Visc_CHOW_c3.0_cond1.bed.depth"
+#singlePdf<-FALSE
+#outputFile<-""
 
 data<-read.table(inputFile, sep="\t", header=T, stringsAsFactors = F)
 files<-unique(data$File)[1:5]
