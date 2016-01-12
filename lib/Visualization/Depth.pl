@@ -106,5 +106,6 @@ close BED;
 
 my $singlePdfStr = ( defined $singlePdf ) ? 1 : 0;
 my $outputFile = ( defined $singlePdf ) ? "${dataFile}.pdf" : "";
-system("R --vanilla -f $r --args $singlePdfStr $dataFile $outputFile");
+`cp $r Depth.r`;
+system("R --vanilla -f Depth.r --args $singlePdfStr $dataFile $outputFile");
 
