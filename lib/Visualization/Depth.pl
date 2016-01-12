@@ -94,7 +94,7 @@ while (<BED>) {
 
     print( $fileprefix . "\n" );
     my $cmd = "samtools depth -r ${chr}:${start}-${end} $bamFilesStr | sed -e \"s/\$/\t$fileprefix/g \" >> $dataFile";
-    system($cmd);
+    `$cmd`;
 
     $keys->{$fileprefix} = 1;
   }
