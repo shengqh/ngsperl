@@ -400,7 +400,7 @@ sub getPrepareConfig {
       class      => "CQS::FastqIdentical",
       perform    => 1,
       target_dir => $def->{target_dir} . "/identical",
-      option     => "",
+      option     => "-l " . $def->{min_read_length},
       source_ref => $source_ref,
       cqstools   => $def->{cqstools},
       extension  => "_clipped_identical.fastq.gz",
