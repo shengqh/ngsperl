@@ -37,7 +37,7 @@ sub perform {
   my $cluster = get_cluster( $config, $section );
 
   my $finalName    = $task_name . "_pipeline";
-  my $finalpbs     = $self->taskfile( $pbsDir, $finalName );
+  my $finalpbs     = $self->pbsfile( $pbsDir, $finalName );
   my $finallog     = $self->logfile( $logDir, $finalName );
   my $finallogdesp = $cluster->get_log_desc($finallog);
   open( FINAL, ">$finalpbs" ) or die $!;
@@ -136,6 +136,8 @@ echo sequenceTaskEnd=`date`
 
   print FINAL "exit 0\n";
   close(FINAL);
+  
+  print "You may submit or run $finalpbs for all tasks.\n";
 }
 
 sub pbsfiles {
