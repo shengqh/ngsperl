@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "CQSMappedCount";
+  $self->{_name}   = "CQS::CQSMappedCount";
   $self->{_suffix} = "_ct";
   bless $self, $class;
   return $self;
@@ -85,6 +85,8 @@ sub perform {
     print SH "\$MYCMD ./$pbsName \n";
 
     my $log_desc = $cluster->get_log_desc($log);
+    
+    my $name = $self->{_name};
 
     open( OUT, ">$pbsFile" ) or die $!;
     print OUT "$pbsDesc
@@ -98,12 +100,12 @@ if [ -s $countFile ]; then
   echo job has already been done. if you want to do again, delete $countFile and submit job again.
   exit 0
 fi
-
-echo CQSMappedCount=`date` 
+  
+echo ${name}_start=`date` 
 
 mono-sgen $cqsFile mapped_count $option --samtools $samtools -i $bamFile -g $gffFile -o $countFile $seqcountFile $fastqFile
 
-echo finished=`date`
+echo ${name}_end=`date`
 
 exit 0 
 ";
