@@ -31,10 +31,23 @@ sub perform {
   my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %fqFiles = %{ get_raw_files( $config, $section ) };
-  
+
   #print Dumper(\%fqFiles);
-  
-  my $cluster = get_cluster($config, $section);
+
+  my $cluster = get_cluster( $config, $section );
+
+  my $finalName    = $task_name . "_pipeline";
+  my $finalpbs     = $self->taskfile( $pbsDir, $finalName );
+  my $finallog     = $self->logfile( $logDir, $finalName );
+  my $finallogdesp = $cluster->get_log_desc($finallog);
+  open( FINAL, ">$finalpbs" ) or die $!;
+  print FINAL "$pbsDesc
+$finallogdesp
+
+$path_file
+
+echo pipelineStart=`date` 
+";
 
   for my $taskName ( sort keys %fqFiles ) {
     my $shfile = $self->taskfile( $pbsDir, $taskName );
@@ -46,9 +59,11 @@ sub perform {
     my $samples = {};
     my $taskpbs = {};
     for my $tasksection (@tasks) {
+
       #print "task " . $tasksection . " ...\n";
       my $pbsfiles = getPbsFiles( $config, $tasksection );
       for my $sample ( sort keys %{$pbsfiles} ) {
+
         #print "\t", $sample, " => ", $pbsfiles->{$sample}, "\n";
         $samples->{$sample} = 1;
       }
@@ -107,6 +122,9 @@ echo sequenceTaskEnd=`date`
 
       print SH "\$MYCMD ./$pbsName \n";
       print "$pbsFile created\n";
+
+      print FINAL "bash ./$pbsName \n";
+
     }
     print SH "exit 0\n";
     close(SH);
@@ -115,6 +133,9 @@ echo sequenceTaskEnd=`date`
       chmod 0755, $shfile;
     }
   }
+
+  print FINAL "exit 0\n";
+  close(FINAL);
 }
 
 sub pbsfiles {
@@ -132,9 +153,11 @@ sub pbsfiles {
     my $samples = {};
     my $taskpbs = {};
     for my $tasksection (@tasks) {
+
       #print "task " . $tasksection . " ...\n";
       my $pbsfiles = getPbsFiles( $config, $tasksection );
       for my $sample ( sort keys %{$pbsfiles} ) {
+
         #print "\t", $sample, " => ", $pbsfiles->{$sample}, "\n";
         $samples->{$sample} = 1;
       }
