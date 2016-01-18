@@ -55,8 +55,7 @@ sub perform {
   for my $sampleName ( sort keys %rawFiles ) {
     my @bamFiles  = @{ $rawFiles{$sampleName} };
     my $bamFile   = $bamFiles[0];
-    my $fileName  = basename($bamFile);
-    my $countFile = $fileName . ".count";
+    my $countFile = $sampleName . ".count";
 
     my $seqcountFile = "";
     if ( defined $seqCountFiles{$sampleName} ) {
@@ -136,17 +135,13 @@ sub result {
   for my $sampleName ( keys %rawFiles ) {
     my $curDir = $resultDir . "/$sampleName";
 
-    my @bamFiles = @{ $rawFiles{$sampleName} };
-    my $bamFile  = $bamFiles[0];
-    my $fileName = basename($bamFile);
-
     my @resultFiles = ();
-    my $countFile   = "${curDir}/${fileName}.count";
-    my $tRNAPositionFile   = "${curDir}/${fileName}.tRNA.position";
+    my $countFile   = "${curDir}/${sampleName}.count";
+    my $tRNAPositionFile   = "${curDir}/${sampleName}.tRNA.position";
     push( @resultFiles, $countFile );
     push( @resultFiles, $tRNAPositionFile );
     push( @resultFiles, "${countFile}.mapped.xml" );
-    push( @resultFiles, "${curDir}/${fileName}.info" );
+    push( @resultFiles, "${curDir}/${sampleName}.info" );
 
     if ($unmapped_fastq) {
       my $unmapped = change_extension( $countFile, ".unmapped.fastq.gz" );
