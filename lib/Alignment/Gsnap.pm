@@ -48,6 +48,7 @@ sub perform {
   for my $sampleName ( sort keys %rawFiles ) {
     my @sampleFiles = @{ $rawFiles{$sampleName} };
     my $resultFile     = $sampleName . ".txt";
+    my $zippedResultFile     = $sampleName . ".txt.gz";
 
     my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
     my $pbsName = basename($pbsFile);
@@ -68,18 +69,24 @@ cd $curDir
 
 echo gsnap_start=`date`
 
-if [ -s $resultFile ]; then
-  echo job $selfname has already been done. if you want to do again, delete $resultFile and submit job again.
+if [ -s $zippedResultFile ]; then
+  echo job $selfname has already been done. if you want to do again, delete $zippedResultFile and submit job again.
   exit 0
 fi
 
-gsnap $option -D $gsnap_index_directory -d $gsnap_index_name -o $resultFile";
+if [ !-s $resultFile ]; then 
+  gsnap $option -D $gsnap_index_directory -d $gsnap_index_name -o $resultFile";
 
   for my $sampleFile (@sampleFiles){
     print OUT " $sampleFile";
   }
   print OUT "
-  
+fi
+
+if [ -s $resultFile ]; then
+  gzip $resultFile
+fi
+
 echo finished=`date`
 
 exit 0;
@@ -107,7 +114,7 @@ sub result {
 
   my $result = {};
   for my $sampleName ( keys %rawFiles ) {
-    my $bamFile     = "${resultDir}/${sampleName}/${sampleName}.txt";
+    my $bamFile     = "${resultDir}/${sampleName}/${sampleName}.txt.gz";
     my @resultFiles = ();
     push( @resultFiles, $bamFile );
     $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
