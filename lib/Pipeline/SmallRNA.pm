@@ -21,736 +21,759 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 our $VERSION = '0.01';
 
 sub getSmallRNAConfig {
-	my ($def) = @_;
+  my ($def) = @_;
 
-	my ( $config, $individual_ref, $summary_ref, $cluster, $source_ref ) = getPrepareConfig( $def, 1 );
-	my @individual = @{$individual_ref};
-	my @summary    = @{$summary_ref};
+  my ( $config, $individual_ref, $summary_ref, $cluster, $source_ref ) = getPrepareConfig( $def, 1 );
+  my @individual = @{$individual_ref};
+  my @summary    = @{$summary_ref};
 
-	#print Dumper($config);
+  #print Dumper($config);
 
-	my $bowtie1 = {
+  my $bowtie1 = {
 
-		#1 mismatch search, NTA
-		bowtie1_genome_1mm_NTA => {
-			class         => "Bowtie1",
-			perform       => 1,
-			target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm_NTA",
-			option        => $def->{bowtie1_option_1mm},
-			source_ref    => [ "identical_NTA", ".fastq.gz\$" ],
-			bowtie1_index => $def->{bowtie1_index},
-			samonly       => 0,
-			sh_direct     => 1,
-			mappedonly    => 1,
-			cluster       => $cluster,
-			pbs           => {
-				"email"    => $def->{email},
-				"nodes"    => "1:ppn=" . $def->{max_thread},
-				"walltime" => "72",
-				"mem"      => "40gb"
-			},
-		},
+    #1 mismatch search, NTA
+    bowtie1_genome_1mm_NTA => {
+      class         => "Bowtie1",
+      perform       => 1,
+      target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm_NTA",
+      option        => $def->{bowtie1_option_1mm},
+      source_ref    => [ "identical_NTA", ".fastq.gz\$" ],
+      bowtie1_index => $def->{bowtie1_index},
+      samonly       => 0,
+      sh_direct     => 1,
+      mappedonly    => 1,
+      cluster       => $cluster,
+      pbs           => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=" . $def->{max_thread},
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    },
 
-		#not identical, for IGV
-		bowtie1_genome_1mm_notidentical => {
-			class         => "Bowtie1",
-			perform       => 1,
-			target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm_notidentical",
-			option        => $def->{bowtie1_option_1mm},
-			source_ref    => $source_ref,
-			bowtie1_index => $def->{bowtie1_index},
-			samonly       => 0,
-			sh_direct     => 0,
-			mappedonly    => 1,
-			cluster       => $cluster,
-			pbs           => {
-				"email"    => $def->{email},
-				"nodes"    => "1:ppn=" . $def->{max_thread},
-				"walltime" => "72",
-				"mem"      => "40gb"
-			},
-		},
-	};
+    #not identical, for IGV
+    bowtie1_genome_1mm_notidentical => {
+      class         => "Bowtie1",
+      perform       => 1,
+      target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm_notidentical",
+      option        => $def->{bowtie1_option_1mm},
+      source_ref    => $source_ref,
+      bowtie1_index => $def->{bowtie1_index},
+      samonly       => 0,
+      sh_direct     => 0,
+      mappedonly    => 1,
+      cluster       => $cluster,
+      pbs           => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=" . $def->{max_thread},
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    },
+  };
 
-	push @individual, ( "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_notidentical" );
+  push @individual, ( "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_notidentical" );
 
-	$config = merge( $config, $bowtie1 );
+  $config = merge( $config, $bowtie1 );
 
-	if ( defined $def->{coordinate} ) {
+  if ( defined $def->{coordinate} ) {
 
-		my $count = {
-			bowtie1_genome_1mm_NTA_smallRNA_count => {
-				class           => "CQS::SmallRNACount",
-				perform         => 1,
-				target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_count",
-				option          => $def->{smallrnacount_option},
-				source_ref      => "bowtie1_genome_1mm_NTA",
-				fastq_files_ref => "identical_NTA",
-				seqcount_ref    => [ "identical_NTA", ".dupcount\$" ],
-				cqs_tools       => $def->{cqstools},
-				coordinate_file => $def->{coordinate},
-				fasta_file      => $def->{coordinate_fasta},
-				sh_direct       => 1,
-				cluster         => $cluster,
-				pbs             => {
-					"email"    => $def->{email},
-					"nodes"    => "1:ppn=1",
-					"walltime" => "72",
-					"mem"      => "40gb"
-				},
-			},
-			bowtie1_genome_1mm_NTA_smallRNA_table => {
-				class      => "CQS::SmallRNATable",
-				perform    => 1,
-				target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_table",
-				option     => "",
-				source_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
-				cqs_tools  => $def->{cqstools},
-				prefix     => "smallRNA_1mm_",
-				sh_direct  => 1,
-				cluster    => $cluster,
-				pbs        => {
-					"email"    => $def->{email},
-					"nodes"    => "1:ppn=1",
-					"walltime" => "10",
-					"mem"      => "10gb"
-				},
-			},
-			bowtie1_genome_1mm_NTA_smallRNA_category => {
-				class      => "CQS::SmallRNACategory",
-				perform    => 1,
-				target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_category",
-				option     => "",
-				source_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info\$" ],
-				cqs_tools  => $def->{cqstools},
-				sh_direct  => 1,
-				cluster    => $cluster,
-				pbs        => {
-					"email"    => $def->{email},
-					"nodes"    => "1:ppn=1",
-					"walltime" => "72",
-					"mem"      => "40gb"
-				},
-			},
+    my $count = {
+      bowtie1_genome_1mm_NTA_smallRNA_count => {
+        class           => "CQS::SmallRNACount",
+        perform         => 1,
+        target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_count",
+        option          => $def->{smallrnacount_option},
+        source_ref      => "bowtie1_genome_1mm_NTA",
+        fastq_files_ref => "identical_NTA",
+        seqcount_ref    => [ "identical_NTA", ".dupcount\$" ],
+        cqs_tools       => $def->{cqstools},
+        coordinate_file => $def->{coordinate},
+        fasta_file      => $def->{coordinate_fasta},
+        sh_direct       => 1,
+        cluster         => $cluster,
+        pbs             => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "72",
+          "mem"      => "40gb"
+        },
+      },
+      bowtie1_genome_1mm_NTA_smallRNA_table => {
+        class      => "CQS::SmallRNATable",
+        perform    => 1,
+        target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_table",
+        option     => "",
+        source_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
+        cqs_tools  => $def->{cqstools},
+        prefix     => "smallRNA_1mm_",
+        sh_direct  => 1,
+        cluster    => $cluster,
+        pbs        => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "10",
+          "mem"      => "10gb"
+        },
+      },
+      bowtie1_genome_1mm_NTA_smallRNA_category => {
+        class      => "CQS::SmallRNACategory",
+        perform    => 1,
+        target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_category",
+        option     => "",
+        source_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info\$" ],
+        cqs_tools  => $def->{cqstools},
+        sh_direct  => 1,
+        cluster    => $cluster,
+        pbs        => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "72",
+          "mem"      => "40gb"
+        },
+      },
 
-			#perfect match search to mirbase only
-			bowtie1_genome_1mm_NTA_pmnames => {
-				class      => "Samtools::PerfectMappedReadNames",
-				perform    => 1,
-				target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_pmnames",
-				option     => "",
-				source_ref => "bowtie1_genome_1mm_NTA",
-				sh_direct  => 1,
-				cluster    => $cluster,
-				pbs        => {
-					"email"    => $def->{email},
-					"nodes"    => "1:ppn=" . $def->{max_thread},
-					"walltime" => "72",
-					"mem"      => "40gb"
-				},
-			},
+      #perfect match search to mirbase only
+      bowtie1_genome_1mm_NTA_pmnames => {
+        class      => "Samtools::PerfectMappedReadNames",
+        perform    => 1,
+        target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_pmnames",
+        option     => "",
+        source_ref => "bowtie1_genome_1mm_NTA",
+        sh_direct  => 1,
+        cluster    => $cluster,
+        pbs        => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=" . $def->{max_thread},
+          "walltime" => "72",
+          "mem"      => "40gb"
+        },
+      },
 
-			bowtie1_miRbase_pm => {
-				class         => "Alignment::Bowtie1",
-				perform       => 1,
-				target_dir    => $def->{target_dir} . "/bowtie1_miRbase_pm",
-				option        => $def->{bowtie1_option_pm},
-				source_ref    => [ "identical", ".fastq.gz\$" ],
-				bowtie1_index => $def->{bowtie1_miRBase_index},
-				samonly       => 0,
-				sh_direct     => 1,
-				cluster       => $cluster,
-				pbs           => {
-					"email"    => $def->{email},
-					"nodes"    => "1:ppn=" . $def->{max_thread},
-					"walltime" => "72",
-					"mem"      => "40gb"
-				},
-			},
-			bowtie1_miRbase_pm_count => {
-				class                   => "CQS::CQSChromosomeCount",
-				perform                 => 1,
-				target_dir              => $def->{target_dir} . "/bowtie1_miRbase_pm_count",
-				option                  => $def->{mirbase_count_option},
-				source_ref              => "bowtie1_miRbase_pm",
-				seqcount_ref            => [ "identical", ".dupcount\$" ],
-				perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
-				cqs_tools               => $def->{cqstools},
-				sh_direct               => 1,
-				cluster                 => $cluster,
-				pbs                     => {
-					"email"    => $def->{email},
-					"nodes"    => "1:ppn=1",
-					"walltime" => "72",
-					"mem"      => "40gb"
-				},
-			},
-			bowtie1_miRbase_pm_table => {
-				class      => "CQS::CQSChromosomeTable",
-				perform    => 1,
-				target_dir => $def->{target_dir} . "/bowtie1_miRbase_pm_table",
-				option     => "",
-				source_ref => [ "bowtie1_miRbase_pm_count", ".xml" ],
-				cqs_tools  => $def->{cqstools},
-				prefix     => "miRBase_pm_",
-				sh_direct  => 1,
-				cluster    => $cluster,
-				pbs        => {
-					"email"    => $def->{email},
-					"nodes"    => "1:ppn=1",
-					"walltime" => "10",
-					"mem"      => "10gb"
-				},
-			},
-		};
+      bowtie1_miRbase_pm => {
+        class         => "Alignment::Bowtie1",
+        perform       => 1,
+        target_dir    => $def->{target_dir} . "/bowtie1_miRbase_pm",
+        option        => $def->{bowtie1_option_pm},
+        source_ref    => [ "identical", ".fastq.gz\$" ],
+        bowtie1_index => $def->{bowtie1_miRBase_index},
+        samonly       => 0,
+        sh_direct     => 1,
+        cluster       => $cluster,
+        pbs           => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=" . $def->{max_thread},
+          "walltime" => "72",
+          "mem"      => "40gb"
+        },
+      },
+      bowtie1_miRbase_pm_count => {
+        class                   => "CQS::CQSChromosomeCount",
+        perform                 => 1,
+        target_dir              => $def->{target_dir} . "/bowtie1_miRbase_pm_count",
+        option                  => $def->{mirbase_count_option},
+        source_ref              => "bowtie1_miRbase_pm",
+        seqcount_ref            => [ "identical", ".dupcount\$" ],
+        perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
+        cqs_tools               => $def->{cqstools},
+        sh_direct               => 1,
+        cluster                 => $cluster,
+        pbs                     => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "72",
+          "mem"      => "40gb"
+        },
+      },
+      bowtie1_miRbase_pm_table => {
+        class      => "CQS::CQSChromosomeTable",
+        perform    => 1,
+        target_dir => $def->{target_dir} . "/bowtie1_miRbase_pm_table",
+        option     => "",
+        source_ref => [ "bowtie1_miRbase_pm_count", ".xml" ],
+        cqs_tools  => $def->{cqstools},
+        prefix     => "miRBase_pm_",
+        sh_direct  => 1,
+        cluster    => $cluster,
+        pbs        => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "10",
+          "mem"      => "10gb"
+        },
+      },
+    };
 
-		push @individual, ( "bowtie1_genome_1mm_NTA_smallRNA_count", "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_miRbase_pm", "bowtie1_miRbase_pm_count" );
-		push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_category", "bowtie1_miRbase_pm_table" );
-		$config = merge( $config, $count );
-	}
+    push @individual, ( "bowtie1_genome_1mm_NTA_smallRNA_count", "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_miRbase_pm", "bowtie1_miRbase_pm_count" );
+    push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_category", "bowtie1_miRbase_pm_table" );
 
-	if ( defined $def->{search_unmapped_reads}
-		&& $def->{search_unmapped_reads} )
-	{
-		my $unmappedreads = {
+    if ( defined $def->{mapped_extract} && $def->{mapped_extract} ) {
+      $count->{mapped_extract} = {
+        class         => "SmallRNA::SamExtract",
+        perform       => 1,
+        target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm_notidentical_mapped",
+        option        => "",
+        source_ref    => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
+        cqs_tools     => $def->{cqstools},
+        bam_files_ref => [ "bowtie1_genome_1mm_notidentical", ".bam" ],
+        sh_direct     => 1,
+        cluster       => $cluster,
+        pbs           => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "10",
+          "mem"      => "10gb"
+        },
+      };
+      push @individual, ("sam_extract");
+    }
 
-			#extract unmapped reads
-			unmappedReads => {
-				class       => "CQS::Perl",
-				perform     => 1,
-				target_dir  => $def->{target_dir} . "/unmappedReads",
-				perlFile    => "unmappedReadsToFastq.pl",
-				source_ref  => [ "identical", ".fastq.gz\$" ],
-				source2_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
-				source3_ref => [ "bowtie1_genome_1mm_NTA_pmnames", ".pmnames\$" ],
-				output_ext  => "_clipped_identical.unmapped.fastq.gz",
-				sh_direct   => 1,
-				pbs         => {
-					"email"    => $def->{email},
-					"nodes"    => "1:ppn=1",
-					"walltime" => "1",
-					"mem"      => "10gb"
-				},
-			},
+    $config = merge( $config, $count );
+  }
 
-			#unmapped reads to tRNA
-			bowtie1_tRNA_pm => {
-				class         => 'Alignment::Bowtie1',
-				cluster       => $cluster,
-				sh_direct     => 1,
-				perform       => 1,
-				target_dir    => $def->{target_dir} . "/bowtie1_tRNA_pm",
-				samonly       => 0,
-				source_ref    => 'unmappedReads',
-				bowtie1_index => $def->{bowtie1_tRNA_index},
-				option        => $def->{bowtie1_option_pm},
-				pbs           => {
-					'email'    => $def->{email},
-					'walltime' => '72',
-					'mem'      => '40gb',
-					'nodes'    => '1:ppn=8'
-				}
-			},
+  if ( defined $def->{search_unmapped_reads}
+    && $def->{search_unmapped_reads} )
+  {
+    my $unmappedreads = {
 
-			bowtie1_tRNA_pm_count => {
-				class                   => 'CQS::CQSChromosomeCount',
-				cluster                 => $cluster,
-				sh_direct               => 1,
-				perform                 => 1,
-				target_dir              => $def->{target_dir} . "/bowtie1_tRNA_pm_count",
-				option                  => $def->{smallrnacount_option},
-				perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
-				source_ref              => 'bowtie1_tRNA_pm',
-				cqs_tools               => $def->{cqstools},
-				seqcount_ref            => [ "identical", ".dupcount\$" ],
-				pbs                     => {
-					'email'    => $def->{email},
-					'walltime' => '72',
-					'mem'      => '40gb',
-					'nodes'    => '1:ppn=1'
-				},
-			},
+      #extract unmapped reads
+      unmappedReads => {
+        class       => "CQS::Perl",
+        perform     => 1,
+        target_dir  => $def->{target_dir} . "/unmappedReads",
+        perlFile    => "unmappedReadsToFastq.pl",
+        source_ref  => [ "identical", ".fastq.gz\$" ],
+        source2_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
+        source3_ref => [ "bowtie1_genome_1mm_NTA_pmnames", ".pmnames\$" ],
+        output_ext  => "_clipped_identical.unmapped.fastq.gz",
+        sh_direct   => 1,
+        pbs         => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      },
 
-			bowtie1_tRNA_pm_table => {
-				class      => 'CQS::CQSChromosomeTable',
-				cluster    => $cluster,
-				sh_direct  => 1,
-				perform    => 1,
-				target_dir => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
-				source_ref => [ 'bowtie1_tRNA_pm_count', '.xml' ],
-				cqs_tools  => $def->{cqstools},
-				option     => '',
-				prefix     => 'tRNA_pm_',
-				pbs        => {
-					'email'    => $def->{email},
-					'walltime' => '10',
-					'mem'      => '10gb',
-					'nodes'    => '1:ppn=1'
-				},
-			},
-			bowtie1_tRNA_pm_table_vis => {
-				class              => "CQS::UniqueR",
-				perform            => 1,
-				target_dir         => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
-				rtemplate          => "BacTrnaMappingVis.R",
-				output_file        => "",
-				parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".count\$" ],
-				sh_direct          => 1,
-				pbs                => {
-					"email"    => $def->{email},
-					"nodes"    => "1:ppn=1",
-					"walltime" => "1",
-					"mem"      => "10gb"
-				},
-			},
+      #unmapped reads to tRNA
+      bowtie1_tRNA_pm => {
+        class         => 'Alignment::Bowtie1',
+        cluster       => $cluster,
+        sh_direct     => 1,
+        perform       => 1,
+        target_dir    => $def->{target_dir} . "/bowtie1_tRNA_pm",
+        samonly       => 0,
+        source_ref    => 'unmappedReads',
+        bowtie1_index => $def->{bowtie1_tRNA_index},
+        option        => $def->{bowtie1_option_pm},
+        pbs           => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=8'
+        }
+      },
 
-			#unmapped reads to rRNAL
-			bowtie1_rRNAL_pm => {
-				pbs => {
-					'email'    => $def->{email},
-					'walltime' => '10',
-					'mem'      => '40gb',
-					'nodes'    => '1:ppn=8'
-				},
-				cluster       => $cluster,
-				sh_direct     => 1,
-				perform       => 1,
-				target_dir    => $def->{target_dir} . "/bowtie1_rRNAL_pm",
-				samonly       => 0,
-				source_ref    => 'unmappedReads',
-				bowtie1_index => $def->{bowtie1_rRNAL_index},
-				option        => $def->{bowtie1_option_pm},
-				class         => 'Alignment::Bowtie1'
-			},
+      bowtie1_tRNA_pm_count => {
+        class                   => 'CQS::CQSChromosomeCount',
+        cluster                 => $cluster,
+        sh_direct               => 1,
+        perform                 => 1,
+        target_dir              => $def->{target_dir} . "/bowtie1_tRNA_pm_count",
+        option                  => $def->{smallrnacount_option},
+        perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
+        source_ref              => 'bowtie1_tRNA_pm',
+        cqs_tools               => $def->{cqstools},
+        seqcount_ref            => [ "identical", ".dupcount\$" ],
+        pbs                     => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
+        },
+      },
 
-			bowtie1_rRNAL_pm_count => {
-				pbs => {
-					'email'    => $def->{email},
-					'walltime' => '72',
-					'mem'      => '40gb',
-					'nodes'    => '1:ppn=1'
-				},
-				cluster                 => $cluster,
-				sh_direct               => 1,
-				perform                 => 1,
-				target_dir              => $def->{target_dir} . "/bowtie1_rRNAL_pm_count",
-				option                  => $def->{smallrnacount_option},
-				perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
-				source_ref              => 'bowtie1_rRNAL_pm',
-				cqs_tools               => $def->{cqstools},
-				seqcount_ref            => [ "identical", ".dupcount\$" ],
-				'class'                 => 'CQS::CQSChromosomeCount'
-			},
+      bowtie1_tRNA_pm_table => {
+        class      => 'CQS::CQSChromosomeTable',
+        cluster    => $cluster,
+        sh_direct  => 1,
+        perform    => 1,
+        target_dir => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
+        source_ref => [ 'bowtie1_tRNA_pm_count', '.xml' ],
+        cqs_tools  => $def->{cqstools},
+        option     => '',
+        prefix     => 'tRNA_pm_',
+        pbs        => {
+          'email'    => $def->{email},
+          'walltime' => '10',
+          'mem'      => '10gb',
+          'nodes'    => '1:ppn=1'
+        },
+      },
+      bowtie1_tRNA_pm_table_vis => {
+        class              => "CQS::UniqueR",
+        perform            => 1,
+        target_dir         => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
+        rtemplate          => "BacTrnaMappingVis.R",
+        output_file        => "",
+        parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".count\$" ],
+        sh_direct          => 1,
+        pbs                => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      },
 
-			bowtie1_rRNAL_pm_table => {
-				pbs => {
-					'email'    => $def->{email},
-					'walltime' => '10',
-					'mem'      => '10gb',
-					'nodes'    => '1:ppn=1'
-				},
-				cluster    => $cluster,
-				sh_direct  => 1,
-				perform    => 1,
-				target_dir => $def->{target_dir} . "/bowtie1_rRNAL_pm_table",
-				source_ref => [ 'bowtie1_rRNAL_pm_count', '.xml' ],
-				cqs_tools  => $def->{cqstools},
-				option     => '',
-				class      => 'CQS::CQSChromosomeTable',
-				prefix     => 'rRNAL_pm_'
-			},
+      #unmapped reads to rRNAL
+      bowtie1_rRNAL_pm => {
+        pbs => {
+          'email'    => $def->{email},
+          'walltime' => '10',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=8'
+        },
+        cluster       => $cluster,
+        sh_direct     => 1,
+        perform       => 1,
+        target_dir    => $def->{target_dir} . "/bowtie1_rRNAL_pm",
+        samonly       => 0,
+        source_ref    => 'unmappedReads',
+        bowtie1_index => $def->{bowtie1_rRNAL_index},
+        option        => $def->{bowtie1_option_pm},
+        class         => 'Alignment::Bowtie1'
+      },
 
-			#unmapped reads to rRNAS
-			bowtie1_rRNAS_pm => {
-				pbs => {
-					'email'    => $def->{email},
-					'walltime' => '10',
-					'mem'      => '40gb',
-					'nodes'    => '1:ppn=8'
-				},
-				cluster       => $cluster,
-				sh_direct     => 1,
-				perform       => 1,
-				target_dir    => $def->{target_dir} . "/bowtie1_rRNAS_pm",
-				samonly       => 0,
-				source_ref    => 'unmappedReads',
-				bowtie1_index => $def->{bowtie1_rRNAS_index},
-				option        => $def->{bowtie1_option_pm},
-				class         => 'Alignment::Bowtie1'
-			},
+      bowtie1_rRNAL_pm_count => {
+        pbs => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
+        },
+        cluster                 => $cluster,
+        sh_direct               => 1,
+        perform                 => 1,
+        target_dir              => $def->{target_dir} . "/bowtie1_rRNAL_pm_count",
+        option                  => $def->{smallrnacount_option},
+        perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
+        source_ref              => 'bowtie1_rRNAL_pm',
+        cqs_tools               => $def->{cqstools},
+        seqcount_ref            => [ "identical", ".dupcount\$" ],
+        'class'                 => 'CQS::CQSChromosomeCount'
+      },
 
-			bowtie1_rRNAS_pm_count => {
-				pbs => {
-					'email'    => $def->{email},
-					'walltime' => '72',
-					'mem'      => '40gb',
-					'nodes'    => '1:ppn=1'
-				},
-				cluster                 => $cluster,
-				sh_direct               => 1,
-				perform                 => 1,
-				target_dir              => $def->{target_dir} . "/bowtie1_rRNAS_pm_count",
-				option                  => $def->{smallrnacount_option},
-				perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
-				source_ref              => 'bowtie1_rRNAS_pm',
-				cqs_tools               => $def->{cqstools},
-				seqcount_ref            => [ "identical", ".dupcount\$" ],
-				'class'                 => 'CQS::CQSChromosomeCount'
-			},
+      bowtie1_rRNAL_pm_table => {
+        pbs => {
+          'email'    => $def->{email},
+          'walltime' => '10',
+          'mem'      => '10gb',
+          'nodes'    => '1:ppn=1'
+        },
+        cluster    => $cluster,
+        sh_direct  => 1,
+        perform    => 1,
+        target_dir => $def->{target_dir} . "/bowtie1_rRNAL_pm_table",
+        source_ref => [ 'bowtie1_rRNAL_pm_count', '.xml' ],
+        cqs_tools  => $def->{cqstools},
+        option     => '',
+        class      => 'CQS::CQSChromosomeTable',
+        prefix     => 'rRNAL_pm_'
+      },
 
-			bowtie1_rRNAS_pm_table => {
-				pbs => {
-					'email'    => $def->{email},
-					'walltime' => '10',
-					'mem'      => '10gb',
-					'nodes'    => '1:ppn=1'
-				},
-				cluster    => $cluster,
-				sh_direct  => 1,
-				perform    => 1,
-				target_dir => $def->{target_dir} . "/bowtie1_rRNAS_pm_table",
-				source_ref => [ 'bowtie1_rRNAS_pm_count', '.xml' ],
-				cqs_tools  => $def->{cqstools},
-				option     => '',
-				class      => 'CQS::CQSChromosomeTable',
-				prefix     => 'rRNAS_pm_'
-			},
+      #unmapped reads to rRNAS
+      bowtie1_rRNAS_pm => {
+        pbs => {
+          'email'    => $def->{email},
+          'walltime' => '10',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=8'
+        },
+        cluster       => $cluster,
+        sh_direct     => 1,
+        perform       => 1,
+        target_dir    => $def->{target_dir} . "/bowtie1_rRNAS_pm",
+        samonly       => 0,
+        source_ref    => 'unmappedReads',
+        bowtie1_index => $def->{bowtie1_rRNAS_index},
+        option        => $def->{bowtie1_option_pm},
+        class         => 'Alignment::Bowtie1'
+      },
 
-			#unmapped reads to group1 bacterial
-			bowtie1_bacteria_group1_pm => {
-				pbs => {
-					'email'    => $def->{email},
-					'walltime' => '72',
-					'mem'      => '40gb',
-					'nodes'    => '1:ppn=8'
-				},
-				cluster       => $cluster,
-				sh_direct     => 1,
-				perform       => 1,
-				target_dir    => $def->{target_dir} . "/bowtie1_bacteria_group1_pm",
-				samonly       => 0,
-				source_ref    => 'unmappedReads',
-				bowtie1_index => $def->{bowtie1_bacteria_group1_index},
-				option        => $def->{bowtie1_option_pm},
-				class         => 'Alignment::Bowtie1'
-			},
+      bowtie1_rRNAS_pm_count => {
+        pbs => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
+        },
+        cluster                 => $cluster,
+        sh_direct               => 1,
+        perform                 => 1,
+        target_dir              => $def->{target_dir} . "/bowtie1_rRNAS_pm_count",
+        option                  => $def->{smallrnacount_option},
+        perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
+        source_ref              => 'bowtie1_rRNAS_pm',
+        cqs_tools               => $def->{cqstools},
+        seqcount_ref            => [ "identical", ".dupcount\$" ],
+        'class'                 => 'CQS::CQSChromosomeCount'
+      },
 
-			bowtie1_bacteria_group1_pm_count => {
-				pbs => {
-					'email'    => $def->{email},
-					'walltime' => '72',
-					'mem'      => '40gb',
-					'nodes'    => '1:ppn=1'
-				},
-				cluster                 => $cluster,
-				sh_direct               => 1,
-				perform                 => 1,
-				target_dir              => $def->{target_dir} . "/bowtie1_bacteria_group1_pm_count",
-				option                  => $def->{smallrnacount_option},
-				perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
-				source_ref              => 'bowtie1_bacteria_group1_pm',
-				cqs_tools               => $def->{cqstools},
-				seqcount_ref            => [ "identical", ".dupcount\$" ],
-				'class'                 => 'CQS::CQSChromosomeCount'
-			},
+      bowtie1_rRNAS_pm_table => {
+        pbs => {
+          'email'    => $def->{email},
+          'walltime' => '10',
+          'mem'      => '10gb',
+          'nodes'    => '1:ppn=1'
+        },
+        cluster    => $cluster,
+        sh_direct  => 1,
+        perform    => 1,
+        target_dir => $def->{target_dir} . "/bowtie1_rRNAS_pm_table",
+        source_ref => [ 'bowtie1_rRNAS_pm_count', '.xml' ],
+        cqs_tools  => $def->{cqstools},
+        option     => '',
+        class      => 'CQS::CQSChromosomeTable',
+        prefix     => 'rRNAS_pm_'
+      },
 
-			bowtie1_bacteria_group1_pm_table => {
-				pbs => {
-					'email'    => $def->{email},
-					'walltime' => '72',
-					'mem'      => '40gb',
-					'nodes'    => '1:ppn=1'
-				},
-				cluster    => $cluster,
-				sh_direct  => 1,
-				perform    => 1,
-				target_dir => $def->{target_dir} . "/bowtie1_bacteria_group1_pm_table",
-				source_ref => [ 'bowtie1_bacteria_group1_pm_count', '.xml' ],
-				cqs_tools  => $def->{cqstools},
-				option     => '',
-				class      => 'CQS::CQSChromosomeTable',
-				prefix     => 'bacteria_group1_pm_'
-			},
-			bowtie1_bacteria_group1_pm_table_vis => {
-				class              => "CQS::UniqueR",
-				perform            => 1,
-				target_dir         => $def->{target_dir} . "/bowtie1_bacteria_group1_pm_table",
-				rtemplate          => "group1MappingVis.R",
-				output_file        => ".group1Mapping.Result",
-				parameterFile1_ref => [ "bowtie1_bacteria_group1_pm_table", ".count\$" ],
-				parameterFile2     => $def->{bacteria_group1_log},
-				sh_direct          => 1,
-				pbs                => {
-					"email"    => $def->{email},
-					"nodes"    => "1:ppn=1",
-					"walltime" => "1",
-					"mem"      => "10gb"
-				},
-			},
+      #unmapped reads to group1 bacterial
+      bowtie1_bacteria_group1_pm => {
+        pbs => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=8'
+        },
+        cluster       => $cluster,
+        sh_direct     => 1,
+        perform       => 1,
+        target_dir    => $def->{target_dir} . "/bowtie1_bacteria_group1_pm",
+        samonly       => 0,
+        source_ref    => 'unmappedReads',
+        bowtie1_index => $def->{bowtie1_bacteria_group1_index},
+        option        => $def->{bowtie1_option_pm},
+        class         => 'Alignment::Bowtie1'
+      },
 
-			#unmapped reads to group2 bacterial
-			bowtie1_bacteria_group2_pm => {
-				pbs => {
-					'email'    => $def->{email},
-					'walltime' => '72',
-					'mem'      => '40gb',
-					'nodes'    => '1:ppn=8'
-				},
-				cluster       => $cluster,
-				sh_direct     => 1,
-				perform       => 1,
-				target_dir    => $def->{target_dir} . "/bowtie1_bacteria_group2_pm",
-				samonly       => 0,
-				source_ref    => 'unmappedReads',
-				bowtie1_index => $def->{bowtie1_bacteria_group2_index},
-				option        => $def->{bowtie1_option_pm},
-				class         => 'Alignment::Bowtie1'
-			},
+      bowtie1_bacteria_group1_pm_count => {
+        pbs => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
+        },
+        cluster                 => $cluster,
+        sh_direct               => 1,
+        perform                 => 1,
+        target_dir              => $def->{target_dir} . "/bowtie1_bacteria_group1_pm_count",
+        option                  => $def->{smallrnacount_option},
+        perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
+        source_ref              => 'bowtie1_bacteria_group1_pm',
+        cqs_tools               => $def->{cqstools},
+        seqcount_ref            => [ "identical", ".dupcount\$" ],
+        'class'                 => 'CQS::CQSChromosomeCount'
+      },
 
-			bowtie1_bacteria_group2_pm_count => {
-				pbs => {
-					'email'    => $def->{email},
-					'walltime' => '72',
-					'mem'      => '40gb',
-					'nodes'    => '1:ppn=1'
-				},
-				cluster                 => $cluster,
-				sh_direct               => 1,
-				perform                 => 1,
-				target_dir              => $def->{target_dir} . "/bowtie1_bacteria_group2_pm_count",
-				option                  => $def->{smallrnacount_option},
-				perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
-				source_ref              => 'bowtie1_bacteria_group2_pm',
-				cqs_tools               => $def->{cqstools},
-				seqcount_ref            => [ "identical", ".dupcount\$" ],
-				'class'                 => 'CQS::CQSChromosomeCount'
-			},
+      bowtie1_bacteria_group1_pm_table => {
+        pbs => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
+        },
+        cluster    => $cluster,
+        sh_direct  => 1,
+        perform    => 1,
+        target_dir => $def->{target_dir} . "/bowtie1_bacteria_group1_pm_table",
+        source_ref => [ 'bowtie1_bacteria_group1_pm_count', '.xml' ],
+        cqs_tools  => $def->{cqstools},
+        option     => '',
+        class      => 'CQS::CQSChromosomeTable',
+        prefix     => 'bacteria_group1_pm_'
+      },
+      bowtie1_bacteria_group1_pm_table_vis => {
+        class              => "CQS::UniqueR",
+        perform            => 1,
+        target_dir         => $def->{target_dir} . "/bowtie1_bacteria_group1_pm_table",
+        rtemplate          => "group1MappingVis.R",
+        output_file        => ".group1Mapping.Result",
+        parameterFile1_ref => [ "bowtie1_bacteria_group1_pm_table", ".count\$" ],
+        parameterFile2     => $def->{bacteria_group1_log},
+        sh_direct          => 1,
+        pbs                => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      },
 
-			bowtie1_bacteria_group2_pm_table => {
-				pbs => {
-					'email'    => $def->{email},
-					'walltime' => '72',
-					'mem'      => '40gb',
-					'nodes'    => '1:ppn=1'
-				},
-				cluster    => $cluster,
-				sh_direct  => 1,
-				perform    => 1,
-				target_dir => $def->{target_dir} . "/bowtie1_bacteria_group2_pm_table",
-				source_ref => [ 'bowtie1_bacteria_group2_pm_count', '.xml' ],
-				cqs_tools  => $def->{cqstools},
-				option     => '',
-				class      => 'CQS::CQSChromosomeTable',
-				prefix     => 'bacteria_group2_pm_'
-			},
+      #unmapped reads to group2 bacterial
+      bowtie1_bacteria_group2_pm => {
+        pbs => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=8'
+        },
+        cluster       => $cluster,
+        sh_direct     => 1,
+        perform       => 1,
+        target_dir    => $def->{target_dir} . "/bowtie1_bacteria_group2_pm",
+        samonly       => 0,
+        source_ref    => 'unmappedReads',
+        bowtie1_index => $def->{bowtie1_bacteria_group2_index},
+        option        => $def->{bowtie1_option_pm},
+        class         => 'Alignment::Bowtie1'
+      },
 
-			bowtie1_bacteria_group2_pm_table_vis => {
-				class              => "CQS::UniqueR",
-				perform            => 1,
-				target_dir         => $def->{target_dir} . "/bowtie1_bacteria_group2_pm_table",
-				rtemplate          => "group2MappingVis.R",
-				output_file        => ".group2Mapping.Result",
-				parameterFile1_ref => [ "bowtie1_bacteria_group2_pm_table", ".count\$" ],
-				parameterFile2     => $def->{bacteria_group2_log},
-				sh_direct          => 1,
-				pbs                => {
-					"email"    => $def->{email},
-					"nodes"    => "1:ppn=1",
-					"walltime" => "1",
-					"mem"      => "10gb"
-				},
-			},
-		};
+      bowtie1_bacteria_group2_pm_count => {
+        pbs => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
+        },
+        cluster                 => $cluster,
+        sh_direct               => 1,
+        perform                 => 1,
+        target_dir              => $def->{target_dir} . "/bowtie1_bacteria_group2_pm_count",
+        option                  => $def->{smallrnacount_option},
+        perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
+        source_ref              => 'bowtie1_bacteria_group2_pm',
+        cqs_tools               => $def->{cqstools},
+        seqcount_ref            => [ "identical", ".dupcount\$" ],
+        'class'                 => 'CQS::CQSChromosomeCount'
+      },
 
-		$config = merge( $config, $unmappedreads );
+      bowtie1_bacteria_group2_pm_table => {
+        pbs => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
+        },
+        cluster    => $cluster,
+        sh_direct  => 1,
+        perform    => 1,
+        target_dir => $def->{target_dir} . "/bowtie1_bacteria_group2_pm_table",
+        source_ref => [ 'bowtie1_bacteria_group2_pm_count', '.xml' ],
+        cqs_tools  => $def->{cqstools},
+        option     => '',
+        class      => 'CQS::CQSChromosomeTable',
+        prefix     => 'bacteria_group2_pm_'
+      },
 
-		push @individual,
-		  (
-			"unmappedReads",                    "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",  "bowtie1_rRNAL_pm",
-			"bowtie1_rRNAL_pm_count",           "bowtie1_rRNAS_pm",           "bowtie1_rRNAS_pm_count", "bowtie1_bacteria_group1_pm",
-			"bowtie1_bacteria_group1_pm_count", "bowtie1_bacteria_group2_pm", "bowtie1_bacteria_group2_pm_count"
-		  );
-		push @summary,
-		  (
-			"bowtie1_tRNA_pm_table",                "bowtie1_tRNA_pm_table_vis","bowtie1_rRNAL_pm_table",           "bowtie1_rRNAS_pm_table", "bowtie1_bacteria_group1_pm_table",
-			"bowtie1_bacteria_group1_pm_table_vis", "bowtie1_bacteria_group2_pm_table", "bowtie1_bacteria_group2_pm_table_vis"
-		  );
-	}
+      bowtie1_bacteria_group2_pm_table_vis => {
+        class              => "CQS::UniqueR",
+        perform            => 1,
+        target_dir         => $def->{target_dir} . "/bowtie1_bacteria_group2_pm_table",
+        rtemplate          => "group2MappingVis.R",
+        output_file        => ".group2Mapping.Result",
+        parameterFile1_ref => [ "bowtie1_bacteria_group2_pm_table", ".count\$" ],
+        parameterFile2     => $def->{bacteria_group2_log},
+        sh_direct          => 1,
+        pbs                => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      },
+    };
 
-	if ( defined $def->{pairs} ) {
-		my $comparison = {
+    $config = merge( $config, $unmappedreads );
 
-			#DESeq2
-			top100Reads_deseq2 => {
-				class                => "Comparison::DESeq2",
-				perform              => 1,
-				target_dir           => $def->{target_dir} . "/top100Reads_deseq2",
-				option               => "",
-				source_ref           => "pairs",
-				groups_ref           => "groups",
-				countfile_ref        => [ "identical_sequence_count_table", ".count\$" ],
-				sh_direct            => 1,
-				show_DE_gene_cluster => 1,
-				pvalue               => 0.05,
-				fold_change          => 1.5,
-				min_median_read      => 1,
-				pbs                  => {
-					"email"    => $def->{email},
-					"nodes"    => "1:ppn=1",
-					"walltime" => "10",
-					"mem"      => "10gb"
-				},
-			},
-			tRNA_deseq2 => {
-				class                => "Comparison::DESeq2",
-				perform              => 1,
-				target_dir           => $def->{target_dir} . "/tRNA_deseq2",
-				option               => "",
-				source_ref           => "pairs",
-				groups_ref           => "groups",
-				countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ],
-				sh_direct            => 1,
-				show_DE_gene_cluster => 1,
-				pvalue               => 0.05,
-				fold_change          => 1.5,
-				min_median_read      => 5,
-				pbs                  => {
-					"email"    => $def->{email},
-					"nodes"    => "1:ppn=1",
-					"walltime" => "10",
-					"mem"      => "10gb"
-				},
-			},
-			miRNA_deseq2 => {
-				class                => "Comparison::DESeq2",
-				perform              => 1,
-				target_dir           => $def->{target_dir} . "/miRNA_deseq2",
-				option               => "",
-				source_ref           => "pairs",
-				groups_ref           => "groups",
-				countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ],
-				sh_direct            => 1,
-				show_DE_gene_cluster => 1,
-				pvalue               => 0.05,
-				fold_change          => 1.5,
-				min_median_read      => 5,
-				pbs                  => {
-					"email"    => $def->{email},
-					"nodes"    => "1:ppn=1",
-					"walltime" => "10",
-					"mem"      => "10gb"
-				},
-			},
-			otherSmallRNA_deseq2 => {
-				class                => "Comparison::DESeq2",
-				perform              => 1,
-				target_dir           => $def->{target_dir} . "/otherSmallRNA_deseq2",
-				option               => "",
-				source_ref           => "pairs",
-				groups_ref           => "groups",
-				countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" ],
-				sh_direct            => 1,
-				show_DE_gene_cluster => 1,
-				pvalue               => 0.05,
-				fold_change          => 1.5,
-				min_median_read      => 5,
-				pbs                  => {
-					"email"    => $def->{email},
-					"nodes"    => "1:ppn=1",
-					"walltime" => "10",
-					"mem"      => "10gb"
-				},
-			},
-		};
+    push @individual,
+      (
+      "unmappedReads",                    "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",  "bowtie1_rRNAL_pm",
+      "bowtie1_rRNAL_pm_count",           "bowtie1_rRNAS_pm",           "bowtie1_rRNAS_pm_count", "bowtie1_bacteria_group1_pm",
+      "bowtie1_bacteria_group1_pm_count", "bowtie1_bacteria_group2_pm", "bowtie1_bacteria_group2_pm_count"
+      );
+    push @summary,
+      (
+      "bowtie1_tRNA_pm_table",            "bowtie1_tRNA_pm_table_vis",            "bowtie1_rRNAL_pm_table",           "bowtie1_rRNAS_pm_table",
+      "bowtie1_bacteria_group1_pm_table", "bowtie1_bacteria_group1_pm_table_vis", "bowtie1_bacteria_group2_pm_table", "bowtie1_bacteria_group2_pm_table_vis"
+      );
+  }
 
-		push @summary, ( "top100Reads_deseq2", "tRNA_deseq2", "miRNA_deseq2", "otherSmallRNA_deseq2" );
+  if ( defined $def->{pairs} ) {
+    my $comparison = {
 
-		$config = merge( $config, $comparison );
-	}
+      #DESeq2
+      top100Reads_deseq2 => {
+        class                => "Comparison::DESeq2",
+        perform              => 1,
+        target_dir           => $def->{target_dir} . "/top100Reads_deseq2",
+        option               => "",
+        source_ref           => "pairs",
+        groups_ref           => "groups",
+        countfile_ref        => [ "identical_sequence_count_table", ".count\$" ],
+        sh_direct            => 1,
+        show_DE_gene_cluster => 1,
+        pvalue               => 0.05,
+        fold_change          => 1.5,
+        min_median_read      => 1,
+        pbs                  => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "10",
+          "mem"      => "10gb"
+        },
+      },
+      tRNA_deseq2 => {
+        class                => "Comparison::DESeq2",
+        perform              => 1,
+        target_dir           => $def->{target_dir} . "/tRNA_deseq2",
+        option               => "",
+        source_ref           => "pairs",
+        groups_ref           => "groups",
+        countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ],
+        sh_direct            => 1,
+        show_DE_gene_cluster => 1,
+        pvalue               => 0.05,
+        fold_change          => 1.5,
+        min_median_read      => 5,
+        pbs                  => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "10",
+          "mem"      => "10gb"
+        },
+      },
+      miRNA_deseq2 => {
+        class                => "Comparison::DESeq2",
+        perform              => 1,
+        target_dir           => $def->{target_dir} . "/miRNA_deseq2",
+        option               => "",
+        source_ref           => "pairs",
+        groups_ref           => "groups",
+        countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ],
+        sh_direct            => 1,
+        show_DE_gene_cluster => 1,
+        pvalue               => 0.05,
+        fold_change          => 1.5,
+        min_median_read      => 5,
+        pbs                  => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "10",
+          "mem"      => "10gb"
+        },
+      },
+      otherSmallRNA_deseq2 => {
+        class                => "Comparison::DESeq2",
+        perform              => 1,
+        target_dir           => $def->{target_dir} . "/otherSmallRNA_deseq2",
+        option               => "",
+        source_ref           => "pairs",
+        groups_ref           => "groups",
+        countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" ],
+        sh_direct            => 1,
+        show_DE_gene_cluster => 1,
+        pvalue               => 0.05,
+        fold_change          => 1.5,
+        min_median_read      => 5,
+        pbs                  => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "10",
+          "mem"      => "10gb"
+        },
+      },
+    };
 
-	if ( defined $def->{pairs} or defined $def->{tRNA_vis_group} ) {
-		my $trna_vis_groups;
-		my $trna_sig_result;
-		if ( defined $def->{tRNA_vis_group} ) {
-			$trna_vis_groups = $def->{tRNA_vis_group};
-		} else {
-			$trna_vis_groups = $def->{groups};
-		}
-		if (defined $def->{pairs}) {
-			$trna_sig_result = [ "tRNA_deseq2", "_DESeq2_sig.csv\$" ];
-		}
-		$config->{tRNA_PositionVis} = {
-			class                    => "CQS::UniqueR",
-			perform                  => 1,
-			target_dir               => $def->{target_dir} . "/tRNA_PositionVis",
-			rtemplate                => "tRNAPositionVis.R",
-			output_file              => ".tRNAPositionVis",
-			parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".tRNA.position\$" ],
-			parameterSampleFile2     => $trna_vis_groups,
-			parameterSampleFile3_ref => $trna_sig_result,
-			sh_direct                => 1,
-			pbs                      => {
-				"email"    => $def->{email},
-				"nodes"    => "1:ppn=1",
-				"walltime" => "1",
-				"mem"      => "10gb"
-			},
-		};
-		push @summary, ("tRNA_PositionVis");
+    push @summary, ( "top100Reads_deseq2", "tRNA_deseq2", "miRNA_deseq2", "otherSmallRNA_deseq2" );
 
-	}
-	my $name = $def->{trna_groups};
-	if ( !defined $name ) {
-		$name = $def->{groups};
-	}
+    $config = merge( $config, $comparison );
+  }
 
-	$config->{sequencetask} = {
-		class      => "CQS::SequenceTask",
-		perform    => 1,
-		target_dir => $def->{target_dir} . "/sequencetask",
-		option     => "",
-		source     => {
-			step1 => \@individual,
-			step2 => \@summary,
-		},
-		sh_direct => 0,
-		cluster   => $cluster,
-		pbs       => {
-			"email"    => $def->{email},
-			"nodes"    => "1:ppn=" . $def->{max_thread},
-			"walltime" => "72",
-			"mem"      => "40gb"
-		},
-	};
+  if ( defined $def->{pairs} or defined $def->{tRNA_vis_group} ) {
+    my $trna_vis_groups;
+    my $trna_sig_result;
+    if ( defined $def->{tRNA_vis_group} ) {
+      $trna_vis_groups = $def->{tRNA_vis_group};
+    }
+    else {
+      $trna_vis_groups = $def->{groups};
+    }
+    if ( defined $def->{pairs} ) {
+      $trna_sig_result = [ "tRNA_deseq2", "_DESeq2_sig.csv\$" ];
+    }
+    $config->{tRNA_PositionVis} = {
+      class                    => "CQS::UniqueR",
+      perform                  => 1,
+      target_dir               => $def->{target_dir} . "/tRNA_PositionVis",
+      rtemplate                => "tRNAPositionVis.R",
+      output_file              => ".tRNAPositionVis",
+      parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".tRNA.position\$" ],
+      parameterSampleFile2     => $trna_vis_groups,
+      parameterSampleFile3_ref => $trna_sig_result,
+      sh_direct                => 1,
+      pbs                      => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
+      },
+    };
+    push @summary, ("tRNA_PositionVis");
 
-	return ($config);
+  }
+  my $name = $def->{trna_groups};
+  if ( !defined $name ) {
+    $name = $def->{groups};
+  }
+
+  $config->{sequencetask} = {
+    class      => "CQS::SequenceTask",
+    perform    => 1,
+    target_dir => $def->{target_dir} . "/sequencetask",
+    option     => "",
+    source     => {
+      step1 => \@individual,
+      step2 => \@summary,
+    },
+    sh_direct => 0,
+    cluster   => $cluster,
+    pbs       => {
+      "email"    => $def->{email},
+      "nodes"    => "1:ppn=" . $def->{max_thread},
+      "walltime" => "72",
+      "mem"      => "40gb"
+    },
+  };
+
+  return ($config);
 }
 
 sub performSmallRNA {
-	my ( $def, $perform ) = @_;
-	if ( !defined $perform ) {
-		$perform = 1;
-	}
+  my ( $def, $perform ) = @_;
+  if ( !defined $perform ) {
+    $perform = 1;
+  }
 
-	my $config = getSmallRNAConfig($def);
+  my $config = getSmallRNAConfig($def);
 
-	if ($perform) {
-		saveConfig( $def, $config );
+  if ($perform) {
+    saveConfig( $def, $config );
 
-		performConfig($config);
-	}
+    performConfig($config);
+  }
 
-	return $config;
+  return $config;
 }
 
 sub performSmallRNATask {
-	my ( $def, $task ) = @_;
+  my ( $def, $task ) = @_;
 
-	my $config = getParclipSmallRNAConfig($def);
+  my $config = getParclipSmallRNAConfig($def);
 
-	performTask( $config, $task );
+  performTask( $config, $task );
 
-	return $config;
+  return $config;
 }
 
 1;
