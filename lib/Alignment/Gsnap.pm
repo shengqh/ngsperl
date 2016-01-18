@@ -74,7 +74,7 @@ if [ -s $zippedResultFile ]; then
   exit 0
 fi
 
-if [ !-s $resultFile ]; then 
+if [ ! -s $resultFile ]; then 
   gsnap $option -D $gsnap_index_directory -d $gsnap_index_name -o $resultFile";
 
   for my $sampleFile (@sampleFiles){
