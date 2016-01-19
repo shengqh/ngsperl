@@ -357,7 +357,7 @@ sub getPrepareConfig {
 
   #print Dumper($config);
   $config->{"fastq_len"} = {
-    class      => "FastqLen",
+    class      => "CQS::FastqLen",
     perform    => 1,
     target_dir => $def->{target_dir} . "/fastq_len",
     option     => "",
@@ -490,7 +490,7 @@ sub getPrepareConfig {
 
   if ( !defined $hasNTA || $hasNTA ) {
     $preparation->{identical_NTA} = {
-      class        => "CQS::FastqMirna",
+      class        => "SmallRNA::FastqMirna",
       perform      => 1,
       target_dir   => $def->{target_dir} . "/identical_NTA",
       option       => "-l " . $def->{min_read_length},
