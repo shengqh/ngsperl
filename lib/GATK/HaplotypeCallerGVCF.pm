@@ -114,7 +114,7 @@ if [ ! -s $snvOut ]; then
         chomp($chr);
         my $chrfile = $sampleName . "_snv.tmp." . $chr . ".g.vcf";
         push( @gvcflist, $chrfile );
-        print OUT "  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF --out $chrfile
+        print OUT "  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF -variant_index_type LINEAR -variant_index_parameter 128000 --out $chrfile
 ";
       }
 
@@ -127,7 +127,7 @@ if [ ! -s $snvOut ]; then
   fi";
     }
     else {
-      print OUT "  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF --out $snvOut
+      print OUT "  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF -variant_index_type LINEAR -variant_index_parameter 128000 --out $snvOut
 ";
     }
 
