@@ -55,9 +55,7 @@ sub perform {
 bedtools multicov -bams $bam_file -bed $bedFile | awk '{print(\$4 \"\\t\" \$1 \":\" \$2 \"-\" \$3 \"\\t\" \$NF)}' | sort - > $final_file
 ";
 
-    $self->close_pbs($pbs);
-
-    print "$pbs_file created \n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 

@@ -82,10 +82,8 @@ fi
 
 ";
 
-    $self->close_pbs($pbs);
-
+    $self->close_pbs( $pbs, $pbs_file );
     print $sh "\$MYCMD ./$pbs_name \n";
-    print "$pbs_file created\n";
   }
   print $sh "exit 0\n";
   close $sh;

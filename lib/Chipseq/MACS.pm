@@ -64,8 +64,7 @@ sub perform {
 macs $option -t $sample -c $control -n $group_name
 ";
 
-    $self->close_pbs($pbs);
-    print "$pbs_file created. \n";
+    $self->close_pbs( $pbs, $pbs_file );
 
     print $sh "\$MYCMD ./$pbs_name \n";
   }

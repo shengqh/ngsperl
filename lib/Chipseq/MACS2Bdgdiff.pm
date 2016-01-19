@@ -69,9 +69,7 @@ sub perform {
 macs2 bdgdiff $option --t1 $condition1treat --t2 $condition2treat --c1 $condition1control --c2 $condition2control --o-prefix $comparisonName  
 ";
 
-    $self->close_pbs($pbs);
-
-    print "$pbs_file created \n";
+    $self->close_pbs( $pbs, $pbs_file );
 
     print $sh "\$MYCMD ./$pbs_name \n";
   }

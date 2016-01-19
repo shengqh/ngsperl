@@ -54,9 +54,7 @@ sub perform {
   print $pbs "STAR $option --runThreadN $thread --runMode genomeGenerate --genomeDir . --genomeFastaFiles $faFile --sjdbGTFfile $transcript_gtf --sjdbFileChrStartEnd $final
   ";
 
-  $self->close_pbs($pbs);
-
-  print "$pbs_file created\n";
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {

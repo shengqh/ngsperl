@@ -59,9 +59,7 @@ sub perform {
     print $pbs "
 bam2bed < $bam_file | awk 'BEGIN {OFS = \"\\t\"} ; {if (\$6 == \"+\") print \$1, \$2 + 4, \$3 + 4, \$4, \$5, \$6; else print \$1, \$2 - 5, \$3 - 5, \$4, \$5, \$6}' $pileup > $final_file
 ";
-    $self->close_pbs($pbs);
-
-    print "$pbs_file created \n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 

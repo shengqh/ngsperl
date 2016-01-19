@@ -47,11 +47,9 @@ sub perform {
 
     my $cfiles = merge_string( ',', @{$corFiles} );
 
-    print $pbs "mono-sgen $cqstools paralyzer_annotation $option -i $bam_file -c $cfiles -o $annFile \n";
+    print $pbs "mono $cqstools paralyzer_annotation $option -i $bam_file -c $cfiles -o $annFile \n";
   }
-  $self->close_pbs($pbs);
-
-  print "!!!pbs file $pbs_file created.\n";
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {

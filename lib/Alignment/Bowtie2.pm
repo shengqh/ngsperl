@@ -100,9 +100,7 @@ fi
 ";
     }
 
-    $self->close_pbs($pbs);
-
-    print "$pbs_file created\n";
+    $self->close_pbs($pbs, $pbs_file);
   }
   close $sh;
 

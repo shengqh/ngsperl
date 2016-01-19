@@ -73,9 +73,7 @@ cd $pipeline_dir
 python ROSE2_main.py -g $genome -i $binding_site_file -r $tumor -c $normal -o $cur_dir $option
 ";
 
-    $self->close_pbs($pbs);
-
-    print "$pbs_file created. \n";
+    $self->close_pbs( $pbs, $pbs_file );
 
     print $sh "\$MYCMD ./$pbs_name \n";
   }

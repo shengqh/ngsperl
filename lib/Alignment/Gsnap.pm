@@ -47,8 +47,8 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files     = @{ $raw_files{$sample_name} };
-    my $sample_files_str = join (' ', @sample_files);
-    my $result_file       = $sample_name . ".txt";
+    my $sample_files_str = join( ' ', @sample_files );
+    my $result_file      = $sample_name . ".txt";
     my $zippedResultFile = $sample_name . ".txt.gz";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -73,8 +73,7 @@ if [ -s $result_file ]; then
 fi
 
 ";
-    $self->close_pbs($pbs);
-    print "$pbs_file created\n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 
