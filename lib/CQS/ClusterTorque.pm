@@ -61,7 +61,7 @@ PBS
   return ($pbs_desc);
 }
 
-sub get_log_desc {
+sub get_log_description {
   my ($self, $pbs_file) = @_;
   
   my $result = <<PBS;

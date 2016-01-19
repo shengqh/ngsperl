@@ -75,7 +75,7 @@ sub get_cluster_memory {
 sub get_cluster_desc {
 }
 
-sub get_log_desc {
+sub get_log_description {
 }
 
 sub get_submit_command {
