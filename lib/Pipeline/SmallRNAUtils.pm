@@ -262,7 +262,7 @@ sub getPrepareConfig {
 				pbs        => {
 					"email"    => $def->{email},
 					"nodes"    => "1:ppn=1",
-					"walltime" => "24",
+					"walltime" => "12",
 					"mem"      => "20gb"
 				},
 			},
