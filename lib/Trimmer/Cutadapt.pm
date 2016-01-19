@@ -27,6 +27,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
+  my $random_bases_remove_after_trim = get_option($config, $section, "random_bases_remove_after_trim", 0);
+  
   if ( defined $config->{$section}{adapter} ) {
     $option = $option . " -a " . $config->{$section}{adapter};
   }
@@ -35,21 +37,17 @@ sub perform {
   my $gzipped = get_option( $config, $section, "gzipped", 1 );
 
   if ( $gzipped && $extension =~ /\.gz$/ ) {
-
-    #print $extension . "\n";
     $extension =~ s/\.gz$//g;
-
-    #print $extension . "\n";
   }
+
+  my $shortLimited = $option =~ /-m\s+\d+/;
+  my $longLimited  = $option =~ /-M\s+\d+/;
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
-
-  my $shortLimited = $option =~ /-m\s+\d+/;
-  my $longLimited  = $option =~ /-M\s+\d+/;
 
   for my $sample_name ( sort keys %raw_files ) {
 
