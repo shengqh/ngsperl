@@ -161,7 +161,7 @@ sub getParclipSmallRNAConfig {
 
       #1 mismatch search
       unmappedReads_bowtie1_genome_1mm => {
-        class         => "Bowtie1",
+        class         => "Alignment::Bowtie1",
         perform       => 1,
         target_dir    => $def->{target_dir} . "/unmappedReads_bowtie1_genome_1mm",
         option        => $def->{bowtie1_option_1mm},
