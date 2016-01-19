@@ -28,8 +28,8 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  
-  my $extension = get_option($config, $section, "expect_extension", 1);
+
+  my $extension = get_option( $config, $section, "expect_extension", 1 );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -40,38 +40,24 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
-$path_file
-
-cd $result_dir
-
-";
     for my $sampleFile (@sample_files) {
       my $sampleBasename = basename($sampleFile);
       my $result_file = change_extension( $sampleBasename, $extension );
 
-      print $out "if [ ! -s $result_file ]; then
+      print $pbs "if [ ! -s $result_file ]; then
   msconvert $option $sampleFile
 fi
 ";
     }
-    print $out "
-echo finished=`date`
-
-exit 0 
-";
-    close $out;
-
-    print "$pbs_file created \n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
 
   close $sh;
@@ -92,7 +78,7 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my $extension = get_option($config, $section, "expect_extension", 1);
+  my $extension = get_option( $config, $section, "expect_extension", 1 );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {

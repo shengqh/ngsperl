@@ -117,10 +117,7 @@ sub perform {
     my $result_file = $result_dir . "/" . $currentTaskName . ".noredundant";
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file );
-
-    print $pbs "
-mono $proteomicstools buildsummary -i $currentParamFile 
-";
+    print $pbs "mono $proteomicstools buildsummary -i $currentParamFile";
     $self->close_pbs($pbs);
 
     print "$pbs_file created \n";

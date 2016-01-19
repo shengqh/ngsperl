@@ -27,7 +27,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $perlFile = get_option_value( $config->{$section}{perlFile}, "perlFile", 1 );
   my $is_absolute = File::Spec->file_name_is_absolute($perlFile);
@@ -69,8 +69,8 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sampleCount = scalar(@sample_files);
-    my $samples     = join( ' ', @sample_files );
+    my $sampleCount  = scalar(@sample_files);
+    my $samples      = join( ' ', @sample_files );
 
     my $parameterFile2 = "";
     if ( defined $parameterFiles2{$sample_name} ) {
@@ -100,42 +100,18 @@ sub perform {
       $parameterFile5 = "$file";
     }
 
-    #    my $cur_dir      = create_directory_or_die( $result_dir . "/$sample_name" );
-
-    #    my $pbs_name = "${sample_name}_perl.pbs";
-    #    my $pbs_file = "${pbs_dir}/$pbs_name";
-
-    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
-    my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
-    my $final_file=$sample_name.$output_ext;
+    my $pbs_file   = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name   = basename($pbs_file);
+    my $log        = $self->get_log_filename( $log_dir, $sample_name );
+    my $final_file = $sample_name . $output_ext;
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
-    #    my $log = "${log_dir}/${sample_name}_perl.log";
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-#PBS -o $log
-#PBS -j oe
-
-$path_file
-
-echo Perl=`date`
-cd $target_dir/result
-
-if [ -s $final_file ]; then
-  echo job has already been done. if you want to do again, delete ${result_dir}/${final_file} and submit job again.
-  exit 0;
-fi
-
-perl $perlFile $sample_name$output_ext $option $samples $parameterFile2 $parameterFile3 $parameterFile4 $parameterFile5
-
-echo finished=`date`
-";
-    close $out;
-
-    print "$pbs_file created \n";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+    print $pbs "perl $perlFile $sample_name$output_ext $option $samples $parameterFile2 $parameterFile3 $parameterFile4 $parameterFile5";
+    $self->close_pbs( $pbs, $pbs_file );
   }
 
   close $sh;

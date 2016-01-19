@@ -108,21 +108,15 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
 
-$path_file
-
-cd $cur_dir
-
-echo SNP=`date` 
+    print $pbs "
 
 if [[ -s $snpOut && ! -s $indelOut ]]; then
   mv $snpOut $snvOut
@@ -145,10 +139,8 @@ if [ -s $snvOut ]; then
   cat $indelFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $indelPass
 fi 
 
-echo finished=`date`
 ";
-    close $out;
-    print "$pbs_file created\n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 
@@ -167,8 +159,8 @@ sub result {
   my %bam_files = %{ get_raw_files( $config, $section ) };
   for my $sample_name ( sort keys %bam_files ) {
     my $cur_dir      = $result_dir . "/$sample_name";
-    my $snpPass     = $sample_name . "_snp_filtered.pass.vcf";
-    my $indelPass   = $sample_name . "_indel_filtered.pass.vcf";
+    my $snpPass      = $sample_name . "_snp_filtered.pass.vcf";
+    my $indelPass    = $sample_name . "_indel_filtered.pass.vcf";
     my @result_files = ();
     push( @result_files, "${cur_dir}/${snpPass}" );
     push( @result_files, "${cur_dir}/${indelPass}" );

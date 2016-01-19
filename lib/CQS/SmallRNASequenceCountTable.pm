@@ -37,18 +37,11 @@ sub perform {
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
-  my $log     = $self->get_log_filename( $log_dir, $task_name );
+  my $log      = $self->get_log_filename( $log_dir, $task_name );
 
   my $log_desc = $cluster->get_log_description($log);
 
-  open( my $out, ">$pbs_file" ) or die $!;
-  print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-cd $result_dir
-";
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
   if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
     my $groups = get_raw_files( $config, $section, "groups" );
@@ -58,16 +51,16 @@ cd $result_dir
       my $outputname = basename($outputfile);
 
       my @samples = @{ $groups->{$group_name} };
-      open( FL, ">$filelist" ) or die "Cannot create $filelist";
+      open( my $fl, ">$filelist" ) or die "Cannot create $filelist";
       for my $sample_name ( sort @samples ) {
         my @count_files = @{ $raw_files{$sample_name} };
-        my $countFile  = $count_files[0];
-        print FL $sample_name, "\t", $countFile, "\n";
+        my $countFile   = $count_files[0];
+        print $fl $sample_name, "\t", $countFile, "\n";
       }
-      close(FL);
+      close($fl);
 
-      print $out "
-mono-sgen $cqstools smallrna_sequence_count_table $option -o $outputname -l $filelist
+      print $pbs "
+mono $cqstools smallrna_sequence_count_table $option -o $outputname -l $filelist
 ";
     }
   }
@@ -76,21 +69,19 @@ mono-sgen $cqstools smallrna_sequence_count_table $option -o $outputname -l $fil
     my $outputfile = $self->get_file( $result_dir, ${task_name}, ".count",    0 );
     my $outputname = basename($outputfile);
 
-    open( FL, ">$filelist" ) or die "Cannot create $filelist";
+    open( my $fl, ">$filelist" ) or die "Cannot create $filelist";
     for my $sample_name ( sort keys %raw_files ) {
       my @count_files = @{ $raw_files{$sample_name} };
-      my $countFile  = $count_files[0];
-      print FL $sample_name, "\t", $countFile, "\n";
+      my $countFile   = $count_files[0];
+      print $fl $sample_name, "\t", $countFile, "\n";
     }
-    close(FL);
+    close($fl);
 
-    print $out "
-mono-sgen $cqstools smallrna_sequence_count_table $option -o $outputname -l $filelist
+    print $pbs "
+mono $cqstools smallrna_sequence_count_table $option -o $outputname -l $filelist
 ";
   }
-  close $out;
-
-  print "!!!shell file $pbs_file created.\n";
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {
@@ -106,15 +97,15 @@ sub result {
   if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
     my $groups = get_raw_files( $config, $section, "groups" );
     for my $group_name ( sort keys %{$groups} ) {
-      my $outputfile    = $self->get_file( $result_dir, "${task_name}_${group_name}", ".count",          0 );
-      my $filelist      = $self->get_file( $pbs_dir,    "${task_name}_${group_name}", ".filelist",       0 );
+      my $outputfile = $self->get_file( $result_dir, "${task_name}_${group_name}", ".count",    0 );
+      my $filelist   = $self->get_file( $pbs_dir,    "${task_name}_${group_name}", ".filelist", 0 );
       push( @result_files, $outputfile );
       push( @result_files, $filelist );
     }
   }
   else {
-    my $outputfile    = $self->get_file( $result_dir, ${task_name}, ".count",          0 );
-    my $filelist      = $self->get_file( $pbs_dir,    ${task_name}, ".filelist",       0 );
+    my $outputfile = $self->get_file( $result_dir, ${task_name}, ".count",    0 );
+    my $filelist   = $self->get_file( $pbs_dir,    ${task_name}, ".filelist", 0 );
     push( @result_files, $outputfile );
     push( @result_files, $filelist );
   }

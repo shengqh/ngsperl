@@ -37,10 +37,10 @@ sub perform {
 
   my $sorted = get_option( $config, $section, "sorted", 0 );
 
-  my $replaceReadGroup   = get_option( $config, $section, "replace_read_group", 0 );
-  my $reorderChromosome  = get_option( $config, $section, "reorder_chromosome", 0 );
-  my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals", 1 ) ? "-fixMisencodedQuals" : "";
-  my $baq = get_option( $config, $section, "samtools_baq_calibration", 0 );
+  my $replaceReadGroup   = get_option( $config, $section, "replace_read_group",       0 );
+  my $reorderChromosome  = get_option( $config, $section, "reorder_chromosome",       0 );
+  my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals",       1 ) ? "-fixMisencodedQuals" : "";
+  my $baq                = get_option( $config, $section, "samtools_baq_calibration", 0 );
 
   my $knownvcf      = "";
   my $knownsitesvcf = "";
@@ -57,7 +57,7 @@ sub perform {
   print $sh get_run_command($sh_direct) . "\n";
 
   for my $sample_name ( sort keys %raw_files ) {
-    my @sample_files    = @{ $raw_files{$sample_name} };
+    my @sample_files   = @{ $raw_files{$sample_name} };
     my $sampleFile     = $sample_files[0];
     my $sampleFileName = basename($sampleFile);
 
@@ -101,11 +101,11 @@ sub perform {
     my $recalFile = $sample_name . ".rmdup.split.recal.bam";
 
     my $final_file = $recalFile;
-    my $baqcmd    = "";
-    my $rmlist    = "";
+    my $baqcmd     = "";
+    my $rmlist     = "";
     if ($baq) {
       $final_file = $sample_name . ".rmdup.split.recal.baq.bam";
-      $baqcmd    = "
+      $baqcmd     = "
 if [[ -s $recalFile && ! -s $final_file ]]; then
   echo baq=`date` 
   samtools calmd -Abr $recalFile $faFile > $final_file
@@ -117,7 +117,7 @@ fi
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
@@ -125,21 +125,9 @@ fi
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-$path_file
-
-cd $cur_dir
-
-echo GATKRNASeqRefine_start=`date` 
-
-if [ -s $recalFile ]; then
-  echo job has already been done. if you want to do again, delete $recalFile and submit job again.
-  exit 0
-fi
-
+    print $pbs "
 if [ ! -s $rmdupFile ]; then
   echo MarkDuplicates=`date` 
   $sortCmd
@@ -171,14 +159,8 @@ if [[ -s $final_file && ! -s ${final_file}.stat ]]; then
   rm $rmFiles $rmdupFile ${sample_name}.rmdup.bai ${rmdupFile}.metrics $splitFile ${sample_name}.rmdup.split.bai $grpFile $rmlist
 fi
   
-echo finished=`date`
-
-exit 0;
 ";
-
-    close $out;
-
-    print "$pbs_file created\n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 

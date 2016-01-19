@@ -37,14 +37,14 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sample      = $sample_files[0];
-    
+    my $sample       = $sample_files[0];
+
     my @mapFiles = @{ $mapFiles{$sample_name} };
-    my $map = $mapFiles[0];
+    my $map      = $mapFiles[0];
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
     my $source_option;
@@ -54,11 +54,11 @@ sub perform {
       my $bim = change_extension( $sample, ".bim" );
       $source_option = "-B $sample $bim $fam";
     }
-    elsif ( $sample =~ /ped$/ ){
+    elsif ( $sample =~ /ped$/ ) {
       my $ped_map = change_extension( $sample, ".map" );
       $source_option = "-P $sample $ped_map";
     }
-    else{
+    else {
       my $gen_sample = change_extension( $sample, ".sample" );
       $source_option = "-G $sample $gen_sample";
     }
@@ -68,30 +68,11 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-cd $cur_dir 
-
-if [ -s $phase_file ]; then
-  echo job has already been done. if you want to do again, delete ${cur_dir}/${phase_file} and submit job again.
-  exit 0;
-fi
-
-echo shapeit_start=`date` 
-
-shapeit $option $source_option -M $map -O $phase_file $sample_file
-
-echo finished=`date` 
-
-";
-    close $out;
-
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $phase_file );
+    print $pbs "shapeit $option $source_option -M $map -O $phase_file $sample_file";
+    $self->close_pbs( $pbs, $pbs_file );
+    
     print $sh "\$MYCMD ./$pbs_name \n";
-    print "$pbs_file created\n";
   }
   print $sh "exit 0\n";
   close $sh;

@@ -38,46 +38,26 @@ sub perform {
   print $sh get_run_command($sh_direct) . "\n";
 
   for my $sample_name ( sort keys %raw_files ) {
-    my @inputFiles   = @{ $raw_files{$sample_name} };
+    my @inputFiles = @{ $raw_files{$sample_name} };
     my $inputFileStr = join( ",", @inputFiles );
 
-    my $genFile = $sample_name . ".gen";
+    my $final_file = $sample_name . ".gen";
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-$path_file
+    print $pbs "mono $cqstools impute2_distiller $option -i $inputFileStr -t $targetSnpFile -o $final_file";
 
-cd $cur_dir
-
-if [ -s $genFile ]; then
-  echo job has already been done. if you want to do again, delete $genFile and submit job again.
-  exit 0
-fi
-
-echo Impute2Distiller=`date` 
-
-mono-sgen $cqstools impute2_distiller $option -i $inputFileStr -t $targetSnpFile -o $genFile
-
-echo finished=`date`
-
-exit 0 
-";
-
-    close $out;
-
-    print "$pbs_file created \n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 
@@ -102,7 +82,7 @@ sub result {
     my $cur_dir = $result_dir . "/$sample_name";
 
     my @result_files = ();
-    my $countFile   = "${cur_dir}/${sample_name}.gen";
+    my $countFile    = "${cur_dir}/${sample_name}.gen";
     push( @result_files, $countFile );
     push( @result_files, "${cur_dir}/${sample_name}.info" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );

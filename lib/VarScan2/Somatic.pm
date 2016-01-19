@@ -45,7 +45,7 @@ sub perform {
 
   for my $group_name ( sort keys %group_sample_map ) {
     my @sample_files = @{ $group_sample_map{$group_name} };
-    my $sampleCount = scalar(@sample_files);
+    my $sampleCount  = scalar(@sample_files);
 
     if ( $sampleCount != 2 ) {
       die "SampleFile should be normal,tumor paired.";
@@ -64,33 +64,24 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $group_name );
+    my $log      = $self->get_log_filename( $log_dir, $group_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $snpvcf );
 
-$path_file 
-
-echo varscan2=`date` 
-
-cd $cur_dir
-
-if [ ! -s $snpvcf ]; then
-  if [ ! -s ${normal}.bai ]; then
-    samtools index ${normal}
-  fi
-
-  if [ ! -s ${tumor}.bai ]; then
-    samtools index ${tumor}
-  fi
-
-  java $java_option -jar $varscan2_jar somatic <($normal_pileup) <($tumor_pileup) $group_name $option --output-vcf 
+    print $pbs "
+if [ ! -s ${normal}.bai ]; then
+  samtools index ${normal}
 fi
+
+if [ ! -s ${tumor}.bai ]; then
+  samtools index ${tumor}
+fi
+
+java $java_option -jar $varscan2_jar somatic <($normal_pileup) <($tumor_pileup) $group_name $option --output-vcf 
 
 java $java_option -jar $varscan2_jar processSomatic $snpvcf
 grep -v \"^#\" $snpvcf | cut -f1 | uniq -c | awk '{print \$2\"\t\"\$1}' > ${snpvcf}.chromosome
@@ -98,11 +89,8 @@ grep -v \"^#\" $snpvcf | cut -f1 | uniq -c | awk '{print \$2\"\t\"\$1}' > ${snpv
 java $java_option -jar $varscan2_jar processSomatic $indelvcf
 grep -v \"^#\" $indelvcf | cut -f1 | uniq -c | awk '{print \$2\"\t\"\$1}' > ${indelvcf}.chromosome
 
-echo finished=`date`
 ";
-    close $out;
-
-    print "$pbs_file created \n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
 
   close $sh;

@@ -28,7 +28,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
-  my $data_dir   = get_directory( $config, $section, "data_dir", 1 );
+  my $data_dir = get_directory( $config, $section, "data_dir", 1 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -37,44 +37,24 @@ sub perform {
   print $sh get_run_command($sh_direct) . "\n";
 
   for my $sample_name ( sort keys %raw_files ) {
-    my @sample_files    = @{ $raw_files{$sample_name} };
-    my $files = join(",", @sample_files);
+    my @sample_files = @{ $raw_files{$sample_name} };
+    my $files = join( ",", @sample_files );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
-    
-    my $final = $cur_dir . "/final-list_candidate-fusion-genes.txt";
+
+    my $final = "final-list_candidate-fusion-genes.txt";
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-if [ -s $final ]; then
-  echo job has already been done. if you want to do again, delete $final and submit job again.
-  exit 0
-fi
-
-cd $cur_dir
-
-echo FusionCatcher_start=`date` 
-
-fusioncatcher -p $thread -d $data_dir -i $files -o .
-
-echo FusionCatcher_end=`date` 
-";
-
-    close $out;
-
-    print "$pbs_file created\n";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final );
+    print $pbs "fusioncatcher -p $thread -d $data_dir -i $files -o .";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 
@@ -95,8 +75,8 @@ sub result {
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
-    
-    my $final =  $result_dir . "/${sample_name}/final-list_candidate-fusion-genes.txt";
+
+    my $final        = $result_dir . "/${sample_name}/final-list_candidate-fusion-genes.txt";
     my @result_files = ();
     push( @result_files, $final );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );

@@ -31,46 +31,31 @@ sub perform {
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
-  
-  my $extension = get_option($config, $section, "extension", ".filtered.bam" );
+
+  my $extension = get_option( $config, $section, "extension", ".filtered.bam" );
   print "extension = $extension\n";
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sampleFile  = $sample_files[0];
+    my $sampleFile   = $sample_files[0];
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
+
+    print $sh "\$MYCMD ./$pbs_name \n";
 
     my $final_file = "${sample_name}${extension}";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-cd $result_dir 
-
-if [ -s $final_file ]; then
-  echo job has already been done. if you want to do again, delete ${result_dir}/${final_file} and submit job again.
-  exit 0;
-fi
-
-samtools view $option $sampleFile > $final_file
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+    print $pbs "samtools view $option $sampleFile > $final_file
 samtools index $final_file
-
-exit 0;
 ";
-    close $out;
-
-    print $sh "\$MYCMD ./$pbs_name \n";
-    print "$pbs_file created\n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   print $sh "exit 0\n";
   close $sh;

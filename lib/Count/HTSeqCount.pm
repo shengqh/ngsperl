@@ -44,41 +44,21 @@ sub perform {
   for my $sample_name ( sort keys %raw_files ) {
     my @bam_files  = @{ $raw_files{$sample_name} };
     my $bam_file   = $bam_files[0];
-    my $countFile = "${sample_name}.count";
+    my $final_file = "${sample_name}.count";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
-
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-$path_file
+    print $pbs "samtools view $ispairoption $bam_file | htseq-count $option -q -m intersection-nonempty $strandedoption -i gene_id - $gffFile > $final_file";
 
-cd $result_dir
+    $self->close_pbs( $pbs, $pbs_file );
 
-if [ -s $countFile ]; then
-  echo job has already been done. if you want to do again, delete $countFile and submit job again.
-  exit 0
-fi
-
-echo HTSeqCount=`date`
-
-samtools view $ispairoption $bam_file | htseq-count $option -q -m intersection-nonempty $strandedoption -i gene_id - $gffFile > $countFile
-
-echo finished=`date`
-
-exit 0 
-";
-
-    close $out;
-
-    print "$pbs_file created \n";
   }
   close $sh;
 
@@ -101,7 +81,7 @@ sub result {
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my @result_files = ();
-    my $countFile   = "${result_dir}/${sample_name}.count";
+    my $countFile    = "${result_dir}/${sample_name}.count";
     push( @result_files, $countFile );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }

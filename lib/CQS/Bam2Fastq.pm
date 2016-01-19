@@ -54,9 +54,9 @@ sub perform {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $bam_file     = $sample_files[0];
 
-    my $pbs_file = $self->get_pbs_filename($pbs_dir, $sample_name);
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
@@ -80,7 +80,7 @@ sub perform {
     $sortCmd
   fi
   
-  mono-sgen $cqstools bam2fastq $option -i $sourceFile -o $sample_name 
+  mono $cqstools bam2fastq $option -i $sourceFile -o $sample_name 
   
   if [ -s $final_file ]; then
     rm $sourceFile
@@ -90,37 +90,22 @@ sub perform {
       if ($unmapped_only) {
         my $unmapped_bam = "${sample_name}.unmapped.bam";
         $convertCmd = "samtools view -b -f 4 $bam_file > $unmapped_bam
-  mono-sgen $cqstools bam2fastq $option -i $unmapped_bam -o $sample_name
+  mono $cqstools bam2fastq $option -i $unmapped_bam -o $sample_name
   rm $unmapped_bam ";
       }
       else {
-        $convertCmd = "mono-sgen $cqstools bam2fastq $option -i $bam_file -o $sample_name ";
+        $convertCmd = "mono $cqstools bam2fastq $option -i $bam_file -o $sample_name ";
       }
     }
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-$path_file
+    print $pbs $convertCmd;
 
-cd $result_dir
+    $self->close_pbs( $pbs, $pbs_file );
 
-echo started=`date`
-
-if [ ! -s $final_file ]; then
-  $convertCmd
-fi
-
-echo finished=`date`
-
-exit 0 
-";
-    close $out;
-
-    print "$pbs_file created \n";
   }
   close $sh;
 

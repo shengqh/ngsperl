@@ -41,48 +41,33 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-cd $result_dir
-
-";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
     if ( scalar(@sample_files) == 1 ) {
       my $sampleFile = $sample_files[0];
-      my $trimFile   = get_trim_file($sampleFile, $extension);
-      print $out "if [ ! -s $trimFile ]; then
-  mono-sgen $cqstools fastq_trimmer $option -i $sampleFile -o $trimFile 
+      my $trimFile = get_trim_file( $sampleFile, $extension );
+      print $pbs "if [ ! -s $trimFile ]; then
+  mono $cqstools fastq_trimmer $option -i $sampleFile -o $trimFile 
 fi
 ";
     }
     else {
       my $read1file = $sample_files[0];
       my $read2file = $sample_files[1];
-      my $trim1file = get_trim_file($read1file, $extension);
-      my $trim2file = get_trim_file($read2file, $extension);
-      print $out "if [ ! -s $trim1file ]; then
-  mono-sgen $cqstools fastq_trimmer $option -i $read1file,$read2file -o $trim1file,$trim2file 
+      my $trim1file = get_trim_file( $read1file, $extension );
+      my $trim2file = get_trim_file( $read2file, $extension );
+      print $pbs "if [ ! -s $trim1file ]; then
+  mono $cqstools fastq_trimmer $option -i $read1file,$read2file -o $trim1file,$trim2file
 fi
 ";
     }
 
-    print $out "
-echo finished=`date`
-
-exit 0 
-";
-    close $out;
-
-    print "$pbs_file created \n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
 
   close $sh;
@@ -122,12 +107,12 @@ sub result {
     my @result_files = ();
 
     if ( scalar(@sample_files) == 1 ) {
-      my $trimFile = get_trim_file($sample_files[0], $extension);
+      my $trimFile = get_trim_file( $sample_files[0], $extension );
       push( @result_files, "${result_dir}/${trimFile}" );
     }
     else {
-      my $trim1file = get_trim_file($sample_files[0], $extension);
-      my $trim2file = get_trim_file($sample_files[1], $extension);
+      my $trim1file = get_trim_file( $sample_files[0], $extension );
+      my $trim2file = get_trim_file( $sample_files[1], $extension );
       push( @result_files, "${result_dir}/${trim1file}" );
       push( @result_files, "${result_dir}/${trim2file}" );
     }

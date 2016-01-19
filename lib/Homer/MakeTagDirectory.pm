@@ -26,11 +26,11 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster,$thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $raw_files = get_raw_files( $config, $section );
   my $groups = get_raw_files( $config, $section, "groups" );
-  
+
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
@@ -40,7 +40,7 @@ sub perform {
     my @gfiles  = ();
     foreach my $sample_name ( sort @samples ) {
       my @bam_files = @{ $raw_files->{$sample_name} };
-      foreach my $bam (@bam_files){
+      foreach my $bam (@bam_files) {
         push( @gfiles, $bam );
       }
     }
@@ -48,34 +48,17 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $group_name );
+    my $log      = $self->get_log_filename( $log_dir, $group_name );
 
-    my $cur_dir      = create_directory_or_die( $result_dir . "/$group_name" );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$group_name" );
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-cd $cur_dir 
-
-echo homer_MakeTagDirectory_start=`date` 
-
-makeTagDirectory $cur_dir $bams
-
-echo homer_MakeTagDirectory_finished=`date` 
-
-exit 0
-
-";
-
-    close $out;
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
+    print $pbs "makeTagDirectory $cur_dir $bams";
+    $self->close_pbs( $pbs, $pbs_file );
 
     print $sh "\$MYCMD ./$pbs_name \n";
-    print "$pbs_file created\n";
   }
   print $sh "exit 0\n";
   close $sh;

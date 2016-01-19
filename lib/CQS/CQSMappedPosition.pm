@@ -47,36 +47,27 @@ sub perform {
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $filelist = $pbs_dir . "/" . $self->get_name( $task_name, ".filelist" );
-  open( FL, ">$filelist" ) or die "Cannot create $filelist";
+  open( my $fl, ">$filelist" ) or die "Cannot create $filelist";
   for my $sample_name ( sort keys %raw_files ) {
     my @bam_files = @{ $raw_files{$sample_name} };
     my $bam_file  = $bam_files[0];
-    print FL $sample_name, "\t", $bam_file, "\n";
+    print $fl $sample_name, "\t", $bam_file, "\n";
   }
-  close(FL);
+  close($fl);
 
   my ( $result, $newoption ) = get_result( $task_name, $option );
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
-  my $log     = $self->get_log_filename( $log_dir, $task_name );
+  my $log      = $self->get_log_filename( $log_dir, $task_name );
 
   my $log_desc = $cluster->get_log_description($log);
 
-  open( my $out, ">$pbs_file" ) or die $!;
-  print $out "$pbs_desc
-$log_desc
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
-$path_file
+  print $pbs "mono $cqstools mapped_position $newoption -l $filelist";
 
-cd $result_dir
-
-mono-sgen $cqstools mapped_position $newoption -l $filelist
-";
-
-  close $out;
-
-  print "!!!shell file $pbs_file created.\n";
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {

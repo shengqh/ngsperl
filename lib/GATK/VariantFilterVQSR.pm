@@ -50,11 +50,11 @@ sub perform {
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
-  my $log     = $self->get_log_filename( $log_dir, $task_name );
+  my $log      = $self->get_log_filename( $log_dir, $task_name );
 
   my $merged_file = $task_name . ".vcf";
-  
-  my $dpname = $task_name . ".median" . $min_median_depth;
+
+  my $dpname      = $task_name . ".median" . $min_median_depth;
   my $dpFilterOut = $dpname . ".vcf";
 
   my $snpOut      = $dpname . ".snp.vcf";
@@ -70,16 +70,9 @@ sub perform {
 
   my $log_desc = $cluster->get_log_description($log);
 
-  open( my $out, ">$pbs_file" ) or die $!;
-  print $out "$pbs_desc
-$log_desc
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
-$path_file
-
-cd $result_dir
-
-echo VariantFilterVQSR=`date` 
-
+  print $pbs "
 if [ ! -s $merged_file ]; then
   echo GenotypeGVCFs=`date` 
   java $java_option -jar $gatk_jar -T GenotypeGVCFs $option -nt $thread -D $dbsnp -R $faFile \\
@@ -87,14 +80,14 @@ if [ ! -s $merged_file ]; then
 
   for my $sample_name ( sort keys %gvcfFiles ) {
     my @sample_files = @{ $gvcfFiles{$sample_name} };
-    my $gvcfFile    = $sample_files[0];
-    print $out "    --variant $gvcfFile \\\n";
+    my $gvcfFile     = $sample_files[0];
+    print $pbs "    --variant $gvcfFile \\\n";
   }
 
-  print $out "  -o $merged_file
+  print $pbs "  -o $merged_file
 fi
 ";
-  print $out "
+  print $pbs "
 if [ ! -s $dpFilterOut ]; then
   echo VCF_MinimumMedianDepth_Filter=`date` 
   mono $cqstools vcf_filter -i $merged_file -o $dpFilterOut -d $min_median_depth
@@ -107,7 +100,7 @@ fi
 ";
 
   if ( $hapmap || $omni ) {
-    print $out "
+    print $pbs "
 if [[ -s $snpOut && ! -s $snpCal ]]; then
   echo VariantRecalibratorSNP=`date` 
   java $java_option -jar $gatk_jar \\
@@ -117,18 +110,18 @@ if [[ -s $snpOut && ! -s $snpCal ]]; then
 ";
 
     if ($hapmap) {
-      print $out "    -resource:hapmap,known=false,training=true,truth=true,prior=15.0 $hapmap \\\n";
+      print $pbs "    -resource:hapmap,known=false,training=true,truth=true,prior=15.0 $hapmap \\\n";
     }
 
     if ($omni) {
-      print $out "    -resource:omni,known=false,training=true,truth=true,prior=12.0 $omni \\\n";
+      print $pbs "    -resource:omni,known=false,training=true,truth=true,prior=12.0 $omni \\\n";
     }
 
     if ($g1000) {
-      print $out "    -resource:1000G,known=false,training=true,truth=false,prior=10.0 $g1000 \\\n";
+      print $pbs "    -resource:1000G,known=false,training=true,truth=false,prior=10.0 $g1000 \\\n";
     }
 
-    print $out "    -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 $dbsnp \\
+    print $pbs "    -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 $dbsnp \\
     -an DP \\
     -an QD \\
     -an FS \\
@@ -164,7 +157,7 @@ fi
       ? "-window 35 -cluster 3 -filterName FS -filter \"FS > 30.0\" -filterName QD -filter \"QD < 2.0\""
       : "--filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" -filterName \"snp_filter\"";
 
-    print $out "
+    print $pbs "
 if [[ -s $snpOut && ! -s $snpPass ]]; then
   java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $snpOut $snp_filter -o $snpFilterOut 
   cat $snpFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $snpPass
@@ -173,7 +166,7 @@ fi
   }
 
   if ($mills) {
-    print $out "
+    print $pbs "
 if [[ -s $indelOut && ! -s $indelCal ]]; then
   echo VariantRecalibratorIndel=`date` 
   java $java_option -jar $gatk_jar \\
@@ -214,21 +207,14 @@ fi
     my $indel_filter =
       ( get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3" : "" ) . " --filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\" -filterName \"indel_filter\"";
 
-    print $out "
+    print $pbs "
 if [[ -s $indelOut && ! -s $snpPass ]]; then
   java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $indelOut $indel_filter -o $indelFilterOut 
   cat $indelFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $indelPass
 fi
 "
   }
-  print $out "
-echo finished=`date`
-
-exit 0
-";
-  close $out;
-
-  print "$pbs_file created\n";
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {

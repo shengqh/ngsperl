@@ -37,43 +37,21 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    
-    my $joinFiles = join(',', @sample_files);
-    my $final_file   = $sample_name . ".len";
+
+    my $joinFiles = join( ',', @sample_files );
+    my $final_file = $sample_name . ".len";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
-    
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
+
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-cd $result_dir
-
-if [ -s $final_file ]; then
-  echo job has already been done. if you want to do again, delete ${result_dir}/${final_file} and submit job again.
-  exit 0;
-fi
-
-echo FastqLen_start=`date` 
-
-mono-sgen $cqstools fastq_len -i $joinFiles -o $final_file
-
-echo finished=`date`
-
-exit 0 
-";
-
-    close $out;
-
-    print "$pbs_file created \n";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+    print $pbs "mono $cqstools fastq_len -i $joinFiles -o $final_file";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 
@@ -95,7 +73,7 @@ sub result {
 
   my $result = {};
   for my $sample_name ( sort keys %raw_files ) {
-    my $final_file   = $result_dir . "/" . $sample_name . ".len";
+    my $final_file = $result_dir . "/" . $sample_name . ".len";
 
     my @result_files = ();
 

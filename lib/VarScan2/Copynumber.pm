@@ -50,7 +50,7 @@ sub perform {
 
   for my $group_name ( sort keys %group_sample_map ) {
     my @sample_files = @{ $group_sample_map{$group_name} };
-    my $sampleCount = scalar(@sample_files);
+    my $sampleCount  = scalar(@sample_files);
 
     if ( $sampleCount != 2 ) {
       die "SampleFile should be normal,tumor paired.";
@@ -80,22 +80,15 @@ outputfile<-\"$cpSegFile\"
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $group_name );
+    my $log      = $self->get_log_filename( $log_dir, $group_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
 
-$path_file 
-
-echo varscan2_somatic_copynumber=`date` 
-
-cd $cur_dir
-
+    print $pbs "
 if [ ! -s $cpRawFile ]; then
   if [ ! -s ${normal}.bai ]; then
     samtools index ${normal}
@@ -116,11 +109,8 @@ if [[ -s $cpCallFile && ! -s $cpSegFile ]]; then
   R --vanilla -f $rfile
 fi
 
-echo finished=`date`
 ";
-    close $out;
-
-    print "$pbs_file created \n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
 
   close $sh;

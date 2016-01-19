@@ -36,41 +36,22 @@ sub perform {
   open( FL, ">$filelist" ) or die "Cannot create $filelist";
   for my $sample_name ( sort keys %raw_files ) {
     my @count_files = @{ $raw_files{$sample_name} };
-    my $countFile  = $count_files[0];
+    my $countFile   = $count_files[0];
     print FL $sample_name, "\t", $countFile, "\n";
   }
   close(FL);
 
-  my $pbs_file  = $self->get_pbs_filename( $pbs_dir, $task_name );
-  my $pbs_name  = basename($pbs_file);
+  my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
+  my $pbs_name = basename($pbs_file);
   my $log      = $self->get_log_filename( $log_dir, $task_name );
   my $log_desc = $cluster->get_log_description($log);
 
   my $outputfile = $self->get_file( $result_dir, ${task_name}, "_t2c.tsv", 0 );
   my $outputname = basename($outputfile);
 
-  open( my $out, ">$pbs_file" ) or die $!;
-  print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-cd $result_dir
-
-if [ -s $outputname ]; then
-  echo job has already been done. if you want to do again, delete $outputfile and submit job again.
-  exit 0;
-fi
-
-echo T2CSummary=`date`
-
-mono $cqstools smallrna_t2c_summary $option -o $outputname -l $filelist
-
-echo T2CSummary_finished
-";
-  close $out;
-
-  print "!!!shell file $pbs_file created.\n";
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $outputname );
+  print $pbs "mono $cqstools smallrna_t2c_summary $option -o $outputname -l $filelist";
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {
@@ -80,8 +61,8 @@ sub result {
   my $result = {};
 
   my @result_files = ();
-  my $outputfile  = $self->get_file( $result_dir, ${task_name}, "_t2c.tsv", 0 );
-  my $filelist    = $self->get_file( $pbs_dir, ${task_name}, ".filelist", 0 );
+  my $outputfile   = $self->get_file( $result_dir, ${task_name}, "_t2c.tsv", 0 );
+  my $filelist     = $self->get_file( $pbs_dir, ${task_name}, ".filelist", 0 );
   push( @result_files, $outputfile );
   push( @result_files, $filelist );
   $result->{$task_name} = filter_array( \@result_files, $pattern );

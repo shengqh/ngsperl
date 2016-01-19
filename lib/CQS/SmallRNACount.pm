@@ -39,12 +39,12 @@ sub perform {
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my %seqcount_files = ();
-  if ( has_raw_files($config, $section, "seqcount")) {
+  if ( has_raw_files( $config, $section, "seqcount" ) ) {
     %seqcount_files = %{ get_raw_files( $config, $section, "seqcount" ) };
   }
 
   my %fastqFiles = ();
-  if ( has_raw_files($config, $section, "fastq_files")) {
+  if ( has_raw_files( $config, $section, "fastq_files" ) ) {
     %fastqFiles = %{ get_raw_files( $config, $section, "fastq_files" ) };
   }
 
@@ -55,7 +55,7 @@ sub perform {
   for my $sample_name ( sort keys %raw_files ) {
     my @bam_files  = @{ $raw_files{$sample_name} };
     my $bam_file   = $bam_files[0];
-    my $countFile = $sample_name . ".count";
+    my $final_file = $sample_name . ".count";
 
     my $seqcountFile = "";
     if ( defined $seqcount_files{$sample_name} ) {
@@ -75,37 +75,15 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-cd $cur_dir
-
-if [ -s $countFile ]; then
-  echo job has already been done. if you want to do again, delete $countFile and submit job again.
-  exit 0
-fi
-
-echo SmallRNACount=`date` 
-
-mono $cqstools smallrna_count $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile -o $countFile
-
-echo finished=`date`
-
-exit 0 
-";
-
-    close $out;
-
-    print "$pbs_file created \n";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    print $pbs "mono $cqstools smallrna_count $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile -o $final_file";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 
@@ -135,9 +113,9 @@ sub result {
   for my $sample_name ( keys %raw_files ) {
     my $cur_dir = $result_dir . "/$sample_name";
 
-    my @result_files = ();
-    my $countFile   = "${cur_dir}/${sample_name}.count";
-    my $tRNAPositionFile   = "${cur_dir}/${sample_name}.tRNA.position";
+    my @result_files     = ();
+    my $countFile        = "${cur_dir}/${sample_name}.count";
+    my $tRNAPositionFile = "${cur_dir}/${sample_name}.tRNA.position";
     push( @result_files, $countFile );
     push( @result_files, $tRNAPositionFile );
     push( @result_files, "${countFile}.mapped.xml" );

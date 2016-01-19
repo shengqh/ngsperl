@@ -31,7 +31,7 @@ sub perform {
   my $faFile         = get_param_file( $config->{$section}{fasta_file},     "fasta_file",     1 );
   my $jar            = get_param_file( $config->{$section}{jar},            "jar",            1 );
   my $transcript_gtf = get_param_file( $config->{$section}{transcript_gtf}, "transcript_gtf", 1 );
-  my $sorted = get_option_value($config->{$section}{sorted}, 1);
+  my $sorted = get_option_value( $config->{$section}{sorted}, 1 );
 
   my $raw_files = get_raw_files( $config, $section );
 
@@ -48,25 +48,14 @@ sub perform {
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
-  my $log     = $self->get_log_filename( $log_dir, $task_name );
+  my $log      = $self->get_log_filename( $log_dir, $task_name );
 
   my $log_desc = $cluster->get_log_description($log);
 
-  open( my $out, ">$pbs_file" ) or die $!;
-  print $out "$pbs_desc
-$log_desc
+  my $final_file = "metrics.tsv";
 
-$path_file
-
-cd $result_dir
-
-echo RNASeQC=`date`
-
-if [ -s metrics.tsv ]; then
-  echo job has already been done. if you want to do again, delete ${result_dir}/metrics.tsv and submit job again.
-  exit 0;
-fi
-
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+  print $pbs "
 java -jar $jar $option -s $mapfile -t $transcript_gtf -ttype 2 -r $faFile -o .
 
 rm refGene.txt*
@@ -74,13 +63,8 @@ rm exons.rpkm.gct
 rm */*.tmp.txt*
 rm */*/perBaseDoC.out
 
-echo finished=`date`
-
-exit 0
 ";
-  close $out;
-
-  print "$pbs_file created. \n";
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {
@@ -88,7 +72,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $result      = {};
+  my $result       = {};
   my @result_files = ();
   push( @result_files, $result_dir . "/metrics.tsv" );
   $result->{$task_name} = filter_array( \@result_files, $pattern );

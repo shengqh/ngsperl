@@ -39,7 +39,7 @@ sub perform {
   print $sh get_run_command($sh_direct);
 
   my $filelist = $self->get_file( $pbs_dir, $task_name, ".filelist" );
-  open( FL, ">$filelist" ) or die "Cannot create $filelist";
+  open( my $fl, ">$filelist" ) or die "Cannot create $filelist";
 
   if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
     my $groups = get_raw_files( $config, $section, "groups" );
@@ -49,7 +49,7 @@ sub perform {
         my @smallRNAFiles = @{ $raw_files{$sample_name} };
         my $smallRNAFile  = $smallRNAFiles[0];
 
-        print FL $group_name, "\t", $sample_name, "\t", $smallRNAFile, "\n";
+        print $fl $group_name, "\t", $sample_name, "\t", $smallRNAFile, "\n";
       }
     }
   }
@@ -58,34 +58,21 @@ sub perform {
       my @smallRNAFiles = @{ $raw_files{$sample_name} };
       my $smallRNAFile  = $smallRNAFiles[0];
 
-      print FL $task_name, "\t", $sample_name, "\t", $smallRNAFile, "\n";
+      print $fl $task_name, "\t", $sample_name, "\t", $smallRNAFile, "\n";
     }
   }
-  close(FL);
+  close($fl);
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
-  my $log     = $self->get_log_filename( $log_dir, $task_name );
+  my $log      = $self->get_log_filename( $log_dir, $task_name );
 
   my $log_desc = $cluster->get_log_description($log);
 
-  open( my $out, ">$pbs_file" ) or die $!;
-  print $out "$pbs_desc
-$log_desc
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+  print $pbs "mono $cqstools smallrna_group -i $filelist -o $result_dir";
+  $self->close_pbs( $pbs, $pbs_file );
 
-$path_file
-
-cd $result_dir
-
-echo SmallRNACategory=`date` 
-
-mono-sgen $cqstools smallrna_group -i $filelist -o $result_dir
-
-echo finished=`date`
-
-exit 0 
-";
-  close $out;
   print $sh "\$MYCMD ./$pbs_name \n";
   close $sh;
 

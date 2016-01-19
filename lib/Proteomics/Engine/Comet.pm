@@ -31,7 +31,7 @@ sub perform {
 
   my $param_file = get_param_file( $config->{$section}{param_file}, "param_file", 1 );
   my $database   = get_param_file( $config->{$section}{database},   "database",   1 );
-  my $delete_temp_ms2 = get_option($config, $section, "delete_temp_ms2", 1); 
+  my $delete_temp_ms2 = get_option( $config, $section, "delete_temp_ms2", 1 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -44,26 +44,19 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
-$path_file
-
-cd $result_dir
-
-";
     for my $sampleFile (@sample_files) {
       my $sname = basename($sampleFile);
       my $result_file = change_extension( $sname, ".pep.xml" );
 
-      print $out "if [ ! -s $result_file ]; then\n";
+      print $pbs "if [ ! -s $result_file ]; then\n";
 
       my $ismgf = $sname =~ /\.mgf$/i;
       my $tempFile = $result_dir . "/" . change_extension( $sname, ".ms2" );
@@ -71,39 +64,32 @@ cd $result_dir
       if ($ismgf) {
         my $proteomicstools = get_param_file( $config->{$section}{proteomicstools}, "proteomicstools", 1 );
         my $titleformat = get_option( $config, $section, "titleformat" );
-        print $out "  if [ ! -s $tempFile ]; then
+        print $pbs "  if [ ! -s $tempFile ]; then
     mono $proteomicstools MGF2MS2 -i $sampleFile -t $titleformat -o $tempFile
   fi
 ";
         $sampleFile = $tempFile;
       }
 
-      print $out "  comet -P$param_file -D$database $sampleFile
+      print $pbs "  comet -P$param_file -D$database $sampleFile
   if [ -s $result_file ]; then
     RefreshParser $result_file $database
   fi
 ";
 
-      if ($ismgf && $delete_temp_ms2) {
-        print $out "  if [ -s $result_file ]; then
+      if ( $ismgf && $delete_temp_ms2 ) {
+        print $pbs "  if [ -s $result_file ]; then
     rm $tempFile
   fi
 ";
       }
 
-      print $out "
+      print $pbs "
 fi
 
 ";
     }
-    print $out "
-echo finished=`date`
-
-exit 0 
-";
-    close $out;
-
-    print "$pbs_file created \n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
 
   close $sh;

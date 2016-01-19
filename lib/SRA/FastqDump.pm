@@ -42,66 +42,18 @@ sub perform {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $bam_file     = $sample_files[0];
 
-    my $pbs_file = $self->get_pbs_filename($pbs_dir, $sample_name);
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
-    my $logdesp = $cluster->get_log_description($log);
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
+    my $log_desc = $cluster->get_log_description($log);
 
     print $sh "\$MYCMD ./$pbs_name \n";
-
-    open( my $out, ">$pbs_file" ) or die $!;
-
-    if ($ispaired) {
-      my $fastq1     = $sample_name . "_1.fastq.gz";
-      my $fastq2     = $sample_name . "_2.fastq.gz";
-      
-      print $out "$pbs_desc
-$logdesp
-
-$path_file
-
-cd $result_dir
-
-echo started=`date`
-
-if [ ! -s $fastq1 ]; then
-  ln -s $bam_file ${sample_name}.sra
-  fastq-dump --split-3 --gzip ${sample_name}.sra
-  rm ${sample_name}.sra
-fi
-
-
-echo finished=`date`
-
-exit 0 
-";
-    }
-    else {
-      my $fastq     = $sample_name . ".fastq.gz";
-      print $out "$pbs_desc
-$logdesp
-
-$path_file
-
-cd $result_dir
-
-echo started=`date`
-
-if [ ! -s $fastq ]; then
-  ln -s $bam_file ${sample_name}.sra
-  fastq-dump --gzip ${sample_name}.sra
-  rm ${sample_name}.sra
-fi
-
-echo finished=`date`
-
-exit 0 
-";
-    }
-
-    close $out;
-
-    print "$pbs_file created \n";
+    my $final_file = $ispaired ? $sample_name . "_1.fastq.gz" : $sample_name . ".fastq.gz";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+    print $pbs "ln -s $bam_file ${sample_name}.sra
+fastq-dump --split-3 --gzip ${sample_name}.sra
+rm ${sample_name}.sra";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 

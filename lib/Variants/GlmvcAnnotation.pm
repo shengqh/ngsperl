@@ -71,40 +71,20 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sampleFile  = $sample_files[0];
+    my $sampleFile   = $sample_files[0];
     my $cur_dir      = create_directory_or_die( $result_dir . "/$sample_name" );
 
-    my $pbs_file  = $self->get_pbs_filename( $pbs_dir, $sample_name );
-    my $pbs_name  = basename($pbs_file);
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
     my $log_desc = $cluster->get_log_description($log);
     my $final    = "${sample_name}.annotation.tsv";
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file 
-
-echo Glmvc=`date` 
-
-cd $cur_dir
-
-if [ -s $final ]; then
-  echo job has already been done. if you want to do again, delete ${cur_dir}/${final} and submit job again.
-  exit 0;
-fi      
-      
-mono $glmvcfile annotation $option -i $sampleFile -o ${final}
-
-echo finished=`date`
-";
-
-    close $out;
-
-    print "$pbs_file created \n";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final );
+    print $pbs "mono $glmvcfile annotation $option -i $sampleFile -o ${final}";
+    $self->close_pbs( $pbs, $pbs_file );
 
   }
   close $sh;

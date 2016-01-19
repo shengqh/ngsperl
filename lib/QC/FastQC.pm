@@ -24,9 +24,9 @@ sub new {
 }
 
 sub parsePairedSamples {
-  my ($samples)   = @_;
+  my ($samples)    = @_;
   my @sample_files = @{$samples};
-  my @result      = ();
+  my @result       = ();
   for my $sample (@sample_files) {
     if ( $sample =~ /,/ ) {
       my @files = split( ',', $sample );
@@ -64,42 +64,25 @@ qcimg2pdf.sh -o $task_name
 
   for my $sample_name ( sort keys %raw_files ) {
     my @originalFiles = @{ $raw_files{$sample_name} };
-    my @sample_files   = parsePairedSamples( \@originalFiles );
+    my @sample_files  = parsePairedSamples( \@originalFiles );
 
     my $sampleCount = scalar(@sample_files);
     my $samples     = join( ' ', @sample_files );
-    my $cur_dir      = create_directory_or_die( $result_dir . "/$sample_name" );
+    my $cur_dir     = create_directory_or_die( $result_dir . "/$sample_name" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
-    my $logdesc = $cluster->get_log_description($log);
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
+    my $log_desc  = $cluster->get_log_description($log);
 
     my @expectresult = @{ $result->{$sample_name} };
     my $expectname   = $expectresult[0];
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$logdesc
-
-$path_file
-
-echo fastqc=`date`
-
-if [ -e $expectname ]; then
-  echo job has already been done. if you want to do again, delete ${expectname} and submit job again.
-  exit 0;
-fi
-
-fastqc $option --extract -t $sampleCount -o $cur_dir $samples
-
-echo finished=`date`
-";
-    close $out;
-
-    print "$pbs_file created \n";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $expectname );
+    print $pbs "fastqc $option --extract -t $sampleCount -o $cur_dir $samples";
+    $self->close_pbs( $pbs, $pbs_file );
   }
 
   close $sh;
@@ -121,8 +104,8 @@ sub result {
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my @originalFiles = @{ $raw_files{$sample_name} };
-    my @sample_files   = parsePairedSamples( \@originalFiles );
-    my @result_files   = ();
+    my @sample_files  = parsePairedSamples( \@originalFiles );
+    my @result_files  = ();
     for my $sampleFile (@sample_files) {
       my $name = basename($sampleFile);
       if ( $name =~ /gz$/ ) {

@@ -39,44 +39,29 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $vcffile     = $sample_files[0];
+    my $vcffile      = $sample_files[0];
 
     my $result_file = $result_dir . "/" . $sample_name;
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
 
-$path_file
-
-cd $result_dir
-
-echo QC3bam=`date`
- 
-perl $qc3_perl $option -m v -i $vcffile -a $annovarDB -o $result_file
-
-echo finished=`date`
-
-exit 0
-";
-    close $out;
-
-    print "$pbs_file created. \n";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+    print $pbs "perl $qc3_perl $option -m v -i $vcffile -a $annovarDB -o $result_file";
+    $self->close_pbs( $pbs, $pbs_file );
   }
-  
+
   close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
   }
-  
+
   print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
 }
 

@@ -67,30 +67,14 @@ sub perform {
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
-  my $log     = $self->get_log_filename( $log_dir, $task_name );
+  my $log      = $self->get_log_filename( $log_dir, $task_name );
 
   my $log_desc = $cluster->get_log_description($log);
 
-  open( my $out, ">$pbs_file" ) or die $!;
-  print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-cd $result_dir
-
-echo cuffmerge=`date` 
-
-cuffmerge $option $gtfparam -s $faFile -o . $assembliesfile 
-
-echo finished=`date`
-
-exit 0
-";
-
-  close $out;
-
-  print "$pbs_file created\n";
+  my $final_file = "merged.gtf";
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+  print $pbs "cuffmerge $option $gtfparam -s $faFile -o . $assembliesfile";
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {

@@ -29,7 +29,7 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $cqstools = get_cqstools( $config, $section, 1 );
-  
+
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -37,43 +37,21 @@ sub perform {
   print $sh get_run_command($sh_direct) . "\n";
 
   for my $sample_name ( sort keys %raw_files ) {
-    my @xmlFiles  = @{ $raw_files{$sample_name} };
-    my $xmlFile   = $xmlFiles[0];
-    my $t2cFile = $sample_name . ".T2C.tsv";
+    my @xmlFiles = @{ $raw_files{$sample_name} };
+    my $xmlFile  = $xmlFiles[0];
+    my $t2cFile  = $sample_name . ".T2C.tsv";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-cd $result_dir
-
-if [ -s $t2cFile ]; then
-  echo job has already been done. if you want to do again, delete $t2cFile and submit job again.
-  exit 0
-fi
-
-echo ParclipT2CFinder=`date` 
-
-mono $cqstools parclip_t2c $option -i $xmlFile -o $t2cFile
-
-echo finished=`date`
-
-exit 0 
-";
-
-    close $out;
-
-    print "$pbs_file created \n";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $t2cFile );
+    print $pbs "mono $cqstools parclip_t2c $option -i $xmlFile -o $t2cFile";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 
@@ -99,8 +77,8 @@ sub result {
     my $xmlFile = $t2cFile . ".xml";
 
     my @result_files = ();
-    push( @result_files, $result_dir. "/" . $t2cFile );
-    push( @result_files, $result_dir. "/" . $xmlFile );
+    push( @result_files, $result_dir . "/" . $t2cFile );
+    push( @result_files, $result_dir . "/" . $xmlFile );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }

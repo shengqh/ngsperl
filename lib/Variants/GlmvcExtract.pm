@@ -66,8 +66,8 @@ sub perform {
 
   for my $group_name ( sort keys %{$raw_files} ) {
     my $validateFile = $raw_files->{$group_name}[0];
-    my @sample_files  = @{ $group_sample_map{$group_name} };
-    my @sample_names  = @{ $group_name_map{$group_name} };
+    my @sample_files = @{ $group_sample_map{$group_name} };
+    my @sample_names = @{ $group_name_map{$group_name} };
 
     my $samples = join( ',', @sample_files );
     my $names   = join( ',', @sample_names );
@@ -76,36 +76,16 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $group_name );
+    my $log      = $self->get_log_filename( $log_dir, $group_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $log_desc = $cluster->get_log_description($log);
-    my $final    = "${group_name}.tsv";
+    my $log_desc   = $cluster->get_log_description($log);
+    my $final_file = "${group_name}.tsv";
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file 
-
-echo Glmvc=`date` 
-
-cd $cur_dir
-
-if [ -s $final ]; then
-  echo job has already been done. if you want to do again, delete ${cur_dir}/${final} and submit job again.
-  exit 0;
-fi      
-      
-mono-sgen $glmvcfile extract $option --bam_files $samples --bam_names $names -f $fafile -o ${cur_dir}/$final -v $validateFile
-
-echo finished=`date`
-";
-
-    close $out;
-
-    print "$pbs_file created \n";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    print $pbs "mono $glmvcfile extract $option --bam_files $samples --bam_names $names -f $fafile -o ${cur_dir}/$final_file -v $validateFile";
+    $self->close_pbs( $pbs, $pbs_file );
 
   }
   close $sh;

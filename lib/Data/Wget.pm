@@ -50,29 +50,20 @@ sub perform {
         $iend = $urlCount;
       }
 
-      my $name    = "${sample_name}_${i}_${iend}";
+      my $name     = "${sample_name}_${i}_${iend}";
       my $pbs_file = $self->get_pbs_filename( $pbs_dir, $name );
       my $pbs_name = basename($pbs_file);
-      my $log     = $self->get_log_filename( $log_dir, $name );
+      my $log      = $self->get_log_filename( $log_dir, $name );
 
       my $log_desc = $cluster->get_log_description($log);
 
-      open( my $out, ">$pbs_file" ) or die $!;
-      print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-cd $result_dir
-
-echo Wget=`date`
-";
+      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
       for ( my $j = $i ; $j < $iend ; $j++ ) {
         my $url      = $urls[$j];
         my $filename = basename($url);
 
-        print $out "if [ ! -s $filename ]; then
+        print $pbs "if [ ! -s $filename ]; then
   echo 'wget $url ...\n'
   wget $url
 fi
@@ -80,9 +71,7 @@ fi
 ";
       }
 
-      close $out;
-
-      print "$pbs_file created\n";
+      $self->close_pbs( $pbs, $pbs_file );
 
       print $sh "\$MYCMD ./$pbs_name \n";
     }
@@ -110,7 +99,7 @@ sub result {
     my $listFile  = $listFiles[0];
     my @urls      = read_file( $listFile, chomp => 1 );
     for my $url (@urls) {
-      my $filename   = basename($url);
+      my $filename    = basename($url);
       my $result_file = $result_dir . "/" . $filename;
 
       my @result_files = ();

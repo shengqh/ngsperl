@@ -40,14 +40,8 @@ sub perform {
   my $finalpbs     = $self->get_pbs_filename( $pbs_dir, $finalName );
   my $finallog     = $self->get_log_filename( $log_dir, $finalName );
   my $finallogdesp = $cluster->get_log_description($finallog);
-  open( FINAL, ">$finalpbs" ) or die $!;
-  print FINAL "$pbs_desc
-$finallogdesp
 
-$path_file
-
-echo pipelineStart=`date` 
-";
+  my $final = $self->open_pbs( $finalpbs, $pbs_desc, $finallogdesp, $path_file, $result_dir );
 
   for my $taskName ( sort keys %fqFiles ) {
     my $shfile = $self->get_task_filename( $pbs_dir, $taskName );
@@ -79,18 +73,11 @@ echo pipelineStart=`date`
 
       my $pbs_file = $self->get_pbs_filename( $pbs_dir, $taskSample );
       my $pbs_name = basename($pbs_file);
-      my $log     = $self->get_log_filename( $log_dir, $taskSample );
-      my $logdesp = $cluster->get_log_description($log);
+      my $log      = $self->get_log_filename( $log_dir, $taskSample );
+      my $logdesp  = $cluster->get_log_description($log);
 
-      open( my $out, ">$pbs_file" ) or die $!;
+      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $logdesp, $path_file, $result_dir );
 
-      print $out "$pbs_desc
-$logdesp
-
-$path_file
-
-echo sequenceTaskStart=`date` 
-";
       for my $tasksection (@tasks) {
 
         #print "task " . $tasksection . " ...\n";
@@ -103,27 +90,22 @@ echo sequenceTaskStart=`date`
               if ( !-e $pbs ) {
                 die "Task " . $tasksection . ", file not exists " . $pbs . "\n";
               }
-              print $out "bash " . $pbs . "\n";
+              print $pbs "bash " . $pbs . "\n";
             }
           }
           else {
             if ( !-e $samplepbs ) {
               die "Task " . $tasksection . ", file not exists " . $samplepbs . "\n";
             }
-            print $out "bash " . $samplepbs . "\n";
+            print $pbs "bash " . $samplepbs . "\n";
           }
         }
       }
 
-      print $out "
-echo sequenceTaskEnd=`date` 
-";
-      close $out;
+      $self->close_pbs( $pbs, $pbs_file );
 
       print $sh "\$MYCMD ./$pbs_name \n";
-      print "$pbs_file created\n";
-
-      print FINAL "bash ./$pbs_name \n";
+      print $final "bash ./$pbs_name \n";
 
     }
     print $sh "exit 0\n";
@@ -134,10 +116,8 @@ echo sequenceTaskEnd=`date`
     }
   }
 
-  print FINAL "exit 0\n";
-  close(FINAL);
-  
-  print "You may submit or run $finalpbs for all tasks.\n";
+  $self->close_pbs( $final, $finalpbs );
+
 }
 
 sub get_pbs_files {

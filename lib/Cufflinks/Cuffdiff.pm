@@ -33,12 +33,15 @@ sub perform {
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
 
   my $raw_files = get_raw_files( $config, $section );
+
   #print Dumper($raw_files);
 
   my $groups = get_raw_files( $config, $section, "groups" );
+
   #print Dumper($groups);
 
   my $pairs = get_raw_files( $config, $section, "pairs" );
+
   #print Dumper($pairs);
 
   my $mapfile = $result_dir . "/${task_name}_group_sample.map";
@@ -69,11 +72,11 @@ sub perform {
 
   for my $pair_name ( sort keys %{$pairs} ) {
     my ( $ispaired, $gNames ) = get_pair_groups( $pairs, $pair_name );
-    
+
     #print Dumper($gNames);
-    
+
     my @group_names = @{$gNames};
-    my @bams       = ();
+    my @bams        = ();
     foreach my $group_name (@group_names) {
       push( @bams, $tpgroups{$group_name} );
     }
@@ -81,7 +84,7 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $pair_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $pair_name );
+    my $log      = $self->get_log_filename( $log_dir, $pair_name );
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$pair_name" );
 
@@ -89,29 +92,11 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $final_file = "gene_exp.diff";
 
-$path_file
-
-cd $cur_dir
-
-if [ -s gene_exp.diff ];then
-  echo job has already been done. if you want to do again, delete ${cur_dir}/gene_exp.diff and submit job again.
-  exit 0;
-fi
-
-cuffdiff $option -o . -L $labels -b $faFile $transcript_gtf $bamstrs
-
-echo finished=`date`
-
-exit 0
-";
-
-    close $out;
-
-    print "$pbs_file created. \n";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+    print $pbs "cuffdiff $option -o . -L $labels -b $faFile $transcript_gtf $bamstrs";
+    $self->close_pbs( $pbs, $pbs_file );
 
     print $sh "\$MYCMD ./$pbs_name \n";
   }

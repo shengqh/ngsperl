@@ -31,7 +31,7 @@ sub perform {
   my $cqstools = get_cqstools( $config, $section, 1 );
   my $refgeneFile = get_param_file( $config->{$section}{refgene_file}, "refgene_file (Refgene file downloaded from UCSC Genome Browser)", 1 );
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file (genome fasta file)", 1 );
-  
+
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my %target_files = %{ get_raw_files( $config, $section, "target" ) };
 
@@ -40,44 +40,22 @@ sub perform {
   print $sh get_run_command($sh_direct) . "\n";
 
   for my $sample_name ( sort keys %raw_files ) {
-    my $xmlFile   = $raw_files{$sample_name}->[0];
+    my $xmlFile    = $raw_files{$sample_name}->[0];
     my $final_file = $sample_name . ".target.tsv";
-    
+
     my $targetXml = $target_files{$sample_name}->[0];
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-cd $result_dir
-
-if [ -s $final_file ]; then
-  echo job has already been done. if you want to do again, delete $final_file and submit job again.
-  exit 0
-fi
-
-echo ParclipMirnaTarget=`date` 
-
-mono-sgen $cqstools parclip_mirna_target $option -i $xmlFile -t $targetXml -r $refgeneFile -g $faFile -o $final_file
-
-echo finished=`date`
-
-exit 0 
-";
-
-    close $out;
-
-    print "$pbs_file created \n";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+    print $pbs "mono $cqstools parclip_mirna_target $option -i $xmlFile -t $targetXml -r $refgeneFile -g $faFile -o $final_file";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 
@@ -102,7 +80,7 @@ sub result {
     my $final_file = $sample_name . ".target.tsv";
 
     my @result_files = ();
-    push( @result_files, $result_dir. "/" . $final_file );
+    push( @result_files, $result_dir . "/" . $final_file );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }

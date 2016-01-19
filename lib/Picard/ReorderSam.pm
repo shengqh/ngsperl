@@ -28,7 +28,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
+  my $faFile     = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -39,11 +39,11 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sampleFile  = $sample_files[0];
+    my $sampleFile   = $sample_files[0];
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
@@ -51,33 +51,16 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-$path_file
-
-cd $cur_dir 
-
-if [ -s $final_file ]; then
-  if [ ! -s ${final_file}.bai ]; then
-    samtools index $final_file
-    exit 0;
-  fi
-  echo job has already been done. if you want to do again, delete ${cur_dir}/${final_file} and submit job again.
-  exit 0;
-fi
-
+    print $pbs "
 java -jar $picard_jar ReorderSam I=${sampleFile} O=${final_file} R=${faFile}
-
 samtools index $final_file
-
-exit 0;
 ";
-    close $out;
+
+    $self->close_pbs( $pbs, $pbs_file );
 
     print $sh "\$MYCMD ./$pbs_name \n";
-    print "$pbs_file created\n";
   }
   print $sh "exit 0\n";
   close $sh;

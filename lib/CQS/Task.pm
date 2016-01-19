@@ -121,8 +121,8 @@ cd $result_dir
 ";
   if ( defined $final_file ) {
     print $pbs "
-if [ -s $final_file ]; then
-  echo job has already been done. if you want to do again, delete $final_file and submit job again.
+if [[ -s $final_file or -d $final_file ]]; then
+  echo job has already been done. if you want to do again, delete ${result_dir}/${final_file} and submit job again.
   exit 0
 fi
 ";
@@ -141,6 +141,7 @@ sub close_pbs {
   my $module_name = $self->{_name};
 
   print $pbs "
+
 echo ${module_name}_end=`date`
 
 exit 0

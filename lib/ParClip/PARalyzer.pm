@@ -62,7 +62,7 @@ fi";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     my $iniFile = "${sample_name}.ini";
     open( INI, ">${cur_dir}/${iniFile}" ) or die "Cannot create ${cur_dir}/${iniFile}";
@@ -97,18 +97,11 @@ OUTPUT_MIRNA_TARGETS_FILE=${sample_name}.target.csv
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $final_file = "${sample_name}.target.csv";
 
-cd $cur_dir
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-echo PARalyzer_started=`date`
-
-if [ -s ${sample_name}.target.csv ]; then
-  echo job has already been done. if you want to do again, delete ${sample_name}.target.csv and submit job again.
-  exit 0
-fi
+    print $pbs "
 
 $bam2sam
 
@@ -116,14 +109,8 @@ PARalyzer $memory $iniFile
 
 $rmcmd
 
-echo PARalyzer_finished=`date`
-
-exit 0 
 ";
-
-    close $out;
-
-    print "$pbs_file created \n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 

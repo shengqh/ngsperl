@@ -29,8 +29,8 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $cqstools = get_cqstools( $config, $section, 1 );
-  my $samtools = get_param_file( $config->{$section}{samtools},  "samtools",  1 );
-  my $gffFile  = get_param_file( $config->{$section}{gff_file},  "gff_file",  1 );
+  my $samtools = get_param_file( $config->{$section}{samtools}, "samtools", 1 );
+  my $gffFile  = get_param_file( $config->{$section}{gff_file}, "gff_file", 1 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -46,8 +46,8 @@ sub perform {
   for my $sample_name ( sort keys %raw_files ) {
     my @bam_files  = @{ $raw_files{$sample_name} };
     my $bam_file   = $bam_files[0];
-    my $fileName  = basename($bam_file);
-    my $countFile = $fileName . ".tsv";
+    my $fileName   = basename($bam_file);
+    my $final_file = $fileName . ".tsv";
 
     my $seqcountFile = "";
     if ( defined $seqcount_files{$sample_name} ) {
@@ -60,36 +60,16 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-$path_file
+    print $pbs "mono $cqstools cqs_pileup $option --samtools $samtools -i $bam_file -g $gffFile -o $final_file $seqcountFile";
 
-cd $cur_dir
-
-if [ -s $countFile ]; then
-  echo job has already been done. if you want to do again, delete $countFile and submit job again.
-  exit 0
-fi
-
-echo CQSPileup=`date` 
-
-mono-sgen $cqstools cqs_pileup $option --samtools $samtools -i $bam_file -g $gffFile -o $countFile $seqcountFile
-
-echo finished=`date`
-
-exit 0 
-";
-
-    close $out;
-
-    print "$pbs_file created \n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 
@@ -115,10 +95,10 @@ sub result {
 
     my @bam_files = @{ $raw_files{$sample_name} };
     my $bam_file  = $bam_files[0];
-    my $fileName = basename($bam_file);
+    my $fileName  = basename($bam_file);
 
     my @result_files = ();
-    my $countFile   = $cur_dir . "/" . $fileName . ".tsv";
+    my $countFile    = $cur_dir . "/" . $fileName . ".tsv";
     push( @result_files, $countFile );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );

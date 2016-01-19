@@ -41,35 +41,25 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-cd $result_dir
-
-echo scythe_start=`date` 
-
-";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
     if ( scalar(@sample_files) == 2 ) {
       my $sample1 = $sample_files[0];
       my $sample2 = $sample_files[1];
 
-      my $trim1 = change_extension_gzipped(basename($sample1), "_scythe.fastq");
-      my $trim2 = change_extension_gzipped(basename($sample2), "_scythe.fastq");
+      my $trim1 = change_extension_gzipped( basename($sample1), "_scythe.fastq" );
+      my $trim2 = change_extension_gzipped( basename($sample2), "_scythe.fastq" );
 
       my $final_file1 = $trim1 . ".gz";
       my $final_file2 = $trim2 . ".gz";
 
-      print $out "
+      print $pbs "
 if [ ! -s $final_file1 ]; then
   if [ ! -s $trim1 ]; then
     scythe $option -a $faFile -o $trim1 $sample1
@@ -87,11 +77,11 @@ fi
     else {
       my $sample1 = $sample_files[0];
 
-      my $trim1 = change_extension_gzipped(basename($sample1), "_scythe.fastq");
+      my $trim1 = change_extension_gzipped( basename($sample1), "_scythe.fastq" );
 
       my $final_file1 = $trim1 . ".gz";
 
-      print $out "
+      print $pbs "
 if [ ! -s $final_file1 ]; then
   if [ ! -s $trim1 ]; then
     scythe $option -a $faFile -o $trim1 $sample1
@@ -101,14 +91,7 @@ if [ ! -s $final_file1 ]; then
 fi
 ";
     }
-    print $out "
-echo finished=`date`
-
-exit 0 
-";
-    close $out;
-
-    print "$pbs_file created \n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
 
   close $sh;
@@ -138,8 +121,8 @@ sub result {
       my $sample1 = $sample_files[0];
       my $sample2 = $sample_files[1];
 
-      my $trim1 = change_extension_gzipped(basename($sample1), "_scythe.fastq");
-      my $trim2 = change_extension_gzipped(basename($sample2), "_scythe.fastq");
+      my $trim1 = change_extension_gzipped( basename($sample1), "_scythe.fastq" );
+      my $trim2 = change_extension_gzipped( basename($sample2), "_scythe.fastq" );
 
       my $final_file1 = $trim1 . ".gz";
       my $final_file2 = $trim2 . ".gz";
@@ -150,13 +133,13 @@ sub result {
     else {
       my $sample1 = $sample_files[0];
 
-      my $trim1 = change_extension_gzipped(basename($sample1), "_scythe.fastq");
+      my $trim1 = change_extension_gzipped( basename($sample1), "_scythe.fastq" );
 
       my $final_file1 = $trim1 . ".gz";
 
       push( @result_files, "${result_dir}/${final_file1}" );
     }
-    
+
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;

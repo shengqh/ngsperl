@@ -60,7 +60,7 @@ sub perform {
   for my $sample_name ( sort keys %raw_files ) {
     my @bam_files  = @{ $raw_files{$sample_name} };
     my $bam_file   = $bam_files[0];
-    my $countFile = $sample_name . ".count";
+    my $final_file = $sample_name . ".count";
 
     my $seqcountFile = "";
     if ( defined $seqcount_files{$sample_name} ) {
@@ -80,39 +80,16 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
-    
-    my $name = $self->{_name};
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    print $pbs "mono $cqstools mapped_count $option --samtools $samtools -i $bam_file -g $gffFile -o $final_file $seqcountFile $fastqFile";
 
-$path_file
-
-cd $cur_dir
-
-if [ -s $countFile ]; then
-  echo job has already been done. if you want to do again, delete $countFile and submit job again.
-  exit 0
-fi
-  
-echo ${name}_start=`date` 
-
-mono-sgen $cqstools mapped_count $option --samtools $samtools -i $bam_file -g $gffFile -o $countFile $seqcountFile $fastqFile
-
-echo ${name}_end=`date`
-
-exit 0 
-";
-
-    close $out;
-
-    print "$pbs_file created \n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 
@@ -144,17 +121,17 @@ sub result {
     my @bam_files = @{ $raw_files{$sample_name} };
 
     my @result_files = ();
-    my $countFile   = "${cur_dir}/${sample_name}.count";
-    push( @result_files, $countFile );
-    push( @result_files, "${countFile}.mapped.xml" );
+    my $final_file   = "${cur_dir}/${sample_name}.count";
+    push( @result_files, $final_file );
+    push( @result_files, "${final_file}.mapped.xml" );
     push( @result_files, "${cur_dir}/${sample_name}.info" );
 
     my $unmapped;
     if ($fasta_format) {
-      $unmapped = change_extension( $countFile, ".unmapped.fasta.gz" );
+      $unmapped = change_extension( $final_file, ".unmapped.fasta.gz" );
     }
     else {
-      $unmapped = change_extension( $countFile, ".unmapped.fastq.gz" );
+      $unmapped = change_extension( $final_file, ".unmapped.fastq.gz" );
     }
     push( @result_files, $unmapped );
 

@@ -38,34 +38,25 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sampleFile  = $sample_files[0];
+    my $sampleFile   = $sample_files[0];
 
     my $rmdupFile    = $sample_name . ".rmdup.bam";
     my $sortedPrefix = $sample_name . ".rmdup_sorted";
     my $sortedFile   = $sortedPrefix . ".bam";
 
-    my $pbs_file = $self->get_pbs_filename($pbs_dir, $sample_name);
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    my $cur_dir  = create_directory_or_die( $result_dir . "/$sample_name" );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $sortedFile );
 
-$path_file
-
-cd $cur_dir
-
-if [ -s $sortedFile ]; then
-  echo job has already been done. if you want to do again, delete $sortedFile and submit job again.
-  exit 0
-fi
+    print $pbs "
 
 if [ ! -s $rmdupFile ]; then
   echo RemoveDuplicate=`date` 
@@ -84,14 +75,9 @@ if [[ -s $sortedFile && ! -s ${sortedFile}.bai ]]; then
   rm $rmdupFile
 fi
   
-echo finished=`date`
-
-exit 0;
 ";
 
-    close $out;
-
-    print "$pbs_file created\n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 
@@ -111,7 +97,7 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $sortedFile   = $sample_name . ".rmdup_sorted.bam";
+    my $sortedFile = $sample_name . ".rmdup_sorted.bam";
 
     my @result_files = ();
     push( @result_files, "${result_dir}/${sample_name}/${sortedFile}" );

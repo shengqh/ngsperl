@@ -32,24 +32,15 @@ sub perform {
 
   my %firstFiles = %{ get_raw_files( $config, $section ) };
   my %secondFiles = %{ get_raw_files( $config, $section, "second" ) };
-  my $firstSuffix  = get_option($config, $section, "first_suffix");
-  my $secondSuffix = get_option($config, $section, "second_suffix");
+  my $firstSuffix  = get_option( $config, $section, "first_suffix" );
+  my $secondSuffix = get_option( $config, $section, "second_suffix" );
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $log = $self->get_log_filename( $log_dir, $task_name );
 
   my $log_desc = $cluster->get_log_description($log);
 
-  open( my $out, ">$pbs_file" ) or die $!;
-  print $out "$pbs_desc
-$log_desc
-
-$path_file
-cd $result_dir
-
-echo CQSMappedDistinct=`date`
-
-";
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
   for my $sample_name ( sort keys %firstFiles ) {
     my $firstFile    = $firstFiles{$sample_name}->[0];
@@ -57,18 +48,10 @@ echo CQSMappedDistinct=`date`
     my $firstoutput  = $firstSuffix . $sample_name . ".distinct.count";
     my $secondoutput = $secondSuffix . $sample_name . ".distinct.count";
 
-    print $out "mono-sgen $cqstools mapped_distinct $option --inputfile1 $firstFile --outputfile1 $firstoutput --inputfile2 $secondFile --outputfile2 $secondoutput
-
+    print $pbs "mono $cqstools mapped_distinct $option --inputfile1 $firstFile --outputfile1 $firstoutput --inputfile2 $secondFile --outputfile2 $secondoutput
 ";
   }
-  print $out "
-echo finished=`date`
-
-exit 0
-";
-  close $out;
-
-  print "!!!pbs file $pbs_file created, you can run this shell file to run all MappedDistinct tasks.\n";
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {

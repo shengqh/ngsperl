@@ -89,21 +89,15 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
 
-$path_file
-
-cd $cur_dir
-
-echo HaplotypeCaller=`date`
+    print $pbs "
 
 if [ ! -s $snvOut ]; then
 ";
@@ -114,11 +108,12 @@ if [ ! -s $snvOut ]; then
         chomp($chr);
         my $chrfile = $sample_name . "_snv.tmp." . $chr . ".g.vcf";
         push( @gvcflist, $chrfile );
-        print $out "  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bam_file -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF -variant_index_type LINEAR -variant_index_parameter 128000 --out $chrfile
+        print $pbs
+"  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bam_file -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF -variant_index_type LINEAR -variant_index_parameter 128000 --out $chrfile
 ";
       }
 
-      print $out "  if [[ -s " . join( " && -s ", @gvcflist ) . " ]]; then
+      print $pbs "  if [[ -s " . join( " && -s ", @gvcflist ) . " ]]; then
     java $java_option -cp $gatk_jar org.broadinstitute.gatk.tools.CatVariants \\
       -V " . join( " \\\n      -V ", @gvcflist ) . " \\
       -R $faFile \\
@@ -127,17 +122,15 @@ if [ ! -s $snvOut ]; then
   fi";
     }
     else {
-      print $out "  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bam_file -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF -variant_index_type LINEAR -variant_index_parameter 128000 --out $snvOut
+      print $pbs
+"  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bam_file -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF -variant_index_type LINEAR -variant_index_parameter 128000 --out $snvOut
 ";
     }
 
-    print $out "
+    print $pbs "
 fi
-
-echo finished=`date`
 ";
-    close $out;
-    print "$pbs_file created\n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 
@@ -158,7 +151,7 @@ sub result {
   my %bam_files = %{ get_raw_files( $config, $section ) };
   for my $sample_name ( sort keys %bam_files ) {
     my $cur_dir      = $result_dir . "/$sample_name";
-    my $snvOut      = $sample_name . "_snv" . $extension;
+    my $snvOut       = $sample_name . "_snv" . $extension;
     my @result_files = ();
     push( @result_files, "${cur_dir}/${snvOut}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );

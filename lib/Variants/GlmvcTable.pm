@@ -35,41 +35,23 @@ sub perform {
   open( FL, ">$filelist" ) or die "Cannot create $filelist";
   for my $sample_name ( sort keys %raw_files ) {
     my @count_files = @{ $raw_files{$sample_name} };
-    my $countFile  = $count_files[0];
+    my $countFile   = $count_files[0];
     print FL $sample_name, "\t", $countFile, "\n";
   }
   close(FL);
 
-  my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
-  my $pbs_name = basename($pbs_file);
-  my $log     = $self->get_log_filename( $log_dir, $task_name );
-  my $final   = $result_dir . "/" . $task_name . ".tsv";
+  my $pbs_file   = $self->get_pbs_filename( $pbs_dir, $task_name );
+  my $pbs_name   = basename($pbs_file);
+  my $log        = $self->get_log_filename( $log_dir, $task_name );
+  my $final_file = $task_name . ".tsv";
 
   my $log_desc = $cluster->get_log_description($log);
 
-  open( my $out, ">$pbs_file" ) or die $!;
-  print $out "$pbs_desc
-$log_desc
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-$path_file 
+  print $pbs "mono $glmvcfile table -i $filelist -o $final_file";
 
-echo GlmvcTable=`date` 
-
-cd $result_dir
-
-if [ -s $final ]; then
-  echo job has already been done. if you want to do again, delete $final and submit job again.
-  exit 0
-fi
-
-mono $glmvcfile table -i $filelist -o $final
-";
-
-  close $out;
-
-  print "$pbs_file created \n";
-
-  print "!!!pbs file $pbs_file created, you can run or submit this pbs file.\n";
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {
@@ -77,7 +59,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $final       = $result_dir . "/" . $task_name . ".tsv";
+  my $final        = $result_dir . "/" . $task_name . ".tsv";
   my @result_files = ($final);
 
   my $result = { $task_name => filter_array( \@result_files, $pattern ) };

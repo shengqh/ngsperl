@@ -41,12 +41,12 @@ sub perform {
   my %otherFiles = %{ get_raw_files( $config, $section, "other_smallrna" ) };
 
   my %seqcount_files = ();
-  if ( has_raw_files($config, $section, "seqcount")) {
+  if ( has_raw_files( $config, $section, "seqcount" ) ) {
     %seqcount_files = %{ get_raw_files( $config, $section, "seqcount" ) };
   }
 
   my %fastqFiles = ();
-  if ( has_raw_files($config, $section, "fastq_files")) {
+  if ( has_raw_files( $config, $section, "fastq_files" ) ) {
     %fastqFiles = %{ get_raw_files( $config, $section, "fastq_files" ) };
   }
 
@@ -55,7 +55,7 @@ sub perform {
   print $sh get_run_command($sh_direct) . "\n";
 
   for my $sample_name ( sort keys %trnaFiles ) {
-    my $bam_file   = $trnaFiles{$sample_name}->[0];
+    my $bam_file  = $trnaFiles{$sample_name}->[0];
     my $otherFile = $otherFiles{$sample_name}->[0];
 
     my $countFile = $sample_name . ".count";
@@ -78,37 +78,15 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-cd $cur_dir
-
-if [ -s $countFile ]; then
-  echo job has already been done. if you want to do again, delete $countFile and submit job again.
-  exit 0
-fi
-
-echo TGIRTCount=`date` 
-
-mono $cqstools tgirt_count $option -i $bam_file --other $otherFile -g $coordinate_file $seqcountFile $fastqFile -o $countFile
-
-echo finished=`date`
-
-exit 0 
-";
-
-    close $out;
-
-    print "$pbs_file created \n";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $countFile );
+    print $pbs "mono $cqstools tgirt_count $option -i $bam_file --other $otherFile -g $coordinate_file $seqcountFile $fastqFile -o $countFile";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 
@@ -138,7 +116,7 @@ sub result {
     my $cur_dir = $result_dir . "/$sample_name";
 
     my @result_files = ();
-    my $countFile   = "${cur_dir}/${sample_name}.count";
+    my $countFile    = "${cur_dir}/${sample_name}.count";
     push( @result_files, $countFile );
     push( @result_files, "${countFile}.mapped.xml" );
     push( @result_files, "${cur_dir}/${sample_name}.info" );

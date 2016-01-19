@@ -31,7 +31,7 @@ sub perform {
   my %tagDirectories = %{ get_raw_files( $config, $section ) };
 
   my $pairs = get_raw_files( $config, $section );
-  my $fasta  =get_param_file($config, $section, "genome_fasta", 1);
+  my $fasta = get_param_file( $config, $section, "genome_fasta", 1 );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -39,42 +39,20 @@ sub perform {
 
   for my $pair_name ( sort keys %{$pairs} ) {
     my $pairFile = $pairs->{$pair_name};
-    
+
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $pair_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $pair_name );
+    my $log      = $self->get_log_filename( $log_dir, $pair_name );
 
     my $final_file = $pair_name . ".motif";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-cd $result_dir 
-
-echo homer_FindMotifs_start=`date` 
-
-if [ -s $final_file ];then
-  echo job has already been done. if you want to do again, delete ${result_dir}/${final_file} and submit job again.
-  exit 0;
-fi
-
-findMotifsGenome.pl $pairFile $fasta peakAnalysis -size 200 -len 8
-
-echo homer_FindMotifs_finished=`date` 
-
-exit 0
-
-";
-
-    close $out;
-
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+    print $pbs "findMotifsGenome.pl $pairFile $fasta peakAnalysis -size 200 -len 8";
+    $self->close_pbs( $pbs, $pbs_file );
+  
     print $sh "\$MYCMD ./$pbs_name \n";
-    print "$pbs_file created\n";
   }
   print $sh "exit 0\n";
   close $sh;

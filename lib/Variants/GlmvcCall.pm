@@ -39,7 +39,7 @@ sub perform {
   my $annovar_buildver = $config->{$section}{annovar_buildver};
   if ( defined $annovar_buildver ) {
     $option = $option . " --annovar_buildver $annovar_buildver ";
-    
+
     my $annovar_protocol = $config->{$section}{annovar_protocol};
     if ( defined $annovar_protocol ) {
       $option = $option . " --annovar_protocol $annovar_protocol ";
@@ -102,27 +102,18 @@ sub perform {
 
   for my $group_name ( sort keys %group_sample_map ) {
     my @sample_files = @{ $group_sample_map{$group_name} };
-    my $sampleCount = scalar(@sample_files);
+    my $sampleCount  = scalar(@sample_files);
     my $cur_dir      = create_directory_or_die( $result_dir . "/$group_name" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $group_name );
+    my $log      = $self->get_log_filename( $log_dir, $group_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file 
-
-echo Glmvc=`date` 
-
-cd $cur_dir
-";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
 
     my $finalvcf = "${group_name}.vcf";
 
@@ -143,7 +134,7 @@ cd $cur_dir
         $cmd = "mono-sgen $glmvcfile call -c $thread -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${cur_dir}/${group_name}";
       }
 
-      print $out "
+      print $pbs "
 if [ -s $final ]; then
   echo job has already been done. if you want to do again, delete ${cur_dir}/${final} and submit job again.
   exit 0;
@@ -162,17 +153,11 @@ $cmd
 ";
     }
     else {
-      print $out "mono-sgen $glmvcfile call -t mpileup -m $sample_files[0] $option -o ${cur_dir}/${group_name} \n";
+      print $pbs "mono $glmvcfile call -t mpileup -m $sample_files[0] $option -o ${cur_dir}/${group_name} \n";
     }
 
-    print $out "grep -v \"^#\" $finalvcf | cut -f1 | uniq -c | awk '{print \$2\"\\t\"\$1}' > ${finalvcf}.chromosome 
-    
-echo finished=`date`
-";
-
-    close $out;
-
-    print "$pbs_file created \n";
+    print $pbs "grep -v \"^#\" $finalvcf | cut -f1 | uniq -c | awk '{print \$2\"\\t\"\$1}' > ${finalvcf}.chromosome";
+    $self->close_pbs( $pbs, $pbs_file );
 
   }
   close $sh;

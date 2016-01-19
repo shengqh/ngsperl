@@ -43,22 +43,15 @@ sub perform {
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
 
-    my $pbs_file = $self->get_pbs_filename($pbs_dir, $sample_name);
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
-    
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
+
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-echo index=`date`
-";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
     my $bam_file = $sample_files[0];
 
@@ -68,23 +61,20 @@ echo index=`date`
     }
     else {
       ( $bamSortedFile, my $bamSorted ) = get_sorted_bam($bam_file);
-      print $out "if [ ! -s $bamSortedFile ]; then\n";
-      print $out "  echo samtools_sort=`date`\n";
-      print $out "  samtools sort $bam_file $bamSorted \n";
-      print $out "fi\n";
+      print $pbs "if [ ! -s $bamSortedFile ]; then
+  echo samtools_sort=`date`
+  samtools sort $bam_file $bamSorted 
+fi
+";
     }
 
     my $bamIndexFile = $bamSortedFile . ".bai";
-    print $out "if [ ! -s $bamIndexFile ]; then
+    print $pbs "if [ ! -s $bamIndexFile ]; then
   echo samtools_index=`date`
   samtools index $bamSortedFile 
 fi
-
-echo finished=`date`
 ";
-    close $out;
-
-    print "$pbs_file created\n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
 
   close $sh;

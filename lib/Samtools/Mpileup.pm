@@ -29,7 +29,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $faFile       = get_param_file( $config->{$section}{fasta_file},   "fasta_file",   1 );
+  my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
 
   my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
 
@@ -39,43 +39,27 @@ sub perform {
 
   for my $group_name ( sort keys %group_sample_map ) {
     my @sample_files = @{ $group_sample_map{$group_name} };
-    my $sampleCount = scalar(@sample_files);
-    my $samples = "";
-    for (my $index = 0; $index < $sampleCount; $index ++) {
+    my $sampleCount  = scalar(@sample_files);
+    my $samples      = "";
+    for ( my $index = 0 ; $index < $sampleCount ; $index++ ) {
       $samples = $samples . " " . $sample_files[$index][1];
     }
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$group_name" );
-    
+
     my $mpileup = "${group_name}.mpileup";
 
-    my $pbs_file = $self->get_pbs_filename($pbs_dir, $group_name);
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $group_name );
+    my $log      = $self->get_log_filename( $log_dir, $group_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file 
-
-echo mpileup=`date` 
-
-cd $cur_dir
-
-if [ ! -s $mpileup ]; then
-    samtools mpileup $option -f $faFile $samples > $mpileup
-fi
-
-echo finished=`date`
-";
-    close $out;
-
-    print "$pbs_file created \n";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $mpileup );
+    print $pbs "samtools mpileup $option -f $faFile $samples > $mpileup";
+    $self->close_pbs( $pbs, $pbs_file );
   }
 
   close $sh;
@@ -98,7 +82,7 @@ sub result {
   for my $group_name ( keys %{$groups} ) {
     my @result_files = ();
     my $cur_dir      = $result_dir . "/$group_name";
-    my $mpileup = "${group_name}.mpileup";
+    my $mpileup      = "${group_name}.mpileup";
     push( @result_files, "$cur_dir/$mpileup" );
     $result->{$group_name} = filter_array( \@result_files, $pattern );
   }

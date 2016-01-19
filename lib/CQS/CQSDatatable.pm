@@ -65,24 +65,15 @@ sub perform {
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
-  my $log     = $self->get_log_filename( $log_dir, $task_name );
+  my $log      = $self->get_log_filename( $log_dir, $task_name );
 
   my $log_desc = $cluster->get_log_description($log);
 
-  open( my $out, ">$pbs_file" ) or die $!;
-  print $out "$pbs_desc
-$log_desc
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
-$path_file
+  print $pbs "mono $cqstools data_table $newoption -l $filelist $mapoption";
 
-cd $result_dir
-
-mono-sgen $cqstools data_table $newoption -l $filelist $mapoption
-";
-
-  close $out;
-
-  print "!!!shell file $pbs_file created.\n";
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {

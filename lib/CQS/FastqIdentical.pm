@@ -27,8 +27,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqstools  = get_cqstools( $config, $section, 1 );
-  my $extension = get_option($config, $section, "extension");
+  my $cqstools = get_cqstools( $config, $section, 1 );
+  my $extension = get_option( $config, $section, "extension" );
 
   my $minlen = $config->{$section}{minlen};
   if ( defined $minlen ) {
@@ -50,47 +50,26 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
-    
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
+
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
-$path_file
-
-cd $result_dir
-
-if [ -s $final_file ]; then
-  echo job has already been done. if you want to do again, delete ${result_dir}/${final_file} and submit job again.
-  exit 0;
-fi
-
-echo FastqIdentical_start=`date` 
-";
     if ( scalar(@sample_files) == 1 ) {
-      print $out "mono-sgen $cqstools fastq_identical $option -i $sample_files[0] $minlen -o $final_file \n";
+      print $pbs "mono $cqstools fastq_identical $option -i $sample_files[0] $minlen -o $final_file \n";
     }
     else {
       my $outputFiles = "";
       for my $sampleFile (@sample_files) {
-        my $outputFile = change_extension_gzipped(basename($sampleFile), $extension);
+        my $outputFile = change_extension_gzipped( basename($sampleFile), $extension );
         $outputFiles = $outputFiles . " " . $outputFile;
-        print $out "mono-sgen $cqstools fastq_identical -i $sampleFile $minlen -o $outputFile \n";
+        print $pbs "mono $cqstools fastq_identical -i $sampleFile $minlen -o $outputFile \n";
       }
     }
-    print $out "
-echo finished=`date`
-
-exit 0 
-";
-
-    close $out;
-
-    print "$pbs_file created \n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 
@@ -108,7 +87,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $extension = get_option($config, $section, "extension");
+  my $extension = get_option( $config, $section, "extension" );
   my $merge_result = get_option( $config, $section, "merge_result", 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };

@@ -31,10 +31,10 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $bedFiles = get_raw_files( $config, $section );
-  my $groups   = get_raw_files( $config, $section, "groups" );
+  my $bedFiles  = get_raw_files( $config, $section );
+  my $groups    = get_raw_files( $config, $section, "groups" );
   my $bam_files = get_raw_files( $config, $section, "bam_files" );
-  my $singlepdf = get_option($config, $section, "singlepdf", 0) ? "-s":"";
+  my $singlepdf = get_option( $config, $section, "singlepdf", 0 ) ? "-s" : "";
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -42,12 +42,11 @@ sub perform {
 
   my $perl = dirname(__FILE__) . "/Depth.pl";
 
-
   for my $name ( sort keys %{$bedFiles} ) {
     my $cur_dir = create_directory_or_die( $result_dir . "/$name" );
 
-    my @curBedFiles = @{ $bedFiles->{$name} };
-    my @curBamNames = @{ $groups->{$name} };
+    my @curBedFiles  = @{ $bedFiles->{$name} };
+    my @curBamNames  = @{ $groups->{$name} };
     my @curbam_files = ();
     for my $bamName (@curBamNames) {
       push( @curbam_files, $bam_files->{$bamName}->[0] );
@@ -67,38 +66,18 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $name );
+    my $log      = $self->get_log_filename( $log_dir, $name );
 
+    print $sh "\$MYCMD ./$pbs_name \n";
     my $log_desc = $cluster->get_log_description($log);
 
     #my $final = "${comparisonName}_c3.0_common.bed";
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file 
-
-echo depth=`date` 
-
-cd $cur_dir
-
-";
-
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
     for my $bedFile (@curBedFiles) {
-      print $out "perl $perl -b $bedFile -c $configFile $singlepdf \n";
+      print $pbs "perl $perl -b $bedFile -c $configFile $singlepdf \n";
     }
-
-    print $out "
-
-echo finished=`date`
-
-";
-    close $out;
-
-    print "$pbs_file created \n";
-
-    print $sh "\$MYCMD ./$pbs_name \n";
+    $self->close_pbs( $pbs, $pbs_file );
   }
 
   close $sh;

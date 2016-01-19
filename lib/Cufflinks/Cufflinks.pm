@@ -45,37 +45,16 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
-    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
+    my $cur_dir  = create_directory_or_die( $result_dir . "/$sample_name" );
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $final_file = "transcripts.gtf";
 
-$path_file
-
-cd $cur_dir
-
-if [ -s transcripts.gtf ];then
-  echo job has already been done. if you want to do again, delete ${cur_dir}/transcripts.gtf and submit job again.
-  exit 0;
-fi
-
-echo cufflinks=`date`
- 
-cufflinks $option $gtf -o . $tophat2File
-
-echo finished=`date`
-
-exit 0
-";
-
-    close $out;
-
-    print "$pbs_file created. \n";
-
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+    print $pbs "cufflinks $option $gtf -o . $tophat2File";
+    $self->close_pbs( $pbs, $pbs_file );
     print $sh "\$MYCMD ./$pbs_name \n";
   }
 

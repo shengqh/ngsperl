@@ -46,11 +46,11 @@ sub perform {
     die "File not found : " . $rtemplate;
   }
 
-  my $showLabelInPCA = get_option( $config, $section, "show_label_PCA", 1 );
+  my $showLabelInPCA    = get_option( $config, $section, "show_label_PCA",       1 );
   my $showDEGeneCluster = get_option( $config, $section, "show_DE_gene_cluster", 0 );
-  my $pvalue = get_option( $config, $section, "pvalue", 0.05 );
-  my $foldChange = get_option( $config, $section, "fold_change", 2.0 );
-  my $minMedianInGroup = get_option( $config, $section, "min_median_read", 0 );
+  my $pvalue            = get_option( $config, $section, "pvalue",               0.05 );
+  my $foldChange        = get_option( $config, $section, "fold_change",          2.0 );
+  my $minMedianInGroup  = get_option( $config, $section, "min_median_read",      0 );
 
   my %tpgroups = ();
   for my $group_name ( sort keys %{$groups} ) {
@@ -59,17 +59,17 @@ sub perform {
   }
 
   my $rfile = $result_dir . "/${task_name}.r";
-  open( my $rf, ">$rfile" ) or die "Cannot create $rfile";
-  open $rf, "<$rtemplate" or die $!;
+  open( my $rf, ">$rfile" )     or die "Cannot create $rfile";
+  open( my $rt, "<$rtemplate" ) or die $!;
 
   my $readfunc;
   my $readparam;
   if ( $countfile =~ /csv$/ ) {
-    $readfunc = "read.csv";
+    $readfunc  = "read.csv";
     $readparam = "";
   }
   else {
-    $readfunc = "read.table";
+    $readfunc  = "read.table";
     $readparam = ", sep=\"\\t\"";
   }
   print $rf "
@@ -85,105 +85,97 @@ minMedianInGroup<-$minMedianInGroup
 
 comparisons=list(";
   my $first = 0;
-  for my $comparisonName ( sort keys %{$comparisons} ) {
+  for my $comparison_name ( sort keys %{$comparisons} ) {
     $first++;
 
-    my $gNames = $comparisons->{$comparisonName};
+    my $gNames = $comparisons->{$comparison_name};
     my @group_names;
-    
-    my $paired = 0;
+
+    my $paired   = 0;
     my $groupIds = {};
     if ( ref $gNames eq ref {} ) {
-      @group_names = @{$gNames->{groups}};
-      $paired = defined $gNames->{paired};
-      if($paired){
+      @group_names = @{ $gNames->{groups} };
+      $paired      = defined $gNames->{paired};
+      if ($paired) {
         $groupIds = $gNames->{paired};
       }
     }
     else {
       @group_names = @{$gNames};
     }
-    
-    print(Dumper(@group_names));
-    
+
+    print( Dumper(@group_names) );
+
     if ( scalar(@group_names) != 2 ) {
-      die "Comparison of $comparisonName should contains and only contains two groups!";
+      die "Comparison of $comparison_name should contains and only contains two groups!";
     }
-    
+
     my $g1 = $group_names[0];
     my $g2 = $group_names[1];
     my @s1 = @{ $groups->{$g1} };
     my @s2 = @{ $groups->{$g2} };
 
-    my $filename = "${comparisonName}.design";
+    my $filename = "${comparison_name}.design";
     if ( $first != 1 ) {
       print $rf ",";
     }
     print $rf "
-  \"${comparisonName}\" = c(\"$filename\", \"$g1\", \"$g2\")";
+  \"${comparison_name}\" = c(\"$filename\", \"$g1\", \"$g2\")";
 
     my $cdfile = $result_dir . "/$filename";
-    open( CD, ">$cdfile" ) or die "Cannot create $cdfile";
+    open( my $cd, ">$cdfile" ) or die "Cannot create $cdfile";
     if ($paired) {
-      print CD "Sample\tPaired\tCondition\n";
+      print $cd "Sample\tPaired\tCondition\n";
       for my $i ( 0 .. $#s1 ) {
         my $sname = $s1[$i];
         my $id    = $groupIds->[$i];
-        print CD "${sname}\t${id}\t${g1}\n";
+        print $cd "${sname}\t${id}\t${g1}\n";
       }
       for my $i ( 0 .. $#s2 ) {
         my $sname = $s2[$i];
         my $id    = $groupIds->[$i];
-        print CD "${sname}\t${id}\t${g2}\n";
+        print $cd "${sname}\t${id}\t${g2}\n";
       }
     }
     else {
-      print CD "Sample\tCondition\n";
+      print $cd "Sample\tCondition\n";
       for my $i ( 0 .. $#s1 ) {
         my $sname = $s1[$i];
-        print CD "${sname}\t${g1}\n";
+        print $cd "${sname}\t${g1}\n";
       }
       for my $i ( 0 .. $#s2 ) {
         my $sname = $s2[$i];
-        print CD "${sname}\t${g2}\n";
+        print $cd "${sname}\t${g2}\n";
       }
     }
-    close(CD);
+    close $cd;
   }
-  print RF "
+  print $rf "
 ) \n\n";
 
-  while (<RT>) {
+  while (<$rt>) {
     if ( $_ =~ '^#' ) {
       next;
     }
     last;
   }
-  while (<RT>) {
-    print RF $_;
+  while (<$rt>) {
+    print $rf $_;
   }
-  close(RT);
-  close(RF);
+  close $rt;
+  close $rf;
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
-  my $log     = $self->get_log_filename( $log_dir, $task_name );
+  my $log      = $self->get_log_filename( $log_dir, $task_name );
 
   my $log_desc = $cluster->get_log_description($log);
 
-  open( my $out, ">$pbs_file" ) or die $!;
-  print $out "$pbs_desc
-$log_desc
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
-$path_file
+  print $pbs "R --vanilla -f $rfile \n";
 
-cd $result_dir
-
-R --vanilla -f $rfile
-";
-  close $out;
-
-  print "!!!shell file $pbs_file created.\n";
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {
@@ -193,14 +185,14 @@ sub result {
 
   my $comparisons = get_raw_files( $config, $section );
   my $minMedianInGroup = get_option( $config, $section, "min_median_read", 0 );
-  
+
   my $result = {};
-  for my $comparisonName ( sort keys %{$comparisons} ) {
+  for my $comparison_name ( sort keys %{$comparisons} ) {
     my @result_files = ();
-    push( @result_files, $result_dir . "/${comparisonName}.csv" );
-    push( @result_files, $result_dir . "/${comparisonName}.png" );
-    push( @result_files, $result_dir . "/${comparisonName}_min${minMedianInGroup}_DESeq2_sig.csv" );
-    $result->{$comparisonName} = filter_array( \@result_files, $pattern );
+    push( @result_files, $result_dir . "/${comparison_name}.csv" );
+    push( @result_files, $result_dir . "/${comparison_name}.png" );
+    push( @result_files, $result_dir . "/${comparison_name}_min${minMedianInGroup}_DESeq2_sig.csv" );
+    $result->{$comparison_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

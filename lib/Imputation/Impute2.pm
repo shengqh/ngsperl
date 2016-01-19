@@ -61,14 +61,14 @@ sub perform_phased {
   my $mergefile = $self->get_task_filename( $result_dir, $task_name . "_merge" );
   open( MSH, ">$mergefile" ) or die "Cannot create $mergefile";
 
-  my %raw_files   = %{ get_raw_files( $config, $section ) };
+  my %raw_files  = %{ get_raw_files( $config, $section ) };
   my %mapFiles   = %{ get_raw_files( $config, $section, "genetic_map_file" ) };
   my %haploFiles = %{ get_raw_files( $config, $section, "haplo_file" ) };
   my %rangeFiles = %{ get_raw_files( $config, $section, "range_file" ) };
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sample      = $sample_files[0];
+    my $sample       = $sample_files[0];
 
     my @mFiles = @{ $mapFiles{$sample_name} };
     my $map    = $mFiles[0];
@@ -98,19 +98,15 @@ sub perform_phased {
 
       my $pbs_file = $self->get_pbs_filename( $pbs_dir, $cursample );
       my $pbs_name = basename($pbs_file);
-      my $log     = $self->get_log_filename( $log_dir, $cursample );
+      my $log      = $self->get_log_filename( $log_dir, $cursample );
 
       my $tmpFile = "${cursample}.tmp";
 
       my $log_desc = $cluster->get_log_description($log);
 
-      open( my $out, ">$pbs_file" ) or die $!;
-      print $out "$pbs_desc
-$log_desc
+      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
 
-$path_file
-
-cd $cur_dir 
+      print $pbs "
 
 if [ -s $gen_file ]; then
   echo job has already been done. if you want to do again, delete $cur_dir/$gen_file and submit job again.
@@ -122,12 +118,7 @@ if [ -s $tmpFile ]; then
   exit 0;
 fi
 
-echo impute2_start=`date` 
-
 impute2 $option -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
-
-echo finished=`date`
-
 ";
       if ($isfirst) {
         print MSH "  cat $tmpFile > $gen_tmp_file \n";
@@ -138,10 +129,8 @@ echo finished=`date`
       }
       $start = $end + 1;
 
-      close $out;
-
+      $self->close_pbs( $pbs, $pbs_file );
       print $sh "\$MYCMD ./$pbs_name \n";
-      print "$pbs_file created\n";
     }
 
     close(INFILE);
@@ -173,14 +162,14 @@ sub perform_direct {
   my $mergefile = $self->get_task_filename( $result_dir, $task_name . "_merge" );
   open( MSH, ">$mergefile" ) or die "Cannot create $mergefile";
 
-  my %raw_files   = %{ get_raw_files( $config, $section ) };
+  my %raw_files  = %{ get_raw_files( $config, $section ) };
   my %mapFiles   = %{ get_raw_files( $config, $section, "genetic_map_file" ) };
   my %haploFiles = %{ get_raw_files( $config, $section, "haplo_file" ) };
   my %rangeFiles = %{ get_raw_files( $config, $section, "range_file" ) };
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sample      = $sample_files[0];
+    my $sample       = $sample_files[0];
 
     my @mFiles = @{ $mapFiles{$sample_name} };
     my $map    = $mFiles[0];
@@ -208,7 +197,7 @@ sub perform_direct {
 
       my $pbs_file = $self->get_pbs_filename( $pbs_dir, $cursample );
       my $pbs_name = basename($pbs_file);
-      my $log     = $self->get_log_filename( $log_dir, $cursample );
+      my $log      = $self->get_log_filename( $log_dir, $cursample );
 
       my $log_desc = $cluster->get_log_description($log);
 
@@ -280,7 +269,7 @@ sub result {
     my @result_files = ();
 
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sample      = $sample_files[0];
+    my $sample       = $sample_files[0];
 
     my @rFiles    = @{ $rangeFiles{$sample_name} };
     my $rangeFile = $rFiles[0];

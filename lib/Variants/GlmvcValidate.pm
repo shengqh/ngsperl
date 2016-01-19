@@ -88,28 +88,19 @@ sub perform {
     }
 
     my @sample_files = @{ $group_sample_map{$group_name} };
-    my $sampleCount = scalar(@sample_files);
+    my $sampleCount  = scalar(@sample_files);
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$group_name" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $group_name );
+    my $log      = $self->get_log_filename( $log_dir, $group_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file 
-
-echo Glmvc=`date` 
-
-cd $cur_dir
-";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
 
     my $final = "${group_name}.validation.tsv";
     if ($isbam) {
@@ -127,7 +118,7 @@ cd $cur_dir
         $cmd = "mono $glmvcfile validate -c $thread -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${cur_dir}/${group_name}.validation -v $validateFile";
       }
 
-      print $out "
+      print $pbs "
 if [ -s $final ]; then
   echo job has already been done. if you want to do again, delete ${cur_dir}/${final} and submit job again.
   exit 0;
@@ -146,14 +137,9 @@ $cmd
 ";
     }
     else {
-      print $out "mono-sgen $glmvcfile validate -t mpileup -m $sample_files[0] $option -o ${cur_dir}/${group_name}.validation -v $validateFile \n";
+      print $pbs "mono $glmvcfile validate -t mpileup -m $sample_files[0] $option -o ${cur_dir}/${group_name}.validation -v $validateFile \n";
     }
-
-    print $out "echo finished=`date` \n";
-
-    close $out;
-
-    print "$pbs_file created \n";
+    $self->close_pbs( $pbs, $pbs_file );
 
   }
   close $sh;

@@ -44,29 +44,13 @@ sub perform {
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
-  my $log     = $self->get_log_filename( $log_dir, $task_name );
+  my $log      = $self->get_log_filename( $log_dir, $task_name );
 
   my $log_desc = $cluster->get_log_description($log);
 
-  open( my $out, ">$pbs_file" ) or die $!;
-  print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-cd $result_dir
-
-echo QC3bam=`date`
- 
-perl $qc3_perl $option -m f -i $mapfile -o $result_dir -t $thread
-
-echo finished=`date`
-
-exit 0
-";
-  close $out;
-
-  print "$pbs_file created. \n";
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+  print $pbs "perl $qc3_perl $option -m f -i $mapfile -o $result_dir -t $thread";
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {
@@ -74,7 +58,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $result      = {};
+  my $result       = {};
   my @result_files = ();
   push( @result_files, $result_dir );
   $result->{$task_name} = filter_array( \@result_files, $pattern );

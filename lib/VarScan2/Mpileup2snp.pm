@@ -39,7 +39,7 @@ sub perform {
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct) . "\n";
-  
+
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
 
@@ -50,34 +50,22 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $snpvcf );
 
-$path_file 
-
-echo varscan2=`date` 
-
-cd $cur_dir
-
+    print $pbs "
 if [ ! -s ${normal}.bai ]; then
   samtools index ${normal}
 fi
 
-if [ ! -s $snpvcf ]; then
-  samtools mpileup $mpileup_options -f $faFile $normal | java $java_option -jar $varscan2_jar mpileup2snp $option --output-vcf 1 > $snpvcf
-fi
-
-echo finished=`date` \n";
-    close $out;
-
-    print "$pbs_file created \n";
+samtools mpileup $mpileup_options -f $faFile $normal | java $java_option -jar $varscan2_jar mpileup2snp $option --output-vcf 1 > $snpvcf
+";
+    $self->close_pbs( $pbs, $pbs_file );
   }
 
   close $sh;
@@ -100,7 +88,7 @@ sub result {
   for my $sample_name ( keys %raw_files ) {
     my @result_files = ();
     my $cur_dir      = $result_dir . "/$sample_name";
-    my $snpvcf      = "${sample_name}.snp.vcf";
+    my $snpvcf       = "${sample_name}.snp.vcf";
     push( @result_files, "$cur_dir/${snpvcf}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }

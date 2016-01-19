@@ -62,6 +62,13 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my @sample_files = @{ $raw_files{$sample_name} };
+
+    my $final_file = scalar(@sample_files) == 1 ? $sample_name . $extension : $sample_name . ".1.fastq";
+    if ($gzipped) {
+      $final_file = $final_file . ".gz";
+    }
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+
     if ( scalar(@sample_files) == 1 ) {
       my $finalName      = $sample_name . $extension;
       my $finalShortName = $finalName . ".short";
@@ -71,8 +78,6 @@ sub perform {
       my $finalShortFile = $gzipped ? "${finalShortName}.gz" : $finalShortName;
       my $finalLongFile  = $gzipped ? "${finalLongName}.gz"  : $finalLongName;
 
-      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-
       print $pbs "cutadapt $option -o $final_file ";
       if ($shortLimited) {
         print $pbs " --too-short-output=$finalShortFile";
@@ -81,17 +86,13 @@ sub perform {
         print $pbs " --too-long-output=$finalLongFile";
       }
       print $pbs " $sample_files[0] \n";
-      $self->close_pbs( $pbs, $pbs_file );
     }
     else {
-
       #pair-end data
       my $read1file = $sample_files[0];
       my $read2file = $sample_files[1];
       my $read1name = $sample_name . ".1.fastq.gz";
       my $read2name = $sample_name . ".2.fastq.gz";
-
-      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $read1name );
 
       if ( $shortLimited || $longLimited ) {
         my $temp1name = $sample_name . ".1.tmp.fastq";
@@ -106,9 +107,8 @@ sub perform {
         print $pbs "cutadapt $option -o $read1name $read1file \n";
         print $pbs "cutadapt $option -o $read2name $read2file \n";
       }
-      $self->close_pbs( $pbs, $pbs_file );
     }
-
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 

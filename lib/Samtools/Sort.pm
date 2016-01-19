@@ -38,50 +38,34 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sampleFile  = $sample_files[0];
+    my $sampleFile   = $sample_files[0];
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
+
+    print $sh "\$MYCMD ./$pbs_name \n";
 
     my $sortcmd;
     my $finalPrefix;
     my $final_file;
     if ($sort_by_query) {
       $finalPrefix = "${sample_name}.sortedname";
-      $final_file   = "${finalPrefix}.bam";
+      $final_file  = "${finalPrefix}.bam";
       $sortcmd     = "samtools sort $option -n -@ $thread $sampleFile $finalPrefix";
     }
     else {
       $finalPrefix = "${sample_name}.sorted";
-      $final_file   = "${finalPrefix}.bam";
+      $final_file  = "${finalPrefix}.bam";
       $sortcmd     = "samtools sort $option -@ $thread $sampleFile $finalPrefix
 samtools index $final_file";
     }
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
-
-$path_file
-
-cd $result_dir 
-
-if [ -s $final_file ]; then
-  echo job has already been done. if you want to do again, delete ${result_dir}/${final_file} and submit job again.
-  exit 0;
-fi
-
-$sortcmd
-
-exit 0;
-";
-    close $out;
-
-    print $sh "\$MYCMD ./$pbs_name \n";
-    print "$pbs_file created\n";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+    print $pbs "$sortcmd";
+    $self->close_pbs( $pbs, $pbs_file );
   }
   print $sh "exit 0\n";
   close $sh;

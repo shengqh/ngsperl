@@ -40,43 +40,24 @@ sub perform {
   for my $sample_name ( sort keys %raw_files ) {
     my @bam_files  = @{ $raw_files{$sample_name} };
     my $bam_file   = $bam_files[0];
-    my $countFile = $sample_name . ".count";
+    my $final_file = $sample_name . ".count";
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
-    
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
+
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    open( my $out, ">$pbs_file" ) or die $!;
-    print $out "$pbs_desc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-$path_file
+    print $pbs "samtools view $bam_file | python $dexseqFile $gffFile -s no - $final_file";
 
-cd $cur_dir
+    $self->close_pbs( $pbs, $pbs_file );
 
-if [ -s $countFile ]; then
-  echo job has already been done. if you want to do again, delete $countFile and submit job again.
-  exit 0
-fi
-
-echo DEXSeqCount=`date` 
-
-samtools view $bam_file | python $dexseqFile $gffFile -s no - $countFile
-
-echo finished=`date`
-
-exit 0 
-";
-
-    close $out;
-
-    print "$pbs_file created \n";
   }
   close $sh;
 
@@ -101,7 +82,7 @@ sub result {
     my $cur_dir = $result_dir . "/$sample_name";
 
     my @result_files = ();
-    my $countFile   = $cur_dir . "/" . $sample_name . ".count";
+    my $countFile    = $cur_dir . "/" . $sample_name . ".count";
     push( @result_files, $countFile );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
