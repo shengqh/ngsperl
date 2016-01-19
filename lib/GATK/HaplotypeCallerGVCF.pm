@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "GATK::HaplotypeCallerGVCF";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_hc";
   bless $self, $class;
   return $self;
@@ -30,7 +30,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my $by_chromosome = get_option( $config, $section, "by_chromosome", 0 );
 
@@ -69,39 +69,39 @@ sub perform {
     $java_option = "-Xmx${memory}";
   }
 
-  my %bamFiles = %{ get_raw_files( $config, $section ) };
+  my %bam_files = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct) . "\n";
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct) . "\n";
 
-  #print SH "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
+  #print $sh "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
 
-  for my $sampleName ( sort keys %bamFiles ) {
-    my @sampleFiles = @{ $bamFiles{$sampleName} };
-    my $bamFile     = $sampleFiles[0];
+  for my $sample_name ( sort keys %bam_files ) {
+    my @sample_files = @{ $bam_files{$sample_name} };
+    my $bam_file     = $sample_files[0];
 
-    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
-    my $snvOut    = $sampleName . "_snv" . $extension;
-    my $snvOutTmp = $sampleName . "_snv.tmp" . $extension;
-    my $snvStat   = $sampleName . "_snv.stat";
+    my $snvOut    = $sample_name . "_snv" . $extension;
+    my $snvOutTmp = $sample_name . "_snv.tmp" . $extension;
+    my $snvStat   = $sample_name . "_snv.stat";
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $sample_name );
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
+    open( my $out, ">$pbs_file" ) or die $!;
+    print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $curDir
+cd $cur_dir
 
 echo HaplotypeCaller=`date`
 
@@ -112,13 +112,13 @@ if [ ! -s $snvOut ]; then
       my @gvcflist = ();
       for my $chr (@chrs) {
         chomp($chr);
-        my $chrfile = $sampleName . "_snv.tmp." . $chr . ".g.vcf";
+        my $chrfile = $sample_name . "_snv.tmp." . $chr . ".g.vcf";
         push( @gvcflist, $chrfile );
-        print OUT "  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF -variant_index_type LINEAR -variant_index_parameter 128000 --out $chrfile
+        print $out "  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bam_file -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF -variant_index_type LINEAR -variant_index_parameter 128000 --out $chrfile
 ";
       }
 
-      print OUT "  if [[ -s " . join( " && -s ", @gvcflist ) . " ]]; then
+      print $out "  if [[ -s " . join( " && -s ", @gvcflist ) . " ]]; then
     java $java_option -cp $gatk_jar org.broadinstitute.gatk.tools.CatVariants \\
       -V " . join( " \\\n      -V ", @gvcflist ) . " \\
       -R $faFile \\
@@ -127,19 +127,19 @@ if [ ! -s $snvOut ]; then
   fi";
     }
     else {
-      print OUT "  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bamFile -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF -variant_index_type LINEAR -variant_index_parameter 128000 --out $snvOut
+      print $out "  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bam_file -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF -variant_index_type LINEAR -variant_index_parameter 128000 --out $snvOut
 ";
     }
 
-    print OUT "
+    print $out "
 fi
 
 echo finished=`date`
 ";
-    close OUT;
-    print "$pbsFile created\n";
+    close $out;
+    print "$pbs_file created\n";
   }
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -150,18 +150,18 @@ echo finished=`date`
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
   my $result = {};
 
   my $extension = get_option( $config, $section, "extension", ".g.vcf" );
 
-  my %bamFiles = %{ get_raw_files( $config, $section ) };
-  for my $sampleName ( sort keys %bamFiles ) {
-    my $curDir      = $resultDir . "/$sampleName";
-    my $snvOut      = $sampleName . "_snv" . $extension;
-    my @resultFiles = ();
-    push( @resultFiles, "${curDir}/${snvOut}" );
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+  my %bam_files = %{ get_raw_files( $config, $section ) };
+  for my $sample_name ( sort keys %bam_files ) {
+    my $cur_dir      = $result_dir . "/$sample_name";
+    my $snvOut      = $sample_name . "_snv" . $extension;
+    my @result_files = ();
+    push( @result_files, "${cur_dir}/${snvOut}" );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

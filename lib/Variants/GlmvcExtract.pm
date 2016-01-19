@@ -18,7 +18,7 @@ our @ISA = qw(CQS::GroupTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "GlmvcExtract";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_ge";
   bless $self, $class;
   return $self;
@@ -27,15 +27,15 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $glmvcfile = get_param_file( $config->{$section}{execute_file}, "execute_file", 1 );
 
-  my $rawFiles = get_raw_files( $config, $section );
-  my $bamFiles = get_raw_files( $config, $section, "bam_files" );
+  my $raw_files = get_raw_files( $config, $section );
+  my $bam_files = get_raw_files( $config, $section, "bam_files" );
 
-  #print Dumper($rawFiles);
-  #print Dumper($bamFiles);
+  #print Dumper($raw_files);
+  #print Dumper($bam_files);
 
   my %group_sample_map = ();
   my %group_name_map   = ();
@@ -43,72 +43,72 @@ sub perform {
   my $fafile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
 
   my $groups = get_raw_files( $config, $section, "groups" );
-  for my $groupName ( sort keys %{$rawFiles} ) {
-    my @samples = @{ $groups->{$groupName} };
+  for my $group_name ( sort keys %{$raw_files} ) {
+    my @samples = @{ $groups->{$group_name} };
     my @gfiles  = ();
     my @names   = ();
     my $index   = 0;
-    foreach my $sampleName (@samples) {
-      my @sampleBamFiles = @{ $bamFiles->{$sampleName} };
-      push( @gfiles, $sampleBamFiles[0] );
-      push( @names,  $sampleName );
+    foreach my $sample_name (@samples) {
+      my @samplebam_files = @{ $bam_files->{$sample_name} };
+      push( @gfiles, $samplebam_files[0] );
+      push( @names,  $sample_name );
     }
-    $group_sample_map{$groupName} = \@gfiles;
-    $group_name_map{$groupName}   = \@names;
+    $group_sample_map{$group_name} = \@gfiles;
+    $group_name_map{$group_name}   = \@names;
   }
 
   #print Dumper(%group_name_map);
   #print Dumper(%group_sample_map);
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct) . "\n";
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct) . "\n";
 
-  for my $groupName ( sort keys %{$rawFiles} ) {
-    my $validateFile = $rawFiles->{$groupName}[0];
-    my @sampleFiles  = @{ $group_sample_map{$groupName} };
-    my @sampleNames  = @{ $group_name_map{$groupName} };
+  for my $group_name ( sort keys %{$raw_files} ) {
+    my $validateFile = $raw_files->{$group_name}[0];
+    my @sample_files  = @{ $group_sample_map{$group_name} };
+    my @sample_names  = @{ $group_name_map{$group_name} };
 
-    my $samples = join( ',', @sampleFiles );
-    my $names   = join( ',', @sampleNames );
+    my $samples = join( ',', @sample_files );
+    my $names   = join( ',', @sample_names );
 
-    my $curDir = create_directory_or_die( $resultDir . "/$groupName" );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$group_name" );
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $groupName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $group_name );
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $log_desc = $cluster->get_log_desc($log);
-    my $final    = "${groupName}.tsv";
+    my $log_desc = $cluster->get_log_description($log);
+    my $final    = "${group_name}.tsv";
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
+    open( my $out, ">$pbs_file" ) or die $!;
+    print $out "$pbs_desc
 $log_desc
 
 $path_file 
 
 echo Glmvc=`date` 
 
-cd $curDir
+cd $cur_dir
 
 if [ -s $final ]; then
-  echo job has already been done. if you want to do again, delete ${curDir}/${final} and submit job again.
+  echo job has already been done. if you want to do again, delete ${cur_dir}/${final} and submit job again.
   exit 0;
 fi      
       
-mono-sgen $glmvcfile extract $option --bam_files $samples --bam_names $names -f $fafile -o ${curDir}/$final -v $validateFile
+mono-sgen $glmvcfile extract $option --bam_files $samples --bam_names $names -f $fafile -o ${cur_dir}/$final -v $validateFile
 
 echo finished=`date`
 ";
 
-    close OUT;
+    close $out;
 
-    print "$pbsFile created \n";
+    print "$pbs_file created \n";
 
   }
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -120,17 +120,17 @@ echo finished=`date`
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $rawFiles = get_raw_files( $config, $section );
+  my $raw_files = get_raw_files( $config, $section );
 
   my $result = {};
-  for my $groupName ( keys %{$rawFiles} ) {
-    my @resultFiles = ();
-    my $curDir      = $resultDir . "/$groupName";
+  for my $group_name ( keys %{$raw_files} ) {
+    my @result_files = ();
+    my $cur_dir      = $result_dir . "/$group_name";
 
-    push( @resultFiles, "$curDir/${groupName}.tsv" );
-    $result->{$groupName} = filter_array( \@resultFiles, $pattern );
+    push( @result_files, "$cur_dir/${group_name}.tsv" );
+    $result->{$group_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

@@ -17,7 +17,7 @@ our @ISA = qw(CQS::UniqueTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Proteomics::Summary::AbstractBuildSummary";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_abs";
   bless $self, $class;
   return $self;
@@ -26,16 +26,16 @@ sub new {
 sub get_datasets {
   my ( $self, $config, $section ) = @_;
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
   my %datasets;
   if ( has_raw_files( $config, $section, "datasets" ) ) {
     my %dss = %{ get_raw_files( $config, $section, "datasets" ) };
     foreach my $dsName ( sort keys %dss ) {
-      my @sampleNames = @{ $dss{$dsName} };
+      my @sample_names = @{ $dss{$dsName} };
       my @samples     = ();
-      foreach my $sampleName (@sampleNames) {
-        if ( defined $rawFiles{$sampleName} ) {
-          push( @samples, @{ $rawFiles{$sampleName} } );
+      foreach my $sample_name (@sample_names) {
+        if ( defined $raw_files{$sample_name} ) {
+          push( @samples, @{ $raw_files{$sample_name} } );
         }
       }
       if ( scalar(@samples) > 0 ) {
@@ -44,7 +44,7 @@ sub get_datasets {
     }
   }
   else {
-    %datasets = %rawFiles;
+    %datasets = %raw_files;
   }
 
   my $parameterFile = get_param_file( $config->{$section}{parameter_file}, "parameter_file", 1 );

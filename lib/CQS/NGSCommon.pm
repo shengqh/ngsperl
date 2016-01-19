@@ -19,35 +19,35 @@ our $VERSION = '0.01';
 use Cwd;
 
 sub get_bam_tag {
-  my ($sampleName) = @_;
-  my $tag = "'\@RG ID:$sampleName LB:$sampleName SM:$sampleName PL:ILLUMINA'";
+  my ($sample_name) = @_;
+  my $tag = "'\@RG ID:$sample_name LB:$sample_name SM:$sample_name PL:ILLUMINA'";
   return ($tag);
 }
 
 sub get_sorted_bam {
-  my $bamFile         = shift;
-  my $bamSortedPrefix = change_extension( $bamFile, "_sorted" );
+  my $bam_file         = shift;
+  my $bamSortedPrefix = change_extension( $bam_file, "_sorted" );
   my $bamSortedFile   = $bamSortedPrefix . ".bam";
   return ( $bamSortedFile, $bamSortedPrefix );
 }
 
 sub get_sam2bam_command {
-  my ( $samFile, $bamFile, $indent ) = @_;
+  my ( $sam_file, $bam_file, $indent ) = @_;
 
   if ( !defined($indent) ) {
     $indent = "";
   }
 
-  my $command = "${indent}if [ -s $samFile ]; then
+  my $command = "${indent}if [ -s $sam_file ]; then
 ${indent}  echo sam2bam=`date`
-${indent}  samtools view -b -S $samFile -o $bamFile
+${indent}  samtools view -b -S $sam_file -o $bam_file
 ${indent}fi";
 
   return ($command);
 }
 
 sub get_sort_command {
-  my ( $bamFile, $bamSortedPrefix, $indent ) = @_;
+  my ( $bam_file, $bamSortedPrefix, $indent ) = @_;
 
   if ( !defined($indent) ) {
     $indent = "";
@@ -55,15 +55,15 @@ sub get_sort_command {
 
   my $bamSortedFile;
   if ( !defined $bamSortedPrefix ) {
-    ( $bamSortedFile, $bamSortedPrefix ) = get_sorted_bam($bamFile);
+    ( $bamSortedFile, $bamSortedPrefix ) = get_sorted_bam($bam_file);
   }
   else {
     $bamSortedFile = $bamSortedPrefix . ".bam";
   }
 
-  my $command = "${indent}if [ -s $bamFile ]; then
+  my $command = "${indent}if [ -s $bam_file ]; then
 ${indent}  echo BamSort=`date` 
-${indent}  samtools sort $bamFile $bamSortedPrefix 
+${indent}  samtools sort $bam_file $bamSortedPrefix 
 ${indent}fi";
   return ($command);
 }
@@ -98,16 +98,16 @@ ${indent}fi";
 }
 
 sub get_sort_index_command {
-  my ( $bamFile, $bamSortedPrefix, $indent ) = @_;
+  my ( $bam_file, $bamSortedPrefix, $indent ) = @_;
   my $bamSortedFile;
   if ( !defined $bamSortedPrefix ) {
-    ( $bamSortedFile, $bamSortedPrefix ) = get_sorted_bam($bamFile);
+    ( $bamSortedFile, $bamSortedPrefix ) = get_sorted_bam($bam_file);
   }
   else {
     $bamSortedFile = $bamSortedPrefix . ".bam";
   }
 
-  return get_sort_command($bamFile, $bamSortedPrefix, $indent) . "\n" . get_index_command($bamSortedFile, $indent);  
+  return get_sort_command($bam_file, $bamSortedPrefix, $indent) . "\n" . get_index_command($bamSortedFile, $indent);  
 }
 
 sub transcript_gtf_index_exists {

@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Proteomics::Engine::Msamanda";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_ma";
   bless $self, $class;
   return $self;
@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
   
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
@@ -37,51 +37,51 @@ sub perform {
   
   my %mgffiles = %{ get_raw_files( $config, $section)};
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
-  for my $sampleName ( sort keys %mgffiles ) {
-    my @sampleFiles = @{ $mgffiles{$sampleName} };
-    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
-    my $log_desc = $cluster->get_log_desc($log);
+  for my $sample_name ( sort keys %mgffiles ) {
+    my @sample_files = @{ $mgffiles{$sample_name} };
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log_desc = $cluster->get_log_description($log);
     
 
-    open( OUT, ">$pbsFile" ) or die $!;
+    open( my $out, ">$pbs_file" ) or die $!;
 
-    print OUT "$pbsDesc
+    print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $resultDir 
+cd $result_dir 
 ";
 
-	for my $sampleFile (@sampleFiles) {
+	for my $sampleFile (@sample_files) {
 	      my $sname = basename($sampleFile);
-	      my $resultFile = change_extension( $sname, ".msamanda.txt" );
+	      my $result_file = change_extension( $sname, ".msamanda.txt" );
 	
-	      print OUT "if [ ! -s $resultFile ]; then
-	  mono $executable $sampleFile $database $cfgfile $resultFile
+	      print $out "if [ ! -s $result_file ]; then
+	  mono $executable $sampleFile $database $cfgfile $result_file
 	fi
 	
 	";
 	}
 
-    print OUT "
+    print $out "
 echo finished=`date` 
 
 exit 0
 ";
-    close(OUT);
+    close $out;
 
-    print SH "\$MYCMD ./$pbsName \n";
-    print "$pbsFile created\n";
+    print $sh "\$MYCMD ./$pbs_name \n";
+    print "$pbs_file created\n";
   }  
-  print SH "exit 0\n";
-  close(SH);
+  print $sh "exit 0\n";
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -93,22 +93,22 @@ exit 0
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
   
 
   my $result = {};
-  for my $sampleName ( keys %rawFiles ) {
-    my @resultFiles = ();
-    my @sampleFiles = @{ $rawFiles{$sampleName}};
-    for my $sampleFile (@sampleFiles) {
+  for my $sample_name ( keys %raw_files ) {
+    my @result_files = ();
+    my @sample_files = @{ $raw_files{$sample_name}};
+    for my $sampleFile (@sample_files) {
     	my $sname=basename($sampleFile);
-    	my $resultFile=change_extension($sname,".msamanda.txt");
-    	push(@resultFiles, "${resultDir}/${resultFile}");
+    	my $result_file=change_extension($sname,".msamanda.txt");
+    	push(@result_files, "${result_dir}/${result_file}");
     }
     
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

@@ -20,7 +20,7 @@ my $directory;
 sub new {
 	my ($class) = @_;
 	my $self = $class->SUPER::new();
-	$self->{_name}   = "UniqueR";
+  $self->{_name}   = __PACKAGE__;
 	$self->{_suffix} = "_uniqueR";
 	bless $self, $class;
 	return $self;
@@ -29,7 +29,7 @@ sub new {
 sub perform {
 	my ( $self, $config, $section ) = @_;
 
-	my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+	my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
 	my $rtemplate = get_option_value( $config->{$section}{rtemplate}, "rtemplate", 1 );
 	my $is_absolute = File::Spec->file_name_is_absolute($rtemplate);
@@ -42,40 +42,40 @@ sub perform {
 	my $rCode       = get_option( $config, $section, "rCode",       "" );
 	my $output_file = get_option( $config, $section, "output_file", 0 );
 	
-	my $parameterSampleFiles1 = "";
+	my $parametersample_files1 = "";
 	if ( has_raw_files( $config, $section, "parameterSampleFile1" ) ) {
 		my %temp = %{ get_raw_files( $config, $section, "parameterSampleFile1" ) };
-		open( LIST, ">$resultDir/fileList1.txt" ) or die "Cannot create fileList1.txt";
-		foreach my $sampleName (keys %temp) {
-			foreach my $subSampleFile (@{$temp{$sampleName}}) {
-				print LIST  $subSampleFile."\t$sampleName\n";
+		open( LIST, ">$result_dir/fileList1.txt" ) or die "Cannot create fileList1.txt";
+		foreach my $sample_name (keys %temp) {
+			foreach my $subSampleFile (@{$temp{$sample_name}}) {
+				print LIST  $subSampleFile."\t$sample_name\n";
 			}
 		}
-		$parameterSampleFiles1="fileList1.txt";
+		$parametersample_files1="fileList1.txt";
 		close(LIST);
 	}
-	my $parameterSampleFiles2 = "";
+	my $parametersample_files2 = "";
 	if ( has_raw_files( $config, $section, "parameterSampleFile2" ) ) {
 		my %temp = %{ get_raw_files( $config, $section, "parameterSampleFile2" ) };
-		open( LIST, ">$resultDir/fileList2.txt" ) or die "Cannot create fileList2.txt";
-        foreach my $sampleName (keys %temp) {
-            foreach my $subSampleFile (@{$temp{$sampleName}}) {
-                print LIST  $subSampleFile."\t$sampleName\n";
+		open( LIST, ">$result_dir/fileList2.txt" ) or die "Cannot create fileList2.txt";
+        foreach my $sample_name (keys %temp) {
+            foreach my $subSampleFile (@{$temp{$sample_name}}) {
+                print LIST  $subSampleFile."\t$sample_name\n";
             }
         }
-        $parameterSampleFiles2="fileList2.txt";
+        $parametersample_files2="fileList2.txt";
         close(LIST);
 	}
-	my $parameterSampleFiles3 = "";
+	my $parametersample_files3 = "";
 	if ( has_raw_files( $config, $section, "parameterSampleFile3" ) ) {
 		my %temp = %{ get_raw_files( $config, $section, "parameterSampleFile3" ) };
-        open( LIST, ">$resultDir/fileList3.txt" ) or die "Cannot create fileList3.txt";
-        foreach my $sampleName (keys %temp) {
-            foreach my $subSampleFile (@{$temp{$sampleName}}) {
-                print LIST  $subSampleFile."\t$sampleName\n";
+        open( LIST, ">$result_dir/fileList3.txt" ) or die "Cannot create fileList3.txt";
+        foreach my $sample_name (keys %temp) {
+            foreach my $subSampleFile (@{$temp{$sample_name}}) {
+                print LIST  $subSampleFile."\t$sample_name\n";
             }
         }
-        $parameterSampleFiles3="fileList3.txt";
+        $parametersample_files3="fileList3.txt";
         close(LIST);
 	}
 
@@ -92,7 +92,7 @@ sub perform {
 		$parameterFile3 = "";
 	}
 
-	my $rfile = $resultDir . "/${task_name}.r";
+	my $rfile = $result_dir . "/${task_name}.r";
 	open( RF, ">$rfile" ) or die "Cannot create $rfile";
 	open RT, "<$rtemplate" or die $!;
 
@@ -103,47 +103,47 @@ sub perform {
 		print RF $_;
 	}
 
-	my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
-	my $pbsName = basename($pbsFile);
-	my $log     = $self->logfile( $logDir, $task_name );
-    my $finalFile=$task_name.$output_file;
+	my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
+	my $pbs_name = basename($pbs_file);
+	my $log     = $self->get_log_filename( $log_dir, $task_name );
+    my $final_file=$task_name.$output_file;
     
-	my $log_desc = $cluster->get_log_desc($log);
+	my $log_desc = $cluster->get_log_description($log);
 
-	open( OUT, ">$pbsFile" ) or die $!;
-	print OUT "$pbsDesc
+	open( my $out, ">$pbs_file" ) or die $!;
+	print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $resultDir
+cd $result_dir
 
-if [ -s $finalFile ]; then
-  echo job has already been done. if you want to do again, delete ${resultDir}/${finalFile} and submit job again.
+if [ -s $final_file ]; then
+  echo job has already been done. if you want to do again, delete ${result_dir}/${final_file} and submit job again.
   exit 0;
 fi
 
-R --vanilla --slave -f $rfile --args $task_name$output_file $option $parameterSampleFiles1 $parameterSampleFiles2 $parameterSampleFiles3 $parameterFile1 $parameterFile2 $parameterFile3
+R --vanilla --slave -f $rfile --args $task_name$output_file $option $parametersample_files1 $parametersample_files2 $parametersample_files3 $parameterFile1 $parameterFile2 $parameterFile3
 
 echo finished=`date`
 ";
-	close(OUT);
+	close $out;
 
-	print "!!!shell file $pbsFile created.\n";
+	print "!!!shell file $pbs_file created.\n";
 }
 
 sub result {
 	my ( $self, $config, $section, $pattern ) = @_;
 
-	my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+	my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
 	my $output_file = get_option( $config, $section, "output_file", 0 );
 	my $result      = {};
-	my @resultFiles = ();
+	my @result_files = ();
 
-	push( @resultFiles, "${resultDir}/${task_name}${output_file}" );
+	push( @result_files, "${result_dir}/${task_name}${output_file}" );
 
-	$result->{$task_name} = filter_array( \@resultFiles, $pattern );
+	$result->{$task_name} = filter_array( \@result_files, $pattern );
 	return $result;
 }
 

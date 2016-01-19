@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Alignment::Gsnap";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_gs";
   bless $self, $class;
   return $self;
@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $selfname = $self->{_name};
 
@@ -36,67 +36,47 @@ sub perform {
     }
   }
 
-  my $gsnap_index_directory = get_directory($config, $section, "gsnap_index_directory", 1);
-  my $gsnap_index_name = get_option($config, $section, "gsnap_index_name");
+  my $gsnap_index_directory = get_directory( $config, $section, "gsnap_index_directory", 1 );
+  my $gsnap_index_name = get_option( $config, $section, "gsnap_index_name" );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my $resultFile     = $sampleName . ".txt";
-    my $zippedResultFile     = $sampleName . ".txt.gz";
+  for my $sample_name ( sort keys %raw_files ) {
+    my @sample_files     = @{ $raw_files{$sample_name} };
+    my $sample_files_str = join (' ', @sample_files);
+    my $result_file       = $sample_name . ".txt";
+    my $zippedResultFile = $sample_name . ".txt.gz";
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
-    
-    print SH "\$MYCMD ./$pbsName \n";
+    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
-    my $log_desc = $cluster->get_log_desc($log);
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
-$log_desc
-$path_file
+    my $log_desc = $cluster->get_log_description($log);
 
-cd $curDir
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $zippedResultFile );
 
-echo gsnap_start=`date`
-
-if [ -s $zippedResultFile ]; then
-  echo job $selfname has already been done. if you want to do again, delete $zippedResultFile and submit job again.
-  exit 0
+    print $pbs "
+if [ ! -s $result_file ]; then 
+  gsnap $option -D $gsnap_index_directory -d $gsnap_index_name -o $result_file $sample_files_str
 fi
 
-if [ ! -s $resultFile ]; then 
-  gsnap $option -D $gsnap_index_directory -d $gsnap_index_name -o $resultFile";
-
-  for my $sampleFile (@sampleFiles){
-    print OUT " $sampleFile";
-  }
-  print OUT "
+if [ -s $result_file ]; then
+  gzip $result_file
 fi
 
-if [ -s $resultFile ]; then
-  gzip $resultFile
-fi
-
-echo finished=`date`
-
-exit 0;
 ";
-
-    close OUT;
-
-    print "$pbsFile created\n";
+    $self->close_pbs($pbs);
+    print "$pbs_file created\n";
   }
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -108,16 +88,16 @@ exit 0;
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
-  for my $sampleName ( keys %rawFiles ) {
-    my $bamFile     = "${resultDir}/${sampleName}/${sampleName}.txt.gz";
-    my @resultFiles = ();
-    push( @resultFiles, $bamFile );
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+  for my $sample_name ( keys %raw_files ) {
+    my $bam_file     = "${result_dir}/${sample_name}/${sample_name}.txt.gz";
+    my @result_files = ();
+    push( @result_files, $bam_file );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

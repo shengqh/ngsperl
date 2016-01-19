@@ -18,7 +18,7 @@ our @ISA = qw(CQS::GroupTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "GATK::MuTect";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_mt";
   bless $self, $class;
   return $self;
@@ -27,64 +27,56 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
-  my $muTect_jar = get_param_file( $config->{$section}{muTect_jar},  "muTect_jar",  1 );
-  my $faFile     = get_param_file( $config->{$section}{fasta_file},  "fasta_file",  1 );
-  my $dbsnpfile  = get_param_file( $config->{$section}{dbsnp_file},  "dbsnp_file",  1 );
-  
+  my $muTect_jar = get_param_file( $config->{$section}{muTect_jar}, "muTect_jar", 1 );
+  my $faFile     = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
+  my $dbsnpfile  = get_param_file( $config->{$section}{dbsnp_file}, "dbsnp_file", 1 );
+
   #mouse genome has no corresponding cosmic database
-    my $cosmic_param = "";
+  my $cosmic_param = "";
   my $cosmicfile = get_param_file( $config->{$section}{cosmic_file}, "cosmic_file", 0 );
-  if(defined $cosmicfile){
+  if ( defined $cosmicfile ) {
     $cosmic_param = "--cosmic $cosmicfile";
   }
-  
-  my $java = get_java($config, $section);
+
+  my $java = get_java( $config, $section );
 
   my $java_option = get_option( $config, $section, "java_option", "" );
 
   my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct) . "\n";
-  print SH "cd $pbsDir\n";
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct) . "\n";
+  print $sh "cd $pbs_dir\n";
 
-  for my $groupName ( sort keys %group_sample_map ) {
-    my @sampleFiles = @{ $group_sample_map{$groupName} };
-    my $sampleCount = scalar(@sampleFiles);
-    my $curDir      = create_directory_or_die( $resultDir . "/$groupName" );
+  for my $group_name ( sort keys %group_sample_map ) {
+    my @sample_files = @{ $group_sample_map{$group_name} };
+    my $sampleCount  = scalar(@sample_files);
+    my $cur_dir      = create_directory_or_die( $result_dir . "/$group_name" );
 
     if ( $sampleCount != 2 ) {
       die "SampleFile should be normal,tumor paired.";
     }
 
-    my $normal = $sampleFiles[0][1];
-    my $tumor  = $sampleFiles[1][1];
+    my $normal = $sample_files[0][1];
+    my $tumor  = $sample_files[1][1];
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $groupName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $group_name );
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $out     = "${groupName}.somatic.out";
-    my $vcf     = "${groupName}.somatic.vcf";
-    my $passvcf = "${groupName}.somatic.pass.vcf";
+    my $out_file = "${group_name}.somatic.out";
+    my $vcf      = "${group_name}.somatic.vcf";
+    my $passvcf  = "${group_name}.somatic.pass.vcf";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
-$log_desc
-
-$path_file
-
-echo muTect=`date` 
-
-cd $curDir
-
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $passvcf );
+    print $pbs "
 if [ ! -s ${normal}.bai ]; then
   samtools index ${normal}
 fi
@@ -94,20 +86,20 @@ if [ ! -s ${tumor}.bai ]; then
 fi
 
 if [ ! -s $vcf ]; then
-  $java $java_option -jar $muTect_jar $option --analysis_type MuTect --reference_sequence $faFile $cosmic_param --dbsnp $dbsnpfile --input_file:normal $normal --input_file:tumor $tumor -o $out --vcf $vcf --enable_extended_output
+  $java $java_option -jar $muTect_jar $option --analysis_type MuTect --reference_sequence $faFile $cosmic_param --dbsnp $dbsnpfile --input_file:normal $normal --input_file:tumor $tumor -o $out_file --vcf $vcf --enable_extended_output
 fi 
 
 if [[ -s $vcf && ! -s $passvcf ]]; then
-  if [ -s $out ]; then
+  if [ -s $out_file ]; then
     awk '{if (\$1 ~ /^##INFO/) {exit;} else {print;}}' $vcf > $passvcf
     echo \"##INFO=<ID=LOD,Number=1,Type=Float,Description=\\\"Log of (likelihood tumor event is real / likelihood event is sequencing error )\\\">\" >> $passvcf
     awk 'BEGIN{info=0}{if (\$1 ~ /^##INFO/) {info=1;} if(info) {print;}}' $vcf | grep \"^#\" >> $passvcf
-    grep -v \"^##\" $out | awk -vCOLM=t_lod_fstar 'NR==1 { for (i = 1; i <= NF; i++) { if (\$i == COLM) { cidx = i; } } } NR > 1 {print \";LOD=\"\$cidx}' > ${out}.lod
+    grep -v \"^##\" $out_file | awk -vCOLM=t_lod_fstar 'NR==1 { for (i = 1; i <= NF; i++) { if (\$i == COLM) { cidx = i; } } } NR > 1 {print \";LOD=\"\$cidx}' > ${out_file}.lod
     grep -v \"^#\" $vcf | cut -f1-8 > ${vcf}.first
-    paste -d \"\" ${vcf}.first ${out}.lod > ${vcf}.first_lod
+    paste -d \"\" ${vcf}.first ${out_file}.lod > ${vcf}.first_lod
     grep -v \"^#\" $vcf | cut -f9- > ${vcf}.second
     paste ${vcf}.first_lod ${vcf}.second | grep -v \"^#CHROM\" | grep -v REJECT >> $passvcf
-    rm ${out}.lod ${vcf}.first ${vcf}.first_lod ${vcf}.second
+    rm ${out_file}.lod ${vcf}.first ${vcf}.first_lod ${vcf}.second
     grep -v \"^#\" $passvcf | cut -f1 | uniq -c | awk '{print \$2\"\\t\"\$1}' > ${passvcf}.chromosome
     
   else
@@ -115,34 +107,34 @@ if [[ -s $vcf && ! -s $passvcf ]]; then
   fi
 fi
 
-echo finished=`date` \n";
+";
 
-    close OUT;
+    $self->close_pbs($pbs);
 
-    print "$pbsFile created \n";
+    print "$pbs_file created \n";
   }
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
   }
 
-  print "!!!shell file $shfile created, you can run this shell file to submit all MuTect tasks.\n";
+  print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
 }
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $groups = get_raw_files( $config, $section, "groups" );
 
   my $result = {};
-  for my $groupName ( keys %{$groups} ) {
-    my @resultFiles = ();
-    my $curDir      = $resultDir . "/$groupName";
-    push( @resultFiles, "$curDir/${groupName}.somatic.pass.vcf" );
-    $result->{$groupName} = filter_array( \@resultFiles, $pattern );
+  for my $group_name ( keys %{$groups} ) {
+    my @result_files = ();
+    my $cur_dir      = $result_dir . "/$group_name";
+    push( @result_files, "$cur_dir/${group_name}.somatic.pass.vcf" );
+    $result->{$group_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

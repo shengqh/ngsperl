@@ -18,7 +18,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Wget";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_wget";
   bless $self, $class;
   return $self;
@@ -27,18 +27,18 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $batch = get_option( $config, $section, "batch", 20 );
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct) . "\n";
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct) . "\n";
 
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @listFiles = @{ $rawFiles{$sampleName} };
+  for my $sample_name ( sort keys %raw_files ) {
+    my @listFiles = @{ $raw_files{$sample_name} };
     my $listFile  = $listFiles[0];
     my @urls      = read_file( $listFile, chomp => 1 );
 
@@ -50,20 +50,20 @@ sub perform {
         $iend = $urlCount;
       }
 
-      my $name    = "${sampleName}_${i}_${iend}";
-      my $pbsFile = $self->pbsfile( $pbsDir, $name );
-      my $pbsName = basename($pbsFile);
-      my $log     = $self->logfile( $logDir, $name );
+      my $name    = "${sample_name}_${i}_${iend}";
+      my $pbs_file = $self->get_pbs_filename( $pbs_dir, $name );
+      my $pbs_name = basename($pbs_file);
+      my $log     = $self->get_log_filename( $log_dir, $name );
 
-      my $log_desc = $cluster->get_log_desc($log);
+      my $log_desc = $cluster->get_log_description($log);
 
-      open( OUT, ">$pbsFile" ) or die $!;
-      print OUT "$pbsDesc
+      open( my $out, ">$pbs_file" ) or die $!;
+      print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $resultDir
+cd $result_dir
 
 echo Wget=`date`
 ";
@@ -72,7 +72,7 @@ echo Wget=`date`
         my $url      = $urls[$j];
         my $filename = basename($url);
 
-        print OUT "if [ ! -s $filename ]; then
+        print $out "if [ ! -s $filename ]; then
   echo 'wget $url ...\n'
   wget $url
 fi
@@ -80,14 +80,14 @@ fi
 ";
       }
 
-      close(OUT);
+      close $out;
 
-      print "$pbsFile created\n";
+      print "$pbs_file created\n";
 
-      print SH "\$MYCMD ./$pbsName \n";
+      print $sh "\$MYCMD ./$pbs_name \n";
     }
 
-    close(SH);
+    close $sh;
 
     if ( is_linux() ) {
       chmod 0755, $shfile;
@@ -100,22 +100,22 @@ fi
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $result = {};
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @listFiles = @{ $rawFiles{$sampleName} };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
+  for my $sample_name ( sort keys %raw_files ) {
+    my @listFiles = @{ $raw_files{$sample_name} };
     my $listFile  = $listFiles[0];
     my @urls      = read_file( $listFile, chomp => 1 );
     for my $url (@urls) {
       my $filename   = basename($url);
-      my $resultfile = $resultDir . "/" . $filename;
+      my $result_file = $result_dir . "/" . $filename;
 
-      my @resultFiles = ();
-      push( @resultFiles, $resultDir . "/${filename}" );
-      $result->{$filename} = filter_array( \@resultFiles, $pattern );
+      my @result_files = ();
+      push( @result_files, $result_dir . "/${filename}" );
+      $result->{$filename} = filter_array( \@result_files, $pattern );
     }
   }
 

@@ -111,8 +111,8 @@ sub get_parameter {
   my $target_dir = get_option( $config, $section, "target_dir" );
   $target_dir =~ s|//|/|g;
   $target_dir =~ s|/$||g;
-  my ( $logDir, $pbsDir, $resultDir ) = init_dir($target_dir);
-  my ($pbsDesc) = $cluster->get_cluster_desc($refPbs);
+  my ( $log_dir, $pbs_dir, $result_dir ) = init_dir($target_dir);
+  my ($pbs_desc) = $cluster->get_cluster_desc($refPbs);
 
   my $option    = get_option( $config, $section, "option",    "" );
   my $sh_direct = get_option( $config, $section, "sh_direct", 0 );
@@ -127,7 +127,7 @@ sub get_parameter {
   my $thread = $cluster->get_cluster_thread($refPbs);
   my $memory = $cluster->get_cluster_memory($refPbs);
 
-  return ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory );
+  return ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory );
 }
 
 #get parameter which indicates a file. If required, not defined or not exists, die. If defined but not exists, die.
@@ -193,11 +193,11 @@ sub get_directory {
 
 sub get_cqstools {
   my ( $config, $section, $required ) = @_;
-  my $cqsFile = get_param_file( $config->{$section}{cqs_tools}, "cqs_tools", 0 );
-  if ( !defined $cqsFile ) {
-    $cqsFile = get_param_file( $config->{$section}{cqstools}, "cqstools", $required );
+  my $cqstools = get_param_file( $config->{$section}{cqs_tools}, "cqs_tools", 0 );
+  if ( !defined $cqstools ) {
+    $cqstools = get_param_file( $config->{$section}{cqstools}, "cqstools", $required );
   }
-  return ($cqsFile);
+  return ($cqstools);
 }
 
 sub parse_param_file {
@@ -449,64 +449,64 @@ sub get_option_value {
 }
 
 sub get_pair_groups {
-  my ( $pairs, $pairName ) = @_;
-  my $groupNames;
+  my ( $pairs, $pair_name ) = @_;
+  my $group_names;
   my $ispaired      = 0;
-  my $tmpGroupNames = $pairs->{$pairName};
-  if ( ref($tmpGroupNames) eq 'HASH' ) {
-    $groupNames = $tmpGroupNames->{"groups"};
-    $ispaired   = $tmpGroupNames->{"paired"};
+  my $tmpgroup_names = $pairs->{$pair_name};
+  if ( ref($tmpgroup_names) eq 'HASH' ) {
+    $group_names = $tmpgroup_names->{"groups"};
+    $ispaired   = $tmpgroup_names->{"paired"};
   }
   else {
-    $groupNames = $tmpGroupNames;
+    $group_names = $tmpgroup_names;
   }
   if ( !defined $ispaired ) {
     $ispaired = 0;
   }
-  return ( $ispaired, $groupNames );
+  return ( $ispaired, $group_names );
 }
 
 sub get_pair_groups_names {
-  my ( $pairs, $pairName ) = @_;
-  my $groupNames;
+  my ( $pairs, $pair_name ) = @_;
+  my $group_names;
   my $pairedNames;
-  my $tmpGroupNames = $pairs->{$pairName};
-  if ( ref($tmpGroupNames) eq 'HASH' ) {
-    $groupNames  = $tmpGroupNames->{"groups"};
-    $pairedNames = $tmpGroupNames->{"paired"};
+  my $tmpgroup_names = $pairs->{$pair_name};
+  if ( ref($tmpgroup_names) eq 'HASH' ) {
+    $group_names  = $tmpgroup_names->{"groups"};
+    $pairedNames = $tmpgroup_names->{"paired"};
   }
   else {
-    $groupNames = $tmpGroupNames;
+    $group_names = $tmpgroup_names;
   }
-  return ( $pairedNames, $groupNames );
+  return ( $pairedNames, $group_names );
 }
 
 #Return
 #{
 #  groupName1 => [
-#    [sampleName1_1, sampleFile1_1_1, sampleFile1_1_2],
-#    [sampleName1_2, sampleFile1_2_1, sampleFile1_2_2],
+#    [sample_name1_1, sampleFile1_1_1, sampleFile1_1_2],
+#    [sample_name1_2, sampleFile1_2_1, sampleFile1_2_2],
 #  ],
 #  groupName2 => [
-#    [sampleName2_1, sampleFile2_1_1, sampleFile2_1_2],
-#    [sampleName2_2, sampleFile2_2_1, sampleFile2_2_2],
+#    [sample_name2_1, sampleFile2_1_1, sampleFile2_1_2],
+#    [sample_name2_2, sampleFile2_2_1, sampleFile2_2_2],
 #  ],
 #}
 sub get_group_sample_map {
   my ( $config, $section, $samplePattern ) = @_;
 
-  my $rawFiles = get_raw_files( $config, $section, "source", $samplePattern );
+  my $raw_files = get_raw_files( $config, $section, "source", $samplePattern );
   my $groups = get_raw_files( $config, $section, "groups" );
   my %group_sample_map = ();
-  for my $groupName ( sort keys %{$groups} ) {
-    my @samples = @{ $groups->{$groupName} };
+  for my $group_name ( sort keys %{$groups} ) {
+    my @samples = @{ $groups->{$group_name} };
     my @gfiles  = ();
-    foreach my $sampleName (@samples) {
-      my @bamFiles = @{ $rawFiles->{$sampleName} };
-      my @sambam = ( $sampleName, @bamFiles );
+    foreach my $sample_name (@samples) {
+      my @bam_files = @{ $raw_files->{$sample_name} };
+      my @sambam = ( $sample_name, @bam_files );
       push( @gfiles, \@sambam );
     }
-    $group_sample_map{$groupName} = \@gfiles;
+    $group_sample_map{$group_name} = \@gfiles;
   }
 
   return \%group_sample_map;
@@ -520,19 +520,19 @@ sub get_group_sample_map {
 sub get_group_samplefile_map {
   my ( $config, $section, $samplePattern ) = @_;
 
-  my $rawFiles = get_raw_files( $config, $section, "source", $samplePattern );
+  my $raw_files = get_raw_files( $config, $section, "source", $samplePattern );
   my $groups = get_raw_files( $config, $section, "groups" );
   my %group_sample_map = ();
-  for my $groupName ( sort keys %{$groups} ) {
-    my @samples = @{ $groups->{$groupName} };
+  for my $group_name ( sort keys %{$groups} ) {
+    my @samples = @{ $groups->{$group_name} };
     my @gfiles  = ();
-    foreach my $sampleName (@samples) {
-      my @bamFiles = @{ $rawFiles->{$sampleName} };
-      foreach my $bamFile (@bamFiles) {
-        push( @gfiles, $bamFile );
+    foreach my $sample_name (@samples) {
+      my @bam_files = @{ $raw_files->{$sample_name} };
+      foreach my $bam_file (@bam_files) {
+        push( @gfiles, $bam_file );
       }
     }
-    $group_sample_map{$groupName} = \@gfiles;
+    $group_sample_map{$group_name} = \@gfiles;
   }
 
   return \%group_sample_map;

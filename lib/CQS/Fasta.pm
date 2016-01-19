@@ -21,12 +21,12 @@ sub get_sequence_names {
   my $fastafile = shift;
 
   my @names = ();
-  open( IN, $fastafile ) or die "Couldn't optn $fastafile\n";
-  while (<IN>) {
+  open( my $in, $fastafile ) or die "Couldn't open $fastafile\n";
+  while (<$in>) {
     if (/^>(\S+)/) {
       push( @names, $1 );
     }
   }
-  close(IN);
+  close($in);
   return @names;
 }

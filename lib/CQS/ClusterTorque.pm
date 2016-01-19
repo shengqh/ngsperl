@@ -10,7 +10,7 @@ our @ISA = qw(CQS::ClusterScript);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "CQS::ClusterTorque";
+  $self->{_name}   = __PACKAGE__;
   bless $self, $class;
   return $self;
 }
@@ -42,7 +42,7 @@ sub get_cluster_desc {
 
   die "Assign email address in hash (\"email\" => \"youremail\") and pass hash as parameter to get_cluster_desc" if ( $email eq "" );
 
-  my $pbsDesc = <<PBS;
+  my $pbs_desc = <<PBS;
 #!/bin/bash
 #Beginning of PBS bash script
 #PBS -M $email
@@ -58,14 +58,14 @@ sub get_cluster_desc {
 #PBS -q all
 PBS
 
-  return ($pbsDesc);
+  return ($pbs_desc);
 }
 
 sub get_log_desc {
-  my ($self, $pbsfile) = @_;
+  my ($self, $pbs_file) = @_;
   
   my $result = <<PBS;
-#PBS -o $pbsfile
+#PBS -o $pbs_file
 #PBS -j oe
 PBS
   

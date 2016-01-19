@@ -529,31 +529,31 @@ sub getPrepareConfig {
 sub saveConfig {
 	my ( $def, $config ) = @_;
 
-	my $defFile;
+	my $def_file;
 	if ( $def->{target_dir} =~ /\/$/ ) {
-		$defFile = $def->{target_dir} . $def->{task_name} . '.def';
+		$def_file = $def->{target_dir} . $def->{task_name} . '.def';
 	}
 	else {
-		$defFile = $def->{target_dir} . '/' . $def->{task_name} . '.def';
+		$def_file = $def->{target_dir} . '/' . $def->{task_name} . '.def';
 	}
 
-	open( SH, ">$defFile" ) or die "Cannot create $defFile";
-	print SH Dumper($def);
-	close(SH);
-	print "Saved user definition file to " . $defFile . "\n";
+  open( my $sh1, ">$def_file" ) or die "Cannot create $def_file";
+  print $sh1 Dumper($def);
+  close $sh1;
+  print "Saved user definition file to " . $def_file . "\n";
 
-	my $configFile;
+	my $config_file;
 	if ( $def->{target_dir} =~ /\/$/ ) {
-		$configFile = $def->{target_dir} . $def->{task_name} . '.config';
+		$config_file = $def->{target_dir} . $def->{task_name} . '.config';
 	}
 	else {
-		$configFile = $def->{target_dir} . '/' . $def->{task_name} . '.config';
+		$config_file = $def->{target_dir} . '/' . $def->{task_name} . '.config';
 	}
 
-	open( SH, ">$configFile" ) or die "Cannot create $configFile";
-	print SH Dumper($config);
-	close(SH);
-	print "Saved configuration file to " . $configFile . "\n";
+  open( my $sh2, ">$config_file" ) or die "Cannot create $config_file";
+  print $sh2 Dumper($config);
+  close $sh2;
+  print "Saved configuration file to " . $config_file . "\n";
 }
 
 1;

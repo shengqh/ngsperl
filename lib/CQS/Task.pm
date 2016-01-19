@@ -7,8 +7,7 @@ use CQS::ConfigUtils;
 
 sub new {
   my ($class) = @_;
-  my $self = { _name => undef, _suffix => "", _task_prefix => "", _task_suffix => "", _pbskey => "source" };
-  print __PACKAGE__;
+  my $self = { _name => __PACKAGE__, _suffix => "", _task_prefix => "", _task_suffix => "", _pbskey => "source" };
   bless $self, $class;
   return $self;
 }
@@ -31,7 +30,7 @@ sub require {
   return $result;
 }
 
-sub getname {
+sub get_name {
   my ( $self, $name, $extension, $hassuffix ) = @_;
   if ( !defined $extension ) {
     $extension = "";
@@ -48,7 +47,7 @@ sub getname {
   }
 }
 
-sub getfile {
+sub get_file {
   my ( $self, $dir, $name, $extension, $hassuffix ) = @_;
   if ( !defined $extension ) {
     $extension = "";
@@ -57,33 +56,33 @@ sub getfile {
     $hassuffix = 1;
   }
 
-  return $dir . "/" . $self->getname( $name, $extension, $hassuffix );
+  return $dir . "/" . $self->get_name( $name, $extension, $hassuffix );
 }
 
 sub pbs_name {
   my ( $self, $sample_name ) = @_;
-  return $self->getname( $sample_name, ".pbs" );
+  return $self->get_name( $sample_name, ".pbs" );
 }
 
-sub pbs_file {
+sub get_pbs_filename {
   my ( $self, $dir, $sample_name ) = @_;
-  return $self->getfile( $dir, $sample_name, ".pbs" );
+  return $self->get_file( $dir, $sample_name, ".pbs" );
 }
 
-sub log_file {
+sub get_log_filename {
   my ( $self, $dir, $sample_name ) = @_;
-  return $self->getfile( $dir, $sample_name, ".log" );
+  return $self->get_file( $dir, $sample_name, ".log" );
 }
 
-sub task_file {
+sub get_task_filename {
   my ( $self, $dir, $task_name ) = @_;
-  return $self->getfile( $dir, $task_name, ".sh" );
+  return $self->get_file( $dir, $task_name, ".sh" );
 }
 
-sub pbs_files {
+sub get_pbs_files {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_description, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   #print  "task_name = " . $task_name . "\n";
 
@@ -92,21 +91,25 @@ sub pbs_files {
 
   my $result = {};
   if ( $self->{_pbskey} eq "" ) {
-    $result->{$task_name} = $self->pbs_file( $pbs_dir, $task_name );
+    $result->{$task_name} = $self->get_pbs_filename( $pbs_dir, $task_name );
   }
   else {
     my %fqFiles = %{ get_raw_files( $config, $section, $self->{_pbskey} ) };
 
     for my $sample_name ( sort keys %fqFiles ) {
-      $result->{$sample_name} = $self->pbs_file( $pbs_dir, $sample_name );
+      $result->{$sample_name} = $self->get_pbs_filename( $pbs_dir, $sample_name );
     }
   }
 
   return $result;
 }
 
-sub write_pbs_start {
-  my ( $self, $pbs, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $module_name ) = @_;
+sub open_pbs {
+  my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file ) = @_;
+
+  my $module_name = $self->{_name};
+
+  open( my $pbs, ">$pbs_file" ) or die $!;
 
   print $pbs "$pbs_desc
 $log_desc
@@ -115,25 +118,38 @@ $path_file
 
 cd $result_dir
 
+";
+  if ( defined $final_file ) {
+    print $pbs "
 if [ -s $final_file ]; then
   echo job has already been done. if you want to do again, delete $final_file and submit job again.
   exit 0
 fi
+";
+  }
 
+  print $pbs "
 echo ${module_name}_start=`date`
  
 ";
+  return $pbs;
 }
 
-sub write_pbs_end {
-  my ( $self, $pbs, $module_name ) = @_;
+sub close_pbs {
+  my ( $self, $pbs, $pbs_file ) = @_;
+
+  my $module_name = $self->{_name};
 
   print $pbs "
 echo ${module_name}_end=`date`
 
-exit 1
+exit 0
  
 ";
+
+  close $pbs;
+
+  print "$pbs_file created. \n";
 }
 
 1;

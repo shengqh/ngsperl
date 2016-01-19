@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "CQSChromosomeCount";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_cc";
   bless $self, $class;
   return $self;
@@ -26,15 +26,15 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqsFile = get_cqstools( $config, $section, 1 );
+  my $cqstools = get_cqstools( $config, $section, 1 );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my %seqCountFiles = ();
+  my %seqcount_files = ();
   if ( has_raw_files($config, $section, "seqcount")) {
-    %seqCountFiles = %{ get_raw_files( $config, $section, "seqcount" ) };
+    %seqcount_files = %{ get_raw_files( $config, $section, "seqcount" ) };
   }
 
 
@@ -43,47 +43,47 @@ sub perform {
     %pmNameFiles = %{ get_raw_files( $config, $section, "perfect_mapped_name" ) };
   }
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct) . "\n";
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct) . "\n";
 
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @bamFiles  = @{ $rawFiles{$sampleName} };
-    my $bamFile   = $bamFiles[0];
-    my $fileName  = basename($bamFile);
+  for my $sample_name ( sort keys %raw_files ) {
+    my @bam_files  = @{ $raw_files{$sample_name} };
+    my $bam_file   = $bam_files[0];
+    my $fileName  = basename($bam_file);
     my $countFile = $fileName . ".count";
 
     my $seqcountFile = "";
-    if ( defined $seqCountFiles{$sampleName} ) {
-      my @seqcounts = @{ $seqCountFiles{$sampleName} };
+    if ( defined $seqcount_files{$sample_name} ) {
+      my @seqcounts = @{ $seqcount_files{$sample_name} };
       my $seqcount  = $seqcounts[0];
       $seqcountFile = " -c $seqcount";
     }
 
     my $pmNameFile = "";
-    if ( defined $pmNameFiles{$sampleName} ) {
-      my @pmNames = @{ $pmNameFiles{$sampleName} };
+    if ( defined $pmNameFiles{$sample_name} ) {
+      my @pmNames = @{ $pmNameFiles{$sample_name} };
       my $pmname  = $pmNames[0];
       $pmNameFile = " -n $pmname";
     }
 
-    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
-    my $pbsFile = $self->pbsfile($pbsDir, $sampleName);
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
+    my $pbs_file = $self->get_pbs_filename($pbs_dir, $sample_name);
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $sample_name );
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
+    open( my $out, ">$pbs_file" ) or die $!;
+    print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $curDir
+cd $cur_dir
 
 if [ -s $countFile ]; then
   echo job has already been done. if you want to do again, delete $countFile and submit job again.
@@ -92,19 +92,19 @@ fi
 
 echo CQSChromosomeCount=`date` 
 
-mono-sgen $cqsFile chromosome_count $option $pmNameFile -i $bamFile -o $countFile $seqcountFile
+mono-sgen $cqstools chromosome_count $option $pmNameFile -i $bam_file -o $countFile $seqcountFile
 
 echo finished=`date`
 
 exit 0 
 ";
 
-    close OUT;
+    close $out;
 
-    print "$pbsFile created \n";
+    print "$pbs_file created \n";
   }
   
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -112,34 +112,34 @@ exit 0
 
   print "!!!shell file $shfile created, you can run this shell file to submit all trna_count tasks.\n";
 
-  #`qsub $pbsFile`;
+  #`qsub $pbs_file`;
 }
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $fasta_format = $config->{$section}{fasta_format};
   if ( !defined $fasta_format ) {
     $fasta_format = 0;
   }
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
-  for my $sampleName ( keys %rawFiles ) {
-    my $curDir = $resultDir . "/$sampleName";
+  for my $sample_name ( keys %raw_files ) {
+    my $cur_dir = $result_dir . "/$sample_name";
 
-    my @bamFiles = @{ $rawFiles{$sampleName} };
-    my $bamFile  = $bamFiles[0];
-    my $fileName = basename($bamFile);
+    my @bam_files = @{ $raw_files{$sample_name} };
+    my $bam_file  = $bam_files[0];
+    my $fileName = basename($bam_file);
 
-    my @resultFiles = ();
-    my $countFile   = "${curDir}/${fileName}.count";
-    push( @resultFiles, $countFile );
-    push( @resultFiles, "${countFile}.mapped.xml" );
-    push( @resultFiles, "${curDir}/${fileName}.info" );
+    my @result_files = ();
+    my $countFile   = "${cur_dir}/${fileName}.count";
+    push( @result_files, $countFile );
+    push( @result_files, "${countFile}.mapped.xml" );
+    push( @result_files, "${cur_dir}/${fileName}.info" );
 
     my $unmapped;
     if ($fasta_format) {
@@ -148,9 +148,9 @@ sub result {
     else {
       $unmapped = change_extension( $countFile, ".unmapped.fastq.gz" );
     }
-    push( @resultFiles, $unmapped );
+    push( @result_files, $unmapped );
 
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

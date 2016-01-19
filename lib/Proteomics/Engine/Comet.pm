@@ -16,7 +16,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Proteomics::Engine::Comet";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_comet";
   bless $self, $class;
   return $self;
@@ -24,7 +24,7 @@ sub new {
 
 sub perform {
   my ( $self, $config, $section ) = @_;
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
@@ -33,80 +33,80 @@ sub perform {
   my $database   = get_param_file( $config->{$section}{database},   "database",   1 );
   my $delete_temp_ms2 = get_option($config, $section, "delete_temp_ms2", 1); 
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct) . "\n";
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct) . "\n";
 
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
+  for my $sample_name ( sort keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$sample_name} };
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $sample_name );
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
+    open( my $out, ">$pbs_file" ) or die $!;
+    print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $resultDir
+cd $result_dir
 
 ";
-    for my $sampleFile (@sampleFiles) {
+    for my $sampleFile (@sample_files) {
       my $sname = basename($sampleFile);
-      my $resultFile = change_extension( $sname, ".pep.xml" );
+      my $result_file = change_extension( $sname, ".pep.xml" );
 
-      print OUT "if [ ! -s $resultFile ]; then\n";
+      print $out "if [ ! -s $result_file ]; then\n";
 
       my $ismgf = $sname =~ /\.mgf$/i;
-      my $tempFile = $resultDir . "/" . change_extension( $sname, ".ms2" );
+      my $tempFile = $result_dir . "/" . change_extension( $sname, ".ms2" );
 
       if ($ismgf) {
         my $proteomicstools = get_param_file( $config->{$section}{proteomicstools}, "proteomicstools", 1 );
         my $titleformat = get_option( $config, $section, "titleformat" );
-        print OUT "  if [ ! -s $tempFile ]; then
+        print $out "  if [ ! -s $tempFile ]; then
     mono $proteomicstools MGF2MS2 -i $sampleFile -t $titleformat -o $tempFile
   fi
 ";
         $sampleFile = $tempFile;
       }
 
-      print OUT "  comet -P$param_file -D$database $sampleFile
-  if [ -s $resultFile ]; then
-    RefreshParser $resultFile $database
+      print $out "  comet -P$param_file -D$database $sampleFile
+  if [ -s $result_file ]; then
+    RefreshParser $result_file $database
   fi
 ";
 
       if ($ismgf && $delete_temp_ms2) {
-        print OUT "  if [ -s $resultFile ]; then
+        print $out "  if [ -s $result_file ]; then
     rm $tempFile
   fi
 ";
       }
 
-      print OUT "
+      print $out "
 fi
 
 ";
     }
-    print OUT "
+    print $out "
 echo finished=`date`
 
 exit 0 
 ";
-    close OUT;
+    close $out;
 
-    print "$pbsFile created \n";
+    print "$pbs_file created \n";
   }
 
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -114,27 +114,27 @@ exit 0
 
   print "!!!shell file $shfile created, you can run this shell file to submit all ", $self->{_name}, " tasks.\n";
 
-  #`qsub $pbsFile`;
+  #`qsub $pbs_file`;
 }
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
-  for my $sampleName ( keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my @resultFiles = ();
+  for my $sample_name ( keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$sample_name} };
+    my @result_files = ();
 
-    for my $sampleFile (@sampleFiles) {
+    for my $sampleFile (@sample_files) {
       my $sname = basename($sampleFile);
-      my $resultFile = change_extension( $sname, ".pep.xml" );
-      push( @resultFiles, "${resultDir}/${resultFile}" );
+      my $result_file = change_extension( $sname, ".pep.xml" );
+      push( @result_files, "${result_dir}/${result_file}" );
     }
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

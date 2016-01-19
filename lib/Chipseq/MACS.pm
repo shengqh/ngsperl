@@ -18,7 +18,7 @@ our @ISA = qw(CQS::GroupTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Chipseq::MACS";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_macs";
   bless $self, $class;
   return $self;
@@ -27,67 +27,51 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
-  for my $groupName ( sort keys %group_sample_map ) {
-    my @sampleFiles = @{ $group_sample_map{$groupName} };
-    my $sampleCount = scalar(@sampleFiles);
+  for my $group_name ( sort keys %group_sample_map ) {
+    my @sample_files = @{ $group_sample_map{$group_name} };
+    my $sampleCount  = scalar(@sample_files);
 
     if ( $sampleCount != 2 ) {
       die "SampleFile should be normal,tumor paired.";
     }
 
-    my $curDir = create_directory_or_die( $resultDir . "/$groupName" );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$group_name" );
 
-    my $control = $sampleFiles[0][1];
-    my $sample  = $sampleFiles[1][1];
+    my $control = $sample_files[0][1];
+    my $sample  = $sample_files[1][1];
 
-    my $final  = "${groupName}_peaks.bed";
+    my $final_file = "${group_name}_peaks.bed";
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $groupName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $group_name );
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-$path_file 
-
-cd $curDir
-
-if [ -s $final ];then
-  echo job has already been done. if you want to do again, delete ${curDir}/$final and submit job again.
-  exit 0;
-fi
-
-echo MACS_start=`date`
-
-macs $option -t $sample -c $control -n $groupName
-
-echo MACS_end=`date`
-
+    print $pbs "
+macs $option -t $sample -c $control -n $group_name
 ";
 
-    close(OUT);
+    $self->close_pbs($pbs);
+    print "$pbs_file created. \n";
 
-    print "$pbsFile created. \n";
-
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
   }
 
-  print SH "exit 0\n";
-  close(SH);
+  print $sh "exit 0\n";
+  close $sh;
 
   print "!!!shell file $shfile created, you can run this shell file to submit tasks.\n";
 }
@@ -95,18 +79,18 @@ echo MACS_end=`date`
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
 
   my $result = {};
-  for my $groupName ( sort keys %group_sample_map ) {
-    my $curDir      = $resultDir . "/$groupName";
-    my @resultFiles = ();
-    push( @resultFiles, $curDir . "/${groupName}_peaks.bed" );
-    push( @resultFiles, $curDir . "/${groupName}_MACS_wiggle/treat" );
+  for my $group_name ( sort keys %group_sample_map ) {
+    my $cur_dir      = $result_dir . "/$group_name";
+    my @result_files = ();
+    push( @result_files, $cur_dir . "/${group_name}_peaks.bed" );
+    push( @result_files, $cur_dir . "/${group_name}_MACS_wiggle/treat" );
 
-    $result->{$groupName} = filter_array( \@resultFiles, $pattern );
+    $result->{$group_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

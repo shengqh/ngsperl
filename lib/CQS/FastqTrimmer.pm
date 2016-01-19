@@ -16,7 +16,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "CQS::FastqTrimmer";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_ft";
   bless $self, $class;
   return $self;
@@ -25,67 +25,67 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $cqstools = get_cqstools( $config, $section, 1 );
   my $extension = get_option( $config, $section, "extension" );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
+  for my $sample_name ( sort keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$sample_name} };
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $sample_name );
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
+    open( my $out, ">$pbs_file" ) or die $!;
+    print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $resultDir
+cd $result_dir
 
 ";
-    if ( scalar(@sampleFiles) == 1 ) {
-      my $sampleFile = $sampleFiles[0];
+    if ( scalar(@sample_files) == 1 ) {
+      my $sampleFile = $sample_files[0];
       my $trimFile   = get_trim_file($sampleFile, $extension);
-      print OUT "if [ ! -s $trimFile ]; then
+      print $out "if [ ! -s $trimFile ]; then
   mono-sgen $cqstools fastq_trimmer $option -i $sampleFile -o $trimFile 
 fi
 ";
     }
     else {
-      my $read1file = $sampleFiles[0];
-      my $read2file = $sampleFiles[1];
+      my $read1file = $sample_files[0];
+      my $read2file = $sample_files[1];
       my $trim1file = get_trim_file($read1file, $extension);
       my $trim2file = get_trim_file($read2file, $extension);
-      print OUT "if [ ! -s $trim1file ]; then
+      print $out "if [ ! -s $trim1file ]; then
   mono-sgen $cqstools fastq_trimmer $option -i $read1file,$read2file -o $trim1file,$trim2file 
 fi
 ";
     }
 
-    print OUT "
+    print $out "
 echo finished=`date`
 
 exit 0 
 ";
-    close OUT;
+    close $out;
 
-    print "$pbsFile created \n";
+    print "$pbs_file created \n";
   }
 
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -93,7 +93,7 @@ exit 0
 
   print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->name() . " tasks.\n";
 
-  #`qsub $pbsFile`;
+  #`qsub $pbs_file`;
 }
 
 sub get_trim_file {
@@ -110,28 +110,28 @@ sub get_trim_file {
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $extension = get_option( $config, $section, "extension" );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
-  for my $sampleName ( keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my @resultFiles = ();
+  for my $sample_name ( keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$sample_name} };
+    my @result_files = ();
 
-    if ( scalar(@sampleFiles) == 1 ) {
-      my $trimFile = get_trim_file($sampleFiles[0], $extension);
-      push( @resultFiles, "${resultDir}/${trimFile}" );
+    if ( scalar(@sample_files) == 1 ) {
+      my $trimFile = get_trim_file($sample_files[0], $extension);
+      push( @result_files, "${result_dir}/${trimFile}" );
     }
     else {
-      my $trim1file = get_trim_file($sampleFiles[0], $extension);
-      my $trim2file = get_trim_file($sampleFiles[1], $extension);
-      push( @resultFiles, "${resultDir}/${trim1file}" );
-      push( @resultFiles, "${resultDir}/${trim2file}" );
+      my $trim1file = get_trim_file($sample_files[0], $extension);
+      my $trim2file = get_trim_file($sample_files[1], $extension);
+      push( @result_files, "${result_dir}/${trim1file}" );
+      push( @result_files, "${result_dir}/${trim2file}" );
     }
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

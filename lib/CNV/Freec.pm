@@ -38,7 +38,7 @@ sub perform {
 sub performBAM {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $chrLenFile             = $config->{$section}{chrLenFile}             or die "define ${section}::chrLenFile first";
   my $chrFiles               = $config->{$section}{chrFiles}               or die "define ${section}::chrFiles first, it is the path of directory contains chromosome fasta files";
@@ -47,69 +47,63 @@ sub performBAM {
   my $inputFormat            = $config->{$section}{inputFormat}            or die "define ${section}::inputFormat first";
 
   my $mateOrientation = $config->{$section}{mateOrientation};
-  if(!defined $mateOrientation){
+  if ( !defined $mateOrientation ) {
     die "define ${section}::mateOrientation first";    #0 (for single ends), RF (Illumina mate-pairs), FR (Illumina paired-ends), FF (SOLiD mate-pairs)
   }
 
   my $bedfile = parse_param_file( $config, $section, "bedfile", 0 );
 
-  my $rawFiles = get_raw_files( $config, $section );
+  my $raw_files = get_raw_files( $config, $section );
   my $groups;
   if ( defined $config->{$section}{"groups"} ) {
     $groups = get_raw_files( $config, $section, "groups" );
   }
   else {
     $groups = {};
-    for my $sampleName ( sort keys %{$rawFiles} ) {
-      $groups->{$sampleName} = [$sampleName];
+    for my $sample_name ( sort keys %{$raw_files} ) {
+      $groups->{$sample_name} = [$sample_name];
     }
   }
 
-  my $shfile = $pbsDir . "/${task_name}.sh";
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
+  my $shfile = $pbs_dir . "/${task_name}.sh";
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
 
-  for my $groupName ( sort keys %{$groups} ) {
-    my @samples = @{ $groups->{$groupName} };
-    my $bamFile1;
-    my $bamFile2;
+  for my $group_name ( sort keys %{$groups} ) {
+    my @samples = @{ $groups->{$group_name} };
+    my $bam_file1;
+    my $bam_file2;
     if ( scalar(@samples) > 1 ) {
-      $bamFile2 = $rawFiles->{ $samples[0] }[0];    #control
-      $bamFile1 = $rawFiles->{ $samples[1] }[0];    #sample
+      $bam_file2 = $raw_files->{ $samples[0] }[0];    #control
+      $bam_file1 = $raw_files->{ $samples[1] }[0];    #sample
     }
     else {
-      $bamFile1 = $rawFiles->{ $samples[0] }[0];    #sample
+      $bam_file1 = $raw_files->{ $samples[0] }[0];    #sample
     }
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $groupName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $group_name );
 
-    print SH "\$MYCMD ./$pbsName \n";
-    my $curDir     = create_directory_or_die( $resultDir . "/$groupName" );
-    my $configName = "${groupName}.conf";
-    my $configFile = ${curDir} . "/$configName";
+    print $sh "\$MYCMD ./$pbs_name \n";
+    my $cur_dir    = create_directory_or_die( $result_dir . "/$group_name" );
+    my $configName = "${group_name}.conf";
+    my $configFile = ${cur_dir} . "/$configName";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc   = $cluster->get_log_description($log);
+    my $final_file = "${task_name}.call";
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-$path_file
-
-cd $curDir
-
-echo freec_start=`date`
+    print $pbs "   
 freec -conf $configName 
-echo freec_end=`date`
 ";
-    close OUT;
-    print "$pbsFile created\n";
 
-    open( CON, ">$configFile" ) or die $!;
+    $self->close_pbs( $pbs, $pbs_file );
 
-    print CON "[general] 
+    open( my $con, ">$configFile" ) or die $!;
+
+    print $con "[general] 
 chrLenFile=$chrLenFile 
 ploidy=$ploidy 
 coefficientOfVariation=$coefficientOfVariation 
@@ -117,14 +111,14 @@ chrFiles=$chrFiles
 BedGraphOutput=TRUE
 
 [sample]
-mateFile=$bamFile1 
+mateFile=$bam_file1 
 inputFormat=$inputFormat 
 mateOrientation=$mateOrientation 
 
 ";
-    if ( defined $bamFile2 ) {
-      print CON "[control] 
-mateFile=$bamFile2 
+    if ( defined $bam_file2 ) {
+      print $con "[control] 
+mateFile=$bam_file2 
 inputFormat=$inputFormat 
 mateOrientation=$mateOrientation 
 
@@ -132,15 +126,15 @@ mateOrientation=$mateOrientation
     }
 
     if ( defined $bedfile ) {
-      print CON "[target]
+      print $con "[target]
 captureRegions = $bedfile
 
 ";
     }
 
-    close(CON);
+    close $con;
   }
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -152,7 +146,7 @@ captureRegions = $bedfile
 sub performPileup {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $chrLenFile             = $config->{$section}{chrLenFile}             or die "define ${section}::chrLenFile first";
   my $chrFiles               = $config->{$section}{chrFiles}               or die "define ${section}::chrFiles first, it is the path of directory contains chromosome fasta files";
@@ -168,76 +162,67 @@ sub performPileup {
 
   my $fastaFile = parse_param_file( $config, $section, "fasta_file", 1 );
 
-  my $rawFiles = get_raw_files( $config, $section );
-  my $groups   = get_raw_files( $config, $section, "groups" );
+  my $raw_files = get_raw_files( $config, $section );
+  my $groups = get_raw_files( $config, $section, "groups" );
 
-  my $shfile = $pbsDir . "/${task_name}.sh";
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $pbs_dir . "/${task_name}.sh";
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
-  for my $groupName ( sort keys %{$groups} ) {
-    my @samples = @{ $groups->{$groupName} };
-    my $bamFile1;
-    my $bamFile2;
+  for my $group_name ( sort keys %{$groups} ) {
+    my @samples = @{ $groups->{$group_name} };
+    my $bam_file1;
+    my $bam_file2;
     my $pileup1;
     my $pileup2;
     if ( scalar(@samples) > 1 ) {
-      $bamFile2 = $rawFiles->{ $samples[0] }[0];    #control
-      $pileup2  = $samples[0] . ".pileup.gz";
-      $bamFile1 = $rawFiles->{ $samples[1] }[0];    #sample
-      $pileup1  = $samples[1] . ".pileup.gz";
+      $bam_file2 = $raw_files->{ $samples[0] }[0];    #control
+      $pileup2   = $samples[0] . ".pileup.gz";
+      $bam_file1 = $raw_files->{ $samples[1] }[0];    #sample
+      $pileup1   = $samples[1] . ".pileup.gz";
     }
     else {
-      $bamFile1 = $rawFiles->{ $samples[0] }[0];    #sample
-      $pileup1  = $samples[0] . ".pileup.gz";
+      $bam_file1 = $raw_files->{ $samples[0] }[0];    #sample
+      $pileup1   = $samples[0] . ".pileup.gz";
     }
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $groupName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $group_name );
 
-    print SH "\$MYCMD ./$pbsName \n";
-    my $curDir     = create_directory_or_die( $resultDir . "/$groupName" );
-    my $configName = "${groupName}.conf";
-    my $configFile = ${curDir} . "/$configName";
+    print $sh "\$MYCMD ./$pbs_name \n";
+    my $cur_dir    = create_directory_or_die( $result_dir . "/$group_name" );
+    my $configName = "${group_name}.conf";
+    my $configFile = ${cur_dir} . "/$configName";
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
-#PBS -o $log
-#PBS -j oe
+    my $log_desc   = $cluster->get_log_description($log);
+    my $final_file = "${task_name}.call";
 
-$path_file
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-cd $curDir
-
-echo freec_start=`date`
-";
-
-    print OUT "
+    print $pbs "
 if [ ! -s $pileup1 ]; then
-  samtools mpileup -A -f $fastaFile $bamFile1 | gzip > $pileup1
+  samtools mpileup -A -f $fastaFile $bam_file1 | gzip > $pileup1
 fi
 ";
 
     if ( defined $pileup2 ) {
-      print OUT "
+      print $pbs "
 if [ ! -s $pileup2 ]; then
-  samtools mpileup -A -f $fastaFile $bamFile2 | gzip > $pileup2
+  samtools mpileup -A -f $fastaFile $bam_file2 | gzip > $pileup2
 fi
 ";
     }
 
-    print OUT "
+    print $pbs "
 freec -conf $configName 
-
-echo freec_end=`date`
 ";
-    close OUT;
-    print "$pbsFile created\n";
 
-    open( CON, ">$configFile" ) or die $!;
+    $self->close_pbs( $pbs, $pbs_file );
 
-    print CON "[general] 
+    open( my $con, ">$configFile" ) or die $!;
+
+    print $con "[general] 
 chrLenFile=$chrLenFile 
 ploidy=$ploidy 
 coefficientOfVariation=$coefficientOfVariation 
@@ -250,8 +235,8 @@ inputFormat=pileup
 mateOrientation=$mateOrientation 
 
 ";
-    if ( defined $bamFile2 ) {
-      print CON "[control] 
+    if ( defined $bam_file2 ) {
+      print $con "[control] 
 mateFile=$pileup2 
 inputFormat=pileup 
 mateOrientation=$mateOrientation 
@@ -260,18 +245,18 @@ mateOrientation=$mateOrientation
     }
 
     if ( defined $bedfile ) {
-      print CON "[target]
+      print $con "[target]
 captureRegions = $bedfile
 
 ";
     }
 
-    print CON "[BAF]
+    print $con "[BAF]
 SNPfile = $snpFile
 ";
-    close(CON);
+    close($con);
   }
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -283,11 +268,11 @@ SNPfile = $snpFile
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $groups = get_raw_files( $config, $section, "groups" );
 
-  my $result = { $task_name => [ $resultDir . "/${task_name}.call" ] };
+  my $result = { $task_name => [ $result_dir . "/${task_name}.call" ] };
 
   return $result;
 }

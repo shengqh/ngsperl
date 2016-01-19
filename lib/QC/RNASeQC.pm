@@ -17,7 +17,7 @@ our @ISA = qw(CQS::UniqueTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "RNASeQC";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_qc";
   bless $self, $class;
   return $self;
@@ -26,44 +26,44 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $faFile         = get_param_file( $config->{$section}{fasta_file},     "fasta_file",     1 );
   my $jar            = get_param_file( $config->{$section}{jar},            "jar",            1 );
   my $transcript_gtf = get_param_file( $config->{$section}{transcript_gtf}, "transcript_gtf", 1 );
   my $sorted = get_option_value($config->{$section}{sorted}, 1);
 
-  my $rawfiles = get_raw_files( $config, $section );
+  my $raw_files = get_raw_files( $config, $section );
 
-  my $mapfile = $resultDir . "/${task_name}_sample.list";
+  my $mapfile = $result_dir . "/${task_name}_sample.list";
   open( MAP, ">$mapfile" ) or die "Cannot create $mapfile";
-  print MAP "SampleID\tBamFile\tNotes\n";
-  for my $sampleName ( sort keys %{$rawfiles} ) {
-    my @bamFiles = @{ $rawfiles->{$sampleName} };
-    for my $bam (@bamFiles) {
-      print MAP $sampleName, "\t", $bam, "\t", $sampleName, "\n";
+  print MAP "SampleID\tbam_file\tNotes\n";
+  for my $sample_name ( sort keys %{$raw_files} ) {
+    my @bam_files = @{ $raw_files->{$sample_name} };
+    for my $bam (@bam_files) {
+      print MAP $sample_name, "\t", $bam, "\t", $sample_name, "\n";
     }
   }
   close(MAP);
 
-  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
-  my $pbsName = basename($pbsFile);
-  my $log     = $self->logfile( $logDir, $task_name );
+  my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
+  my $pbs_name = basename($pbs_file);
+  my $log     = $self->get_log_filename( $log_dir, $task_name );
 
-  my $log_desc = $cluster->get_log_desc($log);
+  my $log_desc = $cluster->get_log_description($log);
 
-  open( OUT, ">$pbsFile" ) or die $!;
-  print OUT "$pbsDesc
+  open( my $out, ">$pbs_file" ) or die $!;
+  print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $resultDir
+cd $result_dir
 
 echo RNASeQC=`date`
 
 if [ -s metrics.tsv ]; then
-  echo job has already been done. if you want to do again, delete ${resultDir}/metrics.tsv and submit job again.
+  echo job has already been done. if you want to do again, delete ${result_dir}/metrics.tsv and submit job again.
   exit 0;
 fi
 
@@ -78,20 +78,20 @@ echo finished=`date`
 
 exit 0
 ";
-  close(OUT);
+  close $out;
 
-  print "$pbsFile created. \n";
+  print "$pbs_file created. \n";
 }
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $result      = {};
-  my @resultFiles = ();
-  push( @resultFiles, $resultDir . "/metrics.tsv" );
-  $result->{$task_name} = filter_array( \@resultFiles, $pattern );
+  my @result_files = ();
+  push( @result_files, $result_dir . "/metrics.tsv" );
+  $result->{$task_name} = filter_array( \@result_files, $pattern );
 
   return $result;
 }

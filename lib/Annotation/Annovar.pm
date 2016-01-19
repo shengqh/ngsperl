@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "Annovar";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_ann";
   bless $self, $class;
   return $self;
@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $buildver = $config->{$section}{buildver} or die "buildver is not defined in $section";
   $option = "-buildver $buildver $option";
@@ -40,39 +40,32 @@ sub perform {
   my $cqstools = get_cqstools( $config, $section, 0 );
   my $affyFile = get_param_file( $config->{$section}{affy_file}, "affy_file", 0 );
 
-  my $rawFiles = get_raw_files( $config, $section );
+  my $raw_files = get_raw_files( $config, $section );
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
-  my $listfile = $self->getfile( $resultDir, $task_name, ".list", 0 );
-  open( LT, ">$listfile" ) or die "Cannot create $listfile";
+  my $listfile = $self->get_file( $result_dir, $task_name, ".list", 0 );
+  open( my $lt, ">$listfile" ) or die "Cannot create $listfile";
 
-  for my $sampleName ( sort keys %{$rawFiles} ) {
-    my @sampleFiles = @{ $rawFiles->{$sampleName} };
+  for my $sample_name ( sort keys %{$raw_files} ) {
+    my @sample_files = @{ $raw_files->{$sample_name} };
 
-    my $pbsFile = $self->pbsfile($pbsDir, $sampleName);
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log_file = $self->get_log_filename( $log_dir, $sample_name );
 
-    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log_file);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
 
-$path_file
-
-cd $curDir
-";
-
-    for my $sampleFile (@sampleFiles) {
+    for my $sampleFile (@sample_files) {
       my ( $filename, $dir ) = fileparse($sampleFile);
 
-      if ( $dir eq $curDir ) {
+      if ( $dir eq $cur_dir ) {
         $sampleFile = $filename;
       }
 
@@ -92,7 +85,7 @@ cd $curDir
         $vcf       = "";
       }
 
-      print OUT "
+      print $pbs "
 if [[ ! -s $result && ! -s $final ]]; then 
   $vcf
   table_annovar.pl $passinput $annovarDB $option --outfile $annovar --remove
@@ -110,7 +103,7 @@ fi
 
       if ( defined $cqstools ) {
         my $affyoption = defined($affyFile) ? "-a $affyFile" : "";
-        print OUT "
+        print $pbs "
 if [ -s $final ]; then
   rm $passinput $result
 fi
@@ -120,25 +113,20 @@ if [[ -s $final && ! -s $excel ]]; then
 fi
 ";
       }
-      
-      print LT "${curDir}/${result}\n";
+
+      print $lt "${cur_dir}/${result}\n";
     }
-    print OUT "
-echo finished=`date`
+    $self->close_pbs($pbs);
 
-exit 0
-";
-    close(OUT);
+    print "$pbs_file created. \n";
 
-    print "$pbsFile created. \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    print SH "\$MYCMD ./$pbsName \n";
-    
   }
-  close(LT);
+  close $lt;
 
-  print SH "exit 0\n";
-  close(SH);
+  print $sh "exit 0\n";
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -149,28 +137,28 @@ exit 0
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $buildver = $config->{$section}{buildver} or die "buildver is not defined in $section";
-  my $rawFiles = get_raw_files( $config, $section );
+  my $raw_files = get_raw_files( $config, $section );
   my $cqstools = get_cqstools( $config, $section, 0 );
 
   my $result = {};
-  for my $sampleName ( sort keys %{$rawFiles} ) {
-    my @sampleFiles = @{ $rawFiles->{$sampleName} };
-    my $curDir      = $resultDir . "/$sampleName";
-    my @resultFiles = ();
-    for my $sampleFile (@sampleFiles) {
+  for my $sample_name ( sort keys %{$raw_files} ) {
+    my @sample_files = @{ $raw_files->{$sample_name} };
+    my $cur_dir      = $result_dir . "/$sample_name";
+    my @result_files = ();
+    for my $sampleFile (@sample_files) {
       my $annovar = change_extension( $sampleFile, ".annovar" );
       my $final   = $annovar . ".final.txt";
       my $result  = "${annovar}.${buildver}_multianno.txt";
       if ( defined $cqstools ) {
         my $excel = $final . ".xls";
-        push( @resultFiles, $curDir . "/$excel" );
+        push( @result_files, $cur_dir . "/$excel" );
       }
-      push( @resultFiles, $curDir . "/$final" );
+      push( @result_files, $cur_dir . "/$final" );
     }
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

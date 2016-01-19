@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Cufflinks";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_clinks";
   bless $self, $class;
   return $self;
@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $transcript_gtf = get_param_file( $config->{$section}{transcript_gtf}, "transcript_gtf", 0 );
   my $gtf = "";
@@ -36,30 +36,30 @@ sub perform {
 
   my %tophat2map = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
 
-  for my $sampleName ( sort keys %tophat2map ) {
-    my @tophat2Files = @{ $tophat2map{$sampleName} };
+  for my $sample_name ( sort keys %tophat2map ) {
+    my @tophat2Files = @{ $tophat2map{$sample_name} };
     my $tophat2File  = $tophat2Files[0];
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
-    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
+    open( my $out, ">$pbs_file" ) or die $!;
+    print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $curDir
+cd $cur_dir
 
 if [ -s transcripts.gtf ];then
-  echo job has already been done. if you want to do again, delete ${curDir}/transcripts.gtf and submit job again.
+  echo job has already been done. if you want to do again, delete ${cur_dir}/transcripts.gtf and submit job again.
   exit 0;
 fi
 
@@ -72,15 +72,15 @@ echo finished=`date`
 exit 0
 ";
 
-    close(OUT);
+    close $out;
 
-    print "$pbsFile created. \n";
+    print "$pbs_file created. \n";
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
   }
 
-  print SH "exit 0\n";
-  close(SH);
+  print $sh "exit 0\n";
+  close $sh;
   if ( is_linux() ) {
     chmod 0755, $shfile;
   }
@@ -90,17 +90,17 @@ exit 0
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %tophat2map = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
-  for my $sampleName ( sort keys %tophat2map ) {
-    my $curDir      = $resultDir . "/$sampleName";
-    my @resultFiles = ();
-    push( @resultFiles, $curDir . "/transcripts.gtf" );
+  for my $sample_name ( sort keys %tophat2map ) {
+    my $cur_dir      = $result_dir . "/$sample_name";
+    my @result_files = ();
+    push( @result_files, $cur_dir . "/transcripts.gtf" );
 
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

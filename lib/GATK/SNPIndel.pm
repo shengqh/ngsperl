@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "GATK::SNPIndel";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_snv";
   bless $self, $class;
   return $self;
@@ -26,23 +26,23 @@ sub new {
 sub getGroupSampleMap {
   my ( $config, $section ) = @_;
 
-  my $rawFiles = get_raw_files( $config, $section );
+  my $raw_files = get_raw_files( $config, $section );
   my %group_sample_map = ();
   if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
     my $groups = get_raw_files( $config, $section, "groups" );
-    for my $groupName ( sort keys %{$groups} ) {
-      my @samples = @{ $groups->{$groupName} };
+    for my $group_name ( sort keys %{$groups} ) {
+      my @samples = @{ $groups->{$group_name} };
       my @gfiles  = ();
       my $index   = 0;
-      foreach my $sampleName (@samples) {
-        my @bamFiles = @{ $rawFiles->{$sampleName} };
-        push( @gfiles, $bamFiles[0] );
+      foreach my $sample_name (@samples) {
+        my @bam_files = @{ $raw_files->{$sample_name} };
+        push( @gfiles, $bam_files[0] );
       }
-      $group_sample_map{$groupName} = \@gfiles;
+      $group_sample_map{$group_name} = \@gfiles;
     }
   }
   else {
-    %group_sample_map = %{$rawFiles};
+    %group_sample_map = %{$raw_files};
   }
 
   return ( \%group_sample_map );
@@ -51,7 +51,7 @@ sub getGroupSampleMap {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my $faFile   = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
@@ -79,48 +79,48 @@ sub perform {
     $java_option = "";
   }
 
-  my %bamFiles = %{ get_raw_files( $config, $section ) };
+  my %bam_files = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct) . "\n";
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct) . "\n";
 
-  #print SH "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
+  #print $sh "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
 
-  for my $sampleName ( sort keys %bamFiles ) {
-    my @sampleFiles = @{ $bamFiles{$sampleName} };
-    my $bamFile     = $sampleFiles[0];
+  for my $sample_name ( sort keys %bam_files ) {
+    my @sample_files = @{ $bam_files{$sample_name} };
+    my $bam_file     = $sample_files[0];
 
-    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
-    my $snvOut  = $sampleName . "_snv.vcf";
-    my $snvStat = $sampleName . "_snv.stat";
+    my $snvOut  = $sample_name . "_snv.vcf";
+    my $snvStat = $sample_name . "_snv.stat";
 
-    my $snpOut       = $sampleName . "_snp.vcf";
-    my $snpStat      = $sampleName . "_snp.stat";
-    my $snpFilterOut = $sampleName . "_snp_filtered.vcf";
-    my $snpPass      = $sampleName . "_snp_filtered.pass.vcf";
+    my $snpOut       = $sample_name . "_snp.vcf";
+    my $snpStat      = $sample_name . "_snp.stat";
+    my $snpFilterOut = $sample_name . "_snp_filtered.vcf";
+    my $snpPass      = $sample_name . "_snp_filtered.pass.vcf";
 
-    my $indelOut       = $sampleName . "_indel.vcf";
-    my $indelStat      = $sampleName . "_indel.stat";
-    my $indelFilterOut = $sampleName . "_indel_filtered.vcf";
-    my $indelPass      = $sampleName . "_indel_filtered.pass.vcf";
+    my $indelOut       = $sample_name . "_indel.vcf";
+    my $indelStat      = $sample_name . "_indel.stat";
+    my $indelFilterOut = $sample_name . "_indel_filtered.vcf";
+    my $indelPass      = $sample_name . "_indel_filtered.pass.vcf";
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $sample_name );
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
+    open( my $out, ">$pbs_file" ) or die $!;
+    print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $curDir
+cd $cur_dir
 
 echo SNP=`date` 
 
@@ -132,7 +132,7 @@ if [[ -s $snpOut && ! -s $indelOut ]]; then
 fi
 
 if [ ! -s $snvOut ]; then
-  java $java_option -jar $gatk_jar -T HaplotypeCaller $option --genotyping_mode DISCOVERY -dontUseSoftClippedBases $call_option -R $faFile -I $bamFile -D $dbsnp $compvcf --out $snvOut -nct $thread 
+  java $java_option -jar $gatk_jar -T HaplotypeCaller $option --genotyping_mode DISCOVERY -dontUseSoftClippedBases $call_option -R $faFile -I $bam_file -D $dbsnp $compvcf --out $snvOut -nct $thread 
 fi
 
 if [ -s $snvOut ]; then
@@ -147,10 +147,10 @@ fi
 
 echo finished=`date`
 ";
-    close OUT;
-    print "$pbsFile created\n";
+    close $out;
+    print "$pbs_file created\n";
   }
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -161,38 +161,38 @@ echo finished=`date`
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
   my $result = {};
 
-  my %bamFiles = %{ get_raw_files( $config, $section ) };
-  for my $sampleName ( sort keys %bamFiles ) {
-    my $curDir      = $resultDir . "/$sampleName";
-    my $snpPass     = $sampleName . "_snp_filtered.pass.vcf";
-    my $indelPass   = $sampleName . "_indel_filtered.pass.vcf";
-    my @resultFiles = ();
-    push( @resultFiles, "${curDir}/${snpPass}" );
-    push( @resultFiles, "${curDir}/${indelPass}" );
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+  my %bam_files = %{ get_raw_files( $config, $section ) };
+  for my $sample_name ( sort keys %bam_files ) {
+    my $cur_dir      = $result_dir . "/$sample_name";
+    my $snpPass     = $sample_name . "_snp_filtered.pass.vcf";
+    my $indelPass   = $sample_name . "_indel_filtered.pass.vcf";
+    my @result_files = ();
+    push( @result_files, "${cur_dir}/${snpPass}" );
+    push( @result_files, "${cur_dir}/${indelPass}" );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }
 
-sub pbsfiles {
+sub get_pbs_files {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $result = {};
   if ( $self->{_pbskey} eq "" ) {
-    $result->{$task_name} = $self->pbsfile( $pbsDir, $task_name );
+    $result->{$task_name} = $self->get_pbs_filename( $pbs_dir, $task_name );
   }
   else {
     my %group_sample_map = %{ getGroupSampleMap( $config, $section ) };
 
-    for my $sampleName ( sort keys %group_sample_map ) {
-      my @resultFiles = ();
-      push( @resultFiles, $self->pbsfile( $pbsDir, $sampleName ) );
-      $result->{$sampleName} = \@resultFiles;
+    for my $sample_name ( sort keys %group_sample_map ) {
+      my @result_files = ();
+      push( @result_files, $self->get_pbs_filename( $pbs_dir, $sample_name ) );
+      $result->{$sample_name} = \@result_files;
     }
   }
 

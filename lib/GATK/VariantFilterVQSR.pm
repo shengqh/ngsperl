@@ -17,7 +17,7 @@ our @ISA = qw(CQS::UniqueTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "VariantFilterVQSR";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_vf";
   bless $self, $class;
   return $self;
@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my $dbsnp  = get_param_file( $config->{$section}{dbsnp_vcf},  "dbsnp_vcf",  1 );
   my $hapmap = get_param_file( $config->{$section}{hapmap_vcf}, "hapmap_vcf", 0 );
@@ -34,7 +34,7 @@ sub perform {
   my $g1000  = get_param_file( $config->{$section}{g1000_vcf},  "g1000_vcf",  0 );
   my $mills  = get_param_file( $config->{$section}{mills_vcf},  "mills_vcf",  0 );
 
-  my $cqsFile = get_cqstools( $config, $section, 1 );
+  my $cqstools = get_cqstools( $config, $section, 1 );
 
   my $faFile   = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
@@ -48,9 +48,9 @@ sub perform {
 
   my %gvcfFiles = %{ get_raw_files( $config, $section ) };
 
-  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
-  my $pbsName = basename($pbsFile);
-  my $log     = $self->logfile( $logDir, $task_name );
+  my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
+  my $pbs_name = basename($pbs_file);
+  my $log     = $self->get_log_filename( $log_dir, $task_name );
 
   my $merged_file = $task_name . ".vcf";
   
@@ -68,15 +68,15 @@ sub perform {
   my $snpPass   = $dpname . ".snp.pass.vcf";
   my $indelPass = $dpname . ".indel.pass.vcf";
 
-  my $log_desc = $cluster->get_log_desc($log);
+  my $log_desc = $cluster->get_log_description($log);
 
-  open( OUT, ">$pbsFile" ) or die $!;
-  print OUT "$pbsDesc
+  open( my $out, ">$pbs_file" ) or die $!;
+  print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $resultDir
+cd $result_dir
 
 echo VariantFilterVQSR=`date` 
 
@@ -85,19 +85,19 @@ if [ ! -s $merged_file ]; then
   java $java_option -jar $gatk_jar -T GenotypeGVCFs $option -nt $thread -D $dbsnp -R $faFile \\
 ";
 
-  for my $sampleName ( sort keys %gvcfFiles ) {
-    my @sampleFiles = @{ $gvcfFiles{$sampleName} };
-    my $gvcfFile    = $sampleFiles[0];
-    print OUT "    --variant $gvcfFile \\\n";
+  for my $sample_name ( sort keys %gvcfFiles ) {
+    my @sample_files = @{ $gvcfFiles{$sample_name} };
+    my $gvcfFile    = $sample_files[0];
+    print $out "    --variant $gvcfFile \\\n";
   }
 
-  print OUT "  -o $merged_file
+  print $out "  -o $merged_file
 fi
 ";
-  print OUT "
+  print $out "
 if [ ! -s $dpFilterOut ]; then
   echo VCF_MinimumMedianDepth_Filter=`date` 
-  mono $cqsFile vcf_filter -i $merged_file -o $dpFilterOut -d $min_median_depth
+  mono $cqstools vcf_filter -i $merged_file -o $dpFilterOut -d $min_median_depth
 fi 
 
 if [[ -s $dpFilterOut && ! -s $snpOut ]]; then
@@ -107,7 +107,7 @@ fi
 ";
 
   if ( $hapmap || $omni ) {
-    print OUT "
+    print $out "
 if [[ -s $snpOut && ! -s $snpCal ]]; then
   echo VariantRecalibratorSNP=`date` 
   java $java_option -jar $gatk_jar \\
@@ -117,18 +117,18 @@ if [[ -s $snpOut && ! -s $snpCal ]]; then
 ";
 
     if ($hapmap) {
-      print OUT "    -resource:hapmap,known=false,training=true,truth=true,prior=15.0 $hapmap \\\n";
+      print $out "    -resource:hapmap,known=false,training=true,truth=true,prior=15.0 $hapmap \\\n";
     }
 
     if ($omni) {
-      print OUT "    -resource:omni,known=false,training=true,truth=true,prior=12.0 $omni \\\n";
+      print $out "    -resource:omni,known=false,training=true,truth=true,prior=12.0 $omni \\\n";
     }
 
     if ($g1000) {
-      print OUT "    -resource:1000G,known=false,training=true,truth=false,prior=10.0 $g1000 \\\n";
+      print $out "    -resource:1000G,known=false,training=true,truth=false,prior=10.0 $g1000 \\\n";
     }
 
-    print OUT "    -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 $dbsnp \\
+    print $out "    -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 $dbsnp \\
     -an DP \\
     -an QD \\
     -an FS \\
@@ -164,7 +164,7 @@ fi
       ? "-window 35 -cluster 3 -filterName FS -filter \"FS > 30.0\" -filterName QD -filter \"QD < 2.0\""
       : "--filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" -filterName \"snp_filter\"";
 
-    print OUT "
+    print $out "
 if [[ -s $snpOut && ! -s $snpPass ]]; then
   java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $snpOut $snp_filter -o $snpFilterOut 
   cat $snpFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $snpPass
@@ -173,7 +173,7 @@ fi
   }
 
   if ($mills) {
-    print OUT "
+    print $out "
 if [[ -s $indelOut && ! -s $indelCal ]]; then
   echo VariantRecalibratorIndel=`date` 
   java $java_option -jar $gatk_jar \\
@@ -214,27 +214,27 @@ fi
     my $indel_filter =
       ( get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3" : "" ) . " --filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\" -filterName \"indel_filter\"";
 
-    print OUT "
+    print $out "
 if [[ -s $indelOut && ! -s $snpPass ]]; then
   java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $indelOut $indel_filter -o $indelFilterOut 
   cat $indelFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $indelPass
 fi
 "
   }
-  print OUT "
+  print $out "
 echo finished=`date`
 
 exit 0
 ";
-  close(OUT);
+  close $out;
 
-  print "$pbsFile created\n";
+  print "$pbs_file created\n";
 }
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $min_median_depth = get_option( $config, $section, "min_median_depth", 3 );
   my $dpname = $task_name . ".median" . $min_median_depth;
@@ -242,12 +242,12 @@ sub result {
   my $snpPass   = $dpname . ".snp.pass.vcf";
   my $indelPass = $dpname . ".indel.pass.vcf";
 
-  my @resultFiles = ();
-  push( @resultFiles, $resultDir . "/" . $snpPass );
-  push( @resultFiles, $resultDir . "/" . $indelPass );
+  my @result_files = ();
+  push( @result_files, $result_dir . "/" . $snpPass );
+  push( @result_files, $result_dir . "/" . $indelPass );
 
   my $result = {};
-  $result->{$task_name} = filter_array( \@resultFiles, $pattern );
+  $result->{$task_name} = filter_array( \@result_files, $pattern );
 
   return $result;
 }

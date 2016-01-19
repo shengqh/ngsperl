@@ -17,7 +17,7 @@ our @ISA = qw(CQS::GroupTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "GlmvcCall";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_gc";
   bless $self, $class;
   return $self;
@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $glmvcfile = get_param_file( $config->{$section}{execute_file}, "execute_file", 1 );
   my $source_type = $config->{$section}{source_type} or die "source_type is not defined in $section";
@@ -63,7 +63,7 @@ sub perform {
 
   my $anno = defined $rnaediting_db || defined $annovar_buildver || defined $annovar_buildver;
 
-  my $rawFiles = get_raw_files( $config, $section );
+  my $raw_files = get_raw_files( $config, $section );
 
   my %group_sample_map = ();
 
@@ -80,72 +80,72 @@ sub perform {
     }
 
     my $groups = get_raw_files( $config, $section, "groups" );
-    for my $groupName ( sort keys %{$groups} ) {
-      my @samples = @{ $groups->{$groupName} };
+    for my $group_name ( sort keys %{$groups} ) {
+      my @samples = @{ $groups->{$group_name} };
       my @gfiles  = ();
       my $index   = 0;
-      foreach my $sampleName (@samples) {
-        my @bamFiles = @{ $rawFiles->{$sampleName} };
-        push( @gfiles, $bamFiles[0] );
+      foreach my $sample_name (@samples) {
+        my @bam_files = @{ $raw_files->{$sample_name} };
+        push( @gfiles, $bam_files[0] );
       }
-      $group_sample_map{$groupName} = \@gfiles;
+      $group_sample_map{$group_name} = \@gfiles;
     }
   }
   else {
-    %group_sample_map = %{$rawFiles};
+    %group_sample_map = %{$raw_files};
   }
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct) . "\n";
-  print SH "cd $pbsDir \n";
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct) . "\n";
+  print $sh "cd $pbs_dir \n";
 
-  for my $groupName ( sort keys %group_sample_map ) {
-    my @sampleFiles = @{ $group_sample_map{$groupName} };
-    my $sampleCount = scalar(@sampleFiles);
-    my $curDir      = create_directory_or_die( $resultDir . "/$groupName" );
+  for my $group_name ( sort keys %group_sample_map ) {
+    my @sample_files = @{ $group_sample_map{$group_name} };
+    my $sampleCount = scalar(@sample_files);
+    my $cur_dir      = create_directory_or_die( $result_dir . "/$group_name" );
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $groupName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $group_name );
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
+    open( my $out, ">$pbs_file" ) or die $!;
+    print $out "$pbs_desc
 $log_desc
 
 $path_file 
 
 echo Glmvc=`date` 
 
-cd $curDir
+cd $cur_dir
 ";
 
-    my $finalvcf = "${groupName}.vcf";
+    my $finalvcf = "${group_name}.vcf";
 
     if ($isbam) {
       if ( $sampleCount != 2 ) {
         die "SampleFile should be normal,tumor paired.";
       }
 
-      my $normal = $sampleFiles[0];
-      my $tumor  = $sampleFiles[1];
-      my $final  = $anno ? "${groupName}.annotation.tsv" : "${groupName}.tsv";
+      my $normal = $sample_files[0];
+      my $tumor  = $sample_files[1];
+      my $final  = $anno ? "${group_name}.annotation.tsv" : "${group_name}.tsv";
 
       my $cmd;
       if ( defined $mpileupParameter ) {
-        $cmd = "samtools mpileup -f $fafile $mpileupParameter $normal $tumor | mono-sgen $glmvcfile call -t console $option -o ${curDir}/${groupName}";
+        $cmd = "samtools mpileup -f $fafile $mpileupParameter $normal $tumor | mono-sgen $glmvcfile call -t console $option -o ${cur_dir}/${group_name}";
       }
       else {
-        $cmd = "mono-sgen $glmvcfile call -c $thread -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${curDir}/${groupName}";
+        $cmd = "mono-sgen $glmvcfile call -c $thread -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${cur_dir}/${group_name}";
       }
 
-      print OUT "
+      print $out "
 if [ -s $final ]; then
-  echo job has already been done. if you want to do again, delete ${curDir}/${final} and submit job again.
+  echo job has already been done. if you want to do again, delete ${cur_dir}/${final} and submit job again.
   exit 0;
 fi      
       
@@ -162,20 +162,20 @@ $cmd
 ";
     }
     else {
-      print OUT "mono-sgen $glmvcfile call -t mpileup -m $sampleFiles[0] $option -o ${curDir}/${groupName} \n";
+      print $out "mono-sgen $glmvcfile call -t mpileup -m $sample_files[0] $option -o ${cur_dir}/${group_name} \n";
     }
 
-    print OUT "grep -v \"^#\" $finalvcf | cut -f1 | uniq -c | awk '{print \$2\"\\t\"\$1}' > ${finalvcf}.chromosome 
+    print $out "grep -v \"^#\" $finalvcf | cut -f1 | uniq -c | awk '{print \$2\"\\t\"\$1}' > ${finalvcf}.chromosome 
     
 echo finished=`date`
 ";
 
-    close OUT;
+    close $out;
 
-    print "$pbsFile created \n";
+    print "$pbs_file created \n";
 
   }
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -187,7 +187,7 @@ echo finished=`date`
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $rnaediting_db     = get_directory( $config, $section, "rnaediting_db", 0 );
   my $annovar_buildver  = $config->{$section}{annovar_buildver};
@@ -197,31 +197,31 @@ sub result {
   my $groups = get_raw_files( $config, $section, "groups" );
 
   my $result = {};
-  for my $groupName ( keys %{$groups} ) {
-    my @resultFiles = ();
-    my $curDir      = $resultDir . "/$groupName";
-    push( @resultFiles, "$curDir/${groupName}.tsv" );
-    push( @resultFiles, "$curDir/${groupName}.vcf" );
+  for my $group_name ( keys %{$groups} ) {
+    my @result_files = ();
+    my $cur_dir      = $result_dir . "/$group_name";
+    push( @result_files, "$cur_dir/${group_name}.tsv" );
+    push( @result_files, "$cur_dir/${group_name}.vcf" );
     if ($anno) {
-      push( @resultFiles, "$curDir/${groupName}.annotation.tsv" );
+      push( @result_files, "$cur_dir/${group_name}.annotation.tsv" );
     }
-    $result->{$groupName} = filter_array( \@resultFiles, $pattern );
+    $result->{$group_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }
 
-sub pbsfiles {
+sub get_pbs_files {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $pairs = get_raw_files( $config, $section, "groups" );
 
   my $result = {};
-  for my $pairName ( sort keys %{$pairs} ) {
-    my $pbsName = $self->pbsname($pairName);
-    my $pbsFile = $pbsDir . "/$pbsName";
-    $result->{$pairName} = $pbsFile;
+  for my $pair_name ( sort keys %{$pairs} ) {
+    my $pbs_name = $self->pbs_name($pair_name);
+    my $pbs_file = $pbs_dir . "/$pbs_name";
+    $result->{$pair_name} = $pbs_file;
   }
   return $result;
 }

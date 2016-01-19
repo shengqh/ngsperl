@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Tophat2";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_th2";
   bless $self, $class;
   return $self;
@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   $option = $option . " --keep-fasta-order --no-coverage-search";
 
@@ -61,22 +61,20 @@ sub perform {
     }
   }
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
-  my $threadcount = get_pbs_thread( $config->{$section}{pbs} );
+  for my $sample_name ( sort keys %fqFiles ) {
+    my @sample_files = @{ $fqFiles{$sample_name} };
+    my $samples = join( " ", @sample_files );
 
-  for my $sampleName ( sort keys %fqFiles ) {
-    my @sampleFiles = @{ $fqFiles{$sampleName} };
-    my $samples = join( " ", @sampleFiles );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
-
-    my $curDir      = create_directory_or_die( $resultDir . "/$sampleName" );
-    my $rgline      = "--rg-id $sampleName --rg-sample $sampleName --rg-library $sampleName";
+    my $cur_dir     = create_directory_or_die( $result_dir . "/$sample_name" );
+    my $rgline      = "--rg-id $sample_name --rg-sample $sample_name --rg-library $sample_name";
     my $tophat2file = "accepted_hits.bam";
 
     my $gtfstr = "";
@@ -87,47 +85,33 @@ sub perform {
       $gtfstr = "--transcriptome-index=$transcript_gtf_index";
     }
 
-    my $final          = $rename_bam    ? "${sampleName}.bam"                                                                      : "accepted_hits.bam";
-    my $sort_cmd       = $sort_by_query ? "samtools sort -n -@ $threadcount accepted_hits.bam ${sampleName}.sortedname"            : "";
-    my $rename_bam_cmd = $rename_bam    ? "mv accepted_hits.bam ${sampleName}.bam\nmv accepted_hits.bam.bai ${sampleName}.bam.bai" : "";
+    my $final_file     = $rename_bam    ? "${sample_name}.bam"                                                                       : "accepted_hits.bam";
+    my $sort_cmd       = $sort_by_query ? "samtools sort -n -@ $thread accepted_hits.bam ${sample_name}.sortedname"                  : "";
+    my $rename_bam_cmd = $rename_bam    ? "mv accepted_hits.bam ${sample_name}.bam\nmv accepted_hits.bam.bai ${sample_name}.bam.bai" : "";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-$path_file
-
-cd $curDir 
-
-if [ -s $final ]; then
-  echo job has already been done. if you want to do again, delete ${curDir}/${final} and submit job again.
-  exit 0;
-fi
-
-echo tophat2_start=`date` 
-
+    print $pbs "
 tophat2 $option $rgline $gtfstr -o . $bowtie2_index $samples
 
-samtools index $tophat2file
-
-$sort_cmd
-
-$rename_bam_cmd
-
-samtools flagstat $final > ${final}.stat 
-
-echo finished=`date` 
-
+if [ -s $tophat2file ]; then
+  samtools index $tophat2file
+  $sort_cmd
+  $rename_bam_cmd
+  samtools flagstat $final_file > ${final_file}.stat
+fi 
+   
 ";
-    close(OUT);
 
-    print SH "\$MYCMD ./$pbsName \n";
-    print "$pbsFile created\n";
+    $self->close_pbs($pbs);
+
+    print $sh "\$MYCMD ./$pbs_name \n";
+    print "$pbs_file created\n";
   }
-  print SH "exit 0\n";
-  close(SH);
+  print $sh "exit 0\n";
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -139,26 +123,26 @@ echo finished=`date`
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
   my $sort_by_query = get_option_value( $config->{$section}{sort_by_query}, 0 );
   my $rename_bam    = get_option_value( $config->{$section}{rename_bam},    0 );
 
   my $result = {};
-  for my $sampleName ( keys %rawFiles ) {
-    my @resultFiles = ();
+  for my $sample_name ( keys %raw_files ) {
+    my @result_files = ();
     if ($rename_bam) {
-      push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}.bam" );
+      push( @result_files, "${result_dir}/${sample_name}/${sample_name}.bam" );
     }
     else {
-      push( @resultFiles, "${resultDir}/${sampleName}/accepted_hits.bam" );
+      push( @result_files, "${result_dir}/${sample_name}/accepted_hits.bam" );
     }
 
     if ($sort_by_query) {
-      push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}.sortedname.bam" );
+      push( @result_files, "${result_dir}/${sample_name}/${sample_name}.sortedname.bam" );
     }
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

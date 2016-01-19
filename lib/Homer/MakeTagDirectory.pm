@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Homer::MakeTagDirectory";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_mtd";
   bless $self, $class;
   return $self;
@@ -26,45 +26,45 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster,$thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster,$thread ) = get_parameter( $config, $section );
 
-  my $rawFiles = get_raw_files( $config, $section );
+  my $raw_files = get_raw_files( $config, $section );
   my $groups = get_raw_files( $config, $section, "groups" );
   
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
-  for my $groupName ( sort keys %{$groups} ) {
-    my @samples = @{ $groups->{$groupName} };
+  for my $group_name ( sort keys %{$groups} ) {
+    my @samples = @{ $groups->{$group_name} };
     my @gfiles  = ();
-    foreach my $sampleName ( sort @samples ) {
-      my @bamFiles = @{ $rawFiles->{$sampleName} };
-      foreach my $bam (@bamFiles){
+    foreach my $sample_name ( sort @samples ) {
+      my @bam_files = @{ $raw_files->{$sample_name} };
+      foreach my $bam (@bam_files){
         push( @gfiles, $bam );
       }
     }
     my $bams = join( " ", @gfiles );
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $groupName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $group_name );
 
-    my $curDir      = create_directory_or_die( $resultDir . "/$groupName" );
+    my $cur_dir      = create_directory_or_die( $result_dir . "/$group_name" );
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
+    open( my $out, ">$pbs_file" ) or die $!;
+    print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $curDir 
+cd $cur_dir 
 
 echo homer_MakeTagDirectory_start=`date` 
 
-makeTagDirectory $curDir $bams
+makeTagDirectory $cur_dir $bams
 
 echo homer_MakeTagDirectory_finished=`date` 
 
@@ -72,13 +72,13 @@ exit 0
 
 ";
 
-    close(OUT);
+    close $out;
 
-    print SH "\$MYCMD ./$pbsName \n";
-    print "$pbsFile created\n";
+    print $sh "\$MYCMD ./$pbs_name \n";
+    print "$pbs_file created\n";
   }
-  print SH "exit 0\n";
-  close(SH);
+  print $sh "exit 0\n";
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -90,15 +90,15 @@ exit 0
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $groups = get_raw_files( $config, $section, "groups" );
 
   my $result = {};
-  for my $groupName ( sort keys %{$groups} ) {
-    my @resultFiles = ();
-    push( @resultFiles, "${resultDir}/${groupName}" );
-    $result->{$groupName} = filter_array( \@resultFiles, $pattern );
+  for my $group_name ( sort keys %{$groups} ) {
+    my @result_files = ();
+    push( @result_files, "${result_dir}/${group_name}" );
+    $result->{$group_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

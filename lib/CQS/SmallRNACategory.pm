@@ -17,7 +17,7 @@ our @ISA = qw(CQS::UniqueTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "SmallRNACategory";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_cat";
   bless $self, $class;
   return $self;
@@ -26,68 +26,68 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqsFile = get_cqstools( $config, $section, 1 );
+  my $cqstools = get_cqstools( $config, $section, 1 );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $pdfoption = get_option( $config, $section, "pdfgraph", 0 ) ? "--pdf" : "";
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
-  my $filelist = $self->getfile( $pbsDir, $task_name, ".filelist" );
+  my $filelist = $self->get_file( $pbs_dir, $task_name, ".filelist" );
   open( FL, ">$filelist" ) or die "Cannot create $filelist";
 
   if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
     my $groups = get_raw_files( $config, $section, "groups" );
-    for my $groupName ( sort keys %{$groups} ) {
-      my @samples = @{ $groups->{$groupName} };
-      for my $sampleName ( sort @samples ) {
-        my @smallRNAFiles = @{ $rawFiles{$sampleName} };
+    for my $group_name ( sort keys %{$groups} ) {
+      my @samples = @{ $groups->{$group_name} };
+      for my $sample_name ( sort @samples ) {
+        my @smallRNAFiles = @{ $raw_files{$sample_name} };
         my $smallRNAFile  = $smallRNAFiles[0];
 
-        print FL $groupName, "\t", $sampleName, "\t", $smallRNAFile, "\n";
+        print FL $group_name, "\t", $sample_name, "\t", $smallRNAFile, "\n";
       }
     }
   }
   else {
-    for my $sampleName ( sort keys %rawFiles ) {
-      my @smallRNAFiles = @{ $rawFiles{$sampleName} };
+    for my $sample_name ( sort keys %raw_files ) {
+      my @smallRNAFiles = @{ $raw_files{$sample_name} };
       my $smallRNAFile  = $smallRNAFiles[0];
 
-      print FL $task_name, "\t", $sampleName, "\t", $smallRNAFile, "\n";
+      print FL $task_name, "\t", $sample_name, "\t", $smallRNAFile, "\n";
     }
   }
   close(FL);
 
-  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
-  my $pbsName = basename($pbsFile);
-  my $log     = $self->logfile( $logDir, $task_name );
+  my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
+  my $pbs_name = basename($pbs_file);
+  my $log     = $self->get_log_filename( $log_dir, $task_name );
 
-  my $log_desc = $cluster->get_log_desc($log);
+  my $log_desc = $cluster->get_log_description($log);
 
-  open( OUT, ">$pbsFile" ) or die $!;
-  print OUT "$pbsDesc
+  open( my $out, ">$pbs_file" ) or die $!;
+  print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $resultDir
+cd $result_dir
 
 echo SmallRNACategory=`date` 
 
-mono-sgen $cqsFile smallrna_group -i $filelist -o $resultDir
+mono-sgen $cqstools smallrna_group -i $filelist -o $result_dir
 
 echo finished=`date`
 
 exit 0 
 ";
-  close(OUT);
-  print SH "\$MYCMD ./$pbsName \n";
-  close(SH);
+  close $out;
+  print $sh "\$MYCMD ./$pbs_name \n";
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -95,24 +95,24 @@ exit 0
 
   print "!!!shell file $shfile created, you can run this shell file to submit all smallRNA category tasks.\n";
 
-  #`qsub $pbsFile`;
+  #`qsub $pbs_file`;
 }
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
-  for my $sampleName ( keys %rawFiles ) {
-    my $countFile = "${resultDir}/${sampleName}.catcount";
+  for my $sample_name ( keys %raw_files ) {
+    my $countFile = "${result_dir}/${sample_name}.catcount";
 
-    my @resultFiles = ();
-    push( @resultFiles, $countFile );
+    my @result_files = ();
+    push( @result_files, $countFile );
 
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

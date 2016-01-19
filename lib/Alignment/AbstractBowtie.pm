@@ -14,44 +14,36 @@ use CQS::StringUtils;
 
 our @ISA = qw(CQS::Task);
 
-sub new {
-  my ($class) = @_;
-  my $self = $class->SUPER::new();
-  $self->{_name} = "AbstractBowtie";
-  bless $self, $class;
-  return $self;
-}
-
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $samformat = get_option( $config, $section, "samformat", 1 );
   my $samonly   = get_option( $config, $section, "samonly",   0 );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
-  for my $sampleName ( sort keys %rawFiles ) {
-    my $curDir = $resultDir . "/$sampleName";
+  for my $sample_name ( sort keys %raw_files ) {
+    my $cur_dir = $result_dir . "/$sample_name";
 
-    my $finalFile;
+    my $final_file;
     if ($samformat) {
       if ($samonly) {
-        $finalFile = $sampleName . ".sam";
+        $final_file = $sample_name . ".sam";
       }
       else {
-        $finalFile = $sampleName . ".bam";
+        $final_file = $sample_name . ".bam";
       }
     }
     else {
-      $finalFile = $sampleName . ".out";
+      $final_file = $sample_name . ".out";
     }
-    my @resultFiles = ();
-    push( @resultFiles, $curDir . "/" . $finalFile );
+    my @result_files = ();
+    push( @result_files, $cur_dir . "/" . $final_file );
 
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
 
   return $result;

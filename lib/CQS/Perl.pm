@@ -18,7 +18,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Perl";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_perl";
   bless $self, $class;
   return $self;
@@ -27,7 +27,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $perlFile = get_option_value( $config->{$section}{perlFile}, "perlFile", 1 );
   my $is_absolute = File::Spec->file_name_is_absolute($perlFile);
@@ -40,7 +40,7 @@ sub perform {
 
   my $output_ext = get_option( $config, $section, "output_ext", 0 );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
   my %parameterFiles2 = ();
   if ( has_raw_files( $config, $section, "source2" ) ) {
     %parameterFiles2 = %{ get_raw_files( $config, $section, "source2" ) };
@@ -58,64 +58,64 @@ sub perform {
     %parameterFiles5 = %{ get_raw_files( $config, $section, "source5" ) };
   }
 
-  my $shfile = $pbsDir . "/${task_name}_perl.sh";
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
+  my $shfile = $pbs_dir . "/${task_name}_perl.sh";
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   if ($sh_direct) {
-    print SH "export MYCMD=\"bash\" \n";
+    print $sh "export MYCMD=\"bash\" \n";
   }
   else {
-    print SH "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
+    print $sh "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
   }
 
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my $sampleCount = scalar(@sampleFiles);
-    my $samples     = join( ' ', @sampleFiles );
+  for my $sample_name ( sort keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$sample_name} };
+    my $sampleCount = scalar(@sample_files);
+    my $samples     = join( ' ', @sample_files );
 
     my $parameterFile2 = "";
-    if ( defined $parameterFiles2{$sampleName} ) {
-      my @files = @{ $parameterFiles2{$sampleName} };
+    if ( defined $parameterFiles2{$sample_name} ) {
+      my @files = @{ $parameterFiles2{$sample_name} };
       my $file  = $files[0];
       $parameterFile2 = "$file";
     }
 
     my $parameterFile3 = "";
-    if ( defined $parameterFiles3{$sampleName} ) {
-      my @files = @{ $parameterFiles3{$sampleName} };
+    if ( defined $parameterFiles3{$sample_name} ) {
+      my @files = @{ $parameterFiles3{$sample_name} };
       my $file  = $files[0];
       $parameterFile3 = "$file";
     }
 
     my $parameterFile4 = "";
-    if ( defined $parameterFiles4{$sampleName} ) {
-      my @files = @{ $parameterFiles4{$sampleName} };
+    if ( defined $parameterFiles4{$sample_name} ) {
+      my @files = @{ $parameterFiles4{$sample_name} };
       my $file  = $files[0];
       $parameterFile4 = "$file";
     }
 
     my $parameterFile5 = "";
-    if ( defined $parameterFiles5{$sampleName} ) {
-      my @files = @{ $parameterFiles5{$sampleName} };
+    if ( defined $parameterFiles5{$sample_name} ) {
+      my @files = @{ $parameterFiles5{$sample_name} };
       my $file  = $files[0];
       $parameterFile5 = "$file";
     }
 
-    #    my $curDir      = create_directory_or_die( $resultDir . "/$sampleName" );
+    #    my $cur_dir      = create_directory_or_die( $result_dir . "/$sample_name" );
 
-    #    my $pbsName = "${sampleName}_perl.pbs";
-    #    my $pbsFile = "${pbsDir}/$pbsName";
+    #    my $pbs_name = "${sample_name}_perl.pbs";
+    #    my $pbs_file = "${pbs_dir}/$pbs_name";
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
-    my $finalFile=$sampleName.$output_ext;
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $final_file=$sample_name.$output_ext;
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    #    my $log = "${logDir}/${sampleName}_perl.log";
+    #    my $log = "${log_dir}/${sample_name}_perl.log";
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
+    open( my $out, ">$pbs_file" ) or die $!;
+    print $out "$pbs_desc
 #PBS -o $log
 #PBS -j oe
 
@@ -124,21 +124,21 @@ $path_file
 echo Perl=`date`
 cd $target_dir/result
 
-if [ -s $finalFile ]; then
-  echo job has already been done. if you want to do again, delete ${resultDir}/${finalFile} and submit job again.
+if [ -s $final_file ]; then
+  echo job has already been done. if you want to do again, delete ${result_dir}/${final_file} and submit job again.
   exit 0;
 fi
 
-perl $perlFile $sampleName$output_ext $option $samples $parameterFile2 $parameterFile3 $parameterFile4 $parameterFile5
+perl $perlFile $sample_name$output_ext $option $samples $parameterFile2 $parameterFile3 $parameterFile4 $parameterFile5
 
 echo finished=`date`
 ";
-    close OUT;
+    close $out;
 
-    print "$pbsFile created \n";
+    print "$pbs_file created \n";
   }
 
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -150,24 +150,24 @@ echo finished=`date`
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
   my $output_ext = get_option( $config, $section, "output_ext", 0 );
 
   my $result = {};
-  for my $sampleName ( keys %rawFiles ) {
+  for my $sample_name ( keys %raw_files ) {
 
-    #    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    #    my @resultFiles = ();
-    #    for my $sampleFile (@sampleFiles) {
+    #    my @sample_files = @{ $raw_files{$sample_name} };
+    #    my @result_files = ();
+    #    for my $sampleFile (@sample_files) {
     #      my $name = basename($sampleFile);
-    #		push( @resultFiles, "${resultDir}/${name}${output_ext}" );
+    #		push( @result_files, "${result_dir}/${name}${output_ext}" );
     #    }
-    my @resultFiles = ();
-    push( @resultFiles, "${resultDir}/${sampleName}${output_ext}" );
+    my @result_files = ();
+    push( @result_files, "${result_dir}/${sample_name}${output_ext}" );
 
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

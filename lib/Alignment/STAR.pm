@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "STAR";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_star";
   bless $self, $class;
   return $self;
@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   if ( $option !~ /outSAMprimaryFlag/ ) {
     $option = $option . "  --outSAMprimaryFlag AllBestScore";
@@ -48,61 +48,47 @@ sub perform {
 
   my %fqFiles = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
-  my $threadcount = get_pbs_thread( $config->{$section}{pbs} );
+  for my $sample_name ( sort keys %fqFiles ) {
+    my @sample_files = @{ $fqFiles{$sample_name} };
 
-  for my $sampleName ( sort keys %fqFiles ) {
-    my @sampleFiles = @{ $fqFiles{$sampleName} };
+    my $uncompress = ( $sample_files[0] =~ /.gz$/ ) ? " --readFilesCommand zcat" : "";
 
-    my $uncompress = ( $sampleFiles[0] =~ /.gz$/ ) ? " --readFilesCommand zcat" : "";
+    my $samples = join( " ", @sample_files );
 
-    my $samples = join( " ", @sampleFiles );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
+    my $rgline  = "ID:$sample_name SM:$sample_name LB:$sample_name PL:ILLUMINA PU:ILLUMINA";
 
-    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
-    my $rgline = "ID:$sampleName SM:$sampleName LB:$sampleName PL:ILLUMINA PU:ILLUMINA";
+    my $final = $output_sort_by_coordinate ? $sample_name . "_Aligned.sortedByCoord.out.bam" : $sample_name . "_Aligned.out.bam";
 
-    my $final = $output_sort_by_coordinate ? $sampleName . "_Aligned.sortedByCoord.out.bam" : $sampleName . "_Aligned.out.bam";
+    my $log_desc = $cluster->get_log_description($log);
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final );
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
-$log_desc
-
-$path_file
-
-cd $curDir 
+    print $pbs "
+STAR $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $genome_dir --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format  
 
 if [ -s $final ]; then
-  echo job has already been done. if you want to do again, delete ${curDir}/${final} and submit job again.
-  exit 0;
+  samtools index $final
+  samtools flagstat $final > ${final}.stat
 fi
 
-echo STAR_start=`date` 
-
-STAR $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $genome_dir --readFilesIn $samples $uncompress --outFileNamePrefix ${sampleName}_ $output_format  
-
-samtools index $final
-
-samtools flagstat $final > ${final}.stat 
-
-echo finished=`date` 
-
 ";
-    close(OUT);
 
-    print SH "\$MYCMD ./$pbsName \n";
-    print "$pbsFile created\n";
+    $self->close_pbs($pbs);
+
+    print $sh "\$MYCMD ./$pbs_name \n";
+    print "$pbs_file created\n";
   }
-  print SH "exit 0\n";
-  close(SH);
+  print $sh "exit 0\n";
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -114,30 +100,30 @@ echo finished=`date`
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
   my $sort_by_coordinate = get_option_value( $config->{$section}{sort_by_coordinate}, 0 );
 
   my $result = {};
-  for my $sampleName ( keys %rawFiles ) {
-    my @resultFiles               = ();
+  for my $sample_name ( keys %raw_files ) {
+    my @result_files              = ();
     my $output_sort_by_coordinate = get_option( $config, $section, "output_sort_by_coordinate", 0 );
     my $output_unsorted           = get_option( $config, $section, "output_unsorted", 0 );
     if ( !$output_sort_by_coordinate && !$output_unsorted ) {
       $output_unsorted = 1;
     }
-    my $tab = $sampleName . "_SJ.out.tab";
+    my $tab = $sample_name . "_SJ.out.tab";
     if ($output_sort_by_coordinate) {
-      push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}_Aligned.sortedByCoord.out.bam" );
+      push( @result_files, "${result_dir}/${sample_name}/${sample_name}_Aligned.sortedByCoord.out.bam" );
 
     }
     if ($output_unsorted) {
-      push( @resultFiles, "${resultDir}/${sampleName}/${sampleName}_Aligned.out.bam" );
+      push( @result_files, "${result_dir}/${sample_name}/${sample_name}_Aligned.out.bam" );
 
     }
-    push( @resultFiles, "${resultDir}/${sampleName}/${tab}" );
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    push( @result_files, "${result_dir}/${sample_name}/${tab}" );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

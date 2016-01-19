@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "CNV::CNVnator";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_cnvnator";
   bless $self, $class;
   return $self;
@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $binsize        = $config->{$section}{binsize}        or die "define ${section}::binsize first";
   my $chromosome_dir = $config->{$section}{chromosome_dir} or die "define ${section}::chromosome_dir first";
@@ -38,65 +38,53 @@ sub perform {
     $genomestr = "-genome " . $genome;
   }
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
+  for my $sample_name ( sort keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$sample_name} };
 
-    my $bamFile = $sampleFiles[0];
+    my $bam_file = $sample_files[0];
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $curDir   = create_directory_or_die( $resultDir . "/$sampleName" );
-    my $rootFile = $sampleName . ".root";
-    my $callFile = $sampleName . ".call";
+    my $cur_dir  = create_directory_or_die( $result_dir . "/$sample_name" );
+    my $rootFile = $sample_name . ".root";
+    my $callFile = $sample_name . ".call";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $callFile );
 
-$path_file
-
-cd $curDir
-
-if [ -s $callFile ]; then
-  echo job has already been done. if you want to do again, delete $callFile and submit job again.
-else
-  if [ ! -s $rootFile ]; then
-    echo \"EXTRACTING READ MAPPING FROM BAM/SAM FILES =\" `date`
-    cnvnator $genomestr -unique -root $rootFile -tree $bamFile 
-  fi
-
-  echo \"GENERATING HISTOGRAM =\" `date`
-  cnvnator $genomestr -root $rootFile -d $chromosome_dir -his $binsize 
-
-  echo \"CALCULATING STATISTICS =\" `date`
-  cnvnator -root $rootFile -stat $binsize 
-
-  echo \"RD SIGNAL PARTITIONING =\" `date`
-  cnvnator -root $rootFile -partition $binsize 
-
-  echo \"CNV CALLING =\" `date`
-  cnvnator -root $rootFile -call $binsize > $callFile 
+    print $pbs "   
+if [ ! -s $rootFile ]; then
+  echo \"EXTRACTING READ MAPPING FROM BAM/SAM FILES =\" `date`
+  cnvnator $genomestr -unique -root $rootFile -tree $bam_file 
 fi
 
-echo finished=`date`
-";
-    close OUT;
+echo \"GENERATING HISTOGRAM =\" `date`
+cnvnator $genomestr -root $rootFile -d $chromosome_dir -his $binsize 
 
-    print "$pbsFile created\n";
+echo \"CALCULATING STATISTICS =\" `date`
+cnvnator -root $rootFile -stat $binsize 
+
+echo \"RD SIGNAL PARTITIONING =\" `date`
+cnvnator -root $rootFile -partition $binsize 
+
+echo \"CNV CALLING =\" `date`
+cnvnator -root $rootFile -call $binsize > $callFile
+";
+
+    $self->close_pbs( $pbs, $pbs_file );
   }
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -108,20 +96,20 @@ echo finished=`date`
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
-  for my $sampleName ( sort keys %rawFiles ) {
-    my $curDir      = create_directory_or_die( $resultDir . "/$sampleName" );
-    my $rootFile    = $sampleName . ".root";
-    my $callFile    = $sampleName . ".call";
-    my @resultFiles = ();
-    push( @resultFiles, $curDir . "/" . $callFile );
-    push( @resultFiles, $curDir . "/" . $rootFile );
+  for my $sample_name ( sort keys %raw_files ) {
+    my $cur_dir      = create_directory_or_die( $result_dir . "/$sample_name" );
+    my $rootFile     = $sample_name . ".root";
+    my $callFile     = $sample_name . ".call";
+    my @result_files = ();
+    push( @result_files, $cur_dir . "/" . $callFile );
+    push( @result_files, $cur_dir . "/" . $rootFile );
 
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
 
   return $result;

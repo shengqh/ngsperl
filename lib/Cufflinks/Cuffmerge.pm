@@ -17,7 +17,7 @@ our @ISA = qw(CQS::UniqueTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Cuffmerge";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_cmerge";
   bless $self, $class;
   return $self;
@@ -37,15 +37,15 @@ sub get_assemblies_file {
   #print_hash($cufflinks_gtf);
 
   $result = $target_dir . "/assemblies.txt";
-  open( OUT, ">$result" ) or die $!;
+  open( my $out, ">$result" ) or die $!;
 
   foreach my $k ( sort keys %{$cufflinks_gtf} ) {
     my @gtfs = @{ $cufflinks_gtf->{$k} };
 
     #print "$gtfs[0]\n";
-    print OUT "$gtfs[0]\n";
+    print $out "$gtfs[0]\n";
   }
-  close OUT;
+  close $out;
 
   return $result;
 }
@@ -53,7 +53,7 @@ sub get_assemblies_file {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $transcript_gtf = get_param_file( $config->{$section}{transcript_gtf}, "transcript_gtf", 0 );
   my $gtfparam = "";
@@ -63,21 +63,21 @@ sub perform {
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
 
-  my $assembliesfile = get_assemblies_file( $config, $section, $resultDir );
+  my $assembliesfile = get_assemblies_file( $config, $section, $result_dir );
 
-  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
-  my $pbsName = basename($pbsFile);
-  my $log     = $self->logfile( $logDir, $task_name );
+  my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
+  my $pbs_name = basename($pbs_file);
+  my $log     = $self->get_log_filename( $log_dir, $task_name );
 
-  my $log_desc = $cluster->get_log_desc($log);
+  my $log_desc = $cluster->get_log_description($log);
 
-  open( OUT, ">$pbsFile" ) or die $!;
-  print OUT "$pbsDesc
+  open( my $out, ">$pbs_file" ) or die $!;
+  print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $resultDir
+cd $result_dir
 
 echo cuffmerge=`date` 
 
@@ -88,17 +88,17 @@ echo finished=`date`
 exit 0
 ";
 
-  close(OUT);
+  close $out;
 
-  print "$pbsFile created\n";
+  print "$pbs_file created\n";
 }
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $result = { $task_name => [ $resultDir . "/merged.gtf" ] };
+  my $result = { $task_name => [ $result_dir . "/merged.gtf" ] };
 
   return $result;
 }

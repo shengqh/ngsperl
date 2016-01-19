@@ -18,7 +18,7 @@ our @ISA = qw(Proteomics::Summary::AbstractBuildSummary);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Proteomics::Summary::BuildSummary";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_bs";
   bless $self, $class;
   return $self;
@@ -27,7 +27,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
@@ -39,11 +39,11 @@ sub perform {
   my @lines    = @{$lines};
   my @dataset  = @{$dataset};
 
-  my $currentParamFile = $resultDir . "/" . $task_name . ".param";
-  open( OUT, ">$currentParamFile" ) or die $!;
+  my $currentParamFile = $result_dir . "/" . $task_name . ".param";
+  open( my $out, ">$currentParamFile" ) or die $!;
 
   for ( my $index = 0 ; $index < scalar(@lines) ; $index++ ) {
-    print OUT $lines[$index] . "\n";
+    print $out $lines[$index] . "\n";
     if ( $lines[$index] =~ "<Datasets>" ) {
       last;
     }
@@ -51,73 +51,59 @@ sub perform {
 
   #print @dataset;
 
-  for my $sampleName ( sort keys %datasets ) {
-    print OUT "    <Dataset>\n";
-    print OUT "      <Name>$sampleName</Name>\n";
-    foreach my $dsline (@dataset){
-      print OUT $dsline . "\n";
+  for my $sample_name ( sort keys %datasets ) {
+    print $out "    <Dataset>\n";
+    print $out "      <Name>$sample_name</Name>\n";
+    foreach my $dsline (@dataset) {
+      print $out $dsline . "\n";
     }
-    print OUT "      <PathNames>\n";
-    my @sampleFiles = @{ $datasets{$sampleName} };
-    for my $sampleFile (@sampleFiles) {
-      print OUT "        <PathName>$sampleFile</PathName>\n";
+    print $out "      <PathNames>\n";
+    my @sample_files = @{ $datasets{$sample_name} };
+    for my $sampleFile (@sample_files) {
+      print $out "        <PathName>$sampleFile</PathName>\n";
     }
-    print OUT "      </PathNames>\n";
-    print OUT "    </Dataset>\n";
+    print $out "      </PathNames>\n";
+    print $out "    </Dataset>\n";
   }
 
   for ( my $index = 0 ; $index < scalar(@lines) ; $index++ ) {
     if ( $lines[$index] =~ "</Datasets>" ) {
       for ( my $nextindex = $index ; $nextindex < scalar(@lines) ; $nextindex++ ) {
-        print OUT $lines[$nextindex] . "\n";
+        print $out $lines[$nextindex] . "\n";
       }
       last;
     }
   }
 
-  close(OUT);
+  close $out;
 
-  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
-  my $pbsName = basename($pbsFile);
-  my $log     = $self->logfile( $logDir, $task_name );
+  my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
+  my $pbs_name = basename($pbs_file);
+  my $log      = $self->get_log_filename( $log_dir, $task_name );
 
-  my $log_desc = $cluster->get_log_desc($log);
-  
-  my $resultFile = $resultDir . "/" . $task_name . ".noredundant";
+  my $log_desc = $cluster->get_log_description($log);
 
-  open( OUT, ">$pbsFile" ) or die $!;
-  print OUT "$pbsDesc
-$log_desc
+  my $result_file = $result_dir . "/" . $task_name . ".noredundant";
 
-$path_file
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file );
 
-cd $resultDir
-
-echo buildsummary=`date`
-
-if [ ! -s $resultFile ]; then
-  mono $proteomicstools buildsummary -i $currentParamFile 
-fi
-
-echo finished=`date`
-
-exit 0 
+  print $pbs "
+mono $proteomicstools buildsummary -i $currentParamFile 
 ";
-  close OUT;
-
-  print "$pbsFile created \n";
+  $self->close_pbs($pbs);
+  print "$pbs_file created \n";
 }
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $result           = {};
-  my $currentParamFile = $pbsDir . "/" . $task_name . ".param";
-  my @resultFiles      = ();
-  push( @resultFiles, $currentParamFile );
-  $result->{$task_name} = filter_array( \@resultFiles, $pattern );
+  my $currentParamFile = $pbs_dir . "/" . $task_name . ".param";
+  my @result_files     = ();
+  push( @result_files, $currentParamFile );
+  $result->{$task_name} = filter_array( \@result_files, $pattern );
   return $result;
 }
 

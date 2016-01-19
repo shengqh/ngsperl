@@ -16,7 +16,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "FastqIdentical";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_IQB";
   bless $self, $class;
   return $self;
@@ -25,7 +25,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $cqstools  = get_cqstools( $config, $section, 1 );
   my $extension = get_option($config, $section, "extension");
@@ -38,61 +38,61 @@ sub perform {
     $minlen = "";
   }
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my $finalFile   = $sampleName . $extension;
+  for my $sample_name ( sort keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$sample_name} };
+    my $final_file   = $sample_name . $extension;
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $sample_name );
     
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
+    open( my $out, ">$pbs_file" ) or die $!;
+    print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $resultDir
+cd $result_dir
 
-if [ -s $finalFile ]; then
-  echo job has already been done. if you want to do again, delete ${resultDir}/${finalFile} and submit job again.
+if [ -s $final_file ]; then
+  echo job has already been done. if you want to do again, delete ${result_dir}/${final_file} and submit job again.
   exit 0;
 fi
 
 echo FastqIdentical_start=`date` 
 ";
-    if ( scalar(@sampleFiles) == 1 ) {
-      print OUT "mono-sgen $cqstools fastq_identical $option -i $sampleFiles[0] $minlen -o $finalFile \n";
+    if ( scalar(@sample_files) == 1 ) {
+      print $out "mono-sgen $cqstools fastq_identical $option -i $sample_files[0] $minlen -o $final_file \n";
     }
     else {
       my $outputFiles = "";
-      for my $sampleFile (@sampleFiles) {
+      for my $sampleFile (@sample_files) {
         my $outputFile = change_extension_gzipped(basename($sampleFile), $extension);
         $outputFiles = $outputFiles . " " . $outputFile;
-        print OUT "mono-sgen $cqstools fastq_identical -i $sampleFile $minlen -o $outputFile \n";
+        print $out "mono-sgen $cqstools fastq_identical -i $sampleFile $minlen -o $outputFile \n";
       }
     }
-    print OUT "
+    print $out "
 echo finished=`date`
 
 exit 0 
 ";
 
-    close OUT;
+    close $out;
 
-    print "$pbsFile created \n";
+    print "$pbs_file created \n";
   }
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -100,39 +100,39 @@ exit 0
 
   print "!!!shell file $shfile created, you can run this shell file to submit all bwa tasks.\n";
 
-  #`qsub $pbsFile`;
+  #`qsub $pbs_file`;
 }
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $extension = get_option($config, $section, "extension");
   my $merge_result = get_option( $config, $section, "merge_result", 0 );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
-  for my $sampleName ( keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my $finalFile   = $resultDir . "/" . $sampleName . $extension;
-    my @resultFiles = ();
+  for my $sample_name ( keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$sample_name} };
+    my $final_file   = $result_dir . "/" . $sample_name . $extension;
+    my @result_files = ();
 
-    if ( scalar(@sampleFiles) == 1 ) {
-      push( @resultFiles, $finalFile );
-      push( @resultFiles, change_extension( $finalFile, ".dupcount" ) );
+    if ( scalar(@sample_files) == 1 ) {
+      push( @result_files, $final_file );
+      push( @result_files, change_extension( $final_file, ".dupcount" ) );
     }
     else {
-      for my $sampleFile (@sampleFiles) {
+      for my $sampleFile (@sample_files) {
         my $fileName = basename($sampleFile);
-        my $outputFile = $resultDir . "/" . change_extension( $fileName, $extension );
-        push( @resultFiles, $outputFile );
-        push( @resultFiles, change_extension( $outputFile, ".dupcount" ) );
+        my $outputFile = $result_dir . "/" . change_extension( $fileName, $extension );
+        push( @result_files, $outputFile );
+        push( @result_files, change_extension( $outputFile, ".dupcount" ) );
       }
     }
 
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

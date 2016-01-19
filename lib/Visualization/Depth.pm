@@ -20,7 +20,7 @@ my $directory;
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Visualization::Depth";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_vd";
   bless $self, $class;
   return $self;
@@ -29,79 +29,79 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $bedFiles = get_raw_files( $config, $section );
   my $groups   = get_raw_files( $config, $section, "groups" );
-  my $bamFiles = get_raw_files( $config, $section, "bam_files" );
+  my $bam_files = get_raw_files( $config, $section, "bam_files" );
   my $singlepdf = get_option($config, $section, "singlepdf", 0) ? "-s":"";
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
   my $perl = dirname(__FILE__) . "/Depth.pl";
 
 
   for my $name ( sort keys %{$bedFiles} ) {
-    my $curDir = create_directory_or_die( $resultDir . "/$name" );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$name" );
 
     my @curBedFiles = @{ $bedFiles->{$name} };
     my @curBamNames = @{ $groups->{$name} };
-    my @curBamFiles = ();
+    my @curbam_files = ();
     for my $bamName (@curBamNames) {
-      push( @curBamFiles, $bamFiles->{$bamName}->[0] );
+      push( @curbam_files, $bam_files->{$bamName}->[0] );
     }
 
-    my $curBamFileStr = join( ' ', @curBamFiles );
+    my $curbam_fileStr = join( ' ', @curbam_files );
 
     my $bamCount = scalar(@curBamNames);
 
     my $configFileName = "${name}.filelist";
-    my $configFile     = $curDir . "/${configFileName}";
+    my $configFile     = $cur_dir . "/${configFileName}";
     open( CON, ">$configFile" ) or die "Cannot create $configFile";
     for ( my $index = 0 ; $index < $bamCount ; $index++ ) {
-      print CON $curBamNames[$index], "\t", $curBamFiles[$index], "\n";
+      print CON $curBamNames[$index], "\t", $curbam_files[$index], "\n";
     }
     close CON;
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $name );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $name );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $name );
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $name );
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
     #my $final = "${comparisonName}_c3.0_common.bed";
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
+    open( my $out, ">$pbs_file" ) or die $!;
+    print $out "$pbs_desc
 $log_desc
 
 $path_file 
 
 echo depth=`date` 
 
-cd $curDir
+cd $cur_dir
 
 ";
 
     for my $bedFile (@curBedFiles) {
-      print OUT "perl $perl -b $bedFile -c $configFile $singlepdf \n";
+      print $out "perl $perl -b $bedFile -c $configFile $singlepdf \n";
     }
 
-    print OUT "
+    print $out "
 
 echo finished=`date`
 
 ";
-    close OUT;
+    close $out;
 
-    print "$pbsFile created \n";
+    print "$pbs_file created \n";
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
   }
 
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -113,16 +113,16 @@ echo finished=`date`
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $comparisons = get_raw_files( $config, $section, "groups" );
   my $result = {};
   for my $comparisonName ( sort keys %{$comparisons} ) {
-    my @resultFiles = ();
-    push( @resultFiles, $resultDir . "/${comparisonName}_c3.0_common.bed" );
-    push( @resultFiles, $resultDir . "/${comparisonName}_cond1.bed" );
-    push( @resultFiles, $resultDir . "/${comparisonName}_cond2.bed" );
-    $result->{$comparisonName} = filter_array( \@resultFiles, $pattern );
+    my @result_files = ();
+    push( @result_files, $result_dir . "/${comparisonName}_c3.0_common.bed" );
+    push( @result_files, $result_dir . "/${comparisonName}_cond1.bed" );
+    push( @result_files, $result_dir . "/${comparisonName}_cond2.bed" );
+    $result->{$comparisonName} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

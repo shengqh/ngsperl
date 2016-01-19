@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Homer::FindMotifs";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_fm";
   bless $self, $class;
   return $self;
@@ -26,40 +26,40 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my %tagDirectories = %{ get_raw_files( $config, $section ) };
 
   my $pairs = get_raw_files( $config, $section );
   my $fasta  =get_param_file($config, $section, "genome_fasta", 1);
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
-  for my $pairName ( sort keys %{$pairs} ) {
-    my $pairFile = $pairs->{$pairName};
+  for my $pair_name ( sort keys %{$pairs} ) {
+    my $pairFile = $pairs->{$pair_name};
     
-    my $pbsFile = $self->pbsfile( $pbsDir, $pairName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $pairName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $pair_name );
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $pair_name );
 
-    my $finalFile = $pairName . ".motif";
+    my $final_file = $pair_name . ".motif";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
+    open( my $out, ">$pbs_file" ) or die $!;
+    print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $resultDir 
+cd $result_dir 
 
 echo homer_FindMotifs_start=`date` 
 
-if [ -s $finalFile ];then
-  echo job has already been done. if you want to do again, delete ${resultDir}/${finalFile} and submit job again.
+if [ -s $final_file ];then
+  echo job has already been done. if you want to do again, delete ${result_dir}/${final_file} and submit job again.
   exit 0;
 fi
 
@@ -71,13 +71,13 @@ exit 0
 
 ";
 
-    close(OUT);
+    close $out;
 
-    print SH "\$MYCMD ./$pbsName \n";
-    print "$pbsFile created\n";
+    print $sh "\$MYCMD ./$pbs_name \n";
+    print "$pbs_file created\n";
   }
-  print SH "exit 0\n";
-  close(SH);
+  print $sh "exit 0\n";
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -89,15 +89,15 @@ exit 0
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $pairs = get_raw_files( $config, $section );
 
   my $result = {};
-  for my $pairName ( sort keys %{$pairs} ) {
-    my @resultFiles = ();
-    push( @resultFiles, "${resultDir}/${pairName}.motif" );
-    $result->{$pairName} = filter_array( \@resultFiles, $pattern );
+  for my $pair_name ( sort keys %{$pairs} ) {
+    my @result_files = ();
+    push( @result_files, "${result_dir}/${pair_name}.motif" );
+    $result->{$pair_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

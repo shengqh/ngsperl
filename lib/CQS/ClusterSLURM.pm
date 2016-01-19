@@ -10,7 +10,7 @@ our @ISA = qw(CQS::ClusterScript);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "CQS::ClusterSLURM";
+  $self->{_name}   = __PACKAGE__;
   bless $self, $class;
   return $self;
 }
@@ -69,7 +69,7 @@ sub get_cluster_desc {
   $mem =~ s/mb/M/g;
   $mem =~ s/gb/G/g;
 
-  my $pbsDesc = <<SBATCH;
+  my $pbs_desc = <<SBATCH;
 #!/bin/bash
 #SBATCH --mail-user=$email
 #SBATCH --mail-type=ALL
@@ -79,14 +79,14 @@ sub get_cluster_desc {
 #SBATCH --mem=$mem
 SBATCH
 
-  return ($pbsDesc);
+  return ($pbs_desc);
 }
 
 sub get_log_desc {
-  my ( $self, $pbsfile ) = @_;
+  my ( $self, $pbs_file ) = @_;
 
   my $result = <<SBATCH;
-#SBATCH -o $pbsfile
+#SBATCH -o $pbs_file
 SBATCH
 
   return ($result);

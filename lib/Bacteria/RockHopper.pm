@@ -17,7 +17,7 @@ our @ISA = qw(CQS::PairTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Bacteria::RockHopper";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_rh";
   bless $self, $class;
   return $self;
@@ -26,97 +26,87 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $rawFiles = get_raw_files( $config, $section );
-  my $groups   = get_raw_files( $config, $section, "groups" );
-  my $pairs    = get_raw_files( $config, $section, "pairs" );
+  my $raw_files = get_raw_files( $config, $section );
+  my $groups    = get_raw_files( $config, $section, "groups" );
+  my $pairs     = get_raw_files( $config, $section, "pairs" );
   my $rockhopper_jar = get_param_file( $config->{$section}{rockhopper_jar}, "rockhopper_jar", 1 );
   my $genome_dir  = get_option( $config, $section, "genome_dir",  1 );
   my $java_option = get_option( $config, $section, "java_option", "" );
 
   my %tpgroups = ();
-  for my $groupName ( sort keys %{$groups} ) {
-    my @samples = @{ $groups->{$groupName} };
+  for my $group_name ( sort keys %{$groups} ) {
+    my @samples = @{ $groups->{$group_name} };
     my @gfiles  = ();
-    foreach my $sampleName ( sort @samples ) {
-      my @fastqFiles = @{ $rawFiles->{$sampleName} };
+    foreach my $sample_name ( sort @samples ) {
+      my @fastqFiles = @{ $raw_files->{$sample_name} };
       push( @gfiles, join( '%', @fastqFiles ) );
     }
-    $tpgroups{$groupName} = join( ",", @gfiles );
+    $tpgroups{$group_name} = join( ",", @gfiles );
   }
 
-  my $mapfile = $self->getfile( $resultDir, $task_name, ".map" );
-  open( MAP, ">$mapfile" ) or die "Cannot create $mapfile";
-  print MAP "Fastq\tSample\tGroup\n";
-  for my $groupName ( sort keys %{$groups} ) {
-    my @samples = @{ $groups->{$groupName} };
-    foreach my $sampleName ( sort @samples ) {
-      my @fastqFiles = @{ $rawFiles->{$sampleName} };
+  my $mapfile = $self->get_file( $result_dir, $task_name, ".map" );
+  open( my $map, ">$mapfile" ) or die "Cannot create $mapfile";
+  print $map "Fastq\tSample\tGroup\n";
+  for my $group_name ( sort keys %{$groups} ) {
+    my @samples = @{ $groups->{$group_name} };
+    foreach my $sample_name ( sort @samples ) {
+      my @fastqFiles = @{ $raw_files->{$sample_name} };
       foreach my $fastq ( sort @fastqFiles ) {
         my $fname = basename($fastq);
         $fname = change_extension( $fname, "" );
-        print MAP "$fname\t$sampleName\t$groupName\n";
+        print $map "$fname\t$sample_name\t$group_name\n";
       }
     }
   }
-  close(MAP);
+  close $map;
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct), "\n";
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct), "\n";
 
-  for my $pairName ( sort keys %{$pairs} ) {
-    my @groupNames = @{ $pairs->{$pairName} };
-    if ( scalar(@groupNames) != 2 ) {
-      die $pairName . " should include and only include two groups, currently is [" . join( ", ", @groupNames );
+  for my $pair_name ( sort keys %{$pairs} ) {
+    my @group_names = @{ $pairs->{$pair_name} };
+    if ( scalar(@group_names) != 2 ) {
+      die $pair_name . " should include and only include two groups, currently is [" . join( ", ", @group_names );
     }
     my @fastqs = ();
-    push( @fastqs, $tpgroups{ $groupNames[1] } );
-    push( @fastqs, $tpgroups{ $groupNames[0] } );
+    push( @fastqs, $tpgroups{ $group_names[1] } );
+    push( @fastqs, $tpgroups{ $group_names[0] } );
     my $fastqstrs = join( " ", @fastqs );
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $pairName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $pairName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $pair_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $pair_name );
 
-    my $curDir = create_directory_or_die( $resultDir . "/$pairName" );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$pair_name" );
 
-    my $labels = $groupNames[1] . "," . $groupNames[0];
+    my $labels = $group_names[1] . "," . $group_names[0];
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc   = $cluster->get_log_description($log);
+    my $final_file = "summary.txt";
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-if [ -s ${curDir}/summary.txt ];then
-  echo job has already been done. if you want to do again, delete ${curDir}/summary.txt and submit job again.
-  exit 0;
-fi
-
-cd $curDir
-
+    print $pbs "
 java $java_option -cp $rockhopper_jar Rockhopper $option -g $genome_dir -L $labels -o . $fastqstrs
 
 if [ -e intermediary ]; then
   rm -rf intermediary
 fi
 
-echo finished=`date`
-
-exit 0
 ";
 
-    close(OUT);
+    $self->close_pbs($pbs);
 
-    print "$pbsFile created. \n";
+    print "$pbs_file created. \n";
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
   }
 
-  print SH "exit 0\n";
-  close(SH);
+  print $sh "exit 0\n";
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -128,28 +118,28 @@ exit 0
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
 
-  my $rawFiles = get_raw_files( $config, $section );
-  my $groups   = get_raw_files( $config, $section, "groups" );
-  my $pairs    = get_raw_files( $config, $section, "pairs" );
+  my $raw_files = get_raw_files( $config, $section );
+  my $groups    = get_raw_files( $config, $section, "groups" );
+  my $pairs     = get_raw_files( $config, $section, "pairs" );
   my $genome_name = get_option( $config, $section, "genome_name", 1 );
 
-  for my $pairName ( sort keys %{$pairs} ) {
-    my $curDir      = $resultDir . "/$pairName";
-    my @resultFiles = ();
-    push( @resultFiles, $curDir . "/" . $genome_name . "_operons.txt" );
-    push( @resultFiles, $curDir . "/" . $genome_name . "_transcripts.txt" );
-    $result->{$pairName} = filter_array( \@resultFiles, $pattern );
+  for my $pair_name ( sort keys %{$pairs} ) {
+    my $cur_dir      = $result_dir . "/$pair_name";
+    my @result_files = ();
+    push( @result_files, $cur_dir . "/" . $genome_name . "_operons.txt" );
+    push( @result_files, $cur_dir . "/" . $genome_name . "_transcripts.txt" );
+    $result->{$pair_name} = filter_array( \@result_files, $pattern );
   }
-  my $mapfile = $self->getfile( $resultDir, $task_name, ".map" );
-  my @resultFiles = ();
-  push( @resultFiles, $mapfile );
-  $result->{$task_name} = filter_array( \@resultFiles, $pattern );
+  my $mapfile = $self->get_file( $result_dir, $task_name, ".map" );
+  my @result_files = ();
+  push( @result_files, $mapfile );
+  $result->{$task_name} = filter_array( \@result_files, $pattern );
 
   return $result;
 }

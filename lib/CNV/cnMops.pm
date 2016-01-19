@@ -17,7 +17,7 @@ our @ISA = qw(CQS::UniqueTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "CNV::cnMops";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_cnmops";
   bless $self, $class;
   return $self;
@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my $bedfile = $config->{$section}{bedfile};
 
@@ -52,120 +52,115 @@ sub perform {
 
   my $callFile = "${task_name}.call";
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my $rfile = $resultDir . "/cnmops_${task_name}.r";
-  open( R, ">$rfile" ) or die "Cannot create $rfile";
-  print R "setwd(\"$resultDir\")
+  my $rfile = $result_dir . "/cnmops_${task_name}.r";
+  open( my $r, ">$rfile" ) or die "Cannot create $rfile";
+  print $r "setwd(\"$result_dir\")
 callfile<-\"$callFile\"
 prefix<-\"$task_name\"
 pairmode<-\"$pairmode\"
 parallel<-$thread
 ";
   if ( defined $bedfile ) {
-    print R "hasbed<-1
+    print $r "hasbed<-1
 bedfile<-\"$bedfile\"
 ";
   }
   else {
-    print R "hasbed<-0\n";
+    print $r "hasbed<-0\n";
   }
 
-  print R "SampleNames <- c( \n";
+  print $r "sample_names <- c( \n";
   my $isfirst = 1;
-  for my $sampleName ( sort keys %rawFiles ) {
+  for my $sample_name ( sort keys %raw_files ) {
     if ($isfirst) {
-      print R "\"$sampleName\"\n";
+      print $r "\"$sample_name\"\n";
       $isfirst = 0;
     }
     else {
-      print R ",\"$sampleName\"\n";
+      print $r ",\"$sample_name\"\n";
     }
   }
-  print R ")
+  print $r ")
 
-BAMFiles <- c(
+bam_files <- c(
 ";
 
   $isfirst = 1;
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my $bamFile     = $sampleFiles[0];
+  for my $sample_name ( sort keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$sample_name} };
+    my $bam_file     = $sample_files[0];
 
     if ( !$isbamsorted ) {
-      ( $bamFile, my $bamSorted ) = get_sorted_bam($bamFile);
+      ( $bam_file, my $bamSorted ) = get_sorted_bam($bam_file);
     }
 
     if ($isfirst) {
-      print R "\"$bamFile\"\n";
+      print $r "\"$bam_file\"\n";
       $isfirst = 0;
     }
     else {
-      print R ",\"$bamFile\"\n";
+      print $r ",\"$bam_file\"\n";
     }
   }
-  print R ")
+  print $r ")
 ";
 
   $isfirst = 1;
-  print R "refnames<-c(";
+  print $r "refnames<-c(";
   for my $refName ( @{$refnames} ) {
     if ($isfirst) {
-      print R "\"$refName\"";
+      print $r "\"$refName\"";
       $isfirst = 0;
     }
     else {
-      print R ",\"$refName\"";
+      print $r ",\"$refName\"";
     }
   }
-  print R ")
+  print $r ")
 ";
 
-  open RT, "<$rtemplate" or die $!;
-  while (<RT>) {
+  open my $rt, "<$rtemplate" or die $!;
+  while (<$rt>) {
     if ( $_ =~ '^#' ) {
       next;
     }
     last;
   }
-  while (<RT>) {
-    print R $_;
+  while (<$rt>) {
+    print $r $_;
   }
-  close(RT);
-  close R;
+  close($rt);
+  close $r;
 
-  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
-  my $pbsName = basename($pbsFile);
-  my $log     = $self->logfile( $logDir, $task_name );
+  my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
+  my $pbs_name = basename($pbs_file);
+  my $log      = $self->get_log_filename( $log_dir, $task_name );
 
-  my $log_desc = $cluster->get_log_desc($log);
+  my $log_desc   = $cluster->get_log_description($log);
+  my $final_file = "${task_name}.call";
 
-  open( OUT, ">$pbsFile" ) or die $!;
-  print OUT "$pbsDesc
-$log_desc
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-$path_file
-
-cd $pbsDir
-echo cnmops=`date`
-R --vanilla < $rfile 
-echo finished=`date`
+  print $pbs "   
+cd $pbs_dir
+R --vanilla -f $rfile 
 ";
-  close OUT;
 
-  print "$pbsFile created\n";
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my @resultFiles = ();
-  push( @resultFiles, $resultDir . "/${task_name}.call" );
-  push( @resultFiles, $resultDir . "/${task_name}.call.bed" );
+  my @result_files = ();
+  push( @result_files, $result_dir . "/${task_name}.call" );
+  push( @result_files, $result_dir . "/${task_name}.call.bed" );
 
-  my $result = { $task_name => filter_array( \@resultFiles, $pattern ) };
+  my $result = { $task_name => filter_array( \@result_files, $pattern ) };
   return $result;
 }
 

@@ -18,7 +18,7 @@ our @ISA = qw(CQS::GroupTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "VarScan2::Somatic";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_vs2";
   bless $self, $class;
   return $self;
@@ -27,7 +27,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $varscan2_jar = get_param_file( $config->{$section}{VarScan2_jar}, "VarScan2_jar", 1 );
   my $faFile       = get_param_file( $config->{$section}{fasta_file},   "fasta_file",   1 );
@@ -36,49 +36,49 @@ sub perform {
 
   my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct) . "\n";
-  print SH "cd $pbsDir\n";
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct) . "\n";
+  print $sh "cd $pbs_dir\n";
 
   my $java_option = get_option( $config, $section, "java_option", "" );
 
-  for my $groupName ( sort keys %group_sample_map ) {
-    my @sampleFiles = @{ $group_sample_map{$groupName} };
-    my $sampleCount = scalar(@sampleFiles);
+  for my $group_name ( sort keys %group_sample_map ) {
+    my @sample_files = @{ $group_sample_map{$group_name} };
+    my $sampleCount = scalar(@sample_files);
 
     if ( $sampleCount != 2 ) {
       die "SampleFile should be normal,tumor paired.";
     }
 
-    my $curDir = create_directory_or_die( $resultDir . "/$groupName" );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$group_name" );
 
-    my $normal = $sampleFiles[0][1];
-    my $tumor  = $sampleFiles[1][1];
+    my $normal = $sample_files[0][1];
+    my $tumor  = $sample_files[1][1];
 
-    my $snpvcf   = "${groupName}.snp.vcf";
-    my $indelvcf = "${groupName}.indel.vcf";
+    my $snpvcf   = "${group_name}.snp.vcf";
+    my $indelvcf = "${group_name}.indel.vcf";
 
     my $normal_pileup = "samtools mpileup $mpileup_options -f $faFile $normal";
     my $tumor_pileup  = "samtools mpileup $mpileup_options -f $faFile $tumor";
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $groupName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $groupName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $group_name );
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
+    open( my $out, ">$pbs_file" ) or die $!;
+    print $out "$pbs_desc
 $log_desc
 
 $path_file 
 
 echo varscan2=`date` 
 
-cd $curDir
+cd $cur_dir
 
 if [ ! -s $snpvcf ]; then
   if [ ! -s ${normal}.bai ]; then
@@ -89,7 +89,7 @@ if [ ! -s $snpvcf ]; then
     samtools index ${tumor}
   fi
 
-  java $java_option -jar $varscan2_jar somatic <($normal_pileup) <($tumor_pileup) $groupName $option --output-vcf 
+  java $java_option -jar $varscan2_jar somatic <($normal_pileup) <($tumor_pileup) $group_name $option --output-vcf 
 fi
 
 java $java_option -jar $varscan2_jar processSomatic $snpvcf
@@ -100,12 +100,12 @@ grep -v \"^#\" $indelvcf | cut -f1 | uniq -c | awk '{print \$2\"\t\"\$1}' > ${in
 
 echo finished=`date`
 ";
-    close OUT;
+    close $out;
 
-    print "$pbsFile created \n";
+    print "$pbs_file created \n";
   }
 
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -117,17 +117,17 @@ echo finished=`date`
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $groups = get_raw_files( $config, $section, "groups" );
 
   my $result = {};
-  for my $groupName ( keys %{$groups} ) {
-    my @resultFiles = ();
-    my $curDir      = $resultDir . "/$groupName";
-    push( @resultFiles, "$curDir/${groupName}.snp.Somatic.hc.vcf" );
-    push( @resultFiles, "$curDir/${groupName}.indel.Somatic.hc.vcf" );
-    $result->{$groupName} = filter_array( \@resultFiles, $pattern );
+  for my $group_name ( keys %{$groups} ) {
+    my @result_files = ();
+    my $cur_dir      = $result_dir . "/$group_name";
+    push( @result_files, "$cur_dir/${group_name}.snp.Somatic.hc.vcf" );
+    push( @result_files, "$cur_dir/${group_name}.indel.Somatic.hc.vcf" );
+    $result->{$group_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

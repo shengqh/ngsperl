@@ -20,12 +20,12 @@ NGSPERL just provide the interface to generate PBS scripts but not running the a
 # Framework
 Our object oriented module-based framework includes three parts: modules, configurations, and a module parser. Each task in the pipeline will be implemented as a module. A configuration will be used for each specific research project which includes multiple tasks with user-defined parameters. A module parser will be used to parse the configuration to generate PBS scripts. Corresponding Linux shell scripts will also be generated for submitting the PBS scripts to the Linux cluster for lengthy tasks or running the PBS scripts directly for shorter tasks based on user choice.  
 
-In order to allow the module integration, each module must implement three functions: result, perform, and pbsfiles. 
+In order to allow the module integration, each module must implement three functions: result, perform, and get_pbs_files. 
 
 The function result will provide the expected result files as if the task were executed.
  
 The function perform is used to generate the corresponding PBS scripts based on user-defined parameters. Once two tasks are joined together in configuration, the downstream task will take the expected result files of the upstream task as the input parameters. The results from multiple tasks can also be used as input files in downstream tasks which makes the framework more flexible.
-The function pbsfiles will return the file names of the corresponding PBS scripts that function perform generated. With function pbsfiles, the user can merge multiple shorter tasks into a single task through module "SequenceTask", then submit the PBS script of this single task to the Linux cluster. This feature is very useful for a pipeline with many quick tasks, such as smallRNA sequencing data analysis. 
+The function get_pbs_files will return the file names of the corresponding PBS scripts that function perform generated. With function get_pbs_files, the user can merge multiple shorter tasks into a single task through module "SequenceTask", then submit the PBS script of this single task to the Linux cluster. This feature is very useful for a pipeline with many quick tasks, such as smallRNA sequencing data analysis. 
 
 Once the required tools are implemented as modules, for each real project, a Perl configuration structure will be defined to join those tools together. Then a module parser will parse this configuration and generate individual PBS scripts for each task. A shell script will also be generated to help the user submit multiple PBS scripts to the cluster or execute those PBS scripts sequentially. 
   

@@ -19,7 +19,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "SequenceTask";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_st";
   bless $self, $class;
   return $self;
@@ -28,7 +28,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %fqFiles = %{ get_raw_files( $config, $section ) };
 
@@ -37,11 +37,11 @@ sub perform {
   my $cluster = get_cluster( $config, $section );
 
   my $finalName    = $task_name . "_pipeline";
-  my $finalpbs     = $self->pbsfile( $pbsDir, $finalName );
-  my $finallog     = $self->logfile( $logDir, $finalName );
-  my $finallogdesp = $cluster->get_log_desc($finallog);
+  my $finalpbs     = $self->get_pbs_filename( $pbs_dir, $finalName );
+  my $finallog     = $self->get_log_filename( $log_dir, $finalName );
+  my $finallogdesp = $cluster->get_log_description($finallog);
   open( FINAL, ">$finalpbs" ) or die $!;
-  print FINAL "$pbsDesc
+  print FINAL "$pbs_desc
 $finallogdesp
 
 $path_file
@@ -50,9 +50,9 @@ echo pipelineStart=`date`
 ";
 
   for my $taskName ( sort keys %fqFiles ) {
-    my $shfile = $self->taskfile( $pbsDir, $taskName );
-    open( SH, ">$shfile" ) or die "Cannot create $shfile";
-    print SH get_run_command($sh_direct);
+    my $shfile = $self->get_task_filename( $pbs_dir, $taskName );
+    open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+    print $sh get_run_command($sh_direct);
 
     my @tasks = @{ $fqFiles{$taskName} };
 
@@ -61,15 +61,15 @@ echo pipelineStart=`date`
     for my $tasksection (@tasks) {
 
       #print "task " . $tasksection . " ...\n";
-      my $pbsfiles = getPbsFiles( $config, $tasksection );
-      for my $sample ( sort keys %{$pbsfiles} ) {
+      my $get_pbs_files = getget_pbs_files( $config, $tasksection );
+      for my $sample ( sort keys %{$get_pbs_files} ) {
 
-        #print "\t", $sample, " => ", $pbsfiles->{$sample}, "\n";
+        #print "\t", $sample, " => ", $get_pbs_files->{$sample}, "\n";
         $samples->{$sample} = 1;
       }
 
-      $taskpbs->{$tasksection} = $pbsfiles;
-      for my $sample ( sort keys %{$pbsfiles} ) {
+      $taskpbs->{$tasksection} = $get_pbs_files;
+      for my $sample ( sort keys %{$get_pbs_files} ) {
         $samples->{$sample} = 1;
       }
     }
@@ -77,14 +77,14 @@ echo pipelineStart=`date`
     for my $sample ( sort keys %{$samples} ) {
       my $taskSample = $sample . "_" . $taskName;
 
-      my $pbsFile = $self->pbsfile( $pbsDir, $taskSample );
-      my $pbsName = basename($pbsFile);
-      my $log     = $self->logfile( $logDir, $taskSample );
-      my $logdesp = $cluster->get_log_desc($log);
+      my $pbs_file = $self->get_pbs_filename( $pbs_dir, $taskSample );
+      my $pbs_name = basename($pbs_file);
+      my $log     = $self->get_log_filename( $log_dir, $taskSample );
+      my $logdesp = $cluster->get_log_description($log);
 
-      open( OUT, ">$pbsFile" ) or die $!;
+      open( my $out, ">$pbs_file" ) or die $!;
 
-      print OUT "$pbsDesc
+      print $out "$pbs_desc
 $logdesp
 
 $path_file
@@ -94,40 +94,40 @@ echo sequenceTaskStart=`date`
       for my $tasksection (@tasks) {
 
         #print "task " . $tasksection . " ...\n";
-        my $pbsfiles = $taskpbs->{$tasksection};
+        my $get_pbs_files = $taskpbs->{$tasksection};
 
-        if ( exists $pbsfiles->{$sample} ) {
-          my $samplepbs = $pbsfiles->{$sample};
+        if ( exists $get_pbs_files->{$sample} ) {
+          my $samplepbs = $get_pbs_files->{$sample};
           if ( ref($samplepbs) eq 'ARRAY' ) {
             for my $pbs ( @{$samplepbs} ) {
               if ( !-e $pbs ) {
                 die "Task " . $tasksection . ", file not exists " . $pbs . "\n";
               }
-              print OUT "bash " . $pbs . "\n";
+              print $out "bash " . $pbs . "\n";
             }
           }
           else {
             if ( !-e $samplepbs ) {
               die "Task " . $tasksection . ", file not exists " . $samplepbs . "\n";
             }
-            print OUT "bash " . $samplepbs . "\n";
+            print $out "bash " . $samplepbs . "\n";
           }
         }
       }
 
-      print OUT "
+      print $out "
 echo sequenceTaskEnd=`date` 
 ";
-      close(OUT);
+      close $out;
 
-      print SH "\$MYCMD ./$pbsName \n";
-      print "$pbsFile created\n";
+      print $sh "\$MYCMD ./$pbs_name \n";
+      print "$pbs_file created\n";
 
-      print FINAL "bash ./$pbsName \n";
+      print FINAL "bash ./$pbs_name \n";
 
     }
-    print SH "exit 0\n";
-    close(SH);
+    print $sh "exit 0\n";
+    close $sh;
 
     if ( is_linux() ) {
       chmod 0755, $shfile;
@@ -140,10 +140,10 @@ echo sequenceTaskEnd=`date`
   print "You may submit or run $finalpbs for all tasks.\n";
 }
 
-sub pbsfiles {
+sub get_pbs_files {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $result = {};
 
@@ -157,22 +157,22 @@ sub pbsfiles {
     for my $tasksection (@tasks) {
 
       #print "task " . $tasksection . " ...\n";
-      my $pbsfiles = getPbsFiles( $config, $tasksection );
-      for my $sample ( sort keys %{$pbsfiles} ) {
+      my $get_pbs_files = getget_pbs_files( $config, $tasksection );
+      for my $sample ( sort keys %{$get_pbs_files} ) {
 
-        #print "\t", $sample, " => ", $pbsfiles->{$sample}, "\n";
+        #print "\t", $sample, " => ", $get_pbs_files->{$sample}, "\n";
         $samples->{$sample} = 1;
       }
 
-      $taskpbs->{$tasksection} = $pbsfiles;
-      for my $sample ( sort keys %{$pbsfiles} ) {
+      $taskpbs->{$tasksection} = $get_pbs_files;
+      for my $sample ( sort keys %{$get_pbs_files} ) {
         $samples->{$sample} = 1;
       }
     }
 
     for my $sample ( sort keys %{$samples} ) {
       my $taskSample = $sample . "_" . $taskName;
-      $result->{$taskSample} = $self->pbsfile( $pbsDir, $taskSample );
+      $result->{$taskSample} = $self->get_pbs_filename( $pbs_dir, $taskSample );
     }
   }
 

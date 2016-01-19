@@ -16,7 +16,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name} = "SRA::FastqDump";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_fd";
   bless $self, $class;
   return $self;
@@ -25,49 +25,49 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $ispaired = $config->{$section}{ispaired};
   if ( !defined $ispaired ) {
     $ispaired = 0;
   }
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct) . "\n";
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct) . "\n";
 
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my $bamfile     = $sampleFiles[0];
+  for my $sample_name ( sort keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$sample_name} };
+    my $bam_file     = $sample_files[0];
 
-    my $pbsFile = $self->pbsfile($pbsDir, $sampleName);
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
-    my $logdesp = $cluster->get_log_desc($log);
+    my $pbs_file = $self->get_pbs_filename($pbs_dir, $sample_name);
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $logdesp = $cluster->get_log_description($log);
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    open( OUT, ">$pbsFile" ) or die $!;
+    open( my $out, ">$pbs_file" ) or die $!;
 
     if ($ispaired) {
-      my $fastq1     = $sampleName . "_1.fastq.gz";
-      my $fastq2     = $sampleName . "_2.fastq.gz";
+      my $fastq1     = $sample_name . "_1.fastq.gz";
+      my $fastq2     = $sample_name . "_2.fastq.gz";
       
-      print OUT "$pbsDesc
+      print $out "$pbs_desc
 $logdesp
 
 $path_file
 
-cd $resultDir
+cd $result_dir
 
 echo started=`date`
 
 if [ ! -s $fastq1 ]; then
-  ln -s $bamfile ${sampleName}.sra
-  fastq-dump --split-3 --gzip ${sampleName}.sra
-  rm ${sampleName}.sra
+  ln -s $bam_file ${sample_name}.sra
+  fastq-dump --split-3 --gzip ${sample_name}.sra
+  rm ${sample_name}.sra
 fi
 
 
@@ -77,20 +77,20 @@ exit 0
 ";
     }
     else {
-      my $fastq     = $sampleName . ".fastq.gz";
-      print OUT "$pbsDesc
+      my $fastq     = $sample_name . ".fastq.gz";
+      print $out "$pbs_desc
 $logdesp
 
 $path_file
 
-cd $resultDir
+cd $result_dir
 
 echo started=`date`
 
 if [ ! -s $fastq ]; then
-  ln -s $bamfile ${sampleName}.sra
-  fastq-dump --gzip ${sampleName}.sra
-  rm ${sampleName}.sra
+  ln -s $bam_file ${sample_name}.sra
+  fastq-dump --gzip ${sample_name}.sra
+  rm ${sample_name}.sra
 fi
 
 echo finished=`date`
@@ -99,11 +99,11 @@ exit 0
 ";
     }
 
-    close OUT;
+    close $out;
 
-    print "$pbsFile created \n";
+    print "$pbs_file created \n";
   }
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -111,34 +111,34 @@ exit 0
 
   print "!!!shell file $shfile created, you can run this shell file to submit all Bam2Fastq tasks.\n";
 
-  #`qsub $pbsFile`;
+  #`qsub $pbs_file`;
 }
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $ispaired = $config->{$section}{ispaired};
   if ( !defined $ispaired ) {
     $ispaired = 0;
   }
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
-  for my $sampleName ( keys %rawFiles ) {
+  for my $sample_name ( keys %raw_files ) {
 
-    my @resultFiles = ();
+    my @result_files = ();
     if ($ispaired) {
-      push( @resultFiles, $resultDir . "/" . $sampleName . "_1.fastq.gz" );
-      push( @resultFiles, $resultDir . "/" . $sampleName . "_2.fastq.gz" );
+      push( @result_files, $result_dir . "/" . $sample_name . "_1.fastq.gz" );
+      push( @result_files, $result_dir . "/" . $sample_name . "_2.fastq.gz" );
     }
     else {
-      push( @resultFiles, $resultDir . "/" . $sampleName . ".fastq.gz" );
+      push( @result_files, $result_dir . "/" . $sample_name . ".fastq.gz" );
     }
 
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

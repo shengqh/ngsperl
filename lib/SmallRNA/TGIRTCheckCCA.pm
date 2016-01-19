@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "TGIRTCheckCCA";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_cca";
   bless $self, $class;
   return $self;
@@ -26,61 +26,61 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqsFile = get_cqstools( $config, $section, 1 );
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my $cqstools = get_cqstools( $config, $section, 1 );
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my %untrimmedFiles = %{ get_raw_files( $config, $section, "untrimmedFastq" ) };
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct) . "\n";
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct) . "\n";
 
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my $sampleFile  = $sampleFiles[0];
+  for my $sample_name ( sort keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$sample_name} };
+    my $sampleFile  = $sample_files[0];
     
-    my @untrimmeds = @{ $untrimmedFiles{$sampleName} };
+    my @untrimmeds = @{ $untrimmedFiles{$sample_name} };
     my $untrimmed  = $untrimmeds[0];
     
-    my $finalFile  = $sampleName . "_CCA.tsv";
+    my $final_file  = $sample_name . "_CCA.tsv";
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $sample_name );
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
+    open( my $out, ">$pbs_file" ) or die $!;
+    print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $resultDir
+cd $result_dir
 
-if [ -s $finalFile ]; then
-  echo job has already been done. if you want to do again, delete $finalFile and submit job again.
+if [ -s $final_file ]; then
+  echo job has already been done. if you want to do again, delete $final_file and submit job again.
   exit 0
 fi
 
 echo CheckCCA=`date` 
 
-mono $cqsFile tgirt_checkcca $option -i $sampleFile -u $untrimmed -o $finalFile
+mono $cqstools tgirt_checkcca $option -i $sampleFile -u $untrimmed -o $final_file
 
 echo finished=`date`
 
 exit 0 
 ";
 
-    close OUT;
+    close $out;
 
-    print "$pbsFile created \n";
+    print "$pbs_file created \n";
   }
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -88,20 +88,20 @@ exit 0
 
   print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
 
-  #`qsub $pbsFile`;
+  #`qsub $pbs_file`;
 }
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
   my $result = {};
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @resultFiles = ();
-    push( @resultFiles, $resultDir . "/" . $sampleName . "_CCA.tsv" );
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+  for my $sample_name ( sort keys %raw_files ) {
+    my @result_files = ();
+    push( @result_files, $result_dir . "/" . $sample_name . "_CCA.tsv" );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

@@ -19,7 +19,7 @@ my $directory;
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "EdgeR";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_er";
   bless $self, $class;
   return $self;
@@ -28,7 +28,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $comparisons = get_raw_files( $config, $section );
   my $totalPair = scalar( keys %{$comparisons} );
@@ -52,12 +52,12 @@ sub perform {
   my $minMedianInGroup = get_option( $config, $section, "min_median_read", 0 );
 
   my %tpgroups = ();
-  for my $groupName ( sort keys %{$groups} ) {
-    my @samples = @{ $groups->{$groupName} };
-    $tpgroups{$groupName} = "\"" . join( "\",\"", @samples ) . "\"";
+  for my $group_name ( sort keys %{$groups} ) {
+    my @samples = @{ $groups->{$group_name} };
+    $tpgroups{$group_name} = "\"" . join( "\",\"", @samples ) . "\"";
   }
 
-  my $rfile = $resultDir . "/${task_name}.r";
+  my $rfile = $result_dir . "/${task_name}.r";
   open( RF, ">$rfile" ) or die "Cannot create $rfile";
   open RT, "<$rtemplate" or die $!;
 
@@ -69,7 +69,7 @@ sub perform {
     $readfunc = "read.table";
   }
   print RF "
-setwd(\"$resultDir\")  
+setwd(\"$result_dir\")  
   
 data<-${readfunc}(\"$countfile\",row.names=1, header=T, check.names=F)
 
@@ -85,29 +85,29 @@ comparisons=list(";
     $first++;
 
     my $gNames = $comparisons->{$comparisonName};
-    my @groupNames;
+    my @group_names;
     
     my $paired = 0;
     my $groupIds = {};
     if ( ref $gNames eq ref {} ) {
-      @groupNames = @{$gNames->{groups}};
+      @group_names = @{$gNames->{groups}};
       $paired = defined $gNames->{paired};
       if($paired){
         $groupIds = $gNames->{paired};
       }
     }
     else {
-      @groupNames = @{$gNames};
+      @group_names = @{$gNames};
     }
     
-    print(Dumper(@groupNames));
+    print(Dumper(@group_names));
     
-    if ( scalar(@groupNames) != 2 ) {
+    if ( scalar(@group_names) != 2 ) {
       die "Comparison of $comparisonName should contains and only contains two groups!";
     }
     
-    my $g1 = $groupNames[0];
-    my $g2 = $groupNames[1];
+    my $g1 = $group_names[0];
+    my $g2 = $group_names[1];
     my @s1 = @{ $groups->{$g1} };
     my @s2 = @{ $groups->{$g2} };
 
@@ -118,7 +118,7 @@ comparisons=list(";
     print RF "
   \"${comparisonName}\" = c(\"$filename\", \"$g1\", \"$g2\")";
 
-    my $cdfile = $resultDir . "/$filename";
+    my $cdfile = $result_dir . "/$filename";
     open( CD, ">$cdfile" ) or die "Cannot create $cdfile";
     if ($paired) {
       print CD "Sample\tPaired\tCondition\n";
@@ -161,40 +161,40 @@ comparisons=list(";
   close(RT);
   close(RF);
 
-  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
-  my $pbsName = basename($pbsFile);
-  my $log     = $self->logfile( $logDir, $task_name );
+  my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
+  my $pbs_name = basename($pbs_file);
+  my $log     = $self->get_log_filename( $log_dir, $task_name );
 
-  my $log_desc = $cluster->get_log_desc($log);
+  my $log_desc = $cluster->get_log_description($log);
 
-  open( OUT, ">$pbsFile" ) or die $!;
-  print OUT "$pbsDesc
+  open( my $out, ">$pbs_file" ) or die $!;
+  print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $resultDir
+cd $result_dir
 
 R --vanilla -f $rfile
 ";
-  close(OUT);
+  close $out;
 
-  print "!!!shell file $pbsFile created.\n";
+  print "!!!shell file $pbs_file created.\n";
 }
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $comparisons = get_raw_files( $config, $section );
 
   my $result = {};
   for my $comparisonName ( sort keys %{$comparisons} ) {
-    my @resultFiles = ();
-    push( @resultFiles, $resultDir . "/${comparisonName}.csv" );
-    push( @resultFiles, $resultDir . "/${comparisonName}.png" );
-    $result->{$comparisonName} = filter_array( \@resultFiles, $pattern );
+    my @result_files = ();
+    push( @result_files, $result_dir . "/${comparisonName}.csv" );
+    push( @result_files, $result_dir . "/${comparisonName}.png" );
+    $result->{$comparisonName} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

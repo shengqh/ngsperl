@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "GATK::Refine";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_rf";
   bless $self, $class;
   return $self;
@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my @vcfFiles = @{ $config->{$section}{vcf_files} } or die "Define vcf_files in section $section first.";
@@ -43,66 +43,66 @@ sub perform {
     $knownsitesvcf = $knownsitesvcf . " -knownSites $vcf";
   }
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $sorted = get_option( $config, $section, "sorted", 0 );
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct) . "\n";
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct) . "\n";
 
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my $sampleFile  = $sampleFiles[0];
+  for my $sample_name ( sort keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$sample_name} };
+    my $sampleFile  = $sample_files[0];
 
     my $inputFile     = $sampleFile;
     my $presortedFile = "";
     my $sortCmd       = "";
     if ( !$sorted ) {
-      my $presortedPrefix = $sampleName . ".sorted";
+      my $presortedPrefix = $sample_name . ".sorted";
       $presortedFile = $presortedPrefix . ".bam";
       $sortCmd       = "samtools sort -@ $thread -m 4G $sampleFile $presortedPrefix";
       $inputFile     = $presortedFile;
     }
 
-    my $rmdupFile     = $sampleName . ".rmdup.bam";
-    my $intervalFile  = $sampleName . ".rmdup.intervals";
-    my $realignedFile = $sampleName . ".rmdup.realigned.bam";
+    my $rmdupFile     = $sample_name . ".rmdup.bam";
+    my $intervalFile  = $sample_name . ".rmdup.intervals";
+    my $realignedFile = $sample_name . ".rmdup.realigned.bam";
     my $grpFile       = $realignedFile . ".grp";
-    my $recalFile     = $sampleName . ".rmdup.realigned.recal.bam";
+    my $recalFile     = $sample_name . ".rmdup.realigned.recal.bam";
 
-    my $finalFile = $recalFile;
+    my $final_file = $recalFile;
     my $baqcmd    = "";
     my $rmlist    = "";
     if ($baq) {
-      $finalFile = $sampleName . ".rmdup.realigned.recal.baq.bam";
+      $final_file = $sample_name . ".rmdup.realigned.recal.baq.bam";
       $baqcmd    = "
-if [[ -s $recalFile && ! -s $finalFile ]]; then
+if [[ -s $recalFile && ! -s $final_file ]]; then
   echo baq=`date` 
-  samtools calmd -Abr $recalFile $faFile > $finalFile
-  samtools index $finalFile
+  samtools calmd -Abr $recalFile $faFile > $final_file
+  samtools index $final_file
 fi      
 ";
       $rmlist = "$recalFile ${recalFile}.bai";
     }
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log     = $self->get_log_filename( $log_dir, $sample_name );
 
-    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
+    open( my $out, ">$pbs_file" ) or die $!;
+    print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $curDir
+cd $cur_dir
 
 echo GATKRefine_start=`date` 
 
@@ -140,10 +140,10 @@ fi
 
 $baqcmd
 
-if [[ -s $finalFile && ! -s ${finalFile}.stat ]]; then
+if [[ -s $final_file && ! -s ${final_file}.stat ]]; then
   echo flagstat=`date` 
-  samtools flagstat $finalFile > ${finalFile}.stat
-  rm $presortedFile $rmdupFile ${sampleName}.rmdup.bai ${rmdupFile}.metrics $realignedFile ${sampleName}.rmdup.realigned.bai $grpFile $rmlist
+  samtools flagstat $final_file > ${final_file}.stat
+  rm $presortedFile $rmdupFile ${sample_name}.rmdup.bai ${rmdupFile}.metrics $realignedFile ${sample_name}.rmdup.realigned.bai $grpFile $rmlist
 fi
   
 echo finished=`date`
@@ -151,11 +151,11 @@ echo finished=`date`
 exit 0;
 ";
 
-    close OUT;
+    close $out;
 
-    print "$pbsFile created\n";
+    print "$pbs_file created\n";
   }
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -167,17 +167,17 @@ exit 0;
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
   my $baq = get_option( $config, $section, "samtools_baq_calibration", 0 );
 
   my $result = {};
-  for my $sampleName ( keys %rawFiles ) {
-    my $finalFile = $baq ? $sampleName . ".rmdup.realigned.recal.baq.bam" : $sampleName . ".rmdup.realigned.recal.bam";
-    my @resultFiles = ();
-    push( @resultFiles, "${resultDir}/${sampleName}/${finalFile}" );
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+  for my $sample_name ( keys %raw_files ) {
+    my $final_file = $baq ? $sample_name . ".rmdup.realigned.recal.baq.bam" : $sample_name . ".rmdup.realigned.recal.bam";
+    my @result_files = ();
+    push( @result_files, "${result_dir}/${sample_name}/${final_file}" );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

@@ -18,7 +18,7 @@ our @ISA = qw(Proteomics::Summary::AbstractBuildSummary);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Proteomics::Summary::AccumulateBuildSummary";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_abs";
   bless $self, $class;
   return $self;
@@ -27,7 +27,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
@@ -46,18 +46,18 @@ sub perform {
   my @lines    = @{$lines};
   my @dataset  = @{$dataset};
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct) . "\n";
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct) . "\n";
 
-  my @sampleNames     = sort keys %datasets;
-  my $sampleNameCount = scalar(@sampleNames);
-  my $numlen          = length($sampleNameCount);
+  my @sample_names     = sort keys %datasets;
+  my $sample_nameCount = scalar(@sample_names);
+  my $numlen           = length($sample_nameCount);
 
   my $index      = 0;
   my $sampleSize = 0;
 
-  while ( $sampleSize <= $sampleNameCount ) {
+  while ( $sampleSize <= $sample_nameCount ) {
     if ( $index < scalar(@bins) ) {
       $sampleSize = $bins[$index];
       $index++;
@@ -65,84 +65,72 @@ sub perform {
     else {
       $sampleSize += $bin_size;
     }
-    if ( $sampleSize > $sampleNameCount ) {
-      $sampleSize = $sampleNameCount;
+    if ( $sampleSize > $sample_nameCount ) {
+      $sampleSize = $sample_nameCount;
     }
     my $currentTaskName = sprintf( "${task_name}_%0${numlen}d", $sampleSize );
 
-    my $currentParamFile = $resultDir . "/" . $currentTaskName . ".param";
-    open( OUT, ">$currentParamFile" ) or die $!;
+    my $currentParamFile = $result_dir . "/" . $currentTaskName . ".param";
+    open( my $out1, ">$currentParamFile" ) or die $!;
 
     for ( my $index = 0 ; $index < scalar(@lines) ; $index++ ) {
-      print OUT $lines[$index] . "\n";
+      print $out1 $lines[$index] . "\n";
       if ( $lines[$index] =~ "<Datasets>" ) {
         last;
       }
     }
     for ( my $index = 0 ; $index < $sampleSize ; $index++ ) {
-      my $sampleName = $sampleNames[$index];
-      print OUT "    <Dataset>\n";
-      print OUT "      <Name>$sampleName</Name>\n";
+      my $sample_name = $sample_names[$index];
+      print $out1 "    <Dataset>\n";
+      print $out1 "      <Name>$sample_name</Name>\n";
       foreach my $dsline (@dataset) {
-        print OUT $dsline . "\n";
+        print $out1 $dsline . "\n";
       }
-      print OUT "      <PathNames>\n";
-      my @sampleFiles = @{ $datasets{$sampleName} };
-      for my $sampleFile (@sampleFiles) {
-        print OUT "        <PathName>$sampleFile</PathName>\n";
+      print $out1 "      <PathNames>\n";
+      my @sample_files = @{ $datasets{$sample_name} };
+      for my $sampleFile (@sample_files) {
+        print $out1 "        <PathName>$sampleFile</PathName>\n";
       }
-      print OUT "      </PathNames>\n";
-      print OUT "    </Dataset>\n";
+      print $out1 "      </PathNames>\n";
+      print $out1 "    </Dataset>\n";
     }
 
     for ( my $index = 0 ; $index < scalar(@lines) ; $index++ ) {
       if ( $lines[$index] =~ "</Datasets>" ) {
         for ( my $nextindex = $index ; $nextindex < scalar(@lines) ; $nextindex++ ) {
-          print OUT $lines[$nextindex] . "\n";
+          print $out1 $lines[$nextindex] . "\n";
         }
         last;
       }
     }
 
-    close(OUT);
+    close $out1;
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $currentTaskName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $currentTaskName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $currentTaskName );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $currentTaskName );
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    my $resultFile = $resultDir . "/" . $currentTaskName . ".noredundant";
+    my $result_file = $result_dir . "/" . $currentTaskName . ".noredundant";
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
-$log_desc
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file );
 
-$path_file
-
-cd $resultDir
-
-echo buildsummary=`date`
-
-if [ ! -s $resultFile ]; then
-  mono $proteomicstools buildsummary -i $currentParamFile 
-fi
-
-echo finished=`date`
-
-exit 0 
+    print $pbs "
+mono $proteomicstools buildsummary -i $currentParamFile 
 ";
-    close OUT;
-    print "$pbsFile created \n";
+    $self->close_pbs($pbs);
 
-    if ( $sampleSize == scalar(@sampleNames) ) {
+    print "$pbs_file created \n";
+
+    if ( $sampleSize == scalar(@sample_names) ) {
       last;
     }
   }
 
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -154,7 +142,7 @@ exit 0
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $bin_size = get_option( $config, $section, "bin_size", 10 );
   my $bins     = $config->{$section}{"bins"};
@@ -163,18 +151,18 @@ sub result {
     @bins = @{$bins};
   }
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my $result      = {};
-  my @resultFiles = ();
+  my $result       = {};
+  my @result_files = ();
 
-  my $sampleNameCount = scalar( keys %rawFiles );
-  my $numlen          = length($sampleNameCount);
+  my $sample_nameCount = scalar( keys %raw_files );
+  my $numlen           = length($sample_nameCount);
 
   my $index      = 0;
   my $sampleSize = 0;
 
-  while ( $sampleSize <= $sampleNameCount ) {
+  while ( $sampleSize <= $sample_nameCount ) {
     if ( $index < scalar(@bins) ) {
       $sampleSize = $bins[$index];
       $index++;
@@ -182,24 +170,24 @@ sub result {
     else {
       $sampleSize += $bin_size;
     }
-    if ( $sampleSize > $sampleNameCount ) {
-      $sampleSize = $sampleNameCount;
+    if ( $sampleSize > $sample_nameCount ) {
+      $sampleSize = $sample_nameCount;
     }
     my $currentTaskName = sprintf( "${task_name}_%0${numlen}d", $sampleSize );
 
-    my $currentNoredundantFile = $resultDir . "/" . $currentTaskName . ".noredundant";
-    push( @resultFiles, $currentNoredundantFile );
+    my $currentNoredundantFile = $result_dir . "/" . $currentTaskName . ".noredundant";
+    push( @result_files, $currentNoredundantFile );
 
-    if ( $sampleSize == $sampleNameCount ) {
+    if ( $sampleSize == $sample_nameCount ) {
       last;
     }
 
     $sampleSize += $bin_size;
-    if ( $sampleSize > $sampleNameCount ) {
-      $sampleSize = $sampleNameCount;
+    if ( $sampleSize > $sample_nameCount ) {
+      $sampleSize = $sample_nameCount;
     }
   }
-  $result->{$task_name} = filter_array( \@resultFiles, $pattern );
+  $result->{$task_name} = filter_array( \@result_files, $pattern );
   return $result;
 }
 1;

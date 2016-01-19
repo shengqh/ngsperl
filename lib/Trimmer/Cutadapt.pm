@@ -16,7 +16,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Cutadapt";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_cut";
   bless $self, $class;
   return $self;
@@ -25,11 +25,14 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $adapter   = get_option( $config, $section, "adapter" );
+  if ( defined $config->{$section}{adapter} ) {
+    $option = $option . " -a " . $config->{$section}{adapter};
+  }
+
   my $extension = get_option( $config, $section, "extension" );
-  my $gzipped   = get_option( $config, $section, "gzipped", 1 );
+  my $gzipped = get_option( $config, $section, "gzipped", 1 );
 
   if ( $gzipped && $extension =~ /\.gz$/ ) {
 
@@ -39,103 +42,75 @@ sub perform {
     #print $extension . "\n";
   }
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
   my $shortLimited = $option =~ /-m\s+\d+/;
   my $longLimited  = $option =~ /-M\s+\d+/;
 
-  for my $sampleName ( sort keys %rawFiles ) {
+  for my $sample_name ( sort keys %raw_files ) {
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $sampleName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $sampleName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
-$log_desc
-
-$path_file
-
-cd $resultDir
-";
-
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    if ( scalar(@sampleFiles) == 1 ) {
-      my $finalName      = $sampleName . $extension;
+    my @sample_files = @{ $raw_files{$sample_name} };
+    if ( scalar(@sample_files) == 1 ) {
+      my $finalName      = $sample_name . $extension;
       my $finalShortName = $finalName . ".short";
       my $finalLongName  = $finalName . ".long";
 
-      my $finalFile      = $gzipped ? "${finalName}.gz"      : $finalName;
+      my $final_file     = $gzipped ? "${finalName}.gz"      : $finalName;
       my $finalShortFile = $gzipped ? "${finalShortName}.gz" : $finalShortName;
       my $finalLongFile  = $gzipped ? "${finalLongName}.gz"  : $finalLongName;
 
-      print OUT "
-if [ -s $finalFile ];then
-  echo job has already been done. if you want to do again, delete ${resultDir}/$finalFile and submit job again.
-  exit 0;
-fi
+      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-echo cutadapt=`date` 
-
-";
-      print OUT "cutadapt $option -a $adapter -o $finalFile ";
+      print $pbs "cutadapt $option -o $final_file ";
       if ($shortLimited) {
-        print OUT " --too-short-output=$finalShortFile";
+        print $pbs " --too-short-output=$finalShortFile";
       }
       if ($longLimited) {
-        print OUT " --too-long-output=$finalLongFile";
+        print $pbs " --too-long-output=$finalLongFile";
       }
-      print OUT " $sampleFiles[0] \n";
+      print $pbs " $sample_files[0] \n";
+      $self->close_pbs( $pbs, $pbs_file );
     }
     else {
 
       #pair-end data
-      my $read1file = $sampleFiles[0];
-      my $read2file = $sampleFiles[1];
-      my $read1name = $sampleName . ".1.fastq.gz";
-      my $read2name = $sampleName . ".2.fastq.gz";
+      my $read1file = $sample_files[0];
+      my $read2file = $sample_files[1];
+      my $read1name = $sample_name . ".1.fastq.gz";
+      my $read2name = $sample_name . ".2.fastq.gz";
 
-      print OUT "
-if [ -s $read1name ];then
-  echo job has already been done. if you want to do again, delete ${resultDir}/$read1name and submit job again.
-  exit 0;
-fi
+      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $read1name );
 
-echo CUTADAPT_start=`date` 
-";
       if ( $shortLimited || $longLimited ) {
-        my $temp1name = $sampleName . ".1.tmp.fastq";
-        my $temp2name = $sampleName . ".2.tmp.fastq";
+        my $temp1name = $sample_name . ".1.tmp.fastq";
+        my $temp2name = $sample_name . ".2.tmp.fastq";
 
         #https://cutadapt.readthedocs.org/en/stable/guide.html#illumina-truseq
-        print OUT "cutadapt $option -a $adapter -o $temp1name -p $temp2name $read1file $read2file \n";
-        print OUT "cutadapt $option -a $adapter -o $read2name -p $read1name $temp2name $temp1name \n";
-        print OUT "rm $temp2name $temp1name \n";
+        print $pbs "cutadapt $option -o $temp1name -p $temp2name $read1file $read2file \n";
+        print $pbs "cutadapt $option -o $read2name -p $read1name $temp2name $temp1name \n";
+        print $pbs "rm $temp2name $temp1name \n";
       }
       else {
-        print OUT "cutadapt $option -a $adapter -o $read1name $read1file \n";
-        print OUT "cutadapt $option -a $adapter -o $read2name $read2file \n";
+        print $pbs "cutadapt $option -o $read1name $read1file \n";
+        print $pbs "cutadapt $option -o $read2name $read2file \n";
       }
+      $self->close_pbs( $pbs, $pbs_file );
     }
-    print OUT "
-echo finished=`date`
 
-exit 0 
-";
-
-    close OUT;
-
-    print "$pbsFile created \n";
   }
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -143,13 +118,13 @@ exit 0
 
   print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
 
-  #`qsub $pbsFile`;
+  #`qsub $pbs_file`;
 }
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $extension = $config->{$section}{extension} or die "define ${section}::extension first";
   my $gzipped = get_option( $config, $section, "gzipped", 1 );
@@ -161,42 +136,42 @@ sub result {
   my $shortLimited = $option =~ /-m\s+\d+/;
   my $longLimited  = $option =~ /-M\s+\d+/;
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my $result      = {};
+  my $result = {};
 
-  for my $sampleName ( keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
+  for my $sample_name ( keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$sample_name} };
 
-    my @resultFiles = ();
-    if ( scalar(@sampleFiles) == 1 ) {
-      my $finalName      = $sampleName . $extension;
+    my @result_files = ();
+    if ( scalar(@sample_files) == 1 ) {
+      my $finalName      = $sample_name . $extension;
       my $finalShortName = $finalName . ".short";
       my $finalLongName  = $finalName . ".long";
 
-      my $finalFile      = $gzipped ? "${finalName}.gz"      : $finalName;
+      my $final_file     = $gzipped ? "${finalName}.gz"      : $finalName;
       my $finalShortFile = $gzipped ? "${finalShortName}.gz" : $finalShortName;
       my $finalLongFile  = $gzipped ? "${finalLongName}.gz"  : $finalLongName;
 
-      push( @resultFiles, $resultDir . "/" . $finalFile );
+      push( @result_files, $result_dir . "/" . $final_file );
 
       if ($shortLimited) {
-        push( @resultFiles, $resultDir . "/" . $finalShortFile );
+        push( @result_files, $result_dir . "/" . $finalShortFile );
       }
       if ($longLimited) {
-        push( @resultFiles, $resultDir . "/" . $finalLongFile );
+        push( @result_files, $result_dir . "/" . $finalLongFile );
       }
     }
     else {
 
       #pair-end data
-      my $read1name = $sampleName . ".1.fastq.gz";
-      my $read2name = $sampleName . ".2.fastq.gz";
+      my $read1name = $sample_name . ".1.fastq.gz";
+      my $read2name = $sample_name . ".2.fastq.gz";
 
-      push( @resultFiles, $resultDir . "/" . $read1name );
-      push( @resultFiles, $resultDir . "/" . $read2name );
+      push( @result_files, $result_dir . "/" . $read1name );
+      push( @result_files, $result_dir . "/" . $read2name );
     }
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

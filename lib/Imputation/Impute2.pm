@@ -17,7 +17,7 @@ our @ISA = qw(CQS::Task);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Imputation::Impute2";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_imp";
   bless $self, $class;
   return $self;
@@ -37,7 +37,7 @@ sub containPosition {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $isPhased = get_option( $config, $section, "isPhased", 0 );
 
@@ -52,40 +52,40 @@ sub perform {
 sub perform_phased {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
-  my $mergefile = $self->taskfile( $resultDir, $task_name . "_merge" );
+  my $mergefile = $self->get_task_filename( $result_dir, $task_name . "_merge" );
   open( MSH, ">$mergefile" ) or die "Cannot create $mergefile";
 
-  my %rawFiles   = %{ get_raw_files( $config, $section ) };
+  my %raw_files   = %{ get_raw_files( $config, $section ) };
   my %mapFiles   = %{ get_raw_files( $config, $section, "genetic_map_file" ) };
   my %haploFiles = %{ get_raw_files( $config, $section, "haplo_file" ) };
   my %rangeFiles = %{ get_raw_files( $config, $section, "range_file" ) };
 
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my $sample      = $sampleFiles[0];
+  for my $sample_name ( sort keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$sample_name} };
+    my $sample      = $sample_files[0];
 
-    my @mFiles = @{ $mapFiles{$sampleName} };
+    my @mFiles = @{ $mapFiles{$sample_name} };
     my $map    = $mFiles[0];
 
-    my @hFiles     = @{ $haploFiles{$sampleName} };
+    my @hFiles     = @{ $haploFiles{$sample_name} };
     my $haploFile  = $hFiles[0];
     my $legendFile = change_extension( $haploFile, ".legend" );
 
-    my @rFiles    = @{ $rangeFiles{$sampleName} };
+    my @rFiles    = @{ $rangeFiles{$sample_name} };
     my $rangeFile = $rFiles[0];
 
-    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
-    my $gen_file     = "${sampleName}.gen";
-    my $gen_tmp_file = "${sampleName}.gen.tmp";
+    my $gen_file     = "${sample_name}.gen";
+    my $gen_tmp_file = "${sample_name}.gen.tmp";
 
-    print MSH "cd $curDir \n";
+    print MSH "cd $cur_dir \n";
     print MSH "if [[ ! -s $gen_file ]]; then \n";
 
     open( INFILE, "<", $rangeFile ) or die("Couldn't open $rangeFile for reading!\n");
@@ -94,31 +94,31 @@ sub perform_phased {
       my $start = ( split( /\s+/, $_ ) )[0];
       my $end   = ( split( /\s+/, $_ ) )[1];
 
-      my $cursample = $sampleName . "_" . $start . "_" . $end;
+      my $cursample = $sample_name . "_" . $start . "_" . $end;
 
-      my $pbsFile = $self->pbsfile( $pbsDir, $cursample );
-      my $pbsName = basename($pbsFile);
-      my $log     = $self->logfile( $logDir, $cursample );
+      my $pbs_file = $self->get_pbs_filename( $pbs_dir, $cursample );
+      my $pbs_name = basename($pbs_file);
+      my $log     = $self->get_log_filename( $log_dir, $cursample );
 
       my $tmpFile = "${cursample}.tmp";
 
-      my $log_desc = $cluster->get_log_desc($log);
+      my $log_desc = $cluster->get_log_description($log);
 
-      open( OUT, ">$pbsFile" ) or die $!;
-      print OUT "$pbsDesc
+      open( my $out, ">$pbs_file" ) or die $!;
+      print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $curDir 
+cd $cur_dir 
 
 if [ -s $gen_file ]; then
-  echo job has already been done. if you want to do again, delete $curDir/$gen_file and submit job again.
+  echo job has already been done. if you want to do again, delete $cur_dir/$gen_file and submit job again.
   exit 0;
 fi
 
 if [ -s $tmpFile ]; then
-  echo job has already been done. if you want to do again, delete $curDir/$tmpFile and submit job again.
+  echo job has already been done. if you want to do again, delete $cur_dir/$tmpFile and submit job again.
   exit 0;
 fi
 
@@ -138,10 +138,10 @@ echo finished=`date`
       }
       $start = $end + 1;
 
-      close(OUT);
+      close $out;
 
-      print SH "\$MYCMD ./$pbsName \n";
-      print "$pbsFile created\n";
+      print $sh "\$MYCMD ./$pbs_name \n";
+      print "$pbs_file created\n";
     }
 
     close(INFILE);
@@ -149,8 +149,8 @@ echo finished=`date`
     print MSH "  mv $gen_tmp_file $gen_file \n";
     print MSH "fi \n\n";
   }
-  print SH "exit 0\n";
-  close(SH);
+  print $sh "exit 0\n";
+  close $sh;
 
   close(MSH);
 
@@ -164,39 +164,39 @@ echo finished=`date`
 sub perform_direct {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
-  my $mergefile = $self->taskfile( $resultDir, $task_name . "_merge" );
+  my $mergefile = $self->get_task_filename( $result_dir, $task_name . "_merge" );
   open( MSH, ">$mergefile" ) or die "Cannot create $mergefile";
 
-  my %rawFiles   = %{ get_raw_files( $config, $section ) };
+  my %raw_files   = %{ get_raw_files( $config, $section ) };
   my %mapFiles   = %{ get_raw_files( $config, $section, "genetic_map_file" ) };
   my %haploFiles = %{ get_raw_files( $config, $section, "haplo_file" ) };
   my %rangeFiles = %{ get_raw_files( $config, $section, "range_file" ) };
 
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my $sample      = $sampleFiles[0];
+  for my $sample_name ( sort keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$sample_name} };
+    my $sample      = $sample_files[0];
 
-    my @mFiles = @{ $mapFiles{$sampleName} };
+    my @mFiles = @{ $mapFiles{$sample_name} };
     my $map    = $mFiles[0];
 
-    my @hFiles     = @{ $haploFiles{$sampleName} };
+    my @hFiles     = @{ $haploFiles{$sample_name} };
     my $haploFile  = $hFiles[0];
     my $legendFile = change_extension( $haploFile, ".legend" );
 
-    my @rFiles    = @{ $rangeFiles{$sampleName} };
+    my @rFiles    = @{ $rangeFiles{$sample_name} };
     my $rangeFile = $rFiles[0];
 
-    my $curDir = create_directory_or_die( $resultDir . "/$sampleName" );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
-    my $gen_file = "${sampleName}.gen";
+    my $gen_file = "${sample_name}.gen";
 
-    print MSH "cd $curDir \n";
+    print MSH "cd $cur_dir \n";
 
     open( INFILE, "<", $rangeFile ) or die("Couldn't open $rangeFile for reading!\n");
     my $isfirst = 1;
@@ -204,32 +204,32 @@ sub perform_direct {
       my $start = ( split( /\s+/, $_ ) )[0];
       my $end   = ( split( /\s+/, $_ ) )[1];
 
-      my $cursample = $sampleName . "_" . $start . "_" . $end;
+      my $cursample = $sample_name . "_" . $start . "_" . $end;
 
-      my $pbsFile = $self->pbsfile( $pbsDir, $cursample );
-      my $pbsName = basename($pbsFile);
-      my $log     = $self->logfile( $logDir, $cursample );
+      my $pbs_file = $self->get_pbs_filename( $pbs_dir, $cursample );
+      my $pbs_name = basename($pbs_file);
+      my $log     = $self->get_log_filename( $log_dir, $cursample );
 
-      my $log_desc = $cluster->get_log_desc($log);
+      my $log_desc = $cluster->get_log_description($log);
 
       my $tmpFile = "${cursample}.tmp";
 
-      open( OUT, ">$pbsFile" ) or die $!;
+      open( my $out, ">$pbs_file" ) or die $!;
 
-      print OUT "$pbsDesc
+      print $out "$pbs_desc
 $log_desc
 
 $path_file
 
-cd $curDir 
+cd $cur_dir 
 
 if [ -s $gen_file ]; then
-  echo job has already been done. if you want to do again, delete $curDir/$gen_file and submit job again.
+  echo job has already been done. if you want to do again, delete $cur_dir/$gen_file and submit job again.
   exit 0;
 fi
 
 if [ -s $tmpFile ]; then
-  echo job has already been done. if you want to do again, delete $curDir/$tmpFile and submit job again.
+  echo job has already been done. if you want to do again, delete $cur_dir/$tmpFile and submit job again.
   exit 0;
 fi
 
@@ -249,14 +249,14 @@ echo finished=`date`
       }
       $start = $end + 1;
 
-      close(OUT);
+      close $out;
 
-      print SH "\$MYCMD ./$pbsName \n";
-      print "$pbsFile created\n";
+      print $sh "\$MYCMD ./$pbs_name \n";
+      print "$pbs_file created\n";
     }
   }
-  print SH "exit 0\n";
-  close(SH);
+  print $sh "exit 0\n";
+  close $sh;
 
   close(MSH);
 
@@ -270,19 +270,19 @@ echo finished=`date`
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
   my %rangeFiles = %{ get_raw_files( $config, $section, "range_file" ) };
 
   my $result = {};
-  for my $sampleName ( sort keys %rawFiles ) {
-    my @resultFiles = ();
+  for my $sample_name ( sort keys %raw_files ) {
+    my @result_files = ();
 
-    my @sampleFiles = @{ $rawFiles{$sampleName} };
-    my $sample      = $sampleFiles[0];
+    my @sample_files = @{ $raw_files{$sample_name} };
+    my $sample      = $sample_files[0];
 
-    my @rFiles    = @{ $rangeFiles{$sampleName} };
+    my @rFiles    = @{ $rangeFiles{$sample_name} };
     my $rangeFile = $rFiles[0];
 
     open( INFILE, "<", $rangeFile ) or die("Couldn't open $rangeFile for reading!\n");
@@ -291,15 +291,15 @@ sub result {
       my $start = ( split( /\s+/, $_ ) )[0];
       my $end   = ( split( /\s+/, $_ ) )[1];
 
-      my $cursample = $sampleName . "_" . $start . "_" . $end;
+      my $cursample = $sample_name . "_" . $start . "_" . $end;
 
       my $tmpFile = "${cursample}.tmp";
 
-      push( @resultFiles, "${resultDir}/${sampleName}/${tmpFile}" );
+      push( @result_files, "${result_dir}/${sample_name}/${tmpFile}" );
     }
     close(INFILE);
 
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

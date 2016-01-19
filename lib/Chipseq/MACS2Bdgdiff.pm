@@ -20,7 +20,7 @@ my $directory;
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "Chipseq::MACS2Bdgdiff";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_mb";
   bless $self, $class;
   return $self;
@@ -29,7 +29,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my %group_sample_treat   = %{ get_raw_files( $config, $section, "source", "_treat_pileup.bdg" ) };
   my %group_sample_control = %{ get_raw_files( $config, $section, "source", "_control_lambda.bdg" ) };
@@ -38,57 +38,45 @@ sub perform {
   #print Dumper(%group_sample_treat);
   #print Dumper(%group_sample_control);
 
-  my $shfile = $self->taskfile( $pbsDir, $task_name );
-  open( SH, ">$shfile" ) or die "Cannot create $shfile";
-  print SH get_run_command($sh_direct);
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
 
   for my $comparisonName ( sort keys %{$comparisons} ) {
-    my @groupNames = @{ $comparisons->{$comparisonName} };
-    my $groupCount = scalar(@groupNames);
+    my @group_names = @{ $comparisons->{$comparisonName} };
+    my $groupCount  = scalar(@group_names);
     if ( $groupCount != 2 ) {
       die "Comparison should be control,treatment paired.";
     }
 
-    my $condition1treat   = $group_sample_treat{ $groupNames[0] }->[0];
-    my $condition1control = $group_sample_control{ $groupNames[0] }->[0];
-    my $condition2treat   = $group_sample_treat{ $groupNames[1] }->[0];
-    my $condition2control = $group_sample_control{ $groupNames[1] }->[0];
+    my $condition1treat   = $group_sample_treat{ $group_names[0] }->[0];
+    my $condition1control = $group_sample_control{ $group_names[0] }->[0];
+    my $condition2treat   = $group_sample_treat{ $group_names[1] }->[0];
+    my $condition2control = $group_sample_control{ $group_names[1] }->[0];
 
-    my $curDir = create_directory_or_die( $resultDir . "/$comparisonName" );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$comparisonName" );
 
-    my $pbsFile = $self->pbsfile( $pbsDir, $comparisonName );
-    my $pbsName = basename($pbsFile);
-    my $log     = $self->logfile( $logDir, $comparisonName );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $comparisonName );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $comparisonName );
 
-    my $log_desc = $cluster->get_log_desc($log);
+    my $log_desc = $cluster->get_log_description($log);
+    my $final_file = "${comparisonName}_c3.0_common.bed";
 
-    my $final = "${comparisonName}_c3.0_common.bed";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-    open( OUT, ">$pbsFile" ) or die $!;
-    print OUT "$pbsDesc
-$log_desc
-
-$path_file 
-
-echo macs2_bdgdiff=`date` 
-
-cd $curDir
-
-if [ ! -s $final ]; then
-  macs2 bdgdiff $option --t1 $condition1treat --t2 $condition2treat --c1 $condition1control --c2 $condition2control --o-prefix $comparisonName  
-fi
-
-echo finished=`date`
-
+    print $pbs "
+macs2 bdgdiff $option --t1 $condition1treat --t2 $condition2treat --c1 $condition1control --c2 $condition2control --o-prefix $comparisonName  
 ";
-    close OUT;
 
-    print "$pbsFile created \n";
+    $self->close_pbs($pbs);
 
-    print SH "\$MYCMD ./$pbsName \n";
+    print "$pbs_file created \n";
+
+    print $sh "\$MYCMD ./$pbs_name \n";
   }
 
-  close(SH);
+  close $sh;
 
   if ( is_linux() ) {
     chmod 0755, $shfile;
@@ -100,18 +88,18 @@ echo finished=`date`
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $comparisons = get_raw_files( $config, $section, "groups" );
   my $result = {};
   for my $comparisonName ( sort keys %{$comparisons} ) {
-    my $curDir = $resultDir . "/$comparisonName";
+    my $cur_dir = $result_dir . "/$comparisonName";
 
-    my @resultFiles = ();
-    push( @resultFiles, $curDir . "/${comparisonName}_c3.0_common.bed" );
-    push( @resultFiles, $curDir . "/${comparisonName}_c3.0_cond1.bed" );
-    push( @resultFiles, $curDir . "/${comparisonName}_c3.0_cond2.bed" );
-    $result->{$comparisonName} = filter_array( \@resultFiles, $pattern );
+    my @result_files = ();
+    push( @result_files, $cur_dir . "/${comparisonName}_c3.0_common.bed" );
+    push( @result_files, $cur_dir . "/${comparisonName}_c3.0_cond1.bed" );
+    push( @result_files, $cur_dir . "/${comparisonName}_c3.0_cond2.bed" );
+    $result->{$comparisonName} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }

@@ -7,7 +7,7 @@ use CQS::ConfigUtils;
 
 sub new {
   my ($class) = @_;
-  my $self = { _name => undef };
+  my $self = { _name => __PACKAGE__ };
   bless $self, $class;
   return $self;
 }

@@ -17,7 +17,7 @@ our @ISA = qw(CQS::UniqueTask);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = "MappedDistinct";
+  $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_dt";
   bless $self, $class;
   return $self;
@@ -26,71 +26,71 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqsFile = get_cqstools( $config, $section, 1 );
+  my $cqstools = get_cqstools( $config, $section, 1 );
 
   my %firstFiles = %{ get_raw_files( $config, $section ) };
   my %secondFiles = %{ get_raw_files( $config, $section, "second" ) };
   my $firstSuffix  = get_option($config, $section, "first_suffix");
   my $secondSuffix = get_option($config, $section, "second_suffix");
 
-  my $pbsFile = $self->pbsfile( $pbsDir, $task_name );
-  my $log = $self->logfile( $logDir, $task_name );
+  my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
+  my $log = $self->get_log_filename( $log_dir, $task_name );
 
-  my $log_desc = $cluster->get_log_desc($log);
+  my $log_desc = $cluster->get_log_description($log);
 
-  open( OUT, ">$pbsFile" ) or die $!;
-  print OUT "$pbsDesc
+  open( my $out, ">$pbs_file" ) or die $!;
+  print $out "$pbs_desc
 $log_desc
 
 $path_file
-cd $resultDir
+cd $result_dir
 
 echo CQSMappedDistinct=`date`
 
 ";
 
-  for my $sampleName ( sort keys %firstFiles ) {
-    my $firstFile    = $firstFiles{$sampleName}->[0];
-    my $secondFile   = $secondFiles{$sampleName}->[0];
-    my $firstoutput  = $firstSuffix . $sampleName . ".distinct.count";
-    my $secondoutput = $secondSuffix . $sampleName . ".distinct.count";
+  for my $sample_name ( sort keys %firstFiles ) {
+    my $firstFile    = $firstFiles{$sample_name}->[0];
+    my $secondFile   = $secondFiles{$sample_name}->[0];
+    my $firstoutput  = $firstSuffix . $sample_name . ".distinct.count";
+    my $secondoutput = $secondSuffix . $sample_name . ".distinct.count";
 
-    print OUT "mono-sgen $cqsFile mapped_distinct $option --inputfile1 $firstFile --outputfile1 $firstoutput --inputfile2 $secondFile --outputfile2 $secondoutput
+    print $out "mono-sgen $cqstools mapped_distinct $option --inputfile1 $firstFile --outputfile1 $firstoutput --inputfile2 $secondFile --outputfile2 $secondoutput
 
 ";
   }
-  print OUT "
+  print $out "
 echo finished=`date`
 
 exit 0
 ";
-  close(OUT);
+  close $out;
 
-  print "!!!pbs file $pbsFile created, you can run this shell file to run all MappedDistinct tasks.\n";
+  print "!!!pbs file $pbs_file created, you can run this shell file to run all MappedDistinct tasks.\n";
 }
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbsDesc, $target_dir, $logDir, $pbsDir, $resultDir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %rawFiles = %{ get_raw_files( $config, $section ) };
+  my %raw_files = %{ get_raw_files( $config, $section ) };
   my $firstSuffix  = $config->{$section}{first_suffix}  or die "define ${section}::first_suffix first";
   my $secondSuffix = $config->{$section}{second_suffix} or die "define ${section}::second_suffix first";
 
   my $result = {};
-  for my $sampleName ( sort keys %rawFiles ) {
-    my $firstoutput  = $resultDir . "/" . $firstSuffix . $sampleName . ".distinct.count";
-    my $secondoutput = $resultDir . "/" . $secondSuffix . $sampleName . ".distinct.count";
+  for my $sample_name ( sort keys %raw_files ) {
+    my $firstoutput  = $result_dir . "/" . $firstSuffix . $sample_name . ".distinct.count";
+    my $secondoutput = $result_dir . "/" . $secondSuffix . $sample_name . ".distinct.count";
 
-    my @resultFiles = ();
+    my @result_files = ();
 
-    push( @resultFiles, $firstoutput );
-    push( @resultFiles, $secondoutput );
+    push( @result_files, $firstoutput );
+    push( @result_files, $secondoutput );
 
-    $result->{$sampleName} = filter_array( \@resultFiles, $pattern );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }
