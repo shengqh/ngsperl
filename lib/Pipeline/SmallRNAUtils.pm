@@ -195,7 +195,7 @@ sub getPrepareConfig {
 				},
 			},
 			cutadapt => {
-				class      => "Cutadapt",
+				class      => "Trimmer::Cutadapt",
 				perform    => 1,
 				target_dir => $def->{target_dir} . "/cutadapt",
 				option     => $cutadapt_option,
