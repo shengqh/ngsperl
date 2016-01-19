@@ -33,7 +33,7 @@ sub getSmallRNAConfig {
 
     #1 mismatch search, NTA
     bowtie1_genome_1mm_NTA => {
-      class         => "Bowtie1",
+      class         => "Alignment::Bowtie1",
       perform       => 1,
       target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm_NTA",
       option        => $def->{bowtie1_option_1mm},
@@ -53,7 +53,7 @@ sub getSmallRNAConfig {
 
     #not identical, for IGV
     bowtie1_genome_1mm_notidentical => {
-      class         => "Bowtie1",
+      class         => "Alignment::Bowtie1",
       perform       => 1,
       target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm_notidentical",
       option        => $def->{bowtie1_option_1mm},
