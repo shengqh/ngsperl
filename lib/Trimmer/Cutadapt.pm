@@ -27,8 +27,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $random_bases_remove_after_trim = get_option($config, $section, "random_bases_remove_after_trim", 0);
-  
+  my $random_bases_remove_after_trim = get_option( $config, $section, "random_bases_remove_after_trim", 0 );
+
   if ( defined $config->{$section}{adapter} ) {
     $option = $option . " -a " . $config->{$section}{adapter};
   }
@@ -40,21 +40,21 @@ sub perform {
     $extension =~ s/\.gz$//g;
   }
 
-  my $optionOnlyLimited='';
-  my $optionRemoveLimited=$option;
-  my $shortLimited = $option =~ /(-m\s+\d+\s+)/;
+  my $optionOnlyLimited   = '';
+  my $optionRemoveLimited = $option;
+  my $shortLimited        = $option =~ /(-m\s+\d+\s+)/;
   if ($shortLimited) {
-  	$shortLimited=$1;
-  	$optionOnlyLimited=$optionOnlyLimited.$shortLimited;
-  	$optionRemoveLimited=~s/$shortLimited//;
+    $shortLimited      = $1;
+    $optionOnlyLimited = $optionOnlyLimited . " " . $shortLimited;
+    $optionRemoveLimited =~ s/$shortLimited//;
   }
-  my $longLimited  = $option =~ /(-M\s+\d+\s+)/;
+  my $longLimited = $option =~ /(-M\s+\d+\s+)/;
   if ($longLimited) {
-  	$longLimited=$1;
-  	$optionOnlyLimited=$optionOnlyLimited.$longLimited;
-  	$optionRemoveLimited=~s/$longLimited//;
+    $longLimited       = $1;
+    $optionOnlyLimited = $optionOnlyLimited . " " . $longLimited;
+    $optionRemoveLimited =~ s/$longLimited//;
   }
-  
+
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -79,7 +79,7 @@ sub perform {
     }
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-    if ( scalar(@sample_files) == 1 ) { # single reads
+    if ( scalar(@sample_files) == 1 ) {    # single reads
       my $finalName      = $sample_name . $extension;
       my $finalShortName = $finalName . ".short";
       my $finalLongName  = $finalName . ".long";
@@ -88,27 +88,24 @@ sub perform {
       my $finalShortFile = $gzipped ? "${finalShortName}.gz" : $finalShortName;
       my $finalLongFile  = $gzipped ? "${finalLongName}.gz"  : $finalLongName;
 
-      if ($random_bases_remove_after_trim) { #remove top random bases
-      	my $temp_file = $final_file . ".cutAdapter.fastq";
-      	print $pbs "cutadapt $optionRemoveLimited -o $temp_file $sample_files[0]\n";
-      	
-      	print $pbs "cutadapt $optionOnlyLimited -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $final_file ";
-      	if ($shortLimited) {
-           print $pbs " --too-short-output=$finalShortFile";
-        }
-        if ($longLimited) {
-           print $pbs " --too-long-output=$finalLongFile";
-        }
-        print $pbs " $temp_file \n";
-      } else { #NOT remove top random bases
-      	 print $pbs "cutadapt $option -o $final_file ";
-         if ($shortLimited) {
-           print $pbs " --too-short-output=$finalShortFile";
-         }
-         if ($longLimited) {
-           print $pbs " --too-long-output=$finalLongFile";
-         }
-         print $pbs " $sample_files[0] \n";
+      my $limit_file_options = "";
+      if ($shortLimited) {
+        $limit_file_options = " --too-short-output=$finalShortFile";
+      }
+      if ($longLimited) {
+        $limit_file_options = $limit_file_options . " --too-long-output=$finalLongFile";
+      }
+
+      if ($random_bases_remove_after_trim) {    #remove top random bases
+        my $temp_file = $final_file . ".cutAdapter.fastq";
+        print $pbs "
+cutadapt $optionRemoveLimited -o $temp_file $sample_files[0]
+cutadapt $optionOnlyLimited $limit_file_options -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $final_file $temp_file 
+rm $temp_file
+";
+      }
+      else {                                    #NOT remove top random bases
+        print $pbs "cutadapt $option $limit_file_options -o $final_file $sample_files[0] \n";
       }
     }
     else {
@@ -119,42 +116,53 @@ sub perform {
       my $read2name = $sample_name . ".2.fastq.gz";
 
       if ( $shortLimited || $longLimited ) {
-        my $temp1name = $sample_name . ".1.tmp.fastq";
-        my $temp2name = $sample_name . ".2.tmp.fastq";
-      	my $temp1_file = $read1name . ".cutAdapter.fastq";
-      	my $temp2_file = $read2name . ".cutAdapter.fastq";
-      	    
-        #https://cutadapt.readthedocs.org/en/stable/guide.html#illumina-truseq
-        if ($random_bases_remove_after_trim) { # remove top random bases
-#           print $pbs "cutadapt $option -o $temp1name -p $temp2name $read1file $read2file \n";
-#       	print $pbs "cutadapt $option -o $temp2_file -p $temp1_file $temp2name $temp1name \n";
-#        	print $pbs "rm $temp2name $temp1name \n";
+        my $temp1name  = $sample_name . ".1.tmp.fastq";
+        my $temp2name  = $sample_name . ".2.tmp.fastq";
+        my $temp1_file = $read1name . ".cutAdapter.fastq";
+        my $temp2_file = $read2name . ".cutAdapter.fastq";
 
-        	print $pbs "cutadapt $optionRemoveLimited -o $temp1_file $read1file \n";
-        	print $pbs "cutadapt $optionRemoveLimited -o $temp2_file $read2file \n";
-        	
-        	print $pbs "cutadapt $optionOnlyLimited -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $temp1name -p $temp2name $temp1_file $temp2_file \n";
-        	print $pbs "cutadapt $optionOnlyLimited -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $read2name -p $read1name $temp2name $temp1name \n";
-        	print $pbs "rm $temp2name $temp1name \n";
-        	
-        } else { # NOT remove top random bases
-            print $pbs "cutadapt $option -o $temp1name -p $temp2name $read1file $read2file \n";
-        	print $pbs "cutadapt $option -o $read2name -p $read1name $temp2name $temp1name \n";
-        	print $pbs "rm $temp2name $temp1name \n";
+        #https://cutadapt.readthedocs.org/en/stable/guide.html#illumina-truseq
+        if ($random_bases_remove_after_trim) {    # remove top random bases
+
+          #           print $pbs "cutadapt $option -o $temp1name -p $temp2name $read1file $read2file \n";
+          #       	print $pbs "cutadapt $option -o $temp2_file -p $temp1_file $temp2name $temp1name \n";
+          #        	print $pbs "rm $temp2name $temp1name \n";
+
+          print $pbs "
+cutadapt $optionRemoveLimited -o $temp1_file $read1file 
+cutadapt $optionRemoveLimited -o $temp2_file $read2file 
+cutadapt $optionOnlyLimited -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $temp1name -p $temp2name $temp1_file $temp2_file 
+cutadapt $optionOnlyLimited -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $read2name -p $read1name $temp2name $temp1name 
+rm $temp2name $temp1name 
+";
+
         }
-     }
-      else { #no short or long limited
-      	if ($random_bases_remove_after_trim) { # remove top random bases
-      	    my $temp1_file = $read1name . ".cutAdapter.fastq";
-      	    my $temp2_file = $read2name . ".cutAdapter.fastq";
-      	    print $pbs "cutadapt $option -o $temp1_file $read1file \n";
-        	print $pbs "cutadapt $option -o $temp2_file $read2file \n";	
-      	    print $pbs "cutadapt -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $read1name $temp1_file \n";
-      	    print $pbs "cutadapt -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $read2name $temp2_file \n";
-      	} else { # NOT remove top random bases
-      		print $pbs "cutadapt $option -o $read1name $read1file \n";
-        	print $pbs "cutadapt $option -o $read2name $read2file \n";	
-      	}
+        else {    # NOT remove top random bases
+          print $pbs "
+cutadapt $option -o $temp1name -p $temp2name $read1file $read2file 
+cutadapt $option -o $read2name -p $read1name $temp2name $temp1name 
+rm $temp2name $temp1name 
+";
+        }
+      }
+      else {      #no short or long limited
+        if ($random_bases_remove_after_trim) {    # remove top random bases
+          my $temp1_file = $read1name . ".cutAdapter.fastq";
+          my $temp2_file = $read2name . ".cutAdapter.fastq";
+          print $pbs "
+cutadapt $option -o $temp1_file $read1file 
+cutadapt $option -o $temp2_file $read2file 
+cutadapt -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $read1name $temp1_file 
+cutadapt -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $read2name $temp2_file 
+rm $temp1_file $temp2_file
+";
+        }
+        else {                                    # NOT remove top random bases
+          print $pbs "
+cutadapt $option -o $read1name $read1file 
+cutadapt $option -o $read2name $read2file
+";
+        }
       }
     }
     $self->close_pbs( $pbs, $pbs_file );
