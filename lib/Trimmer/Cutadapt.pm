@@ -40,9 +40,21 @@ sub perform {
     $extension =~ s/\.gz$//g;
   }
 
-  my $shortLimited = $option =~ /-m\s+\d+/;
-  my $longLimited  = $option =~ /-M\s+\d+/;
-
+  my $optionOnlyLimited='';
+  my $optionRemoveLimited=$option;
+  my $shortLimited = $option =~ /(-m\s+\d+\s+)/;
+  if ($shortLimited) {
+  	$shortLimited=$1;
+  	$optionOnlyLimited=$optionOnlyLimited.$shortLimited;
+  	$optionRemoveLimited=~s/$shortLimited//;
+  }
+  my $longLimited  = $option =~ /(-M\s+\d+\s+)/;
+  if ($longLimited) {
+  	$longLimited=$1;
+  	$optionOnlyLimited=$optionOnlyLimited.$longLimited;
+  	$optionRemoveLimited=~s/$longLimited//;
+  }
+  
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -76,14 +88,27 @@ sub perform {
       my $finalShortFile = $gzipped ? "${finalShortName}.gz" : $finalShortName;
       my $finalLongFile  = $gzipped ? "${finalLongName}.gz"  : $finalLongName;
 
-      print $pbs "cutadapt $option -o $final_file ";
-      if ($shortLimited) {
-        print $pbs " --too-short-output=$finalShortFile";
+      if ($random_bases_remove_after_trim) {
+      	my $temp_file = $final_file . ".tmp.fastq";
+      	print $pbs "cutadapt $optionRemoveLimited -o $temp_file $sample_files[0]";
+      	print $pbs "cutadapt $optionOnlyLimited -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $final_file ";
+      	if ($shortLimited) {
+           print $pbs " --too-short-output=$finalShortFile";
+        }
+        if ($longLimited) {
+           print $pbs " --too-long-output=$finalLongFile";
+        }
+        print $pbs " $temp_file \n";
+      } else {
+      	 print $pbs "cutadapt $option -o $final_file ";
+         if ($shortLimited) {
+           print $pbs " --too-short-output=$finalShortFile";
+         }
+         if ($longLimited) {
+           print $pbs " --too-long-output=$finalLongFile";
+         }
+         print $pbs " $sample_files[0] \n";
       }
-      if ($longLimited) {
-        print $pbs " --too-long-output=$finalLongFile";
-      }
-      print $pbs " $sample_files[0] \n";
     }
     else {
       #pair-end data
