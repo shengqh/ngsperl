@@ -199,6 +199,7 @@ sub getPrepareConfig {
         source_ref => $source_ref,
         adapter    => $adapter,
         extension  => "_clipped.fastq",
+        random_bases_remove_after_trim=> $fastq_remove_random,
         sh_direct  => 0,
         cluster    => $cluster,
         pbs        => {
@@ -243,58 +244,6 @@ sub getPrepareConfig {
     $len_ref = "cutadapt";
     push @individual, ( "fastqc_pre_trim", "cutadapt", "fastqc_post_trim" );
     push @summary, ( "fastqc_pre_trim_summary", "fastqc_post_trim_summary" );
-
-    if ($fastq_remove_random) {
-      $config->{"removeRandom"} = {
-        class      => "Trimmer::Cutadapt",
-        perform    => 1,
-        target_dir => $def->{target_dir} . "/removeRandom",
-        option     => $cutadapt_option . " -u ${fastq_remove_random} -u -${fastq_remove_random}",
-        source_ref => $source_ref,
-        extension => "_removeRandom.fastq",
-        sh_direct => 0,
-        cluster   => $cluster,
-        pbs       => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "12",
-          "mem"      => "20gb"
-        },
-        },
-        $config->{"fastqc_post_removeRandom"} = {
-        class      => "QC::FastQC",
-        perform    => 1,
-        target_dir => $def->{target_dir} . "/fastqc_post_removeRandom",
-        option     => "",
-        source_ref => $source_ref,
-        cluster    => $cluster,
-        pbs        => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "2",
-          "mem"      => "10gb"
-        },
-        };
-      $config->{"fastqc_post_removeRandom_summary"} = {
-        class      => "QC::FastQCSummary",
-        perform    => 1,
-        target_dir => $def->{target_dir} . "/fastqc_post_removeRandom",
-        cqstools   => $def->{cqstools},
-        option     => "",
-        cluster    => $cluster,
-        pbs        => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "2",
-          "mem"      => "10gb"
-        },
-      };
-
-      $source_ref = [ "removeRandom", ".fastq.gz" ];
-      $len_ref = "removeRandom";
-      push @individual, ("fastqc_post_removeRandom");
-      push @summary,    ("fastqc_post_removeRandom_summary");
-    }
 
     if ( !defined $def->{remove_sequences} ) {
       $config->{"fastqc_count_vis"} = {
