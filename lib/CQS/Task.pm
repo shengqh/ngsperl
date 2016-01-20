@@ -121,7 +121,7 @@ cd $result_dir
 ";
   if ( defined $final_file ) {
     print $pbs "
-if [[ -s $final_file or -d $final_file ]]; then
+if [[ ( -s $final_file ) || ( -d $final_file ) ]]; then
   echo job has already been done. if you want to do again, delete ${result_dir}/${final_file} and submit job again.
   exit 0
 fi
