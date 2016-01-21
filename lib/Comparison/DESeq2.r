@@ -113,8 +113,8 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors
 				  geom_point(col=conditionColors, size=4) + 
 				  scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
 				  scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
-				  geom_hline(aes(0), size=.2) + 
-				  geom_vline(aes(0), size=.2) + 
+				  geom_hline(aes(yintercept=0), size=.2) + 
+				  geom_vline(aes(xintercept=0), size=.2) + 
 				  xlab(pcalabs[1]) + ylab(pcalabs[2])
 	  }else{
 		  g <- ggplot(pcadata, aes(x=PC1, y=PC2)) + 
@@ -122,8 +122,8 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors
 				  labs(color = "Group") +
 				  scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) + 
 				  scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
-				  geom_hline(aes(0), size=.2) + 
-				  geom_vline(aes(0), size=.2) +
+				  geom_hline(aes(yintercept=0), size=.2) + 
+				  geom_vline(aes(xintercept=0), size=.2) +
 				  xlab(pcalabs[1]) + ylab(pcalabs[2]) + 
 				  theme(legend.position="top")
 	  }

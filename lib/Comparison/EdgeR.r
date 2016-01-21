@@ -14,7 +14,7 @@
 #
 ##predefined_condition_end
 
-library("EdgeR")
+library("edgeR")
 
 isDataNumeric = unlist(lapply(data[1,], function(x){is.numeric(x)}))
 index = 1
