@@ -143,9 +143,14 @@ reverselog_trans <- function(base = exp(1)) {
 }
 
 isDataNumeric = unlist(lapply(data[1,], function(x){is.numeric(x)}))
-index = 1
-while(!all(isDataNumeric[index:ncol(data)])){
-  index = index + 1
+if (any(isDataNumeric)) {
+	index = 1
+	while(!all(isDataNumeric[index:ncol(data)])){
+		index = index + 1
+	}
+} else {
+	cat("Error: No numeric data found for DESeq2 \n")
+	quit(save="yes")
 }
 
 if(index > 1){
