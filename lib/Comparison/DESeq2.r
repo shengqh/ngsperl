@@ -88,7 +88,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
              scale="r", 
              dist=dist, 
              labRow=NA,
-    				 main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
+             main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
              cexCol=cexCol, 
              legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
     dev.off()
@@ -99,58 +99,58 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors
   filename<-paste0(prefix, "_DESeq2-vsd-pca.png")
   genecount<-nrow(rldmatrix)
   if(genecount > 2){
-	  cat("saving PCA to ", filename, "\n")
-	  png(filename=filename, width=3000, height=3000, res=300)
-	  pca<-prcomp(t(rldmatrix))
-	  supca<-summary(pca)$importance
-	  pcadata<-data.frame(pca$x)
-	  pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
-	  pcadata["sample"]<-row.names(pcadata)
-	  
-	  if(showLabelInPCA){
-		  g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
-				  geom_text(vjust=-0.6, size=4) +
-				  geom_point(col=conditionColors, size=4) + 
-				  scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
-				  scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
-				  geom_hline(aes(yintercept=0), size=.2) + 
-				  geom_vline(aes(xintercept=0), size=.2) + 
-				  xlab(pcalabs[1]) + ylab(pcalabs[2])
-	  }else{
-		  g <- ggplot(pcadata, aes(x=PC1, y=PC2)) + 
-				  geom_point(col=conditionColors, size=4) + 
-				  labs(color = "Group") +
-				  scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) + 
-				  scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
-				  geom_hline(aes(yintercept=0), size=.2) + 
-				  geom_vline(aes(xintercept=0), size=.2) +
-				  xlab(pcalabs[1]) + ylab(pcalabs[2]) + 
-				  theme(legend.position="top")
-	  }
-	  
-	  print(g)
-	  dev.off()
+    cat("saving PCA to ", filename, "\n")
+    png(filename=filename, width=3000, height=3000, res=300)
+    pca<-prcomp(t(rldmatrix))
+    supca<-summary(pca)$importance
+    pcadata<-data.frame(pca$x)
+    pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
+    pcadata["sample"]<-row.names(pcadata)
+    
+    if(showLabelInPCA){
+      g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
+        geom_text(vjust=-0.6, size=4) +
+        geom_point(col=conditionColors, size=4) + 
+        scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
+        scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
+        geom_hline(aes(yintercept=0), size=.2) + 
+        geom_vline(aes(xintercept=0), size=.2) + 
+        xlab(pcalabs[1]) + ylab(pcalabs[2])
+    }else{
+      g <- ggplot(pcadata, aes(x=PC1, y=PC2)) + 
+        geom_point(col=conditionColors, size=4) + 
+        labs(color = "Group") +
+        scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) + 
+        scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
+        geom_hline(aes(yintercept=0), size=.2) + 
+        geom_vline(aes(xintercept=0), size=.2) +
+        xlab(pcalabs[1]) + ylab(pcalabs[2]) + 
+        theme(legend.position="top")
+    }
+    
+    print(g)
+    dev.off()
   }
 }
 
 #for volcano plot
 reverselog_trans <- function(base = exp(1)) {
-	trans <- function(x) -log(x, base)
-	inv <- function(x) base^(-x)
-	trans_new(paste0("reverselog-", format(base)), trans, inv, 
-			log_breaks(base = base), 
-			domain = c(1e-100, Inf))
+  trans <- function(x) -log(x, base)
+  inv <- function(x) base^(-x)
+  trans_new(paste0("reverselog-", format(base)), trans, inv, 
+            log_breaks(base = base), 
+            domain = c(1e-100, Inf))
 }
 
 isDataNumeric = unlist(lapply(data[1,], function(x){is.numeric(x)}))
 if (any(isDataNumeric)) {
-	index = 1
-	while(!all(isDataNumeric[index:ncol(data)])){
-		index = index + 1
-	}
+  index = 1
+  while(!all(isDataNumeric[index:ncol(data)])){
+    index = index + 1
+  }
 } else {
-	cat("Error: No numeric data found for DESeq2 \n")
-	quit(save="yes")
+  cat("Error: No numeric data found for DESeq2 \n")
+  quit(save="yes")
 }
 
 if(index > 1){
@@ -202,13 +202,13 @@ for(comparisonName in comparisonNames){
     med<-med1 | med2
     comparisonData<-comparisonData[med,]
     cat(nrow(comparisonData), " genes with minimum median count in group larger or equals than ", minMedianInGroup, "\n")
-	
-	if (nrow(comparisonData)==0) {
-		cat(paste0("Error: 0 Genes can be used in DESeq2 analysis in comparison ",comparisonName," \n"))
-		next;
-	}
-
-	prefix<-paste0(comparisonName, "_min", minMedianInGroup)
+    
+    if (nrow(comparisonData)==0) {
+      cat(paste0("Error: 0 Genes can be used in DESeq2 analysis in comparison ",comparisonName," \n"))
+      next;
+    }
+    
+    prefix<-paste0(comparisonName, "_min", minMedianInGroup)
     curdata<-data[med,]
   }
   
@@ -217,10 +217,10 @@ for(comparisonName in comparisonNames){
     
     spcorr<-unlist(lapply(c(1:length(pairedSamples)), function(x){
       samples<-designData$Sample[designData$Paired==pairedSamples[x]]
-              cor(comparisonData[,samples[1]],comparisonData[,samples[2]],method="spearman")
-            }))
-            
-
+      cor(comparisonData[,samples[1]],comparisonData[,samples[2]],method="spearman")
+    }))
+    
+    
     sptable<-data.frame(Name=pairedSamples, Spcorr=spcorr)
     write.csv(sptable, file=paste0(prefix, "_Spearman.csv"), row.names=FALSE)
     
@@ -251,8 +251,8 @@ for(comparisonName in comparisonNames){
   
   #some basic graph
   dds=DESeqDataSetFromMatrix(countData = comparisonData,
-      colData = designData,
-      design = ~1)
+                             colData = designData,
+                             design = ~1)
   
   colnames(dds)<-colnames(comparisonData)
   
@@ -264,16 +264,64 @@ for(comparisonName in comparisonNames){
   g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + xlab("DESeq2 log2 transformed count")
   print(g)
   dev.off()
-
+  
   width=max(4000, ncol(rldmatrix) * 40 + 1000)
   height=max(3000, ncol(rldmatrix) * 40)
   png(filename=paste0(prefix, "_DESeq2-log2-density-individual.png"), width=width, height=height, res=300)
-	g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + facet_wrap(~Sample, scales = "free") + xlab("DESeq2 log2 transformed count")
+  g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + facet_wrap(~Sample, scales = "free") + xlab("DESeq2 log2 transformed count")
   print(g)
   dev.off()
   
+  
   #varianceStabilizingTransformation
-  vsd <- varianceStabilizingTransformation(dds, blind=TRUE)
+  
+  allDesignData<-designData
+  allComparisonData<-comparisonData
+  
+  excludedSample<-c()
+  zeronumbers<-apply(comparisonData, 2, function(x){sum(x==0)})
+  zeronumbers<-names(zeronumbers[order(zeronumbers)])
+  percent10<-round(length(zeronumbers) * 0.1)
+  removed<-0
+  
+  excludedCountFile<-paste0(prefix, "_DESeq2-exclude-count.csv")
+  excludedDesignFile<-paste0(prefix, "_DESeq2-exclude-design.csv")
+  if(file.exists(excludedCountFile)){
+    file.remove(excludedCountFile)
+  }
+  if(file.exists(excludedDesignFile)){
+    file.remove(excludedDesignFile)
+  }
+  
+  while(1){
+    #varianceStabilizingTransformation
+    vsdres<-try(vsd <- varianceStabilizingTransformation(dds, blind=TRUE))
+    if(class(vsdres) == "try-error" && grep("every gene contains at least one zero", vsdres[1])){
+      removed<-removed+1
+      keptNumber<-length(zeronumbers) - percent10 * removed
+      keptSample<-zeronumbers[1:keptNumber]
+      excludedSample<-zeronumbers[(keptNumber+1):length(zeronumbers)]
+      
+      comparisonData<-comparisonData[, colnames(comparisonData) %in% keptSample]
+      designData<-designData[rownames(designData) %in% keptSample,]
+      dds=DESeqDataSetFromMatrix(countData = comparisonData,
+                                 colData = designData,
+                                 design = ~1)
+      
+      colnames(dds)<-colnames(comparisonData)
+    }else{
+      conditionColors<-as.matrix(data.frame(Group=c("red", "blue")[designData$Condition]))
+      break
+    }
+  }
+  
+  if(length(excludedSample) > 0){
+    excludedCountData<-allComparisonData[colnames(allComparisonData) %in% excludedSample,]
+    write.csv(file=excludedCountFile, excludedCountData)
+    excludedDesignData<-allDesignData[rownames(allDesignData) %in% excludedSample,]
+    write.csv(file=excludedDesignFile, excludedDesignData)
+  }
+  
   assayvsd<-assay(vsd)
   write.csv(assayvsd, file=paste0(prefix, "_DESeq2-vsd.csv"))
   
@@ -281,7 +329,7 @@ for(comparisonName in comparisonNames){
   assayvsd<-assayvsd[order(vsdiqr, decreasing=T),]
   
   rldmatrix=as.matrix(assayvsd)
-
+  
   #draw pca graph
   drawPCA(paste0(prefix,"_geneAll"), rldmatrix, showLabelInPCA, designData, conditionColors)
   
@@ -324,14 +372,14 @@ for(comparisonName in comparisonNames){
   
   if(showDEGeneCluster){
     siggenes<-rownames(rldmatrix) %in% rownames(tbbselect)
-
+    
     nonDEmatrix<-rldmatrix[!siggenes,,drop=F]
     DEmatrix<-rldmatrix[siggenes,,drop=F]
     
     drawPCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, showLabelInPCA, designData, conditionColors)
     drawHCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames)
     
-	drawPCA(paste0(prefix,"_geneDE"),DEmatrix , showLabelInPCA, designData, conditionColors)
+    drawPCA(paste0(prefix,"_geneDE"),DEmatrix , showLabelInPCA, designData, conditionColors)
     drawHCA(paste0(prefix,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames)
     #drawHCA(paste0(prefix,"_gene500NotDE"), nonDEmatrix[1:min(500, nrow(nonDEmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
   }
@@ -339,27 +387,27 @@ for(comparisonName in comparisonNames){
   #Top 25 Significant genes barplot
   sigDiffNumber<-nrow(tbbselect)
   if (sigDiffNumber>0) {
-	  if (sigDiffNumber>25) {
-		  print(paste0("More than 25 genes were significant. Only the top 25 genes will be used in barplot"))
-		  diffResultSig<-tbbselect[order(tbbselect$padj)[1:25],]
-	  } else {
-		  diffResultSig<-tbbselect
-	  }
-	  diffResultSig$Name<-sapply(strsplit(row.names(diffResultSig),";"),function(x) x[1])
-	  diffResultSig$Name <- factor(diffResultSig$Name, levels=diffResultSig$Name[order(diffResultSig$log2FoldChange)])
-	  diffResultSig<-as.data.frame(diffResultSig)
-	  
-	  png(filename=paste0(prefix, "_DESeq2_sig_barplot.png"), width=3000, height=3000, res=300)
-#	  pdf(paste0(prefix,"_DESeq2_sig_barplot.pdf"))
-	  p<-ggplot(diffResultSig,aes(x=Name,y=log2FoldChange,order=log2FoldChange))+geom_bar(stat="identity")+
-			  coord_flip()+
-#			geom_abline(slope=0,intercept=1,colour="red",linetype = 2)+
-			  scale_y_continuous(name=bquote(log[2]~Fold~Change))+
-			  theme(axis.text = element_text(colour = "black"))
-	  print(p)
-	  dev.off()
+    if (sigDiffNumber>25) {
+      print(paste0("More than 25 genes were significant. Only the top 25 genes will be used in barplot"))
+      diffResultSig<-tbbselect[order(tbbselect$padj)[1:25],]
+    } else {
+      diffResultSig<-tbbselect
+    }
+    diffResultSig$Name<-sapply(strsplit(row.names(diffResultSig),";"),function(x) x[1])
+    diffResultSig$Name <- factor(diffResultSig$Name, levels=diffResultSig$Name[order(diffResultSig$log2FoldChange)])
+    diffResultSig<-as.data.frame(diffResultSig)
+    
+    png(filename=paste0(prefix, "_DESeq2_sig_barplot.png"), width=3000, height=3000, res=300)
+    #	  pdf(paste0(prefix,"_DESeq2_sig_barplot.pdf"))
+    p<-ggplot(diffResultSig,aes(x=Name,y=log2FoldChange,order=log2FoldChange))+geom_bar(stat="identity")+
+      coord_flip()+
+      #			geom_abline(slope=0,intercept=1,colour="red",linetype = 2)+
+      scale_y_continuous(name=bquote(log[2]~Fold~Change))+
+      theme(axis.text = element_text(colour = "black"))
+    print(p)
+    dev.off()
   } else {
-	  print(paste0("No gene with adjusted p value less than ",pvalue," and fold change larger than ",foldChange))
+    print(paste0("No gene with adjusted p value less than ",pvalue," and fold change larger than ",foldChange))
   }
   
   #volcano plot
@@ -370,18 +418,18 @@ for(comparisonName in comparisonNames){
   diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
   diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
   png(filename=paste0(prefix, "_DESeq2_volcanoPlot.png"), width=3000, height=3000, res=300)
-#  pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"))
+  #  pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"))
   p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
-		  geom_point(aes(size=log10BaseMean,colour=colour))+
-		  scale_color_manual(values=changeColours,guide = FALSE)+
-		  scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))+
-		  scale_x_continuous(name=bquote(log[2]~Fold~Change))+
-		  geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
-		  geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
-		  guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
-		  theme_bw()+
-		  scale_size(range = c(3, 7))+
-		  theme(axis.text = element_text(colour = "black"))
+    geom_point(aes(size=log10BaseMean,colour=colour))+
+    scale_color_manual(values=changeColours,guide = FALSE)+
+    scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))+
+    scale_x_continuous(name=bquote(log[2]~Fold~Change))+
+    geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
+    geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
+    guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
+    theme_bw()+
+    scale_size(range = c(3, 7))+
+    theme(axis.text = element_text(colour = "black"))
   print(p)
   dev.off()
 }
