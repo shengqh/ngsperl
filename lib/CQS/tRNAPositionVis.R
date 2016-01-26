@@ -127,7 +127,11 @@ if (is.na(tRNASigFileList)) {
 	tRNASigNames<-NULL
 	for (i in 1:nrow(tRNASigFiles)) {
 		tRNASigFileEach<-tRNASigFiles[i,1]
-		tRNASig<-read.csv(tRNASigFileEach,header=T,row.names=1)
+		if (file.exists(tRNASigFileEach)) {
+			tRNASig<-read.csv(tRNASigFileEach,header=T,row.names=1)
+		} else {
+			tRNASig<-matrix(NA,ncol=0,nrow=0)
+		}
 		if (nrow(tRNASig)==0) {
 			print(paste0("No significant changed tRNA. Will plot ",tRNASigNum," tRNAs with highest reads"))
 			temp<-tapply(positionRawAllSamplesMeanSample$CountPercentage,positionRawAllSamplesMeanSample$Feature,sum)
