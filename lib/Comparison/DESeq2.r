@@ -204,8 +204,8 @@ for(comparisonName in comparisonNames){
     cat(nrow(comparisonData), " genes with minimum median count in group larger or equals than ", minMedianInGroup, "\n")
 	
 	if (nrow(comparisonData)==0) {
-		cat("Error: 0 Genes can be used in DESeq2 analysis \n")
-		quit(save="yes")
+		cat(paste0("Error: 0 Genes can be used in DESeq2 analysis in comparison ",comparisonName," \n"))
+		next;
 	}
 
 	prefix<-paste0(comparisonName, "_min", minMedianInGroup)
