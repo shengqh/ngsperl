@@ -316,7 +316,7 @@ for(comparisonName in comparisonNames){
   }
   
   if(length(excludedSample) > 0){
-    excludedCountData<-allComparisonData[colnames(allComparisonData) %in% excludedSample,]
+    excludedCountData<-allComparisonData[,colnames(allComparisonData) %in% excludedSample]
     write.csv(file=excludedCountFile, excludedCountData)
     excludedDesignData<-allDesignData[rownames(allDesignData) %in% excludedSample,]
     write.csv(file=excludedDesignFile, excludedDesignData)
