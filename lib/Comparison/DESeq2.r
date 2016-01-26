@@ -281,7 +281,8 @@ for(comparisonName in comparisonNames){
   excludedSample<-c()
   zeronumbers<-apply(comparisonData, 2, function(x){sum(x==0)})
   zeronumbers<-names(zeronumbers[order(zeronumbers)])
-  percent10<-round(length(zeronumbers) * 0.1)
+  percent10<-max(1, round(length(zeronumbers) * 0.1))
+  
   removed<-0
   
   excludedCountFile<-paste0(prefix, "_DESeq2-exclude-count.csv")
