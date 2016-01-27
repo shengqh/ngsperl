@@ -250,15 +250,14 @@ sub getSmallRNAConfig {
     $config = merge( $config, $count );
   }
 
-  if ( ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads} )
-  {
+  if ( ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads} ) {
     my $unmappedreads = {
 
       #extract unmapped reads
-      unmappedReads => {
+      unmapped_reads => {
         class       => "CQS::Perl",
         perform     => 1,
-        target_dir  => $def->{target_dir} . "/unmappedReads",
+        target_dir  => $def->{target_dir} . "/unmapped_reads",
         perlFile    => "unmappedReadsToFastq.pl",
         source_ref  => [ "bowtie1_genome_unmapped_reads", ".fastq.gz\$" ],
         source2_ref => [ "bowtie1_miRbase_pm_count", ".mapped.xml" ],
@@ -280,7 +279,7 @@ sub getSmallRNAConfig {
         perform       => 1,
         target_dir    => $def->{target_dir} . "/bowtie1_tRNA_pm",
         samonly       => 0,
-        source_ref    => 'unmappedReads',
+        source_ref    => 'unmapped_reads',
         mappedonly    => 1,
         bowtie1_index => $def->{bowtie1_tRNA_index},
         option        => $def->{bowtie1_option_pm},
@@ -358,7 +357,7 @@ sub getSmallRNAConfig {
         target_dir    => $def->{target_dir} . "/bowtie1_rRNAL_pm",
         samonly       => 0,
         mappedonly    => 1,
-        source_ref    => 'unmappedReads',
+        source_ref    => 'unmapped_reads',
         bowtie1_index => $def->{bowtie1_rRNAL_index},
         option        => $def->{bowtie1_option_pm},
         class         => 'Alignment::Bowtie1'
@@ -415,7 +414,7 @@ sub getSmallRNAConfig {
         target_dir    => $def->{target_dir} . "/bowtie1_rRNAS_pm",
         samonly       => 0,
         mappedonly    => 1,
-        source_ref    => 'unmappedReads',
+        source_ref    => 'unmapped_reads',
         bowtie1_index => $def->{bowtie1_rRNAS_index},
         option        => $def->{bowtie1_option_pm},
         class         => 'Alignment::Bowtie1'
@@ -472,7 +471,7 @@ sub getSmallRNAConfig {
         target_dir    => $def->{target_dir} . "/bowtie1_bacteria_group1_pm",
         samonly       => 0,
         mappedonly    => 1,
-        source_ref    => 'unmappedReads',
+        source_ref    => 'unmapped_reads',
         bowtie1_index => $def->{bowtie1_bacteria_group1_index},
         option        => $def->{bowtie1_option_pm},
         class         => 'Alignment::Bowtie1'
@@ -545,7 +544,7 @@ sub getSmallRNAConfig {
         target_dir    => $def->{target_dir} . "/bowtie1_bacteria_group2_pm",
         samonly       => 0,
         mappedonly    => 1,
-        source_ref    => 'unmappedReads',
+        source_ref    => 'unmapped_reads',
         bowtie1_index => $def->{bowtie1_bacteria_group2_index},
         option        => $def->{bowtie1_option_pm},
         class         => 'Alignment::Bowtie1'
@@ -610,9 +609,9 @@ sub getSmallRNAConfig {
 
     push @individual,
       (
-      "bowtie1_genome_miRbase_unmapped_reads", "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",  "bowtie1_rRNAL_pm",
-      "bowtie1_rRNAL_pm_count",                "bowtie1_rRNAS_pm",           "bowtie1_rRNAS_pm_count", "bowtie1_bacteria_group1_pm",
-      "bowtie1_bacteria_group1_pm_count",      "bowtie1_bacteria_group2_pm", "bowtie1_bacteria_group2_pm_count"
+      "unmapped_reads",                   "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",  "bowtie1_rRNAL_pm",
+      "bowtie1_rRNAL_pm_count",           "bowtie1_rRNAS_pm",           "bowtie1_rRNAS_pm_count", "bowtie1_bacteria_group1_pm",
+      "bowtie1_bacteria_group1_pm_count", "bowtie1_bacteria_group2_pm", "bowtie1_bacteria_group2_pm_count"
       );
     push @summary,
       (
