@@ -85,7 +85,6 @@ sub perform {
     }
 
     for my $sample ( sort keys %{$samples} ) {
-      print $step_name, "\t", $sample, "\n";
       my $pbs_file = $self->get_step_sample_pbs( $pbs_dir, $step_name, $sample );
       my $pbs_name = basename($pbs_file);
       my $log      = $self->get_step_sample_log( $log_dir, $step_name, $sample );
@@ -144,12 +143,14 @@ sub get_step_sample_name {
 
 sub get_step_sample_pbs {
   my ( $self, $pbs_dir, $step_name, $sample ) = @_;
+  print $pbs_dir, "\t", $step_name, "\t", $sample, "\n";
   my $task_sample = get_step_sample_name( $step_name, $sample );
   return $self->get_pbs_filename( $pbs_dir, $task_sample );
 }
 
 sub get_step_sample_log {
   my ( $self, $log_dir, $step_name, $sample ) = @_;
+  print $log_dir, "\t", $step_name, "\t", $sample, "\n";
   my $task_sample = get_step_sample_name( $step_name, $sample );
   return $self->get_log_filename( $log_dir, $task_sample );
 }
