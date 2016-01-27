@@ -11,6 +11,7 @@ use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::UniqueTask;
+use CQS::StringUtils;
 use File::Spec;
 
 our @ISA = qw(CQS::UniqueTask);
