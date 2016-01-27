@@ -29,7 +29,7 @@ sub getSmallRNAConfig {
 
   #print Dumper($config);
 
-  my $search_not_identical = defined $def->{search_not_identical} && $def->{search_not_identical};
+  my $search_not_identical = ( !defined $def->{search_not_identical} ) || $def->{search_not_identical};
 
   my $bowtie1 = {
 
