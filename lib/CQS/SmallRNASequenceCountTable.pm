@@ -102,6 +102,7 @@ sub result {
       my $outputfile = $self->get_file( $result_dir, "${task_name}_${group_name}", ".count",    0 );
       my $filelist   = $self->get_file( $pbs_dir,    "${task_name}_${group_name}", ".filelist", 0 );
       push( @result_files, $outputfile );
+      push( @result_files, $outputfile . ".fasta" );
       push( @result_files, $filelist );
     }
   }
@@ -109,6 +110,7 @@ sub result {
     my $outputfile = $self->get_file( $result_dir, ${task_name}, ".count",    0 );
     my $filelist   = $self->get_file( $pbs_dir,    ${task_name}, ".filelist", 0 );
     push( @result_files, $outputfile );
+    push( @result_files, $outputfile . ".fasta" );
     push( @result_files, $filelist );
   }
   $result->{$task_name} = filter_array( \@result_files, $pattern );
