@@ -29,6 +29,8 @@ sub getSmallRNAConfig {
 
   #print Dumper($config);
 
+  my $search_not_identical = defined $def->{search_not_identical} && $def->{search_not_identical};
+
   my $bowtie1 = {
 
     #1 mismatch search, NTA
@@ -50,9 +52,13 @@ sub getSmallRNAConfig {
         "mem"      => "40gb"
       },
     },
+  };
+  push @individual, ("bowtie1_genome_1mm_NTA");
+
+  if ($search_not_identical) {
 
     #not identical, for IGV
-    bowtie1_genome_1mm_notidentical => {
+    $bowtie1->{bowtie1_genome_1mm_notidentical} = {
       class         => "Alignment::Bowtie1",
       perform       => 1,
       target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm_notidentical",
@@ -69,10 +75,9 @@ sub getSmallRNAConfig {
         "walltime" => "72",
         "mem"      => "40gb"
       },
-    },
-  };
-
-  push @individual, ( "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_notidentical" );
+    };
+    push @individual, ("bowtie1_genome_1mm_notidentical");
+  }
 
   $config = merge( $config, $bowtie1 );
 
@@ -133,7 +138,7 @@ sub getSmallRNAConfig {
         },
       },
 
-      #perfect match search to mirbase only
+      #perfect match search to miRBase only
       bowtie1_genome_1mm_NTA_pmnames => {
         class      => "Samtools::PerfectMappedReadNames",
         perform    => 1,
@@ -150,7 +155,7 @@ sub getSmallRNAConfig {
         },
       },
 
-      #extract unmapped reads
+      # extract unmapped reads. the reads mapped to host smallRNA with/without mismatch and mapped to host genome without mismatch will be excluded.
       bowtie1_genome_unmapped_reads => {
         class       => "CQS::Perl",
         perform     => 1,
@@ -168,10 +173,10 @@ sub getSmallRNAConfig {
           "mem"      => "10gb"
         },
       },
-      bowtie1_miRbase_pm => {
+      bowtie1_miRBase_pm => {
         class         => "Alignment::Bowtie1",
         perform       => 1,
-        target_dir    => $def->{target_dir} . "/bowtie1_miRbase_pm",
+        target_dir    => $def->{target_dir} . "/bowtie1_miRBase_pm",
         option        => $def->{bowtie1_option_pm},
         source_ref    => [ "bowtie1_genome_unmapped_reads", ".fastq.gz\$" ],
         bowtie1_index => $def->{bowtie1_miRBase_index},
@@ -186,12 +191,12 @@ sub getSmallRNAConfig {
           "mem"      => "40gb"
         },
       },
-      bowtie1_miRbase_pm_count => {
+      bowtie1_miRBase_pm_count => {
         class                   => "CQS::CQSChromosomeCount",
         perform                 => 1,
-        target_dir              => $def->{target_dir} . "/bowtie1_miRbase_pm_count",
-        option                  => $def->{mirbase_count_option},
-        source_ref              => "bowtie1_miRbase_pm",
+        target_dir              => $def->{target_dir} . "/bowtie1_miRBase_pm_count",
+        option                  => $def->{miRBase_count_option},
+        source_ref              => "bowtie1_miRBase_pm",
         seqcount_ref            => [ "identical", ".dupcount\$" ],
         perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
         cqs_tools               => $def->{cqstools},
@@ -204,12 +209,12 @@ sub getSmallRNAConfig {
           "mem"      => "40gb"
         },
       },
-      bowtie1_miRbase_pm_table => {
+      bowtie1_miRBase_pm_table => {
         class      => "CQS::CQSChromosomeTable",
         perform    => 1,
-        target_dir => $def->{target_dir} . "/bowtie1_miRbase_pm_table",
+        target_dir => $def->{target_dir} . "/bowtie1_miRBase_pm_table",
         option     => "",
-        source_ref => [ "bowtie1_miRbase_pm_count", ".xml" ],
+        source_ref => [ "bowtie1_miRBase_pm_count", ".xml" ],
         cqs_tools  => $def->{cqstools},
         prefix     => "miRBase_pm_",
         sh_direct  => 1,
@@ -223,11 +228,12 @@ sub getSmallRNAConfig {
       },
     };
 
-    push @individual, ( "bowtie1_genome_1mm_NTA_smallRNA_count", "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_genome_unmapped_reads", "bowtie1_miRbase_pm", "bowtie1_miRbase_pm_count" );
-    push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_category", "bowtie1_miRbase_pm_table" );
+    push @individual, ( "bowtie1_genome_1mm_NTA_smallRNA_count", "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_genome_unmapped_reads", "bowtie1_miRBase_pm", "bowtie1_miRBase_pm_count" );
+    push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_category", "bowtie1_miRBase_pm_table" );
 
-    if ( defined $def->{mapped_extract} && $def->{mapped_extract} ) {
-      $count->{mapped_extract} = {
+    my $extract_mapped = $search_not_identical && ( defined $def->{extract_mapped} ) && $def->{extract_mapped};
+    if ($extract_mapped) {
+      $count->{extract_mapped} = {
         class         => "SmallRNA::SamExtract",
         perform       => 1,
         target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm_notidentical_mapped",
@@ -244,24 +250,26 @@ sub getSmallRNAConfig {
           "mem"      => "10gb"
         },
       };
-      push @individual, ("mapped_extract");
+      push @individual, ("$extract_mapped");
     }
 
     $config = merge( $config, $count );
   }
 
-  if ( ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads} ) {
+  # default of search_unmapped_reads is true
+  my $search_unmapped_reads = ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
+  if ($search_unmapped_reads) {
     my $unmappedreads = {
 
-      #extract unmapped reads
+      # extract unmapped reads. the reads mapped to host smallRNA, perfect match mapped to host genome or perfect match mapped to miRBase will be excluded.
       unmapped_reads => {
         class       => "CQS::Perl",
         perform     => 1,
         target_dir  => $def->{target_dir} . "/unmapped_reads",
         perlFile    => "unmappedReadsToFastq.pl",
         source_ref  => [ "bowtie1_genome_unmapped_reads", ".fastq.gz\$" ],
-        source2_ref => [ "bowtie1_miRbase_pm_count", ".mapped.xml" ],
-        output_ext  => "_hostgenome_mirbase.unmapped.fastq.gz",
+        source2_ref => [ "bowtie1_miRBase_pm_count", ".mapped.xml" ],
+        output_ext  => "_hostgenome_miRBase.unmapped.fastq.gz",
         sh_direct   => 1,
         pbs         => {
           "email"    => $def->{email},
