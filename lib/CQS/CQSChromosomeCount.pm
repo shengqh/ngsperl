@@ -78,7 +78,7 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-    print $pbs "mono-sgen $cqstools chromosome_count $option $pmNameFile -i $bam_file -o $final_file $seqcountFile";
+    print $pbs "mono $cqstools chromosome_count $option $pmNameFile -i $bam_file -o $final_file $seqcountFile";
 
     $self->close_pbs( $pbs, $pbs_file );
   }
@@ -99,11 +99,6 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $fasta_format = $config->{$section}{fasta_format};
-  if ( !defined $fasta_format ) {
-    $fasta_format = 0;
-  }
-
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
@@ -118,16 +113,6 @@ sub result {
     my $countFile    = "${cur_dir}/${fileName}.count";
     push( @result_files, $countFile );
     push( @result_files, "${countFile}.mapped.xml" );
-    push( @result_files, "${cur_dir}/${fileName}.info" );
-
-    my $unmapped;
-    if ($fasta_format) {
-      $unmapped = change_extension( $countFile, ".unmapped.fasta.gz" );
-    }
-    else {
-      $unmapped = change_extension( $countFile, ".unmapped.fastq.gz" );
-    }
-    push( @result_files, $unmapped );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
