@@ -136,7 +136,8 @@ sub perform {
 
   close($result_list);
   
-  print $final_pbs "\nbash ./$summary_pbs \n";
+  my $summary_pbs_name = basename($summary_pbs);
+  print $final_pbs "\nbash ./${summary_pbs_name} \n";
   $self->close_pbs( $final, $final_pbs );
 }
 
