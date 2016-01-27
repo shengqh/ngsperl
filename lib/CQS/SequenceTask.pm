@@ -90,6 +90,7 @@ sub perform {
       my $pbs_name = basename($pbs_file);
       my $log      = $self->get_step_sample_log( $log_dir, $step_name, $sample );
       my $logdesp  = $cluster->get_log_description($log);
+      print "done\n";
 
       my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $logdesp, $path_file, $result_dir );
 
