@@ -150,12 +150,30 @@ sub getSmallRNAConfig {
         },
       },
 
+      #extract unmapped reads
+      bowtie1_genome_unmapped_reads => {
+        class       => "CQS::Perl",
+        perform     => 1,
+        target_dir  => $def->{target_dir} . "/bowtie1_genome_unmapped_reads",
+        perlFile    => "unmappedReadsToFastq.pl",
+        source_ref  => [ "identical", ".fastq.gz\$" ],
+        source2_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
+        source3_ref => [ "bowtie1_genome_1mm_NTA_pmnames", ".pmnames\$" ],
+        output_ext  => "_clipped_identical.unmapped.fastq.gz",
+        sh_direct   => 1,
+        pbs         => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      },
       bowtie1_miRbase_pm => {
         class         => "Alignment::Bowtie1",
         perform       => 1,
         target_dir    => $def->{target_dir} . "/bowtie1_miRbase_pm",
         option        => $def->{bowtie1_option_pm},
-        source_ref    => [ "identical", ".fastq.gz\$" ],
+        source_ref    => [ "bowtie1_genome_unmapped_reads", ".fastq.gz\$" ],
         bowtie1_index => $def->{bowtie1_miRBase_index},
         samonly       => 0,
         sh_direct     => 1,
@@ -205,7 +223,7 @@ sub getSmallRNAConfig {
       },
     };
 
-    push @individual, ( "bowtie1_genome_1mm_NTA_smallRNA_count", "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_miRbase_pm", "bowtie1_miRbase_pm_count" );
+    push @individual, ( "bowtie1_genome_1mm_NTA_smallRNA_count", "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_genome_unmapped_reads", "bowtie1_miRbase_pm", "bowtie1_miRbase_pm_count" );
     push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_category", "bowtie1_miRbase_pm_table" );
 
     if ( defined $def->{mapped_extract} && $def->{mapped_extract} ) {
@@ -232,8 +250,7 @@ sub getSmallRNAConfig {
     $config = merge( $config, $count );
   }
 
-  if ( defined $def->{search_unmapped_reads}
-    && $def->{search_unmapped_reads} )
+  if ( ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads} )
   {
     my $unmappedreads = {
 
@@ -243,10 +260,9 @@ sub getSmallRNAConfig {
         perform     => 1,
         target_dir  => $def->{target_dir} . "/unmappedReads",
         perlFile    => "unmappedReadsToFastq.pl",
-        source_ref  => [ "identical", ".fastq.gz\$" ],
-        source2_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
-        source3_ref => [ "bowtie1_genome_1mm_NTA_pmnames", ".pmnames\$" ],
-        output_ext  => "_clipped_identical.unmapped.fastq.gz",
+        source_ref  => [ "bowtie1_genome_unmapped_reads", ".fastq.gz\$" ],
+        source2_ref => [ "bowtie1_miRbase_pm_count", ".mapped.xml" ],
+        output_ext  => "_hostgenome_mirbase.unmapped.fastq.gz",
         sh_direct   => 1,
         pbs         => {
           "email"    => $def->{email},
@@ -594,9 +610,9 @@ sub getSmallRNAConfig {
 
     push @individual,
       (
-      "unmappedReads",                    "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",  "bowtie1_rRNAL_pm",
-      "bowtie1_rRNAL_pm_count",           "bowtie1_rRNAS_pm",           "bowtie1_rRNAS_pm_count", "bowtie1_bacteria_group1_pm",
-      "bowtie1_bacteria_group1_pm_count", "bowtie1_bacteria_group2_pm", "bowtie1_bacteria_group2_pm_count"
+      "bowtie1_genome_miRbase_unmapped_reads", "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",  "bowtie1_rRNAL_pm",
+      "bowtie1_rRNAL_pm_count",                "bowtie1_rRNAS_pm",           "bowtie1_rRNAS_pm_count", "bowtie1_bacteria_group1_pm",
+      "bowtie1_bacteria_group1_pm_count",      "bowtie1_bacteria_group2_pm", "bowtie1_bacteria_group2_pm_count"
       );
     push @summary,
       (
