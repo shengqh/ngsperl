@@ -46,10 +46,14 @@ sub perform {
   my $summary_log      = $self->get_log_filename( $log_dir, $summary_name );
   my $summary_log_desp = $cluster->get_log_description($summary_log);
 
-  my $final   = $self->open_pbs( $final_pbs,   $pbs_desc, $final_log_desp,   $path_file, $result_dir );
+  my $result_list_file = $self->get_file( $result_dir, $task_name, "_expect_result.tsv" );
+  
   my $summary = $self->open_pbs( $summary_pbs, $pbs_desc, $summary_log_desp, $path_file, $result_dir );
-
-  my $result_list_file = $self->get_file( $result_dir, $task_name, "expect_result.tsv" );
+  print $summary "R --vanilla -f XXX.r --args $result_list_file \n";
+  $self->close_pbs( $summary, $summary_pbs );
+  
+  my $final   = $self->open_pbs( $final_pbs,   $pbs_desc, $final_log_desp,   $path_file, $result_dir );
+  
   open( my $result_list, ">$result_list_file" ) or die $!;
   print $result_list "StepName\tTaskName\tSampleName\tFileList\n";
 
@@ -130,9 +134,10 @@ sub perform {
     }
   }
 
-  $self->close_pbs( $final, $final_pbs );
   close($result_list);
-  $self->close_pbs( $summary, $summary_pbs );
+  
+  print $final_pbs "\nbash ./$summary_pbs \n";
+  $self->close_pbs( $final, $final_pbs );
 }
 
 sub get_step_sample_name {
