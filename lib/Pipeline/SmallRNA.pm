@@ -226,7 +226,7 @@ sub getSmallRNAConfig {
           "mem"      => "10gb"
         },
       };
-      push @individual, ("sam_extract");
+      push @individual, ("mapped_extract");
     }
 
     $config = merge( $config, $count );
