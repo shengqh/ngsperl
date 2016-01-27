@@ -44,7 +44,7 @@ sub perform {
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
   print $pbs "
 qcimg2pdf.sh -o $task_name
-mono $cqstools fastqc_summary -i $fastqc_dir -o ${task_name}.FastQC.summary.tsv 
+mono $cqstools fastqc_summary -i $fastqc_dir -o $final_file 
 ";
   $self->close_pbs( $pbs, $pbs_file );
 
@@ -60,9 +60,9 @@ sub result {
 
   my $result       = {};
   my @result_files = ();
-  push( @result_files, "${result_dir}/${task_name}.FastQC.reads.tsv" );
   push( @result_files, "${result_dir}/${task_name}.FastQC.summary.tsv" );
-  push( @result_files, "${result_dir}/${task_name}.FastQC.overrepresented.tsv" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.summary.reads.tsv" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.summary.overrepresented.tsv" );
   push( @result_files, "${result_dir}/${task_name}.FastQC.pdf" );
   $result->{$task_name} = filter_array( \@result_files, $pattern );
   return $result;
