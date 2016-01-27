@@ -63,9 +63,9 @@ sub perform {
     my $samples = {};
     my $taskpbs = {};
     for my $task_section (@tasks) {
-      my $classname = $config->{$section}{class};
+      my $classname = $config->{$task_section}{class};
       if ( !defined $classname ) {
-        die "$section is not a valid task section.";
+        die "$task_section is not a valid task section.";
       }
       my $myclass         = instantiate( $classname );
       my %expect_file_map = %{ $myclass->result( $config, $task_section ) };
@@ -167,10 +167,11 @@ sub get_pbs_files {
     my $samples = {};
     my $taskpbs = {};
     for my $task_section (@tasks) {
-      if ( !defined $config->{$task_section}{class} ) {
-        die "$section is not a valid task section.";
+      my $classname = $config->{$task_section}{class};
+      if ( !defined $classname ) {
+        die "$task_section is not a valid task section.";
       }
-      my $myclass = instantiate( $config->{$task_section}{class} );
+      my $myclass = instantiate( $classname );
       my $pbs_file_map = $myclass->get_pbs_files( $config, $task_section );
       for my $sample ( sort keys %{$pbs_file_map} ) {
         $samples->{$sample} = 1;
