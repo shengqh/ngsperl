@@ -143,15 +143,13 @@ sub get_step_sample_name {
 
 sub get_step_sample_pbs {
   my ( $self, $pbs_dir, $step_name, $sample ) = @_;
-  print $pbs_dir, "\t", $step_name, "\t", $sample, "\n";
-  my $task_sample = get_step_sample_name( $step_name, $sample );
+  my $task_sample = $self->get_step_sample_name( $step_name, $sample );
   return $self->get_pbs_filename( $pbs_dir, $task_sample );
 }
 
 sub get_step_sample_log {
   my ( $self, $log_dir, $step_name, $sample ) = @_;
-  print $log_dir, "\t", $step_name, "\t", $sample, "\n";
-  my $task_sample = get_step_sample_name( $step_name, $sample );
+  my $task_sample = $self->get_step_sample_name( $step_name, $sample );
   return $self->get_log_filename( $log_dir, $task_sample );
 }
 
