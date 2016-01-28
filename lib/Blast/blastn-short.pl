@@ -17,6 +17,7 @@ while ( my $seq = $seqio->next_seq ) {
   my $fa_name = $seq->id . '.fasta';
   my $seqio_obj = Bio::SeqIO->new( -file => '>$fa_name', -format => 'fasta' );
   $seqio_obj->write_seq($seq);
+  close($seqio_obj);
   print $seq->id . "\n";
   #`blastn -task blastn-short -db nt -perc_identity 100 -remote -query $fa_name -outfmt '6 qlen nident qacc sallacc salltitles' | awk '\$1 == \$2 {print}' | cut -f3- | sort | uniq >> $output_file`;
 }
