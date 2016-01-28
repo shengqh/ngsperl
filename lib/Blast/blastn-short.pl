@@ -25,7 +25,8 @@ for my $seq (@sequences){
   my $fa_name = $seq->id . '.fasta';
   my $seqio_obj = Bio::SeqIO->new( -file => ">$fa_name", -format => 'fasta' );
   $seqio_obj->write_seq($seq);
-  print $current_index . "/" . $total_count . " : " . $seq->id . "\n";
+  my $datastring = localtime();
+  print $datastring . " : " . $current_index . "/" . $total_count . " : " . $seq->id . "\n";
   `blastn -task blastn-short -db nt -perc_identity 100 -remote -query $fa_name -outfmt '6 qlen nident qacc sallacc salltitles' | awk '\$1 == \$2 {print}' | cut -f3- | sort | uniq >> $output_file`;
   unlink ($fa_name);
 }
