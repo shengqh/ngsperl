@@ -15,7 +15,7 @@ if ( -e $output_file ) { unlink $output_file; }
 
 while ( my $seq = $seqio->next_seq ) {
   my $fa_name = $seq->id . '.fasta';
-  my $seqio_obj = Bio::SeqIO->new( -file => '>$fa_name', -format => 'fasta' );
+  my $seqio_obj = Bio::SeqIO->new( -file => ">$fa_name", -format => 'fasta' );
   $seqio_obj->write_seq($seq);
   close($seqio_obj);
   print $seq->id . "\n";
