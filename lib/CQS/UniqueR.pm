@@ -128,7 +128,7 @@ sub result {
   my $result       = {};
   my @result_files = ();
 
-  push( @result_files, "${result_dir}/${task_name}${output_file}${$output_file_ext}" );
+  push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext}" );
 
   $result->{$task_name} = filter_array( \@result_files, $pattern );
   return $result;
