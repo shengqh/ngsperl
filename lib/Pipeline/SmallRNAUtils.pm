@@ -253,8 +253,8 @@ sub getPrepareConfig {
         rtemplate          => "countInFastQcVis.R",
         output_file        => ".countInFastQcVis.Result",
         output_file_ext        => ".pdf",
-        parameterFile1_ref => [ "fastqc_pre_trim_summary", ".FastQC.reads.tsv\$" ],
-        parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.reads.tsv\$" ],
+        parameterFile1_ref => [ "fastqc_pre_trim_summary", ".FastQC.summary.reads.tsv\$" ],
+        parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.summary.reads.tsv\$" ],
         sh_direct          => 1,
         pbs                => {
           "email"    => $def->{email},
@@ -384,9 +384,9 @@ sub getPrepareConfig {
         rtemplate          => "countInFastQcVis.R",
         output_file        => ".countInFastQcVis.Result",
         output_file_ext        => ".pdf",
-        parameterFile1_ref => [ "fastqc_pre_trim_summary", ".FastQC.reads.tsv\$" ],
-        parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.reads.tsv\$" ],
-        parameterFile3_ref => [ "fastqc_post_remove_summary", ".FastQC.reads.tsv\$" ],
+        parameterFile1_ref => [ "fastqc_pre_trim_summary", ".summary.FastQC.reads.tsv\$" ],
+        parameterFile2_ref => [ "fastqc_post_trim_summary", ".summary.FastQC.reads.tsv\$" ],
+        parameterFile3_ref => [ "fastqc_post_remove_summary", ".summary.FastQC.reads.tsv\$" ],
         sh_direct          => 1,
         pbs                => {
           "email"    => $def->{email},
