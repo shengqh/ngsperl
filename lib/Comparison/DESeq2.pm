@@ -189,8 +189,7 @@ sub result {
   my $result = {};
   for my $comparison_name ( sort keys %{$comparisons} ) {
     my @result_files = ();
-    push( @result_files, $result_dir . "/${comparison_name}.csv" );
-    push( @result_files, $result_dir . "/${comparison_name}.png" );
+    push( @result_files, $result_dir . "/${comparison_name}_min${minMedianInGroup}.csv" );
     push( @result_files, $result_dir . "/${comparison_name}_min${minMedianInGroup}_DESeq2_sig.csv" );
     $result->{$comparison_name} = filter_array( \@result_files, $pattern );
   }

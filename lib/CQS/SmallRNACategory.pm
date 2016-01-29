@@ -90,17 +90,9 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %raw_files = %{ get_raw_files( $config, $section ) };
-
-  my $result = {};
-  for my $sample_name ( keys %raw_files ) {
-    my $countFile = "${result_dir}/${sample_name}.catcount";
-
-    my @result_files = ();
-    push( @result_files, $countFile );
-
-    $result->{$sample_name} = filter_array( \@result_files, $pattern );
-  }
+  my $result_files = {"${result_dir}/${task_name}.catcount"};
+  my $result       = {};
+  $result->{$task_name} = filter_array( $result_files, $pattern );
   return $result;
 }
 
