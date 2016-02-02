@@ -49,7 +49,7 @@ sub perform {
   my $result_list_file = $self->get_file( $result_dir, $task_name, "_expect_result.tsv" );
   
   my $summary = $self->open_pbs( $summary_pbs, $pbs_desc, $summary_log_desp, $path_file, $result_dir );
-  print $summary "R --vanilla --slave -f summaryResultFiles.r --args $result_list_file \n";
+  print $summary "R --vanilla --slave -f summaryResultFiles.R --args $result_list_file \n";
   $self->close_pbs( $summary, $summary_pbs );
   
   my $final   = $self->open_pbs( $final_pbs,   $pbs_desc, $final_log_desp,   $path_file, $result_dir );
