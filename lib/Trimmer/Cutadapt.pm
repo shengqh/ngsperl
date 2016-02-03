@@ -29,8 +29,16 @@ sub perform {
 
   my $random_bases_remove_after_trim = get_option( $config, $section, "random_bases_remove_after_trim", 0 );
 
+  my $ispairend = get_option( $config, $section, "pairend", 0 );
+
+  my $adapter_option = "";
   if ( defined $config->{$section}{adapter} ) {
-    $option = $option . " -a " . $config->{$section}{adapter};
+    if ($ispairend) {
+      $adapter_option = " -a " . $config->{$section}{adapter} . " -A " . $config->{$section}{adapter};
+    }
+    else {
+      $adapter_option = " -a " . $config->{$section}{adapter};
+    }
   }
 
   my $extension = get_option( $config, $section, "extension" );
@@ -79,7 +87,7 @@ sub perform {
     }
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-    if ( scalar(@sample_files) == 1 ) {    # single reads
+    if ( !$ispairend ) {    # single reads
       my $finalName      = $sample_name . $extension;
       my $finalShortName = $finalName . ".short";
       my $finalLongName  = $finalName . ".long";
@@ -98,17 +106,70 @@ sub perform {
 
       if ($random_bases_remove_after_trim) {    #remove top random bases
         my $temp_file = $final_file . ".cutAdapter.fastq";
-        print $pbs "
-cutadapt $optionRemoveLimited -o $temp_file $sample_files[0]
+        if ( scalar(@sample_files) == 1 ) {
+          print $pbs "
+cutadapt $optionRemoveLimited $adapter_option -o $temp_file $sample_files[0]
+cutadapt $optionOnlyLimited $limit_file_options -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $final_file $temp_file
+";
+        }
+        else {
+          print $pbs "
+if [ -s $temp_file ]; then
+  delete $temp_file
+fi
+";
+          for my $sample_file (@sample_files) {
+            print $pbs "
+cutadapt $optionRemoveLimited $adapter_option -o temp.fastq $sample_file
+cat temp.fastq >> $temp_file
+rm temp.fastq
+";
+          }
+
+          print $pbs "
 cutadapt $optionOnlyLimited $limit_file_options -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $final_file $temp_file 
 rm $temp_file
 ";
+        }
       }
-      else {                                    #NOT remove top random bases
-        print $pbs "cutadapt $option $limit_file_options -o $final_file $sample_files[0] \n";
+      else {    #NOT remove top random bases
+        if ( scalar(@sample_files) == 1 ) {
+          print $pbs "
+cutadapt $option $adapter_option $limit_file_options -o $final_file $sample_files[0]
+";
+        }
+        else {
+          my $temp_file = $final_file . ".cutAdapter.fastq";
+          print $pbs "
+if [ -s $temp_file ]; then
+  delete $temp_file
+fi
+";
+          for my $sample_file (@sample_files) {
+            print $pbs "
+cutadapt $option $adapter_option $limit_file_options -o temp.fastq $sample_file
+cat temp.fastq >> $temp_file
+rm temp.fastq
+";
+          }
+
+          if ($gzipped) {
+            print $pbs "
+gzip $temp_file
+mv ${temp_file}.gz $final_file
+";
+          }
+          else {
+            print $pbs "
+mv $temp_file $final_file
+";
+          }
+        }
       }
     }
     else {
+      die "should be pair-end data but not!" if ( scalar(@sample_files) != 2 );
+
       #pair-end data
       my $read1file = $sample_files[0];
       my $read2file = $sample_files[1];
@@ -124,43 +185,32 @@ rm $temp_file
         #https://cutadapt.readthedocs.org/en/stable/guide.html#illumina-truseq
         if ($random_bases_remove_after_trim) {    # remove top random bases
 
-          #           print $pbs "cutadapt $option -o $temp1name -p $temp2name $read1file $read2file \n";
-          #       	print $pbs "cutadapt $option -o $temp2_file -p $temp1_file $temp2name $temp1name \n";
-          #        	print $pbs "rm $temp2name $temp1name \n";
-
           print $pbs "
-cutadapt $optionRemoveLimited -o $temp1_file $read1file 
-cutadapt $optionRemoveLimited -o $temp2_file $read2file 
-cutadapt $optionOnlyLimited -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $temp1name -p $temp2name $temp1_file $temp2_file 
-cutadapt $optionOnlyLimited -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $read2name -p $read1name $temp2name $temp1name 
+cutadapt $optionRemoveLimited $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
+cutadapt $optionOnlyLimited -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $read1name -p $read2name $temp1_file $temp2_file 
 rm $temp2name $temp1name 
 ";
 
         }
-        else {    # NOT remove top random bases
+        else {                                    # NOT remove top random bases
           print $pbs "
-cutadapt $option -o $temp1name -p $temp2name $read1file $read2file 
-cutadapt $option -o $read2name -p $read1name $temp2name $temp1name 
-rm $temp2name $temp1name 
+cutadapt $option $adapter_option -o $temp1name -p $temp2name $read1file $read2file 
 ";
         }
       }
-      else {      #no short or long limited
+      else {                                      #no short or long limited
         if ($random_bases_remove_after_trim) {    # remove top random bases
           my $temp1_file = $read1name . ".cutAdapter.fastq";
           my $temp2_file = $read2name . ".cutAdapter.fastq";
           print $pbs "
-cutadapt $option -o $temp1_file $read1file 
-cutadapt $option -o $temp2_file $read2file 
-cutadapt -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $read1name $temp1_file 
-cutadapt -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $read2name $temp2_file 
+cutadapt $option $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
+cutadapt -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $read1name -p $read2name $temp1_file $temp2_file
 rm $temp1_file $temp2_file
 ";
         }
         else {                                    # NOT remove top random bases
           print $pbs "
-cutadapt $option -o $read1name $read1file 
-cutadapt $option -o $read2name $read2file
+cutadapt $option $adapter_option -o $read1name -p $read2name $read1file $read2file
 ";
         }
       }
