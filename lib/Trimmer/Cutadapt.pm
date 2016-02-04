@@ -145,21 +145,28 @@ if [ -s $temp_file ]; then
   delete $temp_file
 fi
 ";
-          for my $sample_file (@sample_files) {
-            print $pbs "
-cutadapt $option $adapter_option -o temp.fastq $sample_file
+          if ( length($limit_file_options) > 0 ) {
+            for my $sample_file (@sample_files) {
+              print $pbs "
+cutadapt $optionRemoveLimited $adapter_option -o temp.fastq $sample_file
 cat temp.fastq >> $temp_file
 rm temp.fastq
 ";
-          }
+            }
 
-          if ( length($limit_file_options) > 0 ) {
             print $pbs "
-cutadapt $limit_file_options -o $final_file $temp_file
+cutadapt $optionOnlyLimited $limit_file_options -o $final_file $temp_file
 rm $temp_file
 ";
           }
           else {
+            for my $sample_file (@sample_files) {
+              print $pbs "
+cutadapt $option $adapter_option -o temp.fastq $sample_file
+cat temp.fastq >> $temp_file
+rm temp.fastq
+";
+            }
             if ($gzipped) {
               print $pbs "
 gzip $temp_file
