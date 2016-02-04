@@ -147,22 +147,30 @@ fi
 ";
           for my $sample_file (@sample_files) {
             print $pbs "
-cutadapt $option $adapter_option $limit_file_options -o temp.fastq $sample_file
+cutadapt $option $adapter_option -o temp.fastq $sample_file
 cat temp.fastq >> $temp_file
 rm temp.fastq
 ";
           }
 
-          if ($gzipped) {
+          if ( length($limit_file_options) > 0 ) {
             print $pbs "
-gzip $temp_file
-mv ${temp_file}.gz $final_file
+cutadapt $limit_file_options -o $final_file $temp_file
+rm $temp_file
 ";
           }
           else {
-            print $pbs "
+            if ($gzipped) {
+              print $pbs "
+gzip $temp_file
+mv ${temp_file}.gz $final_file
+";
+            }
+            else {
+              print $pbs "
 mv $temp_file $final_file
 ";
+            }
           }
         }
       }
