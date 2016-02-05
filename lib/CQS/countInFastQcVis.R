@@ -17,7 +17,7 @@ if (is.na(countInFastQcPostRemove)) {
 	
 	count1$Reads<-count1$Reads-count2$Reads
 	
-	count1$Label="Removed by Trim"
+	count1$Label="Removed by Trimming or Removing Sequence"
 	count2$Label="Reads for Mapping"
 	
 	countForFigure<-rbind(count1,count2)
@@ -32,8 +32,8 @@ if (is.na(countInFastQcPostRemove)) {
 	count1$Reads<-count1$Reads-count2$Reads
 	count2$Reads<-count2$Reads-count3$Reads
 	
-	count1$Label="Removed by Trim"
-	count2$Label="Removed by Removing Sequence"
+	count1$Label="Removed by Removing Sequence"
+	count2$Label="Removed by Trimming"
 	count3$Label="Reads for Mapping"
 	
 	countForFigure<-rbind(count1,count2,count3)
