@@ -50,14 +50,14 @@ sub perform {
 
   my $optionOnlyLimited   = '';
   my $optionRemoveLimited = $option;
-  my $shortLimited        = $option =~ /(-m\s+\d+\s+)/;
+  my $shortLimited        = $option =~ /(-m\s+\d+\s*)/;
   print "option = $option\n";
   if ($shortLimited) {
     $shortLimited      = $1;
     $optionOnlyLimited = $optionOnlyLimited . " " . $shortLimited;
     $optionRemoveLimited =~ s/$shortLimited//;
   }
-  my $longLimited = $option =~ /(-M\s+\d+\s+)/;
+  my $longLimited = $option =~ /(-M\s+\d+\s*)/;
   if ($longLimited) {
     $longLimited       = $1;
     $optionOnlyLimited = $optionOnlyLimited . " " . $longLimited;
