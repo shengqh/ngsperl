@@ -130,6 +130,7 @@ fi
 
   print $pbs "
 echo ${module_name}_start=`date`
+echo working in $result_dir ...
  
 ";
   return $pbs;
