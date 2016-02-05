@@ -330,10 +330,10 @@ sub getPrepareConfig {
   push @individual, ("fastq_len");
 
   if ( defined $def->{remove_sequences} ) {
-    $config->{"remove_sequences"} = {
+    $config->{"remove_contamination_sequences"} = {
       class      => "CQS::Perl",
       perform    => 1,
-      target_dir => $def->{target_dir} . "/remove_sequences",
+      target_dir => $def->{target_dir} . "/remove_contamination_sequences",
       option     => $def->{remove_sequences},
       output_ext => "_clipped_removeSeq.fastq.gz",
       perlFile   => "removeSequenceInFastq.pl",
@@ -347,8 +347,8 @@ sub getPrepareConfig {
         "mem"      => "20gb"
       },
     };
-    push @individual, ("remove_sequences");
-    $source_ref = [ "remove_sequences", ".fastq.gz" ];
+    push @individual, ("remove_contamination_sequences");
+    $source_ref = [ "remove_contamination_sequences", ".fastq.gz" ];
 
     $config->{"fastqc_post_remove"} = {
       class      => "QC::FastQC",
