@@ -97,9 +97,14 @@ sub getPrepareConfig {
     $cluster = "slurm";
   }
 
+  #default is removing terminal N
   my $fastq_remove_N = !defined $def->{fastq_remove_N} || $def->{fastq_remove_N};
-  my $run_cutadapt   = !defined $def->{run_cutadapt}   || $def->{run_cutadapt};
-  my $fastq_remove_random = defined $def->{fastq_remove_random} ? $def->{fastq_remove_random} : 0;
+  
+  #default is trimming adapter
+  my $run_cutadapt   = !defined $def->{run_cutadapt}   || $def->{run_cutadapt}; 
+  
+  #default is NOT remove random bases at cutadapt
+  my $fastq_remove_random = defined $def->{fastq_remove_random} && $def->{fastq_remove_random}; 
 
   my $config = {
     general => {
