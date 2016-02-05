@@ -110,6 +110,7 @@ sub perform {
           print $pbs "
 cutadapt $optionRemoveLimited $adapter_option -o $temp_file $sample_files[0]
 cutadapt $optionOnlyLimited $limit_file_options -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $final_file $temp_file
+rm $temp_file
 ";
         }
         else {
