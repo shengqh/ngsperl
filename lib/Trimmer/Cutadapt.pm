@@ -51,8 +51,8 @@ sub perform {
   my $optionOnlyLimited   = '';
   my $optionRemoveLimited = $option;
   my $shortLimited        = $option =~ /(-m\s+\d+\s+)/;
+  print "option = $option\n";
   if ($shortLimited) {
-    print "has short limitation\n";
     $shortLimited      = $1;
     $optionOnlyLimited = $optionOnlyLimited . " " . $shortLimited;
     $optionRemoveLimited =~ s/$shortLimited//;
