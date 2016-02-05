@@ -187,7 +187,7 @@ sub getPrepareConfig {
 			perform    => 1,
 			target_dir => $def->{target_dir} . "/remove_contamination_sequences",
 			option     => $def->{remove_sequences},
-			output_ext => "_clipped_removeSeq.fastq.gz",
+			output_ext => "_removeSeq.fastq.gz",
 			perlFile   => "removeSequenceInFastq.pl",
 			source_ref => $source_ref,
 			sh_direct  => 1,
