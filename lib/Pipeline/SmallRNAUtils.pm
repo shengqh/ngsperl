@@ -28,6 +28,7 @@ our $VERSION = '0.01';
 #  target_dir => "/scratch/cqs/shengq1/vickers/20150925_parclip_3018-KCV-15/",
 #  max_thread => 8,
 #  cluster    => "slurm",
+#  search_not_identical => 0,
 #
 #  #Default software parameter (don't change it except you really know it)
 #  fastq_remove_N => 0,
