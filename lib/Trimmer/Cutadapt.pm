@@ -22,6 +22,41 @@ sub new {
   return $self;
 }
 
+sub get_final_files {
+  my ( $self, $ispairend, $sample_name, $extension, $fastqextension ) = @_;
+  if ($ispairend) {
+    return ( $sample_name . $extension . ".1" . $fastqextension . ".gz", $sample_name . $extension . ".2" . $fastqextension . ".gz" );
+  }
+  else {
+    my $finalName      = $sample_name . $extension . $fastqextension;
+    my $final_file     = "${finalName}.gz";
+    my $finalShortFile = $finalName . ".short.gz";
+    my $finalLongFile  = $finalName . ".long.gz";
+    return ( $final_file, $finalShortFile, $finalLongFile );
+  }
+}
+
+sub get_extension {
+  my ( $self, $config, $section ) = @_;
+
+  my $extension = $config->{$section}{extension} or die "define ${section}::extension first";
+  if ( $extension =~ /\.gz$/ ) {
+    $extension =~ s/\.gz$//g;
+  }
+
+  my $fastqextension = ".fastq";
+  if ( $extension =~ /\.fastq$/ ) {
+    $extension =~ s/\.fastq$//g;
+  }
+
+  if ( $extension =~ /\.fq$/ ) {
+    $fastqextension = ".fq";
+    $extension =~ s/\.fq$//g;
+  }
+
+  return ( $extension, $fastqextension );
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -41,12 +76,7 @@ sub perform {
     }
   }
 
-  my $extension = get_option( $config, $section, "extension" );
-  my $gzipped = get_option( $config, $section, "gzipped", 1 );
-
-  if ( $gzipped && $extension =~ /\.gz$/ ) {
-    $extension =~ s/\.gz$//g;
-  }
+  my ( $extension, $fastqextension ) = $self->get_extension( $config, $section );
 
   my $optionOnlyLimited   = '';
   my $optionRemoveLimited = $option;
@@ -62,7 +92,6 @@ sub perform {
     $optionOnlyLimited = $optionOnlyLimited . " " . $longLimited;
     $optionRemoveLimited =~ s/$longLimited//;
   }
-
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -81,21 +110,35 @@ sub perform {
 
     my @sample_files = @{ $raw_files{$sample_name} };
 
-    my $final_file = scalar(@sample_files) == 1 ? $sample_name . $extension : $sample_name . ".1.fastq";
-    if ($gzipped) {
-      $final_file = $final_file . ".gz";
-    }
+    my $final_file = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-    if ( !$ispairend ) {    # single reads
-      my $finalName      = $sample_name . $extension;
-      my $finalShortName = $finalName . ".short";
-      my $finalLongName  = $finalName . ".long";
+    if ($ispairend) {
+      die "should be pair-end data but not!" if ( scalar(@sample_files) != 2 );
 
-      my $final_file     = $gzipped ? "${finalName}.gz"      : $finalName;
-      my $finalShortFile = $gzipped ? "${finalShortName}.gz" : $finalShortName;
-      my $finalLongFile  = $gzipped ? "${finalLongName}.gz"  : $finalLongName;
+      #pair-end data
+      my $read1file = $sample_files[0];
+      my $read2file = $sample_files[1];
 
+      my ( $read1name, $read2name ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
+
+      if ($random_bases_remove_after_trim) {    # remove top random bases
+        my $temp1_file = $read1name . ".cutAdapter.fastq";
+        my $temp2_file = $read2name . ".cutAdapter.fastq";
+        print $pbs "
+cutadapt $option $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
+cutadapt -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $read1name -p $read2name $temp1_file $temp2_file
+rm $temp1_file $temp2_file
+";
+      }
+      else {                                    # NOT remove top random bases
+        print $pbs "
+cutadapt $option $adapter_option -o $read1name -p $read2name $read1file $read2file
+";
+      }
+    }
+    else {
+      my ( $final_file, $finalShortFile, $finalLongFile ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
       my $limit_file_options = "";
       if ($shortLimited) {
         $limit_file_options = " --too-short-output=$finalShortFile";
@@ -168,65 +211,10 @@ cat temp.fastq >> $temp_file
 rm temp.fastq
 ";
             }
-            if ($gzipped) {
-              print $pbs "
+          }
+          print $pbs "
 gzip $temp_file
 mv ${temp_file}.gz $final_file
-";
-            }
-            else {
-              print $pbs "
-mv $temp_file $final_file
-";
-            }
-          }
-        }
-      }
-    }
-    else {
-      die "should be pair-end data but not!" if ( scalar(@sample_files) != 2 );
-
-      #pair-end data
-      my $read1file = $sample_files[0];
-      my $read2file = $sample_files[1];
-      my $read1name = $sample_name . ".1.fastq.gz";
-      my $read2name = $sample_name . ".2.fastq.gz";
-
-      if ( $shortLimited || $longLimited ) {
-        my $temp1name  = $sample_name . ".1.tmp.fastq";
-        my $temp2name  = $sample_name . ".2.tmp.fastq";
-        my $temp1_file = $read1name . ".cutAdapter.fastq";
-        my $temp2_file = $read2name . ".cutAdapter.fastq";
-
-        #https://cutadapt.readthedocs.org/en/stable/guide.html#illumina-truseq
-        if ($random_bases_remove_after_trim) {    # remove top random bases
-
-          print $pbs "
-cutadapt $optionRemoveLimited $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
-cutadapt $optionOnlyLimited -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $read1name -p $read2name $temp1_file $temp2_file 
-rm $temp2name $temp1name 
-";
-
-        }
-        else {                                    # NOT remove top random bases
-          print $pbs "
-cutadapt $option $adapter_option -o $temp1name -p $temp2name $read1file $read2file 
-";
-        }
-      }
-      else {                                      #no short or long limited
-        if ($random_bases_remove_after_trim) {    # remove top random bases
-          my $temp1_file = $read1name . ".cutAdapter.fastq";
-          my $temp2_file = $read2name . ".cutAdapter.fastq";
-          print $pbs "
-cutadapt $option $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
-cutadapt -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $read1name -p $read2name $temp1_file $temp2_file
-rm $temp1_file $temp2_file
-";
-        }
-        else {                                    # NOT remove top random bases
-          print $pbs "
-cutadapt $option $adapter_option -o $read1name -p $read2name $read1file $read2file
 ";
         }
       }
@@ -249,50 +237,35 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $extension = $config->{$section}{extension} or die "define ${section}::extension first";
-  my $gzipped = get_option( $config, $section, "gzipped", 1 );
+  my $ispairend = get_option( $config, $section, "pairend", 0 );
 
-  if ( $gzipped && $extension =~ /\.gz$/ ) {
-    $extension =~ s/\.gz$//g;
-  }
-
-  my $shortLimited = $option =~ /-m\s+\d+/;
-  my $longLimited  = $option =~ /-M\s+\d+/;
+  my ( $extension, $fastqextension ) = $self->get_extension( $config, $section );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
 
   for my $sample_name ( keys %raw_files ) {
-    my @sample_files = @{ $raw_files{$sample_name} };
-
     my @result_files = ();
-    if ( scalar(@sample_files) == 1 ) {
-      my $finalName      = $sample_name . $extension;
-      my $finalShortName = $finalName . ".short";
-      my $finalLongName  = $finalName . ".long";
+    if ($ispairend) {
+      my ( $read1name, $read2name ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
 
-      my $final_file     = $gzipped ? "${finalName}.gz"      : $finalName;
-      my $finalShortFile = $gzipped ? "${finalShortName}.gz" : $finalShortName;
-      my $finalLongFile  = $gzipped ? "${finalLongName}.gz"  : $finalLongName;
+      push( @result_files, $result_dir . "/" . $read1name );
+      push( @result_files, $result_dir . "/" . $read2name );
+    }
+    else {
+      my ( $final_file, $finalShortFile, $finalLongFile ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
 
       push( @result_files, $result_dir . "/" . $final_file );
 
+      my $shortLimited = $option =~ /-m\s+\d+/;
+      my $longLimited  = $option =~ /-M\s+\d+/;
       if ($shortLimited) {
         push( @result_files, $result_dir . "/" . $finalShortFile );
       }
       if ($longLimited) {
         push( @result_files, $result_dir . "/" . $finalLongFile );
       }
-    }
-    else {
-
-      #pair-end data
-      my $read1name = $sample_name . ".1.fastq.gz";
-      my $read2name = $sample_name . ".2.fastq.gz";
-
-      push( @result_files, $result_dir . "/" . $read1name );
-      push( @result_files, $result_dir . "/" . $read2name );
     }
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
