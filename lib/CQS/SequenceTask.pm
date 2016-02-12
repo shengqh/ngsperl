@@ -53,7 +53,7 @@ sub perform {
   print $summary "R --vanilla --slave -f $rtemplate --args $result_list_file \n";
   $self->close_pbs( $summary, $summary_pbs );
   
-  my $final   = $self->open_pbs( $final_pbs,   $pbs_desc, $final_log_desp,   $path_file, $result_dir );
+  my $final   = $self->open_pbs( $final_pbs,   $pbs_desc, $final_log_desp,   $path_file, $pbs_dir );
   
   open( my $result_list, ">$result_list_file" ) or die $!;
   print $result_list "StepName\tTaskName\tSampleName\tFileList\n";
