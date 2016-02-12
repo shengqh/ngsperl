@@ -29,7 +29,8 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
-  my @vcfFiles = @{ $config->{$section}{vcf_files} } or die "Define vcf_files in section $section first.";
+  my $vcfFiles = $config->{$section}{vcf_files} or die "Define vcf_files in section $section first.";
+  my @vcfFiles = @{ $vcfFiles } ;
   my $gatk_jar   = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
   my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals", 0 ) ? "-fixMisencodedQuals" : "";
