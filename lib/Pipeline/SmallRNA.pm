@@ -23,67 +23,68 @@ our $VERSION = '0.01';
 sub getSmallRNAConfig {
   my ($def) = @_;
 
-  my ( $config, $individual_ref, $summary_ref, $cluster, $source_ref ) = getPrepareConfig( $def, 1 );
+  my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref ) = getPrepareConfig( $def, 1 );
   my @individual = @{$individual_ref};
   my @summary    = @{$summary_ref};
 
   #print Dumper($config);
 
-  my $search_not_identical = defined $def->{search_not_identical} && $def->{search_not_identical};
+  my $search_not_identical  = defined $def->{search_not_identical} && $def->{search_not_identical};
+  my $search_host_genome    = defined $def->{bowtie1_index};
+  my $search_miRBase        = defined $def->{bowtie1_miRBase_index};
+  my $search_unmapped_reads = ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
+  my $do_comparison         = defined $def->{pairs};
 
-  my $bowtie1 = {
-
-    #1 mismatch search, NTA
-    bowtie1_genome_1mm_NTA => {
-      class         => "Alignment::Bowtie1",
-      perform       => 1,
-      target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm_NTA",
-      option        => $def->{bowtie1_option_1mm},
-      source_ref    => [ "identical_NTA", ".fastq.gz\$" ],
-      bowtie1_index => $def->{bowtie1_index},
-      samonly       => 0,
-      sh_direct     => 1,
-      mappedonly    => 1,
-      cluster       => $cluster,
-      pbs           => {
+  if ($do_comparison) {
+    $config->{top100Reads_deseq2} = {
+      class                => "Comparison::DESeq2",
+      perform              => 1,
+      target_dir           => $def->{target_dir} . "/top100Reads_deseq2",
+      option               => "",
+      source_ref           => "pairs",
+      groups_ref           => "groups",
+      countfile_ref        => [ "identical_sequence_count_table", ".count\$" ],
+      sh_direct            => 1,
+      show_DE_gene_cluster => 1,
+      pvalue               => 0.05,
+      fold_change          => 1.5,
+      min_median_read      => 1,
+      pbs                  => {
         "email"    => $def->{email},
-        "nodes"    => "1:ppn=" . $def->{max_thread},
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    },
-  };
-  push @individual, ("bowtie1_genome_1mm_NTA");
-
-  if ($search_not_identical) {
-
-    #not identical, for IGV
-    $bowtie1->{bowtie1_genome_1mm_notidentical} = {
-      class         => "Alignment::Bowtie1",
-      perform       => 1,
-      target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm_notidentical",
-      option        => $def->{bowtie1_option_1mm},
-      source_ref    => $source_ref,
-      bowtie1_index => $def->{bowtie1_index},
-      samonly       => 0,
-      sh_direct     => 0,
-      mappedonly    => 1,
-      cluster       => $cluster,
-      pbs           => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=" . $def->{max_thread},
-        "walltime" => "72",
-        "mem"      => "40gb"
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "10gb"
       },
     };
-    push @individual, ("bowtie1_genome_1mm_notidentical");
+    push @summary, ("top100Reads_deseq2");
   }
 
-  $config = merge( $config, $bowtie1 );
+  my $identical_ref = [ "identical", ".fastq.gz\$" ];
 
-  if ( defined $def->{coordinate} ) {
+  if ($search_host_genome) {
+    defined $def->{coordinate} or die "No smallRNA coordinate defined!";
 
-    my $count = {
+    my $host_genome = {
+
+      #1 mismatch search, NTA
+      bowtie1_genome_1mm_NTA => {
+        class         => "Alignment::Bowtie1",
+        perform       => 1,
+        target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm_NTA",
+        option        => $def->{bowtie1_option_1mm},
+        source_ref    => [ "identical_NTA", ".fastq.gz\$" ],
+        bowtie1_index => $def->{bowtie1_index},
+        samonly       => 0,
+        sh_direct     => 1,
+        mappedonly    => 1,
+        cluster       => $cluster,
+        pbs           => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=" . $def->{max_thread},
+          "walltime" => "72",
+          "mem"      => "40gb"
+        },
+      },
       bowtie1_genome_1mm_NTA_smallRNA_count => {
         class           => "CQS::SmallRNACount",
         perform         => 1,
@@ -137,48 +138,192 @@ sub getSmallRNAConfig {
           "mem"      => "40gb"
         },
       },
+    };
+    push @individual, ( "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_NTA_smallRNA_count" );
+    push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_category" );
 
-      #perfect match search to miRBase only
-      bowtie1_genome_1mm_NTA_pmnames => {
-        class      => "Samtools::PerfectMappedReadNames",
-        perform    => 1,
-        target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_pmnames",
-        option     => "",
-        source_ref => "bowtie1_genome_1mm_NTA",
-        sh_direct  => 1,
-        cluster    => $cluster,
-        pbs        => {
+    if ($search_not_identical) {
+
+      #not identical, for IGV
+      $host_genome->{bowtie1_genome_1mm_notidentical} = {
+        class         => "Alignment::Bowtie1",
+        perform       => 1,
+        target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm_notidentical",
+        option        => $def->{bowtie1_option_1mm},
+        source_ref    => $not_identical_ref,
+        bowtie1_index => $def->{bowtie1_index},
+        samonly       => 0,
+        sh_direct     => 0,
+        mappedonly    => 1,
+        cluster       => $cluster,
+        pbs           => {
           "email"    => $def->{email},
           "nodes"    => "1:ppn=" . $def->{max_thread},
           "walltime" => "72",
           "mem"      => "40gb"
         },
-      },
+      };
+      push @individual, ("bowtie1_genome_1mm_notidentical");
+    }
 
-      # extract unmapped reads. the reads mapped to host smallRNA with/without mismatch and mapped to host genome without mismatch will be excluded.
-      bowtie1_genome_unmapped_reads => {
-        class       => "CQS::Perl",
-        perform     => 1,
-        target_dir  => $def->{target_dir} . "/bowtie1_genome_unmapped_reads",
-        perlFile    => "unmappedReadsToFastq.pl",
-        source_ref  => [ "identical", ".fastq.gz\$" ],
-        source2_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
-        source3_ref => [ "bowtie1_genome_1mm_NTA_pmnames", ".pmnames\$" ],
-        output_ext  => "_clipped_identical.unmapped.fastq.gz",
-        sh_direct   => 1,
-        pbs         => {
+    $config = merge( $config, $host_genome );
+
+    if ($do_comparison) {
+      my $comparison = {
+
+        #DESeq2
+        miRNA_deseq2 => {
+          class                => "Comparison::DESeq2",
+          perform              => 1,
+          target_dir           => $def->{target_dir} . "/miRNA_deseq2",
+          option               => "",
+          source_ref           => "pairs",
+          groups_ref           => "groups",
+          countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ],
+          sh_direct            => 1,
+          show_DE_gene_cluster => 1,
+          pvalue               => 0.05,
+          fold_change          => 1.5,
+          min_median_read      => 5,
+          pbs                  => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "10",
+            "mem"      => "10gb"
+          },
+        },
+        tRNA_deseq2 => {
+          class                => "Comparison::DESeq2",
+          perform              => 1,
+          target_dir           => $def->{target_dir} . "/tRNA_deseq2",
+          option               => "",
+          source_ref           => "pairs",
+          groups_ref           => "groups",
+          countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ],
+          sh_direct            => 1,
+          show_DE_gene_cluster => 1,
+          pvalue               => 0.05,
+          fold_change          => 1.5,
+          min_median_read      => 5,
+          pbs                  => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "10",
+            "mem"      => "10gb"
+          },
+        },
+        otherSmallRNA_deseq2 => {
+          class                => "Comparison::DESeq2",
+          perform              => 1,
+          target_dir           => $def->{target_dir} . "/otherSmallRNA_deseq2",
+          option               => "",
+          source_ref           => "pairs",
+          groups_ref           => "groups",
+          countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" ],
+          sh_direct            => 1,
+          show_DE_gene_cluster => 1,
+          pvalue               => 0.05,
+          fold_change          => 1.5,
+          min_median_read      => 5,
+          pbs                  => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "10",
+            "mem"      => "10gb"
+          },
+        },
+      };
+
+      $config = merge( $config, $comparison );
+      push @summary, ( "miRNA_deseq2", "tRNA_deseq2", "otherSmallRNA_deseq2" );
+    }
+
+    if ( $do_comparison or defined $def->{tRNA_vis_group} ) {
+      my $trna_vis_groups;
+      my $trna_sig_result;
+      if ( defined $def->{tRNA_vis_group} ) {
+        $trna_vis_groups = $def->{tRNA_vis_group};
+      }
+      else {
+        $trna_vis_groups = $def->{groups};
+      }
+      if ($do_comparison) {
+        $trna_sig_result = [ "tRNA_deseq2", "_DESeq2_sig.csv\$" ];
+      }
+      $config->{tRNA_PositionVis} = {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $def->{target_dir} . "/tRNA_PositionVis",
+        rtemplate                => "tRNAPositionVis.R",
+        output_file              => ".tRNAPositionVis",
+        output_file_ext          => "*",
+        parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".tRNA.position\$" ],
+        parameterSampleFile2     => $trna_vis_groups,
+        parameterSampleFile3_ref => $trna_sig_result,
+        sh_direct                => 1,
+        pbs                      => {
           "email"    => $def->{email},
           "nodes"    => "1:ppn=1",
           "walltime" => "1",
           "mem"      => "10gb"
         },
-      },
+      };
+      push @summary, ("tRNA_PositionVis");
+    }
+
+    # extract unmapped reads. the reads mapped to host smallRNA with/without mismatch and perfect mapped to host genome will be excluded.
+    if ( $search_miRBase || $search_unmapped_reads ) {
+      my $unmapped_reads = {
+
+        #perfect matched reads with host genome
+        bowtie1_genome_1mm_NTA_pmnames => {
+          class      => "Samtools::PerfectMappedReadNames",
+          perform    => 1,
+          target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_pmnames",
+          option     => "",
+          source_ref => "bowtie1_genome_1mm_NTA",
+          sh_direct  => 1,
+          cluster    => $cluster,
+          pbs        => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=" . $def->{max_thread},
+            "walltime" => "72",
+            "mem"      => "40gb"
+          },
+        },
+
+        bowtie1_genome_unmapped_reads => {
+          class       => "CQS::Perl",
+          perform     => 1,
+          target_dir  => $def->{target_dir} . "/bowtie1_genome_unmapped_reads",
+          perlFile    => "unmappedReadsToFastq.pl",
+          source_ref  => [ "identical", ".fastq.gz\$" ],
+          source2_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
+          source3_ref => [ "bowtie1_genome_1mm_NTA_pmnames", ".pmnames\$" ],
+          output_ext  => "_clipped_identical.unmapped.fastq.gz",
+          sh_direct   => 1,
+          pbs         => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "1",
+            "mem"      => "10gb"
+          },
+        }
+      };
+      $config = merge( $config, $unmapped_reads );
+      push @individual, ( "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_genome_unmapped_reads" );
+      $identical_ref = [ "bowtie1_genome_unmapped_reads", ".fastq.gz\$" ];
+    }
+  }
+
+  if ($search_miRBase) {
+    my $mirbase = {
       bowtie1_miRBase_pm => {
         class         => "Alignment::Bowtie1",
         perform       => 1,
         target_dir    => $def->{target_dir} . "/bowtie1_miRBase_pm",
         option        => $def->{bowtie1_option_pm},
-        source_ref    => [ "bowtie1_genome_unmapped_reads", ".fastq.gz\$" ],
+        source_ref    => $identical_ref,
         bowtie1_index => $def->{bowtie1_miRBase_index},
         samonly       => 0,
         sh_direct     => 1,
@@ -225,61 +370,18 @@ sub getSmallRNAConfig {
           "walltime" => "10",
           "mem"      => "10gb"
         },
-      },
+      }
     };
 
-    push @individual, ( "bowtie1_genome_1mm_NTA_smallRNA_count", "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_genome_unmapped_reads", "bowtie1_miRBase_pm", "bowtie1_miRBase_pm_count" );
-    push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_category", "bowtie1_miRBase_pm_table" );
-
-    my $extract_mapped = $search_not_identical && ( defined $def->{extract_mapped} ) && $def->{extract_mapped};
-    if ($extract_mapped) {
-      $count->{extract_mapped} = {
-        class         => "SmallRNA::SamExtract",
-        perform       => 1,
-        target_dir    => $def->{target_dir} . "/bowtie1_genome_1mm_notidentical_mapped",
-        option        => "",
-        source_ref    => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
-        cqs_tools     => $def->{cqstools},
-        bam_files_ref => [ "bowtie1_genome_1mm_notidentical", ".bam" ],
-        sh_direct     => 1,
-        cluster       => $cluster,
-        pbs           => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "10",
-          "mem"      => "10gb"
-        },
-      };
-      push @individual, ("$extract_mapped");
-    }
-
-    $config = merge( $config, $count );
+    $config = merge( $config, $mirbase );
+    push @individual, ( "bowtie1_miRBase_pm", "bowtie1_miRBase_pm_count" );
+    push @summary, ("bowtie1_miRBase_pm_table");
   }
 
-  # default of search_unmapped_reads is true
-  my $search_unmapped_reads = ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
   if ($search_unmapped_reads) {
     my $unmappedreads = {
 
-      # extract unmapped reads. the reads mapped to host smallRNA, perfect match mapped to host genome or perfect match mapped to miRBase will be excluded.
-      unmapped_reads => {
-        class       => "CQS::Perl",
-        perform     => 1,
-        target_dir  => $def->{target_dir} . "/unmapped_reads",
-        perlFile    => "unmappedReadsToFastq.pl",
-        source_ref  => [ "bowtie1_genome_unmapped_reads", ".fastq.gz\$" ],
-        source2_ref => [ "bowtie1_miRBase_pm_count", ".mapped.xml" ],
-        output_ext  => "_hostgenome_miRBase.unmapped.fastq.gz",
-        sh_direct   => 1,
-        pbs         => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
-        },
-      },
-
-      #unmapped reads to tRNA
+      # unmapped reads to tRNA
       bowtie1_tRNA_pm => {
         class         => 'Alignment::Bowtie1',
         cluster       => $cluster,
@@ -287,7 +389,7 @@ sub getSmallRNAConfig {
         perform       => 1,
         target_dir    => $def->{target_dir} . "/bowtie1_tRNA_pm",
         samonly       => 0,
-        source_ref    => 'unmapped_reads',
+        source_ref    => $identical_ref,
         mappedonly    => 1,
         bowtie1_index => $def->{bowtie1_tRNA_index},
         option        => $def->{bowtie1_option_pm},
@@ -300,17 +402,16 @@ sub getSmallRNAConfig {
       },
 
       bowtie1_tRNA_pm_count => {
-        class                   => 'CQS::CQSChromosomeCount',
-        cluster                 => $cluster,
-        sh_direct               => 1,
-        perform                 => 1,
-        target_dir              => $def->{target_dir} . "/bowtie1_tRNA_pm_count",
-        option                  => $def->{smallrnacount_option},
-        perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
-        source_ref              => 'bowtie1_tRNA_pm',
-        cqs_tools               => $def->{cqstools},
-        seqcount_ref            => [ "identical", ".dupcount\$" ],
-        pbs                     => {
+        class        => 'CQS::CQSChromosomeCount',
+        cluster      => $cluster,
+        sh_direct    => 1,
+        perform      => 1,
+        target_dir   => $def->{target_dir} . "/bowtie1_tRNA_pm_count",
+        option       => $def->{smallrnacount_option},
+        source_ref   => 'bowtie1_tRNA_pm',
+        cqs_tools    => $def->{cqstools},
+        seqcount_ref => [ "identical", ".dupcount\$" ],
+        pbs          => {
           'email'    => $def->{email},
           'walltime' => '72',
           'mem'      => '40gb',
@@ -341,7 +442,7 @@ sub getSmallRNAConfig {
         target_dir         => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
         rtemplate          => "BacTrnaMappingVis.R",
         output_file        => "",
-        output_file_ext        => "*",
+        output_file_ext    => "*",
         parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".count\$" ],
         sh_direct          => 1,
         pbs                => {
@@ -366,7 +467,7 @@ sub getSmallRNAConfig {
         target_dir    => $def->{target_dir} . "/bowtie1_rRNAL_pm",
         samonly       => 0,
         mappedonly    => 1,
-        source_ref    => 'unmapped_reads',
+        source_ref    => $identical_ref,
         bowtie1_index => $def->{bowtie1_rRNAL_index},
         option        => $def->{bowtie1_option_pm},
         class         => 'Alignment::Bowtie1'
@@ -379,16 +480,15 @@ sub getSmallRNAConfig {
           'mem'      => '40gb',
           'nodes'    => '1:ppn=1'
         },
-        cluster                 => $cluster,
-        sh_direct               => 1,
-        perform                 => 1,
-        target_dir              => $def->{target_dir} . "/bowtie1_rRNAL_pm_count",
-        option                  => $def->{smallrnacount_option},
-        perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
-        source_ref              => 'bowtie1_rRNAL_pm',
-        cqs_tools               => $def->{cqstools},
-        seqcount_ref            => [ "identical", ".dupcount\$" ],
-        'class'                 => 'CQS::CQSChromosomeCount'
+        cluster      => $cluster,
+        sh_direct    => 1,
+        perform      => 1,
+        target_dir   => $def->{target_dir} . "/bowtie1_rRNAL_pm_count",
+        option       => $def->{smallrnacount_option},
+        source_ref   => 'bowtie1_rRNAL_pm',
+        cqs_tools    => $def->{cqstools},
+        seqcount_ref => [ "identical", ".dupcount\$" ],
+        'class'      => 'CQS::CQSChromosomeCount'
       },
 
       bowtie1_rRNAL_pm_table => {
@@ -423,7 +523,7 @@ sub getSmallRNAConfig {
         target_dir    => $def->{target_dir} . "/bowtie1_rRNAS_pm",
         samonly       => 0,
         mappedonly    => 1,
-        source_ref    => 'unmapped_reads',
+        source_ref    => $identical_ref,
         bowtie1_index => $def->{bowtie1_rRNAS_index},
         option        => $def->{bowtie1_option_pm},
         class         => 'Alignment::Bowtie1'
@@ -436,16 +536,15 @@ sub getSmallRNAConfig {
           'mem'      => '40gb',
           'nodes'    => '1:ppn=1'
         },
-        cluster                 => $cluster,
-        sh_direct               => 1,
-        perform                 => 1,
-        target_dir              => $def->{target_dir} . "/bowtie1_rRNAS_pm_count",
-        option                  => $def->{smallrnacount_option},
-        perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
-        source_ref              => 'bowtie1_rRNAS_pm',
-        cqs_tools               => $def->{cqstools},
-        seqcount_ref            => [ "identical", ".dupcount\$" ],
-        'class'                 => 'CQS::CQSChromosomeCount'
+        cluster      => $cluster,
+        sh_direct    => 1,
+        perform      => 1,
+        target_dir   => $def->{target_dir} . "/bowtie1_rRNAS_pm_count",
+        option       => $def->{smallrnacount_option},
+        source_ref   => 'bowtie1_rRNAS_pm',
+        cqs_tools    => $def->{cqstools},
+        seqcount_ref => [ "identical", ".dupcount\$" ],
+        'class'      => 'CQS::CQSChromosomeCount'
       },
 
       bowtie1_rRNAS_pm_table => {
@@ -480,7 +579,7 @@ sub getSmallRNAConfig {
         target_dir    => $def->{target_dir} . "/bowtie1_bacteria_group1_pm",
         samonly       => 0,
         mappedonly    => 1,
-        source_ref    => 'unmapped_reads',
+        source_ref    => $identical_ref,
         bowtie1_index => $def->{bowtie1_bacteria_group1_index},
         option        => $def->{bowtie1_option_pm},
         class         => 'Alignment::Bowtie1'
@@ -493,16 +592,15 @@ sub getSmallRNAConfig {
           'mem'      => '40gb',
           'nodes'    => '1:ppn=1'
         },
-        cluster                 => $cluster,
-        sh_direct               => 1,
-        perform                 => 1,
-        target_dir              => $def->{target_dir} . "/bowtie1_bacteria_group1_pm_count",
-        option                  => $def->{smallrnacount_option},
-        perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
-        source_ref              => 'bowtie1_bacteria_group1_pm',
-        cqs_tools               => $def->{cqstools},
-        seqcount_ref            => [ "identical", ".dupcount\$" ],
-        'class'                 => 'CQS::CQSChromosomeCount'
+        cluster      => $cluster,
+        sh_direct    => 1,
+        perform      => 1,
+        target_dir   => $def->{target_dir} . "/bowtie1_bacteria_group1_pm_count",
+        option       => $def->{smallrnacount_option},
+        source_ref   => 'bowtie1_bacteria_group1_pm',
+        cqs_tools    => $def->{cqstools},
+        seqcount_ref => [ "identical", ".dupcount\$" ],
+        'class'      => 'CQS::CQSChromosomeCount'
       },
 
       bowtie1_bacteria_group1_pm_table => {
@@ -528,7 +626,7 @@ sub getSmallRNAConfig {
         target_dir         => $def->{target_dir} . "/bowtie1_bacteria_group1_pm_table",
         rtemplate          => "group1MappingVis.R",
         output_file        => ".group1Mapping.Result",
-        output_file_ext        => ".toGenome.csv",
+        output_file_ext    => ".toGenome.csv",
         parameterFile1_ref => [ "bowtie1_bacteria_group1_pm_table", ".count\$" ],
         parameterFile2     => $def->{bacteria_group1_log},
         sh_direct          => 1,
@@ -554,7 +652,7 @@ sub getSmallRNAConfig {
         target_dir    => $def->{target_dir} . "/bowtie1_bacteria_group2_pm",
         samonly       => 0,
         mappedonly    => 1,
-        source_ref    => 'unmapped_reads',
+        source_ref    => $identical_ref,
         bowtie1_index => $def->{bowtie1_bacteria_group2_index},
         option        => $def->{bowtie1_option_pm},
         class         => 'Alignment::Bowtie1'
@@ -567,16 +665,15 @@ sub getSmallRNAConfig {
           'mem'      => '40gb',
           'nodes'    => '1:ppn=1'
         },
-        cluster                 => $cluster,
-        sh_direct               => 1,
-        perform                 => 1,
-        target_dir              => $def->{target_dir} . "/bowtie1_bacteria_group2_pm_count",
-        option                  => $def->{smallrnacount_option},
-        perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
-        source_ref              => 'bowtie1_bacteria_group2_pm',
-        cqs_tools               => $def->{cqstools},
-        seqcount_ref            => [ "identical", ".dupcount\$" ],
-        'class'                 => 'CQS::CQSChromosomeCount'
+        cluster      => $cluster,
+        sh_direct    => 1,
+        perform      => 1,
+        target_dir   => $def->{target_dir} . "/bowtie1_bacteria_group2_pm_count",
+        option       => $def->{smallrnacount_option},
+        source_ref   => 'bowtie1_bacteria_group2_pm',
+        cqs_tools    => $def->{cqstools},
+        seqcount_ref => [ "identical", ".dupcount\$" ],
+        'class'      => 'CQS::CQSChromosomeCount'
       },
 
       bowtie1_bacteria_group2_pm_table => {
@@ -603,7 +700,7 @@ sub getSmallRNAConfig {
         target_dir         => $def->{target_dir} . "/bowtie1_bacteria_group2_pm_table",
         rtemplate          => "group2MappingVis.R",
         output_file        => ".group2Mapping.Result",
-        output_file_ext        => ".pdf",
+        output_file_ext    => ".pdf",
         parameterFile1_ref => [ "bowtie1_bacteria_group2_pm_table", ".count\$" ],
         parameterFile2     => $def->{bacteria_group2_log},
         sh_direct          => 1,
@@ -614,7 +711,7 @@ sub getSmallRNAConfig {
           "mem"      => "10gb"
         },
       },
-      
+
       #unmapped reads to group4 fungus
       bowtie1_fungus_group4_pm => {
         pbs => {
@@ -629,7 +726,7 @@ sub getSmallRNAConfig {
         target_dir    => $def->{target_dir} . "/bowtie1_fungus_group4_pm",
         samonly       => 0,
         mappedonly    => 1,
-        source_ref    => 'unmapped_reads',
+        source_ref    => $identical_ref,
         bowtie1_index => $def->{bowtie1_fungus_group4_index},
         option        => $def->{bowtie1_option_pm},
         class         => 'Alignment::Bowtie1'
@@ -642,16 +739,15 @@ sub getSmallRNAConfig {
           'mem'      => '40gb',
           'nodes'    => '1:ppn=1'
         },
-        cluster                 => $cluster,
-        sh_direct               => 1,
-        perform                 => 1,
-        target_dir              => $def->{target_dir} . "/bowtie1_fungus_group4_pm_count",
-        option                  => $def->{smallrnacount_option},
-        perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
-        source_ref              => 'bowtie1_fungus_group4_pm',
-        cqs_tools               => $def->{cqstools},
-        seqcount_ref            => [ "identical", ".dupcount\$" ],
-        'class'                 => 'CQS::CQSChromosomeCount'
+        cluster      => $cluster,
+        sh_direct    => 1,
+        perform      => 1,
+        target_dir   => $def->{target_dir} . "/bowtie1_fungus_group4_pm_count",
+        option       => $def->{smallrnacount_option},
+        source_ref   => 'bowtie1_fungus_group4_pm',
+        cqs_tools    => $def->{cqstools},
+        seqcount_ref => [ "identical", ".dupcount\$" ],
+        'class'      => 'CQS::CQSChromosomeCount'
       },
 
       bowtie1_fungus_group4_pm_table => {
@@ -677,7 +773,7 @@ sub getSmallRNAConfig {
         target_dir         => $def->{target_dir} . "/bowtie1_fungus_group4_pm_table",
         rtemplate          => "group1MappingVis.R",
         output_file        => ".group4Mapping.Result",
-        output_file_ext        => ".pdf",
+        output_file_ext    => ".pdf",
         parameterFile1_ref => [ "bowtie1_fungus_group4_pm_table", ".count\$" ],
         parameterFile2     => $def->{bacteria_group4_log},
         sh_direct          => 1,
@@ -694,145 +790,16 @@ sub getSmallRNAConfig {
 
     push @individual,
       (
-      "unmapped_reads",                   "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",  "bowtie1_rRNAL_pm",
-      "bowtie1_rRNAL_pm_count",           "bowtie1_rRNAS_pm",           "bowtie1_rRNAS_pm_count", "bowtie1_bacteria_group1_pm",
-      "bowtie1_bacteria_group1_pm_count", "bowtie1_bacteria_group2_pm", "bowtie1_bacteria_group2_pm_count","bowtie1_fungus_group4_pm", "bowtie1_fungus_group4_pm_count"
+      "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",            "bowtie1_rRNAL_pm",           "bowtie1_rRNAL_pm_count",
+      "bowtie1_rRNAS_pm",           "bowtie1_rRNAS_pm_count",           "bowtie1_bacteria_group1_pm", "bowtie1_bacteria_group1_pm_count",
+      "bowtie1_bacteria_group2_pm", "bowtie1_bacteria_group2_pm_count", "bowtie1_fungus_group4_pm",   "bowtie1_fungus_group4_pm_count"
       );
     push @summary,
       (
       "bowtie1_tRNA_pm_table",            "bowtie1_tRNA_pm_table_vis",            "bowtie1_rRNAL_pm_table",           "bowtie1_rRNAS_pm_table",
       "bowtie1_bacteria_group1_pm_table", "bowtie1_bacteria_group1_pm_table_vis", "bowtie1_bacteria_group2_pm_table", "bowtie1_bacteria_group2_pm_table_vis",
-      "bowtie1_fungus_group4_pm_table","bowtie1_fungus_group4_pm_table_vis",
+      "bowtie1_fungus_group4_pm_table",   "bowtie1_fungus_group4_pm_table_vis",
       );
-  }
-
-  if ( defined $def->{pairs} ) {
-    my $comparison = {
-
-      #DESeq2
-      top100Reads_deseq2 => {
-        class                => "Comparison::DESeq2",
-        perform              => 1,
-        target_dir           => $def->{target_dir} . "/top100Reads_deseq2",
-        option               => "",
-        source_ref           => "pairs",
-        groups_ref           => "groups",
-        countfile_ref        => [ "identical_sequence_count_table", ".count\$" ],
-        sh_direct            => 1,
-        show_DE_gene_cluster => 1,
-        pvalue               => 0.05,
-        fold_change          => 1.5,
-        min_median_read      => 1,
-        pbs                  => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "10",
-          "mem"      => "10gb"
-        },
-      },
-      tRNA_deseq2 => {
-        class                => "Comparison::DESeq2",
-        perform              => 1,
-        target_dir           => $def->{target_dir} . "/tRNA_deseq2",
-        option               => "",
-        source_ref           => "pairs",
-        groups_ref           => "groups",
-        countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ],
-        sh_direct            => 1,
-        show_DE_gene_cluster => 1,
-        pvalue               => 0.05,
-        fold_change          => 1.5,
-        min_median_read      => 5,
-        pbs                  => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "10",
-          "mem"      => "10gb"
-        },
-      },
-      miRNA_deseq2 => {
-        class                => "Comparison::DESeq2",
-        perform              => 1,
-        target_dir           => $def->{target_dir} . "/miRNA_deseq2",
-        option               => "",
-        source_ref           => "pairs",
-        groups_ref           => "groups",
-        countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ],
-        sh_direct            => 1,
-        show_DE_gene_cluster => 1,
-        pvalue               => 0.05,
-        fold_change          => 1.5,
-        min_median_read      => 5,
-        pbs                  => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "10",
-          "mem"      => "10gb"
-        },
-      },
-      otherSmallRNA_deseq2 => {
-        class                => "Comparison::DESeq2",
-        perform              => 1,
-        target_dir           => $def->{target_dir} . "/otherSmallRNA_deseq2",
-        option               => "",
-        source_ref           => "pairs",
-        groups_ref           => "groups",
-        countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" ],
-        sh_direct            => 1,
-        show_DE_gene_cluster => 1,
-        pvalue               => 0.05,
-        fold_change          => 1.5,
-        min_median_read      => 5,
-        pbs                  => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "10",
-          "mem"      => "10gb"
-        },
-      },
-    };
-
-    push @summary, ( "top100Reads_deseq2", "tRNA_deseq2", "miRNA_deseq2", "otherSmallRNA_deseq2" );
-
-    $config = merge( $config, $comparison );
-  }
-
-  if ( defined $def->{pairs} or defined $def->{tRNA_vis_group} ) {
-    my $trna_vis_groups;
-    my $trna_sig_result;
-    if ( defined $def->{tRNA_vis_group} ) {
-      $trna_vis_groups = $def->{tRNA_vis_group};
-    }
-    else {
-      $trna_vis_groups = $def->{groups};
-    }
-    if ( defined $def->{pairs} ) {
-      $trna_sig_result = [ "tRNA_deseq2", "_DESeq2_sig.csv\$" ];
-    }
-    $config->{tRNA_PositionVis} = {
-      class                    => "CQS::UniqueR",
-      perform                  => 1,
-      target_dir               => $def->{target_dir} . "/tRNA_PositionVis",
-      rtemplate                => "tRNAPositionVis.R",
-      output_file              => ".tRNAPositionVis",
-      output_file_ext        => "*",
-      parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".tRNA.position\$" ],
-      parameterSampleFile2     => $trna_vis_groups,
-      parameterSampleFile3_ref => $trna_sig_result,
-      sh_direct                => 1,
-      pbs                      => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "1",
-        "mem"      => "10gb"
-      },
-    };
-    push @summary, ("tRNA_PositionVis");
-
-  }
-  my $name = $def->{trna_groups};
-  if ( !defined $name ) {
-    $name = $def->{groups};
   }
 
   $config->{sequencetask} = {
