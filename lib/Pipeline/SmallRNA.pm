@@ -775,7 +775,7 @@ sub getSmallRNAConfig {
         output_file        => ".group4Mapping.Result",
         output_file_ext    => ".pdf",
         parameterFile1_ref => [ "bowtie1_fungus_group4_pm_table", ".count\$" ],
-        parameterFile2     => $def->{bacteria_group4_log},
+        parameterFile2     => $def->{fungus_group4_log},
         sh_direct          => 1,
         pbs                => {
           "email"    => $def->{email},
