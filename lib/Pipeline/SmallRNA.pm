@@ -29,7 +29,7 @@ sub getSmallRNAConfig {
 
   #print Dumper($config);
 
-  my $search_not_identical  = defined $def->{search_not_identical} && $def->{search_not_identical};
+  my $search_not_identical  = ( !defined $def->{search_not_identical} ) || $def->{search_not_identical};
   my $search_host_genome    = defined $def->{bowtie1_index};
   my $search_miRBase        = defined $def->{bowtie1_miRBase_index};
   my $search_unmapped_reads = ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
