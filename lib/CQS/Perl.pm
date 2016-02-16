@@ -69,34 +69,33 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sampleCount  = scalar(@sample_files);
-    my $samples      = join( ' ', @sample_files );
+    my $samples = join( ',', @sample_files );
 
     my $parameterFile2 = "";
     if ( defined $parameterFiles2{$sample_name} ) {
       my @files = @{ $parameterFiles2{$sample_name} };
-      my $file  = $files[0];
+      my $file = join( ",", @files );
       $parameterFile2 = "$file";
     }
 
     my $parameterFile3 = "";
     if ( defined $parameterFiles3{$sample_name} ) {
       my @files = @{ $parameterFiles3{$sample_name} };
-      my $file  = $files[0];
+      my $file = join( ",", @files );
       $parameterFile3 = "$file";
     }
 
     my $parameterFile4 = "";
     if ( defined $parameterFiles4{$sample_name} ) {
       my @files = @{ $parameterFiles4{$sample_name} };
-      my $file  = $files[0];
+      my $file = join( ",", @files );
       $parameterFile4 = "$file";
     }
 
     my $parameterFile5 = "";
     if ( defined $parameterFiles5{$sample_name} ) {
       my @files = @{ $parameterFiles5{$sample_name} };
-      my $file  = $files[0];
+      my $file = join( ",", @files );
       $parameterFile5 = "$file";
     }
 
@@ -129,7 +128,7 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $output_ext = get_option( $config, $section, "output_ext", 0 );
+  my $output_ext = get_option( $config, $section, "output_ext", "" );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
