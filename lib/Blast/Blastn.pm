@@ -39,7 +39,6 @@ sub perform {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $sample       = $sample_files[0];
 
-    my $cur_dir    = create_directory_or_die( $result_dir . "/$sample_name" );
     my $final_file = "${sample_name}.blastn.tsv";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -48,7 +47,7 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
     print $pbs "perl $blastn $final_file $sample";
     $self->close_pbs( $pbs, $pbs_file );
@@ -75,7 +74,7 @@ sub result {
   for my $sample_name ( sort keys %raw_files ) {
     my @result_files = ();
 
-    push( @result_files, "${result_dir}/${sample_name}/${sample_name}.blastn.tsv" );
+    push( @result_files, "${result_dir}/${sample_name}.blastn.tsv" );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
