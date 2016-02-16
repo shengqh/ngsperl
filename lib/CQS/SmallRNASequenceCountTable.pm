@@ -27,12 +27,16 @@ sub perform {
   my ( $self, $config, $section ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
-  
+
   $option = $option . " --exportFasta";
 
   my $cqstools = get_cqstools( $config, $section, 1 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
+  my $fastq_files;
+  if ( has_raw_files( $config, $section, "fastq_files" ) ) {
+    $fastq_files = get_raw_files( $config, $section, "fastq_files" );
+  }
 
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
@@ -57,7 +61,12 @@ sub perform {
       for my $sample_name ( sort @samples ) {
         my @count_files = @{ $raw_files{$sample_name} };
         my $countFile   = $count_files[0];
-        print $fl $sample_name, "\t", $countFile, "\n";
+
+        print $fl $sample_name, "\t", $countFile;
+        if ( defined $fastq_files ) {
+          print $fl $fastq_files->{$fastq_files}->[0];
+        }
+        print $fl "\n";
       }
       close($fl);
 
@@ -75,7 +84,11 @@ mono $cqstools smallrna_sequence_count_table $option -o $outputname -l $filelist
     for my $sample_name ( sort keys %raw_files ) {
       my @count_files = @{ $raw_files{$sample_name} };
       my $countFile   = $count_files[0];
-      print $fl $sample_name, "\t", $countFile, "\n";
+      print $fl $sample_name, "\t", $countFile;
+      if ( defined $fastq_files ) {
+        print $fl $fastq_files->{$fastq_files}->[0];
+      }
+      print $fl "\n";
     }
     close($fl);
 
