@@ -41,6 +41,17 @@ write.csv(ResultOut,paste0(fileListName,".check.csv"))
 
 for (step in unique(ResultOut$StepName)) {
 	tableForPlot<-ResultOut[which(ResultOut$StepName==step),]
+	failLength<-length(grep("FAIL",tableForPlot$Result))
+	warnLength<-length(grep("WARN",tableForPlot$Result))
+	if (failLength>0) {
+		print(paste0("There are ",failLength," FAIL in ",step,"."))
+	}
+	if (warnLength>0) {
+		print(paste0("There are ",warnLength," WARN in ",step,"."))
+	}
+	if (failLength==0 & warnLength==0) {
+		print(paste0("All tasks are successfully finished."))
+	}
 	tableForPlot$TaskName<-factor(tableForPlot$TaskName,levels=rev(unique(tableForPlot$TaskName)))
 	tableForPlot$Result<-factor(tableForPlot$Result,levels=c("PASS","WARN","FAIL"))
 	width=max(2500, 60 * length(unique(tableForPlot$SampleName)))
