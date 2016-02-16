@@ -858,10 +858,9 @@ sub getSmallRNAConfig {
         perform    => 1,
         target_dir => $def->{target_dir} . "/bowtie1_unmapped_sequence_blast",
         option     => "",
-        source_ref => [ "identical_sequence_count_table", ".fasta\$" ],
-
-        #source_ref => [ "bowtie1_unmapped_sequence_count_table", ".fasta\$" ],
-        sh_direct => 1,
+        #source_ref => [ "identical_sequence_count_table", ".fasta\$" ],
+        source_ref => [ "bowtie1_unmapped_sequence_count_table", ".fasta\$" ],
+        sh_direct => 0,
         cluster   => $cluster,
         pbs       => {
           "email"    => $def->{email},
