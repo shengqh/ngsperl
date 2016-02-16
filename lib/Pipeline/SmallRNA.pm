@@ -834,13 +834,32 @@ sub getSmallRNAConfig {
         },
       },
 
+      bowtie1_unmapped_sequence_count_table => {
+        class           => "CQS::SmallRNASequenceCountTable",
+        perform         => 1,
+        target_dir      => $def->{target_dir} . "/bowtie1_unmapped_sequence_count_table",
+        option          => "",
+        source_ref      => [ "identical", ".dupcount\$" ],
+        fastq_files_ref => [ "bowtie1_unmapped_reads", ".fastq.gz" ],
+        cqs_tools       => $def->{cqstools},
+        suffix          => "_unmapped",
+        sh_direct       => 1,
+        cluster         => $cluster,
+        pbs             => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "10",
+          "mem"      => "10gb"
+        },
+      },
+
       #blast =>{
       #
       #}
     };
 
     $config = merge( $config, $blast );
-    push @individual, ("bowtie1_unmapped_reads");
+    push @individual, ("bowtie1_unmapped_reads", "bowtie1_unmapped_sequence_count_table");
   }
   $config->{sequencetask} = {
     class      => "CQS::SequenceTask",
