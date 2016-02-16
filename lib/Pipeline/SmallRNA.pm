@@ -33,6 +33,7 @@ sub getSmallRNAConfig {
   my $search_host_genome    = defined $def->{bowtie1_index};
   my $search_miRBase        = defined $def->{bowtie1_miRBase_index};
   my $search_unmapped_reads = ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
+  my $blast_unmapped_reads  = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
   my $do_comparison         = defined $def->{pairs};
 
   if ($do_comparison) {
@@ -272,7 +273,7 @@ sub getSmallRNAConfig {
     }
 
     # extract unmapped reads. the reads mapped to host smallRNA with/without mismatch and perfect mapped to host genome will be excluded.
-    if ( $search_miRBase || $search_unmapped_reads ) {
+    if ( $search_miRBase || $search_unmapped_reads || $blast_unmapped_reads ) {
       my $unmapped_reads = {
 
         #perfect matched reads with host genome
@@ -315,6 +316,8 @@ sub getSmallRNAConfig {
       $identical_ref = [ "bowtie1_genome_unmapped_reads", ".fastq.gz\$" ];
     }
   }
+
+  my @mapped = ();
 
   if ($search_miRBase) {
     my $mirbase = {
@@ -376,6 +379,8 @@ sub getSmallRNAConfig {
     $config = merge( $config, $mirbase );
     push @individual, ( "bowtie1_miRBase_pm", "bowtie1_miRBase_pm_count" );
     push @summary, ("bowtie1_miRBase_pm_table");
+
+    push @mapped, ( "bowtie1_miRBase_pm_count", ".xml" );
   }
 
   if ($search_unmapped_reads) {
@@ -800,8 +805,43 @@ sub getSmallRNAConfig {
       "bowtie1_bacteria_group1_pm_table", "bowtie1_bacteria_group1_pm_table_vis", "bowtie1_bacteria_group2_pm_table", "bowtie1_bacteria_group2_pm_table_vis",
       "bowtie1_fungus_group4_pm_table",   "bowtie1_fungus_group4_pm_table_vis",
       );
+
+    push @mapped,
+      (
+      "bowtie1_tRNA_pm_count",            ".xml", "bowtie1_rRNAL_pm_count",           ".xml", "bowtie1_rRNAS_pm_count",         ".xml",
+      "bowtie1_bacteria_group1_pm_count", ".xml", "bowtie1_bacteria_group2_pm_count", ".xml", "bowtie1_fungus_group4_pm_count", ".xml"
+      );
+
   }
 
+  if ($blast_unmapped_reads) {
+    my $blast = {
+
+      bowtie1_unmapped_reads => {
+        class       => "CQS::Perl",
+        perform     => 1,
+        target_dir  => $def->{target_dir} . "/bowtie1_unmapped_reads",
+        perlFile    => "unmappedReadsToFastq.pl",
+        source_ref  => $identical_ref,
+        source2_ref => \@mapped,
+        output_ext  => ".unmapped.fastq.gz",
+        sh_direct   => 1,
+        pbs         => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      },
+
+      #blast =>{
+      #
+      #}
+    };
+
+    $config = merge( $config, $blast );
+    push @individual, ("bowtie1_unmapped_reads");
+  }
   $config->{sequencetask} = {
     class      => "CQS::SequenceTask",
     perform    => 1,
