@@ -25,6 +25,43 @@ sub result {
   return $result;
 }
 
+sub html {
+  my ( $self, $config, $section ) = @_;
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my $result = $self->result( $config, $section );
+
+  my $htmlfile = $target_dir . "/" . $section . ".html";
+  open( my $html, ">$htmlfile" ) or die "Cannot create $htmlfile";
+  print $html "<HTML>
+<HEAD>
+<TITLE>$task_name : $section</TITLE>
+</HEAD>
+<BODY>
+<h4>$task_name : $section</h4>
+<table>
+";
+
+  for my $expect_name ( sort keys %{$result} ) {
+    my $expect_files = $result->{$expect_name};
+    print "<tr><td>$expect_name</td><td>\n";
+    for my $expect_file ( @{$expect_files} ) {
+      my $commonLen = 0;
+      ($target_dir ^ $expect_file) =~ /^(\0*)/;
+      $commonLen = $+[0];
+      substr $expect_file, 0, $commonLen, "";
+      print "$expect_file\n";
+    }
+    print "</td></tr>\n";
+  }
+
+  print $html "</table>  
+</BODY>
+</HTML>
+";
+
+  return ($htmlfile);
+}
+
 sub require {
   my $result = [];
   return $result;
