@@ -853,13 +853,27 @@ sub getSmallRNAConfig {
         },
       },
 
-      #blast =>{
-      #
-      #}
+      bowtie1_unmapped_sequence_blast => {
+        class      => "Blast::Blastn",
+        perform    => 1,
+        target_dir => $def->{target_dir} . "/bowtie1_unmapped_sequence_blast",
+        option     => "",
+        source_ref => [ "identical_sequence_count_table", ".fasta\$" ],
+
+        #source_ref => [ "bowtie1_unmapped_sequence_count_table", ".fasta\$" ],
+        sh_direct => 1,
+        cluster   => $cluster,
+        pbs       => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "10",
+          "mem"      => "10gb"
+        },
+      },
     };
 
     $config = merge( $config, $blast );
-    push @individual, ("bowtie1_unmapped_reads", "bowtie1_unmapped_sequence_count_table");
+    push @individual, ( "bowtie1_unmapped_reads", "bowtie1_unmapped_sequence_count_table", "bowtie1_unmapped_sequence_blast" );
   }
   $config->{sequencetask} = {
     class      => "CQS::SequenceTask",

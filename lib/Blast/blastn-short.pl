@@ -7,8 +7,8 @@ use Bio::SeqIO;
 my $output_file = $ARGV[0];
 my $input_file  = $ARGV[1];
 
-$output_file = "/scratch/cqs/shengq1/temp/3018-KCV-35-38_sequence.blastn.tsv";
-$input_file  = "/scratch/cqs/shengq1/vickers/20150709_smallRNA_3018-KCV-35-38_human/identical_sequence_count_table/result/3018-KCV-35-38_sequence.count.fasta";
+#$output_file = "/scratch/cqs/shengq1/temp/3018-KCV-35-38_sequence.blastn.tsv";
+#$input_file  = "/scratch/cqs/shengq1/vickers/20150709_smallRNA_3018-KCV-35-38_human/identical_sequence_count_table/result/3018-KCV-35-38_sequence.count.fasta";
 
 my $seqio = Bio::SeqIO->new( -file => $input_file, '-format' => 'Fasta' );
 if ( -e $output_file ) { unlink $output_file; }
