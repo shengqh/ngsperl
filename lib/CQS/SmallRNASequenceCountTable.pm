@@ -86,7 +86,7 @@ mono $cqstools smallrna_sequence_count_table $option -o $outputname -l $filelist
       my $countFile   = $count_files[0];
       print $fl $sample_name, "\t", $countFile;
       if ( defined $fastq_files ) {
-        print $fl $fastq_files->{$fastq_files}->[0];
+        print $fl $fastq_files->{$sample_name}->[0];
       }
       print $fl "\n";
     }
