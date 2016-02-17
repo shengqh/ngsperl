@@ -56,14 +56,30 @@ foreach my $file ( split( ",", $input_file ) ) {
 open( my $output, ">$output_file" ) or die "Cannot open $output_file";
 printf $output "genome\tunique_sequence_count\tsequences\n";
 
-foreach my $name (
-  sort {
-    my $counta = keys %{ $res{$a} };
-    my $countb = keys %{ $res{$b} };
-    $countb <=> $counta
-  } keys %res
-  )
-{
+my @sorted_genomes = sort {
+  my $counta = keys %{ $res{$a} };
+  my $countb = keys %{ $res{$b} };
+  $countb <=> $counta
+} keys %res;
+
+my $genome_count = scalar(@sorted_genomes);
+for ( my $index = 0 ; $index < $genome_count ; $index++ ) {
+  my $name      = $sorted_genomes[$index];
+  my $count     = keys %{ $res{$name} };
+  my @sequences = keys %{ $res{$name} };
+
+  for ( my $another = $index + 1 ; $another < $genome_count ; $another++ ) {
+    my $another_name  = $sorted_genomes[$another];
+    my $another_count = keys %{ $res{$another_name} };
+    if ( $count > $another_count ) {
+      foreach my $seq (@sequences) {
+        delete $res{$another_name}{$seq};
+      }
+    }
+  }
+}
+
+foreach my $name (@sorted_genomes) {
   my $count = keys %{ $res{$name} };
   my $sequences = join( ";", keys %{ $res{$name} } );
   printf $output "%s\t%d\t%s\n", $name, $count, $sequences;
