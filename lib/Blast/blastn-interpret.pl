@@ -81,7 +81,21 @@ for ( my $index = 0 ; $index < $genome_count ; $index++ ) {
 
 foreach my $name (@sorted_genomes) {
   my $count = keys %{ $res{$name} };
+  if($count == 0){
+    delete $res{name};
+  }
+}
+
+@sorted_genomes = sort {
+  my $counta = keys %{ $res{$a} };
+  my $countb = keys %{ $res{$b} };
+  $countb <=> $counta
+} keys %res;
+
+foreach my $name (@sorted_genomes) {
+  my $count = keys %{ $res{$name} };
   my $sequences = join( ";", keys %{ $res{$name} } );
   printf $output "%s\t%d\t%s\n", $name, $count, $sequences;
 }
+
 close($output);
