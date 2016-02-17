@@ -39,7 +39,7 @@ for ( my $current_index = $from ; $current_index <= $to ; $current_index++ ) {
   my $seqio_obj = Bio::SeqIO->new( -file => ">$fa_name", -format => 'fasta' );
   $seqio_obj->write_seq($seq);
   my $datastring = localtime();
-  print $datastring . " : " . $current_index . "/" . $to . " : " . $seq->id . "\n";
+  print $datastring . " : " . ($current_index + 1) . "/" . ($to + 1) . " : " . $seq->id . "\n";
   `blastn -task blastn-short -db nt -perc_identity 100 -remote -query $fa_name -outfmt '6 qlen nident qacc sallacc salltitles' | awk '\$1 == \$2 {print}' | cut -f3- | sort | uniq >> $fa_output`;
 
   if ( !-e $fa_output ) {
