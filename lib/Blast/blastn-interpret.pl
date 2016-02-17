@@ -53,6 +53,7 @@ foreach my $file ( split( ",", $input_file ) ) {
   close($input);
 }
 
+my %merged;
 my $index = 0;
 while (1) {
   my @sorted_genomes = sort {
@@ -66,27 +67,33 @@ while (1) {
     last;
   }
 
-  my $name      = $sorted_genomes[$index];
-  my $count     = keys %{ $res{$name} };
-  my @sequences = keys %{ $res{$name} };
+  my $name        = $sorted_genomes[$index];
+  my %sequenceMap = %{ $res{$name} };
+  my @sequences   = sort keys %sequenceMap;
+  my $count       = scalar(@sequences);
 
-  for ( my $another = $index + 1 ; $another < $genome_count ; $another++ ) {
-    my $another_name  = $sorted_genomes[$another];
-    my $another_count = keys %{ $res{$another_name} };
-    if ( $count > $another_count ) {
-      foreach my $seq (@sequences) {
-        delete $res{$another_name}{$seq};
+  for ( my $another = $genome_count - 1 ; $another > $index ; $another-- ) {
+    my $another_name      = $sorted_genomes[$another];
+    my @another_sequences = sort keys %{ $res{$another_name} };
+    my $another_count     = scalar(@another_sequences);
+
+    my $issubset = 1;
+    foreach my $seq (@another_sequences) {
+      if ( !exists $sequenceMap{$seq} ) {
+        $issubset = 0;
+        last;
       }
     }
-  }
 
-  foreach my $name (@sorted_genomes) {
-    my $count = keys %{ $res{$name} };
-    if ( $count == 0 ) {
-      delete $res{$name};
+    if ($issubset) {
+      if ( $count == $another_count ) {
+        $name = $name . ";" . $another_name;
+      }
+      delete $res{$another_name};
     }
   }
 
+  $merged{$name} = \@sequences;
   $index++;
 }
 
@@ -94,15 +101,16 @@ open( my $output, ">$output_file" ) or die "Cannot open $output_file";
 printf $output "genome\tunique_sequence_count\tsequences\n";
 
 my @sorted_genomes = sort {
-  my $counta = keys %{ $res{$a} };
-  my $countb = keys %{ $res{$b} };
+  my $counta = scalar( @{ $res{$a} } );
+  my $countb = scalar( @{ $res{$b} } );
   $countb <=> $counta
 } keys %res;
 
 foreach my $name (@sorted_genomes) {
-  my $count = keys %{ $res{$name} };
-  my $sequences = join( ";", keys %{ $res{$name} } );
-  printf $output "%s\t%d\t%s\n", $name, $count, $sequences;
+  my @sequences    = @{ $res{$name} };
+  my $count        = scalar(@sequences);
+  my $sequence_str = join( ";", @sequences );
+  printf $output "%s\t%d\t%s\n", $name, $count, $sequence_str;
 }
 
 close($output);
