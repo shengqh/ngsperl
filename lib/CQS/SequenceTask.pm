@@ -112,11 +112,11 @@ sub perform {
         if ( exists $pbs_files->{$sample} ) {
           my $samplepbs = $pbs_files->{$sample};
           if ( ref($samplepbs) eq 'ARRAY' ) {
-            for my $pbs ( @{$samplepbs} ) {
-              if ( !-e $pbs ) {
-                die "Task " . $task_section . ", file not exists " . $pbs . "\n";
+            for my $subpbs ( @{$samplepbs} ) {
+              if ( !-e $subpbs ) {
+                die "Task " . $task_section . ", file not exists " . $subpbs . "\n";
               }
-              print $pbs "bash " . $pbs . "\n";
+              print $pbs "bash " . $subpbs . "\n";
             }
           }
           else {
