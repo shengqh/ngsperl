@@ -81,8 +81,8 @@ for ( my $index = 0 ; $index < $genome_count ; $index++ ) {
 
 foreach my $name (@sorted_genomes) {
   my $count = keys %{ $res{$name} };
-  if($count == 0){
-    delete $res{name};
+  if ( $count == 0 ) {
+    delete $res{$name};
   }
 }
 
