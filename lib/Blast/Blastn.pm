@@ -44,7 +44,7 @@ sub perform {
 
     for ( my $start = 0 ; $start < $maximum_size ; $start += $bin_size ) {
       my $end       = $start + $bin_size - 1;
-      my $curname   = $sample_name . "_" . $start . "_" . $end;
+      my $curname   = $sample_name . "_" . ( $start + 1 ) . "_" . ( $end + 1 );
       my $curresult = $curname . ".blastn.tsv";
 
       my $pbs_file = $self->get_pbs_filename( $pbs_dir, $curname );
@@ -85,7 +85,7 @@ sub result {
 
     for ( my $start = 0 ; $start < $maximum_size ; $start += $bin_size ) {
       my $end       = $start + $bin_size - 1;
-      my $curname   = $sample_name . "_" . $start . "_" . $end;
+      my $curname   = $sample_name . "_" . ( $start + 1 ) . "_" . ( $end + 1 );
       my $curresult = $curname . ".blastn.tsv";
       push( @result_files, "${result_dir}/$curresult" );
     }
@@ -111,7 +111,7 @@ sub get_pbs_files {
 
     for ( my $start = 0 ; $start < $maximum_size ; $start += $bin_size ) {
       my $end      = $start + $bin_size - 1;
-      my $curname  = $sample_name . "_" . $start . "_" . $end;
+      my $curname  = $sample_name . "_" . ( $start + 1 ) . "_" . ( $end + 1 );
       my $pbs_file = $self->get_pbs_filename( $pbs_dir, $curname );
       push( @result_files, $pbs_file );
     }
