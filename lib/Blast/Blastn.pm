@@ -91,6 +91,8 @@ sub result {
     }
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
+  
+  return $result;
 }
 
 sub get_pbs_files {
