@@ -101,13 +101,13 @@ open( my $output, ">$output_file" ) or die "Cannot open $output_file";
 printf $output "genome\tunique_sequence_count\tsequences\n";
 
 my @sorted_genomes = sort {
-  my $counta = scalar( @{ $res{$a} } );
-  my $countb = scalar( @{ $res{$b} } );
+  my $counta = scalar( @{ $merged{$a} } );
+  my $countb = scalar( @{ $merged{$b} } );
   $countb <=> $counta
-} keys %res;
+} keys %merged;
 
 foreach my $name (@sorted_genomes) {
-  my @sequences    = @{ $res{$name} };
+  my @sequences    = @{ $merged{$name} };
   my $count        = scalar(@sequences);
   my $sequence_str = join( ";", @sequences );
   printf $output "%s\t%d\t%s\n", $name, $count, $sequence_str;
