@@ -63,7 +63,7 @@ while (1) {
 
   my $genome_count = scalar(@sorted_genomes);
   if ( $index >= $genome_count ) {
-    exit;
+    last;
   }
 
   my $name      = $sorted_genomes[$index];
