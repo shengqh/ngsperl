@@ -776,7 +776,7 @@ sub getSmallRNAConfig {
         class              => "CQS::UniqueR",
         perform            => 1,
         target_dir         => $def->{target_dir} . "/bowtie1_fungus_group4_pm_table",
-        rtemplate          => "group1MappingVis.R",
+        rtemplate          => "group4MappingVis.R",
         output_file        => ".group4Mapping.Result",
         output_file_ext    => ".pdf",
         parameterFile1_ref => [ "bowtie1_fungus_group4_pm_table", ".count\$" ],
