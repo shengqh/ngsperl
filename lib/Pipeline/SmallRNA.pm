@@ -875,7 +875,8 @@ sub getSmallRNAConfig {
     };
 
     $config = merge( $config, $blast );
-    push @individual, ( "bowtie1_unmapped_reads", "bowtie1_unmapped_sequence_count_table", "bowtie1_unmapped_sequence_blast" );
+    push @individual, ("bowtie1_unmapped_reads");
+    push @summary, ( "bowtie1_unmapped_sequence_count_table", "bowtie1_unmapped_sequence_blast" );
   }
   $config->{sequencetask} = {
     class      => "CQS::SequenceTask",
