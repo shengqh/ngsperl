@@ -25,6 +25,31 @@ sub result {
   return $result;
 }
 
+sub get_pbs_files {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
+
+  #print  "task_name = " . $task_name . "\n";
+
+  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
+  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+
+  my $result = {};
+  if ( $self->{_pbskey} eq "" ) {
+    $result->{$task_name} = $self->get_pbs_filename( $pbs_dir, $task_name );
+  }
+  else {
+    my %fqFiles = %{ get_raw_files( $config, $section, $self->{_pbskey} ) };
+
+    for my $sample_name ( sort keys %fqFiles ) {
+      $result->{$sample_name} = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    }
+  }
+
+  return $result;
+}
+
 sub html {
   my ( $self, $config, $section ) = @_;
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
@@ -114,31 +139,6 @@ sub get_log_filename {
 sub get_task_filename {
   my ( $self, $dir, $task_name ) = @_;
   return $self->get_file( $dir, $task_name, ".sh" );
-}
-
-sub get_pbs_files {
-  my ( $self, $config, $section ) = @_;
-
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
-
-  #print  "task_name = " . $task_name . "\n";
-
-  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
-  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
-
-  my $result = {};
-  if ( $self->{_pbskey} eq "" ) {
-    $result->{$task_name} = $self->get_pbs_filename( $pbs_dir, $task_name );
-  }
-  else {
-    my %fqFiles = %{ get_raw_files( $config, $section, $self->{_pbskey} ) };
-
-    for my $sample_name ( sort keys %fqFiles ) {
-      $result->{$sample_name} = $self->get_pbs_filename( $pbs_dir, $sample_name );
-    }
-  }
-
-  return $result;
 }
 
 sub open_pbs {
