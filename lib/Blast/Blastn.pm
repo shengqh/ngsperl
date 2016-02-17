@@ -28,8 +28,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $maximum_size = get_option( $self, $config, "maximum_size", 100 );
-  my $bin_size     = get_option( $self, $config, "bin_size",     10 );
+  my $maximum_size = get_option( $config, $section, "maximum_size", 100 );
+  my $bin_size     = get_option( $config, $section, "bin_size",     10 );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -74,8 +74,8 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $maximum_size = get_option( $self, $config, "maximum_size", 100 );
-  my $bin_size     = get_option( $self, $config, "bin_size",     10 );
+  my $maximum_size = get_option( $config, $section, "maximum_size", 100 );
+  my $bin_size     = get_option( $config, $section, "bin_size",     10 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -101,9 +101,8 @@ sub get_pbs_files {
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
-  my $maximum_size = get_option( $self, $config, "maximum_size", 100 );
-  my $bin_size     = get_option( $self, $config, "bin_size",     10 );
-
+  my $maximum_size = get_option( $config, $section, "maximum_size", 100 );
+  my $bin_size     = get_option( $config, $section, "bin_size",     10 );
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
