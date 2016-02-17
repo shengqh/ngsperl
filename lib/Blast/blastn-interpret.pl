@@ -53,17 +53,19 @@ foreach my $file ( split( ",", $input_file ) ) {
   close($input);
 }
 
-open( my $output, ">$output_file" ) or die "Cannot open $output_file";
-printf $output "genome\tunique_sequence_count\tsequences\n";
+my $index = 0;
+while (1) {
+  my @sorted_genomes = sort {
+    my $counta = keys %{ $res{$a} };
+    my $countb = keys %{ $res{$b} };
+    $countb <=> $counta
+  } keys %res;
 
-my @sorted_genomes = sort {
-  my $counta = keys %{ $res{$a} };
-  my $countb = keys %{ $res{$b} };
-  $countb <=> $counta
-} keys %res;
+  my $genome_count = scalar(@sorted_genomes);
+  if ( $index >= $genome_count ) {
+    exit;
+  }
 
-my $genome_count = scalar(@sorted_genomes);
-for ( my $index = 0 ; $index < $genome_count ; $index++ ) {
   my $name      = $sorted_genomes[$index];
   my $count     = keys %{ $res{$name} };
   my @sequences = keys %{ $res{$name} };
@@ -77,16 +79,21 @@ for ( my $index = 0 ; $index < $genome_count ; $index++ ) {
       }
     }
   }
-}
 
-foreach my $name (@sorted_genomes) {
-  my $count = keys %{ $res{$name} };
-  if ( $count == 0 ) {
-    delete $res{$name};
+  foreach my $name (@sorted_genomes) {
+    my $count = keys %{ $res{$name} };
+    if ( $count == 0 ) {
+      delete $res{$name};
+    }
   }
+
+  $index++;
 }
 
-@sorted_genomes = sort {
+open( my $output, ">$output_file" ) or die "Cannot open $output_file";
+printf $output "genome\tunique_sequence_count\tsequences\n";
+
+my @sorted_genomes = sort {
   my $counta = keys %{ $res{$a} };
   my $countb = keys %{ $res{$b} };
   $countb <=> $counta
