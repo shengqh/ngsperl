@@ -73,7 +73,14 @@ sub perform {
         die "$task_section is not a valid task section.";
       }
       my $myclass         = instantiate( $classname );
-      my %expect_file_map = %{ $myclass->result( $config, $task_section ) };
+      my %expect_file_map;
+      eval {
+        %expect_file_map = %{ $myclass->result( $config, $task_section ) };
+      } or do {
+        my $e = $@;
+        die ("Something went wrong to get result of section $task_section : $e\n");
+      };
+      
       my $pbs_file_map    = $myclass->get_pbs_files( $config, $task_section );
       for my $expect_name ( sort keys %expect_file_map ) {
         my $expect_files = $expect_file_map{$expect_name};
