@@ -35,17 +35,28 @@ sub perform {
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
 
-  my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $blastn = dirname(__FILE__) . "/blastn-short.pl";
+  my %raw_files        = %{ get_raw_files( $config, $section ) };
+  my $blastn           = dirname(__FILE__) . "/blastn-short.pl";
+  my $blastn_interpret = dirname(__FILE__) . "/blastn-interpret.pl";
 
   for my $sample_name ( sort keys %raw_files ) {
+    my $interpret_name        = $sample_name . "_interpret";
+    my $interpret_pbs_file    = $self->get_pbs_filename( $pbs_dir, $interpret_name );
+    my $interpret_pbs_name    = basename($interpret_pbs_file);
+    my $interpret_log         = $self->get_log_filename( $log_dir, $interpret_name );
+    my $interpret_log_desc    = $cluster->get_log_description($interpret_log);
+    my $interpret_output_file = $sample_name . ".table.tsv";
+
+    my $interpret_pbs = $self->open_pbs( $interpret_pbs_file, $pbs_desc, $interpret_log_desc, $path_file, $result_dir, $interpret_output_file );
+    my @resultfiles = ();
+
     my @sample_files = @{ $raw_files{$sample_name} };
     my $sample       = $sample_files[0];
-
     for ( my $start = 0 ; $start < $maximum_size ; $start += $bin_size ) {
       my $end       = $start + $bin_size - 1;
       my $curname   = $sample_name . "_" . ( $start + 1 ) . "_" . ( $end + 1 );
       my $curresult = $curname . ".blastn.tsv";
+      push( @resultfiles, $curresult );
 
       my $pbs_file = $self->get_pbs_filename( $pbs_dir, $curname );
       my $pbs_name = basename($pbs_file);
@@ -58,7 +69,13 @@ sub perform {
       $self->close_pbs( $pbs, $pbs_file );
       print $sh "\$MYCMD ./$pbs_name \n";
     }
+
+    my $input_files = join( ",", @resultfiles );
+    print $interpret_pbs "perl $blastn_interpret $interpret_output_file $input_files \n";
+    $self->close_pbs( $interpret_pbs, $interpret_pbs_file );
+    print $sh "\$MYCMD ./$interpret_pbs_name \n";
   }
+
   print $sh "exit 0\n";
   close $sh;
 
@@ -91,7 +108,7 @@ sub result {
     }
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
-  
+
   return $result;
 }
 
