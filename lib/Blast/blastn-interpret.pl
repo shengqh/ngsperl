@@ -1,11 +1,46 @@
 use strict;
 use warnings;
 
-my $output_file = $ARGV[0];
-my $input_file  = $ARGV[1];
+use Getopt::Long;
 
-#$input_file = "../../data/3116_human_41_50.blastn.tsv";
-#$output_file = "../../data/3116_human_41_50.blastn.table.tsv";
+my $usage = "
+
+Synopsis:
+
+perl blast-interpret.pl -i blastn_result_file -o interpret_result_file
+
+Options:
+  -i|--input {file}       Input blastn result file
+  -o|--output {file}      Output table file
+  -h|--help               This page.
+";
+
+Getopt::Long::Configure('bundling');
+
+my $input_file;
+my $output_file;
+my $help;
+
+GetOptions(
+  'i|input=s'  => \$input_file,
+  'o|output=s' => \$output_file,
+  'h|help'     => \$help,
+);
+
+if ( defined $help ) {
+  print $usage;
+  exit(1);
+}
+
+if ( !defined $input_file || !-e $input_file ) {
+  die "Input valid input file!";
+}
+
+if ( !defined $output_file ) {
+  die "Define output file!";
+}
+
+die "$output_file already exists" if ( -e $output_file );
 
 my %res;
 foreach my $file ( split( ",", $input_file ) ) {

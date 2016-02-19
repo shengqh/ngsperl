@@ -26,10 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
-
-  my $maximum_size = get_option( $config, $section, "maximum_size", 100 );
-  my $bin_size     = get_option( $config, $section, "bin_size",     10 );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -40,40 +37,26 @@ sub perform {
   my $blastn_interpret = dirname(__FILE__) . "/blastn-interpret.pl";
 
   for my $sample_name ( sort keys %raw_files ) {
-    my $interpret_name        = $sample_name . "_interpret";
-    my $interpret_pbs_file    = $self->get_pbs_filename( $pbs_dir, $interpret_name );
-    my $interpret_pbs_name    = basename($interpret_pbs_file);
-    my $interpret_log         = $self->get_log_filename( $log_dir, $interpret_name );
-    my $interpret_log_desc    = $cluster->get_log_description($interpret_log);
-    my $interpret_output_file = $sample_name . ".table.tsv";
+    my @sample_files     = @{ $raw_files{$sample_name} };
+    my $sample           = $sample_files[0];
+    my $blast_result     = $sample_name . ".blastn.tsv";
+    my $interpret_result = $sample_name . ".table.tsv";
 
-    my $interpret_pbs = $self->open_pbs( $interpret_pbs_file, $pbs_desc, $interpret_log_desc, $path_file, $result_dir, $interpret_output_file );
-    my @resultfiles = ();
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    my @sample_files = @{ $raw_files{$sample_name} };
-    my $sample       = $sample_files[0];
-    for ( my $start = 0 ; $start < $maximum_size ; $start += $bin_size ) {
-      my $end       = $start + $bin_size - 1;
-      my $curname   = $sample_name . "_" . ( $start + 1 ) . "_" . ( $end + 1 );
-      my $curresult = $curname . ".blastn.tsv";
-      push( @resultfiles, $curresult );
+    my $log_desc = $cluster->get_log_description($log);
 
-      my $pbs_file = $self->get_pbs_filename( $pbs_dir, $curname );
-      my $pbs_name = basename($pbs_file);
-      my $log      = $self->get_log_filename( $log_dir, $curname );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $interpret_result );
+    print $pbs "
+perl $blastn -i $sample -o $blast_result -t $thread
+perl $blastn_interpret -i $blast_result -o $interpret_result
+";
+    $self->close_pbs( $pbs, $pbs_file );
+    print $sh "\$MYCMD ./$pbs_name \n";
 
-      my $log_desc = $cluster->get_log_description($log);
-
-      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $curresult );
-      print $pbs "perl $blastn $curresult $sample $start $end";
-      $self->close_pbs( $pbs, $pbs_file );
-      print $sh "\$MYCMD ./$pbs_name \n";
-    }
-
-    my $input_files = join( ",", @resultfiles );
-    print $interpret_pbs "perl $blastn_interpret $interpret_output_file $input_files \n";
-    $self->close_pbs( $interpret_pbs, $interpret_pbs_file );
-    print $sh "\$MYCMD ./$interpret_pbs_name \n";
+    print $sh "\$MYCMD ./$pbs_file \n";
   }
 
   print $sh "exit 0\n";
@@ -91,53 +74,20 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $maximum_size = get_option( $config, $section, "maximum_size", 100 );
-  my $bin_size     = get_option( $config, $section, "bin_size",     10 );
-
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
   for my $sample_name ( sort keys %raw_files ) {
     my @result_files = ();
 
-    for ( my $start = 0 ; $start < $maximum_size ; $start += $bin_size ) {
-      my $end       = $start + $bin_size - 1;
-      my $curname   = $sample_name . "_" . ( $start + 1 ) . "_" . ( $end + 1 );
-      my $curresult = $curname . ".blastn.tsv";
-      push( @result_files, "${result_dir}/$curresult" );
-    }
+    my $blast_result     = $sample_name . ".blastn.tsv";
+    my $interpret_result = $sample_name . ".table.tsv";
+    push( @result_files, "${result_dir}/$blast_result" );
+    push( @result_files, "${result_dir}/$interpret_result" );
+
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
 
   return $result;
 }
-
-sub get_pbs_files {
-  my ( $self, $config, $section ) = @_;
-
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
-
-  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
-  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
-
-  my $maximum_size = get_option( $config, $section, "maximum_size", 100 );
-  my $bin_size     = get_option( $config, $section, "bin_size",     10 );
-  my %raw_files = %{ get_raw_files( $config, $section ) };
-
-  my $result = {};
-  for my $sample_name ( sort keys %raw_files ) {
-    my @result_files = ();
-
-    for ( my $start = 0 ; $start < $maximum_size ; $start += $bin_size ) {
-      my $end      = $start + $bin_size - 1;
-      my $curname  = $sample_name . "_" . ( $start + 1 ) . "_" . ( $end + 1 );
-      my $pbs_file = $self->get_pbs_filename( $pbs_dir, $curname );
-      push( @result_files, $pbs_file );
-    }
-    $result->{$sample_name} = \@result_files;
-  }
-
-  return $result;
-}
-
 1;
