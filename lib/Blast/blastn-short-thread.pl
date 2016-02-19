@@ -5,15 +5,50 @@ use POSIX;
 
 use File::Basename;
 use Bio::SeqIO;
+use Getopt::Long;
 
-my $output_file = $ARGV[0];
-my $input_file  = $ARGV[1];
+my $usage = "
 
-# Define the number of threads
-my $num_of_threads = $ARGV[2];
+Synopsis:
+
+perl blast-short-thread.pl -i fasta_file -o output_file -t number_of_thread
+
+Options:
+  -i|--input {file}       Input sequence file in fasta format
+  -o|--output {file}      Output file
+  -t|--thread {integer}   Number of thread
+  -h|--help               This page.
+";
+
+Getopt::Long::Configure('bundling');
+
+my $input_file;
+my $output_file;
+my $num_of_threads;
+my $help;
+
+GetOptions(
+  'i|input=s'  => \$input_file,
+  'o|output=s' => \$output_file,
+  't|thread=s' => \$num_of_threads,
+  'h|help'     => \$help,
+);
+
+if ( defined $help ) {
+  print $usage;
+  exit(1);
+}
 
 #$output_file = "/scratch/cqs/shengq1/temp/3018-KCV-35-38_sequence.blastn.tsv";
 #$input_file  = "/scratch/cqs/shengq1/vickers/20150709_smallRNA_3018-KCV-35-38_human/identical_sequence_count_table/result/3018-KCV-35-38_sequence.count.fasta";
+
+if ( !defined $input_file || !-e $input_file ) {
+  die "Input valid input file!";
+}
+
+if ( !defined $output_file ) {
+  die "Define output file!";
+}
 
 if ( !defined $num_of_threads ) {
   $num_of_threads = 1;
@@ -26,8 +61,12 @@ my @sequences = ();
 while ( my $seq = $seqio->next_seq ) {
   push( @sequences, $seq );
 }
+
 my $total_count = scalar(@sequences);
-my $step        = ceil( $total_count / $num_of_threads );
+if ( $total_count < $num_of_threads ) {
+  $num_of_threads = $total_count;
+}
+my $step = ceil( $total_count / $num_of_threads );
 
 # use the initThreads subroutine to create an array of threads.
 my @threads = initThreads();
@@ -36,6 +75,7 @@ my @threads = initThreads();
 my $from  = 0;
 my @files = ();
 foreach (@threads) {
+
   # Tell each thread to perform our 'doOperation()' subroutine.
   my $curoutfile = $output_file . $from;
   $_ = threads->create( \&doOperation, $from, $curoutfile );
@@ -49,6 +89,9 @@ foreach (@threads) {
   $_->join();
 }
 
+foreach my $result_file (@files) {
+  `cat $result_file >> $output_file`;
+}
 print "\nProgram Done!\nPress Enter to exit";
 
 ####################### SUBROUTINES ############################
