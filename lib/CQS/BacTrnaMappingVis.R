@@ -43,8 +43,8 @@ trnaCountTableExpandByRNA<-aggregateCountTable(trnaCountTableExpand,nameSubtRNA)
 trnaCountTableExpandByRNA1<-aggregateCountTable(trnaCountTableExpand,nameSubtRNA1)
 
 
-for ( i in 1:ncol(trnaCountTableSplit)) {
-	png(paste0(resultFile,"_",colnames(trnaCountTableSplit)[i],".tRNA.png"),height=3000,width=3000,res=300)
+for ( i in 1:ncol(trnaCountTable)) {
+	png(paste0(resultFile,"_",colnames(trnaCountTable)[i],".tRNA.png"),height=3000,width=3000,res=300)
 	par(mfrow=c(2,2))
 	par(mar=c(2,2,2,2))
 	
