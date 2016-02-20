@@ -97,10 +97,7 @@ sub perform {
   open( my $rf, ">$rfile" )     or die "Cannot create $rfile";
   open( my $rt, "<$rtemplate" ) or die $!;
   
-  my $rParameter="";
-  if (defined($output_file) and $output_file ne "") {
-  	$rParameter=$rParameter."outFile='$task_name$output_file'\n";
-  }
+  my $rParameter="outFile='$task_name$output_file'\n";
   if (defined($parametersample_files1) and $parametersample_files1 ne "") {
   	$rParameter=$rParameter."parSampleFile1='$parametersample_files1'\n";
   }
@@ -140,9 +137,14 @@ sub perform {
   my $log_desc = $cluster->get_log_description($log);
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-  print $pbs
+  if (defined($option) and $option ne "") {
+  	  print $pbs
      "R --vanilla --slave -f $rfile --args $option"; 
 #    "R --vanilla --slave -f $rfile --args $task_name$output_file $option $parametersample_files1 $parametersample_files2 $parametersample_files3 $parameterFile1 $parameterFile2 $parameterFile3";
+  } else {
+      print $pbs
+     "R --vanilla --slave -f $rfile"; 
+  }
   $self->close_pbs( $pbs, $pbs_file );
 }
 
