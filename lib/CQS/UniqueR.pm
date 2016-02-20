@@ -96,6 +96,31 @@ sub perform {
   my $rfile = $result_dir . "/${task_name}.r";
   open( my $rf, ">$rfile" )     or die "Cannot create $rfile";
   open( my $rt, "<$rtemplate" ) or die $!;
+  
+  my $rParameter="";
+  
+  if (defined($parametersample_files1) and $parametersample_files1 ne "") {
+  	$rParameter=$rParameter."parSampleFile1=$parametersample_files1\n";
+  }
+  if (defined($parametersample_files2) and $parametersample_files2 ne "") {
+  	$rParameter=$rParameter."parSampleFile2=$parametersample_files2\n";
+  }
+  if (defined($parametersample_files3) and $parametersample_files3 ne "") {
+  	$rParameter=$rParameter."parSampleFile3=$parametersample_files3\n";
+  }
+  if (defined($parameterFile1) and $parameterFile1 ne "") {
+  	$rParameter=$rParameter."parFile1=$parameterFile1\n";
+  }
+  if (defined($parameterFile2) and $parameterFile2 ne "") {
+  	$rParameter=$rParameter."parFile2=$parameterFile2\n";
+  }
+  if (defined($parameterFile3) and $parameterFile3 ne "") {
+  	$rParameter=$rParameter."parFile3=$parameterFile3\n";
+  }
+  
+  if ( $rParameter ne "" ) {
+    print $rf $rParameter;
+  }
   if ( defined($rCode) ) {
     print $rf $rCode . "\n";
   }
