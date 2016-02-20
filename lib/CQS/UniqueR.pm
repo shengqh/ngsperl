@@ -98,22 +98,22 @@ sub perform {
   open( my $rt, "<$rtemplate" ) or die $!;
   
   my $rParameter="outFile='$task_name$output_file'\n";
-  if (defined($parametersample_files1) and $parametersample_files1 ne "") {
+  if (defined($parametersample_files1)) {
   	$rParameter=$rParameter."parSampleFile1='$parametersample_files1'\n";
   }
-  if (defined($parametersample_files2) and $parametersample_files2 ne "") {
+  if (defined($parametersample_files2)) {
   	$rParameter=$rParameter."parSampleFile2='$parametersample_files2'\n";
   }
-  if (defined($parametersample_files3) and $parametersample_files3 ne "") {
+  if (defined($parametersample_files3)) {
   	$rParameter=$rParameter."parSampleFile3='$parametersample_files3'\n";
   }
-  if (defined($parameterFile1) and $parameterFile1 ne "") {
+  if (defined($parameterFile1)) {
   	$rParameter=$rParameter."parFile1='$parameterFile1'\n";
   }
-  if (defined($parameterFile2) and $parameterFile2 ne "") {
+  if (defined($parameterFile2)) {
   	$rParameter=$rParameter."parFile2='$parameterFile2'\n";
   }
-  if (defined($parameterFile3) and $parameterFile3 ne "") {
+  if (defined($parameterFile3)) {
   	$rParameter=$rParameter."parFile3='$parameterFile3'\n";
   }
   

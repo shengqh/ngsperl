@@ -48,16 +48,16 @@ for ( i in 1:ncol(trnaCountTable)) {
 	par(mfrow=c(2,2))
 	par(mar=c(2,2,2,2))
 	
-	temp<-trnaCountTableExpandBySpecies
+	temp<-as.matrix(trnaCountTableExpandBySpecies)
 	groupPie(temp[,i])
 	
-	temp<-trnaCountTableExpandBySpecies12
+	temp<-as.matrix(trnaCountTableExpandBySpecies12)
 	groupPie(temp[,i])
 	
-	temp<-trnaCountTableExpandByRNA
+	temp<-as.matrix(trnaCountTableExpandByRNA)
 	groupPie(temp[,i])
 	
-	temp<-trnaCountTableExpandByRNA1
+	temp<-as.matrix(trnaCountTableExpandByRNA1)
 	groupPie(temp[,i])
 	dev.off()
 }

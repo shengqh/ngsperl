@@ -3,7 +3,9 @@
 # Author: zhaos
 ###############################################################################
 
-fileListName<-commandArgs()[7]
+fileListName<-parFile1
+
+#fileListName<-commandArgs()[7]
 #fileListName<-"/scratch/cqs/zhaos/vickers/20160123_smallRNA_3018-KCV-55_human/sequencetask/result/3018-KCV-55_st_expect_result.tsv"
 #setwd("/scratch/cqs/zhaos/vickers/20160123_smallRNA_3018-KCV-55_human/sequencetask/result")
 

@@ -1,7 +1,11 @@
-resultFile<-commandArgs()[7]
-tRNAPositionFileList<-commandArgs()[8]
-groupFileList<-commandArgs()[9]
-tRNASigFileList<-commandArgs()[10]
+resultFile<-outFile
+tRNAPositionFileList<-parFile1
+groupFileList<-parameterFile1
+tRNASigFileList<-parameterFile2
+#resultFile<-commandArgs()[7]
+#tRNAPositionFileList<-commandArgs()[8]
+#groupFileList<-commandArgs()[9]
+#tRNASigFileList<-commandArgs()[10]
 
 #setwd("/scratch/cqs/zhaos/temp/testRMoudle/tRNAPositionVis/result")
 #resultFile<-"test.result"

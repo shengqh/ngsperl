@@ -1,6 +1,10 @@
-resultFile<-commandArgs()[7]
-mappingResultFile<-commandArgs()[8]
-databaseLogFile<-commandArgs()[9]
+resultFile<-outFile
+mappingResultFile<-parFile1
+databaseLogFile<-parFile2
+
+#resultFile<-commandArgs()[7]
+#mappingResultFile<-commandArgs()[8]
+#databaseLogFile<-commandArgs()[9]
 
 #resultFile<-"3018-KCV-52_53_54.group4Mapping.Result"
 #mappingResultFile<-"/scratch/cqs/zhaos/vickers/20160211_smallRNA_3018-KCV-52_53_54_sheep/bowtie1_fungus_group4_pm_table/result/fungus_group4_pm_3018-KCV-52_53_54.count"

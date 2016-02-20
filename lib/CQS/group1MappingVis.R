@@ -1,6 +1,10 @@
-resultFile<-commandArgs()[7]
-mappingResultFile<-commandArgs()[8]
-databaseLogFile<-commandArgs()[9]
+resultFile<-outFile
+mappingResultFile<-parFile1
+databaseLogFile<-parFile2
+
+#resultFile<-commandArgs()[7]
+#mappingResultFile<-commandArgs()[8]
+#databaseLogFile<-commandArgs()[9]
 
 library(ggplot2)
 library(reshape)
@@ -43,7 +47,7 @@ for (i in 1:ncol(mappingResult2Species)) {
 sigNum<-5
 temp<-apply(mappingResult2Species,2,function(x) rev(order(x))[1:sigNum])
 mappingResult2SpeciesSelected<-mappingResult2Species[unique(as.vector(temp)),]
-mappingResult2SpeciesSelected<-rbind(mappingResult2SpeciesSelected,Other=colSums(mappingResult2Species[-unique(as.vector(temp)),]))
+mappingResult2SpeciesSelected<-rbind(mappingResult2SpeciesSelected,Other=colSums(mappingResult2Species[-unique(as.vector(temp)),,drop=FALSE]))
 
 mappingResult2SpeciesSelectedForFigure<-mappingResult2SpeciesSelected
 mappingResult2SpeciesSelectedForFigure$Species<-row.names(mappingResult2SpeciesSelected)
