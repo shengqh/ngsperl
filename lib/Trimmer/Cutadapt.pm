@@ -110,8 +110,8 @@ sub perform {
 
     my @sample_files = @{ $raw_files{$sample_name} };
 
-    my $final_file = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+    my @final_files = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_files[0] );
 
     if ($ispairend) {
       die "should be pair-end data but not!" if ( scalar(@sample_files) != 2 );
