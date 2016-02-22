@@ -71,7 +71,7 @@ sub initializeDefaultOptions {
   }
 
   if ( !defined $def->{smallrnacount_option} ) {
-    $def->{smallrnacount_option} = '-s';
+    $def->{smallrnacount_option} = '';
   }
 
   if ( !defined $def->{bowtie1_option_1mm} ) {
