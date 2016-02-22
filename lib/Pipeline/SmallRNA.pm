@@ -346,7 +346,6 @@ sub getSmallRNAConfig {
         option                  => $def->{miRBase_count_option} . " -m",
         source_ref              => "bowtie1_miRBase_pm",
         seqcount_ref            => [ "identical", ".dupcount\$" ],
-        perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
         cqs_tools               => $def->{cqstools},
         sh_direct               => 1,
         cluster                 => $cluster,
