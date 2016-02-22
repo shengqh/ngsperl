@@ -62,11 +62,10 @@ sub perform {
       $self->close_pbs( $pbs, $pbs_file );
     }
     else {
-      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
-      my $outputFiles = "";
+      my $firstOutputFile = change_extension_gzipped( basename($sample_files[0]), $extension );
+      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $firstOutputFile );
       for my $sampleFile (@sample_files) {
         my $outputFile = change_extension_gzipped( basename($sampleFile), $extension );
-        $outputFiles = $outputFiles . " " . $outputFile;
         print $pbs "mono $cqstools fastq_identical -i $sampleFile $minlen -o $outputFile \n";
       }
       $self->close_pbs( $pbs, $pbs_file );
@@ -105,8 +104,7 @@ sub result {
     }
     else {
       for my $sampleFile (@sample_files) {
-        my $fileName = basename($sampleFile);
-        my $outputFile = $result_dir . "/" . change_extension( $fileName, $extension );
+        my $outputFile = $result_dir . "/" . change_extension_gzipped( basename($sampleFile), $extension );
         push( @result_files, $outputFile );
         push( @result_files, change_extension( $outputFile, ".dupcount" ) );
       }
