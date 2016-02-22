@@ -56,20 +56,21 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
-
     if ( scalar(@sample_files) == 1 ) {
+      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
       print $pbs "mono $cqstools fastq_identical $option -i $sample_files[0] $minlen -o $final_file \n";
+      $self->close_pbs( $pbs, $pbs_file );
     }
     else {
+      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
       my $outputFiles = "";
       for my $sampleFile (@sample_files) {
         my $outputFile = change_extension_gzipped( basename($sampleFile), $extension );
         $outputFiles = $outputFiles . " " . $outputFile;
         print $pbs "mono $cqstools fastq_identical -i $sampleFile $minlen -o $outputFile \n";
       }
+      $self->close_pbs( $pbs, $pbs_file );
     }
-    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 
