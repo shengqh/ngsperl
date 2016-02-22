@@ -79,7 +79,7 @@ sub initializeDefaultOptions {
   }
 
   if ( !defined $def->{bowtie1_option_pm} ) {
-    $def->{bowtie1_option_pm} = '-a --best --strata -v 0';
+    $def->{bowtie1_option_pm} = '-a -k 100 --best --strata -v 0';
   }
 
   if ( !defined $def->{fastq_remove_N} ) {
