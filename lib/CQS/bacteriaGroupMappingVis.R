@@ -12,39 +12,39 @@ databaseLogFile<-parFile2
 library(ggplot2)
 library(reshape)
 
+aggregateCountTable<-function(x,group,method=sum) {
+	result<-aggregate(x, list(factor(group)), method)
+	row.names(result)<-result[,1]
+	result<-result[,-1]
+	return(result)
+}
+groupPie<-function(x,maxCategory=10) {
+	nameToCountForFigure<-na.omit(rev(sort(x)))
+	if (length(nameToCountForFigure)>maxCategory) {
+		nameToCountForFigure<-c(nameToCountForFigure[1:(maxCategory-1)],Other=sum(nameToCountForFigure[-(1:(maxCategory-1))]))
+	}
+	pie(nameToCountForFigure,col=rainbow(length(nameToCountForFigure)),main=paste0("Mapped Reads: ",as.integer(sum(nameToCountForFigure))))
+}
+
+
 mappingResult<-read.delim(mappingResultFile,header=T,row.names=1)
 databaseLog<-read.delim(databaseLogFile,header=T,as.is=T)
-row.names(mappingResult)<-gsub("\\.\\d+","",row.names(mappingResult))
+#row.names(mappingResult)<-gsub("\\.\\d+","",row.names(mappingResult))
 
 id2Species<-databaseLog$Species
 names(id2Species)<-databaseLog$Id
+speciesInMappingResult<-id2Species[row.names(mappingResult)]
 
-mappingResult2Species<-matrix(0,ncol=ncol(mappingResult),nrow=length(unique(id2Species)))
-mappingResult2Species<-as.data.frame(mappingResult2Species)
-row.names(mappingResult2Species)<-unique(id2Species)
-colnames(mappingResult2Species)<-colnames(mappingResult)
-
-for (i in 1:nrow(mappingResult)) {
-	temp<-strsplit(row.names(mappingResult)[i],";")[[1]]
-	for (z in temp) {
-		mappingResult2Species[id2Species[z],]<-as.vector(mappingResult2Species[id2Species[z],])+as.vector(mappingResult[i,]/length(temp))
-	}
-}
+mappingResult2Species<-aggregateCountTable(mappingResult,speciesInMappingResult)
 
 #str(mappingResult2Species)
 write.csv(mappingResult2Species,paste0(resultFile,".toSpecies.csv"))
 
 for (i in 1:ncol(mappingResult2Species)) {
-	png(paste0(colnames(mappingResult2Species)[i],".bacteriaGroup.png"),width=3000,height=1500,res=300)
+	png(paste0(colnames(mappingResult2Species)[i],".Species.png"),width=2000,height=1500,res=300)
 	par(mar=c(2,9,2,9))
-	temp<-mappingResult2Species[,i]
-	names(temp)<-row.names(mappingResult2Species)
-	temp<-rev(sort(temp))
-	if (length(temp)>10) {
-		temp<-c(temp[1:9],sum(temp[10:length(temp)]))
-		names(temp)[10]<-"Other"	
-	}
-	pie(temp,col=rainbow(10),cex=0.5)
+	temp<-as.matrix(mappingResult2Species)
+	groupPie(temp[,i])
 	dev.off()
 }
 
@@ -63,7 +63,7 @@ mappingResult2SpeciesSelectedForFigure$Species<-row.names(mappingResult2SpeciesS
 mappingResult2SpeciesSelectedForFigure<-melt(mappingResult2SpeciesSelectedForFigure)
 colnames(mappingResult2SpeciesSelectedForFigure)<-c("Species","Sample","Reads")
 
-png(paste0(resultFile,".top",sigNum,".png"),width=1400,height=700,res=300)
+png(paste0(resultFile,".top",sigNum,".png"),width=3000,height=1500,res=300)
 ggplot(mappingResult2SpeciesSelectedForFigure,aes(x=Sample,y=Reads,fill=Species))+geom_bar(stat="identity")+theme(axis.text.x = element_text(angle = 90, hjust = 1))
 dev.off()
 

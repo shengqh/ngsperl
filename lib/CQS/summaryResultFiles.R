@@ -52,7 +52,7 @@ for (step in unique(ResultOut$StepName)) {
 		print(paste0("There are ",warnLength," WARN in ",step,"."))
 	}
 	if (failLength==0 & warnLength==0) {
-		print(paste0("All tasks are successfully finished."))
+		print(paste0("All tasks are successfully finished in ",step,"."))
 	}
 	tableForPlot$TaskName<-factor(tableForPlot$TaskName,levels=rev(unique(tableForPlot$TaskName)))
 	tableForPlot$Result<-factor(tableForPlot$Result,levels=c("PASS","WARN","FAIL"))

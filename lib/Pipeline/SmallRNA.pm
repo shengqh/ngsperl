@@ -705,7 +705,7 @@ sub getSmallRNAConfig {
         target_dir         => $def->{target_dir} . "/bowtie1_bacteria_group2_pm_table",
         rtemplate          => "bacteriaGroupMappingVis.R",
         output_file        => ".group2Mapping.Result",
-        output_file_ext    => ".png",
+        output_file_ext    => ".toSpecies.csv",
         parameterFile1_ref => [ "bowtie1_bacteria_group2_pm_table", ".count\$" ],
         parameterFile2     => $def->{bacteria_group2_log},
         sh_direct          => 1,
