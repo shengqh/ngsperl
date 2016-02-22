@@ -1,8 +1,3 @@
-# TODO: Add comment
-# 
-# Author: zhaos
-###############################################################################
-
 fileListName<-parFile1
 
 #fileListName<-commandArgs()[7]

@@ -52,7 +52,7 @@ sub perform {
   my $rfile = $result_dir . "/${summary_name}.r";
   open( my $rf, ">$rfile" )     or die "Cannot create $rfile";
   open( my $rt, "<$rtemplate" ) or die $!;
-  print $rf "parFile1=$result_list_file";
+  print $rf "parFile1='$result_list_file'\n";
   while (<$rt>) {
     print $rf $_;
   }
