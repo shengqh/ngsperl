@@ -343,7 +343,7 @@ sub getSmallRNAConfig {
         class                   => "CQS::CQSChromosomeCount",
         perform                 => 1,
         target_dir              => $def->{target_dir} . "/bowtie1_miRBase_pm_count",
-        option                  => $def->{miRBase_count_option},
+        option                  => $def->{miRBase_count_option} . " -m",
         source_ref              => "bowtie1_miRBase_pm",
         seqcount_ref            => [ "identical", ".dupcount\$" ],
         perfect_mapped_name_ref => "bowtie1_genome_1mm_NTA_pmnames",
