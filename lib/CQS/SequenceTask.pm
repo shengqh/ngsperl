@@ -48,9 +48,19 @@ sub perform {
 
   my $result_list_file = $self->get_file( $result_dir, $task_name, "_expect_result.tsv" );
   
-  my $summary = $self->open_pbs( $summary_pbs, $pbs_desc, $summary_log_desp, $path_file, $result_dir );
   my $rtemplate = dirname(__FILE__) . "/summaryResultFiles.R";
-  print $summary "R --vanilla --slave -f $rtemplate --args $result_list_file \n";
+  my $rfile = $result_dir . "/${summary_name}.r";
+  open( my $rf, ">$rfile" )     or die "Cannot create $rfile";
+  open( my $rt, "<$rtemplate" ) or die $!;
+  print $rf "parFile1=$result_list_file";
+  while (<$rt>) {
+    print $rf $_;
+  }
+  close($rt);
+  close($rf);
+  
+  my $summary = $self->open_pbs( $summary_pbs, $pbs_desc, $summary_log_desp, $path_file, $result_dir );
+  print $summary "R --vanilla --slave -f $rfile \n";
   $self->close_pbs( $summary, $summary_pbs );
   
   my $final   = $self->open_pbs( $final_pbs,   $pbs_desc, $final_log_desp,   $path_file, $pbs_dir );
