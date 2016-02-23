@@ -69,7 +69,7 @@ sub perform {
 
   my $log_desc = $cluster->get_log_description($log);
 
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, "${task_name}.catcount" );
   print $pbs "mono $cqstools smallrna_group -i $filelist -o $result_dir";
   $self->close_pbs( $pbs, $pbs_file );
 
