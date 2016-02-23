@@ -47,15 +47,14 @@ sub perform {
 
   my $log_desc = $cluster->get_log_description($log);
 
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
-
   if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
     my $groups = get_raw_files( $config, $section, "groups" );
     for my $group_name ( sort keys %{$groups} ) {
       my $filelist   = $self->get_file( $pbs_dir,    "${task_name}_${group_name}", ".filelist", 0 );
       my $outputfile = $self->get_file( $result_dir, "${task_name}_${group_name}", ".count",    0 );
       my $outputname = basename($outputfile);
-
+      
       my @samples = @{ $groups->{$group_name} };
       open( my $fl, ">$filelist" ) or die "Cannot create $filelist";
       for my $sample_name ( sort @samples ) {
@@ -71,14 +70,18 @@ sub perform {
       close($fl);
 
       print $pbs "
-mono $cqstools smallrna_sequence_count_table $option -o $outputname -l $filelist
+if [ ! -s $outputname ]; then
+  mono $cqstools smallrna_sequence_count_table $option -o $outputname -l $filelist
+fi
 ";
     }
+    $self->close_pbs( $pbs, $pbs_file );
   }
   else {
     my $filelist   = $self->get_file( $pbs_dir,    ${task_name}, ".filelist", 0 );
     my $outputfile = $self->get_file( $result_dir, ${task_name}, ".count",    0 );
     my $outputname = basename($outputfile);
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $outputname );
 
     open( my $fl, ">$filelist" ) or die "Cannot create $filelist";
     for my $sample_name ( sort keys %raw_files ) {
@@ -95,8 +98,8 @@ mono $cqstools smallrna_sequence_count_table $option -o $outputname -l $filelist
     print $pbs "
 mono $cqstools smallrna_sequence_count_table $option -o $outputname -l $filelist
 ";
+    $self->close_pbs( $pbs, $pbs_file );
   }
-  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {
