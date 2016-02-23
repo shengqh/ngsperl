@@ -40,9 +40,9 @@ sub perform {
   if ( !( -e $rtemplate ) ) {
     die("rtemplate $rtemplate defined but not exists!");
   }
-  my $rCode       = get_option( $config, $section, "rCode",       "" );
-  my $output_file = get_option( $config, $section, "output_file", "" );
-  my $output_file_ext  = get_option( $config, $section, "output_file_ext", "" );
+  my $rCode           = get_option( $config, $section, "rCode",           "" );
+  my $output_file     = get_option( $config, $section, "output_file",     "" );
+  my $output_file_ext = get_option( $config, $section, "output_file_ext", "" );
 
   my $parametersample_files1 = "";
   if ( has_raw_files( $config, $section, "parameterSampleFile1" ) ) {
@@ -97,27 +97,27 @@ sub perform {
   my $rfile = $result_dir . "/${task_name}.r";
   open( my $rf, ">$rfile" )     or die "Cannot create $rfile";
   open( my $rt, "<$rtemplate" ) or die $!;
-  
-  my $rParameter="outFile='$task_name$output_file'\n";
-  if (defined($parametersample_files1)) {
-  	$rParameter=$rParameter."parSampleFile1='$parametersample_files1'\n";
+
+  my $rParameter = "outFile='$task_name$output_file'\n";
+  if ( defined($parametersample_files1) ) {
+    $rParameter = $rParameter . "parSampleFile1='$parametersample_files1'\n";
   }
-  if (defined($parametersample_files2)) {
-  	$rParameter=$rParameter."parSampleFile2='$parametersample_files2'\n";
+  if ( defined($parametersample_files2) ) {
+    $rParameter = $rParameter . "parSampleFile2='$parametersample_files2'\n";
   }
-  if (defined($parametersample_files3)) {
-  	$rParameter=$rParameter."parSampleFile3='$parametersample_files3'\n";
+  if ( defined($parametersample_files3) ) {
+    $rParameter = $rParameter . "parSampleFile3='$parametersample_files3'\n";
   }
-  if (defined($parameterFile1)) {
-  	$rParameter=$rParameter."parFile1='$parameterFile1'\n";
+  if ( defined($parameterFile1) ) {
+    $rParameter = $rParameter . "parFile1='$parameterFile1'\n";
   }
-  if (defined($parameterFile2)) {
-  	$rParameter=$rParameter."parFile2='$parameterFile2'\n";
+  if ( defined($parameterFile2) ) {
+    $rParameter = $rParameter . "parFile2='$parameterFile2'\n";
   }
-  if (defined($parameterFile3)) {
-  	$rParameter=$rParameter."parFile3='$parameterFile3'\n";
+  if ( defined($parameterFile3) ) {
+    $rParameter = $rParameter . "parFile3='$parameterFile3'\n";
   }
-  
+
   if ( $rParameter ne "" ) {
     print $rf $rParameter;
   }
@@ -138,13 +138,13 @@ sub perform {
   my $log_desc = $cluster->get_log_description($log);
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-  if (defined($option) and $option ne "") {
-  	  print $pbs
-     "R --vanilla --slave -f $rfile --args $option"; 
-#    "R --vanilla --slave -f $rfile --args $task_name$output_file $option $parametersample_files1 $parametersample_files2 $parametersample_files3 $parameterFile1 $parameterFile2 $parameterFile3";
-  } else {
-      print $pbs
-     "R --vanilla --slave -f $rfile"; 
+  if ( defined($option) and $option ne "" ) {
+    print $pbs "R --vanilla --slave -f $rfile --args $option";
+
+    #    "R --vanilla --slave -f $rfile --args $task_name$output_file $option $parametersample_files1 $parametersample_files2 $parametersample_files3 $parameterFile1 $parameterFile2 $parameterFile3";
+  }
+  else {
+    print $pbs "R --vanilla --slave -f $rfile";
   }
   $self->close_pbs( $pbs, $pbs_file );
 }
@@ -154,10 +154,10 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $output_file  = get_option( $config, $section, "output_file", 0 );
-  my $output_file_ext  = get_option( $config, $section, "output_file_ext", "" );
-  my $result       = {};
-  my @result_files = ();
+  my $output_file     = get_option( $config, $section, "output_file",     0 );
+  my $output_file_ext = get_option( $config, $section, "output_file_ext", "" );
+  my $result          = {};
+  my @result_files    = ();
 
   push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext}" );
 
