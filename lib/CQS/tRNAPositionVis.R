@@ -1,7 +1,7 @@
 resultFile<-outFile
-tRNAPositionFileList<-parameterFile1
-groupFileList<-parameterFile2
-tRNASigFileList<-parameterFile3
+tRNAPositionFileList<-parSampleFile1
+groupFileList<-parSampleFile2
+tRNASigFileList<-parSampleFile3
 #resultFile<-commandArgs()[7]
 #tRNAPositionFileList<-commandArgs()[8]
 #groupFileList<-commandArgs()[9]
