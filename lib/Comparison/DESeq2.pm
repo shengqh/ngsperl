@@ -87,7 +87,7 @@ minMedianInGroup<-$minMedianInGroup
 
 comparisons=list(";
   my $first = 0;
-  for my $comparison_name ( @comparisonNames ) {
+  for my $comparison_name ( @comparison_names ) {
     $first++;
 
     my $gNames = $comparisons->{$comparison_name};
