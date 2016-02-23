@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use XML::Simple;
+#use XML::Simple;
 use File::Basename;
 
 #my $resultFolder="/scratch/cqs/zhaos/vickers/20150728_3018-KCV-39-40-3220-KCV-1/";
@@ -21,13 +21,21 @@ my %readsDel;
 #match to small RNA reads
 #my $smallRNAreadsFile=$resultFolder.'/bowtie1_genome_1mm_NTA_smallRNA_count/result/'.$sampleName."/$sampleName.bam.count.mapped.xml";
 foreach my $smallRNAreadsFileEach ( split( ",", $smallRNAreadsFile ) ) {
-	my $smallRNAreadsFileContent = XMLin($smallRNAreadsFileEach);
-	my @mappedReads              = keys %{ ${$smallRNAreadsFileContent}{'queries'}{'query'} };
-	foreach my $temp (@mappedReads) {
-		$temp =~ s/:CLIP_(\w+)?$//;
-		$temp = '@' . $temp;
-		$readsDel{$temp} = '';
-	}
+	open XML, "grep 'query name=' $smallRNAreadsFileEach|" or die "Can't read $smallRNAreadsFileEach\n";
+    print "Reading $smallRNAreadsFileEach\n";
+    while (<XML>) {
+    	my $temp=( split '"', $_ )[1];
+    	$temp =~ s/:CLIP_(\w+)?$//;
+        $temp = '@' . $temp;
+        $readsDel{$temp} = '';
+    }
+#	my $smallRNAreadsFileContent = XMLin($smallRNAreadsFileEach);
+#	my @mappedReads              = keys %{ ${$smallRNAreadsFileContent}{'queries'}{'query'} };
+#	foreach my $temp (@mappedReads) {
+#		$temp =~ s/:CLIP_(\w+)?$//;
+#		$temp = '@' . $temp;
+#		$readsDel{$temp} = '';
+#	}
 }
 
 if ( defined $perfectmatchReadsFile ) {
@@ -52,8 +60,7 @@ print "$readsDelCount reads labeled as maped\n";
 #my $identicalFastqFile=$resultFolder.'/identical/result/'.$sampleName.'_clipped_identical.fastq.gz';
 if ( $identicalFastqFile =~ /\.gz$/ ) {
 	open( FASTQ, "zcat $identicalFastqFile|" ) or die $!;
-}
-else {
+} else {
 	open( FASTQ, $identicalFastqFile ) or die $!;
 }
 

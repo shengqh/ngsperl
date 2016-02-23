@@ -107,7 +107,7 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
       print $pbs "
-perl $perlFile $sample_name$output_ext $option $samples $parameterFile2 $parameterFile3 $parameterFile4 $parameterFile5
+perl $perlFile $final_file $option $samples $parameterFile2 $parameterFile3 $parameterFile4 $parameterFile5
 ";
 
     $self->close_pbs( $pbs, $pbs_file );
