@@ -41,7 +41,7 @@ sub perform {
 
   my $final_file = "${task_name}.FastQC.summary.tsv";
 
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
   print $pbs "
 qcimg2pdf.sh -o $task_name
 mono $cqstools fastqc_summary -i $fastqc_dir -o $final_file 
