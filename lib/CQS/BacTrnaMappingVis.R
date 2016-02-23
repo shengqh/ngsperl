@@ -31,11 +31,13 @@ trnaCountTable<-read.delim(trnaCountTableFile,header=T,row.names=1)
 
 trnaCountTableExpand<-expandCountTableByName(trnaCountTable)
 
-nameSub<-strsplit(row.names(trnaCountTableExpand),"-")
-nameSubSpecies<-sapply(nameSub,function(x) gsub("_tRNA","",x[1]))
+nameSub<-strsplit(row.names(trnaCountTableExpand),"_tRNA-|.trna\\d+-")
+nameSubSpecies<-sapply(nameSub,function(x) x[1])
 nameSubSpecies12<-sapply(strsplit(nameSubSpecies,"_"),function(x) paste0(x[1:2],collapse="_"))
-nameSubtRNA<-sapply(nameSub,function(x) paste0(x[2:3],collapse="-"))
-nameSubtRNA1<-sapply(nameSub,function(x) x[2])
+temp<-sapply(nameSub,function(x) x[2])
+temp<-gsub("-\\d+-\\d+$","",temp)
+nameSubtRNA<-paste0(substr(temp,0,3),"-",substr(temp,nchar(temp)-2,nchar(temp)),sep="")
+nameSubtRNA1<-substr(temp,0,3)
 
 trnaCountTableExpandBySpecies<-aggregateCountTable(trnaCountTableExpand,nameSubSpecies)
 trnaCountTableExpandBySpecies12<-aggregateCountTable(trnaCountTableExpand,nameSubSpecies12)

@@ -12,6 +12,16 @@ databaseLogFile<-parFile2
 library(ggplot2)
 library(reshape)
 
+
+expandCountTableByName<-function(x,sep=";") {
+	namesEach<-strsplit(row.names(x),sep)
+	namesEachUnlist<-unlist(namesEach)
+	namesEachLength<-sapply(namesEach,length)
+	xEach<-x/namesEachLength
+	result<-xEach[rep(seq.int(1,nrow(xEach)), namesEachLength),]
+	row.names(result)<-namesEachUnlist
+	return(result)
+}
 aggregateCountTable<-function(x,group,method=sum) {
 	result<-aggregate(x, list(factor(group)), method)
 	row.names(result)<-result[,1]
@@ -33,9 +43,11 @@ databaseLog<-read.delim(databaseLogFile,header=T,as.is=T)
 
 id2Species<-databaseLog$Species
 names(id2Species)<-databaseLog$Id
-speciesInMappingResult<-id2Species[row.names(mappingResult)]
 
-mappingResult2Species<-aggregateCountTable(mappingResult,speciesInMappingResult)
+mappingResultExpand<-expandCountTableByName(mappingResult)
+speciesInMappingResult<-id2Species[row.names(mappingResultExpand)]
+
+mappingResult2Species<-aggregateCountTable(mappingResultExpand,speciesInMappingResult)
 
 #str(mappingResult2Species)
 write.csv(mappingResult2Species,paste0(resultFile,".toSpecies.csv"))
