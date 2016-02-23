@@ -42,6 +42,7 @@ sub perform {
   }
   my $rCode       = get_option( $config, $section, "rCode",       "" );
   my $output_file = get_option( $config, $section, "output_file", "" );
+  my $output_file_ext  = get_option( $config, $section, "output_file_ext", "" );
 
   my $parametersample_files1 = "";
   if ( has_raw_files( $config, $section, "parameterSampleFile1" ) ) {
@@ -132,7 +133,7 @@ sub perform {
   my $pbs_file   = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name   = basename($pbs_file);
   my $log        = $self->get_log_filename( $log_dir, $task_name );
-  my $final_file = $task_name . $output_file;
+  my $final_file = "${task_name}${output_file}${output_file_ext}";
 
   my $log_desc = $cluster->get_log_description($log);
 
