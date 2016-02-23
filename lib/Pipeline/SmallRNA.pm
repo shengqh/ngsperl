@@ -857,16 +857,12 @@ sub getSmallRNAConfig {
         perform    => 1,
         target_dir => $def->{target_dir} . "/bowtie1_unmapped_sequence_blast",
         option     => "",
-
-        #source_ref => [ "identical_sequence_count_table", ".fasta\$" ],
         source_ref   => [ "bowtie1_unmapped_sequence_count_table", ".fasta\$" ],
-        maximum_size => 100,
-        bin_size     => 10,
         sh_direct    => 0,
         cluster      => $cluster,
         pbs          => {
           "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
+          "nodes"    => "1:ppn=" . $def->{max_thread},
           "walltime" => "10",
           "mem"      => "10gb"
         },
