@@ -3,6 +3,8 @@ trnaCountTableFile<-parFile1
 #resultFile<-commandArgs()[7]
 #trnaCountTableFile<-commandArgs()[8]
 
+library(reshape)
+library(ggplot2)
 expandCountTableByName<-function(x,sep=";") {
 	namesEach<-strsplit(row.names(x),sep)
 	namesEachUnlist<-unlist(namesEach)
@@ -63,3 +65,7 @@ for ( i in 1:ncol(trnaCountTable)) {
 	groupPie(temp[,i])
 	dev.off()
 }
+
+png(paste0(resultFile,".top.png"),width=3000,height=1500,res=300)
+groupBarplot(trnaCountTableExpandByRNA1,groupName="tRNA")
+dev.off()

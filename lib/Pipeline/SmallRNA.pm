@@ -257,7 +257,7 @@ sub getSmallRNAConfig {
         target_dir               => $def->{target_dir} . "/tRNA_PositionVis",
         rtemplate                => "tRNAPositionVis.R",
         output_file              => ".tRNAPositionVis",
-        output_file_ext          => "*",
+        output_file_ext          => ".alltRNAPosition.png",
         parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".tRNA.position\$" ],
         parameterSampleFile2     => $trna_vis_groups,
         parameterSampleFile3_ref => $trna_sig_result,
@@ -446,7 +446,7 @@ sub getSmallRNAConfig {
         target_dir         => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
         rtemplate          => "BacTrnaMappingVis.R",
         output_file        => "",
-        output_file_ext    => "*",
+        output_file_ext    => ".top.png",
         parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".count\$" ],
         sh_direct          => 1,
         pbs                => {

@@ -1,7 +1,7 @@
 resultFile<-outFile
-tRNAPositionFileList<-parSampleFile1
-groupFileList<-parSampleFile2
-tRNASigFileList<-parSampleFile3
+tRNAPositionFileList<-parFile1
+groupFileList<-parameterFile1
+tRNASigFileList<-parameterFile2
 #resultFile<-commandArgs()[7]
 #tRNAPositionFileList<-commandArgs()[8]
 #groupFileList<-commandArgs()[9]
@@ -89,7 +89,7 @@ positionRawAllSamplestRNAMeanSample3<-positionRawAllSamplestRNAMeanSample[temp,]
 write.csv(positionRawAllSamplestRNAMeanSample3,paste0(resultFile,".all3tRNAPosition.csv"))
 
 m <- ggplot(positionRawAllSamplestRNAMeanSample3, aes(x = Position,y=CountPercentage,fill=tRNA))
-pdf(paste0(resultFile,".alltRNAPosition.pdf"),width=6,height=6)
+png(paste0(resultFile,".alltRNAPosition.png"),width=3000,height=3000,res=300)
 m + geom_bar(stat="identity")+facet_grid(Group ~ .) +
 		theme(legend.key.size = unit(0.4, "cm"))+
 		ylab("cumulative read fraction (read counts/total reads)")

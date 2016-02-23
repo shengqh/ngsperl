@@ -36,6 +36,26 @@ groupPie<-function(x,maxCategory=10) {
 	pie(nameToCountForFigure,col=rainbow(length(nameToCountForFigure)),main=paste0("Mapped Reads: ",as.integer(sum(nameToCountForFigure))))
 }
 
+groupBarplot<-function(x,maxCategory=5,groupName="Species") {
+	if (nrow(x)>maxCategory) {
+		temp<-apply(x,2,function(y) rev(order(y))[1:maxCategory])
+		mappingResult2SpeciesSelected<-x[unique(as.vector(temp)),]
+		mappingResult2SpeciesSelected<-rbind(mappingResult2SpeciesSelected,Other=colSums(x[-unique(as.vector(temp)),,drop=FALSE]))
+	} else {
+		mappingResult2SpeciesSelected<-x
+	}
+	
+	mappingResult2SpeciesSelectedForFigure<-mappingResult2SpeciesSelected
+	mappingResult2SpeciesSelectedForFigure$Groups<-row.names(mappingResult2SpeciesSelected)
+	mappingResult2SpeciesSelectedForFigure<-melt(mappingResult2SpeciesSelectedForFigure)
+	colnames(mappingResult2SpeciesSelectedForFigure)<-c("Groups","Sample","Reads")
+	
+	ggplot(mappingResult2SpeciesSelectedForFigure,aes(x=Sample,y=Reads,fill=Groups))+
+			geom_bar(stat="identity")+
+			guides(fill= guide_legend(title = groupName))+
+			theme(axis.text.x = element_text(angle = 90, hjust = 1))
+}
+
 
 mappingResult<-read.delim(mappingResultFile,header=T,row.names=1)
 databaseLog<-read.delim(databaseLogFile,header=T,as.is=T)
@@ -61,22 +81,8 @@ for (i in 1:ncol(mappingResult2Species)) {
 }
 
 #find the most significant row and combine the result
-sigNum<-5
-if (nrow(mappingResult2Species)>sigNum) {
-	temp<-apply(mappingResult2Species,2,function(x) rev(order(x))[1:sigNum])
-	mappingResult2SpeciesSelected<-mappingResult2Species[unique(as.vector(temp)),]
-	mappingResult2SpeciesSelected<-rbind(mappingResult2SpeciesSelected,Other=colSums(mappingResult2Species[-unique(as.vector(temp)),,drop=FALSE]))
-} else {
-	mappingResult2SpeciesSelected<-mappingResult2Species
-}
-
-mappingResult2SpeciesSelectedForFigure<-mappingResult2SpeciesSelected
-mappingResult2SpeciesSelectedForFigure$Species<-row.names(mappingResult2SpeciesSelected)
-mappingResult2SpeciesSelectedForFigure<-melt(mappingResult2SpeciesSelectedForFigure)
-colnames(mappingResult2SpeciesSelectedForFigure)<-c("Species","Sample","Reads")
-
-png(paste0(resultFile,".top",sigNum,".png"),width=3000,height=1500,res=300)
-ggplot(mappingResult2SpeciesSelectedForFigure,aes(x=Sample,y=Reads,fill=Species))+geom_bar(stat="identity")+theme(axis.text.x = element_text(angle = 90, hjust = 1))
+png(paste0(resultFile,".top.png"),width=3000,height=1500,res=300)
+groupBarplot(mappingResult2Species,groupName="Species")
 dev.off()
 
 
