@@ -102,29 +102,20 @@ rm ${f2}.fifo";
 
       my $log_desc = $cluster->get_log_description($log);
 
-      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
+      my $final_file = $samonly?$sam_file:$bam_file;
+      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+
+        print $pbs "
+$bowtie1_aln_command
+";
 
       if ($samonly) {
         print $pbs "
-if [ -s $sam_file ]; then
-  echo job has already been done. if you want to do again, delete $sam_file and submit job again.
-  exit 0
-fi
-
-$bowtie1_aln_command
-
 $mappedonlycmd
 ";
       }
       else {
         print $pbs "
-if [ -s $bam_file ]; then
-  echo job has already been done. if you want to do again, delete $bam_file and submit job again.
-  exit 0
-fi
-
-$bowtie1_aln_command
-
 if [ -s $bowtiesam ]; then
 ";
         if ($sortbam) {
