@@ -32,7 +32,9 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $comparisons = get_raw_files( $config, $section );
-  my $totalPair = scalar( keys %{$comparisons} );
+  my @comparison_names = sort keys %{$comparisons};
+  
+  my $totalPair = scalar( @comparison_names );
   if ( 0 == $totalPair ) {
     die "No pair defined!";
   }
@@ -85,7 +87,7 @@ minMedianInGroup<-$minMedianInGroup
 
 comparisons=list(";
   my $first = 0;
-  for my $comparison_name ( sort keys %{$comparisons} ) {
+  for my $comparison_name ( @comparisonNames ) {
     $first++;
 
     my $gNames = $comparisons->{$comparison_name};
@@ -171,7 +173,8 @@ comparisons=list(";
 
   my $log_desc = $cluster->get_log_description($log);
 
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+  my $final_file = $comparison_names[0] . "_min${minMedianInGroup}_DESeq2_sig.csv";
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
   print $pbs "R --vanilla -f $rfile \n";
 
