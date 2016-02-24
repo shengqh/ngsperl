@@ -28,6 +28,26 @@ groupPie<-function(x,maxCategory=10) {
 	pie(nameToCountForFigure,col=rainbow(length(nameToCountForFigure)),main=paste0("Mapped Reads: ",as.integer(sum(nameToCountForFigure))))
 }
 
+groupBarplot<-function(x,maxCategory=5,groupName="Species") {
+	if (nrow(x)>maxCategory) {
+		temp<-apply(x,2,function(y) rev(order(y))[1:maxCategory])
+		mappingResult2SpeciesSelected<-x[unique(as.vector(temp)),]
+		mappingResult2SpeciesSelected<-rbind(mappingResult2SpeciesSelected,Other=colSums(x[-unique(as.vector(temp)),,drop=FALSE]))
+	} else {
+		mappingResult2SpeciesSelected<-x
+	}
+	
+	mappingResult2SpeciesSelectedForFigure<-mappingResult2SpeciesSelected
+	mappingResult2SpeciesSelectedForFigure$Groups<-row.names(mappingResult2SpeciesSelected)
+	mappingResult2SpeciesSelectedForFigure<-melt(mappingResult2SpeciesSelectedForFigure)
+	colnames(mappingResult2SpeciesSelectedForFigure)<-c("Groups","Sample","Reads")
+	
+	ggplot(mappingResult2SpeciesSelectedForFigure,aes(x=Sample,y=Reads,fill=Groups))+
+			geom_bar(stat="identity")+
+			guides(fill= guide_legend(title = groupName))+
+			theme(axis.text.x = element_text(angle = 90, hjust = 1))
+}
+
 
 trnaCountTable<-read.delim(trnaCountTableFile,header=T,row.names=1)
 
