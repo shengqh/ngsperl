@@ -35,6 +35,7 @@ sub getSmallRNAConfig {
   my $search_unmapped_reads = ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
   my $blast_unmapped_reads  = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
   my $do_comparison         = defined $def->{pairs};
+  my $groups         = defined $def->{groups};
 
   if ($do_comparison) {
     $config->{top100Reads_deseq2} = {
@@ -705,6 +706,7 @@ sub getSmallRNAConfig {
         rtemplate          => "bacteriaGroupMappingVis.R",
         output_file        => ".group2Mapping.Result",
         output_file_ext    => ".toSpecies.csv",
+        parameterSampleFile1 => $groups,
         parameterFile1_ref => [ "bowtie1_bacteria_group2_pm_table", ".count\$" ],
         parameterFile2     => $def->{bacteria_group2_log},
         sh_direct          => 1,
