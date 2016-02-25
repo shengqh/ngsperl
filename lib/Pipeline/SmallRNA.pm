@@ -35,7 +35,7 @@ sub getSmallRNAConfig {
   my $search_unmapped_reads = ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
   my $blast_unmapped_reads  = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
   my $do_comparison         = defined $def->{pairs};
-  my $groups         = defined $def->{groups};
+  my $groups         = $def->{groups};
 
   if ($do_comparison) {
     $config->{top100Reads_deseq2} = {
