@@ -21,12 +21,12 @@ aggregateCountTable<-function(x,group,method=sum) {
 	result<-result[,-1]
 	return(result)
 }
-groupPie<-function(x,maxCategory=10) {
+groupPie<-function(x,maxCategory=10,main="") {
 	nameToCountForFigure<-na.omit(rev(sort(x)))
 	if (length(nameToCountForFigure)>maxCategory) {
 		nameToCountForFigure<-c(nameToCountForFigure[1:(maxCategory-1)],Other=sum(nameToCountForFigure[-(1:(maxCategory-1))]))
 	}
-	pie(nameToCountForFigure,col=rainbow(length(nameToCountForFigure)),main=paste0("Mapped Reads: ",as.integer(sum(nameToCountForFigure))))
+	pie(nameToCountForFigure,col=rainbow(length(nameToCountForFigure)),main=main)
 }
 
 groupBarplot<-function(x,maxCategory=5,groupName="Species") {
@@ -49,9 +49,25 @@ groupBarplot<-function(x,maxCategory=5,groupName="Species") {
 			theme(axis.text.x = element_text(angle = 90, hjust = 1))
 }
 
+mergeTableBySampleGroup<-function(x,sampleToGroup) {
+	xRatio<-t(t(x)/colSums(x))
+	groupLength<-length(unique(sampleToGroup[,2]))
+	xRatioGroupMean<-matrix(NA,ncol=groupLength,nrow=nrow(x))
+	colnames(xRatioGroupMean)<-unique(sampleToGroup[,2])
+	row.names(xRatioGroupMean)<-row.names(x)
+	for (i in 1:groupLength) {
+		currentSample<-sampleToGroup[which(sampleToGroup[,2]==colnames(xRatioGroupMean)[i]),1]
+		xRatioGroupMean[,i]<-rowMeans(xRatio[,currentSample])
+	}
+	return(xRatioGroupMean)
+}
 
 trnaCountTable<-read.delim(trnaCountTableFile,header=T,row.names=1)
-sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
+if (groupFileList!="") {
+	sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
+	#keep the groups with samples in the count table
+	sampleToGroup<-sampleToGroup[which(sampleToGroup[,1] %in% colnames(trnaCountTable)),]
+}
 
 trnaCountTableExpand<-expandCountTableByName(trnaCountTable)
 
@@ -67,7 +83,6 @@ trnaCountTableExpandBySpecies<-aggregateCountTable(trnaCountTableExpand,nameSubS
 trnaCountTableExpandBySpecies12<-aggregateCountTable(trnaCountTableExpand,nameSubSpecies12)
 trnaCountTableExpandByRNA<-aggregateCountTable(trnaCountTableExpand,nameSubtRNA)
 trnaCountTableExpandByRNA1<-aggregateCountTable(trnaCountTableExpand,nameSubtRNA1)
-
 
 for ( i in 1:ncol(trnaCountTable)) {
 	png(paste0(resultFile,"_",colnames(trnaCountTable)[i],".tRNA.png"),height=3000,width=3000,res=300)
@@ -86,6 +101,33 @@ for ( i in 1:ncol(trnaCountTable)) {
 	temp<-as.matrix(trnaCountTableExpandByRNA1)
 	groupPie(temp[,i])
 	dev.off()
+}
+
+if (groupFileList!="") {
+	trnaCountTableExpandBySpeciesBySampleGroup<-mergeTableBySampleGroup(trnaCountTableExpandBySpecies,sampleToGroup)
+	trnaCountTableExpandBySpecies12BySampleGroup<-mergeTableBySampleGroup(trnaCountTableExpandBySpecies12,sampleToGroup)
+	trnaCountTableExpandByRNABySampleGroup<-mergeTableBySampleGroup(trnaCountTableExpandByRNA,sampleToGroup)
+	trnaCountTableExpandByRNA1BySampleGroup<-mergeTableBySampleGroup(trnaCountTableExpandByRNA1,sampleToGroup)
+	
+	groupNames<-colnames(trnaCountTableExpandBySpeciesBySampleGroup)
+	for ( i in 1:length(groupNames)) {
+		png(paste0(resultFile,"_",groupNames[i],".Group.tRNA.png"),height=3000,width=3000,res=300)
+		par(mfrow=c(2,2))
+		par(mar=c(2,2,2,2))
+		
+		temp<-as.matrix(trnaCountTableExpandBySpeciesBySampleGroup)
+		groupPie(temp[,i],main=paste0("Group: ",groupNames[i]))
+		
+		temp<-as.matrix(trnaCountTableExpandBySpecies12BySampleGroup)
+		groupPie(temp[,i],main=paste0("Group: ",groupNames[i]))
+		
+		temp<-as.matrix(trnaCountTableExpandByRNABySampleGroup)
+		groupPie(temp[,i],main=paste0("Group: ",groupNames[i]))
+		
+		temp<-as.matrix(trnaCountTableExpandByRNA1BySampleGroup)
+		groupPie(temp[,i],main=paste0("Group: ",groupNames[i]))
+		dev.off()
+	}
 }
 
 png(paste0(resultFile,".top.png"),width=3000,height=1500,res=300)
