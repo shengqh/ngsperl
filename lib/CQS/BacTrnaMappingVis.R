@@ -1,5 +1,6 @@
 resultFile<-outFile
 trnaCountTableFile<-parFile1
+groupFileList<-parSampleFile1
 #resultFile<-commandArgs()[7]
 #trnaCountTableFile<-commandArgs()[8]
 
@@ -50,6 +51,7 @@ groupBarplot<-function(x,maxCategory=5,groupName="Species") {
 
 
 trnaCountTable<-read.delim(trnaCountTableFile,header=T,row.names=1)
+sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
 
 trnaCountTableExpand<-expandCountTableByName(trnaCountTable)
 

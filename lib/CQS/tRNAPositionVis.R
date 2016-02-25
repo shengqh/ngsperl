@@ -1,7 +1,7 @@
 resultFile<-outFile
-tRNAPositionFileList<-parFile1
-groupFileList<-parameterFile1
-tRNASigFileList<-parameterFile2
+tRNAPositionFileList<-parSampleFile1
+groupFileList<-parSampleFile2
+tRNASigFileList<-parSampleFile3
 #resultFile<-commandArgs()[7]
 #tRNAPositionFileList<-commandArgs()[8]
 #groupFileList<-commandArgs()[9]
@@ -116,7 +116,7 @@ if (is.na(tRNASigFileList)) {
 	tRNASigFileName<-".highesttRNAPosition.pdf"
 
 	temp<-positionRawAllSamplesMeanSample[which(positionRawAllSamplesMeanSample$Feature %in% tRNASigNames),]
-	write.csv(positionRawAllSamplesMeanSample,paste0(resultFile,"tRNAPositionEach.csv"))
+	write.csv(positionRawAllSamplesMeanSample,paste0(resultFile,".tRNAPositionEach.csv"))
 	m <- ggplot(temp, aes(x = Position,y=CountPercentage))
 	pdf(paste0(resultFile,tRNASigFileName),height=15,width=7)
 	print(
