@@ -101,6 +101,10 @@ sub initializeDefaultOptions {
   if ( !defined $def->{has_NTA} ) {
     $def->{has_NTA} = 1;
   }
+  
+  if(!defined $def->{mirbase_count_option}){
+    $def->{mirbase_count_option} = "";
+  }
 
   return $def;
 }
