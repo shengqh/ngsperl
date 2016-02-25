@@ -77,7 +77,7 @@ databaseLog<-read.delim(databaseLogFile,header=T,as.is=T)
 if (groupFileList!="") {
 	sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
 	#keep the groups with samples in the count table
-	sampleToGroup<-sampleToGroup[which(sampleToGroup[,1] %in% colnames(trnaCountTable)),]
+	sampleToGroup<-sampleToGroup[which(sampleToGroup[,1] %in% colnames(mappingResult)),]
 }
 
 id2Species<-databaseLog$Species
@@ -102,11 +102,12 @@ for (i in 1:ncol(mappingResult2Species)) {
 if (groupFileList!="") {
 	mappingResult2SpeciesBySampleGroup<-mergeTableBySampleGroup(mappingResult2Species,sampleToGroup)
 	
-	for (i in 1:ncol(mappingResult2SpeciesBySampleGroup)) {
-		png(paste0(resultFile,"_",colnames(mappingResult2SpeciesBySampleGroup)[i],".Group.Species.png"),width=2000,height=1500,res=300)
+	groupNames<-colnames(mappingResult2SpeciesBySampleGroup)
+	for (i in 1:length(groupNames)) {
+		png(paste0(resultFile,"_",groupNames[i],".Group.Species.png"),width=2000,height=1500,res=300)
 		par(mar=c(2,9,2,9))
 		temp<-as.matrix(mappingResult2SpeciesBySampleGroup)
-		groupPie(temp[,i],main=paste0("Group: ",colnames(mappingResult2SpeciesBySampleGroup)[i]))
+		groupPie(temp[,i],main=paste0("Group: ",groupNames[i]))
 		dev.off()
 	}
 }
