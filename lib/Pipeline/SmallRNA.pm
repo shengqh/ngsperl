@@ -448,6 +448,7 @@ sub getSmallRNAConfig {
         rtemplate          => "BacTrnaMappingVis.R",
         output_file        => "",
         output_file_ext    => ".top.png",
+        parameterSampleFile1 => $groups,
         parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".count\$" ],
         sh_direct          => 1,
         pbs                => {
