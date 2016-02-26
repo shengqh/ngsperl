@@ -129,7 +129,7 @@ sub getSmallRNAConfig {
         perform              => 1,
         target_dir           => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_table",
         rtemplate            => "countTableCorrelation.R",
-        output_file          => ".1",
+        output_file          => "parameterSampleFile1",
         output_file_ext      => ".Correlation.png",
         parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".count\$" ],
         sh_direct            => 1,
