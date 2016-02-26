@@ -478,6 +478,7 @@ sub getSmallRNAConfig {
         option        => $def->{bowtie1_option_pm},
         class         => 'Alignment::Bowtie1'
       },
+
       bowtie1_rRNAL_pm_sequence_table => {
         pbs => {
           'email'    => $def->{email},
@@ -494,42 +495,6 @@ sub getSmallRNAConfig {
         cqs_tools  => $def->{cqstools},
         option     => '',
         class      => 'CQS::BAMSequenceCountTable',
-        prefix     => 'rRNAL_pm_'
-      },
-
-      bowtie1_rRNAL_pm_count => {
-        pbs => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
-        },
-        cluster      => $cluster,
-        sh_direct    => 1,
-        perform      => 1,
-        target_dir   => $def->{target_dir} . "/bowtie1_rRNAL_pm_count",
-        option       => $def->{smallrnacount_option},
-        source_ref   => 'bowtie1_rRNAL_pm',
-        cqs_tools    => $def->{cqstools},
-        seqcount_ref => [ "identical", ".dupcount\$" ],
-        'class'      => 'CQS::CQSChromosomeCount'
-      },
-
-      bowtie1_rRNAL_pm_table => {
-        pbs => {
-          'email'    => $def->{email},
-          'walltime' => '10',
-          'mem'      => '10gb',
-          'nodes'    => '1:ppn=1'
-        },
-        cluster    => $cluster,
-        sh_direct  => 1,
-        perform    => 1,
-        target_dir => $def->{target_dir} . "/bowtie1_rRNAL_pm_table",
-        source_ref => [ 'bowtie1_rRNAL_pm_count', '.xml' ],
-        cqs_tools  => $def->{cqstools},
-        option     => '',
-        class      => 'CQS::CQSChromosomeTable',
         prefix     => 'rRNAL_pm_'
       },
 
@@ -553,25 +518,7 @@ sub getSmallRNAConfig {
         class         => 'Alignment::Bowtie1'
       },
 
-      bowtie1_rRNAS_pm_count => {
-        pbs => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
-        },
-        cluster      => $cluster,
-        sh_direct    => 1,
-        perform      => 1,
-        target_dir   => $def->{target_dir} . "/bowtie1_rRNAS_pm_count",
-        option       => $def->{smallrnacount_option},
-        source_ref   => 'bowtie1_rRNAS_pm',
-        cqs_tools    => $def->{cqstools},
-        seqcount_ref => [ "identical", ".dupcount\$" ],
-        'class'      => 'CQS::CQSChromosomeCount'
-      },
-
-      bowtie1_rRNAS_pm_table => {
+      bowtie1_rRNAS_pm_sequence_table => {
         pbs => {
           'email'    => $def->{email},
           'walltime' => '10',
@@ -581,11 +528,12 @@ sub getSmallRNAConfig {
         cluster    => $cluster,
         sh_direct  => 1,
         perform    => 1,
-        target_dir => $def->{target_dir} . "/bowtie1_rRNAS_pm_table",
-        source_ref => [ 'bowtie1_rRNAS_pm_count', '.xml' ],
+        target_dir => $def->{target_dir} . "/bowtie1_rRNAS_pm_sequence_table",
+        source_ref   => 'bowtie1_rRNAS_pm',
+        seqcount_ref => [ "identical", ".dupcount\$" ],
         cqs_tools  => $def->{cqstools},
         option     => '',
-        class      => 'CQS::CQSChromosomeTable',
+        class      => 'CQS::BAMSequenceCountTable',
         prefix     => 'rRNAS_pm_'
       },
 
