@@ -124,6 +124,22 @@ sub getSmallRNAConfig {
           "mem"      => "10gb"
         },
       },
+      bowtie1_genome_1mm_NTA_smallRNA_table_vis => {
+        class                => "CQS::UniqueR",
+        perform              => 1,
+        target_dir           => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_table",
+        rtemplate            => "countTableCorrelation.R",
+        output_file          => ".1",
+        output_file_ext      => ".Correlation.png",
+        parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".count\$" ],
+        sh_direct            => 1,
+        pbs                  => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      },
       bowtie1_genome_1mm_NTA_smallRNA_category => {
         class      => "CQS::SmallRNACategory",
         perform    => 1,

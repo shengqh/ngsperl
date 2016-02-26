@@ -62,7 +62,7 @@ mergeTableBySampleGroup<-function(x,sampleToGroup) {
 	return(xRatioGroupMean)
 }
 
-trnaCountTable<-read.delim(trnaCountTableFile,header=T,row.names=1)
+trnaCountTable<-read.delim(trnaCountTableFile,header=T,row.names=1,check.names=FALSE)
 if (groupFileList!="") {
 	sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
 	#keep the groups with samples in the count table
