@@ -45,6 +45,7 @@ if ( defined $perfectmatchReadsFile ) {
     #perfect match reads
     #my $perfectmatchReadsFile=$resultFolder.'/bowtie1_genome_1mm_NTA_pmnames/result/'.$sampleName.'.pmnames';
     open READ, "<$perfectmatchReadsFileEach" or die $!;
+    print "Reading $perfectmatchReadsFileEach\n";
     while (<READ>) {
       chomp;
       if (/_$/) {    #
