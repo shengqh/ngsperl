@@ -100,7 +100,7 @@ sub perform {
 
     my $final_file="";
     my $output_file_r="";
-	if ( $output_file == "parameterSampleFile1" or $output_file == "parameterSampleFile2" or $output_file == "parameterSampleFile3" ) {
+	if ( $output_file eq "parameterSampleFile1" or $output_file eq "parameterSampleFile2" or $output_file eq "parameterSampleFile3" ) {
 	    if ( has_raw_files( $config, $section, $output_file ) ) {
             my %temp = %{ get_raw_files( $config, $section, $output_file ) };
             foreach my $sample_name ( keys %temp ) {
@@ -108,6 +108,8 @@ sub perform {
                     $final_file = "${subSampleFile}${output_file_ext}";
                 }
             }
+        } else {
+            die "output_file defined as ".$output_file.", but ".$output_file." not in configure\n";
         }
 	}
 	else {
@@ -175,7 +177,7 @@ sub result {
 	my $result          = {};
 	my @result_files    = ();
 
-	if ( $output_file == "parameterSampleFile1" or $output_file == "parameterSampleFile2" or $output_file == "parameterSampleFile3" ) {
+	if ( $output_file eq "parameterSampleFile1" or $output_file eq "parameterSampleFile2" or $output_file eq "parameterSampleFile3" ) {
 		if ( has_raw_files( $config, $section, $output_file ) ) {
 			my %temp = %{ get_raw_files( $config, $section, $output_file ) };
 			foreach my $sample_name ( keys %temp ) {
@@ -183,6 +185,8 @@ sub result {
 					push( @result_files, "${result_dir}/${subSampleFile}${output_file_ext}" );
 				}
 			}
+		} else {
+			die "output_file defined as ".$output_file.", but ".$output_file." not in configure\n";
 		}
 	}
 	else {
