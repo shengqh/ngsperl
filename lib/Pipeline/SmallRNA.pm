@@ -630,9 +630,10 @@ sub getSmallRNAConfig {
         class              => "CQS::UniqueR",
         perform            => 1,
         target_dir         => $def->{target_dir} . "/bowtie1_bacteria_group1_pm_table",
-        rtemplate          => "group1MappingVis.R",
+        rtemplate          => "bacteriaGroupMappingVis.R",
         output_file        => ".group1Mapping.Result",
-        output_file_ext    => ".toGenome.csv",
+        output_file_ext    => ".toSpecies.csv",
+        parameterSampleFile1 => $groups,
         parameterFile1_ref => [ "bowtie1_bacteria_group1_pm_table", ".count\$" ],
         parameterFile2     => $def->{bacteria_group1_log},
         sh_direct          => 1,
@@ -778,9 +779,10 @@ sub getSmallRNAConfig {
         class              => "CQS::UniqueR",
         perform            => 1,
         target_dir         => $def->{target_dir} . "/bowtie1_fungus_group4_pm_table",
-        rtemplate          => "group4MappingVis.R",
+        rtemplate          => "bacteriaGroupMappingVis.R",
         output_file        => ".group4Mapping.Result",
         output_file_ext    => ".toSpecies.csv",
+        parameterSampleFile1 => $groups,
         parameterFile1_ref => [ "bowtie1_fungus_group4_pm_table", ".count\$" ],
         parameterFile2     => $def->{fungus_group4_log},
         sh_direct          => 1,
@@ -813,6 +815,57 @@ sub getSmallRNAConfig {
       "bowtie1_tRNA_pm_count",            ".xml", "bowtie1_rRNAL_pm_count",           ".xml", "bowtie1_rRNAS_pm_count",         ".xml",
       "bowtie1_bacteria_group1_pm_count", ".xml", "bowtie1_bacteria_group2_pm_count", ".xml", "bowtie1_fungus_group4_pm_count", ".xml"
       );
+
+	#do unmapped reads DESeq2
+    if ($do_comparison) {
+      my $unmapped_comparison = {
+
+        #DESeq2
+        group1_deseq2 => {
+          class                => "Comparison::DESeq2",
+          perform              => 1,
+          target_dir           => $def->{target_dir} . "/bacteria_group1_deseq2",
+          option               => "",
+          source_ref           => "pairs",
+          groups_ref           => "groups",
+          countfile_ref        => [ "bowtie1_bacteria_group1_pm_table_vis", ".toSpecies.csv\$" ],
+          sh_direct            => 1,
+          show_DE_gene_cluster => 1,
+          pvalue               => 0.05,
+          fold_change          => 1.5,
+          min_median_read      => 5,
+          pbs                  => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "10",
+            "mem"      => "10gb"
+          },
+        },
+        group2_deseq2 => {
+          class                => "Comparison::DESeq2",
+          perform              => 1,
+          target_dir           => $def->{target_dir} . "/bacteria_group2_deseq2",
+          option               => "",
+          source_ref           => "pairs",
+          groups_ref           => "groups",
+          countfile_ref        => [ "bowtie1_bacteria_group2_pm_table_vis", ".toSpecies.csv\$" ],
+          sh_direct            => 1,
+          show_DE_gene_cluster => 1,
+          pvalue               => 0.05,
+          fold_change          => 1.5,
+          min_median_read      => 5,
+          pbs                  => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "10",
+            "mem"      => "10gb"
+          },
+        },
+      };
+
+      $config = merge( $config, $unmapped_comparison );
+      push @summary, ( "group1_deseq2", "group2_deseq2");
+    }
 
   }
 
