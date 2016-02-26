@@ -55,7 +55,7 @@ sub perform {
   close($fl);
 
   print $pbs "
-mono $cqstools sequence_count_table $option -o $outputname -l $filelist
+mono $cqstools bam_sequence_count_table $option -o $outputname -l $filelist
 ";
   $self->close_pbs( $pbs, $pbs_file );
 }
