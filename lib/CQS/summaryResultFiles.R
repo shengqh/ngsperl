@@ -21,19 +21,30 @@ file.size1<-function(x) {
 		return(file.size(x))
 	}
 }
-
+addUnitToSize<-function(x) {
+	xCut<-cut(x,c(-Inf,1024,1024^2,1024^3,Inf))
+	reSizeFactor<-c(1,1024,1024^2,1024^3)
+	reSizeUnit<-c("B","K","M","G")
+	result<-x/reSizeFactor[as.integer(xCut)]
+	result<-paste0(round(result,0),reSizeUnit[as.integer(xCut)])
+	result[is.na(x)]<-NA
+	
+	return(result)
+}
 
 fileList<-read.delim(fileListName,as.is=T,header=T)
 temp<-strsplit(fileList$FileList,",")
-fileSize<-sapply(temp,function(x) file.size1(x)/1048576)
-fileSizeTotal<-sapply(fileSize,sum,na.rm=T)
-fileExistPercent<-sapply(fileSize,function(x) length(which(x>0.0001&!is.na(x)))/length(x))
+fileSizeRaw<-lapply(temp,function(x) file.size1(x))
+fileSize<-lapply(fileSizeRaw,addUnitToSize)
+fileSizeTotalRaw<-sapply(fileSizeRaw,sum,na.rm=T)
+fileSizeTotal<-addUnitToSize(fileSizeTotalRaw)
+fileExistPercent<-sapply(fileSizeRaw,function(x) length(which(x>100&!is.na(x)))/length(x))
 Result<-rep("FAIL",length(fileExistPercent))
 Result[which(fileExistPercent==1)]<-"PASS"
 Result[which(fileExistPercent>0 & fileExistPercent<1)]<-"WARN"
-fileSize<-sapply(fileSize,function(x) paste(as.integer(x),collapse=","))
+fileSize<-sapply(fileSize,function(x) paste(x,collapse=","))
 
-ResultOut<-data.frame(fileList,fileSize=fileSize,fileSizeTotal=fileSizeTotal,fileExistPercent=fileExistPercent,Result=Result,stringsAsFactors=FALSE)
+ResultOut<-data.frame(fileList,FileSize=fileSize,FileSizeTotalRaw=fileSizeTotalRaw,FileSizeTotal=fileSizeTotal,FileExistPercent=fileExistPercent,Result=Result,stringsAsFactors=FALSE)
 write.csv(ResultOut,paste0(fileListName,".check.csv"))
 
 for (step in unique(ResultOut$StepName)) {
@@ -63,9 +74,16 @@ for (step in unique(ResultOut$StepName)) {
 	print(g)
 	dev.off()
 	
-	png(file=paste0(fileListName,"_",step,".fileSize.png"),height=height, width=width, res=300)
-	g<-ggplot(tableForPlot, aes(SampleName, TaskName))+
-			geom_tile(data=tableForPlot, aes(fill=fileSizeTotal), color="white") +
+	temp<-aggregate(tableForPlot$FileSizeTotalRaw, list(factor(tableForPlot$TaskName)), median,na.rm=T)
+	taskFileSizeMedian<-temp[,2]
+	names(taskFileSizeMedian)<-temp[,1]
+	
+	tableForPlot$Task<-paste0(tableForPlot$TaskName," (",addUnitToSize(taskFileSizeMedian)[tableForPlot$TaskName],")")
+	tableForPlot$RelativeSize<-tableForPlot$FileSizeTotalRaw/taskFileSizeMedian[tableForPlot$TaskName]
+	
+	png(file=paste0(fileListName,"_",step,".RelativeFileSize.png"),height=height, width=width, res=300)
+	g<-ggplot(tableForPlot, aes(SampleName, Task))+
+			geom_tile(data=tableForPlot, aes(fill=RelativeSize), color="white") +
 			theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.5, face="bold"),
 					axis.text.y = element_text(size=11, face="bold")) +
 			coord_equal()
