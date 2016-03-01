@@ -1,6 +1,7 @@
 NGSPERL : A semi-automated framework for large scale next generation sequencing data analysis
 ==========
 * [Introduction](#Introduction)
+* [Citation](#Citation)
 * [Download and install](#download)
 * [Framework](#framework)
 * [Quick Start](#example)
@@ -9,6 +10,10 @@ NGSPERL : A semi-automated framework for large scale next generation sequencing 
 <a name="Introduction"/>
 # Introduction #
 High-throughput sequencing technologies have been widely used in the research field, especially in cancer biology. With the huge amounts of sequencing data being generated, data analysis has become the bottle-neck of the research procedure. A lot of tools have been developed for different data types and different data analysis purposes while new tools are still being published every month. A software framework which not only supports large scale data analysis using the existing pipeline on cluster but can also easily replace/extend old modules in the pipeline will help solve the problem. We have designed and implemented NGSPERL, a semi-automated module-based framework, for high-throughput sequencing data analysis. Three major analysis pipelines with multiple tasks have been developed for RNA sequencing, exome sequencing, and small RNA sequencing data. The pipelines cover the tasks from raw data pre-processing, quality control, mapping, and comparison to report. Each task in the pipelines was developed as module. The module uses the output from the previous task in the pipeline as the input parameter to generate the corresponding portable batch system (PBS) scripts with other user-defined parameters. The module with such a trace-back design can be easily plugged into or unplugged from existing pipelines. The PBS scripts generated at each task can be submitted to cluster or run directly based on user choice. Multiple tasks can also be combined together as a single task to simplify the data analysis. Such a flexible framework will significantly accelerate the speed of large scale sequencing data analysis.
+
+<a name="Citation"/>
+#Citation
+Sheng Q, Zhao S, Guo M, Shyr Y: NGSPERL: a semi-automated framework for large scale next generation sequencing data analysis. International Journal of Computational Biology and Drug Design 2015, 8(3):203-211.
 
 <a name="download"/>
 # Download and install #
