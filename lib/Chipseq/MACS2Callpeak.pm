@@ -39,6 +39,8 @@ sub perform {
     %control_files = %{ $self->get_current_raw_files( $config, $section, "controls" ) };
   }
 
+  my $peak_name = ( $option =~ /--broad/ ) ? "broadPeak" : "narrowPeak";
+
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
@@ -66,7 +68,7 @@ sub perform {
 
     print $pbs "   
 macs2 callpeak $option $treatment $control -n $sample_name
-cut -f1-6 ${sample_name}_peaks.narrowPeak > ${sample_name}_peaks.narrowPeak.bed
+cut -f1-6 ${sample_name}_peaks.${peak_name} > ${sample_name}_peaks.${peak_name}.bed
 ";
 
     $self->close_pbs( $pbs, $pbs_file );
@@ -88,15 +90,17 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %raw_files = %{ $self->get_current_raw_files( $config, $section ) };
+  my %raw_files = %{ $self->get_current_raw_files( $config, $section, "groups" ) };
+  my $peak_name = ( $option =~ /--broad/ ) ? "broadPeak" : "narrowPeak";
+
   my $result = {};
   for my $sample_name ( sort keys %raw_files ) {
     my $cur_dir      = $result_dir . "/$sample_name";
     my @result_files = ();
     push( @result_files, $cur_dir . "/${sample_name}_treat_pileup.bdg" );
     push( @result_files, $cur_dir . "/${sample_name}_control_lambda.bdg" );
-    push( @result_files, $cur_dir . "/${sample_name}_peaks.narrowPeak" );
-    push( @result_files, $cur_dir . "/${sample_name}_peaks.narrowPeak.bed" );
+    push( @result_files, $cur_dir . "/${sample_name}_peaks.${peak_name}" );
+    push( @result_files, $cur_dir . "/${sample_name}_peaks.${peak_name}.bed" );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
