@@ -43,6 +43,7 @@ sub perform {
 
   my %raw_files = %{ $self->get_current_raw_files( $config, $section ) };
   my $groups_as_control = defined $config->{$section}{groups} && defined $config->{$section}{groups_as_control} && $config->{$section}{groups_as_control};
+  print "group as control = " . $groups_as_control . "\n";
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
