@@ -15,6 +15,13 @@ use Data::Dumper;
 
 our @ISA = qw(CQS::GroupTask);
 
+sub new {
+  my ($class) = @_;
+  my $self = $class->SUPER::new();
+  bless $self, $class;
+  return $self;
+}
+
 sub get_current_raw_files {
   my ( $self, $config, $section, $group_key ) = @_;
   my $raw_files;
