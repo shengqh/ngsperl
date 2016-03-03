@@ -13,7 +13,7 @@ use CQS::NGSCommon;
 use CQS::StringUtils;
 use Data::Dumper;
 
-our @ISA = qw(CQS::AbstractMACSCallpeak);
+our @ISA = qw(Chipseq::AbstractMACSCallpeak);
 
 sub new {
   my ($class) = @_;
