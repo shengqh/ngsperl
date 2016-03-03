@@ -58,12 +58,12 @@ sub perform {
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $treatment = "-t " . join( ",", @sample_files );
+    my $treatment = "-t " . join( " ", @sample_files );
 
     my $control = "";
     if ($has_control) {
       my @control_files = @{ $control_files{$sample_name} };
-      $control = "-c " . join( ",", @control_files );
+      $control = "-c " . join( " ", @control_files );
     }
     my $final_file = "${sample_name}_peaks.bed";
 
