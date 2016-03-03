@@ -17,7 +17,7 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map)
+    qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key)
   ]
 );
 
@@ -518,10 +518,15 @@ sub get_group_sample_map {
 #  groupName2 => [sampleFile2_1_1, sampleFile2_1_2, sampleFile2_2_1, sampleFile2_2_2],
 #}
 sub get_group_samplefile_map {
-  my ( $config, $section, $samplePattern ) = @_;
+  my ( $config, $section, $sample_pattern ) = @_;
+  return get_group_samplefile_map_key($config, $section, $sample_pattern, "groups");
+}
 
-  my $raw_files = get_raw_files( $config, $section, "source", $samplePattern );
-  my $groups = get_raw_files( $config, $section, "groups" );
+sub get_group_samplefile_map_key {
+  my ( $config, $section, $sample_pattern, $group_key ) = @_;
+
+  my $raw_files = get_raw_files( $config, $section, "source", $sample_pattern );
+  my $groups = get_raw_files( $config, $section, $group_key );
   my %group_sample_map = ();
   for my $group_name ( sort keys %{$groups} ) {
     my @samples = @{ $groups->{$group_name} };
