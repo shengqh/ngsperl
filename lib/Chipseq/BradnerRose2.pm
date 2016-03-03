@@ -40,12 +40,7 @@ sub perform {
 
   print Dumper(%raw_files) . "\n";
 
-  my $has_control = has_raw_files( $config, $section, "controls" );
-  print "has_control = " . $has_control . "\n";
-  my %control_files;
-  if ($has_control) {
-    %control_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
-  }
+  my %control_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
 
   print Dumper(%control_files) . "\n";
 
