@@ -28,7 +28,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
   my $genome = get_option( $config, $section, "genome" );
   my $pipeline_dir = get_directory( $config, $section, "pipeline_dir", 1 );
   my $binding_site_file = parse_param_file( $config, $section, "binding_site_file", 1 );
@@ -37,22 +36,21 @@ sub perform {
     $option = "-s 12500 -t 2500";
   }
 
+  my %raw_files = %{ $self->get_current_raw_files( $config, $section, "groups" ) };
+  my %control_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
+
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
 
-  for my $group_name ( sort keys %group_sample_map ) {
-    my @sample_files = @{ $group_sample_map{$group_name} };
-    my $sampleCount  = scalar(@sample_files);
+  for my $group_name ( sort keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$group_name} };
+    my $treatment = "-r " . $sample_files[0];
 
-    if ( $sampleCount != 2 ) {
-      die "SampleFile should be normal,tumor paired.";
-    }
+    my @control_files = @{ $control_files{$group_name} };
+    my $control = "-c " . $control_files[0];
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$group_name" );
-
-    my $normal = $sample_files[0][1];
-    my $tumor  = $sample_files[1][1];
 
     my $cpRawFile  = "${group_name}.copynumber";
     my $cpCallFile = "${group_name}.call";
@@ -65,12 +63,12 @@ sub perform {
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc   = $cluster->get_log_description($log);
-    my $final_file = "${group_name}_peaks.bed";
+    my $final_file = "${group_name}_peaks_AllEnhancers.table.txt";
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
     print $pbs "
 cd $pipeline_dir
-python ROSE2_main.py -g $genome -i $binding_site_file -r $tumor -c $normal -o $cur_dir $option
+python ROSE2_main.py -g $genome -i $binding_site_file $treatment $control -o $cur_dir $option
 ";
 
     $self->close_pbs( $pbs, $pbs_file );
@@ -89,13 +87,13 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
+  my %raw_files = %{ $self->get_current_raw_files( $config, $section, "groups" ) };
 
   my $result = {};
-  for my $group_name ( sort keys %group_sample_map ) {
+  for my $group_name ( sort keys %raw_files ) {
     my $cur_dir      = $result_dir . "/$group_name";
     my @result_files = ();
-    push( @result_files, $cur_dir . "/${group_name}_peaks.bed" );
+    push( @result_files, $cur_dir . "/${group_name}_peaks_AllEnhancers.table.txt" );
     $result->{$group_name} = filter_array( \@result_files, $pattern );
   }
   return $result;

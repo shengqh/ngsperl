@@ -11,10 +11,9 @@ use CQS::FileUtils;
 use CQS::GroupTask;
 use CQS::NGSCommon;
 use CQS::StringUtils;
-use Chipseq::AbstractMACSCallpeak;
 use Data::Dumper;
 
-our @ISA = qw(Chipseq::AbstractMACSCallpeak);
+our @ISA = qw(CQS::GroupTask);
 
 sub new {
   my ($class) = @_;
