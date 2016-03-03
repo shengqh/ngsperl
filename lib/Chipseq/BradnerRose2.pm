@@ -52,12 +52,7 @@ sub perform {
     my @sample_files = @{ $raw_files{$group_name} };
     my $treatment    = "-r " . $sample_files[0];
 
-    print Dumper(@sample_files) . "\n";
-
     my @controls = @{ $control_files{$group_name} };
-
-    print Dumper(@controls) . "\n";
-
     my $control = "-c " . $controls[0];
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$group_name" );
