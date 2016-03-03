@@ -37,6 +37,9 @@ sub perform {
   }
 
   my %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+
+    print Dumper(%raw_files) . "\n";
+
   my %control_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
 
     print Dumper(%control_files) . "\n";
