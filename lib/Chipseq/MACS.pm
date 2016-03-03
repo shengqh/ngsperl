@@ -60,8 +60,6 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
