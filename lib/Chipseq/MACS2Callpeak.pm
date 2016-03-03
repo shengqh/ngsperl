@@ -13,7 +13,7 @@ use CQS::NGSCommon;
 use CQS::StringUtils;
 use Data::Dumper;
 
-our @ISA = qw(CQS::GroupTask);
+our @ISA = qw(CQS::AbstractMACSCallpeak);
 
 sub new {
   my ($class) = @_;
@@ -22,18 +22,6 @@ sub new {
   $self->{_suffix} = "_mc";
   bless $self, $class;
   return $self;
-}
-
-sub get_current_raw_files {
-  my ( $self, $config, $section, $group_key ) = @_;
-  my $raw_files;
-  if ( has_raw_files( $config, $section, $group_key ) ) {
-    $raw_files = get_group_samplefile_map_key( $config, $section, "", $group_key );
-  }
-  else {
-    $raw_files = get_raw_files( $config, $section );
-  }
-  return $raw_files;
 }
 
 sub perform {
@@ -76,15 +64,8 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
     print $pbs "   
-
-if [ ! -s ${sample_name}_peaks.narrowPeak ]; then
-  macs2 callpeak $option $treatment $control -n $sample_name
-fi
-
-if [[ ! -s ${sample_name}_peaks.narrowPeak.bed && -s ${sample_name}_peaks.narrowPeak ]]; then
-  cut -f1-6 ${sample_name}_peaks.narrowPeak > ${sample_name}_peaks.narrowPeak.bed
-fi 
-
+macs2 callpeak $option $treatment $control -n $sample_name
+cut -f1-6 ${sample_name}_peaks.narrowPeak > ${sample_name}_peaks.narrowPeak.bed
 ";
 
     $self->close_pbs( $pbs, $pbs_file );
