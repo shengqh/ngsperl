@@ -39,6 +39,9 @@ sub perform {
   my %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
   my %control_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
 
+    print Dumper(%control_files) . "\n";
+
+
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
