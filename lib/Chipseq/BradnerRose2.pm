@@ -66,8 +66,6 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $group_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
     my $log_desc   = $cluster->get_log_description($log);
     my $final_file = "${group_name}_peaks_AllEnhancers.table.txt";
 
