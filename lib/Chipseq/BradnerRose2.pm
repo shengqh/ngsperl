@@ -38,12 +38,16 @@ sub perform {
 
   my %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
 
-    print Dumper(%raw_files) . "\n";
+  print Dumper(%raw_files) . "\n";
 
-  my %control_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
+  my $has_control = has_raw_files( $config, $section, "controls" );
+  print "has_control = " . $has_control . "\n";
+  my %control_files;
+  if ($has_control) {
+    %control_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
+  }
 
-    print Dumper(%control_files) . "\n";
-
+  print Dumper(%control_files) . "\n";
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -51,10 +55,10 @@ sub perform {
 
   for my $group_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$group_name} };
-    my $treatment = "-r " . $sample_files[0];
-  
+    my $treatment    = "-r " . $sample_files[0];
+
     print Dumper(@sample_files) . "\n";
-    
+
     my @controls = @{ $control_files{$group_name} };
 
     print Dumper(@controls) . "\n";
