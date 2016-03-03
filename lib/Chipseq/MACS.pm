@@ -48,12 +48,12 @@ sub perform {
     my $final_file = "${sample_name}_peaks.bed";
 
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $treatment = "-t " . join( " ", @sample_files );
+    my $treatment = "-t " . join( ",", @sample_files );
 
     my $control = "";
     if ($has_control) {
       my @control_files = @{ $control_files{$sample_name} };
-      $control = "-c " . join( " ", @control_files );
+      $control = "-c " . join( ",", @control_files );
     }
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -86,10 +86,10 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
+  my %raw_files = %{ $self->get_current_raw_files( $config, $section, "groups" ) };
 
   my $result = {};
-  for my $group_name ( sort keys %group_sample_map ) {
+  for my $group_name ( sort keys %raw_files ) {
     my $cur_dir      = $result_dir . "/$group_name";
     my @result_files = ();
     push( @result_files, $cur_dir . "/${group_name}_peaks.bed" );
