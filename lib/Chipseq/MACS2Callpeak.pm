@@ -42,7 +42,7 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my %raw_files = %{ $self->get_current_raw_files( $config, $section ) };
-  my $groups_as_control = defined $config->{$section}{groups} && defined $config->{$section}{groups_as_control} && $config->{$section}{groups_as_control};
+  my $groups_as_control = (defined $config->{$section}{groups}) && (defined $config->{$section}{groups_as_control}) && ($config->{$section}{groups_as_control});
   print "group as control = " . $groups_as_control . "\n";
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
