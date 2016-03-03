@@ -25,9 +25,9 @@ sub new {
 }
 
 sub get_current_raw_files {
-  my ( $self, $config, $section, $key ) = @_;
+  my ( $self, $config, $section ) = @_;
   my $raw_files;
-  if ( has_raw_files( $config, $section, $key ) ) {
+  if ( has_raw_files( $config, $section, "groups" ) ) {
     $raw_files = get_group_samplefile_map( $config, $section );
   }
   else {
