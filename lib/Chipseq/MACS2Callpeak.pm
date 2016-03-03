@@ -25,10 +25,10 @@ sub new {
 }
 
 sub get_current_raw_files {
-  my ( $self, $config, $section ) = @_;
+  my ( $self, $config, $section, $group_key ) = @_;
   my $raw_files;
-  if ( has_raw_files( $config, $section, "groups" ) ) {
-    $raw_files = get_group_samplefile_map( $config, $section );
+  if ( has_raw_files( $config, $section, $group_key ) ) {
+    $raw_files = get_group_samplefile_map( $config, $section, "", $group_key );
   }
   else {
     $raw_files = get_raw_files( $config, $section );
@@ -41,24 +41,30 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %raw_files = %{ $self->get_current_raw_files( $config, $section ) };
-  my $groups_as_control = (defined $config->{$section}{groups}) && (defined $config->{$section}{groups_as_control}) && ($config->{$section}{groups_as_control});
-  print "group as control = " . $groups_as_control . "\n";
+  my %raw_files = %{ $self->get_current_raw_files( $config, $section, "treatment" ) };
+
+  my $has_control = has_raw_files( $config, $section, "control" );
+  print "has_control = " . $has_control . "\n";
+  my %control_files = {};
+  if ($has_control) {
+    %control_files = %{ $self->get_current_raw_files( $config, $section, "control" ) };
+  }
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
 
   for my $sample_name ( sort keys %raw_files ) {
+    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
+
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $cur_dir      = create_directory_or_die( $result_dir . "/$sample_name" );
+    my $treatment = "-t " . join( ",", @sample_files );
 
     my $control = "";
-    if ( $groups_as_control && scalar(@sample_files) > 1 ) {
-      my $first_one = shift @sample_files;
-      $control = "-c $first_one";
+    if ($has_control) {
+      my @control_files = @{ $control_files{$sample_name} };
+      $control = "-c " . join( ",", @control_files );
     }
-    my $treatment = "-t " . join( ",", @sample_files );
     my $final_file = "${sample_name}_peaks.bed";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
