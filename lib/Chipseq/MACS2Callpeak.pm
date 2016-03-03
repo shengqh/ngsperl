@@ -13,7 +13,7 @@ use CQS::NGSCommon;
 use CQS::StringUtils;
 use Data::Dumper;
 
-our @ISA = qw(CQS::Task);
+our @ISA = qw(CQS::GroupTask);
 
 sub new {
   my ($class) = @_;
