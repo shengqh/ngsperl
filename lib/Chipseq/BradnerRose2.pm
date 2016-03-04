@@ -31,7 +31,6 @@ sub perform {
 
   my $genome = get_option( $config, $section, "genome" );
   my $pipeline_dir = get_directory( $config, $section, "pipeline_dir", 1 );
-  my $binding_site_file = parse_param_file( $config, $section, "binding_site_file", 1 );
 
   if ( $option eq "" ) {
     $option = "-s 12500 -t 2500";
@@ -45,6 +44,8 @@ sub perform {
 
   #print Dumper(%control_files) . "\n";
 
+  my %binding_site_files = get_raw_files( $config, $section, "binding_site_file" );
+
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
@@ -54,7 +55,9 @@ sub perform {
     my $treatment    = "-r " . $sample_files[0];
 
     my @controls = @{ $control_files{$group_name} };
-    my $control = "-c " . $controls[0];
+    my $control  = "-c " . $controls[0];
+
+    my @binding_files = @{ $binding_site_files{$group_name} };
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$group_name" );
 
@@ -72,9 +75,12 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
     print $pbs "
 cd $pipeline_dir
-python ROSE2_main.py -g $genome -i $binding_site_file $treatment $control -o $cur_dir $option
 ";
-
+    for my $binding_file (@binding_files) {
+      print $pbs "
+python ROSE2_main.py -g $genome -i $binding_file $treatment $control -o $cur_dir $option
+";
+    }
     $self->close_pbs( $pbs, $pbs_file );
 
     print $sh "\$MYCMD ./$pbs_name \n";
