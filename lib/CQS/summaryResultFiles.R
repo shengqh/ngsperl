@@ -74,7 +74,7 @@ for (step in unique(ResultOut$StepName)) {
 	print(g)
 	dev.off()
 	
-	temp<-aggregate(tableForPlot$FileSizeTotalRaw, list(factor(tableForPlot$TaskName)), median,na.rm=T)
+	temp<-aggregate(tableForPlot$FileSizeTotalRaw, list(factor(tableForPlot$TaskName)), function(x) if (median(x,na.rm=T)==0) {return(max(x,na.rm=T))} else {median(x,na.rm=T)})
 	taskFileSizeMedian<-temp[,2]
 	names(taskFileSizeMedian)<-temp[,1]
 	
