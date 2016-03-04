@@ -46,6 +46,8 @@ sub perform {
 
   my %binding_site_files = get_raw_files( $config, $section, "binding_site_file" );
 
+  print Dumper(%binding_site_files) . "\n";
+
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
