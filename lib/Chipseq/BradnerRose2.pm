@@ -44,7 +44,7 @@ sub perform {
 
   #print Dumper(%control_files) . "\n";
 
-  my %binding_site_files = get_raw_files( $config, $section, "binding_site_file" );
+  my %binding_site_files = %{get_raw_files( $config, $section, "binding_site_file" )};
 
   print Dumper(%binding_site_files) . "\n";
 
