@@ -55,7 +55,7 @@ sub perform {
       my @control_files = @{ $control_files{$sample_name} };
       $control = "-c " . join( " ", @control_files );
     }
-    my $final_file = "${sample_name}_peaks.bed";
+    my $final_file = "${sample_name}_peaks.${peak_name}";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
