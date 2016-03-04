@@ -22,7 +22,8 @@ our $VERSION = '0.01';
 
 sub getSmallRNAConfig {
   my ($def) = @_;
-
+  $def->{VERSION}=$VERSION;
+  
   my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref ) = getPrepareConfig( $def, 1 );
   my @individual = @{$individual_ref};
   my @summary    = @{$summary_ref};
