@@ -46,8 +46,14 @@ sub perform {
   my $summary_log      = $self->get_log_filename( $log_dir, $summary_name );
   my $summary_log_desp = $cluster->get_log_description($summary_log);
 
+  my $report_name     = $task_name . "_report";
+  my $report_pbs      = $self->get_pbs_filename( $pbs_dir, $report_name );
+  my $report_log      = $self->get_log_filename( $log_dir, $report_name );
+  my $report_log_desp = $cluster->get_log_description($report_log);
+
   my $result_list_file = $self->get_file( $result_dir, $task_name, "_expect_result.tsv" );
   
+  #Make Summary Figure
   my $rtemplate = dirname(__FILE__) . "/summaryResultFiles.R";
   my $rfile = $result_dir . "/${summary_name}.r";
   open( my $rf, ">$rfile" )     or die "Cannot create $rfile";
@@ -62,6 +68,23 @@ sub perform {
   my $summary = $self->open_pbs( $summary_pbs, $pbs_desc, $summary_log_desp, $path_file, $result_dir );
   print $summary "R --vanilla --slave -f $rfile \n";
   $self->close_pbs( $summary, $summary_pbs );
+  
+  #Make Report
+  my $rtemplateReport = dirname(__FILE__) . "/MakeReport.R";
+  my $rfileReport = $result_dir . "/${report_name}.r";
+  open( my $rfReport, ">$rfileReport" )     or die "Cannot create $rfileReport";
+  open( my $rtReport, "<$rtemplateReport" ) or die $!;
+  print $rfReport "parFile1='$task_name'\n";
+  print $rfReport "parFile2='$target_dir'\n";
+  while (<$rtReport>) {
+    print $rfReport $_;
+  }
+  close($rtReport);
+  close($rfReport);
+  
+  my $report = $self->open_pbs( $report_pbs, $pbs_desc, $report_log_desp, $path_file, $result_dir );
+  print $report "R --vanilla --slave -f $rfileReport \n";
+  $self->close_pbs( $report, $report_pbs );
   
   my $final   = $self->open_pbs( $final_pbs,   $pbs_desc, $final_log_desp,   $path_file, $pbs_dir );
   
