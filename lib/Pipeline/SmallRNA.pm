@@ -18,7 +18,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(performSmallRNA performSmallRNATask)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 sub getSmallRNAConfig {
   my ($def) = @_;
@@ -913,7 +913,7 @@ sub getSmallRNAConfig {
         source_ref  => $identical_ref,
         source2_ref => \@mapped,
         source3_ref => \@pmnames,
-        output_ext  => ".unmapped.fastq.gz",
+        output_ext  => ".unmapped.fastq.gz,..unmapped.fastq.dupcount",
         sh_direct   => 1,
         pbs         => {
           "email"    => $def->{email},

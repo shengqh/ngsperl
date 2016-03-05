@@ -131,7 +131,8 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $output_ext = get_option( $config, $section, "output_ext", "" );
-
+  my @output_exts=split( ",", $output_ext );
+  
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
 
@@ -142,7 +143,9 @@ sub result {
     #		push( @result_files, "${result_dir}/${name}${output_ext}" );
     #    }
     my @result_files = ();
-    push( @result_files, "${result_dir}/${sample_name}${output_ext}" );
+    foreach my $output_ext_each (@output_exts) {
+    	push( @result_files, "${result_dir}/${sample_name}${output_ext_each}" );
+    }
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }

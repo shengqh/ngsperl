@@ -63,14 +63,28 @@ print "$readsDelCount reads labeled as mapped\n";
 #go through identical folder to make new fastq files
 #my $identicalFastqFile=$resultFolder.'/identical/result/'.$sampleName.'_clipped_identical.fastq.gz';
 if ( $identicalFastqFile =~ /\.gz$/ ) {
-  open( FASTQ, "zcat $identicalFastqFile|" ) or die $!;
+	open( FASTQ, "zcat $identicalFastqFile|" ) or die $!;
+	my $identicalFastqCountFile=$identicalFastqFile;
+	$identicalFastqCountFile=~s/\.gz$//;
+	open (DUPCOUNT, $identicalFastqCountFile.'.dupcount') or die $!;
+	
+} else {
+	open( FASTQ, $identicalFastqFile ) or die $!;
+	open (DUPCOUNT, $identicalFastqFile.'.dupcount') or die $!;
 }
-else {
-  open( FASTQ, $identicalFastqFile ) or die $!;
+
+my %fastq2Count;
+while(<DUPCOUNT>) {
+	my @lines=( split '\t', $_ );
+	$fastq2Count{$lines[0]}=$_;
 }
 
 #my $identicalFastqFileBase=basename($identicalFastqFile);
 open RESULT, "| gzip -c > $outFile" or die "error writing result: $!";
+my $outDupcountFile=$outFile;
+$outDupcountFile=~s/\.gz$//;
+$outDupcountFile=$outDupcountFile.".dupcount";
+open RESULTCOUNT, ">$outDupcountFile" or die "error writing result: $!";
 
 while ( my $line1 = <FASTQ> ) {
   my $line2   = <FASTQ>;
@@ -82,9 +96,12 @@ while ( my $line1 = <FASTQ> ) {
   }
   else {
     print RESULT $line1 . $line2 . $line3 . $line4;
+    $readKey=~s/^@//;
+    print RESULTCOUNT $fastq2Count{$readKey};
   }
 }
 close RESULT;
+close RESULTCOUNT;
 
 if (%readsDel) {
   $readsDelCount = scalar( keys %readsDel );

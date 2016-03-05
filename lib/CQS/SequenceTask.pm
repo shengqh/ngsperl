@@ -72,10 +72,12 @@ sub perform {
   #Make Report
   my $rtemplateReport = dirname(__FILE__) . "/MakeReport.R";
   my $rfileReport = $result_dir . "/${report_name}.r";
+  my $task_dir=$target_dir;
+  $task_dir=~s/\/sequencetask$//;
   open( my $rfReport, ">$rfileReport" )     or die "Cannot create $rfileReport";
   open( my $rtReport, "<$rtemplateReport" ) or die $!;
   print $rfReport "parFile1='$task_name'\n";
-  print $rfReport "parFile2='$target_dir'\n";
+  print $rfReport "parFile2='$task_dir'\n";
   while (<$rtReport>) {
     print $rfReport $_;
   }
