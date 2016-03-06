@@ -182,7 +182,7 @@ sub result {
 			my %temp = %{ get_raw_files( $config, $section, $output_file ) };
 			foreach my $sample_name ( keys %temp ) {
 				foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
-					push( @result_files, "${result_dir}/${subSampleFile}${output_file_ext}" );
+					push( @result_files, "${subSampleFile}${output_file_ext}" );
 				}
 			}
 		} else {

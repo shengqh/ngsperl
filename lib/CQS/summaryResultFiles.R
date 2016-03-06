@@ -63,7 +63,7 @@ for (step in unique(ResultOut$StepName)) {
 	tableForPlot$TaskName<-factor(tableForPlot$TaskName,levels=rev(unique(tableForPlot$TaskName)))
 	tableForPlot$Result<-factor(tableForPlot$Result,levels=c("PASS","WARN","FAIL"))
 	width=max(2500, 60 * length(unique(tableForPlot$SampleName)))
-	height=max(2000, 60 * length(unique(tableForPlot$TaskName)))
+	height=max(2500, 60 * length(unique(tableForPlot$TaskName)))
 	png(file=paste0(fileListName,"_",step,".png"), height=height, width=width, res=300)
 	g<-ggplot(tableForPlot, aes(SampleName, TaskName))+
 			geom_tile(data=tableForPlot, aes(fill=Result), color="white") +
@@ -84,6 +84,7 @@ for (step in unique(ResultOut$StepName)) {
 	png(file=paste0(fileListName,"_",step,".RelativeFileSize.png"),height=height, width=width, res=300)
 	g<-ggplot(tableForPlot, aes(SampleName, Task))+
 			geom_tile(data=tableForPlot, aes(fill=Log2RelativeSize), color="white") +
+			scale_fill_gradient2(low="light green", high="red") +
 			theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.5, face="bold"),
 					axis.text.y = element_text(size=11, face="bold")) +
 			coord_equal()
