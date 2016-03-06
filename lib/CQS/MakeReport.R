@@ -53,7 +53,7 @@ setwd(projectReportDir)
 resultFileList<-read.csv(resultFileListFile,header=T,as.is=T)
 
 #Prepare project report
-figureToDisply<-data.frame(Title="Task Status",File=c(paste0(projectReportDir,"/",projectName,c("_st_expect_result.tsv_step1.png","_st_expect_result.tsv_step2.png"))),stringsAsFactors=F)
+figureToDisply<-data.frame(Title="Task Status",File=c(paste0(projectReportDir,"/",projectName,c("_st_expect_result.tsv_step1.png","_st_expect_result.tsv_step1.RelativeFileSize.png","_st_expect_result.tsv_step2.png"))),stringsAsFactors=F)
 
 resultFileList$TaskResultFolder<-gsub( "\\/result\\/.*$", "\\/result/", resultFileList$FileList)
 resultFileList$TaskResultFolder<-gsub(projectDir,"",resultFileList$TaskResultFolder)

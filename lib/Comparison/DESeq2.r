@@ -430,7 +430,10 @@ for(comparisonName in comparisonNames){
     guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
     theme_bw()+
     scale_size(range = c(3, 7))+
-    theme(axis.text = element_text(colour = "black"))
+	theme(axis.text = element_text(colour = "black",size=30),
+			axis.title = element_text(size=30),
+			legend.text= element_text(size=30),
+			legend.title= element_text(size=30))
   print(p)
   dev.off()
 }

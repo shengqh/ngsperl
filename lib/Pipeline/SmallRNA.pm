@@ -159,7 +159,7 @@ sub getSmallRNAConfig {
       },
     };
     push @individual, ( "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_NTA_smallRNA_count" );
-    push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_category" );
+    push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_table_vis","bowtie1_genome_1mm_NTA_smallRNA_category" );
 
     if ($search_not_identical) {
 
