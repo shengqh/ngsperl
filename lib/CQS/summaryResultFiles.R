@@ -79,11 +79,11 @@ for (step in unique(ResultOut$StepName)) {
 	names(taskFileSizeMedian)<-temp[,1]
 	
 	tableForPlot$Task<-paste0(tableForPlot$TaskName," (",addUnitToSize(taskFileSizeMedian)[tableForPlot$TaskName],")")
-	tableForPlot$RelativeSize<-tableForPlot$FileSizeTotalRaw/taskFileSizeMedian[tableForPlot$TaskName]
+	tableForPlot$Log2RelativeSize<-log2(tableForPlot$FileSizeTotalRaw/taskFileSizeMedian[tableForPlot$TaskName])
 	
 	png(file=paste0(fileListName,"_",step,".RelativeFileSize.png"),height=height, width=width, res=300)
 	g<-ggplot(tableForPlot, aes(SampleName, Task))+
-			geom_tile(data=tableForPlot, aes(fill=RelativeSize), color="white") +
+			geom_tile(data=tableForPlot, aes(fill=Log2RelativeSize), color="white") +
 			theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.5, face="bold"),
 					axis.text.y = element_text(size=11, face="bold")) +
 			coord_equal()
