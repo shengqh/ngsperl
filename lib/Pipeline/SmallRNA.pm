@@ -319,7 +319,8 @@ sub getSmallRNAConfig {
           source_ref  => [ "identical", ".fastq.gz\$" ],
           source2_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
           source3_ref => ["bowtie1_genome_1mm_NTA_pmnames"],
-          output_ext  => "_clipped_identical.unmapped.fastq.gz,_clipped_identical.unmapped.fastq.dupcount",
+          output_ext  => "_clipped_identical.unmapped.fastq.gz",
+          output_other_ext  => "_clipped_identical.unmapped.fastq.dupcount",
           sh_direct   => 1,
           pbs         => {
             "email"    => $def->{email},
@@ -913,7 +914,8 @@ sub getSmallRNAConfig {
         source_ref  => $identical_ref,
         source2_ref => \@mapped,
         source3_ref => \@pmnames,
-        output_ext  => ".unmapped.fastq.gz,.unmapped.fastq.dupcount",
+        output_ext  => "_clipped_identical.unmapped.fastq.gz",
+        output_other_ext  => "_clipped_identical.unmapped.fastq.dupcount",
         sh_direct   => 1,
         pbs         => {
           "email"    => $def->{email},
