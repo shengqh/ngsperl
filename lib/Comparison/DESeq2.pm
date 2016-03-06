@@ -79,7 +79,7 @@ setwd(\"$result_dir\")
   
 data<-${readfunc}(\"$countfile\",row.names=1, header=T, check.names=F $readparam)
 
-taskName<-$task_name
+taskName<-'$task_name'
 showLabelInPCA<-$showLabelInPCA
 showDEGeneCluster<-$showDEGeneCluster
 pvalue<-$pvalue
