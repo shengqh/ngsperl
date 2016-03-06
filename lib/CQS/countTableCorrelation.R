@@ -30,6 +30,8 @@ for (i in 1:nrow(countTableFileAll)) {
 	colClass<-sapply(count, class)
 	countNum<-count[,which(colClass=="numeric" | colClass=="integer")]
 	countNum<-round(countNum,0)
+	#remove genes with total reads 0
+	countNum<-countNum[which(rowSums(countNum,na.rm=T)>0),]
 	
 	dds=DESeqDataSetFromMatrix(countData = countNum, colData = as.data.frame(rep(1,ncol(countNum))),design = ~1)
 	temp<-DESeq2::varianceStabilizingTransformation(dds, blind = TRUE)
