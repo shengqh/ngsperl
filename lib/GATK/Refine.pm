@@ -31,16 +31,21 @@ sub perform {
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $vcfFiles = $config->{$section}{vcf_files} or die "Define vcf_files in section $section first.";
   my @vcfFiles = @{ $vcfFiles } ;
+  my $sitesVcfFiles = $config->{$section}{sites_vcf_files} or die "Define sites_vcf_files in section $section first.";
+  my @sitesVcfFiles = @{ $sitesVcfFiles } ;
   my $gatk_jar   = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
   my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals", 0 ) ? "-fixMisencodedQuals" : "";
   my $baq = get_option( $config, $section, "samtools_baq_calibration", 0 );
 
   my $knownvcf      = "";
-  my $knownsitesvcf = "";
-
   foreach my $vcf (@vcfFiles) {
     $knownvcf      = $knownvcf . " -known $vcf";
+  }
+  
+  my $knownsitesvcf = $knownvcf;
+  $knownsitesvcf=~s/\-known/\-knownSites/g;
+  foreach my $vcf (@sitesVcfFiles) {
     $knownsitesvcf = $knownsitesvcf . " -knownSites $vcf";
   }
 
