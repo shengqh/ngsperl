@@ -140,14 +140,13 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
-  my %binding_site_files = %{ get_raw_files( $config, $section, "binding_site_file" ) };
+  my %binding_site_beds = %{ get_raw_files( $config, $section, "binding_site_bed" ) };
 
   my $result = {};
   for my $group_name ( sort keys %raw_files ) {
     my $cur_dir       = $result_dir . "/$group_name";
     my @result_files  = ();
-    my @binding_files = @{ $binding_site_files{$group_name} };
-
+    my @binding_files = @{ $binding_site_beds{$group_name} };
     for my $binding_file (@binding_files) {
       my ( $filename, $dirs, $suffix ) = fileparse( $binding_file, ".bed\$" );
       $filename =~ s/\./_/g;
