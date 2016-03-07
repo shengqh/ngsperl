@@ -174,6 +174,7 @@ if [[ -s $indelOut && ! -s $indelCal ]]; then
     -R $faFile \\
     -input $indelOut \\
     -resource:mills,known=true,training=true,truth=true,prior=12.0 $mills \\
+    -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 $dbsnp \\
     -an QD \\
     -an DP \\
     -an FS \\
