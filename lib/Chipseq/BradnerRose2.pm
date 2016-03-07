@@ -83,10 +83,10 @@ cd $pipeline_dir
         my ( $filename, $dirs, $suffix ) = fileparse( $binding_file, ".bed\$" );
         $filename =~ s/\./_/g;
 
-        my $final_file = "${filename}_peaks_AllEnhancers.table.txt";
+        my $final_file = "${cur_dir}/${filename}_peaks_AllEnhancers.table.txt";
         print $pbs "if [ ! -s $final_file ]; then \n";
 
-        my $newfile = $filename . $suffix;
+        my $newfile = "${cur_dir}/${filename}${suffix}";
         if ( defined $binding_site_filter ) {
           print $pbs "  grep $binding_site_filter $binding_file > $newfile \n";
         }
@@ -103,20 +103,24 @@ fi
     else {
       my ( $filename, $dirs, $suffix ) = fileparse( $binding_files[0], ".bed\$" );
       $filename =~ s/\./_/g;
-      my $final_file = "${filename}_peaks_AllEnhancers.table.txt";
+      my $final_file = "${cur_dir}/${filename}_peaks_AllEnhancers.table.txt";
 
       my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
       print $pbs "
 cd $pipeline_dir
 ";
       my $binding_file = $binding_files[0];
+
+      my $newfile = "${cur_dir}/${filename}${suffix}";
       if ( defined $binding_site_filter ) {
-        my $newfile = basename($binding_file);
         print $pbs "grep $binding_site_filter $binding_file > $newfile \n";
-        $binding_file = $newfile;
       }
-      print $pbs "
-python ROSE2_main.py -g $genome -i $binding_file $treatment $control -o $cur_dir $option
+      else {
+        print $pbs "cp -f $binding_file $newfile \n";
+      }
+      print $pbs "python ROSE2_main.py -g $genome -i $newfile $treatment $control -o $cur_dir $option 
+fi
+
 ";
       $self->close_pbs( $pbs, $pbs_file );
     }
