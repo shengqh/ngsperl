@@ -39,7 +39,7 @@ sub print_hash {
 sub filter_array {
   my ($sourceFiles, $pattern ) = @_;
 
-  if ( !defined $pattern ) {
+  if ( !defined $pattern || $pattern eq "") {
     return $sourceFiles;
   }
 
