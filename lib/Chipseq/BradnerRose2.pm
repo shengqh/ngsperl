@@ -88,7 +88,7 @@ cd $pipeline_dir
 
         my $newfile = "${cur_dir}/${filename}${suffix}";
         if ( defined $binding_site_filter ) {
-          print $pbs "  grep $binding_site_filter $binding_file > $newfile \n";
+          print $pbs "  grep \"$binding_site_filter\" $binding_file > $newfile \n";
         }
         else {
           print $pbs "  cp -f $binding_file $newfile \n";
@@ -113,7 +113,7 @@ cd $pipeline_dir
 
       my $newfile = "${cur_dir}/${filename}${suffix}";
       if ( defined $binding_site_filter ) {
-        print $pbs "grep $binding_site_filter $binding_file > $newfile \n";
+        print $pbs "grep \"$binding_site_filter\" $binding_file > $newfile \n";
       }
       else {
         print $pbs "cp -f $binding_file $newfile \n";
