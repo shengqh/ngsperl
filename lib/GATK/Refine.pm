@@ -29,23 +29,22 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
-  my $vcfFiles = $config->{$section}{vcf_files} or die "Define vcf_files in section $section first.";
-  my @vcfFiles = @{ $vcfFiles } ;
-  my $sitesVcfFiles = $config->{$section}{sites_vcf_files} or die "Define sites_vcf_files in section $section first.";
-  my @sitesVcfFiles = @{ $sitesVcfFiles } ;
-  my $gatk_jar   = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
-  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
+  my $vcfFiles           = $config->{$section}{indel_vcf_files} or die "Define indel_vcf_files in section $section first.";
+  my @vcfFiles           = @{$vcfFiles};
+  my $sitesVcfFiles      = $config->{$section}{known_vcf_files} or die "Define known_vcf_files in section $section first.";
+  my @sitesVcfFiles      = @{$sitesVcfFiles};
+  my $gatk_jar           = get_param_file( $config->{$section}{gatk_jar}, "gatk_jar", 1 );
+  my $picard_jar         = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
   my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals", 0 ) ? "-fixMisencodedQuals" : "";
-  my $baq = get_option( $config, $section, "samtools_baq_calibration", 0 );
+  my $baq                = get_option( $config, $section, "samtools_baq_calibration", 0 );
 
-  my $knownvcf      = "";
+  my $indel_vcf = "";
   foreach my $vcf (@vcfFiles) {
-    $knownvcf      = $knownvcf . " -known $vcf";
+    $indel_vcf = $indel_vcf . " -known $vcf";
   }
-  
-  my $knownsitesvcf = $knownvcf;
-  $knownsitesvcf=~s/\-known/\-knownSites/g;
-  foreach my $vcf (@sitesVcfFiles) {
+
+  my $knownsitesvcf = "";
+  foreach my $vcf ( @vcfFiles, @sitesVcfFiles ) {
     $knownsitesvcf = $knownsitesvcf . " -knownSites $vcf";
   }
 
@@ -114,13 +113,13 @@ fi
 
 if [[ -s $rmdupFile && ! -s $intervalFile ]]; then
   echo RealignerTargetCreator=`date` 
-  java $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $rmdupFile -R $faFile $knownvcf -o $intervalFile
+  java $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $rmdupFile -R $faFile $indel_vcf -o $intervalFile
 fi
 
 if [[ -s $intervalFile && ! -s $realignedFile ]]; then
   echo IndelRealigner=`date` 
   #InDel parameter referenced: http://www.broadinstitute.org/gatk/guide/tagged?tag=local%20realignment
-  java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $fixMisencodedQuals -I $rmdupFile -R $faFile -targetIntervals $intervalFile $knownvcf --consensusDeterminationModel KNOWNS_ONLY -LOD 0.4 -o $realignedFile 
+  java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $fixMisencodedQuals -I $rmdupFile -R $faFile -targetIntervals $intervalFile $indel_vcf --consensusDeterminationModel KNOWNS_ONLY -LOD 0.4 -o $realignedFile 
 fi
 
 if [[ -s $realignedFile && ! -s $grpFile ]]; then
