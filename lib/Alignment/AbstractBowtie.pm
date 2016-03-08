@@ -20,7 +20,6 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my $samformat = get_option( $config, $section, "samformat", 1 );
-  my $samonly   = get_option( $config, $section, "samonly",   0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -30,12 +29,7 @@ sub result {
 
     my $final_file;
     if ($samformat) {
-      if ($samonly) {
-        $final_file = $sample_name . ".sam";
-      }
-      else {
-        $final_file = $sample_name . ".bam";
-      }
+      $final_file = $sample_name . ".bam";
     }
     else {
       $final_file = $sample_name . ".out";
