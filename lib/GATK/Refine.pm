@@ -43,7 +43,7 @@ sub perform {
   my $restrict_intervals="";
   if (defined $bedFile and $bedFile ne "") {
   	if (defined $interval_padding and $interval_padding!=0) {
-  		$restrict_intervals="-L $bedFile -interval_padding $interval_padding";
+  		$restrict_intervals="-L $bedFile -ip $interval_padding";
   	} else {
   		$restrict_intervals="-L $bedFile";
   	}
