@@ -64,11 +64,18 @@ sub perform {
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
-      my $chromosome_grep_command = "";
-      if($chromosome_grep_pattern ne ""){
-        $chromosome_grep_command = "samtools view -H $sam_file | grep \"^\@SQ\" | cut -f2 |cut -d \":\" -f 2 | grep $chromosome_grep_pattern | xargs ";
-      } 
-
+    my $chromosome_grep_command = "";
+    my $final_file              = $bam_file;
+    if ( $chromosome_grep_pattern ne "" ) {
+      my $tmp_file = $sample_name . ".filtered.bam";
+      $chromosome_grep_command = "
+samtools idxstats $bam_file | cut -f 1 | grep $chromosome_grep_pattern | xargs samtools view -b $bam_file > $tmp_file
+    rm $bam_file
+    rm ${bam_file}.bai
+    mv $tmp_file $bam_file
+    samtools index $bam_file
+";
+    }
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
@@ -84,8 +91,9 @@ if [ -s $sam_file ]; then
   $chromosome_grep_command samtools view -Shu -F 256 $sam_file | samtools sort -o $bam_file -
   if [ -s $bam_file ]; then
     samtools index $bam_file 
-    samtools flagstat $bam_file > ${bam_file}.stat 
     rm $sam_file
+    $chromosome_grep_pattern
+    samtools flagstat $bam_file > ${bam_file}.stat 
   fi
 fi
 ";
