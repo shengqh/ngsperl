@@ -100,7 +100,7 @@ rm ${f2}.fifo";
       
       my $chromosome_grep_command = "";
       if($chromosome_grep_pattern ne ""){
-        $chromosome_grep_command = "samtools view -H $bowtiesam | grep \"^\@SQ\" | cut -f2 |cut -d \":\" -f 2 | grep \"$chromosome_grep_pattern\" |xargs ";
+        $chromosome_grep_command = "samtools view -H $bowtiesam | grep \"^\@SQ\" | cut -f2 |cut -d \":\" -f 2 | grep $chromosome_grep_pattern | xargs ";
       } 
 
       print $sh "\$MYCMD ./$pbs_name \n";

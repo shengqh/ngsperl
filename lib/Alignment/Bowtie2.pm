@@ -29,6 +29,7 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $bowtie2_index = $config->{$section}{bowtie2_index} or die "define ${section}::bowtie2_index first";
+  my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -63,6 +64,12 @@ sub perform {
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
+      my $chromosome_grep_command = "";
+      if($chromosome_grep_pattern ne ""){
+        $chromosome_grep_command = "samtools view -H $sam_file | grep \"^\@SQ\" | cut -f2 |cut -d \":\" -f 2 | grep $chromosome_grep_pattern | xargs ";
+      } 
+
+
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
@@ -74,7 +81,7 @@ sub perform {
 $bowtie2_aln_command
 
 if [ -s $sam_file ]; then
-  samtools view -Shu -F 256 $sam_file | samtools sort -o $bam_file -
+  $chromosome_grep_command samtools view -Shu -F 256 $sam_file | samtools sort -o $bam_file -
   if [ -s $bam_file ]; then
     samtools index $bam_file 
     samtools flagstat $bam_file > ${bam_file}.stat 
