@@ -71,6 +71,7 @@ sub perform {
       $chromosome_grep_command = "
 echo filtering bam by chromosome pattern $chromosome_grep_pattern
     samtools idxstats $bam_file | cut -f 1 | grep $chromosome_grep_pattern | xargs samtools view -b $bam_file > $tmp_file
+    samtools flagstat $bam_file > ${bam_file}.raw.stat
     rm $bam_file
     rm ${bam_file}.bai
     mv $tmp_file $bam_file
@@ -89,11 +90,11 @@ echo filtering bam by chromosome pattern $chromosome_grep_pattern
 $bowtie2_aln_command
 
 if [ -s $sam_file ]; then
-  $chromosome_grep_command samtools view -Shu -F 256 $sam_file | samtools sort -o $bam_file -
+  samtools view -Shu -F 256 $sam_file | samtools sort -o $bam_file -
   if [ -s $bam_file ]; then
     samtools index $bam_file 
     rm $sam_file
-    $chromosome_grep_pattern
+    $chromosome_grep_command
     samtools flagstat $bam_file > ${bam_file}.stat 
   fi
 fi

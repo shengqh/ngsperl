@@ -105,6 +105,7 @@ rm ${f2}.fifo";
         $chromosome_grep_command = "
 echo filtering bam by chromosome pattern $chromosome_grep_pattern
     samtools idxstats $bam_file | cut -f 1 | grep $chromosome_grep_pattern | xargs samtools view -b $bam_file > $tmp_file
+    samtools flagstat $bam_file > ${bam_file}.raw.stat
     rm $bam_file
     rm ${bam_file}.bai
     mv $tmp_file $bam_file
