@@ -99,15 +99,25 @@ rm ${f2}.fifo";
       my $cur_dir  = create_directory_or_die( $result_dir . "/$sample_name" );
       
       my $chromosome_grep_command = "";
-      if($chromosome_grep_pattern ne ""){
-        $chromosome_grep_command = "samtools view -H $bowtiesam | grep \"^\@SQ\" | cut -f2 |cut -d \":\" -f 2 | grep $chromosome_grep_pattern | xargs ";
+      my $final_file = $bam_file;
+      if($sortbam && ($chromosome_grep_pattern ne "")){
+        my $tmp_file = $sample_name . ".filtered.bam";
+        $chromosome_grep_command = "
+samtools idxstats $bam_file | cut -f 1 | grep $chromosome_grep_pattern | xargs samtools view -b $bam_file > $tmp_file
+rm $bam_file
+rm ${bam_file}.bai
+rm ${bam_file}.stat
+mv $tmp_file $bam_file
+samtools index $bam_file
+samtools flagstat $bam_file > ${bam_file}.stat
+
+";
       } 
 
       print $sh "\$MYCMD ./$pbs_name \n";
 
       my $log_desc = $cluster->get_log_description($log);
 
-      my $final_file = $bam_file;
       my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
       print $pbs "
@@ -118,16 +128,17 @@ $bowtie1_aln_command
 if [ -s $bowtiesam ]; then
 ";
       if ($sortbam) {
-        print $pbs "$chromosome_grep_command  samtools view -Shu $mappedonlyoption $bowtiesam | samtools sort -o $bam_file -
+        print $pbs "samtools view -Shu $mappedonlyoption $bowtiesam | samtools sort -o $bam_file -
   if [ -s $bam_file ]; then
     samtools index $bam_file 
     samtools flagstat $bam_file > ${bam_file}.stat
     rm $bowtiesam
+    $chromosome_grep_command
   fi
 ";
       }
       else {
-        print $pbs "$chromosome_grep_command samtools view -S $mappedonlyoption -b $bowtiesam > ${sample_name}.bam
+        print $pbs "samtools view -S $mappedonlyoption -b $bowtiesam > ${sample_name}.bam
   if [ -s $bam_file ]; then
     rm $bowtiesam
   fi
