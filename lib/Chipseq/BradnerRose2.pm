@@ -118,10 +118,7 @@ cd $pipeline_dir
       else {
         print $pbs "cp -f $binding_file $newfile \n";
       }
-      print $pbs "python ROSE2_main.py -g $genome -i $newfile $treatment $control -o $cur_dir $option 
-fi
-
-";
+      print $pbs "python ROSE2_main.py -g $genome -i $newfile $treatment $control -o $cur_dir $option \n"; 
       $self->close_pbs( $pbs, $pbs_file );
     }
 
