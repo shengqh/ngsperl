@@ -103,14 +103,13 @@ rm ${f2}.fifo";
       if($sortbam && ($chromosome_grep_pattern ne "")){
         my $tmp_file = $sample_name . ".filtered.bam";
         $chromosome_grep_command = "
-samtools idxstats $bam_file | cut -f 1 | grep $chromosome_grep_pattern | xargs samtools view -b $bam_file > $tmp_file
-rm $bam_file
-rm ${bam_file}.bai
-rm ${bam_file}.stat
-mv $tmp_file $bam_file
-samtools index $bam_file
-samtools flagstat $bam_file > ${bam_file}.stat
-
+    samtools idxstats $bam_file | cut -f 1 | grep $chromosome_grep_pattern | xargs samtools view -b $bam_file > $tmp_file
+    rm $bam_file
+    rm ${bam_file}.bai
+    rm ${bam_file}.stat
+    mv $tmp_file $bam_file
+    samtools index $bam_file
+    samtools flagstat $bam_file > ${bam_file}.stat
 ";
       } 
 
@@ -133,7 +132,7 @@ if [ -s $bowtiesam ]; then
     samtools index $bam_file 
     samtools flagstat $bam_file > ${bam_file}.stat
     rm $bowtiesam
-    $chromosome_grep_command
+$chromosome_grep_command
   fi
 ";
       }
