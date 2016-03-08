@@ -62,7 +62,7 @@ for (step in unique(ResultOut$StepName)) {
 	}
 	tableForPlot$TaskName<-factor(tableForPlot$TaskName,levels=rev(unique(tableForPlot$TaskName)))
 	tableForPlot$Result<-factor(tableForPlot$Result,levels=c("PASS","WARN","FAIL"))
-	width=max(2500, 60 * length(unique(tableForPlot$SampleName)))
+	width=max(3000, 90 * length(unique(tableForPlot$SampleName)))
 	height=max(2500, 60 * length(unique(tableForPlot$TaskName)))
 	png(file=paste0(fileListName,"_",step,".png"), height=height, width=width, res=300)
 	g<-ggplot(tableForPlot, aes(SampleName, TaskName))+
