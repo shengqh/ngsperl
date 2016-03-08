@@ -52,10 +52,10 @@ sub perform {
   my $report_log_desp = $cluster->get_log_description($report_log);
 
   my $result_list_file = $self->get_file( $result_dir, $task_name, "_expect_result.tsv" );
-  
+
   #Make Summary Figure
   my $rtemplate = dirname(__FILE__) . "/summaryResultFiles.R";
-  my $rfile = $result_dir . "/${summary_name}.r";
+  my $rfile     = $result_dir . "/${summary_name}.r";
   open( my $rf, ">$rfile" )     or die "Cannot create $rfile";
   open( my $rt, "<$rtemplate" ) or die $!;
   print $rf "parFile1='$result_list_file'\n";
@@ -64,32 +64,33 @@ sub perform {
   }
   close($rt);
   close($rf);
-  
+
   my $summary = $self->open_pbs( $summary_pbs, $pbs_desc, $summary_log_desp, $path_file, $result_dir );
   print $summary "R --vanilla --slave -f $rfile \n";
   $self->close_pbs( $summary, $summary_pbs );
-  
+
   #Make Report
   my $rtemplateReport = dirname(__FILE__) . "/MakeReport.R";
-  my $rfileReport = $result_dir . "/${report_name}.r";
-  my $task_dir=$target_dir;
-  $task_dir=~s/\/sequencetask$//;
+  my $rfileReport     = $result_dir . "/${report_name}.r";
+  my $task_dir        = $target_dir;
+  $task_dir =~ s/\/sequencetask$//;
   open( my $rfReport, ">$rfileReport" )     or die "Cannot create $rfileReport";
   open( my $rtReport, "<$rtemplateReport" ) or die $!;
   print $rfReport "parFile1='$task_name'\n";
   print $rfReport "parFile2='$task_dir'\n";
+
   while (<$rtReport>) {
     print $rfReport $_;
   }
   close($rtReport);
   close($rfReport);
-  
+
   my $report = $self->open_pbs( $report_pbs, $pbs_desc, $report_log_desp, $path_file, $result_dir );
   print $report "R --vanilla --slave -f $rfileReport \n";
   $self->close_pbs( $report, $report_pbs );
-  
-  my $final   = $self->open_pbs( $final_pbs,   $pbs_desc, $final_log_desp,   $path_file, $pbs_dir );
-  
+
+  my $final = $self->open_pbs( $final_pbs, $pbs_desc, $final_log_desp, $path_file, $pbs_dir );
+
   open( my $result_list, ">$result_list_file" ) or die $!;
   print $result_list "StepName\tTaskName\tSampleName\tFileList\n";
 
@@ -107,20 +108,36 @@ sub perform {
       if ( !defined $classname ) {
         die "$task_section is not a valid task section.";
       }
-      my $myclass         = instantiate( $classname );
+      my $myclass = instantiate($classname);
       my %expect_file_map;
-      eval {
-        %expect_file_map = %{ $myclass->result( $config, $task_section ) };
-      } or do {
+      eval { %expect_file_map = %{ $myclass->result( $config, $task_section ) }; } or do {
         my $e = $@;
-        die ("Something went wrong to get result of section $task_section : $e\n");
+        die("Something went wrong to get result of section $task_section : $e\n");
       };
-      
-      my $pbs_file_map    = $myclass->get_pbs_files( $config, $task_section );
+
+      my $pbs_file_map = $myclass->get_pbs_files( $config, $task_section );
       for my $expect_name ( sort keys %expect_file_map ) {
         my $expect_files = $expect_file_map{$expect_name};
         my $expect_file_list = join( ",", @{$expect_files} );
         print $result_list $step_name, "\t", $task_section, "\t", $expect_name, "\t", $expect_file_list, "\n";
+      }
+
+      for my $sample ( sort keys %{$pbs_file_map} ) {
+        my $samplepbs = $pbs_file_map->{$sample};
+        if ( ref($samplepbs) eq 'ARRAY' ) {
+          for my $subpbs ( @{$samplepbs} ) {
+            if ( !-e $subpbs ) {
+              die "Task " . $task_section . ", file not exists " . $subpbs . "\n";
+            }
+            print $final "bash " . $subpbs . "\n";
+          }
+        }
+        else {
+          if ( !-e $samplepbs ) {
+            die "Task " . $task_section . ", file not exists " . $samplepbs . "\n";
+          }
+          print $final "bash " . $samplepbs . "\n";
+        }
       }
 
       #print "task " . $task_section . " ...\n";
@@ -148,16 +165,10 @@ sub perform {
           my $samplepbs = $pbs_files->{$sample};
           if ( ref($samplepbs) eq 'ARRAY' ) {
             for my $subpbs ( @{$samplepbs} ) {
-              if ( !-e $subpbs ) {
-                die "Task " . $task_section . ", file not exists " . $subpbs . "\n";
-              }
               print $pbs "bash " . $subpbs . "\n";
             }
           }
           else {
-            if ( !-e $samplepbs ) {
-              die "Task " . $task_section . ", file not exists " . $samplepbs . "\n";
-            }
             print $pbs "bash " . $samplepbs . "\n";
           }
         }
@@ -166,8 +177,6 @@ sub perform {
       $self->close_pbs( $pbs, $pbs_file );
 
       print $sh "\$MYCMD ./$pbs_name \n";
-      print $final "bash ./$pbs_name \n";
-
     }
     print $sh "exit 0\n";
     close $sh;
@@ -178,7 +187,7 @@ sub perform {
   }
 
   close($result_list);
-  
+
   my $summary_pbs_name = basename($summary_pbs);
   print $final "\nbash ./$summary_pbs_name \n";
   $self->close_pbs( $final, $final_pbs );
@@ -220,7 +229,7 @@ sub get_pbs_files {
       if ( !defined $classname ) {
         die "$task_section is not a valid task section.";
       }
-      my $myclass = instantiate( $classname );
+      my $myclass = instantiate($classname);
       my $pbs_file_map = $myclass->get_pbs_files( $config, $task_section );
       for my $sample ( sort keys %{$pbs_file_map} ) {
         $samples->{$sample} = 1;
