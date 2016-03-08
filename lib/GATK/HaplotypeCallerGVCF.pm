@@ -71,7 +71,7 @@ sub perform {
 
   my $bedFile            = get_param_file( $config->{$section}{bed_file}, "bed_file", 0 );
   my $interval_padding   = get_option( $config, $section, "interval_padding", 0 );
-  my $restrict_intervals;
+  my $restrict_intervals="";
   if (defined $bedFile and $bedFile ne "") {
   	if (defined $interval_padding and $interval_padding!=0) {
   		$restrict_intervals="-L $bedFile -interval_padding $interval_padding";
