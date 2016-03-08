@@ -651,7 +651,13 @@ if (length(allSigNameList)>=2) {
 	#geting dataForFigure order in figure
 	temp$Direction<-as.integer(as.character(temp$Direction))
 	temp<-acast(temp, Gene~comparisonName ,value.var="Direction")
-	temp<-temp[do.call(order, data.frame(temp)),]	
+	temp<-temp[do.call(order, data.frame(temp)),]
+	maxNameChr<-max(nchar(row.names(temp)))
+	if (maxNameChr>70) {
+		row.names(temp)<-substr(row.names(temp),0,70)
+		dataForFigure$Gene<-substr(dataForFigure$Gene,0,70)
+		warning(paste0("The gene names were too long (",maxNameChr,"). Only first 70 letters were kept."))
+	}
 	dataForFigure$Gene<-factor(dataForFigure$Gene,levels=row.names(temp))
 	
 	width=max(2500, 60 * length(unique(dataForFigure$comparisonName)))
