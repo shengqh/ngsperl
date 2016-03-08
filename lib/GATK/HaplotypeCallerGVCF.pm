@@ -69,6 +69,17 @@ sub perform {
     $java_option = "-Xmx${memory}";
   }
 
+  my $bedFile            = get_param_file( $config->{$section}{bed_file}, "bed_file", 0 );
+  my $interval_padding   = get_option( $config, $section, "interval_padding", 0 );
+  my $restrict_intervals;
+  if (defined $bedFile and $bedFile ne "") {
+  	if (defined $interval_padding and $interval_padding!=0) {
+  		$restrict_intervals="-L $bedFile -interval_padding $interval_padding";
+  	} else {
+  		$restrict_intervals="-L $bedFile";
+  	}
+  }
+  
   my %bam_files = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -123,7 +134,7 @@ if [ ! -s $snvOut ]; then
     }
     else {
       print $pbs
-"  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bam_file -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF -variant_index_type LINEAR -variant_index_parameter 128000 --out $snvOut
+"  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bam_file -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF -variant_index_type LINEAR -variant_index_parameter 128000 --out $snvOut $restrict_intervals
 ";
     }
 

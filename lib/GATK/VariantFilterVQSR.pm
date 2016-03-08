@@ -52,6 +52,49 @@ sub perform {
   my $pbs_name = basename($pbs_file);
   my $log      = $self->get_log_filename( $log_dir, $task_name );
 
+  my $bedFile = get_param_file( $config->{$section}{bed_file}, "bed_file", 0 );
+  my $snp_annotations="";
+  my $indel_annotations="";
+if (defined $bedFile and $bedFile ne "") {
+	$snp_annotations=
+   "-an QD \\
+    -an FS \\
+    -an SOR \\
+    -an MQ \\
+    -an MQRankSum \\
+    -an ReadPosRankSum \\
+    -an InbreedingCoeff \\
+    ";
+    $indel_annotations=
+   "-an QD \\
+    -an FS \\
+    -an SOR \\
+    -an MQRankSum \\
+    -an ReadPosRankSum \\
+    -an InbreedingCoeff \\
+    ";
+} else {
+    $snp_annotations=
+   "-an DP \\
+    -an QD \\
+    -an FS \\
+    -an SOR \\
+    -an MQ \\
+    -an MQRankSum \\
+    -an ReadPosRankSum \\
+    -an InbreedingCoeff \\
+    ";
+    $indel_annotations=
+   "-an DP \\
+    -an QD \\
+    -an FS \\
+    -an SOR \\
+    -an MQRankSum \\
+    -an ReadPosRankSum \\
+    -an InbreedingCoeff \\
+    ";
+}
+
   my $merged_file = $task_name . ".vcf";
 
   my $dpname      = $task_name . ".median" . $min_median_depth;
@@ -122,13 +165,7 @@ if [[ -s $snpOut && ! -s $snpCal ]]; then
     }
 
     print $pbs "    -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 $dbsnp \\
-    -an DP \\
-    -an QD \\
-    -an FS \\
-    -an SOR \\
-    -an MQRankSum \\
-    -an ReadPosRankSum \\
-    -an InbreedingCoeff \\
+    $snp_annotations
     -mode SNP \\
     -tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 90.0 \\
     -recalFile $snpCal \\
@@ -175,13 +212,7 @@ if [[ -s $indelOut && ! -s $indelCal ]]; then
     -input $indelOut \\
     -resource:mills,known=true,training=true,truth=true,prior=12.0 $mills \\
     -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 $dbsnp \\
-    -an QD \\
-    -an DP \\
-    -an FS \\
-    -an SOR \\
-    -an MQRankSum \\
-    -an ReadPosRankSum \\
-    -an InbreedingCoeff \\
+    $indel_annotations
     -mode INDEL \\
     -tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 90.0 \\
     --maxGaussians 4 \\

@@ -37,7 +37,18 @@ sub perform {
   my $picard_jar         = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
   my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals", 0 ) ? "-fixMisencodedQuals" : "";
   my $baq                = get_option( $config, $section, "samtools_baq_calibration", 0 );
-
+  my $bedFile            = get_param_file( $config->{$section}{bed_file}, "bed_file", 0 );
+  my $interval_padding   = get_option( $config, $section, "interval_padding", 0 );
+  
+  my $restrict_intervals;
+  if (defined $bedFile and $bedFile ne "") {
+  	if (defined $interval_padding and $interval_padding!=0) {
+  		$restrict_intervals="-L $bedFile -interval_padding $interval_padding";
+  	} else {
+  		$restrict_intervals="-L $bedFile";
+  	}
+  }
+  
   my $indel_vcf = "";
   foreach my $vcf (@vcfFiles) {
     $indel_vcf = $indel_vcf . " -known $vcf";
@@ -113,18 +124,18 @@ fi
 
 if [[ -s $rmdupFile && ! -s $intervalFile ]]; then
   echo RealignerTargetCreator=`date` 
-  java $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $rmdupFile -R $faFile $indel_vcf -o $intervalFile
+  java $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $rmdupFile -R $faFile $indel_vcf -o $intervalFile $restrict_intervals
 fi
 
 if [[ -s $intervalFile && ! -s $realignedFile ]]; then
   echo IndelRealigner=`date` 
   #InDel parameter referenced: http://www.broadinstitute.org/gatk/guide/tagged?tag=local%20realignment
-  java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $fixMisencodedQuals -I $rmdupFile -R $faFile -targetIntervals $intervalFile $indel_vcf --consensusDeterminationModel KNOWNS_ONLY -LOD 0.4 -o $realignedFile 
+  java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $fixMisencodedQuals -I $rmdupFile -R $faFile -targetIntervals $intervalFile $indel_vcf --consensusDeterminationModel USE_READS -LOD 0.4 -o $realignedFile 
 fi
 
 if [[ -s $realignedFile && ! -s $grpFile ]]; then
   echo BaseRecalibrator=`date` 
-  java $option -jar $gatk_jar -T BaseRecalibrator -nct $thread -rf BadCigar -R $faFile -I $realignedFile $knownsitesvcf -o $grpFile
+  java $option -jar $gatk_jar -T BaseRecalibrator -nct $thread -rf BadCigar -R $faFile -I $realignedFile $knownsitesvcf -o $grpFile $restrict_intervals
 fi
 
 if [[ -s $grpFile && ! -s $recalFile ]]; then
