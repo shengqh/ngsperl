@@ -189,7 +189,8 @@ sub perform {
   close($result_list);
 
   my $summary_pbs_name = basename($summary_pbs);
-  print $final "\nbash ./$summary_pbs_name \n";
+  print $final "\nbash $summary_pbs \n";
+  print $final "\nbash $report_pbs \n";
   $self->close_pbs( $final, $final_pbs );
 }
 
