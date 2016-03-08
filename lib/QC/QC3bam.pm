@@ -49,7 +49,9 @@ sub perform {
 
   my $log_desc = $cluster->get_log_description($log);
 
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+  my $final_file = "bamReport.html";
+
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
   print $pbs "perl $qc3_perl $option -m b -i $mapfile -g $transcript_gtf -o $result_dir";
   $self->close_pbs( $pbs, $pbs_file );
 }
@@ -61,7 +63,7 @@ sub result {
 
   my $result       = {};
   my @result_files = ();
-  push( @result_files, $result_dir . "/metrics.tsv" );
+  push( @result_files, $result_dir . "/bamReport.html" );
   $result->{$task_name} = filter_array( \@result_files, $pattern );
 
   return $result;
