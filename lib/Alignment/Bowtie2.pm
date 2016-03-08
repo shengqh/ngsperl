@@ -29,7 +29,6 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $bowtie2_index = $config->{$section}{bowtie2_index} or die "define ${section}::bowtie2_index first";
-  my $samonly = get_option( $config, $section, "samonly", 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -60,7 +59,7 @@ sub perform {
 
     my $pbs_name = $self->pbs_name($sample_name);
     my $pbs_file = $pbs_dir . "/$pbs_name";
-    my $log     = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
@@ -68,24 +67,9 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $bam_file );
 
-    if ($samonly) {
-      print $pbs "
-if [ -s $sam_file ]; then
-  echo job has already been done. if you want to do again, delete $sam_file and submit job again.
-  exit 0
-fi
-
-$bowtie2_aln_command
-";
-    }
-    else {
-      print $pbs "
-if [ -s $bam_file ]; then
-  echo job has already been done. if you want to do again, delete $bam_file and submit job again.
-  exit 0
-fi
+    print $pbs "
 
 $bowtie2_aln_command
 
@@ -98,9 +82,7 @@ if [ -s $sam_file ]; then
   fi
 fi
 ";
-    }
-
-    $self->close_pbs($pbs, $pbs_file);
+    $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
 

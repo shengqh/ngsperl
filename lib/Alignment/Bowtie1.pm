@@ -29,9 +29,10 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $bowtie1_index = $config->{$section}{bowtie1_index} or die "define ${section}::bowtie1_index first";
-  my $samformat  = get_option( $config, $section, "samformat",  1 );
-  my $mappedonly = get_option( $config, $section, "mappedonly", 0 );
-  
+  my $samformat               = get_option( $config, $section, "samformat",               1 );
+  my $mappedonly              = get_option( $config, $section, "mappedonly",              0 );
+  my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
+
   $option = $option . " -p $thread";
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
@@ -41,7 +42,6 @@ sub perform {
   print $sh get_run_command($sh_direct) . " \n";
 
   if ($samformat) {
-    my $samonly = get_option( $config, $section, "samonly", 0 );
     my $sortbam = get_option( $config, $section, "sortbam", 1 );
 
     for my $sample_name ( sort keys %raw_files ) {
@@ -97,46 +97,47 @@ rm ${f2}.fifo";
       my $pbs_name = basename($pbs_file);
       my $log      = $self->get_log_filename( $log_dir, $sample_name );
       my $cur_dir  = create_directory_or_die( $result_dir . "/$sample_name" );
+      
+      my $chromosome_grep_command = "";
+      if($chromosome_grep_pattern ne ""){
+        $chromosome_grep_command = "samtools view -H $bowtiesam | grep \"^\@SQ\" | cut -f2 |cut -d \":\" -f 2 | grep \"$chromosome_grep_pattern\" |xargs ";
+      } 
 
       print $sh "\$MYCMD ./$pbs_name \n";
 
       my $log_desc = $cluster->get_log_description($log);
 
-      my $final_file = $samonly?$sam_file:$bam_file;
+      my $final_file = $bam_file;
       my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-        print $pbs "
+      print $pbs "
 $bowtie1_aln_command
 ";
 
-      if ($samonly) {
-        print $pbs "
-$mappedonlycmd
-";
-      }
-      else {
-        print $pbs "
+      print $pbs "
 if [ -s $bowtiesam ]; then
 ";
-        if ($sortbam) {
-          print $pbs "  samtools view -Shu $mappedonlyoption $bowtiesam | samtools sort -o $bam_file -
+      if ($sortbam) {
+        print $pbs "$chromosome_grep_command  samtools view -Shu $mappedonlyoption $bowtiesam | samtools sort -o $bam_file -
   if [ -s $bam_file ]; then
     samtools index $bam_file 
     samtools flagstat $bam_file > ${bam_file}.stat
-";
-        }
-        else {
-          print $pbs "samtools view -S $mappedonlyoption -b $bowtiesam > ${sample_name}.bam
-  if [ -s $bam_file ]; then
-";
-        }
-        print $pbs "    rm $bowtiesam
+    rm $bowtiesam
   fi
-fi
 ";
       }
-      
-      $self->close_pbs($pbs, $pbs_file);
+      else {
+        print $pbs "$chromosome_grep_command samtools view -S $mappedonlyoption -b $bowtiesam > ${sample_name}.bam
+  if [ -s $bam_file ]; then
+    rm $bowtiesam
+  fi
+";
+      }
+      print $pbs "
+fi
+";
+
+      $self->close_pbs( $pbs, $pbs_file );
     }
     close $sh;
 
@@ -193,6 +194,7 @@ rm ${f2}.fifo
       print $pbs "
 $bowtie1_aln_command
 ";
+
       $self->close_pbs($pbs);
       print "$pbs_file created\n";
     }
