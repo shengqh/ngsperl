@@ -45,7 +45,7 @@ mergeTableBySampleGroup<-function(x,sampleToGroup) {
 	row.names(xRatioGroupMean)<-row.names(x)
 	for (i in 1:groupLength) {
 		currentSample<-sampleToGroup[which(sampleToGroup[,2]==colnames(xRatioGroupMean)[i]),1]
-		xRatioGroupMean[,i]<-rowMeans(xRatio[,currentSample])
+		xRatioGroupMean[,i]<-rowMeans(xRatio[,currentSample,drop=FALSE])
 	}
 	return(xRatioGroupMean)
 }
