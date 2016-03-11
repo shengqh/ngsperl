@@ -71,7 +71,7 @@ groupBarplot<-function(x,maxCategory=5,groupName="Species") {
 }
 
 
-mappingResult<-read.delim(mappingResultFile,header=T,row.names=1)
+mappingResult<-read.delim(mappingResultFile,header=T,row.names=1, check.names=F)
 databaseLog<-read.delim(databaseLogFile,header=T,as.is=T)
 #row.names(mappingResult)<-gsub("\\.\\d+","",row.names(mappingResult))
 if (groupFileList!="") {
