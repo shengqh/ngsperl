@@ -22,8 +22,8 @@ our $VERSION = '0.02';
 
 sub getSmallRNAConfig {
   my ($def) = @_;
-  $def->{VERSION}=$VERSION;
-  
+  $def->{VERSION} = $VERSION;
+
   my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref ) = getPrepareConfig( $def, 1 );
   my @individual = @{$individual_ref};
   my @summary    = @{$summary_ref};
@@ -126,15 +126,15 @@ sub getSmallRNAConfig {
         },
       },
       bowtie1_genome_1mm_NTA_smallRNA_table_vis => {
-        class                => "CQS::UniqueR",
-        perform              => 1,
-        target_dir           => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_table",
-        rtemplate            => "countTableCorrelation.R",
-        output_file          => "parameterSampleFile1",
-        output_file_ext      => ".Correlation.png",
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_table",
+        rtemplate                => "countTableCorrelation.R",
+        output_file              => "parameterSampleFile1",
+        output_file_ext          => ".Correlation.png",
         parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".count\$" ],
-        sh_direct            => 1,
-        pbs                  => {
+        sh_direct                => 1,
+        pbs                      => {
           "email"    => $def->{email},
           "nodes"    => "1:ppn=1",
           "walltime" => "1",
@@ -159,7 +159,7 @@ sub getSmallRNAConfig {
       },
     };
     push @individual, ( "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_NTA_smallRNA_count" );
-    push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_table_vis","bowtie1_genome_1mm_NTA_smallRNA_category" );
+    push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_table_vis", "bowtie1_genome_1mm_NTA_smallRNA_category" );
 
     if ($search_not_identical) {
 
@@ -312,17 +312,17 @@ sub getSmallRNAConfig {
         },
 
         bowtie1_genome_unmapped_reads => {
-          class       => "CQS::Perl",
-          perform     => 1,
-          target_dir  => $def->{target_dir} . "/bowtie1_genome_unmapped_reads",
-          perlFile    => "unmappedReadsToFastq.pl",
-          source_ref  => [ "identical", ".fastq.gz\$" ],
-          source2_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
-          source3_ref => ["bowtie1_genome_1mm_NTA_pmnames"],
-          output_ext  => "_clipped_identical.unmapped.fastq.gz",
-          output_other_ext  => "_clipped_identical.unmapped.fastq.dupcount",
-          sh_direct   => 1,
-          pbs         => {
+          class            => "CQS::Perl",
+          perform          => 1,
+          target_dir       => $def->{target_dir} . "/bowtie1_genome_unmapped_reads",
+          perlFile         => "unmappedReadsToFastq.pl",
+          source_ref       => [ "identical", ".fastq.gz\$" ],
+          source2_ref      => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
+          source3_ref      => ["bowtie1_genome_1mm_NTA_pmnames"],
+          output_ext       => "_clipped_identical.unmapped.fastq.gz",
+          output_other_ext => "_clipped_identical.unmapped.fastq.dupcount",
+          sh_direct        => 1,
+          pbs              => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
             "walltime" => "1",
@@ -461,6 +461,7 @@ sub getSmallRNAConfig {
         },
       },
       bowtie1_tRNA_pm_table_vis => {
+        task_name            => $def->{task_name} . "_tv1",
         class                => "CQS::UniqueR",
         perform              => 1,
         target_dir           => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
@@ -478,11 +479,12 @@ sub getSmallRNAConfig {
         },
       },
       bowtie1_tRNA_pm_table_vis2 => {
+        task_name            => $def->{task_name} . "_tv2",
         class                => "CQS::UniqueR",
         perform              => 1,
-        target_dir           => $def->{target_dir} . "/bowtie1_tRNA_pm_vis2",
+        target_dir           => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
         rtemplate            => "bacteriaGroupMappingVis.R",
-        output_file          => ".tRNA.Result",
+        output_file          => ".tRNA",
         output_file_ext      => ".category.csv",
         parameterSampleFile1 => $groups,
         parameterFile1_ref   => [ "bowtie1_tRNA_pm_table", ".count\$" ],
@@ -893,7 +895,7 @@ sub getSmallRNAConfig {
             "mem"      => "10gb"
           },
         },
-       group4_deseq2 => {
+        group4_deseq2 => {
           class                => "Comparison::DESeq2",
           perform              => 1,
           target_dir           => $def->{target_dir} . "/fungus_group4_deseq2",
@@ -925,17 +927,17 @@ sub getSmallRNAConfig {
     my $blast = {
 
       bowtie1_unmapped_reads => {
-        class       => "CQS::Perl",
-        perform     => 1,
-        target_dir  => $def->{target_dir} . "/bowtie1_unmapped_reads",
-        perlFile    => "unmappedReadsToFastq.pl",
-        source_ref  => $identical_ref,
-        source2_ref => \@mapped,
-        source3_ref => \@pmnames,
-        output_ext  => "_clipped_identical.unmapped.fastq.gz",
-        output_other_ext  => "_clipped_identical.unmapped.fastq.dupcount",
-        sh_direct   => 1,
-        pbs         => {
+        class            => "CQS::Perl",
+        perform          => 1,
+        target_dir       => $def->{target_dir} . "/bowtie1_unmapped_reads",
+        perlFile         => "unmappedReadsToFastq.pl",
+        source_ref       => $identical_ref,
+        source2_ref      => \@mapped,
+        source3_ref      => \@pmnames,
+        output_ext       => "_clipped_identical.unmapped.fastq.gz",
+        output_other_ext => "_clipped_identical.unmapped.fastq.dupcount",
+        sh_direct        => 1,
+        pbs              => {
           "email"    => $def->{email},
           "nodes"    => "1:ppn=1",
           "walltime" => "1",
