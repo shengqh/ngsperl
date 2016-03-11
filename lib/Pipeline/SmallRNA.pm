@@ -480,7 +480,7 @@ sub getSmallRNAConfig {
       bowtie1_tRNA_pm_table_vis2 => {
         class                => "CQS::UniqueR",
         perform              => 1,
-        target_dir           => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
+        target_dir           => $def->{target_dir} . "/bowtie1_tRNA_pm_vis2",
         rtemplate            => "bacteriaGroupMappingVis.R",
         output_file          => ".tRNA.Result",
         output_file_ext      => ".category.csv",
