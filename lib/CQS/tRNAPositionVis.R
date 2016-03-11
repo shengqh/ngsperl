@@ -15,6 +15,7 @@ tRNASigFileList<-parSampleFile3
 library(ggplot2)
 library(grid)
 print("Doing tRNA position visualization")
+maxPos<-100
 
 summaryPositionInSamples<-function(positionData,positionKeyVar="PositionKey",
 		keepVar=c("Position","Group","tRNA","Count","CountPercentage"),
@@ -88,11 +89,15 @@ temp<-grep("^[A-Z][a-z][a-z]",positionRawAllSamplestRNAMeanSample$tRNA)
 positionRawAllSamplestRNAMeanSample3<-positionRawAllSamplestRNAMeanSample[temp,]
 write.csv(positionRawAllSamplestRNAMeanSample3,paste0(resultFile,".all3tRNAPosition.csv"))
 
+positionRawAllSamplestRNAMeanSample3<-positionRawAllSamplestRNAMeanSample3[which(positionRawAllSamplestRNAMeanSample3$Position<=maxPos),]
 m <- ggplot(positionRawAllSamplestRNAMeanSample3, aes(x = Position,y=CountPercentage,fill=tRNA))
 png(paste0(resultFile,".alltRNAPosition.png"),width=3000,height=3000,res=300)
 m + geom_bar(stat="identity")+facet_grid(Group ~ .) +
 		theme(legend.key.size = unit(0.4, "cm"))+
-		ylab("cumulative read fraction (read counts/total reads)")
+		ylab("cumulative read fraction (read counts/total reads)")+
+		theme(text = element_text(size=20))+theme(legend.text = element_text(size=22))+
+		guides(fill= guide_legend(ncol = 1,keywidth=1.2))+
+		scale_fill_manual(values=colorRampPalette(brewer.pal(9, "Set1"))(length(unique(positionRawAllSamplestRNAMeanSample3$tRNA))))
 dev.off()
 
 #significant tRNA position distribution

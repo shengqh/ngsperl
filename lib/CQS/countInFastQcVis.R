@@ -46,5 +46,5 @@ if (countInFastQcPostRemove=="") {
 	dev.off()
 }
 
-
+write.csv(countForFigure,paste0(resultFile,".Reads.csv"))
 
