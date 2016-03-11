@@ -518,6 +518,43 @@ sub getSmallRNAConfig {
         class         => 'Alignment::Bowtie1'
       },
 
+      bowtie1_rRNAL_pm_count => {
+        class        => 'CQS::CQSChromosomeCount',
+        cluster      => $cluster,
+        sh_direct    => 1,
+        perform      => 1,
+        target_dir   => $def->{target_dir} . "/bowtie1_rRNAL_pm_count",
+        option       => $def->{smallrnacount_option} . " --namePattern _\\(.+?\\)\\;",
+        source_ref   => 'bowtie1_rRNAL_pm',
+        cqs_tools    => $def->{cqstools},
+        seqcount_ref => [ "identical", ".dupcount\$" ],
+        pbs          => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
+        },
+      },
+
+      bowtie1_tRNA_pm_table => {
+        class      => 'CQS::CQSChromosomeTable',
+        cluster    => $cluster,
+        sh_direct  => 1,
+        perform    => 1,
+        target_dir => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
+        source_ref => [ 'bowtie1_tRNA_pm_count', '.xml' ],
+        cqs_tools  => $def->{cqstools},
+        option     => '',
+        prefix     => 'tRNA_pm_',
+        pbs        => {
+          'email'    => $def->{email},
+          'walltime' => '10',
+          'mem'      => '10gb',
+          'nodes'    => '1:ppn=1'
+        },
+      },
+
+
       bowtie1_rRNAL_pm_names => {
         class      => "Samtools::PerfectMappedReadNames",
         perform    => 1,
