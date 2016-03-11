@@ -517,40 +517,40 @@ sub getSmallRNAConfig {
         option        => $def->{bowtie1_option_pm},
         class         => 'Alignment::Bowtie1'
       },
-
-      bowtie1_rRNAL_pm_names => {
-        class      => "Samtools::PerfectMappedReadNames",
-        perform    => 1,
-        target_dir => $def->{target_dir} . "/bowtie1_rRNAL_pm_names",
-        option     => "",
-        source_ref => "bowtie1_rRNAL_pm",
-        sh_direct  => 1,
-        cluster    => $cluster,
-        pbs        => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "10",
-          "mem"      => "10gb"
+      bowtie1_rRNAL_pm_count => {
+        class        => 'CQS::CQSChromosomeCount',
+        cluster      => $cluster,
+        sh_direct    => 1,
+        perform      => 1,
+        target_dir   => $def->{target_dir} . "/bowtie1_rRNAL_pm_count",
+        option       => $def->{smallrnacount_option} . " --namePattern _\\(.+?\\)\\;",
+        source_ref   => 'bowtie1_rRNAL_pm',
+        cqs_tools    => $def->{cqstools},
+        seqcount_ref => [ "identical", ".dupcount\$" ],
+        pbs          => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
         },
       },
 
       bowtie1_rRNAL_pm_table => {
-        pbs => {
+        class      => 'CQS::CQSChromosomeTable',
+        cluster    => $cluster,
+        sh_direct  => 1,
+        perform    => 1,
+        target_dir => $def->{target_dir} . "/bowtie1_rRNAL_pm_table",
+        source_ref => [ 'bowtie1_rRNAL_pm_count', '.xml' ],
+        cqs_tools  => $def->{cqstools},
+        option     => '',
+        prefix     => 'rRNAL_pm_',
+        pbs        => {
           'email'    => $def->{email},
           'walltime' => '10',
           'mem'      => '10gb',
           'nodes'    => '1:ppn=1'
         },
-        cluster      => $cluster,
-        sh_direct    => 1,
-        perform      => 1,
-        target_dir   => $def->{target_dir} . "/bowtie1_rRNAL_pm_table",
-        source_ref   => 'bowtie1_rRNAL_pm',
-        seqcount_ref => [ "identical", ".dupcount\$" ],
-        cqs_tools    => $def->{cqstools},
-        option       => '',
-        class        => 'CQS::BAMSequenceCountTable',
-        prefix       => 'rRNAL_pm_'
       },
 
       #unmapped reads to rRNAS
@@ -572,39 +572,39 @@ sub getSmallRNAConfig {
         option        => $def->{bowtie1_option_pm},
         class         => 'Alignment::Bowtie1'
       },
-      bowtie1_rRNAS_pm_names => {
-        class      => "Samtools::PerfectMappedReadNames",
-        perform    => 1,
-        target_dir => $def->{target_dir} . "/bowtie1_rRNAS_pm_names",
-        option     => "",
-        source_ref => "bowtie1_rRNAS_pm",
-        sh_direct  => 1,
-        cluster    => $cluster,
-        pbs        => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "10",
-          "mem"      => "10gb"
+      bowtie1_rRNAS_pm_count => {
+        class        => 'CQS::CQSChromosomeCount',
+        cluster      => $cluster,
+        sh_direct    => 1,
+        perform      => 1,
+        target_dir   => $def->{target_dir} . "/bowtie1_rRNAS_pm_count",
+        option       => $def->{smallrnacount_option} . " --namePattern _\\(.+?\\)\\;",
+        source_ref   => 'bowtie1_rRNAS_pm',
+        cqs_tools    => $def->{cqstools},
+        seqcount_ref => [ "identical", ".dupcount\$" ],
+        pbs          => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
         },
       },
-
       bowtie1_rRNAS_pm_table => {
-        pbs => {
+        class      => 'CQS::CQSChromosomeTable',
+        cluster    => $cluster,
+        sh_direct  => 1,
+        perform    => 1,
+        target_dir => $def->{target_dir} . "/bowtie1_rRNAS_pm_table",
+        source_ref => [ 'bowtie1_rRNAS_pm_count', '.xml' ],
+        cqs_tools  => $def->{cqstools},
+        option     => '',
+        prefix     => 'rRNAS_pm_',
+        pbs        => {
           'email'    => $def->{email},
           'walltime' => '10',
           'mem'      => '10gb',
           'nodes'    => '1:ppn=1'
         },
-        cluster      => $cluster,
-        sh_direct    => 1,
-        perform      => 1,
-        target_dir   => $def->{target_dir} . "/bowtie1_rRNAS_pm_table",
-        source_ref   => 'bowtie1_rRNAS_pm',
-        seqcount_ref => [ "identical", ".dupcount\$" ],
-        cqs_tools    => $def->{cqstools},
-        option       => '',
-        class        => 'CQS::BAMSequenceCountTable',
-        prefix       => 'rRNAS_pm_'
       },
 
       #unmapped reads to group1 bacterial
@@ -835,8 +835,8 @@ sub getSmallRNAConfig {
 
     push @individual,
       (
-      "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",            "bowtie1_rRNAL_pm",           "bowtie1_rRNAL_pm_names",
-      "bowtie1_rRNAS_pm",           "bowtie1_rRNAS_pm_names",           "bowtie1_bacteria_group1_pm", "bowtie1_bacteria_group1_pm_count",
+      "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",            "bowtie1_rRNAL_pm",           "bowtie1_rRNAL_pm_count",
+      "bowtie1_rRNAS_pm",           "bowtie1_rRNAS_pm_count",           "bowtie1_bacteria_group1_pm", "bowtie1_bacteria_group1_pm_count",
       "bowtie1_bacteria_group2_pm", "bowtie1_bacteria_group2_pm_count", "bowtie1_fungus_group4_pm",   "bowtie1_fungus_group4_pm_count"
       );
     push @summary,
@@ -846,9 +846,11 @@ sub getSmallRNAConfig {
       "bowtie1_fungus_group4_pm_table",   "bowtie1_fungus_group4_pm_table_vis",
       );
 
-    push @mapped, ( "bowtie1_tRNA_pm_count", ".xml", "bowtie1_bacteria_group1_pm_count", ".xml", "bowtie1_bacteria_group2_pm_count", ".xml", "bowtie1_fungus_group4_pm_count", ".xml" );
-
-    push @pmnames, ( "bowtie1_rRNAL_pm_names", "bowtie1_rRNAS_pm_names", );
+    push @mapped,
+      (
+      "bowtie1_tRNA_pm_count",            ".xml", "bowtie1_rRNAL_pm_count",           ".xml", "bowtie1_rRNAS_pm_count",         ".xml",
+      "bowtie1_bacteria_group1_pm_count", ".xml", "bowtie1_bacteria_group2_pm_count", ".xml", "bowtie1_fungus_group4_pm_count", ".xml"
+      );
 
     #do unmapped reads DESeq2
     if ($do_comparison) {
