@@ -64,10 +64,11 @@ groupBarplot<-function(x,maxCategory=5,groupName="Species") {
 	mappingResult2SpeciesSelectedForFigure<-melt(mappingResult2SpeciesSelectedForFigure)
 	colnames(mappingResult2SpeciesSelectedForFigure)<-c("Groups","Sample","Reads")
 	
-	ggplot(mappingResult2SpeciesSelectedForFigure,aes(x=Sample,y=Reads,fill=Groups))+
+	g<-ggplot(mappingResult2SpeciesSelectedForFigure,aes(x=Sample,y=Reads,fill=Groups))+
 			geom_bar(stat="identity")+
 			guides(fill= guide_legend(title = groupName))+
 			theme(axis.text.x = element_text(angle = 90, hjust = 1))
+	print(g)
 }
 
 
