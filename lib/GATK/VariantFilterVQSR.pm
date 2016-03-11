@@ -63,16 +63,14 @@ if (defined $bedFile and $bedFile ne "") {
     -an MQ \\
     -an MQRankSum \\
     -an ReadPosRankSum \\
-    -an InbreedingCoeff \\
-    ";
+    -an InbreedingCoeff \\";
     $indel_annotations=
    "-an QD \\
     -an FS \\
     -an SOR \\
     -an MQRankSum \\
     -an ReadPosRankSum \\
-    -an InbreedingCoeff \\
-    ";
+    -an InbreedingCoeff \\";
 } else {
     $snp_annotations=
    "-an DP \\
@@ -82,8 +80,7 @@ if (defined $bedFile and $bedFile ne "") {
     -an MQ \\
     -an MQRankSum \\
     -an ReadPosRankSum \\
-    -an InbreedingCoeff \\
-    ";
+    -an InbreedingCoeff \\";
     $indel_annotations=
    "-an DP \\
     -an QD \\
@@ -91,8 +88,7 @@ if (defined $bedFile and $bedFile ne "") {
     -an SOR \\
     -an MQRankSum \\
     -an ReadPosRankSum \\
-    -an InbreedingCoeff \\
-    ";
+    -an InbreedingCoeff \\";
 }
 
   my $merged_file = $task_name . ".vcf";

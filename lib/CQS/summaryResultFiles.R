@@ -80,6 +80,7 @@ for (step in unique(ResultOut$StepName)) {
 	names(taskFileSizeMedian)<-temp[,1]
 	
 	tableForPlot$Task<-paste0(tableForPlot$TaskName," (",addUnitToSize(taskFileSizeMedian)[tableForPlot$TaskName],")")
+	tableForPlot$Task<-factor(tableForPlot$Task,levels=rev(unique(tableForPlot$Task)))
 	tableForPlot$Log2RelativeSize<-log2(tableForPlot$FileSizeTotalRaw/taskFileSizeMedian[tableForPlot$TaskName])
 	
 	png(file=paste0(fileListName,"_",step,".RelativeFileSize.png"),height=height, width=width, res=300)
