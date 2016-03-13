@@ -417,6 +417,22 @@ sub getPrepareConfig {
       "mem"      => "20gb"
     },
   };
+    $config->{"fastq_len_vis"} = {
+      class              => "CQS::UniqueR",
+      perform            => 1,
+      target_dir         => $def->{target_dir} . "/fastq_len",
+      rtemplate          => "fastqLengthVis.R",
+      output_file        => ".lengthDistribution",
+      output_file_ext    => ".csv",
+      parameterSampleFile1_ref => [ "fastq_len", ".len\$" ],
+      sh_direct          => 1,
+      pbs                => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
+      },
+  };
   push @individual, ("fastq_len");
 
   my $preparation = {

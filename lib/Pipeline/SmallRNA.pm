@@ -18,7 +18,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(performSmallRNA performSmallRNATask)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 sub getSmallRNAConfig {
   my ($def) = @_;
