@@ -219,12 +219,12 @@ sub getPrepareConfig {
       output_ext => "_removeSeq.fastq.gz",
       perlFile   => "removeSequenceInFastq.pl",
       source_ref => $source_ref,
-      sh_direct  => 1,
+      sh_direct  => 0,
       cluster    => $cluster,
       pbs        => {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
-        "walltime" => "24",
+        "walltime" => "2",
         "mem"      => "20gb"
       },
     };
