@@ -434,6 +434,7 @@ sub getPrepareConfig {
       },
   };
   push @individual, ("fastq_len");
+  push @summary,    ("fastq_len_vis");
 
   my $preparation = {
     identical => {
