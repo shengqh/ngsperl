@@ -483,7 +483,6 @@ sub getSmallRNAConfig {
         },
       },
       bowtie1_tRNA_pm_table_vis => {
-        task_name            => $def->{task_name} . "_tv1",
         class                => "CQS::UniqueR",
         perform              => 1,
         target_dir           => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
@@ -492,25 +491,6 @@ sub getSmallRNAConfig {
         output_file_ext      => ".top.png",
         parameterSampleFile1 => $groups,
         parameterFile1_ref   => [ "bowtie1_tRNA_pm_table", ".count\$" ],
-        sh_direct            => 1,
-        pbs                  => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
-        },
-      },
-      bowtie1_tRNA_pm_table_vis2 => {
-        task_name            => $def->{task_name} . "_tv2",
-        class                => "CQS::UniqueR",
-        perform              => 1,
-        target_dir           => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
-        rtemplate            => "bacteriaGroupMappingVis.R",
-        output_file          => ".tRNA",
-        output_file_ext      => ".category.csv",
-        parameterSampleFile1 => $groups,
-        parameterFile1_ref   => [ "bowtie1_tRNA_pm_table", ".count\$" ],
-        parameterFile2       => $def->{trna_category_log},
         sh_direct            => 1,
         pbs                  => {
           "email"    => $def->{email},
