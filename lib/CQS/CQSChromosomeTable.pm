@@ -82,7 +82,7 @@ fi
     close(FL);
 
     print $pbs "
-mono-sgen $cqstools chromosome_table $option -o $outputname -l $filelist
+mono $cqstools chromosome_table $option -o $outputname -l $filelist
 ";
     $self->close_pbs( $pbs, $pbs_file );
   }
@@ -95,26 +95,26 @@ sub result {
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
-  my $result = {};
+  my $result       = {};
+  my $has_category = $option =~ /--categoryMapFile/;
 
   my @result_files = ();
   if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
     my $groups = get_raw_files( $config, $section, "groups" );
     for my $group_name ( sort keys %{$groups} ) {
-      my $filelist   = $self->get_file( $pbs_dir,    "${task_name}_${group_name}", ".filelist", 0 );
-      my $outputfile = $self->get_file( $result_dir, "${task_name}_${group_name}", ".count",    0 );
-      my $result_file = "${result_dir}/$outputfile";
-
-      push( @result_files, $result_file );
-      push( @result_files, $filelist );
+      push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".count", 0 ) );
+      if ($has_category) {
+        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".category.count", 0 ) );
+      }
+      push( @result_files, $self->get_file( $pbs_dir, "${task_name}_${group_name}", ".filelist", 0 ) );
     }
   }
   else {
-    my $filelist   = $self->get_file( $pbs_dir,    ${task_name}, ".filelist", 0 );
-    my $outputfile = $self->get_file( $result_dir, ${task_name}, ".count",    0 );
-
-    push( @result_files, $outputfile );
-    push( @result_files, $filelist );
+    push( @result_files, $self->get_file( $result_dir, ${task_name}, ".count", 0 ) );
+    if ($has_category) {
+      push( @result_files, $self->get_file( $result_dir, ${task_name}, ".category.count", 0 ) );
+    }
+    push( @result_files, $self->get_file( $pbs_dir, ${task_name}, ".filelist", 0 ) );
   }
 
   $result->{$task_name} = filter_array( \@result_files, $pattern );
