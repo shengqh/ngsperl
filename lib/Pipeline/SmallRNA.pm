@@ -141,34 +141,36 @@ sub getSmallRNAConfig {
           "mem"      => "10gb"
         },
       },
-#      bowtie1_genome_1mm_NTA_smallRNA_category => {
-#        class      => "CQS::SmallRNACategory",
-#        perform    => 1,
-#        target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_category",
-#        option     => "",
-#        source_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info\$" ],
-#        cqs_tools  => $def->{cqstools},
-#        sh_direct  => 1,
-#        cluster    => $cluster,
-#        pbs        => {
-#          "email"    => $def->{email},
-#          "nodes"    => "1:ppn=1",
-#          "walltime" => "72",
-#          "mem"      => "40gb"
-#        },
-#      },
-      
+
+      #      bowtie1_genome_1mm_NTA_smallRNA_category => {
+      #        class      => "CQS::SmallRNACategory",
+      #        perform    => 1,
+      #        target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_category",
+      #        option     => "",
+      #        source_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info\$" ],
+      #        cqs_tools  => $def->{cqstools},
+      #        sh_direct  => 1,
+      #        cluster    => $cluster,
+      #        pbs        => {
+      #          "email"    => $def->{email},
+      #          "nodes"    => "1:ppn=1",
+      #          "walltime" => "72",
+      #          "mem"      => "40gb"
+      #        },
+      #      },
+
       #need project name as parameterSampleFile1 to be result file name
       bowtie1_genome_1mm_NTA_smallRNA_category => {
-        class                    => "CQS::UniqueR",
-        perform                  => 1,
-        target_dir               => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_category",
-        rtemplate                => "smallRnaCategory.R",
-        output_file              => "parameterSampleFile1",
-        output_file_ext          => ".category.png",
-#        parameterSampleFile1     => $trna_vis_groups,
+        class           => "CQS::UniqueR",
+        perform         => 1,
+        target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_category",
+        rtemplate       => "smallRnaCategory.R",
+        output_file     => "parameterSampleFile1",
+        output_file_ext => ".category.png",
+
+        #        parameterSampleFile1     => $trna_vis_groups,
         parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info" ],
-        parameterSampleFile2 => $groups,
+        parameterSampleFile2     => $groups,
         sh_direct                => 1,
         pbs                      => {
           "email"    => $def->{email},
@@ -177,8 +179,7 @@ sub getSmallRNAConfig {
           "mem"      => "10gb"
         },
       },
-      
-      
+
     };
     push @individual, ( "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_NTA_smallRNA_count" );
     push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_table_vis", "bowtie1_genome_1mm_NTA_smallRNA_category" );
@@ -473,7 +474,7 @@ sub getSmallRNAConfig {
         target_dir => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
         source_ref => [ 'bowtie1_tRNA_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
-        option     => '--categoryMapFile ' . $def->{trna_category_log},
+        option     => '--categoryMapFile ' . $def->{trna_category_map},
         prefix     => 'tRNA_pm_',
         pbs        => {
           'email'    => $def->{email},
@@ -525,7 +526,7 @@ sub getSmallRNAConfig {
         sh_direct    => 1,
         perform      => 1,
         target_dir   => $def->{target_dir} . "/bowtie1_rRNAL_pm_count",
-        option       => $def->{smallrnacount_option} . " --namePattern _\\(.+?\\)\\;",
+        option       => $def->{smallrnacount_option} . ' --categoryMapFile ' . $def->{rrnaL_category_map},
         source_ref   => 'bowtie1_rRNAL_pm',
         cqs_tools    => $def->{cqstools},
         seqcount_ref => [ "identical", ".dupcount\$" ],
@@ -580,7 +581,7 @@ sub getSmallRNAConfig {
         sh_direct    => 1,
         perform      => 1,
         target_dir   => $def->{target_dir} . "/bowtie1_rRNAS_pm_count",
-        option       => $def->{smallrnacount_option} . " --namePattern _\\(.+?\\)\\;",
+        option       => $def->{smallrnacount_option} . ' --categoryMapFile ' . $def->{rrnaS_category_map},
         source_ref   => 'bowtie1_rRNAS_pm',
         cqs_tools    => $def->{cqstools},
         seqcount_ref => [ "identical", ".dupcount\$" ],
