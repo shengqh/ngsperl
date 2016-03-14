@@ -141,30 +141,32 @@ sub getSmallRNAConfig {
           "mem"      => "10gb"
         },
       },
-      bowtie1_genome_1mm_NTA_smallRNA_category => {
-        class      => "CQS::SmallRNACategory",
-        perform    => 1,
-        target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_category",
-        option     => "",
-        source_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info\$" ],
-        cqs_tools  => $def->{cqstools},
-        sh_direct  => 1,
-        cluster    => $cluster,
-        pbs        => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "72",
-          "mem"      => "40gb"
-        },
-      },
+#      bowtie1_genome_1mm_NTA_smallRNA_category => {
+#        class      => "CQS::SmallRNACategory",
+#        perform    => 1,
+#        target_dir => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_category",
+#        option     => "",
+#        source_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info\$" ],
+#        cqs_tools  => $def->{cqstools},
+#        sh_direct  => 1,
+#        cluster    => $cluster,
+#        pbs        => {
+#          "email"    => $def->{email},
+#          "nodes"    => "1:ppn=1",
+#          "walltime" => "72",
+#          "mem"      => "40gb"
+#        },
+#      },
       
-      bowtie1_genome_1mm_NTA_smallRNA_category1 => {
+      #need project name as parameterSampleFile1 to be result file name
+      bowtie1_genome_1mm_NTA_smallRNA_category => {
         class                    => "CQS::UniqueR",
         perform                  => 1,
         target_dir               => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_category",
         rtemplate                => "smallRnaCategory.R",
         output_file              => "parameterSampleFile1",
         output_file_ext          => ".category.png",
+#        parameterSampleFile1     => $trna_vis_groups,
         parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info" ],
         parameterSampleFile2 => $groups,
         sh_direct                => 1,
