@@ -473,7 +473,7 @@ sub getSmallRNAConfig {
         target_dir => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
         source_ref => [ 'bowtie1_tRNA_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
-        option     => '',
+        option     => '--categoryMapFile ' . $def->{trna_category_log},
         prefix     => 'tRNA_pm_',
         pbs        => {
           'email'    => $def->{email},
