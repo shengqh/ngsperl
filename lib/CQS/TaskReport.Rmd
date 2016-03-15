@@ -1,0 +1,10 @@
+--- 
+title: "Small RNA pipeline Result Report: `r TaskName`"
+output: html_document
+---
+
+
+```{r,echo=FALSE}
+  	datatable(resultFileListTaskEachFileTable,escape = FALSE,rownames = FALSE) 
+```
+
