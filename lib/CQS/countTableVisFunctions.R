@@ -71,7 +71,7 @@ tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",g
 	} else {
 		datForFigure<-dat
 	}
-	p<-ggplot(xForFigure,aes_string(x=x,y=y,fill=fill))+
+	p<-ggplot(datForFigure,aes_string(x=x,y=y,fill=fill))+
 			geom_bar(stat="identity")+
 			guides(fill= guide_legend(title = groupName))+
 			theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5)) + 
@@ -123,7 +123,9 @@ ggpie <- function (dat, fill="Species", y="Reads",facet="Sample", maxCategory=NA
 	return(p)
 }
 
-
+###############################################################################
+# End funtions in count table barplot and pie chart
+###############################################################################
 
 
 expandCountTableByName<-function(x,sep=";") {
