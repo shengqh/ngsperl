@@ -32,14 +32,6 @@ sub perform {
 
 	my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-	my $rtemplate = get_option_value( $config->{$section}{rtemplate}, "rtemplate", 1 );
-	my $is_absolute = File::Spec->file_name_is_absolute($rtemplate);
-	if ( !$is_absolute ) {
-		$rtemplate = dirname(__FILE__) . "/$rtemplate";
-	}
-	if ( !( -e $rtemplate ) ) {
-		die("rtemplate $rtemplate defined but not exists!");
-	}
 	my $rCode           = get_option( $config, $section, "rCode",           "" );
 	my $output_file     = get_option( $config, $section, "output_file",     "" );
 	my $output_file_ext = get_option( $config, $section, "output_file_ext", "" );
@@ -96,7 +88,6 @@ sub perform {
 
 	my $rfile = $result_dir . "/${task_name}.r";
 	open( my $rf, ">$rfile" )     or die "Cannot create $rfile";
-	open( my $rt, "<$rtemplate" ) or die $!;
 
     my $final_file="";
     my $output_file_r="";
@@ -143,10 +134,23 @@ sub perform {
 	if ( defined($rCode) ) {
 		print $rf $rCode . "\n";
 	}
-	while (<$rt>) {
-		print $rf $_;
-	}
-	close($rt);
+	
+	my $rtemplates = get_option_value( $config->{$section}{rtemplate}, "rtemplate", 1 );
+    my @rtemplates=split( ",|;", $rtemplates );
+    foreach my $rtemplate (@rtemplates) {
+        my $is_absolute = File::Spec->file_name_is_absolute($rtemplate);
+        if ( !$is_absolute ) {
+            $rtemplate = dirname(__FILE__) . "/$rtemplate";
+        }
+        if ( !( -e $rtemplate ) ) {
+            die("rtemplate $rtemplate defined but not exists!");
+        }
+        open( my $rt, "<$rtemplate" ) or die $!;
+            while (<$rt>) {
+            print $rf $_;
+        }
+        close($rt);
+    }
 	close($rf);
 
 	my $pbs_file   = $self->get_pbs_filename( $pbs_dir, $task_name );
