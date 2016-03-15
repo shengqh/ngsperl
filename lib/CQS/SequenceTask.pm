@@ -4,6 +4,7 @@ package CQS::SequenceTask;
 use strict;
 use warnings;
 use File::Basename;
+use File::Copy;
 use Data::Dumper;
 use CQS::PBS;
 use CQS::ConfigUtils;
@@ -71,6 +72,11 @@ sub perform {
 
   #Make Report
   my $rtemplateReport = dirname(__FILE__) . "/MakeReport.R";
+  my $projectRmd = dirname(__FILE__) . "/ProjectReport.Rmd";
+  my $taskRmd = dirname(__FILE__) . "/TaskReport.Rmd";
+  copy ($projectRmd, $result_dir."/ProjectReport.Rmd") or die "Copy failed: $!";
+  copy ($taskRmd, $result_dir."/TaskReport.Rmd") or die "Copy failed: $!";
+  
   my $rfileReport     = $result_dir . "/${report_name}.r";
   my $task_dir        = $target_dir;
   $task_dir =~ s/\/sequencetask$//;

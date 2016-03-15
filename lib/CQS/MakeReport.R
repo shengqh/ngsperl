@@ -1,11 +1,10 @@
 projectName<-parFile1
 projectDir<-parFile2
 
-#projectName<-"3018-KCV-61"
-#projectDir<-"/scratch/cqs/zhaos/vickers/20160223_smallRNA_3018-KCV-61_human/"
-
-projectTemplateFile<-"/home/zhaos/source/r_cqs/vickers/codesToPipeline/ProjectReport.Rmd"
-taskTemplateFile<-"/home/zhaos/source/r_cqs/vickers/codesToPipeline/TaskReport.Rmd"
+#projectTemplateFile<-"/home/zhaos/source/r_cqs/vickers/codesToPipeline/ProjectReport.Rmd"
+#taskTemplateFile<-"/home/zhaos/source/r_cqs/vickers/codesToPipeline/TaskReport.Rmd"
+projectTemplateFile<-"ProjectReport.Rmd"
+taskTemplateFile<-"TaskReport.Rmd"
 
 #colInProjectTable<-c("TaskName","SampleName","fileSize","Result")
 colInTaskTable<-c("StepName","TaskName","SampleName","FileList","FileSize","Result")

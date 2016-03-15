@@ -159,16 +159,15 @@ sub getSmallRNAConfig {
       #        },
       #      },
 
-      #need project name as parameterSampleFile1 to be result file name
       bowtie1_genome_1mm_NTA_smallRNA_category => {
         class           => "CQS::UniqueR",
         perform         => 1,
         target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_category",
-        rtemplate       => "smallRnaCategory.R",
+        rtemplate       => "countTableVisFunctions.R,smallRnaCategory.R",
         output_file     => "parameterSampleFile1",
-        output_file_ext => ".category.png",
+        output_file_ext => ".Category.png",
 
-        #        parameterSampleFile1     => $trna_vis_groups,
+        parameterFile1     => $def->{task_name},
         parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info" ],
         parameterSampleFile2     => $groups,
         sh_direct                => 1,
