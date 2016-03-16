@@ -129,7 +129,7 @@ ggpie <- function (dat, fill="Species", y="Reads",facet="Sample", maxCategory=NA
 	}
 	if (!is.na(colorNames)) {
 		colors<-makeColors(length(unique(datForFigure[,fill])),colorNames)
-		p+scale_fill_manual(values=colors)
+		p<-p+scale_fill_manual(values=colors)
 	}
 	return(p)
 }
