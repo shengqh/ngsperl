@@ -39,12 +39,13 @@ tablePie<-function(x,maxCategory=10,main="",addPercent=F) {
 }
 
 makeColors<-function(n,colorNames="Set1") {
-	if (n<8) {
+	maxN<-brewer.pal.info[colorNames,"maxcolors"]
+	if (n<=maxN) {
 		colors<-brewer.pal(n, colorNames)
-		return(colors)
 	} else {
-		
+		colors<-colorRampPalette(brewer.pal(maxN, colorNames))(n)
 	}
+	return(colors)
 }
 
 tableMaxCategory<-function(dat,maxCategory=NA) {
@@ -61,13 +62,13 @@ tableMaxCategory<-function(dat,maxCategory=NA) {
 	return(datForFigure)
 }
 
-tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",groupName=fill,transformTable=T,textSize=20) {
+tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",groupName=fill,transformTable=T,textSize=20,ylab=y) {
 	if (transformTable) {
 		datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory)
 		
-		datForFigure$Groups<-row.names(dat)
-		datForFigure<-melt(xForFigure)
-		colnames(xForFigure)<-c(fill,x,y)
+#		datForFigure$Groups<-row.names(dat)
+		datForFigure<-melt(as.matrix(datForFigure))
+		colnames(datForFigure)<-c(fill,x,y)
 	} else {
 		datForFigure<-dat
 	}
@@ -75,15 +76,20 @@ tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",g
 			geom_bar(stat="identity")+
 			guides(fill= guide_legend(title = groupName))+
 			theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5)) + 
-			theme(legend.position = "top")+
 			theme(axis.text = element_text(size=textSize),legend.text=element_text(size=textSize),
 					axis.title = element_text(size=textSize),legend.title= element_text(size=textSize))+
-			guides(fill = guide_legend(keywidth = 2, keyheight = 2))
+			ylab(ylab)
+	if (length(unique(datForFigure[,fill]))<=7) {
+		p<-p+theme(legend.position = "top")+
+				guides(fill = guide_legend(nrow = 1,keywidth = 2, keyheight = 2))
+	} else {
+		p<-p+	guides(fill = guide_legend(ncol = 1,keywidth = 1, keyheight = 1))
+	}
 	return(p)
 }
 
 #changed from function in http://mathematicalcoffee.blogspot.com/2014/06/ggpie-pie-graphs-in-ggplot2.html
-ggpie <- function (dat, fill="Species", y="Reads",facet="Sample", maxCategory=NA,main=NA, percent=T,textSize=15) {
+ggpie <- function (dat, fill="Species", y="Reads",facet="Sample", maxCategory=NA,main=NA, percent=T,textSize=15,colorNames="Set1") {
 	datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory)
 
 	if (percent) {
@@ -109,7 +115,8 @@ ggpie <- function (dat, fill="Species", y="Reads",facet="Sample", maxCategory=NA
 					axis.text.x=element_blank(),
 					axis.title=element_blank(),
 					panel.grid=element_blank()) +
-			scale_y_continuous(breaks=cumsum(datForFigure[[y]]) - datForFigure[[y]] / 2, labels=datForFigure[[fill]]) +
+			scale_y_continuous(breaks=cumsum(datForFigure[[y]])-datForFigure[[y]]/2,
+					labels=datForFigure[[fill]]) +
 			theme(panel.background = element_rect(fill = "white"))+
 			theme(legend.text=element_text(size=textSize),
 					legend.title= element_text(size=textSize),
@@ -120,13 +127,12 @@ ggpie <- function (dat, fill="Species", y="Reads",facet="Sample", maxCategory=NA
 	if (!is.na(facet)) {
 		p<-p+facet_wrap(c(facet))
 	}
+	if (!is.na(colorNames)) {
+		colors<-makeColors(length(unique(datForFigure[,fill])),colorNames)
+		p+scale_fill_manual(values=colors)
+	}
 	return(p)
 }
-
-###############################################################################
-# End funtions in count table barplot and pie chart
-###############################################################################
-
 
 expandCountTableByName<-function(x,sep=";") {
 	namesEach<-strsplit(row.names(x),sep)
@@ -145,5 +151,18 @@ aggregateCountTable<-function(x,group,method=sum) {
 	return(result)
 }
 
+###############################################################################
+# End funtions in count table barplot and pie chart
+# Start defining parameters for functions
+###############################################################################
 
+if (!exists("maxCategory")) {
+	maxCategory=5
+}
+if (!exists("textSize")) {
+	textSize=9
+}
 
+###############################################################################
+# End defining parameters for functions
+###############################################################################
