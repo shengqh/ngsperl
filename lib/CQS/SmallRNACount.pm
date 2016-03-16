@@ -55,7 +55,7 @@ sub perform {
   for my $sample_name ( sort keys %raw_files ) {
     my @bam_files  = @{ $raw_files{$sample_name} };
     my $bam_file   = $bam_files[0];
-    my $final_file = $sample_name . ".count.mapped.xml";
+    my $final_file = $sample_name . ".count";
 
     my $seqcountFile = "";
     if ( defined $seqcount_files{$sample_name} ) {
