@@ -608,6 +608,24 @@ sub getSmallRNAConfig {
           'nodes'    => '1:ppn=1'
         },
       },
+      bowtie1_rRNAS_pm_table_vis => {
+        class                => "CQS::UniqueR",
+        perform              => 1,
+        target_dir           => $def->{target_dir} . "/bowtie1_rRNAS_pm_table",
+        rtemplate            => "bacteriaGroupMappingVis.R",
+        output_file          => ".rRnaMapping.Result",
+        output_file_ext      => ".toSpecies.csv",
+        parameterSampleFile1 => $groups,
+        parameterFile1_ref   => [ "bowtie1_rRNAS_pm_table", ".count\$" ],
+        parameterFile3       => [ "fastqc_count_vis", ".Reads.csv\$" ],
+        sh_direct            => 1,
+        pbs                  => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      },
 
       #unmapped reads to group1 bacterial
       bowtie1_bacteria_group1_pm => {

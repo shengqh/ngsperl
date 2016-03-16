@@ -46,5 +46,6 @@ if (countInFastQcPostRemove=="") {
 	dev.off()
 }
 
-write.csv(countForFigure,paste0(resultFile,".Reads.csv"))
+countForFigureOut<-acast(countForFigure,Label~Sample,value.var="Reads")
+write.csv(countForFigureOut,paste0(resultFile,".Reads.csv"))
 

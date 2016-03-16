@@ -270,7 +270,7 @@ sub getPrepareConfig {
         target_dir         => $def->{target_dir} . "/fastqc_post_remove",
         rtemplate          => "countInFastQcVis.R",
         output_file        => ".countInFastQcVis.Result",
-        output_file_ext    => ".pdf",
+        output_file_ext    => ".Reads.csv",
         parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.summary.reads.tsv\$" ],
         parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.summary.reads.tsv\$" ],
         sh_direct          => 1,
