@@ -56,6 +56,7 @@ sub perform {
     my @bam_files  = @{ $raw_files{$sample_name} };
     my $bam_file   = $bam_files[0];
     my $final_file = $sample_name . ".count";
+    my $final_xml_file = $sample_name . ".count.mapped.xml";
 
     my $seqcountFile = "";
     if ( defined $seqcount_files{$sample_name} ) {
@@ -81,7 +82,7 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_xml_file );
     print $pbs "mono $cqstools smallrna_count $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile -o $final_file";
     $self->close_pbs( $pbs, $pbs_file );
   }
