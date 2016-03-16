@@ -617,7 +617,7 @@ sub getSmallRNAConfig {
         output_file_ext      => ".toSpecies.csv",
         parameterSampleFile1 => $groups,
         parameterFile1_ref   => [ "bowtie1_rRNAS_pm_table", ".count\$" ],
-        parameterFile3       => [ "fastqc_count_vis", ".Reads.csv\$" ],
+        parameterFile3_ref   => [ "fastqc_count_vis", ".Reads.csv\$" ],
         sh_direct            => 1,
         pbs                  => {
           "email"    => $def->{email},

@@ -8,7 +8,7 @@ countInFastQcPostRemove<-parFile3
 #countInFastQcPostRemove<-commandArgs()[10]
 
 library(ggplot2)
-library(reshape)
+library(reshape2)
 
 #countInFastQcPreTrim<-"/scratch/cqs/zhaos/vickers/20151017_3018-KCV-45-46/fastqc_pre_trim/result/3018-KCV-45-46.FastQC.summary.reads.tsv"
 #countInFastQcPostTrim<-"/scratch/cqs/zhaos/vickers/20151017_3018-KCV-45-46/fastqc_post_trim/result/3018-KCV-45-46.FastQC.summary.reads.tsv"
