@@ -14,6 +14,7 @@ tRNASigFileList<-parSampleFile3
 
 library(ggplot2)
 library(grid)
+library(RColorBrewer)
 print("Doing tRNA position visualization")
 maxPos<-100
 
