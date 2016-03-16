@@ -31,6 +31,7 @@ if (databaseLogFile!="") { #Group Count Table
 					paste(x[1:2],collapse="_")
 				}
 			})
+	write.csv(mappingResult2Species,paste0(resultFile,".Species.csv"))
 } else {
 	mappingResult2Species<-mappingResult
 }
@@ -61,6 +62,8 @@ if (groupFileList!="") {
 	sampleToGroup<-sampleToGroup[which(sampleToGroup[,1] %in% colnames(mappingResult)),]
 	
 	mappingResult2SpeciesBySampleGroup<-mergeTableBySampleGroup(mappingResult2Species,sampleToGroup)
+	
+	write.csv(mappingResult2SpeciesBySampleGroup,paste0(resultFile,".PercentGroups.csv"))
 	
 	png(paste0(resultFile,".Piechart.Group.png"),width=3000,height=3000,res=300)
 	p<-ggpie(mappingResult2SpeciesBySampleGroup,fill="Category", y="Reads",facet="Sample",maxCategory=maxCategory,textSize=textSize)

@@ -62,7 +62,7 @@ tableMaxCategory<-function(dat,maxCategory=NA) {
 	return(datForFigure)
 }
 
-tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",groupName=fill,transformTable=T,textSize=20,ylab=y) {
+tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",groupName=fill,transformTable=T,textSize=20,ylab=y,colorNames="Set1") {
 	if (transformTable) {
 		datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory)
 		
@@ -84,6 +84,10 @@ tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",g
 				guides(fill = guide_legend(nrow = 1,keywidth = 2, keyheight = 2))
 	} else {
 		p<-p+	guides(fill = guide_legend(ncol = 1,keywidth = 1, keyheight = 1))
+	}
+	if (!is.na(colorNames)) {
+		colors<-makeColors(length(unique(datForFigure[,fill])),colorNames)
+		p<-p+scale_fill_manual(values=colors)
 	}
 	return(p)
 }

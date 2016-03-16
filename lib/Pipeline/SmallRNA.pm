@@ -693,7 +693,7 @@ sub getSmallRNAConfig {
         parameterFile1_ref   => [ "bowtie1_bacteria_group1_pm_table", ".count\$" ],
         parameterFile2       => $def->{bacteria_group1_log},
         parameterFile3_ref   => [ "fastqc_count_vis", ".Reads.csv\$" ],
-        rCode     => 'maxCategory=5;textSize=9;',
+        rCode     => 'maxCategory=4;textSize=9;',
         sh_direct            => 1,
         pbs                  => {
           "email"    => $def->{email},
