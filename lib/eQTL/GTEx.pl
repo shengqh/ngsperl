@@ -63,7 +63,8 @@ while (<$input>) {
 
   if ( $position =~ /^\d+$/ ) {
     my $key = "^" . $chrom . "_" . $position . "_";
-    open( my $find, 'grep "$key" ${gtex_dir}/*.snpgenes |' ) or die "Cannot execute grep command";
+    my $cmd = 'grep "$key" ${gtex_dir}/*.snpgenes |';
+    open( my $find, $cmd ) or die "Cannot execute grep command $cmd ";
     while(<$find>){
       chomp;
       my $filename = s/:.*$//g;
