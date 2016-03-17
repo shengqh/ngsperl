@@ -71,8 +71,8 @@ while (<$input>) {
       chomp;
       print $_ . "\n";
       my @parts = split( "\t", $_ );
-      my $filename = $parts[0] =~ /.*\/(.+)_Analysis.snpgenes/;
-      push(@target, $parts[0] . ":" . $filename);
+      my $filename = $parts[0] =~ /.*\/(.*)?_Analysis.snpgenes/;
+      push(@target, $filename . ":" . $parts[26]);
     }
     close($find);
     if(scalar(@target) > 0){
