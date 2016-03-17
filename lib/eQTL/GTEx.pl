@@ -69,6 +69,7 @@ while (<$input>) {
     my @target = ();
     while(<$find>){
       chomp;
+      print $_ . "\n";
       my @parts = split( "\t", $_ );
       push(@target, $parts[0] . ":" . $parts[26]);
     }
