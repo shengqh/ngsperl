@@ -55,7 +55,7 @@ while (<$input>) {
   chomp;
   my @parts = split( "\t", $_ );
   if ( scalar(@parts) < 3 ) {
-    continue;
+    next;
   }
 
   my $chrom    = $parts[0];
