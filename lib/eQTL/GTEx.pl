@@ -63,9 +63,9 @@ while (<$input>) {
   my $name = $parts[1];
   my $position = $parts[2];
   
-  print "${name}:${chrom}:${position} ...\n";
-
   if ( $position =~ /^\d+$/ ) {
+    print "${name}:${chrom}:${position} ...\n";
+    
     my $key = "^" . $chrom . "_" . $position . "_";
     my $cmd = "grep \"$key\" ${gtex_dir}/*.snpgenes |";
     #print $cmd, "\n";
