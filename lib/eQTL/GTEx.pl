@@ -73,7 +73,7 @@ while (<$input>) {
     my @target = ();
     while(<$find>){
       chomp;
-      print $_ . "\n";
+      #print $_ . "\n";
       my @parts = split( "\t", $_ );
       my ($filename) = $parts[0] =~ /.*\/(.*)?_Analysis.snpgenes/;
       push(@target, $filename . ":" . $parts[26]);
