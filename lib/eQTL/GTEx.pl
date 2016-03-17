@@ -63,15 +63,19 @@ while (<$input>) {
 
   if ( $position =~ /^\d+$/ ) {
     my $key = "^" . $chrom . "_" . $position . "_";
-    my $cmd = "grep \"$key\" ${gtex_dir}/*.snpgenes |";
+    my $cmd = "grep \"$key\" ${gtex_dir}/Whole_Blood_Analysis.snpgenes |";
     print $cmd, "\n";
     open( my $find, $cmd ) or die "Cannot execute grep command $cmd ";
+    my @target = ();
     while(<$find>){
       chomp;
-      my $filename = s/:.*$//g;
-      print $key, "\t", $filename, "\n"; 
+      my @parts = split( "\t", $_ );
+      push(@target, $parts[0] . ":" . $parts[26]);
     }
     close($find);
+    if(scalar(@target) > 0){
+      print $key, "\t", join("/", @target), "\n";
+    } 
   }
 }
 close($input);
