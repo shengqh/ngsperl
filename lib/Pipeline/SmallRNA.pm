@@ -18,7 +18,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(performSmallRNA performSmallRNATask)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 sub getSmallRNAConfig {
 	my ($def) = @_;
@@ -486,11 +486,13 @@ sub getSmallRNAConfig {
 				class                => "CQS::UniqueR",
 				perform              => 1,
 				target_dir           => $def->{target_dir} . "/bowtie1_tRNA_pm_table",
-				rtemplate            => "BacTrnaMappingVis.R",
-				output_file          => "",
-				output_file_ext      => ".top.png",
+				rtemplate            => "countTableVisFunctions.R,bacteriaTrnaMappingVis.R",
+				output_file          => ".tRNAMapping.Result",
+				output_file_ext      => ".Barplot.png",
 				parameterSampleFile1 => $groups,
 				parameterFile1_ref   => [ "bowtie1_tRNA_pm_table", ".count\$" ],
+				parameterFile3_ref   => [ "fastqc_count_vis", ".Reads.csv\$" ],
+				rCode                => 'maxCategory=3;textSize=9;',
 				sh_direct            => 1,
 				pbs                  => {
 					"email"    => $def->{email},

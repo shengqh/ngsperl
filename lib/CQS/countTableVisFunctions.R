@@ -26,7 +26,7 @@ mergeTableBySampleGroup<-function(x,sampleToGroup) {
 	return(xRatioGroupMean)
 }
 
-tablePie<-function(x,maxCategory=10,main="",addPercent=F) {
+basicPie<-function(x,maxCategory=10,main="",addPercent=F) {
 	nameToCountForFigure<-na.omit(rev(sort(x)))
 	if (length(nameToCountForFigure)>maxCategory) {
 		nameToCountForFigure<-c(nameToCountForFigure[1:(maxCategory-1)],Other=sum(nameToCountForFigure[-(1:(maxCategory-1))]))
@@ -54,7 +54,7 @@ tableMaxCategory<-function(dat,maxCategory=NA) {
 		categoryKeptInd<-sort(unique(as.vector(temp)))
 		datForFigure<-dat[categoryKeptInd,]
 		if (length(categoryKeptInd)<nrow(dat)) {
-			datForFigure<-rbind(datForFigure,Other=colSums(dat[-categoryKeptInd,]))
+			datForFigure<-rbind(datForFigure,Other=colSums(dat[-categoryKeptInd,,drop=FALSE]))
 		}
 	} else {
 		datForFigure<-dat
@@ -62,7 +62,7 @@ tableMaxCategory<-function(dat,maxCategory=NA) {
 	return(datForFigure)
 }
 
-tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",groupName=fill,transformTable=T,textSize=20,ylab=y,colorNames="Set1") {
+tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",groupName=fill,transformTable=TRUE,textSize=20,ylab=y,colorNames="Set1") {
 	if (transformTable) {
 		datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory)
 		
@@ -92,24 +92,55 @@ tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",g
 	return(p)
 }
 
-#changed from function in http://mathematicalcoffee.blogspot.com/2014/06/ggpie-pie-graphs-in-ggplot2.html
-ggpie <- function (dat, fill="Species", y="Reads",facet="Sample", maxCategory=NA,main=NA, percent=T,textSize=15,colorNames="Set1") {
-	datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory)
-
-	if (percent) {
-		datForFigure<-t(t(datForFigure)/colSums(datForFigure))
-	}
-	if (row.names(datForFigure)[nrow(datForFigure)]=="Other") {
-		categoryOrderedNames<-c(row.names(datForFigure)[-nrow(datForFigure)][rev(order(rowSums(datForFigure[-nrow(datForFigure),])))],"Other")
+tableBarplotToFile<-function(dat,fileName,totalCountFile="",maxCategory=5,textSize=9,transformTable=T,...) {
+	if (totalCountFile!="") { #normlize with total count *10^6
+		totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1)
+		totalCount<-unlist(totalCount["Reads for Mapping",])
+		dat<-10^6*t(t(dat)/totalCount[colnames(dat)])
+		ylab<-"Mapped Reads per Million"
 	} else {
-		categoryOrderedNames<-row.names(datForFigure)[rev(order(rowSums(datForFigure)))]
+		ylab<-"Reads"
 	}
-	
-	datForFigure<-melt(as.matrix(datForFigure),as.is=T)
-	colnames(datForFigure)<-c(fill,facet,y)
-	datForFigure[,1]<-factor(datForFigure[,1],levels=categoryOrderedNames)
-	datForFigure<-orderDataByNames(datForFigure,datForFigure[,1],categoryOrderedNames)
-	
+	width<-max(3000,75*ncol(dat))
+	height<-1500
+	png(fileName,width=width,height=height,res=300)
+	p<-tableBarplot(dat,maxCategory=maxCategory,textSize=textSize,ylab=ylab,transformTable=transformTable,...)
+	print(p)
+	dev.off()
+}
+
+#changed from function in http://mathematicalcoffee.blogspot.com/2014/06/ggpie-pie-graphs-in-ggplot2.html
+ggpie <- function (dat, fill="Category", y="Reads",facet="Sample", maxCategory=NA,main=NA, percent=T,textSize=15,colorNames="Set1",transformTable=TRUE) {
+	if (transformTable) {
+		datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory)
+		
+	    if (percent) {
+		    datForFigure<-t(t(datForFigure)/colSums(datForFigure))
+	    }
+		if (row.names(datForFigure)[nrow(datForFigure)]=="Other") {
+			categoryOrderedNames<-c(row.names(datForFigure)[-nrow(datForFigure)][rev(order(rowSums(datForFigure[-nrow(datForFigure),])))],"Other")
+		} else {
+			categoryOrderedNames<-row.names(datForFigure)[rev(order(rowSums(datForFigure)))]
+		}
+		
+		datForFigure<-melt(as.matrix(datForFigure),as.is=T)
+		colnames(datForFigure)<-c(fill,facet,y)
+		datForFigure[,fill]<-factor(datForFigure[,fill],levels=categoryOrderedNames)
+		datForFigure<-orderDataByNames(datForFigure,datForFigure[,fill],categoryOrderedNames)
+	} else {
+		datForFigure<-dat
+		if (percent) {
+			if (!is.na(facet)) {
+				temp<-tapply(datForFigure[,y],datForFigure[,facet],sum)
+				datForFigure[,y]<-datForFigure[,y]/temp[datForFigure[,facet]]
+			} else {
+				datForFigure[,y]<-datForFigure[,y]/sum(datForFigure[,y])
+			}
+		}
+		categoryOrderedNames<-levels(datForFigure[,fill])[rev(order(tapply(datForFigure[,y],datForFigure[,fill],sum)))]
+		datForFigure[,fill]<-factor(datForFigure[,fill],levels=categoryOrderedNames)
+		datForFigure<-orderDataByNames(datForFigure,datForFigure[,fill],categoryOrderedNames)
+	}
 	p = ggplot(datForFigure, aes_string(x=factor(1), y=y, fill=fill)) +
 			geom_bar(width=1, stat='identity', color='black') +
 			guides(fill=guide_legend(keywidth = 1.5, keyheight = 1.5,override.aes=list(colour=NA))) + # removes black borders from legend
@@ -138,6 +169,33 @@ ggpie <- function (dat, fill="Species", y="Reads",facet="Sample", maxCategory=NA
 	return(p)
 }
 
+ggpieToFile<-function(dat,fileName,fill="Category", maxCategory=5,textSize=9,transformTable=TRUE,...) {
+	png(fileName,width=3000,height=3000,res=300)
+	p<-ggpie(dat,fill=fill, maxCategory=maxCategory,textSize=textSize,transformTable=transformTable,...)
+	print(p)
+	dev.off()
+}
+
+ggpieGroupToFile<-function(dat,fileName,groupFileList="",outFileName="",
+		maxCategory=5,textSize=9,transformTable=TRUE,fill="Category", y="Reads",facet="Sample",...) {
+	if (groupFileList!="") {
+		if (!transformTable) {
+			dat<-acast(dat,as.formula(paste(fill,"~",facet)),value.var=y)
+		}
+		
+		sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
+		#keep the groups with samples in the count table
+		sampleToGroup<-sampleToGroup[which(sampleToGroup[,1] %in% colnames(dat)),]
+		
+		datBySampleGroup<-mergeTableBySampleGroup(dat,sampleToGroup)
+		if (outFileName!="") {
+			write.csv(datBySampleGroup,outFileName)
+		}
+		ggpieToFile(datBySampleGroup,fileName=fileName,maxCategory=maxCategory,textSize=textSize,
+				transformTable=TRUE,fill=fill,y=y,facet=facet,...)
+	}
+}
+
 expandCountTableByName<-function(x,sep=";") {
 	namesEach<-strsplit(row.names(x),sep)
 	namesEachUnlist<-unlist(namesEach)
@@ -153,6 +211,38 @@ aggregateCountTable<-function(x,group,method=sum) {
 	row.names(result)<-result[,1]
 	result<-result[,-1]
 	return(result)
+}
+
+countTableToSpecies<-function(dat,databaseLogFile="",outFileName="",shortName=T) {
+	if (databaseLogFile!="") { #Species Count Table
+		databaseLog<-read.delim(databaseLogFile,header=T,as.is=T)
+		id2Species<-databaseLog$Species
+		names(id2Species)<-databaseLog$Id
+		
+		mappingResultExpand<-expandCountTableByName(dat)
+		speciesInMappingResult<-id2Species[row.names(mappingResultExpand)]
+		
+		mappingResult2Species<-aggregateCountTable(mappingResultExpand,speciesInMappingResult)
+		
+		#short name
+		if (shortName) {
+			row.names(mappingResult2Species)<-sapply(strsplit(row.names(mappingResult2Species),"_"),function(x) {
+						if (length(x)<=3) {
+							paste(x,collapse="_")
+						} else if (grepl("^\\d+$",x[2])) {
+							paste(x[1:3],collapse="_")
+						} else {
+							paste(x[1:2],collapse="_")
+						}
+					})
+		}
+		if (outFileName!="") {
+			write.csv(mappingResult2Species,outFileName)
+		}
+	} else {
+		mappingResult2Species<-dat
+	}
+	return(mappingResult2Species)
 }
 
 ###############################################################################
