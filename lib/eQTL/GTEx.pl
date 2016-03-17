@@ -68,8 +68,8 @@ while (<$input>) {
     open( my $find, $cmd ) or die "Cannot execute grep command $cmd ";
     while(<$find>){
       chomp;
-      my $filename = s/:.*$//g;
-      print $key, "\t", $filename, "\n"; 
+      my $eqtl = $_;
+      print $key, "\t", $eqtl, "\n"; 
     }
     close($find);
   }
