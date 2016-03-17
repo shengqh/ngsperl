@@ -63,7 +63,7 @@ while (<$input>) {
 
   if ( $position =~ /^\d+$/ ) {
     my $key = "^" . $chrom . "_" . $position . "_";
-    my $cmd = "grep \"$key\" ${gtex_dir}/Whole_Blood_Analysis.snpgenes |";
+    my $cmd = "grep \"$key\" ${gtex_dir}/Whole_Blood_*.snpgenes |";
     print $cmd, "\n";
     open( my $find, $cmd ) or die "Cannot execute grep command $cmd ";
     my @target = ();
