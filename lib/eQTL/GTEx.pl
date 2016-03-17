@@ -80,7 +80,7 @@ while (<$input>) {
     }
     close($find);
     if(scalar(@target) > 0){
-      print $output, "${name}:${chrom}:${position}\t" . join("/", @target), "\n";
+      print $output "${name}:${chrom}:${position}\t" . join("/", @target), "\n";
     } 
   }
 }
