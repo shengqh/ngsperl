@@ -51,6 +51,7 @@ die "$output_file already exists" if ( -e $output_file );
 
 my %res;
 open( my $input, "<$input_file" ) or die "Cannot open $input_file";
+open( my $output, ">$output_file" ) or die "Cannot create $output_file";
 while (<$input>) {
   chomp;
   my @parts = split( "\t", $_ );
@@ -59,7 +60,10 @@ while (<$input>) {
   }
 
   my $chrom    = $parts[0];
+  my $name = $parts[1];
   my $position = $parts[2];
+  
+  print "${name}:${chrom}:${position} ...\n";
 
   if ( $position =~ /^\d+$/ ) {
     my $key = "^" . $chrom . "_" . $position . "_";
@@ -76,8 +80,11 @@ while (<$input>) {
     }
     close($find);
     if(scalar(@target) > 0){
-      print $key, "\t", join("/", @target), "\n";
+      print $output, "${name}:${chrom}:${position}\t" . join("/", @target), "\n";
     } 
   }
 }
 close($input);
+close($output);
+
+print "Done.\n";
