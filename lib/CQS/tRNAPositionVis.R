@@ -116,7 +116,7 @@ positionRawAllSamplesMeanSample$Feature<-gsub("tRNA:","",positionRawAllSamplesMe
 #significant tRNA names
 print("Doing tRNA position visualization for significant tRNAs")
 tRNASigNum<-10
-if (is.na(tRNASigFileList)) {
+if (is.na(tRNASigFileList) | tRNASigFileList=="") {
 	temp<-tapply(positionRawAllSamplesMeanSample$CountPercentage,positionRawAllSamplesMeanSample$Feature,sum)
 	tRNASigNames<-names(rev(sort(temp)))[1:tRNASigNum]
 	tRNASigFileName<-".highesttRNAPosition.pdf"

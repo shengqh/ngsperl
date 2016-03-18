@@ -109,7 +109,7 @@ tableBarplotToFile<-function(dat,fileName,totalCountFile="",maxCategory=5,textSi
 		ylab<-"Reads"
 	}
 	width<-max(3000,75*ncol(dat))
-	height<-3500
+	height<-1500
 	png(fileName,width=width,height=height,res=300)
 	p<-tableBarplot(dat,maxCategory=maxCategory,textSize=textSize,ylab=ylab,transformTable=transformTable,...)
 	print(p)
