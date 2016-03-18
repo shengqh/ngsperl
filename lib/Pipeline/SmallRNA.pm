@@ -125,22 +125,6 @@ sub getSmallRNAConfig {
 					"mem"      => "10gb"
 				},
 			},
-			bowtie1_genome_1mm_NTA_smallRNA_table_vis => {
-				class                    => "CQS::UniqueR",
-				perform                  => 1,
-				target_dir               => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_table",
-				rtemplate                => "countTableCorrelation.R",
-				output_file              => "parameterSampleFile1",
-				output_file_ext          => ".Correlation.png",
-				parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".count\$","bowtie1_bacteria_group2_pm_table_vis",".Species.csv\$" ],
-				sh_direct                => 1,
-				pbs                      => {
-					"email"    => $def->{email},
-					"nodes"    => "1:ppn=1",
-					"walltime" => "1",
-					"mem"      => "10gb"
-				},
-			},
 
 			#      bowtie1_genome_1mm_NTA_smallRNA_category => {
 			#        class      => "CQS::SmallRNACategory",
@@ -179,7 +163,7 @@ sub getSmallRNAConfig {
 
 		};
 		push @individual, ( "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_NTA_smallRNA_count" );
-		push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_table_vis", "bowtie1_genome_1mm_NTA_smallRNA_category" );
+		push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table",  "bowtie1_genome_1mm_NTA_smallRNA_category" );
 
 		if ($search_not_identical) {
 
@@ -1034,15 +1018,33 @@ sub getSmallRNAConfig {
 		push @summary, ( "bowtie1_unmapped_sequence_count_table", "bowtie1_unmapped_sequence_blast" );
 	}
 	
+    $config->{count_table_correlation} = {
+                class                    => "CQS::UniqueR",
+                perform                  => 1,
+                target_dir               => $def->{target_dir} . "/count_table_correlation",
+                rtemplate                => "countTableCorrelation.R",
+                output_file              => "parameterSampleFile1",
+                output_file_ext          => ".Correlation.png",
+                parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".count\$","bowtie1_bacteria_group2_pm_table_vis",".Species.csv\$","bowtie1_rRNAL_pm_table", ".count\$" ],
+                sh_direct                => 1,
+                pbs                      => {
+                    "email"    => $def->{email},
+                    "nodes"    => "1:ppn=1",
+                    "walltime" => "1",
+                    "mem"      => "10gb"
+                },
+            },
 	$config->{reads_in_tasks} = {
 		class      => "CQS::UniqueR",
 		perform    => 1,
 		target_dir => $def->{target_dir} . "/reads_in_tasks",
 		rtemplate            => "countTableVisFunctions.R,ReadsInTasks.R",
 		output_file_ext      => ".TaskReads.csv",
-		parameterSampleFile1_ref => [ "bowtie1_tRNA_pm_table", ".count\$","bowtie1_rRNAL_pm_table", ".count\$",
-		"bowtie1_rRNAS_pm_table", ".count\$","bowtie1_bacteria_group1_pm_table",".count\$",
+		parameterSampleFile1_ref => ["bowtie1_genome_1mm_NTA_smallRNA_table",".miRNA.count\$","bowtie1_genome_1mm_NTA_smallRNA_table",".tRNA.count\$", 
+		"bowtie1_genome_1mm_NTA_smallRNA_table",".other.count\$","bowtie1_miRBAse_pm_table", ".count\$","bowtie1_tRNA_pm_table", ".category.count\$",
+		"bowtie1_rRNAL_pm_table", ".count\$","bowtie1_rRNAS_pm_table", ".count\$","bowtie1_bacteria_group1_pm_table",".count\$",
 		"bowtie1_bacteria_group2_pm_table",".count\$","bowtie1_fungus_group4_pm_table",".count\$" ],
+		parameterFile3_ref   => [ "fastqc_count_vis", ".Reads.csv\$" ],
 		sh_direct => 1,
 		pbs       => {
 			"email"    => $def->{email},
@@ -1051,7 +1053,7 @@ sub getSmallRNAConfig {
 			"mem"      => "10gb"
 		},
 	};
-	push @summary, ( "reads_in_tasks");
+	push @summary, ( "count_table_correlation","reads_in_tasks");
 	
 	$config->{sequencetask} = {
 		class      => "CQS::SequenceTask",
