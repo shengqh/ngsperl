@@ -85,6 +85,7 @@ my $outDupcountFile=$outFile;
 $outDupcountFile=~s/\.gz$//;
 $outDupcountFile=$outDupcountFile.".dupcount";
 open RESULTCOUNT, ">$outDupcountFile" or die "error writing result: $!";
+print RESULTCOUNT "Query\tCount\tSequence\n";
 
 while ( my $line1 = <FASTQ> ) {
   my $line2   = <FASTQ>;
