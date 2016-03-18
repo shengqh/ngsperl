@@ -1070,7 +1070,7 @@ sub getSmallRNAConfig {
 		perform                  => 1,
 		target_dir               => $def->{target_dir} . "/reads_in_tasks",
 		rtemplate                => "countTableVisFunctions.R,ReadsInTasksPie.R",
-		output_file_ext          => ".TaskReads.csv",
+		output_file_ext          => ".NonParallel.TaskReads.csv",
 		parameterSampleFile1_ref => \@table_for_pieSummary,
 
 		#    parameterFile3_ref       => [ "fastqc_count_vis", ".Reads.csv\$" ],
