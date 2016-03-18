@@ -164,7 +164,7 @@ sub getSmallRNAConfig {
 				perform         => 1,
 				target_dir      => $def->{target_dir} . "/bowtie1_genome_1mm_NTA_smallRNA_category",
 				rtemplate       => "countTableVisFunctions.R,smallRnaCategory.R",
-				output_file     => $def->{task_name},
+				output_file     => "",
 				output_file_ext => ".Category.Table.csv",
 				parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info" ],
 				parameterSampleFile2     => $groups,
@@ -1033,6 +1033,24 @@ sub getSmallRNAConfig {
 		push @individual, ("bowtie1_unmapped_reads");
 		push @summary, ( "bowtie1_unmapped_sequence_count_table", "bowtie1_unmapped_sequence_blast" );
 	}
+	
+	$config->{reads_in_tasks} = {
+		class      => "CQS::UniqueR",
+		perform    => 1,
+		target_dir => $def->{target_dir} . "/reads_in_tasks",
+		rtemplate            => "countTableVisFunctions.R,ReadsInTasks.R",
+		output_file_ext      => ".TaskReads.csv",
+		parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".count\$","bowtie1_bacteria_group2_pm_table_vis",".Species.csv\$" ],
+		sh_direct => 1,
+		pbs       => {
+			"email"    => $def->{email},
+			"nodes"    => "1:ppn=1",
+			"walltime" => "12",
+			"mem"      => "10gb"
+		},
+	};
+	push @summary, ( "reads_in_tasks");
+	
 	$config->{sequencetask} = {
 		class      => "CQS::SequenceTask",
 		perform    => 1,
