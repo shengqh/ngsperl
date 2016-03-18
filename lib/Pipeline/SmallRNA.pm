@@ -1041,7 +1041,7 @@ sub getSmallRNAConfig {
 		rtemplate            => "countTableVisFunctions.R,ReadsInTasks.R",
 		output_file_ext      => ".TaskReads.csv",
 		parameterSampleFile1_ref => ["bowtie1_genome_1mm_NTA_smallRNA_table",".miRNA.count\$","bowtie1_genome_1mm_NTA_smallRNA_table",".tRNA.count\$", 
-		"bowtie1_genome_1mm_NTA_smallRNA_table",".other.count\$","bowtie1_miRBAse_pm_table", ".count\$","bowtie1_tRNA_pm_table", ".category.count\$",
+		"bowtie1_genome_1mm_NTA_smallRNA_table",".other.count\$","bowtie1_miRBase_pm_table", ".count\$","bowtie1_tRNA_pm_table", ".category.count\$",
 		"bowtie1_rRNAL_pm_table", ".count\$","bowtie1_rRNAS_pm_table", ".count\$","bowtie1_bacteria_group1_pm_table",".count\$",
 		"bowtie1_bacteria_group2_pm_table",".count\$","bowtie1_fungus_group4_pm_table",".count\$" ],
 		parameterFile3_ref   => [ "fastqc_count_vis", ".Reads.csv\$" ],
