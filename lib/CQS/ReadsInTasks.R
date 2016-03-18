@@ -16,10 +16,21 @@ for (countFile in countFiles[,1]) {
 	} else {
 		countTable<-read.delim(countFile,header=T,row.names=1)
 	}
-	resultTable<-rbind(resultTable,colSums(countTable))
+	colClass<-sapply(countTable, class)
+	countTableNum<-countTable[,which(colClass=="numeric" | colClass=="integer")]
+	
+	if (is.null(resultTable)) {
+		resultTable<-rbind(colSums(countTableNum))
+	} else {
+		resultTable<-rbind(resultTable,colSums(countTableNum)[colnames(resultTable)])
+	}
 }
 
-row.names(resultTable)<-basename(countFiles[,1])
+#change names
+row.names(resultTable)<-gsub("_pm_.+","",basename(countFiles[,1]))
+row.names(resultTable)<-gsub(".+.miRNA.count$","Host_genome_miRNA",row.names(resultTable))
+row.names(resultTable)<-gsub(".+.tRNA.count$","Host_genome_tRNA",row.names(resultTable))
+row.names(resultTable)<-gsub(".+.other.count$","Host_genome_other_smallRna",row.names(resultTable))
 write.csv(resultTable,paste0(resultFile,".TaskReads.csv"))
 
 tableBarplotToFile(dat=resultTable,fileName=paste0(resultFile,".TaskReads.Barplot.png"),

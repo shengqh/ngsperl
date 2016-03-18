@@ -1025,7 +1025,10 @@ sub getSmallRNAConfig {
                 rtemplate                => "countTableCorrelation.R",
                 output_file              => "parameterSampleFile1",
                 output_file_ext          => ".Correlation.png",
-                parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".count\$","bowtie1_bacteria_group2_pm_table_vis",".Species.csv\$","bowtie1_rRNAL_pm_table", ".count\$" ],
+                parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".count\$","bowtie1_miRBase_pm_table", ".count\$",
+                "bowtie1_tRNA_pm_table", ".count\$","bowtie1_rRNAL_pm_table", ".count\$","bowtie1_rRNAS_pm_table", ".count\$",
+                "bowtie1_bacteria_group1_pm_table_vis",".Species.csv\$","bowtie1_bacteria_group2_pm_table_vis",".Species.csv\$",
+                "bowtie1_fungus_group4_pm_table_vis",".Species.csv\$"],
                 sh_direct                => 1,
                 pbs                      => {
                     "email"    => $def->{email},

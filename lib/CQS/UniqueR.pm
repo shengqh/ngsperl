@@ -176,7 +176,7 @@ sub result {
 
 	my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-	my $output_file     = get_option( $config, $section, "output_file",     0 );
+	my $output_file     = get_option( $config, $section, "output_file",     "" );
 	my $output_file_ext = get_option( $config, $section, "output_file_ext", "" );
 	my $result          = {};
 	my @result_files    = ();
