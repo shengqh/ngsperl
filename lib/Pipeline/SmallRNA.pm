@@ -150,8 +150,9 @@ sub getSmallRNAConfig {
 
 		};
 
-		push @table_for_pieSummary,
-		  ( "bowtie1_genome_1mm_NTA_smallRNA_count", ".miRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_count", ".tRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_count", ".other.count\$" );
+#		push @table_for_pieSummary,
+#		  ( "bowtie1_genome_1mm_NTA_smallRNA_count", ".miRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_count", ".tRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_count", ".other.count\$" );
+        push @table_for_pieSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_count", ".count\$");
 		push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".count\$" );
 		push @table_for_countSum,
 		  (
