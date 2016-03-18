@@ -1,11 +1,15 @@
-resultFile<-outFile
-countFiles<-parSampleFile1
+#############################
+#Count reads in all table Tasks;
+#############################
 
-library(reshape)
-library(ggplot2)
+#source("/home/zhaos/source/r_cqs/vickers/codesToPipeline/countTableVisFunctions.R")
+resultFile<-outFile
+countFilesList<-parSampleFile1
+
+countFiles<-read.delim(countFilesList,header=F,as.is=T)
 
 resultTable<-NULL
-for (countFile in countFiles[1,]) {
+for (countFile in countFiles[,1]) {
 	if (grepl(".csv$",countFile)) {
 		countTable<-read.csv(countFile,header=T,row.names=1)
 	} else {
@@ -15,10 +19,8 @@ for (countFile in countFiles[1,]) {
 }
 
 
-row.names(resultTable)<-countFiles[2,]
-dataForFigure<-melt(resultTable)
-colnames(dataForFigure)<-c("Task","Sample","Reads")
-write.csv(dataForFigure,paste0(resultFile,".TaskReads.csv"))
+row.names(resultTable)<-basename(countFiles[,1])
 
-ggplot(dataForFigure,aes(x=Sample,y=Reads))+geom_bar(stat="identity",position="dodge",aes(fill=Task))
-
+tableBarplotToFile(dat=resultTable,fileName=paste0(resultFile,".TaskReads.Barplot.png"),
+		totalCountFile="",maxCategory=NA,textSize=textSize,
+		fill=NA,facet="Category")

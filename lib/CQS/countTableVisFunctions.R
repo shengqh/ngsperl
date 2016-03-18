@@ -62,33 +62,40 @@ tableMaxCategory<-function(dat,maxCategory=NA) {
 	return(datForFigure)
 }
 
-tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",groupName=fill,transformTable=TRUE,textSize=20,ylab=y,colorNames="Set1") {
+tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",facet=NA,varName=if (is.na(facet)) c(fill,x,y) else c(facet,x,y),transformTable=TRUE,textSize=20,ylab=y,colorNames="Set1") {
 	if (transformTable) {
 		datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory)
 		
 #		datForFigure$Groups<-row.names(dat)
 		datForFigure<-melt(as.matrix(datForFigure))
-		colnames(datForFigure)<-c(fill,x,y)
+		colnames(datForFigure)<-varName
 	} else {
 		datForFigure<-dat
 	}
-	p<-ggplot(datForFigure,aes_string(x=x,y=y,fill=fill))+
-			geom_bar(stat="identity")+
-			guides(fill= guide_legend(title = groupName))+
+	if (!is.na(fill)) {
+		p<-ggplot(datForFigure,aes_string(x=x,y=y,fill=fill))
+		if (length(unique(datForFigure[,fill]))<=7 & sum(nchar(as.character(unique(datForFigure[,fill]))))<70) {
+			p<-p+theme(legend.position = "top")+
+					guides(fill = guide_legend(nrow = 1,keywidth = 2, keyheight = 2))
+		} else {
+			p<-p+	guides(fill = guide_legend(ncol = 1,keywidth = 1, keyheight = 1))
+		}
+		if (colorNames!="") {
+			colors<-makeColors(length(unique(datForFigure[,fill])),colorNames)
+			p<-p+scale_fill_manual(values=colors)
+		}
+	} else if (!is.na(facet)) {
+		p<-ggplot(datForFigure,aes_string(x=x,y=y))+facet_wrap(c(facet))
+	} else {
+		p<-ggplot(datForFigure,aes_string(x=x,y=y))
+	}
+	p<-p+geom_bar(stat="identity")+
+#			guides(fill= guide_legend(title = groupName))+
 			theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5)) + 
 			theme(axis.text = element_text(size=textSize),legend.text=element_text(size=textSize),
 					axis.title = element_text(size=textSize),legend.title= element_text(size=textSize))+
 			ylab(ylab)
-	if (length(unique(datForFigure[,fill]))<=7) {
-		p<-p+theme(legend.position = "top")+
-				guides(fill = guide_legend(nrow = 1,keywidth = 2, keyheight = 2))
-	} else {
-		p<-p+	guides(fill = guide_legend(ncol = 1,keywidth = 1, keyheight = 1))
-	}
-	if (!is.na(colorNames)) {
-		colors<-makeColors(length(unique(datForFigure[,fill])),colorNames)
-		p<-p+scale_fill_manual(values=colors)
-	}
+
 	return(p)
 }
 
