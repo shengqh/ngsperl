@@ -30,7 +30,7 @@ sub getSmallRNAConfig {
 
 	my @table_for_correlation = ();
 	my @table_for_countSum    = ();
-	my @table_for_pieSummary  = ();
+	my @table_for_pieSummary  = ("identical",".dupcount");
 
 	#print Dumper($config);
 
@@ -1069,7 +1069,7 @@ sub getSmallRNAConfig {
 		suffix                   => "_pie",
 		perform                  => 1,
 		target_dir               => $def->{target_dir} . "/reads_in_tasks",
-		rtemplate                => "countTableVisFunctions.R,ReadsInTasks.R",
+		rtemplate                => "countTableVisFunctions.R,ReadsInTasksPie.R",
 		output_file_ext          => ".TaskReads.csv",
 		parameterSampleFile1_ref => \@table_for_pieSummary,
 
