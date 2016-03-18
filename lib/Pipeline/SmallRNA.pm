@@ -1065,7 +1065,7 @@ sub getSmallRNAConfig {
 	  };
 	$config->{reads_in_tasks_pie} = {
 		class                    => "CQS::UniqueR",
-		suffix                   => "_uniqueR_pie",
+		suffix                   => "_pie",
 		perform                  => 1,
 		target_dir               => $def->{target_dir} . "/reads_in_tasks",
 		rtemplate                => "countTableVisFunctions.R,ReadsInTasks.R",
