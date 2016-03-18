@@ -1,6 +1,6 @@
+taskName<-outFile
 categoryFileList<-parSampleFile1
 groupFileList<-parSampleFile2
-taskName<-parFile1
 
 #source("/home/zhaos/source/r_cqs/vickers/codesToPipeline/countTableVisFunctions.R")
 
