@@ -33,7 +33,8 @@ sub perform {
 	my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
 	$self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
-	$self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+	my $task_suffix=get_option( $config, $section, "suffix", "" );
+	$self->{_task_suffix} = $task_suffix;
 
 	my $rCode           = get_option( $config, $section, "rCode",           "" );
 	my $output_file     = get_option( $config, $section, "output_file",     "" );
@@ -42,37 +43,37 @@ sub perform {
 	my $parametersample_files1 = "";
 	if ( has_raw_files( $config, $section, "parameterSampleFile1" ) ) {
 		my %temp = %{ get_raw_files( $config, $section, "parameterSampleFile1" ) };
-		open( LIST, ">$result_dir/fileList1.txt" ) or die "Cannot create fileList1.txt";
+		open( LIST, ">$result_dir/fileList1${task_suffix}.txt" ) or die "Cannot create fileList1.txt";
 		foreach my $sample_name ( keys %temp ) {
 			foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
 				print LIST $subSampleFile . "\t$sample_name\n";
 			}
 		}
-		$parametersample_files1 = "fileList1.txt";
+		$parametersample_files1 = "fileList1${task_suffix}.txt";
 		close(LIST);
 	}
 	my $parametersample_files2 = "";
 	if ( has_raw_files( $config, $section, "parameterSampleFile2" ) ) {
 		my %temp = %{ get_raw_files( $config, $section, "parameterSampleFile2" ) };
-		open( LIST, ">$result_dir/fileList2.txt" ) or die "Cannot create fileList2.txt";
+		open( LIST, ">$result_dir/fileList2${task_suffix}.txt" ) or die "Cannot create fileList2.txt";
 		foreach my $sample_name ( keys %temp ) {
 			foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
 				print LIST $subSampleFile . "\t$sample_name\n";
 			}
 		}
-		$parametersample_files2 = "fileList2.txt";
+		$parametersample_files2 = "fileList2${task_suffix}.txt";
 		close(LIST);
 	}
 	my $parametersample_files3 = "";
 	if ( has_raw_files( $config, $section, "parameterSampleFile3" ) ) {
 		my %temp = %{ get_raw_files( $config, $section, "parameterSampleFile3" ) };
-		open( LIST, ">$result_dir/fileList3.txt" ) or die "Cannot create fileList3.txt";
+		open( LIST, ">$result_dir/fileList3${task_suffix}.txt" ) or die "Cannot create fileList3.txt";
 		foreach my $sample_name ( keys %temp ) {
 			foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
 				print LIST $subSampleFile . "\t$sample_name\n";
 			}
 		}
-		$parametersample_files3 = "fileList3.txt";
+		$parametersample_files3 = "fileList3${task_suffix}.txt";
 		close(LIST);
 	}
 
@@ -89,7 +90,7 @@ sub perform {
 		$parameterFile3 = "";
 	}
 
-	my $rfile = $result_dir . "/${task_name}.r";
+	my $rfile = $result_dir . "/${task_name}${task_suffix}.r";
 	open( my $rf, ">$rfile" ) or die "Cannot create $rfile";
 
 	my $final_file    = "";
