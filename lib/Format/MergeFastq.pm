@@ -56,9 +56,14 @@ sub perform {
 fi
 ";
       for my $sample_file (@sample_files) {
-        print $pbs "zcat $sample_file >> $final_fastq \n";
+        print $pbs "
+echo merging $sample_file ...
+zcat $sample_file >> $final_fastq 
+";
       }
-      print $pbs "gzip $final_fastq \n";
+      print $pbs "
+echo gzipping $final_fastq ...
+gzip $final_fastq \n";
     }
     $self->close_pbs( $pbs, $pbs_file );
   }
