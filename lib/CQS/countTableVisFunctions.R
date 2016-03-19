@@ -101,7 +101,7 @@ tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",f
 
 tableBarplotToFile<-function(dat,fileName,totalCountFile="",maxCategory=5,textSize=9,transformTable=T,...) {
 	if (totalCountFile!="") { #normlize with total count *10^6
-		totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1)
+		totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
 		totalCount<-unlist(totalCount["Reads for Mapping",])
 		dat<-10^6*t(t(dat)/totalCount[colnames(dat)])
 		ylab<-"Mapped Reads per Million"
