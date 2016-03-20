@@ -258,14 +258,14 @@ sub getSmallRNAConfig {
 			push @summary, ( "miRNA_deseq2", "tRNA_deseq2", "otherSmallRNA_deseq2" );
 		}
 
-		if ( $do_comparison or defined $def->{tRNA_vis_group} ) {
+		if ( $do_comparison or defined $groups or defined $def->{tRNA_vis_group} ) {
 			my $trna_vis_groups;
 			my $trna_sig_result;
 			if ( defined $def->{tRNA_vis_group} ) {
 				$trna_vis_groups = $def->{tRNA_vis_group};
 			}
 			else {
-				$trna_vis_groups = $def->{groups};
+				$trna_vis_groups = $groups;
 			}
 			if ($do_comparison) {
 				$trna_sig_result = [ "tRNA_deseq2", "_DESeq2_sig.csv\$" ];
