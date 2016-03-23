@@ -895,6 +895,67 @@ sub getSmallRNAConfig {
 			my $unmapped_comparison = {
 
 				#DESeq2
+				nonHost_tRna_deseq2 => {
+                    class                => "Comparison::DESeq2",
+                    perform              => 1,
+                    target_dir           => $def->{target_dir} . "/nonHost_tRna_deseq2",
+                    option               => "",
+                    source_ref           => "pairs",
+                    groups_ref           => "groups",
+                    countfile_ref        => [ "bowtie1_tRNA_pm_table", ".category.count\$"],
+                    sh_direct            => 1,
+                    show_DE_gene_cluster => 1,
+                    pvalue               => 0.05,
+                    fold_change          => 1.5,
+                    min_median_read      => 5,
+                    pbs                  => {
+                        "email"    => $def->{email},
+                        "nodes"    => "1:ppn=1",
+                        "walltime" => "10",
+                        "mem"      => "10gb"
+                    },
+                },
+                nonHost_rRNAL_deseq2 => {
+                    class                => "Comparison::DESeq2",
+                    perform              => 1,
+                    target_dir           => $def->{target_dir} . "/nonHost_rRNAL_deseq2",
+                    option               => "",
+                    source_ref           => "pairs",
+                    groups_ref           => "groups",
+                    countfile_ref        => [ "bowtie1_rRNAL_pm_table",  ".count\$"],
+                    sh_direct            => 1,
+                    show_DE_gene_cluster => 1,
+                    pvalue               => 0.05,
+                    fold_change          => 1.5,
+                    min_median_read      => 5,
+                    pbs                  => {
+                        "email"    => $def->{email},
+                        "nodes"    => "1:ppn=1",
+                        "walltime" => "10",
+                        "mem"      => "10gb"
+                    },
+                },
+                nonHost_rRNAS_deseq2 => {
+                    class                => "Comparison::DESeq2",
+                    perform              => 1,
+                    target_dir           => $def->{target_dir} . "/nonHost_rRNAS_deseq2",
+                    option               => "",
+                    source_ref           => "pairs",
+                    groups_ref           => "groups",
+                    countfile_ref        => [ "bowtie1_rRNAS_pm_table",  ".count\$" ],
+                    sh_direct            => 1,
+                    show_DE_gene_cluster => 1,
+                    pvalue               => 0.05,
+                    fold_change          => 1.5,
+                    min_median_read      => 5,
+                    pbs                  => {
+                        "email"    => $def->{email},
+                        "nodes"    => "1:ppn=1",
+                        "walltime" => "10",
+                        "mem"      => "10gb"
+                    },
+                },
+                
 				group1_deseq2 => {
 					class                => "Comparison::DESeq2",
 					perform              => 1,
@@ -958,7 +1019,7 @@ sub getSmallRNAConfig {
 			};
 
 			$config = merge( $config, $unmapped_comparison );
-			push @summary, ( "group1_deseq2", "group2_deseq2" );
+			push @summary, ( "group1_deseq2", "group2_deseq2" ,"group4_deseq2","nonHost_tRna_deseq2","nonHost_rRNAL_deseq2","nonHost_rRNAS_deseq2");
 		}
 	}
 
