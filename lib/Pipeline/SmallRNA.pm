@@ -28,7 +28,7 @@ sub getSmallRNAConfig {
 	my @individual = @{$individual_ref};
 	my @summary    = @{$summary_ref};
 
-	my @table_for_correlation = ();
+	my @table_for_correlation = ("identical_sequence_count_table",".count\$");
 	my @table_for_countSum    = ();
 	my @table_for_pieSummary  = ("identical",".dupcount");
 
