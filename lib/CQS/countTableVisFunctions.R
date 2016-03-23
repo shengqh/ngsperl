@@ -99,7 +99,7 @@ tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",f
 	return(p)
 }
 
-tableBarplotToFile<-function(dat,fileName,totalCountFile="",maxCategory=5,textSize=9,transformTable=T,...) {
+tableBarplotToFile<-function(dat,fileName,totalCountFile="",maxCategory=5,textSize=9,transformTable=T,height=1500,...) {
 	if (totalCountFile!="") { #normlize with total count *10^6
 		totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
 		totalCount<-unlist(totalCount["Reads for Mapping",])
@@ -109,7 +109,7 @@ tableBarplotToFile<-function(dat,fileName,totalCountFile="",maxCategory=5,textSi
 		ylab<-"Reads"
 	}
 	width<-max(3000,75*ncol(dat))
-	height<-1500
+	height<-height
 	png(fileName,width=width,height=height,res=300)
 	p<-tableBarplot(dat,maxCategory=maxCategory,textSize=textSize,ylab=ylab,transformTable=transformTable,...)
 	print(p)
@@ -117,19 +117,22 @@ tableBarplotToFile<-function(dat,fileName,totalCountFile="",maxCategory=5,textSi
 }
 
 #changed from function in http://mathematicalcoffee.blogspot.com/2014/06/ggpie-pie-graphs-in-ggplot2.html
-ggpie <- function (dat, fill="Category", y="Reads",facet="Sample", maxCategory=NA,main=NA, percent=T,textSize=15,colorNames="Set1",transformTable=TRUE) {
+ggpie <- function (dat, fill="Category", y="Reads",facet="Sample", maxCategory=NA,main=NA, percent=T,textSize=15,colorNames="Set1",transformTable=TRUE,reOrder=TRUE) {
 	if (transformTable) {
 		datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory)
 		
 	    if (percent) {
 		    datForFigure<-t(t(datForFigure)/colSums(datForFigure))
 	    }
-		if (row.names(datForFigure)[nrow(datForFigure)]=="Other") {
-			categoryOrderedNames<-c(row.names(datForFigure)[-nrow(datForFigure)][rev(order(rowSums(datForFigure[-nrow(datForFigure),])))],"Other")
+		if (reOrder) {
+			if (row.names(datForFigure)[nrow(datForFigure)]=="Other") {
+				categoryOrderedNames<-c(row.names(datForFigure)[-nrow(datForFigure)][rev(order(rowSums(datForFigure[-nrow(datForFigure),])))],"Other")
+			} else {
+				categoryOrderedNames<-row.names(datForFigure)[rev(order(rowSums(datForFigure)))]
+			}
 		} else {
-			categoryOrderedNames<-row.names(datForFigure)[rev(order(rowSums(datForFigure)))]
+			categoryOrderedNames<-row.names(datForFigure)
 		}
-		
 		datForFigure<-melt(as.matrix(datForFigure),as.is=T)
 		colnames(datForFigure)<-c(fill,facet,y)
 		datForFigure[,fill]<-factor(datForFigure[,fill],levels=categoryOrderedNames)

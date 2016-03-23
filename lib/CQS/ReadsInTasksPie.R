@@ -28,3 +28,15 @@ for (countFile in countFiles[,1]) {
 resultTable<-data.frame(Task=taskName,Count=totalCountAll,Sample=countFiles[,2])
 resultTable<-acast(resultTable,Task~Sample,value.var="Count")
 write.csv(resultTable,paste0(resultFile,".NonParallel.TaskReads.csv"))
+
+HostSmallRnaMapped<-resultTable["bowtie1_genome_1mm_NTA_smallRNA_count",]
+HostGenomeMappedReads<-resultTable["identical",]-resultTable["bowtie1_genome_unmapped_reads",]-resultTable["bowtie1_genome_1mm_NTA_smallRNA_count",]
+NonHostMapped<-resultTable["bowtie1_genome_unmapped_reads",]-resultTable["bowtie1_unmapped_reads",]
+UnMapped<-resultTable["bowtie1_unmapped_reads",]
+
+tableForPieChart<-rbind(HostSmallRnaMapped,HostGenomeMappedReads,NonHostMapped,UnMapped)
+ggpieToFile(tableForPieChart,fileName=paste0(resultFile,".NonParallel.TaskReads.Piechart.png"),maxCategory=NA,textSize=textSize,reOrder=FALSE)
+
+
+
+
