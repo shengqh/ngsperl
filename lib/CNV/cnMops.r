@@ -1,5 +1,5 @@
 #setwd("/scratch/cqs/shengq1/dnaseq/2110/cnmops/result")
-#SampleNames <- c(
+#sample_names <- c(
 #"2110_JP_01"
 #,"2110_JP_02"
 #,"2110_JP_03"
@@ -48,10 +48,10 @@ library(cn.mops)
 resfile<-paste0(prefix, "_resCNMOPS.cnmops.Rdata")
 
 if(length(refnames) > 0){
-  insample<-SampleNames %in% refnames
-  REFNames<-SampleNames[insample]
+  insample<-sample_names %in% refnames
+  REFNames<-sample_names[insample]
   REFFiles<-BAMFiles[insample]
-  SAMNames<-SampleNames[!insample]
+  SAMNames<-sample_names[!insample]
   SAMFiles<-BAMFiles[!insample]
   if(hasbed){
     segfile<-paste0(prefix, "_getSegmentReadCountsFromBAM_ref.Rdata")
@@ -84,7 +84,7 @@ if(length(refnames) > 0){
     }else{
       segments <- read.table(bedfile, sep="\t", as.is=TRUE, header=T)
       gr <- GRanges(segments[,1], IRanges(segments[,2],segments[,3]), gene=segments[,4])
-      x <- getSegmentReadCountsFromBAM(BAMFiles, GR=gr, sampleNames=SampleNames, mode=pairmode, parallel=parallel)
+      x <- getSegmentReadCountsFromBAM(BAMFiles, GR=gr, sampleNames=sample_names, mode=pairmode, parallel=parallel)
       save(refx, samx, file=segfile)
     }
     resCNMOPS<-exomecn.mops(x, upperThreshold=0.5, lowerThreshold=-0.5)
@@ -94,7 +94,7 @@ if(length(refnames) > 0){
     if(file.exists(countfile)){
       load(countfile)
     }else{
-      x <- getReadCountsFromBAM(BAMFiles, sampleNames=SampleNames, mode=pairmode)
+      x <- getReadCountsFromBAM(BAMFiles, sampleNames=sample_names, mode=pairmode)
       save(x, file=countfile)
     }
     resCNMOPS <- cn.mops(x) 
