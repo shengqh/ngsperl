@@ -17,7 +17,7 @@
 #,"2110_JP_15"
 #,"2110_JP_16"
 #)
-#BAMFiles <- c(
+#bam_files <- c(
 #"/scratch/cqs/shengq1/dnaseq/2110/bwa_markdup/2110-JP-1_realigned_recal_rmdup.sorted.bam"
 #,"/scratch/cqs/shengq1/dnaseq/2110/bwa_markdup/2110-JP-2_realigned_recal_rmdup.sorted.bam"
 #,"/scratch/cqs/shengq1/dnaseq/2110/bwa_markdup/2110-JP-3_realigned_recal_rmdup.sorted.bam"
@@ -50,9 +50,9 @@ resfile<-paste0(prefix, "_resCNMOPS.cnmops.Rdata")
 if(length(refnames) > 0){
   insample<-sample_names %in% refnames
   REFNames<-sample_names[insample]
-  REFFiles<-BAMFiles[insample]
+  REFFiles<-bam_files[insample]
   SAMNames<-sample_names[!insample]
-  SAMFiles<-BAMFiles[!insample]
+  SAMFiles<-bam_files[!insample]
   if(hasbed){
     segfile<-paste0(prefix, "_getSegmentReadCountsFromBAM_ref.Rdata")
     if(file.exists(segfile)){
@@ -84,7 +84,7 @@ if(length(refnames) > 0){
     }else{
       segments <- read.table(bedfile, sep="\t", as.is=TRUE, header=T)
       gr <- GRanges(segments[,1], IRanges(segments[,2],segments[,3]), gene=segments[,4])
-      x <- getSegmentReadCountsFromBAM(BAMFiles, GR=gr, sampleNames=sample_names, mode=pairmode, parallel=parallel)
+      x <- getSegmentReadCountsFromBAM(bam_files, GR=gr, sampleNames=sample_names, mode=pairmode, parallel=parallel)
       save(refx, samx, file=segfile)
     }
     resCNMOPS<-exomecn.mops(x, upperThreshold=0.5, lowerThreshold=-0.5)
@@ -94,7 +94,7 @@ if(length(refnames) > 0){
     if(file.exists(countfile)){
       load(countfile)
     }else{
-      x <- getReadCountsFromBAM(BAMFiles, sampleNames=sample_names, mode=pairmode)
+      x <- getReadCountsFromBAM(bam_files, sampleNames=sample_names, mode=pairmode)
       save(x, file=countfile)
     }
     resCNMOPS <- cn.mops(x) 
