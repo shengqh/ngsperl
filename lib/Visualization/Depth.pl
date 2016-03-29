@@ -77,6 +77,7 @@ my $r = dirname(__FILE__) . "/Depth.r";
 
 my $readsFile = basename($bedFile) . ".reads";
 open( my $reads, "> $readsFile" ) or die "Cannot open file $readsFile";
+print $reads "Sample\tMappedReads\n";
 for ( my $index = 0 ; $index < scalar(@bamNames) ; $index++ ) {
   my $curName        = $bamNames[$index];
   my $curBamFile     = $bamFiles[$index];
@@ -86,6 +87,7 @@ for ( my $index = 0 ; $index < scalar(@bamNames) ; $index++ ) {
   }
 
   my $curMappedReads = `grep " mapped (" $curBamStatFile | cut -d ' ' -f1`;
+  chomp($curMappedReads);
   print $reads $curName, "\t", $curMappedReads, "\n";
 }
 close($reads);
