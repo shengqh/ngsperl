@@ -75,34 +75,51 @@ my $bamFilesStr = join( ' ',   @bamFiles );
 
 my $r = dirname(__FILE__) . "/Depth.r";
 
-my $dataFile = basename($bedFile) . ".depth";
-open( BED, $bedFile ) or die "Cannot open file $bedFile";
-`printf "Chr\tPosition\t${bamNamesStr}\tFile\n" > $dataFile`;
-
-my $keys = {};
-while (<BED>) {
-  s/\r|\n//g;
-  my ( $chr, $start, $end, $fileprefix ) = split "\t";
-  if ( defined $start && defined $end ) {
-    if ( !defined $fileprefix ) {
-      $fileprefix = "${chr}_${start}_${end}";
-    }
-
-    if ( exists $keys->{$fileprefix} ) {
-      next;
-    }
-
-    print( $fileprefix . "\n" );
-    my $cmd = "samtools depth -r ${chr}:${start}-${end} $bamFilesStr | sed -e \"s/\$/\t$fileprefix/g \" >> $dataFile";
-    my $returnCode = system( $cmd);
-    if($returnCode != 0){
-      die("Error return code = $returnCode, exit.");
-    }
-
-    $keys->{$fileprefix} = 1;
+my $readsFile = basename($bedFile) . ".reads";
+open( my $reads, "> $readsFile" ) or die "Cannot open file $readsFile";
+for ( my $index = 0 ; $index < scalar(@bamNames) ; $index++ ) {
+  my $curName        = $bamNames[$index];
+  my $curBamFile     = $bamFiles[$index];
+  my $curBamStatFile = $curBamFile . ".stat";
+  if ( !-e $curBamStatFile ) {
+    `samtools flagstat $curBamFile > $curBamStatFile`;
   }
+
+  my $curMappedReads = `grep " mapped (" $curBamStatFile | cut -d ' ' -f1`;
+  print $reads $curName, "\t", $curMappedReads, "\n";
 }
-close BED;
+close($reads);
+
+my $dataFile = basename($bedFile) . ".depth";
+if ( !-e $dataFile ) {
+  open( BED, $bedFile ) or die "Cannot open file $bedFile";
+  `printf "Chr\tPosition\t${bamNamesStr}\tFile\n" > $dataFile`;
+
+  my $keys = {};
+  while (<BED>) {
+    s/\r|\n//g;
+    my ( $chr, $start, $end, $fileprefix ) = split "\t";
+    if ( defined $start && defined $end ) {
+      if ( !defined $fileprefix ) {
+        $fileprefix = "${chr}_${start}_${end}";
+      }
+
+      if ( exists $keys->{$fileprefix} ) {
+        next;
+      }
+
+      print( $fileprefix . "\n" );
+      my $cmd        = "samtools depth -r ${chr}:${start}-${end} $bamFilesStr | sed -e \"s/\$/\t$fileprefix/g \" >> $dataFile";
+      my $returnCode = system($cmd);
+      if ( $returnCode != 0 ) {
+        die("Error return code = $returnCode, exit.");
+      }
+
+      $keys->{$fileprefix} = 1;
+    }
+  }
+  close BED;
+}
 
 my $singlePdfStr = ( defined $singlePdf ) ? 1 : 0;
 my $outputFile = ( defined $singlePdf ) ? "${dataFile}.pdf" : "";
