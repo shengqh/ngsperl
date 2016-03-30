@@ -395,7 +395,7 @@ sub getSmallRNAConfig {
 		};
 
 		$config = merge( $config, $mirbase );
-		push @table_for_correlation, ( "bowtie1_miRBase_pm_table", ".count\$" );
+#		push @table_for_correlation, ( "bowtie1_miRBase_pm_table", ".count\$" );
 		push @table_for_countSum,    ( "bowtie1_miRBase_pm_table", ".count\$" );
 		push @individual,            ( "bowtie1_miRBase_pm",       "bowtie1_miRBase_pm_count" );
 		push @summary,               ("bowtie1_miRBase_pm_table");
