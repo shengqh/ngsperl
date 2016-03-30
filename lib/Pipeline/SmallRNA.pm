@@ -157,7 +157,7 @@ sub getSmallRNAConfig {
 		push @table_for_countSum,
 		  (
 			"bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$",
-			"bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$", "bowtie1_miRBase_pm_table",              ".count\$"
+			"bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$"
 		  );
 		push @individual, ( "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_NTA_smallRNA_count" );
 		push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_category" );

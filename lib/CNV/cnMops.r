@@ -127,7 +127,8 @@ write.table(locus, file=paste0(prefix, ".call.bed"), sep="\t", col.names=F, row.
 
 cnvr<- data.frame(seqnames=seqnames(resCNMOPS@cnvr),
                   starts=start(resCNMOPS@cnvr)-1,
-                  ends=end(resCNMOPS@cnvr))
+                  ends=end(resCNMOPS@cnvr),
+                  file=paste(seqnames(resCNMOPS@cnvr), start(resCNMOPS@cnvr)-1, end(resCNMOPS@cnvr), sep="_") )
 cnvr<-data.frame(cbind(cnvr, elementMetadata(resCNMOPS@cnvr)))
 write.table(file=paste0(prefix, ".cnvr.tsv"), cnvr, sep="\t" ,row.names=F)
 
