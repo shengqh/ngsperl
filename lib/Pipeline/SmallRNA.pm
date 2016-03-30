@@ -1159,7 +1159,7 @@ sub getSmallRNAConfig {
 		pbs       => {
 			"email"    => $def->{email},
 			"nodes"    => "1:ppn=" . $def->{max_thread},
-			"walltime" => "12",
+			"walltime" => $def->{sequencetask_run_time},
 			"mem"      => "40gb"
 		},
 	};

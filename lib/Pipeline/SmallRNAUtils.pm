@@ -105,7 +105,15 @@ sub initializeDefaultOptions {
   if(!defined $def->{mirbase_count_option}){
     $def->{mirbase_count_option} = "";
   }
-
+  
+  if(!defined $def->{table_vis_text_size}){
+    $def->{table_vis_text_size} = "9";
+  }
+  
+   if(!defined $def->{sequencetask_run_time}){
+    $def->{sequencetask_run_time} = "12";
+  }
+  
   return $def;
 }
 
