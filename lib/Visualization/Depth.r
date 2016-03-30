@@ -1,3 +1,6 @@
+#readFile<-"WES.cnvr.tsv.reads"
+#cnvrFile<-"WES.cnvr.tsv"
+
 library("reshape2")
 library("ggplot2")
 
@@ -10,34 +13,64 @@ if(is.null(outputFile)){
   outputFile = ""
 }
 
-#setwd("H:/shengquanhu/projects/JonathanBrown/20151215_janathan_atacseq_fat/macs2bdgdiff_replicates_nomodel_depth/result/SQ_Visc_CHOW")
-#inputFile<-"SQ_Visc_CHOW_c3.0_cond1.bed.depth"
-#singlePdf<-FALSE
-#outputFile<-""
-
 data<-read.table(inputFile, sep="\t", header=T, stringsAsFactors = F)
+
+if(exists("readFile")){
+  sampleReads<-read.table(readFile, sep="\t", header=T, row.names=1, as.is = T)
+  totalReads<-sampleReads[, 1]
+  names(totalReads)<-rownames(sampleReads)
+  for(sample in rownames(sampleReads)){
+    data[,sample] = data[,sample] * 1000000 / totalReads[sample]
+  }
+}
+
+if(exists("cnvrFile")){
+  cnvr<-read.table(cnvrFile, sep="\t", header=T, stringsAsFactors = F, row.names=4)
+  refs<-rownames(sampleReads)[! rownames(sampleReads) %in% colnames(cnvr)]
+  
+  colors<-c("green", "darkblue", "lightblue", "black", colorRampPalette(c("yellow", "red"))(11))
+  names(colors)<-c("REF","CN0", "CN1", "CN2", "CN3", "CN4", "CN5", "CN6", "CN7", "CN8", "CN16", "CN32", "CN64")
+}
+
 files<-unique(data$File)
 
 if(singlePdf){
   pdf(outputFile, onefile = T)
 }
 
+x<-files[1]
 for(x in files){
   cat(x, "\n")
   curdata<-data[data$File==x,]
   mdata<-melt(curdata, id=c("Chr", "Position", "File"))
   colnames(mdata)<-c("Chr", "Position", "File", "Sample", "Depth")
-  g<-ggplot(mdata, aes(x=Position, y=Depth, colour=Sample)) + 
-    geom_point() + 
-    stat_smooth() + 
-    xlab(unique(data$chr)) + 
+  
+  g<-ggplot(mdata, aes(x=Position, y=Depth))
+  if(exists("cnvrFile")){
+    tmpcnv<-cnvr[x, c(4:ncol(cnvr))]
+    tmpcnv[,refs] <- "REF"
+    tmpcnv<-t(tmpcnv)
+    
+    curcnv<-as.character(tmpcnv[,1])
+    names(curcnv) <- row.names(tmpcnv)
+    
+    mdata$Color<-as.character(curcnv[as.character(mdata$Sample)])
+    g<-g + geom_point(aes(color = Color), size=0.5) +
+      scale_colour_manual(name="CNV", values = colors)
+  }else{
+    g<-g + geom_point(aes(color = Sample), size=0.5, show.legend = F)
+  }
+  
+  g <- g + xlab(unique(data$chr)) + 
+    ylab("Reads per million total reads") +
     ggtitle(x) +
-    facet_grid( Sample ~ .) +
+    facet_wrap( ~ Sample, ncol=1) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+  
   if(singlePdf){
     print(g)
   }else{
-    png(paste0(x, ".png"), width=2000, height=max(3000, 300+500 * length(unique(curdata$Sample))), res=300)
+    png(paste0(x, ".png"), width=2000, height=max(3000, 300+800 * length(unique(curdata$Sample))), res=300)
     print(g)
     dev.off()
   }

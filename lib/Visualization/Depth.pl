@@ -14,12 +14,13 @@ my $usage = "
 
 Synopsis:
 
-Depth -b bedFile -c configFile [-s]
+Depth -b bedFile -c configFile -r totalReadsFile -v cnvrFile [-s]
 
 Options:
 
   -b|--bedFile            Input bed file, the forth column should be result file prefix
-  -c|--configFile         Input file list with two columns: sample name and bam files
+  -c|--configFile         Input file list with two columns: sample name and bam file
+  -v|--cnvrFile           Input file from cn.mops module which includes loci and CNx categories cross samples
   -s|--singlePdf          Output as single pdf (for small dataset)
   -h|--help               This page.
 ";
@@ -29,13 +30,15 @@ Getopt::Long::Configure('bundling');
 my $help;
 my $bedFile;
 my $configFile;
+my $cnvrFile;
 my $singlePdf;
 
 GetOptions(
-  'h|help'         => \$help,
-  'b|bedFile=s'    => \$bedFile,
-  'c|configFile=s' => \$configFile,
-  's|siglepdf'     => \$singlePdf,
+  'h|help'             => \$help,
+  'b|bedFile=s'        => \$bedFile,
+  'c|configFile=s'     => \$configFile,
+  'v|cnvrFile=s'       => \$cnvrFile,
+  's|siglepdf'         => \$singlePdf,
 );
 
 if ( defined $help ) {
@@ -125,6 +128,17 @@ if ( !-e $depthFile ) {
 
 my $singlePdfStr = ( defined $singlePdf ) ? 1 : 0;
 my $outputFile = ( defined $singlePdf ) ? "${depthFile}.pdf" : "";
-`cp $r Depth.r`;
+
+if(-e "Depth.r"){
+  unlink("Depth.r");
+}
+
+`echo "readFile<-\"$readsFile\"" >> Depth.r`;
+
+if ( defined($cnvrFile) ) {
+  `echo "cnvrFile<-\"$cnvrFile\"" >> Depth.r`;
+}
+
+`cat $r >> Depth.r`;
 system("R --vanilla -f Depth.r --args $singlePdfStr $depthFile $bedFile $outputFile");
 

@@ -35,6 +35,11 @@ sub perform {
   my $groups    = get_raw_files( $config, $section, "groups" );
   my $bam_files = get_raw_files( $config, $section, "bam_files" );
   my $singlepdf = get_option( $config, $section, "singlepdf", 0 ) ? "-s" : "";
+  
+  my $cnvr_files;
+  if(has_raw_files($config, $section, "cnvr_files")){
+    $cnvr_files = get_raw_files( $config, $section, "cnvr_files" );
+  }
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -52,17 +57,21 @@ sub perform {
       push( @curbam_files, $bam_files->{$bamName}->[0] );
     }
 
+    my $cnvr_option = "";
+    if(defined $cnvr_files){
+      $cnvr_option = "--cnvrFile " . $cnvr_files->{$name}->[0];
+    }
     my $curbam_fileStr = join( ' ', @curbam_files );
 
     my $bamCount = scalar(@curBamNames);
 
     my $configFileName = "${name}.filelist";
     my $configFile     = $cur_dir . "/${configFileName}";
-    open( CON, ">$configFile" ) or die "Cannot create $configFile";
+    open( my $con, ">$configFile" ) or die "Cannot create $configFile";
     for ( my $index = 0 ; $index < $bamCount ; $index++ ) {
-      print CON $curBamNames[$index], "\t", $curbam_files[$index], "\n";
+      print $con $curBamNames[$index], "\t", $curbam_files[$index], "\n";
     }
-    close CON;
+    close $con;
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $name );
     my $pbs_name = basename($pbs_file);
@@ -75,7 +84,7 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
     for my $bedFile (@curBedFiles) {
-      print $pbs "perl $perl -b $bedFile -c $configFile $singlepdf \n";
+      print $pbs "perl $perl -b $bedFile -c $configFile $cnvr_option $singlepdf \n";
     }
     $self->close_pbs( $pbs, $pbs_file );
   }
