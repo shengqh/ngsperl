@@ -42,7 +42,7 @@ sub perform {
 
 	my $parametersample_files1 = "";
 	if ( has_raw_files( $config, $section, "parameterSampleFile1" ) ) {
-	  print Dumper($config->{$section}{parameterSampleFile1});
+	  print Dumper($config->{$section}{"parameterSampleFile1"});
 	  
 		my %temp = %{ get_raw_files( $config, $section, "parameterSampleFile1" ) };
 		open( LIST, ">$result_dir/fileList1${task_suffix}.txt" ) or die "Cannot create fileList1.txt";
