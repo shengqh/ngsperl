@@ -342,7 +342,7 @@ sub do_get_raw_files {
     #print Dumper($refmap);
 
     my %result = ();
-    for my $index ( keys %{$refmap} ) {
+    for my $index ( sort keys %{$refmap} ) {
       my $values       = $refmap->{$index};
       my $targetConfig = $values->{config};
       my $section      = $values->{section};
