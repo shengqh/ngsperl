@@ -48,7 +48,6 @@ sub perform {
 
 		open( LIST, ">$result_dir/fileList1${task_suffix}.txt" ) or die "Cannot create fileList1.txt";
 		foreach my $sample_name ( keys %temp ) {
-		  print $sample_name, "\n";
 			foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
 				print LIST $subSampleFile . "\t$sample_name\n";
 			}
