@@ -44,10 +44,11 @@ sub perform {
 	if ( has_raw_files( $config, $section, "parameterSampleFile1" ) ) {
 	  
 		my %temp = %{ get_raw_files( $config, $section, "parameterSampleFile1" ) };
+    #print Dumper(%temp);
+
 		open( LIST, ">$result_dir/fileList1${task_suffix}.txt" ) or die "Cannot create fileList1.txt";
 		foreach my $sample_name ( keys %temp ) {
 		  print $sample_name, "\n";
-      print Dumper(@{ $temp{$sample_name} });
 			foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
 				print LIST $subSampleFile . "\t$sample_name\n";
 			}
