@@ -37,7 +37,7 @@ for(x in files){
   if(singlePdf){
     print(g)
   }else{
-    png(paste0(outputFile, x, ".png"), width=2000, height=max(3000, 300+500 * length(unique(curdata$Sample))), res=300)
+    png(paste0(x, ".png"), width=2000, height=max(3000, 300+500 * length(unique(curdata$Sample))), res=300)
     print(g)
     dev.off()
   }
