@@ -125,6 +125,12 @@ locus$name<-paste0(d$seqnames, "_", d$start, "_", d$end, "_", d$CN, "_", d$sampl
 locus<-locus[order(d$seqnames, d$start),]
 write.table(locus, file=paste0(prefix, ".call.bed"), sep="\t", col.names=F, row.names=F,quote=F)
 
+cnvr<- data.frame(seqnames=seqnames(resCNMOPS@cnvr),
+                  starts=start(resCNMOPS@cnvr)-1,
+                  ends=end(resCNMOPS@cnvr))
+cnvr<-data.frame(cbind(cnvr, elementMetadata(resCNMOPS@cnvr)))
+write.table(file=paste0(prefix, ".cnvr.tsv"), cnvr, sep="\t" ,row.names=F)
+
 # dir.create("images", showWarnings = FALSE)
 # 
 # index<-9
