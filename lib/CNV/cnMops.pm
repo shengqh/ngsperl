@@ -159,6 +159,7 @@ sub result {
   my @result_files = ();
   push( @result_files, $result_dir . "/${task_name}.call" );
   push( @result_files, $result_dir . "/${task_name}.call.bed" );
+  push( @result_files, $result_dir . "/${task_name}.cnvr.tsv" );
 
   my $result = { $task_name => filter_array( \@result_files, $pattern ) };
   return $result;
