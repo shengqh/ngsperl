@@ -45,7 +45,6 @@ for(x in files){
   mdata<-melt(curdata, id=c("Chr", "Position", "File"))
   colnames(mdata)<-c("Chr", "Position", "File", "Sample", "Depth")
   
-  g<-ggplot(mdata, aes(x=Position, y=Depth))
   if(exists("cnvrFile")){
     tmpcnv<-cnvr[x, c(4:ncol(cnvr))]
     tmpcnv[,refs] <- "REF"
@@ -55,10 +54,12 @@ for(x in files){
     names(curcnv) <- row.names(tmpcnv)
     
     mdata$Color<-as.character(curcnv[as.character(mdata$Sample)])
-    g<-g + geom_point(aes(color = Color), size=0.5) +
+    g<-ggplot(mdata, aes(x=Position, y=Depth)) + 
+      geom_point(aes(color = Color), size=0.5) +
       scale_colour_manual(name="CNV", values = colors)
   }else{
-    g<-g + geom_point(aes(color = Sample), size=0.5, show.legend = F)
+    g<-ggplot(mdata, aes(x=Position, y=Depth)) +
+      geom_point(aes(color = Sample), size=0.5, show.legend = F)
   }
   
   g <- g + xlab(unique(data$chr)) + 
