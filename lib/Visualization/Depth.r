@@ -30,6 +30,8 @@ if(exists("cnvrFile")){
   
   colors<-c("green", "darkblue", "lightblue", "black", colorRampPalette(c("yellow", "red"))(11))
   names(colors)<-c("REF","CN0", "CN1", "CN2", "CN3", "CN4", "CN5", "CN6", "CN7", "CN8", "CN16", "CN32", "CN64")
+  
+  no_sig<-c("CN1","CN2","CN3","REF")
 }
 
 files<-unique(data$File)
@@ -41,9 +43,6 @@ if(singlePdf){
 x<-files[1]
 for(x in files){
   cat(x, "\n")
-  curdata<-data[data$File==x,]
-  mdata<-melt(curdata, id=c("Chr", "Position", "File"))
-  colnames(mdata)<-c("Chr", "Position", "File", "Sample", "Depth")
   
   if(exists("cnvrFile")){
     tmpcnv<-cnvr[x, c(4:ncol(cnvr))]
@@ -53,6 +52,16 @@ for(x in files){
     curcnv<-as.character(tmpcnv[,1])
     names(curcnv) <- row.names(tmpcnv)
     
+    if(length(curcnv[! (curcnv %in% no_sig)]) == 0){
+      next
+    }
+  }
+  
+  curdata<-data[data$File==x,]
+  mdata<-melt(curdata, id=c("Chr", "Position", "File"))
+  colnames(mdata)<-c("Chr", "Position", "File", "Sample", "Depth")
+  
+  if(exists("cnvrFile")){
     mdata$Color<-as.character(curcnv[as.character(mdata$Sample)])
     g<-ggplot(mdata, aes(x=Position, y=Depth)) + 
       geom_point(aes(color = Color), size=0.5) +
