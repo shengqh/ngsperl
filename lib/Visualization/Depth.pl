@@ -133,7 +133,7 @@ if(-e "Depth.r"){
   unlink("Depth.r");
 }
 
-`echo "readFile<-\"$readsFile\"" >> Depth.r`;
+`echo "readFile<-""$readsFile""" >> Depth.r`;
 
 if ( defined($cnvrFile) ) {
   `echo "cnvrFile<-\"$cnvrFile\"" >> Depth.r`;
