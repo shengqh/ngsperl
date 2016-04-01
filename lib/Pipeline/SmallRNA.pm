@@ -257,10 +257,10 @@ sub getSmallRNAConfig {
                 class                    => "CQS::UniqueR",
                 perform                  => 1,
                 target_dir               => $def->{target_dir} . "/host_deseq2_all_vis",
-                rtemplate                => "countTableVisFunctions.R,smallRnaCategory.R",
+                rtemplate                => "DESeq2_all_vis.R",
                 output_file              => "",
                 output_file_ext          => ".Host.DESeq2.All.png",
-                parameterSampleFile1_ref => [ "miRNA_deseq2", "_DESeq2.csv\$","tRNA_deseq2", "_DESeq2.csv\$","otherSmallRNA_deseq2", "_DESeq2.csv\$"],
+                parameterSampleFile1_ref => ["top100Reads_deseq2","_DESeq2.csv\$", "miRNA_deseq2", "_DESeq2.csv\$","tRNA_deseq2", "_DESeq2.csv\$","otherSmallRNA_deseq2", "_DESeq2.csv\$"],
                 parameterSampleFile2     => $groups,
                 sh_direct                => 1,
                 pbs                      => {
@@ -273,7 +273,7 @@ sub getSmallRNAConfig {
 			};
 
 			$config = merge( $config, $comparison );
-			push @summary, ( "miRNA_deseq2", "tRNA_deseq2", "otherSmallRNA_deseq2" );
+			push @summary, ( "miRNA_deseq2", "tRNA_deseq2", "otherSmallRNA_deseq2","host_deseq2_all_vis" );
 		}
 
 		if ( $do_comparison or defined $groups or defined $def->{tRNA_vis_group} ) {
