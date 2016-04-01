@@ -180,7 +180,7 @@ ggpie <- function (dat, fill="Category", y="Reads",facet="Sample", maxCategory=N
 }
 
 ggpieToFile<-function(dat,fileName,fill="Category", maxCategory=5,textSize=9,transformTable=TRUE,...) {
-	png(fileName,width=3000,height=3000,res=300)
+	png(fileName,width=2000,height=2000,res=300)
 	p<-ggpie(dat,fill=fill, maxCategory=maxCategory,textSize=textSize,transformTable=transformTable,...)
 	print(p)
 	dev.off()

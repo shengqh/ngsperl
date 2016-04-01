@@ -18,7 +18,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(performSmallRNA performSmallRNATask)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 sub getSmallRNAConfig {
 	my ($def) = @_;
@@ -41,6 +41,7 @@ sub getSmallRNAConfig {
 	my $blast_unmapped_reads  = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
 	my $do_comparison         = defined $def->{pairs};
 	my $groups                = $def->{groups};
+	my $groups_vis_layout     = $def->{groups_vis_layout};
 
 	if ($do_comparison) {
 		$config->{top100Reads_deseq2} = {
@@ -252,6 +253,23 @@ sub getSmallRNAConfig {
 						"mem"      => "10gb"
 					},
 				},
+				host_deseq2_all_vis => {
+                class                    => "CQS::UniqueR",
+                perform                  => 1,
+                target_dir               => $def->{target_dir} . "/host_deseq2_all_vis",
+                rtemplate                => "countTableVisFunctions.R,smallRnaCategory.R",
+                output_file              => "",
+                output_file_ext          => ".Host.DESeq2.All.png",
+                parameterSampleFile1_ref => [ "miRNA_deseq2", "_DESeq2.csv\$","tRNA_deseq2", "_DESeq2.csv\$","otherSmallRNA_deseq2", "_DESeq2.csv\$"],
+                parameterSampleFile2     => $groups,
+                sh_direct                => 1,
+                pbs                      => {
+                    "email"    => $def->{email},
+                    "nodes"    => "1:ppn=1",
+                    "walltime" => "1",
+                    "mem"      => "10gb"
+                },
+            },
 			};
 
 			$config = merge( $config, $comparison );
@@ -469,6 +487,7 @@ sub getSmallRNAConfig {
 				output_file          => ".tRNAMapping.Result",
 				output_file_ext      => ".Category.Barplot.png",
 				parameterSampleFile1 => $groups,
+				parameterSampleFile2 => $groups_vis_layout,
 				parameterFile1_ref   => [ "bowtie1_tRNA_pm_table", ".count\$" ],
 				parameterFile3_ref   => [ "fastqc_count_vis", ".Reads.csv\$" ],
 				rCode                => 'maxCategory=3;textSize=9;',
@@ -1101,6 +1120,7 @@ sub getSmallRNAConfig {
 		output_file              => "parameterSampleFile1",
 		output_file_ext          => ".Correlation.png",
 		parameterSampleFile1_ref => \@table_for_correlation,
+		parameterSampleFile2 => $groups,
 		sh_direct                => 1,
 		pbs                      => {
 			"email"    => $def->{email},
