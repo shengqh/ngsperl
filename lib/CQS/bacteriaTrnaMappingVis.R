@@ -8,6 +8,7 @@ mappingResultFile<-parFile1
 databaseLogFile<-parFile2
 totalCountFile<-parFile3
 groupFileList<-parSampleFile1
+groupVisLayoutFileList<-parSampleFile2
 
 #Category count Table
 mappingResultCategory<-read.delim(gsub(".count$",".category.count",mappingResultFile),header=T,row.names=1, check.names=F)
@@ -64,12 +65,13 @@ tableBarplotToFile(dat=mappingResultCategory,fileName=paste0(resultFile,".Catego
 
 #Group Pie chart for tables
 ggpieGroupToFile(dat=trnaCountTableExpandBySpecies12,fileName=paste0(resultFile,".Species12.Group.Piechart.png"),groupFileList=groupFileList,
-		outFileName=paste0(resultFile,".Species12.PercentGroups.csv"),maxCategory=maxCategory,textSize=textSize)
+		outFileName=paste0(resultFile,".Species12.PercentGroups.csv"),maxCategory=maxCategory,textSize=textSize,visLayoutFileList=groupVisLayoutFileList)
 ggpieGroupToFile(dat=trnaCountTableExpandByRNA,fileName=paste0(resultFile,".tRNAType2.Group.Piechart.png"),groupFileList=groupFileList,
-		outFileName=paste0(resultFile,".tRNAType2.PercentGroups.csv"),maxCategory=maxCategory,textSize=textSize)
+		outFileName=paste0(resultFile,".tRNAType2.PercentGroups.csv"),maxCategory=maxCategory,textSize=textSize,visLayoutFileList=groupVisLayoutFileList)
 ggpieGroupToFile(dat=trnaCountTableExpandByRNA1,fileName=paste0(resultFile,".tRNAType1.Group.Piechart.png"),groupFileList=groupFileList,
-		outFileName=paste0(resultFile,".tRNAType1.PercentGroups.csv"),maxCategory=maxCategory,textSize=textSize)
+		outFileName=paste0(resultFile,".tRNAType1.PercentGroups.csv"),maxCategory=maxCategory,textSize=textSize,visLayoutFileList=groupVisLayoutFileList)
 ggpieGroupToFile(dat=mappingResultCategory,fileName=paste0(resultFile,".Category.Group.Piechart.png"),groupFileList=groupFileList,
-		outFileName=paste0(resultFile,".Category.PercentGroups.csv"),maxCategory=NA,textSize=textSize)
+		outFileName=paste0(resultFile,".Category.PercentGroups.csv"),maxCategory=NA,textSize=textSize,visLayoutFileList=groupVisLayoutFileList)
+
 
 

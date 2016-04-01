@@ -117,7 +117,9 @@ tableBarplotToFile<-function(dat,fileName,totalCountFile="",maxCategory=5,textSi
 }
 
 #changed from function in http://mathematicalcoffee.blogspot.com/2014/06/ggpie-pie-graphs-in-ggplot2.html
-ggpie <- function (dat, fill="Category", y="Reads",facet="Sample", maxCategory=NA,main=NA, percent=T,textSize=15,colorNames="Set1",transformTable=TRUE,reOrder=TRUE) {
+ggpie <- function (dat, fill="Category", y="Reads",facet="Sample", 
+		maxCategory=NA,main=NA, percent=T,textSize=15,colorNames="Set1",
+		transformTable=TRUE,reOrder=TRUE,visLayoutFileList="") {
 	if (transformTable) {
 		datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory)
 		
@@ -135,8 +137,6 @@ ggpie <- function (dat, fill="Category", y="Reads",facet="Sample", maxCategory=N
 		}
 		datForFigure<-melt(as.matrix(datForFigure),as.is=T)
 		colnames(datForFigure)<-c(fill,facet,y)
-		datForFigure[,fill]<-factor(datForFigure[,fill],levels=categoryOrderedNames)
-		datForFigure<-orderDataByNames(datForFigure,datForFigure[,fill],categoryOrderedNames)
 	} else {
 		datForFigure<-dat
 		if (percent) {
@@ -148,9 +148,21 @@ ggpie <- function (dat, fill="Category", y="Reads",facet="Sample", maxCategory=N
 			}
 		}
 		categoryOrderedNames<-levels(datForFigure[,fill])[rev(order(tapply(datForFigure[,y],datForFigure[,fill],sum)))]
-		datForFigure[,fill]<-factor(datForFigure[,fill],levels=categoryOrderedNames)
-		datForFigure<-orderDataByNames(datForFigure,datForFigure[,fill],categoryOrderedNames)
 	}
+	datForFigure[,fill]<-factor(datForFigure[,fill],levels=categoryOrderedNames)
+	datForFigure<-orderDataByNames(datForFigure,datForFigure[,fill],categoryOrderedNames)
+	
+	if (visLayoutFileList!="") {
+		visLayout<-read.delim(visLayoutFileList,as.is=T,header=F)
+		visLayout<-sapply(split(visLayout[,1],visLayout[,2]),function(x) x)
+		row.names(visLayout)<-visLayout[,"Groups"]
+		visLayout<-data.frame(visLayout[,-which(colnames(visLayout)=="Groups")])
+		visLayout$Col_Group<-factor(visLayout$Col_Group,levels=unique(visLayout$Col_Group))
+		visLayout$Row_Group<-factor(visLayout$Row_Group,levels=unique(visLayout$Row_Group))
+		
+		datForFigure<-data.frame(datForFigure,visLayout[datForFigure[,2],])
+	}
+	
 	p = ggplot(datForFigure, aes_string(x=factor(1), y=y, fill=fill)) +
 			geom_bar(width=1, stat='identity', color='black') +
 			guides(fill=guide_legend(keywidth = 1.5, keyheight = 1.5,override.aes=list(colour=NA))) + # removes black borders from legend
@@ -169,9 +181,12 @@ ggpie <- function (dat, fill="Category", y="Reads",facet="Sample", maxCategory=N
 	if (!is.na(main)) {
 		p = p + ggtitle(main)
 	}
-	if (!is.na(facet)) {
+	if (visLayoutFileList!="") {
+		p<-p+facet_grid(Row_Group~Col_Group)
+	} else if (!is.na(facet)) {
 		p<-p+facet_wrap(c(facet))
 	}
+
 	if (!is.na(colorNames)) {
 		colors<-makeColors(length(unique(datForFigure[,fill])),colorNames)
 		p<-p+scale_fill_manual(values=colors)
@@ -179,15 +194,31 @@ ggpie <- function (dat, fill="Category", y="Reads",facet="Sample", maxCategory=N
 	return(p)
 }
 
-ggpieToFile<-function(dat,fileName,fill="Category", maxCategory=5,textSize=9,transformTable=TRUE,...) {
-	png(fileName,width=2000,height=2000,res=300)
-	p<-ggpie(dat,fill=fill, maxCategory=maxCategory,textSize=textSize,transformTable=transformTable,...)
+ggpieToFile<-function(dat,fileName,fill="Category", maxCategory=5,textSize=9,transformTable=TRUE,visLayoutFileList="",...) {
+	if (visLayoutFileList!="") {
+		visLayout<-read.delim(visLayoutFileList,as.is=T,header=F)
+		rowLength<-length(unique(visLayout[which(visLayout[,2]=="Row_Group"),1]))
+		colLength<-length(unique(visLayout[which(visLayout[,2]=="Col_Group"),1]))
+		height<-max(1500,rowLength*560)
+		width<-max(1500,colLength*560)
+	} else {
+		if (transformTable) {
+			height<-(as.integer(sqrt(ncol(dat)))+1)*560
+		} else {
+			height<-2700
+		}
+		width<-height
+	}
+
+	png(fileName,width=width,height=height,res=300)
+	p<-ggpie(dat,fill=fill, maxCategory=maxCategory,textSize=textSize,transformTable=transformTable,visLayoutFileList=visLayoutFileList,...)
 	print(p)
 	dev.off()
 }
 
 ggpieGroupToFile<-function(dat,fileName,groupFileList="",outFileName="",
-		maxCategory=5,textSize=9,transformTable=TRUE,fill="Category", y="Reads",facet="Sample",...) {
+		maxCategory=5,textSize=9,transformTable=TRUE,fill="Category", 
+		y="Reads",facet="Sample",visLayoutFileList="",...) {
 	if (groupFileList!="") {
 		if (!transformTable) {
 			dat<-acast(dat,as.formula(paste(fill,"~",facet)),value.var=y)
@@ -202,7 +233,7 @@ ggpieGroupToFile<-function(dat,fileName,groupFileList="",outFileName="",
 			write.csv(datBySampleGroup,outFileName)
 		}
 		ggpieToFile(datBySampleGroup,fileName=fileName,maxCategory=maxCategory,textSize=textSize,
-				transformTable=TRUE,fill=fill,y=y,facet=facet,...)
+				transformTable=TRUE,fill=fill,y=y,facet=facet,visLayoutFileList=visLayoutFileList,...)
 	}
 }
 

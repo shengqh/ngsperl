@@ -8,6 +8,7 @@ mappingResultFile<-parFile1
 databaseLogFile<-parFile2
 totalCountFile<-parFile3
 groupFileList<-parSampleFile1
+groupVisLayoutFileList<-parSampleFile2
 
 mappingResult<-read.delim(mappingResultFile,header=T,row.names=1, check.names=F)
 mappingResult2Species<-countTableToSpecies(dat=mappingResult,databaseLogFile=databaseLogFile,outFileName=paste0(resultFile,".Species.csv"))
@@ -20,4 +21,4 @@ tableBarplotToFile(dat=mappingResult2Species,fileName=paste0(resultFile,".Barplo
 
 #Group Pie chart
 ggpieGroupToFile(dat=mappingResult2Species,fileName=paste0(resultFile,".Group.Piechart.png"),groupFileList=groupFileList,
-		outFileName=paste0(resultFile,".PercentGroups.csv"),maxCategory=maxCategory,textSize=textSize)
+		outFileName=paste0(resultFile,".PercentGroups.csv"),maxCategory=maxCategory,textSize=textSize,visLayoutFileList=groupVisLayoutFileList)
