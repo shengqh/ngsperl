@@ -183,6 +183,9 @@ ggpie <- function (dat, fill="Category", y="Reads",facet="Sample",
 	}
 	if (visLayoutFileList!="") {
 		p<-p+facet_grid(Row_Group~Col_Group)
+		if (length(unique(datForFigure$Row_Group))<length(unique(datForFigure$Col_Group))) {
+			p<-p+theme(legend.position="top")
+		}
 	} else if (!is.na(facet)) {
 		p<-p+facet_wrap(c(facet))
 	}
@@ -199,17 +202,18 @@ ggpieToFile<-function(dat,fileName,fill="Category", maxCategory=5,textSize=9,tra
 		visLayout<-read.delim(visLayoutFileList,as.is=T,header=F)
 		rowLength<-length(unique(visLayout[which(visLayout[,2]=="Row_Group"),1]))
 		colLength<-length(unique(visLayout[which(visLayout[,2]=="Col_Group"),1]))
-		height<-max(1500,rowLength*560)
-		width<-max(1500,colLength*560)
+		height<-max(2000,rowLength*560)
+#		width<-max(1500,colLength*560)
 	} else {
 		if (transformTable) {
 			height<-(as.integer(sqrt(ncol(dat)))+1)*560
 		} else {
 			height<-2700
 		}
-		width<-height
+#		width<-height
 	}
-
+	width<-height
+	
 	png(fileName,width=width,height=height,res=300)
 	p<-ggpie(dat,fill=fill, maxCategory=maxCategory,textSize=textSize,transformTable=transformTable,visLayoutFileList=visLayoutFileList,...)
 	print(p)
