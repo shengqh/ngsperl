@@ -6,6 +6,20 @@ library(heatmap3)
 library(DESeq2)  
 library(RColorBrewer)
 
+#Merge Sample By Group
+mergeTableBySampleGroup<-function(x,sampleToGroup) {
+	xRatio<-t(t(x)/colSums(x))
+	groupLength<-length(unique(sampleToGroup[,2]))
+	xRatioGroupMean<-matrix(NA,ncol=groupLength,nrow=nrow(x))
+	colnames(xRatioGroupMean)<-unique(sampleToGroup[,2])
+	row.names(xRatioGroupMean)<-row.names(x)
+	for (i in 1:groupLength) {
+		currentSample<-sampleToGroup[which(sampleToGroup[,2]==colnames(xRatioGroupMean)[i]),1]
+		xRatioGroupMean[,i]<-rowMeans(xRatio[,currentSample])
+	}
+	return(xRatioGroupMean)
+}
+
 #extract part of color from a color range
 col_part<-function(data_all,data_part,col) {
 	min_all<-min(data_all,na.rm=T)

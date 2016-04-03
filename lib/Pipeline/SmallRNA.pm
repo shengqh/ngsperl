@@ -261,7 +261,7 @@ sub getSmallRNAConfig {
                 output_file              => "",
                 output_file_ext          => ".Host.DESeq2.All.png",
                 parameterSampleFile1_ref => ["top100Reads_deseq2","_DESeq2.csv\$", "miRNA_deseq2", "_DESeq2.csv\$","tRNA_deseq2", "_DESeq2.csv\$","otherSmallRNA_deseq2", "_DESeq2.csv\$"],
-                parameterSampleFile2     => $groups,
+                parameterSampleFile2     => $def->{pairs_vis_layout_host},
                 sh_direct                => 1,
                 pbs                      => {
                     "email"    => $def->{email},
