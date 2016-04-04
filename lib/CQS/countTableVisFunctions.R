@@ -301,6 +301,9 @@ if (!exists("maxCategory")) {
 if (!exists("textSize")) {
 	textSize=9
 }
+if (!exists("groupTextSize")) {
+	groupTextSize=10
+}
 
 ###############################################################################
 # End defining parameters for functions

@@ -21,4 +21,4 @@ tableBarplotToFile(dat=mappingResult2Species,fileName=paste0(resultFile,".Barplo
 
 #Group Pie chart
 ggpieGroupToFile(dat=mappingResult2Species,fileName=paste0(resultFile,".Group.Piechart.png"),groupFileList=groupFileList,
-		outFileName=paste0(resultFile,".PercentGroups.csv"),maxCategory=maxCategory,textSize=textSize,visLayoutFileList=groupVisLayoutFileList)
+		outFileName=paste0(resultFile,".PercentGroups.csv"),maxCategory=maxCategory,textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList)

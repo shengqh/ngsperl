@@ -61,9 +61,9 @@ tableBarplotToFile(dat=categoryAllTable2,fileName=paste0(taskName,".Category2.Ba
 
 #Group Pie Chart for Tables
 ggpieGroupToFile(dat=categoryFigure,fileName=paste0(taskName,".Category1.Group.Piechart.png"),groupFileList=groupFileList,
-		outFileName=paste0(taskName,".Category1.PercentGroup.Table.csv"),maxCategory=NA,textSize=textSize,y="Count",transformTable=FALSE)
+		outFileName=paste0(taskName,".Category1.PercentGroup.Table.csv"),maxCategory=NA,textSize=groupTextSize,y="Count",transformTable=FALSE)
 ggpieGroupToFile(dat=categoryAllTable2,fileName=paste0(taskName,".Category2.Group.Piechart.png"),groupFileList=groupFileList,
-		outFileName=paste0(taskName,".Category2.PercentGroup.Table.csv"),maxCategory=NA,textSize=textSize)
+		outFileName=paste0(taskName,".Category2.PercentGroup.Table.csv"),maxCategory=NA,textSize=groupTextSize)
 
 
 
