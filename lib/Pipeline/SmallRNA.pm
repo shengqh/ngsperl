@@ -140,6 +140,7 @@ sub getSmallRNAConfig {
 				output_file_ext          => ".Category.Table.csv",
 				parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info" ],
 				parameterSampleFile2     => $groups,
+				parameterSampleFile3 => $groups_vis_layout,
 				rCode                => 'textSize=9;groupTextSize='.$def->{table_vis_group_text_size}.';',
 				sh_direct                => 1,
 				pbs                      => {
