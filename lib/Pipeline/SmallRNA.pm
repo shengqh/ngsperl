@@ -140,7 +140,7 @@ sub getSmallRNAConfig {
 				output_file_ext          => ".Category.Table.csv",
 				parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info" ],
 				parameterSampleFile2     => $groups,
-				rCode                => 'textSize=9;gourpTextSize='.$def->{table_vis_group_text_size}.';',
+				rCode                => 'textSize=9;groupTextSize='.$def->{table_vis_group_text_size}.';',
 				sh_direct                => 1,
 				pbs                      => {
 					"email"    => $def->{email},
@@ -491,7 +491,7 @@ sub getSmallRNAConfig {
 				parameterSampleFile2 => $groups_vis_layout,
 				parameterFile1_ref   => [ "bowtie1_tRNA_pm_table", ".count\$" ],
 				parameterFile3_ref   => [ "fastqc_count_vis", ".Reads.csv\$" ],
-				rCode                => 'maxCategory=3;textSize=9;gourpTextSize='.$def->{table_vis_group_text_size}.';',
+				rCode                => 'maxCategory=3;textSize=9;groupTextSize='.$def->{table_vis_group_text_size}.';',
 				sh_direct            => 1,
 				pbs                  => {
 					"email"    => $def->{email},
@@ -566,7 +566,7 @@ sub getSmallRNAConfig {
 				parameterSampleFile2 => $groups_vis_layout,
 				parameterFile1_ref   => [ "bowtie1_rRNAL_pm_table", ".count\$" ],
 				parameterFile3_ref   => [ "fastqc_count_vis", ".Reads.csv\$" ],
-				rCode                => 'maxCategory=NA;textSize=9;gourpTextSize='.$def->{table_vis_group_text_size}.';',
+				rCode                => 'maxCategory=NA;textSize=9;groupTextSize='.$def->{table_vis_group_text_size}.';',
 				sh_direct            => 1,
 				pbs                  => {
 					"email"    => $def->{email},
@@ -640,7 +640,7 @@ sub getSmallRNAConfig {
 				parameterSampleFile2 => $groups_vis_layout,
 				parameterFile1_ref   => [ "bowtie1_rRNAS_pm_table", ".count\$" ],
 				parameterFile3_ref   => [ "fastqc_count_vis", ".Reads.csv\$" ],
-				rCode                => 'maxCategory=NA;textSize=9;gourpTextSize='.$def->{table_vis_group_text_size}.';',
+				rCode                => 'maxCategory=NA;textSize=9;groupTextSize='.$def->{table_vis_group_text_size}.';',
 				sh_direct            => 1,
 				pbs                  => {
 					"email"    => $def->{email},
@@ -717,7 +717,7 @@ sub getSmallRNAConfig {
 				parameterFile1_ref   => [ "bowtie1_bacteria_group1_pm_table", ".count\$" ],
 				parameterFile2       => $def->{bacteria_group1_log},
 				parameterFile3_ref   => [ "fastqc_count_vis", ".Reads.csv\$" ],
-				rCode                => 'maxCategory=4;textSize=9;gourpTextSize='.$def->{table_vis_group_text_size}.';',
+				rCode                => 'maxCategory=4;textSize=9;groupTextSize='.$def->{table_vis_group_text_size}.';',
 				sh_direct            => 1,
 				pbs                  => {
 					"email"    => $def->{email},
@@ -795,7 +795,7 @@ sub getSmallRNAConfig {
 				parameterFile1_ref   => [ "bowtie1_bacteria_group2_pm_table", ".count\$" ],
 				parameterFile2       => $def->{bacteria_group2_log},
 				parameterFile3_ref   => [ "fastqc_count_vis", ".Reads.csv\$" ],
-				rCode                => 'maxCategory=5;textSize=9;gourpTextSize='.$def->{table_vis_group_text_size}.';',
+				rCode                => 'maxCategory=5;textSize=9;groupTextSize='.$def->{table_vis_group_text_size}.';',
 				sh_direct            => 1,
 				pbs                  => {
 					"email"    => $def->{email},
@@ -873,7 +873,7 @@ sub getSmallRNAConfig {
 				parameterFile2       => $def->{fungus_group4_log},
 				parameterFile3_ref   => [ "fastqc_count_vis", ".Reads.csv\$" ],
 				sh_direct            => 1,
-				rCode                => 'maxCategory=8;textSize=9;gourpTextSize='.$def->{table_vis_group_text_size}.';',
+				rCode                => 'maxCategory=8;textSize=9;groupTextSize='.$def->{table_vis_group_text_size}.';',
 				pbs                  => {
 					"email"    => $def->{email},
 					"nodes"    => "1:ppn=1",

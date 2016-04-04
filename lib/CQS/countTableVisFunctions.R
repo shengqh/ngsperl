@@ -177,7 +177,8 @@ ggpie <- function (dat, fill="Category", y="Reads",facet="Sample",
 			theme(panel.background = element_rect(fill = "white"))+
 			theme(legend.text=element_text(size=textSize),
 					legend.title= element_text(size=textSize),
-					strip.text.x = element_text(size = textSize))
+					strip.text.x = element_text(size = textSize),
+					strip.text.y = element_text(size = textSize))
 	if (!is.na(main)) {
 		p = p + ggtitle(main)
 	}
