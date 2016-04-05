@@ -235,6 +235,26 @@ sub getSmallRNAConfig {
 						"mem"      => "10gb"
 					},
 				},
+				tRNA_aminoacid_deseq2 => {
+                    class                => "Comparison::DESeq2",
+                    perform              => 1,
+                    target_dir           => $def->{target_dir} . "/tRNA_aminoacid_deseq2",
+                    option               => "",
+                    source_ref           => "pairs",
+                    groups_ref           => "groups",
+                    countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count\$" ],
+                    sh_direct            => 1,
+                    show_DE_gene_cluster => 1,
+                    pvalue               => 0.05,
+                    fold_change          => 1.5,
+                    min_median_read      => 5,
+                    pbs                  => {
+                        "email"    => $def->{email},
+                        "nodes"    => "1:ppn=1",
+                        "walltime" => "10",
+                        "mem"      => "10gb"
+                    },
+                },
 				otherSmallRNA_deseq2 => {
 					class                => "Comparison::DESeq2",
 					perform              => 1,
