@@ -138,10 +138,11 @@ for (i in 1:nrow(countTableFileAll)) {
 		png(paste0(countTableFile,".Group.Correlation.png"),width=2000,height=2000,res=300)
 		heatmap3(countNumCor,scale="none",balanceColor=T,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
 		dev.off()
-		png(paste0(countTableFile,".Group.Correlation.Cluster.png"),width=2000,height=2000,res=300)
-		heatmap3(countNumCor,scale="none",balanceColor=T,margin=margin,col=col,legendfun=legendfun)
-		dev.off()
-		
+		if (ncol(countNumCor)>3) {
+			png(paste0(countTableFile,".Group.Correlation.Cluster.png"),width=2000,height=2000,res=300)
+			heatmap3(countNumCor,scale="none",balanceColor=T,margin=margin,col=col,legendfun=legendfun)
+			dev.off()
+		}
 	}
 	
 }
