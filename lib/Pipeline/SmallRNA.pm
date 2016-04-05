@@ -583,6 +583,7 @@ sub getSmallRNAConfig {
 				rtemplate            => "countTableVisFunctions.R,countTableVis.R",
 				output_file          => ".rRnaLMapping.Result",
 				output_file_ext      => ".Barplot.png",
+				parameterSampleFile1Order => $def->{groups_order},
 				parameterSampleFile1 => $groups,
 				parameterSampleFile2 => $groups_vis_layout,
 				parameterFile1_ref   => [ "bowtie1_rRNAL_pm_table", ".count\$" ],
