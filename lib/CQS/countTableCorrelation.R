@@ -42,6 +42,9 @@ for (i in 1:nrow(countTableFileAll)) {
 	} else {
 		count<-read.delim(countTableFile,header=T,row.names=1,as.is=T)
 	}
+	if (nrow(count)==0) {
+		next;
+	}
 	
 	colClass<-sapply(count, class)
 	countNum<-count[,which(colClass=="numeric" | colClass=="integer")]
