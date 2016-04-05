@@ -107,6 +107,7 @@ sub result {
       my $mirnaIsomiRNTAfile = $self->get_file( $result_dir, "${task_name}_${group_name}", ".miRNA.isomiR_NTA.count", 0 );
       my $mirnaNTAfile       = $self->get_file( $result_dir, "${task_name}_${group_name}", ".miRNA.NTA.count",        0 );
       my $tRNAfile           = $self->get_file( $result_dir, "${task_name}_${group_name}", ".tRNA.count",             0 );
+      my $tRNAAminoacidfile  = $self->get_file( $result_dir, "${task_name}_${group_name}", ".tRNA.aminoacid.count",   0 );
       my $otherfile          = $self->get_file( $result_dir, "${task_name}_${group_name}", ".other.count",            0 );
       my $filelist           = $self->get_file( $pbs_dir,    "${task_name}_${group_name}", ".filelist",               0 );
       push( @result_files, $outputfile );
@@ -115,6 +116,7 @@ sub result {
       push( @result_files, $mirnaIsomiRNTAfile );
       push( @result_files, $mirnaNTAfile );
       push( @result_files, $tRNAfile );
+      push( @result_files, $tRNAAminoacidfile );
       push( @result_files, $otherfile );
       push( @result_files, $filelist );
     }
@@ -126,6 +128,7 @@ sub result {
     my $mirnaIsomiRNTAfile = $self->get_file( $result_dir, "${task_name}", ".miRNA.isomiR_NTA.count", 0 );
     my $mirnaNTAfile       = $self->get_file( $result_dir, "${task_name}", ".miRNA.NTA.count",        0 );
     my $tRNAfile           = $self->get_file( $result_dir, "${task_name}", ".tRNA.count",             0 );
+    my $tRNAAminoacidfile  = $self->get_file( $result_dir, "${task_name}", ".tRNA.aminoacid.count",   0 );
     my $otherfile          = $self->get_file( $result_dir, "${task_name}", ".other.count",            0 );
     my $filelist           = $self->get_file( $pbs_dir,    "${task_name}", ".filelist",               0 );
     push( @result_files, $outputfile );
@@ -134,6 +137,7 @@ sub result {
     push( @result_files, $mirnaIsomiRNTAfile );
     push( @result_files, $mirnaNTAfile );
     push( @result_files, $tRNAfile );
+    push( @result_files, $tRNAAminoacidfile );
     push( @result_files, $otherfile );
     push( @result_files, $filelist );
   }
