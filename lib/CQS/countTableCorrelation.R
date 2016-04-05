@@ -35,6 +35,7 @@ col_part<-function(data_all,data_part,col) {
 countTableFileAll<-read.delim(countTableFileList,header=F,as.is=T)
 for (i in 1:nrow(countTableFileAll)) {
 	countTableFile<-countTableFileAll[i,1]
+	print(paste0("Reading ",countTableFile))
 	
 	if (grepl(".csv$",countTableFile)) {
 		count<-read.csv(countTableFile,header=T,row.names=1,as.is=T)
