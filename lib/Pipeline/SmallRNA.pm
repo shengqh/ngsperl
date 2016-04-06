@@ -314,7 +314,7 @@ sub getSmallRNAConfig {
 					target_dir  => $def->{target_dir} . "/host_deseq2_all_vis",
 					rtemplate   => "DESeq2_all_vis.R",
 					output_file => "",
-					output_file_ext          => ".Host.DESeq2.All.png",
+					output_file_ext          => ".DESeq2.Matrix.png",
 					parameterSampleFile1_ref => [
 						"top100Reads_deseq2",   "_DESeq2.csv\$",
 						"miRNA_deseq2",         "_DESeq2.csv\$",
@@ -1189,7 +1189,7 @@ sub getSmallRNAConfig {
 					target_dir  => $def->{target_dir} . "/nonHost_deseq2_groups_vis",
 					rtemplate   => "DESeq2_all_vis.R",
 					output_file => "",
-					output_file_ext          => ".nonHost.DESeq2.Groups.png",
+					output_file_ext          => ".DESeq2.Matrix.png",
 					parameterSampleFile1_ref => [
 						"group1_deseq2",     "_DESeq2.csv\$",
 						"group2_deseq2",     "_DESeq2.csv\$",

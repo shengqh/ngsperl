@@ -77,7 +77,7 @@ p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
 				strip.text.y = element_text(size = 25),
 				legend.position="top")
 		
-png(filename=paste0(resultFile, ".Host.DESeq2.All.png"), width=4000, height=4000, res=300)
+png(filename=paste0(resultFile, ".DESeq2.Matrix.png"), width=4000, height=4000, res=300)
 if (visLayoutFileList!="") {
 	print(p+facet_grid(Row_Group~Col_Group,scales = "free"))
 } else {
