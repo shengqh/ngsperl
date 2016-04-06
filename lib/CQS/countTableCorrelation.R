@@ -38,9 +38,9 @@ for (i in 1:nrow(countTableFileAll)) {
 	print(paste0("Reading ",countTableFile))
 	
 	if (grepl(".csv$",countTableFile)) {
-		count<-read.csv(countTableFile,header=T,row.names=1,as.is=T)
+		count<-read.csv(countTableFile,header=T,row.names=1,as.is=T,check.names=FALSE)
 	} else {
-		count<-read.delim(countTableFile,header=T,row.names=1,as.is=T)
+		count<-read.delim(countTableFile,header=T,row.names=1,as.is=T,check.names=FALSE)
 	}
 	if (nrow(count)==0) {
 		next;
