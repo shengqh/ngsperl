@@ -335,7 +335,7 @@ sub getSmallRNAConfig {
 			$config = merge( $config, $comparison );
 			push @summary,
 			  (
-				"miRNA_deseq2",         "tRNA_deseq2",
+				"miRNA_deseq2",         "tRNA_deseq2", "tRNA_aminoacid_deseq2",
 				"otherSmallRNA_deseq2", "host_deseq2_all_vis"
 			  );
 		}
