@@ -1204,6 +1204,27 @@ sub getSmallRNAConfig {
 						"mem"      => "10gb"
 					},
 				},
+			    nonHost_deseq2_tRNArRNA_vis => {
+					class       => "CQS::UniqueR",
+					perform     => 1,
+					target_dir  => $def->{target_dir} . "/nonHost_deseq2_tRNArRNA_vis",
+					rtemplate   => "DESeq2_all_vis.R",
+					output_file => "",
+					output_file_ext          => ".DESeq2.Matrix.png",
+					parameterSampleFile1_ref => [
+						"nonHost_tRna_deseq2",     "_DESeq2.csv\$",
+						"nonHost_rRNAL_deseq2",     "_DESeq2.csv\$",
+						"nonHost_rRNAS_deseq2",     "_DESeq2.csv\$"
+					],
+					parameterSampleFile2 => $def->{pairs_nonHosttRNArRNA_deseq2_vis_layout},
+					sh_direct            => 1,
+					pbs                  => {
+						"email"    => $def->{email},
+						"nodes"    => "1:ppn=1",
+						"walltime" => "1",
+						"mem"      => "10gb"
+					},
+				},
 			};
 
 			$config = merge( $config, $unmapped_comparison );
@@ -1212,7 +1233,7 @@ sub getSmallRNAConfig {
 				"group1_deseq2",        "group2_deseq2",
 				"group4_deseq2",        "nonHost_tRna_deseq2",
 				"nonHost_rRNAL_deseq2", "nonHost_rRNAS_deseq2",
-				"nonHost_deseq2_groups_vis"
+				"nonHost_deseq2_groups_vis","nonHost_deseq2_tRNArRNA_vis"
 			  );
 		}
 	}
