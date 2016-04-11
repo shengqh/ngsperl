@@ -53,6 +53,7 @@ sub perform {
     my $sample       = $sample_files[0];
 
     my $sample_stat = "${sample_name}.depth.stat";
+    print $pbs "echo processing $sample ...\n";
     print $pbs "samtools depth $option $sample $min_depth_command | wc | awk '{print \"${sample_name}\\t\" \$1;}'>> $final \n";
   }
   $self->close_pbs( $pbs, $pbs_file );
