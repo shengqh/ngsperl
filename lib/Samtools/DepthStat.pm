@@ -33,7 +33,7 @@ sub perform {
   my $minimum_depth     = $config->{$section}{minimum_depth};
   my $min_depth_command = "";
   if ( defined $minimum_depth ) {
-    $min_depth_command = " | awk '$3 >= $minimum_depth' ";
+    $min_depth_command = " | awk '\$3 >= $minimum_depth' ";
   }
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -53,7 +53,7 @@ sub perform {
     my $sample       = $sample_files[0];
 
     my $sample_stat = "${sample_name}.depth.stat";
-    print $pbs "samtools depth $option $sample $min_depth_command | wc | awk '{print $sample_name $1;}'>> $final";
+    print $pbs "samtools depth $option $sample $min_depth_command | wc | awk '{print $sample_name \$1;}'>> $final";
   }
   $self->close_pbs( $pbs, $pbs_file );
 
