@@ -129,16 +129,20 @@ if ( !-e $depthFile ) {
 my $singlePdfStr = ( defined $singlePdf ) ? 1 : 0;
 my $outputFile = ( defined $singlePdf ) ? "${depthFile}.pdf" : "";
 
-if(-e "Depth.r"){
-  unlink("Depth.r");
-}
+open( my $targetr, ">Depth.r" ) or die "Cannot create file Depth.r";
+open( my $rtemplate, $r ) or die "Cannot open file $r";
 
-`echo "readFile<-\\"$readsFile\\"" >> Depth.r`;
-
+print $targetr "readFile<-\"$readsFile\" \n";
 if ( defined($cnvrFile) ) {
-  `echo "cnvrFile<-\\"$cnvrFile\\"" >> Depth.r`;
+  print $targetr "cnvrFile<-\"$cnvrFile\" \n";
+}
+while(<$rtemplate>){
+  chomp;
+  print $targetr $_, "\n";
 }
 
-`cat $r >> Depth.r`;
+close($rtemplate);
+close($targetr);
+
 system("R --vanilla -f Depth.r --args $singlePdfStr $depthFile $bedFile $outputFile");
 
