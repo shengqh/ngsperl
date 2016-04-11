@@ -31,7 +31,8 @@ if(exists("cnvrFile")){
   colors<-c("green", "darkblue", "lightblue", "black", colorRampPalette(c("yellow", "red"))(11))
   names(colors)<-c("REF","CN0", "CN1", "CN2", "CN3", "CN4", "CN5", "CN6", "CN7", "CN8", "CN16", "CN32", "CN64")
   
-  no_sig<-c("CN1","CN2","CN3","REF")
+  #no_sig<-c("CN1","CN2","CN3","REF")
+  no_sig<-c("CN2","REF")
 }
 
 files<-unique(data$File)
