@@ -50,7 +50,7 @@ sub perform {
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final );
   for my $sample_name ( sort keys %bam_files ) {
     my @sample_files = @{ $bam_files{$sample_name} };
-    my $sample       = $sample_files[0];
+    my $sample       = join(" ", @sample_files);
 
     my $sample_stat = "${sample_name}.depth.stat";
     print $pbs "echo processing $sample ...\n";
