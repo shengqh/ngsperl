@@ -57,7 +57,7 @@ sub perform {
       my $sample_name  = shift @sample_files;
       my $samples      = join( " ", @sample_files );
 
-      print $pbs "echo processing $group_name ...\n";
+      print $pbs "echo processing $sample_name ...\n";
       print $pbs "samtools depth $option $samples $cqscommand | wc | awk '{print \"${group_name}\\t${sample_name}\\t\" \$1;}'>> $final \n";
     }
   }
