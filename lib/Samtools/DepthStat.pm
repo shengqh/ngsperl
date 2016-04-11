@@ -50,10 +50,11 @@ sub perform {
   my $final    = "${task_name}.tsv";
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final );
-  for my $group_name ( sort keys %group_sample_map ) {
+  my @group_names = sort keys %group_sample_map;
+  for my $group_name (@group_names) {
     my @samples = @{ $group_sample_map{$group_name} };
     for my $sample (@samples) {
-      my @sample_files = @{ $sample };
+      my @sample_files = @{$sample};
       my $sample_name  = shift @sample_files;
       my $samples      = join( " ", @sample_files );
 
@@ -61,6 +62,31 @@ sub perform {
       print $pbs "samtools depth $option $samples $cqscommand | wc | awk '{print \"${group_name}\\t${sample_name}\\t\" \$1;}'>> $final \n";
     }
   }
+
+  if ( $config->{$section}{is_groups_paired} ) {
+    my @first_samples      = @{ $group_sample_map{ $group_names[0] } };
+    my $sample_count = scalar(@first_samples);
+
+    for ( my $index = 1 ; $index < $sample_count ; $index++ ) {
+      my @cursample_names = ();
+      my @cursamples = ();
+      for my $group_name (@group_names) {
+        my @samples = @{ $group_sample_map{$group_name} };
+        my @sample_files = @{$samples[$index]};
+        my $sample_name  = shift @sample_files;
+        my $samples      = join( " ", @sample_files );
+        push(@cursample_names, $sample_name);
+        push(@cursamples, $samples);
+      }
+      
+      my $show_sample_names = join("-", @cursample_names);
+      my $show_samples = join(" ", @cursamples);
+      print $pbs "echo processing pair $index ...\n";
+      print $pbs "samtools depth $option $show_samples $cqscommand | wc | awk '{print \"COMMON\\t${show_sample_names}\\t\" \$1;}'>> $final \n";
+      
+    }
+  }
+
   $self->close_pbs( $pbs, $pbs_file );
 
   if ( is_linux() ) {
