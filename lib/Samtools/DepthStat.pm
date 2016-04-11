@@ -81,7 +81,7 @@ sub perform {
       
       my $show_sample_names = join("-", @cursample_names);
       my $show_samples = join(" ", @cursamples);
-      print $pbs "echo processing pair $index ...\n";
+      print $pbs "echo processing $show_sample_names ...\n";
       print $pbs "samtools depth $option $show_samples $cqscommand | wc | awk '{print \"COMMON\\t${show_sample_names}\\t\" \$1;}'>> $final \n";
       
     }
