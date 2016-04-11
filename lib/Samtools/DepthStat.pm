@@ -30,7 +30,7 @@ sub perform {
 
   my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
 
-  my $minimum_depth     = $config->{$section}{minimum_depth};
+  my $minimum_depth = $config->{$section}{minimum_depth};
   my $cqstools;
   my $cqscommand = "";
   if ( defined $minimum_depth ) {
@@ -51,12 +51,15 @@ sub perform {
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final );
   for my $group_name ( sort keys %group_sample_map ) {
-    my @sample_files = @{ $group_sample_map{$group_name} };
-    my $sample_name = shift @sample_files;
-    my $samples      = join(" ", @sample_files);
+    my @samples = @{ $group_sample_map{$group_name} };
+    for my $sample (@samples) {
+      my @sample_files = @{ $sample };
+      my $sample_name  = shift @sample_files;
+      my $samples      = join( " ", @sample_files );
 
-    print $pbs "echo processing $group_name ...\n";
-    print $pbs "samtools depth $option $samples $cqscommand | wc | awk '{print \"${group_name}\\t${sample_name}\\t\" \$1;}'>> $final \n";
+      print $pbs "echo processing $group_name ...\n";
+      print $pbs "samtools depth $option $samples $cqscommand | wc | awk '{print \"${group_name}\\t${sample_name}\\t\" \$1;}'>> $final \n";
+    }
   }
   $self->close_pbs( $pbs, $pbs_file );
 
