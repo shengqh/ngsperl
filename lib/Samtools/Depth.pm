@@ -46,10 +46,7 @@ sub perform {
   for my $group_name ( sort keys %group_sample_map ) {
     my @sample_files = @{ $group_sample_map{$group_name} };
     my $sampleCount  = scalar(@sample_files);
-    my $samples      = "";
-    for ( my $index = 0 ; $index < $sampleCount ; $index++ ) {
-      $samples = $samples . " " . $sample_files[$index][1];
-    }
+    my $samples      = join(" ", @sample_files);
 
     my $depth = "${group_name}.depth";
 

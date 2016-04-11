@@ -8,11 +8,11 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::UniqueTask;
+use CQS::GroupTask;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 
-our @ISA = qw(CQS::UniqueTask);
+our @ISA = qw(CQS::GroupTask);
 
 sub new {
   my ($class) = @_;
@@ -28,12 +28,14 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %bam_files = %{ get_raw_files( $config, $section ) };
+  my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
 
   my $minimum_depth     = $config->{$section}{minimum_depth};
-  my $min_depth_command = "";
+  my $cqstools;
+  my $cqscommand = "";
   if ( defined $minimum_depth ) {
-    $min_depth_command = " | awk '\$3 >= $minimum_depth' ";
+    $cqstools = get_cqstools( $config, $section, 1 );
+    $cqscommand = " | mono $cqstools depth_filter -d $minimum_depth";
   }
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -48,13 +50,13 @@ sub perform {
   my $final    = "${task_name}.tsv";
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final );
-  for my $sample_name ( sort keys %bam_files ) {
-    my @sample_files = @{ $bam_files{$sample_name} };
-    my $sample       = join(" ", @sample_files);
+  for my $group_name ( sort keys %group_sample_map ) {
+    my @sample_files = @{ $group_sample_map{$group_name} };
+    my $sample_name = shift @sample_files;
+    my $samples      = join(" ", @sample_files);
 
-    my $sample_stat = "${sample_name}.depth.stat";
-    print $pbs "echo processing $sample ...\n";
-    print $pbs "samtools depth $option $sample $min_depth_command | wc | awk '{print \"${sample_name}\\t\" \$1;}'>> $final \n";
+    print $pbs "echo processing $group_name ...\n";
+    print $pbs "samtools depth $option $samples $cqscommand | wc | awk '{print \"${group_name}\\t${sample_name}\\t\" \$1;}'>> $final \n";
   }
   $self->close_pbs( $pbs, $pbs_file );
 
