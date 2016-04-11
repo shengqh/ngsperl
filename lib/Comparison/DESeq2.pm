@@ -163,7 +163,8 @@ comparisons=list(";
     last;
   }
   while (<$rt>) {
-    print $rf $_;
+    chomp;
+    print $rf $_, "\n";
   }
   close $rt;
   close $rf;
