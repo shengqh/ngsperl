@@ -3,19 +3,17 @@
 #outputFile="callable_sites.png"
 #minimumDepth=20
 
-library(reshape2)
 library(ggplot2)
 library(cowplot)
 
 setwd(resultDir)
 data<-read.table(inputFile, sep="\t", header=T)
-mdata<-melt(data)
 
 png(file=outputFile, width=2000, height=1500, res=300)
-g<-ggplot(mdata, aes(Group, value)) + 
-  geom_boxplot(outlier.shape = NA) + 
+g<-ggplot(data, aes(Group, Count)) +
+  geom_boxplot(outlier.shape = NA) +
   geom_point(position = position_jitter(width = 0.5)) +
-  xlab("") + 
+  xlab("") +
   ylab(paste0("Callable Sites (Depth >= ", minimumDepth, ")")) +
   theme_cowplot()
 print(g)
