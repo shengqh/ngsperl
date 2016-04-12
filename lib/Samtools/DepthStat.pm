@@ -37,6 +37,9 @@ sub perform {
     $cqstools = get_cqstools( $config, $section, 1 );
     $cqscommand = " | mono $cqstools depth_filter -d $minimum_depth";
   }
+  else {
+    $minimum_depth = 1;
+  }
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -48,6 +51,27 @@ sub perform {
 
   my $log_desc = $cluster->get_log_description($log);
   my $final    = "${task_name}.tsv";
+
+  my $template_r_file = dirname(__FILE__) . "/DepthStat.r";
+  my $target_r_file   = $result_dir . "/" . $task_name . ".r";
+  open( my $targetr,   ">$target_r_file" ) or die "Cannot create file $target_r_file";
+  open( my $rtemplate, $template_r_file )  or die "Cannot open file $template_r_file";
+  print $targetr "resultDir=\"$result_dir\"
+inputFile=\"$final\"
+outputFile=\"${task_name}.png\"
+minimumDepth=$minimum_depth
+";
+
+  while (<$rtemplate>) {
+    chomp;
+    if ( $_ =~ /^#/ ) {
+      next;
+    }
+    print $targetr $_, "\n";
+  }
+
+  close($rtemplate);
+  close($targetr);
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final );
   my @group_names = sort keys %group_sample_map;
@@ -64,29 +88,29 @@ sub perform {
   }
 
   if ( $config->{$section}{is_groups_paired} ) {
-    my @first_samples      = @{ $group_sample_map{ $group_names[0] } };
-    my $sample_count = scalar(@first_samples);
+    my @first_samples = @{ $group_sample_map{ $group_names[0] } };
+    my $sample_count  = scalar(@first_samples);
 
     for ( my $index = 1 ; $index < $sample_count ; $index++ ) {
       my @cursample_names = ();
-      my @cursamples = ();
+      my @cursamples      = ();
       for my $group_name (@group_names) {
-        my @samples = @{ $group_sample_map{$group_name} };
-        my @sample_files = @{$samples[$index]};
+        my @samples      = @{ $group_sample_map{$group_name} };
+        my @sample_files = @{ $samples[$index] };
         my $sample_name  = shift @sample_files;
         my $samples      = join( " ", @sample_files );
-        push(@cursample_names, $sample_name);
-        push(@cursamples, $samples);
+        push( @cursample_names, $sample_name );
+        push( @cursamples,      $samples );
       }
-      
-      my $show_sample_names = join("-", @cursample_names);
-      my $show_samples = join(" ", @cursamples);
+
+      my $show_sample_names = join( "-", @cursample_names );
+      my $show_samples      = join( " ", @cursamples );
       print $pbs "echo processing $show_sample_names ...\n";
       print $pbs "samtools depth $option $show_samples $cqscommand | wc | awk '{print \"COMMON\\t${show_sample_names}\\t\" \$1;}'>> $final \n";
-      
     }
   }
 
+  print $pbs "R --vanilla -f $target_r_file \n";
   $self->close_pbs( $pbs, $pbs_file );
 
   if ( is_linux() ) {
@@ -104,6 +128,7 @@ sub result {
   my $result       = {};
   my @result_files = ();
   push( @result_files, "$result_dir/${task_name}.tsv" );
+  push( @result_files, "$result_dir/${task_name}.png" );
   $result->{$task_name} = filter_array( \@result_files, $pattern );
   return $result;
 }
