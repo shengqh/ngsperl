@@ -91,7 +91,7 @@ minimumDepth=$minimum_depth
     my @first_samples = @{ $group_sample_map{ $group_names[0] } };
     my $sample_count  = scalar(@first_samples);
 
-    for ( my $index = 1 ; $index < $sample_count ; $index++ ) {
+    for ( my $index = 0 ; $index < $sample_count ; $index++ ) {
       my @cursample_names = ();
       my @cursamples      = ();
       for my $group_name (@group_names) {
