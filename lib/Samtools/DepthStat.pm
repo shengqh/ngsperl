@@ -62,7 +62,7 @@ outputFile=\"${task_name}.png\"
 minimumDepth=$minimum_depth
 ";
 
-  for ( my $line = <$rtemplate> ) {
+  while ( my $line = <$rtemplate> ) {
     chomp($line);
     $line =~ s/\r//g;
     if ( $line =~ /^#/ ) {
