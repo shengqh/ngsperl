@@ -52,7 +52,9 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-    print $pbs "cat $bed_files_str | sort -k1,1 -k2,2n | bedtools merge $option -i stdin > $final_file \n";
+    print $pbs "cat $bed_files_str | sort -k1,1 -k2,2n | bedtools merge $option -i stdin > $final_file
+awk '{print(\$1 \"\\tmerged_bed\\texon\\t\" \$2 \"\\t\" \$3 \"\\t.\\t+\\t0\\tgene_id \" \$4 \")}' $final_file > ${group_name}.gff
+";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
