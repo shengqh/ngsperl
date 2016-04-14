@@ -28,7 +28,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $gffFile = get_param_file( $config->{$section}{gff_file}, "gff_file", 1 );
+  my $gffFile = parse_param_file( $config, $section, "gff_file", 1 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $ispaired = get_option_value( $config->{$section}{ispairend}, "ispairend", 0 );
