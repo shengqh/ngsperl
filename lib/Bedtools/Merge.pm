@@ -78,8 +78,8 @@ sub result {
   my $result = {};
   for my $group_name ( sort keys %$group_samples ) {
     my @result_files = ();
-    my $final_file   = "${result_dir}/${group_name}.bed";
-    push( @result_files, $final_file );
+    push( @result_files, "${result_dir}/${group_name}.bed" );
+    push( @result_files, "${result_dir}/${group_name}.gff" );
     $result->{$group_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
