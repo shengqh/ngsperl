@@ -63,7 +63,8 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
     
-    my $sname = $sample_name = ~ s/ /_/g;
+    my $sname = $sample_name;
+    $sname =~ s/ /_/g;
 
     print $pbs "
 macs $option $treatment $control -n $sample_name
