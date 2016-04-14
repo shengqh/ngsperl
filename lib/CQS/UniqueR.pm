@@ -161,7 +161,7 @@ sub perform {
 		print $rf $rCode . "\n";
 	}
 
-	my $rtemplates = get_param_file( $config->{$section}{rtemplate}, "rtemplate", 1 );
+	my $rtemplates = get_option( $config, $section, "rtemplate");
 	my @rtemplates = split( ",|;", $rtemplates );
 	foreach my $rtemplate (@rtemplates) {
 		my $is_absolute = File::Spec->file_name_is_absolute($rtemplate);

@@ -32,8 +32,7 @@ sub perform {
 		$pbs_dir,   $result_dir, $option,   $sh_direct,  $cluster
 	) = get_parameter( $config, $section );
 
-	my $perlFile =
-	  get_param_file( $config->{$section}{perlFile}, "perlFile", 1 );
+	my $perlFile = get_option( $config, $section, "perlFile");
 	my $is_absolute = File::Spec->file_name_is_absolute($perlFile);
 	if ( !$is_absolute ) {
 		$perlFile = dirname(__FILE__) . "/$perlFile";
