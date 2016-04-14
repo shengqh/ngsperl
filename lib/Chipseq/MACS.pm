@@ -31,11 +31,11 @@ sub perform {
 
   my %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
 
-  my $has_control = has_raw_files( $config, $section, "controls" );
-  print "has_control = " . $has_control . "\n";
-  my %control_files;
-  if ($has_control) {
-    %control_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
+  my $has_input = has_raw_files( $config, $section, "inputs" );
+  print "has_input = " . $has_input . "\n";
+  my %input_files;
+  if ($has_input) {
+    %input_files = %{ $self->get_grouped_raw_files( $config, $section, "inputs" ) };
   }
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -49,10 +49,10 @@ sub perform {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $treatment = "-t " . join( ",", @sample_files );
 
-    my $control = "";
-    if ($has_control) {
-      my @control_files = @{ $control_files{$sample_name} };
-      $control = "-c " . join( ",", @control_files );
+    my $input = "";
+    if ($has_input) {
+      my @input_files = @{ $input_files{$sample_name} };
+      $input = "-c " . join( ",", @input_files );
     }
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -68,7 +68,7 @@ sub perform {
 
     print $pbs "
 if [ ! -s ${sample_name}_peaks.bed ]; then
-  macs $option $treatment $control -n $sample_name
+  macs $option $treatment $input -n $sample_name
 fi
 
 if [[ -s ${sample_name}_peaks.bed && ! -s ${sample_name}_peaks.name.bed ]]; then
