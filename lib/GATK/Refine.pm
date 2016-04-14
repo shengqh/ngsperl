@@ -92,20 +92,21 @@ sub perform {
     my $realignedFile = $sample_name . ".rmdup.realigned.bam";
     my $grpFile       = $realignedFile . ".grp";
     my $recalFile     = $sample_name . ".rmdup.realigned.recal.bam";
+    my $slimFile     = $sample_name . ".rmdup.realigned.recal.slim.bam";
 
-    my $final_file = $recalFile;
+    my $final_file = $slimFile;
     my $baqcmd     = "";
     my $rmlist     = "";
     if ($baq) {
-      $final_file = $sample_name . ".rmdup.realigned.recal.baq.bam";
+      $final_file = $sample_name . ".rmdup.realigned.recal.slim.baq.bam";
       $baqcmd     = "
-if [[ -s $recalFile && ! -s $final_file ]]; then
+if [[ -s $slimFile && ! -s $final_file ]]; then
   echo baq=`date` 
-  samtools calmd -Abr $recalFile $faFile > $final_file
+  samtools calmd -Abr $slimFile $faFile > $final_file
   samtools index $final_file
 fi      
 ";
-      $rmlist = "$recalFile ${recalFile}.bai";
+      $rmlist = "$slimFile ${slimFile}.bai";
     }
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -149,12 +150,18 @@ if [[ -s $grpFile && ! -s $recalFile ]]; then
   java $option -jar $gatk_jar -T PrintReads -nct $thread -rf BadCigar -R $faFile -I $realignedFile -BQSR $grpFile -o $recalFile 
 fi
 
+if [[ -s $recalFile && ! -s $slimFile ]]; then
+  echo slim=`date` 
+  samtools view -h $recalFile | sed 's/\tBD\:Z\:[^\t]*//' | sed 's/\tPG\:Z\:[^\t]*//' | sed 's/\tBI\:Z\:[^\t]*//' | samtools view -S -b > $slimFile
+  samtools index $slimFile
+fi
+
 $baqcmd
 
 if [[ -s $final_file && ! -s ${final_file}.stat ]]; then
   echo flagstat=`date` 
   samtools flagstat $final_file > ${final_file}.stat
-  rm $presortedFile $rmdupFile ${sample_name}.rmdup.bai ${rmdupFile}.metrics $realignedFile ${sample_name}.rmdup.realigned.bai $grpFile $rmlist
+  rm $presortedFile $rmdupFile ${sample_name}.rmdup.bai ${rmdupFile}.metrics $realignedFile ${sample_name}.rmdup.realigned.bai $grpFile $recalFile $rmlist
 fi
 ";
     $self->close_pbs( $pbs, $pbs_file );
@@ -178,7 +185,7 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $final_file = $baq ? $sample_name . ".rmdup.realigned.recal.baq.bam" : $sample_name . ".rmdup.realigned.recal.bam";
+    my $final_file = $baq ? $sample_name . ".rmdup.realigned.recal.slim.baq.bam" : $sample_name . ".rmdup.realigned.recal.slim.bam";
     my @result_files = ();
     push( @result_files, "${result_dir}/${sample_name}/${final_file}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
