@@ -29,7 +29,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %group_samples = $self->get_grouped_raw_files( $config, $section, "groups" );
+  my %group_samples = get_group_sample_map( $config, $section );
   
   print Dumper(%group_samples);
 
