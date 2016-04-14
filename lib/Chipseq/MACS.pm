@@ -44,7 +44,7 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
-    my $final_file = "${sample_name}_peaks.bed";
+    my $final_file = "${sample_name}_peaks.name.bed";
 
     my @sample_files = @{ $raw_files{$sample_name} };
     my $treatment = "-t " . join( ",", @sample_files );
@@ -67,9 +67,13 @@ sub perform {
     $sname =~ s/ /_/g;
 
     print $pbs "
-macs $option $treatment $control -n $sample_name
-sed 's/\\tMACS_peak_/\\t${sname}_/' ${sample_name}_peaks.bed > ${sample_name}_peaks.name.bed
-mv ${sample_name}_peaks.name.bed ${sample_name}_peaks.bed
+if [ !-s ${sample_name}_peaks.bed ]; then
+  macs $option $treatment $control -n $sample_name
+fi
+
+if [[ -s ${sample_name}_peaks.bed && ! -s ${sample_name}_peaks.name.bed ]]; then
+  sed 's/\\tMACS_peak_/\\t${sname}_/' ${sample_name}_peaks.bed > ${sample_name}_peaks.name.bed
+fi
 ";
 
     $self->close_pbs( $pbs, $pbs_file );
@@ -94,7 +98,7 @@ sub result {
   for my $group_name ( sort keys %raw_files ) {
     my $cur_dir      = $result_dir . "/$group_name";
     my @result_files = ();
-    push( @result_files, $cur_dir . "/${group_name}_peaks.bed" );
+    push( @result_files, $cur_dir . "/${group_name}_peaks.name.bed" );
     push( @result_files, $cur_dir . "/${group_name}_MACS_wiggle/treat" );
 
     $result->{$group_name} = filter_array( \@result_files, $pattern );
