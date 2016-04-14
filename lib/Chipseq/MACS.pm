@@ -67,7 +67,7 @@ sub perform {
     $sname =~ s/ /_/g;
 
     print $pbs "
-if [ !-s ${sample_name}_peaks.bed ]; then
+if [ ! -s ${sample_name}_peaks.bed ]; then
   macs $option $treatment $control -n $sample_name
 fi
 
