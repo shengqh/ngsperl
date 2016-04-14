@@ -28,7 +28,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %group_samples = get_grouped_raw_files( $config, $section, "groups" );
+  my %group_samples = $self->get_grouped_raw_files( $config, $section, "groups" );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
