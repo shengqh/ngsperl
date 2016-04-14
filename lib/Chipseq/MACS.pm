@@ -62,9 +62,12 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    
+    my $sname = $sample_name = ~ s/ /_/g;
 
     print $pbs "
 macs $option $treatment $control -n $sample_name
+sed 's/\\tMACS_peak_/$sname/' ${sample_name}_peaks.bed > ${sample_name}_peaks.name.bed
 ";
 
     $self->close_pbs( $pbs, $pbs_file );
