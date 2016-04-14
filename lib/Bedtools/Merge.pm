@@ -29,7 +29,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $group_samples = get_group_sample_map( $config, $section );
+  my $group_samples = get_group_samplefile_map( $config, $section );
   
   print Dumper($group_samples);
 
@@ -71,10 +71,10 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %group_samples = get_grouped_raw_files( $config, $section, "groups" );
+  my $group_samples = get_group_samplefile_map( $config, $section );
 
   my $result = {};
-  for my $group_name ( sort keys %group_samples ) {
+  for my $group_name ( sort keys %$group_samples ) {
     my @result_files = ();
     my $final_file   = "${result_dir}/${group_name}.bed";
     push( @result_files, $final_file );
