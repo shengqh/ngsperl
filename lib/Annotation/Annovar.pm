@@ -148,8 +148,7 @@ sub result {
     my @result_files = ();
     for my $sampleFile (@sample_files) {
       my $annovar = change_extension( $sampleFile, ".annovar" );
-      my $final   = $annovar . ".final.txt";
-      my $result  = "${annovar}.${buildver}_multianno.txt";
+      my $final   = $annovar . ".final.tsv";
       if ( defined $cqstools ) {
         my $excel = $final . ".xls";
         push( @result_files, $cur_dir . "/$excel" );
