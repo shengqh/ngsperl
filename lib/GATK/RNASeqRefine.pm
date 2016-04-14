@@ -153,7 +153,7 @@ fi
 
 if [[ -s $recalFile && ! -s $slimFile ]]; then
   echo slim=`date` 
-  samtools view -h $recalFile | sed 's/\tBD\:Z\:[^\t]*//' | sed 's/\tPG\:Z\:[^\t]*//' | sed 's/\tBI\:Z\:[^\t]*//' | samtools view -S -b > $slimFile
+  samtools view -h $recalFile | sed 's/\\tBD\:Z\:[^\\t]*//' | sed 's/\\tPG\:Z\:[^\\t]*//' | sed 's/\\tBI\:Z\:[^\\t]*//' | samtools view -S -b > $slimFile
   samtools index $slimFile
 fi
 
