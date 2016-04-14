@@ -68,7 +68,8 @@ sub perform {
 
     print $pbs "
 macs $option $treatment $control -n $sample_name
-sed 's/\\tMACS_peak_/$sname/' ${sample_name}_peaks.bed > ${sample_name}_peaks.name.bed
+sed 's/\\tMACS_peak_/\\t${sname}_/' ${sample_name}_peaks.bed > ${sample_name}_peaks.name.bed
+mv ${sample_name}_peaks.name.bed ${sample_name}_peaks.bed
 ";
 
     $self->close_pbs( $pbs, $pbs_file );
