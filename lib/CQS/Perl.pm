@@ -33,7 +33,7 @@ sub perform {
 	) = get_parameter( $config, $section );
 
 	my $perlFile =
-	  get_option_value( $config->{$section}{perlFile}, "perlFile", 1 );
+	  get_param_file( $config->{$section}{perlFile}, "perlFile", 1 );
 	my $is_absolute = File::Spec->file_name_is_absolute($perlFile);
 	if ( !$is_absolute ) {
 		$perlFile = dirname(__FILE__) . "/$perlFile";

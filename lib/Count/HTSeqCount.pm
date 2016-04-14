@@ -31,10 +31,10 @@ sub perform {
   my $gffFile = parse_param_file( $config, $section, "gff_file", 1 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $ispaired = get_option_value( $config->{$section}{ispairend}, "ispairend", 0 );
+  my $ispaired = get_option_value( $config->{$section}{ispairend}, 0 );
   my $ispairoption = $ispaired ? "-f 1" : "";
 
-  my $stranded = get_option_value( $config->{$section}{stranded}, "stranded", "no" );
+  my $stranded = get_option_value( $config->{$section}{stranded}, "no" );
   my $strandedoption = "-s " . $stranded;
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
