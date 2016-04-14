@@ -29,16 +29,16 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %group_samples = get_group_sample_map( $config, $section );
+  my $group_samples = get_group_sample_map( $config, $section );
   
-  print Dumper(%group_samples);
+  print Dumper($group_samples);
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct) . "\n";
 
-  for my $group_name ( sort keys %group_samples ) {
-    my @bed_files = @{ $group_samples{$group_name} };
+  for my $group_name ( sort keys %$group_samples ) {
+    my @bed_files = @{ $group_samples->{$group_name} };
     my $bed_files_str = join( ' ', @bed_files );
 
     my $final_file = "${group_name}.bed";
