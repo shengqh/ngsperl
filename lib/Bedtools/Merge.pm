@@ -31,7 +31,7 @@ sub perform {
 
   my $group_samples = get_group_samplefile_map( $config, $section );
   
-  print Dumper($group_samples);
+  #print Dumper($group_samples);
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
