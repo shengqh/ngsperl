@@ -142,7 +142,8 @@ sub getPrepareConfig {
   my $fastq_remove_random            = $def->{fastq_remove_random};
   my $remove_contamination_sequences = $def->{remove_sequences} ne "";
   my $hasNTA                         = $def->{has_NTA};
-
+  my $groups            = $def->{groups};
+  
   my $config = {
     general => {
       task_name => $def->{task_name},
@@ -433,6 +434,7 @@ sub getPrepareConfig {
       output_file        => ".lengthDistribution",
       output_file_ext    => ".csv",
       parameterSampleFile1_ref => [ "fastq_len", ".len\$" ],
+      parameterSampleFile1      => $groups,
       sh_direct          => 1,
       pbs                => {
         "email"    => $def->{email},
