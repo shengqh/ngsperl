@@ -434,7 +434,7 @@ sub getPrepareConfig {
       output_file        => ".lengthDistribution",
       output_file_ext    => ".csv",
       parameterSampleFile1_ref => [ "fastq_len", ".len\$" ],
-      parameterSampleFile1      => $groups,
+      parameterSampleFile2      => $groups,
       sh_direct          => 1,
       pbs                => {
         "email"    => $def->{email},
