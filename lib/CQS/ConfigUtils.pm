@@ -85,9 +85,11 @@ sub get_java {
 }
 
 sub get_parameter {
-  my ( $config, $section ) = @_;
+  my ( $config, $section, $create_directory ) = @_;
 
   die "no section $section found!" if !defined $config->{$section};
+  
+  $create_directory = 1 if !defined($create_directory);
 
   my $task_name = get_option( $config, $section, "task_name", "" );
   if ( $task_name eq "" ) {
@@ -111,7 +113,7 @@ sub get_parameter {
   my $target_dir = get_option( $config, $section, "target_dir" );
   $target_dir =~ s|//|/|g;
   $target_dir =~ s|/$||g;
-  my ( $log_dir, $pbs_dir, $result_dir ) = init_dir($target_dir);
+  my ( $log_dir, $pbs_dir, $result_dir ) = init_dir($target_dir, $create_directory);
   my ($pbs_desc) = $cluster->get_cluster_desc($refPbs);
 
   my $option    = get_option( $config, $section, "option",    "" );
@@ -354,7 +356,7 @@ sub do_get_raw_files {
         %myres = %{ $myclass->result( $targetConfig, $section, $pattern ) };
       }
       else {
-        my ( $res, $issource ) = do_get_raw_files( $targetConfig, $section, 1 );
+        my ( $res, $issource ) = do_get_raw_files( $targetConfig, $section, 1, undef, $pattern );
         %myres = %{$res};
       }
 
@@ -404,7 +406,17 @@ sub do_get_raw_files {
   }
 
   if ($returnself) {
-    return ( $config->{$section}, 0 );
+    if ( defined $pattern ) {
+      my $result = {};
+      for my $key ( sort keys %{ $config->{$section} } ) {
+        my $values = $config->{$section}{$key};
+        $result->{$key} = filter_array( $values, $pattern );
+      }
+      return ( $result, 0 );
+    }
+    else {
+      return ( $config->{$section}, 0 );
+    }
   }
   else {
     die "define $mapname or $mapname_ref or $mapname_config_ref for $section";
@@ -451,11 +463,11 @@ sub get_option_value {
 sub get_pair_groups {
   my ( $pairs, $pair_name ) = @_;
   my $group_names;
-  my $ispaired      = 0;
+  my $ispaired       = 0;
   my $tmpgroup_names = $pairs->{$pair_name};
   if ( ref($tmpgroup_names) eq 'HASH' ) {
     $group_names = $tmpgroup_names->{"groups"};
-    $ispaired   = $tmpgroup_names->{"paired"};
+    $ispaired    = $tmpgroup_names->{"paired"};
   }
   else {
     $group_names = $tmpgroup_names;
@@ -472,7 +484,7 @@ sub get_pair_groups_names {
   my $pairedNames;
   my $tmpgroup_names = $pairs->{$pair_name};
   if ( ref($tmpgroup_names) eq 'HASH' ) {
-    $group_names  = $tmpgroup_names->{"groups"};
+    $group_names = $tmpgroup_names->{"groups"};
     $pairedNames = $tmpgroup_names->{"paired"};
   }
   else {
@@ -519,7 +531,7 @@ sub get_group_sample_map {
 #}
 sub get_group_samplefile_map {
   my ( $config, $section, $sample_pattern ) = @_;
-  return get_group_samplefile_map_key($config, $section, $sample_pattern, "groups");
+  return get_group_samplefile_map_key( $config, $section, $sample_pattern, "groups" );
 }
 
 sub get_group_samplefile_map_key {

@@ -19,10 +19,7 @@ our $VERSION = '0.01';
 sub init_dir {
   my ( $rootDir, $create ) = @_;
 
-  if ( !defined $create ) {
-    $create = 1;
-  }
-
+  $create = 1 if !defined $create;
   #defined several folders
   my $pbs_dir    = "$rootDir/pbs";
   my $result_dir = "$rootDir/result";

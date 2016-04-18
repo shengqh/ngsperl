@@ -68,6 +68,7 @@ sub perform {
 
     print $pbs "
 if [ ! -s ${sample_name}_peaks.bed ]; then
+  if [ -s 
   macs $option $treatment $input -n $sample_name
 fi
 
@@ -90,7 +91,7 @@ fi
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
 
