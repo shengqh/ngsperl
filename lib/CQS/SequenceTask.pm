@@ -183,7 +183,7 @@ then
 
         #print "task " . $task_section . " ...\n";
         my $pbs_map = $taskpbs->{$task_section};
-        if ( exists $pbs_map->{$sample} ) {
+        if ( defined $pbs_map->{$sample} ) {
           my $samplepbs = $pbs_map->{$sample};
           if ( ref($samplepbs) eq 'ARRAY' ) {
             for my $subpbs ( @{$samplepbs} ) {
@@ -196,7 +196,7 @@ then
         }
 
         my $expect_map = $expects->{$task_section};
-        if ( exists $expect_map->{$sample} ) {
+        if ( defined $expect_map->{$sample} ) {
           my $expect_files = $expect_map->{$sample};
           for my $expect_file (@$expect_files) {
             print $clear "  rm -rf $expect_file \n";
