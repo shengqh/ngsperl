@@ -72,13 +72,13 @@ sub perform {
 
   #Make Report
   my $rtemplateReport = dirname(__FILE__) . "/MakeReport.R";
-  my $projectRmd = dirname(__FILE__) . "/ProjectReport.Rmd";
-  my $taskRmd = dirname(__FILE__) . "/TaskReport.Rmd";
-  copy ($projectRmd, $result_dir."/ProjectReport.Rmd") or die "Copy failed: $!";
-  copy ($taskRmd, $result_dir."/TaskReport.Rmd") or die "Copy failed: $!";
-  
-  my $rfileReport     = $result_dir . "/${report_name}.r";
-  my $task_dir        = $target_dir;
+  my $projectRmd      = dirname(__FILE__) . "/ProjectReport.Rmd";
+  my $taskRmd         = dirname(__FILE__) . "/TaskReport.Rmd";
+  copy( $projectRmd, $result_dir . "/ProjectReport.Rmd" ) or die "Copy failed: $!";
+  copy( $taskRmd,    $result_dir . "/TaskReport.Rmd" )    or die "Copy failed: $!";
+
+  my $rfileReport = $result_dir . "/${report_name}.r";
+  my $task_dir    = $target_dir;
   $task_dir =~ s/\/sequencetask$//;
   open( my $rfReport, ">$rfileReport" )     or die "Cannot create $rfileReport";
   open( my $rtReport, "<$rtemplateReport" ) or die $!;
@@ -109,21 +109,22 @@ sub perform {
 
     my $samples = {};
     my $taskpbs = {};
+    my $expects = {};
     for my $task_section (@tasks) {
       my $classname = $config->{$task_section}{class};
       if ( !defined $classname ) {
         die "$task_section is not a valid task section.";
       }
       my $myclass = instantiate($classname);
-      my %expect_file_map;
-      eval { %expect_file_map = %{ $myclass->result( $config, $task_section ) }; } or do {
+      my $expect_file_map;
+      eval { $expect_file_map = $myclass->result( $config, $task_section ); } or do {
         my $e = $@;
         die("Something went wrong to get result of section $task_section : $e\n");
       };
 
       my $pbs_file_map = $myclass->get_pbs_files( $config, $task_section );
-      for my $expect_name ( sort keys %expect_file_map ) {
-        my $expect_files = $expect_file_map{$expect_name};
+      for my $expect_name ( sort keys %$expect_file_map ) {
+        my $expect_files = $expect_file_map->{$expect_name};
         my $expect_file_list = join( ",", @{$expect_files} );
         print $result_list $step_name, "\t", $task_section, "\t", $expect_name, "\t", $expect_file_list, "\n";
       }
@@ -146,6 +147,8 @@ sub perform {
         }
       }
 
+      $expects->{$task_section} = $expect_file_map;
+
       #print "task " . $task_section . " ...\n";
       $taskpbs->{$task_section} = $pbs_file_map;
 
@@ -162,11 +165,13 @@ sub perform {
 
       my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $logdesp, $path_file, $result_dir );
 
+      my $clear_file = change_extension( $pbs_file, "_clear.sh" );
+      open my $clear, ">$clear_file" or die "Cannot create file $clear_file";
+
       for my $task_section (@tasks) {
 
         #print "task " . $task_section . " ...\n";
         my $pbs_files = $taskpbs->{$task_section};
-
         if ( exists $pbs_files->{$sample} ) {
           my $samplepbs = $pbs_files->{$sample};
           if ( ref($samplepbs) eq 'ARRAY' ) {
@@ -177,8 +182,13 @@ sub perform {
           else {
             print $pbs "bash " . $samplepbs . "\n";
           }
+
+          my $expect_files = $expects->{$task_section}{$sample};
+          my $expect_file_list = join( " ", @{$expect_files} );
+          print $clear "rm $expect_file_list \n";
         }
       }
+      close($clear);
 
       $self->close_pbs( $pbs, $pbs_file );
 
