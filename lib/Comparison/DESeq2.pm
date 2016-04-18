@@ -91,21 +91,22 @@ comparisons=list(";
   for my $comparison_name (@comparison_names) {
     $first++;
 
+    my $covariances = {};
+
     my $gNames = $comparisons->{$comparison_name};
     my @group_names;
 
-    my $paired   = 0;
-    my $groupIds = {};
     if ( ref $gNames eq ref {} ) {
       @group_names = @{ $gNames->{groups} };
-      $paired      = defined $gNames->{paired};
-      if ($paired) {
-        $groupIds = $gNames->{paired};
+      for my $key ( sort keys %$gNames ) {
+        next if ( $key == "groups" );
+        $covariances->{$key} = $gNames->{$key};
       }
     }
     else {
       @group_names = @{$gNames};
     }
+    my @covariances_keys = sort keys %$covariances;
 
     #print( Dumper(@group_names) );
 
@@ -118,6 +119,19 @@ comparisons=list(";
     my @s1 = @{ $groups->{$g1} };
     my @s2 = @{ $groups->{$g2} };
 
+    my $total_sample_count = scalar(@s1) + scalar(@s2);
+
+    for my $key ( keys %$covariances ) {
+      my $values = $covariances->{$key};
+      if ( !( ref $values eq ref [] ) ) {
+        die "Covariances of " . $key . " shoud be array reference!";
+      }
+
+      if ( scalar(@$values) != $total_sample_count ) {
+        die "Number of covariance value of " . $key . " shoud be $total_sample_count !";
+      }
+    }
+
     my $filename = "${comparison_name}.design";
     if ( $first != 1 ) {
       print $rf ",";
@@ -127,29 +141,31 @@ comparisons=list(";
 
     my $cdfile = $result_dir . "/$filename";
     open( my $cd, ">$cdfile" ) or die "Cannot create $cdfile";
-    if ($paired) {
-      print $cd "Sample\tPaired\tCondition\n";
-      for my $i ( 0 .. $#s1 ) {
-        my $sname = $s1[$i];
-        my $id    = $groupIds->[$i];
-        print $cd "${sname}\t${id}\t${g1}\n";
-      }
-      for my $i ( 0 .. $#s2 ) {
-        my $sname = $s2[$i];
-        my $id    = $groupIds->[$i];
-        print $cd "${sname}\t${id}\t${g2}\n";
-      }
+    if ( scalar(@covariances_keys) > 0 ) {
+      print $cd "Sample\tCondition\t", join( "\t", @covariances_keys ), "\n";
     }
     else {
       print $cd "Sample\tCondition\n";
-      for my $i ( 0 .. $#s1 ) {
-        my $sname = $s1[$i];
-        print $cd "${sname}\t${g1}\n";
+    }
+    for my $i ( 0 .. $#s1 ) {
+      my $sname = $s1[$i];
+      print $cd "${sname}\t${g1}";
+      if ( scalar(@covariances_keys) > 0 ) {
+        for my $key (@covariances_keys) {
+          print $cd "\t" . $covariances->{$key}[$i];
+        }
       }
-      for my $i ( 0 .. $#s2 ) {
-        my $sname = $s2[$i];
-        print $cd "${sname}\t${g2}\n";
+      print $cd "\n";
+    }
+    for my $i ( 0 .. $#s2 ) {
+      my $sname = $s2[$i];
+      print $cd "${sname}\t${g2}";
+      if ( scalar(@covariances_keys) > 0 ) {
+        for my $key (@covariances_keys) {
+          print $cd "\t" . $covariances->{$key}[ $i + scalar(@s1) ];
+        }
       }
+      print $cd "\n";
     }
     close $cd;
   }
