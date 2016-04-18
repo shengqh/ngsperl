@@ -4,6 +4,7 @@ package CQS::UniqueTask;
 use strict;
 use warnings;
 use CQS::Task;
+use CQS::ConfigUtils;
 
 our @ISA = qw(CQS::Task);
 
