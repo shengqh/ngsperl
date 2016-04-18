@@ -83,16 +83,21 @@ for (step in unique(ResultOut$StepName)) {
 	tableForPlot$Task<-factor(tableForPlot$Task,levels=rev(unique(tableForPlot$Task)))
 	tableForPlot$Log2RelativeSize<-log2(tableForPlot$FileSizeTotalRaw/taskFileSizeMedian[tableForPlot$TaskName])
 	
-	png(file=paste0(fileListName,"_",step,".RelativeFileSize.png"),height=height, width=width, res=300)
-	g<-ggplot(tableForPlot, aes(SampleName, Task))+
-			geom_tile(data=tableForPlot, aes(fill=Log2RelativeSize), color="white") +
-			scale_fill_gradient2(low="light green", high="red") +
-			theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.5, face="bold"),
-					axis.text.y = element_text(size=11, face="bold")) +
-			labs(title = paste0(step,": Relative File Size"))+
-			coord_equal()
-	print(g)
-	dev.off()
+	if (all(is.na(tableForPlot$Log2RelativeSize))) {
+		print(paste0("All tasks in ",step," have 0 file size."))
+	} else {
+		png(file=paste0(fileListName,"_",step,".RelativeFileSize.png"),height=height, width=width, res=300)
+		g<-ggplot(tableForPlot, aes(SampleName, Task))+
+				geom_tile(data=tableForPlot, aes(fill=Log2RelativeSize), color="white") +
+				scale_fill_gradient2(low="light green", high="red") +
+				theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.5, face="bold"),
+						axis.text.y = element_text(size=11, face="bold")) +
+				labs(title = paste0(step,": Relative File Size"))+
+				coord_equal()
+		print(g)
+		dev.off()
+	}
+
 }
 
 
