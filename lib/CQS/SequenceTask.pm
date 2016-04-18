@@ -216,9 +216,9 @@ then
             print $clear "  rm -rf $expect_file \n";
           }
         }
-        print $clear "fi \n";
       }
 
+      print $clear "fi \n";
       close($clear);
     }
   }
