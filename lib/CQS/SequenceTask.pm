@@ -184,8 +184,9 @@ sub perform {
           }
 
           my $expect_files = $expects->{$task_section}{$sample};
-          my $expect_file_list = join( " ", @{$expect_files} );
-          print $clear "rm $expect_file_list \n";
+          for my $expect_file (@$expect_files){
+            print $clear "rm $expect_file \n";
+          }
         }
       }
       close($clear);
