@@ -152,10 +152,17 @@ sub perform {
       #print "task " . $task_section . " ...\n";
       $taskpbs->{$task_section} = $pbs_file_map;
 
-      for my $sample ( sort keys %{$pbs_file_map} ) {
+      for my $sample ( sort keys %$pbs_file_map ) {
+        $samples->{$sample} = 1;
+      }
+      for my $sample ( sort keys %$expect_file_map ) {
         $samples->{$sample} = 1;
       }
     }
+
+    print dumper($expects), "\n";
+
+    print dumper($samples), "\n";
 
     for my $sample ( sort keys %{$samples} ) {
       my $pbs_file = $self->get_step_sample_pbs( $pbs_dir, $step_name, $sample );
@@ -167,13 +174,18 @@ sub perform {
 
       my $clear_file = change_extension( $pbs_file, "_clear.sh" );
       open my $clear, ">$clear_file" or die "Cannot create file $clear_file";
-
+      print $clear "
+read -p \"Are you sure you want to clear all result for $sample? \" -n 1 -r
+echo
+if [[ \$REPLY =~ ^[Yy]\$ ]]
+then
+";
       for my $task_section (@tasks) {
 
         #print "task " . $task_section . " ...\n";
-        my $pbs_files = $taskpbs->{$task_section};
-        if ( exists $pbs_files->{$sample} ) {
-          my $samplepbs = $pbs_files->{$sample};
+        my $pbs_map = $taskpbs->{$task_section};
+        if ( exists $pbs_map->{$sample} ) {
+          my $samplepbs = $pbs_map->{$sample};
           if ( ref($samplepbs) eq 'ARRAY' ) {
             for my $subpbs ( @{$samplepbs} ) {
               print $pbs "bash " . $subpbs . "\n";
@@ -182,13 +194,17 @@ sub perform {
           else {
             print $pbs "bash " . $samplepbs . "\n";
           }
+        }
 
-          my $expect_files = $expects->{$task_section}{$sample};
-          for my $expect_file (@$expect_files){
-            print $clear "rm -rf $expect_file \n";
+        my $expect_map = $expects->{$task_section};
+        if ( exists $expect_map->{$sample} ) {
+          my $expect_files = $expect_map->{$sample};
+          for my $expect_file (@$expect_files) {
+            print $clear "  rm -rf $expect_file \n";
           }
         }
       }
+      print $clear "fi \n";
       close($clear);
 
       $self->close_pbs( $pbs, $pbs_file );
