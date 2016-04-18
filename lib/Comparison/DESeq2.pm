@@ -99,7 +99,7 @@ comparisons=list(";
     if ( ref $gNames eq ref {} ) {
       @group_names = @{ $gNames->{groups} };
       for my $key ( sort keys %$gNames ) {
-        next if ( $key == "groups" );
+        next if ( $key eq "groups" );
         $covariances->{$key} = $gNames->{$key};
       }
     }
