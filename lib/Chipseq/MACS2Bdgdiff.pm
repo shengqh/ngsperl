@@ -35,8 +35,8 @@ sub perform {
   my %group_sample_control = %{ get_raw_files( $config, $section, "source", "_control_lambda.bdg" ) };
   my $comparisons = get_raw_files( $config, $section, "groups" );
 
-  #print Dumper(%group_sample_treat);
-  #print Dumper(%group_sample_control);
+  print Dumper(%group_sample_treat);
+  print Dumper(%group_sample_control);
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
