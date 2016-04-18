@@ -195,7 +195,9 @@ sub perform {
     }
     print $sh "exit 0\n";
     close $sh;
-
+    if ( is_linux() ) {
+      chmod 0755, $shfile;
+    }
     for my $clear_key ( sort keys %$clear_keys ) {
       my $pbs_file = $self->get_step_sample_pbs( $pbs_dir, $step_name, $clear_key );
       my $clear_file = change_extension( $pbs_file, "_clear.sh" );
@@ -215,12 +217,9 @@ then
           }
         }
         print $clear "fi \n";
-        close($clear);
       }
 
-      if ( is_linux() ) {
-        chmod 0755, $shfile;
-      }
+      close($clear);
     }
   }
   close($result_list);
