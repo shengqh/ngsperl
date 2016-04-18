@@ -107,9 +107,11 @@ sub perform {
 
     my @tasks = @{ $step_map{$step_name} };
 
-    my $samples = {};
-    my $taskpbs = {};
-    my $expects = {};
+    my $samples    = {};
+    my $taskpbs    = {};
+    my $clears     = {};
+    my $clear_keys = {};
+
     for my $task_section (@tasks) {
       my $classname = $config->{$task_section}{class};
       if ( !defined $classname ) {
@@ -122,6 +124,11 @@ sub perform {
         die("Something went wrong to get result of section $task_section : $e\n");
       };
 
+      my $clear_map = $myclass->get_clear_map( $config, $task_section );
+      $clears->{$task_section} = $clear_map;
+      for my $sample ( sort keys %$clear_map ) {
+        $clear_keys->{$sample} = 1;
+      }
       my $pbs_file_map = $myclass->get_pbs_files( $config, $task_section );
       for my $expect_name ( sort keys %$expect_file_map ) {
         my $expect_files = $expect_file_map->{$expect_name};
@@ -147,15 +154,10 @@ sub perform {
         }
       }
 
-      $expects->{$task_section} = $expect_file_map;
-
       #print "task " . $task_section . " ...\n";
       $taskpbs->{$task_section} = $pbs_file_map;
 
       for my $sample ( sort keys %$pbs_file_map ) {
-        $samples->{$sample} = 1;
-      }
-      for my $sample ( sort keys %$expect_file_map ) {
         $samples->{$sample} = 1;
       }
     }
@@ -171,14 +173,6 @@ sub perform {
 
       my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $logdesp, $path_file, $result_dir );
 
-      my $clear_file = change_extension( $pbs_file, "_clear.sh" );
-      open my $clear, ">$clear_file" or die "Cannot create file $clear_file";
-      print $clear "
-read -p \"Are you sure you want to clear all result for $sample? \" -n 1 -r
-echo
-if [[ \$REPLY =~ ^[Yy]\$ ]]
-then
-";
       for my $task_section (@tasks) {
 
         #print "task " . $task_section . " ...\n";
@@ -194,18 +188,7 @@ then
             print $pbs "bash " . $samplepbs . "\n";
           }
         }
-
-        my $expect_map = $expects->{$task_section};
-        if ( defined $expect_map->{$sample} ) {
-          my $expect_files = $expect_map->{$sample};
-          for my $expect_file (@$expect_files) {
-            print $clear "  rm -rf $expect_file \n";
-          }
-        }
       }
-      print $clear "fi \n";
-      close($clear);
-
       $self->close_pbs( $pbs, $pbs_file );
 
       print $sh "\$MYCMD ./$pbs_name \n";
@@ -213,11 +196,33 @@ then
     print $sh "exit 0\n";
     close $sh;
 
-    if ( is_linux() ) {
-      chmod 0755, $shfile;
+    for my $clear_key ( sort keys %$clear_keys ) {
+      my $pbs_file = $self->get_step_sample_pbs( $pbs_dir, $step_name, $clear_key );
+      my $clear_file = change_extension( $pbs_file, "_clear.sh" );
+      open my $clear, ">$clear_file" or die "Cannot create file $clear_file";
+      print $clear "
+read -p \"Are you sure you want to clear all result for $clear_key? \" -n 1 -r
+echo
+if [[ \$REPLY =~ ^[Yy]\$ ]]
+then
+";
+      for my $task_section (@tasks) {
+
+        my $clear_files = $clears->{$task_section}{$clear_key};
+        if ( defined $clear_files ) {
+          for my $expect_file (@$clear_files) {
+            print $clear "  rm -rf $expect_file \n";
+          }
+        }
+        print $clear "fi \n";
+        close($clear);
+      }
+
+      if ( is_linux() ) {
+        chmod 0755, $shfile;
+      }
     }
   }
-
   close($result_list);
 
   my $summary_pbs_name = basename($summary_pbs);
