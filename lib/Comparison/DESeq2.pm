@@ -107,7 +107,7 @@ comparisons=list(";
       @group_names = @{$gNames};
     }
 
-    print( Dumper(@group_names) );
+    #print( Dumper(@group_names) );
 
     if ( scalar(@group_names) != 2 ) {
       die "Comparison of $comparison_name should contains and only contains two groups!";
