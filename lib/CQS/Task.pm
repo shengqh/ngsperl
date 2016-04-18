@@ -25,6 +25,11 @@ sub result {
   return $result;
 }
 
+sub get_clear_map {
+  my $self = shift;
+  return $self->result(@_);
+}
+
 sub get_pbs_files {
   my ( $self, $config, $section ) = @_;
 
