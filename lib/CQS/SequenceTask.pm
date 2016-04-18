@@ -160,9 +160,8 @@ sub perform {
       }
     }
 
-    print dumper($expects), "\n";
-
-    print dumper($samples), "\n";
+    #print dumper($expects), "\n";
+    #print dumper($samples), "\n";
 
     for my $sample ( sort keys %{$samples} ) {
       my $pbs_file = $self->get_step_sample_pbs( $pbs_dir, $step_name, $sample );
