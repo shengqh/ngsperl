@@ -33,8 +33,8 @@ sub perform {
 
   my $comparisons = get_raw_files( $config, $section );
   my @comparison_names = sort keys %{$comparisons};
-  
-  my $totalPair = scalar( @comparison_names );
+
+  my $totalPair = scalar(@comparison_names);
   if ( 0 == $totalPair ) {
     die "No pair defined!";
   }
@@ -88,7 +88,7 @@ minMedianInGroup<-$minMedianInGroup
 
 comparisons=list(";
   my $first = 0;
-  for my $comparison_name ( @comparison_names ) {
+  for my $comparison_name (@comparison_names) {
     $first++;
 
     my $gNames = $comparisons->{$comparison_name};
@@ -202,4 +202,20 @@ sub result {
   return $result;
 }
 
+sub get_clear_map {
+  my ( $self, $config, $section, $pattern ) = @_;
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+
+  my $comparison_result = $self->result( $config, $section, $pattern );
+  my $result            = {};
+  my @result_files      = ();
+  for my $crs ( sort values %$comparison_result ) {
+    for my $cr (@$crs) {
+      push( @result_files, $cr );
+    }
+  }
+  $result->{$task_name} = \@result_files;
+
+  return $result;
+}
 1;
