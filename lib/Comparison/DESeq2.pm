@@ -33,8 +33,8 @@ sub perform {
 
   my $comparisons = get_raw_files( $config, $section );
   my @comparison_names = sort keys %{$comparisons};
-  
-  my $totalPair = scalar( @comparison_names );
+
+  my $totalPair = scalar(@comparison_names);
   if ( 0 == $totalPair ) {
     die "No pair defined!";
   }
@@ -88,7 +88,7 @@ minMedianInGroup<-$minMedianInGroup
 
 comparisons=list(";
   my $first = 0;
-  for my $comparison_name ( @comparison_names ) {
+  for my $comparison_name (@comparison_names) {
     $first++;
 
     my $gNames = $comparisons->{$comparison_name};
@@ -107,7 +107,7 @@ comparisons=list(";
       @group_names = @{$gNames};
     }
 
-    print( Dumper(@group_names) );
+    #print( Dumper(@group_names) );
 
     if ( scalar(@group_names) != 2 ) {
       die "Comparison of $comparison_name should contains and only contains two groups!";
