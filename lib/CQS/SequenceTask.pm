@@ -185,7 +185,7 @@ sub perform {
 
           my $expect_files = $expects->{$task_section}{$sample};
           for my $expect_file (@$expect_files){
-            print $clear "rm $expect_file \n";
+            print $clear "rm -rf $expect_file \n";
           }
         }
       }
