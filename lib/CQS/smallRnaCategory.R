@@ -51,8 +51,8 @@ for (i in 1:ncol(categoryAllTable1)) {
 }
 
 #Pie Chart for Tables
-ggpieToFile(categoryFigure,fileName=paste0(taskName,".Category1.Piechart.png"),maxCategory=NA,textSize=textSize,y="Count",transformTable=FALSE)
-ggpieToFile(categoryAllTable2,fileName=paste0(taskName,".Category2.Piechart.png"),maxCategory=NA,textSize=textSize)
+p1<-ggpieToFile(categoryFigure,fileName=paste0(taskName,".Category1.Piechart.png"),maxCategory=NA,textSize=textSize,y="Count",transformTable=FALSE,reOrder=FALSE)
+p2<-ggpieToFile(categoryAllTable2,fileName=paste0(taskName,".Category2.Piechart.png"),maxCategory=NA,textSize=textSize)
 
 #Barplot for Tables
 tableBarplotToFile(dat=categoryFigure,fileName=paste0(taskName,".Category1.Barplot.png"),

@@ -147,7 +147,11 @@ ggpie <- function (dat, fill="Category", y="Reads",facet="Sample",
 				datForFigure[,y]<-datForFigure[,y]/sum(datForFigure[,y])
 			}
 		}
-		categoryOrderedNames<-levels(datForFigure[,fill])[rev(order(tapply(datForFigure[,y],datForFigure[,fill],sum)))]
+		if (reOrder) {
+			categoryOrderedNames<-unique(datForFigure[,fill])[rev(order(tapply(datForFigure[,y],datForFigure[,fill],sum)))]
+		} else {
+			categoryOrderedNames<-unique(datForFigure[,fill])
+		}
 	}
 	datForFigure[,fill]<-factor(datForFigure[,fill],levels=categoryOrderedNames)
 	datForFigure<-orderDataByNames(datForFigure,datForFigure[,fill],categoryOrderedNames)
@@ -189,6 +193,7 @@ ggpie <- function (dat, fill="Category", y="Reads",facet="Sample",
 		}
 	} else if (!is.na(facet)) {
 		p<-p+facet_wrap(c(facet))
+#		p<-p+facet_wrap(c(facet),nrow=2)+theme(legend.position="top")
 	}
 
 	if (!is.na(colorNames)) {
@@ -219,6 +224,7 @@ ggpieToFile<-function(dat,fileName,fill="Category", maxCategory=5,textSize=9,tra
 	p<-ggpie(dat,fill=fill, maxCategory=maxCategory,textSize=textSize,transformTable=transformTable,visLayoutFileList=visLayoutFileList,...)
 	print(p)
 	dev.off()
+	invisible(p)
 }
 
 ggpieGroupToFile<-function(dat,fileName,groupFileList="",outFileName="",
