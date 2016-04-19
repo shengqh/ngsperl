@@ -68,7 +68,6 @@ sub perform {
 
     print $pbs "
 if [ ! -s ${sample_name}_peaks.bed ]; then
-  if [ -s 
   macs $option $treatment $input -n $sample_name
 fi
 
