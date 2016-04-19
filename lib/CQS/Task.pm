@@ -34,7 +34,7 @@ sub get_clear_map {
     my @newvalues = grep { !/\/pbs\// } @$values;
     
     print("old\n");
-    print(dumper($values));
+    print(Dumper($values));
     if ( scalar(@newvalues) > 0 ) {
       $result->{$key} = \@newvalues;
     }
@@ -42,7 +42,7 @@ sub get_clear_map {
       $result->{$key} = undef;
     }
     print("new\n");
-    print(dumper(\@newvalues));
+    print(Dumper(\@newvalues));
   }
   return $result;
 }
