@@ -26,8 +26,14 @@ sub result {
 }
 
 sub get_clear_map {
-  my $self = shift;
-  return $self->result(@_);
+  my $self   = shift;
+  my $result = $self->result(@_);
+  for my $key ( keys %$result ) {
+    my $values = $result->{$key};
+    my @newvalues = grep { !/file.list\$/ } @$values;
+    $result->{$key} = \@newvalues;
+  }
+  return $result;
 }
 
 sub get_pbs_files {
@@ -76,7 +82,7 @@ sub html {
     print "<tr><td>$expect_name</td><td>\n";
     for my $expect_file ( @{$expect_files} ) {
       my $commonLen = 0;
-      ($target_dir ^ $expect_file) =~ /^(\0*)/;
+      ( $target_dir ^ $expect_file ) =~ /^(\0*)/;
       $commonLen = $+[0];
       substr $expect_file, 0, $commonLen, "";
       print "$expect_file\n";
