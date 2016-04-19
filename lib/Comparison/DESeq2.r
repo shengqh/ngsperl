@@ -178,12 +178,17 @@ for(comparisonName in comparisonNames){
   designData<-read.table(designFile, sep="\t", header=T)
   designData$Condition<-factor(designData$Condition, levels=gnames)
   
-  if(ncol(designData) == 3){
-    ispaired<-TRUE
-    cat("Paired data!\n")
+  if(ncol(designData) >= 3){
+    cat("Data with covariances!\n")
   }else{
-    ispaired<-FALSE
-    cat("Not paired data!\n")
+    cat("Data without covariances!\n")
+  }
+  if (any(colnames(designData)=="Paired")) {
+	  ispaired<-TRUE
+	  cat("Paired Data!\n")
+  }else{
+	  ispaired<-FALSE
+	  cat("Not Paired Data!\n")
   }
   
   comparisonData<-countData[,colnames(countData) %in% as.character(designData$Sample),drop=F]
@@ -341,15 +346,10 @@ for(comparisonName in comparisonNames){
   drawHCA(paste0(prefix,"_geneAll"), rldmatrix, ispaired, designData, conditionColors, gnames)
   
   #different expression analysis
-  if(ispaired){
-    dds=DESeqDataSetFromMatrix(countData = comparisonData,
+  designFormula=as.formula(paste0("~",paste0(c(colnames(designData)[-c(1:2)],"Condition"),collapse="+")))
+  dds=DESeqDataSetFromMatrix(countData = comparisonData,
                                colData = designData,
-                               design = ~ Paired + Condition)
-  }else{
-    dds=DESeqDataSetFromMatrix(countData = comparisonData,
-                               colData = designData,
-                               design = ~ Condition)
-  }
+                               design = designFormula)
   
   dds <- DESeq(dds)
   res<-results(dds,cooksCutoff=FALSE)
