@@ -30,7 +30,7 @@ sub get_clear_map {
   my $result = $self->result(@_);
   for my $key ( keys %$result ) {
     my $values = $result->{$key};
-    my @newvalues = grep { !/\\pbs\\/ } @$values;
+    my @newvalues = grep { !/\/pbs\// } @$values;
     $result->{$key} = \@newvalues;
   }
   return $result;
