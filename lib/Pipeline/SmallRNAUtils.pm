@@ -430,7 +430,7 @@ sub getPrepareConfig {
       class              => "CQS::UniqueR",
       perform            => 1,
       target_dir         => $def->{target_dir} . "/fastq_len",
-      rtemplate          => "fastqLengthVis.R",
+      rtemplate          => "countTableVisFunctions.R,fastqLengthVis.R",
       output_file        => ".lengthDistribution",
       output_file_ext    => ".csv",
       parameterSampleFile1_ref => [ "fastq_len", ".len\$" ],
