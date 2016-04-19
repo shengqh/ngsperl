@@ -31,7 +31,12 @@ sub get_clear_map {
   for my $key ( keys %$result ) {
     my $values = $result->{$key};
     my @newvalues = grep { !/\/pbs\// } @$values;
-    $result->{$key} = \@newvalues;
+    if ( scalar(@newvalues) > 0 ) {
+      $result->{$key} = \@newvalues;
+    }
+    else {
+      $result->{$key} = undef;
+    }
   }
   return $result;
 }
