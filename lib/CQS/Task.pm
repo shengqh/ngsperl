@@ -4,6 +4,7 @@ package CQS::Task;
 use strict;
 use warnings;
 use CQS::ConfigUtils;
+use Data::Dumper;
 
 sub new {
   my ($class) = @_;
