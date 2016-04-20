@@ -193,8 +193,10 @@ for(comparisonName in comparisonNames){
   
   comparisonData<-countData[,colnames(countData) %in% as.character(designData$Sample),drop=F]
   if(ncol(comparisonData) != nrow(designData)){
-    warning(paste0("Data not matched, there are ", nrow(designData), " samples in design file ", designFile, " but ", ncol(comparisonData), " samples in data "))
-    next
+	message=paste0("Data not matched, there are ", nrow(designData), " samples in design file ", designFile, " but ", ncol(comparisonData), " samples in data ")
+	warning(message)
+	writeLines(message,paste0(comparisonName,".error"))
+	next
   }
   comparisonData<-comparisonData[,as.character(designData$Sample)]
   
@@ -211,7 +213,9 @@ for(comparisonName in comparisonNames){
     cat(nrow(comparisonData), " genes with minimum median count in group larger or equals than ", minMedianInGroup, "\n")
     
     if (nrow(comparisonData)==0) {
-      cat(paste0("Error: 0 Genes can be used in DESeq2 analysis in comparison ",comparisonName," \n"))
+		message=paste0("Error: 0 Genes can be used in DESeq2 analysis in comparison ",comparisonName," \n")
+		warning(message)
+		writeLines(message,paste0(comparisonName,".error"))
       next;
     }
     
@@ -322,9 +326,9 @@ for(comparisonName in comparisonNames){
       break
     }
   }
-  if (norw(comparisonData)<=1) {
-	  message=paste0("All genes in ",comparisonName," has at least 0 value. Can't do DESeq2.")
-	  print(message)
+  if (nrow(comparisonData)<=1) {
+	  message=paste0("Error: All genes in ",comparisonName," has at least one 0 value. Can't do DESeq2.")
+	  warning(message)
 	  writeLines(message,paste0(comparisonName,".error"))
 	  next;
   }
