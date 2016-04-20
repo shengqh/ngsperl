@@ -13,6 +13,7 @@ orderDataByNames<-function(x,orderKey,orderNames) {
 	return(x[orderedInd,])
 }
 
+#Merge Sample By Group
 mergeTableBySampleGroup<-function(x,sampleToGroup) {
 	xRatio<-t(t(x)/colSums(x))
 	groupLength<-length(unique(sampleToGroup[,2]))
@@ -24,6 +25,18 @@ mergeTableBySampleGroup<-function(x,sampleToGroup) {
 		xRatioGroupMean[,i]<-rowMeans(xRatio[,currentSample])
 	}
 	return(xRatioGroupMean)
+}
+
+#extract part of color from a color range
+col_part<-function(data_all,data_part,col) {
+	min_all<-min(data_all,na.rm=T)
+	max_all<-max(data_all,na.rm=T)
+	min_part<-min(data_part,na.rm=T)
+	max_part<-max(data_part,na.rm=T)
+	cut_off_low<-round(quantile(1:length(col),(min_part-min_all)/(max_all-min_all)))
+	cut_off_high<-round(quantile(1:length(col),(max_part-min_all)/(max_all-min_all)))
+	col=col[cut_off_low:cut_off_high]
+	return(col)
 }
 
 basicPie<-function(x,maxCategory=10,main="",addPercent=F) {

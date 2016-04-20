@@ -2,35 +2,11 @@ countTableFileList<-parSampleFile1
 groupFileList<-parSampleFile2
 fixColorRange<-TRUE
 
+#source("/home/zhaos/source/r_cqs/vickers/codesToPipeline/countTableVisFunctions.R")
+
 library(heatmap3)
 library(DESeq2)  
 library(RColorBrewer)
-
-#Merge Sample By Group
-mergeTableBySampleGroup<-function(x,sampleToGroup) {
-	xRatio<-t(t(x)/colSums(x))
-	groupLength<-length(unique(sampleToGroup[,2]))
-	xRatioGroupMean<-matrix(NA,ncol=groupLength,nrow=nrow(x))
-	colnames(xRatioGroupMean)<-unique(sampleToGroup[,2])
-	row.names(xRatioGroupMean)<-row.names(x)
-	for (i in 1:groupLength) {
-		currentSample<-sampleToGroup[which(sampleToGroup[,2]==colnames(xRatioGroupMean)[i]),1]
-		xRatioGroupMean[,i]<-rowMeans(xRatio[,currentSample])
-	}
-	return(xRatioGroupMean)
-}
-
-#extract part of color from a color range
-col_part<-function(data_all,data_part,col) {
-	min_all<-min(data_all,na.rm=T)
-	max_all<-max(data_all,na.rm=T)
-	min_part<-min(data_part,na.rm=T)
-	max_part<-max(data_part,na.rm=T)
-	cut_off_low<-round(quantile(1:length(col),(min_part-min_all)/(max_all-min_all)))
-	cut_off_high<-round(quantile(1:length(col),(max_part-min_all)/(max_all-min_all)))
-	col=col[cut_off_low:cut_off_high]
-	return(col)
-}
 
 countTableFileAll<-read.delim(countTableFileList,header=F,as.is=T)
 for (i in 1:nrow(countTableFileAll)) {

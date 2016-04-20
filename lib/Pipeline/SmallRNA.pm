@@ -1322,7 +1322,7 @@ sub getSmallRNAConfig {
 		class           => "CQS::UniqueR",
 		perform         => 1,
 		target_dir      => $def->{target_dir} . "/count_table_correlation",
-		rtemplate       => "countTableCorrelation.R",
+		rtemplate       => "countTableVisFunctions.R,countTableCorrelation.R",
 		output_file     => "parameterSampleFile1",
 		output_file_ext => ".Correlation.png",
 		parameterSampleFile1_ref  => \@table_for_correlation,
