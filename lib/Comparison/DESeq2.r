@@ -468,13 +468,15 @@ for(comparisonName in comparisonNames){
 		prefix<-comparisonName
 	}
 	sigFile<-paste0(prefix, "_DESeq2_sig.csv")
-	sigTable<-read.csv(sigFile,header=TRUE,as.is=TRUE)
-	if (nrow(sigTable)>0) {
-		allSigNameList[[comparisonName]]<-sigTable[,1]
-		allSigDirectionList[[comparisonName]]<-sign(sigTable$log2FoldChange)
-	} else {
-		warning(paste0("No significant genes in ",comparisonName))
+	if (file.exists(sigFile)) {
+		sigTable<-read.csv(sigFile,header=TRUE,as.is=TRUE)
+		if (nrow(sigTable)>0) {
+			allSigNameList[[comparisonName]]<-sigTable[,1]
+			allSigDirectionList[[comparisonName]]<-sign(sigTable$log2FoldChange)
+		} else {
+			warning(paste0("No significant genes in ",comparisonName))
 #		allSigNameList[[comparisonName]]<-""
+		}
 	}
 }
 
