@@ -35,9 +35,9 @@ sub perform {
   my $groups    = get_raw_files( $config, $section, "groups" );
   my $bam_files = get_raw_files( $config, $section, "bam_files" );
   my $singlepdf = get_option( $config, $section, "singlepdf", 0 ) ? "-s" : "";
-  
+
   my $cnvr_files;
-  if(has_raw_files($config, $section, "cnvr_files")){
+  if ( has_raw_files( $config, $section, "cnvr_files" ) ) {
     $cnvr_files = get_raw_files( $config, $section, "cnvr_files" );
   }
 
@@ -58,7 +58,7 @@ sub perform {
     }
 
     my $cnvr_option = "";
-    if(defined $cnvr_files){
+    if ( defined $cnvr_files ) {
       $cnvr_option = "--cnvrFile " . $cnvr_files->{$name}->[0];
     }
     my $curbam_fileStr = join( ' ', @curbam_files );
@@ -66,7 +66,7 @@ sub perform {
     my $bamCount = scalar(@curBamNames);
 
     my $configFileName = "${name}.filelist";
-    my $configFile     = $cur_dir . "/${configFileName}";
+    my $configFile     = $pbs_dir . "/${configFileName}";
     open( my $con, ">$configFile" ) or die "Cannot create $configFile";
     for ( my $index = 0 ; $index < $bamCount ; $index++ ) {
       print $con $curBamNames[$index], "\t", $curbam_files[$index], "\n";
@@ -79,8 +79,6 @@ sub perform {
 
     print $sh "\$MYCMD ./$pbs_name \n";
     my $log_desc = $cluster->get_log_description($log);
-
-    #my $final = "${comparisonName}_c3.0_common.bed";
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
     for my $bedFile (@curBedFiles) {
@@ -101,16 +99,23 @@ sub perform {
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0);
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $comparisons = get_raw_files( $config, $section, "groups" );
+  my $bedFiles = get_raw_files( $config, $section );
+
   my $result = {};
-  for my $comparisonName ( sort keys %{$comparisons} ) {
+  for my $name ( sort keys %{$bedFiles} ) {
+    my $cur_dir = create_directory_or_die( $result_dir . "/$name" );
     my @result_files = ();
-    push( @result_files, $result_dir . "/${comparisonName}_c3.0_common.bed" );
-    push( @result_files, $result_dir . "/${comparisonName}_cond1.bed" );
-    push( @result_files, $result_dir . "/${comparisonName}_cond2.bed" );
-    $result->{$comparisonName} = filter_array( \@result_files, $pattern );
+    push( @result_files, $pbs_dir . "/" .  $name . ".filelist" );
+
+    my @curBedFiles = @{ $bedFiles->{$name} };
+    for my $bedFile (@curBedFiles) {
+      push( @result_files, $cur_dir . "/" .  basename($bedFile) . ".depth" );
+      push( @result_files, $cur_dir . "/" .  basename($bedFile) . ".reads" );
+    }
+
+    $result->{$name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }
