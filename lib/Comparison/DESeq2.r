@@ -304,7 +304,7 @@ for(comparisonName in comparisonNames){
   while(1){
     #varianceStabilizingTransformation
     vsdres<-try(vsd <- varianceStabilizingTransformation(dds, blind=TRUE))
-    if(class(vsdres) == "try-error" && grep("every gene contains at least one zero", vsdres[1])){
+    if(class(vsdres) == "try-error" && grepl("every gene contains at least one zero", vsdres[1])){
       removed<-removed+1
       keptNumber<-length(zeronumbers) - percent10 * removed
       keptSample<-zeronumbers[1:keptNumber]
@@ -321,6 +321,12 @@ for(comparisonName in comparisonNames){
       conditionColors<-as.matrix(data.frame(Group=c("red", "blue")[designData$Condition]))
       break
     }
+  }
+  if (norw(comparisonData)<=1) {
+	  message=paste0("All genes in ",comparisonName," has at least 0 value. Can't do DESeq2.")
+	  print(message)
+	  writeLines(message,paste0(comparisonName,".error"))
+	  next;
   }
   
   if(length(excludedSample) > 0){
