@@ -305,9 +305,10 @@ for(comparisonName in comparisonNames){
     file.remove(excludedDesignFile)
   }
   
+  fitType<-"parametric"
   while(1){
     #varianceStabilizingTransformation
-    vsdres<-try(vsd <- varianceStabilizingTransformation(dds, blind=TRUE))
+    vsdres<-try(vsd <- varianceStabilizingTransformation(dds, blind=TRUE,fitType=fitType))
     if(class(vsdres) == "try-error" && grepl("every gene contains at least one zero", vsdres[1])){
       removed<-removed+1
       keptNumber<-length(zeronumbers) - percent10 * removed
@@ -321,7 +322,12 @@ for(comparisonName in comparisonNames){
                                  design = ~1)
       
       colnames(dds)<-colnames(comparisonData)
-    }else{
+    } else if (class(vsdres) == "try-error" && grepl("newsplit: out of vertex space", vsdres[1])) {
+		message=paste0("Warning: varianceStabilizingTransformation function can't run. fitType was set to local to try again")
+		warning(message)
+		fitType<-"mean"
+		writeLines(message,paste0(comparisonName,".error"))
+	} else{
       conditionColors<-as.matrix(data.frame(Group=c("red", "blue")[designData$Condition]))
       break
     }
@@ -361,7 +367,7 @@ for(comparisonName in comparisonNames){
                                colData = designData,
                                design = designFormula)
   
-  dds <- DESeq(dds)
+  dds <- DESeq(dds,fitType=fitType)
   res<-results(dds,cooksCutoff=FALSE)
   
   cat("DESeq2 finished.\n")
