@@ -10,11 +10,15 @@ totalCountFile<-parFile3
 countFiles<-read.delim(countFilesList,header=F,as.is=T)
 
 resultTable<-NULL
+taskFileWithReads<-NULL
 for (countFile in countFiles[,1]) {
 	if (grepl(".csv$",countFile)) {
 		countTable<-read.csv(countFile,header=T,row.names=1)
 	} else {
 		countTable<-read.delim(countFile,header=T,row.names=1)
+	}
+	if (nrow(countTable)==0) {
+		next;
 	}
 	colClass<-sapply(countTable, class)
 	countTableNum<-countTable[,which(colClass=="numeric" | colClass=="integer")]
@@ -24,10 +28,11 @@ for (countFile in countFiles[,1]) {
 	} else {
 		resultTable<-rbind(resultTable,colSums(countTableNum)[colnames(resultTable)])
 	}
+	taskFileWithReads<-c(taskFileWithReads,countFile)
 }
 
 #change names
-row.names(resultTable)<-gsub("_pm_.+","",basename(countFiles[,1]))
+row.names(resultTable)<-gsub("_pm_.+","",basename(taskFileWithReads))
 row.names(resultTable)<-gsub(".+.miRNA.count$","Host_genome_miRNA",row.names(resultTable))
 row.names(resultTable)<-gsub(".+.tRNA.count$","Host_genome_tRNA",row.names(resultTable))
 row.names(resultTable)<-gsub(".+.other.count$","Host_genome_other_smallRna",row.names(resultTable))
