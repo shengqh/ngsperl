@@ -122,7 +122,6 @@ fi
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
     print $pbs "
-
 if [ ! -s $rmdupFile ]; then
   echo MarkDuplicates=`date` 
   $sortCmd
@@ -151,7 +150,7 @@ if [[ -s $grpFile && ! -s $recalFile ]]; then
 fi
 
 if [[ -s $recalFile && ! -s $slimFile ]]; then
-  echo slim=`date`
+  echo slim=`date` 
   samtools view -h $recalFile | sed 's/\\tBD\:Z\:[^\\t]*//' | sed 's/\\tPG\:Z\:[^\\t]*//' | sed 's/\\tBI\:Z\:[^\\t]*//' | samtools view -S -b > $slimFile
   samtools index $slimFile
 fi
