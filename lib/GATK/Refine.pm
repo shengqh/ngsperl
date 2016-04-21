@@ -122,36 +122,35 @@ fi
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
     print $pbs "
+if [ ! -s $rmdupFile ]; then
+  echo MarkDuplicates=`date` 
+  $sortCmd
+  java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
+fi
+
+if [[ -s $rmdupFile && ! -s $intervalFile ]]; then
+  echo RealignerTargetCreator=`date` 
+  java $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $rmdupFile -R $faFile $indel_vcf -o $intervalFile $restrict_intervals
+fi
+
+if [[ -s $intervalFile && ! -s $realignedFile ]]; then
+  echo IndelRealigner=`date` 
+  #InDel parameter referenced: http://www.broadinstitute.org/gatk/guide/tagged?tag=local%20realignment
+  java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $fixMisencodedQuals -I $rmdupFile -R $faFile -targetIntervals $intervalFile $indel_vcf --consensusDeterminationModel USE_READS -LOD 0.4 -o $realignedFile 
+fi
+
+if [[ -s $realignedFile && ! -s $grpFile ]]; then
+  echo BaseRecalibrator=`date` 
+  java $option -jar $gatk_jar -T BaseRecalibrator -nct $thread -rf BadCigar -R $faFile -I $realignedFile $knownsitesvcf -o $grpFile $restrict_intervals
+fi
+
+if [[ -s $grpFile && ! -s $recalFile ]]; then
+  echo PrintReads=`date`
+  java $option -jar $gatk_jar -T PrintReads -nct $thread -rf BadCigar -R $faFile -I $realignedFile -BQSR $grpFile -o $recalFile 
+fi
 
 if [[ -s $recalFile && ! -s $slimFile ]]; then
-  if [[ -s $grpFile && ! -s $recalFile ]]; then
-    if [[ -s $realignedFile && ! -s $grpFile ]]; then
-      if [[ -s $intervalFile && ! -s $realignedFile ]]; then
-        if [[ -s $rmdupFile && ! -s $intervalFile ]]; then
-          if [ ! -s $rmdupFile ]; then
-            echo MarkDuplicates=`date` 
-            $sortCmd
-            java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
-          fi
-          
-          echo RealignerTargetCreator=`date` 
-          java $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $rmdupFile -R $faFile $indel_vcf -o $intervalFile $restrict_intervals
-        fi
-
-        echo IndelRealigner=`date` 
-        #InDel parameter referenced: http://www.broadinstitute.org/gatk/guide/tagged?tag=local%20realignment
-        java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $fixMisencodedQuals -I $rmdupFile -R $faFile -targetIntervals $intervalFile $indel_vcf --consensusDeterminationModel USE_READS -LOD 0.4 -o $realignedFile 
-      fi
-
-      echo BaseRecalibrator=`date` 
-      java $option -jar $gatk_jar -T BaseRecalibrator -nct $thread -rf BadCigar -R $faFile -I $realignedFile $knownsitesvcf -o $grpFile $restrict_intervals
-    fi
-
-    echo PrintReads=`date`
-    java $option -jar $gatk_jar -T PrintReads -nct $thread -rf BadCigar -R $faFile -I $realignedFile -BQSR $grpFile -o $recalFile 
-  fi
-
-  echo slim=`date`
+  echo slim=`date` 
   samtools view -h $recalFile | sed 's/\\tBD\:Z\:[^\\t]*//' | sed 's/\\tPG\:Z\:[^\\t]*//' | sed 's/\\tBI\:Z\:[^\\t]*//' | samtools view -S -b > $slimFile
   samtools index $slimFile
 fi
