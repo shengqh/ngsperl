@@ -109,7 +109,7 @@ fi
 
 ";
 
-    $self->close_pbs($pbs);
+    $self->close_pbs($pbs, $pbs_file);
 
     print "$pbs_file created \n";
   }
