@@ -1,7 +1,12 @@
 ###############################################################################
 # Functions in pipeline
 ###############################################################################
-saveInError<-function(message="",filename=paste0(Sys.time(),".error")) {
+saveInError<-function(message="",filePrefix="",fileSuffix=paste0(Sys.Date(),".error")) {
+	if (filePrefix=="") {
+		filename<-fileSuffix
+	} else {
+		filename<-paste0(filePrefix,".",fileSuffix)
+	}
 	save.image(paste0(filename,".RData"))
 	writeLines(message,paste0(filename))
 	warning(message)

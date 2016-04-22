@@ -119,7 +119,7 @@ for (i in 1:nrow(countTableFileAll)) {
 		heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
 		dev.off()
 		if (ncol(countNumCor)<=3 | any(is.na(cor(countNumCor,use="pa")))) {
-			saveInError("Can't do correlation analysis for group table")
+			saveInError(paste0("Can't do correlation analysis for group table for ",countTableFile))
 		} else {
 			png(paste0(countTableFile,".Group.Correlation.Cluster.png"),width=2000,height=2000,res=300)
 			heatmap3(countNumCor,scale="none",balanceColor=T,margin=margin,col=col,legendfun=legendfun)
