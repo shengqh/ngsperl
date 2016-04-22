@@ -174,9 +174,10 @@ cd $result_dir
 
 ";
   if ( defined $final_file ) {
+    my $delete_file = ($final_file =~ /^\//)?$final_file:"${result_dir}/${final_file}";
     print $pbs "
 if [[ ( -s $final_file ) || ( -d $final_file ) ]]; then
-  echo job has already been done. if you want to do again, delete ${result_dir}/${final_file} and submit job again.
+  echo job has already been done. if you want to do again, delete $delete_file and submit job again.
   exit 0
 fi
 ";
