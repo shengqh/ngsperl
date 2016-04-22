@@ -107,7 +107,7 @@ sub result {
     my @sample_files  = parsePairedSamples( \@originalFiles );
     my @result_files  = ();
     for my $sampleFile (@sample_files) {
-      my ($dir, $name) = basename($sampleFile);
+      my $name = basename($sampleFile);
       if ( $name =~ /gz$/ ) {
         $name = change_extension( $name, "" );
       }
