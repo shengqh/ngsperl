@@ -1,4 +1,13 @@
 ###############################################################################
+# Functions in pipeline
+###############################################################################
+saveInError<-function(message="",filename=paste0(Sys.time(),".error")) {
+	save.image(paste0(filename,".RData"))
+	writeLines(message,paste0(filename))
+	warning(message)
+}
+
+###############################################################################
 # Funtions in count table barplot and pie chart
 ###############################################################################
 library(reshape2)
