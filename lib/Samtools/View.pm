@@ -78,7 +78,7 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $final_file = "${sample_name}.${extension}";
+    my $final_file = "${sample_name}${extension}";
 
     my @result_files = ();
     push( @result_files, "${result_dir}/${final_file}" );
