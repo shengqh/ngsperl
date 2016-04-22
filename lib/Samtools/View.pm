@@ -33,7 +33,7 @@ sub perform {
   print $sh get_run_command($sh_direct);
 
   my $extension = get_option( $config, $section, "extension", ".filtered.bam" );
-  print "extension = $extension\n";
+  #print "extension = $extension\n";
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -74,9 +74,11 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
+  my $extension = get_option( $config, $section, "extension", ".filtered.bam" );
+
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $final_file = "${sample_name}.filtered.bam";
+    my $final_file = "${sample_name}${extension}";
 
     my @result_files = ();
     push( @result_files, "${result_dir}/${final_file}" );
