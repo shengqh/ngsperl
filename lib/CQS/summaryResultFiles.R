@@ -53,9 +53,23 @@ for (step in unique(ResultOut$StepName)) {
 	warnLength<-length(grep("WARN",tableForPlot$Result))
 	if (failLength>0) {
 		print(paste0("There are ",failLength," FAIL in ",step,"."))
+		message<-as.vector(apply(tableForPlot[grep("FAIL",tableForPlot$Result),c("TaskName","SampleName")],1,function(x) paste(x,collapse=": ")))
+		if (length(message)<=10) {
+			print(message)
+		} else {
+			print("First 10 tasks:")
+			print(message[1:10])
+		}
 	}
 	if (warnLength>0) {
 		print(paste0("There are ",warnLength," WARN in ",step,"."))
+		message<-as.vector(apply(tableForPlot[grep("WARN",tableForPlot$Result),c("TaskName","SampleName")],1,function(x) paste(x,collapse=": ")))
+		if (length(message)<=10) {
+			print(message)
+		} else {
+			print("First 10 tasks:")
+			print(message[1:10])
+		}
 	}
 	if (failLength==0 & warnLength==0) {
 		print(paste0("All tasks are successfully finished in ",step,"."))
