@@ -134,6 +134,7 @@ sub result {
     my @result_files = ();
     my $cur_dir      = $result_dir . "/$group_name";
     push( @result_files, "$cur_dir/${group_name}.somatic.pass.vcf" );
+    push( @result_files, "$cur_dir/${group_name}.somatic.vcf" );
     $result->{$group_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
