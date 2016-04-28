@@ -25,13 +25,13 @@ sub getSmallRNAConfig {
   $def->{VERSION} = $VERSION;
 
   my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
-  
-  my $host_genome_dir = create_directory_or_die( $def->{target_dir} . "/host_genome" );
-  my $nonhost_library_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_library" );
-  my $nonhost_genome_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_genome" );
-  my $nonhost_blast_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_blast" );
+
+  my $host_genome_dir        = create_directory_or_die( $def->{target_dir} . "/host_genome" );
+  my $nonhost_library_dir    = create_directory_or_die( $def->{target_dir} . "/nonhost_library" );
+  my $nonhost_genome_dir     = create_directory_or_die( $def->{target_dir} . "/nonhost_genome" );
+  my $nonhost_blast_dir      = create_directory_or_die( $def->{target_dir} . "/nonhost_blast" );
   my $data_visualization_dir = create_directory_or_die( $def->{target_dir} . "/data_visualization" );
-  
+
   my @individual = @{$individual_ref};
   my @summary    = @{$summary_ref};
 
@@ -662,9 +662,10 @@ sub getSmallRNAConfig {
         },
       },
       bowtie1_rRNAS_pm_table_vis => {
-        class                     => "CQS::UniqueR",
-        perform                   => 1,
-        target_dir                => $data_visualization_dir . "/nonhost_library_rRNAS",,
+        class      => "CQS::UniqueR",
+        perform    => 1,
+        target_dir => $data_visualization_dir . "/nonhost_library_rRNAS",
+        ,
         rtemplate                 => "countTableVisFunctions.R,countTableVis.R",
         output_file               => ".rRnaSMapping.Result",
         output_file_ext           => ".Barplot.png",
@@ -1095,9 +1096,10 @@ sub getSmallRNAConfig {
           },
         },
         nonHost_deseq2_tRNArRNA_vis => {
-          class                    => "CQS::UniqueR",
-          perform                  => 1,
-          target_dir               => $data_visualization_dir . "/nonhost_library_deseq2",,
+          class      => "CQS::UniqueR",
+          perform    => 1,
+          target_dir => $data_visualization_dir . "/nonhost_library_deseq2",
+          ,
           rtemplate                => "DESeq2_all_vis.R",
           output_file              => "",
           output_file_ext          => ".DESeq2.Matrix.png",
@@ -1124,7 +1126,7 @@ sub getSmallRNAConfig {
       bowtie1_unmapped_reads => {
         class            => "CQS::Perl",
         perform          => 1,
-        target_dir       => $def->{target_dir} . "/bowtie1_unmapped_reads",
+        target_dir       => $nonhost_blast_dir . "/bowtie1_unmapped_reads",
         perlFile         => "unmappedReadsToFastq.pl",
         source_ref       => $identical_ref,
         source2_ref      => \@mapped,
@@ -1153,7 +1155,7 @@ sub getSmallRNAConfig {
       bowtie1_unmapped_sequence_count_table => {
         class           => "CQS::SmallRNASequenceCountTable",
         perform         => 1,
-        target_dir      => $def->{target_dir} . "/bowtie1_unmapped_sequence_count_table",
+        target_dir      => $nonhost_blast_dir . "/bowtie1_unmapped_sequence_count_table",
         option          => "",
         source_ref      => [ "identical", ".dupcount\$" ],
         fastq_files_ref => $identical_ref,
@@ -1171,7 +1173,7 @@ sub getSmallRNAConfig {
       bowtie1_unmapped_sequence_blast => {
         class      => "Blast::Blastn",
         perform    => 1,
-        target_dir => $def->{target_dir} . "/bowtie1_unmapped_sequence_blast",
+        target_dir => $nonhost_blast_dir . "/bowtie1_unmapped_sequence_blast",
         option     => "",
         source_ref => [ "bowtie1_unmapped_sequence_count_table", ".fasta\$" ],
         sh_direct  => 0,
@@ -1192,7 +1194,7 @@ sub getSmallRNAConfig {
   $config->{count_table_correlation} = {
     class                     => "CQS::UniqueR",
     perform                   => 1,
-    target_dir                => $def->{target_dir} . "/count_table_correlation",
+    target_dir                => $data_visualization_dir . "/count_table_correlation",
     rtemplate                 => "countTableVisFunctions.R,countTableCorrelation.R",
     output_file               => "parameterSampleFile1",
     output_file_ext           => ".Correlation.png",
@@ -1210,7 +1212,7 @@ sub getSmallRNAConfig {
     $config->{reads_in_tasks} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
-    target_dir               => $def->{target_dir} . "/reads_in_tasks",
+    target_dir               => $data_visualization_dir . "/reads_in_tasks",
     rtemplate                => "countTableVisFunctions.R,ReadsInTasks.R",
     output_file_ext          => ".TaskReads.csv",
     parameterSampleFile1_ref => \@table_for_countSum,
@@ -1227,7 +1229,7 @@ sub getSmallRNAConfig {
     class                    => "CQS::UniqueR",
     suffix                   => "_pie",
     perform                  => 1,
-    target_dir               => $def->{target_dir} . "/reads_in_tasks",
+    target_dir               => $data_visualization_dir . "/reads_in_tasks",
     rtemplate                => "countTableVisFunctions.R,ReadsInTasksPie.R",
     output_file_ext          => ".NonParallel.TaskReads.csv",
     parameterSampleFile1_ref => \@table_for_pieSummary,
