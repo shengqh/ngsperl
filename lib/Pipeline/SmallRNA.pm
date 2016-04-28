@@ -51,10 +51,10 @@ sub getSmallRNAConfig {
   my $groups_vis_layout    = $def->{groups_vis_layout};
 
   if ($do_comparison) {
-    $config->{top100Reads_deseq2} = {
+    $config->{deseq2_top100Reads} = {
       class                => "Comparison::DESeq2",
       perform              => 1,
-      target_dir           => $class_independent_dir . "/top100Reads_deseq2",
+      target_dir           => $class_independent_dir . "/deseq2_top100Reads",
       option               => "",
       source_ref           => "pairs",
       groups_ref           => "groups",
@@ -71,7 +71,7 @@ sub getSmallRNAConfig {
         "mem"      => "10gb"
       },
     };
-    push @summary, ("top100Reads_deseq2");
+    push @summary, ("deseq2_top100Reads");
   }
 
   my $identical_ref = [ "identical", ".fastq.gz\$" ];
@@ -200,7 +200,7 @@ sub getSmallRNAConfig {
       my $comparison = {
 
         #DESeq2
-        miRNA_deseq2 => {
+        deseq2_miRNA => {
           class                => "Comparison::DESeq2",
           perform              => 1,
           target_dir           => $host_genome_dir . "/deseq2_miRNA",
@@ -220,7 +220,7 @@ sub getSmallRNAConfig {
             "mem"      => "10gb"
           },
         },
-        tRNA_deseq2 => {
+        deseq2_tRNA => {
           class                => "Comparison::DESeq2",
           perform              => 1,
           target_dir           => $host_genome_dir . "/deseq2_tRNA",
@@ -240,7 +240,7 @@ sub getSmallRNAConfig {
             "mem"      => "10gb"
           },
         },
-        tRNA_aminoacid_deseq2 => {
+        deseq2_tRNA_aminoacid => {
           class                => "Comparison::DESeq2",
           perform              => 1,
           target_dir           => $host_genome_dir . "/deseq2_tRNA_aminoacid",
@@ -260,7 +260,7 @@ sub getSmallRNAConfig {
             "mem"      => "10gb"
           },
         },
-        otherSmallRNA_deseq2 => {
+        deseq2_otherSmallRNA => {
           class                => "Comparison::DESeq2",
           perform              => 1,
           target_dir           => $host_genome_dir . "/deseq2_otherSmallRNA",
@@ -287,7 +287,7 @@ sub getSmallRNAConfig {
           rtemplate                => "DESeq2_all_vis.R",
           output_file              => "",
           output_file_ext          => ".DESeq2.Matrix.png",
-          parameterSampleFile1_ref => [ "top100Reads_deseq2", "_DESeq2.csv\$", "miRNA_deseq2", "_DESeq2.csv\$", "tRNA_deseq2", "_DESeq2.csv\$", "otherSmallRNA_deseq2", "_DESeq2.csv\$" ],
+          parameterSampleFile1_ref => [ "deseq2_top100Reads", "_DESeq2.csv\$", "deseq2_miRNA", "_DESeq2.csv\$", "deseq2_tRNA", "_DESeq2.csv\$", "deseq2_otherSmallRNA", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_host_deseq2_vis_layout},
           sh_direct                => 1,
           pbs                      => {
@@ -300,7 +300,7 @@ sub getSmallRNAConfig {
       };
 
       $config = merge( $config, $comparison );
-      push @summary, ( "miRNA_deseq2", "tRNA_deseq2", "tRNA_aminoacid_deseq2", "otherSmallRNA_deseq2", "host_deseq2_all_vis" );
+      push @summary, ( "deseq2_miRNA", "deseq2_tRNA", "deseq2_tRNA_aminoacid", "deseq2_otherSmallRNA", "host_deseq2_all_vis" );
     }
 
     if ( $do_comparison
@@ -316,7 +316,7 @@ sub getSmallRNAConfig {
         $trna_vis_groups = $groups;
       }
       if ($do_comparison) {
-        $trna_sig_result = [ "tRNA_deseq2", "_DESeq2_sig.csv\$" ];
+        $trna_sig_result = [ "deseq2_tRNA", "_DESeq2_sig.csv\$" ];
       }
       $config->{tRNA_PositionVis} = {
         class                    => "CQS::UniqueR",
@@ -957,7 +957,7 @@ sub getSmallRNAConfig {
       my $unmapped_comparison = {
 
         #DESeq2
-        nonHost_tRna_deseq2 => {
+        nonHost_deseq2_tRNA => {
           class                => "Comparison::DESeq2",
           perform              => 1,
           target_dir           => $nonhost_library_dir . "/deseq2_tRNA",
@@ -1103,7 +1103,7 @@ sub getSmallRNAConfig {
           rtemplate                => "DESeq2_all_vis.R",
           output_file              => "",
           output_file_ext          => ".DESeq2.Matrix.png",
-          parameterSampleFile1_ref => [ "nonHost_tRna_deseq2", "_DESeq2.csv\$", "nonHost_rRNAL_deseq2", "_DESeq2.csv\$", "nonHost_rRNAS_deseq2", "_DESeq2.csv\$" ],
+          parameterSampleFile1_ref => [ "nonHost_deseq2_tRNA", "_DESeq2.csv\$", "nonHost_rRNAL_deseq2", "_DESeq2.csv\$", "nonHost_rRNAS_deseq2", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_nonHosttRNArRNA_deseq2_vis_layout},
           sh_direct                => 1,
           pbs                      => {
@@ -1117,7 +1117,7 @@ sub getSmallRNAConfig {
 
       $config = merge( $config, $unmapped_comparison );
       push @summary,
-        ( "group1_deseq2", "group2_deseq2", "group4_deseq2", "nonHost_tRna_deseq2", "nonHost_rRNAL_deseq2", "nonHost_rRNAS_deseq2", "nonHost_deseq2_groups_vis", "nonHost_deseq2_tRNArRNA_vis" );
+        ( "group1_deseq2", "group2_deseq2", "group4_deseq2", "nonHost_deseq2_tRNA", "nonHost_rRNAL_deseq2", "nonHost_rRNAS_deseq2", "nonHost_deseq2_groups_vis", "nonHost_deseq2_tRNArRNA_vis" );
     }
   }
 
