@@ -101,19 +101,19 @@ sub initializeDefaultOptions {
   if ( !defined $def->{has_NTA} ) {
     $def->{has_NTA} = 1;
   }
-  
-  if(!defined $def->{mirbase_count_option}){
+
+  if ( !defined $def->{mirbase_count_option} ) {
     $def->{mirbase_count_option} = "";
   }
-  
-  if(!defined $def->{table_vis_group_text_size}){
+
+  if ( !defined $def->{table_vis_group_text_size} ) {
     $def->{table_vis_group_text_size} = "10";
   }
-  
-   if(!defined $def->{sequencetask_run_time}){
+
+  if ( !defined $def->{sequencetask_run_time} ) {
     $def->{sequencetask_run_time} = "12";
   }
-  
+
   return $def;
 }
 
@@ -134,6 +134,9 @@ sub getPrepareConfig {
 
   create_directory_or_die( $def->{target_dir} );
 
+  my $preprocessing_dir = create_directory_or_die( $def->{target_dir} . "/preprocessing" );
+  my $class_independent_dir = create_directory_or_die( $def->{target_dir} . "/class_independent" );
+
   $def = initializeDefaultOptions($def);
 
   my $cluster                        = $def->{cluster};
@@ -142,8 +145,8 @@ sub getPrepareConfig {
   my $fastq_remove_random            = $def->{fastq_remove_random};
   my $remove_contamination_sequences = $def->{remove_sequences} ne "";
   my $hasNTA                         = $def->{has_NTA};
-  my $groups            = $def->{groups};
-  
+  my $groups                         = $def->{groups};
+
   my $config = {
     general => {
       task_name => $def->{task_name},
@@ -169,7 +172,7 @@ sub getPrepareConfig {
     $config->{fastq_remove_N} = {
       class      => "CQS::FastqTrimmer",
       perform    => $fastq_remove_N,
-      target_dir => $def->{target_dir} . "/fastq_remove_N",
+      target_dir => $preprocessing_dir . "/fastq_remove_N",
       option     => "-n -z",
       extension  => "_trim.fastq.gz",
       source_ref => "files",
@@ -191,7 +194,7 @@ sub getPrepareConfig {
   $config->{"fastqc_raw"} = {
     class      => "QC::FastQC",
     perform    => 1,
-    target_dir => $def->{target_dir} . "/fastqc_raw",
+    target_dir => $preprocessing_dir . "/fastqc_raw",
     option     => "",
     source_ref => $source_ref,
     cluster    => $cluster,
@@ -205,7 +208,7 @@ sub getPrepareConfig {
   $config->{"fastqc_raw_summary"} = {
     class      => "QC::FastQCSummary",
     perform    => 1,
-    target_dir => $def->{target_dir} . "/fastqc_raw",
+    target_dir => $preprocessing_dir . "/fastqc_raw",
     cqstools   => $def->{cqstools},
     option     => "",
     cluster    => $cluster,
@@ -223,7 +226,7 @@ sub getPrepareConfig {
     $config->{"remove_contamination_sequences"} = {
       class      => "CQS::Perl",
       perform    => 1,
-      target_dir => $def->{target_dir} . "/remove_contamination_sequences",
+      target_dir => $preprocessing_dir . "/remove_contamination_sequences",
       option     => $def->{remove_sequences},
       output_ext => "_removeSeq.fastq.gz",
       perlFile   => "removeSequenceInFastq.pl",
@@ -244,7 +247,7 @@ sub getPrepareConfig {
     $config->{"fastqc_post_remove"} = {
       class      => "QC::FastQC",
       perform    => 1,
-      target_dir => $def->{target_dir} . "/fastqc_post_remove",
+      target_dir => $preprocessing_dir . "/fastqc_post_remove",
       option     => "",
       source_ref => $source_ref,
       cluster    => $cluster,
@@ -258,7 +261,7 @@ sub getPrepareConfig {
     $config->{"fastqc_post_remove_summary"} = {
       class      => "QC::FastQCSummary",
       perform    => 1,
-      target_dir => $def->{target_dir} . "/fastqc_post_remove",
+      target_dir => $preprocessing_dir . "/fastqc_post_remove",
       cqstools   => $def->{cqstools},
       option     => "",
       cluster    => $cluster,
@@ -276,7 +279,7 @@ sub getPrepareConfig {
       $config->{"fastqc_count_vis"} = {
         class              => "CQS::UniqueR",
         perform            => 1,
-        target_dir         => $def->{target_dir} . "/fastqc_post_remove",
+        target_dir         => $preprocessing_dir . "/fastqc_post_remove",
         rtemplate          => "countInFastQcVis.R",
         output_file        => ".countInFastQcVis.Result",
         output_file_ext    => ".Reads.csv",
@@ -312,7 +315,7 @@ sub getPrepareConfig {
       cutadapt => {
         class                          => "Trimmer::Cutadapt",
         perform                        => 1,
-        target_dir                     => $def->{target_dir} . "/cutadapt",
+        target_dir                     => $preprocessing_dir . "/cutadapt",
         option                         => $cutadapt_option,
         source_ref                     => $source_ref,
         adapter                        => $adapter,
@@ -330,7 +333,7 @@ sub getPrepareConfig {
       fastqc_post_trim => {
         class      => "QC::FastQC",
         perform    => 1,
-        target_dir => $def->{target_dir} . "/fastqc_post_trim",
+        target_dir => $preprocessing_dir . "/fastqc_post_trim",
         option     => "",
         sh_direct  => 1,
         source_ref => [ "cutadapt", ".fastq.gz" ],
@@ -346,7 +349,7 @@ sub getPrepareConfig {
         class      => "QC::FastQCSummary",
         perform    => 1,
         sh_direct  => 1,
-        target_dir => $def->{target_dir} . "/fastqc_post_trim",
+        target_dir => $preprocessing_dir . "/fastqc_post_trim",
         cqstools   => $def->{cqstools},
         option     => "",
         cluster    => $cluster,
@@ -369,7 +372,7 @@ sub getPrepareConfig {
       $config->{"fastqc_count_vis"} = {
         class              => "CQS::UniqueR",
         perform            => 1,
-        target_dir         => $def->{target_dir} . "/fastqc_post_trim",
+        target_dir         => $preprocessing_dir . "/fastqc_post_trim",
         rtemplate          => "countInFastQcVis.R",
         output_file        => ".countInFastQcVis.Result",
         output_file_ext    => ".Reads.csv",
@@ -391,7 +394,7 @@ sub getPrepareConfig {
     $config->{"fastqc_count_vis"} = {
       class              => "CQS::UniqueR",
       perform            => 1,
-      target_dir         => $def->{target_dir} . "/fastqc_post_trim",
+      target_dir         => $preprocessing_dir . "/fastqc_post_trim",
       rtemplate          => "countInFastQcVis.R",
       output_file        => ".countInFastQcVis.Result",
       output_file_ext    => ".Reads.csv",
@@ -413,7 +416,7 @@ sub getPrepareConfig {
   $config->{"fastq_len"} = {
     class      => "CQS::FastqLen",
     perform    => 1,
-    target_dir => $def->{target_dir} . "/fastq_len",
+    target_dir => $preprocessing_dir . "/fastq_len",
     option     => "",
     source_ref => $len_ref,
     cqstools   => $def->{cqstools},
@@ -426,22 +429,22 @@ sub getPrepareConfig {
       "mem"      => "20gb"
     },
   };
-    $config->{"fastq_len_vis"} = {
-      class              => "CQS::UniqueR",
-      perform            => 1,
-      target_dir         => $def->{target_dir} . "/fastq_len",
-      rtemplate          => "countTableVisFunctions.R,fastqLengthVis.R",
-      output_file        => ".lengthDistribution",
-      output_file_ext    => ".csv",
-      parameterSampleFile1_ref => [ "fastq_len", ".len\$" ],
-      parameterSampleFile2      => $groups,
-      sh_direct          => 1,
-      pbs                => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "1",
-        "mem"      => "10gb"
-      },
+  $config->{"fastq_len_vis"} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $preprocessing_dir . "/fastq_len",
+    rtemplate                => "countTableVisFunctions.R,fastqLengthVis.R",
+    output_file              => ".lengthDistribution",
+    output_file_ext          => ".csv",
+    parameterSampleFile1_ref => [ "fastq_len", ".len\$" ],
+    parameterSampleFile2     => $groups,
+    sh_direct                => 1,
+    pbs                      => {
+      "email"    => $def->{email},
+      "nodes"    => "1:ppn=1",
+      "walltime" => "1",
+      "mem"      => "10gb"
+    },
   };
   push @individual, ("fastq_len");
   push @summary,    ("fastq_len_vis");
@@ -450,7 +453,7 @@ sub getPrepareConfig {
     identical => {
       class      => "CQS::FastqIdentical",
       perform    => 1,
-      target_dir => $def->{target_dir} . "/identical",
+      target_dir => $preprocessing_dir . "/identical",
       option     => "-l " . $def->{min_read_length},
       source_ref => $source_ref,
       cqstools   => $def->{cqstools},
@@ -467,7 +470,7 @@ sub getPrepareConfig {
     identical_sequence_count_table => {
       class      => "CQS::SmallRNASequenceCountTable",
       perform    => 1,
-      target_dir => $def->{target_dir} . "/identical_sequence_count_table",
+      target_dir => $class_independent_dir . "/identical_sequence_count_table",
       option     => "",
       source_ref => [ "identical", ".dupcount\$" ],
       cqs_tools  => $def->{cqstools},
@@ -486,11 +489,11 @@ sub getPrepareConfig {
   push @individual, ("identical");
   push @summary,    ("identical_sequence_count_table");
 
-  if ( $hasNTA ) {
+  if ($hasNTA) {
     $preparation->{identical_NTA} = {
       class        => "SmallRNA::FastqMirna",
       perform      => 1,
-      target_dir   => $def->{target_dir} . "/identical_NTA",
+      target_dir   => $preprocessing_dir . "/identical_NTA",
       option       => "-l " . $def->{min_read_length},
       source_ref   => [ "identical", ".fastq.gz\$" ],
       seqcount_ref => [ "identical", ".dupcount\$" ],
@@ -510,7 +513,7 @@ sub getPrepareConfig {
 
   $config = merge( $config, $preparation );
 
-  return ( $config, \@individual, \@summary, $cluster, $source_ref );
+  return ( $config, \@individual, \@summary, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir );
 }
 
 sub saveConfig {
