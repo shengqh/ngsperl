@@ -131,7 +131,7 @@ sub perform {
         $cmd = "samtools mpileup -f $fafile $mpileupParameter $normal $tumor | mono-sgen $glmvcfile call -t console $option -o ${cur_dir}/${group_name}";
       }
       else {
-        $cmd = "mono-sgen $glmvcfile call -c $thread -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${cur_dir}/${group_name}";
+        $cmd = "mono $glmvcfile call -c $thread -t bam -f $fafile $option --normal $normal --tumor $tumor -o ${cur_dir}/${group_name}";
       }
 
       print $pbs "
