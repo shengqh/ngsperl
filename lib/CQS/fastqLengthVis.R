@@ -30,6 +30,7 @@ if (groupFileList!="") {
 	temp<-melt(datBySampleGroup)
 	colnames(temp)<-c("Position","Group","Percent")
 	png(paste0(resultFile,".png"),width=2000,height=1500,res=300)
-	ggplot(temp,aes(x=Position,y=Percent,colour= Group))+geom_line()
+	p<-ggplot(temp,aes(x=Position,y=Percent,colour= Group))+geom_line()
+	print(p)
 	dev.off()
 }
