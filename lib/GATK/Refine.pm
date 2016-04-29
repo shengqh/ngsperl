@@ -87,12 +87,20 @@ sub perform {
       $inputFile     = $presortedFile;
     }
 
-    my $rmdupFile     = $sample_name . ".rmdup.bam";
-    my $intervalFile  = $sample_name . ".rmdup.intervals";
+    my $rmdupFile = $sample_name . ".rmdup.bam";
+    my $rmdupFileIndex = change_extension( $rmdupFile, ".bai" );
+
+    my $intervalFile = $sample_name . ".rmdup.intervals";
+
     my $realignedFile = $sample_name . ".rmdup.realigned.bam";
-    my $grpFile       = $realignedFile . ".grp";
-    my $recalFile     = $sample_name . ".rmdup.realigned.recal.bam";
-    my $slimFile      = $sample_name . ".rmdup.realigned.recal.slim.bam";
+    my $realignedFileIndex = change_extension( $realignedFile, ".bai" );
+
+    my $grpFile = $realignedFile . ".grp";
+
+    my $recalFile = $sample_name . ".rmdup.realigned.recal.bam";
+    my $recalFileIndex = change_extension( $recalFile, ".bai" );
+
+    my $slimFile = $sample_name . ".rmdup.realigned.recal.slim.bam";
 
     my $final_file = $slimFile;
     my $baqcmd     = "";
@@ -160,7 +168,7 @@ $baqcmd
 if [[ -s $final_file && ! -s ${final_file}.stat ]]; then
   echo flagstat=`date` 
   samtools flagstat $final_file > ${final_file}.stat
-  rm $presortedFile $rmdupFile ${sample_name}.rmdup.bai ${rmdupFile}.metrics $realignedFile ${sample_name}.rmdup.realigned.bai $grpFile $recalFile $rmlist
+  rm $presortedFile $rmdupFile $rmdupFileIndex ${rmdupFile}.metrics $intervalFile $realignedFile $realignedFileIndex $grpFile $recalFile $recalFileIndex $rmlist
 fi
 ";
     $self->close_pbs( $pbs, $pbs_file );
