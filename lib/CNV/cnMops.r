@@ -45,6 +45,7 @@
 
 
 library(cn.mops)
+library(DNAcopy)
 resfile<-paste0(prefix, "_resCNMOPS.cnmops.Rdata")
 
 if(length(refnames) > 0){
@@ -74,7 +75,11 @@ if(length(refnames) > 0){
       save(refdata, samdata, file=countfile)
     }
   }
-  resCNMOPS<-referencecn.mops(samdata, refdata, upperThreshold=0.5, lowerThreshold=-0.5, segAlgorithm="fast")
+  resCNMOPS<-referencecn.mops(cases=samdata, 
+                              controls=refdata, 
+                              classes=c("CN0", "CN1", "CN2", "CN3", "CN4", "CN5", "CN6", "CN7", "CN8", "CN16", "CN32", "CN64", "CN128"),
+                              I=c(0.025,0.5,1,1.5,2,2.5,3,3.5,4,8,16,32,64),
+                              segAlgorithm="DNAcopy")
   resCNMOPS<-calcIntegerCopyNumbers(resCNMOPS)
 }else{
   if(hasbed){
