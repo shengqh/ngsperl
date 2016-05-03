@@ -4,15 +4,6 @@
 library("reshape2")
 library("ggplot2")
 
-args<-commandArgs(trailingOnly=TRUE)
-singlePdf<-(args[1] == "1")
-inputFile<-args[2]
-outputFile<-args[3]
-
-if(is.null(outputFile)){
-  outputFile = ""
-}
-
 data<-read.table(inputFile, sep="\t", header=T, stringsAsFactors = F)
 
 if(exists("readFile")){
