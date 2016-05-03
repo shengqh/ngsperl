@@ -134,17 +134,21 @@ my $outputFile = ( defined $singlePdf ) ? "${depthFile}.pdf" : "";
 open( my $targetr,   ">Depth.r" ) or die "Cannot create file Depth.r";
 open( my $rtemplate, $r )         or die "Cannot open file $r";
 
-print $targetr "readFile<-\"$readsFile\" \n";
+print $targetr "readFile = \"$readsFile\" \n";
 if ( defined($cnvrFile) ) {
-  print $targetr "cnvrFile<-\"$cnvrFile\" \n";
+  print $targetr "cnvrFile = \"$cnvrFile\" \n";
 }
+print $targetr "singlePdf = $singlePdfStr \n";
+print $targetr "inputFile = \"$depthFile\" \n";
+print $targetr "outputFile = \"$outputFile\" \n";
+
 while (<$rtemplate>) {
-  chomp;
+  s/\r|\n//g;
   print $targetr $_, "\n";
 }
 
 close($rtemplate);
 close($targetr);
 
-system("R --vanilla -f Depth.r --args $singlePdfStr $depthFile $bedFile $outputFile");
+system("R --vanilla -f Depth.r");
 
