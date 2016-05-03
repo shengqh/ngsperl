@@ -32,13 +32,14 @@ my $bedFile;
 my $configFile;
 my $cnvrFile;
 my $singlePdf;
+my $minDepth = 5;
 
 GetOptions(
-  'h|help'             => \$help,
-  'b|bedFile=s'        => \$bedFile,
-  'c|configFile=s'     => \$configFile,
-  'v|cnvrFile=s'       => \$cnvrFile,
-  's|siglepdf'         => \$singlePdf,
+  'h|help'         => \$help,
+  'b|bedFile=s'    => \$bedFile,
+  'c|configFile=s' => \$configFile,
+  'v|cnvrFile=s'   => \$cnvrFile,
+  's|siglepdf'     => \$singlePdf,
 );
 
 if ( defined $help ) {
@@ -114,7 +115,8 @@ if ( !-e $depthFile ) {
       }
 
       print( $fileprefix . "\n" );
-      my $cmd        = "samtools depth -d 1000000 -r ${chr}:${start}-${end} $bamFilesStr | sed -e \"s/\$/\t$fileprefix/g \" >> $depthFile";
+      my $cmd =
+        "samtools depth -d 1000000 -r ${chr}:${start}-${end} $bamFilesStr | awk '{m=\$3;for(i=4;i<=NF;i++)if(\$i>m)m=\$i;if(m>=$minDepth)print \$0}' | sed -e \"s/\$/\t$fileprefix/g \" >> $depthFile";
       my $returnCode = system($cmd);
       if ( $returnCode != 0 ) {
         die("Error return code = $returnCode, exit.");
@@ -129,14 +131,14 @@ if ( !-e $depthFile ) {
 my $singlePdfStr = ( defined $singlePdf ) ? 1 : 0;
 my $outputFile = ( defined $singlePdf ) ? "${depthFile}.pdf" : "";
 
-open( my $targetr, ">Depth.r" ) or die "Cannot create file Depth.r";
-open( my $rtemplate, $r ) or die "Cannot open file $r";
+open( my $targetr,   ">Depth.r" ) or die "Cannot create file Depth.r";
+open( my $rtemplate, $r )         or die "Cannot open file $r";
 
 print $targetr "readFile<-\"$readsFile\" \n";
 if ( defined($cnvrFile) ) {
   print $targetr "cnvrFile<-\"$cnvrFile\" \n";
 }
-while(<$rtemplate>){
+while (<$rtemplate>) {
   chomp;
   print $targetr $_, "\n";
 }
