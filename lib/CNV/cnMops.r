@@ -43,6 +43,12 @@
 #parallel<-8
 #refnames<-c()
 
+if(hasbed){
+  segments <- read.table(bedfile, sep="\t", as.is=TRUE, header=T)
+  gr <- GRanges(segments[,1], IRanges(segments[,2], segments[,3]))
+  gr <- reduce(gr)
+  sort(gr, ignore.strand=TRUE)
+}    
 
 library(cn.mops)
 library(DNAcopy)
@@ -59,8 +65,6 @@ if(length(refnames) > 0){
     if(file.exists(segfile)){
       load(segfile)
     }else{
-      segments <- read.table(bedfile, sep="\t", as.is=TRUE, header=T)
-      gr <- GRanges(segments[,1], IRanges(segments[,2],segments[,3]), gene=segments[,4])
       refdata <- getSegmentReadCountsFromBAM(REFFiles, GR=gr, sampleNames=REFNames, mode=pairmode, parallel=parallel)
       samdata <- getSegmentReadCountsFromBAM(SAMFiles, GR=gr, sampleNames=SAMNames, mode=pairmode, parallel=parallel)
       save(refdata, samdata, file=segfile)
@@ -77,9 +81,9 @@ if(length(refnames) > 0){
   }
   resCNMOPS<-referencecn.mops(cases=samdata, 
                               controls=refdata, 
-                              classes=c("CN0", "CN1", "CN2", "CN3", "CN4", "CN5", "CN6", "CN7", "CN8", "CN16", "CN32", "CN64", "CN128"),
-                              I=c(0.025,0.5,1,1.5,2,2.5,3,3.5,4,8,16,32,64),
-                              segAlgorithm="DNAcopy")
+                              upperThreshold=0.5, 
+                              lowerThreshold=-0.5,
+                              segAlgorithm="fast")
   resCNMOPS<-calcIntegerCopyNumbers(resCNMOPS)
 }else{
   if(hasbed){
@@ -87,8 +91,6 @@ if(length(refnames) > 0){
     if(file.exists(segfile)){
       load(segfile)
     }else{
-      segments <- read.table(bedfile, sep="\t", as.is=TRUE, header=T)
-      gr <- GRanges(segments[,1], IRanges(segments[,2],segments[,3]), gene=segments[,4])
       x <- getSegmentReadCountsFromBAM(bam_files, GR=gr, sampleNames=sample_names, mode=pairmode, parallel=parallel)
       save(refx, samx, file=segfile)
     }
@@ -135,7 +137,7 @@ cnvr<- data.frame(seqnames=seqnames(resCNMOPS@cnvr),
                   ends=end(resCNMOPS@cnvr),
                   file=paste(seqnames(resCNMOPS@cnvr), start(resCNMOPS@cnvr)-1, end(resCNMOPS@cnvr), sep="_") )
 cnvr<-data.frame(cbind(cnvr, elementMetadata(resCNMOPS@cnvr)))
-write.table(file=paste0(prefix, ".cnvr.tsv"), cnvr, sep="\t" ,row.names=F)
+write.table(file=paste0(prefix, ".cnvr.tsv"), cnvr, sep="\t" ,row.names=F, quote=F)
 
 # dir.create("images", showWarnings = FALSE)
 # 
