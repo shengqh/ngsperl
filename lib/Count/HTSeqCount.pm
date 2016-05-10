@@ -66,9 +66,9 @@ sub perform {
       if ( !$sorted_by_name ) {
         $count_bam_file = "${sample_name}_sortedByName.bam";
         $format         = "-f bam";
-        print $pbs "echo sort bam by name ...
+        print $pbs "echo sorting bam by name = `date`
 samtools sort -n -@ $thread -o $count_bam_file $bam_file
-echo start counting ...
+echo counting = `date`
 
 ";
       }
