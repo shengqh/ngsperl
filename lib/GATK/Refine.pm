@@ -88,27 +88,37 @@ sub perform {
 			$inputFile     = $presortedFile;
 		}
 
-		my $rmdupFile       = $sample_name . ".rmdup.bam";
-		my $rmdupFileIndex  = change_extension( $rmdupFile, ".bai" );
-		my $rmdupFilesToDel = "$rmdupFile $rmdupFileIndex ${rmdupFile}.metrics";
+		my $rmdupFile       = $inputFile;
+		my $rmdupFileIndex  = "";
+		my $rmdupFilesToDel = "";
+		my $rmdupResultName = "";
+		if ($remove_duplicate) {
+			$rmdupFile       = $sample_name . ".rmdup.bam";
+			$rmdupFileIndex  = change_extension( $rmdupFile, ".bai" );
+			$rmdupFilesToDel = "$rmdupFile $rmdupFileIndex ${rmdupFile}.metrics";
+			$rmdupResultName = ".rmdup";
+		}
+		else {
 
-		my $intervalFile = $sample_name . ".rmdup.intervals";
+		}
 
-		my $realignedFile = $sample_name . ".rmdup.realigned.bam";
+		my $intervalFile = $sample_name . "$rmdupResultName.intervals";
+
+		my $realignedFile = $sample_name . "$rmdupResultName.realigned.bam";
 		my $realignedFileIndex = change_extension( $realignedFile, ".bai" );
 
 		my $grpFile = $realignedFile . ".grp";
 
-		my $recalFile = $sample_name . ".rmdup.realigned.recal.bam";
+		my $recalFile = $sample_name . "$rmdupResultName.realigned.recal.bam";
 		my $recalFileIndex = change_extension( $recalFile, ".bai" );
 
-		my $slimFile = $sample_name . ".rmdup.realigned.recal.slim.bam";
+		my $slimFile = $sample_name . "$rmdupResultName.realigned.recal.slim.bam";
 
 		my $final_file = $slimFile;
 		my $baqcmd     = "";
 		my $rmlist     = "";
 		if ($baq) {
-			$final_file = $sample_name . ".rmdup.realigned.recal.slim.baq.bam";
+			$final_file = $sample_name . "$rmdupResultName.realigned.recal.slim.baq.bam";
 			$baqcmd     = "
 if [[ -s $slimFile && ! -s $final_file ]]; then
   echo baq=`date` 
@@ -139,9 +149,6 @@ if [ ! -s $rmdupFile ]; then
   java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
 fi
 ";
-		} else {
-			$rmdupFile       = $inputFile;
-            $rmdupFilesToDel = "";
 		}
 
 		print $pbs "
@@ -197,11 +204,16 @@ sub result {
 	my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
 	my %raw_files = %{ get_raw_files( $config, $section ) };
-	my $baq = get_option( $config, $section, "samtools_baq_calibration", 0 );
+	my $baq              = get_option( $config, $section, "samtools_baq_calibration", 0 );
+	my $remove_duplicate = get_option( $config, $section, "remove_duplicate",         1 );
 
-	my $result = {};
+	my $result          = {};
+	my $rmdupResultName = "";
+	if ($remove_duplicate) {
+		$rmdupResultName = ".rmdup";
+	}
 	for my $sample_name ( keys %raw_files ) {
-		my $final_file = $baq ? $sample_name . ".rmdup.realigned.recal.slim.baq.bam" : $sample_name . ".rmdup.realigned.recal.slim.bam";
+		my $final_file = $baq ? $sample_name . "$rmdupResultName.realigned.recal.slim.baq.bam" : $sample_name . "$rmdupResultName.realigned.recal.slim.bam";
 		my @result_files = ();
 		push( @result_files, "${result_dir}/${sample_name}/${final_file}" );
 		$result->{$sample_name} = filter_array( \@result_files, $pattern );
