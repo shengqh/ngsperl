@@ -66,7 +66,7 @@ sub perform {
       $format = $format . " -r name";
     }
 
-    print $pbs "htseq-count $option $format -q -m intersection-nonempty $strandedoption -i gene_id $count_bam_file $gffFile > $final_file";
+    print $pbs "htseq-count $option $format -q -m intersection-nonempty $strandedoption -i gene_id $count_bam_file $gffFile > $final_file \n";
     
     if($count_bam_file ne $bam_file){
       print $pbs "if [ -s $final_file ]; then
