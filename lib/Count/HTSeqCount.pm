@@ -61,7 +61,7 @@ sub perform {
       if ( !$sorted_by_name ) {
         $count_bam_file = "${sample_name}_sortedByName.bam";
         $format         = "-f bam";
-        print $pbs "samtools sort -n -@ $thread -o $count_bam_file $bam_file";
+        print $pbs "samtools sort -n -@ $thread -o $count_bam_file $bam_file \n";
       }
       $format = $format . " -r name";
     }
