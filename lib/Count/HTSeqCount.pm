@@ -66,12 +66,16 @@ sub perform {
       if ( !$sorted_by_name ) {
         $count_bam_file = "${sample_name}_sortedByName.bam";
         $format         = "-f bam";
-        print $pbs "samtools sort -n -@ $thread -o $count_bam_file $bam_file \n";
+        print $pbs "echo sort bam by name ...
+samtools sort -n -@ $thread -o $count_bam_file $bam_file
+echo start counting ...
+
+";
       }
       $format = $format . " -r name";
     }
 
-    print $pbs "htseq-count $option $format $count_bam_file $gffFile > $final_file \n";
+    print $pbs "htseq-count $option $format $count_bam_file $gffFile > $final_file \n\n";
     
     if($count_bam_file ne $bam_file){
       print $pbs "if [ -s $final_file ]; then
