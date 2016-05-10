@@ -78,6 +78,7 @@ STAR $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $genome
 if [ -s $final ]; then
   samtools index $final
   samtools flagstat $final > ${final}.stat
+  rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_SJ.out.tab ${sample_name}_Log.progress.out
 fi
 
 ";
