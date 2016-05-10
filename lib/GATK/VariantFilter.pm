@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package GATK::VariantFilterVQSR;
+package GATK::VariantFilter;
 
 use strict;
 use warnings;
