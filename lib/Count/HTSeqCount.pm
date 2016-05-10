@@ -34,8 +34,13 @@ sub perform {
   my $ispaired       = get_option_value( $config->{$section}{ispairend},      0 );
   my $sorted_by_name = get_option_value( $config->{$section}{sorted_by_name}, 0 );
 
-  my $stranded = get_option_value( $config->{$section}{stranded}, "no" );
-  my $strandedoption = "-s " . $stranded;
+  if($option !~ /-s/){
+    $option = $option . " -s no";
+  }
+
+  if($option !~ /-m/){
+    $option = $option . " -m intersection-nonempty";
+  }
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -66,7 +71,7 @@ sub perform {
       $format = $format . " -r name";
     }
 
-    print $pbs "htseq-count $option $format -q -m intersection-nonempty $strandedoption -i gene_id $count_bam_file $gffFile > $final_file \n";
+    print $pbs "htseq-count $option $format $count_bam_file $gffFile > $final_file \n";
     
     if($count_bam_file ne $bam_file){
       print $pbs "if [ -s $final_file ]; then
