@@ -37,7 +37,7 @@ sub perform {
 	my $picard_jar         = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
 	my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals", 0 ) ? "-fixMisencodedQuals" : "";
 	my $baq                = get_option( $config, $section, "samtools_baq_calibration", 0 );
-	my $remove_duplicate   = get_option( $config, $section, "remove_duplicate ", 1 );
+	my $remove_duplicate   = get_option( $config, $section, "remove_duplicate", 1 );
 
 	my $bedFile = get_param_file( $config->{$section}{bed_file}, "bed_file", 0 );
 	my $interval_padding = get_option( $config, $section, "interval_padding", 0 );
