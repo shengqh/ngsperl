@@ -26,16 +26,21 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $gffFile = parse_param_file( $config, $section, "gff_file", 1 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $ispaired = get_option_value( $config->{$section}{ispairend}, 0 );
-  my $ispairoption = $ispaired ? "-f 1" : "";
+  my $ispaired       = get_option_value( $config->{$section}{ispairend},      0 );
+  my $sorted_by_name = get_option_value( $config->{$section}{sorted_by_name}, 0 );
 
-  my $stranded = get_option_value( $config->{$section}{stranded}, "no" );
-  my $strandedoption = "-s " . $stranded;
+  if($option !~ /-s/){
+    $option = $option . " -s no";
+  }
+
+  if($option !~ /-m/){
+    $option = $option . " -m intersection-nonempty";
+  }
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -55,7 +60,29 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-    print $pbs "samtools view $ispairoption $bam_file | htseq-count $option -q -m intersection-nonempty $strandedoption -i gene_id - $gffFile > $final_file";
+    my $format = ( $bam_file =~ /.sam$/ ) ? "-f sam" : "-f bam";
+    my $count_bam_file = $bam_file;
+    if ($ispaired) {
+      if ( !$sorted_by_name ) {
+        $count_bam_file = "${sample_name}_sortedByName.bam";
+        $format         = "-f bam";
+        print $pbs "echo sorting bam by name = `date`
+samtools sort -n -@ $thread -T ${sample_name}_sortedByName -o $count_bam_file $bam_file
+echo counting = `date`
+
+";
+      }
+      $format = $format . " -r name";
+    }
+
+    print $pbs "htseq-count $option $format $count_bam_file $gffFile > $final_file \n\n";
+    
+    if($count_bam_file ne $bam_file){
+      print $pbs "if [ -s $final_file ]; then
+  rm $count_bam_file
+fi
+";
+    }
 
     $self->close_pbs( $pbs, $pbs_file );
 
