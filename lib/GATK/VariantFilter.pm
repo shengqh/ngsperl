@@ -188,16 +188,18 @@ fi
     my $snp_filter =
       get_option( $config, $section, "is_rna" )
       ? "-window 35 -cluster 3 -filterName FS -filter \"FS > 30.0\" -filterName QD -filter \"QD < 2.0\""
-      : "--filterExpression \"QD < 2.0\" \\
-         --filterName \"QD\" \
+      : "\\
+         --filterExpression \"QD < 2.0\" \\
+         --filterName \"QD\" \\
          --filterExpression \"FS > 60.0\" \\
-         --filterName \"FS\"
+         --filterName \"FS\" \\
          --filterExpression \"MQ < 40\" \\
-         --filterName \"MQ\"\
+         --filterName \"MQ\" \\
          --filterExpression \"MQRankSum < -12.5\" \\
-         --filterName \"MQRankSum\"\\
+         --filterName \"MQRankSum\" \\
          --filterExpression \"ReadPosRankSum < -8.0\" \\
-         --filterName \"ReadPosRankSum\"";
+         --filterName \"ReadPosRankSum\"\\
+         ";
 
     print $pbs "
 if [[ -s $snpOut && ! -s $snpPass ]]; then
@@ -243,13 +245,14 @@ fi
     my $indelFilterOut = $task_name . ".indel.filtered.vcf";
     my $indel_filter =
       ( get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3" : "" ) . 
-      " 
+      " \\
       --filterExpression \"QD < 2.0\" \\
       --filterName \"QD\" \\
       --filterExpression \"FS > 200.0\"\\
       --filterName \"FS\" \\
       --filterExpression \"ReadPosRankSum < -20.0\"\\
-      --filterName \"ReadPosRankSum\"";
+      --filterName \"ReadPosRankSum\"\\
+      ";
 
     print $pbs "
 if [[ -s $indelOut && ! -s $indelPass ]]; then
