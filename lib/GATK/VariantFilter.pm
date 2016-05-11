@@ -188,7 +188,16 @@ fi
     my $snp_filter =
       get_option( $config, $section, "is_rna" )
       ? "-window 35 -cluster 3 -filterName FS -filter \"FS > 30.0\" -filterName QD -filter \"QD < 2.0\""
-      : "--filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" -filterName \"snp_filter\"";
+      : "--filterExpression \"QD < 2.0\" \\
+         --filterName \"QD\" \
+         --filterExpression \"FS > 60.0\" \\
+         --filterName \"FS\"
+         --filterExpression \"MQ < 40\" \\
+         --filterName \"MQ\"\
+         --filterExpression \"MQRankSum < -12.5\" \\
+         --filterName \"MQRankSum\"\\
+         --filterExpression \"ReadPosRankSum < -8.0\" \\
+         --filterName \"ReadPosRankSum\"";
 
     print $pbs "
 if [[ -s $snpOut && ! -s $snpPass ]]; then
@@ -233,10 +242,17 @@ fi
   else {
     my $indelFilterOut = $task_name . ".indel.filtered.vcf";
     my $indel_filter =
-      ( get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3" : "" ) . " --filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\" -filterName \"indel_filter\"";
+      ( get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3" : "" ) . 
+      " 
+      --filterExpression \"QD < 2.0\" \\
+      --filterName \"QD\" \\
+      --filterExpression \"FS > 200.0\"\\
+      --filterName \"FS\" \\
+      --filterExpression \"ReadPosRankSum < -20.0\"\\
+      --filterName \"ReadPosRankSum\"";
 
     print $pbs "
-if [[ -s $indelOut && ! -s $snpPass ]]; then
+if [[ -s $indelOut && ! -s $indelPass ]]; then
   java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $indelOut $indel_filter -o $indelFilterOut 
   cat $indelFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $indelPass
 fi
