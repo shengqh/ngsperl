@@ -63,27 +63,15 @@ sub perform {
     my $format = ( $bam_file =~ /.sam$/ ) ? "-f sam" : "-f bam";
     my $count_bam_file = $bam_file;
     if ($ispaired) {
-      if ( !$sorted_by_name ) {
-        $count_bam_file = "${sample_name}_sortedByName.bam";
-        $format         = "-f bam";
-        print $pbs "echo sorting bam by name = `date`
-samtools sort -n -@ $thread -T ${sample_name}_sortedByName -o $count_bam_file $bam_file
-echo counting = `date`
-
-";
+      if ( $sorted_by_name ) {
+        $format = $format . " -r name";
+      }else{
+        $format = $format . " -r pos";
       }
-      $format = $format . " -r name";
     }
 
     print $pbs "htseq-count $option $format $count_bam_file $gffFile > $final_file \n\n";
     
-    if($count_bam_file ne $bam_file){
-      print $pbs "if [ -s $final_file ]; then
-  rm $count_bam_file
-fi
-";
-    }
-
     $self->close_pbs( $pbs, $pbs_file );
 
   }
