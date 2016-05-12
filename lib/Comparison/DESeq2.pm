@@ -179,7 +179,7 @@ comparisons=list(";
     last;
   }
   while (<$rt>) {
-    chomp;
+    s/\r|\n//g;
     print $rf $_, "\n";
   }
   close $rt;
