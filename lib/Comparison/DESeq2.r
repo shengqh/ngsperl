@@ -1,16 +1,18 @@
 ##predefined_condition_begin
-#setwd("/scratch/cqs/shengq1/rnaseq/20150226_bojana_FFPE_FF/hiseq/star_deseq2/result")  
-#  
-#data<-read.table("/scratch/cqs/shengq1/rnaseq/20150226_bojana_FFPE_FF/hiseq/star_genetable/result/FFPE_FF_HiSeq_gene.count",row.names=1, header=T, check.names=F)
-#
-#showLabelInPCA<-1
-#showDEGeneCluster<-1
-#pvalue<-0.05
-#foldChange<-2
-#
-#comparisons=list(
-#  "HiSeq_FFPE2_VS_FF2_NoMismatch" = c("HiSeq_FFPE2_VS_FF2_NoMismatch.design", "HiSeq_FF_NoMismatch", "HiSeq_FFPE_NoMismatch")
-#) 
+# setwd("h:/temp")  
+#   
+# data<-read.table("Z:/Shared/Labs/Brown,J/tiger/20160509_brown_3436/star_genetable/result/B3436_gene.count",row.names=1, header=T, check.names=F)
+# 
+# taskName<-'B3436'
+# showLabelInPCA<-1
+# showDEGeneCluster<-0
+# pvalue<-0.05
+# foldChange<-2
+# minMedianInGroup<-5
+# 
+# comparisons=list(
+#   "CAPTISOL_vs_FED" = c("CAPTISOL_vs_FED.design", "FED", "CAPTISOL")
+# ) 
 #
 ##predefined_condition_end
 
@@ -412,7 +414,11 @@ for(comparisonName in comparisonNames){
     } else {
       diffResultSig<-tbbselect
     }
-    diffResultSig$Name<-sapply(strsplit(row.names(diffResultSig),";"),function(x) x[1])
+    if("Feature_gene_name" %in% colnames(diffResultSig)){
+      diffResultSig$Name<-as.character(diffResultSig$Feature_gene_name)
+    }else{
+      diffResultSig$Name<-sapply(strsplit(row.names(diffResultSig),";"),function(x) x[1])
+    }
     diffResultSig$Name <- factor(diffResultSig$Name, levels=diffResultSig$Name[order(diffResultSig$log2FoldChange)])
     diffResultSig<-as.data.frame(diffResultSig)
     
