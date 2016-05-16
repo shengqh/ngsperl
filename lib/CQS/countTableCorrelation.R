@@ -89,8 +89,15 @@ for (i in 1:nrow(countTableFileAll)) {
 		next;
 	}
 	
+	
 	colClass<-sapply(count, class)
-	countNum<-count[,which(colClass=="numeric" | colClass=="integer")]
+	countNotNumIndex<-which(colClass!="numeric" & colClass!="integer")
+	if (length(countNotNumIndex)==0) {
+		countNotNumIndex<-0;
+	} else {
+		countNotNumIndex<-max(countNotNumIndex)
+	}
+	countNum<-count[,c((countNotNumIndex+1):ncol(count))]
 	countNum<-round(countNum,0)
 	#remove genes with total reads 0
 	countNum<-countNum[which(rowSums(countNum,na.rm=T)>0),]
@@ -104,12 +111,12 @@ for (i in 1:nrow(countTableFileAll)) {
 	sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
 	#keep the groups with samples in the count table
 	sampleToGroup<-sampleToGroup[which(sampleToGroup[,1] %in% colnames(countNumVsd)),]
-	groupColor<-text2Color(sampleToGroup[,2])$color
+	groupColor<-text2Color(sampleToGroup[colnames(countNumVsd),2])$color
 		
 	#heatmap
-	margin=c(min(10,max(nchar(colnames(countNumVsd)))/2),min(10,max(nchar(row.names(countNumVsd)))/2))
+#	margin=c(min(10,max(nchar(colnames(countNumVsd)))/2),min(10,max(nchar(row.names(countNumVsd)))/2))
 	png(paste0(countTableFile,".heatmap.png"),width=2000,height=2000,res=300)
-	heatmap3(countNumVsd,ColSideColors = groupColor,ColSideLabs="Group",labRow="", dist=dist,margin=margin,balanceColor=TRUE,,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100))
+	heatmap3(countNumVsd,ColSideColors = groupColor,ColSideLabs="Group",labRow="", dist=dist,balanceColor=TRUE,,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100))
 	dev.off()
 	
 	#PCA
