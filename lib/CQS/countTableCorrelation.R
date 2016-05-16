@@ -1,12 +1,79 @@
 countTableFileList<-parSampleFile1
 groupFileList<-parSampleFile2
-fixColorRange<-TRUE
-
-#source("/home/zhaos/source/r_cqs/vickers/codesToPipeline/countTableVisFunctions.R")
 
 library(heatmap3)
 library(DESeq2)  
 library(RColorBrewer)
+library(ggplot2)
+
+text2Color<-function(x) {
+	colNum=max(length(unique(x)),3)
+	col=RColorBrewer::brewer.pal(colNum,"Set1")[1:length(unique(x))]
+	names(col)<-unique(x)
+	colOut<-col[x]
+	return(list(color=colOut,legend=col))
+}
+drawPCA<-function(prefix, rldmatrix, showLabelInPCA, conditionColors){
+	filename<-paste0(prefix, ".PCA.png")
+	genecount<-nrow(rldmatrix)
+	if(genecount > 2){
+		cat("saving PCA to ", filename, "\n")
+		png(filename=filename, width=3000, height=3000, res=300)
+		pca<-prcomp(t(rldmatrix))
+		supca<-summary(pca)$importance
+		pcadata<-data.frame(pca$x)
+		pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
+		pcadata["sample"]<-row.names(pcadata)
+		
+		if(showLabelInPCA){
+			g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
+					geom_text(vjust=-0.6, size=4) +
+					geom_point(col=conditionColors, size=4) + 
+					scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
+					scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
+					geom_hline(aes(yintercept=0), size=.2) + 
+					geom_vline(aes(xintercept=0), size=.2) + 
+					xlab(pcalabs[1]) + ylab(pcalabs[2])
+		}else{
+			g <- ggplot(pcadata, aes(x=PC1, y=PC2)) + 
+					geom_point(col=conditionColors, size=4) + 
+					labs(color = "Group") +
+					scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) + 
+					scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
+					geom_hline(aes(yintercept=0), size=.2) + 
+					geom_vline(aes(xintercept=0), size=.2) +
+					xlab(pcalabs[1]) + ylab(pcalabs[2]) + 
+					theme(legend.position="top")
+		}
+		
+		print(g)
+		dev.off()
+	}
+}
+
+panel.cor <- function(x, y, digits=2, cex.cor)
+{
+	usr <- par("usr"); on.exit(par(usr))
+	par(usr = c(0, 1, 0, 1))
+#	r <- abs(cor(x, y))
+	r <- (cor(x, y,use="pa"))
+	txt <- format(c(r, 0.123456789), digits=digits)[1]
+	test <- cor.test(x,y)
+	Signif <- ifelse(round(test$p.value,3)<0.001,"p<0.001",paste("p=",round(test$p.value,3)))  
+	text(0.5, 0.25, paste("r=",txt))
+	text(.5, .75, Signif)
+}
+
+panel.smooth<-function (x, y, col = "blue", bg = NA, pch = 18, 
+		cex = 0.8, col.smooth = "red", span = 2/3, iter = 3, ...) 
+{
+	points(x, y, pch = pch, col = col, bg = bg, cex = cex)
+	ok <- is.finite(x) & is.finite(y)
+	if (any(ok)) 
+		lines(stats::lowess(x[ok], y[ok], f = span, iter = iter), 
+				col = col.smooth, ...)
+}
+
 
 countTableFileAll<-read.delim(countTableFileList,header=F,as.is=T)
 for (i in 1:nrow(countTableFileAll)) {
@@ -33,99 +100,25 @@ for (i in 1:nrow(countTableFileAll)) {
 	countNumVsd<-assay(temp)
 	colnames(countNumVsd)<-colnames(countNum)
 	
+	#Group
+	sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
+	#keep the groups with samples in the count table
+	sampleToGroup<-sampleToGroup[which(sampleToGroup[,1] %in% colnames(countNumVsd)),]
+	groupColor<-text2Color(sampleToGroup[,2])$color
+		
 	#heatmap
 	margin=c(min(10,max(nchar(colnames(countNumVsd)))/2),min(10,max(nchar(row.names(countNumVsd)))/2))
 	png(paste0(countTableFile,".heatmap.png"),width=2000,height=2000,res=300)
-	heatmap3(countNumVsd,dist=dist,margin=margin,balanceColor=TRUE,,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100))
+	heatmap3(countNumVsd,ColSideColors = groupColor,ColSideLabs="Group",labRow="", dist=dist,margin=margin,balanceColor=TRUE,,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100))
 	dev.off()
 	
-	#correlation distribution
-	countNumCor<-cor(countNumVsd,use="pa",method="sp")
-	margin=c(min(10,max(nchar(colnames(countNumCor)))/2),min(10,max(nchar(row.names(countNumCor)))/2))
+	#PCA
+	drawPCA(countTableFile, countNumVsd, showLabelInPCA=TRUE, groupColor)
 	
-	colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
-	if (min(countNumCor,na.rm=T)<0) {
-		colAllLabel<-c(-1,0,1)
-		if (fixColorRange) {
-			col<-col_part(data_all=c(-1,1),data_part=countNumCor,col=colAll)
-		} else {
-			col<-colAll
-		}
-	} else {
-		colAllLabel<-c(0,0.5,1)
-		if (fixColorRange) {
-			col<-col_part(data_all=c(0,1),data_part=countNumCor,col=colAll)
-		} else {
-			col<-colAll
-		}
-	}
-	
-	legendfun<-function(x) {
-		par(mar = c(5, 1, 1, 1));
-		image(x=1:length(colAll),y=1,z=matrix(1:length(colAll),ncol=1),xlab="",xaxt="n",yaxt="n",col=colAll);
-		axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
-	}
-	
-	png(paste0(countTableFile,".Correlation.png"),width=2000,height=2000,res=300)
-	heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
+	#Pairs correlation
+	png(paste0(countTableFile,".pairsCorrelation.png"),width=2000,height=2000,res=300)
+	pairs(countNumVsd,lower.panel=panel.smooth, upper.panel=panel.cor)
 	dev.off()
-	if (ncol(countNumCor)>3) {
-		png(paste0(countTableFile,".Correlation.Cluster.png"),width=2000,height=2000,res=300)
-		heatmap3(countNumCor,scale="none",balanceColor=T,margin=margin,col=col,legendfun=legendfun)
-		dev.off()
-	}
-	
-	if (groupFileList!="") {
-		sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
-		#keep the groups with samples in the count table
-		sampleToGroup<-sampleToGroup[which(sampleToGroup[,1] %in% colnames(countNumVsd)),]
-		countNumVsdGroup<-mergeTableBySampleGroup(countNumVsd,sampleToGroup)
-		
-		#heatmap
-		margin=c(min(10,max(nchar(colnames(countNumVsdGroup)))/2),min(10,max(nchar(row.names(countNumVsdGroup)))/2))
-		png(paste0(countTableFile,".Group.heatmap.png"),width=2000,height=2000,res=300)
-		heatmap3(countNumVsdGroup,dist=dist,margin=margin,balanceColor=TRUE,,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100))
-		dev.off()
-		
-		#correlation distribution
-		countNumCor<-cor(countNumVsdGroup,use="pa",method="sp")
-		margin=c(min(10,max(nchar(colnames(countNumCor)))/2),min(10,max(nchar(row.names(countNumCor)))/2))
-		
-		colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
-		if (min(countNumCor,na.rm=T)<0) {
-			colAllLabel<-c(-1,0,1)
-			if (fixColorRange) {
-				col<-col_part(data_all=c(-1,1),data_part=countNumCor,col=colAll)
-			} else {
-				col<-colAll
-			}
-		} else {
-			colAllLabel<-c(0,0.5,1)
-			if (fixColorRange) {
-				col<-col_part(data_all=c(0,1),data_part=countNumCor,col=colAll)
-			} else {
-				col<-colAll
-			}
-		}
-		
-		legendfun<-function(x) {
-			par(mar = c(5, 1, 1, 1));
-			image(x=1:length(colAll),y=1,z=matrix(1:length(colAll),ncol=1),xlab="",xaxt="n",yaxt="n",col=colAll);
-			axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
-		}
-		
-		
-		png(paste0(countTableFile,".Group.Correlation.png"),width=2000,height=2000,res=300)
-		heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
-		dev.off()
-		if (ncol(countNumCor)<=3 | any(is.na(cor(countNumCor,use="pa")))) {
-			saveInError(paste0("Can't do correlation analysis for group table for ",countTableFile))
-		} else {
-			png(paste0(countTableFile,".Group.Correlation.Cluster.png"),width=2000,height=2000,res=300)
-			heatmap3(countNumCor,scale="none",balanceColor=T,margin=margin,col=col,legendfun=legendfun)
-			dev.off()
-		}
-	}
 }
 
 
