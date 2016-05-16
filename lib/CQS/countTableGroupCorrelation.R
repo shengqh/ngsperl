@@ -23,7 +23,13 @@ for (i in 1:nrow(countTableFileAll)) {
 	}
 	
 	colClass<-sapply(count, class)
-	countNum<-count[,which(colClass=="numeric" | colClass=="integer")]
+	countNotNumIndex<-which(colClass!="numeric" & colClass!="integer")
+	if (length(countNotNumIndex)==0) {
+		countNotNumIndex<-0;
+	} else {
+		countNotNumIndex<-max(countNotNumIndex)
+	}
+	countNum<-count[,c((countNotNumIndex+1):ncol(count))]
 	countNum<-round(countNum,0)
 	#remove genes with total reads 0
 	countNum<-countNum[which(rowSums(countNum,na.rm=T)>0),]
