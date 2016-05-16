@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   if ( $option !~ /outSAMprimaryFlag/ ) {
     $option = $option . "  --outSAMprimaryFlag AllBestScore";
@@ -112,7 +112,6 @@ sub result {
     if ( !$output_sort_by_coordinate && !$output_unsorted ) {
       $output_unsorted = 1;
     }
-    my $tab = $sample_name . "_SJ.out.tab";
     if ($output_sort_by_coordinate) {
       push( @result_files, "${result_dir}/${sample_name}/${sample_name}_Aligned.sortedByCoord.out.bam" );
 
@@ -121,7 +120,6 @@ sub result {
       push( @result_files, "${result_dir}/${sample_name}/${sample_name}_Aligned.out.bam" );
 
     }
-    push( @result_files, "${result_dir}/${sample_name}/${tab}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
