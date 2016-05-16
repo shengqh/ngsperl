@@ -111,16 +111,17 @@ for (i in 1:nrow(countTableFileAll)) {
 	sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
 	#keep the groups with samples in the count table
 	sampleToGroup<-sampleToGroup[which(sampleToGroup[,1] %in% colnames(countNumVsd)),]
-	groupColor<-text2Color(sampleToGroup[colnames(countNumVsd),2])$color
+	countNumVsdOrdered<-countNumVsd[,sampleToGroup[,1]]
+	groupColor<-text2Color(sampleToGroup[,2])$color
 		
 	#heatmap
 #	margin=c(min(10,max(nchar(colnames(countNumVsd)))/2),min(10,max(nchar(row.names(countNumVsd)))/2))
 	png(paste0(countTableFile,".heatmap.png"),width=2000,height=2000,res=300)
-	heatmap3(countNumVsd,ColSideColors = groupColor,ColSideLabs="Group",labRow="", dist=dist,balanceColor=TRUE,,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100))
+	heatmap3(countNumVsdOrdered,ColSideColors = groupColor,ColSideLabs="Group",labRow="", dist=dist,balanceColor=TRUE)
 	dev.off()
 	
 	#PCA
-	drawPCA(countTableFile, countNumVsd, showLabelInPCA=TRUE, groupColor)
+	drawPCA(countTableFile, countNumVsdOrdered, showLabelInPCA=TRUE, groupColor)
 	
 	#Pairs correlation
 	png(paste0(countTableFile,".pairsCorrelation.png"),width=2000,height=2000,res=300)
