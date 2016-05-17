@@ -41,8 +41,8 @@ sub perform {
 	my $output_file_label = get_option( $config, $section, "output_file_label", "" );
 	my $output_ext        = get_option( $config, $section, "output_ext",        0 );
 
-	my %raw_files = %{ get_raw_files( $config, $section ) };
-
+	my %raw_files = %{ get_raw_files( $config, $section, "source1" ) };
+	
 	my %parameterFiles2 = ();
 	if ( has_raw_files( $config, $section, "source2" ) ) {
 		%parameterFiles2 = %{ get_raw_files( $config, $section, "source2" ) };
@@ -70,7 +70,7 @@ sub perform {
 	}
 
 	for my $sample_name ( sort keys %raw_files ) {
-		my $samples                = "";
+		my $parameterFile1                = "";
 		my @sample_files           = @{ $raw_files{$sample_name} };
 		my $parameterFileLabel     = get_option( $config, $section, "sampleFileLabel", "" );
 		my $parameterFileLabelEach = get_option( $config, $section, "sampleFileLabelEach", "" );
@@ -81,9 +81,9 @@ sub perform {
 					$fileEach = $1;
 				}
 			}
-			$samples = $samples . $parameterFileLabelEach . $fileEach . ",";
+			$parameterFile1 = $parameterFile1 . $parameterFileLabelEach . $fileEach . ",";
 		}
-		$samples = $parameterFileLabel . $samples;
+		$parameterFile1 = $parameterFileLabel . $parameterFile1;
 
 		my $parameterFile2 = "";
 		if ( defined $parameterFiles2{$sample_name} ) {
@@ -127,7 +127,7 @@ sub perform {
 		my $log_desc = $cluster->get_log_description($log);
 		my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 		print $pbs "
-perl $runProgram $final_file $option $samples $parameterFile2 $parameterFile3
+perl $runProgram $final_file $option $parameterFile1 $parameterFile2 $parameterFile3
 ";
 
 		$self->close_pbs( $pbs, $pbs_file );
