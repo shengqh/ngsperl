@@ -56,9 +56,9 @@ panel.cor <- function(x, y, digits=2, cex.cor)
 	usr <- par("usr"); on.exit(par(usr))
 	par(usr = c(0, 1, 0, 1))
 #	r <- abs(cor(x, y))
-	r <- (cor(x, y,use="pa"))
+	r <- (cor(x, y,use="pa",method="spearman"))
 	txt <- format(c(r, 0.123456789), digits=digits)[1]
-	test <- cor.test(x,y)
+	test <- cor.test(x,y,method="spearman")
 	Signif <- ifelse(round(test$p.value,3)<0.001,"p<0.001",paste("p=",round(test$p.value,3)))  
 	text(0.5, 0.25, paste("r=",txt))
 	text(.5, .75, Signif)
@@ -117,7 +117,8 @@ for (i in 1:nrow(countTableFileAll)) {
 	drawPCA(countTableFile, countNumVsd, showLabelInPCA=TRUE, groupColor)
 	
 	#Pairs correlation
-	png(paste0(countTableFile,".pairsCorrelation.png"),width=2000,height=2000,res=300)
+	pairwidth = max(2000, ncol(countNumVsd) * 300)
+	png(paste0(countTableFile,".pairsCorrelation.png"),width=pairwidth,height=pairwidth,res=300)
 	pairs(countNumVsd,lower.panel=panel.smooth, upper.panel=panel.cor)
 	dev.off()
 }
