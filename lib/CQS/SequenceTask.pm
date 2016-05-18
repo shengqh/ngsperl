@@ -43,9 +43,6 @@ sub perform {
   my $final_log_desp = $cluster->get_log_description($final_log);
 
   my $summary_name     = $task_name . "_summary";
-  my $summary_pbs      = $self->get_pbs_filename( $pbs_dir, $summary_name );
-  my $summary_log      = $self->get_log_filename( $log_dir, $summary_name );
-  my $summary_log_desp = $cluster->get_log_description($summary_log);
 
   my $report_name     = $task_name . "_report";
   my $report_pbs      = $self->get_pbs_filename( $pbs_dir, $report_name );
@@ -53,6 +50,8 @@ sub perform {
   my $report_log_desp = $cluster->get_log_description($report_log);
 
   my $result_list_file = $self->get_file( $result_dir, $task_name, "_expect_result.tsv" );
+
+  my $report = $self->open_pbs( $report_pbs, $pbs_desc, $report_log_desp, $path_file, $result_dir );
 
   #Make Summary Figure
   my $rtemplate = dirname(__FILE__) . "/summaryResultFiles.R";
@@ -66,9 +65,7 @@ sub perform {
   close($rt);
   close($rf);
 
-  my $summary = $self->open_pbs( $summary_pbs, $pbs_desc, $summary_log_desp, $path_file, $result_dir );
-  print $summary "R --vanilla --slave -f $rfile \n";
-  $self->close_pbs( $summary, $summary_pbs );
+  print $report "R --vanilla --slave -f $rfile \n";
 
   #Make Report
   my $rtemplateReport = dirname(__FILE__) . "/MakeReport.R";
@@ -91,7 +88,6 @@ sub perform {
   close($rtReport);
   close($rfReport);
 
-  my $report = $self->open_pbs( $report_pbs, $pbs_desc, $report_log_desp, $path_file, $result_dir );
   print $report "R --vanilla --slave -f $rfileReport \n";
   $self->close_pbs( $report, $report_pbs );
 
@@ -224,8 +220,6 @@ then
   }
   close($result_list);
 
-  my $summary_pbs_name = basename($summary_pbs);
-  print $final "\nbash $summary_pbs \n";
   print $final "\nbash $report_pbs \n";
   $self->close_pbs( $final, $final_pbs );
 }
