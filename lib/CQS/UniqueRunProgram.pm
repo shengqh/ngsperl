@@ -61,7 +61,14 @@ sub perform {
 						$subSampleFile=$1;
 					}
 				}
-				$parametersample_files1=$parametersample_files1.$parameterSampleFileLabelEach.$subSampleFile.$parameterSampleFileSepEach;
+				if ( $parametersample_files1 eq "" ) {
+					$parametersample_files1 = $parameterSampleFileLabelEach.$subSampleFile;
+				}
+				else {
+					$parametersample_files1 =
+					    $parametersample_files1 . $parameterSampleFileSepEach
+					  . $parameterSampleFileLabelEach.$subSampleFile;
+				}
 			}
 		}
 		if ($parameterSampleFileLabel ne "") {
@@ -91,8 +98,14 @@ sub perform {
                         $subSampleFile=$1;
                     }
                 }
-                $parametersample_files2=$parametersample_files2.$parameterSampleFileLabelEach.$subSampleFile.$parameterSampleFileSepEach;
-            }
+				if ( $parametersample_files2 eq "" ) {
+					$parametersample_files2 = $parameterSampleFileLabelEach.$subSampleFile;
+				}
+				else {
+					$parametersample_files2 =
+					    $parametersample_files2 . $parameterSampleFileSepEach
+					  . $parameterSampleFileLabelEach.$subSampleFile;
+				}            }
         }
         if ($parameterSampleFileLabel ne "") {
             $parametersample_files2=$parameterSampleFileLabel.$parametersample_files2
@@ -121,15 +134,21 @@ sub perform {
                         $subSampleFile=$1;
                     }
                 }
-                $parametersample_files3=$parametersample_files3.$parameterSampleFileLabelEach.$subSampleFile.$parameterSampleFileSepEach;
-            }
+				if ( $parametersample_files3 eq "" ) {
+					$parametersample_files3 = $parameterSampleFileLabelEach.$subSampleFile;
+				}
+				else {
+					$parametersample_files3 =
+					    $parametersample_files3 . $parameterSampleFileSepEach
+					  . $parameterSampleFileLabelEach.$subSampleFile;
+				}            }
         }
         if ($parameterSampleFileLabel ne "") {
             $parametersample_files3=$parameterSampleFileLabel.$parametersample_files3
         }
     }
     
-    my $parametersample_files=$parametersample_files1.$parametersample_files2.$parametersample_files3;
+    my $parametersample_files=$parametersample_files1.' '.$parametersample_files2.' '.$parametersample_files3;
 
     my $parameterFile1Label = get_option( $config, $section, "parameterFile1Label", "" );
 	my $parameterFile1 = parse_param_file( $config, $section, "parameterFile1", 0 );
@@ -153,7 +172,7 @@ sub perform {
 	if ( !defined($parameterFile3) ) {
 		$parameterFile3 = "";
 	}
-    my $parameterFiles=$parameterFile1.$parameterFile2.$parameterFile3;
+    my $parameterFiles=$parameterFile1.' '.$parameterFile2.' '.$parameterFile3;
 
 	my $final_file    = "${task_name}${output_file}${output_file_ext}";
 
