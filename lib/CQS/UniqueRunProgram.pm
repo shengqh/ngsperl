@@ -133,7 +133,6 @@ sub perform {
 
     my $parameterFile1Label = get_option( $config, $section, "parameterFile1Label", "" );
 	my $parameterFile1 = parse_param_file( $config, $section, "parameterFile1", 0 );
-    my $parameterFile2Label = get_option( $config, $section, "parameterFile2Label", "" );
 	my $parameterFile2 = parse_param_file( $config, $section, "parameterFile2", 0 );
 	my $parameterFile3 = parse_param_file( $config, $section, "parameterFile3", 0 );
 	if ( defined($parameterFile1) ) {
@@ -143,11 +142,7 @@ sub perform {
 	} else {
 		$parameterFile1 = "";
 	}
-	if ( defined($parameterFile2) ) {
-		if ($parameterFile2Label ne "") {
-			$parameterFile2=$parameterFile2Label.$parameterFile2
-		}
-	} else {
+	if ( !defined($parameterFile2) ) {
 		$parameterFile2 = "";
 	}
 	if ( !defined($parameterFile3) ) {
@@ -155,7 +150,7 @@ sub perform {
 	}
     my $parameterFiles=$parameterFile1.$parameterFile2.$parameterFile3;
 
-	my $final_file    = "${task_name}${output_file}${output_file_ext}";
+	my $final_file    = "${output_file_label}${task_name}${output_file}${output_file_ext}";
 
 	my $runProgram = get_option( $config, $section, "runProgram");
 	my $is_absolute = File::Spec->file_name_is_absolute($runProgram);
@@ -173,7 +168,7 @@ sub perform {
 	my $log_desc = $cluster->get_log_description($log);
 
 	my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-	print $pbs "$runProgram $option $parametersample_files $parameterFiles ${output_file_label}$final_file";
+	print $pbs "$runProgram $option $parametersample_files $parameterFiles $final_file";
 	$self->close_pbs( $pbs, $pbs_file );
 }
 
