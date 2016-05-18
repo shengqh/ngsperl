@@ -37,6 +37,7 @@ sub perform {
 	my $picard_jar         = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
 	my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals", 0 ) ? "-fixMisencodedQuals" : "";
 	my $baq                = get_option( $config, $section, "samtools_baq_calibration", 0 );
+	my $slim               = get_option( $config, $section, "samtools_slim", 0 );
 	my $remove_duplicate   = get_option( $config, $section, "remove_duplicate", 1 );
 
 	my $bedFile = get_param_file( $config->{$section}{bed_file}, "bed_file", 0 );
@@ -112,23 +113,48 @@ sub perform {
 		my $recalFile = $sample_name . "$rmdupResultName.realigned.recal.bam";
 		my $recalFileIndex = change_extension( $recalFile, ".bai" );
 
-		my $slimFile = $sample_name . "$rmdupResultName.realigned.recal.slim.bam";
+		my $final_file = $recalFile;
 
-		my $final_file = $slimFile;
-		my $baqcmd     = "";
-		my $rmlist     = "";
+		my $baqcmd   = "";
+		my $slimCmd  = "";
+		my $slimFile = "";
+		my $rmlist   = "";
+
+		if ($slim) {
+			$slimFile   = $sample_name . "$rmdupResultName.realigned.recal.slim.bam";
+			$final_file = $slimFile;
+			$slimCmd    = "
+if [[ -s $recalFile && ! -s $slimFile ]]; then
+  echo slim=`date` 
+  samtools view -h $recalFile | sed 's/\\tBD\:Z\:[^\\t]*//' | sed 's/\\tPG\:Z\:[^\\t]*//' | sed 's/\\tBI\:Z\:[^\\t]*//' | samtools view -S -b > $slimFile
+  samtools index $slimFile
+fi  
+";
+		}
+
 		if ($baq) {
-			$final_file = $sample_name . "$rmdupResultName.realigned.recal.slim.baq.bam";
-			$baqcmd     = "
+			if ($slim) {
+				$final_file = $sample_name . "$rmdupResultName.realigned.recal.slim.baq.bam";
+				$baqcmd     = "
 if [[ -s $slimFile && ! -s $final_file ]]; then
   echo baq=`date` 
   samtools calmd -Abr $slimFile $faFile > $final_file
   samtools index $final_file
 fi      
 ";
-			$rmlist = "$slimFile ${slimFile}.bai";
+				$rmlist = "$slimFile ${slimFile}.bai";
+			}
+			else {
+				$final_file = $sample_name . "$rmdupResultName.realigned.recal.baq.bam";
+				$baqcmd     = "
+if [[ -s $recalFile && ! -s $final_file ]]; then
+  echo baq=`date` 
+  samtools calmd -Abr $recalFile $faFile > $final_file
+  samtools index $final_file
+fi      
+";
+			}
 		}
-
 		my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
 		my $pbs_name = basename($pbs_file);
 		my $log      = $self->get_log_filename( $log_dir, $sample_name );
@@ -173,11 +199,7 @@ if [[ -s $grpFile && ! -s $recalFile ]]; then
   java $option -jar $gatk_jar -T PrintReads -nct $thread -rf BadCigar -R $faFile -I $realignedFile -BQSR $grpFile -o $recalFile 
 fi
 
-if [[ -s $recalFile && ! -s $slimFile ]]; then
-  echo slim=`date` 
-  samtools view -h $recalFile | sed 's/\\tBD\:Z\:[^\\t]*//' | sed 's/\\tPG\:Z\:[^\\t]*//' | sed 's/\\tBI\:Z\:[^\\t]*//' | samtools view -S -b > $slimFile
-  samtools index $slimFile
-fi
+$slimCmd
 
 $baqcmd
 
@@ -197,7 +219,6 @@ fi
 
 	print "!!!shell file $shfile created, you can run this shell file to submit all GATK refine tasks.\n";
 }
-
 sub result {
 	my ( $self, $config, $section, $pattern ) = @_;
 
@@ -205,6 +226,7 @@ sub result {
 
 	my %raw_files = %{ get_raw_files( $config, $section ) };
 	my $baq              = get_option( $config, $section, "samtools_baq_calibration", 0 );
+	my $slim               = get_option( $config, $section, "samtools_slim", 0 );
 	my $remove_duplicate = get_option( $config, $section, "remove_duplicate",         1 );
 
 	my $result          = {};
@@ -213,7 +235,20 @@ sub result {
 		$rmdupResultName = ".rmdup";
 	}
 	for my $sample_name ( keys %raw_files ) {
-		my $final_file = $baq ? $sample_name . "$rmdupResultName.realigned.recal.slim.baq.bam" : $sample_name . "$rmdupResultName.realigned.recal.slim.bam";
+		my $final_file ="";
+		if ($slim) {
+			if ($baq) {
+				$final_file="$rmdupResultName.realigned.recal.slim.baq.bam";
+			} else {
+				$final_file="$rmdupResultName.realigned.recal.slim.bam";
+			}
+		} else {
+			if ($baq) {
+                $final_file="$rmdupResultName.realigned.recal.baq.bam";
+            } else {
+                $final_file="$rmdupResultName.realigned.recal.bam";
+            }
+		}
 		my @result_files = ();
 		push( @result_files, "${result_dir}/${sample_name}/${final_file}" );
 		$result->{$sample_name} = filter_array( \@result_files, $pattern );
