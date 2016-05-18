@@ -39,7 +39,8 @@ sub perform {
 	}
 
 	my $output_file_label = get_option( $config, $section, "output_file_label", "" );
-	my $output_ext        = get_option( $config, $section, "output_ext",        0 );
+	my $output_file        = get_option( $config, $section, "output_file",        "" );
+	my $output_ext        = get_option( $config, $section, "output_file_ext",        "" );
 
 	my %raw_files = %{ get_raw_files( $config, $section, "source1" ) };
 	
@@ -122,7 +123,7 @@ sub perform {
 		my $pbs_file   = $self->get_pbs_filename( $pbs_dir, $sample_name );
 		my $pbs_name   = basename($pbs_file);
 		my $log        = $self->get_log_filename( $log_dir, $sample_name );
-		my $final_file = $output_file_label . $sample_name . $output_ext;
+		my $final_file = $output_file_label . $sample_name . $output_file.$output_ext;
 
 		my $log_desc = $cluster->get_log_description($log);
 		my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
