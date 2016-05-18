@@ -27,7 +27,10 @@ sub new {
 sub perform {
 	my ( $self, $config, $section ) = @_;
 
-	my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+	my (
+		$task_name, $path_file,  $pbs_desc, $target_dir, $log_dir,
+		$pbs_dir,   $result_dir, $option,   $sh_direct,  $cluster
+	) = get_parameter( $config, $section );
 
 	my $runProgram = get_option( $config, $section, "runProgram" );
 	my $is_absolute = File::Spec->file_name_is_absolute($runProgram);
@@ -38,12 +41,13 @@ sub perform {
 		die("runProgram $runProgram defined but not exists!");
 	}
 
-	my $output_file_label = get_option( $config, $section, "output_file_label", "" );
-	my $output_file        = get_option( $config, $section, "output_file",        "" );
-	my $output_ext        = get_option( $config, $section, "output_file_ext",        "" );
+	my $output_file_label =
+	  get_option( $config, $section, "output_file_label", "" );
+	my $output_file = get_option( $config, $section, "output_file",     "" );
+	my $output_ext  = get_option( $config, $section, "output_file_ext", "" );
 
 	my %raw_files = %{ get_raw_files( $config, $section, "source1" ) };
-	
+
 	my %parameterFiles2 = ();
 	if ( has_raw_files( $config, $section, "source2" ) ) {
 		%parameterFiles2 = %{ get_raw_files( $config, $section, "source2" ) };
@@ -67,55 +71,87 @@ sub perform {
 		print $sh "export MYCMD=\"bash\" \n";
 	}
 	else {
-		print $sh "type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
+		print $sh
+"type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
 	}
 
 	for my $sample_name ( sort keys %raw_files ) {
-		my $parameterFile1                = "";
-		my @sample_files           = @{ $raw_files{$sample_name} };
-		my $parameterFileLabel     = get_option( $config, $section, "source1Label", "" );
-		my $parameterFileLabelEach = get_option( $config, $section, "source1LabelEach", "" );
-		my $parameterFileRegex     = get_option( $config, $section, "source1Regex", "" );
+		my $parameterFile1 = "";
+		my @sample_files   = @{ $raw_files{$sample_name} };
+		my $parameterFileLabel =
+		  get_option( $config, $section, "source1Label", "" );
+		my $parameterFileLabelEach =
+		  get_option( $config, $section, "source1LabelEach", "" );
+		my $parameterFileRegex =
+		  get_option( $config, $section, "source1Regex", "" );
 		foreach my $fileEach (@sample_files) {
 			if ( $parameterFileRegex ne "" ) {
 				if ( $fileEach =~ /$parameterFileRegex/ ) {
 					$fileEach = $1;
 				}
 			}
-			$parameterFile1 = $parameterFile1 . $parameterFileLabelEach . $fileEach . ",";
+			if ( $parameterFile1 eq "" ) {
+				$parameterFile1 = $parameterFileLabelEach . $fileEach;
+			}
+			else {
+				$parameterFile1 =
+				  $parameterFile1 . "," . $parameterFileLabelEach . $fileEach;
+			}
 		}
 		$parameterFile1 = $parameterFileLabel . $parameterFile1;
 
 		my $parameterFile2 = "";
 		if ( defined $parameterFiles2{$sample_name} ) {
-			my $parameterFileLabel     = get_option( $config, $section, "source2Label",     "" );
-			my $parameterFileLabelEach = get_option( $config, $section, "source2LabelEach", "" );
-			my $parameterFileRegex     = get_option( $config, $section, "source2Regex",     "" );
-			my @files                  = @{ $parameterFiles2{$sample_name} };
+			my $parameterFileLabel =
+			  get_option( $config, $section, "source2Label", "" );
+			my $parameterFileLabelEach =
+			  get_option( $config, $section, "source2LabelEach", "" );
+			my $parameterFileRegex =
+			  get_option( $config, $section, "source2Regex", "" );
+			my @files = @{ $parameterFiles2{$sample_name} };
 			foreach my $fileEach (@files) {
 				if ( $parameterFileRegex ne "" ) {
 					if ( $fileEach =~ /$parameterFileRegex/ ) {
 						$fileEach = $1;
 					}
 				}
-				$parameterFile2 = $parameterFile2 . $parameterFileLabelEach . $fileEach . ",";
+				if ( $parameterFile2 eq "" ) {
+					$parameterFile2 = $parameterFileLabelEach . $fileEach;
+				}
+				else {
+					$parameterFile2 =
+					    $parameterFile2 . ","
+					  . $parameterFileLabelEach
+					  . $fileEach;
+				}
 			}
 			$parameterFile2 = $parameterFileLabel . $parameterFile2;
 		}
 
 		my $parameterFile3 = "";
 		if ( defined $parameterFiles3{$sample_name} ) {
-			my $parameterFileLabel     = get_option( $config, $section, "source3Label",     "" );
-			my $parameterFileLabelEach = get_option( $config, $section, "source3LabelEach", "" );
-			my $parameterFileRegex     = get_option( $config, $section, "source3Regex",     "" );
-			my @files                  = @{ $parameterFiles3{$sample_name} };
+			my $parameterFileLabel =
+			  get_option( $config, $section, "source3Label", "" );
+			my $parameterFileLabelEach =
+			  get_option( $config, $section, "source3LabelEach", "" );
+			my $parameterFileRegex =
+			  get_option( $config, $section, "source3Regex", "" );
+			my @files = @{ $parameterFiles3{$sample_name} };
 			foreach my $fileEach (@files) {
 				if ( $parameterFileRegex ne "" ) {
 					if ( $fileEach =~ /$parameterFileRegex/ ) {
 						$fileEach = $1;
 					}
 				}
-				$parameterFile3 = $parameterFile3 . $parameterFileLabelEach . $fileEach . ",";
+				if ( $parameterFile3 eq "" ) {
+					$parameterFile3 = $parameterFileLabelEach . $fileEach;
+				}
+				else {
+					$parameterFile3 =
+					    $parameterFile3 . ","
+					  . $parameterFileLabelEach
+					  . $fileEach;
+				}
 			}
 			$parameterFile3 = $parameterFileLabel . $parameterFile3;
 		}
@@ -123,10 +159,13 @@ sub perform {
 		my $pbs_file   = $self->get_pbs_filename( $pbs_dir, $sample_name );
 		my $pbs_name   = basename($pbs_file);
 		my $log        = $self->get_log_filename( $log_dir, $sample_name );
-		my $final_file = $sample_name . $output_file.$output_ext;
+		my $final_file = $sample_name . $output_file . $output_ext;
 
 		my $log_desc = $cluster->get_log_description($log);
-		my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+		my $pbs      = $self->open_pbs(
+			$pbs_file,  $pbs_desc,   $log_desc,
+			$path_file, $result_dir, $final_file
+		);
 		print $pbs "
 $runProgram $option ${output_file_label}$final_file $parameterFile1 $parameterFile2 $parameterFile3
 ";
@@ -142,17 +181,22 @@ $runProgram $option ${output_file_label}$final_file $parameterFile1 $parameterFi
 		chmod 0755, $shfile;
 	}
 
-	print "!!!shell file $shfile created, you can run this shell file to submit all Perl tasks.\n";
+	print
+"!!!shell file $shfile created, you can run this shell file to submit all Perl tasks.\n";
 }
 
 sub result {
 	my ( $self, $config, $section, $pattern ) = @_;
 
-	my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+	my (
+		$task_name, $path_file,  $pbs_desc, $target_dir, $log_dir,
+		$pbs_dir,   $result_dir, $option,   $sh_direct
+	) = get_parameter( $config, $section, 0 );
 
 	my %raw_files = %{ get_raw_files( $config, $section ) };
-	my $output_ext       = get_option( $config, $section, "output_ext",       "" );
-	my $output_other_ext = get_option( $config, $section, "output_other_ext", "" );
+	my $output_ext = get_option( $config, $section, "output_ext", "" );
+	my $output_other_ext =
+	  get_option( $config, $section, "output_other_ext", "" );
 	my @output_other_exts;
 	if ( $output_other_ext ne "" ) {
 		@output_other_exts = split( ",", $output_other_ext );
@@ -171,7 +215,8 @@ sub result {
 		push( @result_files, "${result_dir}/${sample_name}${output_ext}" );
 		if ( $output_other_ext ne "" ) {
 			foreach my $output_other_ext_each (@output_other_exts) {
-				push( @result_files, "${result_dir}/${sample_name}${output_other_ext_each}" );
+				push( @result_files,
+					"${result_dir}/${sample_name}${output_other_ext_each}" );
 			}
 		}
 
