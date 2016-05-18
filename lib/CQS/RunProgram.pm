@@ -72,9 +72,9 @@ sub perform {
 	for my $sample_name ( sort keys %raw_files ) {
 		my $parameterFile1                = "";
 		my @sample_files           = @{ $raw_files{$sample_name} };
-		my $parameterFileLabel     = get_option( $config, $section, "sampleFileLabel", "" );
-		my $parameterFileLabelEach = get_option( $config, $section, "sampleFileLabelEach", "" );
-		my $parameterFileRegex     = get_option( $config, $section, "sampleFileRegex", "" );
+		my $parameterFileLabel     = get_option( $config, $section, "source1Label", "" );
+		my $parameterFileLabelEach = get_option( $config, $section, "source1LabelEach", "" );
+		my $parameterFileRegex     = get_option( $config, $section, "source1Regex", "" );
 		foreach my $fileEach (@sample_files) {
 			if ( $parameterFileRegex ne "" ) {
 				if ( $fileEach =~ /$parameterFileRegex/ ) {
@@ -87,9 +87,9 @@ sub perform {
 
 		my $parameterFile2 = "";
 		if ( defined $parameterFiles2{$sample_name} ) {
-			my $parameterFileLabel     = get_option( $config, $section, "parameterFile2Label",     "" );
-			my $parameterFileLabelEach = get_option( $config, $section, "parameterFile2LabelEach", "" );
-			my $parameterFileRegex     = get_option( $config, $section, "parameterFile2Regex",     "" );
+			my $parameterFileLabel     = get_option( $config, $section, "source2Label",     "" );
+			my $parameterFileLabelEach = get_option( $config, $section, "source2LabelEach", "" );
+			my $parameterFileRegex     = get_option( $config, $section, "source2Regex",     "" );
 			my @files                  = @{ $parameterFiles2{$sample_name} };
 			foreach my $fileEach (@files) {
 				if ( $parameterFileRegex ne "" ) {
@@ -104,9 +104,9 @@ sub perform {
 
 		my $parameterFile3 = "";
 		if ( defined $parameterFiles3{$sample_name} ) {
-			my $parameterFileLabel     = get_option( $config, $section, "parameterFile3Label",     "" );
-			my $parameterFileLabelEach = get_option( $config, $section, "parameterFile3LabelEach", "" );
-			my $parameterFileRegex     = get_option( $config, $section, "parameterFile3Regex",     "" );
+			my $parameterFileLabel     = get_option( $config, $section, "source3Label",     "" );
+			my $parameterFileLabelEach = get_option( $config, $section, "source3LabelEach", "" );
+			my $parameterFileRegex     = get_option( $config, $section, "source3Regex",     "" );
 			my @files                  = @{ $parameterFiles3{$sample_name} };
 			foreach my $fileEach (@files) {
 				if ( $parameterFileRegex ne "" ) {
