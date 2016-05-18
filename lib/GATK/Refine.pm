@@ -238,15 +238,15 @@ sub result {
 		my $final_file ="";
 		if ($slim) {
 			if ($baq) {
-				$final_file="$sample_name.$rmdupResultName.realigned.recal.slim.baq.bam";
+				$final_file="$sample_name$rmdupResultName.realigned.recal.slim.baq.bam";
 			} else {
-				$final_file="$sample_name.$rmdupResultName.realigned.recal.slim.bam";
+				$final_file="$sample_name$rmdupResultName.realigned.recal.slim.bam";
 			}
 		} else {
 			if ($baq) {
-                $final_file="$sample_name.$rmdupResultName.realigned.recal.baq.bam";
+                $final_file="$sample_name$rmdupResultName.realigned.recal.baq.bam";
             } else {
-                $final_file="$sample_name.$rmdupResultName.realigned.recal.bam";
+                $final_file="$sample_name$rmdupResultName.realigned.recal.bam";
             }
 		}
 		my @result_files = ();
