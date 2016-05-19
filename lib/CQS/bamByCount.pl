@@ -56,7 +56,7 @@ close(OUT);
 
 open( POS, ">${outFile}.pos" ) or die $!;
 foreach my $readId (sort keys %read2Pos) {
-	print POS $read2Pos{$readId}."\t".$read2Info{$readId}."\n";
+	print POS $read2Pos{$readId}."\t".$read2Info{$readId};
 }
 close(POS);
 
