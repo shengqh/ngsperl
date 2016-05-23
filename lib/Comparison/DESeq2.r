@@ -199,6 +199,14 @@ for(comparisonName in comparisonNames){
 	  cat("\n")
 	  designData<-designData[,which(temp!=1)]
   }
+  temp<-rowSums(apply(designData[,-1,drop=F],2,rank))
+  if (length(unique(temp))==1) {
+	  cat(paste0("The model matrix is not full rank, so the model cannot be fit as specified"))
+	  cat("\n")
+	  cat("Only Condition variable will be kept.")
+	  cat("\n")
+	  designData<-designData[,which(colnames(designData)%in% c("Sample","Condition"))]
+  }
   
   comparisonData<-countData[,colnames(countData) %in% as.character(designData$Sample),drop=F]
   if(ncol(comparisonData) != nrow(designData)){
