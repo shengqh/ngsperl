@@ -192,6 +192,13 @@ for(comparisonName in comparisonNames){
 	  ispaired<-FALSE
 	  cat("Not Paired Data!\n")
   }
+  temp<-apply(designData,2,function(x) length(unique(x)))
+  if (any(temp==1)) {
+	  cat(paste0("Factors with only 1 level in design matrix: ",colnames(designData)[which(temp==1)],"\n"))
+	  cat("They will be removed")
+	  cat("\n")
+	  designData<-designData[,which(temp!=1)]
+  }
   
   comparisonData<-countData[,colnames(countData) %in% as.character(designData$Sample),drop=F]
   if(ncol(comparisonData) != nrow(designData)){
