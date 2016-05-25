@@ -123,7 +123,8 @@ sub result {
     }
   }
   else {
-    my $outputfile = $self->get_file( $result_dir, ${task_name}, ".count",    0 );
+#    my $outputfile = $self->get_file( $result_dir, ${task_name}, ".count",    0 );
+    my $outputfile = $self->get_file( $result_dir, ${task_name}, ".read.count",    0 );
     my $filelist   = $self->get_file( $pbs_dir,    ${task_name}, ".filelist", 0 );
     push( @result_files, $outputfile );
     push( @result_files, $outputfile . ".fasta" );
