@@ -147,7 +147,7 @@ sub getSmallRNAConfig {
         parameterSampleFile1Order => $def->{groups_order},
         parameterSampleFile1      => $groups,
         parameterSampleFile2      => $groups_vis_layout,
-        parameterFile1_ref        => [ "bowtie1_tRNA_pm_table", ".count\$" ],
+        parameterFile1_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".count\$" ],
         parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
         rCode                     => 'maxCategory=3;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
         sh_direct                 => 1,
@@ -189,7 +189,7 @@ sub getSmallRNAConfig {
     push @table_for_countSum,
       ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" );
     push @individual, ( "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_NTA_smallRNA_count" );
-    push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_category" );
+    push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_tRNA_table_pm_table_vis","bowtie1_genome_1mm_NTA_smallRNA_category" );
 
     if ($search_not_identical) {
 
