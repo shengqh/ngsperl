@@ -143,7 +143,7 @@ sub getSmallRNAConfig {
         target_dir                => $data_visualization_dir . "/host_genome_tRNA_Category",
         rtemplate                 => "countTableVisFunctions.R,hostTrnaMappingVis.R",
         output_file               => ".tRNAMapping.Result",
-        output_file_ext           => ".Category.Barplot.png",
+        output_file_ext           => ".tRNAType2.Barplot.png",
         parameterSampleFile1Order => $def->{groups_order},
         parameterSampleFile1      => $groups,
         parameterSampleFile2      => $groups_vis_layout,
