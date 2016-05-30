@@ -137,7 +137,28 @@ sub getSmallRNAConfig {
           "mem"      => "10gb"
         },
       },
-
+      bowtie1_genome_1mm_NTA_tRNA_table_pm_table_vis => {
+        class                     => "CQS::UniqueR",
+        perform                   => 1,
+        target_dir                => $data_visualization_dir . "/host_genome_tRNA_Category",
+        rtemplate                 => "countTableVisFunctions.R,hostTrnaMappingVis.R",
+        output_file               => ".tRNAMapping.Result",
+        output_file_ext           => ".Category.Barplot.png",
+        parameterSampleFile1Order => $def->{groups_order},
+        parameterSampleFile1      => $groups,
+        parameterSampleFile2      => $groups_vis_layout,
+        parameterFile1_ref        => [ "bowtie1_tRNA_pm_table", ".count\$" ],
+        parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
+        rCode                     => 'maxCategory=3;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+        sh_direct                 => 1,
+        pbs                       => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      },
+      
       bowtie1_genome_1mm_NTA_smallRNA_category => {
         class                     => "CQS::UniqueR",
         perform                   => 1,
