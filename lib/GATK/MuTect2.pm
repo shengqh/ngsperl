@@ -128,7 +128,7 @@ if [ ! -s ${tumor}.bai ]; then
 fi
 
 if [ ! -s $vcf ]; then
-  $java $java_option -jar $gatk_jar $option -T MuTect2 -R reference.fasta $cosmic_param --dbsnp $dbsnpfile $sample_parm $restrict_intervals -o $vcf
+  $java $java_option -jar $gatk_jar $option -T MuTect2 -R $faFile $cosmic_param --dbsnp $dbsnpfile $sample_parm $restrict_intervals -o $vcf
 fi 
 ";
 
