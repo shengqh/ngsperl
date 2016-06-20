@@ -71,11 +71,12 @@ sub perform {
 	my %raw_files = %{ get_raw_files( $config, $section ) };
 	my %group_sample_map;
 	if ( has_raw_files( $config, $section, "groups" ) ) {
+
 		#%group_sample_map = %{ get_raw_files( $config, $section, "groups" ) };
 		%group_sample_map = %{ get_group_sample_map( $config, $section ) };
 	}
 	else {
-		%group_sample_map=%raw_files;
+		%group_sample_map = %raw_files;
 	}
 
 	my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -86,24 +87,26 @@ sub perform {
 	for my $group_name ( sort keys %group_sample_map ) {
 		my @sample_files = @{ $group_sample_map{$group_name} };
 		print join( "\n", @sample_files );
-		my $sampleCount  = scalar(@sample_files);
+		my $sampleCount = scalar(@sample_files);
 		my $cur_dir = create_directory_or_die( $result_dir . "/$group_name" );
 
 		my $normal;
 		my $tumor;
 		my $sample_parm;
-    	if ( $sampleCount ==1 ) {
-      		$normal="";
-      		$tumor=$sample_files[0];
-      		$sample_parm="--artifact_detection_mode -I:tumor $tumor"
-    	} elsif ($sampleCount != 2) {
-    		die "SampleFile should be tumor only or normal,tumor paired.";
-    	} else {
-    		 $normal = $sample_files[0][1];
-			 $tumor  = $sample_files[1][1];
-			 $sample_parm="-I:tumor $tumor -I:normal $normal"
-    	}
-		print "\n"."Normal: ".$normal."\nTumor: ".$tumor;
+		if ( $sampleCount == 1 ) {
+			$normal      = "";
+			$tumor       = $sample_files[0];
+			$sample_parm = "--artifact_detection_mode -I:tumor $tumor";
+		}
+		elsif ( $sampleCount != 2 ) {
+			die "SampleFile should be tumor only or normal,tumor paired.";
+		}
+		else {
+			$normal      = $sample_files[0][1];
+			$tumor       = $sample_files[1][1];
+			$sample_parm = "-I:tumor $tumor -I:normal $normal";
+		}
+		print "\n" . "Normal: " . $normal . "\nTumor: " . $tumor;
 
 		my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
 		my $pbs_name = basename($pbs_file);
@@ -111,18 +114,25 @@ sub perform {
 
 		print $sh "\$MYCMD ./$pbs_name \n";
 
-#		my $out_file = "${group_name}.somatic.out";
-		my $vcf      = "${group_name}.somatic.vcf";
-#		my $passvcf  = "${group_name}.somatic.pass.vcf";
+		#		my $out_file = "${group_name}.somatic.out";
+		my $vcf = "${group_name}.somatic.vcf";
 
-    my $log_desc = $cluster->get_log_description($log);
+		#		my $passvcf  = "${group_name}.somatic.pass.vcf";
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
-    print $pbs "
+		my $log_desc = $cluster->get_log_description($log);
+
+		my $pbs =
+		  $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file,
+			$cur_dir );
+		if ( $sampleCount == 2 ) {
+			print $pbs "
 if [ ! -s ${normal}.bai ]; then
   samtools index ${normal}
 fi
 
+";
+		}
+		print $pbs "
 if [ ! -s ${tumor}.bai ]; then
   samtools index ${tumor}
 fi
@@ -132,7 +142,7 @@ if [ ! -s $vcf ]; then
 fi 
 ";
 
-    $self->close_pbs($pbs, $pbs_file);
+		$self->close_pbs( $pbs, $pbs_file );
 		print "$pbs_file created \n";
 	}
 	close $sh;
