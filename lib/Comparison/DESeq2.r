@@ -165,7 +165,7 @@ if(index > 1){
 countData<-data[,c(index:ncol(data))]
 
 countData[is.na(countData)] <- 0
-countData<-round(countData)
+countData<-round(countData)+1
 
 comparisonNames=names(comparisons)
 comparisonName=comparisonNames[1]
