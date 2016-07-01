@@ -63,7 +63,7 @@ sub getSmallRNAConfig {
       show_DE_gene_cluster => 1,
       pvalue               => 0.05,
       fold_change          => 1.5,
-      min_median_read      => 1,
+      min_median_read      => 2,
       pbs                  => {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
@@ -233,7 +233,7 @@ sub getSmallRNAConfig {
           show_DE_gene_cluster => 1,
           pvalue               => 0.05,
           fold_change          => 1.5,
-          min_median_read      => 5,
+          min_median_read      => 6,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -253,7 +253,7 @@ sub getSmallRNAConfig {
           show_DE_gene_cluster => 1,
           pvalue               => 0.05,
           fold_change          => 1.5,
-          min_median_read      => 5,
+          min_median_read      => 6,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -273,7 +273,7 @@ sub getSmallRNAConfig {
           show_DE_gene_cluster => 1,
           pvalue               => 0.05,
           fold_change          => 1.5,
-          min_median_read      => 5,
+          min_median_read      => 6,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -293,7 +293,7 @@ sub getSmallRNAConfig {
           show_DE_gene_cluster => 1,
           pvalue               => 0.05,
           fold_change          => 1.5,
-          min_median_read      => 5,
+          min_median_read      => 6,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -990,7 +990,7 @@ sub getSmallRNAConfig {
           show_DE_gene_cluster => 1,
           pvalue               => 0.05,
           fold_change          => 1.5,
-          min_median_read      => 5,
+          min_median_read      => 6,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1010,7 +1010,7 @@ sub getSmallRNAConfig {
           show_DE_gene_cluster => 1,
           pvalue               => 0.05,
           fold_change          => 1.5,
-          min_median_read      => 5,
+          min_median_read      => 6,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1030,7 +1030,7 @@ sub getSmallRNAConfig {
           show_DE_gene_cluster => 1,
           pvalue               => 0.05,
           fold_change          => 1.5,
-          min_median_read      => 5,
+          min_median_read      => 6,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1051,7 +1051,7 @@ sub getSmallRNAConfig {
           show_DE_gene_cluster => 1,
           pvalue               => 0.05,
           fold_change          => 1.5,
-          min_median_read      => 5,
+          min_median_read      => 6,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1071,7 +1071,7 @@ sub getSmallRNAConfig {
           show_DE_gene_cluster => 1,
           pvalue               => 0.05,
           fold_change          => 1.5,
-          min_median_read      => 5,
+          min_median_read      => 6,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1091,7 +1091,7 @@ sub getSmallRNAConfig {
           show_DE_gene_cluster => 1,
           pvalue               => 0.05,
           fold_change          => 1.5,
-          min_median_read      => 5,
+          min_median_read      => 6,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
