@@ -96,7 +96,7 @@ sub perform {
 		if ( $sampleCount == 1 ) {
 			$normal      = "";
 			$tumor       = $sample_files[0];
-			$sample_parm = "--artifact_detection_mode -I:tumor $tumor";
+			$sample_parm = "-I:tumor $tumor";
 		}
 		elsif ( $sampleCount != 2 ) {
 			die "SampleFile should be tumor only or normal,tumor paired.";
