@@ -27,11 +27,13 @@ sub getParclipSmallRNAConfig {
   my @individual = @{$individual_ref};
   my @summary    = @{$summary_ref};
 
+  my $t2c_dir = create_directory_or_die( $def->{target_dir} . "/t2c" );
+
   my $gsnap = {
     gsnap => {
       class                 => 'Alignment::Gsnap',
       perform               => 1,
-      target_dir            => $def->{target_dir} . '/gsnap',
+      target_dir            => $t2c_dir . '/gsnap',
       option                => '-y 0 -z 0 -Y 0 -Z 0 -m 1 -Q --nofails --trim-mismatch-score 0 --trim-indel-score 0 --mode ttoc-nonstranded --gunzip',
       gsnap_index_directory => $def->{gsnap_index_directory},
       gsnap_index_name      => $def->{gsnap_index_name},
@@ -48,7 +50,7 @@ sub getParclipSmallRNAConfig {
     gsnap_smallRNA_count => {
       class           => 'CQS::SmallRNACount',
       perform         => 1,
-      target_dir      => $def->{target_dir} . '/gsnap_smallRNA_count',
+      target_dir      => $t2c_dir . '/gsnap_smallRNA_count',
       option          => '-s -e 4',
       source_ref      => 'gsnap',
       seqcount_ref    => [ 'identical_NTA', '.dupcount$' ],
@@ -67,7 +69,7 @@ sub getParclipSmallRNAConfig {
     gsnap_smallRNA_table => {
       class      => "CQS::SmallRNATable",
       perform    => 1,
-      target_dir => $def->{target_dir} . "/gsnap_smallRNA_table",
+      target_dir => $t2c_dir . "/gsnap_smallRNA_table",
       option     => "",
       source_ref => [ "gsnap_smallRNA_count", ".mapped.xml" ],
       cqs_tools  => $def->{cqstools},
@@ -84,7 +86,7 @@ sub getParclipSmallRNAConfig {
     gsnap_smallRNA_category => {
       class      => "CQS::SmallRNACategory",
       perform    => 1,
-      target_dir => $def->{target_dir} . "/gsnap_smallRNA_category",
+      target_dir => $t2c_dir . "/gsnap_smallRNA_category",
       option     => "",
       source_ref => [ "gsnap_smallRNA_count", ".info\$" ],
       cqs_tools  => $def->{cqstools},
@@ -100,7 +102,7 @@ sub getParclipSmallRNAConfig {
     gsnap_smallRNA_t2c => {
       class      => "CQS::ParclipT2CFinder",
       perform    => 1,
-      target_dir => $def->{target_dir} . "/gsnap_smallRNA_t2c",
+      target_dir => $t2c_dir . "/gsnap_smallRNA_t2c",
       option     => "-p 0.05 -e 0.013",
       source_ref => [ "gsnap_smallRNA_count", ".mapped.xml\$" ],
       cqs_tools  => $def->{cqstools},
@@ -115,7 +117,7 @@ sub getParclipSmallRNAConfig {
     gsnap_smallRNA_t2c_summary => {
       class      => 'SmallRNA::T2CSummary',
       perform    => 1,
-      target_dir => $def->{target_dir} . '/gsnap_smallRNA_t2c_table',
+      target_dir => $t2c_dir . '/gsnap_smallRNA_t2c_table',
       option     => '',
       source_ref => [ 'gsnap_smallRNA_count', '.mapped.xml$' ],
       cqs_tools  => $def->{cqstools},
@@ -138,6 +140,7 @@ sub getParclipSmallRNAConfig {
   if ( defined $def->{search_3utr} && $def->{search_3utr} ) {
     ( defined $def->{utr3_db} ) or die "utr3_db should be defined with search_3utr for parclip data analysis.";
     ( -e $def->{utr3_db} ) or die "utr3_db defined but not exists : " . $def->{utr3_db};
+    my $utr3_dir = create_directory_or_die( $def->{target_dir} . "/3utr" );
 
     my $unmappedreads = {
 
@@ -145,7 +148,7 @@ sub getParclipSmallRNAConfig {
       unmappedReads => {
         class       => "CQS::Perl",
         perform     => 1,
-        target_dir  => $def->{target_dir} . "/unmappedReads",
+        target_dir  => $utr3_dir . "/unmappedReads",
         perlFile    => "unmappedReadsToFastq.pl",
         source_ref  => [ "identical", ".fastq.gz\$" ],
         source2_ref => [ "gsnap_smallRNA_count", ".mapped.xml" ],
@@ -163,7 +166,7 @@ sub getParclipSmallRNAConfig {
       unmappedReads_bowtie1_genome_1mm => {
         class         => "Alignment::Bowtie1",
         perform       => 1,
-        target_dir    => $def->{target_dir} . "/unmappedReads_bowtie1_genome_1mm",
+        target_dir    => $utr3_dir . "/unmappedReads_bowtie1_genome_1mm",
         option        => $def->{bowtie1_option_1mm},
         source_ref    => [ "unmappedReads", ".fastq.gz\$" ],
         bowtie1_index => $def->{bowtie1_index},
@@ -181,7 +184,7 @@ sub getParclipSmallRNAConfig {
       unmappedReads_bowtie1_genome_1mm_3utr_count => {
         class           => "CQS::SmallRNACount",
         perform         => 1,
-        target_dir      => $def->{target_dir} . "/unmappedReads_bowtie1_genome_1mm_3utr_count",
+        target_dir      => $utr3_dir . "/unmappedReads_bowtie1_genome_1mm_3utr_count",
         option          => "",
         source_ref      => [ "unmappedReads_bowtie1_genome_1mm", ".bam\$" ],
         fastq_files_ref => [ "unmappedReads", ".fastq.gz\$" ],
@@ -200,7 +203,7 @@ sub getParclipSmallRNAConfig {
       unmappedReads_bowtie1_genome_1mm_3utr_count_target => {
         class        => "CQS::ParclipTarget",
         perform      => 1,
-        target_dir   => $def->{target_dir} . "/unmappedReads_bowtie1_genome_1mm_3utr_count_target",
+        target_dir   => $utr3_dir . "/unmappedReads_bowtie1_genome_1mm_3utr_count_target",
         option       => "",
         source_ref   => [ "gsnap_smallRNA_t2c", ".xml\$" ],
         target_ref   => [ "unmappedReads_bowtie1_genome_1mm_3utr_count", ".xml\$" ],
