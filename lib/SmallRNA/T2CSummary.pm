@@ -49,7 +49,7 @@ sub perform {
   my $outputfile = $self->get_file( $result_dir, ${task_name}, "_t2c.tsv", 0 );
   my $outputname = basename($outputfile);
 
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $outputname );
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $outputname );
   print $pbs "mono $cqstools smallrna_t2c_summary $option -o $outputname -l $filelist";
   $self->close_pbs( $pbs, $pbs_file );
 }
