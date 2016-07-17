@@ -206,7 +206,7 @@ $baqcmd
 if [[ -s $final_file && ! -s ${final_file}.stat ]]; then
   echo flagstat=`date` 
   samtools flagstat $final_file > ${final_file}.stat
-  rm $presortedFile $rmdupFilesToDel $intervalFile $realignedFile $realignedFileIndex $grpFile $recalFile $recalFileIndex $rmlist
+  rm $presortedFile $rmdupFilesToDel $intervalFile $realignedFile $realignedFileIndex $grpFile $rmlist
 fi
 ";
 		$self->close_pbs( $pbs, $pbs_file );
