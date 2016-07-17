@@ -53,7 +53,7 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
     print $pbs "mono $cqstools parclip_mirna_target $option -i $xmlFile -t $targetXml -r $refgeneFile -g $faFile -o $final_file";
     $self->close_pbs( $pbs, $pbs_file );
   }
