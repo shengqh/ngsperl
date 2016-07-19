@@ -33,9 +33,6 @@ sub perform {
   if ( has_raw_files( $config, $section, "groups" ) ) {
     %treatment_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
   }
-  else {
-    %treatment_files = %{ $self->get_grouped_raw_files( $config, $section, "treatments" ) };
-  }
 
   my %control_files;
   if ( has_raw_files( $config, $section, "inputs" ) ) {
@@ -102,9 +99,6 @@ sub result {
   my %treatment_files;
   if ( has_raw_files( $config, $section, "groups" ) ) {
     %treatment_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
-  }
-  else {
-    %treatment_files = %{ $self->get_grouped_raw_files( $config, $section, "treatments" ) };
   }
 
   my $result = {};

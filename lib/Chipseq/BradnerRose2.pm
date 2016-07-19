@@ -36,14 +36,7 @@ sub perform {
     $option = "-s 12500 -t 2500";
   }
 
-  my %treatments_files;
-  if ( has_raw_files( $config, $section, "groups" ) ) {
-    %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
-  }
-  else {
-    %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "treatments" ) };
-  }
-
+  my %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
   my %control_files = {};
   if ( has_raw_files( $config, $section, "inputs" ) ) {
     %control_files = %{ $self->get_grouped_raw_files( $config, $section, "inputs" ) };
@@ -147,13 +140,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my %treatments_files;
-  if ( has_raw_files( $config, $section, "groups" ) ) {
-    %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
-  }
-  else {
-    %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "treatments" ) };
-  }
+  my %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
 
   my %binding_site_beds = %{ get_raw_files( $config, $section, "binding_site_bed" ) };
 
