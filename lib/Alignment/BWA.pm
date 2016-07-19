@@ -98,7 +98,7 @@ if [ ! -s $rgbam_file ]; then
   fi
 
   if [ -s $rgsam_file ]; then
-    samtools view -S -b $rgsam_file > $rgbam_file
+    samtools view -S -b -@ $thread $rgsam_file > $rgbam_file
     if [ -s $rgbam_file ]; then
       rm $rgsam_file
     fi
