@@ -37,7 +37,7 @@ sub perform {
   }
 
   my %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
-  my %control_files = {};
+  my %control_files;
   if ( has_raw_files( $config, $section, "inputs" ) ) {
     %control_files = %{ $self->get_grouped_raw_files( $config, $section, "inputs" ) };
   }
