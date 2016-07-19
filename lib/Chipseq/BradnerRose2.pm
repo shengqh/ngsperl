@@ -36,20 +36,20 @@ sub perform {
     $option = "-s 12500 -t 2500";
   }
 
-  my %raw_files;
+  my %treatments_files;
   if ( has_raw_files( $config, $section, "groups" ) ) {
-    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+    %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
   }
   else {
-    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "treatments" ) };
+    %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "treatments" ) };
   }
 
-  my %input_files = {};
+  my %control_files = {};
   if ( has_raw_files( $config, $section, "inputs" ) ) {
-    %input_files = %{ $self->get_grouped_raw_files( $config, $section, "inputs" ) };
+    %control_files = %{ $self->get_grouped_raw_files( $config, $section, "inputs" ) };
   }
   elsif ( has_raw_files( $config, $section, "controls" ) ) {
-    %input_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
+    %control_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
   }
 
   my %binding_site_beds = %{ get_raw_files( $config, $section, "binding_site_bed" ) };
@@ -61,14 +61,14 @@ sub perform {
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
 
-  for my $group_name ( sort keys %raw_files ) {
-    my @sample_files = @{ $raw_files{$group_name} };
+  for my $group_name ( sort keys %treatments_files ) {
+    my @sample_files = @{ $treatments_files{$group_name} };
     my $treatment    = "-r " . $sample_files[0];
 
     my $control = "";
-    if ( scalar(%input_files) > 0 ) {
-      my @controls = @{ $input_files{$group_name} };
-      $control = "-c " . $controls[0];
+    if (%control_files) {
+      my @c_files = @{ $control_files{$group_name} };
+      $control = "-c " . $c_files[0];
     }
 
     my @binding_files = @{ $binding_site_beds{$group_name} };
@@ -147,18 +147,18 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my %raw_files;
+  my %treatments_files;
   if ( has_raw_files( $config, $section, "groups" ) ) {
-    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+    %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
   }
   else {
-    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "treatments" ) };
+    %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "treatments" ) };
   }
 
   my %binding_site_beds = %{ get_raw_files( $config, $section, "binding_site_bed" ) };
 
   my $result = {};
-  for my $group_name ( sort keys %raw_files ) {
+  for my $group_name ( sort keys %treatments_files ) {
     my $cur_dir       = $result_dir . "/$group_name";
     my @result_files  = ();
     my @binding_files = @{ $binding_site_beds{$group_name} };

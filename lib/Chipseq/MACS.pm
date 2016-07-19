@@ -29,37 +29,37 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %raw_files;
+  my %treatment_files;
   if ( has_raw_files( $config, $section, "groups" ) ) {
-    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+    %treatment_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
   }
   else {
-    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "treatments" ) };
+    %treatment_files = %{ $self->get_grouped_raw_files( $config, $section, "treatments" ) };
   }
 
-  my %input_files = {};
+  my %control_files = {};
   if ( has_raw_files( $config, $section, "inputs" ) ) {
-    %input_files = %{ $self->get_grouped_raw_files( $config, $section, "inputs" ) };
+    %control_files = %{ $self->get_grouped_raw_files( $config, $section, "inputs" ) };
   }
   elsif ( has_raw_files( $config, $section, "controls" ) ) {
-    %input_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
+    %control_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
   }
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
 
-  for my $sample_name ( sort keys %raw_files ) {
+  for my $sample_name ( sort keys %treatment_files ) {
     my $cur_dir    = create_directory_or_die( $result_dir . "/$sample_name" );
     my $final_file = "${sample_name}_peaks.name.bed";
 
-    my @sample_files = @{ $raw_files{$sample_name} };
+    my @sample_files = @{ $treatment_files{$sample_name} };
     my $treatment = "-t " . join( ",", @sample_files );
 
-    my $input = "";
-    if ( scalar(%input_files) > 0 ) {
-      my @input_files = @{ $input_files{$sample_name} };
-      $input = "-c " . join( ",", @input_files );
+    my $control = "";
+    if (%control_files) {
+      my @c_files = @{ $control_files{$sample_name} };
+      $control = "-c " . join( ",", @c_files );
     }
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -75,7 +75,7 @@ sub perform {
 
     print $pbs "
 if [ ! -s ${sample_name}_peaks.bed ]; then
-  macs $option $treatment $input -n $sample_name
+  macs $option $treatment $control -n $sample_name
 fi
 
 if [[ -s ${sample_name}_peaks.bed && ! -s ${sample_name}_peaks.name.bed ]]; then
@@ -99,16 +99,16 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my %raw_files;
+  my %treatment_files;
   if ( has_raw_files( $config, $section, "groups" ) ) {
-    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+    %treatment_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
   }
   else {
-    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "treatments" ) };
+    %treatment_files = %{ $self->get_grouped_raw_files( $config, $section, "treatments" ) };
   }
 
   my $result = {};
-  for my $group_name ( sort keys %raw_files ) {
+  for my $group_name ( sort keys %treatment_files ) {
     my $cur_dir      = $result_dir . "/$group_name";
     my @result_files = ();
     push( @result_files, $cur_dir . "/${group_name}_peaks.name.bed" );
