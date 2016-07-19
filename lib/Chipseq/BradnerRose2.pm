@@ -36,13 +36,21 @@ sub perform {
     $option = "-s 12500 -t 2500";
   }
 
-  my %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+  my %raw_files;
+  if ( has_raw_files( $config, $section, "groups" ) ) {
+    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+  }
+  else {
+    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "treatments" ) };
+  }
 
-  #print Dumper(%raw_files) . "\n";
-
-  my %control_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
-
-  #print Dumper(%control_files) . "\n";
+  my %input_files = {};
+  if ( has_raw_files( $config, $section, "inputs" ) ) {
+    %input_files = %{ $self->get_grouped_raw_files( $config, $section, "inputs" ) };
+  }
+  elsif ( has_raw_files( $config, $section, "controls" ) ) {
+    %input_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
+  }
 
   my %binding_site_beds = %{ get_raw_files( $config, $section, "binding_site_bed" ) };
   my $binding_site_filter = $config->{$section}{"binding_site_filter"};
@@ -57,8 +65,11 @@ sub perform {
     my @sample_files = @{ $raw_files{$group_name} };
     my $treatment    = "-r " . $sample_files[0];
 
-    my @controls = @{ $control_files{$group_name} };
-    my $control  = "-c " . $controls[0];
+    my $control = "";
+    if ( scalar(%input_files) > 0 ) {
+      my @controls = @{ $input_files{$group_name} };
+      $control = "-c " . $controls[0];
+    }
 
     my @binding_files = @{ $binding_site_beds{$group_name} };
 
@@ -118,7 +129,7 @@ cd $pipeline_dir
       else {
         print $pbs "cp -f $binding_file $newfile \n";
       }
-      print $pbs "python ROSE2_main.py -g $genome -i $newfile $treatment $control -o $cur_dir $option \n"; 
+      print $pbs "python ROSE2_main.py -g $genome -i $newfile $treatment $control -o $cur_dir $option \n";
       $self->close_pbs( $pbs, $pbs_file );
     }
 
@@ -136,7 +147,14 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+  my %raw_files;
+  if ( has_raw_files( $config, $section, "groups" ) ) {
+    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+  }
+  else {
+    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "treatments" ) };
+  }
+
   my %binding_site_beds = %{ get_raw_files( $config, $section, "binding_site_bed" ) };
 
   my $result = {};
