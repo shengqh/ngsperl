@@ -1,3 +1,6 @@
+#load Rcpp package first because of the error with reshape2 package
+library(Rcpp)
+
 ###############################################################################
 # Functions in pipeline
 ###############################################################################
