@@ -9,6 +9,7 @@
 # pvalue<-0.05
 # foldChange<-2
 # minMedianInGroup<-5
+# addCountOne<-0
 # 
 # comparisons=list(
 #   "CAPTISOL_vs_FED" = c("CAPTISOL_vs_FED.design", "FED", "CAPTISOL")
@@ -168,7 +169,10 @@ if(index > 1){
 countData<-data[,c(index:ncol(data))]
 
 countData[is.na(countData)] <- 0
-countData<-round(countData)+1
+
+if(addCountOne){
+  countData<-round(countData)+1
+}
 
 comparisonNames=names(comparisons)
 comparisonName=comparisonNames[1]

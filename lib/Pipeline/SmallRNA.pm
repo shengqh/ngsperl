@@ -45,10 +45,11 @@ sub getSmallRNAConfig {
   my $search_host_genome    = ( !defined $def->{search_host_genome} )    || $def->{search_host_genome};
   my $search_miRBase        = ( !defined $def->{search_miRBase} )        || $def->{search_miRBase};
   my $search_unmapped_reads = ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
-  my $blast_unmapped_reads = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
-  my $do_comparison        = defined $def->{pairs};
-  my $groups               = $def->{groups};
-  my $groups_vis_layout    = $def->{groups_vis_layout};
+  my $blast_unmapped_reads    = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
+  my $do_comparison           = defined $def->{pairs};
+  my $groups                  = $def->{groups};
+  my $groups_vis_layout       = $def->{groups_vis_layout};
+  my $add_count_one_in_DEseq2 = ( !defined $def->{add_count_one_in_DEseq2} ) || $def->{add_count_one_in_DEseq2};
 
   if ($do_comparison) {
     $config->{deseq2_top100Reads} = {
@@ -64,6 +65,7 @@ sub getSmallRNAConfig {
       pvalue               => 0.05,
       fold_change          => 1.5,
       min_median_read      => 2,
+      add_count_one        => $add_count_one_in_DEseq2,
       pbs                  => {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
@@ -158,7 +160,7 @@ sub getSmallRNAConfig {
           "mem"      => "10gb"
         },
       },
-      
+
       bowtie1_genome_1mm_NTA_smallRNA_category => {
         class                     => "CQS::UniqueR",
         perform                   => 1,
@@ -189,7 +191,7 @@ sub getSmallRNAConfig {
     push @table_for_countSum,
       ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" );
     push @individual, ( "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_NTA_smallRNA_count" );
-    push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_tRNA_table_pm_table_vis","bowtie1_genome_1mm_NTA_smallRNA_category" );
+    push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_tRNA_table_pm_table_vis", "bowtie1_genome_1mm_NTA_smallRNA_category" );
 
     if ($search_not_identical) {
 
@@ -234,6 +236,7 @@ sub getSmallRNAConfig {
           pvalue               => 0.05,
           fold_change          => 1.5,
           min_median_read      => 6,
+          add_count_one        => $add_count_one_in_DEseq2,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -254,6 +257,7 @@ sub getSmallRNAConfig {
           pvalue               => 0.05,
           fold_change          => 1.5,
           min_median_read      => 6,
+          add_count_one        => $add_count_one_in_DEseq2,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -274,6 +278,7 @@ sub getSmallRNAConfig {
           pvalue               => 0.05,
           fold_change          => 1.5,
           min_median_read      => 6,
+          add_count_one        => $add_count_one_in_DEseq2,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -294,6 +299,7 @@ sub getSmallRNAConfig {
           pvalue               => 0.05,
           fold_change          => 1.5,
           min_median_read      => 6,
+          add_count_one        => $add_count_one_in_DEseq2,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -991,6 +997,7 @@ sub getSmallRNAConfig {
           pvalue               => 0.05,
           fold_change          => 1.5,
           min_median_read      => 6,
+          add_count_one        => $add_count_one_in_DEseq2,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1011,6 +1018,7 @@ sub getSmallRNAConfig {
           pvalue               => 0.05,
           fold_change          => 1.5,
           min_median_read      => 6,
+          add_count_one        => $add_count_one_in_DEseq2,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1031,6 +1039,7 @@ sub getSmallRNAConfig {
           pvalue               => 0.05,
           fold_change          => 1.5,
           min_median_read      => 6,
+          add_count_one        => $add_count_one_in_DEseq2,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1052,6 +1061,7 @@ sub getSmallRNAConfig {
           pvalue               => 0.05,
           fold_change          => 1.5,
           min_median_read      => 6,
+          add_count_one        => $add_count_one_in_DEseq2,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1072,6 +1082,7 @@ sub getSmallRNAConfig {
           pvalue               => 0.05,
           fold_change          => 1.5,
           min_median_read      => 6,
+          add_count_one        => $add_count_one_in_DEseq2,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1092,6 +1103,7 @@ sub getSmallRNAConfig {
           pvalue               => 0.05,
           fold_change          => 1.5,
           min_median_read      => 6,
+          add_count_one        => $add_count_one_in_DEseq2,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
