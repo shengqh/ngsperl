@@ -94,17 +94,20 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
              labRow=NA,
              main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
              cexCol=cexCol, 
+             useRaster=FALSE,
              legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
     dev.off()
   }
 }
 
 drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors){
-  filename<-paste0(prefix, "_DESeq2-vsd-pca.png")
+  #filename<-paste0(prefix, "_DESeq2-vsd-pca.png")
+  filename<-paste0(prefix, "_DESeq2-vsd-pca.pdf")
   genecount<-nrow(rldmatrix)
   if(genecount > 2){
     cat("saving PCA to ", filename, "\n")
-    png(filename=filename, width=3000, height=3000, res=300)
+    #png(filename=filename, width=3000, height=3000, res=300) # 10 X 10 inches
+    pdf(filename, width=10, height=10)
     pca<-prcomp(t(rldmatrix))
     supca<-summary(pca)$importance
     pcadata<-data.frame(pca$x)
