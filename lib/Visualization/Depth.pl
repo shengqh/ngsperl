@@ -148,12 +148,12 @@ if ( defined $drawLine ) {
   my $zeroes = "\t0" x (scalar(@headers) - 3);
   
   while (<$tmp>) {
-    s/\r|\n//g;
-    my @parts = split "\t";
+    my $line = s/\r|\n//g;
+    my @parts = split("\t", $line);
     if ( $lastfile ne $parts[ scalar(@parts) - 1 ] ) {
       $lastpos  = $parts[1];
       $lastfile = $parts[ scalar(@parts) - 1 ];
-      print $depth @_, "\n";
+      print $depth $line, "\n";
       next;
     }
     
@@ -163,7 +163,7 @@ if ( defined $drawLine ) {
       print $depth $parts[0], "\t", ($parts[1] - 1), $zeroes, "\t", $lastfile, "\n";
     }
 
-    print $depth @_, "\n";
+    print $depth $line, "\n";
     $lastpos  = $parts[1];
   }
   close $tmp;
