@@ -34,7 +34,7 @@ sub perform {
   my $bedFiles  = get_raw_files( $config, $section );
   my $groups    = get_raw_files( $config, $section, "groups" );
   my $bam_files = get_raw_files( $config, $section, "bam_files" );
-  my $singlepdf = get_option( $config, $section, "singlepdf", 0 ) ? "-s" : "";
+  my $singlepdf = get_option( $config, $section, "single_pdf", 0 ) ? "-s" : "";
   my $facetSample = get_option( $config, $section, "facet_sample", 0 ) ? "-f" : "";
 
   my $cnvr_files;
@@ -81,7 +81,9 @@ sub perform {
     print $sh "\$MYCMD ./$pbs_name \n";
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
+    my $depthFile = $cur_dir . "/" .  basename($curBedFiles[0]) . ".depth";
+    
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $depthFile );
     for my $bedFile (@curBedFiles) {
       print $pbs "perl $perl -b $bedFile -c $configFile $cnvr_option $singlepdf $facetSample \n";
     }
