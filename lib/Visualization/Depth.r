@@ -1,5 +1,8 @@
-#readFile<-"WES.cnvr.tsv.reads"
-#cnvrFile<-"WES.cnvr.tsv"
+#readFile = "CR_Y_TBX5_peaks.broadPeak.bed.reads" 
+#singlePdf = 0 
+#inputFile = "CR_Y_TBX5_peaks.broadPeak.bed.depth" 
+#outputFile = "" 
+#facet<-0
 
 library("reshape2")
 library("ggplot2")
@@ -32,7 +35,7 @@ if(singlePdf){
   pdf(outputFile, onefile = T)
 }
 
-x<-files[1]
+x<-files[2]
 for(x in files){
   cat(x, "\n")
   
@@ -53,26 +56,45 @@ for(x in files){
   mdata<-melt(curdata, id=c("Chr", "Position", "File"))
   colnames(mdata)<-c("Chr", "Position", "File", "Sample", "Depth")
   
-  if(exists("cnvrFile")){
-    mdata$Color<-as.character(curcnv[as.character(mdata$Sample)])
-    g<-ggplot(mdata, aes(x=Position, y=Depth)) + 
-      geom_point(aes(color = Color), size=0.5) +
-      scale_colour_manual(name="CNV", values = colors)
-  }else{
-    g<-ggplot(mdata, aes(x=Position, y=Depth)) +
-      geom_point(aes(color = Sample), size=0.5, show.legend = F)
+  if(facet){
+    height=max(3000, 300+800 * length(unique(curdata$Sample)))
+    if(exists("cnvrFile")){
+      mdata$Color<-as.character(curcnv[as.character(mdata$Sample)])
+      g<-ggplot(mdata, aes(x=Position, y=Depth)) + 
+        geom_point(aes(color = Color), size=0.8) +
+        scale_colour_manual(name="CNV", values = colors)
+    }else{
+      g<-ggplot(mdata, aes(x=Position, y=Depth)) +
+        geom_point(aes(color = Sample), size=0.8, show.legend = F)
+    }
+    
+    g <- g + xlab(unique(data$chr)) + 
+      ylab("Reads per million total reads") +
+      ggtitle(x) +
+      facet_wrap( ~ Sample, ncol=1) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   }
-  
-  g <- g + xlab(unique(data$chr)) + 
-    ylab("Reads per million total reads") +
-    ggtitle(x) +
-    facet_wrap( ~ Sample, ncol=1) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
-  
+  else{
+    height=1500
+    if(exists("cnvrFile")){
+      mdata$Color<-as.character(curcnv[as.character(mdata$Sample)])
+      g<-ggplot(mdata, aes(x=Position, y=Depth, group=Sample)) + 
+        geom_point(aes(color = Color), size=0.8) +
+        scale_colour_manual(name="CNV", values = colors)
+    }else{
+      g<-ggplot(mdata, aes(x=Position, y=Depth, group=Sample)) +
+        geom_point(aes(color = Sample), size=0.8, show.legend = T)
+    }
+    
+    g <- g + xlab(unique(data$chr)) + 
+      ylab("Reads per million total reads") +
+      ggtitle(x) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+  }
   if(singlePdf){
     print(g)
   }else{
-    png(paste0(x, ".png"), width=2000, height=max(3000, 300+800 * length(unique(curdata$Sample))), res=300)
+    png(paste0(x, ".png"), width=2000, height=height, res=300)
     print(g)
     dev.off()
   }

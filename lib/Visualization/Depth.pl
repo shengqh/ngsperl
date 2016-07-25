@@ -22,6 +22,7 @@ Options:
   -c|--configFile         Input file list with two columns: sample name and bam file
   -v|--cnvrFile           Input file from cn.mops module which includes loci and CNx categories cross samples
   -s|--singlePdf          Output as single pdf (for small dataset)
+  -f|--facetSampleInImage Draw image using facet_wrap of ggplot
   -h|--help               This page.
 ";
 
@@ -33,13 +34,15 @@ my $configFile;
 my $cnvrFile;
 my $singlePdf;
 my $minDepth = 5;
+my $facetSample;
 
 GetOptions(
-  'h|help'         => \$help,
-  'b|bedFile=s'    => \$bedFile,
-  'c|configFile=s' => \$configFile,
-  'v|cnvrFile=s'   => \$cnvrFile,
-  's|siglepdf'     => \$singlePdf,
+  'h|help'               => \$help,
+  'b|bedFile=s'          => \$bedFile,
+  'c|configFile=s'       => \$configFile,
+  'v|cnvrFile=s'         => \$cnvrFile,
+  's|siglepdf'           => \$singlePdf,
+  'f|facetSampleInImage' => \$facetSample,
 );
 
 if ( defined $help ) {
@@ -129,6 +132,7 @@ if ( !-e $depthFile ) {
 }
 
 my $singlePdfStr = ( defined $singlePdf ) ? 1 : 0;
+my $facetStr = ( defined $facetSample ) ? 1 : 0;
 my $outputFile = ( defined $singlePdf ) ? "${depthFile}.pdf" : "";
 
 open( my $targetr,   ">Depth.r" ) or die "Cannot create file Depth.r";
@@ -141,6 +145,7 @@ if ( defined($cnvrFile) ) {
 print $targetr "singlePdf = $singlePdfStr \n";
 print $targetr "inputFile = \"$depthFile\" \n";
 print $targetr "outputFile = \"$outputFile\" \n";
+print $targetr "facet = \"$facetStr\" \n";
 
 while (<$rtemplate>) {
   s/\r|\n//g;

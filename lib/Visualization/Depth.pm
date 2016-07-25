@@ -35,6 +35,7 @@ sub perform {
   my $groups    = get_raw_files( $config, $section, "groups" );
   my $bam_files = get_raw_files( $config, $section, "bam_files" );
   my $singlepdf = get_option( $config, $section, "singlepdf", 0 ) ? "-s" : "";
+  my $facetSample = get_option( $config, $section, "facet_sample", 0 ) ? "-f" : "";
 
   my $cnvr_files;
   if ( has_raw_files( $config, $section, "cnvr_files" ) ) {
@@ -82,7 +83,7 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
     for my $bedFile (@curBedFiles) {
-      print $pbs "perl $perl -b $bedFile -c $configFile $cnvr_option $singlepdf \n";
+      print $pbs "perl $perl -b $bedFile -c $configFile $cnvr_option $singlepdf $facetSample \n";
     }
     $self->close_pbs( $pbs, $pbs_file );
   }
