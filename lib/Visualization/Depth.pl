@@ -149,6 +149,9 @@ if ( defined $drawLine ) {
 
   while (my $line = <$tmp>) {
     $line = s/\r|\n//g;
+    
+    print $line, "\n";
+    
     my @parts = split /\t/, $line;
 
     print $parts[0], "\t", $parts[1], "\n";
