@@ -142,7 +142,7 @@ if ( defined $drawLine ) {
   my $lastpos  = 0;
   my $lastfile = "";
   my $header = readline($tmp);
-  print $depth, $header;
+  print $depth $header;
   
   my @headers = split("\t", $header);
   my $zeroes = "\t0" x (scalar(@headers) - 3);
@@ -153,17 +153,17 @@ if ( defined $drawLine ) {
     if ( $lastfile ne $parts[ scalar(@parts) - 1 ] ) {
       $lastpos  = $parts[1];
       $lastfile = $parts[ scalar(@parts) - 1 ];
-      print $depth, @_, "\n";
+      print $depth @_, "\n";
       next;
     }
     
     my $gap = $parts[1] - $lastpos;
     if($gap > 2){
-      print $depth, $parts[0], "\t", ($lastpos + 1), $zeroes, "\t", $lastfile, "\n";
-      print $depth, $parts[0], "\t", ($parts[1] - 1), $zeroes, "\t", $lastfile, "\n";
+      print $depth $parts[0], "\t", ($lastpos + 1), $zeroes, "\t", $lastfile, "\n";
+      print $depth $parts[0], "\t", ($parts[1] - 1), $zeroes, "\t", $lastfile, "\n";
     }
 
-    print $depth, @_, "\n";
+    print $depth @_, "\n";
     $lastpos  = $parts[1];
   }
   close $tmp;
