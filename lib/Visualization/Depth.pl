@@ -150,6 +150,9 @@ if ( defined $drawLine ) {
   while (<$tmp>) {
     my $line = s/\r|\n//g;
     my @parts = split("\t", $line);
+    
+    print $parts[0], "\t", $parts[1], "\n";
+    
     if ( $lastfile ne $parts[ scalar(@parts) - 1 ] ) {
       $lastpos  = $parts[1];
       $lastfile = $parts[ scalar(@parts) - 1 ];
