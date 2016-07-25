@@ -55,7 +55,7 @@ for(x in files){
   
   curdata<-data[data$File==x,]
   
-  title<-paste0(x, "(", curdata$Chr[1], ":", min(curdata$Position),"-",max(curdata$Position),")")
+  title<-paste0(x, " (", curdata$Chr[1], ":", min(curdata$Position),"-",max(curdata$Position),")")
   
   mdata<-melt(curdata, id=c("Chr", "Position", "File"))
   colnames(mdata)<-c("Chr", "Position", "File", "Sample", "Depth")
