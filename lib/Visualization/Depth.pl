@@ -136,6 +136,7 @@ if ( !-e $depthFile ) {
 }
 
 if ( defined $drawLine ) {
+  #insert zero count between gap for draw lines
   open( my $tmp,   $curdepthFile )     or die "Cannot open file $curdepthFile";
   open( my $depth, "> " . $depthFile ) or die "Cannot open file $depthFile";
   my $lastchr  = "";
