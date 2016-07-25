@@ -23,6 +23,7 @@ Options:
   -v|--cnvrFile           Input file from cn.mops module which includes loci and CNx categories cross samples
   -s|--singlePdf          Output as single pdf (for small dataset)
   -f|--facetSampleInImage Draw image using facet_wrap of ggplot
+  -l|--drawLine           Draw line, default is draw point.
   -h|--help               This page.
 ";
 
@@ -35,6 +36,7 @@ my $cnvrFile;
 my $singlePdf;
 my $minDepth = 5;
 my $facetSample;
+my $drawLine;
 
 GetOptions(
   'h|help'               => \$help,
@@ -43,6 +45,7 @@ GetOptions(
   'v|cnvrFile=s'         => \$cnvrFile,
   's|siglepdf'           => \$singlePdf,
   'f|facetSampleInImage' => \$facetSample,
+  'l|drawLine'           => \$drawLine,
 );
 
 if ( defined $help ) {
@@ -100,9 +103,10 @@ for ( my $index = 0 ; $index < scalar(@bamNames) ; $index++ ) {
 close($reads);
 
 my $depthFile = basename($bedFile) . ".depth";
+my $curdepthFile = $drawLine ? "${depthFile}.tmp" : $depthFile;
 if ( !-e $depthFile ) {
   open( my $bed, $bedFile ) or die "Cannot open file $bedFile";
-  `printf "Chr\tPosition\t${bamNamesStr}\tFile\n" > $depthFile`;
+  `printf "Chr\tPosition\t${bamNamesStr}\tFile\n" > $curdepthFile`;
 
   my $keys = {};
   while (<$bed>) {
@@ -119,7 +123,7 @@ if ( !-e $depthFile ) {
 
       print( $fileprefix . "\n" );
       my $cmd =
-        "samtools depth -d 1000000 -r ${chr}:${start}-${end} $bamFilesStr | awk '{m=\$3;for(i=4;i<=NF;i++)if(\$i>m)m=\$i;if(m>=$minDepth)print \$0}' | sed -e \"s/\$/\t$fileprefix/g \" >> $depthFile";
+"samtools depth -d 1000000 -r ${chr}:${start}-${end} $bamFilesStr | awk '{m=\$3;for(i=4;i<=NF;i++)if(\$i>m)m=\$i;if(m>=$minDepth)print \$0}' | sed -e \"s/\$/\t$fileprefix/g \" >> $curdepthFile";
       my $returnCode = system($cmd);
       if ( $returnCode != 0 ) {
         die("Error return code = $returnCode, exit.");
@@ -131,9 +135,45 @@ if ( !-e $depthFile ) {
   close $bed;
 }
 
-my $singlePdfStr = ( defined $singlePdf ) ? 1 : 0;
-my $facetStr = ( defined $facetSample ) ? 1 : 0;
-my $outputFile = ( defined $singlePdf ) ? "${depthFile}.pdf" : "";
+if ( defined $drawLine ) {
+  open( my $tmp,    $curdepthFile )     or die "Cannot open file $curdepthFile";
+  open( my $depth, "> " . $depthFile ) or die "Cannot open file $depthFile";
+  my $lastchr  = "";
+  my $lastpos  = 0;
+  my $lastfile = "";
+  my $header = readline($tmp);
+  print $depth, $header;
+  
+  my @headers = split("\t", $header);
+  my $zeroes = "\t0" x (scalar(@headers) - 3);
+  
+  while (<$tmp>) {
+    s/\r|\n//g;
+    my @parts = split "\t";
+    if ( $lastfile ne $parts[ scalar(@parts) - 1 ] ) {
+      $lastpos  = $parts[1];
+      $lastfile = $parts[ scalar(@parts) - 1 ];
+      print $depth, @_, "\n";
+      next;
+    }
+    
+    my $gap = $parts[1] - $lastpos;
+    if($gap > 2){
+      print $depth, $parts[0], "\t", ($lastpos + 1), $zeroes, "\t", $lastfile, "\n";
+      print $depth, $parts[0], "\t", ($parts[1] - 1), $zeroes, "\t", $lastfile, "\n";
+    }
+
+    print $depth, @_, "\n";
+    $lastpos  = $parts[1];
+  }
+  close $tmp;
+  close $depth;
+}
+
+my $singlePdfStr = ( defined $singlePdf )   ? 1                  : 0;
+my $facetStr     = ( defined $facetSample ) ? 1                  : 0;
+my $lineStr      = ( defined $drawLine )    ? 1                  : 0;
+my $outputFile   = ( defined $singlePdf )   ? "${depthFile}.pdf" : "";
 
 open( my $targetr,   ">Depth.r" ) or die "Cannot create file Depth.r";
 open( my $rtemplate, $r )         or die "Cannot open file $r";
@@ -146,6 +186,7 @@ print $targetr "inputFile = \"$depthFile\" \n";
 print $targetr "outputFile = \"$outputFile\" \n";
 print $targetr "singlePdf = $singlePdfStr \n";
 print $targetr "facet = $facetStr \n";
+print $targetr "drawLine = $lineStr \n";
 
 while (<$rtemplate>) {
   s/\r|\n//g;
