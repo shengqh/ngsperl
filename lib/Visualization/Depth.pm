@@ -34,8 +34,9 @@ sub perform {
   my $bedFiles  = get_raw_files( $config, $section );
   my $groups    = get_raw_files( $config, $section, "groups" );
   my $bam_files = get_raw_files( $config, $section, "bam_files" );
-  my $singlepdf = get_option( $config, $section, "single_pdf", 0 ) ? "-s" : "";
+  my $singlepdf   = get_option( $config, $section, "single_pdf",   0 ) ? "-s" : "";
   my $facetSample = get_option( $config, $section, "facet_sample", 0 ) ? "-f" : "";
+  my $drawLine    = get_option( $config, $section, "draw_line",    0 ) ? "-l" : "";
 
   my $cnvr_files;
   if ( has_raw_files( $config, $section, "cnvr_files" ) ) {
@@ -81,11 +82,11 @@ sub perform {
     print $sh "\$MYCMD ./$pbs_name \n";
     my $log_desc = $cluster->get_log_description($log);
 
-    my $depthFile = $cur_dir . "/" .  basename($curBedFiles[0]) . ".depth";
-    
+    my $depthFile = $cur_dir . "/" . basename( $curBedFiles[0] ) . ".depth";
+
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $depthFile );
     for my $bedFile (@curBedFiles) {
-      print $pbs "perl $perl -b $bedFile -c $configFile $cnvr_option $singlepdf $facetSample \n";
+      print $pbs "perl $perl -b $bedFile -c $configFile $cnvr_option $singlepdf $facetSample $drawLine \n";
     }
     $self->close_pbs( $pbs, $pbs_file );
   }
@@ -108,14 +109,14 @@ sub result {
 
   my $result = {};
   for my $name ( sort keys %{$bedFiles} ) {
-    my $cur_dir = create_directory_or_die( $result_dir . "/$name" );
+    my $cur_dir      = create_directory_or_die( $result_dir . "/$name" );
     my @result_files = ();
-    push( @result_files, $pbs_dir . "/" .  $name . ".filelist" );
+    push( @result_files, $pbs_dir . "/" . $name . ".filelist" );
 
     my @curBedFiles = @{ $bedFiles->{$name} };
     for my $bedFile (@curBedFiles) {
-      push( @result_files, $cur_dir . "/" .  basename($bedFile) . ".depth" );
-      push( @result_files, $cur_dir . "/" .  basename($bedFile) . ".reads" );
+      push( @result_files, $cur_dir . "/" . basename($bedFile) . ".depth" );
+      push( @result_files, $cur_dir . "/" . basename($bedFile) . ".reads" );
     }
 
     $result->{$name} = filter_array( \@result_files, $pattern );
