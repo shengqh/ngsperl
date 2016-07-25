@@ -144,12 +144,12 @@ if ( defined $drawLine ) {
   my $header = readline($tmp);
   print $depth $header;
   
-  my @headers = split("\t", $header);
+  my @headers = split('\t', $header);
   my $zeroes = "\t0" x (scalar(@headers) - 3);
   
   while (<$tmp>) {
     my $line = s/\r|\n//g;
-    my @parts = split("\t", $line);
+    my @parts = split('\t', $line);
     
     print $parts[0], "\t", $parts[1], "\n";
     
