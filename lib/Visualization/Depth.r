@@ -3,6 +3,7 @@
 #inputFile = "CR_Y_TBX5_peaks.broadPeak.bed.depth" 
 #outputFile = "" 
 #facet<-0
+#drawLine<-1
 
 library("reshape2")
 library("ggplot2")
@@ -60,14 +61,21 @@ for(x in files){
     height=max(2000, 400+800 * length(unique(curdata$Sample)))
     if(exists("cnvrFile")){
       mdata$Color<-as.character(curcnv[as.character(mdata$Sample)])
-      g<-ggplot(mdata, aes(x=Position, y=Depth)) + 
-        geom_point(aes(color = Color), size=0.8) +
-        scale_colour_manual(name="CNV", values = colors)
+      g<-ggplot(mdata, aes(x=Position, y=Depth))
+      if(drawLine){
+        g <- g + geom_line(aes(color = Color), size=0.8)
+      }else{
+        g <- g + geom_point(aes(color = Color), size=0.8)
+      }
+      g<-g + scale_colour_manual(name="CNV", values = colors)
     }else{
-      g<-ggplot(mdata, aes(x=Position, y=Depth)) +
-        geom_point(aes(color = Sample), size=0.8, show.legend = F)
+      g<-ggplot(mdata, aes(x=Position, y=Depth))
+      if(drawLine){
+        g<-g+geom_line(aes(color = Sample), size=0.8, show.legend = F)
+      }else{
+        g<-g+geom_point(aes(color = Sample), size=0.8, show.legend = F)
+      }
     }
-    
     g <- g + xlab(unique(data$chr)) + 
       ylab("Reads per million total reads") +
       ggtitle(x) +
@@ -78,12 +86,20 @@ for(x in files){
     height=2000
     if(exists("cnvrFile")){
       mdata$Color<-as.character(curcnv[as.character(mdata$Sample)])
-      g<-ggplot(mdata, aes(x=Position, y=Depth, group=Sample)) + 
-        geom_point(aes(color = Color), size=0.8) +
-        scale_colour_manual(name="CNV", values = colors)
+      g<-ggplot(mdata, aes(x=Position, y=Depth, group=Sample))
+      if(drawLine){
+        g <- g + geom_line(aes(color = Color), size=0.8)
+      }else{
+        g <- g + geom_point(aes(color = Color), size=0.8)
+      }
+      g<-g+scale_colour_manual(name="CNV", values = colors)
     }else{
-      g<-ggplot(mdata, aes(x=Position, y=Depth, group=Sample)) +
-        geom_point(aes(color = Sample), size=0.8, show.legend = T)
+      g<-ggplot(mdata, aes(x=Position, y=Depth, group=Sample))
+      if(drawLine){
+        g <- g + geom_line(aes(color = Sample), size=0.8, show.legend = T)
+      }else{
+        g <- g + geom_point(aes(color = Sample), size=0.8, show.legend = T)
+      }
     }
     
     g <- g + xlab(unique(data$chr)) + 
