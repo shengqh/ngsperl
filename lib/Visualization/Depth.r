@@ -54,6 +54,9 @@ for(x in files){
   }
   
   curdata<-data[data$File==x,]
+  
+  title<-paste0(x, "(", curdata$Chr[1], ":", min(curdata$Position),"-",max(curdata$Position),")")
+  
   mdata<-melt(curdata, id=c("Chr", "Position", "File"))
   colnames(mdata)<-c("Chr", "Position", "File", "Sample", "Depth")
   
@@ -102,9 +105,9 @@ for(x in files){
       }
     }
     
-    g <- g + xlab(unique(data$chr)) + 
+    g <- g + xlab(data$chr[1]) + 
       ylab("Reads per million total reads") +
-      ggtitle(x) +
+      ggtitle(title) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   }
   if(singlePdf){
