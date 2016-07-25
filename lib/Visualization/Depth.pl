@@ -147,14 +147,9 @@ if ( defined $drawLine ) {
   my @headers = split /\t/, $header;
   my $zeroes = "\t0" x ( scalar(@headers) - 3 );
 
-  while (my $line = <$tmp>) {
-    $line = s/\r|\n//g;
-    
-    print $line, "\n";
-    
+  while ( my $line = <$tmp> ) {
+    $line =~ s/\r|\n//g;
     my @parts = split /\t/, $line;
-
-    print $parts[0], "\t", $parts[1], "\n";
 
     if ( $lastfile ne $parts[ scalar(@parts) - 1 ] ) {
       $lastpos  = $parts[1];
@@ -174,6 +169,8 @@ if ( defined $drawLine ) {
   }
   close $tmp;
   close $depth;
+  
+  unlink($curdepthFile);
 }
 
 my $singlePdfStr = ( defined $singlePdf )   ? 1                  : 0;
