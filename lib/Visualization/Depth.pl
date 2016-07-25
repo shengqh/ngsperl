@@ -136,38 +136,38 @@ if ( !-e $depthFile ) {
 }
 
 if ( defined $drawLine ) {
-  open( my $tmp,    $curdepthFile )     or die "Cannot open file $curdepthFile";
+  open( my $tmp,   $curdepthFile )     or die "Cannot open file $curdepthFile";
   open( my $depth, "> " . $depthFile ) or die "Cannot open file $depthFile";
   my $lastchr  = "";
   my $lastpos  = 0;
   my $lastfile = "";
-  my $header = readline($tmp);
+  my $header   = readline($tmp);
   print $depth $header;
-  
-  my @headers = split('\t', $header);
-  my $zeroes = "\t0" x (scalar(@headers) - 3);
-  
+
+  my @headers = split /\t/, $header;
+  my $zeroes = "\t0" x ( scalar(@headers) - 3 );
+
   while (<$tmp>) {
     my $line = s/\r|\n//g;
-    my @parts = split('\t', $line);
-    
+    my @parts = split /\t/, $line;
+
     print $parts[0], "\t", $parts[1], "\n";
-    
+
     if ( $lastfile ne $parts[ scalar(@parts) - 1 ] ) {
       $lastpos  = $parts[1];
       $lastfile = $parts[ scalar(@parts) - 1 ];
       print $depth $line, "\n";
       next;
     }
-    
+
     my $gap = $parts[1] - $lastpos;
-    if($gap > 2){
-      print $depth $parts[0], "\t", ($lastpos + 1), $zeroes, "\t", $lastfile, "\n";
-      print $depth $parts[0], "\t", ($parts[1] - 1), $zeroes, "\t", $lastfile, "\n";
+    if ( $gap > 2 ) {
+      print $depth $parts[0], "\t", ( $lastpos + 1 ), $zeroes, "\t", $lastfile, "\n";
+      print $depth $parts[0], "\t", ( $parts[1] - 1 ), $zeroes, "\t", $lastfile, "\n";
     }
 
     print $depth $line, "\n";
-    $lastpos  = $parts[1];
+    $lastpos = $parts[1];
   }
   close $tmp;
   close $depth;
