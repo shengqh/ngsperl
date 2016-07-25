@@ -142,10 +142,10 @@ print $targetr "readFile = \"$readsFile\" \n";
 if ( defined($cnvrFile) ) {
   print $targetr "cnvrFile = \"$cnvrFile\" \n";
 }
-print $targetr "singlePdf = $singlePdfStr \n";
 print $targetr "inputFile = \"$depthFile\" \n";
 print $targetr "outputFile = \"$outputFile\" \n";
-print $targetr "facet = \"$facetStr\" \n";
+print $targetr "singlePdf = $singlePdfStr \n";
+print $targetr "facet = $facetStr \n";
 
 while (<$rtemplate>) {
   s/\r|\n//g;
