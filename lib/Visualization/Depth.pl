@@ -147,8 +147,8 @@ if ( defined $drawLine ) {
   my @headers = split /\t/, $header;
   my $zeroes = "\t0" x ( scalar(@headers) - 3 );
 
-  while (<$tmp>) {
-    my $line = s/\r|\n//g;
+  while (my $line = <$tmp>) {
+    $line = s/\r|\n//g;
     my @parts = split /\t/, $line;
 
     print $parts[0], "\t", $parts[1], "\n";
