@@ -51,7 +51,7 @@ sub perform {
     my $final_file = $ispaired ? $sample_name . "_1.fastq.gz" : $sample_name . ".fastq.gz";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
     print $pbs "ln -s $bam_file ${sample_name}.sra
-fastq-dump --split-3 --gzip ${sample_name}.sra
+fastq-dump --split-3 --gzip --origfmt ${sample_name}.sra
 rm ${sample_name}.sra";
     $self->close_pbs( $pbs, $pbs_file );
   }
