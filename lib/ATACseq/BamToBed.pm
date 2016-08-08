@@ -45,19 +45,26 @@ sub perform {
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $final_file = $sample_name . ".shifted.bed";
+    my $shifted_file = $sample_name . ".shifted.bed";
+    my $confident_file = $sample_name . ".shifted.confident.bed";
     my $pileup     = "";
     if ( defined $blacklistfile ) {
-      $final_file = $sample_name . ".shifted.confident.bed";
-      $pileup     = "| bedtools subtract -a - -b $blacklistfile";
+      $pileup     = "if [[ -s $shifted_file && ! -s $confident_file ]]; then
+  bedtools subtract -a $shifted_file -b $blacklistfile > $confident_file
+  if [[ -s $confident_file ]]; then
+    rm $shifted_file
+  fi
+fi";
     }
+    my $final_file = (defined $blacklistfile) ? $confident_file : $shifted_file;
 
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     print $pbs "
-bam2bed < $bam_file | awk 'BEGIN {OFS = \"\\t\"} ; {if (\$6 == \"+\") print \$1, \$2 + 4, \$3 + 4, \$4, \$5, \$6; else print \$1, \$2 - 5, \$3 - 5, \$4, \$5, \$6}' $pileup > $final_file
+bam2bed < $bam_file | awk 'BEGIN {OFS = \"\\t\"} ; {if (\$6 == \"+\") print \$1, \$2 + 4, \$3 + 4, \$4, \$5, \$6; else print \$1, \$2 - 5, \$3 - 5, \$4, \$5, \$6}' >$shifted_file
+$pileup
 ";
     $self->close_pbs( $pbs, $pbs_file );
   }
