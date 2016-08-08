@@ -33,8 +33,8 @@ sub perform {
   my $keep_chromosome = get_option( $config, $section, "keep_chromosome", "" );
   my $minimum_maq = get_option( $config, $section, "minimum_maq", 10 );
   
-  if($keep_chromosome != ""){
-    $keep_chromosome = "|grep $keep_chromosome";
+  if($keep_chromosome !~ /^\s*$/){
+    $keep_chromosome = "| grep $keep_chromosome";
   }
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
