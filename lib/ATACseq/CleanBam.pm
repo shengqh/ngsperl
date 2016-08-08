@@ -30,7 +30,12 @@ sub perform {
 
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
   my $remove_chromosome = get_option( $config, $section, "remove_chromosome" );
+  my $keep_chromosome = get_option( $config, $section, "keep_chromosome", "" );
   my $minimum_maq = get_option( $config, $section, "minimum_maq", 10 );
+  
+  if($keep_chromosome != ""){
+    $keep_chromosome = "|grep $keep_chromosome";
+  }
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -59,7 +64,7 @@ sub perform {
     print $pbs "
 if [ ! -s $noChrFile ]; then
   echo RemoveChromosome=`date` 
-  samtools idxstats $sampleFile | cut -f 1 | grep -v $remove_chromosome | xargs samtools view -bq $minimum_maq $sampleFile > $noChrFile 
+  samtools idxstats $sampleFile | cut -f 1 | grep -v $remove_chromosome $keep_chromosome | xargs samtools view -bq $minimum_maq $sampleFile > $noChrFile 
 fi
 
 if [[ -s $noChrFile && ! -s $final_file ]]; then
