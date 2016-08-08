@@ -65,7 +65,7 @@ fi";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     print $pbs "
-bam2bed --do-not-sort --max-mem $memory < $bam_file > $bed_file
+bam2bed --do-not-sort < $bam_file > $bed_file
 
 if [[ -s $bed_file && ! -s $shifted_file ]]; then
   awk 'BEGIN {OFS = \"\\t\"} ; {if (\$6 == \"+\") print \$1, \$2 + 4, \$3 + 4, \$4, \$5, \$6; else print \$1, \$2 - 5, \$3 - 5, \$4, \$5, \$6}' $bed_file > $shifted_file
