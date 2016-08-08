@@ -45,12 +45,14 @@ sub perform {
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
+    my $bed_file = $sample_name . ".bed";
     my $shifted_file = $sample_name . ".shifted.bed";
     my $confident_file = $sample_name . ".shifted.confident.bed";
     my $pileup     = "";
     if ( defined $blacklistfile ) {
       $pileup     = "if [[ -s $shifted_file && ! -s $confident_file ]]; then
   bedtools subtract -a $shifted_file -b $blacklistfile > $confident_file
+  
   if [[ -s $confident_file ]]; then
     rm $shifted_file
   fi
@@ -63,7 +65,15 @@ fi";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     print $pbs "
-bam2bed < $bam_file | awk 'BEGIN {OFS = \"\\t\"} ; {if (\$6 == \"+\") print \$1, \$2 + 4, \$3 + 4, \$4, \$5, \$6; else print \$1, \$2 - 5, \$3 - 5, \$4, \$5, \$6}' >$shifted_file
+bam2bed < $bam_file > $bed_file
+
+if [[ -s $bed_file && ! -s $shifted_file ]]; then
+  awk 'BEGIN {OFS = \"\\t\"} ; {if (\$6 == \"+\") print \$1, \$2 + 4, \$3 + 4, \$4, \$5, \$6; else print \$1, \$2 - 5, \$3 - 5, \$4, \$5, \$6}' $bed_file > $shifted_file
+  if [[ -s $shifted_file ]]; then
+    rm $bed_file
+  fi
+fi
+
 $pileup
 ";
     $self->close_pbs( $pbs, $pbs_file );
