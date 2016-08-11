@@ -33,11 +33,11 @@ sub perform {
   my %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
   my $pipeline_dir = get_directory( $config, $section, "pipeline_dir", 1 );
   
-  print Dumper(%treatments_files);
+  #print Dumper(%treatments_files);
   
   my %enhancer_files = %{ get_raw_files( $config, $section, "enhancer_files" ) };
 
-  print Dumper(%enhancer_files);
+  #print Dumper(%enhancer_files);
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
