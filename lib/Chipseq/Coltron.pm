@@ -50,7 +50,7 @@ sub perform {
     my @b_files = @{ $treatments_files{$sample_name} };
     my $bam     = "-b " . $b_files[0];
 
-    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
+    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name/" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
