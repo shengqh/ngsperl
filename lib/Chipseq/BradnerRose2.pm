@@ -107,7 +107,7 @@ fi
     else {
       my ( $filename, $dirs, $suffix ) = fileparse( $binding_files[0], ".bed\$" );
       $filename =~ s/\./_/g;
-      my $final_file = "${cur_dir}/${filename}_peaks_AllEnhancers.table.txt";
+      my $final_file = "${cur_dir}/${filename}_AllEnhancers.table.txt";
 
       my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
       print $pbs "
@@ -152,8 +152,8 @@ sub result {
     for my $binding_file (@binding_files) {
       my ( $filename, $dirs, $suffix ) = fileparse( $binding_file, ".bed\$" );
       $filename =~ s/\./_/g;
-      my $final_file = "${filename}_peaks_AllEnhancers.table.txt";
-      push( @result_files, $cur_dir . "/${filename}_peaks_AllEnhancers.table.txt" );
+      my $final_file = "${filename}_AllEnhancers.table.txt";
+      push( @result_files, $cur_dir . "/$final_file" );
     }
     $result->{$group_name} = filter_array( \@result_files, $pattern );
   }
