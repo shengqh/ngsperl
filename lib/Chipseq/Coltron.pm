@@ -34,7 +34,7 @@ sub perform {
   
   print Dumper(%treatments_files);
   
-  my %enhancer_files = %{ $self->get_raw_files( $config, $section, "enhancer_files" ) };
+  my %enhancer_files = %{ get_raw_files( $config, $section, "enhancer_files" ) };
 
   print Dumper(%enhancer_files);
 
