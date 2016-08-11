@@ -32,9 +32,9 @@ sub perform {
   my $genome = get_option( $config, $section, "genome" );
   my %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
   my $pipeline_dir = get_directory( $config, $section, "pipeline_dir", 1 );
-  
+
   #print Dumper(%treatments_files);
-  
+
   my %enhancer_files = %{ get_raw_files( $config, $section, "enhancer_files" ) };
 
   #print Dumper(%enhancer_files);
@@ -58,8 +58,8 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    #my $final_file = "${cur_dir}/${filename}_peaks_AllEnhancers.table.txt";
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
+    my $final_file = "${cur_dir}/${sample_name}_CLIQUES_RANKED.txt";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
     print $pbs "cd $pipeline_dir
 coltron $enhancer $bam -g $genome -o $cur_dir -n $sample_name $option
 ";
@@ -78,22 +78,16 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
-
-  my %binding_site_beds = %{ get_raw_files( $config, $section, "binding_site_bed" ) };
+  my %enhancer_files = %{ get_raw_files( $config, $section, "enhancer_files" ) };
 
   my $result = {};
-  for my $group_name ( sort keys %treatments_files ) {
-    my $cur_dir       = $result_dir . "/$group_name";
-    my @result_files  = ();
-    my @binding_files = @{ $binding_site_beds{$group_name} };
-    for my $binding_file (@binding_files) {
-      my ( $filename, $dirs, $suffix ) = fileparse( $binding_file, ".bed\$" );
-      $filename =~ s/\./_/g;
-      my $final_file = "${filename}_peaks_AllEnhancers.table.txt";
-      push( @result_files, $cur_dir . "/${filename}_peaks_AllEnhancers.table.txt" );
-    }
-    $result->{$group_name} = filter_array( \@result_files, $pattern );
+  for my $sample_name ( sort keys %enhancer_files ) {
+    my $cur_dir      = $result_dir . "/$sample_name/";
+    my @result_files = ();
+    push( @result_files, "${cur_dir}/${sample_name}_CANIDATE_TF_AND_SUPER_TABLE.txt" );
+    push( @result_files, "${cur_dir}/${sample_name}_CLIQUES_ALL.txt" );
+    push( @result_files, "${cur_dir}/${sample_name}_CLIQUES_RANKED.txt" );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }
