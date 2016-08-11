@@ -31,6 +31,7 @@ sub perform {
 
   my $genome = get_option( $config, $section, "genome" );
   my %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+  my $pipeline_dir = get_directory( $config, $section, "pipeline_dir", 1 );
   
   print Dumper(%treatments_files);
   
@@ -59,7 +60,9 @@ sub perform {
 
     #my $final_file = "${cur_dir}/${filename}_peaks_AllEnhancers.table.txt";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
-    print $pbs "  coltron $enhancer $bam -g $genome -o $cur_dir -n $sample_name $option \n";
+    print $pbs "cd $pipeline_dir
+coltron $enhancer $bam -g $genome -o $cur_dir -n $sample_name $option
+";
     $self->close_pbs( $pbs, $pbs_file );
     print $sh "\$MYCMD ./$pbs_name \n";
   }
