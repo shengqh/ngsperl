@@ -59,7 +59,7 @@ sub perform {
 
     #my $final_file = "${cur_dir}/${filename}_peaks_AllEnhancers.table.txt";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
-    print $pbs "  coltron $enhancer $bam -g $genome -o $cur_dir $option \n";
+    print $pbs "  coltron $enhancer $bam -g $genome -o $cur_dir -n $sample_name $option \n";
     $self->close_pbs( $pbs, $pbs_file );
     print $sh "\$MYCMD ./$pbs_name \n";
   }
