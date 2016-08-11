@@ -30,8 +30,8 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $genome = get_option( $config, $section, "genome" );
-  my %enhancer_files = %{ $self->get_grouped_raw_files( $config, $section ) };
-  my %bam_files = %{ $self->get_grouped_raw_files( $config, $section, "bam_files" ) };
+  my %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+  my %enhancer_files = %{ $self->get_raw_files( $config, $section, "enhancer_files" ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -41,7 +41,7 @@ sub perform {
     my @e_files  = @{ $enhancer_files{$sample_name} };
     my $enhancer = "-e " . $e_files[0];
 
-    my @b_files = @{ $bam_files{$sample_name} };
+    my @b_files = @{ $treatments_files{$sample_name} };
     my $bam     = "-b " . $b_files[0];
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
