@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Pipeline::RnaSeqStar;
+package Pipeline::RNASeq;
 
 use strict;
 use warnings;
@@ -14,20 +14,41 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(performRnaSeqStar performRnaSeqStarTask)] );
+our %EXPORT_TAGS = ( 'all' => [qw(performRNASeq performRNASeqTask)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
-sub getSmallRNAConfig {
+sub initializeDefaultOptions {
+  my $def = shift;
+
+  if ( !defined $def->{cluster} ) {
+    $def->{cluster} = 'slurm';
+  }
+
+  if ( !defined $def->{fastq_remove_N} ) {
+    $def->{fastq_remove_N} = 0;
+  }
+
+  if ( !defined $def->{table_vis_group_text_size} ) {
+    $def->{table_vis_group_text_size} = "10";
+  }
+
+  if ( !defined $def->{sequencetask_run_time} ) {
+    $def->{sequencetask_run_time} = "12";
+  }
+
+  return $def;
+}
+
+sub getRNASeqConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
 
-  my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
+  create_directory_or_die( $def->{target_dir} );
 
-  my @individual = @{$individual_ref};
-  my @summary    = @{$summary_ref};
+  $def = initializeDefaultOptions($def);
 
   my $target_dir;
   my $email;
@@ -37,38 +58,86 @@ sub getSmallRNAConfig {
   my $qc3_perl;
   my $name_map_file;
   my $task;
+
+  my $cluster                        = $def->{cluster};
+  my $fastq_remove_N                 = $def->{fastq_remove_N};
   
-  
-  my $config1={
-  	  fastqc => {
+  my $config = {
+    general => {
+      task_name => $def->{task_name},
+      cluster   => $cluster
+    },
+    files => $def->{files}
+  };
+
+  if ( defined $def->{groups} ) {
+    $config->{groups} = $def->{groups};
+  }
+
+  if ( defined $def->{pairs} ) {
+    $config->{pairs} = $def->{pairs};
+  }
+
+  my @individual = ();
+  my @summary    = ();
+
+  my $source_ref = "files";
+  my $len_ref    = "files";
+  if ( $fastq_remove_N  ) {
+    $config->{fastq_remove_N} = {
+      class      => "CQS::FastqTrimmer",
+      perform    => $fastq_remove_N,
+      target_dir => $def->{target_dir} . "/fastq_remove_N",
+      option     => "-n -z",
+      extension  => "_trim.fastq.gz",
+      source_ref => "files",
+      cqstools   => $def->{cqstools},
+      cluster    => $cluster,
+      sh_direct  => 1,
+      pbs        => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "2",
+        "mem"      => "10gb"
+      }
+    };
+    $source_ref = "fastq_remove_N";
+    $len_ref    = "fastq_remove_N";
+    push @individual, "fastq_remove_N";
+  }
+
+  $config->{"fastqc_raw"} = {
     class      => "QC::FastQC",
     perform    => 1,
-    target_dir => "${target_dir}/fastqc",
+    target_dir => $def->{target_dir} . "/fastqc_raw",
     option     => "",
-    source_ref => "files",
-    sh_direct  => 0,
+    source_ref => $source_ref,
+    cluster    => $cluster,
     pbs        => {
-      "email"    => $email,
-      "nodes"    => "1:ppn=2",
-      "walltime" => "2",
-      "mem"      => "10gb"
-    },
-  },
-  fastqc_summary => {
-    class      => "QC::FastQCSummary",
-    perform    => 1,
-    target_dir => "${target_dir}/fastqc",
-    option     => "",
-    source_ref => "fastqc",
-    cqstools   => $cqstools,
-    sh_direct  => 0,
-    pbs        => {
-      "email"    => $email,
+      "email"    => $def->{email},
       "nodes"    => "1:ppn=1",
       "walltime" => "2",
       "mem"      => "10gb"
     },
-  },
+  };
+  $config->{"fastqc_raw_summary"} = {
+    class      => "QC::FastQCSummary",
+    perform    => 1,
+    target_dir => $def->{target_dir} . "/fastqc_raw",
+    cqstools   => $def->{cqstools},
+    option     => "",
+    cluster    => $cluster,
+    pbs        => {
+      "email"    => $def->{email},
+      "nodes"    => "1:ppn=1",
+      "walltime" => "2",
+      "mem"      => "10gb"
+    },
+  };
+  push @individual, ("fastqc_raw");
+  push @summary,    ("fastqc_raw_summary");
+
+  my $config1={
   star => {
     class                     => "Alignment::STAR",
     perform                   => 1,
@@ -188,16 +257,19 @@ sub getSmallRNAConfig {
     },
   }
   };
+  
+  $config = merge($config, $config1);
+  
   return ($config1);
 }
 
-sub performSmallRNA {
+sub performRNASeq {
   my ( $def, $perform ) = @_;
   if ( !defined $perform ) {
     $perform = 1;
   }
 
-  my $config = getSmallRNAConfig($def);
+  my $config = getRNASeqConfig($def);
 
   if ($perform) {
     saveConfig( $def, $config );
@@ -208,10 +280,10 @@ sub performSmallRNA {
   return $config;
 }
 
-sub performSmallRNATask {
+sub performRNASeqTask {
   my ( $def, $task ) = @_;
 
-  my $config = getParclipSmallRNAConfig($def);
+  my $config = getRNASeqConfig($def);
 
   performTask( $config, $task );
 
