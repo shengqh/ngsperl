@@ -35,9 +35,12 @@ sub initializeDefaultOptions {
 		$def->{table_vis_group_text_size} = "10";
 	}
 
-	if ( !defined $def->{sequencetask_run_time} ) {
-		$def->{sequencetask_run_time} = "12";
+	if ( !defined $def->{max_thread} ) {
+		$def->{max_thread} = "8";
 	}
+	if ( !defined $def->{sequencetask_run_time} ) {
+        $def->{sequencetask_run_time} = "12";
+    }
 
 	return $def;
 }
@@ -79,6 +82,9 @@ sub getRNASeqConfig {
 	}
 
 	my $source_ref = "files";
+	my @individual;
+    my @summary;
+	
 	if ($fastq_remove_N) {
 		$config->{fastq_remove_N} = {
 			class      => "CQS::FastqTrimmer",
@@ -98,6 +104,7 @@ sub getRNASeqConfig {
 			}
 		};
 		$source_ref = "fastq_remove_N";
+		push @individual, ("fastq_remove_N");
 	}
 
 	$config->{"fastqc_raw"} = {
@@ -128,6 +135,8 @@ sub getRNASeqConfig {
 			"mem"      => "10gb"
 		},
 	};
+	push @individual, ("fastqc_raw");
+	push @summary, ("fastqc_raw_summary");
 
 	my $configAlignment = {
 		star => {
@@ -229,28 +238,32 @@ sub getRNASeqConfig {
 				"walltime" => "1",
 				"mem"      => "10gb"
 			},
-		},
-
-		sequencetask => {
-			class      => "CQS::SequenceTask",
-			perform    => 1,
-			target_dir => "${target_dir}/sequencetask",
-			option     => "",
-			source     => {
-				step1 => [ "fastqc_raw",         "star",     "star_featurecount" ],
-				step2 => [ "fastqc_raw_summary", "star_qc3", "star_genetable", "star_genetable_correlation", "star_genetable_deseq2" ],
-			},
-			sh_direct => 0,
-			pbs       => {
-				"email"    => $email,
-				"nodes"    => "1:ppn=8",
-				"walltime" => "72",
-				"mem"      => "40gb"
-			},
 		}
 	};
 	$config = merge( $config, $configAlignment );
+	
+    push @individual, ( "star",     "star_featurecount");
+    push @summary, ("star_qc3", "star_genetable", "star_genetable_correlation", "star_genetable_deseq2" );
 
+  $config->{sequencetask} = {
+    class      => "CQS::SequenceTask",
+    perform    => 1,
+    target_dir => "${target_dir}/sequencetask",
+    option     => "",
+    source     => {
+      step1 => \@individual,
+      step2 => \@summary,
+    },
+    sh_direct => 0,
+    cluster   => $cluster,
+    pbs       => {
+      "email"    => $def->{email},
+      "nodes"    => "1:ppn=" . $def->{max_thread},
+      "walltime" => $def->{sequencetask_run_time},
+      "mem"      => "40gb"
+    },
+  };
+  
 	return ($config);
 }
 
