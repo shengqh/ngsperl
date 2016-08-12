@@ -237,8 +237,8 @@ sub getRNASeqConfig {
 			target_dir => "${target_dir}/sequencetask",
 			option     => "",
 			source     => {
-				step1 => [ "fastqc_raw",         "star",           "star_featurecount" ],
-				step2 => [ "fastqc_raw_summary", "star_genetable", "star_genetable_correlation", "star_genetable_deseq2" ],
+				step1 => [ "fastqc_raw",         "star",     "star_featurecount" ],
+				step2 => [ "fastqc_raw_summary", "star_qc3", "star_genetable", "star_genetable_correlation", "star_genetable_deseq2" ],
 			},
 			sh_direct => 0,
 			pbs       => {

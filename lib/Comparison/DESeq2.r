@@ -180,6 +180,8 @@ comparisonName=comparisonNames[1]
 dir.create("details", showWarnings = FALSE)
 
 pairedspearman<-list()
+resultAllOut<-data
+resultAllOutVar<-c("log2FoldChange","pvalue","padj")
 for(comparisonName in comparisonNames){
   str(comparisonName)
   designFile=comparisons[[comparisonName]][1]
@@ -406,7 +408,11 @@ for(comparisonName in comparisonNames){
   }
   tbb$FoldChange<-2^tbb$log2FoldChange
   tbbselect<-tbb[select,,drop=F]
-  
+  tbbAllOut<-as.data.frame(tbb[,resultAllOutVar,drop=F])
+  tbbAllOut$Significant<-select
+  colnames(tbbAllOut)<-paste0(colnames(tbbAllOut)," (",comparisonName,")")
+  resultAllOut<-cbind(resultAllOut,tbbAllOut[row.names(resultAllOut),])
+
   tbb<-tbb[order(tbb$padj),,drop=F]
   write.csv(as.data.frame(tbb),paste0(prefix, "_DESeq2.csv"))
   
@@ -483,6 +489,9 @@ for(comparisonName in comparisonNames){
   print(p)
   dev.off()
 }
+
+#write a file with all information
+write.csv(resultAllOut,paste0(taskName, "_DESeq2.csv"))
 
 if(length(pairedspearman) > 0){
   #draw pca graph
