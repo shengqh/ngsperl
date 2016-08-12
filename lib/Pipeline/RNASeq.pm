@@ -144,7 +144,7 @@ sub getRNASeqConfig {
 			perform                   => 1,
 			target_dir                => $target_dir . "/star",
 			option                    => "--twopassMode Basic",
-			source_ref                => "files",
+			source_ref                => $source_ref,
 			genome_dir                => $star_index,
 			output_sort_by_coordinate => 1,
 			sh_direct                 => 0,
