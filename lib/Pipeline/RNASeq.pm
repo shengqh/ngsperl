@@ -228,7 +228,7 @@ sub getRNASeqConfig {
 			target_dir               => $target_dir . "/star_genetable_correlation",
 			rtemplate                => "countTableVisFunctions.R,countTableCorrelation.R",
 			output_file              => "parameterSampleFile1",
-			output_file_ext          => ".Correlation.png",
+			output_file_ext          => ".pairsCorrelation.png",
 			parameterSampleFile1_ref => [ "star_genetable", ".count\$" ],
 			parameterSampleFile2_ref => "groups",
 			sh_direct                => 1,
