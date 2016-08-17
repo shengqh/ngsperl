@@ -150,28 +150,23 @@ reverselog_trans <- function(base = exp(1)) {
             domain = c(1e-100, Inf))
 }
 
-isDataNumeric = unlist(lapply(data[1,], function(x){is.numeric(x)}))
-if (any(isDataNumeric)) {
-  index = 1
-  while(!all(isDataNumeric[index:ncol(data)])){
-    index = index + 1
-  }
-} else {
-  cat("Error: No numeric data found for DESeq2 \n")
-  quit(save="yes")
-}
-
-if(index > 1){
-  indecies<-c(1:(index-1))
-}else{
+data<-data[,colnames(data) != "Feature_length"]
+colClass<-sapply(data, class)
+countNotNumIndex<-which(colClass!="numeric" & colClass!="integer")
+if (length(countNotNumIndex)==0) {
+  index<-1;
   indecies<-c()
+} else {
+  index<-max(countNotNumIndex)+1
+  indecies<-c(1:(index-1))
 }
-countData<-data[,c(index:ncol(data))]
 
+countData<-data[,c(index:ncol(data))]
 countData[is.na(countData)] <- 0
+countData<-round(countData)
 
 if(addCountOne){
-  countData<-round(countData)+1
+  countData<-countData+1
 }
 
 comparisonNames=names(comparisons)

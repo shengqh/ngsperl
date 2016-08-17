@@ -16,17 +16,24 @@
 
 library("edgeR")
 
-isDataNumeric = unlist(lapply(data[1,], function(x){is.numeric(x)}))
-index = 1
-while(!all(isDataNumeric[index:ncol(data)])){
-  index = index + 1
+data<-data[,colnames(data) != "Feature_length"]
+colClass<-sapply(data, class)
+countNotNumIndex<-which(colClass!="numeric" & colClass!="integer")
+if (length(countNotNumIndex)==0) {
+  index<-1;
+  indecies<-c()
+} else {
+  index<-max(countNotNumIndex)+1
+  indecies<-c(1:(index-1))
 }
 
-indecies<-c(1:(index-1))
 countData<-data[,c(index:ncol(data))]
-
 countData[is.na(countData)] <- 0
 countData<-round(countData)
+
+if(addCountOne){
+  countData<-countData+1
+}
 
 comparisonNames=names(comparisons)
 comparisonName=comparisonNames[1]
