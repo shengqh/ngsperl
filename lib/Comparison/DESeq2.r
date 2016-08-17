@@ -415,7 +415,12 @@ for(comparisonName in comparisonNames){
 
   tbb<-tbb[order(tbb$padj),,drop=F]
   write.csv(as.data.frame(tbb),paste0(prefix, "_DESeq2.csv"))
-  
+
+  if("Feature_gene_name" %in% colnames(tbb)){
+    gsea<-tbb[,c("Feature_gene_name", "stat"),drop=F]
+    write.table(gsea,paste0(prefix, "_DESeq2_GSEA.rnk"),row.names=F,col.names=F,sep="\t")
+  }
+
   tbbselect<-tbbselect[order(tbbselect$padj),,drop=F]
   write.csv(as.data.frame(tbbselect),paste0(prefix, "_DESeq2_sig.csv"))
   
