@@ -418,7 +418,7 @@ for(comparisonName in comparisonNames){
 
   if("Feature_gene_name" %in% colnames(tbb)){
     gsea<-tbb[,c("Feature_gene_name", "stat"),drop=F]
-    write.table(gsea,paste0(prefix, "_DESeq2_GSEA.rnk"),row.names=F,col.names=F,sep="\t")
+    write.table(gsea,paste0(prefix, "_DESeq2_GSEA.rnk"),row.names=F,col.names=F,sep="\t", quote=F)
   }
 
   tbbselect<-tbbselect[order(tbbselect$padj),,drop=F]
