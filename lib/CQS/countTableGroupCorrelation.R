@@ -67,7 +67,7 @@ for (i in 1:nrow(countTableFileAll)) {
 	}
 	
 	colClass<-sapply(count, class)
-	countNotNumIndex<-which(colClass!="numeric" & colClass!="integer")
+	countNotNumIndex<-which(colnames(count) == "Feature_length" | (colClass!="numeric" & colClass!="integer"))
 	if (length(countNotNumIndex)==0) {
 		countNotNumIndex<-0;
 	} else {
