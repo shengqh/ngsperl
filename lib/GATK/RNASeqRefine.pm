@@ -40,6 +40,7 @@ sub perform {
   my $replaceReadGroup   = get_option( $config, $section, "replace_read_group",       0 );
   my $reorderChromosome  = get_option( $config, $section, "reorder_chromosome",       0 );
   my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals",       0 ) ? "-fixMisencodedQuals" : "";
+  my $slimPrintReads     = get_option( $config, $section, "slim_print_reads",         1 );
   my $baq                = get_option( $config, $section, "samtools_baq_calibration", 0 );
 
   my $knownvcf      = "";
@@ -98,21 +99,36 @@ sub perform {
     my $splitFile = $sample_name . ".rmdup.split.bam";
     my $grpFile   = $splitFile . ".grp";
     my $recalFile = $sample_name . ".rmdup.split.recal.bam";
-    my $slimFile  = $sample_name . ".rmdup.split.recal.slim.bam";
 
-    my $final_file = $slimFile;
-    my $baqcmd     = "";
+    my $final_file = $recalFile;
+    
     my $rmlist     = "";
+
+    my $slimcmd     = "";
+    if($slimPrintReads){
+      $rmlist = "$final_file ${final_file}.bai";
+      my $slimFile  = $sample_name . ".rmdup.split.recal.slim.bam";
+      $slimcmd = "if [[ -s $final_file && ! -s $slimFile ]]; then
+  echo slim=`date` 
+  samtools view -h $final_file | sed 's/\\tBD\:Z\:[^\\t]*//' | sed 's/\\tPG\:Z\:[^\\t]*//' | sed 's/\\tBI\:Z\:[^\\t]*//' | samtools view -S -b > $slimFile
+  samtools index $slimFile
+fi
+";
+      my $final_file = $slimFile;
+    }
+    
+    my $baqcmd     = "";
     if ($baq) {
-      $final_file = $sample_name . ".rmdup.split.recal.slim.baq.bam";
+      $rmlist = $rmlist . " $final_file ${final_file}.bai";
+      my $baq_file = $sample_name . ".rmdup.split.recal.slim.baq.bam";
       $baqcmd     = "
-if [[ -s $slimFile && ! -s $final_file ]]; then
+if [[ -s $final_file && ! -s $baq_file ]]; then
   echo baq=`date` 
-  samtools calmd -Abr $slimFile $faFile > $final_file
-  samtools index $final_file
+  samtools calmd -Abr $final_file $faFile > $baq_file
+  samtools index $baq_file
 fi      
 ";
-      $rmlist = "$slimFile ${slimFile}.bai";
+      $final_file = $baq_file;
     }
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -151,18 +167,14 @@ if [[ -s $splitFile && -s $grpFile && ! -s $recalFile ]]; then
   java $option -jar $gatk_jar -T PrintReads -nct $thread -rf BadCigar -R $faFile -I $splitFile -BQSR $grpFile -o $recalFile 
 fi
 
-if [[ -s $recalFile && ! -s $slimFile ]]; then
-  echo slim=`date` 
-  samtools view -h $recalFile | sed 's/\\tBD\:Z\:[^\\t]*//' | sed 's/\\tPG\:Z\:[^\\t]*//' | sed 's/\\tBI\:Z\:[^\\t]*//' | samtools view -S -b > $slimFile
-  samtools index $slimFile
-fi
+$slimcmd
 
 $baqcmd
 
 if [[ -s $final_file && ! -s ${final_file}.stat ]]; then
   echo flagstat=`date` 
   samtools flagstat $final_file > ${final_file}.stat
-  rm $rmFiles $rmdupFile ${sample_name}.rmdup.bai ${rmdupFile}.metrics $splitFile ${sample_name}.rmdup.split.bai $grpFile $recalFile $rmlist
+  rm $rmFiles $rmdupFile ${sample_name}.rmdup.bai ${rmdupFile}.metrics $splitFile ${sample_name}.rmdup.split.bai $grpFile $rmlist
 fi
   
 ";
