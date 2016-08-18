@@ -23,6 +23,7 @@ sub new {
   return $self;
 }
 
+#RNASeq: based on https://software.broadinstitute.org/gatk/guide/article?id=3891
 sub perform {
   my ( $self, $config, $section ) = @_;
 
