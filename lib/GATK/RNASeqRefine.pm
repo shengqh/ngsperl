@@ -102,13 +102,13 @@ sub perform {
     my $recalFile = $sample_name . ".rmdup.split.recal.bam";
 
     my $final_file = $recalFile;
-    
-    my $rmlist     = "";
 
-    my $slimcmd     = "";
-    if($slimPrintReads){
+    my $rmlist = "";
+
+    my $slimcmd = "";
+    if ($slimPrintReads) {
       $rmlist = "$final_file ${final_file}.bai";
-      my $slimFile  = $sample_name . ".rmdup.split.recal.slim.bam";
+      my $slimFile = $sample_name . ".rmdup.split.recal.slim.bam";
       $slimcmd = "if [[ -s $final_file && ! -s $slimFile ]]; then
   echo slim=`date` 
   samtools view -h $final_file | sed 's/\\tBD\:Z\:[^\\t]*//' | sed 's/\\tPG\:Z\:[^\\t]*//' | sed 's/\\tBI\:Z\:[^\\t]*//' | samtools view -S -b > $slimFile
@@ -117,12 +117,12 @@ fi
 ";
       my $final_file = $slimFile;
     }
-    
-    my $baqcmd     = "";
+
+    my $baqcmd = "";
     if ($baq) {
       $rmlist = $rmlist . " $final_file ${final_file}.bai";
       my $baq_file = $sample_name . ".rmdup.split.recal.slim.baq.bam";
-      $baqcmd     = "
+      $baqcmd = "
 if [[ -s $final_file && ! -s $baq_file ]]; then
   echo baq=`date` 
   samtools calmd -Abr $final_file $faFile > $baq_file
@@ -196,11 +196,22 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $baq = get_option( $config, $section, "samtools_baq_calibration", 0 );
+  my $slimPrintReads = get_option( $config, $section, "slim_print_reads",         1 );
+  my $baq            = get_option( $config, $section, "samtools_baq_calibration", 0 );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $final_file = $baq ? $sample_name . ".rmdup.split.recal.slim.baq.bam" : $sample_name . ".rmdup.split.recal.slim.bam";
+    my $recalFile  = $sample_name . ".rmdup.split.recal.bam";
+    my $final_file = $recalFile;
+    if ($slimPrintReads) {
+      my $slimFile   = $sample_name . ".rmdup.split.recal.slim.bam";
+      my $final_file = $slimFile;
+    }
+
+    if ($baq) {
+      my $baq_file = $sample_name . ".rmdup.split.recal.slim.baq.bam";
+      $final_file = $baq_file;
+    }
     my @result_files = ();
     push( @result_files, "${result_dir}/${sample_name}/${final_file}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
