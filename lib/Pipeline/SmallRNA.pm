@@ -314,7 +314,24 @@ sub getSmallRNAConfig {
           rtemplate                => "DESeq2_all_vis.R",
           output_file              => "",
           output_file_ext          => ".DESeq2.Matrix.png",
-          parameterSampleFile1_ref => [ "deseq2_top100Reads", "_DESeq2.csv\$", "deseq2_miRNA", "_DESeq2.csv\$", "deseq2_tRNA", "_DESeq2.csv\$", "deseq2_otherSmallRNA", "_DESeq2.csv\$" ],
+          parameterSampleFile1_ref => [ "deseq2_miRNA", "_DESeq2.csv\$", "deseq2_tRNA", "_DESeq2.csv\$", "deseq2_otherSmallRNA", "_DESeq2.csv\$" ],
+          parameterSampleFile2     => $def->{pairs_host_deseq2_vis_layout},
+          sh_direct                => 1,
+          pbs                      => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "1",
+            "mem"      => "10gb"
+          },
+        },
+        top100_deseq2_all_vis => {
+          class                    => "CQS::UniqueR",
+          perform                  => 1,
+          target_dir               => $data_visualization_dir . "/top100Reads_deseq2",
+          rtemplate                => "DESeq2_all_vis.R",
+          output_file              => "",
+          output_file_ext          => ".DESeq2.Matrix.png",
+          parameterSampleFile1_ref => [ "deseq2_top100Reads", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_host_deseq2_vis_layout},
           sh_direct                => 1,
           pbs                      => {
