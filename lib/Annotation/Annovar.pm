@@ -74,21 +74,23 @@ sub perform {
       my $final   = $annovar . ".final.tsv";
       my $excel   = $final . ".xls";
 
-      my $vcf;
+      my $runcmd;
       my $passinput;
       if ($isvcf) {
         $passinput = change_extension( $filename, ".avinput" );
-        $vcf = "convert2annovar.pl -format vcf4old ${sampleFile} | cut -f1-7 > $passinput ";
+        $runcmd = "convert2annovar.pl -format vcf4old ${sampleFile} | cut -f1-7 > $passinput 
+  if [ -s $passinput ]; then
+    table_annovar.pl $passinput $annovarDB $option --outfile $annovar --remove
+  fi";
       }
       else {
         $passinput = $sampleFile;
-        $vcf       = "";
+        $runcmd    = "table_annovar.pl $passinput $annovarDB $option --outfile $annovar --remove";
       }
 
       print $pbs "
 if [[ ! -s $result && ! -s $final ]]; then 
-  $vcf
-  table_annovar.pl $passinput $annovarDB $option --outfile $annovar --remove
+  $runcmd
 fi
 
 if [[ -s $result && ! -s $final ]]; then
@@ -148,7 +150,7 @@ sub result {
     my @result_files = ();
     for my $sampleFile (@sample_files) {
       my $annovar = change_extension( $sampleFile, ".annovar" );
-      my $final   = $annovar . ".final.tsv";
+      my $final = $annovar . ".final.tsv";
       if ( defined $cqstools ) {
         my $excel = $final . ".xls";
         push( @result_files, $cur_dir . "/$excel" );
