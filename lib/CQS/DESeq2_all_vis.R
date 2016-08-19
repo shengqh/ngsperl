@@ -69,15 +69,17 @@ p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
 		guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
 		theme_bw()+
 		scale_size(range = c(1, 4))+
-		theme(axis.text = element_text(colour = "black",size=30),
-				axis.title = element_text(size=25),
-				legend.text= element_text(size=25),
-				legend.title= element_text(size=25))+
-		theme(strip.text.x = element_text(size = 25),
-				strip.text.y = element_text(size = 25),
+		theme(axis.text = element_text(colour = "black",size=20),
+				axis.title = element_text(size=20),
+				legend.text= element_text(size=20),
+				legend.title= element_text(size=20))+
+		theme(strip.text.x = element_text(size = 13),
+				strip.text.y = element_text(size = 13),
 				legend.position="top")
 		
-png(filename=paste0(resultFile, ".DESeq2.Matrix.png"), width=4000, height=4000, res=300)
+width<-length(unique(diffResult$Pairs))*800
+height<-max(1600,length(unique(diffResult$Module))*800)
+png(filename=paste0(resultFile, ".DESeq2.Matrix.png"), width=width, height=height, res=300)
 if (visLayoutFileList!="") {
 	print(p+facet_grid(Row_Group~Col_Group,scales = "free"))
 } else {
