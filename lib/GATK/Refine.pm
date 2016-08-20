@@ -210,7 +210,7 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $baq              = get_option( $config, $section, "samtools_baq_calibration", 0 );
-  my $slim             = get_option( $config, $section, "samtools_slim",            0 );
+  my $slim             = get_option( $config, $section, "slim_print_reads",         0 );
   my $remove_duplicate = get_option( $config, $section, "remove_duplicate",         1 );
 
   my $result          = {};
