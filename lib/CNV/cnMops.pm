@@ -130,7 +130,7 @@ bam_files <- c(
   }
   while (<$rt>) {
     s/\r|\n//g;
-    print $r $_;
+    print $r $_, "\n";
   }
   close($rt);
   close $r;
