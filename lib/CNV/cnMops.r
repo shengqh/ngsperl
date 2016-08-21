@@ -43,6 +43,8 @@
 #parallel<-8
 #refnames<-c()
 
+library(GenomicRanges)
+
 if(hasbed){
   segments <- read.table(bedfile, sep="\t", as.is=TRUE, header=T)
   gr <- GRanges(segments[,1], IRanges(segments[,2], segments[,3]))
