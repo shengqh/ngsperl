@@ -30,6 +30,11 @@ sub perform {
 
   my $bedfile = $config->{$section}{bedfile};
 
+  my $refSeqNames = $config->{$section}{ref_seq_names};
+  if ( !defined $bedfile && !defined $refSeqNames ) {
+    die "Either bedfile or ref_seq_names should be defined!";
+  }
+
   my $isbamsorted = $config->{$section}{isbamsorted};
   if ( !defined($isbamsorted) ) {
     $isbamsorted = 0;
@@ -120,6 +125,21 @@ bam_files <- c(
   }
   print $r ")
 ";
+
+  if ( defined $refSeqNames ) {
+    print $r "refSeqNames<-c(";
+    for my $refSeqName ( @{$refSeqNames} ) {
+      if ($isfirst) {
+        print $r "\"$refSeqName\"";
+        $isfirst = 0;
+      }
+      else {
+        print $r ",\"$refSeqName\"";
+      }
+    }
+    print $r ")
+";
+  }
 
   open my $rt, "<$rtemplate" or die $!;
   while (<$rt>) {

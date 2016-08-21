@@ -76,8 +76,8 @@ if(length(refnames) > 0){
     if(file.exists(countfile)){
       load(countfile)
     }else{
-      refdata <- getReadCountsFromBAM(REFFiles, sampleNames=REFNames, mode=pairmode, parallel=parallel)
-      samdata <- getReadCountsFromBAM(SAMFiles, sampleNames=SAMNames, mode=pairmode, parallel=parallel)
+      refdata <- getReadCountsFromBAM(REFFiles, sampleNames=REFNames, mode=pairmode, parallel=parallel, refSeqName=refSeqNames)
+      samdata <- getReadCountsFromBAM(SAMFiles, sampleNames=SAMNames, mode=pairmode, parallel=parallel, refSeqName=refSeqNames)
       save(refdata, samdata, file=countfile)
     }
   }
@@ -103,7 +103,7 @@ if(length(refnames) > 0){
     if(file.exists(countfile)){
       load(countfile)
     }else{
-      x <- getReadCountsFromBAM(bam_files, sampleNames=sample_names, mode=pairmode)
+      x <- getReadCountsFromBAM(bam_files, sampleNames=sample_names, mode=pairmode, refSeqName=refSeqNames)
       save(x, file=countfile)
     }
     resCNMOPS <- cn.mops(x) 
