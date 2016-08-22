@@ -27,6 +27,9 @@ sub getParclipSmallRNAConfig {
   my @individual = @{$individual_ref};
   my @summary    = @{$summary_ref};
 
+  my $groups            = $def->{groups};
+  my $groups_vis_layout = $def->{groups_vis_layout};
+
   my $t2c_dir = create_directory_or_die( $def->{target_dir} . "/t2c" );
 
   my $gsnap = {
@@ -135,6 +138,33 @@ sub getParclipSmallRNAConfig {
   push @individual, ( 'gsnap', 'gsnap_smallRNA_count', 'gsnap_smallRNA_t2c' );
   push @summary, ( 'gsnap_smallRNA_table', 'gsnap_smallRNA_category', 'gsnap_smallRNA_t2c_summary' );
 
+  if ( defined $groups or defined $def->{tRNA_vis_group} ) {
+    my $trna_vis_groups;
+    if ( defined $def->{tRNA_vis_group} ) {
+      $trna_vis_groups = $def->{tRNA_vis_group};
+    }
+    else {
+      $trna_vis_groups = $groups;
+    }
+    $gsnap->{tRNA_PositionVis} = {
+      class                    => "CQS::UniqueR",
+      perform                  => 1,
+      target_dir               => $t2c_dir . "/gsnap_tRNA_PositionVis",
+      rtemplate                => "tRNAPositionVis.R",
+      output_file              => ".tRNAPositionVis",
+      output_file_ext          => ".alltRNAPosition.png",
+      parameterSampleFile1_ref => [ "gsnap_smallRNA_count", ".tRNA.position\$" ],
+      parameterSampleFile2     => $trna_vis_groups,
+      sh_direct                => 1,
+      pbs                      => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
+      },
+    };
+    push @summary, ("tRNA_PositionVis");
+  }
   $config = merge( $config, $gsnap );
 
   if ( defined $def->{search_3utr} && $def->{search_3utr} ) {
