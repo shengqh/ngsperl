@@ -161,8 +161,8 @@ for (i in 1:nrow(countTableFileAll)) {
   
   #heatmap
   margins=c(min(9,max(nchar(colnames(countNumVsd)))/2),min(9,max(nchar(row.names(countNumVsd)))/2))
-  png(paste0(countTableFile,".heatmap.png"),width=3000,height=3000,res=300,margins=margins)
-  heatmap3(countNumVsdOrdered,ColSideColors = groupColor,ColSideLabs="Group",labRow="", dist=dist,balanceColor=TRUE,useRaster=FALSE)
+  png(paste0(countTableFile,".heatmap.png"),width=3000,height=3000,res=300)
+  heatmap3(countNumVsdOrdered,ColSideColors = groupColor,ColSideLabs="Group",labRow="", dist=dist,balanceColor=TRUE,useRaster=FALSE,margins=margins)
   dev.off()
   
   #PCA
