@@ -161,7 +161,7 @@ for (i in 1:nrow(countTableFileAll)) {
   
   #heatmap
   #	margin=c(min(10,max(nchar(colnames(countNumVsd)))/2),min(10,max(nchar(row.names(countNumVsd)))/2))
-  png(paste0(countTableFile,".heatmap.png"),width=2000,height=2000,res=300)
+  png(paste0(countTableFile,".heatmap.png"),width=3000,height=3000,res=300)
   heatmap3(countNumVsdOrdered,ColSideColors = groupColor,ColSideLabs="Group",labRow="", dist=dist,balanceColor=TRUE,useRaster=FALSE)
   dev.off()
   
@@ -169,7 +169,7 @@ for (i in 1:nrow(countTableFileAll)) {
   drawPCA(countTableFile, countNumVsdOrdered, showLabelInPCA=TRUE, groupColor)
   
   #Pairs correlation
-  swidth=max(2000, ncol(countNumVsdOrdered) * 300)
+  swidth=max(2000, ncol(countNumVsdOrdered) * 400)
   png(paste0(countTableFile,".pairsCorrelation.png"),width=swidth,height=swidth,res=300)
   pairs(countNumVsd,lower.panel=panel.smooth, upper.panel=panel.cor)
   dev.off()
