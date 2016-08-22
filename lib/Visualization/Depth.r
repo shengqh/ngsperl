@@ -61,7 +61,7 @@ for(x in files){
   colnames(mdata)<-c("Chr", "Position", "File", "Sample", "Depth")
   
   if(facet){
-    height=max(2000, 400+800 * length(unique(mdata$Sample)))
+    height=max(2000, 400+300 * length(unique(mdata$Sample)))
     if(exists("cnvrFile")){
       mdata$Color<-as.character(curcnv[as.character(mdata$Sample)])
       g<-ggplot(mdata, aes(x=Position, y=Depth))
