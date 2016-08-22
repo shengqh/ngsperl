@@ -160,8 +160,8 @@ for (i in 1:nrow(countTableFileAll)) {
   groupColor<-text2Color(sampleToGroup[,2])$color
   
   #heatmap
-  #	margin=c(min(10,max(nchar(colnames(countNumVsd)))/2),min(10,max(nchar(row.names(countNumVsd)))/2))
-  png(paste0(countTableFile,".heatmap.png"),width=3000,height=3000,res=300)
+  margins=c(min(9,max(nchar(colnames(countNumVsd)))/2),min(9,max(nchar(row.names(countNumVsd)))/2))
+  png(paste0(countTableFile,".heatmap.png"),width=3000,height=3000,res=300,margins=margins)
   heatmap3(countNumVsdOrdered,ColSideColors = groupColor,ColSideLabs="Group",labRow="", dist=dist,balanceColor=TRUE,useRaster=FALSE)
   dev.off()
   
