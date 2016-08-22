@@ -78,7 +78,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
   cat("saving HCA to ", htfile, "\n")
   genecount<-nrow(rldselect)
   if(genecount > 2){
-    png(filename=htfile, width=3000, height =3000, res=300)
+    png(filename=htfile, width=3000, height=3000, res=300)
     cexCol = max(1.0, 0.2 + 1/log10(ncol(rldselect)))
     if(ispaired){
       htColors<-rainbow(length(unique(designData$Paired)))
