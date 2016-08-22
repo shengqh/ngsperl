@@ -29,6 +29,7 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my $cqstools = get_cqstools( $config, $section, 0 );
+  my $cqstools_options = get_option($config, $section, "cqstools_options", "");
 
   my $bedfile = $config->{$section}{bedfile};
 
@@ -180,7 +181,7 @@ R --vanilla -f $rfile
   if (defined $cqstools){
   print $pbs "
 if [[ -s  $final_file && ! -s ${final_file}.tsv ]]; then 
-  mono $cqstools cnmops_merge -i $final_file -o ${final_file}.tsv
+  mono $cqstools cnmops_merge $cqstools_options -i $final_file -o ${final_file}.tsv
 fi
 ";
   }
