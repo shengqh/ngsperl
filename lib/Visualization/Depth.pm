@@ -35,7 +35,7 @@ sub perform {
   my $groups    = get_raw_files( $config, $section, "groups" );
   my $bam_files = get_raw_files( $config, $section, "bam_files" );
   my $singlepdf   = get_option( $config, $section, "single_pdf",   0 ) ? "-s" : "";
-  my $facetSample = get_option( $config, $section, "facet_sample", 0 ) ? "-f" : "";
+  my $facetSample = get_option( $config, $section, "facet_sample", 1 ) ? "-f" : "";
   my $drawLine    = get_option( $config, $section, "draw_line",    0 ) ? "-l" : "";
 
   my $cnvr_files;
