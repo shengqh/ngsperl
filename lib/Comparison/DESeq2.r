@@ -26,6 +26,7 @@ library("grid")
 library("scales")
 library("reshape2")
 library("VennDiagram")
+library("RColorBrewer")
 
 ##Solving node stack overflow problem start###
 #when there are too many genes, drawing dendrogram may failed due to node stack overflow,
@@ -535,7 +536,7 @@ if (length(allSigNameList)>=2 & length(allSigNameList)<=5) {
 			fill=NA,
 			...) 
 	{
-		if (is.na(fill)) {
+		if (is.na(fill[1])) {
 			if (length(x)==5) {
 				fill = c("dodgerblue", "goldenrod1", "darkorange1", "seagreen3", "orchid3")
 			} else if (length(x)==4) {
@@ -692,8 +693,18 @@ if (length(allSigNameList)>=2 & length(allSigNameList)<=5) {
 		return(1)
 #	return(grob.list)
 	}
+	makeColors<-function(n,colorNames="Set1") {
+		maxN<-brewer.pal.info[colorNames,"maxcolors"]
+		if (n<=maxN) {
+			colors<-brewer.pal(n, colorNames)
+		} else {
+			colors<-colorRampPalette(brewer.pal(maxN, colorNames))(n)
+		}
+		return(colors)
+	}
+	colors<-makeColors(length(allSigNameList))
 	png(paste0(taskName,"_significantVenn.png"),res=300,height=2000,width=2000)
-	venn.diagram1(allSigNameList)
+	venn.diagram1(allSigNameList,cex=2,cat.cex=2,cat.col=colors,fill=colors)
 	dev.off()
 }
 #Do heatmap significant genes if length larger or equal than 2
