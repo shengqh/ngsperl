@@ -124,9 +124,6 @@ d[,"type"]<-apply(d,1,function(x){
   }
 })
 
-# locus<-data.frame(Title=paste0(d$sampleName, " ~ ", d$seqnames, ":", d$start, "-", d$end, " ~ ", d$type),
-#                   Filename=paste0(d$sampleName, "_", d$seqnames, "_", d$start, "_", d$end, ".png"))
-
 d<-d[order(d[,"sampleName"], as.numeric(d[,"seqnames"]), as.numeric(d[,"start"])),]
 write.table(d, file=callfile,sep="\t",col.names=T,row.names=F,quote=F)
 
@@ -134,20 +131,3 @@ locus<-d[,c("seqnames", "start", "end")]
 locus$name<-paste0(d$seqnames, "_", d$start, "_", d$end, "_", d$CN, "_", d$sampleName)
 locus<-locus[order(d$seqnames, d$start),]
 write.table(locus, file=paste0(prefix, ".call.bed"), sep="\t", col.names=F, row.names=F,quote=F)
-
-cnvr<- data.frame(seqnames=seqnames(resCNMOPS@cnvr),
-                  starts=start(resCNMOPS@cnvr)-1,
-                  ends=end(resCNMOPS@cnvr),
-                  file=paste(seqnames(resCNMOPS@cnvr), start(resCNMOPS@cnvr)-1, end(resCNMOPS@cnvr), sep="_") )
-cnvr<-data.frame(cbind(cnvr, elementMetadata(resCNMOPS@cnvr)))
-write.table(file=paste0(prefix, ".cnvr.tsv"), cnvr, sep="\t" ,row.names=F, quote=F)
-
-# dir.create("images", showWarnings = FALSE)
-# 
-# index<-9
-# for(index in c(1:nrow(locus))){
-#   png(filename=paste0("images/", locus$Filename[index]), width=2000, height=2000, res=300)
-#   plot(resCNMOPS, which=index, toFile=TRUE)
-#   grid.text(locus$Title[index], y=0.98)
-#   dev.off()
-# }

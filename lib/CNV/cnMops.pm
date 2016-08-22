@@ -198,9 +198,9 @@ sub result {
   push( @result_files, $result_dir . "/${task_name}.call" );
   if(defined $cqstools){
     push( @result_files, $result_dir . "/${task_name}.call.tsv" );
+    push( @result_files, $result_dir . "/${task_name}.call.tsv.cnvr" );
   }
   push( @result_files, $result_dir . "/${task_name}.call.bed" );
-  push( @result_files, $result_dir . "/${task_name}.cnvr.tsv" );
 
   my $result = { $task_name => filter_array( \@result_files, $pattern ) };
   return $result;
