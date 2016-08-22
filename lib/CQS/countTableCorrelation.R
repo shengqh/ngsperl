@@ -63,7 +63,7 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, conditionColors){
   genecount<-nrow(rldmatrix)
   if(genecount > 2){
     cat("saving PCA to ", filename, "\n")
-    png(filename=filename, width=3000, height=3000, res=300)
+    png(filename=filename, width=2000, height=2000, res=300)
     pca<-prcomp(t(rldmatrix))
     supca<-summary(pca)$importance
     pcadata<-data.frame(pca$x)
@@ -160,8 +160,8 @@ for (i in 1:nrow(countTableFileAll)) {
   groupColor<-text2Color(sampleToGroup[,2])$color
   
   #heatmap
-  margins=c(min(9,max(nchar(colnames(countNumVsd)))/2),min(9,max(nchar(row.names(countNumVsd)))/2))
-  png(paste0(countTableFile,".heatmap.png"),width=3000,height=3000,res=300)
+  margins=c(max(9,max(nchar(colnames(countNumVsd)))/2),max(9,max(nchar(row.names(countNumVsd)))/2))
+  png(paste0(countTableFile,".heatmap.png"),width=2000,height=2000,res=300)
   heatmap3(countNumVsdOrdered,ColSideColors = groupColor,ColSideLabs="Group",labRow="", dist=dist,balanceColor=TRUE,useRaster=FALSE,margins=margins)
   dev.off()
   
