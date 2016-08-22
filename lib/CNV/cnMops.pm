@@ -134,6 +134,7 @@ bam_files <- c(
 ";
 
   if ( defined $refSeqNames ) {
+    $isfirst = 1;
     print $r "refSeqNames<-c(";
     for my $refSeqName ( @{$refSeqNames} ) {
       if ($isfirst) {
