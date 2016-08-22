@@ -34,6 +34,8 @@ sub perform {
   if ( !defined $bedfile && !defined $refSeqNames ) {
     die "Either bedfile or ref_seq_names should be defined!";
   }
+  
+  my $window = get_option($config, $section, "window", 100);
 
   my $isbamsorted = $config->{$section}{isbamsorted};
   if ( !defined($isbamsorted) ) {
@@ -73,7 +75,10 @@ bedfile<-\"$bedfile\"
 ";
   }
   else {
-    print $r "hasbed<-0\n";
+    print $r "hasbed<-0
+window<-$window
+";
+    
   }
 
   print $r "sample_names <- c( \n";

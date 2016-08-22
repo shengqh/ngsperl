@@ -42,6 +42,7 @@
 #pairmode<-"paired"
 #parallel<-8
 #refnames<-c()
+#window<-200
 
 library(GenomicRanges)
 
@@ -76,8 +77,8 @@ if(length(refnames) > 0){
     if(file.exists(countfile)){
       load(countfile)
     }else{
-      refdata <- getReadCountsFromBAM(REFFiles, sampleNames=REFNames, mode=pairmode, parallel=parallel, refSeqName=refSeqNames)
-      samdata <- getReadCountsFromBAM(SAMFiles, sampleNames=SAMNames, mode=pairmode, parallel=parallel, refSeqName=refSeqNames)
+      refdata <- getReadCountsFromBAM(REFFiles, sampleNames=REFNames, mode=pairmode, parallel=parallel, refSeqName=refSeqNames, WL=window)
+      samdata <- getReadCountsFromBAM(SAMFiles, sampleNames=SAMNames, mode=pairmode, parallel=parallel, refSeqName=refSeqNames, WL=window)
       save(refdata, samdata, file=countfile)
     }
   }
@@ -103,7 +104,7 @@ if(length(refnames) > 0){
     if(file.exists(countfile)){
       load(countfile)
     }else{
-      x <- getReadCountsFromBAM(bam_files, sampleNames=sample_names, mode=pairmode, refSeqName=refSeqNames)
+      x <- getReadCountsFromBAM(bam_files, sampleNames=sample_names, mode=pairmode, refSeqName=refSeqNames, WL=window)
       save(x, file=countfile)
     }
     resCNMOPS <- cn.mops(x) 
