@@ -47,7 +47,7 @@ sub perform {
 
   for my $name ( sort keys %{$groups} ) {
     my $curgff = "${name}.gff";
-    copy( $gff_file, "${result_dir}/${curgff}" );
+    copy( $gff_file, "${pbs_dir}/${curgff}" );
 
     my @curbam_names = @{ $groups->{$name} };
     my @curbam_files = ();
@@ -64,7 +64,7 @@ sub perform {
     my $final_file = "${name}_plots.pdf";
     print $pbs "
 if [ ! -s $final_file ]; then
-  bamplot $option -b $curbam_fileStr -n $curbam_nameStr -y uniform -i $curgff $colorStr -o .
+  bamplot $option -b $curbam_fileStr -n $curbam_nameStr -y uniform -i ../pbs/$curgff $colorStr -o .
 fi
 ";
   }
