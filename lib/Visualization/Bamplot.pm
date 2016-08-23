@@ -36,7 +36,7 @@ sub perform {
   my $bam_files = get_raw_files( $config, $section, "bam_files" );
   my $singlepdf = get_option( $config, $section, "single_pdf", 0 ) ? "-s" : "";
 
-  my $gff_file = get_param_file( $config, $section, "gff_file", 1 );
+  my $gff_file = parse_param_file( $config, $section, "gff_file", 1 );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
