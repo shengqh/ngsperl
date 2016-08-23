@@ -43,9 +43,8 @@ sub perform {
   print $sh get_run_command($sh_direct);
 
   for my $name ( sort keys %{$groups} ) {
-    my $cur_dir = create_directory_or_die( $result_dir . "/$name" );
     my $curgff  = "${name}.gff";
-    copy( $gff_file, "${cur_dir}/${curgff}" );
+    copy( $gff_file, "${result_dir}/${curgff}" );
 
     my @curbam_names = @{ $groups->{$name} };
     my @curbam_files = ();
@@ -63,9 +62,9 @@ sub perform {
     print $sh "\$MYCMD ./$pbs_name \n";
     my $log_desc = $cluster->get_log_description($log);
 
-    my $final_file = $cur_dir . "/${name}.pdf";
+    my $final_file = $result_dir . "/${name}.pdf";
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
     print $pbs "bamplot $option -b $curbam_fileStr -n $curbam_nameStr -y uniform -i $curgff -o . \n";
     $self->close_pbs( $pbs, $pbs_file );
   }
@@ -89,7 +88,7 @@ sub result {
   my $result = {};
   for my $name ( sort keys %{$groups} ) {
     my @result_files = ();
-    push( @result_files, "${result_dir}/${name}/${name}.pdf" );
+    push( @result_files, "${result_dir}/${name}.pdf" );
     $result->{$name} = filter_array( \@result_files, $pattern );
   }
   return $result;
