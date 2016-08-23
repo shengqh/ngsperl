@@ -57,7 +57,7 @@ sub perform {
 
     my $curbam_nameStr = join( ',', @curbam_names );
     my $curbam_fileStr = join( ',', @curbam_files );
-    my $colorStr = $rainbow_color ? "" : "--color " . join( ',', @black_colors );
+    my $colorStr = $rainbow_color ? "" : "--color " . join( ':', @black_colors );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $name );
     my $pbs_name = basename($pbs_file);
