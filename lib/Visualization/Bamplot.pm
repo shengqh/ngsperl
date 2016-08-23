@@ -32,8 +32,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $groups = get_raw_files( $config, $section );
-  my $bam_files = get_raw_files( $config, $section, "bam_files" );
+  my $bam_files = get_raw_files( $config, $section );
+  my $groups = get_raw_files( $config, $section, "groups" );
   my $singlepdf = get_option( $config, $section, "single_pdf", 0 ) ? "-s" : "";
 
   my $gff_file = parse_param_file( $config, $section, "gff_file", 1 );
@@ -84,7 +84,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $groups = get_raw_files( $config, $section );
+  my $groups = get_raw_files( $config, $section, "groups" );
 
   my $result = {};
   for my $name ( sort keys %{$groups} ) {
