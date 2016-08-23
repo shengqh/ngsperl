@@ -192,4 +192,30 @@ if (length(geneselected)>0) {
 	}
 }
 
-
+#Plot position of interested tRNA
+if (exists("tRnaPlotPosition")) {
+	tRnaPlotPositionMatchData<-NULL
+	for (x in tRnaPlotPosition) {
+		temp<-unique(positionRawAllSamples$Feature[grep(x,positionRawAllSamples$Feature)])
+		if (length(temp)>0) {
+			tRnaPlotPositionMatchData<-c(tRnaPlotPositionMatchData,temp)
+		}
+	}
+	tRnaPlotPositionMatchData<-unique(tRnaPlotPositionMatchData)
+	if (length(tRnaPlotPositionMatchData)>0) {
+		for (i in 1:length(tRnaPlotPositionMatchData)) {
+			temp<-positionRawAllSamples[which(positionRawAllSamples$Feature==tRnaPlotPositionMatchData[i]),]
+			fileSize<-max(length(unique(temp$Sample))/25*2000,2000)
+			m <- ggplot(temp, aes(x = Position,ymin=0,ymax=CountPercentage))
+			png(paste0(resultFile,".tRNAInterested.",gsub("tRNA:","",tRnaPlotPositionMatchData[i]),".png"),height=fileSize,width=fileSize,res=300)
+			print(
+					m+geom_ribbon()+
+							#m + geom_polygon()+
+							facet_wrap(~Sample)+
+							ylab("Read fraction (read counts/total reads)")+
+							theme(strip.text.y = element_text(size = 4))
+			)
+			dev.off()
+		}
+	}
+}
