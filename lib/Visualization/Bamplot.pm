@@ -39,9 +39,11 @@ sub perform {
 
   my $gff_file = parse_param_file( $config, $section, "gff_file", 1 );
 
-  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
-  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
-  print $sh get_run_command($sh_direct);
+  my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
+  my $pbs_name = basename($pbs_file);
+  my $log      = $self->get_log_filename( $log_dir, $task_name );
+  my $log_desc = $cluster->get_log_description($log);
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
   for my $name ( sort keys %{$groups} ) {
     my $curgff = "${name}.gff";
@@ -59,27 +61,17 @@ sub perform {
     my $curbam_fileStr = join( ',', @curbam_files );
     my $colorStr = $rainbow_color ? "" : "--color " . join( ':', @black_colors );
 
-    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $name );
-    my $pbs_name = basename($pbs_file);
-    my $log      = $self->get_log_filename( $log_dir, $name );
-
-    print $sh "\$MYCMD ./$pbs_name \n";
-    my $log_desc = $cluster->get_log_description($log);
-
-    my $final_file = $result_dir . "/${name}.pdf";
-
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-    print $pbs "bamplot $option -b $curbam_fileStr -n $curbam_nameStr -y uniform -i $curgff $colorStr -o . \n";
-    $self->close_pbs( $pbs, $pbs_file );
+    my $final_file = "${name}_plots.pdf";
+    print $pbs "
+if [ ! -s $final_file ]; then
+  bamplot $option -b $curbam_fileStr -n $curbam_nameStr -y uniform -i $curgff $colorStr -o .
+fi
+";
   }
 
-  close $sh;
+  $self->close_pbs( $pbs, $pbs_file );
 
-  if ( is_linux() ) {
-    chmod 0755, $shfile;
-  }
-
-  print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
+  print "!!!pbs file $pbs_file created, you can submit this file or run directly.\n";
 }
 
 sub result {
