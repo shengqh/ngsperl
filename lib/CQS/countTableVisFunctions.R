@@ -273,8 +273,9 @@ ggpieGroupToFile<-function(dat,fileName,groupFileList="",outFileName="",
 		if (outFileName!="") {
 			write.csv(datBySampleGroup,outFileName)
 		}
-		ggpieToFile(datBySampleGroup,fileName=fileName,maxCategory=maxCategory,textSize=textSize,
+		p<-ggpieToFile(datBySampleGroup,fileName=fileName,maxCategory=maxCategory,textSize=textSize,
 				transformTable=TRUE,fill=fill,y=y,facet=facet,visLayoutFileList=visLayoutFileList,...)
+		invisible(p)
 	}
 }
 

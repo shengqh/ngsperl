@@ -40,6 +40,7 @@ for (i in 1:nrow(deseq2ResultFile)) {
 	folders<-strsplit(filePath,"\\/")[[1]]
 	moduleFolder<-folders[which(folders=="result")-1]
 	moduleName<-gsub("_deseq2$","",moduleFolder)
+	moduleName<-gsub("^deseq2_","",moduleName)
 	deseq2Result<-read.csv(filePath,header=T,as.is=T)
 	deseq2Result<-deseq2Result[,selectedVars]
 	deseq2Result$Module<-moduleName
