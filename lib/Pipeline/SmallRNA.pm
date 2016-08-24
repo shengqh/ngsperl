@@ -767,21 +767,21 @@ sub getSmallRNAConfig {
       },
 
       bowtie1_bacteria_group1_pm_table => {
-        pbs => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
-        },
+        class      => 'CQS::CQSChromosomeTable',
         cluster    => $cluster,
         sh_direct  => 1,
         perform    => 1,
         target_dir => $nonhost_genome_dir . "/bowtie1_bacteria_group1_pm_table",
         source_ref => [ 'bowtie1_bacteria_group1_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
-        option     => '',
-        class      => 'CQS::CQSChromosomeTable',
-        prefix     => 'bacteria_group1_pm_'
+        option     => '--outputReadTable',
+        prefix     => 'bacteria_group1_pm_',
+        pbs        => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
+        }
       },
       bowtie1_bacteria_group1_pm_table_vis => {
         class                     => "CQS::UniqueR",
@@ -845,21 +845,21 @@ sub getSmallRNAConfig {
       },
 
       bowtie1_bacteria_group2_pm_table => {
-        pbs => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
-        },
+        class      => 'CQS::CQSChromosomeTable',
         cluster    => $cluster,
         sh_direct  => 1,
         perform    => 1,
         target_dir => $nonhost_genome_dir . "/bowtie1_bacteria_group2_pm_table",
         source_ref => [ 'bowtie1_bacteria_group2_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
-        option     => '',
-        class      => 'CQS::CQSChromosomeTable',
-        prefix     => 'bacteria_group2_pm_'
+        option     => '--outputReadTable',
+        prefix     => 'bacteria_group2_pm_',
+        pbs        => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
+        }
       },
 
       bowtie1_bacteria_group2_pm_table_vis => {
@@ -924,21 +924,21 @@ sub getSmallRNAConfig {
       },
 
       bowtie1_fungus_group4_pm_table => {
-        pbs => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
-        },
+        class      => 'CQS::CQSChromosomeTable',
         cluster    => $cluster,
         sh_direct  => 1,
         perform    => 1,
         target_dir => $nonhost_genome_dir . "/bowtie1_fungus_group4_pm_table",
         source_ref => [ 'bowtie1_fungus_group4_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
-        option     => '',
-        class      => 'CQS::CQSChromosomeTable',
-        prefix     => 'fungus_group4_pm_'
+        option     => '--outputReadTable',
+        prefix     => 'fungus_group4_pm_',
+        pbs        => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
+        }
       },
       bowtie1_fungus_group4_pm_table_vis => {
         class                     => "CQS::UniqueR",
