@@ -64,7 +64,7 @@ p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
 		geom_point(aes(size=log10BaseMean,colour=colour))+
 		scale_color_manual(values=changeColours,guide = FALSE)+
 		scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))+
-		scale_x_continuous(name=bquote(log[2]~Fold~Change))+
+		scale_x_continuous(name=bquote(log[2]~Fold~Change),breaks=pretty_breaks(n=4))+
 		geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
 		geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
 		guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
