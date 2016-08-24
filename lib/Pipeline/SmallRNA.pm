@@ -1337,7 +1337,7 @@ sub performSmallRNA {
 sub performSmallRNATask {
   my ( $def, $task ) = @_;
 
-  my $config = getParclipSmallRNAConfig($def);
+  my $config = getSmallRNAConfig($def);
 
   performTask( $config, $task );
 
