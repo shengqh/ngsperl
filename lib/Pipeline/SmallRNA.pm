@@ -454,7 +454,7 @@ sub getSmallRNAConfig {
         class        => "CQS::CQSChromosomeCount",
         perform      => 1,
         target_dir   => $nonhost_library_dir . "/bowtie1_miRBase_pm_count",
-        option       => $def->{mirbase_count_option} . " -m --keepChrInName",
+        option       => $def->{mirbase_count_option} . " -m --keepChrInName --keepSequence",
         source_ref   => "bowtie1_miRBase_pm",
         seqcount_ref => [ "identical", ".dupcount\$" ],
         cqs_tools    => $def->{cqstools},
@@ -525,7 +525,7 @@ sub getSmallRNAConfig {
         sh_direct    => 1,
         perform      => 1,
         target_dir   => $nonhost_library_dir . "/bowtie1_tRNA_pm_count",
-        option       => $def->{smallrnacount_option} . " --keepChrInName",
+        option       => $def->{smallrnacount_option} . " --keepChrInName --keepSequence",
         source_ref   => 'bowtie1_tRNA_pm',
         cqs_tools    => $def->{cqstools},
         seqcount_ref => [ "identical", ".dupcount\$" ],
@@ -601,7 +601,7 @@ sub getSmallRNAConfig {
         sh_direct    => 1,
         perform      => 1,
         target_dir   => $nonhost_library_dir . "/bowtie1_rRNAL_pm_count",
-        option       => $def->{smallrnacount_option} . ' --keepChrInName --categoryMapFile ' . $def->{rrnaL_category_map},
+        option       => $def->{smallrnacount_option} . ' --keepChrInName --keepSequence --categoryMapFile ' . $def->{rrnaL_category_map},
         source_ref   => 'bowtie1_rRNAL_pm',
         cqs_tools    => $def->{cqstools},
         seqcount_ref => [ "identical", ".dupcount\$" ],
@@ -677,7 +677,7 @@ sub getSmallRNAConfig {
         sh_direct    => 1,
         perform      => 1,
         target_dir   => $nonhost_library_dir . "/bowtie1_rRNAS_pm_count",
-        option       => $def->{smallrnacount_option} . ' --keepChrInName --categoryMapFile ' . $def->{rrnaS_category_map},
+        option       => $def->{smallrnacount_option} . ' --keepChrInName --keepSequence --categoryMapFile ' . $def->{rrnaS_category_map},
         source_ref   => 'bowtie1_rRNAS_pm',
         cqs_tools    => $def->{cqstools},
         seqcount_ref => [ "identical", ".dupcount\$" ],
@@ -759,7 +759,7 @@ sub getSmallRNAConfig {
         sh_direct    => 1,
         perform      => 1,
         target_dir   => $nonhost_genome_dir . "/bowtie1_bacteria_group1_pm_count",
-        option       => $def->{smallrnacount_option} . " --keepChrInName",
+        option       => $def->{smallrnacount_option} . " --keepChrInName --keepSequence",
         source_ref   => 'bowtie1_bacteria_group1_pm',
         cqs_tools    => $def->{cqstools},
         seqcount_ref => [ "identical", ".dupcount\$" ],
@@ -767,21 +767,21 @@ sub getSmallRNAConfig {
       },
 
       bowtie1_bacteria_group1_pm_table => {
-        pbs => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
-        },
+        class      => 'CQS::CQSChromosomeTable',
         cluster    => $cluster,
         sh_direct  => 1,
         perform    => 1,
         target_dir => $nonhost_genome_dir . "/bowtie1_bacteria_group1_pm_table",
         source_ref => [ 'bowtie1_bacteria_group1_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
-        option     => '',
-        class      => 'CQS::CQSChromosomeTable',
-        prefix     => 'bacteria_group1_pm_'
+        option     => '--outputReadTable',
+        prefix     => 'bacteria_group1_pm_',
+        pbs        => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
+        }
       },
       bowtie1_bacteria_group1_pm_table_vis => {
         class                     => "CQS::UniqueR",
@@ -837,7 +837,7 @@ sub getSmallRNAConfig {
         sh_direct    => 1,
         perform      => 1,
         target_dir   => $nonhost_genome_dir . "/bowtie1_bacteria_group2_pm_count",
-        option       => $def->{smallrnacount_option} . " --keepChrInName",
+        option       => $def->{smallrnacount_option} . " --keepChrInName --keepSequence",
         source_ref   => 'bowtie1_bacteria_group2_pm',
         cqs_tools    => $def->{cqstools},
         seqcount_ref => [ "identical", ".dupcount\$" ],
@@ -845,21 +845,21 @@ sub getSmallRNAConfig {
       },
 
       bowtie1_bacteria_group2_pm_table => {
-        pbs => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
-        },
+        class      => 'CQS::CQSChromosomeTable',
         cluster    => $cluster,
         sh_direct  => 1,
         perform    => 1,
         target_dir => $nonhost_genome_dir . "/bowtie1_bacteria_group2_pm_table",
         source_ref => [ 'bowtie1_bacteria_group2_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
-        option     => '',
-        class      => 'CQS::CQSChromosomeTable',
-        prefix     => 'bacteria_group2_pm_'
+        option     => '--outputReadTable',
+        prefix     => 'bacteria_group2_pm_',
+        pbs        => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
+        }
       },
 
       bowtie1_bacteria_group2_pm_table_vis => {
@@ -916,7 +916,7 @@ sub getSmallRNAConfig {
         sh_direct    => 1,
         perform      => 1,
         target_dir   => $nonhost_genome_dir . "/bowtie1_fungus_group4_pm_count",
-        option       => $def->{smallrnacount_option} . " --keepChrInName",
+        option       => $def->{smallrnacount_option} . " --keepChrInName --keepSequence",
         source_ref   => 'bowtie1_fungus_group4_pm',
         cqs_tools    => $def->{cqstools},
         seqcount_ref => [ "identical", ".dupcount\$" ],
@@ -924,21 +924,21 @@ sub getSmallRNAConfig {
       },
 
       bowtie1_fungus_group4_pm_table => {
-        pbs => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
-        },
+        class      => 'CQS::CQSChromosomeTable',
         cluster    => $cluster,
         sh_direct  => 1,
         perform    => 1,
         target_dir => $nonhost_genome_dir . "/bowtie1_fungus_group4_pm_table",
         source_ref => [ 'bowtie1_fungus_group4_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
-        option     => '',
-        class      => 'CQS::CQSChromosomeTable',
-        prefix     => 'fungus_group4_pm_'
+        option     => '--outputReadTable',
+        prefix     => 'fungus_group4_pm_',
+        pbs        => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
+        }
       },
       bowtie1_fungus_group4_pm_table_vis => {
         class                     => "CQS::UniqueR",
@@ -1337,7 +1337,7 @@ sub performSmallRNA {
 sub performSmallRNATask {
   my ( $def, $task ) = @_;
 
-  my $config = getParclipSmallRNAConfig($def);
+  my $config = getSmallRNAConfig($def);
 
   performTask( $config, $task );
 
