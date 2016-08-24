@@ -161,8 +161,13 @@ for (i in 1:nrow(countTableFileAll)) {
   
   #heatmap
   margins=c(max(9,max(nchar(colnames(countNumVsd)))/2), 5)
+  if (nrow(countNumVsdOrdered)>10) {
+	  labRow=""
+  } else {
+	  labRow=row.names(countNumVsdOrdered)
+  }
   png(paste0(countTableFile,".heatmap.png"),width=2000,height=2000,res=300)
-  heatmap3(countNumVsdOrdered,ColSideColors = groupColor,ColSideLabs="Group",labRow="", dist=dist,balanceColor=TRUE,useRaster=FALSE,margins=margins)
+  heatmap3(countNumVsdOrdered,ColSideColors = groupColor,ColSideLabs="Group",labRow=labRow, dist=dist,balanceColor=TRUE,useRaster=FALSE,margins=margins)
   dev.off()
   
   #PCA
