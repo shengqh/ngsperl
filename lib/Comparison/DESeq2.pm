@@ -41,8 +41,7 @@ sub perform {
 
   my $groups = get_raw_files( $config, $section, "groups" );
 
-  my $countfile = parse_param_file( $config, $section, "countfile", 1 );
-
+  my $countfile = get_param_file( $config, $section, "countfile", 1 );
   my $rtemplate = dirname(__FILE__) . "/DESeq2.r";
   if ( !-e $rtemplate ) {
     die "File not found : " . $rtemplate;
@@ -90,6 +89,19 @@ addCountOne<-$addCountOne
 
 comparisons=list(";
   my $first = 0;
+
+  my $countfiles = get_raw_files( $config, $section, "countfile" );
+  my $single_count_file = 1;
+  if ( ref $countfiles eq ref {} ) {
+    if ( scalar( keys %$countfiles ) > 1 ) {
+      $single_count_file = 0;
+    }
+  }
+
+  my $designfile = $result_dir . "/${task_name}.design";
+  open( my $df, ">$designfile" ) or die "Cannot create $designfile";
+  print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\n";
+
   for my $comparison_name (@comparison_names) {
     $first++;
 
@@ -170,7 +182,18 @@ comparisons=list(";
       print $cd "\n";
     }
     close $cd;
+    
+    my $curcountfile = $single_count_file ? $countfile : $countfiles->{$comparison_name};
+    if ( !defined $curcountfile ) {
+      print Dumper($countfiles);
+      die "Count file not found for comparison of $comparison_name!";
+    }
+    if ( ref $curcountfile eq ref [] ) {
+      $curcountfile = $curcountfile->[0];
+    }
+    print $df "$comparison_name\t$curcountfile\t$cdfile\t$g1\t$g2\n";
   }
+  close($df);
   print $rf "
 ) \n\n";
 
