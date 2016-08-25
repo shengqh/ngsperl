@@ -134,7 +134,7 @@ sub getPrepareConfig {
 
   create_directory_or_die( $def->{target_dir} );
 
-  my $preprocessing_dir = create_directory_or_die( $def->{target_dir} . "/preprocessing" );
+  my $preprocessing_dir     = create_directory_or_die( $def->{target_dir} . "/preprocessing" );
   my $class_independent_dir = create_directory_or_die( $def->{target_dir} . "/class_independent" );
 
   $def = initializeDefaultOptions($def);
@@ -146,6 +146,7 @@ sub getPrepareConfig {
   my $remove_contamination_sequences = $def->{remove_sequences} ne "";
   my $hasNTA                         = $def->{has_NTA};
   my $groups                         = $def->{groups};
+  my $pairs                          = $def->{pairs};
 
   my $config = {
     general => {
@@ -477,6 +478,8 @@ sub getPrepareConfig {
       suffix     => "_sequence",
       sh_direct  => 1,
       cluster    => $cluster,
+      groups     => $groups,
+      pairs      => $pairs,
       pbs        => {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
