@@ -43,37 +43,32 @@ sub get_name_files_map {
 
   my $name_files_map = {};
 
-  my $consider_pairs_groups = get_option( $config, $section, "consider_pairs_groups", 0 );
+  if ( has_raw_files( $config, $section, "pairs" ) ) {
+    my $comparisons      = get_raw_files( $config, $section, "pairs" );
+    my @comparison_names = sort keys %{$comparisons};
+    my $groups           = get_raw_files( $config, $section, "groups" );
 
-  if ($consider_pairs_groups) {
-    if ( has_raw_files( $config, $section, "pairs" ) ) {
-      my $comparisons      = get_raw_files( $config, $section, "pairs" );
-      my @comparison_names = sort keys %{$comparisons};
-      my $groups           = get_raw_files( $config, $section, "groups" );
+    for my $comparison_name (@comparison_names) {
+      my $gNames = $comparisons->{$comparison_name};
+      my @group_names;
 
-      for my $comparison_name (@comparison_names) {
-        my $gNames = $comparisons->{$comparison_name};
-        my @group_names;
-
-        if ( ref $gNames eq ref {} ) {
-          @group_names = @{ $gNames->{groups} };
-        }
-        else {
-          @group_names = @{$gNames};
-        }
-
-        $name_files_map->{$comparison_name} = get_sample_map( $groups, $raw_files, \@group_names );
+      if ( ref $gNames eq ref {} ) {
+        @group_names = @{ $gNames->{groups} };
       }
-    }
-    elsif ( has_raw_files( $config, $section, "groups" ) ) {
-      my $groups = get_raw_files( $config, $section, "groups" );
-      for my $group_name ( sort keys %{$groups} ) {
-        my @group_names = [$group_name];
-        $name_files_map->{$group_name} = get_sample_map( $groups, $raw_files, \@group_names );
+      else {
+        @group_names = @{$gNames};
       }
+
+      $name_files_map->{$comparison_name} = get_sample_map( $groups, $raw_files, \@group_names );
     }
   }
-  
+  elsif ( has_raw_files( $config, $section, "groups" ) ) {
+    my $groups = get_raw_files( $config, $section, "groups" );
+    for my $group_name ( sort keys %{$groups} ) {
+      my @group_names = [$group_name];
+      $name_files_map->{$group_name} = get_sample_map( $groups, $raw_files, \@group_names );
+    }
+  }
   my $require_all = 1;
   for my $name ( sort keys %{$name_files_map} ) {
     my $samples = $name_files_map->{$name};
