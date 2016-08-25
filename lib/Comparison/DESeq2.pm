@@ -41,7 +41,7 @@ sub perform {
 
   my $groups = get_raw_files( $config, $section, "groups" );
 
-  my $countfile = get_param_file( $config->{$section}{"countfile"}, "countfile", 1 );
+  my $countfile = parse_param_file( $config, $section, "countfile", 1 );
   my $rtemplate = dirname(__FILE__) . "/DESeq2.r";
   if ( !-e $rtemplate ) {
     die "File not found : " . $rtemplate;
