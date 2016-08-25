@@ -75,7 +75,7 @@ sub get_name_files_map {
     my $samples = $name_files_map->{$name};
     print Dumper($samples);
     print Dumper($raw_files);
-    if ( scalar(%$samples) == scalar(%$raw_files) ) {
+    if ( %$samples == %$raw_files ) {
       $require_all = 0;
       last;
     }
@@ -85,7 +85,7 @@ sub get_name_files_map {
   }
 
   #print Dumper($name_files_map);
-  
+
   return $name_files_map;
 }
 
