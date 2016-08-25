@@ -11,6 +11,7 @@ use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 use CQS::UniqueTask;
+use Data::Dumper;
 
 our @ISA = qw(CQS::UniqueTask);
 
@@ -81,6 +82,8 @@ sub get_name_files_map {
     $name_files_map->{$task_name} = $raw_files;
   }
 
+  print Dumper($name_files_map);
+  
   return $name_files_map;
 }
 
