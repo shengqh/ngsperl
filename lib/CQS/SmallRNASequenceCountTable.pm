@@ -150,11 +150,15 @@ sub result {
   my $name_files_map = get_name_files_map( $config, $section, $task_name );
 
   for my $name ( sort keys %$name_files_map ) {
-    my @result_files = ();
-    my $outputfile   = $self->get_file( $result_dir, $name, ".count", 0 );
-    my $filelist     = $self->get_file( $pbs_dir, $name, ".filelist", 0 );
+    my @result_files   = ();
+    my $outputfile     = $self->get_file( $result_dir, $name, ".count", 0 );
+    my $filelist       = $self->get_file( $pbs_dir, $name, ".filelist", 0 );
+    my $readoutputfile = $self->get_file( $result_dir, $name, ".read.count", 0 );
     push( @result_files, $outputfile );
     push( @result_files, $outputfile . ".fasta" );
+    push( @result_files, $outputfile . ".details" );
+    push( @result_files, $readoutputfile );
+    push( @result_files, $readoutputfile . ".fasta" );
     push( @result_files, $filelist );
     $result->{$name} = filter_array( \@result_files, $pattern );
   }
