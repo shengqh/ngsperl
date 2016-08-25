@@ -55,7 +55,7 @@ sub perform {
 
   my $name_files_map = {};
 
-  if ( has_raw_files("pairs") ) {
+  if ( has_raw_files($config, $section, "pairs") ) {
     my $comparisons      = get_raw_files( $config, $section, "pairs" );
     my @comparison_names = sort keys %{$comparisons};
     my $groups           = get_raw_files( $config, $section, "groups" );
@@ -74,7 +74,7 @@ sub perform {
       $name_files_map->{$comparison_name} = get_sample_map( $groups, \%raw_files, \@group_names );
     }
   }
-  elsif ( has_raw_files("groups") ) {
+  elsif ( has_raw_files($config, $section, "groups") ) {
     my $groups = get_raw_files( $config, $section, "groups" );
     for my $group_name ( sort keys %{$groups} ) {
       my @group_names = [$group_name];
@@ -124,11 +124,11 @@ sub result {
   my $result = {};
 
   my @names = [];
-  if ( has_raw_files("pairs") ) {
+  if ( has_raw_files($config, $section, "pairs") ) {
     my $comparisons = get_raw_files( $config, $section, "pairs" );
     push( @names, keys %$comparisons );
   }
-  elsif ( has_raw_files("groups") ) {
+  elsif ( has_raw_files($config, $section, "groups") ) {
     my $groups = get_raw_files( $config, $section, "groups" );
     push( @names, keys %$groups );
   }
