@@ -59,7 +59,7 @@ sub getSmallRNAConfig {
       option               => "",
       source_ref           => "pairs",
       groups_ref           => "groups",
-      countfile_ref        => [ "identical_sequence_count_table", ".read.count\$" ],
+      countfile_ref        => [ "identical_sequence_count_table", ".count\$" ],
       sh_direct            => 1,
       show_DE_gene_cluster => 1,
       pvalue               => 0.05,
