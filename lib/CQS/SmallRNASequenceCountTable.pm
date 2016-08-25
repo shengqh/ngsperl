@@ -35,27 +35,14 @@ sub get_sample_map {
   return $result;
 }
 
-sub perform {
-  my ( $self, $config, $section ) = @_;
+sub get_name_files_map {
+  my ( $config, $section, $task_name ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
-
-  $option = $option . " --exportFasta";
-
-  my $cqstools = get_cqstools( $config, $section, 1 );
-
-  my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $fastq_files;
-  if ( has_raw_files( $config, $section, "fastq_files" ) ) {
-    $fastq_files = get_raw_files( $config, $section, "fastq_files" );
-  }
-
-  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
-  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+  my $raw_files = get_raw_files( $config, $section );
 
   my $name_files_map = {};
 
-  if ( has_raw_files($config, $section, "pairs") ) {
+  if ( has_raw_files( $config, $section, "pairs" ) ) {
     my $comparisons      = get_raw_files( $config, $section, "pairs" );
     my @comparison_names = sort keys %{$comparisons};
     my $groups           = get_raw_files( $config, $section, "groups" );
@@ -71,18 +58,50 @@ sub perform {
         @group_names = @{$gNames};
       }
 
-      $name_files_map->{$comparison_name} = get_sample_map( $groups, \%raw_files, \@group_names );
+      $name_files_map->{$comparison_name} = get_sample_map( $groups, $raw_files, \@group_names );
     }
   }
-  elsif ( has_raw_files($config, $section, "groups") ) {
+  elsif ( has_raw_files( $config, $section, "groups" ) ) {
     my $groups = get_raw_files( $config, $section, "groups" );
     for my $group_name ( sort keys %{$groups} ) {
       my @group_names = [$group_name];
-      $name_files_map->{$group_name} = get_sample_map( $groups, \%raw_files, \@group_names );
+      $name_files_map->{$group_name} = get_sample_map( $groups, $raw_files, \@group_names );
     }
   }
 
-  $name_files_map->{$task_name} = \%raw_files;
+  my $require_all = 1;
+  for my $name ( sort keys %{$name_files_map} ) {
+    my $samples = $name_files_map->{$name};
+    if ( scalar(@$samples) == scalar($raw_files) ) {
+      $require_all = 0;
+      last;
+    }
+  }
+  if ($require_all) {
+    $name_files_map->{$task_name} = $raw_files;
+  }
+
+  return $name_files_map;
+}
+
+sub perform {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+
+  $option = $option . " --exportFasta";
+
+  my $cqstools = get_cqstools( $config, $section, 1 );
+
+  my $fastq_files;
+  if ( has_raw_files( $config, $section, "fastq_files" ) ) {
+    $fastq_files = get_raw_files( $config, $section, "fastq_files" );
+  }
+
+  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
+  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+
+  my $name_files_map = get_name_files_map( $config, $section, $task_name );
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
@@ -123,18 +142,9 @@ sub result {
 
   my $result = {};
 
-  my @names = [];
-  if ( has_raw_files($config, $section, "pairs") ) {
-    my $comparisons = get_raw_files( $config, $section, "pairs" );
-    push( @names, keys %$comparisons );
-  }
-  elsif ( has_raw_files($config, $section, "groups") ) {
-    my $groups = get_raw_files( $config, $section, "groups" );
-    push( @names, keys %$groups );
-  }
-  push( @names, $task_name );
+  my $name_files_map = get_name_files_map( $config, $section, $task_name );
 
-  for my $name (@names) {
+  for my $name ( sort keys %$name_files_map ) {
     my @result_files = ();
     my $outputfile   = $self->get_file( $result_dir, $name, ".count", 0 );
     my $filelist     = $self->get_file( $pbs_dir, $name, ".filelist", 0 );
