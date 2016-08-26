@@ -60,34 +60,6 @@ sub perform {
     $tpgroups{$group_name} = "\"" . join( "\",\"", @samples ) . "\"";
   }
 
-  my $rfile = $result_dir . "/${task_name}.r";
-  open( my $rf, ">$rfile" )     or die "Cannot create $rfile";
-  open( my $rt, "<$rtemplate" ) or die $!;
-
-  my $readfunc;
-  my $readparam;
-  if ( $countfile =~ /csv$/ ) {
-    $readfunc  = "read.csv";
-    $readparam = "";
-  }
-  else {
-    $readfunc  = "read.table";
-    $readparam = ", sep=\"\\t\"";
-  }
-  print $rf "
-setwd(\"$result_dir\")  
-  
-data<-${readfunc}(\"$countfile\",row.names=1, header=T, check.names=F $readparam)
-
-taskName<-'$task_name'
-showLabelInPCA<-$showLabelInPCA
-showDEGeneCluster<-$showDEGeneCluster
-pvalue<-$pvalue
-foldChange<-$foldChange
-minMedianInGroup<-$minMedianInGroup
-addCountOne<-$addCountOne
-
-comparisons=list(";
   my $first = 0;
 
   my $countfiles = get_raw_files( $config, $section, "countfile" );
@@ -98,7 +70,7 @@ comparisons=list(";
     }
   }
 
-  my $designfile = $result_dir . "/${task_name}.design";
+  my $designfile = $result_dir . "/${task_name}.define";
   open( my $df, ">$designfile" ) or die "Cannot create $designfile";
   print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\n";
 
@@ -138,7 +110,7 @@ comparisons=list(";
     for my $key ( keys %$covariances ) {
       my $values = $covariances->{$key};
       if ( !( ref $values eq ref [] ) ) {
-        die "Covariances of " . $key . " shoud be array reference!";
+        die "Covariances of " . $key . " should be array reference!";
       }
 
       if ( scalar(@$values) != $total_sample_count ) {
@@ -147,11 +119,6 @@ comparisons=list(";
     }
 
     my $filename = "${comparison_name}.design";
-    if ( $first != 1 ) {
-      print $rf ",";
-    }
-    print $rf "
-  \"${comparison_name}\" = c(\"$filename\", \"$g1\", \"$g2\")";
 
     my $cdfile = $result_dir . "/$filename";
     open( my $cd, ">$cdfile" ) or die "Cannot create $cdfile";
@@ -194,11 +161,25 @@ comparisons=list(";
     print $df "$comparison_name\t$curcountfile\t$cdfile\t$g1\t$g2\n";
   }
   close($df);
+
+  my $rfile = $result_dir . "/${task_name}.r";
+  open( my $rf, ">$rfile" )     or die "Cannot create $rfile";
+  open( my $rt, "<$rtemplate" ) or die $!;
   print $rf "
-) \n\n";
+rootdir<-\"$result_dir\"
+inputfile<-\"$designfile\" 
+  
+showLabelInPCA<-$showLabelInPCA
+showDEGeneCluster<-$showDEGeneCluster
+pvalue<-$pvalue
+foldChange<-$foldChange
+minMedianInGroup<-$minMedianInGroup
+addCountOne<-$addCountOne
+
+";
 
   while (<$rt>) {
-    if ( $_ =~ '^#' ) {
+    if ( $_ !~ 'predefined_condition_end\$' ) {
       next;
     }
     last;
