@@ -132,7 +132,10 @@ sub perform {
     close($fl);
 
     print $pbs "
-mono $cqstools smallrna_sequence_count_table $option -o $outputname -l $filelist
+if [ ! -s $outputname ]; then
+  mono $cqstools smallrna_sequence_count_table $option -o $outputname -l $filelist
+fi
+
 ";
   }
   $self->close_pbs( $pbs, $pbs_file );
