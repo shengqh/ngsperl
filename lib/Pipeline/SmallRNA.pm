@@ -94,7 +94,7 @@ sub getSmallRNAConfig {
         "mem"      => "10gb"
       },
     };
-    push @summary, ("deseq2_top100Reads", "deseq2_top100Contigs");
+    push @summary, ( "deseq2_top100Reads", "deseq2_top100Contigs" );
   }
 
   my $identical_ref = [ "identical", ".fastq.gz\$" ];
@@ -352,7 +352,7 @@ sub getSmallRNAConfig {
           rtemplate                => "DESeq2_all_vis.R",
           output_file              => "",
           output_file_ext          => ".DESeq2.Matrix.png",
-          parameterSampleFile1_ref => [ "deseq2_top100Reads", "_DESeq2.csv\$" ],
+          parameterSampleFile1_ref => [ "deseq2_top100Reads", "_DESeq2.csv\$", "deseq2_top100Contigs", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_host_deseq2_vis_layout},
           sh_direct                => 1,
           pbs                      => {
@@ -1107,6 +1107,27 @@ sub getSmallRNAConfig {
             "mem"      => "10gb"
           },
         },
+        group1_reads_deseq2 => {
+          class                => "Comparison::DESeq2",
+          perform              => 1,
+          target_dir           => $nonhost_genome_dir . "/deseq2_bacteria_group1_reads",
+          option               => "",
+          source_ref           => "pairs",
+          groups_ref           => "groups",
+          countfile_ref        => [ "bowtie1_bacteria_group1_pm_table", ".read.count\$" ],
+          sh_direct            => 1,
+          show_DE_gene_cluster => 1,
+          pvalue               => 0.05,
+          fold_change          => 1.5,
+          min_median_read      => 6,
+          add_count_one        => $add_count_one_in_DEseq2,
+          pbs                  => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "10",
+            "mem"      => "10gb"
+          },
+        },
         group2_deseq2 => {
           class                => "Comparison::DESeq2",
           perform              => 1,
@@ -1128,6 +1149,27 @@ sub getSmallRNAConfig {
             "mem"      => "10gb"
           },
         },
+        group2_reads_deseq2 => {
+          class                => "Comparison::DESeq2",
+          perform              => 1,
+          target_dir           => $nonhost_genome_dir . "/deseq2_bacteria_group2_reads",
+          option               => "",
+          source_ref           => "pairs",
+          groups_ref           => "groups",
+          countfile_ref        => [ "bowtie1_bacteria_group2_pm_table", ".read.count\$" ],
+          sh_direct            => 1,
+          show_DE_gene_cluster => 1,
+          pvalue               => 0.05,
+          fold_change          => 1.5,
+          min_median_read      => 6,
+          add_count_one        => $add_count_one_in_DEseq2,
+          pbs                  => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "10",
+            "mem"      => "10gb"
+          },
+        },
         group4_deseq2 => {
           class                => "Comparison::DESeq2",
           perform              => 1,
@@ -1136,6 +1178,27 @@ sub getSmallRNAConfig {
           source_ref           => "pairs",
           groups_ref           => "groups",
           countfile_ref        => [ "bowtie1_fungus_group4_pm_table_vis", ".Species.csv\$" ],
+          sh_direct            => 1,
+          show_DE_gene_cluster => 1,
+          pvalue               => 0.05,
+          fold_change          => 1.5,
+          min_median_read      => 6,
+          add_count_one        => $add_count_one_in_DEseq2,
+          pbs                  => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "10",
+            "mem"      => "10gb"
+          },
+        },
+        group4_reads_deseq2 => {
+          class                => "Comparison::DESeq2",
+          perform              => 1,
+          target_dir           => $nonhost_genome_dir . "/deseq2_bacteria_group4_reads",
+          option               => "",
+          source_ref           => "pairs",
+          groups_ref           => "groups",
+          countfile_ref        => [ "bowtie1_bacteria_group4_pm_table", ".read.count\$" ],
           sh_direct            => 1,
           show_DE_gene_cluster => 1,
           pvalue               => 0.05,
@@ -1187,8 +1250,10 @@ sub getSmallRNAConfig {
       };
 
       $config = merge( $config, $unmapped_comparison );
-      push @summary,
-        ( "group1_deseq2", "group2_deseq2", "group4_deseq2", "nonHost_deseq2_tRNA", "nonHost_rRNAL_deseq2", "nonHost_rRNAS_deseq2", "nonHost_deseq2_groups_vis", "nonHost_deseq2_tRNArRNA_vis" );
+      push @summary, (
+        "group1_deseq2", "group2_deseq2", "group4_deseq2", "group1_deseq2_reads", "group2_deseq2_reads", "group4_deseq2_reads",
+        "nonHost_deseq2_tRNA", "nonHost_rRNAL_deseq2", "nonHost_rRNAS_deseq2", "nonHost_deseq2_groups_vis", "nonHost_deseq2_tRNArRNA_vis"
+      );
     }
   }
 
