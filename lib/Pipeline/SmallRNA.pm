@@ -59,6 +59,27 @@ sub getSmallRNAConfig {
       option               => "",
       source_ref           => "pairs",
       groups_ref           => "groups",
+      countfile_ref        => [ "identical_sequence_count_table", ".read.count\$" ],
+      sh_direct            => 1,
+      show_DE_gene_cluster => 1,
+      pvalue               => 0.05,
+      fold_change          => 1.5,
+      min_median_read      => 2,
+      add_count_one        => $add_count_one_in_DEseq2,
+      pbs                  => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "10gb"
+      },
+    };
+    $config->{deseq2_top100Contigs} = {
+      class                => "Comparison::DESeq2",
+      perform              => 1,
+      target_dir           => $class_independent_dir . "/deseq2_top100Contigs",
+      option               => "",
+      source_ref           => "pairs",
+      groups_ref           => "groups",
       countfile_ref        => [ "identical_sequence_count_table", ".count\$" ],
       sh_direct            => 1,
       show_DE_gene_cluster => 1,
@@ -73,7 +94,7 @@ sub getSmallRNAConfig {
         "mem"      => "10gb"
       },
     };
-    push @summary, ("deseq2_top100Reads");
+    push @summary, ("deseq2_top100Reads", "deseq2_top100Contigs");
   }
 
   my $identical_ref = [ "identical", ".fastq.gz\$" ];
