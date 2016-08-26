@@ -51,12 +51,13 @@ sub perform {
   print $sh get_run_command($sh_direct);
 
   for my $sample_name ( sort keys %raw_files ) {
-    my @sample_files = @{ $raw_files{$sample_name} };
-    my $sam_file     = $sample_name . ".sam";
-    my $rgsam_file   = $sample_name . ".rg.sam";
-    my $rgbam_file   = $sample_name . ".rg.bam";
-    my $bam_file     = $sample_name . ".bam";
-    my $tag          = get_bam_tag($sample_name);
+    my @sample_files   = @{ $raw_files{$sample_name} };
+    my $sam_file       = $sample_name . ".sam";
+    my $clean_sam_file = $sample_name . ".clean.sam";
+    my $rgsam_file     = $sample_name . ".rg.sam";
+    my $rgbam_file     = $sample_name . ".rg.bam";
+    my $bam_file       = $sample_name . ".bam";
+    my $tag            = get_bam_tag($sample_name);
 
     my $sampleFile1 = $sample_files[0];
 
@@ -84,20 +85,32 @@ sub perform {
     print $pbs "
 if [ ! -s $rgbam_file ]; then
   if [ ! -s $rgsam_file ]; then
-    if [ ! -s $sam_file ]; then
-      echo bwa_mem=`date`
-      $bwa_aln_command
+    if [ ! -s $clean_sam_file ]; then
+      if [ ! -s $sam_file ]; then
+        echo bwa_mem=`date`
+        $bwa_aln_command
+      fi
+    
+      if [ -s $sam_file ]; then
+        echo CleanSam=`date`
+        java -jar $picard_jar CleanSam VALIDATION_STRINGENCY=SILENT I=$sam_file O=$clean_sam_file
+        if [ -s $clean_sam_file ]; then
+          rm $sam_file 
+        fi
+      fi
     fi
     
-    if [ -s $sam_file ]; then
-      java -jar $picard_jar AddOrReplaceReadGroups I=$sam_file O=$rgsam_file ID=$sample_name LB=$sample_name SM=$sample_name PL=ILLUMINA PU=ILLUMINA
+    if [ -s $clean_sam_file ]; then
+      echo AddOrReplaceReadGroups=`date`
+      java -jar $picard_jar AddOrReplaceReadGroups I=$clean_sam_file O=$rgsam_file ID=$sample_name LB=$sample_name SM=$sample_name PL=ILLUMINA PU=ILLUMINA
       if [ -s $rgsam_file ]; then
-        rm $sam_file
+        rm $clean_sam_file
       fi
     fi
   fi
 
   if [ -s $rgsam_file ]; then
+    echo sam_to_bam=`date`
     samtools view -S -b -@ $thread $rgsam_file > $rgbam_file
     if [ -s $rgbam_file ]; then
       rm $rgsam_file
@@ -106,6 +119,7 @@ if [ ! -s $rgbam_file ]; then
 fi
 
 if [ -s $rgbam_file ]; then
+  echo sort_bam=`date`
   samtools sort -@ $thread -m 4G $rgbam_file -o $bam_file
   if [ -s $bam_file ]; then
     samtools index $bam_file 
