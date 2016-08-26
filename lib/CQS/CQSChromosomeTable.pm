@@ -95,8 +95,9 @@ sub result {
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
-  my $result       = {};
-  my $has_category = $option =~ /--categoryMapFile/;
+  my $result         = {};
+  my $has_category   = $option =~ /--categoryMapFile/;
+  my $has_read_count = $option =~ /--outputReadTable/;
 
   my @result_files = ();
   if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
@@ -106,15 +107,21 @@ sub result {
       if ($has_category) {
         push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".category.count", 0 ) );
       }
+      if ($has_read_count) {
+        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".read.count", 0 ) );
+      }
       push( @result_files, $self->get_file( $pbs_dir, "${task_name}_${group_name}", ".filelist", 0 ) );
     }
   }
   else {
-    push( @result_files, $self->get_file( $result_dir, ${task_name}, ".count", 0 ) );
+    push( @result_files, $self->get_file( $result_dir, $task_name, ".count", 0 ) );
     if ($has_category) {
-      push( @result_files, $self->get_file( $result_dir, ${task_name}, ".category.count", 0 ) );
+      push( @result_files, $self->get_file( $result_dir, $task_name, ".category.count", 0 ) );
     }
-    push( @result_files, $self->get_file( $pbs_dir, ${task_name}, ".filelist", 0 ) );
+    if ($has_read_count) {
+      push( @result_files, $self->get_file( $result_dir, $task_name, ".read.count", 0 ) );
+    }
+    push( @result_files, $self->get_file( $pbs_dir, $task_name, ".filelist", 0 ) );
   }
 
   $result->{$task_name} = filter_array( \@result_files, $pattern );
