@@ -70,7 +70,8 @@ sub perform {
     }
   }
 
-  my $designfile = $result_dir . "/${task_name}.define";
+  my $designfilename = "${task_name}.define";
+  my $designfile = "$result_dir/$designfilename";
   open( my $df, ">$designfile" ) or die "Cannot create $designfile";
   print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\n";
 
@@ -167,7 +168,7 @@ sub perform {
   open( my $rt, "<$rtemplate" ) or die $!;
   print $rf "
 rootdir<-\"$result_dir\"
-inputfile<-\"$designfile\" 
+inputfile<-\"$designfilename\" 
   
 showLabelInPCA<-$showLabelInPCA
 showDEGeneCluster<-$showDEGeneCluster
@@ -179,7 +180,7 @@ addCountOne<-$addCountOne
 ";
 
   while (<$rt>) {
-    if ( $_ !~ 'predefined_condition_end\$' ) {
+    if ( $_ !~ 'predefined_condition_end' ) {
       next;
     }
     last;
