@@ -95,14 +95,14 @@ sub getSmallRNAConfig {
 					"mem"      => "10gb"
 				},
 			},
-			deseq2_top100_vis => {
+			deseq2_top100_reads_vis => {
 				class                    => "CQS::UniqueR",
 				perform                  => 1,
-				target_dir               => $data_visualization_dir . "/deseq2_top100_vis",
+				target_dir               => $data_visualization_dir . "/deseq2_top100_reads_vis",
 				rtemplate                => "DESeq2_all_vis.R",
 				output_file              => "",
 				output_file_ext          => ".DESeq2.Matrix.png",
-				parameterSampleFile1_ref => [ "deseq2_top100_reads", "_DESeq2.csv\$", "deseq2_top100_contigs", "_DESeq2.csv\$" ],
+				parameterSampleFile1_ref => [ "deseq2_top100_reads", "_DESeq2.csv\$" ],
 				parameterSampleFile2     => $def->{pairs_host_deseq2_vis_layout},
 				sh_direct                => 1,
 				pbs                      => {
@@ -112,9 +112,26 @@ sub getSmallRNAConfig {
 					"mem"      => "10gb"
 				},
 			},
+			deseq2_top100_contigs_vis => {
+                class                    => "CQS::UniqueR",
+                perform                  => 1,
+                target_dir               => $data_visualization_dir . "/deseq2_top100_contigs_vis",
+                rtemplate                => "DESeq2_all_vis.R",
+                output_file              => "",
+                output_file_ext          => ".DESeq2.Matrix.png",
+                parameterSampleFile1_ref => ["deseq2_top100_contigs", "_DESeq2.csv\$" ],
+                parameterSampleFile2     => $def->{pairs_host_deseq2_vis_layout},
+                sh_direct                => 1,
+                pbs                      => {
+                    "email"    => $def->{email},
+                    "nodes"    => "1:ppn=1",
+                    "walltime" => "1",
+                    "mem"      => "10gb"
+                },
+            },
 		};
 
-		push @summary, ( "deseq2_top100_reads", "deseq2_top100_contigs", "deseq2_top100_vis" );
+		push @summary, ( "deseq2_top100_reads", "deseq2_top100_contigs", "deseq2_top100_reads_vis","deseq2_top100_contigs_vis" );
 
 		$config = merge( $config, $class_independent );
 	}
