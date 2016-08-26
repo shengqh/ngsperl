@@ -2,7 +2,6 @@
 use strict;
 use warnings;
 
-use CQS::DNASeq;
 use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ClassFactory;

@@ -18,7 +18,6 @@ curl -L http://cpanmin.us | perl -  LWP::UserAgent
 curl -L http://cpanmin.us | perl -  Net::FTP
 curl -L http://cpanmin.us | perl -  Scalar::Util
 curl -L http://cpanmin.us | perl -  Statistics::Descriptive
-curl -L http://cpanmin.us | perl -  strict
 curl -L http://cpanmin.us | perl -  String::Util
 curl -L http://cpanmin.us | perl -  Test::Deep
 curl -L http://cpanmin.us | perl -  Test::Simple
