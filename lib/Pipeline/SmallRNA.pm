@@ -103,7 +103,7 @@ sub getSmallRNAConfig {
 				output_file              => "",
 				output_file_ext          => ".DESeq2.Matrix.png",
 				parameterSampleFile1_ref => [ "deseq2_top100_reads", "_DESeq2.csv\$" ],
-				parameterSampleFile2     => $def->{pairs_host_deseq2_vis_layout},
+				parameterSampleFile2     => $def->{pairs_top100_deseq2_vis_layout},
 				sh_direct                => 1,
 				pbs                      => {
 					"email"    => $def->{email},
@@ -120,7 +120,7 @@ sub getSmallRNAConfig {
                 output_file              => "",
                 output_file_ext          => ".DESeq2.Matrix.png",
                 parameterSampleFile1_ref => ["deseq2_top100_contigs", "_DESeq2.csv\$" ],
-                parameterSampleFile2     => $def->{pairs_host_deseq2_vis_layout},
+                parameterSampleFile2     => $def->{pairs_top100_deseq2_vis_layout},
                 sh_direct                => 1,
                 pbs                      => {
                     "email"    => $def->{email},
