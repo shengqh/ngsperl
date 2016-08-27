@@ -26,9 +26,8 @@ addVisLayout<-function(datForFigure, visLayoutFileList,LayoutKey="LayoutKey") {
 		visLayout$Col_Group<-factor(visLayout$Col_Group,levels=unique(visLayout$Col_Group))
 		visLayout$Row_Group<-factor(visLayout$Row_Group,levels=unique(visLayout$Row_Group))	
 		datForFigure<-data.frame(datForFigure,visLayout[datForFigure[,LayoutKey],])
-	} else {
-		return(datForFigure)
 	}
+	return(datForFigure)
 }
 
 
