@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Pipeline::RNASeq;
+package Pipeline::ChIPSeq;
 
 use strict;
 use warnings;
