@@ -50,6 +50,7 @@ sub getSmallRNAConfig {
   my $groups                  = $def->{groups};
   my $groups_vis_layout       = $def->{groups_vis_layout};
   my $add_count_one_in_DEseq2 = ( !defined $def->{add_count_one_in_DEseq2} ) || $def->{add_count_one_in_DEseq2};
+  my $non_host_table_option   = "--outputReadTable";
 
   if ($do_comparison) {
     my $class_independent = {
@@ -507,7 +508,7 @@ sub getSmallRNAConfig {
         class      => "CQS::CQSChromosomeTable",
         perform    => 1,
         target_dir => $nonhost_library_dir . "/bowtie1_miRBase_pm_table",
-        option     => "",
+        option     => $non_host_table_option,
         source_ref => [ "bowtie1_miRBase_pm_count", ".xml" ],
         cqs_tools  => $def->{cqstools},
         prefix     => "miRBase_pm_",
@@ -581,7 +582,7 @@ sub getSmallRNAConfig {
         target_dir => $nonhost_library_dir . "/bowtie1_tRNA_pm_table",
         source_ref => [ 'bowtie1_tRNA_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
-        option     => '--categoryMapFile ' . $def->{trna_category_map},
+        option     => $non_host_table_option . ' --categoryMapFile ' . $def->{trna_category_map},
         prefix     => 'tRNA_pm_',
         pbs        => {
           'email'    => $def->{email},
@@ -657,7 +658,7 @@ sub getSmallRNAConfig {
         target_dir => $nonhost_library_dir . "/bowtie1_rRNAL_pm_table",
         source_ref => [ 'bowtie1_rRNAL_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
-        option     => '',
+        option     => $non_host_table_option,
         prefix     => 'rRNAL_pm_',
         pbs        => {
           'email'    => $def->{email},
@@ -732,7 +733,7 @@ sub getSmallRNAConfig {
         target_dir => $nonhost_library_dir . "/bowtie1_rRNAS_pm_table",
         source_ref => [ 'bowtie1_rRNAS_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
-        option     => '',
+        option     => $non_host_table_option,
         prefix     => 'rRNAS_pm_',
         pbs        => {
           'email'    => $def->{email},
@@ -810,7 +811,7 @@ sub getSmallRNAConfig {
         target_dir => $nonhost_genome_dir . "/bowtie1_bacteria_group1_pm_table",
         source_ref => [ 'bowtie1_bacteria_group1_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
-        option     => '--outputReadTable',
+        option     => $non_host_table_option,
         prefix     => 'bacteria_group1_pm_',
         pbs        => {
           'email'    => $def->{email},
@@ -888,7 +889,7 @@ sub getSmallRNAConfig {
         target_dir => $nonhost_genome_dir . "/bowtie1_bacteria_group2_pm_table",
         source_ref => [ 'bowtie1_bacteria_group2_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
-        option     => '--outputReadTable',
+        option     => $non_host_table_option,
         prefix     => 'bacteria_group2_pm_',
         pbs        => {
           'email'    => $def->{email},
@@ -967,7 +968,7 @@ sub getSmallRNAConfig {
         target_dir => $nonhost_genome_dir . "/bowtie1_fungus_group4_pm_table",
         source_ref => [ 'bowtie1_fungus_group4_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
-        option     => '--outputReadTable',
+        option     => $non_host_table_option,
         prefix     => 'fungus_group4_pm_',
         pbs        => {
           'email'    => $def->{email},
