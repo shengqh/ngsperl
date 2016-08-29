@@ -28,6 +28,9 @@ nameSubtRNA1<-substr(temp,0,3)
 trnaCountTableExpandBySpecies12<-aggregateCountTable(mappingResultExpand,nameSubSpecies12)
 trnaCountTableExpandByRNA<-aggregateCountTable(mappingResultExpand,nameSubtRNA)
 trnaCountTableExpandByRNA1<-aggregateCountTable(mappingResultExpand,nameSubtRNA1)
+write.csv(trnaCountTableExpandBySpecies12,paste0(resultFile,".Species12.csv"))
+write.csv(trnaCountTableExpandByRNA,paste0(resultFile,".tRNAType2.csv"))
+write.csv(trnaCountTableExpandByRNA1,paste0(resultFile,".tRNAType1.csv"))
 
 #Make Individual Graphics
 for ( i in 1:ncol(mappingResult)) {
