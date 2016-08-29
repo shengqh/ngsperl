@@ -149,7 +149,8 @@ sub result {
     my $cur_dir      = $result_dir . "/$sample_name";
     my @result_files = ();
     for my $sampleFile (@sample_files) {
-      my $annovar = change_extension( $sampleFile, ".annovar" );
+      my ( $filename, $dir ) = fileparse($sampleFile);
+      my $annovar = change_extension( $filename, ".annovar" );
       my $final = $annovar . ".final.tsv";
       if ( defined $cqstools ) {
         my $excel = $final . ".xls";
