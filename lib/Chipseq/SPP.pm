@@ -30,17 +30,15 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $spp_r = get_directory( $config, $section, "spp_r", 1 );
-  if($option == ""){
-    $option = "-npeak=300000 -savr -savp -savd -rf "
+  if ( $option eq "" ) {
+    $option = "-npeak=300000 -savr -savp -savd -rf ";
   }
 
   my %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+
   my %control_files;
   if ( has_raw_files( $config, $section, "inputs" ) ) {
     %control_files = %{ $self->get_grouped_raw_files( $config, $section, "inputs" ) };
-  }
-  elsif ( has_raw_files( $config, $section, "controls" ) ) {
-    %control_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
   }
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -58,21 +56,21 @@ sub perform {
     }
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$group_name" );
+    my $tmp_dir = create_directory_or_die( $result_dir . "/${group_name}/tmp" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $group_name );
 
-    my $log_desc = $cluster->get_log_description($log);
+    my $log_desc   = $cluster->get_log_description($log);
     my $final_file = "${cur_dir}/${group_name}_spp.tab";
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file);
-    print $pbs "R --vanilla -f $spp_r $treatment $control -odir=$cur_dir -out=${group_name}_spp.tab $option \n";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    print $pbs "Rscript $spp_r $option $treatment $control -odir=$cur_dir -out=${group_name}_spp.tab -tmpdir=$tmp_dir \n";
     $self->close_pbs( $pbs, $pbs_file );
 
     print $sh "\$MYCMD ./$pbs_name \n";
   }
-
   print $sh "exit 0\n";
   close $sh;
 
@@ -88,9 +86,9 @@ sub result {
 
   my $result = {};
   for my $group_name ( sort keys %treatments_files ) {
-    my $cur_dir       = $result_dir . "/$group_name";
-    my @result_files  = ();
-    my $final_file = "${cur_dir}/${group_name}_spp.tab";
+    my $cur_dir      = $result_dir . "/$group_name";
+    my @result_files = ();
+    my $final_file   = "${cur_dir}/${group_name}_spp.tab";
     push( @result_files, $final_file );
     $result->{$group_name} = filter_array( \@result_files, $pattern );
   }
