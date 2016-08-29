@@ -999,6 +999,33 @@ sub getSmallRNAConfig {
           "mem"      => "10gb"
         },
       },
+      nonhost_overlap_vis => {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $data_visualization_dir . "/nonhost_overlap_vis",
+        rtemplate                => "countTableVisFunctions.R,NonHostOverlap.R",
+        output_file              => ".NonHost.Reads",
+        output_file_ext          => ".Overlap.csv",
+        parameterSampleFile1_ref => [
+          "bowtie1_bacteria_group1_pm_table", ".read.count\$", "bowtie1_bacteria_group2_pm_table", ".read.count\$", "bowtie1_fungus_group4_pm_table", ".read.count\$",
+          "bowtie1_tRNA_pm_table",            ".read.count\$", "bowtie1_rRNAL_pm_table",           ".read.count\$", "bowtie1_rRNAS_pm_table",         ".read.count\$",
+        ],
+        parameterSampleFile2Order => $def->{groups_order},
+        parameterSampleFile2      => $groups,
+        parameterSampleFile3      => $groups_vis_layout,
+
+        #				parameterFile1_ref        => [ "bowtie1_fungus_group4_pm_table", ".count\$" ],
+        #				parameterFile2            => $def->{fungus_group4_log},
+        parameterFile3_ref => [ "fastqc_count_vis", ".Reads.csv\$" ],
+        sh_direct          => 1,
+        rCode              => 'maxCategory=8;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+        pbs                => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      },
     };
 
     $config = merge( $config, $unmappedreads );
@@ -1020,12 +1047,12 @@ sub getSmallRNAConfig {
       "bowtie1_rRNAS_pm",           "bowtie1_rRNAS_pm_count",           "bowtie1_bacteria_group1_pm", "bowtie1_bacteria_group1_pm_count",
       "bowtie1_bacteria_group2_pm", "bowtie1_bacteria_group2_pm_count", "bowtie1_fungus_group4_pm",   "bowtie1_fungus_group4_pm_count"
       );
-    push @summary,
-      (
+    push @summary, (
       "bowtie1_tRNA_pm_table",            "nonhost_library_tRNA_vis",           "bowtie1_rRNAL_pm_table",           "nonhost_library_rRNAL_vis",
       "bowtie1_rRNAS_pm_table",           "nonhost_library_rRNAS_vis",          "bowtie1_bacteria_group1_pm_table", "nonhost_genome_bacteria_group1_vis",
       "bowtie1_bacteria_group2_pm_table", "nonhost_genome_bacteria_group2_vis", "bowtie1_fungus_group4_pm_table",   "nonhost_genome_fungus_group4_vis",
-      );
+      "nonhost_overlap_vis"
+    );
 
     push @mapped,
       (
