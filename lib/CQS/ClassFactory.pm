@@ -55,6 +55,10 @@ sub get_pbs_files {
 sub performConfig {
   my ( $config, $pattern, $force ) = @_;
   foreach my $section ( keys %{$config} ) {
+    my $cursection = $config->{$section};
+    if (ref $cursection ne ref {}){
+      next;
+    }
     if ( !defined $pattern || $section =~ m/$pattern/ ) {
       my $classname = $config->{$section}{class};
       if ( defined $classname ) {
@@ -80,6 +84,10 @@ sub performConfig {
   }
 
   foreach my $section ( keys %{$config} ) {
+    my $cursection = $config->{$section};
+    if (ref $cursection ne ref {}){
+      next;
+    }
     if ( !defined $pattern || $section =~ m/$pattern/ ) {
       my $classname = $config->{$section}{class};
       if ( defined $classname ) {
