@@ -23,12 +23,9 @@ sub new {
   return $self;
 }
 
-sub perform {
-  my ( $self, $config, $section ) = @_;
+sub getKnownSitesVcf {
+  my ( $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
-
-  #preparing known vcf files
   my $sitesVcfFiles;
   if ( defined $config->{$section}{known_vcf_files} ) {
     $sitesVcfFiles = $config->{$section}{known_vcf_files};
@@ -45,10 +42,20 @@ sub perform {
     @sitesVcfFiles = @out;
   }
 
-  my $knownsitesvcf = "";
+  my $result = "";
   foreach my $vcf (@sitesVcfFiles) {
-    $knownsitesvcf = $knownsitesvcf . " -knownSites $vcf";
+    $result = $result . " -knownSites $vcf";
   }
+
+  return $result;
+}
+
+sub perform {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+
+  my $knownsitesvcf = getKnownSitesVcf( $config, $section );
 
   #other options
   my $faFile     = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
@@ -58,7 +65,7 @@ sub perform {
   my $baq                = get_option( $config, $section, "samtools_baq_calibration", 0 );
   my $slim               = get_option( $config, $section, "slim_print_reads",         0 );
   my $remove_duplicate   = get_option( $config, $section, "remove_duplicate",         1 );
-
+  my $sorted             = get_option( $config, $section, "sorted",                   0 );
   my $bedFile = get_param_file( $config->{$section}{bed_file}, "bed_file", 0 );
   my $restrict_intervals = "";
   if ( defined $bedFile and $bedFile ne "" ) {
@@ -70,8 +77,6 @@ sub perform {
   }
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-
-  my $sorted = get_option( $config, $section, "sorted", 0 );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
