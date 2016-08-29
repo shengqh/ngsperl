@@ -55,7 +55,6 @@ sub perform {
     my $sam_file       = $sample_name . ".sam";
     my $clean_sam_file = $sample_name . ".clean.sam";
     my $rgsam_file     = $sample_name . ".rg.sam";
-    my $rgbam_file     = $sample_name . ".rg.bam";
     my $bam_file       = $sample_name . ".bam";
     my $tag            = get_bam_tag($sample_name);
 
@@ -74,57 +73,45 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
-
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $bam_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $bam_file );
 
     print $pbs "
-if [ ! -s $rgbam_file ]; then
-  if [ ! -s $rgsam_file ]; then
-    if [ ! -s $clean_sam_file ]; then
-      if [ ! -s $sam_file ]; then
-        echo bwa_mem=`date`
-        $bwa_aln_command
-      fi
-    
-      if [ -s $sam_file ]; then
-        echo CleanSam=`date`
-        java -jar $picard_jar CleanSam VALIDATION_STRINGENCY=SILENT I=$sam_file O=$clean_sam_file
-        if [ -s $clean_sam_file ]; then
-          rm $sam_file 
-        fi
-      fi
+if [ ! -s $rgsam_file ]; then
+  if [ ! -s $clean_sam_file ]; then
+    if [ ! -s $sam_file ]; then
+      echo bwa_mem=`date`
+      $bwa_aln_command
     fi
     
-    if [ -s $clean_sam_file ]; then
-      echo AddOrReplaceReadGroups=`date`
-      java -jar $picard_jar AddOrReplaceReadGroups I=$clean_sam_file O=$rgsam_file ID=$sample_name LB=$sample_name SM=$sample_name PL=ILLUMINA PU=ILLUMINA
-      if [ -s $rgsam_file ]; then
-        rm $clean_sam_file
+    if [ -s $sam_file ]; then
+      echo CleanSam=`date`
+      java -jar $picard_jar CleanSam VALIDATION_STRINGENCY=SILENT I=$sam_file O=$clean_sam_file
+      if [ -s $clean_sam_file ]; then
+        rm $sam_file 
       fi
     fi
   fi
-
-  if [ -s $rgsam_file ]; then
-    echo sam_to_bam=`date`
-    samtools view -S -b -@ $thread $rgsam_file > $rgbam_file
-    if [ -s $rgbam_file ]; then
-      rm $rgsam_file
+  
+  if [ -s $clean_sam_file ]; then
+    echo AddOrReplaceReadGroups=`date`
+    java -jar $picard_jar AddOrReplaceReadGroups I=$clean_sam_file O=$rgsam_file ID=$sample_name LB=$sample_name SM=$sample_name PL=ILLUMINA PU=ILLUMINA
+    if [ -s $rgsam_file ]; then
+      rm $clean_sam_file
     fi
   fi
 fi
 
-if [ -s $rgbam_file ]; then
+if [ -s $rgsam_file ]; then
   echo sort_bam=`date`
-  samtools sort -@ $thread -m 4G $rgbam_file -o $bam_file
+  samtools sort -@ $thread -m 4G $rgsam_file -o $bam_file
   if [ -s $bam_file ]; then
     samtools index $bam_file 
     samtools flagstat $bam_file > ${bam_file}.stat 
-    rm $rgbam_file
+    rm $rgsam_file
   fi
 fi
 ";
@@ -149,7 +136,7 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $bam_file     = "${result_dir}/${sample_name}/${sample_name}.bam";
+    my $bam_file     = "${result_dir}/${sample_name}.bam";
     my @result_files = ();
     push( @result_files, $bam_file );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
