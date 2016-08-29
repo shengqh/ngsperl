@@ -88,7 +88,7 @@ sub get_parameter {
   my ( $config, $section, $create_directory ) = @_;
 
   die "no section $section found!" if !defined $config->{$section};
-  
+
   $create_directory = 1 if !defined($create_directory);
 
   my $task_name = get_option( $config, $section, "task_name", "" );
@@ -113,7 +113,7 @@ sub get_parameter {
   my $target_dir = get_option( $config, $section, "target_dir" );
   $target_dir =~ s|//|/|g;
   $target_dir =~ s|/$||g;
-  my ( $log_dir, $pbs_dir, $result_dir ) = init_dir($target_dir, $create_directory);
+  my ( $log_dir, $pbs_dir, $result_dir ) = init_dir( $target_dir, $create_directory );
   my ($pbs_desc) = $cluster->get_cluster_desc($refPbs);
 
   my $option    = get_option( $config, $section, "option",    "" );
@@ -541,17 +541,22 @@ sub get_group_samplefile_map_key {
   my $groups = get_raw_files( $config, $section, $group_key );
   my %group_sample_map = ();
   for my $group_name ( sort keys %{$groups} ) {
-    my @samples = @{ $groups->{$group_name} };
-    my @gfiles  = ();
-    foreach my $sample_name (@samples) {
-      my @bam_files = @{ $raw_files->{$sample_name} };
-      foreach my $bam_file (@bam_files) {
-        push( @gfiles, $bam_file );
+    my @gfiles        = ();
+    my $group_samples = $groups->{$group_name};
+    if ( ref $group_samples eq ref "" ) {
+      push( @gfiles, $group_samples );
+    }
+    else {
+      my @samples = @{$group_samples};
+      foreach my $sample_name (@samples) {
+        my @bam_files = @{ $raw_files->{$sample_name} };
+        foreach my $bam_file (@bam_files) {
+          push( @gfiles, $bam_file );
+        }
       }
     }
     $group_sample_map{$group_name} = \@gfiles;
   }
-
   return \%group_sample_map;
 }
 
