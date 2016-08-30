@@ -26,7 +26,7 @@ sub new {
 #The results from whole file and by chromosome may be different at BaseQRankSum, MQRankSum or ReadPosRankSum
 #< 1     1291126 .       G       A,<NON_REF>     6.79    .       BaseQRankSum=0.358;ClippingRankSum=0.358;DP=6;MLEAC=1,0;MLEAF=0.500,0.00;MQ=60.00;MQRankSum=0.358;ReadPosRankSum=-1.231 GT:AD:DP:GQ:PL:SB     0/1:3,2,0:5:34:34,0,59,43,65,109:2,1,1,1
 #> 1     1291126 .       G       A,<NON_REF>     6.79    .       BaseQRankSum=1.231;ClippingRankSum=0.358;DP=6;MLEAC=1,0;MLEAF=0.500,0.00;MQ=60.00;MQRankSum=0.358;ReadPosRankSum=-0.358 GT:AD:DP:GQ:PL:SB     0/1:3,2,0:5:34:34,0,59,43,65,109:2,1,1,1
-
+# based on https://software.broadinstitute.org/gatk/best-practices/bp_3step.php?case=GermShortWGS&p=2
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -53,16 +53,6 @@ sub perform {
   my $extension = get_option( $config, $section, "extension", ".g.vcf" );
 
   my $gatk_jar = get_param_file( $config->{$section}{gatk_jar}, "gatk_jar", 1 );
-
-  my $dbsnp   = get_param_file( $config->{$section}{dbsnp_vcf},      "dbsnp_vcf",      1 );
-  my $compvcf = get_param_file( $config->{$section}{comparison_vcf}, "comparison_vcf", 0 );
-
-  if ( defined $compvcf ) {
-    $compvcf = "-comp " . $compvcf;
-  }
-  else {
-    $compvcf = "";
-  }
 
   my $java_option = $config->{$section}{java_option};
   if ( !defined $java_option || $java_option eq "" ) {
@@ -94,9 +84,9 @@ sub perform {
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
-    my $snvOut    = $sample_name . "_snv" . $extension;
-    my $snvOutTmp = $sample_name . "_snv.tmp" . $extension;
-    my $snvStat   = $sample_name . "_snv.stat";
+    my $snvOut    = $sample_name . $extension;
+    my $snvOutTmp = $sample_name . ".tmp" . $extension;
+    my $snvStat   = $sample_name . ".stat";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -117,10 +107,10 @@ if [ ! -s $snvOut ]; then
       my @gvcflist = ();
       for my $chr (@chrs) {
         chomp($chr);
-        my $chrfile = $sample_name . "_snv.tmp." . $chr . ".g.vcf";
+        my $chrfile = $sample_name . ".tmp." . $chr . ".g.vcf";
         push( @gvcflist, $chrfile );
         print $pbs
-"  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bam_file -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF -variant_index_type LINEAR -variant_index_parameter 128000 --out $chrfile
+"  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bam_file -nct $thread --emitRefConfidence GVCF --out $chrfile
 ";
       }
 
@@ -134,7 +124,7 @@ if [ ! -s $snvOut ]; then
     }
     else {
       print $pbs
-"  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bam_file -D $dbsnp $compvcf -nct $thread --emitRefConfidence GVCF -variant_index_type LINEAR -variant_index_parameter 128000 --out $snvOut $restrict_intervals
+"  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bam_file -nct $thread --emitRefConfidence GVCF --out $snvOut $restrict_intervals
 ";
     }
 
@@ -162,7 +152,7 @@ sub result {
   my %bam_files = %{ get_raw_files( $config, $section ) };
   for my $sample_name ( sort keys %bam_files ) {
     my $cur_dir      = $result_dir . "/$sample_name";
-    my $snvOut       = $sample_name . "_snv" . $extension;
+    my $snvOut       = $sample_name . $extension;
     my @result_files = ();
     push( @result_files, "${cur_dir}/${snvOut}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
