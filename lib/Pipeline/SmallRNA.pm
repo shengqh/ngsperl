@@ -50,7 +50,7 @@ sub getSmallRNAConfig {
   my $groups                  = $def->{groups};
   my $groups_vis_layout       = $def->{groups_vis_layout};
   my $add_count_one_in_DEseq2 = ( !defined $def->{add_count_one_in_DEseq2} ) || $def->{add_count_one_in_DEseq2};
-  my $non_host_table_option   = "--outputReadTable";
+  my $non_host_table_option   = "--outputReadTable --outputReadContigTable";
 
   if ($do_comparison) {
     my $class_independent = {
