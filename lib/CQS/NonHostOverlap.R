@@ -237,11 +237,12 @@ if (length(readsMappingNames)>5) {
 	dataForPlot<-readsMappingNames
 }
 names(dataForPlot)<-categoriesNames[1:5]
+colors<-makeColors(length(allSigNameList))
 for (i in 1:ncol(readsMappingTable)) {
 	reads2count<-readsMappingTable[,i]
 	names(reads2count)<-row.names(readsMappingTable)
 	png(paste0(resultFile,".",colnames(readsMappingTable)[i],".venn.png"),res=300,height=2000,width=2000)
-	venn.diagram1(dataForPlot,count=reads2count)
+	venn.diagram1(dataForPlot,count=reads2count,cex=2,cat.cex=2,cat.col=colors,fill=colors)
 	dev.off()
 }
 
