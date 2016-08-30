@@ -158,13 +158,11 @@ fi
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
-
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     if ($remove_duplicate) {
       print $pbs "
@@ -242,7 +240,7 @@ sub result {
       }
     }
     my @result_files = ();
-    push( @result_files, "${result_dir}/${sample_name}/${final_file}" );
+    push( @result_files, "${result_dir}/${final_file}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
