@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package GATK::HaplotypeCallerGVCF;
+package GATK::HaplotypeCaller;
 
 use strict;
 use warnings;
