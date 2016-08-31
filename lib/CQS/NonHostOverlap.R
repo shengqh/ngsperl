@@ -242,7 +242,7 @@ for (i in 1:ncol(readsMappingTable)) {
 	reads2count<-readsMappingTable[,i]
 	names(reads2count)<-row.names(readsMappingTable)
 	png(paste0(resultFile,".",colnames(readsMappingTable)[i],".venn.png"),res=300,height=2000,width=2000)
-	venn.diagram1(dataForPlot,count=reads2count,cex=2,cat.cex=2,cat.col=colors,fill=colors)
+	venn.diagram1(dataForPlot,count=reads2count,cex=2,cat.cex=2,cat.col=colors,fill=colors,alpha=0.7)
 	dev.off()
 }
 
@@ -261,6 +261,7 @@ temp3<-colSums(readsMappingTable[temp3,])
 dataForPlot<-rbind(BothCategories=temp1,MicrobiomeOnly=temp2,EnvironmentOnly=temp3)
 resultOut<-rbind(readsMappingTable[temp1,],readsMappingTable[temp2,],readsMappingTable[temp3,])
 resultOut<-cbind(Category=c(rep("BothCategories",length(temp1)),rep("MicrobiomeOnly",length(temp2)),rep("EnvironmentOnly",length(temp3))),resultOut)
+write.csv(resultOut,paste0(resultFile,".MicrobiomeVsEnvironment.reads.csv"))
 
 #Pie chart for all samples
 ggpieToFile(dataForPlot,fileName=paste0(resultFile,".MicrobiomeVsEnvironment.Piechart.png"),maxCategory=maxCategory,textSize=textSize)
