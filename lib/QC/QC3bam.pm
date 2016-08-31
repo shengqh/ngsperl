@@ -28,8 +28,15 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $transcript_gtf = get_param_file( $config->{$section}{transcript_gtf}, "transcript_gtf", 1 );
-  my $qc3_perl       = get_param_file( $config->{$section}{qc3_perl},       "qc3_perl",       1 );
+  my $target_region_bed = get_param_file( $config->{$section}{target_region_bed}, "target_region_bed", 0 );
+  if ( defined $target_region_bed ) {
+    $option = $option . " -r $target_region_bed";
+  }
+  else {
+    my $transcript_gtf = get_param_file( $config->{$section}{transcript_gtf}, "transcript_gtf", 1 );
+    $option = $option . " -g $transcript_gtf";
+  }
+  my $qc3_perl = get_param_file( $config->{$section}{qc3_perl}, "qc3_perl", 1 );
 
   my $raw_files = get_raw_files( $config, $section );
 
@@ -52,7 +59,7 @@ sub perform {
   my $final_file = "bamReport.html";
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-  print $pbs "perl $qc3_perl $option -m b -i $mapfile -g $transcript_gtf -o $result_dir";
+  print $pbs "perl $qc3_perl $option -m b -i $mapfile -o $result_dir";
   $self->close_pbs( $pbs, $pbs_file );
 }
 
