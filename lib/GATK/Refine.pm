@@ -50,6 +50,14 @@ sub getKnownSitesVcf {
   return $result;
 }
 
+#https://software.broadinstitute.org/gatk/blog?id=7712
+#indel local alignment has been dropped out, since it is just not useful enough anymore when you're calling variants with haplotype-based tools like HaplotypeCaller and MuTect2
+#
+#https://software.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_gatk_engine_CommandLineGATK.php--simplifyBAM
+#--simplifyBAM / -simplifyBAM
+#Strip down read content and tags
+#If provided, output BAM/CRAM files will be simplified to include only key reads for downstream variation discovery analyses (removing duplicates, PF-, non-primary reads), as well stripping all extended tags from the kept reads except the read group identifier
+#Based on this description, it should be safe to remove BD:Z, PG:Z and BI:Z in bam file.
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -63,11 +71,12 @@ sub perform {
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
   my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals",       0 ) ? "-fixMisencodedQuals" : "";
   my $baq                = get_option( $config, $section, "samtools_baq_calibration", 0 );
-  my $slim               = get_option( $config, $section, "slim_print_reads",         0 );
+  my $slim               = get_option( $config, $section, "slim_print_reads",         1 );
   my $remove_duplicate   = get_option( $config, $section, "remove_duplicate",         1 );
   my $sorted             = get_option( $config, $section, "sorted",                   0 );
   my $bedFile = get_param_file( $config->{$section}{bed_file}, "bed_file", 0 );
   my $restrict_intervals = "";
+
   if ( defined $bedFile and $bedFile ne "" ) {
     $restrict_intervals = "-L $bedFile";
     my $interval_padding = get_option( $config, $section, "interval_padding", 0 );
@@ -103,7 +112,7 @@ sub perform {
     if ($remove_duplicate) {
       $rmdupFile       = $sample_name . ".rmdup.bam";
       $rmdupFileIndex  = change_extension( $rmdupFile, ".bai" );
-      $rmdupFilesToDel = "$rmdupFile $rmdupFileIndex ${rmdupFile}.metrics";
+      $rmdupFilesToDel = "$rmdupFile $rmdupFileIndex";
       $rmdupResultName = ".rmdup";
     }
 
@@ -120,8 +129,9 @@ sub perform {
     my $rmlist   = "";
 
     if ($slim) {
-      $slimFile   = $sample_name . "$rmdupResultName.realigned.recal.slim.bam";
+      $slimFile   = $sample_name . "$rmdupResultName.recal.slim.bam";
       $final_file = $slimFile;
+      $rmlist = "$recalFile $recalFile.bai";
       $slimCmd    = "
 if [[ -s $recalFile && ! -s $slimFile ]]; then
   echo slim=`date` 
@@ -133,7 +143,7 @@ fi
 
     if ($baq) {
       if ($slim) {
-        $final_file = $sample_name . "$rmdupResultName.realigned.recal.slim.baq.bam";
+        $final_file = $sample_name . "$rmdupResultName.recal.slim.baq.bam";
         $baqcmd     = "
 if [[ -s $slimFile && ! -s $final_file ]]; then
   echo baq=`date` 
@@ -141,10 +151,10 @@ if [[ -s $slimFile && ! -s $final_file ]]; then
   samtools index $final_file
 fi      
 ";
-        $rmlist = "$slimFile ${slimFile}.bai";
+        $rmlist = $rmlist . " $slimFile ${slimFile}.bai";
       }
       else {
-        $final_file = $sample_name . "$rmdupResultName.realigned.recal.baq.bam";
+        $final_file = $sample_name . "$rmdupResultName.recal.baq.bam";
         $baqcmd     = "
 if [[ -s $recalFile && ! -s $final_file ]]; then
   echo baq=`date` 
@@ -152,6 +162,7 @@ if [[ -s $recalFile && ! -s $final_file ]]; then
   samtools index $final_file
 fi      
 ";
+        $rmlist = $rmlist . " $recalFile ${recalFile}.bai";
       }
     }
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -164,25 +175,29 @@ fi
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
+    print $pbs "
+if [ ! -s $recalFile ]; then";
+
     if ($remove_duplicate) {
       print $pbs "
-if [ ! -s $rmdupFile ]; then
-  echo MarkDuplicates=`date` 
-  $sortCmd
-  java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
-fi
+  if [ ! -s $rmdupFile ]; then
+    echo MarkDuplicates=`date` 
+    $sortCmd
+    java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
+  fi
 ";
     }
 
     print $pbs "
-if [[ -s $rmdupFile && ! -s $recalTable ]]; then
-  echo BaseRecalibrator=`date` 
-  java $option -jar $gatk_jar -T BaseRecalibrator -nct $thread -rf BadCigar -R $faFile -I $rmdupFile $knownsitesvcf -o $recalTable $restrict_intervals
-fi
+  if [[ -s $rmdupFile && ! -s $recalTable ]]; then
+    echo BaseRecalibrator=`date` 
+    java $option -jar $gatk_jar -T BaseRecalibrator -nct $thread -rf BadCigar -R $faFile -I $rmdupFile $knownsitesvcf -o $recalTable $restrict_intervals
+  fi
 
-if [[ -s $recalTable && ! -s $recalFile ]]; then
-  echo PrintReads=`date`
-  java $option -jar $gatk_jar -T PrintReads -nct $thread -rf BadCigar -R $faFile -I $rmdupFile -BQSR $recalTable -o $recalFile 
+  if [ -s $recalTable ]; then
+    echo PrintReads=`date`
+    java $option -jar $gatk_jar -T PrintReads -nct $thread -rf BadCigar -R $faFile -I $rmdupFile -BQSR $recalTable -o $recalFile 
+  fi
 fi
 
 $slimCmd
@@ -213,7 +228,7 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $baq              = get_option( $config, $section, "samtools_baq_calibration", 0 );
-  my $slim             = get_option( $config, $section, "slim_print_reads",         0 );
+  my $slim             = get_option( $config, $section, "slim_print_reads",         1 );
   my $remove_duplicate = get_option( $config, $section, "remove_duplicate",         1 );
 
   my $result          = {};
