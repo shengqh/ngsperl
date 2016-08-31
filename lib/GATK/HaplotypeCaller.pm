@@ -108,15 +108,18 @@ sub perform {
       for my $chr (@chrs) {
         chomp($chr);
         my $chrfile = $sample_name . ".tmp." . $chr . ".g.vcf";
+        my $chrfileidx = $chrfile . ".idx";
         push( @gvcflist, $chrfile );
-        print $pbs
-"java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bam_file -nct $thread --out $chrfile
+        print $pbs "
+if [[ ! -s $chrfile || ! -s $chrfileidx ]]; then
+  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bam_file -nct $thread --out $chrfile $restrict_intervals
+fi
 ";
       }
 
-      print $pbs "if [[ -s " . join( " && -s ", @gvcflist ) . " ]]; then
+      print $pbs "if [[ -s " . join( " \\\n   && -s ", @gvcflist ) . " ]]; then
   java $java_option -cp $gatk_jar org.broadinstitute.gatk.tools.CatVariants \\
-    -V " . join( " \\\n      -V ", @gvcflist ) . " \\
+    -V " . join( " \\\n    -V ", @gvcflist ) . " \\
     -R $faFile \\
     -out $snvOut \\
     -assumeSorted
