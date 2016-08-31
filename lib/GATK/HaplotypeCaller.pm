@@ -86,9 +86,10 @@ sub perform {
     my @sample_files = @{ $bam_files{$sample_name} };
     my $bam_file     = $sample_files[0];
 
-    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
-
     my $snvOut    = $sample_name . $extension;
+    
+    #if the program throw exception, the idx file will not be generated.
+    my $snvOutIndex = $snvOut . ".idx";
     my $snvOutTmp = $sample_name . ".tmp" . $extension;
     my $snvStat   = $sample_name . ".stat";
 
@@ -100,12 +101,7 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
-
-    print $pbs "
-
-if [ ! -s $snvOut ]; then
-";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $snvOutIndex );
 
     if ($by_chromosome) {
       my @gvcflist = ();
@@ -114,27 +110,23 @@ if [ ! -s $snvOut ]; then
         my $chrfile = $sample_name . ".tmp." . $chr . ".g.vcf";
         push( @gvcflist, $chrfile );
         print $pbs
-"  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bam_file -nct $thread --out $chrfile
+"java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bam_file -nct $thread --out $chrfile
 ";
       }
 
-      print $pbs "  if [[ -s " . join( " && -s ", @gvcflist ) . " ]]; then
-    java $java_option -cp $gatk_jar org.broadinstitute.gatk.tools.CatVariants \\
-      -V " . join( " \\\n      -V ", @gvcflist ) . " \\
-      -R $faFile \\
-      -out $snvOut \\
-      -assumeSorted
-  fi";
+      print $pbs "if [[ -s " . join( " && -s ", @gvcflist ) . " ]]; then
+  java $java_option -cp $gatk_jar org.broadinstitute.gatk.tools.CatVariants \\
+    -V " . join( " \\\n      -V ", @gvcflist ) . " \\
+    -R $faFile \\
+    -out $snvOut \\
+    -assumeSorted
+fi";
     }
     else {
       print $pbs
-"  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bam_file -nct $thread --emitRefConfidence GVCF --out $snvOut $restrict_intervals
+"java $java_option -jar $gatk_jar -T HaplotypeCaller $option -R $faFile -I $bam_file -nct $thread --out $snvOut $restrict_intervals
 ";
     }
-
-    print $pbs "
-fi
-";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
@@ -155,10 +147,9 @@ sub result {
 
   my %bam_files = %{ get_raw_files( $config, $section ) };
   for my $sample_name ( sort keys %bam_files ) {
-    my $cur_dir      = $result_dir . "/$sample_name";
     my $snvOut       = $sample_name . $extension;
     my @result_files = ();
-    push( @result_files, "${cur_dir}/${snvOut}" );
+    push( @result_files, "${result_dir}/${snvOut}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
