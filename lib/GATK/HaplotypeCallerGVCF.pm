@@ -33,6 +33,10 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my $by_chromosome = get_option( $config, $section, "by_chromosome", 0 );
+  my $gvcf =get_option( $config, $section, "gvcf", 1 );
+  if($gvcf){
+    $option = $option . " --emitRefConfidence GVCF";
+  }
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
 
@@ -110,7 +114,7 @@ if [ ! -s $snvOut ]; then
         my $chrfile = $sample_name . ".tmp." . $chr . ".g.vcf";
         push( @gvcflist, $chrfile );
         print $pbs
-"  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bam_file -nct $thread --emitRefConfidence GVCF --out $chrfile
+"  java $java_option -jar $gatk_jar -T HaplotypeCaller $option -L $chr -R $faFile -I $bam_file -nct $thread --out $chrfile
 ";
       }
 
