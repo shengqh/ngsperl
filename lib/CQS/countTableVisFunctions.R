@@ -149,7 +149,7 @@ tableBarplotToFile<-function(dat,fileName,totalCountFile="",maxCategory=5,textSi
 #changed from function in http://mathematicalcoffee.blogspot.com/2014/06/ggpie-pie-graphs-in-ggplot2.html
 ggpie <- function (dat, fill="Category", y="Reads",facet="Sample", 
 		maxCategory=NA,main=NA, percent=T,textSize=15,colorNames="Set1",
-		transformTable=TRUE,reOrder=TRUE,visLayoutFileList="") {
+		transformTable=TRUE,reOrder=FALSE,visLayoutFileList="") {
 	if (transformTable) {
 		datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory)
 		

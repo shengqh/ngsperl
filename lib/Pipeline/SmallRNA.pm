@@ -597,7 +597,7 @@ sub getSmallRNAConfig {
         target_dir                => $data_visualization_dir . "/nonhost_library_tRNA_vis",
         rtemplate                 => "countTableVisFunctions.R,bacteriaTrnaMappingVis.R",
         output_file               => ".tRNAMapping.Result",
-        output_file_ext           => ".Category.Barplot.png",
+        output_file_ext           => ".Species12.csv;.tRNAType1.csv;.tRNAType2.csv",
         parameterSampleFile1Order => $def->{groups_order},
         parameterSampleFile1      => $groups,
         parameterSampleFile2      => $groups_vis_layout,
@@ -1086,6 +1086,27 @@ sub getSmallRNAConfig {
             "mem"      => "10gb"
           },
         },
+        deseq2_nonhost_tRNA_species12 => {
+          class                => "Comparison::DESeq2",
+          perform              => 1,
+          target_dir           => $nonhost_library_dir . "/deseq2_nonhost_tRNA_species12",
+          option               => "",
+          source_ref           => "pairs",
+          groups_ref           => "groups",
+          countfile_ref        => [ "nonhost_library_tRNA_vis", ".Species12.csv\$" ],
+          sh_direct            => 1,
+          show_DE_gene_cluster => 1,
+          pvalue               => 0.05,
+          fold_change          => 1.5,
+          min_median_read      => 6,
+          add_count_one        => $add_count_one_in_DEseq2,
+          pbs                  => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "10",
+            "mem"      => "10gb"
+          },
+        },
         deseq2_nonhost_rRNAL => {
           class                => "Comparison::DESeq2",
           perform              => 1,
@@ -1312,7 +1333,7 @@ sub getSmallRNAConfig {
       $config = merge( $config, $unmapped_comparison );
       push @summary,
         (
-        "deseq2_nonhost_tRNA",          "deseq2_nonhost_rRNAL",         "deseq2_nonhost_rRNAS",       "nonhost_library_deseq2_vis",
+        "deseq2_nonhost_tRNA",         "deseq2_nonhost_tRNA_species12", "deseq2_nonhost_rRNAL",         "deseq2_nonhost_rRNAS",       "nonhost_library_deseq2_vis",
         "deseq2_bacteria_group1",       "deseq2_bacteria_group2",       "deseq2_fungus_group4",       "nonhost_genome_deseq2_vis",
         "deseq2_bacteria_group1_reads", "deseq2_bacteria_group2_reads", "deseq2_fungus_group4_reads", "nonhost_genome_deseq2_reads_vis"
         );

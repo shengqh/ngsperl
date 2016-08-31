@@ -221,7 +221,14 @@ sub result {
 		}
 	}
 	else {
-		push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext}" );
+		if ($output_file_ext=~/;/) {
+			my @output_file_exts = split( ";", $output_file_ext );
+			foreach my $output_file_ext_one (@output_file_exts) {
+				push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext_one}" );
+			}
+		} else {
+			push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext}" );
+		}
 	}
 
 	$result->{$task_name} = filter_array( \@result_files, $pattern );
