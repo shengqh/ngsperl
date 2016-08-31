@@ -152,20 +152,27 @@ for (i in 1:nrow(countTableFileAll)) {
 		margin=c(min(10,max(nchar(colnames(countNumCor)))/2),min(10,max(nchar(row.names(countNumCor)))/2))
 		
 		colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
-		if (min(countNumCor,na.rm=T)<0) {
-			colAllLabel<-c(-1,0,1)
-			if (fixColorRange) {
-				col<-col_part(data_all=c(-1,1),data_part=countNumCor,col=colAll)
-			} else {
-				col<-colAll
-			}
+#		if (min(countNumCor,na.rm=T)<0) {
+#			colAllLabel<-c(-1,0,1)
+#			if (fixColorRange) {
+#				col<-col_part(data_all=c(-1,1),data_part=countNumCor,col=colAll)
+#			} else {
+#				col<-colAll
+#			}
+#		} else {
+#			colAllLabel<-c(0,0.5,1)
+#			if (fixColorRange) {
+#				col<-col_part(data_all=c(0,1),data_part=countNumCor,col=colAll)
+#			} else {
+#				col<-colAll
+#			}
+#		}
+		colAllLabel<-c(0,0.5,1)
+		countNumCor[countNumCor<0]<-0
+		if (fixColorRange) {
+			col<-col_part(data_all=c(0,1),data_part=countNumCor,col=colAll)
 		} else {
-			colAllLabel<-c(0,0.5,1)
-			if (fixColorRange) {
-				col<-col_part(data_all=c(0,1),data_part=countNumCor,col=colAll)
-			} else {
-				col<-colAll
-			}
+			col<-colAll
 		}
 		
 		legendfun<-function(x) {

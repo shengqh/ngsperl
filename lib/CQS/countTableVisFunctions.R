@@ -50,6 +50,14 @@ col_part<-function(data_all,data_part,col) {
 	max_all<-max(data_all,na.rm=T)
 	min_part<-min(data_part,na.rm=T)
 	max_part<-max(data_part,na.rm=T)
+	if (min_part<min_all) {
+		min_part<-min_all
+		warning(paste0("Minimum value in data_part is less than data_all"))
+	}
+	if (max_part>max_all) {
+		max_part<-max_all
+		warning(paste0("Maximum value in data_part is larger than data_all"))
+	}
 	cut_off_low<-round(quantile(1:length(col),(min_part-min_all)/(max_all-min_all)))
 	cut_off_high<-round(quantile(1:length(col),(max_part-min_all)/(max_all-min_all)))
 	col=col[cut_off_low:cut_off_high]

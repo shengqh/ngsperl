@@ -259,6 +259,8 @@ temp1<-colSums(readsMappingTable[temp1,])
 temp2<-colSums(readsMappingTable[temp2,])
 temp3<-colSums(readsMappingTable[temp3,])
 dataForPlot<-rbind(BothCategories=temp1,MicrobiomeOnly=temp2,EnvironmentOnly=temp3)
+resultOut<-rbind(readsMappingTable[temp1,],readsMappingTable[temp2,],readsMappingTable[temp3,])
+resultOut<-cbind(Category=c(rep("BothCategories",length(temp1)),rep("MicrobiomeOnly",length(temp2)),rep("EnvironmentOnly",length(temp3))),resultOut)
 
 #Pie chart for all samples
 ggpieToFile(dataForPlot,fileName=paste0(resultFile,".MicrobiomeVsEnvironment.Piechart.png"),maxCategory=maxCategory,textSize=textSize)
