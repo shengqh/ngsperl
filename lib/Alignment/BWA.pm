@@ -136,7 +136,7 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $bam_file     = "${result_dir}/${sample_name}.bam";
+    my $bam_file     = "${result_dir}/${sample_name}/${sample_name}.bam";
     my @result_files = ();
     push( @result_files, $bam_file );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
