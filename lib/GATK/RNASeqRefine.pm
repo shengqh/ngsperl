@@ -38,11 +38,12 @@ sub perform {
 
   my $sorted = get_option( $config, $section, "sorted", 0 );
 
-  my $replaceReadGroup   = get_option( $config, $section, "replace_read_group",       0 );
-  my $reorderChromosome  = get_option( $config, $section, "reorder_chromosome",       0 );
-  my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals",       0 ) ? "-fixMisencodedQuals" : "";
-  my $slimPrintReads     = get_option( $config, $section, "slim_print_reads",         1 );
-  my $baq                = get_option( $config, $section, "samtools_baq_calibration", 0 );
+  my $replaceReadGroup     = get_option( $config, $section, "replace_read_group",       0 );
+  my $reorderChromosome    = get_option( $config, $section, "reorder_chromosome",       0 );
+  my $fixMisencodedQuals   = get_option( $config, $section, "fixMisencodedQuals",       0 ) ? "-fixMisencodedQuals" : "";
+  my $slim                 = get_option( $config, $section, "slim_print_reads",         1 );
+  my $use_self_slim_method = get_option( $config, $section, "use_self_slim_method",     0 );
+  my $baq                  = get_option( $config, $section, "samtools_baq_calibration", 0 );
 
   my $knownvcf      = "";
   my $knownsitesvcf = "";
@@ -97,52 +98,72 @@ sub perform {
       $rmFiles     = $rmFiles . " " . $reorderFile . " " . $reorderFile . ".bai";
     }
 
-    my $splitFile = $sample_name . ".rmdup.split.bam";
-    my $grpFile   = $splitFile . ".grp";
-    my $recalFile = $sample_name . ".rmdup.split.recal.bam";
+    my $splitFile      = $sample_name . ".rmdup.split.bam";
+    my $recalTable     = $sample_name . ".rmdup.split.recal.table";
+    my $recalFile      = $sample_name . ".rmdup.split.recal.bam";
+    my $recalFileIndex = change_extension( $recalFile, ".bai" );
 
-    my $final_file = $recalFile;
+    my $finalFile = $recalFile;
 
-    my $rmlist = "";
-
-    my $slimcmd = "";
-    if ($slimPrintReads) {
-      $rmlist = "$final_file ${final_file}.bai";
-      my $slimFile = $sample_name . ".rmdup.split.recal.slim.bam";
-      $slimcmd = "if [[ -s $final_file && ! -s $slimFile ]]; then
+    my $baqCmd       = "";
+    my $slimCmd      = "";
+    my $slimFile     = "";
+    my $rmlist       = "";
+    my $printOptions = "";
+    if ($slim) {
+      $slimFile  = $sample_name . ".rmdup.split.recal.slim.bam";
+      $finalFile = $slimFile;
+      if ($use_self_slim_method) {
+        $rmlist  = "$recalFile $recalFile.bai";
+        $slimCmd = "
+if [[ -s $recalFile && ! -s $slimFile ]]; then
   echo slim=`date` 
-  samtools view -h $final_file | sed 's/\\tBD\:Z\:[^\\t]*//' | sed 's/\\tPG\:Z\:[^\\t]*//' | sed 's/\\tBI\:Z\:[^\\t]*//' | samtools view -S -b > $slimFile
+  samtools view -h $recalFile | sed 's/\\tBD\:Z\:[^\\t]*//' | sed 's/\\tPG\:Z\:[^\\t]*//' | sed 's/\\tBI\:Z\:[^\\t]*//' | samtools view -S -b > $slimFile
   samtools index $slimFile
-fi
+fi  
 ";
-      my $final_file = $slimFile;
+      }
+      else {
+        $recalFile      = $slimFile;
+        $recalFileIndex = change_extension( $recalFile, ".bai" );
+        $printOptions   = " --simplifyBAM";
+      }
     }
 
-    my $baqcmd = "";
     if ($baq) {
-      $rmlist = $rmlist . " $final_file ${final_file}.bai";
-      my $baq_file = $sample_name . ".rmdup.split.recal.slim.baq.bam";
-      $baqcmd = "
-if [[ -s $final_file && ! -s $baq_file ]]; then
+      if ($slim) {
+        $finalFile = $sample_name . ".rmdup.split.recal.slim.baq.bam";
+        $baqCmd    = "
+if [[ -s $slimFile && ! -s $finalFile ]]; then
   echo baq=`date` 
-  samtools calmd -Abr $final_file $faFile > $baq_file
-  samtools index $baq_file
+  samtools calmd -Abr $slimFile $faFile > $finalFile
+  samtools index $finalFile
 fi      
 ";
-      $final_file = $baq_file;
+        $rmlist = $rmlist . " $slimFile ${slimFile}.bai";
+      }
+      else {
+        $finalFile = $sample_name . ".rmdup.split.recal.baq.bam";
+        $baqCmd    = "
+if [[ -s $recalFile && ! -s $finalFile ]]; then
+  echo baq=`date` 
+  samtools calmd -Abr $recalFile $faFile > $finalFile
+  samtools index $finalFile
+fi      
+";
+        $rmlist = $rmlist . " $recalFile $recalFileIndex";
+      }
     }
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
-
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $finalFile );
 
     print $pbs "
 if [ ! -s $rmdupFile ]; then
@@ -158,24 +179,24 @@ if [ ! -s $splitFile ]; then
   java $option -jar $gatk_jar -T SplitNCigarReads -R $faFile -I $splitInput -o $splitFile -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60 -U ALLOW_N_CIGAR_READS $fixMisencodedQuals
 fi
 
-if [[ -s $splitFile && ! -s $grpFile ]]; then
+if [[ -s $splitFile && ! -s $recalTable ]]; then
   echo BaseRecalibrator=`date` 
-  java $option -jar $gatk_jar -T BaseRecalibrator -nct $thread -rf BadCigar -R $faFile -I $splitFile $knownsitesvcf -o $grpFile
+  java $option -jar $gatk_jar -T BaseRecalibrator -nct $thread -rf BadCigar -R $faFile -I $splitFile $knownsitesvcf -o $recalTable
 fi
 
-if [[ -s $splitFile && -s $grpFile && ! -s $recalFile ]]; then
+if [[ -s $splitFile && -s $recalTable && ! -s $recalFile ]]; then
   echo PrintReads=`date`
-  java $option -jar $gatk_jar -T PrintReads -nct $thread -rf BadCigar -R $faFile -I $splitFile -BQSR $grpFile -o $recalFile 
+  java $option -jar $gatk_jar -T PrintReads $printOptions -nct $thread -rf BadCigar -R $faFile -I $splitFile -BQSR $recalTable -o $recalFile 
 fi
 
-$slimcmd
+$slimCmd
 
-$baqcmd
+$baqCmd
 
-if [[ -s $final_file && ! -s ${final_file}.stat ]]; then
+if [[ -s $finalFile && ! -s ${finalFile}.stat ]]; then
   echo flagstat=`date` 
-  samtools flagstat $final_file > ${final_file}.stat
-  rm $rmFiles $rmdupFile ${sample_name}.rmdup.bai ${rmdupFile}.metrics $splitFile ${sample_name}.rmdup.split.bai $grpFile $rmlist
+  samtools flagstat $finalFile > ${finalFile}.stat
+  rm $rmFiles $rmdupFile ${sample_name}.rmdup.bai ${rmdupFile}.metrics $splitFile ${sample_name}.rmdup.split.bai $recalTable $rmlist
 fi
   
 ";
@@ -196,24 +217,24 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $slimPrintReads = get_option( $config, $section, "slim_print_reads",         1 );
-  my $baq            = get_option( $config, $section, "samtools_baq_calibration", 0 );
+  my $slim = get_option( $config, $section, "slim_print_reads",         1 );
+  my $baq  = get_option( $config, $section, "samtools_baq_calibration", 0 );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $recalFile  = $sample_name . ".rmdup.split.recal.bam";
-    my $final_file = $recalFile;
-    if ($slimPrintReads) {
-      my $slimFile   = $sample_name . ".rmdup.split.recal.slim.bam";
-      my $final_file = $slimFile;
+    my $recalFile = $sample_name . ".rmdup.split.recal.bam";
+    my $finalFile = $recalFile;
+    if ($slim) {
+      my $slimFile  = $sample_name . ".rmdup.split.recal.slim.bam";
+      my $finalFile = $slimFile;
     }
 
     if ($baq) {
       my $baq_file = $sample_name . ".rmdup.split.recal.slim.baq.bam";
-      $final_file = $baq_file;
+      $finalFile = $baq_file;
     }
     my @result_files = ();
-    push( @result_files, "${result_dir}/${sample_name}/${final_file}" );
+    push( @result_files, "${result_dir}/${finalFile}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
