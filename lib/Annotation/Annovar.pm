@@ -78,7 +78,7 @@ sub perform {
       my $passinput;
       if ($isvcf) {
         $passinput = change_extension( $filename, ".avinput" );
-        $runcmd = "convert2annovar.pl -format vcf4old ${sampleFile} | cut -f1-7 > $passinput 
+        $runcmd = "convert2annovar.pl -format vcf4old ${sampleFile} | cut -f1-7 | awk '{gsub(\",\\\\*\", \"\", \$0); print}'> $passinput 
   if [ -s $passinput ]; then
     table_annovar.pl $passinput $annovarDB $option --outfile $annovar --remove
   fi";
