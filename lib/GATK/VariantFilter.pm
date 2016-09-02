@@ -124,8 +124,7 @@ if [[ -s $mergedFile && ! -s $snpCal ]]; then
     -mode SNP \\
     -tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 90.0 \\
     -recalFile $snpCal \\
-    -tranchesFile $snpTranches \\
-    -rscriptFile ${snpTranches}.R
+    -tranchesFile $snpTranches
 fi
 
 if [[ -s $snpCal && ! -s $snpPass ]]; then
@@ -148,20 +147,18 @@ if [[ -s $snpPass && ! -s $indelCal ]]; then
     -R $faFile \\
     -input $snpPass \\
     -resource:mills,known=true,training=true,truth=true,prior=12.0 $mills \\
-    -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 $dbsnp \\
     -an QD \\
     -an DP \\
-    -an FS \\ 
-    -an SOR \\ 
-    -an MQRankSum \\ 
-    -an ReadPosRankSum \\ 
+    -an FS \\
+    -an SOR \\
+    -an MQRankSum \\
+    -an ReadPosRankSum \\
     -an InbreedingCoeff \\
     -mode INDEL \\
     -tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 90.0 \\
     --maxGaussians 4 \\
     -recalFile $indelCal \\
-    -tranchesFile $indelTranches \\
-    -rscriptFile ${indelTranches}.R \\
+    -tranchesFile $indelTranches
 fi
 
 if [[ -s $snpPass && -s $indelCal && ! -s $finalFile ]]; then
