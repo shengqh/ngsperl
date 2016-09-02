@@ -58,42 +58,6 @@ sub perform {
   my $pbs_name = basename($pbs_file);
   my $log      = $self->get_log_filename( $log_dir, $task_name );
 
-  my $bedFile           = get_param_file( $config->{$section}{bed_file}, "bed_file", 0 );
-  my $snp_annotations   = "";
-  my $indel_annotations = "";
-  if ( defined $bedFile and $bedFile ne "" ) {
-    $snp_annotations = "-an QD \\
-    -an FS \\
-    -an SOR \\
-    -an MQ \\
-    -an MQRankSum \\
-    -an ReadPosRankSum \\
-    -an InbreedingCoeff \\";
-    $indel_annotations = "-an QD \\
-    -an FS \\
-    -an SOR \\
-    -an MQRankSum \\
-    -an ReadPosRankSum \\
-    -an InbreedingCoeff \\";
-  }
-  else {
-    $snp_annotations = "-an DP \\
-    -an QD \\
-    -an FS \\
-    -an SOR \\
-    -an MQ \\
-    -an MQRankSum \\
-    -an ReadPosRankSum \\
-    -an InbreedingCoeff \\";
-    $indel_annotations = "-an DP \\
-    -an QD \\
-    -an FS \\
-    -an SOR \\
-    -an MQRankSum \\
-    -an ReadPosRankSum \\
-    -an InbreedingCoeff \\";
-  }
-
   my $mergedFile = $task_name . ".raw.vcf";
 
   my $snpCal      = $task_name . ".snp.recal";
@@ -149,11 +113,19 @@ if [[ -s $mergedFile && ! -s $snpCal ]]; then
     }
 
     print $pbs "    -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 $dbsnp \\
-    $snp_annotations
+    -an DP \\
+    -an QD \\
+    -an FS \\
+    -an SOR \\
+    -an MQ \\
+    -an MQRankSum \\
+    -an ReadPosRankSum \\
+    -an InbreedingCoeff \\
     -mode SNP \\
     -tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 90.0 \\
     -recalFile $snpCal \\
-    -tranchesFile $snpTranches
+    -tranchesFile $snpTranches \\
+    -rscriptFile ${snpTranches}.R
 fi
 
 if [[ -s $snpCal && ! -s $snpPass ]]; then
@@ -177,12 +149,19 @@ if [[ -s $snpPass && ! -s $indelCal ]]; then
     -input $snpPass \\
     -resource:mills,known=true,training=true,truth=true,prior=12.0 $mills \\
     -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 $dbsnp \\
-    $indel_annotations
+    -an QD \\
+    -an DP \\
+    -an FS \\ 
+    -an SOR \\ 
+    -an MQRankSum \\ 
+    -an ReadPosRankSum \\ 
+    -an InbreedingCoeff \\
     -mode INDEL \\
     -tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 90.0 \\
     --maxGaussians 4 \\
     -recalFile $indelCal \\
-    -tranchesFile $indelTranches
+    -tranchesFile $indelTranches \\
+    -rscriptFile ${indelTranches}.R \\
 fi
 
 if [[ -s $snpPass && -s $indelCal && ! -s $finalFile ]]; then
