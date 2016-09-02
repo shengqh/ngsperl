@@ -11,10 +11,10 @@ use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::NGSCommon;
-use CQS::GroupTask;
+use CQS::UniqueTask;
 use CQS::StringUtils;
 
-our @ISA = qw(CQS::GroupTask);
+our @ISA = qw(CQS::UniqueTask);
 
 my $directory;
 
@@ -82,11 +82,11 @@ sub result {
   my $groups = get_raw_files( $config, $section, "groups" );
 
   my $result = {};
+  my @result_files = ();
   for my $name ( sort keys %{$groups} ) {
-    my @result_files = ();
     push( @result_files, "${result_dir}/${name}_plots.pdf" );
-    $result->{$name} = filter_array( \@result_files, $pattern );
   }
+  $result->{$task_name} = filter_array( \@result_files, $pattern );
   return $result;
 }
 
