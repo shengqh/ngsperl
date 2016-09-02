@@ -69,11 +69,12 @@ sub perform {
   my $faFile     = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $gatk_jar   = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
-  my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals",       0 ) ? "-fixMisencodedQuals" : "";
-  my $baq                = get_option( $config, $section, "samtools_baq_calibration", 0 );
-  my $slim               = get_option( $config, $section, "slim_print_reads",         1 );
-  my $remove_duplicate   = get_option( $config, $section, "remove_duplicate",         1 );
-  my $sorted             = get_option( $config, $section, "sorted",                   0 );
+  my $fixMisencodedQuals   = get_option( $config, $section, "fixMisencodedQuals",       0 ) ? "-fixMisencodedQuals" : "";
+  my $baq                  = get_option( $config, $section, "samtools_baq_calibration", 0 );
+  my $slim                 = get_option( $config, $section, "slim_print_reads",         1 );
+  my $use_self_slim_method = get_option( $config, $section, "use_self_slim_method",     0 );
+  my $remove_duplicate     = get_option( $config, $section, "remove_duplicate",         1 );
+  my $sorted               = get_option( $config, $section, "sorted",                   0 );
   my $bedFile = get_param_file( $config->{$section}{bed_file}, "bed_file", 0 );
   my $restrict_intervals = "";
 
@@ -120,29 +121,35 @@ sub perform {
 
     my $recalFile = $sample_name . "$rmdupResultName.recal.bam";
     my $recalFileIndex = change_extension( $recalFile, ".bai" );
-
     my $final_file = $recalFile;
 
-    my $baqcmd   = "";
-    my $slimCmd  = "";
-    my $slimFile = "";
-    my $rmlist   = "";
-
+    my $baqcmd       = "";
+    my $slimCmd      = "";
+    my $slimFile     = "";
+    my $rmlist       = "";
+    my $printOptions = "";
     if ($slim) {
       $slimFile   = $sample_name . "$rmdupResultName.recal.slim.bam";
       $final_file = $slimFile;
-      $rmlist = "$recalFile $recalFile.bai";
-      $slimCmd    = "
+      if ($use_self_slim_method) {
+        $rmlist     = "$recalFile $recalFile.bai";
+        $slimCmd    = "
 if [[ -s $recalFile && ! -s $slimFile ]]; then
   echo slim=`date` 
   samtools view -h $recalFile | sed 's/\\tBD\:Z\:[^\\t]*//' | sed 's/\\tPG\:Z\:[^\\t]*//' | sed 's/\\tBI\:Z\:[^\\t]*//' | samtools view -S -b > $slimFile
   samtools index $slimFile
 fi  
 ";
+      }
+      else {
+        $recalFile = $slimFile;
+        $recalFileIndex = change_extension( $recalFile, ".bai" );
+        $printOptions = " --simplifyBAM";
+      }
     }
 
     if ($baq) {
-      if ($slim) {
+      if ( $slim  ) {
         $final_file = $sample_name . "$rmdupResultName.recal.slim.baq.bam";
         $baqcmd     = "
 if [[ -s $slimFile && ! -s $final_file ]]; then
@@ -162,7 +169,7 @@ if [[ -s $recalFile && ! -s $final_file ]]; then
   samtools index $final_file
 fi      
 ";
-        $rmlist = $rmlist . " $recalFile ${recalFile}.bai";
+        $rmlist = $rmlist . " $recalFile $recalFileIndex";
       }
     }
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -196,7 +203,7 @@ if [ ! -s $recalFile ]; then";
 
   if [ -s $recalTable ]; then
     echo PrintReads=`date`
-    java $option -jar $gatk_jar -T PrintReads -nct $thread -rf BadCigar -R $faFile -I $rmdupFile -BQSR $recalTable -o $recalFile 
+    java $option -jar $gatk_jar -T PrintReads $printOptions -nct $thread -rf BadCigar -R $faFile -I $rmdupFile -BQSR $recalTable -o $recalFile 
   fi
 fi
 
@@ -227,9 +234,10 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $baq              = get_option( $config, $section, "samtools_baq_calibration", 0 );
-  my $slim             = get_option( $config, $section, "slim_print_reads",         1 );
-  my $remove_duplicate = get_option( $config, $section, "remove_duplicate",         1 );
+  my $remove_duplicate     = get_option( $config, $section, "remove_duplicate",         1 );
+  my $slim                 = get_option( $config, $section, "slim_print_reads",         1 );
+  my $use_self_slim_method = get_option( $config, $section, "use_self_slim_method",     0 );
+  my $baq                  = get_option( $config, $section, "samtools_baq_calibration", 0 );
 
   my $result          = {};
   my $rmdupResultName = "";
@@ -238,7 +246,7 @@ sub result {
   }
   for my $sample_name ( keys %raw_files ) {
     my $final_file = "";
-    if ($slim) {
+    if ( $slim ) {
       if ($baq) {
         $final_file = "$sample_name$rmdupResultName.recal.slim.baq.bam";
       }

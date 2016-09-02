@@ -103,6 +103,8 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $snvOutIndex );
 
+    print $pbs "echo Processing $sample_name \n"; 
+
     if ($by_chromosome) {
       my @gvcflist = ();
       for my $chr (@chrs) {
