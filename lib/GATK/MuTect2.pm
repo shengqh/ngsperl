@@ -48,6 +48,14 @@ sub perform {
 		$cosmic_param = "--cosmic $cosmicfile";
 	}
 
+	#normal panel vcf
+	my $normalPanel_param = "";
+	my $normalPanelfile =
+	  get_param_file( $config->{$section}{normal_panel_file}, "normal_panel_file", 0 );
+	if ( defined $normalPanelfile ) {
+		$normalPanel_param = "--normal_panel $normalPanelfile";
+	}
+	
 	#target region
 	my $bedFile =
 	  get_param_file( $config->{$section}{bed_file}, "bed_file", 0 );
@@ -97,6 +105,9 @@ sub perform {
 			$normal      = "";
 			$tumor       = $sample_files[0];
 			$sample_parm = "-I:tumor $tumor";
+			if ($normalPanel_param eq "") { #Only one sample, no normal panel, then is is a normal only sample, need to add --artifact_detection_mode   
+				$option=$option." --artifact_detection_mode";
+			}
 		}
 		elsif ( $sampleCount != 2 ) {
 			die "SampleFile should be tumor only or normal,tumor paired.";
@@ -138,7 +149,7 @@ if [ ! -s ${tumor}.bai ]; then
 fi
 
 if [ ! -s $vcf ]; then
-  $java $java_option -jar $gatk_jar $option -T MuTect2 -R $faFile $cosmic_param --dbsnp $dbsnpfile $sample_parm $restrict_intervals -o $vcf
+  $java $java_option -jar $gatk_jar $option -T MuTect2 -R $faFile $cosmic_param $normalPanel_param --dbsnp $dbsnpfile $sample_parm $restrict_intervals -o $vcf
 fi 
 ";
 
