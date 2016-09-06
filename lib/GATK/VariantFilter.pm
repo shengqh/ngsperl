@@ -68,6 +68,8 @@ sub perform {
   my $indelCal      = $task_name . ".indel.recal";
   my $indelTranches = $task_name . ".indel.tranche";
 
+  my $indelPass = $task_name . ".recal_snp_recal_indel.vcf";
+
   my $finalFile = $task_name . ".pass.vcf";
 
   my $log_desc = $cluster->get_log_description($log);
@@ -161,7 +163,7 @@ if [[ -s $snpPass && ! -s $indelCal ]]; then
     -tranchesFile $indelTranches
 fi
 
-if [[ -s $snpPass && -s $indelCal && ! -s $finalFile ]]; then
+if [[ -s $snpPass && -s $indelCal && ! -s $indelPass ]]; then
   echo ApplyRecalibrationIndel=`date` 
   java $java_option -jar $gatk_jar \\
     -T ApplyRecalibration -nt $thread \\
@@ -171,9 +173,15 @@ if [[ -s $snpPass && -s $indelCal && ! -s $finalFile ]]; then
     --ts_filter_level 99.0 \\
     -recalFile $indelCal \\
     -tranchesFile $indelTranches \\
-    -o $finalFile
-  rm $snpCal ${snpCal}.idx $snpTranches $snpPass ${snpPass}.idx $indelCal ${indelCal}.idx $indelTranches 
+    -o $indelPass
 fi
+
+if [[ -s $indelPass && ! -s $finalFile ]]; then
+  cat $indelPass | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $finalFile
+  rm $snpCal ${snpCal}.idx $snpTranches $snpPass ${snpPass}.idx $indelCal ${indelCal}.idx $indelTranches $indelPass ${indelPass}.idx
+fi
+
+
 ";
   }
   else {    #hard filter mode
