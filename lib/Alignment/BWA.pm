@@ -56,19 +56,21 @@ sub perform {
     my @sample_files   = @{ $raw_files{$sample_name} };
     my $sam_file       = $sample_name . ".sam";
     my $clean_sam_file = $sample_name . ".clean.sam";
-    my $rgsam_file     = $sample_name . ".rg.sam";
     my $bam_file       = $sample_name . ".bam";
+    my $bam_file_index       = $sample_name . ".bam.bai";
     my $tag            = get_bam_tag($sample_name);
 
     my $sampleFile1 = $sample_files[0];
+    
+    my $rg = "\@RG\\tID:${sample_name}\\tPU:illumina\\tLB:${sample_name}\\tSM:${sample_name}\\tPL:illumina";
 
     my $bwa_aln_command;
     if ( scalar(@sample_files) == 2 ) {
       my $sampleFile2 = $sample_files[1];
-      $bwa_aln_command = "bwa mem $option $bwa_index $sampleFile1 $sampleFile2 > $sam_file";
+      $bwa_aln_command = "bwa mem $option -R '$rg' $bwa_index $sampleFile1 $sampleFile2 > $sam_file";
     }
     else {
-      $bwa_aln_command = "bwa mem $option $bwa_index $sampleFile1 > $sam_file";
+      $bwa_aln_command = "bwa mem $option -R '$rg' $bwa_index $sampleFile1 > $sam_file";
     }
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -79,13 +81,13 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $bam_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $bam_file_index );
     
     my $rmlist = $sam_file;
-    my $rginput = $sam_file;
+    my $baminput = $sam_file;
     my $cleansam_cmd = "";
     if($cleansam){
-      $rginput  =$clean_sam_file;
+      $baminput  =$clean_sam_file;
       $rmlist = $rmlist . " " . $clean_sam_file;
       $cleansam_cmd = "if [[ -s $sam_file && ! -s $clean_sam_file ]]; then
   echo CleanSam=`date`
@@ -101,20 +103,15 @@ fi
 
 $cleansam_cmd
     
-if [[ -s $rginput && ! -s $rgsam_file ]]; then
-  echo AddOrReplaceReadGroups=`date`
-  java -jar $picard_jar AddOrReplaceReadGroups I=$rginput O=$rgsam_file ID=$sample_name LB=$sample_name SM=$sample_name PL=ILLUMINA PU=ILLUMINA
-fi
-
-if [ -s $rgsam_file ]; then
+if [ -s $baminput ]; then
   echo sort_bam=`date`
-  samtools sort -@ $thread -m 4G $rgsam_file -o $bam_file
+  samtools sort -@ $thread -m 4G $baminput -o $bam_file
 fi
 
 if [ -s $bam_file ]; then
   samtools index $bam_file 
   samtools flagstat $bam_file > ${bam_file}.stat 
-  rm $rmlist $rgsam_file
+  rm $rmlist
 fi
 ";
 
