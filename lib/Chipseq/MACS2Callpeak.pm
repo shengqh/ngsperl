@@ -24,23 +24,33 @@ sub new {
   return $self;
 }
 
+sub get_raw_files_with_or_without_groups{
+  my ( $self, $config, $section ) = @_;
+  my $result;
+  if ( has_raw_files( $config, $section, "groups" ) ) {
+    $result = $self->get_grouped_raw_files( $config, $section, "groups" );
+  }
+  else {
+    $result = get_raw_files( $config, $section );
+  }
+  
+  return $result;
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %raw_files;
+  my %raw_files = %{$self->get_raw_files_with_or_without_groups($config, $section)};
+
   my %control_files;
   my $has_control = 0;
   if ( has_raw_files( $config, $section, "groups" ) ) {
-    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
     $has_control = has_raw_files( $config, $section, "controls" );
     if ($has_control) {
       %control_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
     }
-  }
-  else {
-    %raw_files = %{ get_raw_files( $config, $section ) };
   }
 
   my $peak_name = ( $option =~ /--broad/ ) ? "broadPeak" : "narrowPeak";
@@ -94,13 +104,8 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my %raw_files;
-  if ( has_raw_files( $config, $section, "groups" ) ) {
-    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
-  }
-  else {
-    %raw_files = %{ get_raw_files( $config, $section ) };
-  }
+  my %raw_files = %{$self->get_raw_files_with_or_without_groups($config, $section)};
+
   my $peak_name = ( $option =~ /--broad/ ) ? "broadPeak" : "narrowPeak";
 
   my $result = {};
@@ -122,13 +127,8 @@ sub get_pbs_files {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my %raw_files;
-  if ( has_raw_files( $config, $section, "groups" ) ) {
-    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
-  }
-  else {
-    %raw_files = %{ get_raw_files( $config, $section ) };
-  }
+  my %raw_files = %{$self->get_raw_files_with_or_without_groups($config, $section)};
+
   my $result = {};
   for my $sample_name ( sort keys %raw_files ) {
       $result->{$sample_name} = $self->get_pbs_filename( $pbs_dir, $sample_name );
