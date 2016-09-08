@@ -30,6 +30,14 @@ sub perform {
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $blacklistfile = get_param_file( $config->{$section}{"blacklist_file"}, "blacklist_file", 0 );
+  my $isPairedEnd    = get_option( $config, $section, "is_paired_end" );
+  my $isSortedByName = 0;
+  my $maxFragmentLength = 0;
+  if($isPairedEnd){
+    $option = $option . " -bedpe";
+    $isSortedByName = get_option( $config, $section, "is_sorted_by_name" );
+    $maxFragmentLength = get_option( $config, $section, "maximum_fragment_length" );
+  }
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -42,39 +50,71 @@ sub perform {
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
+    my $log_desc = $cluster->get_log_description($log);
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $bed_file = $sample_name . ".bed";
-    my $shifted_file = $sample_name . ".shifted.bed";
-    my $confident_file = $sample_name . ".shifted.confident.bed";
-    my $pileup     = "";
-    if ( defined $blacklistfile ) {
-      $pileup     = "if [[ -s $shifted_file && ! -s $confident_file ]]; then
-  bedtools subtract -a $shifted_file -b $blacklistfile > $confident_file
-  
-  if [[ -s $confident_file ]]; then
-    rm $shifted_file
-  fi
-fi";
-    }
-    my $final_file = (defined $blacklistfile) ? $confident_file : $shifted_file;
-
-    my $log_desc = $cluster->get_log_description($log);
+    my $bed_file       = $sample_name . ".bed";
+    my $confident_file = $sample_name . ".confident.bed";
+    my $final_file     = defined $blacklistfile ? $sample_name . ".confident.shifted.bed" : $sample_name . ".shifted.bed";
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-    print $pbs "
-bam2bed --do-not-sort < $bam_file > $bed_file
+    my $rmlist = "";
 
-if [[ -s $bed_file && ! -s $shifted_file ]]; then
-  awk 'BEGIN {OFS = \"\\t\"} ; {if (\$6 == \"+\") print \$1, \$2 + 4, \$3 + 4, \$4, \$5, \$6; else print \$1, \$2 - 5, \$3 - 5, \$4, \$5, \$6}' $bed_file > $shifted_file
-  if [[ -s $shifted_file ]]; then
-    rm $bed_file
-  fi
+    my $sortCmd = "";
+    if ( !$isSortedByName ) {
+      my $presortedFile   = $sample_name . ".sortedByName.bam";
+      print $pbs "
+if [ ! -s $presortedFile ]; then
+  echo SortBamByName=`date` 
+  samtools sort -n  -@ $thread -m $memory $bam_file -o $presortedFile
+fi
+";
+      $rmlist   = $presortedFile;
+      $bam_file = $presortedFile;
+    }
+
+    print $pbs "
+if [ ! -s $bed_file ]; then
+  echo bamtobed=`date` 
+  bedtools bamtobed $option -i $bam_file > $bed_file
+fi
+";
+    $rmlist = $rmlist . " " . $bed_file;
+    
+    if($isPairedEnd){
+      my $slim_file = $sample_name . ".paired_end.bed";
+      print $pbs "
+if [[ -s $bed_file && ! -s $slim_file ]]; then
+  echo convert_paired_end_bed=`date`
+  awk 'BEGIN {OFS = \"\\t\"} ; {if (\$1 == \$4 && \$6 - \$2 < $maxFragmentLength) print \$1, \$2, \$6, \$7, \$8, \$9}' $bed_file > $slim_file 
+fi
+";
+      $bed_file = $slim_file;
+      $rmlist = $rmlist . " " . $slim_file;
+    }
+
+    if ( defined $blacklistfile ) {
+      print $pbs "
+if [[ -s $bed_file && ! -s $confident_file ]]; then
+  echo remove_read_in_blacklist=`date` 
+  bedtools intersect -v -a $bed_file -b $blacklistfile > $confident_file
+fi
+";
+      $bed_file = $confident_file;
+      $rmlist   = $rmlist . " " . $confident_file;
+    }
+
+    print $pbs "
+if [[ -s $bed_file && ! -s $final_file ]]; then
+  echo shift_reads=`date` 
+  awk 'BEGIN {OFS = \"\\t\"} ; {if (\$6 == \"+\") print \$1, \$2 + 4, \$3 + 4, \$4, \$5, \$6; else print \$1, \$2 - 5, \$3 - 5, \$4, \$5, \$6}' $bed_file > $final_file
 fi
 
-$pileup
+if [ -s $final_file ]; then
+  rm $rmlist;
+fi
 ";
     $self->close_pbs( $pbs, $pbs_file );
   }
@@ -101,7 +141,7 @@ sub result {
   for my $sample_name ( keys %raw_files ) {
     my @result_files = ();
 
-    my $final_file = ( defined $blacklistfile ) ? $sample_name . ".shifted.confident.bed" : $sample_name . ".shifted.bed";
+    my $final_file = defined $blacklistfile ? $sample_name . ".confident.shifted.bed" : $sample_name . ".shifted.bed";
     push( @result_files, "${result_dir}/${final_file}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
