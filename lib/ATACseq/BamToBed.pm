@@ -70,7 +70,7 @@ sub perform {
       print $pbs "
 if [ ! -s $presortedFile ]; then
   echo SortBamByName=`date` 
-  samtools sort -n  -@ $thread -m $memory $bam_file -o $presortedFile
+  samtools sort -n  -@ $thread -m $memory -o $presortedFile $bam_file 
 fi
 ";
       $rmlist   = $presortedFile;

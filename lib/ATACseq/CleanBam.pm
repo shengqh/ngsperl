@@ -26,14 +26,15 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
   my $remove_chromosome = get_option( $config, $section, "remove_chromosome" );
-  my $keep_chromosome = get_option( $config, $section, "keep_chromosome", "" );
-  my $minimum_maq = get_option( $config, $section, "minimum_maq", 10 );
-  
-  if($keep_chromosome !~ /^\s*$/){
+  my $keep_chromosome   = get_option( $config, $section, "keep_chromosome", "" );
+  my $minimum_maq       = get_option( $config, $section, "minimum_maq", 10 );
+  my $isSortedByName    = get_option( $config, $section, "is_sorted_by_name" );
+
+  if ( $keep_chromosome !~ /^\s*$/ ) {
     $keep_chromosome = "| grep $keep_chromosome";
   }
 
@@ -47,8 +48,10 @@ sub perform {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $sampleFile   = $sample_files[0];
 
-    my $noChrFile  = $sample_name . ".noChr" . $remove_chromosome . ".bam";
-    my $final_file = $sample_name . ".noChr" . $remove_chromosome . ".rmdup.bam";
+    my $fixFile     = $sample_name . ".fix.bam";
+    my $fixSortFile = $sample_name . ".fix.sorted.bam";
+    my $redupFile   = $sample_name . ".fix.rmdup.bam";
+    my $finalFile  = $sample_name . ".fix.rmdup.noChr" . $remove_chromosome . ".bam";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -58,25 +61,47 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $finalFile );
+    my $rmlist = "";
+    if ( !$isSortedByName ) {
+      my $sorted = $sample_name . ".sortByName.bam";
+      print $pbs "
+if [ ! -s $sorted ]; then
+  echo SortByName=`date` 
+  samtools sort -n -o $sorted $sampleFile 
+fi
+";
+      $sampleFile = $sorted;
+      $rmlist     = $sorted;
+    }
+
     print $pbs "
-if [ ! -s $noChrFile ]; then
-  echo RemoveChromosome=`date` 
-  samtools idxstats $sampleFile | cut -f 1 | grep -v $remove_chromosome $keep_chromosome | xargs samtools view -bq $minimum_maq $sampleFile > $noChrFile 
+if [[ -s $sampleFile && ! -s $fixFile ]]; then
+  echo FixMate=`date` 
+  samtools fixmate $sampleFile  > $fixFile 
 fi
 
-if [[ -s $noChrFile && ! -s $final_file ]]; then
+if [[ -s fixFile && ! -s $fixSortFile ]]; then
+  echo SortByCoordinate=`date` 
+  samtools sort -@ $thread -m $memory -o $fixSortFile $fixFile  
+fi
+
+if [[ -s $fixSortFile && ! -s $redupFile ]]; then
   echo RemoveDuplicate=`date` 
-  java $option -jar $picard_jar MarkDuplicates I=$noChrFile O=$final_file ASSUME_SORTED=true REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT M=${final_file}.metrics
+  java $option -jar $picard_jar MarkDuplicates I=$fixSortFile O=$redupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT M=${redupFile}.metrics
 fi
 
-if [[ -s $final_file && ! -s ${final_file}.bai ]]; then
-  echo BamIndex=`date` 
-  samtools index $final_file
-  samtools flagstat $final_file > ${final_file}.stat
-  rm $noChrFile
+if [[ -s $redupFile && ! -s $finalFile ]]; then
+  echo RemoveChromosome=`date` 
+  samtools idxstats $fixSortFile | cut -f 1 | grep -v $remove_chromosome $keep_chromosome | xargs samtools view -b -q $minimum_maq $redupFile > $finalFile 
 fi
-  
+
+if [[ -s $finalFile && ! -s ${finalFile}.bai ]]; then
+  echo BamIndex=`date` 
+  samtools index $finalFile
+  samtools flagstat $finalFile > ${finalFile}.stat
+  rm $rmlist $fixFile $fixSortFile $redupFile
+fi
 ";
 
     $self->close_pbs( $pbs, $pbs_file );
@@ -100,10 +125,10 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $sortedFile = $sample_name . ".noChr" . $remove_chromosome . ".rmdup.bam";
+    my $finalFile  = $sample_name . ".fix.rmdup.noChr" . $remove_chromosome . ".bam";
 
     my @result_files = ();
-    push( @result_files, "${result_dir}/${sortedFile}" );
+    push( @result_files, "${result_dir}/${finalFile}" );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }

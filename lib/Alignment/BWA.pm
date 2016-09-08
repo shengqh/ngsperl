@@ -26,11 +26,12 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my $selfname = $self->{_name};
   
   my $cleansam = get_option($config, $section, "cleansam", 0);
+  my $sortByCoordinate = get_option($config, $section, "sort_by_coordinate", 1);
 
   $option = $option . " -M";
 
@@ -82,34 +83,43 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $bam_file_index );
-    
-    my $rmlist = $sam_file;
-    my $baminput = $sam_file;
-    my $cleansam_cmd = "";
-    if($cleansam){
-      $baminput  =$clean_sam_file;
-      $rmlist = $rmlist . " " . $clean_sam_file;
-      $cleansam_cmd = "if [[ -s $sam_file && ! -s $clean_sam_file ]]; then
-  echo CleanSam=`date`
-  java -jar $picard_jar CleanSam VALIDATION_STRINGENCY=SILENT I=$sam_file O=$clean_sam_file
-fi";
-    }
-    
+
     print $pbs "
 if [ ! -s $sam_file ]; then
   echo bwa_mem=`date`
   $bwa_aln_command
 fi
-
-$cleansam_cmd
+";    
+    my $rmlist = $sam_file;
+    if($cleansam){
+      print $pbs "
+if [[ -s $sam_file && ! -s $clean_sam_file ]]; then
+  echo CleanSam=`date`
+  java -jar $picard_jar CleanSam VALIDATION_STRINGENCY=SILENT I=$sam_file O=$clean_sam_file
+fi";
+      $rmlist = $rmlist . " " . $clean_sam_file;
+      $sam_file = $clean_sam_file;
+    }
     
-if [ -s $baminput ]; then
+    if($sortByCoordinate){
+      print $pbs "    
+if [ -s $sam_file ]; then
   echo sort_bam=`date`
-  samtools sort -@ $thread -m 4G $baminput -o $bam_file
-fi
-
-if [ -s $bam_file ]; then
+  samtools sort -@ $thread -m $memory $sam_file -o $bam_file
   samtools index $bam_file 
+fi
+";
+    }else{
+      print $pbs "    
+if [ -s $sam_file ]; then
+  echo sam_to_bam=`date`
+  samtools view -b $sam_file -o $bam_file
+fi
+";
+    }
+    
+    print $pbs "
+if [ -s $bam_file ]; then
   samtools flagstat $bam_file > ${bam_file}.stat 
   rm $rmlist
 fi
