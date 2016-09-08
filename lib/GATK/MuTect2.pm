@@ -106,7 +106,7 @@ sub perform {
 			$tumor       = $sample_files[0];
 			$sample_parm = "-I:tumor $tumor";
 			if ($normalPanel_param eq "") { #Only one sample, no normal panel, then is is a normal only sample, need to add --artifact_detection_mode   
-				$option=$option." --artifact_detection_mode";
+				$sample_parm=" --artifact_detection_mode ".$sample_parm;
 			}
 		}
 		elsif ( $sampleCount != 2 ) {
