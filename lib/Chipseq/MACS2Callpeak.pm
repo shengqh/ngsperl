@@ -29,13 +29,18 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
-
-  my $has_control = has_raw_files( $config, $section, "controls" );
-  print "has_control = " . $has_control . "\n";
+  my %raw_files;
   my %control_files;
-  if ($has_control) {
-    %control_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
+  my $has_control = 0;
+  if ( has_raw_files( $config, $section, "groups" ) ) {
+    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+    $has_control = has_raw_files( $config, $section, "controls" );
+    if ($has_control) {
+      %control_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
+    }
+  }
+  else {
+    %raw_files = %{ get_raw_files( $config, $section ) };
   }
 
   my $peak_name = ( $option =~ /--broad/ ) ? "broadPeak" : "narrowPeak";
@@ -89,7 +94,13 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+  my %raw_files;
+  if ( has_raw_files( $config, $section, "groups" ) ) {
+    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+  }
+  else {
+    %raw_files = %{ get_raw_files( $config, $section ) };
+  }
   my $peak_name = ( $option =~ /--broad/ ) ? "broadPeak" : "narrowPeak";
 
   my $result = {};
@@ -102,6 +113,25 @@ sub result {
     push( @result_files, $cur_dir . "/${sample_name}_peaks.${peak_name}.bed" );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
+  }
+  return $result;
+}
+
+sub get_pbs_files {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
+
+  my %raw_files;
+  if ( has_raw_files( $config, $section, "groups" ) ) {
+    %raw_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+  }
+  else {
+    %raw_files = %{ get_raw_files( $config, $section ) };
+  }
+  my $result = {};
+  for my $sample_name ( sort keys %raw_files ) {
+      $result->{$sample_name} = $self->get_pbs_filename( $pbs_dir, $sample_name );
   }
   return $result;
 }
