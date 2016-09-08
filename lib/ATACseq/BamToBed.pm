@@ -33,10 +33,12 @@ sub perform {
   my $isPairedEnd    = get_option( $config, $section, "is_paired_end" );
   my $isSortedByName = 0;
   my $maxFragmentLength = 0;
+  my $minFragmentLength = 0;
   if($isPairedEnd){
     $option = $option . " -bedpe";
     $isSortedByName = get_option( $config, $section, "is_sorted_by_name" );
     $maxFragmentLength = get_option( $config, $section, "maximum_fragment_length" );
+    $minFragmentLength = get_option( $config, $section, "minimum_fragment_length" );
   }
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -88,7 +90,7 @@ fi
       print $pbs "
 if [[ -s $bed_file && ! -s $slim_file ]]; then
   echo convert_paired_end_bed=`date`
-  awk 'BEGIN {OFS = \"\\t\"} ; {if (\$1 == \$4 && \$6 - \$2 < $maxFragmentLength) print \$1, \$2, \$6, \$7, \$8, \$9}' $bed_file > $slim_file 
+  awk 'BEGIN {OFS = \"\\t\"} ; {if (\$1 == \$4 && \$6 - \$2 <= $maxFragmentLength && \$6 - \$2 >= $minFragmentLength ) print \$1, \$2, \$6, \$7, \$8, \$9}' $bed_file > $slim_file 
 fi
 ";
       $bed_file = $slim_file;
