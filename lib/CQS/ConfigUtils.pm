@@ -364,6 +364,10 @@ sub do_get_raw_files {
       my $refcount = keys %myres;
       for my $mykey ( keys %myres ) {
         my $myvalues = $myres{$mykey};
+        if(ref($myvalues) eq ''){
+          $myvalues = [$myvalues];
+        }
+        
         if ( ( ref($myvalues) eq 'ARRAY' ) && ( scalar( @{$myvalues} ) > 0 ) ) {
           if ( exists $result{$mykey} ) {
             my $oldvalues = $result{$mykey};
