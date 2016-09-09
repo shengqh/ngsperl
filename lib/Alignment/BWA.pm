@@ -28,6 +28,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
+  my $sort_memory = $thread == 1? $memory:"4G";
+
   my $selfname = $self->{_name};
 
   my $cleansam         = get_option( $config, $section, "cleansam",           0 );
@@ -96,7 +98,7 @@ fi";
       print $pbs "    
 if [ -s $unsorted_bam_file ]; then
   echo sort_bam=`date`
-  samtools sort -@ $thread -m 4G $unsorted_bam_file -o $bam_file
+  samtools sort -@ $thread -m $sort_memory $unsorted_bam_file -o $bam_file
   samtools index $bam_file 
 fi
 ";
