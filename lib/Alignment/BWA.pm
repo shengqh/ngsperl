@@ -32,7 +32,7 @@ sub perform {
 
   my $cleansam         = get_option( $config, $section, "cleansam",           0 );
   my $sortByCoordinate = get_option( $config, $section, "sort_by_coordinate", 1 );
-
+  
   $option = $option . " -M";
 
   if ( !( $option =~ /\s-t\s/ ) ) {
@@ -96,7 +96,7 @@ fi";
       print $pbs "    
 if [ -s $unsorted_bam_file ]; then
   echo sort_bam=`date`
-  samtools sort -@ $thread -m $memory $unsorted_bam_file -o $bam_file
+  samtools sort -@ $thread -m 4G $unsorted_bam_file -o $bam_file
   samtools index $bam_file 
 fi
 ";
