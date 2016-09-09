@@ -45,12 +45,18 @@ sub getSmallRNAConfig {
   my $search_host_genome    = ( !defined $def->{search_host_genome} )    || $def->{search_host_genome};
   my $search_miRBase        = ( !defined $def->{search_miRBase} )        || $def->{search_miRBase};
   my $search_unmapped_reads = ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
-  my $blast_unmapped_reads    = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
-  my $do_comparison           = defined $def->{pairs};
-  my $groups                  = $def->{groups};
-  my $groups_vis_layout       = $def->{groups_vis_layout};
-  my $add_count_one_in_DEseq2 = ( !defined $def->{add_count_one_in_DEseq2} ) || $def->{add_count_one_in_DEseq2};
-  my $non_host_table_option   = "--outputReadTable --outputReadContigTable";
+  my $blast_unmapped_reads  = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
+  my $do_comparison         = defined $def->{pairs};
+  my $groups                = $def->{groups};
+  my $groups_vis_layout     = $def->{groups_vis_layout};
+  my $non_host_table_option = "--outputReadTable --outputReadContigTable";
+
+  my $DE_show_gene_cluster        = $def->{DE_show_gene_cluster};
+  my $DE_pvalue                   = $def->{DE_pvalue};
+  my $DE_fold_change              = $def->{DE_fold_change};
+  my $DE_add_count_one            = $def->{DE_add_count_one};
+  my $DE_min_median_read_top100   = $def->{DE_min_median_read_top100};
+  my $DE_min_median_read_smallRNA = $def->{DE_min_median_read_smallRNA};
 
   if ($do_comparison) {
     my $class_independent = {
@@ -63,11 +69,11 @@ sub getSmallRNAConfig {
         groups_ref           => "groups",
         countfile_ref        => [ "identical_sequence_count_table", ".read.count\$" ],
         sh_direct            => 1,
-        show_DE_gene_cluster => 1,
-        pvalue               => 0.05,
-        fold_change          => 1.5,
-        min_median_read      => 2,
-        add_count_one        => $add_count_one_in_DEseq2,
+        show_DE_gene_cluster => $DE_show_gene_cluster,
+        pvalue               => $DE_pvalue,
+        fold_change          => $DE_fold_change,
+        min_median_read      => $DE_min_median_read_top100,
+        add_count_one        => $DE_add_count_one,
         pbs                  => {
           "email"    => $def->{email},
           "nodes"    => "1:ppn=1",
@@ -84,11 +90,11 @@ sub getSmallRNAConfig {
         groups_ref           => "groups",
         countfile_ref        => [ "identical_sequence_count_table", ".count\$" ],
         sh_direct            => 1,
-        show_DE_gene_cluster => 1,
-        pvalue               => 0.05,
-        fold_change          => 1.5,
-        min_median_read      => 2,
-        add_count_one        => $add_count_one_in_DEseq2,
+        show_DE_gene_cluster => $DE_show_gene_cluster,
+        pvalue               => $DE_pvalue,
+        fold_change          => $DE_fold_change,
+        min_median_read      => $DE_min_median_read_top100,
+        add_count_one        => $DE_add_count_one,
         pbs                  => {
           "email"    => $def->{email},
           "nodes"    => "1:ppn=1",
@@ -289,11 +295,11 @@ sub getSmallRNAConfig {
           groups_ref           => "groups",
           countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ],
           sh_direct            => 1,
-          show_DE_gene_cluster => 1,
-          pvalue               => 0.05,
-          fold_change          => 1.5,
-          min_median_read      => 6,
-          add_count_one        => $add_count_one_in_DEseq2,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -310,11 +316,11 @@ sub getSmallRNAConfig {
           groups_ref           => "groups",
           countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ],
           sh_direct            => 1,
-          show_DE_gene_cluster => 1,
-          pvalue               => 0.05,
-          fold_change          => 1.5,
-          min_median_read      => 6,
-          add_count_one        => $add_count_one_in_DEseq2,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -331,11 +337,11 @@ sub getSmallRNAConfig {
           groups_ref           => "groups",
           countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count\$" ],
           sh_direct            => 1,
-          show_DE_gene_cluster => 1,
-          pvalue               => 0.05,
-          fold_change          => 1.5,
-          min_median_read      => 6,
-          add_count_one        => $add_count_one_in_DEseq2,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -352,11 +358,11 @@ sub getSmallRNAConfig {
           groups_ref           => "groups",
           countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" ],
           sh_direct            => 1,
-          show_DE_gene_cluster => 1,
-          pvalue               => 0.05,
-          fold_change          => 1.5,
-          min_median_read      => 6,
-          add_count_one        => $add_count_one_in_DEseq2,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -998,11 +1004,11 @@ sub getSmallRNAConfig {
           groups_ref           => "groups",
           countfile_ref        => [ "bowtie1_tRNA_pm_table", ".count\$" ],
           sh_direct            => 1,
-          show_DE_gene_cluster => 1,
-          pvalue               => 0.05,
-          fold_change          => 1.5,
-          min_median_read      => 6,
-          add_count_one        => $add_count_one_in_DEseq2,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1019,11 +1025,11 @@ sub getSmallRNAConfig {
           groups_ref           => "groups",
           countfile_ref        => [ "bowtie1_tRNA_pm_table", ".category.count\$" ],
           sh_direct            => 1,
-          show_DE_gene_cluster => 1,
-          pvalue               => 0.05,
-          fold_change          => 1.5,
-          min_median_read      => 6,
-          add_count_one        => $add_count_one_in_DEseq2,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1040,11 +1046,11 @@ sub getSmallRNAConfig {
           groups_ref           => "groups",
           countfile_ref        => [ "nonhost_library_tRNA_vis", ".Species12.csv\$" ],
           sh_direct            => 1,
-          show_DE_gene_cluster => 1,
-          pvalue               => 0.05,
-          fold_change          => 1.5,
-          min_median_read      => 6,
-          add_count_one        => $add_count_one_in_DEseq2,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1061,11 +1067,11 @@ sub getSmallRNAConfig {
           groups_ref           => "groups",
           countfile_ref        => [ "nonhost_library_tRNA_vis", ".tRNAType1.csv\$" ],
           sh_direct            => 1,
-          show_DE_gene_cluster => 1,
-          pvalue               => 0.05,
-          fold_change          => 1.5,
-          min_median_read      => 6,
-          add_count_one        => $add_count_one_in_DEseq2,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1082,11 +1088,11 @@ sub getSmallRNAConfig {
           groups_ref           => "groups",
           countfile_ref        => [ "nonhost_library_tRNA_vis", ".tRNAType2.csv\$" ],
           sh_direct            => 1,
-          show_DE_gene_cluster => 1,
-          pvalue               => 0.05,
-          fold_change          => 1.5,
-          min_median_read      => 6,
-          add_count_one        => $add_count_one_in_DEseq2,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1103,11 +1109,11 @@ sub getSmallRNAConfig {
           groups_ref           => "groups",
           countfile_ref        => [ "bowtie1_rRNA_pm_table", ".count\$" ],
           sh_direct            => 1,
-          show_DE_gene_cluster => 1,
-          pvalue               => 0.05,
-          fold_change          => 1.5,
-          min_median_read      => 6,
-          add_count_one        => $add_count_one_in_DEseq2,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1143,11 +1149,11 @@ sub getSmallRNAConfig {
           groups_ref           => "groups",
           countfile_ref        => [ "nonhost_genome_bacteria_group1_vis", ".Species.csv\$" ],
           sh_direct            => 1,
-          show_DE_gene_cluster => 1,
-          pvalue               => 0.05,
-          fold_change          => 1.5,
-          min_median_read      => 6,
-          add_count_one        => $add_count_one_in_DEseq2,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1164,11 +1170,11 @@ sub getSmallRNAConfig {
           groups_ref           => "groups",
           countfile_ref        => [ "bowtie1_bacteria_group1_pm_table", ".read.count\$" ],
           sh_direct            => 1,
-          show_DE_gene_cluster => 1,
-          pvalue               => 0.05,
-          fold_change          => 1.5,
-          min_median_read      => 6,
-          add_count_one        => $add_count_one_in_DEseq2,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1185,11 +1191,11 @@ sub getSmallRNAConfig {
           groups_ref           => "groups",
           countfile_ref        => [ "nonhost_genome_bacteria_group2_vis", ".Species.csv\$" ],
           sh_direct            => 1,
-          show_DE_gene_cluster => 1,
-          pvalue               => 0.05,
-          fold_change          => 1.5,
-          min_median_read      => 6,
-          add_count_one        => $add_count_one_in_DEseq2,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1206,11 +1212,11 @@ sub getSmallRNAConfig {
           groups_ref           => "groups",
           countfile_ref        => [ "bowtie1_bacteria_group2_pm_table", ".read.count\$" ],
           sh_direct            => 1,
-          show_DE_gene_cluster => 1,
-          pvalue               => 0.05,
-          fold_change          => 1.5,
-          min_median_read      => 6,
-          add_count_one        => $add_count_one_in_DEseq2,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1227,11 +1233,11 @@ sub getSmallRNAConfig {
           groups_ref           => "groups",
           countfile_ref        => [ "nonhost_genome_fungus_group4_vis", ".Species.csv\$" ],
           sh_direct            => 1,
-          show_DE_gene_cluster => 1,
-          pvalue               => 0.05,
-          fold_change          => 1.5,
-          min_median_read      => 6,
-          add_count_one        => $add_count_one_in_DEseq2,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1248,11 +1254,11 @@ sub getSmallRNAConfig {
           groups_ref           => "groups",
           countfile_ref        => [ "bowtie1_fungus_group4_pm_table", ".read.count\$" ],
           sh_direct            => 1,
-          show_DE_gene_cluster => 1,
-          pvalue               => 0.05,
-          fold_change          => 1.5,
-          min_median_read      => 6,
-          add_count_one        => $add_count_one_in_DEseq2,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
           pbs                  => {
             "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
@@ -1297,12 +1303,13 @@ sub getSmallRNAConfig {
       };
 
       $config = merge( $config, $unmapped_comparison );
-      push @summary, (
-        "deseq2_nonhost_tRNA",          "deseq2_nonhost_tRNA_species",  "deseq2_nonhost_tRNA_type",   "deseq2_nonhost_tRNA_anticodon",
-        "deseq2_nonhost_rRNA",          "nonhost_library_deseq2_vis",
-        "deseq2_bacteria_group1",       "deseq2_bacteria_group2",       "deseq2_fungus_group4",       "nonhost_genome_deseq2_vis",
-        "deseq2_bacteria_group1_reads", "deseq2_bacteria_group2_reads", "deseq2_fungus_group4_reads", "nonhost_genome_deseq2_reads_vis"
-      );
+      push @summary,
+        (
+        "deseq2_nonhost_tRNA",        "deseq2_nonhost_tRNA_species", "deseq2_nonhost_tRNA_type",     "deseq2_nonhost_tRNA_anticodon",
+        "deseq2_nonhost_rRNA",        "nonhost_library_deseq2_vis",  "deseq2_bacteria_group1",       "deseq2_bacteria_group2",
+        "deseq2_fungus_group4",       "nonhost_genome_deseq2_vis",   "deseq2_bacteria_group1_reads", "deseq2_bacteria_group2_reads",
+        "deseq2_fungus_group4_reads", "nonhost_genome_deseq2_reads_vis"
+        );
     }
   }
 
