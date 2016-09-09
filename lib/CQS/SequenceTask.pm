@@ -6,13 +6,13 @@ use warnings;
 use File::Basename;
 use File::Copy;
 use Data::Dumper;
+use CQS::Task;
 use CQS::PBS;
-use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use CQS::ConfigUtils;
 use CQS::ClassFactory;
 
 our @ISA = qw(CQS::Task);
@@ -24,6 +24,40 @@ sub new {
   $self->{_suffix} = "_st";
   bless $self, $class;
   return $self;
+}
+
+sub get_pbs_files {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
+
+  my $result = {};
+
+  my %step_map = %{ get_raw_files( $config, $section ) };
+
+  for my $step_name ( sort keys %step_map ) {
+    my @tasks = @{ $step_map{$step_name} };
+
+    my $samples = {};
+    my $taskpbs = {};
+    for my $task_section (@tasks) {
+      my $classname = $config->{$task_section}{class};
+      if ( !defined $classname ) {
+        die "$task_section is not a valid task section.";
+      }
+      my $myclass = instantiate($classname);
+      my $pbs_file_map = $myclass->get_pbs_files( $config, $task_section );
+      for my $sample ( sort keys %{$pbs_file_map} ) {
+        $samples->{$sample} = 1;
+      }
+    }
+
+    for my $sample ( sort keys %{$samples} ) {
+      my $step_sample = $self->get_step_sample_name( $step_name, $sample );
+      $result->{$step_sample} = $self->get_step_sample_pbs( $pbs_dir, $step_name, $sample );
+    }
+  }
+  return $result;
 }
 
 sub perform {
@@ -241,38 +275,5 @@ sub get_step_sample_log {
   return $self->get_log_filename( $log_dir, $task_sample );
 }
 
-sub get_pbs_files {
-  my ( $self, $config, $section ) = @_;
-
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
-
-  my $result = {};
-
-  my %step_map = %{ get_raw_files( $config, $section ) };
-
-  for my $step_name ( sort keys %step_map ) {
-    my @tasks = @{ $step_map{$step_name} };
-
-    my $samples = {};
-    my $taskpbs = {};
-    for my $task_section (@tasks) {
-      my $classname = $config->{$task_section}{class};
-      if ( !defined $classname ) {
-        die "$task_section is not a valid task section.";
-      }
-      my $myclass = instantiate($classname);
-      my $pbs_file_map = $myclass->get_pbs_files( $config, $task_section );
-      for my $sample ( sort keys %{$pbs_file_map} ) {
-        $samples->{$sample} = 1;
-      }
-    }
-
-    for my $sample ( sort keys %{$samples} ) {
-      my $step_sample = $self->get_step_sample_name( $step_name, $sample );
-      $result->{$step_sample} = $self->get_step_sample_pbs( $pbs_dir, $step_name, $sample );
-    }
-  }
-  return $result;
-}
 
 1;
