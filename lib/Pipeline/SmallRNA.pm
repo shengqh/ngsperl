@@ -1297,12 +1297,12 @@ sub getSmallRNAConfig {
       };
 
       $config = merge( $config, $unmapped_comparison );
-      push @summary,
-        (
-        "deseq2_nonhost_tRNA",          "deseq2_nonhost_tRNA_species12", "deseq2_nonhost_rRNA",        "nonhost_library_deseq2_vis",
-        "deseq2_bacteria_group1",       "deseq2_bacteria_group2",        "deseq2_fungus_group4",       "nonhost_genome_deseq2_vis",
-        "deseq2_bacteria_group1_reads", "deseq2_bacteria_group2_reads",  "deseq2_fungus_group4_reads", "nonhost_genome_deseq2_reads_vis"
-        );
+      push @summary, (
+        "deseq2_nonhost_tRNA",          "deseq2_nonhost_tRNA_species",  "deseq2_nonhost_tRNA_type",   "deseq2_nonhost_tRNA_anticodon",
+        "deseq2_nonhost_rRNA",          "nonhost_library_deseq2_vis",
+        "deseq2_bacteria_group1",       "deseq2_bacteria_group2",       "deseq2_fungus_group4",       "nonhost_genome_deseq2_vis",
+        "deseq2_bacteria_group1_reads", "deseq2_bacteria_group2_reads", "deseq2_fungus_group4_reads", "nonhost_genome_deseq2_reads_vis"
+      );
     }
   }
 
