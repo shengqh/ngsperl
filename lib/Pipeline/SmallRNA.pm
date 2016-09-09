@@ -613,8 +613,8 @@ sub getSmallRNAConfig {
         },
       },
 
-      #unmapped reads to rRNAL
-      bowtie1_rRNAL_pm => {
+      #unmapped reads to rRNA
+      bowtie1_rRNA_pm => {
         pbs => {
           'email'    => $def->{email},
           'walltime' => '10',
@@ -624,22 +624,22 @@ sub getSmallRNAConfig {
         cluster       => $cluster,
         sh_direct     => 1,
         perform       => 1,
-        target_dir    => $nonhost_library_dir . "/bowtie1_rRNAL_pm",
+        target_dir    => $nonhost_library_dir . "/bowtie1_rRNA_pm",
         samonly       => 0,
         mappedonly    => 1,
         source_ref    => $identical_ref,
-        bowtie1_index => $def->{bowtie1_rRNAL_index},
+        bowtie1_index => $def->{bowtie1_rRNA_index},
         option        => $def->{bowtie1_option_pm},
         class         => 'Alignment::Bowtie1'
       },
-      bowtie1_rRNAL_pm_count => {
+      bowtie1_rRNA_pm_count => {
         class        => 'CQS::CQSChromosomeCount',
         cluster      => $cluster,
         sh_direct    => 1,
         perform      => 1,
-        target_dir   => $nonhost_library_dir . "/bowtie1_rRNAL_pm_count",
-        option       => $def->{smallrnacount_option} . ' --keepChrInName --keepSequence --categoryMapFile ' . $def->{rrnaL_category_map},
-        source_ref   => 'bowtie1_rRNAL_pm',
+        target_dir   => $nonhost_library_dir . "/bowtie1_rRNA_pm_count",
+        option       => $def->{smallrnacount_option} . ' --keepChrInName --keepSequence --categoryMapFile ' . $def->{rrna_category_map},
+        source_ref   => 'bowtie1_rRNA_pm',
         cqs_tools    => $def->{cqstools},
         seqcount_ref => [ "identical", ".dupcount\$" ],
         pbs          => {
@@ -650,16 +650,16 @@ sub getSmallRNAConfig {
         },
       },
 
-      bowtie1_rRNAL_pm_table => {
+      bowtie1_rRNA_pm_table => {
         class      => 'CQS::CQSChromosomeTable',
         cluster    => $cluster,
         sh_direct  => 1,
         perform    => 1,
-        target_dir => $nonhost_library_dir . "/bowtie1_rRNAL_pm_table",
-        source_ref => [ 'bowtie1_rRNAL_pm_count', '.xml' ],
+        target_dir => $nonhost_library_dir . "/bowtie1_rRNA_pm_table",
+        source_ref => [ 'bowtie1_rRNA_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
         option     => $non_host_table_option,
-        prefix     => 'rRNAL_pm_',
+        prefix     => 'rRNA_pm_',
         pbs        => {
           'email'    => $def->{email},
           'walltime' => '10',
@@ -667,93 +667,17 @@ sub getSmallRNAConfig {
           'nodes'    => '1:ppn=1'
         },
       },
-      nonhost_library_rRNAL_vis => {
+      nonhost_library_rRNA_vis => {
         class                     => "CQS::UniqueR",
         perform                   => 1,
-        target_dir                => $data_visualization_dir . "/nonhost_library_rRNAL_vis",
+        target_dir                => $data_visualization_dir . "/nonhost_library_rRNA_vis",
         rtemplate                 => "countTableVisFunctions.R,countTableVis.R",
-        output_file               => ".rRnaLMapping.Result",
+        output_file               => ".rRNAMapping.Result",
         output_file_ext           => ".Barplot.png",
         parameterSampleFile1Order => $def->{groups_order},
         parameterSampleFile1      => $groups,
         parameterSampleFile2      => $groups_vis_layout,
-        parameterFile1_ref        => [ "bowtie1_rRNAL_pm_table", ".count\$" ],
-        parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
-        rCode                     => 'maxCategory=NA;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
-        sh_direct                 => 1,
-        pbs                       => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
-        },
-      },
-
-      #unmapped reads to rRNAS
-      bowtie1_rRNAS_pm => {
-        pbs => {
-          'email'    => $def->{email},
-          'walltime' => '10',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=8'
-        },
-        cluster       => $cluster,
-        sh_direct     => 1,
-        perform       => 1,
-        target_dir    => $nonhost_library_dir . "/bowtie1_rRNAS_pm",
-        samonly       => 0,
-        mappedonly    => 1,
-        source_ref    => $identical_ref,
-        bowtie1_index => $def->{bowtie1_rRNAS_index},
-        option        => $def->{bowtie1_option_pm},
-        class         => 'Alignment::Bowtie1'
-      },
-      bowtie1_rRNAS_pm_count => {
-        class        => 'CQS::CQSChromosomeCount',
-        cluster      => $cluster,
-        sh_direct    => 1,
-        perform      => 1,
-        target_dir   => $nonhost_library_dir . "/bowtie1_rRNAS_pm_count",
-        option       => $def->{smallrnacount_option} . ' --keepChrInName --keepSequence --categoryMapFile ' . $def->{rrnaS_category_map},
-        source_ref   => 'bowtie1_rRNAS_pm',
-        cqs_tools    => $def->{cqstools},
-        seqcount_ref => [ "identical", ".dupcount\$" ],
-        pbs          => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
-        },
-      },
-      bowtie1_rRNAS_pm_table => {
-        class      => 'CQS::CQSChromosomeTable',
-        cluster    => $cluster,
-        sh_direct  => 1,
-        perform    => 1,
-        target_dir => $nonhost_library_dir . "/bowtie1_rRNAS_pm_table",
-        source_ref => [ 'bowtie1_rRNAS_pm_count', '.xml' ],
-        cqs_tools  => $def->{cqstools},
-        option     => $non_host_table_option,
-        prefix     => 'rRNAS_pm_',
-        pbs        => {
-          'email'    => $def->{email},
-          'walltime' => '10',
-          'mem'      => '10gb',
-          'nodes'    => '1:ppn=1'
-        },
-      },
-      nonhost_library_rRNAS_vis => {
-        class      => "CQS::UniqueR",
-        perform    => 1,
-        target_dir => $data_visualization_dir . "/nonhost_library_rRNAS_vis",
-        ,
-        rtemplate                 => "countTableVisFunctions.R,countTableVis.R",
-        output_file               => ".rRnaSMapping.Result",
-        output_file_ext           => ".Barplot.png",
-        parameterSampleFile1Order => $def->{groups_order},
-        parameterSampleFile1      => $groups,
-        parameterSampleFile2      => $groups_vis_layout,
-        parameterFile1_ref        => [ "bowtie1_rRNAS_pm_table", ".count\$" ],
+        parameterFile1_ref        => [ "bowtie1_rRNA_pm_table", ".count\$" ],
         parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
         rCode                     => 'maxCategory=NA;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
         sh_direct                 => 1,
@@ -1008,7 +932,7 @@ sub getSmallRNAConfig {
         output_file_ext          => ".Overlap.csv",
         parameterSampleFile1_ref => [
           "bowtie1_bacteria_group1_pm_table", ".read.count\$", "bowtie1_bacteria_group2_pm_table", ".read.count\$", "bowtie1_fungus_group4_pm_table", ".read.count\$",
-          "bowtie1_tRNA_pm_table",            ".read.count\$", "bowtie1_rRNAL_pm_table",           ".read.count\$", "bowtie1_rRNAS_pm_table",         ".read.count\$",
+          "bowtie1_tRNA_pm_table",            ".read.count\$", "bowtie1_rRNA_pm_table",            ".read.count\$",
         ],
         parameterSampleFile2Order => $def->{groups_order},
         parameterSampleFile2      => $groups,
@@ -1032,32 +956,32 @@ sub getSmallRNAConfig {
 
     push @table_for_correlation,
       (
-      "bowtie1_tRNA_pm_table",              ".count\$",       "bowtie1_rRNAL_pm_table",             ".count\$",       "bowtie1_rRNAS_pm_table",           ".count\$",
-      "nonhost_genome_bacteria_group1_vis", ".Species.csv\$", "nonhost_genome_bacteria_group2_vis", ".Species.csv\$", "nonhost_genome_fungus_group4_vis", ".Species.csv\$"
+      "bowtie1_tRNA_pm_table",              ".count\$",       "bowtie1_rRNA_pm_table",            ".count\$", "nonhost_genome_bacteria_group1_vis", ".Species.csv\$",
+      "nonhost_genome_bacteria_group2_vis", ".Species.csv\$", "nonhost_genome_fungus_group4_vis", ".Species.csv\$"
       );
     push @table_for_countSum,
       (
-      "bowtie1_tRNA_pm_table",            ".category.count\$", "bowtie1_rRNAL_pm_table",           ".count\$", "bowtie1_rRNAS_pm_table",         ".count\$",
-      "bowtie1_bacteria_group1_pm_table", ".count\$",          "bowtie1_bacteria_group2_pm_table", ".count\$", "bowtie1_fungus_group4_pm_table", ".count\$"
+      "bowtie1_tRNA_pm_table",            ".category.count\$", "bowtie1_rRNA_pm_table",          ".count\$", "bowtie1_bacteria_group1_pm_table", ".count\$",
+      "bowtie1_bacteria_group2_pm_table", ".count\$",          "bowtie1_fungus_group4_pm_table", ".count\$"
       );
 
     push @individual,
       (
-      "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",            "bowtie1_rRNAL_pm",           "bowtie1_rRNAL_pm_count",
-      "bowtie1_rRNAS_pm",           "bowtie1_rRNAS_pm_count",           "bowtie1_bacteria_group1_pm", "bowtie1_bacteria_group1_pm_count",
-      "bowtie1_bacteria_group2_pm", "bowtie1_bacteria_group2_pm_count", "bowtie1_fungus_group4_pm",   "bowtie1_fungus_group4_pm_count"
+      "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",            "bowtie1_rRNA_pm",            "bowtie1_rRNA_pm_count",
+      "bowtie1_bacteria_group1_pm", "bowtie1_bacteria_group1_pm_count", "bowtie1_bacteria_group2_pm", "bowtie1_bacteria_group2_pm_count",
+      "bowtie1_fungus_group4_pm",   "bowtie1_fungus_group4_pm_count"
       );
-    push @summary, (
-      "bowtie1_tRNA_pm_table",            "nonhost_library_tRNA_vis",           "bowtie1_rRNAL_pm_table",           "nonhost_library_rRNAL_vis",
-      "bowtie1_rRNAS_pm_table",           "nonhost_library_rRNAS_vis",          "bowtie1_bacteria_group1_pm_table", "nonhost_genome_bacteria_group1_vis",
-      "bowtie1_bacteria_group2_pm_table", "nonhost_genome_bacteria_group2_vis", "bowtie1_fungus_group4_pm_table",   "nonhost_genome_fungus_group4_vis",
-      "nonhost_overlap_vis"
-    );
+    push @summary,
+      (
+      "bowtie1_tRNA_pm_table",            "nonhost_library_tRNA_vis",           "bowtie1_rRNA_pm_table",            "nonhost_library_rRNA_vis",
+      "bowtie1_bacteria_group1_pm_table", "nonhost_genome_bacteria_group1_vis", "bowtie1_bacteria_group2_pm_table", "nonhost_genome_bacteria_group2_vis",
+      "bowtie1_fungus_group4_pm_table",   "nonhost_genome_fungus_group4_vis",   "nonhost_overlap_vis"
+      );
 
     push @mapped,
       (
-      "bowtie1_tRNA_pm_count",            ".xml", "bowtie1_rRNAL_pm_count",           ".xml", "bowtie1_rRNAS_pm_count",         ".xml",
-      "bowtie1_bacteria_group1_pm_count", ".xml", "bowtie1_bacteria_group2_pm_count", ".xml", "bowtie1_fungus_group4_pm_count", ".xml"
+      "bowtie1_tRNA_pm_count",            ".xml", "bowtie1_rRNA_pm_count",          ".xml", "bowtie1_bacteria_group1_pm_count", ".xml",
+      "bowtie1_bacteria_group2_pm_count", ".xml", "bowtie1_fungus_group4_pm_count", ".xml"
       );
 
     #do unmapped reads DESeq2
@@ -1170,35 +1094,14 @@ sub getSmallRNAConfig {
             "mem"      => "10gb"
           },
         },
-        deseq2_nonhost_rRNAL => {
+        deseq2_nonhost_rRNA => {
           class                => "Comparison::DESeq2",
           perform              => 1,
-          target_dir           => $nonhost_library_dir . "/deseq2_nonhost_rRNAL",
+          target_dir           => $nonhost_library_dir . "/deseq2_nonhost_rRNA",
           option               => "",
           source_ref           => "pairs",
           groups_ref           => "groups",
-          countfile_ref        => [ "bowtie1_rRNAL_pm_table", ".count\$" ],
-          sh_direct            => 1,
-          show_DE_gene_cluster => 1,
-          pvalue               => 0.05,
-          fold_change          => 1.5,
-          min_median_read      => 6,
-          add_count_one        => $add_count_one_in_DEseq2,
-          pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
-          },
-        },
-        deseq2_nonhost_rRNAS => {
-          class                => "Comparison::DESeq2",
-          perform              => 1,
-          target_dir           => $nonhost_library_dir . "/deseq2_nonhost_rRNAS",
-          option               => "",
-          source_ref           => "pairs",
-          groups_ref           => "groups",
-          countfile_ref        => [ "bowtie1_rRNAS_pm_table", ".count\$" ],
+          countfile_ref        => [ "bowtie1_rRNA_pm_table", ".count\$" ],
           sh_direct            => 1,
           show_DE_gene_cluster => 1,
           pvalue               => 0.05,
@@ -1220,7 +1123,7 @@ sub getSmallRNAConfig {
           rtemplate                => "DESeq2_all_vis.R",
           output_file              => "",
           output_file_ext          => ".DESeq2.Matrix.png",
-          parameterSampleFile1_ref => [ "deseq2_nonhost_tRNA", "_DESeq2.csv\$", "deseq2_nonhost_rRNAL", "_DESeq2.csv\$", "deseq2_nonhost_rRNAS", "_DESeq2.csv\$" ],
+          parameterSampleFile1_ref => [ "deseq2_nonhost_tRNA", "_DESeq2.csv\$", "deseq2_nonhost_rRNA", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_nonHosttRNArRNA_deseq2_vis_layout},
           sh_direct                => 1,
           pbs                      => {
@@ -1396,9 +1299,9 @@ sub getSmallRNAConfig {
       $config = merge( $config, $unmapped_comparison );
       push @summary,
         (
-        "deseq2_nonhost_tRNA",         "deseq2_nonhost_tRNA_species12", "deseq2_nonhost_rRNAL",         "deseq2_nonhost_rRNAS",       "nonhost_library_deseq2_vis",
-        "deseq2_bacteria_group1",       "deseq2_bacteria_group2",       "deseq2_fungus_group4",       "nonhost_genome_deseq2_vis",
-        "deseq2_bacteria_group1_reads", "deseq2_bacteria_group2_reads", "deseq2_fungus_group4_reads", "nonhost_genome_deseq2_reads_vis"
+        "deseq2_nonhost_tRNA",          "deseq2_nonhost_tRNA_species12", "deseq2_nonhost_rRNA",        "nonhost_library_deseq2_vis",
+        "deseq2_bacteria_group1",       "deseq2_bacteria_group2",        "deseq2_fungus_group4",       "nonhost_genome_deseq2_vis",
+        "deseq2_bacteria_group1_reads", "deseq2_bacteria_group2_reads",  "deseq2_fungus_group4_reads", "nonhost_genome_deseq2_reads_vis"
         );
     }
   }
