@@ -22,6 +22,20 @@ sub new {
   return $self;
 }
 
+sub get_final_file {
+  my ( $sample_name, $blacklistfile, $shiftPosition ) = @_;
+  my $result = $sample_name;
+  if ( defined $blacklistfile ) {
+    $result = $sample_name . ".confident";
+  }
+
+  if ($shiftPosition) {
+    $result = $sample_name . ".shifted";
+  }
+  $result = $result . ".bed";
+  return $result;
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -30,16 +44,17 @@ sub perform {
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $blacklistfile = get_param_file( $config->{$section}{"blacklist_file"}, "blacklist_file", 0 );
-  my $isPairedEnd    = get_option( $config, $section, "is_paired_end" );
-  my $isSortedByName = 0;
+  my $isPairedEnd       = get_option( $config, $section, "is_paired_end" );
+  my $isSortedByName    = 0;
   my $maxFragmentLength = 0;
   my $minFragmentLength = 0;
-  if($isPairedEnd){
-    $option = $option . " -bedpe";
-    $isSortedByName = get_option( $config, $section, "is_sorted_by_name" );
+  if ($isPairedEnd) {
+    $option            = $option . " -bedpe";
+    $isSortedByName    = get_option( $config, $section, "is_sorted_by_name" );
     $maxFragmentLength = get_option( $config, $section, "maximum_fragment_length" );
     $minFragmentLength = get_option( $config, $section, "minimum_fragment_length" );
   }
+  my $shiftPosition = get_option( $config, $section, "shift_position", 0 );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -56,64 +71,69 @@ sub perform {
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $bed_file       = $sample_name . ".bed";
-    my $confident_file = $sample_name . ".confident.bed";
-    my $final_file     = defined $blacklistfile ? $sample_name . ".confident.shifted.bed" : $sample_name . ".shifted.bed";
-
+    my $final_file = get_final_file($sample_name, $blacklistfile, $shiftPosition);
+    
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     my $rmlist = "";
 
     my $sortCmd = "";
     if ( !$isSortedByName ) {
-      my $presortedFile   = $sample_name . ".sortedByName.bam";
+      my $presortedFile = $sample_name . ".sortedByName.bam";
       print $pbs "
 if [ ! -s $presortedFile ]; then
   echo SortBamByName=`date` 
-  samtools sort -n  -@ $thread -m $memory -o $presortedFile $bam_file 
+  samtools sort -n  -@ $thread -m 4G -o $presortedFile $bam_file 
 fi
 ";
       $rmlist   = $presortedFile;
       $bam_file = $presortedFile;
     }
 
+    my $bed_file = $isPairedEnd ? $sample_name . ".bedpe" : $sample_name . ".bed";
     print $pbs "
 if [ ! -s $bed_file ]; then
   echo bamtobed=`date` 
   bedtools bamtobed $option -i $bam_file > $bed_file
 fi
 ";
-    $rmlist = $rmlist . " " . $bed_file;
-    
-    if($isPairedEnd){
-      my $slim_file = $sample_name . ".paired_end.bed";
+    if ($isPairedEnd) {
+      my $slim_file = $sample_name . ".bed";
       print $pbs "
 if [[ -s $bed_file && ! -s $slim_file ]]; then
   echo convert_paired_end_bed=`date`
   awk 'BEGIN {OFS = \"\\t\"} ; {if (\$1 == \$4 && \$6 - \$2 <= $maxFragmentLength && \$6 - \$2 >= $minFragmentLength ) print \$1, \$2, \$6, \$7, \$8, \$9}' $bed_file > $slim_file 
 fi
 ";
+      $rmlist   = $rmlist . " " . $bed_file;
       $bed_file = $slim_file;
-      $rmlist = $rmlist . " " . $slim_file;
     }
 
     if ( defined $blacklistfile ) {
+      my $confident_file = $sample_name . ".confident.bed";
       print $pbs "
 if [[ -s $bed_file && ! -s $confident_file ]]; then
   echo remove_read_in_blacklist=`date` 
   bedtools intersect -v -a $bed_file -b $blacklistfile > $confident_file
 fi
 ";
+      $rmlist   = $rmlist . " " . $bed_file;
       $bed_file = $confident_file;
-      $rmlist   = $rmlist . " " . $confident_file;
+    }
+
+    if ($shiftPosition) {
+      my $shiftPositive = $shiftPosition;
+      my $shiftNegative = $shiftPosition + 1;
+      print $pbs "
+if [[ -s $bed_file && ! -s $final_file ]]; then
+  echo shift_reads=`date` 
+  awk 'BEGIN {OFS = \"\\t\"} ; {if (\$6 == \"+\") print \$1, \$2 + $shiftPositive, \$3 + $shiftPositive, \$4, \$5, \$6; else print \$1, \$2 - $shiftNegative, \$3 - $shiftNegative, \$4, \$5, \$6}' $bed_file > $final_file
+fi
+";
+      $rmlist = $rmlist . " " . $bed_file;
     }
 
     print $pbs "
-if [[ -s $bed_file && ! -s $final_file ]]; then
-  echo shift_reads=`date` 
-  awk 'BEGIN {OFS = \"\\t\"} ; {if (\$6 == \"+\") print \$1, \$2 + 4, \$3 + 4, \$4, \$5, \$6; else print \$1, \$2 - 5, \$3 - 5, \$4, \$5, \$6}' $bed_file > $final_file
-fi
-
 if [ -s $final_file ]; then
   rm $rmlist;
 fi
@@ -138,12 +158,13 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $blacklistfile = get_param_file( $config->{$section}{"blacklist_file"}, "blacklist_file", 0 );
+  my $shiftPosition = get_option( $config, $section, "shift_position", 0 );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my @result_files = ();
 
-    my $final_file = defined $blacklistfile ? $sample_name . ".confident.shifted.bed" : $sample_name . ".shifted.bed";
+    my $final_file = get_final_file($sample_name, $blacklistfile, $shiftPosition);
     push( @result_files, "${result_dir}/${final_file}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
