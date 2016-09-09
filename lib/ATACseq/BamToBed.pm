@@ -40,6 +40,8 @@ sub perform {
   my ( $self, $config, $section ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
+  
+  my $sort_memory = $thread == 1? $memory:"4G";
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -83,7 +85,7 @@ sub perform {
       print $pbs "
 if [ ! -s $presortedFile ]; then
   echo SortBamByName=`date` 
-  samtools sort -n  -@ $thread -m 4G -o $presortedFile $bam_file 
+  samtools sort -n  -@ $thread -m $sort_memory -o $presortedFile $bam_file 
 fi
 ";
       $rmlist   = $presortedFile;

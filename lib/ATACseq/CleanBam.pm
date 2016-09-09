@@ -28,6 +28,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
+  my $sort_memory = $thread == 1? $memory:"4G";
+
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
   my $remove_chromosome = get_option( $config, $section, "remove_chromosome" );
   my $keep_chromosome   = get_option( $config, $section, "keep_chromosome", "" );
@@ -66,7 +68,7 @@ sub perform {
       print $pbs "
 if [ ! -s $sorted ]; then
   echo SortByCoordinate=`date` 
-  samtools sort -@ $thread -m 4G -o $sorted $sampleFile 
+  samtools sort -@ $thread -m $sort_memory -o $sorted $sampleFile 
 fi
 ";
       $sampleFile = $sorted;
