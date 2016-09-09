@@ -29,9 +29,9 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my $selfname = $self->{_name};
-  
-  my $cleansam = get_option($config, $section, "cleansam", 0);
-  my $sortByCoordinate = get_option($config, $section, "sort_by_coordinate", 1);
+
+  my $cleansam         = get_option( $config, $section, "cleansam",           0 );
+  my $sortByCoordinate = get_option( $config, $section, "sort_by_coordinate", 1 );
 
   $option = $option . " -M";
 
@@ -54,25 +54,16 @@ sub perform {
   print $sh get_run_command($sh_direct);
 
   for my $sample_name ( sort keys %raw_files ) {
-    my @sample_files   = @{ $raw_files{$sample_name} };
-    my $sam_file       = $sample_name . ".sam";
-    my $clean_sam_file = $sample_name . ".clean.sam";
-    my $bam_file       = $sample_name . ".bam";
-    my $bam_file_index       = $sample_name . ".bam.bai";
-    my $tag            = get_bam_tag($sample_name);
+    my @sample_files = @{ $raw_files{$sample_name} };
+    my $sample_files_str = ( scalar(@sample_files) == 2 ) ? $sample_files[0] . " " . $sample_files[1] : $sample_files[0];
 
-    my $sampleFile1 = $sample_files[0];
-    
+    my $unsorted_bam_file = $sample_name . ".unsorted.bam";
+    my $clean_sam_file    = $sample_name . ".unsorted.clean.bam";
+    my $bam_file          = $sample_name . ".bam";
+    my $bam_file_stat     = $sample_name . ".bam.stat";
+    my $tag               = get_bam_tag($sample_name);
+
     my $rg = "\@RG\\tID:${sample_name}\\tPU:illumina\\tLB:${sample_name}\\tSM:${sample_name}\\tPL:illumina";
-
-    my $bwa_aln_command;
-    if ( scalar(@sample_files) == 2 ) {
-      my $sampleFile2 = $sample_files[1];
-      $bwa_aln_command = "bwa mem $option -R '$rg' $bwa_index $sampleFile1 $sampleFile2 > $sam_file";
-    }
-    else {
-      $bwa_aln_command = "bwa mem $option -R '$rg' $bwa_index $sampleFile1 > $sam_file";
-    }
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -82,42 +73,43 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $bam_file_index );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $bam_file_stat );
 
     print $pbs "
-if [ ! -s $sam_file ]; then
+if [ ! -s $unsorted_bam_file ]; then
   echo bwa_mem=`date`
-  $bwa_aln_command
+  bwa mem $option -R '$rg' $bwa_index $sample_files_str | samtools view -bS -o $unsorted_bam_file
 fi
-";    
-    my $rmlist = $sam_file;
-    if($cleansam){
+";
+    my $rmlist = "";
+    if ($cleansam) {
       print $pbs "
-if [[ -s $sam_file && ! -s $clean_sam_file ]]; then
+if [[ -s $unsorted_bam_file && ! -s $clean_sam_file ]]; then
   echo CleanSam=`date`
-  java -jar $picard_jar CleanSam VALIDATION_STRINGENCY=SILENT I=$sam_file O=$clean_sam_file
+  java -jar $picard_jar CleanSam VALIDATION_STRINGENCY=SILENT I=$unsorted_bam_file O=$clean_sam_file
 fi";
-      $rmlist = $rmlist . " " . $clean_sam_file;
-      $sam_file = $clean_sam_file;
+      $rmlist            = $rmlist . " " . $unsorted_bam_file;
+      $unsorted_bam_file = $clean_sam_file;
     }
-    
-    if($sortByCoordinate){
+
+    if ($sortByCoordinate) {
       print $pbs "    
-if [ -s $sam_file ]; then
+if [ -s $unsorted_bam_file ]; then
   echo sort_bam=`date`
-  samtools sort -@ $thread -m $memory $sam_file -o $bam_file
+  samtools sort -@ $thread -m $memory $unsorted_bam_file -o $bam_file
   samtools index $bam_file 
 fi
 ";
-    }else{
-      print $pbs "    
-if [ -s $sam_file ]; then
-  echo sam_to_bam=`date`
-  samtools view -b $sam_file -o $bam_file
+      $rmlist = $rmlist . " " . $unsorted_bam_file;
+    }
+    else {
+      print $pbs "
+if [ -s $unsorted_bam_file ]; then
+  mv $unsorted_bam_file $bam_file
 fi
 ";
     }
-    
+
     print $pbs "
 if [ -s $bam_file ]; then
   samtools flagstat $bam_file > ${bam_file}.stat 
