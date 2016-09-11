@@ -45,11 +45,10 @@ sub getSmallRNAConfig {
   my $search_host_genome    = ( !defined $def->{search_host_genome} )    || $def->{search_host_genome};
   my $search_miRBase        = ( !defined $def->{search_miRBase} )        || $def->{search_miRBase};
   my $search_unmapped_reads = ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
-  my $blast_unmapped_reads  = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
-  my $do_comparison         = defined $def->{pairs};
-  my $groups                = $def->{groups};
-  my $groups_vis_layout     = $def->{groups_vis_layout};
-  my $non_host_table_option = "--outputReadTable --outputReadContigTable";
+  my $blast_unmapped_reads = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
+  my $do_comparison        = defined $def->{pairs};
+  my $groups               = $def->{groups};
+  my $groups_vis_layout    = $def->{groups_vis_layout};
 
   my $DE_show_gene_cluster        = $def->{DE_show_gene_cluster};
   my $DE_pvalue                   = $def->{DE_pvalue};
@@ -57,6 +56,9 @@ sub getSmallRNAConfig {
   my $DE_add_count_one            = $def->{DE_add_count_one};
   my $DE_min_median_read_top100   = $def->{DE_min_median_read_top100};
   my $DE_min_median_read_smallRNA = $def->{DE_min_median_read_smallRNA};
+
+  my $max_sequence_extension_base = $def->{max_sequence_extension_base};
+  my $non_host_table_option       = "--maxExtensionBase $max_sequence_extension_base --outputReadTable --outputReadContigTable";
 
   if ($do_comparison) {
     my $class_independent = {

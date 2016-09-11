@@ -113,31 +113,34 @@ sub initializeDefaultOptions {
   if ( !defined $def->{sequencetask_run_time} ) {
     $def->{sequencetask_run_time} = "12";
   }
-  
-  if(!defined $def->{DE_show_gene_cluster}){
+
+  if ( !defined $def->{DE_show_gene_cluster} ) {
     $def->{DE_show_gene_cluster} = 1;
   }
 
-  if(!defined $def->{DE_pvalue}){
+  if ( !defined $def->{DE_pvalue} ) {
     $def->{DE_pvalue} = 0.05;
   }
 
-  if(!defined $def->{DE_fold_change}){
+  if ( !defined $def->{DE_fold_change} ) {
     $def->{DE_fold_change} = 1.5;
   }
 
-  if(!defined $def->{DE_add_count_one}){
+  if ( !defined $def->{DE_add_count_one} ) {
     $def->{DE_add_count_one} = 1;
   }
 
-  if(!defined $def->{DE_min_median_read_top100}){
+  if ( !defined $def->{DE_min_median_read_top100} ) {
     $def->{DE_min_median_read_top100} = 2;
   }
 
-  if(!defined $def->{DE_min_median_read_smallRNA}){
+  if ( !defined $def->{DE_min_median_read_smallRNA} ) {
     $def->{DE_min_median_read_smallRNA} = 6;
   }
 
+  if ( !defined $def->{max_sequence_extension_base} ) {
+    $def->{max_sequence_extension_base} = 1;
+  }
 
   return $def;
 }
@@ -172,6 +175,8 @@ sub getPrepareConfig {
   my $hasNTA                         = $def->{has_NTA};
   my $groups                         = $def->{groups};
   my $pairs                          = $def->{pairs};
+
+  my $max_sequence_extension_base = $def->{max_sequence_extension_base};
 
   my $config = {
     general => {
@@ -497,7 +502,7 @@ sub getPrepareConfig {
       class      => "CQS::SmallRNASequenceCountTable",
       perform    => 1,
       target_dir => $class_independent_dir . "/identical_sequence_count_table",
-      option     => "",
+      option     => "--maxExtensionBase $max_sequence_extension_base",
       source_ref => [ "identical", ".dupcount\$" ],
       cqs_tools  => $def->{cqstools},
       suffix     => "_sequence",
