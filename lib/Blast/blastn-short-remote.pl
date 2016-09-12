@@ -16,7 +16,6 @@ perl blast-short-thread.pl -i fasta_file -o output_file -t number_of_thread
 Options:
   -i|--input {file}       Input sequence file in fasta format
   -o|--output {file}      Output file
-  -l|--localdb            Local blast database (if not defined, using remote server)
   -t|--thread {integer}   Number of thread
   -h|--help               This page.
 ";
@@ -32,7 +31,6 @@ my $help;
 GetOptions(
   'i|input=s'  => \$input_file,
   'o|output=s' => \$output_file,
-  'l|localdb=s' => \$local_db,
   't|thread=s' => \$num_of_threads,
   'h|help'     => \$help,
 );
@@ -128,11 +126,7 @@ sub doOperation {
     my $datastring = localtime();
     
     print $datastring . " : thread " . $id . " : " . ( $current_index + 1 ) . "/" . ( $to + 1 ) . " : " . $seq->id . "\n";
-    if(!defined $local_db){
-      `blastn -task blastn-short -db nt -perc_identity 100 -remote -query $fa_name -outfmt '6 qlen nident qacc sallacc salltitles' | awk '\$1 == \$2 {print}' | cut -f3- | sort | uniq >> $fa_output`;
-    }else{
-      `blastn -task blastn-short -db $local_db/nt -perc_identity 100 -query $fa_name -outfmt '6 qlen nident qacc sallacc salltitles' | awk '\$1 == \$2 {print}' | cut -f3- | sort | uniq >> $fa_output`;
-    }
+    `blastn -task blastn-short -db nt -perc_identity 100 -remote -query $fa_name -outfmt '6 qlen nident qacc sallacc salltitles' | awk '\$1 == \$2 {print}' | cut -f3- | sort | uniq >> $fa_output`;
     if ( !-e $fa_output ) {
       print STDERR "blastn failed for $fa_name ";
     }

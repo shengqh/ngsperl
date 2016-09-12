@@ -33,12 +33,15 @@ sub perform {
   print $sh get_run_command($sh_direct);
 
   my %raw_files        = %{ get_raw_files( $config, $section ) };
-  my $blastn           = dirname(__FILE__) . "/blastn-short.pl";
   my $blastn_interpret = dirname(__FILE__) . "/blastn-interpret.pl";
   
   my $blastdb = get_option($config, $section, "localdb", 0);
+  my $blastn  = dirname(__FILE__);
   if($blastdb){
     $option = $option . " --localdb " . $blastdb;
+    $blastn = $blastn . "/blastn-short-local.pl";
+  }else{
+    $blastn = $blastn . "/blastn-short-remote.pl";
   }
 
   for my $sample_name ( sort keys %raw_files ) {
