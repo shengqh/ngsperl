@@ -73,7 +73,7 @@ sub perform {
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $final_file = get_final_file($sample_name, $blacklistfile, $shiftPosition);
+    my $final_file = $sample_name . ".bed";
     
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
@@ -92,7 +92,7 @@ fi
       $bam_file = $presortedFile;
     }
 
-    my $bed_file = $isPairedEnd ? $sample_name . ".bedpe" : $sample_name . ".bed";
+    my $bed_file = $isPairedEnd ? $sample_name . ".raw.bedpe" : $sample_name . ".raw.bed";
     print $pbs "
 if [ ! -s $bed_file ]; then
   echo bamtobed=`date` 
@@ -100,7 +100,7 @@ if [ ! -s $bed_file ]; then
 fi
 ";
     if ($isPairedEnd) {
-      my $slim_file = $sample_name . ".bed";
+      my $slim_file = $sample_name . ".slim.bed";
       print $pbs "
 if [[ -s $bed_file && ! -s $slim_file ]]; then
   echo convert_paired_end_bed=`date`
@@ -126,17 +126,20 @@ fi
     if ($shiftPosition) {
       my $shiftPositive = $shiftPosition;
       my $shiftNegative = $shiftPosition + 1;
+      my $shiftFile = $sample_name + ".shifted.bed";
       print $pbs "
-if [[ -s $bed_file && ! -s $final_file ]]; then
+if [[ -s $bed_file && ! -s $shiftFile ]]; then
   echo shift_reads=`date` 
-  awk 'BEGIN {OFS = \"\\t\"} ; {if (\$6 == \"+\") print \$1, \$2 + $shiftPositive, \$3 + $shiftPositive, \$4, \$5, \$6; else print \$1, \$2 - $shiftNegative, \$3 - $shiftNegative, \$4, \$5, \$6}' $bed_file > $final_file
+  awk 'BEGIN {OFS = \"\\t\"} ; {if (\$6 == \"+\") print \$1, \$2 + $shiftPositive, \$3 + $shiftPositive, \$4, \$5, \$6; else print \$1, \$2 - $shiftNegative, \$3 - $shiftNegative, \$4, \$5, \$6}' $bed_file > $shiftFile
 fi
 ";
-      $rmlist = $rmlist . " " . $bed_file;
+      $rmlist = $rmlist . " " . $bed_file . " " . $shiftFile;
+      $bed_file = $shiftFile;
     }
 
     print $pbs "
-if [ -s $final_file ]; then
+if [ -s $bed_file ]; then
+  sort -k1,1V -k2,2n -k3,3n $bed_file > $final_file
   rm $rmlist;
 fi
 ";
@@ -159,14 +162,12 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $blacklistfile = get_param_file( $config->{$section}{"blacklist_file"}, "blacklist_file", 0 );
-  my $shiftPosition = get_option( $config, $section, "shift_position", 0 );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my @result_files = ();
 
-    my $final_file = get_final_file($sample_name, $blacklistfile, $shiftPosition);
+    my $final_file = $sample_name . ".bed";
     push( @result_files, "${result_dir}/${final_file}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
