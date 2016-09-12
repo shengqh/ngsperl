@@ -47,17 +47,24 @@ sub perform {
 
   my $blacklistfile = get_param_file( $config->{$section}{"blacklist_file"}, "blacklist_file", 0 );
   my $isPairedEnd       = get_option( $config, $section, "is_paired_end" );
-  my $isSortedByName    = 0;
-  my $maxFragmentLength = 0;
   my $minFragmentLength = 0;
+  my $maxFragmentLength = 0;
   if ($isPairedEnd) {
-    $option            = $option . " -bedpe";
-    $isSortedByName    = get_option( $config, $section, "is_sorted_by_name" );
-    $maxFragmentLength = get_option( $config, $section, "maximum_fragment_length" );
     $minFragmentLength = get_option( $config, $section, "minimum_fragment_length" );
+    $maxFragmentLength = get_option( $config, $section, "maximum_fragment_length" );
+    
+    $option = $option . " --min-fragment-length $minFragmentLength --max-fragment-length $maxFragmentLength"
   }
-  my $shiftPosition = get_option( $config, $section, "shift_position", 0 );
-
+  my $shiftForward = get_option( $config, $section, "shift_forward", 0 );
+  my $shiftReverse = get_option( $config, $section, "shift_reverse", 0 );
+  my $minMAPQ = get_option( $config, $section, "minimum_mapq", 10 );
+  $option = $option . " --shift_forward  $shiftForward --shift_reverse $shiftReverse --min-mapq $minMAPQ";
+  
+  my $python_bam2bed = dirname(__FILE__) . "/bam2bed.py";
+  if ( !-e $python_bam2bed ) {
+    die "File not found : " . $python_bam2bed;
+  }
+  
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct) . "\n";
@@ -77,40 +84,14 @@ sub perform {
     
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-    my $rmlist = "";
-
-    my $sortCmd = "";
-    if ( !$isSortedByName ) {
-      my $presortedFile = $sample_name . ".sortedByName.bam";
-      print $pbs "
-if [ ! -s $presortedFile ]; then
-  echo SortBamByName=`date` 
-  samtools sort -n  -@ $thread -m $sort_memory -o $presortedFile $bam_file 
-fi
-";
-      $rmlist   = $presortedFile;
-      $bam_file = $presortedFile;
-    }
-
-    my $bed_file = $isPairedEnd ? $sample_name . ".raw.bedpe" : $sample_name . ".raw.bed";
+    my $bed_file = $sample_name . ".converted.bed";
+    my $rmlist = "$bed_file";
     print $pbs "
 if [ ! -s $bed_file ]; then
   echo bamtobed=`date` 
-  bedtools bamtobed $option -i $bam_file > $bed_file
+  python $python_bam2bed $option -i $bam_file -o $bed_file 
 fi
 ";
-    if ($isPairedEnd) {
-      my $slim_file = $sample_name . ".slim.bed";
-      print $pbs "
-if [[ -s $bed_file && ! -s $slim_file ]]; then
-  echo convert_paired_end_bed=`date`
-  awk 'BEGIN {OFS = \"\\t\"} ; {if (\$1 == \$4 && \$6 - \$2 <= $maxFragmentLength && \$6 - \$2 >= $minFragmentLength ) print \$1, \$2, \$6, \$7, \$8, \$9}' $bed_file > $slim_file 
-fi
-";
-      $rmlist   = $rmlist . " " . $bed_file;
-      $bed_file = $slim_file;
-    }
-
     if ( defined $blacklistfile ) {
       my $confident_file = $sample_name . ".confident.bed";
       print $pbs "
@@ -119,26 +100,13 @@ if [[ -s $bed_file && ! -s $confident_file ]]; then
   bedtools intersect -v -a $bed_file -b $blacklistfile > $confident_file
 fi
 ";
-      $rmlist   = $rmlist . " " . $bed_file;
+      $rmlist   = $rmlist . " " . $confident_file;
       $bed_file = $confident_file;
-    }
-
-    if ($shiftPosition) {
-      my $shiftPositive = $shiftPosition;
-      my $shiftNegative = $shiftPosition + 1;
-      my $shiftFile = $sample_name + ".shifted.bed";
-      print $pbs "
-if [[ -s $bed_file && ! -s $shiftFile ]]; then
-  echo shift_reads=`date` 
-  awk 'BEGIN {OFS = \"\\t\"} ; {if (\$6 == \"+\") print \$1, \$2 + $shiftPositive, \$3 + $shiftPositive, \$4, \$5, \$6; else print \$1, \$2 - $shiftNegative, \$3 - $shiftNegative, \$4, \$5, \$6}' $bed_file > $shiftFile
-fi
-";
-      $rmlist = $rmlist . " " . $bed_file . " " . $shiftFile;
-      $bed_file = $shiftFile;
     }
 
     print $pbs "
 if [ -s $bed_file ]; then
+  echo sort_bed=`date` 
   sort -k1,1V -k2,2n -k3,3n $bed_file > $final_file
   rm $rmlist;
 fi
