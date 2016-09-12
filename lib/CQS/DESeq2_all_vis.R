@@ -24,7 +24,20 @@ addVisLayout<-function(datForFigure, visLayoutFileList,LayoutKey="LayoutKey") {
 		row.names(visLayout)<-visLayout[,"Groups"]
 		visLayout<-data.frame(visLayout[,-which(colnames(visLayout)=="Groups")])
 		visLayout$Col_Group<-factor(visLayout$Col_Group,levels=unique(visLayout$Col_Group))
-		visLayout$Row_Group<-factor(visLayout$Row_Group,levels=unique(visLayout$Row_Group))	
+		visLayout$Row_Group<-factor(visLayout$Row_Group,levels=unique(visLayout$Row_Group))
+		data2Layout<-unique(datForFigure[,LayoutKey])
+		for (x in 1:nrow(visLayout)) {
+			groupKeys<-strsplit(row.names(visLayout)[x],";")[[1]]
+			matchedInd<-grep(groupKeys,data2Layout)
+			if (length(matchedInd)==1) {
+				row.names(visLayout)[x]<-data2Layout[matchedInd]
+			} else {
+				message=paste0("Warning: Layout Group: ",row.names(visLayout)[x]," can't match data.\n Data: \n",paste(data2Layout,collapse="\n"))
+				warning(message)
+				writeLines(message,paste0(visLayoutFileList,".error"))
+				return(datForFigure)
+			}
+		}
 		datForFigure<-data.frame(datForFigure,visLayout[datForFigure[,LayoutKey],])
 	}
 	return(datForFigure)
