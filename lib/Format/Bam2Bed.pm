@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package ATACseq::BamToBed;
+package Format::Bam2Bed;
 
 use strict;
 use warnings;
