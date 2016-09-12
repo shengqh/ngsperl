@@ -79,7 +79,7 @@ p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
 		
 width<-length(unique(diffResult$Pairs))*800
 height<-max(1600,length(unique(diffResult$Module))*800)
-png(filename=paste0(resultFile, ".DESeq2.Matrix.png"), width=width, height=height, res=300)
+png(filename=paste0(resultFile, ".png"), width=width, height=height, res=300)
 if (visLayoutFileList!="") {
 	print(p+facet_grid(Row_Group~Col_Group,scales = "free"))
 } else {

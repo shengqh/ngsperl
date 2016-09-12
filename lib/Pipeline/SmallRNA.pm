@@ -18,7 +18,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(performSmallRNA performSmallRNATask)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 sub getSmallRNAConfig {
   my ($def) = @_;
@@ -109,8 +109,8 @@ sub getSmallRNAConfig {
         perform                  => 1,
         target_dir               => $data_visualization_dir . "/deseq2_top100_reads_vis",
         rtemplate                => "DESeq2_all_vis.R",
-        output_file              => "",
-        output_file_ext          => ".Top100Reads.DESeq2.Matrix.png",
+        output_file              => ".Top100Reads.DESeq2.Matrix",
+        output_file_ext          => ".png",
         parameterSampleFile1_ref => [ "deseq2_top100_reads", "_DESeq2.csv\$" ],
         parameterSampleFile2     => $def->{pairs_top100_deseq2_vis_layout},
         sh_direct                => 1,
@@ -126,8 +126,8 @@ sub getSmallRNAConfig {
         perform                  => 1,
         target_dir               => $data_visualization_dir . "/deseq2_top100_contigs_vis",
         rtemplate                => "DESeq2_all_vis.R",
-        output_file              => "",
-        output_file_ext          => ".Top100Contigs.DESeq2.Matrix.png",
+        output_file              => ".Top100Contigs.DESeq2.Matrix",
+        output_file_ext          => ".png",
         parameterSampleFile1_ref => [ "deseq2_top100_contigs", "_DESeq2.csv\$" ],
         parameterSampleFile2     => $def->{pairs_top100_deseq2_vis_layout},
         sh_direct                => 1,
@@ -377,8 +377,8 @@ sub getSmallRNAConfig {
           perform                  => 1,
           target_dir               => $data_visualization_dir . "/host_genome_deseq2_vis",
           rtemplate                => "DESeq2_all_vis.R",
-          output_file              => "",
-          output_file_ext          => ".DESeq2.Matrix.png",
+          output_file              => ".HostGenome.DESeq2.Matrix",
+          output_file_ext          => ".png",
           parameterSampleFile1_ref => [ "deseq2_miRNA", "_DESeq2.csv\$", "deseq2_tRNA", "_DESeq2.csv\$", "deseq2_otherSmallRNA", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_host_deseq2_vis_layout},
           sh_direct                => 1,
@@ -1129,8 +1129,8 @@ sub getSmallRNAConfig {
           target_dir => $data_visualization_dir . "/nonhost_library_deseq2_vis",
           ,
           rtemplate                => "DESeq2_all_vis.R",
-          output_file              => "",
-          output_file_ext          => ".DESeq2.Matrix.png",
+          output_file              => ".NonHostLibrary.DESeq2.Matrix",
+          output_file_ext          => ".png",
           parameterSampleFile1_ref => [ "deseq2_nonhost_tRNA", "_DESeq2.csv\$", "deseq2_nonhost_rRNA", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_nonHosttRNArRNA_deseq2_vis_layout},
           sh_direct                => 1,
@@ -1273,8 +1273,8 @@ sub getSmallRNAConfig {
           perform                  => 1,
           target_dir               => $data_visualization_dir . "/nonhost_genome_deseq2_vis",
           rtemplate                => "DESeq2_all_vis.R",
-          output_file              => "",
-          output_file_ext          => ".DESeq2.Matrix.png",
+          output_file              => ".NonHostGenome.DESeq2.Matrix",
+          output_file_ext          => ".png",
           parameterSampleFile1_ref => [ "deseq2_bacteria_group1", "_DESeq2.csv\$", "deseq2_bacteria_group2", "_DESeq2.csv\$", "deseq2_fungus_group4", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_nonHostGroups_deseq2_vis_layout},
           sh_direct                => 1,
@@ -1290,8 +1290,8 @@ sub getSmallRNAConfig {
           perform                  => 1,
           target_dir               => $data_visualization_dir . "/nonhost_genome_deseq2_reads_vis",
           rtemplate                => "DESeq2_all_vis.R",
-          output_file              => "",
-          output_file_ext          => ".DESeq2.Matrix.png",
+          output_file              => ".NonHostGenomeReads.DESeq2.Matrix",
+          output_file_ext          => ".png",
           parameterSampleFile1_ref => [ "deseq2_bacteria_group1_reads", "_DESeq2.csv\$", "deseq2_bacteria_group2_reads", "_DESeq2.csv\$", "deseq2_fungus_group4_reads", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_nonHostGroups_deseq2_vis_layout},
           sh_direct                => 1,

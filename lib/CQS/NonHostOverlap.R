@@ -9,7 +9,7 @@ groupFileList<-parSampleFile2
 groupVisLayoutFileList<-parSampleFile3
 totalCountFile<-parFile3
 
-categoriesNames<-c("Microbiome","Environment","Fungus","tRNA","rRNAL","rRNAS")
+categoriesNames<-c("Microbiome","Environment","Fungus","tRNA","rRNA")
 
 readsMappingNames<-list()
 readsMappingTable<-NULL
