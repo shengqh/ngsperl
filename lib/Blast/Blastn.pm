@@ -36,7 +36,7 @@ sub perform {
   my $blastn           = dirname(__FILE__) . "/blastn-short.pl";
   my $blastn_interpret = dirname(__FILE__) . "/blastn-interpret.pl";
   
-  my $blastdb = get_option($config, $section, "blastdb", 0);
+  my $blastdb = get_option($config, $section, "localdb", 0);
   if($blastdb){
     $option = $option . " --localdb " . $blastdb;
   }
