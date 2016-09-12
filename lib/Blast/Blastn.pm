@@ -35,6 +35,11 @@ sub perform {
   my %raw_files        = %{ get_raw_files( $config, $section ) };
   my $blastn           = dirname(__FILE__) . "/blastn-short.pl";
   my $blastn_interpret = dirname(__FILE__) . "/blastn-interpret.pl";
+  
+  my $blastdb = get_option($config, $section, "blastdb", 0);
+  if($blastdb){
+    $option = $option . " --localdb " . $blastdb;
+  }
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files     = @{ $raw_files{$sample_name} };
@@ -50,7 +55,7 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $interpret_result );
     print $pbs "
-perl $blastn -i $sample -o $blast_result -t $thread
+perl $blastn $option -i $sample -o $blast_result -t $thread
 perl $blastn_interpret -i $blast_result -o $interpret_result
 ";
     $self->close_pbs( $pbs, $pbs_file );
