@@ -43,6 +43,7 @@ dataForPlot<-rbind(dataForPlot,temp)
 #row.names(dataForPlot)[(nrow(dataForPlot)-length(categoriesNames)+1):nrow(dataForPlot)]<-categoriesNames
 row.names(dataForPlot)<-c(paste0(categoriesNames," Only"),"Mapped to more than one Category")
 
+write.csv(dataForPlot,paste0(resultFile,".Overlap.csv"))
 
 #Pie chart for all samples
 ggpieToFile(dataForPlot,fileName=paste0(resultFile,".Piechart.png"),maxCategory=maxCategory,textSize=textSize)
@@ -64,7 +65,7 @@ if (length(readsMappingNames)>5) {
 	dataForPlot<-readsMappingNames
 }
 names(dataForPlot)<-categoriesNames[1:5]
-colors<-makeColors(length(allSigNameList))
+colors<-makeColors(length(categoriesNames))
 vennCex=1.2
 for (i in 1:ncol(readsMappingTable)) {
 	reads2count<-readsMappingTable[,i]
