@@ -60,6 +60,8 @@ sub getSmallRNAConfig {
   my $max_sequence_extension_base = $def->{max_sequence_extension_base};
   my $non_host_table_option       = "--maxExtensionBase $max_sequence_extension_base --outputReadTable --outputReadContigTable";
 
+  my $blast_localdb = $def->{blast_localdb};
+
   if ($do_comparison) {
     my $class_independent = {
       deseq2_top100_reads => {
@@ -1371,6 +1373,7 @@ sub getSmallRNAConfig {
         option     => "",
         source_ref => [ "bowtie1_unmapped_sequence_count_table", ".fasta\$" ],
         sh_direct  => 0,
+        localdb    => $blast_localdb,
         cluster    => $cluster,
         pbs        => {
           "email"    => $def->{email},

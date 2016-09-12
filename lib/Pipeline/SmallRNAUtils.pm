@@ -142,6 +142,14 @@ sub initializeDefaultOptions {
     $def->{max_sequence_extension_base} = 1;
   }
 
+  if ( !defined $def->{blast_top100_reads} ) {
+    $def->{blast_top100_reads} = 0;
+  }
+
+  if ( !defined $def->{blast_localdb} ) {
+    $def->{blast_localdb} = "";
+  }
+
   return $def;
 }
 
@@ -177,6 +185,8 @@ sub getPrepareConfig {
   my $pairs                          = $def->{pairs};
 
   my $max_sequence_extension_base = $def->{max_sequence_extension_base};
+  my $blast_top100_reads          = $def->{blast_top100_reads};
+  my $blast_localdb               = $def->{blast_localdb};
 
   my $config = {
     general => {
@@ -521,6 +531,25 @@ sub getPrepareConfig {
 
   push @individual, ("identical");
   push @summary,    ("identical_sequence_count_table");
+
+  if ($blast_top100_reads) {
+    $preparation->{identical_sequence_top100_blast} = {
+      class      => "Blast::Blastn",
+      perform    => 1,
+      target_dir => $class_independent_dir . "/identical_sequence_top100_blast",
+      option     => "",
+      source_ref => [ "identical_sequence_count_table", ".fasta\$" ],
+      sh_direct  => 0,
+      localdb    => $blast_localdb,
+      cluster    => $cluster,
+      pbs        => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=" . $def->{max_thread},
+        "walltime" => "10",
+        "mem"      => "10gb"
+      },
+    };
+  }
 
   if ($hasNTA) {
     $preparation->{identical_NTA} = {
