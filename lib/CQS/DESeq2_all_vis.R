@@ -28,7 +28,10 @@ addVisLayout<-function(datForFigure, visLayoutFileList,LayoutKey="LayoutKey") {
 		data2Layout<-unique(datForFigure[,LayoutKey])
 		for (x in 1:nrow(visLayout)) {
 			groupKeys<-strsplit(row.names(visLayout)[x],";")[[1]]
-			matchedInd<-grep(groupKeys,data2Layout)
+			matchedInd<-1:length(data2Layout)
+			for (y in groupKeys) {
+				matchedInd<-intersect(matchedInd,grep(y,data2Layout))
+			}
 			if (length(matchedInd)==1) {
 				row.names(visLayout)[x]<-data2Layout[matchedInd]
 			} else {
