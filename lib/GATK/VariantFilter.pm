@@ -233,9 +233,15 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $finalFile = $task_name . ".pass.vcf";
+#  my $finalFile = $task_name . ".pass.vcf";
+#
+#  my @result_files = ();
+#  push( @result_files, $result_dir . "/" . $finalFile );
 
   my @result_files = ();
+  my $finalFile = $task_name . ".median3.snp.pass.vcf";
+  push( @result_files, $result_dir . "/" . $finalFile );
+  $finalFile = $task_name . ".median3.indel.pass.vcf";
   push( @result_files, $result_dir . "/" . $finalFile );
 
   my $result = {};

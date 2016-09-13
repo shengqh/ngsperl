@@ -79,7 +79,14 @@ for (i in 1:nrow(countTableFileAll)) {
 	countNum<-countNum[which(rowSums(countNum,na.rm=T)>0),]
 	
 	dds=DESeqDataSetFromMatrix(countData = countNum, colData = as.data.frame(rep(1,ncol(countNum))),design = ~1)
-	temp<-DESeq2::varianceStabilizingTransformation(dds, blind = TRUE)
+
+	vsdres<-try(temp<-DESeq2::varianceStabilizingTransformation(dds, blind = TRUE))
+	if (class(vsdres) == "try-error") {
+		message=paste0("Warning: varianceStabilizingTransformation function can't run.\n",as.character(vsdres))
+		warning(message)
+		writeLines(message,paste0(countTableFile,".vsd.warning"))
+		next;
+	}
 	countNumVsd<-assay(temp)
 	colnames(countNumVsd)<-colnames(countNum)
 	
