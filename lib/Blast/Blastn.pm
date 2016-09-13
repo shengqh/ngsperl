@@ -63,8 +63,6 @@ perl $blastn_interpret -i $blast_result -o $interpret_result
 ";
     $self->close_pbs( $pbs, $pbs_file );
     print $sh "\$MYCMD ./$pbs_name \n";
-
-    print $sh "\$MYCMD ./$pbs_file \n";
   }
 
   print $sh "exit 0\n";
