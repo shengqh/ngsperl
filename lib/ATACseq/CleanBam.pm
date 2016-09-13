@@ -91,7 +91,7 @@ if [[ -s $finalFile && ! -s ${finalFile}.bai ]]; then
   echo BamIndex=`date` 
   samtools index $finalFile
   samtools flagstat $finalFile > ${finalFile}.stat
-  #rm $rmlist $redupFile ${redupFile}.bai
+  rm $rmlist $redupFile ${redupFile}.bai
 fi
 ";
 
