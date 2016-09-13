@@ -79,6 +79,7 @@ fi
 if [[ -s $sampleFile && ! -s $redupFile ]]; then
   echo RemoveDuplicate=`date` 
   java $option -jar $picard_jar MarkDuplicates I=$sampleFile O=$redupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT M=${redupFile}.metrics
+  samtools index $redupFile
 fi
 
 if [[ -s $redupFile && ! -s $finalFile ]]; then
@@ -90,7 +91,7 @@ if [[ -s $finalFile && ! -s ${finalFile}.bai ]]; then
   echo BamIndex=`date` 
   samtools index $finalFile
   samtools flagstat $finalFile > ${finalFile}.stat
-  rm $rmlist $redupFile
+  #rm $rmlist $redupFile ${redupFile}.bai
 fi
 ";
 
