@@ -118,6 +118,8 @@ sub get_parameter {
 
   my $option    = get_option( $config, $section, "option",    "" );
   my $sh_direct = get_option( $config, $section, "sh_direct", 0 );
+  
+  my $init_command = get_option( $config, $section, "init_command", "" );
 
   if ($sh_direct) {
     $sh_direct = "bash";
@@ -129,7 +131,7 @@ sub get_parameter {
   my $thread = $cluster->get_cluster_thread($refPbs);
   my $memory = $cluster->get_cluster_memory($refPbs);
 
-  return ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory );
+  return ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command );
 }
 
 #get parameter which indicates a file. If required, not defined or not exists, die. If defined but not exists, die.

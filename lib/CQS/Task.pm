@@ -159,8 +159,12 @@ sub get_task_filename {
 }
 
 sub open_pbs {
-  my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file ) = @_;
+  my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command ) = @_;
 
+  if (!defined $init_command){
+    $init_command = "";
+  }
+  
   my $module_name = $self->{_name};
 
   open( my $pbs, ">$pbs_file" ) or die $!;
@@ -169,6 +173,7 @@ sub open_pbs {
 $log_desc
 
 $path_file
+$init_command
 
 cd $result_dir
 
