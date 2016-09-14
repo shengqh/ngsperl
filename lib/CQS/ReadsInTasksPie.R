@@ -6,6 +6,8 @@
 resultFile<-outFile
 countFilesList<-parSampleFile1
 #totalCountFile<-parFile3
+groupFileList<-parSampleFile2
+groupVisLayoutFileList<-parSampleFile3
 
 countFiles<-read.delim(countFilesList,header=F,as.is=T)
 
@@ -36,6 +38,10 @@ UnMapped<-resultTable["bowtie1_unmapped_reads",]
 
 tableForPieChart<-rbind(HostSmallRnaMapped,HostGenomeMappedReads,NonHostMapped,UnMapped)
 ggpieToFile(tableForPieChart,fileName=paste0(resultFile,".NonParallel.TaskReads.Piechart.png"),maxCategory=NA,textSize=textSize,reOrder=FALSE)
+#Group Pie chart
+ggpieGroupToFile(tableForPieChart,fileName=paste0(resultFile,".NonParallel.TaskReads.Piechart.png"),maxCategory=NA,textSize=textSize,reOrder=FALSE,
+		groupFileList=groupFileList,
+		outFileName=paste0(resultFile,".NonParallel.TaskReads.PercentGroups.csv"),textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList)
 
 
 
