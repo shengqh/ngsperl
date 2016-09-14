@@ -406,6 +406,9 @@ ggpie <- function (dat, fill="Category", y="Reads",facet="Sample",
 		p<-p+facet_grid(Row_Group~Col_Group)
 		if (length(unique(datForFigure$Row_Group))<length(unique(datForFigure$Col_Group))) {
 			p<-p+theme(legend.position="top")
+			if (max(nchar(as.character(datForFigure[,fill])))>20) {
+				p<-p+guides(fill= guide_legend(ncol = 2))
+			}
 		}
 	} else if (!is.na(facet)) {
 		p<-p+facet_wrap(c(facet))
@@ -495,13 +498,13 @@ countTableToSpecies<-function(dat,databaseLogFile="",outFileName="",shortName=T)
 		
 		#short name
 		if (shortName) {
-			row.names(mappingResult2Species)<-sapply(strsplit(row.names(mappingResult2Species),"_"),function(x) {
+			row.names(mappingResult2Species)<-sapply(strsplit(row.names(mappingResult2Species)," |_"),function(x) {
 						if (length(x)<=3) {
-							paste(x,collapse="_")
+							paste(x,collapse=" ")
 						} else if (grepl("^\\d+$",x[2])) {
-							paste(x[1:3],collapse="_")
+							paste(x[1:3],collapse=" ")
 						} else {
-							paste(x[1:2],collapse="_")
+							paste(x[1:2],collapse=" ")
 						}
 					})
 		}
