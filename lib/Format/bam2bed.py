@@ -45,11 +45,18 @@ try:
       continue
     
     if read.is_paired:
-      if read.reference_name != read.next_reference_name or read.next_reference_start > read.reference_start:
+      if read.reference_name != read.next_reference_name:
         continue
+      
+      if read.next_reference_start > read.reference_start:
+        continue
+      elif read.next_reference_start == read.reference_start and read.is_read2:
+        continue
+      
       fragment_length = read.reference_end - read.next_reference_start
       if fragment_length < args.min_fragment_length or fragment_length > args.max_fragment_length:
         continue
+      
       is_reverse = (read.is_read1 and read.is_reverse) or (read.is_read2 and not read.is_reverse)
       reference_start = read.next_reference_start
     else:

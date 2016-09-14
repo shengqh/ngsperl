@@ -27,7 +27,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
 
   my $muTect_jar = get_param_file( $config->{$section}{muTect_jar}, "muTect_jar", 1 );
   my $faFile     = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
@@ -75,7 +75,7 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $passvcf );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $passvcf, $init_command );
     print $pbs "
 if [ ! -s ${normal}.bai ]; then
   samtools index ${normal}
@@ -86,7 +86,7 @@ if [ ! -s ${tumor}.bai ]; then
 fi
 
 if [ ! -s $vcf ]; then
-  $java $java_option -jar $muTect_jar $option --analysis_type MuTect --reference_sequence $faFile $cosmic_param --dbsnp $dbsnpfile --input_file:normal $normal --input_file:tumor $tumor -o $out_file --vcf $vcf --enable_extended_output
+  $java $java_option -jar $muTect_jar --analysis_type MuTect $option --reference_sequence $faFile $cosmic_param --dbsnp $dbsnpfile --input_file:normal $normal --input_file:tumor $tumor -o $out_file --vcf $vcf --enable_extended_output
 fi 
 
 if [[ -s $vcf && ! -s $passvcf ]]; then

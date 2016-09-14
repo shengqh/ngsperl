@@ -745,7 +745,7 @@ sub getSmallRNAConfig {
         target_dir => $nonhost_genome_dir . "/bowtie1_bacteria_group1_pm_table",
         source_ref => [ 'bowtie1_bacteria_group1_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
-        option     => $non_host_table_option,
+        option     => $non_host_table_option . ' --categoryMapFile ' . $def->{bacteria_group1_species_map},
         prefix     => 'bacteria_group1_pm_',
         pbs        => {
           'email'    => $def->{email},
@@ -823,7 +823,7 @@ sub getSmallRNAConfig {
         target_dir => $nonhost_genome_dir . "/bowtie1_bacteria_group2_pm_table",
         source_ref => [ 'bowtie1_bacteria_group2_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
-        option     => $non_host_table_option,
+        option     => $non_host_table_option . ' --categoryMapFile ' . $def->{bacteria_group2_species_map},
         prefix     => 'bacteria_group2_pm_',
         pbs        => {
           'email'    => $def->{email},
@@ -902,7 +902,7 @@ sub getSmallRNAConfig {
         target_dir => $nonhost_genome_dir . "/bowtie1_fungus_group4_pm_table",
         source_ref => [ 'bowtie1_fungus_group4_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
-        option     => $non_host_table_option,
+        option     => $non_host_table_option . ' --categoryMapFile ' . $def->{fungus_group4_species_map},
         prefix     => 'fungus_group4_pm_',
         pbs        => {
           'email'    => $def->{email},
