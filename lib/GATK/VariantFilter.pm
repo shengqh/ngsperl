@@ -29,7 +29,7 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my $dbsnp = get_param_file( $config->{$section}{dbsnp_vcf}, "dbsnp_vcf", 1 );
-  my $vqsrMode = get_option( $config, $section, "vqsr_mode");
+  my $vqsrMode = get_option( $config, $section, "vqsr_mode" );
   my $hapmap;
   my $omni;
   my $g1000;
@@ -60,16 +60,6 @@ sub perform {
 
   my $mergedFile = $task_name . ".raw.vcf";
 
-  my $snpCal      = $task_name . ".snp.recal";
-  my $snpTranches = $task_name . ".snp.tranche";
-
-  my $snpPass = $task_name . ".recal_snp_raw_indel.vcf";
-
-  my $indelCal      = $task_name . ".indel.recal";
-  my $indelTranches = $task_name . ".indel.tranche";
-
-  my $indelPass = $task_name . ".recal_snp_recal_indel.vcf";
-
   my $finalFile = $task_name . ".pass.vcf";
 
   my $log_desc = $cluster->get_log_description($log);
@@ -92,7 +82,13 @@ if [ ! -s $mergedFile ]; then
 fi
 ";
 
-  if ( $vqsrMode ) {    #VQSR mode
+  if ($vqsrMode) {    #VQSR mode
+    my $snpCal      = $task_name . ".snp.recal";
+    my $snpTranches = $task_name . ".snp.tranche";
+    my $snpPass = $task_name . ".recal_snp_raw_indel.vcf";
+    my $indelCal      = $task_name . ".indel.recal";
+    my $indelTranches = $task_name . ".indel.tranche";
+    my $indelPass = $task_name . ".recal_snp_recal_indel.vcf";
     print $pbs "
 if [[ -s $mergedFile && ! -s $snpCal ]]; then
   echo VariantRecalibratorSNP=`date` 
@@ -185,43 +181,39 @@ fi
 ";
   }
   else {    #hard filter mode
+    my $raw_snp_file   = $task_name . ".raw_snp.vcf";
+    my $snpPass = $task_name . ".snp_filtered.vcf";
+    my $raw_indel_file = $task_name . ".raw_indel.vcf";
+    my $indelPass = $task_name . ".indel_filtered.vcf";
+    my $filtered_file  = $task_name . ".filtered.vcf";
+
     my $snp_filter =
       get_option( $config, $section, "is_rna" )
-      ? "-window 35 -cluster 3 -filterName FS -filter \"FS > 30.0\" -filterName QD -filter \"QD < 2.0\""
-      : "\\
-         --filterExpression \"QD < 2.0\" \\
-         --filterName \"QD\" \\
-         --filterExpression \"FS > 60.0\" \\
-         --filterName \"FS\" \\
-         --filterExpression \"MQ < 40\" \\
-         --filterName \"MQ\" \\
-         --filterExpression \"MQRankSum < -12.5\" \\
-         --filterName \"MQRankSum\" \\
-         --filterExpression \"ReadPosRankSum < -8.0\" \\
-         --filterName \"ReadPosRankSum\"\\
-         ";
+      ? "-window 35 -cluster 3 --filterExpression \"FS > 30.0 || QD < 2.0\" --filterName \"snp_filter\" " 
+      : "--filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" --filterName \"snp_filter\" ";
 
     print $pbs "
 if [[ -s $mergedFile && ! -s $snpPass ]]; then
-  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $mergedFile $snp_filter -o $snpPass 
+  echo filter_snp=`date`
+  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $mergedFile -selectType SNP -o $raw_snp_file 
+  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $raw_snp_file $snp_filter -o $snpPass 
 fi
 ";
 
-    my $indelFilterOut = $task_name . ".snp_indel.filtered.vcf";
-    my $indel_filter = ( get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3" : "" ) . " \\
-      --filterExpression \"QD < 2.0\" \\
-      --filterName \"QD\" \\
-      --filterExpression \"FS > 200.0\"\\
-      --filterName \"FS\" \\
-      --filterExpression \"ReadPosRankSum < -20.0\"\\
-      --filterName \"ReadPosRankSum\"\\
-      ";
+    my $indel_filter = ( get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3" : "" ) . " --filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\" --filterName \"indel_filter\" ";
 
     print $pbs "
-if [[ -s $snpPass && ! -s $finalFile ]]; then
-  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $snpPass $indel_filter -o $indelFilterOut 
-  cat $indelFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $finalFile
-  rm $snpPass ${snpPass}.idx $indelFilterOut ${indelFilterOut}.idx
+if [[ -s $mergedFile && ! -s $indelPass ]]; then
+  echo filter_indel=`date`
+  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $mergedFile -selectType INDEL -o $raw_indel_file 
+  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $raw_indel_file $indel_filter -o $indelPass 
+fi
+
+if [[ -s $snpPass && -s $indelPass && ! -s $finalFile ]]; then
+  echo combine_snp=`date`
+  java $java_option -Xmx${memory} -jar $gatk_jar -T CombineVariants -R $faFile --variant:snp $snpPass --variant:indel $indelPass -o $filtered_file -genotypeMergeOptions PRIORITIZE -priority snp,indel
+  cat $filtered_file | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $finalFile
+  rm $raw_snp_file $raw_indel_file $snpPass $indelPass $filtered_file ${raw_snp_file}.idx ${raw_indel_file}.idx ${snpPass}.idx ${indelPass}.idx ${filtered_file}.idx
 fi
 "
   }
@@ -233,13 +225,13 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-#  my $finalFile = $task_name . ".pass.vcf";
-#
-#  my @result_files = ();
-#  push( @result_files, $result_dir . "/" . $finalFile );
+  #  my $finalFile = $task_name . ".pass.vcf";
+  #
+  #  my @result_files = ();
+  #  push( @result_files, $result_dir . "/" . $finalFile );
 
   my @result_files = ();
-  my $finalFile = $task_name . ".median3.snp.pass.vcf";
+  my $finalFile    = $task_name . ".median3.snp.pass.vcf";
   push( @result_files, $result_dir . "/" . $finalFile );
   $finalFile = $task_name . ".median3.indel.pass.vcf";
   push( @result_files, $result_dir . "/" . $finalFile );
