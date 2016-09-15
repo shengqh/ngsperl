@@ -67,6 +67,9 @@ foreach my $file ( split( ",", $input_file ) ) {
     elsif ( $genome =~ /mouse/i || $genome =~ /Mus musculus/i ) {
       $genome = "Mouse";
     }
+    elsif ( $genome =~ /zebrafish/i || $genome =~ /Danio rerio/i ) {
+      $genome = "Zebrafish";
+    }
     else {
       my @tokens = split( " ", $genome );
       if ( scalar(@tokens) == 1 ) {
