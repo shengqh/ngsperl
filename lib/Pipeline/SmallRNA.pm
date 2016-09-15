@@ -474,7 +474,7 @@ sub getSmallRNAConfig {
       };
 
       $config = merge( $config, $comparison );
-      push @summary, ( "deseq2_miRNA", "deseq2_tRNA", "deseq2_tRNA_aminoacid", "deseq2_otherSmallRNA", "host_genome_deseq2_vis" );
+      push @summary, ( "deseq2_miRNA", "deseq2_tRNA", "deseq2_tRNA_aminoacid", "deseq2_otherSmallRNA", "host_genome_deseq2_vis","deseq2_miRNA_NTA","deseq2_miRNA_isomiR","deseq2_miRNA_isomiR_NTA","host_genome_deseq2_miRNA_vis" );
     }
 
     if ( $do_comparison or defined $groups or defined $def->{tRNA_vis_group} ) {
@@ -1510,7 +1510,8 @@ sub getSmallRNAConfig {
     rtemplate                => "countTableVisFunctions.R,ReadsInTasksPie.R",
     output_file_ext          => ".NonParallel.TaskReads.csv",
     parameterSampleFile1_ref => \@table_for_pieSummary,
-
+    parameterSampleFile2      => $groups,
+    parameterSampleFile3      => $groups_vis_layout,
     #    parameterFile3_ref       => [ "fastqc_count_vis", ".Reads.csv\$" ],
     sh_direct => 1,
     pbs       => {
