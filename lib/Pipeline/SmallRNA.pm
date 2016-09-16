@@ -257,7 +257,7 @@ sub getSmallRNAConfig {
     push @table_for_pieSummary,  ( "bowtie1_genome_1mm_NTA_smallRNA_count", ".count\$" );
     push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".count\$" );
     push @table_for_readSummary,
-          ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" );
+          ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$" );
     push @name_for_readSummary, ("Host miRNA","Host tRNA","Host other small RNA");
     push @table_for_countSum,
       ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" );
@@ -844,11 +844,11 @@ sub getSmallRNAConfig {
         target_dir                => $data_visualization_dir . "/nonhost_genome_bacteria_group1_vis",
         rtemplate                 => "countTableVisFunctions.R,countTableVis.R",
         output_file               => ".group1Mapping.Result",
-        output_file_ext           => ".Species.csv",
+        output_file_ext           => ".Piechart.png",
         parameterSampleFile1Order => $def->{groups_order},
         parameterSampleFile1      => $groups,
         parameterSampleFile2      => $groups_vis_layout,
-        parameterFile1_ref        => [ "bowtie1_bacteria_group1_pm_table", ".count\$" ],
+        parameterFile1_ref        => [ "bowtie1_bacteria_group1_pm_table", ".category.count\$" ],
 #        parameterFile2            => $def->{bacteria_group1_log},
         parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
         rCode                     => 'maxCategory=4;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
@@ -923,11 +923,11 @@ sub getSmallRNAConfig {
         target_dir                => $data_visualization_dir . "/nonhost_genome_bacteria_group2_vis",
         rtemplate                 => "countTableVisFunctions.R,countTableVis.R",
         output_file               => ".group2Mapping.Result",
-        output_file_ext           => ".Species.csv",
+        output_file_ext           => ".Piechart.png",
         parameterSampleFile1Order => $def->{groups_order},
         parameterSampleFile1      => $groups,
         parameterSampleFile2      => $groups_vis_layout,
-        parameterFile1_ref        => [ "bowtie1_bacteria_group2_pm_table", ".count\$" ],
+        parameterFile1_ref        => [ "bowtie1_bacteria_group2_pm_table", ".category.count\$" ],
 #        parameterFile2            => $def->{bacteria_group2_log},
         parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
         rCode                     => 'maxCategory=5;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
@@ -1001,11 +1001,11 @@ sub getSmallRNAConfig {
         target_dir                => $data_visualization_dir . "/nonhost_genome_fungus_group4_vis",
         rtemplate                 => "countTableVisFunctions.R,countTableVis.R",
         output_file               => ".group4Mapping.Result",
-        output_file_ext           => ".Species.csv",
+        output_file_ext           => ".Piechart.png",
         parameterSampleFile1Order => $def->{groups_order},
         parameterSampleFile1      => $groups,
         parameterSampleFile2      => $groups_vis_layout,
-        parameterFile1_ref        => [ "bowtie1_fungus_group4_pm_table", ".count\$" ],
+        parameterFile1_ref        => [ "bowtie1_fungus_group4_pm_table", ".category.count\$" ],
 #        parameterFile2            => $def->{fungus_group4_log},
         parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
         sh_direct                 => 1,
@@ -1060,8 +1060,8 @@ sub getSmallRNAConfig {
       );
     push @table_for_readSummary,      
     (
-      "bowtie1_tRNA_pm_table",              ".count\$",       "bowtie1_rRNA_pm_table",            ".count\$", "nonhost_genome_bacteria_group1_vis", ".Species.csv\$",
-      "nonhost_genome_bacteria_group2_vis", ".Species.csv\$", "nonhost_genome_fungus_group4_vis", ".Species.csv\$"
+      "bowtie1_tRNA_pm_table",              ".read.count\$",       "bowtie1_rRNA_pm_table",            ".read.count\$", "bowtie1_bacteria_group1_pm_table", ".read.count\$",
+      "bowtie1_bacteria_group2_pm_table", ".read.count\$", "bowtie1_fungus_group4_pm_table", ".read.count\$"
       );
     push @name_for_readSummary, ("Non host tRNA","Non host rRNA","HUman Microbiome Bacteria","Environment Bacteria","Fungus");
  
