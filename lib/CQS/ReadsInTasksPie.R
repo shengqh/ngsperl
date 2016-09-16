@@ -39,7 +39,7 @@ UnMapped<-resultTable["bowtie1_unmapped_reads",]
 tableForPieChart<-rbind(HostSmallRnaMapped,HostGenomeMappedReads,NonHostMapped,UnMapped)
 ggpieToFile(tableForPieChart,fileName=paste0(resultFile,".NonParallel.TaskReads.Piechart.png"),maxCategory=NA,textSize=textSize,reOrder=FALSE)
 #Group Pie chart
-ggpieGroupToFile(tableForPieChart,fileName=paste0(resultFile,".NonParallel.TaskReads.Piechart.png"),maxCategory=NA,textSize=textSize,reOrder=FALSE,
+ggpieGroupToFile(tableForPieChart,fileName=paste0(resultFile,".NonParallel.TaskReads.Group.Piechart.png"),maxCategory=NA,reOrder=FALSE,
 		groupFileList=groupFileList,
 		outFileName=paste0(resultFile,".NonParallel.TaskReads.PercentGroups.csv"),textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList)
 
