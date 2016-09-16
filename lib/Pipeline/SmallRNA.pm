@@ -1063,7 +1063,7 @@ sub getSmallRNAConfig {
       "bowtie1_tRNA_pm_table",              ".read.count\$",       "bowtie1_rRNA_pm_table",            ".read.count\$", "bowtie1_bacteria_group1_pm_table", ".read.count\$",
       "bowtie1_bacteria_group2_pm_table", ".read.count\$", "bowtie1_fungus_group4_pm_table", ".read.count\$"
       );
-    push @name_for_readSummary, ("Non host tRNA","Non host rRNA","HUman Microbiome Bacteria","Environment Bacteria","Fungus");
+    push @name_for_readSummary, ("Non host tRNA","Non host rRNA","Human Microbiome Bacteria","Environment Bacteria","Fungus");
  
     push @individual,
       (
@@ -1538,7 +1538,7 @@ sub getSmallRNAConfig {
     target_dir               => $data_visualization_dir . "/reads_mapping_summary",
     rtemplate                => "countTableVisFunctions.R,ReadsMappingSummary.R",
     output_file_ext          => ".ReadsMapping.Summary.csv",
-    parameterFile3_ref       =>[ "identical_sequence_count_table", ".read.count\$" ],
+    parameterFile1_ref       =>[ "identical_sequence_count_table", ".read.count\$" ],
     parameterSampleFile1_ref => \@table_for_readSummary,
     parameterSampleFile2      => $groups,
     parameterSampleFile3      => $groups_vis_layout,

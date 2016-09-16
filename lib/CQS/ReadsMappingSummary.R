@@ -7,8 +7,14 @@
 #readFiles<-c("/scratch/cqs/zhaos/vickers/20160909_smallRNA_3018-KCV-77_78_79_mouse/nonhost_library/bowtie1_tRNA_pm_table/result/tRNA_pm_KCV-77_78_79.read.count",
 #		"/scratch/cqs/zhaos/vickers/20160909_smallRNA_3018-KCV-77_78_79_mouse/nonhost_library/bowtie1_rRNA_pm_table/result/rRNA_pm_KCV-77_78_79.read.count")
 #readFilesModule<-c("Non-host tRNA","Non-host rRNA")
+resultFile<-outFile
+top100ReadFile<-parFile1
+readFileList<-parSampleFile1
+groupFileList<-parSampleFile2
+groupVisLayoutFileList<-parSampleFile3
 
 top100Table<-read.delim(top100ReadFile,header=T,row.names=1,as.is=T)
+readFiles<-read.delim(readFileList,header=F,as.is=T)[,1]
 mappingTable<-NULL
 for (readFile in readFiles) {
 	readsTable<-read.delim(readFile,header=T,row.names=1,as.is=T)
