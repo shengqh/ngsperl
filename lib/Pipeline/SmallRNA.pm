@@ -37,8 +37,9 @@ sub getSmallRNAConfig {
 
   my @table_for_correlation = ( "identical_sequence_count_table", ".count\$" );
   my @table_for_countSum    = ();
+  my @table_for_readSummary    = ();
   my @table_for_pieSummary  = ( "identical", ".dupcount" );
-
+  my @name_for_readSummary=();
   #print Dumper($config);
 
   my $search_not_identical  = ( !defined $def->{search_not_identical} )  || $def->{search_not_identical};
@@ -255,6 +256,9 @@ sub getSmallRNAConfig {
 
     push @table_for_pieSummary,  ( "bowtie1_genome_1mm_NTA_smallRNA_count", ".count\$" );
     push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".count\$" );
+    push @table_for_readSummary,
+          ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" );
+    push @name_for_readSummary, ("Host miRNA","Host tRNA","Host other small RNA");
     push @table_for_countSum,
       ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" );
     push @individual, ( "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_NTA_smallRNA_count" );
@@ -1054,7 +1058,13 @@ sub getSmallRNAConfig {
       "bowtie1_tRNA_pm_table",            ".category.count\$", "bowtie1_rRNA_pm_table",          ".count\$", "bowtie1_bacteria_group1_pm_table", ".count\$",
       "bowtie1_bacteria_group2_pm_table", ".count\$",          "bowtie1_fungus_group4_pm_table", ".count\$"
       );
-
+    push @table_for_readSummary,      
+    (
+      "bowtie1_tRNA_pm_table",              ".count\$",       "bowtie1_rRNA_pm_table",            ".count\$", "nonhost_genome_bacteria_group1_vis", ".Species.csv\$",
+      "nonhost_genome_bacteria_group2_vis", ".Species.csv\$", "nonhost_genome_fungus_group4_vis", ".Species.csv\$"
+      );
+    push @name_for_readSummary, ("Non host tRNA","Non host rRNA","HUman Microbiome Bacteria","Environment Bacteria","Fungus");
+ 
     push @individual,
       (
       "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",            "bowtie1_rRNA_pm",            "bowtie1_rRNA_pm_count",
@@ -1521,7 +1531,27 @@ sub getSmallRNAConfig {
       "mem"      => "10gb"
     },
   };
-  push @summary, ( "count_table_correlation", "reads_in_tasks", "reads_in_tasks_pie" );
+  my $name_for_readSummary_r="readFilesModule=c('".join("','",@name_for_readSummary)."')";
+  $config->{reads_mapping_summary} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $data_visualization_dir . "/reads_mapping_summary",
+    rtemplate                => "countTableVisFunctions.R,ReadsMappingSummary.R",
+    output_file_ext          => ".ReadsMapping.Summary.csv",
+    parameterFile3_ref       =>[ "identical_sequence_count_table", ".read.count\$" ],
+    parameterSampleFile1_ref => \@table_for_readSummary,
+    parameterSampleFile2      => $groups,
+    parameterSampleFile3      => $groups_vis_layout,
+    rCode=>$name_for_readSummary_r,
+    sh_direct => 1,
+    pbs       => {
+      "email"    => $def->{email},
+      "nodes"    => "1:ppn=1",
+      "walltime" => "12",
+      "mem"      => "10gb"
+    },
+  };
+  push @summary, ( "count_table_correlation", "reads_in_tasks", "reads_in_tasks_pie","reads_mapping_summary" );
 
   $config->{sequencetask} = {
     class      => "CQS::SequenceTask",
