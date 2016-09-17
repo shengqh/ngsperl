@@ -156,7 +156,7 @@ for (i in 1:nrow(countTableFileAll)) {
 		
 		#correlation distribution
 		countNumCor<-cor(countNumVsdGroup,use="pa",method="sp")
-		margin=c(min(10,max(nchar(colnames(countNumCor)))/2),min(10,max(nchar(row.names(countNumCor)))/2))
+		margin=c(min(10,max(nchar(colnames(countNumCor)))/1.5),min(10,max(nchar(row.names(countNumCor)))/1.5))
 		
 		colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
 #		if (min(countNumCor,na.rm=T)<0) {

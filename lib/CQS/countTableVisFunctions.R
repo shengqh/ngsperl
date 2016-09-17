@@ -485,6 +485,18 @@ aggregateCountTable<-function(x,group,method=sum) {
 	return(result)
 }
 
+shortSpeciesName<-function(x) {
+	x<-sapply(strsplit(x," |_"),function(x) {
+				if (length(x)<=3) {
+					paste(x,collapse=" ")
+				} else if (grepl("^\\d+$",x[2])) {
+					paste(x[1:3],collapse=" ")
+				} else {
+					paste(x[1:2],collapse=" ")
+				}
+			})
+}
+
 countTableToSpecies<-function(dat,databaseLogFile="",outFileName="",shortName=T) {
 	if (databaseLogFile!="") { #Species Count Table
 		databaseLog<-read.delim(databaseLogFile,header=T,as.is=T)
@@ -498,21 +510,16 @@ countTableToSpecies<-function(dat,databaseLogFile="",outFileName="",shortName=T)
 		
 		#short name
 		if (shortName) {
-			row.names(mappingResult2Species)<-sapply(strsplit(row.names(mappingResult2Species)," |_"),function(x) {
-						if (length(x)<=3) {
-							paste(x,collapse=" ")
-						} else if (grepl("^\\d+$",x[2])) {
-							paste(x[1:3],collapse=" ")
-						} else {
-							paste(x[1:2],collapse=" ")
-						}
-					})
+			row.names(mappingResult2Species)<-shortSpeciesName(row.names(mappingResult2Species))
 		}
 		if (outFileName!="") {
 			write.csv(mappingResult2Species,outFileName)
 		}
 	} else {
 		mappingResult2Species<-dat
+		if (shortName) {
+			row.names(mappingResult2Species)<-shortSpeciesName(row.names(mappingResult2Species))
+		}
 	}
 	return(mappingResult2Species)
 }
