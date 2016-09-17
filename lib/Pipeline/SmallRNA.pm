@@ -466,7 +466,7 @@ sub getSmallRNAConfig {
           output_file              => ".HostGenome.miRNA.DESeq2.Matrix",
           output_file_ext          => ".png",
           parameterSampleFile1_ref => [ "deseq2_miRNA_isomiR", "_DESeq2.csv\$", "deseq2_miRNA_NTA", "_DESeq2.csv\$", "deseq2_miRNA_isomiR_NTA", "_DESeq2.csv\$" ],
-          parameterSampleFile2     => $def->{pairs_host_deseq2_vis_layout},
+          parameterSampleFile2     => $def->{pairs_host_miRNA_deseq2_vis_layout},
           sh_direct                => 1,
           pbs                      => {
             "email"    => $def->{email},
