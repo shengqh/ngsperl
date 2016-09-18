@@ -489,7 +489,7 @@ shortSpeciesName<-function(x) {
 	x<-sapply(strsplit(x," |_"),function(x) {
 				if (length(x)<=3) {
 					paste(x,collapse=" ")
-				} else if (grepl("^\\d+$",x[2])) {
+				} else if (grepl("^\\d+$",x[2]) | x[2]=="ATCC") {
 					paste(x[1:3],collapse=" ")
 				} else {
 					paste(x[1:2],collapse=" ")

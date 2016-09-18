@@ -65,6 +65,7 @@ for (i in 1:nrow(countTableFileAll)) {
 	if (nrow(count)==0) {
 		next;
 	}
+	count[is.na(count)]<-0
 	
 	colClass<-sapply(count, class)
 	countNotNumIndex<-which(colnames(count) == "Feature_length" | (colClass!="numeric" & colClass!="integer"))
@@ -129,16 +130,17 @@ for (i in 1:nrow(countTableFileAll)) {
 	
 	png(paste0(countTableFile,".Correlation.png"),width=2000,height=2000,res=300)
 	if(nrow(countNum) < 20){
+	  labRow=NULL
 	  margin=c(min(10,max(nchar(colnames(countNumCor)))/2),min(10,max(nchar(row.names(countNumCor)))/2))
-	  heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
 	}else{
+	  labRow=""
 	  margin=c(min(10,max(nchar(colnames(countNumCor)))/2),5)
-	  heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow="",margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
 	}
+	heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=labRow,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
 	dev.off()
 	if (ncol(countNumCor)>3) {
 		png(paste0(countTableFile,".Correlation.Cluster.png"),width=2000,height=2000,res=300)
-		heatmap3(countNumCor,scale="none",balanceColor=T,margin=margin,col=col,legendfun=legendfun)
+		heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun)
 		dev.off()
 	}
 	
