@@ -69,6 +69,7 @@ sub perform {
   my $faFile     = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $gatk_jar   = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
+  my $indelRealignment   = get_option( $config, $section, "indel_realignment",       0 );
   my $fixMisencodedQuals   = get_option( $config, $section, "fixMisencodedQuals",       0 ) ? "-fixMisencodedQuals" : "";
   my $baq                  = get_option( $config, $section, "samtools_baq_calibration", 0 );
   my $slim                 = get_option( $config, $section, "slim_print_reads",         1 );
