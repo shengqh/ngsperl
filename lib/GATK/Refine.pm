@@ -254,7 +254,7 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $final_file   = "${sample_name}${rmdupResultName}.recal${slimResultName}${indelResultName}${baqResultName}.bam ";
+    my $final_file   = "${sample_name}${rmdupResultName}.recal${slimResultName}${indelResultName}${baqResultName}.bam";
     my @result_files = ();
     push( @result_files, "${result_dir}/${final_file}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
