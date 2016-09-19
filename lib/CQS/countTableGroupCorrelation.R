@@ -129,13 +129,8 @@ for (i in 1:nrow(countTableFileAll)) {
 	}
 	
 	png(paste0(countTableFile,".Correlation.png"),width=2000,height=2000,res=300)
-	if(nrow(countNum) < 20){
-	  labRow=NULL
-	  margin=c(min(10,max(nchar(colnames(countNumCor)))/2),min(10,max(nchar(row.names(countNumCor)))/2))
-	}else{
-	  labRow=""
-	  margin=c(min(10,max(nchar(colnames(countNumCor)))/2),5)
-	}
+	labRow=NULL
+	margin=c(min(10,max(nchar(colnames(countNumCor)))/2),min(10,max(nchar(row.names(countNumCor)))/2))
 	heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=labRow,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
 	dev.off()
 	if (ncol(countNumCor)>3) {
@@ -151,9 +146,14 @@ for (i in 1:nrow(countTableFileAll)) {
 		countNumVsdGroup<-mergeTableBySampleGroup(countNumVsd,sampleToGroup)
 		
 		#heatmap
-		margin=c(min(10,max(nchar(colnames(countNumVsdGroup)))/2),min(10,max(nchar(row.names(countNumVsdGroup)))/2))
+		margin=c(min(10,max(nchar(colnames(countNumVsdGroup)))/1.5),min(10,max(nchar(row.names(countNumVsdGroup)))/2))
 		png(paste0(countTableFile,".Group.heatmap.png"),width=2000,height=2000,res=300)
-		heatmap3(countNumVsdGroup,dist=dist,margin=margin,balanceColor=TRUE,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100))
+		if(nrow(countNumVsdGroup) < 20){
+			heatmap3(countNumVsdGroup,dist=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100))
+		}else{
+			margin[2]<-5
+			heatmap3(countNumVsdGroup,dist=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,labRow="",col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100))
+		}
 		dev.off()
 		
 		#correlation distribution

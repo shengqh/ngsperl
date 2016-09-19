@@ -35,7 +35,7 @@ sub getSmallRNAConfig {
   my @individual = @{$individual_ref};
   my @summary    = @{$summary_ref};
 
-  my @table_for_correlation = ( "identical_sequence_count_table", ".count\$" );
+  my @table_for_correlation = ( "identical_sequence_count_table", "^(?!.*?read).*\.count\$" );
   my @table_for_countSum    = ();
   my @table_for_readSummary    = ();
   my @table_for_pieSummary  = ( "identical", ".dupcount" );
@@ -255,7 +255,7 @@ sub getSmallRNAConfig {
     };
 
     push @table_for_pieSummary,  ( "bowtie1_genome_1mm_NTA_smallRNA_count", ".count\$" );
-    push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".count\$" );
+    push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "^(?!.*?read).*\.count\$" );
     push @table_for_readSummary,
           ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$" );
     push @name_for_readSummary, ("Host miRNA","Host tRNA","Host other small RNA");
@@ -1050,7 +1050,7 @@ sub getSmallRNAConfig {
 
     push @table_for_correlation,
       (
-      "bowtie1_tRNA_pm_table",              ".count\$",       "bowtie1_rRNA_pm_table",            ".count\$", "bowtie1_bacteria_group1_pm_table", ".category.count\$",
+      "bowtie1_tRNA_pm_table",              "^(?!.*?read).*\.count\$",       "bowtie1_rRNA_pm_table",            "^(?!.*?read).*\.count\$", "bowtie1_bacteria_group1_pm_table", ".category.count\$",
       "bowtie1_bacteria_group2_pm_table", ".category.count\$", "bowtie1_fungus_group4_pm_table", ".category.count\$"
       );
     push @table_for_countSum,
