@@ -130,7 +130,7 @@ sub perform {
     if ( !$sorted ) {
       my $presortedFile = $sample_name . ".sorted.bam";
       print $pbs "
-if [[ -s inputFile && ! -s $presortedFile ]]; then
+if [[ -s $inputFile && ! -s $presortedFile ]]; then
   echo sort=`date` 
   samtools sort -@ $thread -m 4G -o $presortedFile $inputFile
   samtools index $presortedFile
