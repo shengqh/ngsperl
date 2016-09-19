@@ -207,7 +207,7 @@ fi
 
     if ($baq) {
       print $pbs "
-if [[ -s $inputFile && !-s $final_file ]]; then
+if [[ -s $inputFile && ! -s $final_file ]]; then
   echo baq = `date` 
   samtools calmd -Abr $inputFile $faFile > $final_file samtools index $final_file 
 fi
