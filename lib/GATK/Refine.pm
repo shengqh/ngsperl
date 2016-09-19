@@ -153,15 +153,22 @@ fi
       $rmlist    = $rmlist . " $rmdupFile $rmdupFileIndex";
     }
 
-    my $recalTable   = "${sample_name}${rmdupResultName}.recal.table";
-    my $recalFile    = "${sample_name}${rmdupResultName}.recal.bam";
-    my $slimFile     = "${sample_name}${rmdupResultName}.recal${slimResultName}.bam";
-    my $printOptions = "";
-    if ( $slim and !$use_self_slim_method ) {
-      $printOptions = " --simplifyBAM";
-      $recalFile    = $slimFile;
-    }
+    my $recalTable     = "${sample_name}${rmdupResultName}.recal.table";
+    my $recalFile      = "${sample_name}${rmdupResultName}.recal.bam";
     my $recalFileIndex = change_extension( $recalFile, ".bai" );
+    my $slimFile       = "${sample_name}${rmdupResultName}.recal${slimResultName}.bam";
+    my $slimFileIndex  = change_extension( $slimFile, ".bai" );
+    my $printOptions   = "";
+    if ($slim) {
+      if ( !$use_self_slim_method ) {
+        $printOptions   = " --simplifyBAM";
+        $recalFile      = $slimFile;
+        $recalFileIndex = $slimFileIndex;
+      }
+      else {
+        $slimFileIndex = $slimFile . ".bai";
+      }
+    }
 
     print $pbs "
 if [[ -s $inputFile && ! -s $recalTable ]]; then
