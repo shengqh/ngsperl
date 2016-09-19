@@ -144,7 +144,7 @@ fi
       my $rmdupFile = $sample_name . ".rmdup.bam";
       my $rmdupFileIndex = change_extension( $rmdupFile, ".bai" );
       print $pbs "
-if [[ -s inputFile && ! -s $rmdupFile ]]; then
+if [[ -s $inputFile && ! -s $rmdupFile ]]; then
   echo MarkDuplicates=`date` 
   java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
 fi
