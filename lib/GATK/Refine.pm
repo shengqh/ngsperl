@@ -216,7 +216,7 @@ fi
     }
 
     print $pbs "
-if [[ -s $final_file && !-s ${final_file}.stat ]]; then 
+if [[ -s $final_file && ! -s ${final_file}.stat ]]; then 
   echo flagstat = `date` 
   samtools flagstat $final_file > ${final_file}.stat 
   rm $rmlist 
