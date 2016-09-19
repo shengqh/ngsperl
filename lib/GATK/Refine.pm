@@ -112,7 +112,7 @@ sub perform {
     my $slimResultName  = $slim             ? ".slim"  : "";
     my $indelResultName = $indelRealignment ? ".indel" : "";
     my $baqResultName   = $baq              ? ".baq"   : "";
-    my $final_file      = "${sample_name}${rmdupResultName}.recal${indelResultName}${slimResultName}${baqResultName}.bam";
+    my $final_file      = "${sample_name}${rmdupResultName}.recal${slimResultName}${indelResultName}${baqResultName}.bam";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
