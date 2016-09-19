@@ -175,7 +175,7 @@ if [[ -s $recalTable && ! -s $recalFile ]]; then
 fi
 ";
     if ( $slim and $use_self_slim_method ) {
-      $rmlist = $rmlist . " $recalFile $recalFile.bai";
+      $rmlist = $rmlist . " $recalFile $recalFileIndex";
       print $pbs "
 if [[ -s $recalFile && ! -s $slimFile ]]; then
   echo slim=`date` 
