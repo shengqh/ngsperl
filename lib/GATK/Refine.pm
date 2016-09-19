@@ -52,6 +52,7 @@ sub getKnownSitesVcf {
 
 #https://software.broadinstitute.org/gatk/blog?id=7712
 #indel local alignment has been dropped out, since it is just not useful enough anymore when you're calling variants with haplotype-based tools like HaplotypeCaller and MuTect2
+#But for muTect1, you may still consider to perform indel_realignment
 #
 #https://software.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_gatk_engine_CommandLineGATK.php--simplifyBAM
 #--simplifyBAM / -simplifyBAM
