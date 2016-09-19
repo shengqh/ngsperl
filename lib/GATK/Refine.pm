@@ -159,15 +159,10 @@ fi
     my $slimFile       = "${sample_name}${rmdupResultName}.recal${slimResultName}.bam";
     my $slimFileIndex  = change_extension( $slimFile, ".bai" );
     my $printOptions   = "";
-    if ($slim) {
-      if ( !$use_self_slim_method ) {
-        $printOptions   = " --simplifyBAM";
-        $recalFile      = $slimFile;
-        $recalFileIndex = $slimFileIndex;
-      }
-      else {
-        $slimFileIndex = $slimFile . ".bai";
-      }
+    if ( $slim and !$use_self_slim_method ) {
+      $printOptions   = " --simplifyBAM";
+      $recalFile      = $slimFile;
+      $recalFileIndex = $slimFileIndex;
     }
 
     print $pbs "
@@ -188,38 +183,39 @@ if [[ -s $recalFile && ! -s $slimFile ]]; then
   echo slim=`date` 
   samtools view -h $recalFile | sed 's/\\tBD\:Z\:[^\\t]*//' | sed 's/\\tPG\:Z\:[^\\t]*//' | sed 's/\\tBI\:Z\:[^\\t]*//' | samtools view -S -b > $slimFile
   samtools index $slimFile
+  mv ${slimFile}.bai $slimFileIndex
 fi  
 ";
     }
-    $inputFile = $slimFile;
 
+    my $indelFile = "${sample_name}${rmdupResultName}.recal${slimResultName}${indelResultName}.bam";
+    my $indelFileIndex = change_extension( $indelFile, ".bai" );
     if ($indelRealignment) {
       my $intervalFile = "${sample_name}${rmdupResultName}.recal${slimResultName}${indelResultName}.intervals";
-      my $indel_file   = "${sample_name}${rmdupResultName}.recal${slimResultName}${indelResultName}.bam";
-      $rmlist = $rmlist . " $inputFile $inputFile.bai $intervalFile";
+      $rmlist = $rmlist . " $slimFile $slimFileIndex.bai $intervalFile";
       print $pbs "
-if [[ -s $inputFile && ! -s $indel_file ]]; then
+if [[ -s $slimFile && ! -s $indelFile ]]; then
   echo RealignerTargetCreator=`date` 
-  java $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $inputFile -R $faFile $indel_vcf -o $intervalFile $restrict_intervals
+  java $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $slimFile -R $faFile $indel_vcf -o $intervalFile $restrict_intervals
 fi
 
-if [[ -s $intervalFile && ! -s $indel_file ]]; then
+if [[ -s $intervalFile && ! -s $indelFile ]]; then
   echo IndelRealigner=`date` 
   #InDel parameter referenced: http://www.broadinstitute.org/gatk/guide/tagged?tag=local%20realignment
-  java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $fixMisencodedQuals -I $slimFile -R $faFile -targetIntervals $intervalFile $indel_vcf --consensusDeterminationModel USE_READS -LOD 0.4 -o $indel_file 
+  java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $fixMisencodedQuals -I $slimFile -R $faFile -targetIntervals $intervalFile $indel_vcf --consensusDeterminationModel USE_READS -LOD 0.4 -o $indelFile 
 fi  
 ";
-      $inputFile = $indel_file;
     }
 
     if ($baq) {
       print $pbs "
-if [[ -s $inputFile && ! -s $final_file ]]; then
+if [[ -s $indelFile && ! -s $final_file ]]; then
   echo baq = `date` 
-  samtools calmd -Abr $inputFile $faFile > $final_file samtools index $final_file 
+  samtools calmd -Abr $indelFile $faFile > $final_file 
+  samtools index $final_file 
 fi
 ";
-      $rmlist = $rmlist . " $inputFile $inputFile.bai ";
+      $rmlist = $rmlist . " $indelFile $indelFileIndex";
     }
 
     print $pbs "
