@@ -192,7 +192,7 @@ fi
     my $indelFileIndex = change_extension( $indelFile, ".bai" );
     if ($indelRealignment) {
       my $intervalFile = "${sample_name}${rmdupResultName}.recal${slimResultName}${indelResultName}.intervals";
-      $rmlist = $rmlist . " $slimFile $slimFileIndex.bai $intervalFile";
+      $rmlist = $rmlist . " $slimFile $slimFileIndex $intervalFile";
       print $pbs "
 if [[ -s $slimFile && ! -s $indelFile ]]; then
   echo RealignerTargetCreator=`date` 
