@@ -190,7 +190,7 @@ sub getRNASeqConfig {
 			class         => "CQS::CQSDatatable",
 			perform       => 1,
 			target_dir    => $target_dir . "/star_genetable",
-			option        => "-k 0 -v 6 -e -o ${task}_gene.count",
+			option        => "-k 0 -v 6 -e --fillMissingWithZero -o ${task}_gene.count",
 			source_ref    => "star_featurecount",
 			name_map_file => $name_map_file,
 			cqs_tools     => $cqstools,
