@@ -37,9 +37,10 @@ sub getSmallRNAConfig {
 
   my @table_for_correlation = ( "identical_sequence_count_table", "^(?!.*?read).*\.count\$" );
   my @table_for_countSum    = ();
-  my @table_for_readSummary    = ();
+  my @table_for_readSummary = ();
   my @table_for_pieSummary  = ( "identical", ".dupcount" );
-  my @name_for_readSummary=();
+  my @name_for_readSummary  = ();
+
   #print Dumper($config);
 
   my $search_not_identical  = ( !defined $def->{search_not_identical} )  || $def->{search_not_identical};
@@ -257,8 +258,8 @@ sub getSmallRNAConfig {
     push @table_for_pieSummary,  ( "bowtie1_genome_1mm_NTA_smallRNA_count", ".count\$" );
     push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "^(?!.*?read).*\.count\$" );
     push @table_for_readSummary,
-          ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$" );
-    push @name_for_readSummary, ("Host miRNA","Host tRNA","Host other small RNA");
+      ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$" );
+    push @name_for_readSummary, ( "Host miRNA", "Host tRNA", "Host other small RNA" );
     push @table_for_countSum,
       ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" );
     push @individual, ( "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_NTA_smallRNA_count" );
@@ -315,7 +316,7 @@ sub getSmallRNAConfig {
             "mem"      => "10gb"
           },
         },
-         deseq2_miRNA_NTA => {
+        deseq2_miRNA_NTA => {
           class                => "Comparison::DESeq2",
           perform              => 1,
           target_dir           => $host_genome_dir . "/deseq2_miRNA_NTA",
@@ -336,7 +337,7 @@ sub getSmallRNAConfig {
             "mem"      => "10gb"
           },
         },
-         deseq2_miRNA_isomiR => {
+        deseq2_miRNA_isomiR => {
           class                => "Comparison::DESeq2",
           perform              => 1,
           target_dir           => $host_genome_dir . "/deseq2_miRNA_isomiR",
@@ -478,7 +479,11 @@ sub getSmallRNAConfig {
       };
 
       $config = merge( $config, $comparison );
-      push @summary, ( "deseq2_miRNA", "deseq2_tRNA", "deseq2_tRNA_aminoacid", "deseq2_otherSmallRNA", "host_genome_deseq2_vis","deseq2_miRNA_NTA","deseq2_miRNA_isomiR","deseq2_miRNA_isomiR_NTA","host_genome_deseq2_miRNA_vis" );
+      push @summary,
+        (
+        "deseq2_miRNA",        "deseq2_tRNA",             "deseq2_tRNA_aminoacid", "deseq2_otherSmallRNA", "host_genome_deseq2_vis", "deseq2_miRNA_NTA",
+        "deseq2_miRNA_isomiR", "deseq2_miRNA_isomiR_NTA", "host_genome_deseq2_miRNA_vis"
+        );
     }
 
     if ( $do_comparison or defined $groups or defined $def->{tRNA_vis_group} ) {
@@ -552,13 +557,14 @@ sub getSmallRNAConfig {
         },
       },
       bowtie1_genome_host_reads_table => {
-        class            => "CQS::CQSDatatable",
-        perform          => 1,
-        target_dir       => $host_genome_dir . "/bowtie1_genome_host_reads_table",
-        source_ref       => [ "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.dupcount\$" ],
-        option           => "-k 2 -v 1",
-        sh_direct        => 1,
-        pbs              => {
+        class      => "CQS::CQSDatatable",
+        perform    => 1,
+        target_dir => $host_genome_dir . "/bowtie1_genome_host_reads_table",
+        source_ref => [ "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.dupcount\$" ],
+        option     => "-k 2 -v 1",
+        cqstools   => $def->{cqstools},
+        sh_direct  => 1,
+        pbs        => {
           "email"    => $def->{email},
           "nodes"    => "1:ppn=1",
           "walltime" => "1",
@@ -568,7 +574,7 @@ sub getSmallRNAConfig {
     };
     $config = merge( $config, $unmapped_reads );
     push @individual,           ( "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_genome_unmapped_reads" );
-    push @summary, ("bowtie1_genome_host_reads_table");
+    push @summary,              ("bowtie1_genome_host_reads_table");
     push @table_for_pieSummary, ( "bowtie1_genome_unmapped_reads",  ".dupcount" );
     $identical_ref = [ "bowtie1_genome_unmapped_reads", ".fastq.gz\$" ];
   }
@@ -864,11 +870,12 @@ sub getSmallRNAConfig {
         parameterSampleFile1      => $groups,
         parameterSampleFile2      => $groups_vis_layout,
         parameterFile1_ref        => [ "bowtie1_bacteria_group1_pm_table", ".category.count\$" ],
-#        parameterFile2            => $def->{bacteria_group1_log},
-        parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
-        rCode                     => 'maxCategory=4;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
-        sh_direct                 => 1,
-        pbs                       => {
+
+        #        parameterFile2            => $def->{bacteria_group1_log},
+        parameterFile3_ref => [ "fastqc_count_vis", ".Reads.csv\$" ],
+        rCode              => 'maxCategory=4;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+        sh_direct          => 1,
+        pbs                => {
           "email"    => $def->{email},
           "nodes"    => "1:ppn=1",
           "walltime" => "1",
@@ -943,11 +950,12 @@ sub getSmallRNAConfig {
         parameterSampleFile1      => $groups,
         parameterSampleFile2      => $groups_vis_layout,
         parameterFile1_ref        => [ "bowtie1_bacteria_group2_pm_table", ".category.count\$" ],
-#        parameterFile2            => $def->{bacteria_group2_log},
-        parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
-        rCode                     => 'maxCategory=5;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
-        sh_direct                 => 1,
-        pbs                       => {
+
+        #        parameterFile2            => $def->{bacteria_group2_log},
+        parameterFile3_ref => [ "fastqc_count_vis", ".Reads.csv\$" ],
+        rCode              => 'maxCategory=5;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+        sh_direct          => 1,
+        pbs                => {
           "email"    => $def->{email},
           "nodes"    => "1:ppn=1",
           "walltime" => "1",
@@ -1021,11 +1029,12 @@ sub getSmallRNAConfig {
         parameterSampleFile1      => $groups,
         parameterSampleFile2      => $groups_vis_layout,
         parameterFile1_ref        => [ "bowtie1_fungus_group4_pm_table", ".category.count\$" ],
-#        parameterFile2            => $def->{fungus_group4_log},
-        parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
-        sh_direct                 => 1,
-        rCode                     => 'maxCategory=8;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
-        pbs                       => {
+
+        #        parameterFile2            => $def->{fungus_group4_log},
+        parameterFile3_ref => [ "fastqc_count_vis", ".Reads.csv\$" ],
+        sh_direct          => 1,
+        rCode              => 'maxCategory=8;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+        pbs                => {
           "email"    => $def->{email},
           "nodes"    => "1:ppn=1",
           "walltime" => "1",
@@ -1065,21 +1074,21 @@ sub getSmallRNAConfig {
 
     push @table_for_correlation,
       (
-      "bowtie1_tRNA_pm_table",              "^(?!.*?read).*\.count\$",       "bowtie1_rRNA_pm_table",            "^(?!.*?read).*\.count\$", "bowtie1_bacteria_group1_pm_table", ".category.count\$",
-      "bowtie1_bacteria_group2_pm_table", ".category.count\$", "bowtie1_fungus_group4_pm_table", ".category.count\$"
+      "bowtie1_tRNA_pm_table",            "^(?!.*?read).*\.count\$", "bowtie1_rRNA_pm_table",          "^(?!.*?read).*\.count\$", "bowtie1_bacteria_group1_pm_table", ".category.count\$",
+      "bowtie1_bacteria_group2_pm_table", ".category.count\$",       "bowtie1_fungus_group4_pm_table", ".category.count\$"
       );
     push @table_for_countSum,
       (
       "bowtie1_tRNA_pm_table",            ".category.count\$", "bowtie1_rRNA_pm_table",          ".count\$", "bowtie1_bacteria_group1_pm_table", ".count\$",
       "bowtie1_bacteria_group2_pm_table", ".count\$",          "bowtie1_fungus_group4_pm_table", ".count\$"
       );
-    push @table_for_readSummary,      
-    (
-      "bowtie1_tRNA_pm_table",              ".read.count\$",       "bowtie1_rRNA_pm_table",            ".read.count\$", "bowtie1_bacteria_group1_pm_table", ".read.count\$",
+    push @table_for_readSummary,
+      (
+      "bowtie1_tRNA_pm_table",            ".read.count\$", "bowtie1_rRNA_pm_table",          ".read.count\$", "bowtie1_bacteria_group1_pm_table", ".read.count\$",
       "bowtie1_bacteria_group2_pm_table", ".read.count\$", "bowtie1_fungus_group4_pm_table", ".read.count\$"
       );
-    push @name_for_readSummary, ("Non host tRNA","Non host rRNA","Human Microbiome Bacteria","Environment Bacteria","Fungus");
- 
+    push @name_for_readSummary, ( "Non host tRNA", "Non host rRNA", "Human Microbiome Bacteria", "Environment Bacteria", "Fungus" );
+
     push @individual,
       (
       "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",            "bowtie1_rRNA_pm",            "bowtie1_rRNA_pm_count",
@@ -1492,8 +1501,9 @@ sub getSmallRNAConfig {
     rtemplate                => "countTableVisFunctions.R,ReadsInTasksPie.R",
     output_file_ext          => ".NonParallel.TaskReads.csv",
     parameterSampleFile1_ref => \@table_for_pieSummary,
-    parameterSampleFile2      => $groups,
-    parameterSampleFile3      => $groups_vis_layout,
+    parameterSampleFile2     => $groups,
+    parameterSampleFile3     => $groups_vis_layout,
+
     #    parameterFile3_ref       => [ "fastqc_count_vis", ".Reads.csv\$" ],
     sh_direct => 1,
     pbs       => {
@@ -1503,27 +1513,27 @@ sub getSmallRNAConfig {
       "mem"      => "10gb"
     },
   };
-  my $name_for_readSummary_r="readFilesModule=c('".join("','",@name_for_readSummary)."')";
+  my $name_for_readSummary_r = "readFilesModule=c('" . join( "','", @name_for_readSummary ) . "')";
   $config->{reads_mapping_summary} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
     target_dir               => $data_visualization_dir . "/reads_mapping_summary",
     rtemplate                => "countTableVisFunctions.R,ReadsMappingSummary.R",
     output_file_ext          => ".ReadsMapping.Summary.csv",
-    parameterFile1_ref       =>[ "identical_sequence_count_table", ".read.count\$" ],
+    parameterFile1_ref       => [ "identical_sequence_count_table", ".read.count\$" ],
     parameterSampleFile1_ref => \@table_for_readSummary,
-    parameterSampleFile2      => $groups,
-    parameterSampleFile3      => $groups_vis_layout,
-    rCode=>$name_for_readSummary_r,
-    sh_direct => 1,
-    pbs       => {
+    parameterSampleFile2     => $groups,
+    parameterSampleFile3     => $groups_vis_layout,
+    rCode                    => $name_for_readSummary_r,
+    sh_direct                => 1,
+    pbs                      => {
       "email"    => $def->{email},
       "nodes"    => "1:ppn=1",
       "walltime" => "12",
       "mem"      => "10gb"
     },
   };
-  push @summary, ( "count_table_correlation", "reads_in_tasks", "reads_in_tasks_pie","reads_mapping_summary" );
+  push @summary, ( "count_table_correlation", "reads_in_tasks", "reads_in_tasks_pie", "reads_mapping_summary" );
 
   if ($blast_unmapped_reads) {
     my $blast = {
@@ -1567,7 +1577,7 @@ sub getSmallRNAConfig {
     $config = merge( $config, $blast );
     push @summary, ( "bowtie1_unmapped_sequence_count_table", "bowtie1_unmapped_sequence_blast" );
   }
-  
+
   $config->{sequencetask} = {
     class      => "CQS::SequenceTask",
     perform    => 1,
