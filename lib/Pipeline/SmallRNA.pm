@@ -552,7 +552,7 @@ sub getSmallRNAConfig {
         },
       },
       bowtie1_genome_host_reads_table => {
-        class            => "CQS::DataTable",
+        class            => "CQS::CQSDatatable",
         perform          => 1,
         target_dir       => $host_genome_dir . "/bowtie1_genome_host_reads_table",
         source_ref       => [ "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.dupcount\$" ],
