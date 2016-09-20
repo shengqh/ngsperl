@@ -561,7 +561,7 @@ sub getSmallRNAConfig {
         perform    => 1,
         target_dir => $host_genome_dir . "/bowtie1_genome_host_reads_table",
         source_ref => [ "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.dupcount\$" ],
-        option     => "-k 2 -v 1",
+        option     => "-k 2 -v 1 --fillMissingWithZero",
         cqstools   => $def->{cqstools},
         sh_direct  => 1,
         pbs        => {
