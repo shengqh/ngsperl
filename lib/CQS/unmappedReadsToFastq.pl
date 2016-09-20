@@ -39,6 +39,7 @@ foreach my $smallRNAreadsFileEach ( split( ",", $smallRNAreadsFile ) ) {
   #	}
 }
 
+my %perfectmatchOnlyReads;
 if ( defined $perfectmatchReadsFile ) {
   foreach my $perfectmatchReadsFileEach ( split( ",", $perfectmatchReadsFile ) ) {
 
@@ -50,9 +51,11 @@ if ( defined $perfectmatchReadsFile ) {
       chomp;
       if (/_$/) {    #
         s/:CLIP_$//;
-        $readsDel{ '@' . $_ } = '';
-
-        #		push @mappedReads, $_;
+        my $readKey='@'.$_;
+        if (! exists $readsDel{$readKey}) { #Not in small RNA mapping result
+          $readsDel{$readKey} = '';
+          $perfectmatchOnlyReads{$readKey} = '';
+        }
       }
     }
   }
@@ -88,10 +91,6 @@ $outDupcountFile=~s/\.gz$/.dupcount/;
 #$outDupcountFile=$outDupcountFile.".dupcount";
 open RESULTCOUNT, ">$outDupcountFile" or die "error writing result: $!";
 print RESULTCOUNT "Query\tCount\tSequence\n";
-my $outMappedDupcountFile=$outFile;
-$outMappedDupcountFile=~s/\.unmapped\.fastq\.gz$/.mapped.dupcount/;
-open MAPPEDCOUNT, ">$outMappedDupcountFile" or die "error writing result: $!";
-print MAPPEDCOUNT "Query\tCount\tSequence\n";
 
 while ( my $line1 = <FASTQ> ) {
   my $line2   = <FASTQ>;
@@ -100,8 +99,6 @@ while ( my $line1 = <FASTQ> ) {
   my $readKey = ( split( " ", $line1 ) )[0];
   if ( exists $readsDel{$readKey} ) {
     delete $readsDel{$readKey};
-    $readKey=~s/^@//;
-    print MAPPEDCOUNT $fastq2Count{$readKey};
   }
   else {
     print RESULT $line1 . $line2 . $line3 . $line4;
@@ -111,7 +108,18 @@ while ( my $line1 = <FASTQ> ) {
 }
 close RESULT;
 close RESULTCOUNT;
-close MAPPEDCOUNT;
+
+if (%perfectmatchOnlyReads) {
+  my $outMappedDupcountFile=$outFile;
+  $outMappedDupcountFile=~s/\.unmapped\.fastq\.gz$/.mappedToHostGenome.dupcount/;
+  open MAPPEDCOUNT, ">$outMappedDupcountFile" or die "error writing result: $!";
+  print MAPPEDCOUNT "Query\tCount\tSequence\n";
+  foreach my $readKey (keys %perfectmatchOnlyReads) {
+    $readKey=~s/^@//;
+    print MAPPEDCOUNT $fastq2Count{$readKey};
+  }
+  close MAPPEDCOUNT;
+}
 
 if (%readsDel) {
   $readsDelCount = scalar( keys %readsDel );
