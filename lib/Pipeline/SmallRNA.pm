@@ -1435,49 +1435,6 @@ sub getSmallRNAConfig {
     push @table_for_pieSummary, ( "bowtie1_unmapped_reads", ".dupcount" );
   }
 
-  if ($blast_unmapped_reads) {
-    my $blast = {
-
-      bowtie1_unmapped_sequence_count_table => {
-        class           => "CQS::SmallRNASequenceCountTable",
-        perform         => 1,
-        target_dir      => $nonhost_blast_dir . "/bowtie1_unmapped_sequence_count_table",
-        option          => "",
-        source_ref      => [ "identical", ".dupcount\$" ],
-        fastq_files_ref => $identical_ref,
-        cqs_tools       => $def->{cqstools},
-        suffix          => "_unmapped",
-        sh_direct       => 1,
-        cluster         => $cluster,
-        pbs             => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "10",
-          "mem"      => "10gb"
-        },
-      },
-      bowtie1_unmapped_sequence_blast => {
-        class      => "Blast::Blastn",
-        perform    => 1,
-        target_dir => $nonhost_blast_dir . "/bowtie1_unmapped_sequence_blast",
-        option     => "",
-        source_ref => [ "bowtie1_unmapped_sequence_count_table", ".fasta\$" ],
-        sh_direct  => 0,
-        localdb    => $blast_localdb,
-        cluster    => $cluster,
-        pbs        => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=" . $def->{max_thread},
-          "walltime" => "10",
-          "mem"      => "10gb"
-        },
-      },
-    };
-
-    $config = merge( $config, $blast );
-    push @summary, ( "bowtie1_unmapped_sequence_count_table", "bowtie1_unmapped_sequence_blast" );
-  }
-
   $config->{count_table_correlation} = {
     class                     => "CQS::UniqueR",
     perform                   => 1,
@@ -1553,6 +1510,49 @@ sub getSmallRNAConfig {
   };
   push @summary, ( "count_table_correlation", "reads_in_tasks", "reads_in_tasks_pie","reads_mapping_summary" );
 
+  if ($blast_unmapped_reads) {
+    my $blast = {
+
+      bowtie1_unmapped_sequence_count_table => {
+        class           => "CQS::SmallRNASequenceCountTable",
+        perform         => 1,
+        target_dir      => $nonhost_blast_dir . "/bowtie1_unmapped_sequence_count_table",
+        option          => "",
+        source_ref      => [ "identical", ".dupcount\$" ],
+        fastq_files_ref => $identical_ref,
+        cqs_tools       => $def->{cqstools},
+        suffix          => "_unmapped",
+        sh_direct       => 1,
+        cluster         => $cluster,
+        pbs             => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "10",
+          "mem"      => "10gb"
+        },
+      },
+      bowtie1_unmapped_sequence_blast => {
+        class      => "Blast::Blastn",
+        perform    => 1,
+        target_dir => $nonhost_blast_dir . "/bowtie1_unmapped_sequence_blast",
+        option     => "",
+        source_ref => [ "bowtie1_unmapped_sequence_count_table", ".fasta\$" ],
+        sh_direct  => 0,
+        localdb    => $blast_localdb,
+        cluster    => $cluster,
+        pbs        => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=" . $def->{max_thread},
+          "walltime" => "10",
+          "mem"      => "10gb"
+        },
+      },
+    };
+
+    $config = merge( $config, $blast );
+    push @summary, ( "bowtie1_unmapped_sequence_count_table", "bowtie1_unmapped_sequence_blast" );
+  }
+  
   $config->{sequencetask} = {
     class      => "CQS::SequenceTask",
     perform    => 1,

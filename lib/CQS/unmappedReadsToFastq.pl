@@ -78,7 +78,7 @@ while(<DUPCOUNT>) {
 	my @lines=( split '\t', $_ );
 	$fastq2Count{$lines[0]}=$_;
 }
-my $dupCount = scalar( keys %fastq2Count );
+my $dupCount = scalar( keys %fastq2Count )-1; #-1 becasue of the title in dupcount file
 print "$dupCount reads recorded in DupCount file\n";
 
 #my $identicalFastqFileBase=basename($identicalFastqFile);
