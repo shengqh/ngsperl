@@ -78,14 +78,20 @@ while(<DUPCOUNT>) {
 	my @lines=( split '\t', $_ );
 	$fastq2Count{$lines[0]}=$_;
 }
+my $dupCount = scalar( keys %fastq2Count );
+print "$dupCount reads recorded in DupCount file\n";
 
 #my $identicalFastqFileBase=basename($identicalFastqFile);
 open RESULT, "| gzip -c > $outFile" or die "error writing result: $!";
 my $outDupcountFile=$outFile;
-$outDupcountFile=~s/\.gz$//;
-$outDupcountFile=$outDupcountFile.".dupcount";
+$outDupcountFile=~s/\.gz$/.dupcount/;
+#$outDupcountFile=$outDupcountFile.".dupcount";
 open RESULTCOUNT, ">$outDupcountFile" or die "error writing result: $!";
 print RESULTCOUNT "Query\tCount\tSequence\n";
+my $outMappedDupcountFile=$outFile;
+$outMappedDupcountFile=~s/\.unmapped\.fastq\.gz$/.mapped.dupcount/;
+open MAPPEDCOUNT, ">$outMappedDupcountFile" or die "error writing result: $!";
+print MAPPEDCOUNT "Query\tCount\tSequence\n";
 
 while ( my $line1 = <FASTQ> ) {
   my $line2   = <FASTQ>;
@@ -94,6 +100,8 @@ while ( my $line1 = <FASTQ> ) {
   my $readKey = ( split( " ", $line1 ) )[0];
   if ( exists $readsDel{$readKey} ) {
     delete $readsDel{$readKey};
+    $readKey=~s/^@//;
+    print MAPPEDCOUNT $fastq2Count{$readKey};
   }
   else {
     print RESULT $line1 . $line2 . $line3 . $line4;
@@ -103,12 +111,13 @@ while ( my $line1 = <FASTQ> ) {
 }
 close RESULT;
 close RESULTCOUNT;
+close MAPPEDCOUNT;
 
 if (%readsDel) {
   $readsDelCount = scalar( keys %readsDel );
-  print "WARNING: $readsDelCount reads labeled as unmapped but not found in fastq\n";
+  print "WARNING: $readsDelCount reads labeled as mapped but not found in fastq\n";
   my $temp = ( keys %readsDel )[0];
-  print( "First unmapped reads but not in fastq: " . $temp );
+  print( "First mapped reads but not in fastq: " . $temp );
 }
 
 print("Success!\n");

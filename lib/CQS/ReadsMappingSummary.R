@@ -30,5 +30,5 @@ temp<-apply(mappingTable,1,function(x) length(which(x=="Y")))
 mappingTable<-cbind(mappingTable,NumberOfModules=temp)
 
 result<-cbind(mappingTable,top100Table)
-write.csv(result,paste0(resultFile,".ReadsMapping.csv"))
+write.csv(result,paste0(resultFile,".ReadsMapping.Summary.csv"))
 
