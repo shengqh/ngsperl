@@ -554,7 +554,23 @@ sub getPrepareConfig {
       perform    => 1,
       target_dir => $class_independent_dir . "/identical_sequence_top100_read_blast",
       option     => "",
-      source_ref => [ "identical_sequence_count_table", "read.count.fasta\$" ],
+      source_ref => [ "identical_sequence_count_table", ".read.count.fasta\$" ],
+      sh_direct  => 0,
+      localdb    => $blast_localdb,
+      cluster    => $cluster,
+      pbs        => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=" . $def->{max_thread},
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    };
+    $preparation->{identical_sequence_top100_minicontig_blast} = {
+      class      => "Blast::Blastn",
+      perform    => 1,
+      target_dir => $class_independent_dir . "/identical_sequence_top100_minicontig_blast",
+      option     => "",
+      source_ref => [ "identical_sequence_count_table", ".minicontig.count.fasta\$" ],
       sh_direct  => 0,
       localdb    => $blast_localdb,
       cluster    => $cluster,

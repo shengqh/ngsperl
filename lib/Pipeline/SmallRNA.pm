@@ -1534,6 +1534,10 @@ sub getSmallRNAConfig {
     },
   };
   push @summary, ( "count_table_correlation", "reads_in_tasks", "reads_in_tasks_pie", "reads_mapping_summary" );
+  
+  if($def->{blast_top100_reads}){
+    push @summary, ( "identical_sequence_top100_contig_blast", "identical_sequence_top100_read_blast", "identical_sequence_top100_minicontig_blast" );
+  }
 
   if ($blast_unmapped_reads) {
     my $blast = {
