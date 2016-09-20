@@ -550,10 +550,25 @@ sub getSmallRNAConfig {
           "walltime" => "1",
           "mem"      => "10gb"
         },
+      },
+      bowtie1_genome_host_reads_table => {
+        class            => "CQS::DataTable",
+        perform          => 1,
+        target_dir       => $host_genome_dir . "/bowtie1_genome_host_reads_table",
+        source_ref       => [ "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.dupcount\$" ],
+        option           => "-k 2 -v 1",
+        sh_direct        => 1,
+        pbs              => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
       }
     };
     $config = merge( $config, $unmapped_reads );
     push @individual,           ( "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_genome_unmapped_reads" );
+    push @summary, ("bowtie1_genome_host_reads_table");
     push @table_for_pieSummary, ( "bowtie1_genome_unmapped_reads",  ".dupcount" );
     $identical_ref = [ "bowtie1_genome_unmapped_reads", ".fastq.gz\$" ];
   }
