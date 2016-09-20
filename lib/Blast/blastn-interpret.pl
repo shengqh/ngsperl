@@ -53,10 +53,10 @@ foreach my $file ( split( ",", $input_file ) ) {
     $genome =~ s/PREDICTED: //g;
     $genome =~ s/Homologies in //g;
     
-    my $additional = "";
-    if ( $genome =~ /ribosomal RNA/i || $genome =~ /rRNA/i ) {
-      $additional = " rRNA";
-    }
+    #my $additional = "";
+    #if ( $genome =~ /ribosomal RNA/i || $genome =~ /rRNA/i ) {
+    #  $additional = " rRNA";
+    #}
 
     if ( $genome =~ /human/i || $genome =~ /homo sapiens/i ) {
       $genome = "Human";
@@ -90,7 +90,7 @@ foreach my $file ( split( ",", $input_file ) ) {
       }
     }
     
-    $genome = $genome . $additional;
+    #$genome = $genome . $additional;
     
     #print $seq, "\t", $genome, "\n";
     $res{$genome}{$seq} = 1;

@@ -546,7 +546,7 @@ sub getPrepareConfig {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=" . $def->{max_thread},
         "walltime" => "72",
-        "mem"      => "10gb"
+        "mem"      => "40gb"
       },
     };
     $preparation->{identical_sequence_top100_read_blast} = {
@@ -562,7 +562,7 @@ sub getPrepareConfig {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=" . $def->{max_thread},
         "walltime" => "72",
-        "mem"      => "10gb"
+        "mem"      => "40gb"
       },
     };
   }
