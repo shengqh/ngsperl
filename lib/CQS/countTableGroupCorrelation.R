@@ -68,12 +68,12 @@ for (i in 1:nrow(countTableFileAll)) {
 	count[is.na(count)]<-0
 	
 	colClass<-sapply(count, class)
-	countNotNumIndex<-which(colnames(count) == "Feature_length" | (colClass!="numeric" & colClass!="integer"))
+	countNotNumIndex<-which(colnames(count) %in% c("Feature_length","Location","Sequence") | (colClass!="numeric" & colClass!="integer"))
 	if (length(countNotNumIndex)==0) {
 		countNotNumIndex<-0;
 	} else {
 		countNotNumIndex<-max(countNotNumIndex)
-	}
+	} #Please note here we only use columns after the rightest Non-Number column as count data
 	countNum<-count[,c((countNotNumIndex+1):ncol(count))]
 	countNum<-round(countNum,0)
 	#remove genes with total reads 0
