@@ -140,6 +140,7 @@ for (i in 1:nrow(countTableFileAll)) {
 	}
 	
 	if (groupFileList!="") {
+    cexColGroup<-1
 		sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
 		#keep the groups with samples in the count table
 		sampleToGroup<-sampleToGroup[which(sampleToGroup[,1] %in% colnames(countNumVsd)),]
@@ -149,10 +150,10 @@ for (i in 1:nrow(countTableFileAll)) {
 		margin=c(min(10,max(nchar(colnames(countNumVsdGroup)))/1.5),min(10,max(nchar(row.names(countNumVsdGroup)))/2))
 		png(paste0(countTableFile,".Group.heatmap.png"),width=2000,height=2000,res=300)
 		if(nrow(countNumVsdGroup) < 20){
-			heatmap3(countNumVsdGroup,dist=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100))
+			heatmap3(countNumVsdGroup,dist=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
 		}else{
 			margin[2]<-5
-			heatmap3(countNumVsdGroup,dist=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,labRow="",col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100))
+			heatmap3(countNumVsdGroup,dist=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,labRow="",col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
 		}
 		dev.off()
 		
@@ -192,13 +193,13 @@ for (i in 1:nrow(countTableFileAll)) {
 		
 		
 		png(paste0(countTableFile,".Group.Correlation.png"),width=2000,height=2000,res=300)
-		heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
+		heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
 		dev.off()
 		if (ncol(countNumCor)<=3 | any(is.na(cor(countNumCor,use="pa")))) {
 			saveInError(paste0("Less than 3 samples. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(Sys.Date(),".warning"))
 		} else {
 			png(paste0(countTableFile,".Group.Correlation.Cluster.png"),width=2000,height=2000,res=300)
-			heatmap3(countNumCor,scale="none",balanceColor=T,margin=margin,col=col,legendfun=legendfun)
+			heatmap3(countNumCor,scale="none",balanceColor=T,margin=margin,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
 			dev.off()
 		}
 	}
