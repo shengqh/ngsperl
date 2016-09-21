@@ -27,7 +27,7 @@ for (readFile in readFiles) {
 }
 colnames(mappingTable)<-readFilesModule
 temp<-apply(mappingTable,1,function(x) length(which(x=="Y")))
-mappingTable<-cbind(mappingTable,NumberOfModules=temp)
+mappingTable<-cbind(mappingTable,NumberOfModulesMapped=temp)
 
 result<-cbind(mappingTable,top100Table)
 write.csv(result,paste0(resultFile,".ReadsMapping.Summary.csv"))
