@@ -4,6 +4,7 @@ import sys
 import logging
 import os
 
+#this bam2bed is specific designed for DNASeq without structure vairantion
 parser = argparse.ArgumentParser(description="Convert SAM/BAM to bed. \nFor paired end data, only the fragment length between min-fragment-length and max-fragment-length will be exported. The reference start will be the minimum start of read1 and read2 and the reference end will be reference start plus fragment length. The strand will be set as same as read1.",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
@@ -50,7 +51,8 @@ try:
       
       if read.next_reference_start > read.reference_start:
         continue
-      elif read.next_reference_start == read.reference_start and read.is_read2:
+      
+      if read.next_reference_start == read.reference_start and read.is_read2:
         continue
       
       fragment_length = read.reference_end - read.next_reference_start
