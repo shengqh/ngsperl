@@ -52,11 +52,6 @@ foreach my $file ( split( ",", $input_file ) ) {
     my $genome = $parts[2];
     $genome =~ s/PREDICTED: //g;
     $genome =~ s/Homologies in //g;
-    
-    #my $additional = "";
-    #if ( $genome =~ /ribosomal RNA/i || $genome =~ /rRNA/i ) {
-    #  $additional = " rRNA";
-    #}
 
     if ( $genome =~ /human/i || $genome =~ /homo sapiens/i ) {
       $genome = "Human";
@@ -89,15 +84,13 @@ foreach my $file ( split( ",", $input_file ) ) {
         }
       }
     }
-    
-    #$genome = $genome . $additional;
-    
-    #print $seq, "\t", $genome, "\n";
+
     $res{$genome}{$seq} = 1;
   }
   close($input);
 }
 
+#merge genome whose mapped reads are contained in another genome
 my %merged;
 my $index = 0;
 while (1) {
@@ -124,7 +117,7 @@ while (1) {
 
     my $issubset = 1;
     foreach my $seq (@another_sequences) {
-      if ( !exists $sequenceMap{$seq} ) {
+      if ( not exists $sequenceMap{$seq} ) {
         $issubset = 0;
         last;
       }
@@ -142,20 +135,112 @@ while (1) {
   $index++;
 }
 
-open( my $output, ">$output_file" ) or die "Cannot open $output_file";
-printf $output "genome\tunique_sequence_count\tsequences\n";
+sub getSequenceGenomeMap {
+  my $merged = shift;
+  my $result = {};
+  foreach my $name ( keys %$merged ) {
+    my @sequences = @{ $merged->{$name} };
+    foreach my $seq (@sequences) {
+      if ( not exists $result->{$seq} ) {
+        $result->{$seq} = {};
+      }
+      $result->{$seq}->{$name} = 1;
+    }
+  }
 
-my @sorted_genomes = sort {
+  return $result;
+}
+
+#remove genome without unique sequence
+while (1) {
+
+  #build sequence/genome map
+  my $sequenceGenomeMap = getSequenceGenomeMap( \%merged );
+
+  #sort genomes by increasing of count
+  my @sorted_genomes = sort {
+    my $counta = scalar( @{ $merged{$a} } );
+    my $countb = scalar( @{ $merged{$b} } );
+    $counta <=> $countb;
+  } keys %merged;
+
+  #remove first genome without unique sequence
+  my $removed = 0;
+  foreach my $genome (@sorted_genomes) {
+    my $unique    = 0;
+    my @sequences = @{$merged{$genome}};
+    foreach my $sequence (@sequences) {
+      if ( scalar( keys %{ $sequenceGenomeMap->{$sequence} } ) == 1 ) {
+        $unique = 1;
+        last;
+      }
+    }
+
+    if ( not $unique ) {
+      $removed = 1;
+      delete $merged{$genome};
+      last;
+    }
+  }
+
+  if ( not $removed ) {
+    last;
+  }
+}
+
+my $sequenceGenomeMap = getSequenceGenomeMap( \%merged );
+my @sorted_genomes    = sort {
   my $counta = scalar( @{ $merged{$a} } );
   my $countb = scalar( @{ $merged{$b} } );
-  $countb <=> $counta
+  $countb <=> $counta;
 } keys %merged;
 
+my $sequenceFile = $output_file;
+$sequenceFile =~ s{\.[^.]*$}{.sequences.tsv};
+open( my $output, ">$sequenceFile" ) or die "Cannot open $sequenceFile";
+printf $output "sequence\t" . join( "\t", @sorted_genomes ) . "\n";
+
+my @sorted_sequences = sort keys %$sequenceGenomeMap;
+if(index($sorted_sequences[0], "_")){
+  @sorted_sequences = sort {
+    my ($counta) = $a =~ /_(\d+)$/;
+    my ($countb) = $b =~ /_(\d+)$/;
+    $countb <=> $counta;
+  } @sorted_sequences;
+};
+
+foreach my $seq (@sorted_sequences ) {
+  printf $output $seq;
+  my %genomes = %{ $sequenceGenomeMap->{$seq} };
+  foreach my $genome (@sorted_genomes) {
+    if ( exists $genomes{$genome} ) {
+      printf $output "\t1";
+    }
+    else {
+      printf $output "\t0";
+    }
+  }
+  printf $output "\n";
+}
+
+close($output);
+
+open( $output, ">$output_file" ) or die "Cannot open $output_file";
+printf $output "genome\tsequence_count\tunique_sequence_count\n";
+
 foreach my $name (@sorted_genomes) {
-  my @sequences    = @{ $merged{$name} };
-  my $count        = scalar(@sequences);
+  my @sequences           = @{ $merged{$name} };
+  my $uniqueSequenceCount = 0;
+  foreach my $seq (@sequences) {
+    my $genomes = $sequenceGenomeMap->{$seq};
+    if ( scalar( keys %$genomes ) == 1 ) {
+      $uniqueSequenceCount++;
+    }
+  }
+
+  my $count = scalar(@sequences);
   my $sequence_str = join( ";", @sequences );
-  printf $output "%s\t%d\t%s\n", $name, $count, $sequence_str;
+  printf $output "%s\t%d\t%d\n", $name, $count, $uniqueSequenceCount;
 }
 
 close($output);

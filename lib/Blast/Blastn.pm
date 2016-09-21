@@ -58,7 +58,10 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $interpret_result );
     print $pbs "
-perl $blastn $option -i $sample -o $blast_result -t $thread
+if [ ! -s $blast_result ]; then
+  perl $blastn $option -i $sample -o $blast_result -t $thread
+fi
+
 perl $blastn_interpret -i $blast_result -o $interpret_result
 ";
     $self->close_pbs( $pbs, $pbs_file );
@@ -86,10 +89,10 @@ sub result {
   for my $sample_name ( sort keys %raw_files ) {
     my @result_files = ();
 
-    my $blast_result     = $sample_name . ".blastn.tsv";
     my $interpret_result = $sample_name . ".table.tsv";
-    push( @result_files, "${result_dir}/$blast_result" );
-    push( @result_files, "${result_dir}/$interpret_result" );
+    push( @result_files, "${result_dir}/${sample_name}.blastn.tsv" );
+    push( @result_files, "${result_dir}/${sample_name}.table.tsv" );
+    push( @result_files, "${result_dir}/${sample_name}.table.sequences.tsv" );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
