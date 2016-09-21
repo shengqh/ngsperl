@@ -81,10 +81,11 @@ sub getSmallRNAConfig {
         min_median_read      => $DE_min_median_read_top100,
         add_count_one        => $DE_add_count_one,
         pbs                  => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "10",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
         },
       },
       deseq2_top100_contigs => {
@@ -102,10 +103,11 @@ sub getSmallRNAConfig {
         min_median_read      => $DE_min_median_read_top100,
         add_count_one        => $DE_add_count_one,
         pbs                  => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "10",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
         },
       },
       deseq2_top100_reads_vis => {
@@ -119,10 +121,11 @@ sub getSmallRNAConfig {
         parameterSampleFile2     => $def->{pairs_top100_deseq2_vis_layout},
         sh_direct                => 1,
         pbs                      => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       },
       deseq2_top100_contigs_vis => {
@@ -136,10 +139,11 @@ sub getSmallRNAConfig {
         parameterSampleFile2     => $def->{pairs_top100_deseq2_vis_layout},
         sh_direct                => 1,
         pbs                      => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       },
     };
@@ -169,10 +173,11 @@ sub getSmallRNAConfig {
         mappedonly    => 1,
         cluster       => $cluster,
         pbs           => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=" . $def->{max_thread},
-          "walltime" => "72",
-          "mem"      => "40gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=" . $def->{max_thread},
+          "walltime"  => "72",
+          "mem"       => "40gb"
         },
       },
       bowtie1_genome_1mm_NTA_smallRNA_count => {
@@ -189,10 +194,11 @@ sub getSmallRNAConfig {
         sh_direct       => 1,
         cluster         => $cluster,
         pbs             => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "72",
-          "mem"      => "40gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "72",
+          "mem"       => "40gb"
         },
       },
       bowtie1_genome_1mm_NTA_smallRNA_table => {
@@ -206,10 +212,11 @@ sub getSmallRNAConfig {
         sh_direct  => 1,
         cluster    => $cluster,
         pbs        => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "10",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
         },
       },
       bowtie1_genome_1mm_NTA_smallRNA_category => {
@@ -226,10 +233,11 @@ sub getSmallRNAConfig {
         rCode                     => 'textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
         sh_direct                 => 1,
         pbs                       => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       },
       host_genome_tRNA_category => {
@@ -247,10 +255,11 @@ sub getSmallRNAConfig {
         rCode                     => 'maxCategory=3;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
         sh_direct                 => 1,
         pbs                       => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       },
     };
@@ -280,10 +289,11 @@ sub getSmallRNAConfig {
         mappedonly    => 1,
         cluster       => $cluster,
         pbs           => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=" . $def->{max_thread},
-          "walltime" => "72",
-          "mem"      => "40gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=" . $def->{max_thread},
+          "walltime"  => "72",
+          "mem"       => "40gb"
         },
       };
       push @individual, ("bowtie1_genome_1mm_notidentical");
@@ -310,10 +320,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         deseq2_miRNA_NTA => {
@@ -331,10 +342,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         deseq2_miRNA_isomiR => {
@@ -352,10 +364,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         deseq2_miRNA_isomiR_NTA => {
@@ -373,10 +386,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         deseq2_tRNA => {
@@ -394,10 +408,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         deseq2_tRNA_aminoacid => {
@@ -415,10 +430,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         deseq2_otherSmallRNA => {
@@ -436,10 +452,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         host_genome_deseq2_vis => {
@@ -453,10 +470,11 @@ sub getSmallRNAConfig {
           parameterSampleFile2     => $def->{pairs_host_deseq2_vis_layout},
           sh_direct                => 1,
           pbs                      => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "1",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
           },
         },
         host_genome_deseq2_miRNA_vis => {
@@ -470,10 +488,11 @@ sub getSmallRNAConfig {
           parameterSampleFile2     => $def->{pairs_host_miRNA_deseq2_vis_layout},
           sh_direct                => 1,
           pbs                      => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "1",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
           },
         },
       };
@@ -510,10 +529,11 @@ sub getSmallRNAConfig {
         parameterSampleFile3_ref => $trna_sig_result,
         sh_direct                => 1,
         pbs                      => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       };
       push @summary, ("host_genome_tRNA_PositionVis");
@@ -531,10 +551,11 @@ sub getSmallRNAConfig {
         sh_direct  => 1,
         cluster    => $cluster,
         pbs        => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "10",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
         },
       },
 
@@ -550,10 +571,11 @@ sub getSmallRNAConfig {
         output_other_ext => "_clipped_identical.unmapped.fastq.dupcount,_clipped_identical.mappedToHostGenome.dupcount",
         sh_direct        => 1,
         pbs              => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       },
       bowtie1_genome_host_reads_table => {
@@ -565,20 +587,20 @@ sub getSmallRNAConfig {
         cqstools   => $def->{cqstools},
         sh_direct  => 1,
         pbs        => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       }
     };
     $config = merge( $config, $unmapped_reads );
-    push @individual,           ( "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_genome_unmapped_reads" );
-    push @summary,              ("bowtie1_genome_host_reads_table");
-    push @table_for_pieSummary, ( "bowtie1_genome_unmapped_reads",  ".dupcount" );
-    push @table_for_readSummary,
-      ( "bowtie1_genome_host_reads_table", ".count\$" );
-    push @name_for_readSummary, ( "Host Genome");
+    push @individual,            ( "bowtie1_genome_1mm_NTA_pmnames",  "bowtie1_genome_unmapped_reads" );
+    push @summary,               ("bowtie1_genome_host_reads_table");
+    push @table_for_pieSummary,  ( "bowtie1_genome_unmapped_reads",   ".dupcount" );
+    push @table_for_readSummary, ( "bowtie1_genome_host_reads_table", ".count\$" );
+    push @name_for_readSummary,  ("Host Genome");
     $identical_ref = [ "bowtie1_genome_unmapped_reads", ".fastq.gz\$" ];
   }
 
@@ -599,10 +621,11 @@ sub getSmallRNAConfig {
         mappedonly    => 1,
         cluster       => $cluster,
         pbs           => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=" . $def->{max_thread},
-          "walltime" => "72",
-          "mem"      => "40gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=" . $def->{max_thread},
+          "walltime"  => "72",
+          "mem"       => "40gb"
         },
       },
       bowtie1_miRBase_pm_count => {
@@ -616,10 +639,11 @@ sub getSmallRNAConfig {
         sh_direct    => 1,
         cluster      => $cluster,
         pbs          => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "72",
-          "mem"      => "40gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "72",
+          "mem"       => "40gb"
         },
       },
       bowtie1_miRBase_pm_table => {
@@ -633,10 +657,11 @@ sub getSmallRNAConfig {
         sh_direct  => 1,
         cluster    => $cluster,
         pbs        => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "10",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
         },
       }
     };
@@ -667,10 +692,11 @@ sub getSmallRNAConfig {
         bowtie1_index => $def->{bowtie1_tRNA_index},
         option        => $def->{bowtie1_option_pm},
         pbs           => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=8'
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '72',
+          'mem'       => '40gb',
+          'nodes'     => '1:ppn=8'
         }
       },
 
@@ -685,10 +711,11 @@ sub getSmallRNAConfig {
         cqs_tools    => $def->{cqstools},
         seqcount_ref => [ "identical", ".dupcount\$" ],
         pbs          => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '72',
+          'mem'       => '40gb',
+          'nodes'     => '1:ppn=1'
         },
       },
 
@@ -703,10 +730,11 @@ sub getSmallRNAConfig {
         option     => $non_host_table_option . ' --categoryMapFile ' . $def->{trna_category_map},
         prefix     => 'tRNA_pm_',
         pbs        => {
-          'email'    => $def->{email},
-          'walltime' => '10',
-          'mem'      => '10gb',
-          'nodes'    => '1:ppn=1'
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '10',
+          'mem'       => '10gb',
+          'nodes'     => '1:ppn=1'
         },
       },
       nonhost_library_tRNA_vis => {
@@ -724,20 +752,22 @@ sub getSmallRNAConfig {
         rCode                     => 'maxCategory=3;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
         sh_direct                 => 1,
         pbs                       => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       },
 
       #unmapped reads to rRNA
       bowtie1_rRNA_pm => {
         pbs => {
-          'email'    => $def->{email},
-          'walltime' => '10',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=8'
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '10',
+          'mem'       => '40gb',
+          'nodes'     => '1:ppn=8'
         },
         cluster       => $cluster,
         sh_direct     => 1,
@@ -761,10 +791,11 @@ sub getSmallRNAConfig {
         cqs_tools    => $def->{cqstools},
         seqcount_ref => [ "identical", ".dupcount\$" ],
         pbs          => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '72',
+          'mem'       => '40gb',
+          'nodes'     => '1:ppn=1'
         },
       },
 
@@ -779,10 +810,11 @@ sub getSmallRNAConfig {
         option     => $non_host_table_option,
         prefix     => 'rRNA_pm_',
         pbs        => {
-          'email'    => $def->{email},
-          'walltime' => '10',
-          'mem'      => '10gb',
-          'nodes'    => '1:ppn=1'
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '10',
+          'mem'       => '10gb',
+          'nodes'     => '1:ppn=1'
         },
       },
       nonhost_library_rRNA_vis => {
@@ -800,20 +832,22 @@ sub getSmallRNAConfig {
         rCode                     => 'maxCategory=NA;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
         sh_direct                 => 1,
         pbs                       => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       },
 
       #unmapped reads to group1 bacterial
       bowtie1_bacteria_group1_pm => {
         pbs => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=8'
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '72',
+          'mem'       => '40gb',
+          'nodes'     => '1:ppn=8'
         },
         cluster       => $cluster,
         sh_direct     => 1,
@@ -829,10 +863,11 @@ sub getSmallRNAConfig {
 
       bowtie1_bacteria_group1_pm_count => {
         pbs => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '72',
+          'mem'       => '40gb',
+          'nodes'     => '1:ppn=1'
         },
         cluster      => $cluster,
         sh_direct    => 1,
@@ -856,10 +891,11 @@ sub getSmallRNAConfig {
         option     => $non_host_table_option . ' --categoryMapFile ' . $def->{bacteria_group1_species_map},
         prefix     => 'bacteria_group1_pm_',
         pbs        => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '72',
+          'mem'       => '40gb',
+          'nodes'     => '1:ppn=1'
         }
       },
       nonhost_genome_bacteria_group1_vis => {
@@ -879,20 +915,22 @@ sub getSmallRNAConfig {
         rCode              => 'maxCategory=4;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
         sh_direct          => 1,
         pbs                => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       },
 
       #unmapped reads to group2 bacterial
       bowtie1_bacteria_group2_pm => {
         pbs => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=8'
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '72',
+          'mem'       => '40gb',
+          'nodes'     => '1:ppn=8'
         },
         cluster       => $cluster,
         sh_direct     => 1,
@@ -908,10 +946,11 @@ sub getSmallRNAConfig {
 
       bowtie1_bacteria_group2_pm_count => {
         pbs => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '72',
+          'mem'       => '40gb',
+          'nodes'     => '1:ppn=1'
         },
         cluster      => $cluster,
         sh_direct    => 1,
@@ -935,10 +974,11 @@ sub getSmallRNAConfig {
         option     => $non_host_table_option . ' --categoryMapFile ' . $def->{bacteria_group2_species_map},
         prefix     => 'bacteria_group2_pm_',
         pbs        => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '72',
+          'mem'       => '40gb',
+          'nodes'     => '1:ppn=1'
         }
       },
 
@@ -959,20 +999,22 @@ sub getSmallRNAConfig {
         rCode              => 'maxCategory=5;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
         sh_direct          => 1,
         pbs                => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       },
 
       #unmapped reads to group4 fungus
       bowtie1_fungus_group4_pm => {
         pbs => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=8'
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '72',
+          'mem'       => '40gb',
+          'nodes'     => '1:ppn=8'
         },
         cluster       => $cluster,
         sh_direct     => 1,
@@ -988,10 +1030,11 @@ sub getSmallRNAConfig {
 
       bowtie1_fungus_group4_pm_count => {
         pbs => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '72',
+          'mem'       => '40gb',
+          'nodes'     => '1:ppn=1'
         },
         cluster      => $cluster,
         sh_direct    => 1,
@@ -1015,10 +1058,11 @@ sub getSmallRNAConfig {
         option     => $non_host_table_option . ' --categoryMapFile ' . $def->{fungus_group4_species_map},
         prefix     => 'fungus_group4_pm_',
         pbs        => {
-          'email'    => $def->{email},
-          'walltime' => '72',
-          'mem'      => '40gb',
-          'nodes'    => '1:ppn=1'
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '72',
+          'mem'       => '40gb',
+          'nodes'     => '1:ppn=1'
         }
       },
       nonhost_genome_fungus_group4_vis => {
@@ -1038,10 +1082,11 @@ sub getSmallRNAConfig {
         sh_direct          => 1,
         rCode              => 'maxCategory=8;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
         pbs                => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       },
       nonhost_overlap_vis => {
@@ -1065,10 +1110,11 @@ sub getSmallRNAConfig {
         sh_direct          => 1,
         rCode              => 'maxCategory=8;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
         pbs                => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       },
     };
@@ -1131,10 +1177,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         deseq2_nonhost_tRNA_category => {
@@ -1152,10 +1199,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         deseq2_nonhost_tRNA_species => {
@@ -1173,10 +1221,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         deseq2_nonhost_tRNA_type => {
@@ -1194,10 +1243,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         deseq2_nonhost_tRNA_anticodon => {
@@ -1215,10 +1265,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         deseq2_nonhost_rRNA => {
@@ -1236,10 +1287,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         nonhost_library_deseq2_vis => {
@@ -1254,10 +1306,11 @@ sub getSmallRNAConfig {
           parameterSampleFile2     => $def->{pairs_nonHosttRNArRNA_deseq2_vis_layout},
           sh_direct                => 1,
           pbs                      => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "1",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
           },
         },
 
@@ -1276,10 +1329,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         deseq2_bacteria_group1_reads => {
@@ -1297,10 +1351,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         deseq2_bacteria_group2 => {
@@ -1318,10 +1373,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         deseq2_bacteria_group2_reads => {
@@ -1339,10 +1395,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         deseq2_fungus_group4 => {
@@ -1360,10 +1417,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         deseq2_fungus_group4_reads => {
@@ -1381,10 +1439,11 @@ sub getSmallRNAConfig {
           min_median_read      => $DE_min_median_read_smallRNA,
           add_count_one        => $DE_add_count_one,
           pbs                  => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
         nonhost_genome_deseq2_vis => {
@@ -1398,10 +1457,11 @@ sub getSmallRNAConfig {
           parameterSampleFile2     => $def->{pairs_nonHostGroups_deseq2_vis_layout},
           sh_direct                => 1,
           pbs                      => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "1",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
           },
         },
         nonhost_genome_deseq2_reads_vis => {
@@ -1415,10 +1475,11 @@ sub getSmallRNAConfig {
           parameterSampleFile2     => $def->{pairs_nonHostGroups_deseq2_vis_layout},
           sh_direct                => 1,
           pbs                      => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "1",
-            "mem"      => "10gb"
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
           },
         },
       };
@@ -1474,10 +1535,11 @@ sub getSmallRNAConfig {
     parameterSampleFile2      => $groups,
     sh_direct                 => 1,
     pbs                       => {
-      "email"    => $def->{email},
-      "nodes"    => "1:ppn=1",
-      "walltime" => "1",
-      "mem"      => "10gb"
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
     },
     },
     $config->{reads_in_tasks} = {
@@ -1490,10 +1552,11 @@ sub getSmallRNAConfig {
     parameterFile3_ref       => [ "fastqc_count_vis", ".Reads.csv\$" ],
     sh_direct                => 1,
     pbs                      => {
-      "email"    => $def->{email},
-      "nodes"    => "1:ppn=1",
-      "walltime" => "12",
-      "mem"      => "10gb"
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "10gb"
     },
     };
   $config->{reads_in_tasks_pie} = {
@@ -1510,10 +1573,11 @@ sub getSmallRNAConfig {
     #    parameterFile3_ref       => [ "fastqc_count_vis", ".Reads.csv\$" ],
     sh_direct => 1,
     pbs       => {
-      "email"    => $def->{email},
-      "nodes"    => "1:ppn=1",
-      "walltime" => "12",
-      "mem"      => "10gb"
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "10gb"
     },
   };
   my $name_for_readSummary_r = "readFilesModule=c('" . join( "','", @name_for_readSummary ) . "')";
@@ -1530,15 +1594,16 @@ sub getSmallRNAConfig {
     rCode                    => $name_for_readSummary_r,
     sh_direct                => 1,
     pbs                      => {
-      "email"    => $def->{email},
-      "nodes"    => "1:ppn=1",
-      "walltime" => "12",
-      "mem"      => "10gb"
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "10gb"
     },
   };
   push @summary, ( "count_table_correlation", "reads_in_tasks", "reads_in_tasks_pie", "reads_mapping_summary" );
-  
-  if($def->{blast_top100_reads}){
+
+  if ( $def->{blast_top100_reads} ) {
     push @summary, ( "identical_sequence_top100_contig_blast", "identical_sequence_top100_read_blast", "identical_sequence_top100_minicontig_blast" );
   }
 
@@ -1557,10 +1622,11 @@ sub getSmallRNAConfig {
         sh_direct       => 1,
         cluster         => $cluster,
         pbs             => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "10",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
         },
       },
       bowtie1_unmapped_sequence_blast => {
@@ -1573,10 +1639,11 @@ sub getSmallRNAConfig {
         localdb    => $blast_localdb,
         cluster    => $cluster,
         pbs        => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=" . $def->{max_thread},
-          "walltime" => "10",
-          "mem"      => "10gb"
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=" . $def->{max_thread},
+          "walltime"  => "10",
+          "mem"       => "10gb"
         },
       },
     };
@@ -1597,10 +1664,11 @@ sub getSmallRNAConfig {
     sh_direct => 0,
     cluster   => $cluster,
     pbs       => {
-      "email"    => $def->{email},
-      "nodes"    => "1:ppn=" . $def->{max_thread},
-      "walltime" => $def->{sequencetask_run_time},
-      "mem"      => "40gb"
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=" . $def->{max_thread},
+      "walltime"  => $def->{sequencetask_run_time},
+      "mem"       => "40gb"
     },
   };
 

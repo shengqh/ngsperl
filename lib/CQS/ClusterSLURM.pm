@@ -34,7 +34,9 @@ sub get_cluster_desc {
         $email = $hash{$_};
       }
       elsif ( $_ eq "emailType" ) {
-        $emailType = $hash{$_};
+        if (defined $hash{$_}) {
+          $emailType = $hash{$_};
+        }
       }
       elsif ( $_ eq "mem" ) {
         $mem = $hash{$_};
