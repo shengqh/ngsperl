@@ -25,6 +25,7 @@ sub getSmallRNAConfig {
   $def->{VERSION} = $VERSION;
 
   my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
+  my $task_name=$def->{task_name},
 
   my $host_genome_dir        = create_directory_or_die( $def->{target_dir} . "/host_genome" );
   my $nonhost_library_dir    = create_directory_or_die( $def->{target_dir} . "/nonhost_library" );
@@ -1298,12 +1299,11 @@ sub getSmallRNAConfig {
           class      => "CQS::UniqueR",
           perform    => 1,
           target_dir => $data_visualization_dir . "/nonhost_library_deseq2_vis",
-          ,
           rtemplate                => "DESeq2_all_vis.R",
           output_file              => ".NonHostLibrary.DESeq2.Matrix",
           output_file_ext          => ".png",
-          parameterSampleFile1_ref => [ "deseq2_nonhost_tRNA", "_DESeq2.csv\$", "deseq2_nonhost_rRNA", "_DESeq2.csv\$" ],
-          parameterSampleFile2     => $def->{pairs_nonHosttRNArRNA_deseq2_vis_layout},
+          parameterSampleFile1_ref => [ "deseq2_nonhost_tRNA", "_DESeq2.csv\$", "deseq2_nonhost_tRNA_category", "_DESeq2.csv\$","deseq2_nonhost_tRNA_species", "_DESeq2.csv\$","deseq2_nonhost_tRNA_type", "_DESeq2.csv\$","deseq2_nonhost_tRNA_type", "_DESeq2.csv\$" ],
+          parameterSampleFile2     => $def->{pairs_nonHostLibrary_deseq2_vis_layout},
           sh_direct                => 1,
           pbs                      => {
             "email"     => $def->{email},
@@ -1587,7 +1587,7 @@ sub getSmallRNAConfig {
     target_dir               => $data_visualization_dir . "/reads_mapping_summary",
     rtemplate                => "countTableVisFunctions.R,ReadsMappingSummary.R",
     output_file_ext          => ".ReadsMapping.Summary.csv",
-    parameterFile1_ref       => [ "identical_sequence_count_table", ".read.count\$" ],
+    parameterFile1_ref       => [ "identical_sequence_count_table", $task_name."_sequence.read.count\$" ],
     parameterSampleFile1_ref => \@table_for_readSummary,
     parameterSampleFile2     => $groups,
     parameterSampleFile3     => $groups_vis_layout,

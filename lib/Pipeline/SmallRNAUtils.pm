@@ -127,7 +127,7 @@ sub initializeDefaultOptions {
   }
 
   if ( !defined $def->{DE_add_count_one} ) {
-    $def->{DE_add_count_one} = 1;
+    $def->{DE_add_count_one} = 0;
   }
 
   if ( !defined $def->{DE_min_median_read_top100} ) {
