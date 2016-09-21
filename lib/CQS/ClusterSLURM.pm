@@ -18,6 +18,7 @@ sub new {
 sub get_cluster_desc {
   my $walltime = "48";
   my $email    = "";
+  my $emailType    = "ALL";
   my $mem      = "15000M";
   my $nodes    = "1";
   my $ntasks   = "";
@@ -31,6 +32,9 @@ sub get_cluster_desc {
       }
       elsif ( $_ eq "email" ) {
         $email = $hash{$_};
+      }
+      elsif ( $_ eq "emailType" ) {
+        $emailType = $hash{$_};
       }
       elsif ( $_ eq "mem" ) {
         $mem = $hash{$_};
@@ -72,7 +76,7 @@ sub get_cluster_desc {
   my $pbs_desc = <<SBATCH;
 #!/bin/bash
 #SBATCH --mail-user=$email
-#SBATCH --mail-type=ALL
+#SBATCH --mail-type=$emailType
 #SBATCH --nodes=$nodes
 #SBATCH --ntasks=$ntasks
 #SBATCH --time=$walltime
