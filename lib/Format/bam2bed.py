@@ -88,7 +88,7 @@ try:
     output.flush()
     accepted += 1
   
-  logger.info("totally processed %d, accepted %d" % (processed, accepted))
+  logger.info("totally processed %d, accepted %d, ignore_unpaired %d" % (processed, accepted, len(saved_read)))
   samfile.close()
   output.close()
   if args.output != "-":
