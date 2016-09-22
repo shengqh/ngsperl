@@ -234,8 +234,11 @@ sub parse_param_file {
       my $result = $myclass->result( $config, $refSectionName, $pattern );
       foreach my $k ( sort keys %{$result} ) {
         my @files = @{ $result->{$k} };
-        return $files[0];
+        if (scalar(@files) > 0){
+          return $files[0];
+        }
       }
+      die "section $refSectionName return nothing!";
     }
   }
 
