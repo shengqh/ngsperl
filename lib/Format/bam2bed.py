@@ -91,19 +91,15 @@ try:
       strand = "+"
       shift = args.shift_forward
     output.write("%s\t%d\t%d\t%s\t%d\t%s\n" % (read.reference_name, reference_start + shift, reference_end + shift, read.qname, mapq, strand))
-    output.flush()
     accepted += 1
   
   logger.info("totally processed %d, accepted %d, ignore_unpaired %d" % (processed, accepted, len(saved_read)))
-  samfile.close()
-  output.close()
   if args.output != "-":
     if os.path.isfile(args.output):
       os.delete(args.output)
     os.rename(tmpfile, args.output)
-except:
+finally:
   samfile.close()
   output.close()
-  raise
         
   
