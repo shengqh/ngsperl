@@ -87,7 +87,7 @@ fi
     my $bed_file = $sample_name . ".converted.bed";
     $rmlist = $rmlist . " $bed_file";
     print $pbs "
-if [[ -s $bam_file and ! -s $bed_file ]]; then
+if [[ -s $bam_file && ! -s $bed_file ]]; then
   echo bamtobed=`date` 
   bedtools bamtobed $option -i $bam_file > $bed_file 
 fi
@@ -108,7 +108,7 @@ fi
 if [ -s $bed_file ]; then
   echo sort_bed=`date` 
   sort -k1,1V -k2,2n -k3,3n $bed_file > $final_file
-  rm $rmlist;
+  #rm $rmlist;
 fi
 ";
     $self->close_pbs( $pbs, $pbs_file );
