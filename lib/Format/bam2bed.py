@@ -49,7 +49,7 @@ try:
       continue;
     
     if read.is_paired:
-      if not read.is_proper_pair:
+      if not read.is_proper_pair or read.mate_is_unmapped:
         continue;
       
       if read.reference_name != read.next_reference_name:
@@ -60,6 +60,9 @@ try:
         continue
       
       paired_read = saved_read[read.qname]
+      
+      assert read.is_read1 != paired_read.is_read1, "Something went wrong (two records indicates same read1 or read2: %s), ignored" % read.qname
+      
       try:
         reference_start = min(read.reference_start, paired_read.reference_start)
         reference_end = max(read.reference_end, paired_read.reference_end)
