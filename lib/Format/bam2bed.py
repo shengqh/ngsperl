@@ -52,10 +52,10 @@ try:
       if not read.is_proper_pair or read.mate_is_unmapped:
         continue;
       
-      if read.reference_name != read.next_reference_name:
+      if read.is_reverse == read.mate_is_reverse:
         continue;
       
-      if read.is_reverse == read.mate_is_reverse:
+      if read.reference_name != read.next_reference_name:
         continue;
       
       if not saved_read.has_key(read.qname):
