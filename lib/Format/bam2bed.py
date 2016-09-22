@@ -55,6 +55,9 @@ try:
       if read.reference_name != read.next_reference_name:
         continue;
       
+      if read.is_reverse == read.mate_is_reverse:
+        continue;
+      
       if not saved_read.has_key(read.qname):
         saved_read[read.qname] = read
         continue
