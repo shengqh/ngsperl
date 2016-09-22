@@ -22,27 +22,13 @@ sub new {
   return $self;
 }
 
-sub get_final_file {
-  my ( $sample_name, $blacklistfile, $shiftPosition ) = @_;
-  my $result = $sample_name;
-  if ( defined $blacklistfile ) {
-    $result = $sample_name . ".confident";
-  }
-
-  if ($shiftPosition) {
-    $result = $sample_name . ".shifted";
-  }
-  $result = $result . ".bed";
-  return $result;
-}
-
 sub perform {
   my ( $self, $config, $section ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $genome = parse_param_file($config, $section, "genome_fasta", 1);
+  my $genome = parse_param_file($config, $section, "chromosome_length_file", 1);
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
