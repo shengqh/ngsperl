@@ -1302,7 +1302,7 @@ sub getSmallRNAConfig {
           rtemplate                => "DESeq2_all_vis.R",
           output_file              => ".NonHostLibrary.DESeq2.Matrix",
           output_file_ext          => ".png",
-          parameterSampleFile1_ref => [ "deseq2_nonhost_tRNA", "_DESeq2.csv\$", "deseq2_nonhost_tRNA_category", "_DESeq2.csv\$","deseq2_nonhost_tRNA_species", "_DESeq2.csv\$","deseq2_nonhost_tRNA_type", "_DESeq2.csv\$","deseq2_nonhost_tRNA_type", "_DESeq2.csv\$" ],
+          parameterSampleFile1_ref => [ "deseq2_nonhost_tRNA", "_DESeq2.csv\$", "deseq2_nonhost_tRNA_category", "_DESeq2.csv\$","deseq2_nonhost_tRNA_species", "_DESeq2.csv\$","deseq2_nonhost_tRNA_type", "_DESeq2.csv\$","deseq2_nonhost_tRNA_anticodon", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_nonHostLibrary_deseq2_vis_layout},
           sh_direct                => 1,
           pbs                      => {
@@ -1487,7 +1487,7 @@ sub getSmallRNAConfig {
       $config = merge( $config, $unmapped_comparison );
       push @summary,
         (
-        "deseq2_nonhost_tRNA",        "deseq2_nonhost_tRNA_species", "deseq2_nonhost_tRNA_type",     "deseq2_nonhost_tRNA_anticodon",
+        "deseq2_nonhost_tRNA",       "deseq2_nonhost_tRNA_category", "deseq2_nonhost_tRNA_species", "deseq2_nonhost_tRNA_type",     "deseq2_nonhost_tRNA_anticodon",
         "deseq2_nonhost_rRNA",        "nonhost_library_deseq2_vis",  "deseq2_bacteria_group1",       "deseq2_bacteria_group2",
         "deseq2_fungus_group4",       "nonhost_genome_deseq2_vis",   "deseq2_bacteria_group1_reads", "deseq2_bacteria_group2_reads",
         "deseq2_fungus_group4_reads", "nonhost_genome_deseq2_reads_vis"
