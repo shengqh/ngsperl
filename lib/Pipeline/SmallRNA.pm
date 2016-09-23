@@ -670,7 +670,7 @@ sub getSmallRNAConfig {
     $config = merge( $config, $mirbase );
 
     #		push @table_for_correlation, ( "bowtie1_miRBase_pm_table", ".count\$" );
-    push @table_for_countSum, ( "bowtie1_miRBase_pm_table", ".count\$" );
+    push @table_for_countSum, ( "bowtie1_miRBase_pm_table", "^(?!.*?read).*\.count\$" );
     push @individual,         ( "bowtie1_miRBase_pm",       "bowtie1_miRBase_pm_count" );
     push @summary,            ("bowtie1_miRBase_pm_table");
 
@@ -1129,8 +1129,8 @@ sub getSmallRNAConfig {
       );
     push @table_for_countSum,
       (
-      "bowtie1_tRNA_pm_table",            ".category.count\$", "bowtie1_rRNA_pm_table",          ".count\$", "bowtie1_bacteria_group1_pm_table", ".count\$",
-      "bowtie1_bacteria_group2_pm_table", ".count\$",          "bowtie1_fungus_group4_pm_table", ".count\$"
+      "bowtie1_tRNA_pm_table",            ".category.count\$", "bowtie1_rRNA_pm_table",          "^(?!.*?read).*\.count\$", "bowtie1_bacteria_group1_pm_table", "^(?!.*?read).*\.count\$",
+      "bowtie1_bacteria_group2_pm_table", "^(?!.*?read).*\.count\$",          "bowtie1_fungus_group4_pm_table", "^(?!.*?read).*\.count\$"
       );
     push @table_for_readSummary,
       (
