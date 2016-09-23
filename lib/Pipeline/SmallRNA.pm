@@ -1129,7 +1129,7 @@ sub getSmallRNAConfig {
       );
     push @table_for_countSum,
       (
-      "bowtie1_tRNA_pm_table",            ".category.count\$", "bowtie1_rRNA_pm_table",          ".category.count\$", "bowtie1_bacteria_group1_pm_table", ".category.count\$",
+      "bowtie1_tRNA_pm_table",            ".category.count\$", "bowtie1_rRNA_pm_table",          "$task_name\.count\$", "bowtie1_bacteria_group1_pm_table", ".category.count\$",
       "bowtie1_bacteria_group2_pm_table", ".category.count\$",          "bowtie1_fungus_group4_pm_table", ".category.count\$"
       );
     push @table_for_readSummary,
