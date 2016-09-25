@@ -57,7 +57,7 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sample_files_str = ( scalar(@sample_files) == 2 ) ? $sample_files[0] . " " . $sample_files[1] : $sample_files[0];
+    my $sample_files_str = ( scalar(@sample_files) == 2 ) ? "\"" . $sample_files[0] . "\" \"" . $sample_files[1] . "\"" : "\"" . $sample_files[0] . "\"";
 
     my $unsorted_bam_file = $sample_name . ".unsorted.bam";
     my $clean_sam_file    = $sample_name . ".unsorted.clean.bam";

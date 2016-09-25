@@ -32,6 +32,7 @@ sub perform {
   my $samformat               = get_option( $config, $section, "samformat",               1 );
   my $mappedonly              = get_option( $config, $section, "mappedonly",              0 );
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
+  my $outputToSameFolder = get_option( $config, $section, "output_to_same_folder", 0 );
 
   $option = $option . " -p $thread";
 
@@ -96,7 +97,7 @@ rm ${f2}.fifo";
       my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
       my $pbs_name = basename($pbs_file);
       my $log      = $self->get_log_filename( $log_dir, $sample_name );
-      my $cur_dir  = create_directory_or_die( $result_dir . "/$sample_name" );
+      my $cur_dir  = $outputToSameFolder? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
       
       my $chromosome_grep_command = "";
       my $final_file = $bam_file;
