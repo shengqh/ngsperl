@@ -134,4 +134,4 @@ if os.path.isfile(annovar_outputfile):
   os.remove(annovarinputfile)
   os.remove(annovar_outputfile)
   
-print("all done.")
+print("annotate splicing by annovar done.")

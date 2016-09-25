@@ -37,6 +37,17 @@ sub perform {
     $isvcf = 0;
   }
 
+  my $splicing_threshold = get_option( $config, $section, "splicing_threshold", 0 );
+  if ( $splicing_threshold > 0 ) {
+    $option = $option + " -splicing_threshold $splicing_threshold";
+  }
+
+  my $refineSplicing = $option =~ 'refGene';
+  my $pythonSplicing = dirname(__FILE__) . "/annovarSplicing.py";
+  if ( $refineSplicing & !-e $pythonSplicing ) {
+    die "File not found : " . $pythonSplicing;
+  }
+
   my $cqstools = get_cqstools( $config, $section, 0 );
   my $affyFile = get_param_file( $config->{$section}{affy_file}, "affy_file", 0 );
 
@@ -69,10 +80,11 @@ sub perform {
         $sampleFile = $filename;
       }
 
-      my $annovar = change_extension( $filename, ".annovar" );
-      my $result  = "${annovar}.${buildver}_multianno.txt";
-      my $final   = $annovar . ".final.tsv";
-      my $excel   = $final . ".xls";
+      my $annovar       = change_extension( $filename, ".annovar" );
+      my $result        = "${annovar}.${buildver}_multianno.txt";
+      my $refine_result = "${annovar}.splicing.${buildver}_multianno.txt";
+      my $final         = $annovar . ".final.tsv";
+      my $excel         = $final . ".xls";
 
       my $runcmd;
       my $passinput;
@@ -92,7 +104,19 @@ sub perform {
 if [[ ! -s $result && ! -s $final ]]; then 
   $runcmd
 fi
+";
 
+      if ($refineSplicing) {
+        my $splicing_threshold_option = $splicing_threshold > 0 ? " -s $splicing_threshold" : "";
+        print $pbs "
+if [[ -s $result && ! -s $refine_result ]]; then 
+  python $pythonSplicing -i $result -d $annovarDB -o $refine_result -b $buildver $splicing_threshold_option
+fi
+";
+        $result = $refine_result;
+      }
+
+      print $pbs "
 if [[ -s $result && ! -s $final ]]; then
   grep \"^##\" ${sampleFile} > ${final}.header
   grep -v \"^##\" ${sampleFile} | cut -f7- > ${sampleFile}.clean
