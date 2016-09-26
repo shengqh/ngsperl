@@ -519,6 +519,8 @@ for(countfile_index in c(1:length(countfiles))){
   #Venn for all significant genes
   allSigNameList<-list()
   allSigDirectionList<-list()
+  sigTableAll<-NULL
+  sigTableAllVar<-c("baseMean","log2FoldChange","lfcSE","stat","pvalue","padj","FoldChange")
   for(comparisonName in comparisonNames){
     if (minMedianInGroup > 0) {
       prefix<-paste0(comparisonName, "_min", minMedianInGroup)
@@ -531,12 +533,16 @@ for(countfile_index in c(1:length(countfiles))){
       if (nrow(sigTable)>0) {
         allSigNameList[[comparisonName]]<-sigTable[,1]
         allSigDirectionList[[comparisonName]]<-sign(sigTable$log2FoldChange)
+		sigTable$comparisonName<-comparisonName
+		sigTableAll<-rbind(sigTableAll,sigTable[,c("comparisonName",sigTableAllVar)])
       } else {
         warning(paste0("No significant genes in ",comparisonName))
         #		allSigNameList[[comparisonName]]<-""
       }
     }
   }
+  #Output all significant genes table
+  write.csv(sigTableAll,paste0(inputfile,"_min", minMedianInGroup,"_DESeq2_allSig.csv"))
   
   #Do venn if length between 2-5
   if (length(allSigNameList)>=2 & length(allSigNameList)<=5) {

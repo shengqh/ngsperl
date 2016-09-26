@@ -131,11 +131,11 @@ sub initializeDefaultOptions {
   }
 
   if ( !defined $def->{DE_min_median_read_top100} ) {
-    $def->{DE_min_median_read_top100} = 2;
+    $def->{DE_min_median_read_top100} = 1;
   }
 
   if ( !defined $def->{DE_min_median_read_smallRNA} ) {
-    $def->{DE_min_median_read_smallRNA} = 6;
+    $def->{DE_min_median_read_smallRNA} = 5;
   }
 
   if ( !defined $def->{max_sequence_extension_base} ) {
