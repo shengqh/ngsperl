@@ -529,12 +529,12 @@ for(countfile_index in c(1:length(countfiles))){
     }
     sigFile<-paste0(prefix, "_DESeq2_sig.csv")
     if (file.exists(sigFile)) {
-      sigTable<-read.csv(sigFile,header=TRUE,as.is=TRUE)
+      sigTable<-read.csv(sigFile,header=TRUE,as.is=TRUE,row.names=1)
       if (nrow(sigTable)>0) {
-        allSigNameList[[comparisonName]]<-sigTable[,1]
+        allSigNameList[[comparisonName]]<-row.names(sigTable)
         allSigDirectionList[[comparisonName]]<-sign(sigTable$log2FoldChange)
 		sigTable$comparisonName<-comparisonName
-		sigTableAll<-rbind(sigTableAll,sigTable[,c("comparisonName",sigTableAllVar)])
+		sigTableAll<-rbind(sigTableAll,sigTable[,c("comparisonName",sigTableAllVar),drop=FALSE])
       } else {
         warning(paste0("No significant genes in ",comparisonName))
         #		allSigNameList[[comparisonName]]<-""
