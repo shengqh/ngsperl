@@ -67,7 +67,7 @@ qcimg2pdf.sh -o $task_name
     my @sample_files  = parsePairedSamples( \@originalFiles );
 
     my $sampleCount = scalar(@sample_files);
-    my $samples     = join( ' ', @sample_files );
+    my $samples     = '"' . join( '" "', @sample_files ) . '"';
     my $cur_dir     = create_directory_or_die( $result_dir . "/$sample_name" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
