@@ -69,19 +69,28 @@ sub get_name_files_map {
       $name_files_map->{$group_name} = get_sample_map( $groups, $raw_files, \@group_names );
     }
   }
-  my $require_all = 1;
-  for my $name ( sort keys %{$name_files_map} ) {
-    my $samples = $name_files_map->{$name};
 
-    #print Dumper($samples);
-    #print Dumper($raw_files);
-    if ( scalar( keys %$samples ) == scalar( keys %$raw_files ) ) {
-      $require_all = 0;
-      last;
-    }
-  }
-  if ($require_all) {
+  if ( scalar( keys %$name_files_map ) > 1 ) {
     $name_files_map->{$task_name} = $raw_files;
+  }
+  else {
+    my $is_total = 0;
+    for my $name ( sort keys %{$name_files_map} ) {
+      my $samples = $name_files_map->{$name};
+
+      #print Dumper($samples);
+      #print Dumper($raw_files);
+      if ( scalar( keys %$samples ) == scalar( keys %$raw_files ) ) {
+        $is_total = 1;
+        last;
+      }
+    }
+    if ($is_total) {
+      $name_files_map = { $task_name => $raw_files };
+    }
+    else {
+      $name_files_map->{$task_name} = $raw_files;
+    }
   }
 
   #print Dumper($name_files_map);
