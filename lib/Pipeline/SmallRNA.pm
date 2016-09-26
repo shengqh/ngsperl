@@ -59,6 +59,10 @@ sub getSmallRNAConfig {
   my $DE_add_count_one            = $def->{DE_add_count_one};
   my $DE_min_median_read_top100   = $def->{DE_min_median_read_top100};
   my $DE_min_median_read_smallRNA = $def->{DE_min_median_read_smallRNA};
+  if ($DE_add_count_one) {
+    $DE_min_median_read_top100=$DE_min_median_read_top100+$DE_add_count_one;
+    $DE_min_median_read_smallRNA=$DE_min_median_read_smallRNA+$DE_add_count_one;
+  }
 
   my $max_sequence_extension_base = $def->{max_sequence_extension_base};
   my $non_host_table_option       = "--maxExtensionBase $max_sequence_extension_base --outputReadTable --outputReadContigTable";
