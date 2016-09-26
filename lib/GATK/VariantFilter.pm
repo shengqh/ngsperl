@@ -83,12 +83,12 @@ fi
 ";
 
   if ($vqsrMode) {    #VQSR mode
-    my $snpCal      = $task_name . ".snp.recal";
-    my $snpTranches = $task_name . ".snp.tranche";
-    my $snpPass = $task_name . ".recal_snp_raw_indel.vcf";
+    my $snpCal        = $task_name . ".snp.recal";
+    my $snpTranches   = $task_name . ".snp.tranche";
+    my $snpPass       = $task_name . ".recal_snp_raw_indel.vcf";
     my $indelCal      = $task_name . ".indel.recal";
     my $indelTranches = $task_name . ".indel.tranche";
-    my $indelPass = $task_name . ".recal_snp_recal_indel.vcf";
+    my $indelPass     = $task_name . ".recal_snp_recal_indel.vcf";
     print $pbs "
 if [[ -s $mergedFile && ! -s $snpCal ]]; then
   echo VariantRecalibratorSNP=`date` 
@@ -182,14 +182,14 @@ fi
   }
   else {    #hard filter mode
     my $raw_snp_file   = $task_name . ".raw_snp.vcf";
-    my $snpPass = $task_name . ".snp_filtered.vcf";
+    my $snpPass        = $task_name . ".snp_filtered.vcf";
     my $raw_indel_file = $task_name . ".raw_indel.vcf";
-    my $indelPass = $task_name . ".indel_filtered.vcf";
+    my $indelPass      = $task_name . ".indel_filtered.vcf";
     my $filtered_file  = $task_name . ".filtered.vcf";
 
     my $snp_filter =
       get_option( $config, $section, "is_rna" )
-      ? "-window 35 -cluster 3 --filterExpression \"FS > 30.0 || QD < 2.0\" --filterName \"snp_filter\" " 
+      ? "-window 35 -cluster 3 --filterExpression \"FS > 30.0 || QD < 2.0\" --filterName \"snp_filter\" "
       : "--filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" --filterName \"snp_filter\" ";
 
     print $pbs "
@@ -200,7 +200,8 @@ if [[ -s $mergedFile && ! -s $snpPass ]]; then
 fi
 ";
 
-    my $indel_filter = ( get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3" : "" ) . " --filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\" --filterName \"indel_filter\" ";
+    my $indel_filter =
+      ( get_option( $config, $section, "is_rna" ) ? "-window 35 -cluster 3" : "" ) . " --filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\" --filterName \"indel_filter\" ";
 
     print $pbs "
 if [[ -s $mergedFile && ! -s $indelPass ]]; then
@@ -225,16 +226,15 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  #  my $finalFile = $task_name . ".pass.vcf";
-  #
-  #  my @result_files = ();
-  #  push( @result_files, $result_dir . "/" . $finalFile );
-
+  my $finalFile = $task_name . ".pass.vcf";
   my @result_files = ();
-  my $finalFile    = $task_name . ".median3.snp.pass.vcf";
   push( @result_files, $result_dir . "/" . $finalFile );
-  $finalFile = $task_name . ".median3.indel.pass.vcf";
-  push( @result_files, $result_dir . "/" . $finalFile );
+
+  #  my @result_files = ();
+  #  my $finalFile    = $task_name . ".median3.snp.pass.vcf";
+  #  push( @result_files, $result_dir . "/" . $finalFile );
+  #  $finalFile = $task_name . ".median3.indel.pass.vcf";
+  #  push( @result_files, $result_dir . "/" . $finalFile );
 
   my $result = {};
   $result->{$task_name} = filter_array( \@result_files, $pattern );
