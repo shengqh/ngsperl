@@ -96,7 +96,7 @@ try:
   logger.info("totally processed %d, accepted %d, ignore_unpaired %d" % (processed, accepted, len(saved_read)))
   if args.output != "-":
     if os.path.isfile(args.output):
-      os.delete(args.output)
+      os.remove(args.output)
     os.rename(tmpfile, args.output)
 finally:
   samfile.close()
