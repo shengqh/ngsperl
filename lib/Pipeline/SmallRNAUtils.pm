@@ -130,8 +130,8 @@ sub initializeDefaultOptions {
     $def->{DE_add_count_one} = 0;
   }
 
-  if ( !defined $def->{DE_min_median_read_top100} ) {
-    $def->{DE_min_median_read_top100} = 1;
+  if ( !defined $def->{DE_min_median_read_top} ) {
+    $def->{DE_min_median_read_top} = 2;
   }
 
   if ( !defined $def->{DE_min_median_read_smallRNA} ) {
@@ -142,8 +142,12 @@ sub initializeDefaultOptions {
     $def->{max_sequence_extension_base} = 1;
   }
 
-  if ( !defined $def->{blast_top100_reads} ) {
-    $def->{blast_top100_reads} = 0;
+  if ( !defined $def->{top_read_number} ) {
+    $def->{top_read_number} = 100;
+  }
+
+  if ( !defined $def->{blast_top_reads} ) {
+    $def->{blast_top_reads} = 0;
   }
 
   if ( !defined $def->{blast_localdb} ) {
@@ -185,8 +189,10 @@ sub getPrepareConfig {
   my $pairs                          = $def->{pairs};
 
   my $max_sequence_extension_base = $def->{max_sequence_extension_base};
-  my $blast_top100_reads          = $def->{blast_top100_reads};
+  my $blast_top_reads             = $def->{blast_top_reads};
   my $blast_localdb               = $def->{blast_localdb};
+
+  my $top_read_number = $def->{top_read_number};
 
   my $config = {
     general => {
@@ -512,7 +518,7 @@ sub getPrepareConfig {
       class      => "CQS::SmallRNASequenceCountTable",
       perform    => 1,
       target_dir => $class_independent_dir . "/identical_sequence_count_table",
-      option     => "--maxExtensionBase $max_sequence_extension_base",
+      option     => "--maxExtensionBase $max_sequence_extension_base -n $top_read_number --exportFastaNumber $top_read_number",
       source_ref => [ "identical", ".dupcount\$" ],
       cqs_tools  => $def->{cqstools},
       suffix     => "_sequence",
@@ -532,11 +538,11 @@ sub getPrepareConfig {
   push @individual, ("identical");
   push @summary,    ("identical_sequence_count_table");
 
-  if ($blast_top100_reads) {
-    $preparation->{identical_sequence_top100_contig_blast} = {
+  if ($blast_top_reads) {
+    $preparation->{"identical_sequence_top${top_read_number}_contig_blast"} = {
       class      => "Blast::Blastn",
       perform    => 1,
-      target_dir => $class_independent_dir . "/identical_sequence_top100_contig_blast",
+      target_dir => $class_independent_dir . "/identical_sequence_top${top_read_number}_contig_blast",
       option     => "",
       source_ref => [ "identical_sequence_count_table", "sequence.count.fasta\$" ],
       sh_direct  => 0,
@@ -549,10 +555,10 @@ sub getPrepareConfig {
         "mem"      => "40gb"
       },
     };
-    $preparation->{identical_sequence_top100_read_blast} = {
+    $preparation->{"identical_sequence_top${top_read_number}_read_blast"} = {
       class      => "Blast::Blastn",
       perform    => 1,
-      target_dir => $class_independent_dir . "/identical_sequence_top100_read_blast",
+      target_dir => $class_independent_dir . "/identical_sequence_top${top_read_number}_read_blast",
       option     => "",
       source_ref => [ "identical_sequence_count_table", ".read.count.fasta\$" ],
       sh_direct  => 0,
@@ -565,10 +571,10 @@ sub getPrepareConfig {
         "mem"      => "40gb"
       },
     };
-    $preparation->{identical_sequence_top100_minicontig_blast} = {
+    $preparation->{"identical_sequence_top${top_read_number}_minicontig_blast"} = {
       class      => "Blast::Blastn",
       perform    => 1,
-      target_dir => $class_independent_dir . "/identical_sequence_top100_minicontig_blast",
+      target_dir => $class_independent_dir . "/identical_sequence_top${top_read_number}_minicontig_blast",
       option     => "",
       source_ref => [ "identical_sequence_count_table", ".minicontig.count.fasta\$" ],
       sh_direct  => 0,

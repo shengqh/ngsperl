@@ -25,9 +25,9 @@ sub getSmallRNAConfig {
   $def->{VERSION} = $VERSION;
 
   my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
-  my $task_name=$def->{task_name},
+  my $task_name = $def->{task_name},
 
-  my $host_genome_dir        = create_directory_or_die( $def->{target_dir} . "/host_genome" );
+    my $host_genome_dir = create_directory_or_die( $def->{target_dir} . "/host_genome" );
   my $nonhost_library_dir    = create_directory_or_die( $def->{target_dir} . "/nonhost_library" );
   my $nonhost_genome_dir     = create_directory_or_die( $def->{target_dir} . "/nonhost_genome" );
   my $nonhost_blast_dir      = create_directory_or_die( $def->{target_dir} . "/nonhost_blast" );
@@ -57,24 +57,25 @@ sub getSmallRNAConfig {
   my $DE_pvalue                   = $def->{DE_pvalue};
   my $DE_fold_change              = $def->{DE_fold_change};
   my $DE_add_count_one            = $def->{DE_add_count_one};
-  my $DE_min_median_read_top100   = $def->{DE_min_median_read_top100};
+  my $DE_min_median_read_top      = $def->{DE_min_median_read_top};
   my $DE_min_median_read_smallRNA = $def->{DE_min_median_read_smallRNA};
   if ($DE_add_count_one) {
-    $DE_min_median_read_top100=$DE_min_median_read_top100+$DE_add_count_one;
-    $DE_min_median_read_smallRNA=$DE_min_median_read_smallRNA+$DE_add_count_one;
+    $DE_min_median_read_top      = $DE_min_median_read_top + $DE_add_count_one;
+    $DE_min_median_read_smallRNA = $DE_min_median_read_smallRNA + $DE_add_count_one;
   }
 
   my $max_sequence_extension_base = $def->{max_sequence_extension_base};
   my $non_host_table_option       = "--maxExtensionBase $max_sequence_extension_base --outputReadTable --outputReadContigTable";
 
-  my $blast_localdb = $def->{blast_localdb};
+  my $blast_localdb   = $def->{blast_localdb};
+  my $top_read_number = $def->{top_read_number};
 
   if ($do_comparison) {
     my $class_independent = {
-      deseq2_top100_reads => {
+      "deseq2_top${top_read_number}_reads" => {
         class                => "Comparison::DESeq2",
         perform              => 1,
-        target_dir           => $class_independent_dir . "/deseq2_top100_reads",
+        target_dir           => $class_independent_dir . "/deseq2_top${top_read_number}_reads",
         option               => "",
         source_ref           => "pairs",
         groups_ref           => "groups",
@@ -83,7 +84,7 @@ sub getSmallRNAConfig {
         show_DE_gene_cluster => $DE_show_gene_cluster,
         pvalue               => $DE_pvalue,
         fold_change          => $DE_fold_change,
-        min_median_read      => $DE_min_median_read_top100,
+        min_median_read      => $DE_min_median_read_top,
         add_count_one        => $DE_add_count_one,
         pbs                  => {
           "email"     => $def->{email},
@@ -93,10 +94,10 @@ sub getSmallRNAConfig {
           "mem"       => "10gb"
         },
       },
-      deseq2_top100_contigs => {
+      "deseq2_top${top_read_number}_contigs" => {
         class                => "Comparison::DESeq2",
         perform              => 1,
-        target_dir           => $class_independent_dir . "/deseq2_top100_contigs",
+        target_dir           => $class_independent_dir . "/deseq2_top${top_read_number}_contigs",
         option               => "",
         source_ref           => "pairs",
         groups_ref           => "groups",
@@ -105,7 +106,7 @@ sub getSmallRNAConfig {
         show_DE_gene_cluster => $DE_show_gene_cluster,
         pvalue               => $DE_pvalue,
         fold_change          => $DE_fold_change,
-        min_median_read      => $DE_min_median_read_top100,
+        min_median_read      => $DE_min_median_read_top,
         add_count_one        => $DE_add_count_one,
         pbs                  => {
           "email"     => $def->{email},
@@ -115,15 +116,37 @@ sub getSmallRNAConfig {
           "mem"       => "10gb"
         },
       },
-      deseq2_top100_reads_vis => {
+      "deseq2_top${top_read_number}_minicontigs" => {
+        class                => "Comparison::DESeq2",
+        perform              => 1,
+        target_dir           => $class_independent_dir . "/deseq2_top${top_read_number}_minicontigs",
+        option               => "",
+        source_ref           => "pairs",
+        groups_ref           => "groups",
+        countfile_ref        => [ "identical_sequence_count_table", "minicontig.count\$" ],
+        sh_direct            => 1,
+        show_DE_gene_cluster => $DE_show_gene_cluster,
+        pvalue               => $DE_pvalue,
+        fold_change          => $DE_fold_change,
+        min_median_read      => $DE_min_median_read_top,
+        add_count_one        => $DE_add_count_one,
+        pbs                  => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        },
+      },
+      "deseq2_top${top_read_number}_reads_vis" => {
         class                    => "CQS::UniqueR",
         perform                  => 1,
-        target_dir               => $data_visualization_dir . "/deseq2_top100_reads_vis",
+        target_dir               => $data_visualization_dir . "/deseq2_top${top_read_number}_reads_vis",
         rtemplate                => "DESeq2_all_vis.R",
-        output_file              => ".Top100Reads.DESeq2.Matrix",
+        output_file              => ".Top${top_read_number}Reads.DESeq2.Matrix",
         output_file_ext          => ".png",
-        parameterSampleFile1_ref => [ "deseq2_top100_reads", "_DESeq2.csv\$" ],
-        parameterSampleFile2     => $def->{pairs_top100_deseq2_vis_layout},
+        parameterSampleFile1_ref => [ "deseq2_top${top_read_number}_reads", "_DESeq2.csv\$" ],
+        parameterSampleFile2     => $def->{pairs_top_deseq2_vis_layout},
         sh_direct                => 1,
         pbs                      => {
           "email"     => $def->{email},
@@ -133,15 +156,33 @@ sub getSmallRNAConfig {
           "mem"       => "10gb"
         },
       },
-      deseq2_top100_contigs_vis => {
+      "deseq2_top${top_read_number}_contigs_vis" => {
         class                    => "CQS::UniqueR",
         perform                  => 1,
-        target_dir               => $data_visualization_dir . "/deseq2_top100_contigs_vis",
+        target_dir               => $data_visualization_dir . "/deseq2_top${top_read_number}_contigs_vis",
         rtemplate                => "DESeq2_all_vis.R",
-        output_file              => ".Top100Contigs.DESeq2.Matrix",
+        output_file              => ".Top${top_read_number}Contigs.DESeq2.Matrix",
         output_file_ext          => ".png",
-        parameterSampleFile1_ref => [ "deseq2_top100_contigs", "_DESeq2.csv\$" ],
-        parameterSampleFile2     => $def->{pairs_top100_deseq2_vis_layout},
+        parameterSampleFile1_ref => [ "deseq2_top${top_read_number}_contigs", "_DESeq2.csv\$" ],
+        parameterSampleFile2     => $def->{pairs_top_deseq2_vis_layout},
+        sh_direct                => 1,
+        pbs                      => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      },
+      "deseq2_top${top_read_number}_minicontigs_vis" => {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $data_visualization_dir . "/deseq2_top${top_read_number}_minicontigs_vis",
+        rtemplate                => "DESeq2_all_vis.R",
+        output_file              => ".Top${top_read_number}Contigs.DESeq2.Matrix",
+        output_file_ext          => ".png",
+        parameterSampleFile1_ref => [ "deseq2_top${top_read_number}_minicontigs", "_DESeq2.csv\$" ],
+        parameterSampleFile2     => $def->{pairs_top_deseq2_vis_layout},
         sh_direct                => 1,
         pbs                      => {
           "email"     => $def->{email},
@@ -153,7 +194,11 @@ sub getSmallRNAConfig {
       },
     };
 
-    push @summary, ( "deseq2_top100_reads", "deseq2_top100_contigs", "deseq2_top100_reads_vis", "deseq2_top100_contigs_vis" );
+    push @summary,
+      (
+      "deseq2_top${top_read_number}_reads",       "deseq2_top${top_read_number}_contigs", "deseq2_top${top_read_number}_minicontigs", "deseq2_top${top_read_number}_reads_vis",
+      "deseq2_top${top_read_number}_contigs_vis", "deseq2_top${top_read_number}_minicontigs_vis"
+      );
 
     $config = merge( $config, $class_independent );
   }
@@ -1134,7 +1179,7 @@ sub getSmallRNAConfig {
     push @table_for_countSum,
       (
       "bowtie1_tRNA_pm_table",            ".category.count\$", "bowtie1_rRNA_pm_table",          "$task_name\.count\$", "bowtie1_bacteria_group1_pm_table", ".category.count\$",
-      "bowtie1_bacteria_group2_pm_table", ".category.count\$",          "bowtie1_fungus_group4_pm_table", ".category.count\$"
+      "bowtie1_bacteria_group2_pm_table", ".category.count\$", "bowtie1_fungus_group4_pm_table", ".category.count\$"
       );
     push @table_for_readSummary,
       (
@@ -1300,16 +1345,19 @@ sub getSmallRNAConfig {
           },
         },
         nonhost_library_deseq2_vis => {
-          class      => "CQS::UniqueR",
-          perform    => 1,
-          target_dir => $data_visualization_dir . "/nonhost_library_deseq2_vis",
+          class                    => "CQS::UniqueR",
+          perform                  => 1,
+          target_dir               => $data_visualization_dir . "/nonhost_library_deseq2_vis",
           rtemplate                => "DESeq2_all_vis.R",
           output_file              => ".NonHostLibrary.DESeq2.Matrix",
           output_file_ext          => ".png",
-          parameterSampleFile1_ref => [ "deseq2_nonhost_tRNA", "_DESeq2.csv\$", "deseq2_nonhost_tRNA_category", "_DESeq2.csv\$","deseq2_nonhost_tRNA_species", "_DESeq2.csv\$","deseq2_nonhost_tRNA_type", "_DESeq2.csv\$","deseq2_nonhost_tRNA_anticodon", "_DESeq2.csv\$" ],
-          parameterSampleFile2     => $def->{pairs_nonHostLibrary_deseq2_vis_layout},
-          sh_direct                => 1,
-          pbs                      => {
+          parameterSampleFile1_ref => [
+            "deseq2_nonhost_tRNA",      "_DESeq2.csv\$", "deseq2_nonhost_tRNA_category",  "_DESeq2.csv\$", "deseq2_nonhost_tRNA_species", "_DESeq2.csv\$",
+            "deseq2_nonhost_tRNA_type", "_DESeq2.csv\$", "deseq2_nonhost_tRNA_anticodon", "_DESeq2.csv\$"
+          ],
+          parameterSampleFile2 => $def->{pairs_nonHostLibrary_deseq2_vis_layout},
+          sh_direct            => 1,
+          pbs                  => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
@@ -1491,10 +1539,10 @@ sub getSmallRNAConfig {
       $config = merge( $config, $unmapped_comparison );
       push @summary,
         (
-        "deseq2_nonhost_tRNA",       "deseq2_nonhost_tRNA_category", "deseq2_nonhost_tRNA_species", "deseq2_nonhost_tRNA_type",     "deseq2_nonhost_tRNA_anticodon",
-        "deseq2_nonhost_rRNA",        "nonhost_library_deseq2_vis",  "deseq2_bacteria_group1",       "deseq2_bacteria_group2",
-        "deseq2_fungus_group4",       "nonhost_genome_deseq2_vis",   "deseq2_bacteria_group1_reads", "deseq2_bacteria_group2_reads",
-        "deseq2_fungus_group4_reads", "nonhost_genome_deseq2_reads_vis"
+        "deseq2_nonhost_tRNA",           "deseq2_nonhost_tRNA_category", "deseq2_nonhost_tRNA_species", "deseq2_nonhost_tRNA_type",
+        "deseq2_nonhost_tRNA_anticodon", "deseq2_nonhost_rRNA",          "nonhost_library_deseq2_vis",  "deseq2_bacteria_group1",
+        "deseq2_bacteria_group2",        "deseq2_fungus_group4",         "nonhost_genome_deseq2_vis",   "deseq2_bacteria_group1_reads",
+        "deseq2_bacteria_group2_reads",  "deseq2_fungus_group4_reads",   "nonhost_genome_deseq2_reads_vis"
         );
     }
   }
@@ -1591,7 +1639,7 @@ sub getSmallRNAConfig {
     target_dir               => $data_visualization_dir . "/reads_mapping_summary",
     rtemplate                => "countTableVisFunctions.R,ReadsMappingSummary.R",
     output_file_ext          => ".ReadsMapping.Summary.csv",
-    parameterFile1_ref       => [ "identical_sequence_count_table", $task_name."_sequence.read.count\$" ],
+    parameterFile1_ref       => [ "identical_sequence_count_table", $task_name . "_sequence.read.count\$" ],
     parameterSampleFile1_ref => \@table_for_readSummary,
     parameterSampleFile2     => $groups,
     parameterSampleFile3     => $groups_vis_layout,
@@ -1607,8 +1655,8 @@ sub getSmallRNAConfig {
   };
   push @summary, ( "count_table_correlation", "reads_in_tasks", "reads_in_tasks_pie", "reads_mapping_summary" );
 
-  if ( $def->{blast_top100_reads} ) {
-    push @summary, ( "identical_sequence_top100_contig_blast", "identical_sequence_top100_read_blast", "identical_sequence_top100_minicontig_blast" );
+  if ( $def->{blast_top_reads} ) {
+    push @summary, ( "identical_sequence_top${top_read_number}_contig_blast", "identical_sequence_top${top_read_number}_read_blast", "identical_sequence_top${top_read_number}_minicontig_blast" );
   }
 
   if ($blast_unmapped_reads) {
