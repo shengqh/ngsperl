@@ -109,6 +109,7 @@ fi
       if ($refineSplicing) {
         my $splicing_threshold_option = $splicing_threshold > 0 ? " -s $splicing_threshold" : "";
         print $pbs "
+echo find_protein_position_for_splicing=`date`
 if [[ -s $result && ! -s $refine_result ]]; then 
   python $pythonSplicing -i $result -d $annovarDB -o $refine_result -b $buildver $splicing_threshold_option
 fi
