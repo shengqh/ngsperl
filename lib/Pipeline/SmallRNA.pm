@@ -1725,7 +1725,7 @@ sub getSmallRNAConfig {
         perform    => 1,
         target_dir => $nonhost_blast_dir . "/unmapped_sequence_top${top_read_number}_contig_blast",
         option     => "",
-        source_ref => [ "unmapped_sequence_count_table", "sequence.count.fasta\$" ],
+        source_ref => [ "unmapped_sequence_count_table", "unmapped.count.fasta\$" ],
         sh_direct  => 0,
         localdb    => $blast_localdb,
         cluster    => $cluster,

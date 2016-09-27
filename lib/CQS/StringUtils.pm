@@ -37,7 +37,7 @@ sub print_hash {
 }
 
 sub filter_array {
-  my ($sourceFiles, $pattern ) = @_;
+  my ($sourceFiles, $pattern, $canReturnEmpty ) = @_;
 
   if ( !defined $pattern || $pattern eq "") {
     return $sourceFiles;
@@ -52,7 +52,7 @@ sub filter_array {
     }
   }
 
-  if(scalar(@filteredFiles) == 0){
+  if(scalar(@filteredFiles) == 0 && ! $canReturnEmpty){
     my $str = join(', ', @{$sourceFiles});
     warn("No file in array [$str] matched with pattern $pattern, empty array returned.");
   }
