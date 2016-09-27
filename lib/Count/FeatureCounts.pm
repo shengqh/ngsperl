@@ -37,7 +37,7 @@ sub perform {
     $option = $option . " -g gene_id";
   }
 
-  if ( $option !~ /-m/ ) {
+  if ( $option !~ /-t/ ) {
     $option = $option . " -t exon";
   }
 
@@ -63,7 +63,7 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-    print $pbs "featureCounts $option -a $gffFile -o $final_file $bam_file \n\n";
+    print $pbs "featureCounts $option -T $thread -a $gffFile -o $final_file $bam_file \n\n";
 
     $self->close_pbs( $pbs, $pbs_file );
   }
