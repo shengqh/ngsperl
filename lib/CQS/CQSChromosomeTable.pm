@@ -99,27 +99,41 @@ sub result {
   my $has_category   = $option =~ /--categoryMapFile/;
   my $has_read_count = $option =~ /--outputReadTable/;
 
+  my $has_contig = $option =~ /--outputReadContigTable/;
+
   my @result_files = ();
   if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
     my $groups = get_raw_files( $config, $section, "groups" );
     for my $group_name ( sort keys %{$groups} ) {
-      push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".count", 0 ) );
+      push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".count",     0 ) );
+      push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".count.xml", 0 ) );
       if ($has_category) {
         push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".category.count", 0 ) );
       }
       if ($has_read_count) {
         push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".read.count", 0 ) );
       }
+      if ($has_contig) {
+        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".contig.count",               0 ) );
+        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".contig.count.details",       0 ) );
+        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".contig.count.details.depth", 0 ) );
+      }
       push( @result_files, $self->get_file( $pbs_dir, "${task_name}_${group_name}", ".filelist", 0 ) );
     }
   }
   else {
     push( @result_files, $self->get_file( $result_dir, $task_name, ".count", 0 ) );
+    push( @result_files, $self->get_file( $result_dir, $task_name, ".count.xml", 0 ) );
     if ($has_category) {
       push( @result_files, $self->get_file( $result_dir, $task_name, ".category.count", 0 ) );
     }
     if ($has_read_count) {
       push( @result_files, $self->get_file( $result_dir, $task_name, ".read.count", 0 ) );
+    }
+    if ($has_contig) {
+      push( @result_files, $self->get_file( $result_dir, $task_name, ".contig.count",               0 ) );
+      push( @result_files, $self->get_file( $result_dir, $task_name, ".contig.count.details",       0 ) );
+      push( @result_files, $self->get_file( $result_dir, $task_name, ".contig.count.details.depth", 0 ) );
     }
     push( @result_files, $self->get_file( $pbs_dir, $task_name, ".filelist", 0 ) );
   }
