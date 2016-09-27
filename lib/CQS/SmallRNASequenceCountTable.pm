@@ -151,7 +151,7 @@ fi
 }
 
 sub result {
-  my ( $self, $config, $section, $pattern ) = @_;
+  my ( $self, $config, $section, $pattern, $canReturnEmpty ) = @_;
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
@@ -176,7 +176,7 @@ sub result {
     push( @result_files, $readoutputfile );
     push( @result_files, $readoutputfile . ".fasta" );
     push( @result_files, $filelist );
-    $result->{$name} = filter_array( \@result_files, $pattern );
+    $result->{$name} = filter_array( \@result_files, $pattern, $canReturnEmpty );
   }
 
   return $result;
