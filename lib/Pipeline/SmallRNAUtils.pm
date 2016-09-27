@@ -154,6 +154,10 @@ sub initializeDefaultOptions {
     $def->{blast_localdb} = "";
   }
 
+  if ( !defined $def->{perform_contig} ) {
+    $def->{perform_contig} = 1;
+  }
+
   return $def;
 }
 
