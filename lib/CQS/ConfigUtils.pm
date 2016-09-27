@@ -231,7 +231,7 @@ sub parse_param_file {
     die "section $refSectionName was not defined!" if !defined $config->{$refSectionName};
     if ( defined $config->{$refSectionName}{class} ) {
       my $myclass = instantiate( $config->{$refSectionName}{class} );
-      my $result = $myclass->result( $config, $refSectionName, $pattern );
+      my $result = $myclass->result( $config, $refSectionName, $pattern, 1 );
       foreach my $k ( sort keys %{$result} ) {
         my @files = @{ $result->{$k} };
         if (scalar(@files) > 0){
