@@ -399,6 +399,9 @@ for(countfile_index in c(1:length(countfiles))){
     
     #different expression analysis
     designFormula=as.formula(paste0("~",paste0(c(colnames(designData)[-c(1:2)],"Condition"),collapse="+")))
+	
+	cat(paste0("Formula = ", designFormula), "\n")
+	
     dds=DESeqDataSetFromMatrix(countData = comparisonData,
                                colData = designData,
                                design = designFormula)
