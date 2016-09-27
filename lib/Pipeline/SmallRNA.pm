@@ -25,9 +25,9 @@ sub getSmallRNAConfig {
   $def->{VERSION} = $VERSION;
 
   my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
-  my $task_name = $def->{task_name},
+  my $task_name = $def->{task_name};
 
-    my $host_genome_dir = create_directory_or_die( $def->{target_dir} . "/host_genome" );
+  my $host_genome_dir        = create_directory_or_die( $def->{target_dir} . "/host_genome" );
   my $nonhost_library_dir    = create_directory_or_die( $def->{target_dir} . "/nonhost_library" );
   my $nonhost_genome_dir     = create_directory_or_die( $def->{target_dir} . "/nonhost_genome" );
   my $nonhost_blast_dir      = create_directory_or_die( $def->{target_dir} . "/nonhost_blast" );
@@ -48,10 +48,10 @@ sub getSmallRNAConfig {
   my $search_host_genome    = ( !defined $def->{search_host_genome} )    || $def->{search_host_genome};
   my $search_miRBase        = ( !defined $def->{search_miRBase} )        || $def->{search_miRBase};
   my $search_unmapped_reads = ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
-  my $blast_unmapped_reads = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
-  my $do_comparison        = defined $def->{pairs};
-  my $groups               = $def->{groups};
-  my $groups_vis_layout    = $def->{groups_vis_layout};
+
+  my $do_comparison     = defined $def->{pairs};
+  my $groups            = $def->{groups};
+  my $groups_vis_layout = $def->{groups_vis_layout};
 
   my $DE_show_gene_cluster        = $def->{DE_show_gene_cluster};
   my $DE_pvalue                   = $def->{DE_pvalue};
@@ -65,11 +65,16 @@ sub getSmallRNAConfig {
   }
 
   my $max_sequence_extension_base = $def->{max_sequence_extension_base};
-  my $non_host_table_option       = "--maxExtensionBase $max_sequence_extension_base --outputReadTable --outputReadContigTable";
+  my $blast_localdb               = $def->{blast_localdb};
 
-  my $blast_localdb   = $def->{blast_localdb};
+  my $non_host_table_option   = "--maxExtensionBase $max_sequence_extension_base --outputReadTable";
+  my $perform_contig_analysis = $def->{perform_contig_analysis};
+  if ($perform_contig_analysis) {
+    $non_host_table_option = $non_host_table_option . " --outputReadContigTable";
+  }
+
+  my $blast_unmapped_reads = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
   my $top_read_number = $def->{top_read_number};
-
   if ($do_comparison) {
     my $class_independent = {
       "deseq2_top${top_read_number}_reads" => {
@@ -1662,11 +1667,11 @@ sub getSmallRNAConfig {
   if ($blast_unmapped_reads) {
     my $blast = {
 
-      bowtie1_unmapped_sequence_count_table => {
+      "unmapped_sequence_count_table" => {
         class           => "CQS::SmallRNASequenceCountTable",
         perform         => 1,
-        target_dir      => $nonhost_blast_dir . "/bowtie1_unmapped_sequence_count_table",
-        option          => "",
+        target_dir      => $nonhost_blast_dir . "/unmapped_sequence_count_table",
+        option          => "--maxExtensionBase $max_sequence_extension_base -n $top_read_number --exportFastaNumber $top_read_number",
         source_ref      => [ "identical", ".dupcount\$" ],
         fastq_files_ref => $identical_ref,
         cqs_tools       => $def->{cqstools},
@@ -1681,12 +1686,46 @@ sub getSmallRNAConfig {
           "mem"       => "10gb"
         },
       },
-      bowtie1_unmapped_sequence_blast => {
+      "unmapped_sequence_top${top_read_number}_minicontig_blast" => {
         class      => "Blast::Blastn",
         perform    => 1,
-        target_dir => $nonhost_blast_dir . "/bowtie1_unmapped_sequence_blast",
+        target_dir => $nonhost_blast_dir . "/unmapped_sequence_top${top_read_number}_minicontig_blast",
         option     => "",
-        source_ref => [ "bowtie1_unmapped_sequence_count_table", ".fasta\$" ],
+        source_ref => [ "unmapped_sequence_count_table", "minicontig.count.fasta\$" ],
+        sh_direct  => 0,
+        localdb    => $blast_localdb,
+        cluster    => $cluster,
+        pbs        => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=" . $def->{max_thread},
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        },
+      },
+      "unmapped_sequence_top${top_read_number}_read_blast" => {
+        class      => "Blast::Blastn",
+        perform    => 1,
+        target_dir => $nonhost_blast_dir . "/unmapped_sequence_top${top_read_number}_read_blast",
+        option     => "",
+        source_ref => [ "unmapped_sequence_count_table", "read.count.fasta\$" ],
+        sh_direct  => 0,
+        localdb    => $blast_localdb,
+        cluster    => $cluster,
+        pbs        => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=" . $def->{max_thread},
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        },
+      },
+      "unmapped_sequence_top${top_read_number}_contig_blast" => {
+        class      => "Blast::Blastn",
+        perform    => 1,
+        target_dir => $nonhost_blast_dir . "/unmapped_sequence_top${top_read_number}_contig_blast",
+        option     => "",
+        source_ref => [ "unmapped_sequence_count_table", "sequence.count.fasta\$" ],
         sh_direct  => 0,
         localdb    => $blast_localdb,
         cluster    => $cluster,
@@ -1701,7 +1740,11 @@ sub getSmallRNAConfig {
     };
 
     $config = merge( $config, $blast );
-    push @summary, ( "bowtie1_unmapped_sequence_count_table", "bowtie1_unmapped_sequence_blast" );
+    push @summary,
+      (
+      "unmapped_sequence_count_table",                      "unmapped_sequence_top${top_read_number}_minicontig_blast",
+      "unmapped_sequence_top${top_read_number}_read_blast", "unmapped_sequence_top${top_read_number}_contig_blast"
+      );
   }
 
   $config->{sequencetask} = {
