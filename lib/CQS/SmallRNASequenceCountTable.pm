@@ -30,6 +30,7 @@ sub get_sample_map {
   for my $group_name (@$group_names) {
     my @sample_names = @{ $groups->{$group_name} };
     for my $sample_name (@sample_names) {
+      die "Unknown sample $sample_name in group $group_name" if ! $rawfiles->{$sample_name};
       $result->{$sample_name} = $rawfiles->{$sample_name};
     }
   }
