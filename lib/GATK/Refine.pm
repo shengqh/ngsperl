@@ -79,11 +79,13 @@ sub perform {
   my $slim                 = get_option( $config, $section, "slim_print_reads",         1 );
   my $use_self_slim_method = get_option( $config, $section, "use_self_slim_method",     0 );
   my $baq                  = get_option( $config, $section, "samtools_baq_calibration", 0 );
-  my $rmdupLabel= get_option( $config, $section, "remove_duplicate", 1 );
-  if ($rmdupLabel) {
-  	$rmdupLabel="true";
-  } else {
-  	$rmdupLabel="false";
+  my $mark_duplicate     = get_option( $config, $section, "mark_duplicate",         0 );
+  
+  my $removeDupLabel;
+  if ($remove_duplicate) {
+    $removeDupLabel="true";
+  } elsif ($mark_duplicate) {
+    $removeDupLabel="false";
   }
   
   my $indel_vcf = "";
@@ -115,7 +117,12 @@ sub perform {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $sampleFile   = $sample_files[0];
 
-    my $rmdupResultName = $remove_duplicate ? ".rmdup" : "";
+    my $rmdupResultName = "";
+    if ($remove_duplicate) {
+      $rmdupResultName=".rmdup";
+    } elsif ($mark_duplicate) {
+      $rmdupResultName=".markdup";
+    }
     my $slimResultName  = $slim             ? ".slim"  : "";
     my $indelResultName = $indelRealignment ? ".indel" : "";
     my $baqResultName   = $baq              ? ".baq"   : "";
@@ -147,13 +154,13 @@ fi
       $rmlist    = $rmlist . " $presortedFile ${presortedFile}.bai";
     }
 
-    if ($remove_duplicate) {
-      my $rmdupFile = $sample_name . ".rmdup.bam";
+    if ($remove_duplicate or $mark_duplicate) {
+      my $rmdupFile = $sample_name . $rmdupResultName.".bam";
       my $rmdupFileIndex = change_extension( $rmdupFile, ".bai" );
       print $pbs "
 if [[ -s $inputFile && ! -s $rmdupFile ]]; then
   echo MarkDuplicates=`date` 
-  java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=$rmdupLabel CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
+  java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=$removeDupLabel CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
 fi
 ";
       $inputFile = $rmdupFile;

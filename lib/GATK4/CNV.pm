@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package GATK::CNV;
+package GATK4::CNV;
 
 use strict;
 use warnings;
@@ -30,13 +30,13 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
 
   #parameter files
-  my $gatkJar="";
-  my $targetFile=""; #should pad it to +/- 250 regions as suggested 
-  my $gslLibraryFile="";
-  my $hdfViewFolder="";
+  my $gatkJar   = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
+  my $targetFile   = get_param_file( $config->{$section}{bed_file},   "bed_file",   1 );
+  my $gslLibraryFile   = get_param_file( $config->{$section}{gslLibraryFile},   "gslLibraryFile",   1 );
+  my $hdfViewFolder   = get_param_file( $config->{$section}{hdfViewFolder},   "hdfViewFolder",   1 );
   
-  my $genoem_file="";
-  
+  my $genoemFile   = get_param_file( $config->{$section}{fasta_file},   "fasta_file",   1 );
+  my $PONFile   = get_param_file( $config->{$section}{PanelOfNormal},   "PanelOfNormal",   1 );
   
   #make PBS  
   my %raw_files = %{ get_raw_files( $config, $section ) };
@@ -49,7 +49,7 @@ sub perform {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $sampleFile   = $sample_files[0];
 
-    my $final_file      = "${sample_name}${rmdupResultName}.recal${slimResultName}${indelResultName}${baqResultName}.bam";
+    my $final_file      = "${sample_name}.coverage.cr.tsv.segfile.tsv.called.tsv";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -69,7 +69,7 @@ sub perform {
     print $pbs "
 if [[ -s $inputFile && ! -s $step1OutputFile ]]; then
   echo Step1=`date` 
-  java $option -jar $gatkJar CalculateTargetCoverage -I $inputFile -O $step1OutputFile --targets $targetFile -R $genoem_file -transform PCOV --targetInformationColumns FULL -groupBy SAMPLE -keepdups
+  java $option -jar $gatkJar CalculateTargetCoverage -I $inputFile -O $step1OutputFile --targets $targetFile -R $genoemFile -transform PCOV --targetInformationColumns FULL -groupBy SAMPLE -keepdups
 fi
 ";
     #step2: Create coverage profile
@@ -82,105 +82,38 @@ print $pbs "
 if [[ -s $step1OutputFile && ! -s $step2OutputFileTN ]]; then
   echo Step2=`date` 
   export LD_PRELOAD=/usr/local/gsl/latest/x86_64/gcc46/nonet/lib/libgslcblas.so
-  java $option -Djava.library.path=$hdfViewFolder -jar $gatkJar CalculateTargetCoverage -I $inputFile -O $outputFile --targets $targetFile -R $genoem_file -transform PCOV --targetInformationColumns FULL -groupBy SAMPLE -keepdups
+  java $option -Djava.library.path=$hdfViewFolder -jar $gatkJar NormalizeSomaticReadCounts -I $step1OutputFile -T $targetFile -PON $PONFile -TN $step2OutputFileTN -FNO $step2OutputFileFNO -BHO $step2OutputFileBHO -PTN $step2OutputFilePTN
 fi
 ";
 
 	#Step 3. Segment coverage profile
-	
-	
+	my $step3OutputFile=$step2OutputFileTN.".segfile.tsv";
+    print $pbs "
+if [[ -s $step2OutputFileTN && ! -s $step3OutputFile ]]; then
+  echo Step1=`date` 
+  java $option -jar $gatkJar PerformSegmentation -TN $step2OutputFileTN -O $step3OutputFile --log2Input
+fi
+";	
 	
 	#Step 4. Plot coverage profile
-	
-	
-	
+  my $step4OutputFile=$step3OutputFile.".segfile.tsv";
+  my $step4ImagePre=$sample_name.".CNV";
+    print $pbs "
+if [[ -s $step3OutputFile && ! -s $step4OutputFile ]]; then
+  echo Step1=`date` 
+  java $option -jar $gatkJar PlotSegmentedCopyRatio -TN $step2OutputFileTN -PTN $step2OutputFilePTN -S $step3OutputFile -pre $step4ImagePre -O . --log2Input
+fi
+";  
+
 	#Step 5. Call segments
+	 my $step5OutputFile=$step3OutputFile.".called.tsv";
+    print $pbs "
+if [[ -s $step3OutputFile && ! -s $step5OutputFile ]]; then
+  echo Step1=`date` 
+  java $option -jar $gatkJar CallSegments -TN $step2OutputFileTN -S $step3OutputFile -O $step5OutputFile
+fi
+";
 	
-    if ($remove_duplicate) {
-      my $rmdupFile = $sample_name . ".rmdup.bam";
-      my $rmdupFileIndex = change_extension( $rmdupFile, ".bai" );
-      print $pbs "
-if [[ -s $inputFile && ! -s $rmdupFile ]]; then
-  echo MarkDuplicates=`date` 
-  java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
-fi
-";
-      $inputFile = $rmdupFile;
-      $rmlist    = $rmlist . " $rmdupFile $rmdupFileIndex";
-    }
-
-    my $recalTable     = "${sample_name}${rmdupResultName}.recal.table";
-    my $recalFile      = "${sample_name}${rmdupResultName}.recal.bam";
-    my $recalFileIndex = change_extension( $recalFile, ".bai" );
-    my $slimFile       = "${sample_name}${rmdupResultName}.recal${slimResultName}.bam";
-    my $slimFileIndex  = change_extension( $slimFile, ".bai" );
-    my $printOptions   = "";
-    if ( $slim and !$use_self_slim_method ) {
-      $printOptions   = " --simplifyBAM";
-      $recalFile      = $slimFile;
-      $recalFileIndex = $slimFileIndex;
-    }
-
-    print $pbs "
-if [[ -s $inputFile && ! -s $recalTable ]]; then
-  echo BaseRecalibrator=`date` 
-  java $option -jar $gatk_jar -T BaseRecalibrator -nct $thread -rf BadCigar -R $faFile -I $inputFile $knownsitesvcf -o $recalTable $restrict_intervals
-fi
-
-if [[ -s $recalTable && ! -s $recalFile ]]; then
-  echo PrintReads=`date`
-  java $option -jar $gatk_jar -T PrintReads $printOptions -nct $thread -rf BadCigar -R $faFile -I $inputFile -BQSR $recalTable -o $recalFile 
-fi
-";
-    if ( $slim and $use_self_slim_method ) {
-      $rmlist = $rmlist . " $recalFile $recalFileIndex";
-      print $pbs "
-if [[ -s $recalFile && ! -s $slimFile ]]; then
-  echo slim=`date` 
-  samtools view -h $recalFile | sed 's/\\tBD\:Z\:[^\\t]*//' | sed 's/\\tPG\:Z\:[^\\t]*//' | sed 's/\\tBI\:Z\:[^\\t]*//' | samtools view -S -b > $slimFile
-  samtools index $slimFile
-  mv ${slimFile}.bai $slimFileIndex
-fi  
-";
-    }
-
-    my $indelFile = "${sample_name}${rmdupResultName}.recal${slimResultName}${indelResultName}.bam";
-    my $indelFileIndex = change_extension( $indelFile, ".bai" );
-    if ($indelRealignment) {
-      my $intervalFile = "${sample_name}${rmdupResultName}.recal${slimResultName}${indelResultName}.intervals";
-      $rmlist = $rmlist . " $slimFile $slimFileIndex $intervalFile";
-      print $pbs "
-if [[ -s $slimFile && ! -s $indelFile ]]; then
-  echo RealignerTargetCreator=`date` 
-  java $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $slimFile -R $faFile $indel_vcf -o $intervalFile $restrict_intervals
-fi
-
-if [[ -s $intervalFile && ! -s $indelFile ]]; then
-  echo IndelRealigner=`date` 
-  #InDel parameter referenced: http://www.broadinstitute.org/gatk/guide/tagged?tag=local%20realignment
-  java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $fixMisencodedQuals -I $slimFile -R $faFile -targetIntervals $intervalFile $indel_vcf --consensusDeterminationModel USE_READS -LOD 0.4 -o $indelFile 
-fi  
-";
-    }
-
-    if ($baq) {
-      print $pbs "
-if [[ -s $indelFile && ! -s $final_file ]]; then
-  echo baq = `date` 
-  samtools calmd -Abr $indelFile $faFile > $final_file 
-  samtools index $final_file 
-fi
-";
-      $rmlist = $rmlist . " $indelFile $indelFileIndex";
-    }
-
-    print $pbs "
-if [[ -s $final_file && ! -s ${final_file}.stat ]]; then 
-  echo flagstat = `date` 
-  samtools flagstat $final_file > ${final_file}.stat 
-  rm $rmlist 
-fi
-";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
@@ -189,7 +122,7 @@ fi
     chmod 0755, $shfile;
   }
 
-  print " !!!shell file $shfile created, you can run this shell file to submit all GATK refine tasks . \n ";
+  print " !!!shell file $shfile created, you can run this shell file to submit all GATK CNV tasks. \n ";
 }
 
 sub result {
@@ -198,19 +131,9 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $remove_duplicate = get_option( $config, $section, "remove_duplicate",         1 );
-  my $indelRealignment = get_option( $config, $section, "indel_realignment",        0 );
-  my $slim             = get_option( $config, $section, "slim_print_reads",         1 );
-  my $baq              = get_option( $config, $section, "samtools_baq_calibration", 0 );
-
-  my $rmdupResultName = $remove_duplicate ? ".rmdup" : "";
-  my $indelResultName = $indelRealignment ? ".indel" : "";
-  my $slimResultName  = $slim             ? ".slim"  : "";
-  my $baqResultName   = $baq              ? ".baq"   : "";
-
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $final_file   = "${sample_name}${rmdupResultName}.recal${slimResultName}${indelResultName}${baqResultName}.bam";
+    my $final_file      = "${sample_name}.coverage.cr.tsv.segfile.tsv.called.tsv";
     my @result_files = ();
     push( @result_files, "${result_dir}/${final_file}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
