@@ -32,6 +32,11 @@ sub perform {
   #parameter files
   my $gatkJar="";
   my $targetFile=""; #should pad it to +/- 250 regions as suggested 
+  my $gslLibraryFile="";
+  my $hdfViewFolder="";
+  
+  my $genoem_file="";
+  
   
   #make PBS  
   my %raw_files = %{ get_raw_files( $config, $section ) };
@@ -58,16 +63,39 @@ sub perform {
 
     my $inputFile    = $sampleFile;
     my $resultPrefix = $sample_name;
-    my $outputFile="";
   
     #step1: Collect proportional coverage
+    my $step1OutputFile=$resultPrefix.".coverage";
     print $pbs "
-if [[ -s $inputFile && ! -s $rmdupFile ]]; then
+if [[ -s $inputFile && ! -s $step1OutputFile ]]; then
   echo Step1=`date` 
-  java $option -jar $gatkJar MarkDuplicates -I $inputFile -O $outputFile ASSUME_SORTED=true REMOVE_DUPLICATES=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
+  java $option -jar $gatkJar CalculateTargetCoverage -I $inputFile -O $step1OutputFile --targets $targetFile -R $genoem_file -transform PCOV --targetInformationColumns FULL -groupBy SAMPLE -keepdups
+fi
+";
+    #step2: Create coverage profile
+    my $step2OutputFileTN=$step1OutputFile.".cr.tsv";
+    my $step2OutputFileFNO=$step1OutputFile.".fnt.tsv";
+    my $step2OutputFileBHO=$step1OutputFile.".beta_hats.tsv";
+    my $step2OutputFilePTN=$step1OutputFile.".pre_tangent_normalization_cr.tsv";
+        
+print $pbs "
+if [[ -s $step1OutputFile && ! -s $step2OutputFileTN ]]; then
+  echo Step2=`date` 
+  export LD_PRELOAD=/usr/local/gsl/latest/x86_64/gcc46/nonet/lib/libgslcblas.so
+  java $option -Djava.library.path=$hdfViewFolder -jar $gatkJar CalculateTargetCoverage -I $inputFile -O $outputFile --targets $targetFile -R $genoem_file -transform PCOV --targetInformationColumns FULL -groupBy SAMPLE -keepdups
 fi
 ";
 
+	#Step 3. Segment coverage profile
+	
+	
+	
+	#Step 4. Plot coverage profile
+	
+	
+	
+	#Step 5. Call segments
+	
     if ($remove_duplicate) {
       my $rmdupFile = $sample_name . ".rmdup.bam";
       my $rmdupFileIndex = change_extension( $rmdupFile, ".bai" );

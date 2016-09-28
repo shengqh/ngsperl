@@ -79,7 +79,13 @@ sub perform {
   my $slim                 = get_option( $config, $section, "slim_print_reads",         1 );
   my $use_self_slim_method = get_option( $config, $section, "use_self_slim_method",     0 );
   my $baq                  = get_option( $config, $section, "samtools_baq_calibration", 0 );
-
+  my $rmdupLabel= get_option( $config, $section, "remove_duplicate", 1 );
+  if ($rmdupLabel) {
+  	$rmdupLabel="true";
+  } else {
+  	$rmdupLabel="false";
+  }
+  
   my $indel_vcf = "";
   if ($indelRealignment) {
     my $vcfFiles = $config->{$section}{indel_vcf_files} or die "Define indel_vcf_files in section $section first.";
@@ -147,7 +153,7 @@ fi
       print $pbs "
 if [[ -s $inputFile && ! -s $rmdupFile ]]; then
   echo MarkDuplicates=`date` 
-  java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
+  java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=$rmdupLabel CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
 fi
 ";
       $inputFile = $rmdupFile;
