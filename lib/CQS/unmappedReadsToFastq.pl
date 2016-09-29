@@ -15,6 +15,10 @@ my $outFile = $ARGV[0];
 my $identicalFastqFile    = $ARGV[1];
 my $smallRNAreadsFile     = $ARGV[2];
 my $perfectmatchReadsFile = $ARGV[3];
+my $shortReads = $ARGV[4];
+if (!defined $shortReads) {
+  $shortReads=20;
+}
 
 my %readsDel;
 
@@ -86,40 +90,83 @@ print "$dupCount reads recorded in DupCount file\n";
 
 #my $identicalFastqFileBase=basename($identicalFastqFile);
 open RESULT, "| gzip -c > $outFile" or die "error writing result: $!";
+
 my $outDupcountFile=$outFile;
 $outDupcountFile=~s/\.gz$/.dupcount/;
 #$outDupcountFile=$outDupcountFile.".dupcount";
 open RESULTCOUNT, ">$outDupcountFile" or die "error writing result: $!";
 print RESULTCOUNT "Query\tCount\tSequence\n";
 
-while ( my $line1 = <FASTQ> ) {
+if (%perfectmatchOnlyReads) { #Has perfect matched file
+  my $outMappedFastqFile=$outFile;
+  $outMappedFastqFile=~s/\.unmapped\.fastq\.gz$/\.mappedToHostGenome\.fastq\.gz/;
+  open RESULTGENOME, "| gzip -c > $outMappedFastqFile" or die "error writing result: $!";
+  my $outShortFastqFile=$outFile;
+  $outShortFastqFile=~s/\.unmapped\.fastq\.gz$/\.short\.fastq\.gz/;
+  open RESULTSHORT, "| gzip -c > $outShortFastqFile" or die "error writing result: $!";
+  
+  my $outMappedDupcountFile=$outFile;
+  $outMappedDupcountFile=~s/\.unmapped\.fastq\.gz$/.mappedToHostGenome.dupcount/;
+  open MAPPEDCOUNT, ">$outMappedDupcountFile" or die "error writing result: $!";
+  print MAPPEDCOUNT "Query\tCount\tSequence\n";
+  
+  my $outShortDupcountFile=$outFile;
+  $outShortDupcountFile=~s/\.unmapped\.fastq\.gz$/.short.dupcount/;
+  open SHORTCOUNT, ">$outShortDupcountFile" or die "error writing result: $!";
+  print SHORTCOUNT "Query\tCount\tSequence\n";
+  
+  while ( my $line1 = <FASTQ> ) {
   my $line2   = <FASTQ>;
   my $line3   = <FASTQ>;
   my $line4   = <FASTQ>;
   my $readKey = ( split( " ", $line1 ) )[0];
   if ( exists $readsDel{$readKey} ) {
     delete $readsDel{$readKey};
+    
+    if (exists $perfectmatchOnlyReads{$readKey}) { #Reads from perfect match genoem, not small RNA 
+      $readKey=~s/^@//;
+      if ((length($line2)-1)<$shortReads) { # -1 because of next line sign, < means short Reads>
+         print RESULTSHORT $line1 . $line2 . $line3 . $line4;
+         print SHORTCOUNT $fastq2Count{$readKey};
+      } else { #long reads
+        print RESULTGENOME $line1 . $line2 . $line3 . $line4;
+        print MAPPEDCOUNT $fastq2Count{$readKey};
+      }
+    }
   }
   else {
+    $readKey=~s/^@//;
+    if ((length($line2)-1)<$shortReads) { # -1 because of next line sign, < means short Reads>
+      print RESULTSHORT $line1 . $line2 . $line3 . $line4;
+      print SHORTCOUNT $fastq2Count{$readKey};
+    } else {
+      print RESULT $line1 . $line2 . $line3 . $line4;
+      print RESULTCOUNT $fastq2Count{$readKey};
+    }
+  }
+  }
+  close RESULTGENOME;
+  close MAPPEDCOUNT;
+  close RESULTSHORT;
+  close SHORTCOUNT;
+} else { #Don't have perfect matched file
+  while ( my $line1 = <FASTQ> ) {
+  my $line2   = <FASTQ>;
+  my $line3   = <FASTQ>;
+  my $line4   = <FASTQ>;
+  my $readKey = ( split( " ", $line1 ) )[0];
+  if ( exists $readsDel{$readKey} ) {
+    delete $readsDel{$readKey};
+  } else {
     print RESULT $line1 . $line2 . $line3 . $line4;
     $readKey=~s/^@//;
     print RESULTCOUNT $fastq2Count{$readKey};
   }
 }
+  
+}
 close RESULT;
 close RESULTCOUNT;
-
-if (%perfectmatchOnlyReads) {
-  my $outMappedDupcountFile=$outFile;
-  $outMappedDupcountFile=~s/\.unmapped\.fastq\.gz$/.mappedToHostGenome.dupcount/;
-  open MAPPEDCOUNT, ">$outMappedDupcountFile" or die "error writing result: $!";
-  print MAPPEDCOUNT "Query\tCount\tSequence\n";
-  foreach my $readKey (keys %perfectmatchOnlyReads) {
-    $readKey=~s/^@//;
-    print MAPPEDCOUNT $fastq2Count{$readKey};
-  }
-  close MAPPEDCOUNT;
-}
 
 if (%readsDel) {
   $readsDelCount = scalar( keys %readsDel );
