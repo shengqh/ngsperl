@@ -72,12 +72,13 @@ while ( my $seq = $seqio->next_seq ) {
 my $total_sequence = scalar(@sequences);
 for ( my $current_index = 0 ; $current_index < $total_sequence ; $current_index++ ) {
   my $seq       = $sequences[$current_index];
-  my $fa_name   = $seq->id . '.fasta';
-  my $fa_output = $seq->id . '.fasta.output';
+  my $file_name = $seq->id;
+  $file_name =~ s/;/_/g;
+  my $fa_name   = $file_name . '.fasta';
+  my $fa_output = $file_name . '.fasta.output';
   my $seqio_obj = Bio::SeqIO->new( -file => ">$fa_name", -format => 'fasta' );
   $seqio_obj->write_seq($seq);
   my $datastring = localtime();
-
   print $datastring . " : " . ( $current_index + 1 ) . "/" . $total_sequence . " : " . $seq->id . "\n";
 `blastn -task blastn-short -db $local_db/nt -perc_identity 100 -query $fa_name $thread_option -outfmt '6 qlen nident qacc sallacc salltitles' | awk '\$1 == \$2 {print}' | cut -f3- | sort | uniq >> $fa_output`;
   if ( !-e $fa_output ) {
