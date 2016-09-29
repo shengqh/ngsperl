@@ -47,7 +47,7 @@ sub perform {
 	my $genoemFile =
 	  get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
 	my $PONFile =
-	  get_param_file( $config->{$section}{PanelOfNormal}, "PanelOfNormal", 0 );
+	  parse_param_file( $config, $section, "PanelOfNormal", 0 );
 
 	#parameter
 	my $makePON = get_option( $config, $section, "makePON", 0 );
