@@ -148,7 +148,7 @@ fi
 		print $sh "\$MYCMD ./$pbs_name \n";
 		my $final_file      = "${task_name}.PON";
 		my $step1_file_list = "${task_name}.PONStep1.List";
-		open( my $PONStep1ResultFileList, ">$step1_file_list" )
+		open( my $PONStep1ResultFileList, ">$result_dir/$step1_file_list" )
 		  or die "Cannot create $shfile";
 
 		my $log      = $self->get_log_filename( $log_dir, $task_name );
@@ -170,7 +170,7 @@ fi
 			my $step1OutputFile = $resultPrefix . ".PONStep1.coverage";
 			print $pbs "
 if [[ -s $inputFile && ! -s $step1OutputFile ]]; then
-  echo Step1=`date` 
+  echo Step1:$sample_name=`date` 
   java $option -jar $gatkJar CalculateTargetCoverage -I $inputFile -O $step1OutputFile --targets $targetFile -R $genoemFile -transform PCOV --targetInformationColumns FULL -groupBy SAMPLE -keepdups
 fi
 ";

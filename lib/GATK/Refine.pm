@@ -247,7 +247,7 @@ fi
     chmod 0755, $shfile;
   }
 
-  print " !!!shell file $shfile created, you can run this shell file to submit all GATK refine tasks . \n ";
+  print " !!!shell file $shfile created, you can run this shell file to submit all GATK refine tasks. \n ";
 }
 
 sub result {
@@ -260,12 +260,18 @@ sub result {
   my $indelRealignment = get_option( $config, $section, "indel_realignment",        0 );
   my $slim             = get_option( $config, $section, "slim_print_reads",         1 );
   my $baq              = get_option( $config, $section, "samtools_baq_calibration", 0 );
+  my $mark_duplicate     = get_option( $config, $section, "mark_duplicate",         0 );
 
-  my $rmdupResultName = $remove_duplicate ? ".rmdup" : "";
   my $indelResultName = $indelRealignment ? ".indel" : "";
   my $slimResultName  = $slim             ? ".slim"  : "";
   my $baqResultName   = $baq              ? ".baq"   : "";
-
+  my $rmdupResultName = "";
+    if ($remove_duplicate) {
+      $rmdupResultName=".rmdup";
+    } elsif ($mark_duplicate) {
+      $rmdupResultName=".markdup";
+    };
+    
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my $final_file   = "${sample_name}${rmdupResultName}.recal${slimResultName}${indelResultName}${baqResultName}.bam";
