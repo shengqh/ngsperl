@@ -25,10 +25,15 @@ if (any(isDataNumeric)) {
 mappingResult<-mappingResult[,c(index:ncol(mappingResult))]
 
 mappingResultExpand<-expandCountTableByName(mappingResult)
-#Make one table into different sub Tables
-nameLength<-nchar(row.names(mappingResultExpand))
-nameSubtRNA<-substr(row.names(mappingResultExpand),nameLength-5,nameLength)
-nameSubtRNA1<-substr(row.names(mappingResultExpand),nameLength-5,nameLength-3)
+#Make one table into different sub Tables, need to match tRNA name
+if (grepl("^tRNA-[A-Za-z]+-[A-Za-z]+",row.names(mappingResultExpand)[1])) { #tRNA like tRNA-Gly-GCC-1-2
+	nameSubtRNA<-sapply(strsplit(row.names(mappingResultExpand),"-"),function(x) paste(x[2:3],collapse=""))
+	nameSubtRNA1<-sapply(strsplit(row.names(mappingResultExpand),"-"),function(x) x[2])
+} else { #tRNA like chr6.tRNA1014-CysGCA
+	nameLength<-nchar(row.names(mappingResultExpand))
+	nameSubtRNA<-substr(row.names(mappingResultExpand),nameLength-5,nameLength)
+	nameSubtRNA1<-substr(row.names(mappingResultExpand),nameLength-5,nameLength-3)
+}
 trnaCountTableExpandByRNA<-aggregateCountTable(mappingResultExpand,nameSubtRNA)
 trnaCountTableExpandByRNA1<-aggregateCountTable(mappingResultExpand,nameSubtRNA1)
 
