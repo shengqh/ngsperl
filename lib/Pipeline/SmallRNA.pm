@@ -623,7 +623,7 @@ sub getSmallRNAConfig {
         source2_ref      => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
         source3_ref      => ["bowtie1_genome_1mm_NTA_pmnames"],
         output_ext       => "_clipped_identical.unmapped.fastq.gz",
-        output_other_ext => "_clipped_identical.unmapped.fastq.dupcount,_clipped_identical.mappedToHostGenome.dupcount",
+        output_other_ext => "_clipped_identical.unmapped.fastq.dupcount,_clipped_identical.mappedToHostGenome.dupcount,_clipped_identical.mappedToHostGenome.fastq.gz,_clipped_identical.short.fastq.gz,_clipped_identical.short.dupcount",
         sh_direct        => 1,
         pbs              => {
           "email"     => $def->{email},
@@ -656,7 +656,7 @@ sub getSmallRNAConfig {
     push @table_for_pieSummary,  ( "bowtie1_genome_unmapped_reads",   ".unmapped.fastq.dupcount" );
     push @table_for_readSummary, ( "bowtie1_genome_host_reads_table", ".count\$" );
     push @name_for_readSummary,  ("Host Genome");
-    $identical_ref = [ "bowtie1_genome_unmapped_reads", ".fastq.gz\$" ];
+    $identical_ref = [ "bowtie1_genome_unmapped_reads", ".unmapped.fastq.gz\$" ];
   }
 
   my @mapped  = ();
