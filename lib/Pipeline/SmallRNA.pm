@@ -38,8 +38,9 @@ sub getSmallRNAConfig {
 
   my @table_for_correlation = ( "identical_sequence_count_table", "^(?!.*?read).*\.count\$" );
   my @table_for_countSum    = ();
+  my @table_for_pieSummary  = ();
+  my @name_for_pieSummary  = ();
   my @table_for_readSummary = ();
-  my @table_for_pieSummary  = ( "identical", ".dupcount" );
   my @name_for_readSummary  = ();
 
   #print Dumper($config);
@@ -320,6 +321,7 @@ sub getSmallRNAConfig {
     };
 
     push @table_for_pieSummary,  ( "bowtie1_genome_1mm_NTA_smallRNA_count", ".count\$" );
+    push @name_for_pieSummary,"Host Samll RNA";
     push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "^(?!.*?read).*\.count\$" );
     push @table_for_readSummary,
       ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$" );
@@ -653,7 +655,8 @@ sub getSmallRNAConfig {
     $config = merge( $config, $unmapped_reads );
     push @individual,            ( "bowtie1_genome_1mm_NTA_pmnames",  "bowtie1_genome_unmapped_reads" );
     push @summary,               ("bowtie1_genome_host_reads_table");
-    push @table_for_pieSummary,  ( "bowtie1_genome_unmapped_reads",   ".unmapped.fastq.dupcount" );
+    push @table_for_pieSummary,  ( "bowtie1_genome_unmapped_reads",   ".unmapped.fastq.dupcount","bowtie1_genome_unmapped_reads",   ".mappedToHostGenome.dupcount","bowtie1_genome_unmapped_reads",   ".short.dupcount" );
+    push @name_for_pieSummary, ("Unmapped In Host","Mapped to Host Genome","Too Short for Mapping");
     push @table_for_readSummary, ( "bowtie1_genome_host_reads_table", ".count\$" );
     push @name_for_readSummary,  ("Host Genome");
     $identical_ref = [ "bowtie1_genome_unmapped_reads", ".unmapped.fastq.gz\$" ];
@@ -1578,6 +1581,7 @@ sub getSmallRNAConfig {
     $config = merge( $config, $unmapped_reads );
     push @individual, ("bowtie1_unmapped_reads");
     push @table_for_pieSummary, ( "bowtie1_unmapped_reads", ".dupcount" );
+    push @name_for_pieSummary,("UnMapped");
   }
 
   $config->{count_table_correlation} = {
@@ -1616,6 +1620,8 @@ sub getSmallRNAConfig {
       "mem"       => "10gb"
     },
     };
+    
+  my $name_for_pieSummary_r = "readFilesModule=c('" . join( "','", @name_for_pieSummary ) . "')";  
   $config->{reads_in_tasks_pie} = {
     class                    => "CQS::UniqueR",
     suffix                   => "_pie",
@@ -1626,7 +1632,7 @@ sub getSmallRNAConfig {
     parameterSampleFile1_ref => \@table_for_pieSummary,
     parameterSampleFile2     => $groups,
     parameterSampleFile3     => $groups_vis_layout,
-
+    rCode                    => $name_for_pieSummary_r,
     #    parameterFile3_ref       => [ "fastqc_count_vis", ".Reads.csv\$" ],
     sh_direct => 1,
     pbs       => {
