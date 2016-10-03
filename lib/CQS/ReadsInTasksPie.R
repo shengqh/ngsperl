@@ -36,7 +36,7 @@ NonHostMappedReads<-resultTable["Unmapped In Host",]-resultTable["UnMapped",]
 
 tableForPieChart<-resultTable
 tableForPieChart["Unmapped In Host",]<-NonHostMappedReads
-row.names(tableForPieChart)[which(row.names(tableForPieChart)=="Unmapped In Host")]<-"mapped to Non-Host"
+row.names(tableForPieChart)[which(row.names(tableForPieChart)=="Unmapped In Host")]<-"Mapped to Non-Host"
 
 write.csv(tableForPieChart,paste0(resultFile,".NonParallel.TaskReads.csv"))
 
