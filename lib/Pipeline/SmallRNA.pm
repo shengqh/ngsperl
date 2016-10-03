@@ -655,8 +655,8 @@ sub getSmallRNAConfig {
     $config = merge( $config, $unmapped_reads );
     push @individual,            ( "bowtie1_genome_1mm_NTA_pmnames",  "bowtie1_genome_unmapped_reads" );
     push @summary,               ("bowtie1_genome_host_reads_table");
-    push @table_for_pieSummary,  ( "bowtie1_genome_unmapped_reads",   ".unmapped.fastq.dupcount","bowtie1_genome_unmapped_reads",   ".mappedToHostGenome.dupcount","bowtie1_genome_unmapped_reads",   ".short.dupcount" );
-    push @name_for_pieSummary, ("Unmapped In Host","Mapped to Host Genome","Too Short for Mapping");
+    push @table_for_pieSummary,  ( "bowtie1_genome_unmapped_reads",   ".mappedToHostGenome.dupcount","bowtie1_genome_unmapped_reads",   ".short.dupcount","bowtie1_genome_unmapped_reads",   ".unmapped.fastq.dupcount" );
+    push @name_for_pieSummary, ("Mapped to Host Genome","Too Short for Mapping","Unmapped In Host");
     push @table_for_readSummary, ( "bowtie1_genome_host_reads_table", ".count\$" );
     push @name_for_readSummary,  ("Host Genome");
     $identical_ref = [ "bowtie1_genome_unmapped_reads", ".unmapped.fastq.gz\$" ];

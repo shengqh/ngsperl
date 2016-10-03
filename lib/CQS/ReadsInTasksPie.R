@@ -11,7 +11,9 @@ groupVisLayoutFileList<-parSampleFile3
 
 countFiles<-read.delim(countFilesList,header=F,as.is=T)
 
-taskName<-sapply(strsplit(countFiles[,1],"\\/"),function(x) {resultFolderInd<-grep("result",x);return(x[resultFolderInd-1])})
+#taskName<-sapply(strsplit(countFiles[,1],"\\/"),function(x) {resultFolderInd<-grep("result",x);return(x[resultFolderInd-1])})
+taskName<-factor(readFilesModule,levels=readFilesModule)
+
 totalCountAll<-NULL
 for (countFile in countFiles[,1]) {
 	if (grepl(".csv$",countFile)) {
@@ -30,12 +32,12 @@ for (countFile in countFiles[,1]) {
 resultTable<-data.frame(Task=taskName,Count=totalCountAll,Sample=countFiles[,2])
 resultTable<-acast(resultTable,Task~Sample,value.var="Count")
 
-HostSmallRnaMapped<-resultTable["bowtie1_genome_1mm_NTA_smallRNA_count",]
-HostGenomeMappedReads<-resultTable["identical",]-resultTable["bowtie1_genome_unmapped_reads",]-resultTable["bowtie1_genome_1mm_NTA_smallRNA_count",]
-NonHostMapped<-resultTable["bowtie1_genome_unmapped_reads",]-resultTable["bowtie1_unmapped_reads",]
-UnMapped<-resultTable["bowtie1_unmapped_reads",]
+NonHostMappedReads<-resultTable["Unmapped In Host",]-resultTable["UnMapped",]
 
-tableForPieChart<-rbind(HostSmallRnaMapped,HostGenomeMappedReads,NonHostMapped,UnMapped)
+tableForPieChart<-resultTable
+tableForPieChart["Unmapped In Host",]<-NonHostMappedReads
+row.names(tableForPieChart)[which(row.names(tableForPieChart)=="Unmapped In Host")]<-"mapped to Non-Host"
+
 write.csv(tableForPieChart,paste0(resultFile,".NonParallel.TaskReads.csv"))
 
 ggpieToFile(tableForPieChart,fileName=paste0(resultFile,".NonParallel.TaskReads.Piechart.png"),maxCategory=NA,textSize=textSize,reOrder=FALSE)
