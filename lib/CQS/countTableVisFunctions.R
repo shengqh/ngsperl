@@ -431,7 +431,7 @@ ggpieToFile<-function(dat,fileName,fill="Category", maxCategory=5,textSize=9,tra
 #		width<-max(1500,colLength*560)
 	} else {
 		if (transformTable) {
-			height<-(as.integer(sqrt(ncol(dat)))+1)*560
+			height<-max(2000,(as.integer(sqrt(ncol(dat)))+1)*560)
 		} else {
 			height<-2700
 		}
