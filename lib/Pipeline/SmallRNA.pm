@@ -736,6 +736,63 @@ sub getSmallRNAConfig {
 
   if ($search_unmapped_reads) {
     my $unmappedreads = {
+      #mapped to genome reads to All Non Host
+      bowtie1_NonHost_pm => {
+        pbs => {
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '10',
+          'mem'       => '40gb',
+          'nodes'     => '1:ppn=8'
+        },
+        cluster       => $cluster,
+        sh_direct     => 1,
+        perform       => 1,
+        target_dir    => $nonhost_library_dir . "/bowtie1_NonHost_pm",
+        samonly       => 0,
+        mappedonly    => 1,
+        source_ref    => ["bowtie1_genome_unmapped_reads",   ".mappedToHostGenome.fastq.gz"],
+        bowtie1_index => $def->{bowtie1_all_nonHost_index},
+        option        => $def->{bowtie1_option_pm},
+        class         => 'Alignment::Bowtie1'
+      },
+      bowtie1_NonHost_pm_count => {
+        class        => 'CQS::CQSChromosomeCount',
+        cluster      => $cluster,
+        sh_direct    => 1,
+        perform      => 1,
+        target_dir   => $nonhost_library_dir . "/bowtie1_NonHost_pm_count",
+        option       => $def->{smallrnacount_option} . ' --keepChrInName --categoryMapFile ' . $def->{all_nonHost_map},
+        source_ref   => 'bowtie1_NonHost_pm',
+        cqs_tools    => $def->{cqstools},
+        seqcount_ref => [ "identical", ".dupcount\$" ],
+        pbs          => {
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '72',
+          'mem'       => '40gb',
+          'nodes'     => '1:ppn=1'
+        },
+      },
+
+      bowtie1_NonHost_pm_table => {
+        class      => 'CQS::CQSChromosomeTable',
+        cluster    => $cluster,
+        sh_direct  => 1,
+        perform    => 1,
+        target_dir => $nonhost_library_dir . "/bowtie1_NonHost_pm_table",
+        source_ref => [ 'bowtie1_NonHost_pm_count', '.xml' ],
+        cqs_tools  => $def->{cqstools},
+        option     => $non_host_table_option,
+        prefix     => 'nonHost_pm_',
+        pbs        => {
+          'email'     => $def->{email},
+          "emailType" => $def->{emailType},
+          'walltime'  => '10',
+          'mem'       => '10gb',
+          'nodes'     => '1:ppn=1'
+        },
+      },
 
       # unmapped reads to tRNA
       bowtie1_tRNA_pm => {
