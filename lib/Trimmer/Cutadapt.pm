@@ -92,6 +92,11 @@ sub perform {
     $optionOnlyLimited = $optionOnlyLimited . " " . $longLimited;
     $optionRemoveLimited =~ s/$longLimited//;
   }
+  
+  if(index($option, "--trim-n") == -1){
+    $option = $option . " --trim-n";
+  }
+  
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );

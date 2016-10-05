@@ -358,9 +358,6 @@ sub getPrepareConfig {
     if ( !defined $cutadapt_option ) {
       $cutadapt_option = "-m " . $def->{min_read_length};
     }
-    if ( $fastq_remove_N && $cutadapt_option !~ /--trim-n/ ) {
-      $cutadapt_option = $cutadapt_option . " --trim-n";
-    }
 
     my $cutadaptModules = {
       cutadapt => {
