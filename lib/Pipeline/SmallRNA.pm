@@ -321,7 +321,7 @@ sub getSmallRNAConfig {
     };
 
     push @table_for_pieSummary,  ( "bowtie1_genome_1mm_NTA_smallRNA_count", ".count\$" );
-    push @name_for_pieSummary,"Host Samll RNA";
+    push @name_for_pieSummary,"Host Small RNA";
     push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "^(?!.*?read).*\.count\$" );
     push @table_for_readSummary,
       ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$" );
