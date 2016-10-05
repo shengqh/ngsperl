@@ -53,6 +53,7 @@ sub perform {
   my $foldChange        = get_option( $config, $section, "fold_change",          2.0 );
   my $minMedianInGroup  = get_option( $config, $section, "min_median_read",      0 );
   my $addCountOne       = get_option( $config, $section, "add_count_one",        0 );
+  my $usePearsonInHCA   = get_option( $config, $section, "use_pearson_in_hca",   0 );
 
   my %tpgroups = ();
   for my $group_name ( sort keys %{$groups} ) {
@@ -176,6 +177,7 @@ pvalue<-$pvalue
 foldChange<-$foldChange
 minMedianInGroup<-$minMedianInGroup
 addCountOne<-$addCountOne
+usePearsonInHCA<-$usePearsonInHCA
 
 ";
 

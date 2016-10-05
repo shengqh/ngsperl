@@ -9,8 +9,13 @@ pvalue<-0.05
 foldChange<-1.5
 minMedianInGroup<-2
 addCountOne<-1
+usePearsonInHCA<-0
 
 ##predefined_condition_end
+
+if(!exists("usePearsonInHCA")){
+  usePearsonInHCA=0
+}
 
 library("DESeq2")
 library("heatmap3")
@@ -85,7 +90,19 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
     }else{
       gsColors = conditionColors;
     }
-    heatmap3(rldselect, 
+    if(usePearsonInHCA){
+      heatmap3(rldselect, 
+             col = hmcols, 
+             ColSideColors = gsColors, 
+             margins=c(12,5), 
+             scale="r", 
+             labRow=NA,
+             main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
+             cexCol=cexCol, 
+             useRaster=FALSE,
+             legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
+    }else{
+      heatmap3(rldselect, 
              col = hmcols, 
              ColSideColors = gsColors, 
              margins=c(12,5), 
@@ -96,6 +113,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
              cexCol=cexCol, 
              useRaster=FALSE,
              legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
+    }
     dev.off()
   }
 }
@@ -443,11 +461,12 @@ for(countfile_index in c(1:length(countfiles))){
       nonDEmatrix<-rldmatrix[!siggenes,,drop=F]
       DEmatrix<-rldmatrix[siggenes,,drop=F]
       
-      drawPCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, showLabelInPCA, designData, conditionColors)
+	  drawPCA(paste0(prefix,"_geneDE"),DEmatrix , showLabelInPCA, designData, conditionColors)
+	  drawHCA(paste0(prefix,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames)
+	  
+	  drawPCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, showLabelInPCA, designData, conditionColors)
       drawHCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames)
       
-      drawPCA(paste0(prefix,"_geneDE"),DEmatrix , showLabelInPCA, designData, conditionColors)
-      drawHCA(paste0(prefix,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames)
       #drawHCA(paste0(prefix,"_gene500NotDE"), nonDEmatrix[1:min(500, nrow(nonDEmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
     }
     
