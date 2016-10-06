@@ -737,7 +737,7 @@ sub getSmallRNAConfig {
   if ($search_unmapped_reads) {
     my $unmappedreads = {
       #mapped to genome reads to All Non Host
-      bowtie1_NonHost_pm => {
+      bowtie1_HostGenomeReads_NonHost_pm => {
         pbs => {
           'email'     => $def->{email},
           "emailType" => $def->{emailType},
@@ -748,7 +748,7 @@ sub getSmallRNAConfig {
         cluster       => $cluster,
         sh_direct     => 1,
         perform       => 1,
-        target_dir    => $nonhost_library_dir . "/bowtie1_NonHost_pm",
+        target_dir    => $nonhost_library_dir . "/bowtie1_HostGenomeReads_NonHost_pm",
         samonly       => 0,
         mappedonly    => 1,
         source_ref    => ["bowtie1_genome_unmapped_reads",   ".mappedToHostGenome.fastq.gz"],
@@ -756,14 +756,14 @@ sub getSmallRNAConfig {
         option        => $def->{bowtie1_option_pm},
         class         => 'Alignment::Bowtie1'
       },
-      bowtie1_NonHost_pm_count => {
+      bowtie1_HostGenomeReads_NonHost_pm_count => {
         class        => 'CQS::CQSChromosomeCount',
         cluster      => $cluster,
         sh_direct    => 1,
         perform      => 1,
-        target_dir   => $nonhost_library_dir . "/bowtie1_NonHost_pm_count",
+        target_dir   => $nonhost_library_dir . "/bowtie1_HostGenomeReads_NonHost_pm_count",
         option       => $def->{smallrnacount_option} . ' --keepChrInName --categoryMapFile ' . $def->{all_nonHost_map},
-        source_ref   => 'bowtie1_NonHost_pm',
+        source_ref   => 'bowtie1_HostGenomeReads_NonHost_pm',
         cqs_tools    => $def->{cqstools},
         seqcount_ref => [ "identical", ".dupcount\$" ],
         pbs          => {
@@ -775,13 +775,13 @@ sub getSmallRNAConfig {
         },
       },
 
-      bowtie1_NonHost_pm_table => {
+      bowtie1_HostGenomeReads_NonHost_pm_table => {
         class      => 'CQS::CQSChromosomeTable',
         cluster    => $cluster,
         sh_direct  => 1,
         perform    => 1,
-        target_dir => $nonhost_library_dir . "/bowtie1_NonHost_pm_table",
-        source_ref => [ 'bowtie1_NonHost_pm_count', '.xml' ],
+        target_dir => $nonhost_library_dir . "/bowtie1_HostGenomeReads_NonHost_pm_table",
+        source_ref => [ 'bowtie1_HostGenomeReads_NonHost_pm_count', '.xml' ],
         cqs_tools  => $def->{cqstools},
         option     => $non_host_table_option,
         prefix     => 'nonHost_pm_',
@@ -793,17 +793,17 @@ sub getSmallRNAConfig {
           'nodes'     => '1:ppn=1'
         },
       },
-      nonhost_All_vis => {
+      HostGenomeReads_NonHost_vis => {
         class                     => "CQS::UniqueR",
         perform                   => 1,
-        target_dir                => $data_visualization_dir . "/nonhost_All_vis",
+        target_dir                => $data_visualization_dir . "/HostGenomeReads_NonHost_vis",
         rtemplate                 => "countTableVisFunctions.R,countTableVis.R",
         output_file               => ".NonHostAll.Result",
         output_file_ext           => ".Barplot.png",
         parameterSampleFile1Order => $def->{groups_order},
         parameterSampleFile1      => $groups,
         parameterSampleFile2      => $groups_vis_layout,
-        parameterFile1_ref        => [ "bowtie1_NonHost_pm_table", ".count\$" ],
+        parameterFile1_ref        => [ "bowtie1_HostGenomeReads_NonHost_pm_table", ".count\$" ],
         parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
         rCode                     => 'maxCategory=NA;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
         sh_direct                 => 1,
@@ -1277,12 +1277,14 @@ sub getSmallRNAConfig {
 
     push @individual,
       (
+      "bowtie1_HostGenomeReads_NonHost_pm","bowtie1_HostGenomeReads_NonHost_pm_count",
       "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",            "bowtie1_rRNA_pm",            "bowtie1_rRNA_pm_count",
       "bowtie1_bacteria_group1_pm", "bowtie1_bacteria_group1_pm_count", "bowtie1_bacteria_group2_pm", "bowtie1_bacteria_group2_pm_count",
       "bowtie1_fungus_group4_pm",   "bowtie1_fungus_group4_pm_count"
       );
     push @summary,
       (
+      "bowtie1_HostGenomeReads_NonHost_pm_table","HostGenomeReads_NonHost_vis",
       "bowtie1_tRNA_pm_table",            "nonhost_library_tRNA_vis",           "bowtie1_rRNA_pm_table",            "nonhost_library_rRNA_vis",
       "bowtie1_bacteria_group1_pm_table", "nonhost_genome_bacteria_group1_vis", "bowtie1_bacteria_group2_pm_table", "nonhost_genome_bacteria_group2_vis",
       "bowtie1_fungus_group4_pm_table",   "nonhost_genome_fungus_group4_vis",   "nonhost_overlap_vis"
