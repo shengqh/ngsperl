@@ -217,7 +217,7 @@ mergeTableBySampleGroup<-function(x,sampleToGroup) {
 	row.names(xRatioGroupMean)<-row.names(x)
 	for (i in 1:groupLength) {
 		currentSample<-sampleToGroup[which(sampleToGroup[,2]==colnames(xRatioGroupMean)[i]),1]
-		xRatioGroupMean[,i]<-rowMeans(xRatio[,currentSample,drop=FALSE])
+		xRatioGroupMean[,i]<-rowMeans(xRatio[,currentSample,drop=FALSE],na.rm=T)
 	}
 	return(xRatioGroupMean)
 }
@@ -340,7 +340,7 @@ ggpie <- function (dat, fill="Category", y="Reads",facet="Sample",
 		datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory)
 		
 	    if (percent) {
-		    datForFigure<-t(t(datForFigure)/colSums(datForFigure))
+		    datForFigure<-t(t(datForFigure)/colSums(datForFigure,na.rm=T))
 	    }
 		if (reOrder) {
 			if (row.names(datForFigure)[nrow(datForFigure)]=="Other") {
