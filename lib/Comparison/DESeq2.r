@@ -107,7 +107,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
              ColSideColors = gsColors, 
              margins=c(12,5), 
              scale="r", 
-             dist=dist, 
+             distfun=dist, 
              labRow=NA,
              main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
              cexCol=cexCol, 
