@@ -61,7 +61,7 @@ sub perform {
   }
   close(FL);
 
-  my ( $result, $newoption ) = get_result( $task_name, $option );
+  my ( $result_file, $newoption ) = get_result( $task_name, $option );
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
@@ -69,7 +69,7 @@ sub perform {
 
   my $log_desc = $cluster->get_log_description($log);
 
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file );
 
   print $pbs "mono $cqstools data_table $newoption -l $filelist $mapoption";
 
