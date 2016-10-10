@@ -96,9 +96,9 @@ for (i in 1:nrow(countTableFileAll)) {
 	#margin=c(min(10,max(nchar(colnames(countNumVsd)))/2),min(10,max(nchar(row.names(countNumVsd)))/2))
 	png(paste0(countTableFile,".heatmap.png"),width=2000,height=2000,res=300)
 	if(nrow(countNum) < 20){
-	  heatmap3(countNumVsd,dist=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100))
+	  heatmap3(countNumVsd,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100))
 	}else{
-	  heatmap3(countNumVsd,dist=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,labRow="",col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100))
+	  heatmap3(countNumVsd,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,labRow="",col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100))
 	}
 	dev.off()
 	
@@ -150,10 +150,10 @@ for (i in 1:nrow(countTableFileAll)) {
 		margin=c(min(10,max(nchar(colnames(countNumVsdGroup)))/1.5),min(10,max(nchar(row.names(countNumVsdGroup)))/2))
 		png(paste0(countTableFile,".Group.heatmap.png"),width=2000,height=2000,res=300)
 		if(nrow(countNumVsdGroup) < 20){
-			heatmap3(countNumVsdGroup,dist=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
+			heatmap3(countNumVsdGroup,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
 		}else{
 			margin[2]<-5
-			heatmap3(countNumVsdGroup,dist=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,labRow="",col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
+			heatmap3(countNumVsdGroup,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,labRow="",col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
 		}
 		dev.off()
 		

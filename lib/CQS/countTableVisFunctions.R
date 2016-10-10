@@ -210,7 +210,7 @@ orderDataByNames<-function(x,orderKey,orderNames) {
 
 #Merge Sample By Group
 mergeTableBySampleGroup<-function(x,sampleToGroup) {
-	xRatio<-t(t(x)/colSums(x))
+	xRatio<-t(t(x)/colSums(x,na.rm=T))
 	groupLength<-length(unique(sampleToGroup[,2]))
 	xRatioGroupMean<-matrix(NA,ncol=groupLength,nrow=nrow(x))
 	colnames(xRatioGroupMean)<-unique(sampleToGroup[,2])
