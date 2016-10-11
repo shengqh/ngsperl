@@ -10,6 +10,8 @@ totalCountFile<-parFile3
 groupFileList<-parSampleFile1
 groupVisLayoutFileList<-parSampleFile2
 
+facetColCount=getFacetColCount(groupFileList)
+
 #tRNA count file and Tables
 mappingResult<-read.delim(mappingResultFile,header=T,row.names=1, check.names=F)
 isDataNumeric = unlist(lapply(mappingResult[1,], function(x){is.numeric(x)}))
@@ -38,8 +40,8 @@ trnaCountTableExpandByRNA<-aggregateCountTable(mappingResultExpand,nameSubtRNA)
 trnaCountTableExpandByRNA1<-aggregateCountTable(mappingResultExpand,nameSubtRNA1)
 
 #Pie chart for tables
-ggpieToFile(trnaCountTableExpandByRNA,fileName=paste0(resultFile,".tRNAType2.Piechart.png"),maxCategory=maxCategory,textSize=textSize)
-ggpieToFile(trnaCountTableExpandByRNA1,fileName=paste0(resultFile,".tRNAType1.Piechart.png"),maxCategory=maxCategory,textSize=textSize)
+ggpieToFile(trnaCountTableExpandByRNA,fileName=paste0(resultFile,".tRNAType2.Piechart.png"),maxCategory=maxCategory,textSize=textSize,facetColCount=facetColCount)
+ggpieToFile(trnaCountTableExpandByRNA1,fileName=paste0(resultFile,".tRNAType1.Piechart.png"),maxCategory=maxCategory,textSize=textSize,facetColCount=facetColCount)
 
 #Barplot for tables
 tableBarplotToFile(dat=trnaCountTableExpandByRNA,fileName=paste0(resultFile,".tRNAType2.Barplot.png"),totalCountFile=totalCountFile,maxCategory=maxCategory,textSize=textSize)

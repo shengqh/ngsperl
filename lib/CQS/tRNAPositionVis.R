@@ -12,6 +12,8 @@ tRNASigFileList<-parSampleFile3
 #tRNAPositionFileList<-"fileList1.txt"
 #groupFileList<-"fileList2.txt"
 
+facetColCount=getFacetColCount(groupFileList)
+
 library(ggplot2)
 library(grid)
 library(RColorBrewer)
@@ -179,15 +181,17 @@ if (length(geneselected)>0) {
 	for (i in 1:length(geneselected)) {
 		temp<-positionRawAllSamples[which(positionRawAllSamples$Feature==geneselected[i]),]
 		fileSize<-max(length(unique(temp$Sample))/25*2000,2000)
-		m <- ggplot(temp, aes(x = Position,ymin=0,ymax=CountPercentage))
+		m <- ggplot(temp, aes(x = Position,ymin=0,ymax=CountPercentage)) + 
+				geom_ribbon() +
+				ylab("Read fraction (read counts/total reads)") +
+				theme(strip.text.y = element_text(size = 4))
+		if(facetColCount > 0){
+			m <- m + facet_wrap(~Sample, ncol=facetColCount)
+		}else{
+			m <- m + facet_wrap(~Sample)
+		}
 		png(paste0(resultFile,tRNASigFileName,".",gsub("tRNA:","",geneselected[i]),".png"),height=fileSize,width=fileSize,res=300)
-		print(
-				m+geom_ribbon()+
-				#m + geom_polygon()+
-						facet_wrap(~Sample)+
-						ylab("Read fraction (read counts/total reads)")+
-						theme(strip.text.y = element_text(size = 4))
-		)
+		print(m)
 		dev.off()
 	}
 }
@@ -206,15 +210,17 @@ if (exists("tRnaPlotPosition")) {
 		for (i in 1:length(tRnaPlotPositionMatchData)) {
 			temp<-positionRawAllSamples[which(positionRawAllSamples$Feature==tRnaPlotPositionMatchData[i]),]
 			fileSize<-max(length(unique(temp$Sample))/25*2000,2000)
-			m <- ggplot(temp, aes(x = Position,ymin=0,ymax=CountPercentage))
+			m <- ggplot(temp, aes(x = Position,ymin=0,ymax=CountPercentage)) + 
+					geom_ribbon() +
+					ylab("Read fraction (read counts/total reads)") +
+					theme(strip.text.y = element_text(size = 4))
+			if(facetColCount > 0){
+				m <- m + facet_wrap(~Sample, ncol=facetColCount)
+			}else{
+				m <- m + facet_wrap(~Sample)
+			}
 			png(paste0(resultFile,".tRNAInterested.",gsub("tRNA:","",tRnaPlotPositionMatchData[i]),".png"),height=fileSize,width=fileSize,res=300)
-			print(
-					m+geom_ribbon()+
-							#m + geom_polygon()+
-							facet_wrap(~Sample)+
-							ylab("Read fraction (read counts/total reads)")+
-							theme(strip.text.y = element_text(size = 4))
-			)
+			print(m)
 			dev.off()
 		}
 	}

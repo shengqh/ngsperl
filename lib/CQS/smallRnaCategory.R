@@ -3,6 +3,8 @@ categoryFileList<-parSampleFile1
 groupFileList<-parSampleFile2
 groupVisLayoutFileList<-parSampleFile3
 
+facetColCount=getFacetColCount(groupFileList)
+
 #source("/home/zhaos/source/r_cqs/vickers/codesToPipeline/countTableVisFunctions.R")
 
 ################################
@@ -51,8 +53,8 @@ for (i in 1:ncol(categoryAllTable1)) {
 }
 
 #Pie Chart for Tables
-p1<-ggpieToFile(categoryFigure,fileName=paste0(taskName,".Category1.Piechart.png"),maxCategory=NA,textSize=textSize,y="Count",transformTable=FALSE,reOrder=FALSE)
-p2<-ggpieToFile(categoryAllTable2,fileName=paste0(taskName,".Category2.Piechart.png"),maxCategory=NA,textSize=textSize)
+p1<-ggpieToFile(categoryFigure,fileName=paste0(taskName,".Category1.Piechart.png"),maxCategory=NA,textSize=textSize,y="Count",transformTable=FALSE,reOrder=FALSE,facetColCount=facetColCount)
+p2<-ggpieToFile(categoryAllTable2,fileName=paste0(taskName,".Category2.Piechart.png"),maxCategory=NA,textSize=textSize,facetColCount=facetColCount)
 
 #Barplot for Tables
 tableBarplotToFile(dat=categoryFigure,fileName=paste0(taskName,".Category1.Barplot.png"),

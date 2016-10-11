@@ -10,6 +10,8 @@ totalCountFile<-parFile3
 groupFileList<-parSampleFile1
 groupVisLayoutFileList<-parSampleFile2
 
+facetColCount=getFacetColCount(groupFileList)
+
 #Category count Table
 mappingResultCategory<-read.delim(gsub(".count$",".category.count",mappingResultFile),header=T,row.names=1, check.names=F)
 
@@ -55,10 +57,10 @@ for ( i in 1:ncol(mappingResult)) {
 
 
 #Pie chart for tables
-ggpieToFile(trnaCountTableExpandBySpecies12,fileName=paste0(resultFile,".Species12.Piechart.png"),maxCategory=maxCategory,textSize=textSize)
-ggpieToFile(trnaCountTableExpandByRNA,fileName=paste0(resultFile,".tRNAType2.Piechart.png"),maxCategory=maxCategory,textSize=textSize)
-ggpieToFile(trnaCountTableExpandByRNA1,fileName=paste0(resultFile,".tRNAType1.Piechart.png"),maxCategory=maxCategory,textSize=textSize)
-ggpieToFile(mappingResultCategory,fileName=paste0(resultFile,".Category.Piechart.png"),maxCategory=NA,textSize=textSize)
+ggpieToFile(trnaCountTableExpandBySpecies12,fileName=paste0(resultFile,".Species12.Piechart.png"),maxCategory=maxCategory,textSize=textSize,facetColCount=facetColCount)
+ggpieToFile(trnaCountTableExpandByRNA,fileName=paste0(resultFile,".tRNAType2.Piechart.png"),maxCategory=maxCategory,textSize=textSize,facetColCount=facetColCount)
+ggpieToFile(trnaCountTableExpandByRNA1,fileName=paste0(resultFile,".tRNAType1.Piechart.png"),maxCategory=maxCategory,textSize=textSize,facetColCount=facetColCount)
+ggpieToFile(mappingResultCategory,fileName=paste0(resultFile,".Category.Piechart.png"),maxCategory=NA,textSize=textSize,facetColCount=facetColCount)
 
 #Barplot for tables
 tableBarplotToFile(dat=trnaCountTableExpandBySpecies12,fileName=paste0(resultFile,".Species12.Barplot.png"),totalCountFile=totalCountFile,maxCategory=maxCategory,textSize=textSize)
