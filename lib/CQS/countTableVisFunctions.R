@@ -404,8 +404,7 @@ ggpie <- function (dat, fill="Category", y="Reads",facet="Sample",
 					axis.text.x=element_blank(),
 					axis.title=element_blank(),
 					panel.grid=element_blank()) +
-			scale_y_continuous(breaks=cumsum(datForFigure[[y]])-datForFigure[[y]]/2,
-					labels=datForFigure[[fill]]) +
+			#scale_y_continuous(breaks=cumsum(datForFigure[[y]])-datForFigure[[y]]/2, labels=datForFigure[[fill]]) +
 			theme(panel.background = element_rect(fill = "white"))+
 			theme(legend.text=element_text(size=textSize),
 					legend.title= element_text(size=textSize),
