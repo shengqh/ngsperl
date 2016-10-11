@@ -95,7 +95,7 @@ temp3<-colSums(readsMappingTable[temp3,])
 dataForPlot<-rbind(BothCategories=temp1,MicrobiomeOnly=temp2,EnvironmentOnly=temp3)
 
 #Pie chart for all samples
-ggpieToFile(dataForPlot,fileName=paste0(resultFile,".MicrobiomeVsEnvironment.Piechart.png"),maxCategory=maxCategory,textSize=textSize)
+ggpieToFile(dataForPlot,fileName=paste0(resultFile,".MicrobiomeVsEnvironment.Piechart.png"),maxCategory=maxCategory,textSize=textSize,facetColCount=facetColCount)
 
 #Barplot for all samples
 tableBarplotToFile(dataForPlot,fileName=paste0(resultFile,".MicrobiomeVsEnvironment.Barplot.png"),totalCountFile=totalCountFile,maxCategory=maxCategory,textSize=textSize)
