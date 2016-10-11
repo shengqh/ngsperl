@@ -9,6 +9,8 @@ countFilesList<-parSampleFile1
 groupFileList<-parSampleFile2
 groupVisLayoutFileList<-parSampleFile3
 
+facetColCount=getFacetColCount(groupFileList)
+
 countFiles<-read.delim(countFilesList,header=F,as.is=T)
 
 #taskName<-sapply(strsplit(countFiles[,1],"\\/"),function(x) {resultFolderInd<-grep("result",x);return(x[resultFolderInd-1])})
@@ -40,7 +42,7 @@ row.names(tableForPieChart)[which(row.names(tableForPieChart)=="Unmapped In Host
 
 write.csv(tableForPieChart,paste0(resultFile,".NonParallel.TaskReads.csv"))
 
-ggpieToFile(tableForPieChart,fileName=paste0(resultFile,".NonParallel.TaskReads.Piechart.png"),maxCategory=NA,textSize=textSize,reOrder=FALSE)
+ggpieToFile(tableForPieChart,fileName=paste0(resultFile,".NonParallel.TaskReads.Piechart.png"),maxCategory=NA,textSize=textSize,reOrder=FALSE,facetColCount=facetColCount)
 #Group Pie chart
 ggpieGroupToFile(tableForPieChart,fileName=paste0(resultFile,".NonParallel.TaskReads.Group.Piechart.png"),maxCategory=NA,reOrder=FALSE,
 		groupFileList=groupFileList,

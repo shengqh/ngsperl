@@ -9,6 +9,8 @@ groupFileList<-parSampleFile2
 groupVisLayoutFileList<-parSampleFile3
 totalCountFile<-parFile3
 
+facetColCount=getFacetColCount(groupFileList)
+
 categoriesNames<-c("Microbiome","Environment","Fungus","tRNA","rRNA")
 
 readsMappingNames<-list()
@@ -46,7 +48,7 @@ row.names(dataForPlot)<-c(paste0(categoriesNames," Only"),"Mapped to more than o
 write.csv(dataForPlot,paste0(resultFile,".Overlap.csv"))
 
 #Pie chart for all samples
-ggpieToFile(dataForPlot,fileName=paste0(resultFile,".Piechart.png"),maxCategory=maxCategory,textSize=textSize)
+ggpieToFile(dataForPlot,fileName=paste0(resultFile,".Piechart.png"),maxCategory=maxCategory,textSize=textSize, facetColCount=facetColCount)
 
 #Barplot for all samples
 tableBarplotToFile(dataForPlot,fileName=paste0(resultFile,".Barplot.png"),totalCountFile=totalCountFile,maxCategory=maxCategory,textSize=textSize)

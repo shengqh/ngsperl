@@ -578,7 +578,7 @@ sub getSmallRNAConfig {
         class                    => "CQS::UniqueR",
         perform                  => 1,
         target_dir               => $data_visualization_dir . "/host_genome_tRNA_PositionVis",
-        rtemplate                => "tRNAPositionVis.R",
+        rtemplate                => "countTableVisFunctions.R,tRNAPositionVis.R",
         output_file              => ".tRNAPositionVis",
         output_file_ext          => ".alltRNAPosition.png",
         parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".tRNA.position\$" ],
