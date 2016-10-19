@@ -39,6 +39,7 @@ sub perform {
   }
   
   my $max_mismatch = get_option($config, $section, "max_mismatch", 0);
+  my $height_width = get_option($config, $section, "height_width", "");
   
   my $raw_files = get_raw_files( $config, $section );
   my @bamfiles = ();
@@ -58,7 +59,7 @@ sub perform {
   print $pbs "
 python $python_bamMismatch $option -i $bamfile -o $final_file 
 
-R --vanilla -f $r_bamMismatch --args $final_file ${final_file}.png $max_mismatch
+R --vanilla -f $r_bamMismatch --args $final_file ${final_file}.png $max_mismatch $height_width
 ";
   $self->close_pbs( $pbs, $pbs_file );
 }

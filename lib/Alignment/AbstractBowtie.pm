@@ -19,24 +19,23 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $samformat = get_option( $config, $section, "samformat", 1 );
+  my $samformat          = get_option( $config, $section, "samformat",             1 );
   my $outputToSameFolder = get_option( $config, $section, "output_to_same_folder", 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
   for my $sample_name ( sort keys %raw_files ) {
-    my $cur_dir  = $outputToSameFolder? $result_dir : $result_dir . "/$sample_name";
+    my $cur_dir = $outputToSameFolder ? $result_dir : $result_dir . "/$sample_name";
 
-    my $final_file;
+    my @result_files = ();
     if ($samformat) {
-      $final_file = $sample_name . ".bam";
+      push( @result_files, "${cur_dir}/${sample_name}.bam" );
+      push( @result_files, "${cur_dir}/${sample_name}.bam.stat" );
     }
     else {
-      $final_file = $sample_name . ".out";
+      push( @result_files, "${cur_dir}/${sample_name}.out" );
     }
-    my @result_files = ();
-    push( @result_files, $cur_dir . "/" . $final_file );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }

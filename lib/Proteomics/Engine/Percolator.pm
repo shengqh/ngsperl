@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Proteomics::Distiller::PSMDistiller;
+package Proteomics::Engine::Percolator;
 
 use strict;
 use warnings;
@@ -17,7 +17,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
-  $self->{_suffix} = "_psm";
+  $self->{_suffix} = "_pf";
   bless $self, $class;
   return $self;
 }
@@ -30,11 +30,7 @@ sub perform {
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
-  my $proteomicstools = get_param_file( $config->{$section}{proteomicstools}, "proteomicstools", 1 );
-
   my %raw_files = %{ get_raw_files( $config, $section ) };
-
-  my $rank2 = ( $option =~ /--rank2/ );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -42,6 +38,7 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
+    my $sample_file = $sample_files[0];
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -50,18 +47,19 @@ sub perform {
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
+    my $final_file = $sample_name . ".percolator.tsv";
+    my $decoy_file = $sample_name . ".percolator.decoy.tsv";
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
-
-    for my $sampleFile (@sample_files) {
-      my $result_file = $rank2 ? $sampleFile . ".rank2.peptides" : $sampleFile . ".peptides";
-
-      print $pbs "if [ ! -s $result_file ]; then
-  mono $proteomicstools PSM_distiller -i $sampleFile $option -o $result_file
-fi
-
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+    print $pbs "
+echo processing $sample_file
+percolator $option -m ${final_file}.tmp -M ${decoy_file}.tmp $sample_file
+if [ -s ${final_file}.tmp ]; then
+  cut -f1-6 ${final_file}.tmp > $final_file
+  cut -f1-6 ${decoy_file}.tmp > $decoy_file
+  rm ${final_file}.tmp ${decoy_file}.tmp
+fi 
 ";
-    }
     $self->close_pbs( $pbs, $pbs_file );
   }
 
@@ -81,18 +79,16 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my %raw_files = %{ get_raw_files( $config, $section ) };
+   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
-  my $rank2 = ( $option =~ /--rank2/ ) && ( $option =~ /Comet/ );
   for my $sample_name ( keys %raw_files ) {
-    my @sample_files = @{ $raw_files{$sample_name} };
-    my @result_files = ();
+    my $final_file = $sample_name . ".percolator.tsv";
+    my $decoy_file = $sample_name . ".percolator.decoy.tsv";
 
-    for my $sampleFile (@sample_files) {
-      my $result_file = $rank2 ? $sampleFile . ".rank2.peptides" : $sampleFile . ".peptides";
-      push( @result_files, "${result_file}" );
-    }
+    my @result_files = ();
+    push( @result_files, "${result_dir}/${final_file}" );
+    push( @result_files, "${result_dir}/${decoy_file}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;

@@ -87,7 +87,7 @@ sub perform {
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file );
   print $pbs "mono $proteomicstools buildsummary -i $currentParamFile";
-  $self->close_pbs($pbs);
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {
@@ -95,10 +95,10 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $result           = {};
-  my $currentParamFile = $pbs_dir . "/" . $task_name . ".param";
-  my @result_files     = ();
-  push( @result_files, $currentParamFile );
+  my $result       = {};
+  my $result_file  = $result_dir . "/" . $task_name . ".noredundant";
+  my @result_files = ();
+  push( @result_files, $result_file );
   $result->{$task_name} = filter_array( \@result_files, $pattern );
   return $result;
 }

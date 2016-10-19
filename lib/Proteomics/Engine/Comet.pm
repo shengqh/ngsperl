@@ -33,6 +33,10 @@ sub perform {
   my $database   = get_param_file( $config->{$section}{database},   "database",   1 );
   my $delete_temp_ms2 = get_option( $config, $section, "delete_temp_ms2", 1 );
 
+  open my $handle, '<', $param_file;
+  chomp( my @lines = <$handle> );
+  close $handle;
+
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -110,6 +114,12 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
+  my $param_file = get_param_file( $config->{$section}{param_file}, "param_file", 1 );
+  open my $handle, '<', $param_file;
+  chomp( my @lines = <$handle> );
+  close $handle;
+  my $outputPercolatorPin = grep( /output_percolatorfile\s*=\s*1/, @lines );
+
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
@@ -119,6 +129,9 @@ sub result {
       my $sname = basename($sampleFile);
       my $result_file = change_extension( $sname, ".pep.xml" );
       push( @result_files, "${result_dir}/${result_file}" );
+      if ($outputPercolatorPin) {
+        push( @result_files, "${result_dir}/" . change_extension( $sname, ".pin" ) );
+      }
     }
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
