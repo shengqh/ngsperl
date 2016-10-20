@@ -27,12 +27,12 @@ count3=count3[rownames(count1),]
 count1$Reads<-count1$Reads-count2$Reads
 count2$Reads<-count2$Reads-count3$Reads
 
-count1$Category="Not properly paired"
+count1$Category="Removed"
 count2$Category="Unmapped"
 count3$Category="Mapped"
 
 countForFigure<-rbind(count1,count2,count3)
-countForFigure$Category=factor(countForFigure$Category, levels=c("Not properly paired", "Unmapped", "Mapped"))
+countForFigure$Category=factor(countForFigure$Category, levels=c("Removed", "Unmapped", "Mapped"))
 
 width=max(2000, 100 * nrow(count1))
 png(file=paste0(resultPrefix,".Reads.png"), height=2000, width=width, res=300)
