@@ -472,6 +472,28 @@ sub getSmallRNAConfig {
             "mem"       => "10gb"
           },
         },
+        deseq2_tRNA_reads => {
+          class                => "Comparison::DESeq2",
+          perform              => 1,
+          target_dir           => $host_genome_dir . "/deseq2_tRNA_reads",
+          option               => "",
+          source_ref           => "pairs",
+          groups_ref           => "groups",
+          countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$" ],
+          sh_direct            => 1,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
+          pbs                  => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        },
         deseq2_tRNA_aminoacid => {
           class                => "Comparison::DESeq2",
           perform              => 1,
