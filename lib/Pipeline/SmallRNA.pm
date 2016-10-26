@@ -583,7 +583,7 @@ sub getSmallRNAConfig {
       $config = merge( $config, $comparison );
       push @summary,
         (
-        "deseq2_miRNA",        "deseq2_tRNA",             "deseq2_tRNA_aminoacid", "deseq2_otherSmallRNA", "host_genome_deseq2_vis", "deseq2_miRNA_NTA",
+        "deseq2_miRNA",        "deseq2_tRNA",         "deseq2_tRNA_reads",    "deseq2_tRNA_aminoacid", "deseq2_otherSmallRNA", "host_genome_deseq2_vis", "deseq2_miRNA_NTA",
         "deseq2_miRNA_isomiR", "deseq2_miRNA_isomiR_NTA", "host_genome_deseq2_miRNA_vis"
         );
     }
@@ -1349,6 +1349,28 @@ sub getSmallRNAConfig {
             "mem"       => "10gb"
           },
         },
+        deseq2_nonhost_tRNA_reads => {
+          class                => "Comparison::DESeq2",
+          perform              => 1,
+          target_dir           => $nonhost_library_dir . "/deseq2_nonhost_tRNA_reads",
+          option               => "",
+          source_ref           => "pairs",
+          groups_ref           => "groups",
+          countfile_ref        => [ "bowtie1_tRNA_pm_table", ".read.count\$" ],
+          sh_direct            => 1,
+          show_DE_gene_cluster => $DE_show_gene_cluster,
+          pvalue               => $DE_pvalue,
+          fold_change          => $DE_fold_change,
+          min_median_read      => $DE_min_median_read_smallRNA,
+          add_count_one        => $DE_add_count_one,
+          pbs                  => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        },
         deseq2_nonhost_tRNA_category => {
           class                => "Comparison::DESeq2",
           perform              => 1,
@@ -1654,7 +1676,7 @@ sub getSmallRNAConfig {
       $config = merge( $config, $unmapped_comparison );
       push @summary,
         (
-        "deseq2_nonhost_tRNA",           "deseq2_nonhost_tRNA_category", "deseq2_nonhost_tRNA_species", "deseq2_nonhost_tRNA_type",
+        "deseq2_nonhost_tRNA",           "deseq2_nonhost_tRNA_reads","deseq2_nonhost_tRNA_category", "deseq2_nonhost_tRNA_species", "deseq2_nonhost_tRNA_type",
         "deseq2_nonhost_tRNA_anticodon", "deseq2_nonhost_rRNA",          "nonhost_library_deseq2_vis",  "deseq2_bacteria_group1",
         "deseq2_bacteria_group2",        "deseq2_fungus_group4",         "nonhost_genome_deseq2_vis",   "deseq2_bacteria_group1_reads",
         "deseq2_bacteria_group2_reads",  "deseq2_fungus_group4_reads",   "nonhost_genome_deseq2_reads_vis"
