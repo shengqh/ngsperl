@@ -53,6 +53,10 @@ sub getSmallRNAConfig {
   my $do_comparison     = defined $def->{pairs};
   my $groups            = $def->{groups};
   my $groups_vis_layout = $def->{groups_vis_layout};
+  my $groups_smallRNA_vis_layout=$groups_vis_layout;
+  if (defined $def->{groups_smallRNA_vis_layout}) {
+    $groups_smallRNA_vis_layout = $def->{groups_smallRNA_vis_layout};
+  }
 
   my $DE_show_gene_cluster        = $def->{DE_show_gene_cluster};
   my $DE_pvalue                   = $def->{DE_pvalue};
@@ -285,7 +289,7 @@ sub getSmallRNAConfig {
         parameterSampleFile1_ref  => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info" ],
         parameterSampleFile2      => $groups,
         parameterSampleFile2Order => $def->{groups_order},
-        parameterSampleFile3      => $groups_vis_layout,
+        parameterSampleFile3      => $groups_smallRNA_vis_layout,
         rCode                     => 'textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
         sh_direct                 => 1,
         pbs                       => {

@@ -467,7 +467,9 @@ ggpieGroupToFile<-function(dat,fileName,groupFileList="",outFileName="",
 		y="Reads",facet="Sample",visLayoutFileList="",...) {
 	if (groupFileList!="") {
 		if (!transformTable) {
+			fillOrder<-unique(dat[,fill])
 			dat<-acast(dat,as.formula(paste(fill,"~",facet)),value.var=y)
+			dat<-dat[fillOrder,]
 		}
 		
 		sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
