@@ -173,7 +173,7 @@ with open(summaryFile, 'w') as output:
     output.write("\n")
 
 with open(snpsFile, 'w') as output:
-  output.write("File\tPosition\tRefAllele\tAltAllele\tAltAllelePercentage\tNumberOfAllele\tNumberOfA\tPercentageOfA\tNumberOfT\tPercentageOfT\tNumberOfG\tPercentageOfG\tNumberOfC\tPercentageOfC\n")
+  output.write("File\tPosition\tRefAllele\tRefAllelePercentage\tAltAllele\tAltAllelePercentage\tNumberOfAllele\tNumberOfA\tPercentageOfA\tNumberOfT\tPercentageOfT\tNumberOfG\tPercentageOfG\tNumberOfC\tPercentageOfC\n")
   for filename in filenames:
     basesFileCounts = basesCounts[filename]
     sortedCounts = sorted(basesFileCounts.items())
@@ -184,6 +184,6 @@ with open(snpsFile, 'w') as output:
       minor_allele = minor_alleles_sorted[len(minor_alleles_sorted) - 1]
       for allele in ['A', 'T', 'G', 'C']:
         if allele != counts['R'] and counts[allele] >= min_count:
-          output.write("%s\t%d\t%s\t%s\t%.2f\t%d\t%d\t%.2f\t%d\t%.2f\t%d\t%.2f\t%d\t%.2f\n" %(filename, idx, counts['R'], minor_allele[0], minor_allele[1], counts['N'], counts['A'], counts['A'] * 100.0 / counts['N'], counts['T'], counts['T'] * 100.0 / counts['N'], counts['G'], counts['G'] * 100.0 / counts['N'],counts['C'], counts['C'] * 100.0 / counts['N']))
+          output.write("%s\t%d\t%s\t%.2f\t%s\t%.2f\t%d\t%d\t%.2f\t%d\t%.2f\t%d\t%.2f\t%d\t%.2f\n" %(filename, idx + 1, counts['R'], counts[counts['R']] * 100.0 / counts['N'], minor_allele[0], minor_allele[1], counts['N'], counts['A'], counts['A'] * 100.0 / counts['N'], counts['T'], counts['T'] * 100.0 / counts['N'], counts['G'], counts['G'] * 100.0 / counts['N'],counts['C'], counts['C'] * 100.0 / counts['N']))
           break
   
