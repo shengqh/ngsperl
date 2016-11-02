@@ -32,7 +32,12 @@ sub perform {
   my $samformat               = get_option( $config, $section, "samformat",               1 );
   my $mappedonly              = get_option( $config, $section, "mappedonly",              0 );
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
-  my $outputToSameFolder = get_option( $config, $section, "output_to_same_folder", 0 );
+  my $outputToSameFolder      = get_option( $config, $section, "output_to_same_folder",   0 );
+  my $add_RG_to_read = get_option( $config, $section, "add_RG_to_read" );
+  my $picard;
+  if($add_RG_to_read){
+    $picard = get_param_file($config->{$section}{"picard_jar"}, "picard_jar", 1);
+  }
 
   $option = $option . " -p $thread";
 
@@ -65,7 +70,7 @@ fi";
       my $bam_file = $sample_name . ".bam";
 
       my $indent = "";
-      my $tag    = "--sam-RG ID:$sample_name --sam-RG LB:$sample_name --sam-RG SM:$sample_name --sam-RG PL:ILLUMINA";
+      my $tag    = "--sam-RG ID:$sample_name --sam-RG LB:$sample_name --sam-RG SM:$sample_name --sam-RG PL:ILLUMINA --sam-RG PU:$sample_name";
 
       my $bowtie1_aln_command;
       if ( $sample_files[0] =~ /.gz$/ ) {
@@ -97,11 +102,11 @@ rm ${f2}.fifo";
       my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
       my $pbs_name = basename($pbs_file);
       my $log      = $self->get_log_filename( $log_dir, $sample_name );
-      my $cur_dir  = $outputToSameFolder? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
-      
+      my $cur_dir  = $outputToSameFolder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+
       my $chromosome_grep_command = "";
-      my $final_file = $bam_file;
-      if($sortbam && ($chromosome_grep_pattern ne "")){
+      my $final_file              = $bam_file;
+      if ( $sortbam && ( $chromosome_grep_pattern ne "" ) ) {
         my $tmp_file = $sample_name . ".filtered.bam";
         $chromosome_grep_command = "
     echo filtering bam by chromosome pattern $chromosome_grep_pattern
@@ -112,7 +117,20 @@ rm ${f2}.fifo";
     mv $tmp_file $bam_file
     samtools index $bam_file
 ";
-      } 
+      }
+      
+      my $add_RG_to_read_command = "";
+      if($add_RG_to_read){
+        my $tmp_file = $sample_name . ".rg.bam";
+        $add_RG_to_read_command = "
+    echo add_RG_to_read_command by picard
+    java -jar $picard AddOrReplaceReadGroups I=$bam_file O=$tmp_file ID=$sample_name LB=$sample_name SM=$sample_name PL=illumina PU=$sample_name CREATE_INDEX=False
+    rm $bam_file
+    rm ${bam_file}.bai
+    mv $tmp_file $bam_file
+    samtools index $bam_file
+";
+      }
 
       print $sh "\$MYCMD ./$pbs_name \n";
 
@@ -120,33 +138,33 @@ rm ${f2}.fifo";
 
       my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-      print $pbs "
-$bowtie1_aln_command
-";
-
-      print $pbs "
-if [ -s $bowtiesam ]; then
-";
+      print $pbs "$bowtie1_aln_command \n";
       if ($sortbam) {
-        print $pbs "  samtools view -Shu $mappedonlyoption $bowtiesam | samtools sort -@ $thread -o $bam_file -
+        print $pbs "
+if [ -s $bowtiesam ]; then
+  samtools view -Shu $mappedonlyoption $bowtiesam | samtools sort -@ $thread -o $bam_file -
   if [ -s $bam_file ]; then
-    samtools index $bam_file 
     rm $bowtiesam
+    samtools index $bam_file 
     $chromosome_grep_command
+    $add_RG_to_read_command    
     samtools flagstat $bam_file > ${bam_file}.stat
   fi
+fi
 ";
       }
       else {
-        print $pbs "samtools view -S $mappedonlyoption -b $bowtiesam > ${sample_name}.bam
+        print $pbs "
+if [ -s $bowtiesam ]; then
+  samtools view -S $mappedonlyoption -b $bowtiesam > ${sample_name}.bam
   if [ -s $bam_file ]; then
     rm $bowtiesam
+    $add_RG_to_read_command    
+    samtools flagstat $bam_file > ${bam_file}.stat
   fi
-";
-      }
-      print $pbs "
 fi
 ";
+      }
 
       $self->close_pbs( $pbs, $pbs_file );
     }
