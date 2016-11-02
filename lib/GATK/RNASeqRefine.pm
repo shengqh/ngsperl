@@ -217,22 +217,14 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $slim = get_option( $config, $section, "slim_print_reads",         1 );
-  my $baq  = get_option( $config, $section, "samtools_baq_calibration", 0 );
+  my $slim = get_option( $config, $section, "slim_print_reads", 1 );
+  my $slim_str = $slim ? ".slim" : "";
+  my $baq = get_option( $config, $section, "samtools_baq_calibration", 0 );
+  my $baq_str = $baq ? ".baq" : "";
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $recalFile = $sample_name . ".rmdup.split.recal.bam";
-    my $finalFile = $recalFile;
-    if ($slim) {
-      my $slimFile  = $sample_name . ".rmdup.split.recal.slim.bam";
-      my $finalFile = $slimFile;
-    }
-
-    if ($baq) {
-      my $baq_file = $sample_name . ".rmdup.split.recal.slim.baq.bam";
-      $finalFile = $baq_file;
-    }
+    my $finalFile    = $sample_name . ".rmdup.split.recal${slim_str}${baq_str}.bam";
     my @result_files = ();
     push( @result_files, "${result_dir}/${finalFile}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
