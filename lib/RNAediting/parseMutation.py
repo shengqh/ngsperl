@@ -8,77 +8,123 @@ from itertools import groupby
 from Bio import SeqIO
 from asyncore import read
 
+DEBUG=False
+NOT_DEBUG=not DEBUG
+
 parser = argparse.ArgumentParser(description="Parsing mismatch combination in BAM files.",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-parser.add_argument('-i', '--input', action='store', nargs='?', required=True, help="Input BAM files, separated by ','")
-parser.add_argument('-o', '--output', action='store', nargs='?', required=True, help="Output file")
-parser.add_argument('-f', '--fasta', action='store', nargs='?', required=True, help="Sequence fasta file, should contain only one sequence")
-parser.add_argument('-p', '--positions', action='store', nargs='?', required=True, help="Position of interesting, 1-based and separated by ','")
+parser.add_argument('-i', '--input', action='store', nargs='?', required=NOT_DEBUG, help="Input BAM files, separated by ','")
+parser.add_argument('-o', '--output', action='store', nargs='?', required=NOT_DEBUG, help="Output file")
+parser.add_argument('-f', '--fasta', action='store', nargs='?', required=NOT_DEBUG, help="Sequence fasta file, should contain only one sequence")
+parser.add_argument('-p', '--positions', action='store', nargs='?', required=NOT_DEBUG, help="Position of interesting, 1-based and separated by ','")
+parser.add_argument('-b', '--min_base_quality', action='store', nargs='?', type=int, default=20, help="Minimum base quality")
+parser.add_argument('-m', '--min_minor_allele_frequency', action='store', nargs='?', type=float, default=0.01, help="Minimum minor allele frequency")
 
 args = parser.parse_args()
 
-# args.input = "/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cerebellum-Rat1_S01.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cerebellum-Rat2_S11.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cerebellum-Rat3_S21.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Colon-Rat1_S07.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Colon-Rat2_S17.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Colon-Rat3_S27.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cortex-Rat1_S02.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cortex-Rat2_S12.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cortex-Rat3_S22.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hippocampus-Rat1_S03.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hippocampus-Rat2_S13.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hippocampus-Rat3_S23.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hypothalamus-Rat1_S04.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hypothalamus-Rat2_S14.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hypothalamus-Rat3_S24.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Kidney-Rat1_S09.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Kidney-Rat2_S19.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Kidney-Rat3_S29.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Lung-Rat1_S06.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Lung-Rat2_S16.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Lung-Rat3_S26.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Pancreas-Rat1_S10.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Pancreas-Rat2_S20.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Pancreas-Rat3_S30.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Stomach-Rat1_S08.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Stomach-Rat2_S18.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Stomach-Rat3_S28.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Striatum-Rat1_S05.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Striatum-Rat2_S15.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Striatum-Rat3_S25.bam";
-# args.fasta = "/workspace/shengq1/guoyan/20160922_rnaediting/database/rat_GRM4.fasta"
-# args.positions = "72, 75, 231, 246, 331"
+if DEBUG:
+  #args.input = "/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cerebellum-Rat1_S01.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cerebellum-Rat2_S11.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cerebellum-Rat3_S21.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Colon-Rat1_S07.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Colon-Rat2_S17.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Colon-Rat3_S27.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cortex-Rat1_S02.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cortex-Rat2_S12.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cortex-Rat3_S22.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hippocampus-Rat1_S03.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hippocampus-Rat2_S13.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hippocampus-Rat3_S23.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hypothalamus-Rat1_S04.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hypothalamus-Rat2_S14.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hypothalamus-Rat3_S24.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Kidney-Rat1_S09.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Kidney-Rat2_S19.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Kidney-Rat3_S29.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Lung-Rat1_S06.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Lung-Rat2_S16.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Lung-Rat3_S26.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Pancreas-Rat1_S10.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Pancreas-Rat2_S20.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Pancreas-Rat3_S30.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Stomach-Rat1_S08.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Stomach-Rat2_S18.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Stomach-Rat3_S28.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Striatum-Rat1_S05.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Striatum-Rat2_S15.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Striatum-Rat3_S25.bam";
+  args.input = "/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cerebellum-Rat1_S01.bam";
+  args.fasta = "/workspace/shengq1/guoyan/20160922_rnaediting/database/rat_GRM4.fasta"
+  args.positions = "72, 75, 231, 246, 331"
+  args.output = "/workspace/shengq1/guoyan/20160922_rnaediting/rnaediting.mutation.AAGAG.tsv"
 
 positions=[int(ps.strip()) for ps in args.positions.split(',')]
 
 logger = logging.getLogger('parseMutation')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
+print("min_base_quality=%d" % args.min_base_quality)
+print("min_minor_allele_frequency=%f" % args.min_minor_allele_frequency)
+
 fastaSequences = [fs for fs in SeqIO.parse(open(args.fasta),'fasta')]
+if len(fastaSequences) == 0:
+  logger.error("No sequence read from file %s, exit" % args.fasta)
+  sys.exit(0)
+  
+fastaSequence = fastaSequences[0]
 refBases = [fastaSequences[0].seq[idx-1] for idx in positions]
 refString = "".join(refBases)
 
-#args.output = "/workspace/shengq1/guoyan/20160922_rnaediting/rnaediting.mutation." + refString + ".tsv"
+basesCounts = {}
+
+validBases = set(['A', 'T', 'G', 'C'])
+
 summaryFile = os.path.splitext(args.output)[0] + ".summary.tsv"
 readsFile = os.path.splitext(args.output)[0] + ".reads.tsv"
+snpsFile = os.path.splitext(args.output)[0] + ".SNV.tsv"
 
 mutations = []
 inputfiles = args.input.split(',')
 
+filenames=[]
 with open(readsFile, 'w') as output:
-  output.write("File\tTotal\tFailed\tReverseStrand\tProcessed\n")
+  output.write("File\tTotal\tReadFailed\tReverseStrandFailed\tBaseQualityFailed\tValid\n")
   for inputfile in inputfiles:
     if inputfile.endswith(".bam"):
       openmode = "rb"
     else:
       openmode = "r"
       
-    filename = "STDIN" if inputfile == "-" else os.path.splitext(os.path.basename(inputfile))[0]
+    filename = os.path.splitext(os.path.basename(inputfile))[0]
+    filenames.append(filename)
+    
+    basesFileCounts = {}
+    for (idx, base) in enumerate(fastaSequence.seq):
+      basesFileCounts[idx] = {'R':base, 'A':0, 'T':0, 'G':0, 'C':0, 'N':0}
+
+    basesCounts[filename] = basesFileCounts
   
     logger.info("processing %s ..." % filename)
     processed = 0
-    failedCount=0
+    readFailedCount=0
     reversedCount=0
+    baseFailedCount=0
     samfile = pysam.Samfile(inputfile, openmode)
     try:
       mutationMap = {}
-      for read in samfile.fetch(until_eof=True):
+      for sread in samfile.fetch(until_eof=True):
         processed += 1
-        if processed % 1000000 == 0:
+        if processed % 100000 == 0:
           logger.info("processed %d" % processed)
-  
-        if read.is_unmapped or read.is_secondary or read.is_qcfail or read.is_duplicate or read.is_supplementary:
-          failedCount += 1
+          
+        if DEBUG:
+          if processed == 1000:
+            break
+#   
+        if sread.is_unmapped or sread.is_secondary or sread.is_qcfail or sread.is_duplicate or sread.is_supplementary:
+          readFailedCount += 1
           continue;
         
-        start = read.reference_start
-        if read.is_reverse:
+        start = sread.reference_start
+        if sread.is_reverse:
           reversedCount += 1
           continue
-    
-        bases = [read.seq[idx-start-1] for idx in positions]
+        
+        if any(sread.query_qualities[idx-start-1] < args.min_base_quality for idx in positions): 
+          baseFailedCount += 1
+          continue
+        
+        bases = [sread.seq[idx-start-1] for idx in positions]
         baseString = "".join(bases)
         
         if(mutationMap.has_key(baseString)):
           mutationMap[baseString] = mutationMap[baseString] + 1
         else:
           mutationMap[baseString] = 1
+          
+        for idx, value in basesFileCounts.items():
+          position = idx-start
+          if position >= len(sread.seq):
+            continue
+          curbase = sread.seq[position]
+          if curbase in validBases:
+            value['N'] = value['N']+1
+            value[curbase] = value[curbase]+1
         
-      logger.info("total processed %d, failed %d, reversed %d" % (processed, failedCount, reversedCount))
-      output.write("%s\t%d\t%d\t%d\t%d\n" %(filename, processed, failedCount, reversedCount, processed - failedCount - reversedCount))
+      logger.info("total processed %d, read failed %d, reversed %d, base failed %d" % (processed, readFailedCount, reversedCount, baseFailedCount ))
+      output.write("%s\t%d\t%d\t%d\t%d\t%d\n" %(filename, processed, readFailedCount, reversedCount, baseFailedCount, processed - readFailedCount - reversedCount - baseFailedCount))
       
       countSum = sum(mutationMap.values())
       for key in sorted(mutationMap, key=mutationMap.get, reverse=True):
@@ -88,21 +134,16 @@ with open(readsFile, 'w') as output:
     finally:
       samfile.close()
       
-if args.output == "-":
-  output = sys.stdout
-else:
-  tmpfile = args.output + ".tmp"
-  output = open(tmpfile, 'w')
-
+tmpfile = args.output + ".tmp"
+output = open(tmpfile, 'w')
 try:
   output.write("File\tMutation\tReadCount\tPercentage\n")
   for mutation in mutations:
     output.write("%s\t%s\t%d\t%.2f\n" % (mutation[0], mutation[1], mutation[2], mutation[3]))
     
-  if args.output != "-":
-    if os.path.isfile(args.output):
-      os.remove(args.output)
-    os.rename(tmpfile, args.output)
+  if os.path.isfile(args.output):
+    os.remove(args.output)
+  os.rename(tmpfile, args.output)
 finally:
   output.close()
 
@@ -130,3 +171,19 @@ with open(summaryFile, 'w') as output:
       else:
         output.write("\t%.2f" % mus[0][3])
     output.write("\n")
+
+with open(snpsFile, 'w') as output:
+  output.write("File\tPosition\tRefAllele\tAltAllele\tAltAllelePercentage\tNumberOfAllele\tNumberOfA\tPercentageOfA\tNumberOfT\tPercentageOfT\tNumberOfG\tPercentageOfG\tNumberOfC\tPercentageOfC\n")
+  for filename in filenames:
+    basesFileCounts = basesCounts[filename]
+    sortedCounts = sorted(basesFileCounts.items())
+    for idx, counts in sortedCounts:
+      min_count= counts['N'] * args.min_minor_allele_frequency
+      minor_alleles = [(allele, counts[allele] * 100.0 / counts['N']) for allele in ['A', 'T', 'G', 'C'] if allele != counts['R']]
+      minor_alleles_sorted = sorted(minor_alleles, key=lambda allele:allele[1])
+      minor_allele = minor_alleles_sorted[len(minor_alleles_sorted) - 1]
+      for allele in ['A', 'T', 'G', 'C']:
+        if allele != counts['R'] and counts[allele] >= min_count:
+          output.write("%s\t%d\t%s\t%s\t%.2f\t%d\t%d\t%.2f\t%d\t%.2f\t%d\t%.2f\t%d\t%.2f\n" %(filename, idx, counts['R'], minor_allele[0], minor_allele[1], counts['N'], counts['A'], counts['A'] * 100.0 / counts['N'], counts['T'], counts['T'] * 100.0 / counts['N'], counts['G'], counts['G'] * 100.0 / counts['N'],counts['C'], counts['C'] * 100.0 / counts['N']))
+          break
+  
