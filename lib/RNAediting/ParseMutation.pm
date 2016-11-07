@@ -33,11 +33,15 @@ sub perform {
     die "File not found : " . $python_script;
   }
   
-#  my $r_bamMismatch = dirname(__FILE__) . "/bamMismatch.r";
-#  if ( !-e $r_bamMismatch ) {
-#    die "File not found : " . $r_bamMismatch;
-#  }
-#  
+  my $rTemplate = dirname(__FILE__) . "/parseMutation.r";
+  if ( !-e $rTemplate ) {
+    die "File not found : " . $rTemplate;
+  }
+  
+  my $picture_width = get_option($config, $section, "picture_width", 3000);
+  my $picture_height = get_option($config, $section, "picture_height", 3000);
+  my $percentageThresholds = get_option($config, $section, "percentage_thresholds", "1 2 5");
+  
   my $positions = "\"" . get_option($config, $section, "positions") . "\"";
   my $sequence_fasta = get_param_file($config->{$section}{"sequence_fasta"}, "sequence_fasta", 1);
   
@@ -58,10 +62,9 @@ sub perform {
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
   print $pbs "
 python $python_script $option -i $bamfile -o $final_file -f $sequence_fasta -p $positions
-"
-;
-#R --vanilla -f $r_bamMismatch --args $final_file ${final_file}.png $max_mismatch $height_width
-#";
+
+R --vanilla -f $rTemplate --args ${task_name}.SNV.tsv ${task_name}.SNV $picture_width $picture_height $percentageThresholds
+";
   $self->close_pbs( $pbs, $pbs_file );
 }
 
@@ -76,6 +79,7 @@ sub result {
   push( @result_files, $result_dir . "/${task_name}.tsv" );
   push( @result_files, $result_dir . "/${task_name}.summary.tsv" );
   push( @result_files, $result_dir . "/${task_name}.reads.tsv" );
+  push( @result_files, $result_dir . "/${task_name}.SNV.tsv" );
   $result->{$task_name} = filter_array( \@result_files, $pattern );
 
   return $result;
