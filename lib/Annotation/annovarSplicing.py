@@ -90,9 +90,10 @@ if os.path.isfile(annovar_outputfile):
       else:
         anno = {}
         for a in parts[splicingAAChangeRefGeneIndex].split(','):
-          aparts = a.split(':')
-          ma = prog.match(aparts[-1])
-          anno[aparts[1]] = ':'.join(aparts[0:3]) + ':p.X' + ma.group(1) + 'X'
+          if a != 'UNKNOWN':
+            aparts = a.split(':')
+            ma = prog.match(aparts[-1])
+            anno[aparts[1]] = ':'.join(aparts[0:3]) + ':p.X' + ma.group(1) + 'X'
       
       locus = parts[0] + ":" + str(originalposition)
       if splicing_map.has_key(locus):
