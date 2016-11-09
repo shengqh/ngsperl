@@ -33,7 +33,7 @@ sub perform {
   my $mappedonly              = get_option( $config, $section, "mappedonly",              0 );
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
   my $outputToSameFolder      = get_option( $config, $section, "output_to_same_folder",   0 );
-  my $add_RG_to_read = get_option( $config, $section, "add_RG_to_read" );
+  my $add_RG_to_read = get_option( $config, $section, "add_RG_to_read", 0 );
   my $picard;
   if($add_RG_to_read){
     $picard = get_param_file($config->{$section}{"picard_jar"}, "picard_jar", 1);

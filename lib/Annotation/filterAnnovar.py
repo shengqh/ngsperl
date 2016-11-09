@@ -1,5 +1,6 @@
 import argparse
 import logging
+import re
 
 parser = argparse.ArgumentParser(description="filter Annovar by truncating/nonsense SNV with/without ExAC annotation",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -9,13 +10,17 @@ NOT_DEBUG=not DEBUG
 
 parser.add_argument('-i', '--input', action='store', nargs='?', required=NOT_DEBUG, help='Input annovar result file from NGSPERL')
 parser.add_argument('-e', '--exac_threshold', action='store', nargs='?', default=1.0, help='Maximum ExAC value (default=1.0, no filter)')
+parser.add_argument('-r', '--sample_name_pattern', action='store', nargs='?', default="", help='Sample name regex pattern for extraction those samples only')
 parser.add_argument('-o', '--output', action='store', nargs='?', required=NOT_DEBUG, help='Output annovar result file')
 
 args = parser.parse_args()
 
+print(args)
+
 inputfile=args.input
 outputfile=args.output
 maxExacValue=float(args.exac_threshold)
+sampleNamePattern=args.sample_name_pattern
 
 if DEBUG:
   inputfile="/scratch/cqs/shengq1/dnaseq/20161013_liuqi_gene_panel/bwa_refine_hc_gvcf_vqsr_annovar/result/Adenoma/Adenoma.pass.annovar.final.tsv"
@@ -37,6 +42,8 @@ with open(inputfile, 'r') as f:
 
   snvHeaderIndecies = range(0, formatIndex)
   sampleIndecies = range(formatIndex+1,len(headers))
+  if sampleNamePattern != "":
+    sampleIndecies = [index for index in sampleIndecies if re.search(sampleNamePattern, headers[index])]
 
   funcIndex=headers.index("Func.refGene")
   geneIndex = headers.index("Gene.refGene")
@@ -45,6 +52,8 @@ with open(inputfile, 'r') as f:
   sampleCount = len(sampleIndecies)
   
   print("sampleCount=%d" % (sampleCount))
+  if sampleCount == 0:
+    raise ValueError("Sample count is zero, check your sample name regex pattern: " + sampleNamePattern)
 
   with open(outputfile, 'w') as snvw:
     snvw.write("%s\tFrequency\tFrequencyFoldChange\tFormat\t%s\n" % ("\t".join(headers[i] for i in snvHeaderIndecies), "\t".join(headers[i] for i in sampleIndecies)))
@@ -69,4 +78,4 @@ with open(inputfile, 'r') as f:
       snvw.write(d[1])
   f.close()
      
-print("all done.")
+print("done.")

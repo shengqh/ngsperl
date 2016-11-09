@@ -37,6 +37,12 @@ sub perform {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my @exac_values = get_maximum_exac_values($config, $section);
+  my $sampleNamePattern = get_option( $config, $section, "sample_name_pattern", "" );
+  my $sampleNameSuffix = "";
+  if($sampleNamePattern ne ""){
+    $sampleNameSuffix = get_option( $config, $section, "sample_name_suffix" );
+    $sampleNamePattern = "-r $sampleNamePattern"
+  }
 
   my $script = dirname(__FILE__) . "/filterAnnovar.py";
   if ( !-e $script ) {
@@ -55,14 +61,14 @@ sub perform {
     
     if(scalar(@exac_values) > 0){
       for my $exac_value (@exac_values){
-        my $finalFile = "${sample_name}.exac${exac_value}.tsv";
+        my $finalFile = "${sample_name}${sampleNameSuffix}.exac${exac_value}.tsv";
         print $pbs "if [ ! -e $finalFile ]; then 
-  python $script $option -i $annovar_file -e $exac_value -o $finalFile 
+  python $script $option -i $annovar_file -e $exac_value -o $finalFile $sampleNamePattern
 fi
 ";
       }
     }else{
-        my $finalFile = "${sample_name}.tsv";
+        my $finalFile = "${sample_name}${sampleNameSuffix}.tsv";
         print $pbs "if [ ! -e $finalFile ]; then 
   python $script $option -i $annovar_file -o $finalFile 
 fi
@@ -79,6 +85,11 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my @exac_values = get_maximum_exac_values($config, $section);
+  my $sampleNamePattern = get_option( $config, $section, "sample_name_pattern", "" );
+  my $sampleNameSuffix = "";
+  if($sampleNamePattern ne ""){
+    $sampleNameSuffix = get_option( $config, $section, "sample_name_suffix" );
+  }
 
   my $result = {};
   
@@ -86,11 +97,11 @@ sub result {
     my @result_files = ();
     if(scalar(@exac_values) > 0){
       for my $exac_value (@exac_values){
-        my $finalFile = "$result_dir/${task_name}.exac${exac_value}.tsv";
+        my $finalFile = "$result_dir/${task_name}${sampleNameSuffix}.exac${exac_value}.tsv";
         push(@result_files, $finalFile);
       }
     }else{
-      my $finalFile = "$result_dir/${task_name}.tsv";
+      my $finalFile = "$result_dir/${task_name}${sampleNameSuffix}.tsv";
       push(@result_files, $finalFile);
     }
     $result->{$sample_name} = filter_array( \@result_files, $pattern );

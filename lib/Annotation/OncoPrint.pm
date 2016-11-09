@@ -32,7 +32,7 @@ sub perform {
   my $picture_width     = get_option( $config, $section, "picture_width" );
   my $picture_height    = get_option( $config, $section, "picture_height" );
   my $sampleNamePattern = get_option( $config, $section, "sample_name_pattern" );
-  my $sampleNameSuffix = get_option( $config, $section, "sample_name_suffix" );
+  my $sampleNameSuffix = get_option( $config, $section, "sample_name_suffix", "");
   my $geneNames         = get_option( $config, $section, "gene_names" );
 
   my $script = dirname(__FILE__) . "/oncoPrint.r";
