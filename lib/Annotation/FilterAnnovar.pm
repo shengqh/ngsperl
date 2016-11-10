@@ -70,7 +70,7 @@ fi
     }else{
         my $finalFile = "${sample_name}${sampleNameSuffix}.tsv";
         print $pbs "if [ ! -e $finalFile ]; then 
-  python $script $option -i $annovar_file -o $finalFile 
+  python $script $option -i $annovar_file -o $finalFile $sampleNamePattern
 fi
 ";
     }
