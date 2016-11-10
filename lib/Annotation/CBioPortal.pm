@@ -30,7 +30,7 @@ sub perform {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $sampleNamePattern = get_option( $config, $section, "sample_name_pattern" );
-  my $sampleNameSuffix = get_option( $config, $section, "sample_name_suffix", "");
+  my $sampleNameSuffix  = get_option( $config, $section, "sample_name_suffix", "" );
   my $geneNames         = get_option( $config, $section, "gene_names" );
 
   my $script = dirname(__FILE__) . "/CBioPortal.r";
@@ -47,8 +47,8 @@ sub perform {
   for my $sample_name ( sort keys %raw_files ) {
     my @inputFiles = @{ $raw_files{$sample_name} };
     for my $inputFile (@inputFiles) {
-      my $filename = basename($inputFile);
-      my $prefix = change_extension($filename, "${sampleNameSuffix}.cBioPortal");
+      my $filename  = basename($inputFile);
+      my $prefix    = change_extension( $filename, "${sampleNameSuffix}.cBioPortal" );
       my $finalFile = $prefix . ".oncoprinter.txt";
       print $pbs "if [ ! -e $finalFile ]; then 
   R --vanilla -f $script --args $inputFile $prefix $sampleNamePattern $geneNames
@@ -74,7 +74,7 @@ sub result {
     my @inputFiles   = @{ $raw_files{$sample_name} };
     for my $inputFile (@inputFiles) {
       my $filename = basename($inputFile);
-      my $prefix = change_extension($filename, "${sampleNameSuffix}.cBioPortal");
+      my $prefix = change_extension( $filename, "${sampleNameSuffix}.cBioPortal" );
       push( @result_files, "$result_dir/${prefix}.oncoprinter.txt" );
       push( @result_files, "$result_dir/${prefix}.mutationmapper.txt" );
     }
