@@ -24,7 +24,7 @@ if (countInFastQcPostRemove=="") {
 	count1$Label="Removed by Trimming or Removing Sequence"
 	count2$Label="Reads for Mapping"
 	
-	countForFigure<-rbind(count1,count2)
+	countForFigure<-rbind(count2,count1)
 	pdf(paste0(resultFile,".pdf"),width=14)
 	print(ggplot(countForFigure,aes(x=Sample,y=Reads,fill=Label))+geom_bar(stat="identity")+theme(axis.text.x = element_text(angle = 90, hjust = 1)))
 	dev.off()
@@ -40,7 +40,7 @@ if (countInFastQcPostRemove=="") {
 	count2$Label="Removed by Trimming"
 	count3$Label="Reads for Mapping"
 	
-	countForFigure<-rbind(count1,count2,count3)
+	countForFigure<-rbind(count3,count1,count2)
 	pdf(paste0(resultFile,".pdf"),width=14)
 	print(ggplot(countForFigure,aes(x=Sample,y=Reads,fill=Label))+geom_bar(stat="identity")+theme(axis.text.x = element_text(angle = 90, hjust = 1)))
 	dev.off()
