@@ -32,6 +32,7 @@ accepted = ["frameshift deletion", "frameshift insertion", "frameshift substitut
 def getKey(item): return item[0]
 def getDicValueCount(item): return len(item[1])
 
+filtered = []
 with open(inputfile, 'r') as f:
   for line in f:
     if(not line.startswith("#")):
@@ -55,27 +56,26 @@ with open(inputfile, 'r') as f:
   if sampleCount == 0:
     raise ValueError("Sample count is zero, check your sample name regex pattern: " + sampleNamePattern)
 
-  with open(outputfile, 'w') as snvw:
-    snvw.write("%s\tFrequency\tFrequencyFoldChange\tFormat\t%s\n" % ("\t".join(headers[i] for i in snvHeaderIndecies), "\t".join(headers[i] for i in sampleIndecies)))
-    filtered = []
-    for line in f:
-      parts = line.split('\t')
-      gene = parts[geneIndex]
-      if(parts[funcIndex] == "splicing" or parts[refIndex] in accepted):
-        if(exacIndex == -1 or not parts[exacIndex] or float(parts[exacIndex]) < maxExacValue):
-          freq = 0.0
-          for idx in sampleIndecies:
-            if(parts[idx].startswith("0/1") or parts[idx].startswith("1/1")):
-              parts[idx] = "1"
-              freq += 1.0
-            else:
-              parts[idx] = "0"
-          freqperc = freq / sampleCount
-          freqfold = "NA" if exacIndex == -1 or not parts[exacIndex] else "100" if float(parts[exacIndex]) == 0 else str(freqperc / float(parts[exacIndex]))
-          filtered.append([freqperc, "%s\t%f\t%s\t\t%s\n" % ("\t".join(parts[i] for i in snvHeaderIndecies), freqperc, freqfold, "\t".join(parts[i] for i in sampleIndecies))])
-    fsorted = sorted(filtered, key=getKey, reverse=True)
-    for d in fsorted:
-      snvw.write(d[1])
-  f.close()
+  for line in f:
+    parts = line.split('\t')
+    gene = parts[geneIndex]
+    if(parts[funcIndex] == "splicing" or parts[refIndex] in accepted):
+      if(exacIndex == -1 or not parts[exacIndex] or float(parts[exacIndex]) < maxExacValue):
+        freq = 0.0
+        for idx in sampleIndecies:
+          if(parts[idx].startswith("0/1") or parts[idx].startswith("1/1")):
+            parts[idx] = "1"
+            freq += 1.0
+          else:
+            parts[idx] = "0"
+        freqperc = freq / sampleCount
+        freqfold = "NA" if exacIndex == -1 or not parts[exacIndex] else "100" if float(parts[exacIndex]) == 0 else str(freqperc / float(parts[exacIndex]))
+        filtered.append([freqperc, "%s\t%f\t%s\t\t%s\n" % ("\t".join(parts[i] for i in snvHeaderIndecies), freqperc, freqfold, "\t".join(parts[i] for i in sampleIndecies))])
+
+fsorted = sorted(filtered, key=getKey, reverse=True)
+with open(outputfile, 'w') as snvw:
+  snvw.write("%s\tFrequency\tFrequencyFoldChange\tFormat\t%s\n" % ("\t".join(headers[i] for i in snvHeaderIndecies), "\t".join(headers[i] for i in sampleIndecies)))
+  for d in fsorted:
+    snvw.write(d[1])
      
 print("done.")
