@@ -1,31 +1,30 @@
 import argparse
-import logging
 import re
 
 parser = argparse.ArgumentParser(description="filter Annovar result for truncating/nonsense SNVs with/without ExAC limitation",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-DEBUG = False
+DEBUG = True
 NOT_DEBUG = not DEBUG
 
 parser.add_argument('-i', '--input', action='store', nargs='?', required=NOT_DEBUG, help='Input annovar result file from NGSPERL')
 parser.add_argument('-e', '--exac_threshold', action='store', nargs='?', default=1.0, help='Maximum ExAC value (default=1.0, no filter)')
 parser.add_argument('-r', '--sample_name_pattern', action='store', nargs='?', default="", help='Sample name regex pattern for extraction those samples only')
-parser.add_argument('-o', '--output', action='store', nargs='?', required=NOT_DEBUG, help='Output SNV result file')
+parser.add_argument('-o', '--output_prefix', action='store', nargs='?', required=NOT_DEBUG, help='Output file prefix')
 
 args = parser.parse_args()
 
 print(args)
 
 inputfile = args.input
-outputfile = args.output
+outputprefix = args.output_prefix
 maxExacValue = float(args.exac_threshold)
 sampleNamePattern = args.sample_name_pattern
 
 if DEBUG:
-  inputfile = "/scratch/cqs/shengq1/dnaseq/20161013_liuqi_gene_panel/bwa_refine_hc_gvcf_vqsr_annovar/result/Adenoma/Adenoma.pass.annovar.final.tsv"
-  outputfile = "/scratch/cqs/shengq1/dnaseq/20161013_liuqi_gene_panel/bwa_refine_hc_gvcf_vqsr_annovar/result/Adenoma/Adenoma.pass.annovar.final.exac0.01.tsv"
-  maxExacValue = 1.0
+  inputfile = "H:/shengquanhu/projects/20161013_liuqi_gene_panel/bwa_refine_hc_gvcf_vqsr_annovar/Adenoma.pass.annovar.final.tsv"
+  outputprefix = "H:/shengquanhu/projects/20161013_liuqi_gene_panel/bwa_refine_hc_gvcf_vqsr_annovar/Adenoma.pass.annovar.final.exac0.01"
+  maxExacValue = 0.01
 
 accepted = ["frameshift deletion", "frameshift insertion", "frameshift substitution", "nonsynonymous SNV", "stopgain", "stoploss"]
 
@@ -33,6 +32,7 @@ def getKey(item): return item[0]
 def getDicValueCount(item): return len(item[1])
 
 filtered = []
+genes = {}
 with open(inputfile, 'r') as f:
   for line in f:
     if(not line.startswith("#")):
@@ -72,10 +72,36 @@ with open(inputfile, 'r') as f:
         freqfold = "NA" if exacIndex == -1 or not parts[exacIndex] else "100" if float(parts[exacIndex]) == 0 else str(freqperc / float(parts[exacIndex]))
         filtered.append([freqperc, "%s\t%f\t%s\t\t%s\n" % ("\t".join(parts[i] for i in snvHeaderIndecies), freqperc, freqfold, "\t".join(parts[i] for i in sampleIndecies))])
 
-fsorted = sorted(filtered, key=getKey, reverse=True)
-with open(outputfile, 'w') as snvw:
-  snvw.write("%s\tFrequency\tFrequencyFoldChange\tFormat\t%s\n" % ("\t".join(headers[i] for i in snvHeaderIndecies), "\t".join(headers[i] for i in sampleIndecies)))
-  for d in fsorted:
-    snvw.write(d[1])
-     
+        curgene = parts[geneIndex]
+        if len(curgene) > 0:
+          if curgene in genes:
+            curgenemap = genes[curgene]
+            for idx in sampleIndecies:
+              if parts[idx] == "1":
+                curgenemap[idx] = "1"
+          else:
+            curgenemap = {}
+            genes[curgene] = curgenemap
+            for idx in sampleIndecies:
+              curgenemap[idx] = parts[idx]
+
+  fsorted = sorted(filtered, key=getKey, reverse=True)
+  with open(outputprefix + ".SNP.tsv", 'w') as snvw:
+    snvw.write("%s\tFrequency\tFrequencyFoldChange\tFormat\t%s\n" % ("\t".join(headers[i] for i in snvHeaderIndecies), "\t".join(headers[i] for i in sampleIndecies)))
+    for d in fsorted:
+      snvw.write(d[1])
+
+  genelist = []
+  for gene in genes:
+    genemap=genes[gene]
+    freq = [v for k,v in genemap.items() if v == "1"]
+    freqperc = len(freq) * 1.0 / sampleCount
+    genelist.append([freqperc, gene])
+  gsorted = sorted(genelist, key=getKey, reverse=True)
+  with open(outputprefix + ".gene.tsv", 'w') as genew:
+    genew.write("Gene\tFrequency\t%s\n" % ("\t".join(headers[i] for i in sampleIndecies)))
+    for d in gsorted:
+      genemap=genes[d[1]]
+      genew.write("%s\t%f\t%s\n" %(d[1], d[0], "\t".join(genemap[i] for i in sampleIndecies )))
+
 print("done.")
