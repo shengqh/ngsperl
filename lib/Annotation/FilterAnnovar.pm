@@ -99,11 +99,11 @@ sub result {
     my @result_files = ();
     if(scalar(@exac_values) > 0){
       for my $exac_value (@exac_values){
-        push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.exac${exac_value}.SNP.tsv");
+        push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.exac${exac_value}.snv.tsv");
         push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.exac${exac_value}.gene.tsv");
       }
     }else{
-      push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.SNP.tsv");
+      push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.snv.tsv");
       push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.gene.tsv");
     }
     $result->{$sample_name} = filter_array( \@result_files, $pattern );

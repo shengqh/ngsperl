@@ -86,7 +86,7 @@ with open(inputfile, 'r') as f:
               curgenemap[idx] = parts[idx]
 
   fsorted = sorted(filtered, key=getKey, reverse=True)
-  with open(outputprefix + ".SNP.tsv", 'w') as snvw:
+  with open(outputprefix + ".snv.tsv", 'w') as snvw:
     snvw.write("%s\tFrequency\tFrequencyFoldChange\tFormat\t%s\n" % ("\t".join(headers[i] for i in snvHeaderIndecies), "\t".join(headers[i] for i in sampleIndecies)))
     for d in fsorted:
       snvw.write(d[1])
