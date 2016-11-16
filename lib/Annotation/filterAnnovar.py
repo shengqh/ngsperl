@@ -4,7 +4,7 @@ import re
 parser = argparse.ArgumentParser(description="filter Annovar result for truncating/nonsense SNVs with/without ExAC limitation",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-DEBUG = True
+DEBUG = False
 NOT_DEBUG = not DEBUG
 
 parser.add_argument('-i', '--input', action='store', nargs='?', required=NOT_DEBUG, help='Input annovar result file from NGSPERL')

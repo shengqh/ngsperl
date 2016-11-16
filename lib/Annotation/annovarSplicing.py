@@ -2,8 +2,6 @@ import subprocess
 import os.path
 import re
 import argparse
-import logging
-from shapely.coords import required
 
 parser = argparse.ArgumentParser(description="annovate splicing with protein position by annovar.",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
