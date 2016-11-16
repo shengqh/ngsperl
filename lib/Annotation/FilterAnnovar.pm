@@ -61,16 +61,18 @@ sub perform {
     
     if(scalar(@exac_values) > 0){
       for my $exac_value (@exac_values){
-        my $finalFile = "${sample_name}${sampleNameSuffix}.exac${exac_value}.tsv";
+        my $finalFilePrefix = "${sample_name}${sampleNameSuffix}.exac${exac_value}";
+        my $finalFile = $finalFilePrefix . ".gene.tsv";
         print $pbs "if [ ! -e $finalFile ]; then 
-  python $script $option -i $annovar_file -e $exac_value -o $finalFile $sampleNamePattern
+  python $script $option -i $annovar_file -e $exac_value -o $finalFilePrefix $sampleNamePattern
 fi
 ";
       }
     }else{
-        my $finalFile = "${sample_name}${sampleNameSuffix}.tsv";
+        my $finalFilePrefix = "${sample_name}${sampleNameSuffix}";
+        my $finalFile = $finalFilePrefix . ".gene.tsv";
         print $pbs "if [ ! -e $finalFile ]; then 
-  python $script $option -i $annovar_file -o $finalFile $sampleNamePattern
+  python $script $option -i $annovar_file -o $finalFilePrefix $sampleNamePattern
 fi
 ";
     }
@@ -97,12 +99,12 @@ sub result {
     my @result_files = ();
     if(scalar(@exac_values) > 0){
       for my $exac_value (@exac_values){
-        my $finalFile = "$result_dir/${task_name}${sampleNameSuffix}.exac${exac_value}.tsv";
-        push(@result_files, $finalFile);
+        push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.exac${exac_value}.SNP.tsv");
+        push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.exac${exac_value}.gene.tsv");
       }
     }else{
-      my $finalFile = "$result_dir/${task_name}${sampleNameSuffix}.tsv";
-      push(@result_files, $finalFile);
+      push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.SNP.tsv");
+      push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.gene.tsv");
     }
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
