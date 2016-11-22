@@ -290,7 +290,7 @@ tableMaxCategory<-function(dat,maxCategory=NA) {
 	return(datForFigure)
 }
 
-tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",facet=NA,varName=if (is.na(facet)) c(fill,x,y) else c(facet,x,y),transformTable=TRUE,textSize=20,ylab=y,colorNames="Set1") {
+tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",facet=NA,varName=if (is.na(facet)) c(fill,x,y) else c(facet,x,y),transformTable=TRUE,textSize=20,ylab=y,colorNames="Set1",barwidth=0.5) {
 	if (transformTable) {
 		datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory)
 		
@@ -317,7 +317,7 @@ tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",f
 	} else {
 		p<-ggplot(datForFigure,aes_string(x=x,y=y))
 	}
-	p<-p+geom_bar(stat="identity")+
+	p<-p+geom_bar(stat="identity", width=barwidth)+
 #			guides(fill= guide_legend(title = groupName))+
 			theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5)) + 
 			theme(axis.text = element_text(size=textSize),legend.text=element_text(size=textSize),

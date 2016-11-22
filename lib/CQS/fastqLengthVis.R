@@ -4,6 +4,7 @@ groupFileList<-parSampleFile2
 
 library(reshape2)
 library(ggplot2)
+library(cowplot)
 
 #source("/home/zhaos/source/r_cqs/vickers/codesToPipeline/countTableVisFunctions.R")
 
@@ -21,6 +22,13 @@ for (i in 1:nrow(lengthFiles)) {
 lengthAllTable<-acast(lengthAll,Len~Sample,value.var="Count")
 write.csv(lengthAllTable,paste0(resultFile,".csv"))
 
+width=max(2000, 800 * (ceiling(sqrt(ncol(lengthAllTable)))+1))
+png(paste0(resultFile,".png"),width=width,height=width,res=300)
+p=ggplot(lengthAll, aes(x=Len, y=Count)) + geom_bar(stat="identity", width=.5) + facet_wrap(~Sample, scales = "free_x") +
+		xlab("Read length") + ylab("Read count")
+print(p)
+dev.off()
+
 if (groupFileList!="") {
 	sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
 	#keep the groups with samples in the count table
@@ -29,7 +37,7 @@ if (groupFileList!="") {
 	datBySampleGroup<-mergeTableBySampleGroup(lengthAllTable,sampleToGroup)
 	temp<-melt(datBySampleGroup)
 	colnames(temp)<-c("Position","Group","Percent")
-	png(paste0(resultFile,".png"),width=2000,height=1500,res=300)
+	png(paste0(resultFile,".group.png"),width=2000,height=1500,res=300)
 	p<-ggplot(temp,aes(x=Position,y=Percent,colour= Group))+geom_line()
 	print(p)
 	dev.off()

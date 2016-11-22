@@ -68,6 +68,10 @@ with open(inputfile, 'r') as f:
             freq += 1.0
           else:
             parts[idx] = "0"
+            
+        if freq == 0:
+          continue
+        
         freqperc = freq / sampleCount
         freqfold = "NA" if exacIndex == -1 or not parts[exacIndex] else "100" if float(parts[exacIndex]) == 0 else str(freqperc / float(parts[exacIndex]))
         filtered.append([freqperc, "%s\t%f\t%s\t\t%s\n" % ("\t".join(parts[i] for i in snvHeaderIndecies), freqperc, freqfold, "\t".join(parts[i] for i in sampleIndecies))])

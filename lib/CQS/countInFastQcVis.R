@@ -9,6 +9,7 @@ countInFastQcPostRemove<-parFile3
 
 library(ggplot2)
 library(reshape2)
+library(cowplot)
 
 #countInFastQcPreTrim<-"/scratch/cqs/zhaos/vickers/20151017_3018-KCV-45-46/fastqc_pre_trim/result/3018-KCV-45-46.FastQC.summary.reads.tsv"
 #countInFastQcPostTrim<-"/scratch/cqs/zhaos/vickers/20151017_3018-KCV-45-46/fastqc_post_trim/result/3018-KCV-45-46.FastQC.summary.reads.tsv"
@@ -26,7 +27,7 @@ if (countInFastQcPostRemove=="") {
 	
 	countForFigure<-rbind(count2,count1)
 	pdf(paste0(resultFile,".pdf"),width=14)
-	print(ggplot(countForFigure,aes(x=Sample,y=Reads,fill=Label))+geom_bar(stat="identity")+theme(axis.text.x = element_text(angle = 90, hjust = 1)))
+	print(ggplot(countForFigure,aes(x=Sample,y=Reads,fill=Label))+geom_bar(stat="identity", width=0.5)+theme(axis.text.x = element_text(angle = 90, hjust = 1)))
 	dev.off()
 } else {
 	count1<-read.delim(countInFastQcPreTrim,header=T)
@@ -42,7 +43,7 @@ if (countInFastQcPostRemove=="") {
 	
 	countForFigure<-rbind(count3,count1,count2)
 	pdf(paste0(resultFile,".pdf"),width=14)
-	print(ggplot(countForFigure,aes(x=Sample,y=Reads,fill=Label))+geom_bar(stat="identity")+theme(axis.text.x = element_text(angle = 90, hjust = 1)))
+	print(ggplot(countForFigure,aes(x=Sample,y=Reads,fill=Label))+geom_bar(stat="identity", width=0.5)+theme(axis.text.x = element_text(angle = 90, hjust = 1)))
 	dev.off()
 }
 

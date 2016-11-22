@@ -52,7 +52,7 @@ sub perform {
     $java_option = "-Xmx${memory}";
   }
 
-  my %gvcfFiles = %{ get_raw_files( $config, $section ) };
+  my %vcfFiles = %{ get_raw_files( $config, $section ) };
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
@@ -66,22 +66,6 @@ sub perform {
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $finalFile );
 
-  print $pbs "
-if [ ! -s $mergedFile ]; then
-  echo GenotypeGVCFs=`date` 
-  java $java_option -jar $gatk_jar -T GenotypeGVCFs $option -nt $thread -D $dbsnp -R $faFile \\
-";
-
-  for my $sample_name ( sort keys %gvcfFiles ) {
-    my @sample_files = @{ $gvcfFiles{$sample_name} };
-    my $gvcfFile     = $sample_files[0];
-    print $pbs "    --variant $gvcfFile \\\n";
-  }
-
-  print $pbs "  -o $mergedFile
-fi
-";
-
   if ($vqsrMode) {    #VQSR mode
     my $snpCal        = $task_name . ".snp.recal";
     my $snpTranches   = $task_name . ".snp.tranche";
@@ -89,7 +73,22 @@ fi
     my $indelCal      = $task_name . ".indel.recal";
     my $indelTranches = $task_name . ".indel.tranche";
     my $indelPass     = $task_name . ".recal_snp_recal_indel.vcf";
-    print $pbs "
+
+  print $pbs "
+if [ ! -s $mergedFile ]; then
+  echo GenotypeGVCFs=`date` 
+  java $java_option -jar $gatk_jar -T GenotypeGVCFs $option -nt $thread -D $dbsnp -R $faFile \\
+";
+
+  for my $sample_name ( sort keys %vcfFiles ) {
+    my @sample_files = @{ $vcfFiles{$sample_name} };
+    my $gvcfFile     = $sample_files[0];
+    print $pbs "    --variant $gvcfFile \\\n";
+  }
+
+  print $pbs "  -o $mergedFile
+fi
+
 if [[ -s $mergedFile && ! -s $snpCal ]]; then
   echo VariantRecalibratorSNP=`date` 
   java $java_option -jar $gatk_jar \\
@@ -191,6 +190,22 @@ fi
       get_option( $config, $section, "is_rna" )
       ? "-window 35 -cluster 3 --filterExpression \"FS > 30.0 || QD < 2.0\" --filterName \"snp_filter\" "
       : "--filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" --filterName \"snp_filter\" ";
+
+  print $pbs "
+java $java_option -Xmx${memory} -jar $gatk_jar \\
+  -T CombineVariants \\
+  -R $faFile \\
+";
+
+  for my $sample_name ( sort keys %vcfFiles ) {
+    my @sample_files = @{ $vcfFiles{$sample_name} };
+    my $vcfFile      = $sample_files[0];
+    print $pbs "  --variant $vcfFile \\\n";
+  }
+  
+  print $pbs "  -o $mergedFile \\
+  -genotypeMergeOptions UNIQUIFY
+";
 
     print $pbs "
 if [[ -s $mergedFile && ! -s $snpPass ]]; then
