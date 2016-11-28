@@ -87,7 +87,8 @@ for (i in sample_start:sample_end){
 					type<-mutdata_gene_samples$ExonicFunc.refGene[j]
 					if (type=="frameshift deletion" | type=="frameshift substitution") type="Frame_Shift_Del"
 					else if (type=="frameshift insertion") type="Frame_Shift_Ins"
-					else if (type=="stopgain" | type=="nonsynonymous SNV") type="Nonsense_Mutation"
+					else if (type=="stopgain") type="Nonsense_Mutation"
+					else if (type=="nonsynonymous SNV") type="Missense_Mutation"
 					
 					mutationmapper<-rbind(mutationmapper,c(gene, sample,pchange, type))
 				} 

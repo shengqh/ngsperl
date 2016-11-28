@@ -539,6 +539,28 @@ sub getPrepareConfig {
   push @individual, ("identical");
   push @summary,    ("identical_sequence_count_table");
 
+  if ( $def->{special_sequence_file} ) {
+    $config->{"special_sequence_count_table"} = {
+      class                    => "CQS::ProgramWrapper",
+      perform                  => 1,
+      interpretor              => "python",
+      program                  => "../SmallRNA/findSequence.py",
+      target_dir               => $class_independent_dir . "/special_sequence_count_table",
+      option                   => "",
+      parameterSampleFile1_ref => [ "identical", ".dupcount\$" ],
+      parameterFile1           => $def->{special_sequence_file},
+      sh_direct                => 1,
+      output_ext               => ".special_sequence.tsv",
+      pbs                      => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "10gb"
+      },
+    };
+    push @summary, ("special_sequence_count_table");
+  }
+
   if ($blast_top_reads) {
     $preparation->{"identical_sequence_top${top_read_number}_contig_blast"} = {
       class      => "Blast::Blastn",

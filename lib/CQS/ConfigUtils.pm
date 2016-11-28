@@ -17,7 +17,8 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key)
+    qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups 
+      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key save_parameter_sample_file)
   ]
 );
 
@@ -568,6 +569,32 @@ sub get_group_samplefile_map_key {
     $group_sample_map{$group_name} = \@gfiles;
   }
   return \%group_sample_map;
+}
+
+sub save_parameter_sample_file {
+  my ( $config, $section, $key, $outputFile ) = @_;
+
+  if ( has_raw_files( $config, $section, $key ) ) {
+    my %temp = %{ get_raw_files( $config, $section, $key ) };
+    my @orderedSampleNames;
+    my $sampleFileOrder = $config->{$section}{$key . "Order"};
+    if ( defined $sampleFileOrder ) {
+      @orderedSampleNames = @{$sampleFileOrder};
+    }
+    else {
+      @orderedSampleNames = sort keys %temp;
+    }
+    open( my $list, '>', $outputFile ) or die "Cannot create $outputFile";
+    foreach my $sample_name (@orderedSampleNames) {
+      foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
+        print $list $subSampleFile . "\t$sample_name\n";
+      }
+    }
+    close($list);
+    return ($outputFile)
+  }else{
+    return ("");
+  }
 }
 
 1;
