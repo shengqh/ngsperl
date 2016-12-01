@@ -55,6 +55,10 @@ sub perform {
   my $addCountOne       = get_option( $config, $section, "add_count_one",        0 );
   my $usePearsonInHCA   = get_option( $config, $section, "use_pearson_in_hca",   0 );
 
+  my $top25only           = get_option( $config, $section, "top25only",              0 );
+  my $detectedInBothGroup = get_option( $config, $section, "detected_in_both_group", 0 );
+  my $performWilcox       = get_option( $config, $section, "perform_wilcox",         0 );
+
   my %tpgroups = ();
   for my $group_name ( sort keys %{$groups} ) {
     my @samples = @{ $groups->{$group_name} };
@@ -72,7 +76,7 @@ sub perform {
   }
 
   my $designfilename = "${task_name}.define";
-  my $designfile = "$result_dir/$designfilename";
+  my $designfile     = "$result_dir/$designfilename";
   open( my $df, ">$designfile" ) or die "Cannot create $designfile";
   print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\n";
 
@@ -151,7 +155,7 @@ sub perform {
       print $cd "\n";
     }
     close $cd;
-    
+
     my $curcountfile = $single_count_file ? $countfile : $countfiles->{$comparison_name};
     if ( !defined $curcountfile ) {
       print Dumper($countfiles);
@@ -178,7 +182,9 @@ foldChange<-$foldChange
 minMedianInGroup<-$minMedianInGroup
 addCountOne<-$addCountOne
 usePearsonInHCA<-$usePearsonInHCA
-
+top25only<-$top25only
+detectedInBothGroup<-$detectedInBothGroup
+performWilcox<-$performWilcox
 ";
 
   while (<$rt>) {
@@ -199,8 +205,18 @@ usePearsonInHCA<-$usePearsonInHCA
   my $log      = $self->get_log_filename( $log_dir, $task_name );
 
   my $log_desc = $cluster->get_log_description($log);
+  my $prefix   = $comparison_names[0];
+  if ($top25only) {
+    $prefix = $prefix . "_top25";
+  }
+  if ($detectedInBothGroup) {
+    $prefix = $prefix . "_detectedInBothGroup";
+  }
+  if ( $minMedianInGroup > 0 ) {
+    $prefix = $prefix . "_min${minMedianInGroup}";
+  }
 
-  my $final_file = $comparison_names[0] . "_min${minMedianInGroup}_DESeq2_sig.csv";
+  my $final_file = $prefix . "_DESeq2_sig.csv";
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
   print $pbs "R --vanilla -f $rfile \n";
@@ -214,14 +230,35 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my $comparisons = get_raw_files( $config, $section );
-  my $minMedianInGroup = get_option( $config, $section, "min_median_read", 0 );
+  my $minMedianInGroup    = get_option( $config, $section, "min_median_read",        0 );
+  my $top25only           = get_option( $config, $section, "top25only",              0 );
+  my $detectedInBothGroup = get_option( $config, $section, "detected_in_both_group", 0 );
+  my $performWilcox       = get_option( $config, $section, "perform_wilcox",         0 );
 
   my $result = {};
   for my $comparison_name ( sort keys %{$comparisons} ) {
     my @result_files = ();
-    push( @result_files, $result_dir . "/${comparison_name}_min${minMedianInGroup}.csv" );
-    push( @result_files, $result_dir . "/${comparison_name}_min${minMedianInGroup}_DESeq2.csv" );
-    push( @result_files, $result_dir . "/${comparison_name}_min${minMedianInGroup}_DESeq2_sig.csv" );
+    my $prefix       = $comparison_name;
+    if ($top25only) {
+      $prefix = $prefix . "_top25";
+    }
+    if ($detectedInBothGroup) {
+      $prefix = $prefix . "_detectedInBothGroup";
+    }
+    if ( $minMedianInGroup > 0 ) {
+      $prefix = $prefix . "_min${minMedianInGroup}";
+    }
+
+    my $final_file = $prefix . "_DESeq2_sig.csv";
+
+    push( @result_files, $result_dir . "/${prefix}.csv" );
+    push( @result_files, $result_dir . "/${prefix}_DESeq2.csv" );
+    push( @result_files, $result_dir . "/${prefix}_DESeq2_sig.csv" );
+    if ($performWilcox) {
+      push( @result_files, $result_dir . "/${prefix}_quantile_wilcox.csv" );
+      push( @result_files, $result_dir . "/${prefix}_quantile_wilcox_sig.csv" );
+    }
+
     $result->{$comparison_name} = filter_array( \@result_files, $pattern );
   }
   return $result;

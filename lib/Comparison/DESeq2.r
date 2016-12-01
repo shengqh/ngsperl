@@ -4,14 +4,24 @@ rootdir<-"H:/shengquanhu/projects/20160701_smallRNA_3018-KCV-77_78_79_mouse/clas
 inputfile<-"KCV-77_78_79.design"
 
 showLabelInPCA<-1
-showDEGeneCluster<-1
+showDEGeneCluster<-0
 pvalue<-0.05
 foldChange<-1.5
 minMedianInGroup<-2
-addCountOne<-1
+addCountOne<-0
 usePearsonInHCA<-0
 
+top25only=1
+detectedInBothGroup=1
+performWilcox=1
+
 ##predefined_condition_end
+
+zeroCount=0
+if(addCountOne){
+  zeroCount=1
+  minMedianInGroup=minMedianInGroup+1
+}
 
 if(!exists("usePearsonInHCA")){
   usePearsonInHCA=0
@@ -255,6 +265,32 @@ for(countfile_index in c(1:length(countfiles))){
     comparisonData<-comparisonData[,as.character(designData$Sample)]
     
     prefix<-comparisonName
+    if(top25only){
+      ranks=apply(comparisonData, 2, function(x){
+        y=x[x > 0]
+        q=quantile(y)
+        return(x>=q[4])
+      })
+      
+      select=apply(ranks, 1, function(x){
+        any(x)
+      })
+      
+      comparisonData=comparisonData[select,]
+      prefix=paste0(prefix,"_top25")
+    }
+    
+    if(detectedInBothGroup){
+      conds<-unique(designData$Condition)
+      data1<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[1]]]
+      data2<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[2]]]
+      med1<-apply(data1, 1, median) > zeroCount
+      med2<-apply(data2, 1, median) > zeroCount
+      med<-med1 & med2
+      comparisonData<-comparisonData[med,]
+      prefix=paste0(prefix,"_detectedInBothGroup")
+    }
+    
     curdata<-data
     if(minMedianInGroup > 0){
       conds<-unique(designData$Condition)
@@ -273,7 +309,7 @@ for(countfile_index in c(1:length(countfiles))){
         next;
       }
       
-      prefix<-paste0(comparisonName, "_min", minMedianInGroup)
+      prefix<-paste0(prefix, "_min", minMedianInGroup)
       curdata<-data[med,]
     }
     
@@ -313,6 +349,40 @@ for(countfile_index in c(1:length(countfiles))){
     conditionColors<-as.matrix(data.frame(Group=c("red", "blue")[designData$Condition]))
     
     write.csv(comparisonData, file=paste0(prefix, ".csv"))
+    
+    if(preformWilcox){
+      #quantile and wilcox
+      quantileData=normalize.quantiles(data.matrix(comparisonData))
+      colnames(quantileData)=colnames(comparisonData)
+      rownames(quantileData)=rownames(comparisonData)
+      write.csv(quantileData, file=paste0(prefix, "_quantile.csv"), row.names = T)
+      
+      data1<-quantileData[, colnames(quantileData) %in% designData$Sample[designData$Condition==conds[1]]]
+      data2<-quantileData[, colnames(quantileData) %in% designData$Sample[designData$Condition==conds[2]]]
+      
+      diffData=data.frame(quantileData)
+      diffData$pvalues=unlist(lapply(c(1:nrow(data1)), function(index){
+        d1=data1[index,]
+        d2=data2[index,]
+        test=wilcox.test(d1,d2)
+        test$p.value
+      }))
+      diffData$log2MedianFoldChange=unlist(lapply(c(1:nrow(data1)), function(index){
+        d1=data1[index,]
+        d2=data2[index,]
+        log2(median(d2) / median(d1))
+      }))
+      diffData$log2MeanFoldChange=unlist(lapply(c(1:nrow(data1)), function(index){
+        d1=data1[index,]
+        d2=data2[index,]
+        log2(mean(d2) / mean(d1))
+      }))
+      diffData=diffData[order(diffData$pvalues),]
+      write.csv(diffData, file=paste0(comparisonName, "_quantile_wilcox.csv"), row.names = T)
+      
+      filterData=diffData[diffData$pvalues<=pvalue & abs(diffData$log2MedianFoldChange) > log2(foldChange),]
+      write.csv(filterData, file=paste0(comparisonName, "_quantile_wilcox_sig.csv"), row.names = T)
+    }
     
     #some basic graph
     dds=DESeqDataSetFromMatrix(countData = comparisonData,
