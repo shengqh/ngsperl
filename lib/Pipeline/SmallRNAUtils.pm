@@ -138,6 +138,18 @@ sub initializeDefaultOptions {
     $def->{DE_min_median_read_smallRNA} = 5;
   }
 
+  if ( !defined $def->{DE_top25only} ) {
+    $def->{DE_top25only} = 0;
+  }
+
+  if ( !defined $def->{DE_detected_in_both_group} ) {
+    $def->{DE_detected_in_both_group} = 0;
+  }
+
+  if ( !defined $def->{DE_perform_wilcox} ) {
+    $def->{DE_perform_wilcox} = 0;
+  }
+
   if ( !defined $def->{max_sequence_extension_base} ) {
     $def->{max_sequence_extension_base} = 1;
   }

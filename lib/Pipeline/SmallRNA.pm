@@ -39,7 +39,7 @@ sub getSmallRNAConfig {
   my @table_for_correlation = ( "identical_sequence_count_table", "^(?!.*?read).*\.count\$" );
   my @table_for_countSum    = ();
   my @table_for_pieSummary  = ();
-  my @name_for_pieSummary  = ();
+  my @name_for_pieSummary   = ();
   my @table_for_readSummary = ();
   my @name_for_readSummary  = ();
 
@@ -50,11 +50,11 @@ sub getSmallRNAConfig {
   my $search_miRBase        = ( !defined $def->{search_miRBase} )        || $def->{search_miRBase};
   my $search_unmapped_reads = ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
 
-  my $do_comparison     = defined $def->{pairs};
-  my $groups            = $def->{groups};
-  my $groups_vis_layout = $def->{groups_vis_layout};
-  my $groups_smallRNA_vis_layout=$groups_vis_layout;
-  if (defined $def->{groups_smallRNA_vis_layout}) {
+  my $do_comparison              = defined $def->{pairs};
+  my $groups                     = $def->{groups};
+  my $groups_vis_layout          = $def->{groups_vis_layout};
+  my $groups_smallRNA_vis_layout = $groups_vis_layout;
+  if ( defined $def->{groups_smallRNA_vis_layout} ) {
     $groups_smallRNA_vis_layout = $def->{groups_smallRNA_vis_layout};
   }
 
@@ -64,10 +64,9 @@ sub getSmallRNAConfig {
   my $DE_add_count_one            = $def->{DE_add_count_one};
   my $DE_min_median_read_top      = $def->{DE_min_median_read_top};
   my $DE_min_median_read_smallRNA = $def->{DE_min_median_read_smallRNA};
-  if ($DE_add_count_one) {
-    $DE_min_median_read_top      = $DE_min_median_read_top + $DE_add_count_one;
-    $DE_min_median_read_smallRNA = $DE_min_median_read_smallRNA + $DE_add_count_one;
-  }
+  my $DE_top25only                = $def->{DE_top25only};
+  my $DE_detected_in_both_group   = $def->{DE_detected_in_both_group};
+  my $DE_perform_wilcox           = $def->{DE_perform_wilcox};
 
   my $max_sequence_extension_base = $def->{max_sequence_extension_base};
   my $blast_localdb               = $def->{blast_localdb};
@@ -324,8 +323,8 @@ sub getSmallRNAConfig {
       },
     };
 
-    push @table_for_pieSummary,  ( "bowtie1_genome_1mm_NTA_smallRNA_count", ".count\$" );
-    push @name_for_pieSummary,"Host Small RNA";
+    push @table_for_pieSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_count", ".count\$" );
+    push @name_for_pieSummary, "Host Small RNA";
     push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "^(?!.*?read).*\.count\$" );
     push @table_for_readSummary,
       ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$" );
@@ -367,20 +366,23 @@ sub getSmallRNAConfig {
 
         #DESeq2
         deseq2_miRNA => {
-          class                => "Comparison::DESeq2",
-          perform              => 1,
-          target_dir           => $host_genome_dir . "/deseq2_miRNA",
-          option               => "",
-          source_ref           => "pairs",
-          groups_ref           => "groups",
-          countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ],
-          sh_direct            => 1,
-          show_DE_gene_cluster => $DE_show_gene_cluster,
-          pvalue               => $DE_pvalue,
-          fold_change          => $DE_fold_change,
-          min_median_read      => $DE_min_median_read_smallRNA,
-          add_count_one        => $DE_add_count_one,
-          pbs                  => {
+          class                  => "Comparison::DESeq2",
+          perform                => 1,
+          target_dir             => $host_genome_dir . "/deseq2_miRNA",
+          option                 => "",
+          source_ref             => "pairs",
+          groups_ref             => "groups",
+          countfile_ref          => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ],
+          sh_direct              => 1,
+          show_DE_gene_cluster   => $DE_show_gene_cluster,
+          pvalue                 => $DE_pvalue,
+          fold_change            => $DE_fold_change,
+          min_median_read        => $DE_min_median_read_smallRNA,
+          add_count_one          => $DE_add_count_one,
+          top25only              => $DE_top25only,
+          detected_in_both_group => $DE_detected_in_both_group,
+          perform_wilcox         => $DE_perform_wilcox,
+          pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
@@ -389,20 +391,23 @@ sub getSmallRNAConfig {
           },
         },
         deseq2_miRNA_NTA => {
-          class                => "Comparison::DESeq2",
-          perform              => 1,
-          target_dir           => $host_genome_dir . "/deseq2_miRNA_NTA",
-          option               => "",
-          source_ref           => "pairs",
-          groups_ref           => "groups",
-          countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.NTA.count\$" ],
-          sh_direct            => 1,
-          show_DE_gene_cluster => $DE_show_gene_cluster,
-          pvalue               => $DE_pvalue,
-          fold_change          => $DE_fold_change,
-          min_median_read      => $DE_min_median_read_smallRNA,
-          add_count_one        => $DE_add_count_one,
-          pbs                  => {
+          class                  => "Comparison::DESeq2",
+          perform                => 1,
+          target_dir             => $host_genome_dir . "/deseq2_miRNA_NTA",
+          option                 => "",
+          source_ref             => "pairs",
+          groups_ref             => "groups",
+          countfile_ref          => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.NTA.count\$" ],
+          sh_direct              => 1,
+          show_DE_gene_cluster   => $DE_show_gene_cluster,
+          pvalue                 => $DE_pvalue,
+          fold_change            => $DE_fold_change,
+          min_median_read        => $DE_min_median_read_smallRNA,
+          add_count_one          => $DE_add_count_one,
+          top25only              => $DE_top25only,
+          detected_in_both_group => $DE_detected_in_both_group,
+          perform_wilcox         => $DE_perform_wilcox,
+          pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
@@ -411,20 +416,23 @@ sub getSmallRNAConfig {
           },
         },
         deseq2_miRNA_isomiR => {
-          class                => "Comparison::DESeq2",
-          perform              => 1,
-          target_dir           => $host_genome_dir . "/deseq2_miRNA_isomiR",
-          option               => "",
-          source_ref           => "pairs",
-          groups_ref           => "groups",
-          countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR.count\$" ],
-          sh_direct            => 1,
-          show_DE_gene_cluster => $DE_show_gene_cluster,
-          pvalue               => $DE_pvalue,
-          fold_change          => $DE_fold_change,
-          min_median_read      => $DE_min_median_read_smallRNA,
-          add_count_one        => $DE_add_count_one,
-          pbs                  => {
+          class                  => "Comparison::DESeq2",
+          perform                => 1,
+          target_dir             => $host_genome_dir . "/deseq2_miRNA_isomiR",
+          option                 => "",
+          source_ref             => "pairs",
+          groups_ref             => "groups",
+          countfile_ref          => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR.count\$" ],
+          sh_direct              => 1,
+          show_DE_gene_cluster   => $DE_show_gene_cluster,
+          pvalue                 => $DE_pvalue,
+          fold_change            => $DE_fold_change,
+          min_median_read        => $DE_min_median_read_smallRNA,
+          add_count_one          => $DE_add_count_one,
+          top25only              => $DE_top25only,
+          detected_in_both_group => $DE_detected_in_both_group,
+          perform_wilcox         => $DE_perform_wilcox,
+          pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
@@ -433,20 +441,23 @@ sub getSmallRNAConfig {
           },
         },
         deseq2_miRNA_isomiR_NTA => {
-          class                => "Comparison::DESeq2",
-          perform              => 1,
-          target_dir           => $host_genome_dir . "/deseq2_miRNA_isomiR_NTA",
-          option               => "",
-          source_ref           => "pairs",
-          groups_ref           => "groups",
-          countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR_NTA.count\$" ],
-          sh_direct            => 1,
-          show_DE_gene_cluster => $DE_show_gene_cluster,
-          pvalue               => $DE_pvalue,
-          fold_change          => $DE_fold_change,
-          min_median_read      => $DE_min_median_read_smallRNA,
-          add_count_one        => $DE_add_count_one,
-          pbs                  => {
+          class                  => "Comparison::DESeq2",
+          perform                => 1,
+          target_dir             => $host_genome_dir . "/deseq2_miRNA_isomiR_NTA",
+          option                 => "",
+          source_ref             => "pairs",
+          groups_ref             => "groups",
+          countfile_ref          => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR_NTA.count\$" ],
+          sh_direct              => 1,
+          show_DE_gene_cluster   => $DE_show_gene_cluster,
+          pvalue                 => $DE_pvalue,
+          fold_change            => $DE_fold_change,
+          min_median_read        => $DE_min_median_read_smallRNA,
+          add_count_one          => $DE_add_count_one,
+          top25only              => $DE_top25only,
+          detected_in_both_group => $DE_detected_in_both_group,
+          perform_wilcox         => $DE_perform_wilcox,
+          pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
@@ -455,20 +466,23 @@ sub getSmallRNAConfig {
           },
         },
         deseq2_tRNA => {
-          class                => "Comparison::DESeq2",
-          perform              => 1,
-          target_dir           => $host_genome_dir . "/deseq2_tRNA",
-          option               => "",
-          source_ref           => "pairs",
-          groups_ref           => "groups",
-          countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ],
-          sh_direct            => 1,
-          show_DE_gene_cluster => $DE_show_gene_cluster,
-          pvalue               => $DE_pvalue,
-          fold_change          => $DE_fold_change,
-          min_median_read      => $DE_min_median_read_smallRNA,
-          add_count_one        => $DE_add_count_one,
-          pbs                  => {
+          class                  => "Comparison::DESeq2",
+          perform                => 1,
+          target_dir             => $host_genome_dir . "/deseq2_tRNA",
+          option                 => "",
+          source_ref             => "pairs",
+          groups_ref             => "groups",
+          countfile_ref          => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ],
+          sh_direct              => 1,
+          show_DE_gene_cluster   => $DE_show_gene_cluster,
+          pvalue                 => $DE_pvalue,
+          fold_change            => $DE_fold_change,
+          min_median_read        => $DE_min_median_read_smallRNA,
+          add_count_one          => $DE_add_count_one,
+          top25only              => $DE_top25only,
+          detected_in_both_group => $DE_detected_in_both_group,
+          perform_wilcox         => $DE_perform_wilcox,
+          pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
@@ -477,20 +491,23 @@ sub getSmallRNAConfig {
           },
         },
         deseq2_tRNA_reads => {
-          class                => "Comparison::DESeq2",
-          perform              => 1,
-          target_dir           => $host_genome_dir . "/deseq2_tRNA_reads",
-          option               => "",
-          source_ref           => "pairs",
-          groups_ref           => "groups",
-          countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$" ],
-          sh_direct            => 1,
-          show_DE_gene_cluster => $DE_show_gene_cluster,
-          pvalue               => $DE_pvalue,
-          fold_change          => $DE_fold_change,
-          min_median_read      => $DE_min_median_read_smallRNA,
-          add_count_one        => $DE_add_count_one,
-          pbs                  => {
+          class                  => "Comparison::DESeq2",
+          perform                => 1,
+          target_dir             => $host_genome_dir . "/deseq2_tRNA_reads",
+          option                 => "",
+          source_ref             => "pairs",
+          groups_ref             => "groups",
+          countfile_ref          => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$" ],
+          sh_direct              => 1,
+          show_DE_gene_cluster   => $DE_show_gene_cluster,
+          pvalue                 => $DE_pvalue,
+          fold_change            => $DE_fold_change,
+          min_median_read        => $DE_min_median_read_smallRNA,
+          add_count_one          => $DE_add_count_one,
+          top25only              => $DE_top25only,
+          detected_in_both_group => $DE_detected_in_both_group,
+          perform_wilcox         => $DE_perform_wilcox,
+          pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
@@ -499,20 +516,23 @@ sub getSmallRNAConfig {
           },
         },
         deseq2_tRNA_aminoacid => {
-          class                => "Comparison::DESeq2",
-          perform              => 1,
-          target_dir           => $host_genome_dir . "/deseq2_tRNA_aminoacid",
-          option               => "",
-          source_ref           => "pairs",
-          groups_ref           => "groups",
-          countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count\$" ],
-          sh_direct            => 1,
-          show_DE_gene_cluster => $DE_show_gene_cluster,
-          pvalue               => $DE_pvalue,
-          fold_change          => $DE_fold_change,
-          min_median_read      => $DE_min_median_read_smallRNA,
-          add_count_one        => $DE_add_count_one,
-          pbs                  => {
+          class                  => "Comparison::DESeq2",
+          perform                => 1,
+          target_dir             => $host_genome_dir . "/deseq2_tRNA_aminoacid",
+          option                 => "",
+          source_ref             => "pairs",
+          groups_ref             => "groups",
+          countfile_ref          => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count\$" ],
+          sh_direct              => 1,
+          show_DE_gene_cluster   => $DE_show_gene_cluster,
+          pvalue                 => $DE_pvalue,
+          fold_change            => $DE_fold_change,
+          min_median_read        => $DE_min_median_read_smallRNA,
+          add_count_one          => $DE_add_count_one,
+          top25only              => $DE_top25only,
+          detected_in_both_group => $DE_detected_in_both_group,
+          perform_wilcox         => $DE_perform_wilcox,
+          pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
@@ -521,20 +541,23 @@ sub getSmallRNAConfig {
           },
         },
         deseq2_otherSmallRNA => {
-          class                => "Comparison::DESeq2",
-          perform              => 1,
-          target_dir           => $host_genome_dir . "/deseq2_otherSmallRNA",
-          option               => "",
-          source_ref           => "pairs",
-          groups_ref           => "groups",
-          countfile_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" ],
-          sh_direct            => 1,
-          show_DE_gene_cluster => $DE_show_gene_cluster,
-          pvalue               => $DE_pvalue,
-          fold_change          => $DE_fold_change,
-          min_median_read      => $DE_min_median_read_smallRNA,
-          add_count_one        => $DE_add_count_one,
-          pbs                  => {
+          class                  => "Comparison::DESeq2",
+          perform                => 1,
+          target_dir             => $host_genome_dir . "/deseq2_otherSmallRNA",
+          option                 => "",
+          source_ref             => "pairs",
+          groups_ref             => "groups",
+          countfile_ref          => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" ],
+          sh_direct              => 1,
+          show_DE_gene_cluster   => $DE_show_gene_cluster,
+          pvalue                 => $DE_pvalue,
+          fold_change            => $DE_fold_change,
+          min_median_read        => $DE_min_median_read_smallRNA,
+          add_count_one          => $DE_add_count_one,
+          top25only              => $DE_top25only,
+          detected_in_both_group => $DE_detected_in_both_group,
+          perform_wilcox         => $DE_perform_wilcox,
+          pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
@@ -583,8 +606,8 @@ sub getSmallRNAConfig {
       $config = merge( $config, $comparison );
       push @summary,
         (
-        "deseq2_miRNA",        "deseq2_tRNA",         "deseq2_tRNA_reads",    "deseq2_tRNA_aminoacid", "deseq2_otherSmallRNA", "host_genome_deseq2_vis", "deseq2_miRNA_NTA",
-        "deseq2_miRNA_isomiR", "deseq2_miRNA_isomiR_NTA", "host_genome_deseq2_miRNA_vis"
+        "deseq2_miRNA",     "deseq2_tRNA",         "deseq2_tRNA_reads",       "deseq2_tRNA_aminoacid", "deseq2_otherSmallRNA", "host_genome_deseq2_vis",
+        "deseq2_miRNA_NTA", "deseq2_miRNA_isomiR", "deseq2_miRNA_isomiR_NTA", "host_genome_deseq2_miRNA_vis"
         );
     }
 
@@ -643,17 +666,18 @@ sub getSmallRNAConfig {
       },
 
       bowtie1_genome_unmapped_reads => {
-        class            => "CQS::Perl",
-        perform          => 1,
-        target_dir       => $host_genome_dir . "/bowtie1_genome_unmapped_reads",
-        perlFile         => "unmappedReadsToFastq.pl",
-        source_ref       => [ "identical", ".fastq.gz\$" ],
-        source2_ref      => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
-        source3_ref      => ["bowtie1_genome_1mm_NTA_pmnames"],
-        output_ext       => "_clipped_identical.unmapped.fastq.gz",
-        output_other_ext => "_clipped_identical.unmapped.fastq.dupcount,_clipped_identical.mappedToHostGenome.dupcount,_clipped_identical.mappedToHostGenome.fastq.gz,_clipped_identical.short.fastq.gz,_clipped_identical.short.dupcount",
-        sh_direct        => 1,
-        pbs              => {
+        class       => "CQS::Perl",
+        perform     => 1,
+        target_dir  => $host_genome_dir . "/bowtie1_genome_unmapped_reads",
+        perlFile    => "unmappedReadsToFastq.pl",
+        source_ref  => [ "identical", ".fastq.gz\$" ],
+        source2_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
+        source3_ref => ["bowtie1_genome_1mm_NTA_pmnames"],
+        output_ext  => "_clipped_identical.unmapped.fastq.gz",
+        output_other_ext =>
+"_clipped_identical.unmapped.fastq.dupcount,_clipped_identical.mappedToHostGenome.dupcount,_clipped_identical.mappedToHostGenome.fastq.gz,_clipped_identical.short.fastq.gz,_clipped_identical.short.dupcount",
+        sh_direct => 1,
+        pbs       => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
@@ -679,12 +703,13 @@ sub getSmallRNAConfig {
       }
     };
     $config = merge( $config, $unmapped_reads );
-    push @individual,            ( "bowtie1_genome_1mm_NTA_pmnames",  "bowtie1_genome_unmapped_reads" );
-    push @summary,               ("bowtie1_genome_host_reads_table");
-    push @table_for_pieSummary,  ( "bowtie1_genome_unmapped_reads",   ".mappedToHostGenome.dupcount","bowtie1_genome_unmapped_reads",   ".short.dupcount","bowtie1_genome_unmapped_reads",   ".unmapped.fastq.dupcount" );
-    push @name_for_pieSummary, ("Mapped to Host Genome","Too Short for Mapping","Unmapped In Host");
+    push @individual, ( "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_genome_unmapped_reads" );
+    push @summary, ("bowtie1_genome_host_reads_table");
+    push @table_for_pieSummary,
+      ( "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.dupcount", "bowtie1_genome_unmapped_reads", ".short.dupcount", "bowtie1_genome_unmapped_reads", ".unmapped.fastq.dupcount" );
+    push @name_for_pieSummary, ( "Mapped to Host Genome", "Too Short for Mapping", "Unmapped In Host" );
     push @table_for_readSummary, ( "bowtie1_genome_host_reads_table", ".count\$" );
-    push @name_for_readSummary,  ("Host Genome");
+    push @name_for_readSummary, ("Host Genome");
     $identical_ref = [ "bowtie1_genome_unmapped_reads", ".unmapped.fastq.gz\$" ];
   }
 
@@ -762,6 +787,7 @@ sub getSmallRNAConfig {
 
   if ($search_unmapped_reads) {
     my $unmappedreads = {
+
       #mapped to genome reads to All Non Host
       bowtie1_HostGenomeReads_NonHost_pm => {
         pbs => {
@@ -777,7 +803,7 @@ sub getSmallRNAConfig {
         target_dir    => $nonhost_library_dir . "/bowtie1_HostGenomeReads_NonHost_pm",
         samonly       => 0,
         mappedonly    => 1,
-        source_ref    => ["bowtie1_genome_unmapped_reads",   ".mappedToHostGenome.fastq.gz"],
+        source_ref    => [ "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.gz" ],
         bowtie1_index => $def->{bowtie1_all_nonHost_index},
         option        => $def->{bowtie1_option_pm},
         class         => 'Alignment::Bowtie1'
@@ -841,7 +867,7 @@ sub getSmallRNAConfig {
           "mem"       => "10gb"
         },
       },
-      
+
       # unmapped reads to tRNA
       bowtie1_tRNA_pm => {
         class         => 'Alignment::Bowtie1',
@@ -1303,17 +1329,16 @@ sub getSmallRNAConfig {
 
     push @individual,
       (
-      "bowtie1_HostGenomeReads_NonHost_pm","bowtie1_HostGenomeReads_NonHost_pm_count",
-      "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",            "bowtie1_rRNA_pm",            "bowtie1_rRNA_pm_count",
-      "bowtie1_bacteria_group1_pm", "bowtie1_bacteria_group1_pm_count", "bowtie1_bacteria_group2_pm", "bowtie1_bacteria_group2_pm_count",
-      "bowtie1_fungus_group4_pm",   "bowtie1_fungus_group4_pm_count"
+      "bowtie1_HostGenomeReads_NonHost_pm", "bowtie1_HostGenomeReads_NonHost_pm_count", "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",
+      "bowtie1_rRNA_pm",                    "bowtie1_rRNA_pm_count",                    "bowtie1_bacteria_group1_pm", "bowtie1_bacteria_group1_pm_count",
+      "bowtie1_bacteria_group2_pm",         "bowtie1_bacteria_group2_pm_count",         "bowtie1_fungus_group4_pm",   "bowtie1_fungus_group4_pm_count"
       );
     push @summary,
       (
-      "bowtie1_HostGenomeReads_NonHost_pm_table","HostGenomeReads_NonHost_vis",
-      "bowtie1_tRNA_pm_table",            "nonhost_library_tRNA_vis",           "bowtie1_rRNA_pm_table",            "nonhost_library_rRNA_vis",
-      "bowtie1_bacteria_group1_pm_table", "nonhost_genome_bacteria_group1_vis", "bowtie1_bacteria_group2_pm_table", "nonhost_genome_bacteria_group2_vis",
-      "bowtie1_fungus_group4_pm_table",   "nonhost_genome_fungus_group4_vis",   "nonhost_overlap_vis"
+      "bowtie1_HostGenomeReads_NonHost_pm_table", "HostGenomeReads_NonHost_vis",        "bowtie1_tRNA_pm_table",            "nonhost_library_tRNA_vis",
+      "bowtie1_rRNA_pm_table",                    "nonhost_library_rRNA_vis",           "bowtie1_bacteria_group1_pm_table", "nonhost_genome_bacteria_group1_vis",
+      "bowtie1_bacteria_group2_pm_table",         "nonhost_genome_bacteria_group2_vis", "bowtie1_fungus_group4_pm_table",   "nonhost_genome_fungus_group4_vis",
+      "nonhost_overlap_vis"
       );
 
     push @mapped,
@@ -1676,10 +1701,10 @@ sub getSmallRNAConfig {
       $config = merge( $config, $unmapped_comparison );
       push @summary,
         (
-        "deseq2_nonhost_tRNA",           "deseq2_nonhost_tRNA_reads","deseq2_nonhost_tRNA_category", "deseq2_nonhost_tRNA_species", "deseq2_nonhost_tRNA_type",
-        "deseq2_nonhost_tRNA_anticodon", "deseq2_nonhost_rRNA",          "nonhost_library_deseq2_vis",  "deseq2_bacteria_group1",
-        "deseq2_bacteria_group2",        "deseq2_fungus_group4",         "nonhost_genome_deseq2_vis",   "deseq2_bacteria_group1_reads",
-        "deseq2_bacteria_group2_reads",  "deseq2_fungus_group4_reads",   "nonhost_genome_deseq2_reads_vis"
+        "deseq2_nonhost_tRNA",          "deseq2_nonhost_tRNA_reads",     "deseq2_nonhost_tRNA_category", "deseq2_nonhost_tRNA_species",
+        "deseq2_nonhost_tRNA_type",     "deseq2_nonhost_tRNA_anticodon", "deseq2_nonhost_rRNA",          "nonhost_library_deseq2_vis",
+        "deseq2_bacteria_group1",       "deseq2_bacteria_group2",        "deseq2_fungus_group4",         "nonhost_genome_deseq2_vis",
+        "deseq2_bacteria_group1_reads", "deseq2_bacteria_group2_reads",  "deseq2_fungus_group4_reads",   "nonhost_genome_deseq2_reads_vis"
         );
     }
   }
@@ -1708,9 +1733,9 @@ sub getSmallRNAConfig {
 
     $identical_ref = [ "bowtie1_unmapped_reads", ".fastq.gz\$" ];
     $config = merge( $config, $unmapped_reads );
-    push @individual, ("bowtie1_unmapped_reads");
+    push @individual,           ("bowtie1_unmapped_reads");
     push @table_for_pieSummary, ( "bowtie1_unmapped_reads", ".dupcount" );
-    push @name_for_pieSummary,("UnMapped");
+    push @name_for_pieSummary,  ("UnMapped");
   }
 
   $config->{count_table_correlation} = {
@@ -1749,8 +1774,8 @@ sub getSmallRNAConfig {
       "mem"       => "10gb"
     },
     };
-    
-  my $name_for_pieSummary_r = "readFilesModule=c('" . join( "','", @name_for_pieSummary ) . "')";  
+
+  my $name_for_pieSummary_r = "readFilesModule=c('" . join( "','", @name_for_pieSummary ) . "')";
   $config->{reads_in_tasks_pie} = {
     class                    => "CQS::UniqueR",
     suffix                   => "_pie",
@@ -1762,6 +1787,7 @@ sub getSmallRNAConfig {
     parameterSampleFile2     => $groups,
     parameterSampleFile3     => $groups_vis_layout,
     rCode                    => $name_for_pieSummary_r,
+
     #    parameterFile3_ref       => [ "fastqc_count_vis", ".Reads.csv\$" ],
     sh_direct => 1,
     pbs       => {
