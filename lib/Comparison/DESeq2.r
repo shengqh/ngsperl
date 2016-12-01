@@ -350,7 +350,7 @@ for(countfile_index in c(1:length(countfiles))){
     
     write.csv(comparisonData, file=paste0(prefix, ".csv"))
     
-    if(preformWilcox){
+    if(performWilcox){
       #quantile and wilcox
       quantileData=normalize.quantiles(data.matrix(comparisonData))
       colnames(quantileData)=colnames(comparisonData)
