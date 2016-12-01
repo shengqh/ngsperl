@@ -11,9 +11,9 @@ minMedianInGroup<-2
 addCountOne<-0
 usePearsonInHCA<-0
 
-top25only=1
-detectedInBothGroup=1
-performWilcox=1
+top25only=0
+detectedInBothGroup=0
+performWilcox=0
 
 ##predefined_condition_end
 

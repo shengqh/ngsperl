@@ -83,7 +83,9 @@ for (gene in genelist){
 		}
 		value=c(value, curvalue)
 	}
-	oncoprint<-rbind(oncoprint,c(gene,value)) 
+	if(any(value != " ")){
+		oncoprint<-rbind(oncoprint,c(gene,value))
+	}
 }
 colnames(oncoprint)<-c("Gene",colnames(mutdata_gene_samples)[sample_start:sample_end])
 write.table(oncoprint,file=outputFile,quote=F,row.names=F,sep="\t")
