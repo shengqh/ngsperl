@@ -298,6 +298,40 @@ for(countfile_index in c(1:length(countfiles))){
       prefix=paste0(prefix,"_detectedInBothGroup")
     }
     
+	if(performWilcox){
+		#quantile and wilcox
+		quantileData=normalize.quantiles(data.matrix(comparisonData))
+		colnames(quantileData)=colnames(comparisonData)
+		rownames(quantileData)=rownames(comparisonData)
+		write.csv(quantileData, file=paste0(prefix, "_quantile.csv"), row.names = T)
+		
+		data1<-quantileData[, colnames(quantileData) %in% designData$Sample[designData$Condition==conds[1]]]
+		data2<-quantileData[, colnames(quantileData) %in% designData$Sample[designData$Condition==conds[2]]]
+		
+		diffData=data.frame(quantileData)
+		diffData$pvalues=unlist(lapply(c(1:nrow(data1)), function(index){
+							d1=data1[index,]
+							d2=data2[index,]
+							test=wilcox.test(d1,d2)
+							test$p.value
+						}))
+		diffData$log2MedianFoldChange=unlist(lapply(c(1:nrow(data1)), function(index){
+							d1=data1[index,]
+							d2=data2[index,]
+							log2(median(d2) / median(d1))
+						}))
+		diffData$log2MeanFoldChange=unlist(lapply(c(1:nrow(data1)), function(index){
+							d1=data1[index,]
+							d2=data2[index,]
+							log2(mean(d2) / mean(d1))
+						}))
+		diffData=diffData[order(diffData$pvalues),]
+		write.csv(diffData, file=paste0(prefix, "_quantile_wilcox.csv"), row.names = T)
+		
+		filterData=diffData[diffData$pvalues<=pvalue & abs(diffData$log2MedianFoldChange) > log2(foldChange),]
+		write.csv(filterData, file=paste0(prefix, "_quantile_wilcox_sig.csv"), row.names = T)
+	}
+	
     if(minMedianInGroup > 0){
       conds<-unique(designData$Condition)
       data1<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[1]]]
@@ -358,40 +392,6 @@ for(countfile_index in c(1:length(countfiles))){
     conditionColors<-as.matrix(data.frame(Group=c("red", "blue")[designData$Condition]))
     
     write.csv(comparisonData, file=paste0(prefix, ".csv"))
-    
-    if(performWilcox){
-      #quantile and wilcox
-      quantileData=normalize.quantiles(data.matrix(comparisonData))
-      colnames(quantileData)=colnames(comparisonData)
-      rownames(quantileData)=rownames(comparisonData)
-      write.csv(quantileData, file=paste0(prefix, "_quantile.csv"), row.names = T)
-      
-      data1<-quantileData[, colnames(quantileData) %in% designData$Sample[designData$Condition==conds[1]]]
-      data2<-quantileData[, colnames(quantileData) %in% designData$Sample[designData$Condition==conds[2]]]
-      
-      diffData=data.frame(quantileData)
-      diffData$pvalues=unlist(lapply(c(1:nrow(data1)), function(index){
-        d1=data1[index,]
-        d2=data2[index,]
-        test=wilcox.test(d1,d2)
-        test$p.value
-      }))
-      diffData$log2MedianFoldChange=unlist(lapply(c(1:nrow(data1)), function(index){
-        d1=data1[index,]
-        d2=data2[index,]
-        log2(median(d2) / median(d1))
-      }))
-      diffData$log2MeanFoldChange=unlist(lapply(c(1:nrow(data1)), function(index){
-        d1=data1[index,]
-        d2=data2[index,]
-        log2(mean(d2) / mean(d1))
-      }))
-      diffData=diffData[order(diffData$pvalues),]
-      write.csv(diffData, file=paste0(comparisonName, "_quantile_wilcox.csv"), row.names = T)
-      
-      filterData=diffData[diffData$pvalues<=pvalue & abs(diffData$log2MedianFoldChange) > log2(foldChange),]
-      write.csv(filterData, file=paste0(comparisonName, "_quantile_wilcox_sig.csv"), row.names = T)
-    }
     
     #some basic graph
     dds=DESeqDataSetFromMatrix(countData = comparisonData,
