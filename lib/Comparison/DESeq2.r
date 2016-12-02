@@ -37,6 +37,7 @@ library("scales")
 library("reshape2")
 library("VennDiagram")
 library("RColorBrewer")
+library("preprocessCore")
 
 setwd(rootdir)  
 comparisons_data<-read.table(inputfile, header=T, check.names=F , sep="\t", stringsAsFactors = F)
