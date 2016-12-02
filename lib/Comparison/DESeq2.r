@@ -263,6 +263,7 @@ for(countfile_index in c(1:length(countfiles))){
       next
     }
     comparisonData<-comparisonData[,as.character(designData$Sample)]
+    curdata<-data
     
     prefix<-comparisonName
     if(top25only){
@@ -277,6 +278,8 @@ for(countfile_index in c(1:length(countfiles))){
       })
       
       comparisonData=comparisonData[select,]
+      curdata=curdata[select,]
+      
       prefix=paste0(prefix,"_top25")
     }
     
@@ -287,11 +290,13 @@ for(countfile_index in c(1:length(countfiles))){
       med1<-apply(data1, 1, median) > zeroCount
       med2<-apply(data2, 1, median) > zeroCount
       med<-med1 & med2
+      
       comparisonData<-comparisonData[med,]
+      curdata=curdata[med,]
+      
       prefix=paste0(prefix,"_detectedInBothGroup")
     }
     
-    curdata<-data
     if(minMedianInGroup > 0){
       conds<-unique(designData$Condition)
       data1<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[1]]]
@@ -299,7 +304,10 @@ for(countfile_index in c(1:length(countfiles))){
       med1<-apply(data1, 1, median) >= minMedianInGroup
       med2<-apply(data2, 1, median) >= minMedianInGroup
       med<-med1 | med2
+
       comparisonData<-comparisonData[med,]
+      curdata<-data[med,]
+      
       cat(nrow(comparisonData), " genes with minimum median count in group larger or equals than ", minMedianInGroup, "\n")
       
       if (nrow(comparisonData)==0) {
@@ -310,7 +318,6 @@ for(countfile_index in c(1:length(countfiles))){
       }
       
       prefix<-paste0(prefix, "_min", minMedianInGroup)
-      curdata<-data[med,]
     }
     
     if(ispaired){
@@ -339,6 +346,7 @@ for(countfile_index in c(1:length(countfiles))){
     }
     
     notEmptyData<-apply(comparisonData, 1, max) > 0
+    
     comparisonData<-comparisonData[notEmptyData,]
     curdata<-curdata[notEmptyData,]
     
