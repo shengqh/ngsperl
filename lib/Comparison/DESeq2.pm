@@ -58,7 +58,8 @@ sub perform {
   my $top25only           = get_option( $config, $section, "top25only",              0 );
   my $detectedInBothGroup = get_option( $config, $section, "detected_in_both_group", 0 );
   my $performWilcox       = get_option( $config, $section, "perform_wilcox",         0 );
-
+  my $useRawPvalue       = get_option( $config, $section, "use_raw_p_value",         0 );
+  
   my %tpgroups = ();
   for my $group_name ( sort keys %{$groups} ) {
     my @samples = @{ $groups->{$group_name} };
@@ -185,6 +186,7 @@ usePearsonInHCA<-$usePearsonInHCA
 top25only<-$top25only
 detectedInBothGroup<-$detectedInBothGroup
 performWilcox<-$performWilcox
+useRawPvalue<-$useRawPvalue
 ";
 
   while (<$rt>) {
