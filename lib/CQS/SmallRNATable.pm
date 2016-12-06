@@ -29,6 +29,10 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $cqstools = get_cqstools( $config, $section, 1 );
+  my $python_script = dirname(__FILE__) . "/smallRNATable.py";
+  if ( !-e $python_script ) {
+    die "File not found : " . $python_script;
+  }
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -49,6 +53,9 @@ sub perform {
       my $outputfile = $self->get_file( $result_dir, "${task_name}_${group_name}", ".count",    0 );
       my $outputname = basename($outputfile);
 
+      my $ntaFile = $self->get_file( $result_dir, "${task_name}_${group_name}", ".miRNA.NTA.count",    0 );
+      my $ntaBaseFile = $self->get_file( $result_dir, "${task_name}_${group_name}", ".miRNA.NTA.base.count",    0 );
+
       my @samples = @{ $groups->{$group_name} };
       open( my $fl, ">$filelist" ) or die "Cannot create $filelist";
       for my $sample_name ( sort @samples ) {
@@ -61,6 +68,7 @@ sub perform {
       print $pbs "
 if [ ! -s $outputname ]; then
   mono $cqstools smallrna_table $option -o $outputname -l $filelist
+  python $python_script \"$ntaFile\" \"$ntaBaseFile\"
 fi
 ";
     }
@@ -81,8 +89,12 @@ fi
     }
     close($fl);
 
+    my $ntaFile = $self->get_file( $result_dir, ${task_name}, ".miRNA.NTA.count",    0 );
+    my $ntaBaseFile = $self->get_file( $result_dir, ${task_name}, ".miRNA.NTA.base.count",    0 );
+
     print $pbs "
 mono $cqstools smallrna_table $option -o $outputname -l $filelist
+python $python_script \"$ntaFile\" \"$ntaBaseFile\"
 ";
     $self->close_pbs( $pbs, $pbs_file );
   }
