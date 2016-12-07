@@ -14,6 +14,7 @@ usePearsonInHCA<-0
 top25only=0
 detectedInBothGroup=0
 performWilcox=0
+useRawPvalue=0
 
 ##predefined_condition_end
 
@@ -598,13 +599,14 @@ for(countfile_index in c(1:length(countfiles))){
 		png(filename=paste0(prefix, "_DESeq2_volcanoPlot.png"), width=3000, height=3000, res=300)
 		#  pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"))
 		if (useRawPvalue==1) {
-			p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))
+			p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
+					scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
 		} else {
-			p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))
+			p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
+					scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
 		}
 		p<-p+geom_point(aes(size=log10BaseMean,colour=colour))+
 				scale_color_manual(values=changeColours,guide = FALSE)+
-				scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))+
 				scale_x_continuous(name=bquote(log[2]~Fold~Change))+
 				geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
 				geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
