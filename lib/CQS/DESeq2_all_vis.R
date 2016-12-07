@@ -3,8 +3,9 @@ deseq2ResultFileList<-parSampleFile1
 visLayoutFileList<-parSampleFile2
 
 selectedVars<-c("baseMean","log2FoldChange","pvalue","padj","FoldChange")
-pvalue<-0.05
-foldChange<-1.5
+#20161207: Don't need this now as significant result file was used to filter significant
+#pvalue<-0.05
+#foldChange<-1.5
 
 #for volcano plot
 library(scales)
@@ -62,11 +63,19 @@ for (i in 1:nrow(deseq2ResultFile)) {
 	moduleFolder<-folders[which(folders=="result")-1]
 	moduleName<-gsub("_deseq2$","",moduleFolder)
 	moduleName<-gsub("^deseq2_","",moduleName)
-	deseq2Result<-read.csv(filePath,header=T,as.is=T)
-	deseq2Result<-deseq2Result[,selectedVars]
+	deseq2ResultRaw<-read.csv(filePath,header=T,as.is=T)
+	
+	deseq2Result<-deseq2ResultRaw[,selectedVars]
 	deseq2Result$Module<-moduleName
 	deseq2Result$Pairs<-deseq2ResultFile[i,2]
 	deseq2Result$LayoutKey<-paste0(moduleFolder,"_",deseq2ResultFile[i,2])
+	
+	#20161207: Read significant result file so that don't need to filter significant in this module
+	fileSigPath<-paste0(tools::file_path_sans_ext(filePath),"_sig.csv")
+	deseq2SigResult<-read.csv(fileSigPath,header=T,as.is=T)
+	deseq2Result$Significant<-0
+	deseq2Result$Significant[which(deseq2ResultRaw[,1] %in% deseq2SigResult[,1])]<-1
+	
 	deseq2ResultAll<-rbind(deseq2ResultAll,deseq2Result)
 }
 
@@ -76,8 +85,11 @@ changeColours<-c(grey="grey",blue="blue",red="red")
 diffResult<-as.data.frame(deseq2ResultAll)
 diffResult$log10BaseMean<-log10(diffResult$baseMean)
 diffResult$colour<-"grey"
-diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
-diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
+#20161207: Use significant result file so that don't need to filter significant in this module
+diffResult$colour[which(diffResult$Significant==1 & diffResult$log2FoldChange>0)]<-"red"
+diffResult$colour[which(diffResult$Significant==1 & diffResult$log2FoldChange<0)]<-"blue"
+#diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
+#diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
 
 diffResult<-addVisLayout(diffResult,visLayoutFileList)
 
