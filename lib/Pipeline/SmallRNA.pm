@@ -67,6 +67,7 @@ sub getSmallRNAConfig {
   my $DE_top25only                = $def->{DE_top25only};
   my $DE_detected_in_both_group   = $def->{DE_detected_in_both_group};
   my $DE_perform_wilcox           = $def->{DE_perform_wilcox};
+  my $DE_use_raw_p_value           = $def->{DE_use_raw_p_value};
 
   my $max_sequence_extension_base = $def->{max_sequence_extension_base};
   my $blast_localdb               = $def->{blast_localdb};
@@ -381,6 +382,7 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
+          use_raw_p_value         => $DE_use_raw_p_value,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -405,6 +407,7 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
+          use_raw_p_value         => $DE_use_raw_p_value,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -429,6 +432,7 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
+          use_raw_p_value         => $DE_use_raw_p_value,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -453,6 +457,7 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
+          use_raw_p_value         => $DE_use_raw_p_value,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -477,6 +482,7 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
+          use_raw_p_value         => $DE_use_raw_p_value,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -501,6 +507,7 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
+          use_raw_p_value         => $DE_use_raw_p_value,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -526,6 +533,7 @@ sub getSmallRNAConfig {
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
           perform_wilcox         => $DE_perform_wilcox,
+          use_raw_p_value         => $DE_use_raw_p_value,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -550,6 +558,7 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
+          use_raw_p_value         => $DE_use_raw_p_value,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -575,6 +584,7 @@ sub getSmallRNAConfig {
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
           perform_wilcox         => $DE_perform_wilcox,
+          use_raw_p_value         => $DE_use_raw_p_value,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
