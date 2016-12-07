@@ -381,7 +381,6 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
-          perform_wilcox         => $DE_perform_wilcox,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -406,7 +405,30 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
-          perform_wilcox         => $DE_perform_wilcox,
+          pbs                    => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        },
+        deseq2_miRNA_NTA_base => {
+          class                  => "Comparison::DESeq2",
+          perform                => 1,
+          target_dir             => $host_genome_dir . "/deseq2_miRNA_NTA_base",
+          option                 => "",
+          source_ref             => "pairs",
+          groups_ref             => "groups",
+          countfile_ref          => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.NTA.base.count\$" ],
+          sh_direct              => 1,
+          show_DE_gene_cluster   => $DE_show_gene_cluster,
+          pvalue                 => $DE_pvalue,
+          fold_change            => $DE_fold_change,
+          min_median_read        => $DE_min_median_read_smallRNA,
+          add_count_one          => $DE_add_count_one,
+          top25only              => $DE_top25only,
+          detected_in_both_group => $DE_detected_in_both_group,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -431,7 +453,6 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
-          perform_wilcox         => $DE_perform_wilcox,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -456,7 +477,6 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
-          perform_wilcox         => $DE_perform_wilcox,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -481,7 +501,6 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
-          perform_wilcox         => $DE_perform_wilcox,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -531,7 +550,6 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
-          perform_wilcox         => $DE_perform_wilcox,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -604,11 +622,10 @@ sub getSmallRNAConfig {
       };
 
       $config = merge( $config, $comparison );
-      push @summary,
-        (
-        "deseq2_miRNA",     "deseq2_tRNA",         "deseq2_tRNA_reads",       "deseq2_tRNA_aminoacid", "deseq2_otherSmallRNA", "host_genome_deseq2_vis",
-        "deseq2_miRNA_NTA", "deseq2_miRNA_isomiR", "deseq2_miRNA_isomiR_NTA", "host_genome_deseq2_miRNA_vis"
-        );
+      push @summary, (
+        "deseq2_miRNA",     "deseq2_tRNA",           "deseq2_tRNA_reads",   "deseq2_tRNA_aminoacid",   "deseq2_otherSmallRNA", "host_genome_deseq2_vis",
+        "deseq2_miRNA_NTA", "deseq2_miRNA_NTA_base", "deseq2_miRNA_isomiR", "deseq2_miRNA_isomiR_NTA", "host_genome_deseq2_miRNA_vis"
+      );
     }
 
     if ( $do_comparison or defined $groups or defined $def->{tRNA_vis_group} ) {
