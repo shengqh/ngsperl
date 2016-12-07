@@ -504,7 +504,11 @@ for(countfile_index in c(1:length(countfiles))){
 		
 		cat("DESeq2 finished.\n")
 		
-		select<-(!is.na(res$padj)) & (res$padj<pvalue) & ((res$log2FoldChange >= log2(foldChange)) | (res$log2FoldChange <= -log2(foldChange)))
+		if (useRawPvalue==1) {
+			select<-(!is.na(res$pvalue)) & (res$pvalue<pvalue) & ((res$log2FoldChange >= log2(foldChange)) | (res$log2FoldChange <= -log2(foldChange)))
+		} else {
+			select<-(!is.na(res$padj)) & (res$padj<pvalue) & ((res$log2FoldChange >= log2(foldChange)) | (res$log2FoldChange <= -log2(foldChange)))
+		}
 		
 		if(length(indecies) > 0){
 			inddata<-data[rownames(comparisonData),indecies,drop=F]
@@ -519,10 +523,10 @@ for(countfile_index in c(1:length(countfiles))){
 		colnames(tbbAllOut)<-paste0(colnames(tbbAllOut)," (",comparisonName,")")
 		resultAllOut<-cbind(resultAllOut,tbbAllOut[row.names(resultAllOut),])
 		
-		tbb<-tbb[order(tbb$padj),,drop=F]
+		tbb<-tbb[order(tbb$pvalue),,drop=F]
 		write.csv(as.data.frame(tbb),paste0(prefix, "_DESeq2.csv"))
 		
-		tbbselect<-tbbselect[order(tbbselect$padj),,drop=F]
+		tbbselect<-tbbselect[order(tbbselect$pvalue),,drop=F]
 		sigFile=paste0(prefix, "_DESeq2_sig.csv")
 		write.csv(as.data.frame(tbbselect),sigFile)
 		
@@ -553,7 +557,7 @@ for(countfile_index in c(1:length(countfiles))){
 		if (sigDiffNumber>0) {
 			if (sigDiffNumber>25) {
 				print(paste0("More than 25 genes were significant. Only the top 25 genes will be used in barplot"))
-				diffResultSig<-tbbselect[order(tbbselect$padj)[1:25],]
+				diffResultSig<-tbbselect[order(tbbselect$pvalue)[1:25],]
 			} else {
 				diffResultSig<-tbbselect
 			}
@@ -583,12 +587,22 @@ for(countfile_index in c(1:length(countfiles))){
 		diffResult<-as.data.frame(tbb)
 		diffResult$log10BaseMean<-log10(diffResult$baseMean)
 		diffResult$colour<-"grey"
-		diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
-		diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
+		if (useRawPvalue==1) {
+			diffResult$colour[which(diffResult$pvalue<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
+			diffResult$colour[which(diffResult$pvalue<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
+		} else {
+			diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
+			diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
+		}
+		
 		png(filename=paste0(prefix, "_DESeq2_volcanoPlot.png"), width=3000, height=3000, res=300)
 		#  pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"))
-		p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
-				geom_point(aes(size=log10BaseMean,colour=colour))+
+		if (useRawPvalue==1) {
+			p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))
+		} else {
+			p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))
+		}
+		p<-p+geom_point(aes(size=log10BaseMean,colour=colour))+
 				scale_color_manual(values=changeColours,guide = FALSE)+
 				scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))+
 				scale_x_continuous(name=bquote(log[2]~Fold~Change))+
