@@ -602,6 +602,7 @@ sub getSmallRNAConfig {
           output_file_ext          => ".png",
           parameterSampleFile1_ref => [ "deseq2_miRNA", "_DESeq2.csv\$", "deseq2_tRNA", "_DESeq2.csv\$", "deseq2_otherSmallRNA", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_host_deseq2_vis_layout},
+          rCode                    => 'useRawPvalue='.$DE_use_raw_p_value.";",
           sh_direct                => 1,
           pbs                      => {
             "email"     => $def->{email},
@@ -620,6 +621,7 @@ sub getSmallRNAConfig {
           output_file_ext          => ".png",
           parameterSampleFile1_ref => [ "deseq2_miRNA_isomiR", "_DESeq2.csv\$", "deseq2_miRNA_NTA", "_DESeq2.csv\$", "deseq2_miRNA_isomiR_NTA", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_host_miRNA_deseq2_vis_layout},
+          rCode                    => 'useRawPvalue='.$DE_use_raw_p_value.";",
           sh_direct                => 1,
           pbs                      => {
             "email"     => $def->{email},
@@ -1545,6 +1547,7 @@ sub getSmallRNAConfig {
             "deseq2_nonhost_tRNA_type", "_DESeq2.csv\$", "deseq2_nonhost_tRNA_anticodon", "_DESeq2.csv\$"
           ],
           parameterSampleFile2 => $def->{pairs_nonHostLibrary_deseq2_vis_layout},
+          rCode                    => 'useRawPvalue='.$DE_use_raw_p_value.";",
           sh_direct            => 1,
           pbs                  => {
             "email"     => $def->{email},
@@ -1696,6 +1699,7 @@ sub getSmallRNAConfig {
           output_file_ext          => ".png",
           parameterSampleFile1_ref => [ "deseq2_bacteria_group1", "_DESeq2.csv\$", "deseq2_bacteria_group2", "_DESeq2.csv\$", "deseq2_fungus_group4", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_nonHostGroups_deseq2_vis_layout},
+          rCode                    => 'useRawPvalue='.$DE_use_raw_p_value.";",
           sh_direct                => 1,
           pbs                      => {
             "email"     => $def->{email},
@@ -1714,6 +1718,7 @@ sub getSmallRNAConfig {
           output_file_ext          => ".png",
           parameterSampleFile1_ref => [ "deseq2_bacteria_group1_reads", "_DESeq2.csv\$", "deseq2_bacteria_group2_reads", "_DESeq2.csv\$", "deseq2_fungus_group4_reads", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_nonHostGroups_deseq2_vis_layout},
+          rCode                    => 'useRawPvalue='.$DE_use_raw_p_value.";",
           sh_direct                => 1,
           pbs                      => {
             "email"     => $def->{email},
