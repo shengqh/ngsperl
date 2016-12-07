@@ -93,10 +93,16 @@ diffResult$colour[which(diffResult$Significant==1 & diffResult$log2FoldChange<0)
 
 diffResult<-addVisLayout(diffResult,visLayoutFileList)
 
-p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
+if (useRawPvalue==1) {
+	p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
+			scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
+} else {
+	p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
+			scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
+}
+p<-p+
 		geom_point(aes(size=log10BaseMean,colour=colour))+
 		scale_color_manual(values=changeColours,guide = FALSE)+
-		scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))+
 		scale_x_continuous(name=bquote(log[2]~Fold~Change),breaks=pretty_breaks(n=4))+
 		geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
 		geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
