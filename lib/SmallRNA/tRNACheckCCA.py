@@ -2,13 +2,16 @@ import sys
 import gzip
 import io
 
-inputfile = sys.argv[1]
-originalfile = sys.argv[2]
-outputfile = sys.argv[3]
+DEBUG = 1
 
-#inputfile="Z:/Shared/Labs/Vickers Lab/Tiger/projects/20150930_TGIRT_tRNA_human/identical/result/KCVH01_clipped_identical.fastq.gz"
-#originalfile="Z:/Shared/Labs/Vickers Lab/Tiger/data/20150515_tRNA/KCVH1_S6_R1_001.fastq.gz"
-#outputfile="H:/temp/test_cca.tsv"
+if DEBUG:
+  inputfile="Z:/Shared/Labs/Vickers Lab/Tiger/projects/20150930_TGIRT_tRNA_human/identical/result/KCVH01_clipped_identical.fastq.gz"
+  originalfile="Z:/Shared/Labs/Vickers Lab/Tiger/data/20150515_tRNA/KCVH1_S6_R1_001.fastq.gz"
+  outputfile="H:/temp/test_cca.tsv"
+else:
+  inputfile = sys.argv[1]
+  originalfile = sys.argv[2]
+  outputfile = sys.argv[3]
 
 ccs={}
 if(inputfile.endswith(".gz")):
@@ -18,12 +21,16 @@ else:
 
 try:
   readCount = 0
-  for header in f:
+  while True:
+    header = f.readline()
+    if '' == header:
+      break
+
     if not header.startswith("@"):
       continue
-    seq = f.__next__().strip()
-    ignore = f.__next__().strip()
-    score = f.__next__().strip()
+    seq = f.readline().strip()
+    ignore = f.readline().strip()
+    score = f.readline().strip()
 
     readCount = readCount+1
     if readCount % 10000 == 0:
@@ -44,12 +51,16 @@ try:
   with open(outputfile, "w") as sw:
     readCount = 0
     ccCount = 0
-    for header in f:
+    while True:
+      header = f.readline()
+      if '' == header:
+        break
+
       if not header.startswith("@"):
         continue
-      seq = f.__next__()
-      f.__next__()
-      f.__next__()
+      seq = f.readline()
+      f.readline()
+      f.readline()
 
       readCount = readCount + 1
       if readCount % 10000 == 0:
