@@ -2,13 +2,13 @@ import sys
 import gzip
 import io
 
-#inputfile = sys.argv[1]
-#originalfile = sys.argv[2]
-#outputfile = sys.argv[3]
+inputfile = sys.argv[1]
+originalfile = sys.argv[2]
+outputfile = sys.argv[3]
 
-inputfile="Z:/Shared/Labs/Vickers Lab/Tiger/projects/20150930_TGIRT_tRNA_human/identical/result/KCVH01_clipped_identical.fastq.gz"
-originalfile="Z:/Shared/Labs/Vickers Lab/Tiger/data/20150515_tRNA/KCVH1_S6_R1_001.fastq.gz"
-outputfile="H:/temp/test_cca.tsv"
+#inputfile="Z:/Shared/Labs/Vickers Lab/Tiger/projects/20150930_TGIRT_tRNA_human/identical/result/KCVH01_clipped_identical.fastq.gz"
+#originalfile="Z:/Shared/Labs/Vickers Lab/Tiger/data/20150515_tRNA/KCVH1_S6_R1_001.fastq.gz"
+#outputfile="H:/temp/test_cca.tsv"
 
 ccs={}
 if(inputfile.endswith(".gz")):
