@@ -2,7 +2,7 @@ import sys
 import gzip
 import io
 
-DEBUG = 1
+DEBUG = 0
 
 if DEBUG:
   inputfile="Z:/Shared/Labs/Vickers Lab/Tiger/projects/20150930_TGIRT_tRNA_human/identical/result/KCVH01_clipped_identical.fastq.gz"
@@ -63,7 +63,7 @@ try:
       f.readline()
 
       readCount = readCount + 1
-      if readCount % 10000 == 0:
+      if readCount % 100000 == 0:
         print("%d/%d reads end with CC processed" % (ccCount, readCount))
 
       name = header.split(' ')[0]
