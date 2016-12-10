@@ -2,11 +2,9 @@ import sys
 import gzip
 import os
 import logging
+import argparse
 
-logger = logging.getLogger('fastqSmallRnaNTA')
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
-
-DEBUG = 1
+DEBUG = 0
 NTA_TAG = ":CLIP_"
 
 if DEBUG:
@@ -14,9 +12,20 @@ if DEBUG:
   outputFile="H:/temp/KCVH01_clipped_identical_NTA.fastq.gz"
   minReadLength=16
 else:
-  inputFile = sys.argv[1]
-  outputFile = sys.argv[2]
-  minReadLength = int(sys.argv[3])
+  parser = argparse.ArgumentParser(description="Generate smallRNA NTA read for fastq file.",
+                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+  parser.add_argument('-i', '--input', action='store', nargs='?', help='Input Fastq file')
+  parser.add_argument('-o', '--output', action='store', nargs='?', help="Output NTA Fastq file")
+  parser.add_argument('-l', '--minReadLength', action='store', nargs='?', default="16", help="Minimum read length")
+
+  args = parser.parse_args()
+  inputFile = args.input
+  outputFile = args.output
+  minReadLength = int(args.minReadLength)
+
+logger = logging.getLogger('fastqSmallRnaNTA')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
 def readCountMap(countFile, logger):
   result = {}
