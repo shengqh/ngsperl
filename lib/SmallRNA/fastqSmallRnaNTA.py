@@ -4,7 +4,7 @@ import os
 import logging
 import argparse
 
-DEBUG = 1
+DEBUG = 0
 NTA_TAG = ":CLIP_"
 
 if DEBUG:
