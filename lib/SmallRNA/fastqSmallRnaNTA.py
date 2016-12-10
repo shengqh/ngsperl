@@ -94,7 +94,7 @@ try:
     fw.close()
     if os.path.isfile(outputFile):
       os.remove(outputFile)
-      os.rename(tmpFile, outputFile)
+    os.rename(tmpFile, outputFile)
     logger.info("Generating NTA reads successed!")
   except BaseException as e:
     logger.error('Failed to generate NTA reads: %s' % str(e))
