@@ -4,7 +4,7 @@ import os
 import logging
 import argparse
 
-DEBUG = 0
+DEBUG = 1
 NTA_TAG = ":CLIP_"
 
 if DEBUG:
@@ -84,7 +84,7 @@ try:
         if newLength < minReadLength:
           break
 
-        clipped = "" if i == 0 else seq[newLength]
+        clipped = "" if i == 0 else seq[newLength:]
         header = qname + NTA_TAG + clipped
 
         fw.write(header + "\n")
