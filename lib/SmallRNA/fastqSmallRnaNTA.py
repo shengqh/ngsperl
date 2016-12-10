@@ -12,7 +12,7 @@ if DEBUG:
   outputFile="H:/temp/KCVH01_clipped_identical_NTA.fastq.gz"
   minReadLength=16
 else:
-  parser = argparse.ArgumentParser(description="Generate smallRNA NTA read for fastq file.",
+  parser = argparse.ArgumentParser(description="Generate smallRNA NTA read for Fastq file.",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input Fastq file')
