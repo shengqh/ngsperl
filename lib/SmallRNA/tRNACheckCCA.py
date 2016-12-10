@@ -1,23 +1,23 @@
 import sys
 import gzip
-import io
+import os
 
 DEBUG = 0
 
 if DEBUG:
-  inputfile="Z:/Shared/Labs/Vickers Lab/Tiger/projects/20150930_TGIRT_tRNA_human/identical/result/KCVH01_clipped_identical.fastq.gz"
-  originalfile="Z:/Shared/Labs/Vickers Lab/Tiger/data/20150515_tRNA/KCVH1_S6_R1_001.fastq.gz"
-  outputfile="H:/temp/test_cca.tsv"
+  inputFile="Z:/Shared/Labs/Vickers Lab/Tiger/projects/20150930_TGIRT_tRNA_human/identical/result/KCVH01_clipped_identical.fastq.gz"
+  originalFile="Z:/Shared/Labs/Vickers Lab/Tiger/data/20150515_tRNA/KCVH1_S6_R1_001.fastq.gz"
+  outputFile="H:/temp/test_cca.tsv"
 else:
-  inputfile = sys.argv[1]
-  originalfile = sys.argv[2]
-  outputfile = sys.argv[3]
+  inputFile = sys.argv[1]
+  originalFile = sys.argv[2]
+  outputFile = sys.argv[3]
 
 ccs={}
-if(inputfile.endswith(".gz")):
-  f = gzip.open(inputfile, 'rt')
+if(inputFile.endswith(".gz")):
+  f = gzip.open(inputFile, 'rt')
 else:
-  f = open(inputfile, 'r')
+  f = open(inputFile, 'r')
 
 try:
   readCount = 0
@@ -42,13 +42,14 @@ try:
 finally:
   f.close()
 
-if(originalfile.endswith(".gz")):
-  f = gzip.open(originalfile, 'rt')
+if(originalFile.endswith(".gz")):
+  f = gzip.open(originalFile, 'rt')
 else:
-  f = open(originalfile, 'r')
+  f = open(originalFile, 'r')
 
 try:
-  with open(outputfile, "w") as sw:
+  tempFile = outputFile + ".tmp"
+  with open(tempFile, "w") as sw:
     readCount = 0
     ccCount = 0
     while True:
@@ -80,11 +81,15 @@ try:
 
       if seq[len(sequence)] == 'A':
         sw.write(name + "\n")
+
+  if os.path.isfile(outputFile):
+    os.remove(outputFile)
+  os.rename(tempFile, outputFile)
 finally:
   f.close()
 
 if len(ccs) > 0:
-  unfoundFile = outputfile + ".unfound"
+  unfoundFile = outputFile + ".unfound"
   with open(unfoundFile, "w") as fw:
     for key in ccs:
       fw.write(key + "\n")
