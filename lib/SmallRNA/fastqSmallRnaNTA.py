@@ -24,6 +24,9 @@ else:
   parser.set_defaults(ccaa=False)
 
   args = parser.parse_args()
+  
+  print(args)
+  
   inputFile = args.input
   outputFile = args.output
   ccaa=args.ccaa
@@ -93,8 +96,8 @@ try:
         header = qname + NTA_TAG + clipped
 
         fw.write(header + "\n")
-        fw.write(ignore + "\n")
         fw.write(seq[0:newLength] + "\n")
+        fw.write(ignore + "\n")
         fw.write(score[0:newLength] + "\n")
     fw.close()
     if os.path.isfile(outputFile):
