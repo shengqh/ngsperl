@@ -37,9 +37,9 @@ genes = {}
 with open(outputprefix + ".filtered.tsv", 'w') as sw:
   with open(inputfile, 'r') as f:
     for line in f:
-      sw.write(line)
       if(not line.startswith("#")):
         break
+      sw.write(line)
 
     headers = line.rstrip().split()
     formatIndex = headers.index("FORMAT")
@@ -48,6 +48,8 @@ with open(outputprefix + ".filtered.tsv", 'w') as sw:
     sampleIndecies = range(formatIndex + 1, len(headers))
     if sampleNamePattern != "":
       sampleIndecies = [index for index in sampleIndecies if re.search(sampleNamePattern, headers[index])]
+
+    sw.write("%s\t%s" %("\t".join(headers[i] for i in snvHeaderIndecies), "\t".join(headers[i] for i in sampleIndecies)))
 
     funcIndex = headers.index("Func.refGene")
     geneIndex = headers.index("Gene.refGene")
