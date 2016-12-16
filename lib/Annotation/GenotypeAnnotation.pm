@@ -30,6 +30,9 @@ sub perform {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
+  my $detailGeneNames = get_option( $config, $section, "detail_genes" );
+  my %detail_files = %{ get_raw_files( $config, $section, "detail_file" ) };
+
   my $sampleNamePattern = get_option( $config, $section, "sample_name_pattern" );
   my $sampleNameSuffix  = get_option( $config, $section, "sample_name_suffix", "" );
   my $geneNames         = get_option( $config, $section, "gene_names" );
@@ -88,10 +91,15 @@ fi
 fi
 ";
       }
+    }
 
+    my @detailFiles = @{ $detail_files{$sample_name} };
+    for my $inputFile (@detailFiles) {
+      my $filename = basename($inputFile);
       my $geneFile = change_extension( $filename, "${sampleNameSuffix}.geneDetails.txt" );
+      my $genes    = join( ",", split( "\\s+", $detailGeneNames ) );
       print $pbs "if [ ! -e $geneFile ]; then 
-  python $gene_script -i $inputFile -o $geneFile -g $geneNames
+  python $gene_script -i $inputFile -o $geneFile -g $genes
 fi
 ";
     }

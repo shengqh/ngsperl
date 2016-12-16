@@ -3,7 +3,7 @@ import re
 
 parser = argparse.ArgumentParser(description="Export detail genotype information of gene", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-DEBUG = True
+DEBUG = False
 NOT_DEBUG = not DEBUG
 
 parser.add_argument('-i', '--input', action='store', nargs='?', required=NOT_DEBUG, help='Input filtered annovar result file from FilterAnnovar')
@@ -53,7 +53,6 @@ with open(outputfile, 'w') as sw:
         curGenes = parts[geneIndex].split(",")
         if gene in curGenes:
           for idx in sampleIndecies:
-            print("%d" % idx)
             if parts[idx].startswith("0/1") or parts[idx].startswith("1/1"):
               counts = parts[idx].split(":")[1].split(",")
               refCount=int(counts[0])
