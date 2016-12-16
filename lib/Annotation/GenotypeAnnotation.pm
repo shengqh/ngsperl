@@ -31,8 +31,8 @@ sub perform {
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $sampleNamePattern = get_option( $config, $section, "sample_name_pattern" );
-  my $sampleNameSuffix = get_option( $config, $section, "sample_name_suffix", "" );
-  my $geneNames      = get_option( $config, $section, "gene_names" );
+  my $sampleNameSuffix  = get_option( $config, $section, "sample_name_suffix", "" );
+  my $geneNames         = get_option( $config, $section, "gene_names" );
 
   my $oncoPrint = get_option( $config, $section, "draw_onco_print" );
   my $picture_width;
@@ -42,7 +42,7 @@ sub perform {
   if ($oncoPrint) {
     $picture_width  = get_option( $config, $section, "onco_picture_width" );
     $picture_height = get_option( $config, $section, "onco_picture_height" );
-    $onco_script = dirname(__FILE__) . "/oncoPrint.r";
+    $onco_script    = dirname(__FILE__) . "/oncoPrint.r";
     if ( !-e $onco_script ) {
       die "File not found : " . $onco_script;
     }
@@ -55,6 +55,11 @@ sub perform {
     if ( !-e $cbioportal_script ) {
       die "File not found : " . $cbioportal_script;
     }
+  }
+
+  my $gene_script = dirname(__FILE__) . "/geneDetails.py";
+  if ( !-e $gene_script ) {
+    die "File not found : " . $gene_script;
   }
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
@@ -83,6 +88,12 @@ fi
 fi
 ";
       }
+
+      my $geneFile = change_extension( $filename, "${sampleNameSuffix}.geneDetails.txt" );
+      print $pbs "if [ ! -e $geneFile ]; then 
+  python $gene_script -i $inputFile -o $geneFile -g $geneNames
+fi
+";
     }
   }
   $self->close_pbs( $pbs, $pbs_file );
