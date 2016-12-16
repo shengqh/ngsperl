@@ -101,10 +101,12 @@ sub result {
       for my $exac_value (@exac_values){
         push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.exac${exac_value}.snv.tsv");
         push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.exac${exac_value}.gene.tsv");
+        push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.exac${exac_value}.filtered.tsv");
       }
     }else{
       push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.snv.tsv");
       push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.gene.tsv");
+      push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.filtered.tsv");
     }
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }

@@ -4,7 +4,7 @@ import re
 parser = argparse.ArgumentParser(description="filter Annovar result for truncating/nonsense SNVs with/without ExAC limitation",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-DEBUG = True
+DEBUG = False
 NOT_DEBUG = not DEBUG
 
 parser.add_argument('-i', '--input', action='store', nargs='?', required=NOT_DEBUG, help='Input annovar result file from NGSPERL')
@@ -34,7 +34,7 @@ def getDicValueCount(item): return len(item[1])
 
 filtered = []
 genes = {}
-with open(outputprefix + ".tsv", 'w') as sw:
+with open(outputprefix + ".filtered.tsv", 'w') as sw:
   with open(inputfile, 'r') as f:
     for line in f:
       sw.write(line)
@@ -60,7 +60,7 @@ with open(outputprefix + ".tsv", 'w') as sw:
       raise ValueError("Sample count is zero, check your sample name regex pattern: " + sampleNamePattern)
 
     for line in f:
-      parts = line.split('\t')
+      parts = line.rstrip().split('\t')
       gene = parts[geneIndex]
       if(parts[funcIndex] == "splicing" or parts[refIndex] in accepted):
         if(exacIndex == -1 or not parts[exacIndex] or float(parts[exacIndex]) < maxExacValue):
