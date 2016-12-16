@@ -10,6 +10,7 @@ NTA_TAG = ":CLIP_"
 if DEBUG:
   inputFile="Z:/Shared/Labs/Vickers Lab/Tiger/projects/20150930_TGIRT_tRNA_human/identical/result/KCVH01_clipped_identical.fastq.gz"
   outputFile="H:/temp/KCVH01_clipped_identical_NTA.fastq.gz"
+  ccaa=True #for test, default to True
   minReadLength=16
 else:
   parser = argparse.ArgumentParser(description="Generate smallRNA NTA read for Fastq file.",
@@ -17,11 +18,18 @@ else:
 
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input Fastq file')
   parser.add_argument('-o', '--output', action='store', nargs='?', help="Output NTA Fastq file")
+  parser.add_argument('--ccaa', dest='ccaa', action='store_true', help="Consider CCAA for tRNA")
+  parser.add_argument('--no-ccaa', dest='ccaa', action='store_false', help="Not consider CCAA for tRNA")
   parser.add_argument('-l', '--minReadLength', action='store', nargs='?', default="16", help="Minimum read length")
+  parser.set_defaults(ccaa=False)
 
   args = parser.parse_args()
+  
+  print(args)
+  
   inputFile = args.input
   outputFile = args.output
+  ccaa=args.ccaa
   minReadLength = int(args.minReadLength)
 
 logger = logging.getLogger('fastqSmallRnaNTA')
@@ -78,7 +86,7 @@ try:
 
       qname = header.split(' ')[0]
 
-      curRange = rng4 if seq.endswith("CCAA") else rng3
+      curRange = rng4 if ccaa and seq.endswith("CCAA") else rng3
       for i in curRange:
         newLength = seqLength - i
         if newLength < minReadLength:
@@ -88,8 +96,8 @@ try:
         header = qname + NTA_TAG + clipped
 
         fw.write(header + "\n")
-        fw.write(ignore + "\n")
         fw.write(seq[0:newLength] + "\n")
+        fw.write(ignore + "\n")
         fw.write(score[0:newLength] + "\n")
     fw.close()
     if os.path.isfile(outputFile):

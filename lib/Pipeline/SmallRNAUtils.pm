@@ -71,7 +71,7 @@ sub initializeDefaultOptions {
   }
 
   if ( !defined $def->{smallrnacount_option} ) {
-    $def->{smallrnacount_option} = '';
+    $def->{smallrnacount_option} = '--offsets 0,1,2,-1,-2';
   }
 
   if ( !defined $def->{bowtie1_option_1mm} ) {
@@ -168,6 +168,10 @@ sub initializeDefaultOptions {
 
   if ( !defined $def->{perform_contig_analysis} ) {
     $def->{perform_contig_analysis} = 0;
+  }
+
+  if ( !defined $def->{consider_tRNA_NTA} ) {
+    $def->{consider_tRNA_NTA} = 0;
   }
 
   return $def;
@@ -527,6 +531,22 @@ sub getPrepareConfig {
         "mem"      => "20gb"
       },
     },
+    identical_check_cca => {
+      class              => "SmallRNA::TGIRTCheckCCA",
+      perform            => 1,
+      target_dir         => $preprocessing_dir . "/identical_check_cca",
+      option             => "",
+      source_ref         => [ 'identical', '.fastq.gz$' ],
+      untrimmedFastq_ref => "files",
+      cqs_tools          => $def->{cqstools},
+      sh_direct          => 0,
+      pbs                => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "72",
+        "mem"      => "10gb"
+      },
+    },
     identical_sequence_count_table => {
       class      => "CQS::SmallRNASequenceCountTable",
       perform    => 1,
@@ -550,6 +570,26 @@ sub getPrepareConfig {
 
   push @individual, ("identical");
   push @summary,    ("identical_sequence_count_table");
+
+  if ( $hasNTA && $def->{consider_tRNA_NTA} ) {
+    $preparation->{identical_check_cca} = {
+      class              => "SmallRNA::tRNACheckCCA",
+      perform            => 1,
+      target_dir         => $preprocessing_dir . "/identical_check_cca",
+      option             => "",
+      source_ref         => [ 'identical', '.fastq.gz$' ],
+      untrimmedFastq_ref => "files",
+      cqs_tools          => $def->{cqstools},
+      sh_direct          => 0,
+      pbs                => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "72",
+        "mem"      => "10gb"
+      },
+    };
+    push @individual, ("identical_check_cca");
+  }
 
   if ( $def->{special_sequence_file} ) {
     $config->{"special_sequence_count_table"} = {
@@ -625,18 +665,18 @@ sub getPrepareConfig {
   }
 
   if ($hasNTA) {
+    my $ccaaOption = $def->{consider_tRNA_NTA} ? "--ccaa" : "--no-ccaa";
     $preparation->{identical_NTA} = {
-      class        => "SmallRNA::FastqMirna",
-      perform      => 1,
-      target_dir   => $preprocessing_dir . "/identical_NTA",
-      option       => "-l " . $def->{min_read_length},
-      source_ref   => [ "identical", ".fastq.gz\$" ],
-      seqcount_ref => [ "identical", ".dupcount\$" ],
-      cqstools     => $def->{cqstools},
-      extension    => "_clipped_identical_NTA.fastq.gz",
-      sh_direct    => 1,
-      cluster      => $cluster,
-      pbs          => {
+      class      => "SmallRNA::FastqSmallRnaNTA",
+      perform    => 1,
+      target_dir => $preprocessing_dir . "/identical_NTA",
+      option     => $ccaaOption . " -l " . $def->{min_read_length},
+      source_ref => [ "identical", ".fastq.gz\$" ],
+      cqstools   => $def->{cqstools},
+      extension  => "_clipped_identical_NTA.fastq.gz",
+      sh_direct  => 1,
+      cluster    => $cluster,
+      pbs        => {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
         "walltime" => "24",
