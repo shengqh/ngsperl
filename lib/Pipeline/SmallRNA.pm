@@ -247,7 +247,7 @@ sub getSmallRNAConfig {
         option          => $def->{smallrnacount_option},
         source_ref      => "bowtie1_genome_1mm_NTA",
         fastq_files_ref => "identical_NTA",
-        seqcount_ref    => [ "identical_NTA", ".dupcount\$" ],
+        seqcount_ref    => [ "identical", ".dupcount\$" ],
         cqs_tools       => $def->{cqstools},
         coordinate_file => $def->{coordinate},
         fasta_file      => $def->{coordinate_fasta},
@@ -430,7 +430,6 @@ sub getSmallRNAConfig {
           fold_change            => $DE_fold_change,
           min_median_read        => $DE_min_median_read_smallRNA,
           add_count_one          => $DE_add_count_one,
-          top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
           use_raw_p_value         => $DE_use_raw_p_value,
           pbs                    => {
