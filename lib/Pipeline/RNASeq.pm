@@ -226,7 +226,7 @@ sub getRNASeqConfig {
 			class                    => "CQS::UniqueR",
 			perform                  => 1,
 			target_dir               => $target_dir . "/star_genetable_correlation",
-			rtemplate                => "countTableVisFunctions.R,countTableCorrelation.R",
+			rtemplate                => "countTableVisFunctions.R,countTableGroupCorrelation.R",
 			output_file              => "parameterSampleFile1",
 			output_file_ext          => ".pairsCorrelation.png",
 			parameterSampleFile1_ref => [ "star_genetable", ".count\$" ],
