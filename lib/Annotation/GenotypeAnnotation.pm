@@ -32,6 +32,7 @@ sub perform {
 
   my $sampleNamePattern = get_option( $config, $section, "sample_name_pattern" );
   my $sampleNameSuffix = get_option( $config, $section, "sample_name_suffix", "" );
+  my $geneNames      = get_option( $config, $section, "gene_names" );
 
   my $oncoPrint = get_option( $config, $section, "draw_onco_print" );
   my $picture_width;
@@ -41,7 +42,6 @@ sub perform {
   if ($oncoPrint) {
     $picture_width  = get_option( $config, $section, "onco_picture_width" );
     $picture_height = get_option( $config, $section, "onco_picture_height" );
-    $geneNames      = get_option( $config, $section, "gene_names" );
     $onco_script = dirname(__FILE__) . "/oncoPrint.r";
     if ( !-e $onco_script ) {
       die "File not found : " . $onco_script;
@@ -51,7 +51,6 @@ sub perform {
   my $CBioPortal = get_option( $config, $section, "prepare_cbioportal_data" );
   my $cbioportal_script;
   if ($CBioPortal) {
-    $geneNames = get_option( $config, $section, "gene_names" );
     $cbioportal_script = dirname(__FILE__) . "/CBioPortal.r";
     if ( !-e $cbioportal_script ) {
       die "File not found : " . $cbioportal_script;
