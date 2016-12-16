@@ -90,10 +90,9 @@ sub getRNASeqConfig {
 			class      => "CQS::FastqTrimmer",
 			perform    => $fastq_remove_N,
 			target_dir => $target_dir . "/fastq_remove_N",
-			option     => "-n -z",
+			option     => "",
 			extension  => "_trim.fastq.gz",
 			source_ref => "files",
-			cqstools   => $cqstools,
 			cluster    => $cluster,
 			sh_direct  => 1,
 			pbs        => {

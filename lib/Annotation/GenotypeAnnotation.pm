@@ -37,7 +37,7 @@ sub perform {
   my $oncoPrint = get_option( $config, $section, "draw_onco_print" );
   my $picture_width;
   my $picture_height;
-  my $geneNames;
+
   my $onco_script;
   if ($oncoPrint) {
     $picture_width  = get_option( $config, $section, "onco_picture_width" );
