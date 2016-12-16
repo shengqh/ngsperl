@@ -49,7 +49,7 @@ with open(outputprefix + ".filtered.tsv", 'w') as sw:
     if sampleNamePattern != "":
       sampleIndecies = [index for index in sampleIndecies if re.search(sampleNamePattern, headers[index])]
 
-    sw.write("%s\t%s\t%s" %("\t".join(headers[i] for i in snvHeaderIndecies), headers[formatIndex], "\t".join(headers[i] for i in sampleIndecies)))
+    sw.write("%s\t%s\t%s\n" %("\t".join(headers[i] for i in snvHeaderIndecies), headers[formatIndex], "\t".join(headers[i] for i in sampleIndecies)))
 
     funcIndex = headers.index("Func.refGene")
     geneIndex = headers.index("Gene.refGene")
