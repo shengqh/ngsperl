@@ -4,7 +4,7 @@ import re
 parser = argparse.ArgumentParser(description="filter Annovar result for truncating/nonsense SNVs with/without ExAC limitation",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-DEBUG = False
+DEBUG = True
 NOT_DEBUG = not DEBUG
 
 parser.add_argument('-i', '--input', action='store', nargs='?', required=NOT_DEBUG, help='Input annovar result file from NGSPERL')
@@ -31,81 +31,85 @@ accepted = ["frameshift deletion", "frameshift insertion", "frameshift substitut
 def getKey(item): return item[0]
 def getDicValueCount(item): return len(item[1])
 
+
 filtered = []
 genes = {}
-with open(inputfile, 'r') as f:
-  for line in f:
-    if(not line.startswith("#")):
-      break
+with open(outputprefix + ".tsv", 'w') as sw:
+  with open(inputfile, 'r') as f:
+    for line in f:
+      sw.write(line)
+      if(not line.startswith("#")):
+        break
 
-  headers = line.rstrip().split()
-  formatIndex = headers.index("FORMAT")
+    headers = line.rstrip().split()
+    formatIndex = headers.index("FORMAT")
 
-  snvHeaderIndecies = range(0, formatIndex)
-  sampleIndecies = range(formatIndex + 1, len(headers))
-  if sampleNamePattern != "":
-    sampleIndecies = [index for index in sampleIndecies if re.search(sampleNamePattern, headers[index])]
+    snvHeaderIndecies = range(0, formatIndex)
+    sampleIndecies = range(formatIndex + 1, len(headers))
+    if sampleNamePattern != "":
+      sampleIndecies = [index for index in sampleIndecies if re.search(sampleNamePattern, headers[index])]
 
-  funcIndex = headers.index("Func.refGene")
-  geneIndex = headers.index("Gene.refGene")
-  refIndex = headers.index("ExonicFunc.refGene")
-  exacIndex = headers.index("ExAC_ALL")
-  sampleCount = len(sampleIndecies)
-  
-  print("sampleCount=%d" % (sampleCount))
-  if sampleCount == 0:
-    raise ValueError("Sample count is zero, check your sample name regex pattern: " + sampleNamePattern)
+    funcIndex = headers.index("Func.refGene")
+    geneIndex = headers.index("Gene.refGene")
+    refIndex = headers.index("ExonicFunc.refGene")
+    exacIndex = headers.index("ExAC_ALL")
+    sampleCount = len(sampleIndecies)
 
-  for line in f:
-    parts = line.split('\t')
-    gene = parts[geneIndex]
-    if(parts[funcIndex] == "splicing" or parts[refIndex] in accepted):
-      if(exacIndex == -1 or not parts[exacIndex] or float(parts[exacIndex]) < maxExacValue):
-        freq = 0.0
-        for idx in sampleIndecies:
-          if(parts[idx].startswith("0/1") or parts[idx].startswith("1/1")):
-            parts[idx] = "1"
-            freq += 1.0
-          else:
-            parts[idx] = "0"
-            
-        if freq == 0:
-          continue
-        
-        freqperc = freq / sampleCount
-        freqfold = "NA" if exacIndex == -1 or not parts[exacIndex] else "100" if float(parts[exacIndex]) == 0 else str(freqperc / float(parts[exacIndex]))
-        filtered.append([freqperc, "%s\t%f\t%s\t\t%s\n" % ("\t".join(parts[i] for i in snvHeaderIndecies), freqperc, freqfold, "\t".join(parts[i] for i in sampleIndecies))])
+    print("sampleCount=%d" % (sampleCount))
+    if sampleCount == 0:
+      raise ValueError("Sample count is zero, check your sample name regex pattern: " + sampleNamePattern)
 
-        curgene = parts[geneIndex]
-        if len(curgene) > 0:
-          if curgene in genes:
-            curgenemap = genes[curgene]
-            for idx in sampleIndecies:
-              if parts[idx] == "1":
-                curgenemap[idx] = "1"
-          else:
-            curgenemap = {}
-            genes[curgene] = curgenemap
-            for idx in sampleIndecies:
-              curgenemap[idx] = parts[idx]
+    for line in f:
+      parts = line.split('\t')
+      gene = parts[geneIndex]
+      if(parts[funcIndex] == "splicing" or parts[refIndex] in accepted):
+        if(exacIndex == -1 or not parts[exacIndex] or float(parts[exacIndex]) < maxExacValue):
+          freq = len([idx for idx in sampleIndecies if parts[idx].startswith("0/1") or parts[idx].startswith("1/1")])
+          if freq == 0:
+            continue
 
-  fsorted = sorted(filtered, key=getKey, reverse=True)
-  with open(outputprefix + ".snv.tsv", 'w') as snvw:
-    snvw.write("%s\tFrequency\tFrequencyFoldChange\tFormat\t%s\n" % ("\t".join(headers[i] for i in snvHeaderIndecies), "\t".join(headers[i] for i in sampleIndecies)))
-    for d in fsorted:
-      snvw.write(d[1])
+          sw.write("%s\t%s\n" %("\t".join(parts[i] for i in snvHeaderIndecies), "\t".join(parts[i] for i in sampleIndecies )))
 
-  genelist = []
-  for gene in genes:
-    genemap=genes[gene]
-    freq = [v for k,v in genemap.items() if v == "1"]
-    freqperc = len(freq) * 1.0 / sampleCount
-    genelist.append([freqperc, gene])
-  gsorted = sorted(genelist, key=getKey, reverse=True)
-  with open(outputprefix + ".gene.tsv", 'w') as genew:
-    genew.write("Gene\tFrequency\t%s\n" % ("\t".join(headers[i] for i in sampleIndecies)))
-    for d in gsorted:
-      genemap=genes[d[1]]
-      genew.write("%s\t%f\t%s\n" %(d[1], d[0], "\t".join(genemap[i] for i in sampleIndecies )))
+          for idx in sampleIndecies:
+            if(parts[idx].startswith("0/1") or parts[idx].startswith("1/1")):
+              parts[idx] = "1"
+            else:
+              parts[idx] = "0"
+
+          freqperc = float(freq) / sampleCount
+          freqfold = "NA" if exacIndex == -1 or not parts[exacIndex] else "100" if float(parts[exacIndex]) == 0 else str(freqperc / float(parts[exacIndex]))
+          filtered.append([freqperc, "%s\t%f\t%s\t\t%s\n" % ("\t".join(parts[i] for i in snvHeaderIndecies), freqperc, freqfold, "\t".join(parts[i] for i in sampleIndecies))])
+
+          curgene = parts[geneIndex]
+          if len(curgene) > 0:
+            if curgene in genes:
+              curgenemap = genes[curgene]
+              for idx in sampleIndecies:
+                if parts[idx] == "1":
+                  curgenemap[idx] = "1"
+            else:
+              curgenemap = {}
+              genes[curgene] = curgenemap
+              for idx in sampleIndecies:
+                curgenemap[idx] = parts[idx]
+
+    fsorted = sorted(filtered, key=getKey, reverse=True)
+    with open(outputprefix + ".snv.tsv", 'w') as snvw:
+      snvw.write("%s\tFrequency\tFrequencyFoldChange\tFormat\t%s\n" % ("\t".join(headers[i] for i in snvHeaderIndecies), "\t".join(headers[i] for i in sampleIndecies)))
+      for d in fsorted:
+        snvw.write(d[1])
+
+    genelist = []
+    for gene in genes:
+      genemap=genes[gene]
+      freq = [v for k,v in genemap.items() if v == "1"]
+      freqperc = len(freq) * 1.0 / sampleCount
+      genelist.append([freqperc, gene])
+    gsorted = sorted(genelist, key=getKey, reverse=True)
+    with open(outputprefix + ".gene.tsv", 'w') as genew:
+      genew.write("Gene\tFrequency\t%s\n" % ("\t".join(headers[i] for i in sampleIndecies)))
+      for d in gsorted:
+        genemap=genes[d[1]]
+        genew.write("%s\t%f\t%s\n" %(d[1], d[0], "\t".join(genemap[i] for i in sampleIndecies )))
 
 print("done.")
