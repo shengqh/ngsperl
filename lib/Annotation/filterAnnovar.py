@@ -70,7 +70,7 @@ with open(outputprefix + ".filtered.tsv", 'w') as sw:
           if freq == 0:
             continue
 
-          sw.write("%s\t%s\n" %("\t".join(parts[i] for i in snvHeaderIndecies), "\t".join(parts[i] for i in sampleIndecies )))
+          sw.write("%s\t%s\t%s\n" %("\t".join(parts[i] for i in snvHeaderIndecies), parts[formatIndex], "\t".join(parts[i] for i in sampleIndecies )))
 
           for idx in sampleIndecies:
             if(parts[idx].startswith("0/1") or parts[idx].startswith("1/1")):
