@@ -31,6 +31,10 @@ sub initializeDefaultOptions {
     $def->{fastq_remove_N} = 0;
   }
 
+  if ( !defined $def->{sra_to_fastq} ) {
+    $def->{sra_to_fastq} = 0;
+  }
+
   if ( !defined $def->{table_vis_group_text_size} ) {
     $def->{table_vis_group_text_size} = "10";
   }
@@ -57,7 +61,7 @@ sub getRNASeqConfig {
   my $cluster = $def->{cluster};
   my $task    = $def->{task_name};
 
-  my $sra_to_fastq   = $def->{sra_to_fastq} or 0;
+  my $sra_to_fastq   = $def->{sra_to_fastq};
   my $fastq_remove_N = $def->{fastq_remove_N};
   my $email          = $def->{email};
   my $cqstools       = $def->{cqstools} or die "Define cqstools at definition first";
