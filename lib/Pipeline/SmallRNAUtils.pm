@@ -147,7 +147,7 @@ sub initializeDefaultOptions {
   }
 
   if ( !defined $def->{DE_detected_in_both_group} ) {
-    $def->{DE_detected_in_both_group} = 0;
+    $def->{DE_detected_in_both_group} = 1;
   }
 
   if ( !defined $def->{DE_perform_wilcox} ) {
@@ -155,7 +155,7 @@ sub initializeDefaultOptions {
   }
 
   if ( !defined $def->{DE_use_raw_pvalue} ) {
-    $def->{DE_use_raw_pvalue} = 0;
+    $def->{DE_use_raw_pvalue} = 1;
   }
 
   if ( !defined $def->{max_sequence_extension_base} ) {
