@@ -166,6 +166,7 @@ sub getSmallRNAConfig {
         output_file_ext          => ".png",
         parameterSampleFile1_ref => [ "deseq2_top${top_read_number}_reads", "_DESeq2.csv\$" ],
         parameterSampleFile2     => $def->{pairs_top_deseq2_vis_layout},
+        rCode                    => 'useRawPvalue=' . $DE_use_raw_pvalue . ";",
         sh_direct                => 1,
         pbs                      => {
           "email"     => $def->{email},
@@ -184,6 +185,7 @@ sub getSmallRNAConfig {
         output_file_ext          => ".png",
         parameterSampleFile1_ref => [ "deseq2_top${top_read_number}_contigs", "_DESeq2.csv\$" ],
         parameterSampleFile2     => $def->{pairs_top_deseq2_vis_layout},
+        rCode                    => 'useRawPvalue=' . $DE_use_raw_pvalue . ";",
         sh_direct                => 1,
         pbs                      => {
           "email"     => $def->{email},
@@ -202,6 +204,7 @@ sub getSmallRNAConfig {
         output_file_ext          => ".png",
         parameterSampleFile1_ref => [ "deseq2_top${top_read_number}_minicontigs", "_DESeq2.csv\$" ],
         parameterSampleFile2     => $def->{pairs_top_deseq2_vis_layout},
+        rCode                    => 'useRawPvalue=' . $DE_use_raw_pvalue . ";",
         sh_direct                => 1,
         pbs                      => {
           "email"     => $def->{email},
