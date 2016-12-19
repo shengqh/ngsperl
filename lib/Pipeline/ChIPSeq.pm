@@ -31,6 +31,10 @@ sub initializeDefaultOptions {
     $def->{fastq_remove_N} = 0;
   }
 
+  if ( !defined $def->{sra_to_fastq} ) {
+    $def->{sra_to_fastq} = 0;
+  }
+
   if ( !defined $def->{table_vis_group_text_size} ) {
     $def->{table_vis_group_text_size} = "10";
   }
@@ -58,6 +62,7 @@ sub getConfig {
   my $cluster = $def->{cluster};
   my $task    = $def->{task_name};
 
+  my $sra_to_fastq   = $def->{sra_to_fastq};
   my $fastq_remove_N = $def->{fastq_remove_N};
   my $email          = $def->{email};
   my $bwa_index      = $def->{bwa_index};
@@ -80,6 +85,27 @@ sub getConfig {
   my $source_ref = "files";
   my @individual;
   my @summary;
+
+
+  if ($sra_to_fastq) {
+    $config->{sra2fastq} = {
+      class      => "SRA::FastqDump",
+      perform    => 1,
+      ispaired   => 0,
+      target_dir => "${target_dir}/sra2fastq",
+      option     => "",
+      source_ref => "files",
+      sh_direct  => 0,
+      pbs        => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "10gb"
+      },
+    };
+    $source_ref = "sra2fastq";
+    push @individual, ("sra2fastq");
+  }
 
   if ($fastq_remove_N) {
     $config->{fastq_remove_N} = {

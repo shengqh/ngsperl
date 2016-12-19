@@ -18,7 +18,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups 
-      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key save_parameter_sample_file)
+      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key save_parameter_sample_file saveConfig)
   ]
 );
 
@@ -595,6 +595,37 @@ sub save_parameter_sample_file {
   }else{
     return ("");
   }
+}
+
+
+sub saveConfig {
+  my ( $def, $config ) = @_;
+
+  my $def_file;
+  if ( $def->{target_dir} =~ /\/$/ ) {
+    $def_file = $def->{target_dir} . $def->{task_name} . '.def';
+  }
+  else {
+    $def_file = $def->{target_dir} . '/' . $def->{task_name} . '.def';
+  }
+
+  open( my $sh1, ">$def_file" ) or die "Cannot create $def_file";
+  print $sh1 Dumper($def);
+  close $sh1;
+  print "Saved user definition file to " . $def_file . "\n";
+
+  my $config_file;
+  if ( $def->{target_dir} =~ /\/$/ ) {
+    $config_file = $def->{target_dir} . $def->{task_name} . '.config';
+  }
+  else {
+    $config_file = $def->{target_dir} . '/' . $def->{task_name} . '.config';
+  }
+
+  open( my $sh2, ">$config_file" ) or die "Cannot create $config_file";
+  print $sh2 Dumper($config);
+  close $sh2;
+  print "Saved configuration file to " . $config_file . "\n";
 }
 
 1;
