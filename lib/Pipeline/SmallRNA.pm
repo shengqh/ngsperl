@@ -20,6 +20,16 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.06';
 
+sub getValue {
+  my ( $def, $name ) = @_;
+  if ( defined $def->{$name} ) {
+    return $def->{$name};
+  }
+  else {
+    die "Define $name in user definition first@";
+  }
+}
+
 sub getSmallRNAConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
@@ -58,19 +68,18 @@ sub getSmallRNAConfig {
     $groups_smallRNA_vis_layout = $def->{groups_smallRNA_vis_layout};
   }
 
-  my $DE_show_gene_cluster        = $def->{DE_show_gene_cluster};
-  my $DE_pvalue                   = $def->{DE_pvalue};
-  my $DE_fold_change              = $def->{DE_fold_change};
-  my $DE_add_count_one            = $def->{DE_add_count_one};
-  my $DE_min_median_read_top      = $def->{DE_min_median_read_top};
-  my $DE_min_median_read_smallRNA = $def->{DE_min_median_read_smallRNA};
-  my $DE_top25only                = $def->{DE_top25only};
-  my $DE_detected_in_both_group   = $def->{DE_detected_in_both_group};
-  my $DE_perform_wilcox           = $def->{DE_perform_wilcox};
-  my $DE_use_raw_p_value           = $def->{DE_use_raw_p_value};
-
-  my $max_sequence_extension_base = $def->{max_sequence_extension_base};
-  my $blast_localdb               = $def->{blast_localdb};
+  my $DE_show_gene_cluster        = getValue( $def, "DE_show_gene_cluster" );
+  my $DE_pvalue                   = getValue( $def, "DE_pvalue" );
+  my $DE_fold_change              = getValue( $def, "DE_fold_change" );
+  my $DE_add_count_one            = getValue( $def, "DE_add_count_one" );
+  my $DE_min_median_read_top      = getValue( $def, "DE_min_median_read_top" );
+  my $DE_min_median_read_smallRNA = getValue( $def, "DE_min_median_read_smallRNA" );
+  my $DE_top25only                = getValue( $def, "DE_top25only" );
+  my $DE_detected_in_both_group   = getValue( $def, "DE_show_gene_cluster" );
+  my $DE_perform_wilcox           = getValue( $def, "DE_perform_wilcox" );
+  my $DE_use_raw_pvalue           = getValue( $def, "DE_use_raw_pvalue" );
+  my $max_sequence_extension_base = $def->{max_sequence_extension_base} or die "Define max_sequence_extension_base first!";
+  my $blast_localdb = $def->{blast_localdb} or die "Define blast_localdb first!";
 
   my $non_host_table_option   = "--maxExtensionBase $max_sequence_extension_base --outputReadTable";
   my $perform_contig_analysis = $def->{perform_contig_analysis};
@@ -244,7 +253,7 @@ sub getSmallRNAConfig {
         class           => "CQS::SmallRNACount",
         perform         => 1,
         target_dir      => $host_genome_dir . "/bowtie1_genome_1mm_NTA_smallRNA_count",
-        option          => $def->{smallrnacount_option},
+        option          => $def->{smallrnacount_option} . " --offsets " . $def->{micrornacount_offsets},
         source_ref      => "bowtie1_genome_1mm_NTA",
         fastq_files_ref => "identical_NTA",
         seqcount_ref    => [ "identical", ".dupcount\$" ],
@@ -382,7 +391,7 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
-          use_raw_p_value         => $DE_use_raw_p_value,
+          use_raw_p_value        => $DE_use_raw_pvalue,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -407,7 +416,7 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
-          use_raw_p_value         => $DE_use_raw_p_value,
+          use_raw_p_value        => $DE_use_raw_pvalue,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -431,7 +440,7 @@ sub getSmallRNAConfig {
           min_median_read        => $DE_min_median_read_smallRNA,
           add_count_one          => $DE_add_count_one,
           detected_in_both_group => $DE_detected_in_both_group,
-          use_raw_p_value         => $DE_use_raw_p_value,
+          use_raw_p_value        => $DE_use_raw_pvalue,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -456,7 +465,7 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
-          use_raw_p_value         => $DE_use_raw_p_value,
+          use_raw_p_value        => $DE_use_raw_pvalue,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -481,7 +490,7 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
-          use_raw_p_value         => $DE_use_raw_p_value,
+          use_raw_p_value        => $DE_use_raw_pvalue,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -506,7 +515,7 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
-          use_raw_p_value         => $DE_use_raw_p_value,
+          use_raw_p_value        => $DE_use_raw_pvalue,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -532,7 +541,7 @@ sub getSmallRNAConfig {
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
           perform_wilcox         => $DE_perform_wilcox,
-          use_raw_p_value         => $DE_use_raw_p_value,
+          use_raw_p_value        => $DE_use_raw_pvalue,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -557,7 +566,7 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
-          use_raw_p_value         => $DE_use_raw_p_value,
+          use_raw_p_value        => $DE_use_raw_pvalue,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -583,7 +592,7 @@ sub getSmallRNAConfig {
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
           perform_wilcox         => $DE_perform_wilcox,
-          use_raw_p_value         => $DE_use_raw_p_value,
+          use_raw_p_value        => $DE_use_raw_pvalue,
           pbs                    => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -601,7 +610,7 @@ sub getSmallRNAConfig {
           output_file_ext          => ".png",
           parameterSampleFile1_ref => [ "deseq2_miRNA", "_DESeq2.csv\$", "deseq2_tRNA", "_DESeq2.csv\$", "deseq2_otherSmallRNA", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_host_deseq2_vis_layout},
-          rCode                    => 'useRawPvalue='.$DE_use_raw_p_value.";",
+          rCode                    => 'useRawPvalue=' . $DE_use_raw_pvalue . ";",
           sh_direct                => 1,
           pbs                      => {
             "email"     => $def->{email},
@@ -620,7 +629,7 @@ sub getSmallRNAConfig {
           output_file_ext          => ".png",
           parameterSampleFile1_ref => [ "deseq2_miRNA_isomiR", "_DESeq2.csv\$", "deseq2_miRNA_NTA", "_DESeq2.csv\$", "deseq2_miRNA_isomiR_NTA", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_host_miRNA_deseq2_vis_layout},
-          rCode                    => 'useRawPvalue='.$DE_use_raw_p_value.";",
+          rCode                    => 'useRawPvalue=' . $DE_use_raw_pvalue . ";",
           sh_direct                => 1,
           pbs                      => {
             "email"     => $def->{email},
@@ -633,10 +642,11 @@ sub getSmallRNAConfig {
       };
 
       $config = merge( $config, $comparison );
-      push @summary, (
+      push @summary,
+        (
         "deseq2_miRNA",     "deseq2_tRNA",           "deseq2_tRNA_reads",   "deseq2_tRNA_aminoacid",   "deseq2_otherSmallRNA", "host_genome_deseq2_vis",
         "deseq2_miRNA_NTA", "deseq2_miRNA_NTA_base", "deseq2_miRNA_isomiR", "deseq2_miRNA_isomiR_NTA", "host_genome_deseq2_miRNA_vis"
-      );
+        );
     }
 
     if ( $do_comparison or defined $groups or defined $def->{tRNA_vis_group} ) {
@@ -1546,7 +1556,7 @@ sub getSmallRNAConfig {
             "deseq2_nonhost_tRNA_type", "_DESeq2.csv\$", "deseq2_nonhost_tRNA_anticodon", "_DESeq2.csv\$"
           ],
           parameterSampleFile2 => $def->{pairs_nonHostLibrary_deseq2_vis_layout},
-          rCode                    => 'useRawPvalue='.$DE_use_raw_p_value.";",
+          rCode                => 'useRawPvalue=' . $DE_use_raw_pvalue . ";",
           sh_direct            => 1,
           pbs                  => {
             "email"     => $def->{email},
@@ -1698,7 +1708,7 @@ sub getSmallRNAConfig {
           output_file_ext          => ".png",
           parameterSampleFile1_ref => [ "deseq2_bacteria_group1", "_DESeq2.csv\$", "deseq2_bacteria_group2", "_DESeq2.csv\$", "deseq2_fungus_group4", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_nonHostGroups_deseq2_vis_layout},
-          rCode                    => 'useRawPvalue='.$DE_use_raw_p_value.";",
+          rCode                    => 'useRawPvalue=' . $DE_use_raw_pvalue . ";",
           sh_direct                => 1,
           pbs                      => {
             "email"     => $def->{email},
@@ -1717,7 +1727,7 @@ sub getSmallRNAConfig {
           output_file_ext          => ".png",
           parameterSampleFile1_ref => [ "deseq2_bacteria_group1_reads", "_DESeq2.csv\$", "deseq2_bacteria_group2_reads", "_DESeq2.csv\$", "deseq2_fungus_group4_reads", "_DESeq2.csv\$" ],
           parameterSampleFile2     => $def->{pairs_nonHostGroups_deseq2_vis_layout},
-          rCode                    => 'useRawPvalue='.$DE_use_raw_p_value.";",
+          rCode                    => 'useRawPvalue=' . $DE_use_raw_pvalue . ";",
           sh_direct                => 1,
           pbs                      => {
             "email"     => $def->{email},

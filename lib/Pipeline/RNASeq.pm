@@ -61,14 +61,17 @@ sub getRNASeqConfig {
   my $cluster = $def->{cluster};
   my $task    = $def->{task_name};
 
-  my $sra_to_fastq   = $def->{sra_to_fastq};
-  my $fastq_remove_N = $def->{fastq_remove_N};
-  my $email          = $def->{email};
-  my $cqstools       = $def->{cqstools} or die "Define cqstools at definition first";
-  my $star_index     = $def->{star_index} or die "Define star_index at definition first";
-  my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
-  my $qc3_perl       = $def->{qc3_perl};
-  my $name_map_file  = $def->{name_map_file} or die "Define tramscript name_map_file at definition first";
+  my $sra_to_fastq               = $def->{sra_to_fastq};
+  my $fastq_remove_N             = $def->{fastq_remove_N};
+  my $email                      = $def->{email};
+  my $cqstools                   = $def->{cqstools} or die "Define cqstools at definition first";
+  my $star_index                 = $def->{star_index} or die "Define star_index at definition first";
+  my $transcript_gtf             = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
+  my $qc3_perl                   = $def->{qc3_perl};
+  my $name_map_file              = $def->{name_map_file} or die "Define tramscript name_map_file at definition first";
+  my $use_pearson_in_hca         = defined $def->{use_pearson_in_hca} ? $def->{use_pearson_in_hca} : 1;
+  my $top25cv_in_hca             = defined $def->{top25cv_in_hca} ? $def->{top25cv_in_hca} : 0;
+  my $use_green_red_color_in_hca = defined $def->{use_green_red_color_in_hca} ? $def->{use_green_red_color_in_hca} : 1;
 
   my $config = {
     general => {
@@ -224,6 +227,7 @@ sub getRNASeqConfig {
       pvalue               => 0.05,
       fold_change          => 2.0,
       min_median_read      => 5,
+      use_pearson_in_hca   => $use_pearson_in_hca,
       pbs                  => {
         "email"    => $email,
         "nodes"    => "1:ppn=1",
@@ -234,10 +238,12 @@ sub getRNASeqConfig {
     star_genetable_correlation => {
       class                    => "CQS::UniqueR",
       perform                  => 1,
+      rCode                    => "usePearsonInHCA<-$use_pearson_in_hca; useGreenRedColorInHCA<-$use_green_red_color_in_hca; top25cvInHCA<-$top25cv_in_hca; ",
       target_dir               => $target_dir . "/star_genetable_correlation",
       rtemplate                => "countTableVisFunctions.R,countTableGroupCorrelation.R",
       output_file              => "parameterSampleFile1",
       output_file_ext          => ".pairsCorrelation.png",
+      use_pearson_in_hca       => $def->{use_pearson_in_hca},
       parameterSampleFile1_ref => [ "star_genetable", ".count\$" ],
       parameterSampleFile2_ref => "groups",
       sh_direct                => 1,

@@ -13,7 +13,7 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(getSmallRNADefinition getPrepareConfig saveConfig)] );
+our %EXPORT_TAGS = ( 'all' => [qw(getSmallRNADefinition getPrepareConfig)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -70,8 +70,12 @@ sub initializeDefaultOptions {
     $def->{min_read_length} = 16;
   }
 
+  if ( !defined $def->{micrornacount_offsets} ) {
+    $def->{micrornacount_offsets} = '0,1,2';
+  }
+
   if ( !defined $def->{smallrnacount_option} ) {
-    $def->{smallrnacount_option} = '--offsets 0,1,2,-1,-2';
+    $def->{smallrnacount_option} = '';
   }
 
   if ( !defined $def->{bowtie1_option_1mm} ) {
@@ -148,6 +152,10 @@ sub initializeDefaultOptions {
 
   if ( !defined $def->{DE_perform_wilcox} ) {
     $def->{DE_perform_wilcox} = 0;
+  }
+
+  if ( !defined $def->{DE_use_raw_pvalue} ) {
+    $def->{DE_use_raw_pvalue} = 0;
   }
 
   if ( !defined $def->{max_sequence_extension_base} ) {
@@ -689,36 +697,6 @@ sub getPrepareConfig {
   $config = merge( $config, $preparation );
 
   return ( $config, \@individual, \@summary, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir );
-}
-
-sub saveConfig {
-  my ( $def, $config ) = @_;
-
-  my $def_file;
-  if ( $def->{target_dir} =~ /\/$/ ) {
-    $def_file = $def->{target_dir} . $def->{task_name} . '.def';
-  }
-  else {
-    $def_file = $def->{target_dir} . '/' . $def->{task_name} . '.def';
-  }
-
-  open( my $sh1, ">$def_file" ) or die "Cannot create $def_file";
-  print $sh1 Dumper($def);
-  close $sh1;
-  print "Saved user definition file to " . $def_file . "\n";
-
-  my $config_file;
-  if ( $def->{target_dir} =~ /\/$/ ) {
-    $config_file = $def->{target_dir} . $def->{task_name} . '.config';
-  }
-  else {
-    $config_file = $def->{target_dir} . '/' . $def->{task_name} . '.config';
-  }
-
-  open( my $sh2, ">$config_file" ) or die "Cannot create $config_file";
-  print $sh2 Dumper($config);
-  close $sh2;
-  print "Saved configuration file to " . $config_file . "\n";
 }
 
 1;

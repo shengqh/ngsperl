@@ -2,6 +2,18 @@ countTableFileList<-parSampleFile1
 groupFileList<-parSampleFile2
 fixColorRange<-TRUE
 
+if(exists("useGreenRedColorInHCA") && useGreenRedColorInHCA){
+  hmcols <- colorRampPalette(c("green", "black", "red"))(256)
+}else{
+  hmcols <- colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
+}
+
+if(exists("usePearsonInHCA") && usePearsonInHCA){
+  distf <- function(x) as.dist(1 - cor(t(x), use = "pa"))
+}else{
+  distf <- dist
+}
+
 #source("/home/zhaos/source/r_cqs/vickers/codesToPipeline/countTableVisFunctions.R")
 
 library(heatmap3)
@@ -94,14 +106,25 @@ for (i in 1:nrow(countTableFileAll)) {
 	#heatmap
 	margin=c(max(9,max(nchar(colnames(countNumVsd)))/2), 5)
 	#margin=c(min(10,max(nchar(colnames(countNumVsd)))/2),min(10,max(nchar(row.names(countNumVsd)))/2))
+	
+	countHT<-countNumVsd
+	if(exists("top25cvInHCA") && top25cvInHCA){
+	  CV <- function(x){
+      (sd(x)/mean(x))*100
+    }
+    cvs <- apply(countNumVsd,1,CV)
+    countHT<-countNumVsd[cvs>=quantile(cvs)[4],]
+	}
+  print("Drawing heatmap for all samples.")
 	png(paste0(countTableFile,".heatmap.png"),width=2000,height=2000,res=300)
-	if(nrow(countNum) < 20){
-	  heatmap3(countNumVsd,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100))
+	if(nrow(countHT) < 20){
+	  heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=hmcols)
 	}else{
-	  heatmap3(countNumVsd,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,labRow="",col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100))
+	  heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,showRowDendro=F,labRow="",col=hmcols)
 	}
 	dev.off()
 	
+  print("Doing correlation analysis ...")
 	#correlation distribution
 	countNumCor<-cor(countNumVsd,use="pa",method="sp")
 	
