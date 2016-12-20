@@ -11,6 +11,7 @@ use CQS::StringUtils;
 use CQS::CQSDebug;
 use Data::Dumper;
 use Hash::Merge qw( merge );
+use Tie::IxHash;
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -263,7 +264,7 @@ sub has_raw_files {
   return ( defined $config->{$section}{$mapname} ) || ( defined $config->{$section}{$mapname_ref} ) || ( defined $config->{$section}{$mapname_config_ref} );
 }
 
-sub do_get_raw_files {
+sub do_get_unsorted_raw_files {
   my ( $config, $section, $returnself, $mapname, $pattern ) = @_;
 
   die "section $section was not defined!" if !defined $config->{$section};
@@ -363,7 +364,7 @@ sub do_get_raw_files {
         %myres = %{ $myclass->result( $targetConfig, $section, $pattern ) };
       }
       else {
-        my ( $res, $issource ) = do_get_raw_files( $targetConfig, $section, 1, undef, $pattern );
+        my ( $res, $issource ) = do_get_unsorted_raw_files( $targetConfig, $section, 1, undef, $pattern );
         %myres = %{$res};
       }
 
@@ -432,6 +433,21 @@ sub do_get_raw_files {
   else {
     die "define $mapname or $mapname_ref or $mapname_config_ref for $section";
   }
+}
+
+sub do_get_raw_files {
+  my %result;
+  tie %result, 'Tie::IxHash';
+
+  my $resultUnsorted=do_get_unsorted_raw_files(@_);
+  if (exists ${$resultUnsorted}{".order"}) {
+    
+  } else {
+    foreach my $key (sort keys %{$resultUnsorted}) {
+      $result{$key}=${$resultUnsorted}{$key}
+    }
+  }
+  return(\%result)
 }
 
 sub get_raw_files {
