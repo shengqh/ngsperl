@@ -217,7 +217,7 @@ for(countfile_index in c(1:length(countfiles))){
 	
 	pairedspearman<-list()
 	resultAllOut<-data
-	resultAllOutVar<-c("log2FoldChange","pvalue","padj")
+	resultAllOutVar<-c("baseMean","log2FoldChange","pvalue","padj")
 	
 	comparison_index = 1
 	comparison_sig_file = c()
@@ -623,6 +623,61 @@ for(countfile_index in c(1:length(countfiles))){
 	
 	#write a file with all information
 	write.csv(resultAllOut,paste0(basename(inputfile),"_DESeq2.csv"))
+	
+	#volcano plot for all comparisons
+	temp<-resultAllOut[,-(1:ncol(data))]
+	diffResult<-NULL
+	diffResultVar<-unique(sapply(strsplit(colnames(temp)," "),function(x) x[1]))
+	for (i in 1:(nrow(comparisons))) {
+		temp1<-temp[,(i*length(diffResultVar)-(length(diffResultVar)-1)):(i*length(diffResultVar))]
+		colnames(temp1)<-diffResultVar
+		temp1$Comparison<-comparisons$ComparisonName[i]
+		if (is.null(diffResult)) {
+			diffResult<-temp1
+		} else {
+			diffResult<-rbind(diffResult,temp1)
+		}
+	}
+	changeColours<-c(grey="grey",blue="blue",red="red")
+	diffResult$log10BaseMean<-log10(diffResult$baseMean)
+	diffResult$colour<-"grey"
+	if (useRawPvalue==1) {
+		diffResult$colour[which(diffResult$pvalue<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
+		diffResult$colour[which(diffResult$pvalue<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
+	} else {
+		diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
+		diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
+	}
+	
+	width<-max(2000,2000*nrow(comparisons))
+	png(filename=paste0(basename(inputfile), "_DESeq2_volcanoPlot.png"), width=width, height=2000, res=300)
+	#  pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"))
+	if (useRawPvalue==1) {
+		p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
+				scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
+	} else {
+		p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
+				scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
+	}
+	p<-p+geom_point(aes(size=log10BaseMean,colour=colour))+
+			scale_color_manual(values=changeColours,guide = FALSE)+
+			scale_x_continuous(name=bquote(log[2]~Fold~Change))+
+			geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
+			geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
+			guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
+			theme_bw()+
+			scale_size(range = c(3, 7))+
+			facet_grid(. ~ Comparison)+
+			theme(axis.text = element_text(colour = "black",size=30),
+					axis.title = element_text(size=30),
+					legend.text= element_text(size=30),
+					legend.title= element_text(size=30))
+	print(p)
+	dev.off()
+	
+	
+	
+	
 	
 	if(length(pairedspearman) > 0){
 		#draw pca graph
