@@ -671,7 +671,8 @@ for(countfile_index in c(1:length(countfiles))){
 			theme(axis.text = element_text(colour = "black",size=30),
 					axis.title = element_text(size=30),
 					legend.text= element_text(size=30),
-					legend.title= element_text(size=30))
+					legend.title= element_text(size=30),
+					strip.text.x = element_text(size = 30))
 	print(p)
 	dev.off()
 	
