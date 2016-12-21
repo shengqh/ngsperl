@@ -109,7 +109,7 @@ for (i in 1:nrow(countTableFileAll)) {
 	
 	countHT<-countNumVsd
 	if(exists("top25cvInHCA") && top25cvInHCA){
-	  CV <- function(x){
+    CV <- function(x){
       (sd(x)/mean(x))*100
     }
     cvs <- apply(countNumVsd,1,CV)
