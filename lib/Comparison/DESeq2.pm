@@ -32,7 +32,7 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $comparisons = get_raw_files( $config, $section );
-  my @comparison_names = sort keys %{$comparisons};
+  my @comparison_names = keys %{$comparisons};
 
   my $totalPair = scalar(@comparison_names);
   if ( 0 == $totalPair ) {
