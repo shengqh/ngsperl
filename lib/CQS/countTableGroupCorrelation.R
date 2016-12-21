@@ -1,3 +1,7 @@
+library(heatmap3)
+library(DESeq2)  
+library(RColorBrewer)
+
 countTableFileList<-parSampleFile1
 groupFileList<-parSampleFile2
 fixColorRange<-TRUE
@@ -15,10 +19,6 @@ if(exists("usePearsonInHCA") && usePearsonInHCA){
 }
 
 #source("/home/zhaos/source/r_cqs/vickers/codesToPipeline/countTableVisFunctions.R")
-
-library(heatmap3)
-library(DESeq2)  
-library(RColorBrewer)
 
 ##Solving node stack overflow problem start###
 #when there are too many genes, drawing dendrogram may failed due to node stack overflow,
