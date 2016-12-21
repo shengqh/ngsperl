@@ -11,13 +11,14 @@ use CQS::StringUtils;
 use CQS::CQSDebug;
 use Data::Dumper;
 use Hash::Merge qw( merge );
+use Tie::IxHash;
 
 require Exporter;
 our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups 
+    qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups
       get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key save_parameter_sample_file saveConfig)
   ]
 );
@@ -119,7 +120,7 @@ sub get_parameter {
 
   my $option    = get_option( $config, $section, "option",    "" );
   my $sh_direct = get_option( $config, $section, "sh_direct", 0 );
-  
+
   my $init_command = get_option( $config, $section, "init_command", "" );
 
   if ($sh_direct) {
@@ -235,7 +236,7 @@ sub parse_param_file {
       my $result = $myclass->result( $config, $refSectionName, $pattern, 1 );
       foreach my $k ( sort keys %{$result} ) {
         my @files = @{ $result->{$k} };
-        if (scalar(@files) > 0){
+        if ( scalar(@files) > 0 ) {
           return $files[0];
         }
       }
@@ -263,7 +264,7 @@ sub has_raw_files {
   return ( defined $config->{$section}{$mapname} ) || ( defined $config->{$section}{$mapname_ref} ) || ( defined $config->{$section}{$mapname_config_ref} );
 }
 
-sub do_get_raw_files {
+sub do_get_unsorted_raw_files {
   my ( $config, $section, $returnself, $mapname, $pattern ) = @_;
 
   die "section $section was not defined!" if !defined $config->{$section};
@@ -363,17 +364,17 @@ sub do_get_raw_files {
         %myres = %{ $myclass->result( $targetConfig, $section, $pattern ) };
       }
       else {
-        my ( $res, $issource ) = do_get_raw_files( $targetConfig, $section, 1, undef, $pattern );
+        my ( $res, $issource ) = do_get_unsorted_raw_files( $targetConfig, $section, 1, undef, $pattern );
         %myres = %{$res};
       }
 
       my $refcount = keys %myres;
       for my $mykey ( keys %myres ) {
         my $myvalues = $myres{$mykey};
-        if(ref($myvalues) eq ''){
+        if ( ref($myvalues) eq '' ) {
           $myvalues = [$myvalues];
         }
-        
+
         if ( ( ref($myvalues) eq 'ARRAY' ) && ( scalar( @{$myvalues} ) > 0 ) ) {
           if ( exists $result{$mykey} ) {
             my $oldvalues = $result{$mykey};
@@ -432,6 +433,27 @@ sub do_get_raw_files {
   else {
     die "define $mapname or $mapname_ref or $mapname_config_ref for $section";
   }
+}
+
+sub do_get_raw_files {
+  my %result;
+  tie %result, 'Tie::IxHash';
+
+  my ( $resultUnsorted, $issource ) = do_get_unsorted_raw_files(@_);
+
+  my @orderedKeys;
+  if ( exists $resultUnsorted->{".order"} ) {
+    my $orders = $resultUnsorted->{".order"};
+    @orderedKeys = @$orders;
+    die "number of key defined in .order not equals to actual keys for @_" if ( scalar(@orderedKeys) != (scalar( keys %{$resultUnsorted} ) - 1) );
+  }
+  else {
+    @orderedKeys = sort keys %{$resultUnsorted};
+  }
+  for my $key (@orderedKeys) {
+    $result{$key} = $resultUnsorted->{$key};
+  }
+  return ( \%result, $issource );
 }
 
 sub get_raw_files {
@@ -577,7 +599,7 @@ sub save_parameter_sample_file {
   if ( has_raw_files( $config, $section, $key ) ) {
     my %temp = %{ get_raw_files( $config, $section, $key ) };
     my @orderedSampleNames;
-    my $sampleFileOrder = $config->{$section}{$key . "Order"};
+    my $sampleFileOrder = $config->{$section}{ $key . "Order" };
     if ( defined $sampleFileOrder ) {
       @orderedSampleNames = @{$sampleFileOrder};
     }
@@ -591,12 +613,12 @@ sub save_parameter_sample_file {
       }
     }
     close($list);
-    return ($outputFile)
-  }else{
+    return ($outputFile);
+  }
+  else {
     return ("");
   }
 }
-
 
 sub saveConfig {
   my ( $def, $config ) = @_;
