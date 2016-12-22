@@ -25,13 +25,11 @@ my $def = {
 };
 
 my $unsorted = get_raw_files($def, "unsorted_section");
-for my $key (keys %$unsorted){
-  print $key;
-}
+my @unsortedKeys = keys %$unsorted;
+is_deeply(\@unsortedKeys, ["A", "B", "C"] );
 
 my $sorted = get_raw_files($def, "sorted_section");
-for my $key (keys %$sorted){
-  print $key;
-}
+my @sortedKeys = keys %$sorted;
+is_deeply(\@sortedKeys, ["C", "B", "A"] );
 
 1;
