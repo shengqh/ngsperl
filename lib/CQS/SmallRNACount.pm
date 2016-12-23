@@ -30,10 +30,15 @@ sub perform {
 
   my $cqstools = get_cqstools( $config, $section, 1 );
   my $coordinate_file = get_param_file( $config->{$section}{coordinate_file}, "coordinate_file", 1 );
-  my $fastaFile       = get_param_file( $config->{$section}{fasta_file},      "fasta_file",      0 );
 
+  my $fastaFile       = get_param_file( $config->{$section}{fasta_file},      "fasta_file",      0 );
   if ( defined $fastaFile ) {
     $option = $option . " -f $fastaFile";
+  }
+
+  my $ccaFile = parse_param_file( $config, $section, "cca_file", 0 );
+  if(defined $ccaFile){
+    $option = $option . " --ccaFile $ccaFile";
   }
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
@@ -53,9 +58,9 @@ sub perform {
   print $sh get_run_command($sh_direct) . "\n";
 
   for my $sample_name ( sort keys %raw_files ) {
-    my @bam_files  = @{ $raw_files{$sample_name} };
-    my $bam_file   = $bam_files[0];
-    my $final_file = $sample_name . ".count";
+    my @bam_files      = @{ $raw_files{$sample_name} };
+    my $bam_file       = $bam_files[0];
+    my $final_file     = $sample_name . ".count";
     my $final_xml_file = $sample_name . ".count.mapped.xml";
 
     my $seqcountFile = "";

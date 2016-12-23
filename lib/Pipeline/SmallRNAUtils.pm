@@ -59,127 +59,62 @@ our $VERSION = '0.01';
 #  star_index_directory => "/scratch/cqs/shengq1/references/hg19_16569_MT/STAR_index_v37.75_2.4.2a_sjdb49"
 #};
 
+sub checkOption {
+  my ( $def, $optionName, $deafultValue ) = @_;
+  if ( !defined $def->{$optionName} ) {
+    $def->{$optionName} = $deafultValue;
+  }
+  return $def;
+}
+
+sub isVersion3 {
+  my $def = shift;
+  my $result = defined $def->{version} && $def->{version} == 3;
+  return $result;
+}
+
 sub initializeDefaultOptions {
   my $def = shift;
 
-  if ( !defined $def->{cluster} ) {
-    $def->{cluster} = 'slurm';
-  }
+  checkOption( $def, "cluster",                     "slurm" );
+  checkOption( $def, "min_read_length",             16 );
+  checkOption( $def, "bowtie1_option_1mm",          "-a -m 100 --best --strata -v 1" );
+  checkOption( $def, "bowtie1_option_pm",           "-a -m 1000 --best --strata -v 0" );
+  checkOption( $def, "fastq_remove_N",              1 );
+  checkOption( $def, "run_cutadapt",                1 );
+  checkOption( $def, "fastq_remove_random",         0 );
+  checkOption( $def, "remove_sequences",            "" );
+  checkOption( $def, "has_NTA",                     1 );
+  checkOption( $def, "mirbase_count_option",        "-p hsa" );
+  checkOption( $def, "table_vis_group_text_size",   10 );
+  checkOption( $def, "sequencetask_run_time",       12 );
+  checkOption( $def, "DE_show_gene_cluster",        1 );
+  checkOption( $def, "DE_pvalue",                   0.05 );
+  checkOption( $def, "DE_fold_change",              1.5 );
+  checkOption( $def, "DE_add_count_one",            0 );
+  checkOption( $def, "DE_min_median_read_top",      2 );
+  checkOption( $def, "DE_min_median_read_smallRNA", 5 );
+  checkOption( $def, "DE_top25only",                0 );
+  checkOption( $def, "DE_detected_in_both_group",   1 );
+  checkOption( $def, "DE_perform_wilcox",           0 );
+  checkOption( $def, "DE_use_raw_pvalue",           1 );
+  checkOption( $def, "max_sequence_extension_base", 1 );
+  checkOption( $def, "top_read_number",             100 );
+  checkOption( $def, "blast_top_reads",             0 );
+  checkOption( $def, "blast_localdb",               "" );
+  checkOption( $def, "perform_contig_analysis",     0 );
 
-  if ( !defined $def->{min_read_length} ) {
-    $def->{min_read_length} = 16;
+  if ( isVersion3($def) ) {
+    checkOption( $def, "smallrnacount_option",      "--yRNAsnRNAsnoRNA --min_overlap 0.9" );
+    checkOption( $def, "micrornacount_offsets",     "0,1,2,-1,-2" );
+    checkOption( $def, "consider_tRNA_NTA",         1 );
+    checkOption( $def, "smallrnacounttable_option", "--yRNAsnRNAsnoRNA" );
   }
-
-  if ( !defined $def->{micrornacount_offsets} ) {
-    $def->{micrornacount_offsets} = '0,1,2';
-  }
-
-  if ( !defined $def->{smallrnacount_option} ) {
-    $def->{smallrnacount_option} = '';
-  }
-
-  if ( !defined $def->{bowtie1_option_1mm} ) {
-    $def->{bowtie1_option_1mm} = '-a -m 100 --best --strata -v 1';
-  }
-
-  if ( !defined $def->{bowtie1_option_pm} ) {
-    $def->{bowtie1_option_pm} = '-a -m 1000 --best --strata -v 0';
-  }
-
-  if ( !defined $def->{fastq_remove_N} ) {
-    $def->{fastq_remove_N} = 1;
-  }
-
-  if ( !defined $def->{run_cutadapt} ) {
-    $def->{run_cutadapt} = 1;
-  }
-
-  if ( !defined $def->{fastq_remove_random} ) {
-    $def->{fastq_remove_random} = 0;
-  }
-
-  if ( !defined $def->{remove_sequences} ) {
-    $def->{remove_sequences} = "";
-  }
-
-  if ( !defined $def->{has_NTA} ) {
-    $def->{has_NTA} = 1;
-  }
-
-  if ( !defined $def->{mirbase_count_option} ) {
-    $def->{mirbase_count_option} = "";
-  }
-
-  if ( !defined $def->{table_vis_group_text_size} ) {
-    $def->{table_vis_group_text_size} = "10";
-  }
-
-  if ( !defined $def->{sequencetask_run_time} ) {
-    $def->{sequencetask_run_time} = "12";
-  }
-
-  if ( !defined $def->{DE_show_gene_cluster} ) {
-    $def->{DE_show_gene_cluster} = 1;
-  }
-
-  if ( !defined $def->{DE_pvalue} ) {
-    $def->{DE_pvalue} = 0.05;
-  }
-
-  if ( !defined $def->{DE_fold_change} ) {
-    $def->{DE_fold_change} = 1.5;
-  }
-
-  if ( !defined $def->{DE_add_count_one} ) {
-    $def->{DE_add_count_one} = 0;
-  }
-
-  if ( !defined $def->{DE_min_median_read_top} ) {
-    $def->{DE_min_median_read_top} = 2;
-  }
-
-  if ( !defined $def->{DE_min_median_read_smallRNA} ) {
-    $def->{DE_min_median_read_smallRNA} = 5;
-  }
-
-  if ( !defined $def->{DE_top25only} ) {
-    $def->{DE_top25only} = 0;
-  }
-
-  if ( !defined $def->{DE_detected_in_both_group} ) {
-    $def->{DE_detected_in_both_group} = 1;
-  }
-
-  if ( !defined $def->{DE_perform_wilcox} ) {
-    $def->{DE_perform_wilcox} = 0;
-  }
-
-  if ( !defined $def->{DE_use_raw_pvalue} ) {
-    $def->{DE_use_raw_pvalue} = 1;
-  }
-
-  if ( !defined $def->{max_sequence_extension_base} ) {
-    $def->{max_sequence_extension_base} = 1;
-  }
-
-  if ( !defined $def->{top_read_number} ) {
-    $def->{top_read_number} = 100;
-  }
-
-  if ( !defined $def->{blast_top_reads} ) {
-    $def->{blast_top_reads} = 0;
-  }
-
-  if ( !defined $def->{blast_localdb} ) {
-    $def->{blast_localdb} = "";
-  }
-
-  if ( !defined $def->{perform_contig_analysis} ) {
-    $def->{perform_contig_analysis} = 0;
-  }
-
-  if ( !defined $def->{consider_tRNA_NTA} ) {
-    $def->{consider_tRNA_NTA} = 0;
+  else {
+    checkOption( $def, "smallrnacount_option",      "" );
+    checkOption( $def, "micrornacount_offsets",     "0,1,2" );
+    checkOption( $def, "consider_tRNA_NTA",         0 );
+    checkOption( $def, "smallrnacounttable_option", "" );
   }
 
   return $def;
@@ -537,22 +472,6 @@ sub getPrepareConfig {
         "nodes"    => "1:ppn=1",
         "walltime" => "24",
         "mem"      => "20gb"
-      },
-    },
-    identical_check_cca => {
-      class              => "SmallRNA::TGIRTCheckCCA",
-      perform            => 1,
-      target_dir         => $preprocessing_dir . "/identical_check_cca",
-      option             => "",
-      source_ref         => [ 'identical', '.fastq.gz$' ],
-      untrimmedFastq_ref => "files",
-      cqs_tools          => $def->{cqstools},
-      sh_direct          => 0,
-      pbs                => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "10gb"
       },
     },
     identical_sequence_count_table => {
