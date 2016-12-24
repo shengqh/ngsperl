@@ -48,6 +48,19 @@ comparisons_data<-read.table(inputfile, header=T, check.names=F , sep="\t", stri
 #It could be solved by forcing stats:::plotNode to be run as interpreted code rather then byte-compiled code via a nasty hack.
 #http://stackoverflow.com/questions/16559250/error-in-heatmap-2-gplots/25877485#25877485
 
+#align two count table
+align<-function(data1,data2,by=0,suffixes=c(deparse(substitute(data1)),deparse(substitute(data2))),sort=T) {
+	if (is.null(data1)) {
+		return(data2)
+	} else if (is.null(data2)) {
+		return(data1)
+	}
+	data<-merge(data1,data2,by=by,all=T,suffixes=suffixes,sort=sort)
+	row.names(data)<-data[,1]
+	data<-data[,-1]
+	return (data)
+}
+
 # Convert a byte-compiled function to an interpreted-code function 
 unByteCode <- function(fun)
 {
@@ -180,7 +193,10 @@ reverselog_trans <- function(base = exp(1)) {
 }
 
 countfiles<-unlist(unique(comparisons_data$CountFile))
+allComparisons<-unlist(unique(comparisons_data$ComparisonName))
 
+dataAllOut<-NULL
+resultAllOut<-NULL
 countfile_index = 1
 for(countfile_index in c(1:length(countfiles))){
 	countfile = countfiles[countfile_index]
@@ -216,7 +232,11 @@ for(countfile_index in c(1:length(countfiles))){
 	dir.create("details", showWarnings = FALSE)
 	
 	pairedspearman<-list()
-	resultAllOut<-data
+	
+	newVarInData<-setdiff(colnames(data),colnames(dataAllOut))
+	if (length(newVarInData)>0) {
+		dataAllOut<-align(dataAllOut,data[,newVarInData,drop=FALSE])
+	}
 	resultAllOutVar<-c("baseMean","log2FoldChange","pvalue","padj")
 	
 	comparison_index = 1
@@ -522,7 +542,8 @@ for(countfile_index in c(1:length(countfiles))){
 		tbbAllOut<-as.data.frame(tbb[,resultAllOutVar,drop=F])
 		tbbAllOut$Significant<-select
 		colnames(tbbAllOut)<-paste0(colnames(tbbAllOut)," (",comparisonName,")")
-		resultAllOut<-cbind(resultAllOut,tbbAllOut[row.names(resultAllOut),])
+		resultAllOut<-cbind(as.data.frame(resultAllOut)[row.names(dataAllOut),],as.matrix(tbbAllOut[row.names(dataAllOut),]))
+		row.names(resultAllOut)<-row.names(dataAllOut)
 		
 		tbb<-tbb[order(tbb$pvalue),,drop=F]
 		write.csv(as.data.frame(tbb),paste0(prefix, "_DESeq2.csv"))
@@ -620,66 +641,7 @@ for(countfile_index in c(1:length(countfiles))){
 		print(p)
 		dev.off()
 	}
-	
-	#write a file with all information
-	write.csv(resultAllOut,paste0(basename(inputfile),"_DESeq2.csv"))
-	
-	#volcano plot for all comparisons
-	temp<-resultAllOut[,-(1:ncol(data))]
-	diffResult<-NULL
-	diffResultVar<-unique(sapply(strsplit(colnames(temp)," "),function(x) x[1]))
-	for (i in 1:(nrow(comparisons))) {
-		temp1<-temp[,(i*length(diffResultVar)-(length(diffResultVar)-1)):(i*length(diffResultVar))]
-		colnames(temp1)<-diffResultVar
-		temp1$Comparison<-comparisons$ComparisonName[i]
-		if (is.null(diffResult)) {
-			diffResult<-temp1
-		} else {
-			diffResult<-rbind(diffResult,temp1)
-		}
-	}
-	changeColours<-c(grey="grey",blue="blue",red="red")
-	diffResult$log10BaseMean<-log10(diffResult$baseMean)
-	diffResult$colour<-"grey"
-	if (useRawPvalue==1) {
-		diffResult$colour[which(diffResult$pvalue<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
-		diffResult$colour[which(diffResult$pvalue<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
-	} else {
-		diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
-		diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
-	}
-	
-	width<-max(2000,2000*nrow(comparisons))
-	png(filename=paste0(basename(inputfile), "_DESeq2_volcanoPlot.png"), width=width, height=2000, res=300)
-	#  pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"))
-	if (useRawPvalue==1) {
-		p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
-				scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
-	} else {
-		p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
-				scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
-	}
-	p<-p+geom_point(aes(size=log10BaseMean,colour=colour))+
-			scale_color_manual(values=changeColours,guide = FALSE)+
-			scale_x_continuous(name=bquote(log[2]~Fold~Change))+
-			geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
-			geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
-			guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
-			theme_bw()+
-			scale_size(range = c(3, 7))+
-			facet_grid(. ~ Comparison)+
-			theme(axis.text = element_text(colour = "black",size=30),
-					axis.title = element_text(size=30),
-					legend.text= element_text(size=30),
-					legend.title= element_text(size=30),
-					strip.text.x = element_text(size = 30))
-	print(p)
-	dev.off()
-	
-	
-	
-	
-	
+			
 	if(length(pairedspearman) > 0){
 		#draw pca graph
 		filename<-ifelse(minMedianInGroup > 0, paste0("spearman_min", minMedianInGroup, ".png"), "spearman.png")
@@ -940,3 +902,60 @@ for(countfile_index in c(1:length(countfiles))){
 		dev.off()
 	}
 }
+
+#write a file with all information
+resultAllOut<-cbind(dataAllOut,resultAllOut[row.names(dataAllOut),])
+write.csv(resultAllOut,paste0(basename(inputfile),"_DESeq2.csv"))
+
+#volcano plot for all comparisons
+temp<-resultAllOut[,-(1:ncol(dataAllOut))]
+diffResult<-NULL
+diffResultVar<-unique(sapply(strsplit(colnames(temp)," "),function(x) x[1]))
+for (i in 1:(length(allComparisons))) {
+	temp1<-temp[,(i*length(diffResultVar)-(length(diffResultVar)-1)):(i*length(diffResultVar))]
+	colnames(temp1)<-diffResultVar
+	temp1$Comparison<-allComparisons[i]
+	if (is.null(diffResult)) {
+		diffResult<-temp1
+	} else {
+		diffResult<-rbind(diffResult,temp1)
+	}
+}
+changeColours<-c(grey="grey",blue="blue",red="red")
+diffResult$log10BaseMean<-log10(diffResult$baseMean)
+diffResult$Comparison<-factor(diffResult$Comparison,levels=unique(diffResult$Comparison))
+diffResult$colour<-"grey"
+if (useRawPvalue==1) {
+	diffResult$colour[which(diffResult$pvalue<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
+	diffResult$colour[which(diffResult$pvalue<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
+} else {
+	diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
+	diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
+}
+
+width<-max(2000,2000*length(allComparisons))
+png(filename=paste0(basename(inputfile), "_DESeq2_volcanoPlot.png"), width=width, height=2000, res=300)
+#  pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"))
+if (useRawPvalue==1) {
+	p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
+			scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
+} else {
+	p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
+			scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
+}
+p<-p+geom_point(aes(size=log10BaseMean,colour=colour))+
+		scale_color_manual(values=changeColours,guide = FALSE)+
+		scale_x_continuous(name=bquote(log[2]~Fold~Change))+
+		geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
+		geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
+		guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
+		theme_bw()+
+		scale_size(range = c(3, 7))+
+		facet_grid(. ~ Comparison)+
+		theme(axis.text = element_text(colour = "black",size=30),
+				axis.title = element_text(size=30),
+				legend.text= element_text(size=30),
+				legend.title= element_text(size=30),
+				strip.text.x = element_text(size = 30))
+print(p)
+dev.off()
