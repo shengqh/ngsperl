@@ -58,10 +58,10 @@ sub getSmallRNAConfig {
     $nonhost_genome_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_genome" );
   }
 
-  my $nonhost_blast_dir;
-  if ($blast_unmapped_reads) {
-    $nonhost_blast_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_blast" );
-  }
+  my     $nonhost_blast_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_blast" );
+#  if ($blast_unmapped_reads) {
+#    $nonhost_blast_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_blast" );
+#  }
 
   my $data_visualization_dir = create_directory_or_die( $def->{target_dir} . "/data_visualization" );
 
