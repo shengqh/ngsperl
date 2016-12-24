@@ -860,8 +860,8 @@ for(countfile_index in c(1:length(countfiles))){
 			maxN<-brewer.pal.info[colorNames,"maxcolors"]
 			if (n<=maxN) {
 				colors<-brewer.pal(n, colorNames)
-				if (length(colors)>length(n)) {
-					colors<-colors[1:length(n)]
+				if (length(colors)>n) {
+					colors<-colors[1:n]
 				}
 			} else {
 				colors<-colorRampPalette(brewer.pal(maxN, colorNames))(n)
