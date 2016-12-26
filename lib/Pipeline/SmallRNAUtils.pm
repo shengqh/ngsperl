@@ -103,18 +103,17 @@ sub initializeDefaultOptions {
   checkOption( $def, "blast_top_reads",             0 );
   checkOption( $def, "blast_localdb",               "" );
   checkOption( $def, "perform_contig_analysis",     0 );
+  checkOption( $def, "smallrnacount_option",        "" );
 
   if ( isVersion3($def) ) {
-    checkOption( $def, "smallrnacount_option",      "--yRNAsnRNAsnoRNA --min_overlap 0.9" );
-    checkOption( $def, "micrornacount_offsets",     "0,1,2,-1,-2" );
-    checkOption( $def, "consider_tRNA_NTA",         1 );
-    checkOption( $def, "smallrnacounttable_option", "--yRNAsnRNAsnoRNA" );
+    checkOption( $def, "consider_tRNA_NTA",              1 );
+    checkOption( $def, "host_smallrnacount_option",      $def->{smallrnacount_option} . " --min_overlap 0.9 --yRNAsnRNAsnoRNA --offsets 0,1,2,-1,-2" );
+    checkOption( $def, "host_smallrnacounttable_option", "--yRNAsnRNAsnoRNA" );
   }
   else {
-    checkOption( $def, "smallrnacount_option",      "" );
-    checkOption( $def, "micrornacount_offsets",     "0,1,2" );
-    checkOption( $def, "consider_tRNA_NTA",         0 );
-    checkOption( $def, "smallrnacounttable_option", "" );
+    checkOption( $def, "consider_tRNA_NTA",              0 );
+    checkOption( $def, "host_smallrnacount_option",      $def->{smallrnacount_option} . " --min_overlap 0.9 --offsets 0,1,2" );
+    checkOption( $def, "host_smallrnacounttable_option", "" );
   }
 
   return $def;
