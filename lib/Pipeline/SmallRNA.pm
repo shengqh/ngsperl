@@ -58,10 +58,10 @@ sub getSmallRNAConfig {
     $nonhost_genome_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_genome" );
   }
 
-  my     $nonhost_blast_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_blast" );
-#  if ($blast_unmapped_reads) {
-#    $nonhost_blast_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_blast" );
-#  }
+  my $nonhost_blast_dir;
+  if ($search_miRBase || $search_unmapped_reads) {
+    $nonhost_blast_dir = create_directory_or_die( $def->{target_dir} . "/final_unmapped" );
+  }
 
   my $data_visualization_dir = create_directory_or_die( $def->{target_dir} . "/data_visualization" );
 
@@ -281,7 +281,7 @@ sub getSmallRNAConfig {
         class           => "CQS::SmallRNACount",
         perform         => 1,
         target_dir      => $host_genome_dir . "/bowtie1_genome_1mm_NTA_smallRNA_count",
-        option          => $def->{smallrnacount_option} . " --offsets " . $def->{micrornacount_offsets},
+        option          => $def->{host_smallrnacount_option},
         source_ref      => "bowtie1_genome_1mm_NTA",
         fastq_files_ref => "identical_NTA",
         seqcount_ref    => [ "identical", ".dupcount\$" ],
@@ -302,7 +302,7 @@ sub getSmallRNAConfig {
         class      => "CQS::SmallRNATable",
         perform    => 1,
         target_dir => $host_genome_dir . "/bowtie1_genome_1mm_NTA_smallRNA_table",
-        option     => $def->{smallrnacounttable_option},
+        option     => $def->{host_smallrnacounttable_option},
         source_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
         cqs_tools  => $def->{cqstools},
         prefix     => "smallRNA_1mm_",
@@ -1824,10 +1824,10 @@ sub getSmallRNAConfig {
 
   if ( $search_miRBase || $search_unmapped_reads ) {
     my $unmapped_reads = {
-      bowtie1_unmapped_reads => {
+      final_unmapped_reads => {
         class            => "CQS::Perl",
         perform          => 1,
-        target_dir       => $nonhost_blast_dir . "/bowtie1_unmapped_reads",
+        target_dir       => $nonhost_blast_dir . "/final_unmapped_reads",
         perlFile         => "unmappedReadsToFastq.pl",
         source_ref       => $identical_ref,
         source2_ref      => \@mapped,
@@ -1844,10 +1844,10 @@ sub getSmallRNAConfig {
       },
     };
 
-    $identical_ref = [ "bowtie1_unmapped_reads", ".fastq.gz\$" ];
+    $identical_ref = [ "final_unmapped_reads", ".fastq.gz\$" ];
     $config = merge( $config, $unmapped_reads );
-    push @individual,           ("bowtie1_unmapped_reads");
-    push @table_for_pieSummary, ( "bowtie1_unmapped_reads", ".dupcount" );
+    push @individual,           ("final_unmapped_reads");
+    push @table_for_pieSummary, ( "final_unmapped_reads", ".dupcount" );
     push @name_for_pieSummary,  ("UnMapped");
   }
 
