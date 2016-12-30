@@ -156,6 +156,7 @@ for (i in 1:nrow(countTableFileAll)) {
 	
   if (groupFileList!="") {
     sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
+    sampleToGroup<-sampleToGroup[which(sampleToGroup[,1] %in% colnames(countNumVsd)),]
     colors=primary.colors(length(unique(sampleToGroup$V2)))
     conditionColors<-as.matrix(data.frame(Group=primary.colors(length(unique(sampleToGroup$V2)))[as.factor(sampleToGroup$V2)]))
   }else{
