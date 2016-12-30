@@ -46,6 +46,10 @@ sub initializeDefaultOptions {
     $def->{sequencetask_run_time} = "12";
   }
 
+  if ( !defined $def->{perform_rnaseqc} ) {
+    $def->{perform_rnaseqc} = 0;
+  }
+
   return $def;
 }
 
@@ -73,6 +77,12 @@ sub getRNASeqConfig {
   my $top25cv_in_hca             = defined $def->{top25cv_in_hca} ? $def->{top25cv_in_hca} : 0;
   my $use_green_red_color_in_hca = defined $def->{use_green_red_color_in_hca} ? $def->{use_green_red_color_in_hca} : 1;
 
+  if ( $def->{perform_rnaseqc} ) {
+    defined $def->{rnaseqc_jar} or die "Define rnaseqc_jar first!";
+    ( -e $def->{rnaseqc_jar} )  or die "rnaseqc_jar not exists " . $def->{rnaseqc_jar};
+    defined $def->{fasta_file}  or die "Define fasta_file for rnaseqc first!";
+    ( -e $def->{fasta_file} )   or die "fasta_file not exists " . $def->{fasta_file};
+  }
   my $config = {
     general => {
       task_name => $task,
@@ -182,6 +192,20 @@ sub getRNASeqConfig {
         "mem"      => "30gb"
       },
     },
+    star_summary => {
+      class      => "Alignment::STARSummary",
+      perform    => 1,
+      target_dir => $target_dir . "/star",
+      option     => "",
+      source_ref => [ "star", "_Log.final.out" ],
+      sh_direct  => 1,
+      pbs        => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    },
     star_featurecount => {
       class      => "Count::FeatureCounts",
       perform    => 1,
@@ -257,8 +281,29 @@ sub getRNASeqConfig {
   };
   $config = merge( $config, $configAlignment );
   push @individual, ( "star", "star_featurecount" );
-  push @summary, ( "star_genetable", "star_genetable_correlation", "star_genetable_deseq2" );
+  push @summary, ( "star_summary", "star_genetable", "star_genetable_correlation", "star_genetable_deseq2" );
 
+  if ( $def->{perform_rnaseqc} ) {
+    $config->{rnaseqc} = {
+      class          => "QC::RNASeQC",
+      perform        => 1,
+      target_dir     => "${target_dir}/rnaseqc",
+      init_command   => $def->{rnaseqc_init_command},
+      option         => "",
+      source_ref     => [ "star", "_Aligned.sortedByCoord.out.bam" ],
+      jar            => $def->{rnaseqc_jar},
+      fasta_file     => $def->{fasta_file},
+      rrna_fasta     => $def->{rrna_fasta},
+      transcript_gtf => $transcript_gtf,
+      pbs            => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=8",
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    };
+    push( @summary, "rnaseqc" );
+  }
   if ( defined $qc3_perl ) {
     $config->{star_qc3} = {
       class          => "QC::QC3bam",

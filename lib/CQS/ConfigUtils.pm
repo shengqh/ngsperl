@@ -19,7 +19,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups
-      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key save_parameter_sample_file saveConfig)
+      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key save_parameter_sample_file saveConfig writeFileList)
   ]
 );
 
@@ -445,7 +445,7 @@ sub do_get_raw_files {
   if ( exists $resultUnsorted->{".order"} ) {
     my $orders = $resultUnsorted->{".order"};
     @orderedKeys = @$orders;
-    die "number of key defined in .order not equals to actual keys for @_" if ( scalar(@orderedKeys) != (scalar( keys %{$resultUnsorted} ) - 1) );
+    die "number of key defined in .order not equals to actual keys for @_" if ( scalar(@orderedKeys) != ( scalar( keys %{$resultUnsorted} ) - 1 ) );
   }
   else {
     @orderedKeys = sort keys %{$resultUnsorted};
@@ -648,6 +648,23 @@ sub saveConfig {
   print $sh2 Dumper($config);
   close $sh2;
   print "Saved configuration file to " . $config_file . "\n";
+}
+
+sub writeFileList {
+  my ( $fileName, $fileMap, $exportAllFiles ) = @_;
+  open( my $fl, ">$fileName" ) or die "Cannot create $fileName";
+  for my $sample_name ( sort keys %$fileMap ) {
+    my @files = @{ $fileMap->{$sample_name} };
+    if ( defined $exportAllFiles and $exportAllFiles ) {
+      for my $eachFile (@files) {
+        print $fl $sample_name, "\t", $eachFile, "\n";
+      }
+    }
+    else {
+      print $fl $sample_name, "\t", $files[0], "\n";
+    }
+  }
+  close($fl);
 }
 
 1;
