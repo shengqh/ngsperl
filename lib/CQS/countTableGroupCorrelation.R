@@ -115,8 +115,10 @@ for (i in 1:nrow(countTableFileAll)) {
     cvs <- apply(countNumVsd,1,CV)
     countHT<-countNumVsd[cvs>=quantile(cvs)[4],]
 	}
+	
+  width=max(2000, 50 * ncol(countHT))
   print("Drawing heatmap for all samples.")
-	png(paste0(countTableFile,".heatmap.png"),width=2000,height=2000,res=300)
+	png(paste0(countTableFile,".heatmap.png"),width=width,height=width,res=300)
 	if(nrow(countHT) < 20){
 	  heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=hmcols)
 	}else{
@@ -151,13 +153,13 @@ for (i in 1:nrow(countTableFileAll)) {
 		axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
 	}
 	
-	png(paste0(countTableFile,".Correlation.png"),width=2000,height=2000,res=300)
+	png(paste0(countTableFile,".Correlation.png"),width=width,height=width,res=300)
 	labRow=NULL
 	margin=c(min(10,max(nchar(colnames(countNumCor)))/2),min(10,max(nchar(row.names(countNumCor)))/2))
 	heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=labRow,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
 	dev.off()
 	if (ncol(countNumCor)>3) {
-		png(paste0(countTableFile,".Correlation.Cluster.png"),width=2000,height=2000,res=300)
+		png(paste0(countTableFile,".Correlation.Cluster.png"),width=width,height=width,res=300)
 		heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun)
 		dev.off()
 	}
