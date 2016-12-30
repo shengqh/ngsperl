@@ -221,10 +221,6 @@ for (i in 1:nrow(countTableFileAll)) {
 		sampleToGroup<-sampleToGroup[which(sampleToGroup[,1] %in% colnames(countNumVsd)),]
 		countNumVsdGroup<-mergeTableBySampleGroup(countNumVsd,sampleToGroup)
 		
-		conditionColors=
-		drawPCA(countTableFile, countHT, 1, designData, conditionColors)
-		
-		
 		#heatmap
 		margin=c(min(10,max(nchar(colnames(countNumVsdGroup)))/1.5),min(10,max(nchar(row.names(countNumVsdGroup)))/2))
 		png(paste0(countTableFile,".Group.heatmap.png"),width=2000,height=2000,res=300)
