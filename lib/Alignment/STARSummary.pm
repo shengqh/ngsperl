@@ -44,7 +44,7 @@ sub perform {
     die "File not found : " . $r_script;
   }
   
-  my $finalFile = "${task_name}.STARSummary.tsv";
+  my $finalFile = "${task_name}.STARSummary.csv";
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $finalFile );
   print $pbs "
@@ -64,8 +64,8 @@ sub result {
 
   my $result       = {};
   my @result_files = ();
-  push( @result_files, "${result_dir}/${task_name}.STARSummary.tsv" );
-  push( @result_files, "${result_dir}/${task_name}.STARSummary.tsv.png" );
+  push( @result_files, "${result_dir}/${task_name}.STARSummary.csv" );
+  push( @result_files, "${result_dir}/${task_name}.STARSummary.csv.png" );
   $result->{$task_name} = filter_array( \@result_files, $pattern );
   return $result;
 }

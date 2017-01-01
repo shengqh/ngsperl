@@ -29,7 +29,7 @@ for(i in c(1:nrow(filelist))){
   }
 }
 
-write.csv(file=paste0(outputFile, ".details.csv"), final)
+write.csv(file=sub("^([^.]*).*", ".details.csv", outputFile), final)
 
 reads=final[c("Number of input reads", "Uniquely mapped reads number", "Number of reads mapped to multiple loci", "Number of reads mapped to too many loci"),]
 treads=data.frame(t(data.matrix(reads)))

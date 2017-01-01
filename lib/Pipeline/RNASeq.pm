@@ -50,6 +50,10 @@ sub initializeDefaultOptions {
     $def->{perform_rnaseqc} = 0;
   }
 
+  if ( !defined $def->{perform_qc3bam} ) {
+    $def->{perform_qc3bam} = 0;
+  }
+
   return $def;
 }
 
@@ -71,7 +75,6 @@ sub getRNASeqConfig {
   my $cqstools                   = $def->{cqstools} or die "Define cqstools at definition first";
   my $star_index                 = $def->{star_index} or die "Define star_index at definition first";
   my $transcript_gtf             = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
-  my $qc3_perl                   = $def->{qc3_perl};
   my $name_map_file              = $def->{name_map_file} or die "Define tramscript name_map_file at definition first";
   my $use_pearson_in_hca         = defined $def->{use_pearson_in_hca} ? $def->{use_pearson_in_hca} : 1;
   my $top25cv_in_hca             = defined $def->{top25cv_in_hca} ? $def->{top25cv_in_hca} : 0;
@@ -82,6 +85,11 @@ sub getRNASeqConfig {
     ( -e $def->{rnaseqc_jar} )  or die "rnaseqc_jar not exists " . $def->{rnaseqc_jar};
     defined $def->{fasta_file}  or die "Define fasta_file for rnaseqc first!";
     ( -e $def->{fasta_file} )   or die "fasta_file not exists " . $def->{fasta_file};
+  }
+
+  if ( $def->{perform_qc3bam} ) {
+    defined $def->{qc3_perl} or die "Define qc3_perl first!";
+    ( -e $def->{qc3_perl} )  or die "qc3_perl not exists " . $def->{qc3_perl};
   }
   my $config = {
     general => {
@@ -266,7 +274,7 @@ sub getRNASeqConfig {
       target_dir               => $target_dir . "/star_genetable_correlation",
       rtemplate                => "countTableVisFunctions.R,countTableGroupCorrelation.R",
       output_file              => "parameterSampleFile1",
-      output_file_ext          => ".pairsCorrelation.png",
+      output_file_ext          => ".Correlation.png",
       use_pearson_in_hca       => $def->{use_pearson_in_hca},
       parameterSampleFile1_ref => [ "star_genetable", ".count\$" ],
       parameterSampleFile2_ref => "groups",
@@ -304,14 +312,14 @@ sub getRNASeqConfig {
     };
     push( @summary, "rnaseqc" );
   }
-  if ( defined $qc3_perl ) {
+  if ( $def->{perform_qc3bam} ) {
     $config->{star_qc3} = {
       class          => "QC::QC3bam",
       perform        => 1,
       target_dir     => $target_dir . "/star_qc3",
       option         => "",
       transcript_gtf => $transcript_gtf,
-      qc3_perl       => $qc3_perl,
+      qc3_perl       => $def->{qc3_perl},
       source_ref     => [ "star", "_Aligned.sortedByCoord.out.bam" ],
       pbs            => {
         "email"    => $email,
