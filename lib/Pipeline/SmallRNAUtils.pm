@@ -182,6 +182,9 @@ sub initializeDefaultOptions {
     $def->{consider_tRNA_NTA} = 0;
   }
 
+  if ( !defined $def->{perform_tDRmapper} ) {
+    $def->{perform_tDRmapper} = 0;
+  }
   return $def;
 }
 
@@ -219,6 +222,8 @@ sub getPrepareConfig {
   my $max_sequence_extension_base = $def->{max_sequence_extension_base};
   my $blast_top_reads             = $def->{blast_top_reads};
   my $blast_localdb               = $def->{blast_localdb};
+
+  my $perform_tDRmapper = defined $def->{perform_tDRmapper} && $def->{perform_tDRmapper} && defined $def->{tDRmapper} && defined $def->{tDRmapper_fasta};
 
   my $top_read_number = $def->{top_read_number};
 
@@ -482,6 +487,27 @@ sub getPrepareConfig {
       },
     };
     push @summary, ("fastqc_count_vis");
+  }
+
+  #tDRmapper
+  if ($perform_tDRmapper) {
+    $config->{"tDRmapper"} = {
+      class      => "CQS::Perl",
+      perform    => 1,
+      target_dir => $preprocessing_dir . "/tDRmapper",
+      perlFile   => "runtDRmapper.pl",
+      option     => $def->{tDRmapper} . " " . $def->{tDRmapper_fasta},
+      source_ref => "fastqfiles",
+      output_ext => "_clipped_identical.fastq.hq_cs",
+      sh_direct  => 1,
+      pbs        => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
+      },
+    };
+    push @individual, ("tDRmapper");
   }
 
   #print Dumper($config);

@@ -86,7 +86,7 @@ sub getSmallRNAConfig {
   if ($perform_contig_analysis) {
     $non_host_table_option = $non_host_table_option . " --outputReadContigTable";
   }
-
+  
   my $blast_unmapped_reads = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
   my $top_read_number = $def->{top_read_number};
   if ($do_comparison) {
