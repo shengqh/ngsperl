@@ -51,7 +51,8 @@ sub perform {
     my $sampleList          = $qctable->{$qcname};
     my $defaultQcnameTissue = delete $sampleList->{Tissue};
     my $curdir              = create_directory_or_die( $result_dir . "/" . $qcname );
-    my $mapfile             = $curdir . "/${qcname}.txt";
+    my $mapFileName         = "${qcname}.txt";
+    my $mapfile             = $curdir . "/" . $mapFileName;
     open( my $map, ">$mapfile" ) or die "Cannot create $mapfile";
     print $map "SampleID\tTissue\tFactor\tReplicate\tbamReads\tControlID\tbamControl\tPeaks\tPeakCaller\n";
     for my $sampleName ( sort keys %$sampleList ) {
@@ -78,7 +79,8 @@ sub perform {
     }
     close($map);
 
-    print $pbs "R --vanilla -f $script --args $mapfile $genome \n";
+    print $pbs "cd $curdir
+R --vanilla -f $script --args $mapFileName $genome \n";
   }
 
   $self->close_pbs( $pbs, $pbs_file );
@@ -88,12 +90,19 @@ sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  my $qctable = get_raw_files( $config, $section, "qctable" );
 
-  my $result       = {};
-  my @result_files = ();
-  push( @result_files, $result_dir . "/bamReport.html" );
-  $result->{$task_name} = filter_array( \@result_files, $pattern );
+  my $result = {};
 
+  for my $qcname ( sort keys %$qctable ) {
+    my @result_files = ();
+    my $curdir       = $result_dir . "/" . $qcname;
+    my $targetDir    = $curdir . "/ChIPQCreport";
+    push( @result_files, $targetDir . "/CCPlot.png" );
+    push( @result_files, $targetDir . "/CoverageHistogramPlot.png" );
+    push( @result_files, $targetDir . "/Rip.png" );
+    $result->{$qcname} = filter_array( \@result_files, $pattern );
+  }
   return $result;
 }
 
