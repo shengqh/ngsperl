@@ -31,10 +31,9 @@ sub getValue {
 }
 
 sub addDEseq2 {
-  my ( $config, $def, $summary_ref, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read ) = @_;
+  my ( $config, $def, $summary, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read ) = @_;
 
   my $taskName = "deseq2_" . $taskKey;
-  my @summary  = @{$summary_ref};
 
   $config->{$taskName} = {
     class                  => "Comparison::DESeq2",
@@ -61,14 +60,13 @@ sub addDEseq2 {
       "mem"       => "10gb"
     },
   };
-  push @summary, $taskName;
+  push @$summary, $taskName;
   return $taskName;
 }
 
 sub addDeseq2Visualization {
-  my ( $config, $def, $summary_ref, $taskKey, $deseq2FileRef, $dataVisualizationDir, $layoutName ) = @_;
+  my ( $config, $def, $summary, $taskKey, $deseq2FileRef, $dataVisualizationDir, $layoutName ) = @_;
 
-  my @summary  = @{$summary_ref};
   my $taskName = "deseq2_" . $taskKey . "_vis";
 
   $config->{$taskName} = {
@@ -90,7 +88,7 @@ sub addDeseq2Visualization {
       "mem"       => "10gb"
     },
   };
-  push @summary, $taskName;
+  push @$summary, $taskName;
   return $taskName;
 }
 
