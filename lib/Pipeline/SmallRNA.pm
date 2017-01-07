@@ -488,8 +488,11 @@ sub getSmallRNAConfig {
       if ( isVersion3($def) ) {
         my @visual_source = ();
 
+print "DEBUG:", @$summary_ref, "\n";
         #miRNA
         $deseq2Task = addDEseq2( $config, $def, $summary_ref, "miRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
+print "DEBUG:", @$summary_ref, "\n";
+
         push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
         addDEseq2( $config, $def, $summary_ref, "miRNA_NTA",        [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.NTA.count\$" ],        $host_genome_dir, $DE_min_median_read_smallRNA );
         addDEseq2( $config, $def, $summary_ref, "miRNA_NTA_base",   [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.NTA.base.count\$" ],   $host_genome_dir, $DE_min_median_read_smallRNA );
