@@ -131,8 +131,8 @@ sub getSmallRNAConfig {
 
   my $data_visualization_dir = create_directory_or_die( $def->{target_dir} . "/data_visualization" );
 
-  my @individual = @{$individual_ref};
-  my @summary    = @{$summary_ref};
+  my @individual = @$individual_ref;
+  my @summary    = @$summary_ref;
 
   my @table_for_correlation = ( "identical_sequence_count_table", "^(?!.*?read).*\.count\$" );
   my @table_for_countSum    = ();
