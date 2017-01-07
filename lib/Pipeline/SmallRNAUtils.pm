@@ -104,6 +104,7 @@ sub initializeDefaultOptions {
   checkOption( $def, "blast_localdb",               "" );
   checkOption( $def, "perform_contig_analysis",     0 );
   checkOption( $def, "smallrnacount_option",        "" );
+  checkOption( $def, "hasYRNA",                     0 );
 
   if ( isVersion3($def) ) {
     checkOption( $def, "consider_tRNA_NTA",              1 );
