@@ -253,7 +253,7 @@ sub getSmallRNAConfig {
   my $blast_localdb = $def->{blast_localdb} or die "Define blast_localdb first!";
 
   my $max_sequence_extension_base = getValue( $def, "max_sequence_extension_base" );
-  $def->{non_host_table_option} = $def->{non_host_table_option} . " --maxExtensionBase " . $def->{max_sequence_extension_base};
+  $def->{non_host_table_option} = "--maxExtensionBase " . $def->{max_sequence_extension_base} . " " . $def->{non_host_table_option};
   my $perform_contig_analysis = $def->{perform_contig_analysis};
   if ($perform_contig_analysis) {
     $def->{non_host_table_option} = $def->{non_host_table_option} . " --outputReadContigTable";
