@@ -1122,21 +1122,21 @@ sub getSmallRNAConfig {
 
       #Mapping unmapped reads to group4 database
       addNonhostDatabase(
-        $config, $def, $individual_ref, $summary_ref, "bacteria_group4_pm", $nonhost_genome_dir,    #general option
-        $def->{bowtie1_bacteria_group4_index}, $identical_ref,                                      #bowtie option
-        $def->{smallrnacount_option} . ' --keepChrInName --keepSequence',                           #count option
-        $def->{non_host_table_option} . ' --categoryMapFile ' . $def->{bacteria_group4_species_map} #table option
+        $config, $def, $individual_ref, $summary_ref, "fungus_group4_pm", $nonhost_genome_dir,    #general option
+        $def->{bowtie1_fungus_group4_index}, $identical_ref,                                      #bowtie option
+        $def->{smallrnacount_option} . ' --keepChrInName --keepSequence',                         #count option
+        $def->{non_host_table_option} . ' --categoryMapFile ' . $def->{fungus_group4_species_map} #table option
       );
       addNonhostVis(
         $config, $def,
         $summary_ref,
-        "nonhost_genome_bacteria_group4_vis",
+        "nonhost_genome_fungus_group4_vis",
         $data_visualization_dir,
         {
           rtemplate          => "countTableVisFunctions.R,countTableVis.R",
           output_file        => ".group4Mapping.Result",
           output_file_ext    => ".Piechart.png",
-          parameterFile1_ref => [ "bowtie1_bacteria_group4_pm_table", ".category.count\$" ],
+          parameterFile1_ref => [ "bowtie1_fungus_group4_pm_table", ".category.count\$" ],
         }
       );
 
