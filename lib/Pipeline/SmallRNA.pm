@@ -31,7 +31,7 @@ sub getValue {
 }
 
 sub addComparison {
-  my ( $config, $def, $summary_ref, $taskKey, $countfileRef, $layoutName, $deseq2Dir, $dataVisualizationDir );
+  my ( $config, $def, $summary_ref, $taskKey, $countfileRef, $layoutName, $deseq2Dir, $dataVisualizationDir ) = @_;
 
   my $taskName = "deseq2_" . $taskKey;
 
