@@ -13,7 +13,7 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(getSmallRNADefinition getPrepareConfig)] );
+our %EXPORT_TAGS = ( 'all' => [qw(getSmallRNADefinition getPrepareConfig isVersion3)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 

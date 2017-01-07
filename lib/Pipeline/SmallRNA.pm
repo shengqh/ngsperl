@@ -26,8 +26,65 @@ sub getValue {
     return $def->{$name};
   }
   else {
-    die "Define $name in user definition first@";
+    die "Define $name in user definition first.";
   }
+}
+
+sub addComparison {
+  my ( $config, $def, $summary_ref, $taskKey, $countfileRef, $layoutName, $deseq2Dir, $dataVisualizationDir );
+
+  my $taskName = "deseq2_" . $taskKey;
+
+  $config->{$taskName} = {
+    class                  => "Comparison::DESeq2",
+    perform                => 1,
+    target_dir             => $deseq2Dir . "/$taskName",
+    option                 => "",
+    source_ref             => "pairs",
+    groups_ref             => "groups",
+    countfile_ref          => $countfileRef,
+    sh_direct              => 1,
+    show_DE_gene_cluster   => $def->{DE_show_gene_cluster},
+    pvalue                 => $def->{DE_pvalue},
+    fold_change            => $def->{DE_fold_change},
+    min_median_read        => $def->{DE_min_median_read_top},
+    add_count_one          => $def->{DE_add_count_one},
+    top25only              => $def->{DE_top25only},
+    detected_in_both_group => $def->{DE_detected_in_both_group},
+    use_raw_p_value        => $def->{DE_use_raw_pvalue},
+    pbs                    => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    },
+  };
+
+  my $visTaskName = $taskName . "_vis";
+
+  $config->{$visTaskName} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $dataVisualizationDir . "/$visTaskName",
+    rtemplate                => "DESeq2_all_vis.R",
+    output_file              => ".${taskKey}.DESeq2.Matrix",
+    output_file_ext          => ".png",
+    parameterSampleFile1_ref => [ $taskName, "_DESeq2.csv\$" ],
+    parameterSampleFile2     => $def->{$layoutName},
+    rCode                    => 'useRawPvalue=' . $def->{DE_use_raw_pvalue} . ";",
+    sh_direct                => 1,
+    pbs                      => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+
+  my @summary = @{$summary_ref};
+  push @summary, ( $taskName, $visTaskName );
 }
 
 sub getSmallRNAConfig {
@@ -37,10 +94,14 @@ sub getSmallRNAConfig {
   my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
   my $task_name = $def->{task_name};
 
-  my $search_not_identical  = ( !defined $def->{search_not_identical} )  || $def->{search_not_identical};
-  my $search_host_genome    = ( !defined $def->{search_host_genome} )    || $def->{search_host_genome};
-  my $search_miRBase        = ( !defined $def->{search_miRBase} )        || $def->{search_miRBase};
-  my $search_unmapped_reads = ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
+  my $search_not_identical =
+    ( !defined $def->{search_not_identical} ) || $def->{search_not_identical};
+  my $search_host_genome =
+    ( !defined $def->{search_host_genome} ) || $def->{search_host_genome};
+  my $search_miRBase =
+    ( !defined $def->{search_miRBase} ) || $def->{search_miRBase};
+  my $search_unmapped_reads =
+    ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
   my $blast_unmapped_reads = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
 
   my $host_genome_dir;
@@ -59,7 +120,7 @@ sub getSmallRNAConfig {
   }
 
   my $nonhost_blast_dir;
-  if ($search_miRBase || $search_unmapped_reads) {
+  if ( $search_miRBase || $search_unmapped_reads ) {
     $nonhost_blast_dir = create_directory_or_die( $def->{target_dir} . "/final_unmapped" );
   }
 
@@ -93,10 +154,11 @@ sub getSmallRNAConfig {
   my $DE_min_median_read_smallRNA = getValue( $def, "DE_min_median_read_smallRNA" );
   my $DE_top25only                = getValue( $def, "DE_top25only" );
   my $DE_detected_in_both_group   = getValue( $def, "DE_show_gene_cluster" );
-  my $DE_perform_wilcox           = getValue( $def, "DE_perform_wilcox" );
   my $DE_use_raw_pvalue           = getValue( $def, "DE_use_raw_pvalue" );
-  my $max_sequence_extension_base = $def->{max_sequence_extension_base} or die "Define max_sequence_extension_base first!";
-  my $blast_localdb = $def->{blast_localdb} or die "Define blast_localdb first!";
+  my $max_sequence_extension_base = $def->{max_sequence_extension_base}
+    or die "Define max_sequence_extension_base first!";
+  my $blast_localdb = $def->{blast_localdb}
+    or die "Define blast_localdb first!";
 
   my $non_host_table_option   = "--maxExtensionBase $max_sequence_extension_base --outputReadTable";
   my $perform_contig_analysis = $def->{perform_contig_analysis};
@@ -106,148 +168,165 @@ sub getSmallRNAConfig {
 
   my $top_read_number = $def->{top_read_number};
   if ($do_comparison) {
-    my $class_independent = {
-      "deseq2_top${top_read_number}_reads" => {
-        class                  => "Comparison::DESeq2",
-        perform                => 1,
-        target_dir             => $class_independent_dir . "/deseq2_top${top_read_number}_reads",
-        option                 => "",
-        source_ref             => "pairs",
-        groups_ref             => "groups",
-        countfile_ref          => [ "identical_sequence_count_table", ".read.count\$" ],
-        sh_direct              => 1,
-        show_DE_gene_cluster   => $DE_show_gene_cluster,
-        pvalue                 => $DE_pvalue,
-        fold_change            => $DE_fold_change,
-        min_median_read        => $DE_min_median_read_top,
-        add_count_one          => $DE_add_count_one,
-        top25only              => $DE_top25only,
-        detected_in_both_group => $DE_detected_in_both_group,
-        use_raw_p_value        => $DE_use_raw_pvalue,
-        pbs                    => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      },
-      "deseq2_top${top_read_number}_contigs" => {
-        class                  => "Comparison::DESeq2",
-        perform                => 1,
-        target_dir             => $class_independent_dir . "/deseq2_top${top_read_number}_contigs",
-        option                 => "",
-        source_ref             => "pairs",
-        groups_ref             => "groups",
-        countfile_ref          => [ "identical_sequence_count_table", ".count\$" ],
-        sh_direct              => 1,
-        show_DE_gene_cluster   => $DE_show_gene_cluster,
-        pvalue                 => $DE_pvalue,
-        fold_change            => $DE_fold_change,
-        min_median_read        => $DE_min_median_read_top,
-        add_count_one          => $DE_add_count_one,
-        top25only              => $DE_top25only,
-        detected_in_both_group => $DE_detected_in_both_group,
-        use_raw_p_value        => $DE_use_raw_pvalue,
-        pbs                    => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      },
-      "deseq2_top${top_read_number}_minicontigs" => {
-        class                  => "Comparison::DESeq2",
-        perform                => 1,
-        target_dir             => $class_independent_dir . "/deseq2_top${top_read_number}_minicontigs",
-        option                 => "",
-        source_ref             => "pairs",
-        groups_ref             => "groups",
-        countfile_ref          => [ "identical_sequence_count_table", "minicontig.count\$" ],
-        sh_direct              => 1,
-        show_DE_gene_cluster   => $DE_show_gene_cluster,
-        pvalue                 => $DE_pvalue,
-        fold_change            => $DE_fold_change,
-        min_median_read        => $DE_min_median_read_top,
-        add_count_one          => $DE_add_count_one,
-        top25only              => $DE_top25only,
-        detected_in_both_group => $DE_detected_in_both_group,
-        use_raw_p_value        => $DE_use_raw_pvalue,
-        pbs                    => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      },
-      "deseq2_top${top_read_number}_reads_vis" => {
-        class                    => "CQS::UniqueR",
-        perform                  => 1,
-        target_dir               => $data_visualization_dir . "/deseq2_top${top_read_number}_reads_vis",
-        rtemplate                => "DESeq2_all_vis.R",
-        output_file              => ".Top${top_read_number}Reads.DESeq2.Matrix",
-        output_file_ext          => ".png",
-        parameterSampleFile1_ref => [ "deseq2_top${top_read_number}_reads", "_DESeq2.csv\$" ],
-        parameterSampleFile2     => $def->{pairs_top_deseq2_vis_layout},
-        rCode                    => 'useRawPvalue=' . $DE_use_raw_pvalue . ";",
-        sh_direct                => 1,
-        pbs                      => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      },
-      "deseq2_top${top_read_number}_contigs_vis" => {
-        class                    => "CQS::UniqueR",
-        perform                  => 1,
-        target_dir               => $data_visualization_dir . "/deseq2_top${top_read_number}_contigs_vis",
-        rtemplate                => "DESeq2_all_vis.R",
-        output_file              => ".Top${top_read_number}Contigs.DESeq2.Matrix",
-        output_file_ext          => ".png",
-        parameterSampleFile1_ref => [ "deseq2_top${top_read_number}_contigs", "_DESeq2.csv\$" ],
-        parameterSampleFile2     => $def->{pairs_top_deseq2_vis_layout},
-        rCode                    => 'useRawPvalue=' . $DE_use_raw_pvalue . ";",
-        sh_direct                => 1,
-        pbs                      => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      },
-      "deseq2_top${top_read_number}_minicontigs_vis" => {
-        class                    => "CQS::UniqueR",
-        perform                  => 1,
-        target_dir               => $data_visualization_dir . "/deseq2_top${top_read_number}_minicontigs_vis",
-        rtemplate                => "DESeq2_all_vis.R",
-        output_file              => ".Top${top_read_number}Contigs.DESeq2.Matrix",
-        output_file_ext          => ".png",
-        parameterSampleFile1_ref => [ "deseq2_top${top_read_number}_minicontigs", "_DESeq2.csv\$" ],
-        parameterSampleFile2     => $def->{pairs_top_deseq2_vis_layout},
-        rCode                    => 'useRawPvalue=' . $DE_use_raw_pvalue . ";",
-        sh_direct                => 1,
-        pbs                      => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      },
-    };
-
-    push @summary,
-      (
-      "deseq2_top${top_read_number}_reads",       "deseq2_top${top_read_number}_contigs", "deseq2_top${top_read_number}_minicontigs", "deseq2_top${top_read_number}_reads_vis",
-      "deseq2_top${top_read_number}_contigs_vis", "deseq2_top${top_read_number}_minicontigs_vis"
+    if ( isVersion3($def) ) {
+      addComparison( $config, $def, $summary_ref, "top${top_read_number}_reads", [ "identical_sequence_count_table", ".read.count\$" ],
+        "pairs_top_deseq2_vis_layout", $class_independent_dir, $data_visualization_dir );
+      addComparison(
+        $config, $def, $summary_ref,
+        "top${top_read_number}_contigs",
+        [ "identical_sequence_count_table", ".count\$" ],
+        "pairs_top_deseq2_vis_layout", $class_independent_dir, $data_visualization_dir
       );
+      addComparison(
+        $config, $def, $summary_ref,
+        "top${top_read_number}_minicontigs",
+        [ "identical_sequence_count_table", "minicontig.count\$" ],
+        "pairs_top_deseq2_vis_layout", $class_independent_dir, $data_visualization_dir
+      );
+    }
+    else {
+      my $class_independent = {
+        "deseq2_top${top_read_number}_reads" => {
+          class                  => "Comparison::DESeq2",
+          perform                => 1,
+          target_dir             => $class_independent_dir . "/deseq2_top${top_read_number}_reads",
+          option                 => "",
+          source_ref             => "pairs",
+          groups_ref             => "groups",
+          countfile_ref          => [ "identical_sequence_count_table", ".read.count\$" ],
+          sh_direct              => 1,
+          show_DE_gene_cluster   => $DE_show_gene_cluster,
+          pvalue                 => $DE_pvalue,
+          fold_change            => $DE_fold_change,
+          min_median_read        => $DE_min_median_read_top,
+          add_count_one          => $DE_add_count_one,
+          top25only              => $DE_top25only,
+          detected_in_both_group => $DE_detected_in_both_group,
+          use_raw_p_value        => $DE_use_raw_pvalue,
+          pbs                    => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        },
+        "deseq2_top${top_read_number}_contigs" => {
+          class                  => "Comparison::DESeq2",
+          perform                => 1,
+          target_dir             => $class_independent_dir . "/deseq2_top${top_read_number}_contigs",
+          option                 => "",
+          source_ref             => "pairs",
+          groups_ref             => "groups",
+          countfile_ref          => [ "identical_sequence_count_table", ".count\$" ],
+          sh_direct              => 1,
+          show_DE_gene_cluster   => $DE_show_gene_cluster,
+          pvalue                 => $DE_pvalue,
+          fold_change            => $DE_fold_change,
+          min_median_read        => $DE_min_median_read_top,
+          add_count_one          => $DE_add_count_one,
+          top25only              => $DE_top25only,
+          detected_in_both_group => $DE_detected_in_both_group,
+          use_raw_p_value        => $DE_use_raw_pvalue,
+          pbs                    => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        },
+        "deseq2_top${top_read_number}_minicontigs" => {
+          class                  => "Comparison::DESeq2",
+          perform                => 1,
+          target_dir             => $class_independent_dir . "/deseq2_top${top_read_number}_minicontigs",
+          option                 => "",
+          source_ref             => "pairs",
+          groups_ref             => "groups",
+          countfile_ref          => [ "identical_sequence_count_table", "minicontig.count\$" ],
+          sh_direct              => 1,
+          show_DE_gene_cluster   => $DE_show_gene_cluster,
+          pvalue                 => $DE_pvalue,
+          fold_change            => $DE_fold_change,
+          min_median_read        => $DE_min_median_read_top,
+          add_count_one          => $DE_add_count_one,
+          top25only              => $DE_top25only,
+          detected_in_both_group => $DE_detected_in_both_group,
+          use_raw_p_value        => $DE_use_raw_pvalue,
+          pbs                    => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        },
+        "deseq2_top${top_read_number}_reads_vis" => {
+          class                    => "CQS::UniqueR",
+          perform                  => 1,
+          target_dir               => $data_visualization_dir . "/deseq2_top${top_read_number}_reads_vis",
+          rtemplate                => "DESeq2_all_vis.R",
+          output_file              => ".Top${top_read_number}Reads.DESeq2.Matrix",
+          output_file_ext          => ".png",
+          parameterSampleFile1_ref => [ "deseq2_top${top_read_number}_reads", "_DESeq2.csv\$" ],
+          parameterSampleFile2     => $def->{pairs_top_deseq2_vis_layout},
+          rCode                    => 'useRawPvalue=' . $DE_use_raw_pvalue . ";",
+          sh_direct                => 1,
+          pbs                      => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        },
+        "deseq2_top${top_read_number}_contigs_vis" => {
+          class                    => "CQS::UniqueR",
+          perform                  => 1,
+          target_dir               => $data_visualization_dir . "/deseq2_top${top_read_number}_contigs_vis",
+          rtemplate                => "DESeq2_all_vis.R",
+          output_file              => ".Top${top_read_number}Contigs.DESeq2.Matrix",
+          output_file_ext          => ".png",
+          parameterSampleFile1_ref => [ "deseq2_top${top_read_number}_contigs", "_DESeq2.csv\$" ],
+          parameterSampleFile2     => $def->{pairs_top_deseq2_vis_layout},
+          rCode                    => 'useRawPvalue=' . $DE_use_raw_pvalue . ";",
+          sh_direct                => 1,
+          pbs                      => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        },
+        "deseq2_top${top_read_number}_minicontigs_vis" => {
+          class                    => "CQS::UniqueR",
+          perform                  => 1,
+          target_dir               => $data_visualization_dir . "/deseq2_top${top_read_number}_minicontigs_vis",
+          rtemplate                => "DESeq2_all_vis.R",
+          output_file              => ".Top${top_read_number}Contigs.DESeq2.Matrix",
+          output_file_ext          => ".png",
+          parameterSampleFile1_ref => [ "deseq2_top${top_read_number}_minicontigs", "_DESeq2.csv\$" ],
+          parameterSampleFile2     => $def->{pairs_top_deseq2_vis_layout},
+          rCode                    => 'useRawPvalue=' . $DE_use_raw_pvalue . ";",
+          sh_direct                => 1,
+          pbs                      => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        },
+      };
 
-    $config = merge( $config, $class_independent );
+      push @summary,
+        (
+        "deseq2_top${top_read_number}_reads",       "deseq2_top${top_read_number}_contigs", "deseq2_top${top_read_number}_minicontigs", "deseq2_top${top_read_number}_reads_vis",
+        "deseq2_top${top_read_number}_contigs_vis", "deseq2_top${top_read_number}_minicontigs_vis"
+        );
+      $config = merge( $config, $class_independent );
+    }
   }
 
   my $identical_ref = [ "identical", ".fastq.gz\$" ];
@@ -573,7 +652,6 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
-          perform_wilcox         => $DE_perform_wilcox,
           use_raw_p_value        => $DE_use_raw_pvalue,
           pbs                    => {
             "email"     => $def->{email},
@@ -624,7 +702,6 @@ sub getSmallRNAConfig {
           add_count_one          => $DE_add_count_one,
           top25only              => $DE_top25only,
           detected_in_both_group => $DE_detected_in_both_group,
-          perform_wilcox         => $DE_perform_wilcox,
           use_raw_p_value        => $DE_use_raw_pvalue,
           pbs                    => {
             "email"     => $def->{email},
