@@ -114,64 +114,63 @@ sub addNonhostDatabase {
   my $bowtie1CountTask = "bowtie1_" . $taskKey . "_count";
   my $bowtie1TableTask = "bowtie1_" . $taskKey . "_table";
 
-  my $nonhost = {
-    $bowtie1Task => {
-      class         => "Alignment::Bowtie1",
-      perform       => 1,
-      target_dir    => $parentDir . "/" . $bowtie1Task,
-      option        => $def->{bowtie1_option_pm},
-      source_ref    => $sourceRef,
-      bowtie1_index => $bowtieIndex,
-      samonly       => 0,
-      sh_direct     => 1,
-      mappedonly    => 1,
-      cluster       => $def->{cluster},
-      pbs           => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=" . $def->{max_thread},
-        "walltime"  => "72",
-        "mem"       => "40gb"
-      },
+  $config->{$bowtie1Task} = {
+    class         => "Alignment::Bowtie1",
+    perform       => 1,
+    target_dir    => $parentDir . "/" . $bowtie1Task,
+    option        => $def->{bowtie1_option_pm},
+    source_ref    => $sourceRef,
+    bowtie1_index => $bowtieIndex,
+    samonly       => 0,
+    sh_direct     => 1,
+    mappedonly    => 1,
+    cluster       => $def->{cluster},
+    pbs           => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=" . $def->{max_thread},
+      "walltime"  => "72",
+      "mem"       => "40gb"
     },
-    $bowtie1CountTask => {
-      class        => "CQS::CQSChromosomeCount",
-      perform      => 1,
-      target_dir   => $parentDir . "/" . $bowtie1CountTask,
-      option       => $countOption,
-      source_ref   => $bowtie1Task,
-      seqcount_ref => [ "identical", ".dupcount\$" ],
-      cqs_tools    => $def->{cqstools},
-      sh_direct    => 1,
-      cluster      => $def->{cluster},
-      pbs          => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "72",
-        "mem"       => "40gb"
-      },
-    },
-    $bowtie1TableTask => {
-      class      => "CQS::CQSChromosomeTable",
-      perform    => 1,
-      target_dir => $parentDir . "/" . $bowtie1TableTask,
-      option     => $def->{non_host_table_option},
-      source_ref => [ $bowtie1CountTask, ".xml" ],
-      cqs_tools  => $def->{cqstools},
-      prefix     => $taskKey . "_",
-      sh_direct  => 1,
-      cluster    => $def->{cluster},
-      pbs        => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "10",
-        "mem"       => "10gb"
-      },
-    }
   };
-  $config = merge( $config, $nonhost );
+
+  $config->{$bowtie1CountTask} = {
+    class        => "CQS::CQSChromosomeCount",
+    perform      => 1,
+    target_dir   => $parentDir . "/" . $bowtie1CountTask,
+    option       => $countOption,
+    source_ref   => $bowtie1Task,
+    seqcount_ref => [ "identical", ".dupcount\$" ],
+    cqs_tools    => $def->{cqstools},
+    sh_direct    => 1,
+    cluster      => $def->{cluster},
+    pbs          => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "72",
+      "mem"       => "40gb"
+    },
+  };
+  
+  $config->{$bowtie1TableTask} = {
+    class      => "CQS::CQSChromosomeTable",
+    perform    => 1,
+    target_dir => $parentDir . "/" . $bowtie1TableTask,
+    option     => $def->{non_host_table_option},
+    source_ref => [ $bowtie1CountTask, ".xml" ],
+    cqs_tools  => $def->{cqstools},
+    prefix     => $taskKey . "_",
+    sh_direct  => 1,
+    cluster    => $def->{cluster},
+    pbs        => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    },
+  };
   push @$individual, ( $bowtie1Task, $bowtie1TableTask );
   push @$summary, $bowtie1TableTask;
 }
