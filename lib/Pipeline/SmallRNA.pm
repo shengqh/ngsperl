@@ -197,14 +197,10 @@ sub getSmallRNAConfig {
   my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
   my $task_name = $def->{task_name};
 
-  my $search_not_identical =
-    ( !defined $def->{search_not_identical} ) || $def->{search_not_identical};
-  my $search_host_genome =
-    ( !defined $def->{search_host_genome} ) || $def->{search_host_genome};
-  my $search_miRBase =
-    ( !defined $def->{search_miRBase} ) || $def->{search_miRBase};
-  my $search_unmapped_reads =
-    ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
+  my $search_not_identical  = ( !defined $def->{search_not_identical} )  || $def->{search_not_identical};
+  my $search_host_genome    = ( !defined $def->{search_host_genome} )    || $def->{search_host_genome};
+  my $search_miRBase        = ( !defined $def->{search_miRBase} )        || $def->{search_miRBase};
+  my $search_unmapped_reads = ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
   my $blast_unmapped_reads = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
 
   my $host_genome_dir;
@@ -238,12 +234,11 @@ sub getSmallRNAConfig {
 
   #print Dumper($config);
 
-  my $do_comparison              = defined $def->{pairs};
-  my $groups                     = $def->{groups};
-  my $groups_vis_layout          = $def->{groups_vis_layout};
-  my $groups_smallRNA_vis_layout = $groups_vis_layout;
-  if ( defined $def->{groups_smallRNA_vis_layout} ) {
-    $groups_smallRNA_vis_layout = $def->{groups_smallRNA_vis_layout};
+  my $do_comparison     = defined $def->{pairs};
+  my $groups            = $def->{groups};
+  my $groups_vis_layout = $def->{groups_vis_layout};
+  if ( !defined $def->{groups_smallRNA_vis_layout} ) {
+    $def->{groups_smallRNA_vis_layout} = $def->{groups_vis_layout};
   }
 
   my $DE_show_gene_cluster        = getValue( $def, "DE_show_gene_cluster" );
@@ -255,15 +250,13 @@ sub getSmallRNAConfig {
   my $DE_top25only                = getValue( $def, "DE_top25only" );
   my $DE_detected_in_both_group   = getValue( $def, "DE_show_gene_cluster" );
   my $DE_use_raw_pvalue           = getValue( $def, "DE_use_raw_pvalue" );
-  my $max_sequence_extension_base = $def->{max_sequence_extension_base}
-    or die "Define max_sequence_extension_base first!";
-  my $blast_localdb = $def->{blast_localdb}
-    or die "Define blast_localdb first!";
+  my $blast_localdb = $def->{blast_localdb} or die "Define blast_localdb first!";
 
-  my $non_host_table_option   = "--maxExtensionBase $max_sequence_extension_base --outputReadTable";
+  my $max_sequence_extension_base = getValue( $def, "max_sequence_extension_base" );
+  $def->{non_host_table_option} = $def->{non_host_table_option} . " --maxExtensionBase " . $def->{max_sequence_extension_base};
   my $perform_contig_analysis = $def->{perform_contig_analysis};
   if ($perform_contig_analysis) {
-    $non_host_table_option = $non_host_table_option . " --outputReadContigTable";
+    $def->{non_host_table_option} = $def->{non_host_table_option} . " --outputReadContigTable";
   }
 
   my $deseq2Task;
@@ -505,7 +498,7 @@ sub getSmallRNAConfig {
         parameterSampleFile1_ref  => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info" ],
         parameterSampleFile2      => $groups,
         parameterSampleFile2Order => $def->{groups_order},
-        parameterSampleFile3      => $groups_smallRNA_vis_layout,
+        parameterSampleFile3      => $def->{groups_smallRNA_vis_layout},
         rCode                     => 'textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
         sh_direct                 => 1,
         pbs                       => {
@@ -1274,7 +1267,7 @@ sub getSmallRNAConfig {
           target_dir => $nonhost_library_dir . "/bowtie1_HostGenomeReads_NonHost_pm_table",
           source_ref => [ 'bowtie1_HostGenomeReads_NonHost_pm_count', '.xml' ],
           cqs_tools  => $def->{cqstools},
-          option     => $non_host_table_option,
+          option     => $def->{non_host_table_option},
           prefix     => 'nonHost_pm_',
           pbs        => {
             'email'     => $def->{email},
@@ -1355,7 +1348,7 @@ sub getSmallRNAConfig {
           target_dir => $nonhost_library_dir . "/bowtie1_tRNA_pm_table",
           source_ref => [ 'bowtie1_tRNA_pm_count', '.xml' ],
           cqs_tools  => $def->{cqstools},
-          option     => $non_host_table_option . ' --categoryMapFile ' . $def->{trna_category_map},
+          option     => $def->{non_host_table_option} . ' --categoryMapFile ' . $def->{trna_category_map},
           prefix     => 'tRNA_pm_',
           pbs        => {
             'email'     => $def->{email},
@@ -1435,7 +1428,7 @@ sub getSmallRNAConfig {
           target_dir => $nonhost_library_dir . "/bowtie1_rRNA_pm_table",
           source_ref => [ 'bowtie1_rRNA_pm_count', '.xml' ],
           cqs_tools  => $def->{cqstools},
-          option     => $non_host_table_option,
+          option     => $def->{non_host_table_option},
           prefix     => 'rRNA_pm_',
           pbs        => {
             'email'     => $def->{email},
@@ -1516,7 +1509,7 @@ sub getSmallRNAConfig {
           target_dir => $nonhost_genome_dir . "/bowtie1_bacteria_group1_pm_table",
           source_ref => [ 'bowtie1_bacteria_group1_pm_count', '.xml' ],
           cqs_tools  => $def->{cqstools},
-          option     => $non_host_table_option . ' --categoryMapFile ' . $def->{bacteria_group1_species_map},
+          option     => $def->{non_host_table_option} . ' --categoryMapFile ' . $def->{bacteria_group1_species_map},
           prefix     => 'bacteria_group1_pm_',
           pbs        => {
             'email'     => $def->{email},
@@ -1599,7 +1592,7 @@ sub getSmallRNAConfig {
           target_dir => $nonhost_genome_dir . "/bowtie1_bacteria_group2_pm_table",
           source_ref => [ 'bowtie1_bacteria_group2_pm_count', '.xml' ],
           cqs_tools  => $def->{cqstools},
-          option     => $non_host_table_option . ' --categoryMapFile ' . $def->{bacteria_group2_species_map},
+          option     => $def->{non_host_table_option} . ' --categoryMapFile ' . $def->{bacteria_group2_species_map},
           prefix     => 'bacteria_group2_pm_',
           pbs        => {
             'email'     => $def->{email},
@@ -1683,7 +1676,7 @@ sub getSmallRNAConfig {
           target_dir => $nonhost_genome_dir . "/bowtie1_fungus_group4_pm_table",
           source_ref => [ 'bowtie1_fungus_group4_pm_count', '.xml' ],
           cqs_tools  => $def->{cqstools},
-          option     => $non_host_table_option . ' --categoryMapFile ' . $def->{fungus_group4_species_map},
+          option     => $def->{non_host_table_option} . ' --categoryMapFile ' . $def->{fungus_group4_species_map},
           prefix     => 'fungus_group4_pm_',
           pbs        => {
             'email'     => $def->{email},

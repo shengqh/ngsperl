@@ -19,7 +19,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups
-      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key save_parameter_sample_file saveConfig writeFileList)
+      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key save_parameter_sample_file saveConfig writeFileList initDefaultValue)
   ]
 );
 
@@ -665,6 +665,14 @@ sub writeFileList {
     }
   }
   close($fl);
+}
+
+sub initDefaultValue {
+  my ( $def, $optionName, $deafultValue ) = @_;
+  if ( !defined $def->{$optionName} ) {
+    $def->{$optionName} = $deafultValue;
+  }
+  return $def;
 }
 
 1;
