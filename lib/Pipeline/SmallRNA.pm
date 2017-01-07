@@ -171,6 +171,7 @@ sub addNonhostDatabase {
       },
     }
   };
+  $config = merge( $config, $nonhost );
   push @$individual, ( $bowtie1Task, $bowtie1TableTask );
   push @$summary, $bowtie1TableTask;
 }
