@@ -30,6 +30,151 @@ sub getValue {
   }
 }
 
+sub addBowtie {
+  my ( $config, $def, $summary, $taskKey, $sourceRef, $parentDir, $bowtieOption, $bowtieIndex ) = @_;
+
+  my $taskName = "bowtie1_" . $taskKey;
+  $config->{$taskName} = {
+    class         => "Alignment::Bowtie1",
+    perform       => 1,
+    target_dir    => $parentDir . "/" . $taskName,
+    option        => $bowtieOption,
+    source_ref    => $sourceRef,
+    bowtie1_index => $bowtieIndex,
+    samonly       => 0,
+    sh_direct     => 1,
+    mappedonly    => 1,
+    cluster       => $def->{cluster},
+    pbs           => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=" . $def->{max_thread},
+      "walltime"  => "72",
+      "mem"       => "40gb"
+    },
+  };
+  push @$summary, $taskName;
+  return $taskName;
+}
+
+sub addBowtieCount {
+  my ( $config, $def, $summary, $taskName, $countClassName, $parentDir, $countOption, $optionHash ) = @_;
+
+  $config->{$taskName} = merge(
+    {
+      class      => $countClassName,
+      perform    => 1,
+      target_dir => $parentDir . "/" . $taskName,
+      option     => $countOption,
+      cqs_tools  => $def->{cqstools},
+      sh_direct  => 1,
+      cluster    => $def->{cluster},
+      pbs        => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "72",
+        "mem"       => "40gb"
+      },
+    },
+    $optionHash
+  );
+  push @$summary, $taskName;
+  return $taskName;
+}
+
+sub addBowtieTable {
+  my ( $config, $def, $summary, $taskName, $parentDir, $optionHash ) = @_;
+
+  $config->{$taskName} = merge(
+    {
+      perform    => 1,
+      target_dir => $parentDir . "/" . $taskName,
+      cqs_tools  => $def->{cqstools},
+      sh_direct  => 1,
+      cluster    => $def->{cluster},
+      pbs        => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    },
+    $optionHash
+  );
+  push @$summary, $taskName;
+  return $taskName;
+}
+
+sub addNonhostDatabase {
+  my ( $config, $def, $individual, $summary, $taskKey, $parentDir, $bowtieIndex, $sourceRef, $countOption ) = @_;
+
+  my $bowtie1Task      = "bowtie1_" . $taskKey;
+  my $bowtie1CountTask = "bowtie1_" . $taskKey . "_count";
+  my $bowtie1TableTask = "bowtie1_" . $taskKey . "_table";
+
+  my $nonhost = {
+    $bowtie1Task => {
+      class         => "Alignment::Bowtie1",
+      perform       => 1,
+      target_dir    => $parentDir . "/" . $bowtie1Task,
+      option        => $def->{bowtie1_option_pm},
+      source_ref    => $sourceRef,
+      bowtie1_index => $bowtieIndex,
+      samonly       => 0,
+      sh_direct     => 1,
+      mappedonly    => 1,
+      cluster       => $def->{cluster},
+      pbs           => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=" . $def->{max_thread},
+        "walltime"  => "72",
+        "mem"       => "40gb"
+      },
+    },
+    $bowtie1CountTask => {
+      class        => "CQS::CQSChromosomeCount",
+      perform      => 1,
+      target_dir   => $parentDir . "/" . $bowtie1CountTask,
+      option       => $countOption,
+      source_ref   => $bowtie1Task,
+      seqcount_ref => [ "identical", ".dupcount\$" ],
+      cqs_tools    => $def->{cqstools},
+      sh_direct    => 1,
+      cluster      => $def->{cluster},
+      pbs          => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "72",
+        "mem"       => "40gb"
+      },
+    },
+    $bowtie1TableTask => {
+      class      => "CQS::CQSChromosomeTable",
+      perform    => 1,
+      target_dir => $parentDir . "/" . $bowtie1TableTask,
+      option     => $def->{non_host_table_option},
+      source_ref => [ $bowtie1CountTask, ".xml" ],
+      cqs_tools  => $def->{cqstools},
+      prefix     => $taskKey . "_",
+      sh_direct  => 1,
+      cluster    => $def->{cluster},
+      pbs        => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    }
+  };
+  push @$individual, ( $bowtie1Task, $bowtie1TableTask );
+  push @$summary, $bowtie1TableTask;
+}
+
 sub addDEseq2 {
   my ( $config, $def, $summary, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read ) = @_;
 
@@ -52,6 +197,7 @@ sub addDEseq2 {
     top25only              => $def->{DE_top25only},
     detected_in_both_group => $def->{DE_detected_in_both_group},
     use_raw_p_value        => $def->{DE_use_raw_pvalue},
+    cluster                => $def->{cluster},
     pbs                    => {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
@@ -80,6 +226,7 @@ sub addDeseq2Visualization {
     parameterSampleFile2     => $def->{$layoutName},
     rCode                    => 'useRawPvalue=' . $def->{DE_use_raw_pvalue} . ";",
     sh_direct                => 1,
+    cluster                  => $def->{cluster},
     pbs                      => {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
@@ -169,6 +316,9 @@ sub getSmallRNAConfig {
   }
 
   my $deseq2Task;
+  my $bowtie1Task;
+  my $bowtie1CountTask;
+  my $bowtie1TableTask;
 
   my $top_read_number = $def->{top_read_number};
   if ($do_comparison) {
@@ -480,21 +630,20 @@ sub getSmallRNAConfig {
     }
 
     $config = merge( $config, $host_genome );
-
     if ($do_comparison) {
       if ( isVersion3($def) ) {
         my @visual_source = ();
 
-        #print "DEBUG:", @$summary_ref, "\n";
         #miRNA
         $deseq2Task = addDEseq2( $config, $def, \@$summary_ref, "miRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
-        #print "DEBUG:", @$summary_ref, "\n";
-
         push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
         addDEseq2( $config, $def, $summary_ref, "miRNA_NTA",        [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.NTA.count\$" ],        $host_genome_dir, $DE_min_median_read_smallRNA );
         addDEseq2( $config, $def, $summary_ref, "miRNA_NTA_base",   [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.NTA.base.count\$" ],   $host_genome_dir, $DE_min_median_read_smallRNA );
         addDEseq2( $config, $def, $summary_ref, "miRNA_isomiR",     [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR.count\$" ],     $host_genome_dir, $DE_min_median_read_smallRNA );
         addDEseq2( $config, $def, $summary_ref, "miRNA_isomiR_NTA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR_NTA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
+        addDeseq2Visualization( $config, $def, $summary_ref, "host_genome_miRNA",
+          [ "deseq2_miRNA_isomiR", "_DESeq2.csv\$", "deseq2_miRNA_NTA", "_DESeq2.csv\$", "deseq2_miRNA_isomiR_NTA", "_DESeq2.csv\$" ],
+          $data_visualization_dir, "pairs_host_miRNA_deseq2_vis_layout" );
 
         #tRNA
         $deseq2Task = addDEseq2( $config, $def, $summary_ref, "tRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
@@ -503,14 +652,14 @@ sub getSmallRNAConfig {
         addDEseq2( $config, $def, $summary_ref, "tRNA_aminoacid", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
 
         if ( $def->{host_smallrnacounttable_option} =~ /yRNAsnRNAsnoRNA/ ) {
+          if ( $def->{hasYRNA} ) {
 
-          if($def->{hasYRNA}){
             #yRNA
             $deseq2Task = addDEseq2( $config, $def, $summary_ref, "yRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
             push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
             addDEseq2( $config, $def, $summary_ref, "yRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.read.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
           }
-          
+
           #snRNA
           $deseq2Task = addDEseq2( $config, $def, $summary_ref, "snRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
           push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
@@ -527,9 +676,8 @@ sub getSmallRNAConfig {
         push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
         addDEseq2( $config, $def, $summary_ref, "otherSmallRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
 
-        #visualization
+        #host genome smallRNA visualization
         addDeseq2Visualization( $config, $def, $summary_ref, "host_genome", \@visual_source, $data_visualization_dir, "pairs_host_deseq2_vis_layout" );
-        addDeseq2Visualization( $config, $def, $summary_ref, "host_genome_miRNA", [ "deseq2_miRNA_isomiR", "_DESeq2.csv\$", "deseq2_miRNA_NTA", "_DESeq2.csv\$", "deseq2_miRNA_isomiR_NTA", "_DESeq2.csv\$" ], $data_visualization_dir, "pairs_host_miRNA_deseq2_vis_layout" );
       }
       else {
 
@@ -915,72 +1063,78 @@ sub getSmallRNAConfig {
   my @pmnames = ();
 
   if ($search_miRBase) {
-    my $mirbase = {
-      bowtie1_miRBase_pm => {
-        class         => "Alignment::Bowtie1",
-        perform       => 1,
-        target_dir    => $nonhost_library_dir . "/bowtie1_miRBase_pm",
-        option        => $def->{bowtie1_option_pm},
-        source_ref    => $identical_ref,
-        bowtie1_index => $def->{bowtie1_miRBase_index},
-        samonly       => 0,
-        sh_direct     => 1,
-        mappedonly    => 1,
-        cluster       => $cluster,
-        pbs           => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=" . $def->{max_thread},
-          "walltime"  => "72",
-          "mem"       => "40gb"
+    if ( isVersion3($def) ) {
+      addNonhostDatabase( $config, $def, $individual_ref, $summary_ref, "miRBase_pm", $nonhost_library_dir, $def->{bowtie1_miRBase_index},
+        $identical_ref, $def->{mirbase_count_option} . " -m --keepChrInName --keepSequence" );
+    }
+    else {
+      my $mirbase = {
+        bowtie1_miRBase_pm => {
+          class         => "Alignment::Bowtie1",
+          perform       => 1,
+          target_dir    => $nonhost_library_dir . "/bowtie1_miRBase_pm",
+          option        => $def->{bowtie1_option_pm},
+          source_ref    => $identical_ref,
+          bowtie1_index => $def->{bowtie1_miRBase_index},
+          samonly       => 0,
+          sh_direct     => 1,
+          mappedonly    => 1,
+          cluster       => $cluster,
+          pbs           => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=" . $def->{max_thread},
+            "walltime"  => "72",
+            "mem"       => "40gb"
+          },
         },
-      },
-      bowtie1_miRBase_pm_count => {
-        class        => "CQS::CQSChromosomeCount",
-        perform      => 1,
-        target_dir   => $nonhost_library_dir . "/bowtie1_miRBase_pm_count",
-        option       => $def->{mirbase_count_option} . " -m --keepChrInName --keepSequence",
-        source_ref   => "bowtie1_miRBase_pm",
-        seqcount_ref => [ "identical", ".dupcount\$" ],
-        cqs_tools    => $def->{cqstools},
-        sh_direct    => 1,
-        cluster      => $cluster,
-        pbs          => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "72",
-          "mem"       => "40gb"
+        bowtie1_miRBase_pm_count => {
+          class        => "CQS::CQSChromosomeCount",
+          perform      => 1,
+          target_dir   => $nonhost_library_dir . "/bowtie1_miRBase_pm_count",
+          option       => $def->{mirbase_count_option} . " -m --keepChrInName --keepSequence",
+          source_ref   => "bowtie1_miRBase_pm",
+          seqcount_ref => [ "identical", ".dupcount\$" ],
+          cqs_tools    => $def->{cqstools},
+          sh_direct    => 1,
+          cluster      => $cluster,
+          pbs          => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "72",
+            "mem"       => "40gb"
+          },
         },
-      },
-      bowtie1_miRBase_pm_table => {
-        class      => "CQS::CQSChromosomeTable",
-        perform    => 1,
-        target_dir => $nonhost_library_dir . "/bowtie1_miRBase_pm_table",
-        option     => $non_host_table_option,
-        source_ref => [ "bowtie1_miRBase_pm_count", ".xml" ],
-        cqs_tools  => $def->{cqstools},
-        prefix     => "miRBase_pm_",
-        sh_direct  => 1,
-        cluster    => $cluster,
-        pbs        => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      }
-    };
+        bowtie1_miRBase_pm_table => {
+          class      => "CQS::CQSChromosomeTable",
+          perform    => 1,
+          target_dir => $nonhost_library_dir . "/bowtie1_miRBase_pm_table",
+          option     => $non_host_table_option,
+          source_ref => [ "bowtie1_miRBase_pm_count", ".xml" ],
+          cqs_tools  => $def->{cqstools},
+          prefix     => "miRBase_pm_",
+          sh_direct  => 1,
+          cluster    => $cluster,
+          pbs        => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        }
+      };
 
-    $config = merge( $config, $mirbase );
+      $config = merge( $config, $mirbase );
 
-    #		push @table_for_correlation, ( "bowtie1_miRBase_pm_table", ".count\$" );
+      #		push @table_for_correlation, ( "bowtie1_miRBase_pm_table", ".count\$" );
+      push @$individual_ref, ( "bowtie1_miRBase_pm", "bowtie1_miRBase_pm_count" );
+      push @$summary_ref, ("bowtie1_miRBase_pm_table");
+    }
+
     push @table_for_countSum, ( "bowtie1_miRBase_pm_table", "^(?!.*?read).*\.count\$" );
-    push @$individual_ref,         ( "bowtie1_miRBase_pm",       "bowtie1_miRBase_pm_count" );
-    push @$summary_ref,            ("bowtie1_miRBase_pm_table");
-
-    push @mapped, ( "bowtie1_miRBase_pm_count", ".xml" );
+    push @mapped,             ( "bowtie1_miRBase_pm_count", ".xml" );
   }
 
   if ($search_unmapped_reads) {
@@ -1973,7 +2127,7 @@ sub getSmallRNAConfig {
 
     $identical_ref = [ "final_unmapped_reads", ".fastq.gz\$" ];
     $config = merge( $config, $unmapped_reads );
-    push @$individual_ref,           ("final_unmapped_reads");
+    push @$individual_ref,      ("final_unmapped_reads");
     push @table_for_pieSummary, ( "final_unmapped_reads", ".dupcount" );
     push @name_for_pieSummary,  ("UnMapped");
   }
