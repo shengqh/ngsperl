@@ -1010,7 +1010,8 @@ sub getSmallRNAConfig {
     addNonhostDatabase(
       $config, $def, $individual_ref, $summary_ref, "miRBase_pm", $nonhost_library_dir,    #general option
       $def->{bowtie1_miRBase_index}, $identical_ref,                                       #bowtie option
-      $def->{mirbase_count_option} . " -m --keepChrInName --keepSequence"                  #count option
+      $def->{mirbase_count_option} . " -m --keepChrInName --keepSequence",                 #count option
+      $def->{non_host_table_option}                                                        #table option
     );
 
     push @table_for_countSum, ( "bowtie1_miRBase_pm_table", "^(?!.*?read).*\.count\$" );
@@ -1181,7 +1182,7 @@ sub getSmallRNAConfig {
 
       if ($do_comparison) {
 
-        addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA",           [ "bowtie1_tRNA_pm_table",    ".count\$" ],     $nonhost_library_dir, $DE_min_median_read_smallRNA );
+        addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA",           [ "bowtie1_tRNA_pm_table",    ".count\$" ],          $nonhost_library_dir, $DE_min_median_read_smallRNA );
         addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_reads",     [ "bowtie1_tRNA_pm_table",    ".read.count\$" ],     $nonhost_library_dir, $DE_min_median_read_smallRNA );
         addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_category",  [ "bowtie1_tRNA_pm_table",    ".category.count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA );
         addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_species",   [ "nonhost_library_tRNA_vis", ".Species12.csv\$" ],  $nonhost_library_dir, $DE_min_median_read_smallRNA );
