@@ -179,14 +179,14 @@ sub getSmallRNAConfig {
   if ($do_comparison) {
     if ( isVersion3($def) ) {
       $deseq2Task = addDEseq2( $config, $def, $summary_ref, "top${top_read_number}_reads", [ "identical_sequence_count_table", ".read.count\$" ], $class_independent_dir, $DE_min_median_read_top );
-      addDeseq2Visualization( $config, $def, $summary_ref, "top${top_read_number}_reads", [ $deseq2Task, "_DESeq2.csv\$" ], "pairs_top_deseq2_vis_layout", $data_visualization_dir );
+      addDeseq2Visualization( $config, $def, $summary_ref, "top${top_read_number}_reads", [ $deseq2Task, "_DESeq2.csv\$" ], $data_visualization_dir, "pairs_top_deseq2_vis_layout" );
 
       $deseq2Task = addDEseq2( $config, $def, $summary_ref, "top${top_read_number}_contigs", [ "identical_sequence_count_table", ".count\$" ], $class_independent_dir, $DE_min_median_read_top );
-      addDeseq2Visualization( $config, $def, $summary_ref, "top${top_read_number}_contigs", [ $deseq2Task, "_DESeq2.csv\$" ], "pairs_top_deseq2_vis_layout", $data_visualization_dir );
+      addDeseq2Visualization( $config, $def, $summary_ref, "top${top_read_number}_contigs", [ $deseq2Task, "_DESeq2.csv\$" ], $data_visualization_dir, "pairs_top_deseq2_vis_layout" );
 
       $deseq2Task =
         addDEseq2( $config, $def, $summary_ref, "top${top_read_number}_minicontigs", [ "identical_sequence_count_table", ".minicontig.count\$" ], $class_independent_dir, $DE_min_median_read_top );
-      addDeseq2Visualization( $config, $def, $summary_ref, "top${top_read_number}_minicontigs", [ $deseq2Task, "_DESeq2.csv\$" ], "pairs_top_deseq2_vis_layout", $data_visualization_dir );
+      addDeseq2Visualization( $config, $def, $summary_ref, "top${top_read_number}_minicontigs", [ $deseq2Task, "_DESeq2.csv\$" ], $data_visualization_dir, "pairs_top_deseq2_vis_layout" );
     }
     else {
       my $class_independent = {
@@ -526,7 +526,7 @@ sub getSmallRNAConfig {
         push(@visual_source, [$deseq2Task, "_DESeq2.csv\$"] );
         addDEseq2( $config, $def, $summary_ref, "otherSmallRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
 
-        addDeseq2Visualization( $config, $def, $summary_ref, "host_genome", \@visual_source, "pairs_top_deseq2_vis_layout", $data_visualization_dir );
+        addDeseq2Visualization( $config, $def, $summary_ref, "host_genome", \@visual_source, $data_visualization_dir, "pairs_top_deseq2_vis_layout" );
       }
       else {
 
