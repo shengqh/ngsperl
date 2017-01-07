@@ -131,9 +131,6 @@ sub getSmallRNAConfig {
 
   my $data_visualization_dir = create_directory_or_die( $def->{target_dir} . "/data_visualization" );
 
-  my @individual = @$individual_ref;
-  my @summary    = @$summary_ref;
-
   my @table_for_correlation = ( "identical_sequence_count_table", "^(?!.*?read).*\.count\$" );
   my @table_for_countSum    = ();
   my @table_for_pieSummary  = ();
@@ -322,7 +319,7 @@ sub getSmallRNAConfig {
         },
       };
 
-      push @summary,
+      push @$summary_ref,
         (
         "deseq2_top${top_read_number}_reads",       "deseq2_top${top_read_number}_contigs", "deseq2_top${top_read_number}_minicontigs", "deseq2_top${top_read_number}_reads_vis",
         "deseq2_top${top_read_number}_contigs_vis", "deseq2_top${top_read_number}_minicontigs_vis"
@@ -454,8 +451,8 @@ sub getSmallRNAConfig {
     push @name_for_readSummary, ( "Host miRNA", "Host tRNA", "Host other small RNA" );
     push @table_for_countSum,
       ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" );
-    push @individual, ( "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_NTA_smallRNA_count" );
-    push @summary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_category", "host_genome_tRNA_category" );
+    push @$individual_ref, ( "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_NTA_smallRNA_count" );
+    push @$summary_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_category", "host_genome_tRNA_category" );
 
     if ($search_not_identical) {
 
@@ -479,7 +476,7 @@ sub getSmallRNAConfig {
           "mem"       => "40gb"
         },
       };
-      push @individual, ("bowtie1_genome_1mm_notidentical");
+      push @$individual_ref, ("bowtie1_genome_1mm_notidentical");
     }
 
     $config = merge( $config, $host_genome );
@@ -488,10 +485,10 @@ sub getSmallRNAConfig {
       if ( isVersion3($def) ) {
         my @visual_source = ();
 
-print "DEBUG:", @summary, "\n";
+print "DEBUG:", @$summary_ref, "\n";
         #miRNA
-        $deseq2Task = addDEseq2( $config, $def, $summary_ref, "miRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
-print "DEBUG:", @summary, "\n";
+        $deseq2Task = addDEseq2( $config, $def, \@$summary_ref, "miRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
+print "DEBUG:", @$summary_ref, "\n";
 
         push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
         addDEseq2( $config, $def, $summary_ref, "miRNA_NTA",        [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.NTA.count\$" ],        $host_genome_dir, $DE_min_median_read_smallRNA );
@@ -801,7 +798,7 @@ print "DEBUG:", @summary, "\n";
         };
 
         $config = merge( $config, $comparison );
-        push @summary,
+        push @$summary_ref,
           (
           "deseq2_miRNA",     "deseq2_tRNA",           "deseq2_tRNA_reads",   "deseq2_tRNA_aminoacid",   "deseq2_otherSmallRNA", "host_genome_deseq2_vis",
           "deseq2_miRNA_NTA", "deseq2_miRNA_NTA_base", "deseq2_miRNA_isomiR", "deseq2_miRNA_isomiR_NTA", "host_genome_deseq2_miRNA_vis"
@@ -839,7 +836,7 @@ print "DEBUG:", @summary, "\n";
           "mem"       => "10gb"
         },
       };
-      push @summary, ("host_genome_tRNA_PositionVis");
+      push @$summary_ref, ("host_genome_tRNA_PositionVis");
     }
 
     my $unmapped_reads = {
@@ -900,8 +897,8 @@ print "DEBUG:", @summary, "\n";
       }
     };
     $config = merge( $config, $unmapped_reads );
-    push @individual, ( "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_genome_unmapped_reads" );
-    push @summary, ("bowtie1_genome_host_reads_table");
+    push @$individual_ref, ( "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_genome_unmapped_reads" );
+    push @$summary_ref, ("bowtie1_genome_host_reads_table");
     push @table_for_pieSummary,
       ( "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.dupcount", "bowtie1_genome_unmapped_reads", ".short.dupcount", "bowtie1_genome_unmapped_reads", ".unmapped.fastq.dupcount" );
     push @name_for_pieSummary, ( "Mapped to Host Genome", "Too Short for Mapping", "Unmapped In Host" );
@@ -976,8 +973,8 @@ print "DEBUG:", @summary, "\n";
 
     #		push @table_for_correlation, ( "bowtie1_miRBase_pm_table", ".count\$" );
     push @table_for_countSum, ( "bowtie1_miRBase_pm_table", "^(?!.*?read).*\.count\$" );
-    push @individual,         ( "bowtie1_miRBase_pm",       "bowtie1_miRBase_pm_count" );
-    push @summary,            ("bowtie1_miRBase_pm_table");
+    push @$individual_ref,         ( "bowtie1_miRBase_pm",       "bowtie1_miRBase_pm_count" );
+    push @$summary_ref,            ("bowtie1_miRBase_pm_table");
 
     push @mapped, ( "bowtie1_miRBase_pm_count", ".xml" );
   }
@@ -1524,13 +1521,13 @@ print "DEBUG:", @summary, "\n";
       );
     push @name_for_readSummary, ( "Non host tRNA", "Non host rRNA", "Human Microbiome Bacteria", "Environment Bacteria", "Fungus" );
 
-    push @individual,
+    push @$individual_ref,
       (
       "bowtie1_HostGenomeReads_NonHost_pm", "bowtie1_HostGenomeReads_NonHost_pm_count", "bowtie1_tRNA_pm",            "bowtie1_tRNA_pm_count",
       "bowtie1_rRNA_pm",                    "bowtie1_rRNA_pm_count",                    "bowtie1_bacteria_group1_pm", "bowtie1_bacteria_group1_pm_count",
       "bowtie1_bacteria_group2_pm",         "bowtie1_bacteria_group2_pm_count",         "bowtie1_fungus_group4_pm",   "bowtie1_fungus_group4_pm_count"
       );
-    push @summary,
+    push @$summary_ref,
       (
       "bowtie1_HostGenomeReads_NonHost_pm_table", "HostGenomeReads_NonHost_vis",        "bowtie1_tRNA_pm_table",            "nonhost_library_tRNA_vis",
       "bowtie1_rRNA_pm_table",                    "nonhost_library_rRNA_vis",           "bowtie1_bacteria_group1_pm_table", "nonhost_genome_bacteria_group1_vis",
@@ -1938,7 +1935,7 @@ print "DEBUG:", @summary, "\n";
       };
 
       $config = merge( $config, $unmapped_comparison );
-      push @summary,
+      push @$summary_ref,
         (
         "deseq2_nonhost_tRNA",          "deseq2_nonhost_tRNA_reads",     "deseq2_nonhost_tRNA_category", "deseq2_nonhost_tRNA_species",
         "deseq2_nonhost_tRNA_type",     "deseq2_nonhost_tRNA_anticodon", "deseq2_nonhost_rRNA",          "nonhost_library_deseq2_vis",
@@ -1972,7 +1969,7 @@ print "DEBUG:", @summary, "\n";
 
     $identical_ref = [ "final_unmapped_reads", ".fastq.gz\$" ];
     $config = merge( $config, $unmapped_reads );
-    push @individual,           ("final_unmapped_reads");
+    push @$individual_ref,           ("final_unmapped_reads");
     push @table_for_pieSummary, ( "final_unmapped_reads", ".dupcount" );
     push @name_for_pieSummary,  ("UnMapped");
   }
@@ -2058,10 +2055,10 @@ print "DEBUG:", @summary, "\n";
       "mem"       => "10gb"
     },
   };
-  push @summary, ( "count_table_correlation", "reads_in_tasks", "reads_in_tasks_pie", "reads_mapping_summary" );
+  push @$summary_ref, ( "count_table_correlation", "reads_in_tasks", "reads_in_tasks_pie", "reads_mapping_summary" );
 
   if ( $def->{blast_top_reads} ) {
-    push @summary, ( "identical_sequence_top${top_read_number}_contig_blast", "identical_sequence_top${top_read_number}_read_blast", "identical_sequence_top${top_read_number}_minicontig_blast" );
+    push @$summary_ref, ( "identical_sequence_top${top_read_number}_contig_blast", "identical_sequence_top${top_read_number}_read_blast", "identical_sequence_top${top_read_number}_minicontig_blast" );
   }
 
   if ($blast_unmapped_reads) {
@@ -2140,7 +2137,7 @@ print "DEBUG:", @summary, "\n";
     };
 
     $config = merge( $config, $blast );
-    push @summary,
+    push @$summary_ref,
       (
       "unmapped_sequence_count_table",                      "unmapped_sequence_top${top_read_number}_minicontig_blast",
       "unmapped_sequence_top${top_read_number}_read_blast", "unmapped_sequence_top${top_read_number}_contig_blast"
@@ -2153,8 +2150,8 @@ print "DEBUG:", @summary, "\n";
     target_dir => $def->{target_dir} . "/sequencetask",
     option     => "",
     source     => {
-      step1 => \@individual,
-      step2 => \@summary,
+      step1 => $individual_ref,
+      step2 => $summary_ref,
     },
     sh_direct => 0,
     cluster   => $cluster,
