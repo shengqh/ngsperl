@@ -154,10 +154,8 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "run_cutadapt", 1 );
   if ( $def->{run_cutadapt} ) {
-    initDefaultValue( $def, "adapter", "TGGAATTCTCGGGTGCCAAGG" );
-    if ( !defined $def->{cutadapt_option} ) {
-      $def->{cutadapt_option} = "-m " . $def->{min_read_length};
-    }
+    initDefaultValue( $def, "adapter",         "TGGAATTCTCGGGTGCCAAGG" );
+    initDefaultValue( $def, "cutadapt_option", "-m " . $def->{min_read_length} );
   }
 
   initDefaultValue( $def, "remove_sequences",            "" );
@@ -184,7 +182,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "max_sequence_extension_base", "1" );
   initDefaultValue( $def, "nonhost_table_option",        "--outputReadTable" );
 
-  initDefaultValue( $def, "has_NTA", 1 );
+  initDefaultValue( $def, "consider_miRNA_NTA", 1 );
 
   #search database
   initDefaultValue( $def, "search_not_identical",   1 );
