@@ -293,7 +293,27 @@ sub getSmallRNAConfig {
         "mem"       => "10gb"
       }
     };
-    push @$summary_ref, $fastaTask;
+
+    my $blastTask = $fastaTask . "_blastn";
+    $config->{$blastTask} = {
+      class      => "Blast::Blastn",
+      perform    => 1,
+      target_dir => $class_independent_dir . "/$blastTask",
+      option     => "",
+      source_ref => [ $fastaTask, ".fasta\$" ],
+      sh_direct  => 0,
+      localdb    => $def->{blast_localdb},
+      cluster    => $def->{cluster},
+      pbs        => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=" . $def->{max_thread},
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    };
+
+    push @$summary_ref, ( $fastaTask, $blastTask );
   }
 
   my $identical_ref = [ "identical", ".fastq.gz\$" ];
