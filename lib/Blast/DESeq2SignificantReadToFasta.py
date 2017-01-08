@@ -19,7 +19,7 @@ sequences = set()
 for inputfile in inputfiles:
   with open(inputfile, 'rb') as csvfile:
     spamreader = csv.reader(csvfile, delimiter=',', quotechar='"')
-    header=pamreader.next()
+    spamreader.next()
     for row in spamreader:
       sequences.add(row[0])
 
