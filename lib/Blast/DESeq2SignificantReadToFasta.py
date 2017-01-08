@@ -18,7 +18,7 @@ outputfile=args.output
 sequences = set()
 for inputfile in inputfiles:
   with open(inputfile, 'rb') as csvfile:
-    pamreader = csv.reader(csvfile, delimiter=',', quotechar='"')
+    spamreader = csv.reader(csvfile, delimiter=',', quotechar='"')
     header=pamreader.next()
     for row in spamreader:
       sequences.add(row[0])
