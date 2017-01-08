@@ -275,6 +275,24 @@ sub getSmallRNAConfig {
     $deseq2Task =
       addDEseq2( $config, $def, $summary_ref, "top${top_read_number}_minicontigs", [ "identical_sequence_count_table", ".minicontig.count\$" ], $class_independent_dir, $DE_min_median_read_top );
     addDeseq2Visualization( $config, $def, $summary_ref, "top${top_read_number}_minicontigs", [ $deseq2Task, "_DESeq2.csv\$" ], $data_visualization_dir, "pairs_top_deseq2_vis_layout" );
+
+    $config->{"top${top_read_number}_minicontigs_sequences"} = {
+      class      => "Blast::DESeq2SignificantReadToFasta",
+      perform    => 1,
+      target_dir => $class_independent_dir . "/top${top_read_number}_minicontigs_sequences",
+      option     => "",
+      source_ref => [ "top${top_read_number}_minicontigs", "_DESeq2_sig.csv\$" ],
+      sh_direct  => 1,
+      cluster    => $def->{cluster},
+      pbs        => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "2",
+        "mem"       => "10gb"
+      }
+    };
+    push @$summary_ref, "top${top_read_number}_minicontigs_sequences";
   }
 
   my $identical_ref = [ "identical", ".fastq.gz\$" ];
