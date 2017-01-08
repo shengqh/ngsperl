@@ -28,5 +28,3 @@ with open(outputfile, 'w') as fasta:
     fasta.write(">%s\n%s\n" %(seq, seq));
     
 print("%d sequences prepared for blastn \n" % len(sequences))
-
-print("Transfer DEseq2 significant read to fasta for blastn done.")
