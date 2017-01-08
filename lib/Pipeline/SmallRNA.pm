@@ -7,6 +7,7 @@ use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
+use Pipeline::PipelineUtils;
 use Pipeline::SmallRNAUtils;
 use Data::Dumper;
 use Hash::Merge qw( merge );
@@ -20,176 +21,6 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.06';
 
-sub getValue {
-  my ( $def, $name ) = @_;
-  if ( defined $def->{$name} ) {
-    return $def->{$name};
-  }
-  else {
-    die "Define $name in user definition first.";
-  }
-}
-
-sub addNonhostDatabase {
-  my ( $config, $def, $individual, $summary, $taskKey, $parentDir, $bowtieIndex, $sourceRef, $countOption, $tableOption ) = @_;
-
-  my $bowtie1Task      = "bowtie1_" . $taskKey;
-  my $bowtie1CountTask = "bowtie1_" . $taskKey . "_count";
-  my $bowtie1TableTask = "bowtie1_" . $taskKey . "_table";
-
-  $config->{$bowtie1Task} = {
-    class         => "Alignment::Bowtie1",
-    perform       => 1,
-    target_dir    => $parentDir . "/" . $bowtie1Task,
-    option        => $def->{bowtie1_option_pm},
-    source_ref    => $sourceRef,
-    bowtie1_index => $bowtieIndex,
-    samonly       => 0,
-    sh_direct     => 1,
-    mappedonly    => 1,
-    cluster       => $def->{cluster},
-    pbs           => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
-      "nodes"     => "1:ppn=" . $def->{max_thread},
-      "walltime"  => "72",
-      "mem"       => "40gb"
-    },
-  };
-
-  $config->{$bowtie1CountTask} = {
-    class        => "CQS::CQSChromosomeCount",
-    perform      => 1,
-    target_dir   => $parentDir . "/" . $bowtie1CountTask,
-    option       => $countOption,
-    source_ref   => $bowtie1Task,
-    seqcount_ref => [ "identical", ".dupcount\$" ],
-    cqs_tools    => $def->{cqstools},
-    sh_direct    => 1,
-    cluster      => $def->{cluster},
-    pbs          => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "72",
-      "mem"       => "40gb"
-    },
-  };
-
-  $config->{$bowtie1TableTask} = {
-    class      => "CQS::CQSChromosomeTable",
-    perform    => 1,
-    target_dir => $parentDir . "/" . $bowtie1TableTask,
-    option     => $tableOption,
-    source_ref => [ $bowtie1CountTask, ".xml" ],
-    cqs_tools  => $def->{cqstools},
-    prefix     => $taskKey . "_",
-    sh_direct  => 1,
-    cluster    => $def->{cluster},
-    pbs        => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "10gb"
-    },
-  };
-  push @$individual, ( $bowtie1Task, $bowtie1TableTask );
-  push @$summary, $bowtie1TableTask;
-}
-
-sub addNonhostVis {
-  my ( $config, $def, $summary, $taskName, $parentDir, $optionHash ) = @_;
-
-  $config->{$taskName} = merge(
-    {
-      class                     => "CQS::UniqueR",
-      perform                   => 1,
-      target_dir                => $parentDir . "/" . $taskName,
-      parameterSampleFile1Order => $def->{groups_order},
-      parameterSampleFile1      => $def->{groups},
-      parameterSampleFile2      => $def->{groups_vis_layout},
-      parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
-      rCode                     => 'maxCategory=NA;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
-      sh_direct                 => 1,
-      pbs                       => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "1",
-        "mem"       => "10gb"
-      },
-    },
-    $optionHash
-  );
-
-  push @$summary, $taskName;
-}
-
-sub addDEseq2 {
-  my ( $config, $def, $summary, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read ) = @_;
-
-  my $taskName = "deseq2_" . $taskKey;
-
-  $config->{$taskName} = {
-    class                  => "Comparison::DESeq2",
-    perform                => 1,
-    target_dir             => $deseq2Dir . "/$taskName",
-    option                 => "",
-    source_ref             => "pairs",
-    groups_ref             => "groups",
-    countfile_ref          => $countfileRef,
-    sh_direct              => 1,
-    show_DE_gene_cluster   => $def->{DE_show_gene_cluster},
-    pvalue                 => $def->{DE_pvalue},
-    fold_change            => $def->{DE_fold_change},
-    min_median_read        => $DE_min_median_read,
-    add_count_one          => $def->{DE_add_count_one},
-    top25only              => $def->{DE_top25only},
-    detected_in_both_group => $def->{DE_detected_in_both_group},
-    use_raw_p_value        => $def->{DE_use_raw_pvalue},
-    cluster                => $def->{cluster},
-    pbs                    => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "10gb"
-    },
-  };
-  push @$summary, $taskName;
-  return $taskName;
-}
-
-sub addDeseq2Visualization {
-  my ( $config, $def, $summary, $taskKey, $deseq2FileRef, $dataVisualizationDir, $layoutName ) = @_;
-
-  my $taskName = "deseq2_" . $taskKey . "_vis";
-
-  $config->{$taskName} = {
-    class                    => "CQS::UniqueR",
-    perform                  => 1,
-    target_dir               => $dataVisualizationDir . "/$taskName",
-    rtemplate                => "DESeq2_all_vis.R",
-    output_file              => ".${taskKey}.DESeq2.Matrix",
-    output_file_ext          => ".png",
-    parameterSampleFile1_ref => $deseq2FileRef,
-    parameterSampleFile2     => $def->{$layoutName},
-    rCode                    => 'useRawPvalue=' . $def->{DE_use_raw_pvalue} . ";",
-    sh_direct                => 1,
-    cluster                  => $def->{cluster},
-    pbs                      => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
-      "mem"       => "10gb"
-    },
-  };
-  push @$summary, $taskName;
-  return $taskName;
-}
-
 sub getSmallRNAConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
@@ -197,29 +28,33 @@ sub getSmallRNAConfig {
   my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
   my $task_name = $def->{task_name};
 
-  my $search_not_identical  = ( !defined $def->{search_not_identical} )  || $def->{search_not_identical};
-  my $search_host_genome    = ( !defined $def->{search_host_genome} )    || $def->{search_host_genome};
-  my $search_miRBase        = ( !defined $def->{search_miRBase} )        || $def->{search_miRBase};
-  my $search_unmapped_reads = ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
-  my $blast_unmapped_reads = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
+  my $search_not_identical   = getValue( $def, "search_not_identical" );
+  my $search_host_genome     = getValue( $def, "search_host_genome" );
+  my $search_nonhost_genome  = getValue( $def, "search_nonhost_database" );
+  my $search_nonhost_library = getValue( $def, "search_nonhost_library" );
+  my $search_nonhost_database = $search_nonhost_genome || $search_nonhost_library;
 
+  my $blast_top_reads      = getValue( $def, "blast_top_reads" );
+  my $blast_unmapped_reads = getValue( $def, "blast_unmapped_reads" );
+
+  my $top_read_number = getValue( $def, "top_read_number" );
   my $host_genome_dir;
   if ($search_host_genome) {
     $host_genome_dir = create_directory_or_die( $def->{target_dir} . "/host_genome" );
   }
 
   my $nonhost_library_dir;
-  if ( $search_unmapped_reads || $search_miRBase ) {
+  if ($search_nonhost_library) {
     $nonhost_library_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_library" );
   }
 
   my $nonhost_genome_dir;
-  if ($search_unmapped_reads) {
+  if ($search_nonhost_genome) {
     $nonhost_genome_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_genome" );
   }
 
   my $nonhost_blast_dir;
-  if ( $search_miRBase || $search_unmapped_reads ) {
+  if ( $blast_unmapped_reads || $search_nonhost_database ) {
     $nonhost_blast_dir = create_directory_or_die( $def->{target_dir} . "/final_unmapped" );
   }
 
@@ -241,22 +76,14 @@ sub getSmallRNAConfig {
     $def->{groups_smallRNA_vis_layout} = $def->{groups_vis_layout};
   }
 
-  my $DE_show_gene_cluster        = getValue( $def, "DE_show_gene_cluster" );
-  my $DE_pvalue                   = getValue( $def, "DE_pvalue" );
-  my $DE_fold_change              = getValue( $def, "DE_fold_change" );
-  my $DE_add_count_one            = getValue( $def, "DE_add_count_one" );
   my $DE_min_median_read_top      = getValue( $def, "DE_min_median_read_top" );
   my $DE_min_median_read_smallRNA = getValue( $def, "DE_min_median_read_smallRNA" );
-  my $DE_top25only                = getValue( $def, "DE_top25only" );
-  my $DE_detected_in_both_group   = getValue( $def, "DE_show_gene_cluster" );
-  my $DE_use_raw_pvalue           = getValue( $def, "DE_use_raw_pvalue" );
-  my $blast_localdb = $def->{blast_localdb} or die "Define blast_localdb first!";
 
   my $max_sequence_extension_base = getValue( $def, "max_sequence_extension_base" );
-  $def->{non_host_table_option} = "--maxExtensionBase " . $def->{max_sequence_extension_base} . " " . $def->{non_host_table_option};
+  $def->{nonhost_table_option} = "--maxExtensionBase " . $def->{max_sequence_extension_base} . " " . $def->{nonhost_table_option};
   my $perform_contig_analysis = $def->{perform_contig_analysis};
   if ($perform_contig_analysis) {
-    $def->{non_host_table_option} = $def->{non_host_table_option} . " --outputReadContigTable";
+    $def->{nonhost_table_option} = $def->{nonhost_table_option} . " --outputReadContigTable";
   }
 
   my $deseq2Task;
@@ -264,85 +91,29 @@ sub getSmallRNAConfig {
   my $bowtie1CountTask;
   my $bowtie1TableTask;
 
-  my $top_read_number = $def->{top_read_number};
   if ($do_comparison) {
-    $deseq2Task = addDEseq2( $config, $def, $summary_ref, "top${top_read_number}_reads", [ "identical_sequence_count_table", ".read.count\$" ], $class_independent_dir, $DE_min_median_read_top );
-    addDeseq2Visualization( $config, $def, $summary_ref, "top${top_read_number}_reads", [ $deseq2Task, "_DESeq2.csv\$" ], $data_visualization_dir, "pairs_top_deseq2_vis_layout" );
+    my $taskKey = "top${top_read_number}";
 
-    $deseq2Task = addDEseq2( $config, $def, $summary_ref, "top${top_read_number}_contigs", [ "identical_sequence_count_table", ".count\$" ], $class_independent_dir, $DE_min_median_read_top );
-    addDeseq2Visualization( $config, $def, $summary_ref, "top${top_read_number}_contigs", [ $deseq2Task, "_DESeq2.csv\$" ], $data_visualization_dir, "pairs_top_deseq2_vis_layout" );
+    $deseq2Task = addDEseq2( $config, $def, $summary_ref, "${taskKey}_reads", [ "identical_sequence_count_table", ".read.count\$" ], $class_independent_dir, $DE_min_median_read_top );
+    addDeseq2Visualization( $config, $def, $summary_ref, "${taskKey}_reads", [ $deseq2Task, "_DESeq2.csv\$" ], $data_visualization_dir, "pairs_top_deseq2_vis_layout" );
 
-    $deseq2Task =
-      addDEseq2( $config, $def, $summary_ref, "top${top_read_number}_minicontigs", [ "identical_sequence_count_table", ".minicontig.count\$" ], $class_independent_dir, $DE_min_median_read_top );
-    addDeseq2Visualization( $config, $def, $summary_ref, "top${top_read_number}_minicontigs", [ $deseq2Task, "_DESeq2.csv\$" ], $data_visualization_dir, "pairs_top_deseq2_vis_layout" );
+    $deseq2Task = addDEseq2( $config, $def, $summary_ref, "${taskKey}_contigs", [ "identical_sequence_count_table", ".count\$" ], $class_independent_dir, $DE_min_median_read_top );
+    addDeseq2Visualization( $config, $def, $summary_ref, "${taskKey}_contigs", [ $deseq2Task, "_DESeq2.csv\$" ], $data_visualization_dir, "pairs_top_deseq2_vis_layout" );
 
-    my $fastaTask = "deseq2_top${top_read_number}_minicontigs_sequences";
-    $config->{$fastaTask} = {
-      class      => "Blast::DESeq2SignificantReadToFasta",
-      perform    => 1,
-      target_dir => $class_independent_dir . "/$fastaTask",
-      option     => "",
-      source_ref => [ $deseq2Task, "_DESeq2_sig.csv\$" ],
-      sh_direct  => 1,
-      cluster    => $def->{cluster},
-      pbs        => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "2",
-        "mem"       => "10gb"
-      }
-    };
-
-    my $blastTask = $fastaTask . "_blastn";
-    $config->{$blastTask} = {
-      class      => "Blast::Blastn",
-      perform    => 1,
-      target_dir => $class_independent_dir . "/$blastTask",
-      option     => "",
-      source_ref => [ $fastaTask, ".fasta\$" ],
-      sh_direct  => 0,
-      localdb    => $def->{blast_localdb},
-      cluster    => $def->{cluster},
-      pbs        => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=" . $def->{max_thread},
-        "walltime"  => "10",
-        "mem"       => "10gb"
-      },
-    };
-
-    push @$summary_ref, ( $fastaTask, $blastTask );
+    $deseq2Task = addDEseq2( $config, $def, $summary_ref, "${taskKey}_minicontigs", [ "identical_sequence_count_table", ".minicontig.count\$" ], $class_independent_dir, $DE_min_median_read_top );
+    addDeseq2Visualization( $config, $def, $summary_ref, "${taskKey}_minicontigs", [ $deseq2Task, "_DESeq2.csv\$" ], $data_visualization_dir, "pairs_top_deseq2_vis_layout" );
   }
 
   my $identical_ref = [ "identical", ".fastq.gz\$" ];
 
   if ($search_host_genome) {
-    defined $def->{coordinate} or die "No smallRNA coordinate defined!";
+    getValue( $def, "coordinate" );
+
+    #1 mismatch search, NTA
+    addBowtie( $config, $def, $individual_ref, "bowtie1_genome_1mm_NTA", $host_genome_dir, $def->{bowtie1_index}, [ "identical_NTA", ".fastq.gz\$" ], $def->{bowtie1_option_1mm} );
 
     my $host_genome = {
 
-      #1 mismatch search, NTA
-      bowtie1_genome_1mm_NTA => {
-        class         => "Alignment::Bowtie1",
-        perform       => 1,
-        target_dir    => $host_genome_dir . "/bowtie1_genome_1mm_NTA",
-        option        => $def->{bowtie1_option_1mm},
-        source_ref    => [ "identical_NTA", ".fastq.gz\$" ],
-        bowtie1_index => $def->{bowtie1_index},
-        samonly       => 0,
-        sh_direct     => 1,
-        mappedonly    => 1,
-        cluster       => $cluster,
-        pbs           => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=" . $def->{max_thread},
-          "walltime"  => "72",
-          "mem"       => "40gb"
-        },
-      },
       bowtie1_genome_1mm_NTA_smallRNA_count => {
         class           => "CQS::SmallRNACount",
         perform         => 1,
@@ -441,31 +212,6 @@ sub getSmallRNAConfig {
       ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" );
     push @$individual_ref, ( "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_NTA_smallRNA_count" );
     push @$summary_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_category", "host_genome_tRNA_category" );
-
-    if ($search_not_identical) {
-
-      #not identical, for IGV
-      $host_genome->{bowtie1_genome_1mm_notidentical} = {
-        class         => "Alignment::Bowtie1",
-        perform       => 1,
-        target_dir    => $host_genome_dir . "/bowtie1_genome_1mm_notidentical",
-        option        => $def->{bowtie1_option_1mm},
-        source_ref    => $not_identical_ref,
-        bowtie1_index => $def->{bowtie1_index},
-        samonly       => 0,
-        sh_direct     => 0,
-        mappedonly    => 1,
-        cluster       => $cluster,
-        pbs           => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=" . $def->{max_thread},
-          "walltime"  => "72",
-          "mem"       => "40gb"
-        },
-      };
-      push @$individual_ref, ("bowtie1_genome_1mm_notidentical");
-    }
 
     $config = merge( $config, $host_genome );
     if ($do_comparison) {
@@ -620,27 +366,16 @@ sub getSmallRNAConfig {
 
   my @mapped  = ();
   my @pmnames = ();
+  my @overlap = ();
 
-  if ($search_miRBase) {
-    addNonhostDatabase(
-      $config, $def, $individual_ref, $summary_ref, "miRBase_pm", $nonhost_library_dir,    #general option
-      $def->{bowtie1_miRBase_index}, $identical_ref,                                       #bowtie option
-      $def->{mirbase_count_option} . " -m --keepChrInName --keepSequence",                 #count option
-      $def->{non_host_table_option}                                                        #table option
-    );
-
-    push @table_for_countSum, ( "bowtie1_miRBase_pm_table", "^(?!.*?read).*\.count\$" );
-    push @mapped,             ( "bowtie1_miRBase_pm_count", ".xml" );
-  }
-
-  if ($search_unmapped_reads) {
+  if ($search_nonhost_database) {
 
     #Mapping host genome reads to non-host databases
     addNonhostDatabase(
       $config, $def, $individual_ref, $summary_ref, "HostGenomeReads_NonHost_pm", $nonhost_library_dir,    #general option
       $def->{bowtie1_all_nonHost_index}, [ "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.gz" ],    #bowtie option
       $def->{smallrnacount_option} . ' --keepChrInName --categoryMapFile ' . $def->{all_nonHost_map},            #count option
-      $def->{non_host_table_option}                                                                              #table option
+      $def->{nonhost_table_option}                                                                               #table option
     );
     addNonhostVis(
       $config, $def,
@@ -654,53 +389,15 @@ sub getSmallRNAConfig {
         parameterFile1_ref => [ "bowtie1_HostGenomeReads_NonHost_pm_table", ".count\$" ],
       }
     );
+  }
 
-    #Mapping unmapped reads to tRNA database
-    addNonhostDatabase(
-      $config, $def, $individual_ref, $summary_ref, "tRNA_pm", $nonhost_library_dir,    #general option
-      $def->{bowtie1_tRNA_index}, $identical_ref,                                       #bowtie option
-      $def->{smallrnacount_option} . " --keepChrInName --keepSequence",                 #count option
-      $def->{non_host_table_option} . ' --categoryMapFile ' . $def->{trna_category_map} #table option
-    );
-    addNonhostVis(
-      $config, $def,
-      $summary_ref,
-      "nonhost_library_tRNA_vis",
-      $data_visualization_dir,
-      {
-        rtemplate          => "countTableVisFunctions.R,bacteriaTrnaMappingVis.R",
-        output_file        => ".tRNAMapping.Result",
-        output_file_ext    => ".Species12.csv;.tRNAType1.csv;.tRNAType2.csv",
-        parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".count\$" ],
-      }
-    );
-
-    #Mapping unmapped reads to rRNA database
-    addNonhostDatabase(
-      $config, $def, $individual_ref, $summary_ref, "rRNA_pm", $nonhost_library_dir,    #general option
-      $def->{bowtie1_rRNA_index}, $identical_ref,                                       #bowtie option
-      $def->{smallrnacount_option} . ' --keepChrInName --keepSequence --categoryMapFile ' . $def->{rrna_category_map},    #count option                                          #count option
-      $def->{non_host_table_option}                                                                                       #table option
-    );
-    addNonhostVis(
-      $config, $def,
-      $summary_ref,
-      "nonhost_library_rRNA_vis",
-      $data_visualization_dir,
-      {
-        rtemplate          => "countTableVisFunctions.R,countTableVis.R",
-        output_file        => ".rRNAMapping.Result",
-        output_file_ext    => ".Barplot.png",
-        parameterFile1_ref => [ "bowtie1_rRNA_pm_table", ".count\$" ],
-      }
-    );
-
-    #Mapping unmapped reads to group1 database
+  #Mapping unmapped reads to nonhost genome
+  if ($search_nonhost_genome) {
     addNonhostDatabase(
       $config, $def, $individual_ref, $summary_ref, "bacteria_group1_pm", $nonhost_genome_dir,    #general option
       $def->{bowtie1_bacteria_group1_index}, $identical_ref,                                      #bowtie option
       $def->{smallrnacount_option} . ' --keepChrInName --keepSequence',                           #count option
-      $def->{non_host_table_option} . ' --categoryMapFile ' . $def->{bacteria_group1_species_map} #table option
+      $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{bacteria_group1_species_map}  #table option
     );
     addNonhostVis(
       $config, $def,
@@ -720,7 +417,7 @@ sub getSmallRNAConfig {
       $config, $def, $individual_ref, $summary_ref, "bacteria_group2_pm", $nonhost_genome_dir,    #general option
       $def->{bowtie1_bacteria_group2_index}, $identical_ref,                                      #bowtie option
       $def->{smallrnacount_option} . ' --keepChrInName --keepSequence',                           #count option
-      $def->{non_host_table_option} . ' --categoryMapFile ' . $def->{bacteria_group2_species_map} #table option
+      $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{bacteria_group2_species_map}  #table option
     );
     addNonhostVis(
       $config, $def,
@@ -740,7 +437,7 @@ sub getSmallRNAConfig {
       $config, $def, $individual_ref, $summary_ref, "fungus_group4_pm", $nonhost_genome_dir,    #general option
       $def->{bowtie1_fungus_group4_index}, $identical_ref,                                      #bowtie option
       $def->{smallrnacount_option} . ' --keepChrInName --keepSequence',                         #count option
-      $def->{non_host_table_option} . ' --categoryMapFile ' . $def->{fungus_group4_species_map} #table option
+      $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{fungus_group4_species_map}  #table option
     );
     addNonhostVis(
       $config, $def,
@@ -755,44 +452,95 @@ sub getSmallRNAConfig {
       }
     );
 
+    push @table_for_correlation,
+      ( "bowtie1_bacteria_group1_pm_table", ".category.count\$", "bowtie1_bacteria_group2_pm_table", ".category.count\$", "bowtie1_fungus_group4_pm_table", ".category.count\$" );
+    push @table_for_countSum,
+      ( "bowtie1_bacteria_group1_pm_table", ".category.count\$", "bowtie1_bacteria_group2_pm_table", ".category.count\$", "bowtie1_fungus_group4_pm_table", ".category.count\$" );
+    push @table_for_readSummary, ( "bowtie1_bacteria_group1_pm_table", ".read.count\$", "bowtie1_bacteria_group2_pm_table", ".read.count\$", "bowtie1_fungus_group4_pm_table", ".read.count\$" );
+    push @name_for_readSummary, ( "Human Microbiome Bacteria", "Environment Bacteria", "Fungus" );
+
+    push @mapped,  ( "bowtie1_bacteria_group1_pm_count", ".xml",          "bowtie1_bacteria_group2_pm_count", ".xml",          "bowtie1_fungus_group4_pm_count", ".xml" );
+    push @overlap, ( "bowtie1_bacteria_group1_pm_table", ".read.count\$", "bowtie1_bacteria_group2_pm_table", ".read.count\$", "bowtie1_fungus_group4_pm_table", ".read.count\$" );
+
+    if ($do_comparison) {
+
+      addDEseq2( $config, $def, $summary_ref, "bacteria_group1",       [ "bowtie1_bacteria_group1_pm_table", ".category.count\$" ], $nonhost_genome_dir, $DE_min_median_read_smallRNA );
+      addDEseq2( $config, $def, $summary_ref, "bacteria_group1_reads", [ "bowtie1_bacteria_group1_pm_table", ".read.count\$" ],     $nonhost_genome_dir, $DE_min_median_read_smallRNA );
+      addDEseq2( $config, $def, $summary_ref, "bacteria_group2",       [ "bowtie1_bacteria_group2_pm_table", ".category.count\$" ], $nonhost_genome_dir, $DE_min_median_read_smallRNA );
+      addDEseq2( $config, $def, $summary_ref, "bacteria_group2_reads", [ "bowtie1_bacteria_group2_pm_table", ".read.count\$" ],     $nonhost_genome_dir, $DE_min_median_read_smallRNA );
+      addDEseq2( $config, $def, $summary_ref, "fungus_group4",         [ "bowtie1_fungus_group4_pm_table",   ".category.count\$" ], $nonhost_genome_dir, $DE_min_median_read_smallRNA );
+      addDEseq2( $config, $def, $summary_ref, "fungus_group4_reads",   [ "bowtie1_fungus_group4_pm_table",   ".read.count\$" ],     $nonhost_genome_dir, $DE_min_median_read_smallRNA );
+
+      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome_deseq2",
+        [ "deseq2_bacteria_group1", "_DESeq2.csv\$", "deseq2_bacteria_group2", "_DESeq2.csv\$", "deseq2_fungus_group4", "_DESeq2.csv\$" ],
+        $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout" );
+
+      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome_deseq2_reads",
+        [ "deseq2_bacteria_group1_reads", "_DESeq2.csv\$", "deseq2_bacteria_group2_reads", "_DESeq2.csv\$", "deseq2_fungus_group4_reads", "_DESeq2.csv\$" ],
+        $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout" );
+    }
+  }
+
+  #Mapping unmapped reads to nonhost library
+  if ($search_nonhost_library) {
+
+    #Mapping unmapped reads to miRBase library
+    addNonhostDatabase(
+      $config, $def, $individual_ref, $summary_ref, "miRBase_pm", $nonhost_library_dir,    #general option
+      $def->{bowtie1_miRBase_index}, $identical_ref,                                       #bowtie option
+      $def->{mirbase_count_option} . " -m --keepChrInName --keepSequence",                 #count option
+      $def->{nonhost_table_option}                                                         #table option
+    );
+
+    push @table_for_countSum, ( "bowtie1_miRBase_pm_table", "^(?!.*?read).*\.count\$" );
+    push @mapped,             ( "bowtie1_miRBase_pm_count", ".xml" );
+
+    #Mapping unmapped reads to tRNA library
+    addNonhostDatabase(
+      $config, $def, $individual_ref, $summary_ref, "tRNA_pm", $nonhost_library_dir,       #general option
+      $def->{bowtie1_tRNA_index}, $identical_ref,                                          #bowtie option
+      $def->{smallrnacount_option} . " --keepChrInName --keepSequence",                    #count option
+      $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{trna_category_map}     #table option
+    );
     addNonhostVis(
       $config, $def,
       $summary_ref,
-      "nonhost_overlap_vis",
+      "nonhost_library_tRNA_vis",
       $data_visualization_dir,
       {
-        rtemplate                => "countTableVisFunctions.R,NonHostOverlap.R",
-        output_file              => ".NonHost.Reads",
-        output_file_ext          => ".Overlap.csv",
-        parameterSampleFile1_ref => [
-          "bowtie1_bacteria_group1_pm_table", ".read.count\$", "bowtie1_bacteria_group2_pm_table", ".read.count\$", "bowtie1_fungus_group4_pm_table", ".read.count\$",
-          "bowtie1_tRNA_pm_table",            ".read.count\$", "bowtie1_rRNA_pm_table",            ".read.count\$",
-        ],
+        rtemplate          => "countTableVisFunctions.R,bacteriaTrnaMappingVis.R",
+        output_file        => ".tRNAMapping.Result",
+        output_file_ext    => ".Species12.csv;.tRNAType1.csv;.tRNAType2.csv",
+        parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".count\$" ],
       }
     );
 
-    push @table_for_correlation,
-      (
-      "bowtie1_tRNA_pm_table",            "^(?!.*?read).*\.count\$", "bowtie1_rRNA_pm_table",          "^(?!.*?read).*\.count\$", "bowtie1_bacteria_group1_pm_table", ".category.count\$",
-      "bowtie1_bacteria_group2_pm_table", ".category.count\$",       "bowtie1_fungus_group4_pm_table", ".category.count\$"
-      );
-    push @table_for_countSum,
-      (
-      "bowtie1_tRNA_pm_table",            ".category.count\$", "bowtie1_rRNA_pm_table",          "$task_name\.count\$", "bowtie1_bacteria_group1_pm_table", ".category.count\$",
-      "bowtie1_bacteria_group2_pm_table", ".category.count\$", "bowtie1_fungus_group4_pm_table", ".category.count\$"
-      );
-    push @table_for_readSummary,
-      (
-      "bowtie1_tRNA_pm_table",            ".read.count\$", "bowtie1_rRNA_pm_table",          ".read.count\$", "bowtie1_bacteria_group1_pm_table", ".read.count\$",
-      "bowtie1_bacteria_group2_pm_table", ".read.count\$", "bowtie1_fungus_group4_pm_table", ".read.count\$"
-      );
-    push @name_for_readSummary, ( "Non host tRNA", "Non host rRNA", "Human Microbiome Bacteria", "Environment Bacteria", "Fungus" );
+    #Mapping unmapped reads to rRNA library
+    addNonhostDatabase(
+      $config, $def, $individual_ref, $summary_ref, "rRNA_pm", $nonhost_library_dir,    #general option
+      $def->{bowtie1_rRNA_index}, $identical_ref,                                       #bowtie option
+      $def->{smallrnacount_option} . ' --keepChrInName --keepSequence --categoryMapFile ' . $def->{rrna_category_map},    #count option                                          #count option
+      $def->{nonhost_table_option}                                                                                        #table option
+    );
+    addNonhostVis(
+      $config, $def,
+      $summary_ref,
+      "nonhost_library_rRNA_vis",
+      $data_visualization_dir,
+      {
+        rtemplate          => "countTableVisFunctions.R,countTableVis.R",
+        output_file        => ".rRNAMapping.Result",
+        output_file_ext    => ".Barplot.png",
+        parameterFile1_ref => [ "bowtie1_rRNA_pm_table", ".count\$" ],
+      }
+    );
 
-    push @mapped,
-      (
-      "bowtie1_tRNA_pm_count",            ".xml", "bowtie1_rRNA_pm_count",          ".xml", "bowtie1_bacteria_group1_pm_count", ".xml",
-      "bowtie1_bacteria_group2_pm_count", ".xml", "bowtie1_fungus_group4_pm_count", ".xml"
-      );
+    push @table_for_correlation, ( "bowtie1_tRNA_pm_table", "^(?!.*?read).*\.count\$", "bowtie1_rRNA_pm_table", "^(?!.*?read).*\.count\$" );
+    push @table_for_countSum,    ( "bowtie1_tRNA_pm_table", ".category.count\$",       "bowtie1_rRNA_pm_table", "$task_name\.count\$" );
+    push @table_for_readSummary, ( "bowtie1_tRNA_pm_table", ".read.count\$",           "bowtie1_rRNA_pm_table", ".read.count\$" );
+    push @name_for_readSummary,  ( "Non host tRNA",         "Non host rRNA" );
+    push @mapped,                ( "bowtie1_tRNA_pm_count", ".xml",                    "bowtie1_rRNA_pm_count", ".xml" );
+    push @overlap,               ( "bowtie1_tRNA_pm_table", ".read.count\$",           "bowtie1_rRNA_pm_table", ".read.count\$" );
 
     if ($do_comparison) {
 
@@ -815,48 +563,45 @@ sub getSmallRNAConfig {
         "pairs_nonHostLibrary_deseq2_vis_layout"
       );
 
-      addDEseq2( $config, $def, $summary_ref, "nonhost_rRNA",          [ "bowtie1_rRNA_pm_table",            ".count\$" ],          $nonhost_library_dir, $DE_min_median_read_smallRNA );
-      addDEseq2( $config, $def, $summary_ref, "bacteria_group1",       [ "bowtie1_bacteria_group1_pm_table", ".category.count\$" ], $nonhost_genome_dir,  $DE_min_median_read_smallRNA );
-      addDEseq2( $config, $def, $summary_ref, "bacteria_group1_reads", [ "bowtie1_bacteria_group1_pm_table", ".read.count\$" ],     $nonhost_genome_dir,  $DE_min_median_read_smallRNA );
-      addDEseq2( $config, $def, $summary_ref, "bacteria_group2",       [ "bowtie1_bacteria_group2_pm_table", ".category.count\$" ], $nonhost_genome_dir,  $DE_min_median_read_smallRNA );
-      addDEseq2( $config, $def, $summary_ref, "bacteria_group2_reads", [ "bowtie1_bacteria_group2_pm_table", ".read.count\$" ],     $nonhost_genome_dir,  $DE_min_median_read_smallRNA );
-      addDEseq2( $config, $def, $summary_ref, "fungus_group4",         [ "bowtie1_fungus_group4_pm_table",   ".category.count\$" ], $nonhost_genome_dir,  $DE_min_median_read_smallRNA );
-      addDEseq2( $config, $def, $summary_ref, "fungus_group4_reads",   [ "bowtie1_fungus_group4_pm_table",   ".read.count\$" ],     $nonhost_genome_dir,  $DE_min_median_read_smallRNA );
-
-      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome_deseq2",
-        [ "deseq2_bacteria_group1", "_DESeq2.csv\$", "deseq2_bacteria_group2", "_DESeq2.csv\$", "deseq2_fungus_group4", "_DESeq2.csv\$" ],
-        $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout" );
-
-      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome_deseq2_reads",
-        [ "deseq2_bacteria_group1_reads", "_DESeq2.csv\$", "deseq2_bacteria_group2_reads", "_DESeq2.csv\$", "deseq2_fungus_group4_reads", "_DESeq2.csv\$" ],
-        $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout" );
+      addDEseq2( $config, $def, $summary_ref, "nonhost_rRNA", [ "bowtie1_rRNA_pm_table", ".count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA );
     }
   }
 
-  if ( $search_miRBase || $search_unmapped_reads ) {
-    my $unmapped_reads = {
-      final_unmapped_reads => {
-        class            => "CQS::Perl",
-        perform          => 1,
-        target_dir       => $nonhost_blast_dir . "/final_unmapped_reads",
-        perlFile         => "unmappedReadsToFastq.pl",
-        source_ref       => $identical_ref,
-        source2_ref      => \@mapped,
-        source3_ref      => \@pmnames,
-        output_ext       => "_clipped_identical.unmapped.fastq.gz",
-        output_other_ext => "_clipped_identical.unmapped.fastq.dupcount",
-        sh_direct        => 1,
-        pbs              => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
-        },
+  if ($search_nonhost_database) {
+
+    addNonhostVis(
+      $config, $def,
+      $summary_ref,
+      "nonhost_overlap_vis",
+      $data_visualization_dir,
+      {
+        rtemplate                => "countTableVisFunctions.R,NonHostOverlap.R",
+        output_file              => ".NonHost.Reads",
+        output_file_ext          => ".Overlap.csv",
+        parameterSampleFile1_ref => \@overlap,
+      }
+    );
+
+    $config->{final_unmapped_reads} = {
+      class            => "CQS::Perl",
+      perform          => 1,
+      target_dir       => $nonhost_blast_dir . "/final_unmapped_reads",
+      perlFile         => "unmappedReadsToFastq.pl",
+      source_ref       => $identical_ref,
+      source2_ref      => \@mapped,
+      source3_ref      => \@pmnames,
+      output_ext       => "_clipped_identical.unmapped.fastq.gz",
+      output_other_ext => "_clipped_identical.unmapped.fastq.dupcount",
+      sh_direct        => 1,
+      pbs              => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
       },
     };
 
     $identical_ref = [ "final_unmapped_reads", ".fastq.gz\$" ];
-    $config = merge( $config, $unmapped_reads );
     push @$individual_ref,      ("final_unmapped_reads");
     push @table_for_pieSummary, ( "final_unmapped_reads", ".dupcount" );
     push @name_for_pieSummary,  ("UnMapped");
@@ -945,91 +690,54 @@ sub getSmallRNAConfig {
   };
   push @$summary_ref, ( "count_table_correlation", "reads_in_tasks", "reads_in_tasks_pie", "reads_mapping_summary" );
 
-  if ( $def->{blast_top_reads} ) {
-    push @$summary_ref, ( "identical_sequence_top${top_read_number}_contig_blast", "identical_sequence_top${top_read_number}_read_blast", "identical_sequence_top${top_read_number}_minicontig_blast" );
+  #add time cost task in the end of pipeline
+  #search not identical reads to genome, for IGV
+  if ( $search_host_genome && $search_not_identical ) {
+    addBowtie( $config, $def, $individual_ref, "bowtie1_genome_1mm_notidentical", $host_genome_dir, $def->{bowtie1_index}, $not_identical_ref, $def->{bowtie1_option_1mm} );
   }
 
-  if ($blast_unmapped_reads) {
-    my $blast = {
+  #blast top reads
+  if ($blast_top_reads) {
+    if ($do_comparison) {
+      addDeseq2SignificantSequenceBlastn( $config, $def, $summary_ref, "deseq2_top${top_read_number}_minicontigs", $class_independent_dir );
+    }
+    else {
+      #addBlastn( $config, $def, $summary_ref, "identical_sequence_top${top_read_number}_contig_blast",     "identical_sequence_count_table", "sequence.count.fasta\$",   $class_independent_dir );
+      #addBlastn( $config, $def, $summary_ref, "identical_sequence_top${top_read_number}_read_blast",       "identical_sequence_count_table", "read.count.fasta\$",       $class_independent_dir );
+      addBlastn( $config, $def, $summary_ref, "identical_sequence_top${top_read_number}_minicontig_blast", "identical_sequence_count_table", "minicontig.count.fasta\$", $class_independent_dir );
+    }
+  }
 
-      "unmapped_sequence_count_table" => {
-        class           => "CQS::SmallRNASequenceCountTable",
-        perform         => 1,
-        target_dir      => $nonhost_blast_dir . "/unmapped_sequence_count_table",
-        option          => "--maxExtensionBase $max_sequence_extension_base -n $top_read_number --exportFastaNumber $top_read_number",
-        source_ref      => [ "identical", ".dupcount\$" ],
-        fastq_files_ref => $identical_ref,
-        cqs_tools       => $def->{cqstools},
-        suffix          => "_unmapped",
-        sh_direct       => 1,
-        cluster         => $cluster,
-        pbs             => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      },
-      "unmapped_sequence_top${top_read_number}_minicontig_blast" => {
-        class      => "Blast::Blastn",
-        perform    => 1,
-        target_dir => $nonhost_blast_dir . "/unmapped_sequence_top${top_read_number}_minicontig_blast",
-        option     => "",
-        source_ref => [ "unmapped_sequence_count_table", "minicontig.count.fasta\$" ],
-        sh_direct  => 0,
-        localdb    => $blast_localdb,
-        cluster    => $cluster,
-        pbs        => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=" . $def->{max_thread},
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      },
-      "unmapped_sequence_top${top_read_number}_read_blast" => {
-        class      => "Blast::Blastn",
-        perform    => 1,
-        target_dir => $nonhost_blast_dir . "/unmapped_sequence_top${top_read_number}_read_blast",
-        option     => "",
-        source_ref => [ "unmapped_sequence_count_table", "read.count.fasta\$" ],
-        sh_direct  => 0,
-        localdb    => $blast_localdb,
-        cluster    => $cluster,
-        pbs        => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=" . $def->{max_thread},
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      },
-      "unmapped_sequence_top${top_read_number}_contig_blast" => {
-        class      => "Blast::Blastn",
-        perform    => 1,
-        target_dir => $nonhost_blast_dir . "/unmapped_sequence_top${top_read_number}_contig_blast",
-        option     => "",
-        source_ref => [ "unmapped_sequence_count_table", "unmapped.count.fasta\$" ],
-        sh_direct  => 0,
-        localdb    => $blast_localdb,
-        cluster    => $cluster,
-        pbs        => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=" . $def->{max_thread},
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
+  #blast unmapped reads
+  if ($blast_unmapped_reads) {
+    $config->{"unmapped_sequence_count_table"} = {
+      class           => "CQS::SmallRNASequenceCountTable",
+      perform         => 1,
+      target_dir      => $nonhost_blast_dir . "/unmapped_sequence_count_table",
+      option          => "--maxExtensionBase $max_sequence_extension_base -n $top_read_number --exportFastaNumber $top_read_number",
+      source_ref      => [ "identical", ".dupcount\$" ],
+      fastq_files_ref => $identical_ref,
+      cqs_tools       => $def->{cqstools},
+      suffix          => "_unmapped",
+      sh_direct       => 1,
+      cluster         => $cluster,
+      pbs             => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
       },
     };
+    push @$summary_ref, "unmapped_sequence_count_table";
 
-    $config = merge( $config, $blast );
-    push @$summary_ref,
-      (
-      "unmapped_sequence_count_table",                      "unmapped_sequence_top${top_read_number}_minicontig_blast",
-      "unmapped_sequence_top${top_read_number}_read_blast", "unmapped_sequence_top${top_read_number}_contig_blast"
-      );
+    if ($do_comparison) {
+      $deseq2Task = addDEseq2( $config, $def, $summary_ref, "unmapped_sequence_minicontigs", [ "unmapped_sequence_count_table", ".minicontig.count\$" ], $nonhost_blast_dir, $DE_min_median_read_top );
+      addDeseq2SignificantSequenceBlastn( $config, $def, $summary_ref, $deseq2Task, $class_independent_dir );
+    }
+    else {
+      addBlastn( $config, $def, $summary_ref, "unmapped_sequence_minicontig_blast", "unmapped_sequence_count_table", "minicontig.count.fasta\$", $nonhost_blast_dir );
+    }
   }
 
   $config->{sequencetask} = {

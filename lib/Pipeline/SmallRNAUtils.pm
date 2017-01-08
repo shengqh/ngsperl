@@ -7,13 +7,16 @@ use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
+use Pipeline::PipelineUtils;
 use Data::Dumper;
 use Hash::Merge qw( merge );
 
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(getSmallRNADefinition getPrepareConfig isVersion3)] );
+our %EXPORT_TAGS =
+  (
+  'all' => [qw(getSmallRNADefinition getPrepareConfig isVersion3 addNonhostDatabase addNonhostVis)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -65,18 +68,102 @@ sub isVersion3 {
   return $result;
 }
 
+sub addNonhostDatabase {
+  my ( $config, $def, $individual, $summary, $taskKey, $parentDir, $bowtieIndex, $sourceRef, $countOption, $tableOption ) = @_;
+
+  my $bowtie1Task      = "bowtie1_" . $taskKey;
+  my $bowtie1CountTask = "bowtie1_" . $taskKey . "_count";
+  my $bowtie1TableTask = "bowtie1_" . $taskKey . "_table";
+
+  addBowtie( $config, $def, $individual, $bowtie1Task, $parentDir, $bowtieIndex, $sourceRef, $def->{bowtie1_option_pm} );
+  $config->{$bowtie1CountTask} = {
+    class        => "CQS::CQSChromosomeCount",
+    perform      => 1,
+    target_dir   => $parentDir . "/" . $bowtie1CountTask,
+    option       => $countOption,
+    source_ref   => $bowtie1Task,
+    seqcount_ref => [ "identical", ".dupcount\$" ],
+    cqs_tools    => $def->{cqstools},
+    sh_direct    => 1,
+    cluster      => $def->{cluster},
+    pbs          => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "72",
+      "mem"       => "40gb"
+    },
+  };
+
+  $config->{$bowtie1TableTask} = {
+    class      => "CQS::CQSChromosomeTable",
+    perform    => 1,
+    target_dir => $parentDir . "/" . $bowtie1TableTask,
+    option     => $tableOption,
+    source_ref => [ $bowtie1CountTask, ".xml" ],
+    cqs_tools  => $def->{cqstools},
+    prefix     => $taskKey . "_",
+    sh_direct  => 1,
+    cluster    => $def->{cluster},
+    pbs        => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    },
+  };
+  push @$individual, ( $bowtie1Task, $bowtie1TableTask );
+  push @$summary, $bowtie1TableTask;
+}
+
+sub addNonhostVis {
+  my ( $config, $def, $summary, $taskName, $parentDir, $optionHash ) = @_;
+
+  $config->{$taskName} = merge(
+    {
+      class                     => "CQS::UniqueR",
+      perform                   => 1,
+      target_dir                => $parentDir . "/" . $taskName,
+      parameterSampleFile1Order => $def->{groups_order},
+      parameterSampleFile1      => $def->{groups},
+      parameterSampleFile2      => $def->{groups_vis_layout},
+      parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
+      rCode                     => 'maxCategory=NA;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+      sh_direct                 => 1,
+      pbs                       => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    },
+    $optionHash
+  );
+
+  push @$summary, $taskName;
+}
+
 sub initializeDefaultOptions {
   my $def = shift;
 
-  initDefaultValue( $def, "cluster",                     "slurm" );
-  initDefaultValue( $def, "min_read_length",             16 );
-  initDefaultValue( $def, "bowtie1_option_1mm",          "-a -m 100 --best --strata -v 1" );
-  initDefaultValue( $def, "bowtie1_option_pm",           "-a -m 1000 --best --strata -v 0" );
-  initDefaultValue( $def, "fastq_remove_N",              1 );
-  initDefaultValue( $def, "run_cutadapt",                1 );
+  initDefaultValue( $def, "cluster",            "slurm" );
+  initDefaultValue( $def, "min_read_length",    16 );
+  initDefaultValue( $def, "bowtie1_option_1mm", "-a -m 100 --best --strata -v 1" );
+  initDefaultValue( $def, "bowtie1_option_pm",  "-a -m 1000 --best --strata -v 0" );
+  initDefaultValue( $def, "fastq_remove_N",     1 );
+
+  initDefaultValue( $def, "run_cutadapt", 1 );
+  if ( $def->{run_cutadapt} ) {
+    initDefaultValue( $def, "adapter", "TGGAATTCTCGGGTGCCAAGG" );
+    if ( !defined $def->{cutadapt_option} ) {
+      $def->{cutadapt_option} = "-m " . $def->{min_read_length};
+    }
+  }
+
   initDefaultValue( $def, "fastq_remove_random",         0 );
   initDefaultValue( $def, "remove_sequences",            "" );
-  initDefaultValue( $def, "has_NTA",                     1 );
   initDefaultValue( $def, "mirbase_count_option",        "-p hsa" );
   initDefaultValue( $def, "table_vis_group_text_size",   10 );
   initDefaultValue( $def, "sequencetask_run_time",       12 );
@@ -92,13 +179,25 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "DE_use_raw_pvalue",           1 );
   initDefaultValue( $def, "max_sequence_extension_base", 1 );
   initDefaultValue( $def, "top_read_number",             100 );
-  initDefaultValue( $def, "blast_top_reads",             0 );
-  initDefaultValue( $def, "blast_localdb",               "" );
+
   initDefaultValue( $def, "perform_contig_analysis",     0 );
   initDefaultValue( $def, "smallrnacount_option",        "" );
   initDefaultValue( $def, "hasYRNA",                     0 );
   initDefaultValue( $def, "max_sequence_extension_base", "1" );
-  initDefaultValue( $def, "non_host_table_option",       "--outputReadTable" );
+  initDefaultValue( $def, "nonhost_table_option",        "--outputReadTable" );
+
+  initDefaultValue( $def, "has_NTA", 1 );
+
+  #search database
+  initDefaultValue( $def, "search_not_identical",   1 );
+  initDefaultValue( $def, "search_host_genome",     1 );
+  initDefaultValue( $def, "search_nonhost_genome",  1 );
+  initDefaultValue( $def, "search_nonhost_library", 1 );
+
+  #blastn
+  initDefaultValue( $def, "blast_top_reads",      0 );
+  initDefaultValue( $def, "blast_unmapped_reads", 0 );
+  initDefaultValue( $def, "blast_localdb",        "" );
 
   if ( isVersion3($def) ) {
     initDefaultValue( $def, "consider_tRNA_NTA",              1 );
@@ -129,34 +228,43 @@ sub getPrepareConfig {
 
   #print Dumper($def);
 
-  create_directory_or_die( $def->{target_dir} );
+  my $target_dir = create_directory_or_die( getValue( $def, "target_dir" ) );
 
-  my $preprocessing_dir     = create_directory_or_die( $def->{target_dir} . "/preprocessing" );
-  my $class_independent_dir = create_directory_or_die( $def->{target_dir} . "/class_independent" );
+  #check cqstools location
+  my $cqstools = getValue( $def, "cqstools" );
+  ( -e $cqstools ) or die "cqstools not exist: " . $cqstools;
+
+  my $preprocessing_dir     = create_directory_or_die( $target_dir . "/preprocessing" );
+  my $class_independent_dir = create_directory_or_die( $target_dir . "/class_independent" );
 
   $def = initializeDefaultOptions($def);
+  my $cluster = getValue( $def, "cluster" );
 
-  my $cluster                        = $def->{cluster};
-  my $fastq_remove_N                 = $def->{fastq_remove_N};
-  my $run_cutadapt                   = $def->{run_cutadapt};
-  my $fastq_remove_random            = $def->{fastq_remove_random};
-  my $remove_contamination_sequences = $def->{remove_sequences} ne "";
-  my $hasNTA                         = $def->{has_NTA};
-  my $groups                         = $def->{groups};
-  my $pairs                          = $def->{pairs};
+  #remove contamination sequences from sequence kit before adapter trimming
+  my $remove_contamination_sequences = getValue( $def, "remove_contamination_sequences" );
 
-  my $max_sequence_extension_base = $def->{max_sequence_extension_base};
-  my $blast_top_reads             = $def->{blast_top_reads};
-  my $blast_localdb               = $def->{blast_localdb};
+  #remove terminal N from fastq
+  my $fastq_remove_N = getValue( $def, "fastq_remove_N" );
 
-  my $top_read_number = $def->{top_read_number};
+  #perform cutadapt to remove adapter
+  my $run_cutadapt    = getValue( $def, "run_cutadapt" );
+  my $cutadapt_option = getValue( $def, "cutadapt_option" );
+  #for nextflex kit, we need to remove X bases after adapter trimming
+  my $fastq_remove_random = getValue( $def, "fastq_remove_random" );
+
+  #nta for microRNA and tRNA
+  my $consider_miRNA_NTA = getValue( $def, "consider_miRNA_NTA" );
+  my $consider_tRNA_NTA  = getValue( $def, "consider_tRNA_NTA" );
+
+  my $max_sequence_extension_base = getValue( $def, "max_sequence_extension_base" );
+  my $top_read_number             = getValue( $def, "top_read_number" );
 
   my $config = {
     general => {
-      task_name => $def->{task_name},
+      task_name => getValue( $def, "task_name" ),
       cluster   => $cluster
     },
-    files => $def->{files}
+    files => getValue( $def, "files" )
   };
 
   if ( defined $def->{groups} ) {
@@ -167,8 +275,8 @@ sub getPrepareConfig {
     $config->{pairs} = $def->{pairs};
   }
 
-  my @individual = ();
-  my @summary    = ();
+  my $individual = [];
+  my $summary    = [];
 
   my $source_ref = "files";
   my $len_ref    = "files";
@@ -192,39 +300,10 @@ sub getPrepareConfig {
     };
     $source_ref = "fastq_remove_N";
     $len_ref    = "fastq_remove_N";
-    push @individual, "fastq_remove_N";
+    push @$individual, "fastq_remove_N";
   }
 
-  $config->{"fastqc_raw"} = {
-    class      => "QC::FastQC",
-    perform    => 1,
-    target_dir => $preprocessing_dir . "/fastqc_raw",
-    option     => "",
-    source_ref => $source_ref,
-    cluster    => $cluster,
-    pbs        => {
-      "email"    => $def->{email},
-      "nodes"    => "1:ppn=1",
-      "walltime" => "2",
-      "mem"      => "10gb"
-    },
-  };
-  $config->{"fastqc_raw_summary"} = {
-    class      => "QC::FastQCSummary",
-    perform    => 1,
-    target_dir => $preprocessing_dir . "/fastqc_raw",
-    cqstools   => $def->{cqstools},
-    option     => "",
-    cluster    => $cluster,
-    pbs        => {
-      "email"    => $def->{email},
-      "nodes"    => "1:ppn=1",
-      "walltime" => "2",
-      "mem"      => "10gb"
-    },
-  };
-  push @individual, ("fastqc_raw");
-  push @summary,    ("fastqc_raw_summary");
+  addFastQC( $config, $def, $individual, $summary, "fastqc_raw", $source_ref, $preprocessing_dir );
 
   if ($remove_contamination_sequences) {
     $config->{"remove_contamination_sequences"} = {
@@ -244,40 +323,11 @@ sub getPrepareConfig {
         "mem"      => "20gb"
       },
     };
-    push @individual, ("remove_contamination_sequences");
+    push @$individual, ("remove_contamination_sequences");
     $source_ref = [ "remove_contamination_sequences", ".fastq.gz" ];
     $len_ref = "remove_contamination_sequences";
 
-    $config->{"fastqc_post_remove"} = {
-      class      => "QC::FastQC",
-      perform    => 1,
-      target_dir => $preprocessing_dir . "/fastqc_post_remove",
-      option     => "",
-      source_ref => $source_ref,
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "2",
-        "mem"      => "10gb"
-      },
-    };
-    $config->{"fastqc_post_remove_summary"} = {
-      class      => "QC::FastQCSummary",
-      perform    => 1,
-      target_dir => $preprocessing_dir . "/fastqc_post_remove",
-      cqstools   => $def->{cqstools},
-      option     => "",
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "2",
-        "mem"      => "10gb"
-      },
-    };
-    push @individual, ("fastqc_post_remove");
-    push @summary,    ("fastqc_post_remove_summary");
+    addFastQC( $config, $def, $individual, $summary, "fastqc_post_remove", $source_ref, $preprocessing_dir );
 
     if ( !$run_cutadapt ) {    #remove sequence but not trimming adapter
       $config->{"fastqc_count_vis"} = {
@@ -297,7 +347,7 @@ sub getPrepareConfig {
           "mem"      => "10gb"
         },
       };
-      push @summary, ("fastqc_count_vis");
+      push @$summary, ("fastqc_count_vis");
     }
   }
 
@@ -366,8 +416,8 @@ sub getPrepareConfig {
 
     $source_ref = [ "cutadapt", ".fastq.gz" ];
     $len_ref = "cutadapt";
-    push @individual, ( "cutadapt", "fastqc_post_trim" );
-    push @summary, ("fastqc_post_trim_summary");
+    push @$individual, ( "cutadapt", "fastqc_post_trim" );
+    push @$summary, ("fastqc_post_trim_summary");
 
     if ( !$remove_contamination_sequences ) {    #trimming adapter but not remove sequence
       $config->{"fastqc_count_vis"} = {
@@ -387,7 +437,7 @@ sub getPrepareConfig {
           "mem"      => "10gb"
         },
       };
-      push @summary, ("fastqc_count_vis");
+      push @$summary, ("fastqc_count_vis");
     }
   }
 
@@ -410,7 +460,7 @@ sub getPrepareConfig {
         "mem"      => "10gb"
       },
     };
-    push @summary, ("fastqc_count_vis");
+    push @$summary, ("fastqc_count_vis");
   }
 
   #print Dumper($config);
@@ -438,7 +488,7 @@ sub getPrepareConfig {
     output_file              => ".lengthDistribution",
     output_file_ext          => ".csv",
     parameterSampleFile1_ref => [ "fastq_len", ".len\$" ],
-    parameterSampleFile2     => $groups,
+    parameterSampleFile2     => $def->{groups},
     sh_direct                => 1,
     pbs                      => {
       "email"    => $def->{email},
@@ -447,8 +497,8 @@ sub getPrepareConfig {
       "mem"      => "10gb"
     },
   };
-  push @individual, ("fastq_len");
-  push @summary,    ("fastq_len_vis");
+  push @$individual, ("fastq_len");
+  push @$summary,    ("fastq_len_vis");
 
   my $preparation = {
     identical => {
@@ -478,8 +528,8 @@ sub getPrepareConfig {
       suffix     => "_sequence",
       sh_direct  => 1,
       cluster    => $cluster,
-      groups     => $groups,
-      pairs      => $pairs,
+      groups     => $def->{groups},
+      pairs      => $def->{pairs},
       pbs        => {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
@@ -489,10 +539,10 @@ sub getPrepareConfig {
     },
   };
 
-  push @individual, ("identical");
-  push @summary,    ("identical_sequence_count_table");
+  push @$individual, ("identical");
+  push @$summary,    ("identical_sequence_count_table");
 
-  if ( $hasNTA && $def->{consider_tRNA_NTA} ) {
+  if ( $consider_miRNA_NTA && $consider_tRNA_NTA ) {
     $preparation->{identical_check_cca} = {
       class              => "SmallRNA::tRNACheckCCA",
       perform            => 1,
@@ -509,7 +559,7 @@ sub getPrepareConfig {
         "mem"      => "10gb"
       },
     };
-    push @individual, ("identical_check_cca");
+    push @$individual, ("identical_check_cca");
   }
 
   if ( $def->{special_sequence_file} ) {
@@ -531,61 +581,10 @@ sub getPrepareConfig {
         "mem"      => "10gb"
       },
     };
-    push @summary, ("special_sequence_count_table");
+    push @$summary, ("special_sequence_count_table");
   }
 
-  if ($blast_top_reads) {
-    $preparation->{"identical_sequence_top${top_read_number}_contig_blast"} = {
-      class      => "Blast::Blastn",
-      perform    => 1,
-      target_dir => $class_independent_dir . "/identical_sequence_top${top_read_number}_contig_blast",
-      option     => "",
-      source_ref => [ "identical_sequence_count_table", "sequence.count.fasta\$" ],
-      sh_direct  => 0,
-      localdb    => $blast_localdb,
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=" . $def->{max_thread},
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    };
-    $preparation->{"identical_sequence_top${top_read_number}_read_blast"} = {
-      class      => "Blast::Blastn",
-      perform    => 1,
-      target_dir => $class_independent_dir . "/identical_sequence_top${top_read_number}_read_blast",
-      option     => "",
-      source_ref => [ "identical_sequence_count_table", ".read.count.fasta\$" ],
-      sh_direct  => 0,
-      localdb    => $blast_localdb,
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=" . $def->{max_thread},
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    };
-    $preparation->{"identical_sequence_top${top_read_number}_minicontig_blast"} = {
-      class      => "Blast::Blastn",
-      perform    => 1,
-      target_dir => $class_independent_dir . "/identical_sequence_top${top_read_number}_minicontig_blast",
-      option     => "",
-      source_ref => [ "identical_sequence_count_table", ".minicontig.count.fasta\$" ],
-      sh_direct  => 0,
-      localdb    => $blast_localdb,
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=" . $def->{max_thread},
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    };
-  }
-
-  if ($hasNTA) {
+  if ($consider_miRNA_NTA) {
     my $ccaaOption = $def->{consider_tRNA_NTA} ? "--ccaa" : "--no-ccaa";
     $preparation->{identical_NTA} = {
       class      => "SmallRNA::FastqSmallRnaNTA",
@@ -604,12 +603,12 @@ sub getPrepareConfig {
         "mem"      => "20gb"
       },
     };
-    push @individual, ("identical_NTA");
+    push @$individual, ("identical_NTA");
   }
 
   $config = merge( $config, $preparation );
 
-  return ( $config, \@individual, \@summary, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir );
+  return ( $config, $individual, $summary, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir );
 }
 
 1;
