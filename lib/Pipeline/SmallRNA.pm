@@ -281,7 +281,7 @@ sub getSmallRNAConfig {
       perform    => 1,
       target_dir => $class_independent_dir . "/top${top_read_number}_minicontigs_sequences",
       option     => "",
-      source_ref => [ "top${top_read_number}_minicontigs", "_DESeq2_sig.csv\$" ],
+      source_ref => [ $deseq2Task, "_DESeq2_sig.csv\$" ],
       sh_direct  => 1,
       cluster    => $def->{cluster},
       pbs        => {
