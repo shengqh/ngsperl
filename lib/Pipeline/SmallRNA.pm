@@ -30,7 +30,7 @@ sub getSmallRNAConfig {
 
   my $search_not_identical   = getValue( $def, "search_not_identical" );
   my $search_host_genome     = getValue( $def, "search_host_genome" );
-  my $search_nonhost_genome  = getValue( $def, "search_nonhost_database" );
+  my $search_nonhost_genome  = getValue( $def, "search_nonhost_genome" );
   my $search_nonhost_library = getValue( $def, "search_nonhost_library" );
   my $search_nonhost_database = $search_nonhost_genome || $search_nonhost_library;
 
