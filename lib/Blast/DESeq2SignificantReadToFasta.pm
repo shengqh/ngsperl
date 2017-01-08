@@ -59,7 +59,8 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
   my $result       = {};
   my @result_files = ();
-  my $final_file   = $task_name . ".fasta";
+  my $final_file   = $result_dir . "/" . $task_name . ".fasta";
+  push @result_files, $final_file;
   $result->{$task_name} = filter_array( \@result_files, $pattern );
   return $result;
 }
