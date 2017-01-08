@@ -13,18 +13,19 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS =
-  (
-  'all' => [qw(getValue addFastQC addBlastn addBowtie addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn)] );
+our %EXPORT_TAGS = ( 'all' => [qw(getValue addFastQC addBlastn addBowtie addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
 sub getValue {
-  my ( $def, $name ) = @_;
+  my ( $def, $name, $defaultValue ) = @_;
   if ( defined $def->{$name} ) {
     return $def->{$name};
+  }
+  elsif ( defined $defaultValue ) {
+    return $defaultValue;
   }
   else {
     die "Define $name in user definition first.";
