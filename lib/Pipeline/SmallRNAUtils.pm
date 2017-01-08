@@ -119,6 +119,7 @@ sub addNonhostVis {
   my ( $config, $def, $summary, $taskName, $parentDir, $optionHash ) = @_;
 
   $config->{$taskName} = merge(
+    $optionHash,
     {
       class                     => "CQS::UniqueR",
       perform                   => 1,
@@ -136,8 +137,7 @@ sub addNonhostVis {
         "walltime"  => "1",
         "mem"       => "10gb"
       },
-    },
-    $optionHash
+    }
   );
 
   push @$summary, $taskName;
