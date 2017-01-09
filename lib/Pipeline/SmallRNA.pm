@@ -579,6 +579,10 @@ sub getSmallRNAConfig {
         output_file              => ".NonHost.Reads",
         output_file_ext          => ".Overlap.csv",
         parameterSampleFile1_ref => \@overlap,
+        parameterSampleFile2Order => $def->{groups_order},
+        parameterSampleFile2      => $groups,
+        parameterSampleFile3      => $groups_vis_layout,
+        parameterFile3_ref => [ "fastqc_count_vis", ".Reads.csv\$" ],
       }
     );
 
