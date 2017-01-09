@@ -726,6 +726,7 @@ sub getSmallRNAConfig {
       perform         => 1,
       target_dir      => $nonhost_blast_dir . "/unmapped_sequence_count_table",
       option          => "--maxExtensionBase $max_sequence_extension_base -n $top_read_number --exportFastaNumber $top_read_number",
+      
       source_ref      => [ "identical", ".dupcount\$" ],
       fastq_files_ref => $identical_ref,
       cqs_tools       => $def->{cqstools},

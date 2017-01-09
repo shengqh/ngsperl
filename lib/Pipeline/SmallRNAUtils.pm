@@ -527,7 +527,7 @@ sub getPrepareConfig {
     push @$summary, ("special_sequence_count_table");
   }
 
-  if ($consider_miRNA_NTA) {
+  if ($consider_miRNA_NTA || $consider_tRNA_NTA) {
     my $ccaaOption = $def->{consider_tRNA_NTA} ? "--ccaa" : "--no-ccaa";
     $preparation->{identical_NTA} = {
       class      => "SmallRNA::FastqSmallRnaNTA",
