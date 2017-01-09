@@ -1141,21 +1141,32 @@ sub getSmallRNAConfig {
         }
       );
 
-      addNonhostVis(
-        $config, $def,
-        $summary_ref,
-        "nonhost_overlap_vis",
-        $data_visualization_dir,
-        {
-          rtemplate                => "countTableVisFunctions.R,NonHostOverlap.R",
-          output_file              => ".NonHost.Reads",
-          output_file_ext          => ".Overlap.csv",
-          parameterSampleFile1_ref => [
-            "bowtie1_bacteria_group1_pm_table", ".read.count\$", "bowtie1_bacteria_group2_pm_table", ".read.count\$", "bowtie1_fungus_group4_pm_table", ".read.count\$",
-            "bowtie1_tRNA_pm_table",            ".read.count\$", "bowtie1_rRNA_pm_table",            ".read.count\$",
-          ],
-        }
-      );
+      $config->{nonhost_overlap_vis} = {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $data_visualization_dir . "/nonhost_overlap_vis",
+        rtemplate                => "countTableVisFunctions.R,NonHostOverlap.R",
+        output_file              => ".NonHost.Reads",
+        output_file_ext          => ".Overlap.csv",
+        parameterSampleFile1_ref => [
+          "bowtie1_bacteria_group1_pm_table", ".read.count\$", "bowtie1_bacteria_group2_pm_table", ".read.count\$", "bowtie1_fungus_group4_pm_table", ".read.count\$",
+          "bowtie1_tRNA_pm_table",            ".read.count\$", "bowtie1_rRNA_pm_table",            ".read.count\$",
+        ],
+        parameterSampleFile2Order => $def->{groups_order},
+        parameterSampleFile2      => $groups,
+        parameterSampleFile3      => $groups_vis_layout,
+        parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
+        sh_direct                 => 1,
+        rCode                     => 'maxCategory=8;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+        pbs                       => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary_ref, "nonhost_overlap_vis";
 
       push @table_for_correlation,
         (
@@ -1202,12 +1213,12 @@ sub getSmallRNAConfig {
         );
 
         addDEseq2( $config, $def, $summary_ref, "nonhost_rRNA",          [ "bowtie1_rRNA_pm_table",            ".count\$" ],          $nonhost_library_dir, $DE_min_median_read_smallRNA );
-        addDEseq2( $config, $def, $summary_ref, "bacteria_group1",       [ "bowtie1_bacteria_group1_pm_table", ".category.count\$" ], $nonhost_genome_dir, $DE_min_median_read_smallRNA );
-        addDEseq2( $config, $def, $summary_ref, "bacteria_group1_reads", [ "bowtie1_bacteria_group1_pm_table", ".read.count\$" ],     $nonhost_genome_dir, $DE_min_median_read_smallRNA );
-        addDEseq2( $config, $def, $summary_ref, "bacteria_group2",       [ "bowtie1_bacteria_group2_pm_table", ".category.count\$" ], $nonhost_genome_dir, $DE_min_median_read_smallRNA );
-        addDEseq2( $config, $def, $summary_ref, "bacteria_group2_reads", [ "bowtie1_bacteria_group2_pm_table", ".read.count\$" ],     $nonhost_genome_dir, $DE_min_median_read_smallRNA );
-        addDEseq2( $config, $def, $summary_ref, "fungus_group4",         [ "bowtie1_fungus_group4_pm_table",   ".category.count\$" ], $nonhost_genome_dir, $DE_min_median_read_smallRNA );
-        addDEseq2( $config, $def, $summary_ref, "fungus_group4_reads",   [ "bowtie1_fungus_group4_pm_table",   ".read.count\$" ],     $nonhost_genome_dir, $DE_min_median_read_smallRNA );
+        addDEseq2( $config, $def, $summary_ref, "bacteria_group1",       [ "bowtie1_bacteria_group1_pm_table", ".category.count\$" ], $nonhost_genome_dir,  $DE_min_median_read_smallRNA );
+        addDEseq2( $config, $def, $summary_ref, "bacteria_group1_reads", [ "bowtie1_bacteria_group1_pm_table", ".read.count\$" ],     $nonhost_genome_dir,  $DE_min_median_read_smallRNA );
+        addDEseq2( $config, $def, $summary_ref, "bacteria_group2",       [ "bowtie1_bacteria_group2_pm_table", ".category.count\$" ], $nonhost_genome_dir,  $DE_min_median_read_smallRNA );
+        addDEseq2( $config, $def, $summary_ref, "bacteria_group2_reads", [ "bowtie1_bacteria_group2_pm_table", ".read.count\$" ],     $nonhost_genome_dir,  $DE_min_median_read_smallRNA );
+        addDEseq2( $config, $def, $summary_ref, "fungus_group4",         [ "bowtie1_fungus_group4_pm_table",   ".category.count\$" ], $nonhost_genome_dir,  $DE_min_median_read_smallRNA );
+        addDEseq2( $config, $def, $summary_ref, "fungus_group4_reads",   [ "bowtie1_fungus_group4_pm_table",   ".read.count\$" ],     $nonhost_genome_dir,  $DE_min_median_read_smallRNA );
 
         addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome_deseq2",
           [ "deseq2_bacteria_group1", "_DESeq2.csv\$", "deseq2_bacteria_group2", "_DESeq2.csv\$", "deseq2_fungus_group4", "_DESeq2.csv\$" ],
