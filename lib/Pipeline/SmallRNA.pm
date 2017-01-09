@@ -569,22 +569,29 @@ sub getSmallRNAConfig {
 
   if ($search_nonhost_database) {
 
-    addNonhostVis(
-      $config, $def,
-      $summary_ref,
-      "nonhost_overlap_vis",
-      $data_visualization_dir,
-      {
-        rtemplate                => "countTableVisFunctions.R,NonHostOverlap.R",
-        output_file              => ".NonHost.Reads",
-        output_file_ext          => ".Overlap.csv",
-        parameterSampleFile1_ref => \@overlap,
-        parameterSampleFile2Order => $def->{groups_order},
-        parameterSampleFile2      => $groups,
-        parameterSampleFile3      => $groups_vis_layout,
-        parameterFile3_ref => [ "fastqc_count_vis", ".Reads.csv\$" ],
-      }
-    );
+    $config->{nonhost_overlap_vis} = {
+      class                     => "CQS::UniqueR",
+      perform                   => 1,
+      target_dir                => $data_visualization_dir . "/nonhost_overlap_vis",
+      rtemplate                 => "countTableVisFunctions.R,NonHostOverlap.R",
+      output_file               => ".NonHost.Reads",
+      output_file_ext           => ".Overlap.csv",
+      parameterSampleFile1_ref  => \@overlap,
+      parameterSampleFile2Order => $def->{groups_order},
+      parameterSampleFile2      => $groups,
+      parameterSampleFile3      => $groups_vis_layout,
+      parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
+      sh_direct                 => 1,
+      rCode                     => 'maxCategory=8;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+      pbs                       => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    };
+    push @$summary_ref, "nonhost_overlap_vis";
 
     $config->{final_unmapped_reads} = {
       class            => "CQS::Perl",
