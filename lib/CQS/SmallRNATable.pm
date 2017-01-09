@@ -136,6 +136,16 @@ sub result {
       push( @result_files, $tRNAfile );
       push( @result_files, $tRNAreadfile );
       push( @result_files, $tRNAAminoacidfile );
+
+      if ( $option =~ /yRNAsnRNAsnoRNA/ ) {
+        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".yRNA.count",        0 ) );
+        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".yRNA.read.count",   0 ) );
+        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".snRNA.count",       0 ) );
+        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".snRNA.read.count",  0 ) );
+        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".snoRNA.count",      0 ) );
+        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".snoRNA.read.count", 0 ) );
+      }
+
       push( @result_files, $otherfile );
       push( @result_files, $otherreadfile );
       push( @result_files, $filelist );
@@ -165,6 +175,16 @@ sub result {
     push( @result_files, $tRNAfile );
     push( @result_files, $tRNAreadfile );
     push( @result_files, $tRNAAminoacidfile );
+
+    if ( $option =~ /yRNAsnRNAsnoRNA/ ) {
+      push( @result_files, $self->get_file( $result_dir, ${task_name}, ".yRNA.count",        0 ) );
+      push( @result_files, $self->get_file( $result_dir, ${task_name}, ".yRNA.read.count",   0 ) );
+      push( @result_files, $self->get_file( $result_dir, ${task_name}, ".snRNA.count",       0 ) );
+      push( @result_files, $self->get_file( $result_dir, ${task_name}, ".snRNA.read.count",  0 ) );
+      push( @result_files, $self->get_file( $result_dir, ${task_name}, ".snoRNA.count",      0 ) );
+      push( @result_files, $self->get_file( $result_dir, ${task_name}, ".snoRNA.read.count", 0 ) );
+    }
+
     push( @result_files, $otherfile );
     push( @result_files, $otherreadfile );
     push( @result_files, $filelist );

@@ -118,8 +118,8 @@ sub result {
     }
     if ($output_unsorted) {
       push( @result_files, "${result_dir}/${sample_name}/${sample_name}_Aligned.out.bam" );
-
     }
+    push( @result_files, "${result_dir}/${sample_name}/${sample_name}_Log.final.out" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;

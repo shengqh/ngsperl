@@ -19,7 +19,7 @@ Sheng Q, Zhao S, Guo M, Shyr Y: NGSPERL: a semi-automated framework for large sc
 # Download and install #
 You can download NGSPERL package from [github](https://github.com/shengqh/ngsperl/). Assume you download the NGSPERL package to "/home/user/ngsperl", add "/home/user/ngsperl/lib" into your your perl library path.
 
-NGSPERL just provide the interface to generate PBS scripts but not running the actual scripts. So, the tools used in the pipeline should be installed individually before the scripts being executed.
+NGSPERL just provide the interface to generate PBS scripts but not running the actual scripts. So, the tools used in the pipeline should be installed individually before the scripts being executed, for example, bwa for genome alignment.
 
 <a name="framework"/>
 # Framework

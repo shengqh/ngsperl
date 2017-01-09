@@ -46,6 +46,18 @@ sub initializeDefaultOptions {
     $def->{sequencetask_run_time} = "12";
   }
 
+  if ( !defined $def->{perform_rnaseqc} ) {
+    $def->{perform_rnaseqc} = 0;
+  }
+
+  if ( !defined $def->{perform_qc3bam} ) {
+    $def->{perform_qc3bam} = 0;
+  }
+
+  if ( !defined $def->{perform_bamplot} ) {
+    $def->{perform_bamplot} = 0;
+  }
+
   return $def;
 }
 
@@ -67,11 +79,28 @@ sub getRNASeqConfig {
   my $cqstools                   = $def->{cqstools} or die "Define cqstools at definition first";
   my $star_index                 = $def->{star_index} or die "Define star_index at definition first";
   my $transcript_gtf             = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
-  my $qc3_perl                   = $def->{qc3_perl};
   my $name_map_file              = $def->{name_map_file} or die "Define tramscript name_map_file at definition first";
   my $use_pearson_in_hca         = defined $def->{use_pearson_in_hca} ? $def->{use_pearson_in_hca} : 1;
   my $top25cv_in_hca             = defined $def->{top25cv_in_hca} ? $def->{top25cv_in_hca} : 0;
   my $use_green_red_color_in_hca = defined $def->{use_green_red_color_in_hca} ? $def->{use_green_red_color_in_hca} : 1;
+
+  if ( $def->{perform_rnaseqc} ) {
+    defined $def->{rnaseqc_jar} or die "Define rnaseqc_jar first!";
+    ( -e $def->{rnaseqc_jar} )  or die "rnaseqc_jar not exists " . $def->{rnaseqc_jar};
+    defined $def->{fasta_file}  or die "Define fasta_file for rnaseqc first!";
+    ( -e $def->{fasta_file} )   or die "fasta_file not exists " . $def->{fasta_file};
+  }
+
+  if ( $def->{perform_qc3bam} ) {
+    defined $def->{qc3_perl} or die "Define qc3_perl first!";
+    ( -e $def->{qc3_perl} )  or die "qc3_perl not exists " . $def->{qc3_perl};
+  }
+
+  if ( $def->{perform_bamplot} ) {
+    defined $def->{dataset_name} or die "Define dataset_name for bamplot first!";
+    defined $def->{gene_names}   or die "Define gene_names for bamplot first, seperate by blank space!";
+    defined $def->{add_chr}   or die "Define add_chr for bamplot first, check your genome sequence!";
+  }
 
   my $config = {
     general => {
@@ -182,6 +211,20 @@ sub getRNASeqConfig {
         "mem"      => "30gb"
       },
     },
+    star_summary => {
+      class      => "Alignment::STARSummary",
+      perform    => 1,
+      target_dir => $target_dir . "/star",
+      option     => "",
+      source_ref => [ "star", "_Log.final.out" ],
+      sh_direct  => 1,
+      pbs        => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    },
     star_featurecount => {
       class      => "Count::FeatureCounts",
       perform    => 1,
@@ -242,7 +285,7 @@ sub getRNASeqConfig {
       target_dir               => $target_dir . "/star_genetable_correlation",
       rtemplate                => "countTableVisFunctions.R,countTableGroupCorrelation.R",
       output_file              => "parameterSampleFile1",
-      output_file_ext          => ".pairsCorrelation.png",
+      output_file_ext          => ".Correlation.png",
       use_pearson_in_hca       => $def->{use_pearson_in_hca},
       parameterSampleFile1_ref => [ "star_genetable", ".count\$" ],
       parameterSampleFile2_ref => "groups",
@@ -257,16 +300,37 @@ sub getRNASeqConfig {
   };
   $config = merge( $config, $configAlignment );
   push @individual, ( "star", "star_featurecount" );
-  push @summary, ( "star_genetable", "star_genetable_correlation", "star_genetable_deseq2" );
+  push @summary, ( "star_summary", "star_genetable", "star_genetable_correlation", "star_genetable_deseq2" );
 
-  if ( defined $qc3_perl ) {
+  if ( $def->{perform_rnaseqc} ) {
+    $config->{rnaseqc} = {
+      class          => "QC::RNASeQC",
+      perform        => 1,
+      target_dir     => "${target_dir}/rnaseqc",
+      init_command   => $def->{rnaseqc_init_command},
+      option         => "",
+      source_ref     => [ "star", "_Aligned.sortedByCoord.out.bam" ],
+      jar            => $def->{rnaseqc_jar},
+      fasta_file     => $def->{fasta_file},
+      rrna_fasta     => $def->{rrna_fasta},
+      transcript_gtf => $transcript_gtf,
+      pbs            => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=8",
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    };
+    push( @summary, "rnaseqc" );
+  }
+  if ( $def->{perform_qc3bam} ) {
     $config->{star_qc3} = {
       class          => "QC::QC3bam",
       perform        => 1,
       target_dir     => $target_dir . "/star_qc3",
       option         => "",
       transcript_gtf => $transcript_gtf,
-      qc3_perl       => $qc3_perl,
+      qc3_perl       => $def->{qc3_perl},
       source_ref     => [ "star", "_Aligned.sortedByCoord.out.bam" ],
       pbs            => {
         "email"    => $email,
@@ -276,6 +340,46 @@ sub getRNASeqConfig {
       },
     };
     push( @summary, "star_qc3" );
+  }
+
+  if ( $def->{perform_bamplot} ) {
+    $config->{gene_pos} = {
+      class        => "Annotation::PrepareGenePosition",
+      perform      => 1,
+      target_dir   => $target_dir . "/gene_pos",
+      option       => "",
+      dataset_name => $def->{dataset_name},
+      gene_names   => $def->{gene_names},
+      add_chr      => $def->{add_chr},
+      output_gff   => 1,
+      pbs          => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "2",
+        "mem"      => "10gb"
+      },
+    };
+    $config->{bamplot} = {
+      class              => "Visualization::Bamplot",
+      perform            => 1,
+      target_dir         => "${target_dir}/bamplot",
+      option             => "-g " . $def->{dataset_name} . " -y uniform -r --save-temp",
+      source_ref         => [ "star", "_Aligned.sortedByCoord.out.bam" ],
+      gff_file_ref       => "gene_pos",
+      is_rainbow_color   => 0,
+      is_single_pdf      => 0,
+      is_draw_individual => 0,
+      groups             => $def->{"plotgroups"},
+      colors             => $def->{"colormaps"},
+      sh_direct          => 1,
+      pbs                => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
+      },
+    };
+    push( @summary, "gene_pos", "bamplot" );
   }
 
   $config->{sequencetask} = {

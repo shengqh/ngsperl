@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Pipeline::ChIPSeq;
+package Pipeline::ChIPSeqTagalign;
 
 use strict;
 use warnings;
@@ -69,10 +69,9 @@ sub getConfig {
 
   my $cqstools   = $def->{cqstools}   or die "define cqstools first";
   my $picard_jar = $def->{picard_jar} or die "define picard_jar first";
+  my $spp_r      = $def->{spp_r}      or die "define spp_r first";
 
   my $macs2_option = $def->{macs2_option} or die "define macs2_option first";
-  my $qctable      = $def->{qc_table}     or die "define qctable first";
-  my $genome       = $def->{genome}       or die "define genome first, such like hg19, check R ChIPQC package";
 
   my $config = {
     general => {
@@ -86,6 +85,7 @@ sub getConfig {
   my $source_ref = "files";
   my @individual;
   my @summary;
+
 
   if ($sra_to_fastq) {
     $config->{sra2fastq} = {
@@ -174,45 +174,83 @@ sub getConfig {
         "mem"      => "40gb"
       },
     },
-    macs2callpeak => {
-      class        => "Chipseq::MACS2Callpeak",
-      perform      => 1,
-      target_dir   => "${target_dir}/macs2callpeak",
-      option       => $macs2_option,
-      source_ref   => "bwa",
-      groups_ref   => "groups",
-      controls_ref => "inputs",
-      sh_direct    => 0,
-      pbs          => {
+    bam2tagalign => {
+      class      => "Format::Bam2TagAlign",
+      perform    => 1,
+      target_dir => "${target_dir}/bam2tagalign",
+      option     => "-F 1548 -q 30",                #filter read in samtools view
+      source_ref => "bwa",
+      sh_direct  => 1,
+      pbs        => {
         "email"    => $email,
         "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "40gb"
+        "walltime" => "2",
+        "mem"      => "10gb"
       },
     },
-    chipqc => {
-      class         => "QC::ChipseqQC",
-      perform       => 1,
-      target_dir    => "${target_dir}/chipqc",
-      option        => "",
-      source_ref    => "bwa",
-      qctable       => $qctable,
-      peaks_ref     => [ "macs2callpeak", "_summits.bed\$" ],
-      peak_software => "bed",
-      genome        => $genome,
-      sh_direct     => 0,
-      pbs           => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    }
   };
 
   $config = merge( $config, $processing );
+
+  my $tagAlignSource = ["bam2tagalign"];
+  if ( defined $def->{merge_tagaligns_files} ) {
+    $config->{merge_tagaligns} = {
+      class      => "Format::MergeTagAlign",
+      perform    => 1,
+      target_dir => "${target_dir}/merge_tagaligns",
+      option     => "",
+      source_ref => "bam2tagalign",
+      groups_ref => "merge_tagaligns_files",
+      sh_direct  => 1,
+      pbs        => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=8",
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    };
+
+    push( @$tagAlignSource, "merge_tagaligns" );
+    push( @summary,        "merge_tagaligns" );
+  }
+
+  my $spp_inputs = defined $def->{spp_inputs} ? "spp_inputs" : "inputs";
+  $config->{spp} = {
+    class      => "Chipseq::SPP",
+    perform    => 1,
+    target_dir => "${target_dir}/spp",
+    option     => "",
+    source_ref => $tagAlignSource,
+    groups_ref => "groups",
+    inputs_ref => $spp_inputs,
+    spp_r      => $spp_r,
+    sh_direct  => 0,
+    pbs        => {
+      "email"    => $email,
+      "nodes"    => "1:ppn=8",
+      "walltime" => "72",
+      "mem"      => "40gb"
+    },
+  };
+
+  $config->{macs2callpeak} = {
+    class        => "Chipseq::MACS2Callpeak",
+    perform      => 1,
+    target_dir   => "${target_dir}/macs2callpeak",
+    option       => $macs2_option,
+    source_ref   => $tagAlignSource,
+    groups_ref   => "groups",
+    controls_ref => "inputs",
+    sh_direct    => 0,
+    pbs          => {
+      "email"    => $email,
+      "nodes"    => "1:ppn=1",
+      "walltime" => "72",
+      "mem"      => "40gb"
+    },
+  };
   push @individual, ( "fastqc_raw", "bwa" );
-  push @summary, ( "fastqc_raw_summary", "macs2callpeak", "chipqc" );
+  push @summary, ( "fastqc_raw_summary", "spp", "macs2callpeak" );
 
   $config->{sequencetask} = {
     class      => "CQS::SequenceTask",
