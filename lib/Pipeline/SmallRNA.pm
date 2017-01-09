@@ -744,7 +744,7 @@ sub getSmallRNAConfig {
 
     if ($do_comparison) {
       $deseq2Task = addDEseq2( $config, $def, $summary_ref, "unmapped_sequence_minicontigs", [ "unmapped_sequence_count_table", ".minicontig.count\$" ], $nonhost_blast_dir, $DE_min_median_read_top );
-      addDeseq2SignificantSequenceBlastn( $config, $def, $summary_ref, $deseq2Task, $class_independent_dir );
+      addDeseq2SignificantSequenceBlastn( $config, $def, $summary_ref, $deseq2Task, $nonhost_blast_dir );
     }
     else {
       addBlastn( $config, $def, $summary_ref, "unmapped_sequence_minicontig_blast", "unmapped_sequence_count_table", "minicontig.count.fasta\$", $nonhost_blast_dir );
