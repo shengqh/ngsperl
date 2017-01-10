@@ -111,8 +111,8 @@ sub addNonhostDatabase {
       "mem"       => "10gb"
     },
   };
-  push @$individual, ( $bowtie1Task, $bowtie1TableTask );
-  push @$summary, $bowtie1TableTask;
+  push @$individual, $bowtie1Task;
+  push @$summary,    $bowtie1TableTask;
 }
 
 sub addNonhostVis {
@@ -527,7 +527,7 @@ sub getPrepareConfig {
     push @$summary, ("special_sequence_count_table");
   }
 
-  if ($consider_miRNA_NTA || $consider_tRNA_NTA) {
+  if ( $consider_miRNA_NTA || $consider_tRNA_NTA ) {
     my $ccaaOption = $def->{consider_tRNA_NTA} ? "--ccaa" : "--no-ccaa";
     $preparation->{identical_NTA} = {
       class      => "SmallRNA::FastqSmallRnaNTA",
