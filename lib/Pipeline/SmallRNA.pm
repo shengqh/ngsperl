@@ -36,6 +36,33 @@ sub getSmallRNAConfig {
 
   my $blast_top_reads      = getValue( $def, "blast_top_reads" );
   my $blast_unmapped_reads = getValue( $def, "blast_unmapped_reads" );
+  
+  my $perform_tDRmapper = getValue( $def, "perform_tDRmapper", 0 );
+  if($perform_tDRmapper){
+    getValue( $def, "tDRmapper" );
+    getValue( $def, "tDRmapper_fasta" );
+  } 
+  
+  #tDRmapper
+  if ($perform_tDRmapper) {
+    $config->{"tDRmapper"} = {
+      class      => "CQS::Perl",
+      perform    => 1,
+      target_dir => $preprocessing_dir . "/tDRmapper",
+      perlFile   => "runtDRmapper.pl",
+      option     => $def->{tDRmapper} . " " . $def->{tDRmapper_fasta},
+      source_ref => $not_identical_ref,
+      output_ext => "_clipped_identical.fastq.hq_cs",
+      sh_direct  => 1,
+      pbs        => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
+      },
+    };
+    push @$individual_ref, ("tDRmapper");
+  }
 
   my $top_read_number = getValue( $def, "top_read_number" );
   my $host_genome_dir;
