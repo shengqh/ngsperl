@@ -253,6 +253,8 @@ sub getPrepareConfig {
   my $consider_miRNA_NTA = getValue( $def, "consider_miRNA_NTA" );
   my $consider_tRNA_NTA  = getValue( $def, "consider_tRNA_NTA" );
 
+  my $perform_tDRmapper = defined $def->{perform_tDRmapper} && $def->{perform_tDRmapper} && defined $def->{tDRmapper} && defined $def->{tDRmapper_fasta};
+
   my $max_sequence_extension_base = getValue( $def, "max_sequence_extension_base" );
   my $top_read_number             = getValue( $def, "top_read_number" );
 
@@ -406,6 +408,27 @@ sub getPrepareConfig {
     push @$summary, ("fastqc_count_vis");
   }
 
+  #tDRmapper
+  if ($perform_tDRmapper) {
+    $config->{"tDRmapper"} = {
+      class      => "CQS::Perl",
+      perform    => 1,
+      target_dir => $preprocessing_dir . "/tDRmapper",
+      perlFile   => "runtDRmapper.pl",
+      option     => $def->{tDRmapper} . " " . $def->{tDRmapper_fasta},
+      source_ref => "fastqfiles",
+      output_ext => "_clipped_identical.fastq.hq_cs",
+      sh_direct  => 1,
+      pbs        => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
+      },
+    };
+    push @$individual, ("tDRmapper");
+  }
+  
   #print Dumper($config);
   $config->{"fastq_len"} = {
     class      => "CQS::FastqLen",
