@@ -29,6 +29,7 @@ sub perform {
 
   my $genome2bit = get_param_file( $config->{$section}{genome2bit}, "genome2bit", 1 );
   my $mirna_db   = get_param_file( $config->{$section}{mirna_db},   "mirna_db",   1 );
+  my $sorted_by_name = get_option( $config, $section, "sorted_by_name" );
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -47,12 +48,28 @@ sub perform {
     my $inputFile = $bam_file;
     if ( $bam_file =~ /bam$/ ) {
       $fileType  = "SAM_FILE";
-      $inputFile = "${sample_name}.sam";
-      $bam2sam   = "if [ ! -s $inputFile ]; then
-  samtools view -h -F 4 -o $inputFile $bam_file
+      $inputFile = "${sample_name}.sortedName.sam";
+
+      my $sortCmd;
+      my $bamInput;
+      my $rmList;
+      if ($sorted_by_name) {
+        $sortCmd  = "";
+        $bamInput = $bam_file;
+        $rmList = "";
+      }
+      else {
+        $sortCmd  = "ln -s $bam_file ${sample_name}.bam; samtools sort -n -o ${sample_name}.sortedName.bam ${sample_name}.bam; rm ${sample_name}.bam;";
+        $bamInput = "${sample_name}.sortedName.bam";
+        $rmList = $bamInput; 
+      }
+
+      $bam2sam = "if [ ! -s $inputFile ]; then
+  $sortCmd
+  samtools view -h -F 4 -o $inputFile $bamInput
 fi";
       $rmcmd = "if [ -s ${sample_name}.target.csv ]; then
-  rm $inputFile 
+  rm $inputFile $rmList 
 fi";
     }
 
