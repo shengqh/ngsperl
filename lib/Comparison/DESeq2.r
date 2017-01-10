@@ -193,7 +193,9 @@ reverselog_trans <- function(base = exp(1)) {
 }
 
 countfiles<-unlist(unique(comparisons_data$CountFile))
+allComparisons<-unlist(unique(comparisons_data$ComparisonName))
 
+dataAllOut<-NULL
 resultAllOut<-NULL
 countfile_index = 1
 for(countfile_index in c(1:length(countfiles))){
@@ -231,9 +233,9 @@ for(countfile_index in c(1:length(countfiles))){
 	
 	pairedspearman<-list()
 	
-	newVarInData<-setdiff(colnames(data),colnames(resultAllOut))
+	newVarInData<-setdiff(colnames(data),colnames(dataAllOut))
 	if (length(newVarInData)>0) {
-		resultAllOut<-align(resultAllOut,data[,newVarInData,drop=FALSE])
+		dataAllOut<-align(dataAllOut,data[,newVarInData,drop=FALSE])
 	}
 	resultAllOutVar<-c("baseMean","log2FoldChange","pvalue","padj")
 	
@@ -540,7 +542,8 @@ for(countfile_index in c(1:length(countfiles))){
 		tbbAllOut<-as.data.frame(tbb[,resultAllOutVar,drop=F])
 		tbbAllOut$Significant<-select
 		colnames(tbbAllOut)<-paste0(colnames(tbbAllOut)," (",comparisonName,")")
-		resultAllOut<-cbind(resultAllOut,tbbAllOut[row.names(resultAllOut),])
+		resultAllOut<-cbind(as.data.frame(resultAllOut)[row.names(dataAllOut),],as.matrix(tbbAllOut[row.names(dataAllOut),]))
+		row.names(resultAllOut)<-row.names(dataAllOut)
 		
 		tbb<-tbb[order(tbb$pvalue),,drop=F]
 		write.csv(as.data.frame(tbb),paste0(prefix, "_DESeq2.csv"))
@@ -638,10 +641,7 @@ for(countfile_index in c(1:length(countfiles))){
 		print(p)
 		dev.off()
 	}
-	
-	#write a file with all information
-	write.csv(resultAllOut,paste0(basename(inputfile),"_DESeq2.csv"))
-		
+			
 	if(length(pairedspearman) > 0){
 		#draw pca graph
 		filename<-ifelse(minMedianInGroup > 0, paste0("spearman_min", minMedianInGroup, ".png"), "spearman.png")
@@ -860,6 +860,9 @@ for(countfile_index in c(1:length(countfiles))){
 			maxN<-brewer.pal.info[colorNames,"maxcolors"]
 			if (n<=maxN) {
 				colors<-brewer.pal(n, colorNames)
+				if (length(colors)>n) {
+					colors<-colors[1:n]
+				}
 			} else {
 				colors<-colorRampPalette(brewer.pal(maxN, colorNames))(n)
 			}
@@ -903,14 +906,18 @@ for(countfile_index in c(1:length(countfiles))){
 	}
 }
 
+#write a file with all information
+resultAllOut<-cbind(dataAllOut,resultAllOut[row.names(dataAllOut),])
+write.csv(resultAllOut,paste0(basename(inputfile),"_DESeq2.csv"))
+
 #volcano plot for all comparisons
-temp<-resultAllOut[,-(1:ncol(data))]
+temp<-resultAllOut[,-(1:ncol(dataAllOut))]
 diffResult<-NULL
 diffResultVar<-unique(sapply(strsplit(colnames(temp)," "),function(x) x[1]))
-for (i in 1:(nrow(comparisons))) {
+for (i in 1:(length(allComparisons))) {
 	temp1<-temp[,(i*length(diffResultVar)-(length(diffResultVar)-1)):(i*length(diffResultVar))]
 	colnames(temp1)<-diffResultVar
-	temp1$Comparison<-comparisons$ComparisonName[i]
+	temp1$Comparison<-allComparisons[i]
 	if (is.null(diffResult)) {
 		diffResult<-temp1
 	} else {
@@ -919,6 +926,7 @@ for (i in 1:(nrow(comparisons))) {
 }
 changeColours<-c(grey="grey",blue="blue",red="red")
 diffResult$log10BaseMean<-log10(diffResult$baseMean)
+diffResult$Comparison<-factor(diffResult$Comparison,levels=unique(diffResult$Comparison))
 diffResult$colour<-"grey"
 if (useRawPvalue==1) {
 	diffResult$colour[which(diffResult$pvalue<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
@@ -928,7 +936,7 @@ if (useRawPvalue==1) {
 	diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
 }
 
-width<-max(2000,2000*nrow(comparisons))
+width<-max(2000,2000*length(allComparisons))
 png(filename=paste0(basename(inputfile), "_DESeq2_volcanoPlot.png"), width=width, height=2000, res=300)
 #  pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"))
 if (useRawPvalue==1) {

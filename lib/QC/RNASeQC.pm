@@ -26,12 +26,17 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
 
   my $faFile         = get_param_file( $config->{$section}{fasta_file},     "fasta_file",     1 );
   my $jar            = get_param_file( $config->{$section}{jar},            "jar",            1 );
   my $transcript_gtf = get_param_file( $config->{$section}{transcript_gtf}, "transcript_gtf", 1 );
   my $sorted = get_option_value( $config->{$section}{sorted}, 1 );
+
+  my $rrna_fasta = get_param_file( $config->{$section}{rrna_fasta}, "rrna_fasta", 0 );
+  if ($rrna_fasta) {
+    $option = $option . " -BWArRNA " . $rrna_fasta;
+  }
 
   my $raw_files = get_raw_files( $config, $section );
 
@@ -54,7 +59,7 @@ sub perform {
 
   my $final_file = "metrics.tsv";
 
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
   print $pbs "
 java -jar $jar $option -s $mapfile -t $transcript_gtf -ttype 2 -r $faFile -o .
 

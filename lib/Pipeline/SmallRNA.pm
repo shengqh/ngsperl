@@ -37,10 +37,32 @@ sub getSmallRNAConfig {
   my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
   my $task_name = $def->{task_name};
 
-  my $host_genome_dir        = create_directory_or_die( $def->{target_dir} . "/host_genome" );
-  my $nonhost_library_dir    = create_directory_or_die( $def->{target_dir} . "/nonhost_library" );
-  my $nonhost_genome_dir     = create_directory_or_die( $def->{target_dir} . "/nonhost_genome" );
-  my $nonhost_blast_dir      = create_directory_or_die( $def->{target_dir} . "/nonhost_blast" );
+  my $search_not_identical  = ( !defined $def->{search_not_identical} )  || $def->{search_not_identical};
+  my $search_host_genome    = ( !defined $def->{search_host_genome} )    || $def->{search_host_genome};
+  my $search_miRBase        = ( !defined $def->{search_miRBase} )        || $def->{search_miRBase};
+  my $search_unmapped_reads = ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
+  my $blast_unmapped_reads = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
+
+  my $host_genome_dir;
+  if ($search_host_genome) {
+    $host_genome_dir = create_directory_or_die( $def->{target_dir} . "/host_genome" );
+  }
+
+  my $nonhost_library_dir;
+  if ( $search_unmapped_reads || $search_miRBase ) {
+    $nonhost_library_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_library" );
+  }
+
+  my $nonhost_genome_dir;
+  if ($search_unmapped_reads) {
+    $nonhost_genome_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_genome" );
+  }
+
+  my $nonhost_blast_dir;
+  if ($search_miRBase || $search_unmapped_reads) {
+    $nonhost_blast_dir = create_directory_or_die( $def->{target_dir} . "/final_unmapped" );
+  }
+
   my $data_visualization_dir = create_directory_or_die( $def->{target_dir} . "/data_visualization" );
 
   my @individual = @{$individual_ref};
@@ -54,11 +76,6 @@ sub getSmallRNAConfig {
   my @name_for_readSummary  = ();
 
   #print Dumper($config);
-
-  my $search_not_identical  = ( !defined $def->{search_not_identical} )  || $def->{search_not_identical};
-  my $search_host_genome    = ( !defined $def->{search_host_genome} )    || $def->{search_host_genome};
-  my $search_miRBase        = ( !defined $def->{search_miRBase} )        || $def->{search_miRBase};
-  my $search_unmapped_reads = ( !defined $def->{search_unmapped_reads} ) || $def->{search_unmapped_reads};
 
   my $do_comparison              = defined $def->{pairs};
   my $groups                     = $def->{groups};
@@ -86,8 +103,7 @@ sub getSmallRNAConfig {
   if ($perform_contig_analysis) {
     $non_host_table_option = $non_host_table_option . " --outputReadContigTable";
   }
-  
-  my $blast_unmapped_reads = defined $def->{blast_unmapped_reads} && $def->{blast_unmapped_reads};
+
   my $top_read_number = $def->{top_read_number};
   if ($do_comparison) {
     my $class_independent = {
@@ -265,7 +281,7 @@ sub getSmallRNAConfig {
         class           => "CQS::SmallRNACount",
         perform         => 1,
         target_dir      => $host_genome_dir . "/bowtie1_genome_1mm_NTA_smallRNA_count",
-        option          => $def->{smallrnacount_option} . " --offsets " . $def->{micrornacount_offsets},
+        option          => $def->{host_smallrnacount_option},
         source_ref      => "bowtie1_genome_1mm_NTA",
         fastq_files_ref => "identical_NTA",
         seqcount_ref    => [ "identical", ".dupcount\$" ],
@@ -286,7 +302,7 @@ sub getSmallRNAConfig {
         class      => "CQS::SmallRNATable",
         perform    => 1,
         target_dir => $host_genome_dir . "/bowtie1_genome_1mm_NTA_smallRNA_table",
-        option     => "",
+        option     => $def->{host_smallrnacounttable_option},
         source_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
         cqs_tools  => $def->{cqstools},
         prefix     => "smallRNA_1mm_",
@@ -344,6 +360,10 @@ sub getSmallRNAConfig {
         },
       },
     };
+
+    if ( $def->{has_NTA} && $def->{consider_tRNA_NTA} ) {
+      $host_genome->{"bowtie1_genome_1mm_NTA_smallRNA_count"}{"cca_file_ref"} = "identical_check_cca";
+    }
 
     push @table_for_pieSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_count", ".count\$" );
     push @name_for_pieSummary, "Host Small RNA";
@@ -1804,10 +1824,10 @@ sub getSmallRNAConfig {
 
   if ( $search_miRBase || $search_unmapped_reads ) {
     my $unmapped_reads = {
-      bowtie1_unmapped_reads => {
+      final_unmapped_reads => {
         class            => "CQS::Perl",
         perform          => 1,
-        target_dir       => $nonhost_blast_dir . "/bowtie1_unmapped_reads",
+        target_dir       => $nonhost_blast_dir . "/final_unmapped_reads",
         perlFile         => "unmappedReadsToFastq.pl",
         source_ref       => $identical_ref,
         source2_ref      => \@mapped,
@@ -1824,10 +1844,10 @@ sub getSmallRNAConfig {
       },
     };
 
-    $identical_ref = [ "bowtie1_unmapped_reads", ".fastq.gz\$" ];
+    $identical_ref = [ "final_unmapped_reads", ".fastq.gz\$" ];
     $config = merge( $config, $unmapped_reads );
-    push @individual,           ("bowtie1_unmapped_reads");
-    push @table_for_pieSummary, ( "bowtie1_unmapped_reads", ".dupcount" );
+    push @individual,           ("final_unmapped_reads");
+    push @table_for_pieSummary, ( "final_unmapped_reads", ".dupcount" );
     push @name_for_pieSummary,  ("UnMapped");
   }
 

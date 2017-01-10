@@ -1,6 +1,7 @@
 library(heatmap3)
 library(DESeq2)  
 library(RColorBrewer)
+library(colorRamps)
 
 countTableFileList<-parSampleFile1
 groupFileList<-parSampleFile2
@@ -61,6 +62,43 @@ unByteCodeAssign(stats:::plotNode)
 # Now raise the interpreted code recursion limit (you may need to adjust this,
 #  decreasing if it uses to much memory, increasing if you get a recursion depth error ).
 options(expressions=5e4)
+drawPCA<-function(filename, rldmatrix, showLabelInPCA, conditionColors){
+  genecount<-nrow(rldmatrix)
+  if(genecount > 2){
+    cat("saving PCA to ", filename, "\n")
+    png(filename=filename, width=3000, height=3000, res=300) # 10 X 10 inches
+    #pdf(filename, width=10, height=10)
+    pca<-prcomp(t(rldmatrix))
+    supca<-summary(pca)$importance
+    pcadata<-data.frame(pca$x)
+    pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
+    pcadata["sample"]<-row.names(pcadata)
+    
+    if(showLabelInPCA){
+      g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
+        geom_text(vjust=-0.6, size=4) +
+        geom_point(col=conditionColors, size=4) + 
+        scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
+        scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
+        geom_hline(aes(yintercept=0), size=.2) + 
+        geom_vline(aes(xintercept=0), size=.2) + 
+        xlab(pcalabs[1]) + ylab(pcalabs[2])
+    }else{
+      g <- ggplot(pcadata, aes(x=PC1, y=PC2)) + 
+        geom_point(col=conditionColors, size=4) + 
+        labs(color = "Group") +
+        scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) + 
+        scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
+        geom_hline(aes(yintercept=0), size=.2) + 
+        geom_vline(aes(xintercept=0), size=.2) +
+        xlab(pcalabs[1]) + ylab(pcalabs[2]) + 
+        theme(legend.position="top")
+    }
+    
+    print(g)
+    dev.off()
+  }
+}
 
 ##Solving node stack overflow problem end###
 
@@ -115,14 +153,29 @@ for (i in 1:nrow(countTableFileAll)) {
     cvs <- apply(countNumVsd,1,CV)
     countHT<-countNumVsd[cvs>=quantile(cvs)[4],]
 	}
+	
+  if (groupFileList!="") {
+    sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
+    sampleToGroup<-sampleToGroup[which(sampleToGroup[,1] %in% colnames(countNumVsd)),]
+    colors=primary.colors(length(unique(sampleToGroup$V2)))
+    conditionColors<-as.matrix(data.frame(Group=primary.colors(length(unique(sampleToGroup$V2)))[as.factor(sampleToGroup$V2)]))
+  }else{
+    conditionColors=NA
+  }
+  
+  width=max(2000, 50 * ncol(countHT))
   print("Drawing heatmap for all samples.")
-	png(paste0(countTableFile,".heatmap.png"),width=2000,height=2000,res=300)
-	if(nrow(countHT) < 20){
-	  heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=hmcols)
-	}else{
-	  heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,showRowDendro=F,labRow="",col=hmcols)
-	}
-	dev.off()
+  png(paste0(countTableFile,".heatmap.png"),width=width,height=width,res=300)
+  
+  if(nrow(countHT) < 20){
+    heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=hmcols, ColSideColors=conditionColors)
+  }else{
+    heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,showRowDendro=F,labRow="",col=hmcols, ColSideColors=conditionColors)
+  }
+  dev.off()
+	
+  print("Drawing PCA for all samples.")
+  drawPCA(paste0(countTableFile,".PCA.png"), countHT, 1, conditionColors)
 	
   print("Doing correlation analysis ...")
 	#correlation distribution
@@ -151,13 +204,13 @@ for (i in 1:nrow(countTableFileAll)) {
 		axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
 	}
 	
-	png(paste0(countTableFile,".Correlation.png"),width=2000,height=2000,res=300)
+	png(paste0(countTableFile,".Correlation.png"),width=width,height=width,res=300)
 	labRow=NULL
 	margin=c(min(10,max(nchar(colnames(countNumCor)))/2),min(10,max(nchar(row.names(countNumCor)))/2))
 	heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=labRow,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
 	dev.off()
 	if (ncol(countNumCor)>3) {
-		png(paste0(countTableFile,".Correlation.Cluster.png"),width=2000,height=2000,res=300)
+		png(paste0(countTableFile,".Correlation.Cluster.png"),width=width,height=width,res=300)
 		heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun)
 		dev.off()
 	}
