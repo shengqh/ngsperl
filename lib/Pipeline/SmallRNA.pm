@@ -143,6 +143,7 @@ sub getSmallRNAConfig {
         source_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
         cqs_tools  => $def->{cqstools},
         prefix     => "smallRNA_1mm_",
+        hasYRNA    => $def->{hasYRNA},
         sh_direct  => 1,
         cluster    => $cluster,
         pbs        => {
@@ -224,6 +225,7 @@ sub getSmallRNAConfig {
       addDEseq2( $config, $def, $summary_ref, "miRNA_NTA_base",   [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.NTA.base.count\$" ],   $host_genome_dir, $DE_min_median_read_smallRNA );
       addDEseq2( $config, $def, $summary_ref, "miRNA_isomiR",     [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR.count\$" ],     $host_genome_dir, $DE_min_median_read_smallRNA );
       addDEseq2( $config, $def, $summary_ref, "miRNA_isomiR_NTA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR_NTA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
+      addDEseq2( $config, $def, $summary_ref, "miRNA_reads",      [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$" ],       $host_genome_dir, $DE_min_median_read_smallRNA );
       addDeseq2Visualization( $config, $def, $summary_ref, "host_genome_miRNA",
         [ "deseq2_miRNA_isomiR", "_DESeq2.csv\$", "deseq2_miRNA_NTA", "_DESeq2.csv\$", "deseq2_miRNA_isomiR_NTA", "_DESeq2.csv\$" ],
         $data_visualization_dir, "pairs_host_miRNA_deseq2_vis_layout" );
@@ -722,11 +724,11 @@ sub getSmallRNAConfig {
   #blast unmapped reads
   if ($blast_unmapped_reads) {
     $config->{"unmapped_sequence_count_table"} = {
-      class           => "CQS::SmallRNASequenceCountTable",
-      perform         => 1,
-      target_dir      => $nonhost_blast_dir . "/unmapped_sequence_count_table",
-      option          => "--maxExtensionBase $max_sequence_extension_base -n $top_read_number --exportFastaNumber $top_read_number",
-      
+      class      => "CQS::SmallRNASequenceCountTable",
+      perform    => 1,
+      target_dir => $nonhost_blast_dir . "/unmapped_sequence_count_table",
+      option     => "--maxExtensionBase $max_sequence_extension_base -n $top_read_number --exportFastaNumber $top_read_number",
+
       source_ref      => [ "identical", ".dupcount\$" ],
       fastq_files_ref => $identical_ref,
       cqs_tools       => $def->{cqstools},
