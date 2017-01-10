@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Pipeline::ChipSeqBowtie;
+package Pipeline::ATACSeq;
 
 use strict;
 use warnings;
@@ -13,7 +13,7 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(performChipSeqBowtie performChipSeqBowtieTask)] );
+our %EXPORT_TAGS = ( 'all' => [qw(performATACSeq performATACSeqTask)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -60,14 +60,18 @@ sub getConfig {
   my $cluster = $def->{cluster};
   my $task    = $def->{task_name};
 
-  my $sra_to_fastq   = $def->{sra_to_fastq};
-  my $fastq_remove_N = $def->{fastq_remove_N};
-  my $email          = $def->{email};
-  my $cqstools       = $def->{cqstools} or die "Define cqstools at definition first";
-  my $fasta_file     = $def->{fasta_file} or die "Define fasta_file at definition first";
-  my $bowtie_index   = $def->{bowtie_index} or die "Define bowtie_index at definition first";
-  my $treatments     = $def->{treatments} or die "Define treatments at definition first";
-  my $controls       = $def->{controls} or die "Define controls at definition first";
+  my $sra_to_fastq     = $def->{sra_to_fastq};
+  my $fastq_remove_N   = $def->{fastq_remove_N};
+  my $email            = $def->{email};
+  my $cqstools         = $def->{cqstools} or die "Define cqstools at definition first";
+  my $picard_jar       = $def->{picard_jar} or die "Define picard_jar at definition first";
+  my $bwa_fasta        = $def->{bwa_fasta} or die "Define bwa_fasta at definition first";
+  my $treatments       = $def->{treatments} or die "Define treatments at definition first";
+  my $pairend          = $def->{pairend} or die "Define pairend at definition first";
+  my $macs1call_option = $def->{macs1call_option};
+  if ( !defined $macs1call_option ) {
+    $macs1call_option = "-p 1e-9 -w -S --space=50";
+  }
 
   my $config = {
     general => {
@@ -75,8 +79,7 @@ sub getConfig {
       cluster   => $cluster
     },
     files      => $def->{files},
-    treatments => $treatments,
-    controls   => $controls
+    treatments => $treatments
   };
 
   my $source_ref = "files";
@@ -161,6 +164,7 @@ sub getConfig {
       source_ref => $source_ref,
       adapter    => "AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC",    #trueseq adapter
       extension  => "_clipped.fastq",
+      pairend    => $pairend,
       sh_direct  => 0,
       pbs        => {
         "email"    => $email,
@@ -212,48 +216,84 @@ sub getConfig {
         "mem"      => "20gb"
       },
     },
-    "bowtie1" => {
-      class         => "Alignment::Bowtie1",
-      perform       => 1,
-      target_dir    => "${target_dir}/bowtie1",
-      option        => "-v 1 -m 1 --best --strata",
-      fasta_file    => $fasta_file,
-      source_ref    => [ "cutadapt", ".fastq.gz\$" ],
-      bowtie1_index => $bowtie_index,
-      sh_direct     => 0,
-      pbs           => {
+    "bwa" => {
+      class              => "Alignment::BWA",
+      perform            => 1,
+      target_dir         => "${target_dir}/bwa",
+      option             => "",
+      bwa_index          => $bwa_fasta,
+      picard_jar         => $picard_jar,
+      source_ref         => [ "cutadapt", ".fastq.gz" ],
+      sort_by_coordinate => 1,
+      sh_direct          => 0,
+      pbs                => {
         "email"    => $email,
         "nodes"    => "1:ppn=8",
         "walltime" => "72",
         "mem"      => "40gb"
       },
     },
-    "macs1callpeak" => {
-      class        => "Chipseq::MACS",
-      perform      => 1,
-      target_dir   => "${target_dir}/macs1callpeak",
-      option       => "-p 1e-9 -w -S --space=50",
-      source_ref   => [ "bowtie1", ".bam\$" ],
-      groups_ref   => "treatments",
-      controls_ref => "controls",
-      sh_direct    => 0,
-      pbs          => {
+    "bwa_cleanbam" => {
+      class                   => "ATACseq::CleanBam",
+      perform                 => 1,
+      target_dir              => "${target_dir}/bwa_cleanbam",
+      option                  => "",
+      source_ref              => "bwa",
+      picard_jar              => $picard_jar,
+      remove_chromosome       => "M",
+      keep_chromosome         => "chr",
+      is_sorted_by_coordinate => 1,
+      sh_direct               => 0,
+      pbs                     => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "240",
+        "mem"      => "40gb"
+      },
+    },
+    "bwa_bam2bed" => {
+      class                   => "Format::Bam2Bed",
+      perform                 => 1,
+      target_dir              => "${target_dir}/bwa_bam2bed",
+      option                  => "",
+      source_ref              => "bwa_cleanbam",
+      blacklist_file          => "/scratch/cqs/shengq1/references/mappable_region/hg19/wgEncodeDacMapabilityConsensusExcludable.bed",
+      is_sorted_by_name       => 0,
+      is_paired_end           => 1,
+      maximum_fragment_length => 1000,
+      minimum_fragment_length => 30,
+      sh_direct               => 1,
+      pbs                     => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=8",
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    },
+    "bwa_macs1callpeak" => {
+      class      => "Chipseq::MACS",
+      perform    => 1,
+      target_dir => "${target_dir}/bwa_macs1callpeak",
+      option     => $macs1call_option,
+      source_ref => "bwa_bam2bed",
+      groups_ref => "treatments",
+      sh_direct  => 0,
+      pbs        => {
         "email"    => $email,
         "nodes"    => "1:ppn=1",
         "walltime" => "72",
         "mem"      => "40gb"
       },
     },
-    "macs1callpeak_bradner_rose2" => {
+    "bwa_macs1callpeak_bradner_rose" => {
       class                => "Chipseq::BradnerRose2",
       perform              => 1,
-      target_dir           => "${target_dir}/macs1callpeak_bradner_rose2",
+      target_dir           => "${target_dir}/bwa_macs1callpeak_bradner_rose",
       option               => "",
-      source_ref           => "bowtie1",
+      source_ref           => "bwa_cleanbam",
       groups_ref           => "treatments",
-      controls_ref         => "controls",
       pipeline_dir         => "/scratch/cqs/shengq1/local/bin/bradnerlab",
-      binding_site_bed_ref => [ "macs1callpeak", ".bed\$" ],
+      binding_site_bed_ref => [ "bwa_macs1callpeak", ".bed\$" ],
       genome               => "hg19",
       sh_direct            => 1,
       pbs                  => {
@@ -262,10 +302,28 @@ sub getConfig {
         "walltime" => "72",
         "mem"      => "40gb"
       },
-    }
+    },
+    "bwa_macs1callpeak_bradner_rose_coltron" => {
+      class              => "Chipseq::Coltron",
+      perform            => 1,
+      target_dir         => "${target_dir}/bwa_macs1callpeak_bradner_rose_coltron",
+      option             => "",
+      source_ref         => "bwa_cleanbam",
+      groups_ref         => "treatments",
+      enhancer_files_ref => [ "bwa_macs1callpeak_bradner_rose", "_AllEnhancers.table.txt" ],
+      genome             => "HG19",
+      pipeline_dir       => "/scratch/cqs/shengq1/local/bin/bradnerlab",
+      sh_direct          => 1,
+      pbs                => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    },
   };
-  push @individual, ( "fastqc_raw", "cutadapt", "fastqc_post_trim", "fastq_len", "bowtie1" );
-  push @summary, ( "fastqc_raw_summary", "macs1callpeak", "macs1callpeak_bradner_rose2" );
+  push @individual, ( "fastqc_raw", "cutadapt", "fastqc_post_trim", "fastq_len", "bwa", "bwa_cleanbam", "bwa_bam2bed" );
+  push @summary, ( "fastqc_raw_summary", "bwa_macs1callpeak", "bwa_macs1callpeak_bradner_rose", "bwa_macs1callpeak_bradner_rose_coltron" );
 
   $config = merge( $config, $processing );
 
@@ -286,7 +344,7 @@ sub getConfig {
       perform            => 1,
       target_dir         => "${target_dir}/bamplot",
       option             => $bamplot_option,
-      source_ref         => "bowtie1",
+      source_ref         => "bwa",
       groups_ref         => "plotgroups",
       gff_file           => $plot_gff,
       is_rainbow_color   => 0,
@@ -324,7 +382,7 @@ sub getConfig {
   return ($config);
 }
 
-sub performChipSeqBowtie {
+sub performATACSeq {
   my ( $def, $perform ) = @_;
   if ( !defined $perform ) {
     $perform = 1;
@@ -341,7 +399,7 @@ sub performChipSeqBowtie {
   return $config;
 }
 
-sub performChipSeqBowtieTask {
+sub performATACSeqTask {
   my ( $def, $task ) = @_;
   my $config = getConfig($def);
 

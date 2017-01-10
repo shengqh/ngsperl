@@ -54,6 +54,10 @@ sub initializeDefaultOptions {
     $def->{perform_qc3bam} = 0;
   }
 
+  if ( !defined $def->{perform_bamplot} ) {
+    $def->{perform_bamplot} = 0;
+  }
+
   return $def;
 }
 
@@ -91,6 +95,13 @@ sub getRNASeqConfig {
     defined $def->{qc3_perl} or die "Define qc3_perl first!";
     ( -e $def->{qc3_perl} )  or die "qc3_perl not exists " . $def->{qc3_perl};
   }
+
+  if ( $def->{perform_bamplot} ) {
+    defined $def->{dataset_name} or die "Define dataset_name for bamplot first!";
+    defined $def->{gene_names}   or die "Define gene_names for bamplot first, seperate by blank space!";
+    defined $def->{add_chr}   or die "Define add_chr for bamplot first, check your genome sequence!";
+  }
+
   my $config = {
     general => {
       task_name => $task,
@@ -329,6 +340,46 @@ sub getRNASeqConfig {
       },
     };
     push( @summary, "star_qc3" );
+  }
+
+  if ( $def->{perform_bamplot} ) {
+    $config->{gene_pos} = {
+      class        => "Annotation::PrepareGenePosition",
+      perform      => 1,
+      target_dir   => $target_dir . "/gene_pos",
+      option       => "",
+      dataset_name => $def->{dataset_name},
+      gene_names   => $def->{gene_names},
+      add_chr      => $def->{add_chr},
+      output_gff   => 1,
+      pbs          => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "2",
+        "mem"      => "10gb"
+      },
+    };
+    $config->{bamplot} = {
+      class              => "Visualization::Bamplot",
+      perform            => 1,
+      target_dir         => "${target_dir}/bamplot",
+      option             => "-g " . $def->{dataset_name} . " -y uniform -r --save-temp",
+      source_ref         => [ "star", "_Aligned.sortedByCoord.out.bam" ],
+      gff_file_ref       => "gene_pos",
+      is_rainbow_color   => 0,
+      is_single_pdf      => 0,
+      is_draw_individual => 0,
+      groups             => $def->{"plotgroups"},
+      colors             => $def->{"colormaps"},
+      sh_direct          => 1,
+      pbs                => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
+      },
+    };
+    push( @summary, "gene_pos", "bamplot" );
   }
 
   $config->{sequencetask} = {

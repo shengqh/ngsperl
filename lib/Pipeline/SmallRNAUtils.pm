@@ -13,7 +13,7 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(getSmallRNADefinition getPrepareConfig)] );
+our %EXPORT_TAGS = ( 'all' => [qw(getSmallRNADefinition getPrepareConfig isVersion3)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -59,14 +59,6 @@ our $VERSION = '0.01';
 #  star_index_directory => "/scratch/cqs/shengq1/references/hg19_16569_MT/STAR_index_v37.75_2.4.2a_sjdb49"
 #};
 
-sub checkOption {
-  my ( $def, $optionName, $deafultValue ) = @_;
-  if ( !defined $def->{$optionName} ) {
-    $def->{$optionName} = $deafultValue;
-  }
-  return $def;
-}
-
 sub isVersion3 {
   my $def = shift;
   my $result = defined $def->{version} && $def->{version} == 3;
@@ -76,45 +68,47 @@ sub isVersion3 {
 sub initializeDefaultOptions {
   my $def = shift;
 
-  checkOption( $def, "cluster",                     "slurm" );
-  checkOption( $def, "min_read_length",             16 );
-  checkOption( $def, "bowtie1_option_1mm",          "-a -m 100 --best --strata -v 1" );
-  checkOption( $def, "bowtie1_option_pm",           "-a -m 1000 --best --strata -v 0" );
-  checkOption( $def, "fastq_remove_N",              1 );
-  checkOption( $def, "run_cutadapt",                1 );
-  checkOption( $def, "fastq_remove_random",         0 );
-  checkOption( $def, "remove_sequences",            "" );
-  checkOption( $def, "has_NTA",                     1 );
-  checkOption( $def, "mirbase_count_option",        "-p hsa" );
-  checkOption( $def, "table_vis_group_text_size",   10 );
-  checkOption( $def, "sequencetask_run_time",       12 );
-  checkOption( $def, "DE_show_gene_cluster",        1 );
-  checkOption( $def, "DE_pvalue",                   0.05 );
-  checkOption( $def, "DE_fold_change",              1.5 );
-  checkOption( $def, "DE_add_count_one",            0 );
-  checkOption( $def, "DE_min_median_read_top",      2 );
-  checkOption( $def, "DE_min_median_read_smallRNA", 5 );
-  checkOption( $def, "DE_top25only",                0 );
-  checkOption( $def, "DE_detected_in_both_group",   1 );
-  checkOption( $def, "DE_perform_wilcox",           0 );
-  checkOption( $def, "DE_use_raw_pvalue",           1 );
-  checkOption( $def, "max_sequence_extension_base", 1 );
-  checkOption( $def, "top_read_number",             100 );
-  checkOption( $def, "blast_top_reads",             0 );
-  checkOption( $def, "blast_localdb",               "" );
-  checkOption( $def, "perform_contig_analysis",     0 );
-  checkOption( $def, "perform_tDRmapper",        "" );
-  checkOption( $def, "smallrnacount_option",        "" );
+  initDefaultValue( $def, "cluster",                     "slurm" );
+  initDefaultValue( $def, "min_read_length",             16 );
+  initDefaultValue( $def, "bowtie1_option_1mm",          "-a -m 100 --best --strata -v 1" );
+  initDefaultValue( $def, "bowtie1_option_pm",           "-a -m 1000 --best --strata -v 0" );
+  initDefaultValue( $def, "fastq_remove_N",              1 );
+  initDefaultValue( $def, "run_cutadapt",                1 );
+  initDefaultValue( $def, "fastq_remove_random",         0 );
+  initDefaultValue( $def, "remove_sequences",            "" );
+  initDefaultValue( $def, "has_NTA",                     1 );
+  initDefaultValue( $def, "mirbase_count_option",        "-p hsa" );
+  initDefaultValue( $def, "table_vis_group_text_size",   10 );
+  initDefaultValue( $def, "sequencetask_run_time",       12 );
+  initDefaultValue( $def, "DE_show_gene_cluster",        1 );
+  initDefaultValue( $def, "DE_pvalue",                   0.05 );
+  initDefaultValue( $def, "DE_fold_change",              1.5 );
+  initDefaultValue( $def, "DE_add_count_one",            0 );
+  initDefaultValue( $def, "DE_min_median_read_top",      2 );
+  initDefaultValue( $def, "DE_min_median_read_smallRNA", 5 );
+  initDefaultValue( $def, "DE_top25only",                0 );
+  initDefaultValue( $def, "DE_detected_in_both_group",   1 );
+  initDefaultValue( $def, "DE_perform_wilcox",           0 );
+  initDefaultValue( $def, "DE_use_raw_pvalue",           1 );
+  initDefaultValue( $def, "max_sequence_extension_base", 1 );
+  initDefaultValue( $def, "top_read_number",             100 );
+  initDefaultValue( $def, "blast_top_reads",             0 );
+  initDefaultValue( $def, "blast_localdb",               "" );
+  initDefaultValue( $def, "perform_contig_analysis",     0 );
+  initDefaultValue( $def, "smallrnacount_option",        "" );
+  initDefaultValue( $def, "hasYRNA",                     0 );
+  initDefaultValue( $def, "max_sequence_extension_base", "1" );
+  initDefaultValue( $def, "non_host_table_option",       "--outputReadTable" );
 
   if ( isVersion3($def) ) {
-    checkOption( $def, "consider_tRNA_NTA",              1 );
-    checkOption( $def, "host_smallrnacount_option",      $def->{smallrnacount_option} . " --min_overlap 0.9 --yRNAsnRNAsnoRNA --offsets 0,1,2,-1,-2" );
-    checkOption( $def, "host_smallrnacounttable_option", "--yRNAsnRNAsnoRNA" );
+    initDefaultValue( $def, "consider_tRNA_NTA",              1 );
+    initDefaultValue( $def, "host_smallrnacount_option",      $def->{smallrnacount_option} . " --min_overlap 0.9 --yRNAsnRNAsnoRNA --offsets 0,1,2,-1,-2" );
+    initDefaultValue( $def, "host_smallrnacounttable_option", "--yRNAsnRNAsnoRNA" );
   }
   else {
-    checkOption( $def, "consider_tRNA_NTA",              0 );
-    checkOption( $def, "host_smallrnacount_option",      $def->{smallrnacount_option} . " --min_overlap 0.9 --offsets 0,1,2" );
-    checkOption( $def, "host_smallrnacounttable_option", "" );
+    initDefaultValue( $def, "consider_tRNA_NTA",              0 );
+    initDefaultValue( $def, "host_smallrnacount_option",      $def->{smallrnacount_option} . " --min_overlap 0.9 --offsets 0,1,2" );
+    initDefaultValue( $def, "host_smallrnacounttable_option", "" );
   }
 
   return $def;
