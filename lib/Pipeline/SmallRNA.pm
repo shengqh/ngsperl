@@ -65,6 +65,27 @@ sub getSmallRNAConfig {
 
   my $data_visualization_dir = create_directory_or_die( $def->{target_dir} . "/data_visualization" );
 
+  my $perform_tDRmapper = getValue( $def, "perform_tDRmapper", 0 );
+  if ($perform_tDRmapper) {
+    $config->{"tDRmapper"} = {
+      class      => "CQS::Perl",
+      perform    => 1,
+      target_dir => create_directory_or_die( $def->{target_dir} . "/other_tools" ) . "/tDRmapper",
+      perlFile   => "runtDRmapper.pl",
+      option     => getValue( $def, "tDRmapper" ) . " " . getValue( $def, "tDRmapper_fasta" ),
+      source_ref => $not_identical_ref,
+      output_ext => "_clipped_identical.fastq.hq_cs",
+      sh_direct  => 1,
+      pbs        => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
+      },
+    };
+    push @$individual_ref, ("tDRmapper");
+  }
+
   my @table_for_correlation = ( "identical_sequence_count_table", "^(?!.*?read).*\.count\$" );
   my @table_for_countSum    = ();
   my @table_for_pieSummary  = ();
@@ -110,7 +131,7 @@ sub getSmallRNAConfig {
   }
 
   my $identical_ref = [ "identical", ".fastq.gz\$" ];
-
+  
   if ($search_host_genome) {
     getValue( $def, "coordinate" );
 
@@ -728,14 +749,12 @@ sub getSmallRNAConfig {
 
   #blast unmapped reads
   if ($blast_unmapped_reads) {
-    $config->{"unmapped_sequence_count_table"} = {
+    $config->{"final_unmapped_reads_table"} = {
       class      => "CQS::SmallRNASequenceCountTable",
       perform    => 1,
-      target_dir => $nonhost_blast_dir . "/unmapped_sequence_count_table",
+      target_dir => $nonhost_blast_dir . "/final_unmapped_reads_table",
       option     => "--maxExtensionBase $max_sequence_extension_base -n $top_read_number --exportFastaNumber $top_read_number",
-
-      source_ref      => [ "identical", ".dupcount\$" ],
-      fastq_files_ref => $identical_ref,
+      source_ref      => [ $identical_ref->[0], ".dupcount\$" ],
       cqs_tools       => $def->{cqstools},
       suffix          => "_unmapped",
       sh_direct       => 1,
@@ -748,14 +767,14 @@ sub getSmallRNAConfig {
         "mem"       => "10gb"
       },
     };
-    push @$summary_ref, "unmapped_sequence_count_table";
+    push @$summary_ref, "final_unmapped_reads_table";
 
     if ($do_comparison) {
-      $deseq2Task = addDEseq2( $config, $def, $summary_ref, "unmapped_sequence_minicontigs", [ "unmapped_sequence_count_table", ".minicontig.count\$" ], $nonhost_blast_dir, $DE_min_median_read_top );
+      $deseq2Task = addDEseq2( $config, $def, $summary_ref, "final_unmapped_reads_minicontigs", [ "final_unmapped_reads_table", ".minicontig.count\$" ], $nonhost_blast_dir, $DE_min_median_read_top );
       addDeseq2SignificantSequenceBlastn( $config, $def, $summary_ref, $deseq2Task, $nonhost_blast_dir );
     }
     else {
-      addBlastn( $config, $def, $summary_ref, "unmapped_sequence_minicontig_blast", "unmapped_sequence_count_table", "minicontig.count.fasta\$", $nonhost_blast_dir );
+      addBlastn( $config, $def, $summary_ref, "final_unmapped_reads_minicontigs_blast", "final_unmapped_reads_table", "minicontig.count.fasta\$", $nonhost_blast_dir );
     }
   }
 
