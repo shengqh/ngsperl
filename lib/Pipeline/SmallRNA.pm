@@ -37,11 +37,6 @@ sub getSmallRNAConfig {
   my $blast_top_reads      = getValue( $def, "blast_top_reads" );
   my $blast_unmapped_reads = getValue( $def, "blast_unmapped_reads" );
 
-  my $perform_tDRmapper = getValue( $def, "perform_tDRmapper" );
-  if ($perform_tDRmapper) {
-    getValue( $def, "tDRmapper" );
-    getValue( $def, "tDRmapper_fasta" );
-  }
   my $top_read_number = getValue( $def, "top_read_number" );
   my $host_genome_dir;
   if ($search_host_genome) {
@@ -67,23 +62,8 @@ sub getSmallRNAConfig {
 
   my $perform_tDRmapper = getValue( $def, "perform_tDRmapper", 0 );
   if ($perform_tDRmapper) {
-    $config->{"tDRmapper"} = {
-      class      => "CQS::Perl",
-      perform    => 1,
-      target_dir => create_directory_or_die( $def->{target_dir} . "/other_tools" ) . "/tDRmapper",
-      perlFile   => "runtDRmapper.pl",
-      option     => getValue( $def, "tDRmapper" ) . " " . getValue( $def, "tDRmapper_fasta" ),
-      source_ref => $not_identical_ref,
-      output_ext => "_clipped_identical.fastq.hq_cs",
-      sh_direct  => 1,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "1",
-        "mem"      => "10gb"
-      },
-    };
-    push @$individual_ref, ("tDRmapper");
+    getValue( $def, "tDRmapper" );
+    getValue( $def, "tDRmapper_fasta" );
   }
 
   my @table_for_correlation = ( "identical_sequence_count_table", "^(?!.*?read).*\.count\$" );
@@ -94,7 +74,6 @@ sub getSmallRNAConfig {
   my @name_for_readSummary  = ();
 
   #print Dumper($config);
-
   my $do_comparison     = defined $def->{pairs};
   my $groups            = $def->{groups};
   my $groups_vis_layout = $def->{groups_vis_layout};
@@ -131,7 +110,7 @@ sub getSmallRNAConfig {
   }
 
   my $identical_ref = [ "identical", ".fastq.gz\$" ];
-  
+
   if ($search_host_genome) {
     getValue( $def, "coordinate" );
 
@@ -754,12 +733,12 @@ sub getSmallRNAConfig {
       perform    => 1,
       target_dir => $nonhost_blast_dir . "/final_unmapped_reads_table",
       option     => "--maxExtensionBase $max_sequence_extension_base -n $top_read_number --exportFastaNumber $top_read_number",
-      source_ref      => [ $identical_ref->[0], ".dupcount\$" ],
-      cqs_tools       => $def->{cqstools},
-      suffix          => "_unmapped",
-      sh_direct       => 1,
-      cluster         => $cluster,
-      pbs             => {
+      source_ref => [ $identical_ref->[0], ".dupcount\$" ],
+      cqs_tools  => $def->{cqstools},
+      suffix     => "_unmapped",
+      sh_direct  => 1,
+      cluster    => $cluster,
+      pbs        => {
         "email"     => $def->{email},
         "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
