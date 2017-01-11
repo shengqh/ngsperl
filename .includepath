@@ -2,5 +2,6 @@
 <includepath>
   <includepathentry path="./lib" />
   <includepathentry path="../bioperl-live" />
+  <includepathentry path="/gpfs22/home/zhaos/source/ngsperl/lib/Trimmer" />
 </includepath>
 
