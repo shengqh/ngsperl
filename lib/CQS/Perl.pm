@@ -63,13 +63,7 @@ sub perform {
 
 	my $shfile = $pbs_dir . "/${task_name}_perl.sh";
 	open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
-	if ($sh_direct) {
-		print $sh "export MYCMD=\"bash\" \n";
-	}
-	else {
-		print $sh
-"type -P qsub &>/dev/null && export MYCMD=\"qsub\" || export MYCMD=\"bash\" \n";
-	}
+  print $sh get_run_command($sh_direct);
 
 	for my $sample_name ( sort keys %raw_files ) {
 		my @sample_files = @{ $raw_files{$sample_name} };

@@ -111,7 +111,7 @@ sub addNonhostDatabase {
       "mem"       => "10gb"
     },
   };
-  push @$individual, $bowtie1Task;
+  push @$individual, $bowtie1CountTask;
   push @$summary,    $bowtie1TableTask;
 }
 

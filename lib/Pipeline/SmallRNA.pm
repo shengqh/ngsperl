@@ -216,7 +216,7 @@ sub getSmallRNAConfig {
     push @name_for_readSummary, ( "Host miRNA", "Host tRNA", "Host other small RNA" );
     push @table_for_countSum,
       ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" );
-    push @$individual_ref, ( "bowtie1_genome_1mm_NTA", "bowtie1_genome_1mm_NTA_smallRNA_count" );
+    push @$individual_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_count" );
     push @$summary_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_category", "host_genome_tRNA_category" );
 
     $config = merge( $config, $host_genome );
@@ -759,20 +759,21 @@ sub getSmallRNAConfig {
 
   #tDRmapper
   if ($perform_tDRmapper) {
+    my $tools_dir = create_directory_or_die($def->{target_dir} . "/other_tools");
     $config->{"tDRmapper"} = {
       class      => "CQS::Perl",
       perform    => 1,
-      target_dir => $preprocessing_dir . "/tDRmapper",
+      target_dir => $tools_dir . "/tDRmapper",
       perlFile   => "runtDRmapper.pl",
       option     => $def->{tDRmapper} . " " . $def->{tDRmapper_fasta},
-      source_ref => "fastqfiles",
+      source_ref => $not_identical_ref,
       output_ext => "_clipped_identical.fastq.hq_cs",
-      sh_direct  => 1,
+      sh_direct  => 0,
       pbs        => {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
-        "walltime" => "1",
-        "mem"      => "10gb"
+        "walltime" => "24",
+        "mem"      => "40gb"
       },
     };
     push @$individual_ref, ("tDRmapper");
