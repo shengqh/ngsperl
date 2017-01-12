@@ -33,7 +33,6 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $bam_files = get_raw_files( $config, $section );
-  my $groups = get_raw_files( $config, $section, "groups" );
   my $singlepdf       = get_option( $config, $section, "is_single_pdf" ) ? "-s" : "";
   my $draw_individual = get_option( $config, $section, "is_draw_individual" );
   my $rainbow_color   = get_option( $config, $section, "is_rainbow_color" );
@@ -43,6 +42,15 @@ sub perform {
   my $colors;
   if ( has_raw_files( $config, $section, "colors" ) ) {
     $colors = get_raw_files( $config, $section, "colors" );
+  }
+
+  my $groups;
+  if ( has_raw_files( $config, $section, "groups" ) ) {
+    $groups = get_raw_files( $config, $section, "groups" );
+  }
+  else {
+    my @bamnames = keys %$bam_files;
+    $groups = { $task_name => \@bamnames };
   }
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
@@ -84,21 +92,24 @@ fi
         my $bamColor = $bam_colors[$i];
 
         my $curgff = "${bamName}.gff";
-        copy( $gff_file, "${pbs_dir}/${curgff}" );
+
+        #copy( $gff_file, "${pbs_dir}/${curgff}" );
 
         my $colorStr = $rainbow_color ? "" : "--color $bamColor";
 
         my $final_file = "${bamName}_plots.pdf";
         print $pbs "
 if [ ! -s $final_file ]; then
-  bamplot $option -b \"$bamFile\" -n \"$bamName\" -y uniform -i ../pbs/$curgff $colorStr -o .
+  if [ ! -s $curgff ]; then
+    cp $gff_file $curgff
+  fi
+  bamplot $option -b \"$bamFile\" -n \"$bamName\" -y uniform -i $curgff $colorStr -o .
 fi
 ";
       }
     }
     else {
       my $curgff = "${name}.gff";
-      copy( $gff_file, "${pbs_dir}/${curgff}" );
 
       my $curbam_nameStr = join( ',', @curbam_names );
       my $curbam_fileStr = join( ',', @curbam_files );
@@ -107,7 +118,10 @@ fi
       my $final_file = "${name}_plots.pdf";
       print $pbs "
 if [ ! -s $final_file ]; then
-  bamplot $option -b \"$curbam_fileStr\" -n \"$curbam_nameStr\" -y uniform -i ../pbs/$curgff $colorStr -o .
+  if [ ! -s $curgff ]; then
+    cp $gff_file $curgff
+  fi
+  bamplot $option -b \"$curbam_fileStr\" -n \"$curbam_nameStr\" -y uniform -i $curgff $colorStr -o .
 fi
 ";
     }
@@ -123,7 +137,16 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $groups = get_raw_files( $config, $section, "groups" );
+  my $bam_files = get_raw_files( $config, $section );
+  my $groups;
+  if ( has_raw_files( $config, $section, "groups" ) ) {
+    $groups = get_raw_files( $config, $section, "groups" );
+  }
+  else {
+    my @bamnames = keys %$bam_files;
+    $groups = { $task_name => \@bamnames };
+  }
+
   my $draw_individual = get_option( $config, $section, "is_draw_individual" );
 
   my $result       = {};

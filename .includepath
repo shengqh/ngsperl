@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <includepath>
   <includepathentry path="./lib" />
-  <includepathentry path="E:\sqh\programs\perl\bioperl-live" />
+  <includepathentry path="../bioperl-live" />
+  <includepathentry path="/gpfs22/home/zhaos/source/ngsperl/lib/Trimmer" />
 </includepath>
 

@@ -31,6 +31,11 @@ sub perform {
   my $cqstools = get_cqstools( $config, $section, 1 );
   my $coordinate_file = get_param_file( $config->{$section}{coordinate_file}, "coordinate_file", 1 );
 
+  my $r_script = dirname(__FILE__) . "/smallRNAPosition.R";
+  if ( !-e $r_script ) {
+    die "File not found : " . $r_script;
+  }
+  
   my $fastaFile       = get_param_file( $config->{$section}{fasta_file},      "fasta_file",      0 );
   if ( defined $fastaFile ) {
     $option = $option . " -f $fastaFile";
@@ -88,7 +93,12 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_xml_file );
-    print $pbs "mono $cqstools smallrna_count $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile -o $final_file";
+    print $pbs "mono $cqstools smallrna_count $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile -o $final_file
+
+for positionFile in *.position; do
+  R --vanilla -f $r_script --args \$positionFile
+done    
+";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
@@ -121,9 +131,8 @@ sub result {
 
     my @result_files     = ();
     my $countFile        = "${cur_dir}/${sample_name}.count";
-    my $tRNAPositionFile = "${cur_dir}/${sample_name}.tRNA.position";
     push( @result_files, $countFile );
-    push( @result_files, $tRNAPositionFile );
+    push( @result_files, "${cur_dir}/${sample_name}.tRNA.position" );
     push( @result_files, "${countFile}.mapped.xml" );
     push( @result_files, "${cur_dir}/${sample_name}.info" );
 
