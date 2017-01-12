@@ -27,8 +27,8 @@ sub get_final_files {
 	my ( $self, $ispairend, $sample_name, $extension, $fastqextension ) = @_;
 	if ($ispairend) {
 		return (
-			$sample_name . $extension . ".1" . $fastqextension . ".gz",
-			$sample_name . $extension . ".2" . $fastqextension . ".gz"
+			$sample_name . $extension . "_1" . $fastqextension . ".gz",
+			$sample_name . $extension . "_2" . $fastqextension . ".gz"
 		);
 	}
 	else {
@@ -108,15 +108,11 @@ sub perform {
 			my $read1file = $sample_files[0];
 			my $read2file = $sample_files[1];
 
-			my ( $read1name, $read2name ) =
-			  $self->get_final_files( $ispairend, $sample_name, $extension,
-				$fastqextension );
-
 			print $pbs "
 trim_galore $option --fastqc --fastqc_args \"--outdir .\" --paired --retain_unpaired --output_dir . $read1file $read2file
 ";
 		}
-		else { #single end
+		else {    #single end
 			my ( $final_file, $finalShortFile, $finalLongFile ) =
 			  $self->get_final_files( $ispairend, $sample_name, $extension,
 				$fastqextension );
@@ -162,32 +158,17 @@ sub result {
 	my %raw_files = %{ get_raw_files( $config, $section ) };
 
 	my $result = {};
-
 	for my $sample_name ( keys %raw_files ) {
-		my @result_files = ();
-		if ($ispairend) {
-			my ( $read1name, $read2name ) =
-			  $self->get_final_files( $ispairend, $sample_name, $extension,
-				$fastqextension );
-
-			push( @result_files, $result_dir . "/" . $read1name );
-			push( @result_files, $result_dir . "/" . $read2name );
-		}
-		else {
-			my ( $final_file, $finalShortFile, $finalLongFile ) =
-			  $self->get_final_files( $ispairend, $sample_name, $extension,
-				$fastqextension );
-
-			push( @result_files, $result_dir . "/" . $final_file );
-
-			my $shortLimited = $option =~ /-m\s+\d+/;
-			my $longLimited  = $option =~ /-M\s+\d+/;
-			if ($shortLimited) {
-				push( @result_files, $result_dir . "/" . $finalShortFile );
+		my @originalFiles = @{ $raw_files{$sample_name} };
+		my @sample_files  = parsePairedSamples( \@originalFiles );
+		my @result_files  = ();
+		for my $sampleFile (@sample_files) {
+			my $name = basename($sampleFile);
+			if ( $name =~ /gz$/ ) {
+				$name = change_extension( $name, "" );
 			}
-			if ($longLimited) {
-				push( @result_files, $result_dir . "/" . $finalLongFile );
-			}
+			$name = change_extension( $name, "_fastqc" );
+			push( @result_files, "${result_dir}/${sample_name}/${name}" );
 		}
 		$result->{$sample_name} = filter_array( \@result_files, $pattern );
 	}

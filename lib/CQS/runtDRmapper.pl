@@ -25,3 +25,7 @@ print "Now Running tDRmapper \n";
 `perl $perlFile $faDatabaseFile $fastqFileInCurrentFolder` if (! -e "$fastqFileInCurrentFolder.hq_cs");
 #perl Scripts/TdrMappingScripts.pl hg19_mature_and_pre.fa trimmed_small_RNA-seq.fastq
 
+if ( -l $fastqFileInCurrentFolder or -e $fastqFileInCurrentFolder ) {
+    unlink $fastqFileInCurrentFolder
+        or die "Failed to remove file $fastqFileInCurrentFolder: $!\n";
+}

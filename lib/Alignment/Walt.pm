@@ -32,7 +32,7 @@ sub perform {
 
   my $walt_index = $config->{$section}{walt_index};
   if ( !defined $walt_index ) {
-    $walt_index = $config->{$section}{fasta_file} or die "define ${section}::walt_index first";
+    die "define ${section}::walt_index first";
   }
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
