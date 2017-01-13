@@ -42,10 +42,9 @@ addVisLayout<-function(datForFigure, visLayoutFileList,LayoutKey="LayoutKey") {
 				matchedInd<-matchedInd[which.min(nchar(data2Layout[matchedInd]))]
 				row.names(visLayout)[x]<-data2Layout[matchedInd]
 			} else {
-				message=paste0("Warning: Layout Group: ",row.names(visLayout)[x]," can't match data.\n Data: \n",paste(data2Layout,collapse="\n"))
-				warning(message)
+				message=paste0("Error: Layout Group: ",row.names(visLayout)[x]," can't match data.\n Data: \n",paste(data2Layout,collapse="\n"))
 				writeLines(message,paste0(visLayoutFileList,".error"))
-				return(datForFigure)
+				stop(message)
 			}
 		}
 		datForFigure<-data.frame(datForFigure,visLayout[datForFigure[,LayoutKey],])
