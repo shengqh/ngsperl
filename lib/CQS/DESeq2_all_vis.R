@@ -69,7 +69,7 @@ for (i in 1:nrow(deseq2ResultFile)) {
 	deseq2Result<-deseq2ResultRaw[,selectedVars]
 	deseq2Result$Module<-moduleName
 	deseq2Result$Pairs<-deseq2ResultFile[i,2]
-	deseq2Result$LayoutKey<-paste0(moduleFolder,"_",deseq2ResultFile[i,2])
+	deseq2Result$LayoutKey<-paste0(moduleName,"_",deseq2ResultFile[i,2])
 	
 	#20161207: Read significant result file so that don't need to filter significant in this module
 	fileSigPath<-paste0(tools::file_path_sans_ext(filePath),"_sig.csv")
