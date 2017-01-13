@@ -63,7 +63,9 @@ for (i in 1:nrow(deseq2ResultFile)) {
 	moduleName<-gsub("_deseq2$","",moduleFolder)
 	moduleName<-gsub("^deseq2_","",moduleName)
   moduleName<-gsub("_reads","",moduleName)
-	deseq2ResultRaw<-read.csv(filePath,header=T,as.is=T)
+  moduleName<-gsub("_minicontigs","",moduleName)
+  moduleName<-gsub("_contigs","",moduleName)
+  deseq2ResultRaw<-read.csv(filePath,header=T,as.is=T)
 	
 	deseq2Result<-deseq2ResultRaw[,selectedVars]
 	deseq2Result$Module<-moduleName
