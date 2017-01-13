@@ -63,6 +63,7 @@ for (i in 1:nrow(deseq2ResultFile)) {
 	moduleFolder<-folders[which(folders=="result")-1]
 	moduleName<-gsub("_deseq2$","",moduleFolder)
 	moduleName<-gsub("^deseq2_","",moduleName)
+  moduleName<-gsub("_reads","",moduleName)
 	deseq2ResultRaw<-read.csv(filePath,header=T,as.is=T)
 	
 	deseq2Result<-deseq2ResultRaw[,selectedVars]
