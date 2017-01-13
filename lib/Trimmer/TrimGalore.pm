@@ -23,19 +23,57 @@ sub new {
 	return $self;
 }
 
+sub parsePairedSamples {
+	my ($samples)    = @_;
+	my @sample_files = @{$samples};
+	my @result       = ();
+	for my $sample (@sample_files) {
+		if ( $sample =~ /,/ ) {
+			my @files = split( ',', $sample );
+			for my $file (@files) {
+				push( @result, $file );
+			}
+		}
+		else {
+			push( @result, $sample );
+		}
+	}
+
+	return @result;
+}
+
+sub remove_fq_file_extension {
+	my ($fileName) = @_;
+	$fileName=basename($fileName);
+	if ( $fileName =~ /\.gz$/ ) {
+		$fileName =~ s/\.gz$//g;
+	}
+	if ( $fileName =~ /\.fastq$/ ) {
+		$fileName =~ s/\.fastq$//g;
+	}
+	if ( $fileName =~ /\.fq$/ ) {
+		$fileName =~ s/\.fq$//g;
+	}
+	return ($fileName);
+}
+
 sub get_final_files {
-	my ( $self, $ispairend, $sample_name, $extension, $fastqextension ) = @_;
+	my ( $self, $ispairend, $sampleFilesRef, $extension, $fastqextension ) = @_;
+
 	if ($ispairend) {
+		my $sampleFileName1 = remove_fq_file_extension( ${$sampleFilesRef}[0] );
+		my $sampleFileName2 = remove_fq_file_extension( ${$sampleFilesRef}[1] );
 		return (
-			$sample_name . $extension . "_1" . $fastqextension . ".gz",
-			$sample_name . $extension . "_2" . $fastqextension . ".gz"
+			$sampleFileName1 . $extension . "_1" . $fastqextension . ".gz",
+			$sampleFileName2 . $extension . "_2" . $fastqextension . ".gz"
 		);
 	}
 	else {
-		my $finalName      = $sample_name . $extension . $fastqextension;
-		my $final_file     = "${finalName}.gz";
-		my $finalShortFile = $finalName . ".short.gz";
-		my $finalLongFile  = $finalName . ".long.gz";
+		my $sampleFileName1 = remove_fq_file_extension( ${$sampleFilesRef}[0] );
+		my $finalName       = $sampleFileName1 . $extension . $fastqextension;
+		my $final_file      = "${finalName}.gz";
+		my $finalShortFile  = $finalName . ".short.gz";
+		my $finalLongFile   = $finalName . ".long.gz";
 		return ( $final_file, $finalShortFile, $finalLongFile );
 	}
 }
@@ -94,7 +132,7 @@ sub perform {
 		my @sample_files = @{ $raw_files{$sample_name} };
 
 		my @final_files =
-		  $self->get_final_files( $ispairend, $sample_name, $extension,
+		  $self->get_final_files( $ispairend, \@sample_files, $extension,
 			$fastqextension );
 		my $pbs =
 		  $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file,
@@ -159,17 +197,31 @@ sub result {
 
 	my $result = {};
 	for my $sample_name ( keys %raw_files ) {
-		my @originalFiles = @{ $raw_files{$sample_name} };
-		my @sample_files  = parsePairedSamples( \@originalFiles );
-		my @result_files  = ();
-		for my $sampleFile (@sample_files) {
-			my $name = basename($sampleFile);
-			if ( $name =~ /gz$/ ) {
-				$name = change_extension( $name, "" );
-			}
-			$name = change_extension( $name, "_fastqc" );
-			push( @result_files, "${result_dir}/${sample_name}/${name}" );
+		my @sample_files = @{ $raw_files{$sample_name} };
+
+		my @result_files = ();
+		if ($ispairend) {
+			my $sampleFileName1 = remove_fq_file_extension( $sample_files[0] );
+			my $sampleFileName2 = remove_fq_file_extension( $sample_files[1] );
+
+			my $resultFile1 =
+			  $sampleFileName1 . $extension . "_1" . $fastqextension . ".gz";
+			push( @result_files,
+				"${result_dir}/${resultFile1}" );
+			my $resultFile2 =
+			  $sampleFileName2 . $extension . "_2" . $fastqextension . ".gz";
+			push( @result_files,
+				"${result_dir}/${resultFile2}" );
 		}
+		else {
+			my $sampleFileName1 =
+			  remove_fq_file_extension( $sample_files[0] );
+			my $resultFile1 =
+			  $sampleFileName1 . $extension . $fastqextension . ".gz";
+			push( @result_files,
+				"${result_dir}/${resultFile1}" );
+		}
+
 		$result->{$sample_name} = filter_array( \@result_files, $pattern );
 	}
 	return $result;

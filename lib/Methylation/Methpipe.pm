@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Alignment::Walt;
+package Methylation::Methpipe;
 
 use strict;
 use warnings;
@@ -18,7 +18,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
-  $self->{_suffix} = "_walt";
+  $self->{_suffix} = "_methpipe";
   bless $self, $class;
   return $self;
 }
@@ -30,11 +30,6 @@ sub perform {
 
   my $selfname = $self->{_name};
 
-  my $walt_index = $config->{$section}{walt_index};
-  if ( !defined $walt_index ) {
-    die "define ${section}::walt_index first";
-  }
-
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -43,9 +38,9 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sample_files_str = ( scalar(@sample_files) == 2 ) ? "-1 " . $sample_files[0] . " -2 " . $sample_files[1]: "-1 " . $sample_files[0];
-
-    my $result_file          = $sample_name . ".mr";
+ 	my $sampleFileBase=basename($sample_files[0]);
+ 
+    my $result_file          = $sample_name . ".meth";
     my $tag               = get_bam_tag($sample_name);
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -58,6 +53,20 @@ sub perform {
 
     my $rmlist = "";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file );
+
+    print $pbs "
+if [ ! -s ${sampleFileBase}.sorted ]; then
+  echo walt=`date`
+  sort -k1,1 -k2,2g -k3,3g -k6,6 $sampleFileBase -o ${sampleFileBase}.sorted;
+fi
+";
+
+
+
+
+
+
+
 
 	if ($sample_files[0]=~/\.gz$/) { #.gz fle, need to zcat
 		my @sample_files_unzip=();
