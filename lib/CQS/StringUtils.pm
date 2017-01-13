@@ -2,6 +2,7 @@ package CQS::StringUtils;
 
 use strict;
 use warnings;
+use Algorithm::Loops qw( NestedLoops );
 
 require Exporter;
 
@@ -23,17 +24,15 @@ sub string_repeat {
 }
 
 sub string_combination {
-  my ( $left, $right, $delimiter ) = @_;
+  my ( $arrayOfStrArray, $delimiter ) = @_;
   my $result = [];
-  for my $str1 (@$left) {
-    for my $str2 (@$right) {
-      if ( length($str1) == 0 || length($str2) == 0 ) {
-        push( @$result, $str1 . $str2 );
-      }
-      else {
-        push( @$result, $str1 . $delimiter . $str2 );
-      }
-    }
+
+  my @b;
+  NestedLoops( $arrayOfStrArray, sub { push @b, [@_] } );
+
+  for my $strArray (@b) {
+    my @notEmpty = grep { length($_) > 0 } @$strArray;
+    push( @$result, join( $delimiter, @notEmpty ) );
   }
   return $result;
 }
