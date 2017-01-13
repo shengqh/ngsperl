@@ -7,6 +7,7 @@ use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
+use Pipeline::PipelineUtils;
 use Data::Dumper;
 use Hash::Merge qw( merge );
 
@@ -60,20 +61,16 @@ sub getConfig {
   my $cluster = $def->{cluster};
   my $task    = $def->{task_name};
 
-  my $sra_to_fastq     = $def->{sra_to_fastq};
-  my $fastq_remove_N   = $def->{fastq_remove_N};
-  my $email            = $def->{email};
-  my $cqstools         = $def->{cqstools} or die "Define cqstools at definition first";
-  my $picard_jar       = $def->{picard_jar} or die "Define picard_jar at definition first";
-  my $bwa_fasta        = $def->{bwa_fasta} or die "Define bwa_fasta at definition first";
-  my $treatments       = $def->{treatments} or die "Define treatments at definition first";
-  my $pairend          = $def->{pairend} or die "Define pairend at definition first";
-  my $macs1call_option = $def->{macs1call_option};
-  if ( !defined $macs1call_option ) {
-    $macs1call_option = "-p 1e-9 -w -S --space=50";
-  }
-
-  my $config = {
+  my $sra_to_fastq     = getValue( $def, "sra_to_fastq",     0 );
+  my $fastq_remove_N   = getValue( $def, "fastq_remove_N",   0 );
+  my $email            = getValue( $def, "email" );
+  my $cqstools         = getValue( $def, "cqstools" );
+  my $picard_jar       = getValue( $def, "picard_jar" );
+  my $bwa_fasta        = getValue( $def, "bwa_fasta" );
+  my $treatments       = getValue( $def, "treatments" );
+  my $pairend          = getValue( $def, "pairend" );
+  my $macs2call_option = getValue( $def, "macs2call_option", "-f BEDPE --broad -g hs -B -q 0.01 --broad-cutoff 0.01 --nomodel --slocal 20000 --llocal 20000 --keep-dup all" );
+  my $config           = {
     general => {
       task_name => $task,
       cluster   => $cluster
@@ -270,13 +267,12 @@ sub getConfig {
         "mem"      => "40gb"
       },
     },
-    "bwa_macs1callpeak" => {
-      class      => "Chipseq::MACS",
+    "bwa_macs2callpeak" => {
+      class      => "Chipseq::MACS2Callpeak",
       perform    => 1,
-      target_dir => "${target_dir}/bwa_macs1callpeak",
-      option     => $macs1call_option,
+      target_dir => "${target_dir}/bwa_macs2callpeak",
+      option     => $macs2call_option,
       source_ref => "bwa_bam2bed",
-      groups_ref => "treatments",
       sh_direct  => 0,
       pbs        => {
         "email"    => $email,
@@ -285,15 +281,15 @@ sub getConfig {
         "mem"      => "40gb"
       },
     },
-    "bwa_macs1callpeak_bradner_rose" => {
+    "bwa_macs2callpeak_bradner_rose" => {
       class                => "Chipseq::BradnerRose2",
       perform              => 1,
-      target_dir           => "${target_dir}/bwa_macs1callpeak_bradner_rose",
+      target_dir           => "${target_dir}/bwa_macs2callpeak_bradner_rose",
       option               => "",
       source_ref           => "bwa_cleanbam",
       groups_ref           => "treatments",
       pipeline_dir         => "/scratch/cqs/shengq1/local/bin/bradnerlab",
-      binding_site_bed_ref => [ "bwa_macs1callpeak", ".bed\$" ],
+      binding_site_bed_ref => [ "bwa_macs2callpeak", ".bed\$" ],
       genome               => "hg19",
       sh_direct            => 1,
       pbs                  => {
@@ -303,14 +299,14 @@ sub getConfig {
         "mem"      => "40gb"
       },
     },
-    "bwa_macs1callpeak_bradner_rose_coltron" => {
+    "bwa_macs2callpeak_bradner_rose_coltron" => {
       class              => "Chipseq::Coltron",
       perform            => 1,
-      target_dir         => "${target_dir}/bwa_macs1callpeak_bradner_rose_coltron",
+      target_dir         => "${target_dir}/bwa_macs2callpeak_bradner_rose_coltron",
       option             => "",
       source_ref         => "bwa_cleanbam",
       groups_ref         => "treatments",
-      enhancer_files_ref => [ "bwa_macs1callpeak_bradner_rose", "_AllEnhancers.table.txt" ],
+      enhancer_files_ref => [ "bwa_macs2callpeak_bradner_rose", "_AllEnhancers.table.txt" ],
       genome             => "HG19",
       pipeline_dir       => "/scratch/cqs/shengq1/local/bin/bradnerlab",
       sh_direct          => 1,
@@ -323,7 +319,7 @@ sub getConfig {
     },
   };
   push @individual, ( "fastqc_raw", "cutadapt", "fastqc_post_trim", "fastq_len", "bwa", "bwa_cleanbam", "bwa_bam2bed" );
-  push @summary, ( "fastqc_raw_summary", "bwa_macs1callpeak", "bwa_macs1callpeak_bradner_rose", "bwa_macs1callpeak_bradner_rose_coltron" );
+  push @summary, ( "fastqc_raw_summary", "bwa_macs2callpeak", "bwa_macs2callpeak_bradner_rose", "bwa_macs2callpeak_bradner_rose_coltron" );
 
   $config = merge( $config, $processing );
 
@@ -331,15 +327,15 @@ sub getConfig {
   if ($plot_gff) {
 
     # "-g HG19 -y uniform -r"
-    my $bamplot_option = $def->{bamplot_option} or die "Define bamplot_option at definition first";
+    my $bamplot_option = getValue( $def, "bamplot_option" );
     my $plotgroups = $def->{plotgroups};
     if ( !defined $plotgroups ) {
       my $files         = $def->{files};
       my @sortedSamples = sort keys %$files;
       $plotgroups = { $task => \@sortedSamples };
     }
-    $config->{plotgroups} = $plotgroups;
-    $config->{"bamplot"} = {
+    $config->{"plotgroups"} = $plotgroups;
+    $config->{"bamplot"}    = {
       class              => "Visualization::Bamplot",
       perform            => 1,
       target_dir         => "${target_dir}/bamplot",
