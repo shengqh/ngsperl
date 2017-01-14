@@ -31,6 +31,14 @@ sub perform {
   my $selfname = $self->{_name};
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
+  my $chrDir=$config->{$section}{chr_dir};
+  if ( !defined $chrDir ) {
+    die "define ${section}::chr_dir first";
+  }
+  my $chrSizeFile=$config->{$section}{chr_size_file};
+  if ( !defined $chrSizeFile ) {
+    die "define ${section}::chr_size_file first";
+  }
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -38,7 +46,8 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
- 	my $sampleFileBase=basename($sample_files[0]);
+ 	my $sampleFile=$sample_files[0];
+ 	my $sampleFileBase=basename($sampleFile);
  
     my $result_file          = $sample_name . ".meth";
     my $tag               = get_bam_tag($sample_name);
@@ -54,45 +63,103 @@ sub perform {
     my $rmlist = "";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file );
 
+#preseq part
     print $pbs "
-if [ ! -s ${sampleFileBase}.sorted ]; then
-  echo walt=`date`
-  sort -k1,1 -k2,2g -k3,3g -k6,6 $sampleFileBase -o ${sampleFileBase}.sorted;
+if [ ! -s ${sampleFileBase}.c_curve ]; then
+  echo preseq=`date`
+  preseq c_curve $sampleFile > ${sampleFileBase}.c_curve
+fi
+if [ ! -s ${sampleFileBase}.lc_extrap ]; then
+  echo preseq=`date`
+  preseq lc_extrap $sampleFile > ${sampleFileBase}.lc_extrap
 fi
 ";
 
-
-
-
-
-
-
-
-	if ($sample_files[0]=~/\.gz$/) { #.gz fle, need to zcat
-		my @sample_files_unzip=();
-		foreach my $sampleFile (@sample_files) {
-			my $sampleFileUnzip = basename(change_extension( $sampleFile, "" ));
-			push @sample_files_unzip,$sampleFileUnzip;
-			print $pbs "
-if [ ! -s $result_file ]; then
-  echo zcat=`date`
-  zcat $sampleFile > $sampleFileUnzip
-fi
-";
-			$rmlist=$rmlist. " $sampleFileUnzip"
-		}
-		$sample_files_str = ( scalar(@sample_files) == 2 ) ? "-1 " . $sample_files_unzip[0] . " -2 " . $sample_files_unzip[1]: "-1 " . $sample_files_unzip[0];
-	}
-	
+#methpip part
     print $pbs "
-if [ ! -s $result_file ]; then
-  echo walt=`date`
-  walt -i $walt_index $sample_files_str -o $result_file
+echo Methpipe=`date`
+if [ ! -s ${sampleFileBase}.dremove ]; then
+   duplicate-remover -s -A -S ${sampleFileBase}.dupstats  -o ${sampleFileBase}.dremove $sampleFile
+fi
+
+if [ ! -s ${sampleFileBase}.bsrate ]; then
+bsrate -c $chrDir ${sampleFileBase}.dremove -o ${sampleFileBase}.bsrate
+fi
+
+if [ ! -s ${sampleFileBase}.epiread ]; then
+methstates -c $chrDir  ${sampleFileBase}.dremove -o ${sampleFileBase}.epiread
+fi
+
+if [ ! -s ${sampleFileBase}.all.meth ]; then
+methcounts -c $chrDir -o ${sampleFileBase}.all.meth ${sampleFileBase}.dremove
+fi
+
+if [ ! -s ${sampleFileBase}.levels ]; then
+levels -o ${sampleFileBase}.levels  ${sampleFileBase}.all.meth
+fi
+
+if [ ! -s ${sampleFileBase}.meth ]; then
+symmetric-cpgs -m -o ${sampleFileBase}.meth ${sampleFileBase}.all.meth
+fi
+
+if [ ! -s ${sampleFileBase}.hmr ]; then
+hmr -o ${sampleFileBase}.hmr  -p ${sampleFileBase}.hmrparams  ${sampleFileBase}.meth
+fi
+
+if [ ! -s ${sampleFileBase}.pmr ]; then
+hmr -o ${sampleFileBase}.pmr  -p ${sampleFileBase}.pmrparams -partial ${sampleFileBase}.meth
+fi
+
+if [ ! -s ${sampleFileBase}.pmd ]; then
+pmd -o ${sampleFileBase}.pmd  -p ${sampleFileBase}.pmdparams ${sampleFileBase}.meth
+fi
+
+if [ ! -s ${sampleFileBase}.allelic ]; then
+allelicmeth  -o ${sampleFileBase}.allelic -c $chrDir ${sampleFileBase}.epiread
+fi
+
+if [ ! -s ${sampleFileBase}.amr ]; then
+amrfinder -o ${sampleFileBase}.amr  ${sampleFileBase}.epiread  -c $chrDir
 fi
 ";
+
+#make tracks
+    print $pbs "
+echo Methpipe To Tracks=`date`
+fi
+
+if [ ! -s ${sampleFileBase}.read.bw ]; then
+awk '{OFS=\"\\t\"; print \$1,\$2,\$2+1,\$6}' < ${sampleFileBase}.meth | wigToBigWig /dev/stdin $chrSizeFile ${sampleFileBase}.read.bw
+fi
+
+if [ ! -s ${sampleFileBase}.meth.bw ]; then
+awk '{OFS=\"\\t\"; print \$1,\$2,\$2+1,\$5}' < ${sampleFileBase}.meth | wigToBigWig /dev/stdin $chrSizeFile ${sampleFileBase}.meth.bw
+fi
+
+if [ ! -s ${sampleFileBase}.allelic.bw ]; then
+awk '{OFS=\"\\t\"; print \$1,\$2,\$2+1,\$5}' < ${sampleFileBase}.allelic | wigToBigWig /dev/stdin $chrSizeFile ${sampleFileBase}.allelic.bw
+fi
+
+if [ ! -s ${sampleFileBase}.hmr.bb ]; then
+cut -f 1-3 ${sampleFileBase}.hmr > ${sampleFileBase}.hmr.tmp
+bedToBigBed  ${sampleFileBase}.hmr.tmp $chrSizeFile ${sampleFileBase}.hmr.bb && rm  ${sampleFileBase}.hmr.tmp
+fi
+
+if [ ! -s ${sampleFileBase}.pmr.bb ]; then
+cut -f 1-3 ${sampleFileBase}.pmr > ${sampleFileBase}.pmr.tmp
+bedToBigBed  ${sampleFileBase}.pmr.tmp $chrSizeFile ${sampleFileBase}.pmr.bb && rm  ${sampleFileBase}.pmr.tmp
+fi
+
+
+if [ ! -s ${sampleFileBase}.pmd.bb ]; then
+cut -f 1-3 ${sampleFileBase}.pmd > ${sampleFileBase}.pmd.tmp
+bedToBigBed  ${sampleFileBase}.pmd.tmp $chrSizeFile ${sampleFileBase}.pmd.bb && rm  ${sampleFileBase}.pmd.tmp
+fi
+";
+
     if ($rmlist ne "") {
     	    print $pbs "
-if [ ! -s $result_file ]; then
+if [ -s $result_file ]; then
   rm $rmlist 
 fi
 ";
@@ -117,7 +184,7 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $bam_file     = "${result_dir}/${sample_name}.mr";
+    my $bam_file     = "${result_dir}/${sample_name}.mr.meth";
     my @result_files = ();
     push( @result_files, $bam_file );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );

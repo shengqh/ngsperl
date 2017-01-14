@@ -45,8 +45,8 @@ sub perform {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $sample_files_str = ( scalar(@sample_files) == 2 ) ? "-1 " . $sample_files[0] . " -2 " . $sample_files[1]: "-1 " . $sample_files[0];
 
-    my $result_file          = $sample_name . ".mr";
-    my $tag               = get_bam_tag($sample_name);
+    my $result_file_unsorted          = $sample_name . ".unsorted.mr";
+	my $result_file          = $sample_name . ".mr";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -59,31 +59,43 @@ sub perform {
     my $rmlist = "";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file );
 
+			print $pbs "
+if [ ! -s $result_file ]; then
+  echo zcat=`date`
+";
 	if ($sample_files[0]=~/\.gz$/) { #.gz fle, need to zcat
 		my @sample_files_unzip=();
 		foreach my $sampleFile (@sample_files) {
 			my $sampleFileUnzip = basename(change_extension( $sampleFile, "" ));
 			push @sample_files_unzip,$sampleFileUnzip;
 			print $pbs "
-if [ ! -s $result_file ]; then
-  echo zcat=`date`
   zcat $sampleFile > $sampleFileUnzip
-fi
 ";
 			$rmlist=$rmlist. " $sampleFileUnzip"
 		}
-		$sample_files_str = ( scalar(@sample_files) == 2 ) ? "-1 " . $sample_files_unzip[0] . " -2 " . $sample_files_unzip[1]: "-1 " . $sample_files_unzip[0];
+					print $pbs "
+fi
+";
+		$sample_files_str = ( scalar(@sample_files_unzip) == 2 ) ? "-1 " . $sample_files_unzip[0] . " -2 " . $sample_files_unzip[1]: "-1 " . $sample_files_unzip[0];
 	}
 	
     print $pbs "
-if [ ! -s $result_file ]; then
+if [ (! -s $result_file_unsorted) && (! -s $result_file) ]; then
   echo walt=`date`
-  walt -i $walt_index $sample_files_str -o $result_file
+  walt -i $walt_index $sample_files_str -o $result_file_unsorted
 fi
 ";
+    print $pbs "
+if [ ! -s $result_file ]; then
+  echo walt=`date`
+  sort -k1,1 -k2,2g -k3,3g -k6,6 $result_file_unsorted -o $result_file;
+fi
+";
+    $rmlist=$rmlist ." $result_file_unsorted";
+
     if ($rmlist ne "") {
     	    print $pbs "
-if [ ! -s $result_file ]; then
+if [ (-s $result_file_unsorted) && (-s $result_file) ]; then
   rm $rmlist 
 fi
 ";
