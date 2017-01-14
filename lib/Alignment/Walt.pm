@@ -69,7 +69,9 @@ if [ ! -s $result_file ]; then
 			my $sampleFileUnzip = basename(change_extension( $sampleFile, "" ));
 			push @sample_files_unzip,$sampleFileUnzip;
 			print $pbs "
-  zcat $sampleFile > $sampleFileUnzip
+  if [ ! -s $sampleFileUnzip ]; then
+      zcat $sampleFile > $sampleFileUnzip
+  fi
 ";
 			$rmlist=$rmlist. " $sampleFileUnzip"
 		}
@@ -80,7 +82,7 @@ fi
 	}
 	
     print $pbs "
-if [ (! -s $result_file_unsorted) && (! -s $result_file) ]; then
+if [ ! (-s $result_file_unsorted) && ! (-s $result_file) ]; then
   echo walt=`date`
   walt -i $walt_index $sample_files_str -o $result_file_unsorted
 fi
