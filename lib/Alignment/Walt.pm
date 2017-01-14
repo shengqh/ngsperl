@@ -82,7 +82,7 @@ fi
 	}
 	
     print $pbs "
-if [ ! -s $result_file_unsorted && ! -s $result_file ]; then
+if [[ ! -s $result_file_unsorted && ! -s $result_file ]]; then
   echo walt=`date`
   walt -i $walt_index $sample_files_str -o $result_file_unsorted
 fi
@@ -97,7 +97,7 @@ fi
 
     if ($rmlist ne "") {
     	    print $pbs "
-if [ -s $result_file_unsorted && -s $result_file ]; then
+if [[ -s $result_file_unsorted && -s $result_file ]]; then
   rm $rmlist 
 fi
 ";
