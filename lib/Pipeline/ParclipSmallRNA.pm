@@ -56,7 +56,7 @@ sub getParclipSmallRNAConfig {
       target_dir      => $t2c_dir . '/gsnap_smallRNA_count',
       option          => '-s -e 4',
       source_ref      => 'gsnap',
-      seqcount_ref    => [ 'identical_NTA', '.dupcount$' ],
+      seqcount_ref    => [ 'identical', '.dupcount$' ],
       coordinate_file => $def->{coordinate},
       fasta_file      => $def->{coordinate_fasta},
       cqs_tools       => $def->{cqstools},
