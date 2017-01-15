@@ -215,7 +215,7 @@ sub getParclipSmallRNAConfig {
         class           => "CQS::SmallRNACount",
         perform         => 1,
         target_dir      => $utr3_dir . "/unmappedReads_bowtie1_genome_1mm_3utr_count",
-        option          => "",
+        option          => "--noCategory",
         source_ref      => [ "unmappedReads_bowtie1_genome_1mm", ".bam\$" ],
         fastq_files_ref => [ "unmappedReads", ".fastq.gz\$" ],
         seqcount_ref    => [ "identical", ".dupcount\$" ],
