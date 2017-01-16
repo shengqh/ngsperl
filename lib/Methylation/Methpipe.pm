@@ -126,7 +126,6 @@ fi
 #make tracks
     print $pbs "
 echo Methpipe To Tracks=`date`
-fi
 
 if [ ! -s ${sampleFileBase}.read.bw ]; then
 awk '{OFS=\"\\t\"; print \$1,\$2,\$2+1,\$6}' < ${sampleFileBase}.meth | wigToBigWig /dev/stdin $chrSizeFile ${sampleFileBase}.read.bw
