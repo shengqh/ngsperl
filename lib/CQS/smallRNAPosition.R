@@ -3,45 +3,90 @@ positionFile = args[1]
 file=tools::file_path_sans_ext(positionFile)
 print(file)
 
-fp=read.table(positionFile, sep="\t", header=T)
+library(reshape2)
+library(ggplot2)
 
-cols=c(rgb(139, 35, 35, 0,maxColorValue=255), 
-       rgb(139, 35, 35, 255*0.2,maxColorValue=255), 
-       rgb(139, 35, 35, 255*0.4,maxColorValue=255), 
-       rgb(139, 35, 35,255*0.6,maxColorValue=255), 
-       rgb(139, 35, 35,255*0.8,maxColorValue=255), 
-       rgb(139, 35, 35,255,maxColorValue=255))
+snRNAGrouping<-function(x) {
+	if (all(grepl(":RNU",head(as.character(x))))) {
+		return(1) #snRNA
+	} else if (all(grepl("tRNA-",head(as.character(x))))) {
+		return(2) #tRNA
+	} else {
+		return(0)
+	}
+}
+
+snRnaName2Group<-function(x,groupSnRNA=1) {
+	if (groupSnRNA==1) { #snRNA
+		snRnaGroup<-sapply(strsplit(as.character(x),":|-"),function(y) y[2])
+		snRnaGroup<-gsub("RNVU","RNU",snRnaGroup)
+		snRnaGroup<-gsub("([A-Z]+[0-9]+)[A-Z]+","\\1",snRnaGroup)
+	} else if (groupSnRNA==2) { #tRNA
+		snRnaGroup<-sapply(strsplit(as.character(x),"-"),function(y) y[2])
+	} else {
+		snRnaGroup<-x
+	}
+	return(snRnaGroup)
+}
+
+
+fp=read.table(file, sep="\t", header=T)
+fp$Feature<-paste0(fp$Feature,"(",round(fp$Count,0),"):",fp$Strand)
 
 features=as.character(unique(fp$Feature))
 if(length(features) > 100){
-  features = features[1:100]
-  fp=fp[fp$Feature %in% features,]
+	features = features[1:100]
+	fp=fp[fp$Feature %in% features,]
 }
-counts=lapply(features, function(x){
-  idx=which(fp$Feature==x)
-  unlist(fp$Count[idx])[1]
-})
-counts=round(unlist(counts))
-strands=lapply(features, function(x){
-  idx=which(fp$Feature==x)
-  unlist(fp$Strand[idx])[1]
-})
-strands=unlist(strands)
-fm=data.frame(feature=features, count=counts, strand=strands)
-tnames=apply(as.matrix(fm),1,function(x){
-  paste0(x[1], "(", as.numeric(x[2]),"):",x[3])
-})
-index = nrow(fm) + 1 - as.numeric(rownames(fm))
-names(index) = features
-fpf=as.character(fp$Feature)
+groupSnRNA<-snRNAGrouping(features)
 
-fp$Index = index[fpf]
-fp$Color=cols[round(fp$Percentage * 5)+1]
+fp$AbsCount<-fp$Count*fp$Percentage
+fp$Percentage[which(fp$Percentage==0)]<-NA
+fp$snRNAGroup<-snRnaName2Group(fp$Feature,groupSnRNA)
 
-height=max(length(features) * 60, 2000)
-png(paste0(positionFile, ".png"), width=8000, height=height, res=300)
-plot(fp$Position, fp$Index, pch=19, cex=fp$Percentage, xlim=c(-30, 120), col=fp$Color, xlab="Position", ylab="Name and Count", yaxt="n", bty="n", xaxt="n", main=file)
-axis(side=1, at=c(-10:120), las=2)
-lines(x=c(0,0), y=c(0, nrow(fm)),col="blue")
-text(rep(-28,nrow(fm)), index, tnames, adj=c(0,0.5))
+height=max(length(unique(fp$Feature))*100,3000)
+width=height
+png(paste0(file,".png"), width=width, height=height, res=300)
+p<-ggplot(fp,aes(x=Position,y=Feature,size=Percentage,colour=Percentage))+
+		geom_point()+
+		scale_size_continuous(range = c(0.1,2))+
+		scale_colour_gradient(low="indianred1",high="darkred")+
+		xlim(c(-30, 120))+ 
+		theme(legend.position="none")+
+		theme(text = element_text(size=25))
+if (groupSnRNA) {
+	p<-p+facet_grid(snRNAGroup~.,space = "free",scale="free")
+}
+print(p)
 dev.off()
+
+if (groupSnRNA) {
+	counts=lapply(features, function(x){
+				idx=which(fp$Feature==x)
+				unlist(fp$Count[idx])[1]
+			})
+	counts=round(unlist(counts))
+	names(counts)<-features
+	snRNAGroup<-snRnaName2Group(features,groupSnRNA)
+	names(snRNAGroup)<-features
+	snRNAGroupTotalCounts<-tapply(counts,snRNAGroup[names(counts)],sum)
+	fpBySnRNAGroup<-aggregate(x = fp, by = list(fp$snRNAGroup, fp$Position), FUN = function(x) if(is.numeric(x)| is.integer(x)) {sum(x)} else {x[1]})
+	fpBySnRNAGroup$GroupPercentage<-fpBySnRNAGroup$AbsCount/snRNAGroupTotalCounts[fpBySnRNAGroup$snRNAGroup]
+	fpBySnRNAGroup$Position<-fpBySnRNAGroup$Group.2
+	
+	height=max(length(unique(fpBySnRNAGroup$snRNAGroup))*100,1500)
+	width=height
+	png(paste0(file,".snRNAGroup.png"), width=width, height=height, res=300)
+	p<-ggplot(fpBySnRNAGroup,aes(x=Position,y=snRNAGroup,size=GroupPercentage,colour=GroupPercentage))+
+			geom_point()+
+			scale_size_continuous(range = c(0.1,2))+
+			scale_colour_gradient(low="indianred1",high="darkred")+
+			xlim(c(-30, 120))+ 
+			theme(legend.position="none")
+	print(p)
+	dev.off()
+}
+
+
+
+
