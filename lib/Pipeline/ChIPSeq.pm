@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Pipeline::ChIPSeq;
+package Pipeline::ChipSeqBowtie;
 
 use strict;
 use warnings;
@@ -7,14 +7,14 @@ use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
-use Pipeline::SmallRNAUtils;
+use Pipeline::Preprocession;
 use Data::Dumper;
 use Hash::Merge qw( merge );
 
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(performChIPSeq performChIPSeqTask)] );
+our %EXPORT_TAGS = ( 'all' => [qw(performChipSeq performChipSeqTask)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -22,30 +22,28 @@ our $VERSION = '0.01';
 
 sub initializeDefaultOptions {
   my $def = shift;
+  initValue( $def, "subdir", 0 );
 
-  if ( !defined $def->{cluster} ) {
-    $def->{cluster} = 'slurm';
+  initValue( $def, "aligner", "bowtie1" );
+  if ( $def->{aligner} eq "bowtie1" ) {
+    initValue( $def, "bowtie1_option", "-v 1 -m 1 --best --strata" );
+  }
+  elsif ( $def->{aligner} eq "bowtie1" ) {
+    initValue( $def, "bwa_option", "" );
   }
 
-  if ( !defined $def->{fastq_remove_N} ) {
-    $def->{fastq_remove_N} = 0;
+  initValue( $def, "peak_caller", "macs1" );
+  if ( $def->{"peak_caller"} eq "macs1" ) {
+    initValue( $def, "macs1_option", "-p 1e-9 -w -S --space=50" );
+  }
+  elsif ( $def->{peak_caller} eq "macs2" ) {
+    my $macs2_genome = getValue( $def, "macs2_genome" );    #hs
+    initValue( $def, "macs2_option", "--broad -B -q 0.01 -g " . $macs2_genome );
   }
 
-  if ( !defined $def->{sra_to_fastq} ) {
-    $def->{sra_to_fastq} = 0;
-  }
-
-  if ( !defined $def->{table_vis_group_text_size} ) {
-    $def->{table_vis_group_text_size} = "10";
-  }
-
-  if ( !defined $def->{max_thread} ) {
-    $def->{max_thread} = "8";
-  }
-
-  if ( !defined $def->{sequencetask_run_time} ) {
-    $def->{sequencetask_run_time} = "12";
-  }
+  initValue( $def, "perform_rose",    0 );
+  initValue( $def, "perform_bamplot", 0 );
+  initValue( $def, "perform_chipqc",  0 );
 
   return $def;
 }
@@ -59,113 +57,41 @@ sub getConfig {
 
   $def = initializeDefaultOptions($def);
 
-  my $cluster = $def->{cluster};
-  my $task    = $def->{task_name};
+  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir ) = getPreprocessionConfig($def);
 
-  my $sra_to_fastq   = $def->{sra_to_fastq};
-  my $fastq_remove_N = $def->{fastq_remove_N};
-  my $email          = $def->{email};
-  my $bwa_index      = $def->{bwa_index};
+  my $email    = getValue( $def, "email" );
+  my $cqstools = getValue( $def, "cqstools" );
 
-  my $cqstools   = $def->{cqstools}   or die "define cqstools first";
-  my $picard_jar = $def->{picard_jar} or die "define picard_jar first";
+  $config->{treatments} = getValue( $def, "treatments" );
+  $config->{controls}   = getValue( $def, "controls" );
 
-  my $macs2_option = $def->{macs2_option} or die "define macs2_option first";
-  my $qctable      = $def->{qc_table}     or die "define qctable first";
-  my $genome       = $def->{genome}       or die "define genome first, such like hg19, check R ChIPQC package";
-
-  my $config = {
-    general => {
-      task_name => $task,
-      cluster   => $cluster
-    },
-  };
-
-  $config = merge( $config, $def );
-
-  my $source_ref = "files";
-  my @individual;
-  my @summary;
-
-  if ($sra_to_fastq) {
-    $config->{sra2fastq} = {
-      class      => "SRA::FastqDump",
-      perform    => 1,
-      ispaired   => 0,
-      target_dir => "${target_dir}/sra2fastq",
-      option     => "",
-      source_ref => "files",
-      sh_direct  => 0,
-      pbs        => {
+  if ( $def->{aligner} eq "bowtie1" ) {
+    $config->{ $def->{aligner} } = {
+      class         => "Alignment::Bowtie1",
+      perform       => 1,
+      target_dir    => "${target_dir}/" . $def->{aligner},
+      option        => getValue( $def, "bowtie_option" ),
+      fasta_file    => getValue( $def, "fasta_file" ),
+      bowtie1_index => getValue( $def, "bowtie_index" ),
+      source_ref    => $source_ref,
+      sh_direct     => 0,
+      pbs           => {
         "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "10",
-        "mem"      => "10gb"
+        "nodes"    => "1:ppn=8",
+        "walltime" => "72",
+        "mem"      => "40gb"
       },
     };
-    $source_ref = "sra2fastq";
-    push @individual, ("sra2fastq");
   }
-
-  if ($fastq_remove_N) {
-    $config->{fastq_remove_N} = {
-      class      => "CQS::FastqTrimmer",
-      perform    => $fastq_remove_N,
-      target_dir => $target_dir . "/fastq_remove_N",
-      option     => "-n -z",
-      extension  => "_trim.fastq.gz",
-      source_ref => "files",
-      cqstools   => $cqstools,
-      cluster    => $cluster,
-      sh_direct  => 1,
-      pbs        => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "2",
-        "mem"      => "10gb"
-      }
-    };
-    $source_ref = "fastq_remove_N";
-    push @individual, ("fastq_remove_N");
-  }
-
-  my $processing = {
-    fastqc_raw => {
-      class      => "QC::FastQC",
-      perform    => 1,
-      target_dir => $target_dir . "/fastqc_raw",
-      option     => "",
-      source_ref => $source_ref,
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "2",
-        "mem"      => "10gb"
-      },
-    },
-    fastqc_raw_summary => {
-      class      => "QC::FastQCSummary",
-      perform    => 1,
-      target_dir => $target_dir . "/fastqc_raw",
-      cqstools   => $cqstools,
-      option     => "",
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "2",
-        "mem"      => "10gb"
-      },
-    },
-    bwa => {
+  elsif ( $def->{aligner} eq "bwa" ) {
+    $config->{ $def->{aligner} } = {
       class      => "Alignment::BWA",
       perform    => 1,
-      target_dir => "${target_dir}/bwa",
-      option     => "",
-      bwa_index  => $bwa_index,
-      source_ref => "$source_ref",
-      picard_jar => $picard_jar,
+      target_dir => "${target_dir}/" . $def->{aligner},
+      option     => getValue( $def, "bwa_option" ),
+      bwa_index  => getValue( $def, "bwa_index" ),
+      source_ref => $source_ref,
+      picard_jar => getValue( $def, "picard_jar" ),
       sh_direct  => 0,
       pbs        => {
         "email"    => $email,
@@ -173,15 +99,24 @@ sub getConfig {
         "walltime" => "72",
         "mem"      => "40gb"
       },
-    },
-    macs2callpeak => {
-      class        => "Chipseq::MACS2Callpeak",
+    };
+  }
+  else {
+    die "Unknown alinger " . $def->{aligner};
+  }
+
+  push @$individual, ( $def->{aligner} );
+
+  my $peakCallerTask = $def->{peak_caller} . "callpeak";
+  if ( $def->{peak_caller} eq "macs1" ) {
+    $config->{$peakCallerTask} = {
+      class        => "Chipseq::MACS",
       perform      => 1,
-      target_dir   => "${target_dir}/macs2callpeak",
-      option       => $macs2_option,
-      source_ref   => "bwa",
-      groups_ref   => "groups",
-      controls_ref => "inputs",
+      target_dir   => "${target_dir}/${peakCallerTask}",
+      option       => getValue( $def, "macs1_option" ),
+      source_ref   => [ $def->{aligner}, ".bam\$" ],
+      groups_ref   => "treatments",
+      controls_ref => "controls",
       sh_direct    => 0,
       pbs          => {
         "email"    => $email,
@@ -189,15 +124,97 @@ sub getConfig {
         "walltime" => "72",
         "mem"      => "40gb"
       },
-    },
-    chipqc => {
-      class         => "QC::ChipseqQC",
-      perform       => 1,
-      target_dir    => "${target_dir}/chipqc",
-      option        => "",
-      source_ref    => "bwa",
+    };
+  }
+  elsif ( $def->{peak_caller} eq "macs2" ) {
+    $config->{$peakCallerTask} = {
+      class        => "Chipseq::MACS2Callpeak",
+      perform      => 1,
+      target_dir   => "${target_dir}/$peakCallerTask",
+      option       => getValue( $def, "macs2_option" ),
+      source_ref   => [ $def->{aligner}, ".bam\$" ],
+      groups_ref   => "treatments",
+      controls_ref => "controls",
+      sh_direct    => 0,
+      pbs          => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    };
+  }
+  else {
+    die "Unknown peak caller " . $def->{"peak_caller"};
+  }
+  push @$summary, ($peakCallerTask);
+
+  if ( $def->{perform_rose} ) {
+    my $roseTask = $def->{peak_caller} . "callpeak_bradner_rose2";
+    $config->{$roseTask} = {
+      class                => "Chipseq::BradnerRose2",
+      perform              => 1,
+      target_dir           => "${target_dir}/$roseTask",
+      option               => "",
+      source_ref           => $peakCallerTask,
+      groups_ref           => "treatments",
+      controls_ref         => "controls",
+      pipeline_dir         => getValue( $def, "rose_folder" ),    #"/scratch/cqs/shengq1/local/bin/bradnerlab"
+      binding_site_bed_ref => [ $peakCallerTask, ".bed\$" ],
+      genome               => getValue( $def, "rose_genome" ),    #hg19,
+      sh_direct            => 1,
+      pbs                  => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    };
+    push @$summary, ($roseTask);
+  }
+
+  if ( getValue( $def, "perform_bamplot" ) ) {
+    my $plotgroups = $def->{plotgroups};
+    if ( !defined $plotgroups ) {
+      my $files         = $def->{files};
+      my @sortedSamples = sort keys %$files;
+      $plotgroups = { getValue( $def, "task_name" ) => \@sortedSamples };
+    }
+    $config->{plotgroups} = $plotgroups;
+    $config->{"bamplot"} = {
+      class              => "Visualization::Bamplot",
+      perform            => 1,
+      target_dir         => "${target_dir}/bamplot",
+      option             => getValue( $def, "bamplot_option" ),
+      source_ref         => $def->{aligner},
+      groups_ref         => "plotgroups",
+      gff_file           => getValue( $def, "bamplot_gff" ),
+      is_rainbow_color   => 0,
+      is_draw_individual => 0,
+      is_single_pdf      => 1,
+      sh_direct          => 1,
+      pbs                => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
+      },
+    };
+    push @$summary, ("bamplot");
+  }
+
+  if ( getValue( $def, "perform_chipqc" ) ) {
+    my $qctable = getValue( $def, "chipqc_table" );
+    my $genome  = getValue( $def, "chipqc_genome" );    #hg19, check R ChIPQC package;
+    $config->{chipqc} = {
+      class      => "QC::ChipseqQC",
+      perform    => 1,
+      target_dir => "${target_dir}/chipqc",
+      option     => "",
+      source_ref => $def->{aligner},
+      ,
       qctable       => $qctable,
-      peaks_ref     => [ "macs2callpeak", "_summits.bed\$" ],
+      peaks_ref     => [ $peakCallerTask, ".bed\$" ],
       peak_software => "bed",
       genome        => $genome,
       sh_direct     => 0,
@@ -207,28 +224,23 @@ sub getConfig {
         "walltime" => "72",
         "mem"      => "40gb"
       },
-    }
-  };
-
-  $config = merge( $config, $processing );
-  push @individual, ( "fastqc_raw", "bwa" );
-  push @summary, ( "fastqc_raw_summary", "macs2callpeak", "chipqc" );
-
-  $config->{sequencetask} = {
+    };
+    push @$summary, ("chipqc");
+  }
+  $config->{"sequencetask"} = {
     class      => "CQS::SequenceTask",
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",
     source     => {
-      step1 => \@individual,
-      step2 => \@summary,
+      step_1 => $individual,
+      step_2 => $summary,
     },
     sh_direct => 0,
-    cluster   => $cluster,
     pbs       => {
-      "email"    => $def->{email},
-      "nodes"    => "1:ppn=" . $def->{max_thread},
-      "walltime" => $def->{sequencetask_run_time},
+      "email"    => $email,
+      "nodes"    => "1:ppn=8",
+      "walltime" => "72",
       "mem"      => "40gb"
     },
   };
@@ -236,7 +248,7 @@ sub getConfig {
   return ($config);
 }
 
-sub performChIPSeq {
+sub performChipSeq {
   my ( $def, $perform ) = @_;
   if ( !defined $perform ) {
     $perform = 1;
@@ -253,9 +265,8 @@ sub performChIPSeq {
   return $config;
 }
 
-sub performChIPSeqTask {
+sub performChipSeqTask {
   my ( $def, $task ) = @_;
-
   my $config = getConfig($def);
 
   performTask( $config, $task );
