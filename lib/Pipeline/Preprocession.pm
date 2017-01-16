@@ -57,7 +57,7 @@ sub getPreprocessionConfig {
   my $sra_to_fastq     = getValue( $def, "sra_to_fastq" );
   my $fastq_remove_N   = getValue( $def, "fastq_remove_N" );
   my $remove_sequences = getValue( $def, "remove_sequences" );    #remove contamination sequences from sequence kit before adapter trimming
-  my $run_cutadapt     = getValue( $def, "run_cutadapt" );
+  my $run_cutadapt     = getValue( $def, "perform_cutadapt" );
   if ($run_cutadapt) {
     getValue( $def, "adapter" );
     getValue( $def, "min_read_length" );
