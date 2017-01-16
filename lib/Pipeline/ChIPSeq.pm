@@ -71,9 +71,9 @@ sub getConfig {
       class         => "Alignment::Bowtie1",
       perform       => 1,
       target_dir    => "${target_dir}/" . $def->{aligner},
-      option        => getValue( $def, "bowtie_option" ),
-      fasta_file    => getValue( $def, "fasta_file" ),
-      bowtie1_index => getValue( $def, "bowtie_index" ),
+      option        => getValue( $def, "bowtie1_option" ),
+      fasta_file    => getValue( $def, "bowtie1_fasta" ),
+      bowtie1_index => getValue( $def, "bowtie1_index" ),
       source_ref    => $source_ref,
       sh_direct     => 0,
       pbs           => {
