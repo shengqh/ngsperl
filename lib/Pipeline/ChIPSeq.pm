@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Pipeline::ChipSeqBowtie;
+package Pipeline::ChIPSeq;
 
 use strict;
 use warnings;
@@ -14,7 +14,7 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(performChipSeq performChipSeqTask)] );
+our %EXPORT_TAGS = ( 'all' => [qw(performChIPSeq performChIPSeqTask)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -248,7 +248,7 @@ sub getConfig {
   return ($config);
 }
 
-sub performChipSeq {
+sub performChIPSeq {
   my ( $def, $perform ) = @_;
   if ( !defined $perform ) {
     $perform = 1;
@@ -265,7 +265,7 @@ sub performChipSeq {
   return $config;
 }
 
-sub performChipSeqTask {
+sub performChIPSeqTask {
   my ( $def, $task ) = @_;
   my $config = getConfig($def);
 
