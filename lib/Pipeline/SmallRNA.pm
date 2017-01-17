@@ -216,7 +216,7 @@ sub getSmallRNAConfig {
     push @name_for_readSummary, ( "Host miRNA", "Host tRNA", "Host other small RNA" );
     push @table_for_countSum,
       ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" );
-    push @$individual_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_count" );
+    push @$individual_ref, ("bowtie1_genome_1mm_NTA_smallRNA_count");
     push @$summary_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_category", "host_genome_tRNA_category" );
 
     $config = merge( $config, $host_genome );
@@ -224,11 +224,13 @@ sub getSmallRNAConfig {
       my @visual_source = ();
 
       #miRNA
-      $deseq2Task = addDEseq2( $config, $def, \@$summary_ref, "miRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
-      push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
+      addDEseq2( $config, $def, \@$summary_ref, "miRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
       addDEseq2( $config, $def, $summary_ref, "miRNA_NTA",        [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.NTA.count\$" ],        $host_genome_dir, $DE_min_median_read_smallRNA );
       addDEseq2( $config, $def, $summary_ref, "miRNA_NTA_base",   [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.NTA.base.count\$" ],   $host_genome_dir, $DE_min_median_read_smallRNA );
-      addDEseq2( $config, $def, $summary_ref, "miRNA_isomiR",     [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR.count\$" ],     $host_genome_dir, $DE_min_median_read_smallRNA );
+
+      $deseq2Task = addDEseq2( $config, $def, $summary_ref, "miRNA_isomiR",     [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR.count\$" ],     $host_genome_dir, $DE_min_median_read_smallRNA );
+      push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
+
       addDEseq2( $config, $def, $summary_ref, "miRNA_isomiR_NTA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR_NTA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
       addDEseq2( $config, $def, $summary_ref, "miRNA_reads",      [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$" ],       $host_genome_dir, $DE_min_median_read_smallRNA );
       addDeseq2Visualization( $config, $def, $summary_ref, "host_genome_miRNA",
@@ -237,29 +239,37 @@ sub getSmallRNAConfig {
 
       #tRNA
       $deseq2Task = addDEseq2( $config, $def, $summary_ref, "tRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
-      push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
+      push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) ); #default is anticodon
       addDEseq2( $config, $def, $summary_ref, "tRNA_reads",     [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$" ],      $host_genome_dir, $DE_min_median_read_smallRNA );
       addDEseq2( $config, $def, $summary_ref, "tRNA_aminoacid", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
 
-      if ( $def->{host_smallrnacounttable_option} =~ /yRNAsnRNAsnoRNA/ ) {
-        if ( $def->{hasYRNA} ) {
+      #snRNA
+      $deseq2Task = addDEseq2( $config, $def, $summary_ref, "snRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
+      push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
+      addDEseq2( $config, $def, $summary_ref, "snRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.read.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
 
-          #yRNA
-          $deseq2Task = addDEseq2( $config, $def, $summary_ref, "yRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
-          push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
-          addDEseq2( $config, $def, $summary_ref, "yRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.read.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
-        }
+      #snoRNA
+      $deseq2Task = addDEseq2( $config, $def, $summary_ref, "snoRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
+      push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
+      addDEseq2( $config, $def, $summary_ref, "snoRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.read.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
 
-        #snRNA
-        $deseq2Task = addDEseq2( $config, $def, $summary_ref, "snRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
+      if ( $def->{hasYRNA} ) {
+
+        #yRNA
+        $deseq2Task = addDEseq2( $config, $def, $summary_ref, "yRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
         push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
-        addDEseq2( $config, $def, $summary_ref, "snRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.read.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
-
-        #snoRNA
-        $deseq2Task = addDEseq2( $config, $def, $summary_ref, "snoRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
-        push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
-        addDEseq2( $config, $def, $summary_ref, "snoRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.read.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
+        addDEseq2( $config, $def, $summary_ref, "yRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.read.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
       }
+
+      #rRNA
+      $deseq2Task = addDEseq2( $config, $def, $summary_ref, "rRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
+      push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
+      addDEseq2( $config, $def, $summary_ref, "rRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.read.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
+
+      #lincRNA
+      $deseq2Task = addDEseq2( $config, $def, $summary_ref, "lincRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".lincRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
+      push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
+      addDEseq2( $config, $def, $summary_ref, "lincRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".lincRNA.read.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
 
       #otherSmallRNA
       $deseq2Task = addDEseq2( $config, $def, $summary_ref, "otherSmallRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
@@ -762,7 +772,7 @@ sub getSmallRNAConfig {
 
   #tDRmapper
   if ($perform_tDRmapper) {
-    my $tools_dir = create_directory_or_die($def->{target_dir} . "/other_tools");
+    my $tools_dir = create_directory_or_die( $def->{target_dir} . "/other_tools" );
     $config->{"tDRmapper"} = {
       class      => "CQS::Perl",
       perform    => 1,
