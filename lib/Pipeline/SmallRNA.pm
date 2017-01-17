@@ -686,10 +686,10 @@ sub getSmallRNAConfig {
     },
   };
   my $name_for_readSummary_r = "readFilesModule=c('" . join( "','", @name_for_readSummary ) . "')";
-  $config->{reads_mapping_summary} = {
+  $config->{sequence_mapped_in_categories} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
-    target_dir               => $data_visualization_dir . "/reads_mapping_summary",
+    target_dir               => $data_visualization_dir . "/sequence_mapped_in_categories",
     rtemplate                => "countTableVisFunctions.R,ReadsMappingSummary.R",
     output_file_ext          => ".ReadsMapping.Summary.csv",
     parameterFile1_ref       => [ "identical_sequence_count_table", $task_name . "_sequence.read.count\$" ],
@@ -706,7 +706,7 @@ sub getSmallRNAConfig {
       "mem"       => "10gb"
     },
   };
-  push @$summary_ref, ( "count_table_correlation", "reads_in_tasks", "reads_in_tasks_pie", "reads_mapping_summary" );
+  push @$summary_ref, ( "count_table_correlation", "reads_in_tasks", "reads_in_tasks_pie", "sequence_mapped_in_categories" );
 
   #add time cost task in the end of pipeline
   #search not identical reads to genome, for IGV
