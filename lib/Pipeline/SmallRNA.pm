@@ -478,11 +478,11 @@ sub getSmallRNAConfig {
       addDEseq2( $config, $def, $summary_ref, "fungus_group4",         [ "bowtie1_fungus_group4_pm_table",   ".category.count\$" ], $nonhost_genome_dir, $DE_min_median_read_smallRNA );
       addDEseq2( $config, $def, $summary_ref, "fungus_group4_reads",   [ "bowtie1_fungus_group4_pm_table",   ".read.count\$" ],     $nonhost_genome_dir, $DE_min_median_read_smallRNA );
 
-      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome_deseq2",
+      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome",
         [ "deseq2_bacteria_group1", "_DESeq2.csv\$", "deseq2_bacteria_group2", "_DESeq2.csv\$", "deseq2_fungus_group4", "_DESeq2.csv\$" ],
         $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout" );
 
-      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome_deseq2_reads",
+      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome_reads",
         [ "deseq2_bacteria_group1_reads", "_DESeq2.csv\$", "deseq2_bacteria_group2_reads", "_DESeq2.csv\$", "deseq2_fungus_group4_reads", "_DESeq2.csv\$" ],
         $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout" );
     }
