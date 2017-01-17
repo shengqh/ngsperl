@@ -128,6 +128,7 @@ sub addNonhostVis {
       parameterSampleFile1      => $def->{groups},
       parameterSampleFile2      => $def->{groups_vis_layout},
       parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
+      rCode                     => 'maxCategory=NA;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
       sh_direct                 => 1,
       pbs                       => {
         "email"     => $def->{email},
