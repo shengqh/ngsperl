@@ -30,7 +30,7 @@ snRnaName2Group<-function(x,groupSnRNA=1) {
 }
 
 
-fp=read.table(file, sep="\t", header=T)
+fp=read.table(positionFile, sep="\t", header=T)
 fp$Feature<-paste0(fp$Feature,"(",round(fp$Count,0),"):",fp$Strand)
 
 features=as.character(unique(fp$Feature))
