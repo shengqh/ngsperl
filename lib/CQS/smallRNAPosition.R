@@ -7,7 +7,7 @@ library(reshape2)
 library(ggplot2)
 
 snRNAGrouping<-function(x) {
-	if (all(grepl(":RNU",head(as.character(x))))) {
+	if (all(grepl(":RNU|:RNVU|:U\\d+",head(as.character(x))))) {
 		return(1) #snRNA
 	} else if (all(grepl("tRNA-",head(as.character(x))))) {
 		return(2) #tRNA
