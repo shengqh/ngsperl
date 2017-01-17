@@ -76,7 +76,14 @@ if (groupSnRNA) {
 	
 	height=max(length(unique(fpBySnRNAGroup$snRNAGroup))*100,1500)
 	width=height
-	png(paste0(file,".snRNAGroup.png"), width=width, height=height, res=300)
+	
+	if(groupSnRNA==1){
+	  name = ".snRNAGroup"
+	}else{
+	  name = ".tRNAGroup"
+	}
+	
+	png(paste0(file, name, ".png"), width=width, height=height, res=300)
 	p<-ggplot(fpBySnRNAGroup,aes(x=Position,y=snRNAGroup,size=GroupPercentage,colour=GroupPercentage))+
 			geom_point()+
 			scale_size_continuous(range = c(0.1,2))+
