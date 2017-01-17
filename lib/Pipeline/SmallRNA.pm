@@ -416,6 +416,7 @@ sub getSmallRNAConfig {
         output_file        => ".group1Mapping.Result",
         output_file_ext    => ".Piechart.png",
         parameterFile1_ref => [ "bowtie1_bacteria_group1_pm_table", ".category.count\$" ],
+        rCode              => 'maxCategory=4;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
       }
     );
 
@@ -436,6 +437,7 @@ sub getSmallRNAConfig {
         output_file        => ".group2Mapping.Result",
         output_file_ext    => ".Piechart.png",
         parameterFile1_ref => [ "bowtie1_bacteria_group2_pm_table", ".category.count\$" ],
+        rCode              => 'maxCategory=5;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
       }
     );
 
@@ -456,6 +458,7 @@ sub getSmallRNAConfig {
         output_file        => ".group4Mapping.Result",
         output_file_ext    => ".Piechart.png",
         parameterFile1_ref => [ "bowtie1_fungus_group4_pm_table", ".category.count\$" ],
+        rCode              => 'maxCategory=8;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
       }
     );
 
