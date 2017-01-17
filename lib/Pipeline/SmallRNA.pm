@@ -561,7 +561,7 @@ sub getSmallRNAConfig {
       addDeseq2Visualization(
         $config, $def,
         $summary_ref,
-        "nonhost_library_deseq2",
+        "nonhost_library",
         [
           "deseq2_nonhost_tRNA",      "_DESeq2.csv\$", "deseq2_nonhost_tRNA_category",  "_DESeq2.csv\$", "deseq2_nonhost_tRNA_species", "_DESeq2.csv\$",
           "deseq2_nonhost_tRNA_type", "_DESeq2.csv\$", "deseq2_nonhost_tRNA_anticodon", "_DESeq2.csv\$"
