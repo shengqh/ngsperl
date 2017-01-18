@@ -21,6 +21,9 @@ ggpieToFile(mappingResult2Species,fileName=paste0(resultFile,".Piechart.png"),ma
 #Barplot for all samples
 tableBarplotToFile(dat=mappingResult2Species,fileName=paste0(resultFile,".Barplot.png"),totalCountFile=totalCountFile,maxCategory=maxCategory,textSize=textSize)
 
+#Barplot for Group samples
+tableBarplotToFile(dat=mappingResult2Species,fileName=paste0(resultFile,".Group.Barplot.png"),groupFileList=groupFileList,outFileName=paste0(resultFile,".ReadsPerMillionGroups.csv"),totalCountFile=totalCountFile,maxCategory=maxCategory,textSize=textSize)
+
 #Group Pie chart
 ggpieGroupToFile(dat=mappingResult2Species,fileName=paste0(resultFile,".Group.Piechart.png"),groupFileList=groupFileList,
 		outFileName=paste0(resultFile,".PercentGroups.csv"),maxCategory=maxCategory,textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList)

@@ -221,8 +221,12 @@ orderDataByNames<-function(x,orderKey,orderNames) {
 }
 
 #Merge Sample By Group
-mergeTableBySampleGroup<-function(x,sampleToGroup) {
-	xRatio<-t(t(x)/colSums(x,na.rm=T))
+mergeTableBySampleGroup<-function(x,sampleToGroup,toPercent=TRUE) {
+	if (toPercent) {
+		xRatio<-t(t(x)/colSums(x,na.rm=T))
+	} else {
+		xRatio<-x
+	}
 	groupLength<-length(unique(sampleToGroup[,2]))
 	xRatioGroupMean<-matrix(NA,ncol=groupLength,nrow=nrow(x))
 	colnames(xRatioGroupMean)<-unique(sampleToGroup[,2])
@@ -327,7 +331,7 @@ tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",f
 	return(p)
 }
 
-tableBarplotToFile<-function(dat,fileName,totalCountFile="",maxCategory=5,textSize=9,transformTable=T,height=1500,...) {
+tableBarplotToFile<-function(dat,fileName,totalCountFile="",groupFileList="",outFileName="",maxCategory=5,textSize=9,transformTable=T,height=1500,...) {
 	if (totalCountFile!="") { #normlize with total count *10^6
 		totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
 		totalCount<-unlist(totalCount["Reads for Mapping",])
@@ -335,6 +339,15 @@ tableBarplotToFile<-function(dat,fileName,totalCountFile="",maxCategory=5,textSi
 		ylab<-"Mapped Reads per Million"
 	} else {
 		ylab<-"Reads"
+	}
+	if (groupFileList!="") {
+		sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
+		#keep the groups with samples in the count table
+		sampleToGroup<-sampleToGroup[which(sampleToGroup[,1] %in% colnames(dat)),]
+		dat<-mergeTableBySampleGroup(dat,sampleToGroup,toPercent=FALSE)
+		if (outFileName!="") {
+			write.csv(dat,outFileName)
+		}
 	}
 	width<-max(3000,75*ncol(dat))
 	height<-height

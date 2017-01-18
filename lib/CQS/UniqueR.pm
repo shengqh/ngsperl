@@ -49,7 +49,7 @@ sub perform {
       @orderedSampleNames = @{$parameterSampleFileOrder};
     }
     else {
-      @orderedSampleNames = sort keys %temp;
+      @orderedSampleNames = keys %temp;
     }
     open( LIST, ">$result_dir/fileList1${task_suffix}.txt" ) or die "Cannot create fileList1.txt";
     foreach my $sample_name (@orderedSampleNames) {
@@ -69,7 +69,7 @@ sub perform {
       @orderedSampleNames = @{$parameterSampleFileOrder};
     }
     else {
-      @orderedSampleNames = sort keys %temp;
+      @orderedSampleNames = keys %temp;
     }
     open( LIST, ">$result_dir/fileList2${task_suffix}.txt" ) or die "Cannot create fileList2.txt";
     foreach my $sample_name (@orderedSampleNames) {
@@ -89,7 +89,7 @@ sub perform {
       @orderedSampleNames = @{$parameterSampleFileOrder};
     }
     else {
-      @orderedSampleNames = sort keys %temp;
+      @orderedSampleNames = keys %temp;
     }
     open( LIST, ">$result_dir/fileList3${task_suffix}.txt" ) or die "Cannot create fileList3.txt";
     foreach my $sample_name (@orderedSampleNames) {
