@@ -124,7 +124,7 @@ sub addNonhostVis {
       class                     => "CQS::UniqueR",
       perform                   => 1,
       target_dir                => $parentDir . "/" . $taskName,
-      parameterSampleFile1Order => $def->{groups_order},
+#      parameterSampleFile1Order => $def->{groups_order},
       parameterSampleFile1      => $def->{groups},
       parameterSampleFile2      => $def->{groups_vis_layout},
       parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
