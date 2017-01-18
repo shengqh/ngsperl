@@ -477,6 +477,8 @@ for(countfile_index in c(1:length(countfiles))){
 				warning(message)
 				fitType<-"mean"
 				writeLines(message,paste0(comparisonName,".error"))
+			} else if(all(is.na(assay(vsd)))){
+			  fitType<-"mean"
 			} else{
 				conditionColors<-as.matrix(data.frame(Group=c("red", "blue")[designData$Condition]))
 				break
