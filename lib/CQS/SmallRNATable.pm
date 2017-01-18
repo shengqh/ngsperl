@@ -100,6 +100,37 @@ python $python_script \"$ntaFile\" \"$ntaBaseFile\"
   }
 }
 
+sub addOutput {
+  my ( $self, $result_files, $result_dir, $pbs_dir, $key, $hasYRNA ) = @_;
+  push( @$result_files, $self->get_file( $result_dir, $key, ".count",                  0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.count",            0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.read.count",       0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.isomiR.count",     0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.isomiR_NTA.count", 0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.NTA.count",        0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.NTA.base.count",   0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.count",             0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.read.count",        0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.aminoacid.count",   0 ) );
+
+  if ($hasYRNA) {
+    push( @$result_files, $self->get_file( $result_dir, $key, ".yRNA.count",      0 ) );
+    push( @$result_files, $self->get_file( $result_dir, $key, ".yRNA.read.count", 0 ) );
+  }
+  push( @$result_files, $self->get_file( $result_dir, $key, ".snRNA.count",        0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".snRNA.read.count",   0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".snoRNA.count",       0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".snoRNA.read.count",  0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".rRNA.count",         0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".rRNA.read.count",    0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".lincRNA.count",      0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".lincRNA.read.count", 0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".other.count",        0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".other.read.count",   0 ) );
+  push( @$result_files, $self->get_file( $pbs_dir,    $key, ".filelist",           0 ) );
+
+}
+
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
@@ -115,59 +146,11 @@ sub result {
   if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
     my $groups = get_raw_files( $config, $section, "groups" );
     for my $group_name ( sort keys %{$groups} ) {
-      push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".count",                  0 ) );
-      push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".miRNA.count",            0 ) );
-      push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".miRNA.read.count",       0 ) );
-      push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".miRNA.isomiR.count",     0 ) );
-      push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".miRNA.isomiR_NTA.count", 0 ) );
-      push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".miRNA.NTA.count",        0 ) );
-      push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".miRNA.NTA.base.count",   0 ) );
-      push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".tRNA.count",             0 ) );
-      push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".tRNA.read.count",        0 ) );
-      push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".tRNA.aminoacid.count",   0 ) );
-
-      if ( $option =~ /yRNAsnRNAsnoRNA/ ) {
-        if ($hasYRNA) {
-          push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".yRNA.count",      0 ) );
-          push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".yRNA.read.count", 0 ) );
-        }
-        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".snRNA.count",       0 ) );
-        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".snRNA.read.count",  0 ) );
-        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".snoRNA.count",      0 ) );
-        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".snoRNA.read.count", 0 ) );
-      }
-
-      push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".other.count",      0 ) );
-      push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".other.read.count", 0 ) );
-      push( @result_files, $self->get_file( $pbs_dir,    "${task_name}_${group_name}", ".filelist",         0 ) );
+      $self->addOutput( \@result_files, $result_dir, $pbs_dir, "${task_name}_${group_name}", $hasYRNA );
     }
   }
   else {
-    push( @result_files, $self->get_file( $result_dir, ${task_name}, ".count",                  0 ) );
-    push( @result_files, $self->get_file( $result_dir, ${task_name}, ".miRNA.count",            0 ) );
-    push( @result_files, $self->get_file( $result_dir, ${task_name}, ".miRNA.read.count",       0 ) );
-    push( @result_files, $self->get_file( $result_dir, ${task_name}, ".miRNA.isomiR.count",     0 ) );
-    push( @result_files, $self->get_file( $result_dir, ${task_name}, ".miRNA.isomiR_NTA.count", 0 ) );
-    push( @result_files, $self->get_file( $result_dir, ${task_name}, ".miRNA.NTA.count",        0 ) );
-    push( @result_files, $self->get_file( $result_dir, ${task_name}, ".miRNA.NTA.base.count",   0 ) );
-    push( @result_files, $self->get_file( $result_dir, ${task_name}, ".tRNA.count",             0 ) );
-    push( @result_files, $self->get_file( $result_dir, ${task_name}, ".tRNA.read.count",        0 ) );
-    push( @result_files, $self->get_file( $result_dir, ${task_name}, ".tRNA.aminoacid.count",   0 ) );
-
-    if ( $option =~ /yRNAsnRNAsnoRNA/ ) {
-      if ($hasYRNA) {
-        push( @result_files, $self->get_file( $result_dir, ${task_name}, ".yRNA.count",      0 ) );
-        push( @result_files, $self->get_file( $result_dir, ${task_name}, ".yRNA.read.count", 0 ) );
-      }
-      push( @result_files, $self->get_file( $result_dir, ${task_name}, ".snRNA.count",       0 ) );
-      push( @result_files, $self->get_file( $result_dir, ${task_name}, ".snRNA.read.count",  0 ) );
-      push( @result_files, $self->get_file( $result_dir, ${task_name}, ".snoRNA.count",      0 ) );
-      push( @result_files, $self->get_file( $result_dir, ${task_name}, ".snoRNA.read.count", 0 ) );
-    }
-
-    push( @result_files, $self->get_file( $result_dir, ${task_name}, ".other.count",      0 ) );
-    push( @result_files, $self->get_file( $result_dir, ${task_name}, ".other.read.count", 0 ) );
-    push( @result_files, $self->get_file( $pbs_dir,    ${task_name}, ".filelist",         0 ) );
+    $self->addOutput( \@result_files, $result_dir, $pbs_dir, $task_name, $hasYRNA );
   }
   $result->{$task_name} = filter_array( \@result_files, $pattern );
 
