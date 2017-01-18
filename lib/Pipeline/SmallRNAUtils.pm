@@ -121,16 +121,17 @@ sub addNonhostVis {
   $config->{$taskName} = merge(
     $optionHash,
     {
-      class                     => "CQS::UniqueR",
-      perform                   => 1,
-      target_dir                => $parentDir . "/" . $taskName,
-#      parameterSampleFile1Order => $def->{groups_order},
-      parameterSampleFile1      => $def->{groups},
-      parameterSampleFile2      => $def->{groups_vis_layout},
-      parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
-      rCode                     => 'maxCategory=NA;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
-      sh_direct                 => 1,
-      pbs                       => {
+      class      => "CQS::UniqueR",
+      perform    => 1,
+      target_dir => $parentDir . "/" . $taskName,
+
+      #      parameterSampleFile1Order => $def->{groups_order},
+      parameterSampleFile1 => $def->{groups},
+      parameterSampleFile2 => $def->{groups_vis_layout},
+      parameterFile3_ref   => [ "fastqc_count_vis", ".Reads.csv\$" ],
+      rCode                => 'maxCategory=NA;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+      sh_direct            => 1,
+      pbs                  => {
         "email"     => $def->{email},
         "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
@@ -195,16 +196,9 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "blast_unmapped_reads", 0 );
   initDefaultValue( $def, "blast_localdb",        "" );
 
-  if ( isVersion3($def) ) {
-    initDefaultValue( $def, "consider_tRNA_NTA",              1 );
-    initDefaultValue( $def, "host_smallrnacount_option",      $def->{smallrnacount_option} . " --min_overlap 0.9 --yRNAsnRNAsnoRNA --offsets 0,1,2,-1,-2" );
-    initDefaultValue( $def, "host_smallrnacounttable_option", "--yRNAsnRNAsnoRNA" );
-  }
-  else {
-    initDefaultValue( $def, "consider_tRNA_NTA",              0 );
-    initDefaultValue( $def, "host_smallrnacount_option",      $def->{smallrnacount_option} . " --min_overlap 0.9 --offsets 0,1,2" );
-    initDefaultValue( $def, "host_smallrnacounttable_option", "" );
-  }
+  initDefaultValue( $def, "consider_tRNA_NTA",              1 );
+  initDefaultValue( $def, "host_smallrnacount_option",      $def->{smallrnacount_option} . " --min_overlap 0.9 --offsets 0,1,2,-1,-2" );
+  initDefaultValue( $def, "host_smallrnacounttable_option", "" );
 
   return $def;
 }
