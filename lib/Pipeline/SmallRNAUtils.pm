@@ -196,9 +196,14 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "blast_unmapped_reads", 0 );
   initDefaultValue( $def, "blast_localdb",        "" );
 
-  initDefaultValue( $def, "consider_tRNA_NTA",              1 );
-  initDefaultValue( $def, "host_smallrnacount_option",      $def->{smallrnacount_option} . " --min_overlap 0.9 --offsets 0,1,2,-1,-2" );
-  initDefaultValue( $def, "host_smallrnacounttable_option", "" );
+  initDefaultValue( $def, "consider_tRNA_NTA", 1 );
+
+  my $additionalOption = $def->{hasYRNA} ? " --exportYRNA" : "";
+  my $defaultOption = getValue( $def, "host_smallrnacount_option", "" );
+  initDefaultValue( $def, "host_smallrnacount_option", $defaultOption . " --min_overlap 0.9 --offsets 0,1,2,-1,-2" . $additionalOption );
+
+  $defaultOption = getValue( $def, "host_smallrnacounttable_option", "" );
+  initDefaultValue( $def, "host_smallrnacounttable_option", $defaultOption . $additionalOption );
 
   return $def;
 }
