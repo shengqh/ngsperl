@@ -50,6 +50,11 @@ addTag<-function(x,tag='a',attribute='href',label="",url="",urlBefore="",urlAfte
 #read result table
 setwd(projectReportDir)
 resultFileList<-read.csv(resultFileListFile,header=T,as.is=T)
+#Only display files in result folder
+temp<-which(grep("\\/result\\/.*$",resultFileList$FileList))
+if (length(temp>0)) {
+	resultFileList<-resultFileList[temp,]
+}
 
 #Prepare project report
 figureToDisply<-data.frame(Title="Task Status",File=c(paste0(projectReportDir,"/",projectName,c("_st_expect_result.tsv_step1.png","_st_expect_result.tsv_step1.RelativeFileSize.png","_st_expect_result.tsv_step2.png"))),stringsAsFactors=F)
@@ -73,11 +78,21 @@ try(render(projectTemplateFile,output_dir="."))
 
 #Prepare and render task report
 for (TaskFolder in unique(resultFileList$TaskResultFolder)) {
-	resultFileListTask<-resultFileList[which(resultFileList$TaskResultFolder==TaskFolder),]
+	#	resultFileListTask<-resultFileList[which(resultFileList$TaskResultFolder==TaskFolder),]
+	TaskFolderKey<-gsub("\\.\\.\\/","",TaskFolder)
+	temp<-grep(TaskFolderKey,resultFileList$FileList)
+	if (length(temp)>0) {
+		resultFileListTask<-resultFileList[temp,]
+	} else {
+		next;
+	}
+	
 	row.names(resultFileListTask)<-resultFileListTask$FileList
 	TaskName<-paste(unique(resultFileListTask$TaskName),collapse=", ")
 	
 	resultFileListTaskEachFile<-expandDataTableByName(resultFileListTask,sep=",")
+	temp<-grep(TaskFolderKey,row.names(resultFileListTaskEachFile))
+	resultFileListTaskEachFile<-resultFileListTaskEachFile[temp,]
 	resultFileListTaskEachFile$FileList<-gsub( "^.*\\/result\\/", "", resultFileListTaskEachFile$FileList)
 	
 	resultFileListTaskEachFileTable<-resultFileListTaskEachFile[,colInTaskTable]
