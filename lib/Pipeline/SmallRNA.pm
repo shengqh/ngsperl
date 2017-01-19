@@ -266,11 +266,6 @@ sub getSmallRNAConfig {
       push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
       addDEseq2( $config, $def, $summary_ref, "rRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.read.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
 
-      #lincRNA
-      $deseq2Task = addDEseq2( $config, $def, $summary_ref, "lincRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".lincRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
-      push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
-      addDEseq2( $config, $def, $summary_ref, "lincRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".lincRNA.read.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
-
       #otherSmallRNA
       $deseq2Task = addDEseq2( $config, $def, $summary_ref, "otherSmallRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA );
       push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
