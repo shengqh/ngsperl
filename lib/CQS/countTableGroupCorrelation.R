@@ -220,7 +220,13 @@ for (i in 1:nrow(countTableFileAll)) {
 		sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
 		#keep the groups with samples in the count table
 		sampleToGroup<-sampleToGroup[which(sampleToGroup[,1] %in% colnames(countNumVsd)),]
-		countNumVsdGroup<-mergeTableBySampleGroup(countNumVsd,sampleToGroup)
+		
+		if(length(unique(sampleToGroup$V2)) < 3){
+		  saveInError(paste0("Less than 3 groups. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(Sys.Date(),".warning"))
+		  next
+		}
+
+    countNumVsdGroup<-mergeTableBySampleGroup(countNumVsd,sampleToGroup)
 		
 		#heatmap
 		margin=c(min(10,max(nchar(colnames(countNumVsdGroup)))/1.5),min(10,max(nchar(row.names(countNumVsdGroup)))/2))
