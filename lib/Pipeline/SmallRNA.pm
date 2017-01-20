@@ -7,6 +7,7 @@ use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
+use CQS::StringUtils;
 use Pipeline::PipelineUtils;
 use Pipeline::SmallRNAUtils;
 use Data::Dumper;
