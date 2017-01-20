@@ -74,12 +74,9 @@ sub getSmallRNAConfig {
   my @name_for_readSummary  = ();
 
   #print Dumper($config);
-  my $do_comparison     = defined $def->{pairs};
-  my $groups            = $def->{groups};
-  my $groups_vis_layout = $def->{groups_vis_layout};
-
-  if ( !defined $groups_vis_layout && defined $groups->{".order"} && defined $groups->{".col"} && defined $groups->{".row"} ) {
-    $groups_vis_layout = {
+  my $groups = $def->{groups};
+  if ( !defined $def->{groups_vis_layout} && defined $groups->{".order"} && defined $groups->{".col"} && defined $groups->{".row"} ) {
+    $def->{groups_vis_layout} = {
       "Col_Group" => $groups->{".col"},
       "Row_Group" => $groups->{".row"},
       "Groups"    => $groups->{".order"}
@@ -88,6 +85,37 @@ sub getSmallRNAConfig {
 
   if ( !defined $def->{groups_smallRNA_vis_layout} ) {
     $def->{groups_smallRNA_vis_layout} = $def->{groups_vis_layout};
+  }
+
+  my $do_comparison = defined $def->{pairs};
+  if ($do_comparison) {
+    my $pairs = $def->{pairs};
+
+    my $orders;
+    if ( defined $pairs->{".order"} ) {
+      $orders = $pairs->{".order"};
+    }
+    else {
+      my @tmp = sort keys %$pairs;
+      $orders = \@tmp;
+    }
+
+    my $cols;
+    if ( defined $pairs->{".col"} ) {
+      $cols = $pairs->{".col"};
+    }
+    else {
+      $cols = $orders;
+    }
+
+    my $numberOfComparison = scalar(@$orders);
+    if ( !defined $def->{pairs_top_deseq2_vis_layout} ) {
+      $def->{pairs_top_deseq2_vis_layout} = {
+        "Col_Group" => $cols,
+        "Row_Group" => [ ("Top 100") x $numberOfComparison ],
+        "Groups"    => string_combination( [ ["top100"], $orders ], '_' ),
+      };
+    }
   }
 
   my $DE_min_median_read_top      = getValue( $def, "DE_min_median_read_top" );
@@ -198,7 +226,7 @@ sub getSmallRNAConfig {
         output_file_ext           => ".tRNAType2.Barplot.png",
         parameterSampleFile1Order => $def->{groups_order},
         parameterSampleFile1      => $groups,
-        parameterSampleFile2      => $groups_vis_layout,
+        parameterSampleFile2      => $def->{groups_vis_layout},
         parameterFile1_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ],
         parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
         rCode                     => 'maxCategory=3;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
@@ -603,7 +631,7 @@ sub getSmallRNAConfig {
       parameterSampleFile1_ref  => \@overlap,
       parameterSampleFile2Order => $def->{groups_order},
       parameterSampleFile2      => $groups,
-      parameterSampleFile3      => $groups_vis_layout,
+      parameterSampleFile3      => $def->{groups_vis_layout},
       parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
       sh_direct                 => 1,
       rCode                     => 'maxCategory=8;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
@@ -689,7 +717,7 @@ sub getSmallRNAConfig {
     output_file_ext          => ".NonParallel.TaskReads.csv",
     parameterSampleFile1_ref => \@table_for_pieSummary,
     parameterSampleFile2     => $groups,
-    parameterSampleFile3     => $groups_vis_layout,
+    parameterSampleFile3     => $def->{groups_vis_layout},
     rCode                    => $name_for_pieSummary_r,
 
     #    parameterFile3_ref       => [ "fastqc_count_vis", ".Reads.csv\$" ],
@@ -712,7 +740,7 @@ sub getSmallRNAConfig {
     parameterFile1_ref       => [ "identical_sequence_count_table", $task_name . "_sequence.read.count\$" ],
     parameterSampleFile1_ref => \@table_for_readSummary,
     parameterSampleFile2     => $groups,
-    parameterSampleFile3     => $groups_vis_layout,
+    parameterSampleFile3     => $def->{groups_vis_layout},
     rCode                    => $name_for_readSummary_r,
     sh_direct                => 1,
     pbs                      => {
