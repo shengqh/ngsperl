@@ -18,7 +18,7 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files2 get_run_command get_option_value get_pair_groups
+    qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files_attributes get_raw_files2 get_run_command get_option_value get_pair_groups
       get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key save_parameter_sample_file saveConfig writeFileList initDefaultValue)
   ]
 );
@@ -441,19 +441,36 @@ sub do_get_raw_files {
 
   my ( $resultUnsorted, $issource ) = do_get_unsorted_raw_files(@_);
 
+  my @keys = grep { $_ !~ /^\./ } keys %$resultUnsorted;
+
   my @orderedKeys;
   if ( exists $resultUnsorted->{".order"} ) {
     my $orders = $resultUnsorted->{".order"};
     @orderedKeys = @$orders;
-    die "number of key defined in .order not equals to actual keys for @_" if ( scalar(@orderedKeys) != ( scalar( keys %{$resultUnsorted} ) - 1 ) );
+    die "number of key defined in .order not equals to actual keys for @_" if ( scalar(@orderedKeys) != scalar(@keys) );
   }
   else {
-    @orderedKeys = sort keys %{$resultUnsorted};
+    @orderedKeys = sort @keys;
   }
   for my $key (@orderedKeys) {
     $result{$key} = $resultUnsorted->{$key};
   }
   return ( \%result, $issource );
+}
+
+sub get_raw_files_attributes {
+  my %result;
+
+  my ( $resultUnsorted, $issource ) = do_get_unsorted_raw_files(@_);
+
+  my @orderedKeys = keys %$resultUnsorted;
+
+  for my $key (@orderedKeys) {
+    if ( $key =~ /^\./ ) {
+      $result{$key} = $resultUnsorted->{$key};
+    }
+  }
+  return ( \%result );
 }
 
 sub get_raw_files {
