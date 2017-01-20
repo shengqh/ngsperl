@@ -92,29 +92,65 @@ sub getSmallRNAConfig {
   if ($do_comparison) {
     my $pairs = $def->{pairs};
 
-    my $orders;
+    my $sampleComparisons;
     if ( defined $pairs->{".order"} ) {
-      $orders = $pairs->{".order"};
+      $sampleComparisons = $pairs->{".order"};
     }
     else {
       my @tmp = sort keys %$pairs;
-      $orders = \@tmp;
+      $sampleComparisons = \@tmp;
     }
 
-    my $cols;
+    my $comparisons;
     if ( defined $pairs->{".col"} ) {
-      $cols = $pairs->{".col"};
+      $comparisons = $pairs->{".col"};
     }
     else {
-      $cols = $orders;
+      $comparisons = $sampleComparisons;
     }
 
-    my $numberOfComparison = scalar(@$orders);
+    my $hostSmallRNA = $def->{hasYRNA} ? [ "isomiR", "tDR-anticodon", "snDR", "snoDR", "yDR", "rDR", "osRNA" ] : [ "isomiR", "tDR-anticodon", "snDR", "snoDR", "rDR", "osRNA" ];
+    my $hostSmallRNAFolder = $def->{hasYRNA} ? [ "miRNA_isomiR", "tRNA", "snRNA", "snoRNA", "yRNA", "rRNA", "otherSmallRNA" ] : [ "miRNA_isomiR", "tRNA", "snRNA", "snoRNA", "rRNA", "otherSmallRNA" ];
+    my $numberOfHostSmallRNA = scalar(@$hostSmallRNA);
+
+    my $numberOfComparison = scalar(@$sampleComparisons);
     if ( !defined $def->{pairs_top_deseq2_vis_layout} ) {
       $def->{pairs_top_deseq2_vis_layout} = {
-        "Col_Group" => $cols,
+        "Col_Group" => $comparisons,
         "Row_Group" => [ ("Top 100") x $numberOfComparison ],
-        "Groups"    => string_combination( [ ["top100"], $orders ], '_' ),
+        "Groups"    => string_combination( [ ["top100"], $sampleComparisons ], '_' ),
+      };
+    }
+
+    if ( !defined $def->{pairs_host_deseq2_vis_layout} ) {
+      $def->{pairs_host_deseq2_vis_layout} = {
+        "Col_Group" => [ (@$comparisons) x $numberOfHostSmallRNA ],
+        "Row_Group" => string_repeat( $hostSmallRNA, $numberOfComparison ),
+        "Groups" => string_combination( [ $hostSmallRNAFolder, $sampleComparisons ], '_' ),
+      };
+    }
+
+    if ( !defined $def->{pairs_host_miRNA_deseq2_vis_layout} ) {
+      $def->{pairs_host_miRNA_deseq2_vis_layout} = {
+        "Col_Group" => [ (@$comparisons) x 3 ],
+        "Row_Group" => string_repeat( [ "isomiR", "NTA", "isomiR NTA" ], $numberOfComparison ),
+        "Groups" => string_combination( [ ["miRNA"], [ "isomiR", "NTA", "isomiR_NTA" ], $sampleComparisons ], '_' ),
+      };
+    }
+
+    if ( !defined $def->{pairs_nonHostGroups_deseq2_vis_layout} ) {
+      $def->{pairs_nonHostGroups_deseq2_vis_layout} = {
+        "Col_Group" => [ (@$comparisons) x 3 ],
+        "Row_Group" => string_repeat( [ "Microbiome", "Environment", "Fungus" ], $numberOfComparison ),
+        "Groups" => string_combination( [ [ "bacteria_group1", "bacteria_group2", "fungus_group4" ], $sampleComparisons ], '_' ),
+      };
+    }
+
+    if ( !defined $def->{pairs_nonHostLibrary_deseq2_vis_layout} ) {
+      $def->{pairs_nonHostLibrary_deseq2_vis_layout} = {
+        "Col_Group" => [ (@$comparisons) x 5 ],
+        "Row_Group" => string_repeat( [ "tDR", "tDR Category", "tDR Species", "tDR Type", "tDR Anticodon" ], $numberOfComparison ),
+        "Groups" => string_combination( [ ["nonhost_tRNA"], [ "", "category", "species", "type", "anticodon" ], $sampleComparisons ], '_' )
       };
     }
   }
