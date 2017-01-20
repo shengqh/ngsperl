@@ -70,7 +70,14 @@ sub getConfig {
   my $treatments       = getValue( $def, "treatments" );
   my $pairend          = getValue( $def, "pairend" );
   my $macs2call_option = getValue( $def, "macs2call_option", "-f BEDPE --broad -g hs -B -q 0.01 --broad-cutoff 0.01 --nomodel --slocal 20000 --llocal 20000 --keep-dup all" );
-  my $config           = {
+
+  my $perform_rose = getValue( $def, "perform_rose" );
+  my $perform_coltron = 0;
+  if ($perform_rose) {
+    $perform_coltron = getValue( $def, "perform_coltron" );
+  }
+
+  my $config = {
     general => {
       task_name => $task,
       cluster   => $cluster
@@ -281,7 +288,12 @@ sub getConfig {
         "mem"      => "40gb"
       },
     },
-    "bwa_macs2callpeak_bradner_rose" => {
+  };
+  push @individual, ( "fastqc_raw", "cutadapt", "fastqc_post_trim", "fastq_len", "bwa", "bwa_cleanbam", "bwa_bam2bed" );
+  push @summary, ( "fastqc_raw_summary", "bwa_macs2callpeak" );
+
+  if ($perform_rose) {
+    $config->{"bwa_macs2callpeak_bradner_rose"} = {
       class                => "Chipseq::BradnerRose2",
       perform              => 1,
       target_dir           => "${target_dir}/bwa_macs2callpeak_bradner_rose",
@@ -298,28 +310,71 @@ sub getConfig {
         "walltime" => "72",
         "mem"      => "40gb"
       },
-    },
-    "bwa_macs2callpeak_bradner_rose_coltron" => {
-      class              => "Chipseq::Coltron",
-      perform            => 1,
-      target_dir         => "${target_dir}/bwa_macs2callpeak_bradner_rose_coltron",
-      option             => "",
-      source_ref         => "bwa_cleanbam",
-      groups_ref         => "treatments",
-      enhancer_files_ref => [ "bwa_macs2callpeak_bradner_rose", "_AllEnhancers.table.txt" ],
-      genome             => "HG19",
-      pipeline_dir       => "/scratch/cqs/shengq1/local/bin/bradnerlab",
-      sh_direct          => 1,
-      pbs                => {
+    };
+    push @summary, ("bwa_macs2callpeak_bradner_rose");
+
+    if ($perform_coltron) {
+      $config->{"bwa_macs2callpeak_bradner_rose_coltron"} = {
+        class              => "Chipseq::Coltron",
+        perform            => 1,
+        target_dir         => "${target_dir}/bwa_macs2callpeak_bradner_rose_coltron",
+        option             => "",
+        source_ref         => "bwa_cleanbam",
+        groups_ref         => "treatments",
+        enhancer_files_ref => [ "bwa_macs2callpeak_bradner_rose", "_AllEnhancers.table.txt" ],
+        genome             => "HG19",
+        pipeline_dir       => "/scratch/cqs/shengq1/local/bin/bradnerlab",
+        sh_direct          => 1,
+        pbs                => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "72",
+          "mem"      => "40gb"
+        },
+      };
+      push @summary, ("bwa_macs2callpeak_bradner_rose_coltron");
+    }
+  }
+
+  if ( defined $def->{comparison} ) {
+    my $peakTask = "bwa_macs2callpeak";
+    if ( defined $def->{replicates} ) {
+      $config->{"bwa_macs2callpeak_replicates"} = {
+        class      => "Chipseq::MACS2Callpeak",
+        perform    => 1,
+        target_dir => "${target_dir}/bwa_macs2callpeak_replicates",
+        option     => $macs2call_option,
+        source_ref => "bwa_bam2bed",
+        groups     => $def->{"replicates"},
+        sh_direct  => 0,
+        pbs        => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "72",
+          "mem"      => "40gb"
+        },
+      };
+      push @summary, ("bwa_macs2callpeak_replicates");
+      $peakTask = "bwa_macs2callpeak_replicates";
+    }
+
+    $config->{"bwa_macs2diff"} = {
+      class      => "Chipseq::MACS2Bdgdiff",
+      perform    => 1,
+      target_dir => "${target_dir}/bwa_macs2diff",
+      option     => "",
+      source_ref => $peakTask,
+      groups     => $def->{comparison},
+      sh_direct  => 0,
+      pbs        => {
         "email"    => $email,
         "nodes"    => "1:ppn=1",
         "walltime" => "72",
         "mem"      => "40gb"
       },
-    },
-  };
-  push @individual, ( "fastqc_raw", "cutadapt", "fastqc_post_trim", "fastq_len", "bwa", "bwa_cleanbam", "bwa_bam2bed" );
-  push @summary, ( "fastqc_raw_summary", "bwa_macs2callpeak", "bwa_macs2callpeak_bradner_rose", "bwa_macs2callpeak_bradner_rose_coltron" );
+    };
+    push @summary, ("bwa_macs2diff");
+  }
 
   $config = merge( $config, $processing );
 
