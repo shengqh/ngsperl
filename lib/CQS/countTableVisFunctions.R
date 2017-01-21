@@ -18,6 +18,20 @@ saveInError<-function(message="",filePrefix="",fileSuffix=paste0(Sys.Date(),".er
 ###############################################################################
 # Funtions in other visualization tasks
 ###############################################################################
+
+
+myEstimateSizeFactors<-function(dds){
+  library(DESeq2)
+  sfres<-try(dds<-estimateSizeFactors(dds))
+  if (class(sfres) == "try-error") {
+    library(edgeR)
+    y<-DGEList(counts=countNum)
+    y<-calcNormFactors(y, methold="TMM")
+    sizeFactors(dds)<-y$samples$norm.factors
+  }
+  return(dds)
+}
+
 library("VennDiagram")
 venn.diagram1<-function (x, count=NULL,filename, height = 3000, width = 3000, resolution = 500, 
 		units = "px", compression = "lzw", na = "stop", main = NULL, 
@@ -573,14 +587,3 @@ if (!exists("groupTextSize")) {
 ###############################################################################
 # End defining parameters for functions
 ###############################################################################
-
-myEstimateSizeFactors<-function(dds){
-  library(DESeq2)
-  sfres<-try(dds<-estimateSizeFactors(dds))
-  if (class(sfres) == "try-error") {
-    library(edgeR)
-    y<-DGEList(counts=countNum)
-    y<-calcNormFactors(y, methold="TMM")
-    sizeFactors(dds)<-y$samples$norm.factors
-  }
-}
