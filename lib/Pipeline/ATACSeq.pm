@@ -29,6 +29,7 @@ sub initializeDefaultOptions {
   initValue( $def, "perform_cutadapt", 0 );
   initValue( $def, "max_thread", 8 );
   initValue( $def, "sequencetask_run_time", 12 );
+  initValue( $def, "perform_cutadapt", 0 );
 
   return $def;
 }
