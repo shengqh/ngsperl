@@ -138,7 +138,7 @@ sub result {
 
   my $result = {};
 
-  my $hasYRNA = $config->{hasYRNA};
+  my $hasYRNA = $config->{$section}->{hasYRNA};
 
   my @result_files = ();
   if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
