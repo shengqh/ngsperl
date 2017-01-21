@@ -7,6 +7,7 @@ use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
+use Pipeline::Preprocession;
 use Pipeline::PipelineUtils;
 use Data::Dumper;
 use Hash::Merge qw( merge );
