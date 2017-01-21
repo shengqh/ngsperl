@@ -84,7 +84,6 @@ sub getPreprocessionConfig {
   };
 
   my $source_ref = "files";
-  my $len_ref    = "files";
   my $individual = [];
   my $summary    = [];
 
@@ -127,7 +126,6 @@ sub getPreprocessionConfig {
       }
     };
     $source_ref = "fastq_remove_N";
-    $len_ref    = "fastq_remove_N";
     push @$individual, "fastq_remove_N";
   }
 
@@ -153,36 +151,74 @@ sub getPreprocessionConfig {
     };
     push @$individual, ("remove_contamination_sequences");
     $source_ref = [ "remove_contamination_sequences", ".fastq.gz" ];
-    $len_ref = "remove_contamination_sequences";
 
     addFastQC( $config, $def, $individual, $summary, "fastqc_post_remove", $source_ref, $preprocessing_dir );
   }
 
   if ($run_cutadapt) {
-    $config->{cutadapt} = {
-      class                          => "Trimmer::Cutadapt",
-      perform                        => 1,
-      target_dir                     => $preprocessing_dir . "/cutadapt",
-      option                         => $def->{cutadapt_option},
-      source_ref                     => $source_ref,
-      adapter                        => $def->{adapter},
-      extension                      => "_clipped.fastq",
-      random_bases_remove_after_trim => $def->{"fastq_remove_random"},
-      pairend                        => $def->{pairend},
-      sh_direct                      => 0,
-      cluster                        => $cluster,
-      pbs                            => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "24",
-        "mem"      => "20gb"
+
+    my $cutadapt = {
+      "cutadapt" => {
+        class                          => "Trimmer::Cutadapt",
+        perform                        => 1,
+        target_dir                     => $preprocessing_dir . "/cutadapt",
+        option                         => $def->{cutadapt_option},
+        source_ref                     => $source_ref,
+        adapter                        => $def->{adapter},
+        extension                      => "_clipped.fastq",
+        random_bases_remove_after_trim => $def->{"fastq_remove_random"},
+        pairend                        => $def->{pairend},
+        sh_direct                      => 0,
+        cluster                        => $cluster,
+        pbs                            => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "24",
+          "mem"      => "20gb"
+        },
+      },
+      "fastq_len" => {
+        class      => "CQS::FastqLen",
+        perform    => 1,
+        target_dir => $preprocessing_dir . "/fastq_len",
+        option     => "",
+        source_ref => "cutadapt",
+        cqstools   => $def->{cqstools},
+        sh_direct  => 1,
+        cluster    => $cluster,
+        pbs        => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "24",
+          "mem"      => "20gb"
+        },
+      },
+      "fastq_len_vis" => {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $preprocessing_dir . "/fastq_len",
+        rtemplate                => "countTableVisFunctions.R,fastqLengthVis.R",
+        output_file              => ".lengthDistribution",
+        output_file_ext          => ".csv",
+        parameterSampleFile1_ref => [ "fastq_len", ".len\$" ],
+        parameterSampleFile2     => $def->{groups},
+        sh_direct                => 1,
+        pbs                      => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
       },
     };
-    push @$individual, "cutadapt";
+
+    $config = merge( $config, $cutadapt );
+
+    push @$individual, ( "cutadapt", "fastq_len" );
+    push @$summary, ("fastq_len_vis");
 
     addFastQC( $config, $def, $individual, $summary, "fastqc_post_trim", [ "cutadapt", ".fastq.gz" ], $preprocessing_dir );
     $source_ref = [ "cutadapt", ".fastq.gz" ];
-    $len_ref = "cutadapt";
   }
 
   my $fastqc_count_vis_files = undef;
@@ -229,41 +265,6 @@ sub getPreprocessionConfig {
   }
 
   #print Dumper($config);
-  $config->{"fastq_len"} = {
-    class      => "CQS::FastqLen",
-    perform    => 1,
-    target_dir => $preprocessing_dir . "/fastq_len",
-    option     => "",
-    source_ref => $len_ref,
-    cqstools   => $def->{cqstools},
-    sh_direct  => 1,
-    cluster    => $cluster,
-    pbs        => {
-      "email"    => $def->{email},
-      "nodes"    => "1:ppn=1",
-      "walltime" => "24",
-      "mem"      => "20gb"
-    },
-  };
-  $config->{"fastq_len_vis"} = {
-    class                    => "CQS::UniqueR",
-    perform                  => 1,
-    target_dir               => $preprocessing_dir . "/fastq_len",
-    rtemplate                => "countTableVisFunctions.R,fastqLengthVis.R",
-    output_file              => ".lengthDistribution",
-    output_file_ext          => ".csv",
-    parameterSampleFile1_ref => [ "fastq_len", ".len\$" ],
-    parameterSampleFile2     => $def->{groups},
-    sh_direct                => 1,
-    pbs                      => {
-      "email"    => $def->{email},
-      "nodes"    => "1:ppn=1",
-      "walltime" => "1",
-      "mem"      => "10gb"
-    },
-  };
-  push @$individual, ("fastq_len");
-  push @$summary,    ("fastq_len_vis");
 
   return ( $config, $individual, $summary, $source_ref, $preprocessing_dir );
 }
