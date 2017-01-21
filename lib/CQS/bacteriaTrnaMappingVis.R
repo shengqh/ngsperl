@@ -56,21 +56,29 @@ for ( i in 1:ncol(mappingResult)) {
 }
 
 
+maxCategoryForSpecies12<-min(c(maxCategory,3),na.rm=T)
+
 #Pie chart for tables
-ggpieToFile(trnaCountTableExpandBySpecies12,fileName=paste0(resultFile,".Species12.Piechart.png"),maxCategory=maxCategory,textSize=textSize,facetColCount=facetColCount)
+ggpieToFile(trnaCountTableExpandBySpecies12,fileName=paste0(resultFile,".Species12.Piechart.png"),maxCategory=maxCategoryForSpecies12,textSize=textSize,facetColCount=facetColCount)
 ggpieToFile(trnaCountTableExpandByRNA,fileName=paste0(resultFile,".tRNAType2.Piechart.png"),maxCategory=maxCategory,textSize=textSize,facetColCount=facetColCount)
 ggpieToFile(trnaCountTableExpandByRNA1,fileName=paste0(resultFile,".tRNAType1.Piechart.png"),maxCategory=maxCategory,textSize=textSize,facetColCount=facetColCount)
 ggpieToFile(mappingResultCategory,fileName=paste0(resultFile,".Category.Piechart.png"),maxCategory=NA,textSize=textSize,facetColCount=facetColCount)
 
 #Barplot for tables
-tableBarplotToFile(dat=trnaCountTableExpandBySpecies12,fileName=paste0(resultFile,".Species12.Barplot.png"),totalCountFile=totalCountFile,maxCategory=maxCategory,textSize=textSize)
+tableBarplotToFile(dat=trnaCountTableExpandBySpecies12,fileName=paste0(resultFile,".Species12.Barplot.png"),totalCountFile=totalCountFile,maxCategory=maxCategoryForSpecies12,textSize=textSize)
 tableBarplotToFile(dat=trnaCountTableExpandByRNA,fileName=paste0(resultFile,".tRNAType2.Barplot.png"),totalCountFile=totalCountFile,maxCategory=maxCategory,textSize=textSize)
 tableBarplotToFile(dat=trnaCountTableExpandByRNA1,fileName=paste0(resultFile,".tRNAType1.Barplot.png"),totalCountFile=totalCountFile,maxCategory=maxCategory,textSize=textSize)
 tableBarplotToFile(dat=mappingResultCategory,fileName=paste0(resultFile,".Category.Barplot.png"),totalCountFile=totalCountFile,maxCategory=NA,textSize=textSize)
 
+#Barplot for Group samples
+tableBarplotToFile(dat=trnaCountTableExpandBySpecies12,fileName=paste0(resultFile,".Species12.Group.Barplot.png"),groupFileList=groupFileList,outFileName=paste0(resultFile,".Species12.ReadsPerMillionGroups.csv"),totalCountFile=totalCountFile,maxCategory=maxCategoryForSpecies12,textSize=textSize)
+tableBarplotToFile(dat=trnaCountTableExpandByRNA,fileName=paste0(resultFile,".tRNAType2.Group.Barplot.png"),groupFileList=groupFileList,outFileName=paste0(resultFile,".tRNAType2.ReadsPerMillionGroups.csv"),totalCountFile=totalCountFile,maxCategory=maxCategory,textSize=textSize)
+tableBarplotToFile(dat=trnaCountTableExpandByRNA1,fileName=paste0(resultFile,".tRNAType1.Group.Barplot.png"),groupFileList=groupFileList,outFileName=paste0(resultFile,".tRNAType1.ReadsPerMillionGroups.csv"),totalCountFile=totalCountFile,maxCategory=maxCategory,textSize=textSize)
+tableBarplotToFile(dat=mappingResultCategory,fileName=paste0(resultFile,".Category.Group.Barplot.png"),groupFileList=groupFileList,outFileName=paste0(resultFile,".Category.ReadsPerMillionGroups.csv"),totalCountFile=totalCountFile,maxCategory=maxCategory,textSize=textSize)
+
 #Group Pie chart for tables
 ggpieGroupToFile(dat=trnaCountTableExpandBySpecies12,fileName=paste0(resultFile,".Species12.Group.Piechart.png"),groupFileList=groupFileList,
-		outFileName=paste0(resultFile,".Species12.PercentGroups.csv"),maxCategory=maxCategory,textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList)
+		outFileName=paste0(resultFile,".Species12.PercentGroups.csv"),maxCategory=maxCategoryForSpecies12,textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList)
 ggpieGroupToFile(dat=trnaCountTableExpandByRNA,fileName=paste0(resultFile,".tRNAType2.Group.Piechart.png"),groupFileList=groupFileList,
 		outFileName=paste0(resultFile,".tRNAType2.PercentGroups.csv"),maxCategory=maxCategory,textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList)
 ggpieGroupToFile(dat=trnaCountTableExpandByRNA1,fileName=paste0(resultFile,".tRNAType1.Group.Piechart.png"),groupFileList=groupFileList,
