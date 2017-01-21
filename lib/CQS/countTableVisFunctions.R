@@ -573,3 +573,14 @@ if (!exists("groupTextSize")) {
 ###############################################################################
 # End defining parameters for functions
 ###############################################################################
+
+myEstimateSizeFactors<-function(dds){
+  library(DESeq2)
+  sfres<-try(dds<-estimateSizeFactors(dds))
+  if (class(sfres) == "try-error") {
+    library(edgeR)
+    y<-DGEList(counts=countNum)
+    y<-calcNormFactors(y, methold="TMM")
+    sizeFactors(dds)<-y$samples$norm.factors
+  }
+}
