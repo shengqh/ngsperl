@@ -168,6 +168,7 @@ sub getPreprocessionConfig {
       adapter                        => $def->{adapter},
       extension                      => "_clipped.fastq",
       random_bases_remove_after_trim => $def->{"fastq_remove_random"},
+      pairend                        => $def->{pairend},
       sh_direct                      => 0,
       cluster                        => $cluster,
       pbs                            => {
