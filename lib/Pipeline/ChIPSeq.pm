@@ -157,7 +157,7 @@ sub getConfig {
       perform              => 1,
       target_dir           => "${target_dir}/$roseTask",
       option               => "",
-      source_ref           => $peakCallerTask,
+      source_ref           => [$def->{aligner}, ".bam\$"],
       groups_ref           => "treatments",
       controls_ref         => "controls",
       pipeline_dir         => getValue( $def, "rose_folder" ),    #"/scratch/cqs/shengq1/local/bin/bradnerlab"
