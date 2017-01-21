@@ -601,6 +601,7 @@ sub getSmallRNAConfig {
         output_file        => ".tRNAMapping.Result",
         output_file_ext    => ".Species12.csv;.tRNAType1.csv;.tRNAType2.csv",
         parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".count\$" ],
+        rCode              => 'maxCategory=3;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
       }
     );
 
@@ -621,6 +622,7 @@ sub getSmallRNAConfig {
         output_file        => ".rRNAMapping.Result",
         output_file_ext    => ".Barplot.png",
         parameterFile1_ref => [ "bowtie1_rRNA_pm_table", ".count\$" ],
+        rCode              => 'maxCategory=NA;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
       }
     );
 
