@@ -51,7 +51,7 @@ addTag<-function(x,tag='a',attribute='href',label="",url="",urlBefore="",urlAfte
 setwd(projectReportDir)
 resultFileList<-read.csv(resultFileListFile,header=T,as.is=T)
 #Only display files in result folder
-temp<-which(grep("\\/result\\/.*$",resultFileList$FileList))
+temp<-grep("\\/result\\/.*$",resultFileList$FileList)
 if (length(temp>0)) {
 	resultFileList<-resultFileList[temp,]
 }
