@@ -656,6 +656,7 @@ for(countfile_index in c(1:length(countfiles))){
 	allSigNameList<-list()
 	allSigDirectionList<-list()
 	sigTableAll<-NULL
+	sigTableAllGene<-NULL
 	sigTableAllVar<-c("baseMean","log2FoldChange","lfcSE","stat","pvalue","padj","FoldChange")
 	for(comparisonName in comparisonNames){
 		prefix<-comparisonName
@@ -679,7 +680,8 @@ for(countfile_index in c(1:length(countfiles))){
 				allSigNameList[[comparisonName]]<-row.names(sigTable)
 				allSigDirectionList[[comparisonName]]<-sign(sigTable$log2FoldChange)
 				sigTable$comparisonName<-comparisonName
-				sigTableAll<-rbind(sigTableAll,sigTable[,c("comparisonName",sigTableAllVar),drop=FALSE])
+				sigTableAll<-rbind(sigTableAll,sigTable[,c("comparisonName",sigTableAllVar),drop=FALSE],make.row.names=FALSE)
+				sigTableAllGene<-c(sigTableAllGene,row.names(sigTable))
 			} else {
 				warning(paste0("No significant genes in ",comparisonName))
 				#		allSigNameList[[comparisonName]]<-""
@@ -687,7 +689,8 @@ for(countfile_index in c(1:length(countfiles))){
 		}
 	}
 	#Output all significant genes table
-	write.csv(sigTableAll,paste0(basename(inputfile),"_DESeq2_allSig.csv"))
+	sigTableAll<-cbind(Gene=sigTableAllGene,sigTableAll)
+	write.csv(sigTableAll,paste0(basename(inputfile),"_DESeq2_allSig.csv"),row.names=FALSE)
 	
 	#Do venn if length between 2-5
 	if (length(allSigNameList)>=2 & length(allSigNameList)<=5) {
