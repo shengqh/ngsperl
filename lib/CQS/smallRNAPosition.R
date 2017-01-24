@@ -7,7 +7,7 @@ library(reshape2)
 library(ggplot2)
 
 snRNAGrouping<-function(x) {
-	if (all(grepl(":RNU|:RNVU|:U\\d+",head(as.character(x))))) {
+	if (all(grepl("^RNU|^RNVU|^U\\d+",head(as.character(x))))) {
 		return(1) #snRNA
 	} else if (all(grepl("tRNA-",head(as.character(x))))) {
 		return(2) #tRNA
@@ -18,11 +18,11 @@ snRNAGrouping<-function(x) {
 
 snRnaName2Group<-function(x,groupSnRNA=1) {
 	if (groupSnRNA==1) { #snRNA
-		snRnaGroup<-sapply(strsplit(as.character(x),":|-"),function(y) y[2])
+		snRnaGroup<-sapply(strsplit(as.character(x),"-"),function(y) y[1])
 		snRnaGroup<-gsub("RNVU","RNU",snRnaGroup)
 		snRnaGroup<-gsub("([A-Z]+[0-9]+)[A-Z]+","\\1",snRnaGroup)
 	} else if (groupSnRNA==2) { #tRNA
-		snRnaGroup<-sapply(strsplit(as.character(x),"-"),function(y) y[2])
+		snRnaGroup<-sapply(strsplit(as.character(x),"-"),function(y) y[(grep("tRNA",y)[1]+1)])
 	} else {
 		snRnaGroup<-x
 	}
