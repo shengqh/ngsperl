@@ -47,6 +47,10 @@ ggpieToFile(trnaCountTableExpandByRNA1,fileName=paste0(resultFile,".tRNAType1.Pi
 tableBarplotToFile(dat=trnaCountTableExpandByRNA,fileName=paste0(resultFile,".tRNAType2.Barplot.png"),totalCountFile=totalCountFile,maxCategory=maxCategory,textSize=textSize)
 tableBarplotToFile(dat=trnaCountTableExpandByRNA1,fileName=paste0(resultFile,".tRNAType1.Barplot.png"),totalCountFile=totalCountFile,maxCategory=maxCategory,textSize=textSize)
 
+#Barplot for Group samples
+tableBarplotToFile(dat=trnaCountTableExpandByRNA,fileName=paste0(resultFile,".tRNAType2.Group.Barplot.png"),groupFileList=groupFileList,outFileName=paste0(resultFile,".tRNAType2.ReadsPerMillionGroups.csv"),totalCountFile=totalCountFile,maxCategory=maxCategory,textSize=textSize)
+tableBarplotToFile(dat=trnaCountTableExpandByRNA1,fileName=paste0(resultFile,".tRNAType1.Group.Barplot.png"),groupFileList=groupFileList,outFileName=paste0(resultFile,".tRNAType1.ReadsPerMillionGroups.csv"),totalCountFile=totalCountFile,maxCategory=maxCategory,textSize=textSize)
+
 #Group Pie chart for tables
 ggpieGroupToFile(dat=trnaCountTableExpandByRNA,fileName=paste0(resultFile,".tRNAType2.Group.Piechart.png"),groupFileList=groupFileList,
 		outFileName=paste0(resultFile,".tRNAType2.PercentGroups.csv"),maxCategory=maxCategory,textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList)
