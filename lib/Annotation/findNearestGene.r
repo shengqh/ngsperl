@@ -11,5 +11,5 @@ df$peak_start<-start(annotated)
 df$peak_end<-end(annotated)
 
 df<-df[,c("seqnames", "peak_start", "peak_end", "peak", "score", "feature", "start_position", "end_position", "insideFeature", "distancetoFeature", "shortestDistance")]
-
+colnames(df)<-c("chr", "start", "end", "feature", "score", "gene", "gene_start", "gene_end", "insideGene", "distanceToGene", "shortestDistanceToGene")
 write.csv(df, file="test.csv", quote=F, row.names=F)
