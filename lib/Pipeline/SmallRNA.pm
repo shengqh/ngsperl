@@ -387,6 +387,7 @@ sub getSmallRNAConfig {
         output_file              => ".tRNAPositionVis",
         output_file_ext          => ".alltRNAPosition.png",
         parameterFile1_ref       => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count.position\$" ],
+        parameterFile2_ref       => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
         parameterSampleFile1     => $trna_vis_groups,
         parameterSampleFile2     => $def->{groups_vis_layout},
         parameterSampleFile3_ref => $trna_sig_result,
