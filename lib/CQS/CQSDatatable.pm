@@ -24,14 +24,14 @@ sub new {
 }
 
 sub get_result {
-  my ( $task_name, $option ) = @_;
+  my ( $self, $result_dir, $task_name, $option ) = @_;
 
   my $result;
   if ( $option =~ /-o\s+(\S+)/ ) {
     $result = $1;
   }
   else {
-    $result = $task_name . ".count";
+    $result = $self->get_file( $result_dir, $task_name, ".count", 0 );
     $option = $option . " -o " . $result;
   }
   return ( $result, $option );
@@ -50,6 +50,9 @@ sub perform {
     $mapoption = "-m $mapFile";
   }
 
+  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
+  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $filelist = $self->get_file( $pbs_dir, $task_name, ".filelist" );
@@ -61,7 +64,7 @@ sub perform {
   }
   close(FL);
 
-  my ( $result_file, $newoption ) = get_result( $task_name, $option );
+  my ( $result_file, $newoption ) = $self->get_result( ".",$task_name, $option );
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
@@ -80,8 +83,11 @@ sub result {
   my ( $self, $config, $section, $pattern ) = @_;
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
+  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
+  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+
   my $result = {};
-  my ( $result_file, $newoption ) = get_result( $task_name, $option );
+  my ( $result_file, $newoption ) = $self->get_result($result_dir, $task_name, $option );
   $result_file = $result_dir . "/" . $result_file;
 
   my $filelist = $pbs_dir . "/" . $self->get_name( $task_name, ".filelist" );
