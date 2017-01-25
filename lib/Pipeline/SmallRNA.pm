@@ -369,8 +369,8 @@ sub getSmallRNAConfig {
         output_file_ext          => ".alltRNAPosition.png",
         parFile1_ref             => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.position\$" ],
         parameterSampleFile1     => $trna_vis_groups,
-        parameterSampleFile2_ref => $trna_sig_result,
-        parameterSampleFile3     => $def->{groups_vis_layout},
+        parameterSampleFile2     => $def->{groups_vis_layout},
+        parameterSampleFile3_ref => $trna_sig_result,
         sh_direct                => 1,
         pbs                      => {
           "email"     => $def->{email},
