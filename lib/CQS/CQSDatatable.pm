@@ -88,9 +88,7 @@ sub result {
 
   my $result = {};
   my ( $result_file, $newoption ) = $self->get_result($result_dir, $task_name, $option );
-  $result_file = $result_dir . "/" . $result_file;
-
-  my $filelist = $pbs_dir . "/" . $self->get_name( $task_name, ".filelist" );
+  my $filelist = $self->get_file( $pbs_dir, $task_name, ".filelist" );
 
   my @result_files = ();
   push( @result_files, $result_file );
