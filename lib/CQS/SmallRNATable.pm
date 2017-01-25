@@ -128,10 +128,8 @@ sub addOutput {
   push( @$result_files, $self->get_file( $result_dir, $key, ".snoRNA.count.position", 0 ) );
   push( @$result_files, $self->get_file( $result_dir, $key, ".snoRNA.read.count",     0 ) );
   push( @$result_files, $self->get_file( $result_dir, $key, ".rRNA.count",            0 ) );
-  push( @$result_files, $self->get_file( $result_dir, $key, ".rRNA.count.position",   0 ) );
   push( @$result_files, $self->get_file( $result_dir, $key, ".rRNA.read.count",       0 ) );
   push( @$result_files, $self->get_file( $result_dir, $key, ".other.count",           0 ) );
-  push( @$result_files, $self->get_file( $result_dir, $key, ".other.count.position",  0 ) );
   push( @$result_files, $self->get_file( $result_dir, $key, ".other.read.count",      0 ) );
   push( @$result_files, $self->get_file( $pbs_dir,    $key, ".filelist",              0 ) );
 
