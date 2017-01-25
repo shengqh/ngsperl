@@ -24,13 +24,14 @@ our $VERSION = '0.01';
 sub initializeDefaultOptions {
   my $def = shift;
 
-  initValue( $def, "cluster", "slurm" );
-  initValue( $def, "sra_to_fastq", 0 );
-  initValue( $def, "fastq_remove_N", 0 );
-  initValue( $def, "perform_cutadapt", 0 );
-  initValue( $def, "max_thread", 8 );
+  initValue( $def, "cluster",               "slurm" );
+  initValue( $def, "sra_to_fastq",          0 );
+  initValue( $def, "fastq_remove_N",        0 );
+  initValue( $def, "perform_cutadapt",      0 );
+  initValue( $def, "max_thread",            8 );
   initValue( $def, "sequencetask_run_time", 12 );
-  initValue( $def, "perform_cutadapt", 0 );
+  initValue( $def, "perform_cutadapt",      0 );
+  initValue( $def, "annotate_nearest_gene", 0 );
 
   return $def;
 }
@@ -49,13 +50,19 @@ sub getConfig {
   my $cluster = $def->{cluster};
   my $task    = $def->{task_name};
 
-  my $email            = getValue( $def, "email" );
+  my $email = getValue( $def, "email" );
   my $macs2call_option = getValue( $def, "macs2call_option", "-f BEDPE --broad -g hs -B -q 0.01 --broad-cutoff 0.01 --nomodel --slocal 20000 --llocal 20000 --keep-dup all" );
 
   my $perform_rose = getValue( $def, "perform_rose" );
   my $perform_coltron = 0;
   if ($perform_rose) {
     $perform_coltron = getValue( $def, "perform_coltron" );
+  }
+
+  my $gene_bed;
+  my $annotate_nearest_gene = getValue( $def, "annotate_nearest_gene" );
+  if ($annotate_nearest_gene) {
+    $gene_bed = getValue( $def, "gene_bed" );
   }
 
   $config->{treatments} = getValue( $def, "treatments" );
@@ -217,6 +224,29 @@ sub getConfig {
       },
     };
     push @$summary, ("bwa_macs2diff");
+
+    if ($annotate_nearest_gene) {
+      $config->{bwa_macs2diff_gene} = {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $target_dir . "/bwa_macs2diff",
+        rtemplate                => "../Annotation/findNearestGene.r",
+        output_file              => "",
+        output_file_ext          => ".Category.Table.csv",
+        parameterSampleFile1_ref => "bwa_macs2diff",
+        parameterFile1           => $gene_bed,
+        rCode                    => '',
+        sh_direct                => 1,
+        pbs                      => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary, ("bwa_macs2diff_gene");
+    }
   }
 
   $config = merge( $config, $processing );
