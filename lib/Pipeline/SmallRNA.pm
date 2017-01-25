@@ -233,6 +233,24 @@ sub getSmallRNAConfig {
           "mem"       => "10gb"
         },
       },
+      bowtie1_genome_1mm_NTA_smallRNA_info => {
+        class      => "CQS::CQSDatatable",
+        perform    => 1,
+        target_dir => $host_genome_dir . "/bowtie1_genome_1mm_NTA_smallRNA_table",
+        option     => "",
+        source_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info" ],
+        cqs_tools  => $def->{cqstools},
+        prefix     => "smallRNA_1mm_",
+        sh_direct  => 1,
+        cluster    => $cluster,
+        pbs        => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        },
+      },
       bowtie1_genome_1mm_NTA_smallRNA_category => {
         class                     => "CQS::UniqueR",
         perform                   => 1,
@@ -291,7 +309,7 @@ sub getSmallRNAConfig {
     push @table_for_countSum,
       ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" );
     push @$individual_ref, ("bowtie1_genome_1mm_NTA_smallRNA_count");
-    push @$summary_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_category", "host_genome_tRNA_category" );
+    push @$summary_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_info", "bowtie1_genome_1mm_NTA_smallRNA_category", "host_genome_tRNA_category" );
 
     $config = merge( $config, $host_genome );
     if ($do_comparison) {
