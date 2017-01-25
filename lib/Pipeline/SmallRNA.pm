@@ -408,8 +408,9 @@ sub getSmallRNAConfig {
         output_file          => ".snRNAPositionVis",
         output_file_ext      => ".allsnRNAPosition.png",
         parameterFile1_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count.position\$" ],
-        parameterSampleFile2 => $groups,
-        parameterSampleFile3 => $def->{groups_vis_layout},
+        parameterFile2_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
+        parameterSampleFile1 => $trna_vis_groups,
+        parameterSampleFile2 => $def->{groups_vis_layout},
         sh_direct            => 1,
         pbs                  => {
           "email"     => $def->{email},
