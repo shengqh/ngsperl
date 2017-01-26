@@ -400,6 +400,27 @@ sub getSmallRNAConfig {
           "mem"       => "10gb"
         },
       };
+      $config->{host_genome_tRNA_PositionVis_anticodon} = {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $data_visualization_dir . "/host_genome_tRNA_PositionVis_anticodon",
+        rtemplate                => "countTableVisFunctions.R,tRNAPositionVis.R",
+        output_file              => ".tRNAPositionVis",
+        output_file_ext          => ".alltRNAPosition.png",
+        parameterFile1_ref       => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count.position\$" ],
+        parameterFile2_ref       => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
+        parameterSampleFile1     => $trna_vis_groups,
+        parameterSampleFile2     => $def->{groups_vis_layout},
+        parameterSampleFile3_ref => $trna_sig_result,
+        sh_direct                => 1,
+        pbs                      => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
       $config->{host_genome_snRNA_PositionVis} = {
         class                => "CQS::UniqueR",
         perform              => 1,
