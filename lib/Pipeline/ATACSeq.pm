@@ -33,6 +33,12 @@ sub initializeDefaultOptions {
   initValue( $def, "perform_cutadapt",      0 );
   initValue( $def, "annotate_nearest_gene", 0 );
 
+  if ( getValue( $def, "perform_cutadapt" ) ) {
+    initValue( $def, "adapter",         "CTGTCTCTTATACACATCT" );
+    initValue( $def, "min_read_length", 36 );
+    initValue( $def, "cutadapt_option", "-q 30" );
+  }
+
   return $def;
 }
 
