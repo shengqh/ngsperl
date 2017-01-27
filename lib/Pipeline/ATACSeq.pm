@@ -25,18 +25,29 @@ sub initializeDefaultOptions {
   my $def = shift;
 
   initValue( $def, "cluster",               "slurm" );
-  initValue( $def, "sra_to_fastq",          0 );
-  initValue( $def, "fastq_remove_N",        0 );
-  initValue( $def, "perform_cutadapt",      0 );
   initValue( $def, "max_thread",            8 );
   initValue( $def, "sequencetask_run_time", 12 );
-  initValue( $def, "perform_cutadapt",      0 );
-  initValue( $def, "annotate_nearest_gene", 0 );
 
+  #Tasks
+  initValue( $def, "sra_to_fastq", 0 );
+
+  initValue( $def, "fastq_remove_N", 0 );
+
+  initValue( $def, "perform_cutadapt", 0 );
   if ( getValue( $def, "perform_cutadapt" ) ) {
     initValue( $def, "adapter",         "CTGTCTCTTATACACATCT" );
     initValue( $def, "min_read_length", 36 );
     initValue( $def, "cutadapt_option", "-q 30" );
+  }
+
+  initValue( $def, "perform_rose",          0 );
+  initValue( $def, "perform_coltron",       0 );
+  initValue( $def, "annotate_nearest_gene", 0 );
+
+  initValue( $def, "perform_homer_motifs", 0 );
+  if ( getValue( $def, "perform_homer_motifs" ) ) {
+    initValue( $def, "homer_option", "" );
+    initValue( $def, "homer_genome", "hg19" );
   }
 
   return $def;
@@ -146,6 +157,26 @@ sub getConfig {
       },
     };
     push @$summary, ("bwa_macs2callpeak");
+
+    if ( getValue( $def, "perform_homer_motifs" ) ) {
+      $config->{bwa_macs2callpeak_homer_motifs} = {
+        class        => "Homer::FindMotifs",
+        option       => getValue( $def, "homer_option" ),
+        perform      => 1,
+        source_ref   => [ "bwa_macs2callpeak", ".bed\$" ],
+        target_dir   => $target_dir . "/bwa_macs2callpeak_homer_motifs",
+        homer_genome => getValue( $def, "homer_genome" ),
+        sh_direct    => 1,
+        pbs          => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary, ("bwa_macs2callpeak_homer_motifs");
+    }
   }
 
   if ($perform_rose) {
@@ -212,6 +243,26 @@ sub getConfig {
       };
       push @$summary, ("bwa_macs2callpeak_replicates");
       $peakTask = "bwa_macs2callpeak_replicates";
+
+      if ( getValue( $def, "perform_homer_motifs" ) ) {
+        $config->{bwa_macs2callpeak_replicates_homer_motifs} = {
+          class        => "Homer::FindMotifs",
+          option       => getValue( $def, "homer_option" ),
+          perform      => 1,
+          source_ref   => [ "bwa_macs2callpeak_replicates", ".bed\$" ],
+          target_dir   => $target_dir . "/bwa_macs2callpeak_replicates_homer_motifs",
+          homer_genome => getValue( $def, "homer_genome" ),
+          sh_direct    => 1,
+          pbs          => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push @$summary, ("bwa_macs2callpeak_replicates_homer_motifs");
+      }
     }
 
     $config->{"bwa_macs2diff"} = {
@@ -252,6 +303,26 @@ sub getConfig {
         },
       };
       push @$summary, ("bwa_macs2diff_gene");
+    }
+
+    if ( getValue( $def, "perform_homer_motifs" ) ) {
+      $config->{bwa_macs2diff_homer_motifs} = {
+        class        => "Homer::FindMotifs",
+        option       => getValue( $def, "homer_option" ),
+        perform      => 1,
+        source_ref   => "bwa_macs2diff",
+        target_dir   => $target_dir . "/bwa_macs2diff_homer_motifs",
+        homer_genome => getValue( $def, "homer_genome" ),
+        sh_direct    => 1,
+        pbs          => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary, ("bwa_macs2diff_homer_motifs");
     }
   }
 

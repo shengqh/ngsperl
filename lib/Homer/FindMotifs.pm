@@ -30,28 +30,28 @@ sub perform {
 
   my %tagDirectories = %{ get_raw_files( $config, $section ) };
 
-  my $pairs = get_raw_files( $config, $section );
-  my $fasta = get_param_file( $config, $section, "genome_fasta", 1 );
+  my $rawFiles = get_raw_files( $config, $section );
+  my $genome = get_option( $config, $section, "homer_genome" );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
 
-  for my $pair_name ( sort keys %{$pairs} ) {
-    my $pairFile = $pairs->{$pair_name};
+  for my $pairName ( sort keys %$rawFiles ) {
+    my $files = $rawFiles->{$pairName};
 
-    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $pair_name );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $pairName );
     my $pbs_name = basename($pbs_file);
-    my $log      = $self->get_log_filename( $log_dir, $pair_name );
-
-    my $final_file = $pair_name . ".motif";
-
+    my $log      = $self->get_log_filename( $log_dir, $pairName );
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-    print $pbs "findMotifsGenome.pl $pairFile $fasta peakAnalysis -size 200 -len 8";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+    for my $file (@$files) {
+      my $output = basename($file);
+      print $pbs "findMotifsGenome.pl $file $genome $output/ $option \n\n";
+    }
     $self->close_pbs( $pbs, $pbs_file );
-  
+
     print $sh "\$MYCMD ./$pbs_name \n";
   }
   print $sh "exit 0\n";
