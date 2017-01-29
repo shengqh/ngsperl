@@ -47,8 +47,13 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
     for my $file (@$files) {
-      my $output = basename($file);
-      print $pbs "findMotifsGenome.pl $file $genome $output/ $option \n\n";
+      my $output    = basename($file);
+      my $finalFile = "${output}/homerResults.html";
+      print $pbs "if [ ! -s $finalFile ]; then
+  findMotifsGenome.pl $file $genome $output/ $option 
+fi
+
+";
     }
     $self->close_pbs( $pbs, $pbs_file );
 
@@ -69,13 +74,18 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $pairs = get_raw_files( $config, $section );
+  my $rawFiles = get_raw_files( $config, $section );
 
   my $result = {};
-  for my $pair_name ( sort keys %{$pairs} ) {
+  for my $pairName ( sort keys %$rawFiles ) {
+    my $files        = $rawFiles->{$pairName};
     my @result_files = ();
-    push( @result_files, "${result_dir}/${pair_name}.motif" );
-    $result->{$pair_name} = filter_array( \@result_files, $pattern );
+    for my $file (@$files) {
+      my $output    = basename($file);
+      my $finalFile = "${output}/homerResults.html";
+      push( @result_files, "${result_dir}/${output}/homerResults.html" );
+    }
+    $result->{$pairName} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }
