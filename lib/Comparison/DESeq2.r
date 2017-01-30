@@ -15,6 +15,7 @@ top25only=0
 detectedInBothGroup=0
 performWilcox=0
 useRawPvalue=0
+textSize=10
 
 ##predefined_condition_end
 
@@ -904,7 +905,7 @@ for(countfile_index in c(1:length(countfiles))){
 				geom_tile(aes(fill=Direction), color="white") +
 				scale_fill_manual(values=c("light green", "red")) +
 				theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.5, face="bold"),
-						axis.text.y = element_text(size=11, face="bold")) +
+						axis.text.y = element_text(size=textSize, face="bold")) +
 				coord_equal()
 		print(g)
 		dev.off()

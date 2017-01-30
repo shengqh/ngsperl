@@ -152,6 +152,7 @@ sub addDEseq2 {
     top25only              => $def->{DE_top25only},
     detected_in_both_group => $def->{DE_detected_in_both_group},
     use_raw_p_value        => $def->{DE_use_raw_pvalue},
+    text_size              => $def->{DE_text_size},
     cluster                => $def->{cluster},
     pbs                    => {
       "email"     => $def->{email},

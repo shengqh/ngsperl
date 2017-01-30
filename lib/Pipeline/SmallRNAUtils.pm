@@ -174,6 +174,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "DE_detected_in_both_group",   1 );
   initDefaultValue( $def, "DE_perform_wilcox",           0 );
   initDefaultValue( $def, "DE_use_raw_pvalue",           1 );
+  initDefaultValue( $def, "DE_text_size",               10 );
   initDefaultValue( $def, "max_sequence_extension_base", 1 );
   initDefaultValue( $def, "top_read_number",             100 );
 
