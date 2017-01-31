@@ -380,19 +380,20 @@ sub getSmallRNAConfig {
         $trna_sig_result = [ "deseq2_tRNA", "_DESeq2_sig.csv\$" ];
       }
       $config->{host_genome_tRNA_PositionVis} = {
-        class                    => "CQS::UniqueR",
-        perform                  => 1,
-        target_dir               => $data_visualization_dir . "/host_genome_tRNA_PositionVis",
-        rtemplate                => "smallRnaPositionVis.R",
-        output_file              => ".tRNAPositionVis",
-        output_file_ext          => ".allPositionBar.png",
-        parameterFile1_ref       => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count.position\$" ],
-        parameterFile2_ref       => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
-        parameterSampleFile1     => $trna_vis_groups,
-        parameterSampleFile2     => $def->{groups_vis_layout},
-#        parameterSampleFile3_ref => $trna_sig_result,
-        sh_direct                => 1,
-        pbs                      => {
+        class                => "CQS::UniqueR",
+        perform              => 1,
+        target_dir           => $data_visualization_dir . "/host_genome_tRNA_PositionVis",
+        rtemplate            => "smallRnaPositionVis.R",
+        output_file          => ".tRNAPositionVis",
+        output_file_ext      => ".allPositionBar.png",
+        parameterFile1_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count.position\$" ],
+        parameterFile2_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
+        parameterSampleFile1 => $trna_vis_groups,
+        parameterSampleFile2 => $def->{groups_vis_layout},
+
+        #        parameterSampleFile3_ref => $trna_sig_result,
+        sh_direct => 1,
+        pbs       => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
@@ -401,19 +402,20 @@ sub getSmallRNAConfig {
         },
       };
       $config->{host_genome_tRNA_PositionVis_anticodon} = {
-        class                    => "CQS::UniqueR",
-        perform                  => 1,
-        target_dir               => $data_visualization_dir . "/host_genome_tRNA_PositionVis_anticodon",
-        rtemplate                => "smallRnaPositionVis.R",
-        output_file              => ".tRNAAnticodonPositionVis",
-        output_file_ext          => ".allPositionBar.png",
-        parameterFile1_ref       => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count.position\$" ],
-        parameterFile2_ref       => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
-        parameterSampleFile1     => $trna_vis_groups,
-        parameterSampleFile2     => $def->{groups_vis_layout},
-#        parameterSampleFile3_ref => $trna_sig_result,
-        sh_direct                => 1,
-        pbs                      => {
+        class                => "CQS::UniqueR",
+        perform              => 1,
+        target_dir           => $data_visualization_dir . "/host_genome_tRNA_PositionVis_anticodon",
+        rtemplate            => "smallRnaPositionVis.R",
+        output_file          => ".tRNAAnticodonPositionVis",
+        output_file_ext      => ".allPositionBar.png",
+        parameterFile1_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count.position\$" ],
+        parameterFile2_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
+        parameterSampleFile1 => $trna_vis_groups,
+        parameterSampleFile2 => $def->{groups_vis_layout},
+
+        #        parameterSampleFile3_ref => $trna_sig_result,
+        sh_direct => 1,
+        pbs       => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
@@ -421,13 +423,34 @@ sub getSmallRNAConfig {
           "mem"       => "10gb"
         },
       };
+      $config->{host_genome_miRNA_PositionVis} = {
+        class                => "CQS::UniqueR",
+        perform              => 1,
+        target_dir           => $data_visualization_dir . "/host_genome_miRNA_PositionVis",
+        rtemplate            => "smallRnaPositionVis.R",
+        output_file          => ".miRNAPositionVis",
+        output_file_ext      => ".allPositionBar.png",
+        parameterFile1_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count.position\$" ],
+        parameterFile2_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
+        parameterSampleFile1 => $trna_vis_groups,
+        parameterSampleFile2 => $def->{groups_vis_layout},
+        sh_direct            => 1,
+        pbs                  => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+
       $config->{host_genome_snRNA_PositionVis} = {
         class                => "CQS::UniqueR",
         perform              => 1,
         target_dir           => $data_visualization_dir . "/host_genome_snRNA_PositionVis",
-        rtemplate                => "smallRnaPositionVis.R",
-        output_file              => ".snRNAPositionVis",
-        output_file_ext          => ".allPositionBar.png",
+        rtemplate            => "smallRnaPositionVis.R",
+        output_file          => ".snRNAPositionVis",
+        output_file_ext      => ".allPositionBar.png",
         parameterFile1_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count.position\$" ],
         parameterFile2_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
         parameterSampleFile1 => $trna_vis_groups,
@@ -441,7 +464,7 @@ sub getSmallRNAConfig {
           "mem"       => "10gb"
         },
       };
-      push @$summary_ref, ("host_genome_tRNA_PositionVis","host_genome_tRNA_PositionVis_anticodon","host_genome_snRNA_PositionVis");
+      push @$summary_ref, ( "host_genome_tRNA_PositionVis", "host_genome_tRNA_PositionVis_anticodon", "host_genome_miRNA_PositionVis", "host_genome_snRNA_PositionVis" );
     }
 
     my $unmapped_reads = {
