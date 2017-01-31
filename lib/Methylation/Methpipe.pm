@@ -66,12 +66,12 @@ sub perform {
 #preseq part
     print $pbs "
 if [ ! -s ${sampleFileBase}.c_curve ]; then
-  echo preseq=`date`
+  echo preseq c_curve=`date`
   preseq c_curve $sampleFile > ${sampleFileBase}.c_curve
 fi
 if [ ! -s ${sampleFileBase}.lc_extrap ]; then
-  echo preseq=`date`
-  preseq lc_extrap $sampleFile > ${sampleFileBase}.lc_extrap
+  echo preseq lc_extrap=`date`
+  preseq lc_extrap -D $sampleFile > ${sampleFileBase}.lc_extrap
 fi
 ";
 
@@ -79,7 +79,7 @@ fi
     print $pbs "
 echo Methpipe=`date`
 if [ ! -s ${sampleFileBase}.dremove ]; then
-   duplicate-remover -s -A -S ${sampleFileBase}.dupstats  -o ${sampleFileBase}.dremove $sampleFile
+   duplicate-remover -D -s -A -S ${sampleFileBase}.dupstats  -o ${sampleFileBase}.dremove $sampleFile
 fi
 
 if [ ! -s ${sampleFileBase}.bsrate ]; then
@@ -115,11 +115,13 @@ pmd -o ${sampleFileBase}.pmd  -p ${sampleFileBase}.pmdparams ${sampleFileBase}.m
 fi
 
 if [ ! -s ${sampleFileBase}.allelic ]; then
-allelicmeth  -o ${sampleFileBase}.allelic -c $chrDir ${sampleFileBase}.epiread
+  echo allelicmeth=`date`
+  allelicmeth  -o ${sampleFileBase}.allelic -c $chrDir ${sampleFileBase}.epiread
 fi
 
 if [ ! -s ${sampleFileBase}.amr ]; then
-amrfinder -o ${sampleFileBase}.amr  ${sampleFileBase}.epiread  -c $chrDir
+  echo amrfinder=`date`
+  amrfinder -o ${sampleFileBase}.amr  ${sampleFileBase}.epiread  -c $chrDir
 fi
 ";
 
