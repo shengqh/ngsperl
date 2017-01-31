@@ -79,6 +79,7 @@ fi
     print $pbs "
 echo Methpipe=`date`
 if [ ! -s ${sampleFileBase}.dremove ]; then
+   echo duplicate-remover=`date`
    duplicate-remover -D -s -A -S ${sampleFileBase}.dupstats  -o ${sampleFileBase}.dremove $sampleFile
 fi
 
