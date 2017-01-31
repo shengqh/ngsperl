@@ -148,6 +148,7 @@ maxPos<-max(allPositionByGroup$Position)
 png(paste0(outFile,".allPositionBar.png"),width=width,height=height,res=300)
 m <- ggplot(allPositionByGroup, aes(x = Position,y=GroupPositionCountFraction,fill=Feature)) +
 		geom_bar(stat="identity") +
+		theme_bw()+
 		theme(legend.key.size = unit(0.4, "cm"))+
 		ylab("cumulative read fraction (read counts/total reads)")+
 		theme(text = element_text(size=20))+theme(legend.text = element_text(size=16))+
