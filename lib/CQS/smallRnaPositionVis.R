@@ -5,7 +5,7 @@
 
 
 
-maxFeature=50
+maxFeature=25
 
 groupFileList=parSampleFile1
 visLayoutFileList=parSampleFile2
@@ -111,8 +111,8 @@ if (xRange[2]>=110) {
 	xRange[2]=xRange[2]+10
 }
 
-axisTextSize=20
-stripTextSize=40
+axisTextSize=12
+stripTextSize=12
 png(paste0(outFile,".png"), width=width, height=height, res=300)
 p<-ggplot(allPositionByGroup,aes(x=Position,y=Feature,size=GroupPercentage,colour=GroupPercentage))+
 		geom_point()+
