@@ -28,13 +28,14 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
-  my $sort_memory = $thread == 1? $memory:"4G";
+  my $sort_memory = $thread == 1 ? $memory : "4G";
 
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
-  my $remove_chromosome = get_option( $config, $section, "remove_chromosome" );
-  my $keep_chromosome   = get_option( $config, $section, "keep_chromosome", "" );
-  my $minimum_maq       = get_option( $config, $section, "minimum_maq", 10 );
-  my $isSortedByCoordinate    = get_option( $config, $section, "is_sorted_by_coordinate" );
+  my $remove_chromosome    = get_option( $config, $section, "remove_chromosome" );
+  my $keep_chromosome      = get_option( $config, $section, "keep_chromosome", "" );
+  my $minimum_maq          = get_option( $config, $section, "minimum_maq", 10 );
+  my $isSortedByCoordinate = get_option( $config, $section, "is_sorted_by_coordinate" );
+  my $blacklistfile = get_param_file( $config->{$section}{"blacklist_file"}, "blacklist_file", 0 );
 
   if ( $keep_chromosome !~ /^\s*$/ ) {
     $keep_chromosome = "| grep $keep_chromosome";
@@ -50,8 +51,8 @@ sub perform {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $sampleFile   = $sample_files[0];
 
-    my $redupFile   = $sample_name . ".rmdup.bam";
-    my $finalFile  = $sample_name . ".rmdup.noChr" . $remove_chromosome . ".bam";
+    my $redupFile = $sample_name . ".rmdup.bam";
+    my $finalFile = $sample_name . ".rmdup.noChr" . $remove_chromosome . ".bam";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -75,16 +76,25 @@ fi
       $rmlist     = $sorted;
     }
 
+    my $finalOption;
+    if ( defined $blacklistfile ) {
+      $finalOption = "| samtools view -b -U $finalFile -o ${sample_name}.discard.bam -L $blacklistfile";
+      $rmlist = $rmlist . " ${sample_name}.discard.bam";
+    }
+    else {
+      $finalOption = "> $finalFile";
+    }
+
     print $pbs "
 if [[ -s $sampleFile && ! -s $redupFile ]]; then
   echo RemoveDuplicate=`date` 
-  java $option -jar $picard_jar MarkDuplicates I=$sampleFile O=$redupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT M=${redupFile}.metrics
+  java -jar $picard_jar MarkDuplicates I=$sampleFile O=$redupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT M=${redupFile}.metrics
   samtools index $redupFile
 fi
 
 if [[ -s $redupFile && ! -s $finalFile ]]; then
-  echo RemoveChromosome=`date` 
-  samtools idxstats $redupFile | cut -f 1 | grep -v $remove_chromosome $keep_chromosome | xargs samtools view -b -q $minimum_maq $redupFile > $finalFile 
+  echo FilterBam=`date` 
+  samtools idxstats $redupFile | cut -f 1 | grep -v $remove_chromosome $keep_chromosome | xargs samtools view $option -b -q $minimum_maq $redupFile $finalOption 
 fi
 
 if [[ -s $finalFile && ! -s ${finalFile}.bai ]]; then
@@ -116,7 +126,7 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $finalFile  = $sample_name . ".rmdup.noChr" . $remove_chromosome . ".bam";
+    my $finalFile = $sample_name . ".rmdup.noChr" . $remove_chromosome . ".bam";
 
     my @result_files = ();
     push( @result_files, "${result_dir}/${finalFile}" );
