@@ -33,6 +33,8 @@ sub initializeDefaultOptions {
 
   initValue( $def, "fastq_remove_N", 0 );
 
+  initValue( $def, "minimum_maq", 30 );
+
   initValue( $def, "perform_cutadapt", 0 );
   if ( getValue( $def, "perform_cutadapt" ) ) {
     initValue( $def, "adapter",         "CTGTCTCTTATACACATCT" );
@@ -42,15 +44,43 @@ sub initializeDefaultOptions {
 
   initValue( $def, "perform_rose",          0 );
   initValue( $def, "perform_coltron",       0 );
+  initValue( $def, "perform_diffbind",      0 );
   initValue( $def, "annotate_nearest_gene", 0 );
+
+  initValue( $def, "caller_type", "macs2" );
+  if ( ( getValue( $def, "caller_type" ) eq "macs2" ) || ( getValue( $def, "caller_type" ) eq "both" ) ) {
+    initValue( $def, "macs2_peak_type", "board" );
+  }
 
   initValue( $def, "perform_homer_motifs", 0 );
   if ( getValue( $def, "perform_homer_motifs" ) ) {
     initValue( $def, "homer_option", "" );
-    initValue( $def, "homer_genome", "hg19" );
   }
 
   return $def;
+}
+
+sub addHomerMotif {
+  my ( $config, $def, $summary, $target_dir, $callName, $callFilePattern ) = @_;
+  my $homerName = $callName . "_homer_motifs";
+  $config->{$homerName} = {
+    class        => "Homer::FindMotifs",
+    option       => getValue( $def, "homer_option" ),
+    perform      => 1,
+    target_dir   => $target_dir . "/" . $homerName,
+    source_ref   => [ $callName, $callFilePattern ],
+    homer_genome => getValue( $def, "homer_genome" ),
+    sh_direct    => 1,
+    pbs          => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push @$summary, ($homerName);
+  return $homerName;
 }
 
 sub getConfig {
@@ -67,8 +97,8 @@ sub getConfig {
   my $cluster = $def->{cluster};
   my $task    = $def->{task_name};
 
-  my $email = getValue( $def, "email" );
-  my $macs2call_option = getValue( $def, "macs2call_option", "-f BEDPE --broad -g hs -B -q 0.01 --broad-cutoff 0.01 --nomodel --slocal 20000 --llocal 20000 --keep-dup all" );
+  my $email   = getValue( $def, "email" );
+  my $pairend = getValue( $def, "pairend" );
 
   my $perform_rose = getValue( $def, "perform_rose" );
   my $perform_coltron = 0;
@@ -82,7 +112,12 @@ sub getConfig {
     $gene_bed = getValue( $def, "gene_bed" );
   }
 
-  $config->{treatments} = getValue( $def, "treatments" );
+  my $perform_diffbind = getValue( $def, "perform_diffbind" );
+  if ($perform_diffbind) {
+    getValue( $def, "diffbind_table" );
+  }
+
+  my $cleanbam_option = $pairend ? "-f 3 -F 3852" : "-F 3844";
 
   my $processing = {
     "bwa" => {
@@ -106,11 +141,13 @@ sub getConfig {
       class                   => "ATACseq::CleanBam",
       perform                 => 1,
       target_dir              => "${target_dir}/bwa_cleanbam",
-      option                  => "",
+      option                  => $cleanbam_option,
       source_ref              => "bwa",
       picard_jar              => getValue( $def, "picard_jar" ),
       remove_chromosome       => "M",
       keep_chromosome         => "chr",
+      minimum_maq             => getValue( $def, "minimum_maq" ),
+      blacklist_file          => $def->{blacklist_file},
       is_sorted_by_coordinate => 1,
       sh_direct               => 0,
       pbs                     => {
@@ -120,119 +157,82 @@ sub getConfig {
         "mem"      => "40gb"
       },
     },
-    "bwa_bam2bed" => {
-      class                   => "Format::Bam2Bed",
-      perform                 => 1,
-      target_dir              => "${target_dir}/bwa_bam2bed",
-      option                  => "",
-      source_ref              => "bwa_cleanbam",
-      blacklist_file          => "/scratch/cqs/shengq1/references/mappable_region/hg19/wgEncodeDacMapabilityConsensusExcludable.bed",
-      is_sorted_by_name       => 0,
-      is_paired_end           => 1,
-      maximum_fragment_length => 1000,
-      minimum_fragment_length => 30,
-      sh_direct               => 1,
-      pbs                     => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=8",
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    },
   };
-  push @$individual, ( "bwa", "bwa_cleanbam", "bwa_bam2bed" );
-  if ( $perform_rose || ( !defined $def->{replicates} ) ) {
-    $config->{"bwa_macs2callpeak"} = {
-      class      => "Chipseq::MACS2Callpeak",
-      perform    => 1,
-      target_dir => "${target_dir}/bwa_macs2callpeak",
-      option     => $macs2call_option,
-      source_ref => "bwa_bam2bed",
-      sh_direct  => 0,
-      pbs        => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    };
-    push @$summary, ("bwa_macs2callpeak");
 
-    if ( getValue( $def, "perform_homer_motifs" ) ) {
-      $config->{bwa_macs2callpeak_homer_motifs} = {
-        class        => "Homer::FindMotifs",
-        option       => getValue( $def, "homer_option" ),
-        perform      => 1,
-        source_ref   => [ "bwa_macs2callpeak", ".bed\$" ],
-        target_dir   => $target_dir . "/bwa_macs2callpeak_homer_motifs",
-        homer_genome => getValue( $def, "homer_genome" ),
-        sh_direct    => 1,
-        pbs          => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      };
-      push @$summary, ("bwa_macs2callpeak_homer_motifs");
-    }
+  push @$individual, ( "bwa", "bwa_cleanbam" );
+
+  my $callerType = getValue( $def, "caller_type" );
+  my @callers = ();
+  if ( $callerType eq "both" ) {
+    push( @callers, ( "macs", "macs2" ) );
+  }
+  elsif ( $callerType eq "macs" ) {
+    push( @callers, ("macs") );
+  }
+  else {
+    push( @callers, ("macs2") );
   }
 
-  if ($perform_rose) {
-    $config->{"bwa_macs2callpeak_bradner_rose"} = {
-      class                => "Chipseq::BradnerRose2",
-      perform              => 1,
-      target_dir           => "${target_dir}/bwa_macs2callpeak_bradner_rose",
-      option               => "",
-      source_ref           => "bwa_cleanbam",
-      groups_ref           => "treatments",
-      pipeline_dir         => "/scratch/cqs/shengq1/local/bin/bradnerlab",
-      binding_site_bed_ref => [ "bwa_macs2callpeak", ".bed\$" ],
-      genome               => "hg19",
-      sh_direct            => 1,
-      pbs                  => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    };
-    push @$summary, ("bwa_macs2callpeak_bradner_rose");
+  for my $caller (@callers) {
+    my @peakTypes = ();
+    my $callOption;
+    my $callClass;
+    my $callerName;
 
-    if ($perform_coltron) {
-      $config->{"bwa_macs2callpeak_bradner_rose_coltron"} = {
-        class              => "Chipseq::Coltron",
-        perform            => 1,
-        target_dir         => "${target_dir}/bwa_macs2callpeak_bradner_rose_coltron",
-        option             => "",
-        source_ref         => "bwa_cleanbam",
-        groups_ref         => "treatments",
-        enhancer_files_ref => [ "bwa_macs2callpeak_bradner_rose", "_AllEnhancers.table.txt" ],
-        genome             => "HG19",
-        pipeline_dir       => "/scratch/cqs/shengq1/local/bin/bradnerlab",
-        sh_direct          => 1,
-        pbs                => {
-          "email"    => $email,
-          "nodes"    => "1:ppn=1",
-          "walltime" => "72",
-          "mem"      => "40gb"
-        },
-      };
-      push @$summary, ("bwa_macs2callpeak_bradner_rose_coltron");
+    if ( $caller eq "macs" ) {
+      $callClass  = "Chipseq::MACS";
+      $callerName = "macs1callpeak";
+      push( @peakTypes, "macs" );
+      if ( defined $def->{"macs_option"} ) {
+        $callOption = $def->{"macs_option"};
+      }
+      else {
+        $callOption = "-p 1e-9 -w -S --space=50";
+      }
     }
-  }
+    else {
+      $callClass  = "Chipseq::MACS2Callpeak";
+      $callerName = "macs2callpeak";
+      if ( defined $def->{"macs2call_option"} ) {
+        $callOption = $def->{"macs2call_option"};
+      }
+      else {
+        my $default_macs2call_option = $pairend ? "-f BAMPE" : "-f BAM";
+        $callOption = $default_macs2call_option . " -g " . getValue( $def, "macs2genome" ) . " -B -q 0.01 --nomodel --slocal 20000 --llocal 20000 --keep-dup all";
+      }
 
-  if ( defined $def->{comparison} ) {
-    my $peakTask = "bwa_macs2callpeak";
-    if ( defined $def->{replicates} ) {
-      $config->{"bwa_macs2callpeak_replicates"} = {
-        class      => "Chipseq::MACS2Callpeak",
+      my $macs2_peak_type = getValue( $def, "macs2_peak_type" );
+      if ( $macs2_peak_type eq "both" ) {
+        push( @peakTypes, ( "broad", "narrow" ) );
+      }
+      elsif ( $macs2_peak_type eq "narrow" ) {
+        push( @peakTypes, ("narrow") );
+      }
+      else {
+        push( @peakTypes, ("broad") );
+      }
+    }
+
+    for my $peakType (@peakTypes) {
+      my $curCallOption = $callOption;
+      my $callFilePattern;
+      if ( $peakType eq "macs" ) {
+        $callFilePattern = ".name.bed\$";
+      }
+      elsif ( $peakType eq "broad" ) {
+        $curCallOption   = " --broad --broad-cutoff 0.01 " . $curCallOption;
+        $callFilePattern = "broadPeak.bed\$";
+      }
+      else {
+        $callFilePattern = "narrowPeak.bed\$";
+      }
+      my $callName = "bwa_${callerName}_${peakType}";
+      $config->{$callName} = {
+        class      => $callClass,
         perform    => 1,
-        target_dir => "${target_dir}/bwa_macs2callpeak_replicates",
-        option     => $macs2call_option,
-        source_ref => "bwa_bam2bed",
-        groups     => $def->{"replicates"},
+        target_dir => "${target_dir}/" . $callName,
+        option     => $curCallOption,
+        source_ref => [ "bwa_cleanbam", ".bam\$" ],
         sh_direct  => 0,
         pbs        => {
           "email"    => $email,
@@ -241,88 +241,153 @@ sub getConfig {
           "mem"      => "40gb"
         },
       };
-      push @$summary, ("bwa_macs2callpeak_replicates");
-      $peakTask = "bwa_macs2callpeak_replicates";
+      push @$individual, ($callName);
 
-      if ( getValue( $def, "perform_homer_motifs" ) ) {
-        $config->{bwa_macs2callpeak_replicates_homer_motifs} = {
-          class        => "Homer::FindMotifs",
-          option       => getValue( $def, "homer_option" ),
-          perform      => 1,
-          source_ref   => [ "bwa_macs2callpeak_replicates", ".bed\$" ],
-          target_dir   => $target_dir . "/bwa_macs2callpeak_replicates_homer_motifs",
-          homer_genome => getValue( $def, "homer_genome" ),
-          sh_direct    => 1,
-          pbs          => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
-            "mem"       => "10gb"
+      if ($perform_diffbind) {
+        my $bindName = $callName . "_diffbind";
+        $config->{$bindName} = {
+          class         => "Comparison::DiffBind",
+          perform       => 1,
+          target_dir    => "${target_dir}/${bindName}",
+          option        => "",
+          source_ref    => "bwa_cleanbam",
+          designtable   => getValue( $def, "diffbind_table" ),
+          peaks_ref     => [ $callName, $callFilePattern ],
+          peak_software => "bed",
+          sh_direct     => 0,
+          pbs           => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=1",
+            "walltime" => "72",
+            "mem"      => "40gb"
           },
         };
-        push @$summary, ("bwa_macs2callpeak_replicates_homer_motifs");
+        push @$summary, ($bindName);
       }
-    }
 
-    $config->{"bwa_macs2diff"} = {
-      class      => "Chipseq::MACS2Bdgdiff",
-      perform    => 1,
-      target_dir => "${target_dir}/bwa_macs2diff",
-      option     => "",
-      source_ref => $peakTask,
-      groups     => $def->{comparison},
-      sh_direct  => 0,
-      pbs        => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    };
-    push @$summary, ("bwa_macs2diff");
+      if ( getValue( $def, "perform_homer_motifs" ) ) {
+        addHomerMotif( $config, $def, $summary, $target_dir, $callName, $callFilePattern );
+      }
 
-    if ($annotate_nearest_gene) {
-      $config->{bwa_macs2diff_gene} = {
-        class                    => "CQS::UniqueR",
-        perform                  => 1,
-        target_dir               => $target_dir . "/bwa_macs2diff",
-        rtemplate                => "../Annotation/findNearestGene.r",
-        output_file              => "",
-        output_file_ext          => ".Category.Table.csv",
-        parameterSampleFile1_ref => "bwa_macs2diff",
-        parameterFile1           => $gene_bed,
-        rCode                    => '',
-        sh_direct                => 1,
-        pbs                      => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      };
-      push @$summary, ("bwa_macs2diff_gene");
-    }
+      if ($perform_rose) {
+        my $roseName = $callName . "_bradner_rose";
+        $config->{$roseName} = {
+          class                => "Chipseq::BradnerRose2",
+          perform              => 1,
+          target_dir           => "${target_dir}/${roseName}",
+          option               => "",
+          source_ref           => "bwa_cleanbam",
+          groups               => $def->{"treatments"},
+          pipeline_dir         => getValue( $def, "rose_folder" ),
+          genome               => getValue( $def, "rose_genome" ),
+          binding_site_bed_ref => [ $callName, $callFilePattern ],
+          sh_direct            => 1,
+          pbs                  => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=1",
+            "walltime" => "72",
+            "mem"      => "40gb"
+          },
+        };
+        push @$summary, ($roseName);
 
-    if ( getValue( $def, "perform_homer_motifs" ) ) {
-      $config->{bwa_macs2diff_homer_motifs} = {
-        class        => "Homer::FindMotifs",
-        option       => getValue( $def, "homer_option" ),
-        perform      => 1,
-        source_ref   => "bwa_macs2diff",
-        target_dir   => $target_dir . "/bwa_macs2diff_homer_motifs",
-        homer_genome => getValue( $def, "homer_genome" ),
-        sh_direct    => 1,
-        pbs          => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      };
-      push @$summary, ("bwa_macs2diff_homer_motifs");
+        if ($perform_coltron) {
+          my $coltronName = $roseName . "_coltron";
+          $config->{$coltronName} = {
+            class              => "Chipseq::Coltron",
+            perform            => 1,
+            target_dir         => "${target_dir}/${coltronName}",
+            option             => "",
+            source_ref         => "bwa_cleanbam",
+            groups             => $def->{"treatments"},
+            enhancer_files_ref => [ $roseName, "_AllEnhancers.table.txt" ],
+            genome             => getValue( $def, "coltron_genome" ),
+            pipeline_dir       => getValue( $def, "rose_folder" ),
+            sh_direct          => 1,
+            pbs                => {
+              "email"    => $email,
+              "nodes"    => "1:ppn=1",
+              "walltime" => "72",
+              "mem"      => "40gb"
+            },
+          };
+          push @$summary, ($coltronName);
+        }
+      }
+
+      if ( ( $caller eq "macs2" ) && ( defined $def->{comparison} ) ) {
+        my $peakTask = $callName;
+        if ( defined $def->{replicates} ) {
+          my $repCallName = $callName . "_replicates";
+          $config->{$repCallName} = {
+            class      => $callName,
+            perform    => 1,
+            target_dir => "${target_dir}/${repCallName}",
+            option     => $curCallOption,
+            source_ref => "bwa_cleanbam",
+            groups     => $def->{"replicates"},
+            sh_direct  => 0,
+            pbs        => {
+              "email"    => $email,
+              "nodes"    => "1:ppn=1",
+              "walltime" => "72",
+              "mem"      => "40gb"
+            },
+          };
+          push @$summary, ($repCallName);
+          $peakTask = $repCallName;
+
+          if ( getValue( $def, "perform_homer_motifs" ) ) {
+            addHomerMotif( $config, $def, $summary, $target_dir, $repCallName, $callFilePattern );
+          }
+        }
+
+        my $diffName = $peakTask . "_bdgdiff";
+        $config->{$diffName} = {
+          class      => "Chipseq::MACS2Bdgdiff",
+          perform    => 1,
+          target_dir => "${target_dir}/$diffName",
+          option     => "",
+          source_ref => $peakTask,
+          groups     => $def->{comparison},
+          sh_direct  => 0,
+          pbs        => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=1",
+            "walltime" => "72",
+            "mem"      => "40gb"
+          },
+        };
+        push @$summary, ($diffName);
+
+        if ($annotate_nearest_gene) {
+          my $geneName = $diffName . "_gene";
+          $config->{$geneName} = {
+            class                    => "CQS::UniqueR",
+            perform                  => 1,
+            target_dir               => "${target_dir}/${geneName}",
+            rtemplate                => "../Annotation/findNearestGene.r",
+            output_file              => "",
+            output_file_ext          => ".Category.Table.csv",
+            parameterSampleFile1_ref => $diffName,
+            parameterFile1           => $gene_bed,
+            rCode                    => '',
+            sh_direct                => 1,
+            pbs                      => {
+              "email"     => $def->{email},
+              "emailType" => $def->{emailType},
+              "nodes"     => "1:ppn=1",
+              "walltime"  => "1",
+              "mem"       => "10gb"
+            },
+          };
+          push @$summary, ($diffName);
+        }
+
+        if ( getValue( $def, "perform_homer_motifs" ) ) {
+          addHomerMotif( $config, $def, $summary, $target_dir, $diffName, ".bed\$" );
+        }
+      }
     }
   }
 
@@ -345,7 +410,7 @@ sub getConfig {
       perform            => 1,
       target_dir         => "${target_dir}/bamplot",
       option             => $bamplot_option,
-      source_ref         => "bwa",
+      source_ref         => "bwa_cleanbam",
       groups_ref         => "plotgroups",
       gff_file           => $plot_gff,
       is_rainbow_color   => 0,
@@ -396,7 +461,6 @@ sub performATACSeq {
 
     performConfig($config);
   }
-
   return $config;
 }
 
