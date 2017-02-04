@@ -57,6 +57,15 @@ sub initializeDefaultOptions {
     initValue( $def, "homer_option", "" );
   }
 
+  if ( !defined $def->{"treatments"} ) {
+    my $files = getValue( $def, "files" );
+    my $groups = {};
+    for my $file ( sort keys %$files ) {
+      $groups->{$file} = $file;
+    }
+    $def->{"treatments"} = $groups;
+  }
+
   return $def;
 }
 
@@ -94,6 +103,8 @@ sub getConfig {
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir ) = getPreprocessionConfig($def);
 
+  $config->{"treatments"} = $def->{"treatments"};
+
   my $cluster = $def->{cluster};
   my $task    = $def->{task_name};
 
@@ -119,47 +130,79 @@ sub getConfig {
 
   my $cleanbam_option = $pairend ? "-f 3 -F 3852" : "-F 3844";
 
-  my $processing = {
-    "bwa" => {
-      class              => "Alignment::BWA",
-      perform            => 1,
-      target_dir         => "${target_dir}/bwa",
-      option             => "",
-      bwa_index          => getValue( $def, "bwa_fasta" ),
-      picard_jar         => getValue( $def, "picard_jar" ),
-      source_ref         => $source_ref,
-      sort_by_coordinate => 1,
-      sh_direct          => 0,
-      pbs                => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=8",
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    },
-    "bwa_cleanbam" => {
-      class                   => "ATACseq::CleanBam",
-      perform                 => 1,
-      target_dir              => "${target_dir}/bwa_cleanbam",
-      option                  => $cleanbam_option,
-      source_ref              => "bwa",
-      picard_jar              => getValue( $def, "picard_jar" ),
-      remove_chromosome       => "M",
-      keep_chromosome         => "chr",
-      minimum_maq             => getValue( $def, "minimum_maq" ),
-      blacklist_file          => $def->{blacklist_file},
-      is_sorted_by_coordinate => 1,
-      sh_direct               => 0,
-      pbs                     => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "240",
-        "mem"      => "40gb"
-      },
+  $config->{"bwa"} = {
+    class              => "Alignment::BWA",
+    perform            => 1,
+    target_dir         => "${target_dir}/bwa",
+    option             => "",
+    bwa_index          => getValue( $def, "bwa_fasta" ),
+    picard_jar         => getValue( $def, "picard_jar" ),
+    source_ref         => $source_ref,
+    sort_by_coordinate => 1,
+    sh_direct          => 0,
+    pbs                => {
+      "email"    => $email,
+      "nodes"    => "1:ppn=8",
+      "walltime" => "72",
+      "mem"      => "40gb"
     },
   };
+  push @$individual, "bwa";
+  addBamStat( $config, $def, $summary, "bwa_stat", $target_dir, [ "bwa", ".stat\$" ] );
 
-  push @$individual, ( "bwa", "bwa_cleanbam" );
+  $config->{"bwa_cleanbam"} = {
+    class                   => "ATACseq::CleanBam",
+    perform                 => 1,
+    target_dir              => "${target_dir}/bwa_cleanbam",
+    option                  => $cleanbam_option,
+    source_ref              => "bwa",
+    picard_jar              => getValue( $def, "picard_jar" ),
+    remove_chromosome       => "M",
+    keep_chromosome         => "chr",
+    minimum_maq             => getValue( $def, "minimum_maq" ),
+    blacklist_file          => $def->{blacklist_file},
+    is_sorted_by_coordinate => 1,
+    sh_direct               => 0,
+    pbs                     => {
+      "email"    => $email,
+      "nodes"    => "1:ppn=1",
+      "walltime" => "240",
+      "mem"      => "40gb"
+    },
+  };
+  push @$individual, "bwa_cleanbam";
+  addBamStat( $config, $def, $summary, "bwa_cleanbam_stat", $target_dir, [ "bwa_cleanbam", ".stat\$" ] );
+
+  if ( defined $config->{fastqc_count_vis} ) {
+    my $files = $config->{fastqc_count_vis}{parameterFile1_ref};
+    if ( defined $config->{fastqc_count_vis}{parameterFile2_ref} ) {
+      my $f = $config->{fastqc_count_vis}{parameterFile2_ref};
+      push @$files, @$f;
+    }
+    if ( defined $config->{fastqc_count_vis}{parameterFile3_ref} ) {
+      my $f = $config->{fastqc_count_vis}{parameterFile3_ref};
+      push @$files, @$f;
+    }
+    push @$files, ( "bwa",          ".stat\$" );
+    push @$files, ( "bwa_cleanbam", ".stat\$" );
+    $config->{"reads_in_task"} = {
+      class                    => "CQS::UniqueR",
+      target_dir               => "${target_dir}/reads_in_task",
+      perform                  => 1,
+      rtemplate                => "countInTasks.R",
+      output_file              => ".countInTasks.Result",
+      output_file_ext          => ".Reads.csv",
+      sh_direct                => 1,
+      parameterSampleFile1_ref => $files,
+      pbs                      => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
+      },
+    };
+    push @$individual, ("reads_in_task");
+  }
 
   my $callerType = getValue( $def, "caller_type" );
   my @callers = ();
@@ -216,7 +259,9 @@ sub getConfig {
     for my $peakType (@peakTypes) {
       my $curCallOption = $callOption;
       my $callFilePattern;
+      my $callName = "bwa_${callerName}_${peakType}";
       if ( $peakType eq "macs" ) {
+        $callName        = "bwa_${callerName}";
         $callFilePattern = ".name.bed\$";
       }
       elsif ( $peakType eq "broad" ) {
@@ -226,13 +271,13 @@ sub getConfig {
       else {
         $callFilePattern = "narrowPeak.bed\$";
       }
-      my $callName = "bwa_${callerName}_${peakType}";
       $config->{$callName} = {
         class      => $callClass,
         perform    => 1,
         target_dir => "${target_dir}/" . $callName,
         option     => $curCallOption,
         source_ref => [ "bwa_cleanbam", ".bam\$" ],
+        groups_ref => "treatments",
         sh_direct  => 0,
         pbs        => {
           "email"    => $email,
@@ -277,7 +322,7 @@ sub getConfig {
           target_dir           => "${target_dir}/${roseName}",
           option               => "",
           source_ref           => "bwa_cleanbam",
-          groups               => $def->{"treatments"},
+          groups_ref           => "treatments",
           pipeline_dir         => getValue( $def, "rose_folder" ),
           genome               => getValue( $def, "rose_genome" ),
           binding_site_bed_ref => [ $callName, $callFilePattern ],
@@ -299,7 +344,7 @@ sub getConfig {
             target_dir         => "${target_dir}/${coltronName}",
             option             => "",
             source_ref         => "bwa_cleanbam",
-            groups             => $def->{"treatments"},
+            groups_ref         => "treatments",
             enhancer_files_ref => [ $roseName, "_AllEnhancers.table.txt" ],
             genome             => getValue( $def, "coltron_genome" ),
             pipeline_dir       => getValue( $def, "rose_folder" ),
@@ -390,8 +435,6 @@ sub getConfig {
       }
     }
   }
-
-  $config = merge( $config, $processing );
 
   my $plot_gff = $def->{plot_gff};
   if ($plot_gff) {
