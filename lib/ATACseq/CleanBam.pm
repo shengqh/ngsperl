@@ -79,7 +79,7 @@ fi
     my $finalOption;
     if ( defined $blacklistfile ) {
       $finalOption = "| samtools view -b -U $finalFile -o ${sample_name}.discard.bam -L $blacklistfile";
-      $rmlist = $rmlist . " ${sample_name}.discard.bam";
+      $rmlist      = $rmlist . " ${sample_name}.discard.bam";
     }
     else {
       $finalOption = "> $finalFile";
@@ -130,6 +130,7 @@ sub result {
 
     my @result_files = ();
     push( @result_files, "${result_dir}/${finalFile}" );
+    push( @result_files, "${result_dir}/${finalFile}.stat" );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
