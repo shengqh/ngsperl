@@ -39,10 +39,14 @@ sub perform {
   my $rCode           = get_option( $config, $section, "rCode",           "" );
   my $output_file     = get_option( $config, $section, "output_file",     "" );
   my $output_file_ext = get_option( $config, $section, "output_file_ext", "" );
+  my @output_file_exts = split( ";", $output_file_ext );
+  if ( scalar(@output_file_exts) == 0 ) {
+    push( @output_file_exts, "" );
+  }
 
   my $parametersample_files1 = "";
   if ( has_raw_files( $config, $section, "parameterSampleFile1" ) ) {
-    my $temp =  get_raw_files( $config, $section, "parameterSampleFile1" );
+    my $temp = get_raw_files( $config, $section, "parameterSampleFile1" );
     my @orderedSampleNames;
     my $parameterSampleFileOrder = $config->{$section}{parameterSampleFile1Order};
     if ( defined $parameterSampleFileOrder ) {
@@ -62,7 +66,7 @@ sub perform {
   }
   my $parametersample_files2 = "";
   if ( has_raw_files( $config, $section, "parameterSampleFile2" ) ) {
-    my $temp = get_raw_files( $config, $section, "parameterSampleFile2" ) ;
+    my $temp = get_raw_files( $config, $section, "parameterSampleFile2" );
     my @orderedSampleNames;
     my $parameterSampleFileOrder = $config->{$section}{parameterSampleFile2Order};
     if ( defined $parameterSampleFileOrder ) {
@@ -124,7 +128,6 @@ sub perform {
       my %temp = %{ get_raw_files( $config, $section, $output_file ) };
       foreach my $sample_name ( keys %temp ) {
         foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
-          my @output_file_exts = split( ";", $output_file_ext );
           $final_file = "${subSampleFile}" . $output_file_exts[0];
         }
       }
@@ -135,7 +138,6 @@ sub perform {
   }
   else {
     $output_file_r = $task_name . $output_file;
-    my @output_file_exts = split( ";", $output_file_ext );
     $final_file    = "${task_name}${output_file}" . $output_file_exts[0];
   }
 
