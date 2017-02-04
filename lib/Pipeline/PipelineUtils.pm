@@ -139,7 +139,6 @@ sub addBamStat {
     perform                  => 1,
     rtemplate                => "../Samtools/BamStat.r",
     output_file              => ".bamstat.csv",
-    output_file_ext          => "",
     sh_direct                => 1,
     parameterSampleFile1_ref => $sourceRef,
     cluster                  => $def->{cluster},
