@@ -142,6 +142,7 @@ sub result {
     my $bam_file     = "${result_dir}/${sample_name}.bam";
     my @result_files = ();
     push( @result_files, $bam_file );
+    push( @result_files, $bam_file . ".stat" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
