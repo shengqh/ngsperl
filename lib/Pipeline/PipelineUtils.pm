@@ -13,7 +13,7 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(initValue getValue addFastQC addBlastn addBowtie addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn)] );
+our %EXPORT_TAGS = ( 'all' => [qw(initValue getValue addFastQC addBlastn addBowtie addBamStat addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -128,6 +128,30 @@ sub addBowtie {
   };
 
   push @$individual, $taskName;
+}
+
+sub addBamStat {
+  my ( $config, $def, $summary, $taskName, $parentDir, $sourceRef ) = @_;
+
+  $config->{$taskName} = {
+    class                    => "CQS::UniqueR",
+    target_dir               => "${parentDir}/${taskName}",
+    perform                  => 1,
+    rtemplate                => "../Samtools/BamStat.r",
+    output_file              => ".bamstat.csv",
+    output_file_ext          => "",
+    sh_direct                => 1,
+    parameterSampleFile1_ref => $sourceRef,
+    cluster                  => $def->{cluster},
+    pbs                      => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    },
+  };
+  push @$summary, $taskName;
 }
 
 sub addDEseq2 {
