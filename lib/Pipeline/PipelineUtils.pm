@@ -131,11 +131,11 @@ sub addBowtie {
 }
 
 sub addBamStat {
-  my ( $config, $def, $summary, $taskName, $parentDir, $sourceRef ) = @_;
+  my ( $config, $def, $summary, $taskName, $targetDir, $sourceRef ) = @_;
 
   $config->{$taskName} = {
     class                    => "CQS::UniqueR",
-    target_dir               => "${parentDir}/${taskName}",
+    target_dir               => $targetDir,
     perform                  => 1,
     rtemplate                => "../Samtools/BamStat.r",
     output_file              => ".bamstat.csv",
