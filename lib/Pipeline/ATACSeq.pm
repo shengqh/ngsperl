@@ -33,9 +33,10 @@ sub initializeDefaultOptions {
 
   initValue( $def, "fastq_remove_N", 0 );
 
-  initValue( $def, "minimum_maq", 30 );
-
-  initValue( $def, "perform_cutadapt", 0 );
+  initValue( $def, "minimum_maq",         30 );
+  initValue( $def, "minimum_insert_size", 30 );
+  initValue( $def, "maximum_insert_size", 1000 );
+  initValue( $def, "perform_cutadapt",    0 );
   if ( getValue( $def, "perform_cutadapt" ) ) {
     initValue( $def, "adapter",         "CTGTCTCTTATACACATCT" );
     initValue( $def, "min_read_length", 36 );
@@ -148,7 +149,26 @@ sub getConfig {
     },
   };
   push @$individual, "bwa";
-  addBamStat( $config, $def, $summary, "bwa_stat", $target_dir, [ "bwa", ".stat\$" ] );
+  addBamStat( $config, $def, $summary, "bwa_stat", $target_dir . "/bwa", [ "bwa", ".stat\$" ] );
+  
+  $config->{bwa_insertsize} = {
+    class                    => "CQS::UniqueR",
+    target_dir               => $target_dir . "/bwa_insertsize",
+    perform                  => 1,
+    rtemplate                => "../Visualization/insertSize.r",
+    output_file              => ".insertsize.png",
+    sh_direct                => 1,
+    parameterSampleFile1_ref => ["bwa",".bam\$"],
+    cluster                  => $def->{cluster},
+    pbs                      => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    },
+  };
+  push @$summary, "bwa_insertsize";
 
   $config->{"bwa_cleanbam"} = {
     class                   => "ATACseq::CleanBam",
@@ -160,6 +180,8 @@ sub getConfig {
     remove_chromosome       => "M",
     keep_chromosome         => "chr",
     minimum_maq             => getValue( $def, "minimum_maq" ),
+    minimum_insert_size     => getValue( $def, "minimum_insert_size" ),
+    maximum_insert_size     => getValue( $def, "maximum_insert_size" ),
     blacklist_file          => $def->{blacklist_file},
     is_sorted_by_coordinate => 1,
     sh_direct               => 0,
@@ -171,7 +193,7 @@ sub getConfig {
     },
   };
   push @$individual, "bwa_cleanbam";
-  addBamStat( $config, $def, $summary, "bwa_cleanbam_stat", $target_dir, [ "bwa_cleanbam", ".stat\$" ] );
+  addBamStat( $config, $def, $summary, "bwa_cleanbam_stat", $target_dir . "/bwa_cleanbam", [ "bwa_cleanbam", ".stat\$" ] );
 
   if ( defined $config->{fastqc_count_vis} ) {
     my $files = $config->{fastqc_count_vis}{parameterFile1_ref};
@@ -183,8 +205,8 @@ sub getConfig {
       my $f = $config->{fastqc_count_vis}{parameterFile3_ref};
       push @$files, @$f;
     }
-    push @$files, ( "bwa",          ".stat\$" );
-    push @$files, ( "bwa_cleanbam", ".stat\$" );
+    push @$files, ( "bwa_stat",          ".csv\$" );
+    push @$files, ( "bwa_cleanbam_stat", ".csv\$" );
     $config->{"reads_in_task"} = {
       class                    => "CQS::UniqueR",
       target_dir               => "${target_dir}/reads_in_task",
@@ -201,7 +223,7 @@ sub getConfig {
         "mem"      => "10gb"
       },
     };
-    push @$individual, ("reads_in_task");
+    push @$summary, ("reads_in_task");
   }
 
   my $callerType = getValue( $def, "caller_type" );
