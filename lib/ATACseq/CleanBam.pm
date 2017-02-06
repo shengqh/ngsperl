@@ -110,22 +110,22 @@ fi
     }
 
     print $pbs "
-if [[ -s $input && !-s $filterFile ]]; then 
+if [[ -s $input && ! -s $filterFile ]]; then 
   echo FilterBam=`date` 
   samtools idxstats $input | cut -f 1 | grep -v $remove_chromosome $keep_chromosome | xargs samtools view $option -b -q $minimum_maq $input $filterOption 
   samtools index $filterFile 
 fi
 
-if [[ -s $filterFile && !-s $finalFile ]]; then 
+if [[ -s $filterFile && ! -s $finalFile ]]; then 
   echo RemoveUnpaired=`date` 
   samtools sort -n $filterFile | samtools fixmate -O bam - -| samtools view $option -b | samtools sort -T $sample_name -o $finalFile 
 fi
 
-if [[ -s $finalFile && !-s ${finalFile}.bai ]]; then 
+if [[ -s $finalFile && ! -s ${finalFile}.bai ]]; then 
   echo BamIndex=`date` 
   samtools index $finalFile 
   samtools flagstat $finalFile > ${finalFile}.stat 
-  #rm $rmlist $redupFile ${redupFile}.metrics ${redupFile}.bai $filterFile ${filterFile}.bai 
+  rm $rmlist $redupFile ${redupFile}.metrics ${redupFile}.bai $filterFile ${filterFile}.bai 
 fi ";
 
     $self->close_pbs( $pbs, $pbs_file );
