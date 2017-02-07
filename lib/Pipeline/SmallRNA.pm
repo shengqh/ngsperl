@@ -305,19 +305,21 @@ sub getSmallRNAConfig {
     push @name_for_pieSummary, "Host Small RNA";
     push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "^(?!.*?read).*\.count\$" );
 
-    push @name_for_readSummary, ( "Host miRNA", "Host tRNA", "Host other small RNA" );
-
+    push @name_for_readSummary, ( "Host miRNA", "Host tRNA");
     push @table_for_readSummary, (
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$",    #miRNA
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$"      #tRNA
     );
+    
     push @table_for_countSum, (
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$",         #miRNA
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$"           #tRNA
     );
     if ( $def->{hasYRNA} ) {
       push @table_for_countSum,    ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count\$" );
+      
       push @table_for_readSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.read.count\$" );
+      push @name_for_readSummary, ( "Host yRNA");
     }
     push @table_for_readSummary, (
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.read.count\$",     #snRNA
@@ -325,6 +327,8 @@ sub getSmallRNAConfig {
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.read.count\$",      #rRNA
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$"      #other
     );
+    push @name_for_readSummary, ( "Host snRNA","Host snoRNA","Host rRNA","Host other small RNA");
+    
     push @table_for_countSum, (
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count\$",          #snRNA
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count\$",         #snoRNA
