@@ -58,6 +58,7 @@ sub initializeDefaultOptions {
     initValue( $def, "homer_option", "" );
   }
 
+  initValue( $def, "perform_bamplot", 0 );
   if ( !defined $def->{"treatments"} ) {
     my $files = getValue( $def, "files" );
     my $groups = {};
@@ -150,7 +151,7 @@ sub getConfig {
   };
   push @$individual, "bwa";
   addBamStat( $config, $def, $summary, "bwa_stat", $target_dir . "/bwa", [ "bwa", ".stat\$" ] );
-  
+
   $config->{bwa_insertsize} = {
     class                    => "CQS::UniqueR",
     target_dir               => $target_dir . "/bwa_insertsize",
@@ -158,7 +159,7 @@ sub getConfig {
     rtemplate                => "../Visualization/insertSize.r",
     output_file              => ".insertsize.png",
     sh_direct                => 1,
-    parameterSampleFile1_ref => ["bwa",".bam\$"],
+    parameterSampleFile1_ref => [ "bwa", ".bam\$" ],
     cluster                  => $def->{cluster},
     pbs                      => {
       "email"     => $def->{email},
@@ -458,8 +459,8 @@ sub getConfig {
     }
   }
 
-  my $plot_gff = $def->{plot_gff};
-  if ($plot_gff) {
+  if ( getValue( $def, "perform_bamplot" ) ) {
+    my $plot_gff = $def->{bamplot_gff};
 
     # "-g HG19 -y uniform -r"
     my $bamplot_option = getValue( $def, "bamplot_option" );
