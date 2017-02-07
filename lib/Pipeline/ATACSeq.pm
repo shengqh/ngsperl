@@ -311,6 +311,33 @@ sub getConfig {
       };
       push @$individual, ($callName);
 
+      if ( getValue( $def, "perform_enhancer" ) ) {
+        my $enhancerName = $callName . "_enhancer";
+
+        $config->{$enhancerName} = {
+          class            => "Chipseq::Enhancer",
+          perform          => 1,
+          target_dir       => "${target_dir}/" . $enhancerName,
+          option           => "",
+          source_ref       => [ "bwa_cleanbam", ".bam\$" ],
+          peaks_ref        => [ $callName, $callFilePattern ],
+          pipeline_dir     => getValue( $def, "enhancer_folder" ),
+          genome           => getValue( $def, "enhancer_genome" ),
+          genome_path => getValue( $def, "enhancer_genome_path" ),
+          gsea_path        => getValue( $def, "enhancer_gsea_path" ),
+          gmx_path         => getValue( $def, "enhancer_gmx_path" ),
+          cpg_path         => getValue( $def, "enhancer_cpg_path" ),
+          sh_direct        => 1,
+          pbs              => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=1",
+            "walltime" => "72",
+            "mem"      => "40gb"
+          },
+        };
+        push @$individual, ($enhancerName);
+      }
+
       if ($perform_diffbind) {
         my $bindName = $callName . "_diffbind";
         $config->{$bindName} = {
@@ -338,9 +365,9 @@ sub getConfig {
       }
 
       if ($perform_rose) {
-        my $roseName = $callName . "_bradner_rose";
+        my $roseName = $callName . "_rose";
         $config->{$roseName} = {
-          class                => "Chipseq::BradnerRose2",
+          class                => "Chipseq::Rose2",
           perform              => 1,
           target_dir           => "${target_dir}/${roseName}",
           option               => "",
