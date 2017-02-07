@@ -531,15 +531,20 @@ aggregateCountTable<-function(x,group,method=sum) {
 }
 
 shortSpeciesName<-function(x) {
-	x<-sapply(strsplit(x," |_"),function(x) {
-				if (length(x)<=3) {
-					paste(x,collapse=" ")
-				} else if (grepl("^\\d+$",x[2]) | x[2]=="ATCC") {
-					paste(x[1:3],collapse=" ")
-				} else {
-					paste(x[1:2],collapse=" ")
-				}
-			})
+	res<-sapply(strsplit(x," |_"),function(x) {
+	  if (length(x)<=3) {
+      paste(x,collapse=" ")
+    } else if (grepl("^\\d+$",x[2]) | x[2]=="ATCC") {
+      paste(x[1:3],collapse=" ")
+    } else {
+      paste(x[1:2],collapse=" ")
+    }
+	})
+  if(length(unique(res)) != length(res)){
+    return(x)
+  }else{
+    return(res)
+  }
 }
 
 countTableToSpecies<-function(dat,databaseLogFile="",outFileName="",shortName=T) {
