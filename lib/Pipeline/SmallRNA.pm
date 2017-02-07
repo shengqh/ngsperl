@@ -149,8 +149,8 @@ sub getSmallRNAConfig {
     if ( !defined $def->{pairs_nonHostLibrary_deseq2_vis_layout} ) {
       $def->{pairs_nonHostLibrary_deseq2_vis_layout} = {
         "Col_Group" => [ (@$comparisons) x 5 ],
-        "Row_Group" => string_repeat( [ "tDR", "tDR Category", "tDR Species", "tDR Type", "tDR Anticodon" ], $numberOfComparison ),
-        "Groups" => string_combination( [ ["nonhost_tRNA"], [ "", "category", "species", "type", "anticodon" ], $sampleComparisons ], '_' )
+        "Row_Group" => string_repeat( [ "tDR", "tDR Species", "tDR Amino Acid", "tDR Anticodon", "tDR Reads" ], $numberOfComparison ),
+        "Groups" => string_combination( [ ["nonhost_tRNA"], [ "", "species", "type", "anticodon", "reads" ], $sampleComparisons ], '_' )
       };
     }
   }
@@ -740,10 +740,11 @@ sub getSmallRNAConfig {
       addDeseq2Visualization(
         $config, $def,
         $summary_ref,
-        "nonhost_library",
+        "nonhost_tRNA",
         [
-          "deseq2_nonhost_tRNA",      "_DESeq2.csv\$", "deseq2_nonhost_tRNA_category",  "_DESeq2.csv\$", "deseq2_nonhost_tRNA_species", "_DESeq2.csv\$",
-          "deseq2_nonhost_tRNA_type", "_DESeq2.csv\$", "deseq2_nonhost_tRNA_anticodon", "_DESeq2.csv\$"
+          "deseq2_nonhost_tRNA",      "_DESeq2.csv\$", "deseq2_nonhost_tRNA_species", "_DESeq2.csv\$",
+          "deseq2_nonhost_tRNA_type", "_DESeq2.csv\$", "deseq2_nonhost_tRNA_anticodon", "_DESeq2.csv\$",
+          "deseq2_nonhost_tRNA_reads", "_DESeq2.csv\$"
         ],
         $data_visualization_dir,
         "pairs_nonHostLibrary_deseq2_vis_layout"
