@@ -305,8 +305,10 @@ sub getSmallRNAConfig {
     push @name_for_pieSummary, "Host Small RNA";
     push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "^(?!.*?read).*\.count\$" );
 
-    push @name_for_readSummary, ( "Host miRNA", "Host tRNA", "Host other small RNA" );
-
+    push @name_for_readSummary, (
+      "Host miRNA",    #miRNA
+      "Host tRNA"      #tRNA
+    );
     push @table_for_readSummary, (
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$",    #miRNA
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$"      #tRNA
@@ -316,9 +318,16 @@ sub getSmallRNAConfig {
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$"           #tRNA
     );
     if ( $def->{hasYRNA} ) {
+      push @name_for_readSummary, "Host yRNA";
       push @table_for_countSum,    ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count\$" );
       push @table_for_readSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.read.count\$" );
     }
+    push @name_for_readSummary, (
+      "Host snRNA",                                                      #snRNA
+      "Host snoRNA",                                                     #snoRNA
+      "Host rRNA",                                                       #rRNA
+      "Host other small RNA",                                            #other
+    );
     push @table_for_readSummary, (
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.read.count\$",     #snRNA
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.read.count\$",    #snoRNA
@@ -391,103 +400,81 @@ sub getSmallRNAConfig {
       addDeseq2Visualization( $config, $def, $summary_ref, "host_genome", \@visual_source, $data_visualization_dir, "pairs_host_deseq2_vis_layout" );
     }
     if ( $do_comparison or defined $groups or defined $def->{tRNA_vis_group} ) {
-      my $trna_vis_groups;
       my $trna_sig_result;
-      if ( defined $def->{tRNA_vis_group} ) {
-        $trna_vis_groups = $def->{tRNA_vis_group};
+      if ( !defined $def->{tRNA_vis_group} ) {
+        $def->{tRNA_vis_group} = $groups;
       }
-      else {
-        $trna_vis_groups = $groups;
-      }
+
       if ($do_comparison) {
         $trna_sig_result = [ "deseq2_tRNA", "_DESeq2_sig.csv\$" ];
       }
-      $config->{host_genome_tRNA_PositionVis} = {
-        class                => "CQS::UniqueR",
-        perform              => 1,
-        target_dir           => $data_visualization_dir . "/host_genome_tRNA_PositionVis",
-        rtemplate            => "smallRnaPositionVis.R",
-        output_file          => ".tRNAPositionVis",
-        output_file_ext      => ".allPositionBar.png",
-        parameterFile1_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count.position\$" ],
-        parameterFile2_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
-        parameterSampleFile1 => $trna_vis_groups,
-        parameterSampleFile2 => $def->{groups_vis_layout},
 
-        #        parameterSampleFile3_ref => $trna_sig_result,
-        sh_direct => 1,
-        pbs       => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      };
-      $config->{host_genome_tRNA_PositionVis_anticodon} = {
-        class                => "CQS::UniqueR",
-        perform              => 1,
-        target_dir           => $data_visualization_dir . "/host_genome_tRNA_PositionVis_anticodon",
-        rtemplate            => "smallRnaPositionVis.R",
-        output_file          => ".tRNAAnticodonPositionVis",
-        output_file_ext      => ".allPositionBar.png",
-        parameterFile1_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count.position\$" ],
-        parameterFile2_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
-        parameterSampleFile1 => $trna_vis_groups,
-        parameterSampleFile2 => $def->{groups_vis_layout},
+      addPositionVis(
+        $config, $def,
+        $summary_ref,
+        "host_genome_miRNA_PositionVis",
+        $data_visualization_dir,
+        {
+          output_file        => ".miRNAPositionVis",
+          parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count.position\$" ],
+        }
+      );
+      addPositionVis(
+        $config, $def,
+        $summary_ref,
+        "host_genome_tRNA_PositionVis",
+        $data_visualization_dir,
+        {
+          output_file        => ".tRNAPositionVis",
+          parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count.position\$" ],
 
-        #        parameterSampleFile3_ref => $trna_sig_result,
-        sh_direct => 1,
-        pbs       => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      };
-      $config->{host_genome_miRNA_PositionVis} = {
-        class                => "CQS::UniqueR",
-        perform              => 1,
-        target_dir           => $data_visualization_dir . "/host_genome_miRNA_PositionVis",
-        rtemplate            => "smallRnaPositionVis.R",
-        output_file          => ".miRNAPositionVis",
-        output_file_ext      => ".allPositionBar.png",
-        parameterFile1_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count.position\$" ],
-        parameterFile2_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
-        parameterSampleFile1 => $trna_vis_groups,
-        parameterSampleFile2 => $def->{groups_vis_layout},
-        sh_direct            => 1,
-        pbs                  => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      };
+          #        parameterSampleFile3_ref => $trna_sig_result,
+        }
+      );
+      addPositionVis(
+        $config, $def,
+        $summary_ref,
+        "host_genome_tRNA_PositionVis_anticodon",
+        $data_visualization_dir,
+        {
+          output_file        => ".tRNAAnticodonPositionVis",
+          parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count.position\$" ],
 
-      $config->{host_genome_snRNA_PositionVis} = {
-        class                => "CQS::UniqueR",
-        perform              => 1,
-        target_dir           => $data_visualization_dir . "/host_genome_snRNA_PositionVis",
-        rtemplate            => "smallRnaPositionVis.R",
-        output_file          => ".snRNAPositionVis",
-        output_file_ext      => ".allPositionBar.png",
-        parameterFile1_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count.position\$" ],
-        parameterFile2_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
-        parameterSampleFile1 => $trna_vis_groups,
-        parameterSampleFile2 => $def->{groups_vis_layout},
-        sh_direct            => 1,
-        pbs                  => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      };
-      push @$summary_ref, ( "host_genome_tRNA_PositionVis", "host_genome_tRNA_PositionVis_anticodon", "host_genome_miRNA_PositionVis", "host_genome_snRNA_PositionVis" );
+          #        parameterSampleFile3_ref => $trna_sig_result,
+        }
+      );
+      if ( $def->{hasYRNA} ) {
+        addPositionVis(
+          $config, $def,
+          $summary_ref,
+          "host_genome_yRNA_PositionVis",
+          $data_visualization_dir,
+          {
+            output_file        => ".yRNAPositionVis",
+            parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count.position\$" ],
+          }
+        );
+      }
+      addPositionVis(
+        $config, $def,
+        $summary_ref,
+        "host_genome_snRNA_PositionVis",
+        $data_visualization_dir,
+        {
+          output_file        => ".snRNAPositionVis",
+          parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count.position\$" ],
+        }
+      );
+      addPositionVis(
+        $config, $def,
+        $summary_ref,
+        "host_genome_snoRNA_PositionVis",
+        $data_visualization_dir,
+        {
+          output_file        => ".snoRNAPositionVis",
+          parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count.position\$" ],
+        }
+      );
     }
 
     my $unmapped_reads = {
