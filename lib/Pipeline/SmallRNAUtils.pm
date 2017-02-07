@@ -14,7 +14,7 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(getSmallRNADefinition getPrepareConfig isVersion3 addNonhostDatabase addNonhostVis)] );
+our %EXPORT_TAGS = ( 'all' => [qw(getSmallRNADefinition getPrepareConfig isVersion3 addNonhostDatabase addPositionVis addNonhostVis)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -115,6 +115,32 @@ sub addNonhostDatabase {
   push @$summary,    $bowtie1TableTask;
 }
 
+sub addPositionVis {
+  my ( $config, $def, $summary, $taskName, $parentDir, $optionHash ) = @_;
+  $config->{$taskName} = merge(
+    $optionHash,
+    {
+      class                => "CQS::UniqueR",
+      perform              => 1,
+      target_dir           => $parentDir . "/$taskName",
+      rtemplate            => "smallRnaPositionVis.R",
+      output_file_ext      => ".allPositionBar.png",
+      parameterFile2_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
+      parameterSampleFile1 => $def->{tRNA_vis_group},
+      parameterSampleFile2 => $def->{groups_vis_layout},
+      sh_direct => 1,
+      pbs       => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    }
+  );
+  push @$summary, $taskName;
+}
+
 sub addNonhostVis {
   my ( $config, $def, $summary, $taskName, $parentDir, $optionHash ) = @_;
 
@@ -174,7 +200,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "DE_detected_in_both_group",   1 );
   initDefaultValue( $def, "DE_perform_wilcox",           0 );
   initDefaultValue( $def, "DE_use_raw_pvalue",           1 );
-  initDefaultValue( $def, "DE_text_size",               10 );
+  initDefaultValue( $def, "DE_text_size",                10 );
   initDefaultValue( $def, "max_sequence_extension_base", 1 );
   initDefaultValue( $def, "top_read_number",             100 );
 
