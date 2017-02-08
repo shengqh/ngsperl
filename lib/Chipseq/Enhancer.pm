@@ -64,17 +64,12 @@ sub perform {
     my $log      = $self->get_log_filename( $log_dir, $fileName );
 
     my $log_desc = $cluster->get_log_description($log);
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
-    for my $peak (@peaks) {
-      my ( $filename, $dirs, $suffix ) = fileparse( $peak, ".bed\$" );
-      $filename =~ s/\./_/g;
+    my $final_file   = "${fileName}_peaks/${fileName}_GENE_TABLE.txt";
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    my $peak = $peaks[0];
 
-      my $final_file = "${cur_dir}/${filename}_peaks_AllEnhancers.table.txt";
-      print $pbs "if [ ! -s $final_file ]; then 
-  python $pipeline_dir/enhancerPromoter.py -b $bamFile -i $peak -g $genome -o . --genomeDirectory $genomeDirectory --gseaPath $gseaPath --gmxPath $gmxPath --cpgPath $cpgPath
-fi
-";
-    }
+    print $pbs "python $pipeline_dir/enhancerPromoter.py -b $bamFile -i $peak -g $genome -o . --genomeDirectory $genomeDirectory --gseaPath $gseaPath --gmxPath $gmxPath --cpgPath $cpgPath \n";
+
     $self->close_pbs( $pbs, $pbs_file );
     print $sh "\$MYCMD ./$pbs_name \n";
   }
@@ -96,7 +91,7 @@ sub result {
   for my $fileName ( keys %$rawFiles ) {
     my $cur_dir      = $result_dir . "/$fileName";
     my @result_files = ();
-    my $final_file   = "${fileName}_AllEnhancers.table.txt";
+    my $final_file   = "${fileName}_peaks/${fileName}_GENE_TABLE.txt";
     push( @result_files, $cur_dir . "/$final_file" );
     $result->{$fileName} = filter_array( \@result_files, $pattern );
   }
