@@ -67,12 +67,13 @@ sub getSmallRNAConfig {
     getValue( $def, "tDRmapper_fasta" );
   }
 
-  my @table_for_correlation = ( "identical_sequence_count_table", "^(?!.*?read).*\.count\$" );
-  my @table_for_countSum    = ();
-  my @table_for_pieSummary  = ();
-  my @name_for_pieSummary   = ();
-  my @table_for_readSummary = ();
-  my @name_for_readSummary  = ();
+  my @table_for_correlation  = ( "identical_sequence_count_table", "^(?!.*?read).*\.count\$" );
+  my @table_for_countSum     = ();
+  my @table_for_pieSummary   = ();
+  my @name_for_pieSummary    = ();
+  my @table_for_readSummary  = ();
+  my @name_for_readSummary   = ();
+  my @name_for_mapPercentage = ( "identical", "dupcount\$" );
 
   #print Dumper($config);
   my $groups = $def->{groups};
@@ -296,6 +297,8 @@ sub getSmallRNAConfig {
         },
       },
     };
+
+    push( @name_for_mapPercentage, "bowtie1_genome_1mm_NTA_smallRNA_count", "count.mapped.xml" );
 
     if ( $def->{has_NTA} && $def->{consider_tRNA_NTA} ) {
       $host_genome->{"bowtie1_genome_1mm_NTA_smallRNA_count"}{"cca_file_ref"} = "identical_check_cca";
@@ -535,6 +538,9 @@ sub getSmallRNAConfig {
       }
     };
     $config = merge( $config, $unmapped_reads );
+
+    push( @name_for_mapPercentage, "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.dupcount\$" );
+
     push @$individual_ref, ( "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_genome_unmapped_reads" );
     push @$summary_ref, ("bowtie1_genome_host_reads_table");
     push @table_for_pieSummary,
@@ -558,6 +564,7 @@ sub getSmallRNAConfig {
       $def->{smallrnacount_option} . ' --keepChrInName --categoryMapFile ' . $def->{all_nonHost_map},            #count option
       $def->{nonhost_table_option}                                                                               #table option
     );
+
     addNonhostVis(
       $config, $def,
       $summary_ref,
@@ -580,6 +587,7 @@ sub getSmallRNAConfig {
       $def->{smallrnacount_option} . ' --keepChrInName --keepSequence',                           #count option
       $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{bacteria_group1_species_map}  #table option
     );
+
     addNonhostVis(
       $config, $def,
       $summary_ref,
@@ -634,6 +642,14 @@ sub getSmallRNAConfig {
         parameterFile1_ref => [ "bowtie1_fungus_group4_pm_table", ".category.count\$" ],
         rCode              => 'maxCategory=8;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
       }
+    );
+
+    push(
+      @name_for_mapPercentage,
+      "bowtie1_bacteria_group1_pm_count",
+      ".count.mapped.xml\$", "bowtie1_bacteria_group2_pm_count",
+      ".count.mapped.xml\$", "bowtie1_fungus_group4_pm_count",
+      ".count.mapped.xml\$"
     );
 
     push @table_for_correlation,
@@ -720,6 +736,7 @@ sub getSmallRNAConfig {
         rCode              => 'maxCategory=NA;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
       }
     );
+    push( @name_for_mapPercentage, "bowtie1_tRNA_pm_count", ".count.mapped.xml\$", "bowtie1_rRNA_pm_count", ".count.mapped.xml\$", );
 
     push @table_for_correlation, ( "bowtie1_tRNA_pm_table", "^(?!.*?read).*\.count\$", "bowtie1_rRNA_pm_table", "^(?!.*?read).*\.count\$" );
     push @table_for_countSum,    ( "bowtie1_tRNA_pm_table", ".category.count\$",       "bowtie1_rRNA_pm_table", "$task_name\.count\$" );
@@ -742,9 +759,8 @@ sub getSmallRNAConfig {
         $summary_ref,
         "nonhost_tRNA",
         [
-          "deseq2_nonhost_tRNA",      "_DESeq2.csv\$", "deseq2_nonhost_tRNA_species", "_DESeq2.csv\$",
-          "deseq2_nonhost_tRNA_type", "_DESeq2.csv\$", "deseq2_nonhost_tRNA_anticodon", "_DESeq2.csv\$",
-          "deseq2_nonhost_tRNA_reads", "_DESeq2.csv\$"
+          "deseq2_nonhost_tRNA",           "_DESeq2.csv\$", "deseq2_nonhost_tRNA_species", "_DESeq2.csv\$", "deseq2_nonhost_tRNA_type", "_DESeq2.csv\$",
+          "deseq2_nonhost_tRNA_anticodon", "_DESeq2.csv\$", "deseq2_nonhost_tRNA_reads",   "_DESeq2.csv\$"
         ],
         $data_visualization_dir,
         "pairs_nonHostLibrary_deseq2_vis_layout"
@@ -803,6 +819,27 @@ sub getSmallRNAConfig {
     push @$individual_ref,      ("final_unmapped_reads");
     push @table_for_pieSummary, ( "final_unmapped_reads", ".dupcount" );
     push @name_for_pieSummary,  ("UnMapped");
+
+    if ( $def->{perform_map_percentage} ) {
+      my $name_for_readSummary_r = "readFilesModule=c('" . join( "','", @name_for_readSummary ) . "')";
+      $config->{map_percentage} = {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $data_visualization_dir . "/map_percentage",
+        rtemplate                => "ReadsMappingSummary.R",
+        output_file_ext          => ".mapPercentage.csv",
+        parameterSampleFile1_ref => \@name_for_mapPercentage,
+        sh_direct                => 1,
+        pbs                      => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "12",
+          "mem"       => "10gb"
+        },
+      };
+      push @$individual_ref, "map_percentage";
+    }
   }
 
   $config->{count_table_correlation} = {
@@ -823,8 +860,9 @@ sub getSmallRNAConfig {
       "walltime"  => "1",
       "mem"       => "10gb"
     },
-    },
-    $config->{reads_in_tasks} = {
+  };
+
+  $config->{reads_in_tasks} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
     target_dir               => $data_visualization_dir . "/reads_in_tasks",
@@ -840,7 +878,7 @@ sub getSmallRNAConfig {
       "walltime"  => "12",
       "mem"       => "10gb"
     },
-    };
+  };
 
   my $name_for_pieSummary_r = "readFilesModule=c('" . join( "','", @name_for_pieSummary ) . "')";
   $config->{reads_in_tasks_pie} = {
