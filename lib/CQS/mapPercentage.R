@@ -66,6 +66,7 @@ for (curSample in samples) {
   df2$Measure<-"Percentage"
   
   dfall<-rbind(df, df2)
+  dfall$Category=factor(dfall$Category, levels=c("Host smallRNA","Host genome","Nonhost","Unmapped"))
   g<-ggplot(dfall, aes(x=ReadCount, y=Value, fill=Category)) + geom_bar(stat="identity") + facet_wrap(~Measure, nrow=2, scales="free_y")
   png(file=paste0(curSample, ".mapped.png"), width=1600, height=2000, res=300)
   print(g)
