@@ -64,7 +64,7 @@ sub perform {
     my $log      = $self->get_log_filename( $log_dir, $fileName );
 
     my $log_desc = $cluster->get_log_description($log);
-    my $final_file   = "${fileName}_peaks/${fileName}_GENE_TABLE.txt";
+    my $final_file   = "${fileName}_peaks/${fileName}_peaks_GENE_TABLE.txt";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
     my $peak = $peaks[0];
 
