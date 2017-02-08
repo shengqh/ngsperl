@@ -826,7 +826,7 @@ sub getSmallRNAConfig {
         class                    => "CQS::UniqueR",
         perform                  => 1,
         target_dir               => $data_visualization_dir . "/map_percentage",
-        rtemplate                => "ReadsMappingSummary.R",
+        rtemplate                => "mapPercentage.R",
         output_file_ext          => ".mapPercentage.csv",
         parameterSampleFile1_ref => \@name_for_mapPercentage,
         sh_direct                => 1,
@@ -851,7 +851,7 @@ sub getSmallRNAConfig {
     output_file_ext           => ".Correlation.png",
     parameterSampleFile1_ref  => \@table_for_correlation,
     parameterSampleFile2Order => $def->{groups_order},
-    parameterSampleFile2      => $groups,
+    parameterSampleFile2      => $def->{tRNA_vis_group},
     sh_direct                 => 1,
     pbs                       => {
       "email"     => $def->{email},
