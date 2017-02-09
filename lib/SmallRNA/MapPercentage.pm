@@ -38,6 +38,10 @@ sub perform {
     die "File not found : " . $rtemplate;
   }
 
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
+
   for my $fileName ( keys %$rawFiles ) {
     my $fileListFile = "${result_dir}/${fileName}.filelist";
     open( my $df, ">$fileListFile" ) or die "Cannot create $fileListFile";
@@ -58,6 +62,12 @@ sub perform {
     print $pbs "R --vanilla -f $rtemplate --args $fileListFile $fileName\n";
 
     $self->close_pbs( $pbs, $pbs_file );
+    print $sh "\$MYCMD ./$pbs_name \n";
+  }
+  print $sh "exit 0\n";
+  close $sh;
+  if ( is_linux() ) {
+    chmod 0755, $shfile;
   }
 }
 
