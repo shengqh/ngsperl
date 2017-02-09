@@ -2,8 +2,8 @@ args = commandArgs(trailingOnly = TRUE)
 
 DEBUG=0
 if(!DEBUG){
-  readFileList<-argv[1]
-  resultPrefix<-argv[2]
+  readFileList<-args[1]
+  resultPrefix<-args[2]
 }else{
   readFileList="/scratch/cqs/shengq1/vickers/20161223_smallRNA_3018-KCV-77_78_79_86_v3/data_visualization/map_percentage/result/Urine_WT_14.filelist"
   resultPrefix="/scratch/cqs/shengq1/vickers/20161223_smallRNA_3018-KCV-77_78_79_86_v3/data_visualization/map_percentage/result/Urine_WT_14"
