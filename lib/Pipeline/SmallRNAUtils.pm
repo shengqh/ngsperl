@@ -128,8 +128,8 @@ sub addPositionVis {
       parameterFile2_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
       parameterSampleFile1 => $def->{tRNA_vis_group},
       parameterSampleFile2 => $def->{groups_vis_layout},
-      sh_direct            => 1,
-      pbs                  => {
+      sh_direct => 1,
+      pbs       => {
         "email"     => $def->{email},
         "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
@@ -175,7 +175,7 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "cluster",            "slurm" );
   initDefaultValue( $def, "min_read_length",    16 );
-  initDefaultValue( $def, "bowtie1_option_1mm", "-a -m 1000 --best --strata -v 1" );
+  initDefaultValue( $def, "bowtie1_option_1mm", "-a -m 100 --best --strata -v 1" );
   initDefaultValue( $def, "bowtie1_option_pm",  "-a -m 1000 --best --strata -v 0" );
   initDefaultValue( $def, "fastq_remove_N",     1 );
 
