@@ -18,6 +18,19 @@ textSize<-9
 
 ##predefined_condition_end
 
+suffix<-"";
+if(top25only){
+  suffix=paste0(suffix,"_top25")
+}
+
+if(detectedInBothGroup){
+  suffix=paste0(suffix, "_detectedInBothGroup")
+}
+
+if(minMedianInGroup > 0){
+  suffix=paste0(suffix, "_min", minMedianInGroup)
+}
+
 zeroCount=0
 if(addCountOne){
   zeroCount=1
@@ -302,7 +315,7 @@ for(countfile_index in c(1:length(countfiles))){
     }
     comparisonData<-comparisonData[,as.character(designData$Sample)]
     
-    prefix<-comparisonName
+    prefix<-paste0(comparisonName, suffix)
     if(top25only){
       ranks=apply(comparisonData, 2, function(x){
         y=x[x > 0]
@@ -315,8 +328,6 @@ for(countfile_index in c(1:length(countfiles))){
       })
       
       comparisonData=comparisonData[select,]
-      
-      prefix=paste0(prefix,"_top25")
     }
     
     if(detectedInBothGroup){
@@ -328,8 +339,6 @@ for(countfile_index in c(1:length(countfiles))){
       med<-med1 & med2
       
       comparisonData<-comparisonData[med,]
-      
-      prefix=paste0(prefix,"_detectedInBothGroup")
     }
     
     if(performWilcox){
@@ -384,8 +393,6 @@ for(countfile_index in c(1:length(countfiles))){
         writeLines(message,paste0(comparisonName,".error"))
         next;
       }
-      
-      prefix<-paste0(prefix, "_min", minMedianInGroup)
     }
     
     if(ispaired){
@@ -678,230 +685,231 @@ for(countfile_index in c(1:length(countfiles))){
 allprefix=basename(inputfile)
 #Venn for all significant genes
 #Output all significant genes table
-sigTableAll<-cbind(Gene=sigTableAllGene,sigTableAll)
-write.csv(sigTableAll,paste0(allprefix,"_DESeq2_allSig.csv"),row.names=FALSE)
-
-#Do venn if length between 2-5
-if (length(allSigNameList)>=2 & length(allSigNameList)<=5) {
-  venn.diagram1<-function (x, filename, height = 3000, width = 3000, resolution = 500, 
-                           units = "px", compression = "lzw", na = "stop", main = NULL, 
-                           sub = NULL, main.pos = c(0.5, 1.05), main.fontface = "plain", 
-                           main.fontfamily = "serif", main.col = "black", main.cex = 1, 
-                           main.just = c(0.5, 1), sub.pos = c(0.5, 1.05), sub.fontface = "plain", 
-                           sub.fontfamily = "serif", sub.col = "black", sub.cex = 1, 
-                           sub.just = c(0.5, 1), category.names = names(x), force.unique = TRUE,
-                           fill=NA,
-                           ...) 
-  {
-    if (is.na(fill[1])) {
-      if (length(x)==5) {
-        fill = c("dodgerblue", "goldenrod1", "darkorange1", "seagreen3", "orchid3")
-      } else if (length(x)==4) {
-        fill = c("dodgerblue", "goldenrod1",  "seagreen3", "orchid3")
-      } else if (length(x)==3) {
-        fill = c("dodgerblue", "goldenrod1", "seagreen3")
-      } else if (length(x)==2) {
-        fill = c("dodgerblue", "goldenrod1")
-      }
-    }
-    if (force.unique) {
-      for (i in 1:length(x)) {
-        x[[i]] <- unique(x[[i]])
-      }
-    }
-    if ("none" == na) {
-      x <- x
-    }
-    else if ("stop" == na) {
-      for (i in 1:length(x)) {
-        if (any(is.na(x[[i]]))) {
-          stop("NAs in dataset", call. = FALSE)
+if(!is.null(sigTableAll)){
+  sigTableAll<-cbind(Gene=sigTableAllGene,sigTableAll)
+  write.csv(sigTableAll,paste0(allprefix, suffix, "_DESeq2_allSig.csv"),row.names=FALSE)
+  
+  #Do venn if length between 2-5
+  if (length(allSigNameList)>=2 & length(allSigNameList)<=5) {
+    venn.diagram1<-function (x, filename, height = 3000, width = 3000, resolution = 500, 
+                             units = "px", compression = "lzw", na = "stop", main = NULL, 
+                             sub = NULL, main.pos = c(0.5, 1.05), main.fontface = "plain", 
+                             main.fontfamily = "serif", main.col = "black", main.cex = 1, 
+                             main.just = c(0.5, 1), sub.pos = c(0.5, 1.05), sub.fontface = "plain", 
+                             sub.fontfamily = "serif", sub.col = "black", sub.cex = 1, 
+                             sub.just = c(0.5, 1), category.names = names(x), force.unique = TRUE,
+                             fill=NA,
+                             ...) 
+    {
+      if (is.na(fill[1])) {
+        if (length(x)==5) {
+          fill = c("dodgerblue", "goldenrod1", "darkorange1", "seagreen3", "orchid3")
+        } else if (length(x)==4) {
+          fill = c("dodgerblue", "goldenrod1",  "seagreen3", "orchid3")
+        } else if (length(x)==3) {
+          fill = c("dodgerblue", "goldenrod1", "seagreen3")
+        } else if (length(x)==2) {
+          fill = c("dodgerblue", "goldenrod1")
         }
       }
-    }
-    else if ("remove" == na) {
-      for (i in 1:length(x)) {
-        x[[i]] <- x[[i]][!is.na(x[[i]])]
+      if (force.unique) {
+        for (i in 1:length(x)) {
+          x[[i]] <- unique(x[[i]])
+        }
       }
-    }
-    else {
-      stop("Invalid na option: valid options are \"none\", \"stop\", and \"remove\"")
-    }
-    if (0 == length(x) | length(x) > 5) {
-      stop("Incorrect number of elements.", call. = FALSE)
-    }
-    if (1 == length(x)) {
-      list.names <- category.names
-      if (is.null(list.names)) {
-        list.names <- ""
+      if ("none" == na) {
+        x <- x
       }
-      grob.list <- VennDiagram::draw.single.venn(area = length(x[[1]]), 
-                                                 category = list.names, ind = FALSE,fill=fill, ...)
-    }
-    else if (2 == length(x)) {
-      grob.list <- VennDiagram::draw.pairwise.venn(area1 = length(x[[1]]), 
-                                                   area2 = length(x[[2]]), cross.area = length(intersect(x[[1]], 
-                                                                                                         x[[2]])), category = category.names, ind = FALSE, 
+      else if ("stop" == na) {
+        for (i in 1:length(x)) {
+          if (any(is.na(x[[i]]))) {
+            stop("NAs in dataset", call. = FALSE)
+          }
+        }
+      }
+      else if ("remove" == na) {
+        for (i in 1:length(x)) {
+          x[[i]] <- x[[i]][!is.na(x[[i]])]
+        }
+      }
+      else {
+        stop("Invalid na option: valid options are \"none\", \"stop\", and \"remove\"")
+      }
+      if (0 == length(x) | length(x) > 5) {
+        stop("Incorrect number of elements.", call. = FALSE)
+      }
+      if (1 == length(x)) {
+        list.names <- category.names
+        if (is.null(list.names)) {
+          list.names <- ""
+        }
+        grob.list <- VennDiagram::draw.single.venn(area = length(x[[1]]), 
+                                                   category = list.names, ind = FALSE,fill=fill, ...)
+      }
+      else if (2 == length(x)) {
+        grob.list <- VennDiagram::draw.pairwise.venn(area1 = length(x[[1]]), 
+                                                     area2 = length(x[[2]]), cross.area = length(intersect(x[[1]], 
+                                                                                                           x[[2]])), category = category.names, ind = FALSE, 
+                                                     fill=fill,
+                                                     ...)
+      }
+      else if (3 == length(x)) {
+        A <- x[[1]]
+        B <- x[[2]]
+        C <- x[[3]]
+        list.names <- category.names
+        nab <- intersect(A, B)
+        nbc <- intersect(B, C)
+        nac <- intersect(A, C)
+        nabc <- intersect(nab, C)
+        grob.list <- VennDiagram::draw.triple.venn(area1 = length(A), 
+                                                   area2 = length(B), area3 = length(C), n12 = length(nab), 
+                                                   n23 = length(nbc), n13 = length(nac), n123 = length(nabc), 
+                                                   category = list.names, ind = FALSE, list.order = 1:3, 
                                                    fill=fill,
                                                    ...)
-    }
-    else if (3 == length(x)) {
-      A <- x[[1]]
-      B <- x[[2]]
-      C <- x[[3]]
-      list.names <- category.names
-      nab <- intersect(A, B)
-      nbc <- intersect(B, C)
-      nac <- intersect(A, C)
-      nabc <- intersect(nab, C)
-      grob.list <- VennDiagram::draw.triple.venn(area1 = length(A), 
-                                                 area2 = length(B), area3 = length(C), n12 = length(nab), 
-                                                 n23 = length(nbc), n13 = length(nac), n123 = length(nabc), 
-                                                 category = list.names, ind = FALSE, list.order = 1:3, 
-                                                 fill=fill,
-                                                 ...)
-    }
-    else if (4 == length(x)) {
-      A <- x[[1]]
-      B <- x[[2]]
-      C <- x[[3]]
-      D <- x[[4]]
-      list.names <- category.names
-      n12 <- intersect(A, B)
-      n13 <- intersect(A, C)
-      n14 <- intersect(A, D)
-      n23 <- intersect(B, C)
-      n24 <- intersect(B, D)
-      n34 <- intersect(C, D)
-      n123 <- intersect(n12, C)
-      n124 <- intersect(n12, D)
-      n134 <- intersect(n13, D)
-      n234 <- intersect(n23, D)
-      n1234 <- intersect(n123, D)
-      grob.list <- VennDiagram::draw.quad.venn(area1 = length(A), 
-                                               area2 = length(B), area3 = length(C), area4 = length(D), 
-                                               n12 = length(n12), n13 = length(n13), n14 = length(n14), 
-                                               n23 = length(n23), n24 = length(n24), n34 = length(n34), 
-                                               n123 = length(n123), n124 = length(n124), n134 = length(n134), 
-                                               n234 = length(n234), n1234 = length(n1234), category = list.names, 
-                                               ind = FALSE, fill=fill,...)
-    }
-    else if (5 == length(x)) {
-      A <- x[[1]]
-      B <- x[[2]]
-      C <- x[[3]]
-      D <- x[[4]]
-      E <- x[[5]]
-      list.names <- category.names
-      n12 <- intersect(A, B)
-      n13 <- intersect(A, C)
-      n14 <- intersect(A, D)
-      n15 <- intersect(A, E)
-      n23 <- intersect(B, C)
-      n24 <- intersect(B, D)
-      n25 <- intersect(B, E)
-      n34 <- intersect(C, D)
-      n35 <- intersect(C, E)
-      n45 <- intersect(D, E)
-      n123 <- intersect(n12, C)
-      n124 <- intersect(n12, D)
-      n125 <- intersect(n12, E)
-      n134 <- intersect(n13, D)
-      n135 <- intersect(n13, E)
-      n145 <- intersect(n14, E)
-      n234 <- intersect(n23, D)
-      n235 <- intersect(n23, E)
-      n245 <- intersect(n24, E)
-      n345 <- intersect(n34, E)
-      n1234 <- intersect(n123, D)
-      n1235 <- intersect(n123, E)
-      n1245 <- intersect(n124, E)
-      n1345 <- intersect(n134, E)
-      n2345 <- intersect(n234, E)
-      n12345 <- intersect(n1234, E)
-      grob.list <- VennDiagram::draw.quintuple.venn(area1 = length(A), 
-                                                    area2 = length(B), area3 = length(C), area4 = length(D), 
-                                                    area5 = length(E), n12 = length(n12), n13 = length(n13), 
-                                                    n14 = length(n14), n15 = length(n15), n23 = length(n23), 
-                                                    n24 = length(n24), n25 = length(n25), n34 = length(n34), 
-                                                    n35 = length(n35), n45 = length(n45), n123 = length(n123), 
-                                                    n124 = length(n124), n125 = length(n125), n134 = length(n134), 
-                                                    n135 = length(n135), n145 = length(n145), n234 = length(n234), 
-                                                    n235 = length(n235), n245 = length(n245), n345 = length(n345), 
-                                                    n1234 = length(n1234), n1235 = length(n1235), n1245 = length(n1245), 
-                                                    n1345 = length(n1345), n2345 = length(n2345), n12345 = length(n12345), 
-                                                    category = list.names, ind = FALSE,fill=fill, ...)
-    }
-    else {
-      stop("Invalid size of input object")
-    }
-    if (!is.null(sub)) {
-      grob.list <- add.title(gList = grob.list, x = sub, pos = sub.pos, 
-                             fontface = sub.fontface, fontfamily = sub.fontfamily, 
-                             col = sub.col, cex = sub.cex)
-    }
-    if (!is.null(main)) {
-      grob.list <- add.title(gList = grob.list, x = main, pos = main.pos, 
-                             fontface = main.fontface, fontfamily = main.fontfamily, 
-                             col = main.col, cex = main.cex)
-    }
-    grid.newpage()
-    grid.draw(grob.list)
-    return(1)
-    # return(grob.list)
-  }
-  makeColors<-function(n,colorNames="Set1") {
-    maxN<-brewer.pal.info[colorNames,"maxcolors"]
-    if (n<=maxN) {
-      colors<-brewer.pal(n, colorNames)
-      if (length(colors)>n) {
-        colors<-colors[1:n]
       }
-    } else {
-      colors<-colorRampPalette(brewer.pal(maxN, colorNames))(n)
+      else if (4 == length(x)) {
+        A <- x[[1]]
+        B <- x[[2]]
+        C <- x[[3]]
+        D <- x[[4]]
+        list.names <- category.names
+        n12 <- intersect(A, B)
+        n13 <- intersect(A, C)
+        n14 <- intersect(A, D)
+        n23 <- intersect(B, C)
+        n24 <- intersect(B, D)
+        n34 <- intersect(C, D)
+        n123 <- intersect(n12, C)
+        n124 <- intersect(n12, D)
+        n134 <- intersect(n13, D)
+        n234 <- intersect(n23, D)
+        n1234 <- intersect(n123, D)
+        grob.list <- VennDiagram::draw.quad.venn(area1 = length(A), 
+                                                 area2 = length(B), area3 = length(C), area4 = length(D), 
+                                                 n12 = length(n12), n13 = length(n13), n14 = length(n14), 
+                                                 n23 = length(n23), n24 = length(n24), n34 = length(n34), 
+                                                 n123 = length(n123), n124 = length(n124), n134 = length(n134), 
+                                                 n234 = length(n234), n1234 = length(n1234), category = list.names, 
+                                                 ind = FALSE, fill=fill,...)
+      }
+      else if (5 == length(x)) {
+        A <- x[[1]]
+        B <- x[[2]]
+        C <- x[[3]]
+        D <- x[[4]]
+        E <- x[[5]]
+        list.names <- category.names
+        n12 <- intersect(A, B)
+        n13 <- intersect(A, C)
+        n14 <- intersect(A, D)
+        n15 <- intersect(A, E)
+        n23 <- intersect(B, C)
+        n24 <- intersect(B, D)
+        n25 <- intersect(B, E)
+        n34 <- intersect(C, D)
+        n35 <- intersect(C, E)
+        n45 <- intersect(D, E)
+        n123 <- intersect(n12, C)
+        n124 <- intersect(n12, D)
+        n125 <- intersect(n12, E)
+        n134 <- intersect(n13, D)
+        n135 <- intersect(n13, E)
+        n145 <- intersect(n14, E)
+        n234 <- intersect(n23, D)
+        n235 <- intersect(n23, E)
+        n245 <- intersect(n24, E)
+        n345 <- intersect(n34, E)
+        n1234 <- intersect(n123, D)
+        n1235 <- intersect(n123, E)
+        n1245 <- intersect(n124, E)
+        n1345 <- intersect(n134, E)
+        n2345 <- intersect(n234, E)
+        n12345 <- intersect(n1234, E)
+        grob.list <- VennDiagram::draw.quintuple.venn(area1 = length(A), 
+                                                      area2 = length(B), area3 = length(C), area4 = length(D), 
+                                                      area5 = length(E), n12 = length(n12), n13 = length(n13), 
+                                                      n14 = length(n14), n15 = length(n15), n23 = length(n23), 
+                                                      n24 = length(n24), n25 = length(n25), n34 = length(n34), 
+                                                      n35 = length(n35), n45 = length(n45), n123 = length(n123), 
+                                                      n124 = length(n124), n125 = length(n125), n134 = length(n134), 
+                                                      n135 = length(n135), n145 = length(n145), n234 = length(n234), 
+                                                      n235 = length(n235), n245 = length(n245), n345 = length(n345), 
+                                                      n1234 = length(n1234), n1235 = length(n1235), n1245 = length(n1245), 
+                                                      n1345 = length(n1345), n2345 = length(n2345), n12345 = length(n12345), 
+                                                      category = list.names, ind = FALSE,fill=fill, ...)
+      }
+      else {
+        stop("Invalid size of input object")
+      }
+      if (!is.null(sub)) {
+        grob.list <- add.title(gList = grob.list, x = sub, pos = sub.pos, 
+                               fontface = sub.fontface, fontfamily = sub.fontfamily, 
+                               col = sub.col, cex = sub.cex)
+      }
+      if (!is.null(main)) {
+        grob.list <- add.title(gList = grob.list, x = main, pos = main.pos, 
+                               fontface = main.fontface, fontfamily = main.fontfamily, 
+                               col = main.col, cex = main.cex)
+      }
+      grid.newpage()
+      grid.draw(grob.list)
+      return(1)
+      # return(grob.list)
     }
-    return(colors)
+    makeColors<-function(n,colorNames="Set1") {
+      maxN<-brewer.pal.info[colorNames,"maxcolors"]
+      if (n<=maxN) {
+        colors<-brewer.pal(n, colorNames)
+        if (length(colors)>n) {
+          colors<-colors[1:n]
+        }
+      } else {
+        colors<-colorRampPalette(brewer.pal(maxN, colorNames))(n)
+      }
+      return(colors)
+    }
+    colors<-makeColors(length(allSigNameList))
+    png(paste0(allprefix,"_significantVenn.png"),res=300,height=2000,width=2000)
+    venn.diagram1(allSigNameList,cex=2,cat.cex=2,cat.col=colors,fill=colors)
+    dev.off()
   }
-  colors<-makeColors(length(allSigNameList))
-  png(paste0(allprefix,"_significantVenn.png"),res=300,height=2000,width=2000)
-  venn.diagram1(allSigNameList,cex=2,cat.cex=2,cat.col=colors,fill=colors)
-  dev.off()
-}
-#Do heatmap significant genes if length larger or equal than 2
-if (length(allSigNameList)>=2) {
-  temp<-cbind(unlist(allSigNameList),unlist(allSigDirectionList))
-  colnames(temp)<-c("Gene","Direction")
-  temp<-cbind(temp,comparisonName=rep(names(allSigNameList),sapply(allSigNameList,length)))
-  temp<-data.frame(temp)
-  dataForFigure<-temp
-  #geting dataForFigure order in figure
-  temp$Direction<-as.integer(as.character(temp$Direction))
-  temp<-acast(temp, Gene~comparisonName ,value.var="Direction")
-  temp<-temp[do.call(order, data.frame(temp)),]
-  maxNameChr<-max(nchar(row.names(temp)))
-  if (maxNameChr>70) {
-    row.names(temp)<-substr(row.names(temp),0,70)
-    dataForFigure$Gene<-substr(dataForFigure$Gene,0,70)
-    warning(paste0("The gene names were too long (",maxNameChr,"). Only first 70 letters were kept."))
+  #Do heatmap significant genes if length larger or equal than 2
+  if (length(allSigNameList)>=2) {
+    temp<-cbind(unlist(allSigNameList),unlist(allSigDirectionList))
+    colnames(temp)<-c("Gene","Direction")
+    temp<-cbind(temp,comparisonName=rep(names(allSigNameList),sapply(allSigNameList,length)))
+    temp<-data.frame(temp)
+    dataForFigure<-temp
+    #geting dataForFigure order in figure
+    temp$Direction<-as.integer(as.character(temp$Direction))
+    temp<-acast(temp, Gene~comparisonName ,value.var="Direction")
+    temp<-temp[do.call(order, data.frame(temp)),]
+    maxNameChr<-max(nchar(row.names(temp)))
+    if (maxNameChr>70) {
+      row.names(temp)<-substr(row.names(temp),0,70)
+      dataForFigure$Gene<-substr(dataForFigure$Gene,0,70)
+      warning(paste0("The gene names were too long (",maxNameChr,"). Only first 70 letters were kept."))
+    }
+    dataForFigure$Gene<-factor(dataForFigure$Gene,levels=row.names(temp))
+    
+    width=max(2500, 60 * length(unique(dataForFigure$comparisonName)))
+    height=max(2000, 40 * length(unique(dataForFigure$Gene)))
+    png(paste0(allprefix, suffix, "_significantHeatmap.png"),res=300,height=height,width=width)
+    g<-ggplot(dataForFigure, aes(comparisonName, Gene))+
+      geom_tile(aes(fill=Direction), color="white") +
+      scale_fill_manual(values=c("light green", "red")) +
+      theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.5, face="bold"),
+            axis.text.y = element_text(size=textSize, face="bold")) +
+      coord_equal()
+    print(g)
+    dev.off()
   }
-  dataForFigure$Gene<-factor(dataForFigure$Gene,levels=row.names(temp))
-  
-  width=max(2500, 60 * length(unique(dataForFigure$comparisonName)))
-  height=max(2000, 40 * length(unique(dataForFigure$Gene)))
-  png(paste0(allprefix,"_significantHeatmap.png"),res=300,height=height,width=width)
-  g<-ggplot(dataForFigure, aes(comparisonName, Gene))+
-    geom_tile(aes(fill=Direction), color="white") +
-    scale_fill_manual(values=c("light green", "red")) +
-    theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.5, face="bold"),
-          axis.text.y = element_text(size=textSize, face="bold")) +
-    coord_equal()
-  print(g)
-  dev.off()
 }
 
 #write a file with all information
 resultAllOut<-cbind(dataAllOut,resultAllOut[row.names(dataAllOut),])
-write.csv(resultAllOut,paste0(allprefix,"_DESeq2.csv"))
 
 #volcano plot for all comparisons
 temp<-resultAllOut[,-(1:ncol(dataAllOut))]
@@ -931,7 +939,7 @@ if (useRawPvalue==1) {
 }
 
 width<-max(2000,2000*length(allComparisons))
-png(filename=paste0(allprefix, "_DESeq2_volcanoPlot.png"), width=width, height=2000, res=300)
+png(filename=paste0(allprefix, suffix, "_DESeq2_volcanoPlot.png"), width=width, height=2000, res=300)
 #  pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"))
 if (useRawPvalue==1) {
   p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
@@ -956,3 +964,5 @@ p<-p+geom_point(aes(size=log10BaseMean,colour=colour))+
         strip.text.x = element_text(size = 30))
 print(p)
 dev.off()
+
+write.csv(resultAllOut,paste0(allprefix, suffix, "_DESeq2.csv"))

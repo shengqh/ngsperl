@@ -26,6 +26,21 @@ sub new {
   return $self;
 }
 
+sub getSuffix {
+  my ( $top25only, $detectedInBothGroup, $minMedianInGroup ) = @_;
+  my $suffix = "";
+  if ($top25only) {
+    $suffix = $suffix . "_top25";
+  }
+  if ($detectedInBothGroup) {
+    $suffix = $suffix . "_detectedInBothGroup";
+  }
+  if ( $minMedianInGroup > 0 ) {
+    $suffix = $suffix . "_min${minMedianInGroup}";
+  }
+  return $suffix;
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -66,6 +81,8 @@ sub perform {
   my $performWilcox       = get_option( $config, $section, "perform_wilcox",         0 );
   my $useRawPvalue        = get_option( $config, $section, "use_raw_p_value",        0 );
   my $textSize            = get_option( $config, $section, "text_size",              11 );
+
+  my $suffix = getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup );
 
   my %tpgroups = ();
   for my $group_name ( sort keys %{$groups} ) {
@@ -217,7 +234,7 @@ textSize<-$textSize
   my $log      = $self->get_log_filename( $log_dir, $task_name );
   my $log_desc = $cluster->get_log_description($log);
 
-  my $final_file = $designfilename . "_DESeq2.csv";
+  my $final_file = $designfilename . $suffix . "_DESeq2.csv";
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
   print $pbs "R --vanilla -f $rfile \n";
@@ -236,19 +253,11 @@ sub result {
   my $detectedInBothGroup = get_option( $config, $section, "detected_in_both_group", 0 );
   my $performWilcox       = get_option( $config, $section, "perform_wilcox",         0 );
 
+  my $suffix = getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup );
   my $result = {};
   for my $comparison_name ( sort keys %{$comparisons} ) {
     my @result_files = ();
-    my $prefix       = $comparison_name;
-    if ($top25only) {
-      $prefix = $prefix . "_top25";
-    }
-    if ($detectedInBothGroup) {
-      $prefix = $prefix . "_detectedInBothGroup";
-    }
-    if ( $minMedianInGroup > 0 ) {
-      $prefix = $prefix . "_min${minMedianInGroup}";
-    }
+    my $prefix       = $comparison_name . $suffix;
 
     my $final_file = $prefix . "_DESeq2_sig.csv";
 
