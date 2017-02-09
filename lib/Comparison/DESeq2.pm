@@ -33,10 +33,10 @@ sub perform {
 
   my $comparisons = get_raw_files( $config, $section );
   my @comparison_names = keys %{$comparisons};
-  
-  my $comparisonAttributes = get_raw_files_attributes($config, $section);
+
+  my $comparisonAttributes = get_raw_files_attributes( $config, $section );
   my $comparisonTitles = \@comparison_names;
-  if(defined $comparisonAttributes->{".order"} && defined $comparisonAttributes->{".col"}){
+  if ( defined $comparisonAttributes->{".order"} && defined $comparisonAttributes->{".col"} ) {
     $comparisonTitles = $comparisonAttributes->{".col"};
   }
 
@@ -64,9 +64,9 @@ sub perform {
   my $top25only           = get_option( $config, $section, "top25only",              0 );
   my $detectedInBothGroup = get_option( $config, $section, "detected_in_both_group", 0 );
   my $performWilcox       = get_option( $config, $section, "perform_wilcox",         0 );
-  my $useRawPvalue       = get_option( $config, $section, "use_raw_p_value",         0 );
-  my $textSize       = get_option( $config, $section, "text_size",         11 );
-  
+  my $useRawPvalue        = get_option( $config, $section, "use_raw_p_value",        0 );
+  my $textSize            = get_option( $config, $section, "text_size",              11 );
+
   my %tpgroups = ();
   for my $group_name ( sort keys %{$groups} ) {
     my @samples = @{ $groups->{$group_name} };
@@ -88,7 +88,7 @@ sub perform {
   open( my $df, ">$designfile" ) or die "Cannot create $designfile";
   print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\n";
 
-  for my $comparisonIndex (0 .. $#comparison_names){
+  for my $comparisonIndex ( 0 .. $#comparison_names ) {
     my $comparison_name = $comparison_names[$comparisonIndex];
     my $comparisonTitle = $comparisonTitles->[$comparisonIndex];
     $first++;
@@ -215,20 +215,9 @@ textSize<-$textSize
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
   my $log      = $self->get_log_filename( $log_dir, $task_name );
-
   my $log_desc = $cluster->get_log_description($log);
-  my $prefix   = $comparison_names[0];
-  if ($top25only) {
-    $prefix = $prefix . "_top25";
-  }
-  if ($detectedInBothGroup) {
-    $prefix = $prefix . "_detectedInBothGroup";
-  }
-  if ( $minMedianInGroup > 0 ) {
-    $prefix = $prefix . "_min${minMedianInGroup}";
-  }
 
-  my $final_file = $prefix . "_DESeq2_sig.csv";
+  my $final_file = $designfilename . "_DESeq2.csv";
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
   print $pbs "R --vanilla -f $rfile \n";
@@ -273,6 +262,7 @@ sub result {
 
     $result->{$comparison_name} = filter_array( \@result_files, $pattern );
   }
+
   return $result;
 }
 
