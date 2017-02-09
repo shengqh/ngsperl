@@ -554,18 +554,18 @@ for(countfile_index in c(1:length(countfiles))){
     row.names(resultAllOut)<-row.names(dataAllOut)
     
     tbb<-tbb[order(tbb$pvalue),,drop=F]
-    sigTable<-as.data.frame(tbb)
-    write.csv(sigTable,paste0(prefix, "_DESeq2.csv"))
+    write.csv(as.data.frame(tbb),paste0(prefix, "_DESeq2.csv"))
+
+    tbbselect<-tbbselect[order(tbbselect$pvalue),,drop=F]
+    sigFile=paste0(prefix, "_DESeq2_sig.csv")
+    sigTable<-as.data.frame(tbbselect)
+    write.csv(sigTable,sigFile)
 
     allSigNameList[[comparisonName]]<-row.names(sigTable)
     allSigDirectionList[[comparisonName]]<-sign(sigTable$log2FoldChange)
     sigTable$comparisonName<-comparisonName
     sigTableAll<-rbind(sigTableAll,sigTable[,c("comparisonName",sigTableAllVar),drop=FALSE],make.row.names=FALSE)
     sigTableAllGene<-c(sigTableAllGene,row.names(sigTable))
-
-    tbbselect<-tbbselect[order(tbbselect$pvalue),,drop=F]
-    sigFile=paste0(prefix, "_DESeq2_sig.csv")
-    write.csv(as.data.frame(tbbselect),sigFile)
     
     if("Feature_gene_name" %in% colnames(tbb)){
       write.table(tbb[,c("Feature_gene_name", "stat"),drop=F],paste0(prefix, "_DESeq2_GSEA.rnk"),row.names=F,col.names=F,sep="\t", quote=F)
