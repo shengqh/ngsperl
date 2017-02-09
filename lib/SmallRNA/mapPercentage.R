@@ -1,6 +1,6 @@
 args = commandArgs(trailingOnly = TRUE)
 
-DEBUG=1
+DEBUG=0
 if(!DEBUG){
   readFileList<-argv[1]
   resultPrefix<-argv[2]
