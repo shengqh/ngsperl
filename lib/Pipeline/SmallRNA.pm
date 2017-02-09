@@ -821,16 +821,13 @@ sub getSmallRNAConfig {
     push @name_for_pieSummary,  ("UnMapped");
 
     if ( $def->{perform_map_percentage} ) {
-      my $name_for_readSummary_r = "readFilesModule=c('" . join( "','", @name_for_readSummary ) . "')";
       $config->{map_percentage} = {
-        class                    => "CQS::UniqueR",
-        perform                  => 1,
-        target_dir               => $data_visualization_dir . "/map_percentage",
-        rtemplate                => "mapPercentage.R",
-        output_file_ext          => ".mapPercentage.csv",
-        parameterSampleFile1_ref => \@name_for_mapPercentage,
-        sh_direct                => 1,
-        pbs                      => {
+        class      => "SmallRNA::MapPercentage",
+        perform    => 1,
+        target_dir => $data_visualization_dir . "/map_percentage",
+        source_ref => \@name_for_mapPercentage,
+        sh_direct  => 1,
+        pbs        => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
