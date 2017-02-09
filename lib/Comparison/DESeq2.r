@@ -687,7 +687,7 @@ allprefix=basename(inputfile)
 #Output all significant genes table
 if(!is.null(sigTableAll)){
   sigTableAll<-cbind(Gene=sigTableAllGene,sigTableAll)
-  write.csv(sigTableAll,paste0(allprefix, suffix, "_DESeq2_allSig.csv"),row.names=FALSE)
+  write.csv(sigTableAll,paste0(allprefix, "_DESeq2_allSig.csv"),row.names=FALSE)
   
   #Do venn if length between 2-5
   if (length(allSigNameList)>=2 & length(allSigNameList)<=5) {
@@ -896,7 +896,7 @@ if(!is.null(sigTableAll)){
     
     width=max(2500, 60 * length(unique(dataForFigure$comparisonName)))
     height=max(2000, 40 * length(unique(dataForFigure$Gene)))
-    png(paste0(allprefix, suffix, "_significantHeatmap.png"),res=300,height=height,width=width)
+    png(paste0(allprefix, "_significantHeatmap.png"),res=300,height=height,width=width)
     g<-ggplot(dataForFigure, aes(comparisonName, Gene))+
       geom_tile(aes(fill=Direction), color="white") +
       scale_fill_manual(values=c("light green", "red")) +
@@ -939,7 +939,7 @@ if (useRawPvalue==1) {
 }
 
 width<-max(2000,2000*length(allComparisons))
-png(filename=paste0(allprefix, suffix, "_DESeq2_volcanoPlot.png"), width=width, height=2000, res=300)
+png(filename=paste0(allprefix, "_DESeq2_volcanoPlot.png"), width=width, height=2000, res=300)
 #  pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"))
 if (useRawPvalue==1) {
   p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
@@ -965,4 +965,4 @@ p<-p+geom_point(aes(size=log10BaseMean,colour=colour))+
 print(p)
 dev.off()
 
-write.csv(resultAllOut,paste0(allprefix, suffix, "_DESeq2.csv"))
+write.csv(resultAllOut,paste0(allprefix, "_DESeq2.csv"))
