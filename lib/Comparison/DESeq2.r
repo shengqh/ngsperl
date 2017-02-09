@@ -673,10 +673,11 @@ for(countfile_index in c(1:length(countfiles))){
   }
 }
 
+allprefix=basename(inputfile)
 #Venn for all significant genes
 #Output all significant genes table
 sigTableAll<-cbind(Gene=sigTableAllGene,sigTableAll)
-write.csv(sigTableAll,paste0(basename(inputfile),"_DESeq2_allSig.csv"),row.names=FALSE)
+write.csv(sigTableAll,paste0(allprefix,"_DESeq2_allSig.csv"),row.names=FALSE)
 
 #Do venn if length between 2-5
 if (length(allSigNameList)>=2 & length(allSigNameList)<=5) {
@@ -860,7 +861,7 @@ if (length(allSigNameList)>=2 & length(allSigNameList)<=5) {
     return(colors)
   }
   colors<-makeColors(length(allSigNameList))
-  png(paste0(comparisonName,"_significantVenn.png"),res=300,height=2000,width=2000)
+  png(paste0(allprefix,"_significantVenn.png"),res=300,height=2000,width=2000)
   venn.diagram1(allSigNameList,cex=2,cat.cex=2,cat.col=colors,fill=colors)
   dev.off()
 }
@@ -885,7 +886,7 @@ if (length(allSigNameList)>=2) {
   
   width=max(2500, 60 * length(unique(dataForFigure$comparisonName)))
   height=max(2000, 40 * length(unique(dataForFigure$Gene)))
-  png(paste0(comparisonName,"_significantHeatmap.png"),res=300,height=height,width=width)
+  png(paste0(allprefix,"_significantHeatmap.png"),res=300,height=height,width=width)
   g<-ggplot(dataForFigure, aes(comparisonName, Gene))+
     geom_tile(aes(fill=Direction), color="white") +
     scale_fill_manual(values=c("light green", "red")) +
@@ -898,7 +899,7 @@ if (length(allSigNameList)>=2) {
 
 #write a file with all information
 resultAllOut<-cbind(dataAllOut,resultAllOut[row.names(dataAllOut),])
-write.csv(resultAllOut,paste0(basename(inputfile),"_DESeq2.csv"))
+write.csv(resultAllOut,paste0(allprefix,"_DESeq2.csv"))
 
 #volcano plot for all comparisons
 temp<-resultAllOut[,-(1:ncol(dataAllOut))]
@@ -928,7 +929,7 @@ if (useRawPvalue==1) {
 }
 
 width<-max(2000,2000*length(allComparisons))
-png(filename=paste0(basename(inputfile), "_DESeq2_volcanoPlot.png"), width=width, height=2000, res=300)
+png(filename=paste0(allprefix, "_DESeq2_volcanoPlot.png"), width=width, height=2000, res=300)
 #  pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"))
 if (useRawPvalue==1) {
   p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
