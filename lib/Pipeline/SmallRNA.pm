@@ -826,7 +826,7 @@ sub getSmallRNAConfig {
         perform    => 1,
         target_dir => $data_visualization_dir . "/map_percentage",
         source_ref => \@name_for_mapPercentage,
-        sh_direct  => 1,
+        sh_direct  => 0,
         pbs        => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
