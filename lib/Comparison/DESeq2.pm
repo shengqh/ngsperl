@@ -33,6 +33,12 @@ sub perform {
 
   my $comparisons = get_raw_files( $config, $section );
   my @comparison_names = keys %{$comparisons};
+  
+  my $comparisonAttributes = get_raw_files_attributes($config, $section);
+  my $comparisonTitles = \@comparison_names;
+  if(defined $comparisonAttributes->{".order"} && defined $comparisonAttributes->{".col"}){
+    $comparisonTitles = $comparisonAttributes->{".col"};
+  }
 
   my $totalPair = scalar(@comparison_names);
   if ( 0 == $totalPair ) {
@@ -80,9 +86,11 @@ sub perform {
   my $designfilename = "${task_name}.define";
   my $designfile     = "$result_dir/$designfilename";
   open( my $df, ">$designfile" ) or die "Cannot create $designfile";
-  print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\n";
+  print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\n";
 
-  for my $comparison_name (@comparison_names) {
+  for my $comparisonIndex (0 .. $#comparison_names){
+    my $comparison_name = $comparison_names[$comparisonIndex];
+    my $comparisonTitle = $comparisonTitles->[$comparisonIndex];
     $first++;
 
     my $covariances = {};
@@ -166,7 +174,7 @@ sub perform {
     if ( ref $curcountfile eq ref [] ) {
       $curcountfile = $curcountfile->[0];
     }
-    print $df "$comparison_name\t$curcountfile\t$cdfile\t$g1\t$g2\n";
+    print $df "$comparison_name\t$curcountfile\t$cdfile\t$g1\t$g2\t$comparisonTitle\n";
   }
   close($df);
 

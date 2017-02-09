@@ -1,20 +1,20 @@
 ##predefined_condition_begin
 
-rootdir<-"H:/shengquanhu/projects/20160701_smallRNA_3018-KCV-77_78_79_mouse/class_independent/deseq2_top100Reads/result"
-inputfile<-"KCV-77_78_79.design"
+rootdir<-"/scratch/cqs/shengq1/vickers/20161223_smallRNA_3018-KCV-77_78_79_86_v3/class_independent/deseq2_top100_reads/result"
+inputfile<-"KCV_3018_77_78_79_86.define" 
 
 showLabelInPCA<-1
-showDEGeneCluster<-0
+showDEGeneCluster<-1
 pvalue<-0.05
 foldChange<-1.5
 minMedianInGroup<-2
 addCountOne<-0
 usePearsonInHCA<-0
-top25only=0
-detectedInBothGroup=0
-performWilcox=0
-useRawPvalue=0
-textSize=10
+top25only<-0
+detectedInBothGroup<-1
+performWilcox<-0
+useRawPvalue<-1
+textSize<-9
 
 ##predefined_condition_end
 
@@ -85,8 +85,8 @@ unByteCodeAssign <- function(fun)
   name <- gsub('^.*::+','', deparse(substitute(fun)))
   FUN <- unByteCode(fun)
   retval <- assignEdgewise(name=name,
-      env=environment(FUN),
-      value=FUN
+                           env=environment(FUN),
+                           value=FUN
   )
   invisible(retval)
 }
@@ -117,27 +117,27 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
     }
     if(usePearsonInHCA){
       heatmap3(rldselect, 
-          col = hmcols, 
-          ColSideColors = gsColors, 
-          margins=c(12,5), 
-          scale="r", 
-          labRow=NA,
-          main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
-          cexCol=cexCol, 
-          useRaster=FALSE,
-          legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
+               col = hmcols, 
+               ColSideColors = gsColors, 
+               margins=c(12,5), 
+               scale="r", 
+               labRow=NA,
+               main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
+               cexCol=cexCol, 
+               useRaster=FALSE,
+               legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
     }else{
       heatmap3(rldselect, 
-          col = hmcols, 
-          ColSideColors = gsColors, 
-          margins=c(12,5), 
-          scale="r", 
-          distfun=dist, 
-          labRow=NA,
-          main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
-          cexCol=cexCol, 
-          useRaster=FALSE,
-          legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
+               col = hmcols, 
+               ColSideColors = gsColors, 
+               margins=c(12,5), 
+               scale="r", 
+               distfun=dist, 
+               labRow=NA,
+               main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
+               cexCol=cexCol, 
+               useRaster=FALSE,
+               legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
     }
     dev.off()
   }
@@ -159,23 +159,23 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors
     
     if(showLabelInPCA){
       g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
-          geom_text(vjust=-0.6, size=4) +
-          geom_point(col=conditionColors, size=4) + 
-          scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
-          scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
-          geom_hline(aes(yintercept=0), size=.2) + 
-          geom_vline(aes(xintercept=0), size=.2) + 
-          xlab(pcalabs[1]) + ylab(pcalabs[2])
+        geom_text(vjust=-0.6, size=4) +
+        geom_point(col=conditionColors, size=4) + 
+        scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
+        scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
+        geom_hline(aes(yintercept=0), size=.2) + 
+        geom_vline(aes(xintercept=0), size=.2) + 
+        xlab(pcalabs[1]) + ylab(pcalabs[2])
     }else{
       g <- ggplot(pcadata, aes(x=PC1, y=PC2)) + 
-          geom_point(col=conditionColors, size=4) + 
-          labs(color = "Group") +
-          scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) + 
-          scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
-          geom_hline(aes(yintercept=0), size=.2) + 
-          geom_vline(aes(xintercept=0), size=.2) +
-          xlab(pcalabs[1]) + ylab(pcalabs[2]) + 
-          theme(legend.position="top")
+        geom_point(col=conditionColors, size=4) + 
+        labs(color = "Group") +
+        scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) + 
+        scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
+        geom_hline(aes(yintercept=0), size=.2) + 
+        geom_vline(aes(xintercept=0), size=.2) +
+        xlab(pcalabs[1]) + ylab(pcalabs[2]) + 
+        theme(legend.position="top")
     }
     
     print(g)
@@ -188,16 +188,29 @@ reverselog_trans <- function(base = exp(1)) {
   trans <- function(x) -log(x, base)
   inv <- function(x) base^(-x)
   trans_new(paste0("reverselog-", format(base)), trans, inv, 
-      log_breaks(base = base), 
-      domain = c(1e-100, Inf))
+            log_breaks(base = base), 
+            domain = c(1e-100, Inf))
 }
 
 countfiles<-unlist(unique(comparisons_data$CountFile))
 allComparisons<-unlist(unique(comparisons_data$ComparisonName))
+if(length(allComparisons) != nrow(comparisons_data)){
+  error(paste("Comparison names cannot be repeated ", comparisons_data$ComparisonName, sep=": "))
+}
+allTitles<-comparisons_data$ComparisonTitle
+names(allTitles)<-comparisons_data$ComparisonName
 
 dataAllOut<-NULL
 resultAllOut<-NULL
+
+allSigNameList<-list()
+allSigDirectionList<-list()
+sigTableAll<-NULL
+sigTableAllGene<-NULL
+sigTableAllVar<-c("baseMean","log2FoldChange","lfcSE","stat","pvalue","padj","FoldChange")
+
 countfile_index = 1
+titles<-NULL
 for(countfile_index in c(1:length(countfiles))){
   countfile = countfiles[countfile_index]
   comparisons = comparisons_data[comparisons_data$CountFile == countfile,]
@@ -240,16 +253,12 @@ for(countfile_index in c(1:length(countfiles))){
   resultAllOutVar<-c("baseMean","log2FoldChange","pvalue","padj")
   
   comparison_index = 1
-
-  allSigNameList<-list()
-  allSigDirectionList<-list()
-  sigTableAll<-NULL
-  sigTableAllGene<-NULL
-  sigTableAllVar<-c("baseMean","log2FoldChange","lfcSE","stat","pvalue","padj","FoldChange")
-
+  
   for(comparison_index in c(1:nrow(comparisons))){
     comparisonName=comparisons$ComparisonName[comparison_index]
-    str(comparisonName)
+    comparisonTitle=comparisons$ComparisonTitle[comparison_index]
+    titles<-c(titles, comparisonTitle)
+    cat(comparisonName, " ", comparisonTitle, "\n")
     designFile=comparisons$ConditionFile[comparison_index]
     gnames=unlist(comparisons[comparison_index, c("ReferenceGroupName", "SampleGroupName")])
     
@@ -296,14 +305,14 @@ for(countfile_index in c(1:length(countfiles))){
     prefix<-comparisonName
     if(top25only){
       ranks=apply(comparisonData, 2, function(x){
-            y=x[x > 0]
-            q=quantile(y)
-            return(x>=q[4])
-          })
+        y=x[x > 0]
+        q=quantile(y)
+        return(x>=q[4])
+      })
       
       select=apply(ranks, 1, function(x){
-            any(x)
-          })
+        any(x)
+      })
       
       comparisonData=comparisonData[select,]
       
@@ -335,21 +344,21 @@ for(countfile_index in c(1:length(countfiles))){
       
       diffData=data.frame(quantileData)
       diffData$pvalues=unlist(lapply(c(1:nrow(data1)), function(index){
-                d1=data1[index,]
-                d2=data2[index,]
-                test=wilcox.test(d1,d2)
-                test$p.value
-              }))
+        d1=data1[index,]
+        d2=data2[index,]
+        test=wilcox.test(d1,d2)
+        test$p.value
+      }))
       diffData$log2MedianFoldChange=unlist(lapply(c(1:nrow(data1)), function(index){
-                d1=data1[index,]
-                d2=data2[index,]
-                log2(median(d2) / median(d1))
-              }))
+        d1=data1[index,]
+        d2=data2[index,]
+        log2(median(d2) / median(d1))
+      }))
       diffData$log2MeanFoldChange=unlist(lapply(c(1:nrow(data1)), function(index){
-                d1=data1[index,]
-                d2=data2[index,]
-                log2(mean(d2) / mean(d1))
-              }))
+        d1=data1[index,]
+        d2=data2[index,]
+        log2(mean(d2) / mean(d1))
+      }))
       diffData=diffData[order(diffData$pvalues),]
       write.csv(diffData, file=paste0(prefix, "_quantile_wilcox.csv"), row.names = T)
       
@@ -383,23 +392,23 @@ for(countfile_index in c(1:length(countfiles))){
       pairedSamples = unique(designData$Paired)
       
       spcorr<-unlist(lapply(c(1:length(pairedSamples)), function(x){
-                samples<-designData$Sample[designData$Paired==pairedSamples[x]]
-                cor(comparisonData[,samples[1]],comparisonData[,samples[2]],method="spearman")
-              }))
+        samples<-designData$Sample[designData$Paired==pairedSamples[x]]
+        cor(comparisonData[,samples[1]],comparisonData[,samples[2]],method="spearman")
+      }))
       
       
       sptable<-data.frame(Name=pairedSamples, Spcorr=spcorr)
       write.csv(sptable, file=paste0(prefix, "_Spearman.csv"), row.names=FALSE)
       
       lapply(c(1:length(pairedSamples)), function(x){
-            samples<-designData$Sample[designData$Paired==pairedSamples[x]]
-            log2c1<-log2(comparisonData[,samples[1]]+1)
-            log2c2<-log2(comparisonData[,samples[2]]+1)
-            png(paste0("details/", prefix, "_Spearman_", pairedSamples[x], ".png"), width=2000, height=2000, res=300)
-            plot(log2c1, log2c2, xlab=paste0(samples[1], " [log2(Count + 1)]"), ylab=paste0(samples[2], " [log2(Count + 1)]"))
-            text(3,15,paste0("SpearmanCorr=", sprintf("%0.3f", spcorr[x])))
-            dev.off()
-          })
+        samples<-designData$Sample[designData$Paired==pairedSamples[x]]
+        log2c1<-log2(comparisonData[,samples[1]]+1)
+        log2c2<-log2(comparisonData[,samples[2]]+1)
+        png(paste0("details/", prefix, "_Spearman_", pairedSamples[x], ".png"), width=2000, height=2000, res=300)
+        plot(log2c1, log2c2, xlab=paste0(samples[1], " [log2(Count + 1)]"), ylab=paste0(samples[2], " [log2(Count + 1)]"))
+        text(3,15,paste0("SpearmanCorr=", sprintf("%0.3f", spcorr[x])))
+        dev.off()
+      })
       
       pairedspearman[[comparisonName]]<-spcorr
     }
@@ -418,8 +427,8 @@ for(countfile_index in c(1:length(countfiles))){
     
     #some basic graph
     dds=DESeqDataSetFromMatrix(countData = comparisonData,
-        colData = designData,
-        design = ~1)
+                               colData = designData,
+                               design = ~1)
     
     colnames(dds)<-colnames(comparisonData)
     
@@ -474,8 +483,8 @@ for(countfile_index in c(1:length(countfiles))){
         comparisonData<-comparisonData[, colnames(comparisonData) %in% keptSample]
         designData<-designData[rownames(designData) %in% keptSample,]
         dds=DESeqDataSetFromMatrix(countData = comparisonData,
-            colData = designData,
-            design = ~1)
+                                   colData = designData,
+                                   design = ~1)
         
         colnames(dds)<-colnames(comparisonData)
       } else if (class(vsdres) == "try-error" && grepl("newsplit: out of vertex space", vsdres[1])) {
@@ -525,8 +534,8 @@ for(countfile_index in c(1:length(countfiles))){
     cat(paste0("", designFormula), "\n")
     
     dds=DESeqDataSetFromMatrix(countData = comparisonData,
-        colData = designData,
-        design = designFormula)
+                               colData = designData,
+                               design = designFormula)
     
     dds <- DESeq(dds,fitType=fitType)
     res<-results(dds,cooksCutoff=FALSE)
@@ -555,12 +564,12 @@ for(countfile_index in c(1:length(countfiles))){
     
     tbb<-tbb[order(tbb$pvalue),,drop=F]
     write.csv(as.data.frame(tbb),paste0(prefix, "_DESeq2.csv"))
-
+    
     tbbselect<-tbbselect[order(tbbselect$pvalue),,drop=F]
     sigFile=paste0(prefix, "_DESeq2_sig.csv")
     sigTable<-as.data.frame(tbbselect)
     write.csv(sigTable,sigFile)
-
+    
     allSigNameList[[comparisonName]]<-row.names(sigTable)
     allSigDirectionList[[comparisonName]]<-sign(sigTable$log2FoldChange)
     sigTable$comparisonName<-comparisonName
@@ -607,10 +616,10 @@ for(countfile_index in c(1:length(countfiles))){
       png(filename=paste0(prefix, "_DESeq2_sig_barplot.png"), width=3000, height=3000, res=300)
       #   pdf(paste0(prefix,"_DESeq2_sig_barplot.pdf"))
       p<-ggplot(diffResultSig,aes(x=Name,y=log2FoldChange,order=log2FoldChange))+geom_bar(stat="identity")+
-          coord_flip()+
-          #     geom_abline(slope=0,intercept=1,colour="red",linetype = 2)+
-          scale_y_continuous(name=bquote(log[2]~Fold~Change))+
-          theme(axis.text = element_text(colour = "black"))
+        coord_flip()+
+        #     geom_abline(slope=0,intercept=1,colour="red",linetype = 2)+
+        scale_y_continuous(name=bquote(log[2]~Fold~Change))+
+        theme(axis.text = element_text(colour = "black"))
       print(p)
       dev.off()
     } else {
@@ -634,27 +643,27 @@ for(countfile_index in c(1:length(countfiles))){
     #  pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"))
     if (useRawPvalue==1) {
       p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
-          scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
+        scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
     } else {
       p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
-          scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
+        scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
     }
     p<-p+geom_point(aes(size=log10BaseMean,colour=colour))+
-        scale_color_manual(values=changeColours,guide = FALSE)+
-        scale_x_continuous(name=bquote(log[2]~Fold~Change))+
-        geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
-        geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
-        guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
-        theme_bw()+
-        scale_size(range = c(3, 7))+
-        theme(axis.text = element_text(colour = "black",size=30),
+      scale_color_manual(values=changeColours,guide = FALSE)+
+      scale_x_continuous(name=bquote(log[2]~Fold~Change))+
+      geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
+      geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
+      guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
+      theme_bw()+
+      scale_size(range = c(3, 7))+
+      theme(axis.text = element_text(colour = "black",size=30),
             axis.title = element_text(size=30),
             legend.text= element_text(size=30),
             legend.title= element_text(size=30))
     print(p)
     dev.off()
   }
-      
+  
   if(length(pairedspearman) > 0){
     #draw pca graph
     filename<-ifelse(minMedianInGroup > 0, paste0("spearman_min", minMedianInGroup, ".png"), "spearman.png")
@@ -662,229 +671,229 @@ for(countfile_index in c(1:length(countfiles))){
     boxplot(pairedspearman)
     dev.off()
   }
-  
-  #Venn for all significant genes
-  #Output all significant genes table
-  sigTableAll<-cbind(Gene=sigTableAllGene,sigTableAll)
-  write.csv(sigTableAll,paste0(basename(inputfile),"_DESeq2_allSig.csv"),row.names=FALSE)
-  
-  #Do venn if length between 2-5
-  if (length(allSigNameList)>=2 & length(allSigNameList)<=5) {
-    venn.diagram1<-function (x, filename, height = 3000, width = 3000, resolution = 500, 
-        units = "px", compression = "lzw", na = "stop", main = NULL, 
-        sub = NULL, main.pos = c(0.5, 1.05), main.fontface = "plain", 
-        main.fontfamily = "serif", main.col = "black", main.cex = 1, 
-        main.just = c(0.5, 1), sub.pos = c(0.5, 1.05), sub.fontface = "plain", 
-        sub.fontfamily = "serif", sub.col = "black", sub.cex = 1, 
-        sub.just = c(0.5, 1), category.names = names(x), force.unique = TRUE,
-        fill=NA,
-        ...) 
-    {
-      if (is.na(fill[1])) {
-        if (length(x)==5) {
-          fill = c("dodgerblue", "goldenrod1", "darkorange1", "seagreen3", "orchid3")
-        } else if (length(x)==4) {
-          fill = c("dodgerblue", "goldenrod1",  "seagreen3", "orchid3")
-        } else if (length(x)==3) {
-          fill = c("dodgerblue", "goldenrod1", "seagreen3")
-        } else if (length(x)==2) {
-          fill = c("dodgerblue", "goldenrod1")
-        }
+}
+
+#Venn for all significant genes
+#Output all significant genes table
+sigTableAll<-cbind(Gene=sigTableAllGene,sigTableAll)
+write.csv(sigTableAll,paste0(basename(inputfile),"_DESeq2_allSig.csv"),row.names=FALSE)
+
+#Do venn if length between 2-5
+if (length(allSigNameList)>=2 & length(allSigNameList)<=5) {
+  venn.diagram1<-function (x, filename, height = 3000, width = 3000, resolution = 500, 
+                           units = "px", compression = "lzw", na = "stop", main = NULL, 
+                           sub = NULL, main.pos = c(0.5, 1.05), main.fontface = "plain", 
+                           main.fontfamily = "serif", main.col = "black", main.cex = 1, 
+                           main.just = c(0.5, 1), sub.pos = c(0.5, 1.05), sub.fontface = "plain", 
+                           sub.fontfamily = "serif", sub.col = "black", sub.cex = 1, 
+                           sub.just = c(0.5, 1), category.names = names(x), force.unique = TRUE,
+                           fill=NA,
+                           ...) 
+  {
+    if (is.na(fill[1])) {
+      if (length(x)==5) {
+        fill = c("dodgerblue", "goldenrod1", "darkorange1", "seagreen3", "orchid3")
+      } else if (length(x)==4) {
+        fill = c("dodgerblue", "goldenrod1",  "seagreen3", "orchid3")
+      } else if (length(x)==3) {
+        fill = c("dodgerblue", "goldenrod1", "seagreen3")
+      } else if (length(x)==2) {
+        fill = c("dodgerblue", "goldenrod1")
       }
-      if (force.unique) {
-        for (i in 1:length(x)) {
-          x[[i]] <- unique(x[[i]])
-        }
-      }
-      if ("none" == na) {
-        x <- x
-      }
-      else if ("stop" == na) {
-        for (i in 1:length(x)) {
-          if (any(is.na(x[[i]]))) {
-            stop("NAs in dataset", call. = FALSE)
-          }
-        }
-      }
-      else if ("remove" == na) {
-        for (i in 1:length(x)) {
-          x[[i]] <- x[[i]][!is.na(x[[i]])]
-        }
-      }
-      else {
-        stop("Invalid na option: valid options are \"none\", \"stop\", and \"remove\"")
-      }
-      if (0 == length(x) | length(x) > 5) {
-        stop("Incorrect number of elements.", call. = FALSE)
-      }
-      if (1 == length(x)) {
-        list.names <- category.names
-        if (is.null(list.names)) {
-          list.names <- ""
-        }
-        grob.list <- VennDiagram::draw.single.venn(area = length(x[[1]]), 
-            category = list.names, ind = FALSE,fill=fill, ...)
-      }
-      else if (2 == length(x)) {
-        grob.list <- VennDiagram::draw.pairwise.venn(area1 = length(x[[1]]), 
-            area2 = length(x[[2]]), cross.area = length(intersect(x[[1]], 
-                    x[[2]])), category = category.names, ind = FALSE, 
-            fill=fill,
-            ...)
-      }
-      else if (3 == length(x)) {
-        A <- x[[1]]
-        B <- x[[2]]
-        C <- x[[3]]
-        list.names <- category.names
-        nab <- intersect(A, B)
-        nbc <- intersect(B, C)
-        nac <- intersect(A, C)
-        nabc <- intersect(nab, C)
-        grob.list <- VennDiagram::draw.triple.venn(area1 = length(A), 
-            area2 = length(B), area3 = length(C), n12 = length(nab), 
-            n23 = length(nbc), n13 = length(nac), n123 = length(nabc), 
-            category = list.names, ind = FALSE, list.order = 1:3, 
-            fill=fill,
-            ...)
-      }
-      else if (4 == length(x)) {
-        A <- x[[1]]
-        B <- x[[2]]
-        C <- x[[3]]
-        D <- x[[4]]
-        list.names <- category.names
-        n12 <- intersect(A, B)
-        n13 <- intersect(A, C)
-        n14 <- intersect(A, D)
-        n23 <- intersect(B, C)
-        n24 <- intersect(B, D)
-        n34 <- intersect(C, D)
-        n123 <- intersect(n12, C)
-        n124 <- intersect(n12, D)
-        n134 <- intersect(n13, D)
-        n234 <- intersect(n23, D)
-        n1234 <- intersect(n123, D)
-        grob.list <- VennDiagram::draw.quad.venn(area1 = length(A), 
-            area2 = length(B), area3 = length(C), area4 = length(D), 
-            n12 = length(n12), n13 = length(n13), n14 = length(n14), 
-            n23 = length(n23), n24 = length(n24), n34 = length(n34), 
-            n123 = length(n123), n124 = length(n124), n134 = length(n134), 
-            n234 = length(n234), n1234 = length(n1234), category = list.names, 
-            ind = FALSE, fill=fill,...)
-      }
-      else if (5 == length(x)) {
-        A <- x[[1]]
-        B <- x[[2]]
-        C <- x[[3]]
-        D <- x[[4]]
-        E <- x[[5]]
-        list.names <- category.names
-        n12 <- intersect(A, B)
-        n13 <- intersect(A, C)
-        n14 <- intersect(A, D)
-        n15 <- intersect(A, E)
-        n23 <- intersect(B, C)
-        n24 <- intersect(B, D)
-        n25 <- intersect(B, E)
-        n34 <- intersect(C, D)
-        n35 <- intersect(C, E)
-        n45 <- intersect(D, E)
-        n123 <- intersect(n12, C)
-        n124 <- intersect(n12, D)
-        n125 <- intersect(n12, E)
-        n134 <- intersect(n13, D)
-        n135 <- intersect(n13, E)
-        n145 <- intersect(n14, E)
-        n234 <- intersect(n23, D)
-        n235 <- intersect(n23, E)
-        n245 <- intersect(n24, E)
-        n345 <- intersect(n34, E)
-        n1234 <- intersect(n123, D)
-        n1235 <- intersect(n123, E)
-        n1245 <- intersect(n124, E)
-        n1345 <- intersect(n134, E)
-        n2345 <- intersect(n234, E)
-        n12345 <- intersect(n1234, E)
-        grob.list <- VennDiagram::draw.quintuple.venn(area1 = length(A), 
-            area2 = length(B), area3 = length(C), area4 = length(D), 
-            area5 = length(E), n12 = length(n12), n13 = length(n13), 
-            n14 = length(n14), n15 = length(n15), n23 = length(n23), 
-            n24 = length(n24), n25 = length(n25), n34 = length(n34), 
-            n35 = length(n35), n45 = length(n45), n123 = length(n123), 
-            n124 = length(n124), n125 = length(n125), n134 = length(n134), 
-            n135 = length(n135), n145 = length(n145), n234 = length(n234), 
-            n235 = length(n235), n245 = length(n245), n345 = length(n345), 
-            n1234 = length(n1234), n1235 = length(n1235), n1245 = length(n1245), 
-            n1345 = length(n1345), n2345 = length(n2345), n12345 = length(n12345), 
-            category = list.names, ind = FALSE,fill=fill, ...)
-      }
-      else {
-        stop("Invalid size of input object")
-      }
-      if (!is.null(sub)) {
-        grob.list <- add.title(gList = grob.list, x = sub, pos = sub.pos, 
-            fontface = sub.fontface, fontfamily = sub.fontfamily, 
-            col = sub.col, cex = sub.cex)
-      }
-      if (!is.null(main)) {
-        grob.list <- add.title(gList = grob.list, x = main, pos = main.pos, 
-            fontface = main.fontface, fontfamily = main.fontfamily, 
-            col = main.col, cex = main.cex)
-      }
-      grid.newpage()
-      grid.draw(grob.list)
-      return(1)
-      # return(grob.list)
     }
-    makeColors<-function(n,colorNames="Set1") {
-      maxN<-brewer.pal.info[colorNames,"maxcolors"]
-      if (n<=maxN) {
-        colors<-brewer.pal(n, colorNames)
-        if (length(colors)>n) {
-          colors<-colors[1:n]
-        }
-      } else {
-        colors<-colorRampPalette(brewer.pal(maxN, colorNames))(n)
+    if (force.unique) {
+      for (i in 1:length(x)) {
+        x[[i]] <- unique(x[[i]])
       }
-      return(colors)
     }
-    colors<-makeColors(length(allSigNameList))
-    png(paste0(comparisonName,"_significantVenn.png"),res=300,height=2000,width=2000)
-    venn.diagram1(allSigNameList,cex=2,cat.cex=2,cat.col=colors,fill=colors)
-    dev.off()
+    if ("none" == na) {
+      x <- x
+    }
+    else if ("stop" == na) {
+      for (i in 1:length(x)) {
+        if (any(is.na(x[[i]]))) {
+          stop("NAs in dataset", call. = FALSE)
+        }
+      }
+    }
+    else if ("remove" == na) {
+      for (i in 1:length(x)) {
+        x[[i]] <- x[[i]][!is.na(x[[i]])]
+      }
+    }
+    else {
+      stop("Invalid na option: valid options are \"none\", \"stop\", and \"remove\"")
+    }
+    if (0 == length(x) | length(x) > 5) {
+      stop("Incorrect number of elements.", call. = FALSE)
+    }
+    if (1 == length(x)) {
+      list.names <- category.names
+      if (is.null(list.names)) {
+        list.names <- ""
+      }
+      grob.list <- VennDiagram::draw.single.venn(area = length(x[[1]]), 
+                                                 category = list.names, ind = FALSE,fill=fill, ...)
+    }
+    else if (2 == length(x)) {
+      grob.list <- VennDiagram::draw.pairwise.venn(area1 = length(x[[1]]), 
+                                                   area2 = length(x[[2]]), cross.area = length(intersect(x[[1]], 
+                                                                                                         x[[2]])), category = category.names, ind = FALSE, 
+                                                   fill=fill,
+                                                   ...)
+    }
+    else if (3 == length(x)) {
+      A <- x[[1]]
+      B <- x[[2]]
+      C <- x[[3]]
+      list.names <- category.names
+      nab <- intersect(A, B)
+      nbc <- intersect(B, C)
+      nac <- intersect(A, C)
+      nabc <- intersect(nab, C)
+      grob.list <- VennDiagram::draw.triple.venn(area1 = length(A), 
+                                                 area2 = length(B), area3 = length(C), n12 = length(nab), 
+                                                 n23 = length(nbc), n13 = length(nac), n123 = length(nabc), 
+                                                 category = list.names, ind = FALSE, list.order = 1:3, 
+                                                 fill=fill,
+                                                 ...)
+    }
+    else if (4 == length(x)) {
+      A <- x[[1]]
+      B <- x[[2]]
+      C <- x[[3]]
+      D <- x[[4]]
+      list.names <- category.names
+      n12 <- intersect(A, B)
+      n13 <- intersect(A, C)
+      n14 <- intersect(A, D)
+      n23 <- intersect(B, C)
+      n24 <- intersect(B, D)
+      n34 <- intersect(C, D)
+      n123 <- intersect(n12, C)
+      n124 <- intersect(n12, D)
+      n134 <- intersect(n13, D)
+      n234 <- intersect(n23, D)
+      n1234 <- intersect(n123, D)
+      grob.list <- VennDiagram::draw.quad.venn(area1 = length(A), 
+                                               area2 = length(B), area3 = length(C), area4 = length(D), 
+                                               n12 = length(n12), n13 = length(n13), n14 = length(n14), 
+                                               n23 = length(n23), n24 = length(n24), n34 = length(n34), 
+                                               n123 = length(n123), n124 = length(n124), n134 = length(n134), 
+                                               n234 = length(n234), n1234 = length(n1234), category = list.names, 
+                                               ind = FALSE, fill=fill,...)
+    }
+    else if (5 == length(x)) {
+      A <- x[[1]]
+      B <- x[[2]]
+      C <- x[[3]]
+      D <- x[[4]]
+      E <- x[[5]]
+      list.names <- category.names
+      n12 <- intersect(A, B)
+      n13 <- intersect(A, C)
+      n14 <- intersect(A, D)
+      n15 <- intersect(A, E)
+      n23 <- intersect(B, C)
+      n24 <- intersect(B, D)
+      n25 <- intersect(B, E)
+      n34 <- intersect(C, D)
+      n35 <- intersect(C, E)
+      n45 <- intersect(D, E)
+      n123 <- intersect(n12, C)
+      n124 <- intersect(n12, D)
+      n125 <- intersect(n12, E)
+      n134 <- intersect(n13, D)
+      n135 <- intersect(n13, E)
+      n145 <- intersect(n14, E)
+      n234 <- intersect(n23, D)
+      n235 <- intersect(n23, E)
+      n245 <- intersect(n24, E)
+      n345 <- intersect(n34, E)
+      n1234 <- intersect(n123, D)
+      n1235 <- intersect(n123, E)
+      n1245 <- intersect(n124, E)
+      n1345 <- intersect(n134, E)
+      n2345 <- intersect(n234, E)
+      n12345 <- intersect(n1234, E)
+      grob.list <- VennDiagram::draw.quintuple.venn(area1 = length(A), 
+                                                    area2 = length(B), area3 = length(C), area4 = length(D), 
+                                                    area5 = length(E), n12 = length(n12), n13 = length(n13), 
+                                                    n14 = length(n14), n15 = length(n15), n23 = length(n23), 
+                                                    n24 = length(n24), n25 = length(n25), n34 = length(n34), 
+                                                    n35 = length(n35), n45 = length(n45), n123 = length(n123), 
+                                                    n124 = length(n124), n125 = length(n125), n134 = length(n134), 
+                                                    n135 = length(n135), n145 = length(n145), n234 = length(n234), 
+                                                    n235 = length(n235), n245 = length(n245), n345 = length(n345), 
+                                                    n1234 = length(n1234), n1235 = length(n1235), n1245 = length(n1245), 
+                                                    n1345 = length(n1345), n2345 = length(n2345), n12345 = length(n12345), 
+                                                    category = list.names, ind = FALSE,fill=fill, ...)
+    }
+    else {
+      stop("Invalid size of input object")
+    }
+    if (!is.null(sub)) {
+      grob.list <- add.title(gList = grob.list, x = sub, pos = sub.pos, 
+                             fontface = sub.fontface, fontfamily = sub.fontfamily, 
+                             col = sub.col, cex = sub.cex)
+    }
+    if (!is.null(main)) {
+      grob.list <- add.title(gList = grob.list, x = main, pos = main.pos, 
+                             fontface = main.fontface, fontfamily = main.fontfamily, 
+                             col = main.col, cex = main.cex)
+    }
+    grid.newpage()
+    grid.draw(grob.list)
+    return(1)
+    # return(grob.list)
   }
-  #Do heatmap significant genes if length larger or equal than 2
-  if (length(allSigNameList)>=2) {
-    temp<-cbind(unlist(allSigNameList),unlist(allSigDirectionList))
-    colnames(temp)<-c("Gene","Direction")
-    temp<-cbind(temp,comparisonName=rep(names(allSigNameList),sapply(allSigNameList,length)))
-    temp<-data.frame(temp)
-    dataForFigure<-temp
-    #geting dataForFigure order in figure
-    temp$Direction<-as.integer(as.character(temp$Direction))
-    temp<-acast(temp, Gene~comparisonName ,value.var="Direction")
-    temp<-temp[do.call(order, data.frame(temp)),]
-    maxNameChr<-max(nchar(row.names(temp)))
-    if (maxNameChr>70) {
-      row.names(temp)<-substr(row.names(temp),0,70)
-      dataForFigure$Gene<-substr(dataForFigure$Gene,0,70)
-      warning(paste0("The gene names were too long (",maxNameChr,"). Only first 70 letters were kept."))
+  makeColors<-function(n,colorNames="Set1") {
+    maxN<-brewer.pal.info[colorNames,"maxcolors"]
+    if (n<=maxN) {
+      colors<-brewer.pal(n, colorNames)
+      if (length(colors)>n) {
+        colors<-colors[1:n]
+      }
+    } else {
+      colors<-colorRampPalette(brewer.pal(maxN, colorNames))(n)
     }
-    dataForFigure$Gene<-factor(dataForFigure$Gene,levels=row.names(temp))
-    
-    width=max(2500, 60 * length(unique(dataForFigure$comparisonName)))
-    height=max(2000, 40 * length(unique(dataForFigure$Gene)))
-    png(paste0(comparisonName,"_significantHeatmap.png"),res=300,height=height,width=width)
-    g<-ggplot(dataForFigure, aes(comparisonName, Gene))+
-        geom_tile(aes(fill=Direction), color="white") +
-        scale_fill_manual(values=c("light green", "red")) +
-        theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.5, face="bold"),
-            axis.text.y = element_text(size=textSize, face="bold")) +
-        coord_equal()
-    print(g)
-    dev.off()
+    return(colors)
   }
+  colors<-makeColors(length(allSigNameList))
+  png(paste0(comparisonName,"_significantVenn.png"),res=300,height=2000,width=2000)
+  venn.diagram1(allSigNameList,cex=2,cat.cex=2,cat.col=colors,fill=colors)
+  dev.off()
+}
+#Do heatmap significant genes if length larger or equal than 2
+if (length(allSigNameList)>=2) {
+  temp<-cbind(unlist(allSigNameList),unlist(allSigDirectionList))
+  colnames(temp)<-c("Gene","Direction")
+  temp<-cbind(temp,comparisonName=rep(names(allSigNameList),sapply(allSigNameList,length)))
+  temp<-data.frame(temp)
+  dataForFigure<-temp
+  #geting dataForFigure order in figure
+  temp$Direction<-as.integer(as.character(temp$Direction))
+  temp<-acast(temp, Gene~comparisonName ,value.var="Direction")
+  temp<-temp[do.call(order, data.frame(temp)),]
+  maxNameChr<-max(nchar(row.names(temp)))
+  if (maxNameChr>70) {
+    row.names(temp)<-substr(row.names(temp),0,70)
+    dataForFigure$Gene<-substr(dataForFigure$Gene,0,70)
+    warning(paste0("The gene names were too long (",maxNameChr,"). Only first 70 letters were kept."))
+  }
+  dataForFigure$Gene<-factor(dataForFigure$Gene,levels=row.names(temp))
+  
+  width=max(2500, 60 * length(unique(dataForFigure$comparisonName)))
+  height=max(2000, 40 * length(unique(dataForFigure$Gene)))
+  png(paste0(comparisonName,"_significantHeatmap.png"),res=300,height=height,width=width)
+  g<-ggplot(dataForFigure, aes(comparisonName, Gene))+
+    geom_tile(aes(fill=Direction), color="white") +
+    scale_fill_manual(values=c("light green", "red")) +
+    theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.5, face="bold"),
+          axis.text.y = element_text(size=textSize, face="bold")) +
+    coord_equal()
+  print(g)
+  dev.off()
 }
 
 #write a file with all information
@@ -907,6 +916,7 @@ for (i in 1:(length(allComparisons))) {
 }
 changeColours<-c(grey="grey",blue="blue",red="red")
 diffResult$log10BaseMean<-log10(diffResult$baseMean)
+diffResult$Comparison<-allTitles[diffResult$Comparison]
 diffResult$Comparison<-factor(diffResult$Comparison,levels=unique(diffResult$Comparison))
 diffResult$colour<-"grey"
 if (useRawPvalue==1) {
@@ -922,21 +932,21 @@ png(filename=paste0(basename(inputfile), "_DESeq2_volcanoPlot.png"), width=width
 #  pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"))
 if (useRawPvalue==1) {
   p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
-      scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
+    scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
 } else {
   p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
-      scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
+    scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
 }
 p<-p+geom_point(aes(size=log10BaseMean,colour=colour))+
-    scale_color_manual(values=changeColours,guide = FALSE)+
-    scale_x_continuous(name=bquote(log[2]~Fold~Change))+
-    geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
-    geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
-    guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
-    theme_bw()+
-    scale_size(range = c(3, 7))+
-    facet_grid(. ~ Comparison)+
-    theme(axis.text = element_text(colour = "black",size=30),
+  scale_color_manual(values=changeColours,guide = FALSE)+
+  scale_x_continuous(name=bquote(log[2]~Fold~Change))+
+  geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
+  geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
+  guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
+  theme_bw()+
+  scale_size(range = c(3, 7))+
+  facet_grid(. ~ Comparison)+
+  theme(axis.text = element_text(colour = "black",size=30),
         axis.title = element_text(size=30),
         legend.text= element_text(size=30),
         legend.title= element_text(size=30),
