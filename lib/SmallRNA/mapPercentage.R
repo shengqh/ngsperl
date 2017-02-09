@@ -51,7 +51,7 @@ res<-lapply(uniqueCounts, function(x){
 df<-do.call(rbind, res)
 colnames(df)<-c("Category", "Value", "ReadCount")
 
-write.csv(df, paste0(resFile, ".csv"))
+write.csv(df, paste0(resultPrefix, ".csv"))
 
 df<-df[df$ReadCount <=20,]
 df$ReadCount<-factor(df$ReadCount)
