@@ -35,6 +35,10 @@ sub perform {
   my $gseaPath        = get_option( $config, $section, "gsea_path" );
   my $gmxPath         = get_option( $config, $section, "gmx_path" );
   my $cpgPath         = get_option( $config, $section, "cpg_path" );
+  my $activityFile    = get_option( $config, $section, "activity_file", "" );
+  if($activityFile ne ""){
+    $option = $option . " -a $activityFile";
+  }
 
   my $rawFiles = get_raw_files( $config, $section );
   my %peakFiles;
@@ -63,12 +67,12 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $fileName );
 
-    my $log_desc = $cluster->get_log_description($log);
-    my $final_file   = "${fileName}_peaks/${fileName}_peaks_GENE_TABLE.txt";
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
-    my $peak = $peaks[0];
+    my $log_desc   = $cluster->get_log_description($log);
+    my $final_file = "${fileName}_peaks/${fileName}_peaks_GENE_TABLE.txt";
+    my $pbs        = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    my $peak       = $peaks[0];
 
-    print $pbs "python $pipeline_dir/enhancerPromoter.py -b $bamFile -i $peak -g $genome -o . --genomeDirectory $genomeDirectory --gseaPath $gseaPath --gmxPath $gmxPath --cpgPath $cpgPath \n";
+    print $pbs "python $pipeline_dir/enhancerPromoter.py $option -b $bamFile -i $peak -g $genome -o . --genomeDirectory $genomeDirectory --gseaPath $gseaPath --gmxPath $gmxPath --cpgPath $cpgPath \n";
 
     $self->close_pbs( $pbs, $pbs_file );
     print $sh "\$MYCMD ./$pbs_name \n";
