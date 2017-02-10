@@ -159,12 +159,12 @@ sub get_task_filename {
 }
 
 sub open_pbs {
-  my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command ) = @_;
+  my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, $final_file_can_empty ) = @_;
 
-  if (!defined $init_command){
+  if ( !defined $init_command ) {
     $init_command = "";
   }
-  
+
   my $module_name = $self->{_name};
 
   open( my $pbs, ">$pbs_file" ) or die $!;
@@ -179,9 +179,11 @@ cd $result_dir
 
 ";
   if ( defined $final_file ) {
-    my $delete_file = ($final_file =~ /^\//)?$final_file:"${result_dir}/${final_file}";
+    my $delete_file = ( $final_file =~ /^\// ) ? $final_file : "${result_dir}/${final_file}";
+
+    my $checkFile = $final_file_can_empty ? "-e" : "-s";
     print $pbs "
-if [[ ( -s $final_file ) || ( -d $final_file ) ]]; then
+if [[ ( $checkFile $final_file ) || ( -d $final_file ) ]]; then
   echo job has already been done. if you want to do again, delete $delete_file and submit job again.
   exit 0
 fi
