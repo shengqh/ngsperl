@@ -123,13 +123,13 @@ sub addPositionVis {
       class                => "CQS::UniqueR",
       perform              => 1,
       target_dir           => $parentDir . "/$taskName",
-      rtemplate            => "smallRnaPositionVis.R",
+      rtemplate            => "countTableVisFunctions.r,smallRnaPositionVis.R",
       output_file_ext      => ".allPositionBar.png",
       parameterFile2_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
       parameterSampleFile1 => $def->{tRNA_vis_group},
       parameterSampleFile2 => $def->{groups_vis_layout},
-      sh_direct => 1,
-      pbs       => {
+      sh_direct            => 1,
+      pbs                  => {
         "email"     => $def->{email},
         "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
@@ -201,14 +201,11 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "DE_perform_wilcox",           0 );
   initDefaultValue( $def, "DE_use_raw_pvalue",           1 );
   initDefaultValue( $def, "DE_text_size",                10 );
-  initDefaultValue( $def, "max_sequence_extension_base", 1 );
-  initDefaultValue( $def, "top_read_number",             100 );
 
-  initDefaultValue( $def, "perform_contig_analysis",     0 );
-  initDefaultValue( $def, "smallrnacount_option",        "" );
-  initDefaultValue( $def, "hasYRNA",                     0 );
-  initDefaultValue( $def, "max_sequence_extension_base", "1" );
-  initDefaultValue( $def, "nonhost_table_option",        "--outputReadTable" );
+  initDefaultValue( $def, "perform_contig_analysis", 0 );
+  initDefaultValue( $def, "smallrnacount_option",    "" );
+  initDefaultValue( $def, "hasYRNA",                 0 );
+  initDefaultValue( $def, "nonhost_table_option",    "--outputReadTable" );
 
   initDefaultValue( $def, "consider_miRNA_NTA", 1 );
 
@@ -231,6 +228,18 @@ sub initializeDefaultOptions {
 
   $defaultOption = getValue( $def, "host_smallrnacounttable_option", "" );
   initDefaultValue( $def, "host_smallrnacounttable_option", $defaultOption . $additionalOption );
+
+  initDefaultValue( $def, "export_contig_details",       1 );
+  initDefaultValue( $def, "max_sequence_extension_base", 1 );
+  initDefaultValue( $def, "top_read_number",             100 );
+  my $defaultSequenceCountOption = "--maxExtensionBase " . getValue( $def, "max_sequence_extension_base" ) .    #base
+    " -n " . getValue( $def, "top_read_number" ) .                                                              #number of sequence
+    " --exportFastaNumber " . getValue( $def, "top_read_number" ) .                                             #fasta
+    ( getValue( $def, "export_contig_details" ) ? " --exportContigDetails" : "" );                              #contig_detail
+  initDefaultValue( $def, "sequence_count_option", $defaultSequenceCountOption );
+
+  #visualization
+  initDefaultValue( $def, "use_least_groups", 0 );
 
   return $def;
 }
@@ -278,9 +287,6 @@ sub getPrepareConfig {
   #nta for microRNA and tRNA
   my $consider_miRNA_NTA = getValue( $def, "consider_miRNA_NTA" );
   my $consider_tRNA_NTA  = getValue( $def, "consider_tRNA_NTA" );
-
-  my $max_sequence_extension_base = getValue( $def, "max_sequence_extension_base" );
-  my $top_read_number             = getValue( $def, "top_read_number" );
 
   my $config = {
     general => {
@@ -491,7 +497,7 @@ sub getPrepareConfig {
       class      => "CQS::SmallRNASequenceCountTable",
       perform    => 1,
       target_dir => $class_independent_dir . "/identical_sequence_count_table",
-      option     => "--maxExtensionBase $max_sequence_extension_base -n $top_read_number --exportFastaNumber $top_read_number",
+      option     => getValue( $def, "sequence_count_option" ),
       source_ref => [ "identical", ".dupcount\$" ],
       cqs_tools  => $def->{cqstools},
       suffix     => "_sequence",
