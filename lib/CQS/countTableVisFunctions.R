@@ -15,10 +15,115 @@ saveInError<-function(message="",filePrefix="",fileSuffix=paste0(Sys.Date(),".er
 	warning(message)
 }
 
+if(!exists("useLeastGroups")){
+  useLeastGroups<-FALSE
+}
+
+getSampleInGroup<-function(groupDefineFile, samples, comparisonDefineFile="", countTableTitle="", useLeastGroups=FALSE){
+  groupData<-read.delim(groupDefineFile,as.is=T,header=F)
+  if(comparisonDefineFile != ""){
+    comparisonData<-read.delim(comparisonDefineFile,as.is=T,header=F)
+    if(countTableTitle %in% comparisonData$V2){
+      countTableGroups<-comparisonData[comparisonData$V2==countTableTitle,"V1"]
+      groupData<-groupData[groupData$V2 %in% countTableGroups,]
+    }
+  }
+  
+  if(useLeastGroups){
+    groupData<-groupData[which(groupData$V1 %in% samples),]
+    groups<-lapply(unique(groupData$V2), function(x){
+      nrow(groupData[groupData$V2==x,])
+    })
+    discardGroups<-NULL
+    groupNames=unique(groupData$V2)
+    for(i in c(1:length(groupNames))){
+      sampleI<-groupData[groupData$V2==groupNames[i], "V1"]
+      for(j in c(i+1:length(groupNames))){
+        sampleJ<-groupData[groupData$V2==groupNames[j], "V1"]
+        if(all(sampleI %in% sampleJ)){
+          discardGroups<-c(discardGroups, groupNames[i])
+          break
+        }else if(all(sampleJ %in% sampleI)){
+          discardGroups<-c(discardGroups, groupNames[j])
+        }
+      }
+    }
+    groupData<-groupData[!(groupData$V2 %in% discardGroups),]
+  }
+  
+  res<-NULL
+  for(sample in samples){
+    stog<-groupData[groupData$V1==sample,,drop=F]
+    if(nrow(stog) == 1){
+      group<-stog[1,2]
+    }else if(nrow(stog) > 1){
+      groups<-stog$V2[order(stog$V2)]
+      group<-paste(groups, collapse=":")
+    }else{
+      group<-"Unknown"
+    }
+    res<-rbind(res, data.frame(V1=sample, V2=group))
+  }
+  rownames(res)<-res$V1
+  return(res)
+}
+
 ###############################################################################
 # Funtions in other visualization tasks
 ###############################################################################
 
+if(!exists("useLeastGroups")){
+  useLeastGroups<-FALSE
+}
+
+getSampleInGroup<-function(groupDefineFile, samples, comparisonDefineFile="", countTableTitle="", useLeastGroups=FALSE){
+  groupData<-read.delim(groupDefineFile,as.is=T,header=F)
+  if(comparisonDefineFile != ""){
+    comparisonData<-read.delim(comparisonDefineFile,as.is=T,header=F)
+    if(countTableTitle %in% comparisonData$V2){
+      countTableGroups<-comparisonData[comparisonData$V2==countTableTitle,"V1"]
+      groupData<-groupData[groupData$V2 %in% countTableGroups,]
+    }
+  }
+  
+  if(useLeastGroups){
+    groupData<-groupData[which(groupData$V1 %in% samples),]
+    groups<-lapply(unique(groupData$V2), function(x){
+      nrow(groupData[groupData$V2==x,])
+    })
+    discardGroups<-NULL
+    groupNames=unique(groupData$V2)
+    for(i in c(1:length(groupNames))){
+      sampleI<-groupData[groupData$V2==groupNames[i], "V1"]
+      for(j in c(i+1:length(groupNames))){
+        sampleJ<-groupData[groupData$V2==groupNames[j], "V1"]
+        if(all(sampleI %in% sampleJ)){
+          discardGroups<-c(discardGroups, groupNames[i])
+          break
+        }else if(all(sampleJ %in% sampleI)){
+          discardGroups<-c(discardGroups, groupNames[j])
+        }
+      }
+    }
+    groupData<-groupData[!(groupData$V2 %in% discardGroups),]
+  }
+  
+  res<-NULL
+  for(sample in samples){
+    stog<-groupData[groupData$V1==sample,,drop=F]
+    if(nrow(stog) == 1){
+      group<-stog[1,2]
+    }else if(nrow(stog) > 1){
+      groups<-stog$V2[order(stog$V2)]
+      group<-paste(groups, collapse=":")
+    }else{
+      group<-"Unknown"
+    }
+    res<-rbind(res, data.frame(V1=sample, V2=group))
+  }
+  rownames(res)<-res$V1
+  return(res)
+}
 
 myEstimateSizeFactors<-function(dds){
   library(DESeq2)
@@ -572,59 +677,6 @@ countTableToSpecies<-function(dat,databaseLogFile="",outFileName="",shortName=T)
 		}
 	}
 	return(mappingResult2Species)
-}
-
-
-if(!exists("useLeastGroups")){
-  useLeastGroups<-FALSE
-}
-
-getSampleInGroup<-function(groupDefineFile, samples, comparisonDefineFile="", countTableTitle="", useLeastGroups=FALSE){
-  groupData<-read.delim(groupDefineFile,as.is=T,header=F)
-  if(comparisonDefineFile != ""){
-    comparisonData<-read.delim(comparisonDefineFile,as.is=T,header=F)
-    if(countTableTitle %in% comparisonData$V2){
-      countTableGroups<-comparisonData[comparisonData$V2==countTableTitle,"V1"]
-      groupData<-groupData[groupData$V2 %in% countTableGroups,]
-    }
-  }
-  
-  if(useLeastGroups){
-    groupData<-groupData[which(groupData$V1 %in% samples),]
-    groups<-lapply(unique(groupData$V2), function(x){
-      nrow(groupData[groupData$V2==x,])
-    })
-    discardGroups<-NULL
-    groupNames=unique(groupData$V2)
-    for(i in c(1:length(groupNames))){
-      sampleI<-groupData[groupData$V2==groupNames[i], "V1"]
-      for(j in c(i+1:length(groupNames))){
-        sampleJ<-groupData[groupData$V2==groupNames[j], "V1"]
-        if(all(sampleI %in% sampleJ)){
-          discardGroups<-c(discardGroups, groupNames[i])
-          break
-        }else if(all(sampleJ %in% sampleI)){
-          discardGroups<-c(discardGroups, groupNames[j])
-        }
-      }
-    }
-    groupData<-groupData[!(groupData$V2 %in% discardGroups),]
-  }
-  
-  res<-NULL
-  for(sample in samples){
-    stog<-groupData[groupData$V1==sample,,drop=F]
-    if(nrow(stog) == 1){
-      group<-stog[1,2]
-    }else if(nrow(stog) > 1){
-      groups<-stog$V2[order(stog$V2)]
-      group<-paste(groups, collapse=":")
-    }else{
-      group<-"Unknown"
-    }
-    res<-rbind(res, data.frame(V1=sample, V2=group))
-  }
-  return(res)
 }
 
 ###############################################################################
