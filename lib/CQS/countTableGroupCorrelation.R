@@ -20,10 +20,6 @@ if(exists("usePearsonInHCA") && usePearsonInHCA){
   distf <- dist
 }
 
-if(!exists("useLeastGroups")){
-  useLeastGroups<-FALSE
-}
-
 #source("/home/zhaos/source/r_cqs/vickers/codesToPipeline/countTableVisFunctions.R")
 
 ##Solving node stack overflow problem start###
