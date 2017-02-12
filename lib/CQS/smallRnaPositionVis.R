@@ -10,10 +10,6 @@ visLayoutFileList=parSampleFile2
 positionFile = parFile1
 totalCountFile<-parFile2
 
-if(!exists("useLeastGroups")){
-  useLeastGroups<-FALSE
-}
-
 #load Rcpp package first because of the error with reshape2 package
 library(Rcpp)
 
