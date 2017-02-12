@@ -20,8 +20,8 @@ if(exists("usePearsonInHCA") && usePearsonInHCA){
   distf <- dist
 }
 
-if(!exists("use_least_groups")){
-  use_least_groups<-FALSE
+if(!exists("useLeastGroups")){
+  useLeastGroups<-FALSE
 }
 
 #source("/home/zhaos/source/r_cqs/vickers/codesToPipeline/countTableVisFunctions.R")
@@ -139,7 +139,7 @@ for (i in 1:nrow(countTableFileAll)) {
   countNum<-countNum[which(rowSums(countNum,na.rm=T)>0),]
   
   if (groupFileList!="") {
-    sampleToGroup<-getSampleInGroup(groupFileList, colnames(countNum), comparisonFileList, countTableTitle, use_least_groups)
+    sampleToGroup<-getSampleInGroup(groupFileList, colnames(countNum), comparisonFileList, countTableTitle, useLeastGroups)
     write.table(sampleToGroup, paste0(countTableFile,".correlation.groups"),col.names=F, row.names=F, quote=F, sep="\t")
   }
   
