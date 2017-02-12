@@ -123,7 +123,7 @@ sub addPositionVis {
       class                => "CQS::UniqueR",
       perform              => 1,
       target_dir           => $parentDir . "/$taskName",
-      rtemplate            => "countTableVisFunctions.r,smallRnaPositionVis.R",
+      rtemplate            => "countTableVisFunctions.R,smallRnaPositionVis.R",
       output_file_ext      => ".allPositionBar.png",
       parameterFile2_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
       parameterSampleFile1 => $def->{tRNA_vis_group},
