@@ -551,6 +551,11 @@ sub get_pair_groups_names {
 ##################################################
 sub get_pure_pairs {
   my ($pairs) = @_;
+  
+  if(! defined $pairs){
+    return(undef)
+  }
+  
   my $result = get_sorted_raw_files($pairs);
 
   for my $pair_name ( keys %$result ) {
