@@ -46,18 +46,26 @@ smallRnaName2Group<-function(x,groupSnRNA=1) {
   }
   return(snRnaGroup)
 }
+position<-read.delim(positionFile, header=T,as.is=T)
+samples<-unique(position$File)
 
-allPosition<-read.delim(positionFile, header=T,as.is=T)
-samples<-unique(allPosition$File)
+groupInfo<-read.delim(groupFileList, header=F, as.is=T)
+groups<-unique(groupInfo$V2)
+groupSize<-table(groupInfo[,2])
 
-groupInfo<-getSampleInGroup(groupFileList, samples, useLeastGroups=useLeastGroups)
-groupSize<-table(groupInfo[,1])
 totalCount<-read.delim(totalCountFile,as.is=T,header=T,row.names=1)
 totalCount<-unlist(totalCount["MappedReads",])
 
-allPosition$FeatureLabel<-paste0(allPosition$Feature,"(",round(allPosition$TotalCount,0),")")
-allPosition$Group<-groupInfo[allPosition$File,1]
-allPosition$PositionCountFraction<-as.vector(allPosition$PositionCount/totalCount[allPosition$File])
+position$FeatureLabel<-paste0(position$Feature,"(",round(position$TotalCount,0),")")
+position$PositionCountFraction<-as.vector(position$PositionCount/totalCount[position$File])
+
+allPosition<-NULL
+for(group in groups){
+  groupSamples<-groupInfo$V1[groupInfo$V2==group]
+  groupPositions<-position[position$File %in% groupSamples,]
+  groupPositions$Group<-group
+  allPosition<-rbind(allPosition, groupPositions)
+}
 
 doSmallRNAGrouping<-smallRNAGrouping(unique(allPosition$Feature))
 if (doSmallRNAGrouping==1 | doSmallRNAGrouping==3) {
