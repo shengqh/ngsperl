@@ -19,7 +19,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files_attributes get_raw_files2 get_run_command get_option_value get_pair_groups
-      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key save_parameter_sample_file saveConfig writeFileList initDefaultValue)
+      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key save_parameter_sample_file saveConfig writeFileList initDefaultValue get_pure_pairs)
   ]
 );
 
@@ -435,14 +435,11 @@ sub do_get_unsorted_raw_files {
   }
 }
 
-sub do_get_raw_files {
+sub get_sorted_raw_files {
+  my $resultUnsorted = shift;
+  my @keys = grep { $_ !~ /^\./ } keys %$resultUnsorted;
   my %result;
   tie %result, 'Tie::IxHash';
-
-  my ( $resultUnsorted, $issource ) = do_get_unsorted_raw_files(@_);
-
-  my @keys = grep { $_ !~ /^\./ } keys %$resultUnsorted;
-
   my @orderedKeys;
   if ( exists $resultUnsorted->{".order"} ) {
     my $orders = $resultUnsorted->{".order"};
@@ -455,7 +452,13 @@ sub do_get_raw_files {
   for my $key (@orderedKeys) {
     $result{$key} = $resultUnsorted->{$key};
   }
-  return ( \%result, $issource );
+  return ( \%result );
+}
+
+sub do_get_raw_files {
+  my ( $resultUnsorted, $issource ) = do_get_unsorted_raw_files(@_);
+  my $result = get_sorted_raw_files($resultUnsorted);
+  return ( $result, $issource );
 }
 
 sub get_raw_files_attributes {
@@ -541,6 +544,23 @@ sub get_pair_groups_names {
     $group_names = $tmpgroup_names;
   }
   return ( $pairedNames, $group_names );
+}
+
+##################################################
+#Get pure pair-group information for UniqueR tasks
+##################################################
+sub get_pure_pairs {
+  my ($pairs) = @_;
+  my $result = get_sorted_raw_files($pairs);
+
+  for my $pair_name ( keys %$result ) {
+    my $tmpgroup_names = $result->{$pair_name};
+    if ( ref($tmpgroup_names) eq 'HASH' ) {
+      my $group_names = $tmpgroup_names->{"groups"};
+      $result->{$pair_name} = $group_names;
+    }
+  }
+  return ($result);
 }
 
 #Return
