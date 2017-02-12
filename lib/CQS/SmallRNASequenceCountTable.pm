@@ -30,7 +30,7 @@ sub get_sample_map {
   for my $group_name (@$group_names) {
     my @sample_names = @{ $groups->{$group_name} };
     for my $sample_name (@sample_names) {
-      die "Unknown sample $sample_name in group $group_name" if ! $rawfiles->{$sample_name};
+      die "Unknown sample $sample_name in group $group_name" if !$rawfiles->{$sample_name};
       $result->{$sample_name} = $rawfiles->{$sample_name};
     }
   }
@@ -127,6 +127,7 @@ sub perform {
     my $filelist   = $self->get_file( $pbs_dir,    $name, ".filelist", 0 );
     my $outputfile = $self->get_file( $result_dir, $name, ".count",    0 );
     my $outputname = basename($outputfile);
+    my $finalfile = basename( $self->get_file( $result_dir, $name, ".minicontig.count", 0 ) );
 
     open( my $fl, ">$filelist" ) or die "Cannot create $filelist";
     my $samples = $name_files_map->{$name};
@@ -142,7 +143,7 @@ sub perform {
     close($fl);
 
     print $pbs "
-if [ ! -s $outputname ]; then
+if [ ! -s $finalfile ]; then
   mono $cqstools smallrna_sequence_count_table $option -o $outputname -l $filelist
 fi
 
