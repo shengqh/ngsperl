@@ -574,6 +574,11 @@ countTableToSpecies<-function(dat,databaseLogFile="",outFileName="",shortName=T)
 	return(mappingResult2Species)
 }
 
+
+if(!exists("useLeastGroups")){
+  useLeastGroups<-FALSE
+}
+
 getSampleInGroup<-function(groupDefineFile, samples, comparisonDefineFile="", countTableTitle="", useLeastGroups=FALSE){
   groupData<-read.delim(groupDefineFile,as.is=T,header=F)
   if(comparisonDefineFile != ""){
