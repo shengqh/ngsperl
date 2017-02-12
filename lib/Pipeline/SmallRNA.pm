@@ -77,6 +77,14 @@ sub getSmallRNAConfig {
   my @name_for_readSummary   = ();
   my @name_for_mapPercentage = ( "identical", "dupcount\$" );
 
+  my $group_rcode = "";
+  if ( $def->{use_least_groups} ) {
+    $group_rcode = "useLeastGroups<-TRUE";
+  }
+  else {
+    $group_rcode = "useLeastGroups<-FALSE";
+  }
+
   #print Dumper($config);
   my $groups = $def->{groups};
   if ( !defined $def->{groups_vis_layout} && defined $groups->{".order"} && defined $groups->{".col"} && defined $groups->{".row"} ) {
@@ -422,6 +430,7 @@ sub getSmallRNAConfig {
         {
           output_file        => ".miRNAPositionVis",
           parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count.position\$" ],
+          rCode              => $group_rcode,
         }
       );
       addPositionVis(
@@ -432,6 +441,7 @@ sub getSmallRNAConfig {
         {
           output_file        => ".tRNAPositionVis",
           parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count.position\$" ],
+          rCode              => $group_rcode,
 
           #        parameterSampleFile3_ref => $trna_sig_result,
         }
@@ -444,6 +454,7 @@ sub getSmallRNAConfig {
         {
           output_file        => ".tRNAAnticodonPositionVis",
           parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count.position\$" ],
+          rCode              => $group_rcode,
 
           #        parameterSampleFile3_ref => $trna_sig_result,
         }
@@ -457,6 +468,7 @@ sub getSmallRNAConfig {
           {
             output_file        => ".yRNAPositionVis",
             parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count.position\$" ],
+            rCode              => $group_rcode,
           }
         );
       }
@@ -468,6 +480,7 @@ sub getSmallRNAConfig {
         {
           output_file        => ".snRNAPositionVis",
           parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count.position\$" ],
+          rCode              => $group_rcode,
         }
       );
       addPositionVis(
@@ -478,6 +491,7 @@ sub getSmallRNAConfig {
         {
           output_file        => ".snoRNAPositionVis",
           parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count.position\$" ],
+          rCode              => $group_rcode,
         }
       );
     }
@@ -852,6 +866,8 @@ sub getSmallRNAConfig {
     parameterSampleFile1_ref  => \@table_for_correlation,
     parameterSampleFile2Order => $def->{groups_order},
     parameterSampleFile2      => $def->{tRNA_vis_group},
+    parameterSampleFile3      => get_pure_pairs( $def->{pairs} ),
+    rCode                     => $group_rcode,
     sh_direct                 => 1,
     pbs                       => {
       "email"     => $def->{email},
@@ -950,12 +966,14 @@ sub getSmallRNAConfig {
       class      => "CQS::SmallRNASequenceCountTable",
       perform    => 1,
       target_dir => $nonhost_blast_dir . "/final_unmapped_reads_table",
-      option     => "--maxExtensionBase $max_sequence_extension_base -n $top_read_number --exportFastaNumber $top_read_number",
+      option     => getValue( $def, "sequence_count_option" ),
       source_ref => [ $identical_ref->[0], ".dupcount\$" ],
       cqs_tools  => $def->{cqstools},
       suffix     => "_unmapped",
       sh_direct  => 1,
       cluster    => $cluster,
+      groups     => $def->{groups},
+      pairs      => $def->{pairs},
       pbs        => {
         "email"     => $def->{email},
         "emailType" => $def->{emailType},
