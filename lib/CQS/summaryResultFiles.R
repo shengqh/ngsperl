@@ -32,6 +32,7 @@ addUnitToSize<-function(x) {
 	return(result)
 }
 
+
 fileList<-read.delim(fileListName,as.is=T,header=T)
 temp<-strsplit(fileList$FileList,",")
 fileSizeRaw<-lapply(temp,function(x) file.size1(x))
@@ -39,6 +40,9 @@ fileSize<-lapply(fileSizeRaw,addUnitToSize)
 fileSizeTotalRaw<-sapply(fileSizeRaw,sum,na.rm=T)
 fileSizeTotal<-addUnitToSize(fileSizeTotalRaw)
 fileExistPercent<-sapply(fileSizeRaw,function(x) length(which(x>100&!is.na(x)))/length(x))
+canBeEmpty<-which(fileList$CanFileEmpty=="True")
+fileExistPercent[canBeEmpty]<-sapply(fileSizeRaw[canBeEmpty],function(x) length(which(x>=0&!is.na(x)))/length(x))
+
 Result<-rep("FAIL",length(fileExistPercent))
 Result[which(fileExistPercent==1)]<-"PASS"
 Result[which(fileExistPercent>0 & fileExistPercent<1)]<-"WARN"
