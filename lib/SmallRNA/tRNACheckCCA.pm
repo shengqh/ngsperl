@@ -23,6 +23,10 @@ sub new {
   return $self;
 }
 
+sub can_result_be_empty_file {
+  return 1;
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 

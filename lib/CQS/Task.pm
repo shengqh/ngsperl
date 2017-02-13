@@ -26,6 +26,10 @@ sub result {
   return $result;
 }
 
+sub can_result_be_empty_file {
+  return 0;
+}
+
 sub get_clear_map {
   my $self   = shift;
   my $result = $self->result(@_);

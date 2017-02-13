@@ -132,7 +132,7 @@ sub perform {
   my $final = $self->open_pbs( $final_pbs, $pbs_desc, $final_log_desp, $path_file, $pbs_dir );
 
   open( my $result_list, ">$result_list_file" ) or die $!;
-  print $result_list "StepName\tTaskName\tSampleName\tFileList\n";
+  print $result_list "StepName\tTaskName\tSampleName\tFileList\tCanFileEmpty\n";
 
   for my $step_name ( sort keys %step_map ) {
     my $shfile = $self->get_task_filename( $pbs_dir, $step_name );
@@ -152,6 +152,8 @@ sub perform {
         die "$task_section is not a valid task section.";
       }
       my $myclass = instantiate($classname);
+      
+      my $can_result_be_empty_file = $myclass->can_result_be_empty_file() ? "True" : "False";
       my $expect_file_map;
       eval { $expect_file_map = $myclass->result( $config, $task_section ); } or do {
         my $e = $@;
@@ -167,7 +169,7 @@ sub perform {
       for my $expect_name ( sort keys %$expect_file_map ) {
         my $expect_files = $expect_file_map->{$expect_name};
         my $expect_file_list = join( ",", @{$expect_files} );
-        print $result_list $step_name, "\t", $task_section, "\t", $expect_name, "\t", $expect_file_list, "\n";
+        print $result_list $step_name, "\t", $task_section, "\t", $expect_name, "\t", $expect_file_list, "\t", $can_result_be_empty_file, "\n";
       }
 
       for my $sample ( sort keys %{$pbs_file_map} ) {
