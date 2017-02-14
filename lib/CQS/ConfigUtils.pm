@@ -18,7 +18,7 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files_attributes get_raw_files2 get_run_command get_option_value get_pair_groups
+    qw(get_config_section has_config_section get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files_attributes get_raw_files2 get_run_command get_option_value get_pair_groups
       get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key save_parameter_sample_file saveConfig writeFileList initDefaultValue get_pure_pairs)
   ]
 );
@@ -27,12 +27,37 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
+####
+# Get section definition from config definition. section can be multiple layers, such as "task1::task2" which indicates $config->{task1}->{task2}
+####
+sub get_config_section {
+  my ( $config, $section ) = @_;
+  my @sections = split( '::', $section );
+  my $result = $config;
+  for my $curSection (@sections) {
+    $result = $result->{$curSection};
+    die "Cannot find section $section!" if ( !defined $result );
+  }
+  return ($result);
+}
+
+sub has_config_section {
+  my ( $config, $section ) = @_;
+  my @sections = split( '::', $section );
+  my $result = $config;
+  for my $curSection (@sections) {
+    $result = $result->{$curSection};
+    return 0 if ( !defined $result );
+  }
+  return 1;
+}
+
 sub get_option {
   my ( $config, $section, $key, $default ) = @_;
 
-  die "no section $section found!" if !defined $config->{$section};
+  my $curSection = get_config_section( $config, $section );
 
-  my $result = $config->{$section}{$key};
+  my $result = $curSection->{$key};
   if ( !defined $result ) {
     if ( !defined $default ) {
       die "Define ${section}::${key} first!";
@@ -48,9 +73,11 @@ sub get_option {
 sub get_cluster {
   my ( $config, $section ) = @_;
 
+  my $curSection = get_config_section( $config, $section );
+
   my $cluster_name;
-  if ( defined $config->{$section}{cluster} ) {
-    $cluster_name = get_option_value( $config->{$section}{cluster}, "slurm" );
+  if ( defined $curSection->{cluster} ) {
+    $cluster_name = get_option_value( $curSection->{cluster}, "slurm" );
   }
   else {
     $cluster_name = get_option_value( $config->{general}{cluster}, "slurm" );
@@ -70,9 +97,11 @@ sub get_cluster {
 sub get_value_in_section_or_general {
   my ( $config, $section, $name, $defaultvalue ) = @_;
 
+  my $curSection = get_config_section( $config, $section );
+
   my $result;
-  if ( defined $config->{$section}{$name} ) {
-    $result = get_option_value( $config->{$section}{$name}, $defaultvalue );
+  if ( defined $curSection->{$name} ) {
+    $result = get_option_value( $curSection->{$name}, $defaultvalue );
   }
   else {
     $result = get_option_value( $config->{general}{$name}, $defaultvalue );
@@ -89,7 +118,7 @@ sub get_java {
 sub get_parameter {
   my ( $config, $section, $create_directory ) = @_;
 
-  die "no section $section found!" if !defined $config->{$section};
+  my $curSection = get_config_section( $config, $section );
 
   $create_directory = 1 if !defined($create_directory);
 
@@ -100,7 +129,7 @@ sub get_parameter {
 
   my $cluster = get_cluster(@_);
 
-  my $path_file = get_param_file( $config->{$section}{path_file}, "path_file", 0 );
+  my $path_file = get_param_file( $curSection->{path_file}, "path_file", 0 );
   if ( !defined $path_file ) {
     $path_file = get_param_file( $config->{general}{path_file}, "path_file", 0 );
   }
@@ -170,10 +199,11 @@ sub get_param_file {
 sub get_directory {
   my ( $config, $section, $name, $required ) = @_;
 
-  die "section $section was not defined!" if !defined $config->{$section};
-  die "parameter name must be defined!"   if !defined $name;
+  my $curSection = get_config_section( $config, $section );
 
-  my $result = $config->{$section}{$name};
+  die "parameter name must be defined!" if !defined $name;
+
+  my $result = $curSection->{$name};
 
   if ($required) {
     if ( !defined $result ) {
@@ -199,9 +229,11 @@ sub get_directory {
 
 sub get_cqstools {
   my ( $config, $section, $required ) = @_;
-  my $cqstools = get_param_file( $config->{$section}{cqs_tools}, "cqs_tools", 0 );
+  my $curSection = get_config_section( $config, $section );
+
+  my $cqstools = get_param_file( $curSection->{cqs_tools}, "cqs_tools", 0 );
   if ( !defined $cqstools ) {
-    $cqstools = get_param_file( $config->{$section}{cqstools}, "cqstools", $required );
+    $cqstools = get_param_file( $curSection->{cqstools}, "cqstools", $required );
   }
   return ($cqstools);
 }
@@ -209,16 +241,17 @@ sub get_cqstools {
 sub parse_param_file {
   my ( $config, $section, $key, $required ) = @_;
 
-  die "section $section was not defined!" if !defined $config->{$section};
+  my $curSection = get_config_section( $config, $section );
+
   die "parameter key must be defined!" if !defined $key;
 
-  if ( defined $config->{$section}{$key} ) {
-    return $config->{$section}{$key};
+  if ( defined $curSection->{$key} ) {
+    return $curSection->{$key};
   }
 
   my $key_ref = $key . "_ref";
-  if ( defined $config->{$section}{$key_ref} ) {
-    my $refSectionName = $config->{$section}{$key_ref};
+  if ( defined $curSection->{$key_ref} ) {
+    my $refSectionName = $curSection->{$key_ref};
     my $pattern;
     if ( ref($refSectionName) eq 'ARRAY' ) {
       my @parts = @{$refSectionName};
@@ -230,9 +263,10 @@ sub parse_param_file {
         $refSectionName = $parts[0];
       }
     }
-    die "section $refSectionName was not defined!" if !defined $config->{$refSectionName};
-    if ( defined $config->{$refSectionName}{class} ) {
-      my $myclass = instantiate( $config->{$refSectionName}{class} );
+
+    my $refSection = get_config_section( $config, $refSectionName );
+    if ( defined $refSection->{class} ) {
+      my $myclass = instantiate( $refSection->{class} );
       my $result = $myclass->result( $config, $refSectionName, $pattern, 1 );
       foreach my $k ( sort keys %{$result} ) {
         my @files = @{ $result->{$k} };
@@ -254,6 +288,8 @@ sub parse_param_file {
 sub has_raw_files {
   my ( $config, $section, $mapname ) = @_;
 
+  my $curSection = get_config_section( $config, $section );
+
   if ( !defined $mapname ) {
     $mapname = "source";
   }
@@ -261,13 +297,13 @@ sub has_raw_files {
   my $mapname_ref        = $mapname . "_ref";
   my $mapname_config_ref = $mapname . "_config_ref";
 
-  return ( defined $config->{$section}{$mapname} ) || ( defined $config->{$section}{$mapname_ref} ) || ( defined $config->{$section}{$mapname_config_ref} );
+  return ( defined $curSection->{$mapname} ) || ( defined $curSection->{$mapname_ref} ) || ( defined $curSection->{$mapname_config_ref} );
 }
 
 sub do_get_unsorted_raw_files {
   my ( $config, $section, $returnself, $mapname, $pattern ) = @_;
 
-  die "section $section was not defined!" if !defined $config->{$section};
+  my $curSection = get_config_section( $config, $section );
 
   if ( !defined $mapname ) {
     $mapname = "source";
@@ -275,16 +311,16 @@ sub do_get_unsorted_raw_files {
   my $mapname_ref        = $mapname . "_ref";
   my $mapname_config_ref = $mapname . "_config_ref";
 
-  if ( defined $config->{$section}{$mapname} ) {
-    return ( $config->{$section}{$mapname}, 1 );
+  if ( defined $curSection->{$mapname} ) {
+    return ( $curSection->{$mapname}, 1 );
   }
 
-  if ( defined $config->{$section}{$mapname_ref} || defined $config->{$section}{$mapname_config_ref} ) {
+  if ( defined $curSection->{$mapname_ref} || defined $curSection->{$mapname_config_ref} ) {
     my $refmap = {};
-    if ( defined $config->{$section}{$mapname_ref} ) {
+    if ( defined $curSection->{$mapname_ref} ) {
 
       #in same config
-      my $targetSection = $config->{$section}{$mapname_ref};
+      my $targetSection = $curSection->{$mapname_ref};
 
       if ( ref($targetSection) eq 'HASH' ) {
         return ( $targetSection, 1 );
@@ -294,11 +330,12 @@ sub do_get_unsorted_raw_files {
         my @parts      = @{$targetSection};
         my $partlength = scalar(@parts);
         for ( my $index = 0 ; $index < $partlength ; ) {
-          if ( !defined $config->{ $parts[$index] } ) {
-            die "undefined section $parts[$index]";
-          }
+        if ( !has_config_section($config, $targetSection) ) {
+          die "undefined section $targetSection";
+        }
+          get_config_section( $config, $parts[$index] );
 
-          if ( $index == ( $partlength - 1 ) || defined $config->{ $parts[ $index + 1 ] } ) {
+          if ( $index == ( $partlength - 1 ) || has_config_section( $config, $parts[ $index + 1 ] ) ) {
             $refmap->{$index} = { config => $config, section => $parts[$index], pattern => $pattern };
             $index++;
           }
@@ -309,7 +346,7 @@ sub do_get_unsorted_raw_files {
         }
       }
       else {
-        if ( !defined $config->{$targetSection} ) {
+        if ( !has_config_section($config, $targetSection) ) {
           die "undefined section $targetSection";
         }
         $refmap->{1} = { config => $config, section => $targetSection, pattern => $pattern };
@@ -318,7 +355,7 @@ sub do_get_unsorted_raw_files {
     else {
 
       #in another config, has to be array
-      my $refSectionName = $config->{$section}{$mapname_config_ref};
+      my $refSectionName = $curSection->{$mapname_config_ref};
       if ( !( ref($refSectionName) eq 'ARRAY' ) ) {
         die "$mapname_config_ref has to be defined as ARRAY with [config, section, pattern]";
       }
@@ -333,7 +370,7 @@ sub do_get_unsorted_raw_files {
 "$mapname_config_ref has to be defined as ARRAY with [config1, section1, pattern1,config2, section2, pattern2] or [config1, section1,config2, section2] format. config should be hash and section should be string";
         }
 
-        if ( !defined $targetConfig->{$targetSection} ) {
+        if ( !has_config_section($targetConfig, $targetSection) ) {
           die "undefined section $targetSection in $mapname_config_ref of $section";
         }
 
@@ -358,9 +395,11 @@ sub do_get_unsorted_raw_files {
       my $section      = $values->{section};
       my $pattern      = $values->{pattern};
 
+      my $targetSection = get_config_section($targetConfig, $section);
+      
       my %myres = ();
-      if ( defined $targetConfig->{$section}{class} ) {
-        my $myclass = instantiate( $targetConfig->{$section}{class} );
+      if ( defined $targetSection->{class} ) {
+        my $myclass = instantiate( $targetSection->{class} );
         %myres = %{ $myclass->result( $targetConfig, $section, $pattern ) };
       }
       else {
@@ -420,14 +459,14 @@ sub do_get_unsorted_raw_files {
   if ($returnself) {
     if ( defined $pattern ) {
       my $result = {};
-      for my $key ( sort keys %{ $config->{$section} } ) {
-        my $values = $config->{$section}{$key};
+      for my $key ( sort keys %$curSection ) {
+        my $values = $curSection->{$key};
         $result->{$key} = filter_array( $values, $pattern );
       }
       return ( $result, 0 );
     }
     else {
-      return ( $config->{$section}, 0 );
+      return ( $curSection, 0 );
     }
   }
   else {
@@ -551,11 +590,11 @@ sub get_pair_groups_names {
 ##################################################
 sub get_pure_pairs {
   my ($pairs) = @_;
-  
-  if(! defined $pairs){
-    return(undef)
+
+  if ( !defined $pairs ) {
+    return (undef);
   }
-  
+
   my $result = get_sorted_raw_files($pairs);
 
   for my $pair_name ( keys %$result ) {
@@ -638,10 +677,12 @@ sub get_group_samplefile_map_key {
 sub save_parameter_sample_file {
   my ( $config, $section, $key, $outputFile ) = @_;
 
+  my $curSection = get_config_section($config, $section);
+  
   if ( has_raw_files( $config, $section, $key ) ) {
     my %temp = %{ get_raw_files( $config, $section, $key ) };
     my @orderedSampleNames;
-    my $sampleFileOrder = $config->{$section}{ $key . "Order" };
+    my $sampleFileOrder = $curSection->{ $key . "Order" };
     if ( defined $sampleFileOrder ) {
       @orderedSampleNames = @{$sampleFileOrder};
     }
