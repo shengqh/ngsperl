@@ -29,20 +29,21 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $comparisons = get_raw_files( $config, $section,"comparison" );
+  my $comparisons = get_raw_files( $config, $section, "comparison" );
   my @comparison_names = keys %{$comparisons};
-  
+
   my $methfiles = get_raw_files( $config, $section, "methfile" );
-#  my $hmrfiles = get_raw_files( $config, $section, "hmrfile" );
+
+  #  my $hmrfiles = get_raw_files( $config, $section, "hmrfile" );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct) . "\n";
   print $sh "cd $pbs_dir\n";
 
-  for my $group_name ( @comparison_names ) {
+  for my $group_name (@comparison_names) {
     my @sampleNames = @{ $comparisons->{$group_name}; };
-    my $sampleCount  = scalar(@sampleNames);
+    my $sampleCount = scalar(@sampleNames);
 
     if ( $sampleCount != 2 ) {
       die "SampleFile should be 2 paired samples.";
@@ -50,13 +51,13 @@ sub perform {
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$group_name" );
 
-    my $controlMethFile = $methfiles->{$sample_files[0][1]};
-    my $treatmentMethFile  = $methfiles->{$sample_files[1][1]};
-    my $methdiffFile="${group_name}.methdiff"
+    my $controlMethFile   = $methfiles->{ $sampleNames[0][1] };
+    my $treatmentMethFile = $methfiles->{ $sampleNames[1][1] };
+    my $methdiffFile      = "${group_name}.methdiff";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
     my $pbs_name = basename($pbs_file);
-    my $log      = $self->get_log_filename( $log_dir, $group_name );
+    my $log = $self->get_log_filename( $log_dir, $group_name );
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
