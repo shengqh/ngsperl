@@ -63,7 +63,7 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $snpvcf );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
 
     print $pbs "
 if [ ! -s $methdiffFile ]; then
