@@ -61,18 +61,16 @@ sub perform {
 
     my @peaks = @{ $peakFiles{$fileName} };
 
-    my $cur_dir = create_directory_or_die( $result_dir . "/$fileName" );
-
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $fileName );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $fileName );
 
     my $log_desc   = $cluster->get_log_description($log);
-    my $final_file = "${fileName}_peaks/${fileName}_peaks_GENE_TABLE.txt";
-    my $pbs        = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    my $final_file = "${fileName}/${fileName}_GENE_TABLE.txt";
+    my $pbs        = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
     my $peak       = $peaks[0];
 
-    print $pbs "python $pipeline_dir/enhancerPromoter.py $option -b $bamFile -i $peak -g $genome -o . --genomeDirectory $genomeDirectory --gseaPath $gseaPath --gmxPath $gmxPath --cpgPath $cpgPath \n";
+    print $pbs "python $pipeline_dir/enhancerPromoter.py $option -b $bamFile -i $peak -g $genome -o . --name $fileName --genomeDirectory $genomeDirectory --gseaPath $gseaPath --gmxPath $gmxPath --cpgPath $cpgPath \n";
 
     $self->close_pbs( $pbs, $pbs_file );
     print $sh "\$MYCMD ./$pbs_name \n";
@@ -93,10 +91,9 @@ sub result {
 
   my $result = {};
   for my $fileName ( keys %$rawFiles ) {
-    my $cur_dir      = $result_dir . "/$fileName";
     my @result_files = ();
-    my $final_file   = "${fileName}_peaks/${fileName}_GENE_TABLE.txt";
-    push( @result_files, $cur_dir . "/$final_file" );
+    my $final_file   = "${fileName}/${fileName}_GENE_TABLE.txt";
+    push( @result_files, $result_dir . "/$final_file" );
     $result->{$fileName} = filter_array( \@result_files, $pattern );
   }
   return $result;
