@@ -330,9 +330,9 @@ sub do_get_unsorted_raw_files {
         my @parts      = @{$targetSection};
         my $partlength = scalar(@parts);
         for ( my $index = 0 ; $index < $partlength ; ) {
-        if ( !has_config_section($config, $targetSection) ) {
-          die "undefined section $targetSection";
-        }
+          if ( !has_config_section( $config, $parts[$index] ) ) {
+            die "undefined section $parts[$index]";
+          }
           get_config_section( $config, $parts[$index] );
 
           if ( $index == ( $partlength - 1 ) || has_config_section( $config, $parts[ $index + 1 ] ) ) {
@@ -346,7 +346,7 @@ sub do_get_unsorted_raw_files {
         }
       }
       else {
-        if ( !has_config_section($config, $targetSection) ) {
+        if ( !has_config_section( $config, $targetSection ) ) {
           die "undefined section $targetSection";
         }
         $refmap->{1} = { config => $config, section => $targetSection, pattern => $pattern };
@@ -370,7 +370,7 @@ sub do_get_unsorted_raw_files {
 "$mapname_config_ref has to be defined as ARRAY with [config1, section1, pattern1,config2, section2, pattern2] or [config1, section1,config2, section2] format. config should be hash and section should be string";
         }
 
-        if ( !has_config_section($targetConfig, $targetSection) ) {
+        if ( !has_config_section( $targetConfig, $targetSection ) ) {
           die "undefined section $targetSection in $mapname_config_ref of $section";
         }
 
@@ -395,8 +395,8 @@ sub do_get_unsorted_raw_files {
       my $section      = $values->{section};
       my $pattern      = $values->{pattern};
 
-      my $targetSection = get_config_section($targetConfig, $section);
-      
+      my $targetSection = get_config_section( $targetConfig, $section );
+
       my %myres = ();
       if ( defined $targetSection->{class} ) {
         my $myclass = instantiate( $targetSection->{class} );
@@ -677,8 +677,8 @@ sub get_group_samplefile_map_key {
 sub save_parameter_sample_file {
   my ( $config, $section, $key, $outputFile ) = @_;
 
-  my $curSection = get_config_section($config, $section);
-  
+  my $curSection = get_config_section( $config, $section );
+
   if ( has_raw_files( $config, $section, $key ) ) {
     my %temp = %{ get_raw_files( $config, $section, $key ) };
     my @orderedSampleNames;
