@@ -39,7 +39,9 @@ sub get_final_files {
 sub get_extension {
   my ( $self, $config, $section ) = @_;
 
-  my $extension = $config->{$section}{extension} or die "define ${section}::extension first";
+  my $curSection = get_config_section( $config, $section );
+
+  my $extension = $curSection->{extension} or die "define ${section}::extension first";
   if ( $extension =~ /\.gz$/ ) {
     $extension =~ s/\.gz$//g;
   }
@@ -66,13 +68,15 @@ sub perform {
 
   my $ispairend = get_option( $config, $section, "pairend", 0 );
 
+  my $curSection = get_config_section( $config, $section );
+
   my $adapter_option = "";
-  if ( defined $config->{$section}{adapter} ) {
+  if ( defined $curSection->{adapter} ) {
     if ($ispairend) {
-      $adapter_option = " -a " . $config->{$section}{adapter} . " -A " . $config->{$section}{adapter};
+      $adapter_option = " -a " . $curSection->{adapter} . " -A " . $curSection->{adapter};
     }
     else {
-      $adapter_option = " -a " . $config->{$section}{adapter};
+      $adapter_option = " -a " . $curSection->{adapter};
     }
   }
 
@@ -92,11 +96,11 @@ sub perform {
     $optionOnlyLimited = $optionOnlyLimited . " " . $longLimited;
     $optionRemoveLimited =~ s/$longLimited//;
   }
-  
-  if(index($option, "--trim-n") == -1){
+
+  if ( index( $option, "--trim-n" ) == -1 ) {
     $option = $option . " --trim-n";
   }
-  
+
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -118,6 +122,15 @@ sub perform {
     my @final_files = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_files[0] );
 
+    for my $sample_file (@sample_files) {
+      print $pbs "
+if [ ! -s $sample_file ]; then
+  echo input file not exits: $sample_file
+  exit 0
+fi
+";
+
+    }
     if ($ispairend) {
       die "should be pair-end data but not!" if ( scalar(@sample_files) != 2 );
 
