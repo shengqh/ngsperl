@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Comparison::DESeq2;
+package Comparison::EdgeR;
 
 use strict;
 use warnings;
