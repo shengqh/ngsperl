@@ -27,6 +27,11 @@ sub result {
 }
 
 sub can_result_be_empty_file {
+  my ( $self, $config, $section ) = @_;
+  my $curSection = get_config_section($config, $section);
+  if(defined $curSection->{can_result_be_empty_file} && $curSection->{can_result_be_empty_file}){
+    return 1;
+  }
   return 0;
 }
 

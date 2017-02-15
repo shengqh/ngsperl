@@ -153,7 +153,7 @@ sub perform {
       }
       my $myclass = instantiate($classname);
       
-      my $can_result_be_empty_file = $myclass->can_result_be_empty_file() ? "True" : "False";
+      my $can_result_be_empty_file = $myclass->can_result_be_empty_file($config, $section) ? "True" : "False";
       my $expect_file_map;
       eval { $expect_file_map = $myclass->result( $config, $task_section ); } or do {
         my $e = $@;
