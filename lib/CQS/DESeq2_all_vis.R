@@ -22,6 +22,9 @@ addVisLayout<-function(datForFigure, visLayoutFileList,LayoutKey="LayoutKey") {
   if (visLayoutFileList!="") {
     visLayout<-read.delim(visLayoutFileList,as.is=T,header=F)
     visLayout<-sapply(split(visLayout[,1],visLayout[,2]),function(x) x)
+    if(is.null(ncol(visLayout))){
+      visLayout<-data.frame(as.list(visLayout))
+    }
     row.names(visLayout)<-visLayout[,"Groups"]
     visLayout<-data.frame(visLayout[,-which(colnames(visLayout)=="Groups")])
     visLayout$Col_Group<-factor(visLayout$Col_Group,levels=unique(visLayout$Col_Group))
@@ -121,7 +124,7 @@ p<-p+
         strip.text.y = element_text(size = 13),
         legend.position="top")
     
-width<-length(unique(diffResult$Pairs))*800
+width<-max(1600,length(unique(diffResult$Pairs))*800)
 height<-max(1600,length(unique(diffResult$Module))*800)
 png(filename=paste0(resultFile, ".png"), width=width, height=height, res=300)
 if (visLayoutFileList!="") {
