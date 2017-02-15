@@ -702,6 +702,7 @@ sub getSmallRNAConfig {
       $def->{mirbase_count_option} . " -m --keepChrInName --keepSequence",                 #count option
       $def->{nonhost_table_option}                                                         #table option
     );
+    $config->{bowtie1_miRBase_pm_count}{can_result_be_empty_file} = 1;
 
     push @table_for_countSum, ( "bowtie1_miRBase_pm_table", "^(?!.*?read).*\.count\$" );
     push @mapped,             ( "bowtie1_miRBase_pm_count", ".xml" );
