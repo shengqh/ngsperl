@@ -29,9 +29,9 @@ if (countInFastQcTrim2=="") {
   count1<-count1[rownames(count2),]
   count1$Reads<-count1$Reads-count2$Reads
   
-  if(countInFastQcTrim1 =~ /post_remove/){
+  if(grepl("post_remove", countInFastQcTrim1)){
     count1$Label="Removed by Removing Sequence"
-  } else if (countInFastQcTrim1 =~ /post_trim/){
+  } else if (grepl("post_trim", countInFastQcTrim1)){
     count1$Label="Removed by Trimming"
   } else {
     count1$Label="Removed by Trimming or Removing Sequence"
