@@ -386,13 +386,13 @@ for(countfile_index in c(1:length(countfiles))){
       comparisonData<-comparisonData[med,]
       
       cat(nrow(comparisonData), " genes with minimum median count in group larger or equals than ", minMedianInGroup, "\n")
-      
-      if (nrow(comparisonData)==0) {
-        message=paste0("Error: 0 Genes can be used in DESeq2 analysis in comparison ",comparisonName," \n")
-        warning(message)
-        writeLines(message,paste0(comparisonName,".error"))
-        next;
-      }
+    }
+
+    if (nrow(comparisonData)==0) {
+      message=paste0("Error: 0 Genes can be used in DESeq2 analysis in comparison ",comparisonName," \n")
+      warning(message)
+      writeLines(message,paste0(comparisonName,".error"))
+      next;
     }
     
     if(ispaired){
@@ -510,6 +510,7 @@ for(countfile_index in c(1:length(countfiles))){
       message=paste0("Error: All genes in ",comparisonName," has at least one 0 value. Can't do DESeq2.")
       warning(message)
       writeLines(message,paste0(comparisonName,".error"))
+      write.csv("", paste0(prefix, "_DESeq2.csv"))
       next;
     }
     
