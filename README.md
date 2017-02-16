@@ -56,7 +56,7 @@ The following code indicates a configuration of the simplest differentially expr
   		files   => {
 		    "S1" => ["rawdata/s1_sequence.txt"],
 		    "S2" => ["rawdata/s2_sequence.txt"],
-	    	"S3" => ["rawdata/s3_sequence.txt"],
+	    	    "S3" => ["rawdata/s3_sequence.txt"],
 	    	"S4" => ["rawdata/s4_sequence.txt"],
 	    	"S5" => ["rawdata/s5_sequence.txt"],
 	    	"S6" => ["rawdata/s6_sequence.txt"],
