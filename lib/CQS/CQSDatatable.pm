@@ -64,7 +64,7 @@ sub perform {
   }
   close(FL);
 
-  my ( $result_file, $newoption ) = $self->get_result( ".",$task_name, $option );
+  my $result_file = $task_name . ".count";
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
@@ -74,7 +74,7 @@ sub perform {
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file );
 
-  print $pbs "mono $cqstools data_table $newoption -l $filelist $mapoption";
+  print $pbs "mono $cqstools data_table $option -o $result_file -l $filelist $mapoption";
 
   $self->close_pbs( $pbs, $pbs_file );
 }
@@ -85,14 +85,10 @@ sub result {
 
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
-
-  my $result = {};
-  my ( $result_file, $newoption ) = $self->get_result($result_dir, $task_name, $option );
-  my $filelist = $self->get_file( $pbs_dir, $task_name, ".filelist" );
-
+  my $result       = {};
   my @result_files = ();
-  push( @result_files, $result_file );
-  push( @result_files, $filelist );
+  push( @result_files, $result_dir . "/" . $task_name . ".count" );
+  push( @result_files, $self->get_file( $pbs_dir, $task_name, ".filelist" ) );
 
   $result->{$task_name} = filter_array( \@result_files, $pattern );
 
