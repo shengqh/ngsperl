@@ -64,7 +64,7 @@ sub perform {
   }
   close(FL);
 
-  my $result_file = $task_name . ".count";
+  my $result_file = $self->get_file(".", $task_name, ".count", 0);
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
@@ -87,7 +87,7 @@ sub result {
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
   my $result       = {};
   my @result_files = ();
-  push( @result_files, $result_dir . "/" . $task_name . ".count" );
+  push( @result_files, $self->get_file($result_dir, $task_name, ".count", 0));
   push( @result_files, $self->get_file( $pbs_dir, $task_name, ".filelist" ) );
 
   $result->{$task_name} = filter_array( \@result_files, $pattern );
