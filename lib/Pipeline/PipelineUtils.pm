@@ -167,6 +167,7 @@ sub addDEseq2 {
     groups_ref             => "groups",
     countfile_ref          => $countfileRef,
     sh_direct              => 1,
+    show_label_PCA         => $def->{show_label_PCA},
     show_DE_gene_cluster   => $def->{DE_show_gene_cluster},
     pvalue                 => $def->{DE_pvalue},
     fold_change            => $def->{DE_fold_change},

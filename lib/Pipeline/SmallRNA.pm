@@ -78,10 +78,16 @@ sub getSmallRNAConfig {
   my @name_for_mapPercentage = ( "identical", "dupcount\$" );
 
   if ( $def->{use_least_groups} ) {
-    $def->{group_rcode} = "useLeastGroups<-TRUE";
+    $def->{correlation_rcode} = "useLeastGroups<-TRUE;";
   }
   else {
-    $def->{group_rcode} = "useLeastGroups<-FALSE";
+    $def->{correlation_rcode} = "useLeastGroups<-FALSE;";
+  }
+  
+  if($def->{show_label_PCA}){
+    $def->{correlation_rcode} = $def->{correlation_rcode} . "showLabelInPCA<-TRUE;"
+  }else{
+    $def->{correlation_rcode} = $def->{correlation_rcode} . "showLabelInPCA<-FALSE;"
   }
 
   #print Dumper($config);
@@ -860,10 +866,10 @@ sub getSmallRNAConfig {
     output_file               => "parameterSampleFile1",
     output_file_ext           => ".Correlation.png",
     parameterSampleFile1_ref  => \@table_for_correlation,
-    parameterSampleFile2Order => $def->{groups_order},
     parameterSampleFile2      => $def->{tRNA_vis_group},
+    parameterSampleFile2Order => $def->{groups_order},
     parameterSampleFile3      => $def->{pure_pairs},
-    rCode                     => $def->{group_rcode},
+    rCode                     => $def->{correlation_rcode},
     sh_direct                 => 1,
     pbs                       => {
       "email"     => $def->{email},
