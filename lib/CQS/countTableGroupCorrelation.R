@@ -152,7 +152,7 @@ for (i in 1:nrow(countTableFileAll)) {
   }
   
   dds=DESeqDataSetFromMatrix(countData = countNum, colData = as.data.frame(rep(1,ncol(countNum))),design = ~1)
-  dds<-myEstimateSizeFactors(dds)
+  dds<-try(myEstimateSizeFactors(dds))
   vsdres<-try(temp<-DESeq2::varianceStabilizingTransformation(dds, blind = TRUE))
   if (class(vsdres) == "try-error") {
     message=paste0("Warning: varianceStabilizingTransformation function failed.\n",as.character(vsdres))

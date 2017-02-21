@@ -909,61 +909,64 @@ if(!is.null(sigTableAll)){
   }
 }
 
-#write a file with all information
-resultAllOut<-cbind(dataAllOut,resultAllOut[row.names(dataAllOut),])
-
-#volcano plot for all comparisons
-temp<-resultAllOut[,-(1:ncol(dataAllOut))]
-diffResult<-NULL
-diffResultVar<-unique(sapply(strsplit(colnames(temp)," "),function(x) x[1]))
-for (i in 1:(length(allComparisons))) {
-  temp1<-temp[,(i*length(diffResultVar)-(length(diffResultVar)-1)):(i*length(diffResultVar))]
-  colnames(temp1)<-diffResultVar
-  temp1$Comparison<-allComparisons[i]
-  if (is.null(diffResult)) {
-    diffResult<-temp1
-  } else {
-    diffResult<-rbind(diffResult,temp1)
-  }
-}
-changeColours<-c(grey="grey",blue="blue",red="red")
-diffResult$log10BaseMean<-log10(diffResult$baseMean)
-diffResult$Comparison<-allTitles[diffResult$Comparison]
-diffResult$Comparison<-factor(diffResult$Comparison,levels=unique(diffResult$Comparison))
-diffResult$colour<-"grey"
-if (useRawPvalue==1) {
-  diffResult$colour[which(diffResult$pvalue<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
-  diffResult$colour[which(diffResult$pvalue<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
-} else {
-  diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
-  diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
-}
-
-width<-max(2000,2000*length(allComparisons))
-png(filename=paste0(allprefix, "_DESeq2_volcanoPlot.png"), width=width, height=2000, res=300)
+if (! is.null(resultAllOut)) {
+	#write a file with all information
+	resultAllOut<-cbind(dataAllOut,resultAllOut[row.names(dataAllOut),])
+	
+	#volcano plot for all comparisons
+	temp<-resultAllOut[,-(1:ncol(dataAllOut))]
+	diffResult<-NULL
+	diffResultVar<-unique(sapply(strsplit(colnames(temp)," "),function(x) x[1]))
+	for (i in 1:(length(allComparisons))) {
+		temp1<-temp[,(i*length(diffResultVar)-(length(diffResultVar)-1)):(i*length(diffResultVar))]
+		colnames(temp1)<-diffResultVar
+		temp1$Comparison<-allComparisons[i]
+		if (is.null(diffResult)) {
+			diffResult<-temp1
+		} else {
+			diffResult<-rbind(diffResult,temp1)
+		}
+	}
+	changeColours<-c(grey="grey",blue="blue",red="red")
+	diffResult$log10BaseMean<-log10(diffResult$baseMean)
+	diffResult$Comparison<-allTitles[diffResult$Comparison]
+	diffResult$Comparison<-factor(diffResult$Comparison,levels=unique(diffResult$Comparison))
+	diffResult$colour<-"grey"
+	if (useRawPvalue==1) {
+		diffResult$colour[which(diffResult$pvalue<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
+		diffResult$colour[which(diffResult$pvalue<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
+	} else {
+		diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
+		diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
+	}
+	
+	width<-max(2000,2000*length(allComparisons))
+	png(filename=paste0(allprefix, "_DESeq2_volcanoPlot.png"), width=width, height=2000, res=300)
 #  pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"))
-if (useRawPvalue==1) {
-  p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
-    scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
-} else {
-  p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
-    scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
+	if (useRawPvalue==1) {
+		p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
+				scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
+	} else {
+		p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
+				scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
+	}
+	p<-p+geom_point(aes(size=log10BaseMean,colour=colour))+
+			scale_color_manual(values=changeColours,guide = FALSE)+
+			scale_x_continuous(name=bquote(log[2]~Fold~Change))+
+			geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
+			geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
+			guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
+			theme_bw()+
+			scale_size(range = c(3, 7))+
+			facet_grid(. ~ Comparison)+
+			theme(axis.text = element_text(colour = "black",size=30),
+					axis.title = element_text(size=30),
+					legend.text= element_text(size=30),
+					legend.title= element_text(size=30),
+					strip.text.x = element_text(size = 30))
+	print(p)
+	dev.off()
+	
+	write.csv(resultAllOut,paste0(allprefix, "_DESeq2.csv"))
+	
 }
-p<-p+geom_point(aes(size=log10BaseMean,colour=colour))+
-  scale_color_manual(values=changeColours,guide = FALSE)+
-  scale_x_continuous(name=bquote(log[2]~Fold~Change))+
-  geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
-  geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
-  guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
-  theme_bw()+
-  scale_size(range = c(3, 7))+
-  facet_grid(. ~ Comparison)+
-  theme(axis.text = element_text(colour = "black",size=30),
-        axis.title = element_text(size=30),
-        legend.text= element_text(size=30),
-        legend.title= element_text(size=30),
-        strip.text.x = element_text(size = 30))
-print(p)
-dev.off()
-
-write.csv(resultAllOut,paste0(allprefix, "_DESeq2.csv"))
