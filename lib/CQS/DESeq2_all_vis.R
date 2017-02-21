@@ -45,9 +45,9 @@ addVisLayout<-function(datForFigure, visLayoutFileList,LayoutKey="LayoutKey") {
         matchedInd<-matchedInd[which.min(nchar(data2Layout[matchedInd]))]
         row.names(visLayout)[x]<-data2Layout[matchedInd]
       } else {
-        message=paste0("Error: Layout Group: ",row.names(visLayout)[x]," can't match data.\n Data: \n",paste(data2Layout,collapse="\n"))
-        writeLines(message,paste0(visLayoutFileList,".error"))
-        stop(message)
+        message=paste0("Warning: Layout Group: ",row.names(visLayout)[x]," can't match data.\n Data: \n",paste(data2Layout,collapse="\n"))
+        writeLines(message,paste0(visLayoutFileList,".warning"))
+		warning(message)
       }
     }
     datForFigure<-data.frame(datForFigure,visLayout[datForFigure[,LayoutKey],])
@@ -67,8 +67,12 @@ for (i in 1:nrow(deseq2ResultFile)) {
   moduleName<-gsub("^deseq2_","",moduleName)
   moduleName<-gsub("_minicontigs","",moduleName)
   moduleName<-gsub("_contigs","",moduleName)
-  deseq2ResultRaw<-read.csv(filePath,header=T,as.is=T)
-  
+  if (file.exists(filePath)) {
+	  deseq2ResultRaw<-read.csv(filePath,header=T,as.is=T)
+  } else {
+	  next;
+  }
+
   deseq2Result<-deseq2ResultRaw[,selectedVars]
   deseq2Result$Module<-moduleName
   deseq2Result$Pairs<-deseq2ResultFile[i,2]
