@@ -40,16 +40,18 @@ write.csv(rbind(categoryAllTable1,categoryAllTable2),paste0(taskName,".Category.
 #Generate graphics for count tables
 ################################
 
-#Make individual figures
-for (i in 1:ncol(categoryAllTable1)) {
-	png(paste0(colnames(categoryAllTable1)[i],".Category.png"),res=300,width=3000,height=1500)
-	par(mfrow=c(1,2))
-	par(mar=c(9,6,3,6))
-	barplot(categoryAllTable1[c("TotalReads","MappedReads","FeatureReads"),i],
+if(!exists("drawInvidividual") || drawInvidividual){
+  #Make individual figures
+  for (i in 1:ncol(categoryAllTable1)) {
+	  png(paste0(colnames(categoryAllTable1)[i],".Category.png"),res=300,width=3000,height=1500)
+	  par(mfrow=c(1,2))
+	  par(mar=c(9,6,3,6))
+	  barplot(categoryAllTable1[c("TotalReads","MappedReads","FeatureReads"),i],
 			names.arg=c("Total Reads","Mapped Reads","Small RNA"),space=0.5,las=2,
 			mar=c(9,9,9,9), col=rainbow(3))
-	basicPie(categoryAllTable2[,i],addPercent=T)
-	dev.off()
+	  basicPie(categoryAllTable2[,i],addPercent=T)
+	 dev.off()
+  }
 }
 
 #Pie Chart for Tables
