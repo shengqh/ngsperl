@@ -20,6 +20,14 @@ if(exists("usePearsonInHCA") && usePearsonInHCA){
   distf <- dist
 }
 
+if(!exists("showLabelInPCA")){
+  showLabelInPCA<-TRUE
+}
+
+if(!exists("suffix")){
+  suffix<-""
+}
+
 #source("/home/zhaos/source/r_cqs/vickers/codesToPipeline/countTableVisFunctions.R")
 
 ##Solving node stack overflow problem start###
@@ -63,7 +71,7 @@ unByteCodeAssign(stats:::plotNode)
 # Now raise the interpreted code recursion limit (you may need to adjust this,
 #  decreasing if it uses to much memory, increasing if you get a recursion depth error ).
 options(expressions=5e4)
-drawPCA<-function(filename, rldmatrix, showLabelInPCA, conditionColors){
+drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors){
   genecount<-nrow(rldmatrix)
   if(genecount > 2){
     cat("saving PCA to ", filename, "\n")
@@ -74,27 +82,28 @@ drawPCA<-function(filename, rldmatrix, showLabelInPCA, conditionColors){
     pcadata<-data.frame(pca$x)
     pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
     pcadata["sample"]<-row.names(pcadata)
+    if(!is.null(groups)){
+      pcadata["group"]<-groups
+    }
     
     if(showLabelInPCA){
       g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
-        geom_text(vjust=-0.6, size=4) +
-        geom_point(col=conditionColors, size=4) + 
-        scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
+        geom_text(vjust=-0.6, size=4)
+    }else{
+      g <- ggplot(pcadata, aes(x=PC1, y=PC2)) +
+        theme(legend.position="top")
+    }
+    if(!is.null(groups)){
+      g<-g+geom_point(aes(col=group), size=4) + 
+        scale_colour_manual(name="",values = groupColors)
+    }else{
+      g<-g+geom_point(size=4) 
+    }
+    g<-g+scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
         scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
         geom_hline(aes(yintercept=0), size=.2) + 
         geom_vline(aes(xintercept=0), size=.2) + 
         xlab(pcalabs[1]) + ylab(pcalabs[2])
-    }else{
-      g <- ggplot(pcadata, aes(x=PC1, y=PC2)) + 
-        geom_point(col=conditionColors, size=4) + 
-        labs(color = "Group") +
-        scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) + 
-        scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
-        geom_hline(aes(yintercept=0), size=.2) + 
-        geom_vline(aes(xintercept=0), size=.2) +
-        xlab(pcalabs[1]) + ylab(pcalabs[2]) + 
-        theme(legend.position="top")
-    }
     
     print(g)
     dev.off()
@@ -131,21 +140,24 @@ for (i in 1:nrow(countTableFileAll)) {
   } #Please note here we only use columns after the rightest Non-Number column as count data
   countNum<-count[,c((countNotNumIndex+1):ncol(count))]
   countNum<-round(countNum,0)
+
   #remove genes with total reads 0
   countNum<-countNum[which(rowSums(countNum,na.rm=T)>0),]
+  #remove samples with total reads 0
+  countNum<-countNum[,which(colSums(countNum,na.rm=T)>0)]
   
   if (groupFileList!="") {
     sampleToGroup<-getSampleInGroup(groupFileList, colnames(countNum), comparisonFileList, countTableTitle, useLeastGroups)
-    write.table(sampleToGroup, paste0(countTableFile,".correlation.groups"),col.names=F, row.names=F, quote=F, sep="\t")
+    write.table(sampleToGroup, paste0(countTableFile,suffix,".correlation.groups"),col.names=F, row.names=F, quote=F, sep="\t")
   }
   
   dds=DESeqDataSetFromMatrix(countData = countNum, colData = as.data.frame(rep(1,ncol(countNum))),design = ~1)
   dds<-myEstimateSizeFactors(dds)
   vsdres<-try(temp<-DESeq2::varianceStabilizingTransformation(dds, blind = TRUE))
   if (class(vsdres) == "try-error") {
-    message=paste0("Warning: varianceStabilizingTransformation function can't run.\n",as.character(vsdres))
+    message=paste0("Warning: varianceStabilizingTransformation function failed.\n",as.character(vsdres))
     warning(message)
-    writeLines(message,paste0(countTableFile,".vsd.warning"))
+    writeLines(message,paste0(countTableFile,suffix,".vsd.warning"))
     next;
   }
   countNumVsd<-assay(temp)
@@ -165,15 +177,21 @@ for (i in 1:nrow(countTableFileAll)) {
   }
   
   if (groupFileList!="") {
-    colors=primary.colors(length(unique(sampleToGroup$V2)))
-    conditionColors<-as.matrix(data.frame(Group=primary.colors(length(unique(sampleToGroup$V2)))[as.factor(sampleToGroup$V2)]))
+    groups<-sampleToGroup$V2
+    colors<-primary.colors(length(unique(groups)))
+    conditionColors<-as.matrix(data.frame(Group=colors[as.factor(sampleToGroup$V2)]))
   }else{
-    conditionColors=NA
+    groups<-NA
+    colors<-NA
+    conditionColors<-NA
   }
+  
+  print("Drawing PCA for all samples.")
+  drawPCA(paste0(countTableFile,suffix,".PCA.png"), countHT, showLabelInPCA, groups, colors)
   
   width=max(2000, 50 * ncol(countHT))
   print("Drawing heatmap for all samples.")
-  png(paste0(countTableFile,".heatmap.png"),width=width,height=width,res=300)
+  png(paste0(countTableFile,suffix,".heatmap.png"),width=width,height=width,res=300)
   
   if(nrow(countHT) < 20){
     if(!is.na(conditionColors)){
@@ -189,9 +207,6 @@ for (i in 1:nrow(countTableFileAll)) {
     }
   }
   dev.off()
-  
-  print("Drawing PCA for all samples.")
-  drawPCA(paste0(countTableFile,".PCA.png"), countHT, 1, conditionColors)
   
   print("Doing correlation analysis ...")
   #correlation distribution
@@ -220,13 +235,13 @@ for (i in 1:nrow(countTableFileAll)) {
     axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
   }
   
-  png(paste0(countTableFile,".Correlation.png"),width=width,height=width,res=300)
+  png(paste0(countTableFile,suffix,".Correlation.png"),width=width,height=width,res=300)
   labRow=NULL
   margin=c(min(10,max(nchar(colnames(countNumCor)))/2),min(10,max(nchar(row.names(countNumCor)))/2))
   heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=labRow,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
   dev.off()
   if (ncol(countNumCor)>3) {
-    png(paste0(countTableFile,".Correlation.Cluster.png"),width=width,height=width,res=300)
+    png(paste0(countTableFile,suffix,".Correlation.Cluster.png"),width=width,height=width,res=300)
     heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun)
     dev.off()
   }
@@ -234,7 +249,7 @@ for (i in 1:nrow(countTableFileAll)) {
   if (groupFileList!="") {
     cexColGroup<-1
     if(length(unique(sampleToGroup$V2)) < 3){
-      saveInError(paste0("Less than 3 groups. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(Sys.Date(),".warning"))
+      saveInError(paste0("Less than 3 groups. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(suffix,Sys.Date(),".warning"))
       next
     }
 
@@ -242,7 +257,7 @@ for (i in 1:nrow(countTableFileAll)) {
     
     #heatmap
     margin=c(min(10,max(nchar(colnames(countNumVsdGroup)))/1.5),min(10,max(nchar(row.names(countNumVsdGroup)))/2))
-    png(paste0(countTableFile,".Group.heatmap.png"),width=2000,height=2000,res=300)
+    png(paste0(countTableFile,suffix,".Group.heatmap.png"),width=2000,height=2000,res=300)
     if(nrow(countNumVsdGroup) < 20){
       heatmap3(countNumVsdGroup,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
     }else{
@@ -285,13 +300,13 @@ for (i in 1:nrow(countTableFileAll)) {
       axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
     }
     
-    png(paste0(countTableFile,".Group.Correlation.png"),width=2000,height=2000,res=300)
+    png(paste0(countTableFile,suffix,".Group.Correlation.png"),width=2000,height=2000,res=300)
     heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
     dev.off()
     if (ncol(countNumCor)<=3 | any(is.na(cor(countNumCor,use="pa")))) {
-      saveInError(paste0("Less than 3 samples. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(Sys.Date(),".warning"))
+      saveInError(paste0("Less than 3 samples. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(suffix,Sys.Date(),".warning"))
     } else {
-      png(paste0(countTableFile,".Group.Correlation.Cluster.png"),width=2000,height=2000,res=300)
+      png(paste0(countTableFile,suffix,".Group.Correlation.Cluster.png"),width=2000,height=2000,res=300)
       heatmap3(countNumCor,scale="none",balanceColor=T,margin=margin,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
       dev.off()
     }
