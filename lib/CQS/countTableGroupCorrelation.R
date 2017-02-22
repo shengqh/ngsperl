@@ -252,15 +252,26 @@ for (i in 1:nrow(countTableFileAll)) {
     image(x=1:length(colAll),y=1,z=matrix(1:length(colAll),ncol=1),xlab="",xaxt="n",yaxt="n",col=colAll);
     axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
   }
+  if (groupFileList!="") {
+	  legendfun<-function() showLegend(legend=unique(groups),col=unique(conditionColors[,1]))
+  }
   
   png(paste0(outputFilePrefix,suffix,".Correlation.png"),width=width,height=width,res=300)
   labRow=NULL
   margin=c(min(10,max(nchar(colnames(countNumCor)))/2),min(10,max(nchar(row.names(countNumCor)))/2))
-  heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=labRow,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
+  if(all(!is.na(conditionColors))) { #has group information
+	  heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=labRow,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,ColSideColors=conditionColors)
+  }else{
+	  heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=labRow,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
+  }
   dev.off()
   if (ncol(countNumCor)>3) {
     png(paste0(outputFilePrefix,suffix,".Correlation.Cluster.png"),width=width,height=width,res=300)
-    heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun)
+	if(!is.na(conditionColors[1,1])){
+		heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun,ColSideColors=conditionColors)
+	}else{
+		heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun)
+	}
     dev.off()
   }
   
