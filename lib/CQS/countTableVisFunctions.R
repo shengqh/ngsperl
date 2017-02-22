@@ -50,8 +50,10 @@ getSampleInGroup<-function(groupDefineFile, samples, comparisonDefineFile="", co
     }
     groupData<-groupData[!(groupData$V2 %in% discardGroups),]
   }
+  groupData$V2<-factor(groupData$V2)
   
   res<-NULL
+  gnameChanged<-FALSE
   for(sample in samples){
     stog<-groupData[groupData$V1==sample,,drop=F]
     if(nrow(stog) == 1){
@@ -59,71 +61,24 @@ getSampleInGroup<-function(groupDefineFile, samples, comparisonDefineFile="", co
     }else if(nrow(stog) > 1){
       groups<-stog$V2[order(stog$V2)]
       group<-paste(groups, collapse=":")
+      gnameChanged<-TRUE
     }else{
       group<-"Unknown"
+      gnameChanged<-TRUE
     }
     res<-rbind(res, data.frame(V1=sample, V2=group))
   }
   rownames(res)<-res$V1
+  if(gnameChanged){
+    sortedGroupNames<-sort(unique(res$V2))
+    res$V2<-factor(res$V2, levels=sortedGroupNames)
+  }
   return(res)
 }
 
 ###############################################################################
 # Funtions in other visualization tasks
 ###############################################################################
-
-if(!exists("useLeastGroups")){
-  useLeastGroups<-FALSE
-}
-
-getSampleInGroup<-function(groupDefineFile, samples, comparisonDefineFile="", countTableTitle="", useLeastGroups=FALSE){
-  groupData<-read.delim(groupDefineFile,as.is=T,header=F)
-  if(comparisonDefineFile != ""){
-    comparisonData<-read.delim(comparisonDefineFile,as.is=T,header=F)
-    if(countTableTitle %in% comparisonData$V2){
-      countTableGroups<-comparisonData[comparisonData$V2==countTableTitle,"V1"]
-      groupData<-groupData[groupData$V2 %in% countTableGroups,]
-    }
-  }
-  
-  if(useLeastGroups){
-    groupData<-groupData[which(groupData$V1 %in% samples),]
-    groups<-lapply(unique(groupData$V2), function(x){
-      nrow(groupData[groupData$V2==x,])
-    })
-    discardGroups<-NULL
-    groupNames=unique(groupData$V2)
-    for(i in c(1:length(groupNames))){
-      sampleI<-groupData[groupData$V2==groupNames[i], "V1"]
-      for(j in c(i+1:length(groupNames))){
-        sampleJ<-groupData[groupData$V2==groupNames[j], "V1"]
-        if(all(sampleI %in% sampleJ)){
-          discardGroups<-c(discardGroups, groupNames[i])
-          break
-        }else if(all(sampleJ %in% sampleI)){
-          discardGroups<-c(discardGroups, groupNames[j])
-        }
-      }
-    }
-    groupData<-groupData[!(groupData$V2 %in% discardGroups),]
-  }
-  
-  res<-NULL
-  for(sample in samples){
-    stog<-groupData[groupData$V1==sample,,drop=F]
-    if(nrow(stog) == 1){
-      group<-stog[1,2]
-    }else if(nrow(stog) > 1){
-      groups<-stog$V2[order(stog$V2)]
-      group<-paste(groups, collapse=":")
-    }else{
-      group<-"Unknown"
-    }
-    res<-rbind(res, data.frame(V1=sample, V2=group))
-  }
-  rownames(res)<-res$V1
-  return(res)
-}
 
 myEstimateSizeFactors<-function(dds){
   library(DESeq2)
@@ -341,20 +296,23 @@ orderDataByNames<-function(x,orderKey,orderNames) {
 
 #Merge Sample By Group
 mergeTableBySampleGroup<-function(x,sampleToGroup,toPercent=TRUE) {
-	if (toPercent) {
-		xRatio<-t(t(x)/colSums(x,na.rm=T))
-	} else {
-		xRatio<-x
-	}
-	groupLength<-length(unique(sampleToGroup[,2]))
-	xRatioGroupMean<-matrix(NA,ncol=groupLength,nrow=nrow(x))
-	colnames(xRatioGroupMean)<-unique(sampleToGroup[,2])
-	row.names(xRatioGroupMean)<-row.names(x)
-	for (i in 1:groupLength) {
-		currentSample<-sampleToGroup[which(sampleToGroup[,2]==colnames(xRatioGroupMean)[i]),1]
-		xRatioGroupMean[,i]<-rowMeans(xRatio[,currentSample,drop=FALSE],na.rm=T)
-	}
-	return(xRatioGroupMean)
+  if (toPercent) {
+    xRatio<-t(t(x)/colSums(x,na.rm=T))
+  } else {
+    xRatio<-x
+  }
+  groupLength<-length(unique(sampleToGroup[,2]))
+  xRatioGroupMean<-matrix(NA,ncol=groupLength,nrow=nrow(x))
+  
+  #keep the order of group by the levels of sampleToGroup$V2
+  colnames(xRatioGroupMean)<-as.character(sort(unique(sampleToGroup[,2])))
+  
+  row.names(xRatioGroupMean)<-row.names(x)
+  for (i in 1:groupLength) {
+    currentSample<-sampleToGroup[which(sampleToGroup[,2]==colnames(xRatioGroupMean)[i]),1]
+    xRatioGroupMean[,i]<-rowMeans(xRatio[,currentSample,drop=FALSE],na.rm=T)
+  }
+  return(xRatioGroupMean)
 }
 
 #extract part of color from a color range
