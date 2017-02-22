@@ -12,6 +12,7 @@ use Pipeline::PipelineUtils;
 use Pipeline::SmallRNAUtils;
 use Data::Dumper;
 use Hash::Merge qw( merge );
+use Storable qw(dclone);
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -61,6 +62,11 @@ sub getSmallRNAConfig {
     $nonhost_blast_dir = create_directory_or_die( $def->{target_dir} . "/final_unmapped" );
   }
 
+  my $batch_dir;
+  if ( defined $def->{batch_groups} ) {
+    $batch_dir = create_directory_or_die( $def->{target_dir} . "/batch_effects" );
+  }
+
   my $data_visualization_dir = create_directory_or_die( $def->{target_dir} . "/data_visualization" );
 
   my $perform_tDRmapper = getValue( $def, "perform_tDRmapper", 0 );
@@ -83,11 +89,12 @@ sub getSmallRNAConfig {
   else {
     $def->{correlation_rcode} = "useLeastGroups<-FALSE;";
   }
-  
-  if($def->{show_label_PCA}){
-    $def->{correlation_rcode} = $def->{correlation_rcode} . "showLabelInPCA<-TRUE;"
-  }else{
-    $def->{correlation_rcode} = $def->{correlation_rcode} . "showLabelInPCA<-FALSE;"
+
+  if ( $def->{show_label_PCA} ) {
+    $def->{correlation_rcode} = $def->{correlation_rcode} . "showLabelInPCA<-TRUE;";
+  }
+  else {
+    $def->{correlation_rcode} = $def->{correlation_rcode} . "showLabelInPCA<-FALSE;";
   }
 
   #print Dumper($config);
@@ -859,7 +866,7 @@ sub getSmallRNAConfig {
   }
 
   $config->{count_table_correlation} = {
-    class                     => "CQS::UniqueR",
+    class                     => "CQS::CountTableGroupCorrelation",
     perform                   => 1,
     target_dir                => $data_visualization_dir . "/count_table_correlation",
     rtemplate                 => "countTableVisFunctions.R,countTableGroupCorrelation.R",
@@ -1017,6 +1024,68 @@ sub getSmallRNAConfig {
     push @$individual_ref, ("tDRmapper");
   }
 
+  #check batch effect
+  if ( defined $def->{batch_groups} ) {
+    my $batchGroups = $def->{batch_groups};
+
+    for my $batchGroup ( sort keys %$batchGroups ) {
+      my $batchName = "count_table_correlation" . "_" . $batchGroup;
+
+      my $batchConfig = dclone( $config->{"count_table_correlation"} );
+      $batchConfig->{target_dir}                = $batch_dir . "/" . $batchName;
+      $batchConfig->{suffix}                    = "_" . $batchGroup;
+      $batchConfig->{output_to_result_dir}      = "1";
+      $batchConfig->{parameterSampleFile2}      = $batchGroups->{$batchGroup};
+      $batchConfig->{parameterSampleFile2Order} = undef;
+
+      $config->{$batchName} = $batchConfig;
+
+      push @$summary_ref, ($batchName);
+    }
+
+    #fastq_len_vis
+    for my $batchGroup ( sort keys %$batchGroups ) {
+      my $batchName = "fastq_len_vis" . "_" . $batchGroup;
+
+      my $batchConfig = dclone( $config->{"fastq_len_vis"} );
+      $batchConfig->{target_dir}           = $batch_dir . "/" . $batchName;
+      $batchConfig->{parameterSampleFile2} = $batchGroups->{$batchGroup};
+      $batchConfig->{output_file}          = ".len_" . $batchGroup;
+
+      $config->{$batchName} = $batchConfig;
+
+      push @$summary_ref, ($batchName);
+    }
+
+    #reads_in_tasks_pie
+    for my $batchGroup ( sort keys %$batchGroups ) {
+      my $batchName = "reads_in_tasks_pie" . "_" . $batchGroup;
+
+      my $batchConfig = dclone( $config->{"reads_in_tasks_pie"} );
+      $batchConfig->{target_dir}           = $batch_dir . "/" . $batchName;
+      $batchConfig->{parameterSampleFile2} = $batchGroups->{$batchGroup};
+      $batchConfig->{output_file}          = ".reads_" . $batchGroup;
+
+      $config->{$batchName} = $batchConfig;
+
+      push @$summary_ref, ($batchName);
+    }
+
+    #bowtie1_genome_1mm_NTA_smallRNA_category
+    for my $batchGroup ( sort keys %$batchGroups ) {
+      my $batchName = "bowtie1_genome_1mm_NTA_smallRNA_category" . "_" . $batchGroup;
+
+      my $batchConfig = dclone( $config->{"bowtie1_genome_1mm_NTA_smallRNA_category"} );
+      $batchConfig->{target_dir}                = $batch_dir . "/" . $batchName;
+      $batchConfig->{parameterSampleFile2}      = $batchGroups->{$batchGroup};
+      $batchConfig->{parameterSampleFile2Order} = undef;
+      $batchConfig->{rCode}                     = $batchConfig->{rCode} . "drawInvidividual=FALSE;";
+
+      $config->{$batchName} = $batchConfig;
+
+      push @$summary_ref, ($batchName);
+    }
+  }
   $config->{sequencetask} = {
     class      => "CQS::SequenceTask",
     perform    => 1,
