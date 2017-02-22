@@ -28,6 +28,10 @@ if(!exists("suffix")){
   suffix<-""
 }
 
+if(!exists("outputDirectory")){
+  outputDirectory<-""
+}
+
 #source("/home/zhaos/source/r_cqs/vickers/codesToPipeline/countTableVisFunctions.R")
 
 ##Solving node stack overflow problem start###
@@ -83,7 +87,7 @@ drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors){
     pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
     pcadata["sample"]<-row.names(pcadata)
     if(!is.null(groups)){
-      pcadata["group"]<-groups
+      pcadata$group<-groups
     }
     
     if(showLabelInPCA){
@@ -116,6 +120,20 @@ countTableFileAll<-read.delim(countTableFileList,header=F,as.is=T)
 i<-1
 for (i in 1:nrow(countTableFileAll)) {
   countTableFile<-countTableFileAll[i,1]
+  
+  if(outputDirectory==""){
+    outputFilePrefix=countTableFile
+  }else{
+    bname=basename(countTableFile)
+    dpath=dirname(countTableFile)
+    dname=basename(dpath)
+    while(dname=="result"){
+      dpath=dirname(dpath)
+      dname=basename(dpath)
+    }
+    outputFilePrefix=paste0(outputDirectory, "/", dname, "." , bname)
+  }
+  
   countTableTitle<-countTableFileAll[i,2]
   
   print(paste0("Reading ",countTableFile))
@@ -148,7 +166,7 @@ for (i in 1:nrow(countTableFileAll)) {
   
   if (groupFileList!="") {
     sampleToGroup<-getSampleInGroup(groupFileList, colnames(countNum), comparisonFileList, countTableTitle, useLeastGroups)
-    write.table(sampleToGroup, paste0(countTableFile,suffix,".correlation.groups"),col.names=F, row.names=F, quote=F, sep="\t")
+    write.table(sampleToGroup, paste0(outputFilePrefix,suffix,".correlation.groups"),col.names=F, row.names=F, quote=F, sep="\t")
   }
   
   dds=DESeqDataSetFromMatrix(countData = countNum, colData = as.data.frame(rep(1,ncol(countNum))),design = ~1)
@@ -157,7 +175,7 @@ for (i in 1:nrow(countTableFileAll)) {
   if (class(vsdres) == "try-error") {
     message=paste0("Warning: varianceStabilizingTransformation function failed.\n",as.character(vsdres))
     warning(message)
-    writeLines(message,paste0(countTableFile,suffix,".vsd.warning"))
+    writeLines(message,paste0(outputFilePrefix,suffix,".vsd.warning"))
     next;
   }
   countNumVsd<-assay(temp)
@@ -179,7 +197,7 @@ for (i in 1:nrow(countTableFileAll)) {
   if (groupFileList!="") {
     groups<-sampleToGroup$V2
     colors<-primary.colors(length(unique(groups)))
-    conditionColors<-as.matrix(data.frame(Group=colors[as.factor(sampleToGroup$V2)]))
+    conditionColors<-as.matrix(data.frame(Group=colors[groups]))
   }else{
     groups<-NA
     colors<-NA
@@ -187,11 +205,11 @@ for (i in 1:nrow(countTableFileAll)) {
   }
   
   print("Drawing PCA for all samples.")
-  drawPCA(paste0(countTableFile,suffix,".PCA.png"), countHT, showLabelInPCA, groups, colors)
+  drawPCA(paste0(outputFilePrefix,suffix,".PCA.png"), countHT, showLabelInPCA, groups, colors)
   
   width=max(2000, 50 * ncol(countHT))
   print("Drawing heatmap for all samples.")
-  png(paste0(countTableFile,suffix,".heatmap.png"),width=width,height=width,res=300)
+  png(paste0(outputFilePrefix,suffix,".heatmap.png"),width=width,height=width,res=300)
   
   if(nrow(countHT) < 20){
     if(!is.na(conditionColors)){
@@ -235,13 +253,13 @@ for (i in 1:nrow(countTableFileAll)) {
     axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
   }
   
-  png(paste0(countTableFile,suffix,".Correlation.png"),width=width,height=width,res=300)
+  png(paste0(outputFilePrefix,suffix,".Correlation.png"),width=width,height=width,res=300)
   labRow=NULL
   margin=c(min(10,max(nchar(colnames(countNumCor)))/2),min(10,max(nchar(row.names(countNumCor)))/2))
   heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=labRow,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
   dev.off()
   if (ncol(countNumCor)>3) {
-    png(paste0(countTableFile,suffix,".Correlation.Cluster.png"),width=width,height=width,res=300)
+    png(paste0(outputFilePrefix,suffix,".Correlation.Cluster.png"),width=width,height=width,res=300)
     heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun)
     dev.off()
   }
@@ -257,7 +275,7 @@ for (i in 1:nrow(countTableFileAll)) {
     
     #heatmap
     margin=c(min(10,max(nchar(colnames(countNumVsdGroup)))/1.5),min(10,max(nchar(row.names(countNumVsdGroup)))/2))
-    png(paste0(countTableFile,suffix,".Group.heatmap.png"),width=2000,height=2000,res=300)
+    png(paste0(outputFilePrefix,suffix,".Group.heatmap.png"),width=2000,height=2000,res=300)
     if(nrow(countNumVsdGroup) < 20){
       heatmap3(countNumVsdGroup,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
     }else{
@@ -300,13 +318,13 @@ for (i in 1:nrow(countTableFileAll)) {
       axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
     }
     
-    png(paste0(countTableFile,suffix,".Group.Correlation.png"),width=2000,height=2000,res=300)
+    png(paste0(outputFilePrefix,suffix,".Group.Correlation.png"),width=2000,height=2000,res=300)
     heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
     dev.off()
     if (ncol(countNumCor)<=3 | any(is.na(cor(countNumCor,use="pa")))) {
-      saveInError(paste0("Less than 3 samples. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(suffix,Sys.Date(),".warning"))
+      saveInError(paste0("Less than 3 samples. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(outputFilePrefix,suffix,Sys.Date(),".warning"))
     } else {
-      png(paste0(countTableFile,suffix,".Group.Correlation.Cluster.png"),width=2000,height=2000,res=300)
+      png(paste0(outputFilePrefix,suffix,".Group.Correlation.Cluster.png"),width=2000,height=2000,res=300)
       heatmap3(countNumCor,scale="none",balanceColor=T,margin=margin,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
       dev.off()
     }
