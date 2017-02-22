@@ -27,6 +27,11 @@ sub new {
   return $self;
 }
 
+sub getRcode {
+  my ( $self, $config, $section ) = @_;
+  return get_option( $config, $section, "rCode", "" );
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -36,7 +41,7 @@ sub perform {
   my $task_suffix = get_option( $config, $section, "suffix", "" );
   $self->{_task_suffix} = $task_suffix;
 
-  my $rCode           = get_option( $config, $section, "rCode",           "" );
+  my $rCode = $self->getRcode( $config, $section );
   my $output_file     = get_option( $config, $section, "output_file",     "" );
   my $output_file_ext = get_option( $config, $section, "output_file_ext", "" );
   my @output_file_exts = split( ";", $output_file_ext );
@@ -57,7 +62,8 @@ sub perform {
     }
     open( LIST, ">$result_dir/fileList1${task_suffix}.txt" ) or die "Cannot create fileList1.txt";
     foreach my $sample_name (@orderedSampleNames) {
-      foreach my $subSampleFile ( @{ ${$temp}{$sample_name} } ) {
+      my $sampleFiles = $temp->{$sample_name};
+      foreach my $subSampleFile (@$sampleFiles) {
         print LIST $subSampleFile . "\t$sample_name\n";
       }
     }
@@ -121,24 +127,14 @@ sub perform {
   my $rfile = $result_dir . "/${task_name}${task_suffix}.r";
   open( my $rf, ">$rfile" ) or die "Cannot create $rfile";
 
-  my $final_file    = "";
-  my $output_file_r = "";
+  my $result_files = $self->result( $config, $section )->{$task_name};
+  my $final_file = $result_files->[-1];
+  my $output_file_r;
   if ( $output_file eq "parameterSampleFile1" or $output_file eq "parameterSampleFile2" or $output_file eq "parameterSampleFile3" ) {
-    if ( has_raw_files( $config, $section, $output_file ) ) {
-      my %temp = %{ get_raw_files( $config, $section, $output_file ) };
-      foreach my $sample_name ( keys %temp ) {
-        foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
-          $final_file = "${subSampleFile}" . $output_file_exts[0];
-        }
-      }
-    }
-    else {
-      die "output_file defined as " . $output_file . ", but " . $output_file . " not in configure\n";
-    }
+    $output_file_r = "";
   }
   else {
     $output_file_r = $task_name . $output_file;
-    $final_file    = "${task_name}${output_file}" . $output_file_exts[0];
   }
 
   my $rParameter = "outFile='$output_file_r'\n";
