@@ -337,6 +337,48 @@ sub getConfig {
           },
         };
         push @$individual, ($enhancerName);
+
+        my $enhancerVis = $enhancerName . "_vis";
+        $config->{$enhancerVis} = {
+          class                    => "CQS::UniqueR",
+          perform                  => 1,
+          target_dir               => "${target_dir}/" . $enhancerVis,
+          option                   => "",
+          rtemplate                => "../Chipseq/enhancerVis.R",
+          output_file              => ".enhancer",
+          output_file_ext          => ".log.tss.png;.log.distal.png;.tss.tsv;.distal.tsv",
+          sh_direct                => 1,
+          parameterSampleFile1_ref => [ "$enhancerName", ".txt\$" ],
+          sh_direct                => 1,
+          pbs                      => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=1",
+            "walltime" => "72",
+            "mem"      => "40gb"
+          },
+        };
+        push @$summary, $enhancerVis;
+
+        my $enhancerVisCor = $enhancerVis . "_correlation";
+        $config->{$enhancerVisCor} = {
+          class                    => "CQS::CountTableGroupCorrelation",
+          perform                  => 1,
+          suffix                   => "_corr",
+          target_dir               => "${target_dir}/" . $enhancerVis,
+          rtemplate                => "countTableVisFunctions.R,countTableGroupCorrelation.R",
+          output_file              => "parameterSampleFile1",
+          output_file_ext          => ".Correlation.png",
+          parameterSampleFile1_ref => [ $enhancerVis, ".tsv\$" ],
+          sh_direct                => 1,
+          pbs                      => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push @$summary, $enhancerVisCor;
       }
 
       if ($perform_diffbind) {
