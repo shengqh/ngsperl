@@ -62,8 +62,9 @@ sub getSmallRNAConfig {
     $nonhost_blast_dir = create_directory_or_die( $def->{target_dir} . "/final_unmapped" );
   }
 
+  my $batchGroups = getBatchGroups($def);
   my $batch_dir;
-  if ( defined $def->{batch_groups} ) {
+  if ( defined $batchGroups ) {
     $batch_dir = create_directory_or_die( $def->{target_dir} . "/batch_effects" );
   }
 
@@ -1025,9 +1026,7 @@ sub getSmallRNAConfig {
   }
 
   #check batch effect
-  if ( defined $def->{batch_groups} ) {
-    my $batchGroups = $def->{batch_groups};
-
+  if ( defined $batchGroups ) {
     for my $batchGroup ( sort keys %$batchGroups ) {
       my $batchName = "count_table_correlation" . "_" . $batchGroup;
 
@@ -1064,6 +1063,7 @@ sub getSmallRNAConfig {
       my $batchConfig = dclone( $config->{"reads_in_tasks_pie"} );
       $batchConfig->{target_dir}           = $batch_dir . "/" . $batchName;
       $batchConfig->{parameterSampleFile2} = $batchGroups->{$batchGroup};
+      $batchConfig->{parameterSampleFile2} = undef;
       $batchConfig->{output_file}          = ".reads_" . $batchGroup;
 
       $config->{$batchName} = $batchConfig;
@@ -1079,6 +1079,7 @@ sub getSmallRNAConfig {
       $batchConfig->{target_dir}                = $batch_dir . "/" . $batchName;
       $batchConfig->{parameterSampleFile2}      = $batchGroups->{$batchGroup};
       $batchConfig->{parameterSampleFile2Order} = undef;
+      $batchConfig->{parameterSampleFile3} = undef;
       $batchConfig->{rCode}                     = $batchConfig->{rCode} . "drawInvidividual=FALSE;";
 
       $config->{$batchName} = $batchConfig;
