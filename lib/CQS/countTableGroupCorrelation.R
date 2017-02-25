@@ -86,7 +86,7 @@ drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors){
     pcadata<-data.frame(pca$x)
     pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
     pcadata["sample"]<-row.names(pcadata)
-    if(!is.null(groups)){
+    if(!is.na(groups)){
       pcadata$group<-groups
     }
     
@@ -97,7 +97,7 @@ drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors){
       g <- ggplot(pcadata, aes(x=PC1, y=PC2)) +
         theme(legend.position="top")
     }
-    if(!is.null(groups)){
+    if(!is.na(groups)){
       g<-g+geom_point(aes(col=group), size=4) + 
         scale_colour_manual(name="",values = groupColors)
     }else{
