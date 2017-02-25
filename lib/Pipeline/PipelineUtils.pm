@@ -13,7 +13,7 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(initValue getValue addFastQC addBlastn addBowtie addBamStat addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn)] );
+our %EXPORT_TAGS = ( 'all' => [qw(initValue getValue addFastQC addBlastn addBowtie addBamStat addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn getBatchGroups)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -243,6 +243,61 @@ sub addDeseq2SignificantSequenceBlastn {
   push @$summary, ($fastaTask);
 
   addBlastn( $config, $def, $summary, $fastaTask . "_blastn", $fastaTask, ".fasta\$", $parentDir );
+}
+
+sub getBatchGroups {
+  my ($def) = @_;
+  my $files = $def->{files};
+  my $result;
+
+  if ( defined $def->{batch_groups_file_regex} ) {
+    for my $regexName ( keys %{ $def->{batch_groups_file_regex} } ) {
+      my $regex     = $def->{batch_groups_file_regex}->{$regexName};
+      my $curGroups = {};
+      $result->{$regexName} = $curGroups;
+      for my $sample ( keys %$files ) {
+        my $sampleFile = $files->{$sample}[0];
+        my $group;
+        if ( $sampleFile =~ /$regex/igs ) {
+          my $groupName = $1;
+          if ( !defined $curGroups->{$groupName} ) {
+            $curGroups->{$groupName} = [];
+          }
+          my $groups = $curGroups->{$groupName};
+          push @$groups, $sample;
+        }
+        else {
+          die( $sample . " didn't match with regex " . $regex . " : " . $sampleFile );
+        }
+      }
+    }
+  }
+  elsif ( defined $def->{batch_groups_name_regex} ) {
+    for my $regexName ( keys %{ $def->{batch_groups_file_regex} } ) {
+      my $regex     = $def->{batch_groups_name_regex}->{$regexName};
+      my $curGroups = {};
+      $result->{$regexName} = $curGroups;
+      for my $sample ( keys %$files ) {
+        my $group;
+        if ( $sample =~ /$regex/igs ) {
+          my $groupName = $1;
+          if ( !defined $curGroups->{$groupName} ) {
+            $curGroups->{$groupName} = [];
+          }
+          my $groups = $curGroups->{$groupName};
+          push @$groups, $sample;
+        }
+        else {
+          die( $sample . " didn't match with regex " . $regex );
+        }
+      }
+    }
+  }
+  elsif ( defined $def->{batch_groups} ) {
+    $result = $def->{batch_groups};
+  }
+
+  return $result;
 }
 
 1;
