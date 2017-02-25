@@ -9,11 +9,11 @@ use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::StringUtils;
-use CQS::Task;
+use CQS::UniqueTask;
 use CQS::NGSCommon;
 use Data::Dumper;
 
-our @ISA = qw(CQS::Task);
+our @ISA = qw(CQS::UniqueTask);
 
 sub new {
   my ($class) = @_;
@@ -36,50 +36,59 @@ sub perform {
   my $gmxPath         = get_option( $config, $section, "gmx_path" );
   my $cpgPath         = get_option( $config, $section, "cpg_path" );
   my $activityFile    = get_option( $config, $section, "activity_file", "" );
-  if($activityFile ne ""){
+  if ( $activityFile ne "" ) {
     $option = $option . " -a $activityFile";
   }
 
   my $rawFiles = get_raw_files( $config, $section );
-  my %peakFiles;
-  if ( defined $config->{$section}{peaks} && -e $config->{$section}{peaks} ) {
-    for my $fileName ( keys %$rawFiles ) {
-      $peakFiles{$fileName} = $config->{$section}{peaks};
-    }
+
+  my $peakCommand = "";
+  my $peakFile;
+  if ( defined $config->{$section}{peaks} && -e $config->{$section}{peaks} ) {    #it is a file
+    $peakFile = $config->{$section}{peaks};
   }
   else {
-    %peakFiles = %{ get_raw_files( $config, $section, "peaks" ) };
+    $peakFile = $task_name . "_merged_peaks.bed";
+    my $tempFile = $task_name . ".tmp.bed";
+    my $peakfiles = get_raw_files( $config, $section, "peaks" );
+    my @bedfiles = ();
+    for my $sample_name ( sort keys %$peakfiles ) {
+      my $sample_files = $peakfiles->{$sample_name};
+      push @bedfiles, @$sample_files;
+    }
+    my $fileOption = join(" ", @bedfiles);
+    
+    $peakCommand = "if [ ! -s $peakFile ]; then
+  cat $fileOption | sort -k1,1 -k2,2n > $tempFile
+  bedtools merge -i $tempFile -c 4 -o collapse > $peakFile
+  rm $tempFile 
+fi
+
+";
   }
 
-  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
-  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
-  print $sh get_run_command($sh_direct);
+  my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
+  my $pbs_name = basename($pbs_file);
+  my $log      = $self->get_log_filename( $log_dir, $task_name );
+  my $log_desc = $cluster->get_log_description($log);
+
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+
+  print $pbs "$peakCommand \n";
 
   for my $fileName ( keys %$rawFiles ) {
     my @bamFiles = @{ $rawFiles->{$fileName} };
     my $bamFile = join( ' ', @bamFiles );
 
-    my @peaks = @{ $peakFiles{$fileName} };
-
-    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $fileName );
-    my $pbs_name = basename($pbs_file);
-    my $log      = $self->get_log_filename( $log_dir, $fileName );
-
-    my $log_desc   = $cluster->get_log_description($log);
     my $final_file = "${fileName}/${fileName}_GENE_TABLE.txt";
-    my $pbs        = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-    my $peak       = $peaks[0];
 
-    print $pbs "python $pipeline_dir/enhancerPromoter.py $option -b $bamFile -i $peak -g $genome -o . --name $fileName --genomeDirectory $genomeDirectory --gseaPath $gseaPath --gmxPath $gmxPath --cpgPath $cpgPath \n";
+    print $pbs "if [ ! -s $final_file ]; then
+  python $pipeline_dir/enhancerPromoter.py $option -b $bamFile -i ${result_dir}/$peakFile -g $genome -o . --name $fileName --genomeDirectory $genomeDirectory --gseaPath $gseaPath --gmxPath $gmxPath --cpgPath $cpgPath
+fi
 
-    $self->close_pbs( $pbs, $pbs_file );
-    print $sh "\$MYCMD ./$pbs_name \n";
+";
   }
-
-  print $sh "exit 0\n";
-  close $sh;
-
-  print "!!!shell file $shfile created, you can run this shell file to submit tasks.\n";
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {
