@@ -222,7 +222,16 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "consider_tRNA_NTA", 1 );
 
-  my $additionalOption = $def->{hasYRNA} ? " --exportYRNA" : "";
+  my $additionalOption = "";
+  if ( $def->{hasSnRNA} ) {
+    $additionalOption = $additionalOption . " --exportSnRNA";
+  }
+  if ( $def->{hasSnoRNA} ) {
+    $additionalOption = $additionalOption . " --exportSnoRNA";
+  }
+  if ( $def->{hasYRNA} ) {
+    $additionalOption = $additionalOption . " --exportYRNA";
+  }
   my $defaultOption = getValue( $def, "host_smallrnacount_option", "" );
   initDefaultValue( $def, "host_smallrnacount_option", $defaultOption . " --min_overlap 0.9 --offsets 0,1,2,-1,-2" . $additionalOption );
 

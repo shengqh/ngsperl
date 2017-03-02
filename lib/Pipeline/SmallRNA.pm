@@ -133,8 +133,23 @@ sub getSmallRNAConfig {
       $comparisons = $sampleComparisons;
     }
 
-    my $hostSmallRNA = $def->{hasYRNA} ? [ "isomiR", "tDR-anticodon", "snDR", "snoDR", "yDR", "rDR", "osRNA" ] : [ "isomiR", "tDR-anticodon", "snDR", "snoDR", "rDR", "osRNA" ];
-    my $hostSmallRNAFolder = $def->{hasYRNA} ? [ "miRNA_isomiR", "tRNA", "snRNA", "snoRNA", "yRNA", "rRNA", "otherSmallRNA" ] : [ "miRNA_isomiR", "tRNA", "snRNA", "snoRNA", "rRNA", "otherSmallRNA" ];
+    my $hostSmallRNA       = [ "isomiR",       "tDR-anticodon" ];
+    my $hostSmallRNAFolder = [ "miRNA_isomiR", "tRNA" ];
+    if ( $def->{hasSoRNA} ) {
+      push( @$hostSmallRNA,       "snDR" );
+      push( @$hostSmallRNAFolder, "snRNA" );
+    }
+    if ( $def->{hasSnoRNA} ) {
+      push( @$hostSmallRNA,       "snoDR" );
+      push( @$hostSmallRNAFolder, "snoRNA" );
+    }
+    if ( $def->{hasYRNA} ) {
+      push( @$hostSmallRNA,       "yDR" );
+      push( @$hostSmallRNAFolder, "yRNA" );
+    }
+    push( @$hostSmallRNA,       ( "rRNA", "otherSmallRNA" ) );
+    push( @$hostSmallRNAFolder, ( "rDR",  "osRNA" ) );
+
     my $numberOfHostSmallRNA = scalar(@$hostSmallRNA);
 
     my $numberOfComparison = scalar(@$sampleComparisons);
@@ -1079,7 +1094,7 @@ sub getSmallRNAConfig {
       $batchConfig->{target_dir}                = $batch_dir . "/" . $batchName;
       $batchConfig->{parameterSampleFile2}      = $batchGroups->{$batchGroup};
       $batchConfig->{parameterSampleFile2Order} = undef;
-      $batchConfig->{parameterSampleFile3} = undef;
+      $batchConfig->{parameterSampleFile3}      = undef;
       $batchConfig->{rCode}                     = $batchConfig->{rCode} . "drawInvidividual=FALSE;";
 
       $config->{$batchName} = $batchConfig;
