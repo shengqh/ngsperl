@@ -909,7 +909,7 @@ if(!is.null(sigTableAll)){
   }
 }
 
-if (! is.null(resultAllOut)) {
+if (length(allComparisons) > 1 & (! is.null(resultAllOut))) {
 	#write a file with all information
 	resultAllOut<-cbind(dataAllOut,resultAllOut[row.names(dataAllOut),])
 	
