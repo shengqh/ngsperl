@@ -35,6 +35,10 @@ sub initializeDefaultOptions {
     $def->{sra_to_fastq} = 0;
   }
 
+  if ( !defined $def->{merge_fastq} ) {
+    $def->{merge_fastq} = 0;
+  }
+
   if ( !defined $def->{table_vis_group_text_size} ) {
     $def->{table_vis_group_text_size} = "10";
   }
@@ -99,7 +103,7 @@ sub getRNASeqConfig {
   if ( $def->{perform_bamplot} ) {
     defined $def->{dataset_name} or die "Define dataset_name for bamplot first!";
     defined $def->{gene_names}   or die "Define gene_names for bamplot first, seperate by blank space!";
-    defined $def->{add_chr}   or die "Define add_chr for bamplot first, check your genome sequence!";
+    defined $def->{add_chr}      or die "Define add_chr for bamplot first, check your genome sequence!";
   }
 
   my $config = {
@@ -142,6 +146,27 @@ sub getRNASeqConfig {
     push @individual, ("sra2fastq");
   }
 
+  if ( $def->{merge_fastq} ) {
+    $config->{merge_fastq} = {
+      class      => "Format::MergeFastq",
+      perform    => 0,
+      target_dir => "${target_dir}/merge_fastq",
+      option     => "",
+      source_ref => $source_ref,
+      sh_direct  => 1,
+      is_paired  => 1,
+      cluster    => $cluster,
+      pbs        => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=2",
+        "walltime" => "2",
+        "mem"      => "10gb"
+      }
+    };
+    $source_ref = "merge_fastq";
+    push @individual, ("merge_fastq");
+  }
+
   if ($fastq_remove_N) {
     $config->{fastq_remove_N} = {
       class      => "CQS::FastqTrimmer",
@@ -149,7 +174,7 @@ sub getRNASeqConfig {
       target_dir => $target_dir . "/fastq_remove_N",
       option     => "",
       extension  => "_trim.fastq.gz",
-      source_ref => "files",
+      source_ref => $source_ref,
       cluster    => $cluster,
       sh_direct  => 1,
       pbs        => {
