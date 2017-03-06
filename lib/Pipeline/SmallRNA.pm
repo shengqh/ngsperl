@@ -147,8 +147,8 @@ sub getSmallRNAConfig {
       push( @$hostSmallRNA,       "yDR" );
       push( @$hostSmallRNAFolder, "yRNA" );
     }
-    push( @$hostSmallRNA,       ( "rRNA", "otherSmallRNA" ) );
-    push( @$hostSmallRNAFolder, ( "rDR",  "osRNA" ) );
+    push( @$hostSmallRNA,       ( "rDR",  "osRNA" ) );
+    push( @$hostSmallRNAFolder, ( "rRNA", "otherSmallRNA" ) );
 
     my $numberOfHostSmallRNA = scalar(@$hostSmallRNA);
 
