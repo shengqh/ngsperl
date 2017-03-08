@@ -101,7 +101,7 @@ sub perform {
   fi";
       } elsif ($isBed) {
         $passinput = change_extension( $filename, ".avinput" );
-        $runcmd = "perl -lane 'my \$fileColNum=scalar(\@F);my \$fileColPart=join(\"\t\",\@F[5..(\$fileColNum-1)]);print \"\$F[0]\t\$F[1]\t\$F[2]\t0\t-\t\$fileColPart\" $sampleFile'  > $passinput 
+        $runcmd = "perl -lane 'my \$fileColNum=scalar(\@F);my \$fileColPart=join(\"\t\",\@F[5..(\$fileColNum-1)]);print \"\$F[0]\t\$F[1]\t\$F[2]\t0\t-\t\$fileColPart\"' $sampleFile > $passinput 
   if [ -s $passinput ]; then
     table_annovar.pl $passinput $annovarDB $option --outfile $annovar --remove
   fi";
