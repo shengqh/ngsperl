@@ -36,6 +36,11 @@ sub perform {
   if ( !defined $isvcf ) {
     $isvcf = 0;
   }
+  my $isBed = $config->{$section}{isBed};
+  if ( !defined $isBed ) {
+    $isBed = 0;
+  }
+  
 
   my $splicing_threshold = get_option( $config, $section, "splicing_threshold", 0 );
   if ( $splicing_threshold > 0 ) {
@@ -94,8 +99,13 @@ sub perform {
   if [ -s $passinput ]; then
     table_annovar.pl $passinput $annovarDB $option --outfile $annovar --remove
   fi";
-      }
-      else {
+      } elsif ($isBed) {
+        $passinput = change_extension( $filename, ".avinput" );
+        $runcmd = "perl -lane 'my \$fileColNum=scalar(\@F);my \$fileColPart=join(\"\t\",\@F[5..(\$fileColNum-1)]);print \"\$F[0]\t\$F[1]\t\$F[2]\t0\t-\t\$fileColPart\" $sampleFile'  > $passinput 
+  if [ -s $passinput ]; then
+    table_annovar.pl $passinput $annovarDB $option --outfile $annovar --remove
+  fi";
+      } else {
         $passinput = $sampleFile;
         $runcmd    = "table_annovar.pl $passinput $annovarDB $option --outfile $annovar --remove";
       }
