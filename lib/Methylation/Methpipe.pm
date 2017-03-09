@@ -191,12 +191,14 @@ sub result {
     my $meth_hmr_file     = "${result_dir}/${sample_name}.mr.hmr";
     my $meth_pmr_file     = "${result_dir}/${sample_name}.mr.pmr";
     my $meth_pmd_file     = "${result_dir}/${sample_name}.mr.pmd";
+    my $meth_amr_file     = "${result_dir}/${sample_name}.mr.amr";
     my @result_files = ();
     push( @result_files, $meth_all_file );
     push( @result_files, $meth_file );
     push( @result_files, $meth_hmr_file );
     push( @result_files, $meth_pmr_file );
     push( @result_files, $meth_pmd_file );
+    push( @result_files, $meth_amr_file );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
