@@ -40,7 +40,6 @@ sub perform {
   if ( !defined $isBed ) {
     $isBed = 0;
   }
-  
 
   my $splicing_threshold = get_option( $config, $section, "splicing_threshold", 0 );
   if ( $splicing_threshold > 0 ) {
@@ -85,7 +84,7 @@ sub perform {
         $sampleFile = $filename;
       }
 
-      my $annovar       = change_extension( $filename, ".annovar" );
+      my $annovar       = $filename . ".annovar";
       my $result        = "${annovar}.${buildver}_multianno.txt";
       my $refine_result = "${annovar}.splicing.${buildver}_multianno.txt";
       my $final         = $annovar . ".final.tsv";
@@ -94,18 +93,20 @@ sub perform {
       my $runcmd;
       my $passinput;
       if ($isvcf) {
-        $passinput = change_extension( $filename, ".avinput" );
-        $runcmd = "convert2annovar.pl -format vcf4old ${sampleFile} | cut -f1-7 | awk '{gsub(\",\\\\*\", \"\", \$0); print}'> $passinput 
+        $passinput = $filename . ".avinput";
+        $runcmd    = "convert2annovar.pl -format vcf4old ${sampleFile} | cut -f1-7 | awk '{gsub(\",\\\\*\", \"\", \$0); print}'> $passinput 
   if [ -s $passinput ]; then
     table_annovar.pl $passinput $annovarDB $option --outfile $annovar --remove
   fi";
-      } elsif ($isBed) {
-        $passinput = $filename.".avinput";
-        $runcmd = "perl -lane 'my \$fileColNum=scalar(\@F);my \$fileColPart=join(\"\t\",\@F[3..(\$fileColNum-1)]);print \"\$F[0]\t\$F[1]\t\$F[2]\t0\t-\t\$fileColPart\"' $sampleFile > $passinput 
+      }
+      elsif ($isBed) {
+        $passinput = $filename . ".avinput";
+        $runcmd    = "perl -lane 'my \$fileColNum=scalar(\@F);my \$fileColPart=join(\"\t\",\@F[3..(\$fileColNum-1)]);print \"\$F[0]\t\$F[1]\t\$F[2]\t0\t-\t\$fileColPart\"' $sampleFile > $passinput 
   if [ -s $passinput ]; then
     table_annovar.pl $passinput $annovarDB $option --outfile $annovar --remove
   fi";
-      } else {
+      }
+      else {
         $passinput = $sampleFile;
         $runcmd    = "table_annovar.pl $passinput $annovarDB $option --outfile $annovar --remove";
       }
@@ -185,8 +186,8 @@ sub result {
     my @result_files = ();
     for my $sampleFile (@sample_files) {
       my ( $filename, $dir ) = fileparse($sampleFile);
-      my $annovar = change_extension( $filename, ".annovar" );
-      my $final = $annovar . ".final.tsv";
+      my $annovar = $filename . ".annovar";
+      my $final   = $annovar . ".final.tsv";
       if ( defined $cqstools ) {
         my $excel = $final . ".xls";
         push( @result_files, $cur_dir . "/$excel" );
