@@ -28,7 +28,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
-  my %raw_files = %{ get_raw_files( $config, $section ) };
+  my ($raw_files, $samples) = get_raw_files( $config, $section );
 
   my $lsamSoftware = get_option( $config, $section, "liver_model_console" );
   my $randomSeed   = get_option( $config, $section, "random_seed" );
@@ -37,8 +37,8 @@ sub perform {
   my $shfile = $self->get_file( $pbs_dir, $task_name, ".bat" );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
 
-  for my $sample_name ( sort keys %raw_files ) {
-    my @sample_files = @{ $raw_files{$sample_name} };
+  for my $sample_name ( @$samples ) {
+    my @sample_files = @{ $raw_files->{$sample_name} };
     my $sample       = $sample_files[0];
 
     my $pbs_file = $self->get_file( $pbs_dir, $sample_name, ".bat" );
