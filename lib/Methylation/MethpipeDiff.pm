@@ -55,8 +55,8 @@ sub perform {
     my $methdiffFile      = "${group_name}.methdiff";
     my $controlHmrFile   = ${$hmrfiles->{ $sampleNames[0] }}[0];
     my $treatmentHmrFile = ${$hmrfiles->{ $sampleNames[1] }}[0];
-    my $dmrFile1      = "${controlHmrFile}.DMR";
-    my $dmrFile2      = "${treatmentHmrFile}.DMR";
+    my $dmrFile1      = basename($controlHmrFile).".DMR";
+    my $dmrFile2      = basename($treatmentHmrFile).".DMR";
     
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
     my $pbs_name = basename($pbs_file);
@@ -70,9 +70,11 @@ sub perform {
 
     print $pbs "
 if [ ! -s $methdiffFile ]; then
+  echo methdiff=`date`
   methdiff -o $methdiffFile $controlMethFile $treatmentMethFile
 fi
-if [[ ! -s $dmrFile1 && ! -s $dmrFile2 ]]; then
+if [[ ! -s $dmrFile1 || ! -s $dmrFile2 ]]; then
+  echo dmr=`date`
   dmr $methdiffFile $controlHmrFile $treatmentHmrFile $dmrFile1 $dmrFile2
 fi
 ";
