@@ -102,6 +102,12 @@ sub result {
     my @result_files = ();
     my $cur_dir      = $result_dir . "/$group_name";
     push( @result_files, "$cur_dir/${group_name}.methdiff" );
+    
+    my @sampleNames = @{ $comparisons->{$group_name}; };
+    my $controlHmrFile=$sampleNames[0].".mr.hmr.DMR";
+    my $treatmentHmrFile=$sampleNames[1].".mr.hmr.DMR";
+    push( @result_files, "$cur_dir/${controlHmrFile}" );
+    push( @result_files, "$cur_dir/${treatmentHmrFile}" );
     $result->{$group_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
