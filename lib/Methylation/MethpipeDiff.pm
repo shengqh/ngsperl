@@ -123,8 +123,8 @@ sub result {
     my @sampleNames = @{ $comparisons->{$group_name}; };
     my $controlHmrFile=$sampleNames[0].".mr.hmr.DMR";
     my $treatmentHmrFile=$sampleNames[1].".mr.hmr.DMR";
-    my $controlHmrFileFiltered=$controlHmrFile."filtered";
-    my $treatmentHmrFileFiltered=$treatmentHmrFile."filtered";
+    my $controlHmrFileFiltered=$controlHmrFile.".filtered";
+    my $treatmentHmrFileFiltered=$treatmentHmrFile.".filtered";
     push( @result_files, "$cur_dir/${controlHmrFile}" );
     push( @result_files, "$cur_dir/${treatmentHmrFile}" );
     push( @result_files, "$cur_dir/${controlHmrFileFiltered}" );
