@@ -87,11 +87,11 @@ fi
 		    print $pbs "
 if [ ! -s $dmrFile1Filtered ]; then
   echo methdiff dmr filter=`date`
-   awk -F \"[:\\t]\" ’$5 >= $minCpgInDMR && $6 >= $minSigCpgInDMR {print $0}’ $dmrFile1 > $dmrFile1Filtered
+   awk -F \"[:\\t]\" '$5 >= $minCpgInDMR && $6 >= $minSigCpgInDMR {print $0}' $dmrFile1 > $dmrFile1Filtered
 fi
 if [ ! -s $dmrFile2Filtered ]; then
   echo methdiff dmr filter=`date`
-   awk -F \"[:\\t]\" ’$5 >= $minCpgInDMR && $6 >= $minSigCpgInDMR {print $0}’ $dmrFile2 > $dmrFile2Filtered
+   awk -F \"[:\\t]\" '$5 >= $minCpgInDMR && $6 >= $minSigCpgInDMR {print $0}' $dmrFile2 > $dmrFile2Filtered
 fi
 ";
 	}
@@ -112,7 +112,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $comparisons = get_raw_files( $config, $section, "comparison" );
+  my $comparisons = get_raw_files( $config, $section );
 
   my $result = {};
   for my $group_name ( keys %{$comparisons} ) {
