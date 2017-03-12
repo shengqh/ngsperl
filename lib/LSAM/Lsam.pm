@@ -28,7 +28,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
-  my ($raw_files, $samples) = get_raw_files( $config, $section );
+  my ($raw_files, $samples) = get_raw_files_and_keys( $config, $section );
 
   my $lsamSoftware = get_option( $config, $section, "liver_model_console" );
   my $randomSeed   = get_option( $config, $section, "random_seed" );
