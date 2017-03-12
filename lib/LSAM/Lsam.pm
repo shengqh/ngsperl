@@ -84,7 +84,12 @@ if EXIST \%file\% (
     }
     $self->close_pbs( $pbs, $pbs_file );
     
-    print $sh "call $pbs_file \n";
+    open ( $pbs, "<", $pbs_file )   or die "Could not open file $pbs_file: $!";
+    while ( my $line = <$pbs> ) {
+      if ($line !~ /exit/){
+        print $sh $line;
+      }
+    }
   }
   close($sh);
 }
