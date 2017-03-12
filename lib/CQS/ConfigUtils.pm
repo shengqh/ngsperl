@@ -18,7 +18,7 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(get_config_section has_config_section get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files get_raw_files_keys get_raw_files_attributes get_raw_files2 get_run_command get_option_value get_pair_groups
+    qw(get_config_section has_config_section get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files_and_keys get_raw_files get_raw_files_keys get_raw_files_attributes get_raw_files2 get_run_command get_option_value get_pair_groups
       get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key save_parameter_sample_file saveConfig writeFileList initDefaultValue get_pure_pairs)
   ]
 );
@@ -531,10 +531,16 @@ sub get_raw_files_attributes {
   return ( \%result );
 }
 
-sub get_raw_files {
+sub get_raw_files_and_keys {
   my ( $config, $section, $mapname, $pattern ) = @_;
   my ( $result, $issource, $orderedKeys ) = do_get_raw_files( $config, $section, 0, $mapname, $pattern );
   return ($result, $orderedKeys);
+}
+
+sub get_raw_files {
+  my ( $config, $section, $mapname, $pattern ) = @_;
+  my ( $result, $issource, $orderedKeys ) = do_get_raw_files( $config, $section, 0, $mapname, $pattern );
+  return $result;
 }
 
 #return raw files and if the raw files are extracted from source directly
