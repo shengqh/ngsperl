@@ -13,7 +13,7 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(initValue getValue addFastQC addBlastn addBowtie addBamStat addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn getBatchGroups)] );
+our %EXPORT_TAGS = ( 'all' => [qw(initValue getValue addFastQC addBlastn addBowtie addBamStat addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn getBatchGroups initDeseq2Options)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -168,6 +168,7 @@ sub addDEseq2 {
     countfile_ref          => $countfileRef,
     sh_direct              => 1,
     show_label_PCA         => $def->{show_label_PCA},
+    use_pearson_in_hca     => $def->{use_pearson_in_hca},
     show_DE_gene_cluster   => $def->{DE_show_gene_cluster},
     pvalue                 => $def->{DE_pvalue},
     fold_change            => $def->{DE_fold_change},
@@ -298,6 +299,21 @@ sub getBatchGroups {
   }
 
   return $result;
+}
+
+sub initDeseq2Options {
+  my $def = shift;
+  initDefaultValue( $def, "DE_show_gene_cluster",      1 );
+  initDefaultValue( $def, "DE_pvalue",                 0.05 );
+  initDefaultValue( $def, "DE_fold_change",            2 );
+  initDefaultValue( $def, "DE_add_count_one",          0 );
+  initDefaultValue( $def, "DE_min_median_read",        5 );
+  initDefaultValue( $def, "DE_top25only",              0 );
+  initDefaultValue( $def, "DE_detected_in_both_group", 1 );
+  initDefaultValue( $def, "DE_perform_wilcox",         0 );
+  initDefaultValue( $def, "DE_use_raw_pvalue",         0 );
+  initDefaultValue( $def, "DE_text_size",              10 );
+  return $def;
 }
 
 1;
