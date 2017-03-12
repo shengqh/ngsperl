@@ -474,9 +474,8 @@ sub do_get_unsorted_raw_files {
   }
 }
 
-sub get_raw_files_keys {
-  my ( $config, $section, $mapname, $pattern ) = @_;
-  my ( $resultUnsorted, $issource ) = do_get_unsorted_raw_files(@_);
+sub do_get_raw_files_keys {
+   my $resultUnsorted = shift;
   my @keys = grep { $_ !~ /^\./ } keys %$resultUnsorted;
   my @result;
   if ( exists $resultUnsorted->{".order"} ) {
@@ -487,7 +486,12 @@ sub get_raw_files_keys {
   else {
     @result = sort @keys;
   }
-  return ( \@result );
+  return \@result;
+}
+
+sub get_raw_files_keys {
+  my ( $resultUnsorted, $issource ) = do_get_unsorted_raw_files(@_);
+  return do_get_raw_files_keys($resultUnsorted);
 }
 
 sub get_sorted_raw_files {
@@ -507,13 +511,13 @@ sub get_sorted_raw_files {
   for my $key (@orderedKeys) {
     $result{$key} = $resultUnsorted->{$key};
   }
-  return ( \%result, \@orderedKeys );
+  return \%result;
 }
 
 sub do_get_raw_files {
   my ( $resultUnsorted, $issource ) = do_get_unsorted_raw_files(@_);
-  my ($result, $orderedKeys) = get_sorted_raw_files($resultUnsorted);
-  return ( $result, $issource, $orderedKeys );
+  my $result = get_sorted_raw_files($resultUnsorted);
+  return ( $result, $issource );
 }
 
 sub get_raw_files_attributes {
@@ -532,14 +536,15 @@ sub get_raw_files_attributes {
 }
 
 sub get_raw_files_and_keys {
-  my ( $config, $section, $mapname, $pattern ) = @_;
-  my ( $result, $issource, $orderedKeys ) = do_get_raw_files( $config, $section, 0, $mapname, $pattern );
-  return ($result, $orderedKeys);
+  my ( $resultUnsorted, $issource ) = do_get_unsorted_raw_files(@_);
+  my $result = get_sorted_raw_files($resultUnsorted);
+  my $orderedKeys = do_get_raw_files_keys($resultUnsorted);
+ return ($result, $orderedKeys);
 }
 
 sub get_raw_files {
   my ( $config, $section, $mapname, $pattern ) = @_;
-  my ( $result, $issource, $orderedKeys ) = do_get_raw_files( $config, $section, 0, $mapname, $pattern );
+  my ( $result, $issource ) = do_get_raw_files( $config, $section, 0, $mapname, $pattern );
   return $result;
 }
 
