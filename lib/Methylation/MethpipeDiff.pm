@@ -34,6 +34,8 @@ sub perform {
 
   my $methfiles = get_raw_files( $config, $section, "methfile" );
   my $hmrfiles = get_raw_files( $config, $section, "hmrfile" );
+  my $minCpgInDMR   = get_option( $config, $section, "minCpgInDMR", 10 );
+  my $minSigCpgInDMR   = get_option( $config, $section, "minSigCpgInDMR", 5 );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -74,10 +76,25 @@ if [ ! -s $methdiffFile ]; then
   methdiff -o $methdiffFile $controlMethFile $treatmentMethFile
 fi
 if [[ ! -s $dmrFile1 || ! -s $dmrFile2 ]]; then
-  echo dmr=`date`
+  echo methdiff dmr=`date`
   dmr $methdiffFile $controlHmrFile $treatmentHmrFile $dmrFile1 $dmrFile2
 fi
 ";
+	if ($minCpgInDMR>0 and $minSigCpgInDMR>0) {
+		my $dmrFile1Filtered=$dmrFile1.".filtered";
+		my $dmrFile2Filtered=$dmrFile2.".filtered";
+		
+		    print $pbs "
+if [ ! -s $dmrFile1Filtered ]; then
+  echo methdiff dmr filter=`date`
+   awk -F \"[:\\t]\" ’$5 >= $minCpgInDMR && $6 >= $minSigCpgInDMR {print $0}’ $dmrFile1 > $dmrFile1Filtered
+fi
+if [ ! -s $dmrFile2Filtered ]; then
+  echo methdiff dmr filter=`date`
+   awk -F \"[:\\t]\" ’$5 >= $minCpgInDMR && $6 >= $minSigCpgInDMR {print $0}’ $dmrFile2 > $dmrFile2Filtered
+fi
+";
+	}
     $self->close_pbs( $pbs, $pbs_file );
   }
 
@@ -106,8 +123,12 @@ sub result {
     my @sampleNames = @{ $comparisons->{$group_name}; };
     my $controlHmrFile=$sampleNames[0].".mr.hmr.DMR";
     my $treatmentHmrFile=$sampleNames[1].".mr.hmr.DMR";
+    my $controlHmrFileFiltered=$controlHmrFile."filtered";
+    my $treatmentHmrFileFiltered=$treatmentHmrFile."filtered";
     push( @result_files, "$cur_dir/${controlHmrFile}" );
     push( @result_files, "$cur_dir/${treatmentHmrFile}" );
+    push( @result_files, "$cur_dir/${controlHmrFileFiltered}" );
+    push( @result_files, "$cur_dir/${treatmentHmrFileFiltered}" );
     $result->{$group_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
