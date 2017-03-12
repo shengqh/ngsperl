@@ -7,7 +7,7 @@ use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
-use Pipeline::SmallRNAUtils;
+use Pipeline::PipelineUtils;
 use Data::Dumper;
 use Hash::Merge qw( merge );
 
@@ -149,7 +149,7 @@ sub getRNASeqConfig {
   if ( $def->{merge_fastq} ) {
     $config->{merge_fastq} = {
       class      => "Format::MergeFastq",
-      perform    => 0,
+      perform    => 1,
       target_dir => "${target_dir}/merge_fastq",
       option     => "",
       source_ref => $source_ref,
@@ -282,27 +282,6 @@ sub getRNASeqConfig {
         "mem"      => "10gb"
       },
     },
-    star_genetable_deseq2 => {
-      class                => "Comparison::DESeq2",
-      perform              => 1,
-      target_dir           => $target_dir . "/star_genetable_deseq2",
-      option               => "",
-      source_ref           => "pairs",
-      groups_ref           => "groups",
-      countfile_ref        => "star_genetable",
-      sh_direct            => 1,
-      show_DE_gene_cluster => 0,
-      pvalue               => 0.05,
-      fold_change          => 2.0,
-      min_median_read      => 5,
-      use_pearson_in_hca   => $use_pearson_in_hca,
-      pbs                  => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "10",
-        "mem"      => "10gb"
-      },
-    },
     star_genetable_correlation => {
       class                    => "CQS::UniqueR",
       perform                  => 1,
@@ -323,10 +302,12 @@ sub getRNASeqConfig {
       },
     }
   };
+
   $config = merge( $config, $configAlignment );
   push @individual, ( "star", "star_featurecount" );
-  push @summary, ( "star_summary", "star_genetable", "star_genetable_correlation", "star_genetable_deseq2" );
+  push @summary, ( "star_summary", "star_genetable", "star_genetable_correlation" );
 
+  addDEseq2( $config, $def, \@summary, "star_genetable", [ "star_genetable", ".count\$" ], $target_dir, $def->{DE_min_median_read} );
   if ( $def->{perform_rnaseqc} ) {
     $config->{rnaseqc} = {
       class          => "QC::RNASeQC",
