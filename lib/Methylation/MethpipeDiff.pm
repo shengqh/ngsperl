@@ -87,11 +87,11 @@ fi
 		    print $pbs "
 if [ ! -s $dmrFile1Filtered ]; then
   echo methdiff dmr filter=`date`
-   awk -F \"[:\\t]\" '$5 >= $minCpgInDMR && $6 >= $minSigCpgInDMR {print $0}' $dmrFile1 > $dmrFile1Filtered
+   awk -F \"[:\\t]\" '\$5 >= $minCpgInDMR && \$6 >= $minSigCpgInDMR {print $0}' $dmrFile1 > $dmrFile1Filtered
 fi
 if [ ! -s $dmrFile2Filtered ]; then
   echo methdiff dmr filter=`date`
-   awk -F \"[:\\t]\" '$5 >= $minCpgInDMR && $6 >= $minSigCpgInDMR {print $0}' $dmrFile2 > $dmrFile2Filtered
+   awk -F \"[:\\t]\" '\$5 >= $minCpgInDMR && \$6 >= $minSigCpgInDMR {print $0}' $dmrFile2 > $dmrFile2Filtered
 fi
 ";
 	}
