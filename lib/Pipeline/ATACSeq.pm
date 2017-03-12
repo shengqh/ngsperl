@@ -196,36 +196,36 @@ sub getConfig {
   push @$individual, "bwa_cleanbam";
   addBamStat( $config, $def, $summary, "bwa_cleanbam_stat", $target_dir . "/bwa_cleanbam", [ "bwa_cleanbam", ".stat\$" ] );
 
-  if ( defined $config->{fastqc_count_vis} ) {
-    my $files = $config->{fastqc_count_vis}{parameterFile1_ref};
-    if ( defined $config->{fastqc_count_vis}{parameterFile2_ref} ) {
-      my $f = $config->{fastqc_count_vis}{parameterFile2_ref};
-      push @$files, @$f;
-    }
-    if ( defined $config->{fastqc_count_vis}{parameterFile3_ref} ) {
-      my $f = $config->{fastqc_count_vis}{parameterFile3_ref};
-      push @$files, @$f;
-    }
-    push @$files, ( "bwa_stat",          ".csv\$" );
-    push @$files, ( "bwa_cleanbam_stat", ".csv\$" );
-    $config->{"reads_in_task"} = {
-      class                    => "CQS::UniqueR",
-      target_dir               => "${target_dir}/reads_in_task",
-      perform                  => 1,
-      rtemplate                => "countInTasks.R",
-      output_file              => ".countInTasks.Result",
-      output_file_ext          => ".Reads.csv",
-      sh_direct                => 1,
-      parameterSampleFile1_ref => $files,
-      pbs                      => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "1",
-        "mem"      => "10gb"
-      },
-    };
-    push @$summary, ("reads_in_task");
-  }
+  #  if ( defined $config->{fastqc_count_vis} ) {
+  #    my $files = $config->{fastqc_count_vis}{parameterFile1_ref};
+  #    if ( defined $config->{fastqc_count_vis}{parameterFile2_ref} ) {
+  #      my $f = $config->{fastqc_count_vis}{parameterFile2_ref};
+  #      push @$files, @$f;
+  #    }
+  #    if ( defined $config->{fastqc_count_vis}{parameterFile3_ref} ) {
+  #      my $f = $config->{fastqc_count_vis}{parameterFile3_ref};
+  #      push @$files, @$f;
+  #    }
+  #    push @$files, ( "bwa_stat",          ".csv\$" );
+  #    push @$files, ( "bwa_cleanbam_stat", ".csv\$" );
+  #    $config->{"reads_in_task"} = {
+  #      class                    => "CQS::UniqueR",
+  #      target_dir               => "${target_dir}/reads_in_task",
+  #      perform                  => 1,
+  #      rtemplate                => "countInTasks.R",
+  #      output_file              => ".countInTasks.Result",
+  #      output_file_ext          => ".Reads.csv",
+  #      sh_direct                => 1,
+  #      parameterSampleFile1_ref => $files,
+  #      pbs                      => {
+  #        "email"    => $def->{email},
+  #        "nodes"    => "1:ppn=1",
+  #        "walltime" => "1",
+  #        "mem"      => "10gb"
+  #      },
+  #    };
+  #    push @$summary, ("reads_in_task");
+  #  }
 
   my $callerType = getValue( $def, "caller_type" );
   my @callers = ();
