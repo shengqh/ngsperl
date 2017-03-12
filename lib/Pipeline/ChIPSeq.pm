@@ -153,7 +153,7 @@ sub getConfig {
   if ( $def->{perform_rose} ) {
     my $roseTask = $def->{peak_caller} . "callpeak_bradner_rose2";
     $config->{$roseTask} = {
-      class                => "Chipseq::BradnerRose2",
+      class                => "Chipseq::Rose2",
       perform              => 1,
       target_dir           => "${target_dir}/$roseTask",
       option               => "",
