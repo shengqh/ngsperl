@@ -190,17 +190,12 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "mirbase_count_option",        "-p hsa" );
   initDefaultValue( $def, "table_vis_group_text_size",   10 );
   initDefaultValue( $def, "sequencetask_run_time",       12 );
-  initDefaultValue( $def, "DE_show_gene_cluster",        1 );
-  initDefaultValue( $def, "DE_pvalue",                   0.05 );
+  
+  initDeseq2Options($def);
   initDefaultValue( $def, "DE_fold_change",              1.5 );
-  initDefaultValue( $def, "DE_add_count_one",            0 );
   initDefaultValue( $def, "DE_min_median_read_top",      2 );
   initDefaultValue( $def, "DE_min_median_read_smallRNA", 5 );
-  initDefaultValue( $def, "DE_top25only",                0 );
-  initDefaultValue( $def, "DE_detected_in_both_group",   1 );
-  initDefaultValue( $def, "DE_perform_wilcox",           0 );
   initDefaultValue( $def, "DE_use_raw_pvalue",           1 );
-  initDefaultValue( $def, "DE_text_size",                10 );
 
   initDefaultValue( $def, "perform_contig_analysis", 0 );
   initDefaultValue( $def, "smallrnacount_option",    "" );
