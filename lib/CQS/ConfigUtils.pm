@@ -778,9 +778,12 @@ sub writeFileList {
 }
 
 sub initDefaultValue {
-  my ( $def, $optionName, $deafultValue ) = @_;
-  if ( !defined $def->{$optionName} ) {
-    $def->{$optionName} = $deafultValue;
+  my ( $def, $name, $defaultValue ) = @_;
+  if ( !defined $def->{$name} ) {
+    if ( !defined $defaultValue ) {
+      die "defaultValue cannot be undefined for $name.";
+    }
+    $def->{$name} = $defaultValue;
   }
   return $def;
 }
