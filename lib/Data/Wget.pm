@@ -38,9 +38,23 @@ sub perform {
   print $sh get_run_command($sh_direct) . "\n";
 
   for my $sample_name ( sort keys %raw_files ) {
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
+
+    my $log_desc = $cluster->get_log_description($log);
+
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+
     my @listFiles = @{ $raw_files{$sample_name} };
     my $listFile  = $listFiles[0];
-    my @urls      = read_file( $listFile, chomp => 1 );
+    my @urls;
+    if ( $listFile =~ /^ftp/ ) {
+      push( @urls, $listFile );
+    }
+    else {
+      @urls = read_file( $listFile, chomp => 1 );
+    }
 
     my $urlCount = scalar(@urls);
 
@@ -49,15 +63,6 @@ sub perform {
       if ( $iend >= $urlCount ) {
         $iend = $urlCount;
       }
-
-      my $name     = "${sample_name}_${i}_${iend}";
-      my $pbs_file = $self->get_pbs_filename( $pbs_dir, $name );
-      my $pbs_name = basename($pbs_file);
-      my $log      = $self->get_log_filename( $log_dir, $name );
-
-      my $log_desc = $cluster->get_log_description($log);
-
-      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
       for ( my $j = $i ; $j < $iend ; $j++ ) {
         my $url      = $urls[$j];
@@ -71,25 +76,24 @@ fi
 ";
       }
 
-      $self->close_pbs( $pbs, $pbs_file );
-
-      print $sh "\$MYCMD ./$pbs_name \n";
     }
+    $self->close_pbs( $pbs, $pbs_file );
 
-    close $sh;
-
-    if ( is_linux() ) {
-      chmod 0755, $shfile;
-    }
-
-    print "!!!shell file $shfile created, you can run this shell file to submit all ", $self->{_name}, " tasks.\n";
+    print $sh "\$MYCMD ./$pbs_name \n";
   }
+  close $sh;
+
+  if ( is_linux() ) {
+    chmod 0755, $shfile;
+  }
+
+  print "!!!shell file $shfile created, you can run this shell file to submit all ", $self->{_name}, " tasks.\n";
 }
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0);
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my $result = {};
 
@@ -97,15 +101,22 @@ sub result {
   for my $sample_name ( sort keys %raw_files ) {
     my @listFiles = @{ $raw_files{$sample_name} };
     my $listFile  = $listFiles[0];
-    my @urls      = read_file( $listFile, chomp => 1 );
+    my @urls;
+    if ( $listFile =~ /^ftp/ ) {
+      push( @urls, $listFile );
+    }
+    else {
+      @urls = read_file( $listFile, chomp => 1 );
+    }
+
+    my @result_files = ();
     for my $url (@urls) {
       my $filename    = basename($url);
       my $result_file = $result_dir . "/" . $filename;
 
-      my @result_files = ();
       push( @result_files, $result_dir . "/${filename}" );
-      $result->{$filename} = filter_array( \@result_files, $pattern );
     }
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
 
   return $result;
