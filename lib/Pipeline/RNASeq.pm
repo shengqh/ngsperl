@@ -8,6 +8,7 @@ use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
 use Pipeline::PipelineUtils;
+use Pipeline::Preprocession;
 use Data::Dumper;
 use Hash::Merge qw( merge );
 
@@ -23,45 +24,12 @@ our $VERSION = '0.01';
 sub initializeDefaultOptions {
   my $def = shift;
 
-  if ( !defined $def->{cluster} ) {
-    $def->{cluster} = 'slurm';
-  }
-
-  if ( !defined $def->{fastq_remove_N} ) {
-    $def->{fastq_remove_N} = 0;
-  }
-
-  if ( !defined $def->{sra_to_fastq} ) {
-    $def->{sra_to_fastq} = 0;
-  }
-
-  if ( !defined $def->{merge_fastq} ) {
-    $def->{merge_fastq} = 0;
-  }
-
-  if ( !defined $def->{table_vis_group_text_size} ) {
-    $def->{table_vis_group_text_size} = "10";
-  }
-
-  if ( !defined $def->{max_thread} ) {
-    $def->{max_thread} = "8";
-  }
-  if ( !defined $def->{sequencetask_run_time} ) {
-    $def->{sequencetask_run_time} = "12";
-  }
-
-  if ( !defined $def->{perform_rnaseqc} ) {
-    $def->{perform_rnaseqc} = 0;
-  }
-
-  if ( !defined $def->{perform_qc3bam} ) {
-    $def->{perform_qc3bam} = 0;
-  }
-
-  if ( !defined $def->{perform_bamplot} ) {
-    $def->{perform_bamplot} = 0;
-  }
-
+  initDefaultValue( $def, "perform_rnaseqc",            0 );
+  initDefaultValue( $def, "perform_qc3bam",             0 );
+  initDefaultValue( $def, "perform_bamplot",            0 );
+  initDefaultValue( $def, "use_pearson_in_hca",         1 );
+  initDefaultValue( $def, "top25cv_in_hca",             0 );
+  initDefaultValue( $def, "use_green_red_color_in_hca", 1 );
   return $def;
 }
 
@@ -69,24 +37,16 @@ sub getRNASeqConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
 
-  my $target_dir = $def->{target_dir};
-  create_directory_or_die($target_dir);
-
   $def = initializeDefaultOptions($def);
 
   my $cluster = $def->{cluster};
   my $task    = $def->{task_name};
 
-  my $sra_to_fastq               = $def->{sra_to_fastq};
-  my $fastq_remove_N             = $def->{fastq_remove_N};
-  my $email                      = $def->{email};
-  my $cqstools                   = $def->{cqstools} or die "Define cqstools at definition first";
-  my $star_index                 = $def->{star_index} or die "Define star_index at definition first";
-  my $transcript_gtf             = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
-  my $name_map_file              = $def->{name_map_file} or die "Define tramscript name_map_file at definition first";
-  my $use_pearson_in_hca         = defined $def->{use_pearson_in_hca} ? $def->{use_pearson_in_hca} : 1;
-  my $top25cv_in_hca             = defined $def->{top25cv_in_hca} ? $def->{top25cv_in_hca} : 0;
-  my $use_green_red_color_in_hca = defined $def->{use_green_red_color_in_hca} ? $def->{use_green_red_color_in_hca} : 1;
+  my $email          = $def->{email};
+  my $cqstools       = $def->{cqstools} or die "Define cqstools at definition first";
+  my $star_index     = $def->{star_index} or die "Define star_index at definition first";
+  my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
+  my $name_map_file  = $def->{name_map_file} or die "Define tramscript name_map_file at definition first";
 
   if ( $def->{perform_rnaseqc} ) {
     defined $def->{rnaseqc_jar} or die "Define rnaseqc_jar first!";
@@ -106,119 +66,11 @@ sub getRNASeqConfig {
     defined $def->{add_chr}      or die "Define add_chr for bamplot first, check your genome sequence!";
   }
 
-  my $config = {
-    general => {
-      task_name => $task,
-      cluster   => $cluster
-    },
-    files => $def->{files}
-  };
+  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir ) = getPreprocessionConfig($def);
 
-  if ( defined $def->{groups} ) {
-    $config->{groups} = $def->{groups};
-  }
+  my $target_dir = $def->{target_dir};
 
-  if ( defined $def->{pairs} ) {
-    $config->{pairs} = $def->{pairs};
-  }
-
-  my $source_ref = "files";
-  my @individual;
-  my @summary;
-
-  if ($sra_to_fastq) {
-    $config->{sra2fastq} = {
-      class      => "SRA::FastqDump",
-      perform    => 1,
-      ispaired   => 0,
-      target_dir => "${target_dir}/sra2fastq",
-      option     => "",
-      source_ref => "files",
-      sh_direct  => 0,
-      pbs        => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "10",
-        "mem"      => "10gb"
-      },
-    };
-    $source_ref = "sra2fastq";
-    push @individual, ("sra2fastq");
-  }
-
-  if ( $def->{merge_fastq} ) {
-    $config->{merge_fastq} = {
-      class      => "Format::MergeFastq",
-      perform    => 1,
-      target_dir => "${target_dir}/merge_fastq",
-      option     => "",
-      source_ref => $source_ref,
-      sh_direct  => 1,
-      is_paired  => 1,
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=2",
-        "walltime" => "2",
-        "mem"      => "10gb"
-      }
-    };
-    $source_ref = "merge_fastq";
-    push @individual, ("merge_fastq");
-  }
-
-  if ($fastq_remove_N) {
-    $config->{fastq_remove_N} = {
-      class      => "CQS::FastqTrimmer",
-      perform    => $fastq_remove_N,
-      target_dir => $target_dir . "/fastq_remove_N",
-      option     => "",
-      extension  => "_trim.fastq.gz",
-      source_ref => $source_ref,
-      cluster    => $cluster,
-      sh_direct  => 1,
-      pbs        => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "2",
-        "mem"      => "10gb"
-      }
-    };
-    $source_ref = "fastq_remove_N";
-    push @individual, ("fastq_remove_N");
-  }
-
-  $config->{"fastqc_raw"} = {
-    class      => "QC::FastQC",
-    perform    => 1,
-    target_dir => $target_dir . "/fastqc_raw",
-    option     => "",
-    source_ref => $source_ref,
-    cluster    => $cluster,
-    pbs        => {
-      "email"    => $email,
-      "nodes"    => "1:ppn=1",
-      "walltime" => "2",
-      "mem"      => "10gb"
-    },
-  };
-  $config->{"fastqc_raw_summary"} = {
-    class      => "QC::FastQCSummary",
-    perform    => 1,
-    target_dir => $target_dir . "/fastqc_raw",
-    cqstools   => $cqstools,
-    option     => "",
-    cluster    => $cluster,
-    pbs        => {
-      "email"    => $email,
-      "nodes"    => "1:ppn=1",
-      "walltime" => "2",
-      "mem"      => "10gb"
-    },
-  };
-  push @individual, ("fastqc_raw");
-  push @summary,    ("fastqc_raw_summary");
-
+  my $groups_ref = defined $def->{groups} ? "groups" : undef;
   my $configAlignment = {
     star => {
       class                     => "Alignment::STAR",
@@ -239,7 +91,7 @@ sub getRNASeqConfig {
     star_summary => {
       class      => "Alignment::STARSummary",
       perform    => 1,
-      target_dir => $target_dir . "/star",
+      target_dir => $def->{target_dir} . "/star",
       option     => "",
       source_ref => [ "star", "_Log.final.out" ],
       sh_direct  => 1,
@@ -283,16 +135,15 @@ sub getRNASeqConfig {
       },
     },
     star_genetable_correlation => {
-      class                    => "CQS::UniqueR",
-      perform                  => 1,
-      rCode                    => "usePearsonInHCA<-$use_pearson_in_hca; useGreenRedColorInHCA<-$use_green_red_color_in_hca; top25cvInHCA<-$top25cv_in_hca; ",
-      target_dir               => $target_dir . "/star_genetable_correlation",
-      rtemplate                => "countTableVisFunctions.R,countTableGroupCorrelation.R",
-      output_file              => "parameterSampleFile1",
-      output_file_ext          => ".Correlation.png",
-      use_pearson_in_hca       => $def->{use_pearson_in_hca},
+      class           => "CQS::UniqueR",
+      perform         => 1,
+      rCode           => "usePearsonInHCA<-" . $def->{use_pearson_in_hca} . "; useGreenRedColorInHCA<-" . $def->{use_green_red_color_in_hca} . "; top25cvInHCA<-" . $def->{top25cv_in_hca} . "; ",
+      target_dir      => $target_dir . "/star_genetable_correlation",
+      rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
+      output_file     => "parameterSampleFile1",
+      output_file_ext => ".Correlation.png",
       parameterSampleFile1_ref => [ "star_genetable", ".count\$" ],
-      parameterSampleFile2_ref => "groups",
+      parameterSampleFile2_ref => $groups_ref,
       sh_direct                => 1,
       pbs                      => {
         "email"    => $email,
@@ -304,10 +155,12 @@ sub getRNASeqConfig {
   };
 
   $config = merge( $config, $configAlignment );
-  push @individual, ( "star", "star_featurecount" );
-  push @summary, ( "star_summary", "star_genetable", "star_genetable_correlation" );
+  push @$individual, ( "star", "star_featurecount" );
+  push @$summary, ( "star_summary", "star_genetable", "star_genetable_correlation" );
 
-  addDEseq2( $config, $def, \@summary, "star_genetable", [ "star_genetable", ".count\$" ], $target_dir, $def->{DE_min_median_read} );
+  if ( defined $def->{pairs} ) {
+    addDEseq2( $config, $def, $summary, "star_genetable", [ "star_genetable", ".count\$" ], $def->{target_dir}, $def->{DE_min_median_read} );
+  }
   if ( $def->{perform_rnaseqc} ) {
     $config->{rnaseqc} = {
       class          => "QC::RNASeQC",
@@ -327,7 +180,7 @@ sub getRNASeqConfig {
         "mem"      => "40gb"
       },
     };
-    push( @summary, "rnaseqc" );
+    push( @$summary, "rnaseqc" );
   }
   if ( $def->{perform_qc3bam} ) {
     $config->{star_qc3} = {
@@ -345,7 +198,7 @@ sub getRNASeqConfig {
         "mem"      => "40gb"
       },
     };
-    push( @summary, "star_qc3" );
+    push( @$summary, "star_qc3" );
   }
 
   if ( $def->{perform_bamplot} ) {
@@ -385,7 +238,7 @@ sub getRNASeqConfig {
         "mem"      => "10gb"
       },
     };
-    push( @summary, "gene_pos", "bamplot" );
+    push( @$summary, "gene_pos", "bamplot" );
   }
 
   $config->{sequencetask} = {
@@ -394,8 +247,8 @@ sub getRNASeqConfig {
     target_dir => "${target_dir}/sequencetask",
     option     => "",
     source     => {
-      step1 => \@individual,
-      step2 => \@summary,
+      step1 => $individual,
+      step2 => $summary,
     },
     sh_direct => 0,
     cluster   => $cluster,
