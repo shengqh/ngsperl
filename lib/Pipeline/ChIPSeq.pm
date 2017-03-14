@@ -23,28 +23,28 @@ our $VERSION = '0.01';
 
 sub initializeDefaultOptions {
   my $def = shift;
-  initValue( $def, "subdir", 0 );
+  initDefaultValue( $def, "subdir", 0 );
 
-  initValue( $def, "aligner", "bowtie1" );
+  initDefaultValue( $def, "aligner", "bowtie1" );
   if ( $def->{aligner} eq "bowtie1" ) {
-    initValue( $def, "bowtie1_option", "-v 1 -m 1 --best --strata" );
+    initDefaultValue( $def, "bowtie1_option", "-v 1 -m 1 --best --strata" );
   }
   elsif ( $def->{aligner} eq "bowtie1" ) {
-    initValue( $def, "bwa_option", "" );
+    initDefaultValue( $def, "bwa_option", "" );
   }
 
-  initValue( $def, "peak_caller", "macs1" );
+  initDefaultValue( $def, "peak_caller", "macs1" );
   if ( $def->{"peak_caller"} eq "macs1" ) {
-    initValue( $def, "macs1_option", "-p 1e-9 -w -S --space=50" );
+    initDefaultValue( $def, "macs1_option", "-p 1e-9 -w -S --space=50" );
   }
   elsif ( $def->{peak_caller} eq "macs2" ) {
     my $macs2_genome = getValue( $def, "macs2_genome" );    #hs
-    initValue( $def, "macs2_option", "--broad -B -q 0.01 -g " . $macs2_genome );
+    initDefaultValue( $def, "macs2_option", "--broad -B -q 0.01 -g " . $macs2_genome );
   }
 
-  initValue( $def, "perform_rose",    0 );
-  initValue( $def, "perform_bamplot", 0 );
-  initValue( $def, "perform_chipqc",  0 );
+  initDefaultValue( $def, "perform_rose",    0 );
+  initDefaultValue( $def, "perform_bamplot", 0 );
+  initDefaultValue( $def, "perform_chipqc",  0 );
 
   return $def;
 }
