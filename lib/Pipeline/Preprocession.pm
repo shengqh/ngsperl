@@ -104,7 +104,7 @@ sub getPreprocessionConfig {
       target_dir => $def->{target_dir} . "/download_sra",
       option     => "",
       source_ref => $source_ref,
-      sh_direct  => 0,
+      sh_direct  => 1,
       cluster    => $def->{cluster},
       pbs        => {
         "email"    => $def->{email},
@@ -125,7 +125,7 @@ sub getPreprocessionConfig {
       target_dir => $def->{target_dir} . "/sra2fastq",
       option     => "",
       source_ref => $source_ref,
-      sh_direct  => 0,
+      sh_direct  => 1,
       cluster    => $def->{cluster},
       pbs        => {
         "email"    => $def->{email},
@@ -191,7 +191,7 @@ sub getPreprocessionConfig {
       output_ext => "_removeSeq.fastq.gz",
       perlFile   => "removeSequenceInFastq.pl",
       source_ref => $source_ref,
-      sh_direct  => 0,
+      sh_direct  => 1,
       cluster    => $cluster,
       pbs        => {
         "email"    => $def->{email},
