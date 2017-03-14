@@ -24,41 +24,41 @@ our $VERSION = '0.01';
 sub initializeDefaultOptions {
   my $def = shift;
 
-  initValue( $def, "cluster",               "slurm" );
-  initValue( $def, "max_thread",            8 );
-  initValue( $def, "sequencetask_run_time", 12 );
+  initDefaultValue( $def, "cluster",               "slurm" );
+  initDefaultValue( $def, "max_thread",            8 );
+  initDefaultValue( $def, "sequencetask_run_time", 12 );
 
   #Tasks
-  initValue( $def, "sra_to_fastq", 0 );
+  initDefaultValue( $def, "sra_to_fastq", 0 );
 
-  initValue( $def, "fastq_remove_N", 0 );
+  initDefaultValue( $def, "fastq_remove_N", 0 );
 
-  initValue( $def, "minimum_maq",         30 );
-  initValue( $def, "minimum_insert_size", 30 );
-  initValue( $def, "maximum_insert_size", 1000 );
-  initValue( $def, "perform_cutadapt",    0 );
+  initDefaultValue( $def, "minimum_maq",         30 );
+  initDefaultValue( $def, "minimum_insert_size", 30 );
+  initDefaultValue( $def, "maximum_insert_size", 1000 );
+  initDefaultValue( $def, "perform_cutadapt",    0 );
   if ( getValue( $def, "perform_cutadapt" ) ) {
-    initValue( $def, "adapter",         "CTGTCTCTTATACACATCT" );
-    initValue( $def, "min_read_length", 36 );
-    initValue( $def, "cutadapt_option", "-q 30" );
+    initDefaultValue( $def, "adapter",         "CTGTCTCTTATACACATCT" );
+    initDefaultValue( $def, "min_read_length", 36 );
+    initDefaultValue( $def, "cutadapt_option", "-q 30" );
   }
 
-  initValue( $def, "perform_rose",          0 );
-  initValue( $def, "perform_coltron",       0 );
-  initValue( $def, "perform_diffbind",      0 );
-  initValue( $def, "annotate_nearest_gene", 0 );
+  initDefaultValue( $def, "perform_rose",          0 );
+  initDefaultValue( $def, "perform_coltron",       0 );
+  initDefaultValue( $def, "perform_diffbind",      0 );
+  initDefaultValue( $def, "annotate_nearest_gene", 0 );
 
-  initValue( $def, "caller_type", "macs2" );
+  initDefaultValue( $def, "caller_type", "macs2" );
   if ( ( getValue( $def, "caller_type" ) eq "macs2" ) || ( getValue( $def, "caller_type" ) eq "both" ) ) {
-    initValue( $def, "macs2_peak_type", "board" );
+    initDefaultValue( $def, "macs2_peak_type", "board" );
   }
 
-  initValue( $def, "perform_homer_motifs", 0 );
+  initDefaultValue( $def, "perform_homer_motifs", 0 );
   if ( getValue( $def, "perform_homer_motifs" ) ) {
-    initValue( $def, "homer_option", "" );
+    initDefaultValue( $def, "homer_option", "" );
   }
 
-  initValue( $def, "perform_bamplot", 0 );
+  initDefaultValue( $def, "perform_bamplot", 0 );
   if ( !defined $def->{"treatments"} ) {
     my $files = getValue( $def, "files" );
     my $groups = {};
