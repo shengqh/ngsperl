@@ -23,13 +23,16 @@ our $VERSION = '0.01';
 sub initializeDefaultOptions {
   my $def = shift;
 
-  initValue( $def, "cluster",                   'slurm' );
-  initValue( $def, "sra_to_fastq",              0 );
-  initValue( $def, "fastq_remove_N",            0 );
-  initValue( $def, "remove_sequences",          "" );
-  initValue( $def, "table_vis_group_text_size", '10' );
-  initValue( $def, "max_thread",                '8' );
-  initValue( $def, "sequencetask_run_time",     '12' );
+  initDefaultValue( $def, "cluster",                   'slurm' );
+  initDefaultValue( $def, "download_sra",              0 );
+  initDefaultValue( $def, "sra_to_fastq",              $def->{download_sra} );
+  initDefaultValue( $def, "merge_fastq",               0 );
+  initDefaultValue( $def, "fastq_remove_N",            0 );
+  initDefaultValue( $def, "perform_cutadapt",          0 );
+  initDefaultValue( $def, "remove_sequences",          "" );
+  initDefaultValue( $def, "table_vis_group_text_size", '10' );
+  initDefaultValue( $def, "max_thread",                '8' );
+  initDefaultValue( $def, "sequencetask_run_time",     '12' );
 
   return $def;
 }
@@ -54,7 +57,14 @@ sub getPreprocessionConfig {
   my $cqstools = getValue( $def, "cqstools" );
 
   #task
-  my $sra_to_fastq     = getValue( $def, "sra_to_fastq" );
+  if ( $def->{sra_to_fastq} ) {
+    defined $def->{is_paired} or die "Define is_paired first!";
+  }
+
+  if ( $def->{merge_fastq} ) {
+    defined $def->{is_paired} or die "Define is_paired first!";
+  }
+
   my $fastq_remove_N   = getValue( $def, "fastq_remove_N" );
   my $remove_sequences = getValue( $def, "remove_sequences" );    #remove contamination sequences from sequence kit before adapter trimming
   my $run_cutadapt     = getValue( $def, "perform_cutadapt" );
@@ -73,31 +83,52 @@ sub getPreprocessionConfig {
   }
 
   #data
-  my $files = getValue( $def, "files" );
-
   my $config = {
     general => {
       task_name => $task,
       cluster   => $cluster
     },
-    files => $files,
+    files  => getValue( $def, "files" ),
+    groups => $def->{groups},
+    pairs  => $def->{pairs},
   };
 
   my $source_ref = "files";
   my $individual = [];
   my $summary    = [];
 
-  if ($sra_to_fastq) {
-    $config->{"sra2fastq"} = {
+  if ( $def->{download_sra} ) {
+    $config->{download_sra} = {
+      class      => "Data::Wget",
+      perform    => 1,
+      target_dir => $def->{target_dir} . "/download_sra",
+      option     => "",
+      source_ref => $source_ref,
+      sh_direct  => 0,
+      cluster    => $def->{cluster},
+      pbs        => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "10gb"
+      },
+    };
+    $source_ref = "download_sra";
+    push @$individual, ("download_sra");
+  }
+
+  if ( $def->{sra_to_fastq} ) {
+    $config->{sra2fastq} = {
       class      => "SRA::FastqDump",
       perform    => 1,
-      ispaired   => 0,
-      target_dir => $preprocessing_dir . "/sra2fastq",
+      ispaired   => $def->{is_paired},
+      target_dir => $def->{target_dir} . "/sra2fastq",
       option     => "",
-      source_ref => "files",
+      source_ref => $source_ref,
       sh_direct  => 0,
+      cluster    => $def->{cluster},
       pbs        => {
-        "email"    => $email,
+        "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
         "walltime" => "10",
         "mem"      => "10gb"
@@ -107,17 +138,37 @@ sub getPreprocessionConfig {
     push @$individual, ("sra2fastq");
   }
 
+  if ( $def->{merge_fastq} ) {
+    $config->{merge_fastq} = {
+      class      => "Format::MergeFastq",
+      perform    => 1,
+      target_dir => $def->{target_dir} . "/merge_fastq",
+      option     => "",
+      source_ref => $source_ref,
+      sh_direct  => 1,
+      is_paired  => $def->{is_paired},
+      cluster    => $def->{cluster},
+      pbs        => {
+        "email"    => $def->{email},
+        "nodes"    => "1:ppn=2",
+        "walltime" => "2",
+        "mem"      => "10gb"
+      }
+    };
+    $source_ref = "merge_fastq";
+    push @$individual, ("merge_fastq");
+  }
+
   if ($fastq_remove_N) {
     $config->{fastq_remove_N} = {
       class      => "CQS::FastqTrimmer",
       perform    => 1,
-      target_dir => $preprocessing_dir . "/fastq_remove_N",
-      option     => "-n -z",
+      target_dir => $def->{target_dir} . "/fastq_remove_N",
+      option     => "",
       extension  => "_trim.fastq.gz",
       source_ref => $source_ref,
-      cqstools   => $cqstools,
-      cluster    => $cluster,
       sh_direct  => 1,
+      cluster    => $def->{cluster},
       pbs        => {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
@@ -126,7 +177,7 @@ sub getPreprocessionConfig {
       }
     };
     $source_ref = "fastq_remove_N";
-    push @$individual, "fastq_remove_N";
+    push @$individual, ("fastq_remove_N");
   }
 
   addFastQC( $config, $def, $individual, $summary, "fastqc_raw", $source_ref, $preprocessing_dir );
@@ -263,8 +314,6 @@ sub getPreprocessionConfig {
     );
     push @$summary, ("fastqc_count_vis");
   }
-
-  #print Dumper($config);
 
   return ( $config, $individual, $summary, $source_ref, $preprocessing_dir );
 }
