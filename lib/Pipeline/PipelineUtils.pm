@@ -13,21 +13,12 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(initValue getValue addFastQC addBlastn addBowtie addBamStat addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn getBatchGroups initDeseq2Options)] );
+our %EXPORT_TAGS =
+  ( 'all' => [qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn getBatchGroups initDeseq2Options)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
-
-sub initValue {
-  my ( $def, $name, $defaultValue ) = @_;
-  if ( !defined $def->{$name} ) {
-    if ( !defined $defaultValue ) {
-      die "defaultValue cannot be undefined for $name.";
-    }
-    $def->{$name} = $defaultValue;
-  }
-}
 
 sub getValue {
   my ( $def, $name, $defaultValue ) = @_;
