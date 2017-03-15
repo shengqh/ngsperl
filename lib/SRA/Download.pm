@@ -57,18 +57,19 @@ sub perform {
     for my $gsm ( sort keys %$taMap ) {
       my $srr = $taMap->{$gsm};
       my $url = "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=" . $gsm;
-      my $req = HTTP::Request->new(GET => $url);
+      my $req = HTTP::Request->new( GET => $url );
 
       # Pass request to the user agent and get a response back
       my $res = $ua->request($req);
 
       if ( $res->is_success ) {
         my $rescontent = $res->content;
+
         #print $rescontent;
-        
+
         my @sraUrls = ( $rescontent =~ m/<a href=\"(ftp:\/\/ftp\-trace.ncbi.nlm.nih.gov\/sra.*?)\">.ftp/g );
         foreach my $sraUrl (@sraUrls) {
-          my $fileUrl = $sraUrl . "/" . $srr . "/" .$srr . ".sra";
+          my $fileUrl = $sraUrl . "/" . $srr . "/" . $srr . ".sra";
           print $pbs "if [ ! -s ${srr}.sra ]; then
   wget $fileUrl
 fi
@@ -97,6 +98,21 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my $result = {};
+
+  my %raw_files = %{ get_raw_files( $config, $section ) };
+
+  for my $sample_name ( sort keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$sample_name} };
+    my $list_file    = $sample_files[0];
+
+    my $taMap = readDictionaryByIndex( $list_file, 19, 16, 1 );
+
+    for my $gsm ( sort keys %$taMap ) {
+      my $srr          = $taMap->{$gsm};
+      my $result_files = ["${result_dir}/${srr}.sra"];
+      $result->{$srr} = filter_array( $result_files, $pattern );
+    }
+  }
 
   return $result;
 }
