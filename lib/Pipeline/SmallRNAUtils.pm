@@ -173,7 +173,9 @@ sub addNonhostVis {
 sub initializeDefaultOptions {
   my $def = shift;
 
-  initDefaultValue( $def, "cluster",            "slurm" );
+  initDefaultValue( $def, "cluster",    "slurm" );
+  initDefaultValue( $def, "max_thread", 8 );
+
   initDefaultValue( $def, "min_read_length",    16 );
   initDefaultValue( $def, "bowtie1_option_1mm", "-a -m 100 --best --strata -v 1" );
   initDefaultValue( $def, "bowtie1_option_pm",  "-a -m 1000 --best --strata -v 0" );
@@ -185,12 +187,12 @@ sub initializeDefaultOptions {
     initDefaultValue( $def, "cutadapt_option", "-m " . $def->{min_read_length} );
   }
 
-  initDefaultValue( $def, "remove_sequences",            "" );
-  initDefaultValue( $def, "fastq_remove_random",         0 );
-  initDefaultValue( $def, "mirbase_count_option",        "-p hsa" );
-  initDefaultValue( $def, "table_vis_group_text_size",   10 );
-  initDefaultValue( $def, "sequencetask_run_time",       12 );
-  
+  initDefaultValue( $def, "remove_sequences",          "" );
+  initDefaultValue( $def, "fastq_remove_random",       0 );
+  initDefaultValue( $def, "mirbase_count_option",      "-p hsa" );
+  initDefaultValue( $def, "table_vis_group_text_size", 10 );
+  initDefaultValue( $def, "sequencetask_run_time",     12 );
+
   initDeseq2Options($def);
   initDefaultValue( $def, "DE_fold_change",              1.5 );
   initDefaultValue( $def, "DE_min_median_read_top",      2 );
