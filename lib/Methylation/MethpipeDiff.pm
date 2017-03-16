@@ -36,7 +36,12 @@ sub perform {
   my $hmrfiles = get_raw_files( $config, $section, "hmrfile" );
   my $minCpgInDMR   = get_option( $config, $section, "minCpgInDMR", 10 );
   my $minSigCpgInDMR   = get_option( $config, $section, "minSigCpgInDMR", 5 );
-
+  
+  my $chrSizeFile=$config->{$section}{chr_size_file}; #to make tracks
+  if ( !defined $chrSizeFile ) {
+    die "define ${section}::chr_size_file first";
+  }
+  
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct) . "\n";
@@ -94,6 +99,22 @@ if [ ! -s $dmrFile2Filtered ]; then
    awk -F \"[:\\t]\" '\$5 >= $minCpgInDMR && \$6 >= $minSigCpgInDMR {print \$0}' $dmrFile2 > $dmrFile2Filtered
 fi
 ";
+
+#make tracks
+    print $pbs "
+echo MethpipeDiff To Tracks=`date`
+
+if [ ! -s ${dmrFile1Filtered}.bb ]; then
+cut -f 1-3 ${dmrFile1Filtered} > ${dmrFile1Filtered}.tmp
+bedToBigBed  ${dmrFile1Filtered}.tmp $chrSizeFile ${dmrFile1Filtered}.bb && rm  ${dmrFile1Filtered}.tmp
+fi
+
+if [ ! -s ${dmrFile2Filtered}.bb ]; then
+cut -f 1-3 ${dmrFile2Filtered} > ${dmrFile2Filtered}.tmp
+bedToBigBed  ${dmrFile2Filtered}.tmp $chrSizeFile ${dmrFile2Filtered}.bb && rm  ${dmrFile2Filtered}.tmp
+fi
+";
+
 	}
     $self->close_pbs( $pbs, $pbs_file );
   }
