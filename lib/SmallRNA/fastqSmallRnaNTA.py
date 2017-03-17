@@ -84,7 +84,7 @@ try:
       if readCount % 10000 == 0:
         logger.info("%d reads processed" % readCount)
 
-      qname = header.split(' ')[0]
+      qname = header.strip().split(' ')[0]
 
       curRange = rng4 if ccaa and seq.endswith("CCAA") else rng3
       for i in curRange:
