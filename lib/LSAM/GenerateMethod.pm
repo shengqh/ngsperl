@@ -46,7 +46,7 @@ sub perform {
   for my $name (keys %$templates ) {
     my $template = $templates->{$name}[0];
     for my $targetName (@$targetNames){
-      my $finalFile = $name . "_" . $targetName . ".out";
+      my $finalFile = $name . "_" . $targetName . ".txt";
       
       print $pbs "
 python $py_script -i $template -o $finalFile --originalName $originalName --targetName $targetName 
@@ -64,13 +64,14 @@ sub result {
   my $templates = get_raw_files( $config, $section );
   my $targetNames = get_option( $config, $section, "target_names" );
 
+  $result_dir =~ s/\//\\/g;
   my $result = {};
   for my $name (keys %$templates ) {
     my $template = $templates->{$name}[0];
     for my $targetName (@$targetNames){
       my $finalFile = $name . "_" . $targetName . ".txt";
       my @result_files = ();
-      push( @result_files, $result_dir . "/" . $finalFile );
+      push( @result_files, $result_dir . "\\" . $finalFile );
       $result->{$name . "_" . $targetName} = filter_array( \@result_files, $pattern );
     }
   }

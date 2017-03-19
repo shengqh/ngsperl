@@ -64,6 +64,8 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
+  $result_dir =~ s/\//\\/g;
+
   my $methods = get_raw_files( $config, $section );
   my $timeRanges = get_option( $config, $section, "time_ranges" );
 
@@ -73,7 +75,7 @@ sub result {
       my $methodFile   = $methods->{$methodName}[0];
       my $finalFile    = $timeName . "_" . $methodName . ".inp";
       my @result_files = ();
-      push( @result_files, $result_dir . "/" . $finalFile );
+      push( @result_files, $result_dir . "\\" . $finalFile );
       $result->{ $timeName . "_" . $methodName } = filter_array( \@result_files, $pattern );
     }
   }
