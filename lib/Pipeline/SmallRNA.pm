@@ -100,7 +100,7 @@ sub getSmallRNAConfig {
 
   #print Dumper($config);
   my $groups = $def->{groups};
-  if ( !defined $def->{groups_vis_layout} && defined $groups->{".order"} && defined $groups->{".col"} && defined $groups->{".row"} ) {
+  if ( !defined $def->{groups_vis_layout} && defined $groups && defined $groups->{".order"} && defined $groups->{".col"} && defined $groups->{".row"} ) {
     $def->{groups_vis_layout} = {
       "Col_Group" => $groups->{".col"},
       "Row_Group" => $groups->{".row"},
