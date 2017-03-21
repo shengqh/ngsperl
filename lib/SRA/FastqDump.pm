@@ -32,15 +32,20 @@ sub perform {
     $ispaired = 0;
   }
 
-  my %raw_files = %{ get_raw_files( $config, $section ) };
+  my %raw_files;
+  
+  if(defined $config->{$section}{"source"}){
+    my $raws = $config->{$section}{"source"};
+    
+  }
+  %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct) . "\n";
 
   for my $sample_name ( sort keys %raw_files ) {
-    my @sample_files = @{ $raw_files{$sample_name} };
-    my $bam_file     = $sample_files[0];
+    my $sample_file = $raw_files{$sample_name}->[0];
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -48,11 +53,20 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     print $sh "\$MYCMD ./$pbs_name \n";
-    my $final_file = $ispaired ? $sample_name . "_1.fastq.gz" : $sample_name . ".fastq.gz";
+
+    my $isNameOnly = $sample_file !~ /\.sra/;
+    my $filePrefix = $isNameOnly ? $sample_file : $sample_name;
+
+    my $final_file = $ispaired ? $filePrefix . "_1.fastq.gz" : $filePrefix . ".fastq.gz";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-    print $pbs "ln -s $bam_file ${sample_name}.sra
+    if ($isNameOnly) {
+      print $pbs "fastq-dump --split-3 --gzip --origfmt --helicos $sample_file \n";
+    }
+    else {
+      print $pbs "ln -s $sample_file ${sample_name}.sra
 fastq-dump --split-3 --gzip --origfmt --helicos ${sample_name}.sra
 rm ${sample_name}.sra";
+    }
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
@@ -80,14 +94,20 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
+    my $sample_file = $raw_files{$sample_name}->[0];
+
+    my $isNameOnly = $sample_file !~ /\.sra/;
+    my $filePrefix = $isNameOnly ? $sample_file : $sample_name;
+
+    my $final_file = $ispaired ? $filePrefix . "_1.fastq.gz" : $filePrefix . ".fastq.gz";
 
     my @result_files = ();
     if ($ispaired) {
-      push( @result_files, $result_dir . "/" . $sample_name . "_1.fastq.gz" );
-      push( @result_files, $result_dir . "/" . $sample_name . "_2.fastq.gz" );
+      push( @result_files, $result_dir . "/" . $filePrefix . "_1.fastq.gz" );
+      push( @result_files, $result_dir . "/" . $filePrefix . "_2.fastq.gz" );
     }
     else {
-      push( @result_files, $result_dir . "/" . $sample_name . ".fastq.gz" );
+      push( @result_files, $result_dir . "/" . $filePrefix . ".fastq.gz" );
     }
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
