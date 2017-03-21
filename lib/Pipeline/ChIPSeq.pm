@@ -24,12 +24,14 @@ our $VERSION = '0.01';
 sub initializeDefaultOptions {
   my $def = shift;
   initDefaultValue( $def, "subdir", 0 );
+  
+  initDefaultValue( $def, "sra_to_fastq", 0 );
 
   initDefaultValue( $def, "aligner", "bowtie1" );
   if ( $def->{aligner} eq "bowtie1" ) {
     initDefaultValue( $def, "bowtie1_option", "-v 1 -m 1 --best --strata" );
   }
-  elsif ( $def->{aligner} eq "bowtie1" ) {
+  elsif ( $def->{aligner} eq "bwa" ) {
     initDefaultValue( $def, "bwa_option", "" );
   }
 
