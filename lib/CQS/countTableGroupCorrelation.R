@@ -180,6 +180,7 @@ for (i in 1:nrow(countTableFileAll)) {
   }
   countNumVsd<-assay(temp)
   colnames(countNumVsd)<-colnames(countNum)
+  write.table(countNumVsd, paste0(outputFilePrefix,suffix,".VSD.txt"),col.names=F, row.names=F, quote=F, sep="\t")
   
   #heatmap
   margin=c(max(9,max(nchar(colnames(countNumVsd)))/2), 5)
