@@ -28,6 +28,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "sra_to_fastq",              $def->{download_sra} );
   initDefaultValue( $def, "merge_fastq",               0 );
   initDefaultValue( $def, "fastq_remove_N",            0 );
+  initDefaultValue( $def, "perform_fastqc",            1 );
   initDefaultValue( $def, "perform_cutadapt",          0 );
   initDefaultValue( $def, "remove_sequences",          "" );
   initDefaultValue( $def, "table_vis_group_text_size", '10' );
@@ -69,7 +70,7 @@ sub getPreprocessionConfig {
   my $remove_sequences = getValue( $def, "remove_sequences" );    #remove contamination sequences from sequence kit before adapter trimming
   my $run_cutadapt     = getValue( $def, "perform_cutadapt" );
   if ($run_cutadapt) {
-    getValue( $def, "adapter" );
+    defined $def->{adapter_5} or defined $def->{adapter_3} or getValue( $def, "adapter" );
     getValue( $def, "min_read_length" );
     my $cutadapt_option = getValue( $def, "cutadapt_option", "" );
     if ( $fastq_remove_N && ( $cutadapt_option !~ /trim\-n/ ) ) {
@@ -180,7 +181,9 @@ sub getPreprocessionConfig {
     push @$individual, ("fastq_remove_N");
   }
 
-  addFastQC( $config, $def, $individual, $summary, "fastqc_raw", $source_ref, $preprocessing_dir );
+  if ( $def->{perform_fastqc} ) {
+    addFastQC( $config, $def, $individual, $summary, "fastqc_raw", $source_ref, $preprocessing_dir );
+  }
 
   if ( length($remove_sequences) ) {
     $config->{"remove_contamination_sequences"} = {
@@ -203,25 +206,31 @@ sub getPreprocessionConfig {
     push @$individual, ("remove_contamination_sequences");
     $source_ref = [ "remove_contamination_sequences", ".fastq.gz" ];
 
-    addFastQC( $config, $def, $individual, $summary, "fastqc_post_remove", $source_ref, $preprocessing_dir );
+    if ( $def->{perform_fastqc} ) {
+      addFastQC( $config, $def, $individual, $summary, "fastqc_post_remove", $source_ref, $preprocessing_dir );
+    }
   }
 
   if ($run_cutadapt) {
 
     my $cutadapt = {
       "cutadapt" => {
-        class                          => "Trimmer::Cutadapt",
-        perform                        => 1,
-        target_dir                     => $preprocessing_dir . "/cutadapt",
-        option                         => $def->{cutadapt_option},
-        source_ref                     => $source_ref,
-        adapter                        => $def->{adapter},
-        extension                      => "_clipped.fastq",
-        random_bases_remove_after_trim => $def->{"fastq_remove_random"},
-        pairend                        => $def->{pairend},
-        sh_direct                      => 0,
-        cluster                        => $cluster,
-        pbs                            => {
+        class                            => "Trimmer::Cutadapt",
+        perform                          => 1,
+        target_dir                       => $preprocessing_dir . "/cutadapt",
+        option                           => $def->{cutadapt_option},
+        source_ref                       => $source_ref,
+        adapter                          => $def->{adapter},
+        adapter_5                        => $def->{adapter_5},
+        adapter_3                        => $def->{adapter_3},
+        random_bases_remove_after_trim   => $def->{"fastq_remove_random"},
+        random_bases_remove_after_trim_5 => $def->{"fastq_remove_random_5"},
+        random_bases_remove_after_trim_3 => $def->{"fastq_remove_random_3"},
+        extension                        => "_clipped.fastq",
+        pairend                          => $def->{pairend},
+        sh_direct                        => 0,
+        cluster                          => $cluster,
+        pbs                              => {
           "email"    => $def->{email},
           "nodes"    => "1:ppn=1",
           "walltime" => "24",
@@ -268,51 +277,55 @@ sub getPreprocessionConfig {
     push @$individual, ( "cutadapt", "fastq_len" );
     push @$summary, ("fastq_len_vis");
 
-    addFastQC( $config, $def, $individual, $summary, "fastqc_post_trim", [ "cutadapt", ".fastq.gz" ], $preprocessing_dir );
+    if ( $def->{perform_fastqc} ) {
+      addFastQC( $config, $def, $individual, $summary, "fastqc_post_trim", [ "cutadapt", ".fastq.gz" ], $preprocessing_dir );
+    }
     $source_ref = [ "cutadapt", ".fastq.gz" ];
   }
 
-  my $fastqc_count_vis_files = undef;
-  if ( length($remove_sequences) && $run_cutadapt ) {
-    $fastqc_count_vis_files = {
-      target_dir         => $preprocessing_dir . "/fastqc_post_trim",
-      parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.summary.reads.tsv\$" ],
-      parameterFile3_ref => [ "fastqc_post_trim_summary", ".FastQC.summary.reads.tsv\$" ],
-    };
-  }
-  elsif ( length($remove_sequences) ) {
-    $fastqc_count_vis_files = {
-      target_dir         => $preprocessing_dir . "/fastqc_post_remove",
-      parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.summary.reads.tsv\$" ],
-    };
-  }
-  elsif ($run_cutadapt) {
-    $fastqc_count_vis_files = {
-      target_dir         => $preprocessing_dir . "/fastqc_post_trim",
-      parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.summary.reads.tsv\$" ],
-    };
-  }
+  if ( $def->{perform_fastqc} ) {
+    my $fastqc_count_vis_files = undef;
+    if ( length($remove_sequences) && $run_cutadapt ) {
+      $fastqc_count_vis_files = {
+        target_dir         => $preprocessing_dir . "/fastqc_post_trim",
+        parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.summary.reads.tsv\$" ],
+        parameterFile3_ref => [ "fastqc_post_trim_summary", ".FastQC.summary.reads.tsv\$" ],
+      };
+    }
+    elsif ( length($remove_sequences) ) {
+      $fastqc_count_vis_files = {
+        target_dir         => $preprocessing_dir . "/fastqc_post_remove",
+        parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.summary.reads.tsv\$" ],
+      };
+    }
+    elsif ($run_cutadapt) {
+      $fastqc_count_vis_files = {
+        target_dir         => $preprocessing_dir . "/fastqc_post_trim",
+        parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.summary.reads.tsv\$" ],
+      };
+    }
 
-  if ( defined $fastqc_count_vis_files ) {
-    $config->{"fastqc_count_vis"} = merge(
-      {
-        class              => "CQS::UniqueR",
-        perform            => 1,
-        rtemplate          => "countInFastQcVis.R",
-        output_file        => ".countInFastQcVis.Result",
-        output_file_ext    => ".Reads.csv",
-        sh_direct          => 1,
-        parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.summary.reads.tsv\$" ],
-        pbs                => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+    if ( defined $fastqc_count_vis_files ) {
+      $config->{"fastqc_count_vis"} = merge(
+        {
+          class              => "CQS::UniqueR",
+          perform            => 1,
+          rtemplate          => "countInFastQcVis.R",
+          output_file        => ".countInFastQcVis.Result",
+          output_file_ext    => ".Reads.csv",
+          sh_direct          => 1,
+          parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.summary.reads.tsv\$" ],
+          pbs                => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "1",
+            "mem"      => "10gb"
+          },
         },
-      },
-      $fastqc_count_vis_files
-    );
-    push @$summary, ("fastqc_count_vis");
+        $fastqc_count_vis_files
+      );
+      push @$summary, ("fastqc_count_vis");
+    }
   }
 
   return ( $config, $individual, $summary, $source_ref, $preprocessing_dir );
