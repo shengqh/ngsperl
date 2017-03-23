@@ -142,7 +142,7 @@ rm ${f2}.fifo";
       if ($sortbam) {
         print $pbs "
 if [ -s $bowtiesam ]; then
-  samtools view -Shu $mappedonlyoption $bowtiesam | samtools sort -@ $thread -o $bam_file -
+  samtools view -Shu $mappedonlyoption $bowtiesam | samtools sort -@ $thread -T ${sample_name}_tmp -o $bam_file -
   if [ -s $bam_file ]; then
     rm $bowtiesam
     samtools index $bam_file 
