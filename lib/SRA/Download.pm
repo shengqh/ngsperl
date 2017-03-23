@@ -14,6 +14,7 @@ use Utils::CollectionUtils;
 use LWP::Simple;
 use LWP::UserAgent;
 use URI::Escape;
+use List::Util qw(first);
 
 our @ISA = qw(CQS::Task);
 
@@ -24,6 +25,18 @@ sub new {
   $self->{_suffix} = "_ds";
   bless $self, $class;
   return $self;
+}
+
+sub getGsmSrrMap {
+  my $listFile = shift;
+  open my $list_handle, "<$listFile";
+  my $first_line = <$list_handle>;
+  close $list_handle;
+  my @columns = split( '\t', $first_line );
+  my $srrIndex = first { $columns[$_] eq 'Run_s' } 0 .. $#columns;
+  my $gsmIndex = first { $columns[$_] eq 'Sample_Name_s' } 0 .. $#columns;
+  my $taMap = readDictionaryByIndex( $listFile, $gsmIndex, $srrIndex, 1 );
+  return $taMap;
 }
 
 sub perform {
@@ -43,6 +56,8 @@ sub perform {
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $list_file    = $sample_files[0];
+    
+    my $taMap = getGsmSrrMap($list_file);
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -52,7 +67,6 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
     print $sh "\$MYCMD ./$pbs_name \n";
-    my $taMap = readDictionaryByIndex( $list_file, 19, 16, 1 );
 
     for my $gsm ( sort keys %$taMap ) {
       my $srr = $taMap->{$gsm};
