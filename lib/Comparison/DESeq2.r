@@ -332,8 +332,8 @@ for(countfile_index in c(1:length(countfiles))){
     
     if(detectedInBothGroup){
       conds<-unique(designData$Condition)
-      data1<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[1]]]
-      data2<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[2]]]
+      data1<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[1]],drop=FALSE]
+      data2<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[2]],drop=FALSE]
       med1<-apply(data1, 1, median) > zeroCount
       med2<-apply(data2, 1, median) > zeroCount
       med<-med1 & med2
@@ -348,8 +348,8 @@ for(countfile_index in c(1:length(countfiles))){
       rownames(quantileData)=rownames(comparisonData)
       write.csv(quantileData, file=paste0(prefix, "_quantile.csv"), row.names = T)
       
-      data1<-quantileData[, colnames(quantileData) %in% designData$Sample[designData$Condition==conds[1]]]
-      data2<-quantileData[, colnames(quantileData) %in% designData$Sample[designData$Condition==conds[2]]]
+      data1<-quantileData[, colnames(quantileData) %in% designData$Sample[designData$Condition==conds[1]],drop=FALSE]
+      data2<-quantileData[, colnames(quantileData) %in% designData$Sample[designData$Condition==conds[2]],drop=FALSE]
       
       diffData=data.frame(quantileData)
       diffData$pvalues=unlist(lapply(c(1:nrow(data1)), function(index){
@@ -377,8 +377,8 @@ for(countfile_index in c(1:length(countfiles))){
     
     if(minMedianInGroup > 0){
       conds<-unique(designData$Condition)
-      data1<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[1]]]
-      data2<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[2]]]
+      data1<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[1]],drop=FALSE]
+      data2<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[2]],drop=FALSE]
       med1<-apply(data1, 1, median) >= minMedianInGroup
       med2<-apply(data2, 1, median) >= minMedianInGroup
       med<-med1 | med2
