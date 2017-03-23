@@ -8,6 +8,7 @@ use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
 use Pipeline::PipelineUtils;
+use Pipeline::Preprocession;
 use Data::Dumper;
 use Hash::Merge qw( merge );
 
@@ -176,13 +177,18 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "cluster",    "slurm" );
   initDefaultValue( $def, "max_thread", 8 );
 
-  initDefaultValue( $def, "min_read_length",    16 );
-  initDefaultValue( $def, "bowtie1_option_1mm", "-a -m 100 --best --strata -v 1" );
-  initDefaultValue( $def, "bowtie1_option_pm",  "-a -m 1000 --best --strata -v 0" );
-  initDefaultValue( $def, "fastq_remove_N",     1 );
+  initDefaultValue( $def, "min_read_length",              16 );
+  initDefaultValue( $def, "bowtie1_option_1mm",           "-a -m 100 --best --strata -v 1" );
+  initDefaultValue( $def, "bowtie1_option_pm",            "-a -m 1000 --best --strata -v 0" );
+  initDefaultValue( $def, "bowtie1_output_to_same_folder", 1 );
+  initDefaultValue( $def, "fastq_remove_N",               1 );
 
-  initDefaultValue( $def, "run_cutadapt", 1 );
-  if ( $def->{run_cutadapt} ) {
+  if ( defined $def->{run_cutadapt} && not defined $def->{perform_cutadapt} ) {
+    $def->{perform_cutadapt} = $def->{run_cutadapt};
+    $def->{run_cutadapt}     = undef;
+  }
+  initDefaultValue( $def, "perform_cutadapt", 1 );
+  if ( $def->{perform_cutadapt} ) {
     initDefaultValue( $def, "adapter",         "TGGAATTCTCGGGTGCCAAGG" );
     initDefaultValue( $def, "cutadapt_option", "-m " . $def->{min_read_length} );
   }
@@ -271,36 +277,19 @@ sub getPrepareConfig {
   my $cqstools = getValue( $def, "cqstools" );
   ( -e $cqstools ) or die "cqstools not exist: " . $cqstools;
 
-  my $preprocessing_dir     = create_directory_or_die( $target_dir . "/preprocessing" );
-  my $class_independent_dir = create_directory_or_die( $target_dir . "/class_independent" );
+  $def->{subdir} = 1;
 
   $def = initializeDefaultOptions($def);
+
+  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir ) = getPreprocessionConfig($def);
+
+  my $class_independent_dir = create_directory_or_die( $target_dir . "/class_independent" );
+
   my $cluster = getValue( $def, "cluster" );
-
-  #remove contamination sequences from sequence kit before adapter trimming
-  my $remove_sequences = getValue( $def, "remove_sequences" );
-
-  #remove terminal N from fastq
-  my $fastq_remove_N = getValue( $def, "fastq_remove_N" );
-
-  #perform cutadapt to remove adapter
-  my $run_cutadapt    = getValue( $def, "run_cutadapt" );
-  my $cutadapt_option = getValue( $def, "cutadapt_option" );
-
-  #for nextflex kit, we need to remove X bases after adapter trimming
-  my $fastq_remove_random = getValue( $def, "fastq_remove_random" );
 
   #nta for microRNA and tRNA
   my $consider_miRNA_NTA = getValue( $def, "consider_miRNA_NTA" );
   my $consider_tRNA_NTA  = getValue( $def, "consider_tRNA_NTA" );
-
-  my $config = {
-    general => {
-      task_name => getValue( $def, "task_name" ),
-      cluster   => $cluster
-    },
-    files => getValue( $def, "files" )
-  };
 
   if ( defined $def->{groups} ) {
     $config->{groups} = $def->{groups};
@@ -309,177 +298,6 @@ sub getPrepareConfig {
   if ( defined $def->{pairs} ) {
     $config->{pairs} = $def->{pairs};
   }
-
-  my $individual = [];
-  my $summary    = [];
-
-  my $source_ref = "files";
-  my $len_ref    = "files";
-  if ( $fastq_remove_N && !$run_cutadapt ) {
-    $config->{fastq_remove_N} = {
-      class      => "CQS::FastqTrimmer",
-      perform    => $fastq_remove_N,
-      target_dir => $preprocessing_dir . "/fastq_remove_N",
-      option     => "-n -z",
-      extension  => "_trim.fastq.gz",
-      source_ref => "files",
-      cqstools   => $def->{cqstools},
-      cluster    => $cluster,
-      sh_direct  => 1,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "2",
-        "mem"      => "10gb"
-      }
-    };
-    $source_ref = "fastq_remove_N";
-    $len_ref    = "fastq_remove_N";
-    push @$individual, "fastq_remove_N";
-  }
-
-  addFastQC( $config, $def, $individual, $summary, "fastqc_raw", $source_ref, $preprocessing_dir );
-
-  if ( length($remove_sequences) ) {
-    $config->{"remove_contamination_sequences"} = {
-      class      => "CQS::Perl",
-      perform    => 1,
-      target_dir => $preprocessing_dir . "/remove_contamination_sequences",
-      option     => $remove_sequences,
-      output_ext => "_removeSeq.fastq.gz",
-      perlFile   => "removeSequenceInFastq.pl",
-      source_ref => $source_ref,
-      sh_direct  => 0,
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "2",
-        "mem"      => "20gb"
-      },
-    };
-    push @$individual, ("remove_contamination_sequences");
-    $source_ref = [ "remove_contamination_sequences", ".fastq.gz" ];
-    $len_ref = "remove_contamination_sequences";
-
-    addFastQC( $config, $def, $individual, $summary, "fastqc_post_remove", $source_ref, $preprocessing_dir );
-  }
-
-  if ($run_cutadapt) {
-    my $adapter = $def->{adapter};
-    if ( !defined $adapter ) {
-      $adapter = "TGGAATTCTCGGGTGCCAAGG";
-    }
-
-    my $cutadapt_option = $def->{cutadapt_option};
-    if ( !defined $cutadapt_option ) {
-      $cutadapt_option = "-m " . $def->{min_read_length};
-    }
-
-    $config->{cutadapt} = {
-      class                          => "Trimmer::Cutadapt",
-      perform                        => 1,
-      target_dir                     => $preprocessing_dir . "/cutadapt",
-      option                         => $cutadapt_option,
-      source_ref                     => $source_ref,
-      adapter                        => $adapter,
-      extension                      => "_clipped.fastq",
-      random_bases_remove_after_trim => $fastq_remove_random,
-      sh_direct                      => 0,
-      cluster                        => $cluster,
-      pbs                            => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "24",
-        "mem"      => "20gb"
-      },
-    };
-    push @$individual, "cutadapt";
-
-    addFastQC( $config, $def, $individual, $summary, "fastqc_post_trim", [ "cutadapt", ".fastq.gz" ], $preprocessing_dir );
-    $source_ref = [ "cutadapt", ".fastq.gz" ];
-    $len_ref = "cutadapt";
-  }
-
-  my $fastqc_count_vis_files = undef;
-  if ( length($remove_sequences) && $run_cutadapt ) {
-    $fastqc_count_vis_files = {
-      target_dir         => $preprocessing_dir . "/fastqc_post_trim",
-      parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.summary.reads.tsv\$" ],
-      parameterFile3_ref => [ "fastqc_post_trim_summary", ".FastQC.summary.reads.tsv\$" ],
-    };
-  }
-  elsif ( length($remove_sequences) ) {
-    $fastqc_count_vis_files = {
-      target_dir         => $preprocessing_dir . "/fastqc_post_remove",
-      parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.summary.reads.tsv\$" ],
-    };
-  }
-  elsif ($run_cutadapt) {
-    $fastqc_count_vis_files = {
-      target_dir         => $preprocessing_dir . "/fastqc_post_trim",
-      parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.summary.reads.tsv\$" ],
-    };
-  }
-
-  if ( defined $fastqc_count_vis_files ) {
-    $config->{"fastqc_count_vis"} = merge(
-      {
-        class              => "CQS::UniqueR",
-        perform            => 1,
-        rtemplate          => "countInFastQcVis.R",
-        output_file        => ".countInFastQcVis.Result",
-        output_file_ext    => ".Reads.csv",
-        sh_direct          => 1,
-        parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.summary.reads.tsv\$" ],
-        pbs                => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
-        },
-      },
-      $fastqc_count_vis_files
-    );
-    push @$summary, ("fastqc_count_vis");
-  }
-
-  #print Dumper($config);
-  $config->{"fastq_len"} = {
-    class      => "CQS::FastqLen",
-    perform    => 1,
-    target_dir => $preprocessing_dir . "/fastq_len",
-    option     => "",
-    source_ref => $len_ref,
-    cqstools   => $def->{cqstools},
-    sh_direct  => 1,
-    cluster    => $cluster,
-    pbs        => {
-      "email"    => $def->{email},
-      "nodes"    => "1:ppn=1",
-      "walltime" => "24",
-      "mem"      => "20gb"
-    },
-  };
-  $config->{"fastq_len_vis"} = {
-    class                    => "CQS::UniqueR",
-    perform                  => 1,
-    target_dir               => $preprocessing_dir . "/fastq_len",
-    rtemplate                => "countTableVisFunctions.R,fastqLengthVis.R",
-    output_file              => ".lengthDistribution",
-    output_file_ext          => ".csv",
-    parameterSampleFile1_ref => [ "fastq_len", ".len\$" ],
-    parameterSampleFile2     => $def->{groups},
-    sh_direct                => 1,
-    pbs                      => {
-      "email"    => $def->{email},
-      "nodes"    => "1:ppn=1",
-      "walltime" => "1",
-      "mem"      => "10gb"
-    },
-  };
-  push @$individual, ("fastq_len");
-  push @$summary,    ("fastq_len_vis");
 
   my $preparation = {
     identical => {
