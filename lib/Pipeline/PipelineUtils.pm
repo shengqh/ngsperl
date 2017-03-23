@@ -14,7 +14,8 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS =
-  ( 'all' => [qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn getBatchGroups initDeseq2Options)] );
+  ( 'all' =>
+    [qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn getBatchGroups initDeseq2Options)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -99,17 +100,18 @@ sub addBowtie {
   my ( $config, $def, $individual, $taskName, $parentDir, $bowtieIndex, $sourceRef, $bowtieOption ) = @_;
 
   $config->{$taskName} = {
-    class         => "Alignment::Bowtie1",
-    perform       => 1,
-    target_dir    => $parentDir . "/" . $taskName,
-    option        => $bowtieOption,
-    source_ref    => $sourceRef,
-    bowtie1_index => $bowtieIndex,
-    samonly       => 0,
-    sh_direct     => 1,
-    mappedonly    => 1,
-    cluster       => $def->{cluster},
-    pbs           => {
+    class                 => "Alignment::Bowtie1",
+    perform               => 1,
+    target_dir            => $parentDir . "/" . $taskName,
+    option                => $bowtieOption,
+    source_ref            => $sourceRef,
+    bowtie1_index         => $bowtieIndex,
+    samonly               => 0,
+    sh_direct             => 1,
+    mappedonly            => 1,
+    cluster               => $def->{cluster},
+    output_to_same_folder => $def->{bowtie1_output_to_same_folder},
+    pbs                   => {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=" . $def->{max_thread},
