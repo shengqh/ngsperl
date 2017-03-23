@@ -64,19 +64,51 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $random_bases_remove_after_trim = get_option( $config, $section, "random_bases_remove_after_trim", 0 );
-
-  my $ispairend = get_option( $config, $section, "pairend", 0 );
-
   my $curSection = get_config_section( $config, $section );
 
+  my $random_bases_option = "";
+  my $random_bases_remove_after_trim = get_option( $config, $section, "random_bases_remove_after_trim", 0 );
+  if ( $random_bases_remove_after_trim > 0 ) {
+    $random_bases_option = "-u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim";
+  }
+  else {
+    my $random_bases_remove_after_trim_5 = get_option( $config, $section, "random_bases_remove_after_trim_5", 0 );
+    if ( $random_bases_remove_after_trim_5 > 0 ) {
+      $random_bases_option = "-u $random_bases_remove_after_trim_5";
+    }
+    my $random_bases_remove_after_trim_3 = get_option( $config, $section, "random_bases_remove_after_trim_3", 0 );
+    if ( $random_bases_remove_after_trim_3 > 0 ) {
+      $random_bases_option = $random_bases_option . "-u -$random_bases_remove_after_trim_3";
+    }
+  }
+  
+  my $ispairend = get_option( $config, $section, "pairend", 0 );
+
   my $adapter_option = "";
-  if ( defined $curSection->{adapter} ) {
+  if ( defined $curSection->{adapter} && length($curSection->{adapter}) > 0) {
     if ($ispairend) {
       $adapter_option = " -a " . $curSection->{adapter} . " -A " . $curSection->{adapter};
     }
     else {
       $adapter_option = " -a " . $curSection->{adapter};
+    }
+  }
+
+  if ( defined $curSection->{adapter_3}  && length($curSection->{adapter_3}) > 0) {
+    if ($ispairend) {
+      $adapter_option = " -a " . $curSection->{adapter_3} . " -A " . $curSection->{adapter_3};
+    }
+    else {
+      $adapter_option = " -a " . $curSection->{adapter_3};
+    }
+  }
+
+  if ( defined $curSection->{adapter_5}  && length($curSection->{adapter_5}) > 0) {
+    if ($ispairend) {
+      $adapter_option = $adapter_option . " -g " . $curSection->{adapter_5} . " -G " . $curSection->{adapter_5};
+    }
+    else {
+      $adapter_option = $adapter_option . " -g " . $curSection->{adapter_5};
     }
   }
 
@@ -140,12 +172,12 @@ fi
 
       my ( $read1name, $read2name ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
 
-      if ($random_bases_remove_after_trim) {    # remove top random bases
+      if ($random_bases_option) {    # remove top random bases
         my $temp1_file = $read1name . ".cutAdapter.fastq";
         my $temp2_file = $read2name . ".cutAdapter.fastq";
         print $pbs "
 cutadapt $option $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
-cutadapt -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $read1name -p $read2name $temp1_file $temp2_file
+cutadapt $random_bases_option -o $read1name -p $read2name $temp1_file $temp2_file
 rm $temp1_file $temp2_file
 ";
       }
@@ -165,12 +197,12 @@ cutadapt $option $adapter_option -o $read1name -p $read2name $read1file $read2fi
         $limit_file_options = $limit_file_options . " --too-long-output=$finalLongFile";
       }
 
-      if ($random_bases_remove_after_trim) {    #remove top random bases
+      if ($random_bases_option) {    #remove top random bases
         my $temp_file = $final_file . ".cutAdapter.fastq";
         if ( scalar(@sample_files) == 1 ) {
           print $pbs "
 cutadapt $optionRemoveLimited $adapter_option -o $temp_file $sample_files[0]
-cutadapt $optionOnlyLimited $limit_file_options -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $final_file $temp_file
+cutadapt $optionOnlyLimited $limit_file_options $random_bases_option -o $final_file $temp_file
 rm $temp_file
 ";
         }
@@ -189,7 +221,7 @@ rm temp.fastq
           }
 
           print $pbs "
-cutadapt $optionOnlyLimited $limit_file_options -u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim -o $final_file $temp_file 
+cutadapt $optionOnlyLimited $limit_file_options $random_bases_option -o $final_file $temp_file 
 rm $temp_file
 ";
         }
