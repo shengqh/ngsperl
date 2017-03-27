@@ -58,9 +58,12 @@ sub perform {
     push @bedfiles, @$sample_files;
   }
 
-  my $fileOption = "-i " . join(@bedfiles);
+  my $fileOption = join(" ", @bedfiles);
+  my $tempFile = $task_name . ".tmp.bed";
   print $pbs "
-bedtools merge $fileOption > $final_file
+cat $fileOption | sort -k1,1 -k2,2n > $tempFile
+bedtools merge -i $tempFile -c 4 -o collapse > $final_file
+rm $tempFile 
 ";
   $self->close_pbs( $pbs, $pbs_file );
 }
