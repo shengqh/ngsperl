@@ -147,9 +147,14 @@ sub addBamStat {
 }
 
 sub addDEseq2 {
-  my ( $config, $def, $summary, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read ) = @_;
+  my ( $config, $def, $summary, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read, $libraryFile, $libraryKey ) = @_;
 
   my $taskName = "deseq2_" . $taskKey;
+
+  my $libraryFileKey = "library_file";
+  if ( ref($libraryFile) eq 'ARRAY' ) {
+    $libraryFileKey = "library_file_ref";
+  }
 
   $config->{$taskName} = {
     class                  => "Comparison::DESeq2",
@@ -172,6 +177,8 @@ sub addDEseq2 {
     use_raw_p_value        => $def->{DE_use_raw_pvalue},
     text_size              => $def->{DE_text_size},
     cluster                => $def->{cluster},
+    $libraryFileKey        => $libraryFile,
+    library_key            => $libraryKey,
     pbs                    => {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},

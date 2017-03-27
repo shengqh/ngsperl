@@ -82,6 +82,12 @@ sub perform {
   my $useRawPvalue        = get_option( $config, $section, "use_raw_p_value",        0 );
   my $textSize            = get_option( $config, $section, "text_size",              11 );
 
+  my $libraryFile = parse_param_file( $config, $section, "library_file", 0 );
+  my $libraryKey;
+  if ( defined $libraryFile ) {
+    $libraryKey = get_option( $config, $section, "library_key", "TotalReads" );
+  }
+
   my $suffix = getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup );
 
   my %tpgroups = ();
@@ -216,6 +222,13 @@ useRawPvalue<-$useRawPvalue
 textSize<-$textSize
 ";
 
+if(defined $libraryFile){
+  print $rf "
+libraryFile<-\"$libraryFile\"
+libraryKey<-\"$libraryKey\"
+";
+}
+
   while (<$rt>) {
     if ( $_ !~ 'predefined_condition_end' ) {
       next;
@@ -235,8 +248,8 @@ textSize<-$textSize
   my $log_desc = $cluster->get_log_description($log);
 
   my $lastComparisonName = $comparison_names[-1];
-  my $final_file = $lastComparisonName . $suffix . "_DESeq2_sig.csv";
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+  my $final_file         = $lastComparisonName . $suffix . "_DESeq2_sig.csv";
+  my $pbs                = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
   print $pbs "R --vanilla -f $rfile \n";
 

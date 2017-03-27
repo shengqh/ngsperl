@@ -1,13 +1,13 @@
 ##predefined_condition_begin
 
-rootdir<-"/scratch/cqs/shengq1/vickers/20161223_smallRNA_3018-KCV-77_78_79_86_v3/class_independent/deseq2_top100_reads/result"
-inputfile<-"KCV_3018_77_78_79_86.define" 
+rootdir<-"/scratch/cqs/shengq1/vickers/20170222_smallRNA_3018_61_human_v3/host_genome/deseq2_miRNA/result"
+inputfile<-"3018_61.define" 
 
 showLabelInPCA<-1
 showDEGeneCluster<-1
 pvalue<-0.05
 foldChange<-1.5
-minMedianInGroup<-2
+minMedianInGroup<-5
 addCountOne<-0
 usePearsonInHCA<-0
 top25only<-0
@@ -15,6 +15,8 @@ detectedInBothGroup<-1
 performWilcox<-0
 useRawPvalue<-1
 textSize<-9
+libraryFile<-"/scratch/cqs/shengq1/vickers/20170222_smallRNA_3018_61_human_v3/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/3018_61.Category.Table.csv"
+libraryKey<-"TotalReads"
 
 ##predefined_condition_end
 
@@ -39,6 +41,12 @@ if(addCountOne){
 
 if(!exists("usePearsonInHCA")){
   usePearsonInHCA=0
+}
+
+if(exists("libraryFile")){
+  librarySize<-read.csv(libraryFile, row.names=1)
+  librarySize<-unlist(librarySize[libraryKey,,drop=T])
+  cat("Using ", libraryKey, " in " , libraryFile , " as library size. \n")
 }
 
 library("DESeq2")
@@ -194,6 +202,17 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors
     print(g)
     dev.off()
   }
+}
+
+myEstimateSizeFactors<-function(dds){
+  sfres<-try(dds<-estimateSizeFactors(dds))
+  if (class(sfres) == "try-error") {
+    library(edgeR)
+    y<-DGEList(counts=countNum)
+    y<-calcNormFactors(y, methold="TMM")
+    sizeFactors(dds)<-y$samples$norm.factors
+  }
+  return(dds)
 }
 
 #for volcano plot
@@ -477,6 +496,14 @@ for(countfile_index in c(1:length(countfiles))){
       file.remove(excludedDesignFile)
     }
     
+    if(exists("librarySize")){
+      curLibrarySize<-librarySize[colnames(dds)]
+      curSizeFactor<-curLibrarySize/median(curLibrarySize)
+      sizeFactors(dds)<-curSizeFactor
+    }else{
+      dds<-myEstimateSizeFactors(dds)
+    }
+    
     fitType<-"parametric"
     while(1){
       #varianceStabilizingTransformation
@@ -544,6 +571,12 @@ for(countfile_index in c(1:length(countfiles))){
     dds=DESeqDataSetFromMatrix(countData = comparisonData,
                                colData = designData,
                                design = designFormula)
+    
+    if(exists("librarySize")){
+      sizeFactors(dds)<-librarySize[colnames(dds)]
+    }else{
+      dds<-myEstimateSizeFactors(dds)
+    }
     
     dds <- DESeq(dds,fitType=fitType)
     res<-results(dds,cooksCutoff=FALSE)
