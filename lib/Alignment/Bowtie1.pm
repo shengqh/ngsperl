@@ -55,6 +55,7 @@ sub perform {
       my $sam_file     = $sample_name . ".sam";
 
       my $bowtiesam        = $sam_file;
+      my $alignlog        = $sample_name . ".log";
       my $mappedonlycmd    = "";
       my $mappedonlyoption = "";
       if ($mappedonly) {
@@ -75,7 +76,7 @@ fi";
       my $bowtie1_aln_command;
       if ( $sample_files[0] =~ /.gz$/ ) {
         if ( scalar(@sample_files) == 1 ) {
-          $bowtie1_aln_command = "zcat $sample_files[0] | bowtie $option -S $tag $bowtie1_index - $bowtiesam";
+          $bowtie1_aln_command = "zcat $sample_files[0] | bowtie $option -S $tag $bowtie1_index - $bowtiesam 2>$alignlog";
         }
         else {
           my $f1 = $sample_files[0];
@@ -88,7 +89,7 @@ zcat $f1 > ${f1}.fifo &
 mkfifo ${f2}.fifo
 zcat $f2 > ${f2}.fifo &
         
-bowtie $option -S $tag $bowtie1_index ${f1}.fifo,${f2}.fifo $bowtiesam
+bowtie $option -S $tag $bowtie1_index ${f1}.fifo,${f2}.fifo $bowtiesam 2>$alignlog
  
 rm ${f1}.fifo
 rm ${f2}.fifo";
@@ -178,13 +179,14 @@ fi
     for my $sample_name ( sort keys %raw_files ) {
       my @sample_files = @{ $raw_files{$sample_name} };
       my $final_file   = $sample_name . ".out";
+      my $alignlog        = $sample_name . ".log";
 
       my $indent = "";
 
       my $bowtie1_aln_command;
       if ( $sample_files[0] =~ /.gz$/ ) {
         if ( scalar(@sample_files) == 1 ) {
-          $bowtie1_aln_command = "zcat $sample_files[0] | bowtie $option $bowtie1_index - $final_file";
+          $bowtie1_aln_command = "zcat $sample_files[0] | bowtie $option $bowtie1_index - $final_file 2>$alignlog";
         }
         else {
           my $f1 = $sample_files[0];
@@ -197,7 +199,7 @@ zcat $f1 > ${f1}.fifo &
 mkfifo ${f2}.fifo
 zcat $f2 > ${f2}.fifo &
         
-bowtie $option $bowtie1_index ${f1}.fifo,${f2}.fifo $final_file
+bowtie $option $bowtie1_index ${f1}.fifo,${f2}.fifo $final_file 2>$alignlog
  
 rm ${f1}.fifo
 rm ${f2}.fifo
@@ -206,7 +208,7 @@ rm ${f2}.fifo
       }
       else {
         my $fastqs = join( ',', @sample_files );
-        $bowtie1_aln_command = "bowtie $option $bowtie1_index $fastqs $final_file ";
+        $bowtie1_aln_command = "bowtie $option $bowtie1_index $fastqs $final_file 2>$alignlog";
       }
 
       my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
