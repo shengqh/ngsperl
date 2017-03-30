@@ -10,6 +10,9 @@ use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::Task;
 use CQS::StringUtils;
+use LWP::Simple;
+use LWP::UserAgent;
+use URI::Escape;
 use List::Util qw(first);
 use Utils::CollectionUtils;
 
@@ -25,7 +28,7 @@ sub new {
 }
 
 sub getGsmSrrMap {
-  my $listFile = shift;  
+  my $listFile = shift;
   open my $list_handle, "<$listFile";
   my $first_line = <$list_handle>;
   close $list_handle;
@@ -39,7 +42,6 @@ sub getGsmSrrMap {
 sub getSraFiles {
   my ( $config, $section ) = @_;
   my $result;
-
   if ( defined $config->{$section}{"list_file"} ) {
     my $taMap = getGsmSrrMap( $config->{$section}{"list_file"} );
     for my $gsm ( keys %$taMap ) {
@@ -47,9 +49,63 @@ sub getSraFiles {
     }
   }
   else {
-    $result = get_raw_files( $config, $section );
+    my $res;
+    if ( defined $config->{$section}{"source"} ) {
+      $res = $config->{$section}{"source"};
+      if ( ref($res) eq 'ARRAY' ) {
+        for my $gsm (@$res) {
+          $result->{$gsm} = [$gsm];
+        }
+      }
+      else {
+        $result = $res;
+      }
+    }
+    else {
+      $result = get_raw_files( $config, $section );
+    }
   }
   return $result;
+}
+
+sub GsmToSrr {
+  my $gsm = shift;
+  my $ua  = new LWP::UserAgent;
+  $ua->agent( "AgentName/0.1 " . $ua->agent );
+  my $url = "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=" . $gsm;
+  my $req = HTTP::Request->new( GET => $url );
+
+  # Pass request to the user agent and get a response back
+  my $res = $ua->request($req);
+
+  if ( $res->is_success ) {
+    my $rescontent = $res->content;
+
+    #print $rescontent;
+
+    my @sraUrls = ( $rescontent =~ m/<a href=\"(ftp:\/\/ftp\-trace.ncbi.nlm.nih.gov\/sra.*?)\">.ftp/g );
+    if ( scalar(@sraUrls) == 0 ) {
+      die "Cannot find SRA url from " . $url;
+    }
+    foreach my $sraUrl (@sraUrls) {
+      my $srrReq = HTTP::Request->new( GET => $sraUrl );
+      my $srrRes = $ua->request($srrReq);
+      if ( $srrRes->is_success ) {
+        my $srrContent = $srrRes->content;
+        my @srrNames   = ( $srrContent =~ m/(SRR\d+)/g );
+        if ( scalar(@srrNames) == 0 ) {
+          die "Cannot find SRR access number from " . $sraUrl;
+        }
+        return $srrNames[0];
+      }
+      else {
+        die "Cannot get result for " . $url;
+      }
+    }
+  }
+  else {
+    die "Cannot get result for " . $gsm;
+  }
 }
 
 sub perform {
@@ -81,12 +137,18 @@ sub perform {
     my $final_file = $ispaired ? $sample_name . "_1.fastq.gz" : $sample_name . ".fastq.gz";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-    if ( $sample_file !~ /\.sra/ ) {
+    if ( $sample_file =~ /GSM/ ) {
+      $sample_file = GsmToSrr($sample_file);
+    }
+    if ( $sample_file =~ /\.sra/ ) {
+      print $pbs "ln -s $sample_file ${sample_name}.sra \n";
+    }
+    elsif ( $sample_file =~ /SRR/ ) {
       my $six = substr( $sample_file, 0, 6 );
       print $pbs "wget ftp://ftp-trace.ncbi.nih.gov/sra/sra-instant/reads/ByRun/sra/SRR/${six}/${sample_file}/${sample_file}.sra -O ${sample_name}.sra\n";
     }
     else {
-      print $pbs "ln -s $sample_file ${sample_name}.sra \n";
+      die "I don't know what it is " . $sample_file;
     }
     print $pbs "fastq-dump --split-3 --gzip --origfmt --helicos ${sample_name}.sra
 rm ${sample_name}.sra
