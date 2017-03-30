@@ -29,10 +29,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my %treatment_files;
-  if ( has_raw_files( $config, $section, "groups" ) ) {
-    %treatment_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
-  }
+  my %treatment_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
 
   my %control_files;
   if ( has_raw_files( $config, $section, "inputs" ) ) {
