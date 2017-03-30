@@ -20,6 +20,15 @@ sub new {
   return $self;
 }
 
+sub get_pbs_key {
+  my ($self, $config, $section) = @_;
+  if ( has_raw_files( $config, $section, "groups" ) ) {
+    return "groups";
+  }else{
+    return "source";
+  }
+}
+
 sub get_grouped_raw_files {
   my ( $self, $config, $section, $group_key ) = @_;
   my $raw_files;
