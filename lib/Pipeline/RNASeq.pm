@@ -46,7 +46,7 @@ sub getRNASeqConfig {
   my $cqstools       = $def->{cqstools} or die "Define cqstools at definition first";
   my $star_index     = $def->{star_index} or die "Define star_index at definition first";
   my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
-  my $name_map_file  = $def->{name_map_file} or die "Define tramscript name_map_file at definition first";
+  my $name_map_file  = $def->{name_map_file};
 
   if ( $def->{perform_rnaseqc} ) {
     defined $def->{rnaseqc_jar} or die "Define rnaseqc_jar first!";
@@ -62,8 +62,10 @@ sub getRNASeqConfig {
 
   if ( $def->{perform_bamplot} ) {
     defined $def->{dataset_name} or die "Define dataset_name for bamplot first!";
-    defined $def->{gene_names}   or die "Define gene_names for bamplot first, seperate by blank space!";
-    defined $def->{add_chr}      or die "Define add_chr for bamplot first, check your genome sequence!";
+    if ( not defined $def->{bamplot_gff} ) {
+      defined $def->{gene_names} or die "Define gene_names for bamplot first, seperate by blank space!";
+      defined $def->{add_chr}    or die "Define add_chr for bamplot first, check your genome sequence!";
+    }
   }
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir ) = getPreprocessionConfig($def);
@@ -85,7 +87,7 @@ sub getRNASeqConfig {
         "email"    => $email,
         "nodes"    => "1:ppn=8",
         "walltime" => "72",
-        "mem"      => "30gb"
+        "mem"      => "40gb"
       },
     },
     star_summary => {
@@ -202,43 +204,68 @@ sub getRNASeqConfig {
   }
 
   if ( $def->{perform_bamplot} ) {
-    $config->{gene_pos} = {
-      class        => "Annotation::PrepareGenePosition",
-      perform      => 1,
-      target_dir   => $target_dir . "/gene_pos",
-      option       => "",
-      dataset_name => $def->{dataset_name},
-      gene_names   => $def->{gene_names},
-      add_chr      => $def->{add_chr},
-      output_gff   => 1,
-      pbs          => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "2",
-        "mem"      => "10gb"
-      },
-    };
-    $config->{bamplot} = {
-      class              => "Visualization::Bamplot",
-      perform            => 1,
-      target_dir         => "${target_dir}/bamplot",
-      option             => "-g " . $def->{dataset_name} . " -y uniform -r --save-temp",
-      source_ref         => [ "star", "_Aligned.sortedByCoord.out.bam" ],
-      gff_file_ref       => "gene_pos",
-      is_rainbow_color   => 0,
-      is_single_pdf      => 0,
-      is_draw_individual => 0,
-      groups             => $def->{"plotgroups"},
-      colors             => $def->{"colormaps"},
-      sh_direct          => 1,
-      pbs                => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "1",
-        "mem"      => "10gb"
-      },
-    };
-    push( @$summary, "gene_pos", "bamplot" );
+    if ( not defined $def->{bamplot_gff} ) {
+      $config->{gene_pos} = {
+        class        => "Annotation::PrepareGenePosition",
+        perform      => 1,
+        target_dir   => $target_dir . "/gene_pos",
+        option       => "",
+        dataset_name => $def->{dataset_name},
+        gene_names   => $def->{gene_names},
+        add_chr      => $def->{add_chr},
+        output_gff   => 1,
+        pbs          => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "2",
+          "mem"      => "10gb"
+        },
+      };
+      $config->{bamplot} = {
+        class              => "Visualization::Bamplot",
+        perform            => 1,
+        target_dir         => "${target_dir}/bamplot",
+        option             => "-g " . $def->{dataset_name} . " -y uniform -r --save-temp",
+        source_ref         => [ "star", "_Aligned.sortedByCoord.out.bam" ],
+        gff_file_ref       => "gene_pos",
+        is_rainbow_color   => 0,
+        is_single_pdf      => 0,
+        is_draw_individual => 0,
+        groups             => $def->{"plotgroups"},
+        colors             => $def->{"colormaps"},
+        sh_direct          => 1,
+        pbs                => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      };
+      push( @$summary, "gene_pos", "bamplot" );
+    }
+    else {
+      $config->{bamplot} = {
+        class              => "Visualization::Bamplot",
+        perform            => 1,
+        target_dir         => "${target_dir}/bamplot",
+        option             => "-g " . $def->{dataset_name} . " -y uniform -r --save-temp",
+        source_ref         => [ "star", "_Aligned.sortedByCoord.out.bam" ],
+        gff_file           => $def->{bamplot_gff},
+        is_rainbow_color   => 0,
+        is_single_pdf      => 0,
+        is_draw_individual => 0,
+        groups             => $def->{"plotgroups"},
+        colors             => $def->{"colormaps"},
+        sh_direct          => 1,
+        pbs                => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      };
+      push( @$summary, "bamplot" );
+    }
   }
 
   $config->{sequencetask} = {
