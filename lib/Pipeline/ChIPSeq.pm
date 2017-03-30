@@ -24,7 +24,7 @@ our $VERSION = '0.01';
 sub initializeDefaultOptions {
   my $def = shift;
   initDefaultValue( $def, "subdir", 0 );
-  
+
   initDefaultValue( $def, "sra_to_fastq", 0 );
 
   initDefaultValue( $def, "aligner", "bowtie1" );
@@ -64,9 +64,6 @@ sub getConfig {
 
   my $email    = getValue( $def, "email" );
   my $cqstools = getValue( $def, "cqstools" );
-
-  $config->{treatments} = getValue( $def, "treatments" );
-  $config->{controls}   = getValue( $def, "controls" );
 
   if ( $def->{aligner} eq "bowtie1" ) {
     $config->{ $def->{aligner} } = {
@@ -113,15 +110,15 @@ sub getConfig {
   my $peakCallerTask = $def->{peak_caller} . "callpeak";
   if ( $def->{peak_caller} eq "macs1" ) {
     $config->{$peakCallerTask} = {
-      class        => "Chipseq::MACS",
-      perform      => 1,
-      target_dir   => "${target_dir}/${peakCallerTask}",
-      option       => getValue( $def, "macs1_option" ),
-      source_ref   => [ $def->{aligner}, ".bam\$" ],
-      groups_ref   => "treatments",
-      controls_ref => "controls",
-      sh_direct    => 0,
-      pbs          => {
+      class      => "Chipseq::MACS",
+      perform    => 1,
+      target_dir => "${target_dir}/${peakCallerTask}",
+      option     => getValue( $def, "macs1_option" ),
+      source_ref => [ $def->{aligner}, ".bam\$" ],
+      groups     => $def->{"treatments"},
+      controls   => $def->{"controls"},
+      sh_direct  => 0,
+      pbs        => {
         "email"    => $email,
         "nodes"    => "1:ppn=1",
         "walltime" => "72",
@@ -131,15 +128,15 @@ sub getConfig {
   }
   elsif ( $def->{peak_caller} eq "macs2" ) {
     $config->{$peakCallerTask} = {
-      class        => "Chipseq::MACS2Callpeak",
-      perform      => 1,
-      target_dir   => "${target_dir}/$peakCallerTask",
-      option       => getValue( $def, "macs2_option" ),
-      source_ref   => [ $def->{aligner}, ".bam\$" ],
-      groups_ref   => "treatments",
-      controls_ref => "controls",
-      sh_direct    => 0,
-      pbs          => {
+      class      => "Chipseq::MACS2Callpeak",
+      perform    => 1,
+      target_dir => "${target_dir}/$peakCallerTask",
+      option     => getValue( $def, "macs2_option" ),
+      source_ref => [ $def->{aligner}, ".bam\$" ],
+      groups     => $def->{"treatments"},
+      controls   => $def->{"controls"},
+      sh_direct  => 0,
+      pbs        => {
         "email"    => $email,
         "nodes"    => "1:ppn=1",
         "walltime" => "72",
@@ -159,9 +156,9 @@ sub getConfig {
       perform              => 1,
       target_dir           => "${target_dir}/$roseTask",
       option               => "",
-      source_ref           => [$def->{aligner}, ".bam\$"],
-      groups_ref           => "treatments",
-      controls_ref         => "controls",
+      source_ref           => [ $def->{aligner}, ".bam\$" ],
+      groups               => $def->{"treatments"},
+      controls             => $def->{"controls"},
       pipeline_dir         => getValue( $def, "rose_folder" ),    #"/scratch/cqs/shengq1/local/bin/bradnerlab"
       binding_site_bed_ref => [ $peakCallerTask, ".bed\$" ],
       genome               => getValue( $def, "rose_genome" ),    #hg19,
