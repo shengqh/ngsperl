@@ -631,7 +631,7 @@ sub getSmallRNAConfig {
   my @pmnames = ();
   my @overlap = ();
 
-  if ( $libraryKey ne "TotalReads" ) {
+  if ( defined $libraryKey && $libraryKey ne "TotalReads" ) {
     $libraryFile = undef;
     $libraryKey  = undef;
   }
