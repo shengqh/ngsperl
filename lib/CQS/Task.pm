@@ -51,6 +51,11 @@ sub get_clear_map {
   return $result;
 }
 
+sub get_pbs_key {
+  my ($self, $config, $section) = @_;
+  return $self->{_pbskey};
+}
+
 sub get_pbs_files {
   my ( $self, $config, $section ) = @_;
 
@@ -62,11 +67,13 @@ sub get_pbs_files {
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
   my $result = {};
-  if ( $self->{_pbskey} eq "" ) {
+  
+  my $pbsKey = $self->get_pbs_key($config, $section);
+  if ( $pbsKey eq "" ) {
     $result->{$task_name} = $self->get_pbs_filename( $pbs_dir, $task_name );
   }
   else {
-    my %fqFiles = %{ get_raw_files( $config, $section, $self->{_pbskey} ) };
+    my %fqFiles = %{ get_raw_files( $config, $section, $pbsKey ) };
 
     for my $sample_name ( sort keys %fqFiles ) {
       $result->{$sample_name} = $self->get_pbs_filename( $pbs_dir, $sample_name );
