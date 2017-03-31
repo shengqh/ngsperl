@@ -82,8 +82,8 @@ sub perform {
 STAR $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $genome_dir --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format  
 
 if [ -s $final ]; then
-  $chromosome_grep_command
   samtools index $final
+  $chromosome_grep_command
   samtools flagstat $final > ${final}.stat
   rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_SJ.out.tab ${sample_name}_Log.progress.out
 fi

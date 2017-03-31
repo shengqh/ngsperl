@@ -82,9 +82,9 @@ if [ -s $sam_file ]; then
   samtools view -Shu -F 256 $sam_file | samtools sort -o $bam_file -
   if [ -s $bam_file ]; then
     samtools index $bam_file 
-    rm $sam_file
     $chromosome_grep_command
     samtools flagstat $bam_file > ${bam_file}.stat 
+    rm $sam_file
   fi
 fi
 ";
