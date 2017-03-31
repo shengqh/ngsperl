@@ -32,6 +32,9 @@ sub perform {
     $option = $option . "  --outSAMprimaryFlag AllBestScore";
   }
 
+  my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
+
+  my $output_to_same_folder     = get_option( $config, $section, "output_to_same_folder",     0 );
   my $output_sort_by_coordinate = get_option( $config, $section, "output_sort_by_coordinate", 0 );
   my $output_unsorted           = get_option( $config, $section, "output_unsorted",           0 );
   if ( !$output_sort_by_coordinate && !$output_unsorted ) {
@@ -63,8 +66,8 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
-    my $rgline  = "ID:$sample_name SM:$sample_name LB:$sample_name PL:ILLUMINA PU:ILLUMINA";
+    my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+    my $rgline = "ID:$sample_name SM:$sample_name LB:$sample_name PL:ILLUMINA PU:ILLUMINA";
 
     my $final = $output_sort_by_coordinate ? $sample_name . "_Aligned.sortedByCoord.out.bam" : $sample_name . "_Aligned.out.bam";
 
@@ -72,10 +75,13 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final );
 
+    my $chromosome_grep_command = $output_sort_by_coordinate ? getChromosomeFilterCommand( $final, $chromosome_grep_pattern ) : "";
+
     print $pbs "
 STAR $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $genome_dir --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format  
 
 if [ -s $final ]; then
+  $chromosome_grep_command
   samtools index $final
   samtools flagstat $final > ${final}.stat
   rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_SJ.out.tab ${sample_name}_Log.progress.out
@@ -103,9 +109,12 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $sort_by_coordinate = get_option_value( $config->{$section}{sort_by_coordinate}, 0 );
+  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 0 );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
+    my $cur_dir = $output_to_same_folder ? $result_dir : $result_dir . "/$sample_name";
+
     my @result_files              = ();
     my $output_sort_by_coordinate = get_option( $config, $section, "output_sort_by_coordinate", 0 );
     my $output_unsorted           = get_option( $config, $section, "output_unsorted", 0 );
@@ -113,13 +122,13 @@ sub result {
       $output_unsorted = 1;
     }
     if ($output_sort_by_coordinate) {
-      push( @result_files, "${result_dir}/${sample_name}/${sample_name}_Aligned.sortedByCoord.out.bam" );
+      push( @result_files, "$cur_dir/${sample_name}_Aligned.sortedByCoord.out.bam" );
 
     }
     if ($output_unsorted) {
-      push( @result_files, "${result_dir}/${sample_name}/${sample_name}_Aligned.out.bam" );
+      push( @result_files, "$cur_dir/${sample_name}_Aligned.out.bam" );
     }
-    push( @result_files, "${result_dir}/${sample_name}/${sample_name}_Log.final.out" );
+    push( @result_files, "$cur_dir/${sample_name}_Log.final.out" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;

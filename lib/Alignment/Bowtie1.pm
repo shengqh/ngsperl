@@ -11,6 +11,7 @@ use CQS::FileUtils;
 use CQS::Task;
 use CQS::NGSCommon;
 use Alignment::AbstractBowtie;
+use Alignment::AlignmentUtils;
 
 our @ISA = qw(Alignment::AbstractBowtie);
 
@@ -33,10 +34,10 @@ sub perform {
   my $mappedonly              = get_option( $config, $section, "mappedonly",              0 );
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
   my $outputToSameFolder      = get_option( $config, $section, "output_to_same_folder",   0 );
-  my $add_RG_to_read = get_option( $config, $section, "add_RG_to_read", 0 );
+  my $add_RG_to_read          = get_option( $config, $section, "add_RG_to_read",          0 );
   my $picard;
-  if($add_RG_to_read){
-    $picard = get_param_file($config->{$section}{"picard_jar"}, "picard_jar", 1);
+  if ($add_RG_to_read) {
+    $picard = get_param_file( $config->{$section}{"picard_jar"}, "picard_jar", 1 );
   }
 
   $option = $option . " -p $thread";
@@ -55,7 +56,7 @@ sub perform {
       my $sam_file     = $sample_name . ".sam";
 
       my $bowtiesam        = $sam_file;
-      my $alignlog        = $sample_name . ".log";
+      my $alignlog         = $sample_name . ".log";
       my $mappedonlycmd    = "";
       my $mappedonlyoption = "";
       if ($mappedonly) {
@@ -105,23 +106,10 @@ rm ${f2}.fifo";
       my $log      = $self->get_log_filename( $log_dir, $sample_name );
       my $cur_dir  = $outputToSameFolder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
-      my $chromosome_grep_command = "";
-      my $final_file              = $bam_file;
-      if ( $sortbam && ( $chromosome_grep_pattern ne "" ) ) {
-        my $tmp_file = $sample_name . ".filtered.bam";
-        $chromosome_grep_command = "
-    echo filtering bam by chromosome pattern $chromosome_grep_pattern
-    samtools idxstats $bam_file | cut -f 1 | grep $chromosome_grep_pattern | xargs samtools view -b $bam_file > $tmp_file
-    samtools flagstat $bam_file > ${bam_file}.raw.stat
-    rm $bam_file
-    rm ${bam_file}.bai
-    mv $tmp_file $bam_file
-    samtools index $bam_file
-";
-      }
-      
+      my $final_file = $bam_file;
+
       my $add_RG_to_read_command = "";
-      if($add_RG_to_read){
+      if ($add_RG_to_read) {
         my $tmp_file = $sample_name . ".rg.bam";
         $add_RG_to_read_command = "
     echo add_RG_to_read_command by picard
@@ -141,6 +129,8 @@ rm ${f2}.fifo";
 
       print $pbs "$bowtie1_aln_command \n";
       if ($sortbam) {
+        my $chromosome_grep_command = getChromosomeFilterCommand( $bam_file, $chromosome_grep_pattern );
+
         print $pbs "
 if [ -s $bowtiesam ]; then
   samtools view -Shu $mappedonlyoption $bowtiesam | samtools sort -@ $thread -T ${sample_name}_tmp -o $bam_file -
@@ -179,7 +169,7 @@ fi
     for my $sample_name ( sort keys %raw_files ) {
       my @sample_files = @{ $raw_files{$sample_name} };
       my $final_file   = $sample_name . ".out";
-      my $alignlog        = $sample_name . ".log";
+      my $alignlog     = $sample_name . ".log";
 
       my $indent = "";
 
