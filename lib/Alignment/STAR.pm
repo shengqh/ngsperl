@@ -11,6 +11,7 @@ use CQS::FileUtils;
 use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use Alignment::AlignmentUtils;
 
 our @ISA = qw(CQS::Task);
 

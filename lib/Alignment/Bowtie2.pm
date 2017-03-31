@@ -11,6 +11,7 @@ use CQS::FileUtils;
 use CQS::Task;
 use CQS::NGSCommon;
 use Alignment::AbstractBowtie;
+use Alignment::AlignmentUtils;
 
 our @ISA = qw(Alignment::AbstractBowtie);
 
