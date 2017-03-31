@@ -24,8 +24,7 @@ sub initializeDefaultOptions {
   my $def = shift;
 
   initDefaultValue( $def, "cluster",                   'slurm' );
-  initDefaultValue( $def, "download_sra",              0 );
-  initDefaultValue( $def, "sra_to_fastq",              $def->{download_sra} );
+  initDefaultValue( $def, "sra_to_fastq",              0 );
   initDefaultValue( $def, "merge_fastq",               0 );
   initDefaultValue( $def, "fastq_remove_N",            0 );
   initDefaultValue( $def, "perform_fastqc",            1 );
@@ -70,17 +69,19 @@ sub getPreprocessionConfig {
   my $remove_sequences = getValue( $def, "remove_sequences" );    #remove contamination sequences from sequence kit before adapter trimming
   my $run_cutadapt     = getValue( $def, "perform_cutadapt" );
   if ($run_cutadapt) {
-    defined $def->{adapter_5} or defined $def->{adapter_3} or getValue( $def, "adapter" );
-    getValue( $def, "min_read_length" );
-    my $cutadapt_option = getValue( $def, "cutadapt_option", "" );
-    if ( $fastq_remove_N && ( $cutadapt_option !~ /trim\-n/ ) ) {
-      $cutadapt_option = $cutadapt_option . " --trim-n";
+    if ( not defined $def->{cutadapt} ) {
+      defined $def->{adapter_5} or defined $def->{adapter_3} or getValue( $def, "adapter" );
+      getValue( $def, "min_read_length" );
+      my $cutadapt_option = getValue( $def, "cutadapt_option", "" );
+      if ( $fastq_remove_N && ( $cutadapt_option !~ /trim\-n/ ) ) {
+        $cutadapt_option = $cutadapt_option . " --trim-n";
+      }
+      $fastq_remove_N = 0;
+      if ( $cutadapt_option !~ /\-m/ ) {
+        $cutadapt_option = $cutadapt_option . " -m " . $def->{min_read_length};
+      }
+      $def->{cutadapt_option} = $cutadapt_option;
     }
-    $fastq_remove_N = 0;
-    if ( $cutadapt_option !~ /\-m/ ) {
-      $cutadapt_option = $cutadapt_option . " -m " . $def->{min_read_length};
-    }
-    $def->{cutadapt_option} = $cutadapt_option;
   }
 
   #data
@@ -89,34 +90,13 @@ sub getPreprocessionConfig {
       task_name => $task,
       cluster   => $cluster
     },
-    files  => getValue( $def, "files" ),
     groups => $def->{groups},
     pairs  => $def->{pairs},
   };
 
-  my $source_ref = "files";
+  my $source_ref;
   my $individual = [];
   my $summary    = [];
-
-  if ( $def->{download_sra} ) {
-    $config->{download_sra} = {
-      class      => "Data::Wget",
-      perform    => 1,
-      target_dir => $def->{target_dir} . "/download_sra",
-      option     => "",
-      source_ref => $source_ref,
-      sh_direct  => 1,
-      cluster    => $def->{cluster},
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "10",
-        "mem"      => "10gb"
-      },
-    };
-    $source_ref = "download_sra";
-    push @$individual, ("download_sra");
-  }
 
   if ( $def->{sra_to_fastq} ) {
     $config->{sra2fastq} = {
@@ -125,7 +105,7 @@ sub getPreprocessionConfig {
       ispaired   => $def->{is_paired},
       target_dir => $def->{target_dir} . "/sra2fastq",
       option     => "",
-      source_ref => $source_ref,
+      source     => $def->{files},
       sh_direct  => 1,
       cluster    => $def->{cluster},
       pbs        => {
@@ -137,6 +117,10 @@ sub getPreprocessionConfig {
     };
     $source_ref = "sra2fastq";
     push @$individual, ("sra2fastq");
+  }
+  else {
+    $config->{files} = getValue( $def, "files" );
+    $source_ref = "files";
   }
 
   if ( $def->{merge_fastq} ) {
@@ -212,8 +196,7 @@ sub getPreprocessionConfig {
   }
 
   if ($run_cutadapt) {
-
-    my $cutadapt = {
+    my $cutadapt_section = {
       "cutadapt" => {
         class                            => "Trimmer::Cutadapt",
         perform                          => 1,
@@ -236,41 +219,49 @@ sub getPreprocessionConfig {
           "walltime" => "24",
           "mem"      => "20gb"
         },
-      },
-      "fastq_len" => {
-        class      => "CQS::FastqLen",
-        perform    => 1,
-        target_dir => $preprocessing_dir . "/fastq_len",
-        option     => "",
-        source_ref => "cutadapt",
-        cqstools   => $def->{cqstools},
-        sh_direct  => 1,
-        cluster    => $cluster,
-        pbs        => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "24",
-          "mem"      => "20gb"
-        },
-      },
-      "fastq_len_vis" => {
-        class                    => "CQS::UniqueR",
-        perform                  => 1,
-        target_dir               => $preprocessing_dir . "/fastq_len",
-        rtemplate                => "countTableVisFunctions.R,fastqLengthVis.R",
-        output_file              => ".lengthDistribution",
-        output_file_ext          => ".csv",
-        parameterSampleFile1_ref => [ "fastq_len", ".len\$" ],
-        parameterSampleFile2     => $def->{groups},
-        sh_direct                => 1,
-        pbs                      => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
-        },
-      },
+      }
     };
+    if ( defined $def->{cutadapt} ) {
+      $cutadapt_section->{cutadapt} = merge( $def->{cutadapt}, $cutadapt_section->{cutadapt} );
+    }
+    my $cutadapt = merge(
+      $cutadapt_section,
+      {
+        "fastq_len" => {
+          class      => "CQS::FastqLen",
+          perform    => 1,
+          target_dir => $preprocessing_dir . "/fastq_len",
+          option     => "",
+          source_ref => "cutadapt",
+          cqstools   => $def->{cqstools},
+          sh_direct  => 1,
+          cluster    => $cluster,
+          pbs        => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "24",
+            "mem"      => "20gb"
+          },
+        },
+        "fastq_len_vis" => {
+          class                    => "CQS::UniqueR",
+          perform                  => 1,
+          target_dir               => $preprocessing_dir . "/fastq_len",
+          rtemplate                => "countTableVisFunctions.R,fastqLengthVis.R",
+          output_file              => ".lengthDistribution",
+          output_file_ext          => ".csv",
+          parameterSampleFile1_ref => [ "fastq_len", ".len\$" ],
+          parameterSampleFile2     => $def->{groups},
+          sh_direct                => 1,
+          pbs                      => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "1",
+            "mem"      => "10gb"
+          },
+        }
+      }
+    );
 
     $config = merge( $config, $cutadapt );
 
