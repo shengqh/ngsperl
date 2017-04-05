@@ -28,7 +28,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
-  my ($raw_files, $samples) = get_raw_files_and_keys( $config, $section );
+  my ( $raw_files, $samples ) = get_raw_files_and_keys( $config, $section );
 
   my $lsamSoftware = get_option( $config, $section, "liver_model_console" );
   my $randomSeed   = get_option( $config, $section, "random_seed" );
@@ -37,28 +37,29 @@ sub perform {
   my $shfile = $self->get_file( $pbs_dir, $task_name, ".bat" );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
 
-  for my $sample_name ( @$samples ) {
-    my @sample_files = @{ $raw_files->{$sample_name} };
+  for my $name (@$samples) {
+    my @sample_files = @{ $raw_files->{$name} };
     my $sample       = $sample_files[0];
 
-    my $pbs_file = $self->get_file( $pbs_dir, $sample_name, ".bat" );
+    my $pbs_file = $self->get_file( $pbs_dir, $name, ".bat" );
     my $pbs_name = basename($pbs_file);
-    my $log      = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $name );
 
-    my $log_desc     = $cluster->get_log_description($log);
-    my $sampleFolder = create_directory_or_die( $result_dir . "/". $sample_name );
+    my $log_desc = $cluster->get_log_description($log);
+
+    my $sampleFolder = create_directory_or_die( $result_dir . "/" . $name );
 
     my $pbs = $self->open_pbs( $pbs_file, "", "", $path_file, $sampleFolder );
     my $curRandomSeed = $randomSeed;
-    
-print $pbs "
+
+    print $pbs "
 \@echo off
 
 set minbytesize=200
 
 ";
     for my $iter ( 1 .. $iteration ) {
-      my $curName = sprintf("${sample_name}_iter%02d_", $iter);
+      my $curName = sprintf( "${name}_iter%02d_", $iter );
       my $curFinalFile = $curName . "Summary.out";
       print $pbs "
 echo Checking $curFinalFile ...
@@ -83,10 +84,10 @@ if EXIST \%file\% (
       $curRandomSeed = $curRandomSeed + 1;
     }
     $self->close_pbs( $pbs, $pbs_file );
-    
-    open ( $pbs, "<", $pbs_file )   or die "Could not open file $pbs_file: $!";
+
+    open( $pbs, "<", $pbs_file ) or die "Could not open file $pbs_file: $!";
     while ( my $line = <$pbs> ) {
-      if ($line !~ /exit/){
+      if ( $line !~ /exit/ ) {
         print $sh $line;
       }
     }
@@ -106,17 +107,17 @@ sub result {
 
   my $result = {};
 
-  for my $sample_name ( sort keys %raw_files ) {
+  for my $name ( sort keys %raw_files ) {
     my @result_files = ();
-    my $sampleFolder = create_directory_or_die( $result_dir . "/". $sample_name );
+
+    my $sampleFolder = create_directory_or_die( $result_dir . "/" . $name );
     for my $iter ( 1 .. $iteration ) {
-      my $curName = sprintf("${sample_name}_iter%02d_", $iter);
+      my $curName = sprintf( "${name}_iter%02d_", $iter );
       push( @result_files, $sampleFolder . "/" . $curName . "Death.out" );
     }
 
-    $result->{$sample_name} = filter_array( \@result_files, $pattern );
+    $result->{$name} = filter_array( \@result_files, $pattern );
   }
-
   return $result;
 }
 1;
