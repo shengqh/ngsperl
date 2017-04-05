@@ -49,6 +49,10 @@ sub getPreprocessionConfig {
   }
 
   $def = initializeDefaultOptions($def);
+  my $is_paired = $def->{is_paired};
+  if ( not defined $is_paired ) {
+    $is_paired = $def->{pairend};
+  }
 
   #general
   my $cluster  = getValue( $def, "cluster" );
@@ -58,11 +62,11 @@ sub getPreprocessionConfig {
 
   #task
   if ( $def->{sra_to_fastq} ) {
-    defined $def->{is_paired} or die "Define is_paired first!";
+    defined $is_paired or die "Define is_paired first!";
   }
 
   if ( $def->{merge_fastq} ) {
-    defined $def->{is_paired} or die "Define is_paired first!";
+    defined $is_paired or die "Define is_paired first!";
   }
 
   my $fastq_remove_N   = getValue( $def, "fastq_remove_N" );
@@ -102,7 +106,7 @@ sub getPreprocessionConfig {
     $config->{sra2fastq} = {
       class      => "SRA::FastqDump",
       perform    => 1,
-      ispaired   => $def->{is_paired},
+      ispaired   => $is_paired,
       target_dir => $def->{target_dir} . "/sra2fastq",
       option     => "",
       source     => $def->{files},
@@ -131,7 +135,7 @@ sub getPreprocessionConfig {
       option     => "",
       source_ref => $source_ref,
       sh_direct  => 1,
-      is_paired  => $def->{is_paired},
+      is_paired  => $is_paired,
       cluster    => $def->{cluster},
       pbs        => {
         "email"    => $def->{email},
@@ -210,7 +214,7 @@ sub getPreprocessionConfig {
         random_bases_remove_after_trim_5 => $def->{"fastq_remove_random_5"},
         random_bases_remove_after_trim_3 => $def->{"fastq_remove_random_3"},
         extension                        => "_clipped.fastq",
-        pairend                          => $def->{pairend},
+        is_paired                        => $is_paired,
         sh_direct                        => 0,
         cluster                          => $cluster,
         pbs                              => {
