@@ -59,6 +59,18 @@ sub get_extension {
   return ( $extension, $fastqextension );
 }
 
+sub get_is_paired {
+  my ( $config, $section ) = @_;
+  my $ispairend;
+  if ( defined $config->{$section}{pairend} ) {
+    $ispairend = get_option( $config, $section, "pairend" );
+  }
+  else {
+    $ispairend = get_option( $config, $section, "is_paired", 0 );
+  }
+  return $ispairend;
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -81,11 +93,11 @@ sub perform {
       $random_bases_option = $random_bases_option . "-u -$random_bases_remove_after_trim_3";
     }
   }
-  
-  my $ispairend = get_option( $config, $section, "pairend", 0 );
+
+  my $ispairend = get_is_paired( $config, $section );
 
   my $adapter_option = "";
-  if ( defined $curSection->{adapter} && length($curSection->{adapter}) > 0) {
+  if ( defined $curSection->{adapter} && length( $curSection->{adapter} ) > 0 ) {
     if ($ispairend) {
       $adapter_option = " -a " . $curSection->{adapter} . " -A " . $curSection->{adapter};
     }
@@ -94,7 +106,7 @@ sub perform {
     }
   }
 
-  if ( defined $curSection->{adapter_3}  && length($curSection->{adapter_3}) > 0) {
+  if ( defined $curSection->{adapter_3} && length( $curSection->{adapter_3} ) > 0 ) {
     if ($ispairend) {
       $adapter_option = " -a " . $curSection->{adapter_3} . " -A " . $curSection->{adapter_3};
     }
@@ -103,7 +115,7 @@ sub perform {
     }
   }
 
-  if ( defined $curSection->{adapter_5}  && length($curSection->{adapter_5}) > 0) {
+  if ( defined $curSection->{adapter_5} && length( $curSection->{adapter_5} ) > 0 ) {
     if ($ispairend) {
       $adapter_option = $adapter_option . " -g " . $curSection->{adapter_5} . " -G " . $curSection->{adapter_5};
     }
@@ -181,7 +193,7 @@ cutadapt $random_bases_option -o $read1name -p $read2name $temp1_file $temp2_fil
 rm $temp1_file $temp2_file
 ";
       }
-      else {                                    # NOT remove top random bases
+      else {                         # NOT remove top random bases
         print $pbs "
 cutadapt $option $adapter_option -o $read1name -p $read2name $read1file $read2file
 ";
@@ -287,8 +299,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $ispairend = get_option( $config, $section, "pairend", 0 );
-
+  my $ispairend = get_is_paired( $config, $section );
   my ( $extension, $fastqextension ) = $self->get_extension( $config, $section );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
