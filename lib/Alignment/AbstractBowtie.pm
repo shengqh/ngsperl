@@ -36,6 +36,7 @@ sub result {
     else {
       push( @result_files, "${cur_dir}/${sample_name}.out" );
     }
+    push( @result_files, "${cur_dir}/${sample_name}.log" );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
