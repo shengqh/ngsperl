@@ -42,6 +42,7 @@ sub perform {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $sam_file     = $sample_name . ".sam";
     my $bam_file     = $sample_name . ".bam";
+    my $log_file     = $sample_name . ".log";
 
     my $indent = "";
     my $tag    = "--sam-RG ID:$sample_name --sam-RG LB:$sample_name --sam-RG SM:$sample_name --sam-RG PL:ILLUMINA";
@@ -54,7 +55,7 @@ sub perform {
       my $fastqs = join( ',', @sample_files );
       $input = "-u " . $fastqs;
     }
-    my $bowtie2_aln_command = "bowtie2 -p $thread $option -x $bowtie2_index $input $tag -S $sam_file";
+    my $bowtie2_aln_command = "bowtie2 -p $thread $option -x $bowtie2_index $input $tag -S $sam_file 2> $log_file";
 
     my $index_command = get_index_command( $bam_file, $indent );
     my $stat_command = get_stat_command( $bam_file, $indent );
