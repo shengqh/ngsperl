@@ -126,6 +126,7 @@ sub perform {
 
   my $rfile = $result_dir . "/${task_name}${task_suffix}.r";
   open( my $rf, ">$rfile" ) or die "Cannot create $rfile";
+  print $rf "rm(list=ls()) \n";
 
   my $result_files = $self->result( $config, $section )->{$task_name};
   my $final_file = $result_files->[-1];
