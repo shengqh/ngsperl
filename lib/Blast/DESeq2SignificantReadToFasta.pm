@@ -8,7 +8,7 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::Task;
+use CQS::UniqueTask;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 
