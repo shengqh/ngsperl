@@ -406,22 +406,20 @@ sub getSmallRNAConfig {
       addDEseq2( $config, $def, $summary_ref, "miRNA_NTA_base", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.NTA.base.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
 
-      $deseq2Task = addDEseq2( $config, $def, $summary_ref, "miRNA_isomiR", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR.count\$" ],
+      addDEseq2( $config, $def, $summary_ref, "miRNA_isomiR", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
+      push @visual_source, "miRNA_isomiR";
 
       addDEseq2( $config, $def, $summary_ref, "miRNA_isomiR_NTA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR_NTA.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       addDEseq2( $config, $def, $summary_ref, "miRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDeseq2Visualization( $config, $def, $summary_ref, "host_genome_miRNA",
-        [ "deseq2_miRNA_isomiR", "_DESeq2.csv\$", "deseq2_miRNA_NTA", "_DESeq2.csv\$", "deseq2_miRNA_isomiR_NTA", "_DESeq2.csv\$" ],
-        $data_visualization_dir, "pairs_host_miRNA_deseq2_vis_layout" );
+      addDeseq2Visualization( $config, $def, $summary_ref, "host_genome_miRNA", [ "miRNA_isomiR", "miRNA_NTA", "miRNA_isomiR_NTA" ],
+        $data_visualization_dir, "pairs_host_miRNA_deseq2_vis_layout", $libraryKey );
 
       #tRNA
-      $deseq2Task =
-        addDEseq2( $config, $def, $summary_ref, "tRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );    #default is anticodon
+      addDEseq2( $config, $def, $summary_ref, "tRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      push @visual_source, "tRNA";
       addDEseq2( $config, $def, $summary_ref, "tRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       addDEseq2( $config, $def, $summary_ref, "tRNA_aminoacid", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count\$" ],
@@ -430,9 +428,8 @@ sub getSmallRNAConfig {
       if ( $def->{hasYRNA} ) {
 
         #yRNA
-        $deseq2Task =
-          addDEseq2( $config, $def, $summary_ref, "yRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
+        addDEseq2( $config, $def, $summary_ref, "yRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        push @visual_source, "yRNA";
         addDEseq2( $config, $def, $summary_ref, "yRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.read.count\$" ],
           $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       }
@@ -440,9 +437,8 @@ sub getSmallRNAConfig {
       if ( $def->{hasSnRNA} ) {
 
         #snRNA
-        $deseq2Task =
-          addDEseq2( $config, $def, $summary_ref, "snRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
+        addDEseq2( $config, $def, $summary_ref, "snRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        push @visual_source, "snRNA";
         addDEseq2( $config, $def, $summary_ref, "snRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.read.count\$" ],
           $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       }
@@ -450,29 +446,27 @@ sub getSmallRNAConfig {
       if ( $def->{hasSnoRNA} ) {
 
         #snoRNA
-        $deseq2Task =
-          addDEseq2( $config, $def, $summary_ref, "snoRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
+        addDEseq2( $config, $def, $summary_ref, "snoRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        push( @visual_source, "snoRNA" );
         addDEseq2( $config, $def, $summary_ref, "snoRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.read.count\$" ],
           $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       }
 
       #rRNA
-      $deseq2Task =
-        addDEseq2( $config, $def, $summary_ref, "rRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
+      addDEseq2( $config, $def, $summary_ref, "rRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      push( @visual_source, "rRNA" );
       addDEseq2( $config, $def, $summary_ref, "rRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.read.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
 
       #otherSmallRNA
       $deseq2Task = addDEseq2( $config, $def, $summary_ref, "otherSmallRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      push( @visual_source, ( $deseq2Task, "_DESeq2.csv\$" ) );
+      push( @visual_source, "otherSmallRNA" );
       addDEseq2( $config, $def, $summary_ref, "otherSmallRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
 
       #host genome smallRNA visualization
-      addDeseq2Visualization( $config, $def, $summary_ref, "host_genome", \@visual_source, $data_visualization_dir, "pairs_host_deseq2_vis_layout" );
+      addDeseq2Visualization( $config, $def, $summary_ref, "host_genome", \@visual_source, $data_visualization_dir, "pairs_host_deseq2_vis_layout", $libraryKey );
     }
     if ( $do_comparison or defined $groups or defined $def->{tRNA_vis_group} ) {
       my $trna_sig_result;
@@ -639,14 +633,15 @@ sub getSmallRNAConfig {
   if ($do_comparison) {
     my $taskKey = "top${top_read_number}";
 
-    $deseq2Task = addDEseq2( $config, $def, $summary_ref, "${taskKey}_reads", [ "identical_sequence_count_table", ".read.count\$" ], $class_independent_dir, $DE_min_median_read_top, $libraryFile, $libraryKey );
-    addDeseq2Visualization( $config, $def, $summary_ref, "${taskKey}_reads", [ $deseq2Task, "_DESeq2.csv\$" ], $data_visualization_dir, "pairs_top_deseq2_vis_layout" );
+    addDEseq2( $config, $def, $summary_ref, "${taskKey}_reads", [ "identical_sequence_count_table", ".read.count\$" ], $class_independent_dir, $DE_min_median_read_top, $libraryFile, $libraryKey );
+    addDeseq2Visualization( $config, $def, $summary_ref, "${taskKey}_reads", ["${taskKey}_reads"], $data_visualization_dir, "pairs_top_deseq2_vis_layout", $libraryKey );
 
-    $deseq2Task = addDEseq2( $config, $def, $summary_ref, "${taskKey}_contigs", [ "identical_sequence_count_table", ".count\$" ], $class_independent_dir, $DE_min_median_read_top, $libraryFile, $libraryKey );
-    addDeseq2Visualization( $config, $def, $summary_ref, "${taskKey}_contigs", [ $deseq2Task, "_DESeq2.csv\$" ], $data_visualization_dir, "pairs_top_deseq2_vis_layout" );
+    addDEseq2( $config, $def, $summary_ref, "${taskKey}_contigs", [ "identical_sequence_count_table", ".count\$" ], $class_independent_dir, $DE_min_median_read_top, $libraryFile, $libraryKey );
+    addDeseq2Visualization( $config, $def, $summary_ref, "${taskKey}_contigs", ["${taskKey}_contigs"], $data_visualization_dir, "pairs_top_deseq2_vis_layout", $libraryKey );
 
-    $deseq2Task = addDEseq2( $config, $def, $summary_ref, "${taskKey}_minicontigs", [ "identical_sequence_count_table", ".minicontig.count\$" ], $class_independent_dir, $DE_min_median_read_top, $libraryFile, $libraryKey );
-    addDeseq2Visualization( $config, $def, $summary_ref, "${taskKey}_minicontigs", [ $deseq2Task, "_DESeq2.csv\$" ], $data_visualization_dir, "pairs_top_deseq2_vis_layout" );
+    addDEseq2( $config, $def, $summary_ref, "${taskKey}_minicontigs", [ "identical_sequence_count_table", ".minicontig.count\$" ],
+      $class_independent_dir, $DE_min_median_read_top, $libraryFile, $libraryKey );
+    addDeseq2Visualization( $config, $def, $summary_ref, "${taskKey}_minicontigs", ["${taskKey}_minicontigs"], $data_visualization_dir, "pairs_top_deseq2_vis_layout", $libraryKey );
   }
 
   if ($search_nonhost_database) {
@@ -757,20 +752,24 @@ sub getSmallRNAConfig {
     push @overlap, ( "bowtie1_bacteria_group1_pm_table", ".read.count\$", "bowtie1_bacteria_group2_pm_table", ".read.count\$", "bowtie1_fungus_group4_pm_table", ".read.count\$" );
 
     if ($do_comparison) {
-      addDEseq2( $config, $def, $summary_ref, "bacteria_group1",       [ "bowtie1_bacteria_group1_pm_table", ".category.count\$" ], $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "bacteria_group1_reads", [ "bowtie1_bacteria_group1_pm_table", ".read.count\$" ],     $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "bacteria_group2",       [ "bowtie1_bacteria_group2_pm_table", ".category.count\$" ], $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "bacteria_group2_reads", [ "bowtie1_bacteria_group2_pm_table", ".read.count\$" ],     $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "fungus_group4",         [ "bowtie1_fungus_group4_pm_table",   ".category.count\$" ], $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "fungus_group4_reads",   [ "bowtie1_fungus_group4_pm_table",   ".read.count\$" ],     $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      addDEseq2( $config, $def, $summary_ref, "bacteria_group1", [ "bowtie1_bacteria_group1_pm_table", ".category.count\$" ],
+        $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      addDEseq2( $config, $def, $summary_ref, "bacteria_group1_reads", [ "bowtie1_bacteria_group1_pm_table", ".read.count\$" ],
+        $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      addDEseq2( $config, $def, $summary_ref, "bacteria_group2", [ "bowtie1_bacteria_group2_pm_table", ".category.count\$" ],
+        $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      addDEseq2( $config, $def, $summary_ref, "bacteria_group2_reads", [ "bowtie1_bacteria_group2_pm_table", ".read.count\$" ],
+        $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      addDEseq2( $config, $def, $summary_ref, "fungus_group4", [ "bowtie1_fungus_group4_pm_table", ".category.count\$" ], $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile,
+        $libraryKey );
+      addDEseq2( $config, $def, $summary_ref, "fungus_group4_reads", [ "bowtie1_fungus_group4_pm_table", ".read.count\$" ],
+        $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
 
-      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome",
-        [ "deseq2_bacteria_group1", "_DESeq2.csv\$", "deseq2_bacteria_group2", "_DESeq2.csv\$", "deseq2_fungus_group4", "_DESeq2.csv\$" ],
-        $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout" );
+      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome", [ "bacteria_group1", "bacteria_group2", "fungus_group4" ],
+        $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey );
 
-      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome_reads",
-        [ "deseq2_bacteria_group1_reads", "_DESeq2.csv\$", "deseq2_bacteria_group2_reads", "_DESeq2.csv\$", "deseq2_fungus_group4_reads", "_DESeq2.csv\$" ],
-        $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout" );
+      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome_reads", [ "bacteria_group1_reads", "bacteria_group2_reads", "fungus_group4_reads" ],
+        $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey );
     }
   }
 
@@ -840,27 +839,34 @@ sub getSmallRNAConfig {
     push @overlap,               ( "bowtie1_tRNA_pm_table", ".read.count\$",           "bowtie1_rRNA_pm_table", ".read.count\$" );
 
     if ($do_comparison) {
-
-      addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA",           [ "bowtie1_tRNA_pm_table",    ".count\$" ],          $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_reads",     [ "bowtie1_tRNA_pm_table",    ".read.count\$" ],     $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_category",  [ "bowtie1_tRNA_pm_table",    ".category.count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_species",   [ "nonhost_library_tRNA_vis", ".Species12.csv\$" ],  $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_type",      [ "nonhost_library_tRNA_vis", ".tRNAType1.csv\$" ],  $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_anticodon", [ "nonhost_library_tRNA_vis", ".tRNAType2.csv\$" ],  $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey);
+      my $tRNADeseq2 = [];
+      push @$tRNADeseq2,
+        addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA", [ "bowtie1_tRNA_pm_table", ".count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      push @$tRNADeseq2,
+        addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_species", [ "nonhost_library_tRNA_vis", ".Species12.csv\$" ],
+        $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      push @$tRNADeseq2,
+        addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_type", [ "nonhost_library_tRNA_vis", ".tRNAType1.csv\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile,
+        $libraryKey );
+      push @$tRNADeseq2,
+        addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_anticodon", [ "nonhost_library_tRNA_vis", ".tRNAType2.csv\$" ],
+        $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      push @$tRNADeseq2,
+        addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_reads", [ "bowtie1_tRNA_pm_table", ".read.count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_category", [ "bowtie1_tRNA_pm_table", ".category.count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile,
+        $libraryKey );
 
       addDeseq2Visualization(
         $config, $def,
         $summary_ref,
         "nonhost_tRNA",
-        [
-          "deseq2_nonhost_tRNA",           "_DESeq2.csv\$", "deseq2_nonhost_tRNA_species", "_DESeq2.csv\$", "deseq2_nonhost_tRNA_type", "_DESeq2.csv\$",
-          "deseq2_nonhost_tRNA_anticodon", "_DESeq2.csv\$", "deseq2_nonhost_tRNA_reads",   "_DESeq2.csv\$"
-        ],
+        [ "nonhost_tRNA", "nonhost_tRNA_species", "nonhost_tRNA_type", "nonhost_tRNA_anticodon", "nonhost_tRNA_reads" ],
         $data_visualization_dir,
-        "pairs_nonHostLibrary_deseq2_vis_layout"
+        "pairs_nonHostLibrary_deseq2_vis_layout",
+        $libraryKey
       );
 
-      addDEseq2( $config, $def, $summary_ref, "nonhost_rRNA", [ "bowtie1_rRNA_pm_table", ".count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA );
+      addDEseq2( $config, $def, $summary_ref, "nonhost_rRNA", [ "bowtie1_rRNA_pm_table", ".count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
     }
   }
 
@@ -1028,8 +1034,9 @@ sub getSmallRNAConfig {
 
   #blast top reads
   if ($blast_top_reads) {
+    my $deseq2TopTask = getDEseq2TaskName("top${top_read_number}_minicontigs", $libraryKey);
     if ($do_comparison) {
-      addDeseq2SignificantSequenceBlastn( $config, $def, $summary_ref, "deseq2_top${top_read_number}_minicontigs", $class_independent_dir );
+      addDeseq2SignificantSequenceBlastn( $config, $def, $summary_ref, $deseq2TopTask, $class_independent_dir );
     }
     else {
       #addBlastn( $config, $def, $summary_ref, "identical_sequence_top${top_read_number}_contig_blast",     "identical_sequence_count_table", "sequence.count.fasta\$",   $class_independent_dir );
@@ -1063,7 +1070,12 @@ sub getSmallRNAConfig {
     push @$summary_ref, "final_unmapped_reads_table";
 
     if ($do_comparison) {
-      $deseq2Task = addDEseq2( $config, $def, $summary_ref, "final_unmapped_reads_minicontigs", [ "final_unmapped_reads_table", ".minicontig.count\$" ], $nonhost_blast_dir, $DE_min_median_read_top, $libraryFile, $libraryKey );
+      $deseq2Task = addDEseq2(
+        $config, $def, $summary_ref,
+        "final_unmapped_reads_minicontigs",
+        [ "final_unmapped_reads_table", ".minicontig.count\$" ],
+        $nonhost_blast_dir, $DE_min_median_read_top, $libraryFile, $libraryKey
+      );
       addDeseq2SignificantSequenceBlastn( $config, $def, $summary_ref, $deseq2Task, $nonhost_blast_dir );
     }
     else {

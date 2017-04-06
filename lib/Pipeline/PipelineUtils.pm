@@ -15,7 +15,7 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS =
   ( 'all' =>
-    [qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn getBatchGroups initDeseq2Options)] );
+    [qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn getBatchGroups initDeseq2Options)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -146,10 +146,19 @@ sub addBamStat {
   push @$summary, $taskName;
 }
 
+sub getDEseq2TaskName {
+  my ( $taskKey, $libraryKey ) = @_;
+  my $result = "deseq2_" . $taskKey;
+  if ( defined $libraryKey ) {
+    $result = $result . "_" . $libraryKey;
+  }
+  return $result;
+}
+
 sub addDEseq2 {
   my ( $config, $def, $summary, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read, $libraryFile, $libraryKey ) = @_;
 
-  my $taskName = "deseq2_" . $taskKey;
+  my $taskName = getDEseq2TaskName( $taskKey, $libraryKey );
 
   my $libraryFileKey = "library_file";
   if ( ref($libraryFile) eq 'ARRAY' ) {
@@ -192,9 +201,14 @@ sub addDEseq2 {
 }
 
 sub addDeseq2Visualization {
-  my ( $config, $def, $summary, $taskKey, $deseq2FileRef, $dataVisualizationDir, $layoutName ) = @_;
+  my ( $config, $def, $summary, $taskKey, $deseq2Tasks, $dataVisualizationDir, $layoutName, $libraryKey ) = @_;
 
-  my $taskName = "deseq2_" . $taskKey . "_vis";
+  my $taskName = getDEseq2TaskName( $taskKey, $libraryKey ) . "_vis";
+
+  my $deseq2FileRef = [];
+  for my $deseq2Task (@$deseq2Tasks) {
+    push @$deseq2FileRef, ( getDEseq2TaskName( $deseq2Task, $libraryKey ), "_DESeq2.csv\$" );
+  }
 
   $config->{$taskName} = {
     class                    => "CQS::UniqueR",
