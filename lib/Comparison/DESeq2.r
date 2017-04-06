@@ -578,8 +578,12 @@ for(countfile_index in c(1:length(countfiles))){
       dds<-myEstimateSizeFactors(dds)
     }
     
-    dds <- DESeq(dds,fitType=fitType)
-    res<-results(dds,cooksCutoff=FALSE)
+    ddsres<-try(dds <- DESeq(dds,fitType=fitType))
+    if(class(ddsres) == "try-error" && grepl("One can instead use the gene-wise estimates as final estimates", ddsres[1])){
+      dds <- estimateDispersionsGeneEst(dds)
+      dispersions(dds) <- mcols(dds)$dispGeneEst
+      dds<-nbinomWaldTest(dds)
+    }
     
     cat("DESeq2 finished.\n")
     
