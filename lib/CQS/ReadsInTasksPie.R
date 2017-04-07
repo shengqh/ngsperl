@@ -34,11 +34,12 @@ for (countFile in countFiles[,1]) {
 resultTable<-data.frame(Task=taskName,Count=totalCountAll,Sample=countFiles[,2])
 resultTable<-acast(resultTable,Task~Sample,value.var="Count")
 
-NonHostMappedReads<-resultTable["Unmapped In Host",]-resultTable["UnMapped",]
-
 tableForPieChart<-resultTable
-tableForPieChart["Unmapped In Host",]<-NonHostMappedReads
-row.names(tableForPieChart)[which(row.names(tableForPieChart)=="Unmapped In Host")]<-"Mapped to Non-Host"
+if("Unmapped" %in% rownames(resultTable)){
+  NonHostMappedReads<-resultTable["Unmapped In Host",]-resultTable["UnMapped",]
+  tableForPieChart["Unmapped In Host",]<-NonHostMappedReads
+  row.names(tableForPieChart)[which(row.names(tableForPieChart)=="Unmapped In Host")]<-"Mapped to Non-Host"
+}
 
 write.csv(tableForPieChart,paste0(resultFile,".NonParallel.TaskReads.csv"))
 
