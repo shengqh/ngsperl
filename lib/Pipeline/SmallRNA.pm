@@ -112,6 +112,22 @@ sub getSmallRNAConfig {
     $def->{groups_smallRNA_vis_layout} = $def->{groups_vis_layout};
   }
 
+  my $libraryFile = undef;
+  my $libraryKey  = undef;
+  if ( defined $def->{DE_library_key} ) {
+    $libraryFile = [ "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category.Table.csv" ];
+    $libraryKey = $def->{DE_library_key};
+  }
+
+  my $hostLibraryStr    = "";
+  my $nonhostLibraryStr = "";
+  if ( defined $libraryKey ) {
+    $hostLibraryStr = $libraryKey;
+    if ( $libraryKey eq "TotalReads" ) {
+      $nonhostLibraryStr = $hostLibraryStr;
+    }
+  }
+
   my $do_comparison = defined $def->{pairs};
   if ($do_comparison) {
     my $pairs = $def->{pairs};
@@ -135,7 +151,7 @@ sub getSmallRNAConfig {
 
     my $hostSmallRNA       = [ "isomiR",       "tDR-anticodon" ];
     my $hostSmallRNAFolder = [ "miRNA_isomiR", "tRNA" ];
-    if ( $def->{hasSoRNA} ) {
+    if ( $def->{hasSnRNA} ) {
       push( @$hostSmallRNA,       "snDR" );
       push( @$hostSmallRNAFolder, "snRNA" );
     }
@@ -157,7 +173,7 @@ sub getSmallRNAConfig {
       $def->{pairs_top_deseq2_vis_layout} = {
         "Col_Group" => $comparisons,
         "Row_Group" => [ ("Top 100") x $numberOfComparison ],
-        "Groups"    => string_combination( [ ["top100"], $sampleComparisons ], '_' ),
+        "Groups"    => string_combination( [ ["top100"], [$nonhostLibraryStr], $sampleComparisons ], '_' ),
       };
     }
 
@@ -165,7 +181,7 @@ sub getSmallRNAConfig {
       $def->{pairs_host_deseq2_vis_layout} = {
         "Col_Group" => [ (@$comparisons) x $numberOfHostSmallRNA ],
         "Row_Group" => string_repeat( $hostSmallRNA, $numberOfComparison ),
-        "Groups" => string_combination( [ $hostSmallRNAFolder, $sampleComparisons ], '_' ),
+        "Groups" => string_combination( [ $hostSmallRNAFolder, [$hostLibraryStr], $sampleComparisons ], '_' ),
       };
     }
 
@@ -173,7 +189,7 @@ sub getSmallRNAConfig {
       $def->{pairs_host_miRNA_deseq2_vis_layout} = {
         "Col_Group" => [ (@$comparisons) x 3 ],
         "Row_Group" => string_repeat( [ "isomiR", "NTA", "isomiR NTA" ], $numberOfComparison ),
-        "Groups" => string_combination( [ ["miRNA"], [ "isomiR", "NTA", "isomiR_NTA" ], $sampleComparisons ], '_' ),
+        "Groups" => string_combination( [ ["miRNA"], [ "isomiR", "NTA", "isomiR_NTA" ], [$hostLibraryStr], $sampleComparisons ], '_' ),
       };
     }
 
@@ -181,7 +197,7 @@ sub getSmallRNAConfig {
       $def->{pairs_nonHostGroups_deseq2_vis_layout} = {
         "Col_Group" => [ (@$comparisons) x 3 ],
         "Row_Group" => string_repeat( [ "Microbiome", "Environment", "Fungus" ], $numberOfComparison ),
-        "Groups" => string_combination( [ [ "bacteria_group1", "bacteria_group2", "fungus_group4" ], $sampleComparisons ], '_' ),
+        "Groups" => string_combination( [ [ "bacteria_group1", "bacteria_group2", "fungus_group4" ], [$nonhostLibraryStr], $sampleComparisons ], '_' ),
       };
     }
 
@@ -189,7 +205,7 @@ sub getSmallRNAConfig {
       $def->{pairs_nonHostLibrary_deseq2_vis_layout} = {
         "Col_Group" => [ (@$comparisons) x 5 ],
         "Row_Group" => string_repeat( [ "tDR", "tDR Species", "tDR Amino Acid", "tDR Anticodon", "tDR Reads" ], $numberOfComparison ),
-        "Groups" => string_combination( [ ["nonhost_tRNA"], [ "", "species", "type", "anticodon", "reads" ], $sampleComparisons ], '_' )
+        "Groups" => string_combination( [ ["nonhost_tRNA"], [ "", "species", "type", "anticodon", "reads" ], [$nonhostLibraryStr], $sampleComparisons ], '_' )
       };
     }
   }
@@ -212,13 +228,6 @@ sub getSmallRNAConfig {
   my $bowtie1TableTask;
 
   my $identical_ref = [ "identical", ".fastq.gz\$" ];
-
-  my $libraryFile = undef;
-  my $libraryKey  = undef;
-  if ( defined $def->{DE_library_key} ) {
-    $libraryFile = [ "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category.Table.csv" ];
-    $libraryKey = $def->{DE_library_key};
-  }
 
   if ($search_host_genome) {
     getValue( $def, "coordinate" );
@@ -856,15 +865,8 @@ sub getSmallRNAConfig {
       addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_category", [ "bowtie1_tRNA_pm_table", ".category.count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile,
         $libraryKey );
 
-      addDeseq2Visualization(
-        $config, $def,
-        $summary_ref,
-        "nonhost_tRNA",
-        [ "nonhost_tRNA", "nonhost_tRNA_species", "nonhost_tRNA_type", "nonhost_tRNA_anticodon", "nonhost_tRNA_reads" ],
-        $data_visualization_dir,
-        "pairs_nonHostLibrary_deseq2_vis_layout",
-        $libraryKey
-      );
+      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_tRNA", [ "nonhost_tRNA", "nonhost_tRNA_species", "nonhost_tRNA_type", "nonhost_tRNA_anticodon", "nonhost_tRNA_reads" ],
+        $data_visualization_dir, "pairs_nonHostLibrary_deseq2_vis_layout", $libraryKey );
 
       addDEseq2( $config, $def, $summary_ref, "nonhost_rRNA", [ "bowtie1_rRNA_pm_table", ".count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
     }
@@ -1034,7 +1036,7 @@ sub getSmallRNAConfig {
 
   #blast top reads
   if ($blast_top_reads) {
-    my $deseq2TopTask = getDEseq2TaskName("top${top_read_number}_minicontigs", $libraryKey);
+    my $deseq2TopTask = getDEseq2TaskName( "top${top_read_number}_minicontigs", $libraryKey );
     if ($do_comparison) {
       addDeseq2SignificantSequenceBlastn( $config, $def, $summary_ref, $deseq2TopTask, $class_independent_dir );
     }
