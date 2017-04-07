@@ -579,12 +579,19 @@ for(countfile_index in c(1:length(countfiles))){
     }
     
     ddsres<-try(dds <- DESeq(dds,fitType=fitType))
-    if(class(ddsres) == "try-error" && grepl("One can instead use the gene-wise estimates as final estimates", ddsres[1])){
-      dds <- estimateDispersionsGeneEst(dds)
-      dispersions(dds) <- mcols(dds)$dispGeneEst
-      dds<-nbinomWaldTest(dds)
+    if(class(ddsres) == "try-error"){
+      if( grepl("One can instead use the gene-wise estimates as final estimates", ddsres[1])){
+        dds <- estimateDispersionsGeneEst(dds)
+        dispersions(dds) <- mcols(dds)$dispGeneEst
+        dds<-nbinomWaldTest(dds)
+      }else if(grepl("newsplit: out of vertex space", ddsres[1])){
+        dds <- DESeq(dds,fitType="mean")
+      }else{
+        stop(paste0("DESeq2 failed: ", ddsres[1]))
+      }
     }
-    
+    res<-results(dds,cooksCutoff=FALSE)
+        
     cat("DESeq2 finished.\n")
     
     if (useRawPvalue==1) {
