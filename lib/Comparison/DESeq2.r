@@ -208,7 +208,7 @@ myEstimateSizeFactors<-function(dds){
   sfres<-try(dds<-estimateSizeFactors(dds))
   if (class(sfres) == "try-error") {
     library(edgeR)
-    y<-DGEList(counts=countNum)
+    y<-DGEList(counts=counts(dds))
     y<-calcNormFactors(y, methold="TMM")
     sizeFactors(dds)<-y$samples$norm.factors
   }
