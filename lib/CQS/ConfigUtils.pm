@@ -19,7 +19,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(get_config_section has_config_section get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files_and_keys get_raw_files get_raw_files_keys get_raw_files_attributes get_raw_files2 get_run_command get_option_value get_pair_groups
-      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key save_parameter_sample_file saveConfig writeFileList initDefaultValue get_pure_pairs)
+      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key save_parameter_sample_file saveConfig writeFileList initDefaultValue get_pure_pairs writeParameterSampleFile)
   ]
 );
 
@@ -475,7 +475,7 @@ sub do_get_unsorted_raw_files {
 }
 
 sub do_get_raw_files_keys {
-   my $resultUnsorted = shift;
+  my $resultUnsorted = shift;
   my @keys = grep { $_ !~ /^\./ } keys %$resultUnsorted;
   my @result;
   if ( exists $resultUnsorted->{".order"} ) {
@@ -537,9 +537,9 @@ sub get_raw_files_attributes {
 
 sub get_raw_files_and_keys {
   my ( $resultUnsorted, $issource ) = do_get_unsorted_raw_files(@_);
-  my $result = get_sorted_raw_files($resultUnsorted);
+  my $result      = get_sorted_raw_files($resultUnsorted);
   my $orderedKeys = do_get_raw_files_keys($resultUnsorted);
- return ($result, $orderedKeys);
+  return ( $result, $orderedKeys );
 }
 
 sub get_raw_files {
@@ -786,6 +786,34 @@ sub initDefaultValue {
     $def->{$name} = $defaultValue;
   }
   return $def;
+}
+
+sub writeParameterSampleFile {
+  my ( $config, $section, $resultDir, $index ) = @_;
+  my $result      = "";
+  my $task_suffix = get_option( $config, $section, "suffix", "" );
+  my $key         = "parameterSampleFile" . $index;
+  if ( has_raw_files( $config, $section, $key ) ) {
+    my $temp = get_raw_files( $config, $section, $key );
+    my @orderedSampleNames;
+    my $keyOrder                 = $key . "Order";
+    my $parameterSampleFileOrder = $config->{$section}{$keyOrder};
+    if ( defined $parameterSampleFileOrder ) {
+      @orderedSampleNames = @{$parameterSampleFileOrder};
+    }
+    else {
+      @orderedSampleNames = keys %$temp;
+    }
+    $result = "fileList${index}${task_suffix}.txt";
+    open( my $list, ">$resultDir/$result" ) or die "Cannot create $result";
+    foreach my $sample_name (@orderedSampleNames) {
+      foreach my $subSampleFile ( @{ ${$temp}{$sample_name} } ) {
+        print $list $subSampleFile . "\t$sample_name\n";
+      }
+    }
+    close($list);
+  }
+  return $result;
 }
 
 1;
