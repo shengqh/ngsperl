@@ -47,7 +47,7 @@ sub perform {
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
 
-  my $perl = dirname(__FILE__) . "/Depth.pl";
+  my $perl = dirname(__FILE__) . "/depth.pl";
 
   for my $name ( sort keys %{$bedFiles} ) {
     my $cur_dir = create_directory_or_die( $result_dir . "/$name" );

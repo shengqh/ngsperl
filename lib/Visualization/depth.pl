@@ -83,7 +83,7 @@ close $config;
 my $bamNamesStr = join( '\\t', @bamNames );
 my $bamFilesStr = join( ' ',   @bamFiles );
 
-my $r = dirname(__FILE__) . "/Depth.r";
+my $r = dirname(__FILE__) . "/depth.r";
 
 my $readsFile = basename($bedFile) . ".reads";
 open( my $reads, "> $readsFile" ) or die "Cannot open file $readsFile";
