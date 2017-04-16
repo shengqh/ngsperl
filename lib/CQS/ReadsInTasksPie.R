@@ -35,7 +35,7 @@ resultTable<-data.frame(Task=taskName,Count=totalCountAll,Sample=countFiles[,2])
 resultTable<-acast(resultTable,Task~Sample,value.var="Count")
 
 tableForPieChart<-resultTable
-if("Unmapped" %in% rownames(resultTable)){
+if("Unmapped" %in% rownames(resultTable) | "UnMapped" %in% rownames(resultTable)){
   NonHostMappedReads<-resultTable["Unmapped In Host",]-resultTable["UnMapped",]
   tableForPieChart["Unmapped In Host",]<-NonHostMappedReads
   row.names(tableForPieChart)[which(row.names(tableForPieChart)=="Unmapped In Host")]<-"Mapped to Non-Host"
