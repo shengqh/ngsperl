@@ -30,7 +30,7 @@ sub perform {
 
   my $FindCircDir = get_option( $config, $section, "FindCircDir", dirname(__FILE__) );
   my $bowtie2_index = $config->{$section}{bowtie2_index} or die "define ${section}::bowtie2_index first";
-  my $genomeFa      = $bowtie2_index . "fa";
+  my $genomeFa = $config->{$section}{genomeFile} or die "define ${section}::genomeFile first";
 
   my $python_script1 = $FindCircDir . "/unmapped2anchors.py";
   if ( !-e $python_script1 ) {
@@ -41,11 +41,6 @@ sub perform {
     die "File not found : " . $python_script2;
   }
 
-  my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
-  my $pbs_name = basename($pbs_file);
-  my $log      = $self->get_log_filename( $log_dir, $task_name );
-  my $log_desc = $cluster->get_log_description($log);
-
   my %raw_files     = %{ get_raw_files( $config, $section ) };
 
   for my $sample_name ( sort keys %raw_files ) {
@@ -53,9 +48,13 @@ sub perform {
     my $sampleFile   = $sample_files[0];
     my $final_file   = "${sample_name}_splice_sites.bed";
 
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
+    my $log_desc = $cluster->get_log_description($log);
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
     print $pbs "
-cd  $target_dir
+cd  $result_dir
 
 echo find_circ step1
 bowtie2 -p16 --very-sensitive --score-min=C,-15,0 --mm -x $bowtie2_index -q -U $sampleFile >${sample_name}.sam 2> ${sample_name}.bowtie2.log 
