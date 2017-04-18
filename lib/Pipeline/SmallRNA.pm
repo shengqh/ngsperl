@@ -62,7 +62,7 @@ sub getSmallRNAConfig {
     $nonhost_blast_dir = create_directory_or_die( $def->{target_dir} . "/final_unmapped" );
   }
 
-  my $batchGroups = getBatchGroups($def);
+  my ( $batchGroups, $batchLayout ) = getBatchGroups($def);
   my $batch_dir;
   if ( defined $batchGroups ) {
     $batch_dir = create_directory_or_die( $def->{target_dir} . "/batch_effects" );
@@ -993,7 +993,7 @@ sub getSmallRNAConfig {
     parameterSampleFile1_ref => \@table_for_pieSummary,
     parameterSampleFile2     => $groups,
     parameterSampleFile3     => $def->{groups_vis_layout},
-    rCode                    => $name_for_pieSummary_r,
+    rCode                    => $name_for_pieSummary_r . ";",
 
     #    parameterFile3_ref       => [ "fastqc_count_vis", ".Reads.csv\$" ],
     sh_direct => 1,
@@ -1118,8 +1118,9 @@ sub getSmallRNAConfig {
       $batchConfig->{output_to_result_dir}      = "1";
       $batchConfig->{parameterSampleFile2}      = $batchGroups->{$batchGroup};
       $batchConfig->{parameterSampleFile2Order} = undef;
-
-      $config->{$batchName} = $batchConfig;
+      $batchConfig->{parameterSampleFile3}      = $batchLayout->{$batchGroup};
+      $batchConfig->{rCode}                     = ( defined $batchConfig->{rCode} ? $batchConfig->{rCode} : "" ) . "visLayoutAlphabet=TRUE;";
+      $config->{$batchName}                     = $batchConfig;
 
       push @$summary_ref, ($batchName);
     }
@@ -1131,7 +1132,9 @@ sub getSmallRNAConfig {
       my $batchConfig = dclone( $config->{"fastq_len_vis"} );
       $batchConfig->{target_dir}           = $batch_dir . "/" . $batchName;
       $batchConfig->{parameterSampleFile2} = $batchGroups->{$batchGroup};
+      $batchConfig->{parameterSampleFile3} = $batchLayout->{$batchGroup};
       $batchConfig->{output_file}          = ".len_" . $batchGroup;
+      $batchConfig->{rCode}                = ( defined $batchConfig->{rCode} ? $batchConfig->{rCode} : "" ) . "visLayoutAlphabet=TRUE;";
 
       $config->{$batchName} = $batchConfig;
 
@@ -1143,10 +1146,12 @@ sub getSmallRNAConfig {
       my $batchName = "reads_in_tasks_pie" . "_" . $batchGroup;
 
       my $batchConfig = dclone( $config->{"reads_in_tasks_pie"} );
-      $batchConfig->{target_dir}           = $batch_dir . "/" . $batchName;
-      $batchConfig->{parameterSampleFile2} = $batchGroups->{$batchGroup};
+      $batchConfig->{target_dir}                 = $batch_dir . "/" . $batchName;
+      $batchConfig->{parameterSampleFile2}       = $batchGroups->{$batchGroup};
       $batchConfig->{parameterSampleFile2_order} = undef;
-      $batchConfig->{output_file}          = ".reads_" . $batchGroup;
+      $batchConfig->{parameterSampleFile3}       = $batchLayout->{$batchGroup};
+      $batchConfig->{output_file}                = ".reads_" . $batchGroup;
+      $batchConfig->{rCode}                      = ( defined $batchConfig->{rCode} ? $batchConfig->{rCode} : "" ) . "visLayoutAlphabet=TRUE;";
 
       $config->{$batchName} = $batchConfig;
 
@@ -1161,8 +1166,8 @@ sub getSmallRNAConfig {
       $batchConfig->{target_dir}                = $batch_dir . "/" . $batchName;
       $batchConfig->{parameterSampleFile2}      = $batchGroups->{$batchGroup};
       $batchConfig->{parameterSampleFile2Order} = undef;
-      $batchConfig->{parameterSampleFile3}      = undef;
-      $batchConfig->{rCode}                     = $batchConfig->{rCode} . "drawInvidividual=FALSE;";
+      $batchConfig->{parameterSampleFile3}      = $batchLayout->{$batchGroup};
+      $batchConfig->{rCode}                     = ( defined $batchConfig->{rCode} ? $batchConfig->{rCode} : "" ) . "drawInvidividual=FALSE;visLayoutAlphabet=TRUE;";
 
       $config->{$batchName} = $batchConfig;
 
