@@ -1145,7 +1145,7 @@ sub getSmallRNAConfig {
       my $batchConfig = dclone( $config->{"reads_in_tasks_pie"} );
       $batchConfig->{target_dir}           = $batch_dir . "/" . $batchName;
       $batchConfig->{parameterSampleFile2} = $batchGroups->{$batchGroup};
-      $batchConfig->{parameterSampleFile2} = undef;
+      $batchConfig->{parameterSampleFile2_order} = undef;
       $batchConfig->{output_file}          = ".reads_" . $batchGroup;
 
       $config->{$batchName} = $batchConfig;
