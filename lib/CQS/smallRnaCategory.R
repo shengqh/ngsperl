@@ -3,6 +3,10 @@ categoryFileList<-parSampleFile1
 groupFileList<-parSampleFile2
 groupVisLayoutFileList<-parSampleFile3
 
+if(!exists("visLayoutAlphabet")){
+  visLayoutAlphabet<-FALSE
+}
+
 facetColCount=getFacetColCount(groupFileList)
 
 #source("/home/zhaos/source/r_cqs/vickers/codesToPipeline/countTableVisFunctions.R")
@@ -66,9 +70,11 @@ tableBarplotToFile(dat=categoryAllTable2,fileName=paste0(taskName,".Category2.Ba
 
 #Group Pie Chart for Tables
 ggpieGroupToFile(dat=categoryFigure,fileName=paste0(taskName,".Category1.Group.Piechart.png"),groupFileList=groupFileList,
-		outFileName=paste0(taskName,".Category1.PercentGroup.Table.csv"),maxCategory=NA,textSize=groupTextSize,y="Count",transformTable=FALSE,visLayoutFileList=groupVisLayoutFileList)
+		outFileName=paste0(taskName,".Category1.PercentGroup.Table.csv"),maxCategory=NA,textSize=groupTextSize,y="Count",transformTable=FALSE,
+		visLayoutFileList=groupVisLayoutFileList,visLayoutAlphabet=visLayoutAlphabet)
 ggpieGroupToFile(dat=categoryAllTable2,fileName=paste0(taskName,".Category2.Group.Piechart.png"),groupFileList=groupFileList,
-		outFileName=paste0(taskName,".Category2.PercentGroup.Table.csv"),maxCategory=NA,textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList)
+		outFileName=paste0(taskName,".Category2.PercentGroup.Table.csv"),maxCategory=NA,textSize=groupTextSize,
+		visLayoutFileList=groupVisLayoutFileList,visLayoutAlphabet=visLayoutAlphabet)
 
 
 
