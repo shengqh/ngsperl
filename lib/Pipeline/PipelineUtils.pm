@@ -13,9 +13,11 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS =
-  ( 'all' =>
-    [qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn getBatchGroups initDeseq2Options)] );
+our %EXPORT_TAGS = (
+  'all' => [
+    qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn getBatchGroups initDeseq2Options)
+  ]
+);
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -264,8 +266,58 @@ sub getBatchGroups {
   my ($def) = @_;
   my $files = $def->{files};
   my $result;
+  my $layout;
 
-  if ( defined $def->{batch_groups_file_regex} ) {
+  if ( defined $def->{batch_groups_name_file_regex} ) {
+    for my $regexName ( keys %{ $def->{batch_groups_name_file_regex} } ) {
+      my $regexHash = $def->{batch_groups_name_file_regex}->{$regexName};
+      my $fileRegex = $regexHash->{file};
+      my $nameRegex = $regexHash->{name};
+
+      my $lCols   = [];
+      my $lRows   = [];
+      my $lGroups = [];
+      $layout->{$regexName} = {
+        "Col_Group" => $lCols,
+        "Row_Group" => $lRows,
+        "Groups"    => $lGroups
+      };
+      my $pushed    = {};
+      my $curGroups = {};
+      $result->{$regexName} = $curGroups;
+
+      for my $sample ( keys %$files ) {
+        my $sampleFile = $files->{$sample}[0];
+        my $group;
+        if ( $sampleFile =~ /$fileRegex/igs ) {
+          my $fileGroupName = $1;
+          if ( $sample =~ /$nameRegex/igs ) {
+            my $sampleGroupName = $1;
+            my $groupName       = $sampleGroupName . "_" . $fileGroupName;
+            if ( !exists( $pushed->{$groupName} ) ) {
+              push( @$lCols,   $fileGroupName );
+              push( @$lRows,   $sampleGroupName );
+              push( @$lGroups, $groupName );
+              $pushed->{$groupName} = "";
+            }
+
+            if ( !defined $curGroups->{$groupName} ) {
+              $curGroups->{$groupName} = [];
+            }
+            my $groups = $curGroups->{$groupName};
+            push @$groups, $sample;
+          }
+          else {
+            die( $sample . " didn't match with name regex " . $nameRegex );
+          }
+        }
+        else {
+          die( $sample . " didn't match with file regex " . $fileRegex . " : " . $sampleFile );
+        }
+      }
+    }
+  }
+  elsif ( defined $def->{batch_groups_file_regex} ) {
     for my $regexName ( keys %{ $def->{batch_groups_file_regex} } ) {
       my $regex     = $def->{batch_groups_file_regex}->{$regexName};
       my $curGroups = {};
@@ -312,7 +364,7 @@ sub getBatchGroups {
     $result = $def->{batch_groups};
   }
 
-  return $result;
+  return ( $result, $layout );
 }
 
 sub initDeseq2Options {
