@@ -9,6 +9,10 @@ countFilesList<-parSampleFile1
 groupFileList<-parSampleFile2
 groupVisLayoutFileList<-parSampleFile3
 
+if(!exists("visLayoutAlphabet")){
+  visLayoutAlphabet<-FALSE
+}
+
 facetColCount=getFacetColCount(groupFileList)
 
 countFiles<-read.delim(countFilesList,header=F,as.is=T)
@@ -47,7 +51,8 @@ ggpieToFile(tableForPieChart,fileName=paste0(resultFile,".NonParallel.TaskReads.
 #Group Pie chart
 ggpieGroupToFile(tableForPieChart,fileName=paste0(resultFile,".NonParallel.TaskReads.Group.Piechart.png"),maxCategory=NA,reOrder=FALSE,
 		groupFileList=groupFileList,
-		outFileName=paste0(resultFile,".NonParallel.TaskReads.PercentGroups.csv"),textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList)
+		outFileName=paste0(resultFile,".NonParallel.TaskReads.PercentGroups.csv"),textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList,
+		visLayoutAlphabet=visLayoutAlphabet)
 
 
 
