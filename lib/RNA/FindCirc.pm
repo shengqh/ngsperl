@@ -69,15 +69,7 @@ $python_script1 ${sample_name}.sorted.unmapped.bam | gzip > ${sample_name}_ancho
 
       
 echo find_circ step3
-bowtie2 -p 16 --score-min=C,-15,0 --reorder --mm \
-        -q -U ${sample_name}_anchors.fastq.gz -x $bowtie2_index |\
-            $python_script2 \
-                --genome=$genomeFa \
-                --prefix=${sample_name}_ \
-                --name=${sample_name}_sample \
-                --stats=${sample_name}_stats.txt \
-                --reads=${sample_name}_spliced_reads.fa \
-                    > $final_file
+bowtie2 -p 16 --score-min=C,-15,0 --reorder --mm -q -U ${sample_name}_anchors.fastq.gz -x $bowtie2_index | $python_script2 --genome=$genomeFa --prefix=${sample_name}_ --name=${sample_name}_sample --stats=${sample_name}_stats.txt --reads=${sample_name}_spliced_reads.fa > $final_file
 ";
     $self->close_pbs( $pbs, $pbs_file );
 
