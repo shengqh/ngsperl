@@ -149,10 +149,13 @@ sub addBamStat {
 }
 
 sub getDEseq2TaskName {
-  my ( $taskKey, $libraryKey ) = @_;
+  my ( $taskKey, $libraryKey, $def ) = @_;
   my $result = "deseq2_" . $taskKey;
   if ( defined $libraryKey ) {
     $result = $result . "_" . $libraryKey;
+  }
+  if(defined $def->{DE_task_suffix}){
+    $result = $result . $def->{DE_task_suffix};
   }
   return $result;
 }
@@ -160,7 +163,7 @@ sub getDEseq2TaskName {
 sub addDEseq2 {
   my ( $config, $def, $summary, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read, $libraryFile, $libraryKey ) = @_;
 
-  my $taskName = getDEseq2TaskName( $taskKey, $libraryKey );
+  my $taskName = getDEseq2TaskName( $taskKey, $libraryKey, $def );
 
   my $libraryFileKey = "library_file";
   if ( ref($libraryFile) eq 'ARRAY' ) {
@@ -205,11 +208,11 @@ sub addDEseq2 {
 sub addDeseq2Visualization {
   my ( $config, $def, $summary, $taskKey, $deseq2Tasks, $dataVisualizationDir, $layoutName, $libraryKey ) = @_;
 
-  my $taskName = getDEseq2TaskName( $taskKey, $libraryKey ) . "_vis";
+  my $taskName = getDEseq2TaskName( $taskKey, $libraryKey, $def ) . "_vis";
 
   my $deseq2FileRef = [];
   for my $deseq2Task (@$deseq2Tasks) {
-    push @$deseq2FileRef, ( getDEseq2TaskName( $deseq2Task, $libraryKey ), "_DESeq2.csv\$" );
+    push @$deseq2FileRef, ( getDEseq2TaskName( $deseq2Task, $libraryKey, $def ), "_DESeq2.csv\$" );
   }
 
   $config->{$taskName} = {
