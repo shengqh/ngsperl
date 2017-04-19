@@ -41,6 +41,10 @@ sub perform {
     die "File not found : " . $python_script2;
   }
 
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
+
   my %raw_files     = %{ get_raw_files( $config, $section ) };
 
   for my $sample_name ( sort keys %raw_files ) {
@@ -52,6 +56,8 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
     my $log_desc = $cluster->get_log_description($log);
+    
+    print $sh "\$MYCMD ./$pbs_name \n";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
     print $pbs "
 cd  $result_dir
@@ -74,6 +80,14 @@ bowtie2 -p 16 --score-min=C,-15,0 --reorder --mm -q -U ${sample_name}_anchors.fa
     $self->close_pbs( $pbs, $pbs_file );
 
   }
+  
+  close $sh;
+
+  if ( is_linux() ) {
+    chmod 0755, $shfile;
+  }
+
+  print "!!!shell file $shfile created, you can run this shell file to submit all FindCirc tasks.\n";
 }
 
 sub result {
