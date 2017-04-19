@@ -205,12 +205,18 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors
 }
 
 myEstimateSizeFactors<-function(dds){
-  sfres<-try(dds<-estimateSizeFactors(dds))
-  if (class(sfres) == "try-error") {
-    library(edgeR)
-    y<-DGEList(counts=counts(dds))
-    y<-calcNormFactors(y, methold="TMM")
-    sizeFactors(dds)<-y$samples$norm.factors
+  if(exists("librarySize")){
+    curLibrarySize<-librarySize[colnames(dds)]
+    curSizeFactor<-curLibrarySize/median(curLibrarySize)
+    sizeFactors(dds)<-curSizeFactor
+  }else{
+    sfres<-try(dds<-estimateSizeFactors(dds))
+    if (class(sfres) == "try-error") {
+      library(edgeR)
+      y<-DGEList(counts=counts(dds))
+      y<-calcNormFactors(y, methold="TMM")
+      sizeFactors(dds)<-y$samples$norm.factors
+    }
   }
   return(dds)
 }
@@ -496,13 +502,7 @@ for(countfile_index in c(1:length(countfiles))){
       file.remove(excludedDesignFile)
     }
     
-    if(exists("librarySize")){
-      curLibrarySize<-librarySize[colnames(dds)]
-      curSizeFactor<-curLibrarySize/median(curLibrarySize)
-      sizeFactors(dds)<-curSizeFactor
-    }else{
-      dds<-myEstimateSizeFactors(dds)
-    }
+    dds<-myEstimateSizeFactors(dds)
     
     fitType<-"parametric"
     while(1){
@@ -572,11 +572,7 @@ for(countfile_index in c(1:length(countfiles))){
                                colData = designData,
                                design = designFormula)
     
-    if(exists("librarySize")){
-      sizeFactors(dds)<-librarySize[colnames(dds)]
-    }else{
-      dds<-myEstimateSizeFactors(dds)
-    }
+    dds<-myEstimateSizeFactors(dds)
     
     ddsres<-try(dds <- DESeq(dds,fitType=fitType))
     if(class(ddsres) == "try-error"){
