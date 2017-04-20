@@ -177,11 +177,11 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "cluster",    "slurm" );
   initDefaultValue( $def, "max_thread", 8 );
 
-  initDefaultValue( $def, "min_read_length",              16 );
-  initDefaultValue( $def, "bowtie1_option_1mm",           "-a -m 100 --best --strata -v 1" );
-  initDefaultValue( $def, "bowtie1_option_pm",            "-a -m 1000 --best --strata -v 0" );
+  initDefaultValue( $def, "min_read_length",               16 );
+  initDefaultValue( $def, "bowtie1_option_1mm",            "-a -m 100 --best --strata -v 1" );
+  initDefaultValue( $def, "bowtie1_option_pm",             "-a -m 1000 --best --strata -v 0" );
   initDefaultValue( $def, "bowtie1_output_to_same_folder", 1 );
-  initDefaultValue( $def, "fastq_remove_N",               1 );
+  initDefaultValue( $def, "fastq_remove_N",                1 );
 
   if ( defined $def->{run_cutadapt} && not defined $def->{perform_cutadapt} ) {
     $def->{perform_cutadapt} = $def->{run_cutadapt};
@@ -204,7 +204,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "DE_min_median_read_top",      2 );
   initDefaultValue( $def, "DE_min_median_read_smallRNA", 5 );
   initDefaultValue( $def, "DE_use_raw_pvalue",           1 );
-
+  initDefaultValue( $def, "DE_library_key",              "TotalReads" );
   initDefaultValue( $def, "perform_contig_analysis", 0 );
   initDefaultValue( $def, "smallrnacount_option",    "" );
   initDefaultValue( $def, "hasYRNA",                 0 );

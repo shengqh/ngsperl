@@ -114,7 +114,7 @@ sub getSmallRNAConfig {
 
   my $libraryFile = undef;
   my $libraryKey  = undef;
-  if ( defined $def->{DE_library_key} ) {
+  if ( defined $def->{DE_library_key} && $def->{DE_library_key} ne "") {
     $libraryFile = [ "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category.Table.csv" ];
     $libraryKey = $def->{DE_library_key};
   }
