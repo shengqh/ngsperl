@@ -39,13 +39,14 @@ sub perform {
 
   for my $pairName ( sort keys %$rawFiles ) {
     my $files = $rawFiles->{$pairName};
+    my $cur_dir  = create_directory_or_die( $result_dir . "/$pairName" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $pairName );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $pairName );
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
     for my $file (@$files) {
       my $output    = basename($file);
       my $finalFile = "${output}/homerResults.html";
