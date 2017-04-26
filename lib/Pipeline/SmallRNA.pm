@@ -121,11 +121,13 @@ sub getSmallRNAConfig {
     $def->{groups_smallRNA_vis_layout} = $def->{groups_vis_layout};
   }
 
+  my $libraryKey = getValue( $def, "DE_library_key", "TotalReads" );
   my $libraryFile = undef;
-  my $libraryKey  = undef;
-  if ( defined $def->{DE_library_key} && $def->{DE_library_key} ne "" ) {
+  if ( $libraryKey ne "" ) {
     $libraryFile = [ "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category.Table.csv" ];
-    $libraryKey = $def->{DE_library_key};
+  }
+  else {
+    $libraryKey = undef;
   }
 
   my $hostLibraryStr    = "";
@@ -728,8 +730,7 @@ sub getSmallRNAConfig {
 
     if ($do_comparison) {
       addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome",       \@nonhost_genome_groups,      $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey );
-      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome_reads", \@nonhost_genome_group_reads, $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey )
-        ;
+      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome_reads", \@nonhost_genome_group_reads, $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey );
     }
   }
 
