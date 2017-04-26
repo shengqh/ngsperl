@@ -178,13 +178,15 @@ sub getSmallRNAConfig {
     push( @$hostSmallRNAFolder, ( "rRNA", "otherSmallRNA" ) );
 
     my $numberOfHostSmallRNA = scalar(@$hostSmallRNA);
+    
+    my $DE_task_suffix = getValue($def, "DE_task_suffix", "");
 
     my $numberOfComparison = scalar(@$sampleComparisons);
     if ( !defined $def->{pairs_top_deseq2_vis_layout} ) {
       $def->{pairs_top_deseq2_vis_layout} = {
         "Col_Group" => $comparisons,
         "Row_Group" => [ ("Top 100") x $numberOfComparison ],
-        "Groups"    => string_combination( [ ["top100"], [$nonhostLibraryStr], $sampleComparisons ], '_' ),
+        "Groups"    => string_combination( [ ["top100"], [$nonhostLibraryStr . $DE_task_suffix], $sampleComparisons ], '_' ),
       };
     }
 
@@ -192,7 +194,7 @@ sub getSmallRNAConfig {
       $def->{pairs_host_deseq2_vis_layout} = {
         "Col_Group" => [ (@$comparisons) x $numberOfHostSmallRNA ],
         "Row_Group" => string_repeat( $hostSmallRNA, $numberOfComparison ),
-        "Groups" => string_combination( [ $hostSmallRNAFolder, [$hostLibraryStr], $sampleComparisons ], '_' ),
+        "Groups" => string_combination( [ $hostSmallRNAFolder, [$hostLibraryStr . $DE_task_suffix], $sampleComparisons ], '_' ),
       };
     }
 
@@ -200,7 +202,7 @@ sub getSmallRNAConfig {
       $def->{pairs_host_miRNA_deseq2_vis_layout} = {
         "Col_Group" => [ (@$comparisons) x 3 ],
         "Row_Group" => string_repeat( [ "isomiR", "NTA", "isomiR NTA" ], $numberOfComparison ),
-        "Groups" => string_combination( [ ["miRNA"], [ "isomiR", "NTA", "isomiR_NTA" ], [$hostLibraryStr], $sampleComparisons ], '_' ),
+        "Groups" => string_combination( [ ["miRNA"], [ "isomiR", "NTA", "isomiR_NTA" ], [$hostLibraryStr. $DE_task_suffix], $sampleComparisons ], '_' ),
       };
     }
 
@@ -208,7 +210,7 @@ sub getSmallRNAConfig {
       $def->{pairs_nonHostGroups_deseq2_vis_layout} = {
         "Col_Group" => [ (@$comparisons) x 3 ],
         "Row_Group" => string_repeat( \@nonhost_genome_group_names, $numberOfComparison ),
-        "Groups" => string_combination( [ \@nonhost_genome_groups, [$nonhostLibraryStr], $sampleComparisons ], '_' ),
+        "Groups" => string_combination( [ \@nonhost_genome_groups, [$nonhostLibraryStr. $DE_task_suffix], $sampleComparisons ], '_' ),
       };
     }
 
@@ -216,7 +218,7 @@ sub getSmallRNAConfig {
       $def->{pairs_nonHostLibrary_deseq2_vis_layout} = {
         "Col_Group" => [ (@$comparisons) x 5 ],
         "Row_Group" => string_repeat( [ "tDR", "tDR Species", "tDR Amino Acid", "tDR Anticodon", "tDR Reads" ], $numberOfComparison ),
-        "Groups" => string_combination( [ ["nonhost_tRNA"], [ "", "species", "type", "anticodon", "reads" ], [$nonhostLibraryStr], $sampleComparisons ], '_' )
+        "Groups" => string_combination( [ ["nonhost_tRNA"], [ "", "species", "type", "anticodon", "reads" ], [$nonhostLibraryStr. $DE_task_suffix], $sampleComparisons ], '_' )
       };
     }
   }
