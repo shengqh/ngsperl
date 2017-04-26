@@ -53,8 +53,17 @@ sub getSmallRNAConfig {
   }
 
   my $nonhost_genome_dir;
+  my @nonhost_genome_groups      = qw( bacteria_group1 bacteria_group2 fungus_group4 );
+  my @nonhost_genome_group_reads = qw( bacteria_group1_reads bacteria_group2_reads fungus_group4_reads );
+  my @nonhost_genome_group_names = ( "Human Microbiome Bacteria", "Environment Bacteria", "Fungus" );
+
   if ($search_nonhost_genome) {
     $nonhost_genome_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_genome" );
+    if ( getValue( $def, "search_nonhost_genome_custom_group", 0 ) ) {
+      push( @nonhost_genome_groups,      "custom_group" );
+      push( @nonhost_genome_group_reads, "custom_group_reads" );
+      push( @nonhost_genome_group_names, getValue( $def, "nonhost_genome_custom_group_name", "Custom" ) );
+    }
   }
 
   my $nonhost_blast_dir;
@@ -114,7 +123,7 @@ sub getSmallRNAConfig {
 
   my $libraryFile = undef;
   my $libraryKey  = undef;
-  if ( defined $def->{DE_library_key} && $def->{DE_library_key} ne "") {
+  if ( defined $def->{DE_library_key} && $def->{DE_library_key} ne "" ) {
     $libraryFile = [ "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category.Table.csv" ];
     $libraryKey = $def->{DE_library_key};
   }
@@ -196,8 +205,8 @@ sub getSmallRNAConfig {
     if ( !defined $def->{pairs_nonHostGroups_deseq2_vis_layout} ) {
       $def->{pairs_nonHostGroups_deseq2_vis_layout} = {
         "Col_Group" => [ (@$comparisons) x 3 ],
-        "Row_Group" => string_repeat( [ "Microbiome", "Environment", "Fungus" ], $numberOfComparison ),
-        "Groups" => string_combination( [ [ "bacteria_group1", "bacteria_group2", "fungus_group4" ], [$nonhostLibraryStr], $sampleComparisons ], '_' ),
+        "Row_Group" => string_repeat( \@nonhost_genome_group_names, $numberOfComparison ),
+        "Groups" => string_combination( [ \@nonhost_genome_groups, [$nonhostLibraryStr], $sampleComparisons ], '_' ),
       };
     }
 
@@ -679,106 +688,48 @@ sub getSmallRNAConfig {
 
   #Mapping unmapped reads to nonhost genome
   if ($search_nonhost_genome) {
-    addNonhostDatabase(
-      $config, $def, $individual_ref, $summary_ref, "bacteria_group1_pm", $nonhost_genome_dir,    #general option
-      $def->{bowtie1_bacteria_group1_index}, $identical_ref,                                      #bowtie option
-      $def->{smallrnacount_option} . ' --keepChrInName --keepSequence',                           #count option
-      $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{bacteria_group1_species_map}  #table option
-    );
+    for my $nonhostGroup (@nonhost_genome_groups) {
+      addNonhostDatabase(
+        $config, $def, $individual_ref, $summary_ref, "${nonhostGroup}_pm", $nonhost_genome_dir,    #general option
+        $def->{"bowtie1_${nonhostGroup}_index"}, $identical_ref,                                    #bowtie option
+        $def->{smallrnacount_option} . ' --keepChrInName --keepSequence',                               #count option
+        $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{"${nonhostGroup}_species_map"}    #table option
+      );
 
-    addNonhostVis(
-      $config, $def,
-      $summary_ref,
-      "nonhost_genome_bacteria_group1_vis",
-      $data_visualization_dir,
-      {
-        rtemplate          => "countTableVisFunctions.R,countTableVis.R",
-        output_file        => ".group1Mapping.Result",
-        output_file_ext    => ".Piechart.png",
-        parameterFile1_ref => [ "bowtie1_bacteria_group1_pm_table", ".category.count\$" ],
-        rCode              => 'maxCategory=4;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+      addNonhostVis(
+        $config, $def,
+        $summary_ref,
+        "nonhost_genome_${nonhostGroup}_vis",
+        $data_visualization_dir,
+        {
+          rtemplate          => "countTableVisFunctions.R,countTableVis.R",
+          output_file        => ".${nonhostGroup}Mapping.Result",
+          output_file_ext    => ".Piechart.png",
+          parameterFile1_ref => [ "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" ],
+          rCode              => 'maxCategory=4;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+        }
+      );
+
+      if ($do_comparison) {
+        addDEseq2( $config, $def, $summary_ref, "${nonhostGroup}", [ "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" ],
+          $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        addDEseq2( $config, $def, $summary_ref, "${nonhostGroup}_reads", [ "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" ],
+          $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       }
-    );
+      push @name_for_mapPercentage, ( "bowtie1_${nonhostGroup}_pm_count", ".count.mapped.xml\$" );
+      push @table_for_correlation,  ( "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" );
+      push @table_for_countSum,     ( "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" );
+      push @table_for_readSummary,  ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
+      push @mapped,                 ( "bowtie1_${nonhostGroup}_pm_count", ".xml" );
+      push @overlap,                ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
+    }
 
-    #Mapping unmapped reads to group2 database
-    addNonhostDatabase(
-      $config, $def, $individual_ref, $summary_ref, "bacteria_group2_pm", $nonhost_genome_dir,    #general option
-      $def->{bowtie1_bacteria_group2_index}, $identical_ref,                                      #bowtie option
-      $def->{smallrnacount_option} . ' --keepChrInName --keepSequence',                           #count option
-      $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{bacteria_group2_species_map}  #table option
-    );
-    addNonhostVis(
-      $config, $def,
-      $summary_ref,
-      "nonhost_genome_bacteria_group2_vis",
-      $data_visualization_dir,
-      {
-        rtemplate          => "countTableVisFunctions.R,countTableVis.R",
-        output_file        => ".group2Mapping.Result",
-        output_file_ext    => ".Piechart.png",
-        parameterFile1_ref => [ "bowtie1_bacteria_group2_pm_table", ".category.count\$" ],
-        rCode              => 'maxCategory=5;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
-      }
-    );
-
-    #Mapping unmapped reads to group4 database
-    addNonhostDatabase(
-      $config, $def, $individual_ref, $summary_ref, "fungus_group4_pm", $nonhost_genome_dir,    #general option
-      $def->{bowtie1_fungus_group4_index}, $identical_ref,                                      #bowtie option
-      $def->{smallrnacount_option} . ' --keepChrInName --keepSequence',                         #count option
-      $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{fungus_group4_species_map}  #table option
-    );
-    addNonhostVis(
-      $config, $def,
-      $summary_ref,
-      "nonhost_genome_fungus_group4_vis",
-      $data_visualization_dir,
-      {
-        rtemplate          => "countTableVisFunctions.R,countTableVis.R",
-        output_file        => ".group4Mapping.Result",
-        output_file_ext    => ".Piechart.png",
-        parameterFile1_ref => [ "bowtie1_fungus_group4_pm_table", ".category.count\$" ],
-        rCode              => 'maxCategory=8;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
-      }
-    );
-
-    push(
-      @name_for_mapPercentage,
-      "bowtie1_bacteria_group1_pm_count",
-      ".count.mapped.xml\$", "bowtie1_bacteria_group2_pm_count",
-      ".count.mapped.xml\$", "bowtie1_fungus_group4_pm_count",
-      ".count.mapped.xml\$"
-    );
-
-    push @table_for_correlation,
-      ( "bowtie1_bacteria_group1_pm_table", ".category.count\$", "bowtie1_bacteria_group2_pm_table", ".category.count\$", "bowtie1_fungus_group4_pm_table", ".category.count\$" );
-    push @table_for_countSum,
-      ( "bowtie1_bacteria_group1_pm_table", ".category.count\$", "bowtie1_bacteria_group2_pm_table", ".category.count\$", "bowtie1_fungus_group4_pm_table", ".category.count\$" );
-    push @table_for_readSummary, ( "bowtie1_bacteria_group1_pm_table", ".read.count\$", "bowtie1_bacteria_group2_pm_table", ".read.count\$", "bowtie1_fungus_group4_pm_table", ".read.count\$" );
-    push @name_for_readSummary, ( "Human Microbiome Bacteria", "Environment Bacteria", "Fungus" );
-
-    push @mapped,  ( "bowtie1_bacteria_group1_pm_count", ".xml",          "bowtie1_bacteria_group2_pm_count", ".xml",          "bowtie1_fungus_group4_pm_count", ".xml" );
-    push @overlap, ( "bowtie1_bacteria_group1_pm_table", ".read.count\$", "bowtie1_bacteria_group2_pm_table", ".read.count\$", "bowtie1_fungus_group4_pm_table", ".read.count\$" );
+    push @name_for_readSummary, @nonhost_genome_group_names;
 
     if ($do_comparison) {
-      addDEseq2( $config, $def, $summary_ref, "bacteria_group1", [ "bowtie1_bacteria_group1_pm_table", ".category.count\$" ],
-        $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "bacteria_group1_reads", [ "bowtie1_bacteria_group1_pm_table", ".read.count\$" ],
-        $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "bacteria_group2", [ "bowtie1_bacteria_group2_pm_table", ".category.count\$" ],
-        $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "bacteria_group2_reads", [ "bowtie1_bacteria_group2_pm_table", ".read.count\$" ],
-        $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "fungus_group4", [ "bowtie1_fungus_group4_pm_table", ".category.count\$" ], $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile,
-        $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "fungus_group4_reads", [ "bowtie1_fungus_group4_pm_table", ".read.count\$" ],
-        $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-
-      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome", [ "bacteria_group1", "bacteria_group2", "fungus_group4" ],
-        $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey );
-
-      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome_reads", [ "bacteria_group1_reads", "bacteria_group2_reads", "fungus_group4_reads" ],
-        $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey );
+      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome",       \@nonhost_genome_groups,      $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey );
+      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome_reads", \@nonhost_genome_group_reads, $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey )
+        ;
     }
   }
 
