@@ -249,6 +249,7 @@ sigTableAllVar<-c("baseMean","log2FoldChange","lfcSE","stat","pvalue","padj","Fo
 
 countfile_index = 1
 titles<-NULL
+validComparisons<-c()
 for(countfile_index in c(1:length(countfiles))){
   countfile = countfiles[countfile_index]
   comparisons = comparisons_data[comparisons_data$CountFile == countfile,]
@@ -420,6 +421,8 @@ for(countfile_index in c(1:length(countfiles))){
       next;
     }
     
+    validComparisons<-c(validComparisons, comparisonName)
+    
     if(ispaired){
       pairedSamples = unique(designData$Paired)
       
@@ -483,85 +486,63 @@ for(countfile_index in c(1:length(countfiles))){
     
     #varianceStabilizingTransformation
     
-    allDesignData<-designData
-    allComparisonData<-comparisonData
-    
-    excludedSample<-c()
-    zeronumbers<-apply(comparisonData, 2, function(x){sum(x==0)})
-    zeronumbers<-names(zeronumbers[order(zeronumbers)])
-    percent10<-max(1, round(length(zeronumbers) * 0.1))
-    
-    removed<-0
-    
-    excludedCountFile<-paste0(prefix, "_DESeq2-exclude-count.csv")
-    excludedDesignFile<-paste0(prefix, "_DESeq2-exclude-design.csv")
-    if(file.exists(excludedCountFile)){
-      file.remove(excludedCountFile)
-    }
-    if(file.exists(excludedDesignFile)){
-      file.remove(excludedDesignFile)
-    }
-    
     dds<-myEstimateSizeFactors(dds)
     
     fitType<-"parametric"
+    if(nrow(comparisonData) < 5){
+      fitType<-"mean"
+    }
     while(1){
       #varianceStabilizingTransformation
       vsdres<-try(vsd <- varianceStabilizingTransformation(dds, blind=TRUE,fitType=fitType))
-      if(class(vsdres) == "try-error" && grepl("every gene contains at least one zero", vsdres[1])){
-        removed<-removed+1
-        keptNumber<-length(zeronumbers) - percent10 * removed
-        keptSample<-zeronumbers[1:keptNumber]
-        excludedSample<-zeronumbers[(keptNumber+1):length(zeronumbers)]
-        
-        comparisonData<-comparisonData[, colnames(comparisonData) %in% keptSample]
-        designData<-designData[rownames(designData) %in% keptSample,]
-        dds=DESeqDataSetFromMatrix(countData = comparisonData,
-                                   colData = designData,
-                                   design = ~1)
-        
-        colnames(dds)<-colnames(comparisonData)
-      } else if (class(vsdres) == "try-error" && grepl("newsplit: out of vertex space", vsdres[1])) {
-        message=paste0("Warning: varianceStabilizingTransformation function can't run. fitType was set to local to try again")
-        warning(message)
-        fitType<-"mean"
-        writeLines(message,paste0(comparisonName,".error"))
-      } else if(all(is.na(assay(vsd)))){
+      if(class(vsdres) == "try-error"){
+        if(grepl("every gene contains at least one zero", vsdres[1])){
+          removed<-removed+1
+          keptNumber<-length(zeronumbers) - percent10 * removed
+          keptSample<-zeronumbers[1:keptNumber]
+          excludedSample<-zeronumbers[(keptNumber+1):length(zeronumbers)]
+          
+          comparisonData<-comparisonData[, colnames(comparisonData) %in% keptSample]
+          designData<-designData[rownames(designData) %in% keptSample,]
+          dds=DESeqDataSetFromMatrix(countData = comparisonData,
+                                     colData = designData,
+                                     design = ~1)
+          
+          colnames(dds)<-colnames(comparisonData)
+        } else if (grepl("newsplit: out of vertex space", vsdres[1]) | fitType != "mean") {
+          message=paste0("Warning: varianceStabilizingTransformation function can't run. fitType was set to mean to try again")
+          warning(message)
+          fitType<-"mean"
+          writeLines(message,paste0(comparisonName,".error"))
+        } else {
+          message=paste0(paste0("Error: varianceStabilizingTransformation function can't run. ", vsdres))
+          writeLines(message,paste0(comparisonName,".error"))
+          stop(message)
+        }
+      }else if(all(is.na(assay(vsd)))){
         fitType<-"mean"
       } else{
         conditionColors<-as.matrix(data.frame(Group=c("red", "blue")[designData$Condition]))
         break
       }
     }
-    if (nrow(comparisonData)<=1) {
-      message=paste0("Error: All genes in ",comparisonName," has at least one 0 value. Can't do DESeq2.")
-      warning(message)
-      writeLines(message,paste0(comparisonName,".error"))
-      write.csv("", paste0(prefix, "_DESeq2.csv"))
-      next;
+    
+    if(nrow(comparisonData) > 1){
+      assayvsd<-assay(vsd)
+      write.csv(assayvsd, file=paste0(prefix, "_DESeq2-vsd.csv"))
+      
+      vsdiqr<-apply(assayvsd, 1, IQR)
+      assayvsd<-assayvsd[order(vsdiqr, decreasing=T),]
+      
+      rldmatrix=as.matrix(assayvsd)
+      
+      #draw pca graph
+      drawPCA(paste0(prefix,"_geneAll"), rldmatrix, showLabelInPCA, designData, conditionColors)
+      
+      #draw heatmap
+      #drawHCA(paste0(prefix,"_gene500"), rldmatrix[1:min(500, nrow(rldmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
+      drawHCA(paste0(prefix,"_geneAll"), rldmatrix, ispaired, designData, conditionColors, gnames)
     }
-    
-    if(length(excludedSample) > 0){
-      excludedCountData<-allComparisonData[,colnames(allComparisonData) %in% excludedSample]
-      write.csv(file=excludedCountFile, excludedCountData)
-      excludedDesignData<-allDesignData[rownames(allDesignData) %in% excludedSample,]
-      write.csv(file=excludedDesignFile, excludedDesignData)
-    }
-    
-    assayvsd<-assay(vsd)
-    write.csv(assayvsd, file=paste0(prefix, "_DESeq2-vsd.csv"))
-    
-    vsdiqr<-apply(assayvsd, 1, IQR)
-    assayvsd<-assayvsd[order(vsdiqr, decreasing=T),]
-    
-    rldmatrix=as.matrix(assayvsd)
-    
-    #draw pca graph
-    drawPCA(paste0(prefix,"_geneAll"), rldmatrix, showLabelInPCA, designData, conditionColors)
-    
-    #draw heatmap
-    #drawHCA(paste0(prefix,"_gene500"), rldmatrix[1:min(500, nrow(rldmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
-    drawHCA(paste0(prefix,"_geneAll"), rldmatrix, ispaired, designData, conditionColors, gnames)
     
     #different expression analysis
     designFormula=as.formula(paste0("~",paste0(c(colnames(designData)[-c(1:2)],"Condition"),collapse="+")))
@@ -587,7 +568,7 @@ for(countfile_index in c(1:length(countfiles))){
       }
     }
     res<-results(dds,cooksCutoff=FALSE)
-        
+    
     cat("DESeq2 finished.\n")
     
     if (useRawPvalue==1) {
@@ -954,15 +935,15 @@ if (! is.null(resultAllOut)) {
   resultAllOut<-cbind(dataAllOut,resultAllOut[row.names(dataAllOut),])
   write.csv(resultAllOut,paste0(allprefix, "_DESeq2.csv"))
   
-  if(length(allComparisons) > 1 ){
+  if(length(validComparisons) > 1 ){
     #volcano plot for all comparisons
     temp<-resultAllOut[,-(1:ncol(dataAllOut))]
     diffResult<-NULL
     diffResultVar<-unique(sapply(strsplit(colnames(temp)," "),function(x) x[1]))
-    for (i in 1:(length(allComparisons))) {
+    for (i in 1:(length(validComparisons))) {
       temp1<-temp[,(i*length(diffResultVar)-(length(diffResultVar)-1)):(i*length(diffResultVar))]
       colnames(temp1)<-diffResultVar
-      temp1$Comparison<-allComparisons[i]
+      temp1$Comparison<-validComparisons[i]
       if (is.null(diffResult)) {
         diffResult<-temp1
       } else {
@@ -1008,5 +989,5 @@ if (! is.null(resultAllOut)) {
             strip.text.x = element_text(size = 30))
     print(p)
     dev.off()
-  }	
+  }  
 }
