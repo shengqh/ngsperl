@@ -8,6 +8,10 @@ groupFileList<-parSampleFile2
 comparisonFileList<-parSampleFile3
 fixColorRange<-TRUE
 
+totalCountFile<-parFile3
+totalCountKey=parFile2
+
+
 if(exists("useGreenRedColorInHCA") && useGreenRedColorInHCA){
   hmcols <- colorRampPalette(c("green", "black", "red"))(256)
 }else{
@@ -32,7 +36,7 @@ if(!exists("outputDirectory")){
   outputDirectory<-""
 }
 
-#source("/home/zhaos/source/r_cqs/vickers/codesToPipeline/countTableVisFunctions.R")
+#source("/home/zhaos/source/ngsperl/lib/CQS/countTableVisFunctions.R")
 
 ##Solving node stack overflow problem start###
 #when there are too many genes, drawing dendrogram may failed due to node stack overflow,

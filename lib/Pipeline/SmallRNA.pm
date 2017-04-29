@@ -106,6 +106,10 @@ sub getSmallRNAConfig {
   else {
     $def->{correlation_rcode} = $def->{correlation_rcode} . "showLabelInPCA<-FALSE;";
   }
+  
+  if (1) { #use total normlization to do correlation analysis
+  	$def->{correlation_rcode} = $def->{correlation_rcode} . "totalCountKey='Reads for Mapping';";
+  }
 
   #print Dumper($config);
   my $groups = $def->{groups};
@@ -907,6 +911,7 @@ sub getSmallRNAConfig {
     parameterSampleFile2      => $def->{tRNA_vis_group},
     parameterSampleFile2Order => $def->{groups_order},
     parameterSampleFile3      => $def->{pure_pairs},
+    parameterFile3_ref       => [ "fastqc_count_vis", ".Reads.csv\$" ],
     rCode                     => $def->{correlation_rcode},
     sh_direct                 => 1,
     pbs                       => {
