@@ -9,7 +9,6 @@ comparisonFileList<-parSampleFile3
 fixColorRange<-TRUE
 
 totalCountFile<-parFile3
-totalCountKey=parFile2
 
 
 if(exists("useGreenRedColorInHCA") && useGreenRedColorInHCA){
@@ -90,7 +89,7 @@ drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors){
     pcadata<-data.frame(pca$x)
     pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
     pcadata["sample"]<-row.names(pcadata)
-    if(!is.na(groups)){
+    if(!is.na(groups[1])){
       pcadata$group<-groups
     }
     
@@ -101,7 +100,7 @@ drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors){
       g <- ggplot(pcadata, aes(x=PC1, y=PC2)) +
         theme(legend.position="top")
     }
-    if(!is.na(groups)){
+    if(!is.na(groups[1])){
       g<-g+geom_point(aes(col=group), size=4) + 
         scale_colour_manual(name="",values = groupColors)
     }else{
@@ -120,6 +119,131 @@ drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors){
 
 ##Solving node stack overflow problem end###
 
+#correlation without 0
+corWithout<-function (x, y = NULL, use = "everything", method = c("pearson", "kendall", "spearman"),ignorValue=0) 
+{
+	na.method <- pmatch(use, c("all.obs", "complete.obs", "pairwise.complete.obs", 
+					"everything", "na.or.complete"))
+	if (is.na(na.method)) 
+		stop("invalid 'use' argument")
+	method <- match.arg(method)
+	if (is.data.frame(y)) 
+		y <- as.matrix(y)
+	if (is.data.frame(x)) 
+		x <- as.matrix(x)
+	if (!is.matrix(x) && is.null(y)) 
+		stop("supply both 'x' and 'y' or a matrix-like 'x'")
+	if (!(is.numeric(x) || is.logical(x))) 
+		stop("'x' must be numeric")
+	stopifnot(is.atomic(x))
+	if (!is.null(y)) {
+		if (!(is.numeric(y) || is.logical(y))) 
+			stop("'y' must be numeric")
+		stopifnot(is.atomic(y))
+	}
+	Rank <- function(u) {
+		if (length(u) == 0L) 
+			u
+		else if (is.matrix(u)) {
+			if (nrow(u) > 1L) 
+				apply(u, 2L, rank, na.last = "keep")
+			else row(u)
+		}
+		else rank(u, na.last = "keep")
+	}
+	
+	#codes for ignor value
+	if (!is.null(ignorValue)) {
+		x[x==ignorValue]<-NA
+		if (!is.null(y)) {
+			y[y==ignorValue]<-NA
+		}
+	}
+	
+	if (method == "pearson") 
+		.Call(stats:::C_cor, x, y, na.method, FALSE)
+	else if (na.method %in% c(2L, 5L)) {
+		if (is.null(y)) {
+			.Call(stats:::C_cor, Rank(na.omit(x)), NULL, na.method, method == 
+							"kendall")
+		}
+		else {
+			nas <- attr(na.omit(cbind(x, y)), "na.action")
+			dropNA <- function(x, nas) {
+				if (length(nas)) {
+					if (is.matrix(x)) 
+						x[-nas, , drop = FALSE]
+					else x[-nas]
+				}
+				else x
+			}
+			.Call(stats:::C_cor, Rank(dropNA(x, nas)), Rank(dropNA(y, 
+									nas)), na.method, method == "kendall")
+		}
+	}
+	else if (na.method != 3L) {
+		x <- Rank(x)
+		if (!is.null(y)) 
+			y <- Rank(y)
+		.Call(stats:::C_cor, x, y, na.method, method == "kendall")
+	}
+	else {
+		if (is.null(y)) {
+			ncy <- ncx <- ncol(x)
+			if (ncx == 0) 
+				stop("'x' is empty")
+			r <- matrix(0, nrow = ncx, ncol = ncy)
+			for (i in seq_len(ncx)) {
+				for (j in seq_len(i)) {
+					x2 <- x[, i]
+					y2 <- x[, j]
+					ok <- complete.cases(x2, y2)
+					x2 <- rank(x2[ok])
+					y2 <- rank(y2[ok])
+					r[i, j] <- if (any(ok)) 
+								.Call(stats:::C_cor, x2, y2, 1L, method == "kendall")
+							else NA
+				}
+			}
+			r <- r + t(r) - diag(diag(r))
+			rownames(r) <- colnames(x)
+			colnames(r) <- colnames(x)
+			r
+		}
+		else {
+			if (length(x) == 0L || length(y) == 0L) 
+				stop("both 'x' and 'y' must be non-empty")
+			matrix_result <- is.matrix(x) || is.matrix(y)
+			if (!is.matrix(x)) 
+				x <- matrix(x, ncol = 1L)
+			if (!is.matrix(y)) 
+				y <- matrix(y, ncol = 1L)
+			ncx <- ncol(x)
+			ncy <- ncol(y)
+			r <- matrix(0, nrow = ncx, ncol = ncy)
+			for (i in seq_len(ncx)) {
+				for (j in seq_len(ncy)) {
+					x2 <- x[, i]
+					y2 <- y[, j]
+					ok <- complete.cases(x2, y2)
+					x2 <- rank(x2[ok])
+					y2 <- rank(y2[ok])
+					r[i, j] <- if (any(ok)) 
+								.Call(stats:::C_cor, x2, y2, 1L, method == "kendall")
+							else NA
+				}
+			}
+			rownames(r) <- colnames(x)
+			colnames(r) <- colnames(y)
+			if (matrix_result) 
+				r
+			else drop(r)
+		}
+	}
+}
+
+
+#start work:
 countTableFileAll<-read.delim(countTableFileList,header=F,as.is=T)
 i<-1
 for (i in 1:nrow(countTableFileAll)) {
@@ -173,18 +297,49 @@ for (i in 1:nrow(countTableFileAll)) {
     write.table(sampleToGroup, paste0(outputFilePrefix,suffix,".correlation.groups"),col.names=F, row.names=F, quote=F, sep="\t")
   }
   
-  dds=DESeqDataSetFromMatrix(countData = countNum, colData = as.data.frame(rep(1,ncol(countNum))),design = ~1)
-  dds<-try(myEstimateSizeFactors(dds))
-  vsdres<-try(temp<-DESeq2::varianceStabilizingTransformation(dds, blind = TRUE))
-  if (class(vsdres) == "try-error") {
-    message=paste0("Warning: varianceStabilizingTransformation function failed.\n",as.character(vsdres))
-    warning(message)
-    writeLines(message,paste0(outputFilePrefix,suffix,".vsd.warning"))
-    next;
+  #filter reads/genes by parameter
+  countNum<-filterCountTable(countNum,groupFileList=groupFileList,minMedian=minMedian,minDedianInGroup=minDedianInGroup)
+  
+  #normlize by total reads or VSD
+  if (totalCountFile!="") { #normlize with total count *10^6
+	  totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
+	  totalCount<-unlist(totalCount[totalCountKey,])
+	  countNumVsd<-10^6*t(t(countNum)/totalCount[colnames(countNum)])
+	  write.table(countNumVsd, paste0(outputFilePrefix,suffix,".RPM.txt"),col.names=NA, quote=F, sep="\t")
+	  
+	  ylab<-"Mapped Reads per Million"
+  } else {
+	  dds=DESeqDataSetFromMatrix(countData = countNum, colData = as.data.frame(rep(1,ncol(countNum))),design = ~1)
+	  dds<-try(myEstimateSizeFactors(dds))
+	  vsdres<-try(temp<-DESeq2::varianceStabilizingTransformation(dds, blind = TRUE))
+	  if (class(vsdres) == "try-error") {
+		  message=paste0("Warning: varianceStabilizingTransformation function failed.\n",as.character(vsdres))
+		  warning(message)
+		  writeLines(message,paste0(outputFilePrefix,suffix,".vsd.warning"))
+		  next;
+	  }
+	  countNumVsd<-assay(temp)
+	  colnames(countNumVsd)<-colnames(countNum)
+	  write.table(countNumVsd, paste0(outputFilePrefix,suffix,".vsd.txt"),col.names=NA, quote=F, sep="\t")
+	  
+	  ylab<-"VSD"
   }
-  countNumVsd<-assay(temp)
-  colnames(countNumVsd)<-colnames(countNum)
-  write.table(countNumVsd, paste0(outputFilePrefix,suffix,".vsd.txt"),col.names=NA, quote=F, sep="\t")
+  
+#  #To be removed
+#  dds=DESeqDataSetFromMatrix(countData = countNum, colData = as.data.frame(rep(1,ncol(countNum))),design = ~1)
+#  dds<-try(myEstimateSizeFactors(dds))
+#  vsdres<-try(temp<-DESeq2::varianceStabilizingTransformation(dds, blind = TRUE))
+#  if (class(vsdres) == "try-error") {
+#    message=paste0("Warning: varianceStabilizingTransformation function failed.\n",as.character(vsdres))
+#    warning(message)
+#    writeLines(message,paste0(outputFilePrefix,suffix,".vsd.warning"))
+#    next;
+#  }
+#  countNumVsd<-assay(temp)
+#  colnames(countNumVsd)<-colnames(countNum)
+#  write.table(countNumVsd, paste0(outputFilePrefix,suffix,".vsd.txt"),col.names=NA, quote=F, sep="\t")
+#  #end to be removed
+  
   
   #heatmap
   margin=c(max(9,max(nchar(colnames(countNumVsd)))/2), 5)
@@ -217,13 +372,13 @@ for (i in 1:nrow(countTableFileAll)) {
   png(paste0(outputFilePrefix,suffix,".heatmap.png"),width=width,height=width,res=300)
   
   if(nrow(countHT) < 20){
-    if(!is.na(conditionColors)){
+    if(!is.na(conditionColors[1])){
       heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=hmcols, ColSideColors=conditionColors)
     }else{
       heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=hmcols)
     }
   }else{
-    if(!is.na(conditionColors)){
+    if(!is.na(conditionColors[1])){
       heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,showRowDendro=F,labRow="",col=hmcols, ColSideColors=conditionColors)
     }else{
       heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,showRowDendro=F,labRow="",col=hmcols)
@@ -233,7 +388,7 @@ for (i in 1:nrow(countTableFileAll)) {
   
   print("Doing correlation analysis ...")
   #correlation distribution
-  countNumCor<-cor(countNumVsd,use="pa",method="sp")
+  countNumCor<-corWithout(countNumVsd,use="pa",method="sp")
   
   colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
   if (min(countNumCor,na.rm=T)<0) {
@@ -301,7 +456,7 @@ for (i in 1:nrow(countTableFileAll)) {
     dev.off()
     
     #correlation distribution
-    countNumCor<-cor(countNumVsdGroup,use="pa",method="sp")
+    countNumCor<-corWithout(countNumVsdGroup,use="pa",method="sp")
     margin=c(min(10,max(nchar(colnames(countNumCor)))/1.5),min(10,max(nchar(row.names(countNumCor)))/1.5))
     
     colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
@@ -337,7 +492,7 @@ for (i in 1:nrow(countTableFileAll)) {
     png(paste0(outputFilePrefix,suffix,".Group.Correlation.png"),width=2000,height=2000,res=300)
     heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
     dev.off()
-    if (ncol(countNumCor)<=3 | any(is.na(cor(countNumCor,use="pa")))) {
+    if (ncol(countNumCor)<=3 | any(is.na(corWithout(countNumCor,use="pa")))) {
       saveInError(paste0("Less than 3 samples. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(outputFilePrefix,suffix,Sys.Date(),".warning"))
     } else {
       png(paste0(outputFilePrefix,suffix,".Group.Correlation.Cluster.png"),width=2000,height=2000,res=300)

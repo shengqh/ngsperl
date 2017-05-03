@@ -295,25 +295,26 @@ orderDataByNames<-function(x,orderKey,orderNames) {
 }
 
 #Merge Sample By Group
-mergeTableBySampleGroup<-function(x,sampleToGroup,toPercent=TRUE) {
-  if (toPercent) {
-    xRatio<-t(t(x)/colSums(x,na.rm=T))
-  } else {
-    xRatio<-x
-  }
-  groupLength<-length(unique(sampleToGroup[,2]))
-  xRatioGroupMean<-matrix(NA,ncol=groupLength,nrow=nrow(x))
-  
-  #keep the order of group by the levels of sampleToGroup$V2
-  colnames(xRatioGroupMean)<-as.character(sort(unique(sampleToGroup[,2])))
-  
-  row.names(xRatioGroupMean)<-row.names(x)
-  for (i in 1:groupLength) {
-    currentSample<-sampleToGroup[which(sampleToGroup[,2]==colnames(xRatioGroupMean)[i]),1]
-    xRatioGroupMean[,i]<-rowMeans(xRatio[,currentSample,drop=FALSE],na.rm=T)
-  }
-  return(xRatioGroupMean)
-}
+#comment it as the same function (improved) is in the end
+#mergeTableBySampleGroup<-function(x,sampleToGroup,toPercent=TRUE) {
+#  if (toPercent) {
+#    xRatio<-t(t(x)/colSums(x,na.rm=T))
+#  } else {
+#    xRatio<-x
+#  }
+#  groupLength<-length(unique(sampleToGroup[,2]))
+#  xRatioGroupMean<-matrix(NA,ncol=groupLength,nrow=nrow(x))
+#  
+#  #keep the order of group by the levels of sampleToGroup$V2
+#  colnames(xRatioGroupMean)<-as.character(sort(unique(sampleToGroup[,2])))
+#  
+#  row.names(xRatioGroupMean)<-row.names(x)
+#  for (i in 1:groupLength) {
+#    currentSample<-sampleToGroup[which(sampleToGroup[,2]==colnames(xRatioGroupMean)[i]),1]
+#    xRatioGroupMean[,i]<-rowMeans(xRatio[,currentSample,drop=FALSE],na.rm=T)
+#  }
+#  return(xRatioGroupMean)
+#}
 
 #extract part of color from a color range
 col_part<-function(data_all,data_part,col) {
@@ -648,6 +649,52 @@ countTableToSpecies<-function(dat,databaseLogFile="",outFileName="",shortName=T)
 	}
 	return(mappingResult2Species)
 }
+
+##########################
+#functions added 20170429 for count table correlation
+##########################
+rowMedians<-function(x,...) {
+	result<-apply(x,1,median,...)
+	return(result)
+}
+mergeTableBySampleGroup<-function(x,sampleToGroup,toPercent=TRUE,rowFun=rowMeans) {
+	if (toPercent) {
+		xRatio<-t(t(x)/colSums(x,na.rm=T))
+	} else {
+		xRatio<-x
+	}
+	groupLength<-length(unique(sampleToGroup[,2]))
+	xRatioGroupMean<-matrix(NA,ncol=groupLength,nrow=nrow(x))
+	
+	#keep the order of group by the levels of sampleToGroup$V2
+	colnames(xRatioGroupMean)<-as.character(sort(unique(sampleToGroup[,2])))
+	
+	row.names(xRatioGroupMean)<-row.names(x)
+	for (i in 1:groupLength) {
+		currentSample<-sampleToGroup[which(sampleToGroup[,2]==colnames(xRatioGroupMean)[i]),1]
+#		xRatioGroupMean[,i]<-rowMeans(xRatio[,currentSample,drop=FALSE],na.rm=T)
+		xRatioGroupMean[,i]<-rowFun(xRatio[,currentSample,drop=FALSE],na.rm=T)
+	}
+	return(xRatioGroupMean)
+}
+filterCountTable<-function(countNum,groupFileList="",minMedian=1,minDedianInGroup=1) {
+	minMedianInd<-apply(countNum,1,median)
+	if (any(minMedianInd<minMedian)) {
+		countNum<-countNum[-which(minMedianInd<minMedian),]
+		print(paste0(length(which(minMedianInd<minMedian))," reads/genes were removed due to median less than ",minMedian))
+	}
+	if (groupFileList!="") {
+		sampleToGroup<-getSampleInGroup(groupFileList, colnames(countNum), comparisonFileList, countTableTitle, useLeastGroups)
+		countNumGroup<-mergeTableBySampleGroup(countNum,sampleToGroup,toPercent=FALSE,rowFun=rowMedians)
+		minGroupMedianInd<-apply(countNumGroup,1,min)
+		if (any(minGroupMedianInd<minDedianInGroup)) {
+			countNum<-countNum[-which(minGroupMedianInd<minDedianInGroup),]
+			print(paste0(length(which(minGroupMedianInd<minDedianInGroup))," reads/genes were removed due to minimal group median less than ",minDedianInGroup))
+		}
+	}
+	return(countNum)
+}
+
 
 ###############################################################################
 # End funtions in count table barplot and pie chart

@@ -110,6 +110,9 @@ sub getSmallRNAConfig {
   if (1) { #use total normlization to do correlation analysis
   	$def->{correlation_rcode} = $def->{correlation_rcode} . "totalCountKey='Reads for Mapping';";
   }
+  if (1) { #set filter parameters
+    $def->{correlation_rcode} = $def->{correlation_rcode} . "minMedian=1;minDedianInGroup=1;";
+  }
 
   #print Dumper($config);
   my $groups = $def->{groups};
