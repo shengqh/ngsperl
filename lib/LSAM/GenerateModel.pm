@@ -30,8 +30,8 @@ sub perform {
 
   my $methods = get_raw_files( $config, $section );
   my $timeRanges = get_option( $config, $section, "time_ranges" );
-  my $dsaFiles   = get_option( $config, $section, "dsa_files" );
-  my $datadef = get_param_file( $config->{$section}{"data_def"}, "optional data definition file" );
+  my $dsaFiles   = $config->{$section}{dsa_files};
+  my $datadef    = get_param_file( $config->{$section}{"data_def"}, "optional data definition file" );
 
   my $pbs_file = $self->get_file( $pbs_dir, $task_name, ".bat" );
   my $pbs_name = basename($pbs_file);
@@ -50,12 +50,20 @@ sub perform {
     my $template = $timeRanges->{$timeName}->[2];
     for my $methodName ( keys %$methods ) {
       my $methodFile = $methods->{$methodName}[0];
-      for my $dsaName ( keys %$dsaFiles ) {
-        my $dsaFile   = $dsaFiles->{$dsaName}[0];
-        my $finalFile = $timeName . "_" . $methodName . "_" . $dsaName . ".inp";
+      if ( defined $dsaFiles ) {
+        for my $dsaName ( keys %$dsaFiles ) {
+          my $dsaFile   = $dsaFiles->{$dsaName}[0];
+          my $finalFile = $timeName . "_" . $methodName . "_" . $dsaName . ".inp";
 
-        print $pbs "
+          print $pbs "
 python $py_script -i $template -o $finalFile --name ${timeName}_${methodName} --datadef $datadef --method $methodFile --dsa $dsaFile --start \"$start\" --end \"$end\" 
+";
+        }
+      }
+      else {
+        my $finalFile = $timeName . "_" . $methodName . ".inp";
+        print $pbs "
+python $py_script -i $template -o $finalFile --name ${timeName}_${methodName} --datadef $datadef --method $methodFile --start \"$start\" --end \"$end\"
 ";
       }
     }
@@ -72,13 +80,21 @@ sub result {
 
   my $methods = get_raw_files( $config, $section );
   my $timeRanges = get_option( $config, $section, "time_ranges" );
-  my $dsaFiles   = get_option( $config, $section, "dsa_files" );
+  my $dsaFiles = $config->{$section}{dsa_files};
 
   my $result = {};
   for my $timeName ( keys %$timeRanges ) {
     for my $methodName ( keys %$methods ) {
-      for my $dsaName ( keys %$dsaFiles ) {
-        my $key          = $timeName . "_" . $methodName . "_" . $dsaName;
+      if ( defined $dsaFiles ) {
+        for my $dsaName ( keys %$dsaFiles ) {
+          my $key          = $timeName . "_" . $methodName . "_" . $dsaName;
+          my $finalFile    = $key . ".inp";
+          my @result_files = ( $result_dir . "\\" . $finalFile );
+          $result->{$key} = filter_array( \@result_files, $pattern );
+        }
+      }
+      else {
+        my $key          = $timeName . "_" . $methodName;
         my $finalFile    = $key . ".inp";
         my @result_files = ( $result_dir . "\\" . $finalFile );
         $result->{$key} = filter_array( \@result_files, $pattern );

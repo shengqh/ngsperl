@@ -33,11 +33,13 @@ with open(args.input, 'r') as sr:
       elif line.startswith("METHODS"):
         sw.write("METHODS " + args.method + "\n")
       elif line.startswith("TARGETDSA"):
-        sw.write("TARGETDSA " + args.dsa + "\n")
-        outputDSA = True
+        if args.dsa != '-':
+          sw.write("TARGETDSA " + args.dsa + "\n")
+          outputDSA = True
       elif line.startswith("OUTPATH"):
         if (not outputDSA):
-          sw.write("TARGETDSA " + args.dsa + "\n")
+          if args.dsa != '-':
+            sw.write("TARGETDSA " + args.dsa + "\n")
         sw.write(line)
       else:
         sw.write(line)
