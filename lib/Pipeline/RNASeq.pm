@@ -187,7 +187,7 @@ sub getRNASeqConfig {
         rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
         output_file     => "parameterSampleFile1",
         output_file_ext => ".Correlation.png",
-        parameterSampleFile1_ref => [ "${aligner}_genetable", ".count\$" ],
+        parameterSampleFile1_ref => [ "genetable", ".count\$" ],
         parameterSampleFile2_ref => $groups_ref,
         sh_direct                => 1,
         pbs                      => {
