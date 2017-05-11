@@ -59,8 +59,8 @@ sub perform {
 
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
     my $finalSam = $sample_name . ".sam";
-    my $finalStat = $sample_name . ".stat";
     my $final = $sample_name . ".bam";
+    my $finalStat = $final . ".stat";
 
     my $log_desc = $cluster->get_log_description($log);
 
