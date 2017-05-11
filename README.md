@@ -8,21 +8,29 @@ NGSPERL : A semi-automated framework for large scale next generation sequencing 
 * [Modules](#module)
 
 <a name="Introduction"/>
-# Introduction #
+
+# Introduction 
+
 High-throughput sequencing technologies have been widely used in the research field, especially in cancer biology. With the huge amounts of sequencing data being generated, data analysis has become the bottle-neck of the research procedure. A lot of tools have been developed for different data types and different data analysis purposes while new tools are still being published every month. A software framework which not only supports large scale data analysis using the existing pipeline on cluster but can also easily replace/extend old modules in the pipeline will help solve the problem. We have designed and implemented NGSPERL, a semi-automated module-based framework, for high-throughput sequencing data analysis. Three major analysis pipelines with multiple tasks have been developed for RNA sequencing, exome sequencing, and small RNA sequencing data. The pipelines cover the tasks from raw data pre-processing, quality control, mapping, and comparison to report. Each task in the pipelines was developed as module. The module uses the output from the previous task in the pipeline as the input parameter to generate the corresponding portable batch system (PBS) scripts with other user-defined parameters. The module with such a trace-back design can be easily plugged into or unplugged from existing pipelines. The PBS scripts generated at each task can be submitted to cluster or run directly based on user choice. Multiple tasks can also be combined together as a single task to simplify the data analysis. Such a flexible framework will significantly accelerate the speed of large scale sequencing data analysis.
 
 <a name="Citation"/>
-#Citation
+
+# Citation
+
 Sheng Q, Zhao S, Guo M, Shyr Y: NGSPERL: a semi-automated framework for large scale next generation sequencing data analysis. International Journal of Computational Biology and Drug Design 2015, 8(3):203-211.
 
 <a name="download"/>
-# Download and install #
+
+# Download and install 
+
 You can download NGSPERL package from [github](https://github.com/shengqh/ngsperl/). Assume you download the NGSPERL package to "/home/user/ngsperl", add "/home/user/ngsperl/lib" into your your perl library path.
 
 NGSPERL just provide the interface to generate PBS scripts but not running the actual scripts. So, the tools used in the pipeline should be installed individually before the scripts being executed, for example, bwa for genome alignment.
 
 <a name="framework"/>
+
 # Framework
+
 Our object oriented module-based framework includes three parts: modules, configurations, and a module parser. Each task in the pipeline will be implemented as a module. A configuration will be used for each specific research project which includes multiple tasks with user-defined parameters. A module parser will be used to parse the configuration to generate PBS scripts. Corresponding Linux shell scripts will also be generated for submitting the PBS scripts to the Linux cluster for lengthy tasks or running the PBS scripts directly for shorter tasks based on user choice.  
 
 In order to allow the module integration, each module must implement three functions: result, perform, and get_pbs_files. 
@@ -35,6 +43,7 @@ The function get_pbs_files will return the file names of the corresponding PBS s
 Once the required tools are implemented as modules, for each real project, a Perl configuration structure will be defined to join those tools together. Then a module parser will parse this configuration and generate individual PBS scripts for each task. A shell script will also be generated to help the user submit multiple PBS scripts to the cluster or execute those PBS scripts sequentially. 
   
 <a name="example"/>
+
 # Quick start
 
 The following code indicates a configuration of the simplest differentially expressed gene comparison. A tophat2 task is followed by a cuffdiff task. After executing the configuration script, the PBS scripts for both tophat2 and cuffdiff tasks will be generated under the user defined directory. Then the user can submit the generated tophat2 PBS scripts to the cluster first and submit cuffdiff PBS scripts after the tophat2 tasks are finished and the tophat2 results are validated.
@@ -106,6 +115,7 @@ The following code indicates a configuration of the simplest differentially expr
 	performConfig($config);
 
 <a name="module"/>
+
 # Implemented Modules
 
 |Category|Module|Software|Description|
