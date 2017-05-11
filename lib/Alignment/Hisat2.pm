@@ -72,14 +72,15 @@ sub perform {
 hisat2 -p $thread --dta -x $genome_dir $samples -S $finalSam 2> $finalStat
 
 if [ -s $finalSam ]; then
+  echo Samtools::Sort_start=`date`
   samtools sort -@ 8 -o ${final}.tmp $finalSam
   mv ${final}.tmp $final
   rm $finalSam
 fi
 
 if [ -s $final ]; then
+  echo Samtools::Index_start=`date`
   samtools index $final
-  samtools flagstat $final > ${final}.stat
 fi
 
 ";
