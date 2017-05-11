@@ -23,7 +23,13 @@ Sheng Q, Zhao S, Guo M, Shyr Y: NGSPERL: a semi-automated framework for large sc
 
 # Download and install 
 
-You can download NGSPERL package from [github](https://github.com/shengqh/ngsperl/). Assume you download the NGSPERL package to "/home/user/ngsperl", add "/home/user/ngsperl/lib" into your your perl library path.
+You can download NGSPERL package from [github](https://github.com/shengqh/ngsperl/).
+
+`git clone https://github.com/shengqh/ngsperl/`
+
+Assume you download the NGSPERL package to "/home/user/ngsperl", add "/home/user/ngsperl/lib" into your your perl library path.
+
+`export PERL5LIB=/home/user/ngsperl/lib:$PERL5LIB`
 
 NGSPERL just provide the interface to generate PBS scripts but not running the actual scripts. So, the tools used in the pipeline should be installed individually before the scripts being executed, for example, bwa for genome alignment.
 
@@ -63,21 +69,21 @@ The following code indicates a configuration of the simplest differentially expr
 	my $config               = {
   		general => { task_name => $task },
   		files   => {
-		    "S1" => ["rawdata/s1_sequence.txt"],
-		    "S2" => ["rawdata/s2_sequence.txt"],
-	    	    "S3" => ["rawdata/s3_sequence.txt"],
-	    	"S4" => ["rawdata/s4_sequence.txt"],
-	    	"S5" => ["rawdata/s5_sequence.txt"],
-	    	"S6" => ["rawdata/s6_sequence.txt"],
+		  "S1" => ["rawdata/s1_sequence.txt"],
+		  "S2" => ["rawdata/s2_sequence.txt"],
+	    	  "S3" => ["rawdata/s3_sequence.txt"],
+	    	  "S4" => ["rawdata/s4_sequence.txt"],
+	    	  "S5" => ["rawdata/s5_sequence.txt"],
+	    	  "S6" => ["rawdata/s6_sequence.txt"],
   		},
   		groups => {
-	    	"G1" => [ "S1", "S2", "S3" ],
-		    "G2" => [ "S4", "S5", "S6" ],
+	    	  "G1" => [ "S1", "S2", "S3" ],
+		  "G2" => [ "S4", "S5", "S6" ],
   		},
 	  	pairs   => { "G2_vs_G1" => [ "G1", "G2" ] },
   		tophat2 => {
 		    class                => "Alignment::Tophat2",
-    		perform              => 1,
+    		    perform              => 1,
 		    target_dir           => "${target_dir}/tophat2",
 		    option               => "--segment-length 25 -r 0 -p 6",
 		    source_ref           => "files",
@@ -91,7 +97,7 @@ The following code indicates a configuration of the simplest differentially expr
     	  		"nodes"    => "1:ppn=6",
     	  		"walltime" => "72",
     	  		"mem"      => "30gb"
-    		},
+    		    },
   		},
   		cuffdiff => {
     		class          => "Cufflinks::Cuffdiff",
@@ -106,11 +112,11 @@ The following code indicates a configuration of the simplest differentially expr
     		sh_direct      => 1,
     		pbs            => {
     	  		"email"    => $email,
-				"nodes"    => "1:ppn=8",
+			"nodes"    => "1:ppn=8",
     	  		"walltime" => "720",
     	  		"mem"      => "40gb"
     		},
-  		},
+  	    },
 	};
 	performConfig($config);
 
