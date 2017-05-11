@@ -192,7 +192,7 @@ fi
       : "--filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" --filterName \"snp_filter\" ";
 
   print $pbs "
-java $java_option -Xmx${memory} -jar $gatk_jar \\
+java $java_option -jar $gatk_jar \\
   -T CombineVariants \\
   -R $faFile \\
 ";
@@ -210,8 +210,8 @@ java $java_option -Xmx${memory} -jar $gatk_jar \\
     print $pbs "
 if [[ -s $mergedFile && ! -s $snpPass ]]; then
   echo filter_snp=`date`
-  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $mergedFile -selectType SNP -o $raw_snp_file 
-  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $raw_snp_file $snp_filter -o $snpPass 
+  java $java_option -jar $gatk_jar -T SelectVariants -R $faFile -V $mergedFile -selectType SNP -o $raw_snp_file 
+  java $java_option -jar $gatk_jar -T VariantFiltration -R $faFile -V $raw_snp_file $snp_filter -o $snpPass 
 fi
 ";
 
@@ -221,13 +221,13 @@ fi
     print $pbs "
 if [[ -s $mergedFile && ! -s $indelPass ]]; then
   echo filter_indel=`date`
-  java $java_option -Xmx${memory} -jar $gatk_jar -T SelectVariants -R $faFile -V $mergedFile -selectType INDEL -o $raw_indel_file 
-  java $java_option -Xmx${memory} -jar $gatk_jar -T VariantFiltration -R $faFile -V $raw_indel_file $indel_filter -o $indelPass 
+  java $java_option -jar $gatk_jar -T SelectVariants -R $faFile -V $mergedFile -selectType INDEL -o $raw_indel_file 
+  java $java_option -jar $gatk_jar -T VariantFiltration -R $faFile -V $raw_indel_file $indel_filter -o $indelPass 
 fi
 
 if [[ -s $snpPass && -s $indelPass && ! -s $finalFile ]]; then
   echo combine_snp=`date`
-  java $java_option -Xmx${memory} -jar $gatk_jar -T CombineVariants -R $faFile --variant:snp $snpPass --variant:indel $indelPass -o $filtered_file -genotypeMergeOptions PRIORITIZE -priority snp,indel
+  java $java_option -jar $gatk_jar -T CombineVariants -R $faFile --variant:snp $snpPass --variant:indel $indelPass -o $filtered_file -genotypeMergeOptions PRIORITIZE -priority snp,indel
   cat $filtered_file | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $finalFile
   rm $raw_snp_file $raw_indel_file $snpPass $indelPass $filtered_file ${raw_snp_file}.idx ${raw_indel_file}.idx ${snpPass}.idx ${indelPass}.idx ${filtered_file}.idx
 fi
