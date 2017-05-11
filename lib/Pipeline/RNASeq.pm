@@ -27,9 +27,12 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_rnaseqc",            0 );
   initDefaultValue( $def, "perform_qc3bam",             0 );
   initDefaultValue( $def, "perform_bamplot",            0 );
+  initDefaultValue( $def, "aligner",                    "hisat2" );
   initDefaultValue( $def, "use_pearson_in_hca",         1 );
   initDefaultValue( $def, "top25cv_in_hca",             0 );
   initDefaultValue( $def, "use_green_red_color_in_hca", 1 );
+  initDefaultValue( $def, "output_bam_to_same_folder",  1 );
+  initDefaultValue( $def, "max_thread",                 8 );
   return $def;
 }
 
@@ -42,11 +45,18 @@ sub getRNASeqConfig {
   my $cluster = $def->{cluster};
   my $task    = $def->{task_name};
 
-  my $email          = $def->{email};
-  my $cqstools       = $def->{cqstools} or die "Define cqstools at definition first";
-  my $star_index     = $def->{star_index} or die "Define star_index at definition first";
+  my $email = $def->{email};
+  my $cqstools = $def->{cqstools} or die "Define cqstools at definition first";
+  my $aligner_index;
+  my $aligner = $def->{aligner};
+  if ( $aligner eq "star" ) {
+    $aligner_index = $def->{star_index} or die "Define star_index at definition first";
+  }
+  else {
+    $aligner_index = $def->{hisat2_index} or die "Define hisat2_index at definition first";
+  }
   my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
-  my $name_map_file  = $def->{name_map_file};
+  my $name_map_file = $def->{name_map_file};
 
   if ( $def->{perform_rnaseqc} ) {
     defined $def->{rnaseqc_jar} or die "Define rnaseqc_jar first!";
@@ -73,95 +83,129 @@ sub getRNASeqConfig {
   my $target_dir = $def->{target_dir};
 
   my $groups_ref = defined $def->{groups} ? "groups" : undef;
-  my $configAlignment = {
-    star => {
-      class                     => "Alignment::STAR",
-      perform                   => 1,
-      target_dir                => $target_dir . "/star",
-      option                    => "--twopassMode Basic",
-      source_ref                => $source_ref,
-      genome_dir                => $star_index,
-      output_sort_by_coordinate => 1,
-      sh_direct                 => 0,
-      pbs                       => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=8",
-        "walltime" => "72",
-        "mem"      => "40gb"
+
+  my $configAlignment;
+  if ( $aligner eq "star" ) {
+    $configAlignment = {
+      "star" => {
+        class                     => "Alignment::STAR",
+        perform                   => 1,
+        target_dir                => $target_dir . "/star",
+        option                    => "--twopassMode Basic",
+        source_ref                => $source_ref,
+        genome_dir                => $aligner_index,
+        output_sort_by_coordinate => 1,
+        output_to_same_folder     => $def->{output_bam_to_same_folder},
+        sh_direct                 => 0,
+        pbs                       => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=" . $def->{max_thread},
+          "walltime" => "72",
+          "mem"      => "40gb"
+        },
       },
-    },
-    star_summary => {
-      class      => "Alignment::STARSummary",
-      perform    => 1,
-      target_dir => $def->{target_dir} . "/star",
-      option     => "",
-      source_ref => [ "star", "_Log.final.out" ],
-      sh_direct  => 1,
-      pbs        => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "40gb"
+      "star_summary" => {
+        class      => "Alignment::STARSummary",
+        perform    => 1,
+        target_dir => $def->{target_dir} . "/star",
+        option     => "",
+        source_ref => [ "star", "_Log.final.out" ],
+        sh_direct  => 1,
+        pbs        => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "72",
+          "mem"      => "40gb"
+        },
+      }
+    };
+    $source_ref = [ "star", "_Aligned.sortedByCoord.out.bam\$" ];
+    push @$summary, ("${aligner}_summary");
+  }
+  else {
+    $configAlignment = {
+      hisat2 => {
+        class                 => "Alignment::Hisat2",
+        perform               => 1,
+        target_dir            => $target_dir . "/hisat2",
+        option                => "",
+        source_ref            => $source_ref,
+        genome_dir            => $aligner_index,
+        output_to_same_folder => $def->{output_bam_to_same_folder},
+        sh_direct             => 1,
+        pbs                   => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=" . $def->{max_thread},
+          "walltime" => "72",
+          "mem"      => "40gb"
+        },
       },
-    },
-    star_featurecount => {
-      class      => "Count::FeatureCounts",
-      perform    => 1,
-      target_dir => $target_dir . "/star_featurecount",
-      option     => "-g gene_id -t exon",
-      source_ref => [ "star", "_Aligned.sortedByCoord.out.bam" ],
-      gff_file   => $transcript_gtf,
-      ispairend  => 1,
-      sh_direct  => 0,
-      pbs        => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "40gb"
+    };
+    $source_ref = [ "hisat2", ".bam\$" ];
+  }
+
+  $configAlignment = merge(
+    $configAlignment,
+    {
+      "featurecount" => {
+        class      => "Count::FeatureCounts",
+        perform    => 1,
+        target_dir => $target_dir . "/featurecount",
+        option     => "-g gene_id -t exon",
+        source_ref => $source_ref,
+        gff_file   => $transcript_gtf,
+        ispairend  => 1,
+        sh_direct  => 0,
+        pbs        => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "72",
+          "mem"      => "40gb"
+        },
       },
-    },
-    star_genetable => {
-      class         => "CQS::CQSDatatable",
-      perform       => 1,
-      target_dir    => $target_dir . "/star_genetable",
-      option        => "-k 0 -v 6 -e --fillMissingWithZero",
-      source_ref    => "star_featurecount",
-      name_map_file => $name_map_file,
-      cqs_tools     => $cqstools,
-      sh_direct     => 1,
-      pbs           => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "10",
-        "mem"      => "10gb"
+      "genetable" => {
+        class         => "CQS::CQSDatatable",
+        perform       => 1,
+        target_dir    => $target_dir . "/genetable",
+        option        => "-k 0 -v 6 -e --fillMissingWithZero",
+        source_ref    => "${aligner}_featurecount",
+        name_map_file => $name_map_file,
+        cqs_tools     => $cqstools,
+        sh_direct     => 1,
+        pbs           => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "10",
+          "mem"      => "10gb"
+        },
       },
-    },
-    star_genetable_correlation => {
-      class           => "CQS::UniqueR",
-      perform         => 1,
-      rCode           => "usePearsonInHCA<-" . $def->{use_pearson_in_hca} . "; useGreenRedColorInHCA<-" . $def->{use_green_red_color_in_hca} . "; top25cvInHCA<-" . $def->{top25cv_in_hca} . "; ",
-      target_dir      => $target_dir . "/star_genetable_correlation",
-      rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
-      output_file     => "parameterSampleFile1",
-      output_file_ext => ".Correlation.png",
-      parameterSampleFile1_ref => [ "star_genetable", ".count\$" ],
-      parameterSampleFile2_ref => $groups_ref,
-      sh_direct                => 1,
-      pbs                      => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "1",
-        "mem"      => "10gb"
-      },
+      "genetable_correlation" => {
+        class           => "CQS::UniqueR",
+        perform         => 1,
+        rCode           => "usePearsonInHCA<-" . $def->{use_pearson_in_hca} . "; useGreenRedColorInHCA<-" . $def->{use_green_red_color_in_hca} . "; top25cvInHCA<-" . $def->{top25cv_in_hca} . "; ",
+        target_dir      => $target_dir . "/genetable_correlation",
+        rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
+        output_file     => "parameterSampleFile1",
+        output_file_ext => ".Correlation.png",
+        parameterSampleFile1_ref => [ "${aligner}_genetable", ".count\$" ],
+        parameterSampleFile2_ref => $groups_ref,
+        sh_direct                => 1,
+        pbs                      => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      }
     }
-  };
+  );
 
   $config = merge( $config, $configAlignment );
-  push @$individual, ( "star", "star_featurecount" );
-  push @$summary, ( "star_summary", "star_genetable", "star_genetable_correlation" );
+  push @$individual, ( "${aligner}", "featurecount" );
+  push @$summary,    ( "genetable",  "genetable_correlation" );
 
   if ( defined $def->{pairs} ) {
-    addDEseq2( $config, $def, $summary, "star_genetable", [ "star_genetable", ".count\$" ], $def->{target_dir}, $def->{DE_min_median_read} );
+    addDEseq2( $config, $def, $summary, "genetable", [ "genetable", ".count\$" ], $def->{target_dir}, $def->{DE_min_median_read} );
   }
   if ( $def->{perform_rnaseqc} ) {
     $config->{rnaseqc} = {
@@ -170,14 +214,14 @@ sub getRNASeqConfig {
       target_dir     => "${target_dir}/rnaseqc",
       init_command   => $def->{rnaseqc_init_command},
       option         => "",
-      source_ref     => [ "star", "_Aligned.sortedByCoord.out.bam" ],
+      source_ref     => $source_ref,
       jar            => $def->{rnaseqc_jar},
       fasta_file     => $def->{fasta_file},
       rrna_fasta     => $def->{rrna_fasta},
       transcript_gtf => $transcript_gtf,
       pbs            => {
         "email"    => $email,
-        "nodes"    => "1:ppn=8",
+        "nodes"    => "1:ppn=" . $def->{max_thread},
         "walltime" => "72",
         "mem"      => "40gb"
       },
@@ -185,14 +229,14 @@ sub getRNASeqConfig {
     push( @$summary, "rnaseqc" );
   }
   if ( $def->{perform_qc3bam} ) {
-    $config->{star_qc3} = {
+    $config->{qc3} = {
       class          => "QC::QC3bam",
       perform        => 1,
-      target_dir     => $target_dir . "/star_qc3",
+      target_dir     => $target_dir . "/qc3",
       option         => "",
       transcript_gtf => $transcript_gtf,
       qc3_perl       => $def->{qc3_perl},
-      source_ref     => [ "star", "_Aligned.sortedByCoord.out.bam" ],
+      source_ref     => $source_ref,
       pbs            => {
         "email"    => $email,
         "nodes"    => "1:ppn=1",
@@ -200,7 +244,7 @@ sub getRNASeqConfig {
         "mem"      => "40gb"
       },
     };
-    push( @$summary, "star_qc3" );
+    push( @$summary, "qc3" );
   }
 
   if ( $def->{perform_bamplot} ) {
@@ -226,7 +270,7 @@ sub getRNASeqConfig {
         perform            => 1,
         target_dir         => "${target_dir}/bamplot",
         option             => "-g " . $def->{dataset_name} . " -y uniform -r --save-temp",
-        source_ref         => [ "star", "_Aligned.sortedByCoord.out.bam" ],
+        source_ref         => $source_ref,
         gff_file_ref       => "gene_pos",
         is_rainbow_color   => 0,
         is_single_pdf      => 0,
@@ -249,7 +293,7 @@ sub getRNASeqConfig {
         perform            => 1,
         target_dir         => "${target_dir}/bamplot",
         option             => "-g " . $def->{dataset_name} . " -y uniform -r --save-temp",
-        source_ref         => [ "star", "_Aligned.sortedByCoord.out.bam" ],
+        source_ref         => $source_ref,
         gff_file           => $def->{bamplot_gff},
         is_rainbow_color   => 0,
         is_single_pdf      => 0,
