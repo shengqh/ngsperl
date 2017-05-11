@@ -168,7 +168,7 @@ sub getRNASeqConfig {
         perform       => 1,
         target_dir    => $target_dir . "/genetable",
         option        => "-k 0 -v 6 -e --fillMissingWithZero",
-        source_ref    => "${aligner}_featurecount",
+        source_ref    => "featurecount",
         name_map_file => $name_map_file,
         cqs_tools     => $cqstools,
         sh_direct     => 1,
