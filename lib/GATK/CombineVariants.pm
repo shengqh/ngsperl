@@ -64,6 +64,7 @@ java $java_option -Xmx${memory} -jar $gatk_jar \\
   -genotypeMergeOptions UNIQUIFY
 ";
 
+
   $self->close_pbs( $pbs, $pbs_file );
 }
 

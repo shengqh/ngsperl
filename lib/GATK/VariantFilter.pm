@@ -193,7 +193,7 @@ fi
 
   print $pbs "
 java $java_option -jar $gatk_jar \\
-  -T CombineVariants \\
+  -T GenotypeGVCFs \\
   -R $faFile \\
 ";
 
@@ -204,8 +204,8 @@ java $java_option -jar $gatk_jar \\
   }
   
   print $pbs "  -o $mergedFile \\
-  -genotypeMergeOptions UNIQUIFY
 ";
+#  -genotypeMergeOptions UNIQUIFY
 
     print $pbs "
 if [[ -s $mergedFile && ! -s $snpPass ]]; then
