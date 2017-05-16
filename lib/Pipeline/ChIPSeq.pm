@@ -44,9 +44,10 @@ sub initializeDefaultOptions {
     initDefaultValue( $def, "macs2_option", "--broad -B -q 0.01 -g " . $macs2_genome );
   }
 
-  initDefaultValue( $def, "perform_rose",    0 );
-  initDefaultValue( $def, "perform_bamplot", 0 );
-  initDefaultValue( $def, "perform_chipqc",  0 );
+  initDefaultValue( $def, "perform_rose",     0 );
+  initDefaultValue( $def, "perform_bamplot",  0 );
+  initDefaultValue( $def, "perform_chipqc",   0 );
+  initDefaultValue( $def, "perform_diffbind", 0 );
 
   return $def;
 }
@@ -59,6 +60,11 @@ sub getConfig {
   create_directory_or_die($target_dir);
 
   $def = initializeDefaultOptions($def);
+
+  my $perform_diffbind = getValue( $def, "perform_diffbind" );
+  if ($perform_diffbind) {
+    getValue( $def, "diffbind_table" );
+  }
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir ) = getPreprocessionConfig($def);
 
@@ -227,6 +233,29 @@ sub getConfig {
     };
     push @$summary, ("chipqc");
   }
+
+  if ($perform_diffbind) {
+    my $bindName = $peakCallerTask . "_diffbind";
+    $config->{$bindName} = {
+      class         => "Comparison::DiffBind",
+      perform       => 1,
+      target_dir    => "${target_dir}/${bindName}",
+      option        => "",
+      source_ref    => [ $def->{aligner}, ".bam\$" ],
+      designtable   => getValue( $def, "diffbind_table" ),
+      peaks_ref     => [ $peakCallerTask, ".bed\$" ],
+      peak_software => "bed",
+      sh_direct     => 0,
+      pbs           => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    };
+    push @$summary, ($bindName);
+  }
+
   $config->{"sequencetask"} = {
     class      => "CQS::SequenceTask",
     perform    => 1,
