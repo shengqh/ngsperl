@@ -251,10 +251,10 @@ sub getParclipSmallRNAConfig {
         },
       },
 
-      unmappedReads_bowtie1_genome_1mm_3utr_count_target => {
+      unmappedReads_bowtie1_genome_1mm_3utr_count_target_t2c => {
         class        => "CQS::ParclipTarget",
         perform      => 1,
-        target_dir   => $utr3_dir . "/unmappedReads_bowtie1_genome_1mm_3utr_count_target",
+        target_dir   => $utr3_dir . "/unmappedReads_bowtie1_genome_1mm_3utr_count_target_t2c",
         option       => "",
         source_ref   => [ "gsnap_smallRNA_t2c", ".xml\$" ],
         target_ref   => [ "unmappedReads_bowtie1_genome_1mm_3utr_count", ".xml\$" ],
@@ -269,9 +269,28 @@ sub getParclipSmallRNAConfig {
           "mem"      => "20gb"
         },
       },
+
+      unmappedReads_bowtie1_genome_1mm_3utr_count_target_all => {
+        class        => "CQS::ParclipTarget",
+        perform      => 1,
+        target_dir   => $utr3_dir . "/unmappedReads_bowtie1_genome_1mm_3utr_count_target_all",
+        option       => "",
+        source_ref   => [ "gsnap_smallRNA_count", ".mapped.xml\$" ],
+        target_ref   => [ "unmappedReads_bowtie1_genome_1mm_3utr_count", ".xml\$" ],
+        fasta_file   => $def->{fasta_file},
+        refgene_file => $def->{refgene_file},
+        cqs_tools    => $def->{cqstools},
+        sh_direct    => 1,
+        pbs          => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "72",
+          "mem"      => "20gb"
+        },
+      },
     };
 
-    push( @individual, ( 'unmappedReads', 'unmappedReads_bowtie1_genome_1mm', 'unmappedReads_bowtie1_genome_1mm_3utr_count', "unmappedReads_bowtie1_genome_1mm_3utr_count_target" ) );
+    push( @individual, ( 'unmappedReads', 'unmappedReads_bowtie1_genome_1mm', 'unmappedReads_bowtie1_genome_1mm_3utr_count', "unmappedReads_bowtie1_genome_1mm_3utr_count_target_t2c", "unmappedReads_bowtie1_genome_1mm_3utr_count_target_all" ) );
     $config = merge( $config, $unmappedreads );
   }
   $config->{sequencetask} = {
