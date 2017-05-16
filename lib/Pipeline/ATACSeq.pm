@@ -50,7 +50,8 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "caller_type", "macs2" );
   if ( ( getValue( $def, "caller_type" ) eq "macs2" ) || ( getValue( $def, "caller_type" ) eq "both" ) ) {
-    initDefaultValue( $def, "macs2_peak_type", "board" );
+    initDefaultValue( $def, "macs2_peak_type",             "board" );
+    initDefaultValue( $def, "macs2_callpeak_as_singleend", 0 );
   }
 
   initDefaultValue( $def, "perform_homer_motifs", 0 );
@@ -263,7 +264,7 @@ sub getConfig {
         $callOption = $def->{"macs2call_option"};
       }
       else {
-        my $default_macs2call_option = $pairend ? "-f BAMPE" : "-f BAM";
+        my $default_macs2call_option = $def->{macs2_callpeak_as_singleend} ? "-f BAM" : $pairend ? "-f BAMPE" : "-f BAM";
         $callOption = $default_macs2call_option . " -g " . getValue( $def, "macs2genome" ) . " -B -q 0.01 --nomodel --slocal 20000 --llocal 20000 --keep-dup all";
       }
 
@@ -293,6 +294,9 @@ sub getConfig {
       }
       else {
         $callFilePattern = "narrowPeak.bed\$";
+        if($def->{macs2_callpeak_as_singleend} and $pairend){
+          $callName = $callName . "_CallAsSingleEnd";
+        } 
       }
       $config->{$callName} = {
         class      => $callClass,

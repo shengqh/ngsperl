@@ -35,6 +35,14 @@ if(!exists("outputDirectory")){
   outputDirectory<-""
 }
 
+if (!exists("minMedian")){
+  minMedian<-1
+}
+
+if (!exists("minMedianInGroup")){
+  minMedianInGroup<-1
+}
+
 #source("/home/zhaos/source/ngsperl/lib/CQS/countTableVisFunctions.R")
 
 ##Solving node stack overflow problem start###
@@ -298,7 +306,7 @@ for (i in 1:nrow(countTableFileAll)) {
   }
   
   #filter reads/genes by parameter
-  countNum<-filterCountTable(countNum,groupFileList=groupFileList,minMedian=minMedian,minDedianInGroup=minDedianInGroup)
+  countNum<-filterCountTable(countNum,groupFileList=groupFileList,minMedian=minMedian,minMedianInGroup=minMedianInGroup)
   
   #normlize by total reads or VSD
   if (totalCountFile!="") { #normlize with total count *10^6

@@ -69,7 +69,7 @@ sub perform {
           }
         }
       }
-      my $factor    = $entryMap->{Factor}    or die "Define Factor for $sampleName in designtable of section $section";
+      my $factor = defined $entryMap->{Factor} ? $entryMap->{Factor} : defined $defaultFactor ? $defaultFactor : die "Define Factor for $sampleName in designtable of section $section";
       my $condition = $entryMap->{Condition} or die "Define Condition for $sampleName in designtable of section $section";
       my $replicate = $entryMap->{Replicate} or die "Define Replicate for $sampleName in designtable of section $section";
       my $bamReads  = $bamfiles->{$sampleName}->[0];
@@ -79,7 +79,7 @@ sub perform {
     }
     close($map);
     my $finalPrefix = $name . ".result";
-    my $finalFile = $name . ".result.tsv";
+    my $finalFile   = $name . ".result.tsv";
     print $pbs "
 cd $curdir
 

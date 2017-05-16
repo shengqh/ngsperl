@@ -677,7 +677,7 @@ mergeTableBySampleGroup<-function(x,sampleToGroup,toPercent=TRUE,rowFun=rowMeans
 	}
 	return(xRatioGroupMean)
 }
-filterCountTable<-function(countNum,groupFileList="",minMedian=1,minDedianInGroup=1) {
+filterCountTable<-function(countNum,groupFileList="",minMedian=1,minMedianInGroup=1) {
 	minMedianInd<-apply(countNum,1,median)
 	if (any(minMedianInd<minMedian)) {
 		countNum<-countNum[-which(minMedianInd<minMedian),]
@@ -687,9 +687,9 @@ filterCountTable<-function(countNum,groupFileList="",minMedian=1,minDedianInGrou
 		sampleToGroup<-getSampleInGroup(groupFileList, colnames(countNum), comparisonFileList, countTableTitle, useLeastGroups)
 		countNumGroup<-mergeTableBySampleGroup(countNum,sampleToGroup,toPercent=FALSE,rowFun=rowMedians)
 		minGroupMedianInd<-apply(countNumGroup,1,min)
-		if (any(minGroupMedianInd<minDedianInGroup)) {
-			countNum<-countNum[-which(minGroupMedianInd<minDedianInGroup),]
-			print(paste0(length(which(minGroupMedianInd<minDedianInGroup))," reads/genes were removed due to minimal group median less than ",minDedianInGroup))
+		if (any(minGroupMedianInd<minMedianInGroup)) {
+			countNum<-countNum[-which(minGroupMedianInd<minMedianInGroup),]
+			print(paste0(length(which(minGroupMedianInd<minMedianInGroup))," reads/genes were removed due to minimal group median less than ",minMedianInGroup))
 		}
 	}
 	return(countNum)

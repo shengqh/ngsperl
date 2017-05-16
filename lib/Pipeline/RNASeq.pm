@@ -27,6 +27,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_rnaseqc",            0 );
   initDefaultValue( $def, "perform_qc3bam",             0 );
   initDefaultValue( $def, "perform_bamplot",            0 );
+  initDefaultValue( $def, "perform_call_variants",      0 );
   initDefaultValue( $def, "aligner",                    "hisat2" );
   initDefaultValue( $def, "use_pearson_in_hca",         1 );
   initDefaultValue( $def, "top25cv_in_hca",             0 );
@@ -76,6 +77,16 @@ sub getRNASeqConfig {
       defined $def->{gene_names} or die "Define gene_names for bamplot first, seperate by blank space!";
       defined $def->{add_chr}    or die "Define add_chr for bamplot first, check your genome sequence!";
     }
+  }
+
+  if ( $def->{perform_call_variants} ) {
+    defined $def->{fasta_file}       or die "Define fasta_file for calling variants";
+    defined $def->{dbsnp}            or die "Define dbsnp for calling variants";
+    defined $def->{gatk_jar}         or die "Define gatk_jar for calling variants";
+    defined $def->{picard_jar}       or die "Define picard_jar for calling variants";
+    defined $def->{annovar_param}    or die "Define annovar_param for calling variants";
+    defined $def->{annovar_db}       or die "Define annovar_db for calling variants";
+    defined $def->{annovar_buildver} or die "Define annovar_buildver for calling variants";
   }
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir ) = getPreprocessionConfig($def);
@@ -207,6 +218,7 @@ sub getRNASeqConfig {
   if ( defined $def->{pairs} ) {
     addDEseq2( $config, $def, $summary, "genetable", [ "genetable", ".count\$" ], $def->{target_dir}, $def->{DE_min_median_read} );
   }
+
   if ( $def->{perform_rnaseqc} ) {
     $config->{rnaseqc} = {
       class          => "QC::RNASeQC",
@@ -228,6 +240,7 @@ sub getRNASeqConfig {
     };
     push( @$summary, "rnaseqc" );
   }
+
   if ( $def->{perform_qc3bam} ) {
     $config->{qc3} = {
       class          => "QC::QC3bam",
@@ -310,6 +323,101 @@ sub getRNASeqConfig {
       };
       push( @$summary, "bamplot" );
     }
+  }
+
+  if ( $def->{perform_call_variants} ) {
+    my $fasta  = $def->{fasta_file};
+    my $dbsnp  = $def->{dbsnp};
+    my $gatk   = $def->{gatk_jar};
+    my $picard = $def->{picard_jar};
+
+    $config->{refine} = {
+      class              => "GATK::RNASeqRefine",
+      perform            => 1,
+      target_dir         => "${target_dir}/refine",
+      source_ref         => $source_ref,
+      option             => "-Xmx40g",
+      fasta_file         => $fasta,
+      vcf_files          => [$dbsnp],
+      gatk_jar           => $gatk,
+      picard_jar         => $picard,
+      fixMisencodedQuals => 0,
+      replace_read_group => 0,
+      reorderChromosome  => 0,
+      sorted             => 1,
+      sh_direct          => 0,
+      pbs                => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=8",
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    };
+    $config->{hc_gvcf} = {
+      class       => "GATK::HaplotypeCaller",
+      perform     => 1,
+      target_dir  => "${target_dir}/hc_gvcf",
+      option      => "",
+      source_ref  => "refine",
+      gvcf        => 1,
+      java_option => "",
+      fasta_file  => $fasta,
+      vcf_files   => [$dbsnp],
+      gatk_jar    => $gatk,
+      sh_direct   => 1,
+      pbs         => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=8",
+        "walltime" => "72",
+        "mem"      => "80gb"
+      },
+    };
+    push( @$individual, "refine", "hc_gvcf" );
+
+    $config->{hc_gvcf_vqsr} = {
+      class       => "GATK::VariantFilter",
+      perform     => 1,
+      target_dir  => "${target_dir}/hc_gvcf_vqsr",
+      option      => "",
+      source_ref  => "hc_gvcf",
+      vqsr_mode   => 1,
+      java_option => "",
+      fasta_file  => $fasta,
+      dbsnp_vcf   => $dbsnp,
+      gatk_jar    => $gatk,
+      hapmap_vcf  => $def->{hapmap},
+      omni_vcf    => $def->{omni},
+      g1000_vcf   => $def->{g1000},
+      mills_vcf   => $def->{mills},
+      cqs_tools   => $cqstools,
+      sh_direct   => 1,
+      pbs         => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=8",
+        "walltime" => "72",
+        "mem"      => "100gb"
+      },
+    };
+
+    $config->{hc_gvcf_vqsr_annovar} = {
+      class      => "Annotation::Annovar",
+      perform    => 1,
+      target_dir => "${target_dir}/hc_gvcf_vqsr_annovar",
+      source_ref => "hc_gvcf_vqsr",
+      option     => $def->{annovar_param},
+      annovar_db => $def->{annovar_db},
+      buildver   => $def->{annovar_buildver},
+      sh_direct  => 1,
+      isvcf      => 1,
+      pbs        => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "72",
+        "mem"      => "10gb"
+      },
+    };
+    push( @$summary, "hc_gvcf_vqsr", "hc_gvcf_vqsr_annovar" );
+
   }
 
   $config->{sequencetask} = {
