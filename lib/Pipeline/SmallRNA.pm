@@ -23,9 +23,19 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.06';
 
+sub initializeDefaultOptions {
+  my $def = shift;
+
+  initDefaultValue( $def, "host_xml2bam", 0 );
+
+  return $def;
+}
+
 sub getSmallRNAConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
+
+  initializeDefaultOptions($def);
 
   my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
   my $task_name = $def->{task_name};
@@ -106,11 +116,11 @@ sub getSmallRNAConfig {
   else {
     $def->{correlation_rcode} = $def->{correlation_rcode} . "showLabelInPCA<-FALSE;";
   }
-  
-  if (1) { #use total normlization to do correlation analysis
-  	$def->{correlation_rcode} = $def->{correlation_rcode} . "totalCountKey='Reads for Mapping';";
+
+  if (1) {    #use total normlization to do correlation analysis
+    $def->{correlation_rcode} = $def->{correlation_rcode} . "totalCountKey='Reads for Mapping';";
   }
-  if (1) { #set filter parameters
+  if (1) {    #set filter parameters
     $def->{correlation_rcode} = $def->{correlation_rcode} . "minMedian=1;minDedianInGroup=1;";
   }
 
@@ -185,15 +195,15 @@ sub getSmallRNAConfig {
     push( @$hostSmallRNAFolder, ( "rRNA", "otherSmallRNA" ) );
 
     my $numberOfHostSmallRNA = scalar(@$hostSmallRNA);
-    
-    my $DE_task_suffix = getValue($def, "DE_task_suffix", "");
+
+    my $DE_task_suffix = getValue( $def, "DE_task_suffix", "" );
 
     my $numberOfComparison = scalar(@$sampleComparisons);
     if ( !defined $def->{pairs_top_deseq2_vis_layout} ) {
       $def->{pairs_top_deseq2_vis_layout} = {
         "Col_Group" => $comparisons,
         "Row_Group" => [ ("Top 100") x $numberOfComparison ],
-        "Groups"    => string_combination( [ ["top100"], [$nonhostLibraryStr . $DE_task_suffix], $sampleComparisons ], '_' ),
+        "Groups"    => string_combination( [ ["top100"], [ $nonhostLibraryStr . $DE_task_suffix ], $sampleComparisons ], '_' ),
       };
     }
 
@@ -201,7 +211,7 @@ sub getSmallRNAConfig {
       $def->{pairs_host_deseq2_vis_layout} = {
         "Col_Group" => [ (@$comparisons) x $numberOfHostSmallRNA ],
         "Row_Group" => string_repeat( $hostSmallRNA, $numberOfComparison ),
-        "Groups" => string_combination( [ $hostSmallRNAFolder, [$hostLibraryStr . $DE_task_suffix], $sampleComparisons ], '_' ),
+        "Groups" => string_combination( [ $hostSmallRNAFolder, [ $hostLibraryStr . $DE_task_suffix ], $sampleComparisons ], '_' ),
       };
     }
 
@@ -209,7 +219,7 @@ sub getSmallRNAConfig {
       $def->{pairs_host_miRNA_deseq2_vis_layout} = {
         "Col_Group" => [ (@$comparisons) x 3 ],
         "Row_Group" => string_repeat( [ "isomiR", "NTA", "isomiR NTA" ], $numberOfComparison ),
-        "Groups" => string_combination( [ ["miRNA"], [ "isomiR", "NTA", "isomiR_NTA" ], [$hostLibraryStr. $DE_task_suffix], $sampleComparisons ], '_' ),
+        "Groups" => string_combination( [ ["miRNA"], [ "isomiR", "NTA", "isomiR_NTA" ], [ $hostLibraryStr . $DE_task_suffix ], $sampleComparisons ], '_' ),
       };
     }
 
@@ -217,7 +227,7 @@ sub getSmallRNAConfig {
       $def->{pairs_nonHostGroups_deseq2_vis_layout} = {
         "Col_Group" => [ (@$comparisons) x 3 ],
         "Row_Group" => string_repeat( \@nonhost_genome_group_names, $numberOfComparison ),
-        "Groups" => string_combination( [ \@nonhost_genome_groups, [$nonhostLibraryStr. $DE_task_suffix], $sampleComparisons ], '_' ),
+        "Groups" => string_combination( [ \@nonhost_genome_groups, [ $nonhostLibraryStr . $DE_task_suffix ], $sampleComparisons ], '_' ),
       };
     }
 
@@ -225,7 +235,7 @@ sub getSmallRNAConfig {
       $def->{pairs_nonHostLibrary_deseq2_vis_layout} = {
         "Col_Group" => [ (@$comparisons) x 5 ],
         "Row_Group" => string_repeat( [ "tDR", "tDR Species", "tDR Amino Acid", "tDR Anticodon", "tDR Reads" ], $numberOfComparison ),
-        "Groups" => string_combination( [ ["nonhost_tRNA"], [ "", "species", "type", "anticodon", "reads" ], [$nonhostLibraryStr. $DE_task_suffix], $sampleComparisons ], '_' )
+        "Groups" => string_combination( [ ["nonhost_tRNA"], [ "", "species", "type", "anticodon", "reads" ], [ $nonhostLibraryStr . $DE_task_suffix ], $sampleComparisons ], '_' )
       };
     }
   }
@@ -360,6 +370,25 @@ sub getSmallRNAConfig {
         },
       },
     };
+
+    if ( defined $def->{host_xml2bam} && $def->{host_xml2bam} ) {
+      $host_genome->{bowtie1_genome_xml2bam} = {
+        class         => "SmallRNA::XmlToBam",
+        perform       => 1,
+        target_dir    => $host_genome_dir . "/bowtie1_genome_xml2bam",
+        source_ref    => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
+        bam_files_ref => [ "bowtie1_genome_1mm_NTA", ".bam" ],
+        sh_direct     => 1,
+        pbs           => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$individual_ref, "bowtie1_genome_xml2bam" );
+    }
 
     push( @name_for_mapPercentage, "bowtie1_genome_1mm_NTA_smallRNA_count", "count.mapped.xml" );
 
@@ -914,7 +943,7 @@ sub getSmallRNAConfig {
     parameterSampleFile2      => $def->{tRNA_vis_group},
     parameterSampleFile2Order => $def->{groups_order},
     parameterSampleFile3      => $def->{pure_pairs},
-    parameterFile3_ref       => [ "fastqc_count_vis", ".Reads.csv\$" ],
+    parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
     rCode                     => $def->{correlation_rcode},
     sh_direct                 => 1,
     pbs                       => {
