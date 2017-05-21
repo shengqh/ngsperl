@@ -115,7 +115,6 @@ if [[ -s $mergedFile && ! -s $snpCal ]]; then
     -an FS \\
     -an SOR \\
     -an MQ \\
-    -an MQRankSum \\
     -an ReadPosRankSum \\
     -an InbreedingCoeff \\
     -mode SNP \\
@@ -148,7 +147,6 @@ if [[ -s $snpPass && ! -s $indelCal ]]; then
     -an DP \\
     -an FS \\
     -an SOR \\
-    -an MQRankSum \\
     -an ReadPosRankSum \\
     -an InbreedingCoeff \\
     -mode INDEL \\
