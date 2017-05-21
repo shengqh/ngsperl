@@ -139,7 +139,6 @@ if [ -s $bowtiesam ]; then
     samtools index $bam_file 
     $chromosome_grep_command
     $add_RG_to_read_command    
-    samtools flagstat $bam_file > ${bam_file}.stat
   fi
 fi
 ";
