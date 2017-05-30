@@ -5,6 +5,7 @@ import os
 import logging
 import argparse
 import xml.etree.ElementTree as ET
+from Bio.Seq import Seq
 
 DEBUG = 0
 
@@ -51,25 +52,28 @@ with pysam.AlignmentFile(unsorted, "wb", header=header) as outf:
     query_count = int(query.get("count")) + 1
     query_name = query.get("name")
     query_sequence=query.get("sequence")
+    reverse_query_sequence=str(Seq(query_sequence).reverse_complement())
+    #query_qualities=pysam.qualitystring_to_array("<" * len(query_sequence))
     for loc in query.findall("location"):
       strand = loc.get("strand")
 
       a = pysam.AlignedSegment()
-      a.query_sequence=query_sequence
       
       if(strand == '+'):
         a.flag = 0
+        a.query_sequence=query_sequence
       else:
         a.flag = 16
+        a.query_sequence=reverse_query_sequence
         
       a.reference_id = chrMap[ loc.get("seqname")]
-      a.reference_start = int(loc.get("start"))
+      a.reference_start = int(loc.get("start")) - 1
       a.mapping_quality = 255
       a.cigarstring = loc.get("cigar")
       a.next_reference_id = -1
       a.next_reference_start=-1
-      a.template_length=len(query_sequence)
-      #a.query_qualities = '*'
+      a.template_length=0
+      #a.query_qualities = query_qualities
       a.tags = (("XA", int(loc.get("score"))),
                 ("MD", loc.get("mdz")),
                 ("NM", int(loc.get("nmi"))))
