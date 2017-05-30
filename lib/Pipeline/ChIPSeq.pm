@@ -41,7 +41,14 @@ sub initializeDefaultOptions {
   }
   elsif ( $def->{peak_caller} eq "macs2" ) {
     my $macs2_genome = getValue( $def, "macs2_genome" );    #hs
-    initDefaultValue( $def, "macs2_option", "--broad -B -q 0.01 -g " . $macs2_genome );
+    initDefaultValue( $def, "macs2_peak_type", "narrow" );
+    my $macs2_peak_type = getValue( $def, "macs2_peak_type" );
+    if ( $macs2_peak_type eq "narrow" ) {
+      initDefaultValue( $def, "macs2_option", "-B -q 0.01 -g " . $macs2_genome );
+    }
+    else {
+      initDefaultValue( $def, "macs2_option", "--broad -B -q 0.01 -g " . $macs2_genome );
+    }
   }
 
   initDefaultValue( $def, "perform_rose",     0 );
@@ -67,15 +74,16 @@ sub getConfig {
   }
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir ) = getPreprocessionConfig($def);
+  my $step2 = [];
 
   my $email    = getValue( $def, "email" );
   my $cqstools = getValue( $def, "cqstools" );
 
   if ( $def->{aligner} eq "bowtie1" ) {
-    $config->{ $def->{aligner} } = {
+    $config->{bowtie1} = {
       class         => "Alignment::Bowtie1",
       perform       => 1,
-      target_dir    => "${target_dir}/" . $def->{aligner},
+      target_dir    => "${target_dir}/bowtie1",
       option        => getValue( $def, "bowtie1_option" ),
       fasta_file    => getValue( $def, "bowtie1_fasta" ),
       bowtie1_index => getValue( $def, "bowtie1_index" ),
@@ -88,6 +96,25 @@ sub getConfig {
         "mem"      => "40gb"
       },
     };
+    $config->{bowtie1_summary} = {
+      class                    => "CQS::UniqueR",
+      perform                  => 1,
+      rCode                    => "",
+      target_dir               => $def->{target_dir} . "/bowtie1",
+      option                   => "",
+      parameterSampleFile1_ref => [ "bowtie1", ".log" ],
+      rtemplate                => "../Alignment/Bowtie1Summary.r",
+      output_file              => $def->{task_name},
+      output_file_ext          => ".csv",
+      pbs                      => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "72",
+        "mem"      => "10gb"
+      },
+    };
+    push @$summary, ("bowtie1_summary");
+
   }
   elsif ( $def->{aligner} eq "bwa" ) {
     $config->{ $def->{aligner} } = {
@@ -133,6 +160,7 @@ sub getConfig {
     };
   }
   elsif ( $def->{peak_caller} eq "macs2" ) {
+    $peakCallerTask = $peakCallerTask . "_" . $def->{macs2_peak_type};
     $config->{$peakCallerTask} = {
       class      => "Chipseq::MACS2Callpeak",
       perform    => 1,
@@ -153,7 +181,7 @@ sub getConfig {
   else {
     die "Unknown peak caller " . $def->{"peak_caller"};
   }
-  push @$summary, ($peakCallerTask);
+  push @$step2, ($peakCallerTask);
 
   if ( $def->{perform_rose} ) {
     my $roseTask = $def->{peak_caller} . "callpeak_bradner_rose2";
@@ -176,7 +204,7 @@ sub getConfig {
         "mem"      => "40gb"
       },
     };
-    push @$summary, ($roseTask);
+    push @$step2, ($roseTask);
   }
 
   if ( getValue( $def, "perform_bamplot" ) ) {
@@ -213,12 +241,11 @@ sub getConfig {
     my $qctable = getValue( $def, "chipqc_table" );
     my $genome  = getValue( $def, "chipqc_genome" );    #hg19, check R ChIPQC package;
     $config->{chipqc} = {
-      class      => "QC::ChipseqQC",
-      perform    => 1,
-      target_dir => "${target_dir}/chipqc",
-      option     => "",
-      source_ref => $def->{aligner},
-      ,
+      class         => "QC::ChipseqQC",
+      perform       => 1,
+      target_dir    => "${target_dir}/chipqc",
+      option        => "",
+      source_ref    => $def->{aligner},
       qctable       => $qctable,
       peaks_ref     => [ $peakCallerTask, ".bed\$" ],
       peak_software => "bed",
@@ -237,16 +264,17 @@ sub getConfig {
   if ($perform_diffbind) {
     my $bindName = $peakCallerTask . "_diffbind";
     $config->{$bindName} = {
-      class         => "Comparison::DiffBind",
-      perform       => 1,
-      target_dir    => "${target_dir}/${bindName}",
-      option        => "",
-      source_ref    => [ $def->{aligner}, ".bam\$" ],
-      designtable   => getValue( $def, "diffbind_table" ),
-      peaks_ref     => [ $peakCallerTask, ".bed\$" ],
-      peak_software => "bed",
-      sh_direct     => 0,
-      pbs           => {
+      class                   => "Comparison::DiffBind",
+      perform                 => 1,
+      target_dir              => "${target_dir}/${bindName}",
+      option                  => "",
+      source_ref              => [ $def->{aligner}, ".bam\$" ],
+      designtable             => getValue( $def, "diffbind_table" ),
+      peaks_ref               => [ $peakCallerTask, ".bed\$" ],
+      peak_software           => "bed",
+      homer_annotation_genome => $def->{homer_annotation_genome},
+      sh_direct               => 0,
+      pbs                     => {
         "email"    => $email,
         "nodes"    => "1:ppn=1",
         "walltime" => "72",
@@ -263,7 +291,8 @@ sub getConfig {
     option     => "",
     source     => {
       step_1 => $individual,
-      step_2 => $summary,
+      step_2 => $step2,
+      step_3 => $summary,
     },
     sh_direct => 0,
     pbs       => {
