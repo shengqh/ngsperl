@@ -11,6 +11,7 @@ use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 use CQS::UniqueTask;
+use Pipeline::PipelineUtils;
 
 our @ISA = qw(CQS::UniqueTask);
 
@@ -32,6 +33,7 @@ sub perform {
   my $designtable = get_raw_files( $config, $section, "designtable" );
   my $peaksfiles  = get_raw_files( $config, $section, "peaks" );
   my $peakSoftware = get_option( $config, $section, "peak_software" );
+  my $homer_annotation_genome = get_option( $config, $section, "homer_annotation_genome", "" );
 
   my $script = dirname(__FILE__) . "/DiffBind.r";
   if ( !-e $script ) {
@@ -44,21 +46,39 @@ sub perform {
   my $log_desc = $cluster->get_log_description($log);
   my $pbs      = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
-  my $defaultTissue = delete $designtable->{Tissue};
-  my $defaultFactor = delete $designtable->{Factor};
+  my $defaultTissue = $designtable->{Tissue};
+  my $defaultFactor = $designtable->{Factor};
 
   for my $name ( sort keys %$designtable ) {
-    my $sampleList        = $designtable->{$name};
-    my $defaultNameTissue = delete $sampleList->{Tissue};
-    my $defaultNameFactor = delete $sampleList->{Factor};
+    if ( $name eq "Tissue" || $name eq "Factor" ) {
+      next;
+    }
 
-    my $curdir      = create_directory_or_die( $result_dir . "/" . $name );
-    my $mapFileName = "${name}.txt";
+    my $sampleList        = $designtable->{$name};
+    my $defaultNameTissue = getValue($sampleList, "Tissue", "Unknown");
+    my $defaultNameFactor = getValue($sampleList, "Factor", "Unknown");
+    my $comparisons       = getValue($sampleList, "Comparison");
+
+    my $curdir       = create_directory_or_die( $result_dir . "/" . $name );
+    my $compFileName = "${name}.comparison.txt";
+    my $compfile     = $curdir . "/" . $compFileName;
+    open( my $comp, ">$compfile" ) or die "Cannot create $compfile";
+    print $comp "Comparison\tGroup1\tGroup2\n";
+    for my $comparison (@$comparisons) {
+      print $comp $comparison->[0] . "\t" . $comparison->[2] . "\t" . $comparison->[1] . "\n";
+    }
+    close($comp);
+
+    my $mapFileName = "${name}.config.txt";
     my $mapfile     = $curdir . "/" . $mapFileName;
     open( my $map, ">$mapfile" ) or die "Cannot create $mapfile";
     print $map "SampleID\tTissue\tFactor\tCondition\tReplicate\tbamReads\tPeaks\tPeakCaller\n";
     for my $sampleName ( sort keys %$sampleList ) {
-      my $entryMap = $sampleList->{$sampleName};
+      if ( $sampleName eq "Tissue" || $sampleName eq "Factor" || $sampleName eq "Comparison" ) {
+        next;
+      }
+
+      my $entryMap = getValue($sampleList, $sampleName);
       my $tissue   = $entryMap->{Tissue};
       if ( !defined $tissue ) {
         $tissue = $defaultNameTissue;
@@ -78,15 +98,26 @@ sub perform {
       print $map $sampleName . "\t" . $tissue . "\t" . $factor . "\t" . $condition . "\t" . $replicate . "\t" . $bamReads . "\t" . $peakFile . "\t" . $peakSoftware . "\n";
     }
     close($map);
-    my $finalPrefix = $name . ".result";
-    my $finalFile   = $name . ".result.tsv";
+    my $finalPrefix = $name;
+    my $finalFile   = $name . "." . $comparisons->[ scalar(@$comparisons) - 1 ]->[0] . ".sig.tsv";
     print $pbs "
 cd $curdir
 
 if [ ! -s $finalFile ]; then
-  R --vanilla -f $script --args $mapFileName $finalPrefix
+  R --vanilla -f $script --args $mapFileName $compFileName $finalPrefix
 fi
+
 ";
+    if ( $homer_annotation_genome ne "" ) {
+      for my $comparison (@$comparisons) {
+        my $comparisonName = $comparison->[0];
+        print $pbs "if [[ -s ${finalPrefix}.${comparisonName}.sig.tsv && ! -s ${finalPrefix}.${comparisonName}.sig.stat.tsv ]]; then 
+annotatePeaks.pl ${finalPrefix}.${comparisonName}.sig.tsv $homer_annotation_genome -annStats ${finalPrefix}.${comparisonName}.sig.stat.tsv -go ${finalPrefix}.${comparisonName}.sig.genes.GO > ${finalPrefix}.${comparisonName}.sig.genes.tsv 
+fi
+
+";
+      }
+    }
   }
 
   $self->close_pbs( $pbs, $pbs_file );
@@ -97,13 +128,32 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
   my $designtable = get_raw_files( $config, $section, "designtable" );
+  my $homer_annotation_genome = get_option( $config, $section, "homer_annotation_genome", "" );
 
   my $result = {};
 
   for my $name ( sort keys %$designtable ) {
     my @result_files = ();
-    my $curdir       = $result_dir . "/" . $name;
-    push( @result_files, "${curdir}/${name}.result.tsv" );
+
+    if ( $name eq "Tissue" || $name eq "Factor" ) {
+      next;
+    }
+
+    my $sampleList        = $designtable->{$name};
+    my $comparisons       = $sampleList->{Comparison};
+
+    my $curdir       = create_directory_or_die( $result_dir . "/" . $name );
+
+    my $finalPrefix = $name;
+    for my $comparison (@$comparisons){
+      my $comparisonName = $comparison->[0];
+      my $finalFile   = $name . "." . $comparisonName . ".sig.tsv";
+      push (@result_files, $curdir . "/" . $finalFile);
+      if ( $homer_annotation_genome ne "" ) {
+        push (@result_files, $curdir . "/" . $name . "." . $comparisonName . ".sig.stat.tsv");
+        push (@result_files, $curdir . "/" . $name . "." . $comparisonName . ".sig.genes.tsv");
+      }
+    }
     $result->{$name} = filter_array( \@result_files, $pattern );
   }
   return $result;
