@@ -72,29 +72,6 @@ sub initializeDefaultOptions {
   return $def;
 }
 
-sub addHomerMotif {
-  my ( $config, $def, $summary, $target_dir, $callName, $callFilePattern ) = @_;
-  my $homerName = $callName . "_homer_motifs";
-  $config->{$homerName} = {
-    class        => "Homer::FindMotifs",
-    option       => getValue( $def, "homer_option" ),
-    perform      => 1,
-    target_dir   => $target_dir . "/" . $homerName,
-    source_ref   => [ $callName, $callFilePattern ],
-    homer_genome => getValue( $def, "homer_genome" ),
-    sh_direct    => 1,
-    pbs          => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
-      "mem"       => "10gb"
-    },
-  };
-  push @$summary, ($homerName);
-  return $homerName;
-}
-
 sub getConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
@@ -104,7 +81,7 @@ sub getConfig {
 
   $def = initializeDefaultOptions($def);
 
-  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir ) = getPreprocessionConfig($def);
+  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $task_index ) = getPreprocessionConfig( $def, 1 );
 
   $config->{"treatments"} = $def->{"treatments"};
 
@@ -294,9 +271,9 @@ sub getConfig {
       }
       else {
         $callFilePattern = "narrowPeak.bed\$";
-        if($def->{macs2_callpeak_as_singleend} and $pairend){
+        if ( $def->{macs2_callpeak_as_singleend} and $pairend ) {
           $callName = $callName . "_CallAsSingleEnd";
-        } 
+        }
       }
       $config->{$callName} = {
         class      => $callClass,
@@ -388,16 +365,17 @@ sub getConfig {
       if ($perform_diffbind) {
         my $bindName = $callName . "_diffbind";
         $config->{$bindName} = {
-          class         => "Comparison::DiffBind",
-          perform       => 1,
-          target_dir    => "${target_dir}/${bindName}",
-          option        => "",
-          source_ref    => "bwa_cleanbam",
-          designtable   => getValue( $def, "diffbind_table" ),
-          peaks_ref     => [ $callName, $callFilePattern ],
-          peak_software => "bed",
-          sh_direct     => 0,
-          pbs           => {
+          class                   => "Comparison::DiffBind",
+          perform                 => 1,
+          target_dir              => "${target_dir}/${bindName}",
+          option                  => "",
+          source_ref              => "bwa_cleanbam",
+          designtable             => getValue( $def, "diffbind_table" ),
+          peaks_ref               => [ $callName, $callFilePattern ],
+          peak_software           => "bed",
+          homer_annotation_genome => $def->{homer_annotation_genome},
+          sh_direct               => 0,
+          pbs                     => {
             "email"    => $email,
             "nodes"    => "1:ppn=1",
             "walltime" => "72",
