@@ -116,7 +116,7 @@ sub result {
     push( @result_files, $cur_dir . "/${sample_name}_control_lambda.bdg" );
     push( @result_files, $cur_dir . "/${sample_name}_peaks.${peak_name}" );
     push( @result_files, $cur_dir . "/${sample_name}_peaks.${peak_name}.bed" );
-    push( @result_files, $cur_dir . "/${sample_name}_summits.bed" );
+    #push( @result_files, $cur_dir . "/${sample_name}_summits.bed" );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
