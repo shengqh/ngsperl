@@ -76,17 +76,17 @@ sub perform {
   my $final_log      = $self->get_log_filename( $log_dir, $final_name );
   my $final_log_desp = $cluster->get_log_description($final_log);
 
-  my $summary_name     = $task_name . "_summary";
+  my $summary_name = $task_name . "_summary";
 
   my $report_name     = $task_name . "_report";
   my $report_pbs      = $self->get_pbs_filename( $pbs_dir, $report_name );
   my $report_log      = $self->get_log_filename( $log_dir, $report_name );
   my $report_log_desp = $cluster->get_log_description($report_log);
-  my $summary_pbs= $self->get_pbs_filename( $pbs_dir, $summary_name );
+  my $summary_pbs     = $self->get_pbs_filename( $pbs_dir, $summary_name );
 
   my $result_list_file = $self->get_file( $result_dir, $task_name, "_expect_result.tsv" );
 
-  my $report = $self->open_pbs( $report_pbs, $pbs_desc, $report_log_desp, $path_file, $result_dir );
+  my $report  = $self->open_pbs( $report_pbs,  $pbs_desc, $report_log_desp, $path_file, $result_dir );
   my $summary = $self->open_pbs( $summary_pbs, $pbs_desc, $report_log_desp, $path_file, $result_dir );
 
   #Make Summary Figure
@@ -104,7 +104,7 @@ sub perform {
   print $report "R --vanilla --slave -f $rfile \n";
   print $summary "R --vanilla --slave -f $rfile \n";
   $self->close_pbs( $summary, $summary_pbs );
-  
+
   #Make Report
   my $rtemplateReport = dirname(__FILE__) . "/MakeReport.R";
   my $projectRmd      = dirname(__FILE__) . "/ProjectReport.Rmd";
@@ -146,14 +146,17 @@ sub perform {
     my $clears     = {};
     my $clear_keys = {};
 
+    my $count = 0;
     for my $task_section (@tasks) {
+      print $final "# " . $task_section . "\n";
+      $count = $count + 1;
       my $classname = $config->{$task_section}{class};
       if ( !defined $classname ) {
         die "$task_section is not a valid task section.";
       }
       my $myclass = instantiate($classname);
-      
-      my $can_result_be_empty_file = $myclass->can_result_be_empty_file($config, $task_section) ? "True" : "False";
+
+      my $can_result_be_empty_file = $myclass->can_result_be_empty_file( $config, $task_section ) ? "True" : "False";
       my $expect_file_map;
       eval { $expect_file_map = $myclass->result( $config, $task_section ); } or do {
         my $e = $@;
@@ -179,14 +182,14 @@ sub perform {
             if ( !-e $subpbs ) {
               die "Task " . $task_section . ", file not exists " . $subpbs . "\n";
             }
-            print $final "bash " . $subpbs . "\n";
+            print $final "bash $subpbs \n" ;
           }
         }
         else {
           if ( !-e $samplepbs ) {
             die "Task " . $task_section . ", file not exists " . $samplepbs . "\n";
           }
-          print $final "bash " . $samplepbs . "\n";
+          print $final "bash $samplepbs \n";
         }
       }
 
@@ -280,6 +283,5 @@ sub get_step_sample_log {
   my $task_sample = $self->get_step_sample_name( $step_name, $sample );
   return $self->get_log_filename( $log_dir, $task_sample );
 }
-
 
 1;
