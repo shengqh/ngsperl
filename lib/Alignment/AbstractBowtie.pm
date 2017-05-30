@@ -31,7 +31,6 @@ sub result {
     my @result_files = ();
     if ($samformat) {
       push( @result_files, "${cur_dir}/${sample_name}.bam" );
-      push( @result_files, "${cur_dir}/${sample_name}.bam.stat" );
     }
     else {
       push( @result_files, "${cur_dir}/${sample_name}.out" );
