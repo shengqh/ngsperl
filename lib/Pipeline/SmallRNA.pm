@@ -27,6 +27,7 @@ sub initializeDefaultOptions {
   my $def = shift;
 
   initDefaultValue( $def, "host_xml2bam", 0 );
+  initDefaultValue( $def, "host_bamplot", 0 );
 
   return $def;
 }
@@ -388,6 +389,41 @@ sub getSmallRNAConfig {
         },
       };
       push( @$individual_ref, "bowtie1_genome_xml2bam" );
+
+      if ( getValue( $def, "host_bamplot" ) ) {
+        my $plot_gff = getValue( $def, "host_bamplot_gff" );
+
+        # "-g HG19 -y uniform -r"
+        my $bamplot_option = getValue( $def, "host_bamplot_option" );
+        my $plotgroups = $def->{plotgroups};
+        if ( !defined $plotgroups ) {
+          my $files         = $def->{files};
+          my @sortedSamples = sort keys %$files;
+          $plotgroups = { $def->{task_name} => \@sortedSamples };
+        }
+
+        $config->{"plotgroups"} = $plotgroups;
+        $config->{"host_bamplot"}    = {
+          class              => "Visualization::Bamplot",
+          perform            => 1,
+          target_dir         => "${host_genome_dir}/host_bamplot",
+          option             => $bamplot_option,
+          source_ref         => "bowtie1_genome_xml2bam",
+          groups_ref         => "plotgroups",
+          gff_file           => $plot_gff,
+          is_rainbow_color   => 0,
+          is_draw_individual => 0,
+          is_single_pdf      => 1,
+          sh_direct          => 1,
+          pbs                => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "1",
+            "mem"      => "10gb"
+          },
+        };
+        push @$summary_ref, ("host_bamplot");
+      }
     }
 
     push( @name_for_mapPercentage, "bowtie1_genome_1mm_NTA_smallRNA_count", "count.mapped.xml" );
