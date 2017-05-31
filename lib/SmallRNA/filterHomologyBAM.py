@@ -15,7 +15,7 @@ def outputQuery(outf, saved_read, referencePrefix, homologyPrefix, chrMap):
         if chrMap[read.reference_id].startswith(homologyPrefix):
           outf.write(read)
   
-def filter(outputBAM, inputBAM, referencePrefix, homologyPrefix):
+def filter(outputBAM, inputBAM, referencePrefix, homologyPrefix, logger):
   if inputBAM.endswith(".bam"):
     openmode = "rb"
   else:
@@ -70,7 +70,7 @@ def main():
   logger = logging.getLogger('homology')
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
   
-  filter(args.output, args.input, args.referencePrefix, args.homologyPrefix)
+  filter(args.output, args.input, args.referencePrefix, args.homologyPrefix, logger)
   
 if __name__ == "__main__":
     main()
