@@ -51,7 +51,7 @@ def main():
   parser = argparse.ArgumentParser(description="Filter homology smallRNA mapping BAM file.",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   
-  DEBUG = True
+  DEBUG = False
   NOT_DEBUG = not DEBUG
   
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input BAM file)', required=NOT_DEBUG)
@@ -65,7 +65,7 @@ def main():
     args.input = "/scratch/cqs/shengq1/temp/RPI11.10000.sam"
     args.referencePrefix="rn5_"
     args.homologyPrefix="mm10_"
-    args.output="/scratch/cqs/shengq1/temp/RPI11.rn5.bam"
+    args.output="/scratch/cqs/shengq1/temp/RPI11.mm10.bam"
   
   logger = logging.getLogger('homology')
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
