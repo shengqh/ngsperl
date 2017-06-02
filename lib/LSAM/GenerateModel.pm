@@ -31,7 +31,14 @@ sub perform {
   my $methods = get_raw_files( $config, $section );
   my $timeRanges = get_option( $config, $section, "time_ranges" );
   my $dsaFiles   = $config->{$section}{dsa_files};
-  my $datadef    = get_param_file( $config->{$section}{"data_def"}, "optional data definition file" );
+  
+  my $defOption = "";
+  if(defined $config->{$section}{"def_data_def"}){
+    $defOption = $defOption . " --defdatadef " . $config->{$section}{"def_data_def"};
+  }
+  if(defined $config->{$section}{"opt_data_def"}){
+    $defOption = $defOption . " --optdatadef " . $config->{$section}{"opt_data_def"};
+  }
 
   my $pbs_file = $self->get_file( $pbs_dir, $task_name, ".bat" );
   my $pbs_name = basename($pbs_file);
@@ -56,14 +63,14 @@ sub perform {
           my $finalFile = $timeName . "_" . $methodName . "_" . $dsaName . ".inp";
 
           print $pbs "
-python $py_script -i $template -o $finalFile --name ${timeName}_${methodName} --datadef $datadef --method $methodFile --dsa $dsaFile --start \"$start\" --end \"$end\" 
+python $py_script -i $template -o $finalFile $defOption --name ${timeName}_${methodName} --method $methodFile --dsa $dsaFile --start \"$start\" --end \"$end\" 
 ";
         }
       }
       else {
         my $finalFile = $timeName . "_" . $methodName . ".inp";
         print $pbs "
-python $py_script -i $template -o $finalFile --name ${timeName}_${methodName} --datadef $datadef --method $methodFile --start \"$start\" --end \"$end\"
+python $py_script -i $template -o $finalFile $defOption --name ${timeName}_${methodName} --method $methodFile --start \"$start\" --end \"$end\"
 ";
       }
     }

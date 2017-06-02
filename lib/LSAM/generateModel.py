@@ -10,7 +10,8 @@ parser.add_argument('-o', '--output', action='store', nargs='?', default="-", he
 parser.add_argument('--name', action='store', nargs='?', default="-", help="Method name")
 parser.add_argument('--method', action='store', nargs='?', default="-", help="Method file")
 parser.add_argument('--dsa', action='store', nargs='?', default="-", help="DSA file")
-parser.add_argument('--datadef', action='store', nargs='?', default="-", help="Optional data definition file")
+parser.add_argument('--defdatadef', action='store', nargs='?', default="-", help="Default data definition file")
+parser.add_argument('--optdatadef', action='store', nargs='?', default="-", help="Optional data definition file")
 parser.add_argument('--startTime', action='store', nargs='?', help="Start time")
 parser.add_argument('--endName', action='store', nargs='?', help="End time")
 
@@ -28,8 +29,16 @@ with open(args.input, 'r') as sr:
         sw.write("START " + args.startTime + "\n")
       elif line.startswith("FINISH"):
         sw.write("FINISH " + args.endName + "\n")
+      elif line.startswith("DEFDATADEF"):
+        if args.optdatadef == '-':
+          sw.write(line)
+        else:
+          sw.write("DEFDATADEF " + args.defdatadef + "\n")
       elif line.startswith("OPTDATADEF"):
-        sw.write("OPTDATADEF " + args.datadef + "\n")
+        if args.optdatadef == '-':
+          sw.write(line)
+        else:
+          sw.write("OPTDATADEF " + args.optdatadef + "\n")
       elif line.startswith("METHODS"):
         sw.write("METHODS " + args.method + "\n")
       elif line.startswith("TARGETDSA"):
