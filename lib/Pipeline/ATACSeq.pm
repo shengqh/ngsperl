@@ -47,6 +47,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_coltron",       0 );
   initDefaultValue( $def, "perform_diffbind",      0 );
   initDefaultValue( $def, "annotate_nearest_gene", 0 );
+  initDefaultValue( $def, "perform_enhancer",      0 );
 
   initDefaultValue( $def, "caller_type", "macs2" );
   if ( ( getValue( $def, "caller_type" ) eq "macs2" ) || ( getValue( $def, "caller_type" ) eq "both" ) ) {
@@ -293,73 +294,7 @@ sub getConfig {
       push @$individual, ($callName);
 
       if ( getValue( $def, "perform_enhancer" ) ) {
-        my $enhancerName = $callName . "_enhancer";
-
-        $config->{$enhancerName} = {
-          class         => "Chipseq::Enhancer",
-          perform       => 1,
-          target_dir    => "${target_dir}/" . $enhancerName,
-          option        => "",
-          source_ref    => [ "bwa_cleanbam", ".bam\$" ],
-          peaks_ref     => [ $callName, $callFilePattern ],
-          pipeline_dir  => getValue( $def, "enhancer_folder" ),
-          genome        => getValue( $def, "enhancer_genome" ),
-          genome_path   => getValue( $def, "enhancer_genome_path" ),
-          gsea_path     => getValue( $def, "enhancer_gsea_path" ),
-          gmx_path      => getValue( $def, "enhancer_gmx_path" ),
-          cpg_path      => getValue( $def, "enhancer_cpg_path" ),
-          activity_file => $def->{enhancer_activity_file},
-          sh_direct     => 1,
-          pbs           => {
-            "email"    => $email,
-            "nodes"    => "1:ppn=1",
-            "walltime" => "72",
-            "mem"      => "40gb"
-          },
-        };
-        push @$individual, ($enhancerName);
-
-        my $enhancerVis = $enhancerName . "_vis";
-        $config->{$enhancerVis} = {
-          class                    => "CQS::UniqueR",
-          perform                  => 1,
-          target_dir               => "${target_dir}/" . $enhancerVis,
-          option                   => "",
-          rtemplate                => "../Chipseq/enhancerVis.R",
-          output_file              => ".enhancer",
-          output_file_ext          => ".log.tss.png;.log.distal.png;.tss.tsv;.distal.tsv",
-          sh_direct                => 1,
-          parameterSampleFile1_ref => [ "$enhancerName", ".txt\$" ],
-          sh_direct                => 1,
-          pbs                      => {
-            "email"    => $email,
-            "nodes"    => "1:ppn=1",
-            "walltime" => "72",
-            "mem"      => "40gb"
-          },
-        };
-        push @$summary, $enhancerVis;
-
-        my $enhancerVisCor = $enhancerVis . "_correlation";
-        $config->{$enhancerVisCor} = {
-          class                    => "CQS::CountTableGroupCorrelation",
-          perform                  => 1,
-          suffix                   => "_corr",
-          target_dir               => "${target_dir}/" . $enhancerVis,
-          rtemplate                => "countTableVisFunctions.R,countTableGroupCorrelation.R",
-          output_file              => "parameterSampleFile1",
-          output_file_ext          => ".Correlation.png",
-          parameterSampleFile1_ref => [ $enhancerVis, ".tsv\$" ],
-          sh_direct                => 1,
-          pbs                      => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
-            "mem"       => "10gb"
-          },
-        };
-        push @$summary, $enhancerVisCor;
+        addEnhancer( $config, $def, $individual, $summary, $target_dir, $callName . "_enhancer", $callName, $callFilePattern );
       }
 
       if ($perform_diffbind) {

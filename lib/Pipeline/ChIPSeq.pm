@@ -55,6 +55,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_bamplot",  0 );
   initDefaultValue( $def, "perform_chipqc",   0 );
   initDefaultValue( $def, "perform_diffbind", 0 );
+  initDefaultValue( $def, "perform_enhancer", 0 );
 
   return $def;
 }
@@ -283,6 +284,11 @@ sub getConfig {
     };
     push @$summary, ($bindName);
   }
+  
+  if ( getValue( $def, "perform_enhancer" ) ) {
+    addEnhancer( $config, $def, $individual, $summary, $target_dir, $peakCallerTask . "_enhancer", $peakCallerTask, ".bed\$" );
+  }
+  
 
   $config->{"sequencetask"} = {
     class      => "CQS::SequenceTask",

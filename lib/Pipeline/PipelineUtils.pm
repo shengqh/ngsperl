@@ -15,9 +15,9 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat 
-      getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn 
-      getBatchGroups initDeseq2Options addHomerMotif)
+    qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat
+      getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn
+      getBatchGroups initDeseq2Options addHomerMotif addEnhancer)
   ]
 );
 
@@ -156,7 +156,7 @@ sub getDEseq2TaskName {
   if ( defined $libraryKey ) {
     $result = $result . "_" . $libraryKey;
   }
-  if(defined $def->{DE_task_suffix}){
+  if ( defined $def->{DE_task_suffix} ) {
     $result = $result . $def->{DE_task_suffix};
   }
   return $result;
@@ -393,6 +393,77 @@ sub addHomerMotif {
   };
   push @$summary, ($homerName);
   return $homerName;
+}
+
+sub addEnhancer {
+  my ( $config, $def, $individual, $summary, $target_dir, $enhancerName, $callName, $callFilePattern ) = @_;
+  $config->{$enhancerName} = {
+    class         => "Chipseq::Enhancer",
+    perform       => 1,
+    target_dir    => "${target_dir}/" . $enhancerName,
+    option        => "",
+    source_ref    => [ "bwa_cleanbam", ".bam\$" ],
+    peaks_ref     => [ $callName, $callFilePattern ],
+    pipeline_dir  => getValue( $def, "enhancer_folder" ),
+    genome        => getValue( $def, "enhancer_genome" ),
+    genome_path   => getValue( $def, "enhancer_genome_path" ),
+    gsea_path     => getValue( $def, "enhancer_gsea_path" ),
+    gmx_path      => getValue( $def, "enhancer_gmx_path" ),
+    cpg_path      => getValue( $def, "enhancer_cpg_path" ),
+    activity_file => $def->{enhancer_activity_file},
+    sh_direct     => 1,
+    pbs           => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "72",
+      "mem"       => "40gb"
+    },
+  };
+  push @$individual, ($enhancerName);
+
+  my $enhancerVis = $enhancerName . "_vis";
+  $config->{$enhancerVis} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => "${target_dir}/" . $enhancerVis,
+    option                   => "",
+    rtemplate                => "../Chipseq/enhancerVis.R",
+    output_file              => ".enhancer",
+    output_file_ext          => ".log.tss.png;.log.distal.png;.tss.tsv;.distal.tsv",
+    sh_direct                => 1,
+    parameterSampleFile1_ref => [ "$enhancerName", ".txt\$" ],
+    sh_direct                => 1,
+    pbs                      => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"    => "1:ppn=1",
+      "walltime" => "72",
+      "mem"      => "40gb"
+    },
+  };
+  push @$summary, $enhancerVis;
+
+  my $enhancerVisCor = $enhancerVis . "_correlation";
+  $config->{$enhancerVisCor} = {
+    class                    => "CQS::CountTableGroupCorrelation",
+    perform                  => 1,
+    suffix                   => "_corr",
+    target_dir               => "${target_dir}/" . $enhancerVis,
+    rtemplate                => "countTableVisFunctions.R,countTableGroupCorrelation.R",
+    output_file              => "parameterSampleFile1",
+    output_file_ext          => ".Correlation.png",
+    parameterSampleFile1_ref => [ $enhancerVis, ".tsv\$" ],
+    sh_direct                => 1,
+    pbs                      => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push @$summary, $enhancerVisCor;
 }
 
 sub initDeseq2Options {
