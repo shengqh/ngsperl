@@ -396,14 +396,14 @@ sub addHomerMotif {
 }
 
 sub addEnhancer {
-  my ( $config, $def, $individual, $summary, $target_dir, $enhancerName, $callName, $callFilePattern ) = @_;
+  my ( $config, $def, $individual, $summary, $target_dir, $enhancerName, $bam_ref, $peak_ref ) = @_;
   $config->{$enhancerName} = {
     class         => "Chipseq::Enhancer",
     perform       => 1,
     target_dir    => "${target_dir}/" . $enhancerName,
     option        => "",
-    source_ref    => [ "bwa_cleanbam", ".bam\$" ],
-    peaks_ref     => [ $callName, $callFilePattern ],
+    source_ref    => $bam_ref,
+    peaks_ref     => $peak_ref,
     pipeline_dir  => getValue( $def, "enhancer_folder" ),
     genome        => getValue( $def, "enhancer_genome" ),
     genome_path   => getValue( $def, "enhancer_genome_path" ),

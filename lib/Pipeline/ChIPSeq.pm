@@ -284,11 +284,10 @@ sub getConfig {
     };
     push @$summary, ($bindName);
   }
-  
+
   if ( getValue( $def, "perform_enhancer" ) ) {
-    addEnhancer( $config, $def, $individual, $summary, $target_dir, $peakCallerTask . "_enhancer", $peakCallerTask, ".bed\$" );
+    addEnhancer( $config, $def, $individual, $summary, $target_dir, $peakCallerTask . "_enhancer", [ $def->{aligner}, ".bam\$" ], [ $peakCallerTask, ".bed\$" ] );
   }
-  
 
   $config->{"sequencetask"} = {
     class      => "CQS::SequenceTask",

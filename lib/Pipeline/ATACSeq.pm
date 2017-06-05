@@ -294,7 +294,7 @@ sub getConfig {
       push @$individual, ($callName);
 
       if ( getValue( $def, "perform_enhancer" ) ) {
-        addEnhancer( $config, $def, $individual, $summary, $target_dir, $callName . "_enhancer", $callName, $callFilePattern );
+        addEnhancer( $config, $def, $individual, $summary, $target_dir, $callName . "_enhancer", [ "bwa_cleanbam", ".bam\$" ], [$callName, $callFilePattern] );
       }
 
       if ($perform_diffbind) {
