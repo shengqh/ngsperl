@@ -127,7 +127,7 @@ sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
-  my $designtable = get_raw_files( $config, $section, "designtable" );
+  my $designtable = get_raw_files( $config, $section, "design_table" );
   my $homer_annotation_genome = get_option( $config, $section, "homer_annotation_genome", "" );
 
   my $result = {};
