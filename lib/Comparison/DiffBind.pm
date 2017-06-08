@@ -46,17 +46,12 @@ sub perform {
   my $log_desc = $cluster->get_log_description($log);
   my $pbs      = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
-  my $defaultTissue = $designtable->{Tissue};
-  my $defaultFactor = $designtable->{Factor};
+  my $mapFiles = writeDesignTable( $target_dir, $section, $designtable, $bamfiles, $peaksfiles, $peakSoftware );
 
-  for my $name ( sort keys %$designtable ) {
-    if ( $name eq "Tissue" || $name eq "Factor" ) {
-      next;
-    }
+  for my $name ( sort keys %$mapFiles ) {
+    my $mapFileName = $mapFiles->{$name};
 
     my $sampleList        = $designtable->{$name};
-    my $defaultNameTissue = getValue($sampleList, "Tissue", "Unknown");
-    my $defaultNameFactor = getValue($sampleList, "Factor", "Unknown");
     my $comparisons       = getValue($sampleList, "Comparison");
 
     my $curdir       = create_directory_or_die( $result_dir . "/" . $name );
@@ -69,35 +64,6 @@ sub perform {
     }
     close($comp);
 
-    my $mapFileName = "${name}.config.txt";
-    my $mapfile     = $curdir . "/" . $mapFileName;
-    open( my $map, ">$mapfile" ) or die "Cannot create $mapfile";
-    print $map "SampleID\tTissue\tFactor\tCondition\tReplicate\tbamReads\tPeaks\tPeakCaller\n";
-    for my $sampleName ( sort keys %$sampleList ) {
-      if ( $sampleName eq "Tissue" || $sampleName eq "Factor" || $sampleName eq "Comparison" ) {
-        next;
-      }
-
-      my $entryMap = getValue($sampleList, $sampleName);
-      my $tissue   = $entryMap->{Tissue};
-      if ( !defined $tissue ) {
-        $tissue = $defaultNameTissue;
-        if ( !defined $tissue ) {
-          $tissue = $defaultTissue;
-          if ( !defined $tissue ) {
-            die "Define Tissue in $sampleName, or in $name, or in section $section";
-          }
-        }
-      }
-      my $factor = defined $entryMap->{Factor} ? $entryMap->{Factor} : defined $defaultFactor ? $defaultFactor : die "Define Factor for $sampleName in designtable of section $section";
-      my $condition = $entryMap->{Condition} or die "Define Condition for $sampleName in designtable of section $section";
-      my $replicate = $entryMap->{Replicate} or die "Define Replicate for $sampleName in designtable of section $section";
-      my $bamReads  = $bamfiles->{$sampleName}->[0];
-      my $peakFile  = $peaksfiles->{$sampleName}->[0];
-
-      print $map $sampleName . "\t" . $tissue . "\t" . $factor . "\t" . $condition . "\t" . $replicate . "\t" . $bamReads . "\t" . $peakFile . "\t" . $peakSoftware . "\n";
-    }
-    close($map);
     my $finalPrefix = $name;
     my $finalFile   = $name . "." . $comparisons->[ scalar(@$comparisons) - 1 ]->[0] . ".sig.tsv";
     print $pbs "
@@ -133,11 +99,11 @@ sub result {
   my $result = {};
 
   for my $name ( sort keys %$designtable ) {
-    my @result_files = ();
-
     if ( $name eq "Tissue" || $name eq "Factor" ) {
       next;
     }
+
+    my @result_files = ();
 
     my $sampleList        = $designtable->{$name};
     my $comparisons       = $sampleList->{Comparison};
