@@ -34,6 +34,7 @@ sub perform {
   my $peaksfiles = get_raw_files( $config, $section, "peaks" );
   my $peakSoftware = get_option( $config, $section, "peak_software" );
   my $genome       = get_option( $config, $section, "genome" );
+  my $combined     = get_option( $config, $section, "combined" );
 
   my $script = dirname(__FILE__) . "/ChipseqQC.r";
   if ( !-e $script ) {
@@ -46,13 +47,19 @@ sub perform {
   my $log_desc = $cluster->get_log_description($log);
   my $pbs      = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
-  my $mapFiles = writeDesignTable( $result_dir, $section, $qctable, $bamfiles, $peaksfiles, $peakSoftware );
+  my $mapFiles = writeDesignTable( $result_dir, $section, $qctable, $bamfiles, $peaksfiles, $peakSoftware, $combined, $task_name );
 
-  for my $qcname ( sort keys %$mapFiles ) {
-    my $mapFileName = $mapFiles->{$qcname};
-    my $curdir      = $result_dir . "/" . $qcname;
-    print $pbs "cd $curdir
+  if ($combined) {
+    my $mapFileName = $mapFiles->{$task_name};
+    print $pbs "R --vanilla -f $script --args $mapFileName $genome \n";
+  }
+  else {
+    for my $qcname ( sort keys %$mapFiles ) {
+      my $mapFileName = $mapFiles->{qcname};
+      my $curdir      = $result_dir . "/" . $qcname;
+      print $pbs "cd $curdir
 R --vanilla -f $script --args $mapFileName $genome \n";
+    }
   }
 
   $self->close_pbs( $pbs, $pbs_file );
@@ -62,21 +69,31 @@ sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
-  my $qctable = get_raw_files( $config, $section, "qctable" );
-
+  my $combined = get_option( $config, $section, "combined" );
   my $result = {};
 
-  for my $qcname ( sort keys %$qctable ) {
-    if ( $qcname eq "Tissue" || $qcname eq "Factor" ) {
-      next;
-    }
+  if ($combined) {
     my @result_files = ();
-    my $curdir       = $result_dir . "/" . $qcname;
-    my $targetDir    = $curdir . "/ChIPQCreport";
+    my $targetDir    = $result_dir . "/ChIPQCreport";
     push( @result_files, $targetDir . "/CCPlot.png" );
     push( @result_files, $targetDir . "/CoverageHistogramPlot.png" );
     push( @result_files, $targetDir . "/Rip.png" );
-    $result->{$qcname} = filter_array( \@result_files, $pattern );
+    $result->{$task_name} = filter_array( \@result_files, $pattern );
+  }
+  else {
+    my $qctable = get_raw_files( $config, $section, "qctable" );
+    for my $qcname ( sort keys %$qctable ) {
+      if ( $qcname eq "Tissue" || $qcname eq "Factor" ) {
+        next;
+      }
+      my @result_files = ();
+      my $curdir       = $result_dir . "/" . $qcname;
+      my $targetDir    = $curdir . "/ChIPQCreport";
+      push( @result_files, $targetDir . "/CCPlot.png" );
+      push( @result_files, $targetDir . "/CoverageHistogramPlot.png" );
+      push( @result_files, $targetDir . "/Rip.png" );
+      $result->{$qcname} = filter_array( \@result_files, $pattern );
+    }
   }
   return $result;
 }

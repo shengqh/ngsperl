@@ -256,6 +256,7 @@ sub getConfig {
       peaks_ref     => [ $peakCallerTask, ".bed\$" ],
       peak_software => "bed",
       genome        => $genome,
+      combined      => getValue( $def, "chipqc_combined", 1 ),
       sh_direct     => 0,
       pbs           => {
         "email"    => $email,

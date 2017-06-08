@@ -510,7 +510,7 @@ sub writeDesignTable {
 
         my $entryMap = getValue( $sampleList, $sampleName );
         my $tissue   = getValue( $entryMap,   "Tissue", $defaultNameTissue );
-        my $factor   = getValue( $entryMap,   "Factor", $defaultNameTissue );
+        my $factor   = getValue( $entryMap,   "Factor", $defaultNameFactor );
         my $condition = $entryMap->{Condition} or die "Define Condition for $sampleName in designtable of section $section";
         my $replicate = $entryMap->{Replicate} or die "Define Replicate for $sampleName in designtable of section $section";
         my $bamReads  = $bamfiles->{$sampleName}->[0];
