@@ -243,7 +243,7 @@ sub getConfig {
     push @$summary, ("bamplot");
   }
 
-  if ( $perform_chipqc ) {
+  if ($perform_chipqc) {
     my $qctable = getValue( $def, "design_table" );
     my $genome  = getValue( $def, "chipqc_genome" );    #hg19, check R ChIPQC package;
     $config->{chipqc} = {
@@ -275,7 +275,7 @@ sub getConfig {
       target_dir              => "${target_dir}/${bindName}",
       option                  => "",
       source_ref              => [ $def->{aligner}, ".bam\$" ],
-      designtable             => getValue( $def, "design_table" ),
+      design_table            => getValue( $def, "design_table" ),
       peaks_ref               => [ $peakCallerTask, ".bed\$" ],
       peak_software           => "bed",
       homer_annotation_genome => $def->{homer_annotation_genome},
