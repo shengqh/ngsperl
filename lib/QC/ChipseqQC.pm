@@ -11,6 +11,7 @@ use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 use CQS::UniqueTask;
+use Pipeline::PipelineUtils;
 
 our @ISA = qw(CQS::UniqueTask);
 
@@ -34,8 +35,6 @@ sub perform {
   my $peakSoftware = get_option( $config, $section, "peak_software" );
   my $genome       = get_option( $config, $section, "genome" );
 
-  my $defaultTissue = delete $qctable->{Tissue};
-
   my $script = dirname(__FILE__) . "/ChipseqQC.r";
   if ( !-e $script ) {
     die "File not found : " . $script;
@@ -47,38 +46,11 @@ sub perform {
   my $log_desc = $cluster->get_log_description($log);
   my $pbs      = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
-  for my $qcname ( sort keys %$qctable ) {
-    my $sampleList          = $qctable->{$qcname};
-    my $defaultQcnameTissue = delete $sampleList->{Tissue};
-    my $curdir              = create_directory_or_die( $result_dir . "/" . $qcname );
-    my $mapFileName         = "${qcname}.txt";
-    my $mapfile             = $curdir . "/" . $mapFileName;
-    open( my $map, ">$mapfile" ) or die "Cannot create $mapfile";
-    print $map "SampleID\tTissue\tFactor\tReplicate\tbamReads\tControlID\tbamControl\tPeaks\tPeakCaller\n";
-    for my $sampleName ( sort keys %$sampleList ) {
-      my $entryMap = $sampleList->{$sampleName};
-      my $sampleId = $entryMap->{Sample} or die "Define Sample for $sampleName in qctable of section $section";
-      my $tissue   = $entryMap->{Tissue};
-      if ( !defined $tissue ) {
-        $tissue = $defaultQcnameTissue;
-        if ( !defined $tissue ) {
-          $tissue = $defaultTissue;
-          if ( !defined $tissue ) {
-            die "Define Tissue in $sampleName, or in $qcname, or in section $section";
-          }
-        }
-      }
-      my $factor    = $entryMap->{Factor}    or die "Define Factor for $sampleName in qctable of section $section";
-      my $replicate = $entryMap->{Replicate} or die "Define Replicate for $sampleName in qctable of section $section";
-      my $bamReads  = $bamfiles->{$sampleId}->[0];
-      my $controlId = $entryMap->{Input}     or die "Define Input for $sampleName in qctable of section $section";
-      my $bamControl = $bamfiles->{$controlId}->[0];
-      my $peakFile   = $peaksfiles->{$sampleName}->[0];
+  my $mapFiles = writeDesignTable( $target_dir, $section, $qctable, $bamfiles, $peaksfiles, $peakSoftware );
 
-      print $map $sampleId . "\t" . $tissue . "\t" . $factor . "\t" . $replicate . "\t" . $bamReads . "\t" . $controlId . "\t" . $bamControl . "\t" . $peakFile . "\t" . $peakSoftware . "\n";
-    }
-    close($map);
-
+  for my $qcname ( sort keys %$mapFiles ) {
+    my $mapFileName = $mapFiles->{qcname};
+    my $curdir      = $result_dir . "/" . $qcname;
     print $pbs "cd $curdir
 R --vanilla -f $script --args $mapFileName $genome \n";
   }
@@ -95,6 +67,9 @@ sub result {
   my $result = {};
 
   for my $qcname ( sort keys %$qctable ) {
+    if ( $qcname eq "Tissue" || $qcname eq "Factor" ) {
+      next;
+    }
     my @result_files = ();
     my $curdir       = $result_dir . "/" . $qcname;
     my $targetDir    = $curdir . "/ChIPQCreport";
