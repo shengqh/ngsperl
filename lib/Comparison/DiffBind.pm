@@ -30,7 +30,7 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $bamfiles    = get_raw_files( $config, $section );
-  my $designtable = get_raw_files( $config, $section, "designtable" );
+  my $designtable = get_raw_files( $config, $section, "design_table" );
   my $peaksfiles  = get_raw_files( $config, $section, "peaks" );
   my $peakSoftware = get_option( $config, $section, "peak_software" );
   my $homer_annotation_genome = get_option( $config, $section, "homer_annotation_genome", "" );
