@@ -46,7 +46,7 @@ sub perform {
   my $log_desc = $cluster->get_log_description($log);
   my $pbs      = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
-  my $mapFiles = writeDesignTable( $target_dir, $section, $qctable, $bamfiles, $peaksfiles, $peakSoftware );
+  my $mapFiles = writeDesignTable( $result_dir, $section, $qctable, $bamfiles, $peaksfiles, $peakSoftware );
 
   for my $qcname ( sort keys %$mapFiles ) {
     my $mapFileName = $mapFiles->{qcname};
