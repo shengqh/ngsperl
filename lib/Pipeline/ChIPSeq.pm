@@ -69,9 +69,14 @@ sub getConfig {
 
   $def = initializeDefaultOptions($def);
 
+  my $perform_chipqc = getValue( $def, "perform_chipqc" );
+  if ($perform_chipqc) {
+    getValue( $def, "design_table" );
+  }
+
   my $perform_diffbind = getValue( $def, "perform_diffbind" );
   if ($perform_diffbind) {
-    getValue( $def, "diffbind_table" );
+    getValue( $def, "design_table" );
   }
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir ) = getPreprocessionConfig($def);
@@ -238,8 +243,8 @@ sub getConfig {
     push @$summary, ("bamplot");
   }
 
-  if ( getValue( $def, "perform_chipqc" ) ) {
-    my $qctable = getValue( $def, "chipqc_table" );
+  if ( $perform_chipqc ) {
+    my $qctable = getValue( $def, "design_table" );
     my $genome  = getValue( $def, "chipqc_genome" );    #hg19, check R ChIPQC package;
     $config->{chipqc} = {
       class         => "QC::ChipseqQC",
