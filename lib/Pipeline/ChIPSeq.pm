@@ -275,7 +275,7 @@ sub getConfig {
       target_dir              => "${target_dir}/${bindName}",
       option                  => "",
       source_ref              => [ $def->{aligner}, ".bam\$" ],
-      designtable             => getValue( $def, "diffbind_table" ),
+      designtable             => getValue( $def, "design_table" ),
       peaks_ref               => [ $peakCallerTask, ".bed\$" ],
       peak_software           => "bed",
       homer_annotation_genome => $def->{homer_annotation_genome},
