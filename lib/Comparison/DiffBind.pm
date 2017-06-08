@@ -51,8 +51,8 @@ sub perform {
   for my $name ( sort keys %$mapFiles ) {
     my $mapFileName = $mapFiles->{$name};
 
-    my $sampleList        = $designtable->{$name};
-    my $comparisons       = getValue($sampleList, "Comparison");
+    my $sampleList = $designtable->{$name};
+    my $comparisons = getValue( $sampleList, "Comparison" );
 
     my $curdir       = create_directory_or_die( $result_dir . "/" . $name );
     my $compFileName = "${name}.comparison.txt";
@@ -105,19 +105,19 @@ sub result {
 
     my @result_files = ();
 
-    my $sampleList        = $designtable->{$name};
-    my $comparisons       = $sampleList->{Comparison};
+    my $sampleList  = $designtable->{$name};
+    my $comparisons = $sampleList->{Comparison};
 
-    my $curdir       = create_directory_or_die( $result_dir . "/" . $name );
+    my $curdir = create_directory_or_die( $result_dir . "/" . $name );
 
     my $finalPrefix = $name;
-    for my $comparison (@$comparisons){
+    for my $comparison (@$comparisons) {
       my $comparisonName = $comparison->[0];
-      my $finalFile   = $name . "." . $comparisonName . ".sig.tsv";
-      push (@result_files, $curdir . "/" . $finalFile);
+      my $finalFile      = $name . "." . $comparisonName . ".sig.tsv";
+      push( @result_files, $curdir . "/" . $finalFile );
       if ( $homer_annotation_genome ne "" ) {
-        push (@result_files, $curdir . "/" . $name . "." . $comparisonName . ".sig.stat.tsv");
-        push (@result_files, $curdir . "/" . $name . "." . $comparisonName . ".sig.genes.tsv");
+        push( @result_files, $curdir . "/" . $name . "." . $comparisonName . ".sig.stat.tsv" );
+        push( @result_files, $curdir . "/" . $name . "." . $comparisonName . ".sig.genes.tsv" );
       }
     }
     $result->{$name} = filter_array( \@result_files, $pattern );
