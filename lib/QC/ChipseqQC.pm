@@ -55,7 +55,7 @@ sub perform {
   }
   else {
     for my $qcname ( sort keys %$mapFiles ) {
-      my $mapFileName = $mapFiles->{qcname};
+      my $mapFileName = $mapFiles->{$qcname};
       my $curdir      = $result_dir . "/" . $qcname;
       print $pbs "cd $curdir
 R --vanilla -f $script --args $mapFileName $genome \n";
