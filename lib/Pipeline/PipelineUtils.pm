@@ -469,7 +469,7 @@ sub addEnhancer {
 sub addMultiQC {
   my ( $config, $def, $summary, $target_dir, $root_dir, $option ) = @_;
   $config->{multiqc} = {
-    class      => "QualityControl::MultiQC",
+    class      => "QC::MultiQC",
     option     => getValue( $def, "multiqc_option", "" ),
     perform    => 1,
     target_dir => $target_dir . "/multiqc",
