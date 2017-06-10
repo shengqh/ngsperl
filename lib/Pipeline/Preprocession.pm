@@ -107,7 +107,7 @@ sub getPreprocessionConfig {
       class      => "SRA::FastqDump",
       perform    => 1,
       ispaired   => $is_paired,
-      target_dir => $def->{target_dir} . "/sra2fastq",
+      target_dir => $def->{target_dir} . "/" . getNextFolderIndex($def) . "sra2fastq",
       option     => "",
       source     => $def->{files},
       sh_direct  => 1,
@@ -131,7 +131,7 @@ sub getPreprocessionConfig {
     $config->{merge_fastq} = {
       class      => "Format::MergeFastq",
       perform    => 1,
-      target_dir => $def->{target_dir} . "/merge_fastq",
+      target_dir => $def->{target_dir} . "/" . getNextFolderIndex($def) . "merge_fastq",
       option     => "",
       source_ref => $source_ref,
       sh_direct  => 1,
@@ -152,7 +152,7 @@ sub getPreprocessionConfig {
     $config->{fastq_remove_N} = {
       class      => "CQS::FastqTrimmer",
       perform    => 1,
-      target_dir => $def->{target_dir} . "/fastq_remove_N",
+      target_dir => $def->{target_dir} . "/" . getNextFolderIndex($def) . "fastq_remove_N",
       option     => "",
       extension  => "_trim.fastq.gz",
       source_ref => $source_ref,
@@ -177,7 +177,7 @@ sub getPreprocessionConfig {
     $config->{"remove_contamination_sequences"} = {
       class      => "CQS::Perl",
       perform    => 1,
-      target_dir => $preprocessing_dir . "/remove_contamination_sequences",
+      target_dir => $preprocessing_dir . "/" . getNextFolderIndex($def) . "remove_contamination_sequences",
       option     => $remove_sequences,
       output_ext => "_removeSeq.fastq.gz",
       perlFile   => "removeSequenceInFastq.pl",
@@ -204,7 +204,7 @@ sub getPreprocessionConfig {
       "cutadapt" => {
         class                            => "Trimmer::Cutadapt",
         perform                          => 1,
-        target_dir                       => $preprocessing_dir . "/cutadapt",
+        target_dir                       => $preprocessing_dir . "/" . getNextFolderIndex($def) . "cutadapt",
         option                           => $def->{cutadapt_option},
         source_ref                       => $source_ref,
         adapter                          => $def->{adapter},
@@ -228,13 +228,15 @@ sub getPreprocessionConfig {
     if ( defined $def->{cutadapt} ) {
       $cutadapt_section->{cutadapt} = merge( $def->{cutadapt}, $cutadapt_section->{cutadapt} );
     }
+    
+    my $fastq_len_dir = $preprocessing_dir . "/" . getNextFolderIndex($def) . "fastq_len";
     my $cutadapt = merge(
       $cutadapt_section,
       {
         "fastq_len" => {
           class      => "CQS::FastqLen",
           perform    => 1,
-          target_dir => $preprocessing_dir . "/fastq_len",
+          target_dir => $fastq_len_dir,
           option     => "",
           source_ref => "cutadapt",
           cqstools   => $def->{cqstools},
@@ -250,7 +252,7 @@ sub getPreprocessionConfig {
         "fastq_len_vis" => {
           class                    => "CQS::UniqueR",
           perform                  => 1,
-          target_dir               => $preprocessing_dir . "/fastq_len",
+          target_dir               => $fastq_len_dir,
           rtemplate                => "countTableVisFunctions.R,fastqLengthVis.R",
           output_file              => ".lengthDistribution",
           output_file_ext          => ".csv",
@@ -282,20 +284,20 @@ sub getPreprocessionConfig {
     my $fastqc_count_vis_files = undef;
     if ( length($remove_sequences) && $run_cutadapt ) {
       $fastqc_count_vis_files = {
-        target_dir         => $preprocessing_dir . "/fastqc_post_trim",
+        target_dir         => $preprocessing_dir . "/" . getNextFolderIndex($def) . "fastqc_post_trim",
         parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.summary.reads.tsv\$" ],
         parameterFile3_ref => [ "fastqc_post_trim_summary", ".FastQC.summary.reads.tsv\$" ],
       };
     }
     elsif ( length($remove_sequences) ) {
       $fastqc_count_vis_files = {
-        target_dir         => $preprocessing_dir . "/fastqc_post_remove",
+        target_dir         => $preprocessing_dir . "/" . getNextFolderIndex($def) . "fastqc_post_remove",
         parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.summary.reads.tsv\$" ],
       };
     }
     elsif ($run_cutadapt) {
       $fastqc_count_vis_files = {
-        target_dir         => $preprocessing_dir . "/fastqc_post_trim",
+        target_dir         => $preprocessing_dir . "/" . getNextFolderIndex($def) . "fastqc_post_trim",
         parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.summary.reads.tsv\$" ],
       };
     }

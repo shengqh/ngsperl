@@ -90,7 +90,7 @@ sub getConfig {
     $config->{bowtie1} = {
       class         => "Alignment::Bowtie1",
       perform       => 1,
-      target_dir    => "${target_dir}/bowtie1",
+      target_dir    => "${target_dir}/" . getNextFolderIndex($def) . "bowtie1",
       option        => getValue( $def, "bowtie1_option" ),
       fasta_file    => getValue( $def, "bowtie1_fasta" ),
       bowtie1_index => getValue( $def, "bowtie1_index" ),
@@ -107,7 +107,7 @@ sub getConfig {
       class                    => "CQS::UniqueR",
       perform                  => 1,
       rCode                    => "",
-      target_dir               => $def->{target_dir} . "/bowtie1",
+      target_dir               => $config->{bowtie1}->{target_dir},
       option                   => "",
       parameterSampleFile1_ref => [ "bowtie1", ".log" ],
       rtemplate                => "../Alignment/Bowtie1Summary.r",
@@ -127,7 +127,7 @@ sub getConfig {
     $config->{ $def->{aligner} } = {
       class      => "Alignment::BWA",
       perform    => 1,
-      target_dir => "${target_dir}/" . $def->{aligner},
+      target_dir => "${target_dir}/" . getNextFolderIndex($def) . $def->{aligner},
       option     => getValue( $def, "bwa_option" ),
       bwa_index  => getValue( $def, "bwa_index" ),
       source_ref => $source_ref,
@@ -152,7 +152,7 @@ sub getConfig {
     $config->{$peakCallerTask} = {
       class      => "Chipseq::MACS",
       perform    => 1,
-      target_dir => "${target_dir}/${peakCallerTask}",
+      target_dir => "${target_dir}/" . getNextFolderIndex($def) . "${peakCallerTask}",
       option     => getValue( $def, "macs1_option" ),
       source_ref => [ $def->{aligner}, ".bam\$" ],
       groups     => $def->{"treatments"},
@@ -171,7 +171,7 @@ sub getConfig {
     $config->{$peakCallerTask} = {
       class      => "Chipseq::MACS2Callpeak",
       perform    => 1,
-      target_dir => "${target_dir}/$peakCallerTask",
+      target_dir => "${target_dir}/" . getNextFolderIndex($def) . "$peakCallerTask",
       option     => getValue( $def, "macs2_option" ),
       source_ref => [ $def->{aligner}, ".bam\$" ],
       groups     => $def->{"treatments"},
@@ -195,7 +195,7 @@ sub getConfig {
     $config->{$roseTask} = {
       class                => "Chipseq::Rose2",
       perform              => 1,
-      target_dir           => "${target_dir}/$roseTask",
+      target_dir           => "${target_dir}/" . getNextFolderIndex($def) . "$roseTask",
       option               => "",
       source_ref           => [ $def->{aligner}, ".bam\$" ],
       groups               => $def->{"treatments"},
@@ -225,7 +225,7 @@ sub getConfig {
     $config->{"bamplot"} = {
       class              => "Visualization::Bamplot",
       perform            => 1,
-      target_dir         => "${target_dir}/bamplot",
+      target_dir         => "${target_dir}/" . getNextFolderIndex($def) . "bamplot",
       option             => getValue( $def, "bamplot_option" ),
       source_ref         => $def->{aligner},
       groups_ref         => "plotgroups",
@@ -250,7 +250,7 @@ sub getConfig {
     $config->{chipqc} = {
       class         => "QC::ChipseqQC",
       perform       => 1,
-      target_dir    => "${target_dir}/chipqc",
+      target_dir    => "${target_dir}/" . getNextFolderIndex($def) . "chipqc",
       option        => "",
       source_ref    => $def->{aligner},
       qctable       => $qctable,
@@ -274,7 +274,7 @@ sub getConfig {
     $config->{$bindName} = {
       class                   => "Comparison::DiffBind",
       perform                 => 1,
-      target_dir              => "${target_dir}/${bindName}",
+      target_dir              => "${target_dir}/" . getNextFolderIndex($def) . "${bindName}",
       option                  => "",
       source_ref              => [ $def->{aligner}, ".bam\$" ],
       design_table            => getValue( $def, "design_table" ),

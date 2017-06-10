@@ -17,7 +17,8 @@ our %EXPORT_TAGS = (
   'all' => [
     qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat
       getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn
-      getBatchGroups initDeseq2Options addHomerMotif addEnhancer writeDesignTable addMultiQC)
+      getBatchGroups initDeseq2Options addHomerMotif addEnhancer writeDesignTable addMultiQC
+      getNextFolderIndex)
   ]
 );
 
@@ -38,12 +39,26 @@ sub getValue {
   }
 }
 
+sub getNextFolderIndex{
+  my ( $def ) = @_;
+
+  my $result = "";
+  my $add_folder_index = getValue($def, "add_folder_index", 0);
+  if($add_folder_index){
+    my $folder_index = getValue($def, "folder_index", 0);
+    $result = sprintf("T%3d_", $folder_index);
+    $def->{folder_index} = $folder_index + 1;
+  }
+
+  return $result;  
+}
+
 sub addFastQC {
   my ( $config, $def, $individual, $summary, $fastqcTask, $source_ref, $parentDir ) = @_;
   $config->{"$fastqcTask"} = {
     class      => "QC::FastQC",
     perform    => 1,
-    target_dir => $parentDir . "/$fastqcTask",
+    target_dir => $parentDir . "/" . getNextFolderIndex($def) . "$fastqcTask",
     option     => "",
     source_ref => $source_ref,
     cluster    => $def->{cluster},
@@ -60,7 +75,7 @@ sub addFastQC {
   $config->{$summaryTask} = {
     class      => "QC::FastQCSummary",
     perform    => 1,
-    target_dir => $parentDir . "/$fastqcTask",
+    target_dir => $config->{"$fastqcTask"}->{target_dir},
     cqstools   => $def->{cqstools},
     option     => "",
     cluster    => $def->{cluster},
@@ -82,7 +97,7 @@ sub addBlastn {
   $config->{$blastTask} = {
     class      => "Blast::Blastn",
     perform    => 1,
-    target_dir => $parentDir . "/$blastTask",
+    target_dir => $parentDir . "/" . getNextFolderIndex($def) . "$blastTask",
     option     => "",
     source_ref => [ $fastaTask, $filePattern ],
     sh_direct  => 0,
@@ -106,7 +121,7 @@ sub addBowtie {
   $config->{$taskName} = {
     class                 => "Alignment::Bowtie1",
     perform               => 1,
-    target_dir            => $parentDir . "/" . $taskName,
+    target_dir            => $parentDir . "/" . getNextFolderIndex($def) . $taskName,
     option                => $bowtieOption,
     source_ref            => $sourceRef,
     bowtie1_index         => $bowtieIndex,
@@ -175,7 +190,7 @@ sub addDEseq2 {
   $config->{$taskName} = {
     class                  => "Comparison::DESeq2",
     perform                => 1,
-    target_dir             => $deseq2Dir . "/$taskName",
+    target_dir             => $deseq2Dir . "/" . getNextFolderIndex($def) . "$taskName",
     option                 => "",
     source_ref             => "pairs",
     groups_ref             => "groups",
@@ -220,7 +235,7 @@ sub addDeseq2Visualization {
   $config->{$taskName} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
-    target_dir               => $dataVisualizationDir . "/$taskName",
+    target_dir               => $dataVisualizationDir . "/" . getNextFolderIndex($def) . "$taskName",
     rtemplate                => "DESeq2_all_vis.R",
     output_file              => ".${taskKey}.DESeq2.Matrix",
     output_file_ext          => ".png",
@@ -248,7 +263,7 @@ sub addDeseq2SignificantSequenceBlastn {
   $config->{$fastaTask} = {
     class      => "Blast::DESeq2SignificantReadToFasta",
     perform    => 1,
-    target_dir => $parentDir . "/$fastaTask",
+    target_dir => $parentDir . "/" . getNextFolderIndex($def) . "$fastaTask",
     option     => "",
     source_ref => [ $deseq2Task, "_DESeq2_sig.csv\$" ],
     sh_direct  => 1,
@@ -379,7 +394,7 @@ sub addHomerMotif {
     class        => "Homer::FindMotifs",
     option       => getValue( $def, "homer_option" ),
     perform      => 1,
-    target_dir   => $target_dir . "/" . $homerName,
+    target_dir   => $target_dir . "/" . getNextFolderIndex($def) . $homerName,
     source_ref   => [ $callName, $callFilePattern ],
     homer_genome => getValue( $def, "homer_genome" ),
     sh_direct    => 1,
@@ -400,7 +415,7 @@ sub addEnhancer {
   $config->{$enhancerName} = {
     class         => "Chipseq::Enhancer",
     perform       => 1,
-    target_dir    => "${target_dir}/" . $enhancerName,
+    target_dir    => "${target_dir}/" . getNextFolderIndex($def) . $enhancerName,
     option        => "",
     source_ref    => $bam_ref,
     peaks_ref     => $peak_ref,
@@ -426,7 +441,7 @@ sub addEnhancer {
   $config->{$enhancerVis} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
-    target_dir               => "${target_dir}/" . $enhancerVis,
+    target_dir               => "${target_dir}/" . getNextFolderIndex($def) . $enhancerVis,
     option                   => "",
     rtemplate                => "../Chipseq/enhancerVis.R",
     output_file              => ".enhancer",
@@ -449,7 +464,7 @@ sub addEnhancer {
     class                    => "CQS::CountTableGroupCorrelation",
     perform                  => 1,
     suffix                   => "_corr",
-    target_dir               => "${target_dir}/" . $enhancerVis,
+    target_dir               => $config->{$enhancerVis}->{target_dir},
     rtemplate                => "countTableVisFunctions.R,countTableGroupCorrelation.R",
     output_file              => "parameterSampleFile1",
     output_file_ext          => ".Correlation.png",
@@ -472,7 +487,7 @@ sub addMultiQC {
     class      => "QC::MultiQC",
     option     => getValue( $def, "multiqc_option", "" ),
     perform    => 1,
-    target_dir => $target_dir . "/multiqc",
+    target_dir => $target_dir . "/" . getNextFolderIndex($def) . "multiqc",
     root_dir   => $root_dir,
     sh_direct  => 1,
     pbs        => {
