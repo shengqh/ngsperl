@@ -12,7 +12,7 @@ totalCountFile<-parFile2
 
 #load Rcpp package first because of the error with reshape2 package
 library(Rcpp)
-
+library(grid)
 library(reshape2)
 library(ggplot2)
 library(RColorBrewer)
