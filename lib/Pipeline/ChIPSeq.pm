@@ -147,6 +147,36 @@ sub getConfig {
 
   push @$individual, ( $def->{aligner} );
 
+  if ( getValue( $def, "perform_bamplot" ) ) {
+    my $plotgroups = $def->{plotgroups};
+    if ( !defined $plotgroups ) {
+      my $files         = $def->{files};
+      my @sortedSamples = sort keys %$files;
+      $plotgroups = { getValue( $def, "task_name" ) => \@sortedSamples };
+    }
+    $config->{plotgroups} = $plotgroups;
+    $config->{"bamplot"} = {
+      class              => "Visualization::Bamplot",
+      perform            => 1,
+      target_dir         => "${target_dir}/" . getNextFolderIndex($def) . "bamplot",
+      option             => getValue( $def, "bamplot_option" ),
+      source_ref         => $def->{aligner},
+      groups_ref         => "plotgroups",
+      gff_file           => getValue( $def, "bamplot_gff" ),
+      is_rainbow_color   => 0,
+      is_draw_individual => 0,
+      is_single_pdf      => 1,
+      sh_direct          => 1,
+      pbs                => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
+      },
+    };
+    push @$summary, ("bamplot");
+  }
+
   my $peakCallerTask = $def->{peak_caller} . "callpeak";
   if ( $def->{peak_caller} eq "macs1" ) {
     $config->{$peakCallerTask} = {
@@ -191,7 +221,7 @@ sub getConfig {
   push @$step2, ($peakCallerTask);
 
   if ( $def->{perform_rose} ) {
-    my $roseTask = $def->{peak_caller} . "callpeak_bradner_rose2";
+    my $roseTask = $peakCallerTask . "_bradner_rose2";
     $config->{$roseTask} = {
       class                => "Chipseq::Rose2",
       perform              => 1,
@@ -214,43 +244,14 @@ sub getConfig {
     push @$step2, ($roseTask);
   }
 
-  if ( getValue( $def, "perform_bamplot" ) ) {
-    my $plotgroups = $def->{plotgroups};
-    if ( !defined $plotgroups ) {
-      my $files         = $def->{files};
-      my @sortedSamples = sort keys %$files;
-      $plotgroups = { getValue( $def, "task_name" ) => \@sortedSamples };
-    }
-    $config->{plotgroups} = $plotgroups;
-    $config->{"bamplot"} = {
-      class              => "Visualization::Bamplot",
-      perform            => 1,
-      target_dir         => "${target_dir}/" . getNextFolderIndex($def) . "bamplot",
-      option             => getValue( $def, "bamplot_option" ),
-      source_ref         => $def->{aligner},
-      groups_ref         => "plotgroups",
-      gff_file           => getValue( $def, "bamplot_gff" ),
-      is_rainbow_color   => 0,
-      is_draw_individual => 0,
-      is_single_pdf      => 1,
-      sh_direct          => 1,
-      pbs                => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "1",
-        "mem"      => "10gb"
-      },
-    };
-    push @$summary, ("bamplot");
-  }
-
   if ($perform_chipqc) {
     my $qctable = getValue( $def, "design_table" );
     my $genome  = getValue( $def, "chipqc_genome" );    #hg19, check R ChIPQC package;
-    $config->{chipqc} = {
+    my $chipqc_taskname = $peakCallerTask . "_chipqc";
+    $config->{$chipqc_taskname} = {
       class         => "QC::ChipseqQC",
       perform       => 1,
-      target_dir    => "${target_dir}/" . getNextFolderIndex($def) . "chipqc",
+      target_dir    => "${target_dir}/" . getNextFolderIndex($def) . $chipqc_taskname,
       option        => "",
       source_ref    => $def->{aligner},
       qctable       => $qctable,
@@ -266,7 +267,7 @@ sub getConfig {
         "mem"      => "40gb"
       },
     };
-    push @$summary, ("chipqc");
+    push @$summary, ($chipqc_taskname);
   }
 
   if ($perform_diffbind) {
