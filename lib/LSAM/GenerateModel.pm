@@ -30,13 +30,13 @@ sub perform {
 
   my $methods = get_raw_files( $config, $section );
   my $timeRanges = get_option( $config, $section, "time_ranges" );
-  my $dsaFiles   = $config->{$section}{dsa_files};
-  
+  my $dsaFiles = $config->{$section}{dsa_files};
+
   my $defOption = "";
-  if(defined $config->{$section}{"def_data_def"}){
+  if ( defined $config->{$section}{"def_data_def"} ) {
     $defOption = $defOption . " --defdatadef " . $config->{$section}{"def_data_def"};
   }
-  if(defined $config->{$section}{"opt_data_def"}){
+  if ( defined $config->{$section}{"opt_data_def"} ) {
     $defOption = $defOption . " --optdatadef " . $config->{$section}{"opt_data_def"};
   }
 
@@ -58,9 +58,16 @@ sub perform {
     for my $methodName ( keys %$methods ) {
       my $methodFile = $methods->{$methodName}[0];
       if ( defined $dsaFiles ) {
-        for my $dsaName ( keys %$dsaFiles ) {
-          my $dsaFile   = $dsaFiles->{$dsaName}[0];
-          my $finalFile = $timeName . "_" . $methodName . "_" . $dsaName . ".inp";
+        my @dsaNames = keys %$dsaFiles;
+        for my $dsaName (@dsaNames) {
+          my $dsaFile = $dsaFiles->{$dsaName}[0];
+          my $finalFile;
+          if ( scalar(@dsaNames) > 1 ) {
+            $finalFile = $timeName . "_" . $methodName . "_" . $dsaName . ".inp";
+          }
+          else {
+            $finalFile = $timeName . "_" . $methodName . ".inp";
+          }
 
           print $pbs "
 python $py_script -i $template -o $finalFile $defOption --name ${timeName}_${methodName} --method $methodFile --dsa $dsaFile --start \"$start\" --end \"$end\" 
@@ -93,8 +100,13 @@ sub result {
   for my $timeName ( keys %$timeRanges ) {
     for my $methodName ( keys %$methods ) {
       if ( defined $dsaFiles ) {
-        for my $dsaName ( keys %$dsaFiles ) {
-          my $key          = $timeName . "_" . $methodName . "_" . $dsaName;
+        my @dsaNames = keys %$dsaFiles;
+        for my $dsaName (@dsaNames) {
+          my $dsaFile = $dsaFiles->{$dsaName}[0];
+          my $key     = $timeName . "_" . $methodName;
+          if ( scalar(@dsaNames) > 1 ) {
+            $key = $key . "_" . $dsaName . ".inp";
+          }
           my $finalFile    = $key . ".inp";
           my @result_files = ( $result_dir . "\\" . $finalFile );
           $result->{$key} = filter_array( \@result_files, $pattern );
