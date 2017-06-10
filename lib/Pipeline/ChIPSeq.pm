@@ -56,6 +56,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_chipqc",   0 );
   initDefaultValue( $def, "perform_diffbind", 0 );
   initDefaultValue( $def, "perform_enhancer", 0 );
+  initDefaultValue( $def, "perform_multiqc",  1 );
 
   return $def;
 }
@@ -295,6 +296,9 @@ sub getConfig {
     addEnhancer( $config, $def, $individual, $summary, $target_dir, $peakCallerTask . "_enhancer", [ $def->{aligner}, ".bam\$" ], [ $peakCallerTask, ".bed\$" ] );
   }
 
+  if ( getValue( $def, "perform_multiqc" ) ) {
+    addMultiQC( $config, $def, $summary, $target_dir, $target_dir );
+  }
   $config->{"sequencetask"} = {
     class      => "CQS::SequenceTask",
     perform    => 1,
