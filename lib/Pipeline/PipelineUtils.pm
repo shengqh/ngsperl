@@ -46,7 +46,7 @@ sub getNextFolderIndex{
   my $add_folder_index = getValue($def, "add_folder_index", 0);
   if($add_folder_index){
     my $folder_index = getValue($def, "folder_index", 0);
-    $result = sprintf("T%3d_", $folder_index);
+    $result = sprintf("T%03d_", $folder_index);
     $def->{folder_index} = $folder_index + 1;
   }
 
