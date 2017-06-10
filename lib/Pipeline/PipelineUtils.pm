@@ -17,7 +17,7 @@ our %EXPORT_TAGS = (
   'all' => [
     qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat
       getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn
-      getBatchGroups initDeseq2Options addHomerMotif addEnhancer writeDesignTable)
+      getBatchGroups initDeseq2Options addHomerMotif addEnhancer writeDesignTable addMultiQC)
   ]
 );
 
@@ -464,6 +464,27 @@ sub addEnhancer {
     },
   };
   push @$summary, $enhancerVisCor;
+}
+
+sub addMultiQC {
+  my ( $config, $def, $summary, $target_dir, $root_dir, $option ) = @_;
+  $config->{multiqc} = {
+    class      => "QualityControl::MultiQC",
+    option     => getValue( $def, "multiqc_option", "" ),
+    perform    => 1,
+    target_dir => $target_dir . "/multiqc",
+    root_dir   => $root_dir,
+    sh_direct  => 1,
+    pbs        => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push @$summary, ("multiqc");
+  return "multiqc";
 }
 
 sub initDeseq2Options {
