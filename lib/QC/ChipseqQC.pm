@@ -45,10 +45,15 @@ sub perform {
   my $pbs_name = basename($pbs_file);
   my $log      = $self->get_log_filename( $log_dir, $task_name );
   my $log_desc = $cluster->get_log_description($log);
-  my $pbs      = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+  
+  my $expectFiles = $self->result($config, $section);
+  my @sortedKeys = (sort keys %$expectFiles);
+  my $final_file = $expectFiles->{$sortedKeys[scalar(@sortedKeys)-1]};
+  
+  my $pbs      = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
   my $mapFiles = writeDesignTable( $result_dir, $section, $qctable, $bamfiles, $peaksfiles, $peakSoftware, $combined, $task_name );
-
+  
   if ($combined) {
     my $mapFileName = $mapFiles->{$task_name};
     print $pbs "R --vanilla -f $script --args $mapFileName $genome \n";
@@ -75,9 +80,7 @@ sub result {
   if ($combined) {
     my @result_files = ();
     my $targetDir    = $result_dir . "/ChIPQCreport";
-    push( @result_files, $targetDir . "/CCPlot.png" );
-    push( @result_files, $targetDir . "/CoverageHistogramPlot.png" );
-    push( @result_files, $targetDir . "/Rip.png" );
+    push( @result_files, $targetDir . "/ChIPQC.html" );
     $result->{$task_name} = filter_array( \@result_files, $pattern );
   }
   else {
@@ -89,9 +92,7 @@ sub result {
       my @result_files = ();
       my $curdir       = $result_dir . "/" . $qcname;
       my $targetDir    = $curdir . "/ChIPQCreport";
-      push( @result_files, $targetDir . "/CCPlot.png" );
-      push( @result_files, $targetDir . "/CoverageHistogramPlot.png" );
-      push( @result_files, $targetDir . "/Rip.png" );
+      push( @result_files, $targetDir . "/ChIPQC.html" );
       $result->{$qcname} = filter_array( \@result_files, $pattern );
     }
   }
