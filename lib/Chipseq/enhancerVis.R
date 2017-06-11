@@ -1,7 +1,7 @@
 
 library(reshape2)
 library(ggplot2)
-library(cowplot)
+#library(cowplot)
 
 resultFile<-outFile
 signalFiles<-parSampleFile1
