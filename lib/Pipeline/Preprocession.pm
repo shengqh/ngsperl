@@ -284,20 +284,20 @@ sub getPreprocessionConfig {
     my $fastqc_count_vis_files = undef;
     if ( length($remove_sequences) && $run_cutadapt ) {
       $fastqc_count_vis_files = {
-        target_dir         => $preprocessing_dir . "/" . getNextFolderIndex($def) . "fastqc_post_trim",
+        target_dir         => $config->{fastqc_post_trim}->{target_dir},
         parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.summary.reads.tsv\$" ],
         parameterFile3_ref => [ "fastqc_post_trim_summary", ".FastQC.summary.reads.tsv\$" ],
       };
     }
     elsif ( length($remove_sequences) ) {
       $fastqc_count_vis_files = {
-        target_dir         => $preprocessing_dir . "/" . getNextFolderIndex($def) . "fastqc_post_remove",
+        target_dir         => $config->{fastqc_post_remove}->{target_dir},
         parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.summary.reads.tsv\$" ],
       };
     }
     elsif ($run_cutadapt) {
       $fastqc_count_vis_files = {
-        target_dir         => $preprocessing_dir . "/" . getNextFolderIndex($def) . "fastqc_post_trim",
+        target_dir         => $config->{fastqc_post_trim}->{target_dir},
         parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.summary.reads.tsv\$" ],
       };
     }
