@@ -56,6 +56,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_cleanbam", 0 );
 
   if ( $def->{perform_cleanbam} ) {
+    initDefaultValue( $def, "pairend",             0 );
     initDefaultValue( $def, "minimum_maq",         10 );
     initDefaultValue( $def, "minimum_insert_size", 30 );
     initDefaultValue( $def, "maximum_insert_size", 1000 );
@@ -129,8 +130,8 @@ sub getConfig {
         "mem"      => "10gb"
       },
     };
-    
-    $bam_ref = ["bowtie1", ".bam\$"];
+
+    $bam_ref = [ "bowtie1", ".bam\$" ];
     push @$summary, ("bowtie1_summary");
   }
   elsif ( $def->{aligner} eq "bwa" ) {
@@ -150,7 +151,7 @@ sub getConfig {
         "mem"      => "40gb"
       },
     };
-    $bam_ref = ["bwa", ".bam\$"];
+    $bam_ref = [ "bwa", ".bam\$" ];
   }
   else {
     die "Unknown alinger " . $def->{aligner};
@@ -191,7 +192,7 @@ sub getConfig {
   if ( $def->{perform_cleanbam} ) {
     my $taskName = $def->{aligner} . "_cleanbam";
     addCleanBAM( $config, $def, $individual, $taskName, "${target_dir}/" . getNextFolderIndex($def) . $taskName, $bam_ref, $def->{pairend} );
-    $bam_ref = [$taskName, ".bam\$"];
+    $bam_ref = [ $taskName, ".bam\$" ];
   }
 
   my $peakCallerTask = $def->{peak_caller} . "callpeak";

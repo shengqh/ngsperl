@@ -531,6 +531,7 @@ sub addCleanBAM {
     minimum_insert_size     => $minimum_insert_size,
     maximum_insert_size     => $maximum_insert_size,
     blacklist_file          => $def->{blacklist_file},
+    pairend                 => $pairend,
     is_sorted_by_coordinate => 1,
     sh_direct               => 0,
     pbs                     => {
