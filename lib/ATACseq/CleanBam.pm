@@ -102,7 +102,8 @@ if [[ -s $sampleFile && ! -s $redupFile ]]; then
   samtools index $redupFile
 fi
 ";
-    $rmlist = $rmlist . " $redupFile ${redupFile}.metrics ${redupFile}.bai";
+    #$rmlist = $rmlist . " $redupFile ${redupFile}.metrics ${redupFile}.bai";
+    $rmlist = $rmlist . " $redupFile ${redupFile}.bai";
 
     my $input = $redupFile;
     if ( defined $maxInsertSize && $maxInsertSize > 0 ) {
