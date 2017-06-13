@@ -137,7 +137,7 @@ fi
     }
 
     print $pbs "
-if [[ -s $finalFile && ! -s ${finalFile}.bai ]]; then 
+if [ -s ${finalFile}.bai ]; then 
   rm $rmlist  
 fi
 ";
