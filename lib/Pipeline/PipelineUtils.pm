@@ -521,7 +521,7 @@ sub addCleanBAM {
   $config->{$task_name} = {
     class                   => "ATACseq::CleanBam",
     perform                 => 1,
-    target_dir              => $target_dir . "/" . getNextFolderIndex($def) . "_" . $task_name,
+    target_dir              => $target_dir,
     option                  => $cleanbam_option,
     source_ref              => $bam_ref,
     picard_jar              => getValue( $def, "picard_jar" ),
