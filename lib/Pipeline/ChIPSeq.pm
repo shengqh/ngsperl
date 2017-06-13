@@ -190,7 +190,7 @@ sub getConfig {
 
   if ( $def->{perform_cleanbam} ) {
     my $taskName = $def->{aligner} . "_cleanbam";
-    addCleanBAM( $config, $def, $individual, $taskName, "${target_dir}/" . getNextFolderIndex($def) . "cleanbam", $bam_ref, $def->{pairend} );
+    addCleanBAM( $config, $def, $individual, $taskName, "${target_dir}/" . getNextFolderIndex($def) . $taskName, $bam_ref, $def->{pairend} );
     $bam_ref = [$taskName, ".bam\$"];
   }
 
