@@ -562,8 +562,8 @@ sub initDeseq2Options {
 sub writeDesignTable {
   my ( $target_dir, $section, $designtable, $bamfiles, $peaksfiles, $peakSoftware, $merged, $task_name ) = @_;
 
-  my $defaultTissue = getValue( $designtable, "Tissue", "Unknown" );
-  my $defaultFactor = getValue( $designtable, "Factor", "Unknown" );
+  my $defaultTissue = getValue( $designtable, "Tissue", "" );
+  my $defaultFactor = getValue( $designtable, "Factor", "" );
 
   my $result = {};
 
