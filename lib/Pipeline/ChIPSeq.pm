@@ -53,6 +53,14 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "perform_rose",     0 );
   initDefaultValue( $def, "perform_bamplot",  0 );
+  initDefaultValue( $def, "perform_cleanbam", 0 );
+
+  if ( $def->{perform_cleanbam} ) {
+    initDefaultValue( $def, "minimum_maq",         10 );
+    initDefaultValue( $def, "minimum_insert_size", 30 );
+    initDefaultValue( $def, "maximum_insert_size", 1000 );
+  }
+
   initDefaultValue( $def, "perform_chipqc",   0 );
   initDefaultValue( $def, "perform_diffbind", 0 );
   initDefaultValue( $def, "perform_enhancer", 0 );
@@ -86,6 +94,7 @@ sub getConfig {
   my $email    = getValue( $def, "email" );
   my $cqstools = getValue( $def, "cqstools" );
 
+  my $bam_ref;
   if ( $def->{aligner} eq "bowtie1" ) {
     $config->{bowtie1} = {
       class         => "Alignment::Bowtie1",
@@ -120,8 +129,9 @@ sub getConfig {
         "mem"      => "10gb"
       },
     };
+    
+    $bam_ref = ["bowtie1", ".bam\$"];
     push @$summary, ("bowtie1_summary");
-
   }
   elsif ( $def->{aligner} eq "bwa" ) {
     $config->{ $def->{aligner} } = {
@@ -140,6 +150,7 @@ sub getConfig {
         "mem"      => "40gb"
       },
     };
+    $bam_ref = ["bwa", ".bam\$"];
   }
   else {
     die "Unknown alinger " . $def->{aligner};
@@ -160,7 +171,7 @@ sub getConfig {
       perform            => 1,
       target_dir         => "${target_dir}/" . getNextFolderIndex($def) . "bamplot",
       option             => getValue( $def, "bamplot_option" ),
-      source_ref         => $def->{aligner},
+      source_ref         => $bam_ref,
       groups_ref         => "plotgroups",
       gff_file           => getValue( $def, "bamplot_gff" ),
       is_rainbow_color   => 0,
@@ -177,6 +188,12 @@ sub getConfig {
     push @$summary, ("bamplot");
   }
 
+  if ( $def->{perform_cleanbam} ) {
+    my $taskName = $def->{aligner} . "_cleanbam";
+    addCleanBAM( $config, $def, $individual, $taskName, "${target_dir}/" . getNextFolderIndex($def) . "cleanbam", $bam_ref, $def->{pairend} );
+    $bam_ref = [$taskName, ".bam\$"];
+  }
+
   my $peakCallerTask = $def->{peak_caller} . "callpeak";
   if ( $def->{peak_caller} eq "macs1" ) {
     $config->{$peakCallerTask} = {
@@ -184,7 +201,7 @@ sub getConfig {
       perform    => 1,
       target_dir => "${target_dir}/" . getNextFolderIndex($def) . "${peakCallerTask}",
       option     => getValue( $def, "macs1_option" ),
-      source_ref => [ $def->{aligner}, ".bam\$" ],
+      source_ref => $bam_ref,
       groups     => $def->{"treatments"},
       controls   => $def->{"controls"},
       sh_direct  => 0,
@@ -203,7 +220,7 @@ sub getConfig {
       perform    => 1,
       target_dir => "${target_dir}/" . getNextFolderIndex($def) . "$peakCallerTask",
       option     => getValue( $def, "macs2_option" ),
-      source_ref => [ $def->{aligner}, ".bam\$" ],
+      source_ref => $bam_ref,
       groups     => $def->{"treatments"},
       controls   => $def->{"controls"},
       sh_direct  => 0,
@@ -227,12 +244,12 @@ sub getConfig {
       perform              => 1,
       target_dir           => "${target_dir}/" . getNextFolderIndex($def) . "$roseTask",
       option               => "",
-      source_ref           => [ $def->{aligner}, ".bam\$" ],
+      source_ref           => $bam_ref,
       groups               => $def->{"treatments"},
       controls             => $def->{"controls"},
-      pipeline_dir         => getValue( $def, "rose_folder" ),    #"/scratch/cqs/shengq1/local/bin/bradnerlab"
+      pipeline_dir         => getValue( $def, "rose_folder" ),                             #"/scratch/cqs/shengq1/local/bin/bradnerlab"
       binding_site_bed_ref => [ $peakCallerTask, ".bed\$" ],
-      genome               => getValue( $def, "rose_genome" ),    #hg19,
+      genome               => getValue( $def, "rose_genome" ),                             #hg19,
       sh_direct            => 1,
       pbs                  => {
         "email"    => $email,
@@ -253,7 +270,7 @@ sub getConfig {
       perform       => 1,
       target_dir    => "${target_dir}/" . getNextFolderIndex($def) . $chipqc_taskname,
       option        => "",
-      source_ref    => $def->{aligner},
+      source_ref    => $bam_ref,
       qctable       => $qctable,
       peaks_ref     => [ $peakCallerTask, ".bed\$" ],
       peak_software => "bed",
@@ -277,7 +294,7 @@ sub getConfig {
       perform                 => 1,
       target_dir              => "${target_dir}/" . getNextFolderIndex($def) . "${bindName}",
       option                  => "",
-      source_ref              => [ $def->{aligner}, ".bam\$" ],
+      source_ref              => $bam_ref,
       design_table            => getValue( $def, "design_table" ),
       peaks_ref               => [ $peakCallerTask, ".bed\$" ],
       peak_software           => "bed",
@@ -294,7 +311,7 @@ sub getConfig {
   }
 
   if ( getValue( $def, "perform_enhancer" ) ) {
-    addEnhancer( $config, $def, $individual, $summary, $target_dir, $peakCallerTask . "_enhancer", [ $def->{aligner}, ".bam\$" ], [ $peakCallerTask, ".bed\$" ] );
+    addEnhancer( $config, $def, $individual, $summary, $target_dir, $peakCallerTask . "_enhancer", $bam_ref, [ $peakCallerTask, ".bed\$" ] );
   }
 
   if ( getValue( $def, "perform_multiqc" ) ) {

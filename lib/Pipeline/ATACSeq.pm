@@ -109,8 +109,6 @@ sub getConfig {
     getValue( $def, "diffbind_table" );
   }
 
-  my $cleanbam_option = $pairend ? "-f 3 -F 3852" : "-F 3844";
-
   $config->{"bwa"} = {
     class              => "Alignment::BWA",
     perform            => 1,
@@ -150,6 +148,7 @@ sub getConfig {
   };
   push @$summary, "bwa_insertsize";
 
+  my $cleanbam_option = $pairend ? "-f 3 -F 3852" : "-F 3844";
   $config->{"bwa_cleanbam"} = {
     class                   => "ATACseq::CleanBam",
     perform                 => 1,

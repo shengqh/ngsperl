@@ -18,7 +18,7 @@ our %EXPORT_TAGS = (
     qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat
       getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn
       getBatchGroups initDeseq2Options addHomerMotif addEnhancer writeDesignTable addMultiQC
-      getNextFolderIndex)
+      getNextFolderIndex addCleanBAM)
   ]
 );
 
@@ -39,18 +39,18 @@ sub getValue {
   }
 }
 
-sub getNextFolderIndex{
-  my ( $def ) = @_;
+sub getNextFolderIndex {
+  my ($def) = @_;
 
   my $result = "";
-  my $add_folder_index = getValue($def, "add_folder_index", 0);
-  if($add_folder_index){
-    my $folder_index = getValue($def, "folder_index", 1);
-    $result = sprintf("T%03d_", $folder_index);
+  my $add_folder_index = getValue( $def, "add_folder_index", 0 );
+  if ($add_folder_index) {
+    my $folder_index = getValue( $def, "folder_index", 1 );
+    $result = sprintf( "T%03d_", $folder_index );
     $def->{folder_index} = $folder_index + 1;
   }
 
-  return $result;  
+  return $result;
 }
 
 sub addFastQC {
@@ -500,6 +500,47 @@ sub addMultiQC {
   };
   push @$summary, ("multiqc");
   return "multiqc";
+}
+
+sub addCleanBAM {
+  my ( $config, $def, $individual, $task_name, $target_dir, $bam_ref, $pairend ) = @_;
+
+  my $cleanbam_option;
+  my $minimum_insert_size;
+  my $maximum_insert_size;
+  if ($pairend) {
+    $cleanbam_option     = "-f 3 -F 3852";
+    $minimum_insert_size = getValue( $def, "minimum_insert_size" );
+    $maximum_insert_size = getValue( $def, "maximum_insert_size" );
+  }
+  else {
+    $cleanbam_option = "-F 3844";
+
+  }
+
+  $config->{$task_name} = {
+    class                   => "ATACseq::CleanBam",
+    perform                 => 1,
+    target_dir              => $target_dir . "/" . getNextFolderIndex($def) . "_" . $task_name,
+    option                  => $cleanbam_option,
+    source_ref              => $bam_ref,
+    picard_jar              => getValue( $def, "picard_jar" ),
+    remove_chromosome       => $def->{remove_chromosome},
+    keep_chromosome         => $def->{keep_chromosome},
+    minimum_maq             => getValue( $def, "minimum_maq" ),
+    minimum_insert_size     => $minimum_insert_size,
+    maximum_insert_size     => $maximum_insert_size,
+    blacklist_file          => $def->{blacklist_file},
+    is_sorted_by_coordinate => 1,
+    sh_direct               => 0,
+    pbs                     => {
+      "email"    => $def->{email},
+      "nodes"    => "1:ppn=1",
+      "walltime" => "240",
+      "mem"      => "40gb"
+    },
+  };
+  push @$individual, $task_name;
 }
 
 sub initDeseq2Options {

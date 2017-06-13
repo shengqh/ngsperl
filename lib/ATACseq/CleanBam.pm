@@ -31,12 +31,13 @@ sub perform {
   my $sort_memory = $thread == 1 ? $memory : "4G";
 
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
-  my $remove_chromosome    = get_option( $config, $section, "remove_chromosome" );
-  my $keep_chromosome      = get_option( $config, $section, "keep_chromosome", "" );
-  my $minimum_maq          = get_option( $config, $section, "minimum_maq", 30 );
+  my $remove_chromosome = get_option( $config, $section, "remove_chromosome", "M" );
+  my $keep_chromosome   = get_option( $config, $section, "keep_chromosome",   "" );
+  my $minimum_maq       = get_option( $config, $section, "minimum_maq",       30 );
   my $isSortedByCoordinate = get_option( $config, $section, "is_sorted_by_coordinate" );
   my $blacklistfile = get_param_file( $config->{$section}{"blacklist_file"}, "blacklist_file", 0 );
   my $maxInsertSize = get_option( $config, $section, "maximum_insert_size", 0 );
+  my $pairend       = get_option( $config, $section, "pairend",             1 );
 
   if ( $keep_chromosome !~ /^\s*$/ ) {
     $keep_chromosome = "| grep $keep_chromosome";
@@ -77,7 +78,14 @@ fi
       $rmlist     = $sorted;
     }
 
-    my $filterFile = "${sample_name}.filter.bam";
+    my $filterFile;
+    if ($pairend) {
+      $filterFile = "${sample_name}.filter.bam";
+    }
+    else {
+      $filterFile = $finalFile;
+    }
+    
     my $filterOption;
     if ( defined $blacklistfile ) {
       $filterOption = "| samtools view -b -U $filterFile -o ${sample_name}.discard.bam -L $blacklistfile";
@@ -94,6 +102,7 @@ if [[ -s $sampleFile && ! -s $redupFile ]]; then
   samtools index $redupFile
 fi
 ";
+    $rmlist = $rmlist . " $redupFile ${redupFile}.metrics ${redupFile}.bai";
 
     my $input = $redupFile;
     if ( defined $maxInsertSize && $maxInsertSize > 0 ) {
@@ -106,7 +115,7 @@ if [[ -s $redupFile && ! -s $insertFile ]]; then
 fi
 ";
       $input  = $insertFile;
-      $rmlist = $rmlist . " " . $insertFile . " " . $insertFile . ".bai";
+      $rmlist = $rmlist . " $insertFile  ${insertFile}.bai";
     }
 
     print $pbs "
@@ -115,18 +124,23 @@ if [[ -s $input && ! -s $filterFile ]]; then
   samtools idxstats $input | cut -f 1 | grep -v $remove_chromosome $keep_chromosome | xargs samtools view $option -b -q $minimum_maq $input $filterOption 
   samtools index $filterFile 
 fi
-
+";
+    if ($pairend) {
+      print $pbs "
 if [[ -s $filterFile && ! -s $finalFile ]]; then 
   echo RemoveUnpaired=`date` 
   samtools sort -n $filterFile | samtools fixmate -O bam - -| samtools view $option -b | samtools sort -T $sample_name -o $finalFile 
-fi
-
-if [[ -s $finalFile && ! -s ${finalFile}.bai ]]; then 
-  echo BamIndex=`date` 
   samtools index $finalFile 
-  samtools flagstat $finalFile > ${finalFile}.stat 
-  rm $rmlist $redupFile ${redupFile}.metrics ${redupFile}.bai $filterFile ${filterFile}.bai 
-fi ";
+fi
+";
+      $rmlist = $rmlist . " $filterFile ${filterFile}.bai";
+    }
+
+    print $pbs "
+if [[ -s $finalFile && ! -s ${finalFile}.bai ]]; then 
+  rm $rmlist  
+fi
+";
 
     $self->close_pbs( $pbs, $pbs_file );
   }
