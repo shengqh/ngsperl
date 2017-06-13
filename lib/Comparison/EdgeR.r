@@ -14,6 +14,8 @@
 #
 ##predefined_condition_end
 
+options(bitmapType='cairo')
+
 library("edgeR")
 
 data<-data[,colnames(data) != "Feature_length"]

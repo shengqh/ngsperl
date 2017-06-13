@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 args = commandArgs(trailingOnly=TRUE)
 positionFile = args[1]
 file=tools::file_path_sans_ext(positionFile)

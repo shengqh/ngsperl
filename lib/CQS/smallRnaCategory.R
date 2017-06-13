@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 taskName<-outFile
 categoryFileList<-parSampleFile1
 groupFileList<-parSampleFile2

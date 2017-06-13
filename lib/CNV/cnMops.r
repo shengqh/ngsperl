@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 #setwd("/scratch/cqs/shengq1/dnaseq/2110/cnmops/result")
 #sample_names <- c(
 #"2110_JP_01"

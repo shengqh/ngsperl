@@ -1,3 +1,4 @@
+options(bitmapType='cairo')
 
 resultFile<-outFile
 countInFastQcPreTrim<-parFile1

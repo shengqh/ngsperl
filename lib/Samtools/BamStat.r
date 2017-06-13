@@ -1,3 +1,4 @@
+options(bitmapType='cairo')
 
 filelist<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactor=F)
 filecounts<-apply(filelist, 1, function(x){

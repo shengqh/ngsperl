@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 fileListName<-parFile1
 
 #fileListName<-commandArgs()[7]

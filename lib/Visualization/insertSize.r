@@ -1,3 +1,4 @@
+options(bitmapType='cairo')
 library(Rsamtools)
 library(ggplot2)
 

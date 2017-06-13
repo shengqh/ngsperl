@@ -1,3 +1,4 @@
+options(bitmapType='cairo')
 
 library(ChIPpeakAnno)
 genes <- toGRanges(parFile1, format="BED", skip=1)

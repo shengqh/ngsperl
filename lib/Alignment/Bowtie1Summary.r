@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 inputFile<-parSampleFile1
 outputFile<-outFile
 

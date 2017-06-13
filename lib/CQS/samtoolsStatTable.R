@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 resultPrefix<-outFile
 statFileList<-parSampleFile1
 

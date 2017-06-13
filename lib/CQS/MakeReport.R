@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 projectName<-parFile1
 projectDir<-parFile2
 

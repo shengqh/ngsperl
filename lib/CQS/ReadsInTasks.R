@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 #############################
 #Count reads in all table Tasks;
 #############################

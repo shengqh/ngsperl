@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 #############################
 #Vis for tRNA category
 #############################

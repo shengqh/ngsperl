@@ -1,3 +1,4 @@
+options(bitmapType='cairo')
 #readFile = "CR_Y_TBX5_peaks.broadPeak.bed.reads" 
 #singlePdf = 0 
 #inputFile = "CR_Y_TBX5_peaks.broadPeak.bed.depth" 

@@ -7,6 +7,8 @@ replaceSampleName<-0
 
 #predefine_end
 
+options(bitmapType='cairo')
+
 setwd(outputdir)
 
 library(ggplot2)

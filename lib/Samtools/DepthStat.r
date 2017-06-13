@@ -1,3 +1,4 @@
+options(bitmapType='cairo')
 #resultDir="E:/sqh/Dropbox/career/papers/draft/20160411-guoyan-FFPE"
 #inputFile="callable_sites.tsv"
 #outputFile="callable_sites.png"

@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 resultPrefix<-outFile
 countInFastQcRaw<-parFile1
 countInFastQcPostJoin<-parFile2

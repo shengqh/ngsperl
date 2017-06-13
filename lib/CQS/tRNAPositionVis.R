@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 resultFile<-outFile
 tRNAPositionFileList<-parSampleFile1
 groupFileList<-parSampleFile2

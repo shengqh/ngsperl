@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 #############################
 #Vis for all count tables: Group 1, 2, 4; rRNA categry;
 #############################

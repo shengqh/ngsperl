@@ -1,4 +1,5 @@
-#!/usr/bin/env Rscript
+options(bitmapType='cairo')
+
 args = commandArgs(trailingOnly = TRUE)
 pvalue<-0.05
 foldChange<-1.5

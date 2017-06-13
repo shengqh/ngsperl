@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 library(biomaRt)
 library(gtools)
 

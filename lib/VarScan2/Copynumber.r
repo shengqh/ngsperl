@@ -1,3 +1,4 @@
+options(bitmapType='cairo')
 library(DNAcopy)
 cn <- read.table(inputfile, header=T, stringsAsFactors = F)
 CNA.object <-CNA( genomdat = cn$adjusted_log_ratio, chrom = cn$chrom, maploc = cn$chr_start, data.type = 'logratio')

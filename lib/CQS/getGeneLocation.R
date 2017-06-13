@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 #inputfile<-"e:/temp/genename.txt"
 #outputfile<-"e:/temp/genelocation.bed"
 host<-"useast.ensembl.org"

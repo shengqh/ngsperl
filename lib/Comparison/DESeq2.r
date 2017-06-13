@@ -20,6 +20,8 @@ libraryKey<-"TotalReads"
 
 ##predefined_condition_end
 
+options(bitmapType='cairo')
+
 suffix<-"";
 if(top25only){
   suffix=paste0(suffix,"_top25")

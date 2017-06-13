@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 args = commandArgs(trailingOnly=TRUE)
 
 inputFile = args[1]

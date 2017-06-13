@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 resultFile<-outFile
 deseq2ResultFileList<-parSampleFile1
 visLayoutFileList<-parSampleFile2

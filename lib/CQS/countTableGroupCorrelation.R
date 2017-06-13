@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 library(heatmap3)
 library(DESeq2)  
 library(RColorBrewer)

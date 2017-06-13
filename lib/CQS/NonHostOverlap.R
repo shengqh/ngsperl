@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 #############################
 #Vis for all Non Host Reads: Group 1, 2, 4; tRNA; two rRNA Categry;
 #############################

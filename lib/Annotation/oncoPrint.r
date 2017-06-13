@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 library(ComplexHeatmap)
 
 args = commandArgs(trailingOnly=TRUE)

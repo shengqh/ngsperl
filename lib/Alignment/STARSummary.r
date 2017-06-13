@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 library(reshape2)
 library(ggplot2)
 

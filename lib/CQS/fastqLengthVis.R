@@ -1,3 +1,5 @@
+options(bitmapType='cairo')
+
 resultFile<-outFile
 lengthFileList<-parSampleFile1
 groupFileList<-parSampleFile2
