@@ -105,6 +105,7 @@ sub getConfig {
       fasta_file    => getValue( $def, "bowtie1_fasta" ),
       bowtie1_index => getValue( $def, "bowtie1_index" ),
       source_ref    => $source_ref,
+      output_to_same_folder => 1,
       sh_direct     => 0,
       pbs           => {
         "email"    => $email,
