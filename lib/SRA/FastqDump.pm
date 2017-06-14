@@ -104,7 +104,7 @@ sub GsmToSrr {
     }
   }
   else {
-    die "Cannot get result for " . $gsm;
+    die "Cannot get result for " . $gsm . ", error: " . $res->decoded_content;
   }
 }
 
