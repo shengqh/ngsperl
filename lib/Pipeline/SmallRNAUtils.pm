@@ -281,7 +281,7 @@ sub getPrepareConfig {
 
   $def = initializeDefaultOptions($def);
 
-  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir ) = getPreprocessionConfig($def);
+  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref ) = getPreprocessionConfig($def);
 
   my $class_independent_dir = create_directory_or_die( $target_dir . "/class_independent" );
 
@@ -348,7 +348,7 @@ sub getPrepareConfig {
       target_dir         => $preprocessing_dir . "/identical_check_cca",
       option             => "",
       source_ref         => [ 'identical', '.fastq.gz$' ],
-      untrimmedFastq_ref => "files",
+      untrimmedFastq_ref => $untrimed_ref,
       cqs_tools          => $def->{cqstools},
       sh_direct          => 0,
       pbs                => {
