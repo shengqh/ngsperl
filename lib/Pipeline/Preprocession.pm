@@ -198,6 +198,8 @@ sub getPreprocessionConfig {
       addFastQC( $config, $def, $individual, $summary, "fastqc_post_remove", $source_ref, $preprocessing_dir );
     }
   }
+  
+  my $untrimed_ref = $source_ref;
 
   if ($run_cutadapt) {
     my $cutadapt_section = {
@@ -325,7 +327,7 @@ sub getPreprocessionConfig {
     }
   }
 
-  return ( $config, $individual, $summary, $source_ref, $preprocessing_dir );
+  return ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref );
 }
 
 1;
