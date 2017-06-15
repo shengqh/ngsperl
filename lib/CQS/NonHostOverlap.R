@@ -1,4 +1,5 @@
 options(bitmapType='cairo')
+library(plyr)
 
 #############################
 #Vis for all Non Host Reads: Group 1, 2, 4; tRNA; two rRNA Categry;
@@ -19,11 +20,12 @@ readsMappingNames<-list()
 readsMappingTable<-NULL
 readFiles<-read.delim(readFileList,header=F,as.is=T)
 for (i in 1:nrow(readFiles)) {
-	temp<-read.delim(readFiles[i,1],header=T,row.names=1,as.is=T)
-	readsMappingNames[[i]]<-row.names(temp)
-	readsMappingTable<-rbind(readsMappingTable,temp)
+  cat("reading ", readFiles[i,1], "...\n")
+  temp<-read.delim(readFiles[i,1],header=T,row.names=1,as.is=T)
+  readsMappingNames[[i]]<-row.names(temp)
+  readsMappingTable<-rbind.fill(readsMappingTable,temp)
 }
-
+readsMappingTable[is.na(readsMappingTable)]<-0
 ######################################
 #Reads Overlap: Reads were found in how many categories? For reads only in one category, which one?
 ######################################

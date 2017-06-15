@@ -23,7 +23,7 @@ sub get_clear_map {
   my $comparison_result = $self->SUPER::get_clear_map( $config, $section, $pattern );
   my $result            = {};
   my @result_files      = ();
-  for my $crs ( sort values %$comparison_result ) {
+  for my $crs ( values %$comparison_result ) {
     for my $cr (@$crs) {
       push( @result_files, $cr );
     }
