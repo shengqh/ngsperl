@@ -23,7 +23,7 @@ sub get_cluster_desc {
   my $nodes    = "1";
   my $ntasks   = "";
 
-  my ( $self, $pbsParamHashRef ) = @_;
+  my ( $self, $pbsParamHashRef, $constraint ) = @_;
   if ( defined $pbsParamHashRef ) {
     my %hash = %{$pbsParamHashRef};
     foreach ( keys %hash ) {
@@ -83,8 +83,10 @@ sub get_cluster_desc {
 #SBATCH --ntasks=$ntasks
 #SBATCH --time=$walltime
 #SBATCH --mem=$mem
-#SBATCH --constraint=haswell
 SBATCH
+  if (defined $constraint){
+    $pbs_desc = $pbs_desc . "#SBATCH --constraint=$constraint\n";
+  }
 
   return ($pbs_desc);
 }
