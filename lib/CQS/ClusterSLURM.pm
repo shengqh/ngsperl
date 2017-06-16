@@ -83,6 +83,7 @@ sub get_cluster_desc {
 #SBATCH --ntasks=$ntasks
 #SBATCH --time=$walltime
 #SBATCH --mem=$mem
+#SBATCH --constraint=haswell
 SBATCH
 
   return ($pbs_desc);
