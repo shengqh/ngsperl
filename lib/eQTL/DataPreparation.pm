@@ -27,28 +27,30 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
-  my $plink_prefix_names = get_raw_files( $config, $section );
-  my $rnaseq_files = get_raw_files( $config, $section, "rnaseq_files" );
-
-  my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
-  my $pbs_name = basename($pbs_file);
-  my $log      = $self->get_log_filename( $log_dir, $task_name );
-  my $log_desc = $cluster->get_log_description($log);
-
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+  my $rnaseq_files = get_raw_files( $config, $section );
+  my $plink_prefix_names = get_raw_files( $config, $section, "plink_prefix_names" );
 
   my $find_common_sample_script = dirname(__FILE__) . "/findCommonSample.py";
   if ( !-e $find_common_sample_script ) {
     die "File not found : " . $find_common_sample_script;
   }
 
-  for my $sample_name ( sort keys %$plink_prefix_names ) {
-    my $plink_prefix    = $plink_prefix_names->{$sample_name}->[0];
-    my $fam_file    = $plink_prefix->{$sample_name}->[0] . ".fam";
-    my $rnaseq_file = $rnaseq_files->{$sample_name}->[0];
+  for my $sample_name ( sort keys %$rnaseq_files ) {
+    my $rnaseq_file  = $rnaseq_files->{$sample_name}->[0];
+    my $plink_prefix = $plink_prefix_names->{$sample_name}->[0];
+    my $fam_file     = $plink_prefix . ".fam";
 
     my $common_fam_file = $sample_name . "_common.fam";
     my $common_bed_file = $sample_name . "_common.bed";
+
+    my $cur_dir  = create_directory_or_die( $result_dir . "/" . $sample_name );
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
+    my $log_desc = $cluster->get_log_description($log);
+
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
+
     print $pbs "
 if [ ! -s $common_fam_file ]; then
   echo findCommonSample=`date`
@@ -79,14 +81,14 @@ if [ ! -s ${sample_name}_common_filtered.traw ]; then
 fi
 ";
 
-#if [ ! -s ${sample_name}_common_filtered.tsv ]; then
-#  echo convering ${name}_brca_common_filtered.traw to ${name}_brca_common_filtered.tsv
-#  python /home/shengq1/program/projects/guoyan/20160826_guoyan_tcga_multi_omics/formatSNPData.py -i ${name}_brca_common_filtered.traw -o ${name}_brca_common_filtered.tsv
-#fi
+    #if [ ! -s ${sample_name}_common_filtered.tsv ]; then
+    #  echo convering ${name}_brca_common_filtered.traw to ${name}_brca_common_filtered.tsv
+    #  python /home/shengq1/program/projects/guoyan/20160826_guoyan_tcga_multi_omics/formatSNPData.py -i ${name}_brca_common_filtered.traw -o ${name}_brca_common_filtered.tsv
+    #fi
 
-#";
+    #";
+    $self->close_pbs( $pbs, $pbs_file );
   }
-  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {
