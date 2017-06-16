@@ -13,6 +13,7 @@ def outputQuery(outf, saved_read, referencePrefix, homologyPrefix, chrMap):
     if hasRef:
       for read in saved_read:
         if chrMap[read.reference_id].startswith(homologyPrefix):
+          read.reference_id = chrMap[chrMap[read.reference_id]]
           outf.write(read)
   
 def filter(outputBAM, inputBAM, referencePrefix, homologyPrefix, logger):
@@ -24,9 +25,22 @@ def filter(outputBAM, inputBAM, referencePrefix, homologyPrefix, logger):
   with pysam.AlignmentFile(inputBAM, openmode) as samfile:
     header = samfile.header
     chrMap = {}
-    for idx, sq in enumerate(header["SQ"]):
+    sqs = header["SQ"]
+    for idx in range(len(sqs)-1, -1, -1):
+      sq = sqs[idx]
       chr = sq['SN']
       chrMap[idx] = chr
+      if chr.startswith(referencePrefix):
+        del sqs[idx]
+    
+    for idx in range(0, len(sqs)):
+      sq = sqs[idx]
+      chr = sq['SN']
+      chrMap[chr] = idx
+      sq['SN'] = chr[len(homologyPrefix):]
+      
+    header["SQ"] = sqs
+      
     with pysam.AlignmentFile(outputBAM, "wb", header=header) as outf:
       processed = 0
       lastQuery =''
@@ -54,18 +68,22 @@ def main():
   DEBUG = False
   NOT_DEBUG = not DEBUG
   
-  parser.add_argument('-i', '--input', action='store', nargs='?', help='Input BAM file)', required=NOT_DEBUG)
-  parser.add_argument('--referencePrefix', action='store', nargs='?', help='Input reference genome prefix)', required=NOT_DEBUG)
-  parser.add_argument('--homologyPrefix', action='store', nargs='?', help='Input homology genome prefix)', required=NOT_DEBUG)
+  parser.add_argument('-i', '--input', action='store', nargs='?', help='Input BAM file', required=NOT_DEBUG)
+  parser.add_argument('--referencePrefix', action='store', nargs='?', help='Input reference genome prefix', required=NOT_DEBUG)
+  parser.add_argument('--homologyPrefix', action='store', nargs='?', help='Input homology genome prefix', required=NOT_DEBUG)
   parser.add_argument('-o', '--output', action='store', nargs='?', help="Output BAM file", required=NOT_DEBUG)
   
+  if not DEBUG and len(sys.argv)==1:
+    parser.print_help()
+    sys.exit(1)
+    
   args = parser.parse_args()
   
   if DEBUG:
     args.input = "/scratch/cqs/shengq1/temp/RPI11.10000.sam"
     args.referencePrefix="rn5_"
     args.homologyPrefix="mm10_"
-    args.output="/scratch/cqs/shengq1/temp/RPI11.mm10.bam"
+    args.output="/scratch/cqs/shengq1/temp/RPI11.10000.mm10.bam"
   
   logger = logging.getLogger('homology')
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
