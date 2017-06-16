@@ -27,11 +27,15 @@ def main():
   NOT_DEBUG = not DEBUG
   
   parser.add_argument('-r', '--reference', action='store', nargs='?', help='Input reference FASTA file)', required=NOT_DEBUG)
-  parser.add_argument('--referencePrefix', action='store', nargs='?', help='Input reference genome name)', required=NOT_DEBUG)
+  parser.add_argument('--referencePrefix', action='store', nargs='?', help='Input reference genome prefix)', required=NOT_DEBUG)
   parser.add_argument('-l', '--homology', action='store', nargs='?', help="Input homology FASTA file", required=NOT_DEBUG)
-  parser.add_argument('--homologyPrefix', action='store', nargs='?', help='Input homology genome name)', required=NOT_DEBUG)
+  parser.add_argument('--homologyPrefix', action='store', nargs='?', help='Input homology genome prefix)', required=NOT_DEBUG)
   parser.add_argument('-o', '--output', action='store', nargs='?', help="Output FASTA file", required=NOT_DEBUG)
   
+  if not DEBUG and len(sys.argv)==1:
+    parser.print_help()
+    sys.exit(1)
+
   args = parser.parse_args()
   
   if DEBUG:
