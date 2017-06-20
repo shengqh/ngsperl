@@ -79,7 +79,7 @@ getSampleInGroup<-function(groupDefineFile, samples, comparisonDefineFile="", co
   if (onlySamplesInGroup) {
 	  #remvoe "Unknown" group
 	  res<-res[which(res$V2!="Unknown"),]
-	  res$V2<-as.factor(as.character(res$V2))
+	  res$V2<-factor(as.character(res$V2))
   }
   
   return(res)
@@ -680,7 +680,7 @@ mergeTableBySampleGroup<-function(x,sampleToGroup,toPercent=TRUE,rowFun=rowMeans
 	
 	row.names(xRatioGroupMean)<-row.names(x)
 	for (i in 1:groupLength) {
-		currentSample<-sampleToGroup[which(sampleToGroup[,2]==colnames(xRatioGroupMean)[i]),1]
+		currentSample<-as.character(sampleToGroup[which(sampleToGroup[,2]==colnames(xRatioGroupMean)[i]),1])
 #		xRatioGroupMean[,i]<-rowMeans(xRatio[,currentSample,drop=FALSE],na.rm=T)
 		xRatioGroupMean[,i]<-rowFun(xRatio[,currentSample,drop=FALSE],na.rm=T)
 	}
