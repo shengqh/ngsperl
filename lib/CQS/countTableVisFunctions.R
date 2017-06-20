@@ -21,7 +21,7 @@ if(!exists("useLeastGroups")){
   useLeastGroups<-FALSE
 }
 
-getSampleInGroup<-function(groupDefineFile, samples, comparisonDefineFile="", countTableTitle="", useLeastGroups=FALSE){
+getSampleInGroup<-function(groupDefineFile, samples, comparisonDefineFile="", countTableTitle="", useLeastGroups=FALSE,onlySamplesInGroup=FALSE){
   groupData<-read.delim(groupDefineFile,as.is=T,header=F)
   if(comparisonDefineFile != ""){
     comparisonData<-read.delim(comparisonDefineFile,as.is=T,header=F)
@@ -75,6 +75,13 @@ getSampleInGroup<-function(groupDefineFile, samples, comparisonDefineFile="", co
     sortedGroupNames<-sort(unique(res$V2))
     res$V2<-factor(res$V2, levels=sortedGroupNames)
   }
+  
+  if (onlySamplesInGroup) {
+	  #remvoe "Unknown" group
+	  res<-res[which(res$V2!="Unknown"),]
+	  res$V2<-as.factor(as.character(res$V2))
+  }
+  
   return(res)
 }
 

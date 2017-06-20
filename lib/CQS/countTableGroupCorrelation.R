@@ -9,6 +9,7 @@ countTableFileList<-parSampleFile1
 groupFileList<-parSampleFile2
 comparisonFileList<-parSampleFile3
 fixColorRange<-TRUE
+onlySamplesInGroup=TRUE
 
 totalCountFile<-parFile3
 
@@ -303,8 +304,13 @@ for (i in 1:nrow(countTableFileAll)) {
   countNum<-countNum[,which(colSums(countNum,na.rm=T)>0)]
   
   if (groupFileList!="") {
-    sampleToGroup<-getSampleInGroup(groupFileList, colnames(countNum), comparisonFileList, countTableTitle, useLeastGroups)
+    sampleToGroup<-getSampleInGroup(groupFileList, colnames(countNum), comparisonFileList, countTableTitle, useLeastGroups,onlySamplesInGroup=onlySamplesInGroup)
     write.table(sampleToGroup, paste0(outputFilePrefix,suffix,".correlation.groups"),col.names=F, row.names=F, quote=F, sep="\t")
+	if (onlySamplesInGroup) {
+		countNum<-countNum[,which(colnames(countNum) %in% as.character(sampleToGroup$V1))]
+		#remove genes with total reads 0
+		countNum<-countNum[which(rowSums(countNum,na.rm=T)>0),]
+	}
   }
   
   #filter reads/genes by parameter
