@@ -446,13 +446,17 @@ for (i in 1:nrow(countTableFileAll)) {
 	  }
 	  dev.off()
 	  if (ncol(countNumCor)>3) {
-		  png(paste0(outputFilePrefix,suffix,".Correlation.Cluster.png"),width=width,height=width,res=300)
-		  if(!is.na(conditionColors[1,1])){
-			  heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun,ColSideColors=conditionColors)
-		  }else{
-			  heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun)
-		  }
-		  dev.off()
+		  if (any(is.na(countNumCor))) {
+			  print(paste0("NA in correlation matrix. Can't draw .Correlation.Cluster.png"))
+		  } else {
+		  	png(paste0(outputFilePrefix,suffix,".Correlation.Cluster.png"),width=width,height=width,res=300)
+		  	if(!is.na(conditionColors[1,1])){
+				  heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun,ColSideColors=conditionColors)
+		  	}else{
+				  heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun)
+		  	}
+			dev.off()
+	  	  }
 	  }
 	  
 	  if (groupFileList!="") {
@@ -512,7 +516,7 @@ for (i in 1:nrow(countTableFileAll)) {
 		  png(paste0(outputFilePrefix,suffix,".Group.Correlation.png"),width=2000,height=2000,res=300)
 		  heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
 		  dev.off()
-		  if (ncol(countNumCor)<=3 | any(is.na(corWithout(countNumCor,use="pa")))) {
+		  if (ncol(countNumCor)<3 | any(is.na(corWithout(countNumCor,use="pa")))) {
 			  saveInError(paste0("Less than 3 samples. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(outputFilePrefix,suffix,Sys.Date(),".warning"))
 		  } else {
 			  png(paste0(outputFilePrefix,suffix,".Group.Correlation.Cluster.png"),width=2000,height=2000,res=300)
