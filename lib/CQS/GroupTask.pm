@@ -29,16 +29,4 @@ sub get_pbs_key {
   }
 }
 
-sub get_grouped_raw_files {
-  my ( $self, $config, $section, $group_key ) = @_;
-  my $raw_files;
-  if ( has_raw_files( $config, $section, $group_key ) ) {
-    $raw_files = get_group_samplefile_map_key( $config, $section, "", $group_key );
-  }
-  else {
-    $raw_files = get_raw_files( $config, $section );
-  }
-  return $raw_files;
-}
-
 1;
