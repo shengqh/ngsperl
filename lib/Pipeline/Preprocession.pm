@@ -94,6 +94,7 @@ sub getPreprocessionConfig {
       task_name => $task,
       cluster   => $cluster
     },
+    constraint => $def->{constraint},
     groups => $def->{groups},
     pairs  => $def->{pairs},
   };
