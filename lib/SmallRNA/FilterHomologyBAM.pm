@@ -34,9 +34,10 @@ sub perform {
   if ( !-e $py_script ) {
     die "File not found : " . $py_script;
   }
-  
-  my $referencePrefix = get_option($config, $section, "reference_prefix");
-  my $homologyPrefix = get_option($config, $section, "homology_prefix");
+
+  my $referencePrefix    = get_option( $config, $section, "reference_prefix" );
+  my $homologyPrefix     = get_option( $config, $section, "homology_prefix" );
+  my $outputReferneceBAM = get_option( $config, $section, "output_reference_bam", 0 );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -56,7 +57,16 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-    print $pbs "python $py_script -i $sampleFile -o $final_file $option --referencePrefix $referencePrefix --homologyPrefix $homologyPrefix";
+    print $pbs "python $py_script -i $sampleFile -o $final_file $option --referencePrefix $referencePrefix --homologyPrefix $homologyPrefix \n";
+    
+    if($outputReferneceBAM){
+      my $py_script2 = dirname(__FILE__) . "/filterReferenceBAM.py";
+      if ( !-e $py_script2 ) {
+        die "File not found : " . $py_script2;
+      }
+      my $refBam = $sample_name . "." . $referencePrefix . ".bam";
+      print $pbs "python $py_script2 -i $sampleFile -o $refBam $option --referencePrefix $referencePrefix \n";
+    }
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
@@ -76,7 +86,10 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $homologyPrefix = get_option($config, $section, "homology_prefix");
+
+  my $referencePrefix    = get_option( $config, $section, "reference_prefix" );
+  my $homologyPrefix     = get_option( $config, $section, "homology_prefix" );
+  my $outputReferneceBAM = get_option( $config, $section, "output_reference_bam", 0 );
 
   my $result = {};
   for my $sample_name ( sort keys %raw_files ) {
@@ -84,6 +97,10 @@ sub result {
 
     my @result_files = ();
     push( @result_files, $final_file );
+
+    if ($outputReferneceBAM) {
+      push( @result_files, $result_dir . "/" . $sample_name . "." . $referencePrefix . ".bam" );
+    }
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
