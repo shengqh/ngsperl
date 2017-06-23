@@ -36,13 +36,13 @@ sub perform {
     $option = "-s 12500 -t 2500";
   }
 
-  my %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+  my %treatments_files = %{ get_grouped_raw_files( $config, $section, "groups" ) };
   my %control_files;
   if ( has_raw_files( $config, $section, "inputs" ) ) {
-    %control_files = %{ $self->get_grouped_raw_files( $config, $section, "inputs" ) };
+    %control_files = %{ get_grouped_raw_files( $config, $section, "inputs" ) };
   }
   elsif ( has_raw_files( $config, $section, "controls" ) ) {
-    %control_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
+    %control_files = %{ get_grouped_raw_files( $config, $section, "controls" ) };
   }
 
   my %binding_site_beds = %{ get_raw_files( $config, $section, "binding_site_bed" ) };

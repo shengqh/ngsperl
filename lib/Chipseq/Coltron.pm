@@ -30,7 +30,7 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $genome = get_option( $config, $section, "genome" );
-  my %treatments_files = %{ $self->get_grouped_raw_files( $config, $section, "groups" ) };
+  my %treatments_files = %{ get_grouped_raw_files( $config, $section, "groups" ) };
   my $pipeline_dir = get_directory( $config, $section, "pipeline_dir", 1 );
 
   #print Dumper(%treatments_files);

@@ -28,7 +28,7 @@ sub get_raw_files_with_or_without_groups{
   my ( $self, $config, $section ) = @_;
   my $result;
   if ( has_raw_files( $config, $section, "groups" ) ) {
-    $result = $self->get_grouped_raw_files( $config, $section, "groups" );
+    $result = get_grouped_raw_files( $config, $section, "groups" );
   }
   else {
     $result = get_raw_files( $config, $section );
@@ -49,7 +49,7 @@ sub perform {
   if ( has_raw_files( $config, $section, "groups" ) ) {
     $has_control = has_raw_files( $config, $section, "controls" );
     if ($has_control) {
-      %control_files = %{ $self->get_grouped_raw_files( $config, $section, "controls" ) };
+      %control_files = %{ get_grouped_raw_files( $config, $section, "controls" ) };
     }
   }
 
