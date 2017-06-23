@@ -30,19 +30,19 @@ sub perform {
 
   my $dbsnp = get_param_file( $config->{$section}{dbsnp_vcf}, "dbsnp_vcf", 1 );
   my $vqsrMode = get_option( $config, $section, "vqsr_mode" );
+  my $gvcf = get_option( $config, $section, "gvcf", 1 );
   my $hapmap;
   my $omni;
   my $g1000;
   my $mills;
 
   if ($vqsrMode) {
+    $gvcf   = 1;
     $hapmap = get_param_file( $config->{$section}{hapmap_vcf}, "hapmap_vcf", 1 );
-    $omni   = get_param_file( $config->{$section}{omni_vcf},   "omni_vcf",   0 );
-    $g1000  = get_param_file( $config->{$section}{g1000_vcf},  "g1000_vcf",  0 );
-    $mills  = get_param_file( $config->{$section}{mills_vcf},  "mills_vcf",  1 );
+    $omni   = get_param_file( $config->{$section}{omni_vcf}, "omni_vcf", 0 );
+    $g1000  = get_param_file( $config->{$section}{g1000_vcf}, "g1000_vcf", 0 );
+    $mills  = get_param_file( $config->{$section}{mills_vcf}, "mills_vcf", 1 );
   }
-
-  my $cqstools = get_cqstools( $config, $section, 1 );
 
   my $faFile   = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
@@ -74,19 +74,19 @@ sub perform {
     my $indelTranches = $task_name . ".indel.tranche";
     my $indelPass     = $task_name . ".recal_snp_recal_indel.vcf";
 
-  print $pbs "
+    print $pbs "
 if [ ! -s $mergedFile ]; then
   echo GenotypeGVCFs=`date` 
   java $java_option -jar $gatk_jar -T GenotypeGVCFs $option -nt $thread -D $dbsnp -R $faFile \\
 ";
 
-  for my $sample_name ( sort keys %vcfFiles ) {
-    my @sample_files = @{ $vcfFiles{$sample_name} };
-    my $gvcfFile     = $sample_files[0];
-    print $pbs "    --variant $gvcfFile \\\n";
-  }
+    for my $sample_name ( sort keys %vcfFiles ) {
+      my @sample_files = @{ $vcfFiles{$sample_name} };
+      my $gvcfFile     = $sample_files[0];
+      print $pbs "    --variant $gvcfFile \\\n";
+    }
 
-  print $pbs "  -o $mergedFile
+    print $pbs "  -o $mergedFile
 fi
 
 if [[ -s $mergedFile && ! -s $snpCal ]]; then
@@ -189,21 +189,23 @@ fi
       ? "-window 35 -cluster 3 --filterExpression \"FS > 30.0 || QD < 2.0\" --filterName \"snp_filter\" "
       : "--filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" --filterName \"snp_filter\" ";
 
-  print $pbs "
+    my $command = $gvcf ? "-T GenotypeGVCFs" : "-T CombineVariants -genotypeMergeOptions UNIQUIFY";
+    print $pbs "
 java $java_option -jar $gatk_jar \\
-  -T GenotypeGVCFs \\
+  $command \\
   -R $faFile \\
 ";
 
-  for my $sample_name ( sort keys %vcfFiles ) {
-    my @sample_files = @{ $vcfFiles{$sample_name} };
-    my $vcfFile      = $sample_files[0];
-    print $pbs "  --variant $vcfFile \\\n";
-  }
-  
-  print $pbs "  -o $mergedFile \\
+    for my $sample_name ( sort keys %vcfFiles ) {
+      my @sample_files = @{ $vcfFiles{$sample_name} };
+      my $vcfFile      = $sample_files[0];
+      print $pbs "  --variant $vcfFile \\\n";
+    }
+
+    print $pbs "  -o $mergedFile
 ";
-#  -genotypeMergeOptions UNIQUIFY
+
+    #  -genotypeMergeOptions UNIQUIFY
 
     print $pbs "
 if [[ -s $mergedFile && ! -s $snpPass ]]; then
@@ -239,7 +241,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $finalFile = $task_name . ".pass.vcf";
+  my $finalFile    = $task_name . ".pass.vcf";
   my @result_files = ();
   push( @result_files, $result_dir . "/" . $finalFile );
 
