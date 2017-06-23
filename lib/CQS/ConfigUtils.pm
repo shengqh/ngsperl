@@ -19,7 +19,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(get_config_section has_config_section get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files_and_keys get_raw_files get_raw_files_keys get_raw_files_attributes get_raw_files2 get_run_command get_option_value get_pair_groups
-      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key save_parameter_sample_file saveConfig writeFileList initDefaultValue get_pure_pairs writeParameterSampleFile)
+      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key get_grouped_raw_files save_parameter_sample_file saveConfig writeFileList initDefaultValue get_pure_pairs writeParameterSampleFile)
   ]
 );
 
@@ -699,6 +699,19 @@ sub get_group_samplefile_map_key {
     $group_sample_map{$group_name} = \@gfiles;
   }
   return \%group_sample_map;
+}
+
+
+sub get_grouped_raw_files {
+  my ( $config, $section, $group_key ) = @_;
+  my $raw_files;
+  if ( has_raw_files( $config, $section, $group_key ) ) {
+    $raw_files = get_group_samplefile_map_key( $config, $section, "", $group_key );
+  }
+  else {
+    $raw_files = get_raw_files( $config, $section );
+  }
+  return $raw_files;
 }
 
 sub save_parameter_sample_file {
