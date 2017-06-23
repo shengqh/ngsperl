@@ -560,7 +560,7 @@ sub initDeseq2Options {
 }
 
 sub writeDesignTable {
-  my ( $target_dir, $section, $designtable, $bamfiles, $peaksfiles, $peakSoftware, $merged, $task_name ) = @_;
+  my ( $target_dir, $section, $designtable, $bamfiles, $peaksfiles, $peakSoftware, $merged, $task_name, $treatments, $controls ) = @_;
 
   my $defaultTissue = getValue( $designtable, "Tissue", "" );
   my $defaultFactor = getValue( $designtable, "Factor", "" );
@@ -571,7 +571,7 @@ sub writeDesignTable {
     my $mapFileName = "${task_name}.config.txt";
     my $mapfile     = $target_dir . "/" . $mapFileName;
     open( my $map, ">$mapfile" ) or die "Cannot create $mapfile";
-    print $map "SampleID\tTissue\tFactor\tCondition\tReplicate\tbamReads\tPeaks\tPeakCaller\n";
+    print $map "SampleID\tTissue\tFactor\tCondition\tReplicate\tbamReads\tControlID\tbamControl\tPeaks\tPeakCaller\n";
     for my $name ( sort keys %$designtable ) {
       if ( $name eq "Tissue" || $name eq "Factor" ) {
         next;
@@ -591,10 +591,28 @@ sub writeDesignTable {
         my $factor   = getValue( $entryMap,   "Factor", $defaultNameFactor );
         my $condition = $entryMap->{Condition} or die "Define Condition for $sampleName in designtable of section $section";
         my $replicate = $entryMap->{Replicate} or die "Define Replicate for $sampleName in designtable of section $section";
-        my $bamReads  = $bamfiles->{$sampleName}->[0];
         my $peakFile  = $peaksfiles->{$sampleName}->[0];
 
-        print $map $sampleName . "\t" . $tissue . "\t" . $factor . "\t" . $condition . "\t" . $replicate . "\t" . $bamReads . "\t" . $peakFile . "\t" . $peakSoftware . "\n";
+        my $sampleId   = $treatments->{$sampleName}->[0];
+        my $bamReads   = $bamfiles->{$sampleId}[0];
+        my $controlId  = "";
+        my $bamControl = "";
+
+        if ( defined $controls ) {
+          $controlId  = $controls->{$sampleName}->[0];
+          $bamControl = $bamfiles->{$controlId}[0];
+        }
+
+        print $map $sampleId . "\t"
+          . $tissue . "\t"
+          . $factor . "\t"
+          . $condition . "\t"
+          . $replicate . "\t"
+          . $bamReads . "\t"
+          . $controlId . "\t"
+          . $bamControl . "\t"
+          . $peakFile . "\t"
+          . $peakSoftware . "\n";
       }
     }
     close($map);
@@ -615,7 +633,7 @@ sub writeDesignTable {
       my $mapFileName = "${name}.config.txt";
       my $mapfile     = $curdir . "/" . $mapFileName;
       open( my $map, ">$mapfile" ) or die "Cannot create $mapfile";
-      print $map "SampleID\tTissue\tFactor\tCondition\tReplicate\tbamReads\tPeaks\tPeakCaller\n";
+      print $map "SampleID\tTissue\tFactor\tCondition\tReplicate\tbamReads\tControlID\tbamControl\tPeaks\tPeakCaller\n";
       for my $sampleName ( sort keys %$sampleList ) {
         if ( $sampleName eq "Tissue" || $sampleName eq "Factor" || $sampleName eq "Comparison" ) {
           next;
@@ -626,10 +644,28 @@ sub writeDesignTable {
         my $factor   = getValue( $entryMap,   "Factor", $defaultNameTissue );
         my $condition = $entryMap->{Condition} or die "Define Condition for $sampleName in designtable of section $section";
         my $replicate = $entryMap->{Replicate} or die "Define Replicate for $sampleName in designtable of section $section";
-        my $bamReads  = $bamfiles->{$sampleName}->[0];
         my $peakFile  = $peaksfiles->{$sampleName}->[0];
 
-        print $map $sampleName . "\t" . $tissue . "\t" . $factor . "\t" . $condition . "\t" . $replicate . "\t" . $bamReads . "\t" . $peakFile . "\t" . $peakSoftware . "\n";
+        my $sampleId   = $treatments->{$sampleName}->[0];
+        my $bamReads   = $bamfiles->{$sampleId}[0];
+        my $controlId  = "";
+        my $bamControl = "";
+
+        if ( defined $controls ) {
+          $controlId  = $controls->{$sampleName}->[0];
+          $bamControl = $controls->{$controlId}[0];
+        }
+
+        print $map $sampleId . "\t"
+          . $tissue . "\t"
+          . $factor . "\t"
+          . $condition . "\t"
+          . $replicate . "\t"
+          . $bamReads . "\t"
+          . $controlId . "\t"
+          . $bamControl . "\t"
+          . $peakFile . "\t"
+          . $peakSoftware . "\n";
       }
       close($map);
 
