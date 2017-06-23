@@ -6,12 +6,20 @@ library(ChIPQC)
 
 configFile=args[1]
 annotationName=args[2]
+chromosomes=args[3]
 
 cat("configFile=", configFile, "\n")
 cat("annotationName=", annotationName, "\n")
+cat("chromosomes=", chromosomes, "\n")
 
-samples <- read.table(configFile, sep="\t", header=T)
+if(!is.na(chromosomes)){
+  chromosomes = unlist(strsplit(chromosomes, split=','))
+}else{
+  chromosomes = NULL
+} 
 
-experiment = ChIPQC(samples, annotaiton = annotationName)
+experiment <- read.table(configFile, sep="\t", header=T)
 
-ChIPQCreport(experiment)
+qcresult = ChIPQC(experiment, annotation = annotationName, chromosomes=chromosomes)
+
+ChIPQCreport(qcresult)

@@ -29,12 +29,20 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
-  my $bamfiles   = get_raw_files( $config, $section );
+  my $bamfiles = get_raw_files( $config, $section );
+
+  my $treatments = $config->{$section}{"groups"};
+  my $controls = $config->{$section}{"inputs"};
+  if ( !defined $controls ) {
+    $controls = $config->{$section}{"controls"};
+  }
   my $qctable    = get_raw_files( $config, $section, "qctable" );
   my $peaksfiles = get_raw_files( $config, $section, "peaks" );
   my $peakSoftware = get_option( $config, $section, "peak_software" );
   my $genome       = get_option( $config, $section, "genome" );
   my $combined     = get_option( $config, $section, "combined" );
+
+  my $chromosomes = get_option( $config, $section, "chromosomes", "" );
 
   my $script = dirname(__FILE__) . "/ChipseqQC.r";
   if ( !-e $script ) {
@@ -45,18 +53,18 @@ sub perform {
   my $pbs_name = basename($pbs_file);
   my $log      = $self->get_log_filename( $log_dir, $task_name );
   my $log_desc = $cluster->get_log_description($log);
-  
-  my $expectFiles = $self->result($config, $section);
-  my @sortedKeys = (sort keys %$expectFiles);
-  my $final_file = $expectFiles->{$sortedKeys[scalar(@sortedKeys)-1]}->[0];
-  
-  my $pbs      = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-  my $mapFiles = writeDesignTable( $result_dir, $section, $qctable, $bamfiles, $peaksfiles, $peakSoftware, $combined, $task_name );
-  
+  my $expectFiles = $self->result( $config, $section );
+  my @sortedKeys  = ( sort keys %$expectFiles );
+  my $final_file  = $expectFiles->{ $sortedKeys[ scalar(@sortedKeys) - 1 ] }->[0];
+
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+
+  my $mapFiles = writeDesignTable( $result_dir, $section, $qctable, $bamfiles, $peaksfiles, $peakSoftware, $combined, $task_name, $treatments, $controls );
+
   if ($combined) {
     my $mapFileName = $mapFiles->{$task_name};
-    print $pbs "R --vanilla -f $script --args $mapFileName $genome \n";
+    print $pbs "R --vanilla -f $script --args $mapFileName $genome $chromosomes\n";
   }
   else {
     for my $qcname ( sort keys %$mapFiles ) {
