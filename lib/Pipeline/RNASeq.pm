@@ -28,7 +28,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_qc3bam",             0 );
   initDefaultValue( $def, "perform_bamplot",            0 );
   initDefaultValue( $def, "perform_call_variants",      0 );
-  initDefaultValue( $def, "aligner",                    "hisat2" );
+  initDefaultValue( $def, "aligner",                    "star" );
   initDefaultValue( $def, "use_pearson_in_hca",         1 );
   initDefaultValue( $def, "top25cv_in_hca",             0 );
   initDefaultValue( $def, "use_green_red_color_in_hca", 1 );
@@ -97,11 +97,12 @@ sub getRNASeqConfig {
 
   my $configAlignment;
   if ( $aligner eq "star" ) {
+    my $starFolder = $target_dir . "/" . getNextFolderIndex($def) . "star";
     $configAlignment = {
       "star" => {
         class                     => "Alignment::STAR",
         perform                   => 1,
-        target_dir                => $target_dir . "/star",
+        target_dir                => $starFolder,
         option                    => "--twopassMode Basic",
         source_ref                => $source_ref,
         genome_dir                => $aligner_index,
@@ -118,7 +119,7 @@ sub getRNASeqConfig {
       "star_summary" => {
         class      => "Alignment::STARSummary",
         perform    => 1,
-        target_dir => $def->{target_dir} . "/star",
+        target_dir => $starFolder,
         option     => "",
         source_ref => [ "star", "_Log.final.out" ],
         sh_direct  => 1,
@@ -138,7 +139,7 @@ sub getRNASeqConfig {
       hisat2 => {
         class                 => "Alignment::Hisat2",
         perform               => 1,
-        target_dir            => $target_dir . "/hisat2",
+        target_dir            => $target_dir . "/" . getNextFolderIndex($def) . "hisat2",
         option                => "",
         source_ref            => $source_ref,
         genome_dir            => $aligner_index,
@@ -161,7 +162,7 @@ sub getRNASeqConfig {
       "featurecount" => {
         class      => "Count::FeatureCounts",
         perform    => 1,
-        target_dir => $target_dir . "/featurecount",
+        target_dir => $target_dir . "/" . getNextFolderIndex($def) . "featurecount",
         option     => "-g gene_id -t exon",
         source_ref => $source_ref,
         gff_file   => $transcript_gtf,
@@ -177,7 +178,7 @@ sub getRNASeqConfig {
       "genetable" => {
         class         => "CQS::CQSDatatable",
         perform       => 1,
-        target_dir    => $target_dir . "/genetable",
+        target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "genetable",
         option        => "-k 0 -v 6 -e --fillMissingWithZero",
         source_ref    => "featurecount",
         name_map_file => $name_map_file,
@@ -194,7 +195,7 @@ sub getRNASeqConfig {
         class           => "CQS::UniqueR",
         perform         => 1,
         rCode           => "usePearsonInHCA<-" . $def->{use_pearson_in_hca} . "; useGreenRedColorInHCA<-" . $def->{use_green_red_color_in_hca} . "; top25cvInHCA<-" . $def->{top25cv_in_hca} . "; ",
-        target_dir      => $target_dir . "/genetable_correlation",
+        target_dir      => $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation",
         rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
         output_file     => "parameterSampleFile1",
         output_file_ext => ".Correlation.png",
@@ -223,7 +224,7 @@ sub getRNASeqConfig {
     $config->{rnaseqc} = {
       class          => "QC::RNASeQC",
       perform        => 1,
-      target_dir     => "${target_dir}/rnaseqc",
+      target_dir     => $target_dir . "/" . getNextFolderIndex($def) . "rnaseqc",
       init_command   => $def->{rnaseqc_init_command},
       option         => "",
       source_ref     => $source_ref,
@@ -245,7 +246,7 @@ sub getRNASeqConfig {
     $config->{qc3} = {
       class          => "QC::QC3bam",
       perform        => 1,
-      target_dir     => $target_dir . "/qc3",
+      target_dir     => $target_dir . "/" . getNextFolderIndex($def) . "qc3",
       option         => "",
       transcript_gtf => $transcript_gtf,
       qc3_perl       => $def->{qc3_perl},
@@ -265,7 +266,7 @@ sub getRNASeqConfig {
       $config->{gene_pos} = {
         class        => "Annotation::PrepareGenePosition",
         perform      => 1,
-        target_dir   => $target_dir . "/gene_pos",
+        target_dir   => $target_dir . "/" . getNextFolderIndex($def) . "gene_pos",
         option       => "",
         dataset_name => $def->{dataset_name},
         gene_names   => $def->{gene_names},
@@ -281,7 +282,7 @@ sub getRNASeqConfig {
       $config->{bamplot} = {
         class              => "Visualization::Bamplot",
         perform            => 1,
-        target_dir         => "${target_dir}/bamplot",
+        target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "bamplot",
         option             => "-g " . $def->{dataset_name} . " -y uniform -r --save-temp",
         source_ref         => $source_ref,
         gff_file_ref       => "gene_pos",
@@ -304,7 +305,7 @@ sub getRNASeqConfig {
       $config->{bamplot} = {
         class              => "Visualization::Bamplot",
         perform            => 1,
-        target_dir         => "${target_dir}/bamplot",
+        target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "bamplot",
         option             => "-g " . $def->{dataset_name} . " -y uniform -r --save-temp",
         source_ref         => $source_ref,
         gff_file           => $def->{bamplot_gff},
@@ -326,15 +327,15 @@ sub getRNASeqConfig {
   }
 
   if ( $def->{perform_call_variants} ) {
-    my $fasta  = $def->{fasta_file};
-    my $dbsnp  = $def->{dbsnp};
-    my $gatk   = $def->{gatk_jar};
-    my $picard = $def->{picard_jar};
+    my $fasta  = getValue( $def, "fasta_file" );
+    my $dbsnp  = getValue( $def, "dbsnp" );
+    my $gatk   = getValue( $def, "gatk_jar" );
+    my $picard = getValue( $def, "picard_jar" );
 
     $config->{refine} = {
       class              => "GATK::RNASeqRefine",
       perform            => 1,
-      target_dir         => "${target_dir}/refine",
+      target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "refine",
       source_ref         => $source_ref,
       option             => "-Xmx40g",
       fasta_file         => $fasta,
@@ -353,57 +354,55 @@ sub getRNASeqConfig {
         "mem"      => "40gb"
       },
     };
-    $config->{hc_gvcf} = {
-      class       => "GATK::HaplotypeCaller",
-      perform     => 1,
-      target_dir  => "${target_dir}/hc_gvcf",
-      option      => "",
-      source_ref  => "refine",
-      gvcf        => 1,
-      java_option => "",
-      fasta_file  => $fasta,
-      vcf_files   => [$dbsnp],
-      gatk_jar    => $gatk,
-      sh_direct   => 1,
-      pbs         => {
+
+    $config->{refine_hc} = {
+      class         => "GATK::HaplotypeCaller",
+      perform       => 1,
+      target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "refine_hc",
+      option        => "-dontUseSoftClippedBases -stand_call_conf 20.0",
+      source_ref    => "refine",
+      java_option   => "",
+      fasta_file    => $fasta,
+      gatk_jar      => $gatk,
+      extension     => ".vcf",
+      by_chromosome => 0,                                                            #since we have the bed file, we cannot use by_chromosome.
+      gvcf          => 0,                                                            #http://gatkforums.broadinstitute.org/gatk/discussion/3891/calling-variants-in-rnaseq
+      sh_direct     => 0,
+      pbs           => {
         "email"    => $email,
         "nodes"    => "1:ppn=8",
         "walltime" => "72",
-        "mem"      => "80gb"
+        "mem"      => "40gb"
       },
     };
-    push( @$individual, "refine", "hc_gvcf" );
 
-    $config->{hc_gvcf_vqsr} = {
+    $config->{refine_hc_filter} = {
       class       => "GATK::VariantFilter",
       perform     => 1,
-      target_dir  => "${target_dir}/hc_gvcf_vqsr",
+      target_dir  => $target_dir . "/" . getNextFolderIndex($def) . "refine_hc_filter",
       option      => "",
-      source_ref  => "hc_gvcf",
-      vqsr_mode   => 1,
+      gvcf        => 0,
+      vqsr_mode   => 0,
+      source_ref  => "refine_hc",
       java_option => "",
       fasta_file  => $fasta,
       dbsnp_vcf   => $dbsnp,
       gatk_jar    => $gatk,
-      hapmap_vcf  => $def->{hapmap},
-      omni_vcf    => $def->{omni},
-      g1000_vcf   => $def->{g1000},
-      mills_vcf   => $def->{mills},
-      cqs_tools   => $cqstools,
+      is_rna      => 1,
       sh_direct   => 1,
       pbs         => {
         "email"    => $email,
         "nodes"    => "1:ppn=8",
         "walltime" => "72",
-        "mem"      => "100gb"
+        "mem"      => "40gb"
       },
     };
 
-    $config->{hc_gvcf_vqsr_annovar} = {
+    $config->{refine_hc_filter_annovar} = {
       class      => "Annotation::Annovar",
       perform    => 1,
-      target_dir => "${target_dir}/hc_gvcf_vqsr_annovar",
-      source_ref => "hc_gvcf_vqsr",
+      target_dir => $target_dir . "/" . getNextFolderIndex($def) . "refine_hc_filter_annovar",
+      source_ref => "refine_hc_filter",
       option     => $def->{annovar_param},
       annovar_db => $def->{annovar_db},
       buildver   => $def->{annovar_buildver},
@@ -412,11 +411,12 @@ sub getRNASeqConfig {
       pbs        => {
         "email"    => $email,
         "nodes"    => "1:ppn=1",
-        "walltime" => "72",
+        "walltime" => "2",
         "mem"      => "10gb"
       },
     };
-    push( @$summary, "hc_gvcf_vqsr", "hc_gvcf_vqsr_annovar" );
+    push( @$individual, "refine",           "refine" );
+    push( @$summary,    "refine_hc_filter", "refine_hc_filter_annovar" );
 
   }
 
