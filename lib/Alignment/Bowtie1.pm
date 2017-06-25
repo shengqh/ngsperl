@@ -150,7 +150,6 @@ if [ -s $bowtiesam ]; then
   if [ -s $bam_file ]; then
     rm $bowtiesam
     $add_RG_to_read_command    
-    samtools flagstat $bam_file > ${bam_file}.stat
   fi
 fi
 ";
