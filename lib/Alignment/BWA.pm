@@ -36,6 +36,7 @@ sub perform {
   my $cleansam                = get_option( $config, $section, "cleansam",                0 );
   my $sortByCoordinate        = get_option( $config, $section, "sort_by_coordinate",      1 );
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
+  my $mark_duplicates         = hasMarkDuplicate( $config->{$section} );
 
   $option = $option . " -M";
 
@@ -64,7 +65,6 @@ sub perform {
     my $unsorted_bam_file = $sample_name . ".unsorted.bam";
     my $clean_sam_file    = $sample_name . ".unsorted.clean.bam";
     my $bam_file          = $sample_name . ".bam";
-    my $bam_file_stat     = $sample_name . ".bam.stat";
     my $tag               = get_bam_tag($sample_name);
 
     my $rg = "\@RG\\tID:${sample_name}\\tPU:illumina\\tLB:${sample_name}\\tSM:${sample_name}\\tPL:illumina";
@@ -77,7 +77,8 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $bam_file_stat );
+    my $final_file = ( $sortByCoordinate && $mark_duplicates ) ? $sample_name . ".rmdup.bam" : $bam_file;
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     print $pbs "
 if [ ! -s $unsorted_bam_file ]; then
@@ -108,6 +109,18 @@ if [ -s $unsorted_bam_file ]; then
 fi
 ";
       $rmlist = $rmlist . " " . $unsorted_bam_file;
+      if ($mark_duplicates) {
+        print $pbs "
+if [ -s $bam_file ]; then
+  echo MarkDuplicate=`date` 
+  java -jar $picard_jar MarkDuplicates I=$bam_file O=$final_file ASSUME_SORTED=true REMOVE_DUPLICATES=false VALIDATION_STRINGENCY=SILENT M=${final_file}.metrics
+  if [ -s $final_file ]; then
+    samtools index $final_file 
+  fi
+fi
+";
+        $rmlist = $rmlist . " $bam_file ${bam_file}.bai";
+      }
     }
     else {
       print $pbs "
@@ -118,8 +131,8 @@ fi
     }
 
     print $pbs "
-if [ -s $bam_file ]; then
-  samtools flagstat $bam_file > ${bam_file}.stat 
+if [ -s $final_file ]; then
+  samtools flagstat $final_file > ${final_file}.stat 
   rm $rmlist
 fi
 ";

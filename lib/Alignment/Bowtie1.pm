@@ -30,14 +30,14 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $bowtie1_index = $config->{$section}{bowtie1_index} or die "define ${section}::bowtie1_index first";
-  my $sortbam                 = get_option( $config, $section, "sortbam",                 1 );
+  my $sort_by_coordinate      = get_option( $config, $section, "sort_by_coordinate",      1 );
   my $mappedonly              = get_option( $config, $section, "mappedonly",              0 );
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
   my $outputToSameFolder      = get_option( $config, $section, "output_to_same_folder",   1 );
 
-  my $mark_duplicates         = hasMarkDuplicate( $config->{$section} );
-  my $picard_jar = "";
-  if($mark_duplicates){
+  my $mark_duplicates = hasMarkDuplicate( $config->{$section} );
+  my $picard_jar      = "";
+  if ($mark_duplicates) {
     $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
   }
 
@@ -96,7 +96,7 @@ sub perform {
     my $cur_dir  = $outputToSameFolder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
     my $bam_file = $sample_name . ".bam";
-    my $final_file = $mark_duplicates ? $sample_name . ".rmdup.bam" : $bam_file;
+    my $final_file = ( $sort_by_coordinate && $mark_duplicates ) ? $sample_name . ".rmdup.bam" : $bam_file;
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
@@ -109,7 +109,7 @@ if [[ ! -s $bam_file && ! -s $bowtiesam ]]; then
   $bowtie1_aln_command 
 fi
 ";
-    if ($sortbam) {
+    if ($sort_by_coordinate) {
       my $chromosome_grep_command = getChromosomeFilterCommand( $bam_file, $chromosome_grep_pattern );
 
       print $pbs "
