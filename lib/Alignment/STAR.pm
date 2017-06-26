@@ -35,7 +35,7 @@ sub perform {
 
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
 
-  my $output_to_same_folder     = get_option( $config, $section, "output_to_same_folder",     0 );
+  my $output_to_same_folder     = get_option( $config, $section, "output_to_same_folder",     1 );
   my $output_sort_by_coordinate = get_option( $config, $section, "output_sort_by_coordinate", 0 );
   my $output_unsorted           = get_option( $config, $section, "output_unsorted",           0 );
   if ( !$output_sort_by_coordinate && !$output_unsorted ) {

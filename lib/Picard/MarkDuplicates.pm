@@ -29,6 +29,8 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
+  my $remove_duplicates = get_option($config, $section, "remove_duplicates", 1);
+  my $remove_duplicates_option = $remove_duplicates?"true":"false";
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -60,7 +62,7 @@ sub perform {
 
 if [ ! -s $rmdupFile ]; then
   echo RemoveDuplicate=`date` 
-  java $option -jar $picard_jar MarkDuplicates I=$sampleFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
+  java $option -jar $picard_jar MarkDuplicates I=$sampleFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=$remove_duplicates_option VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
 fi
 
 if [[ -s $rmdupFile && ! -s $sortedFile ]]; then
@@ -71,7 +73,6 @@ fi
 if [[ -s $sortedFile && ! -s ${sortedFile}.bai ]]; then
   echo BamIndex=`date` 
   samtools index $sortedFile
-  samtools flagstat $sortedFile > ${sortedFile}.stat
   rm $rmdupFile
 fi
   

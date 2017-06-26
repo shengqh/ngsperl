@@ -11,6 +11,7 @@ use CQS::FileUtils;
 use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use Alignment::AlignmentUtils;
 
 our @ISA = qw(CQS::Task);
 
@@ -21,7 +22,7 @@ sub result {
 
   my $samformat          = get_option( $config, $section, "samformat",             1 );
   my $outputToSameFolder = get_option( $config, $section, "output_to_same_folder", 0 );
-
+  my $mark_duplicates    = hasMarkDuplicate( $config->{$section} );
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
@@ -29,11 +30,11 @@ sub result {
     my $cur_dir = $outputToSameFolder ? $result_dir : $result_dir . "/$sample_name";
 
     my @result_files = ();
-    if ($samformat) {
-      push( @result_files, "${cur_dir}/${sample_name}.bam" );
+    if ($mark_duplicates) {
+      push( @result_files, "${cur_dir}/${sample_name}.rmdup.bam" );
     }
     else {
-      push( @result_files, "${cur_dir}/${sample_name}.out" );
+      push( @result_files, "${cur_dir}/${sample_name}.bam" );
     }
     push( @result_files, "${cur_dir}/${sample_name}.log" );
 

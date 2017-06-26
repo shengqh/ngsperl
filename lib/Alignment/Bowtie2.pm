@@ -32,6 +32,12 @@ sub perform {
   my $bowtie2_index = $config->{$section}{bowtie2_index} or die "define ${section}::bowtie2_index first";
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
 
+  my $mark_duplicates = hasMarkDuplicate( $config->{$section} );
+  my $picard_jar      = "";
+  if ($mark_duplicates) {
+    $picard_jar = get_param_file( $section->{picard_jar}, "picard_jar", 1 );
+  }
+
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -66,7 +72,7 @@ sub perform {
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
-    my $final_file              = $bam_file;
+    my $final_file = $mark_duplicates ? $sample_name . ".rmdup.bam" : $bam_file;
     my $chromosome_grep_command = getChromosomeFilterCommand( $bam_file, $chromosome_grep_pattern );
 
     print $sh "\$MYCMD ./$pbs_name \n";
@@ -89,6 +95,19 @@ if [ -s $sam_file ]; then
   fi
 fi
 ";
+
+    if ($mark_duplicates) {
+      print $pbs "
+if [ -s $bam_file ]; then
+  echo RemoveDuplicate=`date` 
+  java $option -jar $picard_jar MarkDuplicates I=$bam_file O=$final_file ASSUME_SORTED=true REMOVE_DUPLICATES=false VALIDATION_STRINGENCY=SILENT M=${final_file}.metrics
+  if [ -s $final_file ]; then
+    rm $bam_file ${bam_file}.idx
+    samtools index $final_file 
+  fi
+fi
+";
+    }
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;

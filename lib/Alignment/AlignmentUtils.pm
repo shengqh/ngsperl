@@ -2,12 +2,13 @@ package Alignment::AlignmentUtils;
 
 use strict;
 use warnings;
+use CQS::ConfigUtils;
 
 require Exporter;
 
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw( getChromosomeFilterCommand)] );
+our %EXPORT_TAGS = ( 'all' => [qw( getChromosomeFilterCommand hasMarkDuplicate)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -32,3 +33,10 @@ sub getChromosomeFilterCommand {
   }
   return $result;
 }
+
+sub hasMarkDuplicate {
+  my ($section) = @_;
+  return get_option_value( $section->{"mark_duplicates"}, 0 );
+}
+
+1;
