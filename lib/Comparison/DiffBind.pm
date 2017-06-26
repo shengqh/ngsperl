@@ -35,6 +35,12 @@ sub perform {
   my $peakSoftware = get_option( $config, $section, "peak_software" );
   my $homer_annotation_genome = get_option( $config, $section, "homer_annotation_genome", "" );
 
+  my $treatments = $config->{$section}{"groups"};
+  my $controls = $config->{$section}{"inputs"};
+  if ( !defined $controls ) {
+    $controls = $config->{$section}{"controls"};
+  }
+
   my $script = dirname(__FILE__) . "/DiffBind.r";
   if ( !-e $script ) {
     die "File not found : " . $script;
@@ -46,7 +52,7 @@ sub perform {
   my $log_desc = $cluster->get_log_description($log);
   my $pbs      = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
-  my $mapFiles = writeDesignTable( $result_dir, $section, $designtable, $bamfiles, $peaksfiles, $peakSoftware );
+  my $mapFiles = writeDesignTable( $result_dir, $section, $designtable, $bamfiles, $peaksfiles, $peakSoftware, 0, $task_name, $treatments, $controls );
 
   for my $name ( sort keys %$mapFiles ) {
     my $mapFileName = $mapFiles->{$name};

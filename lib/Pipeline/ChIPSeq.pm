@@ -303,6 +303,8 @@ sub getConfig {
       target_dir              => "${target_dir}/" . getNextFolderIndex($def) . "${bindName}",
       option                  => "",
       source_ref              => $bam_ref,
+      groups                  => $def->{"treatments"},
+      controls                => $def->{"controls"},
       design_table            => getValue( $def, "design_table" ),
       peaks_ref               => [ $peakCallerTask, ".bed\$" ],
       peak_software           => "bed",

@@ -653,7 +653,7 @@ sub writeDesignTable {
 
         if ( defined $controls ) {
           $controlId  = $controls->{$sampleName}->[0];
-          $bamControl = $controls->{$controlId}[0];
+          $bamControl = $bamfiles->{$controlId}[0];
         }
 
         print $map $sampleId . "\t"
