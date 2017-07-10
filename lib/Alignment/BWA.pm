@@ -34,8 +34,8 @@ sub perform {
   my $selfname = $self->{_name};
 
   my $cleansam                = get_option( $config, $section, "cleansam",                0 );
-  my $sortByCoordinate        = get_option( $config, $section, "sort_by_coordinate",      1 );
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
+  my $sortByCoordinate        = get_option( $config, $section, "sort_by_coordinate",      1 );
   my $mark_duplicates         = hasMarkDuplicate( $config->{$section} );
 
   $option = $option . " -M";
@@ -81,18 +81,20 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     print $pbs "
-if [ ! -s $unsorted_bam_file ]; then
-  echo bwa_mem=`date`
-  bwa mem $option -R '$rg' $bwa_index $sample_files_str | samtools view -bS -o $unsorted_bam_file
-fi
+if [ ! -s $bam_file ]; then
+  if [ ! -s $unsorted_bam_file ]; then
+    echo bwa_mem=`date`
+    bwa mem $option -R '$rg' $bwa_index $sample_files_str | samtools view -bS -o $unsorted_bam_file
+  fi
 ";
     my $rmlist = "";
     if ($cleansam) {
       print $pbs "
-if [[ -s $unsorted_bam_file && ! -s $clean_sam_file ]]; then
-  echo CleanSam=`date`
-  java -jar $picard_jar CleanSam VALIDATION_STRINGENCY=SILENT I=$unsorted_bam_file O=$clean_sam_file
-fi";
+  if [[ -s $unsorted_bam_file && ! -s $clean_sam_file ]]; then
+    echo CleanSam=`date`
+    java -jar $picard_jar CleanSam VALIDATION_STRINGENCY=SILENT I=$unsorted_bam_file O=$clean_sam_file
+  fi
+";
       $rmlist            = $rmlist . " " . $unsorted_bam_file;
       $unsorted_bam_file = $clean_sam_file;
     }
@@ -101,11 +103,12 @@ fi";
       my $chromosome_grep_command = getChromosomeFilterCommand( $bam_file, $chromosome_grep_pattern );
 
       print $pbs "    
-if [ -s $unsorted_bam_file ]; then
-  echo sort_bam=`date`
-  samtools sort -@ $thread -m $sort_memory $unsorted_bam_file -o $bam_file
-  samtools index $bam_file 
-  $chromosome_grep_command
+  if [ -s $unsorted_bam_file ]; then
+    echo sort_bam=`date`
+    samtools sort -@ $thread -m $sort_memory $unsorted_bam_file -o $bam_file
+    samtools index $bam_file 
+    $chromosome_grep_command
+  fi
 fi
 ";
       $rmlist = $rmlist . " " . $unsorted_bam_file;
@@ -124,8 +127,9 @@ fi
     }
     else {
       print $pbs "
-if [ -s $unsorted_bam_file ]; then
-  mv $unsorted_bam_file $bam_file
+  if [ -s $unsorted_bam_file ]; then
+    mv $unsorted_bam_file $bam_file
+  fi
 fi
 ";
     }
@@ -153,14 +157,17 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my %raw_files = %{ get_raw_files( $config, $section ) };
+  my $sortByCoordinate = get_option( $config, $section, "sort_by_coordinate", 1 );
+  my $mark_duplicates  = hasMarkDuplicate( $config->{$section} );
+  my %raw_files        = %{ get_raw_files( $config, $section ) };
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $bam_file     = "${result_dir}/${sample_name}.bam";
+    my $final_file = ( $sortByCoordinate && $mark_duplicates ) ? $sample_name . ".rmdup.bam" : $sample_name . ".bam";
+    $final_file = "${result_dir}/$final_file";
     my @result_files = ();
-    push( @result_files, $bam_file );
-    push( @result_files, $bam_file . ".stat" );
+    push( @result_files, $final_file );
+    push( @result_files, $final_file . ".stat" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;

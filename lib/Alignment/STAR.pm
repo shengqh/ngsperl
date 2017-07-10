@@ -35,9 +35,10 @@ sub perform {
 
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
 
-  my $output_to_same_folder     = get_option( $config, $section, "output_to_same_folder",     1 );
-  my $output_sort_by_coordinate = get_option( $config, $section, "output_sort_by_coordinate", 0 );
-  my $output_unsorted           = get_option( $config, $section, "output_unsorted",           0 );
+  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1 );
+  my $output_sort_by_coordinate = getSortByCoordinate( $config, $section );
+
+  my $output_unsorted = get_option( $config, $section, "output_unsorted", 0 );
   if ( !$output_sort_by_coordinate && !$output_unsorted ) {
     $output_unsorted = 1;
   }
@@ -48,7 +49,14 @@ sub perform {
   if ($output_unsorted) {
     $output_format = $output_format . " Unsorted";
   }
-  my $genome_dir = parse_param_file( $config, $section, "genome_dir", 1 );
+
+  my $star_index;
+  if ( defined $config->{$section}{"genome_dir"} ) {
+    $star_index = parse_param_file( $config, $section, "genome_dir", 1 );
+  }
+  else {
+    $star_index = parse_param_file( $config, $section, "star_index", 1 );
+  }
 
   my %fqFiles = %{ get_raw_files( $config, $section ) };
 
@@ -71,6 +79,7 @@ sub perform {
     my $rgline = "ID:$sample_name SM:$sample_name LB:$sample_name PL:ILLUMINA PU:ILLUMINA";
 
     my $final = $output_sort_by_coordinate ? $sample_name . "_Aligned.sortedByCoord.out.bam" : $sample_name . "_Aligned.out.bam";
+    my $index_command = $output_sort_by_coordinate ? "samtools index $final" : "";
 
     my $log_desc = $cluster->get_log_description($log);
 
@@ -79,12 +88,14 @@ sub perform {
     my $chromosome_grep_command = $output_sort_by_coordinate ? getChromosomeFilterCommand( $final, $chromosome_grep_pattern ) : "";
 
     print $pbs "
-STAR $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $genome_dir --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format  
+STAR $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format  
 
 if [ -s $final ]; then
-  samtools index $final
+  $index_command
   $chromosome_grep_command
-  rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_SJ.out.tab ${sample_name}_Log.progress.out
+  
+  awk {'if(\$4==\"2\") print \"\"\$1\"\\t\"\$2-\$9-1\"\\t\"\$3+\$9\"\\tJUNC000\"NR\"\\t\"\$7+\$8\"\\t-\\t\"\$2-\$9-1\"\\t\"\$3+\$9\"\\t255,0,0\\t2\\t\"\$9\",\"\$9\"\\t\",\"0,\"\$3-\$2+\$9+1; else if(\$4==\"1\") print \"\"\$1\"\\t\"\$2-\$9-1\"\\t\"\$3+\$9\"\\tJUNC000\"NR\"\\t\"\$7+\$8\"\\t+\\t\"\$2-\$9-1\"\\t\"\$3+\$9\"\\t0,0,255\\t2\\t\"\$9\",\"\$9\"\\t\",\"0,\"\$3-\$2+\$9+1'} ${sample_name}_SJ.out.tab > ${sample_name}.splicing.bed
+  rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
 fi
 
 ";
@@ -108,7 +119,7 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $sort_by_coordinate = get_option_value( $config->{$section}{sort_by_coordinate}, 0 );
+  my $output_sort_by_coordinate = getSortByCoordinate( $config, $section );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 0 );
 
   my $result = {};
