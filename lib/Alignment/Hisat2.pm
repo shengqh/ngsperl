@@ -35,7 +35,7 @@ sub perform {
 
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
 
-  my $output_to_same_folder     = get_option( $config, $section, "output_to_same_folder",     0 );
+  my $output_to_same_folder     = get_option( $config, $section, "output_to_same_folder",     1 );
   my $genome_dir = parse_param_file( $config, $section, "genome_dir", 1 );
 
   my %fqFiles = %{ get_raw_files( $config, $section ) };
@@ -69,11 +69,11 @@ sub perform {
     my $chromosome_grep_command = getChromosomeFilterCommand( $final, $chromosome_grep_pattern );
 
     print $pbs "
-hisat2 -p $thread --dta -x $genome_dir $samples -S $finalSam 2> $finalStat
+hisat2 -p $thread --dta -x $genome_dir $samples --novel-splicesite-outfile ${sample_name}.splicing  -S $finalSam 2> $finalStat
 
 if [ -s $finalSam ]; then
   echo Samtools::Sort_start=`date`
-  samtools sort -@ 8 -o ${final}.tmp $finalSam
+  samtools sort -@ $thread -o ${final}.tmp $finalSam
   mv ${final}.tmp $final
   rm $finalSam
 fi
@@ -104,7 +104,7 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 0 );
+  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1 );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
