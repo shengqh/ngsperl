@@ -30,6 +30,10 @@ if(!exists("showLabelInPCA")){
   showLabelInPCA<-TRUE
 }
 
+if(!exists("transform")){
+  transform<-FALSE
+}
+
 if(!exists("suffix")){
   suffix<-""
 }
@@ -282,6 +286,11 @@ for (i in 1:nrow(countTableFileAll)) {
   } else {
     count<-read.delim(countTableFile,header=T,row.names=1,as.is=T,check.names=FALSE)
   }
+  
+  if(transform){
+    count<-t(count)
+  }
+  
   if (nrow(count)==0) {
     next;
   }
@@ -306,11 +315,11 @@ for (i in 1:nrow(countTableFileAll)) {
   if (groupFileList!="") {
     sampleToGroup<-getSampleInGroup(groupFileList, colnames(countNum), comparisonFileList, countTableTitle, useLeastGroups,onlySamplesInGroup=onlySamplesInGroup)
     write.table(sampleToGroup, paste0(outputFilePrefix,suffix,".correlation.groups"),col.names=F, row.names=F, quote=F, sep="\t")
-	if (onlySamplesInGroup) {
-		countNum<-countNum[,which(colnames(countNum) %in% as.character(sampleToGroup$V1))]
-		#remove genes with total reads 0
-		countNum<-countNum[which(rowSums(countNum,na.rm=T)>0),]
-	}
+	  if (onlySamplesInGroup) {
+		  countNum<-countNum[,which(colnames(countNum) %in% as.character(sampleToGroup$V1))]
+		  #remove genes with total reads 0
+		  countNum<-countNum[which(rowSums(countNum,na.rm=T)>0),]
+	  }
   }
   
   #filter reads/genes by parameter
@@ -450,13 +459,13 @@ for (i in 1:nrow(countTableFileAll)) {
 			  print(paste0("NA in correlation matrix. Can't draw .Correlation.Cluster.png"))
 		  } else {
 		  	png(paste0(outputFilePrefix,suffix,".Correlation.Cluster.png"),width=width,height=width,res=300)
-		  	if(!is.na(conditionColors[1,1])){
+		  	if(!is.na(conditionColors)){
 				  heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun,ColSideColors=conditionColors)
 		  	}else{
 				  heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun)
 		  	}
-			dev.off()
-	  	  }
+			  dev.off()
+	  	}
 	  }
 	  
 	  if (groupFileList!="") {
