@@ -139,15 +139,17 @@ sub getConfig {
   }
   elsif ( $def->{aligner} eq "bwa" ) {
     $config->{ $def->{aligner} } = {
-      class      => "Alignment::BWA",
-      perform    => 1,
-      target_dir => "${target_dir}/" . getNextFolderIndex($def) . $def->{aligner},
-      option     => getValue( $def, "bwa_option" ),
-      bwa_index  => getValue( $def, "bwa_fasta" ),
-      source_ref => $source_ref,
-      picard_jar => getValue( $def, "picard_jar" ),
-      sh_direct  => 0,
-      pbs        => {
+      class                 => "Alignment::BWA",
+      perform               => 1,
+      target_dir            => "${target_dir}/" . getNextFolderIndex($def) . $def->{aligner},
+      option                => getValue( $def, "bwa_option" ),
+      bwa_index             => getValue( $def, "bwa_fasta" ),
+      source_ref            => $source_ref,
+      output_to_same_folder => 1,
+      picard_jar            => getValue( $def, "picard_jar" ),
+      mark_duplicates       => 1,
+      sh_direct             => 0,
+      pbs                   => {
         "email"    => $email,
         "nodes"    => "1:ppn=8",
         "walltime" => "72",
