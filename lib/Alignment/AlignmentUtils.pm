@@ -8,11 +8,25 @@ require Exporter;
 
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw( getChromosomeFilterCommand hasMarkDuplicate)] );
+our %EXPORT_TAGS = ( 'all' => [qw( getSortByCoordinate getChromosomeFilterCommand hasMarkDuplicate)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
+
+sub getSortByCoordinate {
+  my ( $config, $section ) = @_;
+
+  my $result;
+  if ( defined $config->{$section}{output_sort_by_coordinate} ) {
+    $result = get_option( $config, $section, "output_sort_by_coordinate" );
+  }
+  else {
+    $result = get_option( $config, $section, "sort_by_coordinate", 1 );
+  }
+
+  return $result;
+}
 
 sub getChromosomeFilterCommand {
   my ( $bam_file, $chromosome_grep_pattern ) = @_;
