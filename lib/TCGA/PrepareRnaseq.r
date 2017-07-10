@@ -14,8 +14,8 @@ cancerName = args[1]
 outputFolder = args[2]
 
 if(DEBUG){
-  cancerName = "BRCA"
-  outputFolder = "/scratch/cqs/shengq1/guoyan/prepareRnaseq/result/BRCA"
+  cancerName = "SKCM"
+  outputFolder = "/scratch/cqs/shengq1/guoyan/prepareRnaseq/result/SKCM"
 }
 
 setwd(outputFolder)
@@ -74,17 +74,19 @@ colnames(exp)<-substring(colnames(exp), 1, 15)
 writeFile(exp, file=paste0(cancerName, ".rnaseq2.count.tsv"))
 
 normal<-exp[,grepl("11$", colnames(exp))]
-if(ncol(normal) > 0){
+if(is.matrix(normal) && ncol(normal) > 0){
   writeFile(normal, paste0(cancerName, ".rnaseq2.count.normal.tsv"))
 }
 
 tumor<-exp[,grepl("01$", colnames(exp))]
-if(ncol(tumor) > 0){
+if(length(tumor) > 0){
   writeFile(tumor, paste0(cancerName, ".rnaseq2.count.tumor.tsv"))
 }
 
 totalCounts<-apply(exp, 2, sum)
-genelength<-posframe$s2 - posframe$s1 + 1
+
+#per kilobases
+genelength<-(posframe$s2 - posframe$s1 + 1) / 1000 
 
 #by column
 fpkm<-exp / totalCounts
@@ -96,11 +98,11 @@ fpkm <- fpkm * 1000000
 writeFile(fpkm, file=paste0(cancerName, ".rnaseq2.fpkm.tsv"))
 
 normal<-fpkm[,grepl("11$", colnames(fpkm))]
-if(ncol(normal) > 0){
+if(is.matrix(normal) && ncol(normal) > 0){
   writeFile(normal, paste0(cancerName, ".rnaseq2.fpkm.normal.tsv"))
 }
 
 tumor<-fpkm[,grepl("01$", colnames(fpkm))]
-if(ncol(tumor) > 0){
+if(length(tumor) > 0){
   writeFile(tumor, paste0(cancerName, ".rnaseq2.fpkm.tumor.tsv"))
 }
