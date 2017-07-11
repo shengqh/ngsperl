@@ -420,7 +420,8 @@ for (i in 1:nrow(countTableFileAll)) {
 	  print("Doing correlation analysis ...")
 	  #correlation distribution
 	  countNumCor<-corWithout(countNumVsd,use="pa",method="sp")
-	  
+      write.csv(countNumCor, file=paste0(outputFilePrefix,suffix,".Correlation.csv"), row.names=T)
+ 	  
 	  colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
 	  if (min(countNumCor,na.rm=T)<0) {
 		  colAllLabel<-c(-1,0,1)
