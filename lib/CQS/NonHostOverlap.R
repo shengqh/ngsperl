@@ -29,23 +29,28 @@ readsMappingTable[is.na(readsMappingTable)]<-0
 ######################################
 #Reads Overlap: Reads were found in how many categories? For reads only in one category, which one?
 ######################################
-readsMappingNamesTable<-table(unlist(readsMappingNames))
+allReadsNames<-unlist(readsMappingNames)
+readsMappingNamesTable<-table(allReadsNames)
 dataForPlot<-NULL
 #maxReadCategory<-max(readsMappingNamesTable)
 #for (i in 2:maxReadCategory) {
-#	temp<-colSums(readsMappingTable[names(readsMappingNamesTable)[which(readsMappingNamesTable==i)],])
-#	dataForPlot<-rbind(dataForPlot,temp)
+# temp<-colSums(readsMappingTable[names(readsMappingNamesTable)[which(readsMappingNamesTable==i)],])
+# dataForPlot<-rbind(dataForPlot,temp)
 #}
 #row.names(dataForPlot)<-paste0("Reads Mapped to ",2:maxReadCategory," Categories")
 
 readsInOneCategory<-names(readsMappingNamesTable)[which(readsMappingNamesTable==1)]
+i<-1
 for (i in 1:length(readsMappingNames)) {
-	temp<-intersect(readsInOneCategory,readsMappingNames[[i]])
-	temp<-colSums(readsMappingTable[temp,])
-	dataForPlot<-rbind(dataForPlot,temp)
+  readsOne<-intersect(readsInOneCategory,readsMappingNames[[i]])
+  readsOneTable<-readsMappingTable[allReadsNames %in% readsOne,]
+  readsOneColSums<-colSums(readsOneTable)
+  dataForPlot<-rbind(dataForPlot,readsOneColSums)
 }
-temp<-colSums(readsMappingTable[names(readsMappingNamesTable)[which(readsMappingNamesTable>1)],])
-dataForPlot<-rbind(dataForPlot,temp)
+readsInMoreCategory<-names(readsMappingNamesTable)[which(readsMappingNamesTable>1)]
+readsMoreTable<-readsMappingTable[allReadsNames %in% readsInMoreCategory,]
+readsMoreColSums<-colSums(readsMoreTable)
+dataForPlot<-rbind(dataForPlot,readsMoreColSums)
 #row.names(dataForPlot)[(nrow(dataForPlot)-length(categoriesNames)+1):nrow(dataForPlot)]<-categoriesNames
 row.names(dataForPlot)<-c(paste0(categoriesNames," Only"),"Mapped to more than one Category")
 
@@ -59,44 +64,55 @@ tableBarplotToFile(dataForPlot,fileName=paste0(resultFile,".Barplot.png"),totalC
 
 #Group Pie chart
 ggpieGroupToFile(dataForPlot,fileName=paste0(resultFile,".Group.Piechart.png"),groupFileList=groupFileList,
-		outFileName=paste0(resultFile,".PercentGroups.csv"),maxCategory=maxCategory,textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList)
+    outFileName=paste0(resultFile,".PercentGroups.csv"),maxCategory=maxCategory,textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList)
 
 
 ######################################
 #Reads Overlap: Venn for 5 categories
 ######################################
-if (length(readsMappingNames)>5) {
-	dataForPlot<-readsMappingNames[1:5]
-} else {
-	dataForPlot<-readsMappingNames
-}
-names(dataForPlot)<-categoriesNames[1:5]
-colors<-makeColors(length(categoriesNames))
-vennCex=1.2
-for (i in 1:ncol(readsMappingTable)) {
-	reads2count<-readsMappingTable[,i]
-	names(reads2count)<-row.names(readsMappingTable)
-	png(paste0(resultFile,".",colnames(readsMappingTable)[i],".venn.png"),res=300,height=2000,width=2000)
-	venn.diagram1(dataForPlot,count=reads2count,cex=vennCex,cat.cex=vennCex,fill=colors,alpha=0.7,margin=0.2,cat.dist=c(0.2,0.3,0.2,0.2,0.3))
-	dev.off()
-}
-
+#if (length(readsMappingNames)>5) {
+#   dataForPlot<-readsMappingNames[1:5]
+# } else {
+#   dataForPlot<-readsMappingNames
+# }
+# names(dataForPlot)<-categoriesNames[1:5]
+# colors<-makeColors(length(categoriesNames))
+# vennCex=1.2
+# for (i in 1:ncol(readsMappingTable)) {
+#   reads2count<-readsMappingTable[,i]
+#   names(reads2count)<-row.names(readsMappingTable)
+#   png(paste0(resultFile,".",colnames(readsMappingTable)[i],".venn.png"),res=300,height=2000,width=2000)
+#   venn.diagram1(dataForPlot,count=reads2count,cex=vennCex,cat.cex=vennCex,fill=colors,alpha=0.7,margin=0.2,cat.dist=c(0.2,0.3,0.2,0.2,0.3))
+#   dev.off()
+# }
 
 
 ###################################################
 #Group1 and Group2 reads mapping table overlap
 ###################################################
-temp1<-intersect(readsMappingNames[[1]],readsMappingNames[[2]])
-temp2<-setdiff(readsMappingNames[[1]],temp1)
-temp3<-setdiff(readsMappingNames[[2]],temp1)
-resultOut<-rbind(readsMappingTable[temp1,],readsMappingTable[temp2,],readsMappingTable[temp3,])
-resultOut<-cbind(Category=c(rep("BothCategories",length(temp1)),rep("MicrobiomeOnly",length(temp2)),rep("EnvironmentOnly",length(temp3))),resultOut)
-write.csv(resultOut,paste0(resultFile,".MicrobiomeVsEnvironment.reads.csv"))
+common12<-intersect(readsMappingNames[[1]],readsMappingNames[[2]])
+cat1only<-setdiff(readsMappingNames[[1]],common12)
+cat2only<-setdiff(readsMappingNames[[2]],common12)
 
-temp1<-colSums(readsMappingTable[temp1,])
-temp2<-colSums(readsMappingTable[temp2,])
-temp3<-colSums(readsMappingTable[temp3,])
-dataForPlot<-rbind(BothCategories=temp1,MicrobiomeOnly=temp2,EnvironmentOnly=temp3)
+reads12MappingTable<-readsMappingTable[c(1:(length(readsMappingNames[[1]]) + length(readsMappingNames[[2]]))),]
+reads12MappingNames = c(readsMappingNames[[1]], readsMappingNames[[2]])
+
+common12table<-reads12MappingTable[reads12MappingNames %in% common12,]
+cat1onlytable<-reads12MappingTable[reads12MappingNames %in% cat1only,]
+cat2onlytable<-reads12MappingTable[reads12MappingNames %in% cat2only,]
+
+resultOut<-rbind(common12table, cat1onlytable, cat2onlytable)
+resultOut<-cbind(Read=c(reads12MappingNames[reads12MappingNames %in% common12], reads12MappingNames[reads12MappingNames %in% cat1only], reads12MappingNames[reads12MappingNames %in% cat2only]), 
+                 Category=c(rep("Both_Microbiome",length(common12)),
+                            rep("Both_Environment",length(common12)),
+                            rep("MicrobiomeOnly",nrow(cat1onlytable)),
+                            rep("EnvironmentOnly",nrow(cat2onlytable))),resultOut)
+write.csv(resultOut,paste0(resultFile,".MicrobiomeVsEnvironment.reads.csv"),row.names=F)
+
+common12colsums<-colSums(common12table)
+cat1onlycolsums<-colSums(cat1onlytable)
+cat2onlycolsums<-colSums(cat2onlytable)
+dataForPlot<-rbind(BothCategories=common12colsums,MicrobiomeOnly=cat1onlycolsums,EnvironmentOnly=cat2onlycolsums)
 
 #Pie chart for all samples
 ggpieToFile(dataForPlot,fileName=paste0(resultFile,".MicrobiomeVsEnvironment.Piechart.png"),maxCategory=maxCategory,textSize=textSize,facetColCount=facetColCount)
@@ -106,6 +122,6 @@ tableBarplotToFile(dataForPlot,fileName=paste0(resultFile,".MicrobiomeVsEnvironm
 
 #Group Pie chart
 ggpieGroupToFile(dataForPlot,fileName=paste0(resultFile,".MicrobiomeVsEnvironment.Group.Piechart.png"),groupFileList=groupFileList,
-		outFileName=paste0(resultFile,".PercentGroups.csv"),maxCategory=maxCategory,textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList)
+    outFileName=paste0(resultFile,".PercentGroups.csv"),maxCategory=maxCategory,textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList)
 
 
