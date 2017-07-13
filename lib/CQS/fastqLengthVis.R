@@ -4,6 +4,7 @@ resultFile<-outFile
 lengthFileList<-parSampleFile1
 groupFileList<-parSampleFile2
 groupVisLayoutFileList<-parSampleFile3
+free_y=1
 
 if(!exists("visLayoutAlphabet")){
   visLayoutAlphabet<-FALSE
