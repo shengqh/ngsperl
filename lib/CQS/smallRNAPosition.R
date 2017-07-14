@@ -7,6 +7,7 @@ print(file)
 
 library(reshape2)
 library(ggplot2)
+library(dplyr)
 
 snRNAGrouping<-function(x) {
 	if (all(grepl("^RNU|^RNVU|^U\\d+",head(as.character(x))))) {
@@ -33,13 +34,20 @@ snRnaName2Group<-function(x,groupSnRNA=1) {
 
 
 fp=read.table(positionFile, sep="\t", header=T)
-fp$Feature<-paste0(fp$Feature,"(",round(fp$Count,0),"):",fp$Strand)
+
+featureCount<- as.data.frame(fp %>% group_by(Feature) %>% summarise(max = max(Count)))
+rownames(featureCount)<-featureCount$Feature
+featureCount$max<-round(featureCount$max, 0)
+fp$MaxCount<-featureCount[fp$Feature,"max"]
+fp$Feature<-paste0(fp$Feature,"(",fp$MaxCount,"):",fp$Strand)
 
 features=as.character(unique(fp$Feature))
 if(length(features) > 100){
-	features = features[1:100]
-	fp=fp[fp$Feature %in% features,]
+  features = features[1:100]
+  fp=fp[fp$Feature %in% features,]
 }
+fp$Feature<-factor(fp$Feature, levels=rev(unique(fp$Feature)))
+
 groupSnRNA<-snRNAGrouping(features)
 
 fp$AbsCount<-fp$Count*fp$Percentage
