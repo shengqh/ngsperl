@@ -30,8 +30,8 @@ if(!exists("showLabelInPCA")){
   showLabelInPCA<-TRUE
 }
 
-if(!exists("transform")){
-  transform<-FALSE
+if(!exists("transformTable")){
+	transformTable<-FALSE
 }
 
 if(!exists("suffix")){
@@ -287,7 +287,7 @@ for (i in 1:nrow(countTableFileAll)) {
     count<-read.delim(countTableFile,header=T,row.names=1,as.is=T,check.names=FALSE)
   }
   
-  if(transform){
+  if(transformTable){
     count<-t(count)
   }
   
