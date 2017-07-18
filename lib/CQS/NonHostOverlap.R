@@ -1,5 +1,16 @@
 options(bitmapType='cairo')
 library(plyr)
+rbindFillWithName<-function(x,y,...) {
+	uniqueNamesY<-setdiff(row.names(y),row.names(x))
+	if (length(uniqueNamesY)==0) {
+		return(x)
+	} else {
+		allNames<-c(row.names(x),uniqueNamesY)
+		result<-rbind.fill(x,y[uniqueNamesY,,drop=FALSE],...)
+		row.names(result)<-allNames
+		return(result)
+	}
+}
 
 #############################
 #Vis for all Non Host Reads: Group 1, 2, 4; tRNA; two rRNA Categry;
@@ -23,12 +34,15 @@ for (i in 1:nrow(readFiles)) {
   cat("reading ", readFiles[i,1], "...\n")
   temp<-read.delim(readFiles[i,1],header=T,row.names=1,as.is=T)
   readsMappingNames[[i]]<-row.names(temp)
-  readsMappingTable<-rbind.fill(readsMappingTable,temp)
+  readsMappingTable<-rbindFillWithName(readsMappingTable,temp)
 }
 readsMappingTable[is.na(readsMappingTable)]<-0
+
 ######################################
 #Reads Overlap: Reads were found in how many categories? For reads only in one category, which one?
 ######################################
+
+cat("Preparing overlap reads now ","...\n")
 allReadsNames<-unlist(readsMappingNames)
 readsMappingNamesTable<-table(allReadsNames)
 dataForPlot<-NULL
@@ -70,21 +84,23 @@ ggpieGroupToFile(dataForPlot,fileName=paste0(resultFile,".Group.Piechart.png"),g
 ######################################
 #Reads Overlap: Venn for 5 categories
 ######################################
-#if (length(readsMappingNames)>5) {
-#   dataForPlot<-readsMappingNames[1:5]
-# } else {
-#   dataForPlot<-readsMappingNames
-# }
-# names(dataForPlot)<-categoriesNames[1:5]
-# colors<-makeColors(length(categoriesNames))
-# vennCex=1.2
-# for (i in 1:ncol(readsMappingTable)) {
-#   reads2count<-readsMappingTable[,i]
-#   names(reads2count)<-row.names(readsMappingTable)
-#   png(paste0(resultFile,".",colnames(readsMappingTable)[i],".venn.png"),res=300,height=2000,width=2000)
-#   venn.diagram1(dataForPlot,count=reads2count,cex=vennCex,cat.cex=vennCex,fill=colors,alpha=0.7,margin=0.2,cat.dist=c(0.2,0.3,0.2,0.2,0.3))
-#   dev.off()
-# }
+cat("Making Venn diagram for overlap reads now ","...\n")
+if (length(readsMappingNames)>5) {
+   warning("More than 5 categories. Only first 5 categories will be used in overlap Venn diagram.")
+   dataForPlot<-readsMappingNames[1:5]
+ } else {
+   dataForPlot<-readsMappingNames
+ }
+ names(dataForPlot)<-categoriesNames[1:5]
+ colors<-makeColors(length(categoriesNames))
+ vennCex=1.2
+ for (i in 1:ncol(readsMappingTable)) {
+   reads2count<-readsMappingTable[,i]
+   names(reads2count)<-row.names(readsMappingTable)
+   png(paste0(resultFile,".",colnames(readsMappingTable)[i],".venn.png"),res=300,height=2000,width=2000)
+   venn.diagram1(dataForPlot,count=reads2count,cex=vennCex,cat.cex=vennCex,fill=colors,alpha=0.7,margin=0.2,cat.dist=c(0.2,0.3,0.2,0.2,0.3))
+   dev.off()
+ }
 
 
 ###################################################

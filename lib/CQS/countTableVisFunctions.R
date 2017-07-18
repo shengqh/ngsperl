@@ -117,7 +117,7 @@ venn.diagram1<-function (x, count=NULL,filename, height = 3000, width = 3000, re
 	} else {
 		countFun<-function(x) sum(count[x])
 	}
-	if (is.na(fill)) {
+	if (is.na(fill[1])) {
 		if (length(x)==5) {
 			fill = c("dodgerblue", "goldenrod1", "darkorange1", "seagreen3", "orchid3")
 		} else if (length(x)==4) {
