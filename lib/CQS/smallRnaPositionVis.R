@@ -72,6 +72,7 @@ for(group in groups){
 doSmallRNAGrouping<-smallRNAGrouping(unique(allPosition$Feature))
 if (doSmallRNAGrouping==1 | doSmallRNAGrouping==3) {
   allPosition$smallRNAGroup<-smallRnaName2Group(allPosition$Feature,doSmallRNAGrouping)
+  smallRNAGroupSize<-tapply(allPosition$Feature,allPosition$smallRNAGroup,function(x) length(unique(x)))
 }
 
 if (length(unique(allPosition$Feature))>maxFeature) {
@@ -96,6 +97,8 @@ if (visLayoutFileList!="") {
   visLayout$Row_Group<-factor(visLayout$Row_Group,levels=unique(visLayout$Row_Group))
   
   allPositionByGroup<-data.frame(allPositionByGroup,visLayout[allPositionByGroup[,"Group"],])
+} else {
+  allPositionByGroup$Group<-factor(allPositionByGroup$Group,levels=groups)
 }
 featureNumber<-length(unique(allPositionByGroup$Feature))
 
@@ -134,6 +137,8 @@ p<-ggplot(allPositionByGroup,aes(x=Position,y=Feature,size=GroupPercentage,colou
     theme(legend.position="none")
 if (visLayoutFileList!="" & "smallRNAGroup" %in% colnames(allPositionByGroup)) {
   p<-p+facet_grid(Row_Group+smallRNAGroup~Col_Group,space = "free",scale="free")
+} else if ("smallRNAGroup" %in% colnames(allPositionByGroup)) {
+  p<-p+facet_grid(smallRNAGroup~Group,space = "free",scale="free")
 } else if (visLayoutFileList!="") {
   p<-p+facet_grid(Row_Group~Col_Group,space = "free",scale="free")
 } else {
@@ -141,6 +146,42 @@ if (visLayoutFileList!="" & "smallRNAGroup" %in% colnames(allPositionByGroup)) {
 }
 print(p)
 dev.off()
+
+if (doSmallRNAGrouping==1 | doSmallRNAGrouping==3) {
+	allPositionByGroupBySmallRnaGroup<-aggregate(x = allPositionByGroup[,-which(colnames(allPositionByGroup) %in% c("Group.1","Group.2","Group.3"))], 
+			by = list(allPositionByGroup$smallRNAGroup,allPositionByGroup$Group, allPositionByGroup$Position), FUN = function(x) if(is.numeric(x)| is.integer(x)) {sum(x)} else {x[1]})
+	allPositionByGroupBySmallRnaGroup$SmallRnaGroupPercentage<-as.vector(allPositionByGroupBySmallRnaGroup$GroupPercentage/smallRNAGroupSize[allPositionByGroupBySmallRnaGroup$smallRNAGroup])
+	allPositionByGroupBySmallRnaGroup$Position<-allPositionByGroupBySmallRnaGroup$Group.3
+	
+	featureNumber<-length(unique(allPositionByGroupBySmallRnaGroup$smallRNAGroup))
+	if (visLayoutFileList!="") {
+		height=max(length(unique(allPositionByGroupBySmallRnaGroup$Row_Group))*featureNumber*80,3000)
+		width=max(length(unique(allPositionByGroupBySmallRnaGroup$Col_Group))*2000,3000)
+	} else {
+		height=max(featureNumber*100,3000)
+		width=max(length(unique(allPositionByGroupBySmallRnaGroup$smallRNAGroup))*2000,3000)
+	}
+	png(paste0(outFile,".smallRnaGroup.png"), width=width, height=height, res=300)
+	p<-ggplot(allPositionByGroupBySmallRnaGroup,aes(x=Position,y=smallRNAGroup,size=SmallRnaGroupPercentage,colour=SmallRnaGroupPercentage))+
+			geom_point()+
+			scale_size_continuous(range = c(0.1,3))+
+			scale_colour_gradient(low="indianred1",high="darkred")+
+			xlim(xRange)+ 
+			theme_bw()+
+			theme(text = element_text(size=axisTextSize),axis.text = element_text(size=axisTextSize),
+					axis.title = element_text(size=axisTextSize),
+					strip.text.x = element_text(size=stripTextSize),
+					strip.text.y = element_text(size=stripTextSize,angle = 0))+
+			theme(legend.position="none")
+	if (visLayoutFileList!="") {
+		p<-p+facet_grid(Row_Group~Col_Group,space = "free",scale="free")
+	} else {
+		p<-p+facet_grid(.~Group,space = "free",scale="free")
+	}
+	print(p)
+	dev.off()
+}
+
 
 if (visLayoutFileList!="") {
   height=max(length(unique(allPositionByGroup$Row_Group))*2000,3000)
