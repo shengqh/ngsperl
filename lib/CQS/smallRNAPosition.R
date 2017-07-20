@@ -21,7 +21,7 @@ snRNAGrouping<-function(x) {
 
 snRnaName2Group<-function(x,groupSnRNA=1) {
 	if (groupSnRNA==1) { #snRNA
-		snRnaGroup<-sapply(strsplit(as.character(x),"-"),function(y) y[1])
+		snRnaGroup<-sapply(strsplit(as.character(x),"-|:"),function(y) y[1])
 		snRnaGroup<-gsub("RNVU","RNU",snRnaGroup)
 		snRnaGroup<-gsub("([A-Z]+[0-9]+)[A-Z]+","\\1",snRnaGroup)
 	} else if (groupSnRNA==2) { #tRNA

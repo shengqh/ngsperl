@@ -5,7 +5,7 @@ options(bitmapType='cairo')
 # Author: zhaos
 ###############################################################################
 
-maxFeature=25
+maxFeature=100
 
 groupFileList=parSampleFile1
 visLayoutFileList=parSampleFile2
@@ -38,7 +38,7 @@ smallRNAGrouping<-function(x) {
 
 smallRnaName2Group<-function(x,groupSnRNA=1) {
   if (groupSnRNA==1) { #snRNA
-    snRnaGroup<-sapply(strsplit(as.character(x),"-"),function(y) y[1])
+    snRnaGroup<-sapply(strsplit(as.character(x),"-|:"),function(y) y[1])
     snRnaGroup<-gsub("RNVU","RNU",snRnaGroup)
     snRnaGroup<-gsub("([A-Z]+[0-9]+)[A-Z]+","\\1",snRnaGroup)
   } else if (groupSnRNA==3) { #tRNA with headers and anticodn only (GlyACC)
