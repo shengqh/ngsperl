@@ -153,12 +153,12 @@ if (doSmallRNAGrouping==1 | doSmallRNAGrouping==3) {
 	allPositionByGroupBySmallRnaGroup$SmallRnaGroupPercentage<-as.vector(allPositionByGroupBySmallRnaGroup$GroupPercentage/smallRNAGroupSize[allPositionByGroupBySmallRnaGroup$smallRNAGroup])
 	allPositionByGroupBySmallRnaGroup$Position<-allPositionByGroupBySmallRnaGroup$Group.3
 	
-	featureNumber<-length(unique(allPositionByGroupBySmallRnaGroup$smallRNAGroup))
+	featureNumberSmallRnaGroup<-length(unique(allPositionByGroupBySmallRnaGroup$smallRNAGroup))
 	if (visLayoutFileList!="") {
-		height=max(length(unique(allPositionByGroupBySmallRnaGroup$Row_Group))*featureNumber*80,3000)
+		height=max(length(unique(allPositionByGroupBySmallRnaGroup$Row_Group))*featureNumberSmallRnaGroup*80,3000)
 		width=max(length(unique(allPositionByGroupBySmallRnaGroup$Col_Group))*2000,3000)
 	} else {
-		height=max(featureNumber*100,3000)
+		height=max(featureNumberSmallRnaGroup*100,3000)
 		width=max(length(unique(allPositionByGroupBySmallRnaGroup$smallRNAGroup))*2000,3000)
 	}
 	png(paste0(outFile,".smallRnaGroup.png"), width=width, height=height, res=300)
