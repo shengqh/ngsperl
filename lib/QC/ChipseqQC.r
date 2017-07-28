@@ -20,6 +20,6 @@ if(!is.na(chromosomes)){
 
 experiment <- read.table(configFile, sep="\t", header=T)
 
-qcresult = ChIPQC(experiment, annotation = annotationName, chromosomes=chromosomes)
+qcresult = ChIPQC(experiment, consensus=TRUE, annotation = annotationName, chromosomes=chromosomes)
 
 ChIPQCreport(qcresult)
