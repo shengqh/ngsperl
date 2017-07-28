@@ -37,6 +37,23 @@ sub initializeDefaultOptions {
   return $def;
 }
 
+sub initCutadaptOption {
+  my ( $config, $def, $fastq_remove_N ) = @_;
+
+  if ( $def != $config ) {
+    initDefaultValue( $config, "min_read_length", $def->{"min_read_length"} );
+  }
+  defined $config->{"adapter_5"} or defined $config->{"adapter_3"} or getValue( $config, "adapter" );
+
+  my $cutadapt_option = getValue( $config, "cutadapt_option", getValue( $def, "cutadapt_option", "" ) );
+
+  if ( $cutadapt_option !~ /\-m/ ) {
+    my $min_read_length = getValue( $config, "min_read_length" );
+    $cutadapt_option = $cutadapt_option . " -m " . $min_read_length;
+  }
+  $config->{cutadapt_option} = $cutadapt_option;
+}
+
 sub getPreprocessionConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
@@ -73,19 +90,21 @@ sub getPreprocessionConfig {
   my $remove_sequences = getValue( $def, "remove_sequences" );    #remove contamination sequences from sequence kit before adapter trimming
   my $run_cutadapt     = getValue( $def, "perform_cutadapt" );
   if ($run_cutadapt) {
-    if ( not defined $def->{cutadapt} ) {
-      defined $def->{adapter_5} or defined $def->{adapter_3} or getValue( $def, "adapter" );
-      getValue( $def, "min_read_length" );
-      my $cutadapt_option = getValue( $def, "cutadapt_option", "" );
-      if ( $fastq_remove_N && ( $cutadapt_option !~ /trim\-n/ ) ) {
-        $cutadapt_option = $cutadapt_option . " --trim-n";
-      }
-      $fastq_remove_N = 0;
-      if ( $cutadapt_option !~ /\-m/ ) {
-        $cutadapt_option = $cutadapt_option . " -m " . $def->{min_read_length};
-      }
-      $def->{cutadapt_option} = $cutadapt_option;
+    if ( defined $def->{cutadapt} ) {
+      my $cconfig = $def->{cutadapt};
+      initCutadaptOption( $cconfig, $def, $fastq_remove_N );
     }
+    elsif ( defined $def->{cutadapt_config} ) {
+      my $cconfig = $def->{cutadapt_config};
+      for my $key ( keys %$cconfig ) {
+        my $kconfig = $cconfig->{$key};
+        initCutadaptOption( $kconfig, $def, $fastq_remove_N );
+      }
+    }
+    else {
+      initCutadaptOption( $def, $def, $fastq_remove_N );
+    }
+    $fastq_remove_N = 0;
   }
 
   #data
@@ -95,8 +114,8 @@ sub getPreprocessionConfig {
       cluster   => $cluster
     },
     constraint => $def->{constraint},
-    groups => $def->{groups},
-    pairs  => $def->{pairs},
+    groups     => $def->{groups},
+    pairs      => $def->{pairs},
   };
 
   my $source_ref;
@@ -199,23 +218,28 @@ sub getPreprocessionConfig {
       addFastQC( $config, $def, $individual, $summary, "fastqc_post_remove", $source_ref, $preprocessing_dir );
     }
   }
-  
+
   my $untrimed_ref = $source_ref;
 
   if ($run_cutadapt) {
+    my $cutadapt_class = ( defined $def->{cutadapt_config} ) ? "Trimmer::CutadaptByConfig" : "Trimmer::Cutadapt";
     my $cutadapt_section = {
       "cutadapt" => {
-        class                            => "Trimmer::Cutadapt",
+        class                            => $cutadapt_class,
         perform                          => 1,
         target_dir                       => $preprocessing_dir . "/" . getNextFolderIndex($def) . "cutadapt",
         option                           => $def->{cutadapt_option},
         source_ref                       => $source_ref,
+        config                           => $def->{cutadapt_config},
         adapter                          => $def->{adapter},
         adapter_5                        => $def->{adapter_5},
         adapter_3                        => $def->{adapter_3},
         random_bases_remove_after_trim   => $def->{"fastq_remove_random"},
         random_bases_remove_after_trim_5 => $def->{"fastq_remove_random_5"},
         random_bases_remove_after_trim_3 => $def->{"fastq_remove_random_3"},
+        fastq_remove_random              => $def->{"fastq_remove_random"},
+        fastq_remove_random_5            => $def->{"fastq_remove_random_5"},
+        fastq_remove_random_3            => $def->{"fastq_remove_random_3"},
         extension                        => "_clipped.fastq",
         is_paired                        => $is_paired,
         sh_direct                        => 0,
@@ -231,9 +255,9 @@ sub getPreprocessionConfig {
     if ( defined $def->{cutadapt} ) {
       $cutadapt_section->{cutadapt} = merge( $def->{cutadapt}, $cutadapt_section->{cutadapt} );
     }
-    
+
     my $fastq_len_dir = $preprocessing_dir . "/" . getNextFolderIndex($def) . "fastq_len";
-    my $cutadapt = merge(
+    my $cutadapt      = merge(
       $cutadapt_section,
       {
         "fastq_len" => {
@@ -302,6 +326,10 @@ sub getPreprocessionConfig {
       $fastqc_count_vis_files = {
         target_dir         => $config->{fastqc_post_trim}->{target_dir},
         parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.summary.reads.tsv\$" ],
+      };
+    }else{
+      $fastqc_count_vis_files = {
+        target_dir         => $config->{fastqc_raw}->{target_dir},
       };
     }
 
