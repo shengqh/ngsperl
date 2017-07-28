@@ -62,6 +62,7 @@ sub addFastQC {
     option     => "",
     source_ref => $source_ref,
     cluster    => $def->{cluster},
+    sh_direct  => 1,
     pbs        => {
       "email"    => $def->{email},
       "nodes"    => "1:ppn=1",
@@ -79,7 +80,7 @@ sub addFastQC {
     cqstools   => $def->{cqstools},
     option     => "",
     cluster    => $def->{cluster},
-    ,
+    sh_direct  => 1,
     pbs => {
       "email"    => $def->{email},
       "nodes"    => "1:ppn=1",
