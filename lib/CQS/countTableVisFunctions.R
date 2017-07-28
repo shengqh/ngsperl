@@ -579,7 +579,11 @@ ggpieGroupToFile<-function(dat,fileName,groupFileList="",outFileName="",
 		y="Reads",facet="Sample",visLayoutFileList="",visLayoutAlphabet=FALSE,...) {
 	if (groupFileList!="") {
 		if (!transformTable) {
-			fillOrder<-unique(dat[,fill])
+			if (is.factor(dat[,fill])) {
+				fillOrder<-levels(dat[,fill])
+			} else {
+				fillOrder<-unique(dat[,fill])
+			}
 			dat<-acast(dat,as.formula(paste(fill,"~",facet)),value.var=y)
 			dat<-dat[fillOrder,]
 		}
