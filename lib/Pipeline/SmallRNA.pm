@@ -26,8 +26,9 @@ our $VERSION = '0.06';
 sub initializeDefaultOptions {
   my $def = shift;
 
-  initDefaultValue( $def, "host_xml2bam", 0 );
-  initDefaultValue( $def, "host_bamplot", 0 );
+  initDefaultValue( $def, "host_xml2bam",     0 );
+  initDefaultValue( $def, "host_bamplot",     0 );
+  initDefaultValue( $def, "read_correlation", 0 );
 
   return $def;
 }
@@ -122,7 +123,7 @@ sub getSmallRNAConfig {
     $def->{correlation_rcode} = $def->{correlation_rcode} . "totalCountKey='Reads for Mapping';";
   }
   if (1) {    #set filter parameters
-    $def->{correlation_rcode} = $def->{correlation_rcode} . "minMedian=1;minDedianInGroup=1;";
+    $def->{correlation_rcode} = $def->{correlation_rcode} . "minMedian=1;minMedianInGroup=1;";
   }
 
   #print Dumper($config);
@@ -402,8 +403,8 @@ sub getSmallRNAConfig {
           $plotgroups = { $def->{task_name} => \@sortedSamples };
         }
 
-        $config->{"plotgroups"} = $plotgroups;
-        $config->{"host_bamplot"}    = {
+        $config->{"plotgroups"}   = $plotgroups;
+        $config->{"host_bamplot"} = {
           class              => "Visualization::Bamplot",
           perform            => 1,
           target_dir         => "${host_genome_dir}/host_bamplot",
@@ -451,23 +452,39 @@ sub getSmallRNAConfig {
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$",         #miRNA
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$"           #tRNA
     );
+
+    if ( $def->{read_correlation} ) {
+      push @table_for_correlation, (
+        "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$",    #miRNA
+        "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$"      #tRNA
+      );
+    }
     if ( $def->{hasYRNA} ) {
       push @name_for_readSummary, "Host yRNA";
       push @table_for_countSum,    ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count\$" );
       push @table_for_readSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.read.count\$" );
       push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count\$" );
+      if ( $def->{read_correlation} ) {
+        push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.read.count\$", );
+      }
     }
     if ( $def->{hasSnRNA} ) {
       push @name_for_readSummary, "Host snRNA";
       push @table_for_countSum,    ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count\$" );
       push @table_for_readSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.read.count\$" );
       push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count\$" );
+      if ( $def->{read_correlation} ) {
+        push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.read.count\$", );
+      }
     }
     if ( $def->{hasSnoRNA} ) {
       push @name_for_readSummary, "Host snoRNA";
       push @table_for_countSum,    ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count\$" );
       push @table_for_readSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.read.count\$" );
       push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count\$" );
+      if ( $def->{read_correlation} ) {
+        push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.read.count\$", );
+      }
     }
     push @name_for_readSummary, (
       "Host rRNA",               #rRNA
@@ -485,6 +502,9 @@ sub getSmallRNAConfig {
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.count\$",         #rRNA
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$"         #other
     );
+    if ( $def->{read_correlation} ) {
+      push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$", );
+    }
 
     push @$individual_ref, ("bowtie1_genome_1mm_NTA_smallRNA_count");
     push @$summary_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_info", "bowtie1_genome_1mm_NTA_smallRNA_category", "host_genome_tRNA_category" );
@@ -794,10 +814,13 @@ sub getSmallRNAConfig {
       }
       push @name_for_mapPercentage, ( "bowtie1_${nonhostGroup}_pm_count", ".count.mapped.xml\$" );
       push @table_for_correlation,  ( "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" );
-      push @table_for_countSum,     ( "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" );
-      push @table_for_readSummary,  ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
-      push @mapped,                 ( "bowtie1_${nonhostGroup}_pm_count", ".xml" );
-      push @overlap,                ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
+      if ( $def->{read_correlation} ) {
+        push @table_for_correlation, ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$", );
+      }
+      push @table_for_countSum,    ( "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" );
+      push @table_for_readSummary, ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
+      push @mapped,                ( "bowtie1_${nonhostGroup}_pm_count", ".xml" );
+      push @overlap,               ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
     }
 
     push @name_for_readSummary, @nonhost_genome_group_names;
@@ -867,11 +890,15 @@ sub getSmallRNAConfig {
     push( @name_for_mapPercentage, "bowtie1_tRNA_pm_count", ".count.mapped.xml\$", "bowtie1_rRNA_pm_count", ".count.mapped.xml\$", );
 
     push @table_for_correlation, ( "bowtie1_tRNA_pm_table", "^(?!.*?read).*\.count\$", "bowtie1_rRNA_pm_table", "^(?!.*?read).*\.count\$" );
-    push @table_for_countSum,    ( "bowtie1_tRNA_pm_table", ".category.count\$",       "bowtie1_rRNA_pm_table", "$task_name\.count\$" );
-    push @table_for_readSummary, ( "bowtie1_tRNA_pm_table", ".read.count\$",           "bowtie1_rRNA_pm_table", ".read.count\$" );
+    if ( $def->{read_correlation} ) {
+      push @table_for_correlation, ( "bowtie1_tRNA_pm_table", ".read.count\$", );
+      push @table_for_correlation, ( "bowtie1_rRNA_pm_table", ".read.count\$", );
+    }
+    push @table_for_countSum,    ( "bowtie1_tRNA_pm_table", ".category.count\$", "bowtie1_rRNA_pm_table", "$task_name\.count\$" );
+    push @table_for_readSummary, ( "bowtie1_tRNA_pm_table", ".read.count\$",     "bowtie1_rRNA_pm_table", ".read.count\$" );
     push @name_for_readSummary,  ( "Non host tRNA",         "Non host rRNA" );
-    push @mapped,                ( "bowtie1_tRNA_pm_count", ".xml",                    "bowtie1_rRNA_pm_count", ".xml" );
-    push @overlap,               ( "bowtie1_tRNA_pm_table", ".read.count\$",           "bowtie1_rRNA_pm_table", ".read.count\$" );
+    push @mapped,                ( "bowtie1_tRNA_pm_count", ".xml",              "bowtie1_rRNA_pm_count", ".xml" );
+    push @overlap,               ( "bowtie1_tRNA_pm_table", ".read.count\$",     "bowtie1_rRNA_pm_table", ".read.count\$" );
 
     if ($do_comparison) {
       my $tRNADeseq2 = [];
