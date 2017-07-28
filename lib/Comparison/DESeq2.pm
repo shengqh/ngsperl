@@ -141,6 +141,8 @@ sub perform {
 
     my $g1 = $group_names[0];
     my $g2 = $group_names[1];
+    die "cannot find group $g1 " if !defined($groups->{$g1});
+    die "cannot find group $g2 " if !defined($groups->{$g2});
     my @s1 = @{ $groups->{$g1} };
     my @s2 = @{ $groups->{$g2} };
 
