@@ -23,8 +23,12 @@ readCount<-function(fileName){
   return(count1)
 }
 
+count1<-readCount(countInFastQcPreTrim)
+if (countInFastQcTrim1=="") {
+  count1$Label="Reads for Mapping"
+  countForFigure<-count1
+} else {
 if (countInFastQcTrim2=="") {
-  count1<-readCount(countInFastQcPreTrim)
   count2<-readCount(countInFastQcTrim1)
   
   count1<-count1[rownames(count2),]
@@ -42,7 +46,6 @@ if (countInFastQcTrim2=="") {
   
   countForFigure<-rbind(count2,count1)
 } else {
-  count1<-readCount(countInFastQcPreTrim)
   count2<-readCount(countInFastQcTrim1)
   count3<-readCount(countInFastQcTrim2)
   
@@ -57,6 +60,7 @@ if (countInFastQcTrim2=="") {
   count3$Label="Reads for Mapping"
   
   countForFigure<-rbind(count3,count1,count2)
+}
 }
 
 width<-max(14, length(unique(countForFigure$Sample)) * 0.15)
