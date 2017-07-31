@@ -296,15 +296,57 @@ sub getPreprocessionConfig {
       }
     );
 
-    $config = merge( $config, $cutadapt );
+    $config = merge( $config, $cutadapt_section );
 
-    push @$individual, ( "cutadapt", "fastq_len" );
-    push @$summary, ("fastq_len_vis");
-
+    push @$individual, ("cutadapt");
     if ( $def->{perform_fastqc} ) {
       addFastQC( $config, $def, $individual, $summary, "fastqc_post_trim", [ "cutadapt", ".fastq.gz" ], $preprocessing_dir );
     }
     $source_ref = [ "cutadapt", ".fastq.gz" ];
+  }
+
+  if ( $run_cutadapt or $def->{fastq_len} ) {
+    my $fastq_len_dir = $preprocessing_dir . "/" . getNextFolderIndex($def) . "fastq_len";
+    my $fastq_len     = {
+      "fastq_len" => {
+        class      => "CQS::FastqLen",
+        perform    => 1,
+        target_dir => $fastq_len_dir,
+        option     => "",
+        source_ref => $run_cutadapt ? "cutadapt" : $source_ref,
+        cqstools   => $def->{cqstools},
+        sh_direct  => 1,
+        cluster    => $cluster,
+        pbs        => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "24",
+          "mem"      => "20gb"
+        },
+      },
+      "fastq_len_vis" => {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $fastq_len_dir,
+        rtemplate                => "countTableVisFunctions.R,fastqLengthVis.R",
+        output_file              => ".lengthDistribution",
+        output_file_ext          => ".csv",
+        parameterSampleFile1_ref => [ "fastq_len", ".len\$" ],
+        parameterSampleFile2     => $def->{groups},
+        sh_direct                => 1,
+        pbs                      => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      }
+    };
+
+    $config = merge( $config, $fastq_len );
+
+    push @$individual, ("fastq_len");
+    push @$summary,    ("fastq_len_vis");
   }
 
   if ( $def->{perform_fastqc} ) {
@@ -327,10 +369,9 @@ sub getPreprocessionConfig {
         target_dir         => $config->{fastqc_post_trim}->{target_dir},
         parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.summary.reads.tsv\$" ],
       };
-    }else{
-      $fastqc_count_vis_files = {
-        target_dir         => $config->{fastqc_raw}->{target_dir},
-      };
+    }
+    else {
+      $fastqc_count_vis_files = { target_dir => $config->{fastqc_raw}->{target_dir}, };
     }
 
     if ( defined $fastqc_count_vis_files ) {
