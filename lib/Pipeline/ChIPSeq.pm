@@ -66,6 +66,8 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_diffbind", 0 );
   initDefaultValue( $def, "perform_enhancer", 0 );
   initDefaultValue( $def, "perform_multiqc",  1 );
+  
+  initDefaultValue( $def, "perform_enhancer",      0 );
 
   return $def;
 }
