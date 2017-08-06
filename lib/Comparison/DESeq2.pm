@@ -81,6 +81,7 @@ sub perform {
   my $performWilcox       = get_option( $config, $section, "perform_wilcox",         0 );
   my $useRawPvalue        = get_option( $config, $section, "use_raw_p_value",        0 );
   my $textSize            = get_option( $config, $section, "text_size",              11 );
+  my $transformTable      = get_option( $config, $section, "transform_table",        0 );
 
   my $libraryFile = parse_param_file( $config, $section, "library_file", 0 );
   my $libraryKey;
@@ -141,8 +142,8 @@ sub perform {
 
     my $g1 = $group_names[0];
     my $g2 = $group_names[1];
-    die "cannot find group $g1 " if !defined($groups->{$g1});
-    die "cannot find group $g2 " if !defined($groups->{$g2});
+    die "cannot find group $g1 " if !defined( $groups->{$g1} );
+    die "cannot find group $g2 " if !defined( $groups->{$g2} );
     my @s1 = @{ $groups->{$g1} };
     my @s2 = @{ $groups->{$g2} };
 
@@ -222,14 +223,15 @@ detectedInBothGroup<-$detectedInBothGroup
 performWilcox<-$performWilcox
 useRawPvalue<-$useRawPvalue
 textSize<-$textSize
+transformTable<-$transformTable
 ";
 
-if(defined $libraryFile){
-  print $rf "
+  if ( defined $libraryFile ) {
+    print $rf "
 libraryFile<-\"$libraryFile\"
 libraryKey<-\"$libraryKey\"
 ";
-}
+  }
 
   while (<$rt>) {
     if ( $_ !~ 'predefined_condition_end' ) {

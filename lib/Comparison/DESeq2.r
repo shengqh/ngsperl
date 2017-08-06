@@ -15,6 +15,7 @@ detectedInBothGroup<-1
 performWilcox<-0
 useRawPvalue<-1
 textSize<-9
+transformTable<-0
 libraryFile<-"/scratch/cqs/shengq1/vickers/20170222_smallRNA_3018_61_human_v3/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/3018_61.Category.Table.csv"
 libraryKey<-"TotalReads"
 
@@ -260,6 +261,10 @@ for(countfile_index in c(1:length(countfiles))){
     data<-read.csv(countfile,header=T,row.names=1,as.is=T,check.names=FALSE)
   } else {
     data<-read.delim(countfile,header=T,row.names=1,as.is=T,check.names=FALSE)
+  }
+  
+  if(transformTable){
+    data<-t(data)
   }
   
   data<-data[,colnames(data) != "Feature_length"]
@@ -581,10 +586,11 @@ for(countfile_index in c(1:length(countfiles))){
     
     if(length(indecies) > 0){
       inddata<-data[rownames(comparisonData),indecies,drop=F]
-      tbb<-cbind(inddata, comparisonData, res)
+      tbb<-cbind(inddata, as.data.frame(comparisonData), res)
     }else{
-      tbb<-cbind(comparisonData, res)
+      tbb<-cbind(as.data.frame(comparisonData), res)
     }
+
     tbb$FoldChange<-2^tbb$log2FoldChange
     tbbselect<-tbb[select,,drop=F]
     tbbAllOut<-as.data.frame(tbb[,resultAllOutVar,drop=F])
