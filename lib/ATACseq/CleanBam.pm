@@ -85,7 +85,7 @@ fi
     else {
       $filterFile = $finalFile;
     }
-    
+
     my $filterOption;
     if ( defined $blacklistfile ) {
       $filterOption = "| samtools view -b -U $filterFile -o ${sample_name}.discard.bam -L $blacklistfile";
@@ -95,17 +95,21 @@ fi
       $filterOption = "> $filterFile";
     }
 
-    print $pbs "
+    my $input = $sampleFile;
+    if ( $sampleFile !~ /\.rmdup\./ ) {
+      print $pbs "
 if [[ -s $sampleFile && ! -s $redupFile ]]; then
   echo RemoveDuplicate=`date` 
   java -jar $picard_jar MarkDuplicates I=$sampleFile O=$redupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT M=${redupFile}.metrics
   samtools index $redupFile
 fi
 ";
-    #$rmlist = $rmlist . " $redupFile ${redupFile}.metrics ${redupFile}.bai";
-    $rmlist = $rmlist . " $redupFile ${redupFile}.bai";
 
-    my $input = $redupFile;
+      $rmlist = $rmlist . " $redupFile ${redupFile}.bai";
+
+      $input = $redupFile;
+    }
+    
     if ( defined $maxInsertSize && $maxInsertSize > 0 ) {
       my $insertFile = $sample_name . ".insertsize.bam";
       print $pbs "
