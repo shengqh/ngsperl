@@ -81,7 +81,7 @@ sub addFastQC {
     option     => "",
     cluster    => $def->{cluster},
     sh_direct  => 1,
-    pbs => {
+    pbs        => {
       "email"    => $def->{email},
       "nodes"    => "1:ppn=1",
       "walltime" => "2",
@@ -419,6 +419,7 @@ sub addEnhancer {
     target_dir    => "${target_dir}/" . getNextFolderIndex($def) . $enhancerName,
     option        => "",
     source_ref    => $bam_ref,
+    treatments    => $def->{treatments},
     peaks_ref     => $peak_ref,
     pipeline_dir  => getValue( $def, "enhancer_folder" ),
     genome        => getValue( $def, "enhancer_genome" ),
