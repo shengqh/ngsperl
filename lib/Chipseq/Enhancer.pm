@@ -40,7 +40,7 @@ sub perform {
     $option = $option . " -a $activityFile";
   }
 
-  my $rawFiles = get_raw_files( $config, $section );
+  my $rawFiles = get_grouped_raw_files( $config, $section, "treatments" );
 
   my $peakCommand = "";
   my $peakFile;
@@ -49,15 +49,15 @@ sub perform {
   }
   else {
     $peakFile = $task_name . "_merged_peaks.bed";
-    my $tempFile = $task_name . ".tmp.bed";
+    my $tempFile  = $task_name . ".tmp.bed";
     my $peakfiles = get_raw_files( $config, $section, "peaks" );
-    my @bedfiles = ();
+    my @bedfiles  = ();
     for my $sample_name ( sort keys %$peakfiles ) {
       my $sample_files = $peakfiles->{$sample_name};
       push @bedfiles, @$sample_files;
     }
-    my $fileOption = join(" ", @bedfiles);
-    
+    my $fileOption = join( " ", @bedfiles );
+
     $peakCommand = "if [ ! -s $peakFile ]; then
   cat $fileOption | sort -k1,1 -k2,2n > $tempFile
   bedtools merge -i $tempFile -c 4 -o collapse > $peakFile
@@ -96,7 +96,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $rawFiles = get_raw_files( $config, $section );
+  my $rawFiles = get_grouped_raw_files( $config, $section, "treatments" );
 
   my $result = {};
   for my $fileName ( keys %$rawFiles ) {
