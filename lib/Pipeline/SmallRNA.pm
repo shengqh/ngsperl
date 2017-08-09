@@ -27,6 +27,9 @@ sub initializeDefaultOptions {
   my $def = shift;
 
   initDefaultValue( $def, "host_xml2bam",     0 );
+  initDefaultValue( $def, "bacteria_group1_xml2bam",   0 );
+  initDefaultValue( $def, "bacteria_group2_xml2bam",   0 );
+  initDefaultValue( $def, "fungus_group4_xml2bam",   0 );
   initDefaultValue( $def, "host_bamplot",     0 );
   initDefaultValue( $def, "read_correlation", 0 );
 
@@ -821,6 +824,26 @@ sub getSmallRNAConfig {
       push @table_for_readSummary, ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
       push @mapped,                ( "bowtie1_${nonhostGroup}_pm_count", ".xml" );
       push @overlap,               ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
+
+      my $nonhost_xml2bam = ${nonhostGroup} . "_xml2bam";
+      if ( defined $def->{$nonhost_xml2bam} && $def->{$nonhost_xml2bam} ) {
+        $config->{"bowtie1_" . $nonhost_xml2bam} = {
+          class         => "SmallRNA::XmlToBam",
+          perform       => 1,
+          target_dir    => $nonhost_genome_dir . "/bowtie1_${nonhost_xml2bam}",
+          source_ref    => [ "bowtie1_${nonhostGroup}_pm_count", ".xml" ],
+          bam_files_ref => [ "bowtie1_${nonhostGroup}_pm", ".bam" ],
+          sh_direct     => 1,
+          pbs           => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$individual_ref, "bowtie1_" . $nonhost_xml2bam );
+      }
     }
 
     push @name_for_readSummary, @nonhost_genome_group_names;
