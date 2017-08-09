@@ -223,7 +223,7 @@ sub getPreprocessionConfig {
 
   if ($run_cutadapt) {
     my $cutadapt_class = ( defined $def->{cutadapt_config} ) ? "Trimmer::CutadaptByConfig" : "Trimmer::Cutadapt";
-    my $cutadapt_section = {
+    my $cutadapt = {
       "cutadapt" => {
         class                            => $cutadapt_class,
         perform                          => 1,
@@ -253,52 +253,12 @@ sub getPreprocessionConfig {
       }
     };
     if ( defined $def->{cutadapt} ) {
-      $cutadapt_section->{cutadapt} = merge( $def->{cutadapt}, $cutadapt_section->{cutadapt} );
+      $cutadapt->{cutadapt} = merge( $def->{cutadapt}, $cutadapt->{cutadapt} );
     }
 
-    my $fastq_len_dir = $preprocessing_dir . "/" . getNextFolderIndex($def) . "fastq_len";
-    my $cutadapt      = merge(
-      $cutadapt_section,
-      {
-        "fastq_len" => {
-          class      => "CQS::FastqLen",
-          perform    => 1,
-          target_dir => $fastq_len_dir,
-          option     => "",
-          source_ref => "cutadapt",
-          cqstools   => $def->{cqstools},
-          sh_direct  => 1,
-          cluster    => $cluster,
-          pbs        => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "24",
-            "mem"      => "20gb"
-          },
-        },
-        "fastq_len_vis" => {
-          class                    => "CQS::UniqueR",
-          perform                  => 1,
-          target_dir               => $fastq_len_dir,
-          rtemplate                => "countTableVisFunctions.R,fastqLengthVis.R",
-          output_file              => ".lengthDistribution",
-          output_file_ext          => ".csv",
-          parameterSampleFile1_ref => [ "fastq_len", ".len\$" ],
-          parameterSampleFile2     => $def->{groups},
-          sh_direct                => 1,
-          pbs                      => {
-            "email"    => $def->{email},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "1",
-            "mem"      => "10gb"
-          },
-        }
-      }
-    );
-
-    $config = merge( $config, $cutadapt_section );
-
+    $config = merge( $config, $cutadapt );
     push @$individual, ("cutadapt");
+    
     if ( $def->{perform_fastqc} ) {
       addFastQC( $config, $def, $individual, $summary, "fastqc_post_trim", [ "cutadapt", ".fastq.gz" ], $preprocessing_dir );
     }
