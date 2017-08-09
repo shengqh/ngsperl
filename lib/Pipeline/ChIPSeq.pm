@@ -40,14 +40,16 @@ sub initializeDefaultOptions {
     initDefaultValue( $def, "macs1_option", "-p 1e-9 -w -S --space=50" );
   }
   elsif ( $def->{peak_caller} eq "macs2" ) {
-    my $macs2_genome = getValue( $def, "macs2_genome" );    #hs
     initDefaultValue( $def, "macs2_peak_type", "narrow" );
-    my $macs2_peak_type = getValue( $def, "macs2_peak_type" );
-    if ( $macs2_peak_type eq "narrow" ) {
-      initDefaultValue( $def, "macs2_option", "-B -q 0.01 -g " . $macs2_genome );
-    }
-    else {
-      initDefaultValue( $def, "macs2_option", "--broad -B -q 0.01 -g " . $macs2_genome );
+    if ( not defined $def->{"macs2_option"} ) {
+      my $macs2_genome    = getValue( $def, "macs2_genome" );      #hzs
+      my $macs2_peak_type = getValue( $def, "macs2_peak_type" );
+      if ( $macs2_peak_type eq "narrow" ) {
+        initDefaultValue( $def, "macs2_option", "-B -q 0.01 -g " . $macs2_genome );
+      }
+      else {
+        initDefaultValue( $def, "macs2_option", "--broad -B -q 0.01 -g " . $macs2_genome );
+      }
     }
   }
 
@@ -66,8 +68,8 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_diffbind", 0 );
   initDefaultValue( $def, "perform_enhancer", 0 );
   initDefaultValue( $def, "perform_multiqc",  1 );
-  
-  initDefaultValue( $def, "perform_enhancer",      0 );
+
+  initDefaultValue( $def, "perform_enhancer", 0 );
 
   return $def;
 }
