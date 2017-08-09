@@ -82,6 +82,6 @@ with pysam.AlignmentFile(unsorted, "wb", header=header) as outf:
         a.query_name = query_name + ":" + str(idx)
         outf.write(a)
    
-pysam.sort(unsorted, outputFilePrefix)
+pysam.sort("-o", outputFilePrefix + ".bam", unsorted)
 pysam.index(outputFilePrefix + ".bam")
 os.remove(unsorted)
