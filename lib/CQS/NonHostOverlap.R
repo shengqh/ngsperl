@@ -118,11 +118,13 @@ cat1onlytable<-reads12MappingTable[reads12MappingNames %in% cat1only,]
 cat2onlytable<-reads12MappingTable[reads12MappingNames %in% cat2only,]
 
 resultOut<-rbind(common12table, cat1onlytable, cat2onlytable)
-resultOut<-cbind(Read=c(reads12MappingNames[reads12MappingNames %in% common12], reads12MappingNames[reads12MappingNames %in% cat1only], reads12MappingNames[reads12MappingNames %in% cat2only]), 
+resultOut<-data.frame(Read=c(reads12MappingNames[reads12MappingNames %in% common12], reads12MappingNames[reads12MappingNames %in% cat1only], reads12MappingNames[reads12MappingNames %in% cat2only]), 
                  Category=c(rep("Both_Microbiome",length(common12)),
                             rep("Both_Environment",length(common12)),
                             rep("MicrobiomeOnly",nrow(cat1onlytable)),
-                            rep("EnvironmentOnly",nrow(cat2onlytable))),resultOut)
+                            rep("EnvironmentOnly",nrow(cat2onlytable))),resultOut,stringsAsFactors=FALSE)
+resultOut<-resultOut[-which(resultOut$Category=="Both_Environment"),]
+resultOut$Category<-gsub("Both_Microbiome","Both",resultOut$Category)
 write.csv(resultOut,paste0(resultFile,".MicrobiomeVsEnvironment.reads.csv"),row.names=F)
 
 common12colsums<-colSums(common12table)
