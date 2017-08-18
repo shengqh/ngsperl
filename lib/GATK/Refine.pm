@@ -37,8 +37,8 @@ sub getKnownSitesVcf {
 
   if ( defined $config->{$section}{indel_vcf_files} ) {
     my $vcfFiles = $config->{$section}{indel_vcf_files};
-    my @vcfFiles = @{$vcfFiles};
-    my @out      = keys %{ { map { ( $_ => 1 ) } ( @sitesVcfFiles, @vcfFiles ) } };
+    my @vcfFileArray = ( ref($vcfFiles) eq "ARRAY" ) ? @{$vcfFiles} : ($vcfFiles);
+    my @out = keys %{ { map { ( $_ => 1 ) } ( @sitesVcfFiles, @vcfFileArray ) } };
     @sitesVcfFiles = @out;
   }
 
@@ -79,19 +79,21 @@ sub perform {
   my $slim                 = get_option( $config, $section, "slim_print_reads",         1 );
   my $use_self_slim_method = get_option( $config, $section, "use_self_slim_method",     0 );
   my $baq                  = get_option( $config, $section, "samtools_baq_calibration", 0 );
-  my $mark_duplicate     = get_option( $config, $section, "mark_duplicate",         0 );
-  
+  my $mark_duplicate       = get_option( $config, $section, "mark_duplicate",           0 );
+
   my $removeDupLabel;
   if ($remove_duplicate) {
-    $removeDupLabel="true";
-  } elsif ($mark_duplicate) {
-    $removeDupLabel="false";
+    $removeDupLabel = "true";
   }
-  
+  elsif ($mark_duplicate) {
+    $removeDupLabel = "false";
+  }
+
   my $indel_vcf = "";
   if ($indelRealignment) {
     my $vcfFiles = $config->{$section}{indel_vcf_files} or die "Define indel_vcf_files in section $section first.";
-    foreach my $vcf (@$vcfFiles) {
+    my @vcfFileArray = ( ref($vcfFiles) eq "ARRAY" ) ? @{$vcfFiles} : ($vcfFiles);
+    foreach my $vcf (@vcfFileArray) {
       $indel_vcf = $indel_vcf . " -known $vcf";
     }
   }
@@ -119,9 +121,10 @@ sub perform {
 
     my $rmdupResultName = "";
     if ($remove_duplicate) {
-      $rmdupResultName=".rmdup";
-    } elsif ($mark_duplicate) {
-      $rmdupResultName=".markdup";
+      $rmdupResultName = ".rmdup";
+    }
+    elsif ($mark_duplicate) {
+      $rmdupResultName = ".markdup";
     }
     my $slimResultName  = $slim             ? ".slim"  : "";
     my $indelResultName = $indelRealignment ? ".indel" : "";
@@ -154,8 +157,8 @@ fi
       $rmlist    = $rmlist . " $presortedFile ${presortedFile}.bai";
     }
 
-    if ($remove_duplicate or $mark_duplicate) {
-      my $rmdupFile = $sample_name . $rmdupResultName.".bam";
+    if ( $remove_duplicate or $mark_duplicate ) {
+      my $rmdupFile = $sample_name . $rmdupResultName . ".bam";
       my $rmdupFileIndex = change_extension( $rmdupFile, ".bai" );
       print $pbs "
 if [[ -s $inputFile && ! -s $rmdupFile ]]; then
@@ -260,18 +263,19 @@ sub result {
   my $indelRealignment = get_option( $config, $section, "indel_realignment",        0 );
   my $slim             = get_option( $config, $section, "slim_print_reads",         1 );
   my $baq              = get_option( $config, $section, "samtools_baq_calibration", 0 );
-  my $mark_duplicate     = get_option( $config, $section, "mark_duplicate",         0 );
+  my $mark_duplicate   = get_option( $config, $section, "mark_duplicate",           0 );
 
   my $indelResultName = $indelRealignment ? ".indel" : "";
   my $slimResultName  = $slim             ? ".slim"  : "";
   my $baqResultName   = $baq              ? ".baq"   : "";
   my $rmdupResultName = "";
-    if ($remove_duplicate) {
-      $rmdupResultName=".rmdup";
-    } elsif ($mark_duplicate) {
-      $rmdupResultName=".markdup";
-    };
-    
+  if ($remove_duplicate) {
+    $rmdupResultName = ".rmdup";
+  }
+  elsif ($mark_duplicate) {
+    $rmdupResultName = ".markdup";
+  }
+
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my $final_file   = "${sample_name}${rmdupResultName}.recal${slimResultName}${indelResultName}${baqResultName}.bam";
