@@ -34,6 +34,12 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "perform_gatk_callvariants",   0 );
   initDefaultValue( $def, "gatk_callvariants_vqsr_mode", 1 );
+  initDefaultValue( $def, "perform_muTect",              0 );
+
+  if ( $def->{perform_muTect} ) {
+    initDefaultValue( $def, "indel_realignment", 1 );
+    initDefaultValue( $def, "indel_vcf_files",   $def->{mills} );
+  }
 
   initDefaultValue( $def, "perform_multiqc", 1 );
 
@@ -85,11 +91,15 @@ sub getConfig {
 
   push @$individual, ( $def->{aligner} );
 
-  if ( $def->{perform_gatk_callvariants} ) {
+  if ( $def->{perform_gatk_callvariants} || $def->{perform_muTect} ) {
     my $gatk_jar   = getValue( $def, "gatk_jar" );
     my $picard_jar = getValue( $def, "picard_jar" );
     my $dbsnp      = getValue( $def, "dbsnp" );
-    my $mills      = $def->{mills};
+
+    if ( $def->{indel_realignment} ) {
+      getValue( $def, "indel_vcf_files" );
+    }
+    my $mills = $def->{mills};
     my $vcf = defined $mills ? [ $dbsnp, $mills ] : [$dbsnp];
 
     my $refine_name = $def->{aligner} . "_refine";
@@ -109,6 +119,8 @@ sub getConfig {
       sh_direct                => 0,
       slim_print_reads         => 1,
       samtools_baq_calibration => 0,
+      indel_realignment        => $def->{indel_realignment},
+      indel_vcf_files          => $def->{indel_vcf_files},
       sorted                   => 1,
       pbs                      => {
         "email"    => $email,
@@ -119,106 +131,157 @@ sub getConfig {
     };
     push @$individual, ($refine_name);
 
-    my $gvcf_name = $refine_name . "_hc_gvcf";
-    $config->{$gvcf_name} = {
-      class         => "GATK::HaplotypeCaller",
-      perform       => 1,
-      target_dir    => "${target_dir}/$gvcf_name",
-      option        => "",
-      source_ref    => $refine_name,
-      java_option   => "",
-      fasta_file    => $fasta,
-      gatk_jar      => $gatk_jar,
-      extension     => ".g.vcf",
-      by_chromosome => 0,
-      gvcf          => 1,
-      sh_direct     => 0,
-      pbs           => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=8",
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    };
-    push @$summary, ($gvcf_name);
-
-    my $filter_name;
-    if ( $def->{gatk_callvariants_vqsr_mode} ) {
-      $filter_name = $gvcf_name . "_vqsr";
-      $config->{$filter_name} = {
-        class       => "GATK::VariantFilter",
-        perform     => 1,
-        target_dir  => "${target_dir}/$filter_name",
-        option      => "",
-        vqsr_mode   => 1,
-        source_ref  => "$gvcf_name",
-        java_option => "",
-        fasta_file  => $fasta,
-        dbsnp_vcf   => $dbsnp,
-        hapmap_vcf  => $def->{hapmap},
-        omni_vcf    => $def->{omni},
-        g1000_vcf   => $def->{g1000},
-        mills_vcf   => $mills,
-        gatk_jar    => $gatk_jar,
-        cqstools    => $cqstools,
-        sh_direct   => 1,
-        pbs         => {
+    if ( $def->{perform_gatk_callvariants} ) {
+      my $gvcf_name = $refine_name . "_hc_gvcf";
+      $config->{$gvcf_name} = {
+        class         => "GATK::HaplotypeCaller",
+        perform       => 1,
+        target_dir    => "${target_dir}/$gvcf_name",
+        option        => "",
+        source_ref    => $refine_name,
+        java_option   => "",
+        fasta_file    => $fasta,
+        gatk_jar      => $gatk_jar,
+        extension     => ".g.vcf",
+        by_chromosome => 0,
+        gvcf          => 1,
+        sh_direct     => 0,
+        pbs           => {
           "email"    => $email,
-          "nodes"    => "1:ppn=1",
+          "nodes"    => "1:ppn=8",
           "walltime" => "72",
           "mem"      => "40gb"
         },
       };
-    }
-    else {
-      $filter_name = $gvcf_name . "_hardfilter";
+      push @$individual, ($gvcf_name);
 
-      $config->{$filter_name} = {
-        class       => "GATK::VariantFilter",
-        perform     => 1,
-        target_dir  => "${target_dir}/$filter_name",
-        option      => "",
-        source_ref  => $gvcf_name,
-        java_option => "",
-        gatk_jar    => $gatk_jar,
-        fasta_file  => $fasta,
-        sh_direct   => 1,
-        vqsr_mode   => 0,
-        is_rna      => 0,
-        pbs         => {
+      my $filter_name;
+      if ( $def->{gatk_callvariants_vqsr_mode} ) {
+        $filter_name = $gvcf_name . "_vqsr";
+        $config->{$filter_name} = {
+          class       => "GATK::VariantFilter",
+          perform     => 1,
+          target_dir  => "${target_dir}/$filter_name",
+          option      => "",
+          vqsr_mode   => 1,
+          source_ref  => "$gvcf_name",
+          java_option => "",
+          fasta_file  => $fasta,
+          dbsnp_vcf   => $dbsnp,
+          hapmap_vcf  => $def->{hapmap},
+          omni_vcf    => $def->{omni},
+          g1000_vcf   => $def->{g1000},
+          mills_vcf   => $mills,
+          gatk_jar    => $gatk_jar,
+          cqstools    => $cqstools,
+          sh_direct   => 1,
+          pbs         => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=1",
+            "walltime" => "72",
+            "mem"      => "40gb"
+          },
+        };
+      }
+      else {
+        $filter_name = $gvcf_name . "_hardfilter";
+
+        $config->{$filter_name} = {
+          class       => "GATK::VariantFilter",
+          perform     => 1,
+          target_dir  => "${target_dir}/$filter_name",
+          option      => "",
+          source_ref  => $gvcf_name,
+          java_option => "",
+          gatk_jar    => $gatk_jar,
+          fasta_file  => $fasta,
+          sh_direct   => 1,
+          vqsr_mode   => 0,
+          is_rna      => 0,
+          pbs         => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=1",
+            "walltime" => "72",
+            "mem"      => "40gb"
+          },
+        };
+      }
+      push @$summary, ($filter_name);
+
+      my $annovar_name = $filter_name . "_annovar";
+      $config->{$annovar_name} = {
+        class      => "Annotation::Annovar",
+        perform    => 1,
+        target_dir => "${target_dir}/$annovar_name",
+        source_ref => "$filter_name",
+        option     => getValue( $def, "annovar_param" ),
+        annovar_db => getValue( $def, "annovar_db" ),
+        buildver   => getValue( $def, "annovar_buildver" ),
+        sh_direct  => 1,
+        isvcf      => 1,
+        pbs        => {
           "email"    => $email,
           "nodes"    => "1:ppn=1",
-          "walltime" => "72",
+          "walltime" => "2",
+          "mem"      => "10gb"
+        },
+      };
+      push @$summary, ($annovar_name);
+    }
+
+    if ( $def->{"perform_muTect"} ) {
+      my $mutectName = "${refine_name}_muTect";
+      $config->{$mutectName} = {
+        class        => "GATK::MuTect",
+        perform      => 1,
+        init_command => $def->{muTect_init_command},
+        target_dir   => "${target_dir}/$mutectName",
+        option       => getValue( $def, "muTect_option" ),
+        java_option  => "-Xmx40g",
+        source_ref   => [ $refine_name, ".bam\$" ],
+        groups_ref   => "groups",
+        fasta_file   => $fasta,
+        dbsnp_file   => getValue( $def, "dbsnp" ),
+        bychromosome => 0,
+        sh_direct    => 0,
+        muTect_jar   => getValue( $def, "muTect_jar" ),
+        pbs          => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "240",
           "mem"      => "40gb"
         },
       };
-    }
-    push @$summary, ($filter_name);
 
-    my $annovar_name = $filter_name . "_annovar";
-    $config->{$annovar_name} = {
-      class      => "Annotation::Annovar",
-      perform    => 1,
-      target_dir => "${target_dir}/$annovar_name",
-      source_ref => "$filter_name",
-      option     => getValue( $def, "annovar_param" ),
-      annovar_db => getValue( $def, "annovar_db" ),
-      buildver   => getValue( $def, "annovar_buildver" ),
-      sh_direct  => 1,
-      isvcf      => 1,
-      pbs        => {
-        "email"    => $email,
-        "nodes"    => "1:ppn=1",
-        "walltime" => "2",
-        "mem"      => "10gb"
-      },
-    };
-    push @$summary, ($annovar_name);
+      $config->{"${mutectName}_annovar"} = {
+        class      => "Annotation::Annovar",
+        perform    => 1,
+        target_dir => "${target_dir}/${mutectName}_annovar",
+        option     => getValue( $def, "annovar_param" ),
+        annovar_db => getValue( $def, "annovar_db" ),
+        buildver   => getValue( $def, "annovar_buildver" ),
+        source_ref => [ "${mutectName}", ".pass.vcf\$" ],
+        cqstools   => $cqstools,
+        sh_direct  => 1,
+        isvcf      => 1,
+        pbs        => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "72",
+          "mem"      => "10gb"
+        },
+      };
+
+      push @$summary, ( "${mutectName}", "${mutectName}_annovar" );
+    }
   }
 
+  #qc
   if ( getValue( $def, "perform_multiqc" ) ) {
     addMultiQC( $config, $def, $summary, $target_dir, $target_dir );
   }
+
+  #pileup
   $config->{"sequencetask"} = {
     class      => "CQS::SequenceTask",
     perform    => 1,
