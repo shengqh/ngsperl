@@ -5,19 +5,19 @@ import argparse
 import sys
 from pybedtools import BedTool
 
-DEBUG = True
+DEBUG = False
 
 parser = argparse.ArgumentParser(description="find overlap gene.",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 if not DEBUG:
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input locus file (bed format)', required=True)
-  parser.add_argument('-g', '--gene_file', action='store', nargs='?', help='Gene locus file (bed format)', required=True)
+  parser.add_argument('-g', '--gene_sorted_bed', action='store', nargs='?', help='Gene locus file (sorted bed format)', required=True)
   parser.add_argument('-o', '--output', action='store', nargs='?', help='Output overlap file', required=True)
 
   args = parser.parse_args()
   input_file=args.input
-  gene_file = args.gene_file
+  gene_file = args.gene_sorted_bed
   output_file=args.output
 else:
   input_file= "/scratch/cqs/shengq1/vickers/20170720_AGO_human_CLIP/macs2/result/GSM1020022/GSM1020022_peaks.narrowPeak.bed"
