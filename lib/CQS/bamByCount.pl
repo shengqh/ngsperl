@@ -60,8 +60,8 @@ foreach my $readId (sort keys %read2Pos) {
 }
 close(POS);
 
-`samtools view -bS -o ${outFile}.bam ${outFile}.sam`;
-`samtools index ${outFile}.bam`;
+`samtools view -bS -o ${outFile} ${outFile}.sam`;
+`samtools index ${outFile}`;
 `rm ${outFile}.sam`;
 
-print "$uniqueReadNumber unique reads ($readNumber reads) were selected and saved into ${outFile}.bam.\n";
+print "$uniqueReadNumber unique reads ($readNumber reads) were selected and saved into ${outFile}.\n";
