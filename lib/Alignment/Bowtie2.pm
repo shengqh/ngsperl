@@ -31,11 +31,12 @@ sub perform {
 
   my $bowtie2_index = $config->{$section}{bowtie2_index} or die "define ${section}::bowtie2_index first";
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
+  my $outputToSameFolder      = get_option( $config, $section, "output_to_same_folder",   1 );
 
   my $mark_duplicates = hasMarkDuplicate( $config->{$section} );
   my $picard_jar      = "";
   if ($mark_duplicates) {
-    $picard_jar = get_param_file( $section->{picard_jar}, "picard_jar", 1 );
+    $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
   }
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
@@ -59,7 +60,7 @@ sub perform {
     }
     else {
       my $fastqs = join( ',', @sample_files );
-      $input = "-u " . $fastqs;
+      $input = "-U " . $fastqs;
     }
     my $bowtie2_aln_command = "bowtie2 -p $thread $option -x $bowtie2_index $input $tag -S $sam_file 2> $log_file";
 
@@ -70,7 +71,7 @@ sub perform {
     my $pbs_file = $pbs_dir . "/$pbs_name";
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
+    my $cur_dir  = $outputToSameFolder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
     my $final_file = $mark_duplicates ? $sample_name . ".rmdup.bam" : $bam_file;
     my $chromosome_grep_command = getChromosomeFilterCommand( $bam_file, $chromosome_grep_pattern );
@@ -79,18 +80,19 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $bam_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
     print $pbs "
 
-$bowtie2_aln_command
+if [ ! -s $sam_file ]; then
+  $bowtie2_aln_command
+fi
 
 if [ -s $sam_file ]; then
-  samtools view -Shu -F 256 $sam_file | samtools sort -o $bam_file -
+  samtools view -Shu -F 256 $sam_file | samtools sort -o $bam_file -T $sample_name -
   if [ -s $bam_file ]; then
     samtools index $bam_file 
     $chromosome_grep_command
-    samtools flagstat $bam_file > ${bam_file}.stat 
     rm $sam_file
   fi
 fi
@@ -102,7 +104,7 @@ if [ -s $bam_file ]; then
   echo RemoveDuplicate=`date` 
   java $option -jar $picard_jar MarkDuplicates I=$bam_file O=$final_file ASSUME_SORTED=true REMOVE_DUPLICATES=false VALIDATION_STRINGENCY=SILENT M=${final_file}.metrics
   if [ -s $final_file ]; then
-    rm $bam_file ${bam_file}.idx
+    rm $bam_file ${bam_file}.bai
     samtools index $final_file 
   fi
 fi
