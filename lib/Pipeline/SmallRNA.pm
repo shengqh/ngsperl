@@ -26,12 +26,13 @@ our $VERSION = '0.06';
 sub initializeDefaultOptions {
   my $def = shift;
 
-  initDefaultValue( $def, "host_xml2bam",     0 );
-  initDefaultValue( $def, "bacteria_group1_xml2bam",   0 );
-  initDefaultValue( $def, "bacteria_group2_xml2bam",   0 );
-  initDefaultValue( $def, "fungus_group4_xml2bam",   0 );
-  initDefaultValue( $def, "host_bamplot",     0 );
-  initDefaultValue( $def, "read_correlation", 0 );
+  initDefaultValue( $def, "host_xml2bam",              0 );
+  initDefaultValue( $def, "bacteria_group1_count2bam", 0 );
+  initDefaultValue( $def, "bacteria_group2_count2bam", 0 );
+  initDefaultValue( $def, "fungus_group4_count2bam",   0 );
+  initDefaultValue( $def, "host_bamplot",              0 );
+  initDefaultValue( $def, "read_correlation",          0 );
+  initDefaultValue( $def, "perform_contig_analysis",   0 );
 
   return $def;
 }
@@ -378,7 +379,7 @@ sub getSmallRNAConfig {
 
     if ( defined $def->{host_xml2bam} && $def->{host_xml2bam} ) {
       $host_genome->{bowtie1_genome_xml2bam} = {
-        class         => "SmallRNA::XmlToBam",
+        class         => "SmallRNA::HostXmlToBam",
         perform       => 1,
         target_dir    => $host_genome_dir . "/bowtie1_genome_xml2bam",
         source_ref    => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
@@ -825,24 +826,26 @@ sub getSmallRNAConfig {
       push @mapped,                ( "bowtie1_${nonhostGroup}_pm_count", ".xml" );
       push @overlap,               ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
 
-      my $nonhost_xml2bam = ${nonhostGroup} . "_xml2bam";
-      if ( defined $def->{$nonhost_xml2bam} && $def->{$nonhost_xml2bam} ) {
-        $config->{"bowtie1_" . $nonhost_xml2bam} = {
-          class         => "SmallRNA::XmlToBam",
-          perform       => 1,
-          target_dir    => $nonhost_genome_dir . "/bowtie1_${nonhost_xml2bam}",
-          source_ref    => [ "bowtie1_${nonhostGroup}_pm_count", ".xml" ],
-          bam_files_ref => [ "bowtie1_${nonhostGroup}_pm", ".bam" ],
-          sh_direct     => 1,
-          pbs           => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
-            "mem"       => "10gb"
+      my $nonhost_count2bam = ${nonhostGroup} . "_count2bam";
+      if ( defined $def->{$nonhost_count2bam} && $def->{$nonhost_count2bam} ) {
+        $config->{ "bowtie1_" . $nonhost_count2bam } = {
+          class       => "CQS::Perl",
+          perform     => 1,
+          target_dir  => $nonhost_genome_dir . "/bowtie1_${nonhost_count2bam}",
+          option      => getValue( $def, "${nonhost_count2bam}_option" ),
+          output_ext  => getValue( $def, "${nonhost_count2bam}_output_ext" ),
+          perlFile    => "bamByCount.pl",
+          source_ref  => [ "bowtie1_${nonhostGroup}_pm", ".bam" ],
+          source2_ref => [ "identical", ".dupcount\$" ],
+          sh_direct   => 1,
+          pbs         => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "2",
+            "mem"      => "20gb"
           },
         };
-        push( @$individual_ref, "bowtie1_" . $nonhost_xml2bam );
+        push( @$individual_ref, "bowtie1_" . $nonhost_count2bam );
       }
     }
 
