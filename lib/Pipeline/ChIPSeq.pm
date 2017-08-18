@@ -34,10 +34,13 @@ sub initializeDefaultOptions {
   elsif ( $def->{aligner} eq "bwa" ) {
     initDefaultValue( $def, "bwa_option", "" );
   }
+  elsif ( $def->{aligner} eq "bowtie2" ) {
+    initDefaultValue( $def, "bowtie2_option", "" );
+  }
 
-  initDefaultValue( $def, "peak_caller", "macs1" );
-  if ( $def->{"peak_caller"} eq "macs1" ) {
-    initDefaultValue( $def, "macs1_option", "-p 1e-9 -w -S --space=50" );
+  initDefaultValue( $def, "peak_caller", "macs" );
+  if ( $def->{"peak_caller"} eq "macs" ) {
+    initDefaultValue( $def, "macs_option", "-p 1e-9 -w -S --space=50" );
   }
   elsif ( $def->{peak_caller} eq "macs2" ) {
     initDefaultValue( $def, "macs2_peak_type", "narrow" );
@@ -99,7 +102,6 @@ sub getConfig {
   my $email    = getValue( $def, "email" );
   my $cqstools = getValue( $def, "cqstools" );
 
-  my $bam_ref;
   if ( $def->{aligner} eq "bowtie1" ) {
     $config->{bowtie1} = {
       class                 => "Alignment::Bowtie1",
@@ -138,7 +140,6 @@ sub getConfig {
       },
     };
 
-    $bam_ref = [ "bowtie1", ".bam\$" ];
     push @$summary, ("bowtie1_summary");
   }
   elsif ( $def->{aligner} eq "bwa" ) {
@@ -160,14 +161,33 @@ sub getConfig {
         "mem"      => "40gb"
       },
     };
-    $bam_ref = [ "bwa", ".bam\$" ];
+  }
+  elsif ( $def->{aligner} eq "bowtie2" ) {
+    $config->{ $def->{aligner} } = {
+      class                 => "Alignment::Bowtie2",
+      perform               => 1,
+      target_dir            => "${target_dir}/" . getNextFolderIndex($def) . $def->{aligner},
+      option                => getValue( $def, "bowtie2_option" ),
+      bowtie2_index         => getValue( $def, "bowtie2_index" ),
+      source_ref            => $source_ref,
+      output_to_same_folder => 1,
+      picard_jar            => getValue( $def, "picard_jar" ),
+      mark_duplicates       => 1,
+      sh_direct             => 0,
+      pbs                   => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=8",
+        "walltime" => "72",
+        "mem"      => "40gb"
+      },
+    };
   }
   else {
     die "Unknown alinger " . $def->{aligner};
   }
+  my $bam_ref = [ $def->{aligner}, ".bam\$" ];
 
   push @$individual, ( $def->{aligner} );
-
   if ( getValue( $def, "perform_bamplot" ) ) {
     my $plotgroups = $def->{plotgroups};
     if ( !defined $plotgroups ) {
@@ -204,13 +224,17 @@ sub getConfig {
     $bam_ref = [ $taskName, ".bam\$" ];
   }
 
-  my $peakCallerTask = $def->{peak_caller} . "callpeak";
-  if ( $def->{peak_caller} eq "macs1" ) {
+  my $peakCallerTask;
+  my $callFilePattern;
+
+  if ( $def->{peak_caller} eq "macs" ) {
+    $peakCallerTask = "macs1callpeak";
+    $callFilePattern = ".name.bed\$";
     $config->{$peakCallerTask} = {
       class      => "Chipseq::MACS",
       perform    => 1,
       target_dir => "${target_dir}/" . getNextFolderIndex($def) . "${peakCallerTask}",
-      option     => getValue( $def, "macs1_option" ),
+      option     => getValue( $def, "macs_option" ),
       source_ref => $bam_ref,
       groups     => $def->{"treatments"},
       controls   => $def->{"controls"},
@@ -222,14 +246,24 @@ sub getConfig {
         "mem"      => "40gb"
       },
     };
+    $callFilePattern = ".name.bed\$";
   }
   elsif ( $def->{peak_caller} eq "macs2" ) {
+    $peakCallerTask = "macs2callpeak";
+    my $macs2option = getValue( $def, "macs2_option" );
+    if ( $macs2option =~ /broad/ ) {
+      $callFilePattern = "broadPeak.bed\$";
+    }
+    else {
+      $callFilePattern = "narrowPeak.bed\$";
+    }
+
     $peakCallerTask = $peakCallerTask . "_" . $def->{macs2_peak_type};
     $config->{$peakCallerTask} = {
       class      => "Chipseq::MACS2Callpeak",
       perform    => 1,
       target_dir => "${target_dir}/" . getNextFolderIndex($def) . "$peakCallerTask",
-      option     => getValue( $def, "macs2_option" ),
+      option     => $macs2option,
       source_ref => $bam_ref,
       groups     => $def->{"treatments"},
       controls   => $def->{"controls"},
@@ -246,6 +280,9 @@ sub getConfig {
     die "Unknown peak caller " . $def->{"peak_caller"};
   }
   push @$step2, ($peakCallerTask);
+  if ( getValue( $def, "perform_homer_motifs" ) ) {
+    addHomerMotif( $config, $def, $summary, $target_dir, $peakCallerTask, $callFilePattern );
+  }
 
   if ( $def->{perform_rose} ) {
     my $roseTask = $peakCallerTask . "_bradner_rose2";
