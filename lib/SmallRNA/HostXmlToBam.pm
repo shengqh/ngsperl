@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package SmallRNA::XmlToBam;
+package SmallRNA::HostXmlToBam;
 
 use strict;
 use warnings;
@@ -31,7 +31,7 @@ sub perform {
   my $raw_files = get_raw_files( $config, $section );
   my $bam_files = get_raw_files( $config, $section, "bam_files" );
 
-  my $py_script = dirname(__FILE__) . "/xmlToBam.py";
+  my $py_script = dirname(__FILE__) . "/hostXmlToBam.py";
   if ( !-e $py_script ) {
     die "File not found : " . $py_script;
   }

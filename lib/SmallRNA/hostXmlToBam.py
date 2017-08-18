@@ -10,9 +10,9 @@ from Bio.Seq import Seq
 DEBUG = 0
 
 if DEBUG:
-  inputFile="/scratch/cqs/shengq1/vickers/20161223_smallRNA_3018-KCV-77_78_79_86_v3.T/host_genome/bowtie1_genome_1mm_NTA_smallRNA_count/result/APOB_SRBIKO_86_01/APOB_SRBIKO_86_01.count.mapped.xml"
-  oldbamFile = "/scratch/cqs/shengq1/vickers/20161223_smallRNA_3018-KCV-77_78_79_86_v3.T/host_genome/bowtie1_genome_1mm_NTA/result/APOB_SRBIKO_86_01/APOB_SRBIKO_86_01.bam"
-  outputFilePrefix="/scratch/cqs/shengq1/temp/APOB_SRBIKO_86_01"
+  inputFile="/scratch/cqs/shengq1/vickers/20170628_smallRNA_3018-KCV-77_78_79_mouse_v3/host_genome/bowtie1_genome_1mm_NTA_smallRNA_count/result/Urine_WT_14/Urine_WT_14.count.mapped.xml"
+  oldbamFile = "/scratch/cqs/shengq1/vickers/20170628_smallRNA_3018-KCV-77_78_79_mouse_v3/host_genome/bowtie1_genome_1mm_NTA/result/Urine_WT_14/Urine_WT_14.bam"
+  outputFilePrefix="/scratch/cqs/shengq1/temp/Urine_WT_14"
 else:
   parser = argparse.ArgumentParser(description="Generate smallRNA BAM from mapped xml.",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
