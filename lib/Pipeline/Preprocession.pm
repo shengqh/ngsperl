@@ -290,7 +290,7 @@ sub getPreprocessionConfig {
         target_dir               => $fastq_len_dir,
         rtemplate                => "countTableVisFunctions.R,fastqLengthVis.R",
         output_file              => ".lengthDistribution",
-        output_file_ext          => ".csv",
+        output_file_ext          => ".png",
         parameterSampleFile1_ref => [ "fastq_len", ".len\$" ],
         parameterSampleFile2     => $def->{groups},
         sh_direct                => 1,
@@ -341,7 +341,7 @@ sub getPreprocessionConfig {
           perform            => 1,
           rtemplate          => "countInFastQcVis.R",
           output_file        => ".countInFastQcVis.Result",
-          output_file_ext    => ".Reads.csv",
+          output_file_ext    => ".Reads.csv;.Reads.png",
           sh_direct          => 1,
           parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.summary.reads.tsv\$" ],
           pbs                => {
