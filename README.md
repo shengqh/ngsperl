@@ -127,11 +127,14 @@ The following code indicates a configuration of the simplest differentially expr
 
 We initialized a few pipelines:
 
-|Pipeline|Module|Software|Description|
+|Pipeline|Example|Software|Description|
 |---|---|---|---|
-|RNASeq(https://github.com/shengqh/ngsperl/blob/master/examples/pipeline_rnaseq_simple.pl)||||
-|ExomeSeq(https://github.com/shengqh/ngsperl/blob/master/examples/pipeline_exomeseq_simple.pl)||||
-|ChIPSeq(https://github.com/shengqh/ngsperl/blob/master/examples/pipeline_chipseq_simple.pl)||||
+|RNASeq|[simple](https://github.com/shengqh/ngsperl/blob/master/examples/pipeline_rnaseq_simple.pl)|||
+||[advanced](https://github.com/shengqh/ngsperl/blob/master/examples/pipeline_rnaseq_advanced.pl)|||
+|ExomeSeq|[simple](https://github.com/shengqh/ngsperl/blob/master/examples/pipeline_exomeseq_simple.pl)|||
+||[advanced](https://github.com/shengqh/ngsperl/blob/master/examples/pipeline_exomeseq_advanced.pl)|||
+|ChIPSeq|[simple](https://github.com/shengqh/ngsperl/blob/master/examples/pipeline_chipseq_simple.pl)|||
+||[advanced](https://github.com/shengqh/ngsperl/blob/master/examples/pipeline_chipseq_advanced.pl)|||
 
 <a name="module"/>
 
