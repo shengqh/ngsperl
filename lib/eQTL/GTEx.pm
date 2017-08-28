@@ -32,7 +32,7 @@ sub perform {
   my $snp_files    = get_raw_files( $config, $section );
   my $gtex_folder = get_directory($config, $section, "GTEx_folder", 1);
  
-  my $script = dirname(__FILE__) . "/GTEx.pl";
+  my $script = dirname(__FILE__) . "/GTEx.py";
   if ( !-e $script ) {
     die "File not found : " . $script;
   }
@@ -54,7 +54,7 @@ sub perform {
 
     my $snp_file    = $snp_files->{$sampleName}[0];
 
-    print $pbs "perl $script -i $snp_file -d $gtex_folder -o $final_file\n";
+    print $pbs "python $script -i $snp_file -g $gtex_folder -o $final_file\n";
     $self->close_pbs( $pbs, $pbs_file );
   }
 

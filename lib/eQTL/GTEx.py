@@ -14,6 +14,7 @@ def findGTEx(inputFile, gtexFolder, outputFile, logger):
   snps = {}
   keys = []
   with open(tmpfile, 'w') as wr:
+    logger.info("reading " + inputFile)
     with open(inputFile, 'r') as f:
       for line in f:
         if line.startswith("#"):
@@ -21,11 +22,12 @@ def findGTEx(inputFile, gtexFolder, outputFile, logger):
         elif line == "":
           continue
         else:
-          header = line
+          header = line.strip()
           break
         
       for line in f:
-        parts = line.strip().split('\t')
+        line = line.strip()
+        parts = line.split('\t')
         key = parts[0] + "_" + parts[1] + "_" + parts[3] + "_" + parts[4]
         snps[key] = {
           "line":line, "gtex":{}
@@ -37,7 +39,7 @@ def findGTEx(inputFile, gtexFolder, outputFile, logger):
     gtexFiles = [f for f in listdir(gtexFolder) if isfile(join(gtexFolder, f))]
     gtexFiles.sort()
     tissues = []
-    for gtex in gtexFiles[1:2]:
+    for gtex in gtexFiles:
       tissue = re.sub(r"_Analysis.*", "", gtex)
       tissues.append(tissue)
       gtexfile = join(gtexFolder, gtex)
@@ -59,10 +61,16 @@ def findGTEx(inputFile, gtexFolder, outputFile, logger):
             snps[key]["gtex"][tissue] = [row["gene_name"]]
           else:
             snps[key]["gtex"][tissue].append(row["gene_name"])
-          print("%s => %s" % (key, snps[key]["gtex"][tissue]));
 
-    
-      
+    wr.write("%s\t%s\n" % (header, '\t'.join(tissues)))
+    for key in keys:
+      snp = snps[key]
+      wr.write(snp["line"])
+      for tissue in tissues:
+        wr.write("\t")
+        if tissue in snp["gtex"]:
+          wr.write(",".join(snp["gtex"][tissue]))
+      wr.write("\n")
       
   if os.path.isfile(outputFile):
     os.remove(outputFile)
@@ -72,7 +80,7 @@ def main():
   parser = argparse.ArgumentParser(description="find eQTL annotation in GTEx database",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   
-  DEBUG = True
+  DEBUG = False
   NOT_DEBUG = not DEBUG
   
   parser.add_argument('-i', '--input', action='store', nargs='?', help='VCF file', required=NOT_DEBUG)
@@ -82,9 +90,9 @@ def main():
   args = parser.parse_args()
   
   if DEBUG:
-    args.input = "/scratch/cqs/shengq1/evan/20170823_evan_annovar/annovar/result/Highest/Highest.assoc.linear_Top500.vcf.annovar.final.tsv"
-    args.gtex_folder = "/scratch/cqs/shengq1/references/GTEx"
-    args.output = "/scratch/cqs/shengq1/evan/20170823_evan_annovar/annovar/result/Highest/Highest.assoc.linear_Top500.vcf.annovar.final.GTEx.tsv"
+    args.input = "/scratch/cqs/shengq2/evan/20170823_evan_annovar/annovar/result/Highest/Highest.assoc.linear_Top500.vcf.annovar.final.tsv"
+    args.gtex_folder = "/scratch/cqs/shengq2/references/GTEx"
+    args.output = "/scratch/cqs/shengq2/evan/20170823_evan_annovar/annovar/result/Highest/Highest.assoc.linear_Top500.vcf.annovar.final.GTEx.tsv"
   
   logger = logging.getLogger('gtex')
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
