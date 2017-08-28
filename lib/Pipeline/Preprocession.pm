@@ -189,6 +189,11 @@ sub getPreprocessionConfig {
     push @$individual, ("fastq_remove_N");
   }
 
+  if ( ( $source_ref ne "files" ) and ( defined $def->{fastqs} ) ) {
+    $config->{fastqs} = $def->{fastqs};
+    $source_ref = [ $source_ref, "fastq.gz\$", "fastqs" ];
+  }
+
   if ( $def->{perform_fastqc} ) {
     addFastQC( $config, $def, $individual, $summary, "fastqc_raw", $source_ref, $preprocessing_dir );
   }
@@ -258,7 +263,7 @@ sub getPreprocessionConfig {
 
     $config = merge( $config, $cutadapt );
     push @$individual, ("cutadapt");
-    
+
     if ( $def->{perform_fastqc} ) {
       addFastQC( $config, $def, $individual, $summary, "fastqc_post_trim", [ "cutadapt", ".fastq.gz" ], $preprocessing_dir );
     }
