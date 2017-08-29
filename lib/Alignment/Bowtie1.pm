@@ -153,11 +153,6 @@ fi
   if ( is_linux() ) {
     chmod 0755, $shfile;
   }
-  close $sh;
-
-  if ( is_linux() ) {
-    chmod 0755, $shfile;
-  }
 
   print "!!!shell file $shfile created, you can run this shell file to submit all tasks.\n";
 }
