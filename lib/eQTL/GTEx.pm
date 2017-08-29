@@ -74,9 +74,10 @@ sub result {
   my $snp_genotype_files = get_raw_files( $config, $section );
   my $result = {};
 
-  for my $sampleName (%$snp_genotype_files) {
+  for my $sampleName (keys %$snp_genotype_files) {
     my @result_files = ();
     push( @result_files, "$result_dir/${sampleName}.tsv" );
+    push( @result_files, "$result_dir/${sampleName}.tsv.genes" );
     $result->{$sampleName} = filter_array( \@result_files, $pattern );
   }
   return $result;

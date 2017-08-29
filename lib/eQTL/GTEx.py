@@ -13,6 +13,7 @@ def findGTEx(inputFile, gtexFolder, outputFile, logger):
   
   snps = {}
   keys = []
+  genes = {}
   with open(tmpfile, 'w') as wr:
     logger.info("reading " + inputFile)
     with open(inputFile, 'r') as f:
@@ -57,10 +58,12 @@ def findGTEx(inputFile, gtexFolder, outputFile, logger):
           else:
             continue
           
+          gene = row["gene_name"]
+          genes[gene] = 1
           if not tissue in snps[key]["gtex"]:
-            snps[key]["gtex"][tissue] = [row["gene_name"]]
+            snps[key]["gtex"][tissue] = [gene]
           else:
-            snps[key]["gtex"][tissue].append(row["gene_name"])
+            snps[key]["gtex"][tissue].append(gene)
 
     wr.write("%s\t%s\n" % (header, '\t'.join(tissues)))
     for key in keys:
@@ -75,6 +78,10 @@ def findGTEx(inputFile, gtexFolder, outputFile, logger):
   if os.path.isfile(outputFile):
     os.remove(outputFile)
   os.rename(tmpfile, outputFile)
+  
+  with open(outputFile + ".genes", 'w') as wr:
+    for key in sorted(genes):
+      wr.write(key + "\n")
         
 def main():
   parser = argparse.ArgumentParser(description="find eQTL annotation in GTEx database",
