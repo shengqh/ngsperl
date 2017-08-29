@@ -618,7 +618,9 @@ for(countfile_index in c(1:length(countfiles))){
     if("Feature_gene_name" %in% colnames(tbb)){
       write.table(tbb[,c("Feature_gene_name", "stat"),drop=F],paste0(prefix, "_DESeq2_GSEA.rnk"),row.names=F,col.names=F,sep="\t", quote=F)
       write.table(tbbselect[,c("Feature_gene_name"),drop=F], paste0(prefix, "_DESeq2_sig_genename.txt"),row.names=F,col.names=F,sep="\t", quote=F)
-    }
+    }else{
+      write.table(tbb[,c("stat"),drop=F],paste0(prefix, "_DESeq2_GSEA.rnk"),row.names=T,col.names=F,sep="\t", quote=F)
+    }    
     
     if(showDEGeneCluster){
       siggenes<-rownames(rldmatrix) %in% rownames(tbbselect)
