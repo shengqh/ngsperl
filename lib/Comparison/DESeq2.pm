@@ -99,7 +99,7 @@ sub perform {
 
   my $first = 0;
 
-  my $countfiles = get_raw_files( $config, $section, "countfile" );
+  my $countfiles = defined $config->{$section}{"countfile"} ? {} : get_raw_files( $config, $section, "countfile" );
   my $single_count_file = 1;
   if ( ref $countfiles eq ref {} ) {
     if ( scalar( keys %$countfiles ) > 1 ) {
