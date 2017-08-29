@@ -64,6 +64,7 @@ exp<-exp[!isdup,]
 posframe$chr<-substring(posframe$chr, 4)
 posframe$chrX<-grepl('[XYZ]', posframe$chr)
 posframe<-posframe[with(posframe, order(chrX, chr, s1, s2)), c("geneid", "chr", "s1", "s2")]
+posframe$length<-posframe$s2-posframe$s1
 
 #save position file
 write.table(posframe, file=paste0(cancerName, ".rnaseq2.gene.pos"), sep="\t", row.names=F, quote=F)
@@ -105,4 +106,36 @@ if(is.matrix(normal) && ncol(normal) > 0){
 tumor<-fpkm[,grepl("01$", colnames(fpkm))]
 if(length(tumor) > 0){
   writeFile(tumor, paste0(cancerName, ".rnaseq2.fpkm.tumor.tsv"))
+}
+
+
+counts_to_tpm <- function(counts, featureLength) {
+  stopifnot(length(featureLength) == nrow(counts))
+  
+  logFeatureLength<-log(featureLength)
+  
+  # Process one column at a time.
+  tpm <- do.call(cbind, lapply(1:ncol(counts), function(i) {
+    rate = log(counts[,i]) - logFeatureLength[i]
+    denom = log(sum(exp(rate)))
+    exp(rate - denom + log(1e6))
+  }))
+
+  # Copy the row and column names from the original matrix.
+  colnames(tpm) <- colnames(counts)
+  rownames(tpm) <- rownames(counts)
+  return(tpm)
+}
+
+tpms<-counts_to_tpm(exp, genelength)
+writeFile(tpms, file=paste0(cancerName, ".rnaseq2.tpm.tsv"))
+
+normal<-tpms[,grepl("11$", colnames(tpms))]
+if(is.matrix(normal) && ncol(normal) > 0){
+  writeFile(normal, paste0(cancerName, ".rnaseq2.tpm.normal.tsv"))
+}
+
+tumor<-tpms[,grepl("01$", colnames(tpms))]
+if(length(tumor) > 0){
+  writeFile(tumor, paste0(cancerName, ".rnaseq2.tpm.tumor.tsv"))
 }
