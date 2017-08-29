@@ -9,10 +9,12 @@ countTableFileList<-parSampleFile1
 groupFileList<-parSampleFile2
 comparisonFileList<-parSampleFile3
 fixColorRange<-TRUE
-onlySamplesInGroup=TRUE
 
 totalCountFile<-parFile3
 
+if(!exists("onlySamplesInGroup")){
+  onlySamplesInGroup=TRUE
+}
 
 if(exists("useGreenRedColorInHCA") && useGreenRedColorInHCA){
   hmcols <- colorRampPalette(c("green", "black", "red"))(256)
