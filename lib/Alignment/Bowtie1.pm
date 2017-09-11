@@ -40,6 +40,11 @@ sub perform {
   if ($mark_duplicates) {
     $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
   }
+  
+  my $add_RG_to_read = get_option( $config, $section, "add_RG_to_read", 0 );
+  if($add_RG_to_read){
+    $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
+  }
 
   $option = $option . " -p $thread";
 
@@ -109,6 +114,9 @@ if [[ ! -s $bam_file && ! -s $bowtiesam ]]; then
   $bowtie1_aln_command 
 fi
 ";
+
+    my $addRgCommand = getAddRgCommand($picard_jar, $add_RG_to_read, $bam_file, $sample_name );
+    
     if ($output_sort_by_coordinate) {
       my $chromosome_grep_command = getChromosomeFilterCommand( $bam_file, $chromosome_grep_pattern );
 
@@ -119,6 +127,7 @@ if [[ -s $bowtiesam && ! -s $bam_file ]]; then
     rm $bowtiesam
     samtools index $bam_file 
     $chromosome_grep_command
+    $addRgCommand
   fi
 fi
 ";
@@ -140,6 +149,7 @@ fi
 if [ -s $bowtiesam ]; then
   samtools view -S $mappedonlyoption -b $bowtiesam > ${sample_name}.bam
   if [ -s $bam_file ]; then
+    $addRgCommand
     rm $bowtiesam
   fi
 fi

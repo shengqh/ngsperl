@@ -8,7 +8,7 @@ require Exporter;
 
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw( getSortByCoordinate getChromosomeFilterCommand hasMarkDuplicate)] );
+our %EXPORT_TAGS = ( 'all' => [qw( getSortByCoordinate getChromosomeFilterCommand getAddRgCommand hasMarkDuplicate)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -39,6 +39,23 @@ sub getChromosomeFilterCommand {
     echo filtering bam by chromosome pattern $chromosome_grep_pattern
     samtools idxstats $bam_file | cut -f 1 | grep $chromosome_grep_pattern | xargs samtools view -b $bam_file > $tmp_file
     samtools flagstat $bam_file > ${bam_file}.raw.stat
+    rm $bam_file
+    rm ${bam_file}.bai
+    mv $tmp_file $bam_file
+    samtools index $bam_file
+";
+  }
+  return $result;
+}
+
+sub getAddRgCommand {
+  my ( $picard, $add_RG_to_read, $bam_file, $sample_name ) = @_;
+  my $result = "";
+  if ($add_RG_to_read) {
+    my $tmp_file = $sample_name . ".rg.bam";
+    $result = "
+    echo add_RG_to_read_command by picard
+    java -jar $picard AddOrReplaceReadGroups I=$bam_file O=$tmp_file ID=$sample_name LB=$sample_name SM=$sample_name PL=illumina PU=$sample_name CREATE_INDEX=False
     rm $bam_file
     rm ${bam_file}.bai
     mv $tmp_file $bam_file
