@@ -30,7 +30,7 @@ g=ggplot(data=percCount, aes(x=NumberOfMismatch, y=Percentage)) +
   xlab("Number of mismatch")
 		
 if(xlim > 0){
-  g = g + scale_x_continuous(limits=c(0,xlim), breaks = c(0:xlim))
+  g = g + scale_x_continuous(limits=c(-1,xlim), breaks = c(0:xlim))
 }
 
 print(g)
