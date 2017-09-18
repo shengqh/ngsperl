@@ -59,7 +59,8 @@ if (length(temp>0)) {
 }
 
 #Prepare project report
-figureToDisply<-data.frame(Title="Task Status",File=c(paste0(projectReportDir,"/",projectName,c("_st_expect_result.tsv_step1.png","_st_expect_result.tsv_step1.RelativeFileSize.png","_st_expect_result.tsv_step2.png"))),stringsAsFactors=F)
+stepNames<-unique(resultFileList$StepName)
+figureToDisply<-data.frame(Title="Task Status",File=c(paste0(projectReportDir,"/",projectName,c(paste0("_st_expect_result.tsv_", stepNames, ".png"), paste0("_st_expect_result.tsv_", stepNames, ".RelativeFileSize.png")))),stringsAsFactors=F)
 
 resultFileList$TaskResultFolder<-gsub( "\\/result\\/.*$", "\\/result/", resultFileList$FileList)
 resultFileList$TaskResultFolder<-gsub(projectDir,"",resultFileList$TaskResultFolder)
