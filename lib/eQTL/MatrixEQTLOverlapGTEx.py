@@ -31,6 +31,8 @@ def findOverlap(inputFile, bimFile, gtexFile, outputFile, logger):
   mResult = readMatrixEQTLResult(inputFile)
   logger.info("eQTL = %d" % len(mResult))
 
+  matched = 0
+  unmatched = 0
   tmpFile = outputFile + ".tmp"
   with open(tmpFile, "w") as f:
     f.write("Locus\tGene\tTCGA_Major\tTCGA_Minor\tTCGA_Beta\tGTex_Ref\tGTex_Alt\tGTex_Beta\tBetaMatch\n");
@@ -46,7 +48,12 @@ def findOverlap(inputFile, bimFile, gtexFile, outputFile, logger):
           betaMatch = b.Beta * gtexItem.Beta < 0
         else:
           continue;
-
+        
+        if betaMatch:
+          matched = matched + 1
+        else:
+          unmatched = unmatched + 1
+        
         f.write("%s\t%s\t%s\t%s\t%f\t%s\t%s\t%f\t%r\n" %(
             allele.Locus,
             gtexItem.Gene,
@@ -61,6 +68,13 @@ def findOverlap(inputFile, bimFile, gtexFile, outputFile, logger):
   if os.path.isfile(outputFile):
     os.remove(outputFile)
   os.rename(tmpFile, outputFile)
+  
+  with open(outputFile + ".info", "w") as f:
+    f.write("Type\tCount\n");
+    f.write("Matched\t%d\n" % matched)
+    f.write("Unmatched\t%d\n" % unmatched)
+    f.write("UnmatchedPercentage\t%4.2f%%\n" % (unmatched * 100.0 / (matched + unmatched)))
+  
   logger.info("Done.")
         
 def main():
