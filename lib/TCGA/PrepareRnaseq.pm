@@ -10,10 +10,10 @@ use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::StringUtils;
-use CQS::UniqueTask;
+use CQS::Task;
 use Pipeline::PipelineUtils;
 
-our @ISA = qw(CQS::UniqueTask);
+our @ISA = qw(CQS::Task);
 
 sub new {
   my ($class) = @_;
@@ -82,13 +82,37 @@ sub result {
     push( @result_files, "${curdir}/${cancerName}.rnaseq2.fpkm.tsv" );
     push( @result_files, "${curdir}/${cancerName}.rnaseq2.fpkm.normal.tsv" );
     push( @result_files, "${curdir}/${cancerName}.rnaseq2.fpkm.tumor.tsv" );
+    push( @result_files, "${curdir}/${cancerName}.rnaseq2.fpkm.normal_paired.tsv" );
+    push( @result_files, "${curdir}/${cancerName}.rnaseq2.fpkm.tumor_paired.tsv" );
+    push( @result_files, "${curdir}/${cancerName}.rnaseq2.tpm.tsv" );
+    push( @result_files, "${curdir}/${cancerName}.rnaseq2.tpm.normal.tsv" );
+    push( @result_files, "${curdir}/${cancerName}.rnaseq2.tpm.tumor.tsv" );
+    push( @result_files, "${curdir}/${cancerName}.rnaseq2.tpm.normal_paired.tsv" );
+    push( @result_files, "${curdir}/${cancerName}.rnaseq2.tpm.tumor_paired.tsv" );
     push( @result_files, "${curdir}/${cancerName}.rnaseq2.count.tsv" );
     push( @result_files, "${curdir}/${cancerName}.rnaseq2.count.normal.tsv" );
     push( @result_files, "${curdir}/${cancerName}.rnaseq2.count.tumor.tsv" );
+    push( @result_files, "${curdir}/${cancerName}.rnaseq2.count.normal_paired.tsv" );
+    push( @result_files, "${curdir}/${cancerName}.rnaseq2.count.tumor_paired.tsv" );
     push( @result_files, "${curdir}/${cancerName}.rnaseq2.gene.pos" );
     push( @result_files, "${curdir}/${cancerName}.rnaseq2.count.rdata" );
     $result->{$cancerName} = filter_array( \@result_files, $pattern );
   }
+  return $result;
+}
+
+sub get_pbs_files {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
+
+  my $cancerNames = get_option( $config, $section, "source" );
+
+  my $result = {};
+  for my $cancerName (@$cancerNames) {
+    $result->{$cancerName} = $self->get_pbs_filename( $pbs_dir, $cancerName );
+  }
+
   return $result;
 }
 
