@@ -54,7 +54,7 @@ sub perform {
   }
   close($snf);
 
-  my $sample_list = join( @$samples, ' ' );
+  my $sample_list = join( ' ', @$samples);
 
   print $pbs "
 samtools mpileup $mpileup_options -f $faFile $sample_list | java $java_option -jar $varscan2_jar mpileup2snp $option --vcf-sample-list sampleNames.txt --output-vcf 1 > $final_file
