@@ -28,6 +28,8 @@ sub perform {
   my ( $self, $config, $section ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
+  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
   my $snp_genotype_files    = get_raw_files( $config, $section );
   my $snp_location_files    = get_raw_files( $config, $section, "snp_pos_files" );
@@ -83,10 +85,9 @@ sub result {
 
   my $result = {};
 
-  for my $sampleName (%$snp_genotype_files) {
+  for my $sampleName (keys %$snp_genotype_files) {
     my @result_files = ();
-    my $curdir       = $result_dir . "/" . $sampleName;
-    push( @result_files, "${curdir}/${prefix}${sampleName}.cis.txt" );
+    push( @result_files, "${result_dir}/${prefix}${sampleName}.cis.txt" );
     $result->{$sampleName} = filter_array( \@result_files, $pattern );
   }
   return $result;
