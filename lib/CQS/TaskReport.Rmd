@@ -5,6 +5,10 @@ output: html_document
 
 
 ```{r,echo=FALSE}
-  	datatable(resultFileListTaskEachFileTable,escape = FALSE,rownames = FALSE,options=list(pageLength=100)) 
+  	datatable(resultFileListTaskEachFileTable,escape = FALSE,rownames = FALSE,options=list(pageLength=100)) %>% formatStyle(
+  'FileSize',
+  target = 'row',
+  color = styleEqual('NA', 'red')
+)
 ```
 
