@@ -16,6 +16,17 @@ cat("gene_location_file=", gene_location_file, "\n")
 cat("output_cis_file=", output_cis_file, "\n")
 cat("output_trans_file=", output_trans_file, "\n")
 
+checkFileExists<-function(fileName){
+  if(!file.exists(fileName)){
+    stop(paste0("File not exists ", fileName))
+  }
+}
+
+checkFileExists(snp_genotype_file)
+checkFileExists(snp_location_file)
+checkFileExists(gene_expression_file)
+checkFileExists(gene_location_file)
+
 useModel = modelLINEAR
 
 # perform local (cis) only
