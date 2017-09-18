@@ -25,10 +25,10 @@ args = parser.parse_args()
 
 if DEBUG:
   #args.input = "/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cerebellum-Rat1_S01.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cerebellum-Rat2_S11.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cerebellum-Rat3_S21.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Colon-Rat1_S07.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Colon-Rat2_S17.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Colon-Rat3_S27.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cortex-Rat1_S02.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cortex-Rat2_S12.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cortex-Rat3_S22.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hippocampus-Rat1_S03.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hippocampus-Rat2_S13.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hippocampus-Rat3_S23.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hypothalamus-Rat1_S04.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hypothalamus-Rat2_S14.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Hypothalamus-Rat3_S24.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Kidney-Rat1_S09.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Kidney-Rat2_S19.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Kidney-Rat3_S29.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Lung-Rat1_S06.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Lung-Rat2_S16.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Lung-Rat3_S26.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Pancreas-Rat1_S10.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Pancreas-Rat2_S20.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Pancreas-Rat3_S30.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Stomach-Rat1_S08.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Stomach-Rat2_S18.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Stomach-Rat3_S28.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Striatum-Rat1_S05.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Striatum-Rat2_S15.bam,/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Striatum-Rat3_S25.bam";
-  args.input = "/workspace/shengq1/guoyan/20160922_rnaediting/fastq_join_bowtie/result/Cerebellum-Rat1_S01.bam";
-  args.fasta = "/workspace/shengq1/guoyan/20160922_rnaediting/database/rat_GRM4.fasta"
-  args.positions = "72, 75, 231, 246, 331"
-  args.output = "/workspace/shengq1/guoyan/20160922_rnaediting/rnaediting.mutation.AAGAG.tsv"
+  args.input = "/scratch/cqs/shengq2/emeson/20170831_rnaediting/bowtie/result/C1.bam";
+  args.fasta = "/scratch/cqs/shengq2/emeson/20170831_rnaediting/fasta/bowtie_index_1.1.2/mGlu4.fasta"
+  args.positions = "223, 238, 250"
+  args.output = "/scratch/cqs/shengq2/emeson/20170831_rnaediting/rnaediting.mutation.tsv"
 
 positions=[int(ps.strip()) for ps in args.positions.split(',')]
 
@@ -53,14 +53,13 @@ validBases = set(['A', 'T', 'G', 'C'])
 
 summaryFile = os.path.splitext(args.output)[0] + ".summary.tsv"
 readsFile = os.path.splitext(args.output)[0] + ".reads.tsv"
-snpsFile = os.path.splitext(args.output)[0] + ".SNV.tsv"
 
 mutations = []
 inputfiles = args.input.split(',')
 
 filenames=[]
 with open(readsFile, 'w') as output:
-  output.write("File\tTotal\tReadFailed\tReverseStrandFailed\tBaseQualityFailed\tValid\n")
+  output.write("File\tTotal\tReadFailed\tReverseStrandFailed\tNotCoveredFailed\tBaseQualityFailed\tValid\n")
   for inputfile in inputfiles:
     if inputfile.endswith(".bam"):
       openmode = "rb"
@@ -80,6 +79,7 @@ with open(readsFile, 'w') as output:
     processed = 0
     readFailedCount=0
     reversedCount=0
+    notCoveredCount=0
     baseFailedCount=0
     samfile = pysam.Samfile(inputfile, openmode)
     try:
@@ -89,9 +89,9 @@ with open(readsFile, 'w') as output:
         if processed % 100000 == 0:
           logger.info("processed %d" % processed)
           
-        if DEBUG:
-          if processed == 1000:
-            break
+#        if DEBUG:
+#          if processed == 1000:
+#            break
 #   
         if sread.is_unmapped or sread.is_secondary or sread.is_qcfail or sread.is_duplicate or sread.is_supplementary:
           readFailedCount += 1
@@ -100,6 +100,10 @@ with open(readsFile, 'w') as output:
         start = sread.reference_start
         if sread.is_reverse:
           reversedCount += 1
+          continue
+        
+        if any(idx-start-1 < 0 or idx-start-1 >= sread.alen for idx in positions): 
+          notCoveredCount += 1
           continue
         
         if any(sread.query_qualities[idx-start-1] < args.min_base_quality for idx in positions): 
@@ -114,17 +118,8 @@ with open(readsFile, 'w') as output:
         else:
           mutationMap[baseString] = 1
           
-        for idx, value in basesFileCounts.items():
-          position = idx-start
-          if position >= len(sread.seq):
-            continue
-          curbase = sread.seq[position]
-          if curbase in validBases:
-            value['N'] = value['N']+1
-            value[curbase] = value[curbase]+1
-        
-      logger.info("total processed %d, read failed %d, reversed %d, base failed %d" % (processed, readFailedCount, reversedCount, baseFailedCount ))
-      output.write("%s\t%d\t%d\t%d\t%d\t%d\n" %(filename, processed, readFailedCount, reversedCount, baseFailedCount, processed - readFailedCount - reversedCount - baseFailedCount))
+      logger.info("total processed %d, read failed %d, reversed %d, not covered %d,  base failed %d" % (processed, readFailedCount, reversedCount, notCoveredCount, baseFailedCount ))
+      output.write("%s\t%d\t%d\t%d\t%d\t%d\t%d\n" %(filename, processed, readFailedCount, reversedCount, notCoveredCount, baseFailedCount, processed - readFailedCount - reversedCount - notCoveredCount - baseFailedCount))
       
       countSum = sum(mutationMap.values())
       for key in sorted(mutationMap, key=mutationMap.get, reverse=True):
@@ -135,17 +130,14 @@ with open(readsFile, 'w') as output:
       samfile.close()
       
 tmpfile = args.output + ".tmp"
-output = open(tmpfile, 'w')
-try:
+with open(tmpfile, 'w') as output:
   output.write("File\tMutation\tReadCount\tPercentage\n")
   for mutation in mutations:
     output.write("%s\t%s\t%d\t%.2f\n" % (mutation[0], mutation[1], mutation[2], mutation[3]))
     
-  if os.path.isfile(args.output):
-    os.remove(args.output)
-  os.rename(tmpfile, args.output)
-finally:
-  output.close()
+if os.path.isfile(args.output):
+  os.remove(args.output)
+os.rename(tmpfile, args.output)
 
 groups = []
 mutations.sort(key=lambda mutation: mutation[1])
@@ -171,19 +163,3 @@ with open(summaryFile, 'w') as output:
       else:
         output.write("\t%.2f" % mus[0][3])
     output.write("\n")
-
-with open(snpsFile, 'w') as output:
-  output.write("File\tPosition\tRefAllele\tRefAllelePercentage\tAltAllele\tAltAllelePercentage\tNumberOfAllele\tNumberOfA\tPercentageOfA\tNumberOfT\tPercentageOfT\tNumberOfG\tPercentageOfG\tNumberOfC\tPercentageOfC\n")
-  for filename in filenames:
-    basesFileCounts = basesCounts[filename]
-    sortedCounts = sorted(basesFileCounts.items())
-    for idx, counts in sortedCounts:
-      min_count= counts['N'] * args.min_minor_allele_frequency
-      minor_alleles = [(allele, counts[allele] * 100.0 / counts['N']) for allele in ['A', 'T', 'G', 'C'] if allele != counts['R']]
-      minor_alleles_sorted = sorted(minor_alleles, key=lambda allele:allele[1])
-      minor_allele = minor_alleles_sorted[len(minor_alleles_sorted) - 1]
-      for allele in ['A', 'T', 'G', 'C']:
-        if allele != counts['R'] and counts[allele] >= min_count:
-          output.write("%s\t%d\t%s\t%.2f\t%s\t%.2f\t%d\t%d\t%.2f\t%d\t%.2f\t%d\t%.2f\t%d\t%.2f\n" %(filename, idx + 1, counts['R'], counts[counts['R']] * 100.0 / counts['N'], minor_allele[0], minor_allele[1], counts['N'], counts['A'], counts['A'] * 100.0 / counts['N'], counts['T'], counts['T'] * 100.0 / counts['N'], counts['G'], counts['G'] * 100.0 / counts['N'],counts['C'], counts['C'] * 100.0 / counts['N']))
-          break
-  
