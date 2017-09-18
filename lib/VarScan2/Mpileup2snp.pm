@@ -43,8 +43,6 @@ sub perform {
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
 
-    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
-
     my $normal = $sample_files[0];
     my $snpvcf = "${sample_name}.snp.vcf";
 
@@ -56,7 +54,7 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $snpvcf );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $snpvcf );
 
     print $pbs "
 if [ ! -s ${normal}.bai ]; then
@@ -87,9 +85,8 @@ sub result {
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my @result_files = ();
-    my $cur_dir      = $result_dir . "/$sample_name";
     my $snpvcf       = "${sample_name}.snp.vcf";
-    push( @result_files, "$cur_dir/${snpvcf}" );
+    push( @result_files, "$result_dir/${snpvcf}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
