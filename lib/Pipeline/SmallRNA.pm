@@ -454,6 +454,7 @@ sub getSmallRNAConfig {
     );
     push @table_for_correlation, (
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$",         #miRNA
+      "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR.count\$",         #miRNA isomiR
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$"           #tRNA
     );
 
