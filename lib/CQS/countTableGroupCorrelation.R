@@ -10,6 +10,7 @@ groupFileList<-parSampleFile2
 comparisonFileList<-parSampleFile3
 fixColorRange<-TRUE
 
+geneFile<-parFile1
 totalCountFile<-parFile3
 
 if(!exists("onlySamplesInGroup")){
@@ -26,6 +27,10 @@ if(exists("usePearsonInHCA") && usePearsonInHCA){
   distf <- function(x) as.dist(1 - cor(t(x), use = "pa"))
 }else{
   distf <- dist
+}
+
+if(!exists("useGroupAsBatch")){
+  useGroupAsBatch<-FALSE
 }
 
 if(!exists("showLabelInPCA")){
@@ -259,6 +264,12 @@ corWithout<-function (x, y = NULL, use = "everything", method = c("pearson", "ke
 	}
 }
 
+if (geneFile!="") { #visualization based on genes in geneFile only
+  genes<-read.table(geneFile, sep="\t", header=F)$V1
+  print(paste0("There are ", length(genes), " genes in gene file."))
+}else{
+  genes<-NA
+}
 
 #start work:
 countTableFileAll<-read.delim(countTableFileList,header=F,as.is=T)
@@ -295,6 +306,16 @@ for (i in 1:nrow(countTableFileAll)) {
   
   if (nrow(count)==0) {
     next;
+  }
+  
+  if(!is.na(genes)){
+    if("Feature_gene_name" %in% colnames(count)){
+      curgenes<-c(genes, rownames(count)[count$Feature_gene_name %in% genes])
+    }else{
+      curgenes<-genes
+    }
+  }else{
+    curgenes<-NA
   }
   
   count[is.na(count)]<-0
@@ -352,21 +373,11 @@ for (i in 1:nrow(countTableFileAll)) {
 	  ylab<-"VSD"
   }
   
-#  #To be removed
-#  dds=DESeqDataSetFromMatrix(countData = countNum, colData = as.data.frame(rep(1,ncol(countNum))),design = ~1)
-#  dds<-try(myEstimateSizeFactors(dds))
-#  vsdres<-try(temp<-DESeq2::varianceStabilizingTransformation(dds, blind = TRUE))
-#  if (class(vsdres) == "try-error") {
-#    message=paste0("Warning: varianceStabilizingTransformation function failed.\n",as.character(vsdres))
-#    warning(message)
-#    writeLines(message,paste0(outputFilePrefix,suffix,".vsd.warning"))
-#    next;
-#  }
-#  countNumVsd<-assay(temp)
-#  colnames(countNumVsd)<-colnames(countNum)
-#  write.table(countNumVsd, paste0(outputFilePrefix,suffix,".vsd.txt"),col.names=NA, quote=F, sep="\t")
-#  #end to be removed
-  
+  if(!is.na(curgenes)){
+    countNumVsd<-countNumVsd[rownames(countNumVsd) %in% curgenes,]
+    print(paste0("There are ", nrow(countNumVsd), " genes will be used for visualization."))
+    write.csv(countNumVsd, paste0(outputFilePrefix,suffix,".genes.csv"), quote=F)
+  }
   
   #heatmap
   margin=c(max(9,max(nchar(colnames(countNumVsd)))/2), 5)
@@ -390,11 +401,11 @@ for (i in 1:nrow(countTableFileAll)) {
     colors<-NA
     conditionColors<-NA
   }
-  
+
   print("Drawing PCA for all samples.")
   drawPCA(paste0(outputFilePrefix,suffix,".PCA.png"), countHT, showLabelInPCA, groups, colors)
   
-  width=max(2000, 50 * ncol(countHT))
+  width=min(8000, max(2000, 50 * ncol(countHT)))
   if (ncol(countHT)>1 & nrow(countHT)>1) {
 	  print("Drawing heatmap for all samples.")
 	  png(paste0(outputFilePrefix,suffix,".heatmap.png"),width=width,height=width,res=300)
@@ -417,7 +428,6 @@ for (i in 1:nrow(countTableFileAll)) {
 	  print("Not enough samples or genes. Can't Draw heatmap for all samples.")
   }
 
-  
   if (ncol(countNumVsd)>1 & nrow(countNumVsd)>1) {
 	  print("Doing correlation analysis ...")
 	  #correlation distribution
@@ -496,21 +506,6 @@ for (i in 1:nrow(countTableFileAll)) {
 		  margin=c(min(10,max(nchar(colnames(countNumCor)))/1.5),min(10,max(nchar(row.names(countNumCor)))/1.5))
 		  
 		  colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
-#   if (min(countNumCor,na.rm=T)<0) {
-#     colAllLabel<-c(-1,0,1)
-#     if (fixColorRange) {
-#       col<-col_part(data_all=c(-1,1),data_part=countNumCor,col=colAll)
-#     } else {
-#       col<-colAll
-#     }
-#   } else {
-#     colAllLabel<-c(0,0.5,1)
-#     if (fixColorRange) {
-#       col<-col_part(data_all=c(0,1),data_part=countNumCor,col=colAll)
-#     } else {
-#       col<-colAll
-#     }
-#   }
 		  colAllLabel<-c(0,0.5,1)
 		  countNumCor[countNumCor<0]<-0
 		  if (fixColorRange) {
