@@ -620,6 +620,7 @@ for(countfile_index in c(1:length(countfiles))){
       write.table(tbbselect[,c("Feature_gene_name"),drop=F], paste0(prefix, "_DESeq2_sig_genename.txt"),row.names=F,col.names=F,sep="\t", quote=F)
     }else{
       write.table(tbb[,c("stat"),drop=F],paste0(prefix, "_DESeq2_GSEA.rnk"),row.names=T,col.names=F,sep="\t", quote=F)
+      write.table(data.frame(name=rownames(tbbselect)), paste0(prefix, "_DESeq2_sig_genename.txt"),row.names=F,col.names=F,sep="\t", quote=F)
     }    
     
     if(showDEGeneCluster){

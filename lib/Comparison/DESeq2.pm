@@ -281,7 +281,9 @@ sub result {
 
     push( @result_files, $result_dir . "/${prefix}.csv" );
     push( @result_files, $result_dir . "/${prefix}_DESeq2.csv" );
+    push( @result_files, $result_dir . "/${prefix}_DESeq2_GSEA.rnk" );
     push( @result_files, $result_dir . "/${prefix}_DESeq2_sig.csv" );
+    push( @result_files, $result_dir . "/${prefix}_DESeq2_sig_genename.txt" );
     if ($performWilcox) {
       push( @result_files, $result_dir . "/${prefix}_quantile_wilcox.csv" );
       push( @result_files, $result_dir . "/${prefix}_quantile_wilcox_sig.csv" );
