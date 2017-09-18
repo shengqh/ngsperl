@@ -44,6 +44,8 @@ sub perform {
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct) . "\n";
 
+  my $expectFiles = $self->result( $config, $section );
+
   for my $sampleName ( keys %$gtex_files ) {
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sampleName );
     my $pbs_name = basename($pbs_file);
@@ -52,7 +54,7 @@ sub perform {
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $final_file = $sampleName . ".matrixeqtl_gtex.tsv";
+    my $final_file = basename( $expectFiles->{$sampleName}->[0] );
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     my $gtex_file    = $gtex_files->{$sampleName}[0];
@@ -75,15 +77,14 @@ sub perform {
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
-  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
-  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+  my $prefix = get_option( $config, $section, "prefix", "" );
 
   my $snp_genotype_files = get_raw_files( $config, $section );
   my $result = {};
 
   for my $sampleName (keys %$snp_genotype_files) {
     my @result_files = ();
-    push( @result_files, "$result_dir/${sampleName}.matrixeqtl_gtex.tsv" );
+    push( @result_files, "$result_dir/${prefix}${sampleName}.matrixeqtl_gtex.tsv");
     $result->{$sampleName} = filter_array( \@result_files, $pattern );
   }
   return $result;
