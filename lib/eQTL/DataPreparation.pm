@@ -26,6 +26,8 @@ sub perform {
   my ( $self, $config, $section ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
+  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
+  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
   my $plink_prefix_names = get_raw_files( $config, $section, "plink_prefix_names" );
   my $prefix = get_option( $config, $section, "prefix", "" );
@@ -97,14 +99,6 @@ if [ ! -s $common_bed_file ]; then
   plink -bfile $plink_prefix --keep $common_fam_file --out ${file_name}_common --make-bed 
 fi
 
-if [ ! -s related/${file_name}_common_related.genome.genome ]; then
-  echo finding related samples ...
-  mkdir related
-  cd related
-  pyGenClean_find_related_samples  --bfile ../${file_name}_common --out ${file_name}_common_related
-  cd ..
-fi
-
 if [ ! -s ${file_name}_common_filtered.bed ]; then
   echo filtering SNP ...
   plink --bfile ${file_name}_common --out ${file_name}_common_filtered --mind 0.05 --geno 0.05 --maf 0.05 --hwe 0.001 --make-bed
@@ -125,6 +119,7 @@ cd ..
 if [ ! -s ${file_name}_snp.pos ]; then
   echo converting ${file_name}_common_filtered.tsv ${file_name}_snp.pos
   awk '{ if (NR==1){print \"snp\\tchr\\tpos\";}else{print \$2 \"\\t\" \$1 \"\\t\" \$4;} }' temp_dir/${file_name}_common_filtered.tsv > ${file_name}_snp.pos
+  cp temp_dir/${file_name}_common_filtered.bim ${file_name}_snp.bim
 
   echo converting ${file_name}_common_filtered.tsv ${file_name}_snp.genotype
   cut -f2,7- temp_dir/${file_name}_common_filtered.tsv | awk -v OFS='\\t' '{ if (\$1 == \"SNP\") \$1 = \"id\"; print}' > ${file_name}_snp.genotype
@@ -146,12 +141,12 @@ fi
 
 ";
 
-if($remove_temp_files){
-  print $pbs "if [[ -s ${file_name}_snp.pos && -s ${file_name}_snp.genotype && -s ${file_name}_gene.pos && -s ${file_name}_gene.expression ]]; then
+    if($remove_temp_files){
+      print $pbs "if [[ -s ${file_name}_snp.pos && -s ${file_name}_snp.genotype && -s ${file_name}_gene.pos && -s ${file_name}_gene.expression ]]; then
   rm -rf temp_dir
 fi
 ";  
-}
+    }
     $self->close_pbs( $pbs, $pbs_file );
   }
 
@@ -180,6 +175,7 @@ sub result {
     my $final_name = $prefix . $sample_name;
     push( @result_files, "${cur_dir}/${final_name}_snp.genotype" );
     push( @result_files, "${cur_dir}/${final_name}_snp.pos" );
+    push( @result_files, "${cur_dir}/${final_name}_snp.bim" );
     push( @result_files, "${cur_dir}/${final_name}_gene.expression" );
     push( @result_files, "${cur_dir}/${final_name}_gene.pos" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
