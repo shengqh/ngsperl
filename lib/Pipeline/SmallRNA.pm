@@ -26,13 +26,14 @@ our $VERSION = '0.06';
 sub initializeDefaultOptions {
   my $def = shift;
 
-  initDefaultValue( $def, "host_xml2bam",              0 );
-  initDefaultValue( $def, "bacteria_group1_count2bam", 0 );
-  initDefaultValue( $def, "bacteria_group2_count2bam", 0 );
-  initDefaultValue( $def, "fungus_group4_count2bam",   0 );
-  initDefaultValue( $def, "host_bamplot",              0 );
-  initDefaultValue( $def, "read_correlation",          0 );
-  initDefaultValue( $def, "perform_contig_analysis",   0 );
+  initDefaultValue( $def, "host_xml2bam",                    0 );
+  initDefaultValue( $def, "bacteria_group1_count2bam",       0 );
+  initDefaultValue( $def, "bacteria_group2_count2bam",       0 );
+  initDefaultValue( $def, "fungus_group4_count2bam",         0 );
+  initDefaultValue( $def, "host_bamplot",                    0 );
+  initDefaultValue( $def, "read_correlation",                0 );
+  initDefaultValue( $def, "perform_contig_analysis",         0 );
+  initDefaultValue( $def, "perform_annotate_unmapped_reads", 0 );
 
   return $def;
 }
@@ -51,6 +52,8 @@ sub getSmallRNAConfig {
   my $search_nonhost_genome  = getValue( $def, "search_nonhost_genome" );
   my $search_nonhost_library = getValue( $def, "search_nonhost_library" );
   my $search_nonhost_database = $search_nonhost_genome || $search_nonhost_library;
+
+  my $perform_annotate_unmapped_reads = getValue( $def, "perform_annotate_unmapped_reads" );
 
   my $blast_top_reads      = getValue( $def, "blast_top_reads" );
   my $blast_unmapped_reads = getValue( $def, "blast_unmapped_reads" );
@@ -83,7 +86,7 @@ sub getSmallRNAConfig {
   }
 
   my $nonhost_blast_dir;
-  if ( $blast_unmapped_reads || $search_nonhost_database ) {
+  if ( $blast_unmapped_reads || $search_nonhost_database || $perform_annotate_unmapped_reads ) {
     $nonhost_blast_dir = create_directory_or_die( $def->{target_dir} . "/final_unmapped" );
   }
 
@@ -108,6 +111,10 @@ sub getSmallRNAConfig {
   my @table_for_readSummary  = ();
   my @name_for_readSummary   = ();
   my @name_for_mapPercentage = ( "identical", "dupcount\$" );
+
+  my @reads_for_annoate_unmapped = ( "identical", "dupcount\$", "cutadapt", ".fastq.short.gz\$" );
+  my @files_for_annotate_unmapped = ();
+  my @names_for_annotate_unmapped = ();
 
   if ( $def->{use_least_groups} ) {
     $def->{correlation_rcode} = "useLeastGroups<-TRUE;";
@@ -431,7 +438,9 @@ sub getSmallRNAConfig {
       }
     }
 
-    push( @name_for_mapPercentage, "bowtie1_genome_1mm_NTA_smallRNA_count", "count.mapped.xml" );
+    push( @name_for_mapPercentage,       "bowtie1_genome_1mm_NTA_smallRNA_count", "count.mapped.xml" );
+    push( @files_for_annotate_unmapped, "bowtie1_genome_1mm_NTA_smallRNA_count", "count.mapped.xml" );
+    push( @names_for_annotate_unmapped, "smallRNA" );
 
     if ( $def->{has_NTA} && $def->{consider_tRNA_NTA} ) {
       $host_genome->{"bowtie1_genome_1mm_NTA_smallRNA_count"}{"cca_file_ref"} = "identical_check_cca";
@@ -453,9 +462,9 @@ sub getSmallRNAConfig {
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$"           #tRNA
     );
     push @table_for_correlation, (
-      "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$",         #miRNA
-      "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR.count\$",         #miRNA isomiR
-      "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$"           #tRNA
+      "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$",           #miRNA
+      "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR.count\$",    #miRNA isomiR
+      "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$"             #tRNA
     );
 
     if ( $def->{read_correlation} ) {
@@ -729,7 +738,9 @@ sub getSmallRNAConfig {
       };
       $config = merge( $config, $unmapped_reads );
 
-      push( @name_for_mapPercentage, "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.dupcount\$" );
+      push( @name_for_mapPercentage,       "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.dupcount\$" );
+      push( @files_for_annotate_unmapped, "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.dupcount\$" );
+      push( @names_for_annotate_unmapped, "host_genome" );
 
       push @$individual_ref, ( "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_genome_unmapped_reads" );
       push @$summary_ref, ("bowtie1_genome_host_reads_table");
@@ -819,8 +830,11 @@ sub getSmallRNAConfig {
         addDEseq2( $config, $def, $summary_ref, "${nonhostGroup}_reads", [ "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" ],
           $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       }
-      push @name_for_mapPercentage, ( "bowtie1_${nonhostGroup}_pm_count", ".count.mapped.xml\$" );
-      push @table_for_correlation,  ( "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" );
+      push @name_for_mapPercentage,       ( "bowtie1_${nonhostGroup}_pm_count", ".count.mapped.xml\$" );
+      push @files_for_annotate_unmapped, ( "bowtie1_${nonhostGroup}_pm_count", ".count.mapped.xml\$" );
+      push( @names_for_annotate_unmapped, $nonhostGroup );
+
+      push @table_for_correlation, ( "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" );
       if ( $def->{read_correlation} ) {
         push @table_for_correlation, ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$", );
       }
@@ -916,7 +930,9 @@ sub getSmallRNAConfig {
         rCode              => 'maxCategory=NA;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
       }
     );
-    push( @name_for_mapPercentage, "bowtie1_tRNA_pm_count", ".count.mapped.xml\$", "bowtie1_rRNA_pm_count", ".count.mapped.xml\$", );
+    push( @name_for_mapPercentage,       "bowtie1_tRNA_pm_count", ".count.mapped.xml\$", "bowtie1_rRNA_pm_count", ".count.mapped.xml\$", );
+    push( @files_for_annotate_unmapped, "bowtie1_tRNA_pm_count", ".count.mapped.xml\$", "bowtie1_rRNA_pm_count", ".count.mapped.xml\$", );
+    push( @names_for_annotate_unmapped, "tRNA",                  "rRNA" );
 
     push @table_for_correlation, ( "bowtie1_tRNA_pm_table", "^(?!.*?read).*\.count\$", "bowtie1_rRNA_pm_table", "^(?!.*?read).*\.count\$" );
     if ( $def->{read_correlation} ) {
@@ -1022,6 +1038,27 @@ sub getSmallRNAConfig {
       };
       push @$individual_ref, "map_percentage";
     }
+  }
+
+  if ($perform_annotate_unmapped_reads) {
+    $config->{annotate_unmapped_reads} = {
+      class            => "SmallRNA::AnnotateUnmappedReads",
+      perform          => 1,
+      target_dir       => $nonhost_blast_dir . "/annotate_unmapped_reads",
+      source_ref       => \@reads_for_annoate_unmapped,
+      mapped_files_ref => \@files_for_annotate_unmapped,
+      mapped_names     => join(',', @names_for_annotate_unmapped),
+      min_count        => 2,
+      sh_direct        => 1,
+      pbs              => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "12",
+        "mem"       => "10gb"
+      },
+    };
+    push @$individual_ref, "annotate_unmapped_reads";
   }
 
   $config->{count_table_correlation} = {
