@@ -19,7 +19,6 @@ parser.add_argument('-o', '--output', action='store', nargs='?', required=NOT_DE
 parser.add_argument('-f', '--fasta', action='store', nargs='?', required=NOT_DEBUG, help="Sequence fasta file, should contain only one sequence")
 parser.add_argument('-p', '--positions', action='store', nargs='?', required=NOT_DEBUG, help="Position of interesting, 1-based and separated by ','")
 parser.add_argument('-b', '--min_base_quality', action='store', nargs='?', type=int, default=20, help="Minimum base quality")
-parser.add_argument('-m', '--min_minor_allele_frequency', action='store', nargs='?', type=float, default=0.01, help="Minimum minor allele frequency")
 
 args = parser.parse_args()
 
@@ -36,7 +35,6 @@ logger = logging.getLogger('parseMutation')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
 print("min_base_quality=%d" % args.min_base_quality)
-print("min_minor_allele_frequency=%f" % args.min_minor_allele_frequency)
 
 fastaSequences = [fs for fs in SeqIO.parse(open(args.fasta),'fasta')]
 if len(fastaSequences) == 0:
