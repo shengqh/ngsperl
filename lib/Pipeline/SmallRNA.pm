@@ -34,6 +34,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "read_correlation",                0 );
   initDefaultValue( $def, "perform_contig_analysis",         0 );
   initDefaultValue( $def, "perform_annotate_unmapped_reads", 0 );
+  initDefaultValue( $def, "DE_export_significant_gene_name", 0 );
 
   return $def;
 }
