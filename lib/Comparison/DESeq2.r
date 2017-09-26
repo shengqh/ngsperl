@@ -47,7 +47,7 @@ if(!exists("usePearsonInHCA")){
 }
 
 if(exists("libraryFile")){
-  librarySize<-read.csv(libraryFile, row.names=1)
+  librarySize<-read.csv(libraryFile, row.names=1,check.names=FALSE)
   librarySize<-unlist(librarySize[libraryKey,,drop=T])
   cat("Using ", libraryKey, " in " , libraryFile , " as library size. \n")
 }
