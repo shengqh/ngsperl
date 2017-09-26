@@ -16,6 +16,8 @@ performWilcox<-0
 useRawPvalue<-1
 textSize<-9
 transformTable<-0
+exportSignificantGeneName<-1
+
 libraryFile<-"/scratch/cqs/shengq1/vickers/20170222_smallRNA_3018_61_human_v3/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/3018_61.Category.Table.csv"
 libraryKey<-"TotalReads"
 
@@ -44,6 +46,10 @@ if(addCountOne){
 
 if(!exists("usePearsonInHCA")){
   usePearsonInHCA=0
+}
+
+if(!exists("exportSignificantGeneName")){
+  exportSignificantGeneName<-1
 }
 
 if(exists("libraryFile")){
@@ -617,10 +623,14 @@ for(countfile_index in c(1:length(countfiles))){
     
     if("Feature_gene_name" %in% colnames(tbb)){
       write.table(tbb[,c("Feature_gene_name", "stat"),drop=F],paste0(prefix, "_DESeq2_GSEA.rnk"),row.names=F,col.names=F,sep="\t", quote=F)
-      write.table(tbbselect[,c("Feature_gene_name"),drop=F], paste0(prefix, "_DESeq2_sig_genename.txt"),row.names=F,col.names=F,sep="\t", quote=F)
+      if(exportSignificantGeneName){
+        write.table(tbbselect[,c("Feature_gene_name"),drop=F], paste0(prefix, "_DESeq2_sig_genename.txt"),row.names=F,col.names=F,sep="\t", quote=F)
+      }
     }else{
       write.table(tbb[,c("stat"),drop=F],paste0(prefix, "_DESeq2_GSEA.rnk"),row.names=T,col.names=F,sep="\t", quote=F)
-      write.table(data.frame(name=rownames(tbbselect)), paste0(prefix, "_DESeq2_sig_genename.txt"),row.names=F,col.names=F,sep="\t", quote=F)
+      if(exportSignificantGeneName){
+        write.table(data.frame(name=rownames(tbbselect)), paste0(prefix, "_DESeq2_sig_genename.txt"),row.names=F,col.names=F,sep="\t", quote=F)
+      }
     }    
     
     if(showDEGeneCluster){

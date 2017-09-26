@@ -76,12 +76,13 @@ sub perform {
   my $addCountOne       = get_option( $config, $section, "add_count_one",        0 );
   my $usePearsonInHCA   = get_option( $config, $section, "use_pearson_in_hca",   0 );
 
-  my $top25only           = get_option( $config, $section, "top25only",              0 );
-  my $detectedInBothGroup = get_option( $config, $section, "detected_in_both_group", 0 );
-  my $performWilcox       = get_option( $config, $section, "perform_wilcox",         0 );
-  my $useRawPvalue        = get_option( $config, $section, "use_raw_p_value",        0 );
-  my $textSize            = get_option( $config, $section, "text_size",              11 );
-  my $transformTable      = get_option( $config, $section, "transform_table",        0 );
+  my $top25only                 = get_option( $config, $section, "top25only",                    0 );
+  my $detectedInBothGroup       = get_option( $config, $section, "detected_in_both_group",       0 );
+  my $performWilcox             = get_option( $config, $section, "perform_wilcox",               0 );
+  my $useRawPvalue              = get_option( $config, $section, "use_raw_p_value",              0 );
+  my $textSize                  = get_option( $config, $section, "text_size",                    11 );
+  my $transformTable            = get_option( $config, $section, "transform_table",              0 );
+  my $exportSignificantGeneName = get_option( $config, $section, "export_significant_gene_name", 0 );
 
   my $libraryFile = parse_param_file( $config, $section, "library_file", 0 );
   my $libraryKey;
@@ -224,6 +225,7 @@ performWilcox<-$performWilcox
 useRawPvalue<-$useRawPvalue
 textSize<-$textSize
 transformTable<-$transformTable
+exportSignificantGeneName<-$exportSignificantGeneName
 ";
 
   if ( defined $libraryFile ) {
@@ -270,6 +272,7 @@ sub result {
   my $top25only           = get_option( $config, $section, "top25only",              0 );
   my $detectedInBothGroup = get_option( $config, $section, "detected_in_both_group", 0 );
   my $performWilcox       = get_option( $config, $section, "perform_wilcox",         0 );
+  my $exportSignificantGeneName = get_option( $config, $section, "export_significant_gene_name", 0 );
 
   my $suffix = getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup );
   my $result = {};
@@ -283,7 +286,9 @@ sub result {
     push( @result_files, $result_dir . "/${prefix}_DESeq2.csv" );
     push( @result_files, $result_dir . "/${prefix}_DESeq2_GSEA.rnk" );
     push( @result_files, $result_dir . "/${prefix}_DESeq2_sig.csv" );
-    push( @result_files, $result_dir . "/${prefix}_DESeq2_sig_genename.txt" );
+    if($exportSignificantGeneName){
+      push( @result_files, $result_dir . "/${prefix}_DESeq2_sig_genename.txt" );
+    }
     if ($performWilcox) {
       push( @result_files, $result_dir . "/${prefix}_quantile_wilcox.csv" );
       push( @result_files, $result_dir . "/${prefix}_quantile_wilcox_sig.csv" );
