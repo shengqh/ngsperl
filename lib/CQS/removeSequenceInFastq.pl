@@ -3,7 +3,8 @@ use warnings;
 
 use File::Basename;
 
-my $outFile=$ARGV[0];
+my $finalFile=$ARGV[0];
+my $outFile=$finalFile . ".tmp";
 my $sequenceToDel=$ARGV[1];
 my $fastqFile=$ARGV[2];
 
@@ -47,5 +48,10 @@ while ( my $line1 = <FASTQ> ) {
 	if ($keepSign) {
 			print RESULT $line1.$line2."\n".$line3.$line4
 	}
+}
+
+if (-e $finalFile){
+  unlink($finalFile);
+  rename($outFile, $finalFile);
 }
 print "Success: $delCount reads were deleted\n";
