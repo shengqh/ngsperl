@@ -94,6 +94,8 @@ sub perform {
       my $fastqs = join( ',', @sample_files );
       $bowtie1_aln_command = "bowtie $option -S $tag $bowtie1_index $fastqs $bowtiesam";
     }
+    
+    my $cmd_file_exists = check_file_exists_command(@sample_files);
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -111,6 +113,7 @@ sub perform {
 
     print $pbs "
 if [[ ! -s $bam_file && ! -s $bowtiesam ]]; then
+  $cmd_file_exists
   $bowtie1_aln_command 
 fi
 ";
