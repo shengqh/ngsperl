@@ -39,7 +39,7 @@ sub perform {
   my $qctable    = get_raw_files( $config, $section, "qctable" );
   my $peaksfiles = get_raw_files( $config, $section, "peaks" );
   my $peakSoftware = get_option( $config, $section, "peak_software" );
-  my $genome       = get_option( $config, $section, "genome" );
+  my $genome       = get_option( $config, $section, "genome", "unknown" );
   my $combined     = get_option( $config, $section, "combined" );
 
   my $chromosomes = get_option( $config, $section, "chromosomes", "" );
