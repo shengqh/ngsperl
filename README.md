@@ -129,7 +129,7 @@ We initialized a few pipelines:
 
 |Pipeline|Example|Software|Description|
 |---|---|---|---|
-|RNASeq|[simple](https://github.com/shengqh/ngsperl/blob/master/examples/pipeline_rnaseq_simple.pl)|||
+|RNASeq|[simple](https://github.com/shengqh/ngsperl/wiki/RNASeqSimple)|||
 ||[advanced](https://github.com/shengqh/ngsperl/blob/master/examples/pipeline_rnaseq_advanced.pl)|||
 |ExomeSeq|[simple](https://github.com/shengqh/ngsperl/blob/master/examples/pipeline_exomeseq_simple.pl)|||
 ||[advanced](https://github.com/shengqh/ngsperl/blob/master/examples/pipeline_exomeseq_advanced.pl)|||
