@@ -68,6 +68,10 @@ my $def = {
   pairs => {
     "DMSO_vs_FED" => [ "FED", "DMSO" ],
   },
+  
+  #perform enrichment analysis, organism should be: "athaliana" "btaurus"       "celegans"      "cfamiliaris"   "drerio"  "sscrofa"       "dmelanogaster" "ggallus"       "hsapiens"      "mmusculus"  "rnorvegicus"   "scerevisiae"   
+  perform_webgestalt => 1,
+  webgestalt_organism => "hsapiens", 
 };
 
 performRNASeq($def);
