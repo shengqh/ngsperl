@@ -163,10 +163,12 @@ sub perform {
         die("Something went wrong to get result of section $task_section : $e\n");
       };
 
-      my $clear_map = $myclass->get_clear_map( $config, $task_section );
-      $clears->{$task_section} = $clear_map;
-      for my $sample ( sort keys %$clear_map ) {
-        $clear_keys->{$sample} = 1;
+      if ( !$config->{$task_section}{not_clean} ) {
+        my $clear_map = $myclass->get_clear_map( $config, $task_section );
+        $clears->{$task_section} = $clear_map;
+        for my $sample ( sort keys %$clear_map ) {
+          $clear_keys->{$sample} = 1;
+        }
       }
       my $pbs_file_map = $myclass->get_pbs_files( $config, $task_section );
       for my $expect_name ( sort keys %$expect_file_map ) {
@@ -182,7 +184,7 @@ sub perform {
             if ( !-e $subpbs ) {
               die "Task " . $task_section . ", file not exists " . $subpbs . "\n";
             }
-            print $final "bash $subpbs \n" ;
+            print $final "bash $subpbs \n";
           }
         }
         else {
