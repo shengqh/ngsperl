@@ -9,7 +9,7 @@ require Exporter;
 
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw( list_directories list_files has_file create_directory_or_die change_extension change_extension_gzipped file_exists)] );
+our %EXPORT_TAGS = ( 'all' => [qw( list_directories list_files has_file create_directory_or_die change_extension change_extension_gzipped file_exists check_file_exists_command)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -114,6 +114,20 @@ sub file_exists {
     $result = -e $file;
   }
   return ($result);
+}
+
+sub check_file_exists_command {
+  my @files   = @_;
+  my $result = "";
+  for my $file (@files){
+    $result = $result . "if [ ! -e $file ]; then 
+  echo file not exists : $file, task failed.
+  exit 1
+fi
+"
+  }
+  
+  return $result;
 }
 
 1;
