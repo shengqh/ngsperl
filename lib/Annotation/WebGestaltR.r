@@ -3,10 +3,12 @@ options(bitmapType='cairo')
 library(WebGestaltR)
 
 args = commandArgs(trailingOnly=TRUE)
-sampleName=args[1]
-geneFile = args[2]
-outputDirectory = args[3]
+organism = args[1] #hsapiens
+sampleName=args[2]
+geneFile = args[3]
+outputDirectory = args[4]
 
+cat("organism=", organism, "\n")
 cat("sampleName=", sampleName, "\n")
 cat("geneFile=", geneFile, "\n")
 cat("outputDirectory=", outputDirectory, "\n")
@@ -26,7 +28,7 @@ enrichDatabases<-c("geneontology_Biological_Process",
 )
 
 for(enrichDatabase in enrichDatabases){
-  WebGestaltR(enrichMethod="ORA",organism="hsapiens",
+  WebGestaltR(enrichMethod="ORA",organism=organism,
             enrichDatabase=enrichDatabase,interestGene=genes,
             interestGeneType="genesymbol",referenceSet="genome",
             is.output=TRUE,

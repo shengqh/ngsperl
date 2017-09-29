@@ -26,6 +26,7 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $raw_files = get_raw_files( $config, $section );
+  my $organism = get_option($config, $section, "organism");
 
   my $script = dirname(__FILE__) . "/WebGestaltR.r";
   if ( !-e $script ) {
@@ -51,7 +52,7 @@ sub perform {
     my $inputFile = $raw_files->{$sample_name}->[0];
 
     print $pbs " 
-R --vanilla -f $script --args $sample_name $inputFile .
+R --vanilla -f $script --args $organism $sample_name $inputFile . 
 ";
     $self->close_pbs( $pbs, $pbs_file );
   }
