@@ -114,6 +114,7 @@ sub getPreprocessionConfig {
       cluster   => $cluster
     },
     constraint => $def->{constraint},
+    account    => $def->{account},
     groups     => $def->{groups},
     pairs      => $def->{pairs},
   };
@@ -132,6 +133,7 @@ sub getPreprocessionConfig {
       source     => $def->{files},
       sh_direct  => 1,
       cluster    => $def->{cluster},
+      not_clean  => getValue( $def, "sra_not_clean", 1 ),
       pbs        => {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
