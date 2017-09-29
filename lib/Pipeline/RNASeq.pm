@@ -28,6 +28,8 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_qc3bam",             0 );
   initDefaultValue( $def, "perform_bamplot",            0 );
   initDefaultValue( $def, "perform_call_variants",      0 );
+  initDefaultValue( $def, "perform_webgestalt",         0 );
+  initDefaultValue( $def, "perform_multiqc",            1 );
   initDefaultValue( $def, "aligner",                    "star" );
   initDefaultValue( $def, "use_pearson_in_hca",         1 );
   initDefaultValue( $def, "top25cv_in_hca",             0 );
@@ -217,7 +219,27 @@ sub getRNASeqConfig {
   push @$summary,    ( "genetable",  "genetable_correlation" );
 
   if ( defined $def->{pairs} ) {
-    addDEseq2( $config, $def, $summary, "genetable", [ "genetable", ".count\$" ], $def->{target_dir}, $def->{DE_min_median_read} );
+    my $deseq2taskname = addDEseq2( $config, $def, $summary, "genetable", [ "genetable", ".count\$" ], $def->{target_dir}, $def->{DE_min_median_read} );
+
+    if ( $def->{perform_webgestalt} ) {
+      my $webgestaltTaskName = $deseq2taskname . "_WebGestalt";
+      $config->{$webgestaltTaskName} = {
+        class      => "Annotation::WebGestaltR",
+        perform    => 1,
+        target_dir => "${target_dir}/$webgestaltTaskName",
+        option     => "",
+        source_ref => [ $deseq2taskname, "sig_genename.txt\$" ],
+        organism   => getValue( $def, "webgestalt_organism" ),
+        sh_direct  => 1,
+        pbs        => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "72",
+          "mem"      => "10gb"
+        },
+      };
+      push @$summary, "$webgestaltTaskName";
+    }
   }
 
   if ( $def->{perform_rnaseqc} ) {
@@ -418,6 +440,10 @@ sub getRNASeqConfig {
     push( @$individual, "refine",           "refine" );
     push( @$summary,    "refine_hc_filter", "refine_hc_filter_annovar" );
 
+  }
+  
+  if ( getValue( $def, "perform_multiqc" ) ) {
+    addMultiQC( $config, $def, $summary, $target_dir, $target_dir );
   }
 
   $config->{sequencetask} = {
