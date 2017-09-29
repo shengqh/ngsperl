@@ -70,21 +70,32 @@ sub get_is_paired {
   return $ispairend;
 }
 
+sub get_remove_option {
+  my ( $curSection, @keys ) = @_;
+  my $result = 0;
+  for my $key (@keys) {
+    if ( defined $curSection->{$key} ) {
+      $result = $curSection->{$key};
+    }
+  }
+  return $result;
+}
+
 sub get_cutadapt_option {
   my $curSection = shift;
 
   my $base_option = "";
 
-  my $random_bases_remove_after_trim = get_option_value( $curSection->{"fastq_remove_random"}, 0 );
+  my $random_bases_remove_after_trim = get_remove_option( $curSection, "fastq_remove_random", "random_bases_remove_after_trim" );
   if ( $random_bases_remove_after_trim > 0 ) {
     $base_option = "-u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim";
   }
   else {
-    my $random_bases_remove_after_trim_5 = get_option_value( $curSection->{"fastq_remove_random_5"}, 0 );
+    my $random_bases_remove_after_trim_5 = get_remove_option( $curSection, "fastq_remove_random_5", "random_bases_remove_after_trim_5" );
     if ( $random_bases_remove_after_trim_5 > 0 ) {
       $base_option = "-u $random_bases_remove_after_trim_5";
     }
-    my $random_bases_remove_after_trim_3 = get_option_value( $curSection->{"fastq_remove_random_3"}, 0 );
+    my $random_bases_remove_after_trim_3 = get_remove_option( $curSection, "fastq_remove_random_3", "random_bases_remove_after_trim_3" );
     if ( $random_bases_remove_after_trim_3 > 0 ) {
       $base_option = $base_option . "-u -$random_bases_remove_after_trim_3";
     }
@@ -119,8 +130,8 @@ sub get_cutadapt_option {
       $adapter_option = $adapter_option . " -g " . $curSection->{adapter_5};
     }
   }
-  
-  if(not defined $curSection->{trim_n} or $curSection->{trim_n}){
+
+  if ( not defined $curSection->{trim_n} or $curSection->{trim_n} ) {
     $adapter_option = $adapter_option . " --trim-n";
   }
 
@@ -175,9 +186,9 @@ sub perform {
   print $sh get_run_command($sh_direct);
 
   for my $sample_name ( sort keys %raw_files ) {
-    
+
     my $sampleConfig = $sampleConfigMap->{$sample_name};
-    my ($ispairend, $adapter_option, $random_bases_option) = get_cutadapt_option($sampleConfig);
+    my ( $ispairend, $adapter_option, $random_bases_option ) = get_cutadapt_option($sampleConfig);
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
