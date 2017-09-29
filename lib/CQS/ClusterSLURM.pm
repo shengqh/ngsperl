@@ -23,7 +23,7 @@ sub get_cluster_desc {
   my $nodes    = "1";
   my $ntasks   = "";
 
-  my ( $self, $pbsParamHashRef, $constraint ) = @_;
+  my ( $self, $pbsParamHashRef, $constraint, $account ) = @_;
   if ( defined $pbsParamHashRef ) {
     my %hash = %{$pbsParamHashRef};
     foreach ( keys %hash ) {
@@ -86,6 +86,9 @@ sub get_cluster_desc {
 SBATCH
   if (defined $constraint){
     $pbs_desc = $pbs_desc . "#SBATCH --constraint=$constraint\n";
+  }
+  if(defined $account){
+    $pbs_desc = $pbs_desc . "#SBATCH --account=$account\n";
   }
 
   return ($pbs_desc);
