@@ -350,7 +350,7 @@ sub getPrepareConfig {
       source_ref         => [ 'identical', '.fastq.gz$' ],
       untrimmedFastq_ref => $untrimed_ref,
       cqs_tools          => $def->{cqstools},
-      sh_direct          => 0,
+      sh_direct          => 1,
       pbs                => {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
