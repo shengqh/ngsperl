@@ -72,6 +72,9 @@ my $def = {
   #perform enrichment analysis, organism should be: "athaliana" "btaurus"       "celegans"      "cfamiliaris"   "drerio"  "sscrofa"       "dmelanogaster" "ggallus"       "hsapiens"      "mmusculus"  "rnorvegicus"   "scerevisiae"   
   perform_webgestalt => 1,
   webgestalt_organism => "hsapiens", 
+  
+  #perform multiqc
+  perform_multiqc => 1,
 };
 
 performRNASeq($def);
