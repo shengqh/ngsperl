@@ -40,10 +40,12 @@ DEBUG=0
 args = commandArgs(trailingOnly=TRUE)
 cancerName = args[1]
 outputFolder = args[2]
+geneLengthFile = args[3]
 
 if(DEBUG){
-  cancerName = "COAD"
-  outputFolder = "/scratch/cqs/shengq2/guoyan/prepareRnaseq/result/COAD"
+  cancerName = "SKCM"
+  outputFolder = "/scratch/cqs/shengq2/guoyan/prepareRnaseq/result/SKCM"
+  geneLengthFile = "/scratch/cqs/shengq2/references/gencode/hg19/gencode.v19.chr_patch_hapl_scaff.annotation.gtf.genelength"
 }
 
 setwd(outputFolder)
@@ -88,8 +90,12 @@ isdup<-duplicated(pos$ensembl_gene_id)
 pos<-pos[!isdup,]
 exp<-exp[!isdup,]
 
+#get gene length
+geneLength<-read.table(geneLengthFile, sep="\t", header=T, stringsAsFactor=F)
+rownames(geneLength)<-gsub("\\.\\d+","",geneLength$Geneid)
+pos$length<-geneLength[pos$ensembl_gene_id,"Length"]
+
 #sort pos by chromosome and start
-pos$length<-pos$end-pos$start+1
 pos$seqnames<-substring(pos$seqnames, 4)
 pos$seqnamesX<-grepl('[XYZ]', pos$seqnames)
 pos$seqnamesN<-as.numeric(pos$seqnames)

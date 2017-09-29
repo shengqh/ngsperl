@@ -30,6 +30,7 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $cancerNames = get_option( $config, $section, "source" );
+  my $geneLengthFile = get_param_file($config->{$section}{"gene_length_file"},"gene_length_file",1);
 
   my $script = dirname(__FILE__) . "/PrepareRnaseq.r";
   if ( !-e $script ) {
@@ -55,7 +56,7 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-    print $pbs "R --vanilla -f $script --args $cancerName $cur_dir \n";
+    print $pbs "R --vanilla -f $script --args $cancerName $cur_dir \"$geneLengthFile\" \n";
     $self->close_pbs( $pbs, $pbs_file );
   }
 
