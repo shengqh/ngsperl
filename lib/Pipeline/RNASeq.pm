@@ -24,18 +24,19 @@ our $VERSION = '0.01';
 sub initializeDefaultOptions {
   my $def = shift;
 
-  initDefaultValue( $def, "perform_rnaseqc",            0 );
-  initDefaultValue( $def, "perform_qc3bam",             0 );
-  initDefaultValue( $def, "perform_bamplot",            0 );
-  initDefaultValue( $def, "perform_call_variants",      0 );
-  initDefaultValue( $def, "perform_webgestalt",         0 );
-  initDefaultValue( $def, "perform_multiqc",            1 );
-  initDefaultValue( $def, "aligner",                    "star" );
-  initDefaultValue( $def, "use_pearson_in_hca",         1 );
-  initDefaultValue( $def, "top25cv_in_hca",             0 );
-  initDefaultValue( $def, "use_green_red_color_in_hca", 1 );
-  initDefaultValue( $def, "output_bam_to_same_folder",  1 );
-  initDefaultValue( $def, "max_thread",                 8 );
+  initDefaultValue( $def, "perform_rnaseqc",                 0 );
+  initDefaultValue( $def, "perform_qc3bam",                  0 );
+  initDefaultValue( $def, "perform_bamplot",                 0 );
+  initDefaultValue( $def, "perform_call_variants",           0 );
+  initDefaultValue( $def, "perform_webgestalt",              0 );
+  initDefaultValue( $def, "perform_multiqc",                 1 );
+  initDefaultValue( $def, "aligner",                         "star" );
+  initDefaultValue( $def, "use_pearson_in_hca",              1 );
+  initDefaultValue( $def, "top25cv_in_hca",                  0 );
+  initDefaultValue( $def, "use_green_red_color_in_hca",      1 );
+  initDefaultValue( $def, "output_bam_to_same_folder",       1 );
+  initDefaultValue( $def, "max_thread",                      8 );
+  initDefaultValue( $def, "DE_export_significant_gene_name", 1 );
   return $def;
 }
 
@@ -441,7 +442,7 @@ sub getRNASeqConfig {
     push( @$summary,    "refine_hc_filter", "refine_hc_filter_annovar" );
 
   }
-  
+
   if ( getValue( $def, "perform_multiqc" ) ) {
     addMultiQC( $config, $def, $summary, $target_dir, $target_dir );
   }
