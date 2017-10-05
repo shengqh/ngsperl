@@ -52,6 +52,7 @@ while ( my $line1 = <FASTQ> ) {
 
 if (-e $finalFile){
   unlink($finalFile);
-  rename($outFile, $finalFile);
 }
+rename($outFile, $finalFile);
+
 print "Success: $delCount reads were deleted\n";
