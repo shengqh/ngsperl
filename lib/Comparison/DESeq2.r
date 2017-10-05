@@ -1010,5 +1010,12 @@ if (! is.null(resultAllOut)) {
             strip.text.x = element_text(size = 30))
     print(p)
     dev.off()
+	
+	#output a summary table with numbers of gisnificant changed genes
+	sigGeneSummaryTable<-t(table(diffResult[,"Significant"],diffResult[,"Comparison"]))
+	sigGeneSummaryTable<-data.frame(Comparison=row.names(sigGeneSummaryTable),GeneInComparison=rowSums(sigGeneSummaryTable),NotSignificant=sigGeneSummaryTable[,1],Significant=sigGeneSummaryTable[,2])
+	write.csv(sigGeneSummaryTable,paste0(allprefix, "_DESeq2_sigGeneSummary.csv"),row.names=FALSE)
+	
   }  
 }
+

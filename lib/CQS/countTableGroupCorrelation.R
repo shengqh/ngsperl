@@ -402,6 +402,13 @@ for (i in 1:nrow(countTableFileAll)) {
     conditionColors<-NA
   }
 
+  #density plot
+  dataForPlot<-melt(countHT)
+  png(paste0(outputFilePrefix,suffix,".density.png"),width=2000,height=2000,res=300)
+  p<-ggplot(dataForPlot, aes(value, colour = Var2)) +geom_density()
+  print(p)
+  dev.off()
+  
   print("Drawing PCA for all samples.")
   drawPCA(paste0(outputFilePrefix,suffix,".PCA.png"), countHT, showLabelInPCA, groups, colors)
   
