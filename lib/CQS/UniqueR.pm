@@ -124,7 +124,7 @@ sub perform {
     $parameterFile3 = "";
   }
 
-  my $rfile = $result_dir . "/${task_name}${task_suffix}.r";
+  my $rfile = $pbs_dir . "/${task_name}${task_suffix}.r";
   open( my $rf, ">$rfile" ) or die "Cannot create $rfile";
   print $rf "rm(list=ls()) \n";
 
