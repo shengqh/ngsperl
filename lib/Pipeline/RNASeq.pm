@@ -37,6 +37,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "output_bam_to_same_folder",       1 );
   initDefaultValue( $def, "max_thread",                      8 );
   initDefaultValue( $def, "DE_export_significant_gene_name", 1 );
+  initDefaultValue( $def, "output_to_report_dir",            0 );
   return $def;
 }
 
@@ -95,7 +96,6 @@ sub getRNASeqConfig {
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir ) = getPreprocessionConfig($def);
 
   my $target_dir = $def->{target_dir};
-
   my $groups_ref = defined $def->{groups} ? "groups" : undef;
 
   my $configAlignment;
@@ -120,13 +120,14 @@ sub getRNASeqConfig {
         },
       },
       "star_summary" => {
-        class      => "Alignment::STARSummary",
-        perform    => 1,
-        target_dir => $starFolder,
-        option     => "",
-        source_ref => [ "star", "_Log.final.out" ],
-        sh_direct  => 1,
-        pbs        => {
+        class         => "Alignment::STARSummary",
+        perform       => 1,
+        target_dir    => $starFolder,
+        output_to_dir => getReportDir($def),
+        option        => "",
+        source_ref    => [ "star", "_Log.final.out" ],
+        sh_direct     => 1,
+        pbs           => {
           "email"    => $email,
           "nodes"    => "1:ppn=1",
           "walltime" => "72",
@@ -134,15 +135,16 @@ sub getRNASeqConfig {
         },
       }
     };
+
     $source_ref = [ "star", "_Aligned.sortedByCoord.out.bam\$" ];
     push @$summary, ("${aligner}_summary");
   }
   else {
     $configAlignment = {
       hisat2 => {
-        class                 => "Alignment::Hisat2",
         perform               => 1,
         target_dir            => $target_dir . "/" . getNextFolderIndex($def) . "hisat2",
+        class                 => "Alignment::Hisat2",
         option                => "",
         source_ref            => $source_ref,
         genome_dir            => $aligner_index,
@@ -199,6 +201,7 @@ sub getRNASeqConfig {
         perform         => 1,
         rCode           => "usePearsonInHCA<-" . $def->{use_pearson_in_hca} . "; useGreenRedColorInHCA<-" . $def->{use_green_red_color_in_hca} . "; top25cvInHCA<-" . $def->{top25cv_in_hca} . "; ",
         target_dir      => $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation",
+        output_to_dir   => getReportDir($def),
         rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
         output_file     => "parameterSampleFile1",
         output_file_ext => ".Correlation.png",
@@ -225,14 +228,15 @@ sub getRNASeqConfig {
     if ( $def->{perform_webgestalt} ) {
       my $webgestaltTaskName = $deseq2taskname . "_WebGestalt";
       $config->{$webgestaltTaskName} = {
-        class      => "Annotation::WebGestaltR",
-        perform    => 1,
-        target_dir => "${target_dir}/$webgestaltTaskName",
-        option     => "",
-        source_ref => [ $deseq2taskname, "sig_genename.txt\$" ],
-        organism   => getValue( $def, "webgestalt_organism" ),
-        sh_direct  => 1,
-        pbs        => {
+        class         => "Annotation::WebGestaltR",
+        perform       => 1,
+        target_dir    => "${target_dir}/$webgestaltTaskName",
+        option        => "",
+        source_ref    => [ $deseq2taskname, "sig_genename.txt\$" ],
+        output_to_dir => getReportDir($def),
+        organism      => getValue( $def, "webgestalt_organism" ),
+        sh_direct     => 1,
+        pbs           => {
           "email"    => $email,
           "nodes"    => "1:ppn=1",
           "walltime" => "72",
