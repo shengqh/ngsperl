@@ -17,13 +17,22 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 our $VERSION = '0.01';
 
 sub init_dir {
-  my ( $rootDir, $create ) = @_;
+  my ( $rootDir, $create, $config, $section ) = @_;
 
   $create = 1 if !defined $create;
   #defined several folders
   my $pbs_dir    = "$rootDir/pbs";
-  my $result_dir = "$rootDir/result";
   my $log_dir    = "$rootDir/log";
+  my $result_dir;
+  if(defined $config && defined $section && defined $config->{$section}{"output_to_dir"}){
+    my $output_to_dir = $config->{$section}{"output_to_dir"};
+    $result_dir = "$output_to_dir/" . basename($rootDir);
+    if ($create) {
+      create_directory_or_die($output_to_dir);
+    }
+  }else{
+    $result_dir = "$rootDir/result";
+  }
 
   if ($create) {
     create_directory_or_die($rootDir);

@@ -18,7 +18,7 @@ our %EXPORT_TAGS = (
     qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat
       getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn
       getBatchGroups initDeseq2Options addHomerMotif addEnhancer writeDesignTable addMultiQC
-      getNextFolderIndex addCleanBAM)
+      getNextFolderIndex addCleanBAM getReportDir)
   ]
 );
 
@@ -147,20 +147,20 @@ sub addBamStat {
   my ( $config, $def, $summary, $taskName, $targetDir, $sourceRef ) = @_;
 
   $config->{$taskName} = {
-    class                    => "CQS::UniqueR",
-    target_dir               => $targetDir,
-    perform                  => 1,
-    rtemplate                => "../Samtools/BamStat.r",
-    output_file              => ".bamstat.csv",
-    sh_direct                => 1,
-    parameterSampleFile1_ref => $sourceRef,
-    cluster                  => $def->{cluster},
-    pbs                      => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "10gb"
+    class       => "CQS::UniqueR",
+    target_dir  => $targetDir,
+    perform     => 1,
+    rtemplate   => "../Samtools/BamStat.r",
+    output_file => ".bamstat.csv",
+    sh_direct   => 1,
+    cluster     => $def->{cluster},
+    pbs         => {
+      parameterSampleFile1_ref => $sourceRef,
+      "email"                  => $def->{email},
+      "emailType"              => $def->{emailType},
+      "nodes"                  => "1:ppn=1",
+      "walltime"               => "10",
+      "mem"                    => "10gb"
     },
   };
   push @$summary, $taskName;
@@ -178,6 +178,15 @@ sub getDEseq2TaskName {
   return $result;
 }
 
+sub getReportDir {
+  my $def        = shift;
+  my $report_dir = undef;
+  if ( defined $def->{"output_to_report_dir"} && $def->{"output_to_report_dir"} ) {
+    $report_dir = $def->{target_dir} . "/report";
+  }
+  return ($report_dir);
+}
+
 sub addDEseq2 {
   my ( $config, $def, $summary, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read, $libraryFile, $libraryKey ) = @_;
 
@@ -192,6 +201,7 @@ sub addDEseq2 {
     class                        => "Comparison::DESeq2",
     perform                      => 1,
     target_dir                   => $deseq2Dir . "/" . getNextFolderIndex($def) . "$taskName",
+    output_to_dir                => getReportDir($def),
     option                       => "",
     source_ref                   => "pairs",
     groups_ref                   => "groups",
@@ -238,6 +248,7 @@ sub addDeseq2Visualization {
     class                    => "CQS::UniqueR",
     perform                  => 1,
     target_dir               => $dataVisualizationDir . "/" . getNextFolderIndex($def) . "$taskName",
+    output_to_dir            => getReportDir($def),
     rtemplate                => "DESeq2_all_vis.R",
     output_file              => ".${taskKey}.DESeq2.Matrix",
     output_file_ext          => ".png",
@@ -487,13 +498,14 @@ sub addEnhancer {
 sub addMultiQC {
   my ( $config, $def, $summary, $target_dir, $root_dir, $option ) = @_;
   $config->{multiqc} = {
-    class      => "QC::MultiQC",
-    option     => getValue( $def, "multiqc_option", "" ),
-    perform    => 1,
-    target_dir => $target_dir . "/" . getNextFolderIndex($def) . "multiqc",
-    root_dir   => $root_dir,
-    sh_direct  => 1,
-    pbs        => {
+    class         => "QC::MultiQC",
+    option        => getValue( $def, "multiqc_option", "" ),
+    perform       => 1,
+    target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "multiqc",
+    output_to_dir => getReportDir($def),
+    root_dir      => $root_dir,
+    sh_direct     => 1,
+    pbs           => {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
