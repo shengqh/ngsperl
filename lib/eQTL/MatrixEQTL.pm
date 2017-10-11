@@ -36,6 +36,7 @@ sub perform {
   my $gene_expression_files = get_raw_files( $config, $section, "gene_expression_files" );
   my $gene_location_files   = get_raw_files( $config, $section, "gene_pos_files" );
   my $prefix = get_option( $config, $section, "prefix", "" );
+  my $sort_data_by_tcga = get_option( $config, $section, "sort_data_by_tcga", 0 );
 
   my $script = dirname(__FILE__) . "/MatrixEQTL.r";
   if ( !-e $script ) {
@@ -63,7 +64,7 @@ sub perform {
     my $gene_expression_file = $gene_expression_files->{$sampleName}[0];
     my $gene_location_file   = $gene_location_files->{$sampleName}[0];
 
-    print $pbs "R --vanilla -f $script --args $snp_genotype_file $snp_location_file $gene_expression_file $gene_location_file $final_file\n";
+    print $pbs "R --vanilla -f $script --args $snp_genotype_file $snp_location_file $gene_expression_file $gene_location_file $sort_data_by_tcga $final_file\n";
     $self->close_pbs( $pbs, $pbs_file );
   }
 
