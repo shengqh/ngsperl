@@ -30,19 +30,19 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
   my $bowtie1_index = $config->{$section}{bowtie1_index} or die "define ${section}::bowtie1_index first";
-  my $mappedonly              = get_option( $config, $section, "mappedonly",              0 );
+  my $mappedonly = get_option( $config, $section, "mappedonly", 0 );
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
-  my $outputToSameFolder      = get_option( $config, $section, "output_to_same_folder",   1 );
-  my $output_sort_by_coordinate = getSortByCoordinate($config, $section);
+  my $outputToSameFolder = $self->getOutputToSameFolder( $config, $section );
+  my $output_sort_by_coordinate = getSortByCoordinate( $config, $section );
 
   my $mark_duplicates = hasMarkDuplicate( $config->{$section} );
   my $picard_jar      = "";
   if ($mark_duplicates) {
     $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
   }
-  
+
   my $add_RG_to_read = get_option( $config, $section, "add_RG_to_read", 0 );
-  if($add_RG_to_read){
+  if ($add_RG_to_read) {
     $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
   }
 
@@ -94,7 +94,7 @@ sub perform {
       my $fastqs = join( ',', @sample_files );
       $bowtie1_aln_command = "bowtie $option -S $tag $bowtie1_index $fastqs $bowtiesam";
     }
-    
+
     my $cmd_file_exists = check_file_exists_command(@sample_files);
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -118,8 +118,8 @@ if [[ ! -s $bam_file && ! -s $bowtiesam ]]; then
 fi
 ";
 
-    my $addRgCommand = getAddRgCommand($picard_jar, $add_RG_to_read, $bam_file, $sample_name );
-    
+    my $addRgCommand = getAddRgCommand( $picard_jar, $add_RG_to_read, $bam_file, $sample_name );
+
     if ($output_sort_by_coordinate) {
       my $chromosome_grep_command = getChromosomeFilterCommand( $bam_file, $chromosome_grep_pattern );
 
