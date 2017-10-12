@@ -58,6 +58,8 @@ sub perform {
     %fastqFiles = %{ get_raw_files( $config, $section, "fastq_files" ) };
   }
 
+  my $newMethod = ( $option =~ /-e 4/ ) ? "" : "--newMethod";
+
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct) . "\n";
@@ -93,7 +95,7 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_xml_file );
-    print $pbs "mono $cqstools smallrna_count --newMethod $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile -o $final_file
+    print $pbs "mono $cqstools smallrna_count $newMethod $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile -o $final_file
 ";
     if ( $option !~ /noCategory/ ) {
       print $pbs "
