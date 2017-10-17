@@ -10,7 +10,16 @@ from GTExUtils import GTExItem, readGTExResult
 from os import listdir
 from os.path import isfile, join
 
+def checkFileExist(fileName, logger):
+  if not os.path.isfile(fileName):
+    logger.error("file not exists: " + fileName)
+    sys.exit()
+
 def findOverlap(inputFile, bimFile, gtexFile, outputFile, logger):
+  checkFileExist(inputFile, logger)
+  checkFileExist(bimFile, logger)
+  checkFileExist(gtexFile, logger)
+
   pSNPs = readPlinkSNP(bimFile)
   pSNPs = [p for p in pSNPs if p.Chromosome != "0"]
   logger.info("SNP = %d" % len(pSNPs))

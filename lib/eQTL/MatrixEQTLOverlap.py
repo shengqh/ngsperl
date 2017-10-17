@@ -10,7 +10,17 @@ from GTExUtils import GTExItem, readGTExResult
 from os import listdir
 from os.path import isfile, join
 
+def checkFileExist(fileName, logger):
+  if not os.path.isfile(fileName):
+    logger.error("file not exists: " + fileName)
+    sys.exit()
+
 def findOverlap(inputFile, inputBimFile, inputName, compareFile, compareBimFile, compareName, outputFile, logger):
+  checkFileExist(inputFile, logger)
+  checkFileExist(inputBimFile, logger)
+  checkFileExist(compareFile, logger)
+  checkFileExist(compareBimFile, logger)
+  
   inputMap = {p.Name:p for p in readPlinkSNP(inputBimFile) if p.Chromosome != "0"}
   inputResult = readMatrixEQTLResult(inputFile)
   logger.info("input eQTL = %d" % len(inputResult))
@@ -59,7 +69,9 @@ def findOverlap(inputFile, inputBimFile, inputName, compareFile, compareBimFile,
   os.rename(tmpFile, outputFile)
   
   with open(outputFile + ".info", "w") as f:
-    f.write("Type\tCount\n");
+    f.write("Type\tCount\n")
+    f.write("%s\t%d\n" % (inputName, len(inputResult)))
+    f.write("%s\t%d\n" % (compareName, len(compareResultMap)))
     f.write("Matched\t%d\n" % matched)
     f.write("Unmatched\t%d\n" % unmatched)
     f.write("UnmatchedPercentage\t%4.2f%%\n" % (unmatched * 100.0 / (matched + unmatched)))
