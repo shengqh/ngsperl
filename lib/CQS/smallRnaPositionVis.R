@@ -55,7 +55,7 @@ groupInfo<-read.delim(groupFileList, header=F, as.is=T)
 groups<-unique(groupInfo$V2)
 groupSize<-table(groupInfo[,2])
 
-totalCount<-read.delim(totalCountFile,as.is=T,header=T,row.names=1)
+totalCount<-read.delim(totalCountFile,as.is=T,header=T,row.names=1,check.names=FALSE)
 totalCount<-unlist(totalCount["MappedReads",])
 
 position$FeatureLabel<-paste0(position$Feature,"(",round(position$TotalCount,0),")")
