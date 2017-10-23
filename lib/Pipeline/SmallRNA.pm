@@ -228,6 +228,19 @@ sub getSmallRNAConfig {
         "Groups" => string_combination( [ $hostSmallRNAFolder, [ $hostLibraryStr . $DE_task_suffix ], $sampleComparisons ], '_' ),
       };
     }
+    if ( !defined $def->{pairs_host_reads_deseq2_vis_layout} ) {
+      my $hostSmallRNAReadsFolder=$hostSmallRNAFolder;
+      s/miRNA_isomiR/miRNA/ for @{$hostSmallRNAReadsFolder};
+      
+      my $hostSmallRNAReads=$hostSmallRNA;
+      s/miRNA_isomiR/miRNA_reads/ for @{$hostSmallRNAReads};
+      
+      $def->{pairs_host_reads_deseq2_vis_layout} = {
+        "Col_Group" => [ (@$comparisons) x $numberOfHostSmallRNA ],
+        "Row_Group" => string_repeat( $hostSmallRNAReads, $numberOfComparison ),
+        "Groups" => string_combination( [ $hostSmallRNAReadsFolder, [ $hostLibraryStr . $DE_task_suffix ], $sampleComparisons ], '_' ),
+      };
+    }
 
     if ( !defined $def->{pairs_host_miRNA_deseq2_vis_layout} ) {
       $def->{pairs_host_miRNA_deseq2_vis_layout} = {
@@ -604,7 +617,7 @@ sub getSmallRNAConfig {
 
       #host genome smallRNA visualization
       addDeseq2Visualization( $config, $def, $summary_ref, "host_genome", \@visual_source, $data_visualization_dir, "pairs_host_deseq2_vis_layout", $libraryKey );
-      addDeseq2Visualization( $config, $def, $summary_ref, "host_genome_reads", \@visual_source_reads, $data_visualization_dir, "pairs_host_deseq2_vis_layout", $libraryKey );
+      addDeseq2Visualization( $config, $def, $summary_ref, "host_genome_reads", \@visual_source_reads, $data_visualization_dir, "pairs_host_reads_deseq2_vis_layout", $libraryKey );
     }
     if ( $do_comparison or defined $groups or defined $def->{tRNA_vis_group} ) {
       my $trna_sig_result;
