@@ -230,7 +230,7 @@ sub getSmallRNAConfig {
     }
     if ( !defined $def->{pairs_host_reads_deseq2_vis_layout} ) {
       my $hostSmallRNAReadsFolder=$hostSmallRNAFolder;
-      s/miRNA_isomiR/miRNA_reads/ for @{$hostSmallRNAReadsFolder};
+      s/miRNA_isomiR/miRNA/ for @{$hostSmallRNAReadsFolder};
       
       my $hostSmallRNAReads=$hostSmallRNA;
       s/^isomiR$/miRNA/ for @{$hostSmallRNAReads};
