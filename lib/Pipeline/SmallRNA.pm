@@ -230,10 +230,10 @@ sub getSmallRNAConfig {
     }
     if ( !defined $def->{pairs_host_reads_deseq2_vis_layout} ) {
       my $hostSmallRNAReadsFolder=$hostSmallRNAFolder;
-      s/miRNA_isomiR/miRNA/ for @{$hostSmallRNAReadsFolder};
+      s/miRNA_isomiR/miRNA_reads/ for @{$hostSmallRNAReadsFolder};
       
       my $hostSmallRNAReads=$hostSmallRNA;
-      s/miRNA_isomiR/miRNA_reads/ for @{$hostSmallRNAReads};
+      s/^isomiR$/miRNA/ for @{$hostSmallRNAReads};
       
       $def->{pairs_host_reads_deseq2_vis_layout} = {
         "Col_Group" => [ (@$comparisons) x $numberOfHostSmallRNA ],
