@@ -22,6 +22,15 @@ sub new {
   return $self;
 }
 
+sub acceptSample {
+  my ( $self, $config, $section, $sample_name ) = @_;
+  my $sample_set = get_option( $config, $section, "sample_set", [] );
+  if ( ( scalar(@$sample_set) > 0 ) & !grep( /^$sample_name$/, @$sample_set ) ) {
+    return (0);
+  }
+  return (1);
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -29,17 +38,17 @@ sub perform {
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
-  my $plink_prefix_names = get_raw_files( $config, $section, "plink_prefix_names" );
   my $prefix = get_option( $config, $section, "prefix", "" );
 
   my $fpkm_files = get_raw_files( $config, $section );
+  my $fpkm_common_files = get_raw_files( $config, $section, "rnaseq_common_samples" );
+
+  my $plink_bed_files    = get_raw_files( $config, $section, "plink_bed_files" );
+  my $plink_common_files = get_raw_files( $config, $section, "plink_common_samples" );
+
   my $genepos_files = get_raw_files( $config, $section, "gene_pos" );
   my $remove_temp_files = get_option( $config, $section, "remove_temp_files", 1 );
-
-  my $find_common_sample_script = dirname(__FILE__) . "/findCommonSample.py";
-  if ( !-e $find_common_sample_script ) {
-    die "File not found : " . $find_common_sample_script;
-  }
+  my $pattern           = get_option( $config, $section, "pattern",           1 );
 
   my $format_snp_data_script = dirname(__FILE__) . "/formatSNPData.py";
   if ( !-e $format_snp_data_script ) {
@@ -56,16 +65,22 @@ sub perform {
   print $sh get_run_command($sh_direct) . "\n";
 
   for my $sample_name ( sort keys %$fpkm_files ) {
-    my $fpkm_file    = $fpkm_files->{$sample_name}->[0];
-    my $genepos_file = $genepos_files->{$sample_name}->[0];
+    if ( !$self->acceptSample( $config, $section, $sample_name ) ) {
+      next;
+    }
 
-    my $plink_prefix = $plink_prefix_names->{$sample_name}->[0];
-    my $fam_file     = $plink_prefix . ".fam";
+    my $fpkm_file          = $fpkm_files->{$sample_name}->[0];
+    my $common_rnaseq_file = $fpkm_common_files->{$sample_name}->[0];
+    my $genepos_file       = $genepos_files->{$sample_name}->[0];
+
+    my $plink_prefix = $plink_bed_files->{$sample_name}->[0];
+    $plink_prefix =~ s/\.[^.]*$//;
+    my $common_snp_file = $plink_common_files->{$sample_name}->[0];
 
     my $file_name = $prefix . $sample_name;
 
-    my $common_fam_file = $file_name . "_common.fam";
-    my $common_bed_file = $file_name . "_common.bed";
+    my $common_prefix   = $file_name . "_common";
+    my $common_bed_file = $common_prefix . ".bed";
 
     my $cur_dir  = create_directory_or_die( $result_dir . "/" . $sample_name );
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -82,52 +97,47 @@ if [[ -s ${file_name}_snp.pos && -s ${file_name}_snp.genotype && -s ${file_name}
   echo $sample_name has been prepared. Delete $cur_dir/${file_name}_snp.pos to regenerate the result.
   exit 1;
 fi
-    
+
 if [ ! -s temp_dir ]; then
   mkdir temp_dir
 fi
 
 cd temp_dir    
 
-if [ ! -s $common_fam_file ]; then
-  echo findCommonSample=`date`
-  python $find_common_sample_script -f $fam_file -r $fpkm_file -o $common_fam_file 
-fi
-
 if [ ! -s $common_bed_file ]; then
   echo extractCommonSample=`date`
-  plink -bfile $plink_prefix --keep $common_fam_file --out ${file_name}_common --make-bed 
+  plink -bfile $plink_prefix --keep $common_snp_file --out $common_prefix --make-bed --indiv-sort f $common_snp_file
 fi
 
-if [ ! -s ${file_name}_common_filtered.bed ]; then
+if [ ! -s ${common_prefix}_filtered.bed ]; then
   echo filtering SNP ...
-  plink --bfile ${file_name}_common --out ${file_name}_common_filtered --mind 0.05 --geno 0.05 --maf 0.05 --hwe 0.001 --make-bed
+  plink --bfile $common_prefix --out ${common_prefix}_filtered --mind 0.05 --geno 0.05 --maf 0.05 --hwe 0.001 --make-bed
 fi
 
-if [ ! -s ${file_name}_common_filtered.traw ]; then
+if [ ! -s ${common_prefix}_filtered.traw ]; then
   echo prepareing data for MatrixQTL ...
-  plink --bfile ${file_name}_common_filtered --out ${file_name}_common_filtered --recode A-transpose tab
+  plink --bfile ${common_prefix}_filtered --out ${common_prefix}_filtered --recode A-transpose tab
 fi
 
-if [ ! -s ${file_name}_common_filtered.tsv ]; then
-  echo convering ${file_name}_brca_common_filtered.traw to ${file_name}_common_filtered.tsv
-  python $format_snp_data_script -i ${file_name}_common_filtered.traw -o ${file_name}_common_filtered.tsv
+if [ ! -s ${common_prefix}_filtered.tsv ]; then
+  echo convering ${common_prefix}_filtered.traw to ${common_prefix}_filtered.tsv
+  python $format_snp_data_script -i ${common_prefix}_filtered.traw -o ${common_prefix}_filtered.tsv
 fi
 
 cd ..
 
 if [ ! -s ${file_name}_snp.pos ]; then
-  echo converting ${file_name}_common_filtered.tsv ${file_name}_snp.pos
-  awk '{ if (NR==1){print \"snp\\tchr\\tpos\";}else{print \$2 \"\\t\" \$1 \"\\t\" \$4;} }' temp_dir/${file_name}_common_filtered.tsv > ${file_name}_snp.pos
-  cp temp_dir/${file_name}_common_filtered.bim ${file_name}_snp.bim
+  echo converting ${common_prefix}_filtered.tsv ${file_name}_snp.pos
+  awk '{ if (NR==1){print \"snp\\tchr\\tpos\";}else{print \$2 \"\\t\" \$1 \"\\t\" \$4;} }' temp_dir/${common_prefix}_filtered.tsv > ${file_name}_snp.pos
+  cp temp_dir/${common_prefix}_filtered.bim ${file_name}_snp.bim
 
-  echo converting ${file_name}_common_filtered.tsv ${file_name}_snp.genotype
-  cut -f2,7- temp_dir/${file_name}_common_filtered.tsv | awk -v OFS='\\t' '{ if (\$1 == \"SNP\") \$1 = \"id\"; print}' > ${file_name}_snp.genotype
+  echo converting ${common_prefix}_filtered.tsv ${file_name}_snp.genotype
+  cut -f2,7- temp_dir/${common_prefix}_filtered.tsv | awk -v OFS='\\t' '{ if (\$1 == \"SNP\") \$1 = \"id\"; print}' > ${file_name}_snp.genotype
 fi
 
 if [ ! -s ${file_name}_gene.bed.gz ]; then
   echo prepareGeneExpression ${file_name}_gene.bed.gz
-  R --vanilla -f $prepare_gene_script --args $fpkm_file temp_dir/$common_fam_file $genepos_file ${file_name}_gene.bed
+  R --vanilla -f $prepare_gene_script --args $fpkm_file $common_rnaseq_file $genepos_file ${file_name}_gene.bed
   bgzip ${file_name}_gene.bed && tabix -p bed ${file_name}_gene.bed.gz
 fi
 
@@ -141,11 +151,11 @@ fi
 
 ";
 
-    if($remove_temp_files){
+    if ($remove_temp_files) {
       print $pbs "if [[ -s ${file_name}_snp.pos && -s ${file_name}_snp.genotype && -s ${file_name}_gene.pos && -s ${file_name}_gene.expression ]]; then
   rm -rf temp_dir
 fi
-";  
+";
     }
     $self->close_pbs( $pbs, $pbs_file );
   }
@@ -166,11 +176,16 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $prefix = get_option( $config, $section, "prefix", "" );
+  my $sample_set = get_option( $config, $section, "sample_set", [] );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
+    if ( !$self->acceptSample( $config, $section, $sample_name ) ) {
+      next;
+    }
+
     my @result_files = ();
-    my $cur_dir  = $result_dir . "/" . $sample_name;
+    my $cur_dir      = $result_dir . "/" . $sample_name;
 
     my $final_name = $prefix . $sample_name;
     push( @result_files, "${cur_dir}/${final_name}_snp.genotype" );
