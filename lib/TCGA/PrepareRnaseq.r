@@ -119,15 +119,9 @@ tumorNames<-colnames(exp)[grepl("01$", colnames(exp))]
 names(normalNames)<-gsub("-11", "", normalNames)
 names(tumorNames)<-gsub("-01", "", tumorNames)
 
-pairShortNames<-intersect(names(normalNames), names(tumorNames))
-normalPairNames<-normalNames[pairShortNames]
-tumorPairNames<-tumorNames[pairShortNames]
-
 exportNames<-list()
-exportNames[["normal"]]<-normalNames
-exportNames[["tumor"]]<-tumorNames
-exportNames[["normal_paired"]]<-normalPairNames
-exportNames[["tumor_paired"]]<-tumorPairNames
+exportNames[["Solid_Tissue_Normal"]]<-normalNames
+exportNames[["Primary_Solid_Tumor"]]<-tumorNames
 
 dataMap<-list()
 dataMap[["count"]]<-exp
