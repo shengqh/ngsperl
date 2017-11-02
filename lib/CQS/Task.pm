@@ -26,10 +26,15 @@ sub result {
   return $result;
 }
 
+sub acceptSample {
+  my ($self, $config, $section, $sampleName) = @_;
+  return (1);
+}
+
 sub can_result_be_empty_file {
   my ( $self, $config, $section ) = @_;
-  my $curSection = get_config_section($config, $section);
-  if(defined $curSection->{can_result_be_empty_file}){
+  my $curSection = get_config_section( $config, $section );
+  if ( defined $curSection->{can_result_be_empty_file} ) {
     return $curSection->{can_result_be_empty_file};
   }
   return 0;
@@ -52,7 +57,7 @@ sub get_clear_map {
 }
 
 sub get_pbs_key {
-  my ($self, $config, $section) = @_;
+  my ( $self, $config, $section ) = @_;
   return $self->{_pbskey};
 }
 
@@ -67,8 +72,8 @@ sub get_pbs_files {
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
   my $result = {};
-  
-  my $pbsKey = $self->get_pbs_key($config, $section);
+
+  my $pbsKey = $self->get_pbs_key( $config, $section );
   if ( $pbsKey eq "" ) {
     $result->{$task_name} = $self->get_pbs_filename( $pbs_dir, $task_name );
   }
@@ -76,7 +81,9 @@ sub get_pbs_files {
     my %fqFiles = %{ get_raw_files( $config, $section, $pbsKey ) };
 
     for my $sample_name ( sort keys %fqFiles ) {
-      $result->{$sample_name} = $self->get_pbs_filename( $pbs_dir, $sample_name );
+      if($self->acceptSample($config, $section, $sample_name)){
+        $result->{$sample_name} = $self->get_pbs_filename( $pbs_dir, $sample_name );
+      }
     }
   }
 
