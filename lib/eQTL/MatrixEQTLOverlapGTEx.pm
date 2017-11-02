@@ -23,6 +23,13 @@ sub new {
   return $self;
 }
 
+sub acceptSample {
+  my ( $self, $config, $section, $sample_name ) = @_;
+  my $gtex_files = get_raw_files( $config, $section );
+  my $matrixEQTL_files = get_raw_files( $config, $section, "matrix_eqtl" );
+  return (exists($gtex_files->{$sample_name}) & exists($matrixEQTL_files->{$sample_name}));
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -47,6 +54,10 @@ sub perform {
   my $expectFiles = $self->result( $config, $section );
 
   for my $sampleName ( keys %$gtex_files ) {
+    if (!$self->acceptSample($config, $section, $sampleName)){
+      next;
+    }
+    
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sampleName );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sampleName );
@@ -83,6 +94,10 @@ sub result {
   my $result = {};
 
   for my $sampleName (keys %$snp_genotype_files) {
+    if (!$self->acceptSample($config, $section, $sampleName)){
+      next;
+    }
+    
     my @result_files = ();
     push( @result_files, "$result_dir/${prefix}${sampleName}.matrixeqtl_gtex.tsv");
     $result->{$sampleName} = filter_array( \@result_files, $pattern );
