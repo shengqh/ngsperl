@@ -172,7 +172,6 @@ sub result {
 
     my @result_files = ();
     push( @result_files, "${result_dir}/${finalFile}" );
-    push( @result_files, "${result_dir}/${finalFile}.stat" );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
