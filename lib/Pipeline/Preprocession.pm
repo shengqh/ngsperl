@@ -348,7 +348,7 @@ sub getPreprocessionConfig {
           perform            => 1,
           rtemplate          => "countInFastQcVis.R",
           output_file        => ".countInFastQcVis.Result",
-          output_file_ext    => ".Reads.csv;.Reads.png",
+          output_file_ext    => ".Reads.csv;.pdf",
           sh_direct          => 1,
           parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.summary.reads.tsv\$" ],
           pbs                => {
