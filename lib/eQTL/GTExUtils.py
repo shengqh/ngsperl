@@ -9,6 +9,8 @@ class GTExItem:
     self.Gene = row["gene"].split('.')[0];
     self.Beta = float(row["beta"]);
     self.Key = self.Locus + ":" + self.Gene
+    self.RefAltKey = self.Locus + ":" + self.RefAllele + ":" + self.AltAllele + ":" + self.Gene 
+    self.AltRefKey = self.Locus + ":" + self.AltAllele + ":" + self.RefAllele + ":" + self.Gene 
 
 def readGTExResult(fileName):
   result = list()
