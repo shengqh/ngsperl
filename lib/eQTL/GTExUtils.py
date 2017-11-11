@@ -8,6 +8,8 @@ class GTExItem:
     self.AltAllele = parts[3];
     self.Gene = row["gene"].split('.')[0];
     self.Beta = float(row["beta"]);
+    self.Pvalue = float(row["p_value"])
+    self.FDR = float(row["gene_q_value"])
     self.Key = self.Locus + ":" + self.Gene
     self.RefAltKey = self.Locus + ":" + self.RefAllele + ":" + self.AltAllele + ":" + self.Gene 
     self.AltRefKey = self.Locus + ":" + self.AltAllele + ":" + self.RefAllele + ":" + self.Gene 
