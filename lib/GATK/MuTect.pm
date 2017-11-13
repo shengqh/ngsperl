@@ -31,14 +31,12 @@ sub perform {
 
   my $muTect_jar = get_param_file( $config->{$section}{muTect_jar}, "muTect_jar", 1 );
   my $faFile     = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
-  my $dbsnpfile  = get_param_file( $config->{$section}{dbsnp_file}, "dbsnp_file", 1 );
 
-  #mouse genome has no corresponding cosmic database
-  my $cosmic_param = "";
+  my $dbsnpfile = get_param_file( $config->{$section}{dbsnp_file}, "dbsnp_file", 0 );
+  my $dbsnpOption = defined $dbsnpfile ? "--dbsnp $dbsnpfile" : "";
+
   my $cosmicfile = get_param_file( $config->{$section}{cosmic_file}, "cosmic_file", 0 );
-  if ( defined $cosmicfile ) {
-    $cosmic_param = "--cosmic $cosmicfile";
-  }
+  my $cosmicOption = defined defined $cosmicfile ? "--cosmic $cosmicfile" : "";
 
   my $java = get_java( $config, $section );
 
@@ -86,7 +84,7 @@ if [ ! -s ${tumor}.bai ]; then
 fi
 
 if [ ! -s $vcf ]; then
-  $java $java_option -jar $muTect_jar --analysis_type MuTect $option --reference_sequence $faFile $cosmic_param --dbsnp $dbsnpfile --input_file:normal $normal --input_file:tumor $tumor -o $out_file --vcf $vcf --enable_extended_output
+  $java $java_option -jar $muTect_jar --analysis_type MuTect $option --reference_sequence $faFile $cosmicOption $dbsnpOption --input_file:normal $normal --input_file:tumor $tumor -o $out_file --vcf $vcf --enable_extended_output
 fi 
 
 if [[ -s $vcf && ! -s $passvcf ]]; then
@@ -109,7 +107,7 @@ fi
 
 ";
 
-    $self->close_pbs($pbs, $pbs_file);
+    $self->close_pbs( $pbs, $pbs_file );
 
     print "$pbs_file created \n";
   }
