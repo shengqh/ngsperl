@@ -36,7 +36,7 @@ sub perform {
   my $dbsnpOption = defined $dbsnpfile ? "--dbsnp $dbsnpfile" : "";
 
   my $cosmicfile = get_param_file( $config->{$section}{cosmic_file}, "cosmic_file", 0 );
-  my $cosmicOption = defined defined $cosmicfile ? "--cosmic $cosmicfile" : "";
+  my $cosmicOption = defined $cosmicfile ? "--cosmic $cosmicfile" : "";
 
   my $java = get_java( $config, $section );
 
