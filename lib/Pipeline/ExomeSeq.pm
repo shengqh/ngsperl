@@ -37,8 +37,14 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_muTect",              0 );
 
   if ( $def->{perform_muTect} ) {
-    initDefaultValue( $def, "indel_realignment", 1 );
-    initDefaultValue( $def, "indel_vcf_files",   $def->{mills} );
+    if ( defined $def->{mills} ) {
+      initDefaultValue( $def, "indel_realignment", 1 );
+      initDefaultValue( $def, "indel_vcf_files",   $def->{mills} );
+    }
+    else {
+      initDefaultValue( $def, "indel_realignment", 0 );
+    }
+    initDefaultValue( $def, "perform_annovar", 1 );
   }
 
   initDefaultValue( $def, "perform_multiqc", 1 );
@@ -94,13 +100,31 @@ sub getConfig {
   if ( $def->{perform_gatk_callvariants} || $def->{perform_muTect} ) {
     my $gatk_jar   = getValue( $def, "gatk_jar" );
     my $picard_jar = getValue( $def, "picard_jar" );
-    my $dbsnp      = getValue( $def, "dbsnp" );
 
+    my $dbsnp = $def->{dbsnp};
+    my $indel_vcf_files;
     if ( $def->{indel_realignment} ) {
-      getValue( $def, "indel_vcf_files" );
+      if ( !defined $def->{indel_vcf_files} & defined $dbsnp ) {
+        $indel_vcf_files = $dbsnp;
+      }
+      else {
+        $indel_vcf_files = getValue( $def, "indel_vcf_files" );
+      }
     }
     my $mills = $def->{mills};
-    my $vcf = defined $mills ? [ $dbsnp, $mills ] : [$dbsnp];
+    my $vcf;
+    if ( defined $dbsnp & defined $mills ) {
+      $vcf = [ $dbsnp, $mills ];
+    }
+    elsif ( defined $dbsnp ) {
+      $vcf = [$dbsnp];
+    }
+    elsif ( defined $mills ) {
+      $vcf = [$mills];
+    }
+    else {
+      $vcf = undef;
+    }
 
     my $refine_name = $def->{aligner} . "_refine";
     $config->{$refine_name} = {
@@ -120,7 +144,7 @@ sub getConfig {
       slim_print_reads         => 1,
       samtools_baq_calibration => 0,
       indel_realignment        => $def->{indel_realignment},
-      indel_vcf_files          => $def->{indel_vcf_files},
+      indel_vcf_files          => $indel_vcf_files,
       sorted                   => 1,
       pbs                      => {
         "email"    => $email,
@@ -241,7 +265,7 @@ sub getConfig {
         source_ref   => [ $refine_name, ".bam\$" ],
         groups_ref   => "groups",
         fasta_file   => $fasta,
-        dbsnp_file   => getValue( $def, "dbsnp" ),
+        dbsnp_file   => $def->{"dbsnp"},
         bychromosome => 0,
         sh_direct    => 0,
         muTect_jar   => getValue( $def, "muTect_jar" ),
@@ -252,27 +276,30 @@ sub getConfig {
           "mem"      => "40gb"
         },
       };
+      push @$summary, "${mutectName}";
 
-      $config->{"${mutectName}_annovar"} = {
-        class      => "Annotation::Annovar",
-        perform    => 1,
-        target_dir => "${target_dir}/${mutectName}_annovar",
-        option     => getValue( $def, "annovar_param" ),
-        annovar_db => getValue( $def, "annovar_db" ),
-        buildver   => getValue( $def, "annovar_buildver" ),
-        source_ref => [ "${mutectName}", ".pass.vcf\$" ],
-        cqstools   => $cqstools,
-        sh_direct  => 1,
-        isvcf      => 1,
-        pbs        => {
-          "email"    => $email,
-          "nodes"    => "1:ppn=1",
-          "walltime" => "72",
-          "mem"      => "10gb"
-        },
-      };
+      if ( $def->{perform_annovar} ) {
+        $config->{"${mutectName}_annovar"} = {
+          class      => "Annotation::Annovar",
+          perform    => 1,
+          target_dir => "${target_dir}/${mutectName}_annovar",
+          option     => getValue( $def, "annovar_param" ),
+          annovar_db => getValue( $def, "annovar_db" ),
+          buildver   => getValue( $def, "annovar_buildver" ),
+          source_ref => [ "${mutectName}", ".pass.vcf\$" ],
+          cqstools   => $cqstools,
+          sh_direct  => 1,
+          isvcf      => 1,
+          pbs        => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=1",
+            "walltime" => "72",
+            "mem"      => "10gb"
+          },
+        };
+        push @$summary, "${mutectName}_annovar";
+      }
 
-      push @$summary, ( "${mutectName}", "${mutectName}_annovar" );
     }
   }
 
