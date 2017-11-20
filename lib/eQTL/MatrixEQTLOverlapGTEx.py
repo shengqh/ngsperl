@@ -71,17 +71,19 @@ def findOverlap(inputFile, bimFile, gtexFile, outputFile, logger):
               unmatched = unmatched + 1
             
             if pvalue == pvalues[0]: 
-              f.write("%s\t%s\t%s\t%s\t%f\t%.2E\t%s\t%s\t%f\t%.2E\t%r\n" %(
+              f.write("%s\t%s\t%s\t%s\t%.2E\t%.2E\t%f\t%s\t%s\t%.2E\t%.2E\t%f\t%r\n" %(
                   b.Locus,
                   b.Gene,
                   b.MajorAllele,
                   b.MinorAllele,
-                  b.Beta,
                   b.Pvalue,
+                  b.FDR,
+                  b.Beta,
                   gtexItem.RefAllele,
                   gtexItem.AltAllele,
-                  gtexItem.Beta,
                   gtexItem.Pvalue,
+                  gtexItem.FDR,
+                  gtexItem.Beta,
                   betaMatch));
                   
         overlap = matched + unmatched
