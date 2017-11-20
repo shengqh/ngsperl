@@ -24,6 +24,10 @@ our $VERSION = '0.01';
 sub initializeDefaultOptions {
   my $def = shift;
 
+  initDefaultValue( $def, "perform_preprocessing",           1 );
+  initDefaultValue( $def, "perform_mapping",                 1 );
+  initDefaultValue( $def, "perform_counting",                1 );
+  initDefaultValue( $def, "perform_correlation",             1 );
   initDefaultValue( $def, "perform_rnaseqc",                 0 );
   initDefaultValue( $def, "perform_qc3bam",                  0 );
   initDefaultValue( $def, "perform_bamplot",                 0 );
@@ -51,17 +55,6 @@ sub getRNASeqConfig {
   my $task    = $def->{task_name};
 
   my $email = $def->{email};
-  my $cqstools = $def->{cqstools} or die "Define cqstools at definition first";
-  my $aligner_index;
-  my $aligner = $def->{aligner};
-  if ( $aligner eq "star" ) {
-    $aligner_index = $def->{star_index} or die "Define star_index at definition first";
-  }
-  else {
-    $aligner_index = $def->{hisat2_index} or die "Define hisat2_index at definition first";
-  }
-  my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
-  my $name_map_file = $def->{name_map_file};
 
   if ( $def->{perform_rnaseqc} ) {
     defined $def->{rnaseqc_jar} or die "Define rnaseqc_jar first!";
@@ -98,12 +91,16 @@ sub getRNASeqConfig {
   my $target_dir = $def->{target_dir};
   my $groups_ref = defined $def->{groups} ? "groups" : undef;
 
-  my $configAlignment;
-  if ( $aligner eq "star" ) {
-    my $starFolder = $target_dir . "/" . getNextFolderIndex($def) . "star";
-    $configAlignment = {
-      "star" => {
-        class                     => "Alignment::STAR",
+  my $count_file_ref = $def->{count_file};
+  if ( $def->{perform_star_featurecount} ) {
+    my $aligner_index   = $def->{star_index} or die "Define star_index at definition first";
+    my $starFolder      = $target_dir . "/" . getNextFolderIndex($def) . "star_featurecount";
+    my $transcript_gtf  = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
+    my $cqstools        = $def->{cqstools};
+    my $name_map_file   = $def->{name_map_file};
+    my $configAlignment = {
+      "star_featurecount" => {
+        class                     => "Alignment::STARFeatureCount",
         perform                   => 1,
         target_dir                => $starFolder,
         option                    => "--twopassMode Basic",
@@ -111,8 +108,12 @@ sub getRNASeqConfig {
         genome_dir                => $aligner_index,
         output_sort_by_coordinate => 1,
         output_to_same_folder     => $def->{output_bam_to_same_folder},
-        sh_direct                 => 0,
-        pbs                       => {
+        featureCount_option       => "-g gene_id -t exon",
+        gff_file                  => $transcript_gtf,
+        ispairend                 => 1,
+
+        sh_direct => 0,
+        pbs       => {
           "email"    => $email,
           "nodes"    => "1:ppn=" . $def->{max_thread},
           "walltime" => "72",
@@ -125,55 +126,9 @@ sub getRNASeqConfig {
         target_dir    => $starFolder,
         output_to_dir => getReportDir($def),
         option        => "",
-        source_ref    => [ "star", "_Log.final.out" ],
+        source_ref    => [ "star_featurecount", "_Log.final.out" ],
         sh_direct     => 1,
         pbs           => {
-          "email"    => $email,
-          "nodes"    => "1:ppn=1",
-          "walltime" => "72",
-          "mem"      => "40gb"
-        },
-      }
-    };
-
-    $source_ref = [ "star", "_Aligned.sortedByCoord.out.bam\$" ];
-    push @$summary, ("${aligner}_summary");
-  }
-  else {
-    $configAlignment = {
-      hisat2 => {
-        perform               => 1,
-        target_dir            => $target_dir . "/" . getNextFolderIndex($def) . "hisat2",
-        class                 => "Alignment::Hisat2",
-        option                => "",
-        source_ref            => $source_ref,
-        genome_dir            => $aligner_index,
-        output_to_same_folder => $def->{output_bam_to_same_folder},
-        sh_direct             => 1,
-        pbs                   => {
-          "email"    => $email,
-          "nodes"    => "1:ppn=" . $def->{max_thread},
-          "walltime" => "72",
-          "mem"      => "40gb"
-        },
-      },
-    };
-    $source_ref = [ "hisat2", ".bam\$" ];
-  }
-
-  $configAlignment = merge(
-    $configAlignment,
-    {
-      "featurecount" => {
-        class      => "Count::FeatureCounts",
-        perform    => 1,
-        target_dir => $target_dir . "/" . getNextFolderIndex($def) . "featurecount",
-        option     => "-g gene_id -t exon",
-        source_ref => $source_ref,
-        gff_file   => $transcript_gtf,
-        ispairend  => 1,
-        sh_direct  => 0,
-        pbs        => {
           "email"    => $email,
           "nodes"    => "1:ppn=1",
           "walltime" => "72",
@@ -185,7 +140,7 @@ sub getRNASeqConfig {
         perform       => 1,
         target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "genetable",
         option        => "-k 0 -v 6 -e --fillMissingWithZero",
-        source_ref    => "featurecount",
+        source_ref    => [ "star_featurecount", ".count" ],
         name_map_file => $name_map_file,
         cqs_tools     => $cqstools,
         sh_direct     => 1,
@@ -196,34 +151,171 @@ sub getRNASeqConfig {
           "mem"      => "10gb"
         },
       },
-      "genetable_correlation" => {
-        class           => "CQS::UniqueR",
-        perform         => 1,
-        rCode           => "usePearsonInHCA<-" . $def->{use_pearson_in_hca} . "; useGreenRedColorInHCA<-" . $def->{use_green_red_color_in_hca} . "; top25cvInHCA<-" . $def->{top25cv_in_hca} . "; ",
-        target_dir      => $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation",
-        output_to_dir   => getReportDir($def),
-        rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
-        output_file     => "parameterSampleFile1",
-        output_file_ext => ".Correlation.png",
-        parameterSampleFile1_ref => [ "genetable", ".count\$" ],
-        parameterSampleFile2_ref => $groups_ref,
-        sh_direct                => 1,
-        pbs                      => {
-          "email"    => $email,
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
-        },
-      }
-    }
-  );
+    };
 
-  $config = merge( $config, $configAlignment );
-  push @$individual, ( "${aligner}", "featurecount" );
-  push @$summary,    ( "genetable",  "genetable_correlation" );
+    $source_ref = [ "star_featurecount", "_Aligned.sortedByCoord.out.bam\$" ];
+    push @$individual, ("star_featurecount");
+    push @$summary, ( "star_summary", "genetable" );
+
+    $count_file_ref = [ "genetable", ".count\$" ];
+    $config = merge( $config, $configAlignment );
+  }
+  else {
+
+    if ( $def->{perform_mapping} ) {
+      my $aligner_index;
+      my $aligner = $def->{aligner};
+      if ( $aligner eq "star" ) {
+        $aligner_index = $def->{star_index} or die "Define star_index at definition first";
+      }
+      else {
+        $aligner_index = $def->{hisat2_index} or die "Define hisat2_index at definition first";
+      }
+
+      my $configAlignment;
+      if ( $aligner eq "star" ) {
+        my $starFolder = $target_dir . "/" . getNextFolderIndex($def) . "star";
+        $configAlignment = {
+          "star" => {
+            class                     => "Alignment::STAR",
+            perform                   => 1,
+            target_dir                => $starFolder,
+            option                    => "--twopassMode Basic",
+            source_ref                => $source_ref,
+            genome_dir                => $aligner_index,
+            output_sort_by_coordinate => 1,
+            output_to_same_folder     => $def->{output_bam_to_same_folder},
+            sh_direct                 => 0,
+            pbs                       => {
+              "email"    => $email,
+              "nodes"    => "1:ppn=" . $def->{max_thread},
+              "walltime" => "72",
+              "mem"      => "40gb"
+            },
+          },
+          "star_summary" => {
+            class         => "Alignment::STARSummary",
+            perform       => 1,
+            target_dir    => $starFolder,
+            output_to_dir => getReportDir($def),
+            option        => "",
+            source_ref    => [ "star", "_Log.final.out" ],
+            sh_direct     => 1,
+            pbs           => {
+              "email"    => $email,
+              "nodes"    => "1:ppn=1",
+              "walltime" => "72",
+              "mem"      => "40gb"
+            },
+          }
+        };
+
+        $source_ref = [ "star", "_Aligned.sortedByCoord.out.bam\$" ];
+        push @$summary, ("star_summary");
+      }
+      else {
+        $configAlignment = {
+          hisat2 => {
+            perform               => 1,
+            target_dir            => $target_dir . "/" . getNextFolderIndex($def) . "hisat2",
+            class                 => "Alignment::Hisat2",
+            option                => "",
+            source_ref            => $source_ref,
+            genome_dir            => $aligner_index,
+            output_to_same_folder => $def->{output_bam_to_same_folder},
+            sh_direct             => 1,
+            pbs                   => {
+              "email"    => $email,
+              "nodes"    => "1:ppn=" . $def->{max_thread},
+              "walltime" => "72",
+              "mem"      => "40gb"
+            },
+          },
+        };
+        $source_ref = [ "hisat2", ".bam\$" ];
+      }
+
+      $config = merge( $config, $configAlignment );
+      push @$individual, $aligner;
+    }
+
+    if ( $def->{perform_counting} ) {
+      my $cqstools       = $def->{cqstools};
+      my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
+      my $name_map_file  = $def->{name_map_file};
+      my $configCounting = {
+        "featurecount" => {
+          class      => "Count::FeatureCounts",
+          perform    => 1,
+          target_dir => $target_dir . "/" . getNextFolderIndex($def) . "featurecount",
+          option     => "-g gene_id -t exon",
+          source_ref => $source_ref,
+          gff_file   => $transcript_gtf,
+          ispairend  => 1,
+          sh_direct  => 0,
+          pbs        => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=1",
+            "walltime" => "72",
+            "mem"      => "40gb"
+          },
+        },
+        "genetable" => {
+          class         => "CQS::CQSDatatable",
+          perform       => 1,
+          target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "genetable",
+          option        => "-k 0 -v 6 -e --fillMissingWithZero",
+          source_ref    => "featurecount",
+          name_map_file => $name_map_file,
+          cqs_tools     => $cqstools,
+          sh_direct     => 1,
+          pbs           => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=1",
+            "walltime" => "10",
+            "mem"      => "10gb"
+          },
+        },
+      };
+
+      $config = merge( $config, $configCounting );
+      push @$individual, "featurecount";
+      push @$summary,    "genetable";
+
+      $count_file_ref = [ "genetable", ".count\$" ];
+    }
+  }
+
+  if ( $def->{perform_correlation} ) {
+    $config->{"genetable_correlation"} = {
+      class           => "CQS::UniqueR",
+      perform         => 1,
+      rCode           => "usePearsonInHCA<-" . $def->{use_pearson_in_hca} . "; useGreenRedColorInHCA<-" . $def->{use_green_red_color_in_hca} . "; top25cvInHCA<-" . $def->{top25cv_in_hca} . "; ",
+      target_dir      => $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation",
+      output_to_dir   => getReportDir($def),
+      rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
+      output_file     => "parameterSampleFile1",
+      output_file_ext => ".Correlation.png",
+      parameterSampleFile2_ref => $groups_ref,
+      sh_direct                => 1,
+      pbs                      => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
+      },
+    };
+    if ( ref($count_file_ref) eq "ARRAY" ) {
+      $config->{genetable_correlation}{parameterSampleFile1_ref} = $count_file_ref;
+    }
+    else {
+      $config->{genetable_correlation}{parameterSampleFile1} = $count_file_ref;
+    }
+    push @$summary, "genetable_correlation";
+  }
 
   if ( defined $def->{pairs} ) {
-    my $deseq2taskname = addDEseq2( $config, $def, $summary, "genetable", [ "genetable", ".count\$" ], $def->{target_dir}, $def->{DE_min_median_read} );
+    my $deseq2taskname = addDEseq2( $config, $def, $summary, "genetable", $count_file_ref, $def->{target_dir}, $def->{DE_min_median_read} );
 
     if ( $def->{perform_webgestalt} ) {
       my $webgestaltTaskName = $deseq2taskname . "_WebGestalt";
@@ -248,6 +340,7 @@ sub getRNASeqConfig {
   }
 
   if ( $def->{perform_rnaseqc} ) {
+    my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
     $config->{rnaseqc} = {
       class          => "QC::RNASeQC",
       perform        => 1,
@@ -270,6 +363,7 @@ sub getRNASeqConfig {
   }
 
   if ( $def->{perform_qc3bam} ) {
+    my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
     $config->{qc3} = {
       class          => "QC::QC3bam",
       perform        => 1,
