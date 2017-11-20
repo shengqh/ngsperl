@@ -394,7 +394,11 @@ for (i in 1:nrow(countTableFileAll)) {
   
   if (groupFileList!="") {
     groups<-sampleToGroup$V2
-    colors<-primary.colors(length(unique(groups)))
+    if(length(unique(groups)) > 8){
+      colors<-primary.colors(length(unique(groups)))
+    }else{
+      colors<-rainbow(length(unique(groups)))
+    }
     conditionColors<-as.matrix(data.frame(Group=colors[groups]))
   }else{
     groups<-NA
