@@ -15,14 +15,14 @@ my $def = {
   cqstools   => "/home/shengq2/cqstools/cqstools.exe",
 
   #mapping
-  aligner   => "bwa",
-  bwa_fasta => "/scratch/cqs/shengq2/references/gatk/b37/bwa_index_0.7.12/human_g1k_v37.fasta",
+  aligner    => "bwa",
+  bwa_fasta  => "/scratch/cqs/shengq2/references/gatk/b37/bwa_index_0.7.12/human_g1k_v37.fasta",
+  picard_jar => "/scratch/cqs/shengq2/local/bin/picard/picard.jar",
+  gatk_jar                    => "/scratch/cqs/shengq2/local/bin/gatk/GenomeAnalysisTK.jar",
 
   #call variants
   perform_gatk_callvariants   => 1,
   gatk_callvariants_vqsr_mode => 0,
-  gatk_jar                    => "/scratch/cqs/shengq2/local/bin/gatk/GenomeAnalysisTK.jar",
-  picard_jar                  => "/scratch/cqs/shengq2/local/bin/picard/picard.jar",
   dbsnp                       => "/scratch/cqs/shengq2/references/gatk/b37/dbsnp_150.b37.vcf",
   hapmap                      => "/scratch/cqs/shengq2/references/gatk/b37/hapmap_3.3.b37.vcf",
   omni                        => "/scratch/cqs/shengq2/references/gatk/b37/1000G_omni2.5.b37.vcf",
