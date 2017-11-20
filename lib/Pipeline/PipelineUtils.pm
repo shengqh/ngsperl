@@ -230,6 +230,14 @@ sub addDEseq2 {
       "mem"       => "10gb"
     },
   };
+
+  if ( ref($countfileRef) eq "ARRAY" ) {
+    $config->{$taskName}{countfile_ref} = $countfileRef;
+  }
+  else {
+    $config->{$taskName}{countfile} = $countfileRef;
+  }
+
   push @$summary, $taskName;
   return $taskName;
 }
