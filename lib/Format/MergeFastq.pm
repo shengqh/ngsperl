@@ -27,7 +27,11 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $ispaired = get_option( $config, $section, "is_paired" );
+  my $ispaired    = get_option( $config, $section, "is_paired" );
+  my $is_collated = get_option( $config, $section, "is_collated", 0 );
+  my $is_bzipped  = get_option( $config, $section, "is_bzipped", 0 );
+  my $cat_command = $is_bzipped ? "bzcat" : "zcat";
+
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -54,7 +58,7 @@ sub perform {
       my $file_count = scalar(@sample_files);
       die "file count $file_count is not even for sample $sample_name @sample_files " if $file_count % 2 != 0;
 
-      if ( scalar(@sample_files) == 2 ) {
+      if ( ( scalar(@sample_files) == 2 ) && ( !$is_bzipped ) ) {
         print $pbs "ln -s $sample_files[0] $final_1_file \n";
         print $pbs "ln -s $sample_files[1] $final_2_file \n";
 
@@ -70,17 +74,36 @@ if [ -s $final_2_fastq ]; then
   rm $final_2_fastq
 fi
 ";
-        for ( my $sample_index = 0 ; $sample_index < $file_count ; $sample_index += 2 ) {
-          print $pbs "
+        if ($is_collated) {
+          for ( my $sample_index = 0 ; $sample_index < $file_count / 2 ; $sample_index++ ) {
+            print $pbs "
+echo merging $sample_files[$sample_index] ...
+$cat_command $sample_files[$sample_index] >> $final_1_fastq 
+";
+          }
+          for ( my $sample_index = $file_count / 2 ; $sample_index < $file_count ; $sample_index++ ) {
+            print $pbs "
+echo merging $sample_files[$sample_index] ...
+$cat_command $sample_files[$sample_index] >> $final_2_fastq
+";
+          }
+
+        }
+        else {
+          for ( my $sample_index = 0 ; $sample_index < $file_count ; $sample_index += 2 ) {
+            print $pbs "
 echo merging $sample_files[$sample_index] ...
 zcat $sample_files[$sample_index] >> $final_1_fastq 
+
 echo merging $sample_files[$sample_index+1] ...
 zcat $sample_files[$sample_index+1] >> $final_2_fastq 
 ";
+          }
         }
         print $pbs "
 echo gzipping $final_1_fastq ...
 gzip $final_1_fastq 
+
 echo gzipping $final_2_fastq ...
 gzip $final_2_fastq 
 ";
@@ -133,7 +156,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $ispaired = get_option( $config, $section, "is_paired");
+  my $ispaired = get_option( $config, $section, "is_paired" );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -141,8 +164,8 @@ sub result {
   for my $sample_name ( keys %raw_files ) {
     my @result_files = ();
     if ($ispaired) {
-      my $final_1_file  = $sample_name . ".1.fastq.gz";
-      my $final_2_file  = $sample_name . ".2.fastq.gz";
+      my $final_1_file = $sample_name . ".1.fastq.gz";
+      my $final_2_file = $sample_name . ".2.fastq.gz";
       push( @result_files, $result_dir . "/" . $final_1_file );
       push( @result_files, $result_dir . "/" . $final_2_file );
     }
