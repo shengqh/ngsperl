@@ -28,7 +28,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
-  my $ispaired = get_option_value( $config->{$section}{ispairend}, 0 );
+  my $ispaired = get_option( $config, $section, "ispairend");
   if ($ispaired) {
     $option = $option . " -p";
   }
