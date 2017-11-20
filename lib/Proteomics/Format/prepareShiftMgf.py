@@ -51,19 +51,20 @@ with open(args.input, 'r') as sr:
       count = 0
       bInScan = False
       for line in sr:
-        if line.startswith("###MSMS"):
+        if line.startswith("BEGIN IONS"):
+          bInScan=True
           count = count+1
           if count % 10000 == 0:
             logger.info("%d" % count)
             #break
         elif line.startswith("TITLE="):
           title = line[6:].rstrip()
-          bInScan=True
         elif line.startswith("PEPMASS="):
           precursorMz = float(line[8:].rstrip())
         elif line.startswith("CHARGE=") and bInScan:
           charge = int(line[7])
           precursorMass = (precursorMz - 1.007825035) * charge
+        elif line.startswith("END IONS") and bInScan:
           sw.write("%f\t%f\t0.5\t0\t10\t1\n" % (precursorMass, precursorMass + args.shift_dalton))
 
 logger.info("finding optimal shift precursor ...")
