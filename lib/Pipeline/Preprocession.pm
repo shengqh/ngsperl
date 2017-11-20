@@ -23,6 +23,7 @@ our $VERSION = '0.01';
 sub initializeDefaultOptions {
   my $def = shift;
 
+  initDefaultValue( $def, "perform_preprocessing",     1 );
   initDefaultValue( $def, "cluster",                   'slurm' );
   initDefaultValue( $def, "sra_to_fastq",              0 );
   initDefaultValue( $def, "merge_fastq",               0 );
@@ -59,13 +60,13 @@ sub getPreprocessionConfig {
   $def->{VERSION} = $VERSION;
 
   my $target_dir = create_directory_or_die( getValue( $def, "target_dir" ) );
+  $def = initializeDefaultOptions($def);
 
   my $preprocessing_dir = $target_dir;
-  if ( $def->{subdir} ) {
+  if ($def->{perform_preprocessing} && $def->{subdir} ) {
     $preprocessing_dir = create_directory_or_die( $target_dir . "/preprocessing" );
   }
 
-  $def = initializeDefaultOptions($def);
   my $is_paired = $def->{is_paired};
   if ( not defined $is_paired ) {
     $is_paired = $def->{pairend};
@@ -75,7 +76,26 @@ sub getPreprocessionConfig {
   my $cluster  = getValue( $def, "cluster" );
   my $task     = getValue( $def, "task_name" );
   my $email    = getValue( $def, "email" );
-  my $cqstools = getValue( $def, "cqstools" );
+
+  #data
+  my $config = {
+    general => {
+      task_name => $task,
+      cluster   => $cluster
+    },
+    constraint => $def->{constraint},
+    account    => $def->{account},
+    files      => $def->{files},
+    groups     => $def->{groups},
+    pairs      => $def->{pairs},
+  };
+  my $source_ref = ["files"];
+  my $individual = [];
+  my $summary    = [];
+
+  if ( !$def->{perform_preprocessing} ) {
+    return ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $source_ref );
+  }
 
   #task
   if ( $def->{sra_to_fastq} ) {
@@ -107,22 +127,6 @@ sub getPreprocessionConfig {
     $fastq_remove_N = 0;
   }
 
-  #data
-  my $config = {
-    general => {
-      task_name => $task,
-      cluster   => $cluster
-    },
-    constraint => $def->{constraint},
-    account    => $def->{account},
-    groups     => $def->{groups},
-    pairs      => $def->{pairs},
-  };
-
-  my $source_ref;
-  my $individual = [];
-  my $summary    = [];
-
   if ( $def->{sra_to_fastq} ) {
     $config->{sra2fastq} = {
       class      => "SRA::FastqDump",
@@ -130,7 +134,7 @@ sub getPreprocessionConfig {
       ispaired   => $is_paired,
       target_dir => $def->{target_dir} . "/" . getNextFolderIndex($def) . "sra2fastq",
       option     => "",
-      source     => $def->{files},
+      source     => $source_ref,
       sh_direct  => 1,
       cluster    => $def->{cluster},
       not_clean  => getValue( $def, "sra_not_clean", 1 ),
@@ -144,22 +148,20 @@ sub getPreprocessionConfig {
     $source_ref = "sra2fastq";
     push @$individual, ("sra2fastq");
   }
-  else {
-    $config->{files} = getValue( $def, "files" );
-    $source_ref = "files";
-  }
 
   if ( $def->{merge_fastq} ) {
     $config->{merge_fastq} = {
-      class      => "Format::MergeFastq",
-      perform    => 1,
-      target_dir => $def->{target_dir} . "/" . getNextFolderIndex($def) . "merge_fastq",
-      option     => "",
-      source_ref => $source_ref,
-      sh_direct  => 1,
-      is_paired  => $is_paired,
-      cluster    => $def->{cluster},
-      pbs        => {
+      class       => "Format::MergeFastq",
+      perform     => 1,
+      target_dir  => $def->{target_dir} . "/" . getNextFolderIndex($def) . "merge_fastq",
+      option      => "",
+      source_ref  => $source_ref,
+      sh_direct   => 1,
+      is_paired   => $is_paired,
+      is_bzipped  => $def->{is_bzipped},
+      is_collated => $def->{is_collated},
+      cluster     => $def->{cluster},
+      pbs         => {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=2",
         "walltime" => "2",
