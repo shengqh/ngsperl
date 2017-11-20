@@ -294,8 +294,6 @@ for(countfile_index in c(1:length(countfiles))){
   
   comparisonNames=comparisons$ComparisonName
   
-  dir.create("details", showWarnings = FALSE)
-  
   pairedspearman<-list()
   
   newVarInData<-setdiff(colnames(data),colnames(dataAllOut))
@@ -447,6 +445,8 @@ for(countfile_index in c(1:length(countfiles))){
       
       sptable<-data.frame(Name=pairedSamples, Spcorr=spcorr)
       write.csv(sptable, file=paste0(prefix, "_Spearman.csv"), row.names=FALSE)
+
+      dir.create("details", showWarnings = FALSE)
       
       lapply(c(1:length(pairedSamples)), function(x){
         samples<-designData$Sample[designData$Paired==pairedSamples[x]]
