@@ -36,9 +36,9 @@ sub getKnownSitesVcf {
   my @sitesVcfFiles = @{$sitesVcfFiles};
 
   if ( defined $config->{$section}{indel_vcf_files} ) {
-    my $vcfFiles = $config->{$section}{indel_vcf_files};
+    my $vcfFiles     = $config->{$section}{indel_vcf_files};
     my @vcfFileArray = ( ref($vcfFiles) eq "ARRAY" ) ? @{$vcfFiles} : ($vcfFiles);
-    my @out = keys %{ { map { ( $_ => 1 ) } ( @sitesVcfFiles, @vcfFileArray ) } };
+    my @out          = keys %{ { map { ( $_ => 1 ) } ( @sitesVcfFiles, @vcfFileArray ) } };
     @sitesVcfFiles = @out;
   }
 
@@ -73,13 +73,12 @@ sub perform {
 
   my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals", 0 ) ? "-fixMisencodedQuals" : "";
 
-  my $sorted               = get_option( $config, $section, "sorted",                   0 );
-  my $remove_duplicate     = get_option( $config, $section, "remove_duplicate",         1 );
-  my $indelRealignment     = get_option( $config, $section, "indel_realignment",        0 );
-  my $slim                 = get_option( $config, $section, "slim_print_reads",         1 );
-  my $use_self_slim_method = get_option( $config, $section, "use_self_slim_method",     0 );
-  my $baq                  = get_option( $config, $section, "samtools_baq_calibration", 0 );
-  my $mark_duplicate       = get_option( $config, $section, "mark_duplicate",           0 );
+  my $sorted           = get_option( $config, $section, "sorted",                   0 );
+  my $remove_duplicate = get_option( $config, $section, "remove_duplicate",         1 );
+  my $indelRealignment = get_option( $config, $section, "indel_realignment",        0 );
+  my $slim             = get_option( $config, $section, "slim_print_reads",         1 );
+  my $baq              = get_option( $config, $section, "samtools_baq_calibration", 0 );
+  my $mark_duplicate   = get_option( $config, $section, "mark_duplicate",           0 );
 
   my $removeDupLabel;
   if ($remove_duplicate) {
@@ -126,10 +125,9 @@ sub perform {
     elsif ($mark_duplicate) {
       $rmdupResultName = ".markdup";
     }
-    my $slimResultName  = $slim             ? ".slim"  : "";
     my $indelResultName = $indelRealignment ? ".indel" : "";
     my $baqResultName   = $baq              ? ".baq"   : "";
-    my $final_file      = "${sample_name}${rmdupResultName}.recal${slimResultName}${indelResultName}${baqResultName}.bam";
+    my $final_file      = "${sample_name}${rmdupResultName}${indelResultName}.recal${baqResultName}.bam";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -144,6 +142,7 @@ sub perform {
     my $rmlist       = "";
     my $inputFile    = $sampleFile;
     my $resultPrefix = $sample_name;
+
     if ( !$sorted ) {
       my $presortedFile = $sample_name . ".sorted.bam";
       print $pbs "
@@ -157,6 +156,7 @@ fi
       $rmlist    = $rmlist . " $presortedFile ${presortedFile}.bai";
     }
 
+    my $lastFileList = "";
     if ( $remove_duplicate or $mark_duplicate ) {
       my $rmdupFile = $sample_name . $rmdupResultName . ".bam";
       my $rmdupFileIndex = change_extension( $rmdupFile, ".bai" );
@@ -170,17 +170,30 @@ fi
       $rmlist    = $rmlist . " $rmdupFile $rmdupFileIndex";
     }
 
-    my $recalTable     = "${sample_name}${rmdupResultName}.recal.table";
-    my $recalFile      = "${sample_name}${rmdupResultName}.recal.bam";
-    my $recalFileIndex = change_extension( $recalFile, ".bai" );
-    my $slimFile       = "${sample_name}${rmdupResultName}.recal${slimResultName}.bam";
-    my $slimFileIndex  = change_extension( $slimFile, ".bai" );
-    my $printOptions   = "";
-    if ( $slim and !$use_self_slim_method ) {
-      $printOptions   = " --simplifyBAM";
-      $recalFile      = $slimFile;
-      $recalFileIndex = $slimFileIndex;
+    my $indelFile = "${sample_name}${rmdupResultName}${indelResultName}.bam";
+    my $indelFileIndex = change_extension( $indelFile, ".bai" );
+    if ($indelRealignment) {
+      my $intervalFile = "${sample_name}${rmdupResultName}${indelResultName}.intervals";
+      print $pbs "
+if [[ -s $inputFile && ! -s $indelFile ]]; then
+  echo RealignerTargetCreator=`date` 
+  java $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $inputFile -R $faFile $indel_vcf -o $intervalFile $restrict_intervals
+fi
+
+if [[ -s $intervalFile && ! -s $indelFile ]]; then
+  echo IndelRealigner=`date` 
+  #InDel parameter referenced: http://www.broadinstitute.org/gatk/guide/tagged?tag=local%20realignment
+  java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $fixMisencodedQuals -I $inputFile -R $faFile -targetIntervals $intervalFile $indel_vcf --consensusDeterminationModel USE_READS -LOD 0.4 -o $indelFile 
+fi  
+";
+      $inputFile = $indelFile;
+      $rmlist    = $rmlist . " $indelFile $indelFileIndex $intervalFile";
     }
+
+    my $recalTable     = "${sample_name}${rmdupResultName}${indelResultName}.recal.table";
+    my $recalFile      = "${sample_name}${rmdupResultName}${indelResultName}.recal.bam";
+    my $recalFileIndex = change_extension( $recalFile, ".bai" );
+    my $printOptions   = "";
 
     print $pbs "
 if [[ -s $inputFile && ! -s $recalTable ]]; then
@@ -190,49 +203,18 @@ fi
 
 if [[ -s $recalTable && ! -s $recalFile ]]; then
   echo PrintReads=`date`
-  java $option -jar $gatk_jar -T PrintReads $printOptions -nct $thread -rf BadCigar -R $faFile -I $inputFile -BQSR $recalTable -o $recalFile 
+  java $option -jar $gatk_jar -T PrintReads --simplifyBAM -nct $thread -rf BadCigar -R $faFile -I $inputFile -BQSR $recalTable -o $recalFile 
 fi
 ";
-    if ( $slim and $use_self_slim_method ) {
-      $rmlist = $rmlist . " $recalFile $recalFileIndex";
-      print $pbs "
-if [[ -s $recalFile && ! -s $slimFile ]]; then
-  echo slim=`date` 
-  samtools view -h $recalFile | sed 's/\\tBD\:Z\:[^\\t]*//' | sed 's/\\tPG\:Z\:[^\\t]*//' | sed 's/\\tBI\:Z\:[^\\t]*//' | samtools view -S -b > $slimFile
-  samtools index $slimFile
-  mv ${slimFile}.bai $slimFileIndex
-fi  
-";
-    }
-
-    my $indelFile = "${sample_name}${rmdupResultName}.recal${slimResultName}${indelResultName}.bam";
-    my $indelFileIndex = change_extension( $indelFile, ".bai" );
-    if ($indelRealignment) {
-      my $intervalFile = "${sample_name}${rmdupResultName}.recal${slimResultName}${indelResultName}.intervals";
-      $rmlist = $rmlist . " $slimFile $slimFileIndex $intervalFile";
-      print $pbs "
-if [[ -s $slimFile && ! -s $indelFile ]]; then
-  echo RealignerTargetCreator=`date` 
-  java $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $slimFile -R $faFile $indel_vcf -o $intervalFile $restrict_intervals
-fi
-
-if [[ -s $intervalFile && ! -s $indelFile ]]; then
-  echo IndelRealigner=`date` 
-  #InDel parameter referenced: http://www.broadinstitute.org/gatk/guide/tagged?tag=local%20realignment
-  java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $fixMisencodedQuals -I $slimFile -R $faFile -targetIntervals $intervalFile $indel_vcf --consensusDeterminationModel USE_READS -LOD 0.4 -o $indelFile 
-fi  
-";
-    }
-
     if ($baq) {
       print $pbs "
-if [[ -s $indelFile && ! -s $final_file ]]; then
+if [[ -s $recalFile && ! -s $final_file ]]; then
   echo baq = `date` 
-  samtools calmd -Abr $indelFile $faFile > $final_file 
+  samtools calmd -Abr $recalFile $faFile > $final_file 
   samtools index $final_file 
 fi
 ";
-      $rmlist = $rmlist . " $indelFile $indelFileIndex";
+      $rmlist = $rmlist . " $recalFile $recalFileIndex";
     }
 
     print $pbs "
@@ -261,12 +243,10 @@ sub result {
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $remove_duplicate = get_option( $config, $section, "remove_duplicate",         1 );
   my $indelRealignment = get_option( $config, $section, "indel_realignment",        0 );
-  my $slim             = get_option( $config, $section, "slim_print_reads",         1 );
   my $baq              = get_option( $config, $section, "samtools_baq_calibration", 0 );
   my $mark_duplicate   = get_option( $config, $section, "mark_duplicate",           0 );
 
   my $indelResultName = $indelRealignment ? ".indel" : "";
-  my $slimResultName  = $slim             ? ".slim"  : "";
   my $baqResultName   = $baq              ? ".baq"   : "";
   my $rmdupResultName = "";
   if ($remove_duplicate) {
@@ -278,7 +258,7 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $final_file   = "${sample_name}${rmdupResultName}.recal${slimResultName}${indelResultName}${baqResultName}.bam";
+    my $final_file   = "${sample_name}${rmdupResultName}${indelResultName}.recal${baqResultName}.bam";
     my @result_files = ();
     push( @result_files, "${result_dir}/${final_file}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
