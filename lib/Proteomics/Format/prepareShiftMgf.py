@@ -6,7 +6,7 @@ import os
 import subprocess
 from MgfUtils import MgfItem
 
-DEBUG=True
+DEBUG=False
 NOT_DEBUG=not DEBUG
 
 parser = argparse.ArgumentParser(description="Shift precursor mass in MGF file.",
@@ -40,9 +40,9 @@ with open(args.shift_option_file, 'r') as sr:
   with open(paramFile, 'w') as sw:
     for line in sr:
       if line.startswith("input_path_search"):
-        sw.write("input_path_search=%s\n" % inputFile)
+        sw.write("input_path_search=%s\n" % os.path.abspath(inputFile))
       elif line.startswith("output_path_result"):
-        sw.write("output_path_result=%s\n" % outputFile)
+        sw.write("output_path_result=%s\n" % os.path.abspath(outputFile))
       else:
         sw.write("%s\n" % line.rstrip())
 
@@ -65,10 +65,11 @@ with open(args.input, 'r') as sr:
           charge = int(line[7])
           precursorMass = (precursorMz - 1.007825035) * charge
         elif line.startswith("END IONS") and bInScan:
-          sw.write("%f\t%f\t0.5\t0\t10\t1\n" % (precursorMass, precursorMass + args.shift_dalton))
+          sw.write("%s\t%f\t%f\t0.5\t0\t10\t1\n" % (title, precursorMass, precursorMass + args.shift_dalton))
 
 logger.info("finding optimal shift precursor ...")
-proc = subprocess.Popen([args.shift_software, paramFile], cwd=os.path.dirname(args.shift_software), stdout=subprocess.PIPE)
+proc = subprocess.Popen([os.path.abspath(args.shift_software), os.path.abspath(paramFile)], cwd=os.path.dirname(args.shift_software), stdout=subprocess.PIPE)
+
 while True:
   line = proc.stdout.readline().rstrip()
   if "The size of query result is" in line:
