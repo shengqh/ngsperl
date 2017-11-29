@@ -31,7 +31,6 @@ sub perform {
 
   my $param_file = get_param_file( $config->{$section}{param_file}, "param_file", 1 );
   my $database   = get_param_file( $config->{$section}{database},   "database",   1 );
-  my $delete_temp_ms2 = get_option( $config, $section, "delete_temp_ms2", 1 );
 
   open my $handle, '<', $param_file;
   chomp( my @lines = <$handle> );
@@ -58,35 +57,16 @@ sub perform {
 
     for my $sampleFile (@sample_files) {
       my $sname = basename($sampleFile);
-      my $result_file = change_extension( $sname, ".pep.xml" );
+      my $result_prefix = change_extension( $sname, "" );
+      my $result_file = $result_prefix . ".pep.xml";
 
       print $pbs "if [ ! -s $result_file ]; then\n";
 
-      my $ismgf = $sname =~ /\.mgf$/i;
-      my $tempFile = $result_dir . "/" . change_extension( $sname, ".ms2" );
-
-      if ($ismgf) {
-        my $proteomicstools = get_param_file( $config->{$section}{proteomicstools}, "proteomicstools", 1 );
-        my $titleformat = get_option( $config, $section, "titleformat" );
-        print $pbs "  if [ ! -s $tempFile ]; then
-    mono $proteomicstools MGF2MS2 -i $sampleFile -t $titleformat -o $tempFile
-  fi
-";
-        $sampleFile = $tempFile;
-      }
-
-      print $pbs "  comet -P$param_file -D$database $sampleFile
+      print $pbs "  comet -P$param_file -D$database -N$result_prefix $sampleFile
   if [ -s $result_file ]; then
     RefreshParser $result_file $database
   fi
 ";
-
-      if ( $ismgf && $delete_temp_ms2 ) {
-        print $pbs "  if [ -s $result_file ]; then
-    rm $tempFile
-  fi
-";
-      }
 
       print $pbs "
 fi
