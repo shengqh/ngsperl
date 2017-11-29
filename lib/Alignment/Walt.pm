@@ -59,10 +59,10 @@ sub perform {
     my $rmlist = "";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file );
 
-			print $pbs "
-if [ ! -s $result_file ]; then
-  echo zcat=`date`
-";
+#			print $pbs "
+#if [ ! -s $result_file ]; then
+#  echo zcat=`date`
+#";
 	if ($sample_files[0]=~/\.gz$/) { #.gz fle, need to zcat
 		my @sample_files_unzip=();
 		foreach my $sampleFile (@sample_files) {
@@ -70,15 +70,18 @@ if [ ! -s $result_file ]; then
 			push @sample_files_unzip,$sampleFileUnzip;
 			print $pbs "
   if [ ! -s $sampleFileUnzip ]; then
+      echo zcat=`date`
       zcat $sampleFile > $sampleFileUnzip
   fi
 ";
 			$rmlist=$rmlist. " $sampleFileUnzip"
 		}
-					print $pbs "
-fi
-";
+#					print $pbs "
+#fi
+#";
 		$sample_files_str = ( scalar(@sample_files_unzip) == 2 ) ? "-1 " . $sample_files_unzip[0] . " -2 " . $sample_files_unzip[1]: "-1 " . $sample_files_unzip[0];
+	} else { #NOT .gz fle
+	  $sample_files_str = ( scalar(@sample_files) == 2 ) ? "-1 " . $sample_files[0] . " -2 " . $sample_files[1]: "-1 " . $sample_files[0];
 	}
 	
     print $pbs "
