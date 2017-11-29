@@ -732,7 +732,7 @@ sub getSmallRNAConfig {
           source3_ref => ["bowtie1_genome_1mm_NTA_pmnames"],
           output_ext  => "_clipped_identical.unmapped.fastq.gz",
           output_other_ext =>
-"_clipped_identical.unmapped.fastq.dupcount,_clipped_identical.mappedToHostGenome.dupcount,_clipped_identical.mappedToHostGenome.fastq.gz,_clipped_identical.short.fastq.gz,_clipped_identical.short.dupcount",
+"_clipped_identical.unmapped.fastq.dupcount,_clipped_identical.mappedToHostGenome.fastq.gz,_clipped_identical.mappedToHostGenome.fastq.dupcount,_clipped_identical.short.fastq.gz,_clipped_identical.short.fastq.dupcount,_clipped_identical.unmapped.fastq.gz.info",
           sh_direct => 1,
           pbs       => {
             "email"     => $def->{email},
@@ -746,8 +746,24 @@ sub getSmallRNAConfig {
           class      => "CQS::CQSDatatable",
           perform    => 1,
           target_dir => $host_genome_dir . "/bowtie1_genome_host_reads_table",
-          source_ref => [ "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.dupcount\$" ],
+          source_ref => [ "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount\$" ],
           option     => "-k 2 -v 1 --fillMissingWithZero",
+          cqstools   => $def->{cqstools},
+          sh_direct  => 1,
+          pbs        => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        },
+        bowtie1_genome_reads_distribution_table => {
+          class      => "CQS::CQSDatatable",
+          perform    => 1,
+          target_dir => $host_genome_dir . "/bowtie1_genome_reads_distribution_table",
+          source_ref => [ "bowtie1_genome_unmapped_reads", ".unmapped.fastq.gz.info\$" ],
+          option     => "-k 0 -v 1 --fillMissingWithZero",
           cqstools   => $def->{cqstools},
           sh_direct  => 1,
           pbs        => {
@@ -761,14 +777,14 @@ sub getSmallRNAConfig {
       };
       $config = merge( $config, $unmapped_reads );
 
-      push( @name_for_mapPercentage,       "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.dupcount\$" );
-      push( @files_for_annotate_unmapped, "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.dupcount\$" );
+      push( @name_for_mapPercentage,       "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount\$" );
+      push( @files_for_annotate_unmapped, "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount\$" );
       push( @names_for_annotate_unmapped, "host_genome" );
 
       push @$individual_ref, ( "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_genome_unmapped_reads" );
-      push @$summary_ref, ("bowtie1_genome_host_reads_table");
+      push @$summary_ref, ("bowtie1_genome_host_reads_table", "bowtie1_genome_reads_distribution_table");
       push @table_for_pieSummary,
-        ( "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.dupcount", "bowtie1_genome_unmapped_reads", ".short.dupcount", "bowtie1_genome_unmapped_reads", ".unmapped.fastq.dupcount" );
+        ( "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount", "bowtie1_genome_unmapped_reads", ".short.fastq.dupcount", "bowtie1_genome_unmapped_reads", ".unmapped.fastq.dupcount" );
       push @name_for_pieSummary, ( "Mapped to Host Genome", "Too Short for Mapping", "Unmapped In Host" );
       push @table_for_readSummary, ( "bowtie1_genome_host_reads_table", ".count\$" );
       push @name_for_readSummary, ("Host Genome");
