@@ -87,9 +87,6 @@ sub getConfig {
   $def = initializeDefaultOptions($def);
 
   my $perform_chipqc = getValue( $def, "perform_chipqc" );
-  if ($perform_chipqc) {
-    getValue( $def, "design_table" );
-  }
 
   my $perform_diffbind = getValue( $def, "perform_diffbind" );
   if ($perform_diffbind) {
@@ -309,7 +306,6 @@ sub getConfig {
   }
 
   if ($perform_chipqc) {
-    my $qctable = getValue( $def, "design_table" );
     my $genome  = getValue( $def, "chipqc_genome" );    #hg19, check R ChIPQC package;
     my $chipqc_taskname = $peakCallerTask . "_chipqc";
     $config->{$chipqc_taskname} = {
@@ -320,7 +316,7 @@ sub getConfig {
       source_ref     => $bam_ref,
       groups         => $def->{"treatments"},
       controls       => $def->{"controls"},
-      qctable        => $qctable,
+      qctable        => $def->{"design_table"},
       peaks_ref      => [ $peakCallerTask, ".bed\$" ],
       peak_software  => "bed",
       genome         => $genome,

@@ -24,6 +24,25 @@ sub new {
   return $self;
 }
 
+sub get_qctable {
+  my ( $self, $config, $section, $task_name, $treatments ) = @_;
+  my $result = {};
+  if ( has_raw_files($config, $section, "qctable") ){
+    $result = get_raw_files( $config, $section, "qctable" );
+  } else {
+    my $task = {};
+    for my $treatment (keys %$treatments) {
+      $task->{$treatment} = {
+        Condition => $treatment,
+        Replicate => 1
+      };
+    }
+ 
+    $result->{$task_name} = $task;
+  }
+  return ($result);
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -36,13 +55,14 @@ sub perform {
   if ( !defined $controls ) {
     $controls = $config->{$section}{"controls"};
   }
-  my $qctable    = get_raw_files( $config, $section, "qctable" );
   my $peaksfiles = get_raw_files( $config, $section, "peaks" );
   my $peakSoftware = get_option( $config, $section, "peak_software" );
   my $genome       = get_option( $config, $section, "genome", "unknown" );
   my $combined     = get_option( $config, $section, "combined" );
 
   my $chromosomes = get_option( $config, $section, "chromosomes", "" );
+
+  my $qctable = $self->get_qctable( $config, $section, $task_name, $treatments);
 
   my $script = dirname(__FILE__) . "/ChipseqQC.r";
   if ( !-e $script ) {
@@ -82,6 +102,7 @@ sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  my $treatments = $config->{$section}{"groups"};
   my $combined = get_option( $config, $section, "combined" );
   my $result = {};
 
@@ -92,7 +113,7 @@ sub result {
     $result->{$task_name} = filter_array( \@result_files, $pattern );
   }
   else {
-    my $qctable = get_raw_files( $config, $section, "qctable" );
+    my $qctable = $self->get_qctable( $config, $section, $task_name, $treatments);
     for my $qcname ( sort keys %$qctable ) {
       if ( $qcname eq "Tissue" || $qcname eq "Factor" ) {
         next;
