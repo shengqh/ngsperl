@@ -39,7 +39,7 @@ my $totalReads    = 0;
 my $featureReads  = 0;
 my $genomeReads   = 0;
 my $tooShortReads = 0;
-my $unmappedReads = 0;
+my $unannotatedReads = 0;
 
 #match to small RNA reads
 #my $smallRNAreadsFile=$resultFolder.'/bowtie1_genome_1mm_NTA_smallRNA_count/result/'.$sampleName."/$sampleName.bam.count.mapped.xml";
@@ -160,7 +160,7 @@ if (%perfectmatchOnlyReads) {                      #Has perfect matched file
       else {
         print RESULT $line1 . $line2 . $line3 . $line4;
         print RESULTCOUNT $count->[0];
-        $unmappedReads = $unmappedReads + $count->[1];
+        $unannotatedReads = $unannotatedReads + $count->[1];
       }
     }
   }
@@ -185,8 +185,8 @@ else {    #Don't have perfect matched file
     else {
       print RESULT $line1 . $line2 . $line3 . $line4;
       $readKey =~ s/^@//;
-      print RESULTCOUNT $fastq2Count{$readKey}->[0];
-      $unmappedReads = $unmappedReads + $count->[1];
+      print RESULTCOUNT $count->[0];
+      $unannotatedReads = $unannotatedReads + $count->[1];
     }
   }
 
@@ -203,12 +203,14 @@ if (%readsDel) {
 
 my $infofile = $outFile . ".info";
 open RESULTINFO, ">$infofile" or die "error writing result: $!";
+my $mappedReads = $featureReads + $genomeReads;
 print RESULTINFO "Category\tCount
 TotalReads\t$totalReads
+MappedReads\t$mappedReads
 FeatureReads\t$featureReads
 GenomeReads\t$genomeReads
 TooShortReads\t$tooShortReads
-UnmappedReads\t$unmappedReads
+UnannotatedReads\t$unannotatedReads
 ";
 
 print("Success!\n");

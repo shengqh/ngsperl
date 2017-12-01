@@ -113,7 +113,7 @@ sub getSmallRNAConfig {
   my @name_for_readSummary   = ();
   my @name_for_mapPercentage = ( "identical", "dupcount\$" );
 
-  my @reads_for_annoate_unmapped = ( "identical", "dupcount\$", "cutadapt", ".fastq.short.gz\$" );
+  my @reads_for_annoate_unmapped  = ( "identical", "dupcount\$", "cutadapt", ".fastq.short.gz\$" );
   my @files_for_annotate_unmapped = ();
   my @names_for_annotate_unmapped = ();
 
@@ -229,12 +229,12 @@ sub getSmallRNAConfig {
       };
     }
     if ( !defined $def->{pairs_host_reads_deseq2_vis_layout} ) {
-      my $hostSmallRNAReadsFolder=$hostSmallRNAFolder;
+      my $hostSmallRNAReadsFolder = $hostSmallRNAFolder;
       s/miRNA_isomiR/miRNA/ for @{$hostSmallRNAReadsFolder};
-      
-      my $hostSmallRNAReads=$hostSmallRNA;
+
+      my $hostSmallRNAReads = $hostSmallRNA;
       s/^isomiR$/miRNA/ for @{$hostSmallRNAReads};
-      
+
       $def->{pairs_host_reads_deseq2_vis_layout} = {
         "Col_Group" => [ (@$comparisons) x $numberOfHostSmallRNA ],
         "Row_Group" => string_repeat( $hostSmallRNAReads, $numberOfComparison ),
@@ -452,7 +452,7 @@ sub getSmallRNAConfig {
       }
     }
 
-    push( @name_for_mapPercentage,       "bowtie1_genome_1mm_NTA_smallRNA_count", "count.mapped.xml" );
+    push( @name_for_mapPercentage,      "bowtie1_genome_1mm_NTA_smallRNA_count", "count.mapped.xml" );
     push( @files_for_annotate_unmapped, "bowtie1_genome_1mm_NTA_smallRNA_count", "count.mapped.xml" );
     push( @names_for_annotate_unmapped, "smallRNA" );
 
@@ -539,7 +539,7 @@ sub getSmallRNAConfig {
 
     $config = merge( $config, $host_genome );
     if ($do_comparison) {
-      my @visual_source = ();
+      my @visual_source       = ();
       my @visual_source_reads = ();
 
       #miRNA
@@ -560,7 +560,7 @@ sub getSmallRNAConfig {
       addDeseq2Visualization( $config, $def, $summary_ref, "host_genome_miRNA", [ "miRNA_isomiR", "miRNA_NTA", "miRNA_isomiR_NTA" ],
         $data_visualization_dir, "pairs_host_miRNA_deseq2_vis_layout", $libraryKey );
       push @visual_source_reads, "miRNA_reads";
-      
+
       #tRNA
       addDEseq2( $config, $def, $summary_ref, "tRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       push @visual_source, "tRNA";
@@ -569,7 +569,7 @@ sub getSmallRNAConfig {
       addDEseq2( $config, $def, $summary_ref, "tRNA_aminoacid", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       push @visual_source_reads, "tRNA_reads";
-      
+
       if ( $def->{hasYRNA} ) {
 
         #yRNA
@@ -616,7 +616,7 @@ sub getSmallRNAConfig {
       push @visual_source_reads, "otherSmallRNA_reads";
 
       #host genome smallRNA visualization
-      addDeseq2Visualization( $config, $def, $summary_ref, "host_genome", \@visual_source, $data_visualization_dir, "pairs_host_deseq2_vis_layout", $libraryKey );
+      addDeseq2Visualization( $config, $def, $summary_ref, "host_genome",       \@visual_source,       $data_visualization_dir, "pairs_host_deseq2_vis_layout",       $libraryKey );
       addDeseq2Visualization( $config, $def, $summary_ref, "host_genome_reads", \@visual_source_reads, $data_visualization_dir, "pairs_host_reads_deseq2_vis_layout", $libraryKey );
     }
     if ( $do_comparison or defined $groups or defined $def->{tRNA_vis_group} ) {
@@ -758,33 +758,18 @@ sub getSmallRNAConfig {
             "mem"       => "10gb"
           },
         },
-        bowtie1_genome_reads_distribution_table => {
-          class      => "CQS::CQSDatatable",
-          perform    => 1,
-          target_dir => $host_genome_dir . "/bowtie1_genome_reads_distribution_table",
-          source_ref => [ "bowtie1_genome_unmapped_reads", ".unmapped.fastq.gz.info\$" ],
-          option     => "-k 0 -v 1 --fillMissingWithZero",
-          cqstools   => $def->{cqstools},
-          sh_direct  => 1,
-          pbs        => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
-            "mem"       => "10gb"
-          },
-        }
       };
       $config = merge( $config, $unmapped_reads );
 
-      push( @name_for_mapPercentage,       "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount\$" );
+      push( @name_for_mapPercentage,      "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount\$" );
       push( @files_for_annotate_unmapped, "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount\$" );
       push( @names_for_annotate_unmapped, "host_genome" );
 
-      push @$individual_ref, ( "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_genome_unmapped_reads" );
-      push @$summary_ref, ("bowtie1_genome_host_reads_table", "bowtie1_genome_reads_distribution_table");
+      push @$individual_ref, ( "bowtie1_genome_1mm_NTA_pmnames",  "bowtie1_genome_unmapped_reads" );
+      push @$summary_ref,    ( "bowtie1_genome_host_reads_table" );
       push @table_for_pieSummary,
-        ( "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount", "bowtie1_genome_unmapped_reads", ".short.fastq.dupcount", "bowtie1_genome_unmapped_reads", ".unmapped.fastq.dupcount" );
+        ( "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount", "bowtie1_genome_unmapped_reads", ".short.fastq.dupcount", "bowtie1_genome_unmapped_reads",
+        ".unmapped.fastq.dupcount" );
       push @name_for_pieSummary, ( "Mapped to Host Genome", "Too Short for Mapping", "Unmapped In Host" );
       push @table_for_readSummary, ( "bowtie1_genome_host_reads_table", ".count\$" );
       push @name_for_readSummary, ("Host Genome");
@@ -869,7 +854,7 @@ sub getSmallRNAConfig {
         addDEseq2( $config, $def, $summary_ref, "${nonhostGroup}_reads", [ "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" ],
           $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       }
-      push @name_for_mapPercentage,       ( "bowtie1_${nonhostGroup}_pm_count", ".count.mapped.xml\$" );
+      push @name_for_mapPercentage,      ( "bowtie1_${nonhostGroup}_pm_count", ".count.mapped.xml\$" );
       push @files_for_annotate_unmapped, ( "bowtie1_${nonhostGroup}_pm_count", ".count.mapped.xml\$" );
       push( @names_for_annotate_unmapped, $nonhostGroup );
 
@@ -969,7 +954,7 @@ sub getSmallRNAConfig {
         rCode              => 'maxCategory=NA;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
       }
     );
-    push( @name_for_mapPercentage,       "bowtie1_tRNA_pm_count", ".count.mapped.xml\$", "bowtie1_rRNA_pm_count", ".count.mapped.xml\$", );
+    push( @name_for_mapPercentage,      "bowtie1_tRNA_pm_count", ".count.mapped.xml\$", "bowtie1_rRNA_pm_count", ".count.mapped.xml\$", );
     push( @files_for_annotate_unmapped, "bowtie1_tRNA_pm_count", ".count.mapped.xml\$", "bowtie1_rRNA_pm_count", ".count.mapped.xml\$", );
     push( @names_for_annotate_unmapped, "tRNA",                  "rRNA" );
 
@@ -1045,7 +1030,7 @@ sub getSmallRNAConfig {
       source2_ref      => \@mapped,
       source3_ref      => \@pmnames,
       output_ext       => "_clipped_identical.unmapped.fastq.gz",
-      output_other_ext => "_clipped_identical.unmapped.fastq.dupcount",
+      output_other_ext => "_clipped_identical.unmapped.fastq.dupcount,_clipped_identical.unmapped.fastq.gz.info",
       sh_direct        => 1,
       pbs              => {
         "email"    => $def->{email},
@@ -1054,9 +1039,26 @@ sub getSmallRNAConfig {
         "mem"      => "10gb"
       },
     };
+    $config->{final_unmapped_reads_summary} = {
+      class      => "CQS::CQSDatatable",
+      perform    => 1,
+      target_dir => $nonhost_blast_dir . "/final_unmapped_reads_summary",
+      source_ref => [ "final_unmapped_reads", ".unmapped.fastq.gz.info\$" ],
+      option     => "-k 0 -v 1 --fillMissingWithZero",
+      cqstools   => $def->{cqstools},
+      sh_direct  => 1,
+      pbs        => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    };
 
     $identical_ref = [ "final_unmapped_reads", ".fastq.gz\$" ];
     push @$individual_ref,      ("final_unmapped_reads");
+    push @$summary_ref,         ("final_unmapped_reads_summary");
     push @table_for_pieSummary, ( "final_unmapped_reads", ".dupcount" );
     push @name_for_pieSummary,  ("UnMapped");
 
@@ -1086,7 +1088,7 @@ sub getSmallRNAConfig {
       target_dir       => $nonhost_blast_dir . "/annotate_unmapped_reads",
       source_ref       => \@reads_for_annoate_unmapped,
       mapped_files_ref => \@files_for_annotate_unmapped,
-      mapped_names     => join(',', @names_for_annotate_unmapped),
+      mapped_names     => join( ',', @names_for_annotate_unmapped ),
       min_count        => 2,
       sh_direct        => 1,
       pbs              => {
