@@ -26,17 +26,25 @@ def readFastqQueries(fileName, minCount):
 
       if len(sequence) > 0:
         if sequence in resultMap:
-          resultMap[sequence].QueryCount = resultMap[sequence].QueryCount + 1
+          resultMap[sequence].Count = resultMap[sequence].Count + 1
         else:
-          resultMap[sequence] = QueryItem(sequence, header[1:], 1)
+          resultMap[sequence] = QueryItem(header[1:], sequence, 1)
   finally:
     f.close()
-  
+
   result = resultMap.values()
   if minCount > 1:
-    result = [v for v in result if v.QueryCount >= minCount]
+    result = [v for v in result if v.Count >= minCount]
     
-  result.sort(key=operator.attrgetter('QueryCount'), reverse=True)
+  result.sort(key=operator.attrgetter('Count'), reverse=True)
     
   return(result)
   
+def readFastqQueryMap(fileName):
+  result = {}
+
+  resultList = readFastqQueries(fileName, 1)
+  for query in resultList:
+    result[query.Name] = query;
+  
+  return (result)

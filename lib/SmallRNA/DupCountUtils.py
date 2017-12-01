@@ -11,7 +11,7 @@ def readDupCountQueries(fileName, minCount):
       query_count = int(parts[1])
       query_sequence = parts[2]
       if query_count >= minCount:
-        result.append(QueryItem(query_sequence, query_name, query_count))
-  result.sort(key=operator.attrgetter('QueryCount'), reverse=True)
+        result.append(QueryItem(query_name, query_sequence, query_count))
+  result.sort(key=operator.attrgetter('Count'), reverse=True)
   return(result)
   

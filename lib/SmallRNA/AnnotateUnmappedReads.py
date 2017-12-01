@@ -59,21 +59,21 @@ for idx, mappedFile in enumerate(mappedFiles):
   logger.info("reading %s ..." % mappedFile)
   sequences = readQueries(mappedFile, minCount)
   for query in sequences:
-    query.QueryName = re.sub(":CLIP.*", "", query.QueryName)
+    query.Name = re.sub(":CLIP.*", "", query.Name)
   categoryMap[categoryName] = sequences
   logger.info("%s : %d" % (categoryName, len(sequences)))
 
 mappedQueries = set()
 for sequences in categoryMap.values():
   for item in sequences:
-    mappedQueries.add(item.QueryName)
+    mappedQueries.add(item.Name)
 
 
 def acceptCandidate(queryItem, mappedQueries):
   seqLen = len(queryItem.Sequence)
   if seqLen < 12 or seqLen > 19:
     return False
-  if queryItem.QueryName in mappedQueries:
+  if queryItem.Name in mappedQueries:
     return False
   return True
 
@@ -85,7 +85,7 @@ for inputFile in inputFiles:
   logger.info("unmapped : %d" % len(unmappedQueries))
   candidateReads.extend(unmappedQueries)
 
-candidateReads.sort(key=operator.attrgetter('QueryCount'), reverse=True)
+candidateReads.sort(key=operator.attrgetter('Count'), reverse=True)
 logger.info("total unmapped : %s" % len(candidateReads))
 
 tempFile = outputFile + ".tmp"
@@ -95,7 +95,7 @@ with open(tempFile, "w") as sw:
   iCount = 0
   for read in candidateReads:
     sequence = read.Sequence
-    readCount = read.QueryCount
+    readCount = read.Count
       
     iCount = iCount + 1
     if iCount % 1000 == 0:
@@ -108,7 +108,7 @@ with open(tempFile, "w") as sw:
       sw.write("\t")
       for seq in sequences:
         if sequence in seq.Sequence:
-          sw.write("%s:%d" % (seq.Sequence, seq.QueryCount))
+          sw.write("%s:%d" % (seq.Sequence, seq.Count))
           break
     sw.write("\n")
 
