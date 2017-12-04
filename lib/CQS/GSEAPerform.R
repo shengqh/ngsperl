@@ -46,7 +46,7 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="/home/zhaos/bin/gsea
 preRankedGeneFileTable=parSampleFile1
 preRankedGeneFileTable=read.delim(preRankedGeneFileTable,header=F,as.is=T)
 
-for (preRankedGeneFile in 1:nrow(preRankedGeneFileTable)) {
+for (i in 1:nrow(preRankedGeneFileTable)) {
 	preRankedGeneFile=preRankedGeneFileTable[i,1]
 	compName=preRankedGeneFileTable[i,2]
 	
