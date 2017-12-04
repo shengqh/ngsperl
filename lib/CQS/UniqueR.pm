@@ -182,6 +182,29 @@ sub perform {
     close($rt);
   }
   close($rf);
+  
+  my $rReportTemplates = get_option( $config, $section, "rReportTemplate" ,"");
+  if ($rReportTemplates ne "") {
+  	  	my $rfile = $result_dir . "/".basename($rReportTemplates);
+  		open( my $rf, ">$rfile" ) or die "Cannot create $rfile";
+  		
+  		my @rReportTemplates = split( ",|;", $rReportTemplates );
+  		foreach my $rReportTemplate (@rReportTemplates) {
+    		my $is_absolute = File::Spec->file_name_is_absolute($rReportTemplate);
+    		if ( !$is_absolute ) {
+      			$rReportTemplate = dirname(__FILE__) . "/$rReportTemplate";
+    		}
+    		if ( !( -e $rReportTemplate ) ) {
+      			die("rReportTemplate $rReportTemplate defined but not exists!");
+    		}
+    		open( my $rt, "<$rReportTemplate" ) or die $!;
+    		while (<$rt>) {
+      			print $rf $_;
+    		}
+    		close($rt);
+  		}
+  		close($rf);	
+  }
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
