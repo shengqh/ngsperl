@@ -18,7 +18,7 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(get_config_section has_config_section get_option get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files_and_keys get_raw_files get_raw_files_keys get_raw_files_attributes get_raw_files2 get_run_command get_option_value get_pair_groups
+    qw(get_config_section has_config_section get_option get_option_file get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files_and_keys get_raw_files get_raw_files_keys get_raw_files_attributes get_raw_files2 get_run_command get_option_value get_pair_groups
       get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key get_grouped_raw_files save_parameter_sample_file saveConfig writeFileList initDefaultValue get_pure_pairs writeParameterSampleFile)
   ]
 );
@@ -67,6 +67,22 @@ sub get_option {
     }
   }
 
+  return ($result);
+}
+
+sub get_option_file {
+  my ( $config, $section, $key, $default ) = @_;
+
+  my $curSection = get_config_section( $config, $section );
+
+  my $result = $curSection->{$key};
+  if ( !defined $result ) {
+    die "Define ${section}::${key} first!";
+  }
+
+  if ( !is_debug() && !-e $result ) {
+    die "$key $result defined but not exists!";
+  }
   return ($result);
 }
 
