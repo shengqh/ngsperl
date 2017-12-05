@@ -57,12 +57,12 @@ readsInOneCategory<-names(readsMappingNamesTable)[which(readsMappingNamesTable==
 i<-1
 for (i in 1:length(readsMappingNames)) {
   readsOne<-intersect(readsInOneCategory,readsMappingNames[[i]])
-  readsOneTable<-readsMappingTable[allReadsNames %in% readsOne,]
+  readsOneTable<-readsMappingTable[intersect(allReadsNames,readsOne),]
   readsOneColSums<-colSums(readsOneTable)
   dataForPlot<-rbind(dataForPlot,readsOneColSums)
 }
 readsInMoreCategory<-names(readsMappingNamesTable)[which(readsMappingNamesTable>1)]
-readsMoreTable<-readsMappingTable[allReadsNames %in% readsInMoreCategory,]
+readsMoreTable<-readsMappingTable[intersect(allReadsNames,readsInMoreCategory),]
 readsMoreColSums<-colSums(readsMoreTable)
 dataForPlot<-rbind(dataForPlot,readsMoreColSums)
 #row.names(dataForPlot)[(nrow(dataForPlot)-length(categoriesNames)+1):nrow(dataForPlot)]<-categoriesNames
@@ -92,7 +92,8 @@ if (length(readsMappingNames)>5) {
    dataForPlot<-readsMappingNames
  }
  names(dataForPlot)<-categoriesNames[1:5]
- colors<-makeColors(length(categoriesNames))
+# colors<-makeColors(length(categoriesNames))
+ colors<-makeColors(5)
  vennCex=1.2
  for (i in 1:ncol(readsMappingTable)) {
    reads2count<-readsMappingTable[,i]
@@ -147,22 +148,32 @@ ggpieGroupToFile(dataForPlot,fileName=paste0(resultFile,".MicrobiomeVsEnvironmen
 #Reads Overlap: Venn for Group1, Group2 and Group4
 ###################################################
 cat("Making Venn diagram for non host genome overlap reads now ","...\n")
-if (length(readsMappingNames)>5) {
-	warning("More than 5 categories. Only first 5 categories will be used in overlap Venn diagram.")
-	dataForPlot<-readsMappingNames[1:5]
-} else {
-	dataForPlot<-readsMappingNames
-}
-names(dataForPlot)<-categoriesNames[1:5]
-colors<-makeColors(length(categoriesNames))
+dataForPlot<-readsMappingNames[1:3]
+names(dataForPlot)<-categoriesNames[1:3]
+colors<-makeColors(3)
 vennCex=1.2
 for (i in 1:ncol(readsMappingTable)) {
 	reads2count<-readsMappingTable[,i]
 	names(reads2count)<-row.names(readsMappingTable)
-	png(paste0(resultFile,".",colnames(readsMappingTable)[i],".venn.png"),res=300,height=2000,width=2000)
-	venn.diagram1(dataForPlot,count=reads2count,cex=vennCex,cat.cex=vennCex,fill=colors,alpha=0.7,margin=0.2,cat.dist=c(0.2,0.3,0.2,0.2,0.3))
+	png(paste0(resultFile,".",colnames(readsMappingTable)[i],".NonHostGenome.venn.png"),res=300,height=2000,width=2000)
+	venn.diagram1(dataForPlot,count=reads2count,cex=vennCex,cat.cex=vennCex,fill=colors,alpha=0.7,margin=0.2,cat.dist=c(0.2,0.2,0.2))
 	dev.off()
 }
 
+###################################################
+#Reads Overlap: Venn for tRNA, and rRNA
+###################################################
+cat("Making Venn diagram for non host library overlap reads now ","...\n")
+dataForPlot<-readsMappingNames[4:5]
+names(dataForPlot)<-categoriesNames[4:5]
+colors<-makeColors(3)[1:2]
+vennCex=1.2
+for (i in 1:ncol(readsMappingTable)) {
+	reads2count<-readsMappingTable[,i]
+	names(reads2count)<-row.names(readsMappingTable)
+	png(paste0(resultFile,".",colnames(readsMappingTable)[i],".NonHostLibrary.venn.png"),res=300,height=2000,width=2000)
+	venn.diagram1(dataForPlot,count=reads2count,cex=vennCex,cat.cex=vennCex,fill=colors,alpha=0.7,margin=0.2,cat.dist=c(0.2,0.2))
+	dev.off()
+}
 
 

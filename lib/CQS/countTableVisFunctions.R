@@ -159,12 +159,12 @@ venn.diagram1<-function (x, count=NULL,filename, height = 3000, width = 3000, re
 		if (is.null(list.names)) {
 			list.names <- ""
 		}
-		grob.list <- VennDiagram::draw.single.venn(area = length(x[[1]]), 
+		grob.list <- VennDiagram::draw.single.venn(area = countFun(x[[1]]), 
 				category = list.names, ind = FALSE,fill=fill, ...)
 	}
 	else if (2 == length(x)) {
-		grob.list <- VennDiagram::draw.pairwise.venn(area1 = length(x[[1]]), 
-				area2 = length(x[[2]]), cross.area = length(intersect(x[[1]], 
+		grob.list <- VennDiagram::draw.pairwise.venn(area1 = countFun(x[[1]]), 
+				area2 = countFun(x[[2]]), cross.area = countFun(intersect(x[[1]], 
 								x[[2]])), category = category.names, ind = FALSE, 
 				fill=fill,
 				...)
@@ -178,9 +178,9 @@ venn.diagram1<-function (x, count=NULL,filename, height = 3000, width = 3000, re
 		nbc <- intersect(B, C)
 		nac <- intersect(A, C)
 		nabc <- intersect(nab, C)
-		grob.list <- VennDiagram::draw.triple.venn(area1 = length(A), 
-				area2 = length(B), area3 = length(C), n12 = length(nab), 
-				n23 = length(nbc), n13 = length(nac), n123 = length(nabc), 
+		grob.list <- VennDiagram::draw.triple.venn(area1 = countFun(A), 
+				area2 = countFun(B), area3 = countFun(C), n12 = countFun(nab), 
+				n23 = countFun(nbc), n13 = countFun(nac), n123 = countFun(nabc), 
 				category = list.names, ind = FALSE, list.order = 1:3, 
 				fill=fill,
 				...)
@@ -202,12 +202,12 @@ venn.diagram1<-function (x, count=NULL,filename, height = 3000, width = 3000, re
 		n134 <- intersect(n13, D)
 		n234 <- intersect(n23, D)
 		n1234 <- intersect(n123, D)
-		grob.list <- VennDiagram::draw.quad.venn(area1 = length(A), 
-				area2 = length(B), area3 = length(C), area4 = length(D), 
-				n12 = length(n12), n13 = length(n13), n14 = length(n14), 
-				n23 = length(n23), n24 = length(n24), n34 = length(n34), 
-				n123 = length(n123), n124 = length(n124), n134 = length(n134), 
-				n234 = length(n234), n1234 = length(n1234), category = list.names, 
+		grob.list <- VennDiagram::draw.quad.venn(area1 = countFun(A), 
+				area2 = countFun(B), area3 = countFun(C), area4 = countFun(D), 
+				n12 = countFun(n12), n13 = countFun(n13), n14 = countFun(n14), 
+				n23 = countFun(n23), n24 = countFun(n24), n34 = countFun(n34), 
+				n123 = countFun(n123), n124 = countFun(n124), n134 = countFun(n134), 
+				n234 = countFun(n234), n1234 = countFun(n1234), category = list.names, 
 				ind = FALSE, fill=fill,...)
 	}
 	else if (5 == length(x)) {
