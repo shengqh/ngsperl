@@ -34,7 +34,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_call_variants",           0 );
   initDefaultValue( $def, "perform_webgestalt",              0 );
   initDefaultValue( $def, "perform_multiqc",                 1 );
-  initDefaultValue( $def, "perform_gsea",             defined $def->{pairs} );
+  initDefaultValue( $def, "perform_gsea",             0 );
   initDefaultValue( $def, "aligner",                         "star" );
   initDefaultValue( $def, "use_pearson_in_hca",              1 );
   initDefaultValue( $def, "top25cv_in_hca",                  0 );
@@ -340,27 +340,29 @@ sub getRNASeqConfig {
       push @$summary, "$webgestaltTaskName";
     }
     
-      if ( $def->{perform_gsea} ) {
-    my $gsea_jar = $def->{gsea_jar} or die "Define gsea_jar at definition first";
-    my $gsea_db = $def->{gsea_db} or die "Define gsea_db at definition first";
-    $config->{gsea} = {
-        class                     => "CQS::UniqueR",
-        perform                   => 1,
-        target_dir                => $target_dir . "/" . getNextFolderIndex($def) . "gsea",
-        rtemplate                 => "countTableVisFunctions.R,smallRnaCategory.R",
-        output_file               => "",
-        output_file_ext           => ".gsea.html",
-        parameterSampleFile1_ref  => [ $deseq2taskname, "_GSEA.rnk\$" ],
-        sh_direct                 => 1,
-        pbs                       => {
-          "email"     => $def->{email},
-#          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-    };
-    push( @$summary, "gsea" );
+    if ( $def->{perform_gsea} ) {
+    	my $gsea_jar = $def->{gsea_jar} or die "Define gsea_jar at definition first";
+    	my $gsea_db = $def->{gsea_db} or die "Define gsea_db at definition first";
+    	$config->{gsea} = {
+        	class                     => "CQS::UniqueR",
+        	perform                   => 1,
+        	target_dir                => $target_dir . "/" . getNextFolderIndex($def) . "gsea",
+        	rtemplate                 => "GSEAPerform.R",
+        	rReportTemplate           => "GSEAReport.Rmd",
+        	output_file               => "parameterSampleFile1",
+        	output_file_ext           => ".gsea.html",
+        	parameterSampleFile1_ref  => [ $deseq2taskname, "_GSEA.rnk\$" ],
+        	sh_direct                 => 1,
+        	rCode                     => "gseaDb='".$gsea_db."'; gseaJar='" . $gsea_jar . "';",
+        	pbs                       => {
+          		"email"     => $def->{email},
+#          		"emailType" => $def->{emailType},
+          		"nodes"     => "1:ppn=1",
+          		"walltime"  => "1",
+          		"mem"       => "10gb"
+        	},
+    	};
+    	push( @$summary, "gsea" );
   }
   }
 
