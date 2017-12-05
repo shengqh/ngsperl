@@ -35,6 +35,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_contig_analysis",         0 );
   initDefaultValue( $def, "perform_annotate_unmapped_reads", 0 );
   initDefaultValue( $def, "DE_export_significant_gene_name", 0 );
+  initDefaultValue( $def, "perform_nonhost_tRNA_coverage",   0 );
 
   return $def;
 }
@@ -338,7 +339,7 @@ sub getSmallRNAConfig {
         class      => "CQS::CQSDatatable",
         perform    => 1,
         target_dir => $host_genome_dir . "/bowtie1_genome_1mm_NTA_smallRNA_table",
-        option     => "",
+        option     => "--noheader",
         source_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info" ],
         cqs_tools  => $def->{cqstools},
         prefix     => "smallRNA_1mm_",
@@ -765,8 +766,8 @@ sub getSmallRNAConfig {
       push( @files_for_annotate_unmapped, "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount\$" );
       push( @names_for_annotate_unmapped, "host_genome" );
 
-      push @$individual_ref, ( "bowtie1_genome_1mm_NTA_pmnames",  "bowtie1_genome_unmapped_reads" );
-      push @$summary_ref,    ( "bowtie1_genome_host_reads_table" );
+      push @$individual_ref, ( "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_genome_unmapped_reads" );
+      push @$summary_ref, ("bowtie1_genome_host_reads_table");
       push @table_for_pieSummary,
         ( "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount", "bowtie1_genome_unmapped_reads", ".short.fastq.dupcount", "bowtie1_genome_unmapped_reads",
         ".unmapped.fastq.dupcount" );
@@ -910,7 +911,7 @@ sub getSmallRNAConfig {
     );
     $config->{bowtie1_miRBase_pm_count}{can_result_be_empty_file} = 1;
 
-    push @table_for_countSum, ( "bowtie1_miRBase_pm_table", "^(?!.*?read).*\.count\$" );
+    push @table_for_countSum, ( "bowtie1_miRBase_pm_table", "^((?!read|contig).)*\.count\$" );
     push @mapped,             ( "bowtie1_miRBase_pm_count", ".xml" );
 
     #Mapping unmapped reads to tRNA library
@@ -933,6 +934,42 @@ sub getSmallRNAConfig {
         rCode              => 'maxCategory=3;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
       }
     );
+
+    if ( $def->{perform_nonhost_tRNA_coverage} ) {
+      my $positionTask = $def->{trna_species} . "_tRNA_Position";
+      my $visualizationTask = $positionTask . "Vis_anticodon";
+      my $folder = $data_visualization_dir . "/" . $visualizationTask;
+      $config->{$positionTask} = {
+        class            => "SmallRNA::NonhostLibraryCoverage",
+        perform          => 1,
+        target_dir       => $folder,
+        option           => "",
+        source_ref       => [ "bowtie1_tRNA_pm_table", ".xml" ],
+        fasta_file       => $def->{bowtie1_tRNA_index} . ".fa",
+        species_map_file => $def->{trna_map},
+        species          => $def->{trna_species},
+        sh_direct        => 1,
+        pbs              => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "2",
+          "mem"      => "20gb"
+        },
+      };
+      push( @$summary_ref, $positionTask );
+
+      addPositionVis(
+        $config, $def,
+        $summary_ref,
+        $visualizationTask,
+        $data_visualization_dir,
+        {
+          output_file        => ".nonhost_tRNAAnticodonPositionVis",
+          parameterFile1_ref => [ $positionTask, ".position\$" ],
+          rCode => "countName<-\"TotalReads\""
+        }
+      );
+    }
 
     #Mapping unmapped reads to rRNA library
     addNonhostDatabase(
@@ -1044,7 +1081,7 @@ sub getSmallRNAConfig {
       perform    => 1,
       target_dir => $nonhost_blast_dir . "/final_unmapped_reads_summary",
       source_ref => [ "final_unmapped_reads", ".unmapped.fastq.gz.info\$" ],
-      option     => "-k 0 -v 1 --fillMissingWithZero",
+      option     => "",
       cqstools   => $def->{cqstools},
       sh_direct  => 1,
       pbs        => {

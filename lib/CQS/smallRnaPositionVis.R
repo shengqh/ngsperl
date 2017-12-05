@@ -12,6 +12,10 @@ visLayoutFileList=parSampleFile2
 positionFile = parFile1
 totalCountFile<-parFile2
 
+if (!exists(countName)){
+  countName = "MappedReads"
+}
+
 #load Rcpp package first because of the error with reshape2 package
 library(Rcpp)
 library(grid)
@@ -56,7 +60,7 @@ groups<-unique(groupInfo$V2)
 groupSize<-table(groupInfo[,2])
 
 totalCount<-read.delim(totalCountFile,as.is=T,header=T,row.names=1,check.names=FALSE)
-totalCount<-unlist(totalCount["MappedReads",])
+totalCount<-unlist(totalCount[countName,])
 
 position$FeatureLabel<-paste0(position$Feature,"(",round(position$TotalCount,0),")")
 position$PositionCountFraction<-as.vector(position$PositionCount/totalCount[position$File])
@@ -182,25 +186,29 @@ if (doSmallRNAGrouping==1 | doSmallRNAGrouping==3) {
 	dev.off()
 }
 
-
 if (visLayoutFileList!="") {
-  height=max(length(unique(allPositionByGroup$Row_Group))*2000,3000)
-  width=max(length(unique(allPositionByGroup$Col_Group))*2000,3000)
+  rowGroupCount=length(unique(allPositionByGroup$Row_Group))
+  colGroupCount=length(unique(allPositionByGroup$Col_Group))
+  height=max(rowGroupCount*2000,3000)
+  width=max(colGroupCount*2000,3000)
 } else {
   height=3000
-  width=max(length(unique(allPositionByGroup$Group))*2000,3000)
+  groupCount=length(unique(allPositionByGroup$Group))
+  width=max(groupCount*2000, height)
 }
+
 maxPos<-max(allPositionByGroup$Position)
 png(paste0(outFile,".allPositionBar.png"),width=width,height=height,res=300)
 m <- ggplot(allPositionByGroup, aes(x = Position,y=GroupPositionCountFraction,fill=Feature)) +
     geom_bar(stat="identity") +
     theme_bw()+
-    theme(legend.key.size = unit(0.4, "cm"))+
     ylab("cumulative read fraction (read counts/total reads)")+
     theme(text = element_text(size=20))+theme(legend.text = element_text(size=16))+
-    guides(fill= guide_legend(ncol = 1,keywidth=1, keyheight=1.5))+
     scale_fill_manual(values=colorRampPalette(brewer.pal(9, "Set1"))(featureNumber)) + 
-    xlim(-10, maxPos+5)
+    xlim(-10, maxPos+5) +
+    theme(legend.key.size = unit(0.4, "cm"), legend.position="right") +
+    guides(fill= guide_legend(ncol=2,keywidth=1, keyheight=1.5))
+
 if (visLayoutFileList!="") {
   m<-m+facet_grid(Row_Group~Col_Group,space = "free",scale="free")
 } else {
