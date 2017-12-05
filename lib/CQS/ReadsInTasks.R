@@ -37,6 +37,9 @@ for (countFile in countFiles[,1]) {
 row.names(resultTable)<-gsub("_pm_.+","",basename(taskFileWithReads))
 row.names(resultTable)<-gsub(".+.miRNA.count$","Host_genome_miRNA",row.names(resultTable))
 row.names(resultTable)<-gsub(".+.tRNA.count$","Host_genome_tRNA",row.names(resultTable))
+row.names(resultTable)<-gsub(".+.snRNA.count$","Host_genome_snRNA",row.names(resultTable))
+row.names(resultTable)<-gsub(".+.snoRNA.count$","Host_genome_snoRNA",row.names(resultTable))
+row.names(resultTable)<-gsub(".+.rRNA.count$","Host_genome_rRNA",row.names(resultTable))
 row.names(resultTable)<-gsub(".+.other.count$","Host_genome_other_smallRNA",row.names(resultTable))
 write.csv(resultTable,paste0(resultFile,".TaskReads.csv"))
 
