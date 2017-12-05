@@ -670,7 +670,7 @@ rowMedians<-function(x,...) {
 	result<-apply(x,1,median,...)
 	return(result)
 }
-mergeTableBySampleGroup<-function(x,sampleToGroup,toPercent=TRUE,rowFun=rowMeans) {
+mergeTableBySampleGroup<-function(x,sampleToGroup,toPercent=TRUE,rowFun=rowMeans,groupMinMedian=NULL) {
 	if (toPercent) {
 		xRatio<-t(t(x)/colSums(x,na.rm=T))
 	} else {
@@ -687,6 +687,13 @@ mergeTableBySampleGroup<-function(x,sampleToGroup,toPercent=TRUE,rowFun=rowMeans
 		currentSample<-as.character(sampleToGroup[which(sampleToGroup[,2]==colnames(xRatioGroupMean)[i]),1])
 #		xRatioGroupMean[,i]<-rowMeans(xRatio[,currentSample,drop=FALSE],na.rm=T)
 		xRatioGroupMean[,i]<-rowFun(xRatio[,currentSample,drop=FALSE],na.rm=T)
+		if (!is.null(groupMinMedian)) {
+			temp<-apply(xRatio[,currentSample,drop=FALSE],1,median,na.rm=T)
+			removeInd<-which(temp<groupMinMedian)
+			if (length(removeInd)>0) {
+				xRatioGroupMean[removeInd,i]<-NA
+			}
+		}
 	}
 	return(xRatioGroupMean)
 }
