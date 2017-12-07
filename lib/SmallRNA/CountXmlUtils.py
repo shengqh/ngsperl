@@ -47,7 +47,13 @@ def readCountXmlFeatures(fileName):
     fgroup = FeatureGroup()
     result.append(fgroup)
     for feature in featureGroup.findall('subject'):
-      fgroup.Features.append(FeatureItem(feature.get("name"), ""))
+      fi = FeatureItem(feature.get("name"), "")
+      fgroup.Features.append(fi)
+      for region in feature.findall('region'):
+        for query in region.findall('query'):
+          fgroup.Queries.add(queryMap[query.get('qname')])
+          fi.EndPoints.append([int(query.get('offset')) + int(query.get('seq_len')), int(query.get('query_count'))])
+        
     for query in featureGroup.findall('query'):
       fgroup.Queries.add(queryMap[query.get('qname')])
         
