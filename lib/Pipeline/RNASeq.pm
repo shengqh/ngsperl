@@ -34,7 +34,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_call_variants",           0 );
   initDefaultValue( $def, "perform_webgestalt",              0 );
   initDefaultValue( $def, "perform_multiqc",                 1 );
-  initDefaultValue( $def, "perform_gsea",             0 );
+  initDefaultValue( $def, "perform_gsea",                    0 );
   initDefaultValue( $def, "aligner",                         "star" );
   initDefaultValue( $def, "use_pearson_in_hca",              1 );
   initDefaultValue( $def, "top25cv_in_hca",                  0 );
@@ -92,9 +92,10 @@ sub getRNASeqConfig {
 
   my $target_dir = $def->{target_dir};
   my $groups_ref = defined $def->{groups} ? "groups" : undef;
+  my $aligner    = $def->{aligner};
 
   my $count_file_ref = $def->{count_file};
-  if ( $def->{perform_star_featurecount} ) {
+  if ( $def->{perform_mapping} & $def->{perform_counting} & $aligner eq "star" & $def->{perform_star_featurecount} ) {
     my $aligner_index   = $def->{star_index} or die "Define star_index at definition first";
     my $starFolder      = $target_dir . "/" . getNextFolderIndex($def) . "star_featurecount";
     my $transcript_gtf  = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
@@ -166,7 +167,6 @@ sub getRNASeqConfig {
 
     if ( $def->{perform_mapping} ) {
       my $aligner_index;
-      my $aligner = $def->{aligner};
       if ( $aligner eq "star" ) {
         $aligner_index = $def->{star_index} or die "Define star_index at definition first";
       }
@@ -339,31 +339,32 @@ sub getRNASeqConfig {
       };
       push @$summary, "$webgestaltTaskName";
     }
-    
+
     if ( $def->{perform_gsea} ) {
-    	my $gsea_jar = $def->{gsea_jar} or die "Define gsea_jar at definition first";
-    	my $gsea_db = $def->{gsea_db} or die "Define gsea_db at definition first";
-    	$config->{gsea} = {
-        	class                     => "CQS::UniqueR",
-        	perform                   => 1,
-        	target_dir                => $target_dir . "/" . getNextFolderIndex($def) . "gsea",
-        	rtemplate                 => "GSEAPerform.R",
-        	rReportTemplate           => "GSEAReport.Rmd",
-        	output_file               => "parameterSampleFile1",
-        	output_file_ext           => ".gsea.html",
-        	parameterSampleFile1_ref  => [ $deseq2taskname, "_GSEA.rnk\$" ],
-        	sh_direct                 => 1,
-        	rCode                     => "gseaDb='".$gsea_db."'; gseaJar='" . $gsea_jar . "';",
-        	pbs                       => {
-          		"email"     => $def->{email},
-#          		"emailType" => $def->{emailType},
-          		"nodes"     => "1:ppn=1",
-          		"walltime"  => "1",
-          		"mem"       => "10gb"
-        	},
-    	};
-    	push( @$summary, "gsea" );
-  }
+      my $gsea_jar = $def->{gsea_jar} or die "Define gsea_jar at definition first";
+      my $gsea_db  = $def->{gsea_db}  or die "Define gsea_db at definition first";
+      $config->{gsea} = {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "gsea",
+        rtemplate                => "GSEAPerform.R",
+        rReportTemplate          => "GSEAReport.Rmd",
+        output_file              => "parameterSampleFile1",
+        output_file_ext          => ".gsea.html",
+        parameterSampleFile1_ref => [ $deseq2taskname, "_GSEA.rnk\$" ],
+        sh_direct                => 1,
+        rCode                    => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "';",
+        pbs                      => {
+          "email" => $def->{email},
+
+          #          		"emailType" => $def->{emailType},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      };
+      push( @$summary, "gsea" );
+    }
   }
 
   if ( $def->{perform_rnaseqc} ) {
@@ -408,7 +409,7 @@ sub getRNASeqConfig {
     };
     push( @$summary, "qc3" );
   }
-  
+
   if ( $def->{perform_bamplot} ) {
     if ( not defined $def->{bamplot_gff} ) {
       $config->{gene_pos} = {
