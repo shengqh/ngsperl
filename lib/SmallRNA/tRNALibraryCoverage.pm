@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package SmallRNA::NonhostLibraryCoverage;
+package SmallRNA::tRNALibraryCoverage;
 
 use strict;
 use warnings;
