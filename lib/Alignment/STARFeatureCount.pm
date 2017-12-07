@@ -119,11 +119,16 @@ if [ -s $final_bam ]; then
   rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
 fi
 
-featureCounts $featureCountOption -T $thread -a $gffFile -o $final_file $unsorted 
+if [ -s $unsorted ]; then
+  featureCounts $featureCountOption -T $thread -a $gffFile -o $final_file $unsorted
+fi 
 ";
 
     if ( !$output_unsorted ) {
-      print $pbs "rm $unsorted \n";
+      print $pbs "
+if [ -s $final_file ]; then
+  rm $unsorted 
+fi";
     }
 
     $self->close_pbs( $pbs, $pbs_file );
