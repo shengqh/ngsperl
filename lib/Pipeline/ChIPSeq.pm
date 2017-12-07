@@ -27,7 +27,13 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "sra_to_fastq", 0 );
 
-  initDefaultValue( $def, "aligner", "bowtie1" );
+  my $pairend = getOption( $def, "pairend" );
+  if ($pairend) {
+    initDefaultValue( $def, "aligner", "bwa" );
+  }
+  else {
+    initDefaultValue( $def, "aligner", "bowtie" );
+  }
   if ( $def->{aligner} eq "bowtie1" ) {
     initDefaultValue( $def, "bowtie1_option", "-v 1 -m 1 --best --strata" );
   }
@@ -61,7 +67,6 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_cleanbam", 0 );
 
   if ( $def->{perform_cleanbam} ) {
-    initDefaultValue( $def, "pairend",             0 );
     initDefaultValue( $def, "minimum_maq",         10 );
     initDefaultValue( $def, "minimum_insert_size", 30 );
     initDefaultValue( $def, "maximum_insert_size", 1000 );
@@ -217,6 +222,7 @@ sub getConfig {
 
   if ( $def->{perform_cleanbam} ) {
     my $taskName = $def->{aligner} . "_cleanbam";
+    my $pairend = getValue( $def, "pairend" );
     addCleanBAM( $config, $def, $individual, $taskName, "${target_dir}/" . getNextFolderIndex($def) . $taskName, $bam_ref, $def->{pairend} );
     $bam_ref = [ $taskName, ".bam\$" ];
   }
@@ -225,8 +231,8 @@ sub getConfig {
   my $callFilePattern;
 
   if ( $def->{peak_caller} eq "macs" ) {
-    $peakCallerTask = "macs1callpeak";
-    $callFilePattern = ".name.bed\$";
+    $peakCallerTask            = "macs1callpeak";
+    $callFilePattern           = ".name.bed\$";
     $config->{$peakCallerTask} = {
       class      => "Chipseq::MACS",
       perform    => 1,
@@ -306,7 +312,7 @@ sub getConfig {
   }
 
   if ($perform_chipqc) {
-    my $genome  = getValue( $def, "chipqc_genome" );    #hg19, check R ChIPQC package;
+    my $genome = getValue( $def, "chipqc_genome" );      #hg19, check R ChIPQC package;
     my $chipqc_taskname = $peakCallerTask . "_chipqc";
     $config->{$chipqc_taskname} = {
       class          => "QC::ChipseqQC",
