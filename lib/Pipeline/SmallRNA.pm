@@ -940,7 +940,7 @@ sub getSmallRNAConfig {
       my $visualizationTask = $positionTask . "Vis_anticodon";
       my $folder = $data_visualization_dir . "/" . $visualizationTask;
       $config->{$positionTask} = {
-        class            => "SmallRNA::NonhostLibraryCoverage",
+        class            => "SmallRNA::tRNALibraryCoverage",
         perform          => 1,
         target_dir       => $folder,
         option           => "",
