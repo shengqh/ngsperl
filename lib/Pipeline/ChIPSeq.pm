@@ -27,7 +27,7 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "sra_to_fastq", 0 );
 
-  my $pairend = getOption( $def, "pairend" );
+  my $pairend = getValue( $def, "pairend" );
   if ($pairend) {
     initDefaultValue( $def, "aligner", "bwa" );
   }
@@ -51,14 +51,18 @@ sub initializeDefaultOptions {
   elsif ( $def->{peak_caller} eq "macs2" ) {
     initDefaultValue( $def, "macs2_peak_type", "narrow" );
     if ( not defined $def->{"macs2_option"} ) {
-      my $macs2_genome    = getValue( $def, "macs2_genome" );      #hzs
+      my $macs2_genome    = getValue( $def, "macs2_genome" );      #hs
       my $macs2_peak_type = getValue( $def, "macs2_peak_type" );
+      my $pairend         = getValue( $def, "pairend" );
+      my $defaultOption   = "-B -q 0.01 -g " . $macs2_genome;
       if ( $macs2_peak_type eq "narrow" ) {
-        initDefaultValue( $def, "macs2_option", "-B -q 0.01 -g " . $macs2_genome );
+        $defaultOption = "--broad " . $defaultOption;
       }
-      else {
-        initDefaultValue( $def, "macs2_option", "--broad -B -q 0.01 -g " . $macs2_genome );
+      if ($pairend) {
+        $defaultOption = "-f BAMPE " . $defaultOption;
       }
+
+      $def->{"macs2_option"} = $defaultOption;
     }
   }
 
