@@ -43,6 +43,10 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "max_thread",                      8 );
   initDefaultValue( $def, "DE_export_significant_gene_name", 1 );
   initDefaultValue( $def, "output_to_report_dir",            0 );
+  initDefaultValue( $def, "sequencetask_run_time",     '24' );
+  
+  initDefaultValue( $def, "perform_keggprofile",             0 );
+  initDefaultValue( $def, "keggprofile_useRawPValue",             0 );
 
   return $def;
 }
@@ -355,14 +359,34 @@ sub getRNASeqConfig {
         rCode                    => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "';",
         pbs                      => {
           "email" => $def->{email},
-
-          #          		"emailType" => $def->{emailType},
           "nodes"    => "1:ppn=1",
           "walltime" => "1",
           "mem"      => "10gb"
         },
       };
       push( @$summary, "gsea" );
+    }
+  
+    if ( $def->{perform_keggprofile} ) {
+    	my $keggprofile_useRawPValue = $def->{keggprofile_useRawPValue} or die "Define keggprofile_useRawPValue at definition first";
+    	$config->{keggprofile} = {
+        	class                     => "CQS::UniqueR",
+        	perform                   => 1,
+        	target_dir                => $target_dir . "/" . getNextFolderIndex($def) . "keggprofile",
+        	rtemplate                 => "KEGGprofilePerform.R",
+        	output_file               => "",
+        	output_file_ext           => ".KEGG.csv",
+        	parameterSampleFile1_ref  => [ $deseq2taskname, "_DESeq2.csv\$" ],
+        	sh_direct                 => 1,
+        	rCode                     => "useRawPValue='".$keggprofile_useRawPValue."';'",
+        	pbs                       => {
+          		"email"     => $def->{email},
+          		"nodes"     => "1:ppn=1",
+          		"walltime"  => "1",
+          		"mem"       => "10gb"
+        	},
+    	};
+    	push( @$summary, "keggprofile" );
     }
   }
 
