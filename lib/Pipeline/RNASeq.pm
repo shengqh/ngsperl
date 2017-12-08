@@ -113,8 +113,7 @@ sub getRNASeqConfig {
         output_to_same_folder     => $def->{output_bam_to_same_folder},
         featureCount_option       => "-g gene_id -t exon",
         gff_file                  => $transcript_gtf,
-        ispairend                 => 1,
-
+        ispairend                 => getValue($def, "pairend"),
         sh_direct => 0,
         pbs       => {
           "email"    => $email,
@@ -143,7 +142,7 @@ sub getRNASeqConfig {
         perform       => 1,
         target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "genetable",
         option        => "-k 0 -v 6 -e --fillMissingWithZero",
-        source_ref    => [ "star_featurecount", ".count" ],
+        source_ref    => [ "star_featurecount", ".count\$" ],
         name_map_file => $name_map_file,
         cqs_tools     => $cqstools,
         sh_direct     => 1,
