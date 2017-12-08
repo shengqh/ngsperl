@@ -113,7 +113,7 @@ fi
     if ( defined $maxInsertSize && $maxInsertSize > 0 ) {
       my $insertFile = $sample_name . ".insertsize.bam";
       print $pbs "
-if [[ -s $redupFile && ! -s $insertFile ]]; then
+if [[ -s $input && ! -s $insertFile ]]; then
   echo FilterInsertSize=`date`
   samtools view -h $input | awk -F '\\t' 'function abs(v) {return v < 0 ? -v : v} {if(substr(\$1,1,1) == \"\@\") {print \$0} else { if(abs(\$9) < $maxInsertSize) print \$0}}' | samtools view -b > $insertFile
   samtools index $insertFile
