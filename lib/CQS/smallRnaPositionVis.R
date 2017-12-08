@@ -12,7 +12,7 @@ visLayoutFileList=parSampleFile2
 positionFile = parFile1
 totalCountFile<-parFile2
 
-if (!exists(countName)){
+if (!exists("countName")){
   countName = "MappedReads"
 }
 
