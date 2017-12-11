@@ -69,7 +69,7 @@ for gname in groupNames:
         gmap[gf.Name] = {ep[0]:ep[1] for ep in gf.EndPoints}
 
 with open(outputFile, "w") as sw:
-  sw.write("Sample\tGroup\tFeature\tSampleRank\tOverallRank\tTotalCount\tEndpoint\tEndpointCount\tRelativeEndpoint\tPercentage\n")
+  sw.write("File\tCategory\tFeature\tSampleRank\tOverallRank\tTotalCount\tEndposition\tPositionCount\tRelativeEndpoint\tPercentage\n")
   for groupName in groupNames:
     gmap = groupFeatureMap[groupName]
     gCountMap = {k: sum(v.values()) for k,v in gmap.iteritems()}
