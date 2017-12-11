@@ -55,7 +55,7 @@ sub initializeDefaultOptions {
       my $macs2_peak_type = getValue( $def, "macs2_peak_type" );
       my $pairend         = getValue( $def, "pairend" );
       my $defaultOption   = "-B -q 0.01 -g " . $macs2_genome;
-      if ( $macs2_peak_type eq "narrow" ) {
+      if ( $macs2_peak_type ne "narrow" ) {
         $defaultOption = "--broad " . $defaultOption;
       }
       if ($pairend) {
@@ -76,12 +76,12 @@ sub initializeDefaultOptions {
     initDefaultValue( $def, "maximum_insert_size", 1000 );
   }
 
-  initDefaultValue( $def, "perform_chipqc",   0 );
+  initDefaultValue( $def, "perform_chipqc",   1 );
   initDefaultValue( $def, "perform_diffbind", 0 );
   initDefaultValue( $def, "perform_enhancer", 0 );
   initDefaultValue( $def, "perform_multiqc",  1 );
 
-  initDefaultValue( $def, "perform_enhancer", 0 );
+  initDefaultValue( $def, "perform_homer", 1 );
 
   return $def;
 }
@@ -287,8 +287,8 @@ sub getConfig {
     die "Unknown peak caller " . $def->{"peak_caller"};
   }
   push @$step2, ($peakCallerTask);
-  if ( getValue( $def, "perform_homer_motifs" ) ) {
-    addHomerMotif( $config, $def, $summary, $target_dir, $peakCallerTask, $callFilePattern );
+  if ( getValue( $def, "perform_homer" ) ) {
+    addHomerAnnotation( $config, $def, $summary, $target_dir, $peakCallerTask, $callFilePattern );
   }
 
   if ( $def->{perform_rose} ) {
