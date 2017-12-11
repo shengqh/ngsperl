@@ -99,7 +99,7 @@ sub getRNASeqConfig {
   my $aligner    = $def->{aligner};
 
   my $count_file_ref = $def->{count_file};
-  if ( $def->{perform_mapping} & $def->{perform_counting} & $aligner eq "star" & $def->{perform_star_featurecount} ) {
+  if ( $def->{perform_mapping} && $def->{perform_counting} && ($aligner eq "star") && $def->{perform_star_featurecount} ) {
     my $aligner_index   = $def->{star_index} or die "Define star_index at definition first";
     my $starFolder      = $target_dir . "/" . getNextFolderIndex($def) . "star_featurecount";
     my $transcript_gtf  = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
