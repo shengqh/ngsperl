@@ -43,10 +43,11 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "max_thread",                      8 );
   initDefaultValue( $def, "DE_export_significant_gene_name", 1 );
   initDefaultValue( $def, "output_to_report_dir",            0 );
-  initDefaultValue( $def, "sequencetask_run_time",     '24' );
-  
-  initDefaultValue( $def, "perform_keggprofile",             0 );
-  initDefaultValue( $def, "keggprofile_useRawPValue",             0 );
+  initDefaultValue( $def, "sequencetask_run_time",           '24' );
+
+  initDefaultValue( $def, "perform_keggprofile",      0 );
+  initDefaultValue( $def, "keggprofile_useRawPValue", 0 );
+  initDefaultValue( $def, "pairend",                  1 );
 
   return $def;
 }
@@ -99,7 +100,7 @@ sub getRNASeqConfig {
   my $aligner    = $def->{aligner};
 
   my $count_file_ref = $def->{count_file};
-  if ( $def->{perform_mapping} && $def->{perform_counting} && ($aligner eq "star") && $def->{perform_star_featurecount} ) {
+  if ( $def->{perform_mapping} && $def->{perform_counting} && ( $aligner eq "star" ) && $def->{perform_star_featurecount} ) {
     my $aligner_index   = $def->{star_index} or die "Define star_index at definition first";
     my $starFolder      = $target_dir . "/" . getNextFolderIndex($def) . "star_featurecount";
     my $transcript_gtf  = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
@@ -117,9 +118,9 @@ sub getRNASeqConfig {
         output_to_same_folder     => $def->{output_bam_to_same_folder},
         featureCount_option       => "-g gene_id -t exon",
         gff_file                  => $transcript_gtf,
-        ispairend                 => getValue($def, "pairend"),
-        sh_direct => 0,
-        pbs       => {
+        ispairend                 => getValue( $def, "pairend" ),
+        sh_direct                 => 0,
+        pbs                       => {
           "email"    => $email,
           "nodes"    => "1:ppn=" . $def->{max_thread},
           "walltime" => "72",
@@ -358,7 +359,7 @@ sub getRNASeqConfig {
         sh_direct                => 1,
         rCode                    => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "';",
         pbs                      => {
-          "email" => $def->{email},
+          "email"    => $def->{email},
           "nodes"    => "1:ppn=1",
           "walltime" => "1",
           "mem"      => "10gb"
@@ -366,27 +367,27 @@ sub getRNASeqConfig {
       };
       push( @$summary, "gsea" );
     }
-  
+
     if ( $def->{perform_keggprofile} ) {
-    	my $keggprofile_useRawPValue = $def->{keggprofile_useRawPValue} or die "Define keggprofile_useRawPValue at definition first";
-    	$config->{keggprofile} = {
-        	class                     => "CQS::UniqueR",
-        	perform                   => 1,
-        	target_dir                => $target_dir . "/" . getNextFolderIndex($def) . "keggprofile",
-        	rtemplate                 => "KEGGprofilePerform.R",
-        	output_file               => "",
-        	output_file_ext           => ".KEGG.csv",
-        	parameterSampleFile1_ref  => [ $deseq2taskname, "_DESeq2.csv\$" ],
-        	sh_direct                 => 1,
-        	rCode                     => "useRawPValue='".$keggprofile_useRawPValue."';'",
-        	pbs                       => {
-          		"email"     => $def->{email},
-          		"nodes"     => "1:ppn=1",
-          		"walltime"  => "1",
-          		"mem"       => "10gb"
-        	},
-    	};
-    	push( @$summary, "keggprofile" );
+      my $keggprofile_useRawPValue = $def->{keggprofile_useRawPValue} or die "Define keggprofile_useRawPValue at definition first";
+      $config->{keggprofile} = {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "keggprofile",
+        rtemplate                => "KEGGprofilePerform.R",
+        output_file              => "",
+        output_file_ext          => ".KEGG.csv",
+        parameterSampleFile1_ref => [ $deseq2taskname, "_DESeq2.csv\$" ],
+        sh_direct                => 1,
+        rCode                    => "useRawPValue='" . $keggprofile_useRawPValue . "';'",
+        pbs                      => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      };
+      push( @$summary, "keggprofile" );
     }
   }
 
