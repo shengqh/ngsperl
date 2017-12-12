@@ -38,22 +38,23 @@ sub perform {
   print $sh get_run_command($sh_direct);
 
   for my $pairName ( sort keys %$rawFiles ) {
-    my $files = $rawFiles->{$pairName};
-    my $cur_dir  = create_directory_or_die( $result_dir . "/$pairName" );
+    my $files   = $rawFiles->{$pairName};
+    my $cur_dir = create_directory_or_die( $result_dir . "/$pairName" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $pairName );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $pairName );
     my $log_desc = $cluster->get_log_description($log);
-    
+
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
     for my $file (@$files) {
-      my $output    = basename($file);
-      my $annoFile = $output . ".annotation.txt";
+      my $output        = basename($file);
+      my $outputFolder  = scalar(@$files) == 1 ? "." : $output;
+      my $annoFile      = $output . ".annotation.txt";
       my $annoStatsFile = $output . ".annotation.stats";
-      print $pbs "if [ ! -s $annoFile ]; then
-  findMotifsGenome.pl $file $genome $output/ $option
-  annotatePeaks.pl $file $genome -annStats $annoStatsFile > $output/$annoFile
+      print $pbs "if [ ! -s $outputFolder/$annoFile ]; then
+  findMotifsGenome.pl $file $genome $outputFolder $option
+  annotatePeaks.pl $file $genome -annStats $outputFolder/$annoStatsFile > $outputFolder/$annoFile
 fi
 
 ";
@@ -84,12 +85,13 @@ sub result {
     my $files        = $rawFiles->{$pairName};
     my @result_files = ();
     for my $file (@$files) {
-      my $output    = basename($file);
-      my $annoFile = $output . ".annotation.txt";
+      my $output        = basename($file);
+      my $outputFolder  = scalar(@$files) == 1 ? "" : $output . "/";
+      my $annoFile      = $output . ".annotation.txt";
       my $annoStatsFile = $output . ".annotation.stats";
-      push( @result_files, "${result_dir}/${output}/$annoFile" );
-      push( @result_files, "${result_dir}/${output}/$annoStatsFile" );
-      push( @result_files, "${result_dir}/${output}/homerResults.html" );
+      push( @result_files, "${result_dir}/${outputFolder}$annoFile" );
+      push( @result_files, "${result_dir}/${outputFolder}$annoStatsFile" );
+      push( @result_files, "${result_dir}/${outputFolder}homerResults.html" );
     }
     $result->{$pairName} = filter_array( \@result_files, $pattern );
   }
