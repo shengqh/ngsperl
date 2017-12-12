@@ -136,6 +136,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
   htfile<-paste0(prefix, "_DESeq2-vsd-heatmap.png")
   cat("saving HCA to ", htfile, "\n")
   genecount<-nrow(rldselect)
+  showRowDendro = genecount <= 50
   if(genecount > 2){
     png(filename=htfile, width=3000, height=3000, res=300)
     cexCol = max(1.0, 0.2 + 1/log10(ncol(rldselect)))
@@ -152,7 +153,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
                margins=c(12,5), 
                scale="r", 
                labRow=NA,
-               showRowDendio=False,
+               showRowDendro=showRowDendro,
                main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
                cexCol=cexCol, 
                useRaster=FALSE,
@@ -165,7 +166,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
                scale="r", 
                distfun=dist, 
                labRow=NA,
-               showRowDendio=False,
+               showRowDendro=showRowDendro,
                main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
                cexCol=cexCol, 
                useRaster=FALSE,
