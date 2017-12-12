@@ -26,13 +26,15 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $raw_files = get_raw_files( $config, $section );
-  my $organism = get_option($config, $section, "organism");
+  my $organism         = get_option( $config, $section, "organism" );
+  my $interestGeneType = get_option( $config, $section, "interestGeneType", "genesymbol" );
+  my $referenceSet     = get_option( $config, $section, "referenceSet", "genome_proteincoding" );
 
   my $script = dirname(__FILE__) . "/WebGestaltR.r";
   if ( !-e $script ) {
     die "File not found : " . $script;
   }
-  
+
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct) . " \n";
@@ -42,7 +44,7 @@ sub perform {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
-    my $log = $self->get_log_filename( $log_dir, $sample_name );
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
     my $log_desc = $cluster->get_log_description($log);
 
     print $sh "\$MYCMD ./$pbs_name \n";
@@ -52,11 +54,11 @@ sub perform {
     my $inputFile = $raw_files->{$sample_name}->[0];
 
     print $pbs " 
-R --vanilla -f $script --args $organism $sample_name $inputFile . 
+R --vanilla -f $script --args $organism $sample_name $inputFile . $interestGeneType $referenceSet
 ";
     $self->close_pbs( $pbs, $pbs_file );
   }
-  
+
   close $sh;
 
   if ( is_linux() ) {

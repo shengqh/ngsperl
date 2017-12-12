@@ -7,11 +7,23 @@ organism = args[1] #hsapiens
 sampleName=args[2]
 geneFile = args[3]
 outputDirectory = args[4]
+interestGeneType = args[5]
+referenceSet = args[6]
 
 cat("organism=", organism, "\n")
 cat("sampleName=", sampleName, "\n")
 cat("geneFile=", geneFile, "\n")
 cat("outputDirectory=", outputDirectory, "\n")
+
+if(!exists("interestGeneType")){
+  interestGeneType="genesymbol"
+}
+
+if(!exists("referenceSet")){
+  referenceSet="genome"
+}
+cat("interestGeneType=", interestGeneType, "\n")
+cat("referenceSet=", referenceSet, "\n")
 
 geneList<-read.table(geneFile,header=FALSE,sep="\t",stringsAsFactors=FALSE)
 genes<-geneList$V1
@@ -30,7 +42,7 @@ enrichDatabases<-c("geneontology_Biological_Process",
 for(enrichDatabase in enrichDatabases){
   WebGestaltR(enrichMethod="ORA",organism=organism,
             enrichDatabase=enrichDatabase,interestGene=genes,
-            interestGeneType="genesymbol",referenceSet="genome",
+            interestGeneType=interestGeneType,referenceSet=referenceSet,
             is.output=TRUE,
             outputDirectory=outputDirectory,projectName=paste0(sampleName, "_", enrichDatabase))
 }
