@@ -3,7 +3,7 @@
 # Author: zhaos
 ###############################################################################
 
-setwd("/scratch/cqs/zhaos/temp")
+#setwd("/scratch/cqs/zhaos/temp")
 
 deseq2ResultFileTable=parSampleFile1
 deseq2ResultFileTable=read.delim(deseq2ResultFileTable,header=F,as.is=T)
@@ -15,7 +15,6 @@ deseq2ResultFileTable=read.delim(deseq2ResultFileTable,header=F,as.is=T)
 species='hsa'
 useRawPValue=1
 pCut=0.1
-keggOutFileName<-paste0(basename(deseq2ResultTable),".KEGG")
 
 #pCutPathway=pCut
 pCutPathway=0.01
@@ -197,145 +196,137 @@ col_part<-function(data_all,data_part,col) {
 
 for (i in 1:nrow(deseq2ResultFileTable)) {
 	deseq2ResultTable=deseq2ResultFileTable[i,1]
+	keggOutFileName<-paste0(basename(deseq2ResultTable),".KEGG")
 	
-	
-	
-}
-
-
-
-
-resultTable<-read.csv(deseq2ResultTable,header=T,as.is=T,row.names=1)
-
-#genes<-row.names(resultTable)[which(resultTable[,pValueCol]<=pCut)]
-#if (length(genes)<=50) {
-#	break(paste0("Only ",length(genes)," genes were selected as significant genes. May need to check useRawPValue and pCut to let more genes in."))
-#}
-#genesEnz<-convertIdOneToOne(genes,filters="ensembl_gene_id")
-#genesEnz<-na.omit(genesEnz)
-
-#KEGGresult<-find_enriched_pathway(genesEnz,species=species,returned_genenumber = 5,returned_adjpvalue = 0.1)
-
+	resultTable<-read.csv(deseq2ResultTable,header=T,as.is=T,row.names=1)
+		
 #change gene expression
 #To remove outlier. For not significant genes, change their fold change to less than 1.5.
-temp<-resultTable[,c("log2FoldChange"),drop=FALSE]
-for (i in which(resultTable[,pValueCol]>pCut)) {
-	if (temp[i,1]>=0) {
-		temp[i,1]<-min(log2(1.5),temp[i,1])
-	} else {
-		temp[i,1]<-max(log2(2/3),temp[i,1])
+	temp<-resultTable[,c("log2FoldChange"),drop=FALSE]
+	for (i in which(resultTable[,pValueCol]>pCut)) {
+		if (temp[i,1]>=0) {
+			temp[i,1]<-min(log2(1.5),temp[i,1])
+		} else {
+			temp[i,1]<-max(log2(2/3),temp[i,1])
+		}
 	}
-}
-head(temp)
-resultTableFcToGene<-convertId(temp,filters="ensembl_gene_id")
-geneExpr<-resultTableFcToGene[,1]
-names(geneExpr)<-row.names(resultTableFcToGene)
-keggEnrichedPathway<-find_enriched_pathway(names(geneExpr),species=species,returned_genenumber = 5,returned_pvalue=1,returned_adjpvalue = 1)
+#	head(temp)
+	resultTableFcToGene<-convertId(temp,filters="ensembl_gene_id")
+	geneExpr<-resultTableFcToGene[,1]
+	names(geneExpr)<-row.names(resultTableFcToGene)
+	keggEnrichedPathway<-find_enriched_pathway(names(geneExpr),species=species,returned_genenumber = 5,returned_pvalue=1,returned_adjpvalue = 1)
 #dim(KEGGresult1[[1]])
-
-genes<-row.names(resultTable)[which(resultTable[,pValueCol]<=pCut)]
-genesEnz<-convertIdOneToOne(genes,filters="ensembl_gene_id")
-genesEnz<-na.omit(genesEnz)
-keggSigGeneEnrichedPathway<-find_enriched_pathway(genesEnz,species='hsa',returned_genenumber = 1,returned_pvalue=1,returned_adjpvalue = 1)
-
-
-
-###################################################
+	
+	genes<-row.names(resultTable)[which(resultTable[,pValueCol]<=pCut)]
+	genesEnz<-convertIdOneToOne(genes,filters="ensembl_gene_id")
+	genesEnz<-na.omit(genesEnz)
+	keggSigGeneEnrichedPathway<-find_enriched_pathway(genesEnz,species=species,returned_genenumber = 1,returned_pvalue=1,returned_adjpvalue = 1)
+	
+	
+	
+	###################################################
 #expression changes for all genes in each pathway
-###################################################
+	###################################################
 #make gene fold changes for each pathway
-dataForPlot<-data.frame(stringsAsFactors=FALSE)
-for (i in 1:nrow(keggEnrichedPathway[[1]])) {
-	tempGeneExp<-geneExpr[keggEnrichedPathway[[2]][[i]]]
-	tempPathwayName<-keggEnrichedPathway[[1]][i,1]
-	dataForPlot<-rbind(dataForPlot,cbind(tempPathwayName,tempGeneExp))
-}
+	dataForPlot<-data.frame(stringsAsFactors=FALSE)
+	for (i in 1:nrow(keggEnrichedPathway[[1]])) {
+		tempGeneExp<-geneExpr[keggEnrichedPathway[[2]][[i]]]
+		tempPathwayName<-keggEnrichedPathway[[1]][i,1]
+		dataForPlot<-rbind(dataForPlot,cbind(tempPathwayName,tempGeneExp))
+	}
 #head(dataForPlot)
 #dim(dataForPlot)
-colnames(dataForPlot)<-c("Pathway","FoldChange")
-dataForPlot[,2]<-as.numeric(as.character(dataForPlot[,2]))
-
+	colnames(dataForPlot)<-c("Pathway","FoldChange")
+	dataForPlot[,2]<-as.numeric(as.character(dataForPlot[,2]))
+	
 #plot boxplot for pathway fold changes. Only show pathways with fold changes different than 0 (t test p<=0.01)
-pathwayMedian<-tapply(dataForPlot[,2],dataForPlot[,1],median)
-pathwayMaxChange<-tapply(dataForPlot[,2],dataForPlot[,1],function(x) max(abs(x)))
-pathwayDiff0<-tapply(dataForPlot[,2],dataForPlot[,1],function(x) t.test(x,mu=0)$p.value)
-selectedPathways<-names(which(pathwayDiff0<=0.01))
-if (length(selectedPathways)>0) {
-	selectedPathways<-selectedPathways[which(selectedPathways!="Cyanoamino acid metabolism")] #not in human
-	selectedPathways<-selectedPathways[which(selectedPathways!="Metabolic pathways")] #not in human
-	dataForPlot1<-dataForPlot[which(dataForPlot[,1] %in% selectedPathways),]
-	pathwayMedian1<-pathwayMedian[selectedPathways]
-	dataForPlot1[,1]<-factor(as.character(dataForPlot1[,1]),levels=names(pathwayMedian1)[order(pathwayMedian1)])
+	pathwayMedian<-tapply(dataForPlot[,2],dataForPlot[,1],median)
+	pathwayMaxChange<-tapply(dataForPlot[,2],dataForPlot[,1],function(x) max(abs(x)))
+	pathwayDiff0<-tapply(dataForPlot[,2],dataForPlot[,1],function(x) t.test(x,mu=0)$p.value)
+	selectedPathways<-names(which(pathwayDiff0<=0.01))
+	if (length(selectedPathways)>0) {
+		selectedPathways<-selectedPathways[which(selectedPathways!="Cyanoamino acid metabolism")] #not in human
+		selectedPathways<-selectedPathways[which(selectedPathways!="Metabolic pathways")] #not in human
+		dataForPlot1<-dataForPlot[which(dataForPlot[,1] %in% selectedPathways),]
+		pathwayMedian1<-pathwayMedian[selectedPathways]
+		dataForPlot1[,1]<-factor(as.character(dataForPlot1[,1]),levels=names(pathwayMedian1)[order(pathwayMedian1)])
+		
+		p <- ggplot(dataForPlot1, aes(Pathway, FoldChange))
+		p1 <- p + geom_boxplot(outlier.colour = NA)
+		p1<-p1 + geom_point(position = position_jitter(width = 0.2),size=I(0.7))
+		p2<-p1+theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5,size=20),axis.text.y=element_text(size=20))+geom_hline(yintercept = 0)+coord_flip()
+		
+		keggFCFigureFileName<-paste0(keggOutFileName,".foldchange.pdf")
+		pdf(keggFCFigureFileName,width=10,height=7)
+		print(p2)
+		dev.off()
+	} else {
+		warning(paste0("No pathway has significant fold changes! Can't make differential pathway fold change boxplot."))
+	}
 	
-	p <- ggplot(dataForPlot1, aes(Pathway, FoldChange))
-	p1 <- p + geom_boxplot(outlier.colour = NA)
-	p1<-p1 + geom_point(position = position_jitter(width = 0.2),size=I(0.7))
-	p2<-p1+theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5,size=20),axis.text.y=element_text(size=20))+geom_hline(yintercept = 0)+coord_flip()
 	
-	keggFCFigureFileName<-paste0(keggOutFileName,".foldchange.pdf")
-	pdf(keggFCFigureFileName,width=10,height=7)
-	print(p2)
-	dev.off()
-} else {
-	warning(paste0("No pathway has significant fold changes! Can't make differential pathway fold change boxplot."))
-}
-
-
 #Pathway Figure
 #In case of unbalance fold change. balance the color
-colPart<-col_part(c(-2.5,2.5), range(resultTableFcToGene[,1]),col=colorRampPalette(c('green','black','red'))(1024))
-col<-col_by_value(resultTableFcToGene,col=colPart,range=c(-3,3))
-
+	colPart<-col_part(c(-2.5,2.5), range(resultTableFcToGene[,1]),col=colorRampPalette(c('green','black','red'))(1024))
+	col<-col_by_value(resultTableFcToGene,col=colPart,range=c(-3,3))
+	
 #fold change pathways
-selectedPathways<-names(which(pathwayDiff0<=pCutPathway))
-if (length(selectedPathways)>0) {
-	for (i in selectedPathways) {
-		pathway_id=row.names(keggEnrichedPathway[[1]])[which(keggEnrichedPathway[[1]][,1]==i)]
+	selectedPathways<-names(which(pathwayDiff0<=pCutPathway))
+	if (length(selectedPathways)>0) {
+		for (i in selectedPathways) {
+			pathway_id=row.names(keggEnrichedPathway[[1]])[which(keggEnrichedPathway[[1]][,1]==i)]
 #	pathway_id="04610"
 #	pathway_id="04614"
 #	pathway_id="04370"
 #	pathway_id="03010"
 #	pathway_id="04672"
-		download_KEGGfile(pathway_id)
-		temp<-plot_pathway(resultTableFcToGene,type="bg",bg_col=col,text_col="white",magnify=1.4,species='hsa',pathway_id=pathway_id,genes_kept="abs")
+			download_KEGGfile(pathway_id)
+			temp<-plot_pathway(resultTableFcToGene,type="bg",bg_col=col,text_col="white",magnify=1.4,species='hsa',pathway_id=pathway_id,genes_kept="abs")
+		}
+	} else {
+		warning(paste0("No pathway has significant fold changes! Can't make differential pathway maps."))
 	}
-} else {
-	warning(paste0("No pathway has significant fold changes! Can't make differential pathway maps."))
-}
-
+	
 #differential genes enriched pathways
-sigPathwayInd=which(keggSigGeneEnrichedPathway[[1]][,pValuePathwayCol]<=pCutPathway)
-if (length(sigPathwayInd)>0) {
-	for (pathway_id in row.names(keggSigGeneEnrichedPathway[[1]])[sigPathwayInd]) {
-		pathway_id=i
-		download_KEGGfile(pathway_id)
-		temp<-plot_pathway(resultTableFcToGene,type="bg",bg_col=col,text_col="white",magnify=1.4,species='hsa',pathway_id=pathway_id,genes_kept="abs")
+	sigPathwayInd=which(keggSigGeneEnrichedPathway[[1]][,pValuePathwayCol]<=pCutPathway)
+	if (length(sigPathwayInd)>0) {
+		for (pathway_id in row.names(keggSigGeneEnrichedPathway[[1]])[sigPathwayInd]) {
+			pathway_id=i
+			download_KEGGfile(pathway_id)
+			temp<-plot_pathway(resultTableFcToGene,type="bg",bg_col=col,text_col="white",magnify=1.4,species='hsa',pathway_id=pathway_id,genes_kept="abs")
+		}
 	}
+	
+	
+	##########################################
+#output pathway information table
+	##########################################
+	
+#temp<-find_enriched_pathway(genesEnz,species=species,returned_genenumber = 5,returned_pvalue=1,returned_adjpvalue = 1)
+#	keggResultOut<-data.frame(PathwayId=row.names(keggEnrichedPathway[[1]]),stringsAsFactors=FALSE)
+#	keggResultOut$PathwayId<-row.names(keggEnrichedPathway[[1]])
+#	keggResultOut$PathwayId<-row.names(keggResultOut)
+#	keggResultOut<-keggEnrichedPathway[[1]][,c("Gene_Found","Gene_Pathway")]
+	
+	keggResultOut<-data.frame(Pathway_Id=row.names(keggEnrichedPathway[[1]]),stringsAsFactors=FALSE)
+	keggResultOut$Pathway_Name<-keggEnrichedPathway[[1]][,c("Pathway_Name")]
+	keggResultOut$Pathway_SignificantDiffGene<-keggSigGeneEnrichedPathway[[1]][keggResultOut$Pathway_Id,c("Gene_Found")]
+	keggResultOut$Pathway_DataGene<-keggEnrichedPathway[[1]][,c("Gene_Found")]
+	keggResultOut$Pathway_AllGene<-keggEnrichedPathway[[1]][,c("Gene_Pathway")]
+	keggResultOut$Pathway_Log2FoldChange<-pathwayMedian[keggResultOut$Pathway_Name]
+	keggResultOut$Pathway_Log2FoldChangePValue<-pathwayDiff0[keggResultOut$Pathway_Name]
+	keggResultOut$Pathway_SignificantDiffGenePValue<-keggSigGeneEnrichedPathway[[1]][keggResultOut$Pathway_Id,c("pvalue")]
+	keggResultOut$Pathway_SignificantDiffGeneAdjPValue<-keggSigGeneEnrichedPathway[[1]][keggResultOut$Pathway_Id,c("pvalueAdj")]
+	
+	keggTableFileName<-paste0(keggOutFileName,".csv")
+	write.csv(keggResultOut,keggTableFileName,row.names=FALSE)
+	
 }
 
 
-##########################################
-#output pathway information table
-##########################################
 
-#temp<-find_enriched_pathway(genesEnz,species=species,returned_genenumber = 5,returned_pvalue=1,returned_adjpvalue = 1)
-keggResultOut<-data.frame(PathwayId=row.names(keggEnrichedPathway[[1]]))
-keggResultOut$PathwayId<-row.names(keggEnrichedPathway[[1]])
-keggResultOut$PathwayId<-row.names(keggResultOut)
-keggResultOut<-keggEnrichedPathway[[1]][,c("Gene_Found","Gene_Pathway")]
 
-keggResultOut<-data.frame(Pathway_Id=row.names(keggEnrichedPathway[[1]]))
-keggResultOut$Pathway_Name<-keggEnrichedPathway[[1]][,c("Pathway_Name")]
-keggResultOut$Pathway_SignificantDiffGene<-keggSigGeneEnrichedPathway[[1]][keggResultOut$Pathway_Id,c("Gene_Found")]
-keggResultOut$Pathway_DataGene<-keggEnrichedPathway[[1]][,c("Gene_Found")]
-keggResultOut$Pathway_AllGene<-keggEnrichedPathway[[1]][,c("Gene_Pathway")]
-keggResultOut$Pathway_Log2FoldChange<-pathwayMedian[keggResultOut$Pathway_Name]
-keggResultOut$Pathway_Log2FoldChangePValue<-pathwayDiff0[keggResultOut$Pathway_Name]
-keggResultOut$Pathway_SignificantDiffGenePValue<-keggSigGeneEnrichedPathway[[1]][keggResultOut$Pathway_Id,c("pvalue")]
-keggResultOut$Pathway_SignificantDiffGeneAdjPValue<-keggSigGeneEnrichedPathway[[1]][keggResultOut$Pathway_Id,c("pvalueAdj")]
 
-keggTableFileName<-paste0(keggOutFileName,".csv")
-write.csv(keggResultOut,keggTableFileName,row.names=FALSE)
 
 
 
