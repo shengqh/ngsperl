@@ -326,15 +326,17 @@ sub getRNASeqConfig {
     if ( $def->{perform_webgestalt} ) {
       my $webgestaltTaskName = $deseq2taskname . "_WebGestalt";
       $config->{$webgestaltTaskName} = {
-        class         => "Annotation::WebGestaltR",
-        perform       => 1,
-        target_dir    => "${target_dir}/$webgestaltTaskName",
-        option        => "",
-        source_ref    => [ $deseq2taskname, "sig_genename.txt\$" ],
-        output_to_dir => getReportDir($def),
-        organism      => getValue( $def, "webgestalt_organism" ),
-        sh_direct     => 1,
-        pbs           => {
+        class            => "Annotation::WebGestaltR",
+        perform          => 1,
+        target_dir       => "${target_dir}/$webgestaltTaskName",
+        option           => "",
+        source_ref       => [ $deseq2taskname, "sig_genename.txt\$" ],
+        output_to_dir    => getReportDir($def),
+        organism         => getValue( $def, "webgestalt_organism" ),
+        interestGeneType => $def->{interestGeneType},
+        referenceSet     => $def->{referenceSet},
+        sh_direct => 1,
+        pbs       => {
           "email"    => $email,
           "nodes"    => "1:ppn=1",
           "walltime" => "72",
