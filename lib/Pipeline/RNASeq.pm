@@ -379,7 +379,7 @@ sub getRNASeqConfig {
         output_file_ext          => ".KEGG.csv",
         parameterSampleFile1_ref => [ $deseq2taskname, "_DESeq2.csv\$" ],
         sh_direct                => 1,
-        rCode                    => "useRawPValue='" . $keggprofile_useRawPValue . "';'",
+        rCode                    => "useRawPValue='" . $keggprofile_useRawPValue . "';",
         pbs                      => {
           "email"    => $def->{email},
           "nodes"    => "1:ppn=1",
