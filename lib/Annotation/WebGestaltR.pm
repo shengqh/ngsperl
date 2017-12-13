@@ -28,7 +28,7 @@ sub perform {
   my $raw_files = get_raw_files( $config, $section );
   my $organism         = get_option( $config, $section, "organism" );
   my $interestGeneType = get_option( $config, $section, "interestGeneType", "genesymbol" );
-  my $referenceSet     = get_option( $config, $section, "referenceSet", "genome_proteincoding" );
+  my $referenceSet     = get_option( $config, $section, "referenceSet", "genome" );
 
   my $script = dirname(__FILE__) . "/WebGestaltR.r";
   if ( !-e $script ) {
