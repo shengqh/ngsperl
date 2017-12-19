@@ -216,7 +216,7 @@ sub perform {
   }
   close($df);
 
-  my $rfile = $pbs_dir . "/${task_name}.r";
+  my $rfile = $result_dir . "/${task_name}.r";
   open( my $rf, ">$rfile" )     or die "Cannot create $rfile";
   open( my $rt, "<$rtemplate" ) or die $!;
   print $rf "

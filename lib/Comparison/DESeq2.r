@@ -428,8 +428,8 @@ for(countfile_index in c(1:length(countfiles))){
       cat(nrow(comparisonData), " genes with minimum median count in group larger or equals than ", minMedianInGroup, "\n")
     }
     
-    if (nrow(comparisonData)==0) {
-      message=paste0("Error: 0 Genes can be used in DESeq2 analysis in comparison ",comparisonName," \n")
+    if (nrow(comparisonData)<=1) {
+      message=paste0("Error: Only ", nrow(comparisonData), " Genes can be used in DESeq2 analysis in comparison ",comparisonName,", ignored. \n")
       warning(message)
       writeLines(message,paste0(comparisonName,".error"))
       next;
