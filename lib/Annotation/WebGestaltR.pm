@@ -7,6 +7,7 @@ use File::Basename;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
+use CQS::StringUtils;
 use CQS::Task;
 
 our @ISA = qw(CQS::Task);
@@ -38,9 +39,11 @@ sub perform {
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct) . " \n";
+  
+  my $expect_result = $self->result($config, $section);
 
   for my $sample_name ( sort keys %$raw_files ) {
-    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
+    my $cur_dir = scalar( keys %$raw_files ) == 1 ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -48,13 +51,14 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     print $sh "\$MYCMD ./$pbs_name \n";
-
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
+    my $final_file = $expect_result->{$sample_name}[0];
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
     my $inputFile = $raw_files->{$sample_name}->[0];
 
     print $pbs " 
 R --vanilla -f $script --args $organism $sample_name $inputFile . $interestGeneType $referenceSet
+rm */*.tar.gz
 ";
     $self->close_pbs( $pbs, $pbs_file );
   }
@@ -67,4 +71,22 @@ R --vanilla -f $script --args $organism $sample_name $inputFile . $interestGeneT
 
   print "!!!shell file $shfile created, you can run this shell file to submit " . $self->{_name} . " tasks.\n";
 }
+
+sub result {
+  my ( $self, $config, $section, $pattern ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  my $raw_files = get_raw_files( $config, $section );
+
+  my $result       = {};
+  my @result_files = ();
+  for my $sample_name ( sort keys %$raw_files ) {
+    my $cur_dir = scalar( keys %$raw_files ) == 1 ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+    my $finalFile = "Project_" . $sample_name . "_geneontology_Biological_Process/Report_" . $sample_name . "_geneontology_Biological_Process.html";
+    push( @result_files, "$cur_dir/$finalFile" );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
+  }
+  return $result;
+}
+
 1;
