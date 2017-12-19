@@ -152,11 +152,22 @@ sub perform {
 
     for my $key ( keys %$covariances ) {
       my $values = $covariances->{$key};
-      if ( !( ref $values eq ref [] ) ) {
+      
+      if ($values eq "paired"){
+        if (scalar(@s1) != scalar(@s2)){
+          die "Covariance paired requires equal number of samples in each group for comparison " . $comparison_name . ".";
+        }
+        $values = [];
+        for my $i ( 0 .. $#s1 ) {
+          push(@$values, $key . $i);
+        }
+        for my $i ( 0 .. $#s1 ) {
+          push(@$values, $key . $i);
+        }
+        $covariances->{$key} = $values;
+      }elsif ( !( ref $values eq ref [] ) ) {
         die "Covariances of " . $key . " should be array reference!";
-      }
-
-      if ( scalar(@$values) != $total_sample_count ) {
+      }elsif ( scalar(@$values) != $total_sample_count ) {
         die "Number of covariance value of " . $key . " shoud be $total_sample_count !";
       }
     }
