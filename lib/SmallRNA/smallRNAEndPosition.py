@@ -14,9 +14,9 @@ from audioop import reverse
 DEBUG = 1
 
 if DEBUG:
-  #inputFile="/scratch/cqs/shengq2/vickers/20170628_smallRNA_3018-KCV-77_78_79_mouse_v3/temp/temp.list"
-  inputFile = "/scratch/cqs/shengq2/vickers/20170628_smallRNA_3018-KCV-77_78_79_mouse_v3/temp/smallRNA_1mm_KCV_3018_77_78_79.filelist"
-  outputFile = "/scratch/cqs/shengq2/vickers/20170628_smallRNA_3018-KCV-77_78_79_mouse_v3/temp/temp.endpoint.txt"
+  inputFile = "/scratch/cqs/shengq2/vickers/20170628_smallRNA_3018-KCV-77_78_79_mouse_v3/data_visualization/host_endpoint_vis/smallRNA_1mm_KCV_3018_77_78_79.filelist"
+  #inputFile = "/scratch/cqs/shengq2/vickers/20170628_smallRNA_3018-KCV-77_78_79_mouse_v3/data_visualization/host_endpoint_vis/test.filelist"
+  outputFile = "/scratch/cqs/shengq2/vickers/20170628_smallRNA_3018-KCV-77_78_79_mouse_v3/data_visualization/host_endpoint_vis/KCV_3018_77_78_79.endpoint.txt"
 else:
   parser = argparse.ArgumentParser(description="Generate smallRNA NTA read for Fastq file.",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -38,8 +38,10 @@ with open(inputFile, "r") as ir:
   files = [line.rstrip().split('\t') for line in ir]
 
 fileFeatures = []
+fileIndex = 0
 for file in files:
-  logger.info("Reading feature-query in %s ..." % file[1])
+  fileIndex = fileIndex + 1
+  logger.info("Reading %d/%d : %s ..." % (fileIndex, len(files), file[1]))
   fileFeatures.append([file[0], readCountXmlFeatures(file[1])])
 
 groupNames = set()
@@ -69,7 +71,7 @@ for gname in groupNames:
         gmap[gf.Name] = {ep[0]:ep[1] for ep in gf.EndPoints}
 
 with open(outputFile, "w") as sw:
-  sw.write("File\tCategory\tFeature\tSampleRank\tOverallRank\tTotalCount\tEndposition\tPositionCount\tRelativeEndpoint\tPercentage\n")
+  sw.write("File\tCategory\tFeature\tSampleRank\tOverallRank\tTotalCount\tEndposition\tPositionCount\tRelativeEndpoint\tRelativeSampleEndpoint\tPercentage\n")
   for groupName in groupNames:
     gmap = groupFeatureMap[groupName]
     gCountMap = {k: sum(v.values()) for k,v in gmap.iteritems()}
@@ -97,7 +99,11 @@ with open(outputFile, "w") as sw:
         positions = sorted(set(ep[0] for ep in endpoints))
         totalCount = sum(ep[1] for ep in endpoints)
         maxPosition = gMaxCountIndexMap[featureName]
+        maxSampleCount = max(v[1] for v in endpoints)
+        maxSamplePosition = [v[0] for v in endpoints if v[1] == maxSampleCount][0]
+        
         for position in positions:
           positionCount = sum(ep[1] for ep in endpoints if ep[0] == position)
-          sw.write("%s\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%.2f\n" % (sampleName, groupName, featureName, (idx + 1), groupRank, totalCount, position, positionCount, position - maxPosition, (positionCount * 1.0) / totalCount))  
+          sw.write("%s\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.2f\n" % (sampleName, groupName, featureName, (idx + 1), groupRank, totalCount, position, positionCount, position - maxPosition, position- maxSamplePosition, (positionCount * 1.0) / totalCount))
+            
 logger.info("Result has been saved to %s" % outputFile)
