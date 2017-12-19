@@ -543,7 +543,7 @@ for (i in 1:nrow(countTableFileAll)) {
 		  }
 		  
 		  #group with at least half samples more than 0 count
-		  countNumVsdGroup1<-mergeTableBySampleGroup(countNumVsd,sampleToGroup,groupMinMedian=0.5)
+		  countNumVsdGroup1<-mergeTableBySampleGroup(countNumVsd,sampleToGroup,groupMinMedian=0.5,toPercent=FALSE)
 		  
 		  #heatmap
 		  margin=c(min(10,max(nchar(colnames(countNumVsdGroup1)))/1.5),min(10,max(nchar(row.names(countNumVsdGroup1)))/2))
