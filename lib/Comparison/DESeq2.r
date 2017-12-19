@@ -620,6 +620,11 @@ for(countfile_index in c(1:length(countfiles))){
     allSigDirectionList[[comparisonName]]<-sign(sigTable$log2FoldChange)
     if(nrow(sigTable) > 0){
       sigTable$comparisonName<-comparisonName
+      
+      if (("Feature_gene_name" %in% colnames(sigTable)) & (!("Feature_gene_name" %in% sigTableAllVar))){
+        sigTableAllVar<-c("Feature_gene_name", sigTableAllVar)
+      }
+      
       sigTableAll<-rbind(sigTableAll,sigTable[,c("comparisonName",sigTableAllVar),drop=FALSE],make.row.names=FALSE)
       sigTableAllGene<-c(sigTableAllGene,row.names(sigTable))
     }
