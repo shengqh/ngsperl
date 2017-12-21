@@ -176,8 +176,10 @@ sub perform {
       die("rtemplate $rtemplate defined but not exists!");
     }
     open( my $rt, "<$rtemplate" ) or die $!;
-    while (<$rt>) {
-      print $rf $_;
+    while (my $row = <$rt>) {
+      chomp($row);
+      $row =~ s/\r//g;
+      print $rf "$row\n";
     }
     close($rt);
   }
@@ -198,9 +200,11 @@ sub perform {
       			die("rReportTemplate $rReportTemplate defined but not exists!");
     		}
     		open( my $rt, "<$rReportTemplate" ) or die $!;
-    		while (<$rt>) {
-      			print $rf $_;
-    		}
+        while (my $row = <$rt>) {
+          chomp($row);
+          $row =~ s/\r//g;
+          print $rf "$row\n";
+        }
     		close($rt);
   		}
   		close($rf);	
