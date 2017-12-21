@@ -86,7 +86,50 @@ getSampleInGroup<-function(groupDefineFile, samples, comparisonDefineFile="", co
 }
 
 ###############################################################################
-# Funtions in other visualization tasks
+# Functions for correlation calculation
+###############################################################################
+
+corTestVectorWithoutZero <- function(x, y, method="spearman") {
+  sumxy<-!is.na(x) & !is.na(y) & (x != 0) & (y != 0)
+  ccx<-x[sumxy]
+  ccy<-y[sumxy]
+  cor.test(ccx, ccy, method=method)
+}
+
+corVectorWithoutZero <- function(x, y, method="spearman") {
+  sumxy<-!is.na(x) & !is.na(y) & (x != 0) & (y != 0)
+  ccx<-x[sumxy]
+  ccy<-y[sumxy]
+  cor(ccx, ccy, method=method)
+}
+
+corTableWithoutZero<-function(x, method ="spearman") 
+{
+  if (is.data.frame(x)) 
+    x <- as.matrix(x)
+  if (!(is.numeric(x) || is.logical(x))) 
+    stop("'x' must be numeric")
+  stopifnot(is.atomic(x))
+  ncy <- ncx <- ncol(x)
+  if (ncx == 0) 
+    stop("'x' is empty")
+  r <- matrix(0, nrow = ncx, ncol = ncy)
+  for (i in seq_len(ncx)) {
+    for (j in seq_len(i)) {
+      x2 <- x[, i]
+      y2 <- x[, j]
+      r[i, j] <- corVectorWithoutZero(x2, y2, method=method)
+    }
+  }
+  r <- r + t(r) - diag(diag(r))
+  rownames(r) <- colnames(x)
+  colnames(r) <- colnames(x)
+  r
+}
+
+
+###############################################################################
+# Functions in other visualization tasks
 ###############################################################################
 
 myEstimateSizeFactors<-function(dds){
@@ -707,7 +750,7 @@ filterCountTable<-function(countNum,groupFileList="",minMedian=1,minMedianInGrou
 		sampleToGroup<-getSampleInGroup(groupFileList, colnames(countNum), comparisonFileList, countTableTitle, useLeastGroups)
 		countNumGroup<-mergeTableBySampleGroup(countNum,sampleToGroup,toPercent=FALSE,rowFun=rowMedians)
 		minGroupMedianInd<-apply(countNumGroup,1,min)
-		if (any(minGroupMedianInd<minMedianInGroup)) {
+		if (all(minGroupMedianInd<minMedianInGroup)) {
 			countNum<-countNum[-which(minGroupMedianInd<minMedianInGroup),]
 			print(paste0(length(which(minGroupMedianInd<minMedianInGroup))," reads/genes were removed due to minimal group median less than ",minMedianInGroup))
 		}

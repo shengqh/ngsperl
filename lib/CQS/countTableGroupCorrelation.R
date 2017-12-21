@@ -338,11 +338,11 @@ for (i in 1:nrow(countTableFileAll)) {
   if (groupFileList!="") {
     sampleToGroup<-getSampleInGroup(groupFileList, colnames(countNum), comparisonFileList, countTableTitle, useLeastGroups,onlySamplesInGroup=onlySamplesInGroup)
     write.table(sampleToGroup, paste0(outputFilePrefix,suffix,".correlation.groups"),col.names=F, row.names=F, quote=F, sep="\t")
-	  if (onlySamplesInGroup) {
-		  countNum<-countNum[,which(colnames(countNum) %in% as.character(sampleToGroup$V1))]
-		  #remove genes with total reads 0
-		  countNum<-countNum[which(rowSums(countNum,na.rm=T)>0),]
-	  }
+    if (onlySamplesInGroup) {
+      countNum<-countNum[,which(colnames(countNum) %in% as.character(sampleToGroup$V1))]
+      #remove genes with total reads 0
+      countNum<-countNum[which(rowSums(countNum,na.rm=T)>0),]
+    }
   }
   
   #filter reads/genes by parameter
@@ -350,27 +350,27 @@ for (i in 1:nrow(countTableFileAll)) {
   
   #normlize by total reads or VSD
   if (totalCountFile!="") { #normlize with total count *10^6
-	  totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
-	  totalCount<-unlist(totalCount[totalCountKey,])
-	  countNumVsd<-10^6*t(t(countNum)/totalCount[colnames(countNum)])
-	  write.table(countNumVsd, paste0(outputFilePrefix,suffix,".RPM.txt"),col.names=NA, quote=F, sep="\t")
-	  
-	  ylab<-"Mapped Reads per Million"
+    totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
+    totalCount<-unlist(totalCount[totalCountKey,])
+    countNumVsd<-10^6*t(t(countNum)/totalCount[colnames(countNum)])
+    write.table(countNumVsd, paste0(outputFilePrefix,suffix,".RPM.txt"),col.names=NA, quote=F, sep="\t")
+    
+    ylab<-"Mapped Reads per Million"
   } else {
-	  dds=DESeqDataSetFromMatrix(countData = countNum, colData = as.data.frame(rep(1,ncol(countNum))),design = ~1)
-	  dds<-try(myEstimateSizeFactors(dds))
-	  vsdres<-try(temp<-DESeq2::varianceStabilizingTransformation(dds, blind = TRUE))
-	  if (class(vsdres) == "try-error") {
-		  message=paste0("Warning: varianceStabilizingTransformation function failed.\n",as.character(vsdres))
-		  warning(message)
-		  writeLines(message,paste0(outputFilePrefix,suffix,".vsd.warning"))
-		  next;
-	  }
-	  countNumVsd<-assay(temp)
-	  colnames(countNumVsd)<-colnames(countNum)
-	  write.table(countNumVsd, paste0(outputFilePrefix,suffix,".vsd.txt"),col.names=NA, quote=F, sep="\t")
-	  
-	  ylab<-"VSD"
+    dds=DESeqDataSetFromMatrix(countData = countNum, colData = as.data.frame(rep(1,ncol(countNum))),design = ~1)
+    dds<-try(myEstimateSizeFactors(dds))
+    vsdres<-try(temp<-DESeq2::varianceStabilizingTransformation(dds, blind = TRUE))
+    if (class(vsdres) == "try-error") {
+      message=paste0("Warning: varianceStabilizingTransformation function failed.\n",as.character(vsdres))
+      warning(message)
+      writeLines(message,paste0(outputFilePrefix,suffix,".vsd.warning"))
+      next;
+    }
+    countNumVsd<-assay(temp)
+    colnames(countNumVsd)<-colnames(countNum)
+    write.table(countNumVsd, paste0(outputFilePrefix,suffix,".vsd.txt"),col.names=NA, quote=F, sep="\t")
+    
+    ylab<-"VSD"
   }
   
   if(!is.na(curgenes)){
@@ -394,11 +394,7 @@ for (i in 1:nrow(countTableFileAll)) {
   
   if (groupFileList!="") {
     groups<-sampleToGroup$V2
-    if(length(unique(groups)) > 8){
-      colors<-primary.colors(length(unique(groups)))
-    }else{
-      colors<-rainbow(length(unique(groups)))
-    }
+    colors<-makeColors(length(unique(groups)))
     conditionColors<-as.matrix(data.frame(Group=colors[groups]))
   }else{
     groups<-NA
@@ -418,176 +414,179 @@ for (i in 1:nrow(countTableFileAll)) {
   
   width=min(8000, max(2000, 50 * ncol(countHT)))
   if (ncol(countHT)>1 & nrow(countHT)>1) {
-	  print("Drawing heatmap for all samples.")
-	  png(paste0(outputFilePrefix,suffix,".heatmap.png"),width=width,height=width,res=300)
-	  
-	  if(nrow(countHT) < 20){
-		  if(!is.na(conditionColors[1])){
-			  heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=hmcols, ColSideColors=conditionColors)
-		  }else{
-			  heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=hmcols)
-		  }
-	  }else{
-		  if(!is.na(conditionColors[1])){
-			  heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,showRowDendro=F,labRow="",col=hmcols, ColSideColors=conditionColors)
-		  }else{
-			  heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,showRowDendro=F,labRow="",col=hmcols)
-		  }
-	  }
-	  dev.off()
+    print("Drawing heatmap for all samples.")
+    png(paste0(outputFilePrefix,suffix,".heatmap.png"),width=width,height=width,res=300)
+    
+    if(nrow(countHT) < 20){
+      if(!is.na(conditionColors[1])){
+        heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=hmcols, ColSideColors=conditionColors)
+      }else{
+        heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=hmcols)
+      }
+    }else{
+      if(!is.na(conditionColors[1])){
+        heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,showRowDendro=F,labRow="",col=hmcols, ColSideColors=conditionColors)
+      }else{
+        heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,showRowDendro=F,labRow="",col=hmcols)
+      }
+    }
+    dev.off()
   } else {
-	  print("Not enough samples or genes. Can't Draw heatmap for all samples.")
+    print("Not enough samples or genes. Can't Draw heatmap for all samples.")
   }
 
   if (ncol(countNumVsd)>1 & nrow(countNumVsd)>1) {
-	  print("Doing correlation analysis ...")
-	  #correlation distribution
-	  countNumCor<-corWithout(countNumVsd,use="pa",method="sp")
-      write.csv(countNumCor, file=paste0(outputFilePrefix,suffix,".Correlation.csv"), row.names=T)
- 	  
-	  colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
-	  if (min(countNumCor,na.rm=T)<0) {
-		  colAllLabel<-c(-1,0,1)
-		  if (fixColorRange) {
-			  col<-col_part(data_all=c(-1,1),data_part=countNumCor,col=colAll)
-		  } else {
-			  col<-colAll
-		  }
-	  } else {
-		  colAllLabel<-c(0,0.5,1)
-		  if (fixColorRange) {
-			  col<-col_part(data_all=c(0,1),data_part=countNumCor,col=colAll)
-		  } else {
-			  col<-colAll
-		  }
-	  }
-	  legendfun<-function(x) {
-		  par(mar = c(5, 1, 1, 1));
-		  image(x=1:length(colAll),y=1,z=matrix(1:length(colAll),ncol=1),xlab="",xaxt="n",yaxt="n",col=colAll);
-		  axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
-	  }
-	  if (groupFileList!="") {
-		  legendfun<-function() showLegend(legend=unique(groups),col=unique(conditionColors[,1]))
-	  }
-	  png(paste0(outputFilePrefix,suffix,".Correlation.png"),width=width,height=width,res=300)
-	  labRow=NULL
-	  margin=c(min(10,max(nchar(colnames(countNumCor)))/2),min(10,max(nchar(row.names(countNumCor)))/2))
-	  if(all(!is.na(conditionColors))) { #has group information
-		  heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=labRow,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,ColSideColors=conditionColors)
-	  }else{
-		  heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=labRow,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
-	  }
-	  dev.off()
-	  if (ncol(countNumCor)>3) {
-		  if (any(is.na(countNumCor))) {
-			  print(paste0("NA in correlation matrix. Can't draw .Correlation.Cluster.png"))
-		  } else {
-		  	png(paste0(outputFilePrefix,suffix,".Correlation.Cluster.png"),width=width,height=width,res=300)
-		  	if(!is.na(conditionColors)){
-				  heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun,ColSideColors=conditionColors)
-		  	}else{
-				  heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun)
-		  	}
-			  dev.off()
-	  	}
-	  }
-	  
-	  if (groupFileList!="") {
-		  cexColGroup<-1
-		  if(length(unique(sampleToGroup$V2)) < 3){
-			  saveInError(paste0("Less than 3 groups. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(suffix,Sys.Date(),".warning"))
-			  next
-		  }
-		  
-		  countNumVsdGroup<-mergeTableBySampleGroup(countNumVsd,sampleToGroup)
-		  
-		  #heatmap
-		  margin=c(min(10,max(nchar(colnames(countNumVsdGroup)))/1.5),min(10,max(nchar(row.names(countNumVsdGroup)))/2))
-		  png(paste0(outputFilePrefix,suffix,".Group.heatmap.png"),width=2000,height=2000,res=300)
-		  if(nrow(countNumVsdGroup) < 20){
-			  heatmap3(countNumVsdGroup,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
-		  }else{
-			  margin[2]<-5
-			  heatmap3(countNumVsdGroup,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,labRow="",col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
-		  }
-		  dev.off()
-		  
-		  #correlation distribution
-		  countNumCor<-corWithout(countNumVsdGroup,use="pa",method="sp")
-		  margin=c(min(10,max(nchar(colnames(countNumCor)))/1.5),min(10,max(nchar(row.names(countNumCor)))/1.5))
-		  
-		  colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
-		  colAllLabel<-c(0,0.5,1)
-		  countNumCor[countNumCor<0]<-0
-		  if (fixColorRange) {
-			  col<-col_part(data_all=c(0,1),data_part=countNumCor,col=colAll)
-		  } else {
-			  col<-colAll
-		  }
-		  
-		  legendfun<-function(x) {
-			  par(mar = c(5, 1, 1, 1));
-			  image(x=1:length(colAll),y=1,z=matrix(1:length(colAll),ncol=1),xlab="",xaxt="n",yaxt="n",col=colAll);
-			  axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
-		  }
-		  
-		  png(paste0(outputFilePrefix,suffix,".Group.Correlation.png"),width=2000,height=2000,res=300)
-		  heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
-		  dev.off()
-		  if (ncol(countNumCor)<3 | any(is.na(corWithout(countNumCor,use="pa")))) {
-			  saveInError(paste0("Less than 3 samples. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(outputFilePrefix,suffix,Sys.Date(),".warning"))
-		  } else {
-			  png(paste0(outputFilePrefix,suffix,".Group.Correlation.Cluster.png"),width=2000,height=2000,res=300)
-			  heatmap3(countNumCor,scale="none",balanceColor=T,margin=margin,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
-			  dev.off()
-		  }
-		  
-		  #group with at least half samples more than 0 count
-		  countNumVsdGroup1<-mergeTableBySampleGroup(countNumVsd,sampleToGroup,groupMinMedian=0.5,toPercent=FALSE)
-		  
-		  #heatmap
-		  margin=c(min(10,max(nchar(colnames(countNumVsdGroup1)))/1.5),min(10,max(nchar(row.names(countNumVsdGroup1)))/2))
-		  png(paste0(outputFilePrefix,suffix,".Group.HalfMoreThanZero.heatmap.png"),width=2000,height=2000,res=300)
-		  if(nrow(countNumVsdGroup1) < 20){
-			  heatmap3(countNumVsdGroup1,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
-		  }else{
-			  margin[2]<-5
-			  heatmap3(countNumVsdGroup1,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,labRow="",col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
-		  }
-		  dev.off()
-		  
-		  #correlation distribution
-		  countNumCor<-corWithout(countNumVsdGroup1,use="pa",method="sp")
-		  margin=c(min(10,max(nchar(colnames(countNumCor)))/1.5),min(10,max(nchar(row.names(countNumCor)))/1.5))
-		  
-		  colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
-		  colAllLabel<-c(0,0.5,1)
-		  countNumCor[countNumCor<0]<-0
-		  if (fixColorRange) {
-			  col<-col_part(data_all=c(0,1),data_part=countNumCor,col=colAll)
-		  } else {
-			  col<-colAll
-		  }
-		  
-		  legendfun<-function(x) {
-			  par(mar = c(5, 1, 1, 1));
-			  image(x=1:length(colAll),y=1,z=matrix(1:length(colAll),ncol=1),xlab="",xaxt="n",yaxt="n",col=colAll);
-			  axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
-		  }
-		  
-		  png(paste0(outputFilePrefix,suffix,".Group.HalfMoreThanZero.Correlation.png"),width=2000,height=2000,res=300)
-		  heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
-		  dev.off()
-		  if (ncol(countNumCor)<3 | any(is.na(corWithout(countNumCor,use="pa")))) {
-			  saveInError(paste0("Less than 3 samples. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(outputFilePrefix,suffix,Sys.Date(),".warning"))
-		  } else {
-			  png(paste0(outputFilePrefix,suffix,".Group.HalfMoreThanZero.Correlation.Cluster.png"),width=2000,height=2000,res=300)
-			  heatmap3(countNumCor,scale="none",balanceColor=T,margin=margin,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
-			  dev.off()
-		  }
-		  
-	  }
+    print("Doing correlation analysis of samples ...")
+    #correlation distribution
+    countNumCor<-corTableWithoutZero(countNumVsd,method="spearman")
+    write.csv(countNumCor, file=paste0(outputFilePrefix,suffix,".Correlation.csv"), row.names=T)
+    
+    colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
+    if (min(countNumCor,na.rm=T)<0) {
+      colAllLabel<-c(-1,0,1)
+      if (fixColorRange) {
+        col<-col_part(data_all=c(-1,1),data_part=countNumCor,col=colAll)
+      } else {
+        col<-colAll
+      }
+    } else {
+      colAllLabel<-c(0,0.5,1)
+      if (fixColorRange) {
+        col<-col_part(data_all=c(0,1),data_part=countNumCor,col=colAll)
+      } else {
+        col<-colAll
+      }
+    }
+    legendfun<-function(x) {
+      par(mar = c(5, 1, 1, 1));
+      image(x=1:length(colAll),y=1,z=matrix(1:length(colAll),ncol=1),xlab="",xaxt="n",yaxt="n",col=colAll);
+      axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
+    }
+    if (groupFileList!="") {
+      legendfun<-function() showLegend(legend=unique(groups),col=unique(conditionColors[,1]))
+    }
+    png(paste0(outputFilePrefix,suffix,".Correlation.png"),width=width,height=width,res=300)
+    labRow=NULL
+    margin=c(min(10,max(nchar(colnames(countNumCor)))/2),min(10,max(nchar(row.names(countNumCor)))/2))
+    if(all(!is.na(conditionColors))) { #has group information
+      heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=labRow,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,ColSideColors=conditionColors)
+    }else{
+      heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=labRow,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
+    }
+    dev.off()
+    if (ncol(countNumCor)>3) {
+      if (any(is.na(countNumCor))) {
+        print(paste0("NA in correlation matrix. Can't draw .Correlation.Cluster.png"))
+      } else {
+        png(paste0(outputFilePrefix,suffix,".Correlation.Cluster.png"),width=width,height=width,res=300)
+        if(!is.na(conditionColors)){
+          heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun,ColSideColors=conditionColors)
+        }else{
+          heatmap3(countNumCor,scale="none",balanceColor=T,labRow=labRow,margin=margin,col=col,legendfun=legendfun)
+        }
+        dev.off()
+      }
+    }
+    
+    if (groupFileList!="") {
+      cexColGroup<-1
+      if(length(unique(sampleToGroup$V2)) < 3){
+        saveInError(paste0("Less than 3 groups. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(suffix,Sys.Date(),".warning"))
+        next
+      }
+      
+      countNumVsdGroup<-mergeTableBySampleGroup(countNumVsd,sampleToGroup)
+      
+      #heatmap
+      margin=c(min(10,max(nchar(colnames(countNumVsdGroup)))/1.5),min(10,max(nchar(row.names(countNumVsdGroup)))/2))
+      png(paste0(outputFilePrefix,suffix,".Group.heatmap.png"),width=2000,height=2000,res=300)
+      if(nrow(countNumVsdGroup) < 20){
+        heatmap3(countNumVsdGroup,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
+      }else{
+        margin[2]<-5
+        heatmap3(countNumVsdGroup,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,labRow="",col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
+      }
+      dev.off()
+      
+      print("Doing correlation analysis of groups ...")
+      
+      #correlation distribution
+      countNumCor<-corTableWithoutZero(countNumVsdGroup,method="spearman")
+      margin=c(min(10,max(nchar(colnames(countNumCor)))/1.5),min(10,max(nchar(row.names(countNumCor)))/1.5))
+      
+      colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
+      colAllLabel<-c(0,0.5,1)
+      countNumCor[countNumCor<0]<-0
+      if (fixColorRange) {
+        col<-col_part(data_all=c(0,1),data_part=countNumCor,col=colAll)
+      } else {
+        col<-colAll
+      }
+      
+      legendfun<-function(x) {
+        par(mar = c(5, 1, 1, 1));
+        image(x=1:length(colAll),y=1,z=matrix(1:length(colAll),ncol=1),xlab="",xaxt="n",yaxt="n",col=colAll);
+        axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
+      }
+      
+      png(paste0(outputFilePrefix,suffix,".Group.Correlation.png"),width=2000,height=2000,res=300)
+      heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
+      dev.off()
+      if (ncol(countNumCor)< 3) {
+        saveInError(paste0("Less than 3 samples. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(outputFilePrefix,suffix,Sys.Date(),".warning"))
+      } else {
+        png(paste0(outputFilePrefix,suffix,".Group.Correlation.Cluster.png"),width=2000,height=2000,res=300)
+        heatmap3(countNumCor,scale="none",balanceColor=T,margin=margin,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
+        dev.off()
+      }
+#       
+#       #group with at least half samples more than 0 count
+#       print("Doing correlation analysis of groups HalfMoreThanZero ...")
+#       countNumVsdGroup1<-mergeTableBySampleGroup(countNumVsd,sampleToGroup,groupMinMedian=0.5,toPercent=FALSE)
+#       
+#       #heatmap
+#       margin=c(min(10,max(nchar(colnames(countNumVsdGroup1)))/1.5),min(10,max(nchar(row.names(countNumVsdGroup1)))/2))
+#       png(paste0(outputFilePrefix,suffix,".Group.HalfMoreThanZero.heatmap.png"),width=2000,height=2000,res=300)
+#       if(nrow(countNumVsdGroup1) < 20){
+#         heatmap3(countNumVsdGroup1,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
+#       }else{
+#         margin[2]<-5
+#         heatmap3(countNumVsdGroup1,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,labRow="",col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
+#       }
+#       dev.off()
+#       
+#       #correlation distribution
+#       countNumCor<-corWithout(countNumVsdGroup1,use="pa",method="sp")
+#       margin=c(min(10,max(nchar(colnames(countNumCor)))/1.5),min(10,max(nchar(row.names(countNumCor)))/1.5))
+#       
+#       colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
+#       colAllLabel<-c(0,0.5,1)
+#       countNumCor[countNumCor<0]<-0
+#       if (fixColorRange) {
+#         col<-col_part(data_all=c(0,1),data_part=countNumCor,col=colAll)
+#       } else {
+#         col<-colAll
+#       }
+#       
+#       legendfun<-function(x) {
+#         par(mar = c(5, 1, 1, 1));
+#         image(x=1:length(colAll),y=1,z=matrix(1:length(colAll),ncol=1),xlab="",xaxt="n",yaxt="n",col=colAll);
+#         axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
+#       }
+#       
+#       png(paste0(outputFilePrefix,suffix,".Group.HalfMoreThanZero.Correlation.png"),width=2000,height=2000,res=300)
+#       heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
+#       dev.off()
+#       if (ncol(countNumCor)<3 | any(is.na(corWithout(countNumCor,use="pa")))) {
+#         saveInError(paste0("Less than 3 samples. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(outputFilePrefix,suffix,Sys.Date(),".warning"))
+#       } else {
+#         png(paste0(outputFilePrefix,suffix,".Group.HalfMoreThanZero.Correlation.Cluster.png"),width=2000,height=2000,res=300)
+#         heatmap3(countNumCor,scale="none",balanceColor=T,margin=margin,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
+#         dev.off()
+#       }
+      
+    }
   } else {
-	  print("Not enough samples or genes. Can't do correlation analysis.")
+    print("Not enough samples or genes. Can't do correlation analysis.")
   }
 }
