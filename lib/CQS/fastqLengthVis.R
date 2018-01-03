@@ -41,13 +41,29 @@ if(exists("free_y") && free_y){
   scales="free"
 }
 
-width=max(2000, cellWidth * (ceiling(sqrt(ncol(lengthAllTable)))+1))
-png(paste0(resultFile,".png"),width=width,height=width,res=300)
+facetColCount=getFacetColCount(groupFileList)
+
+if(facetColCount > 0){
+  facetRowCount = ceiling(ncol(lengthAllTable) / facetColCount)
+  width=max(2000, cellWidth * facetColCount)
+  height=max(2000, cellWidth * facetRowCount)
+}else{
+  width=max(2000, cellWidth * (ceiling(sqrt(ncol(lengthAllTable)))+1))
+  height=width
+}
+
+png(paste0(resultFile,".png"),width=width,height=height,res=300)
 p=ggplot(lengthAll, aes(x=Len, y=Count)) + 
   geom_bar(stat="identity", width=.5) + 
-  facet_wrap(~Sample, scales=scales) +
   xlab("Read length") + 
   ylab("Read count")
+
+if(facetColCount > 0){
+  p<-p+facet_wrap(~Sample, ncol=facetColCount, scales=scales)
+}else{
+  p<-p+facet_wrap(~Sample, scales=scales)
+}
+
 print(p)
 dev.off()
 
