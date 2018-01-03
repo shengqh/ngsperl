@@ -37,7 +37,7 @@ sub perform {
   my $log_desc = $cluster->get_log_description($log);
   my $pbs      = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
-  print $pbs "multiqc $option -n $task_name.html $root_dir \n";
+  print $pbs "multiqc $option -p -n $task_name.html $root_dir \n";
 
   $self->close_pbs( $pbs, $pbs_file );
 }
