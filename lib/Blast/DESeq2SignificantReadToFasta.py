@@ -15,16 +15,29 @@ args = parser.parse_args()
 inputfiles=args.input.split(",")
 outputfile=args.output
 
-sequences = set()
+sequences = {}
 for inputfile in inputfiles:
   with open(inputfile, 'rb') as csvfile:
     spamreader = csv.reader(csvfile, delimiter=',', quotechar='"')
-    spamreader.next()
+    header = spamreader.next()
+    baseMeanIndex = [i for i in range(len(header)) if header[i] == "baseMean"][0] - 1
     for row in spamreader:
-      sequences.add(row[0])
+      h = {}
+      for idx in range(1, baseMeanIndex):
+        h[header[idx]] = int(row[idx])
+      if row[0] in sequences:
+        oldh = sequence[row[0]]
+        for k, v in h.items():
+          if k in oldh:
+            oldh[k] = oldh[k] + h[k]
+          else:
+            oldh[k] = h[k]
+      else:
+        sequences[row[0]] = h
 
 with open(outputfile, 'w') as fasta:
-  for seq in sorted(sequences):
-    fasta.write(">%s\n%s\n" %(seq, seq));
+  for seq, h in sequences.items():
+    count = sum(h.values())
+    fasta.write(">%s_%d\n%s\n" %(seq, count, seq));
     
 print("%d sequences prepared for blastn \n" % len(sequences))
