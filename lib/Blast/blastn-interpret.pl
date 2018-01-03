@@ -40,7 +40,7 @@ if ( !defined $output_file ) {
   die "Define output file!";
 }
 
-die "$output_file already exists" if ( -e $output_file );
+#die "$output_file already exists" if ( -e $output_file );
 
 my %res;
 foreach my $file ( split( ",", $input_file ) ) {
