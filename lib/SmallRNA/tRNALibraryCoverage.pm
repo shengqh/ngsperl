@@ -30,7 +30,7 @@ sub perform {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my $py_script = dirname(__FILE__) . "/nonhostLibraryCoverage.py";
+  my $py_script = dirname(__FILE__) . "/tRNALibraryCoverage.py";
   if ( !-e $py_script ) {
     die "File not found : " . $py_script;
   }
