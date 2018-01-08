@@ -278,7 +278,7 @@ for(countfile_index in c(1:length(countfiles))){
   
   data<-data[,colnames(data) != "Feature_length"]
   colClass<-sapply(data, class)
-  countNotNumIndex<-which(colClass!="numeric" & colClass!="integer")
+  countNotNumIndex<-which((colClass!="numeric" & colClass!="integer") | grepl("Gene_Id", colnames(data)))
   if (length(countNotNumIndex)==0) {
     index<-1;
     indecies<-c()
