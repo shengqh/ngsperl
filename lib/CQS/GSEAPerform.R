@@ -46,12 +46,16 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="/home/zhaos/bin/gsea
 preRankedGeneFileTable=parSampleFile1
 preRankedGeneFileTable=read.delim(preRankedGeneFileTable,header=F,as.is=T)
 
+if(!exists("gseaCategories")){
+  gseaCategories<-"h.all.v6.0.symbols.gmt"
+}
+
 for (i in 1:nrow(preRankedGeneFileTable)) {
 	preRankedGeneFile=preRankedGeneFileTable[i,1]
 	compName=preRankedGeneFileTable[i,2]
 	
 	resultDir=getwd()
-	runGSEA(preRankedGeneFile,resultDir=resultDir,makeReport=TRUE,gseaJar=gseaJar,gseaDb=gseaDb)
+	runGSEA(preRankedGeneFile,resultDir=resultDir,makeReport=TRUE,gseaJar=gseaJar,gseaDb=gseaDb,gseaCategories=gseaCategories)
 	
 }
 
