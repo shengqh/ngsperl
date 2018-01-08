@@ -6,10 +6,10 @@ options(bitmapType='cairo')
 
 #source("/home/zhaos/source/r_cqs/vickers/codesToPipeline/countTableVisFunctions.R")
 resultFile<-outFile
-countFilesList<-parSampleFile1
-#totalCountFile<-parFile3
-groupFileList<-parSampleFile2
-groupVisLayoutFileList<-parSampleFile3
+hostFile<-parFile1
+nonhostFile<-parFile2
+groupFileList<-parSampleFile1
+groupVisLayoutFileList<-parSampleFile2
 
 if(!exists("visLayoutAlphabet")){
   visLayoutAlphabet<-FALSE
@@ -17,45 +17,20 @@ if(!exists("visLayoutAlphabet")){
 
 facetColCount=getFacetColCount(groupFileList)
 
-countFiles<-read.delim(countFilesList,header=F,as.is=T)
+hostTable<-read.delim(hostFile,header=T,row.names=1,comment.char = '#')
+hostTable<-hostTable[c("FeatureReads", "GenomeReads", "TooShortReads"),,drop=F]
+rownames(hostTable)<-c('Host Small RNA','Mapped to Host Genome','Too Short for Mapping')
 
-#taskName<-sapply(strsplit(countFiles[,1],"\\/"),function(x) {resultFolderInd<-grep("result",x);return(x[resultFolderInd-1])})
-taskName<-factor(readFilesModule,levels=readFilesModule)
+nonhostTable<-read.delim(nonhostFile,header=T,row.names=1,comment.char = '#')
+nonhostTable<-nonhostTable[c("FeatureReads", "UnannotatedReads"),,drop=F]
+rownames(nonhostTable)<-c('Mapped to Non-Host','Unmapped')
 
-totalCountAll<-NULL
-for (countFile in countFiles[,1]) {
-	if (grepl(".csv$",countFile)) {
-		countTable<-read.csv(countFile,header=T,row.names=1,as.is=T)
-	} else {
-		countTable<-read.delim(countFile,header=T,row.names=1,as.is=T)
-	}
-	countInd<-which(colnames(countTable) %in% c("EstimateCount","Count"))
-	if (length(countInd)>0) {
-		totalCount<-sum(countTable[,countInd[1]])
-	} else {
-		stop(paste0("Can't find colnames matched to Count data in file ",countFile)) 
-	}
-	totalCountAll<-c(totalCountAll,totalCount)
-}
-resultTable<-data.frame(Task=taskName,Count=totalCountAll,Sample=countFiles[,2])
-resultTable<-acast(resultTable,Task~Sample,value.var="Count")
-
-tableForPieChart<-resultTable
-if("Unmapped" %in% rownames(resultTable) | "UnMapped" %in% rownames(resultTable)){
-  NonHostMappedReads<-resultTable["Unmapped In Host",]-resultTable["UnMapped",]
-  tableForPieChart["Unmapped In Host",]<-NonHostMappedReads
-  row.names(tableForPieChart)[which(row.names(tableForPieChart)=="Unmapped In Host")]<-"Mapped to Non-Host"
-}
-
+tableForPieChart<-rbind(hostTable, nonhostTable)
 write.csv(tableForPieChart,paste0(resultFile,".NonParallel.TaskReads.csv"))
 
 ggpieToFile(tableForPieChart,fileName=paste0(resultFile,".NonParallel.TaskReads.Piechart.png"),maxCategory=NA,textSize=textSize,reOrder=FALSE,facetColCount=facetColCount)
 #Group Pie chart
 ggpieGroupToFile(tableForPieChart,fileName=paste0(resultFile,".NonParallel.TaskReads.Group.Piechart.png"),maxCategory=NA,reOrder=FALSE,
-		groupFileList=groupFileList,
-		outFileName=paste0(resultFile,".NonParallel.TaskReads.PercentGroups.csv"),textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList,
-		visLayoutAlphabet=visLayoutAlphabet)
-
-
-
-
+    groupFileList=groupFileList,
+    outFileName=paste0(resultFile,".NonParallel.TaskReads.PercentGroups.csv"),textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList,
+    visLayoutAlphabet=visLayoutAlphabet)

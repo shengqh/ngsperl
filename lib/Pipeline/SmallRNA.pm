@@ -779,7 +779,6 @@ sub getSmallRNAConfig {
   }
 
   my @mapped  = ();
-  my @pmnames = ();
   my @overlap = ();
 
   if ( defined $libraryKey && $libraryKey ne "TotalReads" ) {
@@ -936,9 +935,9 @@ sub getSmallRNAConfig {
     );
 
     if ( $def->{perform_nonhost_tRNA_coverage} ) {
-      my $positionTask = $def->{trna_species} . "_tRNA_Position";
+      my $positionTask      = $def->{trna_species} . "_tRNA_Position";
       my $visualizationTask = $positionTask . "Vis_anticodon";
-      my $folder = $data_visualization_dir . "/" . $visualizationTask;
+      my $folder            = $data_visualization_dir . "/" . $visualizationTask;
       $config->{$positionTask} = {
         class            => "SmallRNA::tRNALibraryCoverage",
         perform          => 1,
@@ -966,7 +965,7 @@ sub getSmallRNAConfig {
         {
           output_file        => ".nonhost_tRNAAnticodonPositionVis",
           parameterFile1_ref => [ $positionTask, ".position\$" ],
-          rCode => "countName<-\"TotalReads\""
+          rCode              => "countName<-\"TotalReads\""
         }
       );
     }
@@ -1065,7 +1064,6 @@ sub getSmallRNAConfig {
       perlFile         => "unmappedReadsToFastq.pl",
       source_ref       => $identical_ref,
       source2_ref      => \@mapped,
-      source3_ref      => \@pmnames,
       output_ext       => "_clipped_identical.unmapped.fastq.gz",
       output_other_ext => "_clipped_identical.unmapped.fastq.dupcount,_clipped_identical.unmapped.fastq.gz.info",
       sh_direct        => 1,
@@ -1180,29 +1178,29 @@ sub getSmallRNAConfig {
     },
   };
 
-  my $name_for_pieSummary_r = "readFilesModule=c('" . join( "','", @name_for_pieSummary ) . "')";
-  $config->{reads_in_tasks_pie} = {
-    class                    => "CQS::UniqueR",
-    suffix                   => "_pie",
-    perform                  => 1,
-    target_dir               => $data_visualization_dir . "/reads_in_tasks",
-    rtemplate                => "countTableVisFunctions.R,ReadsInTasksPie.R",
-    output_file_ext          => ".NonParallel.TaskReads.csv",
-    parameterSampleFile1_ref => \@table_for_pieSummary,
-    parameterSampleFile2     => $groups,
-    parameterSampleFile3     => $def->{groups_vis_layout},
-    rCode                    => $name_for_pieSummary_r . ";",
+  if ( $search_host_genome && $search_nonhost_database ) {
+    $config->{reads_in_tasks_pie} = {
+      class                => "CQS::UniqueR",
+      suffix               => "_pie",
+      perform              => 1,
+      target_dir           => $data_visualization_dir . "/reads_in_tasks",
+      rtemplate            => "countTableVisFunctions.R,ReadsInTasksPie.R",
+      output_file_ext      => ".NonParallel.TaskReads.csv",
+      parameterFile1_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
+      parameterFile2_ref   => [ "final_unmapped_reads_summary", ".count\$" ],
+      parameterSampleFile1 => $groups,
+      parameterSampleFile2 => $def->{groups_vis_layout},
+      sh_direct            => 1,
+      pbs                  => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "12",
+        "mem"       => "10gb"
+      },
+    };
+  }
 
-    #    parameterFile3_ref       => [ "fastqc_count_vis", ".Reads.csv\$" ],
-    sh_direct => 1,
-    pbs       => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "12",
-      "mem"       => "10gb"
-    },
-  };
   my $name_for_readSummary_r = "readFilesModule=c('" . join( "','", @name_for_readSummary ) . "')";
   $config->{sequence_mapped_in_categories} = {
     class                    => "CQS::UniqueR",
