@@ -22,7 +22,11 @@ hostTable<-hostTable[c("FeatureReads", "GenomeReads", "TooShortReads"),,drop=F]
 rownames(hostTable)<-c('Host Small RNA','Mapped to Host Genome','Too Short for Mapping')
 
 nonhostTable<-read.delim(nonhostFile,header=T,row.names=1,comment.char = '#')
-nonhostTable<-nonhostTable[c("FeatureReads", "UnannotatedReads"),,drop=F]
+if("UnmappedReads" %in% rownames(nonhostTable)){
+  nonhostTable<-nonhostTable[c("FeatureReads", "UnmappedReads"),,drop=F]
+}else{
+  nonhostTable<-nonhostTable[c("FeatureReads", "UnannotatedReads"),,drop=F]
+}
 rownames(nonhostTable)<-c('Mapped to Non-Host','Unmapped')
 
 tableForPieChart<-rbind(hostTable, nonhostTable)
