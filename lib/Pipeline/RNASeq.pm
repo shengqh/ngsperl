@@ -349,6 +349,8 @@ sub getRNASeqConfig {
     if ( $def->{perform_gsea} ) {
       my $gsea_jar = $def->{gsea_jar} or die "Define gsea_jar at definition first";
       my $gsea_db  = $def->{gsea_db}  or die "Define gsea_db at definition first";
+      my $gsea_categories  = $def->{gsea_categories}  or die "Define gsea_categories at definition first";
+      #my $gseaCategories = "'h.all.v6.1.symbols.gmt','c2.all.v6.1.symbols.gmt','c5.all.v6.1.symbols.gmt','c6.all.v6.1.symbols.gmt','c7.all.v6.1.symbols.gmt'";
       $config->{gsea} = {
         class                    => "CQS::UniqueR",
         perform                  => 1,
@@ -359,7 +361,7 @@ sub getRNASeqConfig {
         output_file_ext          => ".gsea.html",
         parameterSampleFile1_ref => [ $deseq2taskname, "_GSEA.rnk\$" ],
         sh_direct                => 1,
-        rCode                    => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "';",
+        rCode                    => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategorys=c(" . $gsea_categories . ");",
         pbs                      => {
           "email"    => $def->{email},
           "nodes"    => "1:ppn=1",
