@@ -83,7 +83,10 @@ sub result {
   for my $sample_name ( sort keys %$raw_files ) {
     my $cur_dir = scalar( keys %$raw_files ) == 1 ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
     my $finalFile = "Project_" . $sample_name . "_geneontology_Biological_Process/Report_" . $sample_name . "_geneontology_Biological_Process.html";
-    push( @result_files, "$cur_dir/$finalFile" );
+    push( @result_files, "$cur_dir/Project_${sample_name}_geneontology_Biological_Process/enrichment_results_${sample_name}_geneontology_Biological_Process.txt" );
+    push( @result_files, "$cur_dir/Project_${sample_name}_geneontology_Cellular_Component/enrichment_results_${sample_name}_geneontology_Cellular_Component.txt" );
+    push( @result_files, "$cur_dir/Project_${sample_name}_geneontology_Molecular_Function/enrichment_results_${sample_name}_geneontology_Molecular_Function.txt" );
+    push( @result_files, "$cur_dir/Project_${sample_name}_pathway_KEGG/enrichment_results_${sample_name}_pathway_KEGG.txt" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;

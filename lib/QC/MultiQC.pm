@@ -66,6 +66,7 @@ sub result {
   if(defined $config->{featurecount} || defined $config->{star_featurecount}){
     push(@result_files, "${result_dir}/multiqc_plots/png/mqc_featureCounts_assignment_plot_1_pc.png");    
     push(@result_files, "${result_dir}/multiqc_plots/png/mqc_featureCounts_assignment_plot_1.png");    
+    push(@result_files, "${result_dir}/${task_name}_data/multiqc_featureCounts.txt");    
   }
   $result->{$task_name} = filter_array( \@result_files, $pattern );
   return $result;

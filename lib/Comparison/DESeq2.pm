@@ -297,6 +297,7 @@ sub result {
     push( @result_files, $result_dir . "/${prefix}_DESeq2.csv" );
     push( @result_files, $result_dir . "/${prefix}_DESeq2_GSEA.rnk" );
     push( @result_files, $result_dir . "/${prefix}_DESeq2_sig.csv" );
+    push( @result_files, $result_dir . "/${prefix}_DESeq2_volcanoPlot.png" );
     if($exportSignificantGeneName){
       push( @result_files, $result_dir . "/${prefix}_DESeq2_sig_genename.txt" );
     }

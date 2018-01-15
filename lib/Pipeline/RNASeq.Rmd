@@ -1,0 +1,227 @@
+---
+title: "VANGARD RNA-Seq Analysis Report"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 4
+---
+
+
+```{r setup, include=FALSE}
+library(knitr)
+library(reshape2)
+library(ggplot2)
+library(data.table)
+knitr::opts_chunk$set(echo = TRUE)
+
+figRef <- local({
+    tag <- numeric()
+    created <- logical()
+    used <- logical()
+    function(label, caption, prefix = options("figcap.prefix"), 
+        sep = options("figcap.sep"), prefix.highlight = options("figcap.prefix.highlight")) {
+        i <- which(names(tag) == label)
+        if (length(i) == 0) {
+            i <- length(tag) + 1
+            tag <<- c(tag, i)
+            names(tag)[length(tag)] <<- label
+            used <<- c(used, FALSE)
+            names(used)[length(used)] <<- label
+            created <<- c(created, FALSE)
+            names(created)[length(created)] <<- label
+        }
+        if (!missing(caption)) {
+            created[label] <<- TRUE
+            paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
+                " ", caption)
+        } else {
+            used[label] <<- TRUE
+            paste(prefix, tag[label])
+        }
+    }
+})
+options(figcap.prefix = "Figure", figcap.sep = ":", figcap.prefix.highlight = "**")
+
+tabRef <- local({
+    tag <- numeric()
+    created <- logical()
+    used <- logical()
+    function(label, caption, prefix = options("tabcap.prefix"), 
+        sep = options("tabcap.sep"), prefix.highlight = options("tabcap.prefix.highlight")) {
+        i <- which(names(tag) == label)
+        if (length(i) == 0) {
+            i <- length(tag) + 1
+            tag <<- c(tag, i)
+            names(tag)[length(tag)] <<- label
+            used <<- c(used, FALSE)
+            names(used)[length(used)] <<- label
+            created <<- c(created, FALSE)
+            names(created)[length(created)] <<- label
+        }
+        if (!missing(caption)) {
+            created[label] <<- TRUE
+            paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
+                " ", caption)
+        } else {
+            used[label] <<- TRUE
+            paste(prefix, tag[label])
+        }
+    }
+})
+options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**")
+
+files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
+fileNames<-read.table("fileList2.txt", header=FALSE, as.is=TRUE)
+rownames(files)<-fileNames$V1
+hasEnrichmentAnalysis<-any(grepl("Enrichment_", rownames(files)))
+```
+
+<br>
+
+###1. Summary
+This report includes quality check for raw sequencing data (section 2), reads mapping and assignment (section 3), and expression similarity between samples (section 4). The results of differential expression analysis are summarized in section 5 using the criteria of fold change > 2 & FDR<0.05.   
+
+```{r include=FALSE, eval=hasEnrichmentAnalysis}
+print("The top five enrichment pathways in KEGG are reported in section 6.")
+```
+
+<br>
+
+###2. Sequencing Quality
+
+####2.1 Summary of sequencing quality
+
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("Sequence_quality", "The mean quality scores of sequencing reads in each position")}
+include_graphics(files["Sequence_quality",1])
+```
+
+<br>
+<br>
+
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("GC_percent", "The average GC content of sequencing reads")}
+include_graphics(files["GC_percent",1])
+```
+
+<br>
+<br>
+
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("Adapter_content", "Adapter content of sequencing reads")}
+include_graphics(files["Adapter_content",1])
+```
+
+<br>
+<br>
+
+### 3. Mapping quality
+#### 3.1 Summary of mapping quality
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("STAR_summary", "The statistics of RNAseq mapping results")}
+include_graphics(files["STAR_summary",1])
+```
+
+<br>
+<br>
+
+```{r echo=FALSE}
+table<-read.csv(files["STAR_summary_table",1])
+output_table1<-data.frame(table[,c(2,3,4,5)], (table[,3]+table[,4])/table[,2], row.names=table[,1])
+colnames(output_table1)<-c("Input reads", "Uniquely mapped reads", "Mapped to multiple loci", "Mapped to too many loci", "Ratio")
+kable(output_table1, caption=tabRef("mapSummary", "The summary of RNAseq mapping results"))
+```
+
+**Ratio** = (Uniquely mapped + Mapped to multiple loci)/ Input reads
+
+<br>
+<br>
+
+### 4. Expression Quantification
+#### 4.1 Summary of reads assignment
+```{r echo=FALSE, fig.align="center", fig.cap=figRef("gene_reads", "The number of reads assigned to genes")}
+final = read.table(files["Feature_counts",1],header=T, row.names=1,sep="\t")
+reads=final[,c("Assigned", "Unassigned_MultiMapping", "Unassigned_Ambiguity", "Unassigned_NoFeatures")]
+treads=data.frame(data.matrix(reads))
+treads$Sample=rownames(treads)
+meltreads=melt(treads, id="Sample", variable.name="Read", value.name="Count")
+print(ggplot(meltreads, aes(x=Sample, y=Count, fill=Read)) + 
+  geom_bar(stat="identity", width=0.5) +
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
+        axis.text.y = element_text(size=11, face="bold")))
+```
+
+<br>
+<br>
+
+```{r echo=FALSE}
+table<- read.table(files["Feature_counts",1], header=TRUE)
+output_table2<-data.frame(table[,c(1,2,4,9, 10,12,14)])
+colnames(output_table2)<- c("Sample", "Unassigned ambiguity", "Percent assigned", "Assigned", "Unassigned multimapping", "Unassigned no features",
+                            "Total")
+kable(output_table2, caption=tabRef("geneSummary", "The summary of reads assignment to genes"))
+```
+
+<br>
+<br>
+
+####4.2 Expression density of samples
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("Density", "Expression density distribution of each sample")}
+include_graphics(files["Density",1])
+```
+
+<br>
+<br>
+
+####4.3 Similarity between samples
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("Heatmap", "Heatmap of expression similarity across samples")}
+include_graphics(files["Heatmap",1])
+```
+
+<br>
+<br>
+
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("PCA", "PCA plot of samples")}
+include_graphics(files["PCA",1])
+```
+
+<br>
+<br>
+
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("Correlation_cluster", "Correlation cluster of samples")}
+include_graphics(files["Correlation_cluster",1])
+```
+
+<br>
+<br>
+
+###5. Differential expression
+####5.1 Volcano plot
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("Volcano_plot", "Volcano plot for all comparisons")}
+include_graphics(files["Volcano_plot",1])
+```
+
+<br>
+<br>
+
+####5.2 Summary of differential analysis
+```{r echo=FALSE,results='asis'}
+DESeq2_files<-files[grep("DESeq2_sig", files[,1]),]
+DESeq2_list<-list()
+for (i in 1:nrow(DESeq2_files)){
+  DESeq2_list[[i]]<-read.csv(DESeq2_files[i,1], header=TRUE)
+}
+output_table3<-data.frame(c(gsub("_DESeq2_sig.csv","",basename(DESeq2_files[,1]))), c(unlist(lapply(DESeq2_list, nrow))))
+colnames(output_table3)<-c("Comparison", "Number of DEGs")
+kable(output_table3, caption= "Table 3. DEG numbers under FC > 2 & FDR < 0.05")
+```
+
+<br>
+<br>
+
+```{r test, child = if (hasEnrichmentAnalysis) 'RNASeq_EnrichmentAnalysis.Rmd'} 
+``` 
+
+###7. Results folder structure
+
+<br>
+
+* *_fpkm.tsv -> Gene expression abundance
+* *_DESeq2.csv -> Differential expression analysis results
+* Functional enrichment -> Folder for funtional enrichment results

@@ -3,6 +3,7 @@ package Pipeline::RNASeq;
 
 use strict;
 use warnings;
+use List::Util qw(first);
 use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
@@ -293,15 +294,17 @@ sub getRNASeqConfig {
   }
 
   if ( $def->{perform_correlation} ) {
+    my $cor_dir = ( defined $config->{genetable} ) ? $config->{genetable}{target_dir} : $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation";
     $config->{"genetable_correlation"} = {
       class           => "CQS::UniqueR",
       perform         => 1,
+      suffix          => "_cor",
       rCode           => "usePearsonInHCA<-" . $def->{use_pearson_in_hca} . "; useGreenRedColorInHCA<-" . $def->{use_green_red_color_in_hca} . "; top25cvInHCA<-" . $def->{top25cv_in_hca} . "; ",
-      target_dir      => $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation",
+      target_dir      => $cor_dir,
       output_to_dir   => getReportDir($def),
       rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
       output_file     => "parameterSampleFile1",
-      output_file_ext => ".Correlation.png",
+      output_file_ext => ".Correlation.png;.density.png;.heatmap.png;.PCA.png;.Correlation.Cluster.png",
       parameterSampleFile2_ref => $groups_ref,
       sh_direct                => 1,
       pbs                      => {
@@ -335,8 +338,8 @@ sub getRNASeqConfig {
         organism         => getValue( $def, "webgestalt_organism" ),
         interestGeneType => $def->{interestGeneType},
         referenceSet     => $def->{referenceSet},
-        sh_direct => 1,
-        pbs       => {
+        sh_direct        => 1,
+        pbs              => {
           "email"    => $email,
           "nodes"    => "1:ppn=1",
           "walltime" => "72",
@@ -347,9 +350,10 @@ sub getRNASeqConfig {
     }
 
     if ( $def->{perform_gsea} ) {
-      my $gsea_jar = $def->{gsea_jar} or die "Define gsea_jar at definition first";
-      my $gsea_db  = $def->{gsea_db}  or die "Define gsea_db at definition first";
-      my $gsea_categories  = $def->{gsea_categories}  or die "Define gsea_categories at definition first";
+      my $gsea_jar        = $def->{gsea_jar}        or die "Define gsea_jar at definition first";
+      my $gsea_db         = $def->{gsea_db}         or die "Define gsea_db at definition first";
+      my $gsea_categories = $def->{gsea_categories} or die "Define gsea_categories at definition first";
+
       #my $gseaCategories = "'h.all.v6.1.symbols.gmt','c2.all.v6.1.symbols.gmt','c5.all.v6.1.symbols.gmt','c6.all.v6.1.symbols.gmt','c7.all.v6.1.symbols.gmt'";
       $config->{gsea} = {
         class                    => "CQS::UniqueR",
@@ -599,6 +603,83 @@ sub getRNASeqConfig {
 
   if ( getValue( $def, "perform_multiqc" ) ) {
     addMultiQC( $config, $def, $summary, $target_dir, $target_dir );
+  }
+
+  if ( defined $def->{perform_report} && $def->{perform_report} ) {
+    my @report_files = ();
+    my @report_names = ();
+    if ( defined $config->{multiqc} ) {
+      my @configKeys = keys %$config;
+      if ( first { $_ =~ 'fastqc' } @configKeys ) {
+        push( @report_files, "multiqc",          "per_base_sequence_quality_plot_1.png" );
+        push( @report_files, "multiqc",          "per_sequence_gc_content_plot_Percentages.png" );
+        push( @report_files, "multiqc",          "fastqc_adapter_content_plot_1.png" );
+        push( @report_names, "Sequence_quality", "GC_percent", "Adapter_content" );
+      }
+
+      if ( defined $config->{star_featurecount} || defined $config->{featurecount} ) {
+        push( @report_files, "multiqc", "multiqc_featureCounts.txt" );
+        push( @report_names, "Feature_counts" );
+      }
+    }
+
+    if ( defined $config->{star_summary} ) {
+      push( @report_files, "star_summary", ".STARSummary.csv.png" );
+      push( @report_files, "star_summary", ".STARSummary.csv\$" );
+      push( @report_names, "STAR_summary", "STAR_summary_table" );
+    }
+
+    if ( defined $config->{genetable_correlation} ) {
+      push( @report_files, "genetable_correlation", ".density.png", "genetable_correlation", ".heatmap.png", "genetable_correlation", ".PCA.png", "genetable_correlation", ".Correlation.Cluster.png" );
+      push( @report_names, "Density", "Heatmap", "PCA", "Correlation_cluster" );
+    }
+
+    if ( defined $config->{deseq2_genetable} ) {
+      my $pairs = $config->{pairs};
+
+      if ( scalar( keys %$pairs ) == 1 ) {
+        push( @report_files, "deseq2_genetable", "_DESeq2_volcanoPlot.png" );
+        push( @report_names, "Volcano_plot" );
+      }
+      for my $key ( keys %$pairs ) {
+        push( @report_files, "deseq2_genetable", $key . ".*_DESeq2_sig.csv" );
+        push( @report_names, "DESeq2_" . $key );
+      }
+    }
+
+    if ( defined $config->{deseq2_genetable_WebGestalt} ) {
+      my $pairs = $config->{pairs};
+      for my $key ( keys %$pairs ) {
+        push( @report_files, "deseq2_genetable_WebGestalt", "_geneontology_Biological_Process.txt" );
+        push( @report_files, "deseq2_genetable_WebGestalt", "_geneontology_Cellular_Component.txt" );
+        push( @report_files, "deseq2_genetable_WebGestalt", "_geneontology_Molecular_Function.txt" );
+        push( @report_files, "deseq2_genetable_WebGestalt", "_pathway_KEGG.txt" );
+        push( @report_names, "Enrichment_GO_BP_" . $key );
+        push( @report_names, "Enrichment_GO_CC_" . $key );
+        push( @report_names, "Enrichment_GO_MF_" . $key );
+        push( @report_names, "Enrichment_KEGG_" . $key );
+      }
+    }
+    
+    if ( getValue( $def, "perform_report" ) ) {
+      $config->{report} = {
+        class                    => "CQS::BuildReport",
+        perform                  => 1,
+        target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "report",
+        report_rmd_file          => "../Pipeline/RNASeq.Rmd",
+        additional_rmd_files     => "../Pipeline/RNASeq_EnrichmentAnalysis.Rmd",
+        parameterSampleFile1_ref => \@report_files,
+        parameterSampleFile2     => { Name => \@report_names },
+        sh_direct                => 1,
+        pbs                      => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      };
+      push( @$summary, "report" );
+    }
   }
 
   $config->{sequencetask} = {
