@@ -36,6 +36,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_annotate_unmapped_reads", 0 );
   initDefaultValue( $def, "DE_export_significant_gene_name", 0 );
   initDefaultValue( $def, "perform_nonhost_tRNA_coverage",   0 );
+  initDefaultValue( $def, "perform_host_rRNA_depth",   0 );
 
   return $def;
 }
@@ -76,7 +77,7 @@ sub getSmallRNAConfig {
   my $nonhost_genome_dir;
   my @nonhost_genome_groups      = qw( bacteria_group1 bacteria_group2 fungus_group4 );
   my @nonhost_genome_group_reads = qw( bacteria_group1_reads bacteria_group2_reads fungus_group4_reads );
-  my @nonhost_genome_group_names = ( "Human Microbiome Bacteria", "Environment Bacteria", "Fungus" );
+  my @nonhost_genome_group_names = ( "Microbiome Bacteria", "Environment Bacteria", "Fungus" );
 
   if ($search_nonhost_genome) {
     $nonhost_genome_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_genome" );
@@ -105,6 +106,8 @@ sub getSmallRNAConfig {
     getValue( $def, "tDRmapper" );
     getValue( $def, "tDRmapper_fasta" );
   }
+  
+  my $R_font_size = 'textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';';
 
   my @table_for_correlation  = ( "identical_sequence_count_table", "^(?!.*?read).*\.count\$" );
   my @table_for_countSum     = ();
@@ -365,7 +368,7 @@ sub getSmallRNAConfig {
         parameterSampleFile2      => $groups,
         parameterSampleFile2Order => $def->{groups_order},
         parameterSampleFile3      => $def->{groups_smallRNA_vis_layout},
-        rCode                     => 'textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+        rCode                     => $R_font_size,
         sh_direct                 => 1,
         pbs                       => {
           "email"     => $def->{email},
@@ -387,7 +390,7 @@ sub getSmallRNAConfig {
         parameterSampleFile2      => $def->{groups_vis_layout},
         parameterFile1_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ],
         parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
-        rCode                     => 'maxCategory=3;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+        rCode                     => 'maxCategory=3;' . $R_font_size,
         sh_direct                 => 1,
         pbs                       => {
           "email"     => $def->{email},
@@ -399,6 +402,29 @@ sub getSmallRNAConfig {
       },
     };
 
+    if (defined $def->{perform_host_rRNA_depth} && $def->{perform_host_rRNA_depth}){
+      $host_genome->{bowtie1_genome_rRNA_depth} = {
+        class         => "CQS::ProgramWrapper",
+        perform       => 1,
+        target_dir    => $host_genome_dir . "/bowtie1_genome_rRNA_depth",
+        interpretor => "python",
+        program => "../SmallRNA/rRNAHostDepth.py",
+        parameterSampleFile1_arg    => "-i",
+        parameterSampleFile1_ref    => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
+        output_arg => "-o",
+        output_ext => ".depth.txt",
+        sh_direct     => 1,
+        pbs           => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$summary_ref, "bowtie1_genome_rRNA_depth" );
+    }
+    
     if ( defined $def->{host_xml2bam} && $def->{host_xml2bam} ) {
       $host_genome->{bowtie1_genome_xml2bam} = {
         class         => "SmallRNA::HostXmlToBam",
@@ -844,7 +870,7 @@ sub getSmallRNAConfig {
           output_file        => ".${nonhostGroup}Mapping.Result",
           output_file_ext    => ".Piechart.png",
           parameterFile1_ref => [ "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" ],
-          rCode              => 'maxCategory=4;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+          rCode              => 'maxCategory=4;' . $R_font_size,
         }
       );
 
@@ -930,7 +956,7 @@ sub getSmallRNAConfig {
         output_file        => ".tRNAMapping.Result",
         output_file_ext    => ".Species12.csv;.tRNAType1.csv;.tRNAType2.csv",
         parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".count\$" ],
-        rCode              => 'maxCategory=3;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+        rCode              => 'maxCategory=3;' . $R_font_size,
       }
     );
 
@@ -987,7 +1013,7 @@ sub getSmallRNAConfig {
         output_file        => ".rRNAMapping.Result",
         output_file_ext    => ".Barplot.png",
         parameterFile1_ref => [ "bowtie1_rRNA_pm_table", ".count\$" ],
-        rCode              => 'maxCategory=NA;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+        rCode              => 'maxCategory=NA;' . $R_font_size,
       }
     );
     push( @name_for_mapPercentage,      "bowtie1_tRNA_pm_count", ".count.mapped.xml\$", "bowtie1_rRNA_pm_count", ".count.mapped.xml\$", );
@@ -1045,7 +1071,7 @@ sub getSmallRNAConfig {
         parameterSampleFile3      => $def->{groups_vis_layout},
         parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
         sh_direct                 => 1,
-        rCode                     => 'maxCategory=8;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+        rCode                     => 'maxCategory=8;' . $R_font_size,
         pbs                       => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
@@ -1149,7 +1175,7 @@ sub getSmallRNAConfig {
     parameterSampleFile2Order => $def->{groups_order},
     parameterSampleFile3      => $def->{pure_pairs},
     parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
-    rCode                     => $def->{correlation_rcode},
+    rCode                     => $def->{correlation_rcode} . $R_font_size,
     sh_direct                 => 1,
     pbs                       => {
       "email"     => $def->{email},
@@ -1168,6 +1194,7 @@ sub getSmallRNAConfig {
     output_file_ext          => ".TaskReads.csv",
     parameterSampleFile1_ref => \@table_for_countSum,
     parameterFile3_ref       => [ "fastqc_count_vis", ".Reads.csv\$" ],
+    rCode                    => $R_font_size,
     sh_direct                => 1,
     pbs                      => {
       "email"     => $def->{email},
@@ -1190,6 +1217,7 @@ sub getSmallRNAConfig {
       parameterFile2_ref   => [ "final_unmapped_reads_summary", ".count\$" ],
       parameterSampleFile1 => $groups,
       parameterSampleFile2 => $def->{groups_vis_layout},
+      rCode                => $R_font_size,
       sh_direct            => 1,
       pbs                  => {
         "email"     => $def->{email},
@@ -1212,7 +1240,7 @@ sub getSmallRNAConfig {
     parameterSampleFile1_ref => \@table_for_readSummary,
     parameterSampleFile2     => $groups,
     parameterSampleFile3     => $def->{groups_vis_layout},
-    rCode                    => $name_for_readSummary_r,
+    rCode                    => $name_for_readSummary_r . $R_font_size,
     sh_direct                => 1,
     pbs                      => {
       "email"     => $def->{email},
@@ -1315,7 +1343,7 @@ sub getSmallRNAConfig {
       $batchConfig->{parameterSampleFile2}      = $batchGroups->{$batchGroup};
       $batchConfig->{parameterSampleFile2Order} = undef;
       $batchConfig->{parameterSampleFile3}      = $batchLayout->{$batchGroup};
-      $batchConfig->{rCode}                     = ( defined $batchConfig->{rCode} ? $batchConfig->{rCode} : "" ) . "visLayoutAlphabet=TRUE;";
+      $batchConfig->{rCode}                     = ( defined $batchConfig->{rCode} ? $batchConfig->{rCode} : "" ) . "visLayoutAlphabet=TRUE;" . $R_font_size;
       $config->{$batchName}                     = $batchConfig;
 
       push @$summary_ref, ($batchName);
@@ -1330,7 +1358,7 @@ sub getSmallRNAConfig {
       $batchConfig->{parameterSampleFile2} = $batchGroups->{$batchGroup};
       $batchConfig->{parameterSampleFile3} = $batchLayout->{$batchGroup};
       $batchConfig->{output_file}          = ".len_" . $batchGroup;
-      $batchConfig->{rCode}                = ( defined $batchConfig->{rCode} ? $batchConfig->{rCode} : "" ) . "visLayoutAlphabet=TRUE;";
+      $batchConfig->{rCode}                = ( defined $batchConfig->{rCode} ? $batchConfig->{rCode} : "" ) . "visLayoutAlphabet=TRUE;" . $R_font_size;
 
       $config->{$batchName} = $batchConfig;
 
