@@ -8,11 +8,10 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use CQS::UniqueTask;
 use File::Spec;
-use Cwd;
 
 our @ISA = qw(CQS::UniqueTask);
 
@@ -37,21 +36,33 @@ sub perform {
   my $interpretor = get_option( $config, $section, "interpretor", "" );
   my $program = get_option( $config, $section, "program" );
   if ( !File::Spec->file_name_is_absolute($program) ) {
-    $program = Cwd::realpath( dirname(__FILE__) . "/$program" );
+    $program = dirname(__FILE__) . "/$program";
   }
   if ( !( -e $program ) ) {
     die("program $program defined but not exists!");
   }
 
   my $output_ext = get_option( $config, $section, "output_ext", 0 );
+  my $output_arg = get_option($config, $section, "output_arg", "");
 
   my $parameterSampleFile1 = save_parameter_sample_file( $config, $section, "parameterSampleFile1", "${result_dir}/${task_name}_${task_suffix}_fileList1.list" );
+  my $parameterSampleFile1arg = get_option($config, $section, "parameterSampleFile1_arg", "");
+  
   my $parameterSampleFile2 = save_parameter_sample_file( $config, $section, "parameterSampleFile2", "${result_dir}/${task_name}_${task_suffix}_fileList2.list" );
+  my $parameterSampleFile2arg = get_option($config, $section, "parameterSampleFile2_arg", "");
+
   my $parameterSampleFile3 = save_parameter_sample_file( $config, $section, "parameterSampleFile3", "${result_dir}/${task_name}_${task_suffix}_fileList3.list" );
+  my $parameterSampleFile3arg = get_option($config, $section, "parameterSampleFile3_arg", "");
 
   my $parameterFile1 = parse_param_file( $config, $section, "parameterFile1", 0 );
+  my $parameterFile1arg = get_option($config, $section, "parameterFile1_arg", "");
+
   my $parameterFile2 = parse_param_file( $config, $section, "parameterFile2", 0 );
+  my $parameterFile2arg = get_option($config, $section, "parameterFile2_arg", "");
+
   my $parameterFile3 = parse_param_file( $config, $section, "parameterFile3", 0 );
+  my $parameterFile3arg = get_option($config, $section, "parameterFile3_arg", "");
+
   if ( !defined($parameterFile1) ) {
     $parameterFile1 = "";
   }
@@ -70,7 +81,7 @@ sub perform {
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
   print $pbs "
-$interpretor $program $option $parameterSampleFile1 $parameterSampleFile2 $parameterSampleFile3 $parameterFile1 $parameterFile2 $parameterFile3 $final_file
+$interpretor $program $option $parameterSampleFile1arg $parameterSampleFile1 $parameterSampleFile2arg $parameterSampleFile2 $parameterSampleFile3arg $parameterSampleFile3 $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_arg $final_file
 ";
 
   $self->close_pbs( $pbs, $pbs_file );
