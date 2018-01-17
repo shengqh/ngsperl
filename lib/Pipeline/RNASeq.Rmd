@@ -73,16 +73,32 @@ options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
 fileNames<-read.table("fileList2.txt", header=FALSE, as.is=TRUE)
 rownames(files)<-fileNames$V1
+
+
+summary<-"###1. Summary\nThis report includes quality check for raw sequencing data (section 2), reads mapping and assignment (section 3), and expression similarity between samples (section 4). The results of differential expression analysis are summarized in section 5 using the criteria of fold change >= 2 and FDR <= 0.05."
+
 hasEnrichmentAnalysis<-any(grepl("Enrichment_", rownames(files)))
+#hasEnrichmentAnalysis<-0
+
+summaryFile<-"RNASeq_Summary.Rmd"
+enrichFile<-"RNASeq_EnrichmentAnalysis.Rmd"
+struFile<-"RNASeq_Structure.Rmd"
+
+if(hasEnrichmentAnalysis){
+  summary<-paste0(summary, "The top five enriched elements of each category are reported in section 6.")
+}
+cat(summary, file=summaryFile)
+
+if(hasEnrichmentAnalysis){
+  cat("###6. Funcional enrichment analysis\nList of the top five significantly enriched elements\n<br>\n", file=enrichFile)
+}
+structureIndex<-ifelse(hasEnrichmentAnalysis, 7, 6)
+cat(paste0("###", structureIndex, ". Results folder structure\n"), file=struFile)
 ```
 
 <br>
 
-###1. Summary
-This report includes quality check for raw sequencing data (section 2), reads mapping and assignment (section 3), and expression similarity between samples (section 4). The results of differential expression analysis are summarized in section 5 using the criteria of fold change > 2 & FDR<0.05.   
-
-```{r include=FALSE, eval=hasEnrichmentAnalysis}
-print("The top five enrichment pathways in KEGG are reported in section 6.")
+```{r structure, child=summaryFile} 
 ```
 
 <br>
@@ -215,13 +231,41 @@ kable(output_table3, caption= "Table 3. DEG numbers under FC > 2 & FDR < 0.05")
 <br>
 <br>
 
-```{r test, child = if (hasEnrichmentAnalysis) 'RNASeq_EnrichmentAnalysis.Rmd'} 
+```{r enrich, child = if (hasEnrichmentAnalysis) enrichFile} 
+```
+
+<br>
+
+```{r echo=FALSE, results='asis'}
+if(hasEnrichmentAnalysis){
+  enrich_files<-files[grepl("Enrichment_", rownames(files)),]
+  for (i in 1:nrow(enrich_files)){
+    fdata<-fread(enrich_files[i,1], select=c(1,2,5,9), nrows=5, data.table=FALSE, col.names=c("ID", "Name", "#Gene", "FDR"))
+    ename<-rownames(enrich_files)[i]
+    print(kable(fdata, caption=tabRef(ename, ename)))
+  }  
+}
 ``` 
 
-###7. Results folder structure
+<br>
+
+```{r structure, child=struFile} 
+```
 
 <br>
 
 * *_fpkm.tsv -> Gene expression abundance
 * *_DESeq2.csv -> Differential expression analysis results
 * Functional enrichment -> Folder for funtional enrichment results
+
+```{r echo=FALSE}
+if(file.exists(summaryFile)){
+  file.remove(summaryFile)
+}
+if(file.exists(enrichFile)){
+  file.remove(enrichFile)
+}
+if(file.exists(struFile)){
+  file.remove(struFile)
+}
+```
