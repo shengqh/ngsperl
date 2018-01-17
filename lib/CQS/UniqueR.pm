@@ -49,67 +49,9 @@ sub perform {
     push( @output_file_exts, "" );
   }
 
-  my $parametersample_files1 = "";
-  if ( has_raw_files( $config, $section, "parameterSampleFile1" ) ) {
-    my $temp = get_raw_files( $config, $section, "parameterSampleFile1" );
-    my @orderedSampleNames;
-    my $parameterSampleFileOrder = $config->{$section}{parameterSampleFile1Order};
-    if ( defined $parameterSampleFileOrder ) {
-      @orderedSampleNames = @{$parameterSampleFileOrder};
-    }
-    else {
-      @orderedSampleNames = keys %$temp;
-    }
-    open( LIST, ">$result_dir/fileList1${task_suffix}.txt" ) or die "Cannot create fileList1.txt";
-    foreach my $sample_name (@orderedSampleNames) {
-      my $sampleFiles = $temp->{$sample_name};
-      foreach my $subSampleFile (@$sampleFiles) {
-        print LIST $subSampleFile . "\t$sample_name\n";
-      }
-    }
-    $parametersample_files1 = "fileList1${task_suffix}.txt";
-    close(LIST);
-  }
-  my $parametersample_files2 = "";
-  if ( has_raw_files( $config, $section, "parameterSampleFile2" ) ) {
-    my $temp = get_raw_files( $config, $section, "parameterSampleFile2" );
-    my @orderedSampleNames;
-    my $parameterSampleFileOrder = $config->{$section}{parameterSampleFile2Order};
-    if ( defined $parameterSampleFileOrder ) {
-      @orderedSampleNames = @{$parameterSampleFileOrder};
-    }
-    else {
-      @orderedSampleNames = keys %$temp;
-    }
-    open( LIST, ">$result_dir/fileList2${task_suffix}.txt" ) or die "Cannot create fileList2.txt";
-    foreach my $sample_name (@orderedSampleNames) {
-      foreach my $subSampleFile ( @{ ${$temp}{$sample_name} } ) {
-        print LIST $subSampleFile . "\t$sample_name\n";
-      }
-    }
-    $parametersample_files2 = "fileList2${task_suffix}.txt";
-    close(LIST);
-  }
-  my $parametersample_files3 = "";
-  if ( has_raw_files( $config, $section, "parameterSampleFile3" ) ) {
-    my $temp = get_raw_files( $config, $section, "parameterSampleFile3" );
-    my @orderedSampleNames;
-    my $parameterSampleFileOrder = $config->{$section}{parameterSampleFile3Order};
-    if ( defined $parameterSampleFileOrder ) {
-      @orderedSampleNames = @{$parameterSampleFileOrder};
-    }
-    else {
-      @orderedSampleNames = keys %$temp;
-    }
-    open( LIST, ">$result_dir/fileList3${task_suffix}.txt" ) or die "Cannot create fileList3.txt";
-    foreach my $sample_name (@orderedSampleNames) {
-      foreach my $subSampleFile ( @{ ${$temp}{$sample_name} } ) {
-        print LIST $subSampleFile . "\t$sample_name\n";
-      }
-    }
-    $parametersample_files3 = "fileList3${task_suffix}.txt";
-    close(LIST);
-  }
+  my $parametersample_files1 = writeParameterSampleFile($config, $section, $result_dir, 1);
+  my $parametersample_files2 = writeParameterSampleFile($config, $section, $result_dir, 2);
+  my $parametersample_files3 = writeParameterSampleFile($config, $section, $result_dir, 3);
 
   my $parameterFile1 = parse_param_file( $config, $section, "parameterFile1", 0 );
   my $parameterFile2 = parse_param_file( $config, $section, "parameterFile2", 0 );
