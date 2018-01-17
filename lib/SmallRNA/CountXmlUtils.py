@@ -35,8 +35,11 @@ def readCountXmlQueries(fileName, minCount):
   result.sort(key=operator.attrgetter('Count'), reverse=True)
     
   return(result)
-  
-def readCountXmlFeatures(fileName):
+
+def defaultAcceptFeatureName(featureName):
+  return(True);
+
+def readCountXmlFeatures(fileName, acceptFunc = defaultAcceptFeatureName):
   queryMap = readCountXmlQueryMap(fileName);
   
   result = []
@@ -45,16 +48,21 @@ def readCountXmlFeatures(fileName):
   features = root.find('subjectResult')
   for featureGroup in features.findall('subjectGroup'):
     fgroup = FeatureGroup()
-    result.append(fgroup)
+    bAccept = False
     for feature in featureGroup.findall('subject'):
-      fi = FeatureItem(feature.get("name"), "")
-      fgroup.Features.append(fi)
-      for region in feature.findall('region'):
-        for query in region.findall('query'):
-          fgroup.Queries.add(queryMap[query.get('qname')])
-          fi.EndPoints.append([int(query.get('offset')) + int(query.get('seq_len')), int(query.get('query_count'))])
-        
-    for query in featureGroup.findall('query'):
-      fgroup.Queries.add(queryMap[query.get('qname')])
+      featureName = feature.get("name")
+      if acceptFunc(featureName):
+        bAccept = True
+        fi = FeatureItem(featureName, "")
+        fgroup.Features.append(fi)
+        for region in feature.findall('region'):
+          for query in region.findall('query'):
+            fgroup.Queries.add(queryMap[query.get('qname')])
+            fi.EndPoints.append([int(query.get('offset')) + int(query.get('seq_len')), int(query.get('query_count'))])
+    
+    if bAccept:
+      result.append(fgroup)
+      for query in featureGroup.findall('query'):
+        fgroup.Queries.add(queryMap[query.get('qname')])
         
   return(result)
