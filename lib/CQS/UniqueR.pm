@@ -48,10 +48,11 @@ sub perform {
   if ( scalar(@output_file_exts) == 0 ) {
     push( @output_file_exts, "" );
   }
+  my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
 
-  my $parametersample_files1 = writeParameterSampleFile($config, $section, $result_dir, 1);
-  my $parametersample_files2 = writeParameterSampleFile($config, $section, $result_dir, 2);
-  my $parametersample_files3 = writeParameterSampleFile($config, $section, $result_dir, 3);
+  my $parametersample_files1 = writeParameterSampleFile( $config, $section, $result_dir, 1 );
+  my $parametersample_files2 = writeParameterSampleFile( $config, $section, $result_dir, 2 );
+  my $parametersample_files3 = writeParameterSampleFile( $config, $section, $result_dir, 3 );
 
   my $parameterFile1 = parse_param_file( $config, $section, "parameterFile1", 0 );
   my $parameterFile2 = parse_param_file( $config, $section, "parameterFile2", 0 );
@@ -99,6 +100,9 @@ sub perform {
   if ( defined($parameterFile3) ) {
     $rParameter = $rParameter . "parFile3='$parameterFile3'\n";
   }
+  if ($output_to_result_directory) {
+    $rParameter = $rParameter . "outputDirectory='.'\n";
+  }
 
   if ( $rParameter ne "" ) {
     print $rf $rParameter;
@@ -118,7 +122,7 @@ sub perform {
       die("rtemplate $rtemplate defined but not exists!");
     }
     open( my $rt, "<$rtemplate" ) or die $!;
-    while (my $row = <$rt>) {
+    while ( my $row = <$rt> ) {
       chomp($row);
       $row =~ s/\r//g;
       print $rf "$row\n";
@@ -126,30 +130,30 @@ sub perform {
     close($rt);
   }
   close($rf);
-  
-  my $rReportTemplates = get_option( $config, $section, "rReportTemplate" ,"");
-  if ($rReportTemplates ne "") {
-  	  	my $rfile = $result_dir . "/".basename($rReportTemplates);
-  		open( my $rf, ">$rfile" ) or die "Cannot create $rfile";
-  		
-  		my @rReportTemplates = split( ",|;", $rReportTemplates );
-  		foreach my $rReportTemplate (@rReportTemplates) {
-    		my $is_absolute = File::Spec->file_name_is_absolute($rReportTemplate);
-    		if ( !$is_absolute ) {
-      			$rReportTemplate = dirname(__FILE__) . "/$rReportTemplate";
-    		}
-    		if ( !( -e $rReportTemplate ) ) {
-      			die("rReportTemplate $rReportTemplate defined but not exists!");
-    		}
-    		open( my $rt, "<$rReportTemplate" ) or die $!;
-        while (my $row = <$rt>) {
-          chomp($row);
-          $row =~ s/\r//g;
-          print $rf "$row\n";
-        }
-    		close($rt);
-  		}
-  		close($rf);	
+
+  my $rReportTemplates = get_option( $config, $section, "rReportTemplate", "" );
+  if ( $rReportTemplates ne "" ) {
+    my $rfile = $result_dir . "/" . basename($rReportTemplates);
+    open( my $rf, ">$rfile" ) or die "Cannot create $rfile";
+
+    my @rReportTemplates = split( ",|;", $rReportTemplates );
+    foreach my $rReportTemplate (@rReportTemplates) {
+      my $is_absolute = File::Spec->file_name_is_absolute($rReportTemplate);
+      if ( !$is_absolute ) {
+        $rReportTemplate = dirname(__FILE__) . "/$rReportTemplate";
+      }
+      if ( !( -e $rReportTemplate ) ) {
+        die("rReportTemplate $rReportTemplate defined but not exists!");
+      }
+      open( my $rt, "<$rReportTemplate" ) or die $!;
+      while ( my $row = <$rt> ) {
+        chomp($row);
+        $row =~ s/\r//g;
+        print $rf "$row\n";
+      }
+      close($rt);
+    }
+    close($rf);
   }
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
@@ -175,24 +179,27 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $output_file     = get_option( $config, $section, "output_file",     "" );
-  my $output_file_ext = get_option( $config, $section, "output_file_ext", "" );
-  my $result          = {};
-  my @result_files    = ();
+  my $output_file                = get_option( $config, $section, "output_file",                "" );
+  my $output_file_ext            = get_option( $config, $section, "output_file_ext",            "" );
+  my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
+
+  my $result       = {};
+  my @result_files = ();
 
   if ( $output_file eq "parameterSampleFile1" or $output_file eq "parameterSampleFile2" or $output_file eq "parameterSampleFile3" ) {
     if ( has_raw_files( $config, $section, $output_file ) ) {
       my %temp = %{ get_raw_files( $config, $section, $output_file ) };
       foreach my $sample_name ( keys %temp ) {
         foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
+          my $subSampleName = $output_to_result_directory ? $result_dir . "/" . basename($subSampleFile) : $subSampleFile;
           if ( $output_file_ext =~ /;/ ) {
             my @output_file_exts = split( ";", $output_file_ext );
             foreach my $output_file_ext_one (@output_file_exts) {
-              push( @result_files, "${subSampleFile}${output_file_ext_one}" );
+              push( @result_files, "${subSampleName}${output_file_ext_one}" );
             }
           }
           else {
-            push( @result_files, "${subSampleFile}${output_file_ext}" );
+            push( @result_files, "${subSampleName}${output_file_ext}" );
           }
         }
       }

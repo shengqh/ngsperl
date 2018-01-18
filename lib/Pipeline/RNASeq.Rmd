@@ -1,10 +1,14 @@
 ---
-title: "VANGARD RNA-Seq Analysis Report"
+title: "RNA-Seq Analysis Report"
 output: 
   html_document:
     toc: true
     toc_depth: 4
 ---
+
+<style type="text/css">
+    div.datatables { height: auto !important;}
+</style>
 
 
 ```{r setup, include=FALSE}
@@ -12,6 +16,10 @@ library(knitr)
 library(reshape2)
 library(ggplot2)
 library(data.table)
+library(DT)
+library(RCurl)
+library(htmltools)
+
 knitr::opts_chunk$set(echo = TRUE)
 
 figRef <- local({
@@ -71,13 +79,14 @@ tabRef <- local({
 options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**")
 
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
-fileNames<-read.table("fileList2.txt", header=FALSE, as.is=TRUE)
-rownames(files)<-fileNames$V1
+rownames(files)<-files$V2
 
+rnaseqOptions<-read.table("fileList2.txt", header=FALSE, as.is=TRUE)
+rownames(rnaseqOptions)<-rnaseqOptions$V2
 
-summary<-"###1. Summary\nThis report includes quality check for raw sequencing data (section 2), reads mapping and assignment (section 3), and expression similarity between samples (section 4). The results of differential expression analysis are summarized in section 5 using the criteria of fold change >= 2 and FDR <= 0.05."
+summary<-paste0("###1. Summary\nThis report includes quality check for raw sequencing data (section 2), reads mapping and assignment (section 3), and expression similarity between samples (section 4). The results of differential expression analysis are summarized in section 5 using the criteria of fold change >= ", rnaseqOptions["DE_fold_change", 1], " and FDR <= ", rnaseqOptions["DE_pvalue", 1], ".")
 
-hasEnrichmentAnalysis<-any(grepl("Enrichment_", rownames(files)))
+hasEnrichmentAnalysis<-any(grepl("enrichment_", rownames(files)))
 #hasEnrichmentAnalysis<-0
 
 summaryFile<-"RNASeq_Summary.Rmd"
@@ -93,7 +102,15 @@ if(hasEnrichmentAnalysis){
   cat("###6. Funcional enrichment analysis\nList of the top five significantly enriched elements\n<br>\n", file=enrichFile)
 }
 structureIndex<-ifelse(hasEnrichmentAnalysis, 7, 6)
-cat(paste0("###", structureIndex, ". Results folder structure\n"), file=struFile)
+structure = paste0("###", structureIndex, ". Results folder structure\n",
+                   "* *_fpkm.tsv -> Gene expression abundance table\n",
+                   "* *_DESeq2.csv -> Differential expression analysis results\n")
+
+if(hasEnrichmentAnalysis){
+  structure = paste0(structure, "* Functional_enrichment -> Folder for functional enrichment analysis results")
+}
+
+cat(structure, file=struFile)
 ```
 
 <br>
@@ -107,22 +124,24 @@ cat(paste0("###", structureIndex, ". Results folder structure\n"), file=struFile
 
 ####2.1 Summary of sequencing quality
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("Sequence_quality", "The mean quality scores of sequencing reads in each position")}
-include_graphics(files["Sequence_quality",1])
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastqc_per_base_sequence_quality", "The mean quality scores of sequencing reads in each position")}
+include_graphics(files["fastqc_per_base_sequence_quality",1])
 ```
 
 <br>
 <br>
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("GC_percent", "The average GC content of sequencing reads")}
-include_graphics(files["GC_percent",1])
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastqc_per_sequence_gc_content", "The average GC content of sequencing reads")}
+include_graphics(files["fastqc_per_sequence_gc_content",1])
 ```
 
 <br>
 <br>
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("Adapter_content", "Adapter content of sequencing reads")}
-include_graphics(files["Adapter_content",1])
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastqc_adapter_content", "Adapter content of sequencing reads")}
+if(file.exists(files["fastqc_adapter_content",1])){
+  include_graphics(files["fastqc_adapter_content",1])
+}
 ```
 
 <br>
@@ -137,11 +156,11 @@ include_graphics(files["STAR_summary",1])
 <br>
 <br>
 
-```{r echo=FALSE}
+```{r echo=FALSE,results='asis'}
 table<-read.csv(files["STAR_summary_table",1])
 output_table1<-data.frame(table[,c(2,3,4,5)], (table[,3]+table[,4])/table[,2], row.names=table[,1])
 colnames(output_table1)<-c("Input reads", "Uniquely mapped reads", "Mapped to multiple loci", "Mapped to too many loci", "Ratio")
-kable(output_table1, caption=tabRef("mapSummary", "The summary of RNAseq mapping results"))
+print(kable(output_table1, caption=tabRef("mapSummary", "The summary of RNAseq mapping results")))
 ```
 
 **Ratio** = (Uniquely mapped + Mapped to multiple loci)/ Input reads
@@ -151,12 +170,11 @@ kable(output_table1, caption=tabRef("mapSummary", "The summary of RNAseq mapping
 
 ### 4. Expression Quantification
 #### 4.1 Summary of reads assignment
-```{r echo=FALSE, fig.align="center", fig.cap=figRef("gene_reads", "The number of reads assigned to genes")}
-final = read.table(files["Feature_counts",1],header=T, row.names=1,sep="\t")
-reads=final[,c("Assigned", "Unassigned_MultiMapping", "Unassigned_Ambiguity", "Unassigned_NoFeatures")]
-treads=data.frame(data.matrix(reads))
-treads$Sample=rownames(treads)
-meltreads=melt(treads, id="Sample", variable.name="Read", value.name="Count")
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("gene_reads", "The number of reads assigned to genes in uniquely mapped reads")}
+table<- read.table(files["featureCounts_table",1], header=TRUE)
+output_table2<-data.frame(table[,c(1, 2, 9, 12)])
+colnames(output_table2)<- c("Sample", "Unassigned ambiguity", "Assigned", "Unassigned no features")
+meltreads=melt(output_table2, id="Sample", variable.name="Read", value.name="Count")
 print(ggplot(meltreads, aes(x=Sample, y=Count, fill=Read)) + 
   geom_bar(stat="identity", width=0.5) +
   theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
@@ -166,42 +184,42 @@ print(ggplot(meltreads, aes(x=Sample, y=Count, fill=Read)) +
 <br>
 <br>
 
-```{r echo=FALSE}
-table<- read.table(files["Feature_counts",1], header=TRUE)
-output_table2<-data.frame(table[,c(1,2,4,9, 10,12,14)])
-colnames(output_table2)<- c("Sample", "Unassigned ambiguity", "Percent assigned", "Assigned", "Unassigned multimapping", "Unassigned no features",
-                            "Total")
-kable(output_table2, caption=tabRef("geneSummary", "The summary of reads assignment to genes"))
+```{r echo=FALSE,results='asis'}
+output_table2$UniquelyMapped<-apply(output_table2[,c(2,3,4)], 1, sum)
+output_table2$PercentAssigned<-apply(output_table2[,c(3,5)], 1, function(x){x[1] * 100 / x[2]})
+colnames(output_table2)<- c("Sample", "Unassigned ambiguity", "Assigned", "Unassigned no features", "Total uniquely mapped", "Percent assigned")
+output_table2<- output_table2[,c(1,3,6,2,4,5)]
+print(kable(output_table2, caption=tabRef("geneSummary", "The summary of reads assignment to genes")))
 ```
 
 <br>
 <br>
 
 ####4.2 Expression density of samples
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("Density", "Expression density distribution of each sample")}
-include_graphics(files["Density",1])
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_density", "Expression density distribution of each sample")}
+include_graphics(files["correlation_density",1])
 ```
 
 <br>
 <br>
 
 ####4.3 Similarity between samples
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("Heatmap", "Heatmap of expression similarity across samples")}
-include_graphics(files["Heatmap",1])
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_heatmap", "Heatmap of expression similarity across samples")}
+include_graphics(files["correlation_heatmap",1])
 ```
 
 <br>
 <br>
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("PCA", "PCA plot of samples")}
-include_graphics(files["PCA",1])
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_PCA", "PCA plot of samples")}
+include_graphics(files["correlation_PCA",1])
 ```
 
 <br>
 <br>
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("Correlation_cluster", "Correlation cluster of samples")}
-include_graphics(files["Correlation_cluster",1])
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_cluster", "Correlation cluster of samples")}
+include_graphics(files["correlation_cluster",1])
 ```
 
 <br>
@@ -210,7 +228,7 @@ include_graphics(files["Correlation_cluster",1])
 ###5. Differential expression
 ####5.1 Volcano plot
 ```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("Volcano_plot", "Volcano plot for all comparisons")}
-include_graphics(files["Volcano_plot",1])
+include_graphics(files["deseq2_volcano_plot",1])
 ```
 
 <br>
@@ -225,7 +243,21 @@ for (i in 1:nrow(DESeq2_files)){
 }
 output_table3<-data.frame(c(gsub("_DESeq2_sig.csv","",basename(DESeq2_files[,1]))), c(unlist(lapply(DESeq2_list, nrow))))
 colnames(output_table3)<-c("Comparison", "Number of DEGs")
-kable(output_table3, caption= "Table 3. DEG numbers under FC > 2 & FDR < 0.05")
+print(kable(output_table3, caption= tabRef("deseq2_table", paste0("DEG numbers under FC > ", rnaseqOptions["DE_fold_change", 1], " & FDR < ", rnaseqOptions["DE_pvalue", 1]))))
+
+for (i in 1:nrow(DESeq2_files)){
+  comparisonName<-DESeq2_files[i,2]
+  deseq2<-read.csv(DESeq2_files[i,1], header=TRUE, row.names=1)
+  if(nrow(deseq2) > 0){
+    maxrow<-min(nrow(deseq2), 10)
+    cnames<-c("baseMean", "log2FoldChange","lfcSE", "stat", "pvalue", "padj", "FoldChange")
+    if("Feature_gene_name"%in%colnames(deseq2)){
+      cnames<-c("Feature_gene_name", cnames)
+    }
+    deseq2table<-deseq2[c(1:maxrow), cnames]
+    print(kable(deseq2table, row.names=1, caption= tabRef(comparisonName, paste0(comparisonName, " top ", maxrow, " differential expressed genes"))))
+  }
+}
 ```
 
 <br>
@@ -238,11 +270,64 @@ kable(output_table3, caption= "Table 3. DEG numbers under FC > 2 & FDR < 0.05")
 
 ```{r echo=FALSE, results='asis'}
 if(hasEnrichmentAnalysis){
-  enrich_files<-files[grepl("Enrichment_", rownames(files)),]
+  enrich_files<-files[grepl("enrichment_", rownames(files)),]
   for (i in 1:nrow(enrich_files)){
     fdata<-fread(enrich_files[i,1], select=c(1,2,5,9), nrows=5, data.table=FALSE, col.names=c("ID", "Name", "#Gene", "FDR"))
     ename<-rownames(enrich_files)[i]
     print(kable(fdata, caption=tabRef(ename, ename)))
+  }  
+  
+  addLinkTag<-function(text,link) {
+    result<-paste0("<a href='",link,"'>",text,"</a>")
+    return(result)
+  }
+
+  processGesaTable<-function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=5,absLinkPath=FALSE) {
+        rawTable<-read.delim(gseaTableFile,header=T,as.is=T)
+        rawTableOut<-NULL
+        for (i in head(which(rawTable$FDR.q.val<=maxCategoryFdr),maxCategory)) {
+                categoryName=rawTable[i,1]
+                gseaUrl=paste0("http://software.broadinstitute.org/gsea/msigdb/cards/",categoryName)
+                categoryNameInTable<-addLinkTag(text=categoryName,link=gseaUrl)
+
+                gseaWeb<-getURL(gseaUrl)
+                temp<-strsplit(gseaWeb,"description|\\<td\\>")[[1]]
+                j=grep("Brief",temp)
+                categoryDescription<-gsub("^>","",temp[j+2])
+                categoryDescription<-gsub("<\\/$","",categoryDescription)
+
+                rawTableOut<-rbind(rawTableOut,unlist(c(categoryNameInTable,categoryDescription,rawTable[i,c(4,5,6,8)])))
+        }
+        colnames(rawTableOut)[1:2]<-c("Name","Description")
+        return(rawTableOut)
+  }
+  
+  gsea_files<-files[grepl("gsea_", rownames(files)),]
+  out<-list()
+  for (i in 1:nrow(gsea_files)){
+    gfolders<-read.csv(gsea_files[i,1],header=T,stringsAsFactor=F)
+    gname<-gsub(".rnk.*", "", basename(gsea_files[i,1]))
+    for (j in 1:nrow(gfolders)){
+      resultDirSub<-gfolders$Folder[j]
+      
+      posTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_pos_\\d+\\.xls$",full.names=TRUE)
+      if (length(posTableFile)!=1) {
+        warning(paste0("Can't find positive-regulated GSEA table file in ", resultDirSub))
+      }else{
+        rawTableOut<-processGesaTable(posTableFile)
+        ename<-paste0(gname, " ", gfolders$GseaCategory[j], " Positive-regulated")
+        print(kable(rawTableOut, caption=tabRef(ename, ename)))
+      }
+      
+      negTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_neg_\\d+\\.xls$",full.names=TRUE)
+      if (length(negTableFile)!=1) {
+        warning(paste0("Can't find negative-regulated GSEA table file in ", resultDirSub))
+      }else{
+        rawTableOut<-processGesaTable(negTableFile)
+        ename<-paste0(gname, " ", gfolders$GseaCategory[j], " Negative-regulated")
+        print(kable(rawTableOut, caption=tabRef(ename, ename)))
+      }
+    }
   }  
 }
 ``` 
@@ -252,13 +337,7 @@ if(hasEnrichmentAnalysis){
 ```{r structure, child=struFile} 
 ```
 
-<br>
-
-* *_fpkm.tsv -> Gene expression abundance
-* *_DESeq2.csv -> Differential expression analysis results
-* Functional enrichment -> Folder for funtional enrichment results
-
-```{r echo=FALSE}
+```{r teardown, include=FALSE}
 if(file.exists(summaryFile)){
   file.remove(summaryFile)
 }

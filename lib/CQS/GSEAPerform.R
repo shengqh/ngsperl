@@ -30,15 +30,20 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="/home/zhaos/bin/gsea
 			gseaCategoryName<-fileToName[gseaCategoryName]
 		}
 		runCommond=paste0("java -Xmx8198m -cp ",gseaJar," xtools.gsea.GseaPreranked -gmx ",gseaDb,"/",gseaCategory,
-				"-collapse false -nperm 1000 -rnk ",preRankedGeneFile," -scoring_scheme weighted -make_sets true -rpt_label '",gseaCategoryName,"' -plot_top_x 20 -set_max 500 -set_min 15 -out ",gesaResultDir)
+				"-collapse false -nperm 1000 -rnk ",preRankedGeneFile," -scoring_scheme weighted -make_sets true -rpt_label '",gseaCategoryName,"' -plot_top_x 20 -set_max 500 -set_min 15 -zip_report -out ",gesaResultDir)
 		print(runCommond)
 		system(runCommond)
 	}
 	
+  resultDirSubs<-list.dirs(gesaResultDir,recursive=FALSE,full.names =TRUE)
+  dt<-data.frame(Folder=resultDirSubs)
+  dt$GseaCategory<-gsub(paste0(gesaResultDir,"/"), "", dt$Folder)
+  dt$GseaCategory<-gsub(".GseaPreranked.\\d+$", "", dt$GseaCategory)
+  write.csv(dt, file=paste0(basename(preRankedGeneFile),".gsea.csv"), row.names=F)
+	
 	if (makeReport) {
 		library('rmarkdown')
 		rmarkdown::render(gseaReportTemplt,output_file=paste0(basename(preRankedGeneFile),".gsea.html"),output_dir=resultDir)
-		
 	}
 }
 
@@ -46,19 +51,15 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="/home/zhaos/bin/gsea
 preRankedGeneFileTable=parSampleFile1
 preRankedGeneFileTable=read.delim(preRankedGeneFileTable,header=F,as.is=T)
 
-if(!exists("gseaCategories")){
-  gseaCategories<-"h.all.v6.0.symbols.gmt"
-}
+alldt<-NULL
+resultDir=getwd()
 
 for (i in 1:nrow(preRankedGeneFileTable)) {
 	preRankedGeneFile=preRankedGeneFileTable[i,1]
 	compName=preRankedGeneFileTable[i,2]
-	
-	resultDir=getwd()
-	runGSEA(preRankedGeneFile,resultDir=resultDir,makeReport=TRUE,gseaJar=gseaJar,gseaDb=gseaDb,gseaCategories=gseaCategories)
-	
+
+  dt<-runGSEA(preRankedGeneFile,resultDir=resultDir,makeReport=TRUE,gseaJar=gseaJar,gseaDb=gseaDb,gseaCategories=gseaCategories)
+  alldt<-rbind(alldt, dt)
 }
 
-
-
-
+write.csv(alldt, file="GSEA_result.csv", row.names=F)

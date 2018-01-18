@@ -274,7 +274,7 @@ libraryKey<-\"$libraryKey\"
 }
 
 sub result {
-  my ( $self, $config, $section, $pattern ) = @_;
+  my ( $self, $config, $section, $pattern, $removeEmpty ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
@@ -284,9 +284,17 @@ sub result {
   my $detectedInBothGroup = get_option( $config, $section, "detected_in_both_group", 0 );
   my $performWilcox       = get_option( $config, $section, "perform_wilcox",         0 );
   my $exportSignificantGeneName = get_option( $config, $section, "export_significant_gene_name", 0 );
-
+  
   my $suffix = getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup );
   my $result = {};
+
+  if(scalar(keys %$comparisons) > 1){
+    my $filtered = filter_array( [$result_dir . "/${task_name}.define_DESeq2_volcanoPlot.png"], $pattern, $removeEmpty );
+    if(scalar(@$filtered) > 0 || !$removeEmpty){
+      $result->{$task_name} = $filtered;
+    }
+  }
+
   for my $comparison_name ( sort keys %{$comparisons} ) {
     my @result_files = ();
     my $prefix       = $comparison_name . $suffix;
@@ -298,6 +306,8 @@ sub result {
     push( @result_files, $result_dir . "/${prefix}_DESeq2_GSEA.rnk" );
     push( @result_files, $result_dir . "/${prefix}_DESeq2_sig.csv" );
     push( @result_files, $result_dir . "/${prefix}_DESeq2_volcanoPlot.png" );
+    push( @result_files, $result_dir . "/${prefix}_geneAll_DESeq2-vsd-heatmap.png" );
+    push( @result_files, $result_dir . "/${prefix}_geneAll_DESeq2-vsd-pca.pdf" );
     if($exportSignificantGeneName){
       push( @result_files, $result_dir . "/${prefix}_DESeq2_sig_genename.txt" );
     }
@@ -306,9 +316,12 @@ sub result {
       push( @result_files, $result_dir . "/${prefix}_quantile_wilcox_sig.csv" );
     }
 
-    $result->{$comparison_name} = filter_array( \@result_files, $pattern );
+    my $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
+    if(scalar(@$filtered) > 0 || !$removeEmpty){
+      $result->{$comparison_name} = $filtered;
+    }
   }
-
+  
   return $result;
 }
 

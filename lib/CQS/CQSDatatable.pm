@@ -64,7 +64,7 @@ sub perform {
   }
   close(FL);
 
-  my $result_file = $self->get_file(".", $task_name, ".count", 0);
+  my $result_file = $self->get_file( ".", $task_name, ".count", 0 );
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
@@ -87,8 +87,13 @@ sub result {
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
   my $result       = {};
   my @result_files = ();
-  push( @result_files, $self->get_file($result_dir, $task_name, ".count", 0));
+  push( @result_files, $self->get_file( $result_dir, $task_name, ".count", 0 ) );
   push( @result_files, $self->get_file( $pbs_dir, $task_name, ".filelist" ) );
+
+  my $mapFile = get_param_file( $config->{$section}{name_map_file}, "name_map_file", 0 );
+  if ( defined $mapFile ) {
+    push( @result_files, $self->get_file( $result_dir, $task_name, ".fpkm.tsv", 0 ) );
+  }
 
   $result->{$task_name} = filter_array( \@result_files, $pattern );
 

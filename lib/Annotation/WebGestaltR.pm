@@ -87,6 +87,10 @@ sub result {
     push( @result_files, "$cur_dir/Project_${sample_name}_geneontology_Cellular_Component/enrichment_results_${sample_name}_geneontology_Cellular_Component.txt" );
     push( @result_files, "$cur_dir/Project_${sample_name}_geneontology_Molecular_Function/enrichment_results_${sample_name}_geneontology_Molecular_Function.txt" );
     push( @result_files, "$cur_dir/Project_${sample_name}_pathway_KEGG/enrichment_results_${sample_name}_pathway_KEGG.txt" );
+    push( @result_files, "$cur_dir/Project_${sample_name}_geneontology_Biological_Process" );
+    push( @result_files, "$cur_dir/Project_${sample_name}_geneontology_Cellular_Component" );
+    push( @result_files, "$cur_dir/Project_${sample_name}_geneontology_Molecular_Function" );
+    push( @result_files, "$cur_dir/Project_${sample_name}_pathway_KEGG" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;

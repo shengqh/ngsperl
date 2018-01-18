@@ -19,7 +19,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(get_config_section has_config_section get_option get_option_file get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files_and_keys get_raw_files get_raw_files_keys get_raw_files_attributes get_raw_files2 get_run_command get_option_value get_pair_groups
-      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key get_grouped_raw_files save_parameter_sample_file saveConfig writeFileList initDefaultValue get_pure_pairs writeParameterSampleFile)
+      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key get_grouped_raw_files save_parameter_sample_file saveConfig writeFileList initDefaultValue get_pure_pairs writeParameterSampleFile get_raw_file_list fix_task_name)
   ]
 );
 
@@ -142,6 +142,7 @@ sub get_parameter {
   if ( $task_name eq "" ) {
     $task_name = get_option( $config, "general", "task_name" );
   }
+  $task_name =~ s/\s/_/g;
 
   my $cluster = get_cluster(@_);
 
@@ -316,23 +317,14 @@ sub has_raw_files {
   return ( defined $curSection->{$mapname} ) || ( defined $curSection->{$mapname_ref} ) || ( defined $curSection->{$mapname_config_ref} );
 }
 
-sub do_get_unsorted_raw_files {
-  my ( $config, $section, $returnself, $mapname, $pattern ) = @_;
+sub get_refmap{
+  my ($config, $section, $mapname, $pattern) = @_;
 
   my $curSection = get_config_section( $config, $section );
-
-  if ( !defined $mapname ) {
-    $mapname = "source";
-  }
   my $mapname_ref        = $mapname . "_ref";
   my $mapname_config_ref = $mapname . "_config_ref";
-
-  if ( defined $curSection->{$mapname} ) {
-    return ( $curSection->{$mapname}, 1 );
-  }
-
-  if ( defined $curSection->{$mapname_ref} || defined $curSection->{$mapname_config_ref} ) {
-    my $refmap = {};
+   
+    my $result = {};
     if ( defined $curSection->{$mapname_ref} ) {
 
       #in same config
@@ -352,11 +344,11 @@ sub do_get_unsorted_raw_files {
           get_config_section( $config, $parts[$index] );
 
           if ( $index == ( $partlength - 1 ) || has_config_section( $config, $parts[ $index + 1 ] ) ) {
-            $refmap->{$index} = { config => $config, section => $parts[$index], pattern => $pattern };
+            $result->{$index} = { config => $config, section => $parts[$index], pattern => $pattern };
             $index++;
           }
           else {
-            $refmap->{$index} = { config => $config, section => $parts[$index], pattern => $parts[ $index + 1 ] };
+            $result->{$index} = { config => $config, section => $parts[$index], pattern => $parts[ $index + 1 ] };
             $index += 2;
           }
         }
@@ -365,7 +357,7 @@ sub do_get_unsorted_raw_files {
         if ( !has_config_section( $config, $targetSection ) ) {
           die "undefined section $targetSection";
         }
-        $refmap->{1} = { config => $config, section => $targetSection, pattern => $pattern };
+        $result->{1} = { config => $config, section => $targetSection, pattern => $pattern };
       }
     }
     else {
@@ -391,18 +383,98 @@ sub do_get_unsorted_raw_files {
         }
 
         if ( $index == ( $partlength - 2 ) || ref( $parts[ $index + 2 ] ) eq 'HASH' ) {
-          $refmap->{$index} = { config => $targetConfig, section => $targetSection, pattern => $pattern };
+          $result->{$index} = { config => $targetConfig, section => $targetSection, pattern => $pattern };
           $index += 2;
         }
         else {
-          $refmap->{$index} = { config => $targetConfig, section => $targetSection, pattern => $parts[ $index + 2 ] };
+          $result->{$index} = { config => $targetConfig, section => $targetSection, pattern => $parts[ $index + 2 ] };
           $index += 3;
         }
       }
     }
+    return($result, 0);
+}
 
-    #print Dumper($refmap);
+sub get_raw_file_list {
+  my ( $config, $section, $mapname ) = @_;
 
+  my $curSection = get_config_section( $config, $section );
+
+  if ( !defined $mapname ) {
+    $mapname = "source";
+  }
+  my $mapname_ref        = $mapname . "_ref";
+  my $mapname_config_ref = $mapname . "_config_ref";
+
+  if ( defined $curSection->{$mapname} ) {
+    return $curSection->{$mapname};
+  }
+
+  if ( defined $curSection->{$mapname_ref} || defined $curSection->{$mapname_config_ref} ) {
+    my ($refmap, $returnNow) = get_refmap($config, $section, $mapname, undef);
+    if($returnNow){
+      return $refmap;
+    }
+    
+    my $result = [];
+    my @sortedKeys = sort { $a <=> $b } keys %$refmap;
+    for my $index (@sortedKeys) {
+      my $values       = $refmap->{$index};
+      my $targetConfig = $values->{config};
+      my $section      = $values->{section};
+      my $pattern      = $values->{pattern};
+
+      my $targetSection = get_config_section( $targetConfig, $section );
+
+      my %myres = ();
+      if ( defined $targetSection->{class} ) {
+        my $myclass = instantiate( $targetSection->{class} );
+        %myres = %{ $myclass->result( $targetConfig, $section, $pattern, 1 ) };
+      }
+      else {
+        my ( $res, $issource ) = do_get_unsorted_raw_files( $targetConfig, $section, 1, undef, $pattern, 1 );
+        %myres = %{$res};
+      }
+      
+      my $curfile = "";
+      for my $myvalues (values %myres){
+        die "Return value should be array." if ( ref($myvalues) ne 'ARRAY' );
+        if ( scalar(@$myvalues) > 0 ){
+          $curfile = $myvalues->[0];
+          last;
+        }
+      }
+      die "Cannot find file for " . $values->{section} . " and pattern " . $values->{pattern} if $curfile eq "";
+      push(@$result, $curfile);
+    }
+
+    return $result;
+  }
+
+  die "define $mapname or $mapname_ref or $mapname_config_ref for $section";
+}
+
+sub do_get_unsorted_raw_files {
+  my ( $config, $section, $returnself, $mapname, $pattern, $removeEmpty ) = @_;
+
+  my $curSection = get_config_section( $config, $section );
+
+  if ( !defined $mapname ) {
+    $mapname = "source";
+  }
+  my $mapname_ref        = $mapname . "_ref";
+  my $mapname_config_ref = $mapname . "_config_ref";
+
+  if ( defined $curSection->{$mapname} ) {
+    return ( $curSection->{$mapname}, 1 );
+  }
+
+  if ( defined $curSection->{$mapname_ref} || defined $curSection->{$mapname_config_ref} ) {
+    my ($refmap, $returnNow) = get_refmap($config, $section, $mapname, $pattern);
+    if($returnNow){
+      return ($refmap, 1);
+    }
+    
     my %result = ();
     my @sortedKeys = sort { $a <=> $b } keys %$refmap;
     for my $index (@sortedKeys) {
@@ -416,10 +488,10 @@ sub do_get_unsorted_raw_files {
       my %myres = ();
       if ( defined $targetSection->{class} ) {
         my $myclass = instantiate( $targetSection->{class} );
-        %myres = %{ $myclass->result( $targetConfig, $section, $pattern ) };
+        %myres = %{ $myclass->result( $targetConfig, $section, $pattern, $removeEmpty ) };
       }
       else {
-        my ( $res, $issource ) = do_get_unsorted_raw_files( $targetConfig, $section, 1, undef, $pattern );
+        my ( $res, $issource ) = do_get_unsorted_raw_files( $targetConfig, $section, 1, undef, $pattern, $removeEmpty );
         %myres = %{$res};
       }
 
@@ -559,8 +631,8 @@ sub get_raw_files_and_keys {
 }
 
 sub get_raw_files {
-  my ( $config, $section, $mapname, $pattern ) = @_;
-  my ( $result, $issource ) = do_get_raw_files( $config, $section, 0, $mapname, $pattern );
+  my ( $config, $section, $mapname, $pattern, $removeEmpty ) = @_;
+  my ( $result, $issource ) = do_get_raw_files( $config, $section, 0, $mapname, $pattern, $removeEmpty );
   return $result;
 }
 
@@ -818,12 +890,12 @@ sub initDefaultValue {
 }
 
 sub writeParameterSampleFile {
-  my ( $config, $section, $resultDir, $index ) = @_;
+  my ( $config, $section, $resultDir, $index, $removeEmpty ) = @_;
   my $result      = "";
   my $task_suffix = get_option( $config, $section, "suffix", "" );
   my $key         = "parameterSampleFile" . $index;
   if ( has_raw_files( $config, $section, $key ) ) {
-    my $temp = get_raw_files( $config, $section, $key );
+    my $temp = get_raw_files( $config, $section, $key, undef, $removeEmpty );
     my @orderedSampleNames;
     my $keyOrder                 = $key . "Order";
     my $parameterSampleFileOrder = $config->{$section}{$keyOrder};
@@ -836,13 +908,21 @@ sub writeParameterSampleFile {
     $result = "fileList${index}${task_suffix}.txt";
     open( my $list, ">$resultDir/$result" ) or die "Cannot create $result";
     foreach my $sample_name (@orderedSampleNames) {
-      foreach my $subSampleFile ( @{ ${$temp}{$sample_name} } ) {
+      my $subSampleFiles = $temp->{$sample_name};
+      foreach my $subSampleFile ( @$subSampleFiles ) {
         print $list $subSampleFile . "\t$sample_name\n";
       }
     }
     close($list);
   }
   return $result;
+}
+
+sub fix_task_name {
+  my $def = shift;
+  my $taskName = $def->{task_name};
+  $taskName =~ s/\s/_/g;
+  $def->{task_name} = $taskName;
 }
 
 1;
