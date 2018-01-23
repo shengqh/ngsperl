@@ -134,7 +134,7 @@ sub getPreprocessionConfig {
       ispaired   => $is_paired,
       target_dir => $def->{target_dir} . "/" . getNextFolderIndex($def) . "sra2fastq",
       option     => "",
-      source     => $source_ref,
+      source_ref => $source_ref,
       sh_direct  => 1,
       cluster    => $def->{cluster},
       not_clean  => getValue( $def, "sra_not_clean", 1 ),

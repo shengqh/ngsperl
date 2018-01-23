@@ -260,6 +260,7 @@ sub addDeseq2Visualization {
     rtemplate                => "DESeq2_all_vis.R",
     output_file              => ".${taskKey}.DESeq2.Matrix",
     output_file_ext          => ".png",
+    remove_empty_parameter   => 1,
     parameterSampleFile1_ref => $deseq2FileRef,
     parameterSampleFile2     => $def->{$layoutName},
     rCode                    => 'useRawPvalue=' . $def->{DE_use_raw_pvalue} . ";",
@@ -282,14 +283,15 @@ sub addDeseq2SignificantSequenceBlastn {
 
   my $fastaTask = $deseq2Task . "_sequences";
   $config->{$fastaTask} = {
-    class      => "Blast::DESeq2SignificantReadToFasta",
-    perform    => 1,
-    target_dir => $parentDir . "/" . getNextFolderIndex($def) . "$fastaTask",
-    option     => "",
-    source_ref => [ $deseq2Task, "_DESeq2_sig.csv\$" ],
-    sh_direct  => 1,
-    cluster    => $def->{cluster},
-    pbs        => {
+    class                  => "Blast::DESeq2SignificantReadToFasta",
+    perform                => 1,
+    target_dir             => $parentDir . "/" . getNextFolderIndex($def) . "$fastaTask",
+    option                 => "",
+    remove_empty_parameter => 1,
+    source_ref             => [ $deseq2Task, "_DESeq2_sig.csv\$" ],
+    sh_direct              => 1,
+    cluster                => $def->{cluster},
+    pbs                    => {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",

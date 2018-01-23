@@ -50,9 +50,10 @@ sub perform {
   }
   my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
 
-  my $parametersample_files1 = writeParameterSampleFile( $config, $section, $result_dir, 1 );
-  my $parametersample_files2 = writeParameterSampleFile( $config, $section, $result_dir, 2 );
-  my $parametersample_files3 = writeParameterSampleFile( $config, $section, $result_dir, 3 );
+  my $removeEmpty = get_option( $config, $section, "remove_empty_parameter",     0);
+  my $parametersample_files1 = writeParameterSampleFile( $config, $section, $result_dir, 1, $removeEmpty );
+  my $parametersample_files2 = writeParameterSampleFile( $config, $section, $result_dir, 2, $removeEmpty );
+  my $parametersample_files3 = writeParameterSampleFile( $config, $section, $result_dir, 3, $removeEmpty );
 
   my $parameterFile1 = parse_param_file( $config, $section, "parameterFile1", 0 );
   my $parameterFile2 = parse_param_file( $config, $section, "parameterFile2", 0 );
