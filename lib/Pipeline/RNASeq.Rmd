@@ -22,6 +22,11 @@ library(htmltools)
 
 knitr::opts_chunk$set(echo = TRUE)
 
+addLinkTag<-function(text,link) {
+  result<-paste0("<a href='",link,"' target='_blank'>",text,"</a>")
+  return(result)
+}
+  
 figRef <- local({
     tag <- numeric()
     created <- logical()
@@ -102,14 +107,7 @@ if(hasEnrichmentAnalysis){
   cat("###6. Funcional enrichment analysis\nList of the top five significantly enriched elements\n<br>\n", file=enrichFile)
 }
 structureIndex<-ifelse(hasEnrichmentAnalysis, 7, 6)
-structure = paste0("###", structureIndex, ". Results folder structure\n",
-                   "* *_fpkm.tsv -> Gene expression abundance table\n",
-                   "* *_DESeq2.csv -> Differential expression analysis results\n")
-
-if(hasEnrichmentAnalysis){
-  structure = paste0(structure, "* Functional_enrichment -> Folder for functional enrichment analysis results")
-}
-
+structure = paste0("###", structureIndex, ". Results folder structure\n")
 cat(structure, file=struFile)
 ```
 
@@ -276,11 +274,6 @@ if(hasEnrichmentAnalysis){
     ename<-rownames(enrich_files)[i]
     print(kable(fdata, caption=tabRef(ename, ename)))
   }  
-  
-  addLinkTag<-function(text,link) {
-    result<-paste0("<a href='",link,"'>",text,"</a>")
-    return(result)
-  }
 
   processGesaTable<-function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=5,absLinkPath=FALSE) {
         rawTable<-read.delim(gseaTableFile,header=T,as.is=T)
@@ -335,6 +328,27 @@ if(hasEnrichmentAnalysis){
 <br>
 
 ```{r structure, child=struFile} 
+```
+
+```{r structure_link, echo=FALSE, results='asis'}
+df<-NULL
+fpkmFile<-list.files('.',pattern="fpkm.tsv$",full.names=TRUE,recursive=TRUE)
+if(length(fpkmFile) > 0){
+  df<-rbind(df, data.frame(File=addLinkTag(fpkmFile, fpkmFile), Description="Gene expression abundance table"))
+}
+
+deseqAll<-list.files('.',pattern="_DESeq2.csv$",full.names=TRUE,recursive=TRUE)
+if(length(deseqAll) > 0){
+  df<-rbind(df, data.frame(File=addLinkTag(deseqAll, deseqAll), Description="Differential expression analysis table"))
+}
+
+deseqSig<-list.files('.',pattern="_DESeq2_sig.csv$",full.names=TRUE,recursive=TRUE)
+if(length(deseqSig) > 0){
+  df<-rbind(df, data.frame(File=addLinkTag(deseqSig, deseqSig), Description="Significantly differential expressed genes"))
+}
+
+print(kable(df, caption=tabRef("resultFiles", "Result files")))
+
 ```
 
 ```{r teardown, include=FALSE}
