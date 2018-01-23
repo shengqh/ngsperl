@@ -83,10 +83,6 @@ sub perform {
   
   print $final "
 R --slave -e \"library(knitr);rmarkdown::render('" . "${task_name}.Rmd');\"
-
-if [[ -s ${task_name}.html ]]; then
-  mv ${task_name}.html $task_name
-fi
 ";
 
   $self->close_pbs( $final, $final_pbs );

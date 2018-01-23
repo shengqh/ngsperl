@@ -1,0 +1,171 @@
+---
+title: "smallRNA Sequencing Analysis Report"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 4
+---
+
+<style type="text/css">
+    div.datatables { height: auto !important;}
+</style>
+
+
+```{r setup, include=FALSE}
+library(knitr)
+library(reshape2)
+library(ggplot2)
+library(data.table)
+library(DT)
+library(RCurl)
+library(htmltools)
+
+knitr::opts_chunk$set(echo = TRUE)
+
+figRef <- local({
+    tag <- numeric()
+    created <- logical()
+    used <- logical()
+    function(label, caption, prefix = options("figcap.prefix"), 
+        sep = options("figcap.sep"), prefix.highlight = options("figcap.prefix.highlight")) {
+        i <- which(names(tag) == label)
+        if (length(i) == 0) {
+            i <- length(tag) + 1
+            tag <<- c(tag, i)
+            names(tag)[length(tag)] <<- label
+            used <<- c(used, FALSE)
+            names(used)[length(used)] <<- label
+            created <<- c(created, FALSE)
+            names(created)[length(created)] <<- label
+        }
+        if (!missing(caption)) {
+            created[label] <<- TRUE
+            paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
+                " ", caption)
+        } else {
+            used[label] <<- TRUE
+            paste(prefix, tag[label])
+        }
+    }
+})
+options(figcap.prefix = "Figure", figcap.sep = ":", figcap.prefix.highlight = "**")
+
+tabRef <- local({
+    tag <- numeric()
+    created <- logical()
+    used <- logical()
+    function(label, caption, prefix = options("tabcap.prefix"), 
+        sep = options("tabcap.sep"), prefix.highlight = options("tabcap.prefix.highlight")) {
+        i <- which(names(tag) == label)
+        if (length(i) == 0) {
+            i <- length(tag) + 1
+            tag <<- c(tag, i)
+            names(tag)[length(tag)] <<- label
+            used <<- c(used, FALSE)
+            names(used)[length(used)] <<- label
+            created <<- c(created, FALSE)
+            names(created)[length(created)] <<- label
+        }
+        if (!missing(caption)) {
+            created[label] <<- TRUE
+            paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
+                " ", caption)
+        } else {
+            used[label] <<- TRUE
+            paste(prefix, tag[label])
+        }
+    }
+})
+options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**")
+
+files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
+rownames(files)<-files$V2
+
+rnaseqOptions<-read.table("fileList2.txt", header=FALSE, as.is=TRUE)
+rownames(rnaseqOptions)<-rnaseqOptions$V2
+
+getCategory<-function(category, description){
+  return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", category, "', '",description, "')}\n",
+"  include_graphics(files['", category, "',1])\n```\n"))
+}
+
+categoryRmd<-function(dfCategory){
+  result<-""
+  for(i in c(1:nrow(dfCategory))){
+    section=dfCategory$Section[i]
+    category=dfCategory$Category[i]
+    name=dfCategory$Name[i]
+    heatmap<-paste0("correlation_", category, "_heatmap")
+    pca<-paste0("correlation_", category, "_pca")
+    group_heatmap<-paste0("correlation_", category, "_group_heatmap")
+    corr_heatmap<-paste0("correlation_", category, "_corr_cluster")
+    lines<-paste0(section, " ", name, "\n", getCategory(heatmap, heatmap), getCategory(pca, pca), getCategory(group_heatmap, group_heatmap), getCategory(corr_heatmap, corr_heatmap) )
+    result<-paste0(result, lines)
+  }
+  return(result)
+}
+
+hostFile="host.Rmd"
+host<-data.frame(Section=c("####3.2", "####3.3"), Category=c("mirna", "trna"), Name=c("miRNA", "tRNA"))
+cat(categoryRmd(host), file=hostFile)
+
+nonhostGenomeFile="nonhostgenome.Rmd"
+nonhostGenome<-data.frame(Section=c("####4.1", "####4.2"), Category=c("group1", "group2"), Name=c("Microbime bacteria", "Enviroment bacteria"))
+cat(categoryRmd(nonhostGenome), file=nonhostGenomeFile)
+
+nonhostLibraryFile="nonhostlibrary.Rmd"
+nonhostLibrary<-data.frame(Section=c("####5.1", "####5.2"), Category=c("trnalib", "rrnalib"), Name=c("tRNA library", "rRNA library"))
+cat(categoryRmd(nonhostLibrary), file=nonhostLibraryFile)
+
+```
+
+<br>
+
+###1. Summary
+This report includes preprocessing (section 2), host genome (section 3), nonhost genome (section 4), nonhost library (section 5)
+
+<br>
+
+###2. Preprocessing
+
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastq_len", "read length distribution after adapter trimming")}
+include_graphics(files["fastq_len",1])
+```
+
+###3. Host genome
+####3.1 Overall 
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_mapped", "category_mapped")}
+include_graphics(files["category_mapped",1])
+```
+
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_mapped_group", "category_mapped_group")}
+include_graphics(files["category_mapped_group",1])
+```
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_smallrna", "category_smallrna")}
+include_graphics(files["category_smallrna",1])
+```
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_smallrna_group", "category_smallrna_group")}
+include_graphics(files["category_smallrna_group",1])
+```
+<br>
+
+```{r host, child=hostFile} 
+```
+
+<br>
+
+###4. Non-host genome
+```{r nonhostgenome, child=nonhostGenomeFile} 
+```
+
+<br>
+
+###5. Non-host library
+```{r nonhostlibrary, child=nonhostLibraryFile} 
+```
+
+```{r teardown, include=FALSE}
+if(file.exists(hostFile)){
+#  file.remove(hostFile)
+}
+```
