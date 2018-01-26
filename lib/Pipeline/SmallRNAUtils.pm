@@ -68,11 +68,15 @@ sub isVersion3 {
 }
 
 sub addNonhostDatabase {
-  my ( $config, $def, $individual, $summary, $taskKey, $parentDir, $bowtieIndex, $sourceRef, $countOption, $tableOption ) = @_;
+  my ( $config, $def, $individual, $summary, $taskKey, $parentDir, $bowtieIndex, $sourceRef, $countOption, $tableOption, $count_ref ) = @_;
 
   my $bowtie1Task      = "bowtie1_" . $taskKey;
   my $bowtie1CountTask = "bowtie1_" . $taskKey . "_count";
   my $bowtie1TableTask = "bowtie1_" . $taskKey . "_table";
+  
+  if(!defined $count_ref){
+    $count_ref = ["identical", ".dupcount\$"];
+  }
 
   addBowtie( $config, $def, $individual, $bowtie1Task, $parentDir, $bowtieIndex, $sourceRef, $def->{bowtie1_option_pm} );
   $config->{$bowtie1CountTask} = {
@@ -81,7 +85,7 @@ sub addNonhostDatabase {
     target_dir   => $parentDir . "/" . $bowtie1CountTask,
     option       => $countOption,
     source_ref   => $bowtie1Task,
-    seqcount_ref => [ "identical", ".dupcount\$" ],
+    seqcount_ref => $count_ref,
     cqs_tools    => $def->{cqstools},
     sh_direct    => 1,
     cluster      => $def->{cluster},
