@@ -6,78 +6,10 @@ output:
     toc_depth: 4
 ---
 
-<style type="text/css">
-    div.datatables { height: auto !important;}
-</style>
-
-
+```{r, child="Functions.Rmd"} 
+```
+  
 ```{r setup, include=FALSE}
-library(knitr)
-library(reshape2)
-library(ggplot2)
-library(data.table)
-library(DT)
-library(RCurl)
-library(htmltools)
-
-knitr::opts_chunk$set(echo = TRUE)
-
-figRef <- local({
-    tag <- numeric()
-    created <- logical()
-    used <- logical()
-    function(label, caption, prefix = options("figcap.prefix"), 
-        sep = options("figcap.sep"), prefix.highlight = options("figcap.prefix.highlight")) {
-        i <- which(names(tag) == label)
-        if (length(i) == 0) {
-            i <- length(tag) + 1
-            tag <<- c(tag, i)
-            names(tag)[length(tag)] <<- label
-            used <<- c(used, FALSE)
-            names(used)[length(used)] <<- label
-            created <<- c(created, FALSE)
-            names(created)[length(created)] <<- label
-        }
-        if (!missing(caption)) {
-            created[label] <<- TRUE
-            paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
-                " ", caption)
-        } else {
-            used[label] <<- TRUE
-            paste(prefix, tag[label])
-        }
-    }
-})
-options(figcap.prefix = "Figure", figcap.sep = ":", figcap.prefix.highlight = "**")
-
-tabRef <- local({
-    tag <- numeric()
-    created <- logical()
-    used <- logical()
-    function(label, caption, prefix = options("tabcap.prefix"), 
-        sep = options("tabcap.sep"), prefix.highlight = options("tabcap.prefix.highlight")) {
-        i <- which(names(tag) == label)
-        if (length(i) == 0) {
-            i <- length(tag) + 1
-            tag <<- c(tag, i)
-            names(tag)[length(tag)] <<- label
-            used <<- c(used, FALSE)
-            names(used)[length(used)] <<- label
-            created <<- c(created, FALSE)
-            names(created)[length(created)] <<- label
-        }
-        if (!missing(caption)) {
-            created[label] <<- TRUE
-            paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
-                " ", caption)
-        } else {
-            used[label] <<- TRUE
-            paste(prefix, tag[label])
-        }
-    }
-})
-options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**")
-
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
 rownames(files)<-files$V2
 
@@ -105,9 +37,9 @@ categoryRmd<-function(dfCategory){
   return(result)
 }
 
-hostFile="host.Rmd"
-host<-data.frame(Section=c("####3.2", "####3.3"), Category=c("mirna", "trna"), Name=c("miRNA", "tRNA"))
-cat(categoryRmd(host), file=hostFile)
+hostGenomeFile="hostgenome.Rmd"
+hostGenome<-data.frame(Section=c("####3.2", "####3.3"), Category=c("mirna", "trna"), Name=c("miRNA", "tRNA"))
+cat(categoryRmd(hostGenome), file=hostGenomeFile)
 
 nonhostGenomeFile="nonhostgenome.Rmd"
 nonhostGenome<-data.frame(Section=c("####4.1", "####4.2"), Category=c("group1", "group2"), Name=c("Microbime bacteria", "Enviroment bacteria"))
@@ -147,9 +79,10 @@ include_graphics(files["category_smallrna",1])
 ```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_smallrna_group", "category_smallrna_group")}
 include_graphics(files["category_smallrna_group",1])
 ```
+
 <br>
 
-```{r host, child=hostFile} 
+```{r hostgenome, child=hostGenomeFile} 
 ```
 
 <br>
@@ -165,7 +98,13 @@ include_graphics(files["category_smallrna_group",1])
 ```
 
 ```{r teardown, include=FALSE}
-if(file.exists(hostFile)){
-#  file.remove(hostFile)
+if(file.exists(hostGenomeFile)){
+  file.remove(hostGenomeFile)
+}
+if(file.exists(nonhostGenomeFile)){
+  file.remove(nonhostGenomeFile)
+}
+if(file.exists(nonhostLibraryFile)){
+  file.remove(nonhostLibraryFile)
 }
 ```

@@ -36,8 +36,8 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_annotate_unmapped_reads", 0 );
   initDefaultValue( $def, "DE_export_significant_gene_name", 0 );
   initDefaultValue( $def, "perform_nonhost_tRNA_coverage",   0 );
-  initDefaultValue( $def, "perform_host_rRNA_depth",   0 );
-  initDefaultValue( $def, "search_combined_nonhost",   0 );
+  initDefaultValue( $def, "perform_host_rRNA_depth",         0 );
+  initDefaultValue( $def, "search_combined_nonhost",         0 );
 
   return $def;
 }
@@ -107,7 +107,7 @@ sub getSmallRNAConfig {
     getValue( $def, "tDRmapper" );
     getValue( $def, "tDRmapper_fasta" );
   }
-  
+
   my $R_font_size = 'textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';';
 
   my @table_for_correlation  = ( "identical_sequence_count_table", "^(?!.*?read).*\.count\$" );
@@ -289,7 +289,8 @@ sub getSmallRNAConfig {
   my $bowtie1CountTask;
   my $bowtie1TableTask;
 
-  my $identical_ref = [ "identical", ".fastq.gz\$" ];
+  my $identical_ref       = [ "identical", ".fastq.gz\$" ];
+  my $identical_count_ref = [ "identical", ".dupcount\$" ];
 
   if ($search_host_genome) {
     getValue( $def, "coordinate" );
@@ -306,7 +307,7 @@ sub getSmallRNAConfig {
         option          => $def->{host_smallrnacount_option},
         source_ref      => "bowtie1_genome_1mm_NTA",
         fastq_files_ref => "identical_NTA",
-        seqcount_ref    => [ "identical", ".dupcount\$" ],
+        seqcount_ref    => $identical_count_ref,
         cqs_tools       => $def->{cqstools},
         coordinate_file => $def->{coordinate},
         fasta_file      => $def->{coordinate_fasta},
@@ -403,19 +404,19 @@ sub getSmallRNAConfig {
       },
     };
 
-    if (defined $def->{perform_host_rRNA_depth} && $def->{perform_host_rRNA_depth}){
+    if ( getValue( $def, "perform_host_rRNA_depth", 0 ) ) {
       $host_genome->{bowtie1_genome_rRNA_depth} = {
-        class         => "CQS::ProgramWrapper",
-        perform       => 1,
-        target_dir    => $host_genome_dir . "/bowtie1_genome_rRNA_depth",
-        interpretor => "python",
-        program => "../SmallRNA/rRNAHostDepth.py",
-        parameterSampleFile1_arg    => "-i",
-        parameterSampleFile1_ref    => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
-        output_arg => "-o",
-        output_ext => ".depth.txt",
-        sh_direct     => 1,
-        pbs           => {
+        class                    => "CQS::ProgramWrapper",
+        perform                  => 1,
+        target_dir               => $host_genome_dir . "/bowtie1_genome_rRNA_depth",
+        interpretor              => "python",
+        program                  => "../SmallRNA/rRNAHostDepth.py",
+        parameterSampleFile1_arg => "-i",
+        parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
+        output_arg               => "-o",
+        output_ext               => ".depth.txt",
+        sh_direct                => 1,
+        pbs                      => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
@@ -425,7 +426,7 @@ sub getSmallRNAConfig {
       };
       push( @$summary_ref, "bowtie1_genome_rRNA_depth" );
     }
-    
+
     if ( defined $def->{host_xml2bam} && $def->{host_xml2bam} ) {
       $host_genome->{bowtie1_genome_xml2bam} = {
         class         => "SmallRNA::HostXmlToBam",
@@ -755,7 +756,7 @@ sub getSmallRNAConfig {
           perform     => 1,
           target_dir  => $host_genome_dir . "/bowtie1_genome_unmapped_reads",
           perlFile    => "unmappedReadsToFastq.pl",
-          source_ref  => [ "identical", ".fastq.gz\$" ],
+          source_ref  => $identical_ref,
           source2_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
           source3_ref => ["bowtie1_genome_1mm_NTA_pmnames"],
           output_ext  => "_clipped_identical.unmapped.fastq.gz",
@@ -801,7 +802,8 @@ sub getSmallRNAConfig {
       push @name_for_pieSummary, ( "Mapped to Host Genome", "Too Short for Mapping", "Unmapped In Host" );
       push @table_for_readSummary, ( "bowtie1_genome_host_reads_table", ".count\$" );
       push @name_for_readSummary, ("Host Genome");
-      $identical_ref = [ "bowtie1_genome_unmapped_reads", ".unmapped.fastq.gz\$" ];
+      $identical_ref       = [ "bowtie1_genome_unmapped_reads", ".unmapped.fastq.gz\$" ];
+      $identical_count_ref = [ "bowtie1_genome_unmapped_reads", ".unmapped.fastq.dupcount\$" ];
     }
   }
 
@@ -827,14 +829,15 @@ sub getSmallRNAConfig {
     addDeseq2Visualization( $config, $def, $summary_ref, "${taskKey}_minicontigs", ["${taskKey}_minicontigs"], $data_visualization_dir, "pairs_top_deseq2_vis_layout", $libraryKey );
   }
 
-  if ($search_nonhost_database && getValue($def, "search_combined_nonhost")) {
+  if ( $search_nonhost_database && getValue( $def, "search_combined_nonhost" ) ) {
 
     #Mapping host genome reads to non-host databases
     addNonhostDatabase(
       $config, $def, $individual_ref, $summary_ref, "HostGenomeReads_NonHost_pm", $nonhost_library_dir,    #general option
       $def->{bowtie1_all_nonHost_index}, [ "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.gz" ],    #bowtie option
       $def->{smallrnacount_option} . ' --keepChrInName --categoryMapFile ' . $def->{all_nonHost_map},            #count option
-      $def->{nonhost_table_option}                                                                               #table option
+      $def->{nonhost_table_option},                                                                              #table option
+      $identical_count_ref
     );
 
     addNonhostVis(
@@ -857,8 +860,9 @@ sub getSmallRNAConfig {
       addNonhostDatabase(
         $config, $def, $individual_ref, $summary_ref, "${nonhostGroup}_pm", $nonhost_genome_dir,    #general option
         $def->{"bowtie1_${nonhostGroup}_index"}, $identical_ref,                                    #bowtie option
-        $def->{smallrnacount_option} . ' --keepChrInName --keepSequence',                               #count option
-        $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{"${nonhostGroup}_species_map"}    #table option
+        $def->{smallrnacount_option} . ' --keepChrInName --keepSequence',                                #count option
+        $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{"${nonhostGroup}_species_map"},    #table option
+        $identical_count_ref
       );
 
       addNonhostVis(
@@ -933,7 +937,8 @@ sub getSmallRNAConfig {
       $config, $def, $individual_ref, $summary_ref, "miRBase_pm", $nonhost_library_dir,    #general option
       $def->{bowtie1_miRBase_index}, $identical_ref,                                       #bowtie option
       $def->{mirbase_count_option} . " -m --keepChrInName --keepSequence",                 #count option
-      $def->{nonhost_table_option}                                                         #table option
+      $def->{nonhost_table_option},                                                        #table option
+      $identical_count_ref
     );
     $config->{bowtie1_miRBase_pm_count}{can_result_be_empty_file} = 1;
 
@@ -945,7 +950,8 @@ sub getSmallRNAConfig {
       $config, $def, $individual_ref, $summary_ref, "tRNA_pm", $nonhost_library_dir,       #general option
       $def->{bowtie1_tRNA_index}, $identical_ref,                                          #bowtie option
       $def->{smallrnacount_option} . " --keepChrInName --keepSequence",                    #count option
-      $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{trna_category_map}     #table option
+      $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{trna_category_map},    #table option
+      $identical_count_ref
     );
     addNonhostVis(
       $config, $def,
@@ -962,27 +968,50 @@ sub getSmallRNAConfig {
     );
 
     if ( $def->{perform_nonhost_tRNA_coverage} ) {
-      my $positionTask      = $def->{trna_species} . "_tRNA_Position";
-      my $visualizationTask = $positionTask . "Vis_anticodon";
+      my $positionTask      = "nonhost_library_tRNA_position";
+      my $visualizationTask = $positionTask . "_vis_anticodon";
       my $folder            = $data_visualization_dir . "/" . $visualizationTask;
       $config->{$positionTask} = {
-        class            => "SmallRNA::tRNALibraryCoverage",
-        perform          => 1,
-        target_dir       => $folder,
-        option           => "",
-        source_ref       => [ "bowtie1_tRNA_pm_table", ".xml" ],
-        fasta_file       => $def->{bowtie1_tRNA_index} . ".fa",
-        species_map_file => $def->{trna_map},
-        species          => $def->{trna_species},
-        sh_direct        => 1,
-        pbs              => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "2",
-          "mem"      => "20gb"
+        class                    => "CQS::ProgramWrapper",
+        perform                  => 1,
+        target_dir               => $folder,
+        option                   => "-f " . $def->{bowtie1_tRNA_index} . ".fa -m " . $def->{trna_map} . " -s " . $def->{nonhost_tRNA_coverage_species},
+        interpretor              => "python",
+        program                  => "../SmallRNA/tRNALibraryCoverage.py",
+        parameterFile1_arg => "-i",
+        parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".xml" ],
+        output_arg               => "-o",
+        output_ext               => ".tRNAlib.position",
+        sh_direct                => 1,
+        pbs                      => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       };
       push( @$summary_ref, $positionTask );
+      
+#      
+#      $config->{$positionTask} = {
+#        class            => "SmallRNA::tRNALibraryCoverage",
+#        perform          => 1,
+#        target_dir       => $folder,
+#        option           => "",
+#        source_ref       => [ "bowtie1_tRNA_pm_table", ".xml" ],
+#        fasta_file       => ,
+#        species_map_file => $def->{trna_map},
+#        species          => $def->{trna_species},
+#        sh_direct        => 1,
+#        pbs              => {
+#          "email"    => $def->{email},
+#          "nodes"    => "1:ppn=1",
+#          "walltime" => "2",
+#          "mem"      => "20gb"
+#        },
+#      };
+#      push( @$summary_ref, $positionTask );
 
       addPositionVis(
         $config, $def,
@@ -1002,8 +1031,51 @@ sub getSmallRNAConfig {
       $config, $def, $individual_ref, $summary_ref, "rRNA_pm", $nonhost_library_dir,    #general option
       $def->{bowtie1_rRNA_index}, $identical_ref,                                       #bowtie option
       $def->{smallrnacount_option} . ' --keepChrInName --keepSequence --categoryMapFile ' . $def->{rrna_category_map},    #count option                                          #count option
-      $def->{nonhost_table_option}                                                                                        #table option
+      $def->{nonhost_table_option},                                                                                       #table option
+      $identical_count_ref
     );
+
+    if ( $def->{perform_nonhost_rRNA_coverage} ) {
+      my $positionTask      = "nonhost_library_rRNA_position";
+      my $visualizationTask = $positionTask . "_vis";
+      my $folder            = $data_visualization_dir . "/" . $visualizationTask;
+      $config->{$positionTask} = {
+        class                    => "CQS::ProgramWrapper",
+        perform                  => 1,
+        target_dir               => $folder,
+        option                   => "-s " . getValue( $def, "nonhost_rRNA_coverage_species" ),
+        interpretor              => "python",
+        program                  => "../SmallRNA/rRNALibraryCoverage.py",
+        parameterSampleFile1_arg => "-i",
+        parameterSampleFile1_ref => [ "bowtie1_rRNA_pm", ".bam" ],
+        parameterSampleFile2_arg => "-c",
+        parameterSampleFile2_ref => $identical_count_ref,
+        output_arg               => "-o",
+        output_ext               => ".rRNAlib.position",
+        sh_direct                => 1,
+        pbs                      => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$summary_ref, $positionTask );
+
+      addPositionVis(
+        $config, $def,
+        $summary_ref,
+        $visualizationTask,
+        $data_visualization_dir,
+        {
+          output_file        => ".nonhost_rRNAPositionVis",
+          parameterFile1_ref => [ $positionTask, ".position\$" ],
+          rCode              => "countName<-\"TotalReads\""
+        }
+      );
+    }
+
     addNonhostVis(
       $config, $def,
       $summary_ref,
@@ -1399,7 +1471,7 @@ sub getSmallRNAConfig {
       push @$summary_ref, ($batchName);
     }
   }
-  
+
   if ( getValue( $def, "perform_report" ) ) {
     my @report_files = ();
     my @report_names = ();
@@ -1415,64 +1487,64 @@ sub getSmallRNAConfig {
       push( @report_files, "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category1.Group.Piechart.png" );
       push( @report_files, "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category2.Barplot.png" );
       push( @report_files, "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category2.Group.Piechart.png" );
-      push( @report_names, "category_mapped", "category_mapped_group", "category_smallrna", "category_smallrna_group" );
+      push( @report_names, "category_mapped",                          "category_mapped_group", "category_smallrna", "category_smallrna_group" );
     }
 
     if ( defined $config->{count_table_correlation} ) {
-      if(defined $config->{bowtie1_genome_1mm_NTA_smallRNA_table}){
-        push( @report_files, "count_table_correlation", ".miRNA.count.heatmap.png" );
-        push( @report_files, "count_table_correlation", ".miRNA.count.PCA.png" );
-        push( @report_files, "count_table_correlation", ".miRNA.count.Group.heatmap.png" );
-        push( @report_files, "count_table_correlation", ".miRNA.count.Group.Correlation.Cluster.png" );
+      if ( defined $config->{bowtie1_genome_1mm_NTA_smallRNA_table} ) {
+        push( @report_files, "count_table_correlation",   ".miRNA.count.heatmap.png" );
+        push( @report_files, "count_table_correlation",   ".miRNA.count.PCA.png" );
+        push( @report_files, "count_table_correlation",   ".miRNA.count.Group.heatmap.png" );
+        push( @report_files, "count_table_correlation",   ".miRNA.count.Group.Correlation.Cluster.png" );
         push( @report_names, "correlation_mirna_heatmap", "correlation_mirna_pca", "correlation_mirna_group_heatmap", "correlation_mirna_corr_cluster" );
 
-        push( @report_files, "count_table_correlation", ".tRNA.count.heatmap.png" );
-        push( @report_files, "count_table_correlation", ".tRNA.count.PCA.png" );
-        push( @report_files, "count_table_correlation", ".tRNA.count.Group.heatmap.png" );
-        push( @report_files, "count_table_correlation", ".tRNA.count.Group.Correlation.Cluster.png" );
+        push( @report_files, "count_table_correlation",  ".tRNA.count.heatmap.png" );
+        push( @report_files, "count_table_correlation",  ".tRNA.count.PCA.png" );
+        push( @report_files, "count_table_correlation",  ".tRNA.count.Group.heatmap.png" );
+        push( @report_files, "count_table_correlation",  ".tRNA.count.Group.Correlation.Cluster.png" );
         push( @report_names, "correlation_trna_heatmap", "correlation_trna_pca", "correlation_trna_group_heatmap", "correlation_trna_corr_cluster" );
       }
-      
-      if(defined $config->{bowtie1_bacteria_group1_pm_table}){
-        push( @report_files, "count_table_correlation", "bacteria_group1_.*.count.heatmap.png" );
-        push( @report_files, "count_table_correlation", "bacteria_group1_.*.count.PCA.png" );
-        push( @report_files, "count_table_correlation", "bacteria_group1_.*.count.Group.heatmap.png" );
-        push( @report_files, "count_table_correlation", "bacteria_group1_.*.count.Group.Correlation.Cluster.png" );
+
+      if ( defined $config->{bowtie1_bacteria_group1_pm_table} ) {
+        push( @report_files, "count_table_correlation",    "bacteria_group1_.*.count.heatmap.png" );
+        push( @report_files, "count_table_correlation",    "bacteria_group1_.*.count.PCA.png" );
+        push( @report_files, "count_table_correlation",    "bacteria_group1_.*.count.Group.heatmap.png" );
+        push( @report_files, "count_table_correlation",    "bacteria_group1_.*.count.Group.Correlation.Cluster.png" );
         push( @report_names, "correlation_group1_heatmap", "correlation_group1_pca", "correlation_group1_group_heatmap", "correlation_group1_corr_cluster" );
       }
-      
-      if(defined $config->{bowtie1_bacteria_group2_pm_table}){
-        push( @report_files, "count_table_correlation", "bacteria_group2_.*.count.heatmap.png" );
-        push( @report_files, "count_table_correlation", "bacteria_group2_.*.count.PCA.png" );
-        push( @report_files, "count_table_correlation", "bacteria_group2_.*.count.Group.heatmap.png" );
-        push( @report_files, "count_table_correlation", "bacteria_group2_.*.count.Group.Correlation.Cluster.png" );
+
+      if ( defined $config->{bowtie1_bacteria_group2_pm_table} ) {
+        push( @report_files, "count_table_correlation",    "bacteria_group2_.*.count.heatmap.png" );
+        push( @report_files, "count_table_correlation",    "bacteria_group2_.*.count.PCA.png" );
+        push( @report_files, "count_table_correlation",    "bacteria_group2_.*.count.Group.heatmap.png" );
+        push( @report_files, "count_table_correlation",    "bacteria_group2_.*.count.Group.Correlation.Cluster.png" );
         push( @report_names, "correlation_group2_heatmap", "correlation_group2_pca", "correlation_group2_group_heatmap", "correlation_group2_corr_cluster" );
       }
-      
-      if(defined $config->{bowtie1_tRNA_pm_table}){
-        push( @report_files, "count_table_correlation", "tRNA_pm.*.count.heatmap.png" );
-        push( @report_files, "count_table_correlation", "tRNA_pm.*.count.PCA.png" );
-        push( @report_files, "count_table_correlation", "tRNA_pm.*.count.Group.heatmap.png" );
-        push( @report_files, "count_table_correlation", "tRNA_pm.*.count.Group.Correlation.Cluster.png" );
+
+      if ( defined $config->{bowtie1_tRNA_pm_table} ) {
+        push( @report_files, "count_table_correlation",     "tRNA_pm.*.count.heatmap.png" );
+        push( @report_files, "count_table_correlation",     "tRNA_pm.*.count.PCA.png" );
+        push( @report_files, "count_table_correlation",     "tRNA_pm.*.count.Group.heatmap.png" );
+        push( @report_files, "count_table_correlation",     "tRNA_pm.*.count.Group.Correlation.Cluster.png" );
         push( @report_names, "correlation_trnalib_heatmap", "correlation_trnalib_pca", "correlation_trnalib_group_heatmap", "correlation_trnalib_corr_cluster" );
       }
-      
-      if(defined $config->{bowtie1_rRNA_pm_table}){
-        push( @report_files, "count_table_correlation", "rRNA_pm.*.count.heatmap.png" );
-        push( @report_files, "count_table_correlation", "rRNA_pm.*.count.PCA.png" );
-        push( @report_files, "count_table_correlation", "rRNA_pm.*.count.Group.heatmap.png" );
-        push( @report_files, "count_table_correlation", "rRNA_pm.*.count.Group.Correlation.Cluster.png" );
+
+      if ( defined $config->{bowtie1_rRNA_pm_table} ) {
+        push( @report_files, "count_table_correlation",     "rRNA_pm.*.count.heatmap.png" );
+        push( @report_files, "count_table_correlation",     "rRNA_pm.*.count.PCA.png" );
+        push( @report_files, "count_table_correlation",     "rRNA_pm.*.count.Group.heatmap.png" );
+        push( @report_files, "count_table_correlation",     "rRNA_pm.*.count.Group.Correlation.Cluster.png" );
         push( @report_names, "correlation_rrnalib_heatmap", "correlation_rrnalib_pca", "correlation_rrnalib_group_heatmap", "correlation_rrnalib_corr_cluster" );
       }
     }
 
-    if(defined $config->{nonhost_overlap_vis}){
+    if ( defined $config->{nonhost_overlap_vis} ) {
       push( @report_files, "nonhost_overlap_vis", ".NonHost.Reads.Barplot.png" );
       push( @report_names, "nonhost_overlap_bar" );
     }
 
-    if(defined $config->{pairs}){
-      if(defined $config->{deseq2_host_genome_TotalReads_vis}){
+    if ( defined $config->{pairs} ) {
+      if ( defined $config->{deseq2_host_genome_TotalReads_vis} ) {
         push( @report_files, "deseq2_host_genome_TotalReads_vis", ".DESeq2.Matrix.png" );
         push( @report_names, "deseq2_host_vis" );
       }
@@ -1487,6 +1559,7 @@ sub getSmallRNAConfig {
       perform                    => 1,
       target_dir                 => $def->{target_dir} . "/report",
       report_rmd_file            => "../Pipeline/SmallRNA.Rmd",
+      additional_rmd_files       => "Functions.Rmd",
       parameterSampleFile1_ref   => \@report_files,
       parameterSampleFile1_names => \@report_names,
       parameterSampleFile2_ref   => $options,
@@ -1501,7 +1574,7 @@ sub getSmallRNAConfig {
     };
     push( @$summary_ref, "report" );
   }
-  
+
   $config->{sequencetask} = {
     class      => "CQS::SequenceTask",
     perform    => 1,
