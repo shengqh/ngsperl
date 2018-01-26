@@ -1,16 +1,17 @@
 ---
 title: "RNA-Seq Analysis Report"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
     toc: true
     toc_depth: 4
 ---
-
+  
 <style type="text/css">
-    div.datatables { height: auto !important;}
+  div.datatables { height: auto !important;}
 </style>
-
-
+  
+  
 ```{r setup, include=FALSE}
 library(knitr)
 library(reshape2)
@@ -26,60 +27,60 @@ addLinkTag<-function(text,link) {
   result<-paste0("<a href='",link,"' target='_blank'>",text,"</a>")
   return(result)
 }
-  
+
 figRef <- local({
-    tag <- numeric()
-    created <- logical()
-    used <- logical()
-    function(label, caption, prefix = options("figcap.prefix"), 
-        sep = options("figcap.sep"), prefix.highlight = options("figcap.prefix.highlight")) {
-        i <- which(names(tag) == label)
-        if (length(i) == 0) {
-            i <- length(tag) + 1
-            tag <<- c(tag, i)
-            names(tag)[length(tag)] <<- label
-            used <<- c(used, FALSE)
-            names(used)[length(used)] <<- label
-            created <<- c(created, FALSE)
-            names(created)[length(created)] <<- label
-        }
-        if (!missing(caption)) {
-            created[label] <<- TRUE
-            paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
-                " ", caption)
-        } else {
-            used[label] <<- TRUE
-            paste(prefix, tag[label])
-        }
+  tag <- numeric()
+  created <- logical()
+  used <- logical()
+  function(label, caption, prefix = options("figcap.prefix"), 
+           sep = options("figcap.sep"), prefix.highlight = options("figcap.prefix.highlight")) {
+    i <- which(names(tag) == label)
+    if (length(i) == 0) {
+      i <- length(tag) + 1
+      tag <<- c(tag, i)
+      names(tag)[length(tag)] <<- label
+      used <<- c(used, FALSE)
+      names(used)[length(used)] <<- label
+      created <<- c(created, FALSE)
+      names(created)[length(created)] <<- label
     }
+    if (!missing(caption)) {
+      created[label] <<- TRUE
+      paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
+             " ", caption)
+    } else {
+      used[label] <<- TRUE
+      paste(prefix, tag[label])
+    }
+  }
 })
 options(figcap.prefix = "Figure", figcap.sep = ":", figcap.prefix.highlight = "**")
 
 tabRef <- local({
-    tag <- numeric()
-    created <- logical()
-    used <- logical()
-    function(label, caption, prefix = options("tabcap.prefix"), 
-        sep = options("tabcap.sep"), prefix.highlight = options("tabcap.prefix.highlight")) {
-        i <- which(names(tag) == label)
-        if (length(i) == 0) {
-            i <- length(tag) + 1
-            tag <<- c(tag, i)
-            names(tag)[length(tag)] <<- label
-            used <<- c(used, FALSE)
-            names(used)[length(used)] <<- label
-            created <<- c(created, FALSE)
-            names(created)[length(created)] <<- label
-        }
-        if (!missing(caption)) {
-            created[label] <<- TRUE
-            paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
-                " ", caption)
-        } else {
-            used[label] <<- TRUE
-            paste(prefix, tag[label])
-        }
+  tag <- numeric()
+  created <- logical()
+  used <- logical()
+  function(label, caption, prefix = options("tabcap.prefix"), 
+           sep = options("tabcap.sep"), prefix.highlight = options("tabcap.prefix.highlight")) {
+    i <- which(names(tag) == label)
+    if (length(i) == 0) {
+      i <- length(tag) + 1
+      tag <<- c(tag, i)
+      names(tag)[length(tag)] <<- label
+      used <<- c(used, FALSE)
+      names(used)[length(used)] <<- label
+      created <<- c(created, FALSE)
+      names(created)[length(created)] <<- label
     }
+    if (!missing(caption)) {
+      created[label] <<- TRUE
+      paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
+             " ", caption)
+    } else {
+      used[label] <<- TRUE
+      paste(prefix, tag[label])
+    }
+  }
 })
 options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**")
 
@@ -91,11 +92,14 @@ rownames(rnaseqOptions)<-rnaseqOptions$V2
 
 summary<-paste0("###1. Summary\nThis report includes quality check for raw sequencing data (section 2), reads mapping and assignment (section 3), and expression similarity between samples (section 4). The results of differential expression analysis are summarized in section 5 using the criteria of fold change >= ", rnaseqOptions["DE_fold_change", 1], " and FDR <= ", rnaseqOptions["DE_pvalue", 1], ".")
 
-hasEnrichmentAnalysis<-any(grepl("enrichment_", rownames(files)))
-#hasEnrichmentAnalysis<-0
+hasWebGestaltAnalysis<-any(grepl("WebGestalt_", rownames(files)))
+hasGseaAnalysis<-any(grepl("gsea_", rownames(files)))
+hasEnrichmentAnalysis<-hasWebGestaltAnalysis | hasGseaAnalysis
 
 summaryFile<-"RNASeq_Summary.Rmd"
 enrichFile<-"RNASeq_EnrichmentAnalysis.Rmd"
+webgestaltFile<-"RNASeq_WebgestaltAnalysis.Rmd"
+gseaFile<-"RNASeq_gseaAnalysis.Rmd"
 struFile<-"RNASeq_Structure.Rmd"
 
 if(hasEnrichmentAnalysis){
@@ -103,8 +107,16 @@ if(hasEnrichmentAnalysis){
 }
 cat(summary, file=summaryFile)
 
-if(hasEnrichmentAnalysis){
+if(hasEnrichmentAnalysis ){
   cat("###6. Funcional enrichment analysis\nList of the top five significantly enriched elements\n<br>\n", file=enrichFile)
+}
+enrichIndex<-1
+if(hasWebGestaltAnalysis ){
+  cat("####6.", enrichIndex, " WebGestalt\n", file=webgestaltFile)
+  enrichIndex<-enrichIndex+1
+}
+if(hasGseaAnalysis ){
+  cat("####6.", enrichIndex, " GSEA\n", file=gseaFile)
 }
 structureIndex<-ifelse(hasEnrichmentAnalysis, 7, 6)
 structure = paste0("###", structureIndex, ". Results folder structure\n")
@@ -112,58 +124,52 @@ cat(structure, file=struFile)
 ```
 
 <br>
-
+  
 ```{r structure, child=summaryFile} 
 ```
 
 <br>
-
+  
 ###2. Sequencing Quality
-
+  
 ####2.1 Summary of sequencing quality
-
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastqc_per_base_sequence_quality", "The mean quality scores of sequencing reads in each position")}
+  
+```{r fastqc_per_base_sequence_quality,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastqc_per_base_sequence_quality", "The mean quality scores of sequencing reads in each position")}
 include_graphics(files["fastqc_per_base_sequence_quality",1])
 ```
 
 <br>
-<br>
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastqc_per_sequence_gc_content", "The average GC content of sequencing reads")}
+```{r fastqc_per_sequence_gc_content,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastqc_per_sequence_gc_content", "The average GC content of sequencing reads")}
 include_graphics(files["fastqc_per_sequence_gc_content",1])
 ```
 
 <br>
-<br>
-
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastqc_adapter_content", "Adapter content of sequencing reads")}
+  
+```{r fastqc_adapter_content,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastqc_adapter_content", "Adapter content of sequencing reads")}
 if(file.exists(files["fastqc_adapter_content",1])){
   include_graphics(files["fastqc_adapter_content",1])
 }
 ```
 
 <br>
-<br>
-
+  
 ### 3. Mapping quality
 #### 3.1 Summary of mapping quality
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("STAR_summary", "The statistics of RNAseq mapping results")}
+```{r STAR_summary,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("STAR_summary", "The statistics of RNAseq mapping results")}
 include_graphics(files["STAR_summary",1])
 ```
 
 <br>
-<br>
 
-```{r echo=FALSE,results='asis'}
+```{r STAR_summary_table, echo=FALSE, results='asis'}
 table<-read.csv(files["STAR_summary_table",1])
 output_table1<-data.frame(table[,c(2,3,4,5)], (table[,3]+table[,4])/table[,2], row.names=table[,1])
 colnames(output_table1)<-c("Input reads", "Uniquely mapped reads", "Mapped to multiple loci", "Mapped to too many loci", "Ratio")
 print(kable(output_table1, caption=tabRef("mapSummary", "The summary of RNAseq mapping results")))
 ```
-
 **Ratio** = (Uniquely mapped + Mapped to multiple loci)/ Input reads
 
-<br>
 <br>
 
 ### 4. Expression Quantification
@@ -174,12 +180,11 @@ output_table2<-data.frame(table[,c(1, 2, 9, 12)])
 colnames(output_table2)<- c("Sample", "Unassigned ambiguity", "Assigned", "Unassigned no features")
 meltreads=melt(output_table2, id="Sample", variable.name="Read", value.name="Count")
 print(ggplot(meltreads, aes(x=Sample, y=Count, fill=Read)) + 
-  geom_bar(stat="identity", width=0.5) +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
-        axis.text.y = element_text(size=11, face="bold")))
+        geom_bar(stat="identity", width=0.5) +
+        theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
+              axis.text.y = element_text(size=11, face="bold")))
 ```
 
-<br>
 <br>
 
 ```{r echo=FALSE,results='asis'}
@@ -191,45 +196,39 @@ print(kable(output_table2, caption=tabRef("geneSummary", "The summary of reads a
 ```
 
 <br>
-<br>
 
 ####4.2 Expression density of samples
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_density", "Expression density distribution of each sample")}
+```{r correlation_density,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_density", "Expression density distribution of each sample")}
 include_graphics(files["correlation_density",1])
 ```
 
 <br>
-<br>
 
 ####4.3 Similarity between samples
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_heatmap", "Heatmap of expression similarity across samples")}
+```{r correlation_heatmap,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_heatmap", "Heatmap of expression similarity across samples")}
 include_graphics(files["correlation_heatmap",1])
 ```
 
 <br>
-<br>
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_PCA", "PCA plot of samples")}
+```{r correlation_PCA,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_PCA", "PCA plot of samples")}
 include_graphics(files["correlation_PCA",1])
 ```
 
 <br>
-<br>
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_cluster", "Correlation cluster of samples")}
+```{r correlation_cluster,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_cluster", "Correlation cluster of samples")}
 include_graphics(files["correlation_cluster",1])
 ```
 
 <br>
-<br>
 
 ###5. Differential expression
 ####5.1 Volcano plot
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("Volcano_plot", "Volcano plot for all comparisons")}
+```{r deseq2_volcano_plot,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("Volcano_plot", "Volcano plot for all comparisons")}
 include_graphics(files["deseq2_volcano_plot",1])
 ```
 
-<br>
 <br>
 
 ####5.2 Summary of differential analysis
@@ -259,40 +258,65 @@ for (i in 1:nrow(DESeq2_files)){
 ```
 
 <br>
-<br>
 
 ```{r enrich, child = if (hasEnrichmentAnalysis) enrichFile} 
 ```
 
 <br>
+  
+```{r enrich, child = if (hasWebGestaltAnalysis) webgestaltFile} 
+```
 
 ```{r echo=FALSE, results='asis'}
-if(hasEnrichmentAnalysis){
-  enrich_files<-files[grepl("enrichment_", rownames(files)),]
+if(hasWebGestaltAnalysis){
+  enrich_files<-files[grepl("WebGestalt_", rownames(files)),]
   for (i in 1:nrow(enrich_files)){
     fdata<-fread(enrich_files[i,1], select=c(1,2,5,9), nrows=5, data.table=FALSE, col.names=c("ID", "Name", "#Gene", "FDR"))
     ename<-rownames(enrich_files)[i]
+    if(grepl("_GO_", ename)){
+      fdata$ID = unlist(lapply(fdata$ID, function(x){
+        goUrl=paste0("http://amigo.geneontology.org/amigo/term/GO%3A", gsub("GO:","",x))
+        goWeb<-addLinkTag(x, goUrl)
+        return(goWeb)
+      }))
+    }
+    if(grepl("_KEGG_", ename)){
+      fdata$ID = unlist(lapply(fdata$ID, function(x){
+        goUrl=paste0("http://www.genome.jp/dbget-bin/www_bget?pathway+",x)
+        goWeb<-addLinkTag(x, goUrl)
+        return(goWeb)
+      }))
+    }
     print(kable(fdata, caption=tabRef(ename, ename)))
   }  
+}
+```
 
+<br>
+  
+```{r enrich, child = if (hasGseaAnalysis) gseaFile} 
+```
+
+```{r echo=FALSE, results='asis'}
+if(hasGseaAnalysis){
   processGesaTable<-function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=5,absLinkPath=FALSE) {
-        rawTable<-read.delim(gseaTableFile,header=T,as.is=T)
-        rawTableOut<-NULL
-        for (i in head(which(rawTable$FDR.q.val<=maxCategoryFdr),maxCategory)) {
-                categoryName=rawTable[i,1]
-                gseaUrl=paste0("http://software.broadinstitute.org/gsea/msigdb/cards/",categoryName)
-                categoryNameInTable<-addLinkTag(text=categoryName,link=gseaUrl)
-
-                gseaWeb<-getURL(gseaUrl)
-                temp<-strsplit(gseaWeb,"description|\\<td\\>")[[1]]
-                j=grep("Brief",temp)
-                categoryDescription<-gsub("^>","",temp[j+2])
-                categoryDescription<-gsub("<\\/$","",categoryDescription)
-
-                rawTableOut<-rbind(rawTableOut,unlist(c(categoryNameInTable,categoryDescription,rawTable[i,c(4,5,6,8)])))
-        }
-        colnames(rawTableOut)[1:2]<-c("Name","Description")
-        return(rawTableOut)
+    rawTable<-read.delim(gseaTableFile,header=T,as.is=T)
+    rawTableOut<-NULL
+    for (i in head(which(rawTable$FDR.q.val<=maxCategoryFdr),maxCategory)) {
+      categoryName=rawTable[i,1]
+      gseaUrl=paste0("http://software.broadinstitute.org/gsea/msigdb/cards/",categoryName)
+      categoryNameInTable<-addLinkTag(text=categoryName,link=gseaUrl)
+      
+      gseaWeb<-getURL(gseaUrl)
+      temp<-strsplit(gseaWeb,"description|\\<td\\>")[[1]]
+      j=grep("Brief",temp)
+      categoryDescription<-gsub("^>","",temp[j+2])
+      categoryDescription<-gsub("<\\/$","",categoryDescription)
+      
+      rawTableOut<-rbind(rawTableOut,unlist(c(categoryNameInTable,categoryDescription,rawTable[i,c(4,5,6,8)])))
+    }
+    colnames(rawTableOut)[1:2]<-c("Name","Description")
+    return(rawTableOut)
   }
   
   gsea_files<-files[grepl("gsea_", rownames(files)),]
@@ -326,7 +350,7 @@ if(hasEnrichmentAnalysis){
 ``` 
 
 <br>
-
+  
 ```{r structure, child=struFile} 
 ```
 
@@ -357,6 +381,12 @@ if(file.exists(summaryFile)){
 }
 if(file.exists(enrichFile)){
   file.remove(enrichFile)
+}
+if(file.exists(webgestaltFile)){
+  file.remove(webgestaltFile)
+}
+if(file.exists(gseaFile)){
+  file.remove(gseaFile)
 }
 if(file.exists(struFile)){
   file.remove(struFile)

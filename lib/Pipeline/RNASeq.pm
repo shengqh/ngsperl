@@ -35,8 +35,8 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_qc3bam",        0 );
   initDefaultValue( $def, "perform_bamplot",       0 );
   initDefaultValue( $def, "perform_call_variants", 0 );
-  initDefaultValue( $def, "perform_webgestalt",    0 );
   initDefaultValue( $def, "perform_multiqc",       1 );
+  initDefaultValue( $def, "perform_webgestalt",    0 );
   initDefaultValue( $def, "perform_gsea",          0 );
   initDefaultValue( $def, "perform_report",        0 );
 
@@ -330,7 +330,7 @@ sub getRNASeqConfig {
   if ( defined $def->{pairs} ) {
     my $deseq2taskname = addDEseq2( $config, $def, $summary, "genetable", $count_file_ref, $def->{target_dir}, $def->{DE_min_median_read} );
 
-    if ( $def->{perform_webgestalt} ) {
+    if ( getValue($def,"perform_webgestalt") ) {
       my $webgestaltTaskName = $deseq2taskname . "_WebGestalt";
       $config->{$webgestaltTaskName} = {
         class            => "Annotation::WebGestaltR",
@@ -353,7 +353,7 @@ sub getRNASeqConfig {
       push @$summary, "$webgestaltTaskName";
     }
 
-    if ( $def->{perform_gsea} ) {
+    if ( getValue($def, "perform_gsea") ) {
       my $gsea_jar        = $def->{gsea_jar}        or die "Define gsea_jar at definition first";
       my $gsea_db         = $def->{gsea_db}         or die "Define gsea_db at definition first";
       my $gsea_categories = $def->{gsea_categories} or die "Define gsea_categories at definition first";
@@ -683,17 +683,16 @@ sub getRNASeqConfig {
         push( @report_files, "deseq2_genetable_WebGestalt", $key . "_geneontology_Cellular_Component.txt" );
         push( @report_files, "deseq2_genetable_WebGestalt", $key . "_geneontology_Molecular_Function.txt" );
         push( @report_files, "deseq2_genetable_WebGestalt", $key . "_pathway_KEGG.txt" );
-        push( @report_names, "enrichment_GO_BP_" . $key );
-        push( @report_names, "enrichment_GO_CC_" . $key );
-        push( @report_names, "enrichment_GO_MF_" . $key );
-        push( @report_names, "enrichment_KEGG_" . $key );
+        push( @report_names, "WebGestalt_GO_BP_" . $key );
+        push( @report_names, "WebGestalt_GO_CC_" . $key );
+        push( @report_names, "WebGestalt_GO_MF_" . $key );
+        push( @report_names, "WebGestalt_KEGG_" . $key );
       }
       $hasFunctionalEnrichment=1;
     }
 
     if ( defined $config->{deseq2_genetable_GSEA} ) {
       push( @copy_files, "deseq2_genetable_GSEA", ".gsea\$" );
-      push( @copy_files, "deseq2_genetable_GSEA", ".gsea.html\$" );
 
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
