@@ -38,7 +38,36 @@ sub perform {
 
   my $rtemplate = dirname(__FILE__) . "/" . $config->{$section}{report_rmd_file};
   my $rfile     = $result_dir . "/${task_name}.Rmd";
-  copy( $rtemplate, $rfile ) or die "Copy failed: $!";
+  
+  if ( defined $config->{$section}{function_r_files} ) {
+    my @function_r_files = split( ';', $config->{$section}{function_r_files} );
+    
+    open( my $rmd, ">$rfile" ) or die "Cannot create $rfile";
+    open(my $rin, "<$rtemplate") or die "Cannot open $rtemplate";
+    my $function_done=0;
+    while (<$rin>) {
+      my $rinline = $_;
+      $rinline = s/\r|\n//g;
+      if ($rinline =~ /^```\{/){
+        if(!$function_done){
+          print $rmd '```{r, include=FALSE} \n';
+          for my $func_file (@function_r_files){
+            $func_file = dirname(__FILE__) . "/" . trim($func_file);
+            open(my $fin, "<$func_file") or die "Cannot open $func_file";
+            while(<$fin>){
+              my $finline = $_;
+              $finline = s/\r|\n//g;
+              print $rmd $finline . "\n";
+            }
+          }
+          print $rmd '``` \n';
+          $function_done=1;
+        }
+      }
+    }
+  }else{
+    copy( $rtemplate, $rfile ) or die "Copy failed: $!";
+  }
 
   if ( defined $config->{$section}{additional_rmd_files} ) {
     my @additional_rtemplates = split( ';', $config->{$section}{additional_rmd_files} );
