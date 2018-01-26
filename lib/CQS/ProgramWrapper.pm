@@ -46,12 +46,21 @@ sub perform {
   my $output_arg = get_option($config, $section, "output_arg", "");
 
   my $parameterSampleFile1 = save_parameter_sample_file( $config, $section, "parameterSampleFile1", "${result_dir}/${task_name}_${task_suffix}_fileList1.list" );
+  if($parameterSampleFile1 ne ""){
+    $parameterSampleFile1 = basename($parameterSampleFile1);
+  }
   my $parameterSampleFile1arg = get_option($config, $section, "parameterSampleFile1_arg", "");
   
   my $parameterSampleFile2 = save_parameter_sample_file( $config, $section, "parameterSampleFile2", "${result_dir}/${task_name}_${task_suffix}_fileList2.list" );
+  if($parameterSampleFile2 ne ""){
+    $parameterSampleFile2 = basename($parameterSampleFile2);
+  }
   my $parameterSampleFile2arg = get_option($config, $section, "parameterSampleFile2_arg", "");
 
   my $parameterSampleFile3 = save_parameter_sample_file( $config, $section, "parameterSampleFile3", "${result_dir}/${task_name}_${task_suffix}_fileList3.list" );
+  if($parameterSampleFile3 ne ""){
+    $parameterSampleFile3 = basename($parameterSampleFile3);
+  }
   my $parameterSampleFile3arg = get_option($config, $section, "parameterSampleFile3_arg", "");
 
   my $parameterFile1 = parse_param_file( $config, $section, "parameterFile1", 0 );
@@ -76,7 +85,7 @@ sub perform {
   my $pbs_file   = $self->get_pbs_filename( $pbs_dir, $task_name, ".pbs" );
   my $pbs_name   = basename($pbs_file);
   my $log        = $self->get_log_filename( $log_dir, $task_name, ".log" );
-  my $final_file = $self->get_file( $result_dir, $task_name, $output_ext );
+  my $final_file = basename($self->get_file( $result_dir, $task_name, $output_ext ));
   my $log_desc   = $cluster->get_log_description($log);
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
