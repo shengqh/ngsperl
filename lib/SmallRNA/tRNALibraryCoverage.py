@@ -19,7 +19,7 @@ if DEBUG:
   speciesMapFile = "/scratch/cqs/shengq2/references/smallrna/v3/GtRNAdb2/GtRNAdb2.20161214.map"
   species="bacteria"
 else:
-  parser = argparse.ArgumentParser(description="Generate smallRNA NTA read for Fastq file.",
+  parser = argparse.ArgumentParser(description="Generate tRNA library coverage.",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input xml file')
