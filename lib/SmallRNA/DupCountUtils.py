@@ -1,7 +1,7 @@
 import operator
 from QueryItem import QueryItem
 
-def readDupCountQueries(fileName, minCount):
+def readDupCountQueries(fileName, minCount, sorted=True):
   result = []
   with open(fileName, "r") as sr:
     sr.readline()
@@ -12,6 +12,7 @@ def readDupCountQueries(fileName, minCount):
       query_sequence = parts[2]
       if query_count >= minCount:
         result.append(QueryItem(query_name, query_sequence, query_count))
-  result.sort(key=operator.attrgetter('Count'), reverse=True)
+  if sorted:
+    result.sort(key=operator.attrgetter('Count'), reverse=True)
   return(result)
   
