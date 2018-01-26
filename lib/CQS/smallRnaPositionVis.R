@@ -197,6 +197,7 @@ if (visLayoutFileList!="") {
   width=max(groupCount*2000, height)
 }
 
+ncols<-ifelse(length(unique(allPositionByGroup$Feature))>=5, 2, 1)
 maxPos<-max(allPositionByGroup$Position)
 png(paste0(outFile,".allPositionBar.png"),width=width,height=height,res=300)
 m <- ggplot(allPositionByGroup, aes(x = Position,y=GroupPositionCountFraction,fill=Feature)) +
@@ -207,7 +208,7 @@ m <- ggplot(allPositionByGroup, aes(x = Position,y=GroupPositionCountFraction,fi
     scale_fill_manual(values=colorRampPalette(brewer.pal(9, "Set1"))(featureNumber)) + 
     xlim(-10, maxPos+5) +
     theme(legend.key.size = unit(0.4, "cm"), legend.position="right") +
-    guides(fill= guide_legend(ncol=2,keywidth=1, keyheight=1.5))
+    guides(fill= guide_legend(ncol=ncols,keywidth=1, keyheight=1.5))
 
 if (visLayoutFileList!="") {
   m<-m+facet_grid(Row_Group~Col_Group,space = "free",scale="free")
@@ -216,6 +217,3 @@ if (visLayoutFileList!="") {
 }
 print(m)
 dev.off()
-
-
-
