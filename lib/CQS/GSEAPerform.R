@@ -1,9 +1,6 @@
-# TODO: Add comment
-# 
-# Author: zhaos
 ###############################################################################
-
-
+# Author: Shilin Zhao, Quanhu Sheng
+###############################################################################
 
 runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="/home/zhaos/bin/gsea-3.0.jar",gseaDb="/scratch/TBI/Data/Reference_genome/GSEA/human/V6.0",
 #		gseaCategories=c("h.all.v6.0.symbols.gmt","c2.all.v6.0.symbols.gmt","c5.all.v6.0.symbols.gmt","c6.all.v6.0.symbols.gmt","c7.all.v6.0.symbols.gmt"),
@@ -34,21 +31,32 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="/home/zhaos/bin/gsea
 		print(runCommond)
 		system(runCommond)
 	}
-	
-  resultDirSubs<-list.dirs(gesaResultDir,recursive=FALSE,full.names =TRUE)
-  dt<-data.frame(Folder=resultDirSubs)
+
+  resultDirSubs<-list.dirs(gesaResultDir,recursive=FALSE,full.names=TRUE)
+  newResultDirSubs<-unlist(lapply(resultDirSubs, function(x) {
+    newDir = gsub("\\.GseaPreranked.*", "", x)
+    file.rename(x, newDir)
+    return(newDir)
+  }))
+  
+  dt<-data.frame(Folder=newResultDirSubs)
   dt$GseaCategory<-gsub(paste0(gesaResultDir,"/"), "", dt$Folder)
-  dt$GseaCategory<-gsub(".GseaPreranked.\\d+$", "", dt$GseaCategory)
   write.csv(dt, file=paste0(basename(preRankedGeneFile),".gsea.csv"), row.names=F)
-	
-	if (makeReport) {
-		library('rmarkdown')
-		rmarkdown::render(gseaReportTemplt,output_file=paste0(basename(preRankedGeneFile),".gsea.html"),output_dir=resultDir)
-	}
+  
+  if (makeReport) {
+    library('rmarkdown')
+    rmarkdown::render(gseaReportTemplt,output_file=paste0(basename(preRankedGeneFile),".gsea.html"),output_dir=resultDir)
+  }
+
+  return(dt)
 }
 
-
 preRankedGeneFileTable=parSampleFile1
+
+if(!exists("makeReport")){
+  makeReport=TRUE
+}
+
 preRankedGeneFileTable=read.delim(preRankedGeneFileTable,header=F,as.is=T)
 
 alldt<-NULL
@@ -58,7 +66,7 @@ for (i in 1:nrow(preRankedGeneFileTable)) {
 	preRankedGeneFile=preRankedGeneFileTable[i,1]
 	compName=preRankedGeneFileTable[i,2]
 
-  dt<-runGSEA(preRankedGeneFile,resultDir=resultDir,makeReport=TRUE,gseaJar=gseaJar,gseaDb=gseaDb,gseaCategories=gseaCategories)
+  dt<-runGSEA(preRankedGeneFile,resultDir=resultDir,makeReport=makeReport,gseaJar=gseaJar,gseaDb=gseaDb,gseaCategories=gseaCategories)
   alldt<-rbind(alldt, dt)
 }
 
