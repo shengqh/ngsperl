@@ -35,6 +35,10 @@ sub getStructure {
 
       my @categories = ( $rescontent =~ m/folder.gif" alt="\[DIR\]"> <a href="(.*?)\/"/g );
       foreach my $category (@categories) {
+        if($category =~ /_old/){
+          next;
+        }
+        
         print $category, "\n";
 
         my $categoryurl     = $url . $category;
@@ -48,6 +52,8 @@ sub getStructure {
           if ( $species =~ /_old/ ) {
             next;
           }
+          print "  " . $species . "\n";
+
           my $speciesurl     = $categoryurl . "/" . $species;
           my $speciesreq     = new HTTP::Request GET => $speciesurl;
           my $speciesres     = $ua->request($speciesreq);
