@@ -19,7 +19,8 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(get_config_section has_config_section get_option get_option_file get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files_and_keys get_raw_files get_raw_files_keys get_raw_files_attributes get_raw_files2 get_run_command get_option_value get_pair_groups
-      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key get_grouped_raw_files save_parameter_sample_file saveConfig writeFileList initDefaultValue get_pure_pairs writeParameterSampleFile get_raw_file_list fix_task_name)
+      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key get_grouped_raw_files save_parameter_sample_file saveConfig writeFileList initDefaultValue get_pure_pairs writeParameterSampleFile get_raw_file_list fix_task_name
+      get_parameter_file get_parameter_sample_files)
   ]
 );
 
@@ -924,5 +925,27 @@ sub fix_task_name {
   $taskName =~ s/\s/_/g;
   $def->{task_name} = $taskName;
 }
+
+sub get_parameter_file {
+  my ($config, $section, $key) = @_;
+  my $result = parse_param_file( $config, $section, $key, 0 );
+  my $resultArg = get_option($config, $section, $key . "_arg", "");
+  if ( !defined($result) ) {
+    $result = "";
+  }
+  return ($result, $resultArg);
+} 
+
+sub get_parameter_sample_files {
+  my ($config, $section, $key) = @_;
+  my $result = {};
+  if ( has_raw_files( $config, $section, $key ) ) {
+    $result = get_raw_files( $config, $section, $key );
+  }
+  my $resultArg = get_option($config, $section, $key . "_arg", "");
+  
+  return ($result, $resultArg);
+}
+
 
 1;
