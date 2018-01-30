@@ -85,7 +85,7 @@ sub perform {
   my $pbs_file   = $self->get_pbs_filename( $pbs_dir, $task_name, ".pbs" );
   my $pbs_name   = basename($pbs_file);
   my $log        = $self->get_log_filename( $log_dir, $task_name, ".log" );
-  my $final_file = basename($self->get_file( $result_dir, $task_name, $output_ext ));
+  my $final_file = "${task_name}${output_ext}";
   my $log_desc   = $cluster->get_log_description($log);
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
@@ -108,11 +108,20 @@ sub result {
   $self->{_task_suffix} = $task_suffix;
 
   my $output_ext       = get_option( $config, $section, "output_ext",       "" );
-  my $final_file = $self->get_file( $result_dir, $task_name, $output_ext );
+  my $output_other_ext      = get_option( $config, $section, "output_other_ext", "" );
+  my @output_other_exts;
+  if ( $output_other_ext ne "" ) {
+    @output_other_exts = split( ",", $output_other_ext );
+  }
 
   my $result = {};
   my @result_files = ();
-  push( @result_files, $final_file );
+  push( @result_files, "${result_dir}/${task_name}${output_ext}" );
+  if ( $output_other_ext ne "" ) {
+    foreach my $output_other_ext_each (@output_other_exts) {
+      push( @result_files, "${result_dir}/${task_name}${output_other_ext_each}" );
+    }
+  }
   $result->{$task_name} = filter_array( \@result_files, $pattern );
   return $result;
 }
