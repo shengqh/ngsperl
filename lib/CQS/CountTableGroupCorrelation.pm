@@ -13,7 +13,6 @@ use CQS::NGSCommon;
 use CQS::UniqueR;
 use CQS::StringUtils;
 use File::Spec;
-use Path::Class;
 
 our @ISA = qw(CQS::UniqueR);
 
