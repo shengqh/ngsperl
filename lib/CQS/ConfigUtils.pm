@@ -163,7 +163,16 @@ sub get_parameter {
   $target_dir =~ s|//|/|g;
   $target_dir =~ s|/$||g;
   my ( $log_dir, $pbs_dir, $result_dir ) = init_dir( $target_dir, $create_directory, $config, $section );
-  my $pbs_desc = $cluster->get_cluster_desc($refPbs, $config->{constraint}, $config->{account});
+  
+  my $constraint = $config->{constraint};
+  if((!defined $constraint) && (defined $config->{general})){
+    $constraint = $config->{general}{constraint};
+  }
+  my $account = $config->{account};
+  if((!defined $constraint) && (defined $config->{general})){
+    $account = $config->{general}{account};
+  }
+  my $pbs_desc = $cluster->get_cluster_desc($refPbs, $constraint, $account);
 
   my $option    = get_option( $config, $section, "option",    "" );
   my $sh_direct = get_option( $config, $section, "sh_direct", 0 );
