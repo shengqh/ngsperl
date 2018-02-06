@@ -72,7 +72,7 @@ proc = subprocess.Popen([os.path.abspath(args.shift_software), os.path.abspath(p
 
 while True:
   line = proc.stdout.readline().rstrip()
-  if "The size of query result is" in line:
+  if "Finished!" in line:
     proc.kill()
     break
   elif line == "":
