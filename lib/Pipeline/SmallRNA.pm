@@ -38,6 +38,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_nonhost_tRNA_coverage",   0 );
   initDefaultValue( $def, "perform_host_rRNA_depth",         0 );
   initDefaultValue( $def, "search_combined_nonhost",         0 );
+  initDefaultValue( $def, "perform_report",                  1 );
 
   return $def;
 }
@@ -404,11 +405,14 @@ sub getSmallRNAConfig {
       },
     };
 
-    if ( getValue( $def, "perform_host_rRNA_depth", 0 ) ) {
-      $host_genome->{bowtie1_genome_rRNA_depth} = {
+    if ( getValue( $def, "perform_host_rRNA_coverage", 0 ) ) {
+      my $positionTask      = "host_genome_rRNA_position";
+      my $visualizationTask = $positionTask . "_vis";
+      my $folder            = $data_visualization_dir . "/" . $visualizationTask;
+      $host_genome->{$positionTask} = {
         class                    => "CQS::ProgramWrapper",
         perform                  => 1,
-        target_dir               => $host_genome_dir . "/bowtie1_genome_rRNA_depth",
+        target_dir               => $folder,
         interpretor              => "python",
         program                  => "../SmallRNA/rRNAHostDepth.py",
         parameterSampleFile1_arg => "-i",
@@ -967,23 +971,23 @@ sub getSmallRNAConfig {
       }
     );
 
-    if ( $def->{perform_nonhost_tRNA_coverage} ) {
+    if ( getValue( $def, "perform_nonhost_tRNA_coverage", 0 ) ) {
       my $positionTask      = "nonhost_library_tRNA_position";
       my $visualizationTask = $positionTask . "_vis_anticodon";
       my $folder            = $data_visualization_dir . "/" . $visualizationTask;
       $config->{$positionTask} = {
-        class                    => "CQS::ProgramWrapper",
-        perform                  => 1,
-        target_dir               => $folder,
-        option                   => "-f " . $def->{bowtie1_tRNA_index} . ".fa -m " . $def->{trna_map} . " -s " . $def->{nonhost_tRNA_coverage_species},
-        interpretor              => "python",
-        program                  => "../SmallRNA/tRNALibraryCoverage.py",
+        class              => "CQS::ProgramWrapper",
+        perform            => 1,
+        target_dir         => $folder,
+        option             => "-f " . $def->{bowtie1_tRNA_index} . ".fa -m " . $def->{trna_map} . " -s " . $def->{nonhost_tRNA_coverage_species},
+        interpretor        => "python",
+        program            => "../SmallRNA/tRNALibraryCoverage.py",
         parameterFile1_arg => "-i",
         parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".xml" ],
-        output_arg               => "-o",
-        output_ext               => ".tRNAlib.position",
-        sh_direct                => 1,
-        pbs                      => {
+        output_arg         => "-o",
+        output_ext         => ".tRNAlib.position",
+        sh_direct          => 1,
+        pbs                => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
@@ -992,26 +996,6 @@ sub getSmallRNAConfig {
         },
       };
       push( @$summary_ref, $positionTask );
-      
-#      
-#      $config->{$positionTask} = {
-#        class            => "SmallRNA::tRNALibraryCoverage",
-#        perform          => 1,
-#        target_dir       => $folder,
-#        option           => "",
-#        source_ref       => [ "bowtie1_tRNA_pm_table", ".xml" ],
-#        fasta_file       => ,
-#        species_map_file => $def->{trna_map},
-#        species          => $def->{trna_species},
-#        sh_direct        => 1,
-#        pbs              => {
-#          "email"    => $def->{email},
-#          "nodes"    => "1:ppn=1",
-#          "walltime" => "2",
-#          "mem"      => "20gb"
-#        },
-#      };
-#      push( @$summary_ref, $positionTask );
 
       addPositionVis(
         $config, $def,
@@ -1035,7 +1019,7 @@ sub getSmallRNAConfig {
       $identical_count_ref
     );
 
-    if ( $def->{perform_nonhost_rRNA_coverage} ) {
+    if ( getValue( $def, "perform_nonhost_rRNA_coverage", 0 ) ) {
       my $positionTask      = "nonhost_library_rRNA_position";
       my $visualizationTask = $positionTask . "_vis";
       my $folder            = $data_visualization_dir . "/" . $visualizationTask;
