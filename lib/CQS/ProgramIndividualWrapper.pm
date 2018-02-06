@@ -10,10 +10,10 @@ use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::StringUtils;
-use CQS::UniqueTask;
+use CQS::Task;
 use File::Spec;
 
-our @ISA = qw(CQS::UniqueTask);
+our @ISA = qw(CQS::Task);
 
 sub new {
   my ($class) = @_;
@@ -44,9 +44,10 @@ sub perform {
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
   my $output_ext            = get_option( $config, $section, "output_ext", 0 );
+  my $first_file_only       = get_option( $config, $section, "first_file_only", 0 );
   my $output_arg            = get_option( $config, $section, "output_arg", "" );
 
-  my ( $parameterSampleFile1, $parameterSampleFile1arg ) = get_parameter_sample_files( $config, $section, "parameterSampleFile1" );
+  my ( $parameterSampleFile1, $parameterSampleFile1arg ) = get_parameter_sample_files( $config, $section, "source" );
   my ( $parameterSampleFile2, $parameterSampleFile2arg ) = get_parameter_sample_files( $config, $section, "parameterSampleFile2" );
   my ( $parameterSampleFile3, $parameterSampleFile3arg ) = get_parameter_sample_files( $config, $section, "parameterSampleFile3" );
 
@@ -59,17 +60,8 @@ sub perform {
   print $sh get_run_command($sh_direct) . "\n";
 
   for my $sample_name ( sort keys %$parameterSampleFile1 ) {
-    my $pfile1     = $parameterSampleFile1->{$sample_name}[0];
-    my $final_file = $sample_name . $output_ext;
-
-    my $curOption = "";
-    if ( defined $parameterSampleFile2->{$sample_name} ) {
-      $curOption = $curOption . " " . $parameterSampleFile2arg . " " . $parameterSampleFile2->{$sample_name}[0];
-    }
-
-    if ( defined $parameterSampleFile3->{$sample_name} ) {
-      $curOption = $curOption . " " . $parameterSampleFile3arg . " " . $parameterSampleFile3->{$sample_name}[0];
-    }
+    my $pfiles1 = $parameterSampleFile1->{$sample_name};
+    my $idxend = $first_file_only ? 0 : (scalar(@$pfiles1) - 1);
 
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
@@ -81,10 +73,28 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
-    print $pbs "
-$interpretor $program $option $parameterSampleFile1arg $pfile1 $curOption $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_arg $final_file
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
+
+    for my $i ( 0 .. $idxend ) {
+      my $pfile1 = $pfiles1->[$i];
+      my $final_file = $first_file_only ? $sample_name . $output_ext : basename($pfile1) . $output_ext;
+
+      my $curOption = "";
+      if ( defined $parameterSampleFile2->{$sample_name} ) {
+        $curOption = $curOption . " " . $parameterSampleFile2arg . " " . $parameterSampleFile2->{$sample_name}[$i];
+      }
+
+      if ( defined $parameterSampleFile3->{$sample_name} ) {
+        $curOption = $curOption . " " . $parameterSampleFile3arg . " " . $parameterSampleFile3->{$sample_name}[$i];
+      }
+
+      print $pbs "
+if [[ ! -s $final_file ]]; then
+  $interpretor $program $option $parameterSampleFile1arg $pfile1 $curOption $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_arg $final_file
+fi
+
 ";
+    }
     $self->close_pbs( $pbs, $pbs_file );
   }
 
@@ -105,7 +115,9 @@ sub result {
   my $task_suffix = get_option( $config, $section, "suffix", "" );
   $self->{_task_suffix} = $task_suffix;
 
-  my ( $parameterSampleFile1, $parameterSampleFile1arg ) = get_parameter_sample_files( $config, $section, "parameterSampleFile1" );
+  my $first_file_only = get_option( $config, $section, "first_file_only", 0 );
+
+  my ( $parameterSampleFile1, $parameterSampleFile1arg ) = get_parameter_sample_files( $config, $section, "source" );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
   my $output_ext            = get_option( $config, $section, "output_ext", "" );
   my $output_other_ext      = get_option( $config, $section, "output_other_ext", "" );
@@ -116,13 +128,22 @@ sub result {
 
   my $result = {};
   for my $sample_name ( sort keys %$parameterSampleFile1 ) {
+    my $pfiles1 = $parameterSampleFile1->{$sample_name};
+    my $idxend = $first_file_only ? 0 : (scalar(@$pfiles1) - 1);
+
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
     my @result_files = ();
-    push( @result_files, "${cur_dir}/${sample_name}${output_ext}" );
-    if ( $output_other_ext ne "" ) {
-      foreach my $output_other_ext_each (@output_other_exts) {
-        push( @result_files, "${cur_dir}/${sample_name}${output_other_ext_each}" );
+    for my $i ( 0 .. $idxend ) {
+      my $pfile1 = $pfiles1->[$i];
+      my $final_file = $first_file_only ? $sample_name . $output_ext : basename($pfile1) . $output_ext;
+
+      push( @result_files, "${cur_dir}/$final_file" );
+      if ( $output_other_ext ne "" ) {
+        foreach my $output_other_ext_each (@output_other_exts) {
+          my $other_file = $first_file_only ? $sample_name . $output_other_ext_each : basename($pfile1) . $output_other_ext_each;
+          push( @result_files, "${cur_dir}/$other_file" );
+        }
       }
     }
 
