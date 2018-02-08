@@ -81,14 +81,14 @@ while True:
     print(line.rstrip())
 
 originalFile = args.output_prefix + ".original.mgf"
-centerFile = args.output_prefix + ".center.mgf"
+#centerFile = args.output_prefix + ".center.mgf"
 optimalFile = args.output_prefix + ".optimal.mgf"
 
 count = 0
 with open(outputFile, 'r') as srShift:
   with open(args.input, 'r') as srMgf:
     with open(originalFile, 'w') as swOriginal:
-      with open(centerFile, 'w') as swCenter:
+      #with open(centerFile, 'w') as swCenter:
         with open(optimalFile, 'w') as swOptimal:
           #write header
           for line in srMgf:
@@ -96,7 +96,7 @@ with open(outputFile, 'r') as srShift:
               break
             else:
               swOriginal.write("%s\n" % line.rstrip())
-              swCenter.write("%s\n" % line.rstrip())
+              #swCenter.write("%s\n" % line.rstrip())
               swOptimal.write("%s\n" % line.rstrip())
               
           mgfItem = MgfItem()
@@ -107,7 +107,7 @@ with open(outputFile, 'r') as srShift:
             parts = line.split(',')
             original = float(parts[1])
             originalCandidates = int(parts[2])
-            center = float(parts[3])
+            #center = float(parts[3])
             optimal = float(parts[4])
             optimalCandidates = int(parts[5])
             
@@ -121,9 +121,9 @@ with open(outputFile, 'r') as srShift:
             
             mgfItem.write(swOriginal)
 
-            mgfItem.setTitle("CENTER_" + title)
-            mgfItem.setPrecursorMz((center + 1.007825035 * charge) / charge)
-            mgfItem.write(swCenter)
+            #mgfItem.setTitle("CENTER_" + title)
+            #mgfItem.setPrecursorMz((center + 1.007825035 * charge) / charge)
+            #mgfItem.write(swCenter)
             
             mgfItem.setTitle("OPTIMAL_" + title)
             mgfItem.setPrecursorMz((optimal + 1.007825035 * charge) / charge)

@@ -103,7 +103,7 @@ sub result {
       my $result_prefix = change_extension( $sampleBasename, ".shifted" . $shift_dalton . "daltons" );
 
       push( @result_files, "$result_dir/${result_prefix}.original.mgf" );
-      push( @result_files, "$result_dir/${result_prefix}.center.mgf" );
+      #push( @result_files, "$result_dir/${result_prefix}.center.mgf" );
       push( @result_files, "$result_dir/${result_prefix}.optimal.mgf" );
     }
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
