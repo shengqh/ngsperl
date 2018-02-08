@@ -35,8 +35,9 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_gatk_callvariants",   0 );
   initDefaultValue( $def, "gatk_callvariants_vqsr_mode", 1 );
   initDefaultValue( $def, "perform_muTect",              0 );
+  initDefaultValue( $def, "perform_muTect2indel",        0 );
 
-  if ( $def->{perform_muTect} ) {
+  if ( $def->{perform_muTect} || $def->{perform_muTect2indel} ) {
     if ( defined $def->{mills} ) {
       initDefaultValue( $def, "indel_realignment", 1 );
       initDefaultValue( $def, "indel_vcf_files",   $def->{mills} );
@@ -97,7 +98,7 @@ sub getConfig {
 
   push @$individual, ( $def->{aligner} );
 
-  if ( $def->{perform_gatk_callvariants} || $def->{perform_muTect} ) {
+  if ( $def->{perform_gatk_callvariants} || $def->{perform_muTect} || $def->{perform_muTect2_indel} ) {
     my $gatk_jar   = getValue( $def, "gatk_jar" );
     my $picard_jar = getValue( $def, "picard_jar" );
 
@@ -299,7 +300,54 @@ sub getConfig {
         };
         push @$summary, "${mutectName}_annovar";
       }
+    }
 
+    if ( $def->{"perform_muTect2indel"} ) {
+      my $mutect2Name = "${refine_name}_muTect2indel";
+      $config->{$mutect2Name} = {
+        class        => "GATK::MuTect2Indel",
+        perform      => 1,
+        init_command => $def->{muTect2_init_command},
+        target_dir   => "${target_dir}/$mutect2Name",
+        option       => getValue( $def, "muTect2_option" ),
+        java_option  => "-Xmx40g",
+        source_ref   => [ $refine_name, ".bam\$" ],
+        groups_ref   => "groups",
+        fasta_file   => $fasta,
+        dbsnp_file   => $def->{"dbsnp"},
+        bychromosome => 0,
+        sh_direct    => 0,
+        gatk_jar     => getValue( $def, "gatk_jar" ),
+        pbs          => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "240",
+          "mem"      => "40gb"
+        },
+      };
+      push @$summary, $mutect2Name;
+
+      if ( $def->{perform_annovar} ) {
+        $config->{"${mutect2Name}_annovar"} = {
+          class      => "Annotation::Annovar",
+          perform    => 1,
+          target_dir => "${target_dir}/${mutect2Name}_annovar",
+          option     => getValue( $def, "annovar_param" ),
+          annovar_db => getValue( $def, "annovar_db" ),
+          buildver   => getValue( $def, "annovar_buildver" ),
+          source_ref => [ "${mutect2Name}", ".pass.vcf\$" ],
+          cqstools   => $cqstools,
+          sh_direct  => 1,
+          isvcf      => 1,
+          pbs        => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=1",
+            "walltime" => "72",
+            "mem"      => "10gb"
+          },
+        };
+        push @$summary, "${mutect2Name}_annovar";
+      }
     }
   }
 
