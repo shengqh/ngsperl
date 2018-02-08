@@ -30,7 +30,7 @@ sub perform {
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
-  my $shift_dalton      = get_option( $config, $section, "shift_dalton", "-7" );
+  my $shift_dalton      = get_option( $config, $section, "shift_dalton", "7" );
   my $shift_software    = get_option( $config, $section, "shift_software" );
   my $shift_option_file = get_option( $config, $section, "shift_option_file" );
 
@@ -91,7 +91,7 @@ sub result {
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $shift_dalton = get_option( $config, $section, "shift_dalton", "-7" );
+  my $shift_dalton = get_option( $config, $section, "shift_dalton", "7" );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
@@ -102,7 +102,7 @@ sub result {
       my $sampleBasename = basename($sampleFile);
       my $result_prefix = change_extension( $sampleBasename, ".shifted" . $shift_dalton . "daltons" );
 
-      push( @result_files, "$result_dir/${result_prefix}.original.mgf" );
+      #push( @result_files, "$result_dir/${result_prefix}.original.mgf" );
       #push( @result_files, "$result_dir/${result_prefix}.center.mgf" );
       push( @result_files, "$result_dir/${result_prefix}.optimal.mgf" );
     }

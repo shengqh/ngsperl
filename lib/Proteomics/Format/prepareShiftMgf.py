@@ -9,12 +9,17 @@ from MgfUtils import MgfItem
 DEBUG=False
 NOT_DEBUG=not DEBUG
 
+MassH = 1.007825035
+MassC13 = 13.00335483
+MassC12 = 12
+DeltaC = MassC13 - MassC12
+
 parser = argparse.ArgumentParser(description="Shift precursor mass in MGF file.",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument('-i', '--input', action='store', nargs='?', required=NOT_DEBUG, help="Input MGF files")
 parser.add_argument('-o', '--output_prefix', action='store', nargs='?', required=NOT_DEBUG, help="Output file prefix")
-parser.add_argument('-d', '--shift_dalton', action='store', nargs='?', type=float, default=7.0, required=NOT_DEBUG, help="Shift precursor in Daltons")
+parser.add_argument('-d', '--shift_dalton', action='store', nargs='?', type=float, default=7 * DeltaC, required=NOT_DEBUG, help="Shift precursor in Daltons")
 parser.add_argument('-p', '--shift_software', action='store', nargs='?', required=NOT_DEBUG, help="Shift precursor software (quality_scope)")
 parser.add_argument('-c', '--shift_option_file', action='store', nargs='?', required=NOT_DEBUG, help="Shift precursor option file for quality_scope")
 
@@ -23,7 +28,7 @@ args = parser.parse_args()
 if DEBUG:
   args.input = "/scratch/cqs/shengq2/proteomics/20171026_target_decoy_spectra/mgf/Fusion_HCDOT_Human.mgf";
   args.output_prefix = "/scratch/cqs/shengq2/proteomics/20171026_target_decoy_spectra/mgf/Fusion_HCDOT_Human.shift"
-  args.shift_dalton = 7.0
+  args.shift_dalton = 7 * DeltaC
   args.shift_software = "/scratch/cqs/shengq2/proteomics/20171026_target_decoy_spectra/software/quality_scope"
   args.shift_option_file = "/scratch/cqs/shengq2/proteomics/20171026_target_decoy_spectra/database/uniprot_human_20170325_gindex.param"
 
@@ -63,7 +68,7 @@ with open(args.input, 'r') as sr:
           precursorMz = float(line[8:].rstrip())
         elif line.startswith("CHARGE=") and bInScan:
           charge = int(line[7])
-          precursorMass = (precursorMz - 1.007825035) * charge
+          precursorMass = (precursorMz - MassH) * charge
         elif line.startswith("END IONS") and bInScan:
           sw.write("%s\t%f\t%f\t0.5\t0\t10\t1\n" % (title, precursorMass, precursorMass + args.shift_dalton))
 
@@ -80,14 +85,14 @@ while True:
   else:
     print(line.rstrip())
 
-originalFile = args.output_prefix + ".original.mgf"
+#originalFile = args.output_prefix + ".original.mgf"
 #centerFile = args.output_prefix + ".center.mgf"
 optimalFile = args.output_prefix + ".optimal.mgf"
 
 count = 0
 with open(outputFile, 'r') as srShift:
   with open(args.input, 'r') as srMgf:
-    with open(originalFile, 'w') as swOriginal:
+    #with open(originalFile, 'w') as swOriginal:
       #with open(centerFile, 'w') as swCenter:
         with open(optimalFile, 'w') as swOptimal:
           #write header
@@ -95,7 +100,7 @@ with open(outputFile, 'r') as srShift:
             if(line.startswith("BEGIN IONS")):
               break
             else:
-              swOriginal.write("%s\n" % line.rstrip())
+              #swOriginal.write("%s\n" % line.rstrip())
               #swCenter.write("%s\n" % line.rstrip())
               swOptimal.write("%s\n" % line.rstrip())
               
@@ -105,28 +110,28 @@ with open(outputFile, 'r') as srShift:
               continue
             
             parts = line.split(',')
-            original = float(parts[1])
-            originalCandidates = int(parts[2])
+            #original = float(parts[1])
+            #originalCandidates = int(parts[2])
             #center = float(parts[3])
             optimal = float(parts[4])
-            optimalCandidates = int(parts[5])
+            #optimalCandidates = int(parts[5])
             
             mgfItem.read(srMgf)
             
-            if originalCandidates == 0:
-              continue
+            #if originalCandidates == 0:
+            #  continue
           
             title=mgfItem.getTitle()
             charge=mgfItem.getCharge()
             
-            mgfItem.write(swOriginal)
+            #mgfItem.write(swOriginal)
 
             #mgfItem.setTitle("CENTER_" + title)
             #mgfItem.setPrecursorMz((center + 1.007825035 * charge) / charge)
             #mgfItem.write(swCenter)
             
             mgfItem.setTitle("OPTIMAL_" + title)
-            mgfItem.setPrecursorMz((optimal + 1.007825035 * charge) / charge)
+            mgfItem.setPrecursorMz(optimal / charge + MassH)
             mgfItem.write(swOptimal)
 
             count = count + 1
