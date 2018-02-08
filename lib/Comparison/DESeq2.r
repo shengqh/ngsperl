@@ -944,9 +944,9 @@ if(!is.null(sigTableAll)){
       warning(paste0("The gene names were too long (",maxNameChr,"). Only first 70 letters were kept."))
     }
     dataForFigure$Gene<-factor(dataForFigure$Gene,levels=row.names(temp))
-    
-    width=max(2500, 60 * length(unique(dataForFigure$comparisonName)))
-    height=max(2000, 40 * length(unique(dataForFigure$Gene)))
+
+    width=min(max(2500, 60 * length(unique(dataForFigure$comparisonName))),30000)
+    height=min(max(2000, 40 * length(unique(dataForFigure$Gene))),30000)
     png(paste0(allprefix, "_significantHeatmap.png"),res=300,height=height,width=width)
     g<-ggplot(dataForFigure, aes(comparisonName, Gene))+
       geom_tile(aes(fill=Direction), color="white") +
