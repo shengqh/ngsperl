@@ -4,7 +4,6 @@ import sys
 import logging
 import os
 import subprocess
-from networkx.linalg import spectrum
 
 DEBUG=False
 NOT_DEBUG=not DEBUG
@@ -30,7 +29,7 @@ def getValue(line, key):
 logger.info("processing " + args.input)
 with open(args.input, 'r') as sr:
   with open(args.output, 'w') as sw:
-    sw.write("FileScan\tCharge\tRank\tMatchCount\tXCorr\tIsDecoy\n")
+    sw.write("FileScan\tCharge\tRank\tScore\tMatchCount\tIsDecoy\n")
     #sw.write("FileScan\tObservedMass\tCharge\tRank\tPeptide\tCalcMass\tMassDiff\tMatchCount\tXCorr\n")
     count = 0
     bInScan = False
@@ -53,7 +52,7 @@ with open(args.input, 'r') as sr:
       elif line.startswith("</search_hit>"):
         if lastrank != rank:
           lastrank = rank
-          sw.write("%s\t%s\t%s\t%s\t%s\t%s\n" % (spectrumId, charge, rank, num_matched_peptides, xcorr, isDecoy))
+          sw.write("%s\t%s\t%s\t%s\t%s\t%s\n" % (spectrumId, charge, rank, xcorr, num_matched_peptides, isDecoy))
           #sw.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (spectrumId, mass, charge, rank, peptide, calcmass, massdiff, num_matched_peptides, xcorr))
           count = count+1
           if count % 10000 == 0:
