@@ -17,14 +17,14 @@ parser.add_argument('-o', '--output', action='store', nargs='?', required=NOT_DE
 args = parser.parse_args()
 
 if DEBUG:
-  args.input = "/scratch/cqs/shengq2/proteomics/20171026_target_decoy_spectra/HCDOT_Human_comet_7_target/result/QExactive_HCDOT_Human.shifted7daltons.center.pep.xml";
-  args.output = "/scratch/cqs/shengq2/proteomics/20171026_target_decoy_spectra/HCDOT_Human_comet_7_target/result/QExactive_HCDOT_Human.shifted7daltons.center.pep.xml.tsv"
+  args.input = "/scratch/cqs/shengq2/proteomics/20171026_target_decoy_spectra/HCDOT_Human_comet_7_target/result/QExactive_HCDOT_Human.pep.xml";
+  args.output = "/scratch/cqs/shengq2/proteomics/20171026_target_decoy_spectra/HCDOT_Human_comet_7_target/result/QExactive_HCDOT_Human.pep.xml.tsv"
 
 logger = logging.getLogger('CometPSM')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
 def getValue(line, key):
-  return line.split(key + "=\"",1)[1].split("\"")[0]
+  return line.split(key + "=\"",1)[1].split("\"")[0].strip()
 
 logger.info("processing " + args.input)
 with open(args.input, 'r') as sr:
@@ -52,7 +52,7 @@ with open(args.input, 'r') as sr:
       elif line.startswith("</search_hit>"):
         if lastrank != rank:
           lastrank = rank
-          sw.write("%s\t%s\t%s\t%s\t%s\t%s\n" % (spectrumId, charge, rank, xcorr, num_matched_peptides, isDecoy))
+          sw.write("%s\t%s\t%s\t%s\t%s\t%r\n" % (spectrumId, charge, rank, xcorr, num_matched_peptides, isDecoy))
           #sw.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (spectrumId, mass, charge, rank, peptide, calcmass, massdiff, num_matched_peptides, xcorr))
           count = count+1
           if count % 10000 == 0:
