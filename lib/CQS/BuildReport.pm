@@ -102,7 +102,7 @@ sub perform {
       create_directory_or_die("$report_folder/Functional_enrichment/");
       create_directory_or_die("$report_folder/Functional_enrichment/webGestalt");
       $to_folder = "$task_name/Functional_enrichment/webGestalt";
-    }elsif($copy_file =~ /_GSEA/){
+    }elsif($copy_file =~ /_GSEA/ & $copy_file !~ /_GSEA.rnk/){
       create_directory_or_die("$report_folder/Functional_enrichment/");
       create_directory_or_die("$report_folder/Functional_enrichment/gsea");
       $to_folder = ("$task_name/Functional_enrichment/gsea");
@@ -111,7 +111,7 @@ sub perform {
   }
   
   print $final "
-R --slave -e \"library(knitr);rmarkdown::render('" . "${task_name}.Rmd');\"
+R --slave -e \"library(knitr);rmarkdown::render('${task_name}.Rmd');\"
 ";
 
   $self->close_pbs( $final, $final_pbs );
