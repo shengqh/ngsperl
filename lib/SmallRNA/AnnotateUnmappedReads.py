@@ -7,7 +7,8 @@ import operator
 import xml.etree.ElementTree as ET
 from QueryUtils import readQueries
 
-DEBUG = len(sys.argv) == 1
+#DEBUG = len(sys.argv) == 1
+DEBUG = False
 
 if DEBUG:
   inputFiles ="/scratch/cqs/shengq2/vickers/20170628_smallRNA_3018-KCV-77_78_79_mouse_v3/preprocessing/identical/result/Urine_WT_14_clipped_identical.fastq.dupcount,/scratch/cqs/shengq2/vickers/20170628_smallRNA_3018-KCV-77_78_79_mouse_v3/preprocessing/cutadapt/result/Urine_WT_14_clipped.fastq.short.gz"

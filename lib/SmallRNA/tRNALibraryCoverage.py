@@ -9,7 +9,7 @@ from Bio.Seq import Seq
 from CountXmlUtils import readCountXmlFeatures
 from Feature import FeatureItem, FeatureGroup
 
-DEBUG = 0
+DEBUG = False
 
 if DEBUG:
   #inputFile="/scratch/cqs/shengq2/vickers/20170628_smallRNA_3018-KCV-77_78_79_mouse_v3/nonhost_library/bowtie1_tRNA_pm_count/result/Liver_SRBIKO_11/Liver_SRBIKO_11.bam.count.mapped.xml"
@@ -39,7 +39,7 @@ else:
   speciesMapFile = args.speciesMap
   species = args.species
 
-logger = logging.getLogger('nonhostLibraryCoverage')
+logger = logging.getLogger('tRNALibraryCoverage')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
 def readFeatures(speciesMapFile, species, logger):
@@ -158,5 +158,12 @@ with open(outputFile, "w") as sw:
       coverageCount = featureGroup.CoverageCount[sample]
       for idx in range(1,101):
         sw.write("%s\t%s\t-\t%d\t%d\t%d\t%.2f\n" %(sample, anticodon, coverageCount, coverage[idx], idx, (coverage[idx] * 1.0 / coverageCount)))
-  
+ 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+coverageR = dir_path + "/coverage.R"
+logger.info("Generate heatmap ...")
+cmd = "R --vanilla -f " + coverageR + " --args " + outputFile + " " + os.path.dirname(os.path.realpath(outputFile)) + "/"
+print(cmd + "\n")
+os.system(cmd)
+
 logger.info("Result has been saved to %s" % outputFile)

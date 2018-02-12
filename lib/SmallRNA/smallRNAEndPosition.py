@@ -11,7 +11,7 @@ from CountXmlUtils import readCountXmlFeatures
 from Feature import FeatureItem, FeatureGroup
 from audioop import reverse
 
-DEBUG = 1
+DEBUG = False
 
 if DEBUG:
   inputFile = "/scratch/cqs/shengq2/vickers/20170628_smallRNA_3018-KCV-77_78_79_mouse_v3/data_visualization/host_endpoint_vis/smallRNA_1mm_KCV_3018_77_78_79.filelist"
