@@ -66,9 +66,6 @@ sub perform {
   if [ -s $result_file ]; then
     RefreshParser $result_file $database
   fi
-";
-
-      print $pbs "
 fi
 
 ";
