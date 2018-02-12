@@ -15,4 +15,14 @@ def readDupCountQueries(fileName, minCount, sorted=True):
   if sorted:
     result.sort(key=operator.attrgetter('Count'), reverse=True)
   return(result)
-  
+
+def readDupCountMap(fileName):
+  result = {}
+  with open(fileName, "r") as sr:
+    sr.readline()
+    for line in sr:
+      parts = line.rstrip().split('\t')
+      query_name = parts[0]
+      query_count = int(parts[1])
+      result[query_name] = query_count
+  return(result)
