@@ -512,6 +512,10 @@ for (i in 1:nrow(countTableFileAll)) {
       
       #correlation distribution
       countNumCor<-corTableWithoutZero(countNumVsdGroup,method="spearman")
+	  if (all(countNumCor==1)) {
+		  saveInError(paste0("Correlation for groups all equal to 1. Can't do correlation analysis for ",countTableFile),fileSuffix = paste0(suffix,Sys.Date(),".warning"))
+		  next;
+	  }
       margin=c(min(10,max(nchar(colnames(countNumCor)))/1.5),min(10,max(nchar(row.names(countNumCor)))/1.5))
       
       colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)

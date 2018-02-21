@@ -1286,7 +1286,8 @@ sub getSmallRNAConfig {
     };
   }
 
-  my $name_for_readSummary_r = "readFilesModule=c('" . join( "','", @name_for_readSummary ) . "')";
+  my $name_for_readSummary_r = "readFilesModule=c('" . join( "','", @name_for_readSummary ) . "')
+  ";
   $config->{sequence_mapped_in_categories} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
