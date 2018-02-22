@@ -39,6 +39,10 @@ sub perform {
   my $default_color   = get_option( $config, $section, "default_color", "0,0,0" );
   my $gff_file = parse_param_file( $config, $section, "gff_file", 1 );
 
+  my $draw_by_r        = get_option( $config, $section, "draw_by_r",        0 );
+  my $draw_by_r_width  = get_option( $config, $section, "draw_by_r_width",  10 );
+  my $draw_by_r_height = get_option( $config, $section, "draw_by_r_height", 10 );
+
   my $colors;
   if ( has_raw_files( $config, $section, "colors" ) ) {
     $colors = get_raw_files( $config, $section, "colors" );
@@ -52,6 +56,8 @@ sub perform {
     my @bamnames = keys %$bam_files;
     $groups = { $task_name => \@bamnames };
   }
+
+  my $rscript = dirname(__FILE__) . "/bamplot.r";
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
@@ -103,7 +109,7 @@ if [ ! -s $final_file ]; then
   if [ ! -s $curgff ]; then
     cp $gff_file $curgff
   fi
-  bamplot $option -b \"$bamFile\" -n \"$bamName\" -y uniform -i $curgff $colorStr -o .
+  bamplot $option -v -b \"$bamFile\" -n \"$bamName\" -y uniform -i $curgff $colorStr -o .
 fi
 ";
       }
@@ -115,15 +121,24 @@ fi
       my $curbam_fileStr = join( ',', @curbam_files );
       my $colorStr = $rainbow_color ? "" : "--color " . join( ':', @bam_colors );
 
-      my $final_file = "${name}_plots.pdf";
+      my $final_file  = "${name}_plots.pdf";
       print $pbs "
 if [ ! -s $final_file ]; then
   if [ ! -s $curgff ]; then
     cp $gff_file $curgff
   fi
-  bamplot $option -b \"$curbam_fileStr\" -n \"$curbam_nameStr\" -y uniform -i $curgff $colorStr -o .
+  bamplot $option -v -b \"$curbam_fileStr\" -n \"$curbam_nameStr\" -y uniform -i $curgff $colorStr -o .
 fi
 ";
+
+      if ($draw_by_r) {
+        my $summaryfile = "${name}/${name}_summary.txt";
+        print $pbs "
+if [ -s $summaryfile ]; then
+  R --vanilla -f $rscript --args $summaryfile $draw_by_r_width $draw_by_r_height
+fi
+";
+      }
     }
   }
 
