@@ -35,8 +35,9 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_contig_analysis",         0 );
   initDefaultValue( $def, "perform_annotate_unmapped_reads", 0 );
   initDefaultValue( $def, "DE_export_significant_gene_name", 0 );
+  initDefaultValue( $def, "perform_nonhost_rRNA_coverage",   0 );
   initDefaultValue( $def, "perform_nonhost_tRNA_coverage",   0 );
-  initDefaultValue( $def, "perform_host_rRNA_depth",         0 );
+  initDefaultValue( $def, "perform_host_rRNA_coverage",      0 );
   initDefaultValue( $def, "search_combined_nonhost",         0 );
   initDefaultValue( $def, "perform_report",                  1 );
 
@@ -405,20 +406,19 @@ sub getSmallRNAConfig {
       },
     };
 
-    if ( getValue( $def, "perform_host_rRNA_coverage", 0 ) ) {
-      my $positionTask      = "host_genome_rRNA_position";
-      my $visualizationTask = $positionTask . "_vis";
+    if ( getValue( $def, "perform_host_rRNA_coverage" ) ) {
+      my $visualizationTask      = "host_genome_rRNA_position_vis";
       my $folder            = $data_visualization_dir . "/" . $visualizationTask;
-      $host_genome->{$positionTask} = {
+      $host_genome->{$visualizationTask} = {
         class                    => "CQS::ProgramWrapper",
         perform                  => 1,
         target_dir               => $folder,
         interpretor              => "python",
-        program                  => "../SmallRNA/rRNAHostDepth.py",
+        program                  => "../SmallRNA/rRNAHostCoverage.py",
         parameterSampleFile1_arg => "-i",
         parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
         output_arg               => "-o",
-        output_ext               => ".depth.txt",
+        output_ext               => ".position",
         sh_direct                => 1,
         pbs                      => {
           "email"     => $def->{email},
@@ -428,7 +428,7 @@ sub getSmallRNAConfig {
           "mem"       => "10gb"
         },
       };
-      push( @$summary_ref, "bowtie1_genome_rRNA_depth" );
+      push( @$summary_ref, $visualizationTask );
     }
 
     if ( defined $def->{host_xml2bam} && $def->{host_xml2bam} ) {
@@ -1019,7 +1019,7 @@ sub getSmallRNAConfig {
       $identical_count_ref
     );
 
-    if ( getValue( $def, "perform_nonhost_rRNA_coverage", 0 ) ) {
+    if ( getValue( $def, "perform_nonhost_rRNA_coverage" ) ) {
       my $positionTask      = "nonhost_library_rRNA_position";
       my $visualizationTask = $positionTask . "_vis";
       my $folder            = $data_visualization_dir . "/" . $visualizationTask;
@@ -1506,18 +1506,18 @@ sub getSmallRNAConfig {
       }
 
       if ( defined $config->{bowtie1_tRNA_pm_table} ) {
-        push( @report_files, "count_table_correlation",     "tRNA_pm.*.count.heatmap.png" );
-        push( @report_files, "count_table_correlation",     "tRNA_pm.*.count.PCA.png" );
-        push( @report_files, "count_table_correlation",     "tRNA_pm.*.count.Group.heatmap.png" );
-        push( @report_files, "count_table_correlation",     "tRNA_pm.*.count.Group.Correlation.Cluster.png" );
+        push( @report_files, "count_table_correlation",     "^.*tRNA_pm_${task_name}.count.heatmap.png" );
+        push( @report_files, "count_table_correlation",     "^.*tRNA_pm_${task_name}.count.PCA.png" );
+        push( @report_files, "count_table_correlation",     "^.*tRNA_pm_${task_name}.count.Group.heatmap.png" );
+        push( @report_files, "count_table_correlation",     "^.*tRNA_pm_${task_name}.count.Group.Correlation.Cluster.png" );
         push( @report_names, "correlation_trnalib_heatmap", "correlation_trnalib_pca", "correlation_trnalib_group_heatmap", "correlation_trnalib_corr_cluster" );
       }
 
       if ( defined $config->{bowtie1_rRNA_pm_table} ) {
-        push( @report_files, "count_table_correlation",     "rRNA_pm.*.count.heatmap.png" );
-        push( @report_files, "count_table_correlation",     "rRNA_pm.*.count.PCA.png" );
-        push( @report_files, "count_table_correlation",     "rRNA_pm.*.count.Group.heatmap.png" );
-        push( @report_files, "count_table_correlation",     "rRNA_pm.*.count.Group.Correlation.Cluster.png" );
+        push( @report_files, "count_table_correlation",     "rRNA_pm_${task_name}.count.heatmap.png" );
+        push( @report_files, "count_table_correlation",     "rRNA_pm_${task_name}.count.PCA.png" );
+        push( @report_files, "count_table_correlation",     "rRNA_pm_${task_name}.count.Group.heatmap.png" );
+        push( @report_files, "count_table_correlation",     "rRNA_pm_${task_name}.count.Group.Correlation.Cluster.png" );
         push( @report_names, "correlation_rrnalib_heatmap", "correlation_rrnalib_pca", "correlation_rrnalib_group_heatmap", "correlation_rrnalib_corr_cluster" );
       }
     }
