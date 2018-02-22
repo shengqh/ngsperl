@@ -16,9 +16,15 @@ rownames(files)<-files$V2
 rnaseqOptions<-read.table("fileList2.txt", header=FALSE, as.is=TRUE)
 rownames(rnaseqOptions)<-rnaseqOptions$V2
 
+check_and_include_graphics<-function(graphicFile) {
+  if (file.exists(graphicFile)) {
+    include_graphics(graphicFile)
+  }
+}
+
 getCategory<-function(category, description){
   return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", category, "', '",description, "')}\n",
-"  include_graphics(files['", category, "',1])\n```\n"))
+"  check_and_include_graphics(files['", category, "',1])\n```\n"))
 }
 
 categoryRmd<-function(dfCategory){
@@ -61,23 +67,23 @@ This report includes preprocessing (section 2), host genome (section 3), nonhost
 ###2. Preprocessing
 
 ```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastq_len", "read length distribution after adapter trimming")}
-include_graphics(files["fastq_len",1])
+check_and_include_graphics(files["fastq_len",1])
 ```
 
 ###3. Host genome
 ####3.1 Overall 
 ```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_mapped", "category_mapped")}
-include_graphics(files["category_mapped",1])
+check_and_include_graphics(files["category_mapped",1])
 ```
 
 ```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_mapped_group", "category_mapped_group")}
-include_graphics(files["category_mapped_group",1])
+check_and_include_graphics(files["category_mapped_group",1])
 ```
 ```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_smallrna", "category_smallrna")}
-include_graphics(files["category_smallrna",1])
+check_and_include_graphics(files["category_smallrna",1])
 ```
 ```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_smallrna_group", "category_smallrna_group")}
-include_graphics(files["category_smallrna_group",1])
+check_and_include_graphics(files["category_smallrna_group",1])
 ```
 
 <br>
