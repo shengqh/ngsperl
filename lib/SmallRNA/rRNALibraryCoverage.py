@@ -6,7 +6,7 @@ import re
 import pysam
 from DupCountUtils import readDupCountQueries
 
-DEBUG = 1
+DEBUG = False
 
 if DEBUG:
   inputFile="/scratch/cqs/shengq2/vickers/20170628_smallRNA_3018-KCV-77_78_79_mouse_v3/data_visualization/nonhost_library_rRNA_position_vis/result/KCV_3018_77_78_79__fileList1.list"
@@ -91,5 +91,12 @@ with open(outputFile, "w") as sw:
       poslist = sorted(covs.keys())
       for position in poslist:
         sw.write("%s\t%s\t*\t%d\t%d\t%d\t%.2f\n" %(sampleName, spec, totalCount, covs[position], position, covs[position] * 1.0 / totalCount))
-  
+ 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+coverageR = dir_path + "/coverage.R"
+logger.info("Generate heatmap ...")
+cmd = "R --vanilla -f " + coverageR + " --args " + outputFile + " " + os.path.dirname(os.path.realpath(outputFile)) + "/"
+print(cmd + "\n")
+os.system(cmd)
+ 
 logger.info("Result has been saved to %s" % outputFile)
