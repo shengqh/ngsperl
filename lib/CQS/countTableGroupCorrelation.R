@@ -512,10 +512,6 @@ for (i in 1:nrow(countTableFileAll)) {
       
       #correlation distribution
       countNumCor<-corTableWithoutZero(countNumVsdGroup,method="spearman")
-	  if (all(countNumCor==1)) {
-		  saveInError(paste0("Correlation for groups all equal to 1. Can't do correlation analysis for ",countTableFile),fileSuffix = paste0(suffix,Sys.Date(),".warning"))
-		  next;
-	  }
       margin=c(min(10,max(nchar(colnames(countNumCor)))/1.5),min(10,max(nchar(row.names(countNumCor)))/1.5))
       
       colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
@@ -539,56 +535,14 @@ for (i in 1:nrow(countTableFileAll)) {
       if (ncol(countNumCor)< 3) {
         saveInError(paste0("Less than 3 samples. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(outputFilePrefix,suffix,Sys.Date(),".warning"))
       } else {
+		if (length(table(countNumCor))==1) {
+			saveInError(paste0("Correlation for groups all equal to 1. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(suffix,Sys.Date(),".warning"))
+			next;
+		}
         png(paste0(outputFilePrefix,suffix,".Group.Correlation.Cluster.png"),width=2000,height=2000,res=300)
         heatmap3(countNumCor,scale="none",balanceColor=T,margin=margin,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
         dev.off()
-      }
-#       
-#       #group with at least half samples more than 0 count
-#       print("Doing correlation analysis of groups HalfMoreThanZero ...")
-#       countNumVsdGroup1<-mergeTableBySampleGroup(countNumVsd,sampleToGroup,groupMinMedian=0.5,toPercent=FALSE)
-#       
-#       #heatmap
-#       margin=c(min(10,max(nchar(colnames(countNumVsdGroup1)))/1.5),min(10,max(nchar(row.names(countNumVsdGroup1)))/2))
-#       png(paste0(outputFilePrefix,suffix,".Group.HalfMoreThanZero.heatmap.png"),width=2000,height=2000,res=300)
-#       if(nrow(countNumVsdGroup1) < 20){
-#         heatmap3(countNumVsdGroup1,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
-#       }else{
-#         margin[2]<-5
-#         heatmap3(countNumVsdGroup1,distfun=dist,margin=margin,balanceColor=TRUE,useRaster=FALSE,labRow="",col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100),cexCol=cexColGroup)
-#       }
-#       dev.off()
-#       
-#       #correlation distribution
-#       countNumCor<-corWithout(countNumVsdGroup1,use="pa",method="sp")
-#       margin=c(min(10,max(nchar(colnames(countNumCor)))/1.5),min(10,max(nchar(row.names(countNumCor)))/1.5))
-#       
-#       colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
-#       colAllLabel<-c(0,0.5,1)
-#       countNumCor[countNumCor<0]<-0
-#       if (fixColorRange) {
-#         col<-col_part(data_all=c(0,1),data_part=countNumCor,col=colAll)
-#       } else {
-#         col<-colAll
-#       }
-#       
-#       legendfun<-function(x) {
-#         par(mar = c(5, 1, 1, 1));
-#         image(x=1:length(colAll),y=1,z=matrix(1:length(colAll),ncol=1),xlab="",xaxt="n",yaxt="n",col=colAll);
-#         axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
-#       }
-#       
-#       png(paste0(outputFilePrefix,suffix,".Group.HalfMoreThanZero.Correlation.png"),width=2000,height=2000,res=300)
-#       heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,margin=margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
-#       dev.off()
-#       if (ncol(countNumCor)<3 | any(is.na(corWithout(countNumCor,use="pa")))) {
-#         saveInError(paste0("Less than 3 samples. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(outputFilePrefix,suffix,Sys.Date(),".warning"))
-#       } else {
-#         png(paste0(outputFilePrefix,suffix,".Group.HalfMoreThanZero.Correlation.Cluster.png"),width=2000,height=2000,res=300)
-#         heatmap3(countNumCor,scale="none",balanceColor=T,margin=margin,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
-#         dev.off()
-#       }
-      
+      }     
     }
   } else {
     print("Not enough samples or genes. Can't do correlation analysis.")
