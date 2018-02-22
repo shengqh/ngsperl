@@ -60,12 +60,12 @@ sub result {
     foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
       my $prefix = $subSampleFile;
       if ($output_to_result_dir) {
-        my $file = file($subSampleFile);
-        my $pdir = $file->dir;
-        while ( $pdir->basename eq "result" ) {
-          $pdir = $pdir->parent;
+        my $file = basename($subSampleFile);
+        my $pdir = dirname($subSampleFile);
+        while ( basename($pdir) eq "result" ) {
+          $pdir = dirname($pdir);
         }
-        $prefix = $result_dir . "/" . $pdir->basename . "." . $file->basename;
+        $prefix = $result_dir . "/" . basename($pdir) . "." . $file;
       }
       
       $prefix = $prefix . $suffix;
