@@ -81,7 +81,11 @@ sub perform {
   my $raw_file_list = get_raw_file_list($config, $section, "parameterSampleFile1");
   my $raw_file_names = $config->{$section}{parameterSampleFile1_names};
   
-  die "File lists (". scalar(@$raw_file_list) . ") is not equals to file names (" . scalar(@$raw_file_names) . ")" if scalar(@$raw_file_list) != scalar(@$raw_file_names);
+  if (scalar(@$raw_file_list) != scalar(@$raw_file_names)) {
+    print("Raw file list = \n" . join("\n", @$raw_file_list));
+    print("Raw file names = \n" . join("\n", @$raw_file_names));
+    die "File lists (" . scalar(@$raw_file_list) . ") is not equals to file names (" . scalar(@$raw_file_names) . ")" ;
+  }
   
   open( my $list, ">$result_dir/fileList1.txt" ) or die "Cannot create $result_dir/fileList1.txt";
   while (my ($index, $element) = each(@$raw_file_list)) {
@@ -96,7 +100,7 @@ sub perform {
   my $final_file     = "$task_name/${task_name}.html";
   my $final = $self->open_pbs( $final_pbs, $pbs_desc, $final_log_desp, $path_file, $result_dir );
   
-  for my $copy_file (@$copy_file_list){
+  for my $copy_file (sort @$copy_file_list){
     my $to_folder = $task_name;
     if ($copy_file =~ /_WebGestalt/){
       create_directory_or_die("$report_folder/Functional_enrichment/");
