@@ -67,10 +67,7 @@ sub getPreprocessionConfig {
     $preprocessing_dir = create_directory_or_die( $target_dir . "/preprocessing" );
   }
 
-  my $is_paired = $def->{is_paired};
-  if ( not defined $is_paired ) {
-    $is_paired = $def->{pairend};
-  }
+  my $is_pairend = is_pairend($def);
 
   #general
   my $cluster  = getValue( $def, "cluster" );
@@ -99,11 +96,11 @@ sub getPreprocessionConfig {
 
   #task
   if ( $def->{sra_to_fastq} ) {
-    defined $is_paired or die "Define is_paired first!";
+    defined $is_pairend or die "Define is_pairend first!";
   }
 
   if ( $def->{merge_fastq} ) {
-    defined $is_paired or die "Define is_paired first!";
+    defined $is_pairend or die "Define is_pairend first!";
   }
 
   my $fastq_remove_N   = getValue( $def, "fastq_remove_N" );
@@ -131,7 +128,7 @@ sub getPreprocessionConfig {
     $config->{sra2fastq} = {
       class      => "SRA::FastqDump",
       perform    => 1,
-      ispaired   => $is_paired,
+      ispaired   => $is_pairend,
       target_dir => $def->{target_dir} . "/" . getNextFolderIndex($def) . "sra2fastq",
       option     => "",
       source_ref => $source_ref,
@@ -157,7 +154,7 @@ sub getPreprocessionConfig {
       option      => "",
       source_ref  => $source_ref,
       sh_direct   => 1,
-      is_paired   => $is_paired,
+      is_paired   => $is_pairend,
       is_bzipped  => $def->{is_bzipped},
       is_collated => $def->{is_collated},
       cluster     => $def->{cluster},
@@ -250,7 +247,7 @@ sub getPreprocessionConfig {
         fastq_remove_random_5            => $def->{"fastq_remove_random_5"},
         fastq_remove_random_3            => $def->{"fastq_remove_random_3"},
         extension                        => "_clipped.fastq",
-        is_paired                        => $is_paired,
+        is_paired                        => $is_pairend,
         sh_direct                        => 0,
         cluster                          => $cluster,
         pbs                              => {
