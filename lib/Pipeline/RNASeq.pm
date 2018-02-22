@@ -47,7 +47,6 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "output_bam_to_same_folder",       1 );
   initDefaultValue( $def, "max_thread",                      8 );
   initDefaultValue( $def, "DE_export_significant_gene_name", 1 );
-  initDefaultValue( $def, "output_to_report_dir",            0 );
   initDefaultValue( $def, "sequencetask_run_time",           '24' );
 
   initDefaultValue( $def, "perform_keggprofile",      0 );
@@ -136,7 +135,6 @@ sub getRNASeqConfig {
         class         => "Alignment::STARSummary",
         perform       => 1,
         target_dir    => $starFolder,
-        output_to_dir => getReportDir($def),
         option        => "",
         source_ref    => [ "star_featurecount", "_Log.final.out" ],
         sh_direct     => 1,
@@ -208,7 +206,6 @@ sub getRNASeqConfig {
             class         => "Alignment::STARSummary",
             perform       => 1,
             target_dir    => $starFolder,
-            output_to_dir => getReportDir($def),
             option        => "",
             source_ref    => [ "star", "_Log.final.out" ],
             sh_direct     => 1,
@@ -305,7 +302,6 @@ sub getRNASeqConfig {
       suffix          => "_cor",
       rCode           => "usePearsonInHCA<-" . $def->{use_pearson_in_hca} . "; useGreenRedColorInHCA<-" . $def->{use_green_red_color_in_hca} . "; top25cvInHCA<-" . $def->{top25cv_in_hca} . "; ",
       target_dir      => $cor_dir,
-      output_to_dir   => getReportDir($def),
       rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
       output_file     => "parameterSampleFile1",
       output_file_ext => ".Correlation.png;.density.png;.heatmap.png;.PCA.png;.Correlation.Cluster.png",
@@ -338,7 +334,6 @@ sub getRNASeqConfig {
         target_dir       => $target_dir . "/" . getNextFolderIndex($def) . $webgestaltTaskName,
         option           => "",
         source_ref       => [ $deseq2taskname, "sig_genename.txt\$" ],
-        output_to_dir    => getReportDir($def),
         organism         => getValue( $def, "webgestalt_organism" ),
         interestGeneType => $def->{interestGeneType},
         referenceSet     => $def->{referenceSet},
