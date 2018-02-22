@@ -15,14 +15,9 @@ def getNumberOfMismatch(read):
   return(result)
   
 def filter(outputBAM, inputReferenceBAM, inputHomologyBAM, logger):
-  if inputReferenceBAM.endswith(".bam"):
-    openmode = "rb"
-  else:
-    openmode = "r"
-
   #get query and number of mismatch map in reference BAM
   refQuery = {}      
-  with pysam.AlignmentFile(inputReferenceBAM, openmode) as samfile:
+  with pysam.Samfile(inputReferenceBAM) as samfile:
     processed = 0
     for read in samfile.fetch(until_eof=True):
       processed += 1
@@ -35,14 +30,8 @@ def filter(outputBAM, inputReferenceBAM, inputHomologyBAM, logger):
       refQuery[read.query_name] = getNumberOfMismatch(read);
 
   #filter homology BAM
-  if inputHomologyBAM.endswith(".bam"):
-    openmode = "rb"
-  else:
-    openmode = "r"
-
-  with pysam.AlignmentFile(inputHomologyBAM, openmode) as samfile:
-    header = samfile.header
-    with pysam.AlignmentFile(outputBAM, "wb", header=header) as outf:
+  with pysam.Samfile(inputHomologyBAM) as samfile:
+    with pysam.AlignmentFile(outputBAM, "wb", template=samfile) as outf:
       processed = 0
       for read in samfile.fetch(until_eof=True):
         processed += 1
