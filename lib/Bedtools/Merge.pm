@@ -49,6 +49,9 @@ sub perform {
   my $log_desc = $cluster->get_log_description($log);
 
   my $final_file = $task_name . ".bed";
+  my $gff3_file = $task_name . ".gff3";
+  
+  my $rscript = dirname(__FILE__) . "/bed2gff3.r";
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
@@ -63,6 +66,7 @@ sub perform {
   print $pbs "
 cat $fileOption | sort -k1,1 -k2,2n > $tempFile
 bedtools merge -i $tempFile -c 4 -o collapse > $final_file
+R --vanilla -f $rscript --args $final_file $gff3_file
 rm $tempFile 
 ";
   $self->close_pbs( $pbs, $pbs_file );
@@ -76,7 +80,9 @@ sub result {
   my $result       = {};
   my @result_files = ();
   my $final_file   = $task_name . ".bed";
+  my $gff3_file = $task_name . ".gff3";
   push( @result_files, "${result_dir}/${final_file}" );
+  push( @result_files, "${result_dir}/${gff3_file}" );
   $result->{$task_name} = filter_array( \@result_files, $pattern );
   return $result;
 }
