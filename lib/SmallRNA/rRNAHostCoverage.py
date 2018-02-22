@@ -1,0 +1,79 @@
+import sys
+import os
+import logging
+import argparse
+import re
+import xml.etree.ElementTree as ET
+
+DEBUG = False
+
+if DEBUG:
+  inputFile="/scratch/cqs/shengq2/vickers/20170628_smallRNA_3018-KCV-77_78_79_mouse_v3/data_visualization/host_genome_rRNA_position_vis/result/KCV_3018_77_78_79__fileList1.list"
+  outputFile="/scratch/cqs/shengq2/vickers/20170628_smallRNA_3018-KCV-77_78_79_mouse_v3/data_visualization/host_genome_rRNA_position_vis/result/KCV_3018_77_78_79_pw.rRNAhost.position"
+else:
+  parser = argparse.ArgumentParser(description="Generate rRNA coverage file.",
+                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+  parser.add_argument('-i', '--input', action='store', nargs='?', help='Input xml file')
+  parser.add_argument('-o', '--output', action='store', nargs='?', help="Output coverage file")
+
+  args = parser.parse_args()
+  
+  print(args)
+  
+  inputFile = args.input
+  outputFile = args.output
+
+logger = logging.getLogger('rRNAHostCoverage')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
+
+def readDict(filename):
+  result = {}
+  with open(filename, "r") as sr:
+    for line in sr:
+      parts = line.split('\t')
+      result[parts[1].strip()] = parts[0]
+  return(result)
+
+xmlfiles = readDict(inputFile)
+
+with open(outputFile, "w") as sw:
+  sw.write("File\tFeature\tStrand\tTotalCount\tPositionCount\tPosition\tPercentage\n")
+  
+  for sampleName in sorted(xmlfiles.keys()):
+    logger.info("processing %s" % (sampleName))
+    xmlfile = xmlfiles[sampleName]
+  
+    tree = ET.parse(xmlfile)
+    root = tree.getroot()
+    features = root.find('subjectResult')
+    for featureGroup in features.findall('subjectGroup'):
+      feature = featureGroup.find('subject')
+      featureName = feature.get("name")
+      if featureName.startswith("rRNA:rRNADB_"):
+      #if featureName.startswith("rRNA:"):
+        region = feature.find('region')
+        depth = {}
+        totalCount = 0
+        for query in region.findall('query'):
+          offset = int(query.get('offset'))
+          seq_len = int(query.get('seq_len'))
+          query_count = int(query.get('query_count'))
+          totalCount = totalCount + query_count
+          for idx in range(offset, offset + seq_len):
+            if idx in depth:
+              depth[idx] = depth[idx] + query_count
+            else:
+              depth[idx] = query_count
+        
+        for idx in sorted(depth.keys()):
+          sw.write("%s\t%s\t*\t%d\t%d\t%d\t%.3f\n" % (sampleName, featureName, totalCount,depth[idx], idx, depth[idx] * 1.0 / totalCount ))
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+coverageR = dir_path + "/coverage.R"
+logger.info("Generate heatmap ...")
+cmd = "R --vanilla -f " + coverageR + " --args " + outputFile + " " + os.path.dirname(os.path.realpath(outputFile)) + "/"
+print(cmd + "\n")
+os.system(cmd)
+        
+logger.info("Result has been saved to %s" % outputFile)
