@@ -220,6 +220,7 @@ sub addDEseq2 {
     text_size                    => $def->{DE_text_size},
     cluster                      => $def->{cluster},
     export_significant_gene_name => $def->{DE_export_significant_gene_name},
+    cooksCutoff                  => $def->{DE_cooksCutoff},
     $libraryFileKey              => $libraryFile,
     library_key                  => $libraryKey,
     pbs                          => {
