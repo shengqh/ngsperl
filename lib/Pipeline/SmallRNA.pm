@@ -40,6 +40,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_host_rRNA_coverage",      0 );
   initDefaultValue( $def, "search_combined_nonhost",         0 );
   initDefaultValue( $def, "perform_report",                  1 );
+  initDefaultValue( $def, "DE_cooksCutoff",                  'FALSE' );
 
   return $def;
 }
