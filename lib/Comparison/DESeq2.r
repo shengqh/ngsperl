@@ -690,6 +690,9 @@ for(countfile_index in c(1:length(countfiles))){
         diffResultSig$Name<-as.character(diffResultSig$Feature_gene_name)
       }else{
         diffResultSig$Name<-sapply(strsplit(row.names(diffResultSig),";"),function(x) x[1])
+		if (any(duplicated(diffResultSig$Name))) {
+			diffResultSig$Name[which(duplicated(diffResultSig$Name))]<-row.names(diffResultSig)[which(duplicated(diffResultSig$Name))]
+		}
       }
       diffResultSig$Name <- factor(diffResultSig$Name, levels=diffResultSig$Name[order(diffResultSig$log2FoldChange)])
       diffResultSig<-as.data.frame(diffResultSig)
