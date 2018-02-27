@@ -47,6 +47,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "output_bam_to_same_folder",       1 );
   initDefaultValue( $def, "max_thread",                      8 );
   initDefaultValue( $def, "DE_export_significant_gene_name", 1 );
+  initDefaultValue( $def, "DE_min_median_read",              0 );
   initDefaultValue( $def, "sequencetask_run_time",           '24' );
 
   initDefaultValue( $def, "perform_keggprofile",      0 );
@@ -132,13 +133,13 @@ sub getRNASeqConfig {
         },
       },
       "star_summary" => {
-        class         => "Alignment::STARSummary",
-        perform       => 1,
-        target_dir    => $starFolder,
-        option        => "",
-        source_ref    => [ "star_featurecount", "_Log.final.out" ],
-        sh_direct     => 1,
-        pbs           => {
+        class      => "Alignment::STARSummary",
+        perform    => 1,
+        target_dir => $starFolder,
+        option     => "",
+        source_ref => [ "star_featurecount", "_Log.final.out" ],
+        sh_direct  => 1,
+        pbs        => {
           "email"    => $email,
           "nodes"    => "1:ppn=1",
           "walltime" => "72",
@@ -203,13 +204,13 @@ sub getRNASeqConfig {
             },
           },
           "star_summary" => {
-            class         => "Alignment::STARSummary",
-            perform       => 1,
-            target_dir    => $starFolder,
-            option        => "",
-            source_ref    => [ "star", "_Log.final.out" ],
-            sh_direct     => 1,
-            pbs           => {
+            class      => "Alignment::STARSummary",
+            perform    => 1,
+            target_dir => $starFolder,
+            option     => "",
+            source_ref => [ "star", "_Log.final.out" ],
+            sh_direct  => 1,
+            pbs        => {
               "email"    => $email,
               "nodes"    => "1:ppn=1",
               "walltime" => "72",
@@ -326,7 +327,7 @@ sub getRNASeqConfig {
   if ( defined $def->{pairs} ) {
     my $deseq2taskname = addDEseq2( $config, $def, $summary, "genetable", $count_file_ref, $def->{target_dir}, $def->{DE_min_median_read} );
 
-    if ( getValue($def,"perform_webgestalt") ) {
+    if ( getValue( $def, "perform_webgestalt" ) ) {
       my $webgestaltTaskName = $deseq2taskname . "_WebGestalt";
       $config->{$webgestaltTaskName} = {
         class            => "Annotation::WebGestaltR",
@@ -348,7 +349,7 @@ sub getRNASeqConfig {
       push @$summary, "$webgestaltTaskName";
     }
 
-    if ( getValue($def, "perform_gsea") ) {
+    if ( getValue( $def, "perform_gsea" ) ) {
       my $gsea_jar        = $def->{gsea_jar}        or die "Define gsea_jar at definition first";
       my $gsea_db         = $def->{gsea_db}         or die "Define gsea_db at definition first";
       my $gsea_categories = $def->{gsea_categories} or die "Define gsea_categories at definition first";
@@ -665,7 +666,7 @@ sub getRNASeqConfig {
       push( @copy_files, "deseq2_genetable", "pca.pdf" );
     }
 
-    my $hasFunctionalEnrichment=0;
+    my $hasFunctionalEnrichment = 0;
     if ( defined $config->{deseq2_genetable_WebGestalt} ) {
       push( @copy_files, "deseq2_genetable_WebGestalt", "_geneontology_Biological_Process\$" );
       push( @copy_files, "deseq2_genetable_WebGestalt", "_geneontology_Cellular_Component\$" );
@@ -683,7 +684,7 @@ sub getRNASeqConfig {
         push( @report_names, "WebGestalt_GO_MF_" . $key );
         push( @report_names, "WebGestalt_KEGG_" . $key );
       }
-      $hasFunctionalEnrichment=1;
+      $hasFunctionalEnrichment = 1;
     }
 
     if ( defined $config->{deseq2_genetable_GSEA} ) {
@@ -694,7 +695,7 @@ sub getRNASeqConfig {
         push( @report_files, "deseq2_genetable_GSEA", $key . ".*gsea.csv" );
         push( @report_names, "gsea_" . $key );
       }
-      $hasFunctionalEnrichment=1;
+      $hasFunctionalEnrichment = 1;
     }
 
     my $options = {
@@ -706,7 +707,7 @@ sub getRNASeqConfig {
       perform                    => 1,
       target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . "report",
       report_rmd_file            => "../Pipeline/RNASeq.Rmd",
-      additional_rmd_files            => "Functions.Rmd",
+      additional_rmd_files       => "Functions.Rmd",
       parameterSampleFile1_ref   => \@report_files,
       parameterSampleFile1_names => \@report_names,
       parameterSampleFile2_ref   => $options,
