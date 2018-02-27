@@ -16,7 +16,10 @@ performWilcox<-0
 useRawPvalue<-1
 textSize<-9
 transformTable<-0
+cooksCutoff<-0.99
+maxCooksOutlierPercentage<-0.2
 exportSignificantGeneName<-1
+
 
 libraryFile<-"/scratch/cqs/shengq1/vickers/20170222_smallRNA_3018_61_human_v3/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/3018_61.Category.Table.csv"
 libraryKey<-"TotalReads"
@@ -36,6 +39,12 @@ if(detectedInBothGroup){
 
 if(minMedianInGroup > 0){
   suffix=paste0(suffix, "_min", minMedianInGroup)
+}
+
+if(!useRawPvalue){
+  alpha<-pvalue
+}else{
+  alpha<-0.1
 }
 
 zeroCount=0
@@ -219,15 +228,16 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors
 myEstimateSizeFactors<-function(dds){
   if(exists("librarySize")){
     curLibrarySize<-librarySize[colnames(dds)]
-    curSizeFactor<-curLibrarySize/median(curLibrarySize)
-    sizeFactors(dds)<-curSizeFactor
+    #based on DESeq2 introduction
+    curSizeFactor<- curSizeFactor / exp(rowMeans(log(curSizeFactor)))
+    normalizationFactors(dds)<-curSizeFactor
   }else{
     sfres<-try(dds<-estimateSizeFactors(dds))
     if (class(sfres) == "try-error") {
       library(edgeR)
       y<-DGEList(counts=counts(dds))
       y<-calcNormFactors(y, methold="TMM")
-      sizeFactors(dds)<-y$samples$norm.factors
+      normalizationFactors(dds)<-y$samples$norm.factors
     }
   }
   return(dds)
@@ -583,7 +593,18 @@ for(countfile_index in c(1:length(countfiles))){
         stop(paste0("DESeq2 failed: ", ddsres[1]))
       }
     }
-    res<-results(dds,cooksCutoff=FALSE)
+    if(!exists("cooksCutoff")){
+      res<-results(dds, alpha=alpha)
+    }else{
+      res<-results(dds,cooksCutoff=cooksCutoff, alpha=alpha)
+      if(!is.logical(cooksCutoff)){
+        cooksOutlier = res$baseMean > 0 & is.na(res$pvalue)
+        #if there are too many genes are filtered out by cooksDistance, author suggests to turn off filter. I used 20% as the limitation.
+        if(sum(cooksOutlier) > nrow(res) * maxCooksOutlierPercentage){
+          res<-results(dds,cooksCutoff=FALSE, alpha=alpha)
+        }
+      }
+    }
     
     cat("DESeq2 finished.\n")
     

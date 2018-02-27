@@ -83,6 +83,8 @@ sub perform {
   my $textSize                  = get_option( $config, $section, "text_size",                    11 );
   my $transformTable            = get_option( $config, $section, "transform_table",              0 );
   my $exportSignificantGeneName = get_option( $config, $section, "export_significant_gene_name", 0 );
+  my $cooksCutoff               = get_option( $config, $section, "cooksCutoff",                  'DEFAULT' );
+  my $maxCooksOutlierPercentage = get_option( $config, $section, "maxCooksOutlierPercentage",    0.2 );
 
   my $libraryFile = parse_param_file( $config, $section, "library_file", 0 );
   my $libraryKey;
@@ -152,22 +154,24 @@ sub perform {
 
     for my $key ( keys %$covariances ) {
       my $values = $covariances->{$key};
-      
-      if ($values eq "paired"){
-        if (scalar(@s1) != scalar(@s2)){
+
+      if ( $values eq "paired" ) {
+        if ( scalar(@s1) != scalar(@s2) ) {
           die "Covariance paired requires equal number of samples in each group for comparison " . $comparison_name . ".";
         }
         $values = [];
         for my $i ( 0 .. $#s1 ) {
-          push(@$values, $key . $i);
+          push( @$values, $key . $i );
         }
         for my $i ( 0 .. $#s1 ) {
-          push(@$values, $key . $i);
+          push( @$values, $key . $i );
         }
         $covariances->{$key} = $values;
-      }elsif ( !( ref $values eq ref [] ) ) {
+      }
+      elsif ( !( ref $values eq ref [] ) ) {
         die "Covariances of " . $key . " should be array reference!";
-      }elsif ( scalar(@$values) != $total_sample_count ) {
+      }
+      elsif ( scalar(@$values) != $total_sample_count ) {
         die "Number of covariance value of " . $key . " shoud be $total_sample_count !";
       }
     }
@@ -237,7 +241,13 @@ useRawPvalue<-$useRawPvalue
 textSize<-$textSize
 transformTable<-$transformTable
 exportSignificantGeneName<-$exportSignificantGeneName
+maxCooksOutlierPercentage<-$maxCooksOutlierPercentage
 ";
+
+  if ( $cooksCutoff ne "DEFAULT" ) {
+    print $rf "cooksCutoff<-$cooksCutoff
+";
+  }
 
   if ( defined $libraryFile ) {
     print $rf "
@@ -279,18 +289,18 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my $comparisons = get_raw_files( $config, $section );
-  my $minMedianInGroup    = get_option( $config, $section, "min_median_read",        0 );
-  my $top25only           = get_option( $config, $section, "top25only",              0 );
-  my $detectedInBothGroup = get_option( $config, $section, "detected_in_both_group", 0 );
-  my $performWilcox       = get_option( $config, $section, "perform_wilcox",         0 );
+  my $minMedianInGroup          = get_option( $config, $section, "min_median_read",              0 );
+  my $top25only                 = get_option( $config, $section, "top25only",                    0 );
+  my $detectedInBothGroup       = get_option( $config, $section, "detected_in_both_group",       0 );
+  my $performWilcox             = get_option( $config, $section, "perform_wilcox",               0 );
   my $exportSignificantGeneName = get_option( $config, $section, "export_significant_gene_name", 0 );
-  
+
   my $suffix = getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup );
   my $result = {};
 
-  if(scalar(keys %$comparisons) > 1){
-    my $filtered = filter_array( [$result_dir . "/${task_name}.define_DESeq2_volcanoPlot.png"], $pattern, $removeEmpty );
-    if(scalar(@$filtered) > 0 || !$removeEmpty){
+  if ( scalar( keys %$comparisons ) > 1 ) {
+    my $filtered = filter_array( [ $result_dir . "/${task_name}.define_DESeq2_volcanoPlot.png" ], $pattern, $removeEmpty );
+    if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
       $result->{$task_name} = $filtered;
     }
   }
@@ -308,7 +318,7 @@ sub result {
     push( @result_files, $result_dir . "/${prefix}_DESeq2_volcanoPlot.png" );
     push( @result_files, $result_dir . "/${prefix}_geneAll_DESeq2-vsd-heatmap.png" );
     push( @result_files, $result_dir . "/${prefix}_geneAll_DESeq2-vsd-pca.pdf" );
-    if($exportSignificantGeneName){
+    if ($exportSignificantGeneName) {
       push( @result_files, $result_dir . "/${prefix}_DESeq2_sig_genename.txt" );
     }
     if ($performWilcox) {
@@ -317,11 +327,11 @@ sub result {
     }
 
     my $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
-    if(scalar(@$filtered) > 0 || !$removeEmpty){
+    if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
       $result->{$comparison_name} = $filtered;
     }
   }
-  
+
   return $result;
 }
 
