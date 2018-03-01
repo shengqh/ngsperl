@@ -229,7 +229,8 @@ myEstimateSizeFactors<-function(dds){
   if(exists("librarySize")){
     curLibrarySize<-librarySize[colnames(dds)]
     #based on DESeq2 introduction
-    curSizeFactor<- curLibrarySize / exp(rowMeans(log(curLibrarySize)))
+#    curSizeFactor<- curLibrarySize / exp(rowMeans(log(curLibrarySize)))
+	curSizeFactor<- curLibrarySize / exp(mean(log(curLibrarySize)))
     normalizationFactors(dds)<-curSizeFactor
   }else{
     sfres<-try(dds<-estimateSizeFactors(dds))
