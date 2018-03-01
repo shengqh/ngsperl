@@ -229,7 +229,7 @@ myEstimateSizeFactors<-function(dds){
   if(exists("librarySize")){
     curLibrarySize<-librarySize[colnames(dds)]
     #based on DESeq2 introduction
-    curSizeFactor<- curSizeFactor / exp(rowMeans(log(curSizeFactor)))
+    curSizeFactor<- curLibrarySize / exp(rowMeans(log(curLibrarySize)))
     normalizationFactors(dds)<-curSizeFactor
   }else{
     sfres<-try(dds<-estimateSizeFactors(dds))
@@ -593,19 +593,13 @@ for(countfile_index in c(1:length(countfiles))){
         stop(paste0("DESeq2 failed: ", ddsres[1]))
       }
     }
+    
     if(!exists("cooksCutoff")){
       res<-results(dds, alpha=alpha)
     }else{
-      res<-results(dds,cooksCutoff=cooksCutoff, alpha=alpha)
-      if(!is.logical(cooksCutoff)){
-        cooksOutlier = res$baseMean > 0 & is.na(res$pvalue)
-        #if there are too many genes are filtered out by cooksDistance, author suggests to turn off filter. I used 20% as the limitation.
-        if(sum(cooksOutlier) > nrow(res) * maxCooksOutlierPercentage){
-          res<-results(dds,cooksCutoff=FALSE, alpha=alpha)
-        }
-      }
+      res<-results(dds, cooksCutoff=cooksCutoff, alpha=alpha)
     }
-    
+
     cat("DESeq2 finished.\n")
     
     if (useRawPvalue==1) {
@@ -716,9 +710,11 @@ for(countfile_index in c(1:length(countfiles))){
     diffResult$log10BaseMean<-log10(diffResult$baseMean)
     diffResult$colour<-"grey"
     if (useRawPvalue==1) {
+      diffResult<-subset(diffResult, !is.na(pvalue))
       diffResult$colour[which(diffResult$pvalue<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
       diffResult$colour[which(diffResult$pvalue<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
     } else {
+      diffResult<-subset(diffResult, !is.na(padj))
       diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
       diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
     }
@@ -1009,9 +1005,11 @@ if (! is.null(resultAllOut)) {
     diffResult$Comparison<-factor(diffResult$Comparison,levels=unique(diffResult$Comparison))
     diffResult$colour<-"grey"
     if (useRawPvalue==1) {
+      diffResult<-subset(diffResult, !is.na(pvalue))
       diffResult$colour[which(diffResult$pvalue<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
       diffResult$colour[which(diffResult$pvalue<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
     } else {
+      diffResult<-subset(diffResult, !is.na(padj))
       diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
       diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
     }
