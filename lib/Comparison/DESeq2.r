@@ -226,19 +226,19 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors
 }
 
 myEstimateSizeFactors<-function(dds){
-#  if(exists("librarySize")){
-#    curLibrarySize<-librarySize[colnames(dds)]
+  if(exists("librarySize")){
+    curLibrarySize<-librarySize[colnames(dds)]
     #based on DESeq2 introduction
 #    curSizeFactor<- curLibrarySize / exp(rowMeans(log(curLibrarySize)))
-#	curSizeFactor<- curLibrarySize / exp(mean(log(curLibrarySize)))
-#    normalizationFactors(dds)<-curSizeFactor
-#  }else{
+	curSizeFactor<- curLibrarySize / exp(mean(log(curLibrarySize)))
+	sizeFactors(dds)<-curSizeFactor
+  }else{
     sfres<-try(dds<-estimateSizeFactors(dds))
     if (class(sfres) == "try-error") {
       library(edgeR)
       y<-DGEList(counts=counts(dds))
       y<-calcNormFactors(y, methold="TMM")
-      normalizationFactors(dds)<-y$samples$norm.factors
+	  sizeFactors(dds)<-y$samples$norm.factors
     }
 #  }
   return(dds)
