@@ -34,14 +34,22 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "read_correlation",                0 );
   initDefaultValue( $def, "perform_contig_analysis",         0 );
   initDefaultValue( $def, "perform_annotate_unmapped_reads", 0 );
-  initDefaultValue( $def, "DE_export_significant_gene_name", 0 );
   initDefaultValue( $def, "perform_nonhost_rRNA_coverage",   0 );
   initDefaultValue( $def, "perform_nonhost_tRNA_coverage",   0 );
   initDefaultValue( $def, "perform_host_rRNA_coverage",      0 );
   initDefaultValue( $def, "search_combined_nonhost",         0 );
   initDefaultValue( $def, "perform_report",                  1 );
-  initDefaultValue( $def, "DE_cooksCutoff",                  'FALSE' );
 
+  initDefaultValue( $def, "DE_export_significant_gene_name", 0 );
+  initDefaultValue( $def, "DE_cooksCutoff",                  'FALSE' );
+  initDefaultValue( $def, "DE_pvalue",                       0.05 );
+  initDefaultValue( $def, "DE_fold_change",                  1.5 );
+  initDefaultValue( $def, "DE_min_median_read_top",          2 );
+  initDefaultValue( $def, "DE_min_median_read_smallRNA",     5 );
+  initDefaultValue( $def, "DE_detected_in_both_group",       1 );
+  initDefaultValue( $def, "DE_use_raw_pvalue",               1 );
+  initDefaultValue( $def, "DE_library_key",                  "TotalReads" );
+  initDefaultValue( $def, "DE_show_gene_cluster",            0 );
   return $def;
 }
 
@@ -408,7 +416,7 @@ sub getSmallRNAConfig {
     };
 
     if ( getValue( $def, "perform_host_rRNA_coverage" ) ) {
-      my $visualizationTask      = "host_genome_rRNA_position_vis";
+      my $visualizationTask = "host_genome_rRNA_position_vis";
       my $folder            = $data_visualization_dir . "/" . $visualizationTask;
       $host_genome->{$visualizationTask} = {
         class                    => "CQS::ProgramWrapper",
