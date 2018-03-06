@@ -2,7 +2,7 @@ from difflib import SequenceMatcher
 import unittest
 
 class BaseRole:
-  def __init__(self, sampleName, barcode, primerSequenceStart, primerSequence, primerSilimarRatio, identicalStart, identicalSequence):
+  def __init__(self, sampleName, barcode, primerSequenceStart, primerSequence, primerSilimarRatio, identicalStart, identicalSequence, maximumMismatch=1):
     self.SampleName = sampleName
     self.Barcode = barcode
     self.PrimerSequenceStart = primerSequenceStart
@@ -10,6 +10,7 @@ class BaseRole:
     self.PrimerSimilarRatio = primerSilimarRatio
     self.IdenticalStart = identicalStart
     self.IdenticalSequence = identicalSequence
+    self.MaximumMismatch = maximumMismatch
     self.BaseDict = {}
   
   def addBaseToDict(self, idx, curBase):
@@ -34,23 +35,23 @@ class BaseRole:
       return(False)
     
     curSequence = sequence[self.IdenticalStart:self.IdenticalStart + len(self.IdenticalSequence)]
-    mismatched = 0
-    mismatchedIndex = 0
+    mismatchedIndex = []
     for idx in range(0, len(curSequence)):
       if self.IdenticalSequence[idx] != curSequence[idx]:
-        mismatched = mismatched + 1
-        mismatchedIndex = idx
+        mismatchedIndex.append(idx)
     
-    if mismatched > 1:
+    if len(mismatchedIndex) > self.MaximumMismatch:
+      #print(sequence + "\n")
       return(False)
     
-    if mismatched == 0:  
-      for idx in range(0, len(self.IdenticalSequence)):
+    if len(mismatchedIndex) == 0:  
+      for idx in range(0, min(len(curSequence), len(self.IdenticalSequence))):
         curBase =curSequence[idx]
         self.addBaseToDict(idx, curBase)
     else:
-      curBase =curSequence[mismatchedIndex]
-      self.addBaseToDict(mismatchedIndex, curBase)
+      for misIndex in mismatchedIndex:
+        curBase =curSequence[misIndex]
+        self.addBaseToDict(misIndex, curBase)
     
     return(True)
         

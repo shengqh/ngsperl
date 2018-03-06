@@ -1,5 +1,8 @@
 from difflib import SequenceMatcher
 import unittest
+import collections
+
+Word = collections.namedtuple('Word', ['word', 'discarded'])
 
 class WordRole:
 #   def __init__(self):
@@ -26,12 +29,12 @@ class WordRole:
     curBarcode = sequence[0:len(self.Barcode)]
     
     if self.Barcode != curBarcode :
-      return("")
+      return(Word("", False))
     
     curPrimerSequence = sequence[self.PrimerSequenceStart:self.PrimerSequenceStart + len(self.PrimerSequence)]
     similarRatio = SequenceMatcher(None, self.PrimerSequence, curPrimerSequence).ratio()
     if similarRatio < self.PrimerSimilarRatio:
-      return("")
+      return(Word("", False))
     
     curSequence = sequence[self.IdenticalStart:self.IdenticalStart + len(self.IdenticalSequence)]
     word = ""
@@ -39,29 +42,52 @@ class WordRole:
       refBase = self.IdenticalSequence[idx]
       if refBase == 'R':
         if curSequence[idx] not in self.SiteAllows:
-          return("")
+          return(Word("", True))
         word = word + curSequence[idx]
       elif curSequence[idx] != refBase:
-        return("")
+        return(Word("", True))
     
-    return(word)
-      
+    return((Word(word, False)))
         
 class TestWordRole(unittest.TestCase):
     def testGetWordTurnee(self):
         role = WordRole("MalikG", "ATATGA", 6, "GCTGGACCGGTATGTAGCA", 0.9, 25, "RTRCGTRRTCCTRTTGAGCATAGCCGGTTCAATTCGCGGACTAAGGCCATCATGAA", ['A', 'G'])
         sequence = "ATATGAGCTGGACCGGTATGTAGCAGTACGTAGTCCTATTGAGCATAGCCGGTTCAATTCGCGGACTAAGGCCATCATGAAGATTGCCATCGTTTGGGCAATATCAATAGGAGTTTCAGTTCCTATCCCTGTGATTGGACTGAGGGACGAAAGCAAAGTGTTCGTGAATAATACTACCTGCGTGCTCAATGACCCGAACTTCGTTCTCATCGGGTCCTTCGTGGCATTCTTCATCCCGTTGACAATTATGGTGATCACCTACTTCTTAACGATCTACGTCCTACGCCGTCAAGCTTTGAT"
         curWord = role.getWord(sequence)
-        self.assertEqual(curWord, "GAAGA")
+        self.assertEqual(curWord.word, "GAAGA")
+        self.assertFalse(curWord.discarded)
+
+    def testGetWordTurneeNotDiscard1(self):
+        role = WordRole("MalikG", "ATATGA", 6, "GCTGGACCGGTATGTAGCA", 0.9, 25, "RTRCGTRRTCCTRTTGAGCATAGCCGGTTCAATTCGCGGACTAAGGCCATCATGAA", ['A', 'G'])
+        sequence = "TTATGAGCTGGACCGGTATGTAGCAGTACGTAGTCCTATTGAGCATAGCCGGTTCAATTCGCGGACTAAGGCCATCATGAAGATTGCCATCGTTTGGGCAATATCAATAGGAGTTTCAGTTCCTATCCCTGTGATTGGACTGAGGGACGAAAGCAAAGTGTTCGTGAATAATACTACCTGCGTGCTCAATGACCCGAACTTCGTTCTCATCGGGTCCTTCGTGGCATTCTTCATCCCGTTGACAATTATGGTGATCACCTACTTCTTAACGATCTACGTCCTACGCCGTCAAGCTTTGAT"
+        curWord = role.getWord(sequence)
+        self.assertEqual(curWord.word, "")
+        self.assertFalse(curWord.discarded)
+
+    def testGetWordTurneeNotDiscard2(self):
+        role = WordRole("MalikG", "ATATGA", 6, "GCTGGACCGGTATGTAGCA", 0.9, 25, "RTRCGTRRTCCTRTTGAGCATAGCCGGTTCAATTCGCGGACTAAGGCCATCATGAA", ['A', 'G'])
+        sequence = "ATATGAGCTaaACCGGTATGTAGCAGTACGTAGTCCTATTGAGCATAGCCGGTTCAATTCGCGGACTAAGGCCATCATGAAGATTGCCATCGTTTGGGCAATATCAATAGGAGTTTCAGTTCCTATCCCTGTGATTGGACTGAGGGACGAAAGCAAAGTGTTCGTGAATAATACTACCTGCGTGCTCAATGACCCGAACTTCGTTCTCATCGGGTCCTTCGTGGCATTCTTCATCCCGTTGACAATTATGGTGATCACCTACTTCTTAACGATCTACGTCCTACGCCGTCAAGCTTTGAT"
+        curWord = role.getWord(sequence)
+        self.assertEqual(curWord.word, "")
+        self.assertFalse(curWord.discarded)
+
+    def testGetWordTurneeDiscard(self):
+        role = WordRole("MalikG", "ATATGA", 6, "GCTGGACCGGTATGTAGCA", 0.9, 25, "RTRCGTRRTCCTRTTGAGCATAGCCGGTTCAATTCGCGGACTAAGGCCATCATGAA", ['A', 'G'])
+        sequence = "ATATGAGCTGGACCGGTATGTAGCAGTACGTAGaCCTATTGAGCATAGCCGGTTCAATTCGCGGACTAAGGCCATCATGAAGATTGCCATCGTTTGGGCAATATCAATAGGAGTTTCAGTTCCTATCCCTGTGATTGGACTGAGGGACGAAAGCAAAGTGTTCGTGAATAATACTACCTGCGTGCTCAATGACCCGAACTTCGTTCTCATCGGGTCCTTCGTGGCATTCTTCATCCCGTTGACAATTATGGTGATCACCTACTTCTTAACGATCTACGTCCTACGCCGTCAAGCTTTGAT"
+        curWord = role.getWord(sequence)
+        self.assertEqual(curWord.word, "")
+        self.assertTrue(curWord.discarded)
 
     def testGetWordKayla(self):
         role = WordRole("Kayla1", "AGATAC", 7, "TTAACCCTCACTAAAGGGATTCTCA", 0.9, 43, "GTGATAAGGTCAATGRGGAGATGTATATA", ['A', 'G'])
         sequence = "AGATACATTAACCCTCACTAAAGGGATTCTCAGGATGTCCTTCGTGATAAGGTCAATGAGGAGATGTATATAGAAAGGTTATTTGATCAATGGTACAACAGCTCCATGAACATCATCTGCACGTGGCTGACCCTATAGTGAGTCGTATTAAGATCGGAAGATCTCGTATGCCGTCTTCTGCTTGAAAAAAAAAAAAAAGAAAAAGAAGAATGGAATGAAGACAATGAAAAGAAAAAAAAAAATAGAATAGTTAATAGTACATTACGGCGGAGGATAAGAGTAAGAGTAGAATGAATAGAG"
         curWord = role.getWord(sequence)
-        self.assertEqual(curWord, "A")
+        self.assertEqual(curWord.word, "A")
+        self.assertFalse(curWord.discarded)
 
     def testGetWordHussain(self):
         role = WordRole("Hussain1", "AACCAT", 7, "TTAACCCTCACTAAAGGGAGCTGAT", 0.9, 200, "RTRCGTRRTCCTRTTGAGCATAGCCGGTTCAATTCGCGGACTAAGGCCATCATGAA", ['A', 'G'])
         sequence = "AACCATATTAACCCTCACTAAAGGGAGCTGATATGCTGGTGGGACTACTTGTCATGCCCCTGTCTCTGCTTGCAATTCTTTATGATTATGTCTGGCCTTTACCTAGATATTTGTGCCCCGTCTGGATTTCACTAGATGTGCTATTTTCAACTGCGTCCATCATGCACCTCTGCGCCATATCGCTGGACCGGTATGTAGCAGTGCGTAATCCTGTTGAGCATAGCCGGTTCAATTCGCGGACTAAGGCCATCATGAAGATTGCCATCGTTTGGGCAATATCAATAGGAGTTTCAGTTCCTA"
         curWord = role.getWord(sequence)
-        self.assertEqual(curWord, "GGAAG")
+        self.assertEqual(curWord.word, "GGAAG")
+        self.assertFalse(curWord.discarded)
