@@ -87,7 +87,6 @@ sub perform {
   my $transformTable            = get_option( $config, $section, "transform_table",              0 );
   my $exportSignificantGeneName = get_option( $config, $section, "export_significant_gene_name", 0 );
   my $cooksCutoff               = get_option( $config, $section, "cooksCutoff",                  'DEFAULT' );
-  my $maxCooksOutlierPercentage = get_option( $config, $section, "maxCooksOutlierPercentage",    0.2 );
 
   my $libraryFile = parse_param_file( $config, $section, "library_file", 0 );
   my $libraryKey;
@@ -229,22 +228,22 @@ sub perform {
   print $rf "
 rootdir<-\"$result_dir\"
 inputfile<-\"$designfilename\" 
-  
-showLabelInPCA<-$showLabelInPCA
-showDEGeneCluster<-$showDEGeneCluster
+
 pvalue<-$pvalue
+useRawPvalue<-$useRawPvalue
 foldChange<-$foldChange
 minMedianInGroup<-$minMedianInGroup
+  
+detectedInBothGroup<-$detectedInBothGroup
+showLabelInPCA<-$showLabelInPCA
+showDEGeneCluster<-$showDEGeneCluster
 addCountOne<-$addCountOne
 usePearsonInHCA<-$usePearsonInHCA
 top25only<-$top25only
-detectedInBothGroup<-$detectedInBothGroup
 performWilcox<-$performWilcox
-useRawPvalue<-$useRawPvalue
 textSize<-$textSize
 transformTable<-$transformTable
 exportSignificantGeneName<-$exportSignificantGeneName
-maxCooksOutlierPercentage<-$maxCooksOutlierPercentage
 ";
 
   if ( $cooksCutoff ne "DEFAULT" ) {

@@ -16,10 +16,7 @@ performWilcox<-0
 useRawPvalue<-1
 textSize<-9
 transformTable<-0
-cooksCutoff<-0.99
-maxCooksOutlierPercentage<-0.2
 exportSignificantGeneName<-1
-
 
 libraryFile<-"/scratch/cqs/shengq1/vickers/20170222_smallRNA_3018_61_human_v3/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/3018_61.Category.Table.csv"
 libraryKey<-"TotalReads"
