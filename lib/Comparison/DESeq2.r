@@ -40,9 +40,10 @@ if(minMedianInGroup > 0){
 
 if(useRawPvalue){
   alpha<-0.1
-  suffix=paste0(suffix, "_filterPvalue")
+  suffix=paste0(suffix, "_pvalue", pvalue)
 }else{
   alpha<-pvalue
+  suffix=paste0(suffix, "_fdr", pvalue)
 }
 
 zeroCount=0
