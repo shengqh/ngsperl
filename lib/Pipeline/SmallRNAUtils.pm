@@ -15,7 +15,7 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(getSmallRNADefinition getPrepareConfig isVersion3 addNonhostDatabase addPositionVis addNonhostVis)] );
+our %EXPORT_TAGS = ( 'all' => [qw(initializeSmallRNADefaultOptions getSmallRNADefinition getPrepareConfig isVersion3 addNonhostDatabase addPositionVis addNonhostVis)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -73,9 +73,9 @@ sub addNonhostDatabase {
   my $bowtie1Task      = "bowtie1_" . $taskKey;
   my $bowtie1CountTask = "bowtie1_" . $taskKey . "_count";
   my $bowtie1TableTask = "bowtie1_" . $taskKey . "_table";
-  
-  if(!defined $count_ref){
-    $count_ref = ["identical", ".dupcount\$"];
+
+  if ( !defined $count_ref ) {
+    $count_ref = [ "identical", ".dupcount\$" ];
   }
 
   addBowtie( $config, $def, $individual, $bowtie1Task, $parentDir, $bowtieIndex, $sourceRef, $def->{bowtie1_option_pm} );
@@ -175,11 +175,25 @@ sub addNonhostVis {
   push @$summary, $taskName;
 }
 
-sub initializeDefaultOptions {
+sub initializeSmallRNADefaultOptions {
   my $def = shift;
 
   initDefaultValue( $def, "cluster",    "slurm" );
   initDefaultValue( $def, "max_thread", 8 );
+
+  initDefaultValue( $def, "host_xml2bam",                    0 );
+  initDefaultValue( $def, "bacteria_group1_count2bam",       0 );
+  initDefaultValue( $def, "bacteria_group2_count2bam",       0 );
+  initDefaultValue( $def, "fungus_group4_count2bam",         0 );
+  initDefaultValue( $def, "host_bamplot",                    0 );
+  initDefaultValue( $def, "read_correlation",                0 );
+  initDefaultValue( $def, "perform_contig_analysis",         0 );
+  initDefaultValue( $def, "perform_annotate_unmapped_reads", 0 );
+  initDefaultValue( $def, "perform_nonhost_rRNA_coverage",   0 );
+  initDefaultValue( $def, "perform_nonhost_tRNA_coverage",   0 );
+  initDefaultValue( $def, "perform_host_rRNA_coverage",      0 );
+  initDefaultValue( $def, "search_combined_nonhost",         0 );
+  initDefaultValue( $def, "perform_report",                  0 );
 
   initDefaultValue( $def, "min_read_length",               16 );
   initDefaultValue( $def, "bowtie1_option_1mm",            "-a -m 100 --best --strata -v 1" );
@@ -203,13 +217,14 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "table_vis_group_text_size", 10 );
   initDefaultValue( $def, "sequencetask_run_time",     12 );
 
-  initDeseq2Options($def);
   initDefaultValue( $def, "DE_fold_change",              1.5 );
   initDefaultValue( $def, "DE_min_median_read_top",      2 );
   initDefaultValue( $def, "DE_min_median_read_smallRNA", 5 );
+  initDefaultValue( $def, "DE_pvalue",                   0.05 );
   initDefaultValue( $def, "DE_use_raw_pvalue",           1 );
+  initDefaultValue( $def, "DE_detected_in_both_group",   0 );
   initDefaultValue( $def, "DE_library_key",              "TotalReads" );
-  initDefaultValue( $def, "perform_contig_analysis", 0 );
+
   initDefaultValue( $def, "smallrnacount_option",    "" );
   initDefaultValue( $def, "hasYRNA",                 0 );
   initDefaultValue( $def, "nonhost_table_option",    "--outputReadTable" );
@@ -265,7 +280,7 @@ sub getSmallRNADefinition {
 
   my $def = merge( $userdef, $genome );
 
-  $def = initializeDefaultOptions($def);
+  $def = initializeSmallRNADefaultOptions($def);
 
   return $def;
 }
@@ -283,7 +298,7 @@ sub getPrepareConfig {
 
   $def->{subdir} = 1;
 
-  $def = initializeDefaultOptions($def);
+  $def = initializeSmallRNADefaultOptions($def);
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref ) = getPreprocessionConfig($def);
 

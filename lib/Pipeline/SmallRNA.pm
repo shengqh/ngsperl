@@ -23,41 +23,11 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.06';
 
-sub initializeDefaultOptions {
-  my $def = shift;
-
-  initDefaultValue( $def, "host_xml2bam",                    0 );
-  initDefaultValue( $def, "bacteria_group1_count2bam",       0 );
-  initDefaultValue( $def, "bacteria_group2_count2bam",       0 );
-  initDefaultValue( $def, "fungus_group4_count2bam",         0 );
-  initDefaultValue( $def, "host_bamplot",                    0 );
-  initDefaultValue( $def, "read_correlation",                0 );
-  initDefaultValue( $def, "perform_contig_analysis",         0 );
-  initDefaultValue( $def, "perform_annotate_unmapped_reads", 0 );
-  initDefaultValue( $def, "perform_nonhost_rRNA_coverage",   0 );
-  initDefaultValue( $def, "perform_nonhost_tRNA_coverage",   0 );
-  initDefaultValue( $def, "perform_host_rRNA_coverage",      0 );
-  initDefaultValue( $def, "search_combined_nonhost",         0 );
-  initDefaultValue( $def, "perform_report",                  1 );
-
-  initDefaultValue( $def, "DE_export_significant_gene_name", 0 );
-  initDefaultValue( $def, "DE_cooksCutoff",                  'FALSE' );
-  initDefaultValue( $def, "DE_pvalue",                       0.05 );
-  initDefaultValue( $def, "DE_use_raw_pvalue",               1 );
-  initDefaultValue( $def, "DE_fold_change",                  1.5 );
-  initDefaultValue( $def, "DE_min_median_read_top",          2 );
-  initDefaultValue( $def, "DE_min_median_read_smallRNA",     5 );
-  initDefaultValue( $def, "DE_detected_in_both_group",       0 );
-  initDefaultValue( $def, "DE_library_key",                  "TotalReads" );
-  initDefaultValue( $def, "DE_show_gene_cluster",            0 );
-  return $def;
-}
-
 sub getSmallRNAConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
 
-  initializeDefaultOptions($def);
+  initializeSmallRNADefaultOptions($def);
 
   my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
   my $task_name = $def->{task_name};
