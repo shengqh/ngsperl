@@ -1,17 +1,29 @@
-from difflib import SequenceMatcher
+from SequenceUtils import calcIdenticalRate, getMismatchIndex
 import unittest
+import collections
+import math
 
+BaseResult = collections.namedtuple('BaseResult', ['filled', 'discarded'])
+
+class BaseRoleCriteria:
+  def __init__(self, primerSequenceStart, primerSequence, primerSilimarRatio, identicalSequenceStart, identicalSequence, identicalSilimarRatio):
+    self.PrimerSequence = primerSequence
+    self.PrimerSequenceStart = primerSequenceStart
+    self.PrimerSequenceEnd = self.PrimerSequenceStart + len(self.PrimerSequence)
+    self.PrimerSimilarRatio = primerSilimarRatio
+    self.IdenticalSequence = identicalSequence
+    self.IdenticalSequenceStart = identicalSequenceStart
+    self.IdenticalSequenceEnd = self.IdenticalSequenceStart + len(self.IdenticalSequence)
+    self.IdenticalSilimarRatio = identicalSilimarRatio
+  
 class BaseRole:
-  def __init__(self, sampleName, barcode, primerSequenceStart, primerSequence, primerSilimarRatio, identicalStart, identicalSequence, maximumMismatch=1):
+  def __init__(self, sampleName, barcode, criteria):
     self.SampleName = sampleName
     self.Barcode = barcode
-    self.PrimerSequenceStart = primerSequenceStart
-    self.PrimerSequence = primerSequence
-    self.PrimerSimilarRatio = primerSilimarRatio
-    self.IdenticalStart = identicalStart
-    self.IdenticalSequence = identicalSequence
-    self.MaximumMismatch = maximumMismatch
+    self.Criteria = criteria
     self.BaseDict = {}
+    self.TotalRead = 0
+    self.DiscardRead = 0
   
   def addBaseToDict(self, idx, curBase):
     if idx not in self.BaseDict:
@@ -27,56 +39,61 @@ class BaseRole:
     curBarcode = sequence[0:len(self.Barcode)]
     
     if self.Barcode != curBarcode :
-      return(False)
+      return(BaseResult(False, False))
     
-    curPrimerSequence = sequence[self.PrimerSequenceStart:self.PrimerSequenceStart + len(self.PrimerSequence)]
-    similarRatio = SequenceMatcher(None, self.PrimerSequence, curPrimerSequence).ratio()
-    if similarRatio < self.PrimerSimilarRatio:
-      return(False)
+    curPrimerSequence = sequence[self.Criteria.PrimerSequenceStart:self.Criteria.PrimerSequenceEnd]
+    similarRatio = calcIdenticalRate(self.Criteria.PrimerSequence, curPrimerSequence)
+    if similarRatio < self.Criteria.PrimerSimilarRatio:
+      return(BaseResult(False, False))
     
-    curSequence = sequence[self.IdenticalStart:self.IdenticalStart + len(self.IdenticalSequence)]
-    mismatchedIndex = []
-    for idx in range(0, len(curSequence)):
-      if self.IdenticalSequence[idx] != curSequence[idx]:
-        mismatchedIndex.append(idx)
+    self.TotalRead = self.TotalRead + 1
     
-    if len(mismatchedIndex) > self.MaximumMismatch:
-      #print(sequence + "\n")
-      return(False)
+    curIdenticalSequence = sequence[self.Criteria.IdenticalSequenceStart:self.Criteria.IdenticalSequenceEnd]
+    mismatchIndex = getMismatchIndex(self.Criteria.IdenticalSequence, curIdenticalSequence)
+    minLength = min(len(curIdenticalSequence), len(self.Criteria.IdenticalSequence))
+    if 1 -(len(mismatchIndex) * 1.0 / minLength) < self.Criteria.IdenticalSilimarRatio:
+      self.DiscardRead = self.DiscardRead + 1
+      return(BaseResult(False, True))
     
-    if len(mismatchedIndex) == 0:  
-      for idx in range(0, min(len(curSequence), len(self.IdenticalSequence))):
-        curBase =curSequence[idx]
+    if len(mismatchIndex) == 0:  
+      for idx in range(0, min(len(curIdenticalSequence), len(self.Criteria.IdenticalSequence))):
+        curBase =curIdenticalSequence[idx]
         self.addBaseToDict(idx, curBase)
     else:
-      for misIndex in mismatchedIndex:
-        curBase =curSequence[misIndex]
+      for misIndex in mismatchIndex:
+        curBase =curIdenticalSequence[misIndex]
         self.addBaseToDict(misIndex, curBase)
     
-    return(True)
+    return(BaseResult(True, False))
         
 class TestBaseRole(unittest.TestCase):
     def testFillBaseDictKaylaNoMismatch(self):
-        role = BaseRole("Kayla1", "AGATAC", 7, "TTAACCCTCACTAAAGGGATTCTCA", 0.9, 43, "GTGATAAGGTCAATGAGGAGATGTATATAGA")
+        role = BaseRole("Kayla1", "AGATAC", BaseRoleCriteria(7, "TTAACCCTCACTAAAGGGATTCTCA", 0.9, 43, "GTGATAAGGTCAATGAGGAGATGTATATAGA", 0.9))
         sequence = "AGATACATTAACCCTCACTAAAGGGATTCTCAGGATGTCCTTCGTGATAAGGTCAATGAGGAGATGTATATAGAAAGGTTATTTGATCAATGGTACAACAGCTCCATGAACATCATCTGCACGTGGCTGACCCTATAGTGAGTCGTATTAAGATCGGAAGATCTCGTATGCCGTCTTCTGCTTGAAAAAAAAAAAAAAGAAAAAGAAGAATGGAATGAAGACAATGAAAAGAAAAAAAAAAATAGAATAGTTAATAGTACATTACGGCGGAGGATAAGAGTAAGAGTAGAATGAATAGAG"
-        self.assertTrue(role.fillBaseDict(sequence))
-        self.assertEqual(len(role.IdenticalSequence), len(role.BaseDict))
-        for idx in range(0, len(role.IdenticalSequence)):
+        self.assertTrue(role.fillBaseDict(sequence).filled)
+        self.assertEqual(len(role.Criteria.IdenticalSequence), len(role.BaseDict))
+        for idx in range(0, len(role.Criteria.IdenticalSequence)):
           self.assertEqual(1, len(role.BaseDict[idx]))
-          self.assertEqual(1, role.BaseDict[idx][role.IdenticalSequence[idx]])
+          self.assertEqual(1, role.BaseDict[idx][role.Criteria.IdenticalSequence[idx]])
         #print(role.BaseDict)
         
-    def testFillBaseDictKaylaOneMismatch(self):
-        role = BaseRole("Kayla1", "AGATAC", 7, "TTAACCCTCACTAAAGGGATTCTCA", 0.9, 43, "GTGATAAGGTCAATGAGGAGATGTATATAGA")
-        sequence = "AGATACATTAACCCTCACTAAAGGGATTCTCAGGATGTCCTTCaTGATAAGGTCAATGAGGAGATGTATATAGAAAGGTTATTTGATCAATGGTACAACAGCTCCATGAACATCATCTGCACGTGGCTGACCCTATAGTGAGTCGTATTAAGATCGGAAGATCTCGTATGCCGTCTTCTGCTTGAAAAAAAAAAAAAAGAAAAAGAAGAATGGAATGAAGACAATGAAAAGAAAAAAAAAAATAGAATAGTTAATAGTACATTACGGCGGAGGATAAGAGTAAGAGTAGAATGAATAGAG"
-        self.assertTrue(role.fillBaseDict(sequence))
-        self.assertEqual(1, len(role.BaseDict))
+    def testFillBaseDictKaylaThreeMismatch(self):
+        role = BaseRole("Kayla1", "AGATAC", BaseRoleCriteria(7, "TTAACCCTCACTAAAGGGATTCTCA", 0.9, 43, "GTGATAAGGTCAATGAGGAGATGTATATAGA", 0.9))
+        sequence = "AGATACATTAACCCTCACTAAAGGGATTCTCAGGATGTCCTTCactATAAGGTCAATGAGGAGATGTATATAGAAAGGTTATTTGATCAATGGTACAACAGCTCCATGAACATCATCTGCACGTGGCTGACCCTATAGTGAGTCGTATTAAGATCGGAAGATCTCGTATGCCGTCTTCTGCTTGAAAAAAAAAAAAAAGAAAAAGAAGAATGGAATGAAGACAATGAAAAGAAAAAAAAAAATAGAATAGTTAATAGTACATTACGGCGGAGGATAAGAGTAAGAGTAGAATGAATAGAG"
+        res = role.fillBaseDict(sequence)
+        self.assertTrue(res.filled)
+        self.assertFalse(res.discarded)
+        self.assertEqual(3, len(role.BaseDict))
         self.assertEqual(1, role.BaseDict[0]['a'])
+        self.assertEqual(1, role.BaseDict[1]['c'])
+        self.assertEqual(1, role.BaseDict[2]['t'])
         #print(role.BaseDict)
         
-    def testFillBaseDictKaylaTwoMismatch(self):
-        role = BaseRole("Kayla1", "AGATAC", 7, "TTAACCCTCACTAAAGGGATTCTCA", 0.9, 43, "GTGATAAGGTCAATGAGGAGATGTATATAGA")
-        sequence = "AGATACATTAACCCTCACTAAAGGGATTCTCAGGATGTCCTTCaTaATAAGGTCAATGAGGAGATGTATATAGAAAGGTTATTTGATCAATGGTACAACAGCTCCATGAACATCATCTGCACGTGGCTGACCCTATAGTGAGTCGTATTAAGATCGGAAGATCTCGTATGCCGTCTTCTGCTTGAAAAAAAAAAAAAAGAAAAAGAAGAATGGAATGAAGACAATGAAAAGAAAAAAAAAAATAGAATAGTTAATAGTACATTACGGCGGAGGATAAGAGTAAGAGTAGAATGAATAGAG"
-        self.assertFalse(role.fillBaseDict(sequence))
+    def testFillBaseDictKaylaFourMismatch(self):
+        role = BaseRole("Kayla1", "AGATAC", BaseRoleCriteria(7, "TTAACCCTCACTAAAGGGATTCTCA", 0.9, 43, "GTGATAAGGTCAATGAGGAGATGTATATAGA", 0.9))
+        sequence = "AGATACATTAACCCTCACTAAAGGGATTCTCAGGATGTCCTTCacacATAAGGTCAATGAGGAGATGTATATAGAAAGGTTATTTGATCAATGGTACAACAGCTCCATGAACATCATCTGCACGTGGCTGACCCTATAGTGAGTCGTATTAAGATCGGAAGATCTCGTATGCCGTCTTCTGCTTGAAAAAAAAAAAAAAGAAAAAGAAGAATGGAATGAAGACAATGAAAAGAAAAAAAAAAATAGAATAGTTAATAGTACATTACGGCGGAGGATAAGAGTAAGAGTAGAATGAATAGAG"
+        res = role.fillBaseDict(sequence)
+        self.assertFalse(res.filled)
+        self.assertTrue(res.discarded)
         self.assertEqual(0, len(role.BaseDict))
         #print(role.BaseDict)

@@ -1,20 +1,10 @@
-from difflib import SequenceMatcher
 import unittest
 import collections
+from SequenceUtils import calcIdenticalRate, getMismatchIndex
 
 Word = collections.namedtuple('Word', ['word', 'discarded'])
 
 class WordRole:
-#   def __init__(self):
-#     self.SampleName = ""
-#     self.Barcode = ""
-#     self.PrimerSequenceStart = ""
-#     self.PrimerSequence = ""
-#     self.PrimerSimilarRatio = 0.9
-#     self.IdenticalStart = 0
-#     self.IdenticalSequence = ""
-#     self.SiteAllows = []
-
   def __init__(self, sampleName, barcode, primerSequenceStart, primerSequence, primerSilimarRatio, identicalStart, identicalSequence, siteAllows):
     self.SampleName = sampleName
     self.Barcode = barcode
@@ -32,7 +22,7 @@ class WordRole:
       return(Word("", False))
     
     curPrimerSequence = sequence[self.PrimerSequenceStart:self.PrimerSequenceStart + len(self.PrimerSequence)]
-    similarRatio = SequenceMatcher(None, self.PrimerSequence, curPrimerSequence).ratio()
+    similarRatio = calcIdenticalRate(self.PrimerSequence, curPrimerSequence)
     if similarRatio < self.PrimerSimilarRatio:
       return(Word("", False))
     
