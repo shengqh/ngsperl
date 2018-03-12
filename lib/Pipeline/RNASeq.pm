@@ -654,7 +654,7 @@ sub getRNASeqConfig {
         push( @report_names, "deseq2_volcano_plot" );
       }
       for my $key ( keys %$pairs ) {
-        push( @report_files, "deseq2_genetable", $key . "_DESeq2_sig.csv" );
+        push( @report_files, "deseq2_genetable", $key . ".*_DESeq2_sig.csv" );
         push( @report_names, "deseq2_" . $key );
       }
 

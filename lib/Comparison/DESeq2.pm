@@ -27,7 +27,7 @@ sub new {
 }
 
 sub getSuffix {
-  my ( $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue ) = @_;
+  my ( $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue, $pvalue ) = @_;
   my $suffix = "";
   if ($top25only) {
     $suffix = $suffix . "_top25";
@@ -38,8 +38,11 @@ sub getSuffix {
   if ( $minMedianInGroup > 0 ) {
     $suffix = $suffix . "_min${minMedianInGroup}";
   }
-  if ( $useRawPvalue ) {
-    $suffix = $suffix . "_filterPvalue";
+  if ($useRawPvalue) {
+    $suffix = $suffix . "_pvalue" . $pvalue;
+  }
+  else {
+    $suffix = $suffix . "_fdr" . $pvalue;
   }
   return $suffix;
 }
@@ -94,7 +97,7 @@ sub perform {
     $libraryKey = get_option( $config, $section, "library_key", "TotalReads" );
   }
 
-  my $suffix = getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue );
+  my $suffix = getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue, $pvalue );
 
   my %tpgroups = ();
   for my $group_name ( sort keys %{$groups} ) {
@@ -297,8 +300,8 @@ sub result {
   my $performWilcox             = get_option( $config, $section, "perform_wilcox",               0 );
   my $exportSignificantGeneName = get_option( $config, $section, "export_significant_gene_name", 0 );
   my $useRawPvalue              = get_option( $config, $section, "use_raw_p_value",              0 );
-
-  my $suffix = getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue );
+  my $pvalue                    = get_option( $config, $section, "pvalue",                       0.05 );
+  my $suffix = getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue, $pvalue );
   my $result = {};
 
   if ( scalar( keys %$comparisons ) > 1 ) {
