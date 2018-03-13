@@ -39,10 +39,13 @@ xmlfiles = readDict(inputFile)
 
 with open(outputFile, "w") as sw:
   sw.write("File\tFeature\tStrand\tTotalCount\tPositionCount\tPosition\tPercentage\n")
-  
+
+  sampleFeatureMap = {}  
   for sampleName in sorted(xmlfiles.keys()):
     logger.info("processing %s" % (sampleName))
     xmlfile = xmlfiles[sampleName]
+    
+    sampleFeatureMap[sampleName] = {}
   
     tree = ET.parse(xmlfile)
     root = tree.getroot()
@@ -51,7 +54,7 @@ with open(outputFile, "w") as sw:
       feature = featureGroup.find('subject')
       featureName = feature.get("name")
       if featureName.startswith("rRNA:rRNADB_"):
-      #if featureName.startswith("rRNA:"):
+        sampleFeatureMap[sampleName][featureName] = True
         region = feature.find('region')
         depth = {}
         totalCount = 0
@@ -68,7 +71,13 @@ with open(outputFile, "w") as sw:
         
         for idx in sorted(depth.keys()):
           sw.write("%s\t%s\t*\t%d\t%d\t%d\t%.3f\n" % (sampleName, featureName, totalCount,depth[idx], idx, depth[idx] * 1.0 / totalCount ))
-
+  
+  featureNames = set([fname for sf in sampleFeatureMap.values() for fname in sf.keys()])
+  for sampleName in sorted(sampleFeatureMap.keys()):
+    for featureName in featureNames:
+      if featureName not in sampleFeatureMap[sampleName]:
+        sw.write("%s\t%s\t*\t0\t0\t0\t0\n" % (sampleName, featureName ))
+  
 dir_path = os.path.dirname(os.path.realpath(__file__))
 coverageR = dir_path + "/coverage.R"
 logger.info("Generate heatmap ...")
