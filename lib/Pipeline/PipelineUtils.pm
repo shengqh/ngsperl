@@ -17,7 +17,7 @@ our %EXPORT_TAGS = (
   'all' => [
     qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat
       getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn
-      getBatchGroups initDeseq2Options addHomerMotif addHomerAnnotation addEnhancer writeDesignTable addMultiQC
+      getBatchGroups addHomerMotif addHomerAnnotation addEnhancer writeDesignTable addMultiQC
       getNextFolderIndex addCleanBAM getReportDir)
   ]
 );
@@ -591,21 +591,6 @@ sub addCleanBAM {
     },
   };
   push @$individual, $task_name;
-}
-
-sub initDeseq2Options {
-  my $def = shift;
-  initDefaultValue( $def, "DE_show_gene_cluster",      1 );
-  initDefaultValue( $def, "DE_pvalue",                 0.05 );
-  initDefaultValue( $def, "DE_fold_change",            2 );
-  initDefaultValue( $def, "DE_add_count_one",          0 );
-  initDefaultValue( $def, "DE_min_median_read",        5 );
-  initDefaultValue( $def, "DE_top25only",              0 );
-  initDefaultValue( $def, "DE_detected_in_both_group", 1 );
-  initDefaultValue( $def, "DE_perform_wilcox",         0 );
-  initDefaultValue( $def, "DE_use_raw_pvalue",         0 );
-  initDefaultValue( $def, "DE_text_size",              10 );
-  return $def;
 }
 
 sub writeDesignTable {
