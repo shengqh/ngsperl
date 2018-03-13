@@ -191,7 +191,7 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "perform_annotate_unmapped_reads", 0 );
   initDefaultValue( $def, "perform_nonhost_rRNA_coverage",   0 );
   initDefaultValue( $def, "perform_nonhost_tRNA_coverage",   0 );
-  initDefaultValue( $def, "perform_host_rRNA_coverage",      0 );
+  initDefaultValue( $def, "perform_host_rRNA_coverage",      1 );
   initDefaultValue( $def, "search_combined_nonhost",         0 );
   initDefaultValue( $def, "perform_report",                  0 );
 
@@ -268,7 +268,7 @@ sub initializeSmallRNADefaultOptions {
     " --exportFastaNumber " . getValue( $def, "top_read_number" ) .                                             #fasta
     ( getValue( $def, "export_contig_details" ) ? " --exportContigDetails" : "" );                              #contig_detail
   initDefaultValue( $def, "sequence_count_option", $defaultSequenceCountOption );
-
+  
   #visualization
   initDefaultValue( $def, "use_least_groups", 0 );
 
