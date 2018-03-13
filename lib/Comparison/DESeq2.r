@@ -1048,3 +1048,5 @@ if (! is.null(resultAllOut)) {
   }  
 }
 
+#export session information
+writeLines(capture.output(sessionInfo()), paste0(inputfile,".DESeq2.SessionInfo.txt"))
