@@ -40,20 +40,30 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_gsea",          0 );
   initDefaultValue( $def, "perform_report",        0 );
 
-  initDefaultValue( $def, "aligner",                         "star" );
-  initDefaultValue( $def, "use_pearson_in_hca",              1 );
-  initDefaultValue( $def, "top25cv_in_hca",                  0 );
-  initDefaultValue( $def, "use_green_red_color_in_hca",      1 );
-  initDefaultValue( $def, "output_bam_to_same_folder",       1 );
-  initDefaultValue( $def, "max_thread",                      8 );
-  initDefaultValue( $def, "DE_export_significant_gene_name", 1 );
-  initDefaultValue( $def, "DE_min_median_read",              0 );
-  initDefaultValue( $def, "sequencetask_run_time",           '24' );
+  initDefaultValue( $def, "aligner",                    "star" );
+  initDefaultValue( $def, "use_pearson_in_hca",         1 );
+  initDefaultValue( $def, "top25cv_in_hca",             0 );
+  initDefaultValue( $def, "use_green_red_color_in_hca", 1 );
+  initDefaultValue( $def, "output_bam_to_same_folder",  1 );
+  initDefaultValue( $def, "max_thread",                 8 );
+  initDefaultValue( $def, "sequencetask_run_time",      '24' );
 
   initDefaultValue( $def, "perform_keggprofile",      0 );
   initDefaultValue( $def, "keggprofile_useRawPValue", 0 );
   initDefaultValue( $def, "pairend",                  1 );
 
+  initDefaultValue( $def, "DE_pvalue",                       0.05 );
+  initDefaultValue( $def, "DE_use_raw_pvalue",               0 );
+  initDefaultValue( $def, "DE_fold_change",                  2 );
+  initDefaultValue( $def, "DE_export_significant_gene_name", 1 );
+  initDefaultValue( $def, "DE_show_gene_cluster",            0 );
+  initDefaultValue( $def, "DE_add_count_one",                0 );
+  initDefaultValue( $def, "DE_top25only",                    0 );
+  initDefaultValue( $def, "DE_detected_in_both_group",       0 );
+  initDefaultValue( $def, "DE_perform_wilcox",               0 );
+  initDefaultValue( $def, "DE_text_size",                    10 );
+  initDefaultValue( $def, "DE_min_median_read",              0 );
+  
   return $def;
 }
 
