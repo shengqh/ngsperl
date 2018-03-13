@@ -180,6 +180,9 @@ if(hasWebGestaltAnalysis){
   enrichIndex<-enrichIndex+1
   enrich_files<-files[grepl("WebGestalt_", rownames(files)),]
   for (i in 1:nrow(enrich_files)){
+    if (!file.exists(enrich_files[i,1])) {
+      next;
+    }
     fdata<-fread(enrich_files[i,1], select=c(1,2,5,9), nrows=5, data.table=FALSE, col.names=c("ID", "Name", "#Gene", "FDR"))
     ename<-rownames(enrich_files)[i]
     if(grepl("_GO_", ename)){
