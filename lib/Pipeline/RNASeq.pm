@@ -40,6 +40,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_gsea",          0 );
   initDefaultValue( $def, "perform_report",        0 );
 
+  initDefaultValue( $def, "featureCount_option",        "-g gene_id -t exon" );
   initDefaultValue( $def, "aligner",                    "star" );
   initDefaultValue( $def, "use_pearson_in_hca",         1 );
   initDefaultValue( $def, "top25cv_in_hca",             0 );
@@ -63,7 +64,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "DE_perform_wilcox",               0 );
   initDefaultValue( $def, "DE_text_size",                    10 );
   initDefaultValue( $def, "DE_min_median_read",              0 );
-  
+
   return $def;
 }
 
@@ -131,7 +132,7 @@ sub getRNASeqConfig {
         genome_dir                => $aligner_index,
         output_sort_by_coordinate => 1,
         output_to_same_folder     => $def->{output_bam_to_same_folder},
-        featureCount_option       => "-g gene_id -t exon",
+        featureCount_option       => getValue( $def, "featureCount_option" ),
         gff_file                  => $transcript_gtf,
         ispairend                 => getValue( $def, "pairend" ),
         sh_direct                 => 0,
