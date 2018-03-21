@@ -49,6 +49,10 @@ sub perform {
   if ( defined $mapFile ) {
     $mapoption = "-m $mapFile";
   }
+  my $output_proteincoding_gene=get_option( $config, $section, "output_proteincoding_gene", 0 );
+  if ($output_proteincoding_gene eq '' && $mapFile ne "") {
+    $output_proteincoding_gene=1;
+  }
 
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
@@ -75,6 +79,10 @@ sub perform {
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file );
 
   print $pbs "mono $cqstools data_table $option -o $result_file -l $filelist $mapoption";
+  if ($output_proteincoding_gene) {
+    my $result_file_proteincoding = $self->get_file( ".", $task_name, ".proteincoding.count", 0 );
+    print $pbs "grep protein_coding $result_file > $result_file_proteincoding";
+  }
 
   $self->close_pbs( $pbs, $pbs_file );
 }
