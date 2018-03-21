@@ -27,18 +27,19 @@ sub initializeDefaultOptions {
 
   fix_task_name($def);
 
-  initDefaultValue( $def, "perform_preprocessing", 1 );
-  initDefaultValue( $def, "perform_mapping",       1 );
-  initDefaultValue( $def, "perform_counting",      1 );
-  initDefaultValue( $def, "perform_correlation",   1 );
-  initDefaultValue( $def, "perform_rnaseqc",       0 );
-  initDefaultValue( $def, "perform_qc3bam",        0 );
-  initDefaultValue( $def, "perform_bamplot",       0 );
-  initDefaultValue( $def, "perform_call_variants", 0 );
-  initDefaultValue( $def, "perform_multiqc",       1 );
-  initDefaultValue( $def, "perform_webgestalt",    0 );
-  initDefaultValue( $def, "perform_gsea",          0 );
-  initDefaultValue( $def, "perform_report",        0 );
+  initDefaultValue( $def, "perform_preprocessing",         1 );
+  initDefaultValue( $def, "perform_mapping",               1 );
+  initDefaultValue( $def, "perform_counting",              1 );
+  initDefaultValue( $def, "perform_correlation",           1 );
+  initDefaultValue( $def, "perform_rnaseqc",               0 );
+  initDefaultValue( $def, "perform_qc3bam",                0 );
+  initDefaultValue( $def, "perform_bamplot",               0 );
+  initDefaultValue( $def, "perform_call_variants",         0 );
+  initDefaultValue( $def, "perform_multiqc",               1 );
+  initDefaultValue( $def, "perform_webgestalt",            0 );
+  initDefaultValue( $def, "perform_gsea",                  0 );
+  initDefaultValue( $def, "perform_report",                0 );
+  initDefaultValue( $def, "perform_DE_proteincoding_gene", 0 );
 
   initDefaultValue( $def, "featureCount_option",        "-g gene_id -t exon" );
   initDefaultValue( $def, "aligner",                    "star" );
@@ -338,6 +339,11 @@ sub getRNASeqConfig {
   if ( defined $def->{pairs} ) {
     my $deseq2taskname = addDEseq2( $config, $def, $summary, "genetable", $count_file_ref, $def->{target_dir}, $def->{DE_min_median_read} );
 
+    my $deseq2ProteincodingTaskName;
+    if ( $def->{perform_DE_proteincoding_gene} ) {
+      $deseq2ProteincodingTaskName = addDEseq2( $config, $def, $summary, "proteincoding_genetable", [ "genetable", ".proteincoding.count\$" ], $def->{target_dir}, $def->{DE_min_median_read} );
+    }
+
     if ( getValue( $def, "perform_webgestalt" ) ) {
       my $webgestaltTaskName = $deseq2taskname . "_WebGestalt";
       $config->{$webgestaltTaskName} = {
@@ -358,6 +364,28 @@ sub getRNASeqConfig {
         },
       };
       push @$summary, "$webgestaltTaskName";
+
+      if ( $def->{perform_DE_proteincoding_gene} ) {
+        my $webgestaltTaskName = $deseq2ProteincodingTaskName . "_WebGestalt";
+        $config->{$webgestaltTaskName} = {
+          class            => "Annotation::WebGestaltR",
+          perform          => 1,
+          target_dir       => $target_dir . "/" . getNextFolderIndex($def) . $webgestaltTaskName,
+          option           => "",
+          source_ref       => [ $deseq2ProteincodingTaskName, "sig_genename.txt\$" ],
+          organism         => getValue( $def, "webgestalt_organism" ),
+          interestGeneType => $def->{interestGeneType},
+          referenceSet     => $def->{referenceSet},
+          sh_direct        => 1,
+          pbs              => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=1",
+            "walltime" => "72",
+            "mem"      => "10gb"
+          },
+        };
+        push @$summary, "$webgestaltTaskName";
+      }
     }
 
     if ( getValue( $def, "perform_gsea" ) ) {
