@@ -96,6 +96,30 @@ corTestVectorWithoutZero <- function(x, y, method="spearman") {
   cor.test(ccx, ccy, method=method)
 }
 
+corTestTableWithoutZero<-function(x, method ="spearman")
+{
+  if (is.data.frame(x))
+    x <- as.matrix(x)
+  if (!(is.numeric(x) || is.logical(x)))
+    stop("'x' must be numeric")
+  stopifnot(is.atomic(x))
+  ncx <- ncol(x)
+  if (ncx == 0)
+    stop("'x' is empty")
+
+  cnames<-colnames(x)
+  result<-NULL
+  for (i in c(1:(ncx-1))) {
+    for (j in c((i+1):ncx)) {
+      x2 <- x[, i]
+      y2 <- x[, j]
+      cc <- corTestVectorWithoutZero(x2, y2, method=method)
+      result <- rbind(result, data.frame("Samples" = paste0(cnames[i], " ~ ", cnames[j]), "rho" = cc$estimate, "pvalue" = cc$p.value))
+    }
+  }
+  return(result)
+}
+
 corVectorWithoutZero <- function(x, y, method="spearman") {
   sumxy<-!is.na(x) & !is.na(y) & (x != 0) & (y != 0)
   ccx<-x[sumxy]
