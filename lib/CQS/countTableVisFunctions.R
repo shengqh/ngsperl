@@ -90,7 +90,7 @@ getSampleInGroup<-function(groupDefineFile, samples, comparisonDefineFile="", co
 ###############################################################################
 
 corTestVectorWithoutZero <- function(x, y, method="spearman") {
-  sumxy<-!is.na(x) & !is.na(y) & (x != 0) & (y != 0)
+  sumxy<-!is.na(x) & !is.na(y) & ((x != 0) | (y != 0))
   ccx<-x[sumxy]
   ccy<-y[sumxy]
   cor.test(ccx, ccy, method=method)
@@ -121,7 +121,7 @@ corTestTableWithoutZero<-function(x, method ="spearman")
 }
 
 corVectorWithoutZero <- function(x, y, method="spearman") {
-  sumxy<-!is.na(x) & !is.na(y) & (x != 0) & (y != 0)
+  sumxy<-!is.na(x) & !is.na(y) & ((x != 0) | (y != 0))
   ccx<-x[sumxy]
   ccy<-y[sumxy]
   cor(ccx, ccy, method=method)
