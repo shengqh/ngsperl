@@ -154,13 +154,18 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
     }else{
       gsColors = conditionColors;
     }
+	if (genecount<=30) {
+		labRow=row.names(rldselect)
+	} else {
+		labRow=NA
+	}
     if(usePearsonInHCA){
       heatmap3(rldselect, 
                col = hmcols, 
                ColSideColors = gsColors, 
                margins=c(12,5), 
                scale="r", 
-               labRow=NA,
+               labRow=labRow,
                showRowDendro=showRowDendro,
                main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
                cexCol=cexCol, 
@@ -173,7 +178,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
                margins=c(12,5), 
                scale="r", 
                distfun=dist, 
-               labRow=NA,
+               labRow=labRow,
                showRowDendro=showRowDendro,
                main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
                cexCol=cexCol, 
