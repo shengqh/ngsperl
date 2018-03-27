@@ -156,14 +156,16 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
     }
 	if (genecount<=30) {
 		labRow=row.names(rldselect)
+		margins=c(12,8)
 	} else {
 		labRow=NA
+		margins=c(12,5)
 	}
     if(usePearsonInHCA){
       heatmap3(rldselect, 
                col = hmcols, 
                ColSideColors = gsColors, 
-               margins=c(12,5), 
+               margins=margins, 
                scale="r", 
                labRow=labRow,
                showRowDendro=showRowDendro,
@@ -175,7 +177,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
       heatmap3(rldselect, 
                col = hmcols, 
                ColSideColors = gsColors, 
-               margins=c(12,5), 
+               margins=margins, 
                scale="r", 
                distfun=dist, 
                labRow=labRow,
