@@ -167,6 +167,7 @@ sub getRNASeqConfig {
         option        => "-k 0 -v 6 -e --fillMissingWithZero",
         source_ref    => [ "star_featurecount", ".count\$" ],
         name_map_file => $name_map_file,
+        output_proteincoding_gene=>$def->{perform_DE_proteincoding_gene},
         cqs_tools     => $cqstools,
         sh_direct     => 1,
         pbs           => {
