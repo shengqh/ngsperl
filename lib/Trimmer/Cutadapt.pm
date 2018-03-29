@@ -97,30 +97,34 @@ sub perform {
   my $ispairend = get_is_paired( $config, $section );
 
   my $adapter_option = "";
-  if ( defined $curSection->{adapter} && length( $curSection->{adapter} ) > 0 ) {
-    if ($ispairend) {
-      $adapter_option = " -a " . $curSection->{adapter} . " -A " . $curSection->{adapter};
+  if ( $option !~ /-a/ ) {
+    if ( defined $curSection->{adapter} && length( $curSection->{adapter} ) > 0 ) {
+      if ($ispairend) {
+        $adapter_option = " -a " . $curSection->{adapter} . " -A " . $curSection->{adapter};
+      }
+      else {
+        $adapter_option = " -a " . $curSection->{adapter};
+      }
     }
-    else {
-      $adapter_option = " -a " . $curSection->{adapter};
+
+    if ( defined $curSection->{adapter_3} && length( $curSection->{adapter_3} ) > 0 ) {
+      if ($ispairend) {
+        $adapter_option = " -a " . $curSection->{adapter_3} . " -A " . $curSection->{adapter_3};
+      }
+      else {
+        $adapter_option = " -a " . $curSection->{adapter_3};
+      }
     }
   }
 
-  if ( defined $curSection->{adapter_3} && length( $curSection->{adapter_3} ) > 0 ) {
-    if ($ispairend) {
-      $adapter_option = " -a " . $curSection->{adapter_3} . " -A " . $curSection->{adapter_3};
-    }
-    else {
-      $adapter_option = " -a " . $curSection->{adapter_3};
-    }
-  }
-
-  if ( defined $curSection->{adapter_5} && length( $curSection->{adapter_5} ) > 0 ) {
-    if ($ispairend) {
-      $adapter_option = $adapter_option . " -g " . $curSection->{adapter_5} . " -G " . $curSection->{adapter_5};
-    }
-    else {
-      $adapter_option = $adapter_option . " -g " . $curSection->{adapter_5};
+  if ( $option !~ /-g/ ) {
+    if ( defined $curSection->{adapter_5} && length( $curSection->{adapter_5} ) > 0 ) {
+      if ($ispairend) {
+        $adapter_option = $adapter_option . " -g " . $curSection->{adapter_5} . " -G " . $curSection->{adapter_5};
+      }
+      else {
+        $adapter_option = $adapter_option . " -g " . $curSection->{adapter_5};
+      }
     }
   }
 
