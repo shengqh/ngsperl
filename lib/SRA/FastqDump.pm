@@ -49,9 +49,8 @@ sub getSraFiles {
     }
   }
   else {
-    my $res;
     if ( defined $config->{$section}{"source"} ) {
-      $res = $config->{$section}{"source"};
+      my $res = $config->{$section}{"source"};
       if ( ref($res) eq 'ARRAY' ) {
         for my $gsm (@$res) {
           $result->{$gsm} = [$gsm];
@@ -62,7 +61,16 @@ sub getSraFiles {
       }
     }
     else {
-      $result = get_raw_files( $config, $section );
+      my $fileSection = $config->{$section}{"source_ref"}[0];
+      my $files = $config->{$fileSection};
+      if ( ref($files) eq 'ARRAY' ) {
+        for my $gsm (@$files) {
+          $result->{$gsm} = [$gsm];
+        }
+      }
+      else {
+        $result = get_raw_files( $config, $section );
+      }
     }
   }
   return $result;
