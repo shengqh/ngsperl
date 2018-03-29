@@ -40,6 +40,8 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_gsea",                  0 );
   initDefaultValue( $def, "perform_report",                0 );
   initDefaultValue( $def, "perform_DE_proteincoding_gene", 0 );
+  
+  initDefaultValue( $def, "perform_cutadapt", 0 );
 
   initDefaultValue( $def, "featureCount_option",        "-g gene_id -t exon" );
   initDefaultValue( $def, "aligner",                    "star" );
