@@ -66,6 +66,8 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %step_map = %{ get_raw_files( $config, $section ) };
+  
+  my $task_shell = get_option($config, $section, "task_shell", "bash");
 
   #print Dumper(\%step_map);
 
@@ -222,11 +224,11 @@ sub perform {
           my $samplepbs = $pbs_map->{$sample};
           if ( ref($samplepbs) eq 'ARRAY' ) {
             for my $subpbs ( @{$samplepbs} ) {
-              print $pbs "bash " . $subpbs . "\n";
+              print $pbs "$task_shell " . $subpbs . "\n";
             }
           }
           else {
-            print $pbs "bash " . $samplepbs . "\n";
+            print $pbs "$task_shell " . $samplepbs . "\n";
           }
         }
       }
