@@ -43,7 +43,7 @@ sub perform {
   }
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
-  my $output_ext            = get_option( $config, $section, "output_ext", 0 );
+  my $output_ext            = get_option( $config, $section, "output_ext", "" );
   my $first_file_only       = get_option( $config, $section, "first_file_only", 0 );
   my $output_arg            = get_option( $config, $section, "output_arg", "" );
 
@@ -61,7 +61,7 @@ sub perform {
 
   for my $sample_name ( sort keys %$parameterSampleFile1 ) {
     my $pfiles1 = $parameterSampleFile1->{$sample_name};
-    my $idxend = $first_file_only ? 0 : (scalar(@$pfiles1) - 1);
+    my $idxend = $first_file_only ? 0 : ( scalar(@$pfiles1) - 1 );
 
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
@@ -77,7 +77,7 @@ sub perform {
 
     for my $i ( 0 .. $idxend ) {
       my $pfile1 = $pfiles1->[$i];
-      my $final_file = $first_file_only ? $sample_name . $output_ext : basename($pfile1) . $output_ext;
+      my $final_file = ($first_file_only or (1 == scalar(@$pfiles1))) ? $sample_name . $output_ext : basename($pfile1) . $output_ext;
 
       my $curOption = "";
       if ( defined $parameterSampleFile2->{$sample_name} ) {
@@ -129,7 +129,7 @@ sub result {
   my $result = {};
   for my $sample_name ( sort keys %$parameterSampleFile1 ) {
     my $pfiles1 = $parameterSampleFile1->{$sample_name};
-    my $idxend = $first_file_only ? 0 : (scalar(@$pfiles1) - 1);
+    my $idxend = $first_file_only ? 0 : ( scalar(@$pfiles1) - 1 );
 
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
