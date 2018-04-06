@@ -4,6 +4,17 @@ from SequenceUtils import calcIdenticalRate, getMismatchIndex
 
 Word = collections.namedtuple('Word', ['word', 'discarded'])
 
+class WordRoleCriteria:
+  def __init__(self, primerSequenceStart, primerSequence, primerSilimarRatio, identicalSequenceStart, identicalSequence, siteAllows):
+    self.PrimerSequence = primerSequence
+    self.PrimerSequenceStart = primerSequenceStart
+    self.PrimerSequenceEnd = self.PrimerSequenceStart + len(self.PrimerSequence)
+    self.PrimerSimilarRatio = primerSilimarRatio
+    self.IdenticalSequence = identicalSequence
+    self.IdenticalSequenceStart = identicalSequenceStart
+    self.IdenticalSequenceEnd = self.IdenticalSequenceStart + len(self.IdenticalSequence)
+    self.SiteAllows = siteAllows
+
 class WordRole:
   def __init__(self, sampleName, barcode, primerSequenceStart, primerSequence, primerSilimarRatio, identicalStart, identicalSequence, siteAllows):
     self.SampleName = sampleName
