@@ -26,7 +26,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $raw_files = get_raw_files( $config, $section );
+  my $raw_files = get_raw_files( $config, $section, undef, undef, 1 );
   my $organism         = get_option( $config, $section, "organism" );
   my $interestGeneType = get_option( $config, $section, "interestGeneType", "genesymbol" );
   my $referenceSet     = get_option( $config, $section, "referenceSet", "genome" );
@@ -75,8 +75,8 @@ rm */*.tar.gz
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
-  my $raw_files = get_raw_files( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 1 );
+  my $raw_files = get_raw_files( $config, $section, undef, undef, 1 );
 
   my $result       = {};
   for my $sample_name ( sort keys %$raw_files ) {
@@ -91,7 +91,7 @@ sub result {
     push( @result_files, "$cur_dir/Project_${sample_name}_geneontology_Cellular_Component" );
     push( @result_files, "$cur_dir/Project_${sample_name}_geneontology_Molecular_Function" );
     push( @result_files, "$cur_dir/Project_${sample_name}_pathway_KEGG" );
-    $result->{$sample_name} = filter_array( \@result_files, $pattern );
+    $result->{$sample_name} = filter_array( \@result_files, $pattern, 1 );
   }
   return $result;
 }
