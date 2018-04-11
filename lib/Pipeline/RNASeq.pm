@@ -688,7 +688,7 @@ sub getRNASeqConfig {
       my $pairs = $config->{pairs};
 
       if ( scalar( keys %$pairs ) > 1 ) {
-        push( @report_files, "deseq2_genetable", $taskName . ".*_DESeq2_volcanoPlot.png" );
+        push( @report_files, "deseq2_genetable", $taskName . ".define_DESeq2_volcanoPlot.png" );
         push( @report_names, "deseq2_volcano_plot" );
       }
       else {
