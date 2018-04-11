@@ -226,9 +226,9 @@ sub addDEseq2 {
     pbs                          => {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
-      "nodes"     => "1:ppn=1",
+      "nodes"     => "1:ppn=". $def->{max_thread},
       "walltime"  => "10",
-      "mem"       => "10gb"
+      "mem"       => "20gb"
     },
   };
 

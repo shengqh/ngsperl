@@ -50,7 +50,7 @@ sub getSuffix {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
 
   my $comparisons = get_raw_files( $config, $section );
   my @comparison_names = keys %{$comparisons};
@@ -247,6 +247,7 @@ performWilcox<-$performWilcox
 textSize<-$textSize
 transformTable<-$transformTable
 exportSignificantGeneName<-$exportSignificantGeneName
+thread<-$thread
 ";
 
   if ( $cooksCutoff ne "DEFAULT" ) {
@@ -305,7 +306,7 @@ sub result {
   my $result = {};
 
   if ( scalar( keys %$comparisons ) > 1 ) {
-    my $filtered = filter_array( [ $result_dir . "/${task_name}.define_DESeq2_volcanoPlot.png" ], $pattern, $removeEmpty );
+    my $filtered = filter_array( [ $result_dir . "/${task_name}.define_DESeq2_volcanoPlot.png" ], $pattern, 1 );
     if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
       $result->{$task_name} = $filtered;
     }

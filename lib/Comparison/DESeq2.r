@@ -17,6 +17,7 @@ useRawPvalue<-1
 textSize<-9
 transformTable<-0
 exportSignificantGeneName<-1
+thread<-8
 
 libraryFile<-"/scratch/cqs/shengq1/vickers/20170222_smallRNA_3018_61_human_v3/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/3018_61.Category.Table.csv"
 libraryKey<-"TotalReads"
@@ -66,6 +67,10 @@ if(exists("libraryFile")){
   cat("Using ", libraryKey, " in " , libraryFile , " as library size. \n")
 }
 
+if(!exists("thread")){
+  thread<-1
+}
+
 library("DESeq2")
 library("heatmap3")
 library("lattice")
@@ -77,6 +82,7 @@ library("reshape2")
 library("VennDiagram")
 library("RColorBrewer")
 library("preprocessCore")
+library("BiocParallel")
 
 setwd(rootdir)  
 comparisons_data<-read.table(inputfile, header=T, check.names=F , sep="\t", stringsAsFactors = F)
@@ -587,23 +593,27 @@ for(countfile_index in c(1:length(countfiles))){
     
     dds<-myEstimateSizeFactors(dds)
     
-    ddsres<-try(dds <- DESeq(dds,fitType=fitType))
+    bpparam<-MulticoreParam(thread)
+    parallel<-ifelse(thread <= 1, FALSE, TRUE)
+    
+    ddsres<-try(dds <- DESeq(dds,fitType=fitType, parallel=parallel, BPPARAM=bpparam))
+    
     if(class(ddsres) == "try-error"){
       if( grepl("One can instead use the gene-wise estimates as final estimates", ddsres[1])){
         dds <- estimateDispersionsGeneEst(dds)
         dispersions(dds) <- mcols(dds)$dispGeneEst
         dds<-nbinomWaldTest(dds)
       }else if(grepl("newsplit: out of vertex space", ddsres[1])){
-        dds <- DESeq(dds,fitType="mean")
+        dds <- DESeq(dds,fitType="mean", parallel=parallel, BPPARAM=bpparam)
       }else{
         stop(paste0("DESeq2 failed: ", ddsres[1]))
       }
     }
     
     if(!exists("cooksCutoff")){
-      res<-results(dds, alpha=alpha)
+      res<-results(dds, alpha=alpha, parallel=parallel, BPPARAM=bpparam)
     }else{
-      res<-results(dds, cooksCutoff=cooksCutoff, alpha=alpha)
+      res<-results(dds, cooksCutoff=cooksCutoff, alpha=alpha, parallel=parallel, BPPARAM=bpparam)
     }
 
     cat("DESeq2 finished.\n")
