@@ -52,7 +52,7 @@ sub perform {
     print $pbs "samtools view $bam_file | grep \"NM:i:0\" | cut -f1 > $nameFile
 
 if [ -s ${bam_file}.max.txt ]; then
-  grep '\@' ${bam_file}.max.txt >> $nameFile
+  grep '\@' ${bam_file}.max.txt | sed -e 's/\@//g' >> $nameFile
 fi    
 ";
     $self->close_pbs( $pbs, $pbs_file );
