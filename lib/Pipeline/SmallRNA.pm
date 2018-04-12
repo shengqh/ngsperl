@@ -714,13 +714,22 @@ sub getSmallRNAConfig {
     }
 
     if ( $search_nonhost_database or $blast_unmapped_reads ) {
+      my $readClass;
+      my $readTask;
+      if ($def->{host_remove_all_mapped_reads}){
+        $readClass = "Samtools::MappedReadNames";
+        $readTask = "bowtie1_genome_1mm_NTA_read_names";
+      }else{
+        $readClass = "Samtools::PerfectMappedReadNames";
+        $readTask = "bowtie1_genome_1mm_NTA_pmnames";
+      }
       my $unmapped_reads = {
 
-        #perfect matched reads with host genome
-        bowtie1_genome_1mm_NTA_pmnames => {
-          class      => "Samtools::PerfectMappedReadNames",
+        #matched reads with host genome
+        $readTask => {
+          class      => $readClass,
           perform    => 1,
-          target_dir => $host_genome_dir . "/bowtie1_genome_1mm_NTA_pmnames",
+          target_dir => $host_genome_dir . "/" . $readTask,
           option     => "",
           source_ref => "bowtie1_genome_1mm_NTA",
           sh_direct  => 1,
@@ -741,7 +750,7 @@ sub getSmallRNAConfig {
           perlFile    => "unmappedReadsToFastq.pl",
           source_ref  => $identical_ref,
           source2_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
-          source3_ref => ["bowtie1_genome_1mm_NTA_pmnames"],
+          source3_ref => [$readTask],
           output_ext  => "_clipped_identical.unmapped.fastq.gz",
           output_other_ext =>
 "_clipped_identical.unmapped.fastq.dupcount,_clipped_identical.mappedToHostGenome.fastq.gz,_clipped_identical.mappedToHostGenome.fastq.dupcount,_clipped_identical.short.fastq.gz,_clipped_identical.short.fastq.dupcount,_clipped_identical.unmapped.fastq.gz.info",
@@ -777,7 +786,7 @@ sub getSmallRNAConfig {
       push( @files_for_annotate_unmapped, "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount\$" );
       push( @names_for_annotate_unmapped, "host_genome" );
 
-      push @$individual_ref, ( "bowtie1_genome_1mm_NTA_pmnames", "bowtie1_genome_unmapped_reads" );
+      push @$individual_ref, ( $readTask, "bowtie1_genome_unmapped_reads" );
       push @$summary_ref, ("bowtie1_genome_host_reads_table");
       push @table_for_pieSummary,
         ( "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount", "bowtie1_genome_unmapped_reads", ".short.fastq.dupcount", "bowtie1_genome_unmapped_reads",
@@ -847,7 +856,7 @@ sub getSmallRNAConfig {
         $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{"${nonhostGroup}_species_map"},    #table option
         $identical_count_ref
       );
-
+      
       addNonhostVis(
         $config, $def,
         $summary_ref,
