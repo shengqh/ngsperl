@@ -118,6 +118,37 @@ sub addNonhostDatabase {
   };
   push @$individual, $bowtie1CountTask;
   push @$summary,    $bowtie1TableTask;
+
+  if ( $def->{perform_nonhost_mappedToHost} ) {
+    my $bowtie1readTask = "bowtie1_" . $taskKey . "_mappedreads";
+    $config->{$bowtie1readTask} = {
+      class                    => "CQS::ProgramIndividualWrapper",
+      perform                  => 1,
+      target_dir               => "${parentDir}/$bowtie1readTask",
+      option                   => "",
+      interpretor              => "python",
+      program                  => "../SmallRNA/nonhostXmlToFastq.py",
+      source_arg               => "-i",
+      source_ref               => [ $bowtie1CountTask, ".count.mapped.xml" ],
+      parameterSampleFile2_arg => "-f",
+      parameterSampleFile2_ref => $sourceRef,
+      output_to_same_folder    => 1,
+      output_arg               => "-o",
+      output_ext               => ".fastq.gz",
+      sh_direct                => 1,
+      pbs                      => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    };
+    push @$individual, $bowtie1readTask;
+    
+    my $bowtie1readMapTask = "bowtie1_" . $taskKey . "_mappedreads_host";
+    addBowtie( $config, $def, $individual, $bowtie1readMapTask, $parentDir, $def->{bowtie1_index}, [$bowtie1readTask], $def->{bowtie1_option_2mm} );
+  }
 }
 
 sub addPositionVis {
@@ -196,8 +227,9 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "perform_report",                  0 );
 
   initDefaultValue( $def, "min_read_length",               16 );
-  initDefaultValue( $def, "bowtie1_option_1mm",            "-a -m 100 --best --strata -v 1" );
-  initDefaultValue( $def, "bowtie1_option_pm",             "-a -m 1000 --best --strata -v 0" );
+  initDefaultValue( $def, "bowtie1_option_2mm",            "-a --best --strata -v 2" );
+  initDefaultValue( $def, "bowtie1_option_1mm",            "-a --best -m 100 --strata -v 1" );
+  initDefaultValue( $def, "bowtie1_option_pm",             "-a --best -m 1000 --strata -v 0" );
   initDefaultValue( $def, "bowtie1_output_to_same_folder", 1 );
   initDefaultValue( $def, "fastq_remove_N",                1 );
 
@@ -225,17 +257,18 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "DE_detected_in_both_group",   0 );
   initDefaultValue( $def, "DE_library_key",              "TotalReads" );
 
-  initDefaultValue( $def, "smallrnacount_option",    "" );
-  initDefaultValue( $def, "hasYRNA",                 0 );
-  initDefaultValue( $def, "nonhost_table_option",    "--outputReadTable" );
+  initDefaultValue( $def, "smallrnacount_option", "" );
+  initDefaultValue( $def, "hasYRNA",              0 );
+  initDefaultValue( $def, "nonhost_table_option", "--outputReadTable" );
 
   initDefaultValue( $def, "consider_miRNA_NTA", 1 );
 
   #search database
-  initDefaultValue( $def, "search_not_identical",   1 );
-  initDefaultValue( $def, "search_host_genome",     1 );
-  initDefaultValue( $def, "search_nonhost_genome",  1 );
-  initDefaultValue( $def, "search_nonhost_library", 1 );
+  initDefaultValue( $def, "search_not_identical",         1 );
+  initDefaultValue( $def, "search_host_genome",           1 );
+  initDefaultValue( $def, "host_remove_all_mapped_reads", 0 );
+  initDefaultValue( $def, "search_nonhost_genome",        1 );
+  initDefaultValue( $def, "search_nonhost_library",       1 );
 
   #blastn
   initDefaultValue( $def, "blast_top_reads",      0 );
@@ -268,9 +301,11 @@ sub initializeSmallRNADefaultOptions {
     " --exportFastaNumber " . getValue( $def, "top_read_number" ) .                                             #fasta
     ( getValue( $def, "export_contig_details" ) ? " --exportContigDetails" : "" );                              #contig_detail
   initDefaultValue( $def, "sequence_count_option", $defaultSequenceCountOption );
-  
+
   #visualization
   initDefaultValue( $def, "use_least_groups", 0 );
+
+  initDefaultValue( $def, "perform_nonhost_mappedToHost", 0 );
 
   return $def;
 }
