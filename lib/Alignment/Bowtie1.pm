@@ -66,34 +66,16 @@ sub perform {
       $mappedonlyoption = "-F 4";
     }
 
+    my $bam_file = $sample_name . ".bam";
+    my $final_file = ( $output_sort_by_coordinate && $mark_duplicates ) ? $sample_name . ".rmdup.bam" : $bam_file;
+
+    my $m_option = ($option =~ /\-m/)? "--max ${final_file}.max.txt":""; 
+
     my $indent = "";
     my $tag    = "--sam-RG ID:$sample_name --sam-RG LB:$sample_name --sam-RG SM:$sample_name --sam-RG PL:ILLUMINA --sam-RG PU:$sample_name";
 
-    my $bowtie1_aln_command;
-    if ( $sample_files[0] =~ /.gz$/ ) {
-      if ( scalar(@sample_files) == 1 ) {
-        $bowtie1_aln_command = "zcat $sample_files[0] | bowtie $option -S $tag $bowtie1_index - $bowtiesam 2>$alignlog";
-      }
-      else {
-        my $f1 = $sample_files[0];
-        my $f2 = $sample_files[1];
-
-        $bowtie1_aln_command = "mkfifo ${f1}.fifo
-  zcat $f1 > ${f1}.fifo &
-
-  mkfifo ${f2}.fifo
-  zcat $f2 > ${f2}.fifo &
-        
-  bowtie $option -S $tag $bowtie1_index ${f1}.fifo,${f2}.fifo $bowtiesam 2>$alignlog
- 
-  rm ${f1}.fifo
-  rm ${f2}.fifo";
-      }
-    }
-    else {
-      my $fastqs = join( ',', @sample_files );
-      $bowtie1_aln_command = "bowtie $option -S $tag $bowtie1_index $fastqs $bowtiesam";
-    }
+    my $fastqs = join( ',', @sample_files );
+    my $bowtie1_aln_command = "bowtie $option $m_option -S $tag $bowtie1_index $fastqs $bowtiesam";
 
     my $cmd_file_exists = check_file_exists_command(@sample_files);
 
@@ -101,9 +83,6 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
     my $cur_dir  = $outputToSameFolder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
-
-    my $bam_file = $sample_name . ".bam";
-    my $final_file = ( $output_sort_by_coordinate && $mark_duplicates ) ? $sample_name . ".rmdup.bam" : $bam_file;
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
