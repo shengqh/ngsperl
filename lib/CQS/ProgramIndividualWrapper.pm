@@ -136,7 +136,7 @@ sub result {
     my @result_files = ();
     for my $i ( 0 .. $idxend ) {
       my $pfile1 = $pfiles1->[$i];
-      my $final_file = $first_file_only ? $sample_name . $output_ext : basename($pfile1) . $output_ext;
+      my $final_file = ($first_file_only or (1 == scalar(@$pfiles1))) ? $sample_name . $output_ext : basename($pfile1) . $output_ext;
 
       push( @result_files, "${cur_dir}/$final_file" );
       if ( $output_other_ext ne "" ) {
