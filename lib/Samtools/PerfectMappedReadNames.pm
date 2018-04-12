@@ -49,7 +49,12 @@ sub perform {
     my $nameFile = $sample_name . ".pmnames";
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $nameFile );
-    print $pbs "samtools view $bam_file | grep \"NM:i:0\" | cut -f1 > $nameFile";
+    print $pbs "samtools view $bam_file | grep \"NM:i:0\" | cut -f1 > $nameFile
+
+if [ -s ${bam_file}.max.txt ]; then
+  grep '\@' ${bam_file}.max.txt >> $nameFile
+fi    
+";
     $self->close_pbs( $pbs, $pbs_file );
   }
 
