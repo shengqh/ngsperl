@@ -4,6 +4,16 @@ import xml.etree.ElementTree as ET
 from QueryItem import QueryItem
 from Feature import FeatureItem, FeatureGroup
 
+def readCountXmlQueryNames(fileName):
+  result = set()
+  tree = ET.parse(fileName)
+  root = tree.getroot()
+  queries = root.find('queries')
+  for query in queries.findall('query'):
+    query_name = query.get("name")
+    result.add(query_name)
+  return(result)
+
 def readCountXmlQueryMap(fileName):
   result = {}
   defaultSample = basename(fileName).split('.')[0]
