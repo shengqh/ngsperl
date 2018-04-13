@@ -185,6 +185,10 @@ for (i in 1:nrow(countTableFileAll)) {
     next;
   }
   
+  if (ncol(count)<2) {
+    next;
+  }
+  
   if(!is.na(genes)){
     if("Feature_gene_name" %in% colnames(count)){
       curgenes<-c(genes, rownames(count)[count$Feature_gene_name %in% genes])
