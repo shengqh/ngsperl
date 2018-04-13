@@ -1,6 +1,35 @@
 import operator
 import gzip
+import re
 from QueryItem import QueryItem
+
+def readFastqQueryNames(fileName):
+  result = set()
+  
+  gzipped = fileName.endswith(".gz")
+  if gzipped:
+    f = gzip.open(fileName, 'rt')
+  else:
+    f = open(fileName, 'r')
+  
+  try:
+    while True:
+      header = f.readline()
+      if '' == header:
+        break
+
+      if not header.startswith("@"):
+        continue
+
+      f.readline()
+      f.readline()
+      f.readline()
+
+      result.add(re.sub(r"\s.*$", "", header[1:].rstrip()))
+  finally:
+    f.close()
+
+  return(result)
 
 def readFastqQueries(fileName, minCount):
   resultMap = {}
