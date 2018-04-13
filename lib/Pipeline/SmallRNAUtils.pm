@@ -148,6 +148,34 @@ sub addNonhostDatabase {
     
     my $bowtie1readMapTask = "bowtie1_" . $taskKey . "_mappedreads_host";
     addBowtie( $config, $def, $individual, $bowtie1readMapTask, $parentDir, $def->{bowtie1_index}, [$bowtie1readTask], $def->{bowtie1_option_2mm} );
+
+    my $bowtie1readMapMismatchTask = "bowtie1_" . $taskKey . "_mappedreads_host_mismatch_table";
+    $config->{$bowtie1readMapMismatchTask} = {
+      class                    => "CQS::ProgramWrapper",
+      perform                  => 1,
+      target_dir               => "${parentDir}/$bowtie1readMapMismatchTask",
+      option                   => "-m 2",
+      interpretor              => "python",
+      program                  => "../SmallRNA/bamMismatchTable.py",
+      parameterSampleFile1_arg => "-i",
+      parameterSampleFile1_ref => [ $bowtie1readMapTask, ".bam\$" ],
+      parameterSampleFile2_arg => "-f",
+      parameterSampleFile2_ref => [$bowtie1readTask, ".fastq.gz\$"],
+      parameterSampleFile3_arg => "-c",
+      parameterSampleFile3_ref => $count_ref,
+      output_to_same_folder    => 1,
+      output_arg               => "-o",
+      output_ext               => ".tsv",
+      sh_direct                => 1,
+      pbs                      => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    };
+    push @$summary, $bowtie1readMapMismatchTask;
   }
 }
 
