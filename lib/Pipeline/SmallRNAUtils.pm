@@ -252,7 +252,7 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "perform_nonhost_tRNA_coverage",   0 );
   initDefaultValue( $def, "perform_host_rRNA_coverage",      1 );
   initDefaultValue( $def, "search_combined_nonhost",         0 );
-  initDefaultValue( $def, "perform_report",                  0 );
+  initDefaultValue( $def, "perform_report",                  1 );
 
   initDefaultValue( $def, "min_read_length",               16 );
   initDefaultValue( $def, "bowtie1_option_2mm",            "-a --best --strata -v 2" );
