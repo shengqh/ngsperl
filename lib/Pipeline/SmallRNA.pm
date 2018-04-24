@@ -716,12 +716,13 @@ sub getSmallRNAConfig {
     if ( $search_nonhost_database or $blast_unmapped_reads ) {
       my $readClass;
       my $readTask;
-      if ($def->{host_remove_all_mapped_reads}){
+      if ( $def->{host_remove_all_mapped_reads} ) {
         $readClass = "Samtools::MappedReadNames";
-        $readTask = "bowtie1_genome_1mm_NTA_read_names";
-      }else{
+        $readTask  = "bowtie1_genome_1mm_NTA_read_names";
+      }
+      else {
         $readClass = "Samtools::PerfectMappedReadNames";
-        $readTask = "bowtie1_genome_1mm_NTA_pmnames";
+        $readTask  = "bowtie1_genome_1mm_NTA_pmnames";
       }
       my $unmapped_reads = {
 
@@ -856,7 +857,7 @@ sub getSmallRNAConfig {
         $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{"${nonhostGroup}_species_map"},    #table option
         $identical_count_ref
       );
-      
+
       addNonhostVis(
         $config, $def,
         $summary_ref,
@@ -1208,13 +1209,14 @@ sub getSmallRNAConfig {
     push @$individual_ref, "annotate_unmapped_reads";
   }
 
+  my $corr_output_file_ext = ( defined $def->{groups} ) ? ".Correlation.png;.heatmap.png;.PCA.png;.Group.heatmap.png;.Group.Correlation.Cluster.png;" : ".Correlation.png;.heatmap.png;.PCA.png;";
   $config->{count_table_correlation} = {
     class                     => "CQS::CountTableGroupCorrelation",
     perform                   => 1,
     target_dir                => $data_visualization_dir . "/count_table_correlation",
     rtemplate                 => "countTableVisFunctions.R,countTableGroupCorrelation.R",
     output_file               => "parameterSampleFile1",
-    output_file_ext           => ".Correlation.png;.heatmap.png;.PCA.png;.Group.heatmap.png;.Group.Correlation.Cluster.png;",
+    output_file_ext           => $corr_output_file_ext,
     parameterSampleFile1_ref  => \@table_for_correlation,
     parameterSampleFile2      => $def->{tRNA_vis_group},
     parameterSampleFile2Order => $def->{groups_order},
