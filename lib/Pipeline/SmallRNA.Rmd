@@ -48,7 +48,7 @@ hostGenome<-data.frame(Section=c("####3.2", "####3.3"), Category=c("mirna", "trn
 cat(categoryRmd(hostGenome), file=hostGenomeFile)
 
 nonhostGenomeFile="nonhostgenome.Rmd"
-nonhostGenome<-data.frame(Section=c("####4.1", "####4.2"), Category=c("group1", "group2"), Name=c("Microbime bacteria", "Enviroment bacteria"))
+nonhostGenome<-data.frame(Section=c("####4.1", "####4.2"), Category=c("group1", "group2"), Name=c("Microbime bacteria", "Environment bacteria"))
 cat(categoryRmd(nonhostGenome), file=nonhostGenomeFile)
 
 nonhostLibraryFile="nonhostlibrary.Rmd"
