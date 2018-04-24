@@ -33,13 +33,20 @@ sub instantiate {
 }
 
 sub performTask {
-  my ( $config, $section ) = @_;
+  my ( $config, $section, $runImmediately ) = @_;
   if ( !defined $config->{$section} ) {
     die "No section $section defined.";
   }
   my $classname = $config->{$section}{class} or die "No class defined in section $section.";
   my $obj = instantiate($classname);
   $obj->perform( $config, $section );
+  if(defined $runImmediately && $runImmediately){
+    my $pbs = $obj->get_pbs_files($config, $section);
+    for my $pbskey (keys %$pbs){
+      my $pbsfile = $pbs->{$pbskey};
+      `bash $pbsfile 1 `;
+    }
+  }
 }
 
 sub performConfig {
