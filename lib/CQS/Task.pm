@@ -206,9 +206,11 @@ cd $result_dir
 
     my $checkFile = $final_file_can_empty ? "-e" : "-s";
     print $pbs "
-if [[ ( $checkFile $final_file ) || ( -d $final_file ) ]]; then
-  echo job has already been done. if you want to do again, delete $delete_file and submit job again.
-  exit 0
+if [[ !(1 -eq \$1) ]]; then
+  if [[ ( $checkFile $final_file ) || ( -d $final_file ) ]]; then
+    echo job has already been done. if you want to do again, delete $delete_file and submit job again.
+    exit 0
+  fi
 fi
 ";
   }
