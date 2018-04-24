@@ -235,8 +235,8 @@ for (i in 1:nrow(countTableFileAll)) {
     totalCount<-unlist(totalCount[totalCountKey,])
     countNumVsd<-10^6*t(t(countNum)/totalCount[colnames(countNum)])
     write.table(countNumVsd, paste0(outputFilePrefix,suffix,".RPM.txt"),col.names=NA, quote=F, sep="\t")
-    
-    ylab<-"Mapped Reads per Million"
+    countNumVsd<-log2(countNumVsd+1)
+    ylab<-"log2(Mapped Reads per Million)"
   } else {
     dds=DESeqDataSetFromMatrix(countData = countNum, colData = as.data.frame(rep(1,ncol(countNum))),design = ~1)
     dds<-try(myEstimateSizeFactors(dds))
