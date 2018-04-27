@@ -1272,6 +1272,26 @@ sub getSmallRNAConfig {
         "mem"       => "10gb"
       },
     };
+  $config->{reads_in_tasks_all} = {
+    class                    => "CQS::UniqueR",
+    suffix               => "_all",
+    perform                  => 1,
+    target_dir               => $data_visualization_dir . "/reads_in_tasks",
+    rtemplate                => "countTableVisFunctions.R,ReadsInTasksAll.R",
+    output_file_ext          => "All.TaskReads.csv",
+    parameterFile1_ref       => [ "reads_in_tasks", ".TaskReads.csv\$" ],
+    parameterFile2_ref       => [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv\$" ],
+    parameterFile3_ref       => [ "fastqc_count_vis", ".Reads.csv\$" ],
+    rCode                    => $R_font_size,
+    sh_direct                => 1,
+    pbs                      => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "10gb"
+    },
+  };
   }
 
   my $name_for_readSummary_r = "readFilesModule=c('" . join( "','", @name_for_readSummary ) . "')
@@ -1296,7 +1316,7 @@ sub getSmallRNAConfig {
       "mem"       => "10gb"
     },
   };
-  push @$summary_ref, ( "count_table_correlation", "reads_in_tasks", "reads_in_tasks_pie", "sequence_mapped_in_categories" );
+  push @$summary_ref, ( "count_table_correlation", "reads_in_tasks", "reads_in_tasks_pie", "reads_in_tasks_all", "sequence_mapped_in_categories" );
 
   #add time cost task in the end of pipeline
   #search not identical reads to genome, for IGV
