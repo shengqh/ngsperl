@@ -76,7 +76,6 @@ sub perform {
   my $sorted           = get_option( $config, $section, "sorted",                   0 );
   my $remove_duplicate = get_option( $config, $section, "remove_duplicate",         1 );
   my $indelRealignment = get_option( $config, $section, "indel_realignment",        0 );
-  my $slim             = get_option( $config, $section, "slim_print_reads",         1 );
   my $baq              = get_option( $config, $section, "samtools_baq_calibration", 0 );
   my $mark_duplicate   = get_option( $config, $section, "mark_duplicate",           0 );
 
