@@ -68,7 +68,7 @@ sub isVersion3 {
 }
 
 sub addNonhostDatabase {
-  my ( $config, $def, $individual, $summary, $taskKey, $parentDir, $bowtieIndex, $sourceRef, $countOption, $tableOption, $count_ref ) = @_;
+  my ( $config, $def, $individual, $summary, $taskKey, $parentDir, $bowtieIndex, $sourceRef, $countOption, $tableOption, $count_ref, $nonhostXml ) = @_;
 
   my $bowtie1Task      = "bowtie1_" . $taskKey;
   my $bowtie1CountTask = "bowtie1_" . $taskKey . "_count";
@@ -98,6 +98,8 @@ sub addNonhostDatabase {
     },
   };
 
+  push @$nonhostXml, ($bowtie1CountTask, ".xml");
+  
   $config->{$bowtie1TableTask} = {
     class      => "CQS::CQSChromosomeTable",
     perform    => 1,
@@ -119,7 +121,7 @@ sub addNonhostDatabase {
   push @$individual, $bowtie1CountTask;
   push @$summary,    $bowtie1TableTask;
 
-  if ( $def->{perform_nonhost_mappedToHost} ) {
+  if ( $def->{perform_nonhost_mappedToHost_individual} ) {
     my $bowtie1readTask = "bowtie1_" . $taskKey . "_mappedreads";
     $config->{$bowtie1readTask} = {
       class                    => "CQS::ProgramIndividualWrapper",
