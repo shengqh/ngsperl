@@ -71,7 +71,7 @@ if(!file.exists(countFile)){
   tcgaFiles<-data.frame(Name=tcgaNames, File=files)
   write.table(tcgaFiles, paste0(cancerName, ".rnaseq2.filelist"), sep="\t", quote=F, row.names=F)
   
-  GDCdownload(query, method = "client", chunks.per.download = 10)
+  GDCdownload(query, method = "client")
   rnaseq <- GDCprepare(query)
   
   save(rnaseq, file=countFile)
@@ -92,8 +92,8 @@ exp<-exp[!isdup,]
 
 #get gene length
 geneLength<-read.table(geneLengthFile, sep="\t", header=T, stringsAsFactor=F)
-rownames(geneLength)<-gsub("\\.\\d+","",geneLength$Geneid)
-pos$length<-geneLength[pos$ensembl_gene_id,"Length"]
+rownames(geneLength)<-gsub("\\.\\d+","",geneLength$gene_id)
+pos$length<-geneLength[pos$ensembl_gene_id,"length"]
 
 #sort pos by chromosome and start
 pos$seqnames<-substring(pos$seqnames, 4)
