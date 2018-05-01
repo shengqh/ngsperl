@@ -247,7 +247,7 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "bacteria_group2_count2bam",       0 );
   initDefaultValue( $def, "fungus_group4_count2bam",         0 );
   initDefaultValue( $def, "host_bamplot",                    0 );
-  initDefaultValue( $def, "read_correlation",                0 );
+  initDefaultValue( $def, "read_correlation",                1 );
   initDefaultValue( $def, "perform_contig_analysis",         0 );
   initDefaultValue( $def, "perform_annotate_unmapped_reads", 0 );
   initDefaultValue( $def, "perform_nonhost_rRNA_coverage",   0 );
