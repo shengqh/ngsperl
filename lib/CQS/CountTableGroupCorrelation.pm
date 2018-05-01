@@ -51,11 +51,18 @@ sub result {
 
   my $output_to_result_dir = get_option( $config, $section, "output_to_result_dir", 0 );
   my $output_file_ext      = get_option( $config, $section, "output_file_ext",      "" );
+  my $output_file_task_ext = get_option( $config, $section, "output_file_task_ext", "" );
   my $suffix               = get_option( $config, $section, "suffix",               "" );
   my $result               = {};
   my @result_files         = ();
 
   my %temp = %{ get_raw_files( $config, $section, "parameterSampleFile1" ) };
+  my @names = keys %temp;
+  if ( exists( $temp{$task_name} ) ) {
+    @names = grep { $_ ne $task_name } @names;
+    push( @names, $task_name );
+  }
+
   foreach my $sample_name ( keys %temp ) {
     foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
       my $prefix = $subSampleFile;
@@ -67,7 +74,7 @@ sub result {
         }
         $prefix = $result_dir . "/" . basename($pdir) . "." . $file;
       }
-      
+
       $prefix = $prefix . $suffix;
 
       if ( $output_file_ext =~ /;/ ) {
@@ -78,6 +85,18 @@ sub result {
       }
       else {
         push( @result_files, "${prefix}${output_file_ext}" );
+      }
+
+      if ( ( $output_file_task_ext =~ "" ) && ( $sample_name eq $task_name ) ) {
+        if ( $output_file_task_ext =~ /;/ ) {
+          my @output_file_exts = split( ";", $output_file_task_ext );
+          foreach my $output_file_ext_one (@output_file_exts) {
+            push( @result_files, "${prefix}${output_file_ext_one}" );
+          }
+        }
+        else {
+          push( @result_files, "${prefix}${output_file_task_ext}" );
+        }
       }
     }
   }
