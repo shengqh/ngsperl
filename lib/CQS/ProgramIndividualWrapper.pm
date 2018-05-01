@@ -23,6 +23,21 @@ sub new {
   bless $self, $class;
   return $self;
 }
+sub getFiles {
+  my ( $pfiles1, $join_arg, $first_file_only ) = @_;
+  my $result = [];
+  if ($join_arg) {
+    push @$result, join( ',', @$pfiles1 );
+  }
+  elsif ($first_file_only) {
+    push @$result, $pfiles1->[0];
+  }
+  else {
+    $result = $pfiles1;
+  }
+  return ($result);
+
+}
 
 sub perform {
   my ( $self, $config, $section ) = @_;
@@ -46,6 +61,7 @@ sub perform {
   my $output_ext            = get_option( $config, $section, "output_ext", "" );
   my $first_file_only       = get_option( $config, $section, "first_file_only", 0 );
   my $output_arg            = get_option( $config, $section, "output_arg", "" );
+  my $join_arg              = get_option( $config, $section, "join_arg", 0 );
 
   my ( $parameterSampleFile1, $parameterSampleFile1arg ) = get_parameter_sample_files( $config, $section, "source" );
   my ( $parameterSampleFile2, $parameterSampleFile2arg ) = get_parameter_sample_files( $config, $section, "parameterSampleFile2" );
@@ -61,7 +77,8 @@ sub perform {
 
   for my $sample_name ( sort keys %$parameterSampleFile1 ) {
     my $pfiles1 = $parameterSampleFile1->{$sample_name};
-    my $idxend = $first_file_only ? 0 : ( scalar(@$pfiles1) - 1 );
+    my $pfiles  = getFiles($pfiles1,$join_arg, $first_file_only);
+    my $idxend = scalar(@$pfiles) - 1;
 
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
@@ -76,16 +93,16 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
 
     for my $i ( 0 .. $idxend ) {
-      my $pfile1 = $pfiles1->[$i];
-      my $final_file = ($first_file_only or (1 == scalar(@$pfiles1))) ? $sample_name . $output_ext : basename($pfile1) . $output_ext;
+      my $pfile1 = $pfiles->[$i];
+      my $final_file = ( $first_file_only or ( 1 == scalar(@$pfiles) ) ) ? $sample_name . $output_ext : basename($pfile1) . $output_ext;
 
       my $curOption = "";
       if ( defined $parameterSampleFile2->{$sample_name} ) {
         $curOption = $curOption . " " . $parameterSampleFile2arg . " " . $parameterSampleFile2->{$sample_name}[$i];
-      }
 
       if ( defined $parameterSampleFile3->{$sample_name} ) {
         $curOption = $curOption . " " . $parameterSampleFile3arg . " " . $parameterSampleFile3->{$sample_name}[$i];
+      }
       }
 
       print $pbs "
@@ -120,6 +137,7 @@ sub result {
   my ( $parameterSampleFile1, $parameterSampleFile1arg ) = get_parameter_sample_files( $config, $section, "source" );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
   my $output_ext            = get_option( $config, $section, "output_ext", "" );
+  my $join_arg              = get_option( $config, $section, "join_arg", 0 );
   my $output_other_ext      = get_option( $config, $section, "output_other_ext", "" );
   my @output_other_exts;
   if ( $output_other_ext ne "" ) {
@@ -129,14 +147,15 @@ sub result {
   my $result = {};
   for my $sample_name ( sort keys %$parameterSampleFile1 ) {
     my $pfiles1 = $parameterSampleFile1->{$sample_name};
-    my $idxend = $first_file_only ? 0 : ( scalar(@$pfiles1) - 1 );
+    my $pfiles  = getFiles($pfiles1,$join_arg, $first_file_only);
+    my $idxend = scalar(@$pfiles) - 1;
 
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
     my @result_files = ();
     for my $i ( 0 .. $idxend ) {
-      my $pfile1 = $pfiles1->[$i];
-      my $final_file = ($first_file_only or (1 == scalar(@$pfiles1))) ? $sample_name . $output_ext : basename($pfile1) . $output_ext;
+      my $pfile1 = $pfiles->[$i];
+      my $final_file = ( $first_file_only or ( 1 == scalar(@$pfiles) ) ) ? $sample_name . $output_ext : basename($pfile1) . $output_ext;
 
       push( @result_files, "${cur_dir}/$final_file" );
       if ( $output_other_ext ne "" ) {
