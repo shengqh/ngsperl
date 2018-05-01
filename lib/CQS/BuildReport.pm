@@ -32,40 +32,41 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $final_pbs      = $self->get_pbs_filename( $pbs_dir, $task_name );
-  my $final_log      = $self->get_log_filename( $log_dir, $task_name );
+  my $final_pbs = $self->get_pbs_filename( $pbs_dir, $task_name );
+  my $final_log = $self->get_log_filename( $log_dir, $task_name );
   my $final_log_desp = $cluster->get_log_description($final_log);
 
   my $rtemplate = dirname(__FILE__) . "/" . $config->{$section}{report_rmd_file};
   my $rfile     = $result_dir . "/${task_name}.Rmd";
-  
+
   if ( defined $config->{$section}{function_r_files} ) {
     my @function_r_files = split( ';', $config->{$section}{function_r_files} );
-    
-    open( my $rmd, ">$rfile" ) or die "Cannot create $rfile";
-    open(my $rin, "<$rtemplate") or die "Cannot open $rtemplate";
-    my $function_done=0;
+
+    open( my $rmd, ">$rfile" )     or die "Cannot create $rfile";
+    open( my $rin, "<$rtemplate" ) or die "Cannot open $rtemplate";
+    my $function_done = 0;
     while (<$rin>) {
       my $rinline = $_;
       $rinline = s/\r|\n//g;
-      if ($rinline =~ /^```\{/){
-        if(!$function_done){
+      if ( $rinline =~ /^```\{/ ) {
+        if ( !$function_done ) {
           print $rmd '```{r, include=FALSE} \n';
-          for my $func_file (@function_r_files){
+          for my $func_file (@function_r_files) {
             $func_file = dirname(__FILE__) . "/" . trim($func_file);
-            open(my $fin, "<$func_file") or die "Cannot open $func_file";
-            while(<$fin>){
+            open( my $fin, "<$func_file" ) or die "Cannot open $func_file";
+            while (<$fin>) {
               my $finline = $_;
               $finline = s/\r|\n//g;
               print $rmd $finline . "\n";
             }
           }
           print $rmd '``` \n';
-          $function_done=1;
+          $function_done = 1;
         }
       }
     }
-  }else{
+  }
+  else {
     copy( $rtemplate, $rfile ) or die "Copy failed: $!";
   }
 
@@ -78,42 +79,45 @@ sub perform {
     }
   }
 
-  my $raw_file_list = get_raw_file_list($config, $section, "parameterSampleFile1");
+  my $raw_file_list = get_raw_file_list( $config, $section, "parameterSampleFile1" );
   my $raw_file_names = $config->{$section}{parameterSampleFile1_names};
-  
-  if (scalar(@$raw_file_list) != scalar(@$raw_file_names)) {
-    print("Raw file list = \n" . join("\n", @$raw_file_list));
-    print("Raw file names = \n" . join("\n", @$raw_file_names));
-    die "File lists (" . scalar(@$raw_file_list) . ") is not equals to file names (" . scalar(@$raw_file_names) . ")" ;
+
+  if ( scalar(@$raw_file_list) != scalar(@$raw_file_names) ) {
+    print( "Raw file list = \n" . join( "\n", @$raw_file_list ) );
+    print( "Raw file names = \n" . join( "\n", @$raw_file_names ) );
+    die "File lists (" . scalar(@$raw_file_list) . ") is not equals to file names (" . scalar(@$raw_file_names) . ")";
   }
-  
+
   open( my $list, ">$result_dir/fileList1.txt" ) or die "Cannot create $result_dir/fileList1.txt";
-  while (my ($index, $element) = each(@$raw_file_list)) {
+  while ( my ( $index, $element ) = each(@$raw_file_list) ) {
     print $list "$element\t" . $raw_file_names->[$index] . "\n";
   }
   close($list);
-  
-  writeParameterSampleFile($config, $section, $result_dir, 2);
 
-  my $copy_file_list = get_raw_file_list($config, $section, "parameterSampleFile3");
-  my $report_folder = create_directory_or_die("$result_dir/$task_name");
-  my $final_file     = "$task_name/${task_name}.html";
-  my $final = $self->open_pbs( $final_pbs, $pbs_desc, $final_log_desp, $path_file, $result_dir );
-  
-  for my $copy_file (sort @$copy_file_list){
-    my $to_folder = $task_name;
-    if ($copy_file =~ /_WebGestalt/){
-      create_directory_or_die("$report_folder/Functional_enrichment/");
-      create_directory_or_die("$report_folder/Functional_enrichment/webGestalt");
-      $to_folder = "$task_name/Functional_enrichment/webGestalt";
-    }elsif($copy_file =~ /_GSEA/ & $copy_file !~ /_GSEA.rnk/){
-      create_directory_or_die("$report_folder/Functional_enrichment/");
-      create_directory_or_die("$report_folder/Functional_enrichment/gsea");
-      $to_folder = ("$task_name/Functional_enrichment/gsea");
+  writeParameterSampleFile( $config, $section, $result_dir, 2 );
+
+  my $final_file = "${task_name}.html";
+  my $final = $self->open_pbs( $final_pbs, $pbs_desc, $final_log_desp, $path_file, $result_dir, $final_file );
+
+  my $copy_file_list = get_raw_file_list( $config, $section, "parameterSampleFile3" );
+  if ( scalar( @$copy_file_list ) > 0 ) {
+    my $report_folder = create_directory_or_die("$result_dir/$task_name");
+
+    for my $copy_file ( sort @$copy_file_list ) {
+      my $to_folder = $task_name;
+      if ( $copy_file =~ /_WebGestalt/ ) {
+        create_directory_or_die("$report_folder/Functional_enrichment/");
+        create_directory_or_die("$report_folder/Functional_enrichment/webGestalt");
+        $to_folder = "$task_name/Functional_enrichment/webGestalt";
+      }
+      elsif ( $copy_file =~ /_GSEA/ & $copy_file !~ /_GSEA.rnk/ ) {
+        create_directory_or_die("$report_folder/Functional_enrichment/");
+        create_directory_or_die("$report_folder/Functional_enrichment/gsea");
+        $to_folder = ("$task_name/Functional_enrichment/gsea");
+      }
+      print $final "cp -r -u $copy_file $to_folder \n";
     }
-    print $final "cp -r -u $copy_file $to_folder \n";
   }
-  
   print $final "
 R --slave -e \"library(knitr);rmarkdown::render('${task_name}.Rmd');\"
 ";
