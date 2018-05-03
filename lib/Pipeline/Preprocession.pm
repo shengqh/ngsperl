@@ -153,15 +153,15 @@ sub getPreprocessionConfig {
       target_dir  => $def->{target_dir} . "/" . getNextFolderIndex($def) . "merge_fastq",
       option      => "",
       source_ref  => $source_ref,
-      sh_direct   => 1,
+      sh_direct   => 0,
       is_paired   => $is_pairend,
       is_bzipped  => $def->{is_bzipped},
       is_collated => $def->{is_collated},
       cluster     => $def->{cluster},
       pbs         => {
         "email"    => $def->{email},
-        "nodes"    => "1:ppn=2",
-        "walltime" => "2",
+        "nodes"    => "1:ppn=1",
+        "walltime" => "4",
         "mem"      => "10gb"
       }
     };
