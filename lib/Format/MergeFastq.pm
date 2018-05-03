@@ -76,27 +76,36 @@ fi
 ";
         if ($is_collated) {
           for ( my $sample_index = 0 ; $sample_index < $file_count / 2 ; $sample_index++ ) {
+            my $curSample = $sample_files[$sample_index];
+            my $curCommand = $cat_command;
+            if ($curSample =~ /.gz$/){
+              $curCommand = "zcat";
+            }
             print $pbs "
 echo merging $sample_files[$sample_index] ...
-$cat_command $sample_files[$sample_index] >> $final_1_fastq 
+$curCommand $sample_files[$sample_index] >> $final_1_fastq 
 ";
           }
           for ( my $sample_index = $file_count / 2 ; $sample_index < $file_count ; $sample_index++ ) {
+            my $curSample = $sample_files[$sample_index];
+            my $curCommand = ($curSample =~ /.gz$/)?"zcat":$cat_command;
             print $pbs "
 echo merging $sample_files[$sample_index] ...
-$cat_command $sample_files[$sample_index] >> $final_2_fastq
+$curCommand $sample_files[$sample_index] >> $final_2_fastq
 ";
           }
 
         }
         else {
           for ( my $sample_index = 0 ; $sample_index < $file_count ; $sample_index += 2 ) {
+            my $curSample = $sample_files[$sample_index];
+            my $curCommand = ($curSample =~ /.gz$/)?"zcat":$cat_command;
             print $pbs "
 echo merging $sample_files[$sample_index] ...
-zcat $sample_files[$sample_index] >> $final_1_fastq 
+$curCommand $sample_files[$sample_index] >> $final_1_fastq 
 
 echo merging $sample_files[$sample_index+1] ...
-zcat $sample_files[$sample_index+1] >> $final_2_fastq 
+$curCommand $sample_files[$sample_index+1] >> $final_2_fastq 
 ";
           }
         }
@@ -128,9 +137,10 @@ gzip $final_2_fastq
 fi
 ";
         for my $sample_file (@sample_files) {
+            my $curCommand = ($sample_file =~ /.gz$/)?"zcat":$cat_command;
           print $pbs "
 echo merging $sample_file ...
-zcat $sample_file >> $final_fastq 
+$curCommand $sample_file >> $final_fastq 
 ";
         }
         print $pbs "
