@@ -351,6 +351,7 @@ venn.diagram1<-function (x, count=NULL,filename, height = 3000, width = 3000, re
 library(reshape2)
 library(ggplot2)
 library(RColorBrewer)
+library(scales)
 
 getFacetColCount<-function(groupFileList){
 	result=0
@@ -514,7 +515,8 @@ tableBarplotToFile<-function(dat,fileName,totalCountFile="",groupFileList="",out
 	if (proportionBar) {
 		fileNameProportion<-gsub(".png$",".Proportion.png",fileName)
 		png(fileNameProportion,width=width,height=height,res=300)
-		print(p+scale_y_continuous(labels = percent_format())
+		p$layers <- c(geom_bar(stat="identity",position="fill"))
+		print(p+scale_y_continuous(labels = percent_format())+ylab("Proportion"))
 		dev.off()
 	}
 }
