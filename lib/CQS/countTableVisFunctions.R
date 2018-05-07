@@ -351,6 +351,7 @@ venn.diagram1<-function (x, count=NULL,filename, height = 3000, width = 3000, re
 library(reshape2)
 library(ggplot2)
 library(RColorBrewer)
+library(scales)
 
 getFacetColCount<-function(groupFileList){
 	result=0
@@ -487,7 +488,7 @@ tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",f
 	return(p)
 }
 
-tableBarplotToFile<-function(dat,fileName,totalCountFile="",groupFileList="",outFileName="",maxCategory=5,textSize=9,transformTable=T,height=1500,...) {
+tableBarplotToFile<-function(dat,fileName,totalCountFile="",groupFileList="",outFileName="",maxCategory=5,textSize=9,transformTable=T,height=1500,proportionBar=TRUE,...) {
 	if (totalCountFile!="") { #normlize with total count *10^6
 		totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
 		totalCount<-unlist(totalCount["Reads for Mapping",])
@@ -511,6 +512,13 @@ tableBarplotToFile<-function(dat,fileName,totalCountFile="",groupFileList="",out
 	p<-tableBarplot(dat,maxCategory=maxCategory,textSize=textSize,ylab=ylab,transformTable=transformTable,...)
 	print(p)
 	dev.off()
+	if (proportionBar) {
+		fileNameProportion<-gsub(".png$",".Proportion.png",fileName)
+		png(fileNameProportion,width=width,height=height,res=300)
+		p$layers <- c(geom_bar(stat="identity",position="fill"))
+		print(p+scale_y_continuous(labels = percent_format())+ylab("Proportion"))
+		dev.off()
+	}
 }
 
 readLayout <-function(visLayoutFileList, visLayoutAlphabet=FALSE){

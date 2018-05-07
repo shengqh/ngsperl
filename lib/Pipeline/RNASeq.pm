@@ -647,7 +647,7 @@ sub getRNASeqConfig {
         "mem"      => "10gb"
       },
     };
-    push( @$individual, "refine",           "refine" );
+    push( @$individual, "refine","refine_hc");
     push( @$summary,    "refine_hc_filter", "refine_hc_filter_annovar" );
 
   }
