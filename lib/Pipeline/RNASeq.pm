@@ -312,15 +312,21 @@ sub getRNASeqConfig {
 
   if ( $def->{perform_correlation} ) {
     my $cor_dir = ( defined $config->{genetable} ) ? $config->{genetable}{target_dir} : $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation";
+    my $gene_file = $def->{correlation_gene_file};
+    my $rCode = "";
+    if(defined $gene_file){
+      $rCode = "suffix<-\"_genes\"; ";
+    }
     $config->{"genetable_correlation"} = {
       class           => "CQS::UniqueR",
       perform         => 1,
       suffix          => "_cor",
-      rCode           => "usePearsonInHCA<-" . $def->{use_pearson_in_hca} . "; useGreenRedColorInHCA<-" . $def->{use_green_red_color_in_hca} . "; top25cvInHCA<-" . $def->{top25cv_in_hca} . "; ",
+      rCode           => $rCode . "usePearsonInHCA<-" . $def->{use_pearson_in_hca} . "; useGreenRedColorInHCA<-" . $def->{use_green_red_color_in_hca} . "; top25cvInHCA<-" . $def->{top25cv_in_hca} . "; ",
       target_dir      => $cor_dir,
       rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
       output_file     => "parameterSampleFile1",
       output_file_ext => ".Correlation.png;.density.png;.heatmap.png;.PCA.png;.Correlation.Cluster.png",
+      parameterFile1 => $gene_file,
       parameterSampleFile2_ref => $groups_ref,
       sh_direct                => 1,
       pbs                      => {
