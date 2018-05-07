@@ -142,7 +142,7 @@ drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors){
 ##Solving node stack overflow problem end###
 
 if (geneFile!="") { #visualization based on genes in geneFile only
-  genes<-read.table(geneFile, sep="\t", header=F)$V1
+  genes<-read.table(geneFile, sep="\t", header=F, stringsAsFactors=F)$V1
   print(paste0("There are ", length(genes), " genes in gene file."))
 }else{
   genes<-NA
@@ -256,6 +256,12 @@ for (i in 1:nrow(countTableFileAll)) {
   
   if(!is.na(curgenes)){
     countNumVsd<-countNumVsd[rownames(countNumVsd) %in% curgenes,]
+    if("Feature_gene_name" %in% colnames(count)){
+      geneNames<-count[rownames(countNumVsd), "Feature_gene_name"]
+      if(length(unique(geneNames)) == nrow(countNumVsd)){
+        rownames(countNumVsd)<-geneNames
+      }
+    }
     print(paste0("There are ", nrow(countNumVsd), " genes will be used for visualization."))
     write.csv(countNumVsd, paste0(outputFilePrefix,suffix,".genes.csv"), quote=F)
   }
@@ -298,7 +304,7 @@ for (i in 1:nrow(countTableFileAll)) {
     print("Drawing heatmap for all samples.")
     png(paste0(outputFilePrefix,suffix,".heatmap.png"),width=width,height=width,res=300)
     
-    if(nrow(countHT) < 20){
+    if(nrow(countHT) < 30){
       if(!is.na(conditionColors[1])){
         heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=hmcols, ColSideColors=conditionColors)
       }else{
