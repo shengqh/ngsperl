@@ -1347,26 +1347,26 @@ sub getSmallRNAConfig {
         "mem"       => "10gb"
       },
     };
-  $config->{reads_in_tasks_all} = {
-    class                    => "CQS::UniqueR",
-    suffix               => "_all",
-    perform                  => 1,
-    target_dir               => $data_visualization_dir . "/reads_in_tasks",
-    rtemplate                => "countTableVisFunctions.R,ReadsInTasksAll.R",
-    output_file_ext          => ".All.TaskReads.csv",
-    parameterFile1_ref       => [ "reads_in_tasks", ".TaskReads.csv\$" ],
-    parameterFile2_ref       => [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv\$" ],
-    parameterFile3_ref       => [ "fastqc_count_vis", ".Reads.csv\$" ],
-    rCode                    => $R_font_size,
-    sh_direct                => 1,
-    pbs                      => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "12",
-      "mem"       => "10gb"
-    },
-  };
+    $config->{reads_in_tasks_all} = {
+      class              => "CQS::UniqueR",
+      suffix             => "_all",
+      perform            => 1,
+      target_dir         => $data_visualization_dir . "/reads_in_tasks",
+      rtemplate          => "countTableVisFunctions.R,ReadsInTasksAll.R",
+      output_file_ext    => ".All.TaskReads.csv",
+      parameterFile1_ref => [ "reads_in_tasks", ".TaskReads.csv\$" ],
+      parameterFile2_ref => [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv\$" ],
+      parameterFile3_ref => [ "fastqc_count_vis", ".Reads.csv\$" ],
+      rCode              => $R_font_size,
+      sh_direct          => 1,
+      pbs                => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "12",
+        "mem"       => "10gb"
+      },
+    };
   }
 
   my $name_for_readSummary_r = "readFilesModule=c('" . join( "','", @name_for_readSummary ) . "')
@@ -1560,7 +1560,7 @@ sub getSmallRNAConfig {
         "mem"       => "10gb"
       },
     };
-    push @$summary_ref, ("perform_read_summary");
+    push @$summary_ref, ("read_summary");
   }
   if ( getValue( $def, "perform_report" ) ) {
     my @report_files = ();
@@ -1590,50 +1590,79 @@ sub getSmallRNAConfig {
     }
 
     if ( defined $config->{count_table_correlation} ) {
+      my $hasGroupHeatmap = 0;
+      if ( defined $def->{groups} ) {
+        my $groups = $def->{groups};
+        $hasGroupHeatmap = scalar( keys %$groups ) > 2;
+      }
       if ( defined $config->{bowtie1_genome_1mm_NTA_smallRNA_table} ) {
         push( @report_files, "count_table_correlation",   ".miRNA.count.heatmap.png" );
         push( @report_files, "count_table_correlation",   ".miRNA.count.PCA.png" );
-        push( @report_files, "count_table_correlation",   ".miRNA.count.Group.heatmap.png" );
-        push( @report_files, "count_table_correlation",   ".miRNA.count.Group.Correlation.Cluster.png" );
-        push( @report_names, "correlation_mirna_heatmap", "correlation_mirna_pca", "correlation_mirna_group_heatmap", "correlation_mirna_corr_cluster" );
+        push( @report_names, "correlation_mirna_heatmap", "correlation_mirna_pca" );
+
+        if ($hasGroupHeatmap) {
+          push( @report_files, "count_table_correlation",         ".miRNA.count.Group.heatmap.png" );
+          push( @report_files, "count_table_correlation",         ".miRNA.count.Group.Correlation.Cluster.png" );
+          push( @report_names, "correlation_mirna_group_heatmap", "correlation_mirna_corr_cluster" );
+        }
 
         push( @report_files, "count_table_correlation",  ".tRNA.count.heatmap.png" );
         push( @report_files, "count_table_correlation",  ".tRNA.count.PCA.png" );
-        push( @report_files, "count_table_correlation",  ".tRNA.count.Group.heatmap.png" );
-        push( @report_files, "count_table_correlation",  ".tRNA.count.Group.Correlation.Cluster.png" );
-        push( @report_names, "correlation_trna_heatmap", "correlation_trna_pca", "correlation_trna_group_heatmap", "correlation_trna_corr_cluster" );
+        push( @report_names, "correlation_trna_heatmap", "correlation_trna_pca" );
+
+        if ($hasGroupHeatmap) {
+          push( @report_files, "count_table_correlation",        ".tRNA.count.Group.heatmap.png" );
+          push( @report_files, "count_table_correlation",        ".tRNA.count.Group.Correlation.Cluster.png" );
+          push( @report_names, "correlation_trna_group_heatmap", "correlation_trna_corr_cluster" );
+        }
       }
 
       if ( defined $config->{bowtie1_bacteria_group1_pm_table} ) {
-        push( @report_files, "count_table_correlation",    "bacteria_group1_.*.count.heatmap.png" );
-        push( @report_files, "count_table_correlation",    "bacteria_group1_.*.count.PCA.png" );
-        push( @report_files, "count_table_correlation",    "bacteria_group1_.*.count.Group.heatmap.png" );
-        push( @report_files, "count_table_correlation",    "bacteria_group1_.*.count.Group.Correlation.Cluster.png" );
-        push( @report_names, "correlation_group1_heatmap", "correlation_group1_pca", "correlation_group1_group_heatmap", "correlation_group1_corr_cluster" );
+        push( @report_files, "count_table_correlation",    "bacteria_group1_.*.category.count.heatmap.png" );
+        push( @report_files, "count_table_correlation",    "bacteria_group1_.*.category.count.PCA.png" );
+        push( @report_names, "correlation_group1_heatmap", "correlation_group1_pca" );
+
+        if ($hasGroupHeatmap) {
+          push( @report_files, "count_table_correlation",          "bacteria_group1_.*.category.count.Group.heatmap.png" );
+          push( @report_files, "count_table_correlation",          "bacteria_group1_.*.category.count.Group.Correlation.Cluster.png" );
+          push( @report_names, "correlation_group1_group_heatmap", "correlation_group1_corr_cluster" );
+        }
       }
 
       if ( defined $config->{bowtie1_bacteria_group2_pm_table} ) {
-        push( @report_files, "count_table_correlation",    "bacteria_group2_.*.count.heatmap.png" );
-        push( @report_files, "count_table_correlation",    "bacteria_group2_.*.count.PCA.png" );
-        push( @report_files, "count_table_correlation",    "bacteria_group2_.*.count.Group.heatmap.png" );
-        push( @report_files, "count_table_correlation",    "bacteria_group2_.*.count.Group.Correlation.Cluster.png" );
-        push( @report_names, "correlation_group2_heatmap", "correlation_group2_pca", "correlation_group2_group_heatmap", "correlation_group2_corr_cluster" );
+        push( @report_files, "count_table_correlation",    "bacteria_group2_.*.category.count.heatmap.png" );
+        push( @report_files, "count_table_correlation",    "bacteria_group2_.*.category.count.PCA.png" );
+        push( @report_names, "correlation_group2_heatmap", "correlation_group2_pca" );
+
+        if ($hasGroupHeatmap) {
+          push( @report_files, "count_table_correlation",          "bacteria_group2_.*.category.count.Group.heatmap.png" );
+          push( @report_files, "count_table_correlation",          "bacteria_group2_.*.category.count.Group.Correlation.Cluster.png" );
+          push( @report_names, "correlation_group2_group_heatmap", "correlation_group2_corr_cluster" );
+        }
       }
 
       if ( defined $config->{bowtie1_tRNA_pm_table} ) {
         push( @report_files, "count_table_correlation",     "^.*tRNA_pm_${task_name}.count.heatmap.png" );
         push( @report_files, "count_table_correlation",     "^.*tRNA_pm_${task_name}.count.PCA.png" );
-        push( @report_files, "count_table_correlation",     "^.*tRNA_pm_${task_name}.count.Group.heatmap.png" );
-        push( @report_files, "count_table_correlation",     "^.*tRNA_pm_${task_name}.count.Group.Correlation.Cluster.png" );
-        push( @report_names, "correlation_trnalib_heatmap", "correlation_trnalib_pca", "correlation_trnalib_group_heatmap", "correlation_trnalib_corr_cluster" );
+        push( @report_names, "correlation_trnalib_heatmap", "correlation_trnalib_pca" );
+
+        if ($hasGroupHeatmap) {
+          push( @report_files, "count_table_correlation",           "^.*tRNA_pm_${task_name}.count.Group.heatmap.png" );
+          push( @report_files, "count_table_correlation",           "^.*tRNA_pm_${task_name}.count.Group.Correlation.Cluster.png" );
+          push( @report_names, "correlation_trnalib_group_heatmap", "correlation_trnalib_corr_cluster" );
+        }
       }
 
       if ( defined $config->{bowtie1_rRNA_pm_table} ) {
         push( @report_files, "count_table_correlation",     "rRNA_pm_${task_name}.count.heatmap.png" );
         push( @report_files, "count_table_correlation",     "rRNA_pm_${task_name}.count.PCA.png" );
-        push( @report_files, "count_table_correlation",     "rRNA_pm_${task_name}.count.Group.heatmap.png" );
-        push( @report_files, "count_table_correlation",     "rRNA_pm_${task_name}.count.Group.Correlation.Cluster.png" );
-        push( @report_names, "correlation_rrnalib_heatmap", "correlation_rrnalib_pca", "correlation_rrnalib_group_heatmap", "correlation_rrnalib_corr_cluster" );
+        push( @report_names, "correlation_rrnalib_heatmap", "correlation_rrnalib_pca" );
+        
+        if ($hasGroupHeatmap) {
+          push( @report_files, "count_table_correlation",           "rRNA_pm_${task_name}.count.Group.heatmap.png" );
+          push( @report_files, "count_table_correlation",           "rRNA_pm_${task_name}.count.Group.Correlation.Cluster.png" );
+          push( @report_names, "correlation_rrnalib_group_heatmap", "correlation_rrnalib_corr_cluster" );
+        }
       }
     }
 
