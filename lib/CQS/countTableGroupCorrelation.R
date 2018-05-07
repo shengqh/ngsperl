@@ -298,19 +298,22 @@ for (i in 1:nrow(countTableFileAll)) {
     print("Drawing heatmap for all samples.")
     png(paste0(outputFilePrefix,suffix,".heatmap.png"),width=width,height=width,res=300)
     
-    if(nrow(countHT) < 20){
-      if(!is.na(conditionColors[1])){
-        heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=hmcols, ColSideColors=conditionColors)
-      }else{
-        heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,col=hmcols)
-      }
-    }else{
-      if(!is.na(conditionColors[1])){
-        heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,showRowDendro=F,labRow="",col=hmcols, ColSideColors=conditionColors)
-      }else{
-        heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,showRowDendro=F,labRow="",col=hmcols)
-      }
-    }
+	labRow=""
+	Rowv=NULL
+	showRowDendro=FALSE
+	if(nrow(countHT) < 20){
+		showRowDendro=TRUE
+		labRow=NULL
+	}
+	if(nrow(countHT) > 50000){
+		Rowv=NA
+	}
+	if(!is.na(conditionColors[1])){
+		heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,showRowDendro=showRowDendro,labRow=labRow,col=hmcols,Rowv=Rowv, ColSideColors=conditionColors)
+	} else {
+		heatmap3(countHT,distfun=distf,margin=margin,balanceColor=TRUE,useRaster=FALSE,showRowDendro=showRowDendro,labRow=labRow,col=hmcols,Rowv=Rowv)
+	}
+	
     dev.off()
   } else {
     print("Not enough samples or genes. Can't Draw heatmap for all samples.")
