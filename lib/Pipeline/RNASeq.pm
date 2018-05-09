@@ -38,7 +38,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_multiqc",               1 );
   initDefaultValue( $def, "perform_webgestalt",            0 );
   initDefaultValue( $def, "perform_gsea",                  0 );
-  initDefaultValue( $def, "perform_report",                0 );
+  initDefaultValue( $def, "perform_report",                1 );
   initDefaultValue( $def, "perform_DE_proteincoding_gene", 0 );
   
   initDefaultValue( $def, "perform_cutadapt", 0 );
