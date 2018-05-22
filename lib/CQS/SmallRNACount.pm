@@ -53,6 +53,11 @@ sub perform {
     %seqcount_files = %{ get_raw_files( $config, $section, "seqcount" ) };
   }
 
+  my %excludeXml = ();
+  if ( has_raw_files( $config, $section, "exclude_xml" ) ) {
+    %excludeXml = %{ get_raw_files( $config, $section, "exclude_xml" ) };
+  }
+
   my %fastqFiles = ();
   if ( has_raw_files( $config, $section, "fastq_files" ) ) {
     %fastqFiles = %{ get_raw_files( $config, $section, "fastq_files" ) };
@@ -84,6 +89,13 @@ sub perform {
       $fastqFile = " -q $file";
     }
 
+    my $exclude = "";
+    if ( defined $excludeXml{$sample_name} ) {
+      my @files = @{ $excludeXml{$sample_name} };
+      my $file  = $files[0];
+      $exclude = " --excludeXml $file";
+    }
+
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -95,7 +107,7 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_xml_file );
-    print $pbs "mono $cqstools smallrna_count $newMethod $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile -o $final_file
+    print $pbs "mono $cqstools smallrna_count $newMethod $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile $exclude -o $final_file
 ";
     if ( $option !~ /noCategory/ ) {
       print $pbs "
