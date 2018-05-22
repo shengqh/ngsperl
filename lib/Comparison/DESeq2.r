@@ -197,7 +197,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
   }
 }
 
-drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors){
+drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition){
   #filename<-paste0(prefix, "_DESeq2-vsd-pca.png")
   filename<-paste0(prefix, "_DESeq2-vsd-pca.pdf")
   genecount<-nrow(rldmatrix)
@@ -209,28 +209,24 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, conditionColors
     supca<-summary(pca)$importance
     pcadata<-data.frame(pca$x)
     pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
-    pcadata["sample"]<-row.names(pcadata)
+    pcadata$sample<-row.names(pcadata)
+    pcadata$Group<-condition
     
     if(showLabelInPCA){
       g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
-        geom_text(vjust=-0.6, size=4) +
-        geom_point(col=conditionColors, size=4) + 
+        geom_text(vjust=-0.6, size=4)
+    }else{
+      g <- ggplot(pcadata, aes(x=PC1, y=PC2)) + 
+        labs(color = "Group")
+    }
+    g <- g + geom_point(aes(col=Group), size=4) + 
         scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
         scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
         geom_hline(aes(yintercept=0), size=.2) + 
         geom_vline(aes(xintercept=0), size=.2) + 
-        xlab(pcalabs[1]) + ylab(pcalabs[2])
-    }else{
-      g <- ggplot(pcadata, aes(x=PC1, y=PC2)) + 
-        geom_point(col=conditionColors, size=4) + 
-        labs(color = "Group") +
-        scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) + 
-        scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
-        geom_hline(aes(yintercept=0), size=.2) + 
-        geom_vline(aes(xintercept=0), size=.2) +
-        xlab(pcalabs[1]) + ylab(pcalabs[2]) + 
+        xlab(pcalabs[1]) + ylab(pcalabs[2]) +
+        scale_color_manual(values=c("red", "blue")) +
         theme(legend.position="top")
-    }
     
     print(g)
     dev.off()
@@ -575,7 +571,7 @@ for(countfile_index in c(1:length(countfiles))){
       rldmatrix=as.matrix(assayvsd)
       
       #draw pca graph
-      drawPCA(paste0(prefix,"_geneAll"), rldmatrix, showLabelInPCA, designData, conditionColors)
+      drawPCA(paste0(prefix,"_geneAll"), rldmatrix, showLabelInPCA, designData, designData$Condition)
       
       #draw heatmap
       #drawHCA(paste0(prefix,"_gene500"), rldmatrix[1:min(500, nrow(rldmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
