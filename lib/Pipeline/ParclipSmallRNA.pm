@@ -250,7 +250,21 @@ sub getParclipSmallRNAConfig {
           "mem"      => "20gb"
         },
       },
-
+      unmappedReads_bowtie1_genome_1mm_3utr_count_table => {
+        class      => "CQS::CQSDatatable",
+        perform    => 1,
+        target_dir => $t2c_dir . "/unmappedReads_bowtie1_genome_1mm_3utr_count_table",
+        option     => "-k 0 -i 1 -v 2 -e --fillMissingWithZero",
+        source_ref => "unmappedReads_bowtie1_genome_1mm_3utr_count",
+        cqs_tools  => $def->{cqstools},
+        sh_direct  => 1,
+        pbs        => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "10",
+          "mem"      => "10gb"
+        },
+      },
       unmappedReads_bowtie1_genome_1mm_3utr_count_target_t2c => {
         class        => "CQS::ParclipTarget",
         perform      => 1,
@@ -291,6 +305,7 @@ sub getParclipSmallRNAConfig {
     };
 
     push( @individual, ( 'unmappedReads', 'unmappedReads_bowtie1_genome_1mm', 'unmappedReads_bowtie1_genome_1mm_3utr_count', "unmappedReads_bowtie1_genome_1mm_3utr_count_target_t2c", "unmappedReads_bowtie1_genome_1mm_3utr_count_target_all" ) );
+    push( @summary, 'unmappedReads_bowtie1_genome_1mm_3utr_count_table');
     $config = merge( $config, $unmappedreads );
   }
   $config->{sequencetask} = {
