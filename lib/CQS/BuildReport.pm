@@ -110,7 +110,7 @@ sub perform {
         create_directory_or_die("$report_folder/Functional_enrichment/webGestalt");
         $to_folder = "$task_name/Functional_enrichment/webGestalt";
       }
-      elsif ( $copy_file =~ /_GSEA/ & $copy_file !~ /_GSEA.rnk/ ) {
+      elsif ( $copy_file =~ /_GSEA/ & $copy_file !~ /_GSEA.rnk$/ ) {
         create_directory_or_die("$report_folder/Functional_enrichment/");
         create_directory_or_die("$report_folder/Functional_enrichment/gsea");
         $to_folder = ("$task_name/Functional_enrichment/gsea");
