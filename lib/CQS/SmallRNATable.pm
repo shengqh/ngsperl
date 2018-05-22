@@ -45,6 +45,8 @@ sub perform {
 
   my $log_desc = $cluster->get_log_description($log);
 
+  my $noCategory = $option =~ /noCategory/;
+
   if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
     my $groups = get_raw_files( $config, $section, "groups" );
@@ -65,10 +67,11 @@ sub perform {
       }
       close($fl);
 
+      my $pythonCode = $noCategory ? "" : "python $python_script \"$ntaFile\" \"$ntaBaseFile\"";
       print $pbs "
 if [ ! -s $outputname ]; then
   mono $cqstools smallrna_table $option -o $outputname -l $filelist
-  python $python_script \"$ntaFile\" \"$ntaBaseFile\"
+  $pythonCode
 fi
 ";
     }
@@ -92,9 +95,10 @@ fi
     my $ntaFile     = basename( $self->get_file( $result_dir, ${task_name}, ".miRNA.NTA.count",      0 ) );
     my $ntaBaseFile = basename( $self->get_file( $result_dir, ${task_name}, ".miRNA.NTA.base.count", 0 ) );
 
+    my $pythonCode = $noCategory ? "" : "python $python_script \"$ntaFile\" \"$ntaBaseFile\"";
     print $pbs "
 mono $cqstools smallrna_table $option -o $outputname -l $filelist
-python $python_script \"$ntaFile\" \"$ntaBaseFile\"
+$pythonCode
 ";
     $self->close_pbs( $pbs, $pbs_file );
   }
@@ -102,41 +106,44 @@ python $python_script \"$ntaFile\" \"$ntaBaseFile\"
 
 sub addOutput {
   my ( $self, $result_files, $result_dir, $pbs_dir, $key, $option ) = @_;
-  push( @$result_files, $self->get_file( $result_dir, $key, ".count",                         0 ) );
-  push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.count",                   0 ) );
-  push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.count.position",          0 ) );
-  push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.read.count",              0 ) );
-  push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.isomiR.count",            0 ) );
-  push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.isomiR_NTA.count",        0 ) );
-  push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.NTA.count",               0 ) );
-  push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.NTA.base.count",          0 ) );
-  push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.count",                    0 ) );
-  push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.count.position",           0 ) );
-  push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.read.count",               0 ) );
-  push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.aminoacid.count",          0 ) );
-  push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.aminoacid.count.position", 0 ) );
+  my $noCategory = $option =~ /noCategory/;
+  push( @$result_files, $self->get_file( $result_dir, $key, ".count", 0 ) );
 
-  if ( $option =~ /exportYRNA/ ) {
-    push( @$result_files, $self->get_file( $result_dir, $key, ".yRNA.count",          0 ) );
-    push( @$result_files, $self->get_file( $result_dir, $key, ".yRNA.count.position", 0 ) );
-    push( @$result_files, $self->get_file( $result_dir, $key, ".yRNA.read.count",     0 ) );
-  }
-  if ( $option =~ /exportSnRNA/ ) {
-    push( @$result_files, $self->get_file( $result_dir, $key, ".snRNA.count",          0 ) );
-    push( @$result_files, $self->get_file( $result_dir, $key, ".snRNA.count.position", 0 ) );
-    push( @$result_files, $self->get_file( $result_dir, $key, ".snRNA.read.count",     0 ) );
-  }
-  if ( $option =~ /exportSnoRNA/ ) {
-    push( @$result_files, $self->get_file( $result_dir, $key, ".snoRNA.count",          0 ) );
-    push( @$result_files, $self->get_file( $result_dir, $key, ".snoRNA.count.position", 0 ) );
-    push( @$result_files, $self->get_file( $result_dir, $key, ".snoRNA.read.count",     0 ) );
-  }
-  push( @$result_files, $self->get_file( $result_dir, $key, ".rRNA.count",       0 ) );
-  push( @$result_files, $self->get_file( $result_dir, $key, ".rRNA.read.count",  0 ) );
-  push( @$result_files, $self->get_file( $result_dir, $key, ".other.count",      0 ) );
-  push( @$result_files, $self->get_file( $result_dir, $key, ".other.read.count", 0 ) );
-  push( @$result_files, $self->get_file( $pbs_dir,    $key, ".filelist",         0 ) );
+  if ( !$noCategory ) {
+    push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.count",                   0 ) );
+    push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.count.position",          0 ) );
+    push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.read.count",              0 ) );
+    push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.isomiR.count",            0 ) );
+    push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.isomiR_NTA.count",        0 ) );
+    push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.NTA.count",               0 ) );
+    push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.NTA.base.count",          0 ) );
+    push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.count",                    0 ) );
+    push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.count.position",           0 ) );
+    push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.read.count",               0 ) );
+    push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.aminoacid.count",          0 ) );
+    push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.aminoacid.count.position", 0 ) );
 
+    if ( $option =~ /exportYRNA/ ) {
+      push( @$result_files, $self->get_file( $result_dir, $key, ".yRNA.count",          0 ) );
+      push( @$result_files, $self->get_file( $result_dir, $key, ".yRNA.count.position", 0 ) );
+      push( @$result_files, $self->get_file( $result_dir, $key, ".yRNA.read.count",     0 ) );
+    }
+    if ( $option =~ /exportSnRNA/ ) {
+      push( @$result_files, $self->get_file( $result_dir, $key, ".snRNA.count",          0 ) );
+      push( @$result_files, $self->get_file( $result_dir, $key, ".snRNA.count.position", 0 ) );
+      push( @$result_files, $self->get_file( $result_dir, $key, ".snRNA.read.count",     0 ) );
+    }
+    if ( $option =~ /exportSnoRNA/ ) {
+      push( @$result_files, $self->get_file( $result_dir, $key, ".snoRNA.count",          0 ) );
+      push( @$result_files, $self->get_file( $result_dir, $key, ".snoRNA.count.position", 0 ) );
+      push( @$result_files, $self->get_file( $result_dir, $key, ".snoRNA.read.count",     0 ) );
+    }
+    push( @$result_files, $self->get_file( $result_dir, $key, ".rRNA.count",       0 ) );
+    push( @$result_files, $self->get_file( $result_dir, $key, ".rRNA.read.count",  0 ) );
+    push( @$result_files, $self->get_file( $result_dir, $key, ".other.count",      0 ) );
+    push( @$result_files, $self->get_file( $result_dir, $key, ".other.read.count", 0 ) );
+  }
+  push( @$result_files, $self->get_file( $pbs_dir, $key, ".filelist", 0 ) );
 }
 
 sub result {
