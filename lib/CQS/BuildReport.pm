@@ -83,8 +83,8 @@ sub perform {
   my $raw_file_names = $config->{$section}{parameterSampleFile1_names};
 
   if ( scalar(@$raw_file_list) != scalar(@$raw_file_names) ) {
-    print( "Raw file list = \n" . join( "\n", @$raw_file_list ) );
-    print( "Raw file names = \n" . join( "\n", @$raw_file_names ) );
+    print( "\nRaw file list = \n" . join( "\n", @$raw_file_list ) );
+    print( "\nRaw file names = \n" . join( "\n", @$raw_file_names ) );
     die "File lists (" . scalar(@$raw_file_list) . ") is not equals to file names (" . scalar(@$raw_file_names) . ")";
   }
 
