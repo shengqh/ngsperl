@@ -1,14 +1,14 @@
 import argparse
 import re
 
-parser = argparse.ArgumentParser(description="filter Annovar result for truncating/nonsense SNVs with/without ExAC limitation",
+parser = argparse.ArgumentParser(description="filter Annovar result for truncating/nonsense SNVs with/without ExAC/1000G limitation",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 DEBUG = False
 NOT_DEBUG = not DEBUG
 
 parser.add_argument('-i', '--input', action='store', nargs='?', required=NOT_DEBUG, help='Input annovar result file from NGSPERL')
-parser.add_argument('-e', '--exac_threshold', action='store', nargs='?', default=1.0, help='Maximum ExAC value (default=1.0, no filter)')
+parser.add_argument('-e', '--threshold', action='store', nargs='?', default=1.0, help='Maximum ExAC/1000G allele frequency (default=1.0, no filter)')
 parser.add_argument('-r', '--sample_name_pattern', action='store', nargs='?', default="", help='Sample name regex pattern for extraction those samples only')
 parser.add_argument('-o', '--output_prefix', action='store', nargs='?', required=NOT_DEBUG, help='Output file prefix')
 
@@ -18,7 +18,7 @@ print(args)
 
 inputfile = args.input
 outputprefix = args.output_prefix
-maxExacValue = float(args.exac_threshold)
+maxExacValue = float(args.threshold)
 sampleNamePattern = args.sample_name_pattern
 
 if DEBUG:
@@ -55,6 +55,7 @@ with open(outputprefix + ".filtered.tsv", 'w') as sw:
     geneIndex = headers.index("Gene.refGene")
     refIndex = headers.index("ExonicFunc.refGene")
     exacIndex = headers.index("ExAC_ALL")
+    g1000Index = headers.index("1000g2015aug_all")
     sampleCount = len(sampleIndecies)
 
     print("sampleCount=%d" % (sampleCount))
@@ -65,35 +66,40 @@ with open(outputprefix + ".filtered.tsv", 'w') as sw:
       parts = line.rstrip().split('\t')
       gene = parts[geneIndex]
       if(parts[funcIndex] == "splicing" or parts[refIndex] in accepted):
-        if(exacIndex == -1 or not parts[exacIndex] or float(parts[exacIndex]) < maxExacValue):
-          freq = len([idx for idx in sampleIndecies if parts[idx].startswith("0/1") or parts[idx].startswith("1/1")])
-          if freq == 0:
-            continue
+        if (exacIndex != -1) and (parts[exacIndex] != "") and float(parts[exacIndex]) > maxExacValue:
+          continue
+          
+        if (g1000Index != -1) and (parts[g1000Index] != "") and float(parts[g1000Index]) > maxExacValue:
+          continue
+          
+        freq = len([idx for idx in sampleIndecies if parts[idx].startswith("0/1") or parts[idx].startswith("1/1")])
+        if freq == 0:
+          continue
 
-          sw.write("%s\t%s\t%s\n" %("\t".join(parts[i] for i in snvHeaderIndecies), parts[formatIndex], "\t".join(parts[i] for i in sampleIndecies )))
+        sw.write("%s\t%s\t%s\n" %("\t".join(parts[i] for i in snvHeaderIndecies), parts[formatIndex], "\t".join(parts[i] for i in sampleIndecies )))
 
-          for idx in sampleIndecies:
-            if(parts[idx].startswith("0/1") or parts[idx].startswith("1/1")):
-              parts[idx] = "1"
-            else:
-              parts[idx] = "0"
+        for idx in sampleIndecies:
+          if(parts[idx].startswith("0/1") or parts[idx].startswith("1/1")):
+            parts[idx] = "1"
+          else:
+            parts[idx] = "0"
 
-          freqperc = float(freq) / sampleCount
-          freqfold = "NA" if exacIndex == -1 or not parts[exacIndex] else "100" if float(parts[exacIndex]) == 0 else str(freqperc / float(parts[exacIndex]))
-          filtered.append([freqperc, "%s\t%f\t%s\t\t%s\n" % ("\t".join(parts[i] for i in snvHeaderIndecies), freqperc, freqfold, "\t".join(parts[i] for i in sampleIndecies))])
+        freqperc = float(freq) / sampleCount
+        freqfold = "NA" if exacIndex == -1 or not parts[exacIndex] else "100" if float(parts[exacIndex]) == 0 else str(freqperc / float(parts[exacIndex]))
+        filtered.append([freqperc, "%s\t%f\t%s\t\t%s\n" % ("\t".join(parts[i] for i in snvHeaderIndecies), freqperc, freqfold, "\t".join(parts[i] for i in sampleIndecies))])
 
-          curgene = parts[geneIndex]
-          if len(curgene) > 0:
-            if curgene in genes:
-              curgenemap = genes[curgene]
-              for idx in sampleIndecies:
-                if parts[idx] == "1":
-                  curgenemap[idx] = "1"
-            else:
-              curgenemap = {}
-              genes[curgene] = curgenemap
-              for idx in sampleIndecies:
-                curgenemap[idx] = parts[idx]
+        curgene = parts[geneIndex]
+        if len(curgene) > 0:
+          if curgene in genes:
+            curgenemap = genes[curgene]
+            for idx in sampleIndecies:
+              if parts[idx] == "1":
+                curgenemap[idx] = "1"
+          else:
+            curgenemap = {}
+            genes[curgene] = curgenemap
+            for idx in sampleIndecies:
+              curgenemap[idx] = parts[idx]
 
     fsorted = sorted(filtered, key=getKey, reverse=True)
     with open(outputprefix + ".snv.tsv", 'w') as snvw:
