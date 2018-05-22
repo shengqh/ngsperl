@@ -416,7 +416,7 @@ sub getRNASeqConfig {
         output_file_ext            => ".gsea.html;.gsea.csv;.gsea;",
         parameterSampleFile1_ref   => [ $deseq2taskname, "_GSEA.rnk\$" ],
         sh_direct                  => 1,
-        rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . ");",
+        rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=F;",
         pbs                        => {
           "email"    => $def->{email},
           "nodes"    => "1:ppn=1",
