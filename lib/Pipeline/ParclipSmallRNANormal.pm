@@ -200,6 +200,7 @@ sub getParclipSmallRNANormalConfig {
         option          => '-s -e 4 --noCategory',
         source_ref      => 'gsnap',
         seqcount_ref    => [ 'identical', '.dupcount$' ],
+        exclude_xml_ref => [ 'gsnap_smallRNA_count', ".xml" ],
         coordinate_file => $def->{utr3_db},
         cqs_tools       => $def->{cqstools},
         sh_direct       => 0,
@@ -209,6 +210,23 @@ sub getParclipSmallRNANormalConfig {
           'walltime' => '72',
           'mem'      => '40gb',
           'nodes'    => '1:ppn=1'
+        },
+      },
+      gsnap_3utr_count_table => {
+        class      => "CQS::SmallRNATable",
+        perform    => 1,
+        target_dir => $t2c_dir . "/gsnap_3utr_count_table",
+        option     => "--noCategory",
+        source_ref => [ "gsnap_3utr_count", ".mapped.xml" ],
+        cqs_tools  => $def->{cqstools},
+        prefix     => "smallRNA_3utr_",
+        sh_direct  => 1,
+        cluster    => $cluster,
+        pbs        => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "10",
+          "mem"      => "10gb"
         },
       },
       gsnap_3utr_count_target_t2c => {
@@ -251,8 +269,58 @@ sub getParclipSmallRNANormalConfig {
     };
 
     push( @individual, ( "gsnap_3utr_count", "gsnap_3utr_count_target_t2c", "gsnap_3utr_count_target_all" ) );
+    push( @summary, "gsnap_3utr_count_table" );
     $config = merge( $config, $utr3 );
   }
+
+  if ( defined $def->{search_specific_range} && $def->{search_specific_range} ) {
+    ( defined $def->{specific_range_bed} ) or die "specific_range_bed should be defined with search_specific_range for parclip data analysis.";
+    ( -e $def->{specific_range_bed} ) or die "specific_range_bed defined but not exists : " . $def->{specific_range_bed};
+
+    my $specific = {
+      gsnap_specific_range_count => {
+        class           => 'CQS::SmallRNACount',
+        perform         => 1,
+        target_dir      => $t2c_dir . '/gsnap_specific_range_count',
+        option          => '-s -e 4 --noCategory',
+        source_ref      => 'gsnap',
+        seqcount_ref    => [ 'identical', '.dupcount$' ],
+        exclude_xml_ref => [ 'gsnap_smallRNA_count', ".xml" ],
+        coordinate_file => $def->{specific_range_bed},
+        cqs_tools       => $def->{cqstools},
+        sh_direct       => 0,
+        cluster         => $cluster,
+        pbs             => {
+          'email'    => $def->{email},
+          'walltime' => '72',
+          'mem'      => '40gb',
+          'nodes'    => '1:ppn=1'
+        },
+      },
+      gsnap_specific_range_count_table => {
+        class      => "CQS::SmallRNATable",
+        perform    => 1,
+        target_dir => $t2c_dir . "/gsnap_specific_range_count_table",
+        option     => "--noCategory",
+        source_ref => [ "gsnap_specific_range_count", ".mapped.xml" ],
+        cqs_tools  => $def->{cqstools},
+        prefix     => "parclip_specific_range_",
+        sh_direct  => 1,
+        cluster    => $cluster,
+        pbs        => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "10",
+          "mem"      => "10gb"
+        },
+      },
+    };
+
+    push( @individual, ( "gsnap_specific_range_count" ) );
+    push( @summary, "gsnap_specific_range_count_table" );
+    $config = merge( $config, $specific );
+  }
+
   $config->{sequencetask} = {
     class      => 'CQS::SequenceTask',
     perform    => 1,
