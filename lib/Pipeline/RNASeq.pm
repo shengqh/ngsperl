@@ -42,7 +42,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_gsea",                  0 );
   initDefaultValue( $def, "perform_report",                1 );
   initDefaultValue( $def, "perform_DE_proteincoding_gene", 0 );
-  
+
   initDefaultValue( $def, "perform_cutadapt", 0 );
 
   initDefaultValue( $def, "featureCount_option",        "-g gene_id -t exon" );
@@ -142,11 +142,11 @@ sub getRNASeqConfig {
         ispairend                 => getValue( $def, "pairend" ),
         sh_direct                 => 0,
         pbs                       => {
-          "email"    => $email,
+          "email"     => $email,
           "emailType" => $def->{emailType},
-          "nodes"    => "1:ppn=" . $def->{max_thread},
-          "walltime" => "72",
-          "mem"      => "40gb"
+          "nodes"     => "1:ppn=" . $def->{max_thread},
+          "walltime"  => "72",
+          "mem"       => "40gb"
         },
       },
       "star_summary" => {
@@ -157,29 +157,29 @@ sub getRNASeqConfig {
         source_ref => [ "star_featurecount", "_Log.final.out" ],
         sh_direct  => 1,
         pbs        => {
-          "email"    => $email,
+          "email"     => $email,
           "emailType" => $def->{emailType},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "72",
-          "mem"      => "40gb"
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "72",
+          "mem"       => "40gb"
         },
       },
       "genetable" => {
-        class         => "CQS::CQSDatatable",
-        perform       => 1,
-        target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "genetable",
-        option        => "-k 0 -v 6 -e --fillMissingWithZero",
-        source_ref    => [ "star_featurecount", ".count\$" ],
-        name_map_file => $name_map_file,
-        output_proteincoding_gene=>$def->{perform_DE_proteincoding_gene},
-        cqs_tools     => $cqstools,
-        sh_direct     => 1,
-        pbs           => {
-          "email"    => $email,
+        class                     => "CQS::CQSDatatable",
+        perform                   => 1,
+        target_dir                => $target_dir . "/" . getNextFolderIndex($def) . "genetable",
+        option                    => "-k 0 -v 6 -e --fillMissingWithZero",
+        source_ref                => [ "star_featurecount", ".count\$" ],
+        name_map_file             => $name_map_file,
+        output_proteincoding_gene => $def->{perform_DE_proteincoding_gene},
+        cqs_tools                 => $cqstools,
+        sh_direct                 => 1,
+        pbs                       => {
+          "email"     => $email,
           "emailType" => $def->{emailType},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "10",
-          "mem"      => "10gb"
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
         },
       },
     };
@@ -217,11 +217,11 @@ sub getRNASeqConfig {
             output_to_same_folder     => $def->{output_bam_to_same_folder},
             sh_direct                 => 0,
             pbs                       => {
-              "email"    => $email,
+              "email"     => $email,
               "emailType" => $def->{emailType},
-              "nodes"    => "1:ppn=" . $def->{max_thread},
-              "walltime" => "72",
-              "mem"      => "40gb"
+              "nodes"     => "1:ppn=" . $def->{max_thread},
+              "walltime"  => "72",
+              "mem"       => "40gb"
             },
           },
           "star_summary" => {
@@ -232,11 +232,11 @@ sub getRNASeqConfig {
             source_ref => [ "star", "_Log.final.out" ],
             sh_direct  => 1,
             pbs        => {
-              "email"    => $email,
+              "email"     => $email,
               "emailType" => $def->{emailType},
-              "nodes"    => "1:ppn=1",
-              "walltime" => "72",
-              "mem"      => "40gb"
+              "nodes"     => "1:ppn=1",
+              "walltime"  => "72",
+              "mem"       => "40gb"
             },
           }
         };
@@ -256,11 +256,11 @@ sub getRNASeqConfig {
             output_to_same_folder => $def->{output_bam_to_same_folder},
             sh_direct             => 1,
             pbs                   => {
-              "email"    => $email,
+              "email"     => $email,
               "emailType" => $def->{emailType},
-              "nodes"    => "1:ppn=" . $def->{max_thread},
-              "walltime" => "72",
-              "mem"      => "40gb"
+              "nodes"     => "1:ppn=" . $def->{max_thread},
+              "walltime"  => "72",
+              "mem"       => "40gb"
             },
           },
         };
@@ -286,11 +286,11 @@ sub getRNASeqConfig {
           ispairend  => 1,
           sh_direct  => 0,
           pbs        => {
-            "email"    => $email,
+            "email"     => $email,
             "emailType" => $def->{emailType},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "72",
-            "mem"      => "40gb"
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "72",
+            "mem"       => "40gb"
           },
         },
         "genetable" => {
@@ -303,11 +303,11 @@ sub getRNASeqConfig {
           cqs_tools     => $cqstools,
           sh_direct     => 1,
           pbs           => {
-            "email"    => $email,
+            "email"     => $email,
             "emailType" => $def->{emailType},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "10",
-            "mem"      => "10gb"
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
           },
         },
       };
@@ -321,30 +321,30 @@ sub getRNASeqConfig {
   }
 
   if ( $def->{perform_correlation} ) {
-    my $cor_dir = ( defined $config->{genetable} ) ? $config->{genetable}{target_dir} : $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation";
+    my $cor_dir   = ( defined $config->{genetable} ) ? $config->{genetable}{target_dir} : $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation";
     my $gene_file = $def->{correlation_gene_file};
-    my $rCode = "";
-    if(defined $gene_file){
+    my $rCode     = "";
+    if ( defined $gene_file ) {
       $rCode = "suffix<-\"_genes\"; ";
     }
     $config->{"genetable_correlation"} = {
-      class           => "CQS::UniqueR",
-      perform         => 1,
-      suffix          => "_cor",
-      rCode           => $rCode . "usePearsonInHCA<-" . $def->{use_pearson_in_hca} . "; useGreenRedColorInHCA<-" . $def->{use_green_red_color_in_hca} . "; top25cvInHCA<-" . $def->{top25cv_in_hca} . "; ",
-      target_dir      => $cor_dir,
-      rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
-      output_file     => "parameterSampleFile1",
-      output_file_ext => ".Correlation.png;.density.png;.heatmap.png;.PCA.png;.Correlation.Cluster.png",
-      parameterFile1 => $gene_file,
+      class       => "CQS::UniqueR",
+      perform     => 1,
+      suffix      => "_cor",
+      rCode       => $rCode . "usePearsonInHCA<-" . $def->{use_pearson_in_hca} . "; useGreenRedColorInHCA<-" . $def->{use_green_red_color_in_hca} . "; top25cvInHCA<-" . $def->{top25cv_in_hca} . "; ",
+      target_dir  => $cor_dir,
+      rtemplate   => "countTableVisFunctions.R,countTableGroupCorrelation.R",
+      output_file => "parameterSampleFile1",
+      output_file_ext          => ".Correlation.png;.density.png;.heatmap.png;.PCA.png;.Correlation.Cluster.png",
+      parameterFile1           => $gene_file,
       parameterSampleFile2_ref => $groups_ref,
       sh_direct                => 1,
       pbs                      => {
-        "email"    => $email,
+        "email"     => $email,
         "emailType" => $def->{emailType},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "1",
-        "mem"      => "10gb"
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
       },
     };
     if ( ref($count_file_ref) eq "ARRAY" ) {
@@ -377,11 +377,11 @@ sub getRNASeqConfig {
         referenceSet     => $def->{referenceSet},
         sh_direct        => 1,
         pbs              => {
-          "email"    => $email,
+          "email"     => $email,
           "emailType" => $def->{emailType},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "72",
-          "mem"      => "10gb"
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "72",
+          "mem"       => "10gb"
         },
       };
       push @$summary, "$webgestaltTaskName";
@@ -399,11 +399,11 @@ sub getRNASeqConfig {
           referenceSet     => $def->{referenceSet},
           sh_direct        => 1,
           pbs              => {
-            "email"    => $email,
+            "email"     => $email,
             "emailType" => $def->{emailType},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "72",
-            "mem"      => "10gb"
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "72",
+            "mem"       => "10gb"
           },
         };
         push @$summary, "$webgestaltTaskName";
@@ -431,11 +431,11 @@ sub getRNASeqConfig {
         sh_direct                  => 1,
         rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=F;",
         pbs                        => {
-          "email"    => $def->{email},
+          "email"     => $def->{email},
           "emailType" => $def->{emailType},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       };
       push( @$summary, $gseaTaskName );
@@ -454,11 +454,11 @@ sub getRNASeqConfig {
         sh_direct                => 1,
         rCode                    => "useRawPValue='" . $keggprofile_useRawPValue . "';",
         pbs                      => {
-          "email"    => $def->{email},
+          "email"     => $def->{email},
           "emailType" => $def->{emailType},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       };
       push( @$summary, "keggprofile" );
@@ -479,11 +479,11 @@ sub getRNASeqConfig {
       rrna_fasta     => $def->{rrna_fasta},
       transcript_gtf => $transcript_gtf,
       pbs            => {
-        "email"    => $email,
+        "email"     => $email,
         "emailType" => $def->{emailType},
-        "nodes"    => "1:ppn=" . $def->{max_thread},
-        "walltime" => "72",
-        "mem"      => "40gb"
+        "nodes"     => "1:ppn=" . $def->{max_thread},
+        "walltime"  => "72",
+        "mem"       => "40gb"
       },
     };
     push( @$summary, "rnaseqc" );
@@ -500,11 +500,11 @@ sub getRNASeqConfig {
       qc3_perl       => $def->{qc3_perl},
       source_ref     => $source_ref,
       pbs            => {
-        "email"    => $email,
+        "email"     => $email,
         "emailType" => $def->{emailType},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "40gb"
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "72",
+        "mem"       => "40gb"
       },
     };
     push( @$summary, "qc3" );
@@ -522,11 +522,11 @@ sub getRNASeqConfig {
         add_chr      => $def->{add_chr},
         output_gff   => 1,
         pbs          => {
-          "email"    => $email,
+          "email"     => $email,
           "emailType" => $def->{emailType},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "2",
-          "mem"      => "10gb"
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "2",
+          "mem"       => "10gb"
         },
       };
       $config->{bamplot} = {
@@ -543,11 +543,11 @@ sub getRNASeqConfig {
         colors             => $def->{"colormaps"},
         sh_direct          => 1,
         pbs                => {
-          "email"    => $email,
+          "email"     => $email,
           "emailType" => $def->{emailType},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       };
       push( @$summary, "gene_pos", "bamplot" );
@@ -567,11 +567,11 @@ sub getRNASeqConfig {
         colors             => $def->{"colormaps"},
         sh_direct          => 1,
         pbs                => {
-          "email"    => $email,
+          "email"     => $email,
           "emailType" => $def->{emailType},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       };
       push( @$summary, "bamplot" );
@@ -600,11 +600,11 @@ sub getRNASeqConfig {
       sorted             => 1,
       sh_direct          => 0,
       pbs                => {
-        "email"    => $email,
+        "email"     => $email,
         "emailType" => $def->{emailType},
-        "nodes"    => "1:ppn=8",
-        "walltime" => "72",
-        "mem"      => "40gb"
+        "nodes"     => "1:ppn=8",
+        "walltime"  => "72",
+        "mem"       => "40gb"
       },
     };
 
@@ -622,11 +622,11 @@ sub getRNASeqConfig {
       gvcf          => 0,                                                            #http://gatkforums.broadinstitute.org/gatk/discussion/3891/calling-variants-in-rnaseq
       sh_direct     => 0,
       pbs           => {
-        "email"    => $email,
+        "email"     => $email,
         "emailType" => $def->{emailType},
-        "nodes"    => "1:ppn=8",
-        "walltime" => "72",
-        "mem"      => "40gb"
+        "nodes"     => "1:ppn=8",
+        "walltime"  => "72",
+        "mem"       => "40gb"
       },
     };
 
@@ -645,11 +645,11 @@ sub getRNASeqConfig {
       is_rna      => 1,
       sh_direct   => 1,
       pbs         => {
-        "email"    => $email,
+        "email"     => $email,
         "emailType" => $def->{emailType},
-        "nodes"    => "1:ppn=8",
-        "walltime" => "72",
-        "mem"      => "40gb"
+        "nodes"     => "1:ppn=8",
+        "walltime"  => "72",
+        "mem"       => "40gb"
       },
     };
 
@@ -664,14 +664,14 @@ sub getRNASeqConfig {
       sh_direct  => 1,
       isvcf      => 1,
       pbs        => {
-        "email"    => $email,
+        "email"     => $email,
         "emailType" => $def->{emailType},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "2",
-        "mem"      => "10gb"
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "2",
+        "mem"       => "10gb"
       },
     };
-    push( @$individual, "refine","refine_hc");
+    push( @$individual, "refine",           "refine_hc" );
     push( @$summary,    "refine_hc_filter", "refine_hc_filter_annovar" );
 
   }
@@ -715,6 +715,26 @@ sub getRNASeqConfig {
     }
 
     if ( defined $config->{deseq2_genetable} ) {
+      my $suffix = "";
+      if ( getValue( $def, "DE_top25only", 0 ) ) {
+        $suffix = $suffix . "_top25";
+      }
+
+      if ( getValue( $def, "DE_detected_in_both_group", 0 ) ) {
+        $suffix = $suffix . "_detectedInBothGroup";
+      }
+
+      my $minMedianInGroup = getValue( $def, "DE_min_median_read", 0 );
+      if ( $minMedianInGroup > 0 ) {
+        $suffix = $suffix . "_min" . $minMedianInGroup;
+      }
+      if ( getValue( $def, "DE_use_raw_pvalue", 0 ) ) {
+        $suffix = $suffix . "_pvalue" . $def->{DE_pvalue};
+      }
+      else {
+        $suffix = $suffix . "_fdr" . $def->{DE_pvalue};
+      }
+
       my $pairs = $config->{pairs};
 
       if ( scalar( keys %$pairs ) > 1 ) {
@@ -726,10 +746,9 @@ sub getRNASeqConfig {
         push( @report_names, "deseq2_volcano_plot" );
       }
       for my $key ( keys %$pairs ) {
-        push( @report_files, "deseq2_genetable", $key . ".*_DESeq2_sig.csv" );
+        push( @report_files, "deseq2_genetable", $key . $suffix . "_DESeq2_sig.csv" );
         push( @report_names, "deseq2_" . $key );
       }
-
       push( @copy_files, "deseq2_genetable", "_DESeq2.csv" );
       push( @copy_files, "deseq2_genetable", "_DESeq2_GSEA.rnk" );
       push( @copy_files, "deseq2_genetable", "_DESeq2_sig.csv" );
@@ -786,11 +805,11 @@ sub getRNASeqConfig {
       parameterSampleFile3_ref   => \@copy_files,
       sh_direct                  => 1,
       pbs                        => {
-        "email"    => $def->{email},
+        "email"     => $def->{email},
         "emailType" => $def->{emailType},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "1",
-        "mem"      => "10gb"
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
       },
     };
     push( @$summary, "report" );
@@ -808,11 +827,11 @@ sub getRNASeqConfig {
     sh_direct => 0,
     cluster   => $cluster,
     pbs       => {
-      "email"    => $def->{email},
+      "email"     => $def->{email},
       "emailType" => $def->{emailType},
-      "nodes"    => "1:ppn=" . $def->{max_thread},
-      "walltime" => $def->{sequencetask_run_time},
-      "mem"      => "40gb"
+      "nodes"     => "1:ppn=" . $def->{max_thread},
+      "walltime"  => $def->{sequencetask_run_time},
+      "mem"       => "40gb"
     },
   };
 
