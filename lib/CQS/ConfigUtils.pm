@@ -406,9 +406,13 @@ sub get_refmap {
 }
 
 sub get_raw_file_list {
-  my ( $config, $section, $mapname ) = @_;
+  my ( $config, $section, $mapname, $mustBeOne ) = @_;
 
   my $curSection = get_config_section( $config, $section );
+  
+  if(!defined $mustBeOne){
+    $mustBeOne = 0;
+  }
 
   if ( !defined $mapname ) {
     $mapname = "source";
@@ -447,16 +451,23 @@ sub get_raw_file_list {
       }
 
       my $bFound = 0;
+      my @curResult = ();
       for my $myvalues ( values %myres ) {
         die "Return value should be array." if ( ref($myvalues) ne 'ARRAY' );
         if ( scalar(@$myvalues) > 0 ) {
-          push( @$result, @$myvalues );
+          push( @curResult, @$myvalues );
           $bFound = 1;
         }
       }
       if ( not $bFound ) {
         die "Cannot find file for " . $values->{section} . " and pattern " . $values->{pattern};
       }
+      
+      if($mustBeOne && scalar(@curResult) > 1){
+        die "Only one result allowed but multiple found " . $values->{section} . " and pattern " . $values->{pattern} . "\n" . join("\n  ", @curResult);
+      }
+      
+      push (@$result, @curResult);
     }
 
     return $result;
