@@ -79,7 +79,7 @@ sub perform {
     }
   }
 
-  my $raw_file_list = get_raw_file_list( $config, $section, "parameterSampleFile1" );
+  my $raw_file_list = get_raw_file_list( $config, $section, "parameterSampleFile1", 1 );
   my $raw_file_names = $config->{$section}{parameterSampleFile1_names};
 
   if ( scalar(@$raw_file_list) != scalar(@$raw_file_names) ) {
