@@ -14,6 +14,7 @@ readsInTaskCount<-read.csv(readsInTaskCountFile,header=T,as.is=T,row.names=1)
 readsInTaskPieSummary<-read.csv(readsInTaskPieSummaryFile,header=T,as.is=T,row.names=1)
 
 readsInTaskAll<-rbind(readsInTaskCount,readsInTaskPieSummary[c("Mapped to Host Genome","Too Short for Mapping","Unmapped"),])
+write.csv(readsInTaskAll,paste0(resultFile,".All.TaskReads.csv"))
 
 
 tableBarplotToFile(dat=readsInTaskAll,fileName=paste0(resultFile,".All.TaskReads.Barplot.png"),
