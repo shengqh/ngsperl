@@ -70,15 +70,15 @@ sub perform {
     copy( $rtemplate, $rfile ) or die "Copy failed: $!";
   }
 
-  if ( defined $config->{$section}{additional_rmd_files} ) {
-    my @additional_rtemplates = split( ';', $config->{$section}{additional_rmd_files} );
+  my $additional_rmd_files = $config->{$section}{additional_rmd_files};
+  if ( defined $additional_rmd_files ) {
+    my @additional_rtemplates = split( ';', $additional_rmd_files );
     for my $additional (@additional_rtemplates) {
       my $additional_rtempalte = dirname(__FILE__) . "/" . trim($additional);
       my $additional_rfile     = $result_dir . "/" . basename($additional);
       copy( $additional_rtempalte, $additional_rfile ) or die "Copy failed: $!";
     }
   }
-
   my $raw_file_list = get_raw_file_list( $config, $section, "parameterSampleFile1", 1 );
   my $raw_file_names = $config->{$section}{parameterSampleFile1_names};
 
@@ -100,7 +100,7 @@ sub perform {
   my $final = $self->open_pbs( $final_pbs, $pbs_desc, $final_log_desp, $path_file, $result_dir, $final_file );
 
   my $copy_file_list = get_raw_file_list( $config, $section, "parameterSampleFile3" );
-  if ( scalar( @$copy_file_list ) > 0 ) {
+  if ( scalar(@$copy_file_list) > 0 ) {
     my $report_folder = create_directory_or_die("$result_dir/$task_name");
 
     for my $copy_file ( sort @$copy_file_list ) {
@@ -119,7 +119,7 @@ sub perform {
     }
   }
   print $final "
-R --slave -e \"library(knitr);rmarkdown::render('${task_name}.Rmd');\"
+R -e \"library(knitr);rmarkdown::render('${task_name}.Rmd');\"
 ";
 
   $self->close_pbs( $final, $final_pbs );
