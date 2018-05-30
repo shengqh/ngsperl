@@ -7,6 +7,14 @@ output:
     toc_depth: 4
 ---
 
+<style type="text/css">
+.main-container {
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
 ```{r, child="Functions.Rmd"} 
 ```
   
@@ -277,6 +285,11 @@ structureIndex<-ifelse(hasEnrichmentAnalysis, 7, 6)
 cat(paste0("##", structureIndex, ". Results folder structure\n"))
 
 df<-NULL
+countFile<-list.files('.',pattern=".count$",full.names=TRUE,recursive=TRUE)
+if(length(countFile) > 0){
+  df<-rbind(df, data.frame(File=addLinkTag(countFile, countFile), Description="Gene expression read count table"))
+}
+
 fpkmFile<-list.files('.',pattern="fpkm.tsv$",full.names=TRUE,recursive=TRUE)
 if(length(fpkmFile) > 0){
   df<-rbind(df, data.frame(File=addLinkTag(fpkmFile, fpkmFile), Description="Gene expression abundance table"))

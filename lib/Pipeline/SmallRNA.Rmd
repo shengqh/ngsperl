@@ -6,6 +6,14 @@ output:
     toc_depth: 4
 ---
 
+<style type="text/css">
+.main-container {
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
 ```{r, child="Functions.Rmd"} 
 ```
   
