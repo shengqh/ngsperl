@@ -711,11 +711,11 @@ sub getRNASeqConfig {
       push( @report_files, "genetable_correlation", ".density.png", "genetable_correlation", ".heatmap.png", "genetable_correlation", ".PCA.png", "genetable_correlation", ".Correlation.Cluster.png" );
       push( @report_names, "correlation_density", "correlation_heatmap", "correlation_PCA", "correlation_cluster" );
 
-      push( @copy_files, "genetable_correlation", ".heatmap.png", "genetable_correlation", ".PCA.png" );
+      #push( @copy_files, "genetable_correlation", ".heatmap.png", "genetable_correlation", ".PCA.png" );
     }
 
+    my $suffix = "";
     if ( defined $config->{deseq2_genetable} ) {
-      my $suffix = "";
       if ( getValue( $def, "DE_top25only", 0 ) ) {
         $suffix = $suffix . "_top25";
       }
@@ -750,11 +750,11 @@ sub getRNASeqConfig {
         push( @report_names, "deseq2_" . $key );
       }
       push( @copy_files, "deseq2_genetable", "_DESeq2.csv" );
-      push( @copy_files, "deseq2_genetable", "_DESeq2_GSEA.rnk" );
+      #push( @copy_files, "deseq2_genetable", "_DESeq2_GSEA.rnk" );
       push( @copy_files, "deseq2_genetable", "_DESeq2_sig.csv" );
-      push( @copy_files, "deseq2_genetable", "_DESeq2_sig_genename.txt" );
-      push( @copy_files, "deseq2_genetable", "heatmap.png" );
-      push( @copy_files, "deseq2_genetable", "pca.pdf" );
+      #push( @copy_files, "deseq2_genetable", "_DESeq2_sig_genename.txt" );
+      #push( @copy_files, "deseq2_genetable", "heatmap.png" );
+      #push( @copy_files, "deseq2_genetable", "pca.pdf" );
     }
 
     my $hasFunctionalEnrichment = 0;
@@ -783,7 +783,7 @@ sub getRNASeqConfig {
 
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
-        push( @report_files, "deseq2_genetable_GSEA", $key . ".*gsea.csv" );
+        push( @report_files, "deseq2_genetable_GSEA", $key . $suffix . ".*gsea.csv" );
         push( @report_names, "gsea_" . $key );
       }
       $hasFunctionalEnrichment = 1;

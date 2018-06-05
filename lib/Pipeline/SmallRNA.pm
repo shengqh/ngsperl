@@ -1325,6 +1325,7 @@ sub getSmallRNAConfig {
     },
   };
 
+  push @$summary_ref, ( "count_table_correlation", "reads_in_tasks" );
   if ( $search_host_genome && $search_nonhost_database ) {
     $config->{reads_in_tasks_pie} = {
       class                => "CQS::UniqueR",
@@ -1367,10 +1368,11 @@ sub getSmallRNAConfig {
         "mem"       => "10gb"
       },
     };
+    push @$summary_ref, ( "reads_in_tasks_pie", "reads_in_tasks_all" );
+
   }
 
-  my $name_for_readSummary_r = "readFilesModule=c('" . join( "','", @name_for_readSummary ) . "')
-  ";
+  my $name_for_readSummary_r = "readFilesModule=c('" . join( "','", @name_for_readSummary ) . "'); ";
   $config->{sequence_mapped_in_categories} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
@@ -1391,7 +1393,7 @@ sub getSmallRNAConfig {
       "mem"       => "10gb"
     },
   };
-  push @$summary_ref, ( "count_table_correlation", "reads_in_tasks", "reads_in_tasks_pie", "reads_in_tasks_all", "sequence_mapped_in_categories" );
+  push @$summary_ref, "sequence_mapped_in_categories";
 
   #add time cost task in the end of pipeline
   #search not identical reads to genome, for IGV
@@ -1657,7 +1659,7 @@ sub getSmallRNAConfig {
         push( @report_files, "count_table_correlation",     "rRNA_pm_${task_name}.count.heatmap.png" );
         push( @report_files, "count_table_correlation",     "rRNA_pm_${task_name}.count.PCA.png" );
         push( @report_names, "correlation_rrnalib_heatmap", "correlation_rrnalib_pca" );
-        
+
         if ($hasGroupHeatmap) {
           push( @report_files, "count_table_correlation",           "rRNA_pm_${task_name}.count.Group.heatmap.png" );
           push( @report_files, "count_table_correlation",           "rRNA_pm_${task_name}.count.Group.Correlation.Cluster.png" );
