@@ -21,6 +21,32 @@ if(!exists("useLeastGroups")){
   useLeastGroups<-FALSE
 }
 
+getHeatmapOption<-function(countHT){
+	labRow=""
+	Rowv=NULL
+	showRowDendro=FALSE
+	cmargin=min(10,max(nchar(colnames(countHT)))/2)
+	rmargin=5
+	if(nrow(countHT) < 30){
+		showRowDendro=TRUE
+		labRow=NULL
+		rmargin=min(10,max(nchar(row.names(countHT)))/2)
+	}
+	if(nrow(countHT) > 50000){
+		Rowv=NA
+	}
+	margin=c(cmargin,rmargin)
+	return(list(labRow=labRow, Rowv=Rowv, showRowDendro=showRowDendro, margin=margin))
+}
+
+theme_bw2 <- function () { 
+	theme_bw() %+replace% 
+		theme(
+			panel.border = element_blank(),
+			axis.line = element_line(colour = "black", size = 0.5)
+		)
+}
+
 getSampleInGroup<-function(groupDefineFile, samples, comparisonDefineFile="", countTableTitle="", useLeastGroups=FALSE,onlySamplesInGroup=FALSE){
   groupData<-read.delim(groupDefineFile,as.is=T,header=F)
   if(comparisonDefineFile != ""){
