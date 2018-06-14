@@ -98,8 +98,8 @@ sub result {
   push( @result_files, $self->get_file( $result_dir, $task_name, ".count", 0 ) );
   push( @result_files, $self->get_file( $pbs_dir, $task_name, ".filelist" ) );
 
-  my $mapFile = get_param_file( $config->{$section}{name_map_file}, "name_map_file", 0 );
-  if ( defined $mapFile ) {
+  my $mapFile = $config->{$section}{name_map_file};
+  if ( defined $config->{$section}{name_map_file} ) {
     push( @result_files, $self->get_file( $result_dir, $task_name, ".fpkm.tsv", 0 ) );
   }
 
