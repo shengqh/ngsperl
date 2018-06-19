@@ -261,6 +261,10 @@ libraryFile<-\"$libraryFile\"
 libraryKey<-\"$libraryKey\"
 ";
   }
+  
+  if(defined $config->{$section}{rCode}){
+    print $rf $config->{$section}{rCode} . "\n";
+  }
 
   while (<$rt>) {
     if ( $_ !~ 'predefined_condition_end' ) {
