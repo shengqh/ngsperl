@@ -78,11 +78,7 @@ sub perform {
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file );
 
-  print $pbs "mono $cqstools data_table $option -o $result_file -l $filelist $mapoption";
-  if ($output_proteincoding_gene) {
-    my $result_file_proteincoding = $self->get_file( ".", $task_name, ".proteincoding.count", 0 );
-    print $pbs "grep protein_coding $result_file > $result_file_proteincoding";
-  }
+  print $pbs "mono $cqstools data_table $option -o $result_file -l $filelist $mapoption \n";
 
   $self->close_pbs( $pbs, $pbs_file );
 }
