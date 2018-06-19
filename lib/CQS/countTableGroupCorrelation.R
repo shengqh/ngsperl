@@ -138,7 +138,7 @@ drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outp
 		theme_bw2()
     
 	if(outputPdf){
-		pdf(paste0(filename, ".pdf"), width=7, height=7) 
+		pdf(paste0(filename, ".pdf"), width=6, height=5) 
 	}else{
 		png(filename=paste0(filename, ".png"), width=3000, height=3000, res=300) 
 	}
