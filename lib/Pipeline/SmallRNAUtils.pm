@@ -98,8 +98,8 @@ sub addNonhostDatabase {
     },
   };
 
-  push @$nonhostXml, ($bowtie1CountTask, ".xml");
-  
+  push @$nonhostXml, ( $bowtie1CountTask, ".xml" );
+
   $config->{$bowtie1TableTask} = {
     class      => "CQS::CQSChromosomeTable",
     perform    => 1,
@@ -147,7 +147,7 @@ sub addNonhostDatabase {
       },
     };
     push @$individual, $bowtie1readTask;
-    
+
     my $bowtie1readMapTask = "bowtie1_" . $taskKey . "_mappedreads_host";
     addBowtie( $config, $def, $individual, $bowtie1readMapTask, $parentDir, $def->{bowtie1_index}, [$bowtie1readTask], $def->{bowtie1_option_2mm} );
 
@@ -162,7 +162,7 @@ sub addNonhostDatabase {
       parameterSampleFile1_arg => "-i",
       parameterSampleFile1_ref => [ $bowtie1readMapTask, ".bam\$" ],
       parameterSampleFile2_arg => "-f",
-      parameterSampleFile2_ref => [$bowtie1readTask, ".fastq.gz\$"],
+      parameterSampleFile2_ref => [ $bowtie1readTask, ".fastq.gz\$" ],
       parameterSampleFile3_arg => "-c",
       parameterSampleFile3_ref => $count_ref,
       output_to_same_folder    => 1,
@@ -367,8 +367,6 @@ sub getPrepareConfig {
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref ) = getPreprocessionConfig($def);
 
-  my $class_independent_dir = create_directory_or_die( $target_dir . "/class_independent" );
-
   my $cluster = getValue( $def, "cluster" );
 
   #nta for microRNA and tRNA
@@ -401,30 +399,30 @@ sub getPrepareConfig {
         "mem"      => "20gb"
       },
     },
-    identical_sequence_count_table => {
-      class      => "CQS::SmallRNASequenceCountTable",
-      perform    => 1,
-      target_dir => $class_independent_dir . "/identical_sequence_count_table",
-      option     => getValue( $def, "sequence_count_option" ),
-      source_ref => [ "identical", ".dupcount\$" ],
-      cqs_tools  => $def->{cqstools},
-      suffix     => "_sequence",
-      sh_direct  => 1,
-      cluster    => $cluster,
-      groups     => $def->{groups},
-      pairs      => $def->{pairs},
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "10",
-        "mem"      => "10gb"
-      },
+  };
+  push @$individual, ("identical");
+
+  my $class_independent_dir = create_directory_or_die( $target_dir . "/class_independent" );
+  $preparation->{identical_sequence_count_table} = {
+    class      => "CQS::SmallRNASequenceCountTable",
+    perform    => 1,
+    target_dir => $class_independent_dir . "/identical_sequence_count_table",
+    option     => getValue( $def, "sequence_count_option" ),
+    source_ref => [ "identical", ".dupcount\$" ],
+    cqs_tools  => $def->{cqstools},
+    suffix     => "_sequence",
+    sh_direct  => 1,
+    cluster    => $cluster,
+    groups     => $def->{groups},
+    pairs      => $def->{pairs},
+    pbs        => {
+      "email"    => $def->{email},
+      "nodes"    => "1:ppn=1",
+      "walltime" => "10",
+      "mem"      => "10gb"
     },
   };
-
-  push @$individual, ("identical");
-  push @$summary,    ("identical_sequence_count_table");
-
+  push @$summary, ("identical_sequence_count_table");
   if ( $consider_miRNA_NTA && $consider_tRNA_NTA ) {
     $preparation->{identical_check_cca} = {
       class              => "SmallRNA::tRNACheckCCA",
