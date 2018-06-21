@@ -14,6 +14,7 @@ use LWP::Simple;
 use LWP::UserAgent;
 use URI::Escape;
 use List::Util qw(first);
+use String::Util qw(trim);
 use Utils::CollectionUtils;
 
 our @ISA = qw(CQS::Task);
@@ -62,7 +63,7 @@ sub getSraFiles {
     }
     else {
       my $fileSection = $config->{$section}{"source_ref"}[0];
-      my $files = $config->{$fileSection};
+      my $files       = $config->{$fileSection};
       if ( ref($files) eq 'ARRAY' ) {
         for my $gsm (@$files) {
           $result->{$gsm} = [$gsm];
@@ -77,43 +78,12 @@ sub getSraFiles {
 }
 
 sub GsmToSrr {
-  my $gsm = shift;
-  my $ua  = new LWP::UserAgent;
-  $ua->agent( "AgentName/0.1 " . $ua->agent );
-  my $url = "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=" . $gsm;
-  my $req = HTTP::Request->new( GET => $url );
+  my ($gsm, $sraTable) = @_;
 
-  # Pass request to the user agent and get a response back
-  my $res = $ua->request($req);
-
-  if ( $res->is_success ) {
-    my $rescontent = $res->content;
-
-    #print $rescontent;
-
-    my @sraUrls = ( $rescontent =~ m/<a href=\"(ftp:\/\/ftp\-trace.ncbi.nlm.nih.gov\/sra.*?)\">.ftp/g );
-    if ( scalar(@sraUrls) == 0 ) {
-      die "Cannot find SRA url from " . $url;
-    }
-    foreach my $sraUrl (@sraUrls) {
-      my $srrReq = HTTP::Request->new( GET => $sraUrl );
-      my $srrRes = $ua->request($srrReq);
-      if ( $srrRes->is_success ) {
-        my $srrContent = $srrRes->content;
-        my @srrNames   = ( $srrContent =~ m/(SRR\d+)/g );
-        if ( scalar(@srrNames) == 0 ) {
-          die "Cannot find SRR access number from " . $sraUrl;
-        }
-        return $srrNames[0];
-      }
-      else {
-        die "Cannot get result for " . $url;
-      }
-    }
-  }
-  else {
-    die "Cannot get result for " . $gsm . ", error: " . $res->decoded_content;
-  }
+  my $cmd = "grep $gsm $sraTable | grep -e \"^SRR\" | cut -f1";
+  my $res = ` $cmd `;
+  $res = trim($res);
+  return $res;
 }
 
 sub perform {
@@ -146,7 +116,8 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     if ( $sample_file =~ /GSM/ ) {
-      $sample_file = GsmToSrr($sample_file);
+      my $sraTable  = get_option_file($config, $section, "sra_table");
+      $sample_file = GsmToSrr($sample_file, $sraTable);
     }
     if ( $sample_file =~ /\.sra/ ) {
       print $pbs "ln -s $sample_file ${sample_name}.sra \n";

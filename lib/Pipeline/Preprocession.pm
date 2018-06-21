@@ -46,7 +46,7 @@ sub initCutadaptOption {
   }
   my $cutadapt_option = getValue( $config, "cutadapt_option", getValue( $def, "cutadapt_option", "" ) );
 
-  if (($cutadapt_option !~ /-a/) && ($cutadapt_option !~ /-g/)){
+  if ( ( $cutadapt_option !~ /-a/ ) && ( $cutadapt_option !~ /-g/ ) ) {
     defined $config->{"adapter_5"} or defined $config->{"adapter_3"} or getValue( $config, "adapter" );
   }
 
@@ -65,16 +65,16 @@ sub getPreprocessionConfig {
   $def = initializeDefaultOptions($def);
 
   my $preprocessing_dir = $target_dir;
-  if ($def->{perform_preprocessing} && $def->{subdir} ) {
+  if ( $def->{perform_preprocessing} && $def->{subdir} ) {
     $preprocessing_dir = create_directory_or_die( $target_dir . "/preprocessing" );
   }
 
   my $is_pairend = is_pairend($def);
 
   #general
-  my $cluster  = getValue( $def, "cluster" );
-  my $task     = getValue( $def, "task_name" );
-  my $email    = getValue( $def, "email" );
+  my $cluster = getValue( $def, "cluster" );
+  my $task    = getValue( $def, "task_name" );
+  my $email   = getValue( $def, "email" );
 
   #data
   my $config = {
@@ -99,6 +99,7 @@ sub getPreprocessionConfig {
   #task
   if ( $def->{sra_to_fastq} ) {
     defined $is_pairend or die "Define is_pairend first!";
+    defined $def->{sra_table} or die "Define sra_table first, can be downloaded from ftp://ftp.ncbi.nlm.nih.gov/sra/reports/Metadata/SRA_Accessions.tab";
   }
 
   if ( $def->{merge_fastq} ) {
@@ -134,6 +135,7 @@ sub getPreprocessionConfig {
       target_dir => $def->{target_dir} . "/" . getNextFolderIndex($def) . "sra2fastq",
       option     => "",
       source_ref => $source_ref,
+      sra_table  => $def->{sra_table},
       sh_direct  => 1,
       cluster    => $def->{cluster},
       not_clean  => getValue( $def, "sra_not_clean", 1 ),
