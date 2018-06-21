@@ -29,19 +29,18 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "emailType", "ALL" );
 
-  initDefaultValue( $def, "perform_preprocessing",         1 );
-  initDefaultValue( $def, "perform_mapping",               1 );
-  initDefaultValue( $def, "perform_counting",              1 );
-  initDefaultValue( $def, "perform_correlation",           1 );
-  initDefaultValue( $def, "perform_rnaseqc",               0 );
-  initDefaultValue( $def, "perform_qc3bam",                0 );
-  initDefaultValue( $def, "perform_bamplot",               0 );
-  initDefaultValue( $def, "perform_call_variants",         0 );
-  initDefaultValue( $def, "perform_multiqc",               1 );
-  initDefaultValue( $def, "perform_webgestalt",            0 );
-  initDefaultValue( $def, "perform_gsea",                  0 );
-  initDefaultValue( $def, "perform_report",                1 );
-  initDefaultValue( $def, "perform_DE_proteincoding_gene", 0 );
+  initDefaultValue( $def, "perform_preprocessing", 1 );
+  initDefaultValue( $def, "perform_mapping",       1 );
+  initDefaultValue( $def, "perform_counting",      1 );
+  initDefaultValue( $def, "perform_correlation",   1 );
+  initDefaultValue( $def, "perform_rnaseqc",       0 );
+  initDefaultValue( $def, "perform_qc3bam",        0 );
+  initDefaultValue( $def, "perform_bamplot",       0 );
+  initDefaultValue( $def, "perform_call_variants", 0 );
+  initDefaultValue( $def, "perform_multiqc",       1 );
+  initDefaultValue( $def, "perform_webgestalt",    0 );
+  initDefaultValue( $def, "perform_gsea",          0 );
+  initDefaultValue( $def, "perform_report",        1 );
 
   initDefaultValue( $def, "perform_cutadapt", 0 );
 
@@ -68,8 +67,8 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "DE_detected_in_both_group",       0 );
   initDefaultValue( $def, "DE_perform_wilcox",               0 );
   initDefaultValue( $def, "DE_text_size",                    10 );
-  initDefaultValue( $def, "DE_min_median_read",              0 );
-
+  initDefaultValue( $def, "DE_min_median_read",              5 );
+  initDefaultValue( $def, "perform_DE_proteincoding_gene",   0 );
   return $def;
 }
 
@@ -317,6 +316,9 @@ sub getRNASeqConfig {
       push @$summary,    "genetable";
 
       $count_file_ref = [ "genetable", ".count\$" ];
+      if ( $def->{perform_DE_proteincoding_gene} ) {
+        push @$count_file_ref, [ "genetable", ".proteincoding.count\$" ];
+      }
     }
   }
 
@@ -357,11 +359,13 @@ sub getRNASeqConfig {
   }
 
   if ( defined $def->{pairs} ) {
-    my $deseq2taskname = addDEseq2( $config, $def, $summary, "genetable", $count_file_ref, $def->{target_dir}, $def->{DE_min_median_read} );
 
-    my $deseq2ProteincodingTaskName;
+    my $deseq2taskname;
     if ( $def->{perform_DE_proteincoding_gene} ) {
-      $deseq2ProteincodingTaskName = addDEseq2( $config, $def, $summary, "proteincoding_genetable", [ "genetable", ".proteincoding.count\$" ], $def->{target_dir}, $def->{DE_min_median_read} );
+      $deseq2taskname = addDEseq2( $config, $def, $summary, "proteincoding_genetable", [ "genetable", ".proteincoding.count\$" ], $def->{target_dir}, $def->{DE_min_median_read} );
+    }
+    else {
+      $deseq2taskname = addDEseq2( $config, $def, $summary, "genetable", $count_file_ref, $def->{target_dir}, $def->{DE_min_median_read} );
     }
 
     if ( getValue( $def, "perform_webgestalt" ) ) {
@@ -385,29 +389,6 @@ sub getRNASeqConfig {
         },
       };
       push @$summary, "$webgestaltTaskName";
-
-      if ( $def->{perform_DE_proteincoding_gene} ) {
-        my $webgestaltTaskName = $deseq2ProteincodingTaskName . "_WebGestalt";
-        $config->{$webgestaltTaskName} = {
-          class            => "Annotation::WebGestaltR",
-          perform          => 1,
-          target_dir       => $target_dir . "/" . getNextFolderIndex($def) . $webgestaltTaskName,
-          option           => "",
-          source_ref       => [ $deseq2ProteincodingTaskName, "sig_genename.txt\$" ],
-          organism         => getValue( $def, "webgestalt_organism" ),
-          interestGeneType => $def->{interestGeneType},
-          referenceSet     => $def->{referenceSet},
-          sh_direct        => 1,
-          pbs              => {
-            "email"     => $email,
-            "emailType" => $def->{emailType},
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "72",
-            "mem"       => "10gb"
-          },
-        };
-        push @$summary, "$webgestaltTaskName";
-      }
     }
 
     if ( getValue( $def, "perform_gsea" ) ) {
@@ -708,10 +689,13 @@ sub getRNASeqConfig {
     push( @copy_files, "genetable", ".count\$", "genetable", ".fpkm.tsv" );
 
     if ( defined $config->{genetable_correlation} ) {
-      push( @report_files, "genetable_correlation", ".density.png", "genetable_correlation", ".heatmap.png", "genetable_correlation", ".PCA.png", "genetable_correlation", ".Correlation.Cluster.png" );
+      my $pcoding = $def->{perform_DE_proteincoding_gene} ? ".proteincoding.count" : "";
+      push( @report_files,
+        "genetable_correlation", $pcoding . ".density.png",
+        "genetable_correlation", $pcoding . ".heatmap.png",
+        "genetable_correlation", $pcoding . ".PCA.png",
+        "genetable_correlation", $pcoding . ".Correlation.Cluster.png" );
       push( @report_names, "correlation_density", "correlation_heatmap", "correlation_PCA", "correlation_cluster" );
-
-      #push( @copy_files, "genetable_correlation", ".heatmap.png", "genetable_correlation", ".PCA.png" );
     }
 
     my $suffix = "";
@@ -724,7 +708,7 @@ sub getRNASeqConfig {
         $suffix = $suffix . "_detectedInBothGroup";
       }
 
-      my $minMedianInGroup = getValue( $def, "DE_min_median_read", 0 );
+      my $minMedianInGroup = getValue( $def, "DE_min_median_read", 5 );
       if ( $minMedianInGroup > 0 ) {
         $suffix = $suffix . "_min" . $minMedianInGroup;
       }
@@ -750,8 +734,10 @@ sub getRNASeqConfig {
         push( @report_names, "deseq2_" . $key );
       }
       push( @copy_files, "deseq2_genetable", "_DESeq2.csv" );
+
       #push( @copy_files, "deseq2_genetable", "_DESeq2_GSEA.rnk" );
       push( @copy_files, "deseq2_genetable", "_DESeq2_sig.csv" );
+
       #push( @copy_files, "deseq2_genetable", "_DESeq2_sig_genename.txt" );
       #push( @copy_files, "deseq2_genetable", "heatmap.png" );
       #push( @copy_files, "deseq2_genetable", "pca.pdf" );
