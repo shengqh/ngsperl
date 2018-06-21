@@ -32,8 +32,8 @@ sub getStructure {
     if ( $res->is_success ) {
       open( my $tmp, ">$tmpFile" ) or die "Cannot create $tmpFile";
       my $rescontent = $res->content;
-
-      my @categories = ( $rescontent =~ m/folder.gif" alt="\[DIR\]"> <a href="(.*?)\/"/g );
+      my $pattern = "href=\"([^\/]*?)\/\"";
+      my @categories = ( $rescontent =~ m/$pattern/g );
       foreach my $category (@categories) {
         if($category =~ /_old/){
           next;
@@ -46,7 +46,7 @@ sub getStructure {
         my $categoryres     = $ua->request($categoryreq);
         my $categorycontent = $categoryres->content;
 
-        my @species_array = $categorycontent =~ m/folder.gif" alt="\[DIR\]"> <a href="(.*?)\/"/g;
+        my @species_array = $categorycontent =~ m/$pattern/g;
 
         foreach my $species (@species_array) {
           if ( $species =~ /_old/ ) {
