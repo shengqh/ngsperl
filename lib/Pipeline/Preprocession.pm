@@ -44,9 +44,11 @@ sub initCutadaptOption {
   if ( $def != $config ) {
     initDefaultValue( $config, "min_read_length", $def->{"min_read_length"} );
   }
-  defined $config->{"adapter_5"} or defined $config->{"adapter_3"} or getValue( $config, "adapter" );
-
   my $cutadapt_option = getValue( $config, "cutadapt_option", getValue( $def, "cutadapt_option", "" ) );
+
+  if (($cutadapt_option !~ /-a/) && ($cutadapt_option !~ /-g/)){
+    defined $config->{"adapter_5"} or defined $config->{"adapter_3"} or getValue( $config, "adapter" );
+  }
 
   if ( $cutadapt_option !~ /\-m/ ) {
     my $min_read_length = getValue( $config, "min_read_length" );
