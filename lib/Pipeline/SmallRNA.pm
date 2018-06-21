@@ -46,11 +46,21 @@ sub getSmallRNAConfig {
   my $perform_nonhost_overlap_vis = getValue( $def, "perform_nonhost_overlap_vis", 1 );
 
   my $top_read_number = getValue( $def, "top_read_number" );
-  my $host_genome_dir;
-  if ($search_host_genome) {
-    $host_genome_dir = create_directory_or_die( $def->{target_dir} . "/host_genome" );
-  }
+  
+  my $real_genome_bowtie1_index = $def->{"real_genome_bowtie1_index"};
+  my $isHomologyAnalysis = defined $real_genome_bowtie1_index;
 
+  my $real_genome_dir;
+  if($isHomologyAnalysis){
+    $real_genome_dir = create_directory_or_die( $def->{target_dir} . "/real_genome");
+  }
+  
+  my $host_genome_dir;
+  my $host_genome_suffix =  getValue( $def, "host_genome_suffix", "" );
+  if ($search_host_genome) {
+    $host_genome_dir = create_directory_or_die( $def->{target_dir} . "/host_genome" . $host_genome_suffix );
+  }
+  
   my $nonhost_library_dir;
   if ($search_nonhost_library) {
     $nonhost_library_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_library" );
@@ -277,7 +287,38 @@ sub getSmallRNAConfig {
     getValue( $def, "coordinate" );
 
     #1 mismatch search, NTA
-    addBowtie( $config, $def, $individual_ref, "bowtie1_genome_1mm_NTA", $host_genome_dir, $def->{bowtie1_index}, [ "identical_NTA", ".fastq.gz\$" ], $def->{bowtie1_option_1mm} );
+    my $hostBowtieTask =  "bowtie1_genome_1mm_NTA";
+    addBowtie( $config, $def, $individual_ref, $hostBowtieTask, $host_genome_dir, $def->{bowtie1_index}, [ "identical_NTA", ".fastq.gz\$" ], $def->{bowtie1_option_1mm} );
+    
+    my $bamSource = $hostBowtieTask;
+    
+    if($isHomologyAnalysis){
+      my $realBowtieTask = "bowtie1_real_genome_1mm_NTA";
+      addBowtie( $config, $def, $individual_ref, $realBowtieTask, $real_genome_dir, $real_genome_bowtie1_index, [ "identical_NTA", ".fastq.gz\$" ], $def->{bowtie1_option_1mm} );
+      
+      my $homologyTask = "bowtie1_genome_1mm_NTA_homology";
+      $config->{$homologyTask} = {
+        class           => "SmallRNA::FilterIndividualHomologyBAM",
+        perform         => 1,
+        target_dir      => $host_genome_dir . "/$homologyTask",
+        option          => "",
+        samonly            => 0,
+        source_ref         => $hostBowtieTask,
+        reference_bams_ref => $realBowtieTask,
+        sh_direct       => 1,
+        cluster         => $cluster,
+        pbs             => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "12",
+          "mem"       => "40gb"
+        },
+      };
+      
+      $bamSource = $homologyTask;
+      push @$individual_ref, ("$homologyTask");
+    }
 
     my $host_genome = {
 
@@ -286,7 +327,7 @@ sub getSmallRNAConfig {
         perform         => 1,
         target_dir      => $host_genome_dir . "/bowtie1_genome_1mm_NTA_smallRNA_count",
         option          => $def->{host_smallrnacount_option},
-        source_ref      => "bowtie1_genome_1mm_NTA",
+        source_ref      => $bamSource,
         fastq_files_ref => "identical_NTA",
         seqcount_ref    => $identical_count_ref,
         cqs_tools       => $def->{cqstools},
@@ -416,7 +457,7 @@ sub getSmallRNAConfig {
         perform       => 1,
         target_dir    => $host_genome_dir . "/bowtie1_genome_xml2bam",
         source_ref    => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
-        bam_files_ref => [ "bowtie1_genome_1mm_NTA", ".bam" ],
+        bam_files_ref => [ $bamSource, ".bam" ],
         sh_direct     => 1,
         pbs           => {
           "email"     => $def->{email},
