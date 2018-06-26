@@ -1059,7 +1059,7 @@ if (! is.null(resultAllOut)) {
 		
 		if(outputPdf){
 			width<-max(7,3.5*length(allComparisons))
-			pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"),width=width,height=7)
+			pdf(paste0(allprefix,"_DESeq2_volcanoPlot.pdf"),width=width,height=7)
 		}else{
 			width<-max(2000,1000*length(allComparisons))
 			png(filename=paste0(allprefix, "_DESeq2_volcanoPlot.png"), width=width, height=2000, res=300)
