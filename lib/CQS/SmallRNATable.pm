@@ -105,43 +105,49 @@ $pythonCode
 }
 
 sub addOutput {
-  my ( $self, $result_files, $result_dir, $pbs_dir, $key, $option ) = @_;
+  my ( $self, $result_files, $result_dir, $pbs_dir, $key, $option, $is_tRH ) = @_;
   my $noCategory = $option =~ /noCategory/;
   push( @$result_files, $self->get_file( $result_dir, $key, ".count", 0 ) );
 
   if ( !$noCategory ) {
-    push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.count",                   0 ) );
-    push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.count.position",          0 ) );
-    push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.read.count",              0 ) );
-    push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.isomiR.count",            0 ) );
-    push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.isomiR_NTA.count",        0 ) );
-    push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.NTA.count",               0 ) );
-    push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.NTA.base.count",          0 ) );
+    if ( !$is_tRH ) {
+      push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.count",            0 ) );
+      push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.count.position",   0 ) );
+      push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.read.count",       0 ) );
+      push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.isomiR.count",     0 ) );
+      push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.isomiR_NTA.count", 0 ) );
+      push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.NTA.count",        0 ) );
+      push( @$result_files, $self->get_file( $result_dir, $key, ".miRNA.NTA.base.count",   0 ) );
+    }
+
     push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.count",                    0 ) );
     push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.count.position",           0 ) );
     push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.read.count",               0 ) );
     push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.aminoacid.count",          0 ) );
     push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.aminoacid.count.position", 0 ) );
 
-    if ( $option =~ /exportYRNA/ ) {
-      push( @$result_files, $self->get_file( $result_dir, $key, ".yRNA.count",          0 ) );
-      push( @$result_files, $self->get_file( $result_dir, $key, ".yRNA.count.position", 0 ) );
-      push( @$result_files, $self->get_file( $result_dir, $key, ".yRNA.read.count",     0 ) );
+    if ( !$is_tRH ) {
+
+      if ( $option =~ /exportYRNA/ ) {
+        push( @$result_files, $self->get_file( $result_dir, $key, ".yRNA.count",          0 ) );
+        push( @$result_files, $self->get_file( $result_dir, $key, ".yRNA.count.position", 0 ) );
+        push( @$result_files, $self->get_file( $result_dir, $key, ".yRNA.read.count",     0 ) );
+      }
+      if ( $option =~ /exportSnRNA/ ) {
+        push( @$result_files, $self->get_file( $result_dir, $key, ".snRNA.count",          0 ) );
+        push( @$result_files, $self->get_file( $result_dir, $key, ".snRNA.count.position", 0 ) );
+        push( @$result_files, $self->get_file( $result_dir, $key, ".snRNA.read.count",     0 ) );
+      }
+      if ( $option =~ /exportSnoRNA/ ) {
+        push( @$result_files, $self->get_file( $result_dir, $key, ".snoRNA.count",          0 ) );
+        push( @$result_files, $self->get_file( $result_dir, $key, ".snoRNA.count.position", 0 ) );
+        push( @$result_files, $self->get_file( $result_dir, $key, ".snoRNA.read.count",     0 ) );
+      }
+      push( @$result_files, $self->get_file( $result_dir, $key, ".rRNA.count",       0 ) );
+      push( @$result_files, $self->get_file( $result_dir, $key, ".rRNA.read.count",  0 ) );
+      push( @$result_files, $self->get_file( $result_dir, $key, ".other.count",      0 ) );
+      push( @$result_files, $self->get_file( $result_dir, $key, ".other.read.count", 0 ) );
     }
-    if ( $option =~ /exportSnRNA/ ) {
-      push( @$result_files, $self->get_file( $result_dir, $key, ".snRNA.count",          0 ) );
-      push( @$result_files, $self->get_file( $result_dir, $key, ".snRNA.count.position", 0 ) );
-      push( @$result_files, $self->get_file( $result_dir, $key, ".snRNA.read.count",     0 ) );
-    }
-    if ( $option =~ /exportSnoRNA/ ) {
-      push( @$result_files, $self->get_file( $result_dir, $key, ".snoRNA.count",          0 ) );
-      push( @$result_files, $self->get_file( $result_dir, $key, ".snoRNA.count.position", 0 ) );
-      push( @$result_files, $self->get_file( $result_dir, $key, ".snoRNA.read.count",     0 ) );
-    }
-    push( @$result_files, $self->get_file( $result_dir, $key, ".rRNA.count",       0 ) );
-    push( @$result_files, $self->get_file( $result_dir, $key, ".rRNA.read.count",  0 ) );
-    push( @$result_files, $self->get_file( $result_dir, $key, ".other.count",      0 ) );
-    push( @$result_files, $self->get_file( $result_dir, $key, ".other.read.count", 0 ) );
   }
   push( @$result_files, $self->get_file( $pbs_dir, $key, ".filelist", 0 ) );
 }
@@ -153,17 +159,19 @@ sub result {
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
+  my $is_tRH = get_option( $config, $section, "is_tRH", 0 );
+
   my $result = {};
 
   my @result_files = ();
   if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
     my $groups = get_raw_files( $config, $section, "groups" );
     for my $group_name ( sort keys %{$groups} ) {
-      $self->addOutput( \@result_files, $result_dir, $pbs_dir, "${task_name}_${group_name}", $option );
+      $self->addOutput( \@result_files, $result_dir, $pbs_dir, "${task_name}_${group_name}", $option, $is_tRH );
     }
   }
   else {
-    $self->addOutput( \@result_files, $result_dir, $pbs_dir, $task_name, $option );
+    $self->addOutput( \@result_files, $result_dir, $pbs_dir, $task_name, $option, $is_tRH );
   }
   $result->{$task_name} = filter_array( \@result_files, $pattern );
 
