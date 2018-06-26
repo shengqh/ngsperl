@@ -46,21 +46,21 @@ sub getSmallRNAConfig {
   my $perform_nonhost_overlap_vis = getValue( $def, "perform_nonhost_overlap_vis", 1 );
 
   my $top_read_number = getValue( $def, "top_read_number" );
-  
+
   my $real_genome_bowtie1_index = $def->{"real_genome_bowtie1_index"};
-  my $isHomologyAnalysis = defined $real_genome_bowtie1_index;
+  my $isHomologyAnalysis        = defined $real_genome_bowtie1_index;
 
   my $real_genome_dir;
-  if($isHomologyAnalysis){
-    $real_genome_dir = create_directory_or_die( $def->{target_dir} . "/real_genome");
+  if ($isHomologyAnalysis) {
+    $real_genome_dir = create_directory_or_die( $def->{target_dir} . "/real_genome" );
   }
-  
+
   my $host_genome_dir;
-  my $host_genome_suffix =  getValue( $def, "host_genome_suffix", "" );
+  my $host_genome_suffix = getValue( $def, "host_genome_suffix", "" );
   if ($search_host_genome) {
     $host_genome_dir = create_directory_or_die( $def->{target_dir} . "/host_genome" . $host_genome_suffix );
   }
-  
+
   my $nonhost_library_dir;
   if ($search_nonhost_library) {
     $nonhost_library_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_library" );
@@ -287,27 +287,27 @@ sub getSmallRNAConfig {
     getValue( $def, "coordinate" );
 
     #1 mismatch search, NTA
-    my $hostBowtieTask =  "bowtie1_genome_1mm_NTA";
+    my $hostBowtieTask = "bowtie1_genome_1mm_NTA";
     addBowtie( $config, $def, $individual_ref, $hostBowtieTask, $host_genome_dir, $def->{bowtie1_index}, [ "identical_NTA", ".fastq.gz\$" ], $def->{bowtie1_option_1mm} );
-    
+
     my $bamSource = $hostBowtieTask;
-    
-    if($isHomologyAnalysis){
+
+    if ($isHomologyAnalysis) {
       my $realBowtieTask = "bowtie1_real_genome_1mm_NTA";
       addBowtie( $config, $def, $individual_ref, $realBowtieTask, $real_genome_dir, $real_genome_bowtie1_index, [ "identical_NTA", ".fastq.gz\$" ], $def->{bowtie1_option_1mm} );
-      
+
       my $homologyTask = "bowtie1_genome_1mm_NTA_homology";
       $config->{$homologyTask} = {
-        class           => "SmallRNA::FilterIndividualHomologyBAM",
-        perform         => 1,
-        target_dir      => $host_genome_dir . "/$homologyTask",
-        option          => "",
+        class              => "SmallRNA::FilterIndividualHomologyBAM",
+        perform            => 1,
+        target_dir         => $host_genome_dir . "/$homologyTask",
+        option             => "",
         samonly            => 0,
         source_ref         => $hostBowtieTask,
         reference_bams_ref => $realBowtieTask,
-        sh_direct       => 1,
-        cluster         => $cluster,
-        pbs             => {
+        sh_direct          => 1,
+        cluster            => $cluster,
+        pbs                => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
@@ -315,7 +315,7 @@ sub getSmallRNAConfig {
           "mem"       => "40gb"
         },
       };
-      
+
       $bamSource = $homologyTask;
       push @$individual_ref, ("$homologyTask");
     }
@@ -343,88 +343,125 @@ sub getSmallRNAConfig {
           "mem"       => "40gb"
         },
       },
-      bowtie1_genome_1mm_NTA_smallRNA_table => {
-        class      => "CQS::SmallRNATable",
-        perform    => 1,
-        target_dir => $host_genome_dir . "/bowtie1_genome_1mm_NTA_smallRNA_table",
-        option     => $def->{host_smallrnacounttable_option},
-        source_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
-        cqs_tools  => $def->{cqstools},
-        prefix     => "smallRNA_1mm_",
-        hasYRNA    => $def->{hasYRNA},
-        sh_direct  => 1,
-        cluster    => $cluster,
-        pbs        => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      },
-      bowtie1_genome_1mm_NTA_smallRNA_info => {
-        class      => "CQS::CQSDatatable",
-        perform    => 1,
-        target_dir => $host_genome_dir . "/bowtie1_genome_1mm_NTA_smallRNA_table",
-        option     => "--noheader",
-        source_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info" ],
-        cqs_tools  => $def->{cqstools},
-        prefix     => "smallRNA_1mm_",
-        suffix     => ".mapped",
-        sh_direct  => 1,
-        cluster    => $cluster,
-        pbs        => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      },
-      bowtie1_genome_1mm_NTA_smallRNA_category => {
-        class                     => "CQS::UniqueR",
-        perform                   => 1,
-        target_dir                => $host_genome_dir . "/bowtie1_genome_1mm_NTA_smallRNA_category",
-        rtemplate                 => "countTableVisFunctions.R,smallRnaCategory.R",
-        output_file               => "",
-        output_file_ext           => ".Category.Table.csv;.Category1.Barplot.png;.Category1.Group.Piechart.png;.Category2.Barplot.png;.Category2.Group.Piechart.png;",
-        parameterSampleFile1_ref  => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info" ],
-        parameterSampleFile2      => $groups,
-        parameterSampleFile2Order => $def->{groups_order},
-        parameterSampleFile3      => $def->{groups_smallRNA_vis_layout},
-        rCode                     => $R_font_size,
-        sh_direct                 => 1,
-        pbs                       => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      },
-      host_genome_tRNA_category => {
-        class                     => "CQS::UniqueR",
-        perform                   => 1,
-        target_dir                => $data_visualization_dir . "/host_genome_tRNA_category",
-        rtemplate                 => "countTableVisFunctions.R,hostTrnaMappingVis.R",
-        output_file               => ".tRNAMapping.Result",
-        output_file_ext           => ".tRNAType2.Barplot.png",
-        parameterSampleFile1Order => $def->{groups_order},
-        parameterSampleFile1      => $groups,
-        parameterSampleFile2      => $def->{groups_vis_layout},
-        parameterFile1_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ],
-        parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
-        rCode                     => 'maxCategory=3;' . $R_font_size,
-        sh_direct                 => 1,
-        pbs                       => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      },
     };
+    push @$individual_ref, ("bowtie1_genome_1mm_NTA_smallRNA_count");
+
+    my $countTask = "bowtie1_genome_1mm_NTA_smallRNA_count";
+
+    if ( $def->{perform_host_tRH_analysis} ) {
+      my $tRHTask = "bowtie1_genome_1mm_NTA_smallRNA_count_tRH_filtered";
+      $host_genome->{$tRHTask} = {
+        class                 => "CQS::ProgramIndividualWrapper",
+        perform               => 1,
+        target_dir            => $host_genome_dir . "/$tRHTask",
+        option                => "--minLength 30 --maxLength 40",
+        interpretor           => "python",
+        program               => "../SmallRNA/filterTrnaXml.py",
+        source_arg            => "-i",
+        source_ref            => [ $countTask, ".count.mapped.xml" ],
+        output_to_same_folder => 1,
+        output_arg            => "-o",
+        output_ext            => ".tRH.count.mapped.xml",
+        sh_direct             => 1,
+        pbs                   => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        },
+      };
+      push @$individual_ref, $tRHTask;
+      $countTask = $tRHTask;
+    }
+
+    $host_genome = merge(
+      $host_genome,
+      {
+        bowtie1_genome_1mm_NTA_smallRNA_table => {
+          class      => "CQS::SmallRNATable",
+          perform    => 1,
+          target_dir => $host_genome_dir . "/bowtie1_genome_1mm_NTA_smallRNA_table",
+          option     => $def->{host_smallrnacounttable_option},
+          source_ref => [ $countTask, ".mapped.xml" ],
+          cqs_tools  => $def->{cqstools},
+          prefix     => "smallRNA_1mm_",
+          hasYRNA    => $def->{hasYRNA},
+          sh_direct  => 1,
+          is_tRH     => $def->{perform_host_tRH_analysis},
+          cluster    => $cluster,
+          pbs        => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        },
+        bowtie1_genome_1mm_NTA_smallRNA_info => {
+          class      => "CQS::CQSDatatable",
+          perform    => 1,
+          target_dir => $host_genome_dir . "/bowtie1_genome_1mm_NTA_smallRNA_table",
+          option     => "--noheader",
+          source_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info" ],
+          cqs_tools  => $def->{cqstools},
+          prefix     => "smallRNA_1mm_",
+          suffix     => ".mapped",
+          sh_direct  => 1,
+          cluster    => $cluster,
+          pbs        => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        },
+        bowtie1_genome_1mm_NTA_smallRNA_category => {
+          class                     => "CQS::UniqueR",
+          perform                   => 1,
+          target_dir                => $host_genome_dir . "/bowtie1_genome_1mm_NTA_smallRNA_category",
+          rtemplate                 => "countTableVisFunctions.R,smallRnaCategory.R",
+          output_file               => "",
+          output_file_ext           => ".Category.Table.csv;.Category1.Barplot.png;.Category1.Group.Piechart.png;.Category2.Barplot.png;.Category2.Group.Piechart.png;",
+          parameterSampleFile1_ref  => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info" ],
+          parameterSampleFile2      => $groups,
+          parameterSampleFile2Order => $def->{groups_order},
+          parameterSampleFile3      => $def->{groups_smallRNA_vis_layout},
+          rCode                     => $R_font_size,
+          sh_direct                 => 1,
+          pbs                       => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        },
+        host_genome_tRNA_category => {
+          class                     => "CQS::UniqueR",
+          perform                   => 1,
+          target_dir                => $data_visualization_dir . "/host_genome_tRNA_category",
+          rtemplate                 => "countTableVisFunctions.R,hostTrnaMappingVis.R",
+          output_file               => ".tRNAMapping.Result",
+          output_file_ext           => ".tRNAType2.Barplot.png",
+          parameterSampleFile1Order => $def->{groups_order},
+          parameterSampleFile1      => $groups,
+          parameterSampleFile2      => $def->{groups_vis_layout},
+          parameterFile1_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ],
+          parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
+          rCode                     => 'maxCategory=3;' . $R_font_size,
+          sh_direct                 => 1,
+          pbs                       => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        },
+      }
+    );
 
     if ( getValue( $def, "perform_host_rRNA_coverage" ) ) {
       my $visualizationTask = "host_genome_rRNA_position_vis";
@@ -587,7 +624,6 @@ sub getSmallRNAConfig {
       push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$", );
     }
 
-    push @$individual_ref, ("bowtie1_genome_1mm_NTA_smallRNA_count");
     push @$summary_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_info", "bowtie1_genome_1mm_NTA_smallRNA_category", "host_genome_tRNA_category" );
 
     $config = merge( $config, $host_genome );
