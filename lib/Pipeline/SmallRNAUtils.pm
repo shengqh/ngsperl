@@ -337,6 +337,8 @@ sub initializeSmallRNADefaultOptions {
 
   initDefaultValue( $def, "perform_nonhost_mappedToHost", 0 );
 
+  initDefaultValue( $def, "perform_host_tRH_analysis", 0 );
+
   return $def;
 }
 
