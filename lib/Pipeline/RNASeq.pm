@@ -358,9 +358,10 @@ sub getRNASeqConfig {
     push @$summary, "genetable_correlation";
   }
 
+  my $deseq2taskname;
+  my $webgestaltTaskName;
+  my $gseaTaskName;
   if ( defined $def->{pairs} ) {
-
-    my $deseq2taskname;
     if ( $def->{perform_DE_proteincoding_gene} ) {
       $deseq2taskname = addDEseq2( $config, $def, $summary, "proteincoding_genetable", [ "genetable", ".proteincoding.count\$" ], $def->{target_dir}, $def->{DE_min_median_read} );
     }
@@ -369,7 +370,7 @@ sub getRNASeqConfig {
     }
 
     if ( getValue( $def, "perform_webgestalt" ) ) {
-      my $webgestaltTaskName = $deseq2taskname . "_WebGestalt";
+      $webgestaltTaskName = $deseq2taskname . "_WebGestalt";
       $config->{$webgestaltTaskName} = {
         class            => "Annotation::WebGestaltR",
         perform          => 1,
@@ -396,7 +397,7 @@ sub getRNASeqConfig {
       my $gsea_db         = $def->{gsea_db}         or die "Define gsea_db at definition first";
       my $gsea_categories = $def->{gsea_categories} or die "Define gsea_categories at definition first";
 
-      my $gseaTaskName = $deseq2taskname . "_GSEA";
+      $gseaTaskName = $deseq2taskname . "_GSEA";
 
       #my $gseaCategories = "'h.all.v6.1.symbols.gmt','c2.all.v6.1.symbols.gmt','c5.all.v6.1.symbols.gmt','c6.all.v6.1.symbols.gmt','c7.all.v6.1.symbols.gmt'";
       $config->{$gseaTaskName} = {
@@ -699,7 +700,7 @@ sub getRNASeqConfig {
     }
 
     my $suffix = "";
-    if ( defined $config->{deseq2_genetable} ) {
+    if ( defined $config->{$deseq2taskname} ) {
       if ( getValue( $def, "DE_top25only", 0 ) ) {
         $suffix = $suffix . "_top25";
       }
@@ -722,40 +723,40 @@ sub getRNASeqConfig {
       my $pairs = $config->{pairs};
 
       if ( scalar( keys %$pairs ) > 1 ) {
-        push( @report_files, "deseq2_genetable", $taskName . ".define_DESeq2_volcanoPlot.png" );
+        push( @report_files, $deseq2taskname, $taskName . ".define_DESeq2_volcanoPlot.png" );
         push( @report_names, "deseq2_volcano_plot" );
       }
       else {
-        push( @report_files, "deseq2_genetable", "_DESeq2_volcanoPlot.png" );
+        push( @report_files, $deseq2taskname, "_DESeq2_volcanoPlot.png" );
         push( @report_names, "deseq2_volcano_plot" );
       }
       for my $key ( keys %$pairs ) {
-        push( @report_files, "deseq2_genetable", $key . $suffix . "_DESeq2_sig.csv" );
+        push( @report_files, $deseq2taskname, $key . $suffix . "_DESeq2_sig.csv" );
         push( @report_names, "deseq2_" . $key );
       }
-      push( @copy_files, "deseq2_genetable", "_DESeq2.csv" );
+      push( @copy_files, $deseq2taskname, "_DESeq2.csv" );
 
-      #push( @copy_files, "deseq2_genetable", "_DESeq2_GSEA.rnk" );
-      push( @copy_files, "deseq2_genetable", "_DESeq2_sig.csv" );
+      push( @copy_files, $deseq2taskname, "_DESeq2_sig.csv" );
 
-      #push( @copy_files, "deseq2_genetable", "_DESeq2_sig_genename.txt" );
-      #push( @copy_files, "deseq2_genetable", "heatmap.png" );
-      #push( @copy_files, "deseq2_genetable", "pca.pdf" );
+      #push( @copy_files, $deseq2taskname, "_DESeq2_GSEA.rnk" );
+      #push( @copy_files, $deseq2taskname, "_DESeq2_sig_genename.txt" );
+      #push( @copy_files, $deseq2taskname, "heatmap.png" );
+      #push( @copy_files, $deseq2taskname, "pca.pdf" );
     }
 
     my $hasFunctionalEnrichment = 0;
-    if ( defined $config->{deseq2_genetable_WebGestalt} ) {
-      push( @copy_files, "deseq2_genetable_WebGestalt", "_geneontology_Biological_Process\$" );
-      push( @copy_files, "deseq2_genetable_WebGestalt", "_geneontology_Cellular_Component\$" );
-      push( @copy_files, "deseq2_genetable_WebGestalt", "_geneontology_Molecular_Function\$" );
-      push( @copy_files, "deseq2_genetable_WebGestalt", "_pathway_KEGG\$" );
+    if ( defined $webgestaltTaskName ) {
+      push( @copy_files, $webgestaltTaskName, "_geneontology_Biological_Process\$" );
+      push( @copy_files, $webgestaltTaskName, "_geneontology_Cellular_Component\$" );
+      push( @copy_files, $webgestaltTaskName, "_geneontology_Molecular_Function\$" );
+      push( @copy_files, $webgestaltTaskName, "_pathway_KEGG\$" );
 
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
-        push( @report_files, "deseq2_genetable_WebGestalt", $key . "_geneontology_Biological_Process.txt" );
-        push( @report_files, "deseq2_genetable_WebGestalt", $key . "_geneontology_Cellular_Component.txt" );
-        push( @report_files, "deseq2_genetable_WebGestalt", $key . "_geneontology_Molecular_Function.txt" );
-        push( @report_files, "deseq2_genetable_WebGestalt", $key . "_pathway_KEGG.txt" );
+        push( @report_files, $webgestaltTaskName, $key . "_geneontology_Biological_Process.txt" );
+        push( @report_files, $webgestaltTaskName, $key . "_geneontology_Cellular_Component.txt" );
+        push( @report_files, $webgestaltTaskName, $key . "_geneontology_Molecular_Function.txt" );
+        push( @report_files, $webgestaltTaskName, $key . "_pathway_KEGG.txt" );
         push( @report_names, "WebGestalt_GO_BP_" . $key );
         push( @report_names, "WebGestalt_GO_CC_" . $key );
         push( @report_names, "WebGestalt_GO_MF_" . $key );
@@ -764,12 +765,12 @@ sub getRNASeqConfig {
       $hasFunctionalEnrichment = 1;
     }
 
-    if ( defined $config->{deseq2_genetable_GSEA} ) {
-      push( @copy_files, "deseq2_genetable_GSEA", ".gsea\$" );
+    if ( defined $gseaTaskName ) {
+      push( @copy_files, $gseaTaskName, ".gsea\$" );
 
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
-        push( @report_files, "deseq2_genetable_GSEA", $key . $suffix . ".*gsea.csv" );
+        push( @report_files, $gseaTaskName, $key . $suffix . ".*gsea.csv" );
         push( @report_names, "gsea_" . $key );
       }
       $hasFunctionalEnrichment = 1;
