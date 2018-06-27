@@ -114,6 +114,14 @@ align<-function(data1,data2,by=0,suffixes=c(deparse(substitute(data1)),deparse(s
 	return (data)
 }
 
+theme_bw2 <- function () { 
+  theme_bw() %+replace% 
+    theme(
+      panel.border = element_blank(),
+      axis.line = element_line(colour = "black", size = 0.5)
+    )
+}
+
 # Convert a byte-compiled function to an interpreted-code function 
 unByteCode <- function(fun)
 {
@@ -214,14 +222,6 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
 drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outputPdf=TRUE){
 	genecount<-nrow(rldmatrix)
 	if(genecount > 2){
-		if(outputPdf){
-			filename<-paste0(prefix, "_DESeq2-vsd-pca.pdf")
-			pdf(filename, width=6, height=5)
-		}else{
-			filename<-paste0(prefix, "_DESeq2-vsd-pca.png")
-			png(filename=filename, width=3000, height=3000, res=300)
-		}
-		cat("saving PCA to ", filename, "\n")
 		pca<-prcomp(t(rldmatrix))
 		supca<-summary(pca)$importance
 		pcadata<-data.frame(pca$x)
@@ -243,10 +243,17 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outp
 				geom_vline(aes(xintercept=0), size=.2) + 
 				xlab(pcalabs[1]) + ylab(pcalabs[2]) +
 				scale_color_manual(values=c("red", "blue")) +
-				theme(legend.position="top")
-		
-		print(g)
-		dev.off()
+				theme_bw2() + theme(legend.position="top")
+
+    filename=paste0(prefix, "_DESeq2-vsd-pca", ifelse(outputPdf, ".pdf", ".png")) 
+    cat("saving PCA to ", filename, "\n")
+    if(outputPdf){
+      ggsave(plot=g,filename=filename,width=6,height=5,useDingbats=FALSE)
+    }else{
+      png(filename,res=300,width=3000, height=3000)
+      print(g)
+      dev.off()
+    }
 	}
 }
 
@@ -720,18 +727,19 @@ for(countfile_index in c(1:length(countfiles))){
 			diffResultSig$Name <- factor(diffResultSig$Name, levels=diffResultSig$Name[order(diffResultSig$log2FoldChange)])
 			diffResultSig<-as.data.frame(diffResultSig)
 			
-			if(outputPdf){
-				pdf(paste0(prefix,"_DESeq2_sig_barplot.pdf"), width=7, height=7)
-			}else{
-				png(filename=paste0(prefix, "_DESeq2_sig_barplot.png"), width=3000, height=3000, res=300)
-			}
 			p<-ggplot(diffResultSig,aes(x=Name,y=log2FoldChange,order=log2FoldChange))+geom_bar(stat="identity")+
 					coord_flip()+
 					#     geom_abline(slope=0,intercept=1,colour="red",linetype = 2)+
 					scale_y_continuous(name=bquote(log[2]~Fold~Change))+
 					theme(axis.text = element_text(colour = "black"))
-			print(p)
-			dev.off()
+					
+      if(outputPdf){
+        ggsave(plot=p,height=7,width=7,filename=paste0(prefix,"_DESeq2_sig_barplot.pdf"), useDingbats=FALSE)
+      }else{
+        png(filename=paste0(prefix, "_DESeq2_sig_barplot.png"), width=3000, height=3000, res=300)
+        print(p)
+        dev.off()
+      }
 		} else {
 			print(paste0("No gene with adjusted p value less than ",pvalue," and fold change larger than ",foldChange))
 		}
@@ -751,11 +759,6 @@ for(countfile_index in c(1:length(countfiles))){
 			diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
 		}
 		
-		if(outputPdf){
-			pdf(paste0(prefix,"_DESeq2_volcanoPlot.pdf"), width=10, height=10)
-		}else{
-			png(filename=paste0(prefix, "_DESeq2_volcanoPlot.png"), width=3000, height=3000, res=300)
-		}
 		if (useRawPvalue==1) {
 			p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
 					scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
@@ -775,8 +778,15 @@ for(countfile_index in c(1:length(countfiles))){
 						axis.title = element_text(size=30),
 						legend.text= element_text(size=30),
 						legend.title= element_text(size=30))
-		print(p)
-		dev.off()
+						
+          
+    if(outputPdf){
+      ggsave(plot=p, height=10, width=10, filename=paste0(prefix,"_DESeq2_volcanoPlot.pdf"), useDingbats=FALSE)
+    }else{
+      png(filename=paste0(prefix, "_DESeq2_volcanoPlot.png"), width=3000, height=3000, res=300)
+      print(p)
+      dev.off()
+    }
 	}
 	
 	if(length(pairedspearman) > 0){
@@ -1004,21 +1014,23 @@ if(!is.null(sigTableAll)){
 		}
 		dataForFigure$Gene<-factor(dataForFigure$Gene,levels=row.names(temp))
 		
-		width=min(max(2500, 60 * length(unique(dataForFigure$comparisonName))),30000)
-		height=min(max(2000, 40 * length(unique(dataForFigure$Gene))),30000)
-		if(outputPdf){
-			pdf(paste0(allprefix,"_significantHeatmap.pdf"),width=7,height=7)
-		}else{
-			png(paste0(allprefix, "_significantHeatmap.png"),res=300,height=height,width=width)
-		}
 		g<-ggplot(dataForFigure, aes(comparisonName, Gene))+
 				geom_tile(aes(fill=Direction), color="white") +
 				scale_fill_manual(values=c("light green", "red")) +
 				theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.5, face="bold"),
 						axis.text.y = element_text(size=textSize, face="bold")) +
 				coord_equal()
-		print(g)
-		dev.off()
+				
+            
+    if(outputPdf){
+      ggsave(plot=g, filename=paste0(allprefix,"_significantHeatmap.pdf"),width=7,height=7,useDingbats=FALSE)
+    }else{
+      width=min(max(2500, 60 * length(unique(dataForFigure$comparisonName))),30000)
+      height=min(max(2000, 40 * length(unique(dataForFigure$Gene))),30000)
+      png(paste0(allprefix, "_significantHeatmap.png"),res=300,height=height,width=width)
+      print(g)
+      dev.off()
+    }
 	}
 }
 
@@ -1057,13 +1069,6 @@ if (! is.null(resultAllOut)) {
 			diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
 		}
 		
-		if(outputPdf){
-			width<-max(7,3.5*length(allComparisons))
-			pdf(paste0(allprefix,"_DESeq2_volcanoPlot.pdf"),width=width,height=7)
-		}else{
-			width<-max(2000,1000*length(allComparisons))
-			png(filename=paste0(allprefix, "_DESeq2_volcanoPlot.png"), width=width, height=2000, res=300)
-		}
 		if (useRawPvalue==1) {
 			p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
 					scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
@@ -1085,14 +1090,21 @@ if (! is.null(resultAllOut)) {
 						legend.text= element_text(size=30),
 						legend.title= element_text(size=30),
 						strip.text.x = element_text(size = 30))
-		print(p)
-		dev.off()
+						
+    if(outputPdf){
+      width<-max(7,3.5*length(allComparisons))
+      ggsave(plot=p, filename=paste0(allprefix,"_DESeq2_volcanoPlot.pdf"),width=width,height=7,useDingbats=FALSE)
+    }
+
+    width<-max(2000,1500*length(allComparisons))
+    png(filename=paste0(allprefix, "_DESeq2_volcanoPlot.png"), width=width, height=2000, res=300)
+    print(p)
+    dev.off()
 		
 		#output a summary table with numbers of gisnificant changed genes
 		sigGeneSummaryTable<-t(table(diffResult[,"Significant"],diffResult[,"Comparison"]))
 		sigGeneSummaryTable<-data.frame(Comparison=row.names(sigGeneSummaryTable),GeneInComparison=rowSums(sigGeneSummaryTable),NotSignificant=sigGeneSummaryTable[,1],Significant=sigGeneSummaryTable[,2])
 		write.csv(sigGeneSummaryTable,paste0(allprefix, "_DESeq2_sigGeneSummary.csv"),row.names=FALSE)
-		
 	}  
 }
 
