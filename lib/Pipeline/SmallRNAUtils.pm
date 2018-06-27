@@ -294,11 +294,12 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "consider_miRNA_NTA", 1 );
 
   #search database
-  initDefaultValue( $def, "search_not_identical",         1 );
-  initDefaultValue( $def, "search_host_genome",           1 );
-  initDefaultValue( $def, "host_remove_all_mapped_reads", 0 );
-  initDefaultValue( $def, "search_nonhost_genome",        1 );
-  initDefaultValue( $def, "search_nonhost_library",       1 );
+  initDefaultValue( $def, "search_not_identical",               1 );
+  initDefaultValue( $def, "search_host_genome",                 1 );
+  initDefaultValue( $def, "host_remove_all_mapped_reads",       0 );
+  initDefaultValue( $def, "search_nonhost_genome",              1 );
+  initDefaultValue( $def, "search_nonhost_library",             1 );
+  initDefaultValue( $def, "perform_class_independent_analysis", 1 );
 
   #blastn
   initDefaultValue( $def, "blast_top_reads",      0 );
@@ -404,27 +405,6 @@ sub getPrepareConfig {
   };
   push @$individual, ("identical");
 
-  my $class_independent_dir = create_directory_or_die( $target_dir . "/class_independent" );
-  $preparation->{identical_sequence_count_table} = {
-    class      => "CQS::SmallRNASequenceCountTable",
-    perform    => 1,
-    target_dir => $class_independent_dir . "/identical_sequence_count_table",
-    option     => getValue( $def, "sequence_count_option" ),
-    source_ref => [ "identical", ".dupcount\$" ],
-    cqs_tools  => $def->{cqstools},
-    suffix     => "_sequence",
-    sh_direct  => 1,
-    cluster    => $cluster,
-    groups     => $def->{groups},
-    pairs      => $def->{pairs},
-    pbs        => {
-      "email"    => $def->{email},
-      "nodes"    => "1:ppn=1",
-      "walltime" => "10",
-      "mem"      => "10gb"
-    },
-  };
-  push @$summary, ("identical_sequence_count_table");
   if ( $consider_miRNA_NTA && $consider_tRNA_NTA ) {
     $preparation->{identical_check_cca} = {
       class              => "SmallRNA::tRNACheckCCA",
@@ -445,26 +425,52 @@ sub getPrepareConfig {
     push @$individual, ("identical_check_cca");
   }
 
-  if ( $def->{special_sequence_file} ) {
-    $config->{"special_sequence_count_table"} = {
-      class                    => "CQS::ProgramWrapper",
-      perform                  => 1,
-      interpretor              => "python",
-      program                  => "../SmallRNA/findSequence.py",
-      target_dir               => $class_independent_dir . "/special_sequence_count_table",
-      option                   => "",
-      parameterSampleFile1_ref => [ "identical", ".dupcount\$" ],
-      parameterFile1           => $def->{special_sequence_file},
-      sh_direct                => 1,
-      output_ext               => ".special_sequence.tsv",
-      pbs                      => {
+  my $class_independent_dir;
+  my $perform_class_independent_analysis = getValue( $def, "perform_class_independent_analysis", 1 );
+  if ($perform_class_independent_analysis) {
+    $class_independent_dir = create_directory_or_die( $target_dir . "/class_independent" );
+    $preparation->{identical_sequence_count_table} = {
+      class      => "CQS::SmallRNASequenceCountTable",
+      perform    => 1,
+      target_dir => $class_independent_dir . "/identical_sequence_count_table",
+      option     => getValue( $def, "sequence_count_option" ),
+      source_ref => [ "identical", ".dupcount\$" ],
+      cqs_tools  => $def->{cqstools},
+      suffix     => "_sequence",
+      sh_direct  => 1,
+      cluster    => $cluster,
+      groups     => $def->{groups},
+      pairs      => $def->{pairs},
+      pbs        => {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
         "walltime" => "10",
         "mem"      => "10gb"
       },
     };
-    push @$summary, ("special_sequence_count_table");
+    push @$summary, ("identical_sequence_count_table");
+
+    if ( $def->{special_sequence_file} ) {
+      $config->{"special_sequence_count_table"} = {
+        class                    => "CQS::ProgramWrapper",
+        perform                  => 1,
+        interpretor              => "python",
+        program                  => "../SmallRNA/findSequence.py",
+        target_dir               => $class_independent_dir . "/special_sequence_count_table",
+        option                   => "",
+        parameterSampleFile1_ref => [ "identical", ".dupcount\$" ],
+        parameterFile1           => $def->{special_sequence_file},
+        sh_direct                => 1,
+        output_ext               => ".special_sequence.tsv",
+        pbs                      => {
+          "email"    => $def->{email},
+          "nodes"    => "1:ppn=1",
+          "walltime" => "10",
+          "mem"      => "10gb"
+        },
+      };
+      push @$summary, ("special_sequence_count_table");
+    }
   }
 
   if ( $consider_miRNA_NTA || $consider_tRNA_NTA ) {
