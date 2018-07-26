@@ -798,7 +798,8 @@ for(countfile_index in c(1:length(countfiles))){
 	}
 }
 
-allprefix=basename(inputfile)
+allprefix=paste0(basename(inputfile), suffix)
+
 #Venn for all significant genes
 #Output all significant genes table
 if(!is.null(sigTableAll)){
