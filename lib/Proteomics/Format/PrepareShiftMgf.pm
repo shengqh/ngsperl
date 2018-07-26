@@ -3,7 +3,6 @@ package Proteomics::Format::PrepareShiftMgf;
 
 use strict;
 use warnings;
-use Math::Round;
 use File::Basename;
 use CQS::PBS;
 use CQS::ConfigUtils;
