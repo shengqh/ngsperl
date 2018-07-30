@@ -39,6 +39,9 @@ sub perform {
   if ( defined $config->{$section}{"opt_data_def"} ) {
     $defOption = $defOption . " --optdatadef " . $config->{$section}{"opt_data_def"};
   }
+  if ( defined $config->{$section}{"border_state_file"} ) {
+    $defOption = $defOption . " --border " . $config->{$section}{"border_state_file"};
+  }
 
   my $pbs_file = $self->get_file( $pbs_dir, $task_name, ".bat" );
   my $pbs_name = basename($pbs_file);
