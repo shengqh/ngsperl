@@ -340,6 +340,14 @@ sub initializeSmallRNADefaultOptions {
 
   initDefaultValue( $def, "perform_host_tRH_analysis", 0 );
 
+  initDefaultValue( $def, "correlation_rcode", "" );
+  my $str = $def->{correlation_rcode};
+  $str =~ s/^\s+|\s+$//g;
+  if ( $str ne "" and $str !~ ";\$" ) {
+    $str = $str . ";";
+  }
+  $def->{correlation_rcode} = $str;
+
   return $def;
 }
 

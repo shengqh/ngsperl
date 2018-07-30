@@ -120,10 +120,10 @@ sub getSmallRNAConfig {
   my @names_for_annotate_unmapped = ();
 
   if ( $def->{use_least_groups} ) {
-    $def->{correlation_rcode} = "useLeastGroups<-TRUE;";
+    $def->{correlation_rcode} = $def->{correlation_rcode} . "useLeastGroups<-TRUE;";
   }
   else {
-    $def->{correlation_rcode} = "useLeastGroups<-FALSE;";
+    $def->{correlation_rcode} = $def->{correlation_rcode} . "useLeastGroups<-FALSE;";
   }
 
   if ( $def->{show_label_PCA} ) {
@@ -133,11 +133,16 @@ sub getSmallRNAConfig {
     $def->{correlation_rcode} = $def->{correlation_rcode} . "showLabelInPCA<-FALSE;";
   }
 
-  if (1) {    #use total normlization to do correlation analysis
+  if ($def->{correlation_rcode} !~ /totalCountKey/) {    #use total normlization to do correlation analysis
     $def->{correlation_rcode} = $def->{correlation_rcode} . "totalCountKey='Reads for Mapping';";
   }
-  if (1) {    #set filter parameters
+  
+  if ($def->{correlation_rcode} !~ /minMedian/) {    #set filter parameters
     $def->{correlation_rcode} = $def->{correlation_rcode} . "minMedian=1;minMedianInGroup=1;";
+  }
+  
+  if ($def->{correlation_rcode} !~ /cooksCutoff/) {    #set filter parameters
+    $def->{correlation_rcode} = $def->{correlation_rcode} . "cooksCutoff=FALSE;";
   }
 
   #print Dumper($config);
