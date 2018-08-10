@@ -286,6 +286,7 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "DE_use_raw_pvalue",           1 );
   initDefaultValue( $def, "DE_detected_in_both_group",   0 );
   initDefaultValue( $def, "DE_library_key",              "TotalReads" );
+  initDefaultValue( $def, "DE_cooksCutoff",              "FALSE" );
 
   initDefaultValue( $def, "smallrnacount_option", "" );
   initDefaultValue( $def, "hasYRNA",              0 );
