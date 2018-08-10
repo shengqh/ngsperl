@@ -141,10 +141,6 @@ sub getSmallRNAConfig {
     $def->{correlation_rcode} = $def->{correlation_rcode} . "minMedian=1;minMedianInGroup=1;";
   }
   
-  if ($def->{correlation_rcode} !~ /cooksCutoff/) {    #set filter parameters
-    $def->{correlation_rcode} = $def->{correlation_rcode} . "cooksCutoff=FALSE;";
-  }
-
   #print Dumper($config);
   my $groups = $def->{groups};
   if ( !defined $def->{groups_vis_layout} && defined $groups && defined $groups->{".order"} && defined $groups->{".col"} && defined $groups->{".row"} ) {
@@ -286,7 +282,7 @@ sub getSmallRNAConfig {
 
   my $DE_min_median_read_top      = getValue( $def, "DE_min_median_read_top" );
   my $DE_min_median_read_smallRNA = getValue( $def, "DE_min_median_read_smallRNA" );
-
+  
   my $max_sequence_extension_base = getValue( $def, "max_sequence_extension_base" );
   $def->{nonhost_table_option} = "--maxExtensionBase " . $def->{max_sequence_extension_base} . " " . $def->{nonhost_table_option};
   my $perform_contig_analysis = $def->{perform_contig_analysis};
