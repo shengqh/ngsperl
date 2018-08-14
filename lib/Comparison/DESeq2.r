@@ -1009,10 +1009,13 @@ if(!is.null(sigTableAll)){
 		temp<-temp[do.call(order, data.frame(temp)),]
 		maxNameChr<-max(nchar(row.names(temp)))
 		if (maxNameChr>70) {
-			row.names(temp)<-substr(row.names(temp),0,70)
-			dataForFigure$Gene<-substr(dataForFigure$Gene,0,70)
-			warning(paste0("The gene names were too long (",maxNameChr,"). Only first 70 letters were kept."))
-		}
+      tmpNames<-substr(row.names(temp),0,70)
+      if(length(tmpNames) == length(unique(tmpNames))){
+        row.names(temp)<-tmpNames
+        dataForFigure$Gene<-substr(dataForFigure$Gene,0,70)
+        warning(paste0("The gene names were too long (",maxNameChr,"). Only first 70 letters were kept."))
+      }
+    }
 		dataForFigure$Gene<-factor(dataForFigure$Gene,levels=row.names(temp))
 		
 		g<-ggplot(dataForFigure, aes(comparisonName, Gene))+
