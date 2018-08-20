@@ -137,6 +137,7 @@ sub getRNASeqConfig {
         output_sort_by_coordinate => 1,
         output_to_same_folder     => $def->{output_bam_to_same_folder},
         featureCount_option       => getValue( $def, "featureCount_option" ),
+        star_location             => $def->{star_location},
         gff_file                  => $transcript_gtf,
         ispairend                 => getValue( $def, "pairend" ),
         sh_direct                 => 0,
@@ -215,6 +216,7 @@ sub getRNASeqConfig {
             output_sort_by_coordinate => 1,
             output_to_same_folder     => $def->{output_bam_to_same_folder},
             sh_direct                 => 0,
+            star_location             => $def->{star_location},
             pbs                       => {
               "email"     => $email,
               "emailType" => $def->{emailType},

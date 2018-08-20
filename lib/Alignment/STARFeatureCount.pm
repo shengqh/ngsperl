@@ -34,6 +34,7 @@ sub perform {
   }
 
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
+  my $star = get_option( $config, $section, "star_location", "STAR" );
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1 );
   my $output_sort_by_coordinate = getSortByCoordinate( $config, $section, 1 );
@@ -110,7 +111,7 @@ sub perform {
     print $pbs "
 if [ ! -s $unsorted ]; then
   echo performing star ...
-  STAR $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
+  $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
 fi  
 
 if [ -s $final_bam ]; then

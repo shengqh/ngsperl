@@ -33,6 +33,8 @@ sub perform {
     $option = $option . "  --outSAMprimaryFlag AllBestScore";
   }
 
+  my $star = get_option( $config, $section, "star_location", "STAR" );
+
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1 );
@@ -88,7 +90,7 @@ sub perform {
     my $chromosome_grep_command = $output_sort_by_coordinate ? getChromosomeFilterCommand( $final, $chromosome_grep_pattern ) : "";
 
     print $pbs "
-STAR $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format  
+$star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format  
 
 if [ -s $final ]; then
   $index_command
