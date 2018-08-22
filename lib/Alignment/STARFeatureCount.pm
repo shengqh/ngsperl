@@ -29,12 +29,12 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
-  if ( $option !~ /outSAMprimaryFlag/ ) {
-    $option = $option . "  --outSAMprimaryFlag AllBestScore";
-  }
-
+  #  if ( $option !~ /outSAMprimaryFlag/ ) {
+  #    $option = $option . "  --outSAMprimaryFlag AllBestScore";
+  #  }
+  #
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
-  my $star = get_option( $config, $section, "star_location", "STAR" );
+  my $star                    = get_option( $config, $section, "star_location",           "STAR" );
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1 );
   my $output_sort_by_coordinate = getSortByCoordinate( $config, $section, 1 );
