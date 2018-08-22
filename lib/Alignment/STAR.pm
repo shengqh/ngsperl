@@ -29,9 +29,9 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
-  if ( $option !~ /outSAMprimaryFlag/ ) {
-    $option = $option . "  --outSAMprimaryFlag AllBestScore";
-  }
+  #if ( $option !~ /outSAMprimaryFlag/ ) {
+  #  $option = $option . " --outSAMprimaryFlag AllBestScore";
+  #}
 
   my $star = get_option( $config, $section, "star_location", "STAR" );
 
