@@ -20,6 +20,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_bt2";
+  $self->{log_result} = 0;
   bless $self, $class;
   return $self;
 }

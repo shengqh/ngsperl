@@ -42,7 +42,10 @@ sub result {
     else {
       push( @result_files, "${cur_dir}/${sample_name}.bam" );
     }
-    #push( @result_files, "${cur_dir}/${sample_name}.log" );
+    
+    if($self->{log_result}){
+      push( @result_files, "${cur_dir}/${sample_name}.log" );
+    }
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
