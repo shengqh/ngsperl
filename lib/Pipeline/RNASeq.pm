@@ -32,6 +32,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_preprocessing", 1 );
   initDefaultValue( $def, "perform_mapping",       1 );
   initDefaultValue( $def, "perform_counting",      1 );
+  initDefaultValue( $def, "perform_count_table",   1 );
   initDefaultValue( $def, "perform_correlation",   1 );
   initDefaultValue( $def, "perform_rnaseqc",       0 );
   initDefaultValue( $def, "perform_qc3bam",        0 );
@@ -46,6 +47,7 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "featureCount_option",        "-g gene_id -t exon" );
   initDefaultValue( $def, "aligner",                    "star" );
+  initDefaultValue( $def, "star_option",                "--twopassMode Basic --outSAMprimaryFlag AllBestScore" );
   initDefaultValue( $def, "use_pearson_in_hca",         1 );
   initDefaultValue( $def, "top25cv_in_hca",             0 );
   initDefaultValue( $def, "use_green_red_color_in_hca", 1 );
@@ -115,23 +117,23 @@ sub getRNASeqConfig {
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir ) = getPreprocessionConfig($def);
 
-  my $target_dir = $def->{target_dir};
-  my $groups_ref = defined $def->{groups} ? "groups" : undef;
-  my $aligner    = $def->{aligner};
+  my $target_dir      = $def->{target_dir};
+  my $groups_ref      = defined $def->{groups} ? "groups" : undef;
+  my $aligner         = $def->{aligner};
+  my $star_option     = $def->{star_option};
+  my $count_table_ref = "files";
 
   my $count_file_ref = $def->{count_file};
   if ( $def->{perform_mapping} && $def->{perform_counting} && ( $aligner eq "star" ) && $def->{perform_star_featurecount} ) {
     my $aligner_index   = $def->{star_index} or die "Define star_index at definition first";
     my $starFolder      = $target_dir . "/" . getNextFolderIndex($def) . "star_featurecount";
     my $transcript_gtf  = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
-    my $cqstools        = $def->{cqstools};
-    my $name_map_file   = $def->{name_map_file};
     my $configAlignment = {
       "star_featurecount" => {
         class                     => "Alignment::STARFeatureCount",
         perform                   => 1,
         target_dir                => $starFolder,
-        option                    => "--twopassMode Basic",
+        option                    => $star_option,
         source_ref                => $source_ref,
         genome_dir                => $aligner_index,
         output_sort_by_coordinate => 1,
@@ -164,31 +166,12 @@ sub getRNASeqConfig {
           "mem"       => "40gb"
         },
       },
-      "genetable" => {
-        class                     => "CQS::CQSDatatable",
-        perform                   => 1,
-        target_dir                => $target_dir . "/" . getNextFolderIndex($def) . "genetable",
-        option                    => "-k 0 -v 6 -e --fillMissingWithZero",
-        source_ref                => [ "star_featurecount", ".count\$" ],
-        name_map_file             => $name_map_file,
-        output_proteincoding_gene => $def->{perform_DE_proteincoding_gene},
-        cqs_tools                 => $cqstools,
-        sh_direct                 => 1,
-        pbs                       => {
-          "email"     => $email,
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      },
     };
 
-    $source_ref = [ "star_featurecount", "_Aligned.sortedByCoord.out.bam\$" ];
+    $source_ref      = [ "star_featurecount", "_Aligned.sortedByCoord.out.bam\$" ];
+    $count_table_ref = [ "star_featurecount", ".count\$" ];
     push @$individual, ("star_featurecount");
-    push @$summary, ( "star_summary", "genetable" );
-
-    $count_file_ref = [ "genetable", ".count\$" ];
+    push @$summary,    ("star_summary");
     $config = merge( $config, $configAlignment );
   }
   else {
@@ -210,7 +193,7 @@ sub getRNASeqConfig {
             class                     => "Alignment::STAR",
             perform                   => 1,
             target_dir                => $starFolder,
-            option                    => "--twopassMode Basic",
+            option                    => $star_option,
             source_ref                => $source_ref,
             genome_dir                => $aligner_index,
             output_sort_by_coordinate => 1,
@@ -275,52 +258,61 @@ sub getRNASeqConfig {
     if ( $def->{perform_counting} ) {
       my $cqstools       = $def->{cqstools};
       my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
-      my $name_map_file  = $def->{name_map_file};
-      my $configCounting = {
-        "featurecount" => {
-          class      => "Count::FeatureCounts",
-          perform    => 1,
-          target_dir => $target_dir . "/" . getNextFolderIndex($def) . "featurecount",
-          option     => "-g gene_id -t exon",
-          source_ref => $source_ref,
-          gff_file   => $transcript_gtf,
-          ispairend  => 1,
-          sh_direct  => 0,
-          pbs        => {
-            "email"     => $email,
-            "emailType" => $def->{emailType},
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "72",
-            "mem"       => "40gb"
-          },
-        },
-        "genetable" => {
-          class         => "CQS::CQSDatatable",
-          perform       => 1,
-          target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "genetable",
-          option        => "-k 0 -v 6 -e --fillMissingWithZero",
-          source_ref    => "featurecount",
-          name_map_file => $name_map_file,
-          cqs_tools     => $cqstools,
-          sh_direct     => 1,
-          pbs           => {
-            "email"     => $email,
-            "emailType" => $def->{emailType},
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "10",
-            "mem"       => "10gb"
-          },
+      if ( $def->{additional_bam_files} ) {
+        push @$source_ref, "additional_bam_files";
+      }
+      $config->{"featurecount"} = {
+        class      => "Count::FeatureCounts",
+        perform    => 1,
+        target_dir => $target_dir . "/" . getNextFolderIndex($def) . "featurecount",
+        option     => "-g gene_id -t exon",
+        source_ref => $source_ref,
+        gff_file   => $transcript_gtf,
+        ispairend  => 1,
+        sh_direct  => 0,
+        pbs        => {
+          "email"     => $email,
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "72",
+          "mem"       => "40gb"
         },
       };
 
-      $config = merge( $config, $configCounting );
       push @$individual, "featurecount";
-      push @$summary,    "genetable";
+      $count_table_ref = [ "featurecount", ".count\$" ];
+    }
+  }
 
-      $count_file_ref = [ "genetable", ".count\$" ];
-      if ( $def->{perform_DE_proteincoding_gene} ) {
-        push @$count_file_ref, [ "genetable", ".proteincoding.count\$" ];
-      }
+  my $perform_count_table = $def->{perform_counting} || $def->{perform_count_table};
+
+  if ($perform_count_table) {
+    my $cqstools      = $def->{cqstools};
+    my $name_map_file = $def->{name_map_file};
+    $config->{"genetable"} = {
+      class                     => "CQS::CQSDatatable",
+      perform                   => 1,
+      target_dir                => $target_dir . "/" . getNextFolderIndex($def) . "genetable",
+      option                    => "-k 0 -v 6 -e --fillMissingWithZero",
+      source_ref                => $count_table_ref,
+      output_proteincoding_gene => $def->{perform_DE_proteincoding_gene},
+      name_map_file             => $name_map_file,
+      cqs_tools                 => $cqstools,
+      sh_direct                 => 1,
+      pbs                       => {
+        "email"     => $email,
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    };
+
+    push @$summary, "genetable";
+
+    $count_file_ref = [ "genetable", ".count\$" ];
+    if ( $def->{perform_DE_proteincoding_gene} ) {
+      push @$count_file_ref, [ "genetable", ".proteincoding.count\$" ];
     }
   }
 
@@ -702,7 +694,7 @@ sub getRNASeqConfig {
     }
 
     my $suffix = "";
-    if ( defined $config->{$deseq2taskname} ) {
+    if ( ( defined $deseq2taskname ) && ( defined $config->{$deseq2taskname} ) ) {
       if ( getValue( $def, "DE_top25only", 0 ) ) {
         $suffix = $suffix . "_top25";
       }
