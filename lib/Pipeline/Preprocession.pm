@@ -87,6 +87,7 @@ sub getPreprocessionConfig {
     files      => $def->{files},
     groups     => $def->{groups},
     pairs      => $def->{pairs},
+    additional_bam_files => $def->{additional_bam_files},
   };
   my $source_ref = ["files"];
   my $individual = [];
