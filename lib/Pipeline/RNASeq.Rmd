@@ -89,6 +89,17 @@ print(kable(output_table1, caption=tabRef("mapSummary", "The summary of RNAseq m
 ## 4. Expression Quantification
 ### 4.1 Summary of reads assignment
 ```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("gene_reads", "The number of reads assigned to genes in uniquely mapped reads")}
+# For featureCounts, unassigned_unmapped -> 
+#                    unassigned_mappingquality -> 
+#                    unassigned_fragmentlength -> 
+#                    unassigned_chimericreads -> 
+#                    unassigned_duplicate -> 
+#                    unassigned_multimapping ->
+#                    unassigned_secondary ->
+#                    unassigned_junction_condition ->
+#                    assigned
+# So, we cannot get how many unique mapped reads from the featureCounts summary.
+
 table<- read.table(files["featureCounts_table",1], header=TRUE)
 colsum<-apply(table[,c(2:ncol(table))], 2, sum)
 validcol<-which(colsum > 0)+1
