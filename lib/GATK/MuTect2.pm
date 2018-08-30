@@ -127,6 +127,7 @@ sub perform {
 
 		#		my $out_file = "${group_name}.somatic.out";
 		my $vcf = "${group_name}.somatic.vcf";
+		my $vcfPASS="${group_name}.somatic.PASS.vcf";
 
 		#		my $passvcf  = "${group_name}.somatic.pass.vcf";
 
@@ -150,6 +151,7 @@ fi
 
 if [ ! -s $vcf ]; then
   $java $java_option -jar $gatk_jar $option -T MuTect2 -R $faFile $cosmic_param $normalPanel_param --dbsnp $dbsnpfile $sample_parm $restrict_intervals -o $vcf
+  cat $vcf | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $vcfPASS
 fi 
 ";
 
@@ -182,7 +184,7 @@ sub result {
 	for my $group_name ( keys %{$groups} ) {
 		my @result_files = ();
 		my $cur_dir      = $result_dir . "/$group_name";
-		push( @result_files, "$cur_dir/${group_name}.somatic.pass.vcf" );
+		push( @result_files, "$cur_dir/${group_name}.somatic.PASS.vcf" );
 		push( @result_files, "$cur_dir/${group_name}.somatic.vcf" );
 		$result->{$group_name} = filter_array( \@result_files, $pattern );
 	}
