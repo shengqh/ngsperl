@@ -10,7 +10,7 @@ use CQS::FileUtils;
 use CQS::StringUtils;
 use CQS::Task;
 
-our @ISA = qw(CQS::Task);
+our @ISA = qw(CQS::UniqueTask);
 
 sub new {
   my ($class) = @_;
@@ -26,7 +26,9 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $raw_files = get_raw_files( $config, $section, undef, undef, 1 );
+  my $comparisons = get_raw_files( $config, $section, undef, undef, 1 );
+  my @comparison_names = keys %{$comparisons};
+
   my $organism         = get_option( $config, $section, "organism" );
   my $interestGeneType = get_option( $config, $section, "interestGeneType", "genesymbol" );
   my $referenceSet     = get_option( $config, $section, "referenceSet", "genome" );
@@ -36,51 +38,40 @@ sub perform {
     die "File not found : " . $script;
   }
 
-  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
-  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
-  print $sh get_run_command($sh_direct) . " \n";
-  
+  my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
+  my $pbs_name = basename($pbs_file);
+  my $log      = $self->get_log_filename( $log_dir, $task_name );
+  my $log_desc = $cluster->get_log_description($log);
   my $expect_result = $self->result($config, $section);
 
-  for my $sample_name ( sort keys %$raw_files ) {
-    my $cur_dir = scalar( keys %$raw_files ) == 1 ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+  my $pbs                = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+  for my $sample_name ( sort keys %$comparisons ) {
+    my $cur_dir = scalar( keys %$comparisons ) == 1 ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
-    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
-    my $pbs_name = basename($pbs_file);
-    my $log      = $self->get_log_filename( $log_dir, $sample_name );
-    my $log_desc = $cluster->get_log_description($log);
+    my $final_file = $expect_result->{$sample_name}[-1];
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-    my $final_file = $expect_result->{$sample_name}[0];
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
-
-    my $inputFile = $raw_files->{$sample_name}->[0];
+    my $inputFile = $comparisons->{$sample_name}->[0];
 
     print $pbs " 
-R --vanilla -f $script --args $organism $sample_name $inputFile . $interestGeneType $referenceSet
-rm */*.tar.gz
+if [[ ! -s $final_file || ! -d $final_file ]]; then
+  R --vanilla -f $script --args $organism $sample_name $inputFile . $interestGeneType $referenceSet
+  rm */*.tar.gz
+fi
+
 ";
-    $self->close_pbs( $pbs, $pbs_file );
   }
-
-  close $sh;
-
-  if ( is_linux() ) {
-    chmod 0755, $shfile;
-  }
-
-  print "!!!shell file $shfile created, you can run this shell file to submit " . $self->{_name} . " tasks.\n";
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 1 );
-  my $raw_files = get_raw_files( $config, $section, undef, undef, 1 );
+  my $comparisons = get_raw_files( $config, $section, undef, undef, 1 );
 
   my $result       = {};
-  for my $sample_name ( sort keys %$raw_files ) {
-    my $cur_dir = scalar( keys %$raw_files ) == 1 ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+  for my $sample_name ( sort keys %$comparisons ) {
+    my $cur_dir = scalar( keys %$comparisons ) == 1 ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
     my $finalFile = "Project_" . $sample_name . "_geneontology_Biological_Process/Report_" . $sample_name . "_geneontology_Biological_Process.html";
     my @result_files = ();
     push( @result_files, "$cur_dir/Project_${sample_name}_geneontology_Biological_Process/enrichment_results_${sample_name}_geneontology_Biological_Process.txt" );
