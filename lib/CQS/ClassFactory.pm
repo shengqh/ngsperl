@@ -59,7 +59,7 @@ sub performConfig {
     if ( !defined $pattern || $section =~ m/$pattern/ ) {
       my $classname = $config->{$section}{class};
       if ( defined $classname ) {
-        if ( $classname eq "CQS::SequenceTask" || $classname eq "SequenceTask" ) {
+        if ( $classname =~ /SequenceTask/ ) {
           next;
         }
 
@@ -88,7 +88,7 @@ sub performConfig {
     if ( !defined $pattern || $section =~ m/$pattern/ ) {
       my $classname = $config->{$section}{class};
       if ( defined $classname ) {
-        if ( $classname eq "CQS::SequenceTask" || $classname eq "SequenceTask" ) {
+        if ( $classname =~ /SequenceTask/ ) {
 
           my $perform;
           if ( defined $force && $force ) {
