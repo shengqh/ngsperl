@@ -797,8 +797,9 @@ sub getRNASeqConfig {
     push( @$summary, "report" );
   }
 
+  my $sequenceTaskClass = $cluster eq "slurm"?"CQS::SequenceTaskSlurm":"CQS::SequenceTask";
   $config->{sequencetask} = {
-    class      => "CQS::SequenceTask",
+    class      => $sequenceTaskClass,
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",
