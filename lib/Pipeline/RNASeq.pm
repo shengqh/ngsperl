@@ -28,6 +28,7 @@ sub initializeDefaultOptions {
   fix_task_name($def);
 
   initDefaultValue( $def, "emailType", "ALL" );
+  initDefaultValue( $def, "cluster", "slurm");
 
   initDefaultValue( $def, "perform_preprocessing", 1 );
   initDefaultValue( $def, "perform_mapping",       1 );
@@ -796,8 +797,9 @@ sub getRNASeqConfig {
     push( @$summary, "report" );
   }
 
+  my $sequenceTaskClass = $cluster eq "slurm"?"CQS::SequenceTaskSlurm":"CQS::SequenceTask";
   $config->{sequencetask} = {
-    class      => "CQS::SequenceTask",
+    class      => $sequenceTaskClass,
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",
