@@ -82,11 +82,10 @@ sub getConfig {
 
   $def = initializeDefaultOptions($def);
 
-  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $task_index ) = getPreprocessionConfig( $def, 1 );
+  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig( $def, 1 );
 
   $config->{"treatments"} = $def->{"treatments"};
 
-  my $cluster = $def->{cluster};
   my $task    = $def->{task_name};
 
   my $email   = getValue( $def, "email" );
@@ -480,7 +479,7 @@ sub getConfig {
   }
 
   $config->{"sequencetask"} = {
-    class      => "CQS::SequenceTask",
+    class      => getSequenceTaskClassname($cluster),
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",

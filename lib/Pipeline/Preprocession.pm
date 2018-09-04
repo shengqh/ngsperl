@@ -368,7 +368,7 @@ sub getPreprocessionConfig {
     }
   }
 
-  return ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref );
+  return ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster);
 }
 
 1;

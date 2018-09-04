@@ -215,7 +215,7 @@ sub getConfig {
   push @summary, ( "fastqc_raw_summary", "macs2callpeak", "chipqc" );
 
   $config->{sequencetask} = {
-    class      => "CQS::SequenceTask",
+    class      => getSequenceTaskClassname($cluster),
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",

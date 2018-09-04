@@ -81,7 +81,6 @@ sub getRNASeqConfig {
 
   $def = initializeDefaultOptions($def);
 
-  my $cluster  = $def->{cluster};
   my $taskName = $def->{task_name};
 
   my $email = $def->{email};
@@ -116,7 +115,7 @@ sub getRNASeqConfig {
     defined $def->{annovar_buildver} or die "Define annovar_buildver for calling variants";
   }
 
-  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir ) = getPreprocessionConfig($def);
+  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $cluster ) = getPreprocessionConfig($def);
 
   my $target_dir      = $def->{target_dir};
   my $groups_ref      = defined $def->{groups} ? "groups" : undef;
@@ -797,9 +796,8 @@ sub getRNASeqConfig {
     push( @$summary, "report" );
   }
 
-  my $sequenceTaskClass = $cluster eq "slurm"?"CQS::SequenceTaskSlurm":"CQS::SequenceTask";
   $config->{sequencetask} = {
-    class      => $sequenceTaskClass,
+    class      => getSequenceTaskClassname($cluster),
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",

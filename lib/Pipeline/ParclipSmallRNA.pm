@@ -23,7 +23,7 @@ our $VERSION = '0.01';
 sub getParclipSmallRNAConfig {
   my ($def) = @_;
 
-  my ( $config, $individual_ref, $summary_ref, $cluster ) = getPrepareConfig( $def, 1 );
+  my ( $config, $individual_ref, $summary_ref, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
   my @individual = @{$individual_ref};
   my @summary    = @{$summary_ref};
 
@@ -46,7 +46,7 @@ sub getParclipSmallRNAConfig {
       option                => '-y 0 -z 0 -Y 0 -Z 0 -m 1 -Q --nofails --trim-mismatch-score 0 --trim-indel-score 0 --mode ttoc-nonstranded --gunzip',
       gsnap_index_directory => $def->{gsnap_index_directory},
       gsnap_index_name      => $def->{gsnap_index_name},
-      source_ref            => [ 'identical_NTA', '.fastq.gz$' ],
+      source_ref            => $source_ref,
       sh_direct             => 0,
       cluster               => $cluster,
       pbs                   => {
@@ -309,7 +309,7 @@ sub getParclipSmallRNAConfig {
     $config = merge( $config, $unmappedreads );
   }
   $config->{sequencetask} = {
-    class      => 'CQS::SequenceTask',
+    class      => getSequenceTaskClassname($cluster),
     perform    => 1,
     target_dir => $def->{target_dir} . '/sequencetask',
     option     => '',

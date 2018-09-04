@@ -1833,7 +1833,7 @@ sub getSmallRNAConfig {
   }
 
   $config->{sequencetask} = {
-    class      => "CQS::SequenceTask",
+    class      => getSequenceTaskClassname($cluster),
     perform    => 1,
     target_dir => $def->{target_dir} . "/sequencetask",
     option     => "",

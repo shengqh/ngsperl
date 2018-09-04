@@ -42,7 +42,7 @@ sub getConfig {
 
   $def = initializeDefaultOptions($def);
 
-  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir ) = getPreprocessionConfig($def);
+  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $cluster ) = getPreprocessionConfig($def);
 
   my $email    = getValue( $def, "email" );
   my $cqstools = getValue( $def, "cqstools" );
@@ -104,7 +104,7 @@ sub getConfig {
   push @$individual, "PARalyzer";
 
   $config->{"sequencetask"} = {
-    class      => "CQS::SequenceTask",
+    class      => getSequenceTaskClassname($cluster),
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",

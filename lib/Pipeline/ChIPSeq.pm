@@ -102,7 +102,7 @@ sub getConfig {
     getValue( $def, "design_table" );
   }
 
-  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir ) = getPreprocessionConfig($def);
+  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $cluster ) = getPreprocessionConfig($def);
   my $step2 = [];
 
   my $email    = getValue( $def, "email" );
@@ -377,7 +377,7 @@ sub getConfig {
     addMultiQC( $config, $def, $summary, $target_dir, $target_dir );
   }
   $config->{"sequencetask"} = {
-    class      => "CQS::SequenceTask",
+    class      => getSequenceTaskClassname($cluster),
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",

@@ -18,7 +18,7 @@ our %EXPORT_TAGS = (
     qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat
       getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn
       getBatchGroups addHomerMotif addHomerAnnotation addEnhancer writeDesignTable addMultiQC
-      getNextFolderIndex addCleanBAM getReportDir)
+      getNextFolderIndex addCleanBAM getReportDir getSequenceTaskClassname)
   ]
 );
 
@@ -709,4 +709,12 @@ sub writeDesignTable {
 
   return $result;
 }
+
+sub getSequenceTaskClassname{
+  my $cluster = shift;
+  my $result = $cluster eq "slurm"?"CQS::SequenceTaskSlurm":"CQS::SequenceTask";
+  return($result);
+}
+
+
 1;

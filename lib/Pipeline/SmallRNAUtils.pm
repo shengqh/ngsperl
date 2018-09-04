@@ -377,9 +377,7 @@ sub getPrepareConfig {
 
   $def = initializeSmallRNADefaultOptions($def);
 
-  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref ) = getPreprocessionConfig($def);
-
-  my $cluster = getValue( $def, "cluster" );
+  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
   #nta for microRNA and tRNA
   my $consider_miRNA_NTA = getValue( $def, "consider_miRNA_NTA" );
