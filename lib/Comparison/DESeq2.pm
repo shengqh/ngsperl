@@ -310,7 +310,7 @@ sub result {
   my $result = {};
 
   if ( scalar( keys %$comparisons ) > 1 ) {
-    my $filtered = filter_array( [ $result_dir . "/${task_name}.define_DESeq2_volcanoPlot.png" ], $pattern, 1 );
+    my $filtered = filter_array( [ $result_dir . "/${task_name}.define${suffix}_DESeq2_volcanoPlot.png" ], $pattern, 1 );
     if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
       $result->{$task_name} = $filtered;
     }
