@@ -310,9 +310,9 @@ sub getRNASeqConfig {
 
     push @$summary, "genetable";
 
-    $count_file_ref = [ "genetable", ".count\$" ];
+    $count_file_ref = [ "genetable", "(?<!proteincoding).count\$" ];
     if ( $def->{perform_DE_proteincoding_gene} ) {
-      push @$count_file_ref, [ "genetable", ".proteincoding.count\$" ];
+      push @$count_file_ref, "genetable", ".proteincoding.count\$";
     }
   }
 
@@ -717,7 +717,7 @@ sub getRNASeqConfig {
       my $pairs = $config->{pairs};
 
       if ( scalar( keys %$pairs ) > 1 ) {
-        push( @report_files, $deseq2taskname, $taskName . ".define_DESeq2_volcanoPlot.png" );
+        push( @report_files, $deseq2taskname, $taskName . ".define.*DESeq2_volcanoPlot.png" );
         push( @report_names, "deseq2_volcano_plot" );
       }
       else {
