@@ -104,8 +104,8 @@ sub getSmallRNAConfig {
 
   my $R_font_size = 'textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';';
 
-  my @table_for_correlation  = ();
-  if($perform_class_independent_analysis){
+  my @table_for_correlation = ();
+  if ($perform_class_independent_analysis) {
     push @table_for_correlation, ( "identical_sequence_count_table", "^(?!.*?read).*\.count\$" );
   }
   my @table_for_countSum     = ();
@@ -133,14 +133,14 @@ sub getSmallRNAConfig {
     $def->{correlation_rcode} = $def->{correlation_rcode} . "showLabelInPCA<-FALSE;";
   }
 
-  if ($def->{correlation_rcode} !~ /totalCountKey/) {    #use total normlization to do correlation analysis
+  if ( $def->{correlation_rcode} !~ /totalCountKey/ ) {    #use total normlization to do correlation analysis
     $def->{correlation_rcode} = $def->{correlation_rcode} . "totalCountKey='Reads for Mapping';";
   }
-  
-  if ($def->{correlation_rcode} !~ /minMedian/) {    #set filter parameters
+
+  if ( $def->{correlation_rcode} !~ /minMedian/ ) {        #set filter parameters
     $def->{correlation_rcode} = $def->{correlation_rcode} . "minMedian=1;minMedianInGroup=1;";
   }
-  
+
   #print Dumper($config);
   my $groups = $def->{groups};
   if ( !defined $def->{groups_vis_layout} && defined $groups && defined $groups->{".order"} && defined $groups->{".col"} && defined $groups->{".row"} ) {
@@ -282,7 +282,7 @@ sub getSmallRNAConfig {
 
   my $DE_min_median_read_top      = getValue( $def, "DE_min_median_read_top" );
   my $DE_min_median_read_smallRNA = getValue( $def, "DE_min_median_read_smallRNA" );
-  
+
   my $max_sequence_extension_base = getValue( $def, "max_sequence_extension_base" );
   $def->{nonhost_table_option} = "--maxExtensionBase " . $def->{max_sequence_extension_base} . " " . $def->{nonhost_table_option};
   my $perform_contig_analysis = $def->{perform_contig_analysis};
@@ -835,7 +835,7 @@ sub getSmallRNAConfig {
       }
     }
 
-    if ( $search_nonhost_database or $blast_unmapped_reads ) {
+    if ( $search_nonhost_database or $blast_unmapped_reads or $def->{perform_host_length_dist_category} ) {
       my $readClass;
       my $readTask;
       if ( $def->{host_remove_all_mapped_reads} ) {
@@ -919,6 +919,58 @@ sub getSmallRNAConfig {
       push @name_for_readSummary, ("Host Genome");
       $identical_ref       = [ "bowtie1_genome_unmapped_reads", ".unmapped.fastq.gz\$" ];
       $identical_count_ref = [ "bowtie1_genome_unmapped_reads", ".unmapped.fastq.dupcount\$" ];
+    }
+    
+    if ( $def->{perform_host_length_dist_category} ) {
+      my @length_dist_count = ();
+      my @length_dist_names = ();
+
+      if ( $def->{hasYRNA} ) {
+        push @length_dist_names, "yRNA";
+        push @length_dist_count, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.read.count\$" );
+      }
+
+      if ( $def->{hasSnRNA} ) {
+        push @length_dist_names, "snRNA";
+        push @length_dist_count, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.read.count\$" );
+      }
+
+      if ( $def->{hasSnoRNA} ) {
+        push @length_dist_names, "snoRNA";
+        push @length_dist_count, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.read.count\$" );
+      }
+
+      push @length_dist_names, ( "miRNA", "tRNA", "rRNA", "oRNA", "genome", "category", "fastq_len" );
+      push @length_dist_count, (
+        "bowtie1_genome_1mm_NTA_smallRNA_table",    ".miRNA.read.count\$",
+        "bowtie1_genome_1mm_NTA_smallRNA_table",    ".tRNA.read.count\$",
+        "bowtie1_genome_1mm_NTA_smallRNA_table",    ".rRNA.read.count\$",         #rRNA
+        "bowtie1_genome_1mm_NTA_smallRNA_table",    ".other.read.count\$",        #other
+        "bowtie1_genome_host_reads_table",          ".count\$",
+        "bowtie1_genome_1mm_NTA_smallRNA_category", "Category.Table.csv\$",
+        "fastq_len_summary",                        ".lengthDistribution.csv\$"
+      );
+      
+      $config->{host_length_dist_category} = {
+        class                     => "CQS::UniqueR",
+        perform                   => 1,
+        target_dir                => $data_visualization_dir . "/host_length_dist_category",
+        rtemplate                 => "../smallRNA/lengthDistributionStackedBarplot.R",
+        output_file               => ".NonHost.Reads",
+        output_file_ext           => ".Overlap.csv;.Barplot.png;",
+        parameterSampleFile1_ref  => \@length_dist_count,
+        parameterSampleFile1_names =>\@length_dist_names,
+        sh_direct                 => 1,
+        rCode                     => '' . $R_font_size,
+        pbs                       => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary_ref, ("host_length_dist_category");
     }
   }
 
