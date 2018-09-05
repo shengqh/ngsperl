@@ -32,7 +32,7 @@ for (i in 1:nrow(lengthFiles)) {
 }
 
 lengthAllTable<-acast(lengthAll,Len~Sample,value.var="Count")
-write.csv(lengthAllTable,paste0(resultFile,".csv"), row.names=F)
+write.csv(lengthAllTable,paste0(resultFile,".csv"), row.names=T)
 
 cellWidth=800
 scales="free_x"
