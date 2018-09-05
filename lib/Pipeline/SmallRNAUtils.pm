@@ -242,19 +242,20 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "cluster",    "slurm" );
   initDefaultValue( $def, "max_thread", 8 );
 
-  initDefaultValue( $def, "host_xml2bam",                    0 );
-  initDefaultValue( $def, "bacteria_group1_count2bam",       0 );
-  initDefaultValue( $def, "bacteria_group2_count2bam",       0 );
-  initDefaultValue( $def, "fungus_group4_count2bam",         0 );
-  initDefaultValue( $def, "host_bamplot",                    0 );
-  initDefaultValue( $def, "read_correlation",                1 );
-  initDefaultValue( $def, "perform_contig_analysis",         0 );
-  initDefaultValue( $def, "perform_annotate_unmapped_reads", 0 );
-  initDefaultValue( $def, "perform_nonhost_rRNA_coverage",   0 );
-  initDefaultValue( $def, "perform_nonhost_tRNA_coverage",   0 );
-  initDefaultValue( $def, "perform_host_rRNA_coverage",      1 );
-  initDefaultValue( $def, "search_combined_nonhost",         0 );
-  initDefaultValue( $def, "perform_report",                  1 );
+  initDefaultValue( $def, "host_xml2bam",                      0 );
+  initDefaultValue( $def, "bacteria_group1_count2bam",         0 );
+  initDefaultValue( $def, "bacteria_group2_count2bam",         0 );
+  initDefaultValue( $def, "fungus_group4_count2bam",           0 );
+  initDefaultValue( $def, "host_bamplot",                      0 );
+  initDefaultValue( $def, "read_correlation",                  1 );
+  initDefaultValue( $def, "perform_contig_analysis",           0 );
+  initDefaultValue( $def, "perform_annotate_unmapped_reads",   0 );
+  initDefaultValue( $def, "perform_nonhost_rRNA_coverage",     0 );
+  initDefaultValue( $def, "perform_nonhost_tRNA_coverage",     0 );
+  initDefaultValue( $def, "perform_host_rRNA_coverage",        1 );
+  initDefaultValue( $def, "perform_host_length_dist_category", 1 );
+  initDefaultValue( $def, "search_combined_nonhost",           0 );
+  initDefaultValue( $def, "perform_report",                    1 );
 
   initDefaultValue( $def, "min_read_length",               16 );
   initDefaultValue( $def, "bowtie1_option_2mm",            "-a --best --strata -v 2" );

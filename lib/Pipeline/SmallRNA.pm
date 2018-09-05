@@ -920,49 +920,53 @@ sub getSmallRNAConfig {
       $identical_ref       = [ "bowtie1_genome_unmapped_reads", ".unmapped.fastq.gz\$" ];
       $identical_count_ref = [ "bowtie1_genome_unmapped_reads", ".unmapped.fastq.dupcount\$" ];
     }
-    
+
     if ( $def->{perform_host_length_dist_category} ) {
       my @length_dist_count = ();
       my @length_dist_names = ();
 
+      push @length_dist_names, ( "miRNA", "tDR", "rDR" );
+      push @length_dist_count, (
+        "bowtie1_genome_1mm_NTA_smallRNA_table",    ".miRNA.read.count\$",
+        "bowtie1_genome_1mm_NTA_smallRNA_table",    ".tRNA.read.count\$",
+        "bowtie1_genome_1mm_NTA_smallRNA_table",    ".rRNA.read.count\$"          #rRNA
+      );
+
       if ( $def->{hasYRNA} ) {
-        push @length_dist_names, "yRNA";
+        push @length_dist_names, "yDR";
         push @length_dist_count, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.read.count\$" );
       }
 
       if ( $def->{hasSnRNA} ) {
-        push @length_dist_names, "snRNA";
+        push @length_dist_names, "snDR";
         push @length_dist_count, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.read.count\$" );
       }
 
       if ( $def->{hasSnoRNA} ) {
-        push @length_dist_names, "snoRNA";
+        push @length_dist_names, "snoDR";
         push @length_dist_count, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.read.count\$" );
       }
 
-      push @length_dist_names, ( "miRNA", "tRNA", "rRNA", "oRNA", "genome", "category", "fastq_len" );
+      push @length_dist_names, ( "osDR", "Genome", "fastq_len", "category" );
       push @length_dist_count, (
-        "bowtie1_genome_1mm_NTA_smallRNA_table",    ".miRNA.read.count\$",
-        "bowtie1_genome_1mm_NTA_smallRNA_table",    ".tRNA.read.count\$",
-        "bowtie1_genome_1mm_NTA_smallRNA_table",    ".rRNA.read.count\$",         #rRNA
-        "bowtie1_genome_1mm_NTA_smallRNA_table",    ".other.read.count\$",        #other
+        "bowtie1_genome_1mm_NTA_smallRNA_table",    ".other.read.count\$",         #other
         "bowtie1_genome_host_reads_table",          ".count\$",
-        "bowtie1_genome_1mm_NTA_smallRNA_category", "Category.Table.csv\$",
-        "fastq_len_summary",                        ".lengthDistribution.csv\$"
+        "fastq_len_vis",                            ".lengthDistribution.csv\$",
+        "bowtie1_genome_1mm_NTA_smallRNA_category", "Category.Table.csv\$"
       );
-      
+
       $config->{host_length_dist_category} = {
-        class                     => "CQS::UniqueR",
-        perform                   => 1,
-        target_dir                => $data_visualization_dir . "/host_length_dist_category",
-        rtemplate                 => "../smallRNA/lengthDistributionStackedBarplot.R",
-        output_file               => ".NonHost.Reads",
-        output_file_ext           => ".Overlap.csv;.Barplot.png;",
-        parameterSampleFile1_ref  => \@length_dist_count,
-        parameterSampleFile1_names =>\@length_dist_names,
-        sh_direct                 => 1,
-        rCode                     => '' . $R_font_size,
-        pbs                       => {
+        class                      => "CQS::UniqueR",
+        perform                    => 1,
+        target_dir                 => $data_visualization_dir . "/host_length_dist_category",
+        rtemplate                  => "../SmallRNA/lengthDistributionStackedBarplot.R",
+        output_file                => ".length.pdf",
+        output_file_ext            => "",
+        parameterSampleFile1_ref   => \@length_dist_count,
+        parameterSampleFile1Names => \@length_dist_names,
+        sh_direct                  => 1,
+        rCode                      => '' . $R_font_size,
+        pbs                        => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
