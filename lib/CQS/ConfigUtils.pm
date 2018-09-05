@@ -926,12 +926,26 @@ sub writeParameterSampleFile {
     else {
       @orderedSampleNames = keys %$temp;
     }
+    
+    my @outputNames = ();
+    my $keyNames = $key . "Names";
+    my $parameterSampleFileNames = $config->{$section}{$keyNames};
+    if( defined $parameterSampleFileNames ) {
+      @outputNames = @$parameterSampleFileNames;
+    }
+    
     $result = "fileList${index}${task_suffix}.txt";
     open( my $list, ">$resultDir/$result" ) or die "Cannot create $result";
+    my $nameIndex = -1;
     foreach my $sample_name (@orderedSampleNames) {
       my $subSampleFiles = $temp->{$sample_name};
       foreach my $subSampleFile (@$subSampleFiles) {
-        print $list $subSampleFile . "\t$sample_name\n";
+        my $curSampleName = $sample_name;
+        if(scalar(@outputNames) > 0){
+          $nameIndex = $nameIndex + 1;
+          $curSampleName = $outputNames[$nameIndex];
+        }
+        print $list $subSampleFile . "\t$curSampleName\n";
       }
     }
     close($list);
