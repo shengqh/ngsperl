@@ -23,7 +23,7 @@ our $VERSION = '0.01';
 sub getTGIRTSmallRNAConfig {
   my ($def) = @_;
 
-  my ( $config, $individual_ref, $summary_ref, $cluster ) = getPrepareConfig( $def, 0 );
+  my ( $config, $individual_ref, $summary_ref, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 0 );
   my @individual = @{$individual_ref};
   my @summary    = @{$summary_ref};
 
@@ -161,7 +161,7 @@ sub getTGIRTSmallRNAConfig {
 
   $config = merge( $config, $tgirt );
   $config->{sequencetask} = {
-    class      => 'CQS::SequenceTask',
+    class      => getSequenceTaskClassname($cluster),
     perform    => 1,
     target_dir => $def->{target_dir} . '/sequencetask',
     option     => '',

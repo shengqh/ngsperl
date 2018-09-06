@@ -42,7 +42,7 @@ sub getConfig {
 
   $def = initializeDefaultOptions($def);
 
-  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $cluster ) = getPreprocessionConfig($def);
+  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
   my $email    = getValue( $def, "email" );
   my $cqstools = getValue( $def, "cqstools" );

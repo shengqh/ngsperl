@@ -23,7 +23,7 @@ our $VERSION = '0.01';
 sub getParclipSmallRNANormalConfig {
   my ($def) = @_;
 
-  my ( $config, $individual_ref, $summary_ref, $cluster ) = getPrepareConfig( $def, 1 );
+  my ( $config, $individual_ref, $summary_ref, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
   my @individual = @{$individual_ref};
   my @summary    = @{$summary_ref};
 

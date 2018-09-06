@@ -115,7 +115,7 @@ sub getRNASeqConfig {
     defined $def->{annovar_buildver} or die "Define annovar_buildver for calling variants";
   }
 
-  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $cluster ) = getPreprocessionConfig($def);
+  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
   my $target_dir      = $def->{target_dir};
   my $groups_ref      = defined $def->{groups} ? "groups" : undef;
@@ -340,7 +340,7 @@ sub getRNASeqConfig {
         "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "1",
-        "mem"       => "10gb"
+        "mem"       => "20gb"
       },
     };
     if ( ref($count_file_ref) eq "ARRAY" ) {
