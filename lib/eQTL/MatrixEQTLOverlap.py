@@ -43,16 +43,18 @@ def findOverlap(inputFile, inputBimFile, inputName, compareFile, compareBimFile,
         if pvalue < 0:
           fdr = -pvalue 
           logger.info("fdr = %f" % fdr)
-          curInputResult = [p for p in inputResult if p.FDR <= fdr]
+          curInputResultMap = {p.SNP + ":" + p.Gene:p for p in inputResult if p.FDR <= fdr}
           curCompareResultMap = {p.SNP + ":" + p.Gene:p for p in compareResult if p.FDR <= fdr}
         else:
           logger.info("pvalue = %f" % pvalue)
-          curInputResult = [p for p in inputResult if p.Pvalue <= pvalue]
+          curInputResultMap = {p.SNP + ":" + p.Gene:p for p in inputResult if p.Pvalue <= pvalue}
           curCompareResultMap = {p.SNP + ":" + p.Gene:p for p in compareResult if p.Pvalue <= pvalue}
+          
+        keys = sorted(set(curInputResultMap.keys()).union(curCompareResultMap.keys()))
       
-        for i in curInputResult:
-          iKey = i.SNP + ":" + i.Gene;
-          if iKey in curCompareResultMap:
+        for iKey in keys:
+          if iKey in curCompareResultMap and iKey in curInputResultMap:
+            i = curInputResultMap[iKey]
             c = curCompareResultMap[iKey]
             betaMatch = False;
             if (i.MajorAllele == c.MajorAllele) and (i.MinorAllele == c.MinorAllele):
@@ -82,20 +84,42 @@ def findOverlap(inputFile, inputBimFile, inputName, compareFile, compareBimFile,
                 c.FDR,
                 c.Beta,
                 betaMatch));
+          elif iKey in curInputResultMap:
+            i = curInputResultMap[iKey]
+            if pvalue == pvalues[0]:
+              f.write("%s\t%s\t%s\t%s\t%.2E\t%.2E\t%f\t\t\t\t\t\t\n" % (
+                i.Locus,
+                i.Gene,
+                i.MajorAllele,
+                i.MinorAllele,
+                i.Pvalue,
+                i.FDR,
+                i.Beta));
+          else:
+            c = curCompareResultMap[iKey]
+            if pvalue == pvalues[0]:
+              f.write("%s\t%s\t\t\t\t\t\t%s\t%s\t%.2E\t%.2E\t%f\t\n" % (
+                c.Locus,
+                c.Gene,
+                c.MajorAllele,
+                c.MinorAllele,
+                c.Pvalue,
+                c.FDR,
+                c.Beta));
           
         overlap = matched + unmatched
-        minEqtl = min(len(curInputResult), len(curCompareResultMap))
+        minEqtl = min(len(curInputResultMap), len(curCompareResultMap))
         
         if minEqtl == 0:
-          fi.write("%f\t%d\t%d\t%d\t%f\t%d\t%d\t%f\n" % (pvalue, len(curInputResult), len(curCompareResultMap),
+          fi.write("%f\t%d\t%d\t%d\t%f\t%d\t%d\t%f\n" % (pvalue, len(curInputResultMap), len(curCompareResultMap),
                                                                    0,
                                                                    0,
                                                                    0,
                                                                    0,
                                                                    0))
         else:
-          overlapRate = 1.0 * overlap / min(len(curInputResult), len(curCompareResultMap))
-          fi.write("%f\t%d\t%d\t%d\t%f\t%d\t%d\t%f\n" % (pvalue, len(curInputResult), len(curCompareResultMap),
+          overlapRate = 1.0 * overlap / min(len(curInputResultMap), len(curCompareResultMap))
+          fi.write("%f\t%d\t%d\t%d\t%f\t%d\t%d\t%f\n" % (pvalue, len(curInputResultMap), len(curCompareResultMap),
                                                                    overlap,
                                                                    overlapRate,
                                                                    matched,
