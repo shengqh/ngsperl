@@ -54,6 +54,7 @@ sub perform {
 
     print $pbs " 
 if [[ ! -s $final_file || ! -d $final_file ]]; then
+  cd $cur_dir 
   R --vanilla -f $script --args $organism $sample_name $inputFile . $interestGeneType $referenceSet
   rm */*.tar.gz
 fi
