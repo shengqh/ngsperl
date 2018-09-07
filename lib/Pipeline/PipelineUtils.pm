@@ -18,7 +18,7 @@ our %EXPORT_TAGS = (
     qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat
       getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn
       getBatchGroups addHomerMotif addHomerAnnotation addEnhancer writeDesignTable addMultiQC
-      getNextFolderIndex addCleanBAM getReportDir getSequenceTaskClassname)
+      getNextFolderIndex addCleanBAM getReportDir getSequenceTaskClassname addAnnovar addAnnovarFilter)
   ]
 );
 
@@ -226,7 +226,7 @@ sub addDEseq2 {
     pbs                          => {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
-      "nodes"     => "1:ppn=". $def->{max_thread},
+      "nodes"     => "1:ppn=" . $def->{max_thread},
       "walltime"  => "10",
       "mem"       => "20gb"
     },
@@ -710,11 +710,59 @@ sub writeDesignTable {
   return $result;
 }
 
-sub getSequenceTaskClassname{
+sub getSequenceTaskClassname {
   my $cluster = shift;
-  my $result = $cluster eq "slurm"?"CQS::SequenceTaskSlurm":"CQS::SequenceTask";
-  return($result);
+  my $result = $cluster eq "slurm" ? "CQS::SequenceTaskSlurm" : "CQS::SequenceTask";
+  return ($result);
 }
 
+sub addAnnovar {
+  my ( $config, $def, $summary, $target_dir, $source_name, $source_pattern ) = @_;
+  my $annovar_name = $source_name . "_annovar";
+  my $source_ref = ( defined($source_pattern) and ( $source_pattern ne "" ) ) ? [ $source_name, $source_pattern ] : $source_name;
+  $config->{$annovar_name} = {
+    class      => "Annotation::Annovar",
+    perform    => 1,
+    target_dir => "${target_dir}/$annovar_name",
+    source_ref => $source_ref,
+    option     => getValue( $def, "annovar_param" ),
+    annovar_db => getValue( $def, "annovar_db" ),
+    buildver   => getValue( $def, "annovar_buildver" ),
+    sh_direct  => 1,
+    isvcf      => 1,
+    pbs        => {
+      "email"    => $def->{email},
+      "nodes"    => "1:ppn=1",
+      "walltime" => "2",
+      "mem"      => "10gb"
+    },
+  };
+  push @$summary, ($annovar_name);
+
+  return ($annovar_name);
+}
+
+sub addAnnovarFilter {
+  my ( $config, $def, $summary, $target_dir, $annovar_name ) = @_;
+  my $annovar_filter_name = $annovar_name . "_filter";
+
+  $config->{$annovar_filter_name} = {
+    class               => "Annotation::FilterAnnovar",
+    perform             => 1,
+    target_dir          => "${target_dir}/$annovar_filter_name",
+    source_ref          => $annovar_name,
+    option              => "",
+    sh_direct           => 1,
+    maximum_exac_values => "0.001,0.01,0.1,1.0",
+    pbs                 => {
+      "email"    => $def->{email},
+      "nodes"    => "1:ppn=1",
+      "walltime" => "2",
+      "mem"      => "10gb"
+    },
+  };
+  push @$summary, ($annovar_filter_name);
+  return ($annovar_filter_name);
+}
 
 1;
