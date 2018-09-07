@@ -36,6 +36,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "gatk_callvariants_vqsr_mode", 1 );
   initDefaultValue( $def, "perform_muTect",              0 );
   initDefaultValue( $def, "perform_muTect2indel",        0 );
+  initDefaultValue( $def, "perform_annovar",             0 );
 
   if ( $def->{perform_muTect} || $def->{perform_muTect2indel} ) {
     if ( defined $def->{mills} ) {
@@ -45,7 +46,6 @@ sub initializeDefaultOptions {
     else {
       initDefaultValue( $def, "indel_realignment", 0 );
     }
-    initDefaultValue( $def, "perform_annovar", 1 );
   }
 
   initDefaultValue( $def, "perform_multiqc", 1 );
@@ -168,6 +168,7 @@ sub getConfig {
         fasta_file    => $fasta,
         gatk_jar      => $gatk_jar,
         extension     => ".g.vcf",
+        bed_file      => $def->{covered_bed},
         by_chromosome => 0,
         gvcf          => 1,
         sh_direct     => 0,
@@ -233,25 +234,13 @@ sub getConfig {
       }
       push @$summary, ($filter_name);
 
-      my $annovar_name = $filter_name . "_annovar";
-      $config->{$annovar_name} = {
-        class      => "Annotation::Annovar",
-        perform    => 1,
-        target_dir => "${target_dir}/$annovar_name",
-        source_ref => "$filter_name",
-        option     => getValue( $def, "annovar_param" ),
-        annovar_db => getValue( $def, "annovar_db" ),
-        buildver   => getValue( $def, "annovar_buildver" ),
-        sh_direct  => 1,
-        isvcf      => 1,
-        pbs        => {
-          "email"    => $email,
-          "nodes"    => "1:ppn=1",
-          "walltime" => "2",
-          "mem"      => "10gb"
-        },
-      };
-      push @$summary, ($annovar_name);
+      if ( $def->{perform_annovar} ) {
+        my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $filter_name, undef );
+        
+        if($def->{annovar_param} =~ /exac/){
+          my $annovar_filter_name = addAnnovarFilter($config, $def, $summary, $target_dir, $annovar_name);
+        }
+      }
     }
 
     if ( $def->{"perform_muTect"} ) {
@@ -280,25 +269,7 @@ sub getConfig {
       push @$summary, "${mutectName}";
 
       if ( $def->{perform_annovar} ) {
-        $config->{"${mutectName}_annovar"} = {
-          class      => "Annotation::Annovar",
-          perform    => 1,
-          target_dir => "${target_dir}/${mutectName}_annovar",
-          option     => getValue( $def, "annovar_param" ),
-          annovar_db => getValue( $def, "annovar_db" ),
-          buildver   => getValue( $def, "annovar_buildver" ),
-          source_ref => [ "${mutectName}", ".pass.vcf\$" ],
-          cqstools   => $cqstools,
-          sh_direct  => 1,
-          isvcf      => 1,
-          pbs        => {
-            "email"    => $email,
-            "nodes"    => "1:ppn=1",
-            "walltime" => "72",
-            "mem"      => "10gb"
-          },
-        };
-        push @$summary, "${mutectName}_annovar";
+        my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $mutectName, ".pass.vcf\$" );
       }
     }
 
@@ -328,25 +299,7 @@ sub getConfig {
       push @$summary, $mutect2Name;
 
       if ( $def->{perform_annovar} ) {
-        $config->{"${mutect2Name}_annovar"} = {
-          class      => "Annotation::Annovar",
-          perform    => 1,
-          target_dir => "${target_dir}/${mutect2Name}_annovar",
-          option     => getValue( $def, "annovar_param" ),
-          annovar_db => getValue( $def, "annovar_db" ),
-          buildver   => getValue( $def, "annovar_buildver" ),
-          source_ref => [ "${mutect2Name}", ".pass.vcf\$" ],
-          cqstools   => $cqstools,
-          sh_direct  => 1,
-          isvcf      => 1,
-          pbs        => {
-            "email"    => $email,
-            "nodes"    => "1:ppn=1",
-            "walltime" => "72",
-            "mem"      => "10gb"
-          },
-        };
-        push @$summary, "${mutect2Name}_annovar";
+        my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $mutect2Name, ".pass.vcf\$" );
       }
     }
   }
