@@ -123,14 +123,14 @@ print(kable(output_table2, caption=tabRef("geneSummary", "The summary of reads a
 
 <br>
 
-###4.2 Expression density of samples
+### 4.2 Expression density of samples
 ```{r correlation_density,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_density", "Expression density distribution of each sample")}
 include_graphics(files["correlation_density",1])
 ```
 
 <br>
 
-###4.3 Similarity between samples
+### 4.3 Similarity between samples
 ```{r correlation_heatmap,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_heatmap", "Heatmap of expression similarity across samples")}
 include_graphics(files["correlation_heatmap",1])
 ```
@@ -149,15 +149,15 @@ include_graphics(files["correlation_cluster",1])
 
 <br>
 
-##5. Differential expression
-###5.1 Volcano plot
+## 5. Differential expression
+### 5.1 Volcano plot
 ```{r deseq2_volcano_plot,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("Volcano_plot", "Volcano plot for all comparisons")}
 include_graphics(files["deseq2_volcano_plot",1])
 ```
 
 <br>
 
-###5.2 Summary of differential analysis
+### 5.2 Summary of differential analysis
 ```{r echo=FALSE,results='asis'}
 DESeq2_files<-files[grep("DESeq2_sig", files[,1]),]
 DESeq2_list<-list()
@@ -187,7 +187,7 @@ for (i in 1:nrow(DESeq2_files)){
 
 ```{r enrich, results="asis", echo=FALSE} 
 if(hasEnrichmentAnalysis ){
-  cat("##6. Funcional enrichment analysis\nList of the top five significantly enriched elements\n<br>\n")
+  cat("## 6. Funcional enrichment analysis\nList of the top five significantly enriched elements\n<br>\n")
   enrichIndex<-1
 }
 ```
@@ -196,7 +196,7 @@ if(hasEnrichmentAnalysis ){
   
 ```{r webgestalt, results="asis", echo=FALSE} 
 if(hasWebGestaltAnalysis){
-  cat(paste0("###6.", enrichIndex, " WebGestalt\n"))
+  cat(paste0("  \n### 6.", enrichIndex, " WebGestalt  \n"))
   enrich_files<-files[grepl("WebGestalt_", rownames(files)),]
   enrich_files$Comparisons<-gsub("WebGestalt_GO....", "", enrich_files$V2)
   enrich_files$Comparisons<-gsub("WebGestalt_KEGG_", "", enrich_files$Comparisons)
@@ -204,7 +204,7 @@ if(hasWebGestaltAnalysis){
   for (j in 1:length(comparisons)){
     comparison<-comparisons[j]
     comp_files<-enrich_files[enrich_files$Comparisons == comparison,]
-    cat(paste0("####6.", enrichIndex, ".", j, " ", comparison, "\n"))
+    cat(paste0("  \n#### 6. ", enrichIndex, ".", j, " ", comparison, "  \n"))
   
     for (i in 1:nrow(comp_files)){
       if (!file.exists(comp_files[i,1])) {
@@ -237,7 +237,7 @@ if(hasWebGestaltAnalysis){
   
 ```{r gsea, results="asis", echo=FALSE, warning=FALSE} 
 if(hasGseaAnalysis){
-  cat(paste0("###6.", enrichIndex, " GSEA\n"))
+  cat(paste0("  \n### 6.", enrichIndex, " GSEA  \n"))
   processGesaTable<-function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=5,absLinkPath=FALSE) {
     rawTable<-read.delim(gseaTableFile,header=T,as.is=T)
     rawTableOut<-NULL
@@ -266,7 +266,7 @@ if(hasGseaAnalysis){
   for (j in 1:length(comparisons)){
     comparison<-comparisons[j]
     comp_files<-gsea_files[gsea_files$Comparisons == comparison,]
-    cat(paste0("####6.", enrichIndex, ".", j, " ", comparison, "\n"))
+    cat(paste0("  \n#### 6.", enrichIndex, ".", j, " ", comparison, "  \n"))
   
     for (i in 1:nrow(comp_files)){
       gfolders<-read.csv(comp_files[i,1],header=T,stringsAsFactor=F)
@@ -310,7 +310,7 @@ if(hasGseaAnalysis){
   
 ```{r structure_link, echo=FALSE, results='asis'}
 structureIndex<-ifelse(hasEnrichmentAnalysis, 7, 6)
-cat(paste0("##", structureIndex, ". Results folder structure\n"))
+cat(paste0("## ", structureIndex, ". Results folder structure\n"))
 
 df<-NULL
 countFile<-list.files('.',pattern=".count$",full.names=TRUE,recursive=TRUE)
