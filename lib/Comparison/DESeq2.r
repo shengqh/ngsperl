@@ -267,9 +267,12 @@ myEstimateSizeFactors<-function(dds){
 		sfres<-try(dds<-estimateSizeFactors(dds))
 		if (class(sfres) == "try-error") {
 			library(edgeR)
-			y<-DGEList(counts=counts(dds))
-			y<-calcNormFactors(y, methold="TMM")
-			sizeFactors(dds)<-y$samples$norm.factors
+			countNum<-counts(dds)
+			y<-calcNormFactors(countNum, methold="TMM")
+      cs<-colSums(countNum)
+      cs<-cs / median(cs)
+      sf<-y * cs
+      sizeFactors(dds)<-sf
 		}
 	}
 	return(dds)
