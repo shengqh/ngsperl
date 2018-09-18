@@ -632,7 +632,7 @@ sub writeDesignTable {
         my $controlId  = "";
         my $bamControl = "";
 
-        if ( defined $controls ) {
+        if ( defined $controls && defined $controls->{$sampleName} ) {
           $controlId  = $controls->{$sampleName}->[0];
           $bamControl = $bamfiles->{$controlId}[0];
         }
