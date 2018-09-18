@@ -86,7 +86,7 @@ sub getConfig {
       pbs                   => {
         "email"    => $email,
         "nodes"    => "1:ppn=8",
-        "walltime" => "72",
+        "walltime" => "24",
         "mem"      => "40gb"
       },
     };
@@ -150,7 +150,7 @@ sub getConfig {
       pbs                      => {
         "email"    => $email,
         "nodes"    => "1:ppn=1",
-        "walltime" => "2",
+        "walltime" => "24",
         "mem"      => "40gb"
       },
     };
