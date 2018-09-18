@@ -1,4 +1,5 @@
 options(bitmapType='cairo')
+options(expressions=102400)
 
 args = commandArgs(trailingOnly = TRUE)
 
