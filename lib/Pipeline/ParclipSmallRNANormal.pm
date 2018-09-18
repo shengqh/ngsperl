@@ -7,6 +7,7 @@ use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
+use Pipeline::PipelineUtils;
 use Pipeline::SmallRNAUtils;
 use Data::Dumper;
 use Hash::Merge qw( merge );
@@ -23,6 +24,19 @@ our $VERSION = '0.01';
 sub getParclipSmallRNANormalConfig {
   my ($def) = @_;
 
+  initDefaultValue( $def, "search_smallrna",                    1 );
+  initDefaultValue( $def, "search_3utr",                        1 );
+  initDefaultValue( $def, "exclude_smallrna_reads_for_3utr",    1 );
+  initDefaultValue( $def, "gsnap_option",                       '-y 0 -z 0 -Y 0 -Z 0 -m 1 -Q --max-anchors 1 --use-shared-memory 0 --nofails --trim-mismatch-score 0 --trim-indel-score 0 --mode ttoc-nonstranded --gunzip' );
+  initDefaultValue( $def, "perform_class_independent_analysis", 0 );
+
+  if ( !$def->{search_smallrna} ) {
+    $def->{"consider_miRNA_NTA"} = 0;
+    $def->{"consider_tRNA_NTA"}  = 0;
+  }
+  
+  my $fastq_ref = ($def->{"consider_miRNA_NTA"} | $def->{"consider_tRNA_NTA"})?['identical_NTA', '.fastq.gz$']:['identical', '.fastq.gz$'];
+  
   my ( $config, $individual_ref, $summary_ref, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
   my @individual = @{$individual_ref};
   my @summary    = @{$summary_ref};
@@ -43,10 +57,10 @@ sub getParclipSmallRNANormalConfig {
       class                 => 'Alignment::Gsnap',
       perform               => 1,
       target_dir            => $t2c_dir . '/gsnap',
-      option                => '-y 0 -z 0 -Y 0 -Z 0 -m 1 -Q --nofails --trim-mismatch-score 0 --trim-indel-score 0 --mode ttoc-nonstranded --gunzip',
+      option                => $def->{gsnap_option},
       gsnap_index_directory => $def->{gsnap_index_directory},
       gsnap_index_name      => $def->{gsnap_index_name},
-      source_ref            => [ 'identical_NTA', '.fastq.gz$' ],
+      source_ref            => $fastq_ref,
       sh_direct             => 0,
       cluster               => $cluster,
       pbs                   => {
@@ -55,142 +69,159 @@ sub getParclipSmallRNANormalConfig {
         'walltime' => '72',
         'mem'      => '80gb'
       }
-    },
-    gsnap_smallRNA_count => {
-      class           => 'CQS::SmallRNACount',
-      perform         => 1,
-      target_dir      => $t2c_dir . '/gsnap_smallRNA_count',
-      option          => '-s -e 4',
-      source_ref      => 'gsnap',
-      seqcount_ref    => [ 'identical', '.dupcount$' ],
-      coordinate_file => $def->{coordinate},
-      fasta_file      => $def->{coordinate_fasta},
-      cqs_tools       => $def->{cqstools},
-      sh_direct       => 0,
-      cluster         => $cluster,
-      pbs             => {
-        'email'    => $def->{email},
-        'walltime' => '72',
-        'mem'      => '40gb',
-        'nodes'    => '1:ppn=1'
-      },
-    },
-    gsnap_smallRNA_table => {
-      class      => "CQS::SmallRNATable",
-      perform    => 1,
-      target_dir => $t2c_dir . "/gsnap_smallRNA_table",
-      option     => "",
-      source_ref => [ "gsnap_smallRNA_count", ".mapped.xml" ],
-      cqs_tools  => $def->{cqstools},
-      prefix     => "smallRNA_parclip_",
-      sh_direct  => 1,
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "10",
-        "mem"      => "10gb"
-      },
-    },
-    gsnap_smallRNA_info => {
-      class      => "CQS::CQSDatatable",
-      perform    => 1,
-      target_dir => $t2c_dir . "/gsnap_smallRNA_table",
-      option     => "",
-      source_ref => [ "gsnap_smallRNA_count", ".info" ],
-      cqs_tools  => $def->{cqstools},
-      prefix     => "smallRNA_parclip_",
-      suffix     => ".mapped",
-      sh_direct  => 1,
-      cluster    => $cluster,
-      pbs        => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "10",
-        "mem"       => "10gb"
-      },
-    },
-
-    gsnap_smallRNA_category => {
-      class      => "CQS::SmallRNACategory",
-      perform    => 1,
-      target_dir => $t2c_dir . "/gsnap_smallRNA_category",
-      option     => "",
-      source_ref => [ "gsnap_smallRNA_count", ".info\$" ],
-      cqs_tools  => $def->{cqstools},
-      sh_direct  => 1,
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "40gb"
-      },
-    },
-    gsnap_smallRNA_t2c => {
-      class      => "CQS::ParclipT2CFinder",
-      perform    => 1,
-      target_dir => $t2c_dir . "/gsnap_smallRNA_t2c",
-      option     => "-p 0.05 -e 0.013",
-      source_ref => [ "gsnap_smallRNA_count", ".mapped.xml\$" ],
-      cqs_tools  => $def->{cqstools},
-      sh_direct  => 1,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "72",
-        "mem"      => "20gb"
-      },
-    },
-    gsnap_smallRNA_t2c_summary => {
-      class      => 'SmallRNA::T2CSummary',
-      perform    => 1,
-      target_dir => $t2c_dir . '/gsnap_smallRNA_t2c_table',
-      option     => '',
-      source_ref => [ 'gsnap_smallRNA_count', '.mapped.xml$' ],
-      cqs_tools  => $def->{cqstools},
-      sh_direct  => 0,
-      cluster    => $cluster,
-      pbs        => {
-        'email'    => $def->{email},
-        'walltime' => '72',
-        'mem'      => '40gb',
-        'nodes'    => '1:ppn=1'
-      },
-    },
+    }
   };
+  push @individual, ('gsnap');
 
-  push @individual, ( 'gsnap', 'gsnap_smallRNA_count', 'gsnap_smallRNA_t2c' );
-  push @summary, ( 'gsnap_smallRNA_table', 'gsnap_smallRNA_info', 'gsnap_smallRNA_category', 'gsnap_smallRNA_t2c_summary' );
-
-  if ( defined $groups or defined $def->{tRNA_vis_group} ) {
-    my $trna_vis_groups;
-    if ( defined $def->{tRNA_vis_group} ) {
-      $trna_vis_groups = $def->{tRNA_vis_group};
-    }
-    else {
-      $trna_vis_groups = $groups;
-    }
-
-    addPositionVis(
-      $config, $def,
-      $summary_ref,
-      "gsnap_tRNA_PositionVis",
-      $t2c_dir,
+  if ( $def->{search_smallrna} ) {
+    $gsnap = merge(
+      $gsnap,
       {
-        output_file        => ".tRNAAnticodonPositionVis",
-        output_file_ext    => ".tRNAAnticodonPositionVis.png",
-        parameterFile1_ref => [ "gsnap_smallRNA_table", ".tRNA.count.position\$" ],
-        parameterFile2_ref => [ "gsnap_smallRNA_info", ".mapped.count\$" ],
+        gsnap_smallRNA_count => {
+          class           => 'CQS::SmallRNACount',
+          perform         => 1,
+          target_dir      => $t2c_dir . '/gsnap_smallRNA_count',
+          option          => '-s -e 4',
+          source_ref      => 'gsnap',
+          seqcount_ref    => [ 'identical', '.dupcount$' ],
+          coordinate_file => $def->{coordinate},
+          fasta_file      => $def->{coordinate_fasta},
+          cqs_tools       => $def->{cqstools},
+          sh_direct       => 0,
+          cluster         => $cluster,
+          pbs             => {
+            'email'    => $def->{email},
+            'walltime' => '72',
+            'mem'      => '40gb',
+            'nodes'    => '1:ppn=1'
+          },
+        },
+        gsnap_smallRNA_table => {
+          class      => "CQS::SmallRNATable",
+          perform    => 1,
+          target_dir => $t2c_dir . "/gsnap_smallRNA_table",
+          option     => "",
+          source_ref => [ "gsnap_smallRNA_count", ".mapped.xml" ],
+          cqs_tools  => $def->{cqstools},
+          prefix     => "smallRNA_parclip_",
+          sh_direct  => 1,
+          cluster    => $cluster,
+          pbs        => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "10",
+            "mem"      => "10gb"
+          },
+        },
+        gsnap_smallRNA_info => {
+          class      => "CQS::CQSDatatable",
+          perform    => 1,
+          target_dir => $t2c_dir . "/gsnap_smallRNA_table",
+          option     => "",
+          source_ref => [ "gsnap_smallRNA_count", ".info" ],
+          cqs_tools  => $def->{cqstools},
+          prefix     => "smallRNA_parclip_",
+          suffix     => ".mapped",
+          sh_direct  => 1,
+          cluster    => $cluster,
+          pbs        => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        },
+
+        gsnap_smallRNA_category => {
+          class      => "CQS::SmallRNACategory",
+          perform    => 1,
+          target_dir => $t2c_dir . "/gsnap_smallRNA_category",
+          option     => "",
+          source_ref => [ "gsnap_smallRNA_count", ".info\$" ],
+          cqs_tools  => $def->{cqstools},
+          sh_direct  => 1,
+          cluster    => $cluster,
+          pbs        => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "72",
+            "mem"      => "40gb"
+          },
+        },
+        gsnap_smallRNA_t2c => {
+          class      => "CQS::ParclipT2CFinder",
+          perform    => 1,
+          target_dir => $t2c_dir . "/gsnap_smallRNA_t2c",
+          option     => "-p 0.05 -e 0.013",
+          source_ref => [ "gsnap_smallRNA_count", ".mapped.xml\$" ],
+          cqs_tools  => $def->{cqstools},
+          sh_direct  => 1,
+          pbs        => {
+            "email"    => $def->{email},
+            "nodes"    => "1:ppn=1",
+            "walltime" => "72",
+            "mem"      => "20gb"
+          },
+        },
+        gsnap_smallRNA_t2c_summary => {
+          class      => 'SmallRNA::T2CSummary',
+          perform    => 1,
+          target_dir => $t2c_dir . '/gsnap_smallRNA_t2c_table',
+          option     => '',
+          source_ref => [ 'gsnap_smallRNA_count', '.mapped.xml$' ],
+          cqs_tools  => $def->{cqstools},
+          sh_direct  => 0,
+          cluster    => $cluster,
+          pbs        => {
+            'email'    => $def->{email},
+            'walltime' => '72',
+            'mem'      => '40gb',
+            'nodes'    => '1:ppn=1'
+          },
+        },
       }
     );
+
+    push @individual, ( 'gsnap_smallRNA_count', 'gsnap_smallRNA_t2c' );
+    push @summary, ( 'gsnap_smallRNA_table', 'gsnap_smallRNA_info', 'gsnap_smallRNA_category', 'gsnap_smallRNA_t2c_summary' );
+
+    if ( defined $groups or defined $def->{tRNA_vis_group} ) {
+      my $trna_vis_groups;
+      if ( defined $def->{tRNA_vis_group} ) {
+        $trna_vis_groups = $def->{tRNA_vis_group};
+      }
+      else {
+        $trna_vis_groups = $groups;
+      }
+
+      addPositionVis(
+        $config, $def,
+        $summary_ref,
+        "gsnap_tRNA_PositionVis",
+        $t2c_dir,
+        {
+          output_file        => ".tRNAAnticodonPositionVis",
+          output_file_ext    => ".tRNAAnticodonPositionVis.png",
+          parameterFile1_ref => [ "gsnap_smallRNA_table", ".tRNA.count.position\$" ],
+          parameterFile2_ref => [ "gsnap_smallRNA_info", ".mapped.count\$" ],
+        }
+      );
+    }
   }
   $config = merge( $config, $gsnap );
 
-  if ( defined $def->{search_3utr} && $def->{search_3utr} ) {
+  if ( $def->{search_3utr} ) {
     ( defined $def->{utr3_db} ) or die "utr3_db should be defined with search_3utr for parclip data analysis.";
     ( -e $def->{utr3_db} ) or die "utr3_db defined but not exists : " . $def->{utr3_db};
+
+    my $exclude_ref;
+    if ( $def->{search_smallrna} && $def->{"exclude_smallrna_reads_for_3utr"} ) {
+      $exclude_ref = [ 'gsnap_smallRNA_count', ".xml" ];
+    }
+    else {
+      $exclude_ref = undef;
+    }
 
     my $utr3 = {
       gsnap_3utr_count => {
@@ -200,7 +231,7 @@ sub getParclipSmallRNANormalConfig {
         option          => '-s -e 4 --noCategory',
         source_ref      => 'gsnap',
         seqcount_ref    => [ 'identical', '.dupcount$' ],
-        exclude_xml_ref => [ 'gsnap_smallRNA_count', ".xml" ],
+        exclude_xml_ref => $exclude_ref,
         coordinate_file => $def->{utr3_db},
         cqs_tools       => $def->{cqstools},
         sh_direct       => 0,
@@ -228,48 +259,86 @@ sub getParclipSmallRNANormalConfig {
           "walltime" => "10",
           "mem"      => "10gb"
         },
-      },
-      gsnap_3utr_count_target_t2c => {
-        class        => "CQS::ParclipTarget",
-        perform      => 1,
-        target_dir   => $t2c_dir . "/gsnap_3utr_count_target_t2c",
-        option       => "",
-        source_ref   => [ "gsnap_smallRNA_t2c", ".xml\$" ],
-        target_ref   => [ "gsnap_3utr_count", ".xml\$" ],
-        fasta_file   => $def->{fasta_file},
-        refgene_file => $def->{refgene_file},
-        cqs_tools    => $def->{cqstools},
-        sh_direct    => 1,
-        pbs          => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "72",
-          "mem"      => "20gb"
-        },
-      },
-
-      gsnap_3utr_count_target_all => {
-        class        => "CQS::ParclipTarget",
-        perform      => 1,
-        target_dir   => $t2c_dir . "/gsnap_3utr_count_target_all",
-        option       => "",
-        source_ref   => [ "gsnap_smallRNA_count", ".mapped.xml\$" ],
-        target_ref   => [ "gsnap_3utr_count", ".xml\$" ],
-        fasta_file   => $def->{fasta_file},
-        refgene_file => $def->{refgene_file},
-        cqs_tools    => $def->{cqstools},
-        sh_direct    => 1,
-        pbs          => {
-          "email"    => $def->{email},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "72",
-          "mem"      => "20gb"
-        },
-      },
+      }
     };
+    push( @individual, "gsnap_3utr_count" );
+    push( @summary,    "gsnap_3utr_count_table" );
 
-    push( @individual, ( "gsnap_3utr_count", "gsnap_3utr_count_target_t2c", "gsnap_3utr_count_target_all" ) );
-    push( @summary, "gsnap_3utr_count_table" );
+    if ( defined $def->{seed_smallrna_fasta} ) {
+      $utr3 = merge(
+        $utr3,
+        {
+          gsnap_3utr_count_target_fasta => {
+            class        => "CQS::ParclipTarget",
+            perform      => 1,
+            target_dir   => $t2c_dir . "/gsnap_3utr_count_target_fasta",
+            option       => "",
+            source_ref   => [ "gsnap_3utr_count", ".xml\$" ],
+            seed         => $def->{seed_smallrna_fasta},
+            fasta_file   => $def->{fasta_file},
+            refgene_file => $def->{refgene_file},
+            cqs_tools    => $def->{cqstools},
+            sh_direct    => 1,
+            pbs          => {
+              "email"    => $def->{email},
+              "nodes"    => "1:ppn=1",
+              "walltime" => "72",
+              "mem"      => "20gb"
+            },
+          },
+        }
+      );
+
+      push( @individual, ("gsnap_3utr_count_target_fasta") );
+
+    }
+    elsif ( $def->{search_smallrna} ) {
+
+      $utr3 = merge(
+        $utr3,
+        {
+          gsnap_3utr_count_target_t2c => {
+            class        => "CQS::ParclipTarget",
+            perform      => 1,
+            target_dir   => $t2c_dir . "/gsnap_3utr_count_target_t2c",
+            option       => "",
+            source_ref   => [ "gsnap_3utr_count", ".xml\$" ],
+            seed_ref     => [ "gsnap_smallRNA_t2c", ".xml\$" ],
+            fasta_file   => $def->{fasta_file},
+            refgene_file => $def->{refgene_file},
+            cqs_tools    => $def->{cqstools},
+            sh_direct    => 1,
+            pbs          => {
+              "email"    => $def->{email},
+              "nodes"    => "1:ppn=1",
+              "walltime" => "72",
+              "mem"      => "20gb"
+            },
+          },
+
+          gsnap_3utr_count_target_all => {
+            class        => "CQS::ParclipTarget",
+            perform      => 1,
+            target_dir   => $t2c_dir . "/gsnap_3utr_count_target_all",
+            option       => "",
+            source_ref   => [ "gsnap_3utr_count", ".xml\$" ],
+            seed_ref     => [ "gsnap_smallRNA_count", ".mapped.xml\$" ],
+            fasta_file   => $def->{fasta_file},
+            refgene_file => $def->{refgene_file},
+            cqs_tools    => $def->{cqstools},
+            sh_direct    => 1,
+            pbs          => {
+              "email"    => $def->{email},
+              "nodes"    => "1:ppn=1",
+              "walltime" => "72",
+              "mem"      => "20gb"
+            },
+          },
+        }
+      );
+
+      push( @individual, ( "gsnap_3utr_count_target_t2c", "gsnap_3utr_count_target_all" ) );
+    }
     $config = merge( $config, $utr3 );
   }
 
@@ -316,7 +385,7 @@ sub getParclipSmallRNANormalConfig {
       },
     };
 
-    push( @individual, ( "gsnap_specific_range_count" ) );
+    push( @individual, ("gsnap_specific_range_count") );
     push( @summary, "gsnap_specific_range_count_table" );
     $config = merge( $config, $specific );
   }
