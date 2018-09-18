@@ -32,7 +32,7 @@ def findOverlap(inputFile, inputBimFile, inputName, compareFile, compareBimFile,
   pvalues = [0.01, 0.001, 0.0001, 0.00001, 0.000001, -0.05]
   tmpFile = outputFile + ".tmp"
   with open(tmpFile, "w") as f:
-    f.write("Locus\tGene\t%s_Major\t%s_Minor\t%s_Pvalue\t%s_FDR\t%s_Beta\t%s_Major\t%s_Minor\t%s_Pvalue\t%s_FDR\t%s_Beta\tBetaMatch\n" % (inputName, inputName, inputName, inputName, inputName, compareName, compareName, compareName, compareName, compareName));
+    f.write("SNP\tLocus\tGene\t%s_Major\t%s_Minor\t%s_Pvalue\t%s_FDR\t%s_Beta\t%s_Major\t%s_Minor\t%s_Pvalue\t%s_FDR\t%s_Beta\tBetaMatch\n" % (inputName, inputName, inputName, inputName, inputName, compareName, compareName, compareName, compareName, compareName));
     
     with open(outputFile + ".info", "w") as fi:
       fi.write("pValue\t%s\t%s\tOverlap\tOverlapRate\tMatched\tConflicting_eQTL\teQTL_inconsistency\n" % (inputName, compareName))
@@ -62,7 +62,7 @@ def findOverlap(inputFile, inputBimFile, inputName, compareFile, compareBimFile,
             elif (i.MajorAllele == c.MinorAllele) and (i.MinorAllele == c.MajorAllele):
               betaMatch = i.Beta * c.Beta < 0
             else:
-              continue;
+              betaMatch = "Unknown";
             
             if betaMatch:
               matched = matched + 1
@@ -70,7 +70,8 @@ def findOverlap(inputFile, inputBimFile, inputName, compareFile, compareBimFile,
               unmatched = unmatched + 1
             
             if pvalue == pvalues[0]:
-              f.write("%s\t%s\t%s\t%s\t%.2E\t%.2E\t%f\t%s\t%s\t%.2E\t%.2E\t%f\t%r\n" % (
+              f.write("%s\t%s\t%s\t%s\t%s\t%.2E\t%.2E\t%f\t%s\t%s\t%.2E\t%.2E\t%f\t%r\n" % (
+                i.SNP,
                 i.Locus,
                 i.Gene,
                 i.MajorAllele,
@@ -87,7 +88,8 @@ def findOverlap(inputFile, inputBimFile, inputName, compareFile, compareBimFile,
           elif iKey in curInputResultMap:
             i = curInputResultMap[iKey]
             if pvalue == pvalues[0]:
-              f.write("%s\t%s\t%s\t%s\t%.2E\t%.2E\t%f\t\t\t\t\t\t\n" % (
+              f.write("%s\t%s\t%s\t%s\t%s\t%.2E\t%.2E\t%f\t\t\t\t\t\t\n" % (
+                i.SNP,
                 i.Locus,
                 i.Gene,
                 i.MajorAllele,
@@ -98,7 +100,8 @@ def findOverlap(inputFile, inputBimFile, inputName, compareFile, compareBimFile,
           else:
             c = curCompareResultMap[iKey]
             if pvalue == pvalues[0]:
-              f.write("%s\t%s\t\t\t\t\t\t%s\t%s\t%.2E\t%.2E\t%f\t\n" % (
+              f.write("%s\t%s\t%s\t\t\t\t\t\t%s\t%s\t%.2E\t%.2E\t%f\t\n" % (
+                c.SNP,
                 c.Locus,
                 c.Gene,
                 c.MajorAllele,
