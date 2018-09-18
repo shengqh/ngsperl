@@ -185,13 +185,18 @@ corTableWithoutZero<-function(x, method ="spearman")
 ###############################################################################
 
 myEstimateSizeFactors<-function(dds){
+  #https://support.bioconductor.org/p/86624/
+  #the normalization factor of edgeR is not equivalent to size factor of DESeq2
   library(DESeq2)
   sfres<-try(dds<-estimateSizeFactors(dds))
   if (class(sfres) == "try-error") {
+    countNum<-counts(dds)
     library(edgeR)
-    y<-DGEList(counts=countNum)
-    y<-calcNormFactors(y, methold="TMM")
-    sizeFactors(dds)<-y$samples$norm.factors
+    y<-calcNormFactors(countNum, methold="TMM")
+    cs<-colSums(countNum)
+    cs<-cs / median(cs)
+    sf<-y * cs
+    sizeFactors(dds)<-sf
   }
   return(dds)
 }
