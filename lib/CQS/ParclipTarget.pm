@@ -32,18 +32,22 @@ sub perform {
   my $refgeneFile = get_param_file( $config->{$section}{refgene_file}, "refgene_file (Refgene file downloaded from UCSC Genome Browser)", 1 );
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file (genome fasta file)", 1 );
 
-  my %raw_files = %{ get_raw_files( $config, $section ) };
-  my %target_files = %{ get_raw_files( $config, $section, "target" ) };
+  my %target_files = %{ get_raw_files( $config, $section ) };
+  
+  my $seed_files = $config->{$section}{"seed"};
+  if(!defined $seed_files){
+    $seed_files  = get_raw_files( $config, $section, "seed" );
+  }
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct) . "\n";
 
-  for my $sample_name ( sort keys %raw_files ) {
-    my $xmlFile    = $raw_files{$sample_name}->[0];
-    my $final_file = $sample_name . ".target.tsv";
-
+  for my $sample_name ( sort keys %target_files ) {
     my $targetXml = $target_files{$sample_name}->[0];
+    my $final_file = $sample_name . ".target.tsv";
+  
+    my $inputFile = (defined $config->{$section}{"seed"})?$seed_files:$seed_files->{$sample_name}->[0];
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -54,7 +58,7 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-    print $pbs "mono $cqstools parclip_mirna_target $option -i $xmlFile -t $targetXml -r $refgeneFile -g $faFile -o $final_file";
+    print $pbs "mono $cqstools parclip_mirna_target $option -i $inputFile -t $targetXml -r $refgeneFile -g $faFile -o $final_file";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
