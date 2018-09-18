@@ -52,8 +52,10 @@ sub perform {
 
     my $control = "";
     if (%control_files) {
-      my @c_files = @{ $control_files{$sample_name} };
-      $control = "-c " . join( ",", @c_files );
+      if ( defined $control_files{$sample_name} ) {
+        my @c_files = @{ $control_files{$sample_name} };
+        $control = "-c " . join( ",", @c_files );
+      }
     }
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
