@@ -54,8 +54,8 @@ with open(outputprefix + ".filtered.tsv", 'w') as sw:
     funcIndex = headers.index("Func.refGene")
     geneIndex = headers.index("Gene.refGene")
     refIndex = headers.index("ExonicFunc.refGene")
-    exacIndex = headers.index("ExAC_ALL")
-    g1000Index = headers.index("1000g2015aug_all")
+    exacIndex = headers.index("ExAC_ALL") if "ExAC_ALL" in headers else -1
+    g1000Index = headers.index("1000g2015aug_all") if "1000g2015aug_all" in headers else -1
     sampleCount = len(sampleIndecies)
 
     print("sampleCount=%d" % (sampleCount))
