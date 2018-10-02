@@ -66,13 +66,13 @@ sub get_task_pbs_map {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %step_map = %{ get_raw_files( $config, $section ) };
-  
+
   my $result = {};
   for my $step_name ( sort keys %step_map ) {
     my @tasks = @{ $step_map{$step_name} };
 
-    my $samples    = {};
-    my $taskpbs    = {};
+    my $samples = {};
+    my $taskpbs = {};
     for my $task_section (@tasks) {
       my $classname = $config->{$task_section}{class};
       if ( !defined $classname ) {
@@ -80,10 +80,50 @@ sub get_task_pbs_map {
       }
       my $myclass = instantiate($classname);
 
-      $result->{$step_name} = $myclass->get_pbs_files( $config, $task_section );
+      $result->{$task_section} = $myclass->get_pbs_files( $config, $task_section );
     }
   }
-  return($result);
+  return ($result);
+}
+
+sub get_dependent_pbs_map {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
+
+  my %step_map = %{ get_raw_files( $config, $section ) };
+
+  my $result = {};
+  for my $step_name ( sort keys %step_map ) {
+    my @tasks = @{ $step_map{$step_name} };
+
+    for my $task_section_name (@tasks) {
+      my $task_section = $config->{$task_section_name};
+      my $taskdeppbsmap = {};
+      for my $key ( keys %$task_section ) {
+        my $mapname = $key;
+        if ( $mapname =~ /_ref$/ ) {
+          $mapname =~ s/_config_ref//g;
+          $mapname =~ s/_ref//g;
+          my $refpbsmap = get_ref_section_pbs( $config, $task_section_name, $mapname );
+          for my $refkey ( keys %$refpbsmap ) {
+            my $refpbs = $refpbsmap->{$refkey};
+            my $curpbs = $taskdeppbsmap->{$refkey};
+            if ( !defined $curpbs ) {
+              $curpbs = {};
+            }
+            for my $eachrefpbs (@$refpbs){
+              $curpbs->{$eachrefpbs} = 1;
+            }
+            
+            $taskdeppbsmap->{$refkey} = $curpbs;
+          }
+        }
+      }
+      $result->{$task_section_name} = $taskdeppbsmap;
+    }
+  }
+  return ($result);
 }
 
 sub perform {
@@ -92,8 +132,8 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %step_map = %{ get_raw_files( $config, $section ) };
-  
-  my $task_shell = get_option($config, $section, "task_shell", "bash");
+
+  my $task_shell = get_option( $config, $section, "task_shell", "bash" );
 
   #print Dumper(\%step_map);
 
