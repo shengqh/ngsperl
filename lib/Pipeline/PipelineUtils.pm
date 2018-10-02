@@ -18,7 +18,8 @@ our %EXPORT_TAGS = (
     qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat
       getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn
       getBatchGroups addHomerMotif addHomerAnnotation addEnhancer writeDesignTable addMultiQC
-      getNextFolderIndex addCleanBAM getReportDir getSequenceTaskClassname addAnnovar addAnnovarFilter)
+      getNextFolderIndex addCleanBAM getReportDir getSequenceTaskClassname 
+      addAnnovar addAnnovarFilter addAnnovarFilterGeneannotation)
   ]
 );
 
@@ -737,7 +738,7 @@ sub addAnnovar {
       "mem"      => "10gb"
     },
   };
-  push @$summary, ($annovar_name);
+  push @$summary, $annovar_name;
 
   return ($annovar_name);
 }
@@ -761,8 +762,41 @@ sub addAnnovarFilter {
       "mem"      => "10gb"
     },
   };
-  push @$summary, ($annovar_filter_name);
+  push @$summary, $annovar_filter_name;
   return ($annovar_filter_name);
 }
+
+sub addAnnovarFilterGeneannotation {
+  my ( $config, $def, $summary, $target_dir, $annovar_filter_name ) = @_;
+  my $annovar_filter_geneannotation_name = $annovar_filter_name . "_geneannotation";
+
+  $config->{$annovar_filter_geneannotation_name} = {
+    class                   => "Annotation::GenotypeAnnotation",
+    perform                 => 1,
+    target_dir              => $config->{$annovar_filter_name}{target_dir},
+    source_ref              => [ $annovar_filter_name, ".snv.tsv" ],
+    detail_file_ref         => [ $annovar_filter_name, ".filtered.tsv" ],
+    detail_genes            => $def->{annotation_genes},
+    option                  => "",
+    sample_name_pattern     => ".",
+    sample_name_suffix      => "",
+    gene_names              => $def->{annotation_genes},
+    draw_onco_print         => 1,
+    onco_picture_width      => 6000,
+    onco_picture_height     => 2000,
+    prepare_cbioportal_data => 1,
+    sh_direct               => 1,
+    pbs                     => {
+      "email"    => $def->{email},
+      "nodes"    => "1:ppn=1",
+      "walltime" => "2",
+      "mem"      => "10gb"
+    },
+  };
+  
+  push @$summary, $annovar_filter_geneannotation_name;
+  return ($annovar_filter_geneannotation_name);
+}
+
 
 1;
