@@ -20,7 +20,7 @@ our %EXPORT_TAGS = (
   'all' => [
     qw(get_config_section has_config_section get_option get_option_file get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files_and_keys get_raw_files get_raw_files_keys get_raw_files_attributes get_raw_files2 get_run_command get_option_value get_pair_groups
       get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key get_grouped_raw_files save_parameter_sample_file saveConfig writeFileList initDefaultValue get_pure_pairs writeParameterSampleFile get_raw_file_list fix_task_name
-      get_parameter_file get_parameter_sample_files is_pairend)
+      get_parameter_file get_parameter_sample_files is_pairend get_ref_section_pbs)
   ]
 );
 
@@ -583,6 +583,51 @@ sub do_get_unsorted_raw_files {
     die "define $mapname or $mapname_ref or $mapname_config_ref for $section";
   }
 }
+
+sub get_ref_section_pbs{
+  my ( $config, $section, $mapname ) = @_;
+
+  my $result = {};
+
+  my $curSection = get_config_section( $config, $section );
+
+  my $mapname_ref        = $mapname . "_ref";
+  my $mapname_config_ref = $mapname . "_config_ref";
+
+  if ( defined $curSection->{$mapname_ref} || defined $curSection->{$mapname_config_ref} ) {
+    my ($refmap, $unused) = get_refmap( $config, $section, $mapname );
+
+    my @sortedKeys = sort { $a <=> $b } keys %$refmap;
+    for my $index (@sortedKeys) {
+      my $values       = $refmap->{$index};
+      my $targetConfig = $values->{config};
+      my $section      = $values->{section};
+
+      my $targetSection = get_config_section( $targetConfig, $section );
+
+      if ( defined $targetSection->{class} ) {
+        my $myclass = instantiate( $targetSection->{class} );
+        my $targetpbsmap = $myclass->get_pbs_files( $config, $section );
+        for my $pbskey (keys %$targetpbsmap){
+          my $newpbs = $targetpbsmap->{$pbskey};
+          my $pbslist = $result->{$pbskey};
+          if(defined $pbslist){
+            push @$pbslist, $newpbs;
+          }else{
+            $pbslist = [$newpbs];
+          }
+          $result->{$pbskey} = $pbslist;
+        }
+      }
+      else {
+        next
+      }
+    }
+  }
+  
+  return ($result);
+}
+
 
 sub do_get_raw_files_keys {
   my $resultUnsorted = shift;
