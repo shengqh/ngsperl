@@ -25,6 +25,16 @@ mutationmapperFile = paste0(outputPrefix, ".mutationmapper.txt")
 mutdata<-read.table(inputFile,as.is=T,header=TRUE,sep="\t")
 cnames=colnames(mutdata)
 
+countNotNumIndex<-which(grepl("Format", cnames))
+if (length(countNotNumIndex)==0) {
+  index<-1;
+  indecies<-c()
+} else {
+  index<-max(countNotNumIndex)+1
+  indecies<-c(1:(index-1))
+}
+cnames<-cnames[index:length(cnames)]
+
 samples<-cnames[grep(sampleNamePattern,cnames)]
 if(length(samples) == 0){
   stop(paste0("No sample matches the pattern ", sampleNamePattern))
