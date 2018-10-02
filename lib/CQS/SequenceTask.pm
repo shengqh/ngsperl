@@ -60,6 +60,32 @@ sub get_pbs_files {
   return $result;
 }
 
+sub get_task_pbs_map {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
+
+  my %step_map = %{ get_raw_files( $config, $section ) };
+  
+  my $result = {};
+  for my $step_name ( sort keys %step_map ) {
+    my @tasks = @{ $step_map{$step_name} };
+
+    my $samples    = {};
+    my $taskpbs    = {};
+    for my $task_section (@tasks) {
+      my $classname = $config->{$task_section}{class};
+      if ( !defined $classname ) {
+        die "$task_section is not a valid task section.";
+      }
+      my $myclass = instantiate($classname);
+
+      $result->{$step_name} = $myclass->get_pbs_files( $config, $task_section );
+    }
+  }
+  return($result);
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
