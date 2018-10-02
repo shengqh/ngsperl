@@ -78,11 +78,12 @@ sub getSraFiles {
 }
 
 sub GsmToSrr {
-  my ($gsm, $sraTable) = @_;
+  my ( $gsm, $sraTable ) = @_;
 
   my $cmd = "grep $gsm $sraTable | grep -e \"^SRR\" | cut -f1";
   my $res = ` $cmd `;
   $res = trim($res);
+  $res =~ s/\n/ /g;
   return $res;
 }
 
@@ -116,22 +117,35 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     if ( $sample_file =~ /GSM/ ) {
-      my $sraTable  = get_option_file($config, $section, "sra_table");
-      $sample_file = GsmToSrr($sample_file, $sraTable);
+      my $sraTable = get_option_file( $config, $section, "sra_table" );
+      $sample_file = GsmToSrr( $sample_file, $sraTable );
     }
     if ( $sample_file =~ /\.sra/ ) {
       print $pbs "ln -s $sample_file ${sample_name}.sra \n";
+      print $pbs "fastq-dump --split-3 --gzip --origfmt --helicos ${sample_name}.sra
+rm ${sample_name}.sra
+";
     }
     elsif ( $sample_file =~ /SRR/ ) {
-      my $six = substr( $sample_file, 0, 6 );
-      print $pbs "wget ftp://ftp-trace.ncbi.nih.gov/sra/sra-instant/reads/ByRun/sra/SRR/${six}/${sample_file}/${sample_file}.sra -O ${sample_name}.sra\n";
+      my @sample_files = split( '\s+', $sample_file );
+      if ( scalar(@sample_files) == 1 ) {
+        my $six = substr( $sample_file, 0, 6 );
+        print $pbs "wget ftp://ftp-trace.ncbi.nih.gov/sra/sra-instant/reads/ByRun/sra/SRR/${six}/${sample_file}/${sample_file}.sra -O ${sample_name}.sra\n";
+        print $pbs "fastq-dump --split-3 --gzip --origfmt --helicos ${sample_name}.sra
+rm ${sample_name}.sra
+";
+      }
+      else {
+        print $pbs "if [[ -s ${sample_name}.fastq ]]; then\n  rm ${sample_name}.fastq \nfi \n";
+        for my $sf (@sample_files) {
+          print $pbs "fastq-dump --split-3 --origfmt --helicos $sf -Z >> ${sample_name}.fastq \n";
+        }
+        print $pbs "gzip ${sample_name}.fastq \n";
+      }
     }
     else {
       die "I don't know what it is " . $sample_file;
     }
-    print $pbs "fastq-dump --split-3 --gzip --origfmt --helicos ${sample_name}.sra
-rm ${sample_name}.sra
-";
 
     $self->close_pbs( $pbs, $pbs_file );
   }
