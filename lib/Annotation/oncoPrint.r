@@ -40,6 +40,16 @@ col = c("MISSENSE" = "darkgreen", "TRUNC" = "red")
 mutdata<-read.table(inputFile,as.is=T,header=TRUE,sep="\t")
 cnames=colnames(mutdata)
 
+countNotNumIndex<-which(grepl("Format", cnames))
+if (length(countNotNumIndex)==0) {
+  index<-1;
+  indecies<-c()
+} else {
+  index<-max(countNotNumIndex)+1
+  indecies<-c(1:(index-1))
+}
+cnames<-cnames[index:length(cnames)]
+
 samples<-cnames[grep(sampleNamePattern,cnames)]
 if(length(samples) == 0){
   stop(paste0("No sample matches the pattern ", sampleNamePattern))
@@ -98,6 +108,7 @@ png(paste0(outputFile, ".png"), width=width, height=height, res=300)
 ht=oncoPrint(oncoprint, get_type = function(x) strsplit(x, ";")[[1]],
 		alter_fun = alter_fun, col = col, 
 		column_title = "",
+    show_column_names = ncol(oncoprint) < 50,
 		row_barplot_width = unit(0.5, "cm"),
 		heatmap_legend_param = list(title = "Genetic alternations", at = c("MISSENSE", "TRUNC"), 
 				labels = c("Missense mutation", "Truncating mutation")))
