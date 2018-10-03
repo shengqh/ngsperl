@@ -8,6 +8,7 @@ use CQS::ConfigUtils;
 use CQS::ClassFactory;
 
 my $cqstools = "/home/shengq1/cqstools/CQS.Tools.exe";
+my $cluster = "slurm";
 
 my $hg19_mrna_gff     = "/data/cqs/shengq1/reference/miRBase20/hsa.gff3";
 my $hg19_trna_bed     = "/data/cqs/guoy1/reference/smallrna/hg19_tRNA_ucsc_ensembl.bed";
@@ -44,7 +45,7 @@ my $config = {
   general => {
     task_name => $task_name,
     path_file => "/home/shengq1/local/bin/path.txt",
-    cluster   => "slurm",               #"slurm" or "torque"
+    cluster   => $cluster,               #"slurm" or "torque"
   },
   cutadapt => {
     class      => "Cutadapt",
@@ -290,7 +291,7 @@ my $config = {
     },
   },
   sequencetask => {
-    class      => "CQS::SequenceTask",
+    class      => getSequenceTaskClassname($cluster),
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",

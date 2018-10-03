@@ -4,6 +4,7 @@ use warnings;
 
 use CQS::ClassFactory;
 use CQS::FileUtils;
+my $cluster = "slurm";
 
 my $def = {
 
@@ -49,7 +50,7 @@ my $def = {
 my $config = {
   general => {
     task_name => $def->{task},
-    cluster   => "slurm",        #"slurm" or "torque"
+    cluster   => $cluster,        #"slurm" or "torque"
   },
   fastqc => {
     class      => "QC::FastQC",
@@ -261,7 +262,7 @@ my $config = {
     },
   },
   sequencetask => {
-    class      => "CQS::SequenceTask",
+    class      => getSequenceTaskClassname($cluster),
     perform    => 1,
     target_dir => "$def->{target_dir}/sequencetask",
     source     => {

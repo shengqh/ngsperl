@@ -7,6 +7,7 @@ use CQS::SystemUtils;
 use CQS::ClassFactory;
 
 my $vangard = "template";
+my $cluster = "slurm";
 
 my $target_dir = create_directory_or_die("/scratch/cqs/shengq1/pipelines/ExomeSeq-SomaticMutation-pipeline");
 
@@ -25,7 +26,7 @@ my $email = "quanhu.sheng\@vanderbilt.edu";
 my $config = {
   general => {
     task_name => "${vangard}",
-    cluster   => "slurm",        #"slurm" or "torque"
+    cluster   => $cluster,        #"slurm" or "torque"
   },
   fastqfiles => {
     "2055-PM-00" => [ "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-0_1.fastq.gz", "/autofs/blue_sequencer/Runs/projects/2055-PM/2013-09-24/2055-PM-0_2.fastq.gz" ],
@@ -162,7 +163,7 @@ my $config = {
   },
 
   sequencetask => {
-    class      => "CQS::SequenceTask",
+    class      => getSequenceTaskClassname($cluster),
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",

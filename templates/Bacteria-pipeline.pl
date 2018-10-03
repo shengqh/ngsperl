@@ -10,6 +10,7 @@ my $target_dir = create_directory_or_die("/scratch/cqs/shengq1/pipelines/Bacteri
 
 #my $target_dir = "e:/temp";
 
+my $cluster = "slurm";
 my $email          = "quanhu.sheng\@vanderbilt.edu";
 my $cqstools       = "/home/shengq1/cqstools/CQS.Tools.exe";
 my $rockhopper_jar = "/scratch/cqs/shengq1/local/bin/Rockhopper.jar";
@@ -44,7 +45,7 @@ my $pairs = {
 my $config = {
   general => {
     task_name => "bacteria-pipeline",
-    cluster   => "slurm",               #"slurm" or "torque"
+    cluster   => $cluster,               #"slurm" or "torque"
   },
   fastqc => {
     class      => "QC::FastQC",
@@ -126,7 +127,7 @@ my $config = {
     },
   },
   sequencetask => {
-    class      => "CQS::SequenceTask",
+    class      => getSequenceTaskClassname($cluster),
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",
