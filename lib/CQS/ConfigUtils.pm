@@ -341,7 +341,7 @@ sub get_refmap {
     my $targetSection = $curSection->{$mapname_ref};
 
     if ( ref($targetSection) eq 'HASH' ) {
-      return ( $targetSection, 1 );
+      return ( $result, 0 );
     }
 
     if ( ref($targetSection) eq 'ARRAY' ) {
@@ -604,6 +604,9 @@ sub get_ref_section_pbs{
       my $section      = $values->{section};
 
       my $targetSection = get_config_section( $targetConfig, $section );
+      if(ref($targetSection) ne 'HASH'){
+        next;
+      }
 
       if ( defined $targetSection->{class} ) {
         my $myclass = instantiate( $targetSection->{class} );
