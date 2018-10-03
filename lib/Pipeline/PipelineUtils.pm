@@ -81,6 +81,7 @@ sub addFastQC {
     cqstools   => $def->{cqstools},
     option     => "",
     cluster    => $def->{cluster},
+    source_ref => [$fastqcTask],
     sh_direct  => 1,
     pbs        => {
       "email"    => $def->{email},
