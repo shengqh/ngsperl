@@ -16,6 +16,66 @@ use CQS::SequenceTask;
 
 our @ISA = qw(CQS::SequenceTask);
 
+sub getAllDependentJobids {
+  my ($final_pbs_id_map) = @_;
+
+  my $result = "";
+  if ( keys %$final_pbs_id_map ) {
+    $result = "--dependency=afterany";
+    for my $each_dep_pbs ( keys %$final_pbs_id_map ) {
+      if ($final_pbs_id_map->{$each_dep_pbs}[1] == 0){
+        $result = $result . ":\$" . $final_pbs_id_map->{$each_dep_pbs}[0];
+      }
+    }
+  }
+
+  return $result;
+}
+
+sub getDependentJobids {
+  my ( $task_dep_pbs_map, $pbs_id_map, $task_section, $task_name, $sample ) = @_;
+  my $dep_pbs_map = $task_dep_pbs_map->{$task_section};
+
+  my $result = "";
+  if ( $task_name eq $sample ) {
+    if ( keys %$dep_pbs_map ) {
+      $result = "--dependency=afterany";
+      for my $sample ( keys %$dep_pbs_map ) {
+        my $sample_pbs_map = $dep_pbs_map->{$sample};
+        if ( keys %$sample_pbs_map ) {
+          for my $each_dep_pbs ( keys %$sample_pbs_map ) {
+            $result = $result . ":\$" . $pbs_id_map->{$each_dep_pbs}[0];
+            $pbs_id_map->{$each_dep_pbs}[1] = 1;
+          }
+        }
+      }
+    }
+  }
+  else {
+    my $taskname_pbs_map = $dep_pbs_map->{$task_name};
+    my $dep_pbs          = $dep_pbs_map->{$sample};
+
+    if ( defined $dep_pbs ) {
+      $result = "--dependency=afterany";
+      for my $each_dep_pbs ( keys %$dep_pbs ) {
+        $result = $result . ":\$" . $pbs_id_map->{$each_dep_pbs}[0];
+        $pbs_id_map->{$each_dep_pbs}[1] = 1;
+      }
+    }
+    if ( defined $taskname_pbs_map ) {
+      if ( $result eq "" ) {
+        $result = "--dependency=afterany";
+      }
+      for my $each_dep_pbs ( keys %$taskname_pbs_map ) {
+        $result = $result . ":\$" . $pbs_id_map->{$each_dep_pbs}[0];
+        $pbs_id_map->{$each_dep_pbs}[1] = 1;
+      }
+    }
+  }
+
+  return $result;
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -24,8 +84,8 @@ sub perform {
   my $task_dep_pbs_map = $self->get_dependent_pbs_map( $config, $section );
 
   my %step_map = %{ get_raw_files( $config, $section ) };
-  
-  my $task_shell = get_option($config, $section, "task_shell", "bash");
+
+  my $task_shell = get_option( $config, $section, "task_shell", "bash" );
 
   #print Dumper(\%step_map);
 
@@ -89,15 +149,18 @@ sub perform {
   print $report "R --vanilla --slave -f $rfileReport \n";
   $self->close_pbs( $report, $report_pbs );
 
+  open( my $final_submit, ">${final_pbs}.submit" ) or die $!;
   my $final = $self->open_pbs( $final_pbs, $pbs_desc, $final_log_desp, $path_file, $pbs_dir );
 
   open( my $result_list, ">$result_list_file" ) or die $!;
   print $result_list "StepName\tTaskName\tSampleName\tFileList\tCanFileEmpty\n";
-  
-  my $pbs_id = {};
 
+  my $pbs_id_map = {};
+
+  my $final_pbs_id_map = {};
+  my $final_index      = 0;
   for my $step_name ( sort keys %step_map ) {
-    my $shfile = $self->get_task_filename( $pbs_dir, $step_name );
+    my $shfile = $self->get_file( $pbs_dir, $step_name, ".submit" );
     open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
 
     my @tasks = @{ $step_map{$step_name} };
@@ -140,20 +203,17 @@ sub perform {
 
       for my $sample ( sort keys %{$pbs_file_map} ) {
         my $samplepbs = $pbs_file_map->{$sample};
-        if ( ref($samplepbs) eq 'ARRAY' ) {
-          for my $subpbs ( @{$samplepbs} ) {
-            if ( !-e $subpbs ) {
-#              die "Task " . $task_section . ", file not exists " . $subpbs . "\n";
-            }
-            print $final "bash $subpbs \n";
-          }
+        if ( !-e $samplepbs ) {
+          die "Task " . $task_section . ", file not exists " . $samplepbs . "\n";
         }
-        else {
-          if ( !-e $samplepbs ) {
-#            die "Task " . $task_section . ", file not exists " . $samplepbs . "\n";
-          }
-          print $final "bash $samplepbs \n";
-        }
+
+        my $depjid = getDependentJobids( $task_dep_pbs_map, $final_pbs_id_map, $task_section, $task_name, $sample );
+
+        $final_index = $final_index + 1;
+        print $final_submit "jid" . $final_index . "=\$(sbatch $depjid " . $samplepbs . " | awk '{print \$NF}')\n";
+        $final_pbs_id_map->{$samplepbs} = ["jid" . $final_index, 0];
+
+        print $final "bash $samplepbs \n";
       }
 
       #print "task " . $task_section . " ...\n";
@@ -174,41 +234,35 @@ sub perform {
       my $logdesp  = $cluster->get_log_description($log);
 
       my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $logdesp, $path_file, $result_dir );
-      
+      my $submit_file = "${pbs_file}.submit";
+      open( my $pbs_submit, ">$submit_file" ) or die $!;
+
       my $index = 0;
       for my $task_section (@tasks) {
 
         #print "task " . $task_section . " ...\n";
-        my $pbs_map = $taskpbs->{$task_section};
-        my $dep_pbs_map = $task_dep_pbs_map->{$task_section};
+        my $pbs_map          = $taskpbs->{$task_section};
+        my $dep_pbs_map      = $task_dep_pbs_map->{$task_section};
+        my $taskname_pbs_map = $dep_pbs_map->{$task_name};
         if ( defined $pbs_map->{$sample} ) {
+          my $depjid = getDependentJobids( $task_dep_pbs_map, $pbs_id_map, $task_section, $task_name, $sample );
           my $samplepbs = $pbs_map->{$sample};
-          my $dep_pbs = $dep_pbs_map->{$sample};
-          
-#          if ( ref($samplepbs) eq 'ARRAY' ) {
-#            for my $subpbs ( @{$samplepbs} ) {
-#              my $lastjid = $index == 0?"":"--dependency=afterany:\$jid" . $index;
-#              $index = $index + 1;
-#              print $pbs "jid" . $index . "=\$(sbatch $lastjid " . $subpbs . " | awk '{print \$NF}')\n";
-#            }
-#          }
-#          else {
-          my $depjid = "";
-          if (defined $dep_pbs){
-            $depjid = "--dependency=afterany";
-            for my $each_dep_pbs (keys %$dep_pbs){
-              $depjid = $depjid . ":" . $pbs_id->{$each_dep_pbs};
-            }
-          }
+
           $index = $index + 1;
-          print $pbs "jid" . $index . "=\$(sbatch $depjid " . $samplepbs . " | awk '{print \$NF}')\n";
-          $pbs_id->{$samplepbs} = "jid" . $index;
+          print $pbs_submit "jid" . $index . "=\$(sbatch $depjid " . $samplepbs . " | awk '{print \$NF}')\n";
+          $pbs_id_map->{$samplepbs} = ["jid" . $index, 0];
+
+          print $pbs "bash " . $samplepbs . " \n";
         }
-#        }
       }
+      close($pbs_submit);
+      if ( is_linux() ) {
+        chmod 0755, $submit_file;
+      }
+      
       $self->close_pbs( $pbs, $pbs_file );
 
-      print $sh "bash ./$pbs_name \n";
+      print $sh "bash ./${pbs_name}.submit \n";
     }
     print $sh "exit 0\n";
     close $sh;
@@ -237,9 +291,20 @@ then
 
       print $clear "fi \n";
       close($clear);
+      if ( is_linux() ) {
+        chmod 0755, $clear_file;
+      }
     }
   }
   close($result_list);
+
+  my $alldepids = getAllDependentJobids($final_pbs_id_map);
+  $final_index = $final_index + 1;
+  print $final_submit "jid" . $final_index . "=\$(sbatch $alldepids " . $report_pbs . " | awk '{print \$NF}')\n";
+  close($final_submit);
+  if ( is_linux() ) {
+    chmod 0755, "${final_pbs}.submit";
+  }
 
   print $final "\nbash $report_pbs \n";
   $self->close_pbs( $final, $final_pbs );
