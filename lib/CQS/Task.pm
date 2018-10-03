@@ -4,6 +4,7 @@ package CQS::Task;
 use strict;
 use warnings;
 use CQS::ConfigUtils;
+use CQS::SystemUtils;
 use Data::Dumper;
 
 sub new {
@@ -237,6 +238,10 @@ exit 0
 ";
 
   close $pbs;
+
+  if ( is_linux() ) {
+    chmod 0755, $pbs_file;
+  }
 
   print "$pbs_file created. \n";
 }
