@@ -23,6 +23,7 @@ our $VERSION = '0.01';
 
 sub initializeDefaultOptions {
   my $def = shift;
+  initDefaultValue( $def, "max_thread", 8 );
   initDefaultValue( $def, "subdir", 0 );
 
   initDefaultValue( $def, "sra_to_fastq", 0 );
@@ -37,6 +38,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_muTect",              0 );
   initDefaultValue( $def, "perform_muTect2indel",        0 );
   initDefaultValue( $def, "perform_annovar",             0 );
+  initDefaultValue( $def, "perform_cnv",                 0 );
 
   if ( $def->{perform_muTect} || $def->{perform_muTect2indel} ) {
     if ( defined $def->{mills} ) {
@@ -67,6 +69,7 @@ sub getConfig {
 
   my $email    = getValue( $def, "email" );
   my $cqstools = getValue( $def, "cqstools" );
+  my $max_thread = getValue($def, "max_thread");
 
   my $bam_ref;
   my $fasta;
@@ -85,7 +88,7 @@ sub getConfig {
       sh_direct             => 0,
       pbs                   => {
         "email"    => $email,
-        "nodes"    => "1:ppn=8",
+        "nodes"    => "1:ppn=" . $max_thread,
         "walltime" => "24",
         "mem"      => "40gb"
       },
@@ -98,7 +101,7 @@ sub getConfig {
 
   push @$individual, ( $def->{aligner} );
 
-  if ( $def->{perform_gatk_callvariants} || $def->{perform_muTect} || $def->{perform_muTect2_indel} ) {
+  if ( $def->{perform_gatk_callvariants} || $def->{perform_muTect} || $def->{perform_muTect2_indel} || $def->{perform_cnv} ) {
     my $gatk_jar   = getValue( $def, "gatk_jar" );
     my $picard_jar = getValue( $def, "picard_jar" );
 
@@ -175,7 +178,7 @@ sub getConfig {
         sh_direct     => 0,
         pbs           => {
           "email"    => $email,
-          "nodes"    => "1:ppn=8",
+          "nodes"    => "1:ppn=" . $max_thread,
           "walltime" => "72",
           "mem"      => "40gb"
         },
@@ -246,6 +249,31 @@ sub getConfig {
           }
         }
       }
+
+      if ( $def->{perform_vep} ){
+        my $vep_name = $filter_name . "_vep";
+        $config->{$vep_name} = {
+          class       => "Format::Vcf2Maf",
+          perform     => 1,
+          target_dir  => "${target_dir}/$vep_name",
+          option      => "",
+          source_ref  => [ $filter_name, ".vcf" ],
+          vcf2maf_pl => getValue($def, "vcf2maf_pl"),
+          vep_path => getValue($def, "vep_path"),
+          vep_data => getValue($def, "vep_data"),
+          species  => getValue($def, "species"),
+          ncbi_build => getValue($def, "ncbi_build"),
+          ref_fasta  => $fasta,
+          sh_direct   => 1,
+          pbs         => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=1",
+            "walltime" => "72",
+            "mem"      => "40gb"
+          },
+        };
+        push @$summary, $vep_name;
+      }
     }
 
     if ( $def->{"perform_muTect"} ) {
@@ -306,6 +334,27 @@ sub getConfig {
       if ( $def->{perform_annovar} ) {
         my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $mutect2Name, ".pass.vcf\$" );
       }
+    }
+
+    if ( $def->{perform_cnv} ) {
+      my $cnmopsName = "${refine_name}_cnMOPS";
+      $config->{$cnmopsName} = {
+        class       => "CNV::cnMops",
+        perform     => 1,
+        target_dir  => "${target_dir}/$cnmopsName",
+        option      => "",
+        source_ref  => [ $refine_name, ".bam\$" ],
+        bedfile     => $def->{covered_bed},
+        isbamsorted => 1,
+        sh_direct   => 1,
+        pbs         => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=" . $max_thread,
+          "walltime" => "72",
+          "mem"      => "40gb"
+        }
+      };
+      push @$summary, $cnmopsName;
     }
   }
 
