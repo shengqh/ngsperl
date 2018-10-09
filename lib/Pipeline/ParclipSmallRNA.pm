@@ -8,6 +8,7 @@ use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
 use Pipeline::SmallRNAUtils;
+use Pipeline::PipelineUtils;
 use Data::Dumper;
 use Hash::Merge qw( merge );
 
@@ -270,8 +271,8 @@ sub getParclipSmallRNAConfig {
         perform      => 1,
         target_dir   => $utr3_dir . "/unmappedReads_bowtie1_genome_1mm_3utr_count_target_t2c",
         option       => "",
-        source_ref   => [ "gsnap_smallRNA_t2c", ".xml\$" ],
-        target_ref   => [ "unmappedReads_bowtie1_genome_1mm_3utr_count", ".xml\$" ],
+        source_ref   => [ "unmappedReads_bowtie1_genome_1mm_3utr_count", ".xml\$" ],
+        seed_ref     => [ "gsnap_smallRNA_t2c", ".xml\$" ],
         fasta_file   => $def->{fasta_file},
         refgene_file => $def->{refgene_file},
         cqs_tools    => $def->{cqstools},
@@ -289,8 +290,8 @@ sub getParclipSmallRNAConfig {
         perform      => 1,
         target_dir   => $utr3_dir . "/unmappedReads_bowtie1_genome_1mm_3utr_count_target_all",
         option       => "",
-        source_ref   => [ "gsnap_smallRNA_count", ".mapped.xml\$" ],
-        target_ref   => [ "unmappedReads_bowtie1_genome_1mm_3utr_count", ".xml\$" ],
+        source_ref   => [ "unmappedReads_bowtie1_genome_1mm_3utr_count", ".xml\$" ],
+        seed_ref     => [ "gsnap_smallRNA_count", ".mapped.xml\$" ],
         fasta_file   => $def->{fasta_file},
         refgene_file => $def->{refgene_file},
         cqs_tools    => $def->{cqstools},
@@ -304,8 +305,15 @@ sub getParclipSmallRNAConfig {
       },
     };
 
-    push( @individual, ( 'unmappedReads', 'unmappedReads_bowtie1_genome_1mm', 'unmappedReads_bowtie1_genome_1mm_3utr_count', "unmappedReads_bowtie1_genome_1mm_3utr_count_target_t2c", "unmappedReads_bowtie1_genome_1mm_3utr_count_target_all" ) );
-    push( @summary, 'unmappedReads_bowtie1_genome_1mm_3utr_count_table');
+    push(
+      @individual,
+      (
+        'unmappedReads',                               'unmappedReads_bowtie1_genome_1mm',
+        'unmappedReads_bowtie1_genome_1mm_3utr_count', "unmappedReads_bowtie1_genome_1mm_3utr_count_target_t2c",
+        "unmappedReads_bowtie1_genome_1mm_3utr_count_target_all"
+      )
+    );
+    push( @summary, 'unmappedReads_bowtie1_genome_1mm_3utr_count_table' );
     $config = merge( $config, $unmappedreads );
   }
   $config->{sequencetask} = {
