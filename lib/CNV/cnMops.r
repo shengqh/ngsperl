@@ -41,7 +41,6 @@ options(bitmapType='cairo')
 #bedfile<-"/scratch/cqs/lij17/cnv/SureSelect_XT_Human_All_Exon_V4_withoutchr_withoutY_lite.bed"
 #prefix<-"2110"
 #callfile<-"2110.call"
-#pairmode<-"paired"
 #parallel<-8
 #refnames<-c()
 #window<-200
@@ -70,8 +69,8 @@ if(length(refnames) > 0){
     if(file.exists(segfile)){
       load(segfile)
     }else{
-      refdata <- getSegmentReadCountsFromBAM(REFFiles, GR=gr, sampleNames=REFNames, mode=pairmode, parallel=parallel)
-      samdata <- getSegmentReadCountsFromBAM(SAMFiles, GR=gr, sampleNames=SAMNames, mode=pairmode, parallel=parallel)
+      refdata <- getSegmentReadCountsFromBAM(REFFiles, GR=gr, sampleNames=REFNames, parallel=parallel)
+      samdata <- getSegmentReadCountsFromBAM(SAMFiles, GR=gr, sampleNames=SAMNames, parallel=parallel)
       save(refdata, samdata, file=segfile)
     }
   }else{
@@ -79,8 +78,8 @@ if(length(refnames) > 0){
     if(file.exists(countfile)){
       load(countfile)
     }else{
-      refdata <- getReadCountsFromBAM(REFFiles, sampleNames=REFNames, mode=pairmode, parallel=parallel, refSeqName=refSeqNames, WL=window)
-      samdata <- getReadCountsFromBAM(SAMFiles, sampleNames=SAMNames, mode=pairmode, parallel=parallel, refSeqName=refSeqNames, WL=window)
+      refdata <- getReadCountsFromBAM(REFFiles, sampleNames=REFNames, parallel=parallel, refSeqName=refSeqNames, WL=window)
+      samdata <- getReadCountsFromBAM(SAMFiles, sampleNames=SAMNames, parallel=parallel, refSeqName=refSeqNames, WL=window)
       save(refdata, samdata, file=countfile)
     }
   }
@@ -96,7 +95,7 @@ if(length(refnames) > 0){
     if(file.exists(segfile)){
       load(segfile)
     }else{
-      x <- getSegmentReadCountsFromBAM(bam_files, GR=gr, sampleNames=sample_names, mode=pairmode, parallel=parallel)
+      x <- getSegmentReadCountsFromBAM(bam_files, GR=gr, sampleNames=sample_names, parallel=parallel)
       save(refx, samx, file=segfile)
     }
     resCNMOPS<-exomecn.mops(x, upperThreshold=0.5, lowerThreshold=-0.5)
@@ -106,7 +105,7 @@ if(length(refnames) > 0){
     if(file.exists(countfile)){
       load(countfile)
     }else{
-      x <- getReadCountsFromBAM(bam_files, sampleNames=sample_names, mode=pairmode, refSeqName=refSeqNames, WL=window)
+      x <- getReadCountsFromBAM(bam_files, sampleNames=sample_names, refSeqName=refSeqNames, WL=window)
       save(x, file=countfile)
     }
     resCNMOPS <- cn.mops(x) 

@@ -45,11 +45,6 @@ sub perform {
     $isbamsorted = 0;
   }
 
-  my $pairmode = $config->{$section}{pairmode};
-  if ( !defined($pairmode) ) {
-    $pairmode = "unpaired";
-  }
-
   my $refnames = $config->{$section}{refnames};
   if ( !defined $refnames ) {
     $refnames = [];
@@ -69,7 +64,6 @@ sub perform {
   print $r "setwd(\"$result_dir\")
 callfile<-\"$callFile\"
 prefix<-\"$task_name\"
-pairmode<-\"$pairmode\"
 parallel<-$thread
 ";
   if ( defined $bedfile ) {
