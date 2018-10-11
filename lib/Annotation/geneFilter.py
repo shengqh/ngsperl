@@ -37,6 +37,7 @@ with open(outputfile, 'w') as sw:
         headers = line.rstrip().split()
         formatIndex = headers.index("FORMAT")
         geneIndex = headers.index("Gene.refGene")
+        aaIndex = headers.index("AAChange.refGene")
         snvHeaderIndecies = range(0, formatIndex)
         sampleIndecies = range(formatIndex + 1, len(headers))
         sampleCount = len(sampleIndecies)
@@ -51,6 +52,7 @@ with open(outputfile, 'w') as sw:
         parts = line.rstrip().split('\t')
         curGenes = parts[geneIndex].split(",")
         if gene in curGenes:
+          parts[aaIndex] = parts[aaIndex].split(",")[0]
           sw.write("%s" % "\t".join([parts[idx] for idx in snvHeaderIndecies]))
           for idx in sampleIndecies:
             if parts[idx].startswith("0/0"):
