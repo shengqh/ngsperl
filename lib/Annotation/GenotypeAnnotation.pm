@@ -65,6 +65,11 @@ sub perform {
     die "File not found : " . $gene_script;
   }
 
+  my $gene_filter_script = dirname(__FILE__) . "/geneFilter.py";
+  if ( !-e $gene_filter_script ) {
+    die "File not found : " . $gene_filter_script;
+  }
+
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $log = $self->get_log_filename( $log_dir, $task_name );
   my $log_desc = $cluster->get_log_description($log);
@@ -100,6 +105,15 @@ fi
       my $genes    = join( ",", split( "\\s+", $detailGeneNames ) );
       print $pbs "if [ ! -e $geneFile ]; then 
   python $gene_script -i $inputFile -o $geneFile -g $genes
+fi
+";
+    }
+    for my $inputFile (@detailFiles) {
+      my $filename = basename($inputFile);
+      my $geneFile = change_extension( $filename, "${sampleNameSuffix}.geneFilter.txt" );
+      my $genes    = join( ",", split( "\\s+", $detailGeneNames ) );
+      print $pbs "if [ ! -e $geneFile ]; then 
+  python $gene_filter_script -i $inputFile -o $geneFile -g $genes
 fi
 ";
     }
