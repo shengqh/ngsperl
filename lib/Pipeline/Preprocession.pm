@@ -86,6 +86,7 @@ sub getPreprocessionConfig {
     account    => $def->{account},
     files      => $def->{files},
     groups     => $def->{groups},
+    deseq2_groups => $def->{deseq2_groups},
     pairs      => $def->{pairs},
     additional_bam_files => $def->{additional_bam_files},
   };
