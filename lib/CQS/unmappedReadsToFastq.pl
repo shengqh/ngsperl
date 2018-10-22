@@ -22,6 +22,9 @@ if($DEBUG){
   $perfectmatchReadsFile = "/scratch/cqs/shengq2/vickers/20170628_smallRNA_3018-KCV-77_78_79_mouse_v3/host_genome/bowtie1_genome_1mm_NTA_pmnames/result/Urine_WT_14.pmnames";
 }
 
+die "no identical fastq file: " . $identicalFastqFile if ! -e $identicalFastqFile;
+die "no smallRNA reads file:" . $smallRNAreadsFile if ! -e $smallRNAreadsFile;
+
 sub getDupcountFile {
   my $result = shift;
   if ( $result =~ /\.gz$/ ) {
