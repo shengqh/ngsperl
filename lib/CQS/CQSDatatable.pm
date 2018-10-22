@@ -76,7 +76,12 @@ sub perform {
 
   my $log_desc = $cluster->get_log_description($log);
 
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file );
+  my $final_file = $result_file;  
+  if ($output_proteincoding_gene) {
+    $final_file = $self->get_file( $result_dir, $task_name, ".proteincoding.count", 0 );
+  }
+
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
   print $pbs "mono $cqstools data_table $option -o $result_file -l $filelist $mapoption \n";
 
