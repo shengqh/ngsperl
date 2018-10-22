@@ -263,11 +263,12 @@ sub getConfig {
           vep_data => getValue($def, "vep_data"),
           species  => getValue($def, "species"),
           ncbi_build => getValue($def, "ncbi_build"),
+          filter_vcf => getValue($def, "vep_filter_vcf"),
           ref_fasta  => $fasta,
           sh_direct   => 1,
           pbs         => {
             "email"    => $email,
-            "nodes"    => "1:ppn=1",
+            "nodes"    => "1:ppn=" . $max_thread,
             "walltime" => "72",
             "mem"      => "40gb"
           },
