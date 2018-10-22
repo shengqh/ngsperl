@@ -24,7 +24,7 @@ our $VERSION = '0.01';
 sub getParclipSmallRNAConfig {
   my ($def) = @_;
 
-  my ( $config, $individual_ref, $summary_ref, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
+  my ( $config, $individual_ref, $summary_ref, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir, $identical_ref ) = getPrepareConfig( $def, 1 );
   my @individual = @{$individual_ref};
   my @summary    = @{$summary_ref};
 
@@ -47,7 +47,7 @@ sub getParclipSmallRNAConfig {
       option                => '-y 0 -z 0 -Y 0 -Z 0 -m 1 -Q --nofails --trim-mismatch-score 0 --trim-indel-score 0 --mode ttoc-nonstranded --gunzip',
       gsnap_index_directory => $def->{gsnap_index_directory},
       gsnap_index_name      => $def->{gsnap_index_name},
-      source_ref            => $source_ref,
+      source_ref            => $identical_ref,
       sh_direct             => 0,
       cluster               => $cluster,
       pbs                   => {
@@ -254,7 +254,7 @@ sub getParclipSmallRNAConfig {
       unmappedReads_bowtie1_genome_1mm_3utr_count_table => {
         class      => "CQS::CQSDatatable",
         perform    => 1,
-        target_dir => $t2c_dir . "/unmappedReads_bowtie1_genome_1mm_3utr_count_table",
+        target_dir => $utr3_dir . "/unmappedReads_bowtie1_genome_1mm_3utr_count_table",
         option     => "-k 0 -i 1 -v 2 -e --fillMissingWithZero",
         source_ref => "unmappedReads_bowtie1_genome_1mm_3utr_count",
         cqs_tools  => $def->{cqstools},
