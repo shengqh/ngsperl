@@ -25,7 +25,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $vcf2mgf = get_option_file($config, $section, "vcf2maf_pl");
@@ -34,10 +34,12 @@ sub perform {
   my $species = get_option($config, $section, "species");
   my $ncbi_build = get_option($config, $section, "ncbi_build");
   my $ref_fasta = get_option_file($config, $section, "ref_fasta");
-
-  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
-  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
-  print $sh get_run_command($sh_direct) . "\n";
+  my $filter_vcf;
+  if (defined $config->{$section}{filter_vcf}){
+    $filter_vcf = "--filter-vcf " . get_option_file($config, $section, "filter_vcf");
+  }else{
+    $filter_vcf = "--filter-vcf 0"
+  }
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
@@ -47,8 +49,6 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
     my $final_file = basename($vcf_file) . ".maf";
     my $log_desc = $cluster->get_log_description($log);
 
@@ -56,18 +56,11 @@ sub perform {
 
     print $pbs "
 if [ ! -s $final_file ]; then
-  perl $vcf2mgf --input-vcf $vcf_file --output-maf $final_file --vep-path $vep_path --vep-data $vep_data --species $species --ncbi-build $ncbi_build --ref-fasta $ref_fasta
+  perl $vcf2mgf --vep-forks $thread --input-vcf $vcf_file --output-maf $final_file --vep-path $vep_path --vep-data $vep_data --species $species --ncbi-build $ncbi_build --ref-fasta $ref_fasta $filter_vcf
 fi
 ";
     $self->close_pbs( $pbs, $pbs_file );
   }
-  close $sh;
-
-  if ( is_linux() ) {
-    chmod 0755, $shfile;
-  }
-
-  print "!!!shell file $shfile created, you can run this shell file to submit all Vcf2Maf tasks.\n";
 
   #`qsub $pbs_file`;
 }
