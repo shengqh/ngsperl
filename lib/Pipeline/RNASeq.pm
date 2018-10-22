@@ -72,6 +72,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "DE_text_size",                    10 );
   initDefaultValue( $def, "DE_min_median_read",              5 );
   initDefaultValue( $def, "perform_DE_proteincoding_gene",   0 );
+  initDefaultValue( $def, "perform_proteincoding_gene",      getValue($def, "perform_DE_proteincoding_gene") );
   return $def;
 }
 
@@ -295,7 +296,7 @@ sub getRNASeqConfig {
       target_dir                => $target_dir . "/" . getNextFolderIndex($def) . "genetable",
       option                    => "-k 0 -v 6 -e --fillMissingWithZero",
       source_ref                => $count_table_ref,
-      output_proteincoding_gene => $def->{perform_DE_proteincoding_gene},
+      output_proteincoding_gene => $def->{perform_proteincoding_gene},
       name_map_file             => $name_map_file,
       cqs_tools                 => $cqstools,
       sh_direct                 => 1,
@@ -311,7 +312,7 @@ sub getRNASeqConfig {
     push @$summary, "genetable";
 
     $count_file_ref = [ "genetable", "(?<!proteincoding).count\$" ];
-    if ( $def->{perform_DE_proteincoding_gene} ) {
+    if ( $def->{perform_proteincoding_gene} ) {
       push @$count_file_ref, "genetable", ".proteincoding.count\$";
     }
   }
@@ -356,7 +357,7 @@ sub getRNASeqConfig {
   my $webgestaltTaskName;
   my $gseaTaskName;
   if ( defined $def->{pairs} ) {
-    if ( $def->{perform_DE_proteincoding_gene} ) {
+    if ( $def->{perform_proteincoding_gene} ) {
       $deseq2taskname = addDEseq2( $config, $def, $summary, "proteincoding_genetable", [ "genetable", ".proteincoding.count\$" ], $def->{target_dir}, $def->{DE_min_median_read} );
     }
     else {
@@ -684,7 +685,7 @@ sub getRNASeqConfig {
     push( @copy_files, "genetable", ".count\$", "genetable", ".fpkm.tsv" );
 
     if ( defined $config->{genetable_correlation} ) {
-      my $pcoding = $def->{perform_DE_proteincoding_gene} ? ".proteincoding.count" : "";
+      my $pcoding = $def->{perform_proteincoding_gene} ? ".proteincoding.count" : "";
       push( @report_files,
         "genetable_correlation", $pcoding . ".density.png",
         "genetable_correlation", $pcoding . ".heatmap.png",
