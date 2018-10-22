@@ -412,6 +412,7 @@ sub getPrepareConfig {
     },
   };
   push @$individual, ("identical");
+  my $identical_ref = [ 'identical', '.fastq.gz$' ];
 
   if ( $consider_miRNA_NTA && $consider_tRNA_NTA ) {
     $preparation->{identical_check_cca} = {
@@ -501,11 +502,12 @@ sub getPrepareConfig {
       },
     };
     push @$individual, ("identical_NTA");
+    $identical_ref = ["identical_NTA", ".fastq.gz\$"];
   }
 
   $config = merge( $config, $preparation );
 
-  return ( $config, $individual, $summary, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir );
+  return ( $config, $individual, $summary, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir, $identical_ref );
 }
 
 1;
