@@ -29,15 +29,16 @@ sub getParclipSmallRNANormalConfig {
   initDefaultValue( $def, "exclude_smallrna_reads_for_3utr",    1 );
   initDefaultValue( $def, "gsnap_option",                       '-y 0 -z 0 -Y 0 -Z 0 -m 1 -Q --max-anchors 1 --use-shared-memory 0 --nofails --trim-mismatch-score 0 --trim-indel-score 0 --mode ttoc-nonstranded --gunzip' );
   initDefaultValue( $def, "perform_class_independent_analysis", 0 );
+  initDefaultValue( $def, "bowtie1_option",        "-v 2 -m 10 --best --strata" );
+  initDefaultValue( $def, "output_to_same_folder", 1 );
+  initDefaultValue( $def, "mappedonly",            1 );
 
   if ( !$def->{search_smallrna} ) {
     $def->{"consider_miRNA_NTA"} = 0;
     $def->{"consider_tRNA_NTA"}  = 0;
   }
   
-  my $fastq_ref = ($def->{"consider_miRNA_NTA"} | $def->{"consider_tRNA_NTA"})?['identical_NTA', '.fastq.gz$']:['identical', '.fastq.gz$'];
-  
-  my ( $config, $individual_ref, $summary_ref, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
+  my ( $config, $individual_ref, $summary_ref, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir, $identical_ref ) = getPrepareConfig( $def, 1 );
   my @individual = @{$individual_ref};
   my @summary    = @{$summary_ref};
 
@@ -60,7 +61,7 @@ sub getParclipSmallRNANormalConfig {
       option                => $def->{gsnap_option},
       gsnap_index_directory => $def->{gsnap_index_directory},
       gsnap_index_name      => $def->{gsnap_index_name},
-      source_ref            => $fastq_ref,
+      source_ref            => $identical_ref,
       sh_direct             => 0,
       cluster               => $cluster,
       pbs                   => {
@@ -74,6 +75,12 @@ sub getParclipSmallRNANormalConfig {
   push @individual, ('gsnap');
 
   if ( $def->{search_smallrna} ) {
+    my $coor;
+    if (getValue($def, "mirna_only", 1)){
+      $coor = $def->{miRNA_coordinate};
+    }else{
+      $coor = $def->{coordinate};
+    }
     $gsnap = merge(
       $gsnap,
       {
@@ -84,7 +91,7 @@ sub getParclipSmallRNANormalConfig {
           option          => '-s -e 4',
           source_ref      => 'gsnap',
           seqcount_ref    => [ 'identical', '.dupcount$' ],
-          coordinate_file => $def->{coordinate},
+          coordinate_file => $coor,
           fasta_file      => $def->{coordinate_fasta},
           cqs_tools       => $def->{cqstools},
           sh_direct       => 0,
@@ -388,6 +395,13 @@ sub getParclipSmallRNANormalConfig {
     push( @individual, ("gsnap_specific_range_count") );
     push( @summary, "gsnap_specific_range_count_table" );
     $config = merge( $config, $specific );
+  }
+  
+  if( $def->{perform_paralyzer} ) {
+    my $paralyzer_dir = create_directory_or_die( $def->{target_dir} . "/paralyzer" );
+    my $bowtie_task = addBowtie1PARalyzer($config, $def, \@individual, "bowtie_paralyzer", $paralyzer_dir, 
+      getValue( $def, "bowtie1_index" ), $source_ref, 
+      getValue( $def, "bowtie1_option" ));
   }
 
   $config->{sequencetask} = {
