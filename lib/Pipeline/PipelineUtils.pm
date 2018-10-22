@@ -15,10 +15,11 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addBamStat
+    qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addPARalyzer 
+      addBowtie1PARalyzer addBamStat
       getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn
       getBatchGroups addHomerMotif addHomerAnnotation addEnhancer writeDesignTable addMultiQC
-      getNextFolderIndex addCleanBAM getReportDir getSequenceTaskClassname 
+      getNextFolderIndex addCleanBAM getReportDir getSequenceTaskClassname
       addAnnovar addAnnovarFilter addAnnovarFilterGeneannotation)
   ]
 );
@@ -129,7 +130,7 @@ sub addBowtie {
     source_ref            => $sourceRef,
     bowtie1_index         => $bowtieIndex,
     samonly               => 0,
-    sh_direct             => 1,
+    sh_direct             => 0,
     mappedonly            => 1,
     cluster               => $def->{cluster},
     output_to_same_folder => $def->{bowtie1_output_to_same_folder},
@@ -143,26 +144,81 @@ sub addBowtie {
   };
 
   push @$individual, $taskName;
+
+  return ($taskName);
+}
+
+sub addPARalyzer {
+  my ( $config, $def, $individual, $taskName, $parentDir, $sourceRef ) = @_;
+
+  $config->{$taskName} = {
+    class          => "ParClip::PARalyzer",
+    perform        => 1,
+    target_dir     => $parentDir . "/" . getNextFolderIndex($def) . $taskName,
+    option         => "",
+    source_ref     => $sourceRef,
+    genome2bit     => getValue( $def, "genome_2bit" ),
+    mirna_db       => getValue( $def, "mirna_db" ),
+    sorted_by_name => 0,
+    sh_direct      => 0,
+    pbs            => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "72",
+      "mem"       => "20gb"
+    },
+  };
+
+  return ($taskName);
+}
+
+sub addBowtie1PARalyzer {
+  my ( $config, $def, $individual, $taskName, $parentDir, $bowtieIndex, $sourceRef, $bowtieOption ) = @_;
+
+  $config->{$taskName} = {
+    class         => "ParClip::Bowtie1PARalyzer",
+    perform       => 1,
+    target_dir    => $parentDir . "/" . getNextFolderIndex($def) . $taskName,
+    option        => $bowtieOption,
+    source_ref    => $sourceRef,
+    bowtie1_index => $bowtieIndex,
+    genome2bit    => getValue( $def, "genome_2bit" ),
+    mirna_db      => getValue( $def, "mirna_db" ),
+    sh_direct     => 0,
+    cluster       => $def->{cluster},
+    pbs           => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "72",
+      "mem"       => "40gb"
+    },
+  };
+
+  push @$individual, $taskName;
+
+  return ($taskName);
 }
 
 sub addBamStat {
   my ( $config, $def, $summary, $taskName, $targetDir, $sourceRef ) = @_;
 
   $config->{$taskName} = {
-    class       => "CQS::UniqueR",
-    target_dir  => $targetDir,
-    perform     => 1,
-    rtemplate   => "../Samtools/BamStat.r",
-    output_file => ".bamstat.csv",
-    sh_direct   => 1,
-    cluster     => $def->{cluster},
-    pbs         => {
-      parameterSampleFile1_ref => $sourceRef,
-      "email"                  => $def->{email},
-      "emailType"              => $def->{emailType},
-      "nodes"                  => "1:ppn=1",
-      "walltime"               => "10",
-      "mem"                    => "10gb"
+    class                    => "CQS::UniqueR",
+    target_dir               => $targetDir,
+    perform                  => 1,
+    rtemplate                => "../Samtools/BamStat.r",
+    output_file              => ".bamstat.csv",
+    sh_direct                => 1,
+    cluster                  => $def->{cluster},
+    parameterSampleFile1_ref => $sourceRef,
+    pbs                      => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
     },
   };
   push @$summary, $taskName;
@@ -199,6 +255,7 @@ sub addDEseq2 {
     $libraryFileKey = "library_file_ref";
   }
 
+  my $groupNames = defined $def->{deseq2_groups} ? "deseq2_groups" : "groups";
   $config->{$taskName} = {
     class                        => "Comparison::DESeq2",
     perform                      => 1,
@@ -206,7 +263,7 @@ sub addDEseq2 {
     output_to_dir                => getReportDir($def),
     option                       => "",
     source_ref                   => "pairs",
-    groups_ref                   => "groups",
+    groups_ref                   => $groupNames,
     countfile_ref                => $countfileRef,
     sh_direct                    => 1,
     show_label_PCA               => $def->{show_label_PCA},
@@ -794,10 +851,9 @@ sub addAnnovarFilterGeneannotation {
       "mem"      => "10gb"
     },
   };
-  
+
   push @$summary, $annovar_filter_geneannotation_name;
   return ($annovar_filter_geneannotation_name);
 }
-
 
 1;
