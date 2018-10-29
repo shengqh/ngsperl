@@ -20,7 +20,7 @@ our %EXPORT_TAGS = (
   'all' => [
     qw(get_config_section has_config_section get_option get_option_file get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files_and_keys get_raw_files get_raw_files_keys get_raw_files_attributes get_raw_files2 get_run_command get_option_value get_pair_groups
       get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key get_grouped_raw_files save_parameter_sample_file saveConfig writeFileList initDefaultValue get_pure_pairs writeParameterSampleFile get_raw_file_list fix_task_name
-      get_parameter_file get_parameter_sample_files is_pairend get_ref_section_pbs)
+      get_parameter_file get_parameter_sample_files is_pairend get_ref_section_pbs get_rawfiles_option)
   ]
 );
 
@@ -1042,6 +1042,17 @@ sub is_pairend {
     $result = $def->{pairend};
   }
   return($result);
+}
+
+sub get_rawfiles_option {
+  my ($raw_files, $option_string) = @_;
+  my $result = "";
+  for my $sample_name ( sort keys %$raw_files ) {
+    my @sample_files = @{ $raw_files->{$sample_name} };
+    my $sampleFile   = $sample_files[0];
+    $result = $result . " " . $option_string . " " . $sampleFile;
+  }
+  return $result;
 }
 
 1;
