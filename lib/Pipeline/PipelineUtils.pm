@@ -16,7 +16,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addPARalyzer 
-      addBowtie1PARalyzer addBamStat
+      addBowtie1PARalyzer addBamStat getOutputFormat
       getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn
       getBatchGroups addHomerMotif addHomerAnnotation addEnhancer writeDesignTable addMultiQC
       getNextFolderIndex addCleanBAM getReportDir getSequenceTaskClassname
@@ -245,6 +245,18 @@ sub getReportDir {
   return ($report_dir);
 }
 
+sub getOutputFormat {
+  my $def = shift;
+  my $result = "";
+  if(getValue($def, "outputPdf", 0)){
+    $result = "outputPdf<-TRUE;"
+  }
+  if(getValue($def, "outputPng", 1)){
+    $result = $result . "outputPng<-TRUE;"
+  }
+  return($result);
+}
+
 sub addDEseq2 {
   my ( $config, $def, $summary, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read, $libraryFile, $libraryKey ) = @_;
 
@@ -282,6 +294,7 @@ sub addDEseq2 {
     cooksCutoff                  => $def->{DE_cooksCutoff},
     $libraryFileKey              => $libraryFile,
     library_key                  => $libraryKey,
+    rCode                        => getOutputFormat($def),
     pbs                          => {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
