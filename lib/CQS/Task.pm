@@ -246,4 +246,13 @@ exit 0
   print "$pbs_file created. \n";
 }
 
+sub get_java_option {
+  my ($self, $config, $section, $memory) = @_;
+  my $result = $config->{$section}{java_option};
+  if ( !defined $result || $result eq "" ) {
+    $result = "-Xmx${memory}";
+  }
+  return($result);
+}
+
 1;
