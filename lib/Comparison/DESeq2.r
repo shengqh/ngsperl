@@ -55,7 +55,19 @@ if(addCountOne){
 }
 
 if(!exists("outputPdf")){
-	outputPdf=FALSE
+  outputPdf<-FALSE
+}
+
+if(!exists("outputPng") | !outputPdf ){
+  outputPng<-TRUE
+}
+
+outputFormat<-c()
+if(outputPdf){
+  outputFormat<-c("PDF")
+}
+if(outputPng){
+  outputFormat<-c(outputFormat, "PNG")
 }
 
 if(!exists("countSep")){
@@ -163,63 +175,66 @@ options(expressions=5e4)
 
 hmcols <- colorRampPalette(c("green", "black", "red"))(256)
 
-drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnames, outputPdf){
+drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnames, outputFormat){
 	genecount<-nrow(rldselect)
 	showRowDendro = genecount <= 50
 	if(genecount > 2){
-		if(outputPdf){
-			filename<-paste0(prefix, "_DESeq2-vsd-heatmap.pdf")
-			pdf(filename, width=10, height=10)
-		}else{
-			filename<-paste0(prefix, "_DESeq2-vsd-heatmap.png")
-			png(filename=filename, width=3000, height=3000, res=300)
-		}
-		cat("saving HCA to ", filename, "\n")
-		cexCol = max(1.0, 0.2 + 1/log10(ncol(rldselect)))
-		if(ispaired){
-			htColors<-rainbow(length(unique(designData$Paired)))
-			gsColors<-as.matrix(data.frame(Group=conditionColors, Sample=htColors[designData$Paired]))
-		}else{
-			gsColors = conditionColors;
-		}
-		if (genecount<=30) {
-			labRow=row.names(rldselect)
-			margins=c(12,8)
-		} else {
-			labRow=NA
-			margins=c(12,5)
-		}
-		if(usePearsonInHCA){
-			heatmap3(rldselect, 
-					col = hmcols, 
-					ColSideColors = gsColors, 
-					margins=margins, 
-					scale="r", 
-					labRow=labRow,
-					showRowDendro=showRowDendro,
-					main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
-					cexCol=cexCol, 
-					useRaster=FALSE,
-					legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
-		}else{
-			heatmap3(rldselect, 
-					col = hmcols, 
-					ColSideColors = gsColors, 
-					margins=margins, 
-					scale="r", 
-					distfun=dist, 
-					labRow=labRow,
-					showRowDendro=showRowDendro,
-					main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
-					cexCol=cexCol, 
-					useRaster=FALSE,
-					legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
-		}
-		dev.off()
+    for(format in outputFormat){
+      if("PDF" == format){
+        filename<-paste0(prefix, "_DESeq2-vsd-heatmap.pdf")
+        pdf(filename, width=10, height=10)
+      }else{
+        filename<-paste0(prefix, "_DESeq2-vsd-heatmap.png")
+        png(filename=filename, width=3000, height=3000, res=300)
+      }
+
+      cat("saving HCA to ", filename, "\n")
+      cexCol = max(1.0, 0.2 + 1/log10(ncol(rldselect)))
+      if(ispaired){
+        htColors<-rainbow(length(unique(designData$Paired)))
+        gsColors<-as.matrix(data.frame(Group=conditionColors, Sample=htColors[designData$Paired]))
+      }else{
+        gsColors = conditionColors;
+      }
+      if (genecount<=30) {
+        labRow=row.names(rldselect)
+        margins=c(12,8)
+      } else {
+        labRow=NA
+        margins=c(12,5)
+      }
+      if(usePearsonInHCA){
+        heatmap3(rldselect, 
+          col = hmcols, 
+          ColSideColors = gsColors, 
+          margins=margins, 
+          scale="r", 
+          labRow=labRow,
+          showRowDendro=showRowDendro,
+          main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
+          cexCol=cexCol, 
+          useRaster=FALSE,
+          legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
+      }else{
+        heatmap3(rldselect, 
+          col = hmcols, 
+          ColSideColors = gsColors, 
+          margins=margins, 
+          scale="r", 
+          distfun=dist, 
+          labRow=labRow,
+          showRowDendro=showRowDendro,
+          main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
+          cexCol=cexCol, 
+          useRaster=FALSE,
+          legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
+      }
+      dev.off()
+    }
 	}
 }
 
-drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outputPdf=TRUE){
+drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outputFormat){
 	genecount<-nrow(rldmatrix)
 	if(genecount > 2){
 		pca<-prcomp(t(rldmatrix))
@@ -245,14 +260,18 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outp
 				scale_color_manual(values=c("red", "blue")) +
 				theme_bw2() + theme(legend.position="top")
 
-    filename=paste0(prefix, "_DESeq2-vsd-pca", ifelse(outputPdf, ".pdf", ".png")) 
-    cat("saving PCA to ", filename, "\n")
-    if(outputPdf){
-      ggsave(plot=g,filename=filename,width=6,height=5,useDingbats=FALSE)
-    }else{
-      png(filename,res=300,width=3000, height=3000)
-      print(g)
-      dev.off()
+    for(format in outputFormat){
+      if("PDF" == format){
+        filename=paste0(prefix, "_DESeq2-vsd-pca.pdf") 
+        cat("saving PCA to ", filename, "\n")
+        ggsave(plot=g,filename=filename,width=6,height=5,useDingbats=FALSE)
+      }else{
+        filename=paste0(prefix, "_DESeq2-vsd-pca.png") 
+        cat("saving PCA to ", filename, "\n")
+        png(filename=filename, width=3000, height=3000, res=300)
+        print(g)
+        dev.off()
+      }
     }
 	}
 }
@@ -598,11 +617,10 @@ for(countfile_index in c(1:length(countfiles))){
 			rldmatrix=as.matrix(assayvsd)
 			
 			#draw pca graph
-			drawPCA(paste0(prefix,"_geneAll"), rldmatrix, showLabelInPCA, designData, designData$Condition, outputPdf)
+			drawPCA(paste0(prefix,"_geneAll"), rldmatrix, showLabelInPCA, designData, designData$Condition, outputFormat)
 			
 			#draw heatmap
-			#drawHCA(paste0(prefix,"_gene500"), rldmatrix[1:min(500, nrow(rldmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
-			drawHCA(paste0(prefix,"_geneAll"), rldmatrix, ispaired, designData, conditionColors, gnames, outputPdf)
+			drawHCA(paste0(prefix,"_geneAll"), rldmatrix, ispaired, designData, conditionColors, gnames, outputFormat)
 		}
 		
 		#different expression analysis
@@ -701,13 +719,11 @@ for(countfile_index in c(1:length(countfiles))){
 			nonDEmatrix<-rldmatrix[!siggenes,,drop=F]
 			DEmatrix<-rldmatrix[siggenes,,drop=F]
 			
-			drawPCA(paste0(prefix,"_geneDE"),DEmatrix , showLabelInPCA, designData, conditionColors, outputPdf)
-			drawHCA(paste0(prefix,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames, outputPdf)
+			drawPCA(paste0(prefix,"_geneDE"),DEmatrix , showLabelInPCA, designData, conditionColors, outputFormat)
+			drawHCA(paste0(prefix,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames, outputFormat)
 			
-			drawPCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, showLabelInPCA, designData, conditionColors, outputPdf)
-			drawHCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames, outputPdf)
-			
-			#drawHCA(paste0(prefix,"_gene500NotDE"), nonDEmatrix[1:min(500, nrow(nonDEmatrix)),,drop=F], ispaired, designData, conditionColors, gnames)
+			drawPCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, showLabelInPCA, designData, conditionColors, outputFormat)
+			drawHCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames, outputFormat)
 		}
 		
 		#Top 25 Significant genes barplot
@@ -735,13 +751,15 @@ for(countfile_index in c(1:length(countfiles))){
 					#     geom_abline(slope=0,intercept=1,colour="red",linetype = 2)+
 					scale_y_continuous(name=bquote(log[2]~Fold~Change))+
 					theme(axis.text = element_text(colour = "black"))
-					
-      if(outputPdf){
-        ggsave(plot=p,height=7,width=7,filename=paste0(prefix,"_DESeq2_sig_barplot.pdf"), useDingbats=FALSE)
-      }else{
-        png(filename=paste0(prefix, "_DESeq2_sig_barplot.png"), width=3000, height=3000, res=300)
-        print(p)
-        dev.off()
+			
+			for(format in outputFormat){		
+        if(format == "PDF"){
+          ggsave(plot=p,height=7,width=7,filename=paste0(prefix,"_DESeq2_sig_barplot.pdf"), useDingbats=FALSE)
+        }else{
+          png(filename=paste0(prefix, "_DESeq2_sig_barplot.png"), width=3000, height=3000, res=300)
+          print(p)
+          dev.off()
+        }
       }
 		} else {
 			print(paste0("No gene with adjusted p value less than ",pvalue," and fold change larger than ",foldChange))
@@ -782,22 +800,25 @@ for(countfile_index in c(1:length(countfiles))){
 						legend.text= element_text(size=30),
 						legend.title= element_text(size=30))
 						
-          
     if(outputPdf){
       ggsave(plot=p, height=10, width=10, filename=paste0(prefix,"_DESeq2_volcanoPlot.pdf"), useDingbats=FALSE)
-    }else{
-      png(filename=paste0(prefix, "_DESeq2_volcanoPlot.png"), width=3000, height=3000, res=300)
-      print(p)
-      dev.off()
     }
+    png(filename=paste0(prefix, "_DESeq2_volcanoPlot.png"), width=3000, height=3000, res=300)
+    print(p)
+    dev.off()
 	}
 	
 	if(length(pairedspearman) > 0){
-		#draw pca graph
-		filename<-ifelse(minMedianInGroup > 0, paste0("spearman_min", minMedianInGroup, ".png"), "spearman.png")
-		png(filename=filename, width=1000 * length(pairedspearman), height=2000, res=300)
-		boxplot(pairedspearman)
-		dev.off()
+		filename<-ifelse(minMedianInGroup > 0, paste0("spearman_min", minMedianInGroup), "spearman")
+		for(format in outputFormat){
+		  if(format == "PDF"){
+		    pdf(paste0(filename,".pdf"),width=7,height=7)
+		  }else{
+    		png(filename=paste0(filename,".png"), width=1000 * length(pairedspearman), height=2000, res=300)
+      }
+		  boxplot(pairedspearman)
+		  dev.off()
+		}
 	}
 }
 
@@ -991,13 +1012,15 @@ if(!is.null(sigTableAll)){
 			return(colors)
 		}
 		colors<-makeColors(length(allSigNameList))
-		if(outputPdf){
-			pdf(paste0(allprefix,"_significantVenn.pdf"),width=7,height=7)
-		}else{
-			png(paste0(allprefix,"_significantVenn.png"),res=300,height=2000,width=2000)
+    for(format in outputFormat){      
+      if(format == "PDF"){
+  			pdf(paste0(allprefix,"_significantVenn.pdf"),width=7,height=7)
+	  	}else{
+		  	png(paste0(allprefix,"_significantVenn.png"),res=300,height=2000,width=2000)
+		  }
+		  venn.diagram1(allSigNameList,cex=2,cat.cex=2,cat.col=colors,fill=colors)
+		  dev.off()
 		}
-		venn.diagram1(allSigNameList,cex=2,cat.cex=2,cat.col=colors,fill=colors)
-		dev.off()
 	}
 	#Do heatmap significant genes if length larger or equal than 2
 	if (length(allSigNameList)>=2) {
@@ -1028,15 +1051,16 @@ if(!is.null(sigTableAll)){
 						axis.text.y = element_text(size=textSize, face="bold")) +
 				coord_equal()
 				
-            
-    if(outputPdf){
-      ggsave(plot=g, filename=paste0(allprefix,"_significantHeatmap.pdf"),width=7,height=7,useDingbats=FALSE)
-    }else{
-      width=min(max(2500, 60 * length(unique(dataForFigure$comparisonName))),30000)
-      height=min(max(2000, 40 * length(unique(dataForFigure$Gene))),30000)
-      png(paste0(allprefix, "_significantHeatmap.png"),res=300,height=height,width=width)
-      print(g)
-      dev.off()
+    for(format in outputFormat){      
+      if(format == "PDF"){
+        ggsave(plot=g, filename=paste0(allprefix,"_significantHeatmap.pdf"),width=7,height=7,useDingbats=FALSE)
+      }else{
+        width=min(max(2500, 60 * length(unique(dataForFigure$comparisonName))),30000)
+        height=min(max(2000, 40 * length(unique(dataForFigure$Gene))),30000)
+        png(paste0(allprefix, "_significantHeatmap.png"),res=300,height=height,width=width)
+        print(g)
+        dev.off()
+      }
     }
 	}
 }

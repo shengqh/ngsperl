@@ -90,6 +90,8 @@ sub perform {
   my $transformTable            = get_option( $config, $section, "transform_table",              0 );
   my $exportSignificantGeneName = get_option( $config, $section, "export_significant_gene_name", 0 );
   my $cooksCutoff               = get_option( $config, $section, "cooksCutoff",                  'DEFAULT' );
+  
+  my $rCode = get_option( $config, $section, "rCode", "" );
 
   my $libraryFile = parse_param_file( $config, $section, "library_file", 0 );
   my $libraryKey;
@@ -248,6 +250,8 @@ textSize<-$textSize
 transformTable<-$transformTable
 exportSignificantGeneName<-$exportSignificantGeneName
 thread<-$thread
+
+$rCode
 ";
 
   if ( $cooksCutoff ne "DEFAULT" ) {
@@ -262,10 +266,6 @@ libraryKey<-\"$libraryKey\"
 ";
   }
   
-  if(defined $config->{$section}{rCode}){
-    print $rf $config->{$section}{rCode} . "\n";
-  }
-
   while (<$rt>) {
     if ( $_ !~ 'predefined_condition_end' ) {
       next;
