@@ -21,6 +21,18 @@ if(!exists("outputPdf")){
   outputPdf<-FALSE
 }
 
+if(!exists("outputPng") | !outputPdf ){
+  outputPng<-TRUE
+}
+
+outputFormat<-c()
+if(outputPdf){
+  outputFormat<-c("PDF")
+}
+if(outputPng){
+  outputFormat<-c(outputFormat, "PNG")
+}
+
 if(exists("useGreenRedColorInHCA") && useGreenRedColorInHCA){
   hmcols <- colorRampPalette(c("green", "black", "red"))(256)
 }else{
@@ -104,7 +116,7 @@ unByteCodeAssign(stats:::plotNode)
 # Now raise the interpreted code recursion limit (you may need to adjust this,
 #  decreasing if it uses to much memory, increasing if you get a recursion depth error ).
 options(expressions=5e4)
-drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outputPdf){
+drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat){
   genecount<-nrow(rldmatrix)
   if(genecount > 2){
     cat("saving PCA to ", filename, "\n")
@@ -135,15 +147,17 @@ drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outp
         geom_hline(aes(yintercept=0), size=.2) + 
         geom_vline(aes(xintercept=0), size=.2) + 
         xlab(pcalabs[1]) + ylab(pcalabs[2]) +
-		theme_bw2()
-    
-	if(outputPdf){
-		pdf(paste0(filename, ".pdf"), width=6, height=5) 
-	}else{
-		png(filename=paste0(filename, ".png"), width=3000, height=3000, res=300) 
-	}
-	print(g)
-    dev.off()
+        theme_bw2()
+
+    for(format in outputFormat){
+      if("PDF" == format){
+        pdf(paste0(filename, ".pdf"), width=6, height=5)
+      }else{
+        png(filename=paste0(filename, ".png"), width=3000, height=3000, res=300)
+      }
+      print(g)
+      dev.off()
+    }
   }
 }
 
@@ -299,35 +313,40 @@ for (i in 1:nrow(countTableFileAll)) {
   dataForPlot<-melt(countHT)
   colnames(dataForPlot)[2]<-"Sample"
   p<-ggplot(dataForPlot, aes(value, colour = Sample)) +geom_density() + theme_bw2() + xlab(ylab)
-  if(outputPdf){
-	  pdf(paste0(outputFilePrefix,suffix,".density.pdf"),width=7,height=7)
-  }else{
-	  png(paste0(outputFilePrefix,suffix,".density.png"),width=2000,height=2000,res=300)
+  
+  for(format in outputFormat){
+    if("PDF" == format){
+	   pdf(paste0(outputFilePrefix,suffix,".density.pdf"),width=7,height=7)
+    }else{
+	   png(paste0(outputFilePrefix,suffix,".density.png"),width=2000,height=2000,res=300)
+    }
+    print(p)
+    dev.off()
   }
-  print(p)
-  dev.off()
   
   print("Drawing PCA for all samples.")
-  drawPCA(paste0(outputFilePrefix,suffix,".PCA"), countHT, showLabelInPCA, groups, colors, outputPdf)
+  drawPCA(paste0(outputFilePrefix,suffix,".PCA"), countHT, showLabelInPCA, groups, colors, outputFormat)
 
   hcaOption<-getHeatmapOption(countHT)
   
   width=min(8000, max(2000, 50 * ncol(countHT)))
   if (ncol(countHT)>1 & nrow(countHT)>1) {
     print("Drawing heatmap for all samples.")
-	if(outputPdf){
-		pdf(paste0(outputFilePrefix,suffix,".heatmap.pdf"),width=10,height=10)
-	}else{
-		png(paste0(outputFilePrefix,suffix,".heatmap.png"),width=width,height=width,res=300)
-	}
+    for(format in outputFormat){
+      if("PDF" == format){
+		    pdf(paste0(outputFilePrefix,suffix,".heatmap.pdf"),width=10,height=10)
+		  }else{
+		    png(paste0(outputFilePrefix,suffix,".heatmap.png"),width=width,height=width,res=300)
+	    }
     
-	if(!is.na(conditionColors[1])){
-		heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols, ColSideColors=conditionColors)
-	} else {
-		heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols)
-	}
+	    if(!is.na(conditionColors[1])){
+		    heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols, ColSideColors=conditionColors)
+	    } else {
+		    heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols)
+	    }
 	
-    dev.off()
+      dev.off()
+    }
   } else {
     print("Not enough samples or genes. Can't Draw heatmap for all samples.")
   }
@@ -362,34 +381,39 @@ for (i in 1:nrow(countTableFileAll)) {
     if (groupFileList!="") {
       legendfun<-function() showLegend(legend=unique(groups),col=unique(conditionColors[,1]))
     }
-	if(outputPdf){
-		pdf(paste0(outputFilePrefix,suffix,".Correlation.pdf"),width=7,height=7)
-	}else{
-		png(paste0(outputFilePrefix,suffix,".Correlation.png"),width=width,height=width,res=300)
-	}
-    labRow=NULL
-	hcaOption<-getHeatmapOption(countNumCor)
-    if(all(!is.na(conditionColors))) { #has group information
-      heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,ColSideColors=conditionColors)
-    }else{
-      heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
+    for(format in outputFormat){
+      if("PDF" == format){
+        pdf(paste0(outputFilePrefix,suffix,".Correlation.pdf"),width=7,height=7)
+      }else{
+        png(paste0(outputFilePrefix,suffix,".Correlation.png"),width=width,height=width,res=300)
+	    }
+      labRow=NULL
+	    hcaOption<-getHeatmapOption(countNumCor)
+      if(all(!is.na(conditionColors))) { #has group information
+        heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,ColSideColors=conditionColors)
+      }else{
+        heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
+      }
+      dev.off()
     }
-    dev.off()
+    
     if (ncol(countNumCor)>3) {
       if (any(is.na(countNumCor))) {
         print(paste0("NA in correlation matrix. Can't draw .Correlation.Cluster figure"))
       } else {
-		if (outputPdf){
-		  pdf(paste0(outputFilePrefix,suffix,".Correlation.Cluster.pdf"),width=7, height=7)
-		}else{
-          png(paste0(outputFilePrefix,suffix,".Correlation.Cluster.png"),width=width,height=width,res=300)
-		}
-        if(!is.na(conditionColors)){
-          heatmap3(countNumCor,scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,col=col,legendfun=legendfun,ColSideColors=conditionColors)
-        }else{
-          heatmap3(countNumCor,scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,col=col,legendfun=legendfun)
+        for(format in outputFormat){
+          if("PDF" == format){
+      		  pdf(paste0(outputFilePrefix,suffix,".Correlation.Cluster.pdf"),width=7, height=7)
+		      }else{
+            png(paste0(outputFilePrefix,suffix,".Correlation.Cluster.png"),width=width,height=width,res=300)
+          }
+          if(!is.na(conditionColors)){
+            heatmap3(countNumCor,scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,col=col,legendfun=legendfun,ColSideColors=conditionColors)
+          }else{
+            heatmap3(countNumCor,scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,col=col,legendfun=legendfun)
+          }
+          dev.off()
         }
-        dev.off()
       }
     }
     
@@ -403,14 +427,16 @@ for (i in 1:nrow(countTableFileAll)) {
       countNumVsdGroup<-mergeTableBySampleGroup(countNumVsd,sampleToGroup)
       
       #heatmap
-	  hcaOption<-getHeatmapOption(countNumVsdGroup)
-	  if (outputPdf){
-		  pdf(paste0(outputFilePrefix,suffix,".Group.heatmap.pdf"),width=10,height=10)
-	  }else{
-		  png(paste0(outputFilePrefix,suffix,".Group.heatmap.png"),width=2000,height=2000,res=300)
-	  }
-	  heatmap3(countNumVsdGroup,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,cexCol=cexColGroup)
-      dev.off()
+      hcaOption<-getHeatmapOption(countNumVsdGroup)
+      for(format in outputFormat){
+        if("PDF" == format){
+          pdf(paste0(outputFilePrefix,suffix,".Group.heatmap.pdf"),width=10,height=10) 
+        }else{
+		      png(paste0(outputFilePrefix,suffix,".Group.heatmap.png"),width=2000,height=2000,res=300)
+	      }
+	      heatmap3(countNumVsdGroup,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,cexCol=cexColGroup)
+        dev.off()
+      }
       
       print("Doing correlation analysis of groups ...")
       
@@ -431,28 +457,33 @@ for (i in 1:nrow(countTableFileAll)) {
         axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
       }
       
-	  hcaOption<-getHeatmapOption(countNumCor)
-	  if(outputPdf){
-        pdf(paste0(outputFilePrefix,suffix,".Group.Correlation.pdf"),width=10,height=10)
-	  }else{
-   	    png(paste0(outputFilePrefix,suffix,".Group.Correlation.png"),width=2000,height=2000,res=300)
-  	  }
-      heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,margin=hcaOption$margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
-      dev.off()
+	    hcaOption<-getHeatmapOption(countNumCor)
+      for(format in outputFormat){
+        if("PDF" == format){
+          pdf(paste0(outputFilePrefix,suffix,".Group.Correlation.pdf"),width=10,height=10)
+	      }else{
+   	      png(paste0(outputFilePrefix,suffix,".Group.Correlation.png"),width=2000,height=2000,res=300)
+  	    }
+        heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,margin=hcaOption$margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
+        dev.off()
+      }
+      
       if (ncol(countNumCor)< 3) {
         saveInError(paste0("Less than 3 samples. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(outputFilePrefix,suffix,Sys.Date(),".warning"))
       } else {
-		if (length(table(countNumCor))==1) {
-			saveInError(paste0("Correlation for groups all equal to 1. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(suffix,Sys.Date(),".warning"))
-			next;
-		}
-		if(outputPdf){
-		  pdf(paste0(outputFilePrefix,suffix,".Group.Correlation.Cluster.pdf"),width=10, height=10)
-	    }else{
-		  png(paste0(outputFilePrefix,suffix,".Group.Correlation.Cluster.png"),width=2000,height=2000,res=300)
-		}
-		heatmap3(countNumCor,scale="none",balanceColor=T,margin=hcaOption$margin,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
-        dev.off()
+        if (length(table(countNumCor))==1) {
+			    saveInError(paste0("Correlation for groups all equal to 1. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(suffix,Sys.Date(),".warning"))
+			    next;
+		    }
+        for(format in outputFormat){
+          if("PDF" == format){
+            pdf(paste0(outputFilePrefix,suffix,".Group.Correlation.Cluster.pdf"),width=10, height=10)
+	        }else{
+		        png(paste0(outputFilePrefix,suffix,".Group.Correlation.Cluster.png"),width=2000,height=2000,res=300)
+		      }
+		      heatmap3(countNumCor,scale="none",balanceColor=T,margin=hcaOption$margin,col=col,legendfun=legendfun,cexCol=cexColGroup,cexRow=cexColGroup)
+          dev.off()
+        }
       }     
     }
   } else {
