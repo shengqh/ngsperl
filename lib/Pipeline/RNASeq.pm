@@ -53,6 +53,8 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "top25cv_in_hca",             0 );
   initDefaultValue( $def, "use_green_red_color_in_hca", 1 );
   initDefaultValue( $def, "output_bam_to_same_folder",  1 );
+  initDefaultValue( $def, "show_label_PCA",  1 );
+  
   initDefaultValue( $def, "max_thread",                 8 );
   initDefaultValue( $def, "sequencetask_run_time",      '24' );
 
@@ -73,6 +75,10 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "DE_min_median_read",              5 );
   initDefaultValue( $def, "perform_DE_proteincoding_gene",   0 );
   initDefaultValue( $def, "perform_proteincoding_gene",      getValue($def, "perform_DE_proteincoding_gene") );
+  
+  initDefaultValue( $def, "outputPdf",      0 );
+  initDefaultValue( $def, "outputPng",      1 );
+  
   return $def;
 }
 
@@ -123,7 +129,7 @@ sub getRNASeqConfig {
   my $aligner         = $def->{aligner};
   my $star_option     = $def->{star_option};
   my $count_table_ref = "files";
-
+  
   my $count_file_ref = $def->{count_file};
   if ( $def->{perform_mapping} && $def->{perform_counting} && ( $aligner eq "star" ) && $def->{perform_star_featurecount} ) {
     my $aligner_index   = $def->{star_index} or die "Define star_index at definition first";
@@ -320,10 +326,11 @@ sub getRNASeqConfig {
   if ( $def->{perform_correlation} ) {
     my $cor_dir   = ( defined $config->{genetable} ) ? $config->{genetable}{target_dir} : $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation";
     my $gene_file = $def->{correlation_gene_file};
-    my $rCode     = "";
+    my $rCode     = getOutputFormat($def);
     if ( defined $gene_file ) {
-      $rCode = "suffix<-\"_genes\"; ";
+      $rCode = $rCode . "suffix<-\"_genes\"; ";
     }
+    
     $config->{"genetable_correlation"} = {
       class       => "CQS::UniqueR",
       perform     => 1,
@@ -771,10 +778,14 @@ sub getRNASeqConfig {
       $hasFunctionalEnrichment = 1;
     }
 
+    my $fcOptions= getValue( $def, "featureCount_option" );
+    my $fcMultiMapping = ($fcOptions =~ /-m/) ? "TRUE" : "FALSE";
     my $options = {
       "DE_fold_change" => [ getValue( $def, "DE_fold_change", 2 ) ],
-      "DE_pvalue"      => [ getValue( $def, "DE_pvalue",      0.05 ) ]
+      "DE_pvalue"      => [ getValue( $def, "DE_pvalue",      0.05 ) ],
+      "featureCounts_UseMultiMappingReads" => [$fcMultiMapping]
     };
+    
     $config->{report} = {
       class                      => "CQS::BuildReport",
       perform                    => 1,
@@ -783,7 +794,7 @@ sub getRNASeqConfig {
       additional_rmd_files       => "Functions.Rmd",
       parameterSampleFile1_ref   => \@report_files,
       parameterSampleFile1_names => \@report_names,
-      parameterSampleFile2_ref   => $options,
+      parameterSampleFile2       => $options,
       parameterSampleFile3_ref   => \@copy_files,
       sh_direct                  => 1,
       pbs                        => {
