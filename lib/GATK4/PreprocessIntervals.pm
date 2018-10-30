@@ -42,8 +42,11 @@ sub perform {
   my $ref_fasta_dict = get_param_file( $config->{$section}{ref_fasta_dict}, "ref_fasta_dict", 1 );
   my $ref_fasta      = get_param_file( $config->{$section}{ref_fasta},      "ref_fasta",      1 );
 
-  my $padding    = get_option( $config, $section, "padding",    250 );
-  my $bin_length = get_option( $config, $section, "bin_length", 1000 );
+  #use default value in software rather than assign here since GATK team is still tunning the parameters.
+  my $padding    = get_option( $config, $section, "padding",    -1 );
+  my $bin_length = get_option( $config, $section, "bin_length", -1 );
+
+  my $parameters = get_parameter_options( $config, $section, "--", [ "padding", "bin-length" ] );
 
   my $final_file = $task_name . ".preprocessed.interval_list";
 
@@ -66,9 +69,7 @@ gatk --java-options \"$java_option\" PreprocessIntervals \\
   -L $intervals $blacklist_intervals_option \\
   --sequence-dictionary $ref_fasta_dict \\
   --reference $ref_fasta \\
-  --padding $padding \\
-  --bin-length $bin_length \\
-  --interval-merging-rule OVERLAPPING_ONLY \\
+  --interval-merging-rule OVERLAPPING_ONLY $parameters \\
   --output $final_file
   
 rm -rf .conda

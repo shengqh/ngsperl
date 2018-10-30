@@ -29,7 +29,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
 
-  my $java_option = $self->get_java_option($config, $section, $memory);
+  my $java_option = $self->get_java_option( $config, $section, $memory );
 
   #parameter files
   my $gatk_singularity = get_param_file( $config->{$section}{gatk_singularity}, "gatk_singularity", 1 );
@@ -41,17 +41,14 @@ sub perform {
   my $ref_fasta_dict = get_param_file( $config->{$section}{ref_fasta_dict}, "ref_fasta_dict", 1 );
   my $ref_fasta      = get_param_file( $config->{$section}{ref_fasta},      "ref_fasta",      1 );
 
-  my $minimum_gc_content                         = get_option( $config, $section, "minimum_gc_content",                         0.1 );
-  my $maximum_gc_content                         = get_option( $config, $section, "maximum_gc_content",                         0.9 );
-  my $minimum_mappability                        = get_option( $config, $section, "minimum_mappability",                        0.9 );
-  my $maximum_mappability                        = get_option( $config, $section, "maximum_mappability",                        1.0 );
-  my $minimum_segmental_duplication_content      = get_option( $config, $section, "minimum_segmental_duplication_content",      0.0 );
-  my $maximum_segmental_duplication_content      = get_option( $config, $section, "maximum_segmental_duplication_content",      0.5 );
-  my $low_count_filter_count_threshold           = get_option( $config, $section, "low_count_filter_count_threshold",           5 );
-  my $low_count_filter_percentage_of_samples     = get_option( $config, $section, "low_count_filter_percentage_of_samples",     90.0 );
-  my $extreme_count_filter_minimum_percentile    = get_option( $config, $section, "extreme_count_filter_minimum_percentile",    1.0 );
-  my $extreme_count_filter_maximum_percentile    = get_option( $config, $section, "extreme_count_filter_maximum_percentile",    99.0 );
-  my $extreme_count_filter_percentage_of_samples = get_option( $config, $section, "extreme_count_filter_percentage_of_samples", 90.0 );
+  my $parameters = get_parameter_options(
+    $config, $section, "--",
+    [
+      "minimum-gc-content",                      "maximum-gc-content",                      "minimum-mappability",              "maximum-mappability",
+      "minimum-segmental-duplication-content",   "maximum-segmental-duplication-content",   "low-count-filter-count-threshold", "low-count-filter-percentage-of-samples",
+      "extreme-count-filter-minimum-percentile", "extreme-count-filter-maximum-percentile", "extreme-count-filter-percentage-of-samples"
+    ]
+  );
 
   my $final_file = $task_name . ".filtered.interval_list";
   my %raw_files = %{ get_raw_files( $config, $section ) };
@@ -68,26 +65,14 @@ sub perform {
     $inputOption = $inputOption . " --input " . $sampleFile;
   }
 
-
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh "  
 gatk --java-options \"$java_option\" FilterIntervals \\
-            -L ${intervals} $blacklist_intervals_option \\
-            $inputOption \\
-            --minimum-gc-content ${minimum_gc_content} \\
-            --maximum-gc-content ${maximum_gc_content} \\
-            --minimum-mappability ${minimum_mappability} \\
-            --maximum-mappability ${maximum_mappability} \\
-            --minimum-segmental-duplication-content ${minimum_segmental_duplication_content} \\
-            --maximum-segmental-duplication-content ${maximum_segmental_duplication_content} \\
-            --low-count-filter-count-threshold ${low_count_filter_count_threshold} \\
-            --low-count-filter-percentage-of-samples ${low_count_filter_percentage_of_samples} \\
-            --extreme-count-filter-minimum-percentile ${extreme_count_filter_minimum_percentile} \\
-            --extreme-count-filter-maximum-percentile ${extreme_count_filter_maximum_percentile} \\
-            --extreme-count-filter-percentage-of-samples ${extreme_count_filter_percentage_of_samples} \\
-            --interval-merging-rule OVERLAPPING_ONLY \\
-            --output $final_file
+  -L ${intervals} $blacklist_intervals_option \\
+  $inputOption \\
+  --interval-merging-rule OVERLAPPING_ONLY $parameters\\
+  --output $final_file
 ";
   close($sh);
 

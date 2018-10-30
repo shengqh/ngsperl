@@ -74,12 +74,12 @@ source activate gatk
 cd $result_dir
 
 gatk --java-options \"$java_option\" CollectReadCounts \\
-            -L ${preprocessed_intervals} \\
-            --input $sampleFile \\
-            --reference $ref_fasta \\
-            --format $count_format \\
-            --interval-merging-rule OVERLAPPING_ONLY \\
-            --output $final_file
+  -L ${preprocessed_intervals} \\
+  --input $sampleFile \\
+  --reference $ref_fasta \\
+  --format $count_format \\
+  --interval-merging-rule OVERLAPPING_ONLY \\
+  --output $final_file
             
 rm -rf .cache .conda .config .theano
 ";

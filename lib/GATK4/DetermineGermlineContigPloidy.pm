@@ -29,18 +29,15 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
 
-  my $java_option = $self->get_java_option($config, $section, $memory);
+  my $java_option = $self->get_java_option( $config, $section, $memory );
 
   #parameter files
   my $gatk_singularity = get_param_file( $config->{$section}{gatk_singularity}, "gatk_singularity", 1 );
 
-  my $intervals            = parse_param_file( $config, $section, "filtered_intervals", 1);
+  my $intervals = parse_param_file( $config, $section, "filtered_intervals", 1 );
   my $contig_ploidy_priors = get_param_file( $config->{$section}{contig_ploidy_priors}, "contig_ploidy_priors", 0 );
 
-  my $mean_bias_standard_deviation = get_option( $config, $section, "mean_bias_standard_deviation", 0.01 );
-  my $mapping_error_rate           = get_option( $config, $section, "mapping_error_rate",           0.01 );
-  my $global_psi_scale             = get_option( $config, $section, "global_psi_scale",             0.001 );
-  my $sample_psi_scale             = get_option( $config, $section, "sample_psi_scale",             0.0001 );
+  my $parameters = get_parameter_options( $config, $section, "--", [ "mean-bias-standard-deviation", "mapping-error-rate", "global-psi-scale", "sample-psi-scale" ] );
 
   my $final_file = "${task_name}-contig-ploidy-calls.tar.gz";
   my $raw_files = get_raw_files( $config, $section );
@@ -62,17 +59,13 @@ source activate gatk
 cd $result_dir
 
 gatk --java-options \"$java_option\" DetermineGermlineContigPloidy \\
-            -L $intervals \\
-            $inputOption \\
-            --contig-ploidy-priors ${contig_ploidy_priors} \\
-            --interval-merging-rule OVERLAPPING_ONLY \\
-            --output . \\
-            --output-prefix ${task_name} \\
-            --verbosity DEBUG \\
-            --mean-bias-standard-deviation ${mean_bias_standard_deviation} \\
-            --mapping-error-rate ${mapping_error_rate} \\
-            --global-psi-scale ${global_psi_scale} \\
-            --sample-psi-scale ${sample_psi_scale}
+  -L $intervals \\
+  $inputOption \\
+  --contig-ploidy-priors ${contig_ploidy_priors} \\
+  --interval-merging-rule OVERLAPPING_ONLY \\
+  --output . \\
+  --output-prefix ${task_name} \\
+  --verbosity DEBUG $parameters
 
 rm -rf .cache .conda .config .theano
 ";
@@ -88,9 +81,7 @@ sub result {
   my ( $self, $config, $section, $pattern ) = @_;
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $result = {
-    $task_name => filter_array( [ "${result_dir}/${task_name}-model", "${result_dir}/${task_name}-calls" ], $pattern )
-  };
+  my $result = { $task_name => filter_array( [ "${result_dir}/${task_name}-model", "${result_dir}/${task_name}-calls" ], $pattern ) };
 
   return $result;
 }

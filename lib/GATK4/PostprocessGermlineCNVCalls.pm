@@ -41,6 +41,8 @@ sub perform {
 
   my $model_shard_path = get_raw_files( $config, $section, "model_shard_path" );
   my $model_args = get_rawfiles_option( $model_shard_path, "--model-shard-path" );
+  
+  my $parameters = get_parameter_options($config, $section, "--", "autosomal-ref-copy-number");
 
   #make PBS
   my %raw_files = %{ get_raw_files( $config, $section ) };
@@ -77,15 +79,14 @@ source activate gatk
 cd $sample_dir
 
 gatk --java-options \"$java_option\" PostprocessGermlineCNVCalls \\
-            $calls_args \\
-            $model_args \\
-            --sample-index $i \\
-            --autosomal-ref-copy-number 2 \\
-            --allosomal-contig X \\
-            --allosomal-contig Y \\
-            --contig-ploidy-calls $contig_ploidy_calls_dir \\
-            --output-genotyped-intervals $genotyped_intervals_vcf_filename \\
-            --output-genotyped-segments $genotyped_segments_vcf_filename
+  $calls_args \\
+  $model_args \\
+  --sample-index $i \\
+  --allosomal-contig X \\
+  --allosomal-contig Y $parameters \\
+  --contig-ploidy-calls $contig_ploidy_calls_dir \\
+  --output-genotyped-intervals $genotyped_intervals_vcf_filename \\
+  --output-genotyped-segments $genotyped_segments_vcf_filename
             
 rm -rf .cache .conda .config .theano
 
