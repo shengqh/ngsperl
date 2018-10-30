@@ -20,7 +20,7 @@ our %EXPORT_TAGS = (
   'all' => [
     qw(get_config_section has_config_section get_option get_option_file get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files_and_keys get_raw_files get_raw_files_keys get_raw_files_attributes get_raw_files2 get_run_command get_option_value get_pair_groups
       get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key get_grouped_raw_files save_parameter_sample_file saveConfig writeFileList initDefaultValue get_pure_pairs writeParameterSampleFile get_raw_file_list fix_task_name
-      get_parameter_file get_parameter_sample_files is_pairend get_ref_section_pbs get_rawfiles_option)
+      get_parameter_file get_parameter_sample_files is_pairend get_ref_section_pbs get_rawfiles_option get_parameter_options)
   ]
 );
 
@@ -409,8 +409,8 @@ sub get_raw_file_list {
   my ( $config, $section, $mapname, $mustBeOne ) = @_;
 
   my $curSection = get_config_section( $config, $section );
-  
-  if(!defined $mustBeOne){
+
+  if ( !defined $mustBeOne ) {
     $mustBeOne = 0;
   }
 
@@ -450,7 +450,7 @@ sub get_raw_file_list {
         %myres = %{$res};
       }
 
-      my $bFound = 0;
+      my $bFound    = 0;
       my @curResult = ();
       for my $myvalues ( values %myres ) {
         die "Return value should be array." if ( ref($myvalues) ne 'ARRAY' );
@@ -462,12 +462,12 @@ sub get_raw_file_list {
       if ( not $bFound ) {
         die "Cannot find file for " . $values->{section} . " and pattern " . $values->{pattern};
       }
-      
-      if($mustBeOne && scalar(@curResult) > 1){
-        die "Only one result allowed but multiple found " . $values->{section} . " and pattern " . $values->{pattern} . "\n" . join("\n  ", @curResult);
+
+      if ( $mustBeOne && scalar(@curResult) > 1 ) {
+        die "Only one result allowed but multiple found " . $values->{section} . " and pattern " . $values->{pattern} . "\n" . join( "\n  ", @curResult );
       }
-      
-      push (@$result, @curResult);
+
+      push( @$result, @curResult );
     }
 
     return $result;
@@ -584,7 +584,7 @@ sub do_get_unsorted_raw_files {
   }
 }
 
-sub get_ref_section_pbs{
+sub get_ref_section_pbs {
   my ( $config, $section, $mapname ) = @_;
 
   my $result = {};
@@ -595,7 +595,7 @@ sub get_ref_section_pbs{
   my $mapname_config_ref = $mapname . "_config_ref";
 
   if ( defined $curSection->{$mapname_ref} || defined $curSection->{$mapname_config_ref} ) {
-    my ($refmap, $unused) = get_refmap( $config, $section, $mapname );
+    my ( $refmap, $unused ) = get_refmap( $config, $section, $mapname );
 
     my @sortedKeys = sort { $a <=> $b } keys %$refmap;
     for my $index (@sortedKeys) {
@@ -604,33 +604,33 @@ sub get_ref_section_pbs{
       my $section      = $values->{section};
 
       my $targetSection = get_config_section( $targetConfig, $section );
-      if(ref($targetSection) ne 'HASH'){
+      if ( ref($targetSection) ne 'HASH' ) {
         next;
       }
 
       if ( defined $targetSection->{class} ) {
         my $myclass = instantiate( $targetSection->{class} );
         my $targetpbsmap = $myclass->get_pbs_files( $config, $section );
-        for my $pbskey (keys %$targetpbsmap){
-          my $newpbs = $targetpbsmap->{$pbskey};
+        for my $pbskey ( keys %$targetpbsmap ) {
+          my $newpbs  = $targetpbsmap->{$pbskey};
           my $pbslist = $result->{$pbskey};
-          if(defined $pbslist){
+          if ( defined $pbslist ) {
             push @$pbslist, $newpbs;
-          }else{
+          }
+          else {
             $pbslist = [$newpbs];
           }
           $result->{$pbskey} = $pbslist;
         }
       }
       else {
-        next
+        next;
       }
     }
   }
-  
+
   return ($result);
 }
-
 
 sub do_get_raw_files_keys {
   my $resultUnsorted = shift;
@@ -974,14 +974,14 @@ sub writeParameterSampleFile {
     else {
       @orderedSampleNames = keys %$temp;
     }
-    
-    my @outputNames = ();
-    my $keyNames = $key . "Names";
+
+    my @outputNames              = ();
+    my $keyNames                 = $key . "Names";
     my $parameterSampleFileNames = $config->{$section}{$keyNames};
-    if( defined $parameterSampleFileNames ) {
+    if ( defined $parameterSampleFileNames ) {
       @outputNames = @$parameterSampleFileNames;
     }
-    
+
     $result = "fileList${index}${task_suffix}.txt";
     open( my $list, ">$resultDir/$result" ) or die "Cannot create $result";
     my $nameIndex = -1;
@@ -989,8 +989,8 @@ sub writeParameterSampleFile {
       my $subSampleFiles = $temp->{$sample_name};
       foreach my $subSampleFile (@$subSampleFiles) {
         my $curSampleName = $sample_name;
-        if(scalar(@outputNames) > 0){
-          $nameIndex = $nameIndex + 1;
+        if ( scalar(@outputNames) > 0 ) {
+          $nameIndex     = $nameIndex + 1;
           $curSampleName = $outputNames[$nameIndex];
         }
         print $list $subSampleFile . "\t$curSampleName\n";
@@ -1041,11 +1041,11 @@ sub is_pairend {
   if ( not defined $result ) {
     $result = $def->{pairend};
   }
-  return($result);
+  return ($result);
 }
 
 sub get_rawfiles_option {
-  my ($raw_files, $option_string) = @_;
+  my ( $raw_files, $option_string ) = @_;
   my $result = "";
   for my $sample_name ( sort keys %$raw_files ) {
     my @sample_files = @{ $raw_files->{$sample_name} };
@@ -1053,6 +1053,21 @@ sub get_rawfiles_option {
     $result = $result . " " . $option_string . " " . $sampleFile;
   }
   return $result;
+}
+
+sub get_parameter_options {
+  my ( $config, $section, $prefix, $parameters ) = @_;
+
+  my $curSection = get_config_section( $config, $section );
+  my $result = "";
+  for my $parameter (@$parameters) {
+    my $value = $curSection->{$parameter};
+    if ( defined $value ) {
+      $result = $result . " " . $prefix . $parameter . " " . $value;
+    }
+  }
+
+  return ($result);
 }
 
 1;
