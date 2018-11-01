@@ -117,13 +117,13 @@ sub file_exists {
 }
 
 sub check_file_exists_command {
-  my @files   = @_;
+  my ($files, $intent)   = @_;
   my $result = "";
-  for my $file (@files){
-    $result = $result . "if [ ! -e $file ]; then 
-  echo file not exists : $file, task failed.
-  exit 1
-fi
+  for my $file (@$files){
+    $result = $result . "${intent}if [ ! -e $file ]; then 
+$intent  echo file not exists : $file, task failed.
+$intent  exit 1
+${intent}fi
 "
   }
   
