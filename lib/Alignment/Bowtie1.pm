@@ -78,7 +78,7 @@ sub perform {
     my $fastqs = join( ',', @sample_files );
     my $bowtie1_aln_command = "bowtie $option $m_option -S $tag $bowtie1_index $fastqs $bowtiesam 2>$alignlog";
 
-    my $cmd_file_exists = check_file_exists_command(@sample_files);
+    my $cmd_file_exists = check_file_exists_command(\@sample_files, "  ");
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
