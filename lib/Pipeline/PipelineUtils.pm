@@ -602,13 +602,14 @@ sub addEnhancer {
 }
 
 sub addMultiQC {
-  my ( $config, $def, $summary, $target_dir, $root_dir, $option ) = @_;
+  my ( $config, $def, $summary, $target_dir, $root_dir, $multiqc_depedents ) = @_;
   $config->{multiqc} = {
     class         => "QC::MultiQC",
     option        => getValue( $def, "multiqc_option", "" ),
     perform       => 1,
     target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "multiqc",
     output_to_dir => getReportDir($def),
+    source_ref    => $multiqc_depedents,
     root_dir      => $root_dir,
     sh_direct     => 1,
     pbs           => {
@@ -619,6 +620,7 @@ sub addMultiQC {
       "mem"       => "10gb"
     },
   };
+  
   push @$summary, ("multiqc");
   return "multiqc";
 }
