@@ -67,6 +67,9 @@ sub getDependentJobids {
         $result = "--dependency=afterany";
       }
       for my $each_dep_pbs ( keys %$taskname_pbs_map ) {
+        if (!defined $pbs_id_map->{$each_dep_pbs} ){
+          die "Didn't find $each_dep_pbs in $pbs_id_map";
+        }
         $result = $result . ":\$" . $pbs_id_map->{$each_dep_pbs}[0];
         $pbs_id_map->{$each_dep_pbs}[1] = 1;
       }
