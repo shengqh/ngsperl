@@ -34,6 +34,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "table_vis_group_text_size", '10' );
   initDefaultValue( $def, "max_thread",                '8' );
   initDefaultValue( $def, "sequencetask_run_time",     '12' );
+  initDefaultValue( $def, "emailType", "ALL" );
 
   return $def;
 }
@@ -143,6 +144,7 @@ sub getPreprocessionConfig {
       not_clean  => getValue( $def, "sra_not_clean", 1 ),
       pbs        => {
         "email"    => $def->{email},
+        "emailType" => $def->{emailType},
         "nodes"    => "1:ppn=1",
         "walltime" => "10",
         "mem"      => "10gb"
@@ -166,6 +168,7 @@ sub getPreprocessionConfig {
       cluster     => $def->{cluster},
       pbs         => {
         "email"    => $def->{email},
+        "emailType" => $def->{emailType},
         "nodes"    => "1:ppn=1",
         "walltime" => "4",
         "mem"      => "10gb"
@@ -187,6 +190,7 @@ sub getPreprocessionConfig {
       cluster    => $def->{cluster},
       pbs        => {
         "email"    => $def->{email},
+        "emailType" => $def->{emailType},
         "nodes"    => "1:ppn=1",
         "walltime" => "2",
         "mem"      => "10gb"
@@ -218,6 +222,7 @@ sub getPreprocessionConfig {
       cluster    => $cluster,
       pbs        => {
         "email"    => $def->{email},
+        "emailType" => $def->{emailType},
         "nodes"    => "1:ppn=1",
         "walltime" => "2",
         "mem"      => "20gb"
@@ -258,6 +263,7 @@ sub getPreprocessionConfig {
         cluster                          => $cluster,
         pbs                              => {
           "email"    => $def->{email},
+          "emailType" => $def->{emailType},
           "nodes"    => "1:ppn=1",
           "walltime" => "24",
           "mem"      => "20gb"
@@ -291,6 +297,7 @@ sub getPreprocessionConfig {
         cluster    => $cluster,
         pbs        => {
           "email"    => $def->{email},
+          "emailType" => $def->{emailType},
           "nodes"    => "1:ppn=1",
           "walltime" => "24",
           "mem"      => "20gb"
@@ -308,6 +315,7 @@ sub getPreprocessionConfig {
         sh_direct                => 1,
         pbs                      => {
           "email"    => $def->{email},
+          "emailType" => $def->{emailType},
           "nodes"    => "1:ppn=1",
           "walltime" => "1",
           "mem"      => "10gb"
@@ -358,6 +366,7 @@ sub getPreprocessionConfig {
           parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.summary.reads.tsv\$" ],
           pbs                => {
             "email"    => $def->{email},
+            "emailType" => $def->{emailType},
             "nodes"    => "1:ppn=1",
             "walltime" => "1",
             "mem"      => "10gb"

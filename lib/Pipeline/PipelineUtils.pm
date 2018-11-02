@@ -183,8 +183,8 @@ sub addBowtie1PARalyzer {
     option        => $bowtieOption,
     source_ref    => $sourceRef,
     bowtie1_index => $bowtieIndex,
-    genome2bit    => getValue( $def, "genome_2bit" ),
-    mirna_db      => getValue( $def, "mirna_db" ),
+    genome2bit    => getValue( $def, "paralyzer_genome_2bit" ),
+    mirna_db      => getValue( $def, "paralyzer_mirna_db" ),
     sh_direct     => 0,
     cluster       => $def->{cluster},
     pbs           => {

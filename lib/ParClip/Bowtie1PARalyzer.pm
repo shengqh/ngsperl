@@ -43,9 +43,11 @@ sub perform {
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
 
-    my $bowtie_name_bam        = $sample_name . ".name.bam";
-    my $alignlog         = $sample_name . ".log";
-    
+    my $sam_file = $sample_name . ".sam";
+    my $sam_filtered_file = $sample_name . ".filtered.sam";
+    my $bam_file = $sample_name . ".bam";
+    my $alignlog = $sample_name . ".log";
+
     #prepare paralyzer configuration file
     my $iniFile = "${sample_name}.ini";
     open( INI, ">${result_dir}/${iniFile}" ) or die "Cannot create ${result_dir}/${iniFile}";
@@ -64,7 +66,7 @@ MAXIMUM_NUMBER_OF_NON_CONVERSION_MISMATCHES=5
 
 ADDITIONAL_NUCLEOTIDES_BEYOND_SIGNAL=5
 
-BAM_FILE=${result_dir}/$bowtie_name_bam
+SAM_FILE=${result_dir}/$sam_filtered_file
 GENOME_2BIT_FILE=$genome2bit
 FIND_MIRNA_SEEDMATCHES=$mirna_db
 
@@ -76,16 +78,12 @@ OUTPUT_MIRNA_TARGETS_FILE=${sample_name}.target.csv
 ";
     close(INI);
 
-    my $bam_file = $sample_name . ".bam";
-    my $m_option = ($option =~ /\-m/)? "--max ${bam_file}.max.txt":""; 
+    my $m_option = ( $option =~ /\-m/ ) ? "--max ${bam_file}.max.txt" : "";
 
     my $indent = "";
     my $tag    = "--sam-RG ID:$sample_name --sam-RG LB:$sample_name --sam-RG SM:$sample_name --sam-RG PL:ILLUMINA --sam-RG PU:$sample_name";
 
-    my $fastqs = join( ',', @sample_files );
-    my $bowtie1_aln_command = "bowtie $option $m_option -S $tag $bowtie1_index $fastqs | samtools view -bSF4 - >$bowtie_name_bam 2>$alignlog";
-
-    my $cmd_file_exists = check_file_exists_command(@sample_files);
+    my $cmd_file_exists = check_file_exists_command( \@sample_files, "  " );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -97,20 +95,30 @@ OUTPUT_MIRNA_TARGETS_FILE=${sample_name}.target.csv
     my $final_file = "${sample_name}.target.csv";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-    print $pbs "
-if [[ ! -s $bowtie_name_bam ]]; then
-  $cmd_file_exists
-  $bowtie1_aln_command 
+    my $collapserFasta = $sample_name . ".collapser.fasta";
+    my $fastqs         = join( ' ', @sample_files );
+    my $cat            = ( $sample_files[0] =~ /.gz/ ) ? "zcat" : "cat";
+    print $pbs "if [[ ! -s $collapserFasta || 1 -eq \$1 ]]; then
+$cmd_file_exists
+  $cat $fastqs | fastx_collapser -o $collapserFasta 
 fi
 
-if [[ -s $bowtie_name_bam ]]; then
+if [[ (-s $collapserFasta && ! -s $sam_file) || 1 -eq \$1 ]]; then
+  bowtie $option $m_option -S $tag -f --no-unal $bowtie1_index $collapserFasta > $sam_file
+fi
+
+if [[ (-s $sam_file && ! -s $sam_filtered_file) || 1 -eq \$1 ]]; then
+  samtools view -hSF4 $sam_file >$sam_filtered_file
+fi
+
+if [[ -s $sam_filtered_file || 1 -eq \$1 ]]; then
   PARalyzer $memory $iniFile
 fi
 
-if [[ -s $final_file && -s $bowtie_name_bam && ! -s $bam_file ]]; then
-  samtools sort -@ $thread -T ${sample_name}_tmp -o $bam_file $bowtie_name_bam
+if [[ (-s $final_file && -s $sam_filtered_file && ! -s $bam_file) || 1 -eq \$1 ]]; then
+  samtools sort -@ $thread -T ${sample_name}_tmp -o $bam_file $sam_filtered_file
   if [ -s $bam_file ]; then
-    rm $bowtie_name_bam
+    rm $collapserFasta $sam_file $sam_filtered_file
     samtools index $bam_file 
   fi
 fi
