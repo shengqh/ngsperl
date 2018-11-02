@@ -253,7 +253,7 @@ sub getConfig {
       if ( $def->{perform_vep} ){
         my $vep_name = $filter_name . "_vep";
         $config->{$vep_name} = {
-          class       => "Format::Vcf2Maf",
+          class       => "Annotation::Vcf2Maf",
           perform     => 1,
           target_dir  => "${target_dir}/$vep_name",
           option      => "",

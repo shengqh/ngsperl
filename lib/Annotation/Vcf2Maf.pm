@@ -34,11 +34,18 @@ sub perform {
   my $species = get_option($config, $section, "species");
   my $ncbi_build = get_option($config, $section, "ncbi_build");
   my $ref_fasta = get_option_file($config, $section, "ref_fasta");
+  my $source_vcf = parse_option_file($config, $section, "source_vcf");
+  
   my $filter_vcf;
   if (defined $config->{$section}{filter_vcf}){
     $filter_vcf = "--filter-vcf " . get_option_file($config, $section, "filter_vcf");
   }else{
     $filter_vcf = "--filter-vcf 0"
+  }
+
+  my $script = dirname(__FILE__) . "/vcf2Maf.py";
+  if ( !-e $script ) {
+    die "File not found : " . $script;
   }
 
   for my $sample_name ( sort keys %raw_files ) {
@@ -49,14 +56,23 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    my $final_file = basename($vcf_file) . ".maf";
+    my $tmp_file = basename($vcf_file) . ".maf.tmp";
+    my $final_file = basename($vcf_file) . ".maf.txt";
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
     print $pbs "
-if [ ! -s $final_file ]; then
-  perl $vcf2mgf --vep-forks $thread --input-vcf $vcf_file --output-maf $final_file --vep-path $vep_path --vep-data $vep_data --species $species --ncbi-build $ncbi_build --ref-fasta $ref_fasta $filter_vcf
+if [[ ! -s $final_file ]]; then
+  perl $vcf2mgf --vep-forks $thread --input-vcf $vcf_file --output-maf $tmp_file --vep-path $vep_path --vep-data $vep_data --species $species --ncbi-build $ncbi_build --ref-fasta $ref_fasta $filter_vcf
+  
+  if [[ -s $tmp_file ]]; then
+    python $script -i $tmp_file -v $vcf_file -o $final_file
+    
+    if [[ -s $final_file ]]; then
+      rm $tmp_file
+    fi 
+  fi
 fi
 ";
     $self->close_pbs( $pbs, $pbs_file );
