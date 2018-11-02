@@ -53,6 +53,7 @@ sub perform {
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh "  
 export HOME=$result_dir
+export PYTHONPATH=
 
 source activate gatk
 
