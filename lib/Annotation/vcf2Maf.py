@@ -3,7 +3,6 @@ import sys
 import logging
 import os
 import csv
-from IPython.utils import ulinecache
 
 DEBUG=False
 NotDEBUG=not DEBUG
@@ -19,7 +18,7 @@ args = parser.parse_args()
 if DEBUG:
   args.input = "T:/Shared/Labs/Linton Lab/20180913_linton_exomeseq_2118_human_cutadapt/bwa_refine_hc_gvcf_hardfilter_vep/result/linton_exomeseq_2118.pass.vcf.maf.tmp.tmp"
   args.vcf = "T:/Shared/Labs/Linton Lab/20180913_linton_exomeseq_2118_human_cutadapt/bwa_refine_hc_gvcf_hardfilter/result/linton_exomeseq_2118.pass.vcf.tmp"
-  args.out = "T:/Shared/Labs/Linton Lab/20180913_linton_exomeseq_2118_human_cutadapt/bwa_refine_hc_gvcf_hardfilter_vep/result/linton_exomeseq_2118.pass.vcf.tmp.maf.txt"
+  args.output = "T:/Shared/Labs/Linton Lab/20180913_linton_exomeseq_2118_human_cutadapt/bwa_refine_hc_gvcf_hardfilter_vep/result/linton_exomeseq_2118.pass.vcf.tmp.maf.txt"
 
 logger = logging.getLogger('vcf2maf')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
@@ -45,7 +44,7 @@ with open(args.input, "r") as fin:
 if len(vcfdata) != len(mafdata):
   print("ERROR, there are %d data in vcf while %d data in maf\n" % (len(vcfdata), len(mafdata)))
 else:
-  with open(args.out, "w") as fout:
+  with open(args.output, "w") as fout:
     fout.write(version)
     fout.write('\t'.join(mafheaders))
     for idx, mafitem in enumerate(mafdata):

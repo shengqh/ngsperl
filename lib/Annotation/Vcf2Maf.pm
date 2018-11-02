@@ -34,7 +34,7 @@ sub perform {
   my $species = get_option($config, $section, "species");
   my $ncbi_build = get_option($config, $section, "ncbi_build");
   my $ref_fasta = get_option_file($config, $section, "ref_fasta");
-  my $source_vcf = parse_option_file($config, $section, "source_vcf");
+  my $source_vcf = parse_param_file($config, $section, "source_vcf");
   
   my $filter_vcf;
   if (defined $config->{$section}{filter_vcf}){
@@ -92,7 +92,7 @@ sub result {
   for my $sample_name ( keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $vcf_file     = $sample_files[0];
-    my $final_file = basename($vcf_file) . ".maf";
+    my $final_file = basename($vcf_file) . ".maf.txt";
 
     my @result_files = ();
     push( @result_files, $result_dir . "/" . $final_file );
