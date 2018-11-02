@@ -34,7 +34,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "table_vis_group_text_size", '10' );
   initDefaultValue( $def, "max_thread",                '8' );
   initDefaultValue( $def, "sequencetask_run_time",     '12' );
-  initDefaultValue( $def, "emailType", "ALL" );
+  initDefaultValue( $def, "emailType",                 "ALL" );
 
   return $def;
 }
@@ -80,15 +80,17 @@ sub getPreprocessionConfig {
   #data
   my $config = {
     general => {
-      task_name => $task,
-      cluster   => $cluster
+      task_name  => $task,
+      cluster    => $cluster,
+      email      => $email,
+      emailType  => getValue( $def, "emailType", "ALL" ),
+      constraint => $def->{constraint},
+      account    => $def->{account},
     },
-    constraint => $def->{constraint},
-    account    => $def->{account},
-    files      => $def->{files},
-    groups     => $def->{groups},
-    deseq2_groups => $def->{deseq2_groups},
-    pairs      => $def->{pairs},
+    files                => $def->{files},
+    groups               => $def->{groups},
+    deseq2_groups        => $def->{deseq2_groups},
+    pairs                => $def->{pairs},
     additional_bam_files => $def->{additional_bam_files},
   };
   my $source_ref = ["files"];
@@ -143,11 +145,11 @@ sub getPreprocessionConfig {
       cluster    => $def->{cluster},
       not_clean  => getValue( $def, "sra_not_clean", 1 ),
       pbs        => {
-        "email"    => $def->{email},
+        "email"     => $def->{email},
         "emailType" => $def->{emailType},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "10",
-        "mem"      => "10gb"
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
       },
     };
     $source_ref = "sra2fastq";
@@ -167,11 +169,11 @@ sub getPreprocessionConfig {
       is_collated => $def->{is_collated},
       cluster     => $def->{cluster},
       pbs         => {
-        "email"    => $def->{email},
+        "email"     => $def->{email},
         "emailType" => $def->{emailType},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "4",
-        "mem"      => "10gb"
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "4",
+        "mem"       => "10gb"
       }
     };
     $source_ref = "merge_fastq";
@@ -189,11 +191,11 @@ sub getPreprocessionConfig {
       sh_direct  => 1,
       cluster    => $def->{cluster},
       pbs        => {
-        "email"    => $def->{email},
+        "email"     => $def->{email},
         "emailType" => $def->{emailType},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "2",
-        "mem"      => "10gb"
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "2",
+        "mem"       => "10gb"
       }
     };
     $source_ref = "fastq_remove_N";
@@ -221,11 +223,11 @@ sub getPreprocessionConfig {
       sh_direct  => 1,
       cluster    => $cluster,
       pbs        => {
-        "email"    => $def->{email},
+        "email"     => $def->{email},
         "emailType" => $def->{emailType},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "2",
-        "mem"      => "20gb"
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "2",
+        "mem"       => "20gb"
       },
     };
     push @$individual, ("remove_contamination_sequences");
@@ -262,11 +264,11 @@ sub getPreprocessionConfig {
         sh_direct                        => 0,
         cluster                          => $cluster,
         pbs                              => {
-          "email"    => $def->{email},
+          "email"     => $def->{email},
           "emailType" => $def->{emailType},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "24",
-          "mem"      => "20gb"
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "24",
+          "mem"       => "20gb"
         },
       }
     };
@@ -296,11 +298,11 @@ sub getPreprocessionConfig {
         sh_direct  => 1,
         cluster    => $cluster,
         pbs        => {
-          "email"    => $def->{email},
+          "email"     => $def->{email},
           "emailType" => $def->{emailType},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "24",
-          "mem"      => "20gb"
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "24",
+          "mem"       => "20gb"
         },
       },
       "fastq_len_vis" => {
@@ -314,11 +316,11 @@ sub getPreprocessionConfig {
         parameterSampleFile2     => $def->{groups},
         sh_direct                => 1,
         pbs                      => {
-          "email"    => $def->{email},
+          "email"     => $def->{email},
           "emailType" => $def->{emailType},
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "10gb"
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       }
     };
@@ -365,11 +367,11 @@ sub getPreprocessionConfig {
           sh_direct          => 1,
           parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.summary.reads.tsv\$" ],
           pbs                => {
-            "email"    => $def->{email},
+            "email"     => $def->{email},
             "emailType" => $def->{emailType},
-            "nodes"    => "1:ppn=1",
-            "walltime" => "1",
-            "mem"      => "10gb"
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
           },
         },
         $fastqc_count_vis_files
@@ -378,7 +380,7 @@ sub getPreprocessionConfig {
     }
   }
 
-  return ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster);
+  return ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster );
 }
 
 1;
