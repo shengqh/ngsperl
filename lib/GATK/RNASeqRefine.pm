@@ -4,6 +4,7 @@ package GATK::RNASeqRefine;
 use strict;
 use warnings;
 use File::Basename;
+use List::MoreUtils;
 use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
@@ -209,6 +210,64 @@ fi
   }
 
   print "!!!shell file $shfile created, you can run this shell file to submit all GATK refine tasks.\n";
+}
+
+sub get_clear_map {
+  my ( $self, $config, $section, $pattern ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  my %raw_files = %{ get_raw_files( $config, $section ) };
+
+  my $sorted               = get_option( $config, $section, "sorted",                   0 );
+  my $replaceReadGroup     = get_option( $config, $section, "replace_read_group",       0 );
+  my $reorderChromosome    = get_option( $config, $section, "reorder_chromosome",       0 );
+  my $slim                 = get_option( $config, $section, "slim_print_reads",         1 );
+  my $use_self_slim_method = get_option( $config, $section, "use_self_slim_method",     0 );
+  my $baq                  = get_option( $config, $section, "samtools_baq_calibration", 0 );
+  my $slim_str = $slim ? ".slim" : "";
+  my $baq_str  = $baq  ? ".baq"  : "";
+
+  my $baqResultName = $baq ? ".baq" : "";
+  my $rmdupResultName = ".rmdup";
+
+  my $result = {};
+  for my $sample_name ( keys %raw_files ) {
+    my $finalFile    = $sample_name . ".rmdup.split.recal${slim_str}${baq_str}.bam";
+    my $remove_files = [$finalFile];
+
+    if ( !$sorted ) {
+      my $presortedFile = $sample_name . ".sorted.bam";
+      push @$remove_files, $presortedFile;
+    }
+
+    push @$remove_files, $sample_name . ".rmdup.bam";
+
+    if ($replaceReadGroup) {
+      my $replacedFile = $sample_name . ".rmdup.rgreplaced.bam";
+      push @$remove_files, $replacedFile;
+    }
+
+    if ($reorderChromosome) {
+      my $reorderFile = $sample_name . ".rmdup.reorder.bam";
+      push @$remove_files, $reorderFile;
+    }
+
+    my $splitFile      = $sample_name . ".rmdup.split.bam";
+    my $recalTable     = $sample_name . ".rmdup.split.recal.table";
+    my $recalFile      = $sample_name . ".rmdup.split.recal.bam";
+    my $recalFileIndex = change_extension( $recalFile, ".bai" );
+
+    if ($slim) {
+      my $slimFile = $sample_name . ".rmdup.split.recal.slim.bam";
+      if ($use_self_slim_method) {
+        push @$remove_files, $recalFile;
+      }
+      push @$remove_files, $slimFile;
+    }
+
+    $result->{$sample_name} = $remove_files;
+  }
+  return $result;
 }
 
 sub result {

@@ -234,6 +234,66 @@ fi
   print " !!!shell file $shfile created, you can run this shell file to submit all GATK refine tasks. \n ";
 }
 
+sub get_clear_map {
+  my ( $self, $config, $section, $pattern ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  my %raw_files = %{ get_raw_files( $config, $section ) };
+
+  my $sorted           = get_option( $config, $section, "sorted",                   0 );
+  my $remove_duplicate = get_option( $config, $section, "remove_duplicate",         1 );
+  my $indelRealignment = get_option( $config, $section, "indel_realignment",        0 );
+  my $baq              = get_option( $config, $section, "samtools_baq_calibration", 0 );
+  my $mark_duplicate   = get_option( $config, $section, "mark_duplicate",           0 );
+
+  my $indelResultName = $indelRealignment ? ".indel" : "";
+  my $baqResultName   = $baq              ? ".baq"   : "";
+  my $rmdupResultName = "";
+  if ($remove_duplicate) {
+    $rmdupResultName = ".rmdup";
+  }
+  elsif ($mark_duplicate) {
+    $rmdupResultName = ".markdup";
+  }
+
+  my $result = {};
+  for my $sample_name ( keys %raw_files ) {
+    my $final_file = "${sample_name}${rmdupResultName}${indelResultName}.recal${baqResultName}.bam";
+
+    my $remove_files = [];
+
+    if ( !$sorted ) {
+      my $presortedFile = $sample_name . ".sorted.bam";
+      push @$remove_files, $presortedFile;
+    }
+
+    if ( $remove_duplicate or $mark_duplicate ) {
+      my $rmdupFile = $sample_name . $rmdupResultName . ".bam";
+      my $rmdupFileIndex = change_extension( $rmdupFile, ".bai" );
+      push @$remove_files, ( $rmdupFile, $rmdupFileIndex );
+    }
+
+    if ($indelRealignment) {
+      my $indelFile      = "${sample_name}${rmdupResultName}${indelResultName}.bam";
+      my $indelFileIndex = change_extension( $indelFile, ".bai" );
+      my $intervalFile   = "${sample_name}${rmdupResultName}${indelResultName}.intervals";
+      push @$remove_files, ( $indelFile, $indelFileIndex, $intervalFile );
+    }
+
+    my $recalTable     = "${sample_name}${rmdupResultName}${indelResultName}.recal.table";
+    my $recalFile      = "${sample_name}${rmdupResultName}${indelResultName}.recal.bam";
+    my $recalFileIndex = change_extension( $recalFile, ".bai" );
+
+    push @$remove_files, ( $recalTable, $recalFile, $recalFileIndex );
+    if ($baq) {
+      push @$remove_files, ( $final_file, change_extension( $final_file, ".bai" ) );
+    }
+
+    $result->{$sample_name} = $remove_files;
+  }
+  return $result;
+}
+
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
