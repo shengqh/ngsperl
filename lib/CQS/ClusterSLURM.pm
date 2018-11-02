@@ -10,20 +10,24 @@ our @ISA = qw(CQS::ClusterScript);
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
-  $self->{_name}   = __PACKAGE__;
+  $self->{_name} = __PACKAGE__;
   bless $self, $class;
   return $self;
 }
 
 sub get_cluster_desc {
   my $walltime = "48";
-  my $email    = "";
-  my $emailType    = "ALL";
   my $mem      = "15000M";
   my $nodes    = "1";
   my $ntasks   = "";
 
-  my ( $self, $pbsParamHashRef, $constraint, $account ) = @_;
+  my ( $self, $pbsParamHashRef, $config ) = @_;
+  my $generalOptions = $self->get_general_options($config);
+  my $email          = $generalOptions->{email};
+  my $emailType      = $generalOptions->{emailType};
+  my $constraint     = $generalOptions->{constraint};
+  my $account        = $generalOptions->{account};
+
   if ( defined $pbsParamHashRef ) {
     my %hash = %{$pbsParamHashRef};
     foreach ( keys %hash ) {
@@ -34,7 +38,7 @@ sub get_cluster_desc {
         $email = $hash{$_};
       }
       elsif ( $_ eq "emailType" ) {
-        if (defined $hash{$_}) {
+        if ( defined $hash{$_} ) {
           $emailType = $hash{$_};
         }
       }
@@ -84,10 +88,10 @@ sub get_cluster_desc {
 #SBATCH --time=$walltime
 #SBATCH --mem=$mem
 SBATCH
-  if (defined $constraint){
+  if ( defined $constraint ) {
     $pbs_desc = $pbs_desc . "#SBATCH --constraint=$constraint\n";
   }
-  if(defined $account){
+  if ( defined $account ) {
     $pbs_desc = $pbs_desc . "#SBATCH --account=$account\n";
   }
 

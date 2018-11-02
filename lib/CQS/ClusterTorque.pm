@@ -17,11 +17,13 @@ sub new {
 
 sub get_cluster_desc {
   my $walltime = "48";
-  my $email    = "";
   my $mem      = "15000mb";
   my $nodes    = "1";
 
-  my ($self, $pbsParamHashRef) = @_;
+  my ($self, $pbsParamHashRef, $config) = @_;
+  my $generalOptions = $self->get_general_options($config);
+  my $email = $generalOptions->{email};
+  
   if ( defined $pbsParamHashRef ) {
     my %hash = %{$pbsParamHashRef};
     foreach ( keys %hash ) {
