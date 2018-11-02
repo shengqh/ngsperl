@@ -41,8 +41,8 @@ sub perform {
 
   my $model_shard_path = get_raw_files( $config, $section, "model_shard_path" );
   my $model_args = get_rawfiles_option( $model_shard_path, "--model-shard-path" );
-  
-  my $parameters = get_parameter_options($config, $section, "--", "autosomal-ref-copy-number");
+
+  my $parameters = get_parameter_options( $config, $section, "--", ["autosomal-ref-copy-number"] );
 
   #make PBS
   my %raw_files = %{ get_raw_files( $config, $section ) };
@@ -55,8 +55,8 @@ sub perform {
   for my $i ( 0 .. $#sample_names ) {
     my $sample_name = $sample_names[$i];
 
-    my $sample_dir = create_directory_or_die($result_dir . "/" . $sample_name );
-    
+    my $sample_dir = create_directory_or_die( $result_dir . "/" . $sample_name );
+
     my $genotyped_intervals_vcf_filename = $sample_name . ".genotyped_intervals.vcf.gz";
     my $genotyped_segments_vcf_filename  = $sample_name . ".genotyped_segments.vcf.gz";
 
@@ -114,7 +114,7 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $sample_dir = create_directory_or_die($result_dir . "/" . $sample_name );
+    my $sample_dir                       = $result_dir . "/" . $sample_name;
     my $genotyped_intervals_vcf_filename = $sample_name . ".genotyped_intervals.vcf.gz";
     my $genotyped_segments_vcf_filename  = $sample_name . ".genotyped_segments.vcf.gz";
     $result->{$sample_name} = filter_array( [ "${sample_dir}/$genotyped_intervals_vcf_filename", "${sample_dir}/$genotyped_segments_vcf_filename" ], $pattern );

@@ -68,6 +68,13 @@ sub perform {
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh "  
+export HOME=$result_dir
+export PYTHONPATH=
+
+source activate gatk
+
+cd $result_dir
+
 gatk --java-options \"$java_option\" FilterIntervals \\
   -L ${intervals} $blacklist_intervals_option \\
   $inputOption \\
