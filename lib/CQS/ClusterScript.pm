@@ -72,6 +72,30 @@ sub get_cluster_memory {
   return ($result);
 }
 
+sub get_general_option {
+  my ($self, $config, $key, $default) = @_;
+  my $result = $config->{$key};
+  if ( ( !defined $result ) && ( defined $config->{general} ) ) {
+    $result = $config->{general}{$key};
+  }
+  
+  if (!defined $result){
+    $result = $default
+  }
+  
+  return($result)
+}
+
+sub get_general_options {
+  my ($self, $config) = @_;
+  my $result = {};
+  $result->{constraint} = $self->get_general_option($config, "constraint");
+  $result->{account} = $self->get_general_option($config, "account");
+  $result->{email} = $self->get_general_option($config, "email", "");
+  $result->{emailType} = $self->get_general_option($config, "emailType", "ALL");
+  return $result;
+}
+
 sub get_cluster_desc {
 }
 
