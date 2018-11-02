@@ -130,6 +130,8 @@ sub getRNASeqConfig {
   my $star_option     = $def->{star_option};
   my $count_table_ref = "files";
   
+  my $multiqc_depedents = $source_ref;
+  
   my $count_file_ref = $def->{count_file};
   if ( $def->{perform_mapping} && $def->{perform_counting} && ( $aligner eq "star" ) && $def->{perform_star_featurecount} ) {
     my $aligner_index   = $def->{star_index} or die "Define star_index at definition first";
@@ -180,6 +182,8 @@ sub getRNASeqConfig {
     push @$individual, ("star_featurecount");
     push @$summary,    ("star_summary");
     $config = merge( $config, $configAlignment );
+    
+    $multiqc_depedents = "star_featurecount";
   }
   else {
 
@@ -234,6 +238,7 @@ sub getRNASeqConfig {
 
         $source_ref = [ "star", "_Aligned.sortedByCoord.out.bam\$" ];
         push @$summary, ("star_summary");
+        $multiqc_depedents = "star";
       }
       else {
         $configAlignment = {
@@ -260,6 +265,7 @@ sub getRNASeqConfig {
 
       $config = merge( $config, $configAlignment );
       push @$individual, $aligner;
+      $multiqc_depedents = "hisat2";
     }
 
     if ( $def->{perform_counting} ) {
@@ -288,6 +294,7 @@ sub getRNASeqConfig {
 
       push @$individual, "featurecount";
       $count_table_ref = [ "featurecount", ".count\$" ];
+      $multiqc_depedents = "featurecount";
     }
   }
 
@@ -591,6 +598,8 @@ sub getRNASeqConfig {
         "mem"       => "40gb"
       },
     };
+    
+    $multiqc_depedents = "refine";
 
     $config->{refine_hc} = {
       class         => "GATK::HaplotypeCaller",
@@ -661,7 +670,7 @@ sub getRNASeqConfig {
   }
 
   if ( getValue( $def, "perform_multiqc" ) ) {
-    addMultiQC( $config, $def, $summary, $target_dir, $target_dir );
+    addMultiQC( $config, $def, $summary, $target_dir, $target_dir, $multiqc_depedents );
   }
 
   if ( getValue( $def, "perform_report" ) ) {
