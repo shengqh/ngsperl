@@ -65,7 +65,10 @@ sub getConfig {
   $def = initializeDefaultOptions($def);
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
-  my $step2 = [];
+  my $step3 = [];
+  my $step4 = [];
+  my $step5 = [];
+  my $step6 = [];
 
   my $email    = getValue( $def, "email" );
   my $cqstools = getValue( $def, "cqstools" );
@@ -100,8 +103,10 @@ sub getConfig {
   }
 
   push @$individual, ( $def->{aligner} );
+  
+  my $perform_cnv = $def->{perform_cnv_cnMOPs} ||$def->{perform_cnv_gatk4_cohort}; 
 
-  if ( $def->{perform_gatk_callvariants} || $def->{perform_muTect} || $def->{perform_muTect2_indel} || $def->{perform_cnv} ) {
+  if ( $def->{perform_gatk_callvariants} || $def->{perform_muTect} || $def->{perform_muTect2_indel} || $perform_cnv ) {
     my $gatk_jar   = getValue( $def, "gatk_jar" );
     my $picard_jar = getValue( $def, "picard_jar" );
 
@@ -337,7 +342,7 @@ sub getConfig {
       }
     }
 
-    if ( $def->{perform_cnv} ) {
+    if ( $def->{perform_cnv_cnMOPS} ) {
       my $cnmopsName = "${refine_name}_cnMOPS";
       $config->{$cnmopsName} = {
         class       => "CNV::cnMops",
@@ -356,6 +361,10 @@ sub getConfig {
         }
       };
       push @$summary, $cnmopsName;
+    }
+    
+    if ( $def->{perform_cnv_gatk4_cohort} ) {
+      addGATK4CNVGermlineCohortAnalysis($config, $def, $target_dir, [ $refine_name, ".bam\$" ], $individual, $summary, $step3, $step4, $step5, $step6);
     }
   }
 
@@ -382,6 +391,22 @@ sub getConfig {
       "mem"      => "40gb"
     },
   };
+  
+  if(scalar(@$step3) > 0){
+    $config->{"sequencetask"}{"source"}{step_3} = $step3;
+  }
+  
+  if(scalar(@$step4) > 0){
+    $config->{"sequencetask"}{"source"}{step_4} = $step4;
+  }
+  
+  if(scalar(@$step5) > 0){
+    $config->{"sequencetask"}{"source"}{step_5} = $step5;
+  }
+  
+  if(scalar(@$step6) > 0){
+    $config->{"sequencetask"}{"source"}{step_6} = $step6;
+  }
 
   return ($config);
 }
