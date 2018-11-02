@@ -44,7 +44,6 @@ sub perform {
     my @sample_files = @{ $raw_files{$sample_name} };
 
     my $sam_file = $sample_name . ".sam";
-    my $sam_filtered_file = $sample_name . ".filtered.sam";
     my $bam_file = $sample_name . ".bam";
     my $alignlog = $sample_name . ".log";
 
@@ -66,7 +65,7 @@ MAXIMUM_NUMBER_OF_NON_CONVERSION_MISMATCHES=5
 
 ADDITIONAL_NUCLEOTIDES_BEYOND_SIGNAL=5
 
-SAM_FILE=${result_dir}/$sam_filtered_file
+SAM_FILE=${result_dir}/$sam_file
 GENOME_2BIT_FILE=$genome2bit
 FIND_MIRNA_SEEDMATCHES=$mirna_db
 
@@ -83,7 +82,7 @@ OUTPUT_MIRNA_TARGETS_FILE=${sample_name}.target.csv
     my $indent = "";
     my $tag    = "--sam-RG ID:$sample_name --sam-RG LB:$sample_name --sam-RG SM:$sample_name --sam-RG PL:ILLUMINA --sam-RG PU:$sample_name";
 
-    my $cmd_file_exists = check_file_exists_command( \@sample_files, "  " );
+    my $cmd_file_exists = check_file_exists_command( \@sample_files, "" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -98,27 +97,22 @@ OUTPUT_MIRNA_TARGETS_FILE=${sample_name}.target.csv
     my $collapserFasta = $sample_name . ".collapser.fasta";
     my $fastqs         = join( ' ', @sample_files );
     my $cat            = ( $sample_files[0] =~ /.gz/ ) ? "zcat" : "cat";
-    print $pbs "if [[ ! -s $collapserFasta || 1 -eq \$1 ]]; then
+    print $pbs "
 $cmd_file_exists
-  $cat $fastqs | fastx_collapser -o $collapserFasta 
+$cat $fastqs | fastx_collapser -o $collapserFasta 
+
+if [[ -s $collapserFasta ]]; then
+  bowtie $option $m_option -S $tag -f $bowtie1_index $collapserFasta | samtools view -hSF4 > $sam_file
 fi
 
-if [[ (-s $collapserFasta && ! -s $sam_file) || 1 -eq \$1 ]]; then
-  bowtie $option $m_option -S $tag -f --no-unal $bowtie1_index $collapserFasta > $sam_file
-fi
-
-if [[ (-s $sam_file && ! -s $sam_filtered_file) || 1 -eq \$1 ]]; then
-  samtools view -hSF4 $sam_file >$sam_filtered_file
-fi
-
-if [[ -s $sam_filtered_file || 1 -eq \$1 ]]; then
+if [[ -s $sam_file ]]; then
   PARalyzer $memory $iniFile
 fi
 
-if [[ (-s $final_file && -s $sam_filtered_file && ! -s $bam_file) || 1 -eq \$1 ]]; then
-  samtools sort -@ $thread -T ${sample_name}_tmp -o $bam_file $sam_filtered_file
+if [[ -s $final_file && -s $sam_file ]]; then
+  samtools sort -@ $thread -T ${sample_name}_tmp -o $bam_file $sam_file
   if [ -s $bam_file ]; then
-    rm $collapserFasta $sam_file $sam_filtered_file
+    rm $collapserFasta $sam_file 
     samtools index $bam_file 
   fi
 fi
