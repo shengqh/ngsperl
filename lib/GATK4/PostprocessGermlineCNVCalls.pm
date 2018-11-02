@@ -114,9 +114,10 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
+    my $sample_dir = create_directory_or_die($result_dir . "/" . $sample_name );
     my $genotyped_intervals_vcf_filename = $sample_name . ".genotyped_intervals.vcf.gz";
     my $genotyped_segments_vcf_filename  = $sample_name . ".genotyped_segments.vcf.gz";
-    my $result->{$sample_name} = filter_array( [ "${result_dir}/$genotyped_intervals_vcf_filename", "${result_dir}/$genotyped_segments_vcf_filename" ], $pattern );
+    $result->{$sample_name} = filter_array( [ "${sample_dir}/$genotyped_intervals_vcf_filename", "${sample_dir}/$genotyped_segments_vcf_filename" ], $pattern );
   }
 
   return $result;
