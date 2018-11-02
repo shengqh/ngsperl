@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Format::Vcf2Maf;
+package Annotation::Vcf2Maf;
 
 use strict;
 use warnings;
