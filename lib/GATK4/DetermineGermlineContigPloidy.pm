@@ -39,7 +39,7 @@ sub perform {
 
   my $parameters = get_parameter_options( $config, $section, "--", [ "mean-bias-standard-deviation", "mapping-error-rate", "global-psi-scale", "sample-psi-scale" ] );
 
-  my $final_file = "${task_name}-contig-ploidy-calls.tar.gz";
+  my $final_file = "${task_name}-calls";
   my $raw_files = get_raw_files( $config, $section );
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
