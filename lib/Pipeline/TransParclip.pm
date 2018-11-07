@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Pipeline::ParclipSmallRNA;
+package Pipeline::TransParclip;
 
 use strict;
 use warnings;
@@ -15,13 +15,13 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(getParclipSmallRNAConfig performParclipSmallRNA performParclipSmallRNATask)] );
+our %EXPORT_TAGS = ( 'all' => [qw(getTransParclipConfig performTransParclip performTransParclipTask)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
-sub getParclipSmallRNAConfig {
+sub getTransParclipConfig {
   my ($def) = @_;
 
   my ( $config, $individual_ref, $summary_ref, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir, $identical_ref ) = getPrepareConfig( $def, 1 );
@@ -338,13 +338,13 @@ sub getParclipSmallRNAConfig {
   return ($config);
 }
 
-sub performParclipSmallRNA {
+sub performTransParclip {
   my ( $def, $perform ) = @_;
   if ( !defined $perform ) {
     $perform = 1;
   }
 
-  my $config = getParclipSmallRNAConfig($def);
+  my $config = getTransParclipConfig($def);
 
   if ($perform) {
     saveConfig( $def, $config );
@@ -355,10 +355,10 @@ sub performParclipSmallRNA {
   return $config;
 }
 
-sub performParclipSmallRNATask {
+sub performTransParclipTask {
   my ( $def, $task ) = @_;
 
-  my $config = getParclipSmallRNAConfig($def);
+  my $config = getTransParclipConfig($def);
 
   performTask( $config, $task );
 
