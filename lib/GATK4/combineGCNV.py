@@ -12,13 +12,16 @@ parser = argparse.ArgumentParser(description="Combine gCNV from GATK4 cohort pip
 
 parser.add_argument('-i', '--input', action='store', nargs='?', help='Input gCNV files', required=NotDEBUG)
 parser.add_argument('-o', '--output', action='store', nargs='?', help="Output file name", required=NotDEBUG)
+parser.add_argument('-b', '--bedfile', action='store', nargs='?', help="Interval file in bed format", required=NotDEBUG)
 parser.add_argument('-s', '--minimumScoreDifference', action='store', nargs='?', help="The minimum phred-scaled log posterior score difference between CNV event and normal event", default=30)
+parser.add_argument('-f', '--minimumDuplicationFold', action='store', nargs='?', help="The minimum copy number fold change as duplication", default=2)
 
 args = parser.parse_args()
 
 if DEBUG:
   args.input = "T:/Shared/Labs/Linton Lab/20180913_linton_exomeseq_2118_human_cutadapt/GATK4_CNV_Germline_CombineGCNV/result/linton_exomeseq_2118__fileList1.list"
   args.output = "T:/Shared/Labs/Linton Lab/20180913_linton_exomeseq_2118_human_cutadapt/GATK4_CNV_Germline_CombineGCNV/result/linton_exomeseq_2118.tsv"
+  args.bedfile = "T:/Shared/Labs/Linton Lab/20180913_linton_exomeseq_2118_human_cutadapt/xgen-exome-research-panel-targetsae255a1532796e2eaa53ff00001c1b3c.nochr.bed"
 
 logger = logging.getLogger('combineGCNV')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
@@ -51,7 +54,7 @@ for name, file in fileMap.iteritems():
   #  break
   
 annotationMap = {}
-with open("T:/Shared/Labs/Linton Lab/20180913_linton_exomeseq_2118_human_cutadapt/xgen-exome-research-panel-targetsae255a1532796e2eaa53ff00001c1b3c.nochr.bed", "r") as fin:
+with open(args.bedfile, "r") as fin:
   for line in fin:
     parts = line.split('\t')
     if not parts[0] in annotationMap:
@@ -84,9 +87,13 @@ with open(args.output, "w") as fout:
         expectScore = int(scores[expectCN])
         diffScore = expectScore - cnScore
         if cn > expectCN:
+          if cn < expectCN * args.minimumDuplicationFold:
+            values.append("")
+            continue
           cnType = "DUP"
         else:
           cnType = "DEL"
+        
         if expectScore - cnScore < args.minimumScoreDifference:
           values.append("")
         else:
