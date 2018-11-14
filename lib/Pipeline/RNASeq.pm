@@ -41,8 +41,12 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_call_variants", 0 );
   initDefaultValue( $def, "perform_multiqc",       1 );
   initDefaultValue( $def, "perform_webgestalt",    0 );
-  initDefaultValue( $def, "perform_gsea",          0 );
   initDefaultValue( $def, "perform_report",        1 );
+  
+  initDefaultValue( $def, "perform_gsea",          0 );
+#$def->{gsea_jar}        or die "Define gsea_jar at definition first";
+#$def->{gsea_db}         or die "Define gsea_db at definition first";
+#$def->{gsea_categories}
 
   initDefaultValue( $def, "perform_cutadapt", 0 );
 
@@ -433,7 +437,7 @@ sub getRNASeqConfig {
     }
 
     if ( $def->{perform_keggprofile} ) {
-      my $keggprofile_useRawPValue = $def->{keggprofile_useRawPValue} or die "Define keggprofile_useRawPValue at definition first";
+      my $keggprofile_useRawPValue = defined($def->{keggprofile_useRawPValue}) or die "Define keggprofile_useRawPValue at definition first";
       $config->{keggprofile} = {
         class                    => "CQS::UniqueR",
         perform                  => 1,
