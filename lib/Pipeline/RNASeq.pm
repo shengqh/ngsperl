@@ -64,8 +64,10 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "perform_keggprofile",      0 );
   initDefaultValue( $def, "keggprofile_useRawPValue", 0 );
+  initDefaultValue( $def, "keggprofile_species", "hsa" );
+  initDefaultValue( $def, "keggprofile_pCut", 0.1 );
+  
   initDefaultValue( $def, "pairend",                  1 );
-
   initDefaultValue( $def, "DE_pvalue",                       0.05 );
   initDefaultValue( $def, "DE_use_raw_pvalue",               0 );
   initDefaultValue( $def, "DE_fold_change",                  2 );
@@ -438,6 +440,18 @@ sub getRNASeqConfig {
 
     if ( $def->{perform_keggprofile} ) {
       my $keggprofile_useRawPValue = defined($def->{keggprofile_useRawPValue}) or die "Define keggprofile_useRawPValue at definition first";
+      my $keggprofile_species;
+      if (defined($def->{keggprofile_species})) {
+        $keggprofile_species = $def->{keggprofile_species}
+      } else {
+        die "Define keggprofile_species at definition first";
+      }
+      my $keggprofile_pCut;
+      if (defined($def->{keggprofile_pCut})) {
+        $keggprofile_species = $def->{keggprofile_pCut}
+      } else {
+        die "Define keggprofile_pCut at definition first";
+      }
       $config->{keggprofile} = {
         class                    => "CQS::UniqueR",
         perform                  => 1,
@@ -447,7 +461,7 @@ sub getRNASeqConfig {
         output_file_ext          => ".KEGG.csv",
         parameterSampleFile1_ref => [ $deseq2taskname, "_DESeq2.csv\$" ],
         sh_direct                => 1,
-        rCode                    => "useRawPValue='" . $keggprofile_useRawPValue . "';",
+        rCode                    => "useRawPValue='" . $keggprofile_useRawPValue . "';species='".$keggprofile_species."';pCut=".$keggprofile_pCut.";",
         pbs                      => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
