@@ -199,7 +199,8 @@ for (i in 1:nrow(deseq2ResultFileTable)) {
 	keggOutFileName<-paste0(basename(deseq2ResultTable),".KEGG")
 	
 	resultTable<-read.csv(deseq2ResultTable,header=T,as.is=T,row.names=1)
-		
+	row.names(resultTable)=gsub("\\.\\d+$","",row.names(resultTable))
+	
 #change gene expression
 #To remove outlier. For not significant genes, change their fold change to less than 1.5.
 	temp<-resultTable[,c("log2FoldChange"),drop=FALSE]
@@ -227,7 +228,7 @@ for (i in 1:nrow(deseq2ResultFileTable)) {
 #dim(KEGGresult1[[1]])
 	
 	genes<-row.names(resultTable)[which(resultTable[,pValueCol]<=pCut)]
-	genesEnz<-convertIdOneToOne(genes,filters="ensembl_gene_id")
+	genesEnz<-convertIdOneToOne(genes,filters="ensembl_gene_id",dataset=dataset)
 	genesEnz<-na.omit(genesEnz)
 	keggSigGeneEnrichedPathway<-find_enriched_pathway(genesEnz,species=species,returned_genenumber = 1,returned_pvalue=1,returned_adjpvalue = 1)
 	
