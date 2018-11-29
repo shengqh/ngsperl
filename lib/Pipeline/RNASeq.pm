@@ -215,7 +215,7 @@ sub getRNASeqConfig {
               "email"     => $email,
               "emailType" => $def->{emailType},
               "nodes"     => "1:ppn=" . $def->{max_thread},
-              "walltime"  => "72",
+              "walltime"  => "24",
               "mem"       => "40gb"
             },
           },
@@ -230,8 +230,8 @@ sub getRNASeqConfig {
               "email"     => $email,
               "emailType" => $def->{emailType},
               "nodes"     => "1:ppn=1",
-              "walltime"  => "72",
-              "mem"       => "40gb"
+              "walltime"  => "2",
+              "mem"       => "10gb"
             },
           }
         };
@@ -255,7 +255,7 @@ sub getRNASeqConfig {
               "email"     => $email,
               "emailType" => $def->{emailType},
               "nodes"     => "1:ppn=" . $def->{max_thread},
-              "walltime"  => "72",
+              "walltime"  => "24",
               "mem"       => "40gb"
             },
           },
@@ -287,7 +287,7 @@ sub getRNASeqConfig {
           "email"     => $email,
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
-          "walltime"  => "72",
+          "walltime"  => "24",
           "mem"       => "40gb"
         },
       };
@@ -317,7 +317,7 @@ sub getRNASeqConfig {
         "email"     => $email,
         "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
-        "walltime"  => "10",
+        "walltime"  => "24",
         "mem"       => "10gb"
       },
     };
@@ -354,7 +354,7 @@ sub getRNASeqConfig {
         "email"     => $email,
         "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
-        "walltime"  => "1",
+        "walltime"  => "24",
         "mem"       => "20gb"
       },
     };
@@ -394,7 +394,7 @@ sub getRNASeqConfig {
           "email"     => $email,
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
-          "walltime"  => "72",
+          "walltime"  => "24",
           "mem"       => "10gb"
         },
       };
@@ -425,7 +425,7 @@ sub getRNASeqConfig {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
+          "walltime"  => "24",
           "mem"       => "10gb"
         },
       };
@@ -448,7 +448,7 @@ sub getRNASeqConfig {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
+          "walltime"  => "24",
           "mem"       => "10gb"
         },
       };
@@ -537,7 +537,7 @@ sub getRNASeqConfig {
           "email"     => $email,
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
+          "walltime"  => "24",
           "mem"       => "10gb"
         },
       };
@@ -561,7 +561,7 @@ sub getRNASeqConfig {
           "email"     => $email,
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
+          "walltime"  => "24",
           "mem"       => "10gb"
         },
       };
@@ -660,7 +660,7 @@ sub getRNASeqConfig {
         "email"     => $email,
         "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
-        "walltime"  => "2",
+        "walltime"  => "24",
         "mem"       => "10gb"
       },
     };
