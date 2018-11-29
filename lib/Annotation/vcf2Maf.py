@@ -36,6 +36,9 @@ with open(args.input, "r") as fin:
   version = fin.readline()
   mafheaders = fin.readline().split("\t")
   Tumor_Sample_Barcode_index = mafheaders.index("Tumor_Sample_Barcode")
+  Reference_Allele_index = mafheaders.index("Reference_Allele")
+  Tumor_Seq_Allele1_index = mafheaders.index("Tumor_Seq_Allele1")
+  Tumor_Seq_Allele2_index = mafheaders.index("Tumor_Seq_Allele2")
   t_depth_index = mafheaders.index("t_depth")
   t_ref_count_index = mafheaders.index("t_ref_count")
   t_alt_count_index = mafheaders.index("t_alt_count")
@@ -52,11 +55,37 @@ else:
       for sample_idx in range(sample_index, len(vcfheaders)):
         sample_name = vcfheaders[sample_idx]
         sample_data = vcfitem[sample_idx]
+
         if "./.:" in sample_data:
           continue
         if "0/0:" in sample_data:
           continue
+
         parts = sample_data.split(":")
+        #print(parts)
+
+        if "0/1:" in sample_data:
+          gt = 1
+        elif "1/1:" in sample_data:
+          gt = 2
+        else:
+          pl = parts[len(parts)-1].split(",")
+          #print(pl)
+          gt0 = int(pl[0])
+          gt1 = int(pl[1])
+          gt2 = int(pl[2])
+          if gt0 < gt1 and gt0 < gt2:
+            continue
+          if gt1 < gt2:
+            gt = 1
+          else:
+            gt = 2
+
+        if gt == 1:
+          mafitem[Tumor_Seq_Allele1_index] = mafitem[Reference_Allele_index]
+        else:
+          mafitem[Tumor_Seq_Allele1_index] = mafitem[Tumor_Seq_Allele2_index]
+
         alleles = parts[1].split(",")
         mafitem[Tumor_Sample_Barcode_index] = sample_name
         mafitem[t_depth_index] = parts[2]

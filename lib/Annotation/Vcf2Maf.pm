@@ -56,7 +56,7 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    my $tmp_file = basename($vcf_file) . ".maf.tmp";
+    my $annotation_file = basename($vcf_file) . ".annotation";
     my $final_file = basename($vcf_file) . ".maf.txt";
     my $log_desc = $cluster->get_log_description($log);
 
@@ -64,14 +64,10 @@ sub perform {
 
     print $pbs "
 if [[ ! -s $final_file ]]; then
-  perl $vcf2mgf --vep-forks $thread --input-vcf $vcf_file --output-maf $tmp_file --vep-path $vep_path --vep-data $vep_data --species $species --ncbi-build $ncbi_build --ref-fasta $ref_fasta $filter_vcf
+  perl $vcf2mgf --vep-forks $thread --input-vcf $vcf_file --output-maf $annotation_file --vep-path $vep_path --vep-data $vep_data --species $species --ncbi-build $ncbi_build --ref-fasta $ref_fasta $filter_vcf
   
-  if [[ -s $tmp_file ]]; then
-    python $script -i $tmp_file -v $vcf_file -o $final_file
-    
-    if [[ -s $final_file ]]; then
-      rm $tmp_file
-    fi 
+  if [[ -s $annotation_file ]]; then
+    python $script -i $annotation_file -v $vcf_file -o $final_file
   fi
 fi
 ";
@@ -92,10 +88,11 @@ sub result {
   for my $sample_name ( keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $vcf_file     = $sample_files[0];
+    my $annotation_file = basename($vcf_file) . ".annotation";
     my $final_file = basename($vcf_file) . ".maf.txt";
 
     my @result_files = ();
-    push( @result_files, $result_dir . "/" . $final_file );
+    push( @result_files, ($result_dir . "/" . $final_file, $result_dir . "/" . $annotation_file) );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
