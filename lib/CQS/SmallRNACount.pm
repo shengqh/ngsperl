@@ -41,11 +41,6 @@ sub perform {
     $option = $option . " -f $fastaFile";
   }
 
-  my $ccaFile = parse_param_file( $config, $section, "cca_file", 0 );
-  if ( defined $ccaFile ) {
-    $option = $option . " --ccaFile $ccaFile";
-  }
-
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my %seqcount_files = ();
@@ -63,7 +58,10 @@ sub perform {
     %fastqFiles = %{ get_raw_files( $config, $section, "fastq_files" ) };
   }
 
-  my $newMethod = ( $option =~ /-e 4/ ) ? "" : "--newMethod";
+  my %ccaFile = ();
+  if ( has_raw_files( $config, $section, "cca_files" ) ) {
+    %ccaFile = %{ get_raw_files( $config, $section, "cca_files" ) };
+  }
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -96,6 +94,13 @@ sub perform {
       $exclude = " --excludeXml $file";
     }
 
+    my $cca = "";
+    if ( defined $ccaFile{$sample_name} ) {
+      my @files = @{ $ccaFile{$sample_name} };
+      my $file  = $files[0];
+      $cca = " --ccaFile $file";
+    }
+
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -107,7 +112,7 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_xml_file );
-    print $pbs "mono $cqstools smallrna_count $newMethod $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile $exclude -o $final_file
+    print $pbs "mono $cqstools smallrna_count $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile $exclude $cca -o $final_file
 ";
     if ( $option !~ /noCategory/ ) {
       print $pbs "
