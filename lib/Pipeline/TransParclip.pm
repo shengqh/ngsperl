@@ -24,6 +24,9 @@ our $VERSION = '0.01';
 sub getTransParclipConfig {
   my ($def) = @_;
 
+  initDefaultValue( $def, "gsnap_option", '-y 0 -z 0 -Y 0 -Z 0 -m 1 -Q --max-anchors 1 --use-shared-memory 0 --nofails --trim-mismatch-score 0 --trim-indel-score 0 --mode ttoc-nonstranded --gunzip' );
+  initDefaultValue( $def, "gsnap_smallRNA_count_option",        '-s -e 4 --ignoreNTAAndNoPenaltyMutation ' );
+
   my ( $config, $individual_ref, $summary_ref, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir, $identical_ref ) = getPrepareConfig( $def, 1 );
   my @individual = @{$individual_ref};
   my @summary    = @{$summary_ref};
@@ -36,7 +39,7 @@ sub getTransParclipConfig {
       $def->{tRNA_vis_group} = $groups;
     }
   }
-
+  
   my $t2c_dir = create_directory_or_die( $def->{target_dir} . "/t2c" );
 
   my $gsnap = {
@@ -44,7 +47,7 @@ sub getTransParclipConfig {
       class                 => 'Alignment::Gsnap',
       perform               => 1,
       target_dir            => $t2c_dir . '/gsnap',
-      option                => '-y 0 -z 0 -Y 0 -Z 0 -m 1 -Q --nofails --trim-mismatch-score 0 --trim-indel-score 0 --mode ttoc-nonstranded --gunzip',
+      option                => $def->{"gsnap_option"},
       gsnap_index_directory => $def->{gsnap_index_directory},
       gsnap_index_name      => $def->{gsnap_index_name},
       source_ref            => $identical_ref,
@@ -61,7 +64,7 @@ sub getTransParclipConfig {
       class           => 'CQS::SmallRNACount',
       perform         => 1,
       target_dir      => $t2c_dir . '/gsnap_smallRNA_count',
-      option          => '-s -e 4',
+          option          => $def->{"gsnap_smallRNA_count_option"},
       source_ref      => 'gsnap',
       seqcount_ref    => [ 'identical', '.dupcount$' ],
       coordinate_file => $def->{coordinate},
@@ -161,6 +164,10 @@ sub getTransParclipConfig {
       },
     },
   };
+    
+  if ( defined $config->{identical_check_cca} ) {
+    $gsnap->{gsnap_smallRNA_count}{cca_files_ref} = ["identical_check_cca"];
+  }
 
   push @individual, ( 'gsnap', 'gsnap_smallRNA_count', 'gsnap_smallRNA_t2c' );
   push @summary, ( 'gsnap_smallRNA_table', 'gsnap_smallRNA_info', 'gsnap_smallRNA_category', 'gsnap_smallRNA_t2c_summary' );
