@@ -28,6 +28,8 @@ sub getParclipSmallRNANormalConfig {
   initDefaultValue( $def, "search_3utr",                     1 );
   initDefaultValue( $def, "exclude_smallrna_reads_for_3utr", 1 );
   initDefaultValue( $def, "gsnap_option", '-y 0 -z 0 -Y 0 -Z 0 -m 1 -Q --max-anchors 1 --use-shared-memory 0 --nofails --trim-mismatch-score 0 --trim-indel-score 0 --mode ttoc-nonstranded --gunzip' );
+  initDefaultValue( $def, "gsnap_smallRNA_count_option",        '-s -e 4 --ignoreNTAAndNoPenaltyMutation ' );
+  initDefaultValue( $def, "gsnap_3utr_count_option",            '-s -e 4 --noCategory --ignoreNTAAndNoPenaltyMutation ' );
   initDefaultValue( $def, "perform_class_independent_analysis", 0 );
   initDefaultValue( $def, "paralyzer_bowtie1_option",           "-v 2 -m 10 --best --strata" );
   initDefaultValue( $def, "output_to_same_folder",              1 );
@@ -89,7 +91,7 @@ sub getParclipSmallRNANormalConfig {
           class           => 'CQS::SmallRNACount',
           perform         => 1,
           target_dir      => $t2c_dir . '/gsnap_smallRNA_count',
-          option          => '-s -e 4',
+          option          => $def->{"gsnap_smallRNA_count_option"},
           source_ref      => 'gsnap',
           seqcount_ref    => [ 'identical', '.dupcount$' ],
           coordinate_file => $coor,
@@ -190,6 +192,10 @@ sub getParclipSmallRNANormalConfig {
         },
       }
     );
+    
+    if ( defined $config->{identical_check_cca} ) {
+      $gsnap->{gsnap_smallRNA_count}{cca_files_ref} = ["identical_check_cca"];
+    }
 
     push @individual, ( 'gsnap_smallRNA_count', 'gsnap_smallRNA_t2c' );
     push @summary, ( 'gsnap_smallRNA_table', 'gsnap_smallRNA_info', 'gsnap_smallRNA_category', 'gsnap_smallRNA_t2c_summary' );
@@ -236,7 +242,7 @@ sub getParclipSmallRNANormalConfig {
         class           => 'CQS::SmallRNACount',
         perform         => 1,
         target_dir      => $t2c_dir . '/gsnap_3utr_count',
-        option          => '-s -e 4 --noCategory',
+        option          => $def->{gsnap_3utr_count_option},
         source_ref      => 'gsnap',
         seqcount_ref    => [ 'identical', '.dupcount$' ],
         exclude_xml_ref => $exclude_ref,
