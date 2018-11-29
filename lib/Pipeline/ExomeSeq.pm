@@ -24,7 +24,7 @@ our $VERSION = '0.01';
 sub initializeDefaultOptions {
   my $def = shift;
   initDefaultValue( $def, "max_thread", 8 );
-  initDefaultValue( $def, "subdir", 0 );
+  initDefaultValue( $def, "subdir",     0 );
 
   initDefaultValue( $def, "sra_to_fastq", 0 );
 
@@ -70,9 +70,9 @@ sub getConfig {
   my $step5 = [];
   my $step6 = [];
 
-  my $email    = getValue( $def, "email" );
-  my $cqstools = getValue( $def, "cqstools" );
-  my $max_thread = getValue($def, "max_thread");
+  my $email      = getValue( $def, "email" );
+  my $cqstools   = getValue( $def, "cqstools" );
+  my $max_thread = getValue( $def, "max_thread" );
 
   my $bam_ref;
   my $fasta;
@@ -103,11 +103,11 @@ sub getConfig {
   }
 
   push @$individual, ( $def->{aligner} );
-  
-  my $perform_cnv = $def->{perform_cnv_cnMOPs} ||$def->{perform_cnv_gatk4_cohort}; 
+
+  my $perform_cnv = $def->{perform_cnv_cnMOPs} || $def->{perform_cnv_gatk4_cohort};
 
   if ( $def->{perform_gatk_callvariants} || $def->{perform_muTect} || $def->{perform_muTect2_indel} || $perform_cnv ) {
-    my $gatk_jar   = getValue( $def, "gatk_jar" );
+    my $gatk_jar   = getValue( $def, "gatk3_jar" );
     my $picard_jar = getValue( $def, "picard_jar" );
 
     my $dbsnp = $def->{dbsnp};
@@ -255,23 +255,23 @@ sub getConfig {
         }
       }
 
-      if ( $def->{perform_vep} ){
+      if ( $def->{perform_vep} ) {
         my $vep_name = $filter_name . "_vep";
         $config->{$vep_name} = {
-          class       => "Annotation::Vcf2Maf",
-          perform     => 1,
-          target_dir  => "${target_dir}/$vep_name",
-          option      => "",
-          source_ref  => [ $filter_name, ".vcf" ],
-          vcf2maf_pl => getValue($def, "vcf2maf_pl"),
-          vep_path => getValue($def, "vep_path"),
-          vep_data => getValue($def, "vep_data"),
-          species  => getValue($def, "species"),
-          ncbi_build => getValue($def, "ncbi_build"),
-          filter_vcf => getValue($def, "vep_filter_vcf"),
+          class      => "Annotation::Vcf2Maf",
+          perform    => 1,
+          target_dir => "${target_dir}/$vep_name",
+          option     => "",
+          source_ref => [ $filter_name, ".vcf" ],
+          vcf2maf_pl => getValue( $def, "vcf2maf_pl" ),
+          vep_path   => getValue( $def, "vep_path" ),
+          vep_data   => getValue( $def, "vep_data" ),
+          species    => getValue( $def, "species" ),
+          ncbi_build => getValue( $def, "ncbi_build" ),
+          filter_vcf => $def->{"vep_filter_vcf"},
           ref_fasta  => $fasta,
-          sh_direct   => 1,
-          pbs         => {
+          sh_direct  => 1,
+          pbs        => {
             "email"    => $email,
             "nodes"    => "1:ppn=" . $max_thread,
             "walltime" => "72",
@@ -362,9 +362,13 @@ sub getConfig {
       };
       push @$summary, $cnmopsName;
     }
-    
+
     if ( $def->{perform_cnv_gatk4_cohort} ) {
-      addGATK4CNVGermlineCohortAnalysis($config, $def, $target_dir, [ $refine_name, ".bam\$" ], $individual, $summary, $step3, $step4, $step5, $step6);
+      addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, [ $refine_name, ".bam\$" ], $individual, $summary, $step3, $step4, $step5, $step6 );
+    }
+    
+    if ( $def->{perform_cnv_xhmm} ) {
+      addXHMM( $config, $def, $target_dir, [ $refine_name, ".bam\$" ], $individual, $summary, $step3, $step4, $step5, $step6 );
     }
   }
 
@@ -391,20 +395,20 @@ sub getConfig {
       "mem"      => "40gb"
     },
   };
-  
-  if(scalar(@$step3) > 0){
+
+  if ( scalar(@$step3) > 0 ) {
     $config->{"sequencetask"}{"source"}{step_3} = $step3;
   }
-  
-  if(scalar(@$step4) > 0){
+
+  if ( scalar(@$step4) > 0 ) {
     $config->{"sequencetask"}{"source"}{step_4} = $step4;
   }
-  
-  if(scalar(@$step5) > 0){
+
+  if ( scalar(@$step5) > 0 ) {
     $config->{"sequencetask"}{"source"}{step_5} = $step5;
   }
-  
-  if(scalar(@$step6) > 0){
+
+  if ( scalar(@$step6) > 0 ) {
     $config->{"sequencetask"}{"source"}{step_6} = $step6;
   }
 
