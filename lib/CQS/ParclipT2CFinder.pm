@@ -32,6 +32,11 @@ sub perform {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
+  my $py_script = dirname(__FILE__) . "/../SmallRNA/extractT2CReads.py";
+  if ( !-e $py_script ) {
+    die "File not found : " . $py_script;
+  }
+
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct) . "\n";
@@ -50,7 +55,12 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $t2cFile );
-    print $pbs "mono $cqstools parclip_t2c $option -i $xmlFile -o $t2cFile";
+    print $pbs "mono $cqstools parclip_t2c $option -i $xmlFile -o $t2cFile 
+    
+if [[ -s $t2cFile ]]; then
+  python $py_script -i ${t2cFile}.xml -c $xmlFile -o ${t2cFile}.xml.txt
+fi
+";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
