@@ -12,9 +12,9 @@ deseq2ResultFileTable=read.delim(deseq2ResultFileTable,header=F,as.is=T)
 #parameters
 ###############################
 #deseq2ResultTable="/scratch/cqs/zhaos/projects/20171117_BrownRnaSeq/pipeline/deseq2_genetable/result/GroupA_VS_GroupB_DESeq2.csv"
-species='hsa'
-useRawPValue=1
-pCut=0.1
+#species='hsa'
+#useRawPValue=1
+#pCut=0.1
 
 #pCutPathway=pCut
 pCutPathway=0.01
@@ -199,7 +199,8 @@ for (i in 1:nrow(deseq2ResultFileTable)) {
 	keggOutFileName<-paste0(basename(deseq2ResultTable),".KEGG")
 	
 	resultTable<-read.csv(deseq2ResultTable,header=T,as.is=T,row.names=1)
-		
+	row.names(resultTable)=gsub("\\.\\d+$","",row.names(resultTable))
+	
 #change gene expression
 #To remove outlier. For not significant genes, change their fold change to less than 1.5.
 	temp<-resultTable[,c("log2FoldChange"),drop=FALSE]
@@ -211,14 +212,23 @@ for (i in 1:nrow(deseq2ResultFileTable)) {
 		}
 	}
 #	head(temp)
-	resultTableFcToGene<-convertId(temp,filters="ensembl_gene_id")
+	if (species=="hsa") {
+		dataset="hsapiens_gene_ensembl"
+	} else if (species=="mmu") {
+		dataset="mmusculus_gene_ensembl"
+	} else if (species=="rno") {
+		dataset="rnorvegicus_gene_ensembl"
+	} else {
+		stop(paste0("species only supports hsa, mmu, or rno at this time."))
+	}
+	resultTableFcToGene<-convertId(temp,filters="ensembl_gene_id",dataset=dataset)
 	geneExpr<-resultTableFcToGene[,1]
 	names(geneExpr)<-row.names(resultTableFcToGene)
 	keggEnrichedPathway<-find_enriched_pathway(names(geneExpr),species=species,returned_genenumber = 5,returned_pvalue=1,returned_adjpvalue = 1)
 #dim(KEGGresult1[[1]])
 	
 	genes<-row.names(resultTable)[which(resultTable[,pValueCol]<=pCut)]
-	genesEnz<-convertIdOneToOne(genes,filters="ensembl_gene_id")
+	genesEnz<-convertIdOneToOne(genes,filters="ensembl_gene_id",dataset=dataset)
 	genesEnz<-na.omit(genesEnz)
 	keggSigGeneEnrichedPathway<-find_enriched_pathway(genesEnz,species=species,returned_genenumber = 1,returned_pvalue=1,returned_adjpvalue = 1)
 	

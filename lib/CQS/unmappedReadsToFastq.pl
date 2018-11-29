@@ -23,7 +23,7 @@ if($DEBUG){
 }
 
 die "no identical fastq file: " . $identicalFastqFile if ! -e $identicalFastqFile;
-die "no smallRNA reads file:" . $smallRNAreadsFile if ! -e $smallRNAreadsFile;
+#die "no smallRNA reads file:" . $smallRNAreadsFile if ! -e $smallRNAreadsFile;
 
 sub getDupcountFile {
   my $result = shift;

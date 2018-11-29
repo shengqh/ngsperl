@@ -63,7 +63,7 @@ sub result {
   push( @result_files, "${result_dir}/${task_name}.FastQC.summary.tsv" );
   push( @result_files, "${result_dir}/${task_name}.FastQC.summary.reads.tsv" );
   push( @result_files, "${result_dir}/${task_name}.FastQC.summary.overrepresented.tsv" );
-  push( @result_files, "${result_dir}/${task_name}.FastQC.pdf" );
+#  push( @result_files, "${result_dir}/${task_name}.FastQC.pdf" );
   $result->{$task_name} = filter_array( \@result_files, $pattern );
   return $result;
 }
