@@ -359,6 +359,10 @@ sub getSmallRNAConfig {
         },
       },
     };
+    if ( defined $config->{identical_check_cca} ) {
+      $host_genome->{bowtie1_genome_1mm_NTA_smallRNA_count}{cca_files_ref} = ["identical_check_cca"];
+    }
+    
     push @$individual_ref, ("bowtie1_genome_1mm_NTA_smallRNA_count");
 
     my $countTask = "bowtie1_genome_1mm_NTA_smallRNA_count";
@@ -477,6 +481,31 @@ sub getSmallRNAConfig {
         },
       }
     );
+
+    if ( $def->{perform_host_tRNA_start_position} ) {
+      my $tTask = "host_genome_tRNA_start_position_vis";
+      $host_genome->{$tTask} = {
+        class                    => "CQS::ProgramWrapper",
+        perform                  => 1,
+        target_dir               => $data_visualization_dir . "/$tTask",
+        option                   => "",
+        interpretor              => "python",
+        program                  => "../SmallRNA/tRNAHostStartPosition.py",
+        parameterSampleFile1_arg => "-i",
+        parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
+        output_arg               => "-o",
+        output_ext               => ".tRNA_startPosition.tsv",
+        sh_direct                => 1,
+        pbs                      => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary_ref, $tTask;
+    }
 
     if ( ( not $perform_host_tRH_analysis ) and getValue( $def, "perform_host_rRNA_coverage" ) ) {
       my $visualizationTask = "host_genome_rRNA_position_vis";
@@ -927,9 +956,9 @@ sub getSmallRNAConfig {
 
       push @length_dist_names, ( "miRNA", "tDR", "rDR" );
       push @length_dist_count, (
-        "bowtie1_genome_1mm_NTA_smallRNA_table",    ".miRNA.read.count\$",
-        "bowtie1_genome_1mm_NTA_smallRNA_table",    ".tRNA.read.count\$",
-        "bowtie1_genome_1mm_NTA_smallRNA_table",    ".rRNA.read.count\$"          #rRNA
+        "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$",
+        "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$",
+        "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.read.count\$"     #rRNA
       );
 
       if ( $def->{hasYRNA} ) {
@@ -956,17 +985,17 @@ sub getSmallRNAConfig {
       );
 
       $config->{host_length_dist_category} = {
-        class                      => "CQS::UniqueR",
-        perform                    => 1,
-        target_dir                 => $data_visualization_dir . "/host_length_dist_category",
-        rtemplate                  => "../SmallRNA/lengthDistributionStackedBarplot.R",
-        output_file                => ".length.pdf",
-        output_file_ext            => "",
-        parameterSampleFile1_ref   => \@length_dist_count,
+        class                     => "CQS::UniqueR",
+        perform                   => 1,
+        target_dir                => $data_visualization_dir . "/host_length_dist_category",
+        rtemplate                 => "../SmallRNA/lengthDistributionStackedBarplot.R",
+        output_file               => ".length.pdf",
+        output_file_ext           => "",
+        parameterSampleFile1_ref  => \@length_dist_count,
         parameterSampleFile1Names => \@length_dist_names,
-        sh_direct                  => 1,
-        rCode                      => '' . $R_font_size,
-        pbs                        => {
+        sh_direct                 => 1,
+        rCode                     => '' . $R_font_size,
+        pbs                       => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
