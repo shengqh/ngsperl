@@ -267,7 +267,7 @@ for (i in 1:nrow(deseq2ResultFileTable)) {
 		p2<-p1+theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5,size=20),axis.text.y=element_text(size=20))+geom_hline(yintercept = 0)+coord_flip()
 		
 		keggFCFigureFileName<-paste0(keggOutFileName,".foldchange.pdf")
-		pdf(keggFCFigureFileName,width=10,height=7)
+		pdf(keggFCFigureFileName,width=10,height=max(7,length(unique(dataForPlot1$Pathway))*0.3))
 		print(p2)
 		dev.off()
 	} else {
@@ -290,8 +290,8 @@ for (i in 1:nrow(deseq2ResultFileTable)) {
 #	pathway_id="04370"
 #	pathway_id="03010"
 #	pathway_id="04672"
-			download_KEGGfile(pathway_id)
-			temp<-plot_pathway(resultTableFcToGene,type="bg",bg_col=col,text_col="white",magnify=1.4,species='hsa',pathway_id=pathway_id,genes_kept="abs")
+#			download_KEGGfile(pathway_id)
+			temp<-plot_pathway(resultTableFcToGene,type="bg",bg_col=col,text_col="white",magnify=1.4,species=species,pathway_id=pathway_id,genes_kept="abs")
 		}
 	} else {
 		warning(paste0("No pathway has significant fold changes! Can't make differential pathway maps."))
@@ -301,8 +301,8 @@ for (i in 1:nrow(deseq2ResultFileTable)) {
 	sigPathwayInd=which(keggSigGeneEnrichedPathway[[1]][,pValuePathwayCol]<=pCutPathway)
 	if (length(sigPathwayInd)>0) {
 		for (pathway_id in row.names(keggSigGeneEnrichedPathway[[1]])[sigPathwayInd]) {
-			pathway_id=i
-			download_KEGGfile(pathway_id)
+#			pathway_id=i
+#			download_KEGGfile(pathway_id)
 			temp<-plot_pathway(resultTableFcToGene,type="bg",bg_col=col,text_col="white",magnify=1.4,species='hsa',pathway_id=pathway_id,genes_kept="abs")
 		}
 	}
