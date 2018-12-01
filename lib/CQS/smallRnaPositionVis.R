@@ -27,7 +27,7 @@ library(RColorBrewer)
 smallRNAGrouping<-function(x) {
   tRNAHeaders<-c("Glu","Gly","Asp","Val","His","Thr","Leu","Lys","Cys","Pro",
       "Tyr","Ala","SeC","Asn","Ser","Trp","Gln","iMet","Arg","Ile",
-      "Met","Phe","Sup")
+      "Met","Phe","Sup","tRNA\\d+") #"tRNA\\d+" in mito tRNA such as tRNA:chrM.tRNA7-TW 
   tRNAHeadersPattern<-paste0(tRNAHeaders,collapse="|")
   if (all(grepl("^RNU|^RNVU|^U\\d+",head(as.character(x))))) {
     return(1) #group-able snRNA
