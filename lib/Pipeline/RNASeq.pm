@@ -28,7 +28,7 @@ sub initializeDefaultOptions {
   fix_task_name($def);
 
   initDefaultValue( $def, "emailType", "ALL" );
-  initDefaultValue( $def, "cluster", "slurm");
+  initDefaultValue( $def, "cluster",   "slurm" );
 
   initDefaultValue( $def, "perform_preprocessing", 1 );
   initDefaultValue( $def, "perform_mapping",       1 );
@@ -42,11 +42,12 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_multiqc",       1 );
   initDefaultValue( $def, "perform_webgestalt",    0 );
   initDefaultValue( $def, "perform_report",        1 );
-  
-  initDefaultValue( $def, "perform_gsea",          0 );
-#$def->{gsea_jar}        or die "Define gsea_jar at definition first";
-#$def->{gsea_db}         or die "Define gsea_db at definition first";
-#$def->{gsea_categories}
+
+  initDefaultValue( $def, "perform_gsea", 0 );
+
+  #$def->{gsea_jar}        or die "Define gsea_jar at definition first";
+  #$def->{gsea_db}         or die "Define gsea_db at definition first";
+  #$def->{gsea_categories}
 
   initDefaultValue( $def, "perform_cutadapt", 0 );
 
@@ -57,17 +58,17 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "top25cv_in_hca",             0 );
   initDefaultValue( $def, "use_green_red_color_in_hca", 1 );
   initDefaultValue( $def, "output_bam_to_same_folder",  1 );
-  initDefaultValue( $def, "show_label_PCA",  1 );
-  
-  initDefaultValue( $def, "max_thread",                 8 );
-  initDefaultValue( $def, "sequencetask_run_time",      '24' );
+  initDefaultValue( $def, "show_label_PCA",             1 );
+
+  initDefaultValue( $def, "max_thread",            8 );
+  initDefaultValue( $def, "sequencetask_run_time", '24' );
 
   initDefaultValue( $def, "perform_keggprofile",      0 );
   initDefaultValue( $def, "keggprofile_useRawPValue", 0 );
-  initDefaultValue( $def, "keggprofile_species", "hsa" );
-  initDefaultValue( $def, "keggprofile_pCut", 0.1 );
-  
-  initDefaultValue( $def, "pairend",                  1 );
+  initDefaultValue( $def, "keggprofile_species",      "hsa" );
+  initDefaultValue( $def, "keggprofile_pCut",         0.1 );
+
+  initDefaultValue( $def, "pairend",                         1 );
   initDefaultValue( $def, "DE_pvalue",                       0.05 );
   initDefaultValue( $def, "DE_use_raw_pvalue",               0 );
   initDefaultValue( $def, "DE_fold_change",                  2 );
@@ -80,11 +81,11 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "DE_text_size",                    10 );
   initDefaultValue( $def, "DE_min_median_read",              5 );
   initDefaultValue( $def, "perform_DE_proteincoding_gene",   0 );
-  initDefaultValue( $def, "perform_proteincoding_gene",      getValue($def, "perform_DE_proteincoding_gene") );
-  
-  initDefaultValue( $def, "outputPdf",      0 );
-  initDefaultValue( $def, "outputPng",      1 );
-  
+  initDefaultValue( $def, "perform_proteincoding_gene",      getValue( $def, "perform_DE_proteincoding_gene" ) );
+
+  initDefaultValue( $def, "outputPdf", 0 );
+  initDefaultValue( $def, "outputPng", 1 );
+
   return $def;
 }
 
@@ -135,9 +136,9 @@ sub getRNASeqConfig {
   my $aligner         = $def->{aligner};
   my $star_option     = $def->{star_option};
   my $count_table_ref = "files";
-  
+
   my $multiqc_depedents = $source_ref;
-  
+
   my $count_file_ref = $def->{count_file};
   if ( $def->{perform_mapping} && $def->{perform_counting} && ( $aligner eq "star" ) && $def->{perform_star_featurecount} ) {
     my $aligner_index   = $def->{star_index} or die "Define star_index at definition first";
@@ -188,7 +189,7 @@ sub getRNASeqConfig {
     push @$individual, ("star_featurecount");
     push @$summary,    ("star_summary");
     $config = merge( $config, $configAlignment );
-    
+
     $multiqc_depedents = "star_featurecount";
   }
   else {
@@ -275,7 +276,7 @@ sub getRNASeqConfig {
     }
 
     if ( $def->{perform_counting} ) {
-      my $cqstools       = $def->{cqstools};
+      my $cqstools = $def->{cqstools};
       my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
       if ( $def->{additional_bam_files} ) {
         push @$source_ref, "additional_bam_files";
@@ -343,20 +344,18 @@ sub getRNASeqConfig {
     if ( defined $gene_file ) {
       $rCode = $rCode . "suffix<-\"_genes\"; ";
     }
-    
+
     $config->{"genetable_correlation"} = {
-      class       => "CQS::UniqueR",
+      class       => "CQS::CountTableGroupCorrelation",
       perform     => 1,
-      suffix      => "_cor",
       rCode       => $rCode . "usePearsonInHCA<-" . $def->{use_pearson_in_hca} . "; useGreenRedColorInHCA<-" . $def->{use_green_red_color_in_hca} . "; top25cvInHCA<-" . $def->{top25cv_in_hca} . "; ",
       target_dir  => $cor_dir,
       rtemplate   => "countTableVisFunctions.R,countTableGroupCorrelation.R",
       output_file => "parameterSampleFile1",
-      output_file_ext          => ".Correlation.png;.density.png;.heatmap.png;.PCA.png;.Correlation.Cluster.png",
-      parameterFile1           => $gene_file,
-      parameterSampleFile2_ref => $groups_ref,
-      sh_direct                => 1,
-      pbs                      => {
+      output_file_ext => ".Correlation.png;.density.png;.heatmap.png;.PCA.png;.Correlation.Cluster.png",
+      parameterFile1  => $gene_file,
+      sh_direct       => 1,
+      pbs             => {
         "email"     => $email,
         "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
@@ -369,6 +368,16 @@ sub getRNASeqConfig {
     }
     else {
       $config->{genetable_correlation}{parameterSampleFile1} = $count_file_ref;
+    }
+
+    if ( defined $def->{groups} ) {
+      $config->{genetable_correlation}{parameterSampleFile2} = { all => $def->{groups} };
+
+      if ( defined $def->{correlation_groups} ) {
+        my $correlationGroups = get_pair_group_sample_map( $def->{correlation_groups}, $def->{groups} );
+        $correlationGroups->{all} = $def->{groups};
+        $config->{genetable_correlation}{parameterSampleFile2} = $correlationGroups;
+      }
     }
     push @$summary, "genetable_correlation";
   }
@@ -439,17 +448,19 @@ sub getRNASeqConfig {
     }
 
     if ( $def->{perform_keggprofile} ) {
-      my $keggprofile_useRawPValue = defined($def->{keggprofile_useRawPValue}) or die "Define keggprofile_useRawPValue at definition first";
+      my $keggprofile_useRawPValue = defined( $def->{keggprofile_useRawPValue} ) or die "Define keggprofile_useRawPValue at definition first";
       my $keggprofile_species;
-      if (defined($def->{keggprofile_species})) {
-        $keggprofile_species = $def->{keggprofile_species}
-      } else {
+      if ( defined( $def->{keggprofile_species} ) ) {
+        $keggprofile_species = $def->{keggprofile_species};
+      }
+      else {
         die "Define keggprofile_species at definition first";
       }
       my $keggprofile_pCut;
-      if (defined($def->{keggprofile_pCut})) {
-        $keggprofile_species = $def->{keggprofile_pCut}
-      } else {
+      if ( defined( $def->{keggprofile_pCut} ) ) {
+        $keggprofile_species = $def->{keggprofile_pCut};
+      }
+      else {
         die "Define keggprofile_pCut at definition first";
       }
       $config->{keggprofile} = {
@@ -461,7 +472,7 @@ sub getRNASeqConfig {
         output_file_ext          => ".KEGG.csv",
         parameterSampleFile1_ref => [ $deseq2taskname, "_DESeq2.csv\$" ],
         sh_direct                => 1,
-        rCode                    => "useRawPValue='" . $keggprofile_useRawPValue . "';species='".$keggprofile_species."';pCut=".$keggprofile_pCut.";",
+        rCode                    => "useRawPValue='" . $keggprofile_useRawPValue . "';species='" . $keggprofile_species . "';pCut=" . $keggprofile_pCut . ";",
         pbs                      => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
@@ -616,7 +627,7 @@ sub getRNASeqConfig {
         "mem"       => "40gb"
       },
     };
-    
+
     $multiqc_depedents = "refine";
 
     $config->{refine_hc} = {
@@ -719,13 +730,40 @@ sub getRNASeqConfig {
     push( @copy_files, "genetable", ".count\$", "genetable", ".fpkm.tsv" );
 
     if ( defined $config->{genetable_correlation} ) {
+      my $suffix = $config->{genetable_correlation}{suffix};
+      if ( !defined $suffix ) {
+        $suffix = "";
+      }
       my $pcoding = $def->{perform_proteincoding_gene} ? ".proteincoding.count" : "";
-      push( @report_files,
-        "genetable_correlation", $pcoding . ".density.png",
-        "genetable_correlation", $pcoding . ".heatmap.png",
-        "genetable_correlation", $pcoding . ".PCA.png",
-        "genetable_correlation", $pcoding . ".Correlation.Cluster.png" );
-      push( @report_names, "correlation_density", "correlation_heatmap", "correlation_PCA", "correlation_cluster" );
+
+      my $titles = {"all" => ""};
+      if ( defined $config->{genetable_correlation}{parameterSampleFile2} ) {
+        my $correlationGroups = $config->{genetable_correlation}{parameterSampleFile2};
+        for my $correlationTitle ( keys %$correlationGroups ) {
+          my $groups = $correlationGroups->{$correlationTitle};
+          if ( ref($groups) eq 'HASH' ) {
+            if ( $correlationTitle ne "all" ) {
+              $correlationTitle =~ s/\\s+/_/g;
+              $titles->{$correlationTitle} = "." . $correlationTitle;
+            }
+          }
+        }
+      }
+
+      for my $title (keys %$titles){
+      push(
+        @report_files,
+        "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".density.png", 
+        "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".heatmap.png",
+        "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".PCA.png",     
+        "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".Correlation.Cluster.png"
+      );
+      push( @report_names, 
+      $title . "_correlation_density", 
+      $title . "_correlation_heatmap", 
+      $title . "_correlation_PCA", 
+      $title . "_correlation_cluster" );
+      }
     }
 
     my $suffix = "";
@@ -805,14 +843,14 @@ sub getRNASeqConfig {
       $hasFunctionalEnrichment = 1;
     }
 
-    my $fcOptions= getValue( $def, "featureCount_option" );
-    my $fcMultiMapping = ($fcOptions =~ /-m/) ? "TRUE" : "FALSE";
+    my $fcOptions = getValue( $def, "featureCount_option" );
+    my $fcMultiMapping = ( $fcOptions =~ /-m/ ) ? "TRUE" : "FALSE";
     my $options = {
-      "DE_fold_change" => [ getValue( $def, "DE_fold_change", 2 ) ],
-      "DE_pvalue"      => [ getValue( $def, "DE_pvalue",      0.05 ) ],
+      "DE_fold_change"                     => [ getValue( $def, "DE_fold_change", 2 ) ],
+      "DE_pvalue"                          => [ getValue( $def, "DE_pvalue",      0.05 ) ],
       "featureCounts_UseMultiMappingReads" => [$fcMultiMapping]
     };
-    
+
     $config->{report} = {
       class                      => "CQS::BuildReport",
       perform                    => 1,
