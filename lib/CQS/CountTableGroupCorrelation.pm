@@ -54,7 +54,6 @@ sub result {
   my $output_file_task_ext = get_option( $config, $section, "output_file_task_ext", "" );
   my $suffix               = get_option( $config, $section, "suffix",               "" );
   my $result               = {};
-  my @result_files         = ();
 
   my %temp = %{ get_raw_files( $config, $section, "parameterSampleFile1" ) };
   my @names = keys %temp;
@@ -63,40 +62,63 @@ sub result {
     push( @names, $task_name );
   }
 
-  foreach my $sample_name ( keys %temp ) {
-    foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
-      my $prefix = $subSampleFile;
-      if ($output_to_result_dir) {
-        my $file = basename($subSampleFile);
-        my $pdir = dirname($subSampleFile);
-        while ( basename($pdir) eq "result" ) {
-          $pdir = dirname($pdir);
-        }
-        $prefix = $result_dir . "/" . basename($pdir) . "." . $file;
-      }
-
-      $prefix = $prefix . $suffix;
-
-      if ( $output_file_ext =~ /;/ ) {
-        my @output_file_exts = split( ";", $output_file_ext );
-        foreach my $output_file_ext_one (@output_file_exts) {
-          push( @result_files, "${prefix}${output_file_ext_one}" );
+  my $titles = [$task_name];
+  if ( defined $config->{$section}{parameterSampleFile2} ) {
+    my $correlationGroups = get_raw_files( $config, $section, "parameterSampleFile2" );
+    for my $correlationTitle ( keys %$correlationGroups ) {
+      my $groups = $correlationGroups->{$correlationTitle};
+      if ( ref($groups) eq 'HASH' ) {
+        if ($correlationTitle ne "all"){
+          push( @$titles, $correlationTitle );
         }
       }
-      else {
-        push( @result_files, "${prefix}${output_file_ext}" );
-      }
+    }
+  }
 
-      if ( ( $output_file_task_ext =~ "" ) && ( $sample_name eq $task_name ) ) {
-        if ( $output_file_task_ext =~ /;/ ) {
-          my @output_file_exts = split( ";", $output_file_task_ext );
+  my @result_files = ();
+  for my $title (@$titles) {
+    foreach my $sample_name ( keys %temp ) {
+      my $curSuffix = $suffix;
+      if ( $title ne $task_name ) {
+        $curSuffix = $suffix . "." . $title;
+      }
+      $curSuffix =~ s/\\s+/_/g;
+
+      foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
+        my $prefix = $subSampleFile;
+        if ($output_to_result_dir) {
+          my $file = basename($subSampleFile);
+          my $pdir = dirname($subSampleFile);
+          while ( basename($pdir) eq "result" ) {
+            $pdir = dirname($pdir);
+          }
+          $prefix = $result_dir . "/" . basename($pdir) . "." . $file;
+        }
+
+        $prefix = $prefix . $curSuffix;
+
+        if ( $output_file_ext =~ /;/ ) {
+          my @output_file_exts = split( ";", $output_file_ext );
           foreach my $output_file_ext_one (@output_file_exts) {
             push( @result_files, "${prefix}${output_file_ext_one}" );
           }
         }
         else {
-          push( @result_files, "${prefix}${output_file_task_ext}" );
+          push( @result_files, "${prefix}${output_file_ext}" );
         }
+
+        if ( ( $output_file_task_ext =~ "" ) && ( $sample_name eq $task_name ) ) {
+          if ( $output_file_task_ext =~ /;/ ) {
+            my @output_file_exts = split( ";", $output_file_task_ext );
+            foreach my $output_file_ext_one (@output_file_exts) {
+              push( @result_files, "${prefix}${output_file_ext_one}" );
+            }
+          }
+          else {
+            push( @result_files, "${prefix}${output_file_task_ext}" );
+          }
+        }
+
       }
     }
   }

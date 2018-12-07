@@ -47,68 +47,64 @@ theme_bw2 <- function () {
 		)
 }
 
-getSampleInGroup<-function(groupDefineFile, samples, comparisonDefineFile="", countTableTitle="", useLeastGroups=FALSE,onlySamplesInGroup=FALSE){
-  groupData<-read.delim(groupDefineFile,as.is=T,header=F)
-  if(comparisonDefineFile != ""){
-    comparisonData<-read.delim(comparisonDefineFile,as.is=T,header=F)
-    if(countTableTitle %in% comparisonData$V2){
-      countTableGroups<-comparisonData[comparisonData$V2==countTableTitle,"V1"]
-      groupData<-groupData[groupData$V2 %in% countTableGroups,]
-    }
+getSampleInGroup<-function(groupDefineFile, samples, useLeastGroups=FALSE,onlySamplesInGroup=FALSE){
+  allGroupData<-read.delim(groupDefineFile,as.is=T,header=F)
+  if(ncol(allGroupData) < 3){
+    allGroupData$V3<-"all"
   }
   
-  if(useLeastGroups){
-    groupData<-groupData[which(groupData$V1 %in% samples),]
-    groups<-lapply(unique(groupData$V2), function(x){
-      nrow(groupData[groupData$V2==x,])
-    })
-    discardGroups<-NULL
-    groupNames=unique(groupData$V2)
-    for(i in c(1:length(groupNames))){
-      sampleI<-groupData[groupData$V2==groupNames[i], "V1"]
-      for(j in c(i+1:length(groupNames))){
-        sampleJ<-groupData[groupData$V2==groupNames[j], "V1"]
-        if(all(sampleI %in% sampleJ)){
-          discardGroups<-c(discardGroups, groupNames[i])
-          break
-        }else if(all(sampleJ %in% sampleI)){
-          discardGroups<-c(discardGroups, groupNames[j])
+  result<-NULL
+  for(title in unique(allGroupData$V3)){
+    groupData<-allGroupData[allGroupData$V3 == title,]
+    
+    if(useLeastGroups){
+      groupData<-groupData[which(groupData$V1 %in% samples),]
+      groups<-lapply(unique(groupData$V2), function(x){
+        nrow(groupData[groupData$V2==x,])
+      })
+      discardGroups<-NULL
+      groupNames=unique(groupData$V2)
+      for(i in c(1:length(groupNames))){
+        sampleI<-groupData[groupData$V2==groupNames[i], "V1"]
+        for(j in c(i+1:length(groupNames))){
+          sampleJ<-groupData[groupData$V2==groupNames[j], "V1"]
+          if(all(sampleI %in% sampleJ)){
+            discardGroups<-c(discardGroups, groupNames[i])
+            break
+          }else if(all(sampleJ %in% sampleI)){
+            discardGroups<-c(discardGroups, groupNames[j])
+          }
         }
       }
+      groupData<-groupData[!(groupData$V2 %in% discardGroups),]
     }
-    groupData<-groupData[!(groupData$V2 %in% discardGroups),]
-  }
-  groupData$V2<-factor(groupData$V2)
-  
-  res<-NULL
-  gnameChanged<-FALSE
-  for(sample in samples){
-    stog<-groupData[groupData$V1==sample,,drop=F]
-    if(nrow(stog) == 1){
-      group<-stog[1,2]
-    }else if(nrow(stog) > 1){
-      groups<-stog$V2[order(stog$V2)]
-      group<-paste(groups, collapse=":")
-      gnameChanged<-TRUE
-    }else{
-      group<-"Unknown"
-      gnameChanged<-TRUE
+    groupData$V2<-factor(groupData$V2)
+    
+    res<-NULL
+    gnameChanged<-FALSE
+    for(sample in samples){
+      stog<-groupData[groupData$V1==sample,,drop=F]
+      if(nrow(stog) == 1){
+        group<-stog[1,2]
+      }else if(nrow(stog) > 1){
+        groups<-stog$V2[order(stog$V2)]
+        group<-paste(groups, collapse=":")
+        gnameChanged<-TRUE
+      }else{
+        group<-"Unknown"
+        gnameChanged<-TRUE
+      }
+      res<-rbind(res, data.frame(V1=sample, V2=group, V3=title))
     }
-    res<-rbind(res, data.frame(V1=sample, V2=group))
-  }
-  rownames(res)<-res$V1
-  if(gnameChanged){
-    sortedGroupNames<-sort(unique(res$V2))
-    res$V2<-factor(res$V2, levels=sortedGroupNames)
-  }
-  
-  if (onlySamplesInGroup) {
-	  #remvoe "Unknown" group
-	  res<-res[which(res$V2!="Unknown"),]
-	  res$V2<-factor(as.character(res$V2))
+
+    if (onlySamplesInGroup) {
+      #remvoe "Unknown" group
+      res<-res[which(res$V2!="Unknown"),]
+    }
+    result<-rbind(result, res)
   }
   
-  return(res)
+  return(result)
 }
 
 ###############################################################################
@@ -805,24 +801,26 @@ mergeTableBySampleGroup<-function(x,sampleToGroup,toPercent=TRUE,rowFun=rowMeans
 	}
 	return(xRatioGroupMean)
 }
-filterCountTable<-function(countNum,groupFileList="",minMedian=1,minMedianInGroup=1) {
-	minMedianInd<-apply(countNum,1,median)
-	if (any(minMedianInd<minMedian)) {
-		countNum<-countNum[-which(minMedianInd<minMedian),]
-		print(paste0(length(which(minMedianInd<minMedian))," reads/genes were removed due to median less than ",minMedian))
-	}
-	if (groupFileList!="") {
-		sampleToGroup<-getSampleInGroup(groupFileList, colnames(countNum), comparisonFileList, countTableTitle, useLeastGroups)
-		countNumGroup<-mergeTableBySampleGroup(countNum,sampleToGroup,toPercent=FALSE,rowFun=rowMedians)
-		minGroupMedianInd<-apply(countNumGroup,1,min)
-		if (all(minGroupMedianInd<minMedianInGroup)) {
-			countNum<-countNum[-which(minGroupMedianInd<minMedianInGroup),]
-			print(paste0(length(which(minGroupMedianInd<minMedianInGroup))," reads/genes were removed due to minimal group median less than ",minMedianInGroup))
-		}
-	}
-	return(countNum)
-}
 
+
+filterCountTable<-function(countNum,validSampleToGroup,minMedian=1,minMedianInGroup=1) {
+  result<-countNum[, colnames(countNum) %in% validSampleToGroup$V1]
+  
+  minMedianInd<-apply(result,1,median)
+  if (any(minMedianInd<minMedian)) {
+    result<-result[-which(minMedianInd<minMedian),]
+    print(paste0(length(which(minMedianInd<minMedian))," reads/genes were removed due to median less than ",minMedian))
+  }
+  
+  countNumGroup<-mergeTableBySampleGroup(result,validSampleToGroup,toPercent=FALSE,rowFun=rowMedians)
+  minGroupMedianInd<-apply(countNumGroup,1,min)
+  if (all(minGroupMedianInd<minMedianInGroup)) {
+    result<-result[-which(minGroupMedianInd<minMedianInGroup),]
+    print(paste0(length(which(minGroupMedianInd<minMedianInGroup))," reads/genes were removed due to minimal group median less than ",minMedianInGroup))
+  }
+  
+  return(result)
+}
 
 ###############################################################################
 # End funtions in count table barplot and pie chart
