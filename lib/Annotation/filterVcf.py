@@ -86,5 +86,5 @@ with open(args.output, "w") as fout:
         if gt1lessPercentage < args.percentage:
           fout.write(line)
         else:
-          fdiscard.write("gt1count %d ~ failedCount %d\t%s" %(gt1count, gt1lessCount, line.rstrip()))
+          fdiscard.write("gt1count %d ~ failedCount %d\t%s\n" %(gt1count, gt1lessCount, line.rstrip()))
       print("haszero: %d out of %d" % (svnzero, totalsnv))
