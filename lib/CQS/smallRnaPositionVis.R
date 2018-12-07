@@ -5,7 +5,7 @@ options(bitmapType='cairo')
 # Author: zhaos
 ###############################################################################
 
-maxFeature=100
+maxFeature=50
 
 groupFileList=parSampleFile1
 visLayoutFileList=parSampleFile2
@@ -88,6 +88,7 @@ if (length(unique(allPosition$Feature))>maxFeature) {
 }
 
 allPositionByGroup<-aggregate(x = allPosition, by = list(allPosition$Feature,allPosition$Group, allPosition$Position), FUN = function(x) if(is.numeric(x)| is.integer(x)) {sum(x)} else {x[1]})
+allPositionByGroup$GroupPositionCount<-as.vector(allPositionByGroup$PositionCount/groupSize[allPositionByGroup$Group])
 allPositionByGroup$GroupPercentage<-as.vector(allPositionByGroup$Percentage/groupSize[allPositionByGroup$Group])
 allPositionByGroup$GroupPositionCountFraction<-as.vector(allPositionByGroup$PositionCountFraction/groupSize[allPositionByGroup$Group])
 allPositionByGroup$Position<-allPositionByGroup$Group.3
@@ -217,3 +218,27 @@ if (visLayoutFileList!="") {
 }
 print(m)
 dev.off()
+
+
+
+height=max(featureNumber*200,3000)
+groupCount=length(unique(allPositionByGroup$Group))
+width=max(groupCount*1000, 3000)
+
+png(paste0(outFile,".PositionBar.png"),width=width,height=height,res=300)
+m <- ggplot(allPositionByGroup, aes(x = Position,y=GroupPositionCountFraction)) +
+		geom_bar(stat="identity") +
+		theme_bw()+
+		ylab("cumulative read fraction (read counts/total reads)")+
+		theme(text = element_text(size=20))+
+		theme(legend.text = element_text(size=16))+
+		theme(strip.text.y = element_text(size=stripTextSize,angle = 0))
+#		scale_fill_manual(values=colorRampPalette(brewer.pal(9, "Set1"))(featureNumber)) + 
+#		xlim(-10, maxPos+5) +
+#		theme(legend.key.size = unit(0.4, "cm"), legend.position="right") +
+#		guides(fill= guide_legend(ncol=ncols,keywidth=1, keyheight=1.5))
+
+		#m <- ggplot(allPositionByGroup, aes(x = Position,y=GroupPositionCountFraction))+geom_bar(stat="identity")
+print(m+facet_grid(Feature~Group,scale="free"))
+dev.off()
+
