@@ -1500,7 +1500,6 @@ sub getSmallRNAConfig {
     parameterSampleFile1_ref  => \@table_for_correlation,
     parameterSampleFile2      => $def->{tRNA_vis_group},
     parameterSampleFile2Order => $def->{groups_order},
-    parameterSampleFile3      => $def->{pure_pairs},
     parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
     rCode                     => $def->{correlation_rcode} . $R_font_size,
     sh_direct                 => 1,
@@ -1694,7 +1693,6 @@ sub getSmallRNAConfig {
       $batchConfig->{output_to_result_dir}      = "1";
       $batchConfig->{parameterSampleFile2}      = $batchGroups->{$batchGroup};
       $batchConfig->{parameterSampleFile2Order} = undef;
-      $batchConfig->{parameterSampleFile3}      = $batchLayout->{$batchGroup};
       $batchConfig->{rCode}                     = ( defined $batchConfig->{rCode} ? $batchConfig->{rCode} : "" ) . "visLayoutAlphabet=TRUE;" . $R_font_size;
       $config->{$batchName}                     = $batchConfig;
 
