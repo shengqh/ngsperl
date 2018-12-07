@@ -428,7 +428,7 @@ sub getPrepareConfig {
       pbs                => {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
-        "walltime" => "72",
+        "walltime" => "10",
         "mem"      => "10gb"
       },
     };
@@ -498,7 +498,7 @@ sub getPrepareConfig {
       pbs        => {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
-        "walltime" => "24",
+        "walltime" => "10",
         "mem"      => "20gb"
       },
     };
