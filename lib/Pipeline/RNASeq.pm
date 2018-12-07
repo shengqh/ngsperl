@@ -736,7 +736,7 @@ sub getRNASeqConfig {
       }
       my $pcoding = $def->{perform_proteincoding_gene} ? ".proteincoding.count" : "";
 
-      my $titles = {"all" => ""};
+      my $titles = { "all" => "" };
       if ( defined $config->{genetable_correlation}{parameterSampleFile2} ) {
         my $correlationGroups = $config->{genetable_correlation}{parameterSampleFile2};
         for my $correlationTitle ( keys %$correlationGroups ) {
@@ -750,19 +750,11 @@ sub getRNASeqConfig {
         }
       }
 
-      for my $title (keys %$titles){
-      push(
-        @report_files,
-        "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".density.png", 
-        "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".heatmap.png",
-        "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".PCA.png",     
-        "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".Correlation.Cluster.png"
-      );
-      push( @report_names, 
-      $title . "_correlation_density", 
-      $title . "_correlation_heatmap", 
-      $title . "_correlation_PCA", 
-      $title . "_correlation_cluster" );
+      for my $title ( keys %$titles ) {
+        push( @report_files,
+          "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".density.png", "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".heatmap.png",
+          "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".PCA.png",     "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".Correlation.Cluster.png" );
+        push( @report_names, $title . "_correlation_density", $title . "_correlation_heatmap", $title . "_correlation_PCA", $title . "_correlation_cluster" );
       }
     }
 

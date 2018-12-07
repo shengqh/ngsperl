@@ -18,6 +18,7 @@ deseq2ResultFileTable=read.delim(deseq2ResultFileTable,header=F,as.is=T)
 
 #pCutPathway=pCut
 pCutPathway=0.01
+pCutPathwayDiff0=pCutPathway/10
 useRawPValuePathway=useRawPValue
 if (useRawPValue) {
 	pValueCol="pvalue"
@@ -194,9 +195,10 @@ col_part<-function(data_all,data_part,col) {
 
 
 
-for (i in 1:nrow(deseq2ResultFileTable)) {
-	deseq2ResultTable=deseq2ResultFileTable[i,1]
-	keggOutFileName<-paste0(basename(deseq2ResultTable),".KEGG")
+for (j in 1:nrow(deseq2ResultFileTable)) {
+	deseq2ResultTable=deseq2ResultFileTable[j,1]
+	keggOutFileName<-paste0(tools::file_path_sans_ext(basename(deseq2ResultTable)),"_KEGG")
+	dir.create(keggOutFileName,showWarnings = FALSE)
 	
 	resultTable<-read.csv(deseq2ResultTable,header=T,as.is=T,row.names=1)
 	row.names(resultTable)=gsub("\\.\\d+$","",row.names(resultTable))
@@ -253,7 +255,7 @@ for (i in 1:nrow(deseq2ResultFileTable)) {
 	pathwayMedian<-tapply(dataForPlot[,2],dataForPlot[,1],median)
 	pathwayMaxChange<-tapply(dataForPlot[,2],dataForPlot[,1],function(x) max(abs(x)))
 	pathwayDiff0<-tapply(dataForPlot[,2],dataForPlot[,1],function(x) t.test(x,mu=0)$p.value)
-	selectedPathways<-names(which(pathwayDiff0<=0.01))
+	selectedPathways<-names(which(pathwayDiff0<=pCutPathwayDiff0))
 	if (length(selectedPathways)>0) {
 		selectedPathways<-selectedPathways[which(selectedPathways!="Cyanoamino acid metabolism")] #not in human
 		selectedPathways<-selectedPathways[which(selectedPathways!="Metabolic pathways")] #not in human
@@ -266,8 +268,8 @@ for (i in 1:nrow(deseq2ResultFileTable)) {
 		p1<-p1 + geom_point(position = position_jitter(width = 0.2),size=I(0.7))
 		p2<-p1+theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5,size=20),axis.text.y=element_text(size=20))+geom_hline(yintercept = 0)+coord_flip()
 		
-		keggFCFigureFileName<-paste0(keggOutFileName,".foldchange.pdf")
-		pdf(keggFCFigureFileName,width=10,height=7)
+		keggFCFigureFileName<-paste0(keggOutFileName,"/pathways_foldchange_boxplot.pdf")
+		pdf(keggFCFigureFileName,width=10,height=max(7,length(unique(dataForPlot1$Pathway))*0.3))
 		print(p2)
 		dev.off()
 	} else {
@@ -278,10 +280,12 @@ for (i in 1:nrow(deseq2ResultFileTable)) {
 #Pathway Figure
 #In case of unbalance fold change. balance the color
 	colPart<-col_part(c(-2.5,2.5), range(resultTableFcToGene[,1]),col=colorRampPalette(c('green','black','red'))(1024))
+	png(paste0(keggOutFileName,"/","FoldChange_colorBar",".png"),width=300)
 	col<-col_by_value(resultTableFcToGene,col=colPart,range=c(-3,3))
+	dev.off()
 	
 #fold change pathways
-	selectedPathways<-names(which(pathwayDiff0<=pCutPathway))
+	selectedPathways<-names(which(pathwayDiff0<=pCutPathwayDiff0))
 	if (length(selectedPathways)>0) {
 		for (i in selectedPathways) {
 			pathway_id=row.names(keggEnrichedPathway[[1]])[which(keggEnrichedPathway[[1]][,1]==i)]
@@ -290,8 +294,9 @@ for (i in 1:nrow(deseq2ResultFileTable)) {
 #	pathway_id="04370"
 #	pathway_id="03010"
 #	pathway_id="04672"
-			download_KEGGfile(pathway_id)
-			temp<-plot_pathway(resultTableFcToGene,type="bg",bg_col=col,text_col="white",magnify=1.4,species='hsa',pathway_id=pathway_id,genes_kept="abs")
+#			download_KEGGfile(pathway_id)
+			result_name=paste0(keggOutFileName,"/",species,"_",pathway_id,"_fc",".png")
+			temp<-plot_pathway(resultTableFcToGene,type="bg",bg_col=col,text_col="white",magnify=1.4,species=species,pathway_id=pathway_id,genes_kept="abs",result_name=result_name)
 		}
 	} else {
 		warning(paste0("No pathway has significant fold changes! Can't make differential pathway maps."))
@@ -301,9 +306,10 @@ for (i in 1:nrow(deseq2ResultFileTable)) {
 	sigPathwayInd=which(keggSigGeneEnrichedPathway[[1]][,pValuePathwayCol]<=pCutPathway)
 	if (length(sigPathwayInd)>0) {
 		for (pathway_id in row.names(keggSigGeneEnrichedPathway[[1]])[sigPathwayInd]) {
-			pathway_id=i
-			download_KEGGfile(pathway_id)
-			temp<-plot_pathway(resultTableFcToGene,type="bg",bg_col=col,text_col="white",magnify=1.4,species='hsa',pathway_id=pathway_id,genes_kept="abs")
+#			pathway_id=i
+#			download_KEGGfile(pathway_id)
+			result_name=paste0(keggOutFileName,"/",species,"_",pathway_id,"_fc",".png")
+			temp<-plot_pathway(resultTableFcToGene,type="bg",bg_col=col,text_col="white",magnify=1.4,species=species,pathway_id=pathway_id,genes_kept="abs",result_name=result_name)
 		}
 	}
 	
