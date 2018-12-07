@@ -88,6 +88,7 @@ if (length(unique(allPosition$Feature))>maxFeature) {
 }
 
 allPositionByGroup<-aggregate(x = allPosition, by = list(allPosition$Feature,allPosition$Group, allPosition$Position), FUN = function(x) if(is.numeric(x)| is.integer(x)) {sum(x)} else {x[1]})
+allPositionByGroup$GroupPositionCount<-as.vector(allPositionByGroup$PositionCount/groupSize[allPositionByGroup$Group])
 allPositionByGroup$GroupPercentage<-as.vector(allPositionByGroup$Percentage/groupSize[allPositionByGroup$Group])
 allPositionByGroup$GroupPositionCountFraction<-as.vector(allPositionByGroup$PositionCountFraction/groupSize[allPositionByGroup$Group])
 allPositionByGroup$Position<-allPositionByGroup$Group.3
