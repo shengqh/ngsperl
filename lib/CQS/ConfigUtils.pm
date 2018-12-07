@@ -18,9 +18,43 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(get_config_section has_config_section get_option get_option_file get_java get_cluster get_parameter get_param_file get_directory parse_param_file has_raw_files get_raw_files_and_keys get_raw_files get_raw_files_keys get_raw_files_attributes get_raw_files2 get_run_command get_option_value get_pair_groups
-      get_pair_groups_names get_cqstools get_group_sample_map get_group_samplefile_map get_group_samplefile_map_key get_grouped_raw_files save_parameter_sample_file saveConfig writeFileList initDefaultValue get_pure_pairs writeParameterSampleFile get_raw_file_list fix_task_name
-      get_parameter_file get_parameter_sample_files is_pairend get_ref_section_pbs get_rawfiles_option get_parameter_options)
+    qw(get_config_section
+      has_config_section
+      get_option get_option_file
+      get_java get_cluster
+      get_parameter
+      get_param_file
+      get_directory
+      parse_param_file
+      has_raw_files
+      get_raw_files_and_keys
+      get_raw_files
+      get_raw_files_keys
+      get_raw_files_attributes
+      get_raw_files2
+      get_run_command
+      get_option_value
+      get_pair_groups
+      get_pair_groups_names
+      get_cqstools
+      get_group_sample_map
+      get_group_samplefile_map
+      get_group_samplefile_map_key
+      get_grouped_raw_files
+      save_parameter_sample_file
+      saveConfig writeFileList
+      initDefaultValue
+      get_pure_pairs
+      writeParameterSampleFile
+      get_raw_file_list
+      fix_task_name
+      get_parameter_file
+      get_parameter_sample_files
+      is_pairend
+      get_ref_section_pbs
+      get_rawfiles_option
+      get_parameter_options
+      get_pair_group_sample_map)
   ]
 );
 
@@ -851,6 +885,23 @@ sub get_group_samplefile_map_key {
   return \%group_sample_map;
 }
 
+sub get_pair_group_sample_map {
+  my ( $pairs, $groups ) = @_;
+  my $pure_pairs = get_pure_pairs($pairs);
+  my $result     = {};
+  for my $pair_name ( keys %$pure_pairs ) {
+    my $pair_map = {};
+    $result->{$pair_name} = $pair_map;
+    my $groups_names = $pure_pairs->{$pair_name};
+    for my $group_name (@$groups_names) {
+      my $samples = $groups->{$group_name};
+      $pair_map->{$group_name} = $samples;
+    }
+  }
+
+  return ($result);
+}
+
 sub get_grouped_raw_files {
   my ( $config, $section, $group_key ) = @_;
   my $raw_files;
@@ -979,13 +1030,23 @@ sub writeParameterSampleFile {
     my $nameIndex = -1;
     foreach my $sample_name (@orderedSampleNames) {
       my $subSampleFiles = $temp->{$sample_name};
-      foreach my $subSampleFile (@$subSampleFiles) {
-        my $curSampleName = $sample_name;
-        if ( scalar(@outputNames) > 0 ) {
-          $nameIndex     = $nameIndex + 1;
-          $curSampleName = $outputNames[$nameIndex];
+      if ( ref($subSampleFiles) eq 'HASH' ) {
+        foreach my $groupName (keys %$subSampleFiles) {
+          my $groupSampleNames = $subSampleFiles->{$groupName};
+          for my $groupSampleName (@$groupSampleNames){
+            print $list "${groupSampleName}\t${groupName}\t${sample_name}\n";
+          }
         }
-        print $list $subSampleFile . "\t$curSampleName\n";
+      }
+      else {
+        foreach my $subSampleFile (@$subSampleFiles) {
+          my $curSampleName = $sample_name;
+          if ( scalar(@outputNames) > 0 ) {
+            $nameIndex     = $nameIndex + 1;
+            $curSampleName = $outputNames[$nameIndex];
+          }
+          print $list $subSampleFile . "\t$curSampleName\n";
+        }
       }
     }
     close($list);
