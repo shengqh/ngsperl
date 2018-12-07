@@ -5,7 +5,7 @@ options(bitmapType='cairo')
 # Author: zhaos
 ###############################################################################
 
-maxFeature=100
+maxFeature=50
 
 groupFileList=parSampleFile1
 visLayoutFileList=parSampleFile2
@@ -217,3 +217,27 @@ if (visLayoutFileList!="") {
 }
 print(m)
 dev.off()
+
+
+
+height=max(featureNumber*200,3000)
+groupCount=length(unique(allPositionByGroup$Group))
+width=max(groupCount*1000, 3000)
+
+png(paste0(outFile,".PositionBar.png"),width=width,height=height,res=300)
+m <- ggplot(allPositionByGroup, aes(x = Position,y=GroupPositionCountFraction)) +
+		geom_bar(stat="identity") +
+		theme_bw()+
+		ylab("cumulative read fraction (read counts/total reads)")+
+		theme(text = element_text(size=20))+
+		theme(legend.text = element_text(size=16))+
+		theme(strip.text.y = element_text(size=stripTextSize,angle = 0))
+#		scale_fill_manual(values=colorRampPalette(brewer.pal(9, "Set1"))(featureNumber)) + 
+#		xlim(-10, maxPos+5) +
+#		theme(legend.key.size = unit(0.4, "cm"), legend.position="right") +
+#		guides(fill= guide_legend(ncol=ncols,keywidth=1, keyheight=1.5))
+
+		#m <- ggplot(allPositionByGroup, aes(x = Position,y=GroupPositionCountFraction))+geom_bar(stat="identity")
+print(m+facet_grid(Feature~Group,scale="free"))
+dev.off()
+
