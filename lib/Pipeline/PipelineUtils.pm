@@ -121,8 +121,12 @@ sub addBlastn {
 }
 
 sub addBowtie {
-  my ( $config, $def, $individual, $taskName, $parentDir, $bowtieIndex, $sourceRef, $bowtieOption ) = @_;
+  my ( $config, $def, $individual, $taskName, $parentDir, $bowtieIndex, $sourceRef, $bowtieOption, $hours ) = @_;
 
+  if(!defined $hours){
+    $hours = "24";
+  }
+  
   $config->{$taskName} = {
     class                 => "Alignment::Bowtie1",
     perform               => 1,
@@ -139,7 +143,7 @@ sub addBowtie {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=" . $def->{max_thread},
-      "walltime"  => "72",
+      "walltime"  => $hours,
       "mem"       => "40gb"
     },
   };
@@ -344,7 +348,7 @@ sub addDeseq2Visualization {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
+      "walltime"  => "2",
       "mem"       => "10gb"
     },
   };
@@ -499,7 +503,7 @@ sub addHomerMotif {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
+      "walltime"  => "2",
       "mem"       => "10gb"
     },
   };
@@ -522,7 +526,7 @@ sub addHomerAnnotation {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
+      "walltime"  => "2",
       "mem"       => "10gb"
     },
   };
@@ -552,7 +556,7 @@ sub addEnhancer {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
-      "walltime"  => "72",
+      "walltime"  => "24",
       "mem"       => "40gb"
     },
   };
@@ -574,7 +578,7 @@ sub addEnhancer {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
-      "walltime"  => "72",
+      "walltime"  => "24",
       "mem"       => "40gb"
     },
   };
@@ -617,7 +621,7 @@ sub addMultiQC {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
+      "walltime"  => "2",
       "mem"       => "10gb"
     },
   };
@@ -661,7 +665,7 @@ sub addCleanBAM {
     pbs                     => {
       "email"    => $def->{email},
       "nodes"    => "1:ppn=1",
-      "walltime" => "240",
+      "walltime" => "48",
       "mem"      => "40gb"
     },
   };
@@ -890,7 +894,7 @@ sub addGATK4PreprocessIntervals {
       'pbs'            => {
         'nodes'    => '1:ppn=1',
         'mem'      => '20gb',
-        'walltime' => '4'
+        'walltime' => '2'
       },
     };
     push( @$step2, $result );
