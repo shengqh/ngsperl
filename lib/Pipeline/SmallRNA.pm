@@ -504,6 +504,10 @@ sub getSmallRNAConfig {
           "mem"       => "10gb"
         },
       };
+      
+      if ( !defined $def->{tRNA_vis_group} ) {
+        $def->{tRNA_vis_group} = $groups;
+      }
       addPositionVis(
         $config, $def,
         $summary_ref,
@@ -517,6 +521,7 @@ sub getSmallRNAConfig {
           #        parameterSampleFile3_ref => $trna_sig_result,
         }
       );
+      
       push @$summary_ref, $tTask;
     }
 
