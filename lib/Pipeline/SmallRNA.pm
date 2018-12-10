@@ -504,6 +504,19 @@ sub getSmallRNAConfig {
           "mem"       => "10gb"
         },
       };
+      addPositionVis(
+        $config, $def,
+        $summary_ref,
+        "host_genome_tRNA_start_position_vis_plot",
+        $data_visualization_dir,
+        {
+          target_dir           => $data_visualization_dir . "/host_genome_tRNA_start_position_vis",
+          output_file        => ".tRNAStartPositionVis",
+          parameterFile1_ref => [ "host_genome_tRNA_start_position_vis", ".tRNA_startPosition.tsv\$" ],
+
+          #        parameterSampleFile3_ref => $trna_sig_result,
+        }
+      );
       push @$summary_ref, $tTask;
     }
 
