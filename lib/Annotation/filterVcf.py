@@ -20,9 +20,13 @@ if DEBUG:
   args.input = "T:/Shared/Labs/Linton Lab/20180913_linton_exomeseq_2118_human_cutadapt/bwa_refine_hc_gvcf_hardfilter/result/linton_exomeseq_2118.pass.vcf"
   args.output = "T:/Shared/Labs/Linton Lab/20180913_linton_exomeseq_2118_human_cutadapt/bwa_refine_hc_gvcf_hardfilter_vep/result/linton_exomeseq_2118.pass.filtered.vcf"
 
+print(args)
+
+percentage=float(args.percentage)
+frequency=float(args.frequency)
+
 logger = logging.getLogger('filterVcf')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
-
 
 with open(args.output, "w") as fout:
   with open(args.output + ".discard", "w") as fdiscard:
@@ -71,7 +75,7 @@ with open(args.output, "w") as fout:
             if ad0 + ad1 == 0:
               haszero = True
               gt1lessCount = gt1lessCount + 1
-            elif(ad1  / (ad0 + ad1) < args.frequency):
+            elif(ad1  / (ad0 + ad1) < frequency):
               gt1lessCount = gt1lessCount + 1
         
         if haszero:
@@ -83,7 +87,7 @@ with open(args.output, "w") as fout:
           continue
           
         gt1lessPercentage = gt1lessCount * 1.0 / gt1count
-        if gt1lessPercentage < args.percentage:
+        if gt1lessPercentage < percentage:
           fout.write(line)
         else:
           fdiscard.write("gt1count %d ~ failedCount %d\t%s\n" %(gt1count, gt1lessCount, line.rstrip()))
