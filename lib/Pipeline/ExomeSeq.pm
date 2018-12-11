@@ -35,10 +35,15 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "perform_gatk_callvariants",   0 );
   initDefaultValue( $def, "gatk_callvariants_vqsr_mode", 1 );
-  initDefaultValue( $def, "perform_muTect",              0 );
-  initDefaultValue( $def, "perform_muTect2indel",        0 );
-  initDefaultValue( $def, "perform_annovar",             0 );
-  initDefaultValue( $def, "perform_cnv",                 0 );
+  
+  initDefaultValue( $def, "filter_variants_by_allele_frequency",            0 );
+  initDefaultValue( $def, "filter_variants_by_allele_frequency_percentage", 0.9 );
+  initDefaultValue( $def, "filter_variants_by_allele_frequency_maf",        0.3 );
+
+  initDefaultValue( $def, "perform_muTect",       0 );
+  initDefaultValue( $def, "perform_muTect2indel", 0 );
+  initDefaultValue( $def, "perform_annovar",      0 );
+  initDefaultValue( $def, "perform_cnv",          0 );
 
   if ( $def->{perform_muTect} || $def->{perform_muTect2indel} ) {
     if ( defined $def->{mills} ) {
@@ -243,6 +248,33 @@ sub getConfig {
       }
       push @$summary, ($filter_name);
 
+      if ( $def->{filter_variants_by_allele_frequency} ) {
+        my $maf_filter_name = $filter_name . "_filterMAF";
+        $config->{$maf_filter_name} = {
+          class                 => "CQS::ProgramWrapper",
+          perform               => 1,
+          target_dir            => "${target_dir}/${maf_filter_name}",
+          option                => "-p " . $def->{"filter_variants_by_allele_frequency_percentage"} . " -f " . $def->{"filter_variants_by_allele_frequency_maf"},
+          interpretor           => "python",
+          program               => "../Annotation/filterVcf.py",
+          parameterFile1_arg            => "-i",
+          parameterFile1_ref            => $filter_name,
+          output_to_same_folder => 1,
+          output_arg            => "-o",
+          output_ext            => ".maf_filtered.vcf",
+          sh_direct             => 1,
+          pbs                   => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        };
+        push @$summary, $maf_filter_name;
+        $filter_name = $maf_filter_name;
+      }
+
       if ( $def->{perform_annovar} ) {
         my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $filter_name, undef );
 
@@ -366,7 +398,7 @@ sub getConfig {
     if ( $def->{perform_cnv_gatk4_cohort} ) {
       addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, [ $refine_name, ".bam\$" ], $individual, $summary, $step3, $step4, $step5, $step6 );
     }
-    
+
     if ( $def->{perform_cnv_xhmm} ) {
       addXHMM( $config, $def, $target_dir, [ $refine_name, ".bam\$" ], $individual, $summary, $step3, $step4, $step5, $step6 );
     }
