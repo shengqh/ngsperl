@@ -29,6 +29,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
+  my $project = get_option($config, $section, "project");
   my $pipeline_file = get_option_file( $config, $section, "pipeline_file" );
   my $wdl_file = get_option_file( $config, $section, "wdl_file");
   my $input_json_file = get_option_file( $config, $section, "input_json_file" );
@@ -54,9 +55,9 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $gslog = $result_bucket . "/logging/";
-    my $gsworkspace=$result_bucket . "/workspace/";
-    my $gsresult = $result_bucket . "/result/";
+    my $gslog = $result_bucket . "/logging";
+    my $gsworkspace=$result_bucket . "/workspace";
+    my $gsresult = $result_bucket . "/result";
     
     my $sample_input_file = $self->get_file( $result_dir, $sample_name, ".inputs.json" );
     
@@ -88,12 +89,17 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
     print $pbs "
-gcloud alpha genomics pipelines run --pipeline-file $pipeline_file \\
-  --logging $gslog \\
-  --inputs-from-file WDL=$wdl_file \\
-  --inputs-from-file WORKFLOW_INPUTS=$sample_input_file \\
-  --inputs-from-file WORKFLOW_OPTIONS=$input_option_file \\
-  --inputs WORKSPACE=$gsworkspace --inputs OUTPUTS=$gsresult $option 2>&1 | tee ${pbs_file}.id
+gcloud config set project $project
+
+gcloud \\
+  alpha genomics pipelines run \\
+  --pipeline-file $pipeline_file \\
+  --inputs-from-file WDL=$wdl_file,\\
+WORKFLOW_INPUTS=$sample_input_file,\\
+WORKFLOW_OPTIONS=$input_option_file \\
+  --env-vars WORKSPACE=$gsworkspace,\\
+OUTPUTS=${gsresult}/${sample_name} \\
+  --logging ${gslog}/${sample_name}.log $option 2>&1 | tee ${pbs_file}.id
     
 ";
     $self->close_pbs( $pbs, $pbs_file );
