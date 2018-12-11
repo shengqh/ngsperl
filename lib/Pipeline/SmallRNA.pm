@@ -414,7 +414,7 @@ sub getSmallRNAConfig {
             "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "10",
-            "mem"       => "10gb"
+            "mem"       => "40gb"
           },
         },
         bowtie1_genome_1mm_NTA_smallRNA_info => {
@@ -928,7 +928,7 @@ sub getSmallRNAConfig {
             "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
-            "mem"       => "10gb"
+            "mem"       => "40gb"
           },
         },
       };
@@ -1433,7 +1433,7 @@ sub getSmallRNAConfig {
         "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "1",
-        "mem"       => "10gb"
+        "mem"       => "40gb"
       },
     };
 

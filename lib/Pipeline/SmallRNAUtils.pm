@@ -115,7 +115,7 @@ sub addNonhostDatabase {
       "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
       "walltime"  => "10",
-      "mem"       => "10gb"
+      "mem"       => "40gb"
     },
   };
   push @$individual, $bowtie1CountTask;
