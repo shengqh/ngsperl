@@ -517,8 +517,8 @@ sub getSmallRNAConfig {
           target_dir           => $data_visualization_dir . "/host_genome_tRNA_start_position_vis",
           output_file        => ".tRNAStartPositionVis",
           rtemplate=>"tRnaStartPositionVis.R",
-          parameterFile1_ref => [ "host_genome_tRNA_start_position_vis", ".tRNA_startPosition.tsv\$" ],
-
+          parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count.startpos\$" ],
+          
           #        parameterSampleFile3_ref => $trna_sig_result,
         }
       );
