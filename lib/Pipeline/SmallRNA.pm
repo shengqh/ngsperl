@@ -362,7 +362,7 @@ sub getSmallRNAConfig {
     if ( defined $config->{identical_check_cca} ) {
       $host_genome->{bowtie1_genome_1mm_NTA_smallRNA_count}{cca_files_ref} = ["identical_check_cca"];
     }
-    
+
     push @$individual_ref, ("bowtie1_genome_1mm_NTA_smallRNA_count");
 
     my $countTask = "bowtie1_genome_1mm_NTA_smallRNA_count";
@@ -484,45 +484,24 @@ sub getSmallRNAConfig {
 
     if ( $def->{perform_host_tRNA_start_position} ) {
       my $tTask = "host_genome_tRNA_start_position_vis";
-      $host_genome->{$tTask} = {
-        class                    => "CQS::ProgramWrapper",
-        perform                  => 1,
-        target_dir               => $data_visualization_dir . "/$tTask",
-        option                   => "",
-        interpretor              => "python",
-        program                  => "../SmallRNA/tRNAHostStartPosition.py",
-        parameterSampleFile1_arg => "-i",
-        parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
-        output_arg               => "-o",
-        output_ext               => ".tRNA_startPosition.tsv",
-        sh_direct                => 1,
-        pbs                      => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      };
-      
       if ( !defined $def->{tRNA_vis_group} ) {
         $def->{tRNA_vis_group} = $groups;
       }
       addPositionVis(
         $config, $def,
         $summary_ref,
-        "host_genome_tRNA_start_position_vis_plot",
+        $tTask,
         $data_visualization_dir,
         {
-          target_dir           => $data_visualization_dir . "/host_genome_tRNA_start_position_vis",
+          target_dir         => $data_visualization_dir . "/" . $tTask,
           output_file        => ".tRNAStartPositionVis",
-          rtemplate=>"tRnaStartPositionVis.R",
+          rtemplate          => "tRnaStartPositionVis.R",
           parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count.startpos\$" ],
-          
+
           #        parameterSampleFile3_ref => $trna_sig_result,
         }
       );
-      
+
       push @$summary_ref, $tTask;
     }
 
