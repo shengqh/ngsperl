@@ -31,6 +31,7 @@ hasGseaAnalysis<-any(grepl("gsea_", rownames(files)))
 hasEnrichmentAnalysis<-hasWebGestaltAnalysis | hasGseaAnalysis
 
 corNames<-gsub("_correlation_density", "", rownames(files)[grepl("_correlation_density", rownames(files))])
+corNames<-sort(corNames)
 
 getFigure<-function(category, description){
   return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", category, "', '",description, "')}\n",
