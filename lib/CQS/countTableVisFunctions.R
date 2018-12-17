@@ -25,7 +25,7 @@ getHeatmapOption<-function(countHT){
 	labRow=""
 	Rowv=NULL
 	showRowDendro=FALSE
-	cmargin=max(5, min(10,max(nchar(colnames(countHT)))/2))
+	cmargin=max(5, min(12,max(nchar(colnames(countHT)))/2))
 	rmargin=5
 	if(nrow(countHT) < 30){
 		showRowDendro=TRUE
