@@ -420,7 +420,12 @@ sub getRNASeqConfig {
       my $gsea_jar        = $def->{gsea_jar}        or die "Define gsea_jar at definition first";
       my $gsea_db         = $def->{gsea_db}         or die "Define gsea_db at definition first";
       my $gsea_categories = $def->{gsea_categories} or die "Define gsea_categories at definition first";
-
+      my $gsea_makeReport=0;
+      if (defined $def->{gsea_makeReport}) {
+        $gsea_makeReport=$def->{gsea_makeReport};
+      }
+      
+      
       $gseaTaskName = $deseq2taskname . "_GSEA";
 
       #my $gseaCategories = "'h.all.v6.1.symbols.gmt','c2.all.v6.1.symbols.gmt','c5.all.v6.1.symbols.gmt','c6.all.v6.1.symbols.gmt','c7.all.v6.1.symbols.gmt'";
@@ -435,7 +440,7 @@ sub getRNASeqConfig {
         output_file_ext            => ".gsea.html;.gsea.csv;.gsea;",
         parameterSampleFile1_ref   => [ $deseq2taskname, "_GSEA.rnk\$" ],
         sh_direct                  => 1,
-        rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=F;",
+        rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=",$gsea_makeReport,";",
         pbs                        => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
