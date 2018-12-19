@@ -123,10 +123,10 @@ sub addBlastn {
 sub addBowtie {
   my ( $config, $def, $individual, $taskName, $parentDir, $bowtieIndex, $sourceRef, $bowtieOption, $hours ) = @_;
 
-  if(!defined $hours){
+  if ( !defined $hours ) {
     $hours = "24";
   }
-  
+
   $config->{$taskName} = {
     class                 => "Alignment::Bowtie1",
     perform               => 1,
@@ -251,13 +251,19 @@ sub getReportDir {
 }
 
 sub getOutputFormat {
-  my $def    = shift;
-  my $result = "";
-  if ( getValue( $def, "outputPdf", 0 ) ) {
-    $result = "outputPdf<-TRUE;";
+  my ( $def, $rcode ) = @_;
+  my $result = $rcode;
+
+  if ( $result !~ /outputPdf/ ) {
+    if ( getValue( $def, "outputPdf", 0 ) ) {
+      $result = "outputPdf<-TRUE;";
+    }
   }
-  if ( getValue( $def, "outputPng", 1 ) ) {
-    $result = $result . "outputPng<-TRUE;";
+
+  if ( $result !~ /outputPng/ ) {
+    if ( getValue( $def, "outputPng", 1 ) ) {
+      $result = $result . "outputPng<-TRUE;";
+    }
   }
   return ($result);
 }
@@ -281,7 +287,6 @@ sub addDEseq2 {
     option                       => "",
     source_ref                   => "pairs",
     groups_ref                   => $groupNames,
-    countfile_ref                => $countfileRef,
     sh_direct                    => 1,
     show_label_PCA               => $def->{show_label_PCA},
     use_pearson_in_hca           => $def->{use_pearson_in_hca},
@@ -299,7 +304,7 @@ sub addDEseq2 {
     cooksCutoff                  => $def->{DE_cooksCutoff},
     $libraryFileKey              => $libraryFile,
     library_key                  => $libraryKey,
-    rCode                        => getOutputFormat($def),
+    rCode                        => getOutputFormat($def, ""),
     pbs                          => {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
