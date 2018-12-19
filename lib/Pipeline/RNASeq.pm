@@ -420,7 +420,7 @@ sub getRNASeqConfig {
       my $gsea_jar        = $def->{gsea_jar}        or die "Define gsea_jar at definition first";
       my $gsea_db         = $def->{gsea_db}         or die "Define gsea_db at definition first";
       my $gsea_categories = $def->{gsea_categories} or die "Define gsea_categories at definition first";
-      my $gsea_makeReport=0;
+      my $gsea_makeReport=1;
       if (defined $def->{gsea_makeReport}) {
         $gsea_makeReport=$def->{gsea_makeReport};
       }
