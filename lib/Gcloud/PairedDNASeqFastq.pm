@@ -35,6 +35,7 @@ sub perform {
   my $input_json_file = get_option_file( $config, $section, "input_json_file" );
   my $input_option_file = get_option_file( $config, $section, "input_option_file" );
   my $result_bucket = get_option( $config, $section, "result_bucket");
+  my $calling_interval_file = get_option( $config, $section, "calling_interval_file", "" );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -79,6 +80,12 @@ sub perform {
         print $fo "    \"dnaseq.raw_fastq2\": \"$fastq2\",\n";
       }elsif($row =~ /dnaseq.bwa_commandline/){
         print $fo "    \"dnaseq.bwa_commandline\": \"bwa mem -K 100000000 -p -v 3 -t 16 -R '\@RG\\tID:" . $sample_name ."\\tPU:illumina\\tLB:" . $sample_name . "\\tSM:" . $sample_name ."\\tPL:illumina' -Y \$bash_ref_fasta\",\n";
+      }elsif($row =~ /dnaseq.wgs_calling_interval_list/){
+        if($calling_interval_file ne ""){
+          print $fo "    \"dnaseq.wgs_calling_interval_list\": \"$calling_interval_file\",\n";
+        }else{
+          print $fo $row;
+        }
       }else{
         print $fo $row;
       }
