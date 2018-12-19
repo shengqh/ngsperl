@@ -16,13 +16,13 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(performRNASeq performRNASeqTask)] );
+our %EXPORT_TAGS = ( 'all' => [qw(initializeRNASeqDefaultOptions performRNASeq performRNASeqTask)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
-sub initializeDefaultOptions {
+sub initializeRNASeqDefaultOptions {
   my $def = shift;
 
   fix_task_name($def);
@@ -93,7 +93,7 @@ sub getRNASeqConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
 
-  $def = initializeDefaultOptions($def);
+  $def = initializeRNASeqDefaultOptions($def);
 
   my $taskName = $def->{task_name};
 
@@ -340,7 +340,11 @@ sub getRNASeqConfig {
   if ( $def->{perform_correlation} ) {
     my $cor_dir   = ( defined $config->{genetable} ) ? $config->{genetable}{target_dir} : $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation";
     my $gene_file = $def->{correlation_gene_file};
-    my $rCode     = getOutputFormat($def);
+    my $rCode     = "";
+    if ( defined $def->{correlation_rcode} ) {
+      $rCode = $def->{correlation_rcode};
+    }
+    $rCode     = getOutputFormat($def, $rCode);
     if ( defined $gene_file ) {
       $rCode = $rCode . "suffix<-\"_genes\"; ";
     }
@@ -367,7 +371,8 @@ sub getRNASeqConfig {
       $config->{genetable_correlation}{parameterSampleFile1_ref} = $count_file_ref;
     }
     else {
-      $config->{genetable_correlation}{parameterSampleFile1} = $count_file_ref;
+      $config->{genetable_correlation}{parameterSampleFile1} = {$taskName =>  [$count_file_ref]};
+      $config->{genetable_correlation}{output_to_result_dir} = 1;
     }
 
     if ( defined $def->{groups} ) {
@@ -727,7 +732,9 @@ sub getRNASeqConfig {
       push( @report_names, "STAR_summary", "STAR_summary_table" );
     }
 
-    push( @copy_files, "genetable", ".count\$", "genetable", ".fpkm.tsv" );
+    if ( defined $config->{genetable} ) {
+      push( @copy_files, "genetable", ".count\$", "genetable", ".fpkm.tsv" );
+    }
 
     if ( defined $config->{genetable_correlation} ) {
       my $suffix = $config->{genetable_correlation}{suffix};
