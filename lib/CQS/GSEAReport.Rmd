@@ -46,7 +46,12 @@ addImageTag<-function(imageFile,width=NULL,height=NULL) {
 processGesaTable<-function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=20,absLinkPath=FALSE) {
 	rawTable<-read.delim(gseaTableFile,header=T,as.is=T)
 	rawTableOut<-NULL
-	for (i in head(which(rawTable$FDR.q.val<=maxCategoryFdr),maxCategory)) {
+	
+	selectedCategoryInd=head(which(rawTable$FDR.q.val<=maxCategoryFdr),maxCategory)
+	if (length(selectedCategoryInd)==0) {
+	  return(NULL)
+	}
+	for (i in selectedCategoryInd) {
 		categoryName=rawTable[i,1]
 		gseaUrl=paste0("http://software.broadinstitute.org/gsea/msigdb/cards/",categoryName)
 		categoryNameInTable<-addLinkTag(text=categoryName,link=gseaUrl)
@@ -98,14 +103,19 @@ for (resultDirSub in resultDirSubs) {
  	out<-append(out,list(tags$h1(paste0(basename(resultDirSub)))))
  	
  	rawTableOut<-processGesaTable(posTableFile)
- 	tableOne=datatable(rawTableOut,escape=c(-1,-2,-7))
-  out<-append(out,list(tags$h3("Positive-regulated")))
-  out<-append(out,list(tableOne))
+ 	if (!is.null(rawTableOut)) {
+ 	  tableOne=datatable(rawTableOut,escape=c(-1,-2,-7))
+    out<-append(out,list(tags$h3("Positive-regulated")))
+    out<-append(out,list(tableOne))
+ 	}
+
   
   rawTableOut<-processGesaTable(negTableFile)
- 	tableOne=datatable(rawTableOut,escape=c(-1,-2,-7))
-  out<-append(out,list(tags$h3("Negative-regulated")))
-  out<-append(out,list(tableOne))
+  if (!is.null(rawTableOut)) {
+    tableOne=datatable(rawTableOut,escape=c(-1,-2,-7))
+    out<-append(out,list(tags$h3("Negative-regulated")))
+    out<-append(out,list(tableOne))
+  }
 }
 tagList(out)
 
