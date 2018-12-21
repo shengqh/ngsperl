@@ -27,7 +27,7 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="/home/zhaos/bin/gsea
 			gseaCategoryName<-fileToName[gseaCategoryName]
 		}
 		runCommond=paste0("java -Xmx8198m -cp ",gseaJar," xtools.gsea.GseaPreranked -gmx ",gseaDb,"/",gseaCategory,
-				"-collapse false -nperm 1000 -rnk ",preRankedGeneFile," -scoring_scheme weighted -make_sets true -rpt_label '",gseaCategoryName,"' -plot_top_x 20 -set_max 500 -set_min 15 -zip_report -out ",gesaResultDir)
+				" -collapse false -nperm 1000 -rnk ",preRankedGeneFile," -scoring_scheme weighted -make_sets true -rpt_label '",gseaCategoryName,"' -plot_top_x 20 -set_max 500 -set_min 15 -zip_report -out ",gesaResultDir)
 		print(runCommond)
 		system(runCommond)
 	}
