@@ -29,7 +29,7 @@ splicing_distance=int(args.splicing_threshold)
 possible_positions = [j for j in range(-splicing_distance, splicing_distance + 1) if j != 0]
 
 with open(inputfile, 'r') as f:
-  headers = f.readline().split('\t')
+  headers = f.readline().rstrip().split('\t')
   funcRefGeneIndex=headers.index("Func.refGene")
   geneDetailRefGeneIndex = headers.index("GeneDetail.refGene")
   aachangeRefGeneIndex=headers.index("AAChange.refGene")
@@ -38,7 +38,7 @@ annovarinputfile = outputfile + ".avinput"
 with open(inputfile, 'r') as f:
   with open(annovarinputfile, 'w') as snvw:
     for line in f:
-      parts = line.split('\t')
+      parts = line.rstrip('\r\n').split('\t')
       if parts[funcRefGeneIndex] != "splicing":
         continue
       
@@ -69,12 +69,12 @@ if os.path.isfile(annovar_outputfile):
   splicing_map = {}
   prog = re.compile("p\.\w(\d+)\w")
   with open(annovar_outputfile, "r") as f:
-    splicingHeaders = f.readline().split('\t')
+    splicingHeaders = f.readline().rstrip().split('\t')
     splicingFuncRefGeneIndex=splicingHeaders.index("Func.refGene")
     splicingAAChangeRefGeneIndex=splicingHeaders.index("AAChange.refGene")
     
     for line in f:
-      parts = line.split('\t')
+      parts = line.rstrip('\r\n').split('\t')
       funcRefGene = parts[splicingFuncRefGeneIndex]
       if(funcRefGene == "splicing" or funcRefGene == "intronic"):
         continue
@@ -101,10 +101,11 @@ if os.path.isfile(annovar_outputfile):
       else:
         splicing_map[locus] = [distance, funcRefGene, anno]
 
+  outputTemp = outputfile + ".tmp"
   with open(inputfile, 'r') as f:
-    with open(outputfile, 'w') as w:
+    with open(outputTemp, 'w') as w:
       for line in f:
-        parts = line.split('\t')
+        parts = line.rstrip('\r\n').split('\t')
         if parts[funcRefGeneIndex] != "splicing":
           w.write(line)
           continue
@@ -129,8 +130,12 @@ if os.path.isfile(annovar_outputfile):
               lst.append('')
           parts[aachangeRefGeneIndex] = ','.join(lst)
           
-        w.write("%s" % ("\t".join(parts)))
+        w.write("%s\n" % ("\t".join(parts)))
   os.remove(annovarinputfile)
   os.remove(annovar_outputfile)
+
+  if os.path.isfile(outputfile):
+    os.remove(outputfile)
+  os.rename(outputTemp, outputfile)
   
 print("annotate splicing by annovar done.")
