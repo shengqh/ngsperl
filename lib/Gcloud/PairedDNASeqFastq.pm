@@ -12,6 +12,7 @@ use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 use Alignment::AlignmentUtils;
+use Gcloud::GcloudUtils;
 
 our @ISA = qw(CQS::Task);
 
@@ -79,7 +80,8 @@ sub perform {
       }elsif($row =~ /dnaseq.raw_fastq2/){
         print $fo "    \"dnaseq.raw_fastq2\": \"$fastq2\",\n";
       }elsif($row =~ /dnaseq.bwa_commandline/){
-        print $fo "    \"dnaseq.bwa_commandline\": \"bwa mem -K 100000000 -p -v 3 -t 16 -R '\@RG\\tID:" . $sample_name ."\\tPU:illumina\\tLB:" . $sample_name . "\\tSM:" . $sample_name ."\\tPL:illumina' -Y \$bash_ref_fasta\",\n";
+        my $newbwa = replaceSampleNameBWACommand($row, $sample_name);
+        print $fo $newbwa;
       }elsif($row =~ /dnaseq.wgs_calling_interval_list/){
         if($calling_interval_file ne ""){
           print $fo "    \"dnaseq.wgs_calling_interval_list\": \"$calling_interval_file\",\n";
