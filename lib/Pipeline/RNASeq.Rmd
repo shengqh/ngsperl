@@ -25,6 +25,9 @@ rownames(files)<-files$V2
 rnaseqOptions<-read.table("fileList2.txt", header=FALSE, as.is=TRUE)
 rownames(rnaseqOptions)<-rnaseqOptions$V2
 
+hasFastqc<-any(grepl("fastqc_", rownames(files)))
+hasSTAR<-any(grepl("STAR__", rownames(files)))
+hasFeatureCount<-any(grepl("featureCounts_", rownames(files)))
 hasDEseq2<-any(grepl("deseq2_", rownames(files)))
 hasWebGestaltAnalysis<-any(grepl("WebGestalt_", rownames(files)))
 hasGseaAnalysis<-any(grepl("gsea_", rownames(files)))
@@ -76,35 +79,33 @@ cat("\n")
   
 ### 2.1 Summary of sequencing quality
   
-```{r fastqc_per_base_sequence_quality,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastqc_per_base_sequence_quality", "The mean quality scores of sequencing reads in each position")}
-include_graphics(files["fastqc_per_base_sequence_quality",1])
+```{r fastqc_per_base_sequence_quality,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_per_base_sequence_quality", "The mean quality scores of sequencing reads in each position")}
+check_and_include_graphics(files["fastqc_per_base_sequence_quality",1])
 ```
 
 <br>
 
-```{r fastqc_per_sequence_gc_content,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastqc_per_sequence_gc_content", "The average GC content of sequencing reads")}
-include_graphics(files["fastqc_per_sequence_gc_content",1])
+```{r fastqc_per_sequence_gc_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_per_sequence_gc_content", "The average GC content of sequencing reads")}
+check_and_include_graphics(files["fastqc_per_sequence_gc_content",1])
 ```
 
 <br>
   
-```{r fastqc_adapter_content,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastqc_adapter_content", "Adapter content of sequencing reads")}
-if(file.exists(files["fastqc_adapter_content",1])){
-  include_graphics(files["fastqc_adapter_content",1])
-}
+```{r fastqc_adapter_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_adapter_content", "Adapter content of sequencing reads")}
+check_and_include_graphics(files["fastqc_adapter_content",1])
 ```
 
 <br>
   
 ## 3. Mapping quality
 ### 3.1 Summary of mapping quality
-```{r STAR_summary,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("STAR_summary", "The statistics of RNAseq mapping results")}
+```{r STAR_summary,echo=FALSE,results='asis', include = hasSTAR, eval = hasSTAR, fig.align="center", fig.cap=figRef("STAR_summary", "The statistics of RNAseq mapping results")}
 include_graphics(files["STAR_summary",1])
 ```
 
 <br>
 
-```{r STAR_summary_table, echo=FALSE, results='asis'}
+```{r STAR_summary_table, echo=FALSE, results='asis', include = hasSTAR, eval = hasSTAR}
 table<-read.csv(files["STAR_summary_table",1])
 output_table1<-data.frame(table[,c(2,3,4,5)], table[,3]/table[,2], (table[,3]+table[,4])/table[,2], row.names=table[,1])
 colnames(output_table1)<-c("Input reads", "Uniquely mapped reads", "Mapped to multiple loci", "Mapped to too many loci", "Uniquely mapped ratio", "Ratio")
@@ -120,7 +121,7 @@ print(kable(output_table1, caption=tabRef("mapSummary", "The summary of RNAseq m
 ## 4. Expression Quantification
 ### 4.1 Summary of reads assignment
 
-```{r, results="asis", echo=FALSE} 
+```{r, results="asis", echo=FALSE, include = hasFeatureCount, eval = hasFeatureCount} 
 cat("featureCounts was used to count reads mapped genes, and **MULTI** mapped reads were ")
 if(rnaseqOptions["featureCounts_UseMultiMappingReads", 1] == "FALSE"){
   cat(" **NOT USED**. \n\n")
@@ -129,7 +130,7 @@ if(rnaseqOptions["featureCounts_UseMultiMappingReads", 1] == "FALSE"){
 }
 ```
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("gene_reads", "The number of reads assigned to genes in uniquely mapped reads")}
+```{r,echo=FALSE,results='asis', include = hasFeatureCount, eval = hasFeatureCount, fig.align="center", fig.cap=figRef("gene_reads", "The number of reads assigned to genes in uniquely mapped reads")}
 # For featureCounts, unassigned_unmapped -> 
 #                    unassigned_mappingquality -> 
 #                    unassigned_fragmentlength -> 
@@ -141,19 +142,19 @@ if(rnaseqOptions["featureCounts_UseMultiMappingReads", 1] == "FALSE"){
 #                    assigned
 # So, we cannot get how many unique mapped reads from the featureCounts summary.
 
-table<- read.table(files["featureCounts_table",1], header=TRUE)
+  table<- read.table(files["featureCounts_table",1], header=TRUE)
 
-colsum<-apply(table[,c(2:ncol(table))], 2, sum)
-validcol<-which(colsum > 0)+1
-validcol<-validcol[!(colnames(table)[validcol] %in% c("percent_assigned", "Total"))]
-if(rnaseqOptions["featureCounts_UseMultiMappingReads", 1] == "FALSE"){
-  validcol<-validcol[!(colnames(table)[validcol] %in% c("Unassigned_MultiMapping"))]
-}
+  colsum<-apply(table[,c(2:ncol(table))], 2, sum)
+  validcol<-which(colsum > 0)+1
+  validcol<-validcol[!(colnames(table)[validcol] %in% c("percent_assigned", "Total"))]
+  if(rnaseqOptions["featureCounts_UseMultiMappingReads", 1] == "FALSE"){
+    validcol<-validcol[!(colnames(table)[validcol] %in% c("Unassigned_MultiMapping"))]
+  }
 
-output_table2<-data.frame(table[,c(1, validcol)])
-meltreads=melt(output_table2, id="Sample", variable.name="Read", value.name="Count")
-meltreads$Read<-factor(meltreads$Read, levels=sort(as.character(unique(meltreads$Read))))
-print(ggplot(meltreads, aes(x=Sample, y=Count, fill=Read)) + 
+  output_table2<-data.frame(table[,c(1, validcol)])
+  meltreads=melt(output_table2, id="Sample", variable.name="Read", value.name="Count")
+  meltreads$Read<-factor(meltreads$Read, levels=sort(as.character(unique(meltreads$Read))))
+  print(ggplot(meltreads, aes(x=Sample, y=Count, fill=Read)) + 
         geom_bar(stat="identity", width=0.5) +
         theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
               axis.text.y = element_text(size=11, face="bold")))
@@ -161,7 +162,7 @@ print(ggplot(meltreads, aes(x=Sample, y=Count, fill=Read)) +
 
 <br>
 
-```{r echo=FALSE,results='asis'}
+```{r echo=FALSE,results='asis', include = hasFeatureCount, eval = hasFeatureCount}
 readsUsed = "reads"
 if(rnaseqOptions["featureCounts_UseMultiMappingReads", 1] == "FALSE"){
   assigned <- table$Assigned 
@@ -181,7 +182,7 @@ print(kable(output_table2, caption=tabRef("geneSummary", paste0("The summary of 
 
 ### 4.2 Expression density of samples
 ```{r correlation_density,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_density", "Expression density distribution of each sample")}
-include_graphics(files["all_correlation_density",1])
+check_and_include_graphics(files["all_correlation_density",1])
 ```
 
 <br>
@@ -194,7 +195,7 @@ include_graphics(files["all_correlation_density",1])
 
 ```{r deseq2_1, results="asis", echo=FALSE} 
 if(hasDEseq2 ){
-  cat("## 5. Differential expression\n<br>\n### 5.1 Volcano plot\n<br>\n")
+  cat("## 5. Differential expression\n<br>\n\n### 5.1 Volcano plot\n<br>\n")
 }
 ```
 
