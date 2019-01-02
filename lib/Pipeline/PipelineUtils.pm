@@ -16,7 +16,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addPARalyzer
-      addBowtie1PARalyzer addBamStat getOutputFormat
+      addBowtie1PARalyzer addBamStat addOutputOption getOutputFormat
       getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn
       getBatchGroups addHomerMotif addHomerAnnotation addEnhancer writeDesignTable addMultiQC
       getNextFolderIndex addCleanBAM getReportDir getSequenceTaskClassname
@@ -250,21 +250,28 @@ sub getReportDir {
   return ($report_dir);
 }
 
+sub addOutputOption{
+  my ( $def, $rcode, $key, $defaultValue, $alternativeKey ) = @_;
+  my $result = $rcode;
+  my $newkey = (defined $alternativeKey)? $alternativeKey : $key;
+  if ( $result !~ /$key/ ) {
+    if ( getValue( $def, $key, $defaultValue ) ) {
+      $result = $result . "$newkey<-TRUE;";
+    }else{
+      $result = $result . "$newkey<-FALSE;";
+    }
+  }
+  return($result);
+}
+
 sub getOutputFormat {
   my ( $def, $rcode ) = @_;
   my $result = $rcode;
-
-  if ( $result !~ /outputPdf/ ) {
-    if ( getValue( $def, "outputPdf", 0 ) ) {
-      $result = "outputPdf<-TRUE;";
-    }
-  }
-
-  if ( $result !~ /outputPng/ ) {
-    if ( getValue( $def, "outputPng", 1 ) ) {
-      $result = $result . "outputPng<-TRUE;";
-    }
-  }
+  
+  $result = addOutputOption($def, $result, "outputPdf", 0);
+  $result = addOutputOption($def, $result, "outputPng", 1);
+  $result = addOutputOption($def, $result, "showLabelInPCA", 1);
+    $result     = addOutputOption($def, $result, "use_pearson_in_hca", $def->{use_pearson_in_hca}, "usePearsonInHCA");
   return ($result);
 }
 
