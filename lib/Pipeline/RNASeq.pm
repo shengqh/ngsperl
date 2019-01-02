@@ -4,6 +4,7 @@ package Pipeline::RNASeq;
 use strict;
 use warnings;
 use List::Util qw(first);
+use File::Basename;
 use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
@@ -340,11 +341,11 @@ sub getRNASeqConfig {
   if ( $def->{perform_correlation} ) {
     my $cor_dir   = ( defined $config->{genetable} ) ? $config->{genetable}{target_dir} : $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation";
     my $gene_file = $def->{correlation_gene_file};
-    my $rCode     = "";
-    if ( defined $def->{correlation_rcode} ) {
-      $rCode = $def->{correlation_rcode};
-    }
+
+    my $rCode     = getValue($def, "correlation_rcode", "" );
     $rCode     = getOutputFormat($def, $rCode);
+    $rCode     = addOutputOption($def, $rCode, "use_green_red_color_in_hca", $def->{use_green_red_color_in_hca}, "useGreenRedColorInHCA");
+    $rCode     = addOutputOption($def, $rCode, "top25cv_in_hca", $def->{top25cv_in_hca}, "top25cvInHCA");
     if ( defined $gene_file ) {
       $rCode = $rCode . "suffix<-\"_genes\"; ";
     }
@@ -352,7 +353,7 @@ sub getRNASeqConfig {
     $config->{"genetable_correlation"} = {
       class       => "CQS::CountTableGroupCorrelation",
       perform     => 1,
-      rCode       => $rCode . "usePearsonInHCA<-" . $def->{use_pearson_in_hca} . "; useGreenRedColorInHCA<-" . $def->{use_green_red_color_in_hca} . "; top25cvInHCA<-" . $def->{top25cv_in_hca} . "; ",
+      rCode       => $rCode,
       target_dir  => $cor_dir,
       rtemplate   => "countTableVisFunctions.R,countTableGroupCorrelation.R",
       output_file => "parameterSampleFile1",
@@ -749,6 +750,10 @@ sub getRNASeqConfig {
       my $pcoding = $def->{perform_proteincoding_gene} ? ".proteincoding.count" : "";
 
       my $titles = { "all" => "" };
+      if ( ref($count_file_ref) ne "ARRAY" ) { #count file directly
+        $titles->{all} = basename($count_file_ref);
+        $pcoding = "";
+      }
       if ( defined $config->{genetable_correlation}{parameterSampleFile2} ) {
         my $correlationGroups = $config->{genetable_correlation}{parameterSampleFile2};
         for my $correlationTitle ( keys %$correlationGroups ) {
