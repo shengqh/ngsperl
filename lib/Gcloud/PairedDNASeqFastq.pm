@@ -60,6 +60,7 @@ sub perform {
     my $gslog = $result_bucket . "/logging";
     my $gsworkspace=$result_bucket . "/workspace";
     my $gsresult = $result_bucket . "/result";
+    my $final_file = $gsresult . "/" . $sample_name . "/" . $sample_name . ".g.vcf.gz";
     
     my $sample_input_file = $self->get_file( $result_dir, $sample_name, ".inputs.json" );
     
@@ -100,6 +101,13 @@ sub perform {
     print $pbs "
 gcloud config set project $project
 
+aa=\$(gsutil stat $final_file)
+
+if [[ \$aa ]]; then
+  echo result has been generated $final_file, exit.
+  exit 0
+fi
+  
 gcloud \\
   alpha genomics pipelines run \\
   --pipeline-file $pipeline_file \\
