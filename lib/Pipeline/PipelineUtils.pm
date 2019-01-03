@@ -250,28 +250,29 @@ sub getReportDir {
   return ($report_dir);
 }
 
-sub addOutputOption{
+sub addOutputOption {
   my ( $def, $rcode, $key, $defaultValue, $alternativeKey ) = @_;
   my $result = $rcode;
-  my $newkey = (defined $alternativeKey)? $alternativeKey : $key;
+  my $newkey = ( defined $alternativeKey ) ? $alternativeKey : $key;
   if ( $result !~ /$key/ ) {
     if ( getValue( $def, $key, $defaultValue ) ) {
       $result = $result . "$newkey<-TRUE;";
-    }else{
+    }
+    else {
       $result = $result . "$newkey<-FALSE;";
     }
   }
-  return($result);
+  return ($result);
 }
 
 sub getOutputFormat {
   my ( $def, $rcode ) = @_;
   my $result = $rcode;
-  
-  $result = addOutputOption($def, $result, "outputPdf", 0);
-  $result = addOutputOption($def, $result, "outputPng", 1);
-  $result = addOutputOption($def, $result, "showLabelInPCA", 1);
-    $result     = addOutputOption($def, $result, "use_pearson_in_hca", $def->{use_pearson_in_hca}, "usePearsonInHCA");
+
+  $result = addOutputOption( $def, $result, "outputPdf",          0 );
+  $result = addOutputOption( $def, $result, "outputPng",          1 );
+  $result = addOutputOption( $def, $result, "showLabelInPCA",     1 );
+  $result = addOutputOption( $def, $result, "use_pearson_in_hca", $def->{use_pearson_in_hca}, "usePearsonInHCA" );
   return ($result);
 }
 
@@ -311,7 +312,7 @@ sub addDEseq2 {
     cooksCutoff                  => $def->{DE_cooksCutoff},
     $libraryFileKey              => $libraryFile,
     library_key                  => $libraryKey,
-    rCode                        => getOutputFormat($def, ""),
+    rCode                        => getOutputFormat( $def, "" ),
     pbs                          => {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
