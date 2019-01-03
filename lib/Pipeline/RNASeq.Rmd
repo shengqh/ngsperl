@@ -47,7 +47,7 @@ figureRmd<-function(corNames, section){
   for(i in c(1:length(corNames))){
     name=corNames[i]
     heatmap<-paste0(name, "_correlation_heatmap")
-    pca<-paste0(name, "_correlation_pca")
+    pca<-paste0(name, "_correlation_PCA")
     corr_heatmap<-paste0(name, "_correlation_cluster")
     lines<-paste0("\n", section, ".", i, " ", name, " samples\n\n", getFigure(heatmap, heatmap), getFigure(pca, pca), getFigure(corr_heatmap, corr_heatmap) )
     result<-paste0(result, lines)
