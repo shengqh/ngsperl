@@ -332,8 +332,12 @@ sub getRNASeqConfig {
 
     push @$summary, "genetable";
 
-    $count_file_ref = [ "genetable", "(?<!proteincoding).count\$" ];
-    if ( $def->{perform_proteincoding_gene} ) {
+    if ( getValue($def, "perform_proteincoding_gene_only", 0)) {
+      $count_file_ref = [ ];
+    }else{
+      $count_file_ref = [ "genetable", "(?<!proteincoding).count\$" ];
+    }
+    if ( $def->{perform_proteincoding_gene} ||  getValue($def, "perform_proteincoding_gene_only", 0)) {
       push @$count_file_ref, "genetable", ".proteincoding.count\$";
     }
   }
@@ -381,9 +385,34 @@ sub getRNASeqConfig {
 
       if ( defined $def->{correlation_groups} ) {
         my $correlationGroups = get_pair_group_sample_map( $def->{correlation_groups}, $def->{groups} );
-        $correlationGroups->{all} = $def->{groups};
+        if( getValue($def, "correlation_all", 1) ) {
+          $correlationGroups->{all} = $def->{groups};
+        }
         $config->{genetable_correlation}{parameterSampleFile2} = $correlationGroups;
       }
+  
+      if ( defined $def->{groups_colors} ) {
+        $config->{genetable_correlation}{parameterSampleFile3} = $def->{groups_colors};
+      }
+        
+      if ( defined $def->{correlation_groups_colors} ) {
+        $config->{genetable_correlation}{parameterSampleFile3} = $def->{correlation_groups_colors};
+      }
+      
+      if(defined $config->{genetable_correlation}{parameterSampleFile3}){
+        my $colorGroups = $config->{genetable_correlation}{parameterSampleFile3};
+        my $corGroups = $config->{genetable_correlation}{parameterSampleFile2};
+        for my $title (keys %$corGroups){
+          my $titleGroups = $corGroups->{$title};
+          for my $subGroup (keys %$titleGroups){
+            if (! defined $colorGroups->{$subGroup}){
+              my %cgroups = %$colorGroups;
+              die "Color of group '$subGroup' was not define in " . Dumper($colorGroups);
+            }
+          }
+        }
+      }
+        
     }
     push @$summary, "genetable_correlation";
   }

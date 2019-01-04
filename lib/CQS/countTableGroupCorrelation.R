@@ -7,6 +7,7 @@ library(colorRamps)
 
 countTableFileList<-parSampleFile1
 groupFileList<-parSampleFile2
+colorFileList<-parSampleFile3
 fixColorRange<-TRUE
 
 geneFile<-parFile1
@@ -171,6 +172,14 @@ if (geneFile!="") { #visualization based on genes in geneFile only
   genes<-NA
 }
 
+if(colorFileList != ""){
+  colorsTab<-read.table(colorFileList, sep="\t", header=F, stringsAsFactors=F)
+  groupColors<-colorsTab$V1
+  names(groupColors)<-colorsTab$V2
+}else{
+  groupColors<-NA
+}
+
 #start work:
 countTableFileAll<-read.delim(countTableFileList,header=F,as.is=T)
 i<-1
@@ -320,7 +329,11 @@ for (i in 1:nrow(countTableFileAll)) {
     hasMultipleGroup<-length(unique(validSampleToGroup$V2)) > 1
     if (hasMultipleGroup) {
       groups<-validSampleToGroup$V2
-      colors<-makeColors(length(unique(groups)))
+      if (is.na(groupColors)){
+        colors<-makeColors(length(unique(groups)))
+      }else{
+        colors<-groupColors
+      }
       conditionColors<-as.matrix(data.frame(Group=colors[groups]))
     }else{
       groups<-NA
