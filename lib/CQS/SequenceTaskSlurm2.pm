@@ -44,7 +44,11 @@ sub getDependentJobids {
         my $sample_pbs_map = $dep_pbs_map->{$sample};
         if ( keys %$sample_pbs_map ) {
           for my $each_dep_pbs ( keys %$sample_pbs_map ) {
-            $result = $result . ":\$" . $pbs_id_map->{$each_dep_pbs}[0];
+            my $pid = $pbs_id_map->{$each_dep_pbs};
+            if(!defined $pid){
+              die "Undefined $each_dep_pbs";
+            }
+            $result = $result . ":\$" . $pid->[0];
             $pbs_id_map->{$each_dep_pbs}[1] = 1;
           }
         }
