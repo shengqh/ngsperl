@@ -32,12 +32,16 @@ sub perform {
   my $java_option = $self->get_java_option( $config, $section, $memory );
 
   #parameter files
-  my $gatk_singularity = get_param_file( $config->{$section}{gatk_singularity}, "gatk_singularity", 1 );
+  my $gatk4_singularity = get_param_file( $config->{$section}{gatk4_singularity}, "gatk4_singularity", 1 );
 
   my $intervals = parse_param_file( $config, $section, "filtered_intervals", 1 );
   my $contig_ploidy_priors = get_param_file( $config->{$section}{contig_ploidy_priors}, "contig_ploidy_priors", 0 );
 
-  my $parameters = get_parameter_options( $config, $section, "--", [ "mean-bias-standard-deviation", "mapping-error-rate", "global-psi-scale", "sample-psi-scale" ] );
+  my $parameters = get_parameter_options(
+    $config, $section, "--",
+    [ "mean-bias-standard-deviation", "mapping-error-rate", "global-psi-scale", "sample-psi-scale" ],    #
+    [ "0.01",                         "0.01",               "0.001",            "0.0001" ]
+  );
 
   my $final_file = "${task_name}-calls";
   my $raw_files = get_raw_files( $config, $section );
@@ -47,7 +51,7 @@ sub perform {
   my $log      = $self->get_log_filename( $log_dir, $task_name );
   my $log_desc = $cluster->get_log_description($log);
 
-  my $inputOption = get_rawfiles_option( $raw_files, "--input" );
+  my $inputOption = get_rawfiles_option( $raw_files, "--input", " \\\n  " );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -59,9 +63,11 @@ source activate gatk
 
 cd $result_dir
 
+export MKL_NUM_THREADS=$thread
+export OMP_NUM_THREADS=$thread
+
 gatk --java-options \"$java_option\" DetermineGermlineContigPloidy \\
-  -L $intervals \\
-  $inputOption \\
+  -L $intervals $inputOption \\
   --contig-ploidy-priors ${contig_ploidy_priors} \\
   --interval-merging-rule OVERLAPPING_ONLY \\
   --output . \\
@@ -73,7 +79,7 @@ rm -rf .cache .conda .config .theano
   close($sh);
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
-  print $pbs "singularity run $gatk_singularity $shfile \n";
+  print $pbs "singularity run $gatk4_singularity $shfile \n";
 
   $self->close_pbs( $pbs, $pbs_file );
 }
