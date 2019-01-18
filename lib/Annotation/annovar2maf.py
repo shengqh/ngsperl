@@ -29,8 +29,9 @@ with open(args.input, "r") as fin:
   Tumor_Seq_Allele1_index = mafheaders.index("Tumor_Seq_Allele1")
   Tumor_Seq_Allele2_index = mafheaders.index("Tumor_Seq_Allele2")
   
+  tmpFile = args.output + ".tmp"
   newheaders = mafheaders[0:(sample_index-1)]
-  with open(args.output, "w") as fout:
+  with open(tmpFile, "w") as fout:
     fout.write('\t'.join(newheaders) + "\tsample_id\tt_depth\tt_ref_count\tt_alt_count\tFORMAT\tGENOTYPE\n")
     for line in fin:
       maf_items = line.rstrip().split("\t")
@@ -41,12 +42,14 @@ with open(args.input, "r") as fin:
 
         sample_data = maf_items[sample_idx]
 
-        if sample_data.startswith("0/1:") :
-          new_items[Tumor_Seq_Allele1_index] = new_items[Reference_Allele_index]
-        elif sample_data.startswith("1/1:"):
-          new_items[Tumor_Seq_Allele1_index] = new_items[Tumor_Seq_Allele2_index]
-        else:
+        if sample_data.startswith("0/0:") or sample_data.startswith("0|0:") or sample_data.startswith("./.:")  or sample_data.startswith(".|.:") :
           continue
+        elif sample_data.startswith("0/1:") or sample_data.startswith("0|1:"):
+          new_items[Tumor_Seq_Allele1_index] = new_items[Reference_Allele_index]
+        elif sample_data.startswith("1/1:") or sample_data.startswith("1|1:"):
+          new_items[Tumor_Seq_Allele1_index] = new_items[Tumor_Seq_Allele2_index]
+        else :
+          raise Exception('I don\'t know genotype: ' + sample_data)
         
         parts = sample_data.split(":")
         alleles = parts[1].split(",")
@@ -55,3 +58,7 @@ with open(args.input, "r") as fin:
         t_alt_count = alleles[1]
         
         fout.write("\t".join(new_items) + "\t" + sample_name + "\t" + t_depth + "\t" + t_ref_count + "\t" + t_alt_count + "\t" + maf_items[sample_index-1] + "\t" + sample_data + "\n")
+    
+  if os.path.isfile(args.output):
+    os.remove(args.output)
+  os.rename(tmpFile, args.output)
