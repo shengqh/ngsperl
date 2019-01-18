@@ -34,8 +34,9 @@ sub initializeDefaultOptions {
   }
 
   initDefaultValue( $def, "perform_gatk_callvariants",   0 );
+  initDefaultValue( $def, "perform_gatk4_callvariants",  0 );
   initDefaultValue( $def, "gatk_callvariants_vqsr_mode", 1 );
-  
+
   initDefaultValue( $def, "filter_variants_by_allele_frequency",            0 );
   initDefaultValue( $def, "filter_variants_by_allele_frequency_percentage", 0.9 );
   initDefaultValue( $def, "filter_variants_by_allele_frequency_maf",        0.3 );
@@ -170,7 +171,61 @@ sub getConfig {
     };
     push @$individual, ($refine_name);
 
-    if ( $def->{perform_gatk_callvariants} ) {
+    my $filter_name = "";
+    if ( $def->{perform_gatk4_callvariants} ) {
+      my $gatk4_singularity = getValue( $def, "gatk4_singularity" );
+      my $gatk4_jar         = getValue( $def, "gatk4_jar" );
+      my $gvcf_name         = $refine_name . "_gatk4_hc_gvcf";
+      $config->{$gvcf_name} = {
+        class             => "GATK4::HaplotypeCaller",
+        perform           => 1,
+        target_dir        => "${target_dir}/$gvcf_name",
+        option            => "",
+        source_ref        => $refine_name,
+        java_option       => "",
+        fasta_file        => $fasta,
+        gatk4_singularity => $gatk4_singularity,
+        extension         => ".g.vcf",
+        bed_file          => $def->{covered_bed},
+        by_chromosome     => 0,
+        gvcf              => 1,
+        sh_direct         => 0,
+        pbs               => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=" . $max_thread,
+          "walltime" => "72",
+          "mem"      => "40gb"
+        },
+      };
+      push @$individual, ($gvcf_name);
+      $filter_name = $gvcf_name . "_vqsr";
+      $config->{$filter_name} = {
+        class             => "GATK4::VariantFilter",
+        perform           => 1,
+        target_dir        => "${target_dir}/$filter_name",
+        option            => "",
+        vqsr_mode         => 1,
+        source_ref        => "$gvcf_name",
+        java_option       => "",
+        fasta_file        => $fasta,
+        dbsnp_vcf         => $dbsnp,
+        hapmap_vcf        => $def->{hapmap},
+        omni_vcf          => $def->{omni},
+        g1000_vcf         => $def->{g1000},
+        axiomPoly_vcf     => $def->{axiomPoly},
+        mills_vcf         => $mills,
+        gatk4_singularity => $gatk4_singularity,
+        sh_direct         => 1,
+        pbs               => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=8",
+          "walltime" => "24",
+          "mem"      => "40gb"
+        },
+      };
+      push @$summary, ($filter_name);
+    }
+    elsif ( $def->{perform_gatk_callvariants} ) {
       my $gvcf_name = $refine_name . "_hc_gvcf";
       $config->{$gvcf_name} = {
         class         => "GATK::HaplotypeCaller",
@@ -195,7 +250,6 @@ sub getConfig {
       };
       push @$individual, ($gvcf_name);
 
-      my $filter_name;
       if ( $def->{gatk_callvariants_vqsr_mode} ) {
         $filter_name = $gvcf_name . "_vqsr";
         $config->{$filter_name} = {
@@ -247,7 +301,9 @@ sub getConfig {
         };
       }
       push @$summary, ($filter_name);
+    }
 
+    if ( $def->{perform_gatk4_callvariants} or $def->{perform_gatk_callvariants} ) {
       if ( $def->{filter_variants_by_allele_frequency} ) {
         my $maf_filter_name = $filter_name . "_filterMAF";
         $config->{$maf_filter_name} = {
@@ -257,8 +313,8 @@ sub getConfig {
           option                => "-p " . $def->{"filter_variants_by_allele_frequency_percentage"} . " -f " . $def->{"filter_variants_by_allele_frequency_maf"},
           interpretor           => "python",
           program               => "../Annotation/filterVcf.py",
-          parameterFile1_arg            => "-i",
-          parameterFile1_ref            => $filter_name,
+          parameterFile1_arg    => "-i",
+          parameterFile1_ref    => $filter_name,
           output_to_same_folder => 1,
           output_arg            => "-o",
           output_ext            => ".maf_filtered.vcf",
@@ -284,6 +340,24 @@ sub getConfig {
           if ( defined $def->{annotation_genes} ) {
             addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
           }
+
+          my $annovar_to_maf = $annovar_filter_name . "_toMAF";
+          $config->{$annovar_to_maf} = {
+            class      => "Annotation::Annovar2Maf",
+            perform    => 1,
+            target_dir => $target_dir . "/" . $annovar_to_maf,
+            source_ref => [ $annovar_filter_name, ".filtered.tsv" ],
+            refBuild   => getValue( $def, "annovar_buildver" ),
+            sh_direct  => 1,
+            pbs        => {
+              "email"     => $def->{email},
+              "emailType" => $def->{emailType},
+              "nodes"     => "1:ppn=1",
+              "walltime"  => "1",
+              "mem"       => "10gb"
+            },
+          };
+          push @$summary, $annovar_to_maf;
         }
       }
 
@@ -338,9 +412,47 @@ sub getConfig {
         },
       };
       push @$summary, "${mutectName}";
+      
+      my $combineVariantsName = $mutectName . "_combined";
+      $config->{$combineVariantsName} = {
+        class      => "GATK::CombineVariants",
+        perform     => 1,
+        target_dir  => "${target_dir}/$combineVariantsName",
+        option      => "",
+        source_ref  => [ $mutectName, ".pass.vcf\$" ],
+        java_option => "",
+        fasta_file  => $fasta,
+        gatk_jar    => $gatk_jar,
+        extension   => "_pass.combined.vcf",
+        pbs         => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary, $combineVariantsName;
 
       if ( $def->{perform_annovar} ) {
-        my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $mutectName, ".pass.vcf\$" );
+        my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $combineVariantsName, ".vcf\$" );
+        my $annovar_to_maf = $annovar_name . "_toMAF";
+        $config->{$annovar_to_maf} = {
+          class      => "Annotation::Annovar2Maf",
+          perform    => 1,
+          target_dir => $target_dir . "/" . $annovar_to_maf,
+          source_ref => [ $annovar_name ],
+          refBuild   => getValue( $def, "annovar_buildver" ),
+          sh_direct  => 1,
+          pbs        => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push @$summary, $annovar_to_maf;
       }
     }
 
