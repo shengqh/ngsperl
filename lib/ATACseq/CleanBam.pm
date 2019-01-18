@@ -136,13 +136,14 @@ if [[ -s $filterFile && ! -s $finalFile ]]; then
   echo RemoveUnpaired=`date` 
   samtools sort -n $filterFile | samtools fixmate -O bam - -| samtools view $option -b | samtools sort -T $sample_name -o $finalFile 
   samtools index $finalFile 
+  samtools flagstat $finalFile > ${finalFile}.stat 
 fi
 ";
       $rmlist = $rmlist . " $filterFile ${filterFile}.bai";
     }
 
     print $pbs "
-if [ -s ${finalFile}.bai ]; then 
+if [ -s ${finalFile}.stat ]; then 
   rm $rmlist  
 fi
 ";
@@ -172,6 +173,7 @@ sub result {
 
     my @result_files = ();
     push( @result_files, "${result_dir}/${finalFile}" );
+    push( @result_files, "${result_dir}/${finalFile}.stat" );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
