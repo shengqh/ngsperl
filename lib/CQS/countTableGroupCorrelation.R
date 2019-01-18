@@ -33,6 +33,10 @@ if(outputPng){
   outputFormat<-c(outputFormat, "PNG")
 }
 
+if(!exists("hasRowNames")){
+  hasRowNames<-NA
+}
+
 if(exists("useGreenRedColorInHCA") && useGreenRedColorInHCA){
   hmcols <- colorRampPalette(c("green", "black", "red"))(256)
 }else{
@@ -360,6 +364,9 @@ for (i in 1:nrow(countTableFileAll)) {
     drawPCA(paste0(outputFilePrefix,curSuffix,".PCA"), countHT, showLabelInPCA, groups, colors, outputFormat)
     
     hcaOption<-getHeatmapOption(countHT)
+    if(!is.na(hasRowNames) & hasRowNames){
+      hcaOption$labRow<-NULL
+    }
     
     width=min(8000, max(2000, 50 * ncol(countHT)))
     if (ncol(countHT)>1 & nrow(countHT)>1) {
