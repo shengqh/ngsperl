@@ -844,7 +844,7 @@ sub addAnnovarFilter {
     source_ref          => $annovar_name,
     option              => "",
     sh_direct           => 1,
-    maximum_exac_values => "0.001,0.01,0.1,1.0",
+    maximum_freq_values => "0.001,0.01,0.1,1.0",
     pbs                 => {
       "nodes"    => "1:ppn=1",
       "walltime" => "2",
@@ -895,16 +895,16 @@ sub addGATK4PreprocessIntervals {
 
     #PreprocessIntervals at summary level
     $config->{$result} = {
-      class            => "GATK4::PreprocessIntervals",
-      gatk_singularity => $gatk4_singularity,
-      option           => "",
-      interval_file    => getValue( $def, "covered_bed" ),
-      ref_fasta_dict   => getValue( $def, "ref_fasta_dict" ),
-      ref_fasta        => getValue( $def, "ref_fasta" ),
-      'sh_direct'      => 1,
-      'perform'        => 1,
-      'target_dir'     => $target_dir . '/GATK4_CNV_Germline_PreprocessIntervals',
-      'pbs'            => {
+      class             => "GATK4::PreprocessIntervals",
+      gatk4_singularity => $gatk4_singularity,
+      option            => "",
+      interval_file     => getValue( $def, "covered_bed" ),
+      ref_fasta_dict    => getValue( $def, "ref_fasta_dict" ),
+      ref_fasta         => getValue( $def, "ref_fasta" ),
+      'sh_direct'       => 1,
+      'perform'         => 1,
+      'target_dir'      => $target_dir . '/GATK4_CNV_Germline_PreprocessIntervals',
+      'pbs'             => {
         'nodes'    => '1:ppn=1',
         'mem'      => '20gb',
         'walltime' => '2'
@@ -925,7 +925,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   #CollectReadCounts at sample level
   $config->{"GATK4_CNV_Germline_CollectReadCounts"} = {
     class                      => "GATK4::CollectReadCounts",
-    gatk_singularity           => $gatk4_singularity,
+    gatk4_singularity          => $gatk4_singularity,
     source_ref                 => $bam_ref,
     option                     => "",
     preprocessed_intervals_ref => $preprocessIntervalsTask,
@@ -945,7 +945,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   #FilterIntervals at summary level
   $config->{"GATK4_CNV_Germline_FilterIntervals"} = {
     class                      => "GATK4::FilterIntervals",
-    gatk_singularity           => $gatk4_singularity,
+    gatk4_singularity          => $gatk4_singularity,
     source_ref                 => "GATK4_CNV_Germline_CollectReadCounts",
     option                     => "",
     preprocessed_intervals_ref => "GATK4_CNV_Germline_PreprocessIntervals",
@@ -965,7 +965,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   #DetermineGermlineContigPloidy at summary level
   $config->{"GATK4_CNV_Germline_DetermineGermlineContigPloidyCohortMode"} = {
     class                  => "GATK4::DetermineGermlineContigPloidy",
-    gatk_singularity       => $gatk4_singularity,
+    gatk4_singularity      => $gatk4_singularity,
     source_ref             => "GATK4_CNV_Germline_CollectReadCounts",
     option                 => "",
     filtered_intervals_ref => "GATK4_CNV_Germline_FilterIntervals",
@@ -984,7 +984,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   #GermlineCNVCaller at summary level
   $config->{"GATK4_CNV_Germline_GermlineCNVCaller"} = {
     class                       => "GATK4::GermlineCNVCaller",
-    gatk_singularity            => $gatk4_singularity,
+    gatk4_singularity           => $gatk4_singularity,
     source_ref                  => "GATK4_CNV_Germline_CollectReadCounts",
     option                      => "",
     filtered_intervals_ref      => "GATK4_CNV_Germline_FilterIntervals",
@@ -1003,7 +1003,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   #PostprocessGermlineCNVCalls at sample level
   $config->{"GATK4_CNV_Germline_PostprocessGermlineCNVCalls"} = {
     class                       => "GATK4::PostprocessGermlineCNVCalls",
-    gatk_singularity            => $gatk4_singularity,
+    gatk4_singularity           => $gatk4_singularity,
     source_ref                  => "GATK4_CNV_Germline_CollectReadCounts",
     calls_shard_path_ref        => [ "GATK4_CNV_Germline_GermlineCNVCaller", "calls\$" ],
     model_shard_path_ref        => [ "GATK4_CNV_Germline_GermlineCNVCaller", "model\$" ],
