@@ -44,12 +44,13 @@ sub perform {
   my $log      = $self->get_log_filename( $log_dir, $task_name );
   my $log_desc = $cluster->get_log_description($log);
 
-  my $merged_file = $task_name . $extension;
+  my $final_file = $task_name . $extension;
+  my $merged_file = $task_name . ".tmp.vcf";
 
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $merged_file );
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
   print $pbs "
-java $java_option -Xmx${memory} -jar $gatk_jar \\
+java $java_option -jar $gatk_jar \\
   -T CombineVariants \\
   -R $faFile \\
 ";
@@ -62,6 +63,13 @@ java $java_option -Xmx${memory} -jar $gatk_jar \\
   
   print $pbs "  -o $merged_file \\
   -genotypeMergeOptions UNIQUIFY
+  
+  if [[ -s $merged_file ]]; then
+    grep \"^##\" $merged_file > $final_file
+    grep -v \"^##\" $merged_file | grep \"^#\" | sed -e \"s/.variant\\S*//g\" >> $final_file
+    grep -v \"^#\" $merged_file |sed -e \"s/;set=variant\\S*//g\" >> $final_file
+    rm $merged_file ${merged_file}.idx
+  fi 
 ";
 
 
