@@ -33,7 +33,7 @@ sub perform {
 
   #parameter files
   #my $gatkJar = get_param_file( $config->{$section}{gatk_jar}, "gatk_jar", 1 );
-  my $gatk_singularity = get_param_file( $config->{$section}{gatk_singularity}, "gatk_singularity", 1 );
+  my $gatk4_singularity = get_param_file( $config->{$section}{gatk4_singularity}, "gatk4_singularity", 1 );
 
   my $intervals           = get_param_file( $config->{$section}{interval_file},  "interval_file",  1 );
   my $blacklist_intervals = get_param_file( $config->{$section}{blacklist_file}, "blacklist_file", 0 );
@@ -43,9 +43,6 @@ sub perform {
   my $ref_fasta      = get_param_file( $config->{$section}{ref_fasta},      "ref_fasta",      1 );
 
   #use default value in software rather than assign here since GATK team is still tunning the parameters.
-  my $padding    = get_option( $config, $section, "padding",    -1 );
-  my $bin_length = get_option( $config, $section, "bin_length", -1 );
-
   my $parameters = get_parameter_options( $config, $section, "--", [ "padding", "bin-length" ] );
 
   my $final_file = $task_name . ".preprocessed.interval_list";
@@ -78,7 +75,7 @@ rm -rf .conda
   close($sh);
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
-  print $pbs "singularity run $gatk_singularity $shfile \n";
+  print $pbs "singularity run $gatk4_singularity $shfile \n";
   $self->close_pbs( $pbs, $pbs_file );
 }
 
