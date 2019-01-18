@@ -38,9 +38,68 @@ sub perform {
   my $result_bucket = get_option( $config, $section, "result_bucket");
   my $calling_interval_file = get_option( $config, $section, "calling_interval_file", "" );
 
+  my $gslog = $result_bucket . "/logging";
+  my $gsworkspace=$result_bucket . "/workspace";
+  my $gsresult = $result_bucket . "/result";
+  my $gslogfailed = $gslog . "/failed/";
+  my $gslogsucceed = $gslog . "/succeed/";
+
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  my $logcheckfile = $pbs_dir . "/" . $task_name . ".checklog.sh";
+  open( my $flog, ">$logcheckfile" ) or die "Cannot create $logcheckfile";
+  print $flog "gcloud config set project $project 
+
+gslog=$gslog
+gsworkspace=$gsworkspace
+gsresult=$gsresult
+gslogfailed=$gslogfailed
+gslogsucceed=$gslogsucceed
+
+arr=\$(gsutil ls \$gslog/*.log)
+for logfile in \$arr
+do
+  sample_name=\$(echo \"\${logfile}\" | sed -e 's/.*\\///g' | sed -e 's/.log//g')
+  log_file=\$gslog/\$sample_name.log
+  failed_log_file=\$gslogfailed\$sample_name.log
+  succeed_log_file=\$gslogsucceed\$sample_name.log
+  final_file=\$gsresult/\$sample_name/\$sample_name.g.vcf.gz
+  bb=\$(gsutil stat \$log_file)
+  echo \"\"
+
+  if [[ \$bb ]]; then
+    aa=\$(gsutil stat \$final_file)
+    echo \"\"
+
+    if [[ \$aa ]]; then
+      as=\$(gsutil stat \$succeed_log_file)
+      echo \"\"
+      if [[ ! \$as ]]; then
+        echo gsutil mv \$log_file \$gslogsucceed
+        gsutil mv \$log_file \$gslogsucceed
+        continue
+      fi
+    fi
+
+    for ifail in '' '.2' '.3' '.4' '.5' '.6'
+    do
+      afail=\$failed_log_file\$ifail
+      ag=\$(gsutil stat \$afail)
+      echo \"\"
+      if [[ ! \$ag ]]; then
+        break
+      fi
+    done
+
+    echo gsutil mv \$log_file \$afail
+    gsutil mv \$log_file \$afail
+  fi
+done
+
+";
+  close($flog);
+
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
 
@@ -57,11 +116,7 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $gslog = $result_bucket . "/logging";
-    my $gsworkspace=$result_bucket . "/workspace";
-    my $gsresult = $result_bucket . "/result";
     my $final_file = $gsresult . "/" . $sample_name . "/" . $sample_name . ".g.vcf.gz";
-    
     my $sample_input_file = $self->get_file( $result_dir, $sample_name, ".inputs.json" );
     
     my $fh;
@@ -102,6 +157,7 @@ sub perform {
 gcloud config set project $project
 
 aa=\$(gsutil stat $final_file)
+echo \"\"
 
 if [[ \$aa ]]; then
   echo result has been generated $final_file, exit.
