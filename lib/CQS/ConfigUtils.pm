@@ -1098,25 +1098,32 @@ sub is_pairend {
 }
 
 sub get_rawfiles_option {
-  my ( $raw_files, $option_string ) = @_;
+  my ( $raw_files, $option_string, $intern ) = @_;
   my $result = "";
+  if (not defined $intern){
+    $intern = " ";
+  }
   for my $sample_name ( sort keys %$raw_files ) {
     my @sample_files = @{ $raw_files->{$sample_name} };
     my $sampleFile   = $sample_files[0];
-    $result = $result . " " . $option_string . " " . $sampleFile;
+    $result = $result . $intern . $option_string . " " . $sampleFile;
   }
   return $result;
 }
 
 sub get_parameter_options {
-  my ( $config, $section, $prefix, $parameters ) = @_;
+  my ( $config, $section, $prefix, $parameters, $defaults ) = @_;
 
   my $curSection = get_config_section( $config, $section );
   my $result = "";
-  for my $parameter (@$parameters) {
+  foreach my $i (0 .. (scalar(@$parameters) - 1)){
+    my $parameter = $parameters->[$i];
     my $value = $curSection->{$parameter};
+    if ( not defined $value and defined $defaults) {
+      $value = $defaults->[$i];
+    }
     if ( defined $value ) {
-      $result = $result . " " . $prefix . $parameter . " " . $value;
+      $result = $result . " \\\n  " . $prefix . $parameter . " " . $value;
     }
   }
 
