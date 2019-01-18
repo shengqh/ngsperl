@@ -482,6 +482,9 @@ sub getSmallRNAConfig {
       }
     );
 
+    $config = merge( $config, $host_genome );
+    push @$summary_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_info", "bowtie1_genome_1mm_NTA_smallRNA_category", "host_genome_tRNA_category" );
+
     if ( $def->{perform_host_tRNA_start_position} ) {
       my $tTask = "host_genome_tRNA_start_position_vis";
       if ( !defined $def->{tRNA_vis_group} ) {
@@ -508,7 +511,7 @@ sub getSmallRNAConfig {
     if ( ( not $perform_host_tRH_analysis ) and getValue( $def, "perform_host_rRNA_coverage" ) ) {
       my $visualizationTask = "host_genome_rRNA_position_vis";
       my $folder            = $data_visualization_dir . "/" . $visualizationTask;
-      $host_genome->{$visualizationTask} = {
+      $config->{$visualizationTask} = {
         class                    => "CQS::ProgramWrapper",
         perform                  => 1,
         target_dir               => $folder,
@@ -531,7 +534,7 @@ sub getSmallRNAConfig {
     }
 
     if ( defined $def->{host_xml2bam} && $def->{host_xml2bam} ) {
-      $host_genome->{bowtie1_genome_xml2bam} = {
+      $config->{bowtie1_genome_xml2bam} = {
         class         => "SmallRNA::HostXmlToBam",
         perform       => 1,
         target_dir    => $host_genome_dir . "/bowtie1_genome_xml2bam",
@@ -688,9 +691,6 @@ sub getSmallRNAConfig {
       }
     }
 
-    push @$summary_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_info", "bowtie1_genome_1mm_NTA_smallRNA_category", "host_genome_tRNA_category" );
-
-    $config = merge( $config, $host_genome );
     if ($do_comparison) {
       my @visual_source       = ();
       my @visual_source_reads = ();
