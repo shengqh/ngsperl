@@ -44,7 +44,7 @@ with open(args.input, "r") as fin:
 
         if sample_data.startswith("0/0:") or sample_data.startswith("0|0:") or sample_data.startswith("./.:")  or sample_data.startswith(".|.:") :
           continue
-        elif sample_data.startswith("0/1:") or sample_data.startswith("0|1:"):
+        elif sample_data.startswith("0/1:") or sample_data.startswith("0|1:") or sample_data.startswith("1/0:"):
           new_items[Tumor_Seq_Allele1_index] = new_items[Reference_Allele_index]
         elif sample_data.startswith("1/1:") or sample_data.startswith("1|1:"):
           new_items[Tumor_Seq_Allele1_index] = new_items[Tumor_Seq_Allele2_index]

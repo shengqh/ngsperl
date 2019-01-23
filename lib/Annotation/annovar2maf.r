@@ -7,7 +7,7 @@ inputFile = args[1]
 outputFile = args[2]
 refBuild = args[3]
 
-annovarFinalTable=fread(inputFile,skip="Chr")
+annovarFinalTable=fread(sep="\t",cmd=paste0("grep -v '^#' ", inputFile))
 tempFile<-paste0(outputFile, ".tmp")
 write.table(annovarFinalTable,tempFile,sep="\t",row.names=FALSE)
 testMafTable=annovarToMaf(tempFile, refBuild=refBuild)
