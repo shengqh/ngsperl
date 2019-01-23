@@ -43,8 +43,8 @@ categoryFigure$Sample<-factor(categoryFigure$Sample,levels=sort(unique(levels(ca
 
 categoryAllTable<-acast(categoryAll,V1~Sample,value.var="V2")
 summaryInd<-which(row.names(categoryAllTable) %in% c("TotalReads","MappedReads","FeatureReads","GenomeReads","TooShortReads","UnannotatedReads"))
-categoryAllTable1<-categoryAllTable[summaryInd,]
-categoryAllTable2<-categoryAllTable[-summaryInd,]
+categoryAllTable1<-categoryAllTable[summaryInd,,drop=F]
+categoryAllTable2<-categoryAllTable[-summaryInd,,drop=F]
 write.csv(rbind(categoryAllTable1,categoryAllTable2),paste0(taskName,".Category.Table.csv"))
 
 ################################
