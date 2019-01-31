@@ -18,7 +18,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
-  $self->{_suffix} = "_ur";
+  $self->{_suffix} = "_umi";
   bless $self, $class;
   return $self;
 }
@@ -67,8 +67,8 @@ sub perform {
 ##################################
 # align unmapped bam
 ##################################
-    print $pbs "echo Align unmapped bam \n"; 
-    my $unmapped_fastq_prefix=$bam_file;
+    print $pbs "echo 1. Align unmapped bam \n"; 
+    my $unmapped_fastq_prefix=basename($bam_file);
     print $pbs "
 if [[ ! -s ${unmapped_fastq_prefix}.fastq ]]; then
   java $java_option -jar $picard_jar SamToFastq I=$bam_file F=${unmapped_fastq_prefix}.fastq INTERLEAVE=true
@@ -90,7 +90,7 @@ fi
 ##################################
 # generate consensus reads
 ##################################
-    print $pbs "echo Generate consensus reads \n"; 
+    print $pbs "echo 2. Generate consensus reads \n"; 
     my $umi_mapped_grouped_bam_prefix=$umi_mapped_bam_prefix."_grouped";
     print $pbs "
 if [[ ! -s ${umi_mapped_grouped_bam_prefix}.bam ]]; then
@@ -113,7 +113,7 @@ fi
 ##################################
 # remap the filtered reads
 ##################################
-    print $pbs "echo Remap the filtered reads \n"; 
+    print $pbs "echo 3. Remap the filtered reads \n"; 
         my $unmapped_consensus_fastq_prefix=$sample_name.$extension."_consensus";
     print $pbs "
 if [[ ! -s ${unmapped_consensus_fastq_prefix}.fastq ]]; then
