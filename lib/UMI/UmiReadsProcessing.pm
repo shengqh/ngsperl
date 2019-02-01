@@ -99,13 +99,13 @@ fi
 ";
     my $umi_consensus_bam_prefix=$sample_name.$extension."_UnmappedConsensusReads";
     print $pbs "
-if [[ ! -s ${umi_mapped_grouped_bam_prefix}.bam ]]; then
+if [[ ! -s ${umi_consensus_bam_prefix}.bam ]]; then
   java -Xmx1g -jar $fgbio_jar CallMolecularConsensusReads --input=${umi_mapped_grouped_bam_prefix}.bam --output=${umi_consensus_bam_prefix}.bam --error-rate-post-umi=30 --min-reads=1
 fi
 ";
     my $umi_consensus_filtered_bam_prefix=$umi_consensus_bam_prefix."_PostFilter";
     print $pbs "
-if [[ ! -s ${umi_mapped_grouped_bam_prefix}.bam ]]; then
+if [[ ! -s ${umi_consensus_filtered_bam_prefix}.bam ]]; then
   java -Xmx20g -jar $fgbio_jar FilterConsensusReads --input=${umi_consensus_bam_prefix}.bam --output=${umi_consensus_filtered_bam_prefix}.bam --ref=$bwa_index --reverse-per-base-tags=true --min-reads=1 -E 0.05 -N 40 -e 0.1 -n 0.1
 fi
 ";
