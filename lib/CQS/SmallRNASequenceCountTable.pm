@@ -47,7 +47,8 @@ sub get_name_files_map {
   if ( has_raw_files( $config, $section, "pairs" ) ) {
     my $comparisons      = get_raw_files( $config, $section, "pairs" );
     my @comparison_names = sort keys %{$comparisons};
-    my $groups           = get_raw_files( $config, $section, "groups" );
+    my $groupsName       = defined $config->{$section}{deseq2_groups} ? "deseq2_groups" : "groups";
+    my $groups           = get_raw_files( $config, $section, $groupsName );
 
     for my $comparison_name (@comparison_names) {
       my $gNames = $comparisons->{$comparison_name};
