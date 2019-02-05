@@ -129,11 +129,13 @@ rm ${sample_name}.sra
     elsif ( $sample_file =~ /SRR/ ) {
       my @sample_files = split( '\s+', $sample_file );
       if ( scalar(@sample_files) == 1 ) {
-        my $six = substr( $sample_file, 0, 6 );
-        print $pbs "wget ftp://ftp-trace.ncbi.nih.gov/sra/sra-instant/reads/ByRun/sra/SRR/${six}/${sample_file}/${sample_file}.sra -O ${sample_name}.sra\n";
-        print $pbs "fastq-dump --split-3 --gzip --origfmt --helicos ${sample_name}.sra
-rm ${sample_name}.sra
-";
+        print $pbs "fastq-dump --split-3 --gzip --origfmt --helicos $sample_file \n";
+        if($ispaired){
+          print $pbs "mv ${sample_file}_1.fastq.gz ${sample_name}_1.fastq.gz \n";
+          print $pbs "mv ${sample_file}_2.fastq.gz ${sample_name}_2.fastq.gz \n";
+        }else{
+          print $pbs "mv ${sample_file}.fastq.gz ${sample_name}.fastq.gz \n";
+        }
       }
       else {
         print $pbs "if [[ -s ${sample_name}.fastq ]]; then\n  rm ${sample_name}.fastq \nfi \n";
@@ -174,8 +176,6 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %$raw_files ) {
-
-    my $final_file = $ispaired ? $sample_name . "_1.fastq.gz" : $sample_name . ".fastq.gz";
 
     my @result_files = ();
     if ($ispaired) {
