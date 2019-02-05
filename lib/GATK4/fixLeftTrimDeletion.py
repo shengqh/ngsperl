@@ -9,20 +9,18 @@ from subprocess import call
 
 #https://software.broadinstitute.org/gatk/documentation/article.php?id=6926
 
-DEBUG=True
+DEBUG=False
 NotDEBUG=not DEBUG
 
-parser = argparse.ArgumentParser(description="Fix the deletion with '*' from left trim of GATK4.",
+parser = argparse.ArgumentParser(description="Discard the SNV with '*' (spanning deletion) from left trim of GATK4.",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument('-i', '--input', action='store', nargs='?', required=NotDEBUG, help='Input VCF file')
-parser.add_argument('-f', '--fasta', action='store', nargs='?', required=NotDEBUG, help='Genome sequence fasta file')
 parser.add_argument('-o', '--output', action='store', nargs='?', required=NotDEBUG, help='Output VCF file')
 
 args = parser.parse_args()
 if DEBUG:
   args.input = "/scratch/cqs/shengq2/macrae_linton/20180913_linton_exomeseq_2118_human_cutadapt/bwa_refine_gatk4_hc_gvcf_vqsr/result/linton_exomeseq_2118.indels.snp.recal.pass.leftAligned.vcf.gz"
-  args.fasta = "/scratch/cqs/shengq2/references/gatk/b37/bwa_index_0.7.17/human_g1k_v37.fasta"
   args.output = "/scratch/cqs/shengq2/macrae_linton/20180913_linton_exomeseq_2118_human_cutadapt/bwa_refine_gatk4_hc_gvcf_vqsr/result/linton_exomeseq_2118.indels.snp.recal.pass.leftAligned.fixed.vcf"
 
 print(args)
@@ -30,12 +28,12 @@ print(args)
 logger = logging.getLogger('fixDeletion')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
-logger.info("reading fasta file " + args.fasta)
-fastaMap = {}
-fasta_sequences = SeqIO.parse(open(args.fasta),'fasta')
-for fasta in fasta_sequences:
-  fastaMap[fasta.id] = str(fasta.seq)
-  
+# logger.info("reading fasta file " + args.fasta)
+# fastaMap = {}
+# fasta_sequences = SeqIO.parse(open(args.fasta),'fasta')
+# for fasta in fasta_sequences:
+#   fastaMap[fasta.id] = str(fasta.seq)
+#   
 logger.info("fixing left aligned deletion ...")
 with open(args.output, "w") as fout:
   if args.input.endswith(".gz"):
@@ -71,22 +69,11 @@ with open(args.output, "w") as fout:
         cur_snp_list = []
         last_locus = cur_locus
       
-      if snv[alt_index] != '*':
-        cur_snp_list.append(line)
+      if snv[alt_index] == '*':
         continue
+
+      cur_snp_list.append(line)
       
-      position = int(snv[position_index]) - 1
-      
-      if position == 0:
-        snv[alt_index] = '-'
-        cur_snp_list.append('\t'.join(snv))
-      else:
-        chrSeq = fastaMap[chr]
-        preBase = chrSeq[position - 1]
-        snv[position_index] = str(position)
-        snv[ref_index] = preBase + snv[ref_index]
-        snv[alt_index] = preBase
-        cur_snp_list.insert(0, '\t'.join(snv))
     for snp_line in cur_snp_list:
       fout.write(snp_line)
   finally:
