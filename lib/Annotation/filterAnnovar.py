@@ -11,6 +11,7 @@ parser.add_argument('-i', '--input', action='store', nargs='?', required=NOT_DEB
 parser.add_argument('-t', '--threshold', action='store', nargs='?', default=1.0, help='Maximum ExAC/1000G/gnomAD allele frequency (default=1.0, no filter)')
 parser.add_argument('-r', '--sample_name_pattern', action='store', nargs='?', default="", help='Sample name regex pattern for extraction those samples only')
 parser.add_argument('-o', '--output_prefix', action='store', nargs='?', required=NOT_DEBUG, help='Output file prefix')
+parser.add_argument('--filter_by_type', action='store', nargs='?', default=False, help='filter SNV by type')
 parser.add_argument('--exac_key', action='store', nargs='?', default="ExAC_ALL", help='ExAC name in vcf')
 parser.add_argument('--g1000_key', action='store', nargs='?', default="1000g2015aug_all", help='1000g name in vcf')
 parser.add_argument('--gnomad_key', action='store', nargs='?', default="gnomAD_genome_ALL", help='gnomAD name in vcf')
@@ -69,7 +70,13 @@ with open(outputprefix + ".filtered.tsv", 'w') as sw:
     for line in f:
       parts = line.rstrip().split('\t')
       gene = parts[geneIndex]
-      if(parts[funcIndex] == "splicing" or parts[refIndex] in accepted):
+
+      bAccept = True
+      if parts[funcIndex] != "splicing":
+        if args.filter_by_type:
+          bAccept = parts[refIndex] in accepted
+
+      if bAccept:
         norm_freq = -1
         if (exacIndex != -1) and (parts[exacIndex] != ""):
           norm_freq = float(parts[exacIndex])
