@@ -45,6 +45,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_muTect2indel", 0 );
   initDefaultValue( $def, "perform_annovar",      0 );
   initDefaultValue( $def, "perform_cnv",          0 );
+  initDefaultValue( $def, "perform_vep",          0 );
 
   if ( $def->{perform_muTect} || $def->{perform_muTect2indel} ) {
     if ( defined $def->{mills} ) {
@@ -337,9 +338,9 @@ sub getConfig {
         if ( $def->{annovar_param} =~ /exac/ ) {
           my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name );
 
-          if ( defined $def->{annotation_genes} ) {
-            addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
-          }
+          #if ( defined $def->{annotation_genes} ) {
+          #  addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
+          #}
 
           my $annovar_to_maf = $annovar_filter_name . "_toMAF";
           $config->{$annovar_to_maf} = {
