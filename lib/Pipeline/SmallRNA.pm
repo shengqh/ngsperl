@@ -498,10 +498,9 @@ sub getSmallRNAConfig {
         {
           target_dir         => $data_visualization_dir . "/" . $tTask,
           output_file        => ".tRNAStartPositionVis",
+          output_file_ext    => ".barplot.png",
           rtemplate          => "tRnaStartPositionVis.R",
           parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count.startpos\$" ],
-
-          #        parameterSampleFile3_ref => $trna_sig_result,
         }
       );
 
@@ -1623,18 +1622,19 @@ sub getSmallRNAConfig {
   #blast unmapped reads
   if ($blast_unmapped_reads) {
     $config->{"final_unmapped_reads_table"} = {
-      class      => "CQS::SmallRNASequenceCountTable",
-      perform    => 1,
-      target_dir => $nonhost_blast_dir . "/final_unmapped_reads_table",
-      option     => getValue( $def, "sequence_count_option" ),
-      source_ref => [ $identical_ref->[0], ".dupcount\$" ],
-      cqs_tools  => $def->{cqstools},
-      suffix     => "_unmapped",
-      sh_direct  => 1,
-      cluster    => $cluster,
-      groups     => $def->{groups},
-      pairs      => $def->{pairs},
-      pbs        => {
+      class         => "CQS::SmallRNASequenceCountTable",
+      perform       => 1,
+      target_dir    => $nonhost_blast_dir . "/final_unmapped_reads_table",
+      option        => getValue( $def, "sequence_count_option" ),
+      source_ref    => [ $identical_ref->[0], ".dupcount\$" ],
+      cqs_tools     => $def->{cqstools},
+      suffix        => "_unmapped",
+      sh_direct     => 1,
+      cluster       => $cluster,
+      groups        => $def->{groups},
+      deseq2_groups => $def->{deseq2_groups},
+      pairs         => $def->{pairs},
+      pbs           => {
         "email"     => $def->{email},
         "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
