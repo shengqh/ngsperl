@@ -270,6 +270,8 @@ sub initializeSmallRNADefaultOptions {
     $def->{run_cutadapt}     = undef;
   }
   initDefaultValue( $def, "perform_cutadapt", 1 );
+  initDefaultValue( $def, "fastq_len", 1 );
+  
   if ( $def->{perform_cutadapt} ) {
     initDefaultValue( $def, "adapter",         "TGGAATTCTCGGGTGCCAAGG" );
     initDefaultValue( $def, "cutadapt_option", "-m " . $def->{min_read_length} );
@@ -289,7 +291,7 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "DE_detected_in_both_group",   0 );
   initDefaultValue( $def, "DE_library_key",              "TotalReads" );
   initDefaultValue( $def, "DE_cooksCutoff",              "FALSE" );
-  initDefaultValue( $def, "use_pearson_in_hca",         0 );
+  initDefaultValue( $def, "use_pearson_in_hca",          0 );
 
   initDefaultValue( $def, "smallrnacount_option", "" );
   initDefaultValue( $def, "hasYRNA",              0 );
@@ -441,18 +443,19 @@ sub getPrepareConfig {
   if ($perform_class_independent_analysis) {
     $class_independent_dir = create_directory_or_die( $target_dir . "/class_independent" );
     $preparation->{identical_sequence_count_table} = {
-      class      => "CQS::SmallRNASequenceCountTable",
-      perform    => 1,
-      target_dir => $class_independent_dir . "/identical_sequence_count_table",
-      option     => getValue( $def, "sequence_count_option" ),
-      source_ref => [ "identical", ".dupcount\$" ],
-      cqs_tools  => $def->{cqstools},
-      suffix     => "_sequence",
-      sh_direct  => 1,
-      cluster    => $cluster,
-      groups     => $def->{groups},
-      pairs      => $def->{pairs},
-      pbs        => {
+      class         => "CQS::SmallRNASequenceCountTable",
+      perform       => 1,
+      target_dir    => $class_independent_dir . "/identical_sequence_count_table",
+      option        => getValue( $def, "sequence_count_option" ),
+      source_ref    => [ "identical", ".dupcount\$" ],
+      cqs_tools     => $def->{cqstools},
+      suffix        => "_sequence",
+      sh_direct     => 1,
+      cluster       => $cluster,
+      groups        => $def->{groups},
+      deseq2_groups => $def->{deseq2_groups},
+      pairs         => $def->{pairs},
+      pbs           => {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
         "walltime" => "10",
