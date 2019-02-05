@@ -104,9 +104,9 @@ sub perform {
   my $recalibrated_vcf_filename = $task_name . ".indels.snp.recal.vcf.gz";
 
   my $pass_file = $task_name . ".indels.snp.recal.pass.vcf.gz";
-  my $left_trim_file = $task_name . ".indels.snp.recal.pass.leftAligned.vcf";
-  my $fix_file = $task_name . ".indels.snp.recal.pass.leftAligned.fixed.vcf";
-  my $final_file = $task_name . ".indels.snp.recal.pass.leftAligned.fixed.vcf.gz";
+  my $left_trim_file = $task_name . ".indels.snp.recal.pass.norm.vcf";
+  my $fix_file = $task_name . ".indels.snp.recal.pass.norm.nospan.vcf";
+  my $final_file = $task_name . ".indels.snp.recal.pass.norm.nospan.vcf.gz";
 
   my $reader_threads = min( 5, $thread );
 
@@ -242,19 +242,13 @@ if [[ -s $recalibrated_vcf_filename && ! -s $pass_file ]]; then
 fi
 
 if [[ -s $pass_file && ! -s $left_trim_file ]]; then
-  echo LeftAlignAndTrimVariants=`date`
-  gatk --java-options \"$java_option\" \\
-    LeftAlignAndTrimVariants \\
-    -R $faFile \\
-    -O $left_trim_file \\
-    -V $pass_file \\
-    --split-multi-allelics
-  
+  echo LeftAlignAndNorm=`date`
+  bcftools norm -m- -o $left_trim_file $pass_file 
 fi
 
 if [[ -s $left_trim_file && ! -s $final_file ]]; then
-  echo fixLeftTrimDeletion=`date`
-  python $script -i $left_trim_file -o $fix_file -f $faFile
+  echo noSpanDeletion=`date`
+  python $script -i $left_trim_file -o $fix_file
   bgzip $fix_file
   tabix -p vcf $final_file
 fi
@@ -283,7 +277,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $final_file = $task_name . ".indels.snp.recal.pass.leftAligned.fixed.vcf.gz";
+  my $final_file = $task_name . ".indels.snp.recal.pass.norm.nospan.vcf.gz";
   my @result_files = ();
   push( @result_files, $result_dir . "/" . $final_file );
 
