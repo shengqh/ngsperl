@@ -87,6 +87,9 @@ gatk --java-options \"$java_option\" PostprocessGermlineCNVCalls \\
   --contig-ploidy-calls $contig_ploidy_calls_dir \\
   --output-genotyped-intervals $genotyped_intervals_vcf_filename \\
   --output-genotyped-segments $genotyped_segments_vcf_filename
+
+tabix -p vcf $genotyped_intervals_vcf_filename
+tabix -p vcf $genotyped_segments_vcf_filename
             
 rm -rf .cache .conda .config .theano
 
