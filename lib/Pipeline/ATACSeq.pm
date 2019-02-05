@@ -241,7 +241,7 @@ sub getConfig {
       }
       else {
         my $default_macs2call_option = $def->{macs2_callpeak_as_singleend} ? "-f BAM" : $pairend ? "-f BAMPE" : "-f BAM";
-        $callOption = $default_macs2call_option . " -g " . getValue( $def, "macs2genome" ) . " -B -q 0.01 --nomodel --slocal 20000 --llocal 20000 --keep-dup all";
+        $callOption = $default_macs2call_option . " -g " . getValue( $def, "macs2_genome" ) . " -B -q 0.01 --nomodel --slocal 20000 --llocal 20000 --keep-dup all";
       }
 
       my $macs2_peak_type = getValue( $def, "macs2_peak_type" );
@@ -303,7 +303,9 @@ sub getConfig {
           target_dir              => "${target_dir}/${bindName}",
           option                  => "",
           source_ref              => "bwa_cleanbam",
-          designtable             => getValue( $def, "diffbind_table" ),
+          groups                  => $def->{"treatments"},
+          controls                => $def->{"controls"},
+          design_table             => getValue( $def, "diffbind_table" ),
           peaks_ref               => [ $callName, $callFilePattern ],
           peak_software           => "bed",
           homer_annotation_genome => $def->{homer_annotation_genome},
