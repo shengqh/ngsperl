@@ -138,7 +138,7 @@ fi
 
       print $pbs "
 if [[ -s $result && ! -s $final ]]; then
-  $cat ${sampleFile} | grep \"^##\"  > ${final}.header
+  sed -n '/^[^#]/q;p' ${sampleFile}|sed '\$ d' > ${final}.header
   $cat ${sampleFile} | grep -v \"^##\" | cut -f7- > ${sampleFile}.clean
   grep -v \"^##\" ${result} > ${result}.clean
   paste ${result}.clean ${sampleFile}.clean > ${final}.data
