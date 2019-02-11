@@ -46,6 +46,10 @@ sub result {
     if($self->{log_result}){
       push( @result_files, "${cur_dir}/${sample_name}.log" );
     }
+    
+    if($option =~ /\-m/){
+      push( @result_files, "${cur_dir}/${sample_name}.bam.max.txt" );
+    }
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }

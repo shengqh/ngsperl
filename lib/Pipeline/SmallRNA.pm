@@ -1598,6 +1598,34 @@ sub getSmallRNAConfig {
       },
     };
     push @$summary_ref, "sequence_mapped_in_categories";
+
+    if ( defined $def->{perform_short_reads_source} and $def->{perform_short_reads_source} ) {
+      $config->{short_reads_source} = {
+        'class'                    => 'CQS::ProgramIndividualWrapper',
+        'source_ref'               => [ "bowtie1_genome_unmapped_reads", ".short.fastq.dupcount" ],
+        'source_arg'               => '-i',
+        'parameterSampleFile2_ref' => [ "bowtie1_genome_1mm_NTA", ".bam.max.txt" ],
+        'parameterSampleFile2_arg' => '-m',
+        'parameterFile1_ref'       => [ "sequence_mapped_in_categories", ".ReadsMapping.Summary.csv" ],
+        'parameterFile1_arg'       => '-a',
+        'interpretor'              => 'python',
+        'program'                  => '../SmallRNA/explainShortReads.py',
+        'target_dir'               => $data_visualization_dir . "/short_reads_source",
+        'output_ext'               => '.tsv',
+        'output_arg'               => '-o',
+        'output_to_same_folder'    => 1,
+        'sh_direct'                => 1,
+        'perform'                  => 1,
+        'pbs'                      => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "2",
+          "mem"       => "10gb"
+        },
+      };
+    }
+    push @$summary_ref, "short_reads_source";
   }
 
   #add time cost task in the end of pipeline
