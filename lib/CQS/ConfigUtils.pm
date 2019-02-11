@@ -1067,6 +1067,8 @@ sub get_parameter_file {
   my $resultArg = get_option( $config, $section, $key . "_arg", "" );
   if ( !defined($result) ) {
     $result = "";
+  } else {
+    $result = "\"" . $result . "\"";
   }
   return ( $result, $resultArg );
 }
