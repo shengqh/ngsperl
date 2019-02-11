@@ -60,15 +60,13 @@ sub perform {
     my $final_file = basename($vcf_file) . ".maf.txt";
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     print $pbs "
-if [[ ! -s $final_file ]]; then
-  perl $vcf2mgf --vep-forks $thread --input-vcf $vcf_file --output-maf $annotation_file --vep-path $vep_path --vep-data $vep_data --species $species --ncbi-build $ncbi_build --ref-fasta $ref_fasta $filter_vcf
+perl $vcf2mgf --vep-forks $thread --input-vcf $vcf_file --output-maf $annotation_file --vep-path $vep_path --vep-data $vep_data --species $species --ncbi-build $ncbi_build --ref-fasta $ref_fasta $filter_vcf
   
-  if [[ -s $annotation_file ]]; then
-    python $script -i $annotation_file -v $vcf_file -o $final_file
-  fi
+if [[ -s $annotation_file ]]; then
+  python $script -i $annotation_file -v $vcf_file -o $final_file
 fi
 ";
     $self->close_pbs( $pbs, $pbs_file );

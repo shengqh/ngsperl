@@ -362,7 +362,7 @@ sub getSmallRNAConfig {
     if ( defined $config->{identical_check_cca} ) {
       $host_genome->{bowtie1_genome_1mm_NTA_smallRNA_count}{cca_files_ref} = ["identical_check_cca"];
     }
-    
+
     push @$individual_ref, ("bowtie1_genome_1mm_NTA_smallRNA_count");
 
     my $countTask = "bowtie1_genome_1mm_NTA_smallRNA_count";
@@ -482,54 +482,35 @@ sub getSmallRNAConfig {
       }
     );
 
+    $config = merge( $config, $host_genome );
+    push @$summary_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_info", "bowtie1_genome_1mm_NTA_smallRNA_category", "host_genome_tRNA_category" );
+
     if ( $def->{perform_host_tRNA_start_position} ) {
       my $tTask = "host_genome_tRNA_start_position_vis";
-      $host_genome->{$tTask} = {
-        class                    => "CQS::ProgramWrapper",
-        perform                  => 1,
-        target_dir               => $data_visualization_dir . "/$tTask",
-        option                   => "",
-        interpretor              => "python",
-        program                  => "../SmallRNA/tRNAHostStartPosition.py",
-        parameterSampleFile1_arg => "-i",
-        parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
-        output_arg               => "-o",
-        output_ext               => ".tRNA_startPosition.tsv",
-        sh_direct                => 1,
-        pbs                      => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      };
-      
       if ( !defined $def->{tRNA_vis_group} ) {
         $def->{tRNA_vis_group} = $groups;
       }
       addPositionVis(
         $config, $def,
         $summary_ref,
-        "host_genome_tRNA_start_position_vis_plot",
+        $tTask,
         $data_visualization_dir,
         {
-          target_dir           => $data_visualization_dir . "/host_genome_tRNA_start_position_vis",
+          target_dir         => $data_visualization_dir . "/" . $tTask,
           output_file        => ".tRNAStartPositionVis",
-          rtemplate=>"tRnaStartPositionVis.R",
-          parameterFile1_ref => [ "host_genome_tRNA_start_position_vis", ".tRNA_startPosition.tsv\$" ],
-
-          #        parameterSampleFile3_ref => $trna_sig_result,
+          output_file_ext    => ".barplot.png",
+          rtemplate          => "tRnaStartPositionVis.R",
+          parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count.startpos\$" ],
         }
       );
-      
+
       push @$summary_ref, $tTask;
     }
 
     if ( ( not $perform_host_tRH_analysis ) and getValue( $def, "perform_host_rRNA_coverage" ) ) {
       my $visualizationTask = "host_genome_rRNA_position_vis";
       my $folder            = $data_visualization_dir . "/" . $visualizationTask;
-      $host_genome->{$visualizationTask} = {
+      $config->{$visualizationTask} = {
         class                    => "CQS::ProgramWrapper",
         perform                  => 1,
         target_dir               => $folder,
@@ -552,7 +533,7 @@ sub getSmallRNAConfig {
     }
 
     if ( defined $def->{host_xml2bam} && $def->{host_xml2bam} ) {
-      $host_genome->{bowtie1_genome_xml2bam} = {
+      $config->{bowtie1_genome_xml2bam} = {
         class         => "SmallRNA::HostXmlToBam",
         perform       => 1,
         target_dir    => $host_genome_dir . "/bowtie1_genome_xml2bam",
@@ -709,9 +690,6 @@ sub getSmallRNAConfig {
       }
     }
 
-    push @$summary_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_info", "bowtie1_genome_1mm_NTA_smallRNA_category", "host_genome_tRNA_category" );
-
-    $config = merge( $config, $host_genome );
     if ($do_comparison) {
       my @visual_source       = ();
       my @visual_source_reads = ();
@@ -1644,18 +1622,19 @@ sub getSmallRNAConfig {
   #blast unmapped reads
   if ($blast_unmapped_reads) {
     $config->{"final_unmapped_reads_table"} = {
-      class      => "CQS::SmallRNASequenceCountTable",
-      perform    => 1,
-      target_dir => $nonhost_blast_dir . "/final_unmapped_reads_table",
-      option     => getValue( $def, "sequence_count_option" ),
-      source_ref => [ $identical_ref->[0], ".dupcount\$" ],
-      cqs_tools  => $def->{cqstools},
-      suffix     => "_unmapped",
-      sh_direct  => 1,
-      cluster    => $cluster,
-      groups     => $def->{groups},
-      pairs      => $def->{pairs},
-      pbs        => {
+      class         => "CQS::SmallRNASequenceCountTable",
+      perform       => 1,
+      target_dir    => $nonhost_blast_dir . "/final_unmapped_reads_table",
+      option        => getValue( $def, "sequence_count_option" ),
+      source_ref    => [ $identical_ref->[0], ".dupcount\$" ],
+      cqs_tools     => $def->{cqstools},
+      suffix        => "_unmapped",
+      sh_direct     => 1,
+      cluster       => $cluster,
+      groups        => $def->{groups},
+      deseq2_groups => $def->{deseq2_groups},
+      pairs         => $def->{pairs},
+      pbs           => {
         "email"     => $def->{email},
         "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",

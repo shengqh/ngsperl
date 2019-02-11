@@ -3,6 +3,7 @@ import sys
 import logging
 import os
 import csv
+import gzip
 
 DEBUG=False
 NotDEBUG=not DEBUG
@@ -30,7 +31,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 
 with open(args.output, "w") as fout:
   with open(args.output + ".discard", "w") as fdiscard:
-    with open(args.input, "r") as fin:
+    if args.input.endswith(".gz"):
+      fin = gzip.open(args.input, 'rb')
+    else:
+      fin = open(args.input, "r")
+    try:
       while True:
         line = fin.readline()
         if "#CHROM" in line:
@@ -91,4 +96,8 @@ with open(args.output, "w") as fout:
           fout.write(line)
         else:
           fdiscard.write("gt1count %d ~ failedCount %d\t%s\n" %(gt1count, gt1lessCount, line.rstrip()))
+      
       print("haszero: %d out of %d" % (svnzero, totalsnv))
+    finally:
+      fin.close()
+      

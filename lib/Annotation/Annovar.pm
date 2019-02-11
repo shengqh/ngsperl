@@ -57,9 +57,15 @@ sub perform {
 
   my $raw_files = get_raw_files( $config, $section );
 
-  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
-  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
-  print $sh get_run_command($sh_direct);
+  my $sampleCount = scalar keys %$raw_files;
+
+  my $shfile;
+  my $sh;
+  if ( $sampleCount > 1 ) {
+    $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+    open( $sh, ">$shfile" ) or die "Cannot create $shfile";
+    print $sh get_run_command($sh_direct);
+  }
 
   my $listfile = $self->get_file( $result_dir, $task_name, ".list", 0 );
   open( my $lt, ">$listfile" ) or die "Cannot create $listfile";
@@ -89,6 +95,8 @@ sub perform {
       my $refine_result = "${annovar}.splicing.${buildver}_multianno.txt";
       my $final         = $annovar . ".final.tsv";
       my $excel         = $final . ".xls";
+
+      my $cat = ( $filename =~ /.gz/ ) ? "zcat" : "cat";
 
       my $runcmd;
       my $passinput;
@@ -130,8 +138,8 @@ fi
 
       print $pbs "
 if [[ -s $result && ! -s $final ]]; then
-  grep \"^##\" ${sampleFile} > ${final}.header
-  grep -v \"^##\" ${sampleFile} | cut -f7- > ${sampleFile}.clean
+  $cat ${sampleFile} | grep \"^##\"  > ${final}.header
+  $cat ${sampleFile} | grep -v \"^##\" | cut -f7- > ${sampleFile}.clean
   grep -v \"^##\" ${result} > ${result}.clean
   paste ${result}.clean ${sampleFile}.clean > ${final}.data
   cat ${final}.header ${final}.data > $final
@@ -147,7 +155,7 @@ if [ -s $final ]; then
 fi
 
 if [[ -s $final && ! -s $excel ]]; then
-  mono-sgen $cqstools annovar_refine -i $final $affyoption -o $excel
+  mono $cqstools annovar_refine -i $final $affyoption -o $excel
 fi
 ";
       }
@@ -156,18 +164,21 @@ fi
     }
     $self->close_pbs( $pbs, $pbs_file );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
+    if ( $sampleCount > 1 ) {
+      print $sh "\$MYCMD ./$pbs_name \n";
+    }
   }
   close $lt;
 
-  print $sh "exit 0\n";
-  close $sh;
+  if ( $sampleCount > 1 ) {
+    print $sh "exit 0\n";
+    close $sh;
 
-  if ( is_linux() ) {
-    chmod 0755, $shfile;
+    if ( is_linux() ) {
+      chmod 0755, $shfile;
+    }
+    print "!!!shell file $shfile created, you can run this shell file to submit Annovar tasks.\n";
   }
-  print "!!!shell file $shfile created, you can run this shell file to submit Annovar tasks.\n";
 }
 
 sub result {

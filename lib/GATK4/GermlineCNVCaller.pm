@@ -32,7 +32,7 @@ sub perform {
   my $java_option = $self->get_java_option( $config, $section, $memory );
 
   #parameter files
-  my $gatk_singularity = get_param_file( $config->{$section}{gatk_singularity}, "gatk_singularity", 1 );
+  my $gatk4_singularity = get_param_file( $config->{$section}{gatk4_singularity}, "gatk4_singularity", 1 );
 
   my $intervals               = parse_param_file( $config, $section, "filtered_intervals",      1 );
   my $contig_ploidy_calls_dir = parse_param_file( $config, $section, "contig_ploidy_calls_dir", 1 );
@@ -40,18 +40,32 @@ sub perform {
   my $parameters = get_parameter_options(
     $config, $section, "--",
     [
-      "p-alt",                                  "p-active",                         "cnv-coherence-length", "class-coherence-length", "max-copy-number", "max-bias-factors",
-      "mapping-error-rate",                     "interval-psi-scale",               "sample-psi-scale",
-      "depth-correction-tau",                   "log-mean-bias-standard-deviation", "init-ard-rel-unexplained-variance",
-      "num-gc-bins",                            "gc-curve-standard-deviation",      "copy-number-posterior-expectation-mode",
-      "enable-bias-factors",                    "active-class-padding-hybrid-mode", "learning-rate",
-      "adamax-beta-1",                          "adamax-beta-2",                    "log-emission-samples-per-round",
-      "log-emission-sampling-median-rel-error", "log-emission-sampling-rounds",
-      "max-advi-iter-first-epoch",        "max-advi-iter-subsequent-epochs",     "min-training-epochs",
-      "max-training-epochs",              "initial-temperature",                 "num-thermal-advi-iters",
-      "convergence-snr-averaging-window", "convergence-snr-trigger-threshold",   "convergence-snr-countdown-window",
-      "max-calling-iters",                "caller-update-convergence-threshold", "caller-internal-admixing-rate",
-      "caller-external-admixing-rate",    "disable-annealing"
+      "p-alt",                            "p-active",                               "cnv-coherence-length",                   "class-coherence-length",               #
+      "max-copy-number",                  "max-bias-factors",                       "mapping-error-rate",                     "interval-psi-scale",                   #
+      "sample-psi-scale",                 "depth-correction-tau",                   "log-mean-bias-standard-deviation",       "init-ard-rel-unexplained-variance",    #
+      "num-gc-bins",                      "gc-curve-standard-deviation",            "copy-number-posterior-expectation-mode", "enable-bias-factors",                  #
+      "active-class-padding-hybrid-mode", "learning-rate",                          "adamax-beta-1",                          "adamax-beta-2",                        #
+      "log-emission-samples-per-round",   "log-emission-sampling-median-rel-error", "log-emission-sampling-rounds",           "max-advi-iter-first-epoch",            #
+      "max-advi-iter-subsequent-epochs",  "min-training-epochs",                    "max-training-epochs",                    "initial-temperature",                  #
+      "num-thermal-advi-iters",           "convergence-snr-averaging-window",       "convergence-snr-trigger-threshold",      "convergence-snr-countdown-window",     #
+      "max-calling-iters", "caller-update-convergence-threshold", "caller-internal-admixing-rate",                                                                    #
+      "caller-external-admixing-rate", "disable-annealing"
+    ],
+    [
+      "1e-6",    "1e-2",  "10000.0",                                                                                                                                  #
+      "10000.0", "5",     "5",                                                                                                                                        #
+      "0.01",    "0.001", "0.0001",                                                                                                                                   #
+      "10000.0", "0.1",   "0.1",                                                                                                                                      #
+      "20",      "1.0",   "HYBRID",                                                                                                                                   #
+      "true",    "50000", "0.05",                                                                                                                                     #
+      "0.9",     "0.99",  "50",                                                                                                                                       #
+      "0.005", "10",                                                                                                                                                  #
+      "5000",  "100",                                                                                                                                                 #
+      "10",    "100",                                                                                                                                                 #
+      "2.0",   "2500",                                                                                                                                                #
+      "500",   "0.1", "10",                                                                                                                                           #
+      "10",    "0.001", "0.75",                                                                                                                                       #
+      "1.00",  "false"
     ]
   );
 
@@ -65,7 +79,7 @@ sub perform {
   my $log      = $self->get_log_filename( $log_dir, $task_name );
   my $log_desc = $cluster->get_log_description($log);
 
-  my $inputOption = get_rawfiles_option( $raw_files, "--input" );
+  my $inputOption = get_rawfiles_option( $raw_files, "--input", " \\\n  " );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -77,22 +91,24 @@ source activate gatk
 
 cd $result_dir
 
+export MKL_NUM_THREADS=$thread
+export OMP_NUM_THREADS=$thread
+
 gatk --java-options \"$java_option\" GermlineCNVCaller \\
   --run-mode COHORT \\
-  -L ${intervals} \\
-  $inputOption \\
+  -L ${intervals} $inputOption \\
   --contig-ploidy-calls $contig_ploidy_calls_dir \\
   --interval-merging-rule OVERLAPPING_ONLY \\
   --output . \\
   --output-prefix ${cohort_entity_id} \\
-  --verbosity DEBUG $parameters \\
+  --verbosity DEBUG $parameters
             
 rm -rf .cache .conda .config .theano
 ";
   close($sh);
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
-  print $pbs "singularity run $gatk_singularity $shfile \n";
+  print $pbs "singularity run $gatk4_singularity $shfile \n";
   $self->close_pbs( $pbs, $pbs_file );
 }
 

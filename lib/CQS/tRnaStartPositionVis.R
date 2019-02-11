@@ -60,9 +60,9 @@ for(group in groups){
 	allPosition<-rbind(allPosition, groupPositions)
 }
 
-#tRNA Group
-allPosition$smallRNAGroup<-tRnaName2Group(allPosition$Feature,toAnticodn=TRUE)
-smallRNAGroupSize<-tapply(allPosition$Feature,allPosition$smallRNAGroup,function(x) length(unique(x)))
+##tRNA Group
+#allPosition$smallRNAGroup<-tRnaName2Group(allPosition$Feature,toAnticodn=TRUE)
+#smallRNAGroupSize<-tapply(allPosition$Feature,allPosition$smallRNAGroup,function(x) length(unique(x)))
 
 if (length(unique(allPosition$Feature))>maxFeature) {
 	allPositionUniqueFeature<-unique(allPosition[,c("File","Feature","TotalCount")])
@@ -123,7 +123,7 @@ m <- ggplot(allPositionByGroup, aes(x = Position,y=GroupPercentage)) +
 #		guides(fill= guide_legend(ncol=ncols,keywidth=1, keyheight=1.5))
 
 #m <- ggplot(allPositionByGroup, aes(x = Position,y=GroupPositionCountFraction))+geom_bar(stat="identity")
-print(m+facet_grid(smallRNAGroup~Group,scale="free"))
+print(m+facet_grid(Feature~Group,scale="free"))
 dev.off()
 
 

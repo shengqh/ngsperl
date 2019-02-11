@@ -25,6 +25,15 @@ if(!exists("referenceSet")){
 cat("interestGeneType=", interestGeneType, "\n")
 cat("referenceSet=", referenceSet, "\n")
 
+info = file.info(geneFile)
+if (all(is.na(info$size))) {
+  stop(paste0("Gene file is not exist: ", geneFile, "\n"))
+}
+
+if (all(info$size == 0)) {
+  stop(paste0("Gene file is empty: ", geneFile, "\n"))
+}
+
 geneList<-read.table(geneFile,header=FALSE,sep="\t",stringsAsFactors=FALSE)
 genes<-geneList$V1
 
@@ -43,6 +52,6 @@ for(enrichDatabase in enrichDatabases){
   WebGestaltR(enrichMethod="ORA",organism=organism,
             enrichDatabase=enrichDatabase,interestGene=genes,
             interestGeneType=interestGeneType,referenceSet=referenceSet,
-            is.output=TRUE,
+            isOutput=TRUE,
             outputDirectory=outputDirectory,projectName=paste0(sampleName, "_", enrichDatabase))
 }

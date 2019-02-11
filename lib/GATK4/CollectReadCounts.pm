@@ -33,7 +33,7 @@ sub perform {
 
   #parameter files
   #my $gatkJar = get_param_file( $config->{$section}{gatk_jar}, "gatk_jar", 1 );
-  my $gatk_singularity = get_param_file( $config->{$section}{gatk_singularity}, "gatk_singularity", 1 );
+  my $gatk4_singularity = get_param_file( $config->{$section}{gatk4_singularity}, "gatk4_singularity", 1 );
 
   my $preprocessed_intervals = parse_param_file( $config, $section, "preprocessed_intervals", 1 );
 
@@ -86,7 +86,7 @@ rm -rf .cache .conda .config .theano
     close($shsample);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
-    print $pbs "singularity run $gatk_singularity $shsamplefile \n";
+    print $pbs "singularity run $gatk4_singularity $shsamplefile \n";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;

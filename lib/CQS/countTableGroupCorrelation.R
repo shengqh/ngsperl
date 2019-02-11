@@ -7,6 +7,7 @@ library(colorRamps)
 
 countTableFileList<-parSampleFile1
 groupFileList<-parSampleFile2
+colorFileList<-parSampleFile3
 fixColorRange<-TRUE
 
 geneFile<-parFile1
@@ -30,6 +31,10 @@ if(outputPdf){
 }
 if(outputPng){
   outputFormat<-c(outputFormat, "PNG")
+}
+
+if(!exists("hasRowNames")){
+  hasRowNames<-NA
 }
 
 if(exists("useGreenRedColorInHCA") && useGreenRedColorInHCA){
@@ -169,6 +174,14 @@ if (geneFile!="") { #visualization based on genes in geneFile only
   print(paste0("There are ", length(genes), " genes in gene file."))
 }else{
   genes<-NA
+}
+
+if(colorFileList != ""){
+  colorsTab<-read.table(colorFileList, sep="\t", header=F, stringsAsFactors=F)
+  groupColors<-colorsTab$V1
+  names(groupColors)<-colorsTab$V2
+}else{
+  groupColors<-NA
 }
 
 #start work:
@@ -320,7 +333,11 @@ for (i in 1:nrow(countTableFileAll)) {
     hasMultipleGroup<-length(unique(validSampleToGroup$V2)) > 1
     if (hasMultipleGroup) {
       groups<-validSampleToGroup$V2
-      colors<-makeColors(length(unique(groups)))
+      if (is.na(groupColors)){
+        colors<-makeColors(length(unique(groups)))
+      }else{
+        colors<-groupColors
+      }
       conditionColors<-as.matrix(data.frame(Group=colors[groups]))
     }else{
       groups<-NA
@@ -347,6 +364,9 @@ for (i in 1:nrow(countTableFileAll)) {
     drawPCA(paste0(outputFilePrefix,curSuffix,".PCA"), countHT, showLabelInPCA, groups, colors, outputFormat)
     
     hcaOption<-getHeatmapOption(countHT)
+    if(!is.na(hasRowNames) & hasRowNames){
+      hcaOption$labRow<-NULL
+    }
     
     width=min(8000, max(2000, 50 * ncol(countHT)))
     if (ncol(countHT)>1 & nrow(countHT)>1) {

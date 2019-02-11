@@ -16,7 +16,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addPARalyzer
-      addBowtie1PARalyzer addBamStat getOutputFormat
+      addBowtie1PARalyzer addBamStat addOutputOption getOutputFormat
       getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn
       getBatchGroups addHomerMotif addHomerAnnotation addEnhancer writeDesignTable addMultiQC
       getNextFolderIndex addCleanBAM getReportDir getSequenceTaskClassname
@@ -123,10 +123,10 @@ sub addBlastn {
 sub addBowtie {
   my ( $config, $def, $individual, $taskName, $parentDir, $bowtieIndex, $sourceRef, $bowtieOption, $hours ) = @_;
 
-  if(!defined $hours){
+  if ( !defined $hours ) {
     $hours = "24";
   }
-  
+
   $config->{$taskName} = {
     class                 => "Alignment::Bowtie1",
     perform               => 1,
@@ -250,15 +250,29 @@ sub getReportDir {
   return ($report_dir);
 }
 
+sub addOutputOption {
+  my ( $def, $rcode, $key, $defaultValue, $alternativeKey ) = @_;
+  my $result = $rcode;
+  my $newkey = ( defined $alternativeKey ) ? $alternativeKey : $key;
+  if ( $result !~ /$key/ ) {
+    if ( getValue( $def, $key, $defaultValue ) ) {
+      $result = $result . "$newkey<-TRUE;";
+    }
+    else {
+      $result = $result . "$newkey<-FALSE;";
+    }
+  }
+  return ($result);
+}
+
 sub getOutputFormat {
-  my $def    = shift;
-  my $result = "";
-  if ( getValue( $def, "outputPdf", 0 ) ) {
-    $result = "outputPdf<-TRUE;";
-  }
-  if ( getValue( $def, "outputPng", 1 ) ) {
-    $result = $result . "outputPng<-TRUE;";
-  }
+  my ( $def, $rcode ) = @_;
+  my $result = $rcode;
+
+  $result = addOutputOption( $def, $result, "outputPdf",          0 );
+  $result = addOutputOption( $def, $result, "outputPng",          1 );
+  $result = addOutputOption( $def, $result, "showLabelInPCA",     1 );
+  $result = addOutputOption( $def, $result, "use_pearson_in_hca", $def->{use_pearson_in_hca}, "usePearsonInHCA" );
   return ($result);
 }
 
@@ -281,7 +295,6 @@ sub addDEseq2 {
     option                       => "",
     source_ref                   => "pairs",
     groups_ref                   => $groupNames,
-    countfile_ref                => $countfileRef,
     sh_direct                    => 1,
     show_label_PCA               => $def->{show_label_PCA},
     use_pearson_in_hca           => $def->{use_pearson_in_hca},
@@ -299,7 +312,7 @@ sub addDEseq2 {
     cooksCutoff                  => $def->{DE_cooksCutoff},
     $libraryFileKey              => $libraryFile,
     library_key                  => $libraryKey,
-    rCode                        => getOutputFormat($def),
+    rCode                        => getOutputFormat( $def, "" ),
     pbs                          => {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
@@ -831,7 +844,7 @@ sub addAnnovarFilter {
     source_ref          => $annovar_name,
     option              => "",
     sh_direct           => 1,
-    maximum_exac_values => "0.001,0.01,0.1,1.0",
+    maximum_freq_values => "0.001,0.01,0.1,1.0",
     pbs                 => {
       "nodes"    => "1:ppn=1",
       "walltime" => "2",
@@ -882,16 +895,16 @@ sub addGATK4PreprocessIntervals {
 
     #PreprocessIntervals at summary level
     $config->{$result} = {
-      class            => "GATK4::PreprocessIntervals",
-      gatk_singularity => $gatk4_singularity,
-      option           => "",
-      interval_file    => getValue( $def, "covered_bed" ),
-      ref_fasta_dict   => getValue( $def, "ref_fasta_dict" ),
-      ref_fasta        => getValue( $def, "ref_fasta" ),
-      'sh_direct'      => 1,
-      'perform'        => 1,
-      'target_dir'     => $target_dir . '/GATK4_CNV_Germline_PreprocessIntervals',
-      'pbs'            => {
+      class             => "GATK4::PreprocessIntervals",
+      gatk4_singularity => $gatk4_singularity,
+      option            => "",
+      interval_file     => getValue( $def, "covered_bed" ),
+      ref_fasta_dict    => getValue( $def, "ref_fasta_dict" ),
+      ref_fasta         => getValue( $def, "ref_fasta" ),
+      'sh_direct'       => 1,
+      'perform'         => 1,
+      'target_dir'      => $target_dir . '/GATK4_CNV_Germline_PreprocessIntervals',
+      'pbs'             => {
         'nodes'    => '1:ppn=1',
         'mem'      => '20gb',
         'walltime' => '2'
@@ -912,7 +925,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   #CollectReadCounts at sample level
   $config->{"GATK4_CNV_Germline_CollectReadCounts"} = {
     class                      => "GATK4::CollectReadCounts",
-    gatk_singularity           => $gatk4_singularity,
+    gatk4_singularity          => $gatk4_singularity,
     source_ref                 => $bam_ref,
     option                     => "",
     preprocessed_intervals_ref => $preprocessIntervalsTask,
@@ -932,7 +945,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   #FilterIntervals at summary level
   $config->{"GATK4_CNV_Germline_FilterIntervals"} = {
     class                      => "GATK4::FilterIntervals",
-    gatk_singularity           => $gatk4_singularity,
+    gatk4_singularity          => $gatk4_singularity,
     source_ref                 => "GATK4_CNV_Germline_CollectReadCounts",
     option                     => "",
     preprocessed_intervals_ref => "GATK4_CNV_Germline_PreprocessIntervals",
@@ -952,7 +965,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   #DetermineGermlineContigPloidy at summary level
   $config->{"GATK4_CNV_Germline_DetermineGermlineContigPloidyCohortMode"} = {
     class                  => "GATK4::DetermineGermlineContigPloidy",
-    gatk_singularity       => $gatk4_singularity,
+    gatk4_singularity      => $gatk4_singularity,
     source_ref             => "GATK4_CNV_Germline_CollectReadCounts",
     option                 => "",
     filtered_intervals_ref => "GATK4_CNV_Germline_FilterIntervals",
@@ -971,7 +984,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   #GermlineCNVCaller at summary level
   $config->{"GATK4_CNV_Germline_GermlineCNVCaller"} = {
     class                       => "GATK4::GermlineCNVCaller",
-    gatk_singularity            => $gatk4_singularity,
+    gatk4_singularity           => $gatk4_singularity,
     source_ref                  => "GATK4_CNV_Germline_CollectReadCounts",
     option                      => "",
     filtered_intervals_ref      => "GATK4_CNV_Germline_FilterIntervals",
@@ -990,7 +1003,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   #PostprocessGermlineCNVCalls at sample level
   $config->{"GATK4_CNV_Germline_PostprocessGermlineCNVCalls"} = {
     class                       => "GATK4::PostprocessGermlineCNVCalls",
-    gatk_singularity            => $gatk4_singularity,
+    gatk4_singularity           => $gatk4_singularity,
     source_ref                  => "GATK4_CNV_Germline_CollectReadCounts",
     calls_shard_path_ref        => [ "GATK4_CNV_Germline_GermlineCNVCaller", "calls\$" ],
     model_shard_path_ref        => [ "GATK4_CNV_Germline_GermlineCNVCaller", "model\$" ],

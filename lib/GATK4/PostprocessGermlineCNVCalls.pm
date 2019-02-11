@@ -32,7 +32,7 @@ sub perform {
   my $java_option = $self->get_java_option( $config, $section, $memory );
 
   #parameter files
-  my $gatk_singularity = get_param_file( $config->{$section}{gatk_singularity}, "gatk_singularity", 1 );
+  my $gatk4_singularity = get_param_file( $config->{$section}{gatk4_singularity}, "gatk4_singularity", 1 );
 
   my $contig_ploidy_calls_dir = parse_param_file( $config, $section, "contig_ploidy_calls_dir", 1 );
 
@@ -87,6 +87,9 @@ gatk --java-options \"$java_option\" PostprocessGermlineCNVCalls \\
   --contig-ploidy-calls $contig_ploidy_calls_dir \\
   --output-genotyped-intervals $genotyped_intervals_vcf_filename \\
   --output-genotyped-segments $genotyped_segments_vcf_filename
+
+tabix -p vcf $genotyped_intervals_vcf_filename
+tabix -p vcf $genotyped_segments_vcf_filename
             
 rm -rf .cache .conda .config .theano
 
@@ -94,7 +97,7 @@ rm -rf .cache .conda .config .theano
     close($shsample);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $genotyped_intervals_vcf_filename, $init_command );
-    print $pbs "singularity run $gatk_singularity $shsamplefile \n";
+    print $pbs "singularity run $gatk4_singularity $shsamplefile \n";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;

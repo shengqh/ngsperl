@@ -125,6 +125,7 @@ sub addOutput {
     push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.read.count",               0 ) );
     push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.aminoacid.count",          0 ) );
     push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.aminoacid.count.position", 0 ) );
+    push( @$result_files, $self->get_file( $result_dir, $key, ".tRNA.count.startpos", 0 ) );
 
     if ( !$is_tRH ) {
 

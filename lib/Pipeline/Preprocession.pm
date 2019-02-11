@@ -98,7 +98,7 @@ sub getPreprocessionConfig {
   my $summary    = [];
 
   if ( !$def->{perform_preprocessing} ) {
-    return ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $source_ref );
+    return ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $source_ref, $cluster );
   }
 
   #task

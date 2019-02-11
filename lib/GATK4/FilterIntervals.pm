@@ -32,7 +32,7 @@ sub perform {
   my $java_option = $self->get_java_option( $config, $section, $memory );
 
   #parameter files
-  my $gatk_singularity = get_param_file( $config->{$section}{gatk_singularity}, "gatk_singularity", 1 );
+  my $gatk4_singularity = get_param_file( $config->{$section}{gatk4_singularity}, "gatk4_singularity", 1 );
 
   my $intervals = parse_param_file( $config, $section, "preprocessed_intervals", 1 );
   my $blacklist_intervals = get_param_file( $config->{$section}{blacklist_file}, "blacklist_file", 0 );
@@ -44,9 +44,20 @@ sub perform {
   my $parameters = get_parameter_options(
     $config, $section, "--",
     [
-      "minimum-gc-content",                      "maximum-gc-content",                      "minimum-mappability",              "maximum-mappability",
-      "minimum-segmental-duplication-content",   "maximum-segmental-duplication-content",   "low-count-filter-count-threshold", "low-count-filter-percentage-of-samples",
-      "extreme-count-filter-minimum-percentile", "extreme-count-filter-maximum-percentile", "extreme-count-filter-percentage-of-samples"
+      "minimum-gc-content",                      "maximum-gc-content",                         #
+      "minimum-mappability",                     "maximum-mappability",                        #
+      "minimum-segmental-duplication-content",   "maximum-segmental-duplication-content",      #
+      "low-count-filter-count-threshold",        "low-count-filter-percentage-of-samples",     #
+      "extreme-count-filter-minimum-percentile", "extreme-count-filter-maximum-percentile",    #
+      "extreme-count-filter-percentage-of-samples"
+    ],
+    [
+      "0.1", "0.9",                                                                            #
+      "0.9", "1.0",                                                                            #
+      "0.0", "0.5",                                                                            #
+      "5",   "90.0",                                                                           #
+      "1",   "99.0",                                                                           #
+      "90.0"
     ]
   );
 
@@ -62,7 +73,7 @@ sub perform {
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $sampleFile   = $sample_files[0];
-    $inputOption = $inputOption . " --input " . $sampleFile;
+    $inputOption = $inputOption . " \\\n  --input " . $sampleFile;
   }
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -76,15 +87,14 @@ source activate gatk
 cd $result_dir
 
 gatk --java-options \"$java_option\" FilterIntervals \\
-  -L ${intervals} $blacklist_intervals_option \\
-  $inputOption \\
-  --interval-merging-rule OVERLAPPING_ONLY $parameters\\
+  -L ${intervals} $blacklist_intervals_option $inputOption \\
+  --interval-merging-rule OVERLAPPING_ONLY $parameters \\
   --output $final_file
 ";
   close($sh);
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
-  print $pbs "singularity run $gatk_singularity $shfile \n";
+  print $pbs "singularity run $gatk4_singularity $shfile \n";
   $self->close_pbs( $pbs, $pbs_file );
 }
 

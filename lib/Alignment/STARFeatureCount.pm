@@ -83,8 +83,9 @@ sub perform {
 
   for my $sample_name ( sort keys %fqFiles ) {
     my @sample_files = @{ $fqFiles{$sample_name} };
+    my $sample_file_1 = $sample_files[0];
 
-    my $uncompress = ( $sample_files[0] =~ /.gz$/ ) ? " --readFilesCommand zcat" : "";
+    my $uncompress = ( $sample_file_1 =~ /.gz$/ ) ? " --readFilesCommand zcat" : "";
 
     my $samples = join( " ", @sample_files );
 
@@ -109,7 +110,7 @@ sub perform {
     my $chromosome_grep_command = $output_sort_by_coordinate ? getChromosomeFilterCommand( $final_bam, $chromosome_grep_pattern ) : "";
 
     print $pbs "
-if [ ! -s $unsorted ]; then
+if [[ ! -s $unsorted && -s $sample_file_1 ]]; then
   echo performing star ...
   $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
 fi  

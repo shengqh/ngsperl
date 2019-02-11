@@ -4,6 +4,8 @@ package Pipeline::RNASeq;
 use strict;
 use warnings;
 use List::Util qw(first);
+use File::Basename;
+use Storable qw(dclone);
 use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
@@ -16,13 +18,13 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(performRNASeq performRNASeqTask)] );
+our %EXPORT_TAGS = ( 'all' => [qw(initializeRNASeqDefaultOptions performRNASeq performRNASeqTask)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
-sub initializeDefaultOptions {
+sub initializeRNASeqDefaultOptions {
   my $def = shift;
 
   fix_task_name($def);
@@ -93,7 +95,7 @@ sub getRNASeqConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
 
-  $def = initializeDefaultOptions($def);
+  $def = initializeRNASeqDefaultOptions($def);
 
   my $taskName = $def->{task_name};
 
@@ -331,29 +333,32 @@ sub getRNASeqConfig {
 
     push @$summary, "genetable";
 
-    $count_file_ref = [ "genetable", "(?<!proteincoding).count\$" ];
-    if ( $def->{perform_proteincoding_gene} ) {
+    if ( getValue($def, "perform_proteincoding_gene_only", 0)) {
+      $count_file_ref = [ ];
+    }else{
+      $count_file_ref = [ "genetable", "(?<!proteincoding).count\$" ];
+    }
+    if ( $def->{perform_proteincoding_gene} ||  getValue($def, "perform_proteincoding_gene_only", 0)) {
       push @$count_file_ref, "genetable", ".proteincoding.count\$";
     }
   }
 
   if ( $def->{perform_correlation} ) {
     my $cor_dir   = ( defined $config->{genetable} ) ? $config->{genetable}{target_dir} : $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation";
-    my $gene_file = $def->{correlation_gene_file};
-    my $rCode     = getOutputFormat($def);
-    if ( defined $gene_file ) {
-      $rCode = $rCode . "suffix<-\"_genes\"; ";
-    }
+
+    my $rCode     = getValue($def, "correlation_rcode", "" );
+    $rCode     = getOutputFormat($def, $rCode);
+    $rCode     = addOutputOption($def, $rCode, "use_green_red_color_in_hca", $def->{use_green_red_color_in_hca}, "useGreenRedColorInHCA");
+    $rCode     = addOutputOption($def, $rCode, "top25cv_in_hca", $def->{top25cv_in_hca}, "top25cvInHCA");
 
     $config->{"genetable_correlation"} = {
       class       => "CQS::CountTableGroupCorrelation",
       perform     => 1,
-      rCode       => $rCode . "usePearsonInHCA<-" . $def->{use_pearson_in_hca} . "; useGreenRedColorInHCA<-" . $def->{use_green_red_color_in_hca} . "; top25cvInHCA<-" . $def->{top25cv_in_hca} . "; ",
+      rCode       => $rCode,
       target_dir  => $cor_dir,
       rtemplate   => "countTableVisFunctions.R,countTableGroupCorrelation.R",
       output_file => "parameterSampleFile1",
       output_file_ext => ".Correlation.png;.density.png;.heatmap.png;.PCA.png;.Correlation.Cluster.png",
-      parameterFile1  => $gene_file,
       sh_direct       => 1,
       pbs             => {
         "email"     => $email,
@@ -367,7 +372,8 @@ sub getRNASeqConfig {
       $config->{genetable_correlation}{parameterSampleFile1_ref} = $count_file_ref;
     }
     else {
-      $config->{genetable_correlation}{parameterSampleFile1} = $count_file_ref;
+      $config->{genetable_correlation}{parameterSampleFile1} = {$taskName =>  [$count_file_ref]};
+      $config->{genetable_correlation}{output_to_result_dir} = 1;
     }
 
     if ( defined $def->{groups} ) {
@@ -375,11 +381,45 @@ sub getRNASeqConfig {
 
       if ( defined $def->{correlation_groups} ) {
         my $correlationGroups = get_pair_group_sample_map( $def->{correlation_groups}, $def->{groups} );
-        $correlationGroups->{all} = $def->{groups};
+        if( getValue($def, "correlation_all", 1) ) {
+          $correlationGroups->{all} = $def->{groups};
+        }
         $config->{genetable_correlation}{parameterSampleFile2} = $correlationGroups;
+      }
+  
+      if ( defined $def->{groups_colors} ) {
+        $config->{genetable_correlation}{parameterSampleFile3} = $def->{groups_colors};
+      }
+        
+      if ( defined $def->{correlation_groups_colors} ) {
+        $config->{genetable_correlation}{parameterSampleFile3} = $def->{correlation_groups_colors};
+      }
+      
+      if(defined $config->{genetable_correlation}{parameterSampleFile3}){
+        my $colorGroups = $config->{genetable_correlation}{parameterSampleFile3};
+        my $corGroups = $config->{genetable_correlation}{parameterSampleFile2};
+        for my $title (keys %$corGroups){
+          my $titleGroups = $corGroups->{$title};
+          for my $subGroup (keys %$titleGroups){
+            if (! defined $colorGroups->{$subGroup}){
+              my %cgroups = %$colorGroups;
+              die "Color of group '$subGroup' was not define in " . Dumper($colorGroups);
+            }
+          }
+        }
       }
     }
     push @$summary, "genetable_correlation";
+    
+    my $gene_file = $def->{correlation_gene_file};
+    if ( defined $gene_file ) {
+      $rCode = $rCode . "suffix<-\"_genes\"; hasRowNames=TRUE;";
+      $config->{"genetable_correlation_genes"} = dclone($config->{"genetable_correlation"});
+      $config->{"genetable_correlation_genes"}{target_dir} = $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation_genes";
+      $config->{"genetable_correlation_genes"}{parameterFile1} = $gene_file;
+      $config->{"genetable_correlation_genes"}{rCode}       = $rCode;
+      push @$summary, "genetable_correlation_genes";
+    }
   }
 
   my $deseq2taskname;
@@ -420,7 +460,12 @@ sub getRNASeqConfig {
       my $gsea_jar        = $def->{gsea_jar}        or die "Define gsea_jar at definition first";
       my $gsea_db         = $def->{gsea_db}         or die "Define gsea_db at definition first";
       my $gsea_categories = $def->{gsea_categories} or die "Define gsea_categories at definition first";
-
+      my $gsea_makeReport=1;
+      if (defined $def->{gsea_makeReport}) {
+        $gsea_makeReport=$def->{gsea_makeReport};
+      }
+      
+      
       $gseaTaskName = $deseq2taskname . "_GSEA";
 
       #my $gseaCategories = "'h.all.v6.1.symbols.gmt','c2.all.v6.1.symbols.gmt','c5.all.v6.1.symbols.gmt','c6.all.v6.1.symbols.gmt','c7.all.v6.1.symbols.gmt'";
@@ -435,7 +480,7 @@ sub getRNASeqConfig {
         output_file_ext            => ".gsea.html;.gsea.csv;.gsea;",
         parameterSampleFile1_ref   => [ $deseq2taskname, "_GSEA.rnk\$" ],
         sh_direct                  => 1,
-        rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=F;",
+        rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=".$gsea_makeReport.";",
         pbs                        => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
@@ -727,7 +772,9 @@ sub getRNASeqConfig {
       push( @report_names, "STAR_summary", "STAR_summary_table" );
     }
 
-    push( @copy_files, "genetable", ".count\$", "genetable", ".fpkm.tsv" );
+    if ( defined $config->{genetable} ) {
+      push( @copy_files, "genetable", ".count\$", "genetable", ".fpkm.tsv" );
+    }
 
     if ( defined $config->{genetable_correlation} ) {
       my $suffix = $config->{genetable_correlation}{suffix};
@@ -737,6 +784,10 @@ sub getRNASeqConfig {
       my $pcoding = $def->{perform_proteincoding_gene} ? ".proteincoding.count" : "";
 
       my $titles = { "all" => "" };
+      if ( ref($count_file_ref) ne "ARRAY" ) { #count file directly
+        $titles->{all} = basename($count_file_ref);
+        $pcoding = "";
+      }
       if ( defined $config->{genetable_correlation}{parameterSampleFile2} ) {
         my $correlationGroups = $config->{genetable_correlation}{parameterSampleFile2};
         for my $correlationTitle ( keys %$correlationGroups ) {

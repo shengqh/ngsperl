@@ -23,7 +23,8 @@ cat("outputPrefix=", outputPrefix, "\n")
 
 samplesheet<-read.table(configFile, sep="\t", header=T, stringsAsFactors=F)
 mb1<-dba(sampleSheet=samplesheet, bCorPlot=F)
-mb1<-dba.count(mb1,score=DBA_SCORE_READS)
+minOverlap<-ifelse(nrow(mb1) == 1, 1, 2)
+mb1<-dba.count(mb1,score=DBA_SCORE_READS, minOverlap=minOverlap)
 
 comparisons<-read.table(comparisonFile, se="\t", header=T, stringsAsFactors = F)
 allres<-NULL
