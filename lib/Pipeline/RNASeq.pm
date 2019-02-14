@@ -833,7 +833,7 @@ sub getRNASeqConfig {
       my $pairs = $config->{pairs};
 
       if ( scalar( keys %$pairs ) > 1 ) {
-        push( @report_files, $deseq2taskname, $taskName . ".define.*DESeq2_volcanoPlot.png" );
+        push( @report_files, $deseq2taskname, "/" . $taskName . ".define.*DESeq2_volcanoPlot.png" );
         push( @report_names, "deseq2_volcano_plot" );
       }
       else {
@@ -841,7 +841,7 @@ sub getRNASeqConfig {
         push( @report_names, "deseq2_volcano_plot" );
       }
       for my $key ( keys %$pairs ) {
-        push( @report_files, $deseq2taskname, $key . $suffix . "_DESeq2_sig.csv" );
+        push( @report_files, $deseq2taskname, "/" . $key . $suffix . "_DESeq2_sig.csv" );
         push( @report_names, "deseq2_" . $key );
       }
       push( @copy_files, $deseq2taskname, "_DESeq2.csv" );
@@ -863,10 +863,10 @@ sub getRNASeqConfig {
 
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
-        push( @report_files, $webgestaltTaskName, $key . "_geneontology_Biological_Process.txt" );
-        push( @report_files, $webgestaltTaskName, $key . "_geneontology_Cellular_Component.txt" );
-        push( @report_files, $webgestaltTaskName, $key . "_geneontology_Molecular_Function.txt" );
-        push( @report_files, $webgestaltTaskName, $key . "_pathway_KEGG.txt" );
+        push( @report_files, $webgestaltTaskName, "/enrichment_results_" . $key . "_geneontology_Biological_Process.txt" );
+        push( @report_files, $webgestaltTaskName, "/enrichment_results_" . $key . "_geneontology_Cellular_Component.txt" );
+        push( @report_files, $webgestaltTaskName, "/enrichment_results_" . $key . "_geneontology_Molecular_Function.txt" );
+        push( @report_files, $webgestaltTaskName, "/enrichment_results_" . $key . "_pathway_KEGG.txt" );
         push( @report_names, "WebGestalt_GO_BP_" . $key );
         push( @report_names, "WebGestalt_GO_CC_" . $key );
         push( @report_names, "WebGestalt_GO_MF_" . $key );
@@ -875,12 +875,13 @@ sub getRNASeqConfig {
       $hasFunctionalEnrichment = 1;
     }
 
+
     if ( defined $gseaTaskName ) {
       push( @copy_files, $gseaTaskName, ".gsea\$" );
 
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
-        push( @report_files, $gseaTaskName, $key . $suffix . ".*gsea.csv" );
+        push( @report_files, $gseaTaskName, "/" . $key . $suffix . ".*gsea.csv" );
         push( @report_names, "gsea_" . $key );
       }
       $hasFunctionalEnrichment = 1;
