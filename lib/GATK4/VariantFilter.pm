@@ -104,6 +104,7 @@ sub perform {
   my $recalibrated_vcf_filename = $task_name . ".indels.snp.recal.vcf.gz";
 
   my $pass_file = $task_name . ".indels.snp.recal.pass.vcf.gz";
+  my $split_file = $task_name . ".indels.snp.recal.pass.split.vcf";
   my $left_trim_file = $task_name . ".indels.snp.recal.pass.norm.vcf";
   my $fix_file = $task_name . ".indels.snp.recal.pass.norm.nospan.vcf";
   my $final_file = $task_name . ".indels.snp.recal.pass.norm.nospan.vcf.gz";
@@ -243,7 +244,8 @@ fi
 
 if [[ -s $pass_file && ! -s $left_trim_file ]]; then
   echo LeftAlignAndNorm=`date`
-  bcftools norm -m- -o $left_trim_file $pass_file 
+  bcftools norm -m- -o $split_file $pass_file 
+  bcftools norm -f $faFile -o $left_trim_file $split_file 
 fi
 
 if [[ -s $left_trim_file && ! -s $final_file ]]; then
@@ -261,7 +263,7 @@ if [[ -s $final_file ]]; then
     $indels_recalibration ${indels_recalibration}.tbi \\
     $snps_recalibration ${snps_recalibration}.tbi \\
     $indel_recalibration_tmp_vcf ${indel_recalibration_tmp_vcf}.tbi \\
-    $left_trim_file ${left_trim_file}.idx
+    $split_file ${split_file}.idx $left_trim_file ${left_trim_file}.idx
 fi
 
 ";
