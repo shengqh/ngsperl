@@ -338,9 +338,9 @@ sub getConfig {
         if ( $def->{annovar_param} =~ /exac/ ) {
           my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name );
 
-          #if ( defined $def->{annotation_genes} ) {
-          #  addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
-          #}
+          if ( defined $def->{annotation_genes} ) {
+            addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
+          }
 
           my $annovar_to_maf = $annovar_filter_name . "_toMAF";
           $config->{$annovar_to_maf} = {
@@ -359,6 +359,28 @@ sub getConfig {
             },
           };
           push @$summary, $annovar_to_maf;
+
+          my $annovar_to_maf_report = $annovar_to_maf . "_report";
+          $config->{$annovar_to_maf_report} = {
+            class      => "CQS::UniqueR",
+            perform    => 1,
+            target_dir => $target_dir . "/" . $annovar_to_maf_report,
+            rtemplate                  => "../Annotation/mafReport.r",
+            output_file                => "parameterSampleFile1",
+            output_file_ext            => ".html",
+            parameterSampleFile1_ref   => [ $annovar_to_maf, ".tsv.maf\$" ],
+            parameterFile1 => $def->{family_info_file},
+            sh_direct                  => 1,
+            rCode => (defined $def->{family_info_file}?"clinicalFeatures=\"" . $def->{family_info_feature} ."\";":"") . ( defined $def->{annotation_genes} ? "interestedGeneStr=\"" . $def->{annotation_genes} . "\"" :""),
+            pbs                        => {
+              "email"     => $def->{email},
+              "emailType" => $def->{emailType},
+              "nodes"     => "1:ppn=1",
+              "walltime"  => "24",
+              "mem"       => "10gb"
+            },
+          };
+          push @$summary, $annovar_to_maf_report;
         }
       }
 
