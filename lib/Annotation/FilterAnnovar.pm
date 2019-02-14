@@ -114,14 +114,16 @@ sub result {
     my @result_files = ();
     if(scalar(@freq_values) > 0){
       for my $freq_value (@freq_values){
-        push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.freq${freq_value}.snv.tsv");
-        push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.freq${freq_value}.gene.tsv");
         push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.freq${freq_value}.filtered.tsv");
+        push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.freq${freq_value}.filtered.missense.tsv");
+        push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.freq${freq_value}.snv.missense.tsv");
+        push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.freq${freq_value}.gene.missense.tsv");
       }
     }else{
-      push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.snv.tsv");
-      push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.gene.tsv");
       push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.filtered.tsv");
+      push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.filtered.missense.tsv");
+      push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.snv.missense.tsv");
+      push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.gene.missense.tsv");
     }
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
