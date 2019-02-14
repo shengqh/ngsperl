@@ -137,6 +137,7 @@ sub addBowtie {
     samonly               => 0,
     sh_direct             => 0,
     mappedonly            => 1,
+    export_max_mapped     => $def->{export_max_mapped},
     cluster               => $def->{cluster},
     output_to_same_folder => $def->{bowtie1_output_to_same_folder},
     pbs                   => {

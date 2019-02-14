@@ -23,6 +23,7 @@ sub new {
   bless $self, $class;
   return $self;
 }
+
 sub getFiles {
   my ( $pfiles1, $join_arg, $first_file_only ) = @_;
   my $result = [];
@@ -77,8 +78,8 @@ sub perform {
 
   for my $sample_name ( sort keys %$parameterSampleFile1 ) {
     my $pfiles1 = $parameterSampleFile1->{$sample_name};
-    my $pfiles  = getFiles($pfiles1,$join_arg, $first_file_only);
-    my $idxend = scalar(@$pfiles) - 1;
+    my $pfiles  = getFiles( $pfiles1, $join_arg, $first_file_only );
+    my $idxend  = scalar(@$pfiles) - 1;
 
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
@@ -98,16 +99,16 @@ sub perform {
 
       my $curOption = "";
       if ( defined $parameterSampleFile2->{$sample_name} ) {
-        $curOption = $curOption . " " . $parameterSampleFile2arg . " " . $parameterSampleFile2->{$sample_name}[$i];
+        $curOption = $curOption . " " . $parameterSampleFile2arg . " \"" . $parameterSampleFile2->{$sample_name}[$i] . "\"";
 
-      if ( defined $parameterSampleFile3->{$sample_name} ) {
-        $curOption = $curOption . " " . $parameterSampleFile3arg . " " . $parameterSampleFile3->{$sample_name}[$i];
-      }
+        if ( defined $parameterSampleFile3->{$sample_name} ) {
+          $curOption = $curOption . " " . $parameterSampleFile3arg . " \"" . $parameterSampleFile3->{$sample_name}[$i] . "\"";
+        }
       }
 
       print $pbs "
 if [[ ! -s $final_file ]]; then
-  $interpretor $program $option $parameterSampleFile1arg $pfile1 $curOption $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_arg $final_file
+  $interpretor $program $option $parameterSampleFile1arg \"$pfile1\" $curOption $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_arg $final_file
 fi
 
 ";
@@ -147,8 +148,8 @@ sub result {
   my $result = {};
   for my $sample_name ( sort keys %$parameterSampleFile1 ) {
     my $pfiles1 = $parameterSampleFile1->{$sample_name};
-    my $pfiles  = getFiles($pfiles1,$join_arg, $first_file_only);
-    my $idxend = scalar(@$pfiles) - 1;
+    my $pfiles  = getFiles( $pfiles1, $join_arg, $first_file_only );
+    my $idxend  = scalar(@$pfiles) - 1;
 
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 

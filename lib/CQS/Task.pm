@@ -199,7 +199,7 @@ $log_desc
 $path_file
 $init_command
 
-cd $result_dir
+cd \"$result_dir\"
 
 ";
   if ( defined $final_file ) {

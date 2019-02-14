@@ -206,7 +206,7 @@ sub get_parameter {
   my $init_command = get_option( $config, $section, "init_command", "" );
 
   if ($sh_direct) {
-    $sh_direct = "bash";
+    $sh_direct = "sh";
   }
   else {
     $sh_direct = $cluster->get_submit_command();
@@ -1067,6 +1067,8 @@ sub get_parameter_file {
   my $resultArg = get_option( $config, $section, $key . "_arg", "" );
   if ( !defined($result) ) {
     $result = "";
+  } else {
+    $result = "\"" . $result . "\"";
   }
   return ( $result, $resultArg );
 }
