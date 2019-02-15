@@ -335,7 +335,7 @@ sub getConfig {
       if ( $def->{perform_annovar} ) {
         my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $filter_name, undef );
 
-        if ( $def->{annovar_param} =~ /exac/ ) {
+        if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/) {
           my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name );
 
           if ( defined $def->{annotation_genes} ) {
@@ -347,7 +347,7 @@ sub getConfig {
             class      => "Annotation::Annovar2Maf",
             perform    => 1,
             target_dir => $target_dir . "/" . $annovar_to_maf,
-            source_ref => [ $annovar_filter_name, ".filtered.tsv" ],
+            source_ref => [ $annovar_filter_name, "\\.freq0\\..*.filtered.tsv" ],
             refBuild   => getValue( $def, "annovar_buildver" ),
             sh_direct  => 1,
             pbs        => {
