@@ -26,7 +26,7 @@ rnaseqOptions<-read.table("fileList2.txt", header=FALSE, as.is=TRUE)
 rownames(rnaseqOptions)<-rnaseqOptions$V2
 
 hasFastqc<-any(grepl("fastqc_", rownames(files)))
-hasSTAR<-any(grepl("STAR__", rownames(files)))
+hasSTAR<-any(grepl("STAR_", rownames(files)))
 hasFeatureCount<-any(grepl("featureCounts_", rownames(files)))
 hasDEseq2<-any(grepl("deseq2_", rownames(files)))
 hasWebGestaltAnalysis<-any(grepl("WebGestalt_", rownames(files)))
