@@ -145,8 +145,9 @@ else:
   logger.info("Writing " + refFile + "...")
   writeSnpFile(refFile, snpMap)
 
+expectBimFile = args.output + ".expect.bim"
 with open(args.input + ".bim", "r") as fin:
-  with open(args.output + ".expect.bim", "w") as fout_bim:
+  with open(expectBimFile, "w") as fout_bim:
     for line in fin:
       parts = line.rstrip().split('\t')
       chr = parts[0]
@@ -201,6 +202,13 @@ with open(args.input + ".bim", "r") as fin:
           logger.error("Conflict: " + vdata)
         continue
 
-subprocess.run(["grep ", "Flip " + args.output + ".expect.bim | cut -f2 > " + args.output + ".flip.list"])
+flipListFile = args.output + ".flip.list"
+flipFile = args.output + ".flip"
+refAlleleFile = args.output + ".flip.refAllele"
+
+subprocess.run(["grep ", "Flip " + expectBimFile + " | cut -f2 > " + flipListFile])
+subprocess.run(["plink ", "--bfile " + args.input + " --flip " + flipListFile + " --make-bed --out " + flipFile])
+subprocess.run(["plink ", "--bfile  " + flipFile + " --keep-allele-order --real-ref-alleles --a2-allele " + expectBimFile + " 6 2 '#' --make-bed --out " + refAlleleFile])
+subprocess.run(["plink ", "--bfile  " + refAlleleFile + " --keep-allele-order --real-ref-alleles --a1-allele " + expectBimFile + " 5 2 '#' --make-bed --out " + args.output])
 
 logger.info("Done.")
