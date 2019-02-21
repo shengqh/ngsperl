@@ -206,9 +206,13 @@ flipListFile = args.output + ".flip.list"
 flipFile = args.output + ".flip"
 refAlleleFile = args.output + ".flip.refAllele"
 
-subprocess.run(["grep ", "Flip " + expectBimFile + " | cut -f2 > " + flipListFile])
-subprocess.run(["plink ", "--bfile " + args.input + " --flip " + flipListFile + " --make-bed --out " + flipFile])
-subprocess.run(["plink ", "--bfile  " + flipFile + " --keep-allele-order --real-ref-alleles --a2-allele " + expectBimFile + " 6 2 '#' --make-bed --out " + refAlleleFile])
-subprocess.run(["plink ", "--bfile  " + refAlleleFile + " --keep-allele-order --real-ref-alleles --a1-allele " + expectBimFile + " 5 2 '#' --make-bed --out " + args.output])
+
+os.system("grep Flip " + expectBimFile + " | cut -f2 > " + flipListFile)
+os.system("plink --bfile " + args.input + " --flip " + flipListFile + " --make-bed --out " + flipFile)
+os.system("plink --bfile  " + flipFile + " --keep-allele-order --real-ref-alleles --a2-allele " + expectBimFile + " 6 2 '#' --make-bed --out " + refAlleleFile)
+os.system("plink --bfile  " + refAlleleFile + " --keep-allele-order --real-ref-alleles --a1-allele " + expectBimFile + " 5 2 '#' --make-bed --out " + args.output)
+
+if os.path.isfile(args.output + ".bed"):
+  os.system("rm " + flipFile + ".bed " + flipFile + ".bim " + flipFile + ".fam " + flipFile + ".hh " + refAlleleFile + ".bed " + refAlleleFile + ".bim " + refAlleleFile + ".fam " + refAlleleFile + ".hh ")
 
 logger.info("Done.")
