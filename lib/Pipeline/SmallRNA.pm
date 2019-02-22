@@ -1624,8 +1624,8 @@ sub getSmallRNAConfig {
           "mem"       => "10gb"
         },
       };
+      push @$summary_ref, "short_reads_source";
     }
-    push @$summary_ref, "short_reads_source";
   }
 
   #add time cost task in the end of pipeline
