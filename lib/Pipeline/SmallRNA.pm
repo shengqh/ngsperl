@@ -507,7 +507,7 @@ sub getSmallRNAConfig {
         target_dir                => $tRH_folder . "/host_genome_tRH_category",
         rtemplate                 => "countTableVisFunctions.R,hostTrnaMappingVis.R",
         output_file               => ".tRHMapping.Result",
-        output_file_ext           => ".tRHType2.Barplot.png",
+        output_file_ext           => ".tRNAType2.Barplot.png",
         parameterSampleFile1Order => $def->{groups_order},
         parameterSampleFile1      => $groups,
         parameterSampleFile2      => $def->{groups_vis_layout},
@@ -545,8 +545,6 @@ sub getSmallRNAConfig {
         }
       );
 
-      push @$summary_ref, $tTask;
-
       if ($perform_host_tRH_analysis) {
         my $tRHStartPositionTask = "host_genome_tRH_start_position_vis";
         addPositionVis(
@@ -562,8 +560,6 @@ sub getSmallRNAConfig {
             parameterFile1_ref => [ $tRHTableTask, ".tRNA.count.startpos\$" ],
           }
         );
-
-        push @$summary_ref, $tRHStartPositionTask;
       }
     }
 
