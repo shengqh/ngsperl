@@ -526,7 +526,7 @@ sub getSmallRNAConfig {
           $tRHStartPositionTask,
           $data_visualization_dir,
           {
-            target_dir         => $data_visualization_dir . "/" . $tTask,
+            target_dir         => $data_visualization_dir . "/" . $tRHStartPositionTask,
             output_file        => ".tRHStartPositionVis",
             output_file_ext    => ".barplot.png",
             rtemplate          => "tRnaStartPositionVis.R",

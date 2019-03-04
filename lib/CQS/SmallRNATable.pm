@@ -27,6 +27,7 @@ sub perform {
   my ( $self, $config, $section ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my $is_tRH = get_option( $config, $section, "is_tRH", 0 );
 
   my $cqstools = get_cqstools( $config, $section, 1 );
   my $python_script = dirname(__FILE__) . "/smallRNATable.py";
@@ -67,7 +68,7 @@ sub perform {
       }
       close($fl);
 
-      my $pythonCode = $noCategory ? "" : "python $python_script \"$ntaFile\" \"$ntaBaseFile\"";
+      my $pythonCode = $noCategory ? "" : ($is_tRH? "": "python $python_script \"$ntaFile\" \"$ntaBaseFile\"");
       print $pbs "
 if [ ! -s $outputname ]; then
   mono $cqstools smallrna_table $option -o $outputname -l $filelist
@@ -95,7 +96,7 @@ fi
     my $ntaFile     = basename( $self->get_file( $result_dir, ${task_name}, ".miRNA.NTA.count",      0 ) );
     my $ntaBaseFile = basename( $self->get_file( $result_dir, ${task_name}, ".miRNA.NTA.base.count", 0 ) );
 
-    my $pythonCode = $noCategory ? "" : "python $python_script \"$ntaFile\" \"$ntaBaseFile\"";
+    my $pythonCode = $noCategory ? "" : ($is_tRH?"": "python $python_script \"$ntaFile\" \"$ntaBaseFile\"");
     print $pbs "
 mono $cqstools smallrna_table $option -o $outputname -l $filelist
 $pythonCode
