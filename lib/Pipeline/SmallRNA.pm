@@ -40,6 +40,7 @@ sub getSmallRNAConfig {
 
   my $perform_annotate_unmapped_reads = getValue( $def, "perform_annotate_unmapped_reads" );
   my $perform_class_independent_analysis = getValue( $def, "perform_class_independent_analysis", 1 );
+  my $perform_short_reads_source = getValue($def, "perform_short_reads_source", 0);
 
   my $blast_top_reads      = getValue( $def, "blast_top_reads" );
   my $blast_unmapped_reads = getValue( $def, "blast_unmapped_reads" );
@@ -1665,15 +1666,16 @@ sub getSmallRNAConfig {
     };
     push @$summary_ref, "sequence_mapped_in_categories";
 
-    if ( defined $def->{perform_short_reads_source} and $def->{perform_short_reads_source} ) {
+    if ( $perform_short_reads_source ) {
       $config->{short_reads_source} = {
         'class'                    => 'CQS::ProgramIndividualWrapper',
         'source_ref'               => [ "bowtie1_genome_unmapped_reads", ".short.fastq.dupcount" ],
         'source_arg'               => '-i',
         'parameterSampleFile2_ref' => [ "bowtie1_genome_1mm_NTA", ".bam.max.txt" ],
         'parameterSampleFile2_arg' => '-m',
-        'parameterFile1_ref'       => [ "sequence_mapped_in_categories", ".ReadsMapping.Summary.csv" ],
-        'parameterFile1_arg'       => '-a',
+        'parameterSampleFile3_ref' => \@table_for_readSummary,
+        'parameterSampleFile3_arg' => '-a',
+        option                    => "-n \"" . join( ",", @name_for_readSummary ) . "\"",
         'interpretor'              => 'python',
         'program'                  => '../SmallRNA/explainShortReads.py',
         'target_dir'               => $data_visualization_dir . "/short_reads_source",

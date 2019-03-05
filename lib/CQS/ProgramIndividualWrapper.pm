@@ -76,6 +76,37 @@ sub perform {
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct) . "\n";
 
+  my $bFound2 = 0;
+  my $bFound3 = 0;
+  for my $sample_name ( sort keys %$parameterSampleFile1 ) {
+    if (defined $parameterSampleFile2->{$sample_name}){
+      $bFound2 = 1;
+    }
+    if (defined $parameterSampleFile3->{$sample_name}){
+      $bFound3 = 1;
+    }
+  }
+  
+  my $param_option2 = "";
+  if(not $bFound2){
+    my $file2 = save_parameter_sample_file( $config, $section, "parameterSampleFile2", "${result_dir}/${task_name}_${task_suffix}_fileList2.list" );
+    if($file2 ne ""){
+      $file2 = basename($parameterSampleFile2);
+      my $arg2 = get_option($config, $section, "parameterSampleFile2_arg", "");
+      $param_option2 = $arg2 . " " . $file2;
+    }
+  }
+  
+  my $param_option3 = "";
+  if(not $bFound3){
+    my $file3 = save_parameter_sample_file( $config, $section, "parameterSampleFile3", "${result_dir}/${task_name}_${task_suffix}_fileList3.list" );
+    if($file3 ne ""){
+      $file3 = basename($file3);
+      my $arg3 = get_option($config, $section, "parameterSampleFile3_arg", "");
+      $param_option3 = $arg3 . " " . $file3;
+    }
+  }
+
   for my $sample_name ( sort keys %$parameterSampleFile1 ) {
     my $pfiles1 = $parameterSampleFile1->{$sample_name};
     my $pfiles  = getFiles( $pfiles1, $join_arg, $first_file_only );
@@ -98,12 +129,20 @@ sub perform {
       my $final_file = ( $first_file_only or ( 1 == scalar(@$pfiles) ) ) ? $sample_name . $output_ext : basename($pfile1) . $output_ext;
 
       my $curOption = "";
+      if(not $bFound2){
+        $curOption = $curOption . " " . $param_option2;
+      }
+      
+      if(not $bFound3){
+        $curOption = $curOption . " " . $param_option3;
+      }
+      
       if ( defined $parameterSampleFile2->{$sample_name} ) {
         $curOption = $curOption . " " . $parameterSampleFile2arg . " \"" . $parameterSampleFile2->{$sample_name}[$i] . "\"";
+      }
 
-        if ( defined $parameterSampleFile3->{$sample_name} ) {
-          $curOption = $curOption . " " . $parameterSampleFile3arg . " \"" . $parameterSampleFile3->{$sample_name}[$i] . "\"";
-        }
+      if ( defined $parameterSampleFile3->{$sample_name} ) {
+        $curOption = $curOption . " " . $parameterSampleFile3arg . " \"" . $parameterSampleFile3->{$sample_name}[$i] . "\"";
       }
 
       print $pbs "
