@@ -55,10 +55,12 @@ sub perform {
     $axiomPoly_resource_vcf  = get_param_file( $config->{$section}{axiomPoly_vcf}, "axiomPoly_vcf", 0 );
   }
   
-  my $hapmap_option = defined $hapmap_resource_vcf?"-resource hapmap,known=false,training=true,truth=true,prior=15:${hapmap_resource_vcf} \\\n    ":"";
-  my $omni_option = defined $omni_resource_vcf?"-resource omni,known=false,training=true,truth=true,prior=12:${omni_resource_vcf} \\\n    ":"";
-  my $g1000_option = defined $one_thousand_genomes_resource_vcf? "-resource 1000G,known=false,training=true,truth=false,prior=10:${one_thousand_genomes_resource_vcf} \\\n    ":"";
-  my $axiomPoly_option = defined $axiomPoly_resource_vcf? "-resource axiomPoly,known=false,training=true,truth=false,prior=10:${axiomPoly_resource_vcf} \\\n    ":"";
+  my $hapmap_option = defined $hapmap_resource_vcf?"-resource:hapmap,known=false,training=true,truth=true,prior=15 ${hapmap_resource_vcf} \\\n    ":"";
+  my $omni_option = defined $omni_resource_vcf?"-resource:omni,known=false,training=true,truth=true,prior=12 ${omni_resource_vcf} \\\n    ":"";
+  my $g1000_option = defined $one_thousand_genomes_resource_vcf? "-resource:1000G,known=false,training=true,truth=false,prior=10 ${one_thousand_genomes_resource_vcf} \\\n    ":"";
+  my $axiomPoly_option = defined $axiomPoly_resource_vcf? "-resource:axiomPoly,known=false,training=true,truth=false,prior=10 ${axiomPoly_resource_vcf} \\\n    ":"";
+  my $mills_option = defined $mills_resource_vcf? "-resource:mills,known=false,training=true,truth=true,prior=12 ${mills_resource_vcf} \\\n    ":"";
+  my $dbsnp_option = defined $dbsnp_resource_vcf? "-resource:dbsnp,known=true,training=false,truth=false,prior=2 ${dbsnp_resource_vcf} \\\n    ":"";
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
 
@@ -186,10 +188,8 @@ if [[ -s $sites_only_variant_filtered_vcf && ! -s $indels_recalibration ]]; then
     --trust-all-polymorphic \\
     $indel_tranche_option \\
     $recalibration_annotation_option \\
-    -mode INDEL \\
     --max-gaussians 4 \\
-    -resource mills,known=false,training=true,truth=true,prior=12:${mills_resource_vcf} \\
-    ${axiomPoly_option}-resource dbsnp,known=true,training=false,truth=false,prior=2:${dbsnp_resource_vcf}
+    $mills_option $axiomPoly_option -mode INDEL 
 fi
 
 if [[ -s $sites_only_variant_filtered_vcf && ! -s $snps_recalibration ]]; then
@@ -202,9 +202,8 @@ if [[ -s $sites_only_variant_filtered_vcf && ! -s $snps_recalibration ]]; then
     --trust-all-polymorphic \\
     $snp_tranche_option \\
     $recalibration_annotation_option \\
-    -mode SNP \\
     --max-gaussians 6 \\
-    ${hapmap_option}${omni_option}${g1000_option}-resource dbsnp,known=true,training=false,truth=false,prior=7:${dbsnp_resource_vcf} 
+    ${hapmap_option} ${omni_option} ${g1000_option} ${dbsnp_option} -mode SNP
 fi
 
 if [[ -s $indels_recalibration && ! -s $indel_recalibration_tmp_vcf ]]; then
