@@ -97,7 +97,7 @@ rm -rf .cache .conda .config .theano
     close($shsample);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $genotyped_intervals_vcf_filename, $init_command );
-    print $pbs "singularity run $gatk4_singularity $shsamplefile \n";
+    print $pbs "singularity exec $gatk4_singularity bash $shsamplefile \n";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;

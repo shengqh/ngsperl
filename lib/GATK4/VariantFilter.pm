@@ -270,7 +270,7 @@ fi
   close($sh);
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
-  print $pbs "singularity run $gatk4_singularity $shfile \n";
+  print $pbs "singularity exec $gatk4_singularity bash $shfile \n";
   $self->close_pbs( $pbs, $pbs_file );
 }
 
