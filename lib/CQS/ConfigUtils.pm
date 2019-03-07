@@ -138,6 +138,9 @@ sub get_cluster {
   if ( $cluster_name eq "torque" ) {
     $cluster = instantiate("CQS::ClusterTorque");
   }
+  elsif ( $cluster_name eq "torqueSingapore" ) {
+    $cluster = instantiate("CQS::ClusterTorqueSingapore");
+  }
   else {
     $cluster = instantiate("CQS::ClusterSLURM");
   }
