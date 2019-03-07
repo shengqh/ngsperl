@@ -194,7 +194,7 @@ sub getConfig {
         pbs               => {
           "email"    => $email,
           "nodes"    => "1:ppn=" . $max_thread,
-          "walltime" => "72",
+          "walltime" => "24",
           "mem"      => "40gb"
         },
       };
@@ -245,7 +245,7 @@ sub getConfig {
         pbs           => {
           "email"    => $email,
           "nodes"    => "1:ppn=" . $max_thread,
-          "walltime" => "72",
+          "walltime" => "24",
           "mem"      => "40gb"
         },
       };
@@ -558,7 +558,7 @@ sub getConfig {
     pbs       => {
       "email"    => $email,
       "nodes"    => "1:ppn=8",
-      "walltime" => "72",
+      "walltime" => "24",
       "mem"      => "40gb"
     },
   };
