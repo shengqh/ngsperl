@@ -38,9 +38,9 @@ sub getSmallRNAConfig {
   my $search_nonhost_library = getValue( $def, "search_nonhost_library" );
   my $search_nonhost_database = $search_nonhost_genome || $search_nonhost_library;
 
-  my $perform_annotate_unmapped_reads = getValue( $def, "perform_annotate_unmapped_reads" );
+  my $perform_annotate_unmapped_reads    = getValue( $def, "perform_annotate_unmapped_reads" );
   my $perform_class_independent_analysis = getValue( $def, "perform_class_independent_analysis", 1 );
-  my $perform_short_reads_source = getValue($def, "perform_short_reads_source", 0);
+  my $perform_short_reads_source         = getValue( $def, "perform_short_reads_source", 0 );
 
   my $blast_top_reads      = getValue( $def, "blast_top_reads" );
   my $blast_unmapped_reads = getValue( $def, "blast_unmapped_reads" );
@@ -1665,35 +1665,72 @@ sub getSmallRNAConfig {
       },
     };
     push @$summary_ref, "sequence_mapped_in_categories";
+  }
+  if ($perform_short_reads_source) {
+    $config->{bowtie1_genome_host_too_short_reads_table} = {
+      class      => "CQS::CQSDatatable",
+      perform    => 1,
+      target_dir => $host_genome_dir . "/bowtie1_genome_host_too_short_reads_table",
+      source_ref => [ "bowtie1_genome_unmapped_reads", ".short.fastq.dupcount\$" ],
+      option     => "-k 2 -v 1 --fillMissingWithZero",
+      cqstools   => $def->{cqstools},
+      sh_direct  => 1,
+      pbs        => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "40gb"
+      },
+      },
+      push @$summary_ref, "bowtie1_genome_host_too_short_reads_table";
 
-    if ( $perform_short_reads_source ) {
-      $config->{short_reads_source} = {
-        'class'                    => 'CQS::ProgramIndividualWrapper',
-        'source_ref'               => [ "bowtie1_genome_unmapped_reads", ".short.fastq.dupcount" ],
-        'source_arg'               => '-i',
-        'parameterSampleFile2_ref' => [ "bowtie1_genome_1mm_NTA", ".bam.max.txt" ],
-        'parameterSampleFile2_arg' => '-m',
-        'parameterSampleFile3_ref' => \@table_for_readSummary,
-        'parameterSampleFile3_arg' => '-a',
-        option                    => "-n \"" . join( ",", @name_for_readSummary ) . "\"",
-        'interpretor'              => 'python',
-        'program'                  => '../SmallRNA/explainShortReads.py',
-        'target_dir'               => $data_visualization_dir . "/short_reads_source",
-        'output_ext'               => '.tsv',
-        'output_arg'               => '-o',
-        'output_to_same_folder'    => 1,
-        'sh_direct'                => 1,
-        'perform'                  => 1,
-        'pbs'                      => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "2",
-          "mem"       => "10gb"
-        },
-      };
-      push @$summary_ref, "short_reads_source";
-    }
+    #    my $name_for_readSummary_r = "readFilesModule=c('" . join( "','", @name_for_readSummary ) . "'); ";
+    #    $config->{short_reads_source} = {
+    #      class                    => "CQS::UniqueR",
+    #      perform                  => 1,
+    #      target_dir               => $data_visualization_dir . "/short_reads_source",
+    #      rtemplate                => "countTableVisFunctions.R,ReadsMappingSummary.R",
+    #      output_file_ext          => ".ShortReads.Summary.csv",
+    #      parameterFile1_ref       => [ "bowtie1_genome_host_too_short_reads_table" ],
+    #      parameterSampleFile1_ref => \@table_for_readSummary,
+    #      rCode                    => $name_for_readSummary_r . $R_font_size,
+    #      sh_direct                => 1,
+    #      pbs                      => {
+    #        "email"     => $def->{email},
+    #        "emailType" => $def->{emailType},
+    #        "nodes"     => "1:ppn=1",
+    #        "walltime"  => "12",
+    #        "mem"       => "10gb"
+    #      },
+    #    };
+
+    $config->{short_reads_source} = {
+      'class'                    => 'CQS::ProgramWrapper',
+      'parameterFile1_ref'               => ["bowtie1_genome_host_too_short_reads_table"],
+      'parameterFile1_arg'               => '-i',
+      'parameterSampleFile2_ref' => [ "bowtie1_genome_1mm_NTA", ".bam.max.txt" ],
+      'parameterSampleFile2_arg' => '-m',
+      'parameterSampleFile3_ref' => \@table_for_readSummary,
+      'parameterSampleFile3_arg' => '-a',
+      'option'                   => "-n \"" . join( ",", @name_for_readSummary ) . "\"",
+      'interpretor'              => 'python',
+      'program'                  => '../SmallRNA/explainShortReads.py',
+      'target_dir'               => $data_visualization_dir . "/short_reads_source",
+      'output_ext'               => '.tsv',
+      'output_arg'               => '-o',
+      'output_to_same_folder'    => 1,
+      'sh_direct'                => 1,
+      'perform'                  => 1,
+      'pbs'                      => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "2",
+        "mem"       => "10gb"
+      },
+    };
+    push @$summary_ref, "short_reads_source";
   }
 
   #add time cost task in the end of pipeline
