@@ -102,6 +102,7 @@ cd $result_dir
 
 gatk --java-options \"$java_option\" \\
   HaplotypeCaller $option $restrict_intervals \\
+  --native-pair-hmm-threads $thread \\
   -R $faFile \\
   -I $bam_file \\
   -O $snvOut
