@@ -78,7 +78,7 @@ source activate gatk
 
 cd $sample_dir
 
-gatk --java-options \"$java_option\" PostprocessGermlineCNVCalls \\
+gatk --java-options \"$java_option\" PostprocessGermlineCNVCalls $option \\
   $calls_args \\
   $model_args \\
   --sample-index $i \\

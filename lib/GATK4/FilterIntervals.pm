@@ -86,7 +86,7 @@ source activate gatk
 
 cd $result_dir
 
-gatk --java-options \"$java_option\" FilterIntervals \\
+gatk --java-options \"$java_option\" FilterIntervals $option \\
   -L ${intervals} $blacklist_intervals_option $inputOption \\
   --interval-merging-rule OVERLAPPING_ONLY $parameters \\
   --output $final_file

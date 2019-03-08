@@ -94,7 +94,7 @@ cd $result_dir
 export MKL_NUM_THREADS=$thread
 export OMP_NUM_THREADS=$thread
 
-gatk --java-options \"$java_option\" GermlineCNVCaller \\
+gatk --java-options \"$java_option\" GermlineCNVCaller $option \\
   --run-mode COHORT \\
   -L ${intervals} $inputOption \\
   --contig-ploidy-calls $contig_ploidy_calls_dir \\

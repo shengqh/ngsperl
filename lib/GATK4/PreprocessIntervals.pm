@@ -62,7 +62,7 @@ source activate gatk
 
 cd $result_dir
 
-gatk --java-options \"$java_option\" PreprocessIntervals \\
+gatk --java-options \"$java_option\" PreprocessIntervals $option \\
   -L $intervals $blacklist_intervals_option \\
   --sequence-dictionary $ref_fasta_dict \\
   --reference $ref_fasta \\

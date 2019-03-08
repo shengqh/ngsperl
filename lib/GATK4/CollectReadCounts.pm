@@ -73,7 +73,7 @@ source activate gatk
 
 cd $result_dir
 
-gatk --java-options \"$java_option\" CollectReadCounts \\
+gatk --java-options \"$java_option\" CollectReadCounts $option \\
   -L ${preprocessed_intervals} \\
   --input $sampleFile \\
   --reference $ref_fasta \\
