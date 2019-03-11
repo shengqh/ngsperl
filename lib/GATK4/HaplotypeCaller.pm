@@ -49,12 +49,6 @@ sub perform {
     $java_option = "-Xmx${memory}";
   }
 
-  my $script = dirname(__FILE__) . "/fixMissingEndInVcfHeader.py";
-  if ( !-e $script ) {
-    die "File not found : " . $script;
-  }
-
-
   my $bedFile            = get_param_file( $config->{$section}{bed_file}, "bed_file", 0 );
   my $interval_padding   = get_option( $config, $section, "interval_padding", 0 );
   my $restrict_intervals="";
