@@ -4,14 +4,14 @@ require(data.table)
 require(Hmisc)
 
 tablename<-outFile
-ParentDataFolder<-parFile1
-setwd(ParentDataFolder)
+ParentDataFolders<-c(parFile1, strsplit(parFile3, ","))
+setwd(parFile1)
 
 ctrFile<-parFile2
 
 load(ctrFile)
 options("stringsAsFactors"=FALSE)
-out1=OutputSummary(ParentDataFolder,ctr.opo)
+out1=OutputSummary(ParentDataFolders,ctr.opo)
 
 GenerateTables(out1,csv=T,tablename=tablename)
 

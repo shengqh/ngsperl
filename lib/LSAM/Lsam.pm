@@ -61,6 +61,8 @@ set minbytesize=200
     for my $iter ( 1 .. $iteration ) {
       my $curName = sprintf( "${name}_iter%02d_", $iter );
       my $curFinalFile = $curName . "Summary.out";
+      my $command = "$lsamSoftware $option -i:$sample -o:$sampleFolder -n:$curName -s:$curRandomSeed";
+      
       print $pbs "
 echo Checking $curFinalFile ...
 set file=$curFinalFile
@@ -71,14 +73,14 @@ if EXIST \%file\% (
     echo filesize=\%\%~zA
     if \%\%~zA LSS \%minbytesize\% (
       echo failed, do simulation, start at %date% %time%
-      $lsamSoftware -i:$sample -o:$sampleFolder -n:$curName -s:$curRandomSeed
+      $command
     ) ELSE (
       echo simulation has been done, ignored.
     )
   )
 ) ELSE (
   echo no result, do simulation, start at %date% %time%
-  $lsamSoftware -i:$sample -o:$sampleFolder -n:$curName -s:$curRandomSeed
+  $command
 )
 ";
       $curRandomSeed = $curRandomSeed + 1;
