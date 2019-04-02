@@ -30,6 +30,8 @@ sub perform {
 
   my $vqsrMode = get_option( $config, $section, "vqsr_mode" );
   my $gvcf = get_option( $config, $section, "gvcf", 1 );
+  
+  my $threadOption = ( $thread > 1 ) ? "-nt " . $thread : "";
 
   my $dbsnp;
   my $hapmap;
@@ -79,7 +81,7 @@ sub perform {
     print $pbs "
 if [ ! -s $mergedFile ]; then
   echo GenotypeGVCFs=`date` 
-  java $java_option -jar $gatk_jar -T GenotypeGVCFs $option -nt $thread -D $dbsnp -R $faFile \\
+  java $java_option -jar $gatk_jar -T GenotypeGVCFs $option $threadOption -D $dbsnp -R $faFile \\
 ";
 
     for my $sample_name ( sort keys %vcfFiles ) {
@@ -94,7 +96,7 @@ fi
 if [[ -s $mergedFile && ! -s $snpCal ]]; then
   echo VariantRecalibratorSNP=`date` 
   java $java_option -jar $gatk_jar \\
-    -T VariantRecalibrator -nt $thread \\
+    -T VariantRecalibrator $threadOption \\
     -R $faFile \\
     -input $mergedFile \\
 ";
@@ -128,7 +130,7 @@ fi
 if [[ -s $snpCal && ! -s $snpPass ]]; then
   echo ApplyRecalibrationSNP=`date` 
   java $java_option -jar $gatk_jar \\
-    -T ApplyRecalibration -nt $thread \\
+    -T ApplyRecalibration $threadOption \\
     -R $faFile \\
     -input $mergedFile \\
     -mode SNP \\
@@ -141,7 +143,7 @@ fi
 if [[ -s $snpPass && ! -s $indelCal ]]; then
   echo VariantRecalibratorIndel=`date` 
   java $java_option -jar $gatk_jar \\
-    -T VariantRecalibrator -nt $thread \\
+    -T VariantRecalibrator $threadOption \\
     -R $faFile \\
     -input $snpPass \\
     -resource:mills,known=true,training=true,truth=true,prior=12.0 $mills \\
@@ -161,7 +163,7 @@ fi
 if [[ -s $snpPass && -s $indelCal && ! -s $indelPass ]]; then
   echo ApplyRecalibrationIndel=`date` 
   java $java_option -jar $gatk_jar \\
-    -T ApplyRecalibration -nt $thread \\
+    -T ApplyRecalibration $threadOption \\
     -R $faFile \\
     -input $snpPass \\
     -mode INDEL \\
