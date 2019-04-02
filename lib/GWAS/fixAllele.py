@@ -34,45 +34,41 @@ baseComps = {'A':'T',
              'N':'N',
              '0':'0'}
 
-name_index = 0
-position_index = 1
-illumina_allele1_index = 2
-illumina_allele2_index = 3
-alt_allele_index = 4
-ref_allele_index = 5
+class SNP:
+  def __init__(self, chrom, position, name, illumina_allele1, illumina_allele2, ref_allele, alt_allele):
+    self.chrom = chrom
+    self.position = position
+    self.name = name
+    self.illumina_allele1 = illumina_allele1
+    self.illumina_allele2 = illumina_allele2
+    self.ref_allele = ref_allele
+    self.alt_allele = alt_allele
 
 def readSnpFile(refFile):
   snpMap = {}
   with open(refFile, "r") as fin:
     fin.readline()
     for line in fin:
-      parts = line.rstrip().split('\t')
-      chr = parts[0]
-      position = int(parts[1])
+      parts = line.split('\t')
+      chrom = parts[0]
       name = parts[2]
-      if chr not in snpMap:
+      if chrom not in snpMap:
         chrSnpMap = {}
-        snpMap[chr] = chrSnpMap
+        snpMap[chrom] = chrSnpMap
       else:
-        chrSnpMap = snpMap[chr]
-      chrSnpMap[name] = [name, position, parts[5], parts[6], parts[4], parts[3]]
+        chrSnpMap = snpMap[chrom]
+      chrSnpMap[name] = SNP(chrom, int(parts[1]), name, parts[3], parts[4], parts[5], parts[6].rstrip())
   return(snpMap)
         
 def writeSnpFile(refFile, snpMap):
   with open(refFile, "w") as fout:
-    fout.write("chr\tposition\tsnp\tref_allele\talt_allele\tillumina_allele1\tillumina_allele2\n")
-    for chr in sorted(snpMap):
-      chrSnpMap = snpMap[chr]
-      snpInfos = [snpInfo for snp, snpInfo in chrSnpMap.iteritems()]
-      snpInfos.sort(key=lambda s:s[position_index])
-      for snpInfo in snpInfos:
-        fout.write(chr + 
-                   "\t" + str(snpInfo[position_index]) + 
-                   "\t" + snpInfo[name_index] + 
-                   "\t" + snpInfo[ref_allele_index] +
-                   "\t" + snpInfo[alt_allele_index] + 
-                   "\t" + snpInfo[illumina_allele1_index] + 
-                   "\t" + snpInfo[illumina_allele2_index] + "\n")
+    fout.write("chr\tposition\tsnp\tillumina_allele1\tillumina_allele2\tref_allele\talt_allele\n")
+    for chrom in sorted(snpMap):
+      chrSnpMap = snpMap[chrom]
+      snps = [snp for snpName, snp in chrSnpMap.iteritems()]
+      snps.sort(key=lambda s:s.position)
+      for snp in snps:
+        fout.write("%s\t%d\t%s\t%s\t%s\t%s\t%s\n" % (snp.chrom, snp.position, snp.name, snp.illumina_allele1, snp.illumina_allele2, snp.ref_allele, snp.alt_allele))
     
 refFile = args.manifest + ".ref.txt"
 if os.path.isfile(refFile):
@@ -98,11 +94,11 @@ else:
       snp = parts[snpIndex]
       allele1 = snp[1]
       allele2 = snp[3]
-      chr = parts[chrIndex]
+      chrom = parts[chrIndex]
       position = int(parts[positionIndex])
-      if chr not in snpMap:
-        snpMap[chr]  = {}
-      snpMap[chr][name] = [name, position, allele1, allele2, '', ''] #name, position, illumina_allele1, illumina_allele2, ref_allele, alt_allele
+      if chrom not in snpMap:
+        snpMap[chrom]  = {}
+      snpMap[chrom][name] = SNP(chrom, position, name, allele1, allele2, '', '') #chrom, position, name, illumina_allele1, illumina_allele2, ref_allele, alt_allele
   
   logger.info("Reading " + args.fasta + "...")
   with open(args.fasta, "r") as fin:    
@@ -118,28 +114,28 @@ else:
       
       if record.id in snpMap:
         chrSnpMap = snpMap[record.id]
-        for snp, snpInfo in chrSnpMap.iteritems():
-          if snpInfo[illumina_allele1_index] == 'I' or snpInfo[illumina_allele1_index] == 'D':
+        for snpName, snp in chrSnpMap.iteritems():
+          if snp.illumina_allele1 == 'I' or snp.illumina_allele1 == 'D':
             continue
           
-          refBase = record.seq[snpInfo[position_index]].upper()
-          snpInfo[ref_allele_index] = refBase
-          if snpInfo[illumina_allele1_index] == refBase:
-            snpInfo[alt_allele_index] = snpInfo[illumina_allele2_index]
+          refBase = record.seq[snp.position-1].upper()
+          snp.ref_allele = refBase
+          if snp.illumina_allele1 == refBase:
+            snp.alt_allele = snp.illumina_allele2
             continue
           
-          if snpInfo[illumina_allele2_index] == refBase:
-            snpInfo[alt_allele_index] = snpInfo[illumina_allele1_index]
+          if snp.illumina_allele2 == refBase:
+            snp.alt_allele = snp.illumina_allele1
             continue
           
-          allele1comp = baseComps[snpInfo[illumina_allele1_index]]
-          allele2comp = baseComps[snpInfo[illumina_allele2_index]]
+          allele1comp = baseComps[snp.illumina_allele1]
+          allele2comp = baseComps[snp.illumina_allele2]
           if allele1comp == refBase:
-            snpInfo[alt_allele_index] = allele2comp
+            snp.alt_allele = allele2comp
             continue
           
           if allele2comp == refBase:
-            snpInfo[alt_allele_index] = allele1comp
+            snp.alt_allele = allele1comp
             continue
   
   logger.info("Writing " + refFile + "...")
@@ -150,37 +146,37 @@ with open(args.input + ".bim", "r") as fin:
   with open(expectBimFile, "w") as fout_bim:
     for line in fin:
       parts = line.rstrip().split('\t')
-      chr = parts[0]
+      chrom = parts[0]
       name = parts[1]
       position = int(parts[3])
       minor_allele = parts[4]
       major_allele = parts[5]
        
-      if chr not in snpMap:
+      if chrom not in snpMap:
         continue
    
-      chrSnpMap = snpMap[chr]
+      chrSnpMap = snpMap[chrom]
       if name not in chrSnpMap:
         continue
   
-      snpInfo = chrSnpMap[name]
-      if snpInfo[alt_allele_index] == '':
+      snp = chrSnpMap[name]
+      if snp.alt_allele == '':
         continue
       
-      vdata = "%s\t%s\t0\t%d\t%s\t%s\t%s\t%s" % (chr, name, position, snpInfo[alt_allele_index], snpInfo[ref_allele_index], minor_allele, major_allele)
+      vdata = "%s\t%s\t0\t%d\t%s\t%s\t%s\t%s" % (chrom, name, position, snp.alt_allele, snp.ref_allele, minor_allele, major_allele)
       if major_allele == '0':
         fout_bim.write(vdata + "\tFill\n")
         continue
       
-      if major_allele == snpInfo[ref_allele_index]:
+      if major_allele == snp.ref_allele:
         if minor_allele == '0':
           fout_bim.write(vdata + "\tFill\n")
-        elif minor_allele != snpInfo[alt_allele_index]:
+        elif minor_allele != snp.alt_allele:
           logger.error("Conflict: " + vdata)
         continue
 
-      if major_allele == snpInfo[alt_allele_index]:
-        if (minor_allele == snpInfo[ref_allele_index] or minor_allele == '0'):
+      if major_allele == snp.alt_allele:
+        if (minor_allele == snp.ref_allele or minor_allele == '0'):
           fout_bim.write(vdata + "\tSwitch\n")
         else:
           logger.error("Conflict: " + vdata)
@@ -188,15 +184,15 @@ with open(args.input + ".bim", "r") as fin:
       
       major_comp = baseComps[major_allele]
       minor_comp = baseComps[minor_allele]
-      if major_comp == snpInfo[ref_allele_index]:
-        if (minor_comp == snpInfo[alt_allele_index] or minor_allele == '0'):
+      if major_comp == snp.ref_allele:
+        if (minor_comp == snp.alt_allele or minor_allele == '0'):
           fout_bim.write(vdata + "\tFlip\n")
         else:
           logger.error("Conflict: " + vdata)
         continue
       
-      if major_comp == snpInfo[alt_allele_index]:
-        if (minor_comp == snpInfo[ref_allele_index] or minor_allele == '0'):
+      if major_comp == snp.alt_allele:
+        if (minor_comp == snp.ref_allele or minor_allele == '0'):
           fout_bim.write(vdata + "\tFlip+Switch\n")
         else:
           logger.error("Conflict: " + vdata)
@@ -205,7 +201,6 @@ with open(args.input + ".bim", "r") as fin:
 flipListFile = args.output + ".flip.list"
 flipFile = args.output + ".flip"
 refAlleleFile = args.output + ".flip.refAllele"
-
 
 os.system("grep Flip " + expectBimFile + " | cut -f2 > " + flipListFile)
 os.system("plink --bfile " + args.input + " --flip " + flipListFile + " --make-bed --out " + flipFile)
