@@ -101,7 +101,7 @@ sub addFastQC {
     perform                  => 1,
     target_dir               => $config->{"$fastqcTask"}->{target_dir},
     interpretor              => "python",
-    program                  => "../QC/fastqcSummary.py",
+    program                  => "../QC/fastQCSummary.py",
     parameterSampleFile1_arg => "-i",
     parameterSampleFile1_ref => $fastqcTask,
     output_arg               => "-o",
