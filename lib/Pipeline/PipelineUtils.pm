@@ -94,6 +94,25 @@ sub addFastQC {
   };
   push @$individual, $fastqcTask;
   push @$summary,    $summaryTask;
+  
+  if ($def->{perform_fastqcsummary2}){
+    class                    => "CQS::ProgramWrapper",
+    perform                  => 1,
+    target_dir               => $config->{"$fastqcTask"}->{target_dir},
+    interpretor              => "python",
+    program                  => "../QC/fastqcSummary.py",
+    parameterSampleFile1_arg => "-i",
+    parameterSampleFile1_ref => $fastqcTask,
+    output_arg               => "-o",
+    output_ext               => ".txt",
+    sh_direct                => 1,
+    'pbs'                    => {
+      'nodes'    => '1:ppn=1',
+      'mem'      => '40gb',
+      'walltime' => '10'
+    },
+    
+  }
 }
 
 sub addBlastn {
