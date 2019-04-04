@@ -112,7 +112,7 @@ sub result {
         $name = change_extension( $name, "" );
       }
       $name = change_extension( $name, "_fastqc" );
-      push( @result_files, "${result_dir}/${sample_name}/${name}" );
+      push( @result_files, "${result_dir}/${sample_name}/${name}/fastqc_data.txt" );
     }
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
