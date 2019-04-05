@@ -780,6 +780,8 @@ for(countfile_index in c(1:length(countfiles))){
 			diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
 		}
 		
+		write.csv(diffResult, file=paste0(prefix, "_DESeq2_volcanoPlot.csv"))
+		
 		if (useRawPvalue==1) {
 			p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
 					scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
