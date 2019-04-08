@@ -752,17 +752,27 @@ sub getRNASeqConfig {
     my @report_names = ();
     my @copy_files   = ();
     
-    my $perform_cutadapt = (defined $def->{perform_cutadapt} and $def->{perform_cutadapt});
-      
+    if (defined $config->{fastqc_raw_summary}){
+      push( @report_files, "fastqc_raw_summary",                          ".FastQC.baseQuality.txt.png" );
+      push( @report_files, "fastqc_raw_summary",                          ".FastQC.sequenceGC.txt.png" );
+      push( @report_files, "fastqc_raw_summary",                          ".FastQC.adapter.txt.png" );
+      push( @report_names, "fastqc_raw_per_base_sequence_quality", "fastqc_raw_per_sequence_gc_content", "fastqc_raw_adapter_content" );
+    }  
+    
+    if (defined $config->{fastqc_post_trim_summary}){
+      push( @report_files, "fastqc_post_trim_summary",                          ".FastQC.baseQuality.txt.png" );
+      push( @report_files, "fastqc_post_trim_summary",                          ".FastQC.sequenceGC.txt.png" );
+      push( @report_files, "fastqc_post_trim_summary",                          ".FastQC.adapter.txt.png" );
+      push( @report_names, "fastqc_post_trim_per_base_sequence_quality", "fastqc_post_trim_per_sequence_gc_content", "fastqc_post_trim_adapter_content" );
+    }  
+    
     if ( defined $config->{multiqc} ) {
       my @configKeys = keys %$config;
-      if(!$perform_cutadapt){
-        if ( first { $_ =~ 'fastqc' } @configKeys ) {
-          push( @report_files, "multiqc",                          "fastqc_per_base_sequence_quality_plot_1.png" );
-          push( @report_files, "multiqc",                          "fastqc_per_sequence_gc_content_plot_Percentages.png" );
-          push( @report_files, "multiqc",                          "fastqc_adapter_content_plot_1.png" );
-          push( @report_names, "fastqc_per_base_sequence_quality", "fastqc_per_sequence_gc_content", "fastqc_adapter_content" );
-        }
+      if ( (first { $_ =~ 'fastqc' } @configKeys) and (not defined $config->{fastqc_raw_summary})) {
+        push( @report_files, "multiqc",                          "fastqc_per_base_sequence_quality_plot_1.png" );
+        push( @report_files, "multiqc",                          "fastqc_per_sequence_gc_content_plot_Percentages.png" );
+        push( @report_files, "multiqc",                          "fastqc_adapter_content_plot_1.png" );
+        push( @report_names, "fastqc_raw_per_base_sequence_quality", "fastqc_raw_per_sequence_gc_content", "fastqc_raw_adapter_content" );
       }
 
       if ( defined $config->{star_featurecount} || defined $config->{featurecount} ) {
@@ -771,18 +781,6 @@ sub getRNASeqConfig {
       }
     }
     
-    if($perform_cutadapt){
-      my @configKeys = keys %$config;
-      for my $ckey (@configKeys){
-        if ( $ckey =~ 'fastqc' ) {
-          push( @report_files, $ckey,                          ".FastQC.baseQuality.txt.png" );
-          push( @report_files, $ckey,                          ".FastQC.sequenceGC.txt.png" );
-          push( @report_files, $ckey,                          ".FastQC.adapter.txt.png" );
-          push( @report_names, $ckey . "_per_base_sequence_quality", $ckey . "_per_sequence_gc_content", $ckey . "_adapter_content" );
-        }
-      }
-    }
-
     if ( defined $config->{star_summary} ) {
       push( @report_files, "star_summary", ".STARSummary.csv.png" );
       push( @report_files, "star_summary", ".STARSummary.csv\$" );

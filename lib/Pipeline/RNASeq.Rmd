@@ -26,6 +26,8 @@ rnaseqOptions<-read.table("fileList2.txt", header=FALSE, as.is=TRUE)
 rownames(rnaseqOptions)<-rnaseqOptions$V2
 
 hasFastqc<-any(grepl("fastqc_", rownames(files)))
+hasFastqcPosttrim<-any(grepl("fastqc_post_trim_", rownames(files)))
+
 hasSTAR<-any(grepl("STAR_", rownames(files)))
 hasFeatureCount<-any(grepl("featureCounts_", rownames(files)))
 hasDEseq2<-any(grepl("deseq2_", rownames(files)))
@@ -79,20 +81,26 @@ cat("\n")
   
 ### 2.1 Summary of sequencing quality
   
-```{r fastqc_per_base_sequence_quality,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_per_base_sequence_quality", "The mean quality scores of sequencing reads in each position")}
-check_and_include_graphics(files["fastqc_per_base_sequence_quality",1])
+```{r fastqc_raw_per_base_sequence_quality,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_per_base_sequence_quality", "The mean quality scores of sequencing reads in each position", trunk.eval=hasFastqc)}
+check_and_include_graphics(files["fastqc_raw_per_base_sequence_quality",1])
 ```
 
 <br>
 
-```{r fastqc_per_sequence_gc_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_per_sequence_gc_content", "The average GC content of sequencing reads")}
-check_and_include_graphics(files["fastqc_per_sequence_gc_content",1])
+```{r fastqc_raw_per_sequence_gc_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_per_sequence_gc_content", "The average GC content of sequencing reads", trunk.eval=hasFastqc)}
+check_and_include_graphics(files["fastqc_raw_per_sequence_gc_content",1])
 ```
 
 <br>
   
-```{r fastqc_adapter_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_adapter_content", "Adapter content of sequencing reads")}
-check_and_include_graphics(files["fastqc_adapter_content",1])
+```{r fastqc_raw_adapter_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_adapter_content", "Adapter content of sequencing reads", trunk.eval=hasFastqc)}
+check_and_include_graphics(files["fastqc_raw_adapter_content",1])
+```
+
+<br>
+  
+```{r fastqc_post_trim_adapter_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_post_trim_adapter_content", "Adapter content of sequencing reads after cutadapt", trunk.eval=hasFastqcPosttrim)}
+check_and_include_graphics(files["fastqc_post_trim_adapter_content",1])
 ```
 
 <br>
