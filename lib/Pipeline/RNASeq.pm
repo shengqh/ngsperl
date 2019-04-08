@@ -751,18 +751,35 @@ sub getRNASeqConfig {
     my @report_files = ();
     my @report_names = ();
     my @copy_files   = ();
+    
+    my $perform_cutadapt = (defined $def->{perform_cutadapt} and $def->{perform_cutadapt});
+      
     if ( defined $config->{multiqc} ) {
       my @configKeys = keys %$config;
-      if ( first { $_ =~ 'fastqc' } @configKeys ) {
-        push( @report_files, "multiqc",                          "fastqc_per_base_sequence_quality_plot_1.png" );
-        push( @report_files, "multiqc",                          "fastqc_per_sequence_gc_content_plot_Percentages.png" );
-        push( @report_files, "multiqc",                          "fastqc_adapter_content_plot_1.png" );
-        push( @report_names, "fastqc_per_base_sequence_quality", "fastqc_per_sequence_gc_content", "fastqc_adapter_content" );
+      if(!$perform_cutadapt){
+        if ( first { $_ =~ 'fastqc' } @configKeys ) {
+          push( @report_files, "multiqc",                          "fastqc_per_base_sequence_quality_plot_1.png" );
+          push( @report_files, "multiqc",                          "fastqc_per_sequence_gc_content_plot_Percentages.png" );
+          push( @report_files, "multiqc",                          "fastqc_adapter_content_plot_1.png" );
+          push( @report_names, "fastqc_per_base_sequence_quality", "fastqc_per_sequence_gc_content", "fastqc_adapter_content" );
+        }
       }
 
       if ( defined $config->{star_featurecount} || defined $config->{featurecount} ) {
         push( @report_files, "multiqc", "multiqc_featureCounts.txt" );
         push( @report_names, "featureCounts_table" );
+      }
+    }
+    
+    if($perform_cutadapt){
+      my @configKeys = keys %$config;
+      for my $ckey (@configKeys){
+        if ( $ckey =~ 'fastqc' ) {
+          push( @report_files, $ckey,                          ".FastQC.baseQuality.txt.png" );
+          push( @report_files, $ckey,                          ".FastQC.sequenceGC.txt.png" );
+          push( @report_files, $ckey,                          ".FastQC.adapter.txt.png" );
+          push( @report_names, $ckey . "_per_base_sequence_quality", $ckey . "_per_sequence_gc_content", $ckey . "_adapter_content" );
+        }
       }
     }
 
