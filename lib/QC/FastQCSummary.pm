@@ -32,6 +32,21 @@ sub perform {
   my $pbs_file   = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name   = basename($pbs_file);
   my $log        = $self->get_log_filename( $log_dir, $task_name );
+
+  my $python_script = dirname(__FILE__) . "/fastQCSummary.py";
+  if ( !-e $python_script ) {
+    die "File not found : " . $python_script;
+  }
+
+  my $r_script = dirname(__FILE__) . "/fastQCSummary.r";
+  if ( !-e $r_script ) {
+    die "File not found : " . $r_script;
+  }
+
+  
+  my $fastqc_file_list = "${task_name}_fileList1.list";
+  save_parameter_sample_file( $config, $section, "source", "${result_dir}/$fastqc_file_list" );
+
   my $cqstools   = get_param_file( $config->{$section}{cqstools}, "cqstools", 1 );
   my $fastqc_dir = get_directory( $config, $section, "fastqc_dir", 0 );
   if ( !defined $fastqc_dir ) {
@@ -39,12 +54,16 @@ sub perform {
   }
   my $log_desc = $cluster->get_log_description($log);
 
-  my $final_file = "${task_name}.FastQC.summary.tsv";
+  my $final_file = "${task_name}.FastQC.summary.txt";
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
   print $pbs "
 qcimg2pdf.sh -o $task_name
-mono $cqstools fastqc_summary -i $fastqc_dir -o $final_file 
+
+python $python_script -i $fastqc_file_list -o ${task_name}.FastQC
+
+R --vanilla -f $r_script --args ${task_name}.FastQC
+
 ";
   $self->close_pbs( $pbs, $pbs_file );
 
@@ -60,9 +79,17 @@ sub result {
 
   my $result       = {};
   my @result_files = ();
-  push( @result_files, "${result_dir}/${task_name}.FastQC.summary.tsv" );
-  push( @result_files, "${result_dir}/${task_name}.FastQC.summary.reads.tsv" );
-  push( @result_files, "${result_dir}/${task_name}.FastQC.summary.overrepresented.tsv" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.summary.txt" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.summary.txt.png" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.reads.txt" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.reads.txt.png" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.baseQuality.txt" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.baseQuality.txt.png" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.sequenceGC.txt" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.sequenceGC.txt.png" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.adapter.txt" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.adapter.txt.png" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.overrepresented.txt" );
 #  push( @result_files, "${result_dir}/${task_name}.FastQC.pdf" );
   $result->{$task_name} = filter_array( \@result_files, $pattern );
   return $result;
