@@ -4,6 +4,7 @@ package QC::FastQCSummary;
 use strict;
 use warnings;
 use File::Basename;
+use File::Copy;
 use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
@@ -43,8 +44,15 @@ sub perform {
     die "File not found : " . $r_script;
   }
 
+  my $rmd_script = dirname(__FILE__) . "/fastQCSummary.Rmd";
+  if ( !-e $rmd_script ) {
+    die "File not found : " . $rmd_script;
+  }
+
+  my $rmdfile = $task_name . ".FastQC.Rmd";
+  copy($rmd_script, $result_dir . "/" . $rmdfile) or die "Copy failed: $!";
   
-  my $fastqc_file_list = "${task_name}_summary.list";
+  my $fastqc_file_list = "fileList1.txt";
   save_parameter_sample_file( $config, $section, "source", "${result_dir}/$fastqc_file_list" );
 
   my $cqstools   = get_param_file( $config->{$section}{cqstools}, "cqstools", 1 );
@@ -58,12 +66,13 @@ sub perform {
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
   print $pbs "
-qcimg2pdf.sh -o $task_name
+#qcimg2pdf.sh -o $task_name
 
 python $python_script -i $fastqc_file_list -o ${task_name}.FastQC
 
-R --vanilla -f $r_script --args ${task_name}.FastQC
+R --vanilla -f $r_script --args ${task_name}.FastQC $rmdfile
 
+R -e \"library(knitr);rmarkdown::render('$rmdfile');\"
 ";
   $self->close_pbs( $pbs, $pbs_file );
 

@@ -1,0 +1,151 @@
+---
+title: "FastQC Summary Report"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+ 
+<style type="text/css">
+  div.datatables { height: auto !important;}
+</style>
+  
+  
+```{r functions, include=FALSE}
+library(knitr)
+library(reshape2)
+library(ggplot2)
+library(data.table)
+library(DT)
+library(RCurl)
+library(htmltools)
+
+knitr::opts_chunk$set(echo = TRUE)
+
+addLinkTag<-function(text,link) {
+  result<-paste0("<a href='",link,"' target='_blank'>",text,"</a>")
+  return(result)
+}
+
+figRef <- local({
+  tag <- numeric()
+  created <- logical()
+  used <- logical()
+  function(label, caption, prefix = options("figcap.prefix"), 
+           sep = options("figcap.sep"), prefix.highlight = options("figcap.prefix.highlight"), trunk.eval=TRUE) {
+    if(trunk.eval){ 
+      i <- which(names(tag) == label)
+      if (length(i) == 0) {
+        i <- length(tag) + 1
+        tag <<- c(tag, i)
+        names(tag)[length(tag)] <<- label
+        used <<- c(used, FALSE)
+        names(used)[length(used)] <<- label
+        created <<- c(created, FALSE)
+        names(created)[length(created)] <<- label
+      }
+      if (!missing(caption)) {
+        created[label] <<- TRUE
+        paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
+               " ", caption)
+      } else {
+        used[label] <<- TRUE
+        paste(prefix, tag[label])
+      }
+    }
+  }
+})
+options(figcap.prefix = "Figure", figcap.sep = ":", figcap.prefix.highlight = "**")
+
+
+tabRef <- local({
+  tag <- numeric()
+  created <- logical()
+  used <- logical()
+  function(label, caption, prefix = options("tabcap.prefix"), 
+           sep = options("tabcap.sep"), prefix.highlight = options("tabcap.prefix.highlight"), trunk.eval=TRUE) {
+    if(trunk.eval){
+      i <- which(names(tag) == label)
+      if (length(i) == 0) {
+        i <- length(tag) + 1
+        tag <<- c(tag, i)
+        names(tag)[length(tag)] <<- label
+        used <<- c(used, FALSE)
+        names(used)[length(used)] <<- label
+        created <<- c(created, FALSE)
+        names(created)[length(created)] <<- label
+      }
+      if (!missing(caption)) {
+        created[label] <<- TRUE
+        paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
+              " ", caption)
+      } else {
+        used[label] <<- TRUE
+        paste(prefix, tag[label])
+      }
+    }
+  }
+})
+options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**")
+
+check_and_include_graphics<-function(graphicFile) {
+  if (file.exists(graphicFile)) {
+    include_graphics(graphicFile)
+  }
+}
+
+```
+
+```{r setup, include=FALSE}
+files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
+
+getFigure<-function(filename, fileKey, fileDescription){
+  return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", fileKey, "', '", fileDescription, "')}\n",
+"  check_and_include_graphics(\"", filename, "\")\n```\n"))
+}
+
+figureFile<-"figures.Rmd"
+cnames=c("per_base_quality", "per_base_sequence_content", "per_sequence_quality", "per_sequence_gc_content", "per_tile_quality", "adapter_content")
+figureRmd<-function(files, section){
+  dnames<-unique(files$V2)
+  result<-""
+  i<-1
+  for(i in c(1:length(dnames))){
+    dname = dnames[i]
+    result<-paste0(result, "\n# ", dname, "\n\n")
+
+    dfiles<-files[files$V2 == dname,,drop=F]
+    j<-1
+    for(j in c(1:nrow(dfiles))){
+      dfile = dfiles$V1[j]
+      folder = dirname(dfile)
+      fname = basename(folder)
+      fname = gsub("_fastqc", "", fname)
+      result<-paste0(result, "\n## ", fname, "\n\n")
+
+      imagefolder = paste0(folder, "/Images/")
+      images<-paste0(imagefolder, cnames, ".png")
+      images<-images[file.exists(images)]
+
+      result<-paste0(result, "```{r,echo=FALSE,results='asis', fig.show='hold',out.width=\"33%\", fig.align='center', fig.cap=figRef('", fname, "', '", fname, "')}\n")
+      result<-paste0(result, "  include_graphics(c(\"", paste0(images, "",  collapse = "\", \""), "\")) \n```\n\n")
+    }
+  }
+  return(result)
+}
+cat(figureRmd(files, "#"), file=figureFile)
+
+```
+
+```{r, child=figureFile} 
+```

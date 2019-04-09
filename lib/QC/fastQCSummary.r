@@ -1,6 +1,8 @@
 #outputdir<-"/gpfs23/scratch/cqs/shengq2/rolanda_lister/20190403_rnaseq_2499_lister_mouse_placenta_cutadapt/fastqc_raw/result"
 args = commandArgs(trailingOnly=TRUE)
 prefix = args[1]
+rmdfile = args[2]
+
 summaryfile<-paste0(prefix, ".summary.tsv")
 readfile<-paste0(prefix, ".reads.tsv")
 baseQualityFile<-paste0(prefix, ".baseQuality.tsv")
@@ -116,3 +118,6 @@ g<-ggplot(fp, aes(x=newPosition, y=Adapter, color=File, group=File)) +
         panel.grid.major.y = element_line( size=.1, color="gray" ) )
 print(g)
 dev.off()
+
+library(knitr);
+rmarkdown::render(rmdfile);
