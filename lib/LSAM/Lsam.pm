@@ -104,7 +104,6 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my $outputFolder = get_option( $config, $section, "output_folder" );
   my $iteration    = get_option( $config, $section, "iteration" );
 
   my $result = {};
