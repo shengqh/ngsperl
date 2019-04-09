@@ -27,4 +27,4 @@ if(annotationName == "unknown"){
   qcresult = ChIPQC(experiment, consensus=TRUE, facet=FALSE, annotation = annotationName, chromosomes=chromosomes)
 }
 
-ChIPQCreport(qcresult)
+ChIPQCreport(qcresult, facet=FALSE)
