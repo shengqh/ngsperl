@@ -753,16 +753,16 @@ sub getRNASeqConfig {
     my @copy_files   = ();
     
     if (defined $config->{fastqc_raw_summary}){
-      push( @report_files, "fastqc_raw_summary",                          ".FastQC.baseQuality.txt.png" );
-      push( @report_files, "fastqc_raw_summary",                          ".FastQC.sequenceGC.txt.png" );
-      push( @report_files, "fastqc_raw_summary",                          ".FastQC.adapter.txt.png" );
+      push( @report_files, "fastqc_raw_summary",                          ".FastQC.baseQuality.tsv.png" );
+      push( @report_files, "fastqc_raw_summary",                          ".FastQC.sequenceGC.tsv.png" );
+      push( @report_files, "fastqc_raw_summary",                          ".FastQC.adapter.tsv.png" );
       push( @report_names, "fastqc_raw_per_base_sequence_quality", "fastqc_raw_per_sequence_gc_content", "fastqc_raw_adapter_content" );
     }  
     
     if (defined $config->{fastqc_post_trim_summary}){
-      push( @report_files, "fastqc_post_trim_summary",                          ".FastQC.baseQuality.txt.png" );
-      push( @report_files, "fastqc_post_trim_summary",                          ".FastQC.sequenceGC.txt.png" );
-      push( @report_files, "fastqc_post_trim_summary",                          ".FastQC.adapter.txt.png" );
+      push( @report_files, "fastqc_post_trim_summary",                          ".FastQC.baseQuality.tsv.png" );
+      push( @report_files, "fastqc_post_trim_summary",                          ".FastQC.sequenceGC.tsv.png" );
+      push( @report_files, "fastqc_post_trim_summary",                          ".FastQC.adapter.tsv.png" );
       push( @report_names, "fastqc_post_trim_per_base_sequence_quality", "fastqc_post_trim_per_sequence_gc_content", "fastqc_post_trim_adapter_content" );
     }  
     

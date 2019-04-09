@@ -126,7 +126,7 @@ with open(args.input, "r") as flistin:
             section.data[sampleName][datafilePrefix].append(sline.rstrip())
             continue
 
-with open(args.output + ".summary.txt", "w") as fout:
+with open(args.output + ".summary.tsv", "w") as fout:
   fout.write("Sample\tFile\tCategory\tQCResult\n")
   for skey, svalue in sorted(summary.items()):
     slen = len(svalue)
@@ -134,14 +134,14 @@ with open(args.output + ".summary.txt", "w") as fout:
       for ckey, cvalue in sorted(vvalue.items()):
         fout.write("%s\t%s\t%s\t%s\n" % (skey, skey if slen==1 else vkey, ckey, cvalue))
     
-with open(args.output + ".reads.txt", "w") as fout:
+with open(args.output + ".reads.tsv", "w") as fout:
   fout.write("Sample\tFile\tReads\n")
   for skey, svalue in sorted(reads.items()):
     slen = len(svalue)
     for vkey, vvalue in sorted(svalue.items()):
       fout.write("%s\t%s\t%s\n" % (skey, skey if slen==1 else vkey, vvalue))
 
-with open(args.output + ".overrepresented.txt", "w") as fout:
+with open(args.output + ".overrepresented.tsv", "w") as fout:
   fout.write("Sample\tiFile\t%s\n" % overrepresentedHeader)
   for skey, svalue in sorted(overrepresented.items()):
     slen = len(svalue)
@@ -149,7 +149,7 @@ with open(args.output + ".overrepresented.txt", "w") as fout:
       fout.write("%s\t%s\t%s\n" % (skey, skey if slen==1 else vkey, vvalue))
 
 for section in sections:
-  with open("%s.%s.txt" % (args.output, section.fileName), "w") as fout:
+  with open("%s.%s.tsv" % (args.output, section.fileName), "w") as fout:
     fout.write("Sample\tFile\t%s\n" % section.header)
     for skey, svalue in sorted(section.data.items()):
       slen = len(svalue)

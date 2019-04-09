@@ -44,7 +44,7 @@ sub perform {
   }
 
   
-  my $fastqc_file_list = "${task_name}_fileList1.list";
+  my $fastqc_file_list = "${task_name}_summary.list";
   save_parameter_sample_file( $config, $section, "source", "${result_dir}/$fastqc_file_list" );
 
   my $cqstools   = get_param_file( $config->{$section}{cqstools}, "cqstools", 1 );
@@ -79,17 +79,17 @@ sub result {
 
   my $result       = {};
   my @result_files = ();
-  push( @result_files, "${result_dir}/${task_name}.FastQC.summary.txt" );
-  push( @result_files, "${result_dir}/${task_name}.FastQC.summary.txt.png" );
-  push( @result_files, "${result_dir}/${task_name}.FastQC.reads.txt" );
-  push( @result_files, "${result_dir}/${task_name}.FastQC.reads.txt.png" );
-  push( @result_files, "${result_dir}/${task_name}.FastQC.baseQuality.txt" );
-  push( @result_files, "${result_dir}/${task_name}.FastQC.baseQuality.txt.png" );
-  push( @result_files, "${result_dir}/${task_name}.FastQC.sequenceGC.txt" );
-  push( @result_files, "${result_dir}/${task_name}.FastQC.sequenceGC.txt.png" );
-  push( @result_files, "${result_dir}/${task_name}.FastQC.adapter.txt" );
-  push( @result_files, "${result_dir}/${task_name}.FastQC.adapter.txt.png" );
-  push( @result_files, "${result_dir}/${task_name}.FastQC.overrepresented.txt" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.summary.tsv" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.summary.tsv.png" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.reads.tsv" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.reads.tsv.png" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.baseQuality.tsv" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.baseQuality.tsv.png" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.sequenceGC.tsv" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.sequenceGC.tsv.png" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.adapter.tsv" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.adapter.tsv.png" );
+  push( @result_files, "${result_dir}/${task_name}.FastQC.overrepresented.tsv" );
 #  push( @result_files, "${result_dir}/${task_name}.FastQC.pdf" );
   $result->{$task_name} = filter_array( \@result_files, $pattern );
   return $result;

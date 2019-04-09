@@ -49,13 +49,6 @@ sub perform {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my $summaryfile = $self->get_task_filename( $pbs_dir, $task_name . "_summary" );
-  open( my $sh1, ">$summaryfile" ) or die "Cannot create $summaryfile";
-  print $sh1 "cd $result_dir
-qcimg2pdf.sh -o $task_name
-";
-  close $sh1;
-
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);

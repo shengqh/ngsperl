@@ -336,20 +336,20 @@ sub getPreprocessionConfig {
     if ( length($remove_sequences) && $run_cutadapt ) {
       $fastqc_count_vis_files = {
         target_dir         => $config->{fastqc_post_trim}->{target_dir},
-        parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.summary.reads.tsv\$" ],
-        parameterFile3_ref => [ "fastqc_post_trim_summary", ".FastQC.summary.reads.tsv\$" ],
+        parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.reads.tsv\$" ],
+        parameterFile3_ref => [ "fastqc_post_trim_summary", ".FastQC.reads.tsv\$" ],
       };
     }
     elsif ( length($remove_sequences) ) {
       $fastqc_count_vis_files = {
         target_dir         => $config->{fastqc_post_remove}->{target_dir},
-        parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.summary.reads.tsv\$" ],
+        parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.reads.tsv\$" ],
       };
     }
     elsif ($run_cutadapt) {
       $fastqc_count_vis_files = {
         target_dir         => $config->{fastqc_post_trim}->{target_dir},
-        parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.summary.reads.tsv\$" ],
+        parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.reads.tsv\$" ],
       };
     }
     else {
@@ -365,7 +365,7 @@ sub getPreprocessionConfig {
           output_file        => ".countInFastQcVis.Result",
           output_file_ext    => ".Reads.csv;.pdf",
           sh_direct          => 1,
-          parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.summary.reads.tsv\$" ],
+          parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.reads.tsv\$" ],
           pbs                => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},

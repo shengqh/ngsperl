@@ -1,11 +1,11 @@
 #outputdir<-"/gpfs23/scratch/cqs/shengq2/rolanda_lister/20190403_rnaseq_2499_lister_mouse_placenta_cutadapt/fastqc_raw/result"
 args = commandArgs(trailingOnly=TRUE)
 prefix = args[1]
-summaryfile<-paste0(prefix, ".summary.txt")
-readfile<-paste0(prefix, ".reads.txt")
-baseQualityFile<-paste0(prefix, ".baseQuality.txt")
-sequenceGCFile<-paste0(prefix, ".sequenceGC.txt")
-adapterFile<-paste0(prefix, ".adapter.txt")
+summaryfile<-paste0(prefix, ".summary.tsv")
+readfile<-paste0(prefix, ".reads.tsv")
+baseQualityFile<-paste0(prefix, ".baseQuality.tsv")
+sequenceGCFile<-paste0(prefix, ".sequenceGC.tsv")
+adapterFile<-paste0(prefix, ".adapter.tsv")
 #outputdir<-"H:/shengquanhu/projects/rolanda_lister/20190403_rnaseq_2499_lister_mouse_placenta_cutadapt/temp"
 #summaryfile<-"rnaseq_Diabetic_E175.summary.txt"
 #readfile<-"rnaseq_Diabetic_E175.reads.txt"
