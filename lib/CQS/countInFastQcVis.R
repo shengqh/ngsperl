@@ -19,6 +19,7 @@ library(cowplot)
 #resultFile<-"test"
 readCount<-function(fileName){
   count1<-read.delim(fileName,header=T)
+  count1<-count1[!duplicated(count1$Sample), ]
   rownames(count1)<-count1$Sample
   return(count1)
 }
