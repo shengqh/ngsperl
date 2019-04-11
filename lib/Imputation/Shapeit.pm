@@ -39,8 +39,15 @@ sub perform {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $sample       = $sample_files[0];
 
-    my @mapFiles = @{ $mapFiles{$sample_name} };
-    my $map      = $mapFiles[0];
+    my $map = "";
+    if (defined $mapFiles{$sample_name}){
+      my @mapFiles = @{ $mapFiles{$sample_name} };
+      $map      = $mapFiles[0];
+    }else{
+      my ( $key ) = $sample_name =~ /_(chr)\S+$/;
+      my @mapFiles = @{ $mapFiles{$key} };
+      $map      = $mapFiles[0];
+    }
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
