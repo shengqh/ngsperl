@@ -20,18 +20,21 @@ for inputfile in inputfiles:
   with open(inputfile, 'r') as fin:
     for line1 in fin:
       if line1.startswith(">>Overrepresented sequences"):
-        fin.readline()
-        for line2 in fin:
-          if line2.startswith(">>END_MODULE"):
-            break
-          parts = line.split('\t')
-          if parts[3] == 'No Hit':
-            if parts[0] not in sequences:
-              sequences[parts[0]] = int(parts[1])
-            else:
-              sequences[parts[0]] = sequences[parts[0]] + int(parts[1])
         break
+
+    for line2 in fin:
+      if line2.startswith("#Sequence"):
+        continue
+      if line2.startswith(">>END_MODULE"):
+        break
+      parts = line2.split('\t')
+      if parts[3].startswith('No Hit'):
+        if parts[0] not in sequences:
+          sequences[parts[0]] = int(parts[1])
+        else:
+          sequences[parts[0]] = sequences[parts[0]] + int(parts[1])
       
-sorted_sequences = reversed(sorted((key, value) for (key,value) in sequences.items()))
-for seq in sorted_sequences:
-  print("%s\t%d" % (seq[1], seq[2]))
+sorted_sequences = reversed(sorted((value, key) for (key,value) in sequences.items()))
+with open(outputfile, "w") as fout:
+  for seq in sorted_sequences:
+    fout.write(">%s_%d\n%s\n" % (seq[1], seq[0], seq[1]))
