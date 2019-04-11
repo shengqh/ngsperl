@@ -43,24 +43,27 @@ sub perform {
   for my $sampleName ( sort keys %$rawFiles ) {
     my $files = $rawFiles->{$sampleName};
     my $file = $files->[0];
-    my $filePrefix = substr($file, 0, -4);
-    
-    my $qc1_maf = $sampleName . "_qc1_maf";
-    my $qc2_geno = $sampleName . "_qc2_geno";
-    my $qc3_hwe = $sampleName . "_qc3_hwe";
-    my $qc4_mind = $sampleName . "_qc4_mind";
-    my $qc5_resetid = $sampleName . "_qc5_resetid";
+    my $filePrefix = $file;
+    $filePrefix =~ s{\.[^.]+$}{};
+
+    my $qc1_maf = $sampleName . "_1_maf";
+    my $qc2_geno = $sampleName . "_2_geno";
+    my $qc3_hwe = $sampleName . "_3_hwe";
+    my $qc4_mind = $sampleName . "_4_mind";
+    my $qc5_resetid = $sampleName . "_5_resetid";
     my $output_file = $sampleName . "_clean";
     
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, "${output_file}.bed" );
-    print $pbs "if [ ! -s ${output_file}.bed ]; then
-  plink2 --bfile $filePrefix --maf $thres_maf --make-bed --out $qc1_maf
-  plink2 --bfile $qc1_maf --geno $thres_geno --make-bed --out $qc2_geno
-  plink2 --bfile $qc2_geno --hwe $thres_maf --make-bed --out $qc3_hwe
-  plink2 --bfile $qc3_hwe --mind $thres_maf --make-bed --out $qc4_mind
-  plink2 --bfile $qc4_mind --set-all-var-ids \@:#\\\$r_\\\$a --make-bed --out $qc5_resetid 
-  plink2 --bfile $qc5_resetid --rm-dup force-first --make-bed --out $output_file
-fi
+    print $pbs "
+plink2 --bfile $filePrefix --maf $thres_maf --make-bed --out $qc1_maf
+plink2 --bfile $qc1_maf --geno $thres_geno --make-bed --out $qc2_geno
+plink2 --bfile $qc2_geno --hwe $thres_maf --make-bed --out $qc3_hwe
+plink2 --bfile $qc3_hwe --mind $thres_maf --make-bed --out $qc4_mind
+plink2 --bfile $qc4_mind --set-all-var-ids \@:#\\\$r_\\\$a --make-bed --out $qc5_resetid 
+plink2 --bfile $qc5_resetid --rm-dup force-first --make-bed --out $output_file
+
+wc -l *.bim *.fam > ${sampleName}_qc_count.txt
+rm ${qc1_maf}* ${qc2_geno}*  ${qc3_hwe}*  ${qc4_mind}*  ${qc5_resetid}* 
 
 ";
     $self->close_pbs( $pbs, $pbs_file );
