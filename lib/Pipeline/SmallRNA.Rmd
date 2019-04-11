@@ -54,15 +54,15 @@ categoryRmd<-function(dfCategory){
 }
 
 hostGenomeFile="hostgenome.Rmd"
-hostGenome<-data.frame(Section=c("####3.2", "####3.3"), Category=c("mirna", "trna"), Name=c("miRNA", "tRNA"))
+hostGenome<-data.frame(Section=c("###", "###"), Category=c("mirna", "trna"), Name=c("miRNA", "tRNA"))
 cat(categoryRmd(hostGenome), file=hostGenomeFile)
 
 nonhostGenomeFile="nonhostgenome.Rmd"
-nonhostGenome<-data.frame(Section=c("####4.1", "####4.2"), Category=c("group1", "group2"), Name=c("Microbime bacteria", "Environment bacteria"))
+nonhostGenome<-data.frame(Section=c("###", "###"), Category=c("group1", "group2"), Name=c("Microbime bacteria", "Environment bacteria"))
 cat(categoryRmd(nonhostGenome), file=nonhostGenomeFile)
 
 nonhostLibraryFile="nonhostlibrary.Rmd"
-nonhostLibrary<-data.frame(Section=c("####5.1", "####5.2"), Category=c("trnalib", "rrnalib"), Name=c("tRNA library", "rRNA library"))
+nonhostLibrary<-data.frame(Section=c("###", "###"), Category=c("trnalib", "rrnalib"), Name=c("tRNA library", "rRNA library"))
 cat(categoryRmd(nonhostLibrary), file=nonhostLibraryFile)
 
 ```
