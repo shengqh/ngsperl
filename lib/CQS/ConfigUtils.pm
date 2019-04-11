@@ -4,6 +4,7 @@ package CQS::ConfigUtils;
 use strict;
 use warnings;
 use File::Basename;
+use File::Copy;
 use CQS::FileUtils;
 use CQS::PBS;
 use CQS::ClassFactory;
@@ -948,6 +949,10 @@ sub save_parameter_sample_file {
 
 sub saveConfig {
   my ( $def, $config ) = @_;
+
+  my $targetFile = $def->{target_dir} . "/" . basename($0);
+  print($0 . " => " . $targetFile . "\n");
+  copy($0, $targetFile);
 
   my $def_file;
   if ( $def->{target_dir} =~ /\/$/ ) {
