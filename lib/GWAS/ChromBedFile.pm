@@ -69,9 +69,8 @@ sub result {
   for my $sampleName ( sort keys %$rawFiles ) {
     my @result_files = ();
     for my $chrom (@chroms) {
-      push @result_files, "$result_dir/${sampleName}_chr${chrom}.bed";
+      $result->{$sampleName . "_chr${chrom}"} = filter_array( ["$result_dir/${sampleName}_chr${chrom}.bed"], $pattern );
     }
-    $result->{$sampleName} = filter_array( \@result_files, $pattern );
   }
   return $result;
 }
