@@ -108,11 +108,13 @@ fp$newPosition = unlist(lapply(fp$Position, function(x){
     return(as.numeric(as.character(x)))
   }
 }))
+
+ylimmax<-max(10, max(fp$Adapter))
 png(file=paste0(adapterFile, ".png"), height=1600, width=2000, res=300)
 g<-ggplot(fp, aes(x=newPosition, y=Adapter, color=File, group=File)) + 
   geom_line() +
   xlab("Position") + ylab("Percentage") + ggtitle(fpMaxName) +
-  scale_x_continuous(breaks=seq(0, max(fp$newPosition), 10)) +
+  scale_x_continuous(breaks=seq(0, max(fp$newPosition), 10)) + ylim(0, ylimmax) +
   theme_classic() + 
   theme(legend.position = "none",
         panel.grid.major.y = element_line( size=.1, color="gray" ) )
