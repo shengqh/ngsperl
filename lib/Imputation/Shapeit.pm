@@ -71,11 +71,17 @@ sub perform {
 
     my $phase_file  = "${sample_name}.haps";
     my $sample_file = "${sample_name}.sample";
+    my $plink_sample_file = "${sample_name}.plink.sample";
 
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $phase_file );
-    print $pbs "shapeit $option $source_option -M $map -O $phase_file $sample_file";
+    print $pbs "shapeit $option $source_option -M $map -O $phase_file $sample_file
+
+if [[ -s $sample_file ]]; then
+  cut -d ' ' -f 1-3,6,7  $sample_file > $plink_sample_file
+fi
+";
     $self->close_pbs( $pbs, $pbs_file );
     
     print $sh "\$MYCMD ./$pbs_name \n";
@@ -103,6 +109,7 @@ sub result {
 
     push( @result_files, "${result_dir}/${sample_name}.haps" );
     push( @result_files, "${result_dir}/${sample_name}.sample" );
+    push( @result_files, "${result_dir}/${sample_name}.plink.sample" );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
