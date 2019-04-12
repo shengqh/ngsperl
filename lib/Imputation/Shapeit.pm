@@ -44,7 +44,7 @@ sub perform {
       my @mapFiles = @{ $mapFiles{$sample_name} };
       $map      = $mapFiles[0];
     }else{
-      my ( $key ) = $sample_name =~ /_(chr)\S+$/;
+      my ( $key ) = $sample_name =~ /_(chr\S+)$/;
       my @mapFiles = @{ $mapFiles{$key} };
       $map      = $mapFiles[0];
     }
