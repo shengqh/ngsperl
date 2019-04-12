@@ -24,17 +24,6 @@ sub new {
   return $self;
 }
 
-sub containPosition {
-  my ( $positions, $start, $end ) = @_;
-  for my $position ( @{$positions} ) {
-    if ( $position >= $start && $position <= $end ) {
-      return 1;
-    }
-  }
-
-  return 0;
-}
-
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -47,20 +36,8 @@ sub perform {
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
 
-  my $ranges = {};
   my $interval_bed = get_option_file( $config, $section, "interval_bed" );
-  open( my $fin, '<', $interval_bed ) or die "Could not open $interval_bed\n";
-  while ( my $line = <$fin> ) {
-    chomp $line;
-    my @parts = split( "\t", $line );
-    my $chrom = $parts[0];
-    if (not defined $ranges->{$chrom}){
-      $ranges->{$chrom} = [];
-    }
-    
-    my $locus = $ranges->{$chrom};
-    push @$locus, [$parts[1], $parts[2]];
-  }
+  my $ranges = readLocusFromBedFile($interval_bed);
 
   my $raw_files  = get_raw_files( $config, $section );
   my $mapFiles = readGwasDataFile($config, $section, "genetic_map_file",$raw_files  );
@@ -86,8 +63,6 @@ sub perform {
     my @lFiles     = @{ $legendFiles->{$sample_name} };
     my $legendFile = $lFiles[0];
 
-    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
-
     for my $loc (@$locus) {
       my $start = $loc->[0];
       my $end   = $loc->[1];
@@ -102,7 +77,7 @@ sub perform {
 
       my $log_desc = $cluster->get_log_description($log);
 
-      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $tmpFile, $init_command );
+      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $tmpFile, $init_command );
 
       print $pbs "
 impute2 $option -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
@@ -128,15 +103,59 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $interval_bed = get_option_file( $config, $section, "interval_bed" );
+  my $ranges = readLocusFromBedFile($interval_bed);
 
   my $result = {};
   for my $sample_name ( sort keys %raw_files ) {
-    my @result_files = ();
+    my ( $chrName ) = $sample_name =~ /_chr(\S+)$/;
+    if (not defined $ranges->{$chrName}){
+      die "sample = $sample_name, chr = $chrName, not in $interval_bed";
+    }
+    my $locus = $ranges->{$chrName};
 
+    for my $loc (@$locus) {
+      my $start = $loc->[0];
+      my $end   = $loc->[1];
 
-    $result->{$sample_name} = filter_array( \@result_files, $pattern );
+      my $cursample = $sample_name . "_" . $start . "_" . $end;
+      my $tmpFile = "${cursample}.tmp";
+
+      my @result_files = ();
+      push @result_files, $result_dir . "/" . $tmpFile;
+      $result->{$cursample} = filter_array( \@result_files, $pattern );
+    }
   }
   return $result;
 }
+
+sub get_pbs_files {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
+
+  my %raw_files = %{ get_raw_files( $config, $section ) };
+  my $interval_bed = get_option_file( $config, $section, "interval_bed" );
+  my $ranges = readLocusFromBedFile($interval_bed);
+
+  my $result = {};
+  for my $sample_name ( sort keys %raw_files ) {
+    my ( $chrName ) = $sample_name =~ /_chr(\S+)$/;
+    if (not defined $ranges->{$chrName}){
+      die "sample = $sample_name, chr = $chrName, not in $interval_bed";
+    }
+    my $locus = $ranges->{$chrName};
+
+    for my $loc (@$locus) {
+      my $start = $loc->[0];
+      my $end   = $loc->[1];
+
+      my $cursample = $sample_name . "_" . $start . "_" . $end;
+      $result->{$cursample} = $self->get_pbs_filename( $pbs_dir, $cursample );
+    }
+  }
+
+  return $result;
+}
+
 
 1;

@@ -16,6 +16,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(readChromosomesFromBedFile
+    readLocusFromBedFile
     readGwasDataFile)
   ]
 );
@@ -37,6 +38,25 @@ sub readChromosomesFromBedFile {
     }
   }
   return @chroms;
+}
+
+sub readLocusFromBedFile {
+  my ( $interval_bed ) = @_;
+  my $ranges = {};
+  open( my $fin, '<', $interval_bed ) or die "Could not open $interval_bed\n";
+  while ( my $line = <$fin> ) {
+    chomp $line;
+    my @parts = split( "\t", $line );
+    my $chrom = $parts[0];
+    if (not defined $ranges->{$chrom}){
+      $ranges->{$chrom} = [];
+    }
+    
+    my $locus = $ranges->{$chrom};
+    push @$locus, [$parts[1], $parts[2]];
+  }
+  
+  return $ranges;
 }
 
 sub readGwasDataFile {
