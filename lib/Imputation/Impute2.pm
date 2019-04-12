@@ -65,6 +65,7 @@ sub perform_phased {
   my $mapFiles = readGwasDataFile($config, $section, "genetic_map_file",$raw_files  );
   my $haploFiles = readGwasDataFile( $config, $section, "haplo_file", $raw_files );
   my $rangeFiles = readGwasDataFile( $config, $section, "range_file", $raw_files );
+  my $legendFiles = readGwasDataFile( $config, $section, "legend_file", $raw_files );
 
   for my $sample_name ( sort keys %$raw_files ) {
     my @sample_files = @{ $raw_files->{$sample_name} };
@@ -75,7 +76,9 @@ sub perform_phased {
 
     my @hFiles     = @{ $haploFiles->{$sample_name} };
     my $haploFile  = $hFiles[0];
-    my $legendFile = change_extension( $haploFile, ".legend" );
+
+    my @lFiles     = @{ $legendFiles->{$sample_name} };
+    my $legendFile = $lFiles[0];
 
     my @rFiles    = @{ $rangeFiles->{$sample_name} };
     my $rangeFile = $rFiles[0];
