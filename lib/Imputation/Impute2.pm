@@ -87,9 +87,6 @@ sub perform {
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
-    my $gen_file     = "${sample_name}.gen";
-    my $gen_tmp_file = "${sample_name}.gen.tmp";
-
     for my $loc (@$locus) {
       my $start = $loc->[0];
       my $end   = $loc->[1];
@@ -104,20 +101,9 @@ sub perform {
 
       my $log_desc = $cluster->get_log_description($log);
 
-      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
+      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $tmpFile );
 
       print $pbs "
-
-if [ -s $gen_file ]; then
-  echo job has already been done. if you want to do again, delete $cur_dir/$gen_file and submit job again.
-  exit 0;
-fi
-
-if [ -s $tmpFile ]; then
-  echo job has already been done. if you want to do again, delete $cur_dir/$tmpFile and submit job again.
-  exit 0;
-fi
-
 impute2 $option -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
 ";
       $self->close_pbs( $pbs, $pbs_file );
