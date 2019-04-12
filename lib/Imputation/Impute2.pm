@@ -61,23 +61,23 @@ sub perform_phased {
   my $mergefile = $self->get_task_filename( $result_dir, $task_name . "_merge" );
   open( MSH, ">$mergefile" ) or die "Cannot create $mergefile";
 
-  my %raw_files  = %{ get_raw_files( $config, $section ) };
-  my %mapFiles   = %{ get_raw_files( $config, $section, "genetic_map_file" ) };
-  my %haploFiles = %{ get_raw_files( $config, $section, "haplo_file" ) };
-  my %rangeFiles = %{ get_raw_files( $config, $section, "range_file" ) };
+  my $raw_files  = get_raw_files( $config, $section );
+  my $mapFiles = readGwasDataFile($config, $section, "genetic_map_file",$raw_files  );
+  my $haploFiles = readGwasDataFile( $config, $section, "haplo_file", $raw_files );
+  my $rangeFiles = readGwasDataFile( $config, $section, "range_file", $raw_files );
 
-  for my $sample_name ( sort keys %raw_files ) {
-    my @sample_files = @{ $raw_files{$sample_name} };
+  for my $sample_name ( sort keys %$raw_files ) {
+    my @sample_files = @{ $raw_files->{$sample_name} };
     my $sample       = $sample_files[0];
 
-    my @mFiles = @{ $mapFiles{$sample_name} };
+    my @mFiles = @{ $mapFiles->{$sample_name} };
     my $map    = $mFiles[0];
 
-    my @hFiles     = @{ $haploFiles{$sample_name} };
+    my @hFiles     = @{ $haploFiles->{$sample_name} };
     my $haploFile  = $hFiles[0];
     my $legendFile = change_extension( $haploFile, ".legend" );
 
-    my @rFiles    = @{ $rangeFiles{$sample_name} };
+    my @rFiles    = @{ $rangeFiles->{$sample_name} };
     my $rangeFile = $rFiles[0];
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
@@ -162,23 +162,23 @@ sub perform_direct {
   my $mergefile = $self->get_task_filename( $result_dir, $task_name . "_merge" );
   open( MSH, ">$mergefile" ) or die "Cannot create $mergefile";
 
-  my %raw_files  = %{ get_raw_files( $config, $section ) };
-  my %mapFiles   = %{ get_raw_files( $config, $section, "genetic_map_file" ) };
-  my %haploFiles = %{ get_raw_files( $config, $section, "haplo_file" ) };
-  my %rangeFiles = %{ get_raw_files( $config, $section, "range_file" ) };
+  my $raw_files  = get_raw_files( $config, $section );
+  my $mapFiles = readGwasDataFile($config, $section, "genetic_map_file",$raw_files  );
+  my $haploFiles = readGwasDataFile( $config, $section, "haplo_file", $raw_files );
+  my $rangeFiles = readGwasDataFile( $config, $section, "range_file", $raw_files );
 
-  for my $sample_name ( sort keys %raw_files ) {
-    my @sample_files = @{ $raw_files{$sample_name} };
+  for my $sample_name ( sort keys %$raw_files ) {
+    my @sample_files = @{ $raw_files->{$sample_name} };
     my $sample       = $sample_files[0];
 
-    my @mFiles = @{ $mapFiles{$sample_name} };
+    my @mFiles = @{ $mapFiles->{$sample_name} };
     my $map    = $mFiles[0];
 
-    my @hFiles     = @{ $haploFiles{$sample_name} };
+    my @hFiles     = @{ $haploFiles->{$sample_name} };
     my $haploFile  = $hFiles[0];
     my $legendFile = change_extension( $haploFile, ".legend" );
 
-    my @rFiles    = @{ $rangeFiles{$sample_name} };
+    my @rFiles    = @{ $rangeFiles->{$sample_name} };
     my $rangeFile = $rFiles[0];
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
