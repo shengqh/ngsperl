@@ -53,7 +53,6 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
     my $source_option;
 
     if ( $sample =~ /bed$/ ) {
@@ -75,7 +74,7 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $phase_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $phase_file );
     print $pbs "shapeit $option $source_option -M $map -O $phase_file $sample_file";
     $self->close_pbs( $pbs, $pbs_file );
     
@@ -102,8 +101,8 @@ sub result {
   for my $sample_name ( keys %raw_files ) {
     my @result_files = ();
 
-    push( @result_files, "${result_dir}/${sample_name}/${sample_name}.haps" );
-    push( @result_files, "${result_dir}/${sample_name}/${sample_name}.sample" );
+    push( @result_files, "${result_dir}/${sample_name}.haps" );
+    push( @result_files, "${result_dir}/${sample_name}.sample" );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
