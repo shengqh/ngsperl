@@ -32,22 +32,15 @@ sub perform {
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
 
-  my %raw_files = %{ get_raw_files( $config, $section ) };
-  my %mapFiles = %{ get_raw_files( $config, $section, "genetic_map_file" ) };
+  my $raw_files = get_raw_files( $config, $section ) ;
+  my $mapFiles = readGwasDataFile($config, $section, "genetic_map_file",$raw_files  );
 
-  for my $sample_name ( sort keys %raw_files ) {
-    my @sample_files = @{ $raw_files{$sample_name} };
+  for my $sample_name ( sort keys %$raw_files ) {
+    my @sample_files = @{ $raw_files->{$sample_name} };
     my $sample       = $sample_files[0];
 
-    my $map = "";
-    if (defined $mapFiles{$sample_name}){
-      my @mapFiles = @{ $mapFiles{$sample_name} };
-      $map      = $mapFiles[0];
-    }else{
-      my ( $key ) = $sample_name =~ /_(chr\S+)$/;
-      my @mapFiles = @{ $mapFiles{$key} };
-      $map      = $mapFiles[0];
-    }
+    my @mapFiles = @{ $mapFiles->{$sample_name} };
+    my $map      = $mapFiles[0];
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);

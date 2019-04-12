@@ -15,7 +15,8 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(readChromosomesFromBedFile)
+    qw(readChromosomesFromBedFile
+    readGwasDataFile)
   ]
 );
 
@@ -36,6 +37,20 @@ sub readChromosomesFromBedFile {
     }
   }
   return @chroms;
+}
+
+sub readGwasDataFile {
+  my ( $config, $section, $key, $rawFiles ) = @_;
+  my $result = get_raw_files( $config, $section, $key );
+  my @resultKeys = (sort keys %$result);
+  
+  for my $sample (keys %$rawFiles){
+    for my $resultKey (@resultKeys){
+      $result->{$sample . "_" . $resultKey} = $result->{$resultKey};
+    }
+  }
+  
+  return $result;
 }
 
 
