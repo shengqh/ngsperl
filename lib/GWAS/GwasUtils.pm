@@ -45,8 +45,12 @@ sub readGwasDataFile {
   my @resultKeys = (sort keys %$result);
   
   for my $sample (keys %$rawFiles){
-    for my $resultKey (@resultKeys){
-      $result->{$sample . "_" . $resultKey} = $result->{$resultKey};
+    if (not defined $result->{$sample}){
+      my ( $chrKey ) = $sample =~ /_(chr\S+)$/;
+      if (not defined $result->{$chrKey}){
+        die "$key in $section doesn't have key $sample or $chrKey";
+      }
+      $result->{$sample} = $result->{$chrKey}
     }
   }
   
