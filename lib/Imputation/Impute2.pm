@@ -41,6 +41,7 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $isPhased = get_option( $config, $section, "isPhased", 0 );
+  my $init_command = get_option( $config, $section, "init_command", "" );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -101,7 +102,7 @@ sub perform {
 
       my $log_desc = $cluster->get_log_description($log);
 
-      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $tmpFile );
+      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $tmpFile, $init_command );
 
       print $pbs "
 impute2 $option -known_haps_g $sample -m $map -int $start $end -h $haploFile -l $legendFile -o $tmpFile
