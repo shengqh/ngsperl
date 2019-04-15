@@ -805,7 +805,7 @@ sub writeDesignTable {
 
 sub getSequenceTaskClassname {
   my $cluster = shift;
-  my $result = $cluster eq "slurm" ? "CQS::SequenceTaskSlurm" : "CQS::SequenceTask";
+  my $result = $cluster eq "slurm" ? "CQS::SequenceTaskSlurmSlim" : "CQS::SequenceTask";
   return ($result);
 }
 

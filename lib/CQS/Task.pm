@@ -91,41 +91,27 @@ sub get_pbs_files {
   return $result;
 }
 
-sub html {
+#get pbs source map which indicates which sample name the pbs file comes from
+#for impute2 which generate multiple pbs files and multiple result files from 1 sample name,
+#the multiple pbs should be mapped to same sample name 
+sub get_pbs_source {
   my ( $self, $config, $section ) = @_;
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
-  my $result = $self->result( $config, $section );
+  
+  my $pbsFiles = $self->get_pbs_files($config, $section);
+  my $result = {};
+  for my $resKey (keys %$pbsFiles){
+    $result->{$pbsFiles->{$resKey}} = [$resKey];
+  } 
+  return $result;
+}
 
-  my $htmlfile = $target_dir . "/" . $section . ".html";
-  open( my $html, ">$htmlfile" ) or die "Cannot create $htmlfile";
-  print $html "<HTML>
-<HEAD>
-<TITLE>$task_name : $section</TITLE>
-</HEAD>
-<BODY>
-<h4>$task_name : $section</h4>
-<table>
-";
-
-  for my $expect_name ( sort keys %{$result} ) {
-    my $expect_files = $result->{$expect_name};
-    print "<tr><td>$expect_name</td><td>\n";
-    for my $expect_file ( @{$expect_files} ) {
-      my $commonLen = 0;
-      ( $target_dir ^ $expect_file ) =~ /^(\0*)/;
-      $commonLen = $+[0];
-      substr $expect_file, 0, $commonLen, "";
-      print "$expect_file\n";
-    }
-    print "</td></tr>\n";
-  }
-
-  print $html "</table>  
-</BODY>
-</HTML>
-";
-
-  return ($htmlfile);
+#get result pbs map which indicates which pbs the result name related.
+#for bed file split which has 1 pbs and multiple result files, the multiple result names
+#should be mapped to same pbs 
+sub get_result_dependent_pbs {
+  my ( $self, $config, $section ) = @_;
+  
+  return $self->get_pbs_files($config, $section);
 }
 
 sub require {

@@ -640,17 +640,18 @@ sub get_ref_section_pbs {
 
       if ( defined $targetSection->{class} ) {
         my $myclass = instantiate( $targetSection->{class} );
-        my $targetpbsmap = $myclass->get_pbs_files( $config, $section );
-        for my $pbskey ( keys %$targetpbsmap ) {
-          my $newpbs  = $targetpbsmap->{$pbskey};
-          my $pbslist = $result->{$pbskey};
+        print ($targetSection->{class} . " " . $section. "\n");
+        my $result_pbs_map = $myclass->get_result_dependent_pbs( $config, $section );
+        for my $resultKey ( keys %$result_pbs_map ) {
+          my $newpbs = $result_pbs_map->{$resultKey};
+          my $pbslist = $result->{$resultKey};
           if ( defined $pbslist ) {
             push @$pbslist, $newpbs;
           }
           else {
             $pbslist = [$newpbs];
           }
-          $result->{$pbskey} = $pbslist;
+          $result->{$resultKey} = $pbslist;
         }
       }
       else {
