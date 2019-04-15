@@ -12,7 +12,7 @@ use CQS::UniqueTask;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 
-our @ISA = qw(CQS::UniqueTask);
+our @ISA = qw(CQS::Task);
 
 sub new {
   my ($class) = @_;
@@ -35,12 +35,12 @@ sub perform {
   my $thres_hwe = get_option( $config, $section, "thres_hwe", 0.0001 );
   my $thres_mind = get_option( $config, $section, "thres_mind", 0.03 );
 
-  my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
-  my $pbs_name = basename($pbs_file);
-  my $log      = $self->get_log_filename( $log_dir, $task_name );
-  my $log_desc = $cluster->get_log_description($log);
-
   for my $sampleName ( sort keys %$rawFiles ) {
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sampleName );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $sampleName );
+    my $log_desc = $cluster->get_log_description($log);
+
     my $files = $rawFiles->{$sampleName};
     my $file = $files->[0];
     my $filePrefix = $file;

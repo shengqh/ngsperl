@@ -157,5 +157,33 @@ sub get_pbs_files {
   return $result;
 }
 
+sub get_pbs_source {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
+
+  my %raw_files = %{ get_raw_files( $config, $section ) };
+  my $interval_bed = get_option_file( $config, $section, "interval_bed" );
+  my $ranges = readLocusFromBedFile($interval_bed);
+
+  my $result = {};
+  for my $sample_name ( sort keys %raw_files ) {
+    my ( $chrName ) = $sample_name =~ /_chr(\S+)$/;
+    if (not defined $ranges->{$chrName}){
+      die "sample = $sample_name, chr = $chrName, not in $interval_bed";
+    }
+    my $locus = $ranges->{$chrName};
+
+    for my $loc (@$locus) {
+      my $start = $loc->[0];
+      my $end   = $loc->[1];
+
+      my $cursample = $sample_name . "_" . $start . "_" . $end;
+      $result->{$self->get_pbs_filename( $pbs_dir, $cursample )} = [$sample_name];
+    }
+  }
+
+  return $result;
+}
 
 1;
