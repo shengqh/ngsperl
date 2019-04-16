@@ -40,7 +40,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
-  my $seqs = $self->getSeq();
+  my $seqs = $self->getSeq($config, $section);
   
   for my $seq (@$seqs) {
     my $sample_name = $seq->accession_number;
