@@ -39,7 +39,13 @@ sub perform {
   my $final = $task_name . ".html";
   my $pbs      = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final );
 
-  print $pbs "multiqc $option -p -n $final $root_dir \n";
+  print $pbs "
+if [[ -d ${task_name}_data ]]; then
+  rm -rf ${task_name}_data
+fi
+
+multiqc $option -p -n $final $root_dir 
+";
 
   $self->close_pbs( $pbs, $pbs_file );
 }
