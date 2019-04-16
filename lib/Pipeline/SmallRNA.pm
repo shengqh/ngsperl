@@ -31,11 +31,13 @@ sub getSmallRNAConfig {
 
   my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
   my $task_name = $def->{task_name};
-
+  
+  my $hasMicroRNAOnly = getValue( $def, "hasMicroRNAOnly", 0 );
+  
   my $search_not_identical   = getValue( $def, "search_not_identical" );
   my $search_host_genome     = getValue( $def, "search_host_genome" );
-  my $search_nonhost_genome  = getValue( $def, "search_nonhost_genome" );
-  my $search_nonhost_library = getValue( $def, "search_nonhost_library" );
+  my $search_nonhost_genome  = getValue( $def, "search_nonhost_genome" ) && $hasMicroRNAOnly;
+  my $search_nonhost_library = getValue( $def, "search_nonhost_library" ) && $hasMicroRNAOnly;
   my $search_nonhost_database = $search_nonhost_genome || $search_nonhost_library;
 
   my $perform_annotate_unmapped_reads    = getValue( $def, "perform_annotate_unmapped_reads" );
@@ -45,7 +47,7 @@ sub getSmallRNAConfig {
   my $blast_top_reads      = getValue( $def, "blast_top_reads" );
   my $blast_unmapped_reads = getValue( $def, "blast_unmapped_reads" );
 
-  my $perform_nonhost_overlap_vis = getValue( $def, "perform_nonhost_overlap_vis", 1 );
+  my $perform_nonhost_overlap_vis = getValue( $def, "perform_nonhost_overlap_vis", 1 ) && $hasMicroRNAOnly;
 
   my $top_read_number = getValue( $def, "top_read_number" );
 
@@ -95,16 +97,20 @@ sub getSmallRNAConfig {
 
   my $data_visualization_dir = create_directory_or_die( $def->{target_dir} . "/data_visualization" );
 
-  my $perform_tDRmapper = getValue( $def, "perform_tDRmapper", 0 );
-  if ($perform_tDRmapper) {
-    getValue( $def, "tDRmapper" );
-    getValue( $def, "tDRmapper_fasta" );
+  my $perform_tDRmapper = getValue( $def, "perform_tDRmapper", 0 ) && $hasMicroRNAOnly;
+  if ( !$hasMicroRNAOnly ) {
+    if ($perform_tDRmapper) {
+      getValue( $def, "tDRmapper" );
+      getValue( $def, "tDRmapper_fasta" );
+    }
   }
 
-  my $perform_host_tRH_analysis = getValue( $def, "perform_host_tRH_analysis", 0 );
+  my $perform_host_tRH_analysis = getValue( $def, "perform_host_tRH_analysis", 0 ) && $hasMicroRNAOnly;
   my $tRH_folder = $def->{target_dir} . "/tRH";
-  if ($perform_host_tRH_analysis) {
-    create_directory_or_die($tRH_folder);
+  if ( !$hasMicroRNAOnly ) {
+    if ($perform_host_tRH_analysis) {
+      create_directory_or_die($tRH_folder);
+    }
   }
 
   my $R_font_size = 'textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';';
@@ -199,23 +205,27 @@ sub getSmallRNAConfig {
       $comparisons = $sampleComparisons;
     }
 
-    my $hostSmallRNA       = [ "isomiR",       "tDR-anticodon" ];
-    my $hostSmallRNAFolder = [ "miRNA_isomiR", "tRNA" ];
-    if ( $def->{hasSnRNA} ) {
-      push( @$hostSmallRNA,       "snDR" );
-      push( @$hostSmallRNAFolder, "snRNA" );
-    }
-    if ( $def->{hasSnoRNA} ) {
-      push( @$hostSmallRNA,       "snoDR" );
-      push( @$hostSmallRNAFolder, "snoRNA" );
-    }
-    if ( $def->{hasYRNA} ) {
-      push( @$hostSmallRNA,       "yDR" );
-      push( @$hostSmallRNAFolder, "yRNA" );
-    }
-    push( @$hostSmallRNA,       ( "rDR",  "osRNA" ) );
-    push( @$hostSmallRNAFolder, ( "rRNA", "otherSmallRNA" ) );
+    my $hostSmallRNA       = ["isomiR"];
+    my $hostSmallRNAFolder = ["miRNA_isomiR"];
+    if ( !$hasMicroRNAOnly ) {
 
+      push( @$hostSmallRNA,       "tDR-anticodon" );
+      push( @$hostSmallRNAFolder, "tRNA" );
+      if ( $def->{hasSnRNA} ) {
+        push( @$hostSmallRNA,       "snDR" );
+        push( @$hostSmallRNAFolder, "snRNA" );
+      }
+      if ( $def->{hasSnoRNA} ) {
+        push( @$hostSmallRNA,       "snoDR" );
+        push( @$hostSmallRNAFolder, "snoRNA" );
+      }
+      if ( $def->{hasYRNA} ) {
+        push( @$hostSmallRNA,       "yDR" );
+        push( @$hostSmallRNAFolder, "yRNA" );
+      }
+      push( @$hostSmallRNA,       ( "rDR",  "osRNA" ) );
+      push( @$hostSmallRNAFolder, ( "rRNA", "otherSmallRNA" ) );
+    }
     my $numberOfHostSmallRNA = scalar(@$hostSmallRNA);
 
     my $DE_task_suffix = getValue( $def, "DE_task_suffix", "" );
@@ -356,7 +366,7 @@ sub getSmallRNAConfig {
         },
       },
     };
-    if ( defined $config->{identical_check_cca} ) {
+    if ( !$hasMicroRNAOnly and defined $config->{identical_check_cca} ) {
       $host_genome->{bowtie1_genome_1mm_NTA_smallRNA_count}{cca_files_ref} = ["identical_check_cca"];
     }
 
@@ -426,93 +436,26 @@ sub getSmallRNAConfig {
             "mem"       => "10gb"
           },
         },
-        host_genome_tRNA_category => {
-          class                     => "CQS::UniqueR",
-          perform                   => 1,
-          target_dir                => $data_visualization_dir . "/host_genome_tRNA_category",
-          rtemplate                 => "countTableVisFunctions.R,hostTrnaMappingVis.R",
-          output_file               => ".tRNAMapping.Result",
-          output_file_ext           => ".tRNAType2.Barplot.png",
-          parameterSampleFile1Order => $def->{groups_order},
-          parameterSampleFile1      => $groups,
-          parameterSampleFile2      => $def->{groups_vis_layout},
-          parameterFile1_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ],
-          parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
-          rCode                     => 'maxCategory=3;' . $R_font_size,
-          sh_direct                 => 1,
-          pbs                       => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
-            "mem"       => "10gb"
-          },
-        },
       }
     );
     $config = merge( $config, $host_genome );
-    push @$summary_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_info", "bowtie1_genome_1mm_NTA_smallRNA_category", "host_genome_tRNA_category" );
+    push @$summary_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_info", "bowtie1_genome_1mm_NTA_smallRNA_category" );
 
     my $tRHTask      = "bowtie1_genome_1mm_NTA_smallRNA_count_tRH_filtered";
     my $tRHTableTask = $tRHTask . "_table";
     my $tRHCategory  = $tRHTask . "_category";
-    if ($perform_host_tRH_analysis) {
-      $config->{$tRHTask} = {
-        class                 => "CQS::ProgramIndividualWrapper",
-        perform               => 1,
-        target_dir            => $tRH_folder . "/$tRHTask",
-        option                => "--minLength 30 --maxLength 40",
-        interpretor           => "python",
-        program               => "../SmallRNA/filterTrnaXml.py",
-        source_arg            => "-i",
-        source_ref            => [ $countTask, ".count.mapped.xml" ],
-        output_to_same_folder => 1,
-        output_arg            => "-o",
-        output_ext            => ".tRH.count.mapped.xml",
-        sh_direct             => 1,
-        pbs                   => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      };
-      push @$individual_ref, $tRHTask;
-
-      $config->{$tRHTableTask} = {
-        class      => "CQS::SmallRNATable",
-        perform    => 1,
-        target_dir => $tRH_folder . "/$tRHTableTask",
-        option     => $def->{host_smallrnacounttable_option},
-        source_ref => [ $tRHTask, ".tRH.count.mapped.xml" ],
-        cqs_tools  => $def->{cqstools},
-        prefix     => "smallRNA_1mm_",
-        sh_direct  => 1,
-        is_tRH     => 1,
-        cluster    => $cluster,
-        pbs        => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "40gb"
-        },
-      };
-
-      push @$summary_ref, $tRHTableTask;
-
-      $config->{$tRHCategory} = {
+    if ( !$hasMicroRNAOnly ) {
+      $config->{host_genome_tRNA_category} = {
         class                     => "CQS::UniqueR",
         perform                   => 1,
-        target_dir                => $tRH_folder . "/host_genome_tRH_category",
+        target_dir                => $data_visualization_dir . "/host_genome_tRNA_category",
         rtemplate                 => "countTableVisFunctions.R,hostTrnaMappingVis.R",
-        output_file               => ".tRHMapping.Result",
+        output_file               => ".tRNAMapping.Result",
         output_file_ext           => ".tRNAType2.Barplot.png",
         parameterSampleFile1Order => $def->{groups_order},
         parameterSampleFile1      => $groups,
         parameterSampleFile2      => $def->{groups_vis_layout},
-        parameterFile1_ref        => [ $tRHTableTask, ".tRNA.count\$" ],
+        parameterFile1_ref        => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ],
         parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
         rCode                     => 'maxCategory=3;' . $R_font_size,
         sh_direct                 => 1,
@@ -524,69 +467,140 @@ sub getSmallRNAConfig {
           "mem"       => "10gb"
         },
       };
-      push @$summary_ref, $tRHCategory;
-    }
-
-    if ( $def->{perform_host_tRNA_start_position} ) {
-      my $tTask = "host_genome_tRNA_start_position_vis";
-      if ( !defined $def->{tRNA_vis_group} ) {
-        $def->{tRNA_vis_group} = $groups;
-      }
-      addPositionVis(
-        $config, $def,
-        $summary_ref,
-        $tTask,
-        $data_visualization_dir,
-        {
-          target_dir         => $data_visualization_dir . "/" . $tTask,
-          output_file        => ".tRNAStartPositionVis",
-          output_file_ext    => ".barplot.png",
-          rtemplate          => "tRnaStartPositionVis.R",
-          parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count.startpos\$" ],
-        }
-      );
+      push @$summary_ref, ("host_genome_tRNA_category");
 
       if ($perform_host_tRH_analysis) {
-        my $tRHStartPositionTask = "host_genome_tRH_start_position_vis";
+        $config->{$tRHTask} = {
+          class                 => "CQS::ProgramIndividualWrapper",
+          perform               => 1,
+          target_dir            => $tRH_folder . "/$tRHTask",
+          option                => "--minLength 30 --maxLength 40",
+          interpretor           => "python",
+          program               => "../SmallRNA/filterTrnaXml.py",
+          source_arg            => "-i",
+          source_ref            => [ $countTask, ".count.mapped.xml" ],
+          output_to_same_folder => 1,
+          output_arg            => "-o",
+          output_ext            => ".tRH.count.mapped.xml",
+          sh_direct             => 1,
+          pbs                   => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        };
+        push @$individual_ref, $tRHTask;
+
+        $config->{$tRHTableTask} = {
+          class      => "CQS::SmallRNATable",
+          perform    => 1,
+          target_dir => $tRH_folder . "/$tRHTableTask",
+          option     => $def->{host_smallrnacounttable_option},
+          source_ref => [ $tRHTask, ".tRH.count.mapped.xml" ],
+          cqs_tools  => $def->{cqstools},
+          prefix     => "smallRNA_1mm_",
+          sh_direct  => 1,
+          is_tRH     => 1,
+          cluster    => $cluster,
+          pbs        => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "40gb"
+          },
+        };
+
+        push @$summary_ref, $tRHTableTask;
+
+        $config->{$tRHCategory} = {
+          class                     => "CQS::UniqueR",
+          perform                   => 1,
+          target_dir                => $tRH_folder . "/host_genome_tRH_category",
+          rtemplate                 => "countTableVisFunctions.R,hostTrnaMappingVis.R",
+          output_file               => ".tRHMapping.Result",
+          output_file_ext           => ".tRNAType2.Barplot.png",
+          parameterSampleFile1Order => $def->{groups_order},
+          parameterSampleFile1      => $groups,
+          parameterSampleFile2      => $def->{groups_vis_layout},
+          parameterFile1_ref        => [ $tRHTableTask, ".tRNA.count\$" ],
+          parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
+          rCode                     => 'maxCategory=3;' . $R_font_size,
+          sh_direct                 => 1,
+          pbs                       => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push @$summary_ref, $tRHCategory;
+      }
+
+      if ( $def->{perform_host_tRNA_start_position} ) {
+        my $tTask = "host_genome_tRNA_start_position_vis";
+        if ( !defined $def->{tRNA_vis_group} ) {
+          $def->{tRNA_vis_group} = $groups;
+        }
         addPositionVis(
           $config, $def,
           $summary_ref,
-          $tRHStartPositionTask,
+          $tTask,
           $data_visualization_dir,
           {
-            target_dir         => $tRH_folder . "/" . $tRHStartPositionTask,
-            output_file        => ".tRHStartPositionVis",
+            target_dir         => $data_visualization_dir . "/" . $tTask,
+            output_file        => ".tRNAStartPositionVis",
             output_file_ext    => ".barplot.png",
             rtemplate          => "tRnaStartPositionVis.R",
-            parameterFile1_ref => [ $tRHTableTask, ".tRNA.count.startpos\$" ],
+            parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count.startpos\$" ],
           }
         );
-      }
-    }
 
-    if ( getValue( $def, "perform_host_rRNA_coverage" ) ) {
-      my $visualizationTask = "host_genome_rRNA_position_vis";
-      my $folder            = $data_visualization_dir . "/" . $visualizationTask;
-      $config->{$visualizationTask} = {
-        class                    => "CQS::ProgramWrapper",
-        perform                  => 1,
-        target_dir               => $folder,
-        interpretor              => "python",
-        program                  => "../SmallRNA/rRNAHostCoverage.py",
-        parameterSampleFile1_arg => "-i",
-        parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
-        output_arg               => "-o",
-        output_ext               => ".position",
-        sh_direct                => 1,
-        pbs                      => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      };
-      push( @$summary_ref, $visualizationTask );
+        if ($perform_host_tRH_analysis) {
+          my $tRHStartPositionTask = "host_genome_tRH_start_position_vis";
+          addPositionVis(
+            $config, $def,
+            $summary_ref,
+            $tRHStartPositionTask,
+            $data_visualization_dir,
+            {
+              target_dir         => $tRH_folder . "/" . $tRHStartPositionTask,
+              output_file        => ".tRHStartPositionVis",
+              output_file_ext    => ".barplot.png",
+              rtemplate          => "tRnaStartPositionVis.R",
+              parameterFile1_ref => [ $tRHTableTask, ".tRNA.count.startpos\$" ],
+            }
+          );
+        }
+      }
+
+      if ( getValue( $def, "perform_host_rRNA_coverage" ) ) {
+        my $visualizationTask = "host_genome_rRNA_position_vis";
+        my $folder            = $data_visualization_dir . "/" . $visualizationTask;
+        $config->{$visualizationTask} = {
+          class                    => "CQS::ProgramWrapper",
+          perform                  => 1,
+          target_dir               => $folder,
+          interpretor              => "python",
+          program                  => "../SmallRNA/rRNAHostCoverage.py",
+          parameterSampleFile1_arg => "-i",
+          parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
+          output_arg               => "-o",
+          output_ext               => ".position",
+          sh_direct                => 1,
+          pbs                      => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$summary_ref, $visualizationTask );
+      }
     }
 
     if ( defined $def->{host_xml2bam} && $def->{host_xml2bam} ) {
@@ -647,7 +661,7 @@ sub getSmallRNAConfig {
     push( @files_for_annotate_unmapped, "bowtie1_genome_1mm_NTA_smallRNA_count", "count.mapped.xml" );
     push( @names_for_annotate_unmapped, "smallRNA" );
 
-    if ( $def->{has_NTA} && $def->{consider_tRNA_NTA} ) {
+    if ( !$hasMicroRNAOnly && $def->{has_NTA} && $def->{consider_tRNA_NTA} ) {
       $host_genome->{"bowtie1_genome_1mm_NTA_smallRNA_count"}{"cca_file_ref"} = "identical_check_cca";
     }
 
@@ -656,85 +670,102 @@ sub getSmallRNAConfig {
 
     push @name_for_readSummary, (
       "Host miRNA",    #miRNA
-      "Host tRNA"      #tRNA
     );
     push @table_for_readSummary, (
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$",    #miRNA
-      "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$"      #tRNA
     );
     push @table_for_countSum, (
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$",         #miRNA
-      "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$"           #tRNA
     );
     push @table_for_correlation, (
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$",           #miRNA
       "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR.count\$",    #miRNA isomiR
-      "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$"             #tRNA
     );
-
-    if ($perform_host_tRH_analysis) {
-      push @table_for_correlation, (
-        $tRHTableTask, ".tRNA.count\$"                                     #tRNA
-      );
-    }
     if ( $def->{read_correlation} ) {
       push @table_for_correlation, (
         "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$",    #miRNA
-        "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$"      #tRNA
       );
-      if ($perform_host_tRH_analysis) {
-        push @table_for_correlation, (
-          $tRHTableTask, ".tRNA.read.count\$"                              #tRNA
-        );
-      }
-    }
-    if ( $def->{hasYRNA} ) {
-      push @name_for_readSummary, "Host yRNA";
-      push @table_for_countSum,    ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count\$" );
-      push @table_for_readSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.read.count\$" );
-      push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count\$" );
-      if ( $def->{read_correlation} ) {
-        push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.read.count\$", );
-      }
-    }
-    if ( $def->{hasSnRNA} ) {
-      push @name_for_readSummary, "Host snRNA";
-      push @table_for_countSum,    ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count\$" );
-      push @table_for_readSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.read.count\$" );
-      push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count\$" );
-      if ( $def->{read_correlation} ) {
-        push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.read.count\$", );
-      }
-    }
-    if ( $def->{hasSnoRNA} ) {
-      push @name_for_readSummary, "Host snoRNA";
-      push @table_for_countSum,    ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count\$" );
-      push @table_for_readSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.read.count\$" );
-      push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count\$" );
-      if ( $def->{read_correlation} ) {
-        push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.read.count\$", );
-      }
-    }
-    push @name_for_readSummary, (
-      "Host rRNA",               #rRNA
-      "Host other small RNA",    #other
-    );
-    push @table_for_readSummary, (
-      "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.read.count\$",    #rRNA
-      "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$"    #other
-    );
-    push @table_for_countSum, (
-      "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.count\$",         #rRNA
-      "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$"         #other
-    );
-    push @table_for_correlation, (
-      "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.count\$",         #rRNA
-      "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$"         #other
-    );
-    if ( $def->{read_correlation} ) {
-      push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$", );
     }
 
+    if ( !$hasMicroRNAOnly ) {
+      push @name_for_readSummary, (
+        "Host tRNA"                                                        #tRNA
+      );
+      push @table_for_readSummary, (
+        "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$"      #tRNA
+      );
+      push @table_for_countSum, (
+        "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$"           #tRNA
+      );
+      push @table_for_correlation, (
+        "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$"           #tRNA
+      );
+
+      if ($perform_host_tRH_analysis) {
+        push @table_for_correlation, (
+          $tRHTableTask, ".tRNA.count\$"                                   #tRNA
+        );
+      }
+
+      if ( $def->{read_correlation} ) {
+        push @table_for_correlation, (
+          "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$"    #tRNA
+        );
+        if ($perform_host_tRH_analysis) {
+          push @table_for_correlation, (
+            $tRHTableTask, ".tRNA.read.count\$"                            #tRNA
+          );
+        }
+      }
+      if ( $def->{hasYRNA} ) {
+        push @name_for_readSummary, "Host yRNA";
+        push @table_for_countSum,    ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count\$" );
+        push @table_for_readSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.read.count\$" );
+        push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count\$" );
+        if ( $def->{read_correlation} ) {
+          push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.read.count\$", );
+        }
+      }
+      if ( $def->{hasSnRNA} ) {
+        push @name_for_readSummary, "Host snRNA";
+        push @table_for_countSum,    ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count\$" );
+        push @table_for_readSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.read.count\$" );
+        push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count\$" );
+        if ( $def->{read_correlation} ) {
+          push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.read.count\$", );
+        }
+      }
+      if ( $def->{hasSnoRNA} ) {
+        push @name_for_readSummary, "Host snoRNA";
+        push @table_for_countSum,    ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count\$" );
+        push @table_for_readSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.read.count\$" );
+        push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count\$" );
+        if ( $def->{read_correlation} ) {
+          push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.read.count\$", );
+        }
+      }
+      push @name_for_readSummary, (
+        "Host rRNA",               #rRNA
+        "Host other small RNA",    #other
+      );
+      push @table_for_readSummary, (
+        "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.read.count\$",    #rRNA
+        "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$"    #other
+      );
+      push @table_for_countSum, (
+        "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.count\$",         #rRNA
+        "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$"         #other
+      );
+      push @table_for_correlation, (
+        "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.count\$",         #rRNA
+        "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$"         #other
+      );
+      if ( $def->{read_correlation} ) {
+        push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$", );
+      }
+    }
+
+    ##
     if ($do_comparison) {
       my @visual_source       = ();
       my @visual_source_reads = ();
@@ -758,106 +789,77 @@ sub getSmallRNAConfig {
         $data_visualization_dir, "pairs_host_miRNA_deseq2_vis_layout", $libraryKey );
       push @visual_source_reads, "miRNA_reads";
 
-      #tRNA
-      addDEseq2( $config, $def, $summary_ref, "tRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      push @visual_source, "tRNA";
-      addDEseq2( $config, $def, $summary_ref, "tRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$" ],
-        $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "tRNA_aminoacid", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count\$" ],
-        $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      push @visual_source_reads, "tRNA_reads";
+      if ( !$hasMicroRNAOnly ) {
 
-      if ( $def->{hasYRNA} ) {
-
-        #yRNA
-        addDEseq2( $config, $def, $summary_ref, "yRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        push @visual_source, "yRNA";
-        addDEseq2( $config, $def, $summary_ref, "yRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.read.count\$" ],
+        #tRNA
+        addDEseq2( $config, $def, $summary_ref, "tRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        push @visual_source, "tRNA";
+        addDEseq2( $config, $def, $summary_ref, "tRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$" ],
           $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        push @visual_source_reads, "yRNA_reads";
-      }
-
-      if ( $def->{hasSnRNA} ) {
-
-        #snRNA
-        addDEseq2( $config, $def, $summary_ref, "snRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        push @visual_source, "snRNA";
-        addDEseq2( $config, $def, $summary_ref, "snRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.read.count\$" ],
+        addDEseq2( $config, $def, $summary_ref, "tRNA_aminoacid", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count\$" ],
           $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        push @visual_source_reads, "snRNA_reads";
-      }
+        push @visual_source_reads, "tRNA_reads";
 
-      if ( $def->{hasSnoRNA} ) {
+        if ( $def->{hasYRNA} ) {
 
-        #snoRNA
-        addDEseq2( $config, $def, $summary_ref, "snoRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        push( @visual_source, "snoRNA" );
-        addDEseq2( $config, $def, $summary_ref, "snoRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.read.count\$" ],
+          #yRNA
+          addDEseq2( $config, $def, $summary_ref, "yRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+          push @visual_source, "yRNA";
+          addDEseq2( $config, $def, $summary_ref, "yRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.read.count\$" ],
+            $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+          push @visual_source_reads, "yRNA_reads";
+        }
+
+        if ( $def->{hasSnRNA} ) {
+
+          #snRNA
+          addDEseq2( $config, $def, $summary_ref, "snRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+          push @visual_source, "snRNA";
+          addDEseq2( $config, $def, $summary_ref, "snRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.read.count\$" ],
+            $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+          push @visual_source_reads, "snRNA_reads";
+        }
+
+        if ( $def->{hasSnoRNA} ) {
+
+          #snoRNA
+          addDEseq2( $config, $def, $summary_ref, "snoRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+          push( @visual_source, "snoRNA" );
+          addDEseq2( $config, $def, $summary_ref, "snoRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.read.count\$" ],
+            $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+          push @visual_source_reads, "snoRNA_reads";
+        }
+
+        #rRNA
+        addDEseq2( $config, $def, $summary_ref, "rRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        push( @visual_source, "rRNA" );
+        addDEseq2( $config, $def, $summary_ref, "rRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.read.count\$" ],
           $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        push @visual_source_reads, "snoRNA_reads";
+        push @visual_source_reads, "rRNA_reads";
+
+        #otherSmallRNA
+        $deseq2Task = addDEseq2( $config, $def, $summary_ref, "otherSmallRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" ],
+          $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        push( @visual_source, "otherSmallRNA" );
+        addDEseq2( $config, $def, $summary_ref, "otherSmallRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$" ],
+          $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        push @visual_source_reads, "otherSmallRNA_reads";
       }
-
-      #rRNA
-      addDEseq2( $config, $def, $summary_ref, "rRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      push( @visual_source, "rRNA" );
-      addDEseq2( $config, $def, $summary_ref, "rRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.read.count\$" ],
-        $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      push @visual_source_reads, "rRNA_reads";
-
-      #otherSmallRNA
-      $deseq2Task = addDEseq2( $config, $def, $summary_ref, "otherSmallRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" ],
-        $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      push( @visual_source, "otherSmallRNA" );
-      addDEseq2( $config, $def, $summary_ref, "otherSmallRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$" ],
-        $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      push @visual_source_reads, "otherSmallRNA_reads";
 
       #host genome smallRNA visualization
       addDeseq2Visualization( $config, $def, $summary_ref, "host_genome",       \@visual_source,       $data_visualization_dir, "pairs_host_deseq2_vis_layout",       $libraryKey );
       addDeseq2Visualization( $config, $def, $summary_ref, "host_genome_reads", \@visual_source_reads, $data_visualization_dir, "pairs_host_reads_deseq2_vis_layout", $libraryKey );
 
-      if ($perform_host_tRH_analysis) {
-        addDEseq2( $config, $def, $summary_ref, "tRH",           [ $tRHTableTask, ".tRNA.count\$" ],           $tRH_folder, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        addDEseq2( $config, $def, $summary_ref, "tRH_reads",     [ $tRHTableTask, ".tRNA.read.count\$" ],      $tRH_folder, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        addDEseq2( $config, $def, $summary_ref, "tRH_aminoacid", [ $tRHTableTask, ".tRNA.aminoacid.count\$" ], $tRH_folder, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      if ( !$hasMicroRNAOnly ) {
+        if ($perform_host_tRH_analysis) {
+          addDEseq2( $config, $def, $summary_ref, "tRH",           [ $tRHTableTask, ".tRNA.count\$" ],           $tRH_folder, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+          addDEseq2( $config, $def, $summary_ref, "tRH_reads",     [ $tRHTableTask, ".tRNA.read.count\$" ],      $tRH_folder, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+          addDEseq2( $config, $def, $summary_ref, "tRH_aminoacid", [ $tRHTableTask, ".tRNA.aminoacid.count\$" ], $tRH_folder, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        }
       }
     }
 
     if ( $do_comparison or defined $groups or defined $def->{tRNA_vis_group} ) {
-      my $trna_sig_result;
-      if ( !defined $def->{tRNA_vis_group} ) {
-        $def->{tRNA_vis_group} = $groups;
-      }
-
-      if ($do_comparison) {
-        $trna_sig_result = [ "deseq2_tRNA", "_DESeq2_sig.csv\$" ];
-      }
-
-      addPositionVis(
-        $config, $def,
-        $summary_ref,
-        "host_genome_tRNA_PositionVis",
-        $data_visualization_dir,
-        {
-          output_file        => ".tRNAPositionVis",
-          parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count.position\$" ],
-
-          #        parameterSampleFile3_ref => $trna_sig_result,
-        }
-      );
-      addPositionVis(
-        $config, $def,
-        $summary_ref,
-        "host_genome_tRNA_PositionVis_anticodon",
-        $data_visualization_dir,
-        {
-          output_file        => ".tRNAAnticodonPositionVis",
-          parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count.position\$" ],
-
-          #        parameterSampleFile3_ref => $trna_sig_result,
-        }
-      );
-
       addPositionVis(
         $config, $def,
         $summary_ref,
@@ -868,63 +870,99 @@ sub getSmallRNAConfig {
           parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count.position\$" ],
         }
       );
-      if ( $def->{hasYRNA} ) {
+
+      if ( !$hasMicroRNAOnly ) {
+        my $trna_sig_result;
+        if ( !defined $def->{tRNA_vis_group} ) {
+          $def->{tRNA_vis_group} = $groups;
+        }
+
+        if ($do_comparison) {
+          $trna_sig_result = [ "deseq2_tRNA", "_DESeq2_sig.csv\$" ];
+        }
+
         addPositionVis(
           $config, $def,
           $summary_ref,
-          "host_genome_yRNA_PositionVis",
+          "host_genome_tRNA_PositionVis",
           $data_visualization_dir,
           {
-            output_file        => ".yRNAPositionVis",
-            parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count.position\$" ],
+            output_file        => ".tRNAPositionVis",
+            parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count.position\$" ],
+
+            #        parameterSampleFile3_ref => $trna_sig_result,
           }
         );
-      }
-      if ( $def->{hasSnRNA} ) {
         addPositionVis(
           $config, $def,
           $summary_ref,
-          "host_genome_snRNA_PositionVis",
+          "host_genome_tRNA_PositionVis_anticodon",
           $data_visualization_dir,
           {
-            output_file        => ".snRNAPositionVis",
-            parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count.position\$" ],
+            output_file        => ".tRNAAnticodonPositionVis",
+            parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count.position\$" ],
+
+            #        parameterSampleFile3_ref => $trna_sig_result,
           }
         );
-      }
-      if ( $def->{hasSnoRNA} ) {
-        addPositionVis(
-          $config, $def,
-          $summary_ref,
-          "host_genome_snoRNA_PositionVis",
-          $data_visualization_dir,
-          {
-            output_file        => ".snoRNAPositionVis",
-            parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count.position\$" ],
-          }
-        );
-      }
-      if ($perform_host_tRH_analysis) {
-        addPositionVis(
-          $config, $def,
-          $summary_ref,
-          "host_genome_tRH_PositionVis",
-          $tRH_folder,
-          {
-            output_file        => ".tRHPositionVis",
-            parameterFile1_ref => [ $tRHTableTask, ".tRNA.aminoacid.count.position\$" ],
-          }
-        );
-        addPositionVis(
-          $config, $def,
-          $summary_ref,
-          "host_genome_tRH_PositionVis_anticodon",
-          $tRH_folder,
-          {
-            output_file        => ".tRHAnticodonPositionVis",
-            parameterFile1_ref => [ $tRHTableTask, ".tRNA.count.position\$" ],
-          }
-        );
+        if ( $def->{hasYRNA} ) {
+          addPositionVis(
+            $config, $def,
+            $summary_ref,
+            "host_genome_yRNA_PositionVis",
+            $data_visualization_dir,
+            {
+              output_file        => ".yRNAPositionVis",
+              parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count.position\$" ],
+            }
+          );
+        }
+        if ( $def->{hasSnRNA} ) {
+          addPositionVis(
+            $config, $def,
+            $summary_ref,
+            "host_genome_snRNA_PositionVis",
+            $data_visualization_dir,
+            {
+              output_file        => ".snRNAPositionVis",
+              parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count.position\$" ],
+            }
+          );
+        }
+        if ( $def->{hasSnoRNA} ) {
+          addPositionVis(
+            $config, $def,
+            $summary_ref,
+            "host_genome_snoRNA_PositionVis",
+            $data_visualization_dir,
+            {
+              output_file        => ".snoRNAPositionVis",
+              parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count.position\$" ],
+            }
+          );
+        }
+        if ($perform_host_tRH_analysis) {
+          addPositionVis(
+            $config, $def,
+            $summary_ref,
+            "host_genome_tRH_PositionVis",
+            $tRH_folder,
+            {
+              output_file        => ".tRHPositionVis",
+              parameterFile1_ref => [ $tRHTableTask, ".tRNA.aminoacid.count.position\$" ],
+            }
+          );
+          addPositionVis(
+            $config, $def,
+            $summary_ref,
+            "host_genome_tRH_PositionVis_anticodon",
+            $tRH_folder,
+            {
+              output_file        => ".tRHAnticodonPositionVis",
+              parameterFile1_ref => [ $tRHTableTask, ".tRNA.count.position\$" ],
+            }
+          );
+        }
       }
     }
 
@@ -1707,8 +1745,8 @@ sub getSmallRNAConfig {
 
     $config->{short_reads_source} = {
       'class'                    => 'CQS::ProgramWrapper',
-      'parameterFile1_ref'               => ["bowtie1_genome_host_too_short_reads_table"],
-      'parameterFile1_arg'               => '-i',
+      'parameterFile1_ref'       => ["bowtie1_genome_host_too_short_reads_table"],
+      'parameterFile1_arg'       => '-i',
       'parameterSampleFile2_ref' => [ "bowtie1_genome_1mm_NTA", ".bam.max.txt" ],
       'parameterSampleFile2_arg' => '-m',
       'parameterSampleFile3_ref' => \@table_for_readSummary,

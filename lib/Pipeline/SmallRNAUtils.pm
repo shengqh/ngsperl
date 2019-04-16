@@ -294,6 +294,7 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "use_pearson_in_hca",          0 );
 
   initDefaultValue( $def, "smallrnacount_option", "" );
+  initDefaultValue( $def, "hasMicroRNAOnly",              0 );
   initDefaultValue( $def, "hasYRNA",              0 );
   initDefaultValue( $def, "nonhost_table_option", "--outputReadTable" );
 
