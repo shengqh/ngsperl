@@ -43,7 +43,7 @@ sub perform {
   my $seqs = $self->getSeq($config, $section);
   
   for my $seq (@$seqs) {
-    my $sample_name = $seq->name;
+    my $sample_name = $seq->id;
     my $sample_fasta = $result_dir . "/" . $sample_name . ".fa";
     my $seq_out = Bio::SeqIO->new( -file   => ">$sample_fasta", -format => "Fasta" );
     $seq_out->write_seq($seq);
@@ -55,11 +55,11 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $seqs = $self->getSeq();
+  my $seqs = $self->getSeq($config, $section);
 
   my $result = {};
   for my $seq (@$seqs) {
-    my $sample_name = $seq->name;
+    my $sample_name = $seq->id;
     my $sample_fasta = $result_dir . "/" . $sample_name . ".fa";
     $result->{$sample_name} = filter_array( [$sample_fasta], $pattern );
   }
