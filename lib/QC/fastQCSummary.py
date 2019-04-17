@@ -105,8 +105,8 @@ with open(args.input, "r") as flistin:
             continue
           if not sline.startswith(">>END_MODULE"):
             overrepresented[sampleName][datafilePrefix] = sline.rstrip()
-            bInOver = False
-            continue
+          bInOver = False
+          continue
 
         for section in sections:
           if sline.startswith(section.sectionTag):
