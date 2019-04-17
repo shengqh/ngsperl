@@ -169,18 +169,21 @@ sub getRNASeqConfig {
           "mem"       => "40gb"
         },
       },
-      "star_summary" => {
-        class      => "Alignment::STARSummary",
+      "star_featurecount_summary" => {
+        class      => "CQS::UniqueR",
         perform    => 1,
         target_dir => $starFolder,
         option     => "",
-        source_ref => [ "star_featurecount", "_Log.final.out" ],
+        rtemplate => "../Alignment/STARFeatureCount.r",
+        output_file_ext            => ".STARSummary.csv;.STARSummary.csv.png;.FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
+        parameterSampleFile1_ref   => [ "star_featurecount", "_Log.final.out" ],
+        parameterSampleFile2_ref   => [ "star_featurecount", ".count.summary" ],
         sh_direct  => 1,
         pbs        => {
           "email"     => $email,
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
-          "walltime"  => "72",
+          "walltime"  => "2",
           "mem"       => "40gb"
         },
       },
@@ -189,7 +192,7 @@ sub getRNASeqConfig {
     $source_ref      = [ "star_featurecount", "_Aligned.sortedByCoord.out.bam\$" ];
     $count_table_ref = [ "star_featurecount", ".count\$" ];
     push @$individual, ("star_featurecount");
-    push @$summary,    ("star_summary");
+    push @$summary,    ("star_featurecount_summary");
     $config = merge( $config, $configAlignment );
 
     $multiqc_depedents = "star_featurecount";
@@ -764,22 +767,17 @@ sub getRNASeqConfig {
       push( @report_files, "fastqc_post_trim_summary",                          ".FastQC.sequenceGC.tsv.png" );
       push( @report_files, "fastqc_post_trim_summary",                          ".FastQC.adapter.tsv.png" );
       push( @report_names, "fastqc_post_trim_per_base_sequence_quality", "fastqc_post_trim_per_sequence_gc_content", "fastqc_post_trim_adapter_content" );
-    }  
+    } 
     
-    if ( defined $config->{multiqc} ) {
-      my @configKeys = keys %$config;
-      if ( (first { $_ =~ 'fastqc' } @configKeys) and (not defined $config->{fastqc_raw_summary})) {
-        push( @report_files, "multiqc",                          "fastqc_per_base_sequence_quality_plot_1.png" );
-        push( @report_files, "multiqc",                          "fastqc_per_sequence_gc_content_plot_Percentages.png" );
-        push( @report_files, "multiqc",                          "fastqc_adapter_content_plot_1.png" );
-        push( @report_names, "fastqc_raw_per_base_sequence_quality", "fastqc_raw_per_sequence_gc_content", "fastqc_raw_adapter_content" );
-      }
+    if (defined $config->{star_featurecount_summary}){
+      push( @report_files, "star_featurecount_summary", ".STARSummary.csv.png" );
+      push( @report_files, "star_featurecount_summary", ".STARSummary.csv\$" );
+      push( @report_names, "STAR_summary", "STAR_summary_table" );
 
-      if ( defined $config->{star_featurecount} || defined $config->{featurecount} ) {
-        push( @report_files, "multiqc", "multiqc_featureCounts.txt" );
-        push( @report_names, "featureCounts_table" );
-      }
-    }
+      push( @report_files, "star_featurecount_summary", ".FeatureCountSummary.csv.png\$" );
+      push( @report_files, "star_featurecount_summary", ".FeatureCountSummary.csv\$" );
+      push( @report_names, "featureCounts_table_png", "featureCounts_table" );
+    } 
     
     if ( defined $config->{star_summary} ) {
       push( @report_files, "star_summary", ".STARSummary.csv.png" );

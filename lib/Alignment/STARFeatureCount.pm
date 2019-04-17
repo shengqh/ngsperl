@@ -180,6 +180,7 @@ sub result {
     }
     push( @result_files, "$cur_dir/${sample_name}_Log.final.out" );
     push( @result_files, "$cur_dir/${sample_name}.count" );
+    push( @result_files, "$cur_dir/${sample_name}.count.summary" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
