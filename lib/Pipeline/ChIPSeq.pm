@@ -27,7 +27,11 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "sra_to_fastq", 0 );
 
-  my $pairend = getValue( $def, "pairend" );
+  if (not defined $def->{"is_paired_end"} && defined $def->{"pairend"}){
+    $def->{"is_paired_end"} = $def->{"pairend"};
+  }
+
+  my $pairend = getValue( $def, "is_paired_end" );
   if ($pairend) {
     initDefaultValue( $def, "aligner", "bwa" );
   }
