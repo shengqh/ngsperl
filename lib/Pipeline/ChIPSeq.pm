@@ -333,6 +333,7 @@ sub getConfig {
       combined       => getValue( $def, "chipqc_combined", 1 ),
       blacklist_file => $def->{"blacklist_file"},
       chromosomes    => $def->{"chipqc_chromosomes"},
+      is_paired_end => getValue($def, "is_paired_end"),
       sh_direct      => 0,
       pbs            => {
         "email"    => $email,
