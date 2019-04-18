@@ -41,7 +41,7 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_qc3bam",        0 );
   initDefaultValue( $def, "perform_bamplot",       0 );
   initDefaultValue( $def, "perform_call_variants", 0 );
-  initDefaultValue( $def, "perform_multiqc",       1 );
+  initDefaultValue( $def, "perform_multiqc",       0 );
   initDefaultValue( $def, "perform_webgestalt",    0 );
   initDefaultValue( $def, "perform_report",        1 );
 
@@ -184,7 +184,7 @@ sub getRNASeqConfig {
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "2",
-          "mem"       => "40gb"
+          "mem"       => "10gb"
         },
       },
     };
@@ -232,11 +232,13 @@ sub getRNASeqConfig {
             },
           },
           "star_summary" => {
-            class      => "Alignment::STARSummary",
+            class      => "CQS::UniqueR",
             perform    => 1,
             target_dir => $starFolder,
             option     => "",
-            source_ref => [ "star", "_Log.final.out" ],
+            rtemplate => "../Alignment/STARFeatureCount.r",
+            output_file_ext            => ".STARSummary.csv;.STARSummary.csv.png",
+            parameterSampleFile1_ref   => [ "star", "_Log.final.out" ],
             sh_direct  => 1,
             pbs        => {
               "email"     => $email,
@@ -245,7 +247,7 @@ sub getRNASeqConfig {
               "walltime"  => "2",
               "mem"       => "10gb"
             },
-          }
+          },
         };
 
         $source_ref = [ "star", "_Aligned.sortedByCoord.out.bam\$" ];
@@ -286,10 +288,12 @@ sub getRNASeqConfig {
       if ( $def->{additional_bam_files} ) {
         push @$source_ref, "additional_bam_files";
       }
+      
+      my $featureCountFolder = $target_dir . "/" . getNextFolderIndex($def) . "featurecount";
       $config->{"featurecount"} = {
         class      => "Count::FeatureCounts",
         perform    => 1,
-        target_dir => $target_dir . "/" . getNextFolderIndex($def) . "featurecount",
+        target_dir => $featureCountFolder,
         option     => "-g gene_id -t exon",
         source_ref => $source_ref,
         gff_file   => $transcript_gtf,
@@ -303,8 +307,26 @@ sub getRNASeqConfig {
           "mem"       => "40gb"
         },
       };
+      $config->{"featurecount_summary"} = {
+        class      => "CQS::UniqueR",
+        perform    => 1,
+        target_dir => $featureCountFolder,
+        option     => "",
+        rtemplate => "../Alignment/STARFeatureCount.r",
+        output_file_ext            => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
+        parameterSampleFile2_ref   => [ "featurecount", ".count.summary" ],
+        sh_direct  => 1,
+        pbs        => {
+          "email"     => $email,
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "2",
+          "mem"       => "10gb"
+        },
+      };
 
       push @$individual, "featurecount";
+      push @$summary, "featurecount_summary";
       $count_table_ref = [ "featurecount", ".count\$" ];
       $multiqc_depedents = "featurecount";
     }
