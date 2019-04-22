@@ -82,7 +82,7 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "DE_perform_wilcox",               0 );
   initDefaultValue( $def, "DE_text_size",                    10 );
   initDefaultValue( $def, "DE_min_median_read",              5 );
-  initDefaultValue( $def, "perform_DE_proteincoding_gene",   0 );
+  initDefaultValue( $def, "perform_DE_proteincoding_gene",   1 );
   initDefaultValue( $def, "perform_proteincoding_gene",      getValue( $def, "perform_DE_proteincoding_gene" ) );
 
   initDefaultValue( $def, "outputPdf", 0 );
@@ -805,6 +805,12 @@ sub getRNASeqConfig {
       push( @report_files, "star_summary", ".STARSummary.csv.png" );
       push( @report_files, "star_summary", ".STARSummary.csv\$" );
       push( @report_names, "STAR_summary", "STAR_summary_table" );
+    }
+
+    if ( defined $config->{featurecount_summary} ) {
+      push( @report_files, "featurecount_summary", ".FeatureCountSummary.csv.png\$" );
+      push( @report_files, "featurecount_summary", ".FeatureCountSummary.csv\$" );
+      push( @report_names, "featureCounts_table_png", "featureCounts_table" );
     }
 
     if ( defined $config->{genetable} ) {
