@@ -19,6 +19,7 @@ transformTable<-0
 exportSignificantGeneName<-1
 thread<-8
 outputPdf<-FALSE
+showVolcanoLegend<-0
 
 libraryFile<-"/scratch/cqs/shengq1/vickers/20170222_smallRNA_3018_61_human_v3/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/3018_61.Category.Table.csv"
 libraryKey<-"TotalReads"
@@ -90,6 +91,10 @@ if(exists("libraryFile")){
 
 if(!exists("thread")){
 	thread<-1
+}
+
+if(!exists("showVolcanoLegend")){
+  showVolcanoLegend<-1
 }
 
 library("DESeq2")
@@ -801,6 +806,10 @@ for(countfile_index in c(1:length(countfiles))){
 						axis.title = element_text(size=30),
 						legend.text= element_text(size=30),
 						legend.title= element_text(size=30))
+		
+    if(!showVolcanoLegend){
+      p<-p+ theme(legend.position = "none")
+    }
 						
     if(outputPdf){
       ggsave(plot=p, height=10, width=10, filename=paste0(prefix,"_DESeq2_volcanoPlot.pdf"), useDingbats=FALSE)
