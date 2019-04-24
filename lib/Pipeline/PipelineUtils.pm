@@ -272,6 +272,7 @@ sub getOutputFormat {
 
   $result = addOutputOption( $def, $result, "outputPdf",          0 );
   $result = addOutputOption( $def, $result, "outputPng",          1 );
+  $result = addOutputOption( $def, $result, "outputTIFF",         0 );
   $result = addOutputOption( $def, $result, "showLabelInPCA",     1 );
   $result = addOutputOption( $def, $result, "use_pearson_in_hca", $def->{use_pearson_in_hca}, "usePearsonInHCA" );
   return ($result);
