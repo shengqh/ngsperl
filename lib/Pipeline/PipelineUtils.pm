@@ -276,6 +276,7 @@ sub getOutputFormat {
   $result = addOutputOption( $def, $result, "DE_showVolcanoLegend", 1,                          "showVolcanoLegend" );
   $result = addOutputOption( $def, $result, "use_pearson_in_hca",   $def->{use_pearson_in_hca}, "usePearsonInHCA" );
   $result = addOutputOption( $def, $result, "showLabelInPCA",       1 );
+
   return ($result);
 }
 
