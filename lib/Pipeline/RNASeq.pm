@@ -85,8 +85,9 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_DE_proteincoding_gene",   1 );
   initDefaultValue( $def, "perform_proteincoding_gene",      getValue( $def, "perform_DE_proteincoding_gene" ) );
 
-  initDefaultValue( $def, "outputPdf", 0 );
-  initDefaultValue( $def, "outputPng", 1 );
+  initDefaultValue( $def, "DE_outputPdf",  getValue( $def, "outputPdf",  0 ) );
+  initDefaultValue( $def, "DE_outputPng",  getValue( $def, "outputPng",  1 ) );
+  initDefaultValue( $def, "DE_outputTIFF", getValue( $def, "outputTIFF", 0 ) );
 
   return $def;
 }
@@ -170,16 +171,16 @@ sub getRNASeqConfig {
         },
       },
       "star_featurecount_summary" => {
-        class      => "CQS::UniqueR",
-        perform    => 1,
-        target_dir => $starFolder,
-        option     => "",
-        rtemplate => "../Alignment/STARFeatureCount.r",
-        output_file_ext            => ".STARSummary.csv;.STARSummary.csv.png;.FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
-        parameterSampleFile1_ref   => [ "star_featurecount", "_Log.final.out" ],
-        parameterSampleFile2_ref   => [ "star_featurecount", ".count.summary" ],
-        sh_direct  => 1,
-        pbs        => {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $starFolder,
+        option                   => "",
+        rtemplate                => "../Alignment/STARFeatureCount.r",
+        output_file_ext          => ".STARSummary.csv;.STARSummary.csv.png;.FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
+        parameterSampleFile1_ref => [ "star_featurecount", "_Log.final.out" ],
+        parameterSampleFile2_ref => [ "star_featurecount", ".count.summary" ],
+        sh_direct                => 1,
+        pbs                      => {
           "email"     => $email,
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
@@ -232,15 +233,15 @@ sub getRNASeqConfig {
             },
           },
           "star_summary" => {
-            class      => "CQS::UniqueR",
-            perform    => 1,
-            target_dir => $starFolder,
-            option     => "",
-            rtemplate => "../Alignment/STARFeatureCount.r",
-            output_file_ext            => ".STARSummary.csv;.STARSummary.csv.png",
-            parameterSampleFile1_ref   => [ "star", "_Log.final.out" ],
-            sh_direct  => 1,
-            pbs        => {
+            class                    => "CQS::UniqueR",
+            perform                  => 1,
+            target_dir               => $starFolder,
+            option                   => "",
+            rtemplate                => "../Alignment/STARFeatureCount.r",
+            output_file_ext          => ".STARSummary.csv;.STARSummary.csv.png",
+            parameterSampleFile1_ref => [ "star", "_Log.final.out" ],
+            sh_direct                => 1,
+            pbs                      => {
               "email"     => $email,
               "emailType" => $def->{emailType},
               "nodes"     => "1:ppn=1",
@@ -288,7 +289,7 @@ sub getRNASeqConfig {
       if ( $def->{additional_bam_files} ) {
         push @$source_ref, "additional_bam_files";
       }
-      
+
       my $featureCountFolder = $target_dir . "/" . getNextFolderIndex($def) . "featurecount";
       $config->{"featurecount"} = {
         class      => "Count::FeatureCounts",
@@ -308,15 +309,15 @@ sub getRNASeqConfig {
         },
       };
       $config->{"featurecount_summary"} = {
-        class      => "CQS::UniqueR",
-        perform    => 1,
-        target_dir => $featureCountFolder,
-        option     => "",
-        rtemplate => "../Alignment/STARFeatureCount.r",
-        output_file_ext            => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
-        parameterSampleFile2_ref   => [ "featurecount", ".count.summary" ],
-        sh_direct  => 1,
-        pbs        => {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $featureCountFolder,
+        option                   => "",
+        rtemplate                => "../Alignment/STARFeatureCount.r",
+        output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
+        parameterSampleFile2_ref => [ "featurecount", ".count.summary" ],
+        sh_direct                => 1,
+        pbs                      => {
           "email"     => $email,
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
@@ -326,7 +327,7 @@ sub getRNASeqConfig {
       };
 
       push @$individual, "featurecount";
-      push @$summary, "featurecount_summary";
+      push @$summary,    "featurecount_summary";
       $count_table_ref = [ "featurecount", ".count\$" ];
       $multiqc_depedents = "featurecount";
     }
@@ -358,31 +359,32 @@ sub getRNASeqConfig {
 
     push @$summary, "genetable";
 
-    if ( getValue($def, "perform_proteincoding_gene_only", 0)) {
-      $count_file_ref = [ ];
-    }else{
+    if ( getValue( $def, "perform_proteincoding_gene_only", 0 ) ) {
+      $count_file_ref = [];
+    }
+    else {
       $count_file_ref = [ "genetable", "(?<!proteincoding).count\$" ];
     }
-    if ( $def->{perform_proteincoding_gene} ||  getValue($def, "perform_proteincoding_gene_only", 0)) {
+    if ( $def->{perform_proteincoding_gene} || getValue( $def, "perform_proteincoding_gene_only", 0 ) ) {
       push @$count_file_ref, "genetable", ".proteincoding.count\$";
     }
   }
 
   if ( $def->{perform_correlation} ) {
-    my $cor_dir   = ( defined $config->{genetable} ) ? $config->{genetable}{target_dir} : $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation";
+    my $cor_dir = ( defined $config->{genetable} ) ? $config->{genetable}{target_dir} : $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation";
 
-    my $rCode     = getValue($def, "correlation_rcode", "" );
-    $rCode     = getOutputFormat($def, $rCode);
-    $rCode     = addOutputOption($def, $rCode, "use_green_red_color_in_hca", $def->{use_green_red_color_in_hca}, "useGreenRedColorInHCA");
-    $rCode     = addOutputOption($def, $rCode, "top25cv_in_hca", $def->{top25cv_in_hca}, "top25cvInHCA");
+    my $rCode = getValue( $def, "correlation_rcode", "" );
+    $rCode = getOutputFormat( $def, $rCode );
+    $rCode = addOutputOption( $def, $rCode, "use_green_red_color_in_hca", $def->{use_green_red_color_in_hca}, "useGreenRedColorInHCA" );
+    $rCode = addOutputOption( $def, $rCode, "top25cv_in_hca",             $def->{top25cv_in_hca},             "top25cvInHCA" );
 
     $config->{"genetable_correlation"} = {
-      class       => "CQS::CountTableGroupCorrelation",
-      perform     => 1,
-      rCode       => $rCode,
-      target_dir  => $cor_dir,
-      rtemplate   => "countTableVisFunctions.R,countTableGroupCorrelation.R",
-      output_file => "parameterSampleFile1",
+      class           => "CQS::CountTableGroupCorrelation",
+      perform         => 1,
+      rCode           => $rCode,
+      target_dir      => $cor_dir,
+      rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
+      output_file     => "parameterSampleFile1",
       output_file_ext => ".Correlation.png;.density.png;.heatmap.png;.PCA.png;.Correlation.Cluster.png",
       sh_direct       => 1,
       pbs             => {
@@ -397,7 +399,7 @@ sub getRNASeqConfig {
       $config->{genetable_correlation}{parameterSampleFile1_ref} = $count_file_ref;
     }
     else {
-      $config->{genetable_correlation}{parameterSampleFile1} = {$taskName =>  [$count_file_ref]};
+      $config->{genetable_correlation}{parameterSampleFile1} = { $taskName => [$count_file_ref] };
       $config->{genetable_correlation}{output_to_result_dir} = 1;
     }
 
@@ -406,27 +408,27 @@ sub getRNASeqConfig {
 
       if ( defined $def->{correlation_groups} ) {
         my $correlationGroups = get_pair_group_sample_map( $def->{correlation_groups}, $def->{groups} );
-        if( getValue($def, "correlation_all", 1) ) {
+        if ( getValue( $def, "correlation_all", 1 ) ) {
           $correlationGroups->{all} = $def->{groups};
         }
         $config->{genetable_correlation}{parameterSampleFile2} = $correlationGroups;
       }
-  
+
       if ( defined $def->{groups_colors} ) {
         $config->{genetable_correlation}{parameterSampleFile3} = $def->{groups_colors};
       }
-        
+
       if ( defined $def->{correlation_groups_colors} ) {
         $config->{genetable_correlation}{parameterSampleFile3} = $def->{correlation_groups_colors};
       }
-      
-      if(defined $config->{genetable_correlation}{parameterSampleFile3}){
+
+      if ( defined $config->{genetable_correlation}{parameterSampleFile3} ) {
         my $colorGroups = $config->{genetable_correlation}{parameterSampleFile3};
-        my $corGroups = $config->{genetable_correlation}{parameterSampleFile2};
-        for my $title (keys %$corGroups){
+        my $corGroups   = $config->{genetable_correlation}{parameterSampleFile2};
+        for my $title ( keys %$corGroups ) {
           my $titleGroups = $corGroups->{$title};
-          for my $subGroup (keys %$titleGroups){
-            if (! defined $colorGroups->{$subGroup}){
+          for my $subGroup ( keys %$titleGroups ) {
+            if ( !defined $colorGroups->{$subGroup} ) {
               my %cgroups = %$colorGroups;
               die "Color of group '$subGroup' was not define in " . Dumper($colorGroups);
             }
@@ -435,14 +437,14 @@ sub getRNASeqConfig {
       }
     }
     push @$summary, "genetable_correlation";
-    
+
     my $gene_file = $def->{correlation_gene_file};
     if ( defined $gene_file ) {
-      $rCode = $rCode . "suffix<-\"_genes\"; hasRowNames=TRUE;";
-      $config->{"genetable_correlation_genes"} = dclone($config->{"genetable_correlation"});
-      $config->{"genetable_correlation_genes"}{target_dir} = $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation_genes";
+      $rCode                                                   = $rCode . "suffix<-\"_genes\"; hasRowNames=TRUE;";
+      $config->{"genetable_correlation_genes"}                 = dclone( $config->{"genetable_correlation"} );
+      $config->{"genetable_correlation_genes"}{target_dir}     = $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation_genes";
       $config->{"genetable_correlation_genes"}{parameterFile1} = $gene_file;
-      $config->{"genetable_correlation_genes"}{rCode}       = $rCode;
+      $config->{"genetable_correlation_genes"}{rCode}          = $rCode;
       push @$summary, "genetable_correlation_genes";
     }
   }
@@ -485,12 +487,11 @@ sub getRNASeqConfig {
       my $gsea_jar        = $def->{gsea_jar}        or die "Define gsea_jar at definition first";
       my $gsea_db         = $def->{gsea_db}         or die "Define gsea_db at definition first";
       my $gsea_categories = $def->{gsea_categories} or die "Define gsea_categories at definition first";
-      my $gsea_makeReport=1;
-      if (defined $def->{gsea_makeReport}) {
-        $gsea_makeReport=$def->{gsea_makeReport};
+      my $gsea_makeReport = 1;
+      if ( defined $def->{gsea_makeReport} ) {
+        $gsea_makeReport = $def->{gsea_makeReport};
       }
-      
-      
+
       $gseaTaskName = $deseq2taskname . "_GSEA";
 
       #my $gseaCategories = "'h.all.v6.1.symbols.gmt','c2.all.v6.1.symbols.gmt','c5.all.v6.1.symbols.gmt','c6.all.v6.1.symbols.gmt','c7.all.v6.1.symbols.gmt'";
@@ -505,7 +506,7 @@ sub getRNASeqConfig {
         output_file_ext            => ".gsea.html;.gsea.csv;.gsea;",
         parameterSampleFile1_ref   => [ $deseq2taskname, "_GSEA.rnk\$" ],
         sh_direct                  => 1,
-        rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=".$gsea_makeReport.";",
+        rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=" . $gsea_makeReport . ";",
         pbs                        => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
@@ -776,31 +777,31 @@ sub getRNASeqConfig {
     my @report_files = ();
     my @report_names = ();
     my @copy_files   = ();
-    
-    if (defined $config->{fastqc_raw_summary}){
-      push( @report_files, "fastqc_raw_summary",                          ".FastQC.baseQuality.tsv.png" );
-      push( @report_files, "fastqc_raw_summary",                          ".FastQC.sequenceGC.tsv.png" );
-      push( @report_files, "fastqc_raw_summary",                          ".FastQC.adapter.tsv.png" );
+
+    if ( defined $config->{fastqc_raw_summary} ) {
+      push( @report_files, "fastqc_raw_summary",                   ".FastQC.baseQuality.tsv.png" );
+      push( @report_files, "fastqc_raw_summary",                   ".FastQC.sequenceGC.tsv.png" );
+      push( @report_files, "fastqc_raw_summary",                   ".FastQC.adapter.tsv.png" );
       push( @report_names, "fastqc_raw_per_base_sequence_quality", "fastqc_raw_per_sequence_gc_content", "fastqc_raw_adapter_content" );
-    }  
-    
-    if (defined $config->{fastqc_post_trim_summary}){
-      push( @report_files, "fastqc_post_trim_summary",                          ".FastQC.baseQuality.tsv.png" );
-      push( @report_files, "fastqc_post_trim_summary",                          ".FastQC.sequenceGC.tsv.png" );
-      push( @report_files, "fastqc_post_trim_summary",                          ".FastQC.adapter.tsv.png" );
+    }
+
+    if ( defined $config->{fastqc_post_trim_summary} ) {
+      push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.baseQuality.tsv.png" );
+      push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.sequenceGC.tsv.png" );
+      push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.adapter.tsv.png" );
       push( @report_names, "fastqc_post_trim_per_base_sequence_quality", "fastqc_post_trim_per_sequence_gc_content", "fastqc_post_trim_adapter_content" );
-    } 
-    
-    if (defined $config->{star_featurecount_summary}){
+    }
+
+    if ( defined $config->{star_featurecount_summary} ) {
       push( @report_files, "star_featurecount_summary", ".STARSummary.csv.png" );
       push( @report_files, "star_featurecount_summary", ".STARSummary.csv\$" );
-      push( @report_names, "STAR_summary", "STAR_summary_table" );
+      push( @report_names, "STAR_summary",              "STAR_summary_table" );
 
       push( @report_files, "star_featurecount_summary", ".FeatureCountSummary.csv.png\$" );
       push( @report_files, "star_featurecount_summary", ".FeatureCountSummary.csv\$" );
-      push( @report_names, "featureCounts_table_png", "featureCounts_table" );
-    } 
-    
+      push( @report_names, "featureCounts_table_png",   "featureCounts_table" );
+    }
+
     if ( defined $config->{star_summary} ) {
       push( @report_files, "star_summary", ".STARSummary.csv.png" );
       push( @report_files, "star_summary", ".STARSummary.csv\$" );
@@ -808,8 +809,8 @@ sub getRNASeqConfig {
     }
 
     if ( defined $config->{featurecount_summary} ) {
-      push( @report_files, "featurecount_summary", ".FeatureCountSummary.csv.png\$" );
-      push( @report_files, "featurecount_summary", ".FeatureCountSummary.csv\$" );
+      push( @report_files, "featurecount_summary",    ".FeatureCountSummary.csv.png\$" );
+      push( @report_files, "featurecount_summary",    ".FeatureCountSummary.csv\$" );
       push( @report_names, "featureCounts_table_png", "featureCounts_table" );
     }
 
@@ -825,7 +826,7 @@ sub getRNASeqConfig {
       my $pcoding = $def->{perform_proteincoding_gene} ? ".proteincoding.count" : "";
 
       my $titles = { "all" => "" };
-      if ( ref($count_file_ref) ne "ARRAY" ) { #count file directly
+      if ( ref($count_file_ref) ne "ARRAY" ) {    #count file directly
         $titles->{all} = basename($count_file_ref);
         $pcoding = "";
       }
@@ -915,7 +916,6 @@ sub getRNASeqConfig {
       }
       $hasFunctionalEnrichment = 1;
     }
-
 
     if ( defined $gseaTaskName ) {
       push( @copy_files, $gseaTaskName, ".gsea\$" );

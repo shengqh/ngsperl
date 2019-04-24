@@ -270,10 +270,10 @@ sub getOutputFormat {
   my ( $def, $rcode ) = @_;
   my $result = $rcode;
 
-  $result = addOutputOption( $def, $result, "outputPdf",          0 );
-  $result = addOutputOption( $def, $result, "outputPng",          1 );
-  $result = addOutputOption( $def, $result, "outputTIFF",         0 );
-  $result = addOutputOption( $def, $result, "showLabelInPCA",     1 );
+  $result = addOutputOption( $def, $result, "DE_outputPdf",  0, "outputPdf" );
+  $result = addOutputOption( $def, $result, "DE_outputPng",  1, "outputPng" );
+  $result = addOutputOption( $def, $result, "DE_outputTIFF", 0, "outputTIFF" );
+  $result = addOutputOption( $def, $result, "showLabelInPCA", 1 );
   $result = addOutputOption( $def, $result, "use_pearson_in_hca", $def->{use_pearson_in_hca}, "usePearsonInHCA" );
   return ($result);
 }
