@@ -190,7 +190,7 @@ hmcols <- colorRampPalette(c("green", "black", "red"))(256)
 openPlot<-function(filePrefix, format, pdfWidth, pdfHeight, otherWidth, otherHeight, figureName){
   fileName<-paste0(filePrefix, ".", tolower(format))
   if(format == "PDF"){
-    pdf(filename=fileName, width=pdfWidth, height=pdfHeight, useDingbats=FALSE)
+    pdf(fileName, width=pdfWidth, height=pdfHeight, useDingbats=FALSE)
   }else if(format == "TIFF"){
     tiff(filename=fileName, width=otherWidth, height=otherHeight, res=300)
   }else {
