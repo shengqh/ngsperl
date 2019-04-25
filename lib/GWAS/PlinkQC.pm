@@ -52,6 +52,7 @@ sub perform {
     my $qc4_mind = $sampleName . "_4_mind";
     my $qc5_resetid = $sampleName . "_5_resetid";
     my $output_file = $sampleName . "_clean";
+    my $output_file_gen = $sampleName . "_clean_gen";
     
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, "${output_file}.bed" );
     print $pbs "
@@ -61,9 +62,10 @@ plink2 --bfile $qc2_geno --hwe $thres_maf --make-bed --out $qc3_hwe
 plink2 --bfile $qc3_hwe --mind $thres_maf --make-bed --out $qc4_mind
 plink2 --bfile $qc4_mind --set-all-var-ids \@:#\\\$r_\\\$a --make-bed --out $qc5_resetid 
 plink2 --bfile $qc5_resetid --rm-dup force-first --make-bed --out $output_file
+plink2 --bfile $output_file --export oxford --out $output_file_gen
 
 wc -l *.bim *.fam > ${sampleName}_qc_count.txt
-rm ${qc1_maf}* ${qc2_geno}*  ${qc3_hwe}*  ${qc4_mind}*  ${qc5_resetid}* 
+rm ${qc1_maf}* ${qc2_geno}*  ${qc3_hwe}*  ${qc4_mind}*  ${qc5_resetid}* ${output_file_gen}.gen
 
 ";
     $self->close_pbs( $pbs, $pbs_file );
@@ -79,7 +81,9 @@ sub result {
 
   my $result = {};
   for my $sampleName ( sort keys %$rawFiles ) {
-    my @result_files = ("$result_dir/${sampleName}_clean.bed");
+    my @result_files = ("$result_dir/${sampleName}_clean.bed",
+      "$result_dir/${sampleName}_clean_gen.sample",
+    );
     $result->{$sampleName} = filter_array( \@result_files, $pattern );
   }
   return $result;
