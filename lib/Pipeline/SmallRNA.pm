@@ -2015,6 +2015,18 @@ sub getSmallRNAConfig {
           push( @report_names, "correlation_group2_group_heatmap", "correlation_group2_corr_cluster" );
         }
       }
+      
+      if ( defined $config->{bowtie1_virus_group6_pm_table} ) {
+        push( @report_files, "count_table_correlation",    "virus_group6_.*.category.count.heatmap.png" );
+        push( @report_files, "count_table_correlation",    "virus_group6_.*.category.count.PCA.png" );
+        push( @report_names, "correlation_group6_heatmap", "correlation_group6_pca" );
+
+        if ($hasGroupHeatmap) {
+          push( @report_files, "count_table_correlation",          "virus_group6_.*.category.count.Group.heatmap.png" );
+          push( @report_files, "count_table_correlation",          "virus_group6_.*.category.count.Group.Correlation.Cluster.png" );
+          push( @report_names, "correlation_group6_group_heatmap", "correlation_group6_corr_cluster" );
+        }
+      }
 
       if ( defined $config->{bowtie1_tRNA_pm_table} ) {
         push( @report_files, "count_table_correlation",     "^.*tRNA_pm_${task_name}.count.heatmap.png" );
