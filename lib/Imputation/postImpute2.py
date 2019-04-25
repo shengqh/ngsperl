@@ -7,25 +7,25 @@ import re
 from Bio import SeqIO
 from shutil import copyfile
 
-DEBUG=True
+DEBUG=False
 NotDEBUG=not DEBUG
 
-parser = argparse.ArgumentParser(description="Merge impute2 result files",
+parser = argparse.ArgumentParser(description="Merge impute2 result files with original plink data file",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument('-i', '--input', action='store', nargs='?', help='Input impute2 list file', required=NotDEBUG)
+parser.add_argument('-m', '--mergeFile', action='store', nargs='?', help='Input plink file prefix', required=NotDEBUG)
 parser.add_argument('-o', '--output', action='store', nargs='?', help="Output plink file", required=NotDEBUG)
 
 args = parser.parse_args()
 
 if DEBUG:
-  #rootFolder = "H:/shengquanhu/projects/macrae_linton/20190411_linton_megachip_2118_human/"
   rootFolder = "/scratch/cqs/shengq2/macrae_linton/20190411_linton_megachip_2118_human/"
   args.input = rootFolder + "impute2_merge/result/linton_exomeseq_2118__fileList1.list"
-  args.sample = rootFolder + "plinkqc/result/linton_clean_gen.sample"
   args.output = rootFolder + "impute2_merge/result/linton_exomeseq_2118"
+  args.mergeFile = "/data/h_vangard_1/macrae_linton_data/2118/2118-JB_GSProject_noChr0_fixed"
 
-logger = logging.getLogger('mergeImpute2')
+logger = logging.getLogger('postImpute2')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
 class SNP:
@@ -60,12 +60,18 @@ with open(args.input, "r") as fin:
     snps = readImpute2File(fileInfo[0], chrom)
     for snp in snps:
       allSnps.append(snp)
-      
+     
+tempOutput = args.output + "_impute2" 
+os.system("plink2 --bfile " + args.mergeFile + " --export oxford --out " + tempOutput)
+
 allSnps = sorted(allSnps, key = lambda x: (x.chrom, x.position))
-with open(args.output + ".gen", "w") as fout:
+with open(tempOutput + ".gen", "w") as fout:
   for snp in allSnps:
     fout.write("%d %s %d %s %s %s\n" % (snp.chrom, snp.name, snp.position, snp.firstAllele, snp.secondAllele, " ".join(snp.genoTypes)))
     
-copyfile(args.sample, args.output + ".sample")
-os.system("plink2 --data " + args.output + " --ref-first --make-bed --out " + args.output)
+os.system("plink2 --data " + tempOutput + " ref-first --make-bed --out " + tempOutput)
 
+with open(tempOutput + ".lst", "w") as fout:
+  fout.write(tempOutput + "\n")
+
+os.system("plink --bfile " + args.mergeFile + " --keep-allele-order --merge-list " + tempOutput + ".lst --make-bed --out " + args.output)
