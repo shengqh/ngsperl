@@ -33,11 +33,12 @@ sub getSmallRNAConfig {
   my $task_name = $def->{task_name};
   
   my $hasMicroRNAOnly = getValue( $def, "hasMicroRNAOnly", 0 );
+  my $notMicroRNAOnly = !$hasMicroRNAOnly;
   
   my $search_not_identical   = getValue( $def, "search_not_identical" );
   my $search_host_genome     = getValue( $def, "search_host_genome" );
-  my $search_nonhost_genome  = getValue( $def, "search_nonhost_genome" ) && $hasMicroRNAOnly;
-  my $search_nonhost_library = getValue( $def, "search_nonhost_library" ) && $hasMicroRNAOnly;
+  my $search_nonhost_genome  = getValue( $def, "search_nonhost_genome" ) && $notMicroRNAOnly;
+  my $search_nonhost_library = getValue( $def, "search_nonhost_library" ) && $notMicroRNAOnly;
   my $search_nonhost_database = $search_nonhost_genome || $search_nonhost_library;
 
   my $perform_annotate_unmapped_reads    = getValue( $def, "perform_annotate_unmapped_reads" );
@@ -47,7 +48,7 @@ sub getSmallRNAConfig {
   my $blast_top_reads      = getValue( $def, "blast_top_reads" );
   my $blast_unmapped_reads = getValue( $def, "blast_unmapped_reads" );
 
-  my $perform_nonhost_overlap_vis = getValue( $def, "perform_nonhost_overlap_vis", 1 ) && $hasMicroRNAOnly;
+  my $perform_nonhost_overlap_vis = getValue( $def, "perform_nonhost_overlap_vis", 1 ) && $notMicroRNAOnly;
 
   my $top_read_number = getValue( $def, "top_read_number" );
 
@@ -97,20 +98,16 @@ sub getSmallRNAConfig {
 
   my $data_visualization_dir = create_directory_or_die( $def->{target_dir} . "/data_visualization" );
 
-  my $perform_tDRmapper = getValue( $def, "perform_tDRmapper", 0 ) && $hasMicroRNAOnly;
-  if ( !$hasMicroRNAOnly ) {
-    if ($perform_tDRmapper) {
-      getValue( $def, "tDRmapper" );
-      getValue( $def, "tDRmapper_fasta" );
-    }
+  my $perform_tDRmapper = getValue( $def, "perform_tDRmapper", 0 ) && $notMicroRNAOnly;
+  if ( $perform_tDRmapper) {
+    getValue( $def, "tDRmapper" );
+    getValue( $def, "tDRmapper_fasta" );
   }
 
-  my $perform_host_tRH_analysis = getValue( $def, "perform_host_tRH_analysis", 0 ) && $hasMicroRNAOnly;
+  my $perform_host_tRH_analysis = getValue( $def, "perform_host_tRH_analysis", 0 ) && $notMicroRNAOnly;
   my $tRH_folder = $def->{target_dir} . "/tRH";
-  if ( !$hasMicroRNAOnly ) {
-    if ($perform_host_tRH_analysis) {
-      create_directory_or_die($tRH_folder);
-    }
+  if ($perform_host_tRH_analysis) {
+    create_directory_or_die($tRH_folder);
   }
 
   my $R_font_size = 'textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';';
@@ -207,7 +204,7 @@ sub getSmallRNAConfig {
 
     my $hostSmallRNA       = ["isomiR"];
     my $hostSmallRNAFolder = ["miRNA_isomiR"];
-    if ( !$hasMicroRNAOnly ) {
+    if ( $notMicroRNAOnly ) {
 
       push( @$hostSmallRNA,       "tDR-anticodon" );
       push( @$hostSmallRNAFolder, "tRNA" );
@@ -366,7 +363,7 @@ sub getSmallRNAConfig {
         },
       },
     };
-    if ( !$hasMicroRNAOnly and defined $config->{identical_check_cca} ) {
+    if ( $notMicroRNAOnly and defined $config->{identical_check_cca} ) {
       $host_genome->{bowtie1_genome_1mm_NTA_smallRNA_count}{cca_files_ref} = ["identical_check_cca"];
     }
 
@@ -444,7 +441,7 @@ sub getSmallRNAConfig {
     my $tRHTask      = "bowtie1_genome_1mm_NTA_smallRNA_count_tRH_filtered";
     my $tRHTableTask = $tRHTask . "_table";
     my $tRHCategory  = $tRHTask . "_category";
-    if ( !$hasMicroRNAOnly ) {
+    if ( $notMicroRNAOnly ) {
       $config->{host_genome_tRNA_category} = {
         class                     => "CQS::UniqueR",
         perform                   => 1,
@@ -661,7 +658,7 @@ sub getSmallRNAConfig {
     push( @files_for_annotate_unmapped, "bowtie1_genome_1mm_NTA_smallRNA_count", "count.mapped.xml" );
     push( @names_for_annotate_unmapped, "smallRNA" );
 
-    if ( !$hasMicroRNAOnly && $def->{has_NTA} && $def->{consider_tRNA_NTA} ) {
+    if ( $notMicroRNAOnly && $def->{has_NTA} && $def->{consider_tRNA_NTA} ) {
       $host_genome->{"bowtie1_genome_1mm_NTA_smallRNA_count"}{"cca_file_ref"} = "identical_check_cca";
     }
 
@@ -687,7 +684,7 @@ sub getSmallRNAConfig {
       );
     }
 
-    if ( !$hasMicroRNAOnly ) {
+    if ( $notMicroRNAOnly ) {
       push @name_for_readSummary, (
         "Host tRNA"                                                        #tRNA
       );
@@ -789,7 +786,7 @@ sub getSmallRNAConfig {
         $data_visualization_dir, "pairs_host_miRNA_deseq2_vis_layout", $libraryKey );
       push @visual_source_reads, "miRNA_reads";
 
-      if ( !$hasMicroRNAOnly ) {
+      if ( $notMicroRNAOnly ) {
 
         #tRNA
         addDEseq2( $config, $def, $summary_ref, "tRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
@@ -850,7 +847,7 @@ sub getSmallRNAConfig {
       addDeseq2Visualization( $config, $def, $summary_ref, "host_genome",       \@visual_source,       $data_visualization_dir, "pairs_host_deseq2_vis_layout",       $libraryKey );
       addDeseq2Visualization( $config, $def, $summary_ref, "host_genome_reads", \@visual_source_reads, $data_visualization_dir, "pairs_host_reads_deseq2_vis_layout", $libraryKey );
 
-      if ( !$hasMicroRNAOnly ) {
+      if ( $notMicroRNAOnly ) {
         if ($perform_host_tRH_analysis) {
           addDEseq2( $config, $def, $summary_ref, "tRH",           [ $tRHTableTask, ".tRNA.count\$" ],           $tRH_folder, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
           addDEseq2( $config, $def, $summary_ref, "tRH_reads",     [ $tRHTableTask, ".tRNA.read.count\$" ],      $tRH_folder, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
@@ -871,7 +868,7 @@ sub getSmallRNAConfig {
         }
       );
 
-      if ( !$hasMicroRNAOnly ) {
+      if ( $notMicroRNAOnly ) {
         my $trna_sig_result;
         if ( !defined $def->{tRNA_vis_group} ) {
           $def->{tRNA_vis_group} = $groups;
