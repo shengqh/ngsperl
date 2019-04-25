@@ -17,6 +17,11 @@ facetColCount=getFacetColCount(groupFileList)
 mappingResult<-read.delim(mappingResultFile,header=T,row.names=1, check.names=F)
 mappingResult2Species<-countTableToSpecies(dat=mappingResult,databaseLogFile=databaseLogFile,outFileName=paste0(resultFile,".Species.csv"))
 
+stringLengthCut=40
+if (max(nchar(row.names(mappingResult2Species)))>stringLengthCut) {
+	row.names(mappingResult2Species)=make.unique(stringr::str_trunc(row.names(mappingResult2Species), stringLengthCut))
+}
+
 #Pie chart for all samples
 ggpieToFile(mappingResult2Species,fileName=paste0(resultFile,".Piechart.png"),maxCategory=maxCategory,textSize=textSize,facetColCount=facetColCount)
 

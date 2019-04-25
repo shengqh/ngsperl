@@ -515,7 +515,7 @@ tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",f
 	return(p)
 }
 
-tableBarplotToFile<-function(dat,fileName,totalCountFile="",groupFileList="",outFileName="",maxCategory=5,textSize=9,transformTable=T,height=1500,proportionBar=TRUE,...) {
+tableBarplotToFile<-function(dat,fileName,totalCountFile="",groupFileList="",outFileName="",maxCategory=5,textSize=9,transformTable=T,height=2000,proportionBar=TRUE,...) {
 	if (totalCountFile!="") { #normlize with total count *10^6
 		totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
 		totalCount<-unlist(totalCount["Reads for Mapping",])
@@ -546,6 +546,7 @@ tableBarplotToFile<-function(dat,fileName,totalCountFile="",groupFileList="",out
 		print(p+scale_y_continuous(labels = percent_format())+ylab("Proportion"))
 		dev.off()
 	}
+	return(p)
 }
 
 readLayout <-function(visLayoutFileList, visLayoutAlphabet=FALSE){
