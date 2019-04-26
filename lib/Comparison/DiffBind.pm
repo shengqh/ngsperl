@@ -71,7 +71,7 @@ sub perform {
     }
     close($comp);
 
-    my $overlapFileName = "${name}_minoverlap.txt";
+    my $overlapFileName = "${name}.minoverlap.txt";
 
     my $finalPrefix = $name;
     my $finalFile   = $name . "." . $comparisons->[ scalar(@$comparisons) - 1 ]->[0] . ".sig.tsv";
