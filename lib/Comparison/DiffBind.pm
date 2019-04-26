@@ -55,12 +55,12 @@ sub perform {
   my $mapFiles = writeDesignTable( $result_dir, $section, $designtable, $bamfiles, $peaksfiles, $peakSoftware, 0, $task_name, $treatments, $controls );
 
   for my $name ( sort keys %$mapFiles ) {
-    my $mapFileName = $mapFiles->{$name};
+    my $mapFileName = basename($mapFiles->{$name});
 
     my $sampleList = $designtable->{$name};
     my $comparisons = getValue( $sampleList, "Comparison" );
 
-    my $curdir       = create_directory_or_die( $result_dir . "/" . $name );
+    my $curdir       = $result_dir . "/" . $name;
     my $compFileName = "${name}.comparison.txt";
     my $compfile     = $curdir . "/" . $compFileName;
     open( my $comp, ">$compfile" ) or die "Cannot create $compfile";
@@ -70,13 +70,15 @@ sub perform {
     }
     close($comp);
 
+    my $overlapFileName = "${name}_minoverlap.txt";
+
     my $finalPrefix = $name;
     my $finalFile   = $name . "." . $comparisons->[ scalar(@$comparisons) - 1 ]->[0] . ".sig.tsv";
     print $pbs "
 cd $curdir
 
 if [ ! -s $finalFile ]; then
-  R --vanilla -f $script --args $mapFileName $compFileName $finalPrefix
+  R --vanilla -f $script --args $mapFileName $compFileName $overlapFileName $finalPrefix
 fi
 
 ";
@@ -84,7 +86,7 @@ fi
       for my $comparison (@$comparisons) {
         my $comparisonName = $comparison->[0];
         print $pbs "if [[ -s ${finalPrefix}.${comparisonName}.sig.tsv && ! -s ${finalPrefix}.${comparisonName}.sig.stat.tsv ]]; then 
-annotatePeaks.pl ${finalPrefix}.${comparisonName}.sig.tsv $homer_annotation_genome -annStats ${finalPrefix}.${comparisonName}.sig.stat.tsv -go ${finalPrefix}.${comparisonName}.sig.genes.GO > ${finalPrefix}.${comparisonName}.sig.genes.tsv 
+  annotatePeaks.pl ${finalPrefix}.${comparisonName}.sig.tsv $homer_annotation_genome -annStats ${finalPrefix}.${comparisonName}.sig.stat.tsv -go ${finalPrefix}.${comparisonName}.sig.genes.GO > ${finalPrefix}.${comparisonName}.sig.genes.tsv 
 fi
 
 ";
@@ -113,6 +115,7 @@ sub result {
 
     my $sampleList  = $designtable->{$name};
     my $comparisons = $sampleList->{Comparison};
+    my $minOverlap = $sampleList->{MinOverlap};
 
     my $curdir = create_directory_or_die( $result_dir . "/" . $name );
 
@@ -126,6 +129,12 @@ sub result {
         push( @result_files, $curdir . "/" . $name . "." . $comparisonName . ".sig.genes.tsv" );
       }
     }
+    for my $oKey (sort keys %$minOverlap){
+      push( @result_files, $curdir . "/" . $oKey . ".peaks" );
+      push( @result_files, $curdir . "/" . $oKey . ".pdf" );
+    }
+    push( @result_files, $curdir . "/Overlap-condition.pdf" );
+
     $result->{$name} = filter_array( \@result_files, $pattern );
   }
   return $result;
