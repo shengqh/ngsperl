@@ -712,7 +712,7 @@ sub writeDesignTable {
       my $defaultNameFactor = getValue( $sampleList, "Factor", $defaultFactor );
 
       for my $sampleName ( sort keys %$sampleList ) {
-        if ( $sampleName eq "Tissue" || $sampleName eq "Factor" || $sampleName eq "Comparison" ) {
+        if ( $sampleName eq "Tissue" || $sampleName eq "Factor" || $sampleName eq "Comparison" || $sampleName eq "MinOverlap" ) {
           next;
         }
 
@@ -759,12 +759,18 @@ sub writeDesignTable {
       my $defaultNameTissue = getValue( $sampleList, "Tissue", $defaultTissue );
       my $defaultNameFactor = getValue( $sampleList, "Factor", $defaultFactor );
 
+      my $hasMinOverlap = 0;
       my $curdir      = create_directory_or_die( $target_dir . "/" . $name );
       my $mapFileName = "${name}.config.txt";
       my $mapfile     = $curdir . "/" . $mapFileName;
       open( my $map, ">$mapfile" ) or die "Cannot create $mapfile";
       print $map "SampleID\tTissue\tFactor\tCondition\tReplicate\tbamReads\tControlID\tbamControl\tPeaks\tPeakCaller\n";
       for my $sampleName ( sort keys %$sampleList ) {
+        if ( $sampleName eq "MinOverlap" ) {
+          $hasMinOverlap = 1;
+          next;
+        }
+
         if ( $sampleName eq "Tissue" || $sampleName eq "Factor" || $sampleName eq "Comparison" ) {
           next;
         }
@@ -798,6 +804,16 @@ sub writeDesignTable {
           . $peakSoftware . "\n";
       }
       close($map);
+
+      if ($hasMinOverlap){
+        my $overlapFileName = "${curdir}/${name}.minoverlap.txt";
+        open( my $overlap, ">$overlapFileName" ) or die "Cannot create $overlapFileName";
+        print $overlap "Condition\tminoverlap\n";
+        my $overlapDef =  $sampleList->{"MinOverlap"};
+        for my $oKey (sort keys %$overlapDef){
+          print $overlap $oKey . "\t" . $overlapDef->{$oKey} . "\n";
+        }
+      }
 
       $result->{$name} = $mapfile;
     }
