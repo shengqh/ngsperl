@@ -59,6 +59,7 @@ sub perform {
 
     my $sampleList = $designtable->{$name};
     my $comparisons = getValue( $sampleList, "Comparison" );
+    my $minOverlap = getValue( $sampleList, "MinOverlap");
 
     my $curdir       = $result_dir . "/" . $name;
     my $compFileName = "${name}.comparison.txt";
@@ -82,14 +83,16 @@ if [ ! -s $finalFile ]; then
 fi
 
 ";
+
     if ( $homer_annotation_genome ne "" ) {
+      for my $oKey (sort keys %$minOverlap){
+        my $peaksFile = $oKey . ".peaks";
+        print $pbs "annotatePeaks.pl <(awk -F'\\t' -v OFS='\\t' '{print \$1,\$2,\$3,\"peak\"\$1\":\"\$2,\"NA\",\"+\"}' $peaksFile) $homer_annotation_genome -annStats ${oKey}.stat.tsv -go ${oKey}.genes.GO > ${oKey}.genes.tsv \n\n";
+      }
+
       for my $comparison (@$comparisons) {
         my $comparisonName = $comparison->[0];
-        print $pbs "if [[ -s ${finalPrefix}.${comparisonName}.sig.tsv && ! -s ${finalPrefix}.${comparisonName}.sig.stat.tsv ]]; then 
-  annotatePeaks.pl ${finalPrefix}.${comparisonName}.sig.tsv $homer_annotation_genome -annStats ${finalPrefix}.${comparisonName}.sig.stat.tsv -go ${finalPrefix}.${comparisonName}.sig.genes.GO > ${finalPrefix}.${comparisonName}.sig.genes.tsv 
-fi
-
-";
+        print $pbs "annotatePeaks.pl ${finalPrefix}.${comparisonName}.sig.tsv $homer_annotation_genome -annStats ${finalPrefix}.${comparisonName}.sig.stat.tsv -go ${finalPrefix}.${comparisonName}.sig.genes.GO > ${finalPrefix}.${comparisonName}.sig.genes.tsv \n\n";
       }
     }
   }
