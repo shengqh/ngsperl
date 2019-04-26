@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser(description="Merge impute2 result files with or
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument('-i', '--input', action='store', nargs='?', help='Input impute2 list file', required=NotDEBUG)
-parser.add_argument('-m', '--mergeFile', action='store', nargs='?', help='Input plink file prefix', required=NotDEBUG)
+parser.add_argument('-m', '--mergeFile', action='store', nargs='?', help='Input plink bed file', required=NotDEBUG)
 parser.add_argument('-o', '--output', action='store', nargs='?', help="Output plink file", required=NotDEBUG)
 
 args = parser.parse_args()
@@ -22,8 +22,8 @@ args = parser.parse_args()
 if DEBUG:
   rootFolder = "/scratch/cqs/shengq2/macrae_linton/20190411_linton_megachip_2118_human/"
   args.input = rootFolder + "impute2_merge/result/linton_exomeseq_2118__fileList1.list"
-  args.output = rootFolder + "impute2_merge/result/linton_exomeseq_2118"
-  args.mergeFile = "/data/h_vangard_1/macrae_linton_data/2118/2118-JB_GSProject_noChr0_fixed"
+  args.output = rootFolder + "impute2_merge/result/linton_exomeseq_2118.bed"
+  args.mergeFile = "/data/h_vangard_1/macrae_linton_data/2118/2118-JB_GSProject_noChr0_fixed.bed"
 
 logger = logging.getLogger('postImpute2')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
@@ -61,8 +61,11 @@ with open(args.input, "r") as fin:
     for snp in snps:
       allSnps.append(snp)
      
-tempOutput = args.output + "_impute2" 
-os.system("plink2 --bfile " + args.mergeFile + " --export oxford --out " + tempOutput)
+outputPrefix = os.path.splitext(args.output)[0]
+mergePrefix = os.path.splitext(args.mergeFile)[0]
+
+tempOutput = outputPrefix + "_impute2" 
+os.system("plink2 --bfile " + mergePrefix + " --export oxford --out " + tempOutput)
 
 allSnps = sorted(allSnps, key = lambda x: (x.chrom, x.position))
 with open(tempOutput + ".gen", "w") as fout:
@@ -74,4 +77,4 @@ os.system("plink2 --data " + tempOutput + " ref-first --make-bed --out " + tempO
 with open(tempOutput + ".lst", "w") as fout:
   fout.write(tempOutput + "\n")
 
-os.system("plink --bfile " + args.mergeFile + " --keep-allele-order --merge-list " + tempOutput + ".lst --make-bed --out " + args.output)
+os.system("plink --bfile " + mergePrefix + " --keep-allele-order --merge-list " + tempOutput + ".lst --make-bed --out " + outputPrefix)
