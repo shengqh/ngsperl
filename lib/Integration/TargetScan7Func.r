@@ -3,14 +3,14 @@ library(data.table)
 # Function 1 : get target mRNAs of candidate miRNAs
 # miRNA_vec = vector of miRNAs
 # targetscan_folder = folder with target scan database
-# species = Mmu or Hsa
+# species = mmu or hsa
 # prediction:
 # conserved: conserved and non conserved sites of conserved miRNA families
 # non conserved: conserved and non conserved sites of non conserved miRNA families
 # all: conserved and non conserved sites of conserved and non conserved miRNA families
 # project_name: name that will be used to save txt
 
-targetscan <- function(miRNA_vec, targetscan_folder, species=c("Hsa","Mmu"), prediction=c('Cons','Nonconserved','All'), save_targets= FALSE, project_name=NULL) {
+targetscan <- function(miRNA_vec, targetscan_folder, species=c("hsa","mmu"), prediction=c('Conserved','Nonconserved','All'), save_targets= FALSE, project_name=NULL) {
   species<-match.arg(species)
 
   prediction<-match.arg(prediction)
@@ -19,15 +19,15 @@ targetscan <- function(miRNA_vec, targetscan_folder, species=c("Hsa","Mmu"), pre
     project_name <- gsub("-", "", Sys.Date())
   }
   
-  if(species == "Hsa"){
-    species_folder = "Human"
-  }else if(species == "Mmu"){
-    species_folder = "Mouse"
+  if(species == "hsa"){
+    taxoid = "9606"
+  }else if(species == "mmu"){
+    taxoid = "10090"
   }
   
-  family_file = paste0(targetscan_folder, "/", species_folder, "/", paste0("TargetScan_v7_2_", species, "_miR_Family_Info.txt"))
+  family_file = paste0(targetscan_folder, "/", paste0(taxoid, "_miR_Family_Info.txt"))
   
-  data_file = paste0(targetscan_folder, "/", species_folder, "/", paste0("TargetScan_v7_2_", species, "_", prediction, "_Family_Info.txt"))
+  data_file = paste0(targetscan_folder, "/", paste0(taxoid, "_", prediction, "_Family_Info.txt"))
   
   family <- fread(family_file, data.table = F, select = c(1,4))
   pred <- fread(data_file, data.table = F)
@@ -55,7 +55,7 @@ Not all miRNAs provided could match with the TargetScan family database, make su
   return(miRNA_targets)
 }
 
-#test <- targetscan(as.vector(miRNA[,1]), targetscan_folder = "T:/Shared/Labs/Vickers Lab/MARS/TargetScan_7_2", species = "Hsa", prediction = "Cons")
+#test <- targetscan(as.vector(miRNA[,1]), targetscan_folder = "T:/Shared/Labs/Vickers Lab/MARS/TargetScan_7_2", species = "hsa", prediction = "Cons")
 
 
 ##############################################################################################################
@@ -71,14 +71,16 @@ Not all miRNAs provided could match with the TargetScan family database, make su
   # project_name: name that will be used to save txt
 # *A txt file with the miRNA targtes that are also present in the provided mRNA vector is always saved
 
-targetscan_mRNA <- function(miRNA, mRNA, targetscan_folder, species=c("Hsa","Mmu"), prediction=c('Cons','Nonconserved','All'), save_targets= FALSE, project_name=NULL) {
+targetscan_mRNA <- function(miRNA_vec, mRNA_vec, targetscan_folder, species=c("hsa","mmu"), prediction=c('Conserved','Nonconserved','All'), save_targets= FALSE, project_name=NULL) {
   # get miRNA targets
-  miRNA_targets <- targetscan(miRNA, targetscan_folder, species, prediction, save_targets, project_name=NULL)
+  miRNA_targets <- targetscan(miRNA_vec, targetscan_folder, species, prediction, save_targets, project_name=NULL)
   
   #merge TargetScan targets with mRNA list
-  miRNA_mRNA <- miRNA_targets[which(miRNA_targets$`Gene Symbol` %in% mRNA ==T),]
+  miRNA_mRNA <- miRNA_targets[which(miRNA_targets$`Gene Symbol` %in% mRNA_vec),]
   
-  write.table(miRNA_mRNA, paste(project_name, "miRNA_mRNA_targets.txt", sep="_"), sep="\t", quote = F)
+  if (save_targets) {
+    write.table(miRNA_mRNA, paste(project_name, "_miRNA_mRNA_targets.txt", sep="_"), sep="\t", quote = F)
+  }
   
   return(miRNA_mRNA)
 }
@@ -98,14 +100,18 @@ targetscan_mRNA <- function(miRNA, mRNA, targetscan_folder, species=c("Hsa","Mmu
   # project_name: name that will be used to save txt
   # *A txt file with the miRNA targtes that are also present in the provided mRNA vector is always saved
 
-targetscan_DE <- function(miRNA, mRNA, targetscan_folder, species=c("Hsa","Mmu"), prediction=c('Cons','Nonconserved','All'), save_targets= FALSE, project_name=NULL) {
+targetscan_DE <- function(miRNA, mRNA, targetscan_folder, species=c("hsa","mmu"), prediction=c('Conserved','Nonconserved','All'), save_targets= FALSE, project_name=NULL) {
   # get miRNA targets
-  miRNA_targets <- targetscan(miRNA[,1], targetscan_folder, species, prediction, save_targets, project_name=NULL)
+  miRNA_targets <- targetscan(miRNA[,1], targetscan_folder, species, prediction, FALSE, project_name=NULL)
   
   miRNA_targets_foldchange <- merge(miRNA_targets, miRNA, by.x="MiRBase ID", by.y= "Feature_miRNA_name")
   
   #merge TargetScan targets with mRNA data.frame
   miRNA_mRNA_targets <- merge(miRNA_targets_foldchange, mRNA, by.x="Gene Symbol", by.y= "Feature_gene_name")
+  
+  if ( save_targets ) {
+    write.table(miRNA_mRNA_targets, paste0(project_name, "_miRNA_mRNA_targets.txt"), sep="\t", quote = F)
+  }
   
   #extract up/down miRNA and down/up mRNA. Save in separate files
   upmiRNA_dnmRNA <- miRNA_mRNA_targets[which(miRNA_mRNA_targets$log2FoldChange_miRNA > 0 & miRNA_mRNA_targets$log2FoldChange_mRNA < 0), ]
