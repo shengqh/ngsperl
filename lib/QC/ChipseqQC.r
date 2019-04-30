@@ -22,9 +22,9 @@ if(!is.na(chromosomes)){
 experiment <- read.table(configFile, sep="\t", header=T)
 
 if(annotationName == "unknown"){
-  qcresult = ChIPQC(experiment, consensus=TRUE, facet=FALSE, chromosomes=chromosomes)
+  qcresult = ChIPQC(experiment, consensus=TRUE, chromosomes=chromosomes)
 }else{
-  qcresult = ChIPQC(experiment, consensus=TRUE, facet=FALSE, annotation = annotationName, chromosomes=chromosomes)
+  qcresult = ChIPQC(experiment, consensus=TRUE, annotation = annotationName, chromosomes=chromosomes)
 }
 
-ChIPQCreport(qcresult, facet=FALSE)
+ChIPQCreport(qcresult)
