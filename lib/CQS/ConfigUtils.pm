@@ -1024,7 +1024,7 @@ sub writeParameterSampleFile {
       @orderedSampleNames = @{$parameterSampleFileOrder};
     }
     else {
-      @orderedSampleNames = keys %$temp;
+      @orderedSampleNames = sort keys %$temp;
     }
 
     my @outputNames              = ();
@@ -1040,7 +1040,7 @@ sub writeParameterSampleFile {
     foreach my $sample_name (@orderedSampleNames) {
       my $subSampleFiles = $temp->{$sample_name};
       if ( ref($subSampleFiles) eq 'HASH' ) {
-        foreach my $groupName (keys %$subSampleFiles) {
+        foreach my $groupName (sort keys %$subSampleFiles) {
           my $groupSampleNames = $subSampleFiles->{$groupName};
           for my $groupSampleName (@$groupSampleNames){
             print $list "${groupSampleName}\t${groupName}\t${sample_name}\n";
