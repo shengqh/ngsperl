@@ -73,7 +73,7 @@ Not all miRNAs provided could match with the TargetScan family database, make su
 
 targetscan_mRNA <- function(miRNA_vec, mRNA_vec, targetscan_folder, species=c("hsa","mmu"), prediction=c('Conserved','Nonconserved','All'), save_targets= FALSE, project_name=NULL) {
   # get miRNA targets
-  miRNA_targets <- targetscan(miRNA_vec, targetscan_folder, species, prediction, save_targets, project_name=NULL)
+  miRNA_targets <- targetscan(miRNA_vec, targetscan_folder, species, prediction, save_targets, project_name=project_name)
   
   #merge TargetScan targets with mRNA list
   miRNA_mRNA <- miRNA_targets[which(miRNA_targets$`Gene Symbol` %in% mRNA_vec),]
@@ -102,7 +102,7 @@ targetscan_mRNA <- function(miRNA_vec, mRNA_vec, targetscan_folder, species=c("h
 
 targetscan_DE <- function(miRNA, mRNA, targetscan_folder, species=c("hsa","mmu"), prediction=c('Conserved','Nonconserved','All'), save_targets= FALSE, project_name=NULL) {
   # get miRNA targets
-  miRNA_targets <- targetscan(miRNA[,1], targetscan_folder, species, prediction, FALSE, project_name=NULL)
+  miRNA_targets <- targetscan(miRNA[,1], targetscan_folder, species, prediction, FALSE, project_name=project_name)
   
   miRNA_targets_foldchange <- merge(miRNA_targets, miRNA, by.x="MiRBase ID", by.y= "Feature_miRNA_name")
   
