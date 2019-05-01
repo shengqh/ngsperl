@@ -395,6 +395,9 @@ for (i in 1:nrow(countTableFileAll)) {
       #correlation distribution
       countNumCor<-corTableWithoutZero(countNumVsd,method="spearman")
       write.csv(countNumCor, file=paste0(outputFilePrefix,curSuffix,".Correlation.csv"), row.names=T)
+
+      countNumCorTest<-corTestTableWithoutZero(countNumVsd,method="spearman")
+      write.csv(countNumCorTest, file=paste0(outputFilePrefix,curSuffix,".Correlation.Test.csv"), row.names=T)
       
       colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
       if (min(countNumCor,na.rm=T)<0) {
@@ -481,6 +484,11 @@ for (i in 1:nrow(countTableFileAll)) {
         
         #correlation distribution
         countNumCor<-corTableWithoutZero(countNumVsdGroup,method="spearman")
+        write.csv(countNumCor, file=paste0(outputFilePrefix,curSuffix,".Group.Correlation.csv"), row.names=T)
+
+        countNumCorTest<-corTestTableWithoutZero(countNumVsdGroup,method="spearman")
+        write.csv(countNumCorTest, file=paste0(outputFilePrefix,curSuffix,".Group.Correlation.Test.csv"), row.names=T)
+        
         colAll<-colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
         colAllLabel<-c(0,0.5,1)
         countNumCor[countNumCor<0]<-0
