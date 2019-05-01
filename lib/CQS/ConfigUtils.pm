@@ -640,7 +640,7 @@ sub get_ref_section_pbs {
 
       if ( defined $targetSection->{class} ) {
         my $myclass = instantiate( $targetSection->{class} );
-        print ($targetSection->{class} . " " . $section. "\n");
+        #print ($targetSection->{class} . " " . $section. "\n");
         my $result_pbs_map = $myclass->get_result_dependent_pbs( $config, $section );
         for my $resultKey ( keys %$result_pbs_map ) {
           my $newpbs = $result_pbs_map->{$resultKey};
@@ -1024,7 +1024,7 @@ sub writeParameterSampleFile {
       @orderedSampleNames = @{$parameterSampleFileOrder};
     }
     else {
-      @orderedSampleNames = keys %$temp;
+      @orderedSampleNames = sort keys %$temp;
     }
 
     my @outputNames              = ();
@@ -1040,7 +1040,7 @@ sub writeParameterSampleFile {
     foreach my $sample_name (@orderedSampleNames) {
       my $subSampleFiles = $temp->{$sample_name};
       if ( ref($subSampleFiles) eq 'HASH' ) {
-        foreach my $groupName (keys %$subSampleFiles) {
+        foreach my $groupName (sort keys %$subSampleFiles) {
           my $groupSampleNames = $subSampleFiles->{$groupName};
           for my $groupSampleName (@$groupSampleNames){
             print $list "${groupSampleName}\t${groupName}\t${sample_name}\n";

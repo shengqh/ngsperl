@@ -55,12 +55,13 @@ sub perform {
   my $mapFiles = writeDesignTable( $result_dir, $section, $designtable, $bamfiles, $peaksfiles, $peakSoftware, 0, $task_name, $treatments, $controls );
 
   for my $name ( sort keys %$mapFiles ) {
-    my $mapFileName = $mapFiles->{$name};
+    my $mapFileName = basename($mapFiles->{$name});
 
     my $sampleList = $designtable->{$name};
     my $comparisons = getValue( $sampleList, "Comparison" );
+    my $minOverlap = getValue( $sampleList, "MinOverlap");
 
-    my $curdir       = create_directory_or_die( $result_dir . "/" . $name );
+    my $curdir       = $result_dir . "/" . $name;
     my $compFileName = "${name}.comparison.txt";
     my $compfile     = $curdir . "/" . $compFileName;
     open( my $comp, ">$compfile" ) or die "Cannot create $compfile";
@@ -70,24 +71,28 @@ sub perform {
     }
     close($comp);
 
+    my $overlapFileName = "${name}.minoverlap.txt";
+
     my $finalPrefix = $name;
     my $finalFile   = $name . "." . $comparisons->[ scalar(@$comparisons) - 1 ]->[0] . ".sig.tsv";
     print $pbs "
 cd $curdir
 
 if [ ! -s $finalFile ]; then
-  R --vanilla -f $script --args $mapFileName $compFileName $finalPrefix
+  R --vanilla -f $script --args $mapFileName $compFileName $overlapFileName $finalPrefix
 fi
 
 ";
+
     if ( $homer_annotation_genome ne "" ) {
+      for my $oKey (sort keys %$minOverlap){
+        my $peaksFile = $oKey . ".peaks";
+        print $pbs "annotatePeaks.pl <(awk -F'\\t' -v OFS='\\t' '{print \$1,\$2,\$3,\"peak\"\$1\":\"\$2,\"NA\",\"+\"}' $peaksFile) $homer_annotation_genome -annStats ${oKey}.stat.tsv -go ${oKey}.genes.GO > ${oKey}.genes.tsv \n\n";
+      }
+
       for my $comparison (@$comparisons) {
         my $comparisonName = $comparison->[0];
-        print $pbs "if [[ -s ${finalPrefix}.${comparisonName}.sig.tsv && ! -s ${finalPrefix}.${comparisonName}.sig.stat.tsv ]]; then 
-annotatePeaks.pl ${finalPrefix}.${comparisonName}.sig.tsv $homer_annotation_genome -annStats ${finalPrefix}.${comparisonName}.sig.stat.tsv -go ${finalPrefix}.${comparisonName}.sig.genes.GO > ${finalPrefix}.${comparisonName}.sig.genes.tsv 
-fi
-
-";
+        print $pbs "annotatePeaks.pl ${finalPrefix}.${comparisonName}.sig.tsv $homer_annotation_genome -annStats ${finalPrefix}.${comparisonName}.sig.stat.tsv -go ${finalPrefix}.${comparisonName}.sig.genes.GO > ${finalPrefix}.${comparisonName}.sig.genes.tsv \n\n";
       }
     }
   }
@@ -113,6 +118,7 @@ sub result {
 
     my $sampleList  = $designtable->{$name};
     my $comparisons = $sampleList->{Comparison};
+    my $minOverlap = $sampleList->{MinOverlap};
 
     my $curdir = create_directory_or_die( $result_dir . "/" . $name );
 
@@ -126,6 +132,12 @@ sub result {
         push( @result_files, $curdir . "/" . $name . "." . $comparisonName . ".sig.genes.tsv" );
       }
     }
+    for my $oKey (sort keys %$minOverlap){
+      push( @result_files, $curdir . "/" . $oKey . ".peaks" );
+      push( @result_files, $curdir . "/" . $oKey . ".pdf" );
+    }
+    push( @result_files, $curdir . "/Overlap-condition.pdf" );
+
     $result->{$name} = filter_array( \@result_files, $pattern );
   }
   return $result;

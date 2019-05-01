@@ -149,41 +149,18 @@ if(rnaseqOptions["featureCounts_UseMultiMappingReads", 1] == "FALSE"){
 #                    unassigned_junction_condition ->
 #                    assigned
 # So, we cannot get how many unique mapped reads from the featureCounts summary.
-
-  table<- read.table(files["featureCounts_table",1], header=TRUE)
-
-  colsum<-apply(table[,c(2:ncol(table))], 2, sum)
-  validcol<-which(colsum > 0)+1
-  validcol<-validcol[!(colnames(table)[validcol] %in% c("percent_assigned", "Total"))]
-  if(rnaseqOptions["featureCounts_UseMultiMappingReads", 1] == "FALSE"){
-    validcol<-validcol[!(colnames(table)[validcol] %in% c("Unassigned_MultiMapping"))]
-  }
-
-  output_table2<-data.frame(table[,c(1, validcol)])
-  meltreads=melt(output_table2, id="Sample", variable.name="Read", value.name="Count")
-  meltreads$Read<-factor(meltreads$Read, levels=sort(as.character(unique(meltreads$Read))))
-  print(ggplot(meltreads, aes(x=Sample, y=Count, fill=Read)) + 
-        geom_bar(stat="identity", width=0.5) +
-        theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
-              axis.text.y = element_text(size=11, face="bold")))
+include_graphics(files["featureCounts_table_png",1])
 ```
 
 <br>
 
 ```{r echo=FALSE,results='asis', include = hasFeatureCount, eval = hasFeatureCount}
+table<-read.csv(files["featureCounts_table",1])
 readsUsed = "reads"
 if(rnaseqOptions["featureCounts_UseMultiMappingReads", 1] == "FALSE"){
-  assigned <- table$Assigned 
-  table<-table[!(colnames(table) %in% c("Unassigned_MultiMapping", "Total", "percent_assigned", "Assigned"))]
-  table$Assigned <- assigned 
-  table$Total <- rowSums(table[,c(2:ncol(table))]) 
-  table$Percent_Assigned <- table$Assigned * 1.0 / table$Total 
   readsUsed = "**UNIQUE** reads"
 }
-colsum<-apply(table[,c(2:ncol(table))], 2, sum)
-validcol<-which(colsum > 0)+1
-output_table2<-data.frame(table[,c(1, validcol)])
-print(kable(output_table2, caption=tabRef("geneSummary", paste0("The summary of ", readsUsed, " assignment to genes"))))
+print(kable(table, caption=tabRef("geneSummary", paste0("The summary of ", readsUsed, " assignment to genes"))))
 ```
 
 <br>

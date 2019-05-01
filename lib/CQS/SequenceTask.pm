@@ -98,7 +98,7 @@ sub get_dependent_pbs_map {
     my @tasks = @{ $step_map{$step_name} };
 
     for my $task_section_name (@tasks) {
-      print $task_section_name . "\n";
+      #print $task_section_name . "\n";
       my $task_section = $config->{$task_section_name};
       my $taskdeppbsmap = {};
       for my $key ( keys %$task_section ) {

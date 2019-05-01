@@ -63,12 +63,11 @@ sub get_result_dependent_pbs {
 
   my $interval_bed = get_option_file( $config, $section, "interval_bed" );
   my @chroms = readChromosomesFromBedFile( $interval_bed );
-  my $rawFiles = get_raw_files( $config, $section );
 
   my $pbsFiles = $self->get_pbs_files($config, $section);
   
   my $result = {};
-  for my $sampleName ( sort keys %$rawFiles ) {
+  for my $sampleName ( sort keys %$pbsFiles ) {
     my $pbs_file = $pbsFiles->{$sampleName};
     for my $chrom (@chroms) {
       $result->{$sampleName . "_chr${chrom}"} = $pbs_file;

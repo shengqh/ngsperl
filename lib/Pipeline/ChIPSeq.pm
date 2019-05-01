@@ -27,7 +27,11 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "sra_to_fastq", 0 );
 
-  my $pairend = getValue( $def, "pairend" );
+  if (not defined $def->{"is_paired_end"} && defined $def->{"pairend"}){
+    $def->{"is_paired_end"} = $def->{"pairend"};
+  }
+
+  my $pairend = getValue( $def, "is_paired_end" );
   if ($pairend) {
     initDefaultValue( $def, "aligner", "bwa" );
   }
@@ -333,6 +337,7 @@ sub getConfig {
       combined       => getValue( $def, "chipqc_combined", 1 ),
       blacklist_file => $def->{"blacklist_file"},
       chromosomes    => $def->{"chipqc_chromosomes"},
+      is_paired_end => getValue($def, "is_paired_end"),
       sh_direct      => 0,
       pbs            => {
         "email"    => $email,

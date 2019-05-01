@@ -61,6 +61,8 @@ sub perform {
   my $combined     = get_option( $config, $section, "combined" );
 
   my $chromosomes = get_option( $config, $section, "chromosomes", "" );
+  
+  my $paired_end = get_option( $config, $section, "is_paired_end");
 
   my $qctable = $self->get_qctable( $config, $section, $task_name, $treatments);
 
@@ -79,12 +81,36 @@ sub perform {
   my $final_file  = $expectFiles->{ $sortedKeys[ scalar(@sortedKeys) - 1 ] }->[0];
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+  
+  my $sourceBamFiles = $bamfiles;
+  if ($paired_end){
+    $sourceBamFiles = {};
+    for my $bamName (keys %$bamfiles){
+      $sourceBamFiles->{$bamName} = [$result_dir . "/" . $bamName . ".filtered.bam"];
+    } 
+  }
 
-  my $mapFiles = writeDesignTable( $result_dir, $section, $qctable, $bamfiles, $peaksfiles, $peakSoftware, $combined, $task_name, $treatments, $controls );
+  my $mapFiles = writeDesignTable( $result_dir, $section, $qctable, $sourceBamFiles, $peaksfiles, $peakSoftware, $combined, $task_name, $treatments, $controls );
 
   if ($combined) {
+    if ($paired_end){
+      for my $bamName (keys %$bamfiles){
+        my $oldFile = $bamfiles->{$bamName}->[0];
+        my $newFile = $bamName . ".filtered.bam";
+        print $pbs "samtools view -b -f 65 -o $newFile $oldFile \n\n";
+        $sourceBamFiles->{$bamName} = [$result_dir . "/" . $newFile ];
+      } 
+    }
+    
     my $mapFileName = $mapFiles->{$task_name};
-    print $pbs "R --vanilla -f $script --args $mapFileName $genome $chromosomes\n";
+    print $pbs "R --vanilla -f $script --args $mapFileName $genome $chromosomes\n\n";
+    
+    if ($paired_end){
+      for my $bamName (keys %$sourceBamFiles){
+        my $newFile = $sourceBamFiles->{$bamName}->[0];
+        print $pbs "rm $newFile \n\n";
+      } 
+    }
   }
   else {
     for my $qcname ( sort keys %$mapFiles ) {

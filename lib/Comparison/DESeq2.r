@@ -19,6 +19,7 @@ transformTable<-0
 exportSignificantGeneName<-1
 thread<-8
 outputPdf<-FALSE
+showVolcanoLegend<-0
 
 libraryFile<-"/scratch/cqs/shengq1/vickers/20170222_smallRNA_3018_61_human_v3/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/3018_61.Category.Table.csv"
 libraryKey<-"TotalReads"
@@ -62,12 +63,19 @@ if(!exists("outputPng") | !outputPdf ){
   outputPng<-TRUE
 }
 
+if(!exists("outputTIFF")){
+  outputTIFF<-FALSE
+}
+
 outputFormat<-c()
 if(outputPdf){
   outputFormat<-c("PDF")
 }
 if(outputPng){
   outputFormat<-c(outputFormat, "PNG")
+}
+if(outputTIFF){
+  outputFormat<-c(outputFormat, "TIFF")
 }
 
 if(!exists("countSep")){
@@ -90,6 +98,10 @@ if(exists("libraryFile")){
 
 if(!exists("thread")){
 	thread<-1
+}
+
+if(!exists("showVolcanoLegend")){
+  showVolcanoLegend<-1
 }
 
 library("DESeq2")
@@ -175,34 +187,48 @@ options(expressions=5e4)
 
 hmcols <- colorRampPalette(c("green", "black", "red"))(256)
 
+openPlot<-function(filePrefix, format, pdfWidth, pdfHeight, otherWidth, otherHeight, figureName){
+  fileName<-paste0(filePrefix, ".", tolower(format))
+  if(format == "PDF"){
+    pdf(fileName, width=pdfWidth, height=pdfHeight, useDingbats=FALSE)
+  }else if(format == "TIFF"){
+    tiff(filename=fileName, width=otherWidth, height=otherHeight, res=300)
+  }else {
+    png(filename=fileName, width=otherWidth, height=otherHeight, res=300)
+  }
+  cat("saving", figureName, "to ", fileName, "\n")
+}
+
+drawPlot<-function(filePrefix, outputFormat, pdfWidth, pdfHeight, otherWidth, otherHeight, p, figureName){
+  for(format in outputFormat){  
+    openPlot(filePrefix, format, pdfWidth, pdfHeight, otherWidth, otherHeight, figureName)  
+    print(p)
+    dev.off()
+  }
+}
+
 drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnames, outputFormat){
 	genecount<-nrow(rldselect)
 	showRowDendro = genecount <= 50
 	if(genecount > 2){
-    for(format in outputFormat){
-      if("PDF" == format){
-        filename<-paste0(prefix, "_DESeq2-vsd-heatmap.pdf")
-        pdf(filename, width=10, height=10)
-      }else{
-        filename<-paste0(prefix, "_DESeq2-vsd-heatmap.png")
-        png(filename=filename, width=3000, height=3000, res=300)
-      }
+    cexCol = max(1.0, 0.2 + 1/log10(ncol(rldselect)))
+    if(ispaired){
+      htColors<-rainbow(length(unique(designData$Paired)))
+      gsColors<-as.matrix(data.frame(Group=conditionColors, Sample=htColors[designData$Paired]))
+    }else{
+      gsColors = conditionColors;
+    }
+    if (genecount<=30) {
+      labRow=row.names(rldselect)
+      margins=c(12,8)
+    } else {
+      labRow=NA
+      margins=c(12,5)
+    }
 
-      cat("saving HCA to ", filename, "\n")
-      cexCol = max(1.0, 0.2 + 1/log10(ncol(rldselect)))
-      if(ispaired){
-        htColors<-rainbow(length(unique(designData$Paired)))
-        gsColors<-as.matrix(data.frame(Group=conditionColors, Sample=htColors[designData$Paired]))
-      }else{
-        gsColors = conditionColors;
-      }
-      if (genecount<=30) {
-        labRow=row.names(rldselect)
-        margins=c(12,8)
-      } else {
-        labRow=NA
-        margins=c(12,5)
-      }
+    filePrefix<-paste0(prefix, "_DESeq2-vsd-heatmap")
+    for(format in outputFormat){
+      openPlot(filePrefix, format, 10, 10, 3000, 3000, "HCA")
       if(usePearsonInHCA){
         heatmap3(rldselect, 
           col = hmcols, 
@@ -260,19 +286,8 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outp
 				scale_color_manual(values=c("red", "blue")) +
 				theme_bw2() + theme(legend.position="top")
 
-    for(format in outputFormat){
-      if("PDF" == format){
-        filename=paste0(prefix, "_DESeq2-vsd-pca.pdf") 
-        cat("saving PCA to ", filename, "\n")
-        ggsave(plot=g,filename=filename,width=6,height=5,useDingbats=FALSE)
-      }else{
-        filename=paste0(prefix, "_DESeq2-vsd-pca.png") 
-        cat("saving PCA to ", filename, "\n")
-        png(filename=filename, width=3000, height=3000, res=300)
-        print(g)
-        dev.off()
-      }
-    }
+    filePrefix<-paste0(prefix, "_DESeq2-vsd-pca")
+    drawPlot(filePrefix, outputFormat, 6, 5, 3000, 3000, g, "PCA")
 	}
 }
 
@@ -563,7 +578,6 @@ for(countfile_index in c(1:length(countfiles))){
 		print(g)
 		dev.off()
 		
-		
 		#varianceStabilizingTransformation
 		
 		dds<-myEstimateSizeFactors(dds)
@@ -752,15 +766,8 @@ for(countfile_index in c(1:length(countfiles))){
 					scale_y_continuous(name=bquote(log[2]~Fold~Change))+
 					theme(axis.text = element_text(colour = "black"))
 			
-			for(format in outputFormat){		
-        if(format == "PDF"){
-          ggsave(plot=p,height=7,width=7,filename=paste0(prefix,"_DESeq2_sig_barplot.pdf"), useDingbats=FALSE)
-        }else{
-          png(filename=paste0(prefix, "_DESeq2_sig_barplot.png"), width=3000, height=3000, res=300)
-          print(p)
-          dev.off()
-        }
-      }
+			filePrefix<-paste0(prefix,"_DESeq2_sig_barplot")
+			drawPlot(filePrefix, outputFormat, 7, 7, 3000, 3000, p, "PCA")
 		} else {
 			print(paste0("No gene with adjusted p value less than ",pvalue," and fold change larger than ",foldChange))
 		}
@@ -801,23 +808,20 @@ for(countfile_index in c(1:length(countfiles))){
 						axis.title = element_text(size=30),
 						legend.text= element_text(size=30),
 						legend.title= element_text(size=30))
-						
-    if(outputPdf){
-      ggsave(plot=p, height=10, width=10, filename=paste0(prefix,"_DESeq2_volcanoPlot.pdf"), useDingbats=FALSE)
+		
+    if(!showVolcanoLegend){
+      p<-p+ theme(legend.position = "none")
     }
-    png(filename=paste0(prefix, "_DESeq2_volcanoPlot.png"), width=3000, height=3000, res=300)
-    print(p)
-    dev.off()
+						
+	  filePrefix<-paste0(prefix,"_DESeq2_volcanoPlot")
+    drawPlot(filePrefix, outputFormat, 10, 10, 3000, 3000, p, "Volcano")
 	}
 	
 	if(length(pairedspearman) > 0){
-		filename<-ifelse(minMedianInGroup > 0, paste0("spearman_min", minMedianInGroup), "spearman")
+		filePrefix<-paste0(prefix, "_", ifelse(minMedianInGroup > 0, paste0("spearman_min", minMedianInGroup), "spearman"))
+		fwidth<-max(2000, 1000 * length(pairedspearman))
 		for(format in outputFormat){
-		  if(format == "PDF"){
-		    pdf(paste0(filename,".pdf"),width=7,height=7)
-		  }else{
-    		png(filename=paste0(filename,".png"), width=1000 * length(pairedspearman), height=2000, res=300)
-      }
+      openPlot(filePrefix, format, 7, 7, fwidth, 2000, "Spearman correlation")
 		  boxplot(pairedspearman)
 		  dev.off()
 		}
@@ -1014,12 +1018,9 @@ if(!is.null(sigTableAll)){
 			return(colors)
 		}
 		colors<-makeColors(length(allSigNameList))
-    for(format in outputFormat){      
-      if(format == "PDF"){
-  			pdf(paste0(allprefix,"_significantVenn.pdf"),width=7,height=7)
-	  	}else{
-		  	png(paste0(allprefix,"_significantVenn.png"),res=300,height=2000,width=2000)
-		  }
+    for(format in outputFormat){ 
+      filePrefix<-paste0(allprefix,"_significantVenn")
+      openPlot(filePrefix, format, 7, 7, 2000, 2000, "Venn")
 		  venn.diagram1(allSigNameList,cex=2,cat.cex=2,cat.col=colors,fill=colors)
 		  dev.off()
 		}
@@ -1053,17 +1054,10 @@ if(!is.null(sigTableAll)){
 						axis.text.y = element_text(size=textSize, face="bold")) +
 				coord_equal()
 				
-    for(format in outputFormat){      
-      if(format == "PDF"){
-        ggsave(plot=g, filename=paste0(allprefix,"_significantHeatmap.pdf"),width=7,height=7,useDingbats=FALSE)
-      }else{
-        width=min(max(2500, 60 * length(unique(dataForFigure$comparisonName))),30000)
-        height=min(max(2000, 40 * length(unique(dataForFigure$Gene))),30000)
-        png(paste0(allprefix, "_significantHeatmap.png"),res=300,height=height,width=width)
-        print(g)
-        dev.off()
-      }
-    }
+    width=min(max(2500, 60 * length(unique(dataForFigure$comparisonName))),30000)
+    height=min(max(2000, 40 * length(unique(dataForFigure$Gene))),30000)
+    filePrefix<-paste0(allprefix,"_significantHeatmap")
+    drawPlot(filePrefix, outputFormat, 7, 7, width, height, g, "Significant Heatmap")
 	}
 }
 
@@ -1124,15 +1118,10 @@ if (! is.null(resultAllOut)) {
 						legend.title= element_text(size=30),
 						strip.text.x = element_text(size = 30))
 						
-    if(outputPdf){
-      width<-max(7,3.5*length(allComparisons))
-      ggsave(plot=p, filename=paste0(allprefix,"_DESeq2_volcanoPlot.pdf"),width=width,height=7,useDingbats=FALSE)
-    }
-
-    width<-max(2000,1500*length(allComparisons))
-    png(filename=paste0(allprefix, "_DESeq2_volcanoPlot.png"), width=width, height=2000, res=300)
-    print(p)
-    dev.off()
+		pwidth<-max(7,3.5*length(allComparisons))
+    owidth<-max(2000,1500*length(allComparisons))
+    filePrefix<-paste0(allprefix,"_DESeq2_volcanoPlot")
+    drawPlot(filePrefix, outputFormat, pwidth, 7, owidth, 2000, p, "Volcano")
 		
 		#output a summary table with numbers of gisnificant changed genes
 		sigGeneSummaryTable<-t(table(diffResult[,"Significant"],diffResult[,"Comparison"]))
@@ -1142,4 +1131,4 @@ if (! is.null(resultAllOut)) {
 }
 
 #export session information
-writeLines(capture.output(sessionInfo()), paste0(inputfile,".DESeq2.SessionInfo.txt"))
+writeLines(capture.output(sessionInfo()), paste0(basename(inputfile),".DESeq2.SessionInfo.txt"))
