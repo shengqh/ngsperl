@@ -71,7 +71,7 @@ if(!file.exists(countFile)){
   tcgaFiles<-data.frame(Name=tcgaNames, File=files)
   write.table(tcgaFiles, paste0(cancerName, ".rnaseq2.filelist"), sep="\t", quote=F, row.names=F)
   
-  GDCdownload(query, method = "client")
+  GDCdownload(query, method = "api", files.per.chunk = 10)
   rnaseq <- GDCprepare(query)
   
   save(rnaseq, file=countFile)
