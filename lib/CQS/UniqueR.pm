@@ -204,7 +204,7 @@ sub result {
       foreach my $sample_name ( keys %temp ) {
         if ( ref( $temp{$sample_name} ) eq "HASH" ) {
           foreach my $output_file_ext_one (@output_file_exts) {
-            push( @result_files, "${result_dir}/${sample_name}${output_file}${output_file_ext_one}" );
+            push( @result_files, "${result_dir}/${sample_name}${output_file_ext_one}" );
           }
         }
         else {
