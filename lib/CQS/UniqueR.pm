@@ -50,7 +50,7 @@ sub perform {
   }
   my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
 
-  my $removeEmpty = get_option( $config, $section, "remove_empty_parameter",     0);
+  my $removeEmpty = get_option( $config, $section, "remove_empty_parameter", 0 );
   my $parametersample_files1 = writeParameterSampleFile( $config, $section, $result_dir, 1, $removeEmpty );
   my $parametersample_files2 = writeParameterSampleFile( $config, $section, $result_dir, 2, $removeEmpty );
   my $parametersample_files3 = writeParameterSampleFile( $config, $section, $result_dir, 3, $removeEmpty );
@@ -187,6 +187,13 @@ sub result {
   my $output_file                = get_option( $config, $section, "output_file",                "" );
   my $output_file_ext            = get_option( $config, $section, "output_file_ext",            "" );
   my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
+  
+  my @output_file_exts;
+  if ( $output_file_ext =~ /;/ ) {
+    @output_file_exts = split( ";", $output_file_ext );
+  }else{
+    @output_file_exts = ($output_file_ext );
+  }
 
   my $result       = {};
   my @result_files = ();
@@ -195,16 +202,17 @@ sub result {
     if ( has_raw_files( $config, $section, $output_file ) ) {
       my %temp = %{ get_raw_files( $config, $section, $output_file ) };
       foreach my $sample_name ( keys %temp ) {
-        foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
-          my $subSampleName = $output_to_result_directory ? $result_dir . "/" . basename($subSampleFile) : $subSampleFile;
-          if ( $output_file_ext =~ /;/ ) {
-            my @output_file_exts = split( ";", $output_file_ext );
+        if ( ref( $temp{$sample_name} ) eq "HASH" ) {
+          foreach my $output_file_ext_one (@output_file_exts) {
+            push( @result_files, "${result_dir}/${sample_name}${output_file}${output_file_ext_one}" );
+          }
+        }
+        else {
+          foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
+            my $subSampleName = $output_to_result_directory ? $result_dir . "/" . basename($subSampleFile) : $subSampleFile;
             foreach my $output_file_ext_one (@output_file_exts) {
               push( @result_files, "${subSampleName}${output_file_ext_one}" );
             }
-          }
-          else {
-            push( @result_files, "${subSampleName}${output_file_ext}" );
           }
         }
       }
@@ -214,14 +222,8 @@ sub result {
     }
   }
   else {
-    if ( $output_file_ext =~ /;/ ) {
-      my @output_file_exts = split( ";", $output_file_ext );
-      foreach my $output_file_ext_one (@output_file_exts) {
-        push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext_one}" );
-      }
-    }
-    else {
-      push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext}" );
+    foreach my $output_file_ext_one (@output_file_exts) {
+      push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext_one}" );
     }
   }
 
