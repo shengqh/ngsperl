@@ -352,9 +352,6 @@ sub getPreprocessionConfig {
         parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.reads.tsv\$" ],
       };
     }
-    else {
-      $fastqc_count_vis_files = { target_dir => $config->{fastqc_raw}->{target_dir}, };
-    }
 
     if ( defined $fastqc_count_vis_files ) {
       $config->{"fastqc_count_vis"} = merge(
