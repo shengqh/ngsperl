@@ -58,6 +58,7 @@ sub perform {
   for my $sample_name ( sort keys %raw_files ) {
     my @originalFiles = @{ $raw_files{$sample_name} };
     my @sample_files  = parsePairedSamples( \@originalFiles );
+    my $first_sample_file = $sample_files[0];
 
     my $sampleCount = scalar(@sample_files);
     my $samples     = '"' . join( '" "', @sample_files ) . '"';
@@ -73,7 +74,7 @@ sub perform {
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $expectname );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $expectname, "", 0, $first_sample_file );
     print $pbs "fastqc $option --extract -t $sampleCount -o $cur_dir $samples";
     $self->close_pbs( $pbs, $pbs_file );
   }
