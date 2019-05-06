@@ -169,7 +169,7 @@ sub get_task_filename {
 }
 
 sub open_pbs {
-  my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, $final_file_can_empty ) = @_;
+  my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, $final_file_can_empty, $input_file ) = @_;
 
   if ( !defined $init_command ) {
     $init_command = "";
@@ -198,6 +198,15 @@ if [[ !(1 -eq \$1) ]]; then
     echo job has already been done. if you want to do again, delete $delete_file and submit job again.
     exit 0
   fi
+fi
+";
+  }
+
+  if ( defined $input_file ) {
+    print $pbs "
+if [[ ! -s $input_file ]]; then
+  echo input file not exist: $input_file
+  exit 1
 fi
 ";
   }
