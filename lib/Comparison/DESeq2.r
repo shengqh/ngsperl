@@ -91,9 +91,15 @@ if(!exists("exportSignificantGeneName")){
 }
 
 if(exists("libraryFile")){
-	librarySize<-read.csv(libraryFile, row.names=1,check.names=FALSE)
-	librarySize<-unlist(librarySize[libraryKey,,drop=T])
-	cat("Using ", libraryKey, " in " , libraryFile , " as library size. \n")
+  if (grepl(".csv$", libraryFile)){
+    librarySize<-read.csv(libraryFile, row.names=1,check.names=FALSE)
+    librarySize<-unlist(librarySize[libraryKey,,drop=T])
+    cat("Using ", libraryKey, " in " , libraryFile , " as library size. \n")
+  }else{
+    librarySize<-read.table(libraryFile, row.names=1,check.names=FALSE,header=T,stringsAsFactor=F)
+    librarySize<-unlist(librarySize[,libraryKey,drop=T])
+    cat("Using ", libraryKey, " in " , libraryFile , " as library size. \n")
+  }
 }
 
 if(!exists("thread")){
