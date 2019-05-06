@@ -26,6 +26,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "subdir", 0 );
 
   initDefaultValue( $def, "sra_to_fastq", 0 );
+  initDefaultValue( $def, "mark_duplicates", 1 );
 
   if (not defined $def->{"is_paired_end"} && defined $def->{"pairend"}){
     $def->{"is_paired_end"} = $def->{"pairend"};
@@ -123,7 +124,7 @@ sub getConfig {
       source_ref            => $source_ref,
       output_to_same_folder => 1,
       picard_jar            => getValue( $def, "picard_jar" ),
-      mark_duplicates       => 1,
+      mark_duplicates       => getValue( $def, "mark_duplicates" ),
       sh_direct             => 0,
       pbs                   => {
         "email"    => $email,
