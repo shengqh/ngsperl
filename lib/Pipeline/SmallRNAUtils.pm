@@ -301,12 +301,24 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "consider_miRNA_NTA", 1 );
 
   #search database
-  initDefaultValue( $def, "search_not_identical",               1 );
-  initDefaultValue( $def, "search_host_genome",                 1 );
-  initDefaultValue( $def, "host_remove_all_mapped_reads",       0 );
-  initDefaultValue( $def, "search_nonhost_genome",              1 );
-  initDefaultValue( $def, "search_nonhost_library",             1 );
-  initDefaultValue( $def, "perform_class_independent_analysis", 1 );
+  initDefaultValue( $def, "search_nonhost_genome_custom_group_only",        0 );
+  if (getValue( $def, "search_nonhost_genome_custom_group_only")){
+    $def->{"search_not_identical"} = 0;
+    $def->{"search_host_genome"} = 0;
+    $def->{"search_nonhost_genome"} = 1;
+    $def->{"search_nonhost_genome_custom_group"} = 1;
+    $def->{"search_nonhost_library"} = 0;
+    $def->{"perform_class_independent_analysis"} = 0;
+    $def->{"blast_unmapped_reads"} = 0;
+    $def->{"perform_report"} = 0;
+  }else{
+    initDefaultValue( $def, "search_not_identical",               1 );
+    initDefaultValue( $def, "search_host_genome",                 1 );
+    initDefaultValue( $def, "host_remove_all_mapped_reads",       0 );
+    initDefaultValue( $def, "search_nonhost_genome",              1 );
+    initDefaultValue( $def, "search_nonhost_library",             1 );
+    initDefaultValue( $def, "perform_class_independent_analysis", 1 );
+  }
 
   #blastn
   initDefaultValue( $def, "blast_top_reads",      0 );
