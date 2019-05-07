@@ -62,7 +62,7 @@ sub perform {
   }
   my $log_desc = $cluster->get_log_description($log);
 
-  my $final_file = "${task_name}.FastQC.summary.txt";
+  my $final_file = "${task_name}.FastQC.html";
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
   print $pbs "
@@ -71,8 +71,6 @@ sub perform {
 python $python_script -i $fastqc_file_list -o ${task_name}.FastQC
 
 R --vanilla -f $r_script --args ${task_name}.FastQC $rmdfile
-
-R -e \"library(knitr);rmarkdown::render('$rmdfile');\"
 ";
   $self->close_pbs( $pbs, $pbs_file );
 

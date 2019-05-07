@@ -37,13 +37,17 @@ if (all(info$size == 0)) {
 geneList<-read.table(geneFile,header=FALSE,sep="\t",stringsAsFactors=FALSE)
 genes<-geneList$V1
 
+if(grepl("Gene", genes[1])){
+  genes<-genes[2:length(genes)]
+}
+
 enrichDatabases<-c("geneontology_Biological_Process", 
                    "geneontology_Cellular_Component", 
                    "geneontology_Molecular_Function",
                    "pathway_KEGG", 
                    "pathway_Wikipathway", 
                    "network_Kinase_target", 
-                   "network_miRNA_target", 
+                   "network_miRNA_target" 
                    "network_PPI_BIOGRID", 
                    "network_Transcription_Factor_target"
 )

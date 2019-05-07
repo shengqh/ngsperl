@@ -72,12 +72,19 @@ sub getSmallRNAConfig {
   }
 
   my $nonhost_genome_dir;
-  my @nonhost_genome_groups      = qw( bacteria_group1 bacteria_group2 fungus_group4 virus_group6 );
-  my @nonhost_genome_group_reads = qw( bacteria_group1_reads bacteria_group2_reads fungus_group4_reads virus_group6_reads );
-  my @nonhost_genome_group_names = ( "Microbiome Bacteria", "Environment Bacteria", "Fungus","Virus" );
+  my @nonhost_genome_groups = ();
+  my @nonhost_genome_group_reads = ();
+  my @nonhost_genome_group_names = ();
 
+  my $search_nonhost_genome_custom_group_only = getValue( $def, "search_nonhost_genome_custom_group_only", 0 );
   if ($search_nonhost_genome) {
     $nonhost_genome_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_genome" );
+    if ( ! $search_nonhost_genome_custom_group_only ) {
+      @nonhost_genome_groups      = qw( bacteria_group1 bacteria_group2 fungus_group4 virus_group6 );
+      @nonhost_genome_group_reads = qw( bacteria_group1_reads bacteria_group2_reads fungus_group4_reads virus_group6_reads );
+      @nonhost_genome_group_names = ( "Microbiome Bacteria", "Environment Bacteria", "Fungus","Virus" );
+    }
+
     if ( getValue( $def, "search_nonhost_genome_custom_group", 0 ) ) {
       push( @nonhost_genome_groups,      "custom_group" );
       push( @nonhost_genome_group_reads, "custom_group_reads" );
@@ -86,7 +93,7 @@ sub getSmallRNAConfig {
   }
 
   my $nonhost_blast_dir;
-  if ( $blast_unmapped_reads || $search_nonhost_database || $perform_annotate_unmapped_reads ) {
+  if ( ($blast_unmapped_reads || $search_nonhost_database || $perform_annotate_unmapped_reads) && (!$search_nonhost_genome_custom_group_only) ) {
     $nonhost_blast_dir = create_directory_or_die( $def->{target_dir} . "/final_unmapped" );
   }
 
@@ -166,7 +173,17 @@ sub getSmallRNAConfig {
   my $libraryKey = getValue( $def, "DE_library_key", "TotalReads" );
   my $libraryFile = undef;
   if ( $libraryKey ne "" ) {
-    $libraryFile = [ "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category.Table.csv" ];
+    if ($search_host_genome){
+      $libraryFile = [ "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category.Table.csv" ];
+    }elsif (defined $config->{fastqc_post_trim_summary}){
+      $libraryFile = [ "fastqc_post_trim_summary", ".FastQC.reads.tsv\$" ];
+      $libraryKey = "Reads";
+    }elsif (defined $config->{fastqc_raw_summary}){
+      $libraryFile = [ "fastqc_raw_summary", ".FastQC.reads.tsv\$" ];
+      $libraryKey = "Reads";
+    }else {
+      die ("I don't know where to get library size for key " . $libraryKey);
+    }
   }
   else {
     $libraryKey = undef;
@@ -1225,7 +1242,7 @@ sub getSmallRNAConfig {
 
     push @name_for_readSummary, @nonhost_genome_group_names;
 
-    if ($do_comparison) {
+    if ($do_comparison && (!$search_nonhost_genome_custom_group_only)) {
       addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome",       \@nonhost_genome_groups,      $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey );
       addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome_reads", \@nonhost_genome_group_reads, $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey );
     }
@@ -1475,7 +1492,7 @@ sub getSmallRNAConfig {
     push @$summary_ref, $bowtie1readMapMismatchTask;
   }
 
-  if ($search_nonhost_database) {
+  if ($search_nonhost_database && (! $search_nonhost_genome_custom_group_only)) {
     if ($perform_nonhost_overlap_vis) {
       $config->{nonhost_overlap_vis} = {
         class                     => "CQS::UniqueR",
@@ -1611,6 +1628,8 @@ sub getSmallRNAConfig {
     },
   };
 
+  push @$summary_ref, ( "count_table_correlation" );
+
   $config->{reads_in_tasks} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
@@ -1630,7 +1649,8 @@ sub getSmallRNAConfig {
     },
   };
 
-  push @$summary_ref, ( "count_table_correlation", "reads_in_tasks" );
+  push @$summary_ref, ( "reads_in_tasks" );
+
   if ( $search_host_genome && $search_nonhost_database ) {
     $config->{reads_in_tasks_pie} = {
       class                => "CQS::UniqueR",

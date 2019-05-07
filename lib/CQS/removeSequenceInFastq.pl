@@ -13,6 +13,10 @@ my $fastqFile=$ARGV[2];
 
 my @sequencesToDel=( split /;/, $sequenceToDel );
 
+if ( ! -e $fastqFile) {
+    die "the file does not existi: " . $fastqFile;
+}
+
 if ( $fastqFile =~ /\.gz$/ ) {
 	open( FASTQ, "zcat $fastqFile|" ) or die $!;
 }
