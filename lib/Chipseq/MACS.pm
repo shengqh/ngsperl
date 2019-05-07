@@ -95,10 +95,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my %treatment_files;
-  if ( has_raw_files( $config, $section, "groups" ) ) {
-    %treatment_files = %{ get_grouped_raw_files( $config, $section, "groups" ) };
-  }
+  my %treatment_files = %{ get_grouped_raw_files( $config, $section, "groups" ) };
 
   my $result = {};
   for my $group_name ( sort keys %treatment_files ) {
