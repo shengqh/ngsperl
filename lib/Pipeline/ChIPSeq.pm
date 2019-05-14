@@ -87,6 +87,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_multiqc",  1 );
 
   initDefaultValue( $def, "perform_homer", 1 );
+  initDefaultValue( $def, "perform_merge_peaks", 0 );
 
   return $def;
 }
@@ -292,6 +293,26 @@ sub getConfig {
     die "Unknown peak caller " . $def->{"peak_caller"};
   }
   push @$step2, ($peakCallerTask);
+
+  if ( getValue( $def, "perform_merge_peaks" )) {
+    my $mergePeakTask = $peakCallerTask . "_mergePeaks";
+    $config->{$mergePeakTask} = {
+      class      => "Homer::MergePeaks",
+      perform    => 1,
+      target_dir => "${target_dir}/" . getNextFolderIndex($def) . "$mergePeakTask",
+      option     => "",
+      source_ref => [ $peakCallerTask, $callFilePattern ],
+      groups     => getValue($def, "merge_peaks_groups"),
+      sh_direct  => 1,
+      pbs        => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "5gb"
+      },
+    };
+    push @$summary, $mergePeakTask;
+  }
+
   if ( getValue( $def, "perform_homer" ) ) {
     addHomerAnnotation( $config, $def, $summary, $target_dir, $peakCallerTask, $callFilePattern );
   }

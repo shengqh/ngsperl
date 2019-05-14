@@ -47,7 +47,7 @@ enrichDatabases<-c("geneontology_Biological_Process",
                    "pathway_KEGG", 
                    "pathway_Wikipathway", 
                    "network_Kinase_target", 
-                   "network_miRNA_target" 
+                   "network_miRNA_target",
                    "network_PPI_BIOGRID", 
                    "network_Transcription_Factor_target"
 )

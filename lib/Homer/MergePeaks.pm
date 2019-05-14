@@ -9,11 +9,11 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::Task;
+use CQS::UniqueTask;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 
-our @ISA = qw(CQS::Task);
+our @ISA = qw(CQS::UniqueTask);
 
 sub new {
   my ($class) = @_;
@@ -29,45 +29,34 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
-  if ( defined $config->{$section}->{groups} ) {
-    my %raw_files = %{ get_grouped_raw_files( $config, $section, "groups" ) };
+  my $overlapRate = get_option($config, $section, "overlap_rate", 0.5);
+  my %raw_files = %{ get_grouped_raw_files( $config, $section, "groups" ) };
 
-    for my $sample_name ( sort keys %raw_files ) {
-      my $pbs_file   = $self->get_pbs_filename( $pbs_dir, $sample_name );
-      my $pbs_name   = basename($pbs_file);
-      my $log        = $self->get_log_filename( $log_dir, $sample_name );
-      my $log_desc   = $cluster->get_log_description($log);
-      my $final_file = "${sample_name}.merged.peaks";
+  my $pbs_file   = $self->get_pbs_filename( $pbs_dir, $task_name );
+  my $pbs_name   = basename($pbs_file);
+  my $log        = $self->get_log_filename( $log_dir, $task_name );
+  my $log_desc   = $cluster->get_log_description($log);
 
-      my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-      print $pbs "mergePeaks -prefix ${sample_name}.merged ";
-      my @peak_files = @{ $raw_files{$sample_name} };
-      for my $peak_file (@peak_files) {
-        print $pbs "\\\n  \"$peak_file\" \n";
-      }
-      $self->close_pbs( $pbs, $pbs_file );
+  my @groupNames = sort keys %raw_files;
+  my $final_file = $groupNames[-1]. ".filtered.sorted.bed";
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+
+  for my $sample_name ( @groupNames ) {
+    my $merged_file = "${sample_name}.merged.bed";
+    my $filtered_file = "${sample_name}.filtered.bed";
+    my $final_file = "${sample_name}.filtered.sorted.bed";
+
+    print $pbs "mergePeaks \\";
+    my @peak_files = @{ $raw_files{$sample_name} };
+    my $fileCount = scalar(@peak_files);
+    for my $peak_file (sort @peak_files) {
+      print $pbs "  \"$peak_file\" \\\n";
     }
+    print $pbs " > $merged_file \n\n";
+    print $pbs "awk '{if (\$8/$fileCount > $overlapRate) print \$2\"\\t\"\$3\"\\t\"\$4\"\\t\"\$1\"\\t\"\$8\"\\t\"\$5}' $merged_file > $filtered_file \n\n";
+    print $pbs "bedtools sort -i $filtered_file > $final_file \n\n";
   }
-  else {
-    my %raw_files = %{ get_raw_files( $config, $section ) };
-
-    my $pbs_file   = $self->get_pbs_filename( $pbs_dir, $task_name );
-    my $pbs_name   = basename($pbs_file);
-    my $log        = $self->get_log_filename( $log_dir, $task_name );
-    my $log_desc   = $cluster->get_log_description($log);
-    my $final_file = "${task_name}.merged.peaks";
-
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-    print $pbs "mergePeaks -prefix ${task_name}.merged";
-    for my $sample_name ( sort keys %raw_files ) {
-      my @peak_files = @{ $raw_files{$sample_name} };
-      my $peak_file  = $peak_files[0];
-      print $pbs " \"$peak_file\"";
-    }
-
-    print $pbs "\n";
-    $self->close_pbs( $pbs, $pbs_file );
-  }
+  $self->close_pbs( $pbs, $pbs_file );
 }
 
 sub result {
@@ -75,10 +64,12 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my %raw_files = %{ get_raw_files( $config, $section ) };
-
   my $result = {};
-  $result->{$task_name} = filter_array( ["$result_dir/${task_name}.merged.peaks"], $pattern );
+
+  my %raw_files = %{ get_grouped_raw_files( $config, $section, "groups" ) };
+  for my $sample_name ( sort keys %raw_files ) {
+    $result->{$sample_name} = filter_array( ["$result_dir/${sample_name}.filtered.sorted.bed"], $pattern );
+  }    
   return $result;
 }
 
