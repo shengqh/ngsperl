@@ -10,10 +10,10 @@ use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::StringUtils;
-use CQS::UniqueTask;
+use CQS::UniqueWrapper;
 use File::Spec;
 
-our @ISA = qw(CQS::UniqueTask);
+our @ISA = qw(CQS::UniqueWrapper);
 
 sub new {
   my ($class) = @_;
@@ -85,8 +85,10 @@ sub perform {
   my $pbs_file   = $self->get_pbs_filename( $pbs_dir, $task_name, ".pbs" );
   my $pbs_name   = basename($pbs_file);
   my $log        = $self->get_log_filename( $log_dir, $task_name, ".log" );
-  my $final_file = "${task_name}${output_ext}";
   my $log_desc   = $cluster->get_log_description($log);
+
+  my $result_files = $self->result( $config, $section )->{$task_name};
+  my $final_file = $result_files->[-1];
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
   print $pbs "
@@ -96,34 +98,6 @@ $interpretor $program $option $parameterSampleFile1arg $parameterSampleFile1 $pa
   $self->close_pbs( $pbs, $pbs_file );
 
   print "!!!pbs file $pbs_file created, you can run this pbs file to submit to cluster.\n";
-}
-
-sub result {
-  my ( $self, $config, $section, $pattern ) = @_;
-
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
-
-  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
-  my $task_suffix = get_option( $config, $section, "suffix", "" );
-  $self->{_task_suffix} = $task_suffix;
-
-  my $output_ext       = get_option( $config, $section, "output_ext",       "" );
-  my $output_other_ext      = get_option( $config, $section, "output_other_ext", "" );
-  my @output_other_exts;
-  if ( $output_other_ext ne "" ) {
-    @output_other_exts = split( ",", $output_other_ext );
-  }
-
-  my $result = {};
-  my @result_files = ();
-  push( @result_files, "${result_dir}/${task_name}${output_ext}" );
-  if ( $output_other_ext ne "" ) {
-    foreach my $output_other_ext_each (@output_other_exts) {
-      push( @result_files, "${result_dir}/${task_name}${output_other_ext_each}" );
-    }
-  }
-  $result->{$task_name} = filter_array( \@result_files, $pattern );
-  return $result;
 }
 
 1;
