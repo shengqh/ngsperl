@@ -771,7 +771,7 @@ for(countfile_index in c(1:length(countfiles))){
 				diffResultSig<-tbbselect
 			}
 			if(!is.null(geneNameField)){
-				diffResultSig$Name<-as.character(diffResultSig[,geneNameField]
+				diffResultSig$Name<-as.character(diffResultSig[,geneNameField])
 			}else{
 				diffResultSig$Name<-sapply(strsplit(row.names(diffResultSig),";"),function(x) x[1])
 				if (any(duplicated(diffResultSig$Name))) {
