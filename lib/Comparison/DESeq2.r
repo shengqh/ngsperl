@@ -55,6 +55,10 @@ if(addCountOne){
 	minMedianInGroup=minMedianInGroup+1
 }
 
+if(!exists("idIndex")){
+  idIndex<-1
+}
+
 if(!exists("outputPdf")){
   outputPdf<-FALSE
 }
@@ -352,9 +356,9 @@ for(countfile_index in c(1:length(countfiles))){
 	comparisons = comparisons_data[comparisons_data$CountFile == countfile,]
 	
 	if (grepl(".csv$",countfile)) {
-		data<-read.csv(countfile,header=T,row.names=1,as.is=T,check.names=FALSE)
+		data<-read.csv(countfile,header=T,row.names=idIndex,as.is=T,check.names=FALSE)
 	} else {
-		data<-read.delim(countfile,header=T,row.names=1,as.is=T,check.names=FALSE, sep=countSep)
+		data<-read.delim(countfile,header=T,row.names=idIndex,as.is=T,check.names=FALSE, sep=countSep)
 	}
 	
 	if(transformTable){

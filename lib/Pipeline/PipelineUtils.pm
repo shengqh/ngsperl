@@ -316,7 +316,7 @@ sub addDEseq2 {
     cooksCutoff                  => $def->{DE_cooksCutoff},
     $libraryFileKey              => $libraryFile,
     library_key                  => $libraryKey,
-    rCode                        => getOutputFormat( $def, "" ),
+    rCode                        => getOutputFormat( $def, getValue($def, "DE_rCode", "") ),
     pbs                          => {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
