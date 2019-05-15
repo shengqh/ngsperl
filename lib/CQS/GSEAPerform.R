@@ -63,7 +63,16 @@ alldt<-NULL
 resultDir=getwd()
 
 for (i in 1:nrow(preRankedGeneFileTable)) {
+  preRankedGeneFile=preRankedGeneFileTable[i,1]
+  
+  if(!file.exists(preRankedGeneFile)){
+    stop(paste0("File not exists: " + preRankedGeneFile))
+  }
+}
+  
+for (i in 1:nrow(preRankedGeneFileTable)) {
 	preRankedGeneFile=preRankedGeneFileTable[i,1]
+	
 	compName=preRankedGeneFileTable[i,2]
 
   dt<-runGSEA(preRankedGeneFile,resultDir=resultDir,makeReport=makeReport,gseaJar=gseaJar,gseaDb=gseaDb,gseaCategories=gseaCategories)
