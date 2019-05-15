@@ -725,10 +725,21 @@ for(countfile_index in c(1:length(countfiles))){
 			sigTableAllGene<-c(sigTableAllGene,row.names(sigTable))
 		}
 		
-		if("Feature_gene_name" %in% colnames(tbb)){
-			write.table(tbb[,c("Feature_gene_name", "stat"),drop=F],paste0(prefix, "_DESeq2_GSEA.rnk"),row.names=F,col.names=F,sep="\t", quote=F)
+		geneNameField = NULL
+		
+		lowColNames = tolower(colnames(tbb))
+		for(name in c("Feature_gene_name", "Gene.Symbol", "Gene_Symbol", "Gene Symbol")){
+		  lowName = tolower(name)
+		  if(lowName %in% lowColNames){
+		    geneNameField=colnames(tbb)[match(lowName, lowColNames)]
+		    break
+		  }
+		}
+		   
+		if(!is.null(geneNameField)){
+			write.table(tbb[,c(geneNameField, "stat"),drop=F],paste0(prefix, "_DESeq2_GSEA.rnk"),row.names=F,col.names=F,sep="\t", quote=F)
 			if(exportSignificantGeneName){
-				write.table(tbbselect[,c("Feature_gene_name"),drop=F], paste0(prefix, "_DESeq2_sig_genename.txt"),row.names=F,col.names=F,sep="\t", quote=F)
+				write.table(tbbselect[,c(geneNameField),drop=F], paste0(prefix, "_DESeq2_sig_genename.txt"),row.names=F,col.names=F,sep="\t", quote=F)
 			}
 		}else{
 			write.table(tbb[,c("stat"),drop=F],paste0(prefix, "_DESeq2_GSEA.rnk"),row.names=T,col.names=F,sep="\t", quote=F)
