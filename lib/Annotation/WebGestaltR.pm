@@ -63,7 +63,7 @@ if [[ ! -s $final_file || ! -d $final_file ]]; then
       echo \"Empty gene file\" > ${sample_name}.empty
     fi 
   else
-    echo \"No gene file exist.\"
+    echo \"Gene file not exist: $inputFile\" .
   fi
 fi
 
