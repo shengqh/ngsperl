@@ -241,6 +241,12 @@ if [[ -s $recalibrated_vcf_filename && ! -s $pass_file ]]; then
     --exclude-filtered
 fi
 
+";
+  close($sh);
+
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
+  print $pbs "singularity exec $gatk4_singularity bash $shfile 
+
 if [[ -s $pass_file && ! -s $left_trim_file ]]; then
   echo LeftAlignAndNorm=`date`
   bcftools norm -m- -o $split_file $pass_file 
@@ -266,10 +272,6 @@ if [[ -s $final_file ]]; then
 fi
 
 ";
-  close($sh);
-
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
-  print $pbs "singularity exec $gatk4_singularity bash $shfile \n";
   $self->close_pbs( $pbs, $pbs_file );
 }
 
