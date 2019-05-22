@@ -980,7 +980,7 @@ sub getSmallRNAConfig {
       }
     }
 
-    if ( $search_nonhost_database or $blast_unmapped_reads or $def->{perform_host_length_dist_category} ) {
+    if ( $search_nonhost_database or $blast_unmapped_reads or $def->{perform_host_length_dist_category} or $def->{perform_host_genome_reads_deseq2} ) {
       my $readClass;
       my $readTask;
       if ( $def->{host_remove_all_mapped_reads} ) {
@@ -1064,6 +1064,11 @@ sub getSmallRNAConfig {
       push @name_for_readSummary, ("Host Genome");
       $identical_ref       = [ "bowtie1_genome_unmapped_reads", ".unmapped.fastq.gz\$" ];
       $identical_count_ref = [ "bowtie1_genome_unmapped_reads", ".unmapped.fastq.dupcount\$" ];
+      
+      if($do_comparison and $def->{perform_host_genome_reads_deseq2}){
+        addDEseq2( $config, $def, $summary_ref, "bowtie1_genome_host_reads", [ "bowtie1_genome_host_reads_table", ".count\$" ],
+          $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      }
     }
 
     if ( $def->{perform_host_length_dist_category} ) {

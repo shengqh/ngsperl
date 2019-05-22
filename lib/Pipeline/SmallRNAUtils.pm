@@ -311,6 +311,7 @@ sub initializeSmallRNADefaultOptions {
     $def->{"perform_class_independent_analysis"} = 0;
     $def->{"blast_unmapped_reads"} = 0;
     $def->{"perform_report"} = 0;
+    $def->{perform_host_genome_reads_deseq2} = 0;
   }else{
     initDefaultValue( $def, "search_not_identical",               1 );
     initDefaultValue( $def, "search_host_genome",                 1 );
@@ -318,6 +319,7 @@ sub initializeSmallRNADefaultOptions {
     initDefaultValue( $def, "search_nonhost_genome",              1 );
     initDefaultValue( $def, "search_nonhost_library",             1 );
     initDefaultValue( $def, "perform_class_independent_analysis", 1 );
+    initDefaultValue( $def, "perform_host_genome_reads_deseq2", 0 );
   }
 
   #blastn
