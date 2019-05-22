@@ -907,9 +907,12 @@ sub addAnnovarFilterGeneannotation {
 }
 
 sub addGATK4PreprocessIntervals {
-  my ( $config, $def, $target_dir, $bam_ref, $step1, $step2, $step3, $step4, $step5, $step6 ) = @_;
+  my ( $config, $def, $target_dir, $bam_ref, $step1, $step2, $step3, $step4, $step5, $step6, $index ) = @_;
+  if (!defined $index){
+    $index = "";
+  }
 
-  my $result = "GATK4_CNV_Germline_PreprocessIntervals";
+  my $result = "GATK4_CNV_Germline${index}_PreprocessIntervals";
   if ( !defined $config->{$result} ) {
     my $gatk4_singularity = getValue( $def, "gatk4_singularity" );
 
@@ -923,7 +926,7 @@ sub addGATK4PreprocessIntervals {
       ref_fasta         => getValue( $def, "ref_fasta" ),
       'sh_direct'       => 1,
       'perform'         => 1,
-      'target_dir'      => $target_dir . '/GATK4_CNV_Germline_PreprocessIntervals',
+      'target_dir'      => $target_dir . "/" . $result,
       'pbs'             => {
         'nodes'    => '1:ppn=1',
         'mem'      => '20gb',
@@ -940,10 +943,11 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
   my $gatk4_singularity = getValue( $def, "gatk4_singularity" );
 
-  my $preprocessIntervalsTask = addGATK4PreprocessIntervals( $config, $def, $target_dir, $bam_ref, $step1, $step2, $step3, $step4, $step5, $step6 );
+  my $preprocessIntervalsTask = addGATK4PreprocessIntervals( $config, $def, $target_dir, $bam_ref, $step1, $step2, $step3, $step4, $step5, $step6, "_1" );
 
   #CollectReadCounts at sample level
-  $config->{"GATK4_CNV_Germline_CollectReadCounts"} = {
+  my $CollectReadCounts = "GATK4_CNV_Germline_2_CollectReadCounts";
+  $config->{$CollectReadCounts} = {
     class                      => "GATK4::CollectReadCounts",
     gatk4_singularity          => $gatk4_singularity,
     source_ref                 => $bam_ref,
@@ -953,102 +957,107 @@ sub addGATK4CNVGermlineCohortAnalysis {
     ref_fasta                  => getValue( $def, "ref_fasta" ),
     'sh_direct'                => 0,
     'perform'                  => 1,
-    'target_dir'               => $target_dir . '/GATK4_CNV_Germline_CollectReadCounts',
+    'target_dir'               => $target_dir . '/' . $CollectReadCounts,
     'pbs'                      => {
       'nodes'    => '1:ppn=1',
       'mem'      => '40gb',
       'walltime' => '10'
     },
   };
-  push( @$step3, "GATK4_CNV_Germline_CollectReadCounts" );
+  push( @$step3, $CollectReadCounts );
 
   #FilterIntervals at summary level
-  $config->{"GATK4_CNV_Germline_FilterIntervals"} = {
+  my $FilterIntervals = "GATK4_CNV_Germline_3_FilterIntervals";
+  $config->{$FilterIntervals} = {
     class                      => "GATK4::FilterIntervals",
     gatk4_singularity          => $gatk4_singularity,
-    source_ref                 => "GATK4_CNV_Germline_CollectReadCounts",
+    source_ref                 => $CollectReadCounts,
     option                     => "",
-    preprocessed_intervals_ref => "GATK4_CNV_Germline_PreprocessIntervals",
+    preprocessed_intervals_ref => $preprocessIntervalsTask,
     ref_fasta_dict             => getValue( $def, "ref_fasta_dict" ),
     ref_fasta                  => getValue( $def, "ref_fasta" ),
     'sh_direct'                => 0,
     'perform'                  => 1,
-    'target_dir'               => $target_dir . '/GATK4_CNV_Germline_FilterIntervals',
+    'target_dir'               => $target_dir . '/' . $FilterIntervals,
     'pbs'                      => {
       'nodes'    => '1:ppn=1',
       'mem'      => '40gb',
       'walltime' => '10'
     },
   };
-  push( @$step4, "GATK4_CNV_Germline_FilterIntervals" );
+  push( @$step4, $FilterIntervals );
 
   #DetermineGermlineContigPloidy at summary level
-  $config->{"GATK4_CNV_Germline_DetermineGermlineContigPloidyCohortMode"} = {
+  my $DetermineGermlineContigPloidyCohortMode = "GATK4_CNV_Germline_4_DetermineGermlineContigPloidyCohortMode";
+  $config->{$DetermineGermlineContigPloidyCohortMode} = {
     class                  => "GATK4::DetermineGermlineContigPloidy",
     gatk4_singularity      => $gatk4_singularity,
-    source_ref             => "GATK4_CNV_Germline_CollectReadCounts",
+    source_ref             => $CollectReadCounts,
     option                 => "",
-    filtered_intervals_ref => "GATK4_CNV_Germline_FilterIntervals",
+    filtered_intervals_ref => $FilterIntervals,
     contig_ploidy_priors   => getValue( $def, "contig_ploidy_priors_file" ),
     'sh_direct'            => 0,
     'perform'              => 1,
-    'target_dir'           => $target_dir . '/GATK4_CNV_Germline_DetermineGermlineContigPloidyCohortMode',
+    'target_dir'           => $target_dir . '/' . $DetermineGermlineContigPloidyCohortMode,
     'pbs'                  => {
       'nodes'    => '1:ppn=1',
       'mem'      => '40gb',
       'walltime' => '10'
     },
   };
-  push( @$step4, "GATK4_CNV_Germline_DetermineGermlineContigPloidyCohortMode" );
+  push( @$step4, $DetermineGermlineContigPloidyCohortMode );
 
   #GermlineCNVCaller at summary level
-  $config->{"GATK4_CNV_Germline_GermlineCNVCaller"} = {
+  my $GermlineCNVCaller = "GATK4_CNV_Germline_5_GermlineCNVCaller";
+  $config->{$GermlineCNVCaller} = {
     class                       => "GATK4::GermlineCNVCaller",
     gatk4_singularity           => $gatk4_singularity,
-    source_ref                  => "GATK4_CNV_Germline_CollectReadCounts",
+    source_ref                  => $CollectReadCounts,
     option                      => "",
-    filtered_intervals_ref      => "GATK4_CNV_Germline_FilterIntervals",
-    contig_ploidy_calls_dir_ref => [ "GATK4_CNV_Germline_DetermineGermlineContigPloidyCohortMode", "calls" ],
+    filtered_intervals_ref      => $FilterIntervals,
+    contig_ploidy_calls_dir_ref => [ $DetermineGermlineContigPloidyCohortMode, "calls" ],
     'sh_direct'                 => 0,
     'perform'                   => 1,
-    'target_dir'                => $target_dir . '/GATK4_CNV_Germline_GermlineCNVCaller',
+    'target_dir'                => $target_dir . '/' . $GermlineCNVCaller,
     'pbs'                       => {
       'nodes'    => '1:ppn=1',
       'mem'      => '40gb',
       'walltime' => '10'
     },
   };
-  push( @$step4, "GATK4_CNV_Germline_GermlineCNVCaller" );
+  push( @$step4, $GermlineCNVCaller );
 
   #PostprocessGermlineCNVCalls at sample level
-  $config->{"GATK4_CNV_Germline_PostprocessGermlineCNVCalls"} = {
+  my $PostprocessGermlineCNVCalls = "GATK4_CNV_Germline_6_PostprocessGermlineCNVCalls";
+  $config->{$PostprocessGermlineCNVCalls} = {
     class                       => "GATK4::PostprocessGermlineCNVCalls",
     gatk4_singularity           => $gatk4_singularity,
-    source_ref                  => "GATK4_CNV_Germline_CollectReadCounts",
-    calls_shard_path_ref        => [ "GATK4_CNV_Germline_GermlineCNVCaller", "calls\$" ],
-    model_shard_path_ref        => [ "GATK4_CNV_Germline_GermlineCNVCaller", "model\$" ],
+    source_ref                  => $CollectReadCounts,
+    calls_shard_path_ref        => [ $GermlineCNVCaller, "calls\$" ],
+    model_shard_path_ref        => [ $GermlineCNVCaller, "model\$" ],
     option                      => "",
-    contig_ploidy_calls_dir_ref => [ "GATK4_CNV_Germline_DetermineGermlineContigPloidyCohortMode", "calls" ],
+    contig_ploidy_calls_dir_ref => [ $DetermineGermlineContigPloidyCohortMode, "calls" ],
     'sh_direct'                 => 0,
     'perform'                   => 1,
-    'target_dir'                => $target_dir . '/GATK4_CNV_Germline_PostprocessGermlineCNVCalls',
+    'target_dir'                => $target_dir . '/' . $PostprocessGermlineCNVCalls,
     'pbs'                       => {
       'nodes'    => '1:ppn=1',
       'mem'      => '40gb',
       'walltime' => '10'
     },
   };
-  push( @$step5, "GATK4_CNV_Germline_PostprocessGermlineCNVCalls" );
+  push( @$step5, $PostprocessGermlineCNVCalls );
 
   #CombineGCNV at summary level
-  $config->{"GATK4_CNV_Germline_CombineGCNV"} = {
+  my $CombineGCNV = "GATK4_CNV_Germline_7_CombineGCNV";
+  $config->{$CombineGCNV} = {
     class                    => "CQS::ProgramWrapper",
     perform                  => 1,
-    target_dir               => $target_dir . '/GATK4_CNV_Germline_CombineGCNV',
+    target_dir               => $target_dir . '/' . $CombineGCNV,
     interpretor              => "python",
     program                  => "../GATK4/combineGCNV.py",
     parameterSampleFile1_arg => "-i",
-    parameterSampleFile1_ref => [ "GATK4_CNV_Germline_PostprocessGermlineCNVCalls", ".genotyped_intervals.vcf.gz" ],
+    parameterSampleFile1_ref => [ $PostprocessGermlineCNVCalls, ".genotyped_intervals.vcf.gz" ],
     parameterFile1_arg       => "-b",
     parameterFile1           => getValue( $def, "covered_bed" ),
     output_arg               => "-o",
@@ -1060,7 +1069,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
       'walltime' => '10'
     },
   };
-  push( @$step6, "GATK4_CNV_Germline_CombineGCNV" );
+  push( @$step6, $CombineGCNV );
 }
 
 sub addXHMM {
