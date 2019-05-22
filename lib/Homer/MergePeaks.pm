@@ -53,7 +53,7 @@ sub perform {
       print $pbs "  \"$peak_file\" \\\n";
     }
     print $pbs " > $merged_file \n\n";
-    print $pbs "awk '{if (\$8/$fileCount > $overlapRate) print \$2\"\\t\"\$3\"\\t\"\$4\"\\t\"\$1\"\\t\"\$8\"\\t\"\$5}' $merged_file > $filtered_file \n\n";
+    print $pbs "awk '{n=split(\$7, array, \"|\"); if(n / $fileCount > $overlapRate) print \$2\"\\t\"\$3\"\\t\"\$4\"\\t\"\$1\"\\t\"n\"\\t\"\$5}' $merged_file > $filtered_file \n\n";
     print $pbs "bedtools sort -i $filtered_file > $final_file \n\n";
   }
   $self->close_pbs( $pbs, $pbs_file );

@@ -44,11 +44,11 @@ if(grepl("Gene", genes[1])){
 enrichDatabases<-c("geneontology_Biological_Process", 
                    "geneontology_Cellular_Component", 
                    "geneontology_Molecular_Function",
-                   "pathway_KEGG", 
-                   "pathway_Wikipathway", 
-                   "network_miRNA_target",
-                   "network_PPI_BIOGRID", 
-                   "network_Transcription_Factor_target"
+                   "pathway_KEGG" 
+                   #"pathway_Wikipathway", 
+                   #"network_miRNA_target",
+                   #"network_PPI_BIOGRID", 
+                   #"network_Transcription_Factor_target"
 )
 
 for(enrichDatabase in enrichDatabases){
