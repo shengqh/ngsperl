@@ -1,0 +1,136 @@
+---
+title: "Gene Enrichment Report"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 2
+params:
+  data: plotData
+---
+	
+```{r setup, include=FALSE}
+library(knitr)
+library(kableExtra)
+library(reshape2)
+
+knitr::opts_chunk$set(echo = TRUE, autodep=TRUE, cache.comments=FALSE, message=FALSE, warning=FALSE, dpi=300)
+
+addLinkTag<-function(text,link) {
+	result<-paste0("<a href='",link,"' target='_blank'>",text,"</a>")
+	return(result)
+}
+
+figRef <- local({
+	tag <- numeric()
+	created <- logical()
+	used <- logical()
+	function(label, caption, prefix = options("figcap.prefix"), 
+			 sep = options("figcap.sep"), prefix.highlight = options("figcap.prefix.highlight"), trunk.eval=TRUE) {
+		if(trunk.eval){ 
+			i <- which(names(tag) == label)
+			if (length(i) == 0) {
+				i <- length(tag) + 1
+				tag <<- c(tag, i)
+				names(tag)[length(tag)] <<- label
+				used <<- c(used, FALSE)
+				names(used)[length(used)] <<- label
+				created <<- c(created, FALSE)
+				names(created)[length(created)] <<- label
+			}
+			if (!missing(caption)) {
+				created[label] <<- TRUE
+				paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
+					   " ", caption)
+			} else {
+				used[label] <<- TRUE
+				paste(prefix, tag[label])
+			}
+		}
+	}
+})
+options(figcap.prefix = "Figure", figcap.sep = ":", figcap.prefix.highlight = "**")
+
+tabRef <- local({
+	tag <- numeric()
+	created <- logical()
+	used <- logical()
+	function(label, caption, prefix = options("tabcap.prefix"), 
+			 sep = options("tabcap.sep"), prefix.highlight = options("tabcap.prefix.highlight"), trunk.eval=TRUE) {
+		if(trunk.eval){
+			i <- which(names(tag) == label)
+			if (length(i) == 0) {
+				i <- length(tag) + 1
+				tag <<- c(tag, i)
+				names(tag)[length(tag)] <<- label
+				used <<- c(used, FALSE)
+				names(used)[length(used)] <<- label
+				created <<- c(created, FALSE)
+				names(created)[length(created)] <<- label
+			}
+			if (!missing(caption)) {
+				created[label] <<- TRUE
+				paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
+					   " ", caption)
+			} else {
+				used[label] <<- TRUE
+				paste(prefix, tag[label])
+			}
+		}
+	}
+})
+options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**")
+
+```
+
+```{r data, echo=FALSE, results="asis"}
+enriched<-read.table(plotData$WebGestaltFile, sep="\t", header=T, stringsAsFactors = F)
+deseq2<-read.csv(plotData$deseq2File, header=T, row.names=1, stringsAsFactors = F)
+deseq2<-deseq2[,c("Feature_gene_name", "baseMean", "pvalue", "padj", "FoldChange") ]
+
+cat(paste0("### ", tabRef("enriched", "Enriched pathways"), "\n\n"))
+
+rowCount<-2
+idx<-1
+for(idx in c(1:rowCount)){
+	entry<-enriched[idx,]
+	userIds<-unlist(strsplit( entry$userId[1], ';'))
+	entryTable<-deseq2[deseq2$Feature_gene_name %in% userIds,]
+	geneUp<-sum(entryTable$FoldChange > 1)
+	geneDown<-sum(entryTable$FoldChange < 1)
+	enriched$geneUp[idx]<-geneUp
+	enriched$geneDown[idx]<-geneDown
+}
+
+enriched$oldGeneSet<-enriched$geneSet
+enriched$tblShortCaption<-lapply(enriched$oldGeneSet, function(x){tabRef(paste0("enriched ",x))})
+enriched$tblLongCaption<-apply(enriched, 1, function(x){tabRef(paste0("enriched ",x$oldGeneSet), paste0("Significantly differential expressed genes in ",x$description))})
+enriched$tblLink<-tolower(gsub(' ','', enriched$tblShortCaption))
+
+for(idx in c(1:rowCount)){
+	entry<-enriched[idx,]
+	enriched$geneSet[idx]<-paste0("[", entry$oldGeneSet, "](", entry$link, ")")
+	enriched$link[idx]<-paste0("[", entry$tblShortCaption, "](#", entry$tblLink, ")")
+}
+
+curTable<-enriched[c(1:rowCount),c(1:9, 12,13)]
+print(kable_styling(kable(curTable)) %>% 
+		row_spec(which(curTable$geneUp > curTable$geneDown), color = "black", background = "bisque") %>% 
+		row_spec(which(curTable$geneUp < curTable$geneDown), color = "black", background = "honeydew"))
+cat("\n\n<hr>")
+
+idx<-1
+for(idx in c(1:rowCount)){
+#for(idx in c(1:nrow(enriched))){
+	entry<-enriched[idx,]
+	userIds<-unlist(strsplit( entry$userId[1], ';'))
+	entryTable<-deseq2[deseq2$Feature_gene_name %in% userIds,]
+	cat(paste0("### ", entry$tblLongCaption, " {#", entry$tblLink, "}\n\n" ))
+	print(kable_styling(kable(entryTable)) %>% 
+		row_spec(which(entryTable$FoldChange > 1), color = "black", background = "bisque") %>% 
+		row_spec(which(entryTable$FoldChange < 1), color = "black", background = "honeydew"))
+	cat("\n\n<hr>")
+}
+
+
+```
+

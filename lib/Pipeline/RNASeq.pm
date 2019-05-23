@@ -482,6 +482,33 @@ sub getRNASeqConfig {
         },
       };
       push @$summary, "$webgestaltTaskName";
+
+      if ( defined $def->{perform_link_webgestalt_deseq2} ) {
+        my $linkTaskName = $webgestaltTaskName . "_link_deseq2";
+        $config->{$linkTaskName} = {
+          class                      => "CQS::UniqueR",
+          perform                    => 1,
+          target_dir                 => $config->{$webgestaltTaskName}{target_dir},
+          rtemplate                  => "../Annotation/WebGestaltDeseq2.R",
+          rReportTemplate            => "../Annotation/WebGestaltDeseq2.rmd",
+          output_to_result_directory => 1,
+          output_file                => "parameterSampleFile1",
+          output_file_ext            => ".html",
+          parameterSampleFile1_ref   => [ $webgestaltTaskName, ".txt\$" ],
+          parameterSampleFile2_ref   => [ $deseq2taskname, "sig.csv\$" ],
+          sh_direct                  => 1,
+          rCode                      => "",
+          pbs                        => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "24",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$summary, $linkTaskName );
+
+      }
     }
 
     if ( getValue( $def, "perform_gsea" ) ) {
