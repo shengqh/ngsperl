@@ -11,15 +11,38 @@ for (comparison in comparisons){
   
   compAnnoFile<-compAnnoFiles[1]
   for(compAnnoFile in compAnnoFiles){
-    plotData <- list(WebGestaltFile = compAnnoFile,
-                     deseq2File = compDeseq2File)
+    category <- gsub(paste0(".*?", comparison,"_"), "", basename(compAnnoFile) )
+    category <- gsub(".txt", "", category )
+    category <- gsub("_", " ", category )
+    
+    enriched<-read.table(compAnnoFile, sep="\t", header=T, stringsAsFactors = F)
+    deseq2<-read.csv(compDeseq2File, header=T, row.names=1, stringsAsFactors = F)
+    deseq2<-deseq2[,c("Feature_gene_name", "baseMean", "pvalue", "padj", "FoldChange") ]
+
+    rowCount<-nrow(enriched)
+    idx<-1
+    for(idx in c(1:rowCount)){
+	    entry<-enriched[idx,]
+	    userIds<-unlist(strsplit( entry$userId[1], ';'))
+	    entryTable<-deseq2[deseq2$Feature_gene_name %in% userIds,]
+	    geneUp<-sum(entryTable$FoldChange > 1)
+	    geneDown<-sum(entryTable$FoldChange < 1)
+	    enriched$geneUp[idx]<-geneUp
+	    enriched$geneDown[idx]<-geneDown
+  		enriched$geneSet[idx]<-paste0("[", entry$geneSet, "](", entry$link, ")")
+  		enriched$link[idx]<-""
+    }
+
+    plotData <- list(enriched = enriched,
+                     deseq2 = deseq2,
+                     category = category)
     
     output_path <- paste0(normalizePath(compAnnoFile), ".html")
     
-    output_dir = "E:/temp"
-    output_file = "temp1.html"
-    #output_dir = dirname(output_path)
-    #output_file = basename(output_path)
+    #output_dir = "E:/temp"
+    #output_file = "temp1.html"
+    output_dir = dirname(output_path)
+    output_file = basename(output_path)
     
     cat("Output report to:", output_path, "\n")
     rmarkdown::render("WebGestaltDeseq2.rmd",

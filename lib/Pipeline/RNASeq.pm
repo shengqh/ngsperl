@@ -489,7 +489,7 @@ sub getRNASeqConfig {
           class                      => "CQS::UniqueR",
           perform                    => 1,
           target_dir                 => $config->{$webgestaltTaskName}{target_dir},
-          rtemplate                  => "../Annotation/WebGestaltDeseq2.R",
+          rtemplate                  => "../Annotation/WebGestaltDeseq2.r",
           rReportTemplate            => "../Annotation/WebGestaltDeseq2.rmd",
           output_to_result_directory => 1,
           output_file                => "parameterSampleFile1",

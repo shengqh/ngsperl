@@ -80,37 +80,32 @@ tabRef <- local({
 })
 options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**")
 
+updateEnrichedTable<-function(enriched){
+	rowCount<-nrow(enriched)
+
+	enriched$tblShortCaption<-apply(enriched, 1, function(x){tabRef(paste0("enriched ",x$geneSet))})
+	enriched$tblLongCaption<-apply(enriched, 1, function(x){tabRef(paste0("enriched ",x$geneSet), paste0("Significantly differential expressed genes in ",x$description))})
+	enriched$tblLink<-tolower(gsub(' ','', enriched$tblShortCaption))
+
+	for(idx in c(1:rowCount)){
+		entry<-enriched[idx,]
+		enriched$link[idx]<-paste0("[", entry$tblShortCaption, "](#", entry$tblLink, ")")
+	}
+
+	return(enriched)
+}
+
 ```
 
 ```{r data, echo=FALSE, results="asis"}
-enriched<-read.table(plotData$WebGestaltFile, sep="\t", header=T, stringsAsFactors = F)
-deseq2<-read.csv(plotData$deseq2File, header=T, row.names=1, stringsAsFactors = F)
-deseq2<-deseq2[,c("Feature_gene_name", "baseMean", "pvalue", "padj", "FoldChange") ]
+enriched<-plotData$enriched
+deseq2<-plotData$deseq2
 
-cat(paste0("### ", tabRef("enriched", "Enriched pathways"), "\n\n"))
+cat(paste0("### ", tabRef("enriched", plotData$category), "\n\n"))
 
-rowCount<-2
-idx<-1
-for(idx in c(1:rowCount)){
-	entry<-enriched[idx,]
-	userIds<-unlist(strsplit( entry$userId[1], ';'))
-	entryTable<-deseq2[deseq2$Feature_gene_name %in% userIds,]
-	geneUp<-sum(entryTable$FoldChange > 1)
-	geneDown<-sum(entryTable$FoldChange < 1)
-	enriched$geneUp[idx]<-geneUp
-	enriched$geneDown[idx]<-geneDown
-}
+enriched<-updateEnrichedTable(enriched)
 
-enriched$oldGeneSet<-enriched$geneSet
-enriched$tblShortCaption<-lapply(enriched$oldGeneSet, function(x){tabRef(paste0("enriched ",x))})
-enriched$tblLongCaption<-apply(enriched, 1, function(x){tabRef(paste0("enriched ",x$oldGeneSet), paste0("Significantly differential expressed genes in ",x$description))})
-enriched$tblLink<-tolower(gsub(' ','', enriched$tblShortCaption))
-
-for(idx in c(1:rowCount)){
-	entry<-enriched[idx,]
-	enriched$geneSet[idx]<-paste0("[", entry$oldGeneSet, "](", entry$link, ")")
-	enriched$link[idx]<-paste0("[", entry$tblShortCaption, "](#", entry$tblLink, ")")
-}
+rowCount<-nrow(enriched)
 
 curTable<-enriched[c(1:rowCount),c(1:9, 12,13)]
 print(kable_styling(kable(curTable)) %>% 
@@ -120,7 +115,6 @@ cat("\n\n<hr>")
 
 idx<-1
 for(idx in c(1:rowCount)){
-#for(idx in c(1:nrow(enriched))){
 	entry<-enriched[idx,]
 	userIds<-unlist(strsplit( entry$userId[1], ';'))
 	entryTable<-deseq2[deseq2$Feature_gene_name %in% userIds,]
@@ -130,7 +124,6 @@ for(idx in c(1:rowCount)){
 		row_spec(which(entryTable$FoldChange < 1), color = "black", background = "honeydew"))
 	cat("\n\n<hr>")
 }
-
 
 ```
 
