@@ -251,10 +251,11 @@ if(hasWebGestaltAnalysis){
       if (!file.exists(comp_files[i,1])) {
         next;
       }
+      ename<-rownames(comp_files)[i]
       if(grepl(".html.rds", comp_files[i,1])){
         plotData <-readRDS(comp_files[i,1])
         fdata<-plotData$enriched
-        fdata<-fdata[,c(1,2,4,5,6,7,8,9,12,13)]
+        fdata<-fdata[c(1:min(nrow(fdata),5)),c(1,2,4,5,6,7,8,9,12,13)]
         print(kable_styling(kable(fdata, caption=tabRef(ename, ename))) %>% 
           row_spec(which(fdata$geneUp > fdata$geneDown), color = "black", background = "bisque") %>% 
           row_spec(which(fdata$geneUp < fdata$geneDown), color = "black", background = "honeydew"))
@@ -263,9 +264,9 @@ if(hasWebGestaltAnalysis){
         #txtFile<-gsub(".html.rds$", "", comp_files[i,1])
         #fdata<-read.table(txtFile, sep="\t", header=T, stringsAsFactors = F)
         fdata<-read.table(comp_files[i,1], sep="\t", header=T, stringsAsFactors = F)
+        fdata<-fdata[c(1:min(nrow(fdata))),]
         fdata$geneSet<-paste0("[", fdata$geneSet, "](", fdata$link, ")")
         fdata<-fdata[,c(1,2,4,5,6,7,8,9)]
-        ename<-rownames(comp_files)[i]
         print(kable_styling(kable(fdata, caption=tabRef(ename, ename))))
       }
     }  
