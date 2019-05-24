@@ -453,6 +453,7 @@ sub getRNASeqConfig {
   my $deseq2taskname;
   my $webgestaltTaskName;
   my $gseaTaskName;
+  my $linkTaskName;
   if ( defined $def->{pairs} ) {
     if ( $def->{perform_proteincoding_gene} ) {
       $deseq2taskname = addDEseq2( $config, $def, $summary, "proteincoding_genetable", [ "genetable", ".proteincoding.count\$" ], $def->{target_dir}, $def->{DE_min_median_read} );
@@ -484,16 +485,16 @@ sub getRNASeqConfig {
       push @$summary, "$webgestaltTaskName";
 
       if ( defined $def->{perform_link_webgestalt_deseq2} ) {
-        my $linkTaskName = $webgestaltTaskName . "_link_deseq2";
+        $linkTaskName = $webgestaltTaskName . "_link_deseq2";
         $config->{$linkTaskName} = {
           class                      => "CQS::UniqueR",
           perform                    => 1,
           target_dir                 => $config->{$webgestaltTaskName}{target_dir},
           rtemplate                  => "../Annotation/WebGestaltDeseq2.r",
           rReportTemplate            => "../Annotation/WebGestaltDeseq2.rmd",
-          output_to_result_directory => 1,
+          output_to_result_directory => 0,
           output_file                => "parameterSampleFile1",
-          output_file_ext            => ".html",
+          output_file_ext            => ".html;.html.rds",
           parameterSampleFile1_ref   => [ $webgestaltTaskName, ".txt\$" ],
           parameterSampleFile2_ref   => [ $deseq2taskname, "sig.csv\$" ],
           sh_direct                  => 1,
@@ -507,7 +508,6 @@ sub getRNASeqConfig {
           },
         };
         push( @$summary, $linkTaskName );
-
       }
     }
 
@@ -933,10 +933,17 @@ sub getRNASeqConfig {
 
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
-        push( @report_files, $webgestaltTaskName, "/enrichment_results_" . $key . "_geneontology_Biological_Process.txt" );
-        push( @report_files, $webgestaltTaskName, "/enrichment_results_" . $key . "_geneontology_Cellular_Component.txt" );
-        push( @report_files, $webgestaltTaskName, "/enrichment_results_" . $key . "_geneontology_Molecular_Function.txt" );
-        push( @report_files, $webgestaltTaskName, "/enrichment_results_" . $key . "_pathway_KEGG.txt" );
+        if(defined $linkTaskName && defined $config->{$linkTaskName}){
+          push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_geneontology_Biological_Process.txt.html.rds" );
+          push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_geneontology_Cellular_Component.txt.html.rds" );
+          push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_geneontology_Molecular_Function.txt.html.rds" );
+          push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_pathway_KEGG.txt.html.rds" );
+        }else{
+          push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_geneontology_Biological_Process.txt" );
+          push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_geneontology_Cellular_Component.txt" );
+          push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_geneontology_Molecular_Function.txt" );
+          push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_pathway_KEGG.txt" );
+        }
         push( @report_names, "WebGestalt_GO_BP_" . $key );
         push( @report_names, "WebGestalt_GO_CC_" . $key );
         push( @report_names, "WebGestalt_GO_MF_" . $key );

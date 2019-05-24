@@ -19,6 +19,8 @@ output:
 ```
   
 ```{r setup, include=FALSE}
+library(kableExtra)
+
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
 rownames(files)<-files$V2
 
@@ -373,6 +375,11 @@ if(length(deseqAll) > 0){
 deseqSig<-list.files('.',pattern="_DESeq2_sig.csv$",full.names=TRUE,recursive=TRUE)
 if(length(deseqSig) > 0){
   df<-rbind(df, data.frame(File=addLinkTag(deseqSig, deseqSig), Description="Significantly differential expressed genes"))
+}
+
+webgestaltDeseq2<-list.files('.',pattern=".txt.html$",full.names=TRUE,recursive=TRUE)
+if(length(webgestaltDeseq2) > 0){
+  df<-rbind(df, data.frame(File=addLinkTag(webgestaltDeseq2, webgestaltDeseq2), Description="WebgestaltR enrichment table"))
 }
 
 print(kable_styling(kable(df, caption=tabRef("resultFiles", "Result files"))))
