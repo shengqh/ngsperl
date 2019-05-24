@@ -42,7 +42,7 @@ sub perform {
   my $pbs_name = basename($pbs_file);
   my $log      = $self->get_log_filename( $log_dir, $task_name );
   my $log_desc = $cluster->get_log_description($log);
-  my $expect_result = $self->result($config, $section);
+  my $expect_result = $self->result($config, $section, ".txt\$");
 
   my $pbs                = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
   for my $sample_name ( sort keys %$comparisons ) {
