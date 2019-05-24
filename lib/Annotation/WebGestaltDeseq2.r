@@ -38,6 +38,7 @@ for (comparison in comparisons){
                      category = category)
     
     output_path <- paste0(normalizePath(compAnnoFile), ".html")
+    saveRDS(plotData, paste0(output_path, ".rds"))
     
     #output_dir = "E:/temp"
     #output_file = "temp1.html"

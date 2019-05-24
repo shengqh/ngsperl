@@ -7,6 +7,14 @@ output:
 params:
   data: plotData
 ---
+
+<style type="text/css">
+.main-container {
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
 	
 ```{r setup, include=FALSE}
 library(knitr)
@@ -83,8 +91,8 @@ options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**
 updateEnrichedTable<-function(enriched){
 	rowCount<-nrow(enriched)
 
-	enriched$tblShortCaption<-apply(enriched, 1, function(x){tabRef(paste0("enriched ",x$geneSet))})
-	enriched$tblLongCaption<-apply(enriched, 1, function(x){tabRef(paste0("enriched ",x$geneSet), paste0("Significantly differential expressed genes in ",x$description))})
+	enriched$tblShortCaption<-apply(enriched, 1, function(x){tabRef(paste0("enriched ",x["geneSet"]))})
+	enriched$tblLongCaption<-apply(enriched, 1, function(x){tabRef(paste0("enriched ",x["geneSet"]), paste0("Significantly differential expressed genes in ",x["description"]))})
 	enriched$tblLink<-tolower(gsub(' ','', enriched$tblShortCaption))
 
 	for(idx in c(1:rowCount)){
