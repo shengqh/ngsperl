@@ -484,7 +484,7 @@ sub getRNASeqConfig {
       };
       push @$summary, "$webgestaltTaskName";
 
-      if ( defined $def->{perform_link_webgestalt_deseq2} ) {
+      #if ( defined $def->{perform_link_webgestalt_deseq2} ) {
         $linkTaskName = $webgestaltTaskName . "_link_deseq2";
         $config->{$linkTaskName} = {
           class                      => "CQS::UniqueR",
@@ -508,7 +508,7 @@ sub getRNASeqConfig {
           },
         };
         push( @$summary, $linkTaskName );
-      }
+      #}
     }
 
     if ( getValue( $def, "perform_gsea" ) ) {
@@ -938,6 +938,7 @@ sub getRNASeqConfig {
           push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_geneontology_Cellular_Component.txt.html.rds" );
           push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_geneontology_Molecular_Function.txt.html.rds" );
           push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_pathway_KEGG.txt.html.rds" );
+          push( @copy_files, $linkTaskName, "txt.html\$" );
         }else{
           push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_geneontology_Biological_Process.txt" );
           push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_geneontology_Cellular_Component.txt" );
