@@ -6,7 +6,6 @@
   
 ```{r functions, include=FALSE}
 library(knitr)
-library(kableExtra)
 library(reshape2)
 library(ggplot2)
 library(data.table)
@@ -16,8 +15,13 @@ library(htmltools)
 
 knitr::opts_chunk$set(echo = TRUE)
 
-addLinkTag<-function(text,link) {
+addHtmlLinkTag<-function(text,link) {
   result<-paste0("<a href='",link,"' target='_blank'>",text,"</a>")
+  return(result)
+}
+
+addLinkTag<-function(text,link) {
+  result<-paste0("[", text, "](", link, ")")
   return(result)
 }
 
