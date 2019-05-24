@@ -489,10 +489,10 @@ sub getRNASeqConfig {
         $config->{$linkTaskName} = {
           class                      => "CQS::UniqueR",
           perform                    => 1,
-          target_dir                 => $config->{$webgestaltTaskName}{target_dir},
+          target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $linkTaskName,
           rtemplate                  => "../Annotation/WebGestaltDeseq2.r",
           rReportTemplate            => "../Annotation/WebGestaltDeseq2.rmd",
-          output_to_result_directory => 0,
+          output_to_result_directory => 1,
           output_file                => "parameterSampleFile1",
           output_file_ext            => ".html;.html.rds",
           parameterSampleFile1_ref   => [ $webgestaltTaskName, ".txt\$" ],
