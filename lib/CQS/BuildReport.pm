@@ -105,17 +105,16 @@ sub perform {
 
     for my $copy_file ( sort @$copy_file_list ) {
       my $to_folder = $task_name;
-      if ( $copy_file !~ /txt.html\$/ ) {
-        if ( $copy_file =~ /_WebGestalt/ ) {
-          create_directory_or_die("$report_folder/Functional_enrichment/");
-          create_directory_or_die("$report_folder/Functional_enrichment/webGestalt");
-          $to_folder = "$task_name/Functional_enrichment/webGestalt";
-        }
-        elsif ( $copy_file =~ /_GSEA/ & $copy_file !~ /_GSEA.rnk$/ ) {
-          create_directory_or_die("$report_folder/Functional_enrichment/");
-          create_directory_or_die("$report_folder/Functional_enrichment/gsea");
-          $to_folder = ("$task_name/Functional_enrichment/gsea");
-        }
+      #print($copy_file . "\n");
+      if ( $copy_file =~ /.txt.html/ ) {
+        $to_folder = $task_name;
+        #print("  " . $to_folder . "\n");
+      } elsif ( $copy_file =~ /_WebGestalt/ ) {
+        create_directory_or_die("$report_folder/webGestalt");
+        $to_folder = "$task_name/webGestalt";
+      } elsif ( $copy_file =~ /_GSEA/ & $copy_file !~ /_GSEA.rnk$/ ) {
+        create_directory_or_die("$report_folder/gsea");
+        $to_folder = ("$task_name/gsea");
       }
       print $final "cp -r -u $copy_file $to_folder \n";
     }
