@@ -77,7 +77,7 @@ sub perform {
     if(scalar(@freq_values) > 0){
       for my $freq_value (@freq_values){
         my $finalFilePrefix = "${sample_name}${sampleNameSuffix}.freq${freq_value}";
-        my $finalFile = $finalFilePrefix . ".gene.tsv";
+        my $finalFile = $finalFilePrefix . ".gene.missense.tsv";
         print $pbs "if [ ! -e $finalFile ]; then 
   python $script $option -i $annovar_file -t $freq_value -o $finalFilePrefix $exac_key $g1000_key $gnomad_key $sampleNamePattern
 fi
@@ -85,7 +85,7 @@ fi
       }
     }else{
         my $finalFilePrefix = "${sample_name}${sampleNameSuffix}";
-        my $finalFile = $finalFilePrefix . ".gene.tsv";
+        my $finalFile = $finalFilePrefix . ".gene.missense.tsv";
         print $pbs "if [ ! -e $finalFile ]; then 
   python $script $option -i $annovar_file -o $finalFilePrefix $sampleNamePattern
 fi
