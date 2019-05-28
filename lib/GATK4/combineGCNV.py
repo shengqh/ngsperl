@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser(description="Combine gCNV from GATK4 cohort pip
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument('-i', '--input', action='store', nargs='?', help='Input gCNV files', required=NotDEBUG)
-parser.add_argument('-o', '--output', action='store', nargs='?', help="Output file name", required=NotDEBUG)
+parser.add_argument('-o', '--output', action='store', nargs='?', help="Output file file", required=NotDEBUG)
 parser.add_argument('-b', '--bedfile', action='store', nargs='?', help="Interval file in bed format", required=NotDEBUG)
 parser.add_argument('-s', '--minimumScoreDifference', action='store', nargs='?', help="The minimum phred-scaled log posterior score difference between CNV event and normal event", default=30)
 parser.add_argument('-f', '--minimumDuplicationFold', action='store', nargs='?', help="The minimum copy number fold change as duplication", default=2)
