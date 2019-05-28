@@ -85,6 +85,7 @@ sub addFastQC {
     cluster    => $def->{cluster},
     source_ref => [$fastqcTask],
     sh_direct  => 1,
+    can_result_be_empty_file => 1,
     pbs        => {
       "email"    => $def->{email},
       "nodes"    => "1:ppn=1",
@@ -1061,7 +1062,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
     parameterFile1_arg       => "-b",
     parameterFile1           => getValue( $def, "covered_bed" ),
     output_arg               => "-o",
-    output_ext               => ".txt",
+    output_file_ext          => ".txt",
     sh_direct                => 1,
     'pbs'                    => {
       'nodes'    => '1:ppn=1',
