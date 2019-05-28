@@ -71,7 +71,7 @@ sub perform {
 
   my $cohort_entity_id = $task_name;
 
-  my $final_file = "${task_name}-contig-ploidy-calls.tar.gz";
+  my $final_folder = "${task_name}-calls";
   my $raw_files = get_raw_files( $config, $section );
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
@@ -107,7 +107,7 @@ rm -rf .cache .conda .config .theano
 ";
   close($sh);
 
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_folder, $init_command );
   print $pbs "singularity exec $gatk4_singularity bash $shfile \n";
   $self->close_pbs( $pbs, $pbs_file );
 }

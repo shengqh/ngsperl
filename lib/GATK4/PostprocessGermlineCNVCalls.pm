@@ -71,7 +71,7 @@ sub perform {
     my $shsamplefile = $self->get_task_filename( $pbs_dir, $sample_name );
     open( my $shsample, ">$shsamplefile" ) or die "Cannot create $shsamplefile";
     print $shsample "  
-export HOME=$result_dir
+export HOME=$sample_dir
 export PYTHONPATH=
 
 source activate gatk
@@ -96,7 +96,7 @@ rm -rf .cache .conda .config .theano
 ";
     close($shsample);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $genotyped_intervals_vcf_filename, $init_command );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $sample_dir, $genotyped_intervals_vcf_filename, $init_command );
     print $pbs "singularity exec $gatk4_singularity bash $shsamplefile \n";
     $self->close_pbs( $pbs, $pbs_file );
   }
