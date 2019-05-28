@@ -1,5 +1,5 @@
 --- 
-title: "Small RNA pipeline Result Report: `r TaskName`"
+title: "Pipeline Result Report: `r TaskName`"
 output: html_document
 ---
 
