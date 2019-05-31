@@ -138,8 +138,8 @@ sub perform {
 
   my $rReportTemplates = get_option( $config, $section, "rReportTemplate", "" );
   if ( $rReportTemplates ne "" ) {
-    my $rfile = $result_dir . "/" . basename($rReportTemplates);
-    open( my $rf, ">$rfile" ) or die "Cannot create $rfile";
+    my $rReportFile = $result_dir . "/" . basename($rReportTemplates);
+    open( my $rf, ">$rReportFile" ) or die "Cannot create $rReportFile";
 
     my @rReportTemplates = split( ",|;", $rReportTemplates );
     foreach my $rReportTemplate (@rReportTemplates) {
@@ -169,12 +169,10 @@ sub perform {
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
   if ( defined($option) and $option ne "" ) {
-    print $pbs "R --vanilla --slave -f $rfile --args $option";
-
-    #    "R --vanilla --slave -f $rfile --args $task_name$output_file $option $parametersample_files1 $parametersample_files2 $parametersample_files3 $parameterFile1 $parameterFile2 $parameterFile3";
+    print $pbs "R --vanilla --slave -f " . basename($rfile) . " --args $option";
   }
   else {
-    print $pbs "R --vanilla --slave -f $rfile";
+    print $pbs "R --vanilla --slave -f " . basename($rfile);
   }
   $self->close_pbs( $pbs, $pbs_file );
 }
