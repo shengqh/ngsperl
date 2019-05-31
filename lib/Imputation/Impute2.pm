@@ -36,7 +36,7 @@ sub perform {
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
 
-  my $interval_bed = get_option_file( $config, $section, "interval_bed" );
+  my $interval_bed = parse_param_file( $config, $section, "interval_bed", 1 );
   my $ranges = readLocusFromBedFile($interval_bed);
 
   my $raw_files  = get_raw_files( $config, $section );
@@ -102,7 +102,7 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $interval_bed = get_option_file( $config, $section, "interval_bed" );
+  my $interval_bed = parse_param_file( $config, $section, "interval_bed", 1 );
   my $ranges = readLocusFromBedFile($interval_bed);
 
   my $result = {};
@@ -134,7 +134,7 @@ sub get_pbs_files {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $interval_bed = get_option_file( $config, $section, "interval_bed" );
+  my $interval_bed = parse_param_file( $config, $section, "interval_bed", 1 );
   my $ranges = readLocusFromBedFile($interval_bed);
 
   my $result = {};
@@ -163,7 +163,7 @@ sub get_pbs_source {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $interval_bed = get_option_file( $config, $section, "interval_bed" );
+  my $interval_bed = parse_param_file( $config, $section, "interval_bed", 1 );
   my $ranges = readLocusFromBedFile($interval_bed);
 
   my $result = {};
