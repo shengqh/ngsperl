@@ -92,7 +92,7 @@ sub get_general_options {
   $result->{constraint} = $self->get_general_option($config, "constraint");
   $result->{account} = $self->get_general_option($config, "account");
   $result->{email} = $self->get_general_option($config, "email", "");
-  $result->{emailType} = $self->get_general_option($config, "emailType", "ALL");
+  $result->{emailType} = $self->get_general_option($config, "emailType", "FAIL");
   return $result;
 }
 
