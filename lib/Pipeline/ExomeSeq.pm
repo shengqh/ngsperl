@@ -81,6 +81,26 @@ sub getConfig {
   my $cqstools   = getValue( $def, "cqstools" );
   my $max_thread = getValue( $def, "max_thread" );
 
+  my $geneLocus = undef;
+  if(defined $def->{annotation_genes}){
+    $geneLocus = "annotation_genes_locus";
+    $config->{$geneLocus} = {
+      class                    => "CQS::UniqueR",
+      perform                  => 1,
+      target_dir               => $target_dir . '/' . $geneLocus,
+      rtemplate                => "../Annotation/getGeneLocus.r",
+      rCode                    => "host=\"" . getValue($def, "biomart_host") . "\";dataset=\"" . getValue($def, "biomart_dataset") . "\";symbolKey=\"" . getValue($def, "biomart_symbolKey") . "\";genesStr=\"" . getValue($def, "annotation_genes") . "\"",
+      output_file_ext          => ".bed;.missing",
+      sh_direct                => 1,
+      'pbs'                    => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '40gb',
+        'walltime' => '10'
+      },
+    };
+    push( @$summary, $geneLocus );
+  }
+
   my $bam_ref;
   my $fasta;
   if ( $def->{aligner} eq "bwa" ) {
@@ -318,7 +338,7 @@ sub getConfig {
           parameterFile1_ref    => $filter_name,
           output_to_same_folder => 1,
           output_arg            => "-o",
-          output_ext            => ".maf_filtered.vcf",
+          output_file_ext       => ".maf_filtered.vcf",
           sh_direct             => 1,
           pbs                   => {
             "email"     => $def->{email},
@@ -367,7 +387,7 @@ sub getConfig {
             target_dir => $target_dir . "/" . $annovar_to_maf_report,
             rtemplate                  => "../Annotation/mafReport.r",
             output_file                => "parameterSampleFile1",
-            output_file_ext            => ".html",
+            output_file_ext            => ".report.html",
             parameterSampleFile1_ref   => [ $annovar_to_maf, ".tsv.maf\$" ],
             parameterFile1 => $def->{family_info_file},
             sh_direct                  => 1,
