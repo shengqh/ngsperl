@@ -31,7 +31,7 @@ sub perform {
 
   my $rawFiles = get_raw_files( $config, $section );
 
-  my $interval_bed = get_option_file( $config, $section, "interval_bed" );
+  my $interval_bed = parse_param_file( $config, $section, "interval_bed", 1 );
   my @chroms = readChromosomesFromBedFile( $interval_bed );
   my $lastChrom = $chroms[ scalar(@chroms) - 1 ];
 
@@ -61,7 +61,7 @@ sub get_result_dependent_pbs {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $interval_bed = get_option_file( $config, $section, "interval_bed" );
+  my $interval_bed = parse_param_file( $config, $section, "interval_bed", 1 );
   my @chroms = readChromosomesFromBedFile( $interval_bed );
 
   my $pbsFiles = $self->get_pbs_files($config, $section);
@@ -81,7 +81,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $interval_bed = get_option_file( $config, $section, "interval_bed" );
+  my $interval_bed = parse_param_file( $config, $section, "interval_bed", 1 );
   my @chroms = readChromosomesFromBedFile( $interval_bed );
   my $rawFiles = get_raw_files( $config, $section );
 
