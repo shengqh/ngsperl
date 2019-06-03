@@ -17,7 +17,8 @@ our %EXPORT_TAGS = (
   'all' => [
     qw(readChromosomesFromBedFile
     readLocusFromBedFile
-    readGwasDataFile)
+    readGwasDataFile
+    getPlinkPrefix)
   ]
 );
 
@@ -77,5 +78,10 @@ sub readGwasDataFile {
   return $result;
 }
 
+sub getPlinkPrefix {
+  my ($result) = @_;
+  $result =~ s{\.[^.]+$}{};
+  return($result);
+}
 
 1;
