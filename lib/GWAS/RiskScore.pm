@@ -11,6 +11,7 @@ use CQS::FileUtils;
 use CQS::UniqueTask;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use GWAS::GwasUtils;
 
 our @ISA = qw(CQS::Task);
 
@@ -18,7 +19,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
-  $self->{_suffix} = "_rs";
+  $self->{_suffix} = "_pq";
   bless $self, $class;
   return $self;
 }
@@ -28,25 +29,24 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
-  my $riskScoreFiles = get_raw_files( $config, $section );
-  my $bedFile = parse_param_file($config, $section, "plink_file", 1);
-  my $filePrefix = $bedFile;
-  $filePrefix =~ s{\.[^.]+$}{};
-  
-  for my $sampleName ( sort keys %$riskScoreFiles ) {
+  my $rawFiles = get_raw_files( $config, $section );
+  my $scoreDefinitionFile = get_option_file( $config, $section, "score_definition_file" );
+
+  for my $sampleName ( sort keys %$rawFiles ) {
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sampleName );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sampleName );
     my $log_desc = $cluster->get_log_description($log);
 
-    my $files = $riskScoreFiles->{$sampleName};
-    my $riskScoreFile = $files->[0];
+    my $files  = $rawFiles->{$sampleName};
+    my $file   = $files->[0];
+    my $prefix = getPlinkPrefix($file);
 
     my $final_file = $sampleName . ".profile";
-    
+
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
     print $pbs "
-plink --bfile $filePrefix --score $riskScoreFile --out $sampleName
+    plink --bfile $prefix --score $scoreDefinitionFile --out $sampleName
 ";
     $self->close_pbs( $pbs, $pbs_file );
   }
