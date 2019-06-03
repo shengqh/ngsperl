@@ -15,13 +15,36 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(getValue initPipelineOptions addPreprocess addFastQC addBlastn addBowtie addPARalyzer
-      addBowtie1PARalyzer addBamStat addOutputOption getOutputFormat
-      getDEseq2TaskName addDEseq2 addDeseq2Visualization addDeseq2SignificantSequenceBlastn
-      getBatchGroups addHomerMotif addHomerAnnotation addEnhancer writeDesignTable addMultiQC
-      getNextFolderIndex addCleanBAM getReportDir getSequenceTaskClassname
-      addAnnovar addAnnovarFilter addAnnovarFilterGeneannotation
-      addGATK4CNVGermlineCohortAnalysis addXHMM)
+    qw(getValue 
+    initPipelineOptions 
+    addPreprocess 
+    addFastQC 
+    addBlastn 
+    addBowtie 
+    addPARalyzer
+    addBowtie1PARalyzer 
+    addBamStat 
+    addOutputOption 
+    getOutputFormat
+    getDEseq2TaskName 
+    addDEseq2 
+    addDeseq2Visualization 
+    addDeseq2SignificantSequenceBlastn
+    getBatchGroups 
+    addHomerMotif 
+    addHomerAnnotation 
+    addEnhancer 
+    writeDesignTable 
+    addMultiQC
+    getNextFolderIndex 
+    addCleanBAM 
+    getReportDir 
+    getSequenceTaskClassname
+    addAnnovar 
+    addAnnovarFilter 
+    addAnnovarFilterGeneannotation
+    addGATK4CNVGermlineCohortAnalysis 
+    addXHMM)
   ]
 );
 
@@ -1071,6 +1094,36 @@ sub addGATK4CNVGermlineCohortAnalysis {
     },
   };
   push( @$step6, $CombineGCNV );
+
+  if(defined $def->{annotation_genes} && defined $config->{"annotation_genes_locus"}){
+    my $plotCNV = "GATK4_CNV_Germline_8_PlotGeneCNV";
+    $config->{$plotCNV} = {
+      class                 => "CQS::ProgramWrapper",
+      perform               => 1,
+      target_dir            => $def->{target_dir} . "/$plotCNV",
+      option                => "",
+      interpretor           => "python",
+      program               => "../Visualization/plotPeak.py",
+      parameterSampleFile1_arg => "-i",
+      parameterSampleFile1_ref => [ "annotation_genes_locus", ".bed" ],
+      parameterSampleFile3_arg => "-b",
+      parameterSampleFile3_ref => $bam_ref,
+      output_to_result_directory => 1,
+      output_file           => "parameterSampleFile1",
+      output_arg            => "-o",
+      output_file_ext       => ".pdf",
+      sh_direct             => 1,
+      pbs                   => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    };
+
+    push( @$step6, $plotCNV );
+  }
 }
 
 sub addXHMM {
