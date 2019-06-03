@@ -21,11 +21,15 @@ our %EXPORT_TAGS = (
   'all' => [
     qw(get_config_section
       has_config_section
-      get_option get_option_file
-      get_java get_cluster
+      get_option 
+      get_option_file
+      get_java 
+      get_cluster
       get_parameter
       get_param_file
       get_directory
+      get_result_file
+      get_first_result_file
       parse_param_file
       has_raw_files
       get_raw_files_and_keys
@@ -295,6 +299,36 @@ sub get_cqstools {
   return ($cqstools);
 }
 
+sub get_result_file {
+  my ( $config, $refSectionName, $pattern ) = @_;
+  my $refSection = get_config_section( $config, $refSectionName );
+  if ( defined $refSection->{class} ) {
+    my $myclass = instantiate( $refSection->{class} );
+    my $result = $myclass->result( $config, $refSectionName, $pattern, 1 );
+    return($result);
+  }
+
+  return(undef);
+}
+
+sub get_first_result_file {
+  my ( $config, $refSectionName, $pattern ) = @_;
+  my $refSection = get_config_section( $config, $refSectionName );
+  if ( defined $refSection->{class} ) {
+    my $myclass = instantiate( $refSection->{class} );
+    my $result = $myclass->result( $config, $refSectionName, $pattern, 1 );
+    foreach my $k ( sort keys %{$result} ) {
+      my @files = @{ $result->{$k} };
+      if ( scalar(@files) > 0 ) {
+        return $files[0];
+      }
+    }
+    die "section $refSectionName return nothing!";
+  }
+
+  return(undef);
+}
+
 sub parse_param_file {
   my ( $config, $section, $key, $required ) = @_;
 
@@ -321,17 +355,10 @@ sub parse_param_file {
       }
     }
 
-    my $refSection = get_config_section( $config, $refSectionName );
-    if ( defined $refSection->{class} ) {
-      my $myclass = instantiate( $refSection->{class} );
-      my $result = $myclass->result( $config, $refSectionName, $pattern, 1 );
-      foreach my $k ( sort keys %{$result} ) {
-        my @files = @{ $result->{$k} };
-        if ( scalar(@files) > 0 ) {
-          return $files[0];
-        }
-      }
-      die "section $refSectionName return nothing!";
+    my $result = get_first_result_file($config, $refSectionName, $pattern);
+
+    if(defined $result){
+      return($result);
     }
   }
 
