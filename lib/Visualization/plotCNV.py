@@ -5,6 +5,7 @@ import argparse
 import string
 import subprocess
 import pysam
+from __builtin__ import False
 
 def readHashMap(fileName):
   result = {}
@@ -19,17 +20,87 @@ def readHashMap(fileName):
   #print(result)
   return(result)
 
+class LocusItem(object):
+  def __init__(self):
+    self.Locus = ""
+    self.Chromosome = ""
+    self.Start = 0
+    self.End = 0
+
+  def setLocus(self, chromosome, start, end):
+    self.Chromosome = chromosome
+    self.Start = start
+    self.End = end
+    self.Locus = "%s:%d-%d" % (chromosome, start, end)
+  
+  def setLocusString(self, locus):
+    self.Locus = locus
+    parts = locus.split(":")
+    self.Chromosome = parts[0]
+    positions = parts[1].split("-")
+    self.Start = int(positions[0])
+    self.End = int(positions[1])
+    
+  def getLocusFileString(self):
+    return("%s_%d_%d" % (self.Chromosome, self.Start, self.End))
+  
+  def str(self):
+    return self.Locus
+  
+class CNVItem(LocusItem):
+  def __init__(self, locus, name, sampleCNVMap):
+    self.setLocusString(locus)
+    self.Name = name
+    self.SampleCNVMap = sampleCNVMap
+    
+  def overlap(self, locus):
+    if self.Chromosome != locus.Chromosome:
+      return(False)
+    if self.End < locus.Start:
+      return(False)
+    if self.Start > locus.End:
+      return(False)
+    return(True)
+  
+  def contains(self, chromosome, position):
+    if self.Chromosome != chromosome:
+      return(False)
+    if self.Start > position:
+      return(False)
+    if self.End < position:
+      return(False)
+    return(True)
+
+def readCNVFile(fileName):
+  result = []
+  samples = []
+  with open(fileName, "r") as fin:
+    headers = fin.readline().rstrip().split('\t')
+    samples = headers[2:]
+    for line in fin:
+      parts = line.rstrip().split('\t')
+      sampleCNVMap = {}
+      for sampleIndex in range(2, len(parts)):
+        cnv = parts[sampleIndex]
+        if cnv != "":
+          sampleCNVMap[headers[sampleIndex]] = cnv[0:3]
+      result.append(CNVItem(parts[0], parts[1], sampleCNVMap))
+  return(result, samples)
+
 def main():
-  DEBUG = True
+  DEBUG = False
   NOT_DEBUG = not DEBUG
   
   parser = argparse.ArgumentParser(description="Draw bam plot based on peak list.",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   parser.add_argument('-i', '--input', action='store', nargs='?', required=NOT_DEBUG, help="Input peak file list")
-  parser.add_argument('-g', '--groupsFile', action='store', nargs='?', help="Sample group file", default="")
   parser.add_argument('-b', '--bamListFile', action='store', nargs='?', required=NOT_DEBUG, help="Sample bam file list")
+  parser.add_argument('-c', '--cnvFile', action='store', nargs='?', required=NOT_DEBUG, help="CNV file")
   parser.add_argument('-o', '--output', action='store', nargs='?', required=NOT_DEBUG, help="Output folder")
+  parser.add_argument('-m', '--minSampleCount', action='store', nargs='?', default=5, help="Minimum sample display in figure")
+  parser.add_argument('-n', '--minNormalSampleCount', action='store', nargs='?', default=2, help="Minimum normal sample display in figure")
+  parser.add_argument('--geneWithCNVOnly', action='store', nargs='?', default=True, help="Output gene with CNV detected only")
 
   args = parser.parse_args()
   
@@ -40,6 +111,7 @@ def main():
 #    args.output = "/scratch/cqs/shengq2/vickers/20190504_smallRNA_as_chipseq_GCF_000005845.2_ASM584v2/plotPeak/result/Control.pdf"
     args.input = "/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/GATK4_CNV_Germline_8_PlotGeneCNV/result/linton_exomeseq_3321__fileList1.list"
     args.bamListFile = "/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/GATK4_CNV_Germline_8_PlotGeneCNV/result/linton_exomeseq_3321__fileList3.list"
+    args.cnvFile =  "/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/GATK4_CNV_Germline_7_CombineGCNV/result/linton_exomeseq_3321.txt"
     args.output = "/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/GATK4_CNV_Germline_8_PlotGeneCNV/result/linton_exomeseq_3321.bed.pdf"
   
   logger = logging.getLogger('plotPeaks')
@@ -49,14 +121,9 @@ def main():
   
   bedMap = readHashMap(args.input)
   bamMap = readHashMap(args.bamListFile)
-  if(args.groupsFile != ""):
-    groupMap = readHashMap(args.groupsFile)
-  else:
-    groupMap = {}
-    for bed in bedMap.keys():
-      groupMap[bed] = bamMap.keys()
-
-  print(groupMap)  
+  cnvs, samples = readCNVFile(args.cnvFile)
+  
+  #print(samples)
 
   outputFolder = os.path.dirname(args.output)
 
@@ -64,70 +131,108 @@ def main():
     bedFile = bedMap[bed][0]
     logger.info("processing " + bedFile + "...")
 
-    sampleNames = sorted(groupMap[bed])
-    sampleFiles = [bamMap[sampleName][0] for sampleName in sampleNames]
-
-    bamListFile = outputFolder + "/" + bed + ".bam.list"
-    with open(bamListFile, "w") as fout:
-      for sampleFile in sampleFiles:
-        fout.write(sampleFile + "\n")
-
-    posData = []
-    with open(bedFile, "r") as fin:
-      for line in fin:
-        parts = line.rstrip().split('\t')
-        chrom = parts[0]
-        start = parts[1]
-        end = parts[2]
-        locusData = []
-        locusData.append([]) #add chrom
-        locusData.append([]) #add position
-        for sampleName in sampleNames:
-          locusData.append([])
-
-        locus = "%s:%s-%s" % (chrom, start, end)
-        logger.info("  processing " + locus + " ...")
-
-        if len(parts) > 4:
-          locusName = parts[4]
-        else:
-          locusName = locus
-        posData.append([locusName, locusData])
-
-        proc = subprocess.Popen(["samtools", "depth", "-f", bamListFile, "-r", locus, "-d", "0"], stdout=subprocess.PIPE)
-        for pline in proc.stdout:
-          pparts = pline.rstrip().split("\t")
-          locusData[0].append(pparts[0])
-          locusData[1].append(int(pparts[1]))
-          for idx in range(len(sampleNames)):
-            locusData[idx+2].append(int(pparts[idx+2]))
- 
     bedResultFile = outputFolder + "/" + bed + ".position.txt"
     with open(bedResultFile, "w") as fout:
-      fout.write("File\tFeature\tStrand\tMaxCount\tPositionCount\tPosition\tPercentage\n")
-      for pd in posData:
-        locusName = pd[0]
-        locusData = pd[1]
-        positions = locusData[1]
-        for idx in range(len(sampleNames)):
-          sampleCount = locusData[idx+2]
-          maxCount = max(sampleCount)
+      fout.write("File\tFeature\tStrand\tMaxCount\tPositionCount\tPosition\tPercentage\tCNV\n")
 
-          if maxCount == 0:
-            fout.write("%s\t%s\t*\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locusName, 0, 0, positions[0], 0))
+      posData = []
+      with open(bedFile, "r") as fin:
+        for line in fin:
+          parts = line.rstrip().split('\t')
+          chrom = parts[0]
+          start = int(parts[1])
+          end = int(parts[2])
+          
+          locus = LocusItem()
+          locus.setLocus(chrom, start, end)
+          
+          overlapCNVs = [cnv for cnv in cnvs if cnv.overlap(locus)]
+          
+          if (len(overlapCNVs) == 0) and args.geneWithCNVOnly:
             continue
+  
+          cnvSamples = set()
+          for cnv in overlapCNVs:
+            cnvSamples = cnvSamples.union(cnv.SampleCNVMap.keys())
+          
+          otherSamples = sorted(set(samples) - cnvSamples)
+          
+          if args.minSampleCount > len(cnvSamples):
+            normalSampleCount = max(args.minNormalSampleCount, args.minSampleCount - len(cnvSamples))
+          else: 
+            normalSampleCount = args.minNormalSampleCount
 
-          for cIdx in range(len(positions)):
-            if sampleCount[cIdx] != 0:
-              fout.write("%s\t%s\t*\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locusName, maxCount, sampleCount[cIdx], positions[cIdx], sampleCount[cIdx] * 1.0 / maxCount)) 
+          normalSampleCount = min(normalSampleCount, len(otherSamples))
+          sampleNames = sorted(cnvSamples.union(otherSamples[0:normalSampleCount]))
+          
+          sampleFiles = [bamMap[sampleName][0] for sampleName in sampleNames]
+      
+          bamListFile = outputFolder + "/" + bed + "_" + locus.getLocusFileString() + ".bam.list"
+          with open(bamListFile, "w") as flist:
+            for sampleFile in sampleFiles:
+              flist.write(sampleFile + "\n")
+          
+          locusData = []
+          locusData.append([]) #add chromosome from depth
+          locusData.append([]) #add position from depth
+          locusData.append([]) #add is position in CNV
+          for sampleName in sampleNames:
+            locusData.append([])
+  
+          logger.info("  processing " + locus.Locus + " ...")
+  
+          if len(parts) > 4:
+            locusName = parts[4]
+          else:
+            locusName = locus.Locus
+            
+          #locusName = locusName + "(%d/%d)" % (len(cnvSamples), len(samples))
+          posData.append([locusName, locusData])
+  
+          proc = subprocess.Popen(["samtools", "depth", "-f", bamListFile, "-r", locus.Locus, "-d", "0"], stdout=subprocess.PIPE)
+          for pline in proc.stdout:
+            pparts = pline.rstrip().split("\t")
+            chromosome = pparts[0]
+            position = int(pparts[1])
+            locusData[0].append(chromosome)
+            locusData[1].append(position)
+            inCNV = None
+            for cnv in overlapCNVs:
+              if cnv.contains(chromosome, position):
+                inCNV = cnv
+                break
+            locusData[2].append(inCNV)
+            
+            for idx in range(len(sampleNames)):
+              locusData[idx+3].append(int(pparts[idx+2]))
+ 
+          positions = locusData[1]
+          inCNVs = locusData[2]
+          for idx in range(len(sampleNames)):
+            sampleCount = locusData[idx+3]
+            maxCount = max(sampleCount)
+  
+            if maxCount == 0:
+              fout.write("%s\t%s\t*\t%d\t%d\t%d\t%lf\tNOREAD\n" % (sampleNames[idx], locusName, 0, 0, positions[0], 0))
+              continue
+  
+            for cIdx in range(len(positions)):
+              if sampleCount[cIdx] != 0:
+                inCNV = inCNVs[cIdx]
+                cnvType = ""
+                if inCNV != None:
+                  if sampleNames[idx] in inCNV.SampleCNVMap:
+                    cnvType = inCNV.SampleCNVMap[sampleNames[idx]]
+                fout.write("%s\t%s\t*\t%d\t%d\t%d\t%lf\t%s\n" % (sampleNames[idx], locusName, maxCount, sampleCount[cIdx], positions[cIdx], sampleCount[cIdx] * 1.0 / maxCount, cnvType)) 
 
-    os.remove(bamListFile)
+          os.remove(bamListFile)
+        
     realpath = os.path.dirname(os.path.realpath(__file__))
-    rPath = realpath + "/plotPeak.r"
-    os.system("R --vanilla -f " + rPath + " --args " + bedResultFile + " " + bedResultFile)
-
+    rPath = realpath + "/plotCNV.r"
+    cmd = "R --vanilla -f " + rPath + " --args " + bedResultFile + " " + bedResultFile
+    logger.info(cmd)
+    os.system(cmd)
 
   logger.info("done.")
 
-if __name__ == "__main__":
-    main()
+main()
