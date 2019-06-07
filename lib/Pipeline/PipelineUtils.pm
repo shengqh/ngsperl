@@ -1095,19 +1095,39 @@ sub addGATK4CNVGermlineCohortAnalysis {
   };
   push( @$step6, $CombineGCNV );
 
-  if(defined $def->{annotation_genes} && defined $config->{"annotation_genes_locus"}){
-    my $plotCNV = "GATK4_CNV_Germline_8_PlotGeneCNV";
-    $config->{$plotCNV} = {
+  my $cnvIndex = 8;
+  if($def->{plotCNVGenes}){
+    my $cnvGenes = "GATK4_CNV_Germline_8_CNVGenes";
+    $config->{$cnvGenes} = {
+      class                    => "CQS::UniqueR",
+      perform                  => 1,
+      target_dir               => $target_dir . '/' . $cnvGenes,
+      rtemplate                => "../Annotation/getGeneLocus.r",
+      rCode                    => "host=\"" . getValue($def, "biomart_host") . "\";dataset=\"" . getValue($def, "biomart_dataset") . "\";symbolKey=\"" . getValue($def, "biomart_symbolKey") . "\";genesStr=\"" . getValue( $def, "covered_bed" ) . "\"",
+      output_file_ext          => ".bed;.missing",
+      sh_direct                => 1,
+      'pbs'                    => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '40gb',
+        'walltime' => '10'
+      },
+    };
+    push( @$step6, $cnvGenes );
+    
+    my $plotCNVgenes = "GATK4_CNV_Germline_9_CNVGenesPlot";
+    $config->{$plotCNVgenes} = {
       class                 => "CQS::ProgramWrapper",
       perform               => 1,
-      target_dir            => $def->{target_dir} . "/$plotCNV",
+      target_dir            => $def->{target_dir} . "/$plotCNVgenes",
       option                => "",
       interpretor           => "python",
-      program               => "../Visualization/plotPeak.py",
+      program               => "../Visualization/plotCNV.py",
       parameterSampleFile1_arg => "-i",
-      parameterSampleFile1_ref => [ "annotation_genes_locus", ".bed" ],
+      parameterSampleFile1_ref => [ $cnvGenes, ".bed" ],
       parameterSampleFile3_arg => "-b",
       parameterSampleFile3_ref => $bam_ref,
+      parameterFile1_arg => "-c",
+      parameterFile1_ref => [$CombineGCNV, ".txt"],
       output_to_result_directory => 1,
       output_file           => "parameterSampleFile1",
       output_arg            => "-o",
@@ -1122,7 +1142,40 @@ sub addGATK4CNVGermlineCohortAnalysis {
       },
     };
 
-    push( @$step6, $plotCNV );
+    push( @$step6, $plotCNVgenes );
+    $cnvIndex = 10; 
+  }
+  
+  if(defined $def->{annotation_genes} && defined $config->{"annotation_genes_locus"}){
+    my $annotationGenesPlot = "GATK4_CNV_Germline_" . $cnvIndex . "_AnnotationGenesPlot";
+    $config->{$annotationGenesPlot} = {
+      class                 => "CQS::ProgramWrapper",
+      perform               => 1,
+      target_dir            => $def->{target_dir} . "/$annotationGenesPlot",
+      option                => "",
+      interpretor           => "python",
+      program               => "../Visualization/plotCNV.py",
+      parameterSampleFile1_arg => "-i",
+      parameterSampleFile1_ref => [ "annotation_genes_locus", ".bed" ],
+      parameterSampleFile3_arg => "-b",
+      parameterSampleFile3_ref => $bam_ref,
+      parameterFile1_arg => "-c",
+      parameterFile1_ref => [$CombineGCNV, ".txt"],
+      output_to_result_directory => 1,
+      output_file           => "parameterSampleFile1",
+      output_arg            => "-o",
+      output_file_ext       => ".pdf",
+      sh_direct             => 1,
+      pbs                   => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    };
+
+    push( @$step6, $annotationGenesPlot );
   }
 }
 
