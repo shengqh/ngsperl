@@ -21,7 +21,21 @@ if(!exists('outFile')){
   outFile='test'
 }
 
-genes=unlist(strsplit(genesStr, "\\s+"))
+if(!file.exists(genesStr)){
+  genes=unlist(strsplit(genesStr, "\\s+"))
+}else{
+  geneTable = read.table(genesStr, sep="\t", stringsAsFactor=F)
+  if (grepl(".bed$", genesStr)){
+    genes = unique(geneTable$V4)
+    if (all(grepl("(.+)", genes))) {
+      genes = gsub(".+?\\(", "", genes)
+      genes = gsub("\\).+", "", genes)
+      genes = unique(genes)
+    }
+  }else{
+    genes = geneTable$V1
+  }
+}
 
 ensembl <- useMart("ensembl", host=host, dataset=dataset)
 
