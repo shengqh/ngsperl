@@ -1155,9 +1155,8 @@ sub addGATK4CNVGermlineCohortAnalysis {
       parameterSampleFile1_arg => "-b",
       parameterSampleFile1_ref => $bam_ref,
       output_to_result_directory => 1,
-      output_file           => "parameterSampleFile1",
       output_arg            => "-o",
-      output_file_ext       => ".pdf",
+      output_file_ext       => ".position.txt",
       sh_direct             => 1,
       pbs                   => {
         "email"     => $def->{email},
@@ -1190,9 +1189,8 @@ sub addGATK4CNVGermlineCohortAnalysis {
       parameterSampleFile1_arg => "-b",
       parameterSampleFile1_ref => $bam_ref,
       output_to_result_directory => 1,
-      output_file           => "parameterSampleFile1",
       output_arg            => "-o",
-      output_file_ext       => ".pdf",
+      output_file_ext       => ".position.txt",
       sh_direct             => 1,
       pbs                   => {
         "email"     => $def->{email},

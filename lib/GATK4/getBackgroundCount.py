@@ -55,7 +55,7 @@ def main():
 
   parser.add_argument('-i', '--input', action='store', nargs='?', required=NOT_DEBUG, help="Input bed file")
   parser.add_argument('-b', '--bamListFile', action='store', nargs='?', required=NOT_DEBUG, help="Sample bam file list")
-  parser.add_argument('-c', '--excludeFile', action='store', nargs='?', required=NOT_DEBUG, help="Exclude CNV range file")
+  parser.add_argument('-c', '--cnvFile', action='store', nargs='?', required=NOT_DEBUG, help="Exclude CNV range file")
   parser.add_argument('-o', '--output', action='store', nargs='?', required=NOT_DEBUG, help="Output file")
 
   args = parser.parse_args()
