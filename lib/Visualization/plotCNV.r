@@ -3,10 +3,10 @@ library(data.table)
 
 args <- commandArgs(TRUE)
 if(length(args) == 0){
-  setwd("/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/GATK4_CNV_Germline_9_CNVGenesPlot/result")
-  inputFile<-"linton_exomeseq_3321.position.CCL3L3.txt"
+  setwd("/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/GATK4_CNV_Germline_11_AnnotationGenesPlot/result")
+  inputFile<-"linton_exomeseq_3321.position.txt"
   outputPrefix<-'linton_exomeseq_3321.position'
-  sizeFactorFile<-"/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/background/linton_exomeseq_3321.excluded.bed.sizefactor"
+  sizeFactorFile<-"/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/GATK4_CNV_Germline_08_SizeFactor/result/linton_exomeseq_3321.txt"
   #inputFile<-'/scratch/cqs/shengq2/vickers/20190504_smallRNA_as_chipseq_GCF_000005845.2_ASM584v2/plotPeak/result/Control.position.txt'
   #outputPrefix<-'/scratch/cqs/shengq2/vickers/20190504_smallRNA_as_chipseq_GCF_000005845.2_ASM584v2/plotPeak/result/Control.position'
 }else{
@@ -17,14 +17,16 @@ if(length(args) == 0){
 
 rawTable<-fread(file=inputFile, sep="\t", header=T)
 
-#sizeFactors<-read.table(sizeFactorFile, sep="\t", header=T)
+sizeFactors<-read.table(sizeFactorFile, sep="\t", header=T)
+rownames(sizeFactors)<-paste0(sizeFactors$Sample, ":", sizeFactors$Chromosome)
 
 cols <- c("DEL" = "blue", "DUP" = "red", "NoIndel" = "gray")
-column<-"PositionCount"
 selectedFeature<-unique(rawTable$Feature)[1]
 for (selectedFeature in unique(rawTable$Feature)) {
   cat(paste0(selectedFeature, "\n"))
   dataForPlot<-rawTable[which(rawTable$Feature==selectedFeature),]
+  dataForPlot$Key<-paste0(dataForPlot$File, ":", dataForPlot$Chromosome)
+  dataForPlot$NormalizedPositionCount<-round(dataForPlot$PositionCount * sizeFactors[dataForPlot$Key, "SizeFactor"])
 
   hasCNV<-(("CNV" %in% colnames(dataForPlot)) & (length(unique(dataForPlot$CNV)) > 1))
   
@@ -34,7 +36,8 @@ for (selectedFeature in unique(rawTable$Feature)) {
     dataForPlot$CNV[dataForPlot$CNV==""] = "NoIndel"
   }
   
-  for (column in c("Percentage", "PositionCount")){
+  column<-"NormalizedPositionCount"
+  for (column in c("Percentage", "NormalizedPositionCount")){
     outputFile = paste0(outputPrefix, ".", selectedFeature, ".", column, ".pdf")
     #if (file.exists(outputFile)){
     #  next
