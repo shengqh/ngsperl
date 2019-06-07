@@ -97,6 +97,7 @@ def main():
   parser.add_argument('-i', '--input', action='store', nargs='?', required=NOT_DEBUG, help="Input peak file list")
   parser.add_argument('-b', '--bamListFile', action='store', nargs='?', required=NOT_DEBUG, help="Sample bam file list")
   parser.add_argument('-c', '--cnvFile', action='store', nargs='?', required=NOT_DEBUG, help="CNV file")
+  parser.add_argument('-s', '--sizeFactorFile', action='store', nargs='?', required=NOT_DEBUG, help="Sample chromosome size factor file")
   parser.add_argument('-o', '--output', action='store', nargs='?', required=NOT_DEBUG, help="Output folder")
   parser.add_argument('-m', '--minSampleCount', action='store', nargs='?', default=5, help="Minimum sample display in figure")
   parser.add_argument('-n', '--minNormalSampleCount', action='store', nargs='?', default=2, help="Minimum normal sample display in figure")
@@ -113,6 +114,7 @@ def main():
     args.bamListFile = "/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/GATK4_CNV_Germline_8_PlotGeneCNV/result/linton_exomeseq_3321__fileList3.list"
     args.cnvFile =  "/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/GATK4_CNV_Germline_7_CombineGCNV/result/linton_exomeseq_3321.txt"
     args.output = "/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/GATK4_CNV_Germline_8_PlotGeneCNV/result/linton_exomeseq_3321.bed.pdf"
+    args.sizeFactorFile = "/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/background/linton_exomeseq_3321.excluded.bed.sizefactor"
   
   logger = logging.getLogger('plotPeaks')
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
@@ -133,7 +135,7 @@ def main():
 
     bedResultFile = outputFolder + "/" + bed + ".position.txt"
     with open(bedResultFile, "w") as fout:
-      fout.write("File\tFeature\tStrand\tMaxCount\tPositionCount\tPosition\tPercentage\tCNV\n")
+      fout.write("File\tFeature\tChromosome\tPosition\tPositionCount\tMaxCount\tPercentage\tCNV\n")
 
       posData = []
       with open(bedFile, "r") as fin:
@@ -205,7 +207,8 @@ def main():
             
             for idx in range(len(sampleNames)):
               locusData[idx+3].append(int(pparts[idx+2]))
- 
+          
+          chromosomes = locusData[0]
           positions = locusData[1]
           inCNVs = locusData[2]
           for idx in range(len(sampleNames)):
@@ -213,7 +216,7 @@ def main():
             maxCount = max(sampleCount)
   
             if maxCount == 0:
-              fout.write("%s\t%s\t*\t%d\t%d\t%d\t%lf\tNOREAD\n" % (sampleNames[idx], locusName, 0, 0, positions[0], 0))
+              fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\tNOREAD\n" % (sampleNames[idx], locusName, chromosomes[idx], positions[idx], 0, 0, 0))
               continue
   
             for cIdx in range(len(positions)):
@@ -223,7 +226,7 @@ def main():
                 if inCNV != None:
                   if sampleNames[idx] in inCNV.SampleCNVMap:
                     cnvType = inCNV.SampleCNVMap[sampleNames[idx]]
-                fout.write("%s\t%s\t*\t%d\t%d\t%d\t%lf\t%s\n" % (sampleNames[idx], locusName, maxCount, sampleCount[cIdx], positions[cIdx], sampleCount[cIdx] * 1.0 / maxCount, cnvType)) 
+                fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\t%s\n" % (sampleNames[idx], locusName, chromosomes[idx], positions[cIdx], sampleCount[cIdx], maxCount, sampleCount[cIdx] * 1.0 / maxCount, cnvType)) 
 
           os.remove(bamListFile)
         
