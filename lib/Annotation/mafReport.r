@@ -2,7 +2,14 @@ library(mafreport)
 
 mafFileList = parSampleFile1
 reportOutDir = "."
-clinicalData = parFile1
+
+if(parFile1 != ''){
+  clinicalData = parFile1
+}else{
+  clinicalData = NULL
+  clinicalFeatures = NULL
+}
+
 if(!is.null(interestedGeneStr)) {
   interestedGeneStr = gsub("\\s+", ",", interestedGeneStr)
   interestedGenes = unlist(strsplit(interestedGeneStr, ","))
