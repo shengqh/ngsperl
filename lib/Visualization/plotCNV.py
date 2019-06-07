@@ -232,7 +232,7 @@ def main():
         
     realpath = os.path.dirname(os.path.realpath(__file__))
     rPath = realpath + "/plotCNV.r"
-    cmd = "R --vanilla -f " + rPath + " --args " + bedResultFile + " " + bedResultFile
+    cmd = "R --vanilla -f " + rPath + " --args " + bedResultFile + " " + bedResultFile + " " + args.sizeFactorFile
     logger.info(cmd)
     os.system(cmd)
 

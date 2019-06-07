@@ -967,10 +967,10 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
   my $gatk4_singularity = getValue( $def, "gatk4_singularity" );
 
-  my $preprocessIntervalsTask = addGATK4PreprocessIntervals( $config, $def, $target_dir, $bam_ref, $step1, $step2, $step3, $step4, $step5, $step6, "_1" );
+  my $preprocessIntervalsTask = addGATK4PreprocessIntervals( $config, $def, $target_dir, $bam_ref, $step1, $step2, $step3, $step4, $step5, $step6, "_01" );
 
   #CollectReadCounts at sample level
-  my $CollectReadCounts = "GATK4_CNV_Germline_2_CollectReadCounts";
+  my $CollectReadCounts = "GATK4_CNV_Germline_02_CollectReadCounts";
   $config->{$CollectReadCounts} = {
     class                      => "GATK4::CollectReadCounts",
     gatk4_singularity          => $gatk4_singularity,
@@ -991,7 +991,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   push( @$step3, $CollectReadCounts );
 
   #FilterIntervals at summary level
-  my $FilterIntervals = "GATK4_CNV_Germline_3_FilterIntervals";
+  my $FilterIntervals = "GATK4_CNV_Germline_03_FilterIntervals";
   $config->{$FilterIntervals} = {
     class                      => "GATK4::FilterIntervals",
     gatk4_singularity          => $gatk4_singularity,
@@ -1012,7 +1012,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   push( @$step4, $FilterIntervals );
 
   #DetermineGermlineContigPloidy at summary level
-  my $DetermineGermlineContigPloidyCohortMode = "GATK4_CNV_Germline_4_DetermineGermlineContigPloidyCohortMode";
+  my $DetermineGermlineContigPloidyCohortMode = "GATK4_CNV_Germline_04_DetermineGermlineContigPloidyCohortMode";
   $config->{$DetermineGermlineContigPloidyCohortMode} = {
     class                  => "GATK4::DetermineGermlineContigPloidy",
     gatk4_singularity      => $gatk4_singularity,
@@ -1032,7 +1032,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   push( @$step4, $DetermineGermlineContigPloidyCohortMode );
 
   #GermlineCNVCaller at summary level
-  my $GermlineCNVCaller = "GATK4_CNV_Germline_5_GermlineCNVCaller";
+  my $GermlineCNVCaller = "GATK4_CNV_Germline_05_GermlineCNVCaller";
   $config->{$GermlineCNVCaller} = {
     class                       => "GATK4::GermlineCNVCaller",
     gatk4_singularity           => $gatk4_singularity,
@@ -1052,7 +1052,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   push( @$step4, $GermlineCNVCaller );
 
   #PostprocessGermlineCNVCalls at sample level
-  my $PostprocessGermlineCNVCalls = "GATK4_CNV_Germline_6_PostprocessGermlineCNVCalls";
+  my $PostprocessGermlineCNVCalls = "GATK4_CNV_Germline_06_PostprocessGermlineCNVCalls";
   $config->{$PostprocessGermlineCNVCalls} = {
     class                       => "GATK4::PostprocessGermlineCNVCalls",
     gatk4_singularity           => $gatk4_singularity,
@@ -1073,7 +1073,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   push( @$step5, $PostprocessGermlineCNVCalls );
 
   #CombineGCNV at summary level
-  my $CombineGCNV = "GATK4_CNV_Germline_7_CombineGCNV";
+  my $CombineGCNV = "GATK4_CNV_Germline_07_CombineGCNV";
   $config->{$CombineGCNV} = {
     class                    => "CQS::ProgramWrapper",
     perform                  => 1,
@@ -1094,10 +1094,34 @@ sub addGATK4CNVGermlineCohortAnalysis {
     },
   };
   push( @$step6, $CombineGCNV );
+  
+  my $sizeFactorTask = "GATK4_CNV_Germline_08_SizeFactor";
+  $config->{$sizeFactorTask} = {
+    class                    => "CQS::ProgramWrapper",
+    perform                  => 1,
+    target_dir               => $target_dir . '/' . $sizeFactorTask,
+    interpretor              => "python",
+    program                  => "../GATK4/getBackgroundCount.py",
+    parameterSampleFile1_arg => "-b",
+    parameterSampleFile1_ref => $bam_ref,
+    parameterFile1_arg       => "-i",
+    parameterFile1           => getValue( $def, "covered_bed" ),
+    parameterFile2_arg       => "-c",
+    parameterFile2_ref       => [ $CombineGCNV ],
+    output_arg               => "-o",
+    output_file_ext          => ".txt",
+    sh_direct                => 1,
+    'pbs'                    => {
+      'nodes'    => '1:ppn=1',
+      'mem'      => '40gb',
+      'walltime' => '10'
+    },
+  };
+  push( @$step6, $sizeFactorTask );
 
-  my $cnvIndex = 8;
+  my $cnvIndex = "09";
   if($def->{plotCNVGenes}){
-    my $cnvGenes = "GATK4_CNV_Germline_8_CNVGenes";
+    my $cnvGenes = "GATK4_CNV_Germline_09_CNVGenes";
     $config->{$cnvGenes} = {
       class                    => "CQS::UniqueR",
       perform                  => 1,
@@ -1114,7 +1138,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
     };
     push( @$step6, $cnvGenes );
     
-    my $plotCNVgenes = "GATK4_CNV_Germline_9_CNVGenesPlot";
+    my $plotCNVgenes = "GATK4_CNV_Germline_10_CNVGenesPlot";
     $config->{$plotCNVgenes} = {
       class                 => "CQS::ProgramWrapper",
       perform               => 1,
@@ -1124,10 +1148,12 @@ sub addGATK4CNVGermlineCohortAnalysis {
       program               => "../Visualization/plotCNV.py",
       parameterSampleFile1_arg => "-i",
       parameterSampleFile1_ref => [ $cnvGenes, ".bed" ],
-      parameterSampleFile3_arg => "-b",
-      parameterSampleFile3_ref => $bam_ref,
+      parameterSampleFile2_arg => "-b",
+      parameterSampleFile2_ref => $bam_ref,
       parameterFile1_arg => "-c",
       parameterFile1_ref => [$CombineGCNV, ".txt"],
+      parameterFile2_arg => "-s",
+      parameterFile2_ref => [$sizeFactorTask, ".txt"],
       output_to_result_directory => 1,
       output_file           => "parameterSampleFile1",
       output_arg            => "-o",
@@ -1143,7 +1169,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
     };
 
     push( @$step6, $plotCNVgenes );
-    $cnvIndex = 10; 
+    $cnvIndex = "11"; 
   }
   
   if(defined $def->{annotation_genes} && defined $config->{"annotation_genes_locus"}){
@@ -1161,6 +1187,8 @@ sub addGATK4CNVGermlineCohortAnalysis {
       parameterSampleFile3_ref => $bam_ref,
       parameterFile1_arg => "-c",
       parameterFile1_ref => [$CombineGCNV, ".txt"],
+      parameterFile2_arg => "-s",
+      parameterFile2_ref => [$sizeFactorTask, ".txt"],
       output_to_result_directory => 1,
       output_file           => "parameterSampleFile1",
       output_arg            => "-o",
