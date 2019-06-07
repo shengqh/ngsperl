@@ -1109,7 +1109,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
     parameterFile2_arg       => "-c",
     parameterFile2_ref       => [ $CombineGCNV ],
     output_arg               => "-o",
-    output_file_ext          => ".txt;.txt.sizefactor",
+    output_file_ext          => ".txt.sizefactor;.txt",
     sh_direct                => 1,
     'pbs'                    => {
       'nodes'    => '1:ppn=1',
