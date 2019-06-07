@@ -47,7 +47,7 @@ def readCNVName(fileName):
   return(result)
 
 def main():
-  DEBUG = True
+  DEBUG = False
   NOT_DEBUG = not DEBUG
   
   parser = argparse.ArgumentParser(description="Draw bam plot based on peak list.",
