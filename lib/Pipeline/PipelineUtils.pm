@@ -1171,8 +1171,9 @@ sub addGATK4CNVGermlineCohortAnalysis {
     $cnvIndex = "11"; 
   }
   
+  my $annotationGenesPlot = undef;
   if(defined $def->{annotation_genes} && defined $config->{"annotation_genes_locus"}){
-    my $annotationGenesPlot = "GATK4_CNV_Germline_" . $cnvIndex . "_AnnotationGenesPlot";
+    $annotationGenesPlot = "GATK4_CNV_Germline_" . $cnvIndex . "_AnnotationGenesPlot";
     $config->{$annotationGenesPlot} = {
       class                 => "CQS::ProgramWrapper",
       perform               => 1,
@@ -1190,7 +1191,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
       parameterSampleFile1_ref => $bam_ref,
       output_to_result_directory => 1,
       output_arg            => "-o",
-      output_file_ext       => ".position.txt",
+      output_file_ext       => ".position.txt.slim;.position.txt",
       sh_direct             => 1,
       pbs                   => {
         "email"     => $def->{email},
@@ -1203,6 +1204,8 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
     push( @$step6, $annotationGenesPlot );
   }
+  
+  return($annotationGenesPlot);
 }
 
 sub addXHMM {

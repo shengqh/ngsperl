@@ -132,101 +132,115 @@ def main():
   logger.info("processing " + bedFile + "...")
 
   bedResultFile = args.output
+  bedResultSlimFile = bedResultFile + ".slim"
   with open(bedResultFile, "w") as fout:
     fout.write("File\tFeature\tChromosome\tPosition\tPositionCount\tMaxCount\tPercentage\tCNV\n")
+    with open(bedResultSlimFile, "w") as fslim:
+      fslim.write("File\tFeature\tCNV\n")
 
-    posData = []
-    with open(bedFile, "r") as fin:
-      for line in fin:
-        parts = line.rstrip().split('\t')
-        chrom = parts[0]
-        start = int(parts[1])
-        end = int(parts[2])
+      posData = []
+      with open(bedFile, "r") as fin:
+        for line in fin:
+          parts = line.rstrip().split('\t')
+          chrom = parts[0]
+          start = int(parts[1])
+          end = int(parts[2])
+            
+          locus = LocusItem()
+          locus.setLocus(chrom, start, end)
+            
+          overlapCNVs = [cnv for cnv in cnvs if cnv.overlap(locus)]
           
-        locus = LocusItem()
-        locus.setLocus(chrom, start, end)
-          
-        overlapCNVs = [cnv for cnv in cnvs if cnv.overlap(locus)]
-        
-        if (len(overlapCNVs) == 0) and args.geneWithCNVOnly:
-          continue
-
-        cnvSamples = set()
-        for cnv in overlapCNVs:
-          cnvSamples = cnvSamples.union(cnv.SampleCNVMap.keys())
-        
-        otherSamples = sorted(set(samples) - cnvSamples)
-        
-        if args.minSampleCount > len(cnvSamples):
-          normalSampleCount = max(args.minNormalSampleCount, args.minSampleCount - len(cnvSamples))
-        else: 
-          normalSampleCount = args.minNormalSampleCount
-
-        normalSampleCount = min(normalSampleCount, len(otherSamples))
-        sampleNames = sorted(cnvSamples.union(otherSamples[0:normalSampleCount]))
-        
-        sampleFiles = [bamMap[sampleName][0] for sampleName in sampleNames]
-    
-        bamListFile = bedResultFile + "_" + locus.getLocusFileString() + ".bam.list"
-        with open(bamListFile, "w") as flist:
-          for sampleFile in sampleFiles:
-            flist.write(sampleFile + "\n")
-        
-        locusData = []
-        locusData.append([]) #add chromosome from depth
-        locusData.append([]) #add position from depth
-        locusData.append([]) #add is position in CNV
-        for sampleName in sampleNames:
-          locusData.append([])
-
-        logger.info("  processing " + locus.Locus + " ...")
-
-        if len(parts) > 4:
-          locusName = parts[4]
-        else:
-          locusName = locus.Locus
-          
-        #locusName = locusName + "(%d/%d)" % (len(cnvSamples), len(samples))
-        posData.append([locusName, locusData])
-
-        proc = subprocess.Popen(["samtools", "depth", "-f", bamListFile, "-r", locus.Locus, "-d", "0"], stdout=subprocess.PIPE)
-        for pline in proc.stdout:
-          pparts = pline.rstrip().split("\t")
-          chromosome = pparts[0]
-          position = int(pparts[1])
-          locusData[0].append(chromosome)
-          locusData[1].append(position)
-          inCNV = None
-          for cnv in overlapCNVs:
-            if cnv.contains(chromosome, position):
-              inCNV = cnv
-              break
-          locusData[2].append(inCNV)
-          
-          for idx in range(len(sampleNames)):
-            locusData[idx+3].append(int(pparts[idx+2]))
-        
-        chromosomes = locusData[0]
-        positions = locusData[1]
-        inCNVs = locusData[2]
-        for idx in range(len(sampleNames)):
-          sampleCount = locusData[idx+3]
-          maxCount = max(sampleCount)
-
-          if maxCount == 0:
-            fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\tNOREAD\n" % (sampleNames[idx], locusName, chromosomes[idx], positions[idx], 0, 0, 0))
+          if (len(overlapCNVs) == 0) and args.geneWithCNVOnly:
             continue
 
-          for cIdx in range(len(positions)):
-            if sampleCount[cIdx] != 0:
-              inCNV = inCNVs[cIdx]
-              cnvType = ""
-              if inCNV != None:
-                if sampleNames[idx] in inCNV.SampleCNVMap:
-                  cnvType = inCNV.SampleCNVMap[sampleNames[idx]]
-              fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\t%s\n" % (sampleNames[idx], locusName, chromosomes[idx], positions[cIdx], sampleCount[cIdx], maxCount, sampleCount[cIdx] * 1.0 / maxCount, cnvType)) 
-
-        os.remove(bamListFile)
+          logger.info("  processing " + locus.Locus + " ...")
+  
+          if len(parts) > 4:
+            locusName = parts[4]
+          else:
+            locusName = locus.Locus
+  
+          sampleCNVMap = {}
+          for cnv in overlapCNVs:
+            for sample in cnv.SampleCNVMap.keys():
+              if not sample in sampleCNVMap.keys():
+                sampleCNVMap[sample] = [cnv.SampleCNVMap[sample]]
+              else:
+                sampleCNVMap[sample].append(cnv.SampleCNVMap[sample])
+          
+          for sample in sorted(sampleCNVMap.keys()):
+            sampleCNVs = sorted(set(sampleCNVMap[sample]))
+            for cnv in sampleCNVs:
+              fslim.write("%s\t%s\t%s\n" % (sample, locusName, cnv))
+            
+          cnvSamples = set(sampleCNVMap.keys())
+          
+          otherSamples = sorted(set(samples) - cnvSamples)
+          
+          if args.minSampleCount > len(cnvSamples):
+            normalSampleCount = max(args.minNormalSampleCount, args.minSampleCount - len(cnvSamples))
+          else: 
+            normalSampleCount = args.minNormalSampleCount
+  
+          normalSampleCount = min(normalSampleCount, len(otherSamples))
+          sampleNames = sorted(cnvSamples.union(otherSamples[0:normalSampleCount]))
+          
+          sampleFiles = [bamMap[sampleName][0] for sampleName in sampleNames]
+      
+          bamListFile = bedResultFile + "_" + locus.getLocusFileString() + ".bam.list"
+          with open(bamListFile, "w") as flist:
+            for sampleFile in sampleFiles:
+              flist.write(sampleFile + "\n")
+          
+          locusData = []
+          locusData.append([]) #add chromosome from depth
+          locusData.append([]) #add position from depth
+          locusData.append([]) #add is position in CNV
+          for sampleName in sampleNames:
+            locusData.append([])
+  
+          #locusName = locusName + "(%d/%d)" % (len(cnvSamples), len(samples))
+          posData.append([locusName, locusData])
+  
+          proc = subprocess.Popen(["samtools", "depth", "-f", bamListFile, "-r", locus.Locus, "-d", "0"], stdout=subprocess.PIPE)
+          for pline in proc.stdout:
+            pparts = pline.rstrip().split("\t")
+            chromosome = pparts[0]
+            position = int(pparts[1])
+            locusData[0].append(chromosome)
+            locusData[1].append(position)
+            inCNV = None
+            for cnv in overlapCNVs:
+              if cnv.contains(chromosome, position):
+                inCNV = cnv
+                break
+            locusData[2].append(inCNV)
+            
+            for idx in range(len(sampleNames)):
+              locusData[idx+3].append(int(pparts[idx+2]))
+          
+          chromosomes = locusData[0]
+          positions = locusData[1]
+          inCNVs = locusData[2]
+          for idx in range(len(sampleNames)):
+            sampleCount = locusData[idx+3]
+            maxCount = max(sampleCount)
+  
+            if maxCount == 0:
+              fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\tNOREAD\n" % (sampleNames[idx], locusName, chromosomes[idx], positions[idx], 0, 0, 0))
+              continue
+  
+            for cIdx in range(len(positions)):
+              if sampleCount[cIdx] != 0:
+                inCNV = inCNVs[cIdx]
+                cnvType = ""
+                if inCNV != None:
+                  if sampleNames[idx] in inCNV.SampleCNVMap:
+                    cnvType = inCNV.SampleCNVMap[sampleNames[idx]]
+                fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\t%s\n" % (sampleNames[idx], locusName, chromosomes[idx], positions[cIdx], sampleCount[cIdx], maxCount, sampleCount[cIdx] * 1.0 / maxCount, cnvType)) 
+  
+          os.remove(bamListFile)
       
   realpath = os.path.dirname(os.path.realpath(__file__))
   rPath = realpath + "/plotCNV.r"

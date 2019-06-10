@@ -82,17 +82,24 @@ sub getConfig {
   my $max_thread = getValue( $def, "max_thread" );
 
   my $geneLocus = undef;
-  if(defined $def->{annotation_genes}){
+  if ( defined $def->{annotation_genes} ) {
     $geneLocus = "annotation_genes_locus";
     $config->{$geneLocus} = {
-      class                    => "CQS::UniqueR",
-      perform                  => 1,
-      target_dir               => $target_dir . '/' . $geneLocus,
-      rtemplate                => "../Annotation/getGeneLocus.r",
-      rCode                    => "host=\"" . getValue($def, "biomart_host") . "\";dataset=\"" . getValue($def, "biomart_dataset") . "\";symbolKey=\"" . getValue($def, "biomart_symbolKey") . "\";genesStr=\"" . getValue($def, "annotation_genes") . "\"",
-      output_file_ext          => ".bed;.missing",
-      sh_direct                => 1,
-      'pbs'                    => {
+      class      => "CQS::UniqueR",
+      perform    => 1,
+      target_dir => $target_dir . '/' . $geneLocus,
+      rtemplate  => "../Annotation/getGeneLocus.r",
+      rCode      => "host=\""
+        . getValue( $def, "biomart_host" )
+        . "\";dataset=\""
+        . getValue( $def, "biomart_dataset" )
+        . "\";symbolKey=\""
+        . getValue( $def, "biomart_symbolKey" )
+        . "\";genesStr=\""
+        . getValue( $def, "annotation_genes" ) . "\"",
+      output_file_ext => ".bed;.missing",
+      sh_direct       => 1,
+      'pbs'           => {
         'nodes'    => '1:ppn=1',
         'mem'      => '40gb',
         'walltime' => '10'
@@ -324,6 +331,7 @@ sub getConfig {
       push @$summary, ($filter_name);
     }
 
+    my $annovar_filter_geneannotation_name = undef;
     if ( $def->{perform_gatk4_callvariants} or $def->{perform_gatk_callvariants} ) {
       if ( $def->{filter_variants_by_allele_frequency} ) {
         my $maf_filter_name = $filter_name . "_filterMAF";
@@ -355,11 +363,11 @@ sub getConfig {
       if ( $def->{perform_annovar} ) {
         my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $filter_name, undef );
 
-        if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/) {
+        if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
           my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name );
 
           if ( defined $def->{annotation_genes} ) {
-            addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
+            $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
           }
 
           my $annovar_to_maf = $annovar_filter_name . "_toMAF";
@@ -382,17 +390,18 @@ sub getConfig {
 
           my $annovar_to_maf_report = $annovar_to_maf . "_report";
           $config->{$annovar_to_maf_report} = {
-            class      => "CQS::UniqueR",
-            perform    => 1,
-            target_dir => $target_dir . "/" . $annovar_to_maf_report,
-            rtemplate                  => "../Annotation/mafReport.r",
-            output_file                => "parameterSampleFile1",
-            output_file_ext            => ".report.html",
-            parameterSampleFile1_ref   => [ $annovar_to_maf, ".tsv.maf\$" ],
-            parameterFile1 => $def->{family_info_file},
-            sh_direct                  => 1,
-            rCode => (defined $def->{family_info_file}?"clinicalFeatures=\"" . $def->{family_info_feature} ."\";":"") . ( defined $def->{annotation_genes} ? "interestedGeneStr=\"" . $def->{annotation_genes} . "\"" :""),
-            pbs                        => {
+            class                    => "CQS::UniqueR",
+            perform                  => 1,
+            target_dir               => $target_dir . "/" . $annovar_to_maf_report,
+            rtemplate                => "../Annotation/mafReport.r",
+            output_file              => "parameterSampleFile1",
+            output_file_ext          => ".report.html",
+            parameterSampleFile1_ref => [ $annovar_to_maf, ".tsv.maf\$" ],
+            parameterFile1           => $def->{family_info_file},
+            sh_direct                => 1,
+            rCode                    => ( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" )
+              . ( defined $def->{annotation_genes} ? "interestedGeneStr=\"" . $def->{annotation_genes} . "\"" : "" ),
+            pbs => {
               "email"     => $def->{email},
               "emailType" => $def->{emailType},
               "nodes"     => "1:ppn=1",
@@ -455,10 +464,10 @@ sub getConfig {
         },
       };
       push @$summary, "${mutectName}";
-      
+
       my $combineVariantsName = $mutectName . "_combined";
       $config->{$combineVariantsName} = {
-        class      => "GATK::CombineVariants",
+        class       => "GATK::CombineVariants",
         perform     => 1,
         target_dir  => "${target_dir}/$combineVariantsName",
         option      => "",
@@ -484,7 +493,7 @@ sub getConfig {
           class      => "Annotation::Annovar2Maf",
           perform    => 1,
           target_dir => $target_dir . "/" . $annovar_to_maf,
-          source_ref => [ $annovar_name ],
+          source_ref => [$annovar_name],
           refBuild   => getValue( $def, "annovar_buildver" ),
           sh_direct  => 1,
           pbs        => {
@@ -550,8 +559,31 @@ sub getConfig {
       push @$summary, $cnmopsName;
     }
 
+    my $cnvAnnotationGenesPlot = undef;
     if ( $def->{perform_cnv_gatk4_cohort} ) {
-      addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, [ $refine_name, ".bam\$" ], $individual, $summary, $step3, $step4, $step5, $step6 );
+      $cnvAnnotationGenesPlot = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, [ $refine_name, ".bam\$" ], $individual, $summary, $step3, $step4, $step5, $step6 );
+    }
+
+    if ( ( defined $annovar_filter_geneannotation_name ) and ( defined $cnvAnnotationGenesPlot ) ) {
+      my $oncoPlotTask = "SNV_CNV_Oncoplot";
+      $config->{$oncoPlotTask} = {
+        class                      => "CQS::UniqueR",
+        perform                    => 1,
+        target_dir                 => $target_dir . '/' . $oncoPlotTask,
+        rtemplate                  => "../Annotation/SNV_CNV_OncoPrint.r",
+        parameterSampleFile1_ref   => [ $annovar_filter_geneannotation_name, ".oncoprint.tsv\$" ],
+        parameterFile1_ref         => [ $cnvAnnotationGenesPlot, ".position.txt.slim" ],
+        output_to_result_directory => 1,
+        output_file                => "parameterSampleFile1",
+        output_file_ext            => ".snv_cnv.png;.snv_cnv.txt",
+        sh_direct                  => 1,
+        'pbs'                      => {
+          'nodes'    => '1:ppn=1',
+          'mem'      => '40gb',
+          'walltime' => '10'
+        },
+      };
+      push @$step6, $oncoPlotTask;
     }
 
     if ( $def->{perform_cnv_xhmm} ) {

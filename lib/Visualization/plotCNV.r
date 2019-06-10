@@ -3,10 +3,10 @@ library(data.table)
 
 args <- commandArgs(TRUE)
 if(length(args) == 0){
-  setwd("/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/GATK4_CNV_Germline_11_AnnotationGenesPlot/result")
-  inputFile<-"linton_exomeseq_3321.position.txt"
+  setwd("/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/GATK4_CNV_Germline_10_CNVGenesPlot/result")
+  inputFile<-"linton_exomeseq_3321.position.txt.1000"
   outputPrefix<-'linton_exomeseq_3321.position'
-  sizeFactorFile<-"/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/GATK4_CNV_Germline_08_SizeFactor/result/linton_exomeseq_3321.txt"
+  sizeFactorFile<-"/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/GATK4_CNV_Germline_08_SizeFactor/result/linton_exomeseq_3321.txt.sizefactor"
   #inputFile<-'/scratch/cqs/shengq2/vickers/20190504_smallRNA_as_chipseq_GCF_000005845.2_ASM584v2/plotPeak/result/Control.position.txt'
   #outputPrefix<-'/scratch/cqs/shengq2/vickers/20190504_smallRNA_as_chipseq_GCF_000005845.2_ASM584v2/plotPeak/result/Control.position'
 }else{
@@ -53,7 +53,7 @@ for (selectedFeature in unique(rawTable$Feature)) {
     }
     
     g <- g +
-      facet_grid(File~., scales = "free_y") +
+      facet_grid(File~.) +
       theme_bw() +
       theme(strip.background=element_blank())
     
