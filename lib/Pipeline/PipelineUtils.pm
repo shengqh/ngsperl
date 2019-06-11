@@ -915,8 +915,8 @@ sub addAnnovarFilterGeneannotation {
     sample_name_suffix      => "",
     gene_names              => $def->{annotation_genes},
     draw_onco_print         => 1,
-    onco_picture_width      => 6000,
-    onco_picture_height     => 2000,
+    onco_picture_width      => 0,
+    onco_picture_height     => 0,
     prepare_cbioportal_data => 1,
     sh_direct               => 1,
     pbs                     => {

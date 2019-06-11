@@ -29,8 +29,8 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $picture_width     = get_option( $config, $section, "picture_width" );
-  my $picture_height    = get_option( $config, $section, "picture_height" );
+  my $picture_width     = get_option( $config, $section, "picture_width", 0 );
+  my $picture_height    = get_option( $config, $section, "picture_height", 0 );
   my $sampleNamePattern = get_option( $config, $section, "sample_name_pattern" );
   my $sampleNameSuffix = get_option( $config, $section, "sample_name_suffix", "");
   my $geneNames         = get_option( $config, $section, "gene_names" );

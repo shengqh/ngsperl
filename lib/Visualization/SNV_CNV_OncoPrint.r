@@ -16,13 +16,13 @@ library(ComplexHeatmap)
 inputFiles = parSampleFile1
 cnvFile = parFile1
 
-cnvdata<-read.table(cnvFile, as.is=T, header=T, sep="\t")
+cnvdata<-read.delim(cnvFile, as.is=T, header=T, sep="\t", stringsAsFactors = F)
 
-inputFileData<-read.table(inputFiles, sep="\t", stringsAsFactors = F)
+inputFileData<-read.delim(inputFiles, header=F, sep="\t", stringsAsFactors = F)
 
 inputFile<-inputFileData$V1[[1]]
 for(inputFile in inputFileData$V1){
-  oncoprint<-read.table(inputFile,as.is=T,header=TRUE,sep="\t", row.names=1)
+  oncoprint<-read.delim(inputFile,as.is=T,header=TRUE,sep="\t", row.names=1, stringsAsFactors = F)
   oncoprint[oncoprint==" "]<-NA
   oncoprint[oncoprint==""]<-NA
   
@@ -62,18 +62,17 @@ for(inputFile in inputFileData$V1){
   )
   
   width=max(2000, ncol(oncoprint) * 70 + 300)
-  height=1600
+  height=max(1600, nrow(oncoprint) * 70 + 300)
   
   ##oncoprint
-  outputFile = paste0(outputDirectory, "/", basename(inputFile), ".snv_cnv.png")
-  png(outputFile, width=width, height=height, res=300)
+  png(paste0(outputTextFile, ".png"), width=width, height=height, res=300)
   ht=oncoPrint(oncoprint, get_type = function(x) strsplit(x, ";")[[1]],
                alter_fun = alter_fun, col = col, 
                column_title = "",
                show_column_names = T,
                row_barplot_width = unit(0.5, "cm"),
                heatmap_legend_param = list(title = "Genetic alternations", at = c("MISSENSE", "TRUNC", "DUP", "DEL"), 
-                                           labels = c("Missense mutation", "Truncating mutation", "CNV Dup", "CNV Del")))
+                                           labels = c("Missense mutation", "Truncating mutation", "CNV duplication", "CNV deletion")))
   draw(ht)
   dev.off()
 }
