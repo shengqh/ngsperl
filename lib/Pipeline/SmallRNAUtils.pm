@@ -400,8 +400,9 @@ sub getPrepareConfig {
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
   #nta for microRNA and tRNA
+  my $hasMicroRNAOnly = getValue( $def, "hasMicroRNAOnly", 0 );
   my $consider_miRNA_NTA = getValue( $def, "consider_miRNA_NTA" );
-  my $consider_tRNA_NTA  = getValue( $def, "consider_tRNA_NTA" );
+  my $consider_tRNA_NTA  = getValue( $def, "consider_tRNA_NTA" ) && (!$hasMicroRNAOnly);
 
   if ( defined $def->{groups} ) {
     $config->{groups} = $def->{groups};
@@ -433,7 +434,7 @@ sub getPrepareConfig {
   push @$individual, ("identical");
   my $identical_ref = [ 'identical', '.fastq.gz$' ];
 
-  if ( $consider_miRNA_NTA && $consider_tRNA_NTA ) {
+  if ( $consider_tRNA_NTA ) {
     $preparation->{identical_check_cca} = {
       class              => "SmallRNA::tRNACheckCCA",
       perform            => 1,
@@ -503,7 +504,7 @@ sub getPrepareConfig {
   }
 
   if ( $consider_miRNA_NTA || $consider_tRNA_NTA ) {
-    my $ccaaOption = $def->{consider_tRNA_NTA} ? "--ccaa" : "--no-ccaa";
+    my $ccaaOption = $consider_tRNA_NTA ? "--ccaa" : "--no-ccaa";
     $preparation->{identical_NTA} = {
       class      => "SmallRNA::FastqSmallRnaNTA",
       perform    => 1,
