@@ -3,6 +3,8 @@ import sys
 import logging
 import os
 import csv
+from asn1crypto._ffi import null
+from asn1crypto.core import Null
 
 def getValue(value):
   return int(value[1][0])
@@ -13,13 +15,13 @@ def match(logger, input, names, annotated, maxMapped, maxNumber, output):
   shortReadFiles = []
   with open(input, 'r') as sr:
     for line in sr:
-      parts = line.split('\t')
-      shortReadFiles.append(parts[1].rstrip())
+      parts = line.rstrip().split('\t')
+      shortReadFiles.append(parts[1])
       logger.info("  Reading " + parts[0] + " ...")
       with open(parts[0], 'r') as fin:
         fin.readline()
         for line in fin:
-          reads = line.split('\t')
+          reads = line.rstrip().split('\t')
           seq = reads[2].rstrip()
           if not seq in shortReadMap:
             shortReadMap[seq] = [int(reads[1]), {parts[1]:reads[1]}]
@@ -39,7 +41,7 @@ def match(logger, input, names, annotated, maxMapped, maxNumber, output):
       logger.info("  Reading " + parts[0] + " ...")
       with open(parts[0], 'r') as fin:
         while True:
-          qname = fin.readline()
+          qname = fin.readline().rstrip()
           if not qname:
             break
           seq = fin.readline()
@@ -65,7 +67,7 @@ def match(logger, input, names, annotated, maxMapped, maxNumber, output):
       with open(annofile, 'r') as sr:
         annotatedFiles = sr.readline().rstrip().split('\t')[1:]
         for line in sr:
-          parts = line.split('\t')
+          parts = line.rstrip().split('\t')
           if parts[0] not in annotatedReadMap:
             annotatedReadMap[parts[0]] = [sum(int(p) for p in parts[1:]), [cnames[iIndex]],  parts[1:]]
           else:
@@ -75,12 +77,13 @@ def match(logger, input, names, annotated, maxMapped, maxNumber, output):
   
   logger.info("Writing explain result:" + output + " ...")
   with open(output, "w") as sw:
-    sw.write("ShortReads\tShortReadLength\t" + "\t".join(shortReadFiles) + "\tIsMaxMapped\t" + "\t".join(cnames) + "\t" + "\t".join(annotatedFiles) + "\n")
-    sw.write(shortHeader + "\t" + annotatedHeader + "\n")
+    sw.write("ShortRead\tShortReadCount\tShortReadLength\t" + "\t".join(shortReadFiles) + "\tIsMaxMapped\tParentRead\tParentReadCount\tParentReadCategory\t" + "\t".join(annotatedFiles) + "\n")
+    emptyAnnotation = "\t\t\t\t" + "\t".join(["" for af in annotatedFiles]) + "\n"
     for shortRead in shortReads:
       shortSeq = shortRead[0]
+      shortSeqCount = shortRead[1][0]
       seqMap = shortRead[1][1]
-      sw.write("%s\t%d" % (shortSeq, len(shortSeq)))
+      sw.write("%s\t%s\t%d" % (shortSeq, shortSeqCount, len(shortSeq)))
       for fname in shortReadFiles:
         if fname in seqMap:
           sw.write("\t%s" % seqMap[fname])
@@ -95,10 +98,11 @@ def match(logger, input, names, annotated, maxMapped, maxNumber, output):
         if shortSeq in annoSeq:
           bFound = True
           annoInfo = annotatedRead[1]
-          sw.write('\t'.join(shortRead) + '\t' + '\t'.join(annotatedRead) + '\n')
+          sw.write("\t%s\t%s\t%s\t%s\n" % (annoSeq, annoInfo[0], annoInfo[1][0], "\t".join(annoInfo[2])))
+          break
       
       if not bFound:
-          sw.write('\t'.join(shortRead) + '\t' + emptyAnnotation + '\n')
+        sw.write(emptyAnnotation)
           
   logger.info("Done.")
 
@@ -106,7 +110,7 @@ def main():
   parser = argparse.ArgumentParser(description="Matching short reads with annotated reads.",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   
-  DEBUG=True
+  DEBUG=False
   NOT_DEBUG = not DEBUG
   
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input short reads', required=NOT_DEBUG)
@@ -127,6 +131,7 @@ def main():
     args.maxMapped = "T:/Shared/Labs/Vickers Lab/Tiger/projects/20180809_smallRNA_269_933_2002_human/data_visualization/short_reads_source/result/match__fileList2.list";
     args.annotated = "T:/Shared/Labs/Vickers Lab/Tiger/projects/20180809_smallRNA_269_933_2002_human/data_visualization/short_reads_source/result/match__fileList3.list";
     args.names = "Host miRNA,Host tRNA,Host snRNA,Host snoRNA,Host rRNA,Host other small RNA,Host Genome,Microbiome Bacteria,Environment Bacteria,Fungus,Non host tRNA,Non host rRNA"
+    #args.names = "Host miRNA,Host tRNA"
     args.output = "T:/Shared/Labs/Vickers Lab/Tiger/projects/20180809_smallRNA_269_933_2002_human/data_visualization/short_reads_source/result/match.tsv"
   
   logger = logging.getLogger('explainShortReads')
