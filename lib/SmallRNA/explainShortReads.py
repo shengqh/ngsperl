@@ -3,32 +3,39 @@ import sys
 import logging
 import os
 import csv
-from asn1crypto._ffi import null
-from asn1crypto.core import Null
 
 def getValue(value):
   return int(value[1][0])
 
-def match(logger, input, names, annotated, maxMapped, maxNumber, output):
+def getFilename(value):
+  return value[1]
+
+def match(logger, input, names, annotated, maxMapped, maxNumber, outputPrefix):
   logger.info("Reading short reads:" + input + " ...")
   shortReadMap = {}
   shortReadFiles = []
+
+  shortFileList = []
   with open(input, 'r') as sr:
     for line in sr:
       parts = line.rstrip().split('\t')
-      shortReadFiles.append(parts[1])
-      logger.info("  Reading " + parts[0] + " ...")
-      with open(parts[0], 'r') as fin:
-        fin.readline()
-        for line in fin:
-          reads = line.rstrip().split('\t')
-          seq = reads[2].rstrip()
-          if not seq in shortReadMap:
-            shortReadMap[seq] = [int(reads[1]), {parts[1]:reads[1]}]
-          else:
-            curArray = shortReadMap[seq]
-            curArray[0] = curArray[0] + int(reads[1])
-            curArray[1][parts[1]] = reads[1]
+      shortFileList.append(parts)
+  
+  shortFileList = sorted(shortFileList, key=getFilename)
+  for parts in shortFileList:
+    shortReadFiles.append(parts[1])
+    logger.info("  Reading " + parts[0] + " ...")
+    with open(parts[0], 'r') as fin:
+      fin.readline()
+      for line in fin:
+        reads = line.rstrip().split('\t')
+        seq = reads[2].rstrip()
+        if not seq in shortReadMap:
+          shortReadMap[seq] = [int(reads[1]), {parts[1]:reads[1]}]
+        else:
+          curArray = shortReadMap[seq]
+          curArray[0] = curArray[0] + int(reads[1])
+          curArray[1][parts[1]] = reads[1]
   
   shortReads = sorted(shortReadMap.items(), key=getValue, reverse=True)
   shortReads = shortReads[0:maxNumber]
@@ -75,9 +82,10 @@ def match(logger, input, names, annotated, maxMapped, maxNumber, output):
             
   annotatedReads = sorted(annotatedReadMap.items(), key=getValue, reverse=True)
   
+  output = outputPrefix + ".tsv"
   logger.info("Writing explain result:" + output + " ...")
   with open(output, "w") as sw:
-    sw.write("ShortRead\tShortReadCount\tShortReadLength\t" + "\t".join(shortReadFiles) + "\tIsMaxMapped\tParentRead\tParentReadCount\tParentReadCategory\t" + "\t".join(annotatedFiles) + "\n")
+    sw.write("ShortRead\tShortReadCount\tShortReadLength\t" + "\t".join(["SRS_" + f for f in shortReadFiles]) + "\tIsMaxMapped\tParentRead\tParentReadCount\tParentReadCategory\t" + "\t".join(["PRS_" + f for f in annotatedFiles]) + "\n")
     emptyAnnotation = "\t\t\t\t" + "\t".join(["" for af in annotatedFiles]) + "\n"
     for shortRead in shortReads:
       shortSeq = shortRead[0]
@@ -118,7 +126,7 @@ def main():
   parser.add_argument('-a', '--annotated', action='store', nargs='?', help='Input annotated reads', required=NOT_DEBUG)
   parser.add_argument('-n', '--names', action='store', nargs='?', help='Input annotated reads categories, split by ''', required=NOT_DEBUG)
   parser.add_argument('--maxNumber', action='store', default=500, nargs='?', help='Input number of top short reads for annotation')
-  parser.add_argument('-o', '--output', action='store', nargs='?', default="-", help="Output matched reads file", required=NOT_DEBUG)
+  parser.add_argument('-o', '--output', action='store', nargs='?', default="-", help="Output prefix of matched reads file", required=NOT_DEBUG)
   
   if NOT_DEBUG and len(sys.argv)==1:
     parser.print_help()
@@ -127,12 +135,12 @@ def main():
   args = parser.parse_args()
   
   if DEBUG:
-    args.input = "T:/Shared/Labs/Vickers Lab/Tiger/projects/20180809_smallRNA_269_933_2002_human/data_visualization/short_reads_source/result/match__fileList1.list";
-    args.maxMapped = "T:/Shared/Labs/Vickers Lab/Tiger/projects/20180809_smallRNA_269_933_2002_human/data_visualization/short_reads_source/result/match__fileList2.list";
-    args.annotated = "T:/Shared/Labs/Vickers Lab/Tiger/projects/20180809_smallRNA_269_933_2002_human/data_visualization/short_reads_source/result/match__fileList3.list";
+    args.input = "T:/Shared/Labs/Vickers Lab/Tiger/projects/20180809_smallRNA_269_933_2002_human/data_visualization/short_reads_source/result/match__fileList1.list"
+    args.maxMapped = "T:/Shared/Labs/Vickers Lab/Tiger/projects/20180809_smallRNA_269_933_2002_human/data_visualization/short_reads_source/result/match__fileList2.list"
+    args.annotated = "T:/Shared/Labs/Vickers Lab/Tiger/projects/20180809_smallRNA_269_933_2002_human/data_visualization/short_reads_source/result/match__fileList3.list"
     args.names = "Host miRNA,Host tRNA,Host snRNA,Host snoRNA,Host rRNA,Host other small RNA,Host Genome,Microbiome Bacteria,Environment Bacteria,Fungus,Non host tRNA,Non host rRNA"
     #args.names = "Host miRNA,Host tRNA"
-    args.output = "T:/Shared/Labs/Vickers Lab/Tiger/projects/20180809_smallRNA_269_933_2002_human/data_visualization/short_reads_source/result/match.tsv"
+    args.output = "T:/Shared/Labs/Vickers Lab/Tiger/projects/20180809_smallRNA_269_933_2002_human/data_visualization/short_reads_source/result/match"
   
   logger = logging.getLogger('explainShortReads')
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')

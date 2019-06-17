@@ -127,6 +127,14 @@ sub perform {
       }
     }
   }
+ 
+  my $trim_poly_atgc = get_option( $config, $section, "trim_poly_atgc", 0 );
+  if ($trim_poly_atgc) {
+    $adapter_option = $adapter_option . " -a \"A{50}\" -a \"T{50}\" -a \"G{50}\" -a \"C{50}\"  -A \"A{50}\" -A \"T{50}\" -A \"G{50}\" -A \"C{50}\"";
+    if ($ispairend) {
+      $adapter_option = $adapter_option . " -g \"A{50}\" -g \"T{50}\" -g \"G{50}\" -g \"C{50}\"  -G \"A{50}\" -G \"T{50}\" -G \"G{50}\" -G \"C{50}\"";
+    }
+  }
 
   my ( $extension, $fastqextension ) = $self->get_extension( $config, $section );
 
