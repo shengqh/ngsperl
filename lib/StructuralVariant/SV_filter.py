@@ -136,7 +136,7 @@ with open(args.output, "w") as fout:
                 if dhffc <= t_del and shq == 4:
                     highQuality = True
                     sampleName=vcfheaders[nIndex]
-                    print  sampleName, ped[sampleName]
+                    #print  sampleName, ped[sampleName]
                     if ped[sampleName] not in score:
                         score[ped[sampleName]]=1
                     else:
@@ -160,7 +160,7 @@ with open(args.output, "w") as fout:
                 if dhffc >= t_dup and shq == 4:
                     highQuality = True
                     sampleName=vcfheaders[nIndex]
-                    print sampleName
+                    #print sampleName
                     if ped[sampleName] not in score:
                         score[ped[sampleName]]=1
                     else:
