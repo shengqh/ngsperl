@@ -86,6 +86,7 @@ sub getPreprocessionConfig {
       emailType  => getValue( $def, "emailType", "ALL" ),
       constraint => $def->{constraint},
       account    => $def->{account},
+      docker_command => $def->{docker_command},
     },
     files                => $def->{files},
     groups               => $def->{groups},

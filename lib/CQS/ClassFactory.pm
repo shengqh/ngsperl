@@ -39,6 +39,8 @@ sub performTask {
   }
   my $classname = $config->{$section}{class} or die "No class defined in section $section.";
   my $obj = instantiate($classname);
+  $obj->{_config} = $config;
+  $obj->{_section} = $section;
   $obj->perform( $config, $section );
   if(defined $runImmediately && $runImmediately){
     my $pbs = $obj->get_pbs_files($config, $section);
@@ -74,6 +76,8 @@ sub performConfig {
         if ( !defined $perform || $perform ) {
           print "Preforming $section by $classname \n";
           my $obj = instantiate($classname);
+          $obj->{_config} = $config;
+          $obj->{_section} = $section;
           $obj->perform( $config, $section );
         }
       }
@@ -101,6 +105,8 @@ sub performConfig {
           if ( defined $perform && $perform ) {
             print "Preforming $section by $classname \n";
             my $obj = instantiate($classname);
+            $obj->{_config} = $config;
+            $obj->{_section} = $section;
             $obj->perform( $config, $section );
           }
         }
