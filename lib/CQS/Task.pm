@@ -28,7 +28,7 @@ sub result {
 }
 
 sub acceptSample {
-  my ($self, $config, $section, $sampleName) = @_;
+  my ( $self, $config, $section, $sampleName ) = @_;
   return (1);
 }
 
@@ -82,7 +82,7 @@ sub get_pbs_files {
     my %fqFiles = %{ get_raw_files( $config, $section, $pbsKey ) };
 
     for my $sample_name ( sort keys %fqFiles ) {
-      if($self->acceptSample($config, $section, $sample_name)){
+      if ( $self->acceptSample( $config, $section, $sample_name ) ) {
         $result->{$sample_name} = $self->get_pbs_filename( $pbs_dir, $sample_name );
       }
     }
@@ -93,25 +93,25 @@ sub get_pbs_files {
 
 #get pbs source map which indicates which sample name the pbs file comes from
 #for impute2 which generate multiple pbs files and multiple result files from 1 sample name,
-#the multiple pbs should be mapped to same sample name 
+#the multiple pbs should be mapped to same sample name
 sub get_pbs_source {
   my ( $self, $config, $section ) = @_;
-  
-  my $pbsFiles = $self->get_pbs_files($config, $section);
+
+  my $pbsFiles = $self->get_pbs_files( $config, $section );
   my $result = {};
-  for my $resKey (keys %$pbsFiles){
-    $result->{$pbsFiles->{$resKey}} = [$resKey];
-  } 
+  for my $resKey ( keys %$pbsFiles ) {
+    $result->{ $pbsFiles->{$resKey} } = [$resKey];
+  }
   return $result;
 }
 
 #get result pbs map which indicates which pbs the result name related.
 #for bed file split which has 1 pbs and multiple result files, the multiple result names
-#should be mapped to same pbs 
+#should be mapped to same pbs
 sub get_result_dependent_pbs {
   my ( $self, $config, $section ) = @_;
-  
-  return $self->get_pbs_files($config, $section);
+
+  return $self->get_pbs_files( $config, $section );
 }
 
 sub require {
@@ -168,6 +168,29 @@ sub get_task_filename {
   return $self->get_file( $dir, $task_name, ".sh" );
 }
 
+sub get_docker_value {
+  my ( $self, $key, $default ) = @_;
+  my $result = $default;
+
+  if ( defined $self->{_config} ) {
+    if ( ( defined $self->{_section} ) and ( defined $self->{_config}{$self->{_section}}{$key} ) ) {
+      $result = $self->{_config}{$self->{_section}}{$key};
+      if ( defined $result ) {
+        return ($result);
+      }
+    }
+
+    if ( ( defined $self->{_config} ) and ( defined $self->{_config}{general} ) and ( defined $self->{_config}{general}{$key} ) ) {
+      $result = $self->{_config}{general}{$key};
+      if ( defined $result ) {
+        return ($result);
+      }
+    }
+  }
+
+  return ($result);
+}
+
 sub open_pbs {
   my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, $final_file_can_empty, $input_file ) = @_;
 
@@ -216,6 +239,24 @@ echo ${module_name}_start=`date`
 echo working in $result_dir ...
  
 ";
+
+  my $docker_command = $self->get_docker_value( "docker_command", undef );
+  my $is_sequenceTask = ($module_name =~ /SequenceTask/); 
+  if ( (defined $docker_command) and (not $is_sequenceTask)) {
+    my $sh_file = $pbs_file . ".sh";
+
+    print $pbs "
+$docker_command bash $sh_file 
+
+echo ${module_name}_end=`date`
+
+exit 0
+
+";
+    close $pbs;
+    open( $pbs, ">$sh_file" ) or die $!;
+  }
+
   return $pbs;
 }
 
@@ -224,30 +265,30 @@ sub close_pbs {
 
   my $module_name = $self->{_name};
 
-  print $pbs "
+  my $docker_command = $self->get_docker_value( "docker_command", undef );
+
+  if ( not defined $docker_command ) {
+    print $pbs "
 
 echo ${module_name}_end=`date`
 
 exit 0
  
 ";
+  }
 
   close $pbs;
-
-  if ( is_linux() ) {
-    chmod 0755, $pbs_file;
-  }
 
   print "$pbs_file created. \n";
 }
 
 sub get_java_option {
-  my ($self, $config, $section, $memory) = @_;
+  my ( $self, $config, $section, $memory ) = @_;
   my $result = $config->{$section}{java_option};
   if ( !defined $result || $result eq "" ) {
     $result = "-Xmx${memory}";
   }
-  return($result);
+  return ($result);
 }
 
 1;

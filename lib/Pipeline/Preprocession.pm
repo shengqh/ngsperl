@@ -86,6 +86,7 @@ sub getPreprocessionConfig {
       emailType  => getValue( $def, "emailType", "ALL" ),
       constraint => $def->{constraint},
       account    => $def->{account},
+      docker_command => $def->{docker_command},
     },
     files                => $def->{files},
     groups               => $def->{groups},
@@ -268,7 +269,7 @@ sub getPreprocessionConfig {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
-          "walltime"  => "24",
+          "walltime"  => "23",
           "mem"       => "20gb"
         },
       }
@@ -302,7 +303,7 @@ sub getPreprocessionConfig {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
-          "walltime"  => "24",
+          "walltime"  => "23",
           "mem"       => "20gb"
         },
       },
