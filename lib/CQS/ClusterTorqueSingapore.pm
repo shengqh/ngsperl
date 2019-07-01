@@ -16,10 +16,52 @@ sub new {
   return $self;
 }
 
+sub get_cluster_thread {
+  my $mem      = "4G";
+  my $nodes    = "1";
+  my $ntasks   = "";
+
+  my ($self, $pbsParamHashRef, $config) = @_;
+  my $generalOptions = $self->get_general_options($config);
+  my $email = $generalOptions->{email};
+  
+  if ( defined $pbsParamHashRef ) {
+    my %hash = %{$pbsParamHashRef};
+    foreach ( keys %hash ) {
+      if ( $_ eq "mem" ) {
+        $mem = $hash{$_};
+      }
+      elsif ( $_ eq "nodes" ) {
+        $nodes = $hash{$_};
+      }
+      elsif ( $_ eq "ntasks" ) {
+        $ntasks = $hash{$_};
+      }
+    }
+  }
+  
+  if ($nodes =~ /ppn/){
+    $nodes =~ s/1:ppn=//g;
+  }
+  
+  my $newmem = $mem;
+  $newmem =~ s/\D//g;
+  my $newnodes = $newmem / 4;
+  if($newnodes > $nodes){
+    $nodes = $newnodes;
+  }
+
+  if ( ($ntasks eq "") or ($ntasks < $nodes)) {
+    $ntasks = $nodes;
+  }
+  
+  return ($ntasks);
+}
+
 sub get_cluster_desc {
-  my $walltime = "24";
-  my $mem      = "40G";
-  my $nodes    = "10";
+  my $walltime = "23";
+  my $mem      = "4G";
+  my $nodes    = "1";
   my $project = "21070175";
 
   my ($self, $pbsParamHashRef, $config) = @_;
