@@ -19,7 +19,7 @@ sub new {
 sub get_cluster_desc {
   my $walltime = "24";
   my $mem      = "40G";
-  my $nodes    = "1";
+  my $nodes    = "10";
   my $project = "21070175";
 
   my ($self, $pbsParamHashRef, $config) = @_;
@@ -44,6 +44,13 @@ sub get_cluster_desc {
         $project = $hash{$_};
       }
     }
+  }
+  
+  my $newmem = $mem;
+  $newmem =~ s/\D//g;
+  my $newnodes = $newmem / 4;
+  if($newnodes > $nodes){
+    $nodes = $newnodes;
   }
 
   die "Assign email address in hash (\"email\" => \"youremail\") and pass hash as parameter to get_cluster_desc" if ( $email eq "" );
