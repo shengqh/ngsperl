@@ -46,6 +46,10 @@ sub get_cluster_desc {
     }
   }
   
+  if ($nodes =~ /ppn/){
+    $nodes =~ s/1:ppn=//g;
+  }
+  
   my $newmem = $mem;
   $newmem =~ s/\D//g;
   my $newnodes = $newmem / 4;
