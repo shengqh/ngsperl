@@ -269,7 +269,7 @@ sub getPreprocessionConfig {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
-          "walltime"  => "24",
+          "walltime"  => "23",
           "mem"       => "20gb"
         },
       }
@@ -303,7 +303,7 @@ sub getPreprocessionConfig {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
-          "walltime"  => "24",
+          "walltime"  => "23",
           "mem"       => "20gb"
         },
       },

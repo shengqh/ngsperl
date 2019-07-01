@@ -148,7 +148,7 @@ sub addBowtie {
   my ( $config, $def, $individual, $taskName, $parentDir, $bowtieIndex, $sourceRef, $bowtieOption, $hours ) = @_;
 
   if ( !defined $hours ) {
-    $hours = "24";
+    $hours = "23";
   }
 
   $config->{$taskName} = {
@@ -195,7 +195,7 @@ sub addPARalyzer {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
-      "walltime"  => "72",
+      "walltime"  => "23",
       "mem"       => "20gb"
     },
   };
@@ -221,7 +221,7 @@ sub addBowtie1PARalyzer {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
-      "walltime"  => "72",
+      "walltime"  => "23",
       "mem"       => "40gb"
     },
   };
@@ -597,7 +597,7 @@ sub addEnhancer {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
-      "walltime"  => "24",
+      "walltime"  => "23",
       "mem"       => "40gb"
     },
   };
@@ -619,7 +619,7 @@ sub addEnhancer {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
-      "walltime"  => "24",
+      "walltime"  => "23",
       "mem"       => "40gb"
     },
   };
