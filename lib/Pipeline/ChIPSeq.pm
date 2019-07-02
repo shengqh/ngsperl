@@ -28,12 +28,13 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "sra_to_fastq", 0 );
   initDefaultValue( $def, "mark_duplicates", 1 );
 
-  if (not defined $def->{"is_paired_end"} && defined $def->{"pairend"}){
-    $def->{"is_paired_end"} = $def->{"pairend"};
+  my $is_paired = is_pairend($def);
+  
+  if (not defined $is_paired){
+    getValue( $def, "is_pairend" );
   }
 
-  my $pairend = getValue( $def, "is_paired_end" );
-  if ($pairend) {
+  if ($is_paired) {
     initDefaultValue( $def, "aligner", "bwa" );
   }
   else {
@@ -220,6 +221,7 @@ sub getConfig {
       is_draw_individual => 0,
       is_single_pdf      => 1,
       sh_direct          => 1,
+      docker_command     => $def->{"bamplot_docker_command"},
       pbs                => {
         "email"    => $email,
         "nodes"    => "1:ppn=1",
