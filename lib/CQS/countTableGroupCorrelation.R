@@ -440,8 +440,8 @@ for (i in 1:nrow(countTableFileAll)) {
       }
       
       if (ncol(countNumCor)>3) {
-        if (any(is.na(countNumCor))) {
-          print(paste0("NA in correlation matrix. Can't draw .Correlation.Cluster figure"))
+        if (any(is.na(countNumCor)) | length(unique(as.vector(countNumCor)))<=1) {
+          print(paste0("NA in correlation matrix or not enought unique values. Can't draw .Correlation.Cluster figure"))
         } else {
           for(format in outputFormat){
             if("PDF" == format){
@@ -450,9 +450,9 @@ for (i in 1:nrow(countTableFileAll)) {
               png(paste0(outputFilePrefix,curSuffix,".Correlation.Cluster.png"),width=width,height=width,res=300)
             }
             if(!is.na(conditionColors)){
-              heatmap3(countNumCor,scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,col=col,legendfun=legendfun,ColSideColors=conditionColors)
+              temp=try(heatmap3(countNumCor,scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,col=col,legendfun=legendfun,ColSideColors=conditionColors))
             }else{
-              heatmap3(countNumCor,scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,col=col,legendfun=legendfun)
+              temp=try(heatmap3(countNumCor,scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,col=col,legendfun=legendfun))
             }
             dev.off()
           }
