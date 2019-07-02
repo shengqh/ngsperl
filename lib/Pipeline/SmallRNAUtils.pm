@@ -275,6 +275,7 @@ sub initializeSmallRNADefaultOptions {
   if ( $def->{perform_cutadapt} ) {
     initDefaultValue( $def, "adapter",         "TGGAATTCTCGGGTGCCAAGG" );
     initDefaultValue( $def, "cutadapt_option", "-m " . $def->{min_read_length} );
+    initDefaultValue( $def, "trim_poly_atgc",  1 );
   }
 
   initDefaultValue( $def, "remove_sequences",          "" );
