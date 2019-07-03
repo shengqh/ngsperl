@@ -221,7 +221,6 @@ sub getConfig {
       is_draw_individual => 0,
       is_single_pdf      => 1,
       sh_direct          => 1,
-      docker_command     => $def->{"bamplot_docker_command"},
       pbs                => {
         "email"    => $email,
         "nodes"    => "1:ppn=1",

@@ -23,6 +23,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_bp";
+  $self->{_dockerCommandKey} = "bamplot_docker_command";
   bless $self, $class;
   return $self;
 }

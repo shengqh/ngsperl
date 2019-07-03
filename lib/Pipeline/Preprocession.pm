@@ -86,7 +86,6 @@ sub getPreprocessionConfig {
       emailType  => getValue( $def, "emailType", "ALL" ),
       constraint => $def->{constraint},
       account    => $def->{account},
-      docker_command => $def->{docker_command},
     },
     files                => $def->{files},
     groups               => $def->{groups},
@@ -94,6 +93,13 @@ sub getPreprocessionConfig {
     pairs                => $def->{pairs},
     additional_bam_files => $def->{additional_bam_files},
   };
+  
+  foreach my $key (keys %$def){
+    if ($key =~ /docker_command/){
+      $config->{general}{$key} = $def->{$key};
+    }
+  }
+  
   my $source_ref = ["files"];
   my $individual = [];
   my $summary    = [];

@@ -9,7 +9,7 @@ use Data::Dumper;
 
 sub new {
   my ($class) = @_;
-  my $self = { _name => __PACKAGE__, _suffix => "", _task_prefix => "", _task_suffix => "", _pbskey => "source" };
+  my $self = { _name => __PACKAGE__, _suffix => "", _task_prefix => "", _task_suffix => "", _pbskey => "source", _dockerCommandKey => "docker_command" };
   bless $self, $class;
   return $self;
 }
@@ -169,25 +169,33 @@ sub get_task_filename {
 }
 
 sub get_docker_value {
-  my ( $self, $key, $default ) = @_;
-  my $result = $default;
+  my ($self) = @_;
+  my $result = undef;
 
-  if ( defined $self->{_config} ) {
-    if ( ( defined $self->{_section} ) and ( defined $self->{_config}{$self->{_section}}{$key} ) ) {
-      $result = $self->{_config}{$self->{_section}}{$key};
-      if ( defined $result ) {
-        return ($result);
+  my @dockerKeys = ( $self->{_dockerCommandKey} );
+
+  if ( $self->{_dockerCommandKey} ne "docker_command" ) {
+    push @dockerKeys, "docker_command";
+  }
+
+  for my $dockerKey (@dockerKeys) {
+    if ( defined $self->{_config} ) {
+      if ( ( defined $self->{_section} ) and ( defined $self->{_config}{ $self->{_section} }{$dockerKey} ) ) {
+        $result = $self->{_config}{ $self->{_section} }{$dockerKey};
+        if ( defined $result ) {
+          return ($result);
+        }
       }
-    }
 
-    if ( ( defined $self->{_config} ) and ( defined $self->{_config}{general} ) and ( defined $self->{_config}{general}{$key} ) ) {
-      $result = $self->{_config}{general}{$key};
-      if ( defined $result ) {
-        return ($result);
+      if ( ( defined $self->{_config} ) and ( defined $self->{_config}{general} ) and ( defined $self->{_config}{general}{$dockerKey} ) ) {
+        $result = $self->{_config}{general}{$dockerKey};
+        if ( defined $result ) {
+          return ($result);
+        }
       }
     }
   }
-
+  
   return ($result);
 }
 
@@ -240,9 +248,9 @@ echo working in $result_dir ...
  
 ";
 
-  my $docker_command = $self->get_docker_value( "docker_command", undef );
-  my $is_sequenceTask = ($module_name =~ /SequenceTask/); 
-  if ( (defined $docker_command) and (not $is_sequenceTask)) {
+  my $docker_command = $self->get_docker_value();
+  my $is_sequenceTask = ( $module_name =~ /SequenceTask/ );
+  if ( ( defined $docker_command ) and ( not $is_sequenceTask ) ) {
     my $sh_file = $pbs_file . ".sh";
 
     print $pbs "
@@ -269,7 +277,7 @@ sub close_pbs {
 
   my $module_name = $self->{_name};
 
-  my $docker_command = $self->get_docker_value( "docker_command", undef );
+  my $docker_command = $self->get_docker_value();
 
   if ( not defined $docker_command ) {
     print $pbs "
