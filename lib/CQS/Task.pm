@@ -246,6 +246,10 @@ echo working in $result_dir ...
     my $sh_file = $pbs_file . ".sh";
 
     print $pbs "
+export R_LIBS=
+export PYTHONPATH=
+export HOME=$result_dir
+ 
 $docker_command bash $sh_file 
 
 echo ${module_name}_end=`date`
