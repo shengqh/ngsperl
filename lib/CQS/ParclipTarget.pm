@@ -28,7 +28,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqstools = get_cqstools( $config, $section, 1 );
   my $refgeneFile = get_param_file( $config->{$section}{refgene_file}, "refgene_file (Refgene file downloaded from UCSC Genome Browser)", 1 );
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file (genome fasta file)", 1 );
 
@@ -58,7 +57,7 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-    print $pbs "mono $cqstools parclip_mirna_target $option -i $inputFile -t $targetXml -r $refgeneFile -g $faFile -o $final_file";
+    print $pbs "cqstools parclip_mirna_target $option -i $inputFile -t $targetXml -r $refgeneFile -g $faFile -o $final_file";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;

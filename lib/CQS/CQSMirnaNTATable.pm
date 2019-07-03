@@ -28,8 +28,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqstools = get_cqstools( $config, $section, 1 );
-
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
@@ -60,7 +58,7 @@ sub perform {
       close($fl);
 
       print $pbs "
-mono-sgen $cqstools mirna_nta_table $option -o $outputname -l $filelist
+cqstools mirna_nta_table $option -o $outputname -l $filelist
 ";
     }
   }
@@ -78,7 +76,7 @@ mono-sgen $cqstools mirna_nta_table $option -o $outputname -l $filelist
     close($fl);
 
     print $pbs "
-mono-sgen $cqstools mirna_nta_table $option -o $outputname -l $filelist
+cqstools mirna_nta_table $option -o $outputname -l $filelist
 ";
   }
   $self->close_pbs( $pbs, $pbs_file );

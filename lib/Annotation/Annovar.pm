@@ -52,7 +52,7 @@ sub perform {
     die "File not found : " . $pythonSplicing;
   }
 
-  my $cqstools = get_cqstools( $config, $section, 0 );
+  my $toExcel = get_option( $config, $section, "to_excel", 0 );
   my $affyFile = get_param_file( $config->{$section}{affy_file}, "affy_file", 0 );
 
   my $raw_files = get_raw_files( $config, $section );
@@ -147,7 +147,7 @@ if [[ -s $result && ! -s $final ]]; then
 fi
 ";
 
-      if ( defined $cqstools ) {
+      if ( $toExcel ) {
         my $affyoption = defined($affyFile) ? "-a $affyFile" : "";
         print $pbs "
 if [ -s $final ]; then
@@ -155,7 +155,7 @@ if [ -s $final ]; then
 fi
 
 if [[ -s $final && ! -s $excel ]]; then
-  mono $cqstools annovar_refine -i $final $affyoption -o $excel
+  cqstools annovar_refine -i $final $affyoption -o $excel
 fi
 ";
       }
@@ -188,7 +188,7 @@ sub result {
 
   my $buildver = $config->{$section}{buildver} or die "buildver is not defined in $section";
   my $raw_files = get_raw_files( $config, $section );
-  my $cqstools = get_cqstools( $config, $section, 0 );
+  my $toExcel = get_option( $config, $section, "to_excel", 0 );
 
   my $result = {};
   for my $sample_name ( sort keys %{$raw_files} ) {
@@ -199,7 +199,7 @@ sub result {
       my ( $filename, $dir ) = fileparse($sampleFile);
       my $annovar = $filename . ".annovar";
       my $final   = $annovar . ".final.tsv";
-      if ( defined $cqstools ) {
+      if ( $toExcel ) {
         my $excel = $final . ".xls";
         push( @result_files, $cur_dir . "/$excel" );
       }

@@ -42,8 +42,6 @@ sub perform {
   print "sort_before_convert = $sort_before_convert\n";
   print "sort_thread = $sort_thread\n";
 
-  my $cqstools = get_cqstools( $config, $section, 1 );
-
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -80,7 +78,7 @@ sub perform {
     $sortCmd
   fi
   
-  mono $cqstools bam2fastq $option -i $sourceFile -o $sample_name 
+  cqstools bam2fastq $option -i $sourceFile -o $sample_name 
   
   if [ -s $final_file ]; then
     rm $sourceFile
@@ -90,11 +88,11 @@ sub perform {
       if ($unmapped_only) {
         my $unmapped_bam = "${sample_name}.unmapped.bam";
         $convertCmd = "samtools view -b -f 4 $bam_file > $unmapped_bam
-  mono $cqstools bam2fastq $option -i $unmapped_bam -o $sample_name
+  cqstools bam2fastq $option -i $unmapped_bam -o $sample_name
   rm $unmapped_bam ";
       }
       else {
-        $convertCmd = "mono $cqstools bam2fastq $option -i $bam_file -o $sample_name ";
+        $convertCmd = "cqstools bam2fastq $option -i $bam_file -o $sample_name ";
       }
     }
 

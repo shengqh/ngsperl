@@ -28,7 +28,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
-  my $cqstools = get_cqstools( $config, $section, 0 );
+  my $mergeResult = get_option($config, $section, "merge_result", 0);
   my $cqstools_options = get_option($config, $section, "cqstools_options", "");
 
   my $bedfile = $config->{$section}{bedfile};
@@ -172,10 +172,10 @@ cd $pbs_dir
 R --vanilla -f $rfile 
 ";
 
-  if (defined $cqstools){
+  if ($mergeResult){
   print $pbs "
 if [[ -s  $final_file && ! -s ${final_file}.tsv ]]; then 
-  mono $cqstools cnmops_merge $cqstools_options -i $final_file -o ${final_file}.tsv
+  cqstools cnmops_merge $cqstools_options -i $final_file -o ${final_file}.tsv
 fi
 ";
   }
@@ -188,11 +188,11 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $cqstools = get_cqstools( $config, $section, 0 );
+  my $mergeResult = get_option($config, $section, "merge_result", 0);
 
   my @result_files = ();
   push( @result_files, $result_dir . "/${task_name}.call" );
-  if(defined $cqstools){
+  if($mergeResult){
     push( @result_files, $result_dir . "/${task_name}.call.tsv" );
     push( @result_files, $result_dir . "/${task_name}.call.tsv.cnvr" );
   }

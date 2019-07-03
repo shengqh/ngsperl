@@ -28,7 +28,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqstools = get_cqstools( $config, $section, 1 );
   my $coordinate_file = get_param_file( $config->{$section}{coordinate_file}, "coordinate_file", 1 );
   my $fastaFile       = get_param_file( $config->{$section}{fasta_file},      "fasta_file",      0 );
 
@@ -85,7 +84,7 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $countFile );
-    print $pbs "mono $cqstools tgirt_count $option -i $bam_file --other $otherFile -g $coordinate_file $seqcountFile $fastqFile -o $countFile";
+    print $pbs "cqstools tgirt_count $option -i $bam_file --other $otherFile -g $coordinate_file $seqcountFile $fastqFile -o $countFile";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;

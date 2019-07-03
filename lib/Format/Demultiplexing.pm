@@ -31,7 +31,6 @@ sub perform {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my %mapFiles = %{ get_raw_files( $config, $section, "maps" ) };
-  my $cqstools = get_cqstools( $config, $section, 1 );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -54,7 +53,7 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
-    print $pbs "mono $cqstools fastq_demultiplex $option -m $mapfile -i $fastqfile -o . -s $summaryfile";
+    print $pbs "cqstools fastq_demultiplex $option -m $mapfile -i $fastqfile -o . -s $summaryfile";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;

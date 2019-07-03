@@ -29,7 +29,6 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
   my $is_tRH = get_option( $config, $section, "is_tRH", 0 );
 
-  my $cqstools = get_cqstools( $config, $section, 1 );
   my $python_script = dirname(__FILE__) . "/smallRNATable.py";
   if ( !-e $python_script ) {
     die "File not found : " . $python_script;
@@ -71,7 +70,7 @@ sub perform {
       my $pythonCode = $noCategory ? "" : ($is_tRH? "": "python $python_script \"$ntaFile\" \"$ntaBaseFile\"");
       print $pbs "
 if [ ! -s $outputname ]; then
-  mono $cqstools smallrna_table $option -o $outputname -l $filelist
+  cqstools smallrna_table $option -o $outputname -l $filelist
   $pythonCode
 fi
 ";
@@ -98,7 +97,7 @@ fi
 
     my $pythonCode = $noCategory ? "" : ($is_tRH?"": "python $python_script \"$ntaFile\" \"$ntaBaseFile\"");
     print $pbs "
-mono $cqstools smallrna_table $option -o $outputname -l $filelist
+cqstools smallrna_table $option -o $outputname -l $filelist
 $pythonCode
 ";
     $self->close_pbs( $pbs, $pbs_file );

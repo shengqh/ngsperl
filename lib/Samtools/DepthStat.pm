@@ -34,8 +34,7 @@ sub perform {
   my $cqstools;
   my $cqscommand = "";
   if ( defined $minimum_depth ) {
-    $cqstools = get_cqstools( $config, $section, 1 );
-    $cqscommand = " | mono $cqstools depth_filter -d $minimum_depth";
+    $cqscommand = " | cqstools depth_filter -d $minimum_depth";
   }
   else {
     $minimum_depth = 1;

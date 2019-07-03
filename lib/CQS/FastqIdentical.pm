@@ -27,7 +27,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqstools = get_cqstools( $config, $section, 1 );
   my $extension = get_option( $config, $section, "extension" );
 
   my $minlen = $config->{$section}{minlen};
@@ -58,7 +57,7 @@ sub perform {
 
     if ( scalar(@sample_files) == 1 ) {
       my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-      print $pbs "mono $cqstools fastq_identical $option -i $sample_files[0] $minlen -o $final_file \n";
+      print $pbs "cqstools fastq_identical $option -i $sample_files[0] $minlen -o $final_file \n";
       $self->close_pbs( $pbs, $pbs_file );
     }
     else {
@@ -66,7 +65,7 @@ sub perform {
       my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $firstOutputFile );
       for my $sampleFile (@sample_files) {
         my $outputFile = change_extension_gzipped( basename($sampleFile), $extension );
-        print $pbs "mono $cqstools fastq_identical -i $sampleFile $minlen -o $outputFile \n";
+        print $pbs "cqstools fastq_identical -i $sampleFile $minlen -o $outputFile \n";
       }
       $self->close_pbs( $pbs, $pbs_file );
     }

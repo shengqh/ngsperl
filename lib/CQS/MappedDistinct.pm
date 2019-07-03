@@ -28,8 +28,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqstools = get_cqstools( $config, $section, 1 );
-
   my %firstFiles = %{ get_raw_files( $config, $section ) };
   my %secondFiles = %{ get_raw_files( $config, $section, "second" ) };
   my $firstSuffix  = get_option( $config, $section, "first_suffix" );
@@ -48,7 +46,7 @@ sub perform {
     my $firstoutput  = $firstSuffix . $sample_name . ".distinct.count";
     my $secondoutput = $secondSuffix . $sample_name . ".distinct.count";
 
-    print $pbs "mono $cqstools mapped_distinct $option --inputfile1 $firstFile --outputfile1 $firstoutput --inputfile2 $secondFile --outputfile2 $secondoutput
+    print $pbs "cqstools mapped_distinct $option --inputfile1 $firstFile --outputfile1 $firstoutput --inputfile2 $secondFile --outputfile2 $secondoutput
 ";
   }
   $self->close_pbs( $pbs, $pbs_file );

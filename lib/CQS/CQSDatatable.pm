@@ -42,7 +42,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqstools = get_cqstools( $config, $section, 1 );
   my $mapFile = get_param_file( $config->{$section}{name_map_file}, "name_map_file", 0 );
 
   my $mapoption = "";
@@ -83,7 +82,7 @@ sub perform {
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-  print $pbs "mono $cqstools data_table $option -o $result_file -l $filelist $mapoption \n";
+  print $pbs "cqstools data_table $option -o $result_file -l $filelist $mapoption \n";
 
   $self->close_pbs( $pbs, $pbs_file );
 }

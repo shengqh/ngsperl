@@ -28,8 +28,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqstools = get_cqstools( $config, $section, 1 );
-
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
@@ -61,7 +59,7 @@ sub perform {
       close(FL);
 
       print $pbs "
-mono-sgen $cqstools mapped_table $option -o $outputname -l $filelist
+cqstools mapped_table $option -o $outputname -l $filelist
 ";
     }
   }
@@ -79,7 +77,7 @@ mono-sgen $cqstools mapped_table $option -o $outputname -l $filelist
     close(FL);
 
     print $pbs "
-mono-sgen $cqstools mapped_table $option -o $outputname -l $filelist
+cqstools mapped_table $option -o $outputname -l $filelist
 ";
   }
   $self->close_pbs( $pbs, $pbs_file );

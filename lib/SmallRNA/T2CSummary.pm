@@ -28,8 +28,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqstools = get_cqstools( $config, $section, 1 );
-
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $filelist = $self->get_file( $pbs_dir, ${task_name}, ".filelist", 0 );
@@ -50,7 +48,7 @@ sub perform {
   my $outputname = basename($outputfile);
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $outputname );
-  print $pbs "mono $cqstools smallrna_t2c_summary $option -o $outputname -l $filelist";
+  print $pbs "cqstools smallrna_t2c_summary $option -o $outputname -l $filelist";
   $self->close_pbs( $pbs, $pbs_file );
 }
 

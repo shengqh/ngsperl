@@ -28,8 +28,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqstools = get_cqstools( $config, $section, 1 );
-
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $py_script = dirname(__FILE__) . "/../SmallRNA/extractT2CReads.py";
@@ -55,7 +53,7 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $t2cFile );
-    print $pbs "mono $cqstools parclip_t2c $option -i $xmlFile -o $t2cFile 
+    print $pbs "cqstools parclip_t2c $option -i $xmlFile -o $t2cFile 
     
 if [[ -s $t2cFile ]]; then
   python $py_script -i ${t2cFile}.xml -c $xmlFile -o ${t2cFile}.xml.txt

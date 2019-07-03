@@ -28,7 +28,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqstools = get_cqstools( $config, $section, 1 );
   my $corFiles = $config->{$section}{coordinate_files} or die "define coordinate_files (array) in section $section first!";
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
@@ -47,7 +46,7 @@ sub perform {
 
     my $cfiles = merge_string( ',', @{$corFiles} );
 
-    print $pbs "mono $cqstools paralyzer_annotation $option -i $bam_file -c $cfiles -o $annFile \n";
+    print $pbs "cqstools paralyzer_annotation $option -i $bam_file -c $cfiles -o $annFile \n";
   }
   $self->close_pbs( $pbs, $pbs_file );
 }

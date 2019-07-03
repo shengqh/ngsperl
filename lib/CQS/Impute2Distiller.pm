@@ -28,7 +28,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqstools = get_cqstools( $config, $section, 1 );
   my $targetSnpFile = get_param_file( $config->{$section}{target_snp_file}, "target_snp_file", 1 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
@@ -55,7 +54,7 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-    print $pbs "mono $cqstools impute2_distiller $option -i $inputFileStr -t $targetSnpFile -o $final_file";
+    print $pbs "cqstools impute2_distiller $option -i $inputFileStr -t $targetSnpFile -o $final_file";
 
     $self->close_pbs( $pbs, $pbs_file );
   }

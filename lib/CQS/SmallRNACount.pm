@@ -28,7 +28,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqstools = get_cqstools( $config, $section, 1 );
   my $coordinate_file = get_param_file( $config->{$section}{coordinate_file}, "coordinate_file", 1 );
 
   my $r_script = dirname(__FILE__) . "/smallRNAPosition.R";
@@ -112,7 +111,7 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_xml_file );
-    print $pbs "mono $cqstools smallrna_count $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile $exclude $cca -o $final_file
+    print $pbs "cqstools smallrna_count $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile $exclude $cca -o $final_file
 ";
     if ( $option !~ /noCategory/ ) {
       print $pbs "

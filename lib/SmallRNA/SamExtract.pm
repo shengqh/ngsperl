@@ -28,7 +28,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqstools = get_cqstools( $config, $section, 1 );
   my %count_files = %{ get_raw_files( $config, $section ) };
   my %bam_files = %{ get_raw_files( $config, $section, "bam_files" ) };
 
@@ -57,7 +56,7 @@ sub perform {
     my $pbs = $self->open_pbs($pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     print $pbs "
-mono $cqstools sam_extract $option --bam $sample_bam --count $sample_count -o $final_sam
+cqstools sam_extract $option --bam $sample_bam --count $sample_count -o $final_sam
 
 if [ -s $final_sam ]; then
   samtools view -S -b $final_sam > $final_file

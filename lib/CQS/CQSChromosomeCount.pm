@@ -28,8 +28,6 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $cqstools = get_cqstools( $config, $section, 1 );
-
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my %seqcount_files = ();
@@ -78,7 +76,7 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-    print $pbs "mono $cqstools chromosome_count $option $pmNameFile -i $bam_file -o $final_file $seqcountFile";
+    print $pbs "cqstools chromosome_count $option $pmNameFile -i $bam_file -o $final_file $seqcountFile";
 
     $self->close_pbs( $pbs, $pbs_file );
   }

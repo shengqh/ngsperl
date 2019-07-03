@@ -107,8 +107,6 @@ sub perform {
 
   $option = $option . " --exportFasta";
 
-  my $cqstools = get_cqstools( $config, $section, 1 );
-
   my $fastq_files;
   if ( has_raw_files( $config, $section, "fastq_files" ) ) {
     $fastq_files = get_raw_files( $config, $section, "fastq_files" );
@@ -145,7 +143,7 @@ sub perform {
 
     print $pbs "
 if [ ! -s $finalfile ]; then
-  mono $cqstools smallrna_sequence_count_table $option -o $outputname -l $filelist
+  cqstools smallrna_sequence_count_table $option -o $outputname -l $filelist
 fi
 
 ";
