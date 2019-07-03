@@ -256,6 +256,7 @@ echo working in $result_dir ...
     print $pbs "
 export R_LIBS=
 export PYTHONPATH=
+export JAVA_HOME=
 export HOME=$result_dir
  
 $docker_command bash $sh_file 
