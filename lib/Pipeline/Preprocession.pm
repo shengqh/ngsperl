@@ -94,9 +94,11 @@ sub getPreprocessionConfig {
     additional_bam_files => $def->{additional_bam_files},
   };
   
-  foreach my $key (keys %$def){
-    if ($key =~ /docker_command/){
-      $config->{general}{$key} = $def->{$key};
+  if(not defined $def->{ignore_docker} or not $def->{ignore_docker}){
+    foreach my $key (keys %$def){
+      if ($key =~ /docker_command/){
+        $config->{general}{$key} = $def->{$key};
+      }
     }
   }
   
