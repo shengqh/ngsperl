@@ -229,7 +229,12 @@ sub get_parameter {
 #get parameter which indicates a file. If required, not defined or not exists, die. If defined but not exists, die.
 #returned file either undefined or exists.
 sub get_param_file {
-  my ( $file, $name, $required ) = @_;
+  my ( $file, $name, $required, $checkExists ) = @_;
+
+
+  if(not defined $checkExists){
+    $checkExists = 1;
+  }
 
   my $result = $file;
 
@@ -238,7 +243,7 @@ sub get_param_file {
       die "$name was not defined!";
     }
 
-    if ( !is_debug() && !-e $file ) {
+    if ( !is_debug() and ($checkExists and !-e $file) ) {
       die "$name $file defined but not exists!";
     }
   }
@@ -247,7 +252,7 @@ sub get_param_file {
       if ( $file eq "" ) {
         undef($result);
       }
-      elsif ( !is_debug() && !-e $file ) {
+      elsif ( !is_debug() and ($checkExists and !-e $file )) {
         die "$name $file defined but not exists!";
       }
     }
