@@ -258,6 +258,9 @@ echo working in $result_dir ...
     my $docker_init = ""; 
     if ( defined $self->{_config} and defined $self->{_section} ) {
       $docker_init = $self->{_config}{ $self->{_section} }{"docker_init"};
+      if (not defined $docker_init){
+        $docker_init = "";
+      }
     }
     my $sh_file = $pbs_file . ".sh";
 
@@ -266,8 +269,6 @@ export R_LIBS=
 export PYTHONPATH=
 export JAVA_HOME=
 export HOME=$result_dir
- 
-$docker_init
  
 $docker_command bash $sh_file 
 
@@ -278,6 +279,10 @@ exit 0
 ";
     close $pbs;
     open( $pbs, ">$sh_file" ) or die $!;
+    print $pbs "
+$docker_init
+";
+
   }
 
   return $pbs;

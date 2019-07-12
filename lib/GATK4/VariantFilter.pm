@@ -64,8 +64,7 @@ sub perform {
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
 
-  #my $gatk4_jar = get_param_file( $config->{$section}{gatk4_jar},   "gatk4_jar",   1 );
-  my $gatk4_singularity = get_param_file( $config->{$section}{gatk4_singularity}, "gatk4_singularity", 1 );
+  $self->get_docker_value(1);
 
   my $java_option = $config->{$section}{java_option};
   if ( !defined $java_option || $java_option eq "" ) {
@@ -114,24 +113,9 @@ sub perform {
   my $reader_threads = min( 5, $thread );
 
   my $log_desc = $cluster->get_log_description($log);
-#
-#  my $sample_map_file = $result_dir . "/" . $task_name . ".sample_map";
-#  open( my $sm, ">$sample_map_file" ) or die "Cannot create $sample_map_file";
-#  for my $sample_name ( sort keys %vcfFiles ) {
-#    my @sample_files = @{ $vcfFiles{$sample_name} };
-#    my $gvcfFile     = $sample_files[0];
-#    print $sm "$sample_name\t$gvcfFile\n";
-#  }
-#  close($sm);
 
-  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
-  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
-  print $sh "  
-export HOME=$result_dir
-export PYTHONPATH=
-
-source activate gatk
-
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
+  print $pbs "  
 cd $result_dir
 
 if [ ! -s $mergedFile ]; then
@@ -144,10 +128,10 @@ if [ ! -s $mergedFile ]; then
   for my $sample_name ( sort keys %vcfFiles ) {
     my @sample_files = @{ $vcfFiles{$sample_name} };
     my $gvcfFile     = $sample_files[0];
-    print $sh "    -V $gvcfFile \\\n";
+    print $pbs "    -V $gvcfFile \\\n";
   }
 
-  print $sh "    -O $mergedFile
+  print $pbs "    -O $mergedFile
 fi
 
 if [[ -s $mergedFile && ! -s $callFile ]]; then
@@ -241,12 +225,6 @@ if [[ -s $recalibrated_vcf_filename && ! -s $pass_file ]]; then
     --exclude-filtered
 fi
 
-";
-  close($sh);
-
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
-  print $pbs "singularity exec $gatk4_singularity bash $shfile 
-
 if [[ -s $pass_file && ! -s $left_trim_file ]]; then
   echo LeftAlignAndNorm=`date`
   bcftools norm -m- -o $split_file $pass_file 
@@ -283,12 +261,6 @@ sub result {
   my $final_file = $task_name . ".indels.snp.recal.pass.norm.nospan.vcf.gz";
   my @result_files = ();
   push( @result_files, $result_dir . "/" . $final_file );
-
-  #  my @result_files = ();
-  #  my $finalFile    = $task_name . ".median3.snp.pass.vcf";
-  #  push( @result_files, $result_dir . "/" . $finalFile );
-  #  $finalFile = $task_name . ".median3.indel.pass.vcf";
-  #  push( @result_files, $result_dir . "/" . $finalFile );
 
   my $result = {};
   $result->{$task_name} = filter_array( \@result_files, $pattern );
