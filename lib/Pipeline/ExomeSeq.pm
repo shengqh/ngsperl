@@ -201,8 +201,12 @@ sub getConfig {
 
     my $filter_name = "";
     if ( $def->{perform_gatk4_callvariants} ) {
-      my $gatk4_singularity = getValue( $def, "gatk4_singularity" );
-      my $gatk4_jar         = getValue( $def, "gatk4_jar" );
+      my $dockerCommand = $def->{docker_command};
+      
+      if (defined $def->{gatk4_singularity}){
+        $dockerCommand = "singularity exec " . $def->{gatk4_singularity} . " ";
+      }
+      
       my $gvcf_name         = $refine_name . "_gatk4_hc_gvcf";
       $config->{$gvcf_name} = {
         class             => "GATK4::HaplotypeCaller",
@@ -212,7 +216,8 @@ sub getConfig {
         source_ref        => $refine_name,
         java_option       => "",
         fasta_file        => $fasta,
-        gatk4_singularity => $gatk4_singularity,
+        docker_command    => $dockerCommand,
+        docker_init       => "source activate gatk ",
         extension         => ".g.vcf",
         bed_file          => $def->{covered_bed},
         by_chromosome     => 0,
@@ -242,7 +247,8 @@ sub getConfig {
         g1000_vcf         => $def->{g1000},
         axiomPoly_vcf     => $def->{axiomPoly},
         mills_vcf         => $mills,
-        gatk4_singularity => $gatk4_singularity,
+        docker_init       => "source activate gatk ",
+        docker_command    => $dockerCommand,
         sh_direct         => 1,
         pbs               => {
           "email"    => $email,

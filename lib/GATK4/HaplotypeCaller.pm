@@ -42,7 +42,7 @@ sub perform {
 
   my $extension = get_option( $config, $section, "extension", ".g.vcf" );
 
-  my $gatk4_singularity = get_param_file( $config->{$section}{gatk4_singularity}, "gatk4_singularity", 1 );
+  $self->get_docker_value(1);
 
   my $java_option = $config->{$section}{java_option};
   if ( !defined $java_option || $java_option eq "" ) {
@@ -84,16 +84,8 @@ sub perform {
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
-    my $shsamplefile = $self->get_task_filename( $pbs_dir, $sample_name );
-    open( my $shsample, ">$shsamplefile" ) or die "Cannot create $shsamplefile";
-    print $shsample "  
-export HOME=$result_dir
-export PYTHONPATH=
-
-source activate gatk
-
-cd $result_dir
-
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $snvOutIndex );
+    print $pbs "
 gatk --java-options \"$java_option\" \\
   HaplotypeCaller $option $restrict_intervals \\
   --native-pair-hmm-threads $thread \\
@@ -101,10 +93,7 @@ gatk --java-options \"$java_option\" \\
   -I $bam_file \\
   -O $snvOut
 ";
-    close($shsample);
     
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $snvOutIndex );
-    print $pbs "singularity exec $gatk4_singularity bash $shsamplefile \n";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;

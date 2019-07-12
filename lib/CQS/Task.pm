@@ -169,7 +169,7 @@ sub get_task_filename {
 }
 
 sub get_docker_value {
-  my ($self) = @_;
+  my ($self, $required) = @_;
   my $result = undef;
 
   my @dockerKeys = ( $self->{_dockerCommandKey} );
@@ -194,6 +194,10 @@ sub get_docker_value {
         }
       }
     }
+  }
+  
+  if(defined $required and $required){
+    die "Define docker_command for task " . $self->{_name};
   }
   
   return ($result);
@@ -251,6 +255,10 @@ echo working in $result_dir ...
   my $docker_command = $self->get_docker_value();
   my $is_sequenceTask = ( $module_name =~ /SequenceTask/ );
   if ( ( defined $docker_command ) and ( not $is_sequenceTask ) ) {
+    my $docker_init = ""; 
+    if ( defined $self->{_config} and defined $self->{_section} ) {
+      $docker_init = $self->{_config}{ $self->{_section} }{"docker_init"};
+    }
     my $sh_file = $pbs_file . ".sh";
 
     print $pbs "
@@ -258,6 +266,8 @@ export R_LIBS=
 export PYTHONPATH=
 export JAVA_HOME=
 export HOME=$result_dir
+ 
+$docker_init
  
 $docker_command bash $sh_file 
 
