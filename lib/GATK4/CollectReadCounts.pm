@@ -32,8 +32,7 @@ sub perform {
   my $java_option = $self->get_java_option($config, $section, $memory);
 
   #parameter files
-  #my $gatkJar = get_param_file( $config->{$section}{gatk_jar}, "gatk_jar", 1 );
-  my $gatk4_singularity = get_param_file( $config->{$section}{gatk4_singularity}, "gatk4_singularity", 1 );
+  $self->get_docker_value(1);
 
   my $preprocessed_intervals = parse_param_file( $config, $section, "preprocessed_intervals", 1 );
 
@@ -63,13 +62,8 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $shsamplefile = $self->get_task_filename( $pbs_dir, $sample_name );
-    open( my $shsample, ">$shsamplefile" ) or die "Cannot create $shsamplefile";
-    print $shsample "  
-export HOME=$result_dir
-export PYTHONPATH=
-
-source activate gatk
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
+    print $pbs "  
 
 cd $result_dir
 
@@ -83,10 +77,6 @@ gatk --java-options \"$java_option\" CollectReadCounts $option \\
             
 rm -rf .cache .conda .config .theano
 ";
-    close($shsample);
-
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
-    print $pbs "singularity exec $gatk4_singularity bash $shsamplefile \n";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;

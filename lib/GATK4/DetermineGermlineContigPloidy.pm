@@ -32,7 +32,7 @@ sub perform {
   my $java_option = $self->get_java_option( $config, $section, $memory );
 
   #parameter files
-  my $gatk4_singularity = get_param_file( $config->{$section}{gatk4_singularity}, "gatk4_singularity", 1 );
+  $self->get_docker_value(1);
 
   my $intervals = parse_param_file( $config, $section, "filtered_intervals", 1 );
   my $contig_ploidy_priors = get_param_file( $config->{$section}{contig_ploidy_priors}, "contig_ploidy_priors", 0 );
@@ -53,13 +53,8 @@ sub perform {
 
   my $inputOption = get_rawfiles_option( $raw_files, "--input", " \\\n  " );
 
-  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
-  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
-  print $sh "  
-export HOME=$result_dir
-export PYTHONPATH=
-
-source activate gatk
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
+  print $pbs "  
 
 cd $result_dir
 
@@ -76,11 +71,6 @@ gatk --java-options \"$java_option\" DetermineGermlineContigPloidy $option \\
 
 rm -rf .cache .conda .config .theano
 ";
-  close($sh);
-
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
-  print $pbs "singularity exec $gatk4_singularity bash $shfile \n";
-
   $self->close_pbs( $pbs, $pbs_file );
 }
 

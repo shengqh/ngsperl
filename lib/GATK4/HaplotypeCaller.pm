@@ -42,12 +42,9 @@ sub perform {
 
   my $extension = get_option( $config, $section, "extension", ".g.vcf" );
 
-  $self->get_docker_value(1);
+  my $java_option = $self->get_java_option($config, $section, $memory);
 
-  my $java_option = $config->{$section}{java_option};
-  if ( !defined $java_option || $java_option eq "" ) {
-    $java_option = "-Xmx${memory}";
-  }
+  $self->get_docker_value(1);
 
   my $bedFile            = get_param_file( $config->{$section}{bed_file}, "bed_file", 0 );
   my $interval_padding   = get_option( $config, $section, "interval_padding", 0 );
