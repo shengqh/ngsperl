@@ -65,11 +65,13 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
 
   my $knownsitesvcf = getKnownSitesVcf( $config, $section );
+  
+  my $docker = $self->get_docker_value(0);
 
   #other options
-  my $faFile     = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
-  my $gatk_jar   = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
-  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
+  my $faFile     = get_param_file( $config->{$section}{fasta_file}, "fasta_file", not defined $docker );
+  my $gatk_jar   = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   not defined $docker );
+  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", not defined $docker );
 
   my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals", 0 ) ? "-fixMisencodedQuals" : "";
 
