@@ -9,7 +9,7 @@ use Data::Dumper;
 
 sub new {
   my ($class) = @_;
-  my $self = { _name => __PACKAGE__, _suffix => "", _task_prefix => "", _task_suffix => "", _pbskey => "source", _dockerCommandKey => "docker_command" };
+  my $self = { _name => __PACKAGE__, _suffix => "", _task_prefix => "", _task_suffix => "", _pbskey => "source", _docker_prefix => "" };
   bless $self, $class;
   return $self;
 }
@@ -193,26 +193,32 @@ sub do_get_docker_value {
 
 sub get_docker_value {
   my ($self, $required) = @_;
-  my $result = undef;
+  my $command = undef;
+  my $init = undef;
 
-  my @dockerKeys = ( $self->{_dockerCommandKey} );
+  my $commandKey = $self->{_docker_prefix} . "docker_command";
+  my $initKey = $self->{_docker_prefix} . "docker_init";
 
-  if ( $self->{_dockerCommandKey} ne "docker_command" ) {
-    push @dockerKeys, "docker_command";
+  $command = $self->do_get_docker_value($commandKey);
+  if (defined $command){
+    $init = $self->do_get_docker_value($initKey);
+    return ($command, $init);
   }
+  
+  my $baseCommandKey = "docker_command";
+  my $baseInitKey = "docker_init";
 
-  for my $dockerKey (@dockerKeys) {
-    $result = $self->do_get_docker_value($dockerKey);
-    if (defined $result){
-      return ($result);
-    }
+  $command = $self->do_get_docker_value($baseCommandKey);
+  if (defined $command){
+    $init = $self->do_get_docker_value($baseInitKey);
+    return ($command, $init);
   }
   
   if(defined $required and $required){
-    die "Define docker_command for task " . $self->{_name};
+    die "Define $commandKey for task " . $self->{_name};
   }
   
-  return ($result);
+  return (undef, undef);
 }
 
 sub open_pbs {
@@ -264,10 +270,9 @@ echo working in $result_dir ...
  
 ";
 
-  my $docker_command = $self->get_docker_value();
+  my ($docker_command, $docker_init) = $self->get_docker_value();
   my $is_sequenceTask = ( $module_name =~ /SequenceTask/ );
   if ( ( defined $docker_command ) and ( not $is_sequenceTask ) ) {
-    my $docker_init = $self->do_get_docker_value("docker_init"); 
     if(not defined $docker_init){
       $docker_init = "";
     }

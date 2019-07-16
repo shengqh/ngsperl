@@ -8,11 +8,11 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::UniqueTask;
+use GATK4::GATK4UniqueTask;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 
-our @ISA = qw(CQS::UniqueTask);
+our @ISA = qw(GATK4::GATK4UniqueTask);
 
 sub new {
   my ($class) = @_;
