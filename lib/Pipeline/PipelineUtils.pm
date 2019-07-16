@@ -937,12 +937,9 @@ sub addGATK4PreprocessIntervals {
 
   my $result = "GATK4_CNV_Germline${index}_PreprocessIntervals";
   if ( !defined $config->{$result} ) {
-    my $gatk4_singularity = getValue( $def, "gatk4_singularity" );
-
     #PreprocessIntervals at summary level
     $config->{$result} = {
       class             => "GATK4::PreprocessIntervals",
-      gatk4_singularity => $gatk4_singularity,
       option            => "",
       interval_file     => getValue( $def, "covered_bed" ),
       ref_fasta_dict    => getValue( $def, "ref_fasta_dict" ),
@@ -964,15 +961,12 @@ sub addGATK4PreprocessIntervals {
 sub addGATK4CNVGermlineCohortAnalysis {
   my ( $config, $def, $target_dir, $bam_ref, $step1, $step2, $step3, $step4, $step5, $step6 ) = @_;
 
-  my $gatk4_singularity = getValue( $def, "gatk4_singularity" );
-
   my $preprocessIntervalsTask = addGATK4PreprocessIntervals( $config, $def, $target_dir, $bam_ref, $step1, $step2, $step3, $step4, $step5, $step6, "_01" );
 
   #CollectReadCounts at sample level
   my $CollectReadCounts = "GATK4_CNV_Germline_02_CollectReadCounts";
   $config->{$CollectReadCounts} = {
     class                      => "GATK4::CollectReadCounts",
-    gatk4_singularity          => $gatk4_singularity,
     source_ref                 => $bam_ref,
     option                     => "",
     preprocessed_intervals_ref => $preprocessIntervalsTask,
@@ -993,7 +987,6 @@ sub addGATK4CNVGermlineCohortAnalysis {
   my $FilterIntervals = "GATK4_CNV_Germline_03_FilterIntervals";
   $config->{$FilterIntervals} = {
     class                      => "GATK4::FilterIntervals",
-    gatk4_singularity          => $gatk4_singularity,
     source_ref                 => $CollectReadCounts,
     option                     => "",
     preprocessed_intervals_ref => $preprocessIntervalsTask,
@@ -1014,7 +1007,6 @@ sub addGATK4CNVGermlineCohortAnalysis {
   my $DetermineGermlineContigPloidyCohortMode = "GATK4_CNV_Germline_04_DetermineGermlineContigPloidyCohortMode";
   $config->{$DetermineGermlineContigPloidyCohortMode} = {
     class                  => "GATK4::DetermineGermlineContigPloidy",
-    gatk4_singularity      => $gatk4_singularity,
     source_ref             => $CollectReadCounts,
     option                 => "",
     filtered_intervals_ref => $FilterIntervals,
@@ -1034,7 +1026,6 @@ sub addGATK4CNVGermlineCohortAnalysis {
   my $GermlineCNVCaller = "GATK4_CNV_Germline_05_GermlineCNVCaller";
   $config->{$GermlineCNVCaller} = {
     class                       => "GATK4::GermlineCNVCaller",
-    gatk4_singularity           => $gatk4_singularity,
     source_ref                  => $CollectReadCounts,
     option                      => "",
     filtered_intervals_ref      => $FilterIntervals,
@@ -1054,7 +1045,6 @@ sub addGATK4CNVGermlineCohortAnalysis {
   my $PostprocessGermlineCNVCalls = "GATK4_CNV_Germline_06_PostprocessGermlineCNVCalls";
   $config->{$PostprocessGermlineCNVCalls} = {
     class                       => "GATK4::PostprocessGermlineCNVCalls",
-    gatk4_singularity           => $gatk4_singularity,
     source_ref                  => $CollectReadCounts,
     calls_shard_path_ref        => [ $GermlineCNVCaller, "calls\$" ],
     model_shard_path_ref        => [ $GermlineCNVCaller, "model\$" ],
