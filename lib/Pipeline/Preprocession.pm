@@ -98,6 +98,7 @@ sub getPreprocessionConfig {
     foreach my $key (keys %$def){
       if ($key =~ /docker_command/){
         $config->{general}{$key} = $def->{$key};
+        $config->{general}{docker_init} = $def->{docker_init};
       }
     }
   }

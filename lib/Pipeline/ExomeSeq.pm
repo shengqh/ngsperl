@@ -217,7 +217,6 @@ sub getConfig {
         java_option       => "",
         fasta_file        => $fasta,
         docker_command    => $dockerCommand,
-        docker_init       => "source activate gatk ",
         extension         => ".g.vcf",
         bed_file          => $def->{covered_bed},
         by_chromosome     => 0,
@@ -247,7 +246,6 @@ sub getConfig {
         g1000_vcf         => $def->{g1000},
         axiomPoly_vcf     => $def->{axiomPoly},
         mills_vcf         => $mills,
-        docker_init       => "source activate gatk ",
         docker_command    => $dockerCommand,
         sh_direct         => 1,
         pbs               => {
