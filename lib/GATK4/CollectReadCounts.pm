@@ -8,9 +8,9 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use GATK4::GATK4Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use GATK4::GATK4Task;
 
 our @ISA = qw(GATK4::GATK4Task);
 
