@@ -19,7 +19,6 @@ my $files                = {
   "S34" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s3_sequence.txt,/gpfs21/scratch/cqs/shengq1/report/rawdata/s4_sequence.txt"],
   "S56" => ["/gpfs21/scratch/cqs/shengq1/report/rawdata/s5_sequence.txt,/gpfs21/scratch/cqs/shengq1/report/rawdata/s6_sequence.txt"],
 };
-my $cqstools = "/home/shengq1/cqstools/CQS.Tools.exe";
 my $email    = "quanhu.sheng\@vanderbilt.edu";
 my $task     = "pipeline";
 

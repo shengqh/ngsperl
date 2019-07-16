@@ -15,7 +15,6 @@ my $def = {
 
   #software settings
   dexseqpy => "/home/shengq1/pylibs/bin/dexseq_count.py",
-  cqstools => "/home/shengq1/cqstools/CQS.Tools.exe",
   rnaseqc  => "/home/shengq1/local/bin/RNA-SeQC_v1.1.7.jar",
 
   #databases
@@ -204,7 +203,6 @@ my $config = {
     option        => "--noheader -o $def->{task}_gene.count",
     source_ref    => "htseqcount",
     name_map_file => $def->{name_map_file},
-    cqs_tools     => $def->{cqstools},
     sh_direct     => 1,
     pbs           => {
       "email"    => $def->{email},
@@ -252,7 +250,6 @@ my $config = {
     option        => "-p ENS --noheader -o $def->{task}_exon.count",
     name_map_file => $def->{name_map_file},
     source_ref    => "dexseqcount",
-    cqs_tools     => $def->{cqstools},
     sh_direct     => 0,
     pbs           => {
       "email"    => $def->{email},

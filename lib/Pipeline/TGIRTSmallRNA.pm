@@ -40,7 +40,6 @@ sub getTGIRTSmallRNAConfig {
       option             => "",
       source_ref         => [ 'identical', '.fastq.gz$' ],
       untrimmedFastq_ref => $file_ref,
-      cqs_tools          => $def->{cqstools},
       sh_direct          => 0,
       pbs                => {
         "email"    => $def->{email},
@@ -58,7 +57,6 @@ sub getTGIRTSmallRNAConfig {
       source_ref   => [ 'identical', '.fastq.gz$' ],
       ccaFile_ref  => "check_cca",
       seqcount_ref => [ 'identical', '.dupcount$' ],
-      cqs_tools    => $def->{cqstools},
       sh_direct    => 0,
       pbs          => {
         "email"    => $def->{email},
@@ -110,7 +108,6 @@ sub getTGIRTSmallRNAConfig {
       other_smallrna_ref => [ "star_otherSmallRNA", "_Aligned.out.bam" ],
       fastq_files_ref    => "identical",
       seqcount_ref       => [ "identical", ".dupcount\$" ],
-      cqs_tools          => $def->{cqstools},
       coordinate_file    => $def->{coordinate},
       fasta_file         => $def->{coordinate_fasta},
       sh_direct          => 1,
@@ -127,7 +124,6 @@ sub getTGIRTSmallRNAConfig {
       target_dir => $def->{target_dir} . "/star_tgirt_table",
       option     => "",
       source_ref => [ "star_tgirt_count", ".mapped.xml" ],
-      cqs_tools  => $def->{cqstools},
       prefix     => "tigrt_",
       sh_direct  => 1,
       cluster    => $cluster,
@@ -145,7 +141,6 @@ sub getTGIRTSmallRNAConfig {
       target_dir => $def->{target_dir} . "/star_tgirt_category",
       option     => '',
       source_ref => [ 'star_tgirt_count', '.info$' ],
-      cqs_tools  => $def->{cqstools},
       sh_direct  => 1,
       pbs        => {
         email    => $def->{email},

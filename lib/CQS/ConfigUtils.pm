@@ -41,7 +41,6 @@ our %EXPORT_TAGS = (
       get_option_value
       get_pair_groups
       get_pair_groups_names
-      get_cqstools
       get_group_sample_map
       get_group_samplefile_map
       get_group_samplefile_map_key
@@ -291,17 +290,6 @@ sub get_directory {
     }
   }
   return ($result);
-}
-
-sub get_cqstools {
-  my ( $config, $section, $required ) = @_;
-  my $curSection = get_config_section( $config, $section );
-
-  my $cqstools = get_param_file( $curSection->{cqs_tools}, "cqs_tools", 0 );
-  if ( !defined $cqstools ) {
-    $cqstools = get_param_file( $curSection->{cqstools}, "cqstools", $required );
-  }
-  return ($cqstools);
 }
 
 sub get_result_file {

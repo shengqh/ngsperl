@@ -13,7 +13,6 @@ my $annovar_protocol  = "refGene,snp138,cosmic70";
 my $annovar_operation = "g,f,f";
 my $annovar_param     = "-protocol ${annovar_protocol} -operation ${annovar_operation} --remove";
 my $annovar_db        = "/scratch/cqs/shengq2/references/annovar/humandb/";
-my $cqstools          = "/home/shengq2/cqstools/cqstools.exe";
 my $email             = "quanhu.sheng.1\@vanderbilt.edu";
 
 my $config = {

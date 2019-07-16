@@ -96,7 +96,6 @@ sub getParclipSmallRNANormalConfig {
           seqcount_ref    => [ 'identical', '.dupcount$' ],
           coordinate_file => $coor,
           fasta_file      => $def->{coordinate_fasta},
-          cqs_tools       => $def->{cqstools},
           sh_direct       => 0,
           cluster         => $cluster,
           pbs             => {
@@ -112,7 +111,6 @@ sub getParclipSmallRNANormalConfig {
           target_dir => $t2c_dir . "/gsnap_smallRNA_table",
           option     => "",
           source_ref => [ "gsnap_smallRNA_count", ".mapped.xml" ],
-          cqs_tools  => $def->{cqstools},
           prefix     => "smallRNA_parclip_",
           sh_direct  => 1,
           cluster    => $cluster,
@@ -129,7 +127,6 @@ sub getParclipSmallRNANormalConfig {
           target_dir => $t2c_dir . "/gsnap_smallRNA_table",
           option     => "",
           source_ref => [ "gsnap_smallRNA_count", ".info" ],
-          cqs_tools  => $def->{cqstools},
           prefix     => "smallRNA_parclip_",
           suffix     => ".mapped",
           sh_direct  => 1,
@@ -149,7 +146,6 @@ sub getParclipSmallRNANormalConfig {
           target_dir => $t2c_dir . "/gsnap_smallRNA_category",
           option     => "",
           source_ref => [ "gsnap_smallRNA_count", ".info\$" ],
-          cqs_tools  => $def->{cqstools},
           sh_direct  => 1,
           cluster    => $cluster,
           pbs        => {
@@ -165,7 +161,6 @@ sub getParclipSmallRNANormalConfig {
           target_dir => $t2c_dir . "/gsnap_smallRNA_t2c",
           option     => "-p 0.05 -e 0.013",
           source_ref => [ "gsnap_smallRNA_count", ".mapped.xml\$" ],
-          cqs_tools  => $def->{cqstools},
           sh_direct  => 1,
           pbs        => {
             "email"    => $def->{email},
@@ -180,7 +175,6 @@ sub getParclipSmallRNANormalConfig {
           target_dir => $t2c_dir . '/gsnap_smallRNA_t2c_table',
           option     => '',
           source_ref => [ 'gsnap_smallRNA_count', '.mapped.xml$' ],
-          cqs_tools  => $def->{cqstools},
           sh_direct  => 0,
           cluster    => $cluster,
           pbs        => {
@@ -247,7 +241,6 @@ sub getParclipSmallRNANormalConfig {
         seqcount_ref    => [ 'identical', '.dupcount$' ],
         exclude_xml_ref => $exclude_ref,
         coordinate_file => $def->{utr3_db},
-        cqs_tools       => $def->{cqstools},
         sh_direct       => 0,
         cluster         => $cluster,
         pbs             => {
@@ -263,7 +256,6 @@ sub getParclipSmallRNANormalConfig {
         target_dir => $t2c_dir . "/gsnap_3utr_count_table",
         option     => "--noCategory",
         source_ref => [ "gsnap_3utr_count", ".mapped.xml" ],
-        cqs_tools  => $def->{cqstools},
         prefix     => "smallRNA_3utr_",
         sh_direct  => 1,
         cluster    => $cluster,
@@ -291,7 +283,6 @@ sub getParclipSmallRNANormalConfig {
             seed         => $def->{seed_smallrna_fasta},
             fasta_file   => $def->{fasta_file},
             refgene_file => $def->{refgene_file},
-            cqs_tools    => $def->{cqstools},
             sh_direct    => 1,
             pbs          => {
               "email"    => $def->{email},
@@ -320,7 +311,6 @@ sub getParclipSmallRNANormalConfig {
             seed_ref     => [ "gsnap_smallRNA_t2c", ".xml\$" ],
             fasta_file   => $def->{fasta_file},
             refgene_file => $def->{refgene_file},
-            cqs_tools    => $def->{cqstools},
             sh_direct    => 1,
             pbs          => {
               "email"    => $def->{email},
@@ -339,7 +329,6 @@ sub getParclipSmallRNANormalConfig {
             seed_ref     => [ "gsnap_smallRNA_count", ".mapped.xml\$" ],
             fasta_file   => $def->{fasta_file},
             refgene_file => $def->{refgene_file},
-            cqs_tools    => $def->{cqstools},
             sh_direct    => 1,
             pbs          => {
               "email"    => $def->{email},
@@ -370,7 +359,6 @@ sub getParclipSmallRNANormalConfig {
         seqcount_ref    => [ 'identical', '.dupcount$' ],
         exclude_xml_ref => [ 'gsnap_smallRNA_count', ".xml" ],
         coordinate_file => $def->{specific_range_bed},
-        cqs_tools       => $def->{cqstools},
         sh_direct       => 0,
         cluster         => $cluster,
         pbs             => {
@@ -386,7 +374,6 @@ sub getParclipSmallRNANormalConfig {
         target_dir => $t2c_dir . "/gsnap_specific_range_count_table",
         option     => "--noCategory",
         source_ref => [ "gsnap_specific_range_count", ".mapped.xml" ],
-        cqs_tools  => $def->{cqstools},
         prefix     => "parclip_specific_range_",
         sh_direct  => 1,
         cluster    => $cluster,

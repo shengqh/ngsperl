@@ -45,7 +45,6 @@ sub getConfig {
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
   my $email    = getValue( $def, "email" );
-  my $cqstools = getValue( $def, "cqstools" );
 
   $config->{"bowtie1"} = {
     class                 => "Alignment::Bowtie1",

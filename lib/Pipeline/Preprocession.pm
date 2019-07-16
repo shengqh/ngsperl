@@ -304,7 +304,6 @@ sub getPreprocessionConfig {
         target_dir => $fastq_len_dir,
         option     => "",
         source_ref => $run_cutadapt ? "cutadapt" : $source_ref,
-        cqstools   => $def->{cqstools},
         sh_direct  => 1,
         cluster    => $cluster,
         pbs        => {

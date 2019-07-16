@@ -55,7 +55,6 @@ sub perform {
   my $fastqc_file_list = "fileList1.txt";
   save_parameter_sample_file( $config, $section, "source", "${result_dir}/$fastqc_file_list" );
 
-  my $cqstools   = get_param_file( $config->{$section}{cqstools}, "cqstools", 1 );
   my $fastqc_dir = get_directory( $config, $section, "fastqc_dir", 0 );
   if ( !defined $fastqc_dir ) {
     $fastqc_dir = $result_dir;

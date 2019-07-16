@@ -67,7 +67,6 @@ sub getConfig {
   my $email          = $def->{email};
   my $bwa_index      = $def->{bwa_index};
 
-  my $cqstools   = $def->{cqstools}   or die "define cqstools first";
   my $picard_jar = $def->{picard_jar} or die "define picard_jar first";
   my $spp_r      = $def->{spp_r}      or die "define spp_r first";
 
@@ -115,7 +114,6 @@ sub getConfig {
       option     => "-n -z",
       extension  => "_trim.fastq.gz",
       source_ref => "files",
-      cqstools   => $cqstools,
       cluster    => $cluster,
       sh_direct  => 1,
       pbs        => {
@@ -148,7 +146,6 @@ sub getConfig {
       class      => "QC::FastQCSummary",
       perform    => 1,
       target_dir => $target_dir . "/fastqc_raw",
-      cqstools   => $cqstools,
       option     => "",
       cluster    => $cluster,
       pbs        => {

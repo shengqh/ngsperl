@@ -31,7 +31,6 @@ sub perform {
   my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
 
   my $minimum_depth = $config->{$section}{minimum_depth};
-  my $cqstools;
   my $cqscommand = "";
   if ( defined $minimum_depth ) {
     $cqscommand = " | cqstools depth_filter -d $minimum_depth";

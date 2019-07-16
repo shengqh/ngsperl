@@ -103,7 +103,6 @@ sub addFastQC {
     class      => "QC::FastQCSummary",
     perform    => 1,
     target_dir => $config->{"$fastqcTask"}->{target_dir},
-    cqstools   => $def->{cqstools},
     option     => "",
     cluster    => $def->{cluster},
     source_ref => [$fastqcTask],

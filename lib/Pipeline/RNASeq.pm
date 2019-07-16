@@ -285,7 +285,6 @@ sub getRNASeqConfig {
     }
 
     if ( $def->{perform_counting} ) {
-      my $cqstools = $def->{cqstools};
       my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
       if ( $def->{additional_bam_files} ) {
         push @$source_ref, "additional_bam_files";
@@ -337,7 +336,6 @@ sub getRNASeqConfig {
   my $perform_count_table = $def->{perform_counting} || $def->{perform_count_table};
 
   if ($perform_count_table) {
-    my $cqstools      = $def->{cqstools};
     my $name_map_file = $def->{name_map_file};
     $config->{"genetable"} = {
       class                     => "CQS::CQSDatatable",
@@ -347,7 +345,6 @@ sub getRNASeqConfig {
       source_ref                => $count_table_ref,
       output_proteincoding_gene => $def->{perform_proteincoding_gene},
       name_map_file             => $name_map_file,
-      cqs_tools                 => $cqstools,
       sh_direct                 => 1,
       pbs                       => {
         "email"     => $email,

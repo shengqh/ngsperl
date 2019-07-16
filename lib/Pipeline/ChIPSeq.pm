@@ -113,7 +113,6 @@ sub getConfig {
   my $step2 = [];
 
   my $email    = getValue( $def, "email" );
-  my $cqstools = getValue( $def, "cqstools" );
 
   if ( $def->{aligner} eq "bowtie1" ) {
     $config->{bowtie1} = {

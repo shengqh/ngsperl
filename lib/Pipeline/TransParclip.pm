@@ -69,7 +69,6 @@ sub getTransParclipConfig {
       seqcount_ref    => [ 'identical', '.dupcount$' ],
       coordinate_file => $def->{coordinate},
       fasta_file      => $def->{coordinate_fasta},
-      cqs_tools       => $def->{cqstools},
       sh_direct       => 0,
       cluster         => $cluster,
       pbs             => {
@@ -85,7 +84,6 @@ sub getTransParclipConfig {
       target_dir => $t2c_dir . "/gsnap_smallRNA_table",
       option     => "",
       source_ref => [ "gsnap_smallRNA_count", ".mapped.xml" ],
-      cqs_tools  => $def->{cqstools},
       prefix     => "smallRNA_parclip_",
       sh_direct  => 1,
       cluster    => $cluster,
@@ -102,7 +100,6 @@ sub getTransParclipConfig {
       target_dir => $t2c_dir . "/gsnap_smallRNA_table",
       option     => "",
       source_ref => [ "gsnap_smallRNA_count", ".info" ],
-      cqs_tools  => $def->{cqstools},
       prefix     => "smallRNA_parclip_",
       suffix     => ".mapped",
       sh_direct  => 1,
@@ -122,7 +119,6 @@ sub getTransParclipConfig {
       target_dir => $t2c_dir . "/gsnap_smallRNA_category",
       option     => "",
       source_ref => [ "gsnap_smallRNA_count", ".info\$" ],
-      cqs_tools  => $def->{cqstools},
       sh_direct  => 1,
       cluster    => $cluster,
       pbs        => {
@@ -138,7 +134,6 @@ sub getTransParclipConfig {
       target_dir => $t2c_dir . "/gsnap_smallRNA_t2c",
       option     => "-p 0.05 -e 0.013",
       source_ref => [ "gsnap_smallRNA_count", ".mapped.xml\$" ],
-      cqs_tools  => $def->{cqstools},
       sh_direct  => 1,
       pbs        => {
         "email"    => $def->{email},
@@ -153,7 +148,6 @@ sub getTransParclipConfig {
       target_dir => $t2c_dir . '/gsnap_smallRNA_t2c_table',
       option     => '',
       source_ref => [ 'gsnap_smallRNA_count', '.mapped.xml$' ],
-      cqs_tools  => $def->{cqstools},
       sh_direct  => 0,
       cluster    => $cluster,
       pbs        => {
@@ -248,7 +242,6 @@ sub getTransParclipConfig {
         source_ref      => [ "unmappedReads_bowtie1_genome_1mm", ".bam\$" ],
         fastq_files_ref => [ "unmappedReads", ".fastq.gz\$" ],
         seqcount_ref    => [ "identical", ".dupcount\$" ],
-        cqs_tools       => $def->{cqstools},
         coordinate_file => $def->{utr3_db},
         sh_direct       => 1,
         pbs             => {
@@ -264,7 +257,6 @@ sub getTransParclipConfig {
         target_dir => $utr3_dir . "/unmappedReads_bowtie1_genome_1mm_3utr_count_table",
         option     => "-k 0 -i 1 -v 2 -e --fillMissingWithZero",
         source_ref => "unmappedReads_bowtie1_genome_1mm_3utr_count",
-        cqs_tools  => $def->{cqstools},
         sh_direct  => 1,
         pbs        => {
           "email"    => $def->{email},
@@ -282,7 +274,6 @@ sub getTransParclipConfig {
         seed_ref     => [ "gsnap_smallRNA_t2c", ".xml\$" ],
         fasta_file   => $def->{fasta_file},
         refgene_file => $def->{refgene_file},
-        cqs_tools    => $def->{cqstools},
         sh_direct    => 1,
         pbs          => {
           "email"    => $def->{email},
@@ -301,7 +292,6 @@ sub getTransParclipConfig {
         seed_ref     => [ "gsnap_smallRNA_count", ".mapped.xml\$" ],
         fasta_file   => $def->{fasta_file},
         refgene_file => $def->{refgene_file},
-        cqs_tools    => $def->{cqstools},
         sh_direct    => 1,
         pbs          => {
           "email"    => $def->{email},

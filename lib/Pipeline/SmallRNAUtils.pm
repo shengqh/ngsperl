@@ -36,7 +36,6 @@ our $VERSION = '0.01';
 #  fastq_remove_N => 0,
 #  adapter        => "TGGAATTCTCGGGTGCCAAGG",
 #
-#  cqstools   => "/home/shengq1/cqstools/CQS.Tools.exe",
 #
 #  #Data
 #  files => {
@@ -86,7 +85,6 @@ sub addNonhostDatabase {
     option       => $countOption,
     source_ref   => $bowtie1Task,
     seqcount_ref => $count_ref,
-    cqs_tools    => $def->{cqstools},
     sh_direct    => 1,
     cluster      => $def->{cluster},
     pbs          => {
@@ -106,7 +104,6 @@ sub addNonhostDatabase {
     target_dir => $parentDir . "/" . $bowtie1TableTask,
     option     => $tableOption,
     source_ref => [ $bowtie1CountTask, ".xml" ],
-    cqs_tools  => $def->{cqstools},
     prefix     => $taskKey . "_",
     sh_direct  => 1,
     cluster    => $def->{cluster},
@@ -390,10 +387,6 @@ sub getPrepareConfig {
 
   my $target_dir = create_directory_or_die( getValue( $def, "target_dir" ) );
 
-  #check cqstools location
-  my $cqstools = getValue( $def, "cqstools" );
-  ( -e $cqstools ) or die "cqstools not exist: " . $cqstools;
-
   $def->{subdir} = 1;
 
   $def = initializeSmallRNADefaultOptions($def);
@@ -420,7 +413,6 @@ sub getPrepareConfig {
       target_dir => $preprocessing_dir . "/identical",
       option     => "-l " . $def->{min_read_length},
       source_ref => $source_ref,
-      cqstools   => $def->{cqstools},
       extension  => "_clipped_identical.fastq.gz",
       sh_direct  => 1,
       cluster    => $cluster,
@@ -443,7 +435,6 @@ sub getPrepareConfig {
       option             => "",
       source_ref         => [ 'identical', '.fastq.gz$' ],
       untrimmedFastq_ref => $untrimed_ref,
-      cqs_tools          => $def->{cqstools},
       sh_direct          => 1,
       pbs                => {
         "email"    => $def->{email},
@@ -465,7 +456,6 @@ sub getPrepareConfig {
       target_dir    => $class_independent_dir . "/identical_sequence_count_table",
       option        => getValue( $def, "sequence_count_option" ),
       source_ref    => [ "identical", ".dupcount\$" ],
-      cqs_tools     => $def->{cqstools},
       suffix        => "_sequence",
       sh_direct     => 1,
       cluster       => $cluster,
@@ -512,7 +502,6 @@ sub getPrepareConfig {
       target_dir => $preprocessing_dir . "/identical_NTA",
       option     => $ccaaOption . " -l " . $def->{min_read_length},
       source_ref => [ "identical", ".fastq.gz\$" ],
-      cqstools   => $def->{cqstools},
       extension  => "_clipped_identical_NTA.fastq.gz",
       sh_direct  => 1,
       cluster    => $cluster,
