@@ -78,7 +78,6 @@ sub getConfig {
   my $step6 = [];
 
   my $email      = getValue( $def, "email" );
-  my $cqstools   = getValue( $def, "cqstools" );
   my $max_thread = getValue( $def, "max_thread" );
 
   my $geneLocus = undef;
@@ -201,10 +200,17 @@ sub getConfig {
 
     my $filter_name = "";
     if ( $def->{perform_gatk4_callvariants} ) {
-      my $dockerCommand = $def->{docker_command};
+      my $docker_command = $def->{docker_command};
+      my $docker_init = $def->{docker_init};
       
-      if (defined $def->{gatk4_singularity}){
-        $dockerCommand = "singularity exec " . $def->{gatk4_singularity} . " ";
+      if (defined $def->{gatk4_docker_command}){
+        $docker_command = $def->{gatk4_docker_command};
+        if (defined $def->{gatk4_docker_init}){
+          $docker_init = $def->{gatk4_docker_init};
+        }
+      } elsif (defined $def->{gatk4_singularity}){
+        $docker_command = "singularity exec " . $def->{gatk4_singularity} . " ";
+        $docker_init = "source activate gatk ";
       }
       
       my $gvcf_name         = $refine_name . "_gatk4_hc_gvcf";
@@ -216,7 +222,8 @@ sub getConfig {
         source_ref        => $refine_name,
         java_option       => "",
         fasta_file        => $fasta,
-        docker_command    => $dockerCommand,
+        docker_command    => $docker_command,
+        docker_init       => $docker_init,
         extension         => ".g.vcf",
         bed_file          => $def->{covered_bed},
         by_chromosome     => 0,
@@ -246,7 +253,8 @@ sub getConfig {
         g1000_vcf         => $def->{g1000},
         axiomPoly_vcf     => $def->{axiomPoly},
         mills_vcf         => $mills,
-        docker_command    => $dockerCommand,
+        docker_command    => $docker_command,
+        docker_init       => $docker_init,
         sh_direct         => 1,
         pbs               => {
           "email"    => $email,
@@ -299,7 +307,6 @@ sub getConfig {
           g1000_vcf   => $def->{g1000},
           mills_vcf   => $mills,
           gatk_jar    => $gatk_jar,
-          cqstools    => $cqstools,
           sh_direct   => 1,
           pbs         => {
             "email"    => $email,

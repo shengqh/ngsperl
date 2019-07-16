@@ -96,9 +96,8 @@ sub getPreprocessionConfig {
   
   if(not defined $def->{ignore_docker} or not $def->{ignore_docker}){
     foreach my $key (keys %$def){
-      if ($key =~ /docker_command/){
+      if ($key =~ /docker_/){
         $config->{general}{$key} = $def->{$key};
-        $config->{general}{docker_init} = $def->{docker_init};
       }
     }
   }
