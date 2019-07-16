@@ -168,6 +168,29 @@ sub get_task_filename {
   return $self->get_file( $dir, $task_name, ".sh" );
 }
 
+sub do_get_docker_value {
+  my ($self, $keyName) = @_;
+  my $result = undef;
+
+  if ( defined $self->{_config} ) {
+    if ( ( defined $self->{_section} ) and ( defined $self->{_config}{ $self->{_section} }{$keyName} ) ) {
+      $result = $self->{_config}{ $self->{_section} }{$keyName};
+      if ( defined $result ) {
+        return ($result);
+      }
+    }
+
+    if ( ( defined $self->{_config} ) and ( defined $self->{_config}{general} ) and ( defined $self->{_config}{general}{$keyName} ) ) {
+      $result = $self->{_config}{general}{$keyName};
+      if ( defined $result ) {
+        return ($result);
+      }
+    }
+  }
+  
+  return ($result);
+}
+
 sub get_docker_value {
   my ($self, $required) = @_;
   my $result = undef;
@@ -179,20 +202,9 @@ sub get_docker_value {
   }
 
   for my $dockerKey (@dockerKeys) {
-    if ( defined $self->{_config} ) {
-      if ( ( defined $self->{_section} ) and ( defined $self->{_config}{ $self->{_section} }{$dockerKey} ) ) {
-        $result = $self->{_config}{ $self->{_section} }{$dockerKey};
-        if ( defined $result ) {
-          return ($result);
-        }
-      }
-
-      if ( ( defined $self->{_config} ) and ( defined $self->{_config}{general} ) and ( defined $self->{_config}{general}{$dockerKey} ) ) {
-        $result = $self->{_config}{general}{$dockerKey};
-        if ( defined $result ) {
-          return ($result);
-        }
-      }
+    $result = $self->do_get_docker_value($dockerKey);
+    if (defined $result){
+      return ($result);
     }
   }
   
@@ -255,12 +267,9 @@ echo working in $result_dir ...
   my $docker_command = $self->get_docker_value();
   my $is_sequenceTask = ( $module_name =~ /SequenceTask/ );
   if ( ( defined $docker_command ) and ( not $is_sequenceTask ) ) {
-    my $docker_init = ""; 
-    if ( defined $self->{_config} and defined $self->{_section} ) {
-      $docker_init = $self->{_config}{ $self->{_section} }{"docker_init"};
-      if (not defined $docker_init){
-        $docker_init = "";
-      }
+    my $docker_init = $self->do_get_docker_value("docker_init"); 
+    if(not defined $docker_init){
+      $docker_init = "";
     }
     my $sh_file = $pbs_file . ".sh";
 
