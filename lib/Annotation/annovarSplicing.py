@@ -94,7 +94,7 @@ if os.path.isfile(annovar_outputfile):
             anno[aparts[1]] = ':'.join(aparts[0:3]) + ':p.X' + ma.group(1) + 'X'
       
       locus = parts[0] + ":" + str(originalposition)
-      if splicing_map.has_key(locus):
+      if locus in splicing_map:
         oldone = splicing_map[locus]
         if oldone[0] > distance:
           splicing_map[locus] = [distance, funcRefGene, anno]
@@ -111,7 +111,7 @@ if os.path.isfile(annovar_outputfile):
           continue
         
         locus=  parts[0] + ":" + parts[1]
-        if not splicing_map.has_key(locus):
+        if locus not in splicing_map:
           w.write(line)
           continue
         
@@ -124,7 +124,7 @@ if os.path.isfile(annovar_outputfile):
           for detail in parts[geneDetailRefGeneIndex].split(','):
             detailparts = detail.split(':')
             trans = detailparts[0]
-            if anno.has_key(trans) :
+            if trans in anno :
               lst.append(anno[trans])
             else:
               lst.append('')

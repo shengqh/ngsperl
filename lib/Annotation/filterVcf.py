@@ -6,6 +6,8 @@ import csv
 import gzip
 import re
 
+def is_version_2():
+  return sys.version_info[0] < 3
 
 def initialize_logger(logfile, logname, isDebug):
   logger = logging.getLogger(logname)
@@ -58,13 +60,16 @@ logger.info(str(args))
 with open(args.output, "w") as fout:
   with open(args.output + ".discard", "w") as fdiscard:
     if args.input.endswith(".gz"):
-      fin = gzip.open(args.input, 'rb')
+      if is_version_2():
+        fin = gzip.open(args.input, 'rb')
+      else:
+        fin = gzip.open(args.input, 'rt')
     else:
       fin = open(args.input, "r")
     try:
       while True:
         line = fin.readline()
-        if "#CHROM" in line:
+        if line.find("#CHROM") != -1:
           fout.write(line)
           vcfheaders = line.rstrip().split("\t")
           format_index = vcfheaders.index("FORMAT")
