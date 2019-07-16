@@ -277,7 +277,6 @@ echo working in $result_dir ...
 export R_LIBS=
 export PYTHONPATH=
 export JAVA_HOME=
-export HOME=$result_dir
  
 $docker_command bash $sh_file 
 
@@ -289,6 +288,8 @@ exit 0
     close $pbs;
     open( $pbs, ">$sh_file" ) or die $!;
     print $pbs "
+export HOME=$result_dir
+
 $docker_init
 ";
 
