@@ -29,17 +29,18 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 fileMap = {}
 with open(args.input) as fh:
   for line in fh:
-    file, name = line.strip().split('\t', 1)
-    fileMap[name] = file.strip()
+    filepath, name = line.strip().split('\t', 1)
+    fileMap[name] = filepath.strip()
     
 samples = []
 vcf1 = []
 vcfMap = {}
 bFirst = True
-for name, file in fileMap.iteritems():
+for name in fileMap.keys():
+  filepath=fileMap[name]
   print("reading " + name + " ...")
   samples.append(name)
-  with gzip.open(file, "rb") as fh:
+  with gzip.open(filepath, "rt") as fh:
     lines = []
     for line in fh:
       if line.startswith('#'):
@@ -70,7 +71,7 @@ with open(args.output, "w") as fout:
   fout.write("Locus\tName\t%s\n" % "\t".join(samples))
   intervalCount = len(vcf1)
   for idx in range(0, intervalCount):
-    chr = vcf1[idx][0]
+    chrom = vcf1[idx][0]
     values = []
     for sample in samples:
       gt = vcfMap[sample][idx]
@@ -80,7 +81,7 @@ with open(args.output, "w") as fout:
         parts = gt.split(":")
         cn = int(parts[1])
         expectCN = 2
-        if chr == 'X' or chr == 'Y':
+        if chrom == 'X' or chrom == 'Y':
           expectCN = 1
         scores = parts[2].split(",")
         cnScore = int(scores[cn])
@@ -102,7 +103,7 @@ with open(args.output, "w") as fout:
     if (all(gt == "" for gt in values)):
       continue
 
-    chr = vcf1[idx][0]
+    chrom = vcf1[idx][0]
     start = int(vcf1[idx][1])
     end = int(vcf1[idx][7][4:])
     
@@ -122,4 +123,4 @@ with open(args.output, "w") as fout:
         annotation = ann[2]
       break 
     
-    fout.write("%s:%d-%d\t%s\t%s\n" % (chr, start, end, annotation, "\t".join(values)))
+    fout.write("%s:%d-%d\t%s\t%s\n" % (chrom, start, end, annotation, "\t".join(values)))
