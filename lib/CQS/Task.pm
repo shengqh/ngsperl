@@ -295,6 +295,8 @@ exit 0
     print $pbs "
 export HOME=$result_dir
 
+cd $result_dir
+
 $docker_init
 ";
 
