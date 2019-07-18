@@ -5,7 +5,6 @@ import argparse
 import string
 import subprocess
 import pysam
-from __builtin__ import False
 
 def readHashMap(fileName):
   result = {}

@@ -5,7 +5,6 @@ import argparse
 import string
 import subprocess
 import pysam
-from __builtin__ import False
 
 def readHashMap(fileName):
   result = {}
@@ -132,14 +131,15 @@ def main():
   logger.info("processing " + bedFile + "...")
 
   bedResultFile = args.output
+  bedResultTmpFile = bedResultFile + ".tmp"
   bedResultSlimFile = bedResultFile + ".slim"
-  with open(bedResultFile, "w") as fout:
+  with open(bedResultTmpFile, "wt") as fout:
     fout.write("File\tFeature\tChromosome\tPosition\tPositionCount\tMaxCount\tPercentage\tCNV\n")
-    with open(bedResultSlimFile, "w") as fslim:
+    with open(bedResultSlimFile, "wt") as fslim:
       fslim.write("File\tFeature\tCNV\n")
 
       posData = []
-      with open(bedFile, "r") as fin:
+      with open(bedFile, "rt") as fin:
         for line in fin:
           parts = line.rstrip().split('\t')
           chrom = parts[0]
@@ -205,7 +205,8 @@ def main():
   
           proc = subprocess.Popen(["samtools", "depth", "-f", bamListFile, "-r", locus.Locus, "-d", "0"], stdout=subprocess.PIPE)
           for pline in proc.stdout:
-            pparts = pline.rstrip().split("\t")
+            pparts = pline.rstrip().decode("utf-8").split("\t")
+
             chromosome = pparts[0]
             position = int(pparts[1])
             locusData[0].append(chromosome)
@@ -242,6 +243,10 @@ def main():
   
           os.remove(bamListFile)
       
+  if os.path.exists(bedResultFile):
+    os.remove(bedResultFile)
+  os.rename(bedResultTmpFile, bedResultFile)
+    
   realpath = os.path.dirname(os.path.realpath(__file__))
   rPath = realpath + "/plotCNV.r"
   cmd = "R --vanilla -f " + rPath + " --args " + bedResultFile + " " + bedResultFile + " " + args.sizeFactorFile
