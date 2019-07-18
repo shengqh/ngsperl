@@ -22,20 +22,6 @@ sub new {
   return $self;
 }
 
-sub get_final_file {
-  my ( $sample_name, $blacklistfile, $shiftPosition ) = @_;
-  my $result = $sample_name;
-  if ( defined $blacklistfile ) {
-    $result = $sample_name . ".confident";
-  }
-
-  if ($shiftPosition) {
-    $result = $sample_name . ".shifted";
-  }
-  $result = $result . ".bed";
-  return $result;
-}
-
 sub perform {
   my ( $self, $config, $section ) = @_;
 

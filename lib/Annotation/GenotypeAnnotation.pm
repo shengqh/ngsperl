@@ -74,7 +74,9 @@ sub perform {
   my $log = $self->get_log_filename( $log_dir, $task_name );
   my $log_desc = $cluster->get_log_description($log);
 
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+  my $final_file = $self->get_final_file($config, $section, $result_dir);
+  
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
   for my $sample_name ( sort keys %raw_files ) {
     my @inputFiles = @{ $raw_files{$sample_name} };
@@ -82,18 +84,16 @@ sub perform {
       my $filename = basename($inputFile);
       if ($oncoPrint) {
         my $finalFile = change_extension( $filename, "${sampleNameSuffix}.oncoprint.tsv" );
-        print $pbs "if [ ! -e $finalFile ]; then 
-  R --vanilla -f $onco_script --args $inputFile $finalFile $picture_width $picture_height $sampleNamePattern $geneNames
-fi
+        print $pbs " 
+R --vanilla -f $onco_script --args $inputFile $finalFile $picture_width $picture_height $sampleNamePattern $geneNames
 ";
       }
 
       if ($CBioPortal) {
         my $prefix = change_extension( $filename, "${sampleNameSuffix}.cBioPortal" );
         my $finalFile = $prefix . ".oncoprinter.txt";
-        print $pbs "if [ ! -e $finalFile ]; then 
-  R --vanilla -f $cbioportal_script --args $inputFile $prefix $sampleNamePattern $geneNames
-fi
+        print $pbs " 
+R --vanilla -f $cbioportal_script --args $inputFile $prefix $sampleNamePattern $geneNames
 ";
       }
     }
@@ -103,18 +103,16 @@ fi
       my $filename = basename($inputFile);
       my $geneFile = change_extension( $filename, "${sampleNameSuffix}.geneDetails.txt" );
       my $genes    = join( ",", split( "\\s+", $detailGeneNames ) );
-      print $pbs "if [ ! -e $geneFile ]; then 
-  python $gene_script -i $inputFile -o $geneFile -g $genes
-fi
+      print $pbs " 
+python $gene_script -i $inputFile -o $geneFile -g $genes
 ";
     }
     for my $inputFile (@detailFiles) {
       my $filename = basename($inputFile);
       my $geneFile = change_extension( $filename, "${sampleNameSuffix}.geneFilter.txt" );
       my $genes    = join( ",", split( "\\s+", $detailGeneNames ) );
-      print $pbs "if [ ! -e $geneFile ]; then 
-  python $gene_filter_script -i $inputFile -o $geneFile -g $genes
-fi
+      print $pbs " 
+python $gene_filter_script -i $inputFile -o $geneFile -g $genes
 ";
     }
   }

@@ -22,20 +22,6 @@ sub new {
   return $self;
 }
 
-sub get_final_file {
-  my ( $sample_name, $blacklistfile, $shiftPosition ) = @_;
-  my $result = $sample_name;
-  if ( defined $blacklistfile ) {
-    $result = $sample_name . ".confident";
-  }
-
-  if ($shiftPosition) {
-    $result = $sample_name . ".shifted";
-  }
-  $result = $result . ".bed";
-  return $result;
-}
-
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -52,7 +38,6 @@ sub perform {
   my $gff3_file = $task_name . ".gff3";
   
   my $rscript = dirname(__FILE__) . "/bed2gff3.r";
-
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
   my @bedfiles = ();

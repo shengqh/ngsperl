@@ -22,20 +22,6 @@ sub new {
   return $self;
 }
 
-sub get_final_file {
-  my ( $sample_name, $blacklistfile, $shiftPosition ) = @_;
-  my $result = $sample_name;
-  if ( defined $blacklistfile ) {
-    $result = $sample_name . ".confident";
-  }
-
-  if ($shiftPosition) {
-    $result = $sample_name . ".shifted";
-  }
-  $result = $result . ".bed";
-  return $result;
-}
-
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -67,8 +53,7 @@ sub perform {
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $final_file = $sample_name . ".bed";
-
+    my $final_file = get_final_file($config, $section, $result_dir, $sample_name);
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     my $rmlist = "";

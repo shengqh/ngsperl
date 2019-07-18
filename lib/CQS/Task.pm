@@ -22,6 +22,30 @@ sub name {
 sub perform {
 }
 
+sub get_final_file {
+  my ( $self, $config, $section, $result_dir, $sample ) = @_;
+  my $expect = $self->result($config, $section);
+  
+  if(not defined $sample){
+    my @samples = sort keys %$expect;
+    @samples = sort {$b cmp $a} @samples;
+    $sample = $samples[0];
+  }
+  
+  my $final_files_ref = $expect->{$sample};
+  my @final_files = @$final_files_ref;
+  my $result = $final_files[-1];
+  
+  if (rindex($result, $result_dir) == 0){
+    $result = substr($result, length($result_dir));
+    my $firstChar = substr($result, 0, 1);
+    if (($firstChar eq '/') or ($firstChar eq '\\')){
+      $result = substr($result, 1);
+    }
+  }
+  return($result);
+}
+
 sub result {
   my $result = {};
   return $result;

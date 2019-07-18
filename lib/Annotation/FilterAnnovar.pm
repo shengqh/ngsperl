@@ -68,20 +68,7 @@ sub perform {
   my $log = $self->get_log_filename( $log_dir, $task_name );
   my $log_desc = $cluster->get_log_description($log);
 
-  my $final_file = "";
-  for my $sample_name ( sort keys %raw_files ) {
-    if ( scalar(@freq_values) > 0 ) {
-      for my $freq_value (@freq_values) {
-        my $finalFilePrefix = "${sample_name}${sampleNameSuffix}.freq${freq_value}";
-        $final_file = $finalFilePrefix . ".gene.missense.tsv";
-      }
-    }
-    else {
-      my $finalFilePrefix = "${sample_name}${sampleNameSuffix}";
-      $final_file = $finalFilePrefix . ".gene.missense.tsv";
-    }
-  }
-
+  my $final_file = $self->get_final_file($config, $section, $result_dir);
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
   for my $sample_name ( sort keys %raw_files ) {
