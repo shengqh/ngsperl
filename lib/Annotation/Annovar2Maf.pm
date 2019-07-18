@@ -64,7 +64,7 @@ sub perform {
       print $sh "\$MYCMD ./$pbs_name \n";
     }
 
-    my $final_file = get_final_file($config, $section, $result_dir, $sample_name);
+    my $final_file = $self->get_final_file($config, $section, $result_dir, $sample_name);
     my $log_desc   = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
