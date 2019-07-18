@@ -24,9 +24,9 @@ sub new {
 }
 
 sub get_maximum_freq_values {
-  my ($config, $section ) = @_;
-  my $exac_values = get_option($config, $section, "maximum_freq_values", "0.01,0.001");
-  my @result = split(',', $exac_values);
+  my ( $config, $section ) = @_;
+  my $exac_values = get_option( $config, $section, "maximum_freq_values", "0.01,0.001" );
+  my @result = split( ',', $exac_values );
   return @result;
 }
 
@@ -36,59 +36,72 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my @freq_values = get_maximum_freq_values($config, $section);
+  my @freq_values = get_maximum_freq_values( $config, $section );
   my $sampleNamePattern = get_option( $config, $section, "sample_name_pattern", "" );
   my $sampleNameSuffix = "";
-  if($sampleNamePattern ne ""){
+  if ( $sampleNamePattern ne "" ) {
     $sampleNameSuffix = get_option( $config, $section, "sample_name_suffix" );
-    $sampleNamePattern = "-r $sampleNamePattern"
+    $sampleNamePattern = "-r $sampleNamePattern";
   }
 
   my $exac_key = get_option( $config, $section, "exac_key", "" );
-  if ($exac_key ne ""){
+  if ( $exac_key ne "" ) {
     $exac_key = "--exac_key $exac_key";
   }
-  
+
   my $g1000_key = get_option( $config, $section, "g1000_key", "" );
-  if ($g1000_key ne ""){
+  if ( $g1000_key ne "" ) {
     $g1000_key = "--g1000_key $g1000_key";
   }
-  
+
   my $gnomad_key = get_option( $config, $section, "gnomad_key", "" );
-  if ($gnomad_key ne ""){
+  if ( $gnomad_key ne "" ) {
     $gnomad_key = "--gnomad_key $gnomad_key";
   }
-  
+
   my $script = dirname(__FILE__) . "/filterAnnovar.py";
   if ( !-e $script ) {
     die "File not found : " . $script;
   }
-  
+
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $log = $self->get_log_filename( $log_dir, $task_name );
   my $log_desc = $cluster->get_log_description($log);
 
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
-  
+  my $final_file = "";
+  for my $sample_name ( sort keys %raw_files ) {
+    if ( scalar(@freq_values) > 0 ) {
+      for my $freq_value (@freq_values) {
+        my $finalFilePrefix = "${sample_name}${sampleNameSuffix}.freq${freq_value}";
+        $final_file = $finalFilePrefix . ".gene.missense.tsv";
+      }
+    }
+    else {
+      my $finalFilePrefix = "${sample_name}${sampleNameSuffix}";
+      $final_file = $finalFilePrefix . ".gene.missense.tsv";
+    }
+  }
+
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+
   for my $sample_name ( sort keys %raw_files ) {
     my @annovar_files = @{ $raw_files{$sample_name} };
     my $annovar_file  = $annovar_files[0];
-    
-    if(scalar(@freq_values) > 0){
-      for my $freq_value (@freq_values){
+
+    if ( scalar(@freq_values) > 0 ) {
+      for my $freq_value (@freq_values) {
         my $finalFilePrefix = "${sample_name}${sampleNameSuffix}.freq${freq_value}";
-        my $finalFile = $finalFilePrefix . ".gene.missense.tsv";
-        print $pbs "if [ ! -e $finalFile ]; then 
-  python $script $option -i $annovar_file -t $freq_value -o $finalFilePrefix $exac_key $g1000_key $gnomad_key $sampleNamePattern
-fi
+        my $finalFile       = $finalFilePrefix . ".gene.missense.tsv";
+        print $pbs " 
+python $script $option -i $annovar_file -t $freq_value -o $finalFilePrefix $exac_key $g1000_key $gnomad_key $sampleNamePattern
 ";
       }
-    }else{
-        my $finalFilePrefix = "${sample_name}${sampleNameSuffix}";
-        my $finalFile = $finalFilePrefix . ".gene.missense.tsv";
-        print $pbs "if [ ! -e $finalFile ]; then 
-  python $script $option -i $annovar_file -o $finalFilePrefix $sampleNamePattern
-fi
+    }
+    else {
+      my $finalFilePrefix = "${sample_name}${sampleNameSuffix}";
+      my $finalFile       = $finalFilePrefix . ".gene.missense.tsv";
+      print $pbs " 
+python $script $option -i $annovar_file -o $finalFilePrefix $sampleNamePattern
 ";
     }
   }
@@ -101,29 +114,30 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my @freq_values = get_maximum_freq_values($config, $section);
+  my @freq_values = get_maximum_freq_values( $config, $section );
   my $sampleNamePattern = get_option( $config, $section, "sample_name_pattern", "" );
   my $sampleNameSuffix = "";
-  if($sampleNamePattern ne ""){
+  if ( $sampleNamePattern ne "" ) {
     $sampleNameSuffix = get_option( $config, $section, "sample_name_suffix" );
   }
 
   my $result = {};
-  
+
   for my $sample_name ( sort keys %raw_files ) {
     my @result_files = ();
-    if(scalar(@freq_values) > 0){
-      for my $freq_value (@freq_values){
-        push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.freq${freq_value}.filtered.tsv");
-        push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.freq${freq_value}.filtered.missense.tsv");
-        push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.freq${freq_value}.snv.missense.tsv");
-        push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.freq${freq_value}.gene.missense.tsv");
+    if ( scalar(@freq_values) > 0 ) {
+      for my $freq_value (@freq_values) {
+        push( @result_files, "$result_dir/${task_name}${sampleNameSuffix}.freq${freq_value}.filtered.tsv" );
+        push( @result_files, "$result_dir/${task_name}${sampleNameSuffix}.freq${freq_value}.filtered.missense.tsv" );
+        push( @result_files, "$result_dir/${task_name}${sampleNameSuffix}.freq${freq_value}.snv.missense.tsv" );
+        push( @result_files, "$result_dir/${task_name}${sampleNameSuffix}.freq${freq_value}.gene.missense.tsv" );
       }
-    }else{
-      push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.filtered.tsv");
-      push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.filtered.missense.tsv");
-      push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.snv.missense.tsv");
-      push(@result_files, "$result_dir/${task_name}${sampleNameSuffix}.gene.missense.tsv");
+    }
+    else {
+      push( @result_files, "$result_dir/${task_name}${sampleNameSuffix}.filtered.tsv" );
+      push( @result_files, "$result_dir/${task_name}${sampleNameSuffix}.filtered.missense.tsv" );
+      push( @result_files, "$result_dir/${task_name}${sampleNameSuffix}.snv.missense.tsv" );
+      push( @result_files, "$result_dir/${task_name}${sampleNameSuffix}.gene.missense.tsv" );
     }
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }

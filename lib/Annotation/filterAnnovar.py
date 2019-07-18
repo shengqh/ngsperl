@@ -37,7 +37,8 @@ def getDicValueCount(item): return len(item[1])
 
 filtered = []
 genes = {}
-with open(outputprefix + ".filtered.tsv", 'w') as sw:
+outputFile = outputprefix + ".filtered.tsv"
+with open(outputFile, 'w') as sw:
   with open(outputprefix + ".filtered.missense.tsv", 'w') as swMis:
     with open(inputfile, 'r') as f:
       for line in f:
