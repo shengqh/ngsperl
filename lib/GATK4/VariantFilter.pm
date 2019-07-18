@@ -112,8 +112,6 @@ sub perform {
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
   print $pbs "  
-cd $result_dir
-
 if [ ! -s $mergedFile ]; then
   echo CombineGVCFs=`date` 
   gatk --java-options \"$java_option\" \\
@@ -242,7 +240,8 @@ if [[ -s $final_file ]]; then
     $indels_recalibration ${indels_recalibration}.tbi \\
     $snps_recalibration ${snps_recalibration}.tbi \\
     $indel_recalibration_tmp_vcf ${indel_recalibration_tmp_vcf}.tbi \\
-    $split_file ${split_file}.idx $left_trim_file ${left_trim_file}.idx
+    $split_file ${split_file}.idx $left_trim_file ${left_trim_file}.idx \\
+    .conda
 fi
 
 ";
