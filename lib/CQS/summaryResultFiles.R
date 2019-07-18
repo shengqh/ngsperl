@@ -53,6 +53,9 @@ fileSize<-sapply(fileSize,function(x) paste(x,collapse=","))
 ResultOut<-data.frame(fileList,FileSize=fileSize,FileSizeTotalRaw=fileSizeTotalRaw,FileSizeTotal=fileSizeTotal,FileExistPercent=fileExistPercent,Result=Result,stringsAsFactors=FALSE)
 write.csv(ResultOut,paste0(fileListName,".check.csv"))
 
+colors<-c("light green", "skyblue", "red")
+names(colors)<-c("PASS","WARN","FAIL")
+
 for (step in unique(ResultOut$StepName)) {
 	tableForPlot<-ResultOut[which(ResultOut$StepName==step),]
 	failLength<-length(grep("FAIL",tableForPlot$Result))
@@ -87,7 +90,7 @@ for (step in unique(ResultOut$StepName)) {
 	png(file=paste0(fileListName,"_",step,".png"), height=height, width=width, res=300)
 	g<-ggplot(tableForPlot, aes(SampleName, TaskName))+
 			geom_tile(data=tableForPlot, aes(fill=Result), color="white") +
-			scale_fill_manual(values=c("light green", "skyblue", "red")) +
+			scale_fill_manual(values=colors) +
 			theme(axis.text.x = element_text(angle=90, vjust=1, size=11, hjust=1, face="bold"),
 					axis.text.y = element_text(size=11, face="bold")) +
 			labs(title = paste0(step,": Status"))+
