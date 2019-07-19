@@ -31,8 +31,7 @@ mafResult = mafResult[, uid:=NULL]
 
 avsnpIndex = which(grepl("avsnp", colnames(mafResult)))
 if (avsnpIndex > 0){
-  mafResult$dbSNP_RS = mafResult[,..avsnpIndex]
-  mafResult = mafResult[, -avsnpIndex, with=FALSE]
+  names(mafResult)[avsnpIndex]<-"dbSNP_RS"
 }
 
 write.table(mafResult,outputFile,sep="\t",quote=FALSE,row.names=FALSE)
