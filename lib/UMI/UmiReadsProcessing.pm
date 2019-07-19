@@ -33,8 +33,8 @@ sub perform {
   if ( !defined $bwa_index ) {
     $bwa_index = $config->{$section}{fasta_file} or die "define ${section}::bwa_index first";
   }
-  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
-  my $fgbio_jar = get_param_file( $config->{$section}{fgbio_jar}, "fgbio_jar", 1 );
+  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, not $self->using_docker());
+  my $fgbio_jar = get_param_file( $config->{$section}{fgbio_jar}, "fgbio_jar", 1, not $self->using_docker());
  
   my %unmapped_bam_files = %{ get_raw_files( $config, $section ) };
   

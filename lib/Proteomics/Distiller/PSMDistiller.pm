@@ -30,7 +30,7 @@ sub perform {
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
-  my $proteomicstools = get_param_file( $config->{$section}{proteomicstools}, "proteomicstools", 1 );
+  my $proteomicstools = get_param_file( $config->{$section}{proteomicstools}, "proteomicstools", 1, not $self->using_docker() );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 

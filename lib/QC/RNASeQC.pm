@@ -29,7 +29,7 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
 
   my $faFile         = get_param_file( $config->{$section}{fasta_file},     "fasta_file",     1 );
-  my $jar            = get_param_file( $config->{$section}{jar},            "jar",            1 );
+  my $jar            = get_param_file( $config->{$section}{jar},            "jar",            1, not $self->using_docker() );
   my $transcript_gtf = get_param_file( $config->{$section}{transcript_gtf}, "transcript_gtf", 1 );
   my $sorted = get_option_value( $config->{$section}{sorted}, 1 );
 

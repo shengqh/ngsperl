@@ -29,7 +29,7 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my $faFile   = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
-  my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
+  my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1, not $self->using_docker() );
   my $extension = get_option( $config, $section, "extension", ".vcf" );
 
   my $java_option = $config->{$section}{java_option};

@@ -215,6 +215,13 @@ sub do_get_docker_value {
   return ($result);
 }
 
+sub using_docker {
+  my ($self) = @_;
+  my ($docker_command, $docker_init) = $self->get_docker_value();
+  my $is_sequenceTask = ( $self->{_name} =~ /SequenceTask/ );
+  return(( defined $docker_command ) and ( not $is_sequenceTask ))
+}
+
 sub get_docker_value {
   my ($self, $required) = @_;
   my $command = undef;

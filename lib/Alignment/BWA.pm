@@ -51,10 +51,7 @@ sub perform {
     $bwa_index = $config->{$section}{fasta_file} or die "define ${section}::bwa_index first";
   }
 
-
-  my $docker = $self->get_docker_value(0);
-  my $jarExists = (defined $docker) ? 0 : 1;
-  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, $jarExists );
+  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 , not $self->using_docker() );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 

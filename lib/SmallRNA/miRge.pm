@@ -28,7 +28,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
 
-  my $mirge = get_param_file( $config->{$section}{"miRge_script"}, "miRge_script", 1 );
+  my $mirge = get_param_file( $config->{$section}{"miRge_script"}, "miRge_script", 1, not $self->using_docker() );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   

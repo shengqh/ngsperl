@@ -33,7 +33,7 @@ sub perform {
     die "File not found : " . $rtemplate;
   }
 
-  my $varscan2_jar = get_param_file( $config->{$section}{VarScan2_jar}, "VarScan2_jar", 1 );
+  my $varscan2_jar = get_param_file( $config->{$section}{VarScan2_jar}, "VarScan2_jar", 1, not $self->using_docker() );
   my $faFile       = get_param_file( $config->{$section}{fasta_file},   "fasta_file",   1 );
 
   my $mpileup_options = get_option( $config, $section, "mpileup_options", "-q 1" );

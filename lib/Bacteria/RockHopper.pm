@@ -31,7 +31,7 @@ sub perform {
   my $raw_files = get_raw_files( $config, $section );
   my $groups    = get_raw_files( $config, $section, "groups" );
   my $pairs     = get_raw_files( $config, $section, "pairs" );
-  my $rockhopper_jar = get_param_file( $config->{$section}{rockhopper_jar}, "rockhopper_jar", 1 );
+  my $rockhopper_jar = get_param_file( $config->{$section}{rockhopper_jar}, "rockhopper_jar", 1, not $self->using_docker() );
   my $genome_dir  = get_option( $config, $section, "genome_dir",  1 );
   my $java_option = get_option( $config, $section, "java_option", "" );
 
