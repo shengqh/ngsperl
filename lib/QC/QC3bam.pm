@@ -40,7 +40,7 @@ sub perform {
     my $transcript_gtf = get_param_file( $config->{$section}{transcript_gtf}, "transcript_gtf", 1 );
     $option = $option . " -g $transcript_gtf";
   }
-  my $qc3_perl = get_param_file( $config->{$section}{qc3_perl}, "qc3_perl", 1 );
+  my $qc3_perl = get_param_file( $config->{$section}{qc3_perl}, "qc3_perl", 1, $self->using_docker() );
 
   my $raw_files = get_raw_files( $config, $section );
 

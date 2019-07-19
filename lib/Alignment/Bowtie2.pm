@@ -37,7 +37,7 @@ sub perform {
   my $mark_duplicates = hasMarkDuplicate( $config->{$section} );
   my $picard_jar      = "";
   if ($mark_duplicates) {
-    $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
+    $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, $self->using_docker() );
   }
 
   my %raw_files = %{ get_raw_files( $config, $section ) };

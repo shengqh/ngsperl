@@ -66,13 +66,10 @@ sub perform {
 
   my $knownsitesvcf = getKnownSitesVcf( $config, $section );
   
-  my $docker = $self->get_docker_value(0);
-  my $jarExists = (defined $docker) ? 0 : 1;
-
   #other options
   my $faFile     = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
-  my $gatk_jar   = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1, $jarExists );
-  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, $jarExists );
+  my $gatk_jar   = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1, $self->using_docker() );
+  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, $self->using_docker() );
 
   my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals", 0 ) ? "-fixMisencodedQuals" : "";
 

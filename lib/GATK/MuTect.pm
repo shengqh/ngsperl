@@ -29,7 +29,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
 
-  my $muTect_jar = get_param_file( $config->{$section}{muTect_jar}, "muTect_jar", 1 );
+  my $muTect_jar = get_param_file( $config->{$section}{muTect_jar}, "muTect_jar", 1, $self->using_docker() );
   my $faFile     = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
 
   my $dbsnpfile = get_param_file( $config->{$section}{dbsnp_file}, "dbsnp_file", 0 );

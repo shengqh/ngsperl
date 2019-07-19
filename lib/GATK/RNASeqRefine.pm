@@ -32,8 +32,8 @@ sub perform {
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my @vcfFiles = @{ $config->{$section}{vcf_files} } or die "Define vcf_files in section $section first.";
-  my $gatk_jar   = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
-  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
+  my $gatk_jar   = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1, $self->using_docker() );
+  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, $self->using_docker() );
 
   my $gatk_option = get_option( $config, $section, "gatk_option", "" );
 

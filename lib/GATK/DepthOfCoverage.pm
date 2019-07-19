@@ -30,7 +30,7 @@ sub perform {
 
   my $intervals = parse_param_file( $config, $section, "interval_file", 1 );
   my $ref_fasta = get_param_file( $config->{$section}{ref_fasta},     "ref_fasta",     1 );
-  my $gatk_jar  = get_param_file( $config->{$section}{gatk_jar},      "gatk_jar",      1 );
+  my $gatk_jar  = get_param_file( $config->{$section}{gatk_jar},      "gatk_jar",      1, $self->using_docker() );
 
   my $java_option = $config->{$section}{java_option};
   if ( !defined $java_option || $java_option eq "" ) {

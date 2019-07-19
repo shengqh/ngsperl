@@ -30,7 +30,7 @@ sub perform {
 
   my $sort_memory = $thread == 1 ? $memory : "4G";
 
-  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
+  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, $self->using_docker() );
   my $remove_chromosome = get_option( $config, $section, "remove_chromosome", "M" );
   my $keep_chromosome   = get_option( $config, $section, "keep_chromosome",   "" );
   my $minimum_maq       = get_option( $config, $section, "minimum_maq",       30 );

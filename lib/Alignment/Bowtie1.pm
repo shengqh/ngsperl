@@ -39,12 +39,12 @@ sub perform {
   my $mark_duplicates = hasMarkDuplicate( $config->{$section} );
   my $picard_jar      = "";
   if ($mark_duplicates) {
-    $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
+    $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, $self->using_docker() );
   }
 
   my $add_RG_to_read = get_option( $config, $section, "add_RG_to_read", 0 );
   if ($add_RG_to_read) {
-    $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1 );
+    $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, $self->using_docker() );
   }
 
   $option = $option . " -p $thread";

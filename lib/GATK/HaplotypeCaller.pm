@@ -56,7 +56,7 @@ sub perform {
 
   my $extension = get_option( $config, $section, "extension", ".g.vcf" );
 
-  my $gatk_jar = get_param_file( $config->{$section}{gatk_jar}, "gatk_jar", 1 );
+  my $gatk_jar = get_param_file( $config->{$section}{gatk_jar}, "gatk_jar", 1, $self->using_docker() );
 
   my $java_option = $config->{$section}{java_option};
   if ( !defined $java_option || $java_option eq "" ) {

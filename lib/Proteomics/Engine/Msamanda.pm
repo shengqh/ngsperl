@@ -32,7 +32,7 @@ sub perform {
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
   my $database   = get_param_file( $config->{$section}{database},   "database",   1 );
-  my $executable = get_param_file( $config->{$section}{executable}, "executable", 1 );
+  my $executable = get_param_file( $config->{$section}{executable}, "executable", 1, $self->using_docker() );
   my $cfgfile    = get_param_file( $config->{$section}{cfgfile},    "cfgfile",    1 );
 
   my %mgffiles = %{ get_raw_files( $config, $section ) };

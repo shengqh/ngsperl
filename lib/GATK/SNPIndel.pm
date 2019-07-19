@@ -55,7 +55,7 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my $faFile   = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
-  my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1 );
+  my $gatk_jar = get_param_file( $config->{$section}{gatk_jar},   "gatk_jar",   1, $self->using_docker() );
 
   my $call_option = get_option( $config, $section, "is_rna" ) ? "-stand_emit_conf 20 -stand_call_conf 20" : "--genotyping_mode DISCOVERY  -stand_emit_conf 10 -stand_call_conf 30";
   my $snp_filter =

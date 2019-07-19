@@ -34,7 +34,7 @@ sub perform {
 	) = get_parameter( $config, $section );
 
 	my $gatk_jar =
-	  get_param_file( $config->{$section}{gatk_jar}, "gatk_jar", 1 );
+	  get_param_file( $config->{$section}{gatk_jar}, "gatk_jar", 1, $self->using_docker() );
 	my $faFile =
 	  get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
 	my $dbsnpfile =

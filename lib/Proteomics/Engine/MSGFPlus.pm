@@ -30,7 +30,7 @@ sub perform {
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
-  my $msgf_jar = get_param_file( $config->{$section}{msgf_jar}, "msgf_jar", 1 );
+  my $msgf_jar = get_param_file( $config->{$section}{msgf_jar}, "msgf_jar", 1, $self->using_docker() );
   my $database = get_param_file( $config->{$section}{database}, "database", 1 );
   my $mod_file = get_param_file( $config->{$section}{mod_file}, "mod_file", 1 );
 
