@@ -26,7 +26,6 @@ with open(args.input, "r") as fin:
   sample_index = mafheaders.index("FORMAT") + 1
   Tumor_Sample_Barcode_index = mafheaders.index("Tumor_Sample_Barcode")
   Reference_Allele_index = mafheaders.index("Reference_Allele")
-  Tumor_Seq_Allele1_index = mafheaders.index("Tumor_Seq_Allele1")
   Tumor_Seq_Allele2_index = mafheaders.index("Tumor_Seq_Allele2")
   
   tmpFile = args.output + ".tmp"
@@ -44,11 +43,8 @@ with open(args.input, "r") as fin:
 
         if sample_data.startswith("0/0:") or sample_data.startswith("0|0:") or sample_data.startswith("./.:")  or sample_data.startswith(".|.:") :
           continue
-        elif sample_data.startswith("0/1:") or sample_data.startswith("0|1:") or sample_data.startswith("1/0:"):
-          new_items[Tumor_Seq_Allele1_index] = new_items[Reference_Allele_index]
-        elif sample_data.startswith("1/1:") or sample_data.startswith("1|1:"):
-          new_items[Tumor_Seq_Allele1_index] = new_items[Tumor_Seq_Allele2_index]
-        else :
+
+        if not (sample_data.startswith("0/1:") or sample_data.startswith("0|1:") or sample_data.startswith("1/0:") or sample_data.startswith("1/1:") or sample_data.startswith("1|1:")):
           raise Exception('I don\'t know genotype: ' + sample_data)
         
         parts = sample_data.split(":")
