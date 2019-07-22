@@ -81,7 +81,8 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log_file);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
+    my $final_file = $self->get_final_file($config, $section, $cur_dir, $sample_name);
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
     for my $sampleFile (@sample_files) {
       my ( $filename, $dir ) = fileparse($sampleFile);
