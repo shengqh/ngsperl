@@ -70,7 +70,9 @@ for(inputFile in inputFileData$V1){
                alter_fun = alter_fun, col = col, 
                column_title = "",
                show_column_names = T,
-               row_barplot_width = unit(0.5, "cm"),
+               right_annotation = rowAnnotation(
+                 rbar = anno_oncoprint_barplot(
+                   width = unit(1, "cm"))),
                heatmap_legend_param = list(title = "Genetic alternations", at = c("MISSENSE", "TRUNC", "DUP", "DEL"), 
                                            labels = c("Missense mutation", "Truncating mutation", "CNV duplication", "CNV deletion")))
   draw(ht)
