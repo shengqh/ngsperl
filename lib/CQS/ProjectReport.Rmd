@@ -1,7 +1,17 @@
 --- 
-title: "Small RNA pipeline Result Report"
+title: "Project Result Report"
 output: html_document
 ---
+
+```{css, echo=FALSE}
+body .main-container {
+  max-width: 1280px !important;
+  width: 1280px !important;
+}
+body {
+  max-width: 1280px !important;
+}
+```
 
 # Result Summary
 ```{r,echo=FALSE}
@@ -11,17 +21,17 @@ cat(paste0("This project was finished in ",Sys.time(),", and located at ",projec
 
 ```{r,echo=FALSE,results='asis'}
     for (titleOne in unique(figureToDisply$Title)) {
-		figureToDisplyTitleOne<-figureToDisply[which(figureToDisply$Title==titleOne),]
-		cat(paste0("# ",titleOne))
-		cat("\n")
-		for (i in 1:nrow(figureToDisplyTitleOne)) {
-		cat(paste0('![](',figureToDisplyTitleOne$File[i],')'))
-		cat("\n")
-		}
-		}		
+    figureToDisplyTitleOne<-figureToDisply[which(figureToDisply$Title==titleOne),]
+    cat(paste0("# ",titleOne))
+    cat("\n")
+    for (i in 1:nrow(figureToDisplyTitleOne)) {
+    cat(paste0('![](',figureToDisplyTitleOne$File[i],')'))
+    cat("\n")
+    }
+    }   
 ```
 
 # Result List
 ```{r,echo=FALSE}
-datatable(projectResultUniqueTable,escape = FALSE,rownames = FALSE,options=list(pageLength=100)) 
+datatable(projectResultUniqueTable,escape = FALSE,rownames = FALSE,options=list(pageLength=200)) 
 ```

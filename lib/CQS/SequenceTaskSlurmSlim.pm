@@ -183,7 +183,6 @@ sub perform {
       }
       my $myclass = instantiate($classname);
 
-      my $can_result_be_empty_file = $myclass->can_result_be_empty_file( $config, $task_section ) ? "True" : "False";
       my $expect_file_map;
       eval { $expect_file_map = $myclass->result( $config, $task_section ); } or do {
         my $e = $@;
@@ -201,7 +200,13 @@ sub perform {
       for my $expect_name ( sort keys %$expect_file_map ) {
         my $expect_files = $expect_file_map->{$expect_name};
         my $expect_file_list = join( ",", @{$expect_files} );
-        print $result_list $step_name, "\t", $task_section, "\t", $expect_name, "\t", $expect_file_list, "\t", $can_result_be_empty_file, "\n";
+
+        my @canEmpty = ();
+        for my $expect_file (@$expect_files){
+          push(@canEmpty, $myclass->can_result_be_empty_file( $config, $task_section, $expect_file) ? "True" : "False");
+        }
+        my $canEmptyStr = join(",", @canEmpty);
+        print $result_list $step_name, "\t", $task_section, "\t", $expect_name, "\t", $expect_file_list, "\t", $canEmptyStr, "\n";
       }
 
       my $pbs_source_map = $myclass->get_pbs_source( $config, $task_section );

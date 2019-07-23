@@ -25,7 +25,9 @@ totalCountFile<-parFile3
 
 facetColCount=getFacetColCount(groupFileList)
 
-categoriesNames<-c("Microbiome","Environment","Fungus","tRNA","rRNA")
+if(! exists("categoriesNames")){
+  categoriesNames<-c("Microbiome","Environment","Fungus","tRNA","rRNA")
+}
 
 readsMappingNames<-list()
 readsMappingTable<-NULL

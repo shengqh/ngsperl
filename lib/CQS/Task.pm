@@ -57,7 +57,7 @@ sub acceptSample {
 }
 
 sub can_result_be_empty_file {
-  my ( $self, $config, $section ) = @_;
+  my ( $self, $config, $section, $filename ) = @_;
   my $curSection = get_config_section( $config, $section );
   if ( defined $curSection->{can_result_be_empty_file} ) {
     return $curSection->{can_result_be_empty_file};

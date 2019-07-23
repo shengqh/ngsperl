@@ -21,6 +21,8 @@ output:
 ```{r setup, include=FALSE}
 library(kableExtra)
 
+knitr::opts_chunk$set(fig.width=7, fig.height=7, out.width=800, out.height=800)
+
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
 rownames(files)<-files$V2
 

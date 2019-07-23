@@ -1,14 +1,19 @@
 --- 
-title: "Pipeline Result Report: `r TaskName`"
+title: "Project Result Report: `r TaskName`"
 output: html_document
 ---
 
+```{css, echo=FALSE}
+body .main-container {
+  max-width: 1280px !important;
+  width: 1280px !important;
+}
+body {
+  max-width: 1280px !important;
+}
+```
 
 ```{r,echo=FALSE}
-  	datatable(resultFileListTaskEachFileTable,escape = FALSE,rownames = FALSE,options=list(pageLength=100)) %>% formatStyle(
-  'FileSize',
-  target = 'row',
-  color = styleEqual('NA', 'red')
-)
+    datatable(resultFileListTaskEachFileTable,escape = FALSE,rownames = FALSE,options=list(pageLength=100))
 ```
 
