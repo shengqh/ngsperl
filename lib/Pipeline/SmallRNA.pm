@@ -1107,11 +1107,12 @@ sub getSmallRNAConfig {
         class                     => "CQS::UniqueR",
         perform                   => 1,
         target_dir                => $data_visualization_dir . "/host_length_dist_category",
-        rtemplate                 => "../SmallRNA/lengthDistributionStackedBarplot.R",
+        rtemplate                 => "countTableVisFunctions.R,../SmallRNA/lengthDistributionStackedBarplot.R",
         output_file               => ".length.pdf",
         output_file_ext           => "",
         parameterSampleFile1_ref  => \@length_dist_count,
         parameterSampleFile1Names => \@length_dist_names,
+        parameterSampleFile2      => $def->{groups},
         sh_direct                 => 1,
         rCode                     => '' . $R_font_size,
         pbs                       => {
