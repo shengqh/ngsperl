@@ -1108,8 +1108,8 @@ sub getSmallRNAConfig {
         perform                   => 1,
         target_dir                => $data_visualization_dir . "/host_length_dist_category",
         rtemplate                 => "countTableVisFunctions.R,../SmallRNA/lengthDistributionStackedBarplot.R",
-        output_file               => ".length.pdf",
-        output_file_ext           => "",
+        output_file               => ".length",
+        output_file_ext           => ".pdf;.png",
         parameterSampleFile1_ref  => \@length_dist_count,
         parameterSampleFile1Names => \@length_dist_names,
         parameterSampleFile2      => $def->{groups},
@@ -2057,6 +2057,11 @@ sub getSmallRNAConfig {
           push( @report_names, "correlation_rrnalib_group_heatmap", "correlation_rrnalib_corr_cluster" );
         }
       }
+    }
+    
+    if ( defined $config->{host_length_dist_category} ) {
+      push( @report_files, "host_length_dist_category", ".png" );
+      push( @report_names, "host_length_dist_category" );
     }
 
     if ( defined $config->{nonhost_overlap_vis} ) {

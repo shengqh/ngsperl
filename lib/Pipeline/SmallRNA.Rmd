@@ -19,6 +19,8 @@ output:
 ```
   
 ```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width=7, fig.height=7, out.width=1280)
+
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
 rownames(files)<-files$V2
 
@@ -54,15 +56,15 @@ categoryRmd<-function(dfCategory){
 }
 
 hostGenomeFile="hostgenome.Rmd"
-hostGenome<-data.frame(Section=c("###", "###"), Category=c("mirna", "trna"), Name=c("miRNA", "tRNA"))
+hostGenome<-data.frame(Section=c("##", "##"), Category=c("mirna", "trna"), Name=c("miRNA", "tRNA"))
 cat(categoryRmd(hostGenome), file=hostGenomeFile)
 
 nonhostGenomeFile="nonhostgenome.Rmd"
-nonhostGenome<-data.frame(Section=c("###", "###"), Category=c("group1", "group2"), Name=c("Microbime bacteria", "Environment bacteria"))
+nonhostGenome<-data.frame(Section=c("##", "##"), Category=c("group1", "group2"), Name=c("Microbime bacteria", "Environment bacteria"))
 cat(categoryRmd(nonhostGenome), file=nonhostGenomeFile)
 
 nonhostLibraryFile="nonhostlibrary.Rmd"
-nonhostLibrary<-data.frame(Section=c("###", "###"), Category=c("trnalib", "rrnalib"), Name=c("tRNA library", "rRNA library"))
+nonhostLibrary<-data.frame(Section=c("##", "##"), Category=c("trnalib", "rrnalib"), Name=c("tRNA library", "rRNA library"))
 cat(categoryRmd(nonhostLibrary), file=nonhostLibraryFile)
 
 ```
@@ -72,36 +74,44 @@ cat(categoryRmd(nonhostLibrary), file=nonhostLibraryFile)
 # Summary
 This report includes preprocessing (section 2), host genome (section 3), nonhost genome (section 4), nonhost library (section 5)
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("read_summary_count", "Overall read distribution")}
+```{r,echo=FALSE,results='asis', fig.show="hold", out.width="45%", fig.align = "default"}
 check_and_include_graphics(files["read_summary_count",1])
-```
-
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("read_summary_perc", "Overall read percentage distribution")}
 check_and_include_graphics(files["read_summary_perc",1])
 ```
+
+```{r,echo=FALSE,results='asis'}
+fig1ref<-figRef("read_summary", "Overall read count (left) and read percentage (right) distribution")
+```
+<center>`r fig1ref`</center>
 
 <br>
 
 # Preprocessing
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastq_len", "Read length distribution after adapter trimming")}
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastq_len", "Read length distribution after adapter trimming", trunk.eval=file.exists(files["fastq_len",1]))}
 check_and_include_graphics(files["fastq_len",1])
 ```
 
 # Host genome
 ## Overall 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_mapped_bar", "Read distribution")}
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_mapped_bar", "Read distribution", trunk.eval=file.exists(files["category_mapped_bar",1]))}
 check_and_include_graphics(files["category_mapped_bar",1])
 ```
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_mapped_group", "Read distribution in grouped samples")}
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_mapped_group", "Read distribution in grouped samples", trunk.eval=file.exists(files["category_mapped_group",1]))}
 check_and_include_graphics(files["category_mapped_group",1])
 ```
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_smallrna_bar", "smallRNA read distribution")}
+
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_smallrna_bar", "smallRNA read distribution", trunk.eval=file.exists(files["category_smallrna_bar",1]))}
 check_and_include_graphics(files["category_smallrna_bar",1])
 ```
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_smallrna_group", "smallRNA read distribution in grouped samples")}
+
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_smallrna_group", "smallRNA read distribution in grouped samples", trunk.eval=file.exists(files["category_smallrna_group",1]))}
 check_and_include_graphics(files["category_smallrna_group",1])
+```
+
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("host_length_dist_category", "Host read length distribution in categories", trunk.eval=file.exists(files["host_length_dist_category",1]))}
+check_and_include_graphics(files["host_length_dist_category",1])
 ```
 
 <br>
