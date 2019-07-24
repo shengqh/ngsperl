@@ -303,7 +303,7 @@ echo working in $result_dir ...
 
   my ($docker_command, $docker_init) = $self->get_docker_value();
   my $is_sequenceTask = ( $module_name =~ /SequenceTask/ );
-  if ( ( defined $docker_command ) and ( not $is_sequenceTask ) ) {
+  if ( ( defined $docker_command ) and ( (not $is_sequenceTask) or ($pbs_file =~ /report/) ) ) {
     if(not defined $docker_init){
       $docker_init = "";
     }
