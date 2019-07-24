@@ -12,7 +12,6 @@ if(!exists("visLayoutAlphabet")){
 
 library(reshape2)
 library(ggplot2)
-library(cowplot)
 
 #source("/home/zhaos/source/r_cqs/vickers/codesToPipeline/countTableVisFunctions.R")
 
@@ -34,37 +33,42 @@ for (i in 1:nrow(lengthFiles)) {
 lengthAllTable<-acast(lengthAll,Len~Sample,value.var="Count")
 write.csv(lengthAllTable,paste0(resultFile,".csv"), row.names=T)
 
-cellWidth=800
-scales="free_x"
-if(exists("free_y") && free_y){
-  cellWidth=1000
-  scales="free"
-}
+cellWidth=1500
+scales="free"
+
+textTitle<-element_text(face= "bold", color = "black", size=22, hjust=0.5)
+text20Bold<-element_text(face= "bold", color = "black", size=20)
+text20<-element_text(color = "black", size=20)
 
 facetColCount=getFacetColCount(groupFileList)
 
-if(facetColCount > 0){
-  facetRowCount = ceiling(ncol(lengthAllTable) / facetColCount)
-  width=max(2000, cellWidth * facetColCount)
-  height=max(2000, cellWidth * facetRowCount)
-}else{
-  width=max(2000, cellWidth * (ceiling(sqrt(ncol(lengthAllTable)))+1))
-  height=width
+sampleCount<-ncol(lengthAllTable)
+if(facetColCount == 0){
+  facetColCount = ceiling(sqrt(sampleCount))
 }
+facetRowCount = ceiling( sampleCount * 1.0 / facetColCount)
+width=max(2000, cellWidth * facetColCount) + 100
+height=max(2000, cellWidth * facetRowCount)
 
 png(paste0(resultFile,".png"),width=width,height=height,res=300)
+
 p=ggplot(lengthAll, aes(x=Len, y=Count)) + 
   geom_bar(stat="identity", width=.5) + 
-  xlab("Read length") + 
-  ylab("Read count")
-
-if(facetColCount > 0){
-  p<-p+facet_wrap(~Sample, ncol=facetColCount, scales=scales)
-}else{
-  p<-p+facet_wrap(~Sample, scales=scales)
-}
-
+  theme_classic() + 
+  labs(x = "Read Length", 
+       y = "Read Count")+
+  theme(plot.title = textTitle,
+        axis.title = text20Bold,
+        axis.text = text20,
+        axis.line = element_line(colour = "gray75", size=0.73, linetype = "solid"),
+        axis.ticks = element_line(size=0.73),axis.ticks.length=unit(0.3,"cm"),
+        strip.background = element_blank(),
+        strip.text = text20Bold,
+        legend.text = text20Bold,
+        legend.title = element_blank()) +
+        facet_wrap(~Sample, ncol=facetColCount, scales=scales)
 print(p)
+
 dev.off()
 
 if (groupFileList!="") {

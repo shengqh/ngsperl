@@ -577,112 +577,122 @@ getLayoutWidth<-function(visLayout, minWidth=2000, cellWidth=800){
     
 #changed from function in http://mathematicalcoffee.blogspot.com/2014/06/ggpie-pie-graphs-in-ggplot2.html
 ggpie <- function (dat, fill="Category", y="Reads",facet="Sample", 
-		maxCategory=NA,main=NA, percent=T,textSize=15,colorNames="Set1",
-		transformTable=TRUE,reOrder=FALSE,visLayoutFileList="",visLayoutAlphabet=FALSE,facetColCount=0) {
-	if (transformTable) {
-		datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory)
-		
-	    if (percent) {
-		    datForFigure<-t(t(datForFigure)/colSums(datForFigure,na.rm=T))
-	    }
-		if (reOrder) {
-			if (row.names(datForFigure)[nrow(datForFigure)]=="Other") {
-				categoryOrderedNames<-c(row.names(datForFigure)[-nrow(datForFigure)][rev(order(rowSums(datForFigure[-nrow(datForFigure),])))],"Other")
-			} else {
-				categoryOrderedNames<-row.names(datForFigure)[rev(order(rowSums(datForFigure)))]
-			}
-		} else {
-			categoryOrderedNames<-row.names(datForFigure)
-		}
-		datForFigure<-melt(as.matrix(datForFigure),as.is=T)
-		colnames(datForFigure)<-c(fill,facet,y)
-	} else {
-		datForFigure<-dat
-		if (percent) {
-			if (!is.na(facet)) {
-				temp<-tapply(datForFigure[,y],datForFigure[,facet],sum)
-				datForFigure[,y]<-datForFigure[,y]/temp[datForFigure[,facet]]
-			} else {
-				datForFigure[,y]<-datForFigure[,y]/sum(datForFigure[,y])
-			}
-		}
-		if (reOrder) {
-			categoryOrderedNames<-unique(datForFigure[,fill])[rev(order(tapply(datForFigure[,y],datForFigure[,fill],sum)))]
-		} else {
-			categoryOrderedNames<-unique(datForFigure[,fill])
-		}
-	}
-	datForFigure[,fill]<-factor(datForFigure[,fill],levels=categoryOrderedNames)
-	datForFigure<-orderDataByNames(datForFigure,datForFigure[,fill],categoryOrderedNames)
-	
-	if (visLayoutFileList!="") {
-		visLayout<-readLayout(visLayoutFileList, visLayoutAlphabet)
-		datForFigure<-data.frame(datForFigure,visLayout[datForFigure[,2],])
-	}
-	
-	p = ggplot(datForFigure, aes_string(x=factor(1), y=y, fill=fill)) +
-			geom_bar(width=1, stat='identity', color='black') +
-			guides(fill=guide_legend(keywidth = 1.5, keyheight = 1.5,override.aes=list(colour=NA))) + # removes black borders from legend
-			coord_polar(theta='y') +
-			theme(axis.ticks=element_blank(),
-					axis.text.y=element_blank(),
-					axis.text.x=element_blank(),
-					axis.title=element_blank(),
-					panel.grid=element_blank()) +
-			#scale_y_continuous(breaks=cumsum(datForFigure[[y]])-datForFigure[[y]]/2, labels=datForFigure[[fill]]) +
-			theme(panel.background = element_rect(fill = "white"))+
-			theme(legend.text=element_text(size=textSize),
-					legend.title= element_text(size=textSize),
-					strip.text.x = element_text(size = textSize),
-					strip.text.y = element_text(size = textSize))
-	if (!is.na(main)) {
-		p = p + ggtitle(main)
-	}
-	if (visLayoutFileList!="") {
-		p<-p+facet_grid(Row_Group~Col_Group)
-		if (length(unique(datForFigure$Row_Group))<length(unique(datForFigure$Col_Group))) {
-			p<-p+theme(legend.position="top")
-			if (max(nchar(as.character(datForFigure[,fill])))>20) {
-				p<-p+guides(fill= guide_legend(ncol = 2))
-			}
-		}
-	} else if (!is.na(facet)) {
-		if(facetColCount > 0){
-			p<-p+facet_wrap(c(facet), ncol=facetColCount)
-		}else{
-			p<-p+facet_wrap(c(facet))
-		}
-#		p<-p+facet_wrap(c(facet),nrow=2)+theme(legend.position="top")
-	}
+    maxCategory=NA,main=NA, percent=T,textSize=15,colorNames="Set1",
+    transformTable=TRUE,reOrder=FALSE,visLayoutFileList="",visLayoutAlphabet=FALSE,facetColCount=0) {
+  if (transformTable) {
+    datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory)
+    
+      if (percent) {
+        datForFigure<-t(t(datForFigure)/colSums(datForFigure,na.rm=T))
+      }
+    if (reOrder) {
+      if (row.names(datForFigure)[nrow(datForFigure)]=="Other") {
+        categoryOrderedNames<-c(row.names(datForFigure)[-nrow(datForFigure)][rev(order(rowSums(datForFigure[-nrow(datForFigure),])))],"Other")
+      } else {
+        categoryOrderedNames<-row.names(datForFigure)[rev(order(rowSums(datForFigure)))]
+      }
+    } else {
+      categoryOrderedNames<-row.names(datForFigure)
+    }
+    datForFigure<-melt(as.matrix(datForFigure),as.is=T)
+    colnames(datForFigure)<-c(fill,facet,y)
+  } else {
+    datForFigure<-dat
+    if (percent) {
+      if (!is.na(facet)) {
+        temp<-tapply(datForFigure[,y],datForFigure[,facet],sum)
+        datForFigure[,y]<-datForFigure[,y]/temp[datForFigure[,facet]]
+      } else {
+        datForFigure[,y]<-datForFigure[,y]/sum(datForFigure[,y])
+      }
+    }
+    if (reOrder) {
+      categoryOrderedNames<-unique(datForFigure[,fill])[rev(order(tapply(datForFigure[,y],datForFigure[,fill],sum)))]
+    } else {
+      categoryOrderedNames<-unique(datForFigure[,fill])
+    }
+  }
+  datForFigure[,fill]<-factor(datForFigure[,fill],levels=categoryOrderedNames)
+  datForFigure<-orderDataByNames(datForFigure,datForFigure[,fill],categoryOrderedNames)
+  
+  if (visLayoutFileList!="") {
+    visLayout<-readLayout(visLayoutFileList, visLayoutAlphabet)
+    datForFigure<-data.frame(datForFigure,visLayout[datForFigure[,2],])
+  }
+  textBold<-element_text(face= "bold", color = "black", size=textSize)
+  
+  p = ggplot(datForFigure, aes_string(x=factor(1), y=y, fill=fill)) +
+      geom_bar(width=1, stat='identity', color='black') +
+      guides(fill=guide_legend(keywidth = 1.5, keyheight = 1.5,override.aes=list(colour=NA))) + # removes black borders from legend
+      coord_polar(theta='y') +
+      theme(axis.ticks=element_blank(),
+          axis.text.y=element_blank(),
+          axis.text.x=element_blank(),
+          axis.title=element_blank(),
+          panel.grid=element_blank(),
+          strip.background = element_blank()
+      ) +
+      #scale_y_continuous(breaks=cumsum(datForFigure[[y]])-datForFigure[[y]]/2, labels=datForFigure[[fill]]) +
+      theme(panel.background = element_rect(fill = "white"))+
+      theme(legend.text=textBold,
+          legend.title= textBold,
+          strip.text = textBold)
+  if (!is.na(main)) {
+    p = p + ggtitle(main)
+  }
+  if (visLayoutFileList!="") {
+    p<-p+facet_grid(Row_Group~Col_Group)
+    if (length(unique(datForFigure$Row_Group))<length(unique(datForFigure$Col_Group))) {
+      p<-p+theme(legend.position="top")
+      if (max(nchar(as.character(datForFigure[,fill])))>20) {
+        p<-p+guides(fill= guide_legend(ncol = 2))
+      }
+    }
+  } else if (!is.na(facet)) {
+    if(facetColCount > 0){
+      p<-p+facet_wrap(c(facet), ncol=facetColCount)
+    }else{
+      p<-p+facet_wrap(c(facet))
+    }
+#   p<-p+facet_wrap(c(facet),nrow=2)+theme(legend.position="top")
+  }
 
-	if (!is.na(colorNames)) {
-		colors<-makeColors(length(unique(datForFigure[,fill])),colorNames)
-		p<-p+scale_fill_manual(values=colors)
-	}
-	return(p)
+  if (!is.na(colorNames)) {
+    colors<-makeColors(length(unique(datForFigure[,fill])),colorNames)
+    p<-p+scale_fill_manual(values=colors)
+  }
+  return(p)
 }
 
 ggpieToFile<-function(dat,fileName,fill="Category", maxCategory=5,textSize=9,transformTable=TRUE,visLayoutFileList="",visLayoutAlphabet=FALSE,facetColCount=0,perHeight=700,...) {
-	if (visLayoutFileList!="") {
-		visLayout<-read.delim(visLayoutFileList,as.is=T,header=F)
-		rowLength<-length(unique(visLayout[which(visLayout[,2]=="Row_Group"),1]))
-		colLength<-length(unique(visLayout[which(visLayout[,2]=="Col_Group"),1]))
-		maxLength=max(rowLength, colLength)
-		height<-max(2000,maxLength*perHeight)
-	} else {
-		if (transformTable) {
-			height<-max(2000,(as.integer(sqrt(ncol(dat)))+1)*perHeight)
-		} else {
-      height<-max(2000,(as.integer(sqrt(nrow(dat)))+1)*perHeight)
-		}
-	}
-	width<-height
-	
-	png(fileName,width=width,height=height,res=300)
-	p<-ggpie(dat,fill=fill, maxCategory=maxCategory,textSize=textSize,transformTable=transformTable,visLayoutFileList=visLayoutFileList,visLayoutAlphabet=visLayoutAlphabet,facetColCount=facetColCount,...)
-	print(p)
-	dev.off()
-	invisible(p)
+  if (visLayoutFileList!="") {
+    visLayout<-read.delim(visLayoutFileList,as.is=T,header=F)
+    colLength<-length(unique(visLayout[which(visLayout[,2]=="Col_Group"),1]))
+    rowLength<-length(unique(visLayout[which(visLayout[,2]=="Row_Group"),1]))
+  } else {
+    if("Sample" %in% colnames(dat)){
+      totalSample<-length(unique(dat$Sample))
+    } else  if (transformTable) {
+      totalSample<-ncol(dat)
+    } else {
+      totalSample<-nrow(dat)
+    }
+    
+    if(facetColCount == 0){
+      colLength<-ceiling(sqrt(totalSample))
+    }else{
+      colLength<-facetColCount
+    }
+    rowLength<-ceiling(totalSample * 1.0 / colLength)
+  }
+  width<-max(1600, colLength * perHeight) + 400
+  height<-max(1000, rowLength * (perHeight + 50))
+  
+  png(fileName,width=width,height=height,res=300)
+  p<-ggpie(dat,fill=fill, maxCategory=maxCategory,textSize=textSize,transformTable=transformTable,visLayoutFileList=visLayoutFileList,visLayoutAlphabet=visLayoutAlphabet,facetColCount=facetColCount,...)
+  print(p)
+  dev.off()
+  invisible(p)
 }
 
 ggpieGroupToFile<-function(dat,fileName,groupFileList="",outFileName="",

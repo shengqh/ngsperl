@@ -45,7 +45,8 @@ textTitle<-element_text(face= "bold", color = "black", size=22, hjust=0.5)
 text20Bold<-element_text(face= "bold", color = "black", size=20)
 text20<-element_text(color = "black", size=20)
 
-pdf(file=outFile, onefile=T)
+pdf(file=paste0(outFile,".pdf"), onefile=T)
+
 for(sample in unique(fastq_length$Sample)){
   fq<-fastq_length[fastq_length$Sample==sample,]
   fs<-final[final$Sample==sample,]
@@ -67,6 +68,7 @@ for(sample in unique(fastq_length$Sample)){
           legend.title=element_blank())
   print(g)  
 }
+
 dev.off()
 
 groupFileList<-parSampleFile2
