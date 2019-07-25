@@ -30,7 +30,7 @@ mafResult = merge(testMafTable, leftData, by = "uid")
 mafResult = mafResult[, uid:=NULL]
 
 avsnpIndex = which(grepl("avsnp", colnames(mafResult)))
-if (avsnpIndex > 0){
+if (length(avsnpIndex) > 0){
   names(mafResult)[avsnpIndex]<-"dbSNP_RS"
 }
 

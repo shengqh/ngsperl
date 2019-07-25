@@ -3,8 +3,8 @@
 ###############################################################################
 
 runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="/home/zhaos/bin/gsea-3.0.jar",gseaDb="/scratch/TBI/Data/Reference_genome/GSEA/human/V6.0",
-#		gseaCategories=c("h.all.v6.0.symbols.gmt","c2.all.v6.0.symbols.gmt","c5.all.v6.0.symbols.gmt","c6.all.v6.0.symbols.gmt","c7.all.v6.0.symbols.gmt"),
-		gseaCategories=c("h.all.v6.0.symbols.gmt"),
+#		gseaCategories=c('h.all.v6.1.symbols.gmt', 'c2.all.v6.1.symbols.gmt', 'c5.all.v6.1.symbols.gmt', 'c6.all.v6.1.symbols.gmt', 'c7.all.v6.1.symbols.gmt'),
+		gseaCategories=c("h.all.v6.1.symbols.gmt"),
 		gseaReportTemplt="GSEAReport.Rmd",
 		makeReport=FALSE
 )
