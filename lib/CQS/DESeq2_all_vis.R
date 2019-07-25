@@ -9,6 +9,10 @@ selectedVars<-c("baseMean","log2FoldChange","pvalue","padj","FoldChange")
 #pvalue<-0.05
 #foldChange<-1.5
 
+if(!exists("fixColumn")){
+  fixColumn<-0
+}
+
 #for volcano plot
 library(scales)
 library(ggplot2)
@@ -49,7 +53,7 @@ addVisLayout<-function(datForFigure, visLayoutFileList,LayoutKey="LayoutKey") {
       } else {
         message=paste0("Warning: Layout Group: ",row.names(visLayout)[x]," can't match data.\n Data: \n",paste(data2Layout,collapse="\n"))
         writeLines(message,paste0(visLayoutFileList,".warning"))
-		warning(message)
+    warning(message)
       }
     }
     datForFigure<-data.frame(datForFigure,visLayout[datForFigure[,LayoutKey],])
@@ -70,9 +74,9 @@ for (i in 1:nrow(deseq2ResultFile)) {
   moduleName<-gsub("_minicontigs","",moduleName)
   moduleName<-gsub("_contigs","",moduleName)
   if (file.exists(filePath)) {
-	  deseq2ResultRaw<-read.csv(filePath,header=T,as.is=T)
+    deseq2ResultRaw<-read.csv(filePath,header=T,as.is=T)
   } else {
-	  next;
+    next;
   }
 
   deseq2Result<-deseq2ResultRaw[,selectedVars]
@@ -128,14 +132,30 @@ p<-p+
         legend.title= element_text(size=20))+
     theme(strip.text.x = element_text(size = 13),
         strip.text.y = element_text(size = 13),
+        strip.background = element_blank(),
         legend.position="top")
     
 width<-max(1600,length(unique(diffResult$Pairs))*800)
 height<-max(1600,length(unique(diffResult$Module))*800)
-png(filename=paste0(resultFile, ".png"), width=width, height=height, res=300)
-if (visLayoutFileList!="") {
-  print(p+facet_grid(Row_Group~Col_Group,scales = "free"))
-} else {
-  print(p+facet_grid(Module~Pairs))
+
+if((width > height) | fixColumn){
+  if (visLayoutFileList!="") {
+    p<-p+facet_grid(Row_Group~Col_Group,scales = "free")
+  } else {
+    p<-p+facet_grid(Module~Pairs)
+  }
+}else{
+  if (visLayoutFileList!="") {
+    p<-p+facet_grid(Col_Group~Row_Group,scales = "free")
+  } else {
+    p<-p+facet_grid(Pairs~Module)
+  }
+  tmp<-width
+  width<-height
+  height<-tmp
 }
+
+png(filename=paste0(resultFile, ".png"), width=width, height=height, res=300)
+print(p)
 dev.off()
+

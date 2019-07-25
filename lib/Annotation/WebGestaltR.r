@@ -58,3 +58,6 @@ for(enrichDatabase in enrichDatabases){
             isOutput=TRUE,
             outputDirectory=outputDirectory,projectName=paste0(sampleName, "_", enrichDatabase))
 }
+
+webGestaltR_version<-paste0('WebGestaltR,v', packageVersion('WebGestaltR'))
+writeLines(webGestaltR_version, 'WebGestaltR.version')

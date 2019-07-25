@@ -21,9 +21,9 @@ our %EXPORT_TAGS = (
   'all' => [
     qw(get_config_section
       has_config_section
-      get_option 
+      get_option
       get_option_file
-      get_java 
+      get_java
       get_cluster
       get_parameter
       get_param_file
@@ -58,7 +58,8 @@ our %EXPORT_TAGS = (
       get_ref_section_pbs
       get_rawfiles_option
       get_parameter_options
-      get_pair_group_sample_map)
+      get_pair_group_sample_map
+      get_version_files)
   ]
 );
 
@@ -230,8 +231,7 @@ sub get_parameter {
 sub get_param_file {
   my ( $file, $name, $required, $checkExists ) = @_;
 
-
-  if(not defined $checkExists){
+  if ( not defined $checkExists ) {
     $checkExists = 1;
   }
 
@@ -242,7 +242,7 @@ sub get_param_file {
       die "$name was not defined!";
     }
 
-    if ( !is_debug() and ($checkExists and !-e $file) ) {
+    if ( !is_debug() and ( $checkExists and !-e $file ) ) {
       die "$name $file defined but not exists!";
     }
   }
@@ -251,7 +251,7 @@ sub get_param_file {
       if ( $file eq "" ) {
         undef($result);
       }
-      elsif ( !is_debug() and ($checkExists and !-e $file )) {
+      elsif ( !is_debug() and ( $checkExists and !-e $file ) ) {
         die "$name $file defined but not exists!";
       }
     }
@@ -298,10 +298,10 @@ sub get_result_file {
   if ( defined $refSection->{class} ) {
     my $myclass = instantiate( $refSection->{class} );
     my $result = $myclass->result( $config, $refSectionName, $pattern, 1 );
-    return($result);
+    return ($result);
   }
 
-  return(undef);
+  return (undef);
 }
 
 sub get_first_result_file {
@@ -319,7 +319,7 @@ sub get_first_result_file {
     die "section $refSectionName return nothing!";
   }
 
-  return(undef);
+  return (undef);
 }
 
 sub parse_param_file {
@@ -348,10 +348,10 @@ sub parse_param_file {
       }
     }
 
-    my $result = get_first_result_file($config, $refSectionName, $pattern);
+    my $result = get_first_result_file( $config, $refSectionName, $pattern );
 
-    if(defined $result){
-      return($result);
+    if ( defined $result ) {
+      return ($result);
     }
   }
 
@@ -660,10 +660,11 @@ sub get_ref_section_pbs {
 
       if ( defined $targetSection->{class} ) {
         my $myclass = instantiate( $targetSection->{class} );
+
         #print ($targetSection->{class} . " " . $section. "\n");
         my $result_pbs_map = $myclass->get_result_dependent_pbs( $config, $section );
         for my $resultKey ( keys %$result_pbs_map ) {
-          my $newpbs = $result_pbs_map->{$resultKey};
+          my $newpbs  = $result_pbs_map->{$resultKey};
           my $pbslist = $result->{$resultKey};
           if ( defined $pbslist ) {
             push @$pbslist, $newpbs;
@@ -972,8 +973,8 @@ sub saveConfig {
   my ( $def, $config ) = @_;
 
   my $targetFile = $def->{target_dir} . "/" . basename($0);
-  print($0 . " => " . $targetFile . "\n");
-  copy($0, $targetFile);
+  print( $0 . " => " . $targetFile . "\n" );
+  copy( $0, $targetFile );
 
   my $def_file;
   if ( $def->{target_dir} =~ /\/$/ ) {
@@ -1060,9 +1061,9 @@ sub writeParameterSampleFile {
     foreach my $sample_name (@orderedSampleNames) {
       my $subSampleFiles = $temp->{$sample_name};
       if ( ref($subSampleFiles) eq 'HASH' ) {
-        foreach my $groupName (sort keys %$subSampleFiles) {
+        foreach my $groupName ( sort keys %$subSampleFiles ) {
           my $groupSampleNames = $subSampleFiles->{$groupName};
-          for my $groupSampleName (@$groupSampleNames){
+          for my $groupSampleName (@$groupSampleNames) {
             print $list "${groupSampleName}\t${groupName}\t${sample_name}\n";
           }
         }
@@ -1096,7 +1097,8 @@ sub get_parameter_file {
   my $resultArg = get_option( $config, $section, $key . "_arg", "" );
   if ( !defined($result) ) {
     $result = "";
-  } else {
+  }
+  else {
     $result = "\"" . $result . "\"";
   }
   return ( $result, $resultArg );
@@ -1131,7 +1133,7 @@ sub is_pairend {
 sub get_rawfiles_option {
   my ( $raw_files, $option_string, $intern ) = @_;
   my $result = "";
-  if (not defined $intern){
+  if ( not defined $intern ) {
     $intern = " ";
   }
   for my $sample_name ( sort keys %$raw_files ) {
@@ -1147,10 +1149,10 @@ sub get_parameter_options {
 
   my $curSection = get_config_section( $config, $section );
   my $result = "";
-  foreach my $i (0 .. (scalar(@$parameters) - 1)){
+  foreach my $i ( 0 .. ( scalar(@$parameters) - 1 ) ) {
     my $parameter = $parameters->[$i];
-    my $value = $curSection->{$parameter};
-    if ( not defined $value and defined $defaults) {
+    my $value     = $curSection->{$parameter};
+    if ( not defined $value and defined $defaults ) {
       $value = $defaults->[$i];
     }
     if ( defined $value ) {
@@ -1158,6 +1160,32 @@ sub get_parameter_options {
     }
   }
 
+  return ($result);
+}
+
+sub get_version_files {
+  my ($config) = @_;
+  
+  my $result = {};
+  for my $task_section ( keys %$config ) {
+    my $classname = $config->{$task_section}{class};
+    if ( !defined $classname ) {
+      next;
+    }
+    my $myclass = instantiate($classname);
+
+    my $expect_file_map = $myclass->result( $config, $task_section, "version\$" );
+    if(%$expect_file_map){
+      my $versionFiles = [];
+      for my $key (keys %$expect_file_map){
+        my $expectFiles = $expect_file_map->{$key};
+        push @$versionFiles, @$expectFiles;
+      }
+      if(scalar(@$versionFiles) > 0){
+        $result->{$task_section} = $versionFiles;
+      }
+    }
+  }
   return ($result);
 }
 

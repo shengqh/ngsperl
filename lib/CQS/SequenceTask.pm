@@ -226,7 +226,7 @@ sub perform {
       my $myclass = instantiate($classname);
 
       my $expect_file_map;
-      eval { $expect_file_map = $myclass->result( $config, $task_section ); } or do {
+      eval { $expect_file_map = $myclass->result( $config, $task_section, "(?<!version)\$", 1 ); } or do {
         my $e = $@;
         die("Something went wrong to get result of section $task_section : $e\n");
       };

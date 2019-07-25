@@ -34,7 +34,7 @@ sub initializeDefaultOptions {
   }
 
   initDefaultValue( $def, "perform_gatk_callvariants",   0 );
-  initDefaultValue( $def, "perform_gatk4_callvariants",  0 );
+  initDefaultValue( $def, "perform_gatk4_callvariants",  1 );
   initDefaultValue( $def, "gatk_callvariants_vqsr_mode", 1 );
 
   initDefaultValue( $def, "filter_variants_by_allele_frequency",            0 );
@@ -44,7 +44,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_muTect",       0 );
   initDefaultValue( $def, "perform_muTect2indel", 0 );
   initDefaultValue( $def, "perform_annovar",      0 );
-  initDefaultValue( $def, "perform_cnv",          0 );
+  initDefaultValue( $def, "perform_cnv",          1 );
   initDefaultValue( $def, "perform_vep",          0 );
 
   if ( $def->{perform_muTect} || $def->{perform_muTect2indel} ) {
@@ -57,7 +57,7 @@ sub initializeDefaultOptions {
     }
   }
 
-  initDefaultValue( $def, "perform_multiqc", 1 );
+  initDefaultValue( $def, "perform_multiqc", 0 );
 
   return $def;
 }

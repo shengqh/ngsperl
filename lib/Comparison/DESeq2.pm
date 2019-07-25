@@ -309,11 +309,13 @@ sub result {
   my $suffix = getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue, $pvalue );
   my $result = {};
 
+  my $tasknameFiles = [$result_dir . "/${task_name}.define.DESeq2.version"];
   if ( scalar( keys %$comparisons ) > 1 ) {
-    my $filtered = filter_array( [ $result_dir . "/${task_name}.define${suffix}_DESeq2_volcanoPlot.png" ], $pattern, 1 );
-    if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
-      $result->{$task_name} = $filtered;
-    }
+    push @$tasknameFiles, $result_dir . "/${task_name}.define${suffix}_DESeq2_volcanoPlot.png";
+  }
+  my $filtered = filter_array( $tasknameFiles, $pattern, 1 );
+  if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
+    $result->{$task_name} = $filtered;
   }
 
   for my $comparison_name ( sort keys %{$comparisons} ) {

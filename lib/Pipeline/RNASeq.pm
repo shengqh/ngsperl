@@ -802,6 +802,8 @@ sub getRNASeqConfig {
     my @report_files = ();
     my @report_names = ();
     my @copy_files   = ();
+    
+    my $version_files = get_version_files($config);
 
     if ( defined $config->{fastqc_raw_summary} ) {
       push( @report_files, "fastqc_raw_summary",                   ".FastQC.baseQuality.tsv.png" );
@@ -979,6 +981,8 @@ sub getRNASeqConfig {
       parameterSampleFile1_names => \@report_names,
       parameterSampleFile2       => $options,
       parameterSampleFile3_ref   => \@copy_files,
+      parameterSampleFile4       => $version_files,
+      parameterSampleFile5       => $def->{software_version},
       sh_direct                  => 1,
       pbs                        => {
         "email"     => $def->{email},

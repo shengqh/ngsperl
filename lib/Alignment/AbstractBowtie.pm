@@ -50,6 +50,7 @@ sub result {
     if($option =~ /\-m/){
       push( @result_files, "${cur_dir}/${sample_name}.bam.max.txt" );
     }
+    push( @result_files, "${cur_dir}/${sample_name}.version" );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }

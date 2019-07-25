@@ -5,6 +5,7 @@ output:
   html_document:
     toc: true
     toc_depth: 4
+    number_sections: true
 ---
 
 <style type="text/css">
@@ -21,7 +22,7 @@ output:
 ```{r setup, include=FALSE}
 library(kableExtra)
 
-knitr::opts_chunk$set(fig.width=7, fig.height=7, out.width=800, out.height=800)
+knitr::opts_chunk$set(fig.width=7, fig.height=7, out.width=1280, out.height=1280)
 
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
 rownames(files)<-files$V2
@@ -60,13 +61,13 @@ figureRmd<-function(corNames, section){
   }
   return(result)
 }
-cat(figureRmd(corNames, "#### 4.3"), file=corrFile)
+cat(figureRmd(corNames, "##"), file=corrFile)
 
 ```
 
 <br>
   
-## 1. Summary
+# Summary
 
 ```{r summary, results="asis", echo=FALSE} 
 cat("This report includes quality check for raw sequencing data (section 2), reads mapping and assignment (section 3), and expression similarity between samples (section 4).")
@@ -81,9 +82,9 @@ cat("\n")
 
 <br>
   
-## 2. Sequencing Quality
+# Sequencing Quality
   
-### 2.1 Summary of sequencing quality
+## Summary of sequencing quality
   
 ```{r fastqc_raw_per_base_sequence_quality,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_per_base_sequence_quality", "The mean quality scores of sequencing reads in each position", trunk.eval=hasFastqc)}
 check_and_include_graphics(files["fastqc_raw_per_base_sequence_quality",1])
@@ -109,8 +110,8 @@ check_and_include_graphics(files["fastqc_post_trim_adapter_content",1])
 
 <br>
   
-## 3. Mapping quality
-### 3.1 Summary of mapping quality
+# Mapping quality
+## Summary of mapping quality
 ```{r STAR_summary,echo=FALSE,results='asis', include = hasSTAR, eval = hasSTAR, fig.align="center", fig.cap=figRef("STAR_summary", "The statistics of RNAseq mapping results")}
 include_graphics(files["STAR_summary",1])
 ```
@@ -130,8 +131,8 @@ print(kable_styling(kable(output_table1, caption=tabRef("mapSummary", "The summa
 
 <br>
 
-## 4. Expression Quantification
-### 4.1 Summary of reads assignment
+# Expression Quantification
+## Summary of reads assignment
 
 ```{r, results="asis", echo=FALSE, include = hasFeatureCount, eval = hasFeatureCount} 
 cat("featureCounts was used to count reads mapped genes, and **MULTI** mapped reads were ")
@@ -169,14 +170,14 @@ print(kable_styling(kable(table, caption=tabRef("geneSummary", paste0("The summa
 
 <br>
 
-### 4.2 Expression density of samples
+## Expression density of samples
 ```{r correlation_density,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_density", "Expression density distribution of each sample")}
 check_and_include_graphics(files["all_correlation_density",1])
 ```
 
 <br>
 
-### 4.3 Similarity between samples
+## Similarity between samples
 ```{r, child="corr.Rmd"} 
 ```
 
@@ -184,7 +185,7 @@ check_and_include_graphics(files["all_correlation_density",1])
 
 ```{r deseq2_1, results="asis", echo=FALSE} 
 if(hasDEseq2 ){
-  cat("## 5. Differential expression\n<br>\n\n### 5.1 Volcano plot\n<br>\n")
+  cat("# Differential expression\n<br>\n\n## Volcano plot\n<br>\n")
 }
 ```
 
@@ -196,7 +197,7 @@ check_and_include_graphics(files["deseq2_volcano_plot",1])
 
 ```{r deseq2_2, results="asis", echo=FALSE} 
 if(hasDEseq2 ){
-  cat("### 5.2 Summary of differential analysis\n<br>\n")
+  cat("## Summary of differential analysis\n<br>\n")
 }
 ```
 
@@ -234,8 +235,7 @@ if(hasDEseq2 ){
 
 ```{r enrich, results="asis", echo=FALSE} 
 if(hasEnrichmentAnalysis ){
-  cat("## 6. Funcional enrichment analysis\nList of the top five significantly enriched elements\n<br>\n")
-  enrichIndex<-1
+  cat("# Funcional enrichment analysis\nList of the top five significantly enriched elements\n<br>\n")
 }
 ```
 
@@ -243,7 +243,7 @@ if(hasEnrichmentAnalysis ){
   
 ```{r webgestalt, results="asis", echo=FALSE} 
 if(hasWebGestaltAnalysis){
-  cat(paste0("  \n### 6.", enrichIndex, " WebGestalt  \n"))
+  cat(paste0("  \n## WebGestalt  \n"))
   enrich_files<-files[grepl("WebGestalt_", rownames(files)),]
   enrich_files$Comparisons<-gsub("WebGestalt_GO....", "", enrich_files$V2)
   enrich_files$Comparisons<-gsub("WebGestalt_KEGG_", "", enrich_files$Comparisons)
@@ -251,7 +251,7 @@ if(hasWebGestaltAnalysis){
   for (j in 1:length(comparisons)){
     comparison<-comparisons[j]
     comp_files<-enrich_files[enrich_files$Comparisons == comparison,]
-    cat(paste0("  \n#### 6. ", enrichIndex, ".", j, " ", comparison, "  \n"))
+    cat(paste0("  \n### ", comparison, "  \n"))
   
     for (i in 1:nrow(comp_files)){
       if (!file.exists(comp_files[i,1])) {
@@ -277,7 +277,6 @@ if(hasWebGestaltAnalysis){
       }
     }  
   }
-  enrichIndex<-enrichIndex+1
 }
 ```
 
@@ -285,7 +284,7 @@ if(hasWebGestaltAnalysis){
   
 ```{r gsea, results="asis", echo=FALSE, warning=FALSE} 
 if(hasGseaAnalysis){
-  cat(paste0("  \n### 6.", enrichIndex, " GSEA  \n"))
+  cat(paste0("  \n## GSEA  \n"))
   processGesaTable<-function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=5,absLinkPath=FALSE) {
     rawTable<-read.delim(gseaTableFile,header=T,as.is=T)
     rawTableOut<-NULL
@@ -314,7 +313,7 @@ if(hasGseaAnalysis){
   for (j in 1:length(comparisons)){
     comparison<-comparisons[j]
     comp_files<-gsea_files[gsea_files$Comparisons == comparison,]
-    cat(paste0("  \n#### 6.", enrichIndex, ".", j, " ", comparison, "  \n"))
+    cat(paste0("  \n### ", comparison, "  \n"))
   
     for (i in 1:nrow(comp_files)){
       gfolders<-read.csv(comp_files[i,1],header=T,stringsAsFactor=F)
@@ -350,15 +349,14 @@ if(hasGseaAnalysis){
       }
     }  
   }
-  enrichIndex<-enrichIndex+1
 }
 ``` 
 
 <br>
   
+# Results folder structure
+
 ```{r structure_link, echo=FALSE, results='asis'}
-structureIndex<-ifelse(hasEnrichmentAnalysis, 7, 6)
-cat(paste0("## ", structureIndex, ". Results folder structure\n"))
 
 df<-NULL
 countFile<-list.files('.',pattern=".count$",full.names=TRUE,recursive=TRUE)
@@ -387,5 +385,31 @@ if(length(webgestaltDeseq2) > 0){
 }
 
 print(kable_styling(kable(df, caption=tabRef("resultFiles", "Result files"))))
+
+```
+
+# Software versions
+```{r softwareVersion, echo=FALSE, results='asis'}
+files<-read.delim("fileList4.txt", header=F, stringsAsFactors = F)
+df<-NULL
+curfile<-files$V1[1]
+for(curfile in files$V1){
+  if(file.exists(curfile)){
+    curdf<-read.csv(curfile, header=F)
+    df<-rbind(df, curdf)
+  }
+}
+
+if(file.exists("fileList5.txt")){
+  vers<-read.delim("fileList5.txt", header=F, stringsAsFactors = F)
+  vers<-vers[,c(2,1)]
+  colnames(vers)<-c("V1","V2")
+  df<-rbind(df, vers)
+}
+
+df<-unique(df)
+df<-df[order(df$V1),]
+colnames(df)<-c("Software", "Version")
+print(kable_styling(kable(df, caption=tabRef("versionFiles", "Software versions"))))
 
 ```

@@ -90,6 +90,7 @@ sub result {
     push( @result_files, "$cur_dir/Project_${sample_name}_geneontology_Cellular_Component" );
     push( @result_files, "$cur_dir/Project_${sample_name}_geneontology_Molecular_Function" );
     push( @result_files, "$cur_dir/Project_${sample_name}_pathway_KEGG" );
+    push( @result_files, "$cur_dir/WebGestaltR.version" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern, 1 );
   }
   return $result;

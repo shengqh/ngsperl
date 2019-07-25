@@ -95,6 +95,7 @@ sub perform {
 if [[ ! -s $bam_file && ! -s $bowtiesam ]]; then
   $cmd_file_exists
   $bowtie1_aln_command 
+  bowtie --version | grep bowtie | grep version | cut -d ' ' -f3 | awk '{print \"bowtie,v\"\$1}' > ${final_file}.version
 fi
 ";
 

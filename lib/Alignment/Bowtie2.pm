@@ -87,6 +87,7 @@ sub perform {
 
 if [ ! -s $sam_file ]; then
   $bowtie2_aln_command
+  bowtie2 --version | grep bowtie2 | grep version | cut -d ' ' -f3 | awk '{print \"bowtie2,v\"\$1}' > ${final_file}.version
 fi
 
 if [ -s $sam_file ]; then

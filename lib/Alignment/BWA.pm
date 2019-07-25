@@ -86,6 +86,7 @@ if [ ! -s $bam_file ]; then
   if [ ! -s $unsorted_bam_file ]; then
     echo bwa_mem=`date`
     bwa mem $option -R '$rg' $bwa_index $sample_files_str | samtools view -bS -o $unsorted_bam_file
+    bwa 2>\&1 | grep Version 1 | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${final_file}.bwa.version
   fi
 ";
     my $rmlist = "";
@@ -169,6 +170,7 @@ sub result {
     my @result_files = ();
     push( @result_files, $final_file );
     push( @result_files, $final_file . ".stat" );
+    push( @result_files, $final_file . ".bwa.version" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;

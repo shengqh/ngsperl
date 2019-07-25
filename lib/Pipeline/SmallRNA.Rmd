@@ -39,6 +39,17 @@ getCategory<-function(category, description){
 "  check_and_include_graphics(files['", category, "',1])\n```\n"))
 }
 
+getCategory2<-function(category1, category2, description){
+  return(paste0("```{r,echo=FALSE,results='asis', fig.show='hold', out.width='45%', fig.align = 'default'}\n",
+"check_and_include_graphics(files['", category1, "',1])\n",
+"check_and_include_graphics(files['", category2, "',1])\n",
+"```\n",
+"```{r,echo=FALSE,results='asis'}\n",
+"curFigRef<-figRef('", paste0(category1, category2), "', '",description, "')\n",
+"```\n",
+"<center>`r curFigRef`</center>\n"))
+}
+
 categoryRmd<-function(dfCategory){
   result<-""
   for(i in c(1:nrow(dfCategory))){
@@ -49,7 +60,8 @@ categoryRmd<-function(dfCategory){
     pca<-paste0("correlation_", category, "_pca")
     group_heatmap<-paste0("correlation_", category, "_group_heatmap")
     corr_heatmap<-paste0("correlation_", category, "_corr_cluster")
-    lines<-paste0(section, " ", name, "\n", getCategory(heatmap, heatmap), getCategory(pca, pca), getCategory(group_heatmap, group_heatmap), getCategory(corr_heatmap, corr_heatmap) )
+    #lines<-paste0(section, " ", name, "\n", getCategory(heatmap, heatmap), getCategory(pca, pca), getCategory(group_heatmap, group_heatmap), getCategory(corr_heatmap, corr_heatmap) )
+    lines<-paste0(section, " ", name, "\n", getCategory2(heatmap, pca, paste0("Heatmap (left) and PCA (right) of ", name) ), getCategory(group_heatmap, group_heatmap), getCategory(corr_heatmap, corr_heatmap) )
     result<-paste0(result, lines)
   }
   return(result)
@@ -60,11 +72,11 @@ hostGenome<-data.frame(Section=c("##", "##"), Category=c("mirna", "trna"), Name=
 cat(categoryRmd(hostGenome), file=hostGenomeFile)
 
 nonhostGenomeFile="nonhostgenome.Rmd"
-nonhostGenome<-data.frame(Section=c("##", "##"), Category=c("group1", "group2"), Name=c("Microbime bacteria", "Environment bacteria"))
+nonhostGenome<-data.frame(Section=c("###", "###"), Category=c("group1", "group2"), Name=c("Microbime bacteria", "Environment bacteria"))
 cat(categoryRmd(nonhostGenome), file=nonhostGenomeFile)
 
 nonhostLibraryFile="nonhostlibrary.Rmd"
-nonhostLibrary<-data.frame(Section=c("##", "##"), Category=c("trnalib", "rrnalib"), Name=c("tRNA library", "rRNA library"))
+nonhostLibrary<-data.frame(Section=c("###", "###"), Category=c("trnalib", "rrnalib"), Name=c("tRNA library", "rRNA library"))
 cat(categoryRmd(nonhostLibrary), file=nonhostLibraryFile)
 
 ```
@@ -119,15 +131,23 @@ check_and_include_graphics(files["host_length_dist_category",1])
 ```{r hostgenome, child=hostGenomeFile} 
 ```
 
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("deseq2_host_vis", "DESeq2 result of host smallRNA", trunk.eval=file.exists(files["deseq2_host_vis",1]))}
+cat('## host smallRNA DESeq2 result\n') 
+
+check_and_include_graphics(files["deseq2_host_vis",1])
+```
+
 <br>
 
-# Non-host genome
+# Non-Host
+
+## Non-host genome
 ```{r nonhostgenome, child=nonhostGenomeFile} 
 ```
 
 <br>
 
-# Non-host library
+## Non-host library
 ```{r nonhostlibrary, child=nonhostLibraryFile} 
 ```
 
@@ -141,4 +161,10 @@ if(file.exists(nonhostGenomeFile)){
 if(file.exists(nonhostLibraryFile)){
   file.remove(nonhostLibraryFile)
 }
+```
+
+## Non-host summary
+
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("nonhost_overlap_bar", "Read overlapped in non-host genome/database", trunk.eval=file.exists(files["nonhost_overlap_bar",1]))}
+check_and_include_graphics(files["nonhost_overlap_bar",1])
 ```

@@ -113,6 +113,7 @@ sub perform {
 if [[ ! -s $unsorted && -s $sample_file_1 ]]; then
   echo performing star ...
   $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
+  $star --version | awk '{print \"STAR,v\"\$1}' > ${final_file}.star.version
 fi  
 
 if [ -s $final_bam ]; then
@@ -129,6 +130,7 @@ fi
 if [ -s $unsorted ]; then
   echo performing featureCounts ...
   featureCounts $featureCountOption -T $thread -a $gffFile -o $final_file $unsorted
+  featureCounts -v 2>\&1 | grep featureCounts | cut -d ' ' -f2 | awk '{print \"featureCounts,\"\$1}' > ${final_file}.featureCounts.version
 fi 
 ";
 
@@ -181,6 +183,8 @@ sub result {
     push( @result_files, "$cur_dir/${sample_name}_Log.final.out" );
     push( @result_files, "$cur_dir/${sample_name}.count" );
     push( @result_files, "$cur_dir/${sample_name}.count.summary" );
+    push( @result_files, "$cur_dir/${sample_name}.count.star.version" );
+    push( @result_files, "$cur_dir/${sample_name}.count.featureCounts.version" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;

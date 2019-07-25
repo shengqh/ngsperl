@@ -306,6 +306,9 @@ mv ${temp_file}.gz $final_file
         }
       }
     }
+    print $pbs "
+cutadapt --version | awk '{print \"Cutadapt,v\"\$1}' > ${sample_name}.version
+";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
@@ -353,6 +356,7 @@ sub result {
         push( @result_files, $result_dir . "/" . $finalLongFile );
       }
     }
+    push( @result_files, $result_dir . "/${sample_name}.version" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
