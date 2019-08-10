@@ -44,7 +44,8 @@ our %EXPORT_TAGS = (
     addAnnovarFilter 
     addAnnovarFilterGeneannotation
     addGATK4CNVGermlineCohortAnalysis 
-    addXHMM)
+    addXHMM
+    addGeneLocus)
   ]
 );
 
@@ -105,7 +106,7 @@ sub addFastQC {
     target_dir => $config->{"$fastqcTask"}->{target_dir},
     option     => "",
     cluster    => $def->{cluster},
-    source_ref => [$fastqcTask],
+    source_ref => [$fastqcTask, "data.txt"],
     sh_direct  => 1,
     can_result_be_empty_file => 1,
     pbs        => {
@@ -671,7 +672,9 @@ sub addMultiQC {
 }
 
 sub addCleanBAM {
-  my ( $config, $def, $individual, $task_name, $target_dir, $bam_ref, $pairend ) = @_;
+  my ( $config, $def, $individual, $task_name, $target_dir, $bam_ref ) = @_;
+
+  my $pairend = is_paired_end( $def );
 
   my $cleanbam_option;
   my $minimum_insert_size;
@@ -699,7 +702,7 @@ sub addCleanBAM {
     minimum_insert_size     => $minimum_insert_size,
     maximum_insert_size     => $maximum_insert_size,
     blacklist_file          => $def->{blacklist_file},
-    pairend                 => $pairend,
+    is_paired_end           => $pairend,
     is_sorted_by_coordinate => 1,
     sh_direct               => 0,
     pbs                     => {
@@ -1253,6 +1256,38 @@ sub addXHMM {
   push( @$summary, $cnvTask );
 
   return ($cnvTask);
+}
+
+sub addGeneLocus {
+  my ($config, $def, $summary, $target_dir) = @_;
+  my $geneLocus = undef;
+  if ( defined $def->{annotation_genes} ) {
+    $geneLocus = "annotation_genes_locus";
+    $config->{$geneLocus} = {
+      class      => "CQS::UniqueR",
+      perform    => 1,
+      target_dir => $target_dir . '/' . $geneLocus,
+      rtemplate  => "../Annotation/getGeneLocus.r",
+      rCode      => "host=\""
+        . getValue( $def, "biomart_host" )
+        . "\";dataset=\""
+        . getValue( $def, "biomart_dataset" )
+        . "\";symbolKey=\""
+        . getValue( $def, "biomart_symbolKey" )
+        . "\";genesStr=\""
+        . getValue( $def, "annotation_genes" ) 
+        . "\";shift=" . getValue( $def, "annotation_genes_shift", 0),
+      output_file_ext => ".bed;.missing",
+      sh_direct       => 1,
+      'pbs'           => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '40gb',
+        'walltime' => '10'
+      },
+    };
+    push( @$summary, $geneLocus );
+  }
+  return ($geneLocus);
 }
 
 1;
