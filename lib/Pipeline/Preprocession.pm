@@ -70,7 +70,7 @@ sub getPreprocessionConfig {
     $preprocessing_dir = create_directory_or_die( $target_dir . "/preprocessing" );
   }
 
-  my $is_pairend = is_pairend($def);
+  my $is_pairend = is_paired_end($def);
 
   #general
   my $cluster = getValue( $def, "cluster" );
@@ -112,12 +112,12 @@ sub getPreprocessionConfig {
 
   #task
   if ( $def->{sra_to_fastq} ) {
-    defined $is_pairend or die "Define is_pairend first!";
-    defined $def->{sra_table} or die "Define sra_table first, can be downloaded from ftp://ftp.ncbi.nlm.nih.gov/sra/reports/Metadata/SRA_Accessions.tab";
+    defined $is_pairend or die "Define is_paired_end first!";
+    #defined $def->{sra_table} or die "Define sra_table first, can be downloaded from ftp://ftp.ncbi.nlm.nih.gov/sra/reports/Metadata/SRA_Accessions.tab";
   }
 
   if ( $def->{merge_fastq} ) {
-    defined $is_pairend or die "Define is_pairend first!";
+    defined $is_pairend or die "Define is_paired_end first!";
   }
 
   my $fastq_remove_N   = getValue( $def, "fastq_remove_N" );
@@ -145,7 +145,7 @@ sub getPreprocessionConfig {
     $config->{sra2fastq} = {
       class      => "SRA::FastqDump",
       perform    => 1,
-      ispaired   => $is_pairend,
+      is_paired_end   => $is_pairend,
       target_dir => $def->{target_dir} . "/" . getNextFolderIndex($def) . "sra2fastq",
       option     => "",
       source_ref => $source_ref,
@@ -173,7 +173,7 @@ sub getPreprocessionConfig {
       option      => "",
       source_ref  => $source_ref,
       sh_direct   => 0,
-      is_paired   => $is_pairend,
+      is_paired_end   => $is_pairend,
       is_bzipped  => $def->{is_bzipped},
       is_collated => $def->{is_collated},
       cluster     => $def->{cluster},
@@ -270,7 +270,7 @@ sub getPreprocessionConfig {
         fastq_remove_random_3            => $def->{"fastq_remove_random_3"},
         trim_poly_atgc                   => $def->{trim_poly_atgc},
         extension                        => "_clipped.fastq",
-        is_paired                        => $is_pairend,
+        is_paired_end                        => $is_pairend,
         sh_direct                        => 0,
         cluster                          => $cluster,
         pbs                              => {
