@@ -28,12 +28,8 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "sra_to_fastq", 0 );
   initDefaultValue( $def, "mark_duplicates", 1 );
 
-  my $is_paired = is_pairend($def);
+  my $is_paired = is_paired_end($def);
   
-  if (not defined $is_paired){
-    getValue( $def, "is_pairend" );
-  }
-
   if ($is_paired) {
     initDefaultValue( $def, "aligner", "bwa" );
   }
@@ -59,7 +55,7 @@ sub initializeDefaultOptions {
     if ( not defined $def->{"macs2_option"} ) {
       my $macs2_genome    = getValue( $def, "macs2_genome" );      #hs
       my $macs2_peak_type = getValue( $def, "macs2_peak_type" );
-      my $pairend         = getValue( $def, "pairend" );
+      my $pairend         = is_paired_end( $def );
       my $defaultOption   = "-B -q 0.01 -g " . $macs2_genome;
       if ( $macs2_peak_type ne "narrow" ) {
         $defaultOption = "--broad " . $defaultOption;
@@ -184,7 +180,7 @@ sub getConfig {
       source_ref            => $source_ref,
       output_to_same_folder => 1,
       picard_jar            => getValue( $def, "picard_jar" ),
-      mark_duplicates       => 1,
+      mark_duplicates       => getValue( $def, "mark_duplicates", 1),
       sh_direct             => 0,
       pbs                   => {
         "email"    => $email,
@@ -232,9 +228,61 @@ sub getConfig {
 
   if ( $def->{perform_cleanbam} ) {
     my $taskName = $def->{aligner} . "_cleanbam";
-    my $pairend = getValue( $def, "pairend" );
-    addCleanBAM( $config, $def, $individual, $taskName, "${target_dir}/" . getNextFolderIndex($def) . $taskName, $bam_ref, $def->{pairend} );
+    addCleanBAM( $config, $def, $individual, $taskName, "${target_dir}/" . getNextFolderIndex($def) . $taskName, $bam_ref);
     $bam_ref = [ $taskName, ".bam\$" ];
+  }
+
+  if(defined $def->{annotation_genes}){
+    my $geneLocus = addGeneLocus($config, $def, $summary, $target_dir);
+
+    my $sizeFactorTask = "size_factor";
+    $config->{$sizeFactorTask} = {
+      class                    => "CQS::ProgramWrapper",
+      perform                  => 1,
+      target_dir               => $target_dir . '/' . $sizeFactorTask,
+      interpretor              => "python",
+      program                  => "../Annotation/getBackgroundCount.py",
+      parameterSampleFile1_arg => "-b",
+      parameterSampleFile1_ref => $bam_ref,
+      output_arg               => "-o",
+      output_file_ext          => ".txt.sizefactor;.txt",
+      sh_direct                => 1,
+      'pbs'                    => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '40gb',
+        'walltime' => '10'
+      },
+    };
+    push( @$summary, $sizeFactorTask );
+
+    my $annotationGenesPlot = "annotation_genes_plot";
+    $config->{$annotationGenesPlot} = {
+      class                 => "CQS::ProgramWrapper",
+      perform               => 1,
+      target_dir            => $def->{target_dir} . "/$annotationGenesPlot",
+      option                => "",
+      interpretor           => "python",
+      program               => "../Visualization/plotGene.py",
+      parameterFile1_arg => "-i",
+      parameterFile1_ref => [ $geneLocus, ".bed" ],
+      parameterFile3_arg => "-s",
+      parameterFile3_ref => [$sizeFactorTask, ".sizefactor"],
+      parameterSampleFile1_arg => "-b",
+      parameterSampleFile1_ref => $bam_ref,
+      output_to_result_directory => 1,
+      output_arg            => "-o",
+      output_file_ext       => ".position.txt.slim;.position.txt",
+      sh_direct             => 1,
+      pbs                   => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    };
+
+    push( @$summary, $annotationGenesPlot );
   }
 
   my $peakCallerTask;
