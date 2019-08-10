@@ -54,7 +54,8 @@ our %EXPORT_TAGS = (
       fix_task_name
       get_parameter_file
       get_parameter_sample_files
-      is_pairend
+      is_paired_end
+      get_is_paired_end_option
       get_ref_section_pbs
       get_rawfiles_option
       get_parameter_options
@@ -1115,9 +1116,12 @@ sub get_parameter_sample_files {
   return ( $result, $resultArg );
 }
 
-sub is_pairend {
+sub is_paired_end {
   my ($def) = @_;
-  my $result = $def->{is_pairend};
+  my $result = $def->{is_paired_end};
+  if ( not defined $result ) {
+    $result = $def->{is_pairend};
+  }
   if ( not defined $result ) {
     $result = $def->{is_paired};
   }
@@ -1128,6 +1132,19 @@ sub is_pairend {
     $result = $def->{pairend};
   }
   return ($result);
+}
+
+sub get_is_paired_end_option {
+  my ( $config, $section, $default ) = @_;
+  
+  my $curSection = get_config_section( $config, $section );
+  
+  my $result = is_paired_end($curSection);
+  if(not defined $result and defined $default){
+    $result = $default;
+  }
+  
+  return($result);
 }
 
 sub get_rawfiles_option {
