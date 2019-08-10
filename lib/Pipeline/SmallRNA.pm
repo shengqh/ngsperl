@@ -1178,6 +1178,7 @@ sub getSmallRNAConfig {
 
   #Mapping unmapped reads to nonhost genome
   if ($search_nonhost_genome) {
+    my $nonhost_genome_count_xml = [];
     for my $nonhostGroup (@nonhost_genome_groups) {
       addNonhostDatabase(
         $config, $def, $individual_ref, $summary_ref, "${nonhostGroup}_pm", $nonhost_genome_dir,    #general option
@@ -1220,6 +1221,10 @@ sub getSmallRNAConfig {
       push @table_for_readSummary, ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
       push @mapped,                ( "bowtie1_${nonhostGroup}_pm_count", ".xml" );
       push @overlap,               ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
+      
+      if((not $def->{nonhost_genome_count_no_virus}) or ($nonhostGroup !~ /virus/)){
+        push @$nonhost_genome_count_xml, ( "bowtie1_${nonhostGroup}_pm_table", ".count.xml\$" );
+      }
 
       my $nonhost_count2bam = ${nonhostGroup} . "_count2bam";
       if ( defined $def->{$nonhost_count2bam} && $def->{$nonhost_count2bam} ) {
@@ -1244,6 +1249,30 @@ sub getSmallRNAConfig {
       }
     }
 
+    if ($def->{perform_nonhost_genome_count}){
+      $config->{nonhost_genome_count} = {
+        class              => "CQS::ProgramWrapper",
+        perform            => 1,
+        target_dir         => $nonhost_genome_dir . "/nonhost_genome_count",
+        option             => "",
+        interpretor        => "python",
+        program            => "../SmallRNA/nonhostXmlCount.py",
+        parameterSampleFile1_arg => "-i",
+        parameterSampleFile1_ref => $nonhost_genome_count_xml,
+        output_arg         => "-o",
+        output_file_ext    => ".microbial.tsv",
+        sh_direct          => 1,
+        pbs                => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$summary_ref, "nonhost_genome_count" );
+    }
+    
     push @name_for_readSummary, @nonhost_genome_group_names;
     push @overlapNames, @nonhost_genome_group_names;
 
@@ -1637,6 +1666,10 @@ sub getSmallRNAConfig {
 
   push @$summary_ref, ("count_table_correlation");
 
+  my $paramFile = undef;
+  if(defined $config->{nonhost_genome_count}){
+    $paramFile = ["nonhost_genome_count"];
+  }
   $config->{reads_in_tasks} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
@@ -1668,6 +1701,7 @@ sub getSmallRNAConfig {
       output_file_ext      => ".NonParallel.TaskReads.csv",
       parameterFile1_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
       parameterFile2_ref   => [ "final_unmapped_reads_summary", ".count\$" ],
+      parameterFile3_ref   => $paramFile,
       parameterSampleFile1 => $groups,
       parameterSampleFile2 => $def->{groups_vis_layout},
       rCode                => $R_font_size,
