@@ -31,7 +31,7 @@ sub perform {
   my $gffFile = parse_param_file( $config, $section, "gff_file", 1 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $ispaired       = get_option_value( $config->{$section}{ispairend},      0 );
+  my $ispaired       = get_is_paired_end_option( $config, $section, 0 );
   my $sorted_by_name = get_option_value( $config->{$section}{sorted_by_name}, 0 );
 
   if($option !~ /-s/){

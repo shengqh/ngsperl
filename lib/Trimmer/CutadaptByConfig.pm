@@ -60,16 +60,6 @@ sub get_extension {
   return ( $extension, $fastqextension );
 }
 
-sub get_is_paired {
-  my $curSection = shift;
-
-  my $ispairend = $curSection->{pairend};
-  if ( !defined $ispairend ) {
-    $ispairend = get_option_value( $curSection->{"is_paired"}, 0 );
-  }
-  return $ispairend;
-}
-
 sub get_remove_option {
   my ( $curSection, @keys ) = @_;
   my $result = 0;
@@ -101,7 +91,7 @@ sub get_cutadapt_option {
     }
   }
 
-  my $ispairend = get_is_paired($curSection);
+  my $ispairend = is_paired_end($curSection);
 
   my $adapter_option = "";
   if ( defined $curSection->{adapter} && length( $curSection->{adapter} ) > 0 ) {
@@ -336,7 +326,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $ispairend = get_is_paired( $config->{$section} );
+  my $ispairend = get_is_paired_end_option( $config, $section );
   my ( $extension, $fastqextension ) = $self->get_extension( $config, $section );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };

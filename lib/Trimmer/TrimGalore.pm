@@ -108,7 +108,7 @@ sub perform {
 		$pbs_dir,   $result_dir, $option,   $sh_direct,  $cluster
 	) = get_parameter( $config, $section );
 
-	my $ispairend = get_option( $config, $section, "pairend", 0 );
+	my $ispairend = get_is_paired_end_option( $config, $section, 0 );
 
 	my ( $extension, $fastqextension ) =
 	  $self->get_extension( $config, $section );

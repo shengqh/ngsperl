@@ -59,18 +59,6 @@ sub get_extension {
   return ( $extension, $fastqextension );
 }
 
-sub get_is_paired {
-  my ( $config, $section ) = @_;
-  my $ispairend;
-  if ( defined $config->{$section}{pairend} ) {
-    $ispairend = get_option( $config, $section, "pairend" );
-  }
-  else {
-    $ispairend = get_option( $config, $section, "is_paired", 0 );
-  }
-  return $ispairend;
-}
-
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -94,7 +82,7 @@ sub perform {
     }
   }
 
-  my $ispairend = get_is_paired( $config, $section );
+  my $ispairend = get_is_paired_end_option( $config, $section );
 
   my $adapter_option = "";
   if ( $option !~ /-a/ ) {
@@ -327,7 +315,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $ispairend = get_is_paired( $config, $section );
+  my $ispairend = get_is_paired_end_option( $config, $section );
   my ( $extension, $fastqextension ) = $self->get_extension( $config, $section );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };

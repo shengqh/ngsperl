@@ -28,8 +28,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
 
-  my $ispaired = get_option( $config, $section, "ispairend");
-  if ($ispaired) {
+  my $is_paired_end = get_is_paired_end_option( $config, $section);
+  if ($is_paired_end) {
     $option = $option . " -p";
   }
 

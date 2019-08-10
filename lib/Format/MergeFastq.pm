@@ -27,7 +27,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $ispaired    = get_option( $config, $section, "is_paired" );
+  my $ispaired    = get_is_paired_end_option( $config, $section );
   my $is_collated = get_option( $config, $section, "is_collated", 0 );
   my $is_bzipped  = get_option( $config, $section, "is_bzipped", 0 );
   my $cat_command = $is_bzipped ? "bzcat" : "zcat";
