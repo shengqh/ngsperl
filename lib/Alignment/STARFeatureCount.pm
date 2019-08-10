@@ -60,7 +60,7 @@ sub perform {
   }
 
   my $featureCountOption = get_option( $config, $section, "featureCount_option", "" );
-  my $ispaired = get_option( $config, $section, "ispairend" );
+  my $ispaired = get_option( $config, $section, "is_paired_end" );
   if ($ispaired) {
     $featureCountOption = $featureCountOption . " -p";
   }
