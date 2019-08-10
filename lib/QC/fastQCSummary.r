@@ -28,7 +28,7 @@ fp$Sample<-factor(fp$Sample, levels=sort(unique(fp$Sample)))
 fp$File<-factor(fp$File, levels=sort(unique(fp$File)))
 fp$Category<-factor(fp$Category, levels=sort(unique(fp$Category), decreasing=T))
 
-width=max(2000, 60 * length(unique(fp$File)))
+width=min(max(2000, 60 * length(unique(fp$File))), 10000)
 png(file=paste0(summaryfile, ".png"), height=width * 0.8, width=width, res=300)
 g<-ggplot(fp, aes(File, Category))+  
   geom_tile(data=fp, aes(fill=QCResult), color="white") +
@@ -42,7 +42,7 @@ dev.off()
 #reads
 fp<-read.table(readfile, header=T, sep="\t")
 
-width=max(2000, 60 * nrow(fp))
+width=min(max(2000, 60 * nrow(fp)), 10000)
 png(file=paste0(readfile, ".png"), height=width*0.8, width=width, res=300)
 g<-ggplot(fp, aes(x=File, y=Reads))+ geom_bar(stat="identity", width=.5)+
   theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
