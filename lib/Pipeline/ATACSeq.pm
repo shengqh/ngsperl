@@ -89,7 +89,7 @@ sub getConfig {
   my $task    = $def->{task_name};
 
   my $email   = getValue( $def, "email" );
-  my $pairend = getValue( $def, "pairend" );
+  my $pairend = is_paired_end( $def );
 
   my $perform_rose = getValue( $def, "perform_rose" );
   my $perform_coltron = 0;
