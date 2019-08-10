@@ -17,12 +17,22 @@ if(!exists('genesStr')){
   genesStr<-"LDLR APOB PCSK9 LDLRAP1 STAP1 LIPA ABCG5 ABCGB APOE LPA PNPLA5 CH25H INSIG2 SIRT1"
 }
 
+if(!exists('shift')){
+  shift = 0
+}
+
 if(!exists('outFile')){
   outFile='test'
 }
 
+if(!exists('addChr')){
+  addChr = 0
+}
+
 if(!file.exists(genesStr)){
-  genes=unlist(strsplit(genesStr, "\\s+"))
+  genesStr = gsub(",", " ", genesStr)
+  genesStr = gsub(";", " ", genesStr)
+  genes = unlist(strsplit(genesStr, "\\s+"))
 }else{
   geneTable = read.table(genesStr, sep="\t", stringsAsFactor=F)
   if (grepl(".bed$", genesStr)){
@@ -45,8 +55,18 @@ geneLocus<-getBM(attributes=c("chromosome_name", "start_position", "end_position
 geneLocus$score<-1000
 geneLocus<-geneLocus[,c("chromosome_name", "start_position", "end_position", "score", symbolKey, "strand")]
 geneLocus<-geneLocus[order(geneLocus$chromosome_name, geneLocus$start_position),]
+
+if(shift != 0){
+  geneLocus$start_position[geneLocus$strand == 1] <- geneLocus$start_position[geneLocus$strand == 1] - shift
+  geneLocus$end_position[geneLocus$strand == -1] <- geneLocus$end_position[geneLocus$strand == -1] + shift
+}
+
 geneLocus$strand[geneLocus$strand == 1]<-"+"
 geneLocus$strand[geneLocus$strand == -1]<-"-"
+
+if(addChr & (!any(grepl("chr", geneLocus$chromosome_name))){
+  geneLocus$chromosome_name = paste0("chr", geneLocus$chromosome_name)
+}
 
 write.table(geneLocus, file=paste0(outFile, ".bed"), row.names=F, col.names = F, sep="\t", quote=F)
 
