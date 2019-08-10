@@ -11,6 +11,7 @@ use CQS::FileUtils;
 use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use Alignment::AlignmentUtils;
 
 our @ISA = qw(CQS::Task);
 
@@ -30,14 +31,19 @@ sub perform {
 
   my $sort_memory = $thread == 1 ? $memory : "4G";
 
-  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, not $self->using_docker() );
   my $remove_chromosome = get_option( $config, $section, "remove_chromosome", "M" );
   my $keep_chromosome   = get_option( $config, $section, "keep_chromosome",   "" );
   my $minimum_maq       = get_option( $config, $section, "minimum_maq",       30 );
   my $isSortedByCoordinate = get_option( $config, $section, "is_sorted_by_coordinate" );
   my $blacklistfile = get_param_file( $config->{$section}{"blacklist_file"}, "blacklist_file", 0 );
   my $maxInsertSize = get_option( $config, $section, "maximum_insert_size", 0 );
-  my $pairend       = get_option( $config, $section, "pairend",             1 );
+  my $is_paired_end = get_is_paired_end_option( $config, $section, 1 );
+
+  my $mark_duplicates = hasMarkDuplicate( $config->{$section} );
+  my $picard_jar      = "";
+  if ($mark_duplicates) {
+    $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, not $self->using_docker() );
+  }
 
   if ( $keep_chromosome !~ /^\s*$/ ) {
     $keep_chromosome = "| grep $keep_chromosome";
@@ -53,9 +59,15 @@ sub perform {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $sampleFile   = $sample_files[0];
 
-    my $redupFile = $sample_name . ".rmdup.bam";
-    my $finalFile = $sample_name . ".rmdup.noChr" . $remove_chromosome . ".bam";
-
+    my $redupFile = undef;
+    my $finalFile = undef;
+    if ($mark_duplicates) {
+      $redupFile = $sample_name . ".rmdup.bam";
+      $finalFile = $sample_name . ".rmdup.noChr" . $remove_chromosome . ".bam";
+    }
+    else {
+      $finalFile = $sample_name . ".noChr" . $remove_chromosome . ".bam";
+    }
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
@@ -79,7 +91,7 @@ fi
     }
 
     my $filterFile;
-    if ($pairend) {
+    if ($is_paired_end) {
       $filterFile = "${sample_name}.filter.bam";
     }
     else {
@@ -96,7 +108,7 @@ fi
     }
 
     my $input = $sampleFile;
-    if ( $sampleFile !~ /\.rmdup\./ ) {
+    if ($mark_duplicates) {
       print $pbs "
 if [[ -s $sampleFile && ! -s $redupFile ]]; then
   echo RemoveDuplicate=`date` 
@@ -109,7 +121,7 @@ fi
 
       $input = $redupFile;
     }
-    
+
     if ( defined $maxInsertSize && $maxInsertSize > 0 ) {
       my $insertFile = $sample_name . ".insertsize.bam";
       print $pbs "
@@ -130,17 +142,23 @@ if [[ -s $input && ! -s $filterFile ]]; then
   samtools index $filterFile 
 fi
 ";
-    if ($pairend) {
+    if ($is_paired_end) {
       print $pbs "
 if [[ -s $filterFile && ! -s $finalFile ]]; then 
   echo RemoveUnpaired=`date` 
   samtools sort -n $filterFile | samtools fixmate -O bam - -| samtools view $option -b | samtools sort -T $sample_name -o $finalFile 
   samtools index $finalFile 
-  samtools flagstat $finalFile > ${finalFile}.stat 
 fi
 ";
       $rmlist = $rmlist . " $filterFile ${filterFile}.bai";
     }
+
+    print $pbs "
+if [[ -s $finalFile && ! -s ${finalFile}.stat ]]; then
+  echo Stat=`date`
+  samtools flagstat $finalFile > ${finalFile}.stat
+fi
+";
 
     print $pbs "
 if [ -s ${finalFile}.stat ]; then 
@@ -166,10 +184,11 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $remove_chromosome = get_option( $config, $section, "remove_chromosome" );
+  my $mark_duplicates = hasMarkDuplicate( $config->{$section} );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $finalFile = $sample_name . ".rmdup.noChr" . $remove_chromosome . ".bam";
+    my $finalFile = $mark_duplicates ? $sample_name . ".rmdup.noChr" . $remove_chromosome . ".bam" : $sample_name . ".noChr" . $remove_chromosome . ".bam";
 
     my @result_files = ();
     push( @result_files, "${result_dir}/${finalFile}" );
