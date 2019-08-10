@@ -78,9 +78,11 @@ sub getSraFiles {
 }
 
 sub GsmToSrr {
-  my ( $gsm, $sraTable ) = @_;
+  my ( $gsm ) = @_;
 
-  my $cmd = "grep $gsm $sraTable | grep -e \"^SRR\" | cut -f1";
+  #my $cmd = "grep $gsm $sraTable | grep -e \"^SRR\" | cut -f1";
+  my $cmd = "esearch -db sra -query $gsm |efetch -format docsum |xtract -pattern DocumentSummary -element Run\@acc";
+  #print $cmd . "\n";
   my $res = ` $cmd `;
   $res = trim($res);
   $res =~ s/\n/ /g;
@@ -92,10 +94,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
-  my $ispaired = $config->{$section}{ispaired};
-  if ( !defined $ispaired ) {
-    $ispaired = 0;
-  }
+  my $ispaired = get_is_paired_end_option($config, $section, 0);
 
   my $raw_files = getSraFiles( $config, $section );
 
@@ -117,8 +116,7 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     if ( $sample_file =~ /GSM/ ) {
-      my $sraTable = get_option_file( $config, $section, "sra_table" );
-      $sample_file = GsmToSrr( $sample_file, $sraTable );
+      $sample_file = GsmToSrr( $sample_file );
     }
     if ( $sample_file =~ /\.sra/ ) {
       print $pbs "ln -s $sample_file ${sample_name}.sra \n";
