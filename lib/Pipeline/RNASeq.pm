@@ -70,7 +70,7 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "keggprofile_species",      "hsa" );
   initDefaultValue( $def, "keggprofile_pCut",         0.1 );
 
-  initDefaultValue( $def, "pairend",                         1 );
+  initDefaultValue( $def, "is_paired_end",                         1 );
   initDefaultValue( $def, "DE_pvalue",                       0.05 );
   initDefaultValue( $def, "DE_use_raw_pvalue",               0 );
   initDefaultValue( $def, "DE_fold_change",                  2 );
@@ -161,7 +161,7 @@ sub getRNASeqConfig {
         featureCount_option       => getValue( $def, "featureCount_option" ),
         star_location             => $def->{star_location},
         gff_file                  => $transcript_gtf,
-        ispairend                 => getValue( $def, "pairend" ),
+        is_paired_end                 => is_paired_end( $def ),
         sh_direct                 => 0,
         pbs                       => {
           "email"     => $email,
@@ -298,7 +298,7 @@ sub getRNASeqConfig {
         option     => "-g gene_id -t exon",
         source_ref => $source_ref,
         gff_file   => $transcript_gtf,
-        ispairend  => 1,
+        is_paired_end  => is_paired_end($def),
         sh_direct  => 0,
         pbs        => {
           "email"     => $email,
