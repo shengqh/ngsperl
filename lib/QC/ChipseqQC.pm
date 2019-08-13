@@ -100,7 +100,8 @@ sub perform {
         print $pbs "if [[ ! -s $newFile ]]; then
   samtools view -b -f 65 -o $newFile $oldFile
   samtools index $newFile
-fi  ";
+fi
+";
         $sourceBamFiles->{$bamName} = [$result_dir . "/" . $newFile ];
       } 
     }
@@ -113,7 +114,8 @@ fi  ";
         my $newFile = $sourceBamFiles->{$bamName}->[0];
         print $pbs "if [[ -s $final_file ]]; then 
   rm $newFile
-fi";
+fi
+";
       } 
     }
   }
