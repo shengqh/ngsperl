@@ -97,7 +97,7 @@ sub perform {
       for my $bamName (keys %$bamfiles){
         my $oldFile = $bamfiles->{$bamName}->[0];
         my $newFile = $bamName . ".filtered.bam";
-        print $pbs "if [[ ! -s $newFile ]; then
+        print $pbs "if [[ ! -s $newFile ]]; then
   samtools view -b -f 65 -o $newFile $oldFile
   samtools index $newFile
 fi  ";
