@@ -11,7 +11,7 @@ totalReads<-unlist(category["TotalReads",])
 final<-NULL
 for(rna in RNA_class){
   print(rna)
-  read.count<-fread(fileList1[rna,1],data.table=FALSE)
+  read.count<-fread(fileList1[rna,1],data.table=FALSE,check.names=TRUE)
   if(is.numeric(read.count[,1])){
     read.count.length=read.count[,1]
   }else{
