@@ -554,7 +554,7 @@ sub getRNASeqConfig {
       }
       my $keggprofile_pCut;
       if ( defined( $def->{keggprofile_pCut} ) ) {
-        $keggprofile_species = $def->{keggprofile_pCut};
+        $keggprofile_pCut = $def->{keggprofile_pCut};
       }
       else {
         die "Define keggprofile_pCut at definition first";
