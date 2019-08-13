@@ -97,7 +97,11 @@ sub perform {
       for my $bamName (keys %$bamfiles){
         my $oldFile = $bamfiles->{$bamName}->[0];
         my $newFile = $bamName . ".filtered.bam";
-        print $pbs "samtools view -b -f 65 -o $newFile $oldFile \n\n";
+        print $pbs "if [[ ! -s $newFile ]]; then
+  samtools view -b -f 65 -o $newFile $oldFile
+  samtools index $newFile
+fi
+";
         $sourceBamFiles->{$bamName} = [$result_dir . "/" . $newFile ];
       } 
     }
@@ -108,7 +112,10 @@ sub perform {
     if ($paired_end){
       for my $bamName (keys %$sourceBamFiles){
         my $newFile = $sourceBamFiles->{$bamName}->[0];
-        print $pbs "rm $newFile \n\n";
+        print $pbs "if [[ -s $final_file ]]; then 
+  rm $newFile
+fi
+";
       } 
     }
   }
