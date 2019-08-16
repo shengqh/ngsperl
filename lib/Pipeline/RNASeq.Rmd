@@ -176,7 +176,11 @@ check_and_include_graphics(files["all_correlation_density",1])
 ```{r deseq2_1, results="asis", echo=FALSE} 
 if(hasDEseq2 ){
   cat("# Differential expression\n<br>\n\n")
-  if ("DE_use_raw_pvalue" %in% row.names(rnaseqOptions) & rnaseqOptions["DE_use_raw_pvalue", 1]==0) {pValueText="FDR"} else {pValueText="p value"}
+  if ("DE_use_raw_pvalue" %in% row.names(rnaseqOptions) & rnaseqOptions["DE_use_raw_pvalue", 1]==1) {
+    pValueText="p value"
+  } else {
+    pValueText="FDR"
+  }
   cat("Differential expression analysis criteria:  fold change >= ", rnaseqOptions["DE_fold_change", 1], " and ",pValueText," <= ", rnaseqOptions["DE_pvalue", 1], "\n\n")
   cat("## Volcano plot\n<br>\n\n")
 }
