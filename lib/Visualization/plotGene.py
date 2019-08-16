@@ -193,7 +193,7 @@ def main():
   rPath = realpath + "/plotGene.r"
   cmd = "R --vanilla -f " + rPath + " --args " + bedResultFile + " " + bedResultFile + " " + args.sizeFactorFile
   logger.info(cmd)
-  #os.system(cmd)
+  os.system(cmd)
 
   logger.info("done.")
 

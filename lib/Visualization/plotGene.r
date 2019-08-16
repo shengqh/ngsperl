@@ -15,6 +15,7 @@ if(length(args) == 0){
   sizeFactorFile<-args[3]
 }
 
+cat(inputFile)
 rawTable<-fread(file=inputFile, sep="\t", header=T)
 
 sizeFactors<-read.table(sizeFactorFile, sep="\t", header=T)
@@ -37,7 +38,7 @@ for (selectedFeature in unique(rawTable$Feature)) {
   }
   
   column<-"NormalizedPositionCount"
-  for (column in c("Percentage", "NormalizedPositionCount")){
+  for (column in c("PositionCount", "Percentage", "NormalizedPositionCount")){
     outputFile = paste0(outputPrefix, ".", selectedFeature, ".", column, ".pdf")
     #if (file.exists(outputFile)){
     #  next
