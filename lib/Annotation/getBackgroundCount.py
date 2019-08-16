@@ -118,7 +118,7 @@ def main():
       with pysam.Samfile(bamFile) as samfile:
         logger.info("start counting %s ..." % sample)
         if len(chromosomes) == 0:
-          print samfile.references
+          print(samfile.references)
           curChromosomes = samfile.references
           for chromosome in curChromosomes:
             chromCount = samfile.count(chromosome)
