@@ -568,7 +568,7 @@ sub getRNASeqConfig {
         output_file_ext          => ".KEGG.csv",
         parameterSampleFile1_ref => [ $deseq2taskname, "_DESeq2.csv\$" ],
         sh_direct                => 1,
-        rCode                    => "useRawPValue='" . $keggprofile_useRawPValue . "';species='" . $keggprofile_species . "';pCut=" . $keggprofile_pCut . ";",
+        rCode                    => "useRawPValue=" . $keggprofile_useRawPValue . ";species='" . $keggprofile_species . "';pCut=" . $keggprofile_pCut . ";",
         pbs                      => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
@@ -968,6 +968,7 @@ sub getRNASeqConfig {
     my $options = {
       "DE_fold_change"                     => [ getValue( $def, "DE_fold_change", 2 ) ],
       "DE_pvalue"                          => [ getValue( $def, "DE_pvalue",      0.05 ) ],
+      "DE_use_raw_pvalue"                  => [ getValue( $def, "DE_use_raw_pvalue",      0 ) ],
       "featureCounts_UseMultiMappingReads" => [$fcMultiMapping]
     };
 

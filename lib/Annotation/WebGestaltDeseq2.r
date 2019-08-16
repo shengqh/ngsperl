@@ -11,6 +11,10 @@ for (comparison in comparisons){
   
   compAnnoFile<-compAnnoFiles[1]
   for(compAnnoFile in compAnnoFiles){
+    if (!file.exists(compAnnoFile)) {
+      warning(paste0(compAnnoFile," doesn't exist, Skip!"))
+      next;
+    }
     category <- gsub(paste0(".*?", comparison,"_"), "", basename(compAnnoFile) )
     category <- gsub(".txt", "", category )
     category <- gsub("_", " ", category )

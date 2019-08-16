@@ -54,10 +54,20 @@ tableBarplot<-function(dat,textSize=4,ylab="Reads",colorNames="Set1",barwidth=0.
   return(p)
 }
 
+truncNames=function(x,ncharMax=20) {
+	if(max(nchar(x))>ncharMax) {
+		x=make.unique(substr(x,0,ncharMax))
+	}
+	return(x)
+}
+
 allreads<-read.csv(allreadsFile, row.names=1)
+colnames(allreads)=truncNames(colnames(allreads)) #make names shorter for figure if they are too long
 readCategory<-read.csv(readCategoryFile, row.names=1)
+colnames(readCategory)=truncNames(colnames(readCategory))
 smallRNACategory<-read.csv(smallRNACategoryFile, row.names=1)
 smallRNACategory<-smallRNACategory[grepl("RNA", rownames(smallRNACategory)),]
+colnames(smallRNACategory)=truncNames(colnames(smallRNACategory))
 
 for (perc in c(TRUE, FALSE)){
   g1<-tableBarplot(allreads, percent=perc)
