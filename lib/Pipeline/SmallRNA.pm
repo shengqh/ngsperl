@@ -1692,6 +1692,11 @@ sub getSmallRNAConfig {
   push @$summary_ref, ("reads_in_tasks");
 
   if ( $search_host_genome && $search_nonhost_database ) {
+    my $cur_r_code = $R_font_size;
+    if (defined $def->{unique_groups}){
+      my @uniqueGroups = split(/[,;]/, $def->{unique_groups});
+      $cur_r_code = $cur_r_code . "uniqueGroupNames=c('" . join("','", @uniqueGroups) . "');";
+    }
     $config->{reads_in_tasks_pie} = {
       class                => "CQS::UniqueR",
       suffix               => "_pie",
@@ -1704,7 +1709,7 @@ sub getSmallRNAConfig {
       parameterFile3_ref   => $paramFile,
       parameterSampleFile1 => $groups,
       parameterSampleFile2 => $def->{groups_vis_layout},
-      rCode                => $R_font_size,
+      rCode                => $cur_r_code,
       sh_direct            => 1,
       pbs                  => {
         "email"     => $def->{email},
