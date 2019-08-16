@@ -968,6 +968,7 @@ sub getRNASeqConfig {
     my $options = {
       "DE_fold_change"                     => [ getValue( $def, "DE_fold_change", 2 ) ],
       "DE_pvalue"                          => [ getValue( $def, "DE_pvalue",      0.05 ) ],
+      "DE_use_raw_pvalue"                  => [ getValue( $def, "DE_use_raw_pvalue",      0 ) ],
       "featureCounts_UseMultiMappingReads" => [$fcMultiMapping]
     };
 
