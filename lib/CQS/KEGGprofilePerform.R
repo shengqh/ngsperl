@@ -101,7 +101,9 @@ for (j in 1:nrow(deseq2ResultFileTable)) {
 	resultTableFcToGene<-convertId(temp,filters="ensembl_gene_id",dataset=dataset)
 #	geneExpr<-resultTableFcToGene[,1]
 #	names(geneExpr)<-row.names(resultTableFcToGene)
+	png(paste0(keggOutFileName,".OverallExpression.png"),width=1500,height=3000,res=300)
 	plot_pathway_overall(resultTableFcToGene,species = species)
+	dev.off()
 	keggEnrichedPathway<-find_enriched_pathway(row.names(resultTableFcToGene),species=species,returned_genenumber = 5,returned_pvalue=1,returned_adjpvalue = 1)
 	#dim(KEGGresult1[[1]])
 	
