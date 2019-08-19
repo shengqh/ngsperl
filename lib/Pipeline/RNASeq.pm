@@ -565,7 +565,7 @@ sub getRNASeqConfig {
         target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "keggprofile",
         rtemplate                => "KEGGprofilePerform.R",
         output_file              => "",
-        output_file_ext          => ".KEGG.csv",
+        output_file_ext          => ".KEGGprofile.RData",
         parameterSampleFile1_ref => [ $deseq2taskname, "_DESeq2.csv\$" ],
         sh_direct                => 1,
         rCode                    => "useRawPValue=" . $keggprofile_useRawPValue . ";species='" . $keggprofile_species . "';pCut=" . $keggprofile_pCut . ";",
