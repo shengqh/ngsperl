@@ -9,7 +9,7 @@ use Data::Dumper;
 
 sub new {
   my ($class) = @_;
-  my $self = { _name => __PACKAGE__, _suffix => "", _task_prefix => "", _task_suffix => "", _pbskey => "source", _docker_prefix => "" };
+  my $self = { _name => __PACKAGE__, _suffix => "", _task_prefix => "", _task_suffix => "", _pbskey => "source", _docker_prefix => "", _export_home => 0 };
   bless $self, $class;
   return $self;
 }
@@ -323,9 +323,13 @@ exit 0
 ";
     close $pbs;
     open( $pbs, ">$sh_file" ) or die $!;
+    if($self->{_export_home}){
     print $pbs "
 export HOME=$result_dir
 
+";
+    }
+    print $pbs "
 cd $result_dir
 
 $docker_init
