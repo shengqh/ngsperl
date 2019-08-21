@@ -10,7 +10,7 @@ if(parFile1 != ''){
   clinicalFeatures = NULL
 }
 
-if(!is.null(interestedGeneStr)) {
+if(exists("interestedGeneStr") & (!is.null(interestedGeneStr))) {
   interestedGeneStr = gsub("\\s+", ",", interestedGeneStr)
   interestedGenes = unlist(strsplit(interestedGeneStr, ","))
 }else{
