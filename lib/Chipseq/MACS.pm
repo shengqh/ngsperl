@@ -70,11 +70,11 @@ sub perform {
     $sname =~ s/ /_/g;
 
     print $pbs "
-if [ ! -s ${sample_name}_peaks.bed ]; then
+if [ ! -e ${sample_name}_peaks.bed ]; then
   macs $option $treatment $control -n $sample_name
 fi
 
-if [[ -s ${sample_name}_peaks.bed && ! -s ${sample_name}_peaks.name.bed ]]; then
+if [[ -e ${sample_name}_peaks.bed && ! -e ${sample_name}_peaks.name.bed ]]; then
   sed 's/\\tMACS_peak_/\\t${sname}_/' ${sample_name}_peaks.bed > ${sample_name}_peaks.name.bed
 fi
 ";
