@@ -128,6 +128,9 @@ sub getSmallRNAConfig {
   my @name_for_pieSummary    = ();
   my @table_for_readSummary  = ();
   my @name_for_readSummary   = ();
+  my @table_for_shortReadSource  = ();
+  my @name_for_shortReadSource   = ();
+
   my @name_for_mapPercentage = ( "identical", "dupcount\$" );
 
   my @reads_for_annoate_unmapped  = ( "identical", "dupcount\$", "cutadapt", ".fastq.short.gz\$" );
@@ -681,6 +684,9 @@ sub getSmallRNAConfig {
     push @table_for_pieSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_count", ".count\$" );
     push @name_for_pieSummary, "Host Small RNA";
 
+    push @table_for_shortReadSource, ( "bowtie1_genome_1mm_NTA_smallRNA_table", $task_name . ".read.count\$");
+    push @name_for_shortReadSource, ( "host smallRNA");
+
     push @name_for_readSummary, (
       "Host miRNA",    #miRNA
     );
@@ -1048,6 +1054,9 @@ sub getSmallRNAConfig {
       };
       $config = merge( $config, $unmapped_reads );
 
+      push @table_for_shortReadSource, ( "bowtie1_genome_host_reads_table", ".count\$");
+      push @name_for_shortReadSource, ( "host genome");
+
       push( @name_for_mapPercentage,      "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount\$" );
       push( @files_for_annotate_unmapped, "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount\$" );
       push( @names_for_annotate_unmapped, "host_genome" );
@@ -1202,6 +1211,9 @@ sub getSmallRNAConfig {
           rCode              => 'maxCategory=4;' . $R_font_size,
         }
       );
+
+      push @table_for_shortReadSource, ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
+      push @name_for_shortReadSource, ( $nonhostGroup);
 
       if ($do_comparison) {
         addDEseq2( $config, $def, $summary_ref, "${nonhostGroup}", [ "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" ],
@@ -1426,6 +1438,10 @@ sub getSmallRNAConfig {
         rCode              => 'maxCategory=NA;' . $R_font_size,
       }
     );
+
+    push @table_for_shortReadSource, ( "bowtie1_tRNA_pm_table", ".read.count\$",  "bowtie1_rRNA_pm_table", ".read.count\$" );
+    push @name_for_shortReadSource, ( "nonhost tRNA", "nonhost rRNA" );
+
     push( @name_for_mapPercentage,      "bowtie1_tRNA_pm_count", ".count.mapped.xml\$", "bowtie1_rRNA_pm_count", ".count.mapped.xml\$", );
     push( @files_for_annotate_unmapped, "bowtie1_tRNA_pm_count", ".count.mapped.xml\$", "bowtie1_rRNA_pm_count", ".count.mapped.xml\$", );
     push( @names_for_annotate_unmapped, "tRNA",                  "rRNA" );
@@ -1812,6 +1828,32 @@ sub getSmallRNAConfig {
       },
     };
     push @$summary_ref, "short_reads_source";
+
+    $config->{short_reads_source_bar} = {
+      'class'                    => 'CQS::ProgramWrapper',
+      'parameterSampleFile1_arg' => '-i',
+      'parameterSampleFile1_ref' => [ "bowtie1_genome_unmapped_reads", ".short.fastq.dupcount\$" ],
+      'parameterSampleFile2_arg' => '-a',
+      'parameterSampleFile2_ref' => \@table_for_shortReadSource,
+      'option'                   => "-n \"" . join( ",", @name_for_shortReadSource ) . "\"",
+      'interpretor'              => 'python',
+      'program'                  => '../SmallRNA/shortReadSource.py',
+      'target_dir'               => $data_visualization_dir . "/short_reads_source_bar",
+      'output_file_ext'               => '.tsv',
+      'output_arg'               => '-o',
+      'output_to_same_folder'    => 1,
+      'sh_direct'                => 1,
+      'perform'                  => 1,
+      'pbs'                      => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "2",
+        "mem"       => "10gb"
+      },
+    };
+    push @$summary_ref, "short_reads_source";
+
   }
 
   #add time cost task in the end of pipeline
