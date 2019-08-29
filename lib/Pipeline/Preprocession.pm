@@ -269,6 +269,7 @@ sub getPreprocessionConfig {
         fastq_remove_random_5            => $def->{"fastq_remove_random_5"},
         fastq_remove_random_3            => $def->{"fastq_remove_random_3"},
         trim_poly_atgc                   => $def->{trim_poly_atgc},
+        trim_base_quality_after_adapter_trim => $def->{trim_base_quality_after_adapter_trim},
         extension                        => "_clipped.fastq",
         is_paired_end                        => $is_pairend,
         sh_direct                        => 0,

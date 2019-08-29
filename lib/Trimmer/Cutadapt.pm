@@ -66,20 +66,25 @@ sub perform {
 
   my $curSection = get_config_section( $config, $section );
 
-  my $random_bases_option = "";
+  my $remove_bases_option = "";
   my $random_bases_remove_after_trim = get_option( $config, $section, "random_bases_remove_after_trim", 0 );
   if ( $random_bases_remove_after_trim > 0 ) {
-    $random_bases_option = "-u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim";
+    $remove_bases_option = "-u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim";
   }
   else {
     my $random_bases_remove_after_trim_5 = get_option( $config, $section, "random_bases_remove_after_trim_5", 0 );
     if ( $random_bases_remove_after_trim_5 > 0 ) {
-      $random_bases_option = "-u $random_bases_remove_after_trim_5";
+      $remove_bases_option = "-u $random_bases_remove_after_trim_5";
     }
     my $random_bases_remove_after_trim_3 = get_option( $config, $section, "random_bases_remove_after_trim_3", 0 );
     if ( $random_bases_remove_after_trim_3 > 0 ) {
-      $random_bases_option = $random_bases_option . "-u -$random_bases_remove_after_trim_3";
+      $remove_bases_option = $remove_bases_option . "-u -$random_bases_remove_after_trim_3";
     }
+  }
+
+  my $trim_base_quality_after_adapter_trim = get_option( $config, $section, "trim_base_quality_after_adapter_trim", 0 );
+  if($trim_base_quality_after_adapter_trim > 0 && $remove_bases_option eq ""){
+    $remove_bases_option = "-q " . $trim_base_quality_after_adapter_trim;
   }
 
   my $ispairend = get_is_paired_end_option( $config, $section );
@@ -115,23 +120,23 @@ sub perform {
       }
     }
   }
- 
-  my $trim_poly_atgc = get_option( $config, $section, "trim_poly_atgc", 0 );
+
+  my $trim_poly_atgc = get_option( $config, $section, "trim_poly_atgc", 1 );
   if ($trim_poly_atgc) {
-    if($adapter_option =~ /-a/){
+    if ( $adapter_option =~ /-a/ ) {
       $adapter_option = $adapter_option . " -a \"A{50}\" -a \"T{50}\" -a \"G{50}\" -a \"C{50}\"";
     }
 
-    if($adapter_option =~ /-g/){
+    if ( $adapter_option =~ /-g/ ) {
       $adapter_option = $adapter_option . " -g \"A{50}\" -g \"T{50}\" -g \"G{50}\" -g \"C{50}\"";
     }
 
     if ($ispairend) {
-      if($adapter_option =~ /-A/){
+      if ( $adapter_option =~ /-A/ ) {
         $adapter_option = $adapter_option . " -A \"A{50}\" -A \"T{50}\" -A \"G{50}\" -A \"C{50}\"";
       }
 
-      if($adapter_option =~ /-G/){
+      if ( $adapter_option =~ /-G/ ) {
         $adapter_option = $adapter_option . " -G \"A{50}\" -G \"T{50}\" -G \"G{50}\" -G \"C{50}\"";
       }
     }
@@ -197,12 +202,12 @@ fi
 
       my ( $read1name, $read2name ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
 
-      if ($random_bases_option) {    # remove top random bases
+      if ($remove_bases_option ne "") {    # remove top random bases
         my $temp1_file = $read1name . ".cutAdapter.fastq";
         my $temp2_file = $read2name . ".cutAdapter.fastq";
         print $pbs "
 cutadapt $option $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
-cutadapt $random_bases_option -o $read1name -p $read2name $temp1_file $temp2_file
+cutadapt $remove_bases_option -o $read1name -p $read2name $temp1_file $temp2_file
 rm $temp1_file $temp2_file
 ";
       }
@@ -222,12 +227,12 @@ cutadapt $option $adapter_option -o $read1name -p $read2name $read1file $read2fi
         $limit_file_options = $limit_file_options . " --too-long-output=$finalLongFile";
       }
 
-      if ($random_bases_option) {    #remove top random bases
+      if ($remove_bases_option ne "") {    #remove top random bases
         my $temp_file = $final_file . ".cutAdapter.fastq";
         if ( scalar(@sample_files) == 1 ) {
           print $pbs "
 cutadapt $optionRemoveLimited $adapter_option -o $temp_file $sample_files[0]
-cutadapt $optionOnlyLimited $limit_file_options $random_bases_option -o $final_file $temp_file
+cutadapt $optionOnlyLimited $limit_file_options $remove_bases_option -o $final_file $temp_file
 rm $temp_file
 ";
         }
@@ -246,7 +251,7 @@ rm temp.fastq
           }
 
           print $pbs "
-cutadapt $optionOnlyLimited $limit_file_options $random_bases_option -o $final_file $temp_file 
+cutadapt $optionOnlyLimited $limit_file_options $remove_bases_option -o $final_file $temp_file 
 rm $temp_file
 ";
         }
