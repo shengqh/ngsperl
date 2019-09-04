@@ -1,3 +1,4 @@
+
 options(bitmapType='cairo')
 
 DEBUG<-FALSE
@@ -61,33 +62,45 @@ truncNames=function(x,ncharMax=20) {
 	return(x)
 }
 
+hasReadCategory <- readCategoryFile != ''
+
 allreads<-read.csv(allreadsFile, row.names=1)
 colnames(allreads)=truncNames(colnames(allreads)) #make names shorter for figure if they are too long
-readCategory<-read.csv(readCategoryFile, row.names=1)
-colnames(readCategory)=truncNames(colnames(readCategory))
+if(hasReadCategory){
+  readCategory<-read.csv(readCategoryFile, row.names=1)
+  colnames(readCategory)=truncNames(colnames(readCategory))
+}
 smallRNACategory<-read.csv(smallRNACategoryFile, row.names=1)
 smallRNACategory<-smallRNACategory[grepl("RNA", rownames(smallRNACategory)),]
 colnames(smallRNACategory)=truncNames(colnames(smallRNACategory))
 
 for (perc in c(TRUE, FALSE)){
   g1<-tableBarplot(allreads, percent=perc)
-  g2<-tableBarplot(readCategory, percent=perc)
   g3<-tableBarplot(smallRNACategory, percent=perc)
 
   p1 <- ggplot_gtable(ggplot_build(g1))
-  p2 <- ggplot_gtable(ggplot_build(g2))
   p3 <- ggplot_gtable(ggplot_build(g3))
 
-  maxWidth = unit.pmax(p1$widths[2:3], p2$widths[2:3], p3$widths[2:3])
+  maxWidth = unit.pmax(p1$widths[2:3], p3$widths[2:3])
+  maxHeight = 1400
+  if(hasReadCategory) {
+    g2<-tableBarplot(readCategory, percent=perc)
+    p2 <- ggplot_gtable(ggplot_build(g2))
+    maxWidth = unit.pmax(maxWidth, p2$widths[2:3])
+    p2$widths[2:3] <- maxWidth
+    maxHeight = 2000
+  }
+
   p1$widths[2:3] <- maxWidth
-  p2$widths[2:3] <- maxWidth
   p3$widths[2:3] <- maxWidth
 
-  label1<-c("A", "B", "C")
-  
   width<-max(1500, 20 * ncol(allreads))
-  png(file=paste0(resultPrefix, ifelse(perc, ".perc.png", ".count.png")), width=width, height=2000, res=300)
-  gg1<-ggarrange(p1, p2, p3, ncol = 1, nrow=3, labels=label1)
+  png(file=paste0(resultPrefix, ifelse(perc, ".perc.png", ".count.png")), width=width, height=maxHeight, res=300)
+  if(hasReadCategory) {
+    gg1<-ggarrange(p1, p2, p3, ncol = 1, nrow=3, labels=c("A", "B", "C"))
+  }else{
+    gg1<-ggarrange(p1, p3, ncol = 1, nrow=2, labels=c("A", "B"))
+  }
   print(gg1)
   dev.off()
 }

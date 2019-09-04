@@ -2002,7 +2002,12 @@ sub getSmallRNAConfig {
     }
   }
 
-  if ( $config->{fastqc_count_vis} && $config->{reads_in_tasks_pie} && $config->{bowtie1_genome_1mm_NTA_smallRNA_category} ) {
+  if ( $config->{fastqc_count_vis} && $config->{bowtie1_genome_1mm_NTA_smallRNA_category} ) {
+
+    my $read_in_tasks_file = undef;
+    if( $config->{reads_in_tasks_pie}){
+      $read_in_tasks_file = [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv\$" ];
+    }
     $config->{read_summary} = {
       class              => "CQS::UniqueR",
       perform            => 1,
@@ -2010,7 +2015,7 @@ sub getSmallRNAConfig {
       rtemplate          => "../SmallRNA/readSummary.R",
       output_file_ext    => ".perc.png;.count.png",
       parameterFile1_ref => [ "fastqc_count_vis", ".countInFastQcVis.Result.Reads.csv\$" ],
-      parameterFile2_ref => [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv\$" ],
+      parameterFile2_ref => $read_in_tasks_file,
       parameterFile3_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category.Table.csv\$" ],
       rCode              => "",
       sh_direct          => 1,
@@ -2028,6 +2033,20 @@ sub getSmallRNAConfig {
     my @report_files = ();
     my @report_names = ();
     my @copy_files   = ();
+
+    if ( defined $config->{fastqc_raw_summary} ) {
+      push( @report_files, "fastqc_raw_summary",                   ".FastQC.baseQuality.tsv.png" );
+      push( @report_files, "fastqc_raw_summary",                   ".FastQC.sequenceGC.tsv.png" );
+      push( @report_files, "fastqc_raw_summary",                   ".FastQC.adapter.tsv.png" );
+      push( @report_names, "fastqc_raw_per_base_sequence_quality", "fastqc_raw_per_sequence_gc_content", "fastqc_raw_adapter_content" );
+    }
+
+    if ( defined $config->{fastqc_post_trim_summary} ) {
+      push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.baseQuality.tsv.png" );
+      push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.sequenceGC.tsv.png" );
+      push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.adapter.tsv.png" );
+      push( @report_names, "fastqc_post_trim_per_base_sequence_quality", "fastqc_post_trim_per_sequence_gc_content", "fastqc_post_trim_adapter_content" );
+    }
 
     if ( defined $config->{read_summary} ) {
       push( @report_files, "read_summary", ".count.png", "read_summary", ".perc.png" );

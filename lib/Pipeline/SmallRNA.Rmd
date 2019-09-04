@@ -1,5 +1,6 @@
 ---
 title: "smallRNA Sequencing Analysis Report"
+date: "`r format(Sys.time())`"
 output: 
   html_document:
     toc: true
@@ -50,7 +51,8 @@ getCategory2<-function(category1, category2, description){
 "<center>`r curFigRef`</center>\n"))
 }
 
-categoryRmd<-function(dfCategory){
+categoryRmd<-function(dfCategory, fileName, header){
+  hasFile<-FALSE
   result<-""
   for(i in c(1:nrow(dfCategory))){
     section=dfCategory$Section[i]
@@ -60,31 +62,59 @@ categoryRmd<-function(dfCategory){
     pca<-paste0("correlation_", category, "_pca")
     group_heatmap<-paste0("correlation_", category, "_group_heatmap")
     corr_heatmap<-paste0("correlation_", category, "_corr_cluster")
+    
+    if(file.exists(files[heatmap,1])){
+      hasFile<-TRUE
+    }
+    
     #lines<-paste0(section, " ", name, "\n", getCategory(heatmap, heatmap), getCategory(pca, pca), getCategory(group_heatmap, group_heatmap), getCategory(corr_heatmap, corr_heatmap) )
     lines<-paste0(section, " ", name, "\n", getCategory2(heatmap, pca, paste0("Heatmap (left) and PCA (right) of ", name) ), getCategory(group_heatmap, group_heatmap), getCategory(corr_heatmap, corr_heatmap) )
     result<-paste0(result, lines)
   }
-  return(result)
+
+  if(hasFile){
+    cat(paste0(header, result), file=fileName)
+    return(TRUE)
+  }else{
+    cat("", file=fileName)
+    return(FALSE)
+  }
 }
+
+hasFastqc<-any(grepl("fastqc_", rownames(files)))
+hasFastqcPosttrim<-any(grepl("fastqc_post_trim_", rownames(files)))
 
 hostGenomeFile="hostgenome.Rmd"
 hostGenome<-data.frame(Section=c("##", "##"), Category=c("mirna", "trna"), Name=c("miRNA", "tRNA"))
-cat(categoryRmd(hostGenome), file=hostGenomeFile)
+hasHostGenome<-categoryRmd(hostGenome, hostGenomeFile, "")
 
 nonhostGenomeFile="nonhostgenome.Rmd"
 nonhostGenome<-data.frame(Section=c("###", "###"), Category=c("group1", "group2"), Name=c("Microbime bacteria", "Environment bacteria"))
-cat(categoryRmd(nonhostGenome), file=nonhostGenomeFile)
+hasNonhostGenome<-categoryRmd(nonhostGenome, nonhostGenomeFile, "## Non-host genome\n\n")
 
 nonhostLibraryFile="nonhostlibrary.Rmd"
 nonhostLibrary<-data.frame(Section=c("###", "###"), Category=c("trnalib", "rrnalib"), Name=c("tRNA library", "rRNA library"))
-cat(categoryRmd(nonhostLibrary), file=nonhostLibraryFile)
+hasNonhostLibrary<-categoryRmd(nonhostLibrary, nonhostLibraryFile, "## Non-host library\n\n")
 
 ```
 
 <br>
 
 # Summary
-This report includes preprocessing (section 2), host genome (section 3), nonhost genome (section 4), nonhost library (section 5)
+This report includes summary (section 1), preprocessing (section 2), host genome (section 3)
+```{r, echo=FALSE, results='asis'}
+if(hasNonhostGenome){
+  cat(", nonhost genome (section 4)")
+  nextIndex = 5
+}else{
+  nextIndex = 4
+}
+
+if(hasNonhostLibrary){
+  cat(", nonhost library (section ", nextIndex, ")")
+}
+
+```
 
 ```{r,echo=FALSE,results='asis', fig.show="hold", out.width="45%", fig.align = "default"}
 check_and_include_graphics(files["read_summary_count",1])
@@ -99,6 +129,14 @@ fig1ref<-figRef("read_summary", "Overall read count (left) and read percentage (
 <br>
 
 # Preprocessing
+  
+```{r fastqc_raw_adapter_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_adapter_content", "Adapter content of sequencing reads", trunk.eval=file.exists(files["fastqc_raw_adapter_content",1]))}
+check_and_include_graphics(files["fastqc_raw_adapter_content",1])
+```
+
+```{r fastqc_post_trim_adapter_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_post_trim_adapter_content", "Adapter content of sequencing reads after cutadapt", trunk.eval=file.exists(files["fastqc_post_trim_adapter_content",1]))}
+check_and_include_graphics(files["fastqc_post_trim_adapter_content",1])
+```
 
 ```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastq_len", "Read length distribution after adapter trimming", trunk.eval=file.exists(files["fastq_len",1]))}
 check_and_include_graphics(files["fastq_len",1])
@@ -137,18 +175,20 @@ cat('## host smallRNA DESeq2 result\n')
 check_and_include_graphics(files["deseq2_host_vis",1])
 ```
 
+```{r, echo=FALSE, results='asis'}
+if(hasNonhostGenome | hasNonhostLibrary){
+  cat("# Non-Host")
+}
+
+```
 <br>
 
-# Non-Host
-
-## Non-host genome
-```{r nonhostgenome, child=nonhostGenomeFile} 
+```{r nonhostgenome, include=hasNonhostGenome, child=nonhostGenomeFile} 
 ```
 
 <br>
 
-## Non-host library
-```{r nonhostlibrary, child=nonhostLibraryFile} 
+```{r nonhostlibrary, include=hasNonhostLibrary, child=nonhostLibraryFile} 
 ```
 
 ```{r teardown, include=FALSE}
@@ -163,7 +203,11 @@ if(file.exists(nonhostLibraryFile)){
 }
 ```
 
-## Non-host summary
+```{r, echo=FALSE, results='asis'}
+if(hasNonhostGenome | hasNonhostLibrary){
+  cat("## Non-host summary")
+}
+```
 
 ```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("nonhost_overlap_bar", "Read overlapped in non-host genome/database", trunk.eval=file.exists(files["nonhost_overlap_bar",1]))}
 check_and_include_graphics(files["nonhost_overlap_bar",1])
