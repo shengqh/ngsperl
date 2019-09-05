@@ -20,15 +20,19 @@ deseq2ResultFileTable=read.delim(deseq2ResultFileTable,header=F,as.is=T)
 pCutPathway=0.01
 pCutPathwayDiff0=pCutPathway/10
 useRawPValuePathway=useRawPValue
+log2fcColAll=c("log2FoldChange","log2FC","logFC")
 if (useRawPValue) {
-	pValueCol="pvalue"
+	pValueColAll=c("pvalue","P.Value")
 } else {
-	pValueCol="padj"
+	pValueColAll=c("padj","adj.P.Val")
 }
 if (useRawPValuePathway) {
 	pValuePathwayCol="pvalue"
 } else {
 	pValuePathwayCol="pvalueAdj"
+}
+if (!exists("geneIdType")) {
+  geneIdType="ensembl_gene_id"
 }
 ###############################
 #end parameters
@@ -77,10 +81,17 @@ for (j in 1:nrow(deseq2ResultFileTable)) {
 	
 	resultTable<-read.csv(deseq2ResultTable,header=T,as.is=T,row.names=1)
 	row.names(resultTable)=gsub("\\.\\d+$","",row.names(resultTable))
-
+	log2fcCol=intersect(colnames(resultTable),log2fcColAll)
+	pValueCol=intersect(colnames(resultTable),pValueColAll)
+	if (length(log2fcCol)!=1 | length(pValueCol)!=1) {
+	  warning(paste0("Can't find log2fcCol or pValueCol. Please check colnames in ",deseq2ResultTable));
+	  next;
+	}
+	
+	
 #change gene expression
 #To remove outlier. For not significant genes, change their fold change to less than 2.
-	temp<-resultTable[,c("log2FoldChange"),drop=FALSE]
+	temp<-resultTable[,c(log2fcCol),drop=FALSE]
 	for (i in which(resultTable[,pValueCol]>pCut)) {
 		if (temp[i,1]>=0) {
 			temp[i,1]<-min(log2(2),temp[i,1])
@@ -98,7 +109,7 @@ for (j in 1:nrow(deseq2ResultFileTable)) {
 	} else {
 		stop(paste0("species only supports hsa, mmu, or rno at this time."))
 	}
-	resultTableFcToGene<-convertId(temp,filters="ensembl_gene_id",dataset=dataset)
+	resultTableFcToGene<-convertId(temp,filters=geneIdType,dataset=dataset)
 #	geneExpr<-resultTableFcToGene[,1]
 #	names(geneExpr)<-row.names(resultTableFcToGene)
 	png(paste0(keggOutFileName,".OverallExpression.png"),width=1500,height=3000,res=300)
@@ -114,7 +125,7 @@ for (j in 1:nrow(deseq2ResultFileTable)) {
 	resultTablePSig=resultTable[which(resultTable[,pValueCol]<=pCut),pValueCol,drop=FALSE]
 	if (nrow(resultTablePSig)>10) { #at least 10 genes to do enrichment, or meaningless
 	  temp=1-resultTablePSig #1-p value, so that we can keep the gene with smallest p value when using genesKept="abs"
-	  resultTablePSigToGene<-convertId(temp,filters="ensembl_gene_id",dataset=dataset,genesKept="abs",keepNoId=FALSE)
+	  resultTablePSigToGene<-convertId(temp,filters=geneIdType,dataset=dataset,genesKept="abs",keepNoId=FALSE)
 	  genesEnz<-na.omit(row.names(resultTablePSigToGene))
 	  keggSigGeneEnrichedPathway<-find_enriched_pathway(genesEnz,species=species,returned_genenumber = 1,returned_pvalue=1,returned_adjpvalue = 1)
 	  
@@ -141,7 +152,7 @@ for (j in 1:nrow(deseq2ResultFileTable)) {
 	    #			pathway_id=i
 	    #			download_KEGGfile(pathway_id)
 	    result_name=paste0(keggOutFileName,"/",species,"_",pathway_id,"_fc",".png")
-	    temp<-plot_pathway(resultTableFcToGene,type="bg",bg_col=col,text_col="white",magnify=1.4,species=species,pathway_id=pathway_id,genes_kept="abs",result_name=result_name,border_col=resultTableFcToGeneBorderCol)
+	    temp<-try(plot_pathway(resultTableFcToGene,type="bg",bg_col=col,text_col="white",magnify=1.4,species=species,pathway_id=pathway_id,genes_kept="abs",result_name=result_name,border_col=resultTableFcToGeneBorderCol))
 	  }
 	} else {
 	  warning(paste0("No pathway has significant gene enrichment! Can't make pathway gene expression figures."))

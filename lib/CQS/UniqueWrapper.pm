@@ -28,7 +28,7 @@ sub new {
 }
 
 sub result {
-  my ( $self, $config, $section, $pattern ) = @_;
+  my ( $self, $config, $section, $pattern,$removeEmpty ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
@@ -83,7 +83,12 @@ sub result {
       push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext_one}" );
     }
   }
-  $result->{$task_name} = filter_array( \@result_files, $pattern );
+  #  $result->{$task_name} = filter_array( \@result_files, $pattern );
+  my $filtered = filter_array( \@result_files, $pattern, 1 );
+  if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
+    $result->{$task_name} = $filtered;
+  }
+
 
 #per sample result
   if ( $output_perSample_file eq "parameterSampleFile1" or $output_perSample_file eq "parameterSampleFile2" or $output_perSample_file eq "parameterSampleFile3" ) {
@@ -105,7 +110,11 @@ sub result {
             }
           }
         }
-        $result->{$sample_name} = filter_array( \@result_perSample_files, $pattern );
+        #$result->{$sample_name} = filter_array( \@result_perSample_files, $pattern );
+        my $filtered = filter_array( \@result_perSample_files, $pattern, $removeEmpty );
+        if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
+          $result->{$sample_name} = $filtered;
+        }
       }
     }
     else {
