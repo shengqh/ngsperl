@@ -35,12 +35,20 @@ sub result {
   my $output_file                = get_option( $config, $section, "output_file",                "" );
   my $output_file_ext            = get_option( $config, $section, "output_file_ext",            "" );
   my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
-  
+  my $output_perSample_file                = get_option( $config, $section, "output_perSample_file",                "" );
+  my $output_perSample_file_ext            = get_option( $config, $section, "output_perSample_file_ext",            "" );
+
   my @output_file_exts;
   if ( $output_file_ext =~ /;/ ) {
     @output_file_exts = split( ";", $output_file_ext );
   }else{
     @output_file_exts = ($output_file_ext );
+  }
+  my @output_perSample_file_exts;
+  if ( $output_perSample_file_ext =~ /;/ ) {
+    @output_perSample_file_exts = split( ";", $output_perSample_file_ext );
+  }else{
+    @output_perSample_file_exts = ($output_perSample_file_ext );
   }
 
   my $result       = {};
@@ -50,6 +58,7 @@ sub result {
     if ( has_raw_files( $config, $section, $output_file ) ) {
       my %temp = %{ get_raw_files( $config, $section, $output_file ) };
       foreach my $sample_name ( keys %temp ) {
+#        print "SampleName: $sample_name\n";
         if ( ref( $temp{$sample_name} ) eq "HASH" ) {
           foreach my $output_file_ext_one (@output_file_exts) {
             push( @result_files, "${result_dir}/${sample_name}${output_file_ext_one}" );
@@ -74,8 +83,36 @@ sub result {
       push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext_one}" );
     }
   }
-
   $result->{$task_name} = filter_array( \@result_files, $pattern );
+
+#per sample result
+  if ( $output_perSample_file eq "parameterSampleFile1" or $output_perSample_file eq "parameterSampleFile2" or $output_perSample_file eq "parameterSampleFile3" ) {
+    if ( has_raw_files( $config, $section, $output_perSample_file ) ) {
+      my %temp = %{ get_raw_files( $config, $section, $output_perSample_file ) };
+      foreach my $sample_name ( keys %temp ) {
+#        print "SampleName: $sample_name\n";
+        my @result_perSample_files = ();
+        if ( ref( $temp{$sample_name} ) eq "HASH" ) {
+          foreach my $output_file_ext_one (@output_perSample_file_exts) {
+            push( @result_perSample_files, "${result_dir}/${sample_name}${output_file_ext_one}" );
+          }
+        }
+        else {
+          foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
+            my $subSampleName = $output_to_result_directory ? $result_dir . "/" . basename($subSampleFile) : $subSampleFile;
+            foreach my $output_file_ext_one (@output_perSample_file_exts) {
+              push( @result_perSample_files, "${subSampleName}${output_file_ext_one}" );
+            }
+          }
+        }
+        $result->{$sample_name} = filter_array( \@result_perSample_files, $pattern );
+      }
+    }
+    else {
+      die "output_file defined as " . $output_file . ", but " . $output_file . " not in configure\n";
+    }
+  }
+
   return $result;
 }
 
