@@ -83,20 +83,19 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     print $pbs "
-if [ ! -s $bam_file ]; then
-  if [ ! -s $unsorted_bam_file ]; then
-    echo bwa_mem=`date`
-    bwa mem $option -R '$rg' $bwa_index $sample_files_str | samtools view -bS -o $unsorted_bam_file
-    bwa 2>\&1 | grep Version | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${final_file}.bwa.version
-  fi
+if [ ! -s $unsorted_bam_file ]; then
+  echo bwa_mem=`date`
+  bwa mem $option -R '$rg' $bwa_index $sample_files_str | samtools view -bS -o $unsorted_bam_file
+  bwa 2>\&1 | grep Version | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${final_file}.bwa.version
+fi
 ";
     my $rmlist = "";
     if ($cleansam) {
       print $pbs "
-  if [[ -s $unsorted_bam_file && ! -s $clean_bam_file ]]; then
-    echo CleanSam=`date`
-    java -jar $picard_jar CleanSam VALIDATION_STRINGENCY=SILENT I=$unsorted_bam_file O=$clean_bam_file
-  fi
+if [[ -s $unsorted_bam_file && ! -s $clean_bam_file ]]; then
+  echo CleanSam=`date`
+  java -jar $picard_jar CleanSam VALIDATION_STRINGENCY=SILENT I=$unsorted_bam_file O=$clean_bam_file
+fi
 ";
       $rmlist            = $rmlist . " " . $unsorted_bam_file;
       $unsorted_bam_file = $clean_bam_file;
@@ -125,21 +124,19 @@ fi
       my $chromosome_grep_command = getChromosomeFilterCommand( $final_file, $chromosome_grep_pattern );
 
       print $pbs "    
-  if [ -s $unsorted_bam_file ]; then
-    echo sort_bam=`date`
-    samtools sort -@ $thread -m $sort_memory $unsorted_bam_file -o $final_file
-    samtools index $final_file 
-    $chromosome_grep_command
-  fi
+if [ -s $unsorted_bam_file ]; then
+  echo sort_bam=`date`
+  samtools sort -@ $thread -m $sort_memory $unsorted_bam_file -o $final_file
+  samtools index $final_file 
+  $chromosome_grep_command
 fi
 ";
       $rmlist = $rmlist . " " . $unsorted_bam_file;
     }
     else {
       print $pbs "
-  if [ -s $unsorted_bam_file ]; then
-    mv $unsorted_bam_file $final_file
-  fi
+if [ -s $unsorted_bam_file ]; then
+  mv $unsorted_bam_file $final_file
 fi
 ";
     }
