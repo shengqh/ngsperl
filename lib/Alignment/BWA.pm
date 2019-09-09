@@ -83,16 +83,14 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     print $pbs "
-if [ ! -s $unsorted_bam_file ]; then
-  echo bwa_mem=`date`
-  bwa mem $option -R '$rg' $bwa_index $sample_files_str | samtools view -bS -o $unsorted_bam_file
-  bwa 2>\&1 | grep Version | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${final_file}.bwa.version
-fi
+echo bwa_mem=`date`
+bwa mem $option -R '$rg' $bwa_index $sample_files_str | samtools view -bS -o $unsorted_bam_file
+bwa 2>\&1 | grep Version | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${final_file}.bwa.version
 ";
     my $rmlist = "";
     if ($cleansam) {
       print $pbs "
-if [[ -s $unsorted_bam_file && ! -s $clean_bam_file ]]; then
+if [[ -s $unsorted_bam_file ]]; then
   echo CleanSam=`date`
   java -jar $picard_jar CleanSam VALIDATION_STRINGENCY=SILENT I=$unsorted_bam_file O=$clean_bam_file
 fi
@@ -103,7 +101,7 @@ fi
 
     if ($mark_duplicates) {
       print $pbs "
-if [ -s $unsorted_bam_file && ! -s $rmdup_bam_file ]; then
+if [ -s $unsorted_bam_file ]; then
   echo MarkDuplicate=`date` 
   java -jar $picard_jar MarkDuplicates \\
     INPUT=$unsorted_bam_file \\
