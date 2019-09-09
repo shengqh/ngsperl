@@ -66,7 +66,6 @@ sub perform {
     my $unsorted_bam_file = $sample_name . ".unsorted.bam";
     my $clean_bam_file    = $sample_name . ".unsorted.clean.bam";
     my $rmdup_bam_file    = $sample_name . ".unsorted.rmdup.bam";
-    my $bam_file          = $sample_name . ".bam";
     my $tag               = get_bam_tag($sample_name);
 
     my $rg = "\@RG\\tID:${sample_name}\\tPU:illumina\\tLB:${sample_name}\\tSM:${sample_name}\\tPL:illumina";
@@ -114,7 +113,7 @@ if [ -s $unsorted_bam_file ]; then
     ADD_PG_TAG_TO_READS=false     
 fi
 ";
-      $rmlist            = $rmlist . " $bam_file ${bam_file}.bai";
+      $rmlist            = $rmlist . " " . $unsorted_bam_file;
       $unsorted_bam_file = $rmdup_bam_file;
     }
 
