@@ -120,7 +120,7 @@ sub getConfig {
       source_ref            => $source_ref,
       output_to_same_folder => 1,
       picard_jar            => getValue( $def, "picard_jar" ),
-      mark_duplicates       => 0,
+      mark_duplicates       => 1,
       sh_direct             => 0,
       pbs                   => {
         "email"    => $email,
@@ -182,7 +182,7 @@ sub getConfig {
       vcf_files                => $vcf,
       gatk_jar                 => $gatk_jar,
       picard_jar               => $picard_jar,
-      remove_duplicate         => 1,
+      remove_duplicate         => 0,
       sh_direct                => 0,
       slim_print_reads         => 1,
       samtools_baq_calibration => 0,
