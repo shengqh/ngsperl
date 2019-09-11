@@ -25,7 +25,15 @@ sub new {
 sub get_final_files {
   my ( $self, $ispairend, $sample_name, $extension, $fastqextension ) = @_;
   if ($ispairend) {
-    return ( $sample_name . $extension . ".1" . $fastqextension . ".gz", $sample_name . $extension . ".2" . $fastqextension . ".gz" );
+    my $finalName_1      = $sample_name . $extension . ".1" . $fastqextension;
+    my $finalName_2      = $sample_name . $extension . ".2" . $fastqextension;
+    my $final_file_1     = "${finalName_1}.gz";
+    my $final_file_2     = "${finalName_2}.gz";
+    my $finalShortFile_1 = $finalName_1 . ".short.gz";
+    my $finalShortFile_2 = $finalName_2 . ".short.gz";
+    my $finalLongFile_1  = $finalName_1 . ".long.gz";
+    my $finalLongFile_2  = $finalName_2 . ".long.gz";
+    return ( $final_file_1, $final_file_2, $finalShortFile_1, $finalShortFile_2, $finalLongFile_1, $finalLongFile_2 );
   }
   else {
     my $finalName      = $sample_name . $extension . $fastqextension;
@@ -62,9 +70,14 @@ sub get_extension {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
 
   my $curSection = get_config_section( $config, $section );
+
+  my $thread_option = "";
+  if ($thread > 1) {
+    $thread_option = "-j $thread";
+  }
 
   my $remove_bases_option = "";
   my $random_bases_remove_after_trim = get_option( $config, $section, "random_bases_remove_after_trim", 0 );
@@ -92,31 +105,35 @@ sub perform {
   my $adapter_option = "";
   if ( $option !~ /-a/ ) {
     if ( defined $curSection->{adapter} && length( $curSection->{adapter} ) > 0 ) {
+      my @adapters = split(',', $curSection->{adapter});
+      print(@adapters);
       if ($ispairend) {
-        $adapter_option = " -a " . $curSection->{adapter} . " -A " . $curSection->{adapter};
+        $adapter_option = " -a " . join(' -a ', @adapters) . " -A " . join(' -A ', @adapters);
       }
       else {
-        $adapter_option = " -a " . $curSection->{adapter};
+        $adapter_option = " -a " . join(' -a ', @adapters);
       }
     }
 
     if ( defined $curSection->{adapter_3} && length( $curSection->{adapter_3} ) > 0 ) {
+      my $adapters = split /,/, $curSection->{adapter_3};
       if ($ispairend) {
-        $adapter_option = " -a " . $curSection->{adapter_3} . " -A " . $curSection->{adapter_3};
+        $adapter_option = " -a " . join(' -a ', $adapters) . " -A " . join(' -A ', $adapters);
       }
       else {
-        $adapter_option = " -a " . $curSection->{adapter_3};
+        $adapter_option = " -a " . join(' -a ', $adapters);
       }
     }
   }
 
   if ( $option !~ /-g/ ) {
     if ( defined $curSection->{adapter_5} && length( $curSection->{adapter_5} ) > 0 ) {
+      my $adapters = split /,/, $curSection->{adapter_5};
       if ($ispairend) {
-        $adapter_option = $adapter_option . " -g " . $curSection->{adapter_5} . " -G " . $curSection->{adapter_5};
+        $adapter_option = $adapter_option . " -g " . join(' -g ', $adapters) . " -G " . join(' -G ', $adapters);
       }
       else {
-        $adapter_option = $adapter_option . " -g " . $curSection->{adapter_5};
+        $adapter_option = $adapter_option . " -g " .  join(' -g ', $adapters);
       }
     }
   }
@@ -187,7 +204,7 @@ sub perform {
     for my $sample_file (@sample_files) {
       print $pbs "
 if [ ! -s $sample_file ]; then
-  echo input file not exits: $sample_file
+  echo input file not exist: $sample_file
   exit 0
 fi
 ";
@@ -200,20 +217,27 @@ fi
       my $read1file = $sample_files[0];
       my $read2file = $sample_files[1];
 
-      my ( $read1name, $read2name ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
+      my ( $read1name, $read2name, $finalShortFile_1, $finalShortFile_2, $finalLongFile_1, $finalLongFile_2 ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
+      my $limit_file_options = "";
+      if ($shortLimited) {
+        $limit_file_options = " --too-short-output=$finalShortFile_1 --too-short-paired-output=$finalShortFile_2";
+      }
+      if ($longLimited) {
+        $limit_file_options = $limit_file_options . " --too-long-output=$finalLongFile_1 --too-long-paired-output=$finalLongFile_2";
+      }
 
       if ($remove_bases_option ne "") {    # remove top random bases
         my $temp1_file = $read1name . ".cutAdapter.fastq";
         my $temp2_file = $read2name . ".cutAdapter.fastq";
         print $pbs "
-cutadapt $option $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
-cutadapt $remove_bases_option -o $read1name -p $read2name $temp1_file $temp2_file
+cutadapt $thread_option $option $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
+cutadapt $thread_option $remove_bases_option -o $read1name -p $read2name $limit_file_options $temp1_file $temp2_file 
 rm $temp1_file $temp2_file
 ";
       }
       else {                         # NOT remove top random bases
         print $pbs "
-cutadapt $option $adapter_option -o $read1name -p $read2name $read1file $read2file
+cutadapt $thread_option $option $adapter_option -o $read1name -p $read2name $limit_file_options $read1file $read2file
 ";
       }
     }
@@ -231,8 +255,8 @@ cutadapt $option $adapter_option -o $read1name -p $read2name $read1file $read2fi
         my $temp_file = $final_file . ".cutAdapter.fastq";
         if ( scalar(@sample_files) == 1 ) {
           print $pbs "
-cutadapt $optionRemoveLimited $adapter_option -o $temp_file $sample_files[0]
-cutadapt $optionOnlyLimited $limit_file_options $remove_bases_option -o $final_file $temp_file
+cutadapt $thread_option $optionRemoveLimited $adapter_option -o $temp_file $sample_files[0]
+cutadapt $thread_option $optionOnlyLimited $limit_file_options $remove_bases_option -o $final_file $temp_file
 rm $temp_file
 ";
         }
@@ -244,14 +268,14 @@ fi
 ";
           for my $sample_file (@sample_files) {
             print $pbs "
-cutadapt $optionRemoveLimited $adapter_option -o temp.fastq $sample_file
+cutadapt $thread_option $optionRemoveLimited $adapter_option -o temp.fastq $sample_file
 cat temp.fastq >> $temp_file
 rm temp.fastq
 ";
           }
 
           print $pbs "
-cutadapt $optionOnlyLimited $limit_file_options $remove_bases_option -o $final_file $temp_file 
+cutadapt $thread_option $optionOnlyLimited $limit_file_options $remove_bases_option -o $final_file $temp_file 
 rm $temp_file
 ";
         }
@@ -259,7 +283,7 @@ rm $temp_file
       else {    #NOT remove top random bases
         if ( scalar(@sample_files) == 1 ) {
           print $pbs "
-cutadapt $option $adapter_option $limit_file_options -o $final_file $sample_files[0]
+cutadapt $thread_option $option $adapter_option $limit_file_options -o $final_file $sample_files[0]
 ";
         }
         else {
@@ -272,21 +296,21 @@ fi
           if ( length($limit_file_options) > 0 ) {
             for my $sample_file (@sample_files) {
               print $pbs "
-cutadapt $optionRemoveLimited $adapter_option -o temp.fastq $sample_file
+cutadapt $thread_option $optionRemoveLimited $adapter_option -o temp.fastq $sample_file
 cat temp.fastq >> $temp_file
 rm temp.fastq
 ";
             }
 
             print $pbs "
-cutadapt $optionOnlyLimited $limit_file_options -o $final_file $temp_file
+cutadapt $thread_option $optionOnlyLimited $limit_file_options -o $final_file $temp_file
 rm $temp_file
 ";
           }
           else {
             for my $sample_file (@sample_files) {
               print $pbs "
-cutadapt $option $adapter_option -o temp.fastq $sample_file
+cutadapt $thread_option $option $adapter_option -o temp.fastq $sample_file
 cat temp.fastq >> $temp_file
 rm temp.fastq
 ";
