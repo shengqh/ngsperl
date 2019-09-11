@@ -2087,14 +2087,16 @@ sub getSmallRNAConfig {
           push( @report_names, "correlation_mirna_group_heatmap", "correlation_mirna_corr_cluster" );
         }
 
-        push( @report_files, "count_table_correlation",  "^(?!.*tRH_filtered_table).+.tRNA.count.heatmap.png" );
-        push( @report_files, "count_table_correlation",  "^(?!.*tRH_filtered_table).+.tRNA.count.PCA.png" );
-        push( @report_names, "correlation_trna_heatmap", "correlation_trna_pca" );
+        if(not $hasMicroRNAOnly){
+          push( @report_files, "count_table_correlation",  "^(?!.*tRH_filtered_table).+.tRNA.count.heatmap.png" );
+          push( @report_files, "count_table_correlation",  "^(?!.*tRH_filtered_table).+.tRNA.count.PCA.png" );
+          push( @report_names, "correlation_trna_heatmap", "correlation_trna_pca" );
 
-        if ($hasGroupHeatmap) {
-          push( @report_files, "count_table_correlation",        "^(?!.*tRH_filtered_table).+.tRNA.count.Group.heatmap.png" );
-          push( @report_files, "count_table_correlation",        "^(?!.*tRH_filtered_table).+.tRNA.count.Group.Correlation.Cluster.png" );
-          push( @report_names, "correlation_trna_group_heatmap", "correlation_trna_corr_cluster" );
+          if ($hasGroupHeatmap) {
+            push( @report_files, "count_table_correlation",        "^(?!.*tRH_filtered_table).+.tRNA.count.Group.heatmap.png" );
+            push( @report_files, "count_table_correlation",        "^(?!.*tRH_filtered_table).+.tRNA.count.Group.Correlation.Cluster.png" );
+            push( @report_names, "correlation_trna_group_heatmap", "correlation_trna_corr_cluster" );
+          }
         }
       }
 
