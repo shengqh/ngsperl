@@ -13,18 +13,24 @@ cat("configFile=", configFile, "\n")
 cat("annotationName=", annotationName, "\n")
 cat("chromosomes=", chromosomes, "\n")
 
-if(!is.na(chromosomes)){
-  chromosomes = unlist(strsplit(chromosomes, split=','))
+rdatafile = paste0(configFile, ".rdata")
+if (file.exists(rdatafile)){
+  load(rdatafile)
 }else{
-  chromosomes = NULL
-} 
+  if(!is.na(chromosomes)){
+    chromosomes = unlist(strsplit(chromosomes, split=','))
+  }else{
+    chromosomes = NULL
+  } 
 
-experiment <- read.table(configFile, sep="\t", header=T)
+  experiment <- read.table(configFile, sep="\t", header=T)
 
-if(annotationName == "unknown"){
-  qcresult = ChIPQC(experiment, consensus=TRUE, chromosomes=chromosomes)
-}else{
-  qcresult = ChIPQC(experiment, consensus=TRUE, annotation = annotationName, chromosomes=chromosomes)
+  if(annotationName == "unknown"){
+    qcresult = ChIPQC(experiment, consensus=TRUE, chromosomes=chromosomes)
+  }else{
+    qcresult = ChIPQC(experiment, consensus=TRUE, annotation = annotationName, chromosomes=chromosomes)
+  }
+  save(qcresult, file=rdatafile)
 }
 
 ChIPQCreport(qcresult)
