@@ -109,6 +109,7 @@ sub getConfig {
 
   my $bam_ref;
   my $fasta;
+  #based on paper https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-016-1097-3, we don't do markduplicate anymore
   if ( $def->{aligner} eq "bwa" ) {
     $fasta = getValue( $def, "bwa_fasta" );
     $config->{ $def->{aligner} } = {
@@ -120,7 +121,7 @@ sub getConfig {
       source_ref            => $source_ref,
       output_to_same_folder => 1,
       picard_jar            => getValue( $def, "picard_jar" ),
-      mark_duplicates       => 1,
+      mark_duplicates       => 0,
       sh_direct             => 0,
       pbs                   => {
         "email"    => $email,
@@ -137,7 +138,7 @@ sub getConfig {
 
   push @$individual, ( $def->{aligner} );
 
-  my $perform_cnv = $def->{perform_cnv_cnMOPs} || $def->{perform_cnv_gatk4_cohort};
+  my $perform_cnv = $def->{perform_cnv_cnMOPs} || $def->{perform_cnv_gatk4_cohort} || $def->{perform_cnv_xhmm};
 
   if ( $def->{perform_gatk_callvariants} || $def->{perform_muTect} || $def->{perform_muTect2_indel} || $perform_cnv ) {
     my $gatk_jar   = getValue( $def, "gatk3_jar" );
@@ -168,6 +169,7 @@ sub getConfig {
       $vcf = undef;
     }
 
+    #based on paper https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-016-1097-3, we don't do markduplicate anymore
     my $refine_name = $def->{aligner} . "_refine";
     $config->{$refine_name} = {
       class      => "GATK::Refine",
