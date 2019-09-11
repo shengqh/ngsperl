@@ -65,7 +65,8 @@ sub perform {
 
     my $unsorted_bam_file = $sample_name . ".unsorted.bam";
     my $clean_bam_file    = $sample_name . ".unsorted.clean.bam";
-    my $rmdup_bam_file    = $sample_name . ".unsorted.rmdup.bam";
+    my $sorted_bam_file    = $sample_name . ($sortByCoordinate? ".sortedByCoord.bam":".sortedByQuery.bam");
+    my $rmdup_bam_file    = $sample_name . ($sortByCoordinate? ".sortedByCoord.rmdup.bam":".sortedByQuery.rmdup.bam");
     my $tag               = get_bam_tag($sample_name);
 
     my $rg = "\@RG\\tID:${sample_name}\\tPU:illumina\\tLB:${sample_name}\\tSM:${sample_name}\\tPL:illumina";
@@ -78,18 +79,20 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $final_file = $sample_name . ( $mark_duplicates ? ".rmdup" : "" ) . ( $sortByCoordinate ? ".sorted" : ".unsorted" ) . ".bam";
+    my $final_file =  $mark_duplicates ? $rmdup_bam_file : $sorted_bam_file;
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     print $pbs "
-echo bwa_mem=`date`
-bwa mem $option -R '$rg' $bwa_index $sample_files_str | samtools view -bS -o $unsorted_bam_file
-bwa 2>\&1 | grep Version | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${final_file}.bwa.version
+if [[ (1 -eq \$1) || (! -s $unsorted_bam_file) ]]; then
+  echo bwa_mem=`date`
+  bwa mem $option -R '$rg' $bwa_index $sample_files_str | samtools view -bS -o $unsorted_bam_file
+  bwa 2>\&1 | grep Version | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${sample_name}.bwa.version
+fi
 ";
     my $rmlist = "";
     if ($cleansam) {
       print $pbs "
-if [[ -s $unsorted_bam_file ]]; then
+if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $clean_bam_file)) ]]; then
   echo CleanSam=`date`
   java -jar $picard_jar CleanSam VALIDATION_STRINGENCY=SILENT I=$unsorted_bam_file O=$clean_bam_file
 fi
@@ -98,44 +101,47 @@ fi
       $unsorted_bam_file = $clean_bam_file;
     }
 
-    if ($mark_duplicates) {
-      print $pbs "
-if [ -s $unsorted_bam_file ]; then
-  echo MarkDuplicate=`date` 
-  java -jar $picard_jar MarkDuplicates \\
-    INPUT=$unsorted_bam_file \\
-    OUTPUT=$rmdup_bam_file \\
-    METRICS_FILE=${final_file}.metrics \\
-    VALIDATION_STRINGENCY=SILENT \\
-    OPTICAL_DUPLICATE_PIXEL_DISTANCE=2500 \\
-    ASSUME_SORT_ORDER=\"queryname\" \\
-    CLEAR_DT=\"false\" \\
-    ADD_PG_TAG_TO_READS=false     
-fi
-";
-      $rmlist            = $rmlist . " " . $unsorted_bam_file;
-      $unsorted_bam_file = $rmdup_bam_file;
-    }
-
     if ($sortByCoordinate) {
-      my $chromosome_grep_command = getChromosomeFilterCommand( $final_file, $chromosome_grep_pattern );
+      my $chromosome_grep_command = getChromosomeFilterCommand( $sorted_bam_file, $chromosome_grep_pattern );
 
       print $pbs "    
-if [ -s $unsorted_bam_file ]; then
+if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
   echo sort_bam=`date`
-  samtools sort -@ $thread -m $sort_memory $unsorted_bam_file -o $final_file
-  samtools index $final_file 
+  sambamba sort -t $thread -o $sorted_bam_file $unsorted_bam_file
+  samtools index $sorted_bam_file 
   $chromosome_grep_command
 fi
 ";
-      $rmlist = $rmlist . " " . $unsorted_bam_file;
     }
     else {
-      print $pbs "
-if [ -s $unsorted_bam_file ]; then
-  mv $unsorted_bam_file $final_file
+      print $pbs "    
+if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
+  echo sort_bam=`date`
+  sambamba sort -t $thread --sort-picard -o $sorted_bam_file $unsorted_bam_file
 fi
 ";
+    }
+    $rmlist = $rmlist . " " . $unsorted_bam_file;
+
+    if ($mark_duplicates) {
+      my $ASSUME_SORT_ORDER = $sortByCoordinate ? "coordinate":"queryname";
+      print $pbs "
+if [[ (-s $sorted_bam_file) && ((1 -eq \$1) || (! -s $rmdup_bam_file)) ]]; then
+  echo MarkDuplicate=`date` 
+  java -jar $picard_jar MarkDuplicates \\
+    INPUT=$sorted_bam_file \\
+    OUTPUT=$rmdup_bam_file \\
+    METRICS_FILE=${rmdup_bam_file}.metrics \\
+    VALIDATION_STRINGENCY=SILENT \\
+    OPTICAL_DUPLICATE_PIXEL_DISTANCE=2500 \\
+    ASSUME_SORT_ORDER=\"$ASSUME_SORT_ORDER\" \\
+    CLEAR_DT=false \\
+    ADD_PG_TAG_TO_READS=false \\
+    CREATE_INDEX=true \\
+    REMOVE_DUPLICATES=true
+fi
+";
+      $rmlist = $rmlist . " " . $sorted_bam_file;
     }
 
     print $pbs "
@@ -167,12 +173,14 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $final_file = $sample_name . ( $mark_duplicates ? ".rmdup" : "" ) . ( $sortByCoordinate ? ".sorted" : ".unsorted" ) . ".bam";
+    my $sorted_bam_file    = $sample_name . ($sortByCoordinate? ".sortedByCoord.bam":".sortedByQuery.bam");
+    my $rmdup_bam_file    = $sample_name . ($sortByCoordinate? ".sortedByCoord.rmdup.bam":".sortedByQuery.rmdup.bam");
+    my $final_file =  $mark_duplicates ? $rmdup_bam_file : $sorted_bam_file;
     $final_file = "${result_dir}/$final_file";
     my @result_files = ();
     push( @result_files, $final_file );
     push( @result_files, $final_file . ".stat" );
-    push( @result_files, $final_file . ".bwa.version" );
+    push( @result_files, "${result_dir}/${sample_name}.bwa.version" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
