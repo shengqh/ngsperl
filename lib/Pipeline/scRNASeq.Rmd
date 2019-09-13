@@ -40,10 +40,10 @@ objs<-apply(filelist1, 1, function(x){
 })
 
 if(length(objs) == 1){
-  pmbc <- objs[[1]]
+  pbmc <- objs[[1]]
 }else{
   cellids<-unlist(lapply(objs, function(x) x@project.name))
-  pmbc <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), add.cell.ids = cellids, project = "integrated")
+  pbmc <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), add.cell.ids = cellids, project = "integrated")
 }
 ```
 
