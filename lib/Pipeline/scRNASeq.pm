@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Pipeline::scRNA;
+package Pipeline::scRNASeq;
 
 use strict;
 use warnings;
