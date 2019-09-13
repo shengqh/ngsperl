@@ -29,26 +29,22 @@ We next use the count matrix to create a `Seurat` object. The object serves as a
 library(dplyr)
 library(Seurat)
 
-# Load the PBMC dataset
-rawfile1<-"H:/shengquanhu/projects/20190710_alexander_gelbard_single_cell/Count/3364-AG-1/filtered_feature_bc_matrix"
-rawfile2<-"H:/shengquanhu/projects/20190710_alexander_gelbard_single_cell/Count/3364-AG-2/filtered_feature_bc_matrix"
-rawfile3<-"H:/shengquanhu/projects/20190710_alexander_gelbard_single_cell/Count/3364-AG-3/filtered_feature_bc_matrix"
+filelist1<-read.table("fileList1.txt", header=F)
+finalobj<-NULL
+objs<-apply(filelist1, 1, function(x){
+  fileName  = x[[1]]
+  fileTitle = x[[2]]
+  counts = Read10X_h5(fileName)
+  sobj = CreateSeuratObject(counts = counts, project = fileTitle, min.cells = 3, min.features = 200)
+  return(sobj)
+})
 
-data1 <- Read10X(data.dir = rawfile1)
-pbmc1 <- CreateSeuratObject(counts = data1, project = "S1", min.cells = 3, min.features = 200)
-rm(data1)
-
-data2 <- Read10X(data.dir = rawfile2)
-pbmc2 <- CreateSeuratObject(counts = data2, project = "S2", min.cells = 3, min.features = 200)
-rm(data2)
-
-data3 <- Read10X(data.dir = rawfile3)
-pbmc3 <- CreateSeuratObject(counts = data3, project = "S3", min.cells = 3, min.features = 200)
-rm(data3)
-
-pbmc <- merge(pbmc1, y = c(pbmc2, pbmc3), add.cell.ids = c("S1", "S2", "S3"), project = "iSGS_vs_IPF")
-rm(pbmc1, pbmc2, pbmc3)
-# Initialize the Seurat object with the raw (non-normalized data).
+if(length(objs) == 1){
+  pmbc <- objs[[1]]
+}else{
+  cellids<-unlist(lapply(objs, function(x) x@project.name))
+  pmbc <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), add.cell.ids = cellids, project = "integrated")
+}
 ```
 
 ### Standard pre-processing workflow

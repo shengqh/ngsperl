@@ -106,9 +106,9 @@ sub getScRNASeqConfig {
 
   if ( getValue( $def, "perform_scRNABatchQC" ) ) {
     $config->{scRNABatchQC} = {
-      class                    => "CQS::BuildReport",
+      class                    => "CQS::UniqueRmd",
       perform                  => 1,
-      target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "report",
+      target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "scRNABatchQC",
       report_rmd_file          => "../Pipeline/scRNASeq.Rmd",
       parameterSampleFile1_ref => "files",
       sh_direct                => 1,
@@ -120,14 +120,14 @@ sub getScRNASeqConfig {
         "mem"       => "10gb"
       },
     };
-    push( @$summary, "report" );
+    push( @$summary, "scRNABatchQC" );
   }
 
   if ( getValue( $def, "perform_seurat" ) ) {
     $config->{seurat} = {
-      class                    => "CQS::BuildReport",
+      class                    => "CQS::UniqueRmd",
       perform                  => 1,
-      target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "report",
+      target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "seurat",
       report_rmd_file          => "../Pipeline/scRNASeq.Rmd",
       parameterSampleFile1_ref => "files",
       sh_direct                => 1,
@@ -139,7 +139,7 @@ sub getScRNASeqConfig {
         "mem"       => "10gb"
       },
     };
-    push( @$summary, "report" );
+    push( @$summary, "seurat" );
   }
 
   $config->{sequencetask} = {

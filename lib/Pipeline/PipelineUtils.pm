@@ -870,7 +870,7 @@ sub addAnnovar {
     isvcf      => 1,
     pbs        => {
       "nodes"    => "1:ppn=1",
-      "walltime" => "2",
+      "walltime" => "10",
       "mem"      => "10gb"
     },
   };
