@@ -106,10 +106,10 @@ sub getScRNASeqConfig {
 
   if ( getValue( $def, "perform_scRNABatchQC" ) ) {
     $config->{scRNABatchQC} = {
-      class                    => "CQS::UniqueRmd",
+      class                    => "CQS::UniqueR",
       perform                  => 1,
       target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "scRNABatchQC",
-      report_rmd_file          => "../Pipeline/scRNASeq.Rmd",
+      rtemplate                => "../scRNA/scRNABatchQC.r",
       parameterSampleFile1_ref => "files",
       sh_direct                => 1,
       pbs                      => {
@@ -128,7 +128,7 @@ sub getScRNASeqConfig {
       class                    => "CQS::UniqueRmd",
       perform                  => 1,
       target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "seurat",
-      report_rmd_file          => "../Pipeline/scRNASeq.Rmd",
+      report_rmd_file          => "../scRNA/seurat.rmd",
       parameterSampleFile1_ref => "files",
       sh_direct                => 1,
       pbs                      => {
