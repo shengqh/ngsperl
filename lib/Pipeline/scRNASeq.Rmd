@@ -1,0 +1,134 @@
+---
+title: "Seurat - Guided Clustering Tutorial"
+output:
+  html_document:
+    theme: united
+    df_print: kable
+date: 'Compiled: `r format(Sys.Date(), "%B %d, %Y")`'
+---
+***
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  tidy = TRUE,
+  tidy.opts = list(width.cutoff = 120),
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+### Setup the Seurat Object
+
+For this tutorial, we will be analyzing the a dataset of Peripheral Blood Mononuclear Cells (PBMC) freely available from 10X Genomics. There are 2,700 single cells that were sequenced on the Illumina NextSeq 500. The raw data can be found [here](https://s3-us-west-2.amazonaws.com/10x.files/samples/cell/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz).
+
+We start by reading in the data. The `Read10X` function reads in the output of the [cellranger](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/what-is-cell-ranger) pipeline from 10X, returning a unique molecular identified (UMI) count matrix. The values in this matrix represent the number of molecules for each feature (i.e. gene; row) that are detected in each cell (column).
+
+We next use the count matrix to create a `Seurat` object. The object serves as a container that contains both data (like the count matrix) and analysis (like PCA, or clustering results) for a single-cell dataset. For a technical discussion of the `Seurat` object structure, check out our [GitHub Wiki](https://github.com/satijalab/seurat/wiki). For example, the count matrix is stored in `pbmc[["RNA"]]@counts`.
+
+```{r init}
+library(dplyr)
+library(Seurat)
+
+# Load the PBMC dataset
+rawfile1<-"H:/shengquanhu/projects/20190710_alexander_gelbard_single_cell/Count/3364-AG-1/filtered_feature_bc_matrix"
+rawfile2<-"H:/shengquanhu/projects/20190710_alexander_gelbard_single_cell/Count/3364-AG-2/filtered_feature_bc_matrix"
+rawfile3<-"H:/shengquanhu/projects/20190710_alexander_gelbard_single_cell/Count/3364-AG-3/filtered_feature_bc_matrix"
+
+data1 <- Read10X(data.dir = rawfile1)
+pbmc1 <- CreateSeuratObject(counts = data1, project = "S1", min.cells = 3, min.features = 200)
+rm(data1)
+
+data2 <- Read10X(data.dir = rawfile2)
+pbmc2 <- CreateSeuratObject(counts = data2, project = "S2", min.cells = 3, min.features = 200)
+rm(data2)
+
+data3 <- Read10X(data.dir = rawfile3)
+pbmc3 <- CreateSeuratObject(counts = data3, project = "S3", min.cells = 3, min.features = 200)
+rm(data3)
+
+pbmc <- merge(pbmc1, y = c(pbmc2, pbmc3), add.cell.ids = c("S1", "S2", "S3"), project = "iSGS_vs_IPF")
+rm(pbmc1, pbmc2, pbmc3)
+# Initialize the Seurat object with the raw (non-normalized data).
+```
+
+### Standard pre-processing workflow
+
+The steps below encompass the standard pre-processing workflow for scRNA-seq data in Seurat. These represent the selection and filtration of cells based on QC metrics, data normalization and scaling, and the detection of highly variable features.
+
+#### QC and selecting cells for further analysis
+
+Seurat allows you to easily explore QC metrics and filter cells based on any user-defined criteria. A few QC metrics [commonly used](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4758103/) by the community include
+
+* The number of unique genes detected in each cell. 
+    + Low-quality cells or empty droplets will often have very few genes
+    + Cell doublets or multiplets may exhibit an aberrantly high gene count
+* Similarly, the total number of molecules detected within a cell (correlates strongly with unique genes)
+* The percentage of reads that map to the mitochondrial genome
+    + Low-quality / dying cells often exhibit extensive mitochondrial contamination
+    + We calculate mitochondrial QC metrics with the `PercentageFeatureSet` function, which calculates the percentage of counts originating from a set of features
+    + We use the set of all genes starting with `MT-` as a set of mitochondrial genes
+
+```{r mito, fig.height=7, fig.width=13}
+# The [[ operator can add columns to object metadata. This is a great place to stash QC stats
+pbmc[["percent.mt"]] <- PercentageFeatureSet(object = pbmc, pattern = "^MT-")
+```
+
+<details>
+  <summary>**Where are QC metrics stored in Seurat?**</summary>
+
+* The number of unique genes and total molecules are automatically calculated during `CreateSeuratObject`
+    + You can find them stored in the object meta data
+```{r qc, fig.height=7, fig.width=13}
+# Show QC metrics for the first 5 cells
+head(x = pbmc@meta.data, 5)
+```
+</details>
+\  
+
+In the example below, we visualize QC metrics, and use these to filter cells.
+
+* We filter cells that have unique feature counts over 2,500 or less than 200
+* We filter cells that have >5% mitochondrial counts
+    
+```{r qc2, fig.height=7, fig.width=13}
+
+#Visualize QC metrics as a violin plot
+VlnPlot(object = pbmc, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+
+# FeatureScatter is typically used to visualize feature-feature relationships, but can be used for anything calculated by the object, i.e. columns in object metadata, PC scores etc.
+
+plot1 <- FeatureScatter(object = pbmc, feature1 = "nCount_RNA", feature2 = "percent.mt") 
+plot2 <- FeatureScatter(object = pbmc, feature1 = "nCount_RNA", feature2 = "nFeature_RNA") 
+CombinePlots(plots = list(plot1,plot2))
+
+pbmc <- subset(x = pbmc, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & percent.mt < 5)
+```
+
+***
+
+### Normalizing the data
+
+Apply sctranform normalization.
+
+```{r sctranform}
+pbmc <- SCTransform(pbmc, vars.to.regress = "percent.mt", verbose = FALSE)
+```
+
+### Run non-linear dimensional reduction (UMAP/tSNE)
+
+Seurat offers several non-linear dimensional reduction techniques, such as tSNE and UMAP, to visualize and explore these datasets. The goal of these algorithms is to learn the underlying manifold of the data in order to place similar cells together in low-dimensional space. Cells within the graph-based clusters determined above should co-localize on these dimension reduction plots. As input to the UMAP and tSNE, we suggest using the same PCs as input to the clustering analysis.
+
+```{r umap, fig.height=5, fig.width=7}
+# If you haven't installed UMAP, you can do so via reticulate::py_install(packages = "umap-learn")
+pbmc <- RunPCA(object = pbmc, verbose=FALSE)
+pbmc <- FindNeighbors(object = pbmc, dims=1:20, verbose=FALSE)
+pbmc <- RunUMAP(object = pbmc, dims = 1:20, verbose = FALSE)
+pbmc <- FindClusters(object=pbmc, verbose=FALSE)
+# note that you can set `label = TRUE` or use the LabelClusters function to help label individual clusters
+DimPlot(object = pbmc, reduction = 'umap', label=TRUE)
+```
+```{r gene}
+VlnPlot(pbmc, features = c("CD8A", "GZMK", "CCL5", "S100A4", "ANXA1", "CCR7", "ISG15", "CD3D"), 
+    pt.size = 0.2, ncol = 4)
+```
+}
