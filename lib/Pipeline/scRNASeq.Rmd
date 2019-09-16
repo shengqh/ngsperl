@@ -1,5 +1,5 @@
 ---
-title: "Seurat - Guided Clustering Tutorial"
+title: "Seurat Clustering"
 output:
   html_document:
     theme: united
@@ -19,8 +19,6 @@ knitr::opts_chunk$set(
 
 ### Setup the Seurat Object
 
-For this tutorial, we will be analyzing the a dataset of Peripheral Blood Mononuclear Cells (PBMC) freely available from 10X Genomics. There are 2,700 single cells that were sequenced on the Illumina NextSeq 500. The raw data can be found [here](https://s3-us-west-2.amazonaws.com/10x.files/samples/cell/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz).
-
 We start by reading in the data. The `Read10X` function reads in the output of the [cellranger](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/what-is-cell-ranger) pipeline from 10X, returning a unique molecular identified (UMI) count matrix. The values in this matrix represent the number of molecules for each feature (i.e. gene; row) that are detected in each cell (column).
 
 We next use the count matrix to create a `Seurat` object. The object serves as a container that contains both data (like the count matrix) and analysis (like PCA, or clustering results) for a single-cell dataset. For a technical discussion of the `Seurat` object structure, check out our [GitHub Wiki](https://github.com/satijalab/seurat/wiki). For example, the count matrix is stored in `pbmc[["RNA"]]@counts`.
@@ -34,7 +32,11 @@ finalobj<-NULL
 objs<-apply(filelist1, 1, function(x){
   fileName  = x[[1]]
   fileTitle = x[[2]]
-  counts = Read10X_h5(fileName)
+  if(dir.exists(fileName)){
+    counts = Read10X(fileName)
+  } else {
+    counts = Read10X_h5(fileName)
+  }
   sobj = CreateSeuratObject(counts = counts, project = fileTitle, min.cells = 3, min.features = 200)
   return(sobj)
 })
@@ -114,7 +116,7 @@ pbmc <- SCTransform(pbmc, vars.to.regress = "percent.mt", verbose = FALSE)
 
 Seurat offers several non-linear dimensional reduction techniques, such as tSNE and UMAP, to visualize and explore these datasets. The goal of these algorithms is to learn the underlying manifold of the data in order to place similar cells together in low-dimensional space. Cells within the graph-based clusters determined above should co-localize on these dimension reduction plots. As input to the UMAP and tSNE, we suggest using the same PCs as input to the clustering analysis.
 
-```{r umap, fig.height=5, fig.width=7}
+```{r umap_cells, fig.height=5, fig.width=7}
 # If you haven't installed UMAP, you can do so via reticulate::py_install(packages = "umap-learn")
 pbmc <- RunPCA(object = pbmc, verbose=FALSE)
 pbmc <- FindNeighbors(object = pbmc, dims=1:20, verbose=FALSE)
@@ -123,8 +125,24 @@ pbmc <- FindClusters(object=pbmc, verbose=FALSE)
 # note that you can set `label = TRUE` or use the LabelClusters function to help label individual clusters
 DimPlot(object = pbmc, reduction = 'umap', label=TRUE)
 ```
+
+```{r umap_samples, fig.height=5, fig.width=7}
+DimPlot(object = pbmc, reduction = 'umap', label=FALSE, group.by="orig.ident")
+```
+```{r tsne_cells, fig.height=5, fig.width=7}
+# If you haven't installed UMAP, you can do so via reticulate::py_install(packages = "umap-learn")
+pbmc <- RunTSNE(object = pbmc, dims = 1:20, verbose = FALSE)
+pbmc <- FindClusters(object=pbmc, verbose=FALSE)
+# note that you can set `label = TRUE` or use the LabelClusters function to help label individual clusters
+DimPlot(object = pbmc, reduction = 'tsne', label=TRUE)
+```
+
+```{r tsne_samples, fig.height=5, fig.width=7}
+DimPlot(object = pbmc, reduction = 'tsne', label=FALSE, group.by="orig.ident")
+```
+
 ```{r gene}
-VlnPlot(pbmc, features = c("CD8A", "GZMK", "CCL5", "S100A4", "ANXA1", "CCR7", "ISG15", "CD3D"), 
+VlnPlot(pbmc, features = c("CCR7", "TCF7", "FOXP3", "CD25", "GZMA", "PRF1", "PD1", "LAG3", "TIGIT", "CTLA4"), 
     pt.size = 0.2, ncol = 4)
 ```
 }

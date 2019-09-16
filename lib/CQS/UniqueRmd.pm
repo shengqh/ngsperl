@@ -37,8 +37,10 @@ sub perform {
   my $final_log = $self->get_log_filename( $log_dir, $task_name );
   my $final_log_desp = $cluster->get_log_description($final_log);
 
+  my $output_file_ext = get_option( $config, $section, "output_file_ext", ".html" );
+
   my $rtemplate = dirname(__FILE__) . "/" . $config->{$section}{report_rmd_file};
-  my $rfilename = "${task_name}.Rmd";
+  my $rfilename = ${task_name}. $self->{_suffix} . ".Rmd";
   my $rfile     = build_rmd_file($config, $section, $result_dir, $rfilename);
 
   my $removeEmpty = get_option( $config, $section, "remove_empty_parameter", 0 );
@@ -47,7 +49,8 @@ sub perform {
   my $parametersample_files3 = writeParameterSampleFile( $config, $section, $result_dir, 3, $removeEmpty );
   my $parametersample_files4 = writeParameterSampleFile( $config, $section, $result_dir, 4, $removeEmpty );
 
-  my $final_file = "${task_name}.html";
+  
+  my $final_file = ${task_name}. $self->{_suffix} . ".html";
   my $final = $self->open_pbs( $final_pbs, $pbs_desc, $final_log_desp, $path_file, $result_dir, $final_file );
   print $final "
 R -e \"library(knitr);rmarkdown::render('$rfilename');\"
@@ -63,7 +66,8 @@ sub result {
 
   my $result       = {};
   my @result_files = ();
-  push( @result_files, "${result_dir}/${task_name}.html" );
+  my $final_file = ${task_name}. $self->{_suffix} . ".html";
+  push( @result_files, $final_file );
   $result->{$task_name} = filter_array( \@result_files, $pattern );
   return $result;
 }
