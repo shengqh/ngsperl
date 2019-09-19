@@ -129,6 +129,13 @@ DimPlot(object = pbmc, reduction = 'umap', label=TRUE)
 ```{r umap_samples, fig.height=5, fig.width=7}
 DimPlot(object = pbmc, reduction = 'umap', label=FALSE, group.by="orig.ident")
 ```
+
+```{r umap_gene}
+VlnPlot(pbmc, features = c("CCR7", "TCF7", "FOXP3", "CD25", "GZMA", "PRF1", "PD1", "LAG3", "TIGIT", "CTLA4"), 
+    pt.size = 0.2, ncol = 4)
+```
+}
+
 ```{r tsne_cells, fig.height=5, fig.width=7}
 # If you haven't installed UMAP, you can do so via reticulate::py_install(packages = "umap-learn")
 pbmc <- RunTSNE(object = pbmc, dims = 1:20, verbose = FALSE)
@@ -140,9 +147,3 @@ DimPlot(object = pbmc, reduction = 'tsne', label=TRUE)
 ```{r tsne_samples, fig.height=5, fig.width=7}
 DimPlot(object = pbmc, reduction = 'tsne', label=FALSE, group.by="orig.ident")
 ```
-
-```{r gene}
-VlnPlot(pbmc, features = c("CCR7", "TCF7", "FOXP3", "CD25", "GZMA", "PRF1", "PD1", "LAG3", "TIGIT", "CTLA4"), 
-    pt.size = 0.2, ncol = 4)
-```
-}

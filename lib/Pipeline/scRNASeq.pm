@@ -111,6 +111,7 @@ sub getScRNASeqConfig {
       target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "scRNABatchQC",
       rtemplate                => "../scRNA/scRNABatchQC.r",
       parameterSampleFile1_ref => "files",
+      rCode => "webgestalt_organism='" .  getValue($def, "webgestalt_organism") . "'",
       sh_direct                => 1,
       pbs                      => {
         "email"     => $def->{email},
