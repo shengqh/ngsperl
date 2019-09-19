@@ -168,7 +168,9 @@ We initialized a few pipelines:
 
 <a name="tricks" />
 
-# Download SRA data
+# Tricks
+
+## Download SRA data
 
 In your RNASeq/smallRNASeq/ChipSeq/ExomeSeq definition file, please add those lines:
 ```
