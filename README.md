@@ -7,6 +7,7 @@ NGSPERL : A semi-automated framework for large scale next generation sequencing 
 * [Quick Start](#example)
 * [Pipelines](#pipelines)
 * [Modules](#module)
+* [Tricks](#tricks)
 
 <a name="introduction"/>
 
@@ -164,3 +165,26 @@ We initialized a few pipelines:
 ||VarScan2::Mpileup2snp|Varscan2|SNP caller|
 ||VarScan2::Somatic|Varscan2|Somatic mutation caller|
 |Annotation|Annotation::Annovar|annovar|Annotating SNP, indel and somatic mutation|
+
+<a name="tricks" />
+
+# Download SRA data
+
+In your RNASeq/smallRNASeq/ChipSeq/ExomeSeq definition file, please add those lines:
+```
+  sra_to_fastq => 1,
+  is_paired_end => 0,
+  files => {
+    "BF_HF_12"	=> ["GSM2257715"],	
+    "BF_HF_15"	=> ["GSM2257716"],	
+    "BF_HF_20"	=> ["GSM2257717"],	
+    "Sub_HF_14"	=> ["GSM2257718"],	
+    "Sub_HF_19"	=> ["GSM2257719"],	
+    "Sub_HF_20"	=> ["GSM2257720"],	
+    "VIS_HF_14"	=> ["GSM2257721"],	
+    "VIS_HF_17"	=> ["GSM2257722"],	
+    "VIS_HF_20"	=> ["GSM2257723"],	
+  },
+```
+
+Once the scripts are generated, we can run the code to download data from SRA database. Due to port issue, we cannot submit sra2fastq to cluster. We have to process the sra2fastq tasks at local.
