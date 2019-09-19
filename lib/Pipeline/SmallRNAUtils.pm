@@ -280,7 +280,7 @@ sub initializeSmallRNADefaultOptions {
     initDefaultValue( $def, "trim_base_quality_after_adapter_trim",  0 );
   }
 
-  initDefaultValue( $def, "remove_sequences",          "" );
+  initDefaultValue( $def, "remove_sequences",          "'CCACGTTCCCGTGG;ACAGTCCGACGATC'" );
   initDefaultValue( $def, "fastq_remove_random",       0 );
   initDefaultValue( $def, "mirbase_count_option",      "-p hsa" );
   initDefaultValue( $def, "table_vis_group_text_size", 10 );
