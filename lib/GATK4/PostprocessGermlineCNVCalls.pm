@@ -42,7 +42,10 @@ sub perform {
   my $model_shard_path = get_raw_files( $config, $section, "model_shard_path" );
   my $model_args = get_rawfiles_option( $model_shard_path, "--model-shard-path" );
 
-  my $parameters = get_parameter_options( $config, $section, "--", ["autosomal-ref-copy-number"] );
+  my $parameters = get_parameter_options( $config, $section, "--", ["autosomal-ref-copy-number"], ["2"] );
+
+  my $hasChrInChromosomeName = get_option($config, $section, "has_chr_in_chromosome_name" , 0);
+  my $chrPrefix = $hasChrInChromosomeName ? "chr":"";
 
   #make PBS
   my %raw_files = %{ get_raw_files( $config, $section ) };
@@ -77,14 +80,19 @@ gatk --java-options \"$java_option\" PostprocessGermlineCNVCalls $option \\
   $calls_args \\
   $model_args \\
   --sample-index $i \\
-  --allosomal-contig X \\
-  --allosomal-contig Y $parameters \\
+  --allosomal-contig ${chrPrefix}X \\
+  --allosomal-contig ${chrPrefix}Y $parameters \\
   --contig-ploidy-calls $contig_ploidy_calls_dir \\
   --output-genotyped-intervals $genotyped_intervals_vcf_filename \\
   --output-genotyped-segments $genotyped_segments_vcf_filename
 
-tabix -p vcf $genotyped_intervals_vcf_filename
-tabix -p vcf $genotyped_segments_vcf_filename
+if [[ -s genotyped_intervals_vcf_filename ]]; then
+  tabix -p vcf $genotyped_intervals_vcf_filename
+fi
+
+if [[ -s genotyped_segments_vcf_filename ]]; then
+  tabix -p vcf $genotyped_segments_vcf_filename
+fi
             
 rm -rf .cache .conda .config .theano
 
