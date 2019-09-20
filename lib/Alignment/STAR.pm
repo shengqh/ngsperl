@@ -40,18 +40,20 @@ sub perform {
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1 );
   my $output_sort_by_coordinate = getSortByCoordinate( $config, $section );
 
+  my $sort_by_sambamba = get_option( $config, $section, "sort_by_sambamba", 0 );
+
   my $output_unsorted = get_option( $config, $section, "output_unsorted", 0 );
   if ( !$output_sort_by_coordinate && !$output_unsorted ) {
     $output_unsorted = 1;
   }
   my $output_format = "--outSAMtype BAM";
-  if ($output_sort_by_coordinate) {
-    $output_format = $output_format . " SortedByCoordinate";
-  }
-  if ($output_unsorted) {
+  if(($output_sort_by_coordinate && $sort_by_sambamba) || ($output_unsorted)) {
     $output_format = $output_format . " Unsorted";
   }
-
+  if ($output_sort_by_coordinate && (!$sort_by_sambamba)) {
+    $output_format = $output_format . " SortedByCoordinate";
+  }
+  
   my $star_index;
   if ( defined $config->{$section}{"genome_dir"} ) {
     $star_index = parse_param_file( $config, $section, "genome_dir", 1 );
@@ -80,8 +82,11 @@ sub perform {
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
     my $rgline = "ID:$sample_name SM:$sample_name LB:$sample_name PL:ILLUMINA PU:ILLUMINA";
 
-    my $final = $output_sort_by_coordinate ? $sample_name . "_Aligned.sortedByCoord.out.bam" : $sample_name . "_Aligned.out.bam";
+    my $unsorted = $sample_name . "_Aligned.out.bam";
+    my $final = $output_sort_by_coordinate ? $sample_name . "_Aligned.sortedByCoord.out.bam" : $unsorted;
     my $index_command = $output_sort_by_coordinate ? "samtools index $final" : "";
+
+    my $rmfiles = $output_unsorted ? "" : ($sort_by_sambamba ? $unsorted : "");
 
     my $log_desc = $cluster->get_log_description($log);
 
@@ -91,13 +96,25 @@ sub perform {
 
     print $pbs "
 $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format  
+";
 
+  if($output_sort_by_coordinate && $sort_by_sambamba) {
+    print $pbs "
+if [[ ! -s temp ]]; then
+  mkdir temp
+fi
+
+sambamba sort -m ${memory} --tmpdir temp -o $final -t $thread $unsorted
+";
+  }
+
+  print $pbs "
 if [ -s $final ]; then
   $index_command
   $chromosome_grep_command
   
   awk {'if(\$4==\"2\") print \"\"\$1\"\\t\"\$2-\$9-1\"\\t\"\$3+\$9\"\\tJUNC000\"NR\"\\t\"\$7+\$8\"\\t-\\t\"\$2-\$9-1\"\\t\"\$3+\$9\"\\t255,0,0\\t2\\t\"\$9\",\"\$9\"\\t\",\"0,\"\$3-\$2+\$9+1; else if(\$4==\"1\") print \"\"\$1\"\\t\"\$2-\$9-1\"\\t\"\$3+\$9\"\\tJUNC000\"NR\"\\t\"\$7+\$8\"\\t+\\t\"\$2-\$9-1\"\\t\"\$3+\$9\"\\t0,0,255\\t2\\t\"\$9\",\"\$9\"\\t\",\"0,\"\$3-\$2+\$9+1'} ${sample_name}_SJ.out.tab > ${sample_name}.splicing.bed
-  rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
+  rm -rf $rmfiles ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
 fi
 
 ";
