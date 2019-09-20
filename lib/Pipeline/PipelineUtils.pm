@@ -1053,6 +1053,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
     model_shard_path_ref        => [ $GermlineCNVCaller, "model\$" ],
     option                      => "",
     contig_ploidy_calls_dir_ref => [ $DetermineGermlineContigPloidyCohortMode, "calls" ],
+    has_chr_in_chromosome_name  => getValue($def, "has_chr_in_chromosome_name"),
     'sh_direct'                 => 0,
     'perform'                   => 1,
     'target_dir'                => $target_dir . '/' . $PostprocessGermlineCNVCalls,
