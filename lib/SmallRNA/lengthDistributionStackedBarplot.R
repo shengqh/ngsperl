@@ -12,12 +12,19 @@ final<-NULL
 for(rna in RNA_class){
   print(rna)
   read.count<-fread(fileList1[rna,1],data.table=FALSE,check.names=TRUE)
+
   if(is.numeric(read.count[,1])){
     read.count.length=read.count[,1]
   }else{
     read.count.length=nchar(read.count[,1])
   }
-  read.count<-read.count[,-1]
+
+  if("TopFeature" %in% colnames(read.count)){
+    read.count<-read.count[,c(-1,-2,-3)]
+  }else{
+    read.count<-read.count[,-1]
+  }
+
   read.count.agg<-aggregate(read.count, by=list(read.count.length),sum)
   row.names(read.count.agg)<-read.count.agg[,1]
   read.count.agg<-read.count.agg[,colnames(category)]
