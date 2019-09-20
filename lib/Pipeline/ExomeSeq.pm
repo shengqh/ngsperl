@@ -36,6 +36,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_gatk_callvariants",   0 );
   initDefaultValue( $def, "perform_gatk4_callvariants",  1 );
   initDefaultValue( $def, "gatk_callvariants_vqsr_mode", 1 );
+  initDefaultValue( $def, "has_chr_in_chromosome_name" , 0);
 
   initDefaultValue( $def, "filter_variants_by_allele_frequency",            0 );
   initDefaultValue( $def, "filter_variants_by_allele_frequency_percentage", 0.9 );
