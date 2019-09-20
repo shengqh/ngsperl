@@ -106,7 +106,7 @@ colnames(oncoprint)<-c("Gene",colnames(mutdata_gene_samples)[sample_start:sample
 write.table(oncoprint,file=outputFile,quote=F,row.names=F,sep="\t")
 
 rownames(oncoprint)=oncoprint[,1]
-oncoprint=oncoprint[,c(2:ncol(oncoprint))]
+oncoprint=oncoprint[,c(2:ncol(oncoprint)),drop=F]
 
 if(width == 0){
   width=max(2000, ncol(oncoprint) * 70 + 300)
