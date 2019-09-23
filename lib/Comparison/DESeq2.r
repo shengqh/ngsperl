@@ -1146,8 +1146,23 @@ if (! is.null(resultAllOut)) {
 		
 		#output a summary table with numbers of gisnificant changed genes
 		sigGeneSummaryTable<-t(table(diffResult[,"Significant"],diffResult[,"Comparison"]))
-		sigGeneSummaryTable<-data.frame(Comparison=row.names(sigGeneSummaryTable),GeneInComparison=rowSums(sigGeneSummaryTable),NotSignificant=sigGeneSummaryTable[,1],Significant=sigGeneSummaryTable[,2])
-		write.csv(sigGeneSummaryTable,paste0(allprefix, "_DESeq2_sigGeneSummary.csv"),row.names=FALSE)
+
+		notSigIndex<-match("0", colnames(sigGeneSummaryTable))
+		if(is.na(notSigIndex)){
+		  notSignificant=0
+		}else{
+		  notSignificant=sigGeneSummaryTable[,notSigIndex]
+		}
+
+		sigIndex<-match("1", colnames(sigGeneSummaryTable))
+		if(is.na(sigIndex)){
+		  significant=0
+		}else{
+		  significant=sigGeneSummaryTable[,sigIndex]
+		}
+
+		dSigGeneSummaryTable<-data.frame(Comparison=row.names(sigGeneSummaryTable),GeneInComparison=rowSums(sigGeneSummaryTable),NotSignificant=notSignificant,Significant=significant)
+		write.csv(dSigGeneSummaryTable,paste0(allprefix, "_DESeq2_sigGeneSummary.csv"),row.names=FALSE)
 	}  
 }
 
