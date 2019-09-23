@@ -67,8 +67,7 @@ categoryRmd<-function(dfCategory, fileName, header){
       hasFile<-TRUE
     }
     
-    #lines<-paste0(section, " ", name, "\n", getCategory(heatmap, heatmap), getCategory(pca, pca), getCategory(group_heatmap, group_heatmap), getCategory(corr_heatmap, corr_heatmap) )
-    lines<-paste0(section, " ", name, "\n", getCategory2(heatmap, pca, paste0("Heatmap (left) and PCA (right) of ", name) ), getCategory(group_heatmap, group_heatmap), getCategory(corr_heatmap, corr_heatmap) )
+    lines<-paste0(section, " ", name, "\n", getCategory2(heatmap, pca, paste0("Heatmap (left) and PCA (right) of ", name) ), getCategory2(group_heatmap, corr_heatmap, paste0("Group heatmap (left) and group correlation (right) of ", name)) )
     result<-paste0(result, lines)
   }
 
@@ -80,6 +79,12 @@ categoryRmd<-function(dfCategory, fileName, header){
     return(FALSE)
   }
 }
+
+hasLengthDistCategory<-file.exists(files["host_length_dist_category",1])
+
+hasAdapterRaw<-file.exists(files["fastqc_raw_adapter_content",1])
+hasAdapterPostTrim<-file.exists(files["fastqc_post_trim_adapter_content",1])
+hasAdapterRawOnly<-hasAdapterRaw & (!hasAdapterPostTrim)
 
 hasFastqc<-any(grepl("fastqc_", rownames(files)))
 hasFastqcPosttrim<-any(grepl("fastqc_post_trim_", rownames(files)))
@@ -116,7 +121,8 @@ if(hasNonhostLibrary){
 
 ```
 
-```{r,echo=FALSE,results='asis', fig.show="hold", out.width="45%", fig.align = "default"}
+```{r,echo=FALSE,results='asis', fig.show="hold", out.width="45%", fig.align = "default", out.height=1024}
+cat("## Read summary count\n")
 check_and_include_graphics(files["read_summary_count",1])
 check_and_include_graphics(files["read_summary_perc",1])
 ```
@@ -130,15 +136,24 @@ fig1ref<-figRef("read_summary", "Overall read count (left) and read percentage (
 
 # Preprocessing
   
-```{r fastqc_raw_adapter_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_adapter_content", "Adapter content of sequencing reads", trunk.eval=file.exists(files["fastqc_raw_adapter_content",1]))}
+```{r fastqc_raw_adapter_content,echo=FALSE,results='asis', include=hasAdapterRawOnly, eval=hasAdapterRawOnly, fig.align="center", fig.cap=figRef("fastqc_adapter", "Adapter content of sequencing reads", trunk.eval=hasAdapterRawOnly)}
+cat("## Adapter\n")
 check_and_include_graphics(files["fastqc_raw_adapter_content",1])
 ```
 
-```{r fastqc_post_trim_adapter_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_post_trim_adapter_content", "Adapter content of sequencing reads after cutadapt", trunk.eval=file.exists(files["fastqc_post_trim_adapter_content",1]))}
+```{r,echo=FALSE,results='asis', fig.show="hold", out.width="45%", fig.align = "default", include=hasAdapterPostTrim, eval=hasAdapterPostTrim}
+cat("## Adapter before and after trimming\n")
+check_and_include_graphics(files["fastqc_raw_adapter_content",1])
 check_and_include_graphics(files["fastqc_post_trim_adapter_content",1])
 ```
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastq_len", "Read length distribution after adapter trimming", trunk.eval=file.exists(files["fastq_len",1]))}
+```{r,echo=FALSE,results='asis', include=hasAdapterPostTrim, eval=hasAdapterPostTrim}
+fig1ref<-figRef("fastqc_adapter_content", "Raw adapter (left) and post-trim adapter (right)")
+cat(paste0("<center>", fig1ref, "</center>\n"))
+```
+
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastq_len", "Read length distribution after adapter trimming", trunk.eval=(file.exists(files["fastq_len",1]) & (!hasLengthDistCategory)))}
+cat("## Read length distribution after adapter trimming\n")
 check_and_include_graphics(files["fastq_len",1])
 ```
 
