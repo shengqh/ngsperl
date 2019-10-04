@@ -148,6 +148,7 @@ sub getRNASeqConfig {
     my $aligner_index   = $def->{star_index} or die "Define star_index at definition first";
     my $starFolder      = $target_dir . "/" . getNextFolderIndex($def) . "star_featurecount";
     my $transcript_gtf  = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
+    my $star_featurecount_walltime = getValue($def, "star_featurecount_walltime", 23);
     my $configAlignment = {
       "star_featurecount" => {
         class                     => "Alignment::STARFeatureCount",
@@ -167,7 +168,7 @@ sub getRNASeqConfig {
           "email"     => $email,
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=" . $def->{max_thread},
-          "walltime"  => "23",
+          "walltime"  => "$star_featurecount_walltime",
           "mem"       => "40gb"
         },
       },
