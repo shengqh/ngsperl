@@ -39,7 +39,6 @@ sub perform {
 
   my $output_file_ext = get_option( $config, $section, "output_file_ext", ".html" );
 
-  my $rtemplate = dirname(__FILE__) . "/" . $config->{$section}{report_rmd_file};
   my $rfilename = ${task_name}. $self->{_suffix} . ".Rmd";
   my $rfile     = build_rmd_file($config, $section, $result_dir, $rfilename);
 
