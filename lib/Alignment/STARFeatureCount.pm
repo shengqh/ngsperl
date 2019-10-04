@@ -110,11 +110,41 @@ sub perform {
     my $chromosome_grep_command = $output_sort_by_coordinate ? getChromosomeFilterCommand( $final_bam, $chromosome_grep_pattern ) : "";
 
     print $pbs "
-if [[ ! -s $unsorted && -s $sample_file_1 ]]; then
+if [ -z \${SLURM_JOBID+x} ]; then 
+  echo \"in bash mode\"; 
+  if [[ ! -s $final_bam && -s $sample_file_1 ]]; then
+    echo performing star ...
+    $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
+    $star --version | awk '{print \"STAR,v\"\$1}' > ${final_file}.star.version
+    rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
+  fi  
+else 
+  echo \"in cluster mode\"; 
+  localdir=/tmp/myjob_\${SLURM_JOBID}
+  tmp_cleaner()
+  {
+    rm -rf \${localdir}
+    exit -1
+  }
+  trap 'tmp_cleaner' TERM
+
+  echo creating local directory \${localdir}
+  mkdir \${localdir} # create unique directory on compute node
+  cd \${localdir}
+
   echo performing star ...
   $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
+  rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
+
+  mv ${sample_name}* $cur_dir
+  cd $cur_dir
+  rm -rf \${localdir}
   $star --version | awk '{print \"STAR,v\"\$1}' > ${final_file}.star.version
-fi  
+fi
+
+";
+
+    print $pbs "
 
 if [ -s $final_bam ]; then
   $index_command
@@ -123,8 +153,6 @@ if [ -s $final_bam ]; then
   if [ ! -s ${sample_name}.splicing.bed ]; then
     awk {'if(\$4==\"2\") print \"\"\$1\"\\t\"\$2-\$9-1\"\\t\"\$3+\$9\"\\tJUNC000\"NR\"\\t\"\$7+\$8\"\\t-\\t\"\$2-\$9-1\"\\t\"\$3+\$9\"\\t255,0,0\\t2\\t\"\$9\",\"\$9\"\\t\",\"0,\"\$3-\$2+\$9+1; else if(\$4==\"1\") print \"\"\$1\"\\t\"\$2-\$9-1\"\\t\"\$3+\$9\"\\tJUNC000\"NR\"\\t\"\$7+\$8\"\\t+\\t\"\$2-\$9-1\"\\t\"\$3+\$9\"\\t0,0,255\\t2\\t\"\$9\",\"\$9\"\\t\",\"0,\"\$3-\$2+\$9+1'} ${sample_name}_SJ.out.tab > ${sample_name}.splicing.bed
   fi
-  
-  rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
 fi
 
 if [ -s $unsorted ]; then
