@@ -113,6 +113,7 @@ sub getPreprocessionConfig {
   #task
   if ( $def->{sra_to_fastq} ) {
     defined $is_pairend or die "Define is_paired_end first!";
+    defined $def->{is_restricted_data} or die "Define is_restricted_data first!";
     #defined $def->{sra_table} or die "Define sra_table first, can be downloaded from ftp://ftp.ncbi.nlm.nih.gov/sra/reports/Metadata/SRA_Accessions.tab";
   }
 
@@ -153,6 +154,7 @@ sub getPreprocessionConfig {
       sh_direct  => 1,
       cluster    => $def->{cluster},
       not_clean  => getValue( $def, "sra_not_clean", 1 ),
+      is_restricted_data => getValue($def, "is_restricted_data"),
       pbs        => {
         "email"     => $def->{email},
         "emailType" => $def->{emailType},
