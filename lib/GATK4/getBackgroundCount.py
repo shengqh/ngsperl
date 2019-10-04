@@ -32,7 +32,11 @@ def readBedFile(fileName):
   with open(fileName, "r") as fin:
     for line in fin:
       parts = line.rstrip().split('\t')
-      item = LocusItem(parts[0], int(parts[1]), int(parts[2]), parts[3])
+      if len(parts) >= 4:
+        item = LocusItem(parts[0], int(parts[1]), int(parts[2]), parts[3])
+      else:
+        item = LocusItem(parts[0], int(parts[1]), int(parts[2]), "%s:%s-%s" % (parts[0], parts[1], parts[2]))
+
       result.append(item)
   return(result)
 
@@ -103,6 +107,7 @@ def main():
     startIndex = endIndex
 
   chromosomes = sorted(set(bi.Chromosome for bi in validBedItems))
+  print(chromosomes)
   
   with open(args.output, "w") as fout:
     fout.write("Chromosome\tSample\tCount\n")
