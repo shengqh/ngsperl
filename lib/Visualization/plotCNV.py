@@ -33,8 +33,10 @@ class LocusItem(object):
     self.Locus = "%s:%d-%d" % (chromosome, start, end)
   
   def setLocusString(self, locus):
+    #print(locus)
     self.Locus = locus
     parts = locus.split(":")
+    #print(parts)
     self.Chromosome = parts[0]
     positions = parts[1].split("-")
     self.Start = int(positions[0])
@@ -78,6 +80,7 @@ def readCNVFile(fileName):
     samples = headers[2:]
     for line in fin:
       parts = line.rstrip().split('\t')
+      #print(parts)
       sampleCNVMap = {}
       for sampleIndex in range(2, len(parts)):
         cnv = parts[sampleIndex]
