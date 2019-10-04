@@ -14,6 +14,8 @@ parser.add_argument('-o', '--output_prefix', action='store', nargs='?', required
 parser.add_argument('--exac_key', action='store', nargs='?', default="ExAC_ALL", help='ExAC name in vcf')
 parser.add_argument('--g1000_key', action='store', nargs='?', default="1000g2015aug_all", help='1000g name in vcf')
 parser.add_argument('--gnomad_key', action='store', nargs='?', default="gnomAD_genome_ALL", help='gnomAD name in vcf')
+parser.add_argument('--topmed_key', action='store', nargs='?', default="TOPMed", help='TOPMed name in vcf')
+parser.add_argument('--filter_fq_equal_1', action='store_true', default=False, help='Filter out SNV detected at all samples')
 
 args = parser.parse_args()
 
@@ -65,6 +67,7 @@ with open(outputFile, 'w') as sw:
       exacIndex = headers.index(args.exac_key) if args.exac_key in headers else -1
       g1000Index = headers.index(args.g1000_key) if args.g1000_key in headers else -1
       gnomadIndex = headers.index(args.gnomad_key) if args.gnomad_key in headers else -1
+      topmedIndex = headers.index(args.topmed_key) if args.topmed_key in headers else -1
       sampleCount = len(sampleIndecies)
   
       print("sampleCount=%d" % (sampleCount))
@@ -79,6 +82,13 @@ with open(outputFile, 'w') as sw:
   
         if bAccept:
           norm_freq = -1
+            
+          if (topmedIndex != -1) and (parts[topmedIndex] != ""):
+            if norm_freq == -1:
+              norm_freq = float(parts[topmedIndex])
+            if float(parts[topmedIndex]) > threshold:
+              continue
+
           if (exacIndex != -1) and (parts[exacIndex] != ""):
             norm_freq = float(parts[exacIndex])
             if float(parts[exacIndex]) > threshold:
@@ -96,10 +106,14 @@ with open(outputFile, 'w') as sw:
             if float(parts[g1000Index]) > threshold:
               continue
             
-          freq = len([idx for idx in sampleIndecies if parts[idx].startswith("0/1") or parts[idx].startswith("0|1") or  parts[idx].startswith("1/1") or parts[idx].startswith("1|1")])
+          freq = len([idx for idx in sampleIndecies if parts[idx].startswith("0/1") or parts[idx].startswith("0|1") or parts[idx].startswith("1/1") or parts[idx].startswith("1|1")])
+
           if freq == 0:
             continue
   
+          if args.filter_fq_equal_1 and (freq == sampleCount):
+            continue
+
           values = "%s\t%s\t%s\n" %("\t".join(parts[i] for i in snvHeaderIndecies), parts[formatIndex], "\t".join(parts[i] for i in sampleIndecies ))
           sw.write(values)
   
@@ -149,7 +163,9 @@ for gene in genes:
   freq = [v for k,v in genemap.items() if v == "1"]
   freqperc = len(freq) * 1.0 / sampleCount
   genelist.append([freqperc, gene])
+
 gsorted = sorted(genelist, key=getKey, reverse=True)
+
 with open(outputprefix + ".gene.missense.tsv", 'w') as genew:
   genew.write("Gene\tFrequency\t%s\n" % ("\t".join(headers[i] for i in sampleIndecies)))
   for d in gsorted:

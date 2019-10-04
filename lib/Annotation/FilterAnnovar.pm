@@ -59,6 +59,13 @@ sub perform {
     $gnomad_key = "--gnomad_key $gnomad_key";
   }
 
+  my $filter_fq_equal_1 = get_option( $config, $section, "filter_fq_equal_1", 0 );
+  if ( $filter_fq_equal_1 ) {
+    $filter_fq_equal_1 = "--filter_fq_equal_1";
+  }else{
+    $filter_fq_equal_1 = "";
+  }
+
   my $script = dirname(__FILE__) . "/filterAnnovar.py";
   if ( !-e $script ) {
     die "File not found : " . $script;
@@ -80,7 +87,7 @@ sub perform {
         my $finalFilePrefix = "${sample_name}${sampleNameSuffix}.freq${freq_value}";
         my $finalFile       = $finalFilePrefix . ".gene.missense.tsv";
         print $pbs " 
-python $script $option -i $annovar_file -t $freq_value -o $finalFilePrefix $exac_key $g1000_key $gnomad_key $sampleNamePattern
+python $script $option -i $annovar_file -t $freq_value -o $finalFilePrefix $exac_key $g1000_key $gnomad_key $filter_fq_equal_1 $sampleNamePattern 
 ";
       }
     }
