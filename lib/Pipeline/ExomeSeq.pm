@@ -41,7 +41,8 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "filter_variants_by_allele_frequency",            0 );
   initDefaultValue( $def, "filter_variants_by_allele_frequency_percentage", 0.9 );
   initDefaultValue( $def, "filter_variants_by_allele_frequency_maf",        0.3 );
-
+  initDefaultValue( $def, "filter_variants_fq_equal_1",                     0 );
+  
   initDefaultValue( $def, "perform_muTect",       0 );
   initDefaultValue( $def, "perform_muTect2indel", 0 );
   initDefaultValue( $def, "perform_annovar",      0 );
@@ -82,6 +83,8 @@ sub getConfig {
   my $max_thread = getValue( $def, "max_thread" );
 
   my $geneLocus = undef;
+  my $chrCode = getValue($def, "has_chr_in_chromosome_name") ? ";addChr=1" : "";
+
   if ( defined $def->{annotation_genes} ) {
     $geneLocus = "annotation_genes_locus";
     $config->{$geneLocus} = {
@@ -96,8 +99,8 @@ sub getConfig {
         . "\";symbolKey=\""
         . getValue( $def, "biomart_symbolKey" )
         . "\";genesStr=\""
-        . getValue( $def, "annotation_genes" ) . "\"",
-      output_file_ext => ".bed;.missing",
+        . getValue( $def, "annotation_genes" ) . "\"" . $chrCode,
+      output_file_ext => ".missing;.bed",
       sh_direct       => 1,
       'pbs'           => {
         'nodes'    => '1:ppn=1',
@@ -186,6 +189,7 @@ sub getConfig {
       gatk_jar                 => $gatk_jar,
       picard_jar               => $picard_jar,
       remove_duplicate         => 0,
+      filter_soft_clip         => $def->{filter_soft_clip},
       sh_direct                => 0,
       slim_print_reads         => 1,
       samtools_baq_calibration => 0,
@@ -396,8 +400,9 @@ sub getConfig {
             parameterSampleFile1_ref => [ $annovar_to_maf, ".tsv.maf\$" ],
             parameterFile1           => $def->{family_info_file},
             sh_direct                => 1,
-            rCode                    => ( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" )
-              . ( defined $def->{annotation_genes} ? "interestedGeneStr=\"" . $def->{annotation_genes} . "\"" : "" ),
+            rCode                    => ( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" ),
+#            rCode                    => ( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" )
+#              . ( defined $def->{annotation_genes} ? "interestedGeneStr=\"" . $def->{annotation_genes} . "\"" : "" ),
             pbs => {
               "email"     => $def->{email},
               "emailType" => $def->{emailType},
