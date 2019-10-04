@@ -59,7 +59,10 @@ sub perform {
   }
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
-  my $output_ext            = get_option( $config, $section, "output_ext", "" );
+  my $output_file_ext            = get_option( $config, $section, "output_file_ext",            "" );
+  if($output_file_ext == ""){
+    $output_file_ext            = get_option( $config, $section, "output_ext",            "" );
+  }
   my $first_file_only       = get_option( $config, $section, "first_file_only", 0 );
   my $output_arg            = get_option( $config, $section, "output_arg", "" );
   my $join_arg              = get_option( $config, $section, "join_arg", 0 );
@@ -126,7 +129,7 @@ sub perform {
 
     for my $i ( 0 .. $idxend ) {
       my $pfile1 = $pfiles->[$i];
-      my $final_file = ( $first_file_only or ( 1 == scalar(@$pfiles) ) ) ? $sample_name . $output_ext : basename($pfile1) . $output_ext;
+      my $final_file = ( $first_file_only or ( 1 == scalar(@$pfiles) ) ) ? $sample_name . $output_file_ext : basename($pfile1) . $output_file_ext;
 
       my $curOption = "";
       if(not $bFound2){
@@ -176,7 +179,10 @@ sub result {
 
   my ( $parameterSampleFile1, $parameterSampleFile1arg ) = get_parameter_sample_files( $config, $section, "source" );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
-  my $output_ext            = get_option( $config, $section, "output_ext", "" );
+  my $output_file_ext            = get_option( $config, $section, "output_file_ext",            "" );
+  if($output_file_ext eq ""){
+    $output_file_ext            = get_option( $config, $section, "output_ext",            "" );
+  }
   my $join_arg              = get_option( $config, $section, "join_arg", 0 );
   my $output_other_ext      = get_option( $config, $section, "output_other_ext", "" );
   my @output_other_exts;
@@ -195,7 +201,7 @@ sub result {
     my @result_files = ();
     for my $i ( 0 .. $idxend ) {
       my $pfile1 = $pfiles->[$i];
-      my $final_file = ( $first_file_only or ( 1 == scalar(@$pfiles) ) ) ? $sample_name . $output_ext : basename($pfile1) . $output_ext;
+      my $final_file = ( $first_file_only or ( 1 == scalar(@$pfiles) ) ) ? $sample_name . $output_file_ext : basename($pfile1) . $output_file_ext;
 
       push( @result_files, "${cur_dir}/$final_file" );
       if ( $output_other_ext ne "" ) {

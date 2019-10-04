@@ -34,6 +34,9 @@ sub result {
 
   my $output_file                = get_option( $config, $section, "output_file",                "" );
   my $output_file_ext            = get_option( $config, $section, "output_file_ext",            "" );
+  if($output_file_ext eq ""){
+    $output_file_ext            = get_option( $config, $section, "output_ext",            "" );
+  }
   my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
   my $output_perSample_file                = get_option( $config, $section, "output_perSample_file",                "" );
   my $output_perSample_file_ext            = get_option( $config, $section, "output_perSample_file_ext",            "" );
