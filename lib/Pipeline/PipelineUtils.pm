@@ -891,6 +891,7 @@ sub addAnnovarFilter {
     option              => "",
     sh_direct           => 1,
     maximum_freq_values => "0.001,0.01,0.1,1.0",
+    filter_fq_equal_1   => $def->{filter_variants_fq_equal_1},
     pbs                 => {
       "nodes"    => "1:ppn=1",
       "walltime" => "2",
@@ -965,6 +966,8 @@ sub addGATK4CNVGermlineCohortAnalysis {
   my ( $config, $def, $target_dir, $bam_ref, $step1, $step2, $step3, $step4, $step5, $step6 ) = @_;
 
   my $preprocessIntervalsTask = addGATK4PreprocessIntervals( $config, $def, $target_dir, $bam_ref, $step1, $step2, $step3, $step4, $step5, $step6, "_01" );
+
+  my $chrCode = getValue($def, "has_chr_in_chromosome_name") ? ";addChr=1" : "";
 
   #CollectReadCounts at sample level
   my $CollectReadCounts = "GATK4_CNV_Germline_02_CollectReadCounts";
@@ -1120,7 +1123,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
       perform                  => 1,
       target_dir               => $target_dir . '/' . $cnvGenes,
       rtemplate                => "../Annotation/getGeneLocus.r",
-      rCode                    => "host=\"" . getValue($def, "biomart_host") . "\";dataset=\"" . getValue($def, "biomart_dataset") . "\";symbolKey=\"" . getValue($def, "biomart_symbolKey") . "\";genesStr=\"" . getValue( $def, "covered_bed" ) . "\"",
+      rCode                    => "host=\"" . getValue($def, "biomart_host") . "\";dataset=\"" . getValue($def, "biomart_dataset") . "\";symbolKey=\"" . getValue($def, "biomart_symbolKey") . "\";genesStr=\"" . getValue( $def, "annotation_genes" ) . "\"" . $chrCode,
       output_file_ext          => ".bed;.missing",
       sh_direct                => 1,
       'pbs'                    => {
