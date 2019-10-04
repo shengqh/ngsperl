@@ -54,17 +54,22 @@ for name in fileMap.keys():
   #if len(samples) == 2:
   #  break
   
+print("reading " + args.bedfile + " ...")
 annotationMap = {}
 with open(args.bedfile, "r") as fin:
   for line in fin:
-    parts = line.split('\t')
+    parts = line.rstrip().split('\t')
     if not parts[0] in annotationMap:
       chrList = []
       annotationMap[parts[0]] = chrList
     else:
       chrList = annotationMap[parts[0]]
-    chrList.append([int(parts[1]), int(parts[2]), parts[3]])
+    if(len(parts) >= 4):
+      chrList.append([int(parts[1]), int(parts[2]), parts[3]])
+    else:
+      chrList.append([int(parts[1]), int(parts[2]), "%s:%s-%s" % (parts[0], parts[1], parts[2])])
   
+print("outputing to " + args.output + " ...")
 samples = sorted(samples)  
 # samples = sorted(fileMap.keys())
 with open(args.output, "w") as fout:
