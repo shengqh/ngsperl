@@ -27,7 +27,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
 
   my $sort_memory = $thread == 1 ? $memory : "4G";
 
@@ -61,7 +61,8 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sample_files_str = ( scalar(@sample_files) == 2 ) ? "\"" . $sample_files[0] . "\" \"" . $sample_files[1] . "\"" : "\"" . $sample_files[0] . "\"";
+    my $sample_file_0 = $sample_files[0];
+    my $sample_files_str = ( scalar(@sample_files) == 2 ) ? "\"" . $sample_file_0 . "\" \"" . $sample_files[1] . "\"" : "\"" . $sample_file_0 . "\"";
 
     my $unsorted_bam_file = $sample_name . ".unsorted.bam";
     my $clean_bam_file    = $sample_name . ".unsorted.clean.bam";
@@ -80,7 +81,7 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $final_file =  $mark_duplicates ? $rmdup_bam_file : $sorted_bam_file;
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, 0, $sample_file_0 );
 
     print $pbs "
 if [[ (1 -eq \$1) || (! -s $unsorted_bam_file) ]]; then
