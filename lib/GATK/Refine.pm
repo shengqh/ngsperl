@@ -73,7 +73,6 @@ sub perform {
 
   my $fixMisencodedQuals = get_option( $config, $section, "fixMisencodedQuals", 0 ) ? "-fixMisencodedQuals" : "";
 
-  my $filter_soft_clip = get_option( $config, $section, "filter_soft_clip",         0 );
   my $sorted           = get_option( $config, $section, "sorted",                   0 );
   my $remove_duplicate = get_option( $config, $section, "remove_duplicate",         1 );
   my $indelRealignment = get_option( $config, $section, "indel_realignment",        0 );
@@ -118,8 +117,6 @@ sub perform {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $sampleFile   = $sample_files[0];
 
-    my $filter_soft_clipName = $filter_soft_clip ?".nosoftclip":"";
-
     my $rmdupResultName = "";
     if ($remove_duplicate) {
       $rmdupResultName = ".rmdup";
@@ -131,13 +128,12 @@ sub perform {
     my $indelResultName = $indelRealignment ? ".indel" : "";
     my $baqResultName   = $baq              ? ".baq"   : "";
 
-    my $nosoftclipFile = "${sample_name}${filter_soft_clipName}.bam";
-    my $presortedFile = "${sample_name}${filter_soft_clipName}.sorted.bam";
-    my $rmdupFile = "${sample_name}${filter_soft_clipName}${rmdupResultName}.bam";
-    my $indelFile = "${sample_name}${filter_soft_clipName}${rmdupResultName}${indelResultName}.bam";
-    my $recalTable = "${sample_name}${filter_soft_clipName}${rmdupResultName}${indelResultName}.recal.table";
-    my $recalFile = "${sample_name}${filter_soft_clipName}${rmdupResultName}${indelResultName}.recal.bam";
-    my $final_file = "${sample_name}${filter_soft_clipName}${rmdupResultName}${indelResultName}.recal${baqResultName}.bam";
+    my $presortedFile = "${sample_name}.sorted.bam";
+    my $rmdupFile = "${sample_name}${rmdupResultName}.bam";
+    my $indelFile = "${sample_name}${rmdupResultName}${indelResultName}.bam";
+    my $recalTable = "${sample_name}${rmdupResultName}${indelResultName}.recal.table";
+    my $recalFile = "${sample_name}${rmdupResultName}${indelResultName}.recal.bam";
+    my $final_file = "${sample_name}${rmdupResultName}${indelResultName}.recal${baqResultName}.bam";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -147,33 +143,11 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
-
     my $rmlist       = "";
     my $inputFile    = $sampleFile;
     my $resultPrefix = $sample_name;
 
-    if ($filter_soft_clip) {
-      my $python_filterSoftClip = dirname(__FILE__) . "/filterSoftClip.py";
-      if ( !-e $python_filterSoftClip ) {
-        die "File not found : " . $python_filterSoftClip;
-      }
-
-      my $index_command = "";
-      if($sorted){
-        $index_command = "samtools index $nosoftclipFile "
-      }
-
-      print $pbs "
-if [[ -s $inputFile && ! -s $nosoftclipFile ]]; then
-  echo filter_soft_clip=`date` 
-  python $python_filterSoftClip -i $inputFile -o $nosoftclipFile 
-  $index_command
-fi
-";
-      $inputFile = $nosoftclipFile;
-      $rmlist    = $rmlist . " $nosoftclipFile";
-    }
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, 0, $inputFile );
 
     if ( !$sorted ) {
       print $pbs "
@@ -268,14 +242,12 @@ sub get_clear_map {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my $filter_soft_clip = get_option( $config, $section, "filter_soft_clip",         0 );
   my $sorted           = get_option( $config, $section, "sorted",                   0 );
   my $remove_duplicate = get_option( $config, $section, "remove_duplicate",         1 );
   my $indelRealignment = get_option( $config, $section, "indel_realignment",        0 );
   my $baq              = get_option( $config, $section, "samtools_baq_calibration", 0 );
   my $mark_duplicate   = get_option( $config, $section, "mark_duplicate",           0 );
 
-  my $filter_soft_clipName = $filter_soft_clip ?".nosoftclip":"";
   my $indelResultName = $indelRealignment ? ".indel" : "";
   my $baqResultName   = $baq              ? ".baq"   : "";
   my $rmdupResultName = "";
@@ -288,19 +260,14 @@ sub get_clear_map {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $nosoftclipFile = "${sample_name}${filter_soft_clipName}.bam";
-    my $presortedFile = "${sample_name}${filter_soft_clipName}.sorted.bam";
-    my $rmdupFile = "${sample_name}${filter_soft_clipName}${rmdupResultName}.bam";
-    my $indelFile = "${sample_name}${filter_soft_clipName}${rmdupResultName}${indelResultName}.bam";
-    my $recalTable = "${sample_name}${filter_soft_clipName}${rmdupResultName}${indelResultName}.recal.table";
-    my $recalFile = "${sample_name}${filter_soft_clipName}${rmdupResultName}${indelResultName}.recal.bam";
-    my $final_file = "${sample_name}${filter_soft_clipName}${rmdupResultName}${indelResultName}.recal${baqResultName}.bam";
+    my $presortedFile = "${sample_name}.sorted.bam";
+    my $rmdupFile = "${sample_name}${rmdupResultName}.bam";
+    my $indelFile = "${sample_name}${rmdupResultName}${indelResultName}.bam";
+    my $recalTable = "${sample_name}${rmdupResultName}${indelResultName}.recal.table";
+    my $recalFile = "${sample_name}${rmdupResultName}${indelResultName}.recal.bam";
+    my $final_file = "${sample_name}${rmdupResultName}${indelResultName}.recal${baqResultName}.bam";
 
     my $remove_files = [];
-    if ($filter_soft_clip) {
-      push @$remove_files, $nosoftclipFile;
-    }
-
     if ( !$sorted ) {
       push @$remove_files, $presortedFile;
     }
@@ -316,10 +283,9 @@ sub get_clear_map {
       push @$remove_files, ( $indelFile, $indelFileIndex, $intervalFile );
     }
 
-    my $recalTable     = change_extension( $recalFile, ".table");
     my $recalFileIndex = change_extension( $recalFile, ".bai" );
-
     push @$remove_files, ( $recalTable, $recalFile, $recalFileIndex );
+
     if ($baq) {
       push @$remove_files, ( $final_file, change_extension( $final_file, ".bai" ) );
     }
@@ -335,13 +301,11 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $filter_soft_clip = get_option( $config, $section, "filter_soft_clip",         0 );
   my $remove_duplicate = get_option( $config, $section, "remove_duplicate",         1 );
   my $indelRealignment = get_option( $config, $section, "indel_realignment",        0 );
   my $baq              = get_option( $config, $section, "samtools_baq_calibration", 0 );
   my $mark_duplicate   = get_option( $config, $section, "mark_duplicate",           0 );
 
-  my $filter_soft_clipName = $filter_soft_clip ?".nosoftclip":"";
   my $indelResultName = $indelRealignment ? ".indel" : "";
   my $baqResultName   = $baq              ? ".baq"   : "";
   my $rmdupResultName = "";
@@ -354,7 +318,7 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $final_file = "${sample_name}${filter_soft_clipName}${rmdupResultName}${indelResultName}.recal${baqResultName}.bam";
+    my $final_file = "${sample_name}${rmdupResultName}${indelResultName}.recal${baqResultName}.bam";
     my @result_files = ();
     push( @result_files, "${result_dir}/${final_file}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
