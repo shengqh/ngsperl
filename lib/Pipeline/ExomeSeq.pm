@@ -189,7 +189,6 @@ sub getConfig {
       gatk_jar                 => $gatk_jar,
       picard_jar               => $picard_jar,
       remove_duplicate         => 0,
-      filter_soft_clip         => $def->{filter_soft_clip},
       sh_direct                => 0,
       slim_print_reads         => 1,
       samtools_baq_calibration => 0,
@@ -205,15 +204,44 @@ sub getConfig {
     };
     push @$individual, ($refine_name);
 
+    my $bam_input = $refine_name;
+
+    if($def->{filter_soft_clip}){
+      my $soft_clip_name = $refine_name . "_nosoftclip";
+      $config->{$soft_clip_name} = {
+        class                 => "CQS::ProgramIndividualWrapper",
+        perform               => 1,
+        target_dir            => "${target_dir}/${soft_clip_name}",
+        option                => "--min-mapq " . getValue($def, "soft_clip_min_mapq", 10),
+        interpretor           => "python",
+        program               => "../GATK/filterSoftClip.py",
+        source_arg            => "-i",
+        source_ref            => [ $refine_name, ".bam" ],
+        output_to_same_folder => 1,
+        output_arg            => "-o",
+        output_file_ext       => ".nosoftclip.bam",
+        sh_direct             => 0,
+        pbs                   => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        },
+      };
+      push @$individual, ($soft_clip_name);
+      $bam_input = $soft_clip_name;
+    }
+
     my $filter_name = "";
     if ( $def->{perform_gatk4_callvariants} ) {
-      my $gvcf_name         = $refine_name . "_gatk4_hc_gvcf";
+      my $gvcf_name         = $bam_input . "_gatk4_hc_gvcf";
       $config->{$gvcf_name} = {
         class             => "GATK4::HaplotypeCaller",
         perform           => 1,
         target_dir        => "${target_dir}/$gvcf_name",
         option            => "",
-        source_ref        => $refine_name,
+        source_ref        => $bam_input,
         java_option       => "",
         fasta_file        => $fasta,
         extension         => ".g.vcf",
@@ -443,7 +471,7 @@ sub getConfig {
     }
 
     if ( $def->{"perform_muTect"} ) {
-      my $mutectName = "${refine_name}_muTect";
+      my $mutectName = "${bam_input}_muTect";
       $config->{$mutectName} = {
         class        => "GATK::MuTect",
         perform      => 1,
@@ -451,7 +479,7 @@ sub getConfig {
         target_dir   => "${target_dir}/$mutectName",
         option       => getValue( $def, "muTect_option" ),
         java_option  => "-Xmx40g",
-        source_ref   => [ $refine_name, ".bam\$" ],
+        source_ref   => [ $bam_input, ".bam\$" ],
         groups_ref   => "groups",
         fasta_file   => $fasta,
         dbsnp_file   => $def->{"dbsnp"},
@@ -511,7 +539,7 @@ sub getConfig {
     }
 
     if ( $def->{"perform_muTect2indel"} ) {
-      my $mutect2Name = "${refine_name}_muTect2indel";
+      my $mutect2Name = "${bam_input}_muTect2indel";
       $config->{$mutect2Name} = {
         class        => "GATK::MuTect2Indel",
         perform      => 1,
@@ -519,7 +547,7 @@ sub getConfig {
         target_dir   => "${target_dir}/$mutect2Name",
         option       => getValue( $def, "muTect2_option" ),
         java_option  => "-Xmx40g",
-        source_ref   => [ $refine_name, ".bam\$" ],
+        source_ref   => [ $bam_input, ".bam\$" ],
         groups_ref   => "groups",
         fasta_file   => $fasta,
         dbsnp_file   => $def->{"dbsnp"},
@@ -541,13 +569,13 @@ sub getConfig {
     }
 
     if ( $def->{perform_cnv_cnMOPS} ) {
-      my $cnmopsName = "${refine_name}_cnMOPS";
+      my $cnmopsName = "${bam_input}_cnMOPS";
       $config->{$cnmopsName} = {
         class       => "CNV::cnMops",
         perform     => 1,
         target_dir  => "${target_dir}/$cnmopsName",
         option      => "",
-        source_ref  => [ $refine_name, ".bam\$" ],
+        source_ref  => [ $bam_input, ".bam\$" ],
         bedfile     => $def->{covered_bed},
         isbamsorted => 1,
         sh_direct   => 1,
@@ -563,11 +591,11 @@ sub getConfig {
 
     my $cnvAnnotationGenesPlot = undef;
     if ( $def->{perform_cnv_gatk4_cohort} ) {
-      $cnvAnnotationGenesPlot = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, [ $refine_name, ".bam\$" ], $individual, $summary, $step3, $step4, $step5, $step6 );
+      $cnvAnnotationGenesPlot = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, [ $bam_input, ".bam\$" ], $bam_input, $individual, $summary, $step3, $step4, $step5, $step6 );
     }
 
     if ( ( defined $annovar_filter_geneannotation_name ) and ( defined $cnvAnnotationGenesPlot ) ) {
-      my $oncoPlotTask = "SNV_CNV_Oncoplot";
+      my $oncoPlotTask = "${bam_input}_SNV_CNV_Oncoplot";
       $config->{$oncoPlotTask} = {
         class                      => "CQS::UniqueR",
         perform                    => 1,
@@ -589,7 +617,7 @@ sub getConfig {
     }
 
     if ( $def->{perform_cnv_xhmm} ) {
-      addXHMM( $config, $def, $target_dir, [ $refine_name, ".bam\$" ], $individual, $summary, $step3, $step4, $step5, $step6 );
+      addXHMM( $config, $def, $target_dir, [ $bam_input, ".bam\$" ], $individual, $summary, $step3, $step4, $step5, $step6 );
     }
   }
 
