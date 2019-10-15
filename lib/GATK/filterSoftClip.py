@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser(description="Remove low quality or soft-clip re
 parser.add_argument('-i', '--input', action='store', nargs='?', help='Input BAM file', required=True)
 parser.add_argument('-o', '--output', action='store', nargs='?', help="Output bam file", required=True)
 parser.add_argument('--min-mapq', action='store', nargs='?', type=int, default=10, help="Minimum mapping quality of read")
-#parser.add_argument('-m', '--minimum_softclip_bases', action='store', nargs='?', default=3, help="Discard reads with minimum softclip bases")
+parser.add_argument('-m', '--minimum_softclip_bases', action='store', nargs='?', default=3, help="Discard reads with minimum softclip bases")
 
 args = parser.parse_args()
 
@@ -87,6 +87,10 @@ with pysam.AlignmentFile(args.input, openmode) as samfile:
 if os.path.isfile(args.output):
   os.remove(args.output)
 os.rename(tmpfile, args.output)
+
+cmd = "samtools index " + args.output
+logger.info(cmd)
+os.system(cmd)
 
 logger.info("Done")
 
