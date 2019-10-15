@@ -130,6 +130,7 @@ sub getScRNASeqConfig {
       perform                  => 1,
       target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "seurat",
       report_rmd_file          => "../scRNA/seurat.rmd",
+      additional_rmd_files     => "Functions.Rmd",
       parameterSampleFile1_ref => "files",
       sh_direct                => 1,
       pbs                      => {
