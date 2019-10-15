@@ -94,6 +94,7 @@ sub perform {
 
   if ($combined) {
     if ($paired_end){
+      #for paired end data, keep the first read only for ChipQC
       for my $bamName (keys %$bamfiles){
         my $oldFile = $bamfiles->{$bamName}->[0];
         my $newFile = $bamName . ".filtered.bam";
@@ -113,7 +114,7 @@ fi
       for my $bamName (keys %$sourceBamFiles){
         my $newFile = $sourceBamFiles->{$bamName}->[0];
         print $pbs "if [[ -s $final_file ]]; then 
-  rm $newFile
+  rm $newFile ${newFile}.bai
 fi
 ";
       } 
