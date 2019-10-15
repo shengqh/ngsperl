@@ -77,6 +77,19 @@ sub getPreprocessionConfig {
   my $task    = getValue( $def, "task_name" );
   my $email   = getValue( $def, "email" );
 
+  if (! $def->{sra_to_fastq}){
+    #all file defined in $files should be hard-coding with absolute path, check file
+    my $sourcefiles   = getValue( $def, "files" );
+    foreach my $filename (keys %$sourcefiles){
+      my $fileref = $sourcefiles->{$filename};
+      foreach my $eachfile (@$fileref) {
+        if (! -e $eachfile){
+          die "file not exists (" . $filename . "): " . $eachfile;
+        }
+      }
+    }
+  }
+
   #data
   my $config = {
     general => {
