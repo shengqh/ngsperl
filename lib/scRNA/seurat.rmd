@@ -97,7 +97,7 @@ VlnPlot(object = obj, features = c("nFeature_RNA", "nCount_RNA", "percent.mito")
 
 # FeatureScatter is typically used to visualize feature-feature relationships, but can be used for anything calculated by the object, i.e. columns in object metadata, PC scores etc.
 
-plot1 <- FeatureScatter(object = obj, feature1 = "nCount_RNA", feature2 = "percent.mt") 
+plot1 <- FeatureScatter(object = obj, feature1 = "nCount_RNA", feature2 = "percent.mito") 
 plot2 <- FeatureScatter(object = obj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA") 
 CombinePlots(plots = list(plot1,plot2))
 
@@ -117,7 +117,7 @@ resolution=0.5
 random.seed=20191015
 cluster_umap_file = paste0("cluster_umap.resolution", resolution, ".rds")
 if(!file.exists(cluster_umap_file)){
-	obj <- subset(x = obj, subset = nFeature_RNA > 200 & percent.mt < 20)
+	obj <- subset(x = obj, subset = nFeature_RNA > 200 & percent.mito < 20)
 	obj <- SCTransform(obj, vars.to.regress = "percent.mito", verbose = FALSE)
 
 	obj <- RunPCA(object = obj, verbose=FALSE)
