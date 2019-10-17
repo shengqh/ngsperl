@@ -271,6 +271,8 @@ sub initializeSmallRNADefaultOptions {
     $def->{run_cutadapt}     = undef;
   }
   initDefaultValue( $def, "perform_cutadapt", 1 );
+  initDefaultValue( $def, "cutadapt_thread", 8 );
+
   initDefaultValue( $def, "fastq_len", 1 );
   
   if ( $def->{perform_cutadapt} ) {

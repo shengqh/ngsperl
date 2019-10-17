@@ -265,7 +265,7 @@ sub getPreprocessionConfig {
   my $untrimed_ref = $source_ref;
 
   if ($run_cutadapt) {
-    my $cutadapt_thread = getValue($def, "cutadapt_thread", 8);
+    my $cutadapt_thread = getValue($def, "cutadapt_thread", 1);
     my $cutadapt_class = ( defined $def->{cutadapt_config} ) ? "Trimmer::CutadaptByConfig" : "Trimmer::Cutadapt";
     my $cutadapt = {
       "cutadapt" => {
