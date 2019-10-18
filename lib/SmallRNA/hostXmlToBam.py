@@ -7,7 +7,8 @@ import argparse
 import xml.etree.ElementTree as ET
 from Bio.Seq import Seq
 
-DEBUG = 0
+DEBUG = False
+NOT_DEBUG= not DEBUG
 
 if DEBUG:
   inputFile="/scratch/cqs/shengq1/vickers/20170628_smallRNA_3018-KCV-77_78_79_mouse_v3/host_genome/bowtie1_genome_1mm_NTA_smallRNA_count/result/Urine_WT_14/Urine_WT_14.count.mapped.xml"
@@ -17,9 +18,10 @@ else:
   parser = argparse.ArgumentParser(description="Generate smallRNA BAM from mapped xml.",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-  parser.add_argument('-i', '--input', action='store', nargs='?', help='Input count xml file')
-  parser.add_argument('-b', '--oldbamfile', action='store', nargs='?', help="Original bam file")
-  parser.add_argument('-o', '--output', action='store', nargs='?', help="Output bam file")
+  parser.add_argument('-i', '--input', action='store', nargs='?', help='Input count xml file', required=NOT_DEBUG)
+  parser.add_argument('-b', '--oldbamfile', action='store', nargs='?', help="Original bam file", required=NOT_DEBUG)
+  parser.add_argument('-o', '--output', action='store', nargs='?', help="Output bam file", required=NOT_DEBUG)
+  parser.add_argument('--dont_extend', action='store_true', nargs='?', default=False, help="Don't extend the read with query count")
 
   args = parser.parse_args()
   
@@ -78,9 +80,13 @@ with pysam.AlignmentFile(unsorted, "wb", header=header) as outf:
                 ("MD", loc.get("mdz")),
                 ("NM", int(loc.get("nmi"))))
 
-      for idx in range(1, query_count):
-        a.query_name = query_name + ":" + str(idx)
+      if args.dont_extend:
+        a.query_name = query_name
         outf.write(a)
+      else:
+        for idx in range(1, query_count):
+          a.query_name = query_name + ":" + str(idx)
+          outf.write(a)
    
 pysam.sort("-o", outputFilePrefix + ".bam", unsorted)
 pysam.index(outputFilePrefix + ".bam")
