@@ -21,7 +21,7 @@ else:
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input count xml file', required=NOT_DEBUG)
   parser.add_argument('-b', '--oldbamfile', action='store', nargs='?', help="Original bam file", required=NOT_DEBUG)
   parser.add_argument('-o', '--output', action='store', nargs='?', help="Output bam file", required=NOT_DEBUG)
-  parser.add_argument('--dont_extend', action='store_true', nargs='?', default=False, help="Don't extend the read with query count")
+  parser.add_argument('--dont_extend', action='store_true', default=False, help="Don't extend the read with query count")
 
   args = parser.parse_args()
   
