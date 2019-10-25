@@ -23,6 +23,15 @@ sub build_rmd_file {
   my $rtemplate = dirname(__FILE__) . "/" . $config->{$section}{report_rmd_file};
   my $rfile     = $result_dir . "/" . $result_file;
 
+  if ( defined $config->{$section}{additional_rmd_files} ) {
+    my @additional_rmd_files = split( ';', $config->{$section}{additional_rmd_files} );
+    for my $rmd_file (@additional_rmd_files){
+      my $source_rmd = dirname(__FILE__) . "/" . trim($rmd_file);
+      my $target_rmd = $result_dir . "/" . basename(trim($rmd_file));
+      copy( $source_rmd, $target_rmd ) or die "Copy failed: $!";
+    } 
+  }
+  
   if ( defined $config->{$section}{function_r_files} ) {
     my @function_r_files = split( ';', $config->{$section}{function_r_files} );
 
