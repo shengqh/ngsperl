@@ -111,7 +111,7 @@ allgenes<-obj@assays$RNA@counts@Dimnames[1]
 ```{r celltypedatabase, echo=FALSE}
 marker<-data.frame(fread(markerfile))
 hsind<-regexpr(species,marker[,1])
-marker_hs<-marker[hsind>0 & marker$ubiquitousness.index<0.05,]
+marker_species<-marker[hsind>0 & marker$ubiquitousness.index<0.05,]
 
 ##change the gene symbol only keep the first letter capitalize
 if (species=="Mm") {
@@ -119,7 +119,7 @@ if (species=="Mm") {
 }
 ##
 
-cellType<-tapply(marker_hs$official.gene.symbol,marker_hs$cell.type,list)
+cellType<-tapply(marker_species$official.gene.symbol,marker_species$cell.type,list)
 freq<-sort((table(unlist(cellType)))/length(cellType))
 weight<-1+sqrt((max(freq)-freq)/(max(freq)-min(freq)))
 ################
