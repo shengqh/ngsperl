@@ -2,13 +2,22 @@
 title: "scRNA Sequencing Data Analysis Report"
 date: "`r format(Sys.time())`"
 output: 
-  html_document:
-    toc: true
-    toc_depth: 4
-    number_sections: true
+  rmdformats::readthedown:
+    code_folding: hide
+    self_contained: true
+    thumbnails: false
+    lightbox: false    
+    toc_depth: 3
 ---
 
 <style type="text/css">
+#content {
+    max-width: 1500px !important;
+    margin-left: 300px !important;
+}
+#table-of-contents {
+    width: 300px !important;
+}
 .main-container {
   max-width: 90%;
   margin-left: auto;
@@ -33,41 +42,125 @@ library(dplyr)
 library(Seurat)
 library(knitr)
 library(kableExtra)
+library(ggplot2)
+library(ggpubr)
+library(rmdformats)
+library(DT)
+library(data.table)
+library(digest)
+library(heatmap3)
 
-rawdata_file = "rawdata.rds"
+options_table<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
+options<-split(options_table$V1, options_table$V2)
+
+optionstr<-paste0(options_table$V1, collapse = "_")
+
+Mtpattern= options$Mtpattern
+rRNApattern=options$rRNApattern
+Remove_Mt_rRNA= ifelse(options$Remove_Mt_rRNA == "FALSE", FALSE, TRUE)
+resolution=as.numeric(options$resolution)
+species=options$species
+markerfile<-options$markers_file
+
+nFeature_cutoff_min=as.numeric(options$nFeature_cutoff_min)
+nFeature_cutoff_max=as.numeric(options$nFeature_cutoff_max)
+nCount_cutoff=as.numeric(options$nCount_cutoff)
+mt_cutoff=as.numeric(options$mt_cutoff)
+
+filelist1<-read.table("filelist1.txt", header=F)
+filestr<-paste0(filelist1$V1, collapse = "_")
+
+prefix=paste0(options$prefix , "_", digest(paste0(optionstr, filestr), "md5", serialize = FALSE))
+
+rawdata_file = paste0(prefix, "_rawdata.rds")
 if(!file.exists(rawdata_file)){
-	filelist1<-read.table("filelist1.txt", header=F)
-	finalobj<-NULL
-	objs<-apply(filelist1, 1, function(x){
-		fileName  = x[[1]]
-		fileTitle = x[[2]]
-		if(dir.exists(fileName)){
-			counts = Read10X(fileName)
-		} else {
-			counts = Read10X_h5(fileName)
-		}
-		sobj = CreateSeuratObject(counts = counts, project = fileTitle,  min.cells = 3, min.features = 200)
-		return(sobj)
-	})
-	
-	if(length(objs) == 1){
-		obj <- objs[[1]]
-	}else{
-		cellids<-unlist(lapply(objs, function(x) x@project.name))
-		obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), add.cell.ids = cellids, project = "integrated")
-	}
-	rm(objs)
-	
-	# calculate mitochodram percentage in each sample
-	saveRDS(obj, file=rawdata_file)
+  filelist1<-read.table("filelist1.txt", header=F)
+  finalobj<-NULL
+  objs<-apply(filelist1, 1, function(x){
+    fileName  = x[[1]]
+    fileTitle = x[[2]]
+    if(dir.exists(fileName)){
+      counts = Read10X(fileName)
+    } else {
+      counts = Read10X_h5(fileName)
+    }
+    sobj = CreateSeuratObject(counts = counts, project = fileTitle,  min.cells = 3, min.features = 200)
+    return(sobj)
+  })
+  
+  if(length(objs) == 1){
+    obj <- objs[[1]]
+  }else{
+    cellids<-unlist(lapply(objs, function(x) x@project.name))
+    obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), add.cell.ids = cellids, project = "integrated")
+  }
+  rm(objs)
+  
+#  obj@assays$RNA@counts@Dimnames[[1]] <- toupper(obj@assays$RNA@counts@Dimnames[[1]])
+#  obj@assays$RNA@data@Dimnames[[1]] <- toupper(obj@assays$RNA@data@Dimnames[[1]])
+  
+  # calculate mitochodram percentage in each sample
+  saveRDS(obj, file=rawdata_file)
 }else{
-	obj=readRDS(rawdata_file)
+  obj=readRDS(rawdata_file)
 }
+allgenes<-obj@assays$RNA@counts@Dimnames[1]
+
 ```
 
-# Data preparation and cluster
+```{r celltypedatabase, echo=FALSE}
+marker<-data.frame(fread(markerfile))
+hsind<-regexpr(species,marker[,1])
+marker_hs<-marker[hsind>0 & marker$ubiquitousness.index<0.05,]
 
-## Quality control
+##change the gene symbol only keep the first letter capitalize
+if (species=="Mm") {
+  marker_species$official.gene.symbol<-paste0(substr(marker_species$official.gene.symbol,1,1),substr(tolower(marker_species$official.gene.symbol),2,nchar(marker_species$official.gene.symbol)))
+}
+##
+
+cellType<-tapply(marker_hs$official.gene.symbol,marker_hs$cell.type,list)
+freq<-sort((table(unlist(cellType)))/length(cellType))
+weight<-1+sqrt((max(freq)-freq)/(max(freq)-min(freq)))
+################
+
+ORA_celltype<-function(medianexp,cellType){
+  ORA_result<-matrix(NA, nrow=length(cellType),ncol=dim(medianexp)[2])
+  CTA_result<-matrix(0,nrow=length(cellType),ncol=dim(medianexp)[2])
+  exp_z<-scale(medianexp)
+  genenames<-rownames(medianexp)   
+  for (j in 1: dim(medianexp)[2]){
+    clusterexp<-medianexp[,j] 
+    clusterexp_z<-exp_z[,j]
+    for (i in 1:length(cellType)){
+      
+      ct_exp<-length(intersect(genenames[clusterexp>0],cellType[[i]]))
+      ct_not_exp<-length(cellType[[i]])-ct_exp
+      exp_not_ct<-sum(clusterexp>0)-ct_exp
+      not_exp_not_ct<-length(clusterexp)-ct_not_exp 
+      cont.table<-matrix(c(ct_exp,ct_not_exp,exp_not_ct,not_exp_not_ct),nrow=2)
+      ORA_result[i,j]<-fisher.test(cont.table,alternative="greater")$p.value
+      ###
+      weight_ss<-weight[names(weight)%in%cellType[[i]]]
+      ind<-match(names(weight_ss),genenames)
+      exp_ss<-clusterexp_z[ind[!is.na(ind)]]
+      weight_ss<-weight_ss[!is.na(ind)]
+      CTA_result[i,j]<-sum(exp_ss*weight_ss)/(length(exp_ss)^0.3)
+    }
+  }
+  rownames(ORA_result)<-rownames(CTA_result)<-names(cellType)
+  minp_ora_ind<- apply(ORA_result,2,function(x){which.min(x)})
+  minp_ora<-apply(ORA_result,2,min)
+  names(minp_ora)<-rownames(ORA_result)[minp_ora_ind]
+  
+  max_cta_ind<- apply(CTA_result,2,function(x){which.max(x)})
+  max_cta<-apply(CTA_result,2,max,na.rm=T)
+  names(max_cta)<-rownames(CTA_result)[max_cta_ind]
+  return(list(ora=ORA_result,cta=CTA_result,min_ora=minp_ora,max_cta=max_cta))
+}
+
+```
+# Quality control
 
 A few QC metrics [commonly used](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4758103/) by the community include
 
@@ -82,99 +175,193 @@ A few QC metrics [commonly used](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC47
 
 ```{r mito, echo=FALSE}
 # The [[ operator can add columns to object metadata. This is a great place to stash QC stats
-obj[["percent.mito"]] <- PercentageFeatureSet(object = obj, pattern = "^mt-|^MT-")
+obj[["percent.mt"]] <- PercentageFeatureSet(object = obj, pattern = Mtpattern)
 ```
 
 We visualize QC metrics.
-    
-```{r qc1, echo=FALSE, fig.height=7, fig.width=13, fig.cap=figRef("qc_metrics_1", "Violin plot of number of feature, number of read count and percentage of mitochondrial")}
-
-#Visualize QC metrics as a violin plot
-VlnPlot(object = obj, features = c("nFeature_RNA", "nCount_RNA", "percent.mito"), ncol = 3)
-```
 
 ```{r qc2, echo=FALSE, fig.height=7, fig.width=13, fig.cap=figRef("qc_metrics_2", "Scatter plot of number of feature/percentage of mitochondrial vs number of read count")}
 
 # FeatureScatter is typically used to visualize feature-feature relationships, but can be used for anything calculated by the object, i.e. columns in object metadata, PC scores etc.
 
-plot1 <- FeatureScatter(object = obj, feature1 = "nCount_RNA", feature2 = "percent.mito") 
+plot1 <- FeatureScatter(object = obj, feature1 = "nCount_RNA", feature2 = "percent.mt") 
 plot2 <- FeatureScatter(object = obj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA") 
 CombinePlots(plots = list(plot1,plot2))
 
 ```
 
-## Data filter and cluster analysis 
+# Data filter and cluster analysis 
 
 We use QC metrics to filter cells.
 
-* We filter cells that have unique feature counts less than 200
-* We filter cells that have >20% mitochondrial counts
+* We filter cells that have unique feature counts less than `r nFeature_cutoff_min` or larger than `r nFeature_cutoff_max` 
+* We filter cells that have read count less than `r nCount_cutoff`
+* We filter cells that have >`r mt_cutoff`% mitochondrial counts
 
 Then we normalize the data and run non-linear dimensional reduction (UMAP/tSNE).
 
 ```{r data_prepartion, echo=FALSE}
-resolution=0.5
 random.seed=20191015
-cluster_umap_file = paste0("cluster_umap.resolution", resolution, ".rds")
+cluster_umap_file = paste0(prefix, "_cluster_umap.rds")
 if(!file.exists(cluster_umap_file)){
-	obj <- subset(x = obj, subset = nFeature_RNA > 200 & percent.mito < 20)
-	obj <- SCTransform(obj, vars.to.regress = "percent.mito", verbose = FALSE)
+  obj <- subset(obj, subset = nFeature_RNA > nFeature_cutoff_min & nFeature_RNA<nFeature_cutoff_max & nCount_RNA>nCount_cutoff & percent.mt < mt_cutoff)
 
-	obj <- RunPCA(object = obj, verbose=FALSE)
+  obj <- SCTransform(obj, vars.to.regress = "percent.mt", verbose = FALSE)
 
-	dims<-1:20
-	#PCA->UMAP
-	obj <- RunUMAP(object = obj, dims=dims, verbose = FALSE)
-	
-	#PCA->Neightbors->Clusters
-	obj <- FindNeighbors(object = obj, dims=dims, verbose=FALSE)
-	obj <- FindClusters(object=obj, verbose=FALSE, random.seed=random.seed, resolution=resolution)
-	
-	saveRDS(obj, file=cluster_umap_file)
+  rRNA.genes <- grep(pattern = rRNApattern,  rownames(obj), value = TRUE)
+  Mt.genes<- grep (pattern= Mtpattern,rownames(obj), value=TRUE )
+
+  if (Remove_Mt_rRNA) {
+    var.genes <- dplyr::setdiff(VariableFeatures(obj), c(rRNA.genes,Mt.genes))
+  } else {
+    var.genes <- VariableFeatures(obj)
+  }
+
+  obj <- RunPCA(object = obj, features = var.genes, verbose=FALSE)
+
+  dims<-1:20
+  #PCA->UMAP
+  obj <- RunUMAP(object = obj, dims=dims, verbose = FALSE)
+  
+  #PCA->Neightbors->Clusters
+  obj <- FindNeighbors(object = obj, dims=dims, verbose=FALSE)
+  obj <- FindClusters(object=obj, verbose=FALSE, random.seed=random.seed, resolution=resolution)
+  
+  saveRDS(obj, file=cluster_umap_file)
 }else{
-	obj = readRDS(cluster_umap_file)
+  obj = readRDS(cluster_umap_file)
+  if (Remove_Mt_rRNA) {
+    var.genes <- dplyr::setdiff(VariableFeatures(obj), c(rRNA.genes,Mt.genes))
+  } else {
+    var.genes <- VariableFeatures(obj)
+  }
 }
-
 ```
 
-``` {r umap_cells, echo=FALSE, fig.height=5, fig.width=7, fig.cap=figRef("umap_cells", "UMAP of cells")}
+```{r markers, eval=T, echo=FALSE, results="asis"}
+cat("\n\n## Marker genes for each cluster\n\n")
+
+allmarker_file = paste0(prefix, "_allmarkers.rds")
+if(!file.exists(allmarker_file)){
+  obj.markers <- FindAllMarkers(obj, features=var.genes, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+  saveRDS(obj.markers, allmarker_file)
+}else{
+  obj.markers <- readRDS(allmarker_file)
+}
+top10 <- obj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
+print(kable_styling(kable(top10, caption=tabRef("top10", "Top 10 marker genes in each cluster"))))
+```
+
+# Cell clusters
+    
+```{r qc1, echo=FALSE, fig.height=7, fig.width=13, fig.cap=figRef("qc_metrics_1", "Violin plot of percentage of mitochondrial, number of feature, number of read count and first principle component")}
+VlnPlot(object = obj, features = c("percent.mt", "nFeature_RNA", "nCount_RNA", "PC_1" ), label=T)
+```
+
+``` {r umap_cells, echo=FALSE, fig.height=10, fig.width=12, fig.cap=figRef("umap_cells", "UMAP of cells")}
 # note that you can set `label = TRUE` or use the LabelClusters function to help label individual clusters
 DimPlot(object = obj, reduction = 'umap', label=TRUE)
 ```
 
-```{r umap_samples, echo=FALSE, fig.height=5, fig.width=7, fig.cap=figRef("umap_samples", "UMAP of samples")}
+```{r umap_samples, echo=FALSE, fig.height=10, fig.width=12, fig.cap=figRef("umap_samples", "UMAP of samples")}
 DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="orig.ident")
 ```
 
-# Cell type identification
-
-## Marker genes for each cluster
-
-```{r markers, echo=FALSE, results="asis"}
-allmarker_file = paste0("allmarkers.resolution", resolution, ".rds")
-if(!file.exists(allmarker_file)){
-	allMarkers <- FindAllMarkers(obj)
-	saveRDS(allMarkers, allmarker_file)
-}else{
-	allMarkers <- readRDS(allmarker_file)
-}
-top10 <- allMarkers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
-print(kable_styling(kable(top10, caption=tabRef("top10", "Top 10 marker genes in each cluster"))))
+```{r heatmap_samples, echo=FALSE, fig.height=10, fig.width=12, fig.cap=figRef("heatmap_samples", "Marker genes in each cell type")}
+DoHeatmap(obj, features = top10$gene) + NoLegend()
 ```
 
-## Marker genes figures
+# Predict cell types
 
-```{r markergene figures, echo=FALSE, results="asis", fig.width=10, fig.height=6}
-cluster<-"0"
-for(cluster in levels(top10$cluster)){
-	clusterGenes=top10$gene[top10$cluster==cluster]
-	cat("\n\n### Marker genes in cluster ", cluster, "  \n\n")
-	gi<-1
-	for(gi in c(1,3,5,7,9)){
-		curgenes<-clusterGenes[gi:(gi+1)]
-		p<-FeaturePlot(obj, curgenes, ncol=2, label=T)	
-		print(p)
-	}
+```{r, fig.width=18, fig.height=10, results="asis"}
+#SCLC<-readRDS(cluster_umap_file)
+SCLC<-obj
+clusters<-SCLC@active.ident
+
+sumcounts<-t(apply(GetAssayData(SCLC,assay="RNA",slot="data"),1,function(x){tapply(x,clusters,sum)}))
+logsumcounts<-log2(sumcounts+1)
+
+DoHeatmap_predictcelltype<-function(cta_mat) {
+   layout(matrix(c(2,0,0,1), 2, 2, byrow = TRUE),width=c(1,6),heights=c(1,6))
+      par(mar=c(3,1,1,10))
+      par(xaxs="i")
+      par(yaxs="i")
+   image(1:dim(cta_mat)[2],1:dim(cta_mat)[1],t(cta_mat),col=colorRampPalette(c("white","red"))(100),axes=F,xlab="",ylab="")
+   axis(4,1:dim(cta_mat)[1],labels=rownames(cta_mat),las=2,tick=F,cex.axis=0.8)
+   axis(1,1:dim(cta_mat)[2],labels=0:(dim(cta_mat)[2]-1),las=2,tick=F,cex.axis=0.8)
+
+   par(mar=c(2,1,2,1))
+     maxval<-round(max(cta_mat),digits=1)
+      zval<-seq(0,maxval,0.1)
+      image(1:length(zval),1,matrix(zval,ncol=1),col= colorRampPalette(c("white", "red"))(100),axes=F,xlab="",ylab="")
+      mtext("0",side=1,line=0.5,at=1,cex=0.8)
+      mtext(maxval,side=1,line=0.5,at=length(zval),cex=0.8)
 }
+
+if(species == "Mm"){
+  library(scUnifrac)
+  load(system.file("extdata", "ref.expr.Rdata", package = "scUnifrac"))
+
+  commongene<-intersect(rownames(logsumcounts),rownames(ref.expr))
+  sample_data<-logsumcounts[commongene,]
+  ref_data=ref.expr[commongene,]
+  combined_data = cbind(sample_data, ref_data)
+
+  data.quantileAll <- apply(combined_data, 2, function(x){quantile(x, 0.75)})
+  data.quantileAll<-data.quantileAll / median(data.quantileAll)
+
+  data.norm <- t(t(combined_data) / data.quantileAll)
+  sample_data.norm<-data.norm[,c(1:ncol(sample_data))]
+  ref_data.norm<-data.norm[,c((ncol(sample_data)+1):ncol(data.norm))]
+  
+  preCell<-scUnifrac_predictCelltype(sample_data.norm,ref.expr=ref_data.norm,normalize=F,corcutoff=0.3, drawpicture=F)
+  cat("\n\n## Prediction using log2-upperquantile normalized cluster sum(count) with expression database\n\n")
+  colCell<-preCell
+  new.cluster.ids = c()
+  for(col in c(1:ncol(preCell))){
+    maxvalue = max(preCell[,col])
+    maxindex = which(preCell[, col]==maxvalue)[1]
+    new.cluster.ids=c(new.cluster.ids, rownames(preCell)[maxindex])
+    colCell[, col] = ifelse(preCell[, col]==maxvalue, paste("<font color=\"red\">", round(preCell[, col], 2), "</font>"), round(preCell[, col], 2))
+  }
+  
+  print(kable(colCell, escape = FALSE))
+  
+  heatmap3(preCell, scale="none")
+  
+  names(new.cluster.ids) <- levels(SCLC)
+  SCLC <- RenameIdents(SCLC, new.cluster.ids)
+  print(DimPlot(SCLC, reduction = "umap",label=T,label.size=4))
+  
+}
+
+cat("\n\n## Prediction using log2-upperquantile normalized cluster sum(count) with cell gene activity database\n\n")
+
+data.quantileAll <- apply(logsumcounts, 2, function(x){quantile(x, 0.75)})
+data.quantileAll<-data.quantileAll / median(data.quantileAll)
+
+data.norm <- t(t(logsumcounts) / data.quantileAll)
+predict_celltype<-ORA_celltype(data.norm,cellType)
+
+#use the max_cta_score for each cluster
+new.cluster.ids<-names(predict_celltype$max_cta)
+names(new.cluster.ids) <- levels(SCLC)
+SCLC <- RenameIdents(SCLC, new.cluster.ids)
+print(DimPlot(SCLC, reduction = "umap",label=T,label.size=4))
+DoHeatmap(SCLC, features = top10$gene) + NoLegend()
+cta_index<-apply(predict_celltype$cta,2,function(x){return(order(x,decreasing=T)[1:2])})
+cta_index<-unique(sort(cta_index))
+cta_mat<- predict_celltype$cta[cta_index,]
+  
+ora_index<-apply(predict_celltype$ora,2,function(x){return(order(x,decreasing=F)[1:2])})
+ora_index<-unique(sort(ora_index))
+ora_mat<- predict_celltype$ora[ora_index,]
+ora_mat<--log10(ora_mat)  
+
+cat("\n\n## Predict cell type by cell activity score\n\n")
+DoHeatmap_predictcelltype(cta_mat)
+
+cat("\n\n## Predict cell type by over representive analysis\n\n")
+DoHeatmap_predictcelltype(ora_mat)
 
 ```
