@@ -371,6 +371,11 @@ for (i in 1:nrow(countTableFileAll)) {
     width=min(8000, max(2000, 50 * ncol(countHT)))
     if (ncol(countHT)>1 & nrow(countHT)>1) {
       print(paste0("Drawing heatmap for ", title, " samples."))
+      if (groupFileList!="") {
+        legendfun<-function() showLegend(legend=unique(groups),col=unique(conditionColors[,1]))
+      }else{
+        legendfun<-NULL
+      }
       for(format in outputFormat){
         if("PDF" == format){
           pdf(paste0(outputFilePrefix,curSuffix,".heatmap.pdf"),width=10,height=10)
@@ -379,9 +384,17 @@ for (i in 1:nrow(countTableFileAll)) {
         }
         
         if(!is.na(conditionColors[1])){
-          heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols, ColSideColors=conditionColors)
+          if(is.null(legendfun)){
+            heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,ColSideColors=conditionColors)
+          }else{
+            heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,legendfun=legendfun,ColSideColors=conditionColors)
+          }
         } else {
-          heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols)
+          if(is.null(legendfun)){
+            heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols)
+          }else{
+            heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,legendfun=legendfun)
+          }
         }
         
         dev.off()

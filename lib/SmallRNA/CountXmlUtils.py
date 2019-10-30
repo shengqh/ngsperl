@@ -76,3 +76,41 @@ def readCountXmlFeatures(fileName, acceptFunc = defaultAcceptFeatureName):
         fgroup.Queries.add(queryMap[query.get('qname')])
         
   return(result)
+
+
+def readCountXmlQueriesInFeatures(fileName, acceptFunc = defaultAcceptFeatureName):
+  queryMap = readCountXmlQueryMap(fileName);
+  
+  result = set()
+  tree = ET.parse(fileName)
+  root = tree.getroot()
+  features = root.find('subjectResult')
+  for featureGroup in features.findall('subjectGroup'):
+    fgroup = FeatureGroup()
+    bAccept = False
+    for feature in featureGroup.findall('subject'):
+      featureName = feature.get("name")
+      if acceptFunc(featureName):
+        for region in feature.findall('region'):
+          for query in region.findall('query'):
+            result.add(queryMap[query.get('qname')])
+            
+  return(result)
+
+def readCountXmlQueryLocationInFeatures(fileName):
+  result = {}
+  tree = ET.parse(fileName)
+  root = tree.getroot()
+  features = root.find('subjectResult')
+  for featureGroup in features.findall('subjectGroup'):
+    fgroup = FeatureGroup()
+    for feature in featureGroup.findall('subject'):
+      for region in feature.findall('region'):
+        for query in region.findall('query'):
+          queryName = query.get('qname')
+          queryLocation = query.get('loc')
+          if not queryName in result:
+            result[queryName] ={queryLocation}
+          else:
+            result[queryName].add(queryLocation)
+  return(result)

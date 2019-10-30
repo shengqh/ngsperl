@@ -77,6 +77,19 @@ sub getPreprocessionConfig {
   my $task    = getValue( $def, "task_name" );
   my $email   = getValue( $def, "email" );
 
+  if (! $def->{sra_to_fastq}){
+    #all file defined in $files should be hard-coding with absolute path, check file
+    my $sourcefiles   = getValue( $def, "files" );
+    foreach my $filename (keys %$sourcefiles){
+      my $fileref = $sourcefiles->{$filename};
+      foreach my $eachfile (@$fileref) {
+        if (! -e $eachfile){
+          die "file not exists (" . $filename . "): " . $eachfile;
+        }
+      }
+    }
+  }
+
   #data
   my $config = {
     general => {
@@ -113,6 +126,7 @@ sub getPreprocessionConfig {
   #task
   if ( $def->{sra_to_fastq} ) {
     defined $is_pairend or die "Define is_paired_end first!";
+    defined $def->{is_restricted_data} or die "Define is_restricted_data first!";
     #defined $def->{sra_table} or die "Define sra_table first, can be downloaded from ftp://ftp.ncbi.nlm.nih.gov/sra/reports/Metadata/SRA_Accessions.tab";
   }
 
@@ -153,6 +167,7 @@ sub getPreprocessionConfig {
       sh_direct  => 1,
       cluster    => $def->{cluster},
       not_clean  => getValue( $def, "sra_not_clean", 1 ),
+      is_restricted_data => getValue($def, "is_restricted_data"),
       pbs        => {
         "email"     => $def->{email},
         "emailType" => $def->{emailType},
@@ -250,7 +265,7 @@ sub getPreprocessionConfig {
   my $untrimed_ref = $source_ref;
 
   if ($run_cutadapt) {
-    my $cutadapt_thread = getValue($def, "cutadapt_thread", 8);
+    my $cutadapt_thread = getValue($def, "cutadapt_thread", 1);
     my $cutadapt_class = ( defined $def->{cutadapt_config} ) ? "Trimmer::CutadaptByConfig" : "Trimmer::Cutadapt";
     my $cutadapt = {
       "cutadapt" => {

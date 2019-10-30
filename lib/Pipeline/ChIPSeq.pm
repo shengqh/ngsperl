@@ -138,7 +138,7 @@ sub getConfig {
       option                   => "",
       parameterSampleFile1_ref => [ "bowtie1", ".log" ],
       rtemplate                => "../Alignment/Bowtie1Summary.r",
-      output_file              => $def->{task_name},
+      output_file              => "",
       output_file_ext          => ".csv",
       pbs                      => {
         "email"    => $email,
@@ -171,7 +171,7 @@ sub getConfig {
     };
   }
   elsif ( $def->{aligner} eq "bowtie2" ) {
-    $config->{ $def->{aligner} } = {
+    $config->{ bowtie2 } = {
       class                 => "Alignment::Bowtie2",
       perform               => 1,
       target_dir            => "${target_dir}/" . getNextFolderIndex($def) . $def->{aligner},
@@ -189,6 +189,25 @@ sub getConfig {
         "mem"      => "40gb"
       },
     };
+    $config->{bowtie2_summary} = {
+      class                    => "CQS::UniqueR",
+      perform                  => 1,
+      rCode                    => "",
+      target_dir               => $config->{bowtie2}->{target_dir},
+      option                   => "",
+      parameterSampleFile1_ref => [ "bowtie2", ".log" ],
+      rtemplate                => "../Alignment/Bowtie2Summary.r",
+      output_file              => "",
+      output_file_ext          => ".csv;.png",
+      pbs                      => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "72",
+        "mem"      => "10gb"
+      },
+    };
+
+    push @$summary, ("bowtie2_summary");
   }
   else {
     die "Unknown alinger " . $def->{aligner};

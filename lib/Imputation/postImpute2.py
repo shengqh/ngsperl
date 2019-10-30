@@ -65,16 +65,22 @@ outputPrefix = os.path.splitext(args.output)[0]
 mergePrefix = os.path.splitext(args.mergeFile)[0]
 
 tempOutput = outputPrefix + "_impute2" 
-os.system("plink2 --bfile " + mergePrefix + " --export oxford --out " + tempOutput)
+cmd="plink2 --bfile " + mergePrefix + " --export oxford --out " + tempOutput
+logger.info(cmd)
+os.system(cmd)
 
 allSnps = sorted(allSnps, key = lambda x: (x.chrom, x.position))
 with open(tempOutput + ".gen", "w") as fout:
   for snp in allSnps:
     fout.write("%d %s %d %s %s %s\n" % (snp.chrom, snp.name, snp.position, snp.firstAllele, snp.secondAllele, " ".join(snp.genoTypes)))
     
-os.system("plink2 --data " + tempOutput + " ref-first --make-bed --out " + tempOutput)
+cmd="plink2 --data " + tempOutput + " ref-first --make-bed --out " + tempOutput
+logger.info(cmd)
+os.system(cmd)
 
 with open(tempOutput + ".lst", "w") as fout:
   fout.write(tempOutput + "\n")
 
-os.system("plink --bfile " + mergePrefix + " --keep-allele-order --merge-list " + tempOutput + ".lst --make-bed --out " + outputPrefix)
+cmd="plink --bfile " + mergePrefix + " --keep-allele-order --merge-list " + tempOutput + ".lst --make-bed --out " + outputPrefix
+logger.info(cmd)
+os.system(cmd)

@@ -124,9 +124,16 @@ sub perform {
     elsif ($mark_duplicate) {
       $rmdupResultName = ".markdup";
     }
+
     my $indelResultName = $indelRealignment ? ".indel" : "";
     my $baqResultName   = $baq              ? ".baq"   : "";
-    my $final_file      = "${sample_name}${rmdupResultName}${indelResultName}.recal${baqResultName}.bam";
+
+    my $presortedFile = "${sample_name}.sorted.bam";
+    my $rmdupFile = "${sample_name}${rmdupResultName}.bam";
+    my $indelFile = "${sample_name}${rmdupResultName}${indelResultName}.bam";
+    my $recalTable = "${sample_name}${rmdupResultName}${indelResultName}.recal.table";
+    my $recalFile = "${sample_name}${rmdupResultName}${indelResultName}.recal.bam";
+    my $final_file = "${sample_name}${rmdupResultName}${indelResultName}.recal${baqResultName}.bam";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -136,14 +143,13 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
-
     my $rmlist       = "";
     my $inputFile    = $sampleFile;
     my $resultPrefix = $sample_name;
 
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, 0, $inputFile );
+
     if ( !$sorted ) {
-      my $presortedFile = $sample_name . ".sorted.bam";
       print $pbs "
 if [[ -s $inputFile && ! -s $presortedFile ]]; then
   echo sort=`date` 
@@ -157,7 +163,6 @@ fi
 
     my $lastFileList = "";
     if ( $remove_duplicate or $mark_duplicate ) {
-      my $rmdupFile = $sample_name . $rmdupResultName . ".bam";
       my $rmdupFileIndex = change_extension( $rmdupFile, ".bai" );
       print $pbs "
 if [[ -s $inputFile && ! -s $rmdupFile ]]; then
@@ -169,10 +174,9 @@ fi
       $rmlist    = $rmlist . " $rmdupFile $rmdupFileIndex";
     }
 
-    my $indelFile = "${sample_name}${rmdupResultName}${indelResultName}.bam";
-    my $indelFileIndex = change_extension( $indelFile, ".bai" );
     if ($indelRealignment) {
-      my $intervalFile = "${sample_name}${rmdupResultName}${indelResultName}.intervals";
+      my $indelFileIndex = change_extension( $indelFile, ".bai" );
+      my $intervalFile = change_extension( $indelFile, ".intervals" );
       print $pbs "
 if [[ -s $inputFile && ! -s $indelFile ]]; then
   echo RealignerTargetCreator=`date` 
@@ -189,8 +193,6 @@ fi
       $rmlist    = $rmlist . " $indelFile $indelFileIndex $intervalFile";
     }
 
-    my $recalTable     = "${sample_name}${rmdupResultName}${indelResultName}.recal.table";
-    my $recalFile      = "${sample_name}${rmdupResultName}${indelResultName}.recal.bam";
     my $recalFileIndex = change_extension( $recalFile, ".bai" );
     my $printOptions   = "";
 
@@ -258,33 +260,32 @@ sub get_clear_map {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
+    my $presortedFile = "${sample_name}.sorted.bam";
+    my $rmdupFile = "${sample_name}${rmdupResultName}.bam";
+    my $indelFile = "${sample_name}${rmdupResultName}${indelResultName}.bam";
+    my $recalTable = "${sample_name}${rmdupResultName}${indelResultName}.recal.table";
+    my $recalFile = "${sample_name}${rmdupResultName}${indelResultName}.recal.bam";
     my $final_file = "${sample_name}${rmdupResultName}${indelResultName}.recal${baqResultName}.bam";
 
     my $remove_files = [];
-
     if ( !$sorted ) {
-      my $presortedFile = $sample_name . ".sorted.bam";
       push @$remove_files, $presortedFile;
     }
 
     if ( $remove_duplicate or $mark_duplicate ) {
-      my $rmdupFile = $sample_name . $rmdupResultName . ".bam";
       my $rmdupFileIndex = change_extension( $rmdupFile, ".bai" );
       push @$remove_files, ( $rmdupFile, $rmdupFileIndex );
     }
 
     if ($indelRealignment) {
-      my $indelFile      = "${sample_name}${rmdupResultName}${indelResultName}.bam";
       my $indelFileIndex = change_extension( $indelFile, ".bai" );
-      my $intervalFile   = "${sample_name}${rmdupResultName}${indelResultName}.intervals";
+      my $intervalFile   = change_extension( $indelFile, ".intervals");
       push @$remove_files, ( $indelFile, $indelFileIndex, $intervalFile );
     }
 
-    my $recalTable     = "${sample_name}${rmdupResultName}${indelResultName}.recal.table";
-    my $recalFile      = "${sample_name}${rmdupResultName}${indelResultName}.recal.bam";
     my $recalFileIndex = change_extension( $recalFile, ".bai" );
-
     push @$remove_files, ( $recalTable, $recalFile, $recalFileIndex );
+
     if ($baq) {
       push @$remove_files, ( $final_file, change_extension( $final_file, ".bai" ) );
     }
@@ -317,7 +318,7 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $final_file   = "${sample_name}${rmdupResultName}${indelResultName}.recal${baqResultName}.bam";
+    my $final_file = "${sample_name}${rmdupResultName}${indelResultName}.recal${baqResultName}.bam";
     my @result_files = ();
     push( @result_files, "${result_dir}/${final_file}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );

@@ -891,6 +891,7 @@ sub addAnnovarFilter {
     option              => "",
     sh_direct           => 1,
     maximum_freq_values => "0.001,0.01,0.1,1.0",
+    filter_fq_equal_1   => $def->{filter_variants_fq_equal_1},
     pbs                 => {
       "nodes"    => "1:ppn=1",
       "walltime" => "2",
@@ -933,12 +934,12 @@ sub addAnnovarFilterGeneannotation {
 }
 
 sub addGATK4PreprocessIntervals {
-  my ( $config, $def, $target_dir, $bam_ref, $step1, $step2, $step3, $step4, $step5, $step6, $index ) = @_;
+  my ( $config, $def, $target_dir, $bam_ref, $prefix, $step1, $step2, $step3, $step4, $step5, $step6, $index ) = @_;
   if (!defined $index){
     $index = "";
   }
 
-  my $result = "GATK4_CNV_Germline${index}_PreprocessIntervals";
+  my $result = $prefix . "_gatk4_CNV_Germline${index}_PreprocessIntervals";
   if ( !defined $config->{$result} ) {
     #PreprocessIntervals at summary level
     $config->{$result} = {
@@ -962,12 +963,14 @@ sub addGATK4PreprocessIntervals {
 }
 
 sub addGATK4CNVGermlineCohortAnalysis {
-  my ( $config, $def, $target_dir, $bam_ref, $step1, $step2, $step3, $step4, $step5, $step6 ) = @_;
+  my ( $config, $def, $target_dir, $bam_ref, $prefix, $step1, $step2, $step3, $step4, $step5, $step6 ) = @_;
 
-  my $preprocessIntervalsTask = addGATK4PreprocessIntervals( $config, $def, $target_dir, $bam_ref, $step1, $step2, $step3, $step4, $step5, $step6, "_01" );
+  my $preprocessIntervalsTask = addGATK4PreprocessIntervals( $config, $def, $target_dir, $bam_ref, $prefix, $step1, $step2, $step3, $step4, $step5, $step6, "_01" );
+
+  my $chrCode = getValue($def, "has_chr_in_chromosome_name") ? ";addChr=1" : "";
 
   #CollectReadCounts at sample level
-  my $CollectReadCounts = "GATK4_CNV_Germline_02_CollectReadCounts";
+  my $CollectReadCounts = $prefix . "_gatk4_CNV_Germline_02_CollectReadCounts";
   $config->{$CollectReadCounts} = {
     class                      => "GATK4::CollectReadCounts",
     source_ref                 => $bam_ref,
@@ -987,7 +990,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   push( @$step3, $CollectReadCounts );
 
   #FilterIntervals at summary level
-  my $FilterIntervals = "GATK4_CNV_Germline_03_FilterIntervals";
+  my $FilterIntervals = $prefix . "_gatk4_CNV_Germline_03_FilterIntervals";
   $config->{$FilterIntervals} = {
     class                      => "GATK4::FilterIntervals",
     source_ref                 => $CollectReadCounts,
@@ -1007,7 +1010,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   push( @$step4, $FilterIntervals );
 
   #DetermineGermlineContigPloidy at summary level
-  my $DetermineGermlineContigPloidyCohortMode = "GATK4_CNV_Germline_04_DetermineGermlineContigPloidyCohortMode";
+  my $DetermineGermlineContigPloidyCohortMode = $prefix . "_gatk4_CNV_Germline_04_DetermineGermlineContigPloidyCohortMode";
   $config->{$DetermineGermlineContigPloidyCohortMode} = {
     class                  => "GATK4::DetermineGermlineContigPloidy",
     source_ref             => $CollectReadCounts,
@@ -1026,7 +1029,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   push( @$step4, $DetermineGermlineContigPloidyCohortMode );
 
   #GermlineCNVCaller at summary level
-  my $GermlineCNVCaller = "GATK4_CNV_Germline_05_GermlineCNVCaller";
+  my $GermlineCNVCaller = $prefix . "_gatk4_CNV_Germline_05_GermlineCNVCaller";
   $config->{$GermlineCNVCaller} = {
     class                       => "GATK4::GermlineCNVCaller",
     source_ref                  => $CollectReadCounts,
@@ -1039,13 +1042,13 @@ sub addGATK4CNVGermlineCohortAnalysis {
     'pbs'                       => {
       'nodes'    => '1:ppn=1',
       'mem'      => '40gb',
-      'walltime' => '10'
+      'walltime' => '48'
     },
   };
   push( @$step4, $GermlineCNVCaller );
 
   #PostprocessGermlineCNVCalls at sample level
-  my $PostprocessGermlineCNVCalls = "GATK4_CNV_Germline_06_PostprocessGermlineCNVCalls";
+  my $PostprocessGermlineCNVCalls = $prefix . "_gatk4_CNV_Germline_06_PostprocessGermlineCNVCalls";
   $config->{$PostprocessGermlineCNVCalls} = {
     class                       => "GATK4::PostprocessGermlineCNVCalls",
     source_ref                  => $CollectReadCounts,
@@ -1066,7 +1069,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   push( @$step5, $PostprocessGermlineCNVCalls );
 
   #CombineGCNV at summary level
-  my $CombineGCNV = "GATK4_CNV_Germline_07_CombineGCNV";
+  my $CombineGCNV = $prefix . "_gatk4_CNV_Germline_07_CombineGCNV";
   $config->{$CombineGCNV} = {
     class                    => "CQS::ProgramWrapper",
     perform                  => 1,
@@ -1088,7 +1091,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   };
   push( @$step6, $CombineGCNV );
   
-  my $sizeFactorTask = "GATK4_CNV_Germline_08_SizeFactor";
+  my $sizeFactorTask = $prefix . "_gatk4_CNV_Germline_08_SizeFactor";
   $config->{$sizeFactorTask} = {
     class                    => "CQS::ProgramWrapper",
     perform                  => 1,
@@ -1114,13 +1117,13 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
   my $cnvIndex = "09";
   if($def->{plotCNVGenes}){
-    my $cnvGenes = "GATK4_CNV_Germline_09_CNVGenes";
+    my $cnvGenes = $prefix . "_gatk4_CNV_Germline_09_CNVGenes";
     $config->{$cnvGenes} = {
       class                    => "CQS::UniqueR",
       perform                  => 1,
       target_dir               => $target_dir . '/' . $cnvGenes,
       rtemplate                => "../Annotation/getGeneLocus.r",
-      rCode                    => "host=\"" . getValue($def, "biomart_host") . "\";dataset=\"" . getValue($def, "biomart_dataset") . "\";symbolKey=\"" . getValue($def, "biomart_symbolKey") . "\";genesStr=\"" . getValue( $def, "covered_bed" ) . "\"",
+      rCode                    => "host=\"" . getValue($def, "biomart_host") . "\";dataset=\"" . getValue($def, "biomart_dataset") . "\";symbolKey=\"" . getValue($def, "biomart_symbolKey") . "\";genesStr=\"" . getValue( $def, "annotation_genes" ) . "\"" . $chrCode,
       output_file_ext          => ".bed;.missing",
       sh_direct                => 1,
       'pbs'                    => {
@@ -1131,7 +1134,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
     };
     push( @$step6, $cnvGenes );
     
-    my $plotCNVgenes = "GATK4_CNV_Germline_10_CNVGenesPlot";
+    my $plotCNVgenes = $prefix . "_gatk4_CNV_Germline_10_CNVGenesPlot";
     $config->{$plotCNVgenes} = {
       class                 => "CQS::ProgramWrapper",
       perform               => 1,
@@ -1166,7 +1169,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   
   my $annotationGenesPlot = undef;
   if(defined $def->{annotation_genes} && defined $config->{"annotation_genes_locus"}){
-    $annotationGenesPlot = "GATK4_CNV_Germline_" . $cnvIndex . "_AnnotationGenesPlot";
+    $annotationGenesPlot = $prefix . "_gatk4_CNV_Germline_" . $cnvIndex . "_AnnotationGenesPlot";
     $config->{$annotationGenesPlot} = {
       class                 => "CQS::ProgramWrapper",
       perform               => 1,
@@ -1218,8 +1221,8 @@ sub addXHMM {
     $interval_key   = "interval_file_ref";
     $interval_value = addGATK4PreprocessIntervals( $config, $def, $target_dir, $bam_ref, $step1, $step2, $step3, $step4, $step5, $step6 ), $individual = $step3;
     $summary        = $step4;
-    $docTask        = "XHMM_GATK4_Intervals_GATK3_DepthOfCoverage";
-    $cnvTask        = "XHMM_GATK4_Intervals_CNV";
+    $docTask        = "XHMM_gatk4_Intervals_GATK3_DepthOfCoverage";
+    $cnvTask        = "XHMM_gatk4_Intervals_CNV";
   }
 
   $config->{$docTask} = {

@@ -59,7 +59,10 @@ sub perform {
   }
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
-  my $output_ext            = get_option( $config, $section, "output_ext", "" );
+  my $output_file_ext            = get_option( $config, $section, "output_file_ext",            "" );
+  if($output_file_ext eq ""){
+    $output_file_ext            = get_option( $config, $section, "output_ext",            "" );
+  }
   my $first_file_only       = get_option( $config, $section, "first_file_only", 0 );
   my $output_arg            = get_option( $config, $section, "output_arg", "" );
   my $join_arg              = get_option( $config, $section, "join_arg", 0 );
@@ -107,6 +110,8 @@ sub perform {
     }
   }
 
+  my $expect_result = $self->result($config, $section);
+
   for my $sample_name ( sort keys %$parameterSampleFile1 ) {
     my $pfiles1 = $parameterSampleFile1->{$sample_name};
     my $pfiles  = getFiles( $pfiles1, $join_arg, $first_file_only );
@@ -122,11 +127,12 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
+    my $final_file = $expect_result->{$sample_name}[-1];
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
     for my $i ( 0 .. $idxend ) {
       my $pfile1 = $pfiles->[$i];
-      my $final_file = ( $first_file_only or ( 1 == scalar(@$pfiles) ) ) ? $sample_name . $output_ext : basename($pfile1) . $output_ext;
+      my $final_file = ( $first_file_only or ( 1 == scalar(@$pfiles) ) ) ? $sample_name . $output_file_ext : basename($pfile1) . $output_file_ext;
 
       my $curOption = "";
       if(not $bFound2){
@@ -146,9 +152,7 @@ sub perform {
       }
 
       print $pbs "
-if [[ ! -s $final_file ]]; then
-  $interpretor $program $option $parameterSampleFile1arg \"$pfile1\" $curOption $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_arg $final_file
-fi
+$interpretor $program $option $parameterSampleFile1arg \"$pfile1\" $curOption $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_arg $final_file
 
 ";
     }
@@ -176,7 +180,10 @@ sub result {
 
   my ( $parameterSampleFile1, $parameterSampleFile1arg ) = get_parameter_sample_files( $config, $section, "source" );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
-  my $output_ext            = get_option( $config, $section, "output_ext", "" );
+  my $output_file_ext            = get_option( $config, $section, "output_file_ext",            "" );
+  if($output_file_ext eq ""){
+    $output_file_ext            = get_option( $config, $section, "output_ext",            "" );
+  }
   my $join_arg              = get_option( $config, $section, "join_arg", 0 );
   my $output_other_ext      = get_option( $config, $section, "output_other_ext", "" );
   my @output_other_exts;
@@ -195,7 +202,7 @@ sub result {
     my @result_files = ();
     for my $i ( 0 .. $idxend ) {
       my $pfile1 = $pfiles->[$i];
-      my $final_file = ( $first_file_only or ( 1 == scalar(@$pfiles) ) ) ? $sample_name . $output_ext : basename($pfile1) . $output_ext;
+      my $final_file = ( $first_file_only or ( 1 == scalar(@$pfiles) ) ) ? $sample_name . $output_file_ext : basename($pfile1) . $output_file_ext;
 
       push( @result_files, "${cur_dir}/$final_file" );
       if ( $output_other_ext ne "" ) {

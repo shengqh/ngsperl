@@ -10,11 +10,12 @@ if(parFile1 != ''){
   clinicalFeatures = NULL
 }
 
-if(exists("interestedGeneStr") & (!is.null(interestedGeneStr)) & (interestedGeneStr!="")) {
-  interestedGeneStr = gsub("\\s+", ",", interestedGeneStr)
-  interestedGenes = unlist(strsplit(interestedGeneStr, ","))
-}else{
-  interestedGenes = NULL
+interestedGenes = NULL
+if(exists("interestedGeneStr")) {
+  if((!is.null(interestedGeneStr)) & (interestedGeneStr!="")) {
+    interestedGeneStr = gsub("\\s+", ",", interestedGeneStr)
+    interestedGenes = unlist(strsplit(interestedGeneStr, ","))
+  }
 }
 
 mafFiles = read.table(mafFileList, sep="\t", header=F, stringsAsFactor=F)

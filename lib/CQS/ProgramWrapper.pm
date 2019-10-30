@@ -42,7 +42,10 @@ sub perform {
     die("program $program defined but not exists!");
   }
 
-  my $output_ext = get_option( $config, $section, "output_ext", 0 );
+  my $output_ext = get_option( $config, $section, "output_ext", "" );
+  if($output_ext eq ""){
+     $output_ext = get_option( $config, $section, "output_file_ext", "" );
+  }
   my $output_arg = get_option($config, $section, "output_arg", "");
 
   my $parameterSampleFile1 = save_parameter_sample_file( $config, $section, "parameterSampleFile1", "${result_dir}/${task_name}_${task_suffix}_fileList1.list" );

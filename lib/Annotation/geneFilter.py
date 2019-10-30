@@ -1,5 +1,6 @@
 import argparse
 import re
+import os
 
 parser = argparse.ArgumentParser(description="Export filtered genotype information of gene", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
@@ -25,44 +26,50 @@ if DEBUG:
 
 genelist = genes.split(",")
 
+filename, file_extension = os.path.splitext(outputfile)
+gfile = filename + ".snv.txt"
+
 with open(outputfile, 'w') as sw:
-  bFirst = True
-  for gene in genelist:
-    with open(inputfile, 'r') as f:
-      for line in f:
-        if(not line.startswith("#")):
-          break
+  with open(gfile, 'w') as sg:
+    bFirst = True
+    for gene in genelist:
+      with open(inputfile, 'r') as f:
+        for line in f:
+          if(not line.startswith("#")):
+            break
 
-      if bFirst:
-        headers = line.rstrip().split()
-        formatIndex = headers.index("FORMAT")
-        geneIndex = headers.index("Gene.refGene")
-        aaIndex = headers.index("AAChange.refGene")
-        snvHeaderIndecies = range(0, formatIndex)
-        sampleIndecies = range(formatIndex + 1, len(headers))
-        sampleCount = len(sampleIndecies)
-        print("sampleCount=%d" % (sampleCount))
-        if sampleCount == 0:
-          raise ValueError("Sample count is zero, check your file : " + inputfile)
-        
-        sw.write(line)
-        bFirst = False
+        if bFirst:
+          sg.write(line)
+          headers = line.rstrip().split()
+          formatIndex = headers.index("FORMAT")
+          geneIndex = headers.index("Gene.refGene")
+          aaIndex = headers.index("AAChange.refGene")
+          snvHeaderIndecies = range(0, formatIndex)
+          sampleIndecies = range(formatIndex + 1, len(headers))
+          sampleCount = len(sampleIndecies)
+          print("sampleCount=%d" % (sampleCount))
+          if sampleCount == 0:
+            raise ValueError("Sample count is zero, check your file : " + inputfile)
+          
+          sw.write(line)
+          bFirst = False
 
-      for line in f:
-        parts = line.rstrip().split('\t')
-        curGenes = parts[geneIndex].split(",")
-        if gene in curGenes:
-          parts[aaIndex] = parts[aaIndex].split(",")[0]
-          sw.write("%s" % "\t".join([parts[idx] for idx in snvHeaderIndecies]))
-          for idx in sampleIndecies:
-            if parts[idx].startswith("0/0"):
-              sw.write("\tAA")
-            elif parts[idx].startswith("0/1"):
-              sw.write("\tAB")
-            elif parts[idx].startswith("1/1"):
-              sw.write("\tBB")
-            else:
-              sw.write("\t")
-          sw.write("\n")
+        for line in f:
+          parts = line.rstrip().split('\t')
+          curGenes = parts[geneIndex].split(",")
+          if gene in curGenes:
+            sg.write(line)
+            parts[aaIndex] = parts[aaIndex].split(",")[0]
+            sw.write("%s" % "\t".join([parts[idx] for idx in snvHeaderIndecies]))
+            for idx in sampleIndecies:
+              if parts[idx].startswith("0/0") or parts[idx].startswith("0|0"):
+                sw.write("\tAA")
+              elif parts[idx].startswith("0/1") or parts[idx].startswith("0|1"):
+                sw.write("\tAB")
+              elif parts[idx].startswith("1/1") or parts[idx].startswith("1|1"):
+                sw.write("\tBB")
+              else:
+                sw.write("\t")
+            sw.write("\n")
 
 print("done.")

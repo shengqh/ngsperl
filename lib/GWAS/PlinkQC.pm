@@ -35,6 +35,12 @@ sub perform {
   my $thres_hwe = get_option( $config, $section, "thres_hwe", 0.0001 );
   my $thres_mind = get_option( $config, $section, "thres_mind", 0.03 );
 
+  my $py_script = dirname(__FILE__) . "/findDuplicatedSample.py";
+  if ( !-e $py_script ) {
+    die "File not found : " . $py_script;
+  }
+
+
   for my $sampleName ( sort keys %$rawFiles ) {
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sampleName );
     my $pbs_name = basename($pbs_file);
@@ -51,6 +57,8 @@ sub perform {
     my $qc3_hwe = $sampleName . "_3_hwe";
     my $qc4_mind = $sampleName . "_4_mind";
     my $qc5_resetid = $sampleName . "_5_resetid";
+    my $qc6_rmdupid = $sampleName . "_6_rmdupid";
+    my $qc7_rmdupsample = $sampleName . "_7_rmdupsample";
     my $output_file = $sampleName . "_clean";
     my $output_file_gen = $sampleName . "_clean_gen";
     
@@ -61,11 +69,14 @@ plink2 --bfile $qc1_maf --geno $thres_geno --make-bed --out $qc2_geno
 plink2 --bfile $qc2_geno --hwe $thres_maf --make-bed --out $qc3_hwe
 plink2 --bfile $qc3_hwe --mind $thres_maf --make-bed --out $qc4_mind
 plink2 --bfile $qc4_mind --set-all-var-ids \@:#\\\$r_\\\$a --make-bed --out $qc5_resetid 
-plink2 --bfile $qc5_resetid --rm-dup force-first --make-bed --out $output_file
+plink2 --bfile $qc5_resetid --rm-dup force-first --make-bed --out $qc6_rmdupid
+plink2 --bfile $qc6_rmdupid --missing sample-only --out $qc7_rmdupsample
+python $py_script -i ${qc7_rmdupsample}.smiss -o ${qc7_rmdupsample}.smiss.dupsample
+plink2 --bfile $qc6_rmdupid --remove ${qc7_rmdupsample}.smiss.dupsample --make-bed --out $output_file
 plink2 --bfile $output_file --export oxford --out $output_file_gen
 
 wc -l *.bim *.fam > ${sampleName}_qc_count.txt
-rm ${qc1_maf}* ${qc2_geno}*  ${qc3_hwe}*  ${qc4_mind}*  ${qc5_resetid}* ${output_file_gen}.gen
+rm ${qc1_maf}* ${qc2_geno}*  ${qc3_hwe}*  ${qc4_mind}*  ${qc5_resetid}* ${qc6_rmdupid}* ${qc7_rmdupsample}.log ${qc7_rmdupsample}.smiss ${output_file_gen}.gen
 
 ";
     $self->close_pbs( $pbs, $pbs_file );

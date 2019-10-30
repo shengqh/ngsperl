@@ -95,6 +95,7 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
 
   my $ispaired = get_is_paired_end_option($config, $section, 0);
+  my $is_restricted_data = get_option($config, $section, "is_restricted_data" , 0);
 
   my $raw_files = getSraFiles( $config, $section );
 
@@ -119,10 +120,49 @@ sub perform {
       $sample_file = GsmToSrr( $sample_file );
     }
     if ( $sample_file =~ /\.sra/ ) {
-      print $pbs "ln -s $sample_file ${sample_name}.sra \n";
-      print $pbs "fastq-dump --split-3 --gzip --origfmt --helicos ${sample_name}.sra
+      if ($is_restricted_data){
+        print $pbs "
+ln -s $sample_file ${sample_name}.sra 
+fastq-dump --split-3 --gzip --origfmt --helicos ${sample_name}.sra
 rm ${sample_name}.sra
 ";
+      } else {
+        print $pbs "
+if [ -z \${SLURM_JOBID+x} ]; then 
+  echo \"in bash mode\"; 
+  ln -s $sample_file ${sample_name}.sra 
+  fastq-dump --split-3 --gzip --origfmt --helicos ${sample_name}.sra
+  rm ${sample_name}.sra
+else 
+  echo \"in cluster mode\"; 
+  localdir=/tmp/myjob_\${SLURM_JOBID}
+  tmp_cleaner()
+  {
+  rm -rf \${localdir}
+  exit -1
+  }
+  trap 'tmp_cleaner' TERM
+
+  echo creating local directory \${localdir}
+  mkdir \${localdir} # create unique directory on compute node
+  cd \${localdir}
+
+  echo copying $sample_file to \${localdir}
+  cp $sample_file ${sample_name}.sra
+
+  echo performing fastq-dump on ${sample_name}.sra
+  fastq-dump --split-3 --gzip --origfmt --helicos ${sample_name}.sra
+
+  rm ${sample_name}.sra
+
+  if [[ -s $final_file ]]; then
+    echo copying result back to $result_dir
+    mv -f ${sample_name}* $result_dir
+  fi
+fi
+
+";
+      }
     }
     elsif ( $sample_file =~ /SRR/ ) {
       my @sample_files = split( '\s+', $sample_file );
@@ -165,10 +205,7 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my $ispaired = $config->{$section}{ispaired};
-  if ( !defined $ispaired ) {
-    $ispaired = 0;
-  }
+  my $ispaired = get_is_paired_end_option($config, $section, 0);
 
   my $raw_files = getSraFiles( $config, $section );
 

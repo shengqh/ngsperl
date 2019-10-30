@@ -901,6 +901,9 @@ sub get_group_samplefile_map_key {
     else {
       my @samples = @{$group_samples};
       foreach my $sample_name (@samples) {
+        if (not defined $raw_files->{$sample_name}){
+          die "Cannot find $sample_name of group $group_name in raw_files of section $section, check your sample names";
+        }
         my @bam_files = @{ $raw_files->{$sample_name} };
         foreach my $bam_file (@bam_files) {
           push( @gfiles, $bam_file );
@@ -1061,7 +1064,8 @@ sub writeParameterSampleFile {
     my $nameIndex = -1;
     foreach my $sample_name (@orderedSampleNames) {
       my $subSampleFiles = $temp->{$sample_name};
-      if ( ref($subSampleFiles) eq 'HASH' ) {
+      my $refstr = ref($subSampleFiles);
+      if ( $refstr eq 'HASH' ) {
         foreach my $groupName ( sort keys %$subSampleFiles ) {
           my $groupSampleNames = $subSampleFiles->{$groupName};
           for my $groupSampleName (@$groupSampleNames) {
@@ -1069,7 +1073,7 @@ sub writeParameterSampleFile {
           }
         }
       }
-      else {
+      elsif ( $refstr eq 'ARRAY' ) {
         foreach my $subSampleFile (@$subSampleFiles) {
           my $curSampleName = $sample_name;
           if ( scalar(@outputNames) > 0 ) {
@@ -1078,6 +1082,9 @@ sub writeParameterSampleFile {
           }
           print $list $subSampleFile . "\t$curSampleName\n";
         }
+      }
+      else {
+        print $list $subSampleFiles . "\t$sample_name\n";
       }
     }
     close($list);
