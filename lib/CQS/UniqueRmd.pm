@@ -43,6 +43,17 @@ sub perform {
   my $rfilename = ${task_name}. $self->{_suffix} . ".Rmd";
   my $rfile     = build_rmd_file($config, $section, $result_dir, $rfilename);
 
+  if ( defined $config->{$section}{additional_rmd_files} ) {
+    my @additional_rmd_files = split( ';', $config->{$section}{additional_rmd_files} );
+    for my $additional_rmd_files (@additional_rmd_files) {
+      if (! -e $additional_rmd_files) {
+        $additional_rmd_files=dirname(__FILE__) . "/" . $additional_rmd_files;
+      }
+      my $additional_rmd_files_destination     = $result_dir . "/" . basename($additional_rmd_files);
+      copy( $additional_rmd_files, $additional_rmd_files_destination ) or die "Copy failed: $!";
+    }
+  }
+
   my $removeEmpty = get_option( $config, $section, "remove_empty_parameter", 0 );
   my $parametersample_files1 = writeParameterSampleFile( $config, $section, $result_dir, 1, $removeEmpty );
   my $parametersample_files2 = writeParameterSampleFile( $config, $section, $result_dir, 2, $removeEmpty );

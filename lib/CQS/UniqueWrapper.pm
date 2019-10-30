@@ -44,12 +44,15 @@ sub result {
   }else{
     @output_file_exts = ($output_file_ext );
   }
+  @output_file_exts = grep { $_ ne '' } @output_file_exts; #remove empty elements
+
   my @output_perSample_file_exts;
   if ( $output_perSample_file_ext =~ /;/ ) {
     @output_perSample_file_exts = split( ";", $output_perSample_file_ext );
   }else{
     @output_perSample_file_exts = ($output_perSample_file_ext );
   }
+  @output_perSample_file_exts = grep { $_ ne '' } @output_perSample_file_exts; #remove empty elements
 
   my $result       = {};
   my @result_files = ();

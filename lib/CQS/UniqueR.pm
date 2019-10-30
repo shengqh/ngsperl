@@ -138,6 +138,7 @@ sub perform {
 
   my $rReportTemplates = get_option( $config, $section, "rReportTemplate", "" );
   if ( $rReportTemplates ne "" ) {
+    #my $rReportFile = $result_dir . "/" . basename($rReportTemplates);
     my $rReportFile = $result_dir . "/" . basename($rReportTemplates);
     open( my $rf, ">$rReportFile" ) or die "Cannot create $rReportFile";
 

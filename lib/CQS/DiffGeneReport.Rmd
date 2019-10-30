@@ -1,0 +1,71 @@
+## Differential Gene Report
+
+<br>
+
+
+```{r,echo=FALSE,eval=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastqc_raw_adapter_content", "Adapter content of sequencing reads",trunk.eval=file.exists(files["fastqc_raw_adapter_content",1]))}
+check_and_include_graphics(files["fastqc_raw_adapter_content",1])
+
+```
+
+
+
+```{r diffGeneBoxplot, results="asis", echo=FALSE, fig.align="center"}
+interestedModuleInd=find_module_folder(files,pattern="limma")
+diffGeneFiles=files[interestedModuleInd,]
+
+boxplotFigInd=grep(".RawBoxplot.png$",diffGeneFiles[,1])
+check_and_include_graphics(diffGeneFiles[boxplotFigInd,1])
+
+
+
+```
+
+
+```{r diffGeneTable, results="asis", echo=FALSE, fig.align="center"}
+
+diffGeneTableInd=grep("_Diff_sig.csv$",files[,1])
+
+
+if (length(diffGeneTableInd)>0) {
+  DESeq2_files=files[diffGeneTableInd,,drop=FALSE]
+  
+  #summary Table
+  DESeq2_list<-list()
+  for (i in 1:nrow(DESeq2_files)){
+    DESeq2_list[[i]]<-read.csv(DESeq2_files[i,1], header=TRUE)
+  }
+  output_table3<-data.frame(c(gsub("_DESeq2_sig.csv","",basename(DESeq2_files[,1]))), c(unlist(lapply(DESeq2_list, nrow))))
+  colnames(output_table3)<-c("Comparison", "Number of DEGs")
+#  print(kable_styling(kable(output_table3, caption= tabRef("deseq2_table", paste0("DEG numbers under FC > ", rnaseqOptions["DE_fold_change", 1], " & ",pValueText," < ", rnaseqOptions["DE_pvalue", 1])))))
+  print(kable_styling(kable(output_table3)))
+  
+  
+  for (i in 1:nrow(DESeq2_files)){
+    comparisonName<-DESeq2_files[i,2]
+    deseq2<-read.csv(DESeq2_files[i,1], header=TRUE, row.names=1)
+    if(nrow(deseq2) > 0){
+      maxrow<-min(nrow(deseq2), 10)
+#      cnames<-c("baseMean", "log2FoldChange","lfcSE", "stat", "pvalue", "padj", "FoldChange")
+      cnames<-c("AveExpr", "logFC", "t", "P.Value", "adj.P.Val")
+      cnames=c(intersect(c("GeneSymbol","entry_name"),colnames(deseq2)),cnames)
+      deseq2table<-deseq2[c(1:maxrow), cnames]
+      print(kable_styling(kable(deseq2table, row.names=1, caption= tabRef(comparisonName, paste0(comparisonName, " top ", maxrow, " differential expressed genes")))%>% 
+          row_spec(which(deseq2table$logFC > 0), color = "black", background = "bisque") %>% 
+          row_spec(which(deseq2table$logFC < 0), color = "black", background = "honeydew")))
+    }
+  }
+}
+
+
+```
+
+
+```{r, results="asis", echo=FALSE, include = TRUE, eval = TRUE, fig.align="center"}
+vennFigInd=grep(".RawBoxplot.png$",diffGeneFiles[,1])
+check_and_include_graphics(diffGeneFiles[vennFigInd,1])
+
+
+
+```
+

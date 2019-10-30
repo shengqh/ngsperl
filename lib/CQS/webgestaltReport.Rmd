@@ -1,0 +1,53 @@
+
+<br>
+  
+```{r webgestalt, results="asis", echo=FALSE} 
+
+interestedModuleInd=find_module_folder(files,pattern="webgestalt")
+
+if (length(interestedModuleInd)>0) { #hasWebGestaltAnalysis
+  enrich_files=files[interestedModuleInd,]
+  
+  cat(paste0("  \n## WebGestalt  \n"))
+  enrich_files$Comparisons<-enrich_files[,2]
+  comparisons<-unique(enrich_files$Comparisons)
+  #only keep result table file
+  enrich_files=enrich_files[grep("_Process.txt$|_Component.txt$|_Molecular_Function.txt$|_KEGG.txt$",enrich_files[,1]),]
+  for (j in 1:length(comparisons)){
+    comparison<-comparisons[j]
+    comp_files<-enrich_files[enrich_files$Comparisons == comparison,]
+    cat(paste0("  \n### ", comparison, "  \n"))
+  
+    for (i in 1:nrow(comp_files)){
+      if (!file.exists(comp_files[i,1])) {
+        next;
+      }
+      #ename<-rownames(comp_files)[i]
+      ename=basename(comp_files[i,1])
+      if(grepl(".html.rds$", comp_files[i,1])){
+        plotData <-readRDS(comp_files[i,1])
+        fdata<-plotData$enriched
+        fdata<-fdata[c(1:min(nrow(fdata),5)),c(1,2,4,5,6,7,8,9,12,13)]
+        print(kable_styling(kable(fdata, caption=tabRef(ename, ename))) %>% 
+          row_spec(which(fdata$geneUp > fdata$geneDown), color = "black", background = "bisque") %>% 
+          row_spec(which(fdata$geneUp < fdata$geneDown), color = "black", background = "honeydew"))
+        cat("\n\n<hr>")
+      }else{
+        #txtFile<-gsub(".html.rds$", "", comp_files[i,1])
+        #fdata<-read.table(txtFile, sep="\t", header=T, stringsAsFactors = F)
+        fdata<-read.table(comp_files[i,1], sep="\t", header=T, stringsAsFactors = F)
+        fdata<-fdata[c(1:min(nrow(fdata),5)),]
+        fdata$geneSet<-paste0("[", fdata$geneSet, "](", fdata$link, ")")
+        fdata<-fdata[,c(1,2,4,5,6,7,8,9)]
+        print(kable_styling(kable(fdata, caption=tabRef(ename, ename))))
+      }
+    }  
+  }
+
+  
+  
+}
+
+```
+
+<br>
