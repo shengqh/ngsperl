@@ -33,6 +33,8 @@ sub initializeDefaultOptions {
     initDefaultValue( $def, "bwa_option", "" );
   }
 
+  initDefaultValue( $def, "perform_featureCounts",  0 );
+
   initDefaultValue( $def, "perform_gatk_callvariants",   0 );
   initDefaultValue( $def, "perform_gatk4_callvariants",  1 );
   initDefaultValue( $def, "gatk_callvariants_vqsr_mode", 1 );
@@ -231,6 +233,28 @@ sub getConfig {
       };
       push @$individual, ($soft_clip_name);
       $bam_input = $soft_clip_name;
+    }
+
+    if($def->{perform_featureCounts}){
+      my $featureCounts = $bam_input . "_featureCounts";
+      $config->{$featureCounts} = {
+        class      => "Count::FeatureCounts",
+        perform    => 1,
+        target_dir => "${target_dir}/${featureCounts}",
+        option     => "-F SAF",
+        source_ref => $bam_input,
+        gff_file   => getValue($def, "saf_file"),
+        is_paired_end  => is_paired_end($def),
+        sh_direct  => 1,
+        pbs        => {
+          "email"     => $email,
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "23",
+          "mem"       => "40gb"
+        },
+      };
+      push @$individual, ($featureCounts);
     }
 
     my $filter_name = "";
