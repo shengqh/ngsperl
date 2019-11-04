@@ -33,12 +33,14 @@ sub perform {
     $option = $option . " -p";
   }
 
-  if ( $option !~ /-g/ ) {
-    $option = $option . " -g gene_id";
-  }
+  if ( $option !~ /-F SAF/ ) {
+    if ( $option !~ /-g/ ) {
+      $option = $option . " -g gene_id";
+    }
 
-  if ( $option !~ /-t/ ) {
-    $option = $option . " -t exon";
+    if ( $option !~ /-t/ ) {
+      $option = $option . " -t exon";
+    }
   }
 
   my $gffFile = parse_param_file( $config, $section, "gff_file", 1 );
