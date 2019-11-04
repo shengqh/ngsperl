@@ -1064,7 +1064,8 @@ sub writeParameterSampleFile {
     my $nameIndex = -1;
     foreach my $sample_name (@orderedSampleNames) {
       my $subSampleFiles = $temp->{$sample_name};
-      if ( ref($subSampleFiles) eq 'HASH' ) {
+      my $refstr = ref($subSampleFiles);
+      if ( $refstr eq 'HASH' ) {
         foreach my $groupName ( sort keys %$subSampleFiles ) {
           my $groupSampleNames = $subSampleFiles->{$groupName};
           for my $groupSampleName (@$groupSampleNames) {
@@ -1072,7 +1073,7 @@ sub writeParameterSampleFile {
           }
         }
       }
-      else {
+      elsif ( $refstr eq 'ARRAY' ) {
         foreach my $subSampleFile (@$subSampleFiles) {
           my $curSampleName = $sample_name;
           if ( scalar(@outputNames) > 0 ) {
@@ -1081,6 +1082,9 @@ sub writeParameterSampleFile {
           }
           print $list $subSampleFile . "\t$curSampleName\n";
         }
+      }
+      else {
+        print $list $subSampleFiles . "\t$sample_name\n";
       }
     }
     close($list);

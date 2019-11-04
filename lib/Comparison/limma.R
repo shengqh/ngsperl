@@ -20,6 +20,7 @@ makeDesignTable <- function(rawDataTable, factorTable,factorInDesign=NULL) {
 
 
 performLimma <- function(rawDataTable, designTable, contrastsText = NULL) {
+  rawDataTable=rawDataTable[,row.names(designTable)]
   if (is.null(contrastsText)) {
     contrastsText <- c(colnames(designTable)[-1])
   }
@@ -36,8 +37,8 @@ performLimma <- function(rawDataTable, designTable, contrastsText = NULL) {
 performNormlization = TRUE
 pvalue=0.05
 useRawPvalue=1
-foldChange=1.5
-notNaPropotion=0.9
+foldChange=0
+notNaPropotion=0.5
 
 log2FcCol="logFC"
 statCol="t"
@@ -67,10 +68,16 @@ factorTable=read.delim(parSampleFile1,header=F,as.is=T)
 factorInComparisons=read.delim(parSampleFile2,header=F,as.is=T)
 
 ################################################
-# Normlization and boxplot before and after
+# Normlization and boxplot/density plot before and after
 ################################################
-png(paste0(outFile,".RawDistribution.png"))
+png(paste0(outFile,".RawBoxplot.png"))
 boxplot(rawDataTable, las = 2)
+dev.off()
+
+dataForPlot=melt(rawDataTable,variable.name="Sample")
+p=ggplot(dataForPlot,aes(x=value,colour=Sample))+geom_density()
+png(paste0(outFile,".RawDensity.png"))
+plot(p)
 dev.off()
 
 if (performNormlization) {
@@ -83,10 +90,18 @@ if (performNormlization) {
     return(as.data.frame(pep.qua))
   }
   rawDataTable <- qua.norm(rawDataTable)
-  png(paste0(outFile,".NormlizationDistribution.png"))
+  png(paste0(outFile,".NormlizationBoxplot.png"))
   boxplot(rawDataTable, las = 2)
   dev.off()
+  
+  dataForPlot=melt(rawDataTable,variable.name="Sample")
+  p=ggplot(dataForPlot,aes(x=value,colour=Sample))+geom_density()
+  png(paste0(outFile,".NormlizationDensity.png"))
+  plot(p)
+  dev.off()
 }
+
+
 
 
 ##################################
@@ -115,11 +130,12 @@ naCount=apply(rawDataTable,1,function(x) length(which(is.na(x))))
 rawDataTableForDiffDetection=rawDataTable[which(naCount/ncol(rawDataTable)<=1-notNaPropotion),]
 
 DiffResultsOutTableAll=list() #record all results when needed
+DiffResultsOutDiffGenesAll=list() #record all diff genes when needed
 for (ComparisonOne in unique(factorInComparisons[,3])) {
 #  prefix=paste0(outFile,"_",ComparisonOne)
   prefix=paste0(ComparisonOne)
   
-  factorInDesign=factorInComparisons[which(factorInComparisons[,3]==ComparisonOne),1]
+  factorInDesign=unique(factorInComparisons[which(factorInComparisons[,3]==ComparisonOne),1])
   designTable <- makeDesignTable(rawDataTableForDiffDetection, factorTable,factorInDesign=factorInDesign)
   
   fit3 <- performLimma(rawDataTableForDiffDetection, designTable)
@@ -139,7 +155,6 @@ for (ComparisonOne in unique(factorInComparisons[,3])) {
   write.csv(as.data.frame(tbb),paste0(prefix, "_Diff.csv"))
   write.csv(as.data.frame(tbb[selectDiff,]),paste0(prefix, "_Diff_sig.csv"))
   
-  
   ##################################
   # Output formated files for WebGesnet, GSEA, KEGGprofile
   ##################################
@@ -154,16 +169,50 @@ for (ComparisonOne in unique(factorInComparisons[,3])) {
   }
   
   if(!is.null(geneNameField)){
-    write.table(tbb[,c(geneNameField, statCol),drop=F],paste0(prefix, "_GSEA.rnk"),row.names=F,col.names=F,sep="\t", quote=F)
+    write.table(na.omit(tbb[,c(geneNameField, statCol),drop=F]),paste0(prefix, "_GSEA.rnk"),row.names=F,col.names=F,sep="\t", quote=F)
     write.table(tbb[selectDiff,c(geneNameField),drop=F], paste0(prefix, "_sig_genename.txt"),row.names=F,col.names=F,sep="\t", quote=F)
   }else{
     warning("Can't identify Gene Name column, use row names as gene name")
-    write.table(tbb[,c(statCol),drop=F],paste0(prefix, "_GSEA.rnk"),row.names=T,col.names=F,sep="\t", quote=F)
+    write.table(na.omit(tbb[,c(statCol),drop=F]),paste0(prefix, "_GSEA.rnk"),row.names=T,col.names=F,sep="\t", quote=F)
     write.table(data.frame(name=rownames(tbb[selectDiff,])), paste0(prefix, "_sig_genename.txt"),row.names=F,col.names=F,sep="\t", quote=F)
-  }   
+  }
   
-  
-  
+  ##################################
+  #save result for all
+  ##################################
+  DiffResultsOutTableAll[[ComparisonOne]]=tbb
+  if (length(which(selectDiff))) {
+    if (!is.null(geneNameField)) {
+      DiffResultsOutDiffGenesAll[[ComparisonOne]]=na.omit(tbb[selectDiff,geneNameField])
+    } else {
+      DiffResultsOutDiffGenesAll[[ComparisonOne]]=na.omit(row.names(tbb)[selectDiff])
+    }
+  }
+}
+
+
+########################################################
+# Export figures based on all results
+########################################################
+#vocalo plot
+library(data.table)
+dataForPlot=rbindlist(DiffResultsOutTableAll,idcol="Comparison")
+if (useRawPvalue==1) {
+  p=ggplot(dataForPlot,aes(x=logFC,y=-log10(P.Value)))
+} else {
+  p=ggplot(dataForPlot,aes(x=logFC,y=-log10(adj.P.Val)))
+}
+p=p+geom_point()+facet_wrap(~Comparison,scales="free")
+png(paste0(outFile,".VolcanoPlot.png"))
+print(p)
+dev.off()
+
+#venn plot of differential genes
+#library("VennDiagram")
+if (length(DiffResultsOutDiffGenesAll)>=1 & length(DiffResultsOutDiffGenesAll)<=5) {
+  png(paste0(outFile,".Venn.png"))
+  venn.diagram1(DiffResultsOutDiffGenesAll)
+  dev.off()
 }
 
 
