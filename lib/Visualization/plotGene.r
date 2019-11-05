@@ -25,9 +25,11 @@ cols <- c("DEL" = "blue", "DUP" = "red", "NoIndel" = "gray")
 selectedFeature<-unique(rawTable$Feature)[1]
 for (selectedFeature in unique(rawTable$Feature)) {
   cat(paste0(selectedFeature, "\n"))
+
   dataForPlot<-rawTable[which(rawTable$Feature==selectedFeature),]
   dataForPlot$Key<-paste0(dataForPlot$File, ":", dataForPlot$Chromosome)
   dataForPlot$NormalizedPositionCount<-round(dataForPlot$PositionCount * sizeFactors[dataForPlot$Key, "SizeFactor"])
+  dataForPlot$FileName<-gsub("_", " ", dataForPlot$File)
 
   hasCNV<-(("CNV" %in% colnames(dataForPlot)) & (length(unique(dataForPlot$CNV)) > 1))
   
@@ -37,15 +39,25 @@ for (selectedFeature in unique(rawTable$Feature)) {
     dataForPlot$CNV[dataForPlot$CNV==""] = "NoIndel"
   }
   
+  if(grepl("_\\d+_\\d+$", selectedFeature)){
+    parts=unlist(strsplit(selectedFeature, "_"))
+    featureName=paste0(paste0(parts[1:(length(parts)-2)]), ":", parts[length(parts)-1], "-", parts[length(parts)])
+  }else{
+    featureName = selectedFeature
+  }
+
+  columns<-c("Read count", "Percentage", "Normalized read count")
+  names(columns)<-c("PositionCount", "Percentage", "NormalizedPositionCount")
   column<-"NormalizedPositionCount"
-  for (column in c("PositionCount", "Percentage", "NormalizedPositionCount")){
+  for (column in names(columns)){
     outputFile = paste0(outputPrefix, ".", selectedFeature, ".", column, ".pdf")
     #if (file.exists(outputFile)){
     #  next
     #}
-    pdf(outputFile, height=max(10, length(unique(dataForPlot$File))), width=10, onefile=TRUE)
+    pdf(outputFile, height=max(4, length(unique(dataForPlot$FileName))), width=6, onefile=TRUE)
     g <- ggplot(dataForPlot, aes_string("Position", column)) + 
-      ggtitle(selectedFeature) +
+      ggtitle(featureName) +
+      ylab(columns[column]) +
       geom_line()
     
     if(hasCNV){
@@ -54,7 +66,7 @@ for (selectedFeature in unique(rawTable$Feature)) {
     }
     
     g <- g +
-      facet_grid(File~.) +
+      facet_grid(FileName~.) +
       theme_bw() +
       theme(strip.background=element_blank())
     
