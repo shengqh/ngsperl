@@ -251,9 +251,7 @@ sub getConfig {
     $bam_ref = [ $taskName, ".bam\$" ];
   }
 
-  if(defined $def->{annotation_genes}){
-    my $geneLocus = addGeneLocus($config, $def, $summary, $target_dir);
-
+  if(defined $def->{annotation_locus} or defined $def->{annotation_genes}){
     my $sizeFactorTask = "size_factor";
     $config->{$sizeFactorTask} = {
       class                    => "CQS::ProgramWrapper",
@@ -274,34 +272,90 @@ sub getConfig {
     };
     push( @$summary, $sizeFactorTask );
 
-    my $annotationGenesPlot = "annotation_genes_plot";
-    $config->{$annotationGenesPlot} = {
-      class                 => "CQS::ProgramWrapper",
-      perform               => 1,
-      target_dir            => $def->{target_dir} . "/$annotationGenesPlot",
-      option                => "",
-      interpretor           => "python",
-      program               => "../Visualization/plotGene.py",
-      parameterFile1_arg => "-i",
-      parameterFile1_ref => [ $geneLocus, ".bed" ],
-      parameterFile3_arg => "-s",
-      parameterFile3_ref => [$sizeFactorTask, ".sizefactor"],
-      parameterSampleFile1_arg => "-b",
-      parameterSampleFile1_ref => $bam_ref,
-      output_to_result_directory => 1,
-      output_arg            => "-o",
-      output_file_ext       => ".position.txt.slim;.position.txt",
-      sh_direct             => 1,
-      pbs                   => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "10",
-        "mem"       => "10gb"
-      },
-    };
+    if(defined $def->{annotation_locus}){
+      my $locusFile = $target_dir . "/annotation_locus.bed";
+      open(my $fh, '>', $locusFile) or die "Could not open file '$locusFile' $!";
+      my $locusList = $def->{annotation_locus};
+      my $count = 0;
+      for my $locus (@$locusList){
+        $count = $count + 1;
+        $locus =~ s/,//g;
 
-    push( @$summary, $annotationGenesPlot );
+        my $locusName = $locus;
+        $locusName =~ s/:/_/g; 
+        $locusName =~ s/-/_/g; 
+
+        my @parts = split /:/, $locus;
+        my $chr = $parts[0];
+        my $positions = $parts[1];
+        my @pos = split /-/, $positions;
+        my $start = $pos[0];
+        my $end = $pos[1];
+        print $fh $chr . "\t" . $start . "\t" . $end . "\t1000\t" . $locusName . "\t+\t" . $locusName . "\n";
+      }
+      close($fh);
+
+      my $annotationLocusPlot = "annotation_locus_plot";
+      $config->{$annotationLocusPlot} = {
+        class                 => "CQS::ProgramWrapper",
+        perform               => 1,
+        target_dir            => $def->{target_dir} . "/$annotationLocusPlot",
+        option                => "",
+        interpretor           => "python",
+        program               => "../Visualization/plotGene.py",
+        parameterFile1_arg => "-i",
+        parameterFile1     => $locusFile,
+        parameterFile3_arg => "-s",
+        parameterFile3_ref => [$sizeFactorTask, ".sizefactor"],
+        parameterSampleFile1_arg => "-b",
+        parameterSampleFile1_ref => $bam_ref,
+        output_to_result_directory => 1,
+        output_arg            => "-o",
+        output_file_ext       => ".position.txt.slim;.position.txt",
+        sh_direct             => 1,
+        pbs                   => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        },
+      };
+
+      push( @$summary, $annotationLocusPlot );
+    }
+
+    if(defined $def->{annotation_genes}){
+      my $geneLocus = addGeneLocus($config, $def, $summary, $target_dir);
+      my $annotationGenesPlot = "annotation_genes_plot";
+      $config->{$annotationGenesPlot} = {
+        class                 => "CQS::ProgramWrapper",
+        perform               => 1,
+        target_dir            => $def->{target_dir} . "/$annotationGenesPlot",
+        option                => "",
+        interpretor           => "python",
+        program               => "../Visualization/plotGene.py",
+        parameterFile1_arg => "-i",
+        parameterFile1_ref => [ $geneLocus, ".bed" ],
+        parameterFile3_arg => "-s",
+        parameterFile3_ref => [$sizeFactorTask, ".sizefactor"],
+        parameterSampleFile1_arg => "-b",
+        parameterSampleFile1_ref => $bam_ref,
+        output_to_result_directory => 1,
+        output_arg            => "-o",
+        output_file_ext       => ".position.txt.slim;.position.txt",
+        sh_direct             => 1,
+        pbs                   => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        },
+      };
+
+      push( @$summary, $annotationGenesPlot );
+    }
   }
 
   my $peakCallerTask;
