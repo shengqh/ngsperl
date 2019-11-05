@@ -1,23 +1,15 @@
-import sys
-import os
+import os,sys,inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+cqsdir = os.path.abspath(os.path.dirname(currentdir) + "/CQS")
+sys.path.insert(0,cqsdir) 
+
 import logging
 import argparse
 import string
 import subprocess
-import pysam
 
-def readHashMap(fileName):
-  result = {}
-  with open(fileName, "r") as f:
-    for line in f:
-      parts = line.rstrip().split('\t')
-      if(len(parts) > 1):
-        if parts[1] not in result:
-          result[parts[1]] = [parts[0]]
-        else:
-          result[parts[1]].append(parts[0])
-  #print(result)
-  return(result)
+from FileListUtils import readHashMap, readUniqueHashMap
+from LocusItem import LocusItem, readBedFile
 
 def main():
   DEBUG = False
@@ -44,25 +36,18 @@ def main():
 
   print(args)
   
-  bedMap = readHashMap(args.input)
+  bedMap = readUniqueHashMap(args.input)
+  bamMap = readUniqueHashMap(args.bamListFile)
   groupMap = readHashMap(args.groupsFile)
-  bamMap = readHashMap(args.bamListFile)
 
   for bed in bedMap.keys():
-    bedFile = bedMap[bed][0]
+    bedFile = bedMap[bed]
     logger.info("processing " + bedFile + "...")
 
-    locusList = []
-    with open(bedFile, "r") as fin:
-      for line in fin:
-        parts = line.rstrip().split('\t')
-        chrom = parts[0]
-        start = int(parts[1]) - 1
-        end = int(parts[2])
-        locusList.append([chrom, start, end])
+    locusList = readBedFile(bedFile)
 
     sampleNames = sorted(groupMap[bed])
-    sampleFiles = [bamMap[sampleName][0] for sampleName in sampleNames]
+    sampleFiles = [bamMap[sampleName] for sampleName in sampleNames]
 
     bamListFile = args.output + "/" + bed + ".bam.list"
     with open(bamListFile, "w") as fout:
@@ -70,29 +55,23 @@ def main():
         fout.write(sampleFile + "\n")
 
     posData = []
-    with open(bedFile, "r") as fin:
-      for line in fin:
-        parts = line.rstrip().split('\t')
-        chrom = parts[0]
-        start = parts[1]
-        end = parts[2]
-        locusData = []
-        locusData.append([]) #add chrom
-        locusData.append([]) #add position
-        for sampleName in sampleNames:
-          locusData.append([])
+    for locus in locusList:
+      locusData = []
+      locusData.append([]) #add chrom
+      locusData.append([]) #add position
+      for sampleName in sampleNames:
+        locusData.append([])
 
-        locus = "%s:%s-%s" % (chrom, start, end)
-        logger.info("  processing " + locus + " ...")
-        posData.append([locus, locusData])
+      logger.info("  processing " + locus.Locus + " ...")
+      posData.append([locus, locusData])
 
-        proc = subprocess.Popen(["samtools", "depth", "-f", bamListFile, "-r", locus, "-d", "0"], stdout=subprocess.PIPE)
-        for pline in proc.stdout:
-          pparts = pline.rstrip().split("\t")
-          locusData[0].append(pparts[0])
-          locusData[1].append(int(pparts[1]))
-          for idx in range(len(sampleNames)):
-            locusData[idx+2].append(int(pparts[idx+2]))
+      proc = subprocess.Popen(["samtools", "depth", "-f", bamListFile, "-r", locus, "-d", "0"], stdout=subprocess.PIPE)
+      for pline in proc.stdout:
+        pparts = pline.rstrip().split("\t")
+        locusData[0].append(pparts[0])
+        locusData[1].append(int(pparts[1]))
+        for idx in range(len(sampleNames)):
+          locusData[idx+2].append(int(pparts[idx+2]))
  
     bedResultFile = args.output + "/" + bed + ".position.txt"
     with open(bedResultFile, "w") as fout:
@@ -106,12 +85,12 @@ def main():
           maxCount = max(sampleCount)
 
           if maxCount == 0:
-            fout.write("%s\t%s\t*\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locus, 0, 0, positions[0], 0))
+            fout.write("%s\t%s\t*\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locus.Name, 0, 0, positions[0], 0))
             continue
 
           for cIdx in range(len(positions)):
             if sampleCount[cIdx] != 0:
-              fout.write("%s\t%s\t*\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locus, maxCount, sampleCount[cIdx], positions[cIdx], sampleCount[cIdx] * 1.0 / maxCount)) 
+              fout.write("%s\t%s\t*\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locus.Name, maxCount, sampleCount[cIdx], positions[cIdx], sampleCount[cIdx] * 1.0 / maxCount)) 
 
     os.remove(bamListFile)
     realpath = os.path.dirname(os.path.realpath(__file__))

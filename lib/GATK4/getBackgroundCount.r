@@ -39,7 +39,7 @@ write.table(finalDat, file=outputFile, sep="\t", row.names=F, quote=F)
 nsample=ceiling(sqrt(length(unique(finalDat$Sample))))
 swidth=max(1000, nsample * 500) 
 png(paste0(outputFile, ".png"), width=swidth, height=800, res=300)
-g<-ggplot(finalDat, aes(x=Sample,y=SizeFactor)) + geom_violin() + theme_bw() + 
+g<-ggplot(finalDat, aes(x=Sample,y=LogSizeFactor)) + geom_violin() + theme_bw() + 
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 print(g)
 dev.off()

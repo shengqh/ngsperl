@@ -1,51 +1,15 @@
-import sys
-import os
+import os,sys,inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+cqsdir = os.path.abspath(os.path.dirname(currentdir) + "/CQS")
+sys.path.insert(0,cqsdir) 
+
 import logging
 import argparse
 import string
 import subprocess
-import pysam
+from LocusItem import LocusItem, readBedFile
+from FileListUtils import readUniqueHashMap
 
-def readHashMap(fileName):
-  result = {}
-  with open(fileName, "r") as f:
-    for line in f:
-      parts = line.rstrip().split('\t')
-      if(len(parts) > 1):
-        if parts[1] not in result:
-          result[parts[1]] = [parts[0]]
-        else:
-          result[parts[1]].append(parts[0])
-  #print(result)
-  return(result)
-
-class LocusItem(object):
-  def __init__(self):
-    self.Locus = ""
-    self.Chromosome = ""
-    self.Start = 0
-    self.End = 0
-
-  def setLocus(self, chromosome, start, end):
-    self.Chromosome = chromosome
-    self.Start = start
-    self.End = end
-    self.Locus = "%s:%d-%d" % (chromosome, start, end)
-  
-  def setLocusString(self, locus):
-    self.Locus = locus
-    parts = locus.split(":")
-    self.Chromosome = parts[0]
-    positions = parts[1].split("-")
-    self.Start = int(positions[0])
-    self.End = int(positions[1])
-    
-  def getLocusFileString(self):
-    return("%s_%d_%d" % (self.Chromosome, self.Start, self.End))
-  
-  def str(self):
-    return self.Locus
-  
 def main():
   DEBUG = False
   NOT_DEBUG = not DEBUG
@@ -75,9 +39,9 @@ def main():
 
   print(args)
   
-  bamMap = readHashMap(args.bamListFile)
+  bamMap = readUniqueHashMap(args.bamListFile)
   sampleNames = sorted(bamMap.keys())
-  sampleFiles = [bamMap[sampleName][0] for sampleName in sampleNames]
+  sampleFiles = [bamMap[sampleName] for sampleName in sampleNames]
 
   outputFolder = os.path.dirname(args.output)
 
@@ -104,85 +68,70 @@ def main():
 
   bedResultTmpFile = bedResultFile + ".tmp"
   with open(bedResultTmpFile, "wt") as fout:
-    fout.write("File\tFeature\tChromosome\tPosition\tPositionCount\tMaxCount\tPercentage\n")
+    fout.write("File\tFeature\tLocus\tPosition\tPositionCount\tMaxCount\tPercentage\n")
 
     posData = []
-    with open(bedFile, "rt") as fin:
-      for line in fin:
-        parts = line.rstrip().split('\t')
-        chrom = chrMap[parts[0]]
-        start = int(parts[1])
-        end = int(parts[2])
-            
-        locus = LocusItem()
-        locus.setLocus(chrom, start, end)
-            
-        logger.info("  processing " + locus.Locus + " ...")
-  
-        if len(parts) > 4:
-          locusName = parts[4]
-        else:
-          locusName = locus.Locus
- 
-        sampleNames = sorted(bamMap.keys())
-        sampleFiles = [bamMap[sampleName][0] for sampleName in sampleNames]
-      
-        locusData = []
-        locusData.append([]) #add chromosome from depth
-        locusData.append([]) #add position from depth
-        for sampleName in sampleNames:
-          locusData.append([])
-  
-        #locusName = locusName + "(%d/%d)" % (len(cnvSamples), len(samples))
-        posData.append([locusName, locusData])
-  
-        proc = subprocess.Popen(["samtools", "depth", "-f", bamListFile, "-r", locus.Locus, "-d", "0"], stdout=subprocess.PIPE)
-        for pline in proc.stdout:
-          pparts = pline.rstrip().decode("utf-8").split("\t")
 
-          chromosome = pparts[0]
-          position = int(pparts[1])
-          locusData[0].append(chromosome)
-          locusData[1].append(position)
-            
-          for idx in range(len(sampleNames)):
-            locusData[idx+2].append(int(pparts[idx+2]))
+    locusList = readBedFile(bedFile)
+
+    for locus in locusList:
+      locus.Chromosome = chrMap[locus.Chromosome]
+      locusName = locus.getName()
+      locusString = locus.getLocusString()
+
+      logger.info("  processing " + locus.getLocusString() + " ...")
+
+      locusData = []
+      locusData.append([]) #add position from depth
+      for sampleName in sampleNames:
+        locusData.append([])
+
+      posData.append([locus, locusData])
+
+      proc = subprocess.Popen(["samtools", "depth", "-f", bamListFile, "-r", locusString, "-d", "0"], stdout=subprocess.PIPE)
+      for pline in proc.stdout:
+        pparts = pline.rstrip().decode("utf-8").split("\t")
+
+        position = int(pparts[1])
+        locusData[0].append(position)
           
-        chromosomes = locusData[0]
-        positions = locusData[1]
         for idx in range(len(sampleNames)):
-          sampleCount = locusData[idx+2]
-          if len(sampleCount) == 0:
-            maxCount = 0
-          else:
-            maxCount = max(sampleCount)
-  
-          if maxCount == 0:
-            fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locusName, chrom, start, 0, 0, 0))
-            continue
-  
-          lastZero = True
-          lastPosition = positions[0] - 1
-          for cIdx in range(len(positions)):
-            curPosition = positions[cIdx]
+          locusData[idx+1].append(int(pparts[idx+2]))
+        
+      positions = locusData[0]
+      for idx in range(len(sampleNames)):
+        sampleCount = locusData[idx+1]
+        if len(sampleCount) == 0:
+          maxCount = 0
+        else:
+          maxCount = max(sampleCount)
 
-            if curPosition != lastPosition + 1:
-              if not lastZero:
-                fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locusName, chromosomes[cIdx], lastPosition + 1, 0, maxCount, 0))
-                lastZero = True
+        if maxCount == 0:
+          fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locusName, locusString, locus.Start, 0, 0, 0))
+          continue
 
-            if sampleCount[cIdx] != 0:
-              if lastZero:
-                fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locusName, chromosomes[cIdx], positions[cIdx] - 1, 0, maxCount, 0)) 
-              fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locusName, chromosomes[cIdx], positions[cIdx], sampleCount[cIdx], maxCount, sampleCount[cIdx] * 1.0 / maxCount)) 
-              lastZero = False
-            else:
-              if not lastZero:
-                fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locusName, chromosomes[cIdx], positions[cIdx], 0, maxCount, 0))
+        lastZero = True
+        lastPosition = positions[0] - 1
+        for cIdx in range(len(positions)):
+          curPosition = positions[cIdx]
+
+          if curPosition != lastPosition + 1:
+            if not lastZero:
+              fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locusName, locusString, lastPosition + 1, 0, maxCount, 0))
               lastZero = True
-            lastPosition = curPosition
 
-          fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locusName, chromosomes[0], positions[len(positions)-1] + 1, 0, maxCount, 0))
+          if sampleCount[cIdx] != 0:
+            if lastZero:
+              fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locusName, locusString, positions[cIdx] - 1, 0, maxCount, 0)) 
+            fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locusName, locusString, positions[cIdx], sampleCount[cIdx], maxCount, sampleCount[cIdx] * 1.0 / maxCount)) 
+            lastZero = False
+          else:
+            if not lastZero:
+              fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locusName, locusString, positions[cIdx], 0, maxCount, 0))
+            lastZero = True
+          lastPosition = curPosition
+
+        fout.write("%s\t%s\t%s\t%d\t%d\t%d\t%lf\n" % (sampleNames[idx], locusName, locusString, positions[len(positions)-1] + 1, 0, maxCount, 0))
   
   if os.path.exists(bedResultFile):
     os.remove(bedResultFile)
@@ -191,7 +140,18 @@ def main():
     
   realpath = os.path.dirname(os.path.realpath(__file__))
   rPath = realpath + "/plotGene.r"
-  cmd = "R --vanilla -f " + rPath + " --args " + bedResultFile + " " + bedResultFile + " " + args.sizeFactorFile
+
+  targetR = bedResultFile + ".r"
+  with open(targetR, "wt") as fout:
+    fout.write("inputFile<-\"%s\"\n" % bedResultFile)
+    fout.write("outputPrefix<-\"%s\"\n" % bedResultFile)
+    fout.write("sizeFactorFile<-\"%s\"\n\n" % args.sizeFactorFile)
+    with open(rPath, "r") as fin:
+      for line in fin:
+        line = line.rstrip()
+        fout.write(line + "\n") 
+
+  cmd = "R --vanilla -f " + targetR
   logger.info(cmd)
   os.system(cmd)
 
