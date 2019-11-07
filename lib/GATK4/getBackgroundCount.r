@@ -1,10 +1,18 @@
 library(dplyr)
 library(ggplot2)
 
-args = commandArgs(trailingOnly=TRUE)
+if(! exists("inputFile")){
+  args <- commandArgs(TRUE)
 
-inputFile = args[1]
-outputFile = args[2]
+  if(length(args) == 0){
+    setwd("/scratch/cqs/shengq2/jennifer/20190906_lindsay_exomeseq_3772_hg38/bwa_refine_nosoftclip_gatk4_CNV_Germline_08_SizeFactor/result")
+    inputFile = "lindsay_exomeseq_3772.txt"
+    outputFile = "lindsay_exomeseq_3772.txt.sizefactor"
+  }else{
+    inputFile = args[1]
+    outputFile = args[2]
+  }
+}
 
 dat<-read.table(inputFile, sep="\t", header=T, stringsAsFactors = F)
 dat2<-dat[!(dat$Chromosome %in% c("X", "Y")),]

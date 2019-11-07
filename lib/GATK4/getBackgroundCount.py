@@ -123,10 +123,22 @@ def main():
             chromCount = chromCount + samfile.count(chromBed.Chromosome, chromBed.Start, chromBed.End)
           logger.info("%s ~ %s : %d" % (sample, chromosome, chromCount))
           fout.write("%s\t%s\t%d\n" % (chromosome, sample, chromCount))
-       
+
+
+    
   realpath = os.path.dirname(os.path.realpath(__file__))
   rPath = realpath + "/getBackgroundCount.r"
-  cmd = "R --vanilla -f " + rPath + " --args " + args.output + " " + args.output + ".sizefactor"
+
+  targetR = bedResultFile + ".r"
+  with open(targetR, "wt") as fout:
+    fout.write("inputFile<-\"%s\"\n" % args.output)
+    fout.write("outputFile<-\"%s\"\n\n" % (args.output + ".sizefactor"))
+    with open(rPath, "r") as fin:
+      for line in fin:
+        line = line.rstrip()
+        fout.write(line + "\n") 
+
+  cmd = "R --vanilla -f " + targetR
   logger.info(cmd)
   os.system(cmd)
           
