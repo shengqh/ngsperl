@@ -8,7 +8,7 @@ require Exporter;
 
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(instantiate performTask performConfig performTrace)] );
+our %EXPORT_TAGS = ( 'all' => [qw(instantiate getTaskClass performTask performConfig performTrace)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -32,8 +32,8 @@ sub instantiate {
   return $class->new(@_);
 }
 
-sub performTask {
-  my ( $config, $section, $runImmediately ) = @_;
+sub getTaskClass {
+  my ( $config, $section ) = @_;
   if ( !defined $config->{$section} ) {
     die "No section $section defined.";
   }
@@ -41,6 +41,12 @@ sub performTask {
   my $obj = instantiate($classname);
   $obj->{_config} = $config;
   $obj->{_section} = $section;
+  return ($obj);
+}
+
+sub performTask {
+  my ( $config, $section, $runImmediately ) = @_;
+  my $obj = getTaskClass($config, $section);
   $obj->perform( $config, $section );
   if(defined $runImmediately && $runImmediately){
     my $pbs = $obj->get_pbs_files($config, $section);
