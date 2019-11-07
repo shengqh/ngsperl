@@ -90,10 +90,23 @@ sub perform {
   my $log        = $self->get_log_filename( $log_dir, $task_name, ".log" );
   my $log_desc   = $cluster->get_log_description($log);
 
-  my $result_files = $self->result( $config, $section )->{$task_name};
-  my $final_file = defined $result_files ? $result_files->[-1] : $target_dir;
+  my $results = $self->result( $config, $section );
+  my $result_files = $results->{$task_name};
+  
+  my $pbs;
+  my $final_file;
+  if (defined $result_files){
+    $final_file = $result_files->[-1];
+    $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+  }else{
+    $final_file = $target_dir . "/";
+    
+    my @sampleKeys = reverse sort(keys (%$results));
+    my $firstKey = $sampleKeys[0];
+    my $checkFile = $results->{$firstKey}[-1];
+    $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $checkFile);
+  }
 
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
   print $pbs "
 $interpretor $program $option $parameterSampleFile1arg $parameterSampleFile1 $parameterSampleFile2arg $parameterSampleFile2 $parameterSampleFile3arg $parameterSampleFile3 $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_arg $final_file
 ";
