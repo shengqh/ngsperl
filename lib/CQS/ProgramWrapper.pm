@@ -91,7 +91,7 @@ sub perform {
   my $log_desc   = $cluster->get_log_description($log);
 
   my $result_files = $self->result( $config, $section )->{$task_name};
-  my $final_file = $result_files->[-1];
+  my $final_file = defined $result_files ? $result_files->[-1] : $target_dir;
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
   print $pbs "
