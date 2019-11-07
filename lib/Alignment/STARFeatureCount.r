@@ -83,7 +83,7 @@ if (parSampleFile2 != ''){
   mfinal<-melt(tfinal, id="Sample", variable.name="Read", value.name="Count")
   mfinal$Read<-factor(mfinal$Read, levels=sort(as.character(unique(mfinal$Read))))
   
-  width=max(2000, 50 * ncol(final))
+  width=max(2000, 70 * ncol(final))
   png(file=paste0(outputPrefix, ".csv.png"), height=1500, width=width, res=300)
   
   g<-ggplot(mfinal, aes(x=Sample, y=Count, fill=Read)) +
