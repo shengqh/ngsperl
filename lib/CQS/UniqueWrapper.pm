@@ -89,10 +89,12 @@ sub result {
       push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext_one}" );
     }
   }
-  #  $result->{$task_name} = filter_array( \@result_files, $pattern );
-  my $filtered = filter_array( \@result_files, $pattern, 1 );
-  if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
-    $result->{$task_name} = $filtered;
+
+  if(scalar(@result_files) > 0){
+    my $filtered = filter_array( \@result_files, $pattern, 1 );
+    if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
+      $result->{$task_name} = $filtered;
+    }
   }
 
 
