@@ -237,10 +237,11 @@ sub getConfig {
 
     if($def->{perform_featureCounts}){
       my $featureCounts = $bam_input . "_featureCounts";
+      my $featureCountFolder = "${target_dir}/${featureCounts}";
       $config->{$featureCounts} = {
         class      => "Count::FeatureCounts",
         perform    => 1,
-        target_dir => "${target_dir}/${featureCounts}",
+        target_dir => $featureCountFolder,
         option     => "-F SAF",
         source_ref => $bam_input,
         gff_file   => getValue($def, "saf_file"),
@@ -255,6 +256,49 @@ sub getConfig {
         },
       };
       push @$individual, ($featureCounts);
+
+      my $featureCountsSummary = $featureCounts . "_summary";
+      $config->{$featureCountsSummary} = {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $featureCountFolder,
+        option                   => "",
+        rtemplate                => "../Alignment/STARFeatureCount.r",
+        output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
+        parameterSampleFile2_ref => [ $featureCounts, ".count.summary" ],
+        sh_direct                => 1,
+        pbs                      => {
+          "email"     => $email,
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "2",
+          "mem"       => "10gb"
+        },
+      };
+
+      push @$summary, $featureCountsSummary;
+
+      my $name_map_file = $def->{name_map_file};
+      my $countTable = $featureCounts . "_table";
+      $config->{$countTable} = {
+        class                     => "CQS::CQSDatatable",
+        perform                   => 1,
+        target_dir                => $target_dir . "/" . $countTable,
+        option                    => "-k 0 -v 6 -e --fillMissingWithZero",
+        source_ref                => [$featureCounts, ".count\$"],
+        output_proteincoding_gene => 0,
+        name_map_file             => $name_map_file,
+        sh_direct                 => 1,
+        pbs                       => {
+          "email"     => $email,
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "23",
+          "mem"       => "10gb"
+        },
+      };
+
+      push @$summary, $countTable;
     }
 
     my $filter_name = "";
