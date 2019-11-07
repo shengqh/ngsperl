@@ -33,6 +33,8 @@ sub perform {
   my $rawFiles = get_raw_files( $config, $section );
   my $genome = get_option( $config, $section, "homer_genome" );
 
+  my $rscript = dirname(__FILE__) . "/annotation.r";
+
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
@@ -55,6 +57,7 @@ sub perform {
       print $pbs "if [ ! -s $outputFolder/$annoFile ]; then
   findMotifsGenome.pl $file $genome $outputFolder $option
   annotatePeaks.pl $file $genome -annStats $outputFolder/$annoStatsFile > $outputFolder/$annoFile
+  R --vanilla -f $rscript --args $outputFolder/$annoFile $outputFolder/$annoFile
 fi
 
 ";
