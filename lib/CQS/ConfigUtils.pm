@@ -21,6 +21,7 @@ our %EXPORT_TAGS = (
   'all' => [
     qw(get_config_section
       has_config_section
+      has_option
       get_option
       get_option_file
       get_java
@@ -91,6 +92,13 @@ sub has_config_section {
     return 0 if ( !defined $result );
   }
   return 1;
+}
+
+sub has_option {
+  my ( $config, $section, $key ) = @_;
+  my $curSection = get_config_section( $config, $section );
+  my $result = $curSection->{$key};
+  return (defined $result);
 }
 
 sub get_option {
