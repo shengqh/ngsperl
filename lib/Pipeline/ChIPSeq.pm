@@ -223,6 +223,37 @@ sub getConfig {
       $plotgroups = { getValue( $def, "task_name" ) => \@sortedSamples };
     }
     $config->{plotgroups} = $plotgroups;
+
+    my $gffFile;
+    if (defined $def->{"bamplot_gff"}){
+      $gffFile = $def->{"bamplot_gff"};
+    }elsif (defined $def->{annotation_locus}){
+      $gffFile = $target_dir . "/annotation_locus.gff";
+      open(my $fh, '>', $gffFile) or die "Could not open file '$gffFile' $!";
+      my $locusList = $def->{annotation_locus};
+      my $count = 0;
+      for my $locus (@$locusList){
+        $count = $count + 1;
+        $locus =~ s/,//g;
+
+        my $locusName = $locus;
+        $locusName =~ s/:/_/g; 
+        $locusName =~ s/-/_/g; 
+
+        my @parts = split /:/, $locus;
+        my $chr = $parts[0];
+        my $positions = $parts[1];
+        my @pos = split /-/, $positions;
+        my $start = $pos[0];
+        my $end = $pos[1];
+        my $strand = scalar(@parts) >= 3 ? $parts[2] : "+";
+        print $fh $chr . "\t" . $locusName . "\tLOCUS\t" . $start . "\t" . $end . "\t.\t" . $strand . "\t.\n";
+      }
+      close($fh);
+    }else{
+      getValue( $def, "bamplot_gff" );
+    }
+
     $config->{"bamplot"} = {
       class              => "Visualization::Bamplot",
       perform            => 1,
@@ -230,7 +261,7 @@ sub getConfig {
       option             => getValue( $def, "bamplot_option" ),
       source_ref         => $bam_ref,
       groups_ref         => "plotgroups",
-      gff_file           => getValue( $def, "bamplot_gff" ),
+      gff_file           => $gffFile,
       is_rainbow_color   => 0,
       is_draw_individual => 0,
       is_single_pdf      => 1,
