@@ -66,6 +66,153 @@ sub isVersion3 {
   return $result;
 }
 
+
+sub initializeSmallRNADefaultOptions {
+  my $def = shift;
+
+  initDefaultValue( $def, "cluster",    "slurm" );
+  initDefaultValue( $def, "max_thread", 8 );
+
+  initDefaultValue( $def, "host_xml2bam",                      0 );
+  initDefaultValue( $def, "bacteria_group1_count2bam",         0 );
+  initDefaultValue( $def, "bacteria_group2_count2bam",         0 );
+  initDefaultValue( $def, "fungus_group4_count2bam",           0 );
+  initDefaultValue( $def, "host_bamplot",                      0 );
+  initDefaultValue( $def, "read_correlation",                  1 );
+  initDefaultValue( $def, "perform_contig_analysis",           0 );
+  initDefaultValue( $def, "perform_annotate_unmapped_reads",   0 );
+  initDefaultValue( $def, "perform_nonhost_rRNA_coverage",     0 );
+  initDefaultValue( $def, "perform_nonhost_tRNA_coverage",     0 );
+  initDefaultValue( $def, "perform_host_tRNA_start_position",  1 );
+  initDefaultValue( $def, "perform_host_rRNA_coverage",        1 );
+  initDefaultValue( $def, "perform_host_length_dist_category", 1 );
+  initDefaultValue( $def, "search_combined_nonhost",           0 );
+  initDefaultValue( $def, "perform_report",                    1 );
+
+  initDefaultValue( $def, "perform_nonhost_genome_count",      0 );
+  initDefaultValue( $def, "nonhost_genome_count_no_virus",      0 );
+  
+
+  initDefaultValue( $def, "min_read_length",               16 );
+  initDefaultValue( $def, "bowtie1_option_2mm",            "-a --best --strata -v 2" );
+  initDefaultValue( $def, "bowtie1_option_1mm",            "-a --best -m 100 --strata -v 1" );
+  initDefaultValue( $def, "bowtie1_option_pm",             "-a --best -m 1000 --strata -v 0" );
+  initDefaultValue( $def, "bowtie1_output_to_same_folder", 1 );
+  initDefaultValue( $def, "fastq_remove_N",                1 );
+
+  if ( defined $def->{run_cutadapt} && not defined $def->{perform_cutadapt} ) {
+    $def->{perform_cutadapt} = $def->{run_cutadapt};
+    $def->{run_cutadapt}     = undef;
+  }
+  initDefaultValue( $def, "perform_cutadapt", 1 );
+  initDefaultValue( $def, "cutadapt_thread", 8 );
+
+  initDefaultValue( $def, "fastq_len", 1 );
+  
+  if ( $def->{perform_cutadapt} ) {
+    initDefaultValue( $def, "adapter",         "TGGAATTCTCGGGTGCCAAGG" );
+    initDefaultValue( $def, "cutadapt_option", "-m " . $def->{min_read_length} );
+    initDefaultValue( $def, "trim_poly_atgc",  1 );
+    initDefaultValue( $def, "trim_base_quality_after_adapter_trim",  0 );
+  }
+
+  initDefaultValue( $def, "remove_sequences",          "'CCACGTTCCCGTGG;ACAGTCCGACGATC'" );
+  initDefaultValue( $def, "fastq_remove_random",       0 );
+  initDefaultValue( $def, "mirbase_count_option",      "-p hsa" );
+  initDefaultValue( $def, "table_vis_group_text_size", 10 );
+  initDefaultValue( $def, "sequencetask_run_time",     12 );
+
+  initDefaultValue( $def, "DE_fold_change",              1.5 );
+  initDefaultValue( $def, "DE_min_median_read_top",      2 );
+  initDefaultValue( $def, "DE_min_median_read_smallRNA", 5 );
+  initDefaultValue( $def, "DE_pvalue",                   0.05 );
+  initDefaultValue( $def, "DE_use_raw_pvalue",           1 );
+  initDefaultValue( $def, "DE_detected_in_both_group",   0 );
+  initDefaultValue( $def, "DE_library_key",              "TotalReads" );
+  initDefaultValue( $def, "DE_cooksCutoff",              "FALSE" );
+  initDefaultValue( $def, "use_pearson_in_hca",          0 );
+
+  initDefaultValue( $def, "smallrnacount_option", "" );
+  initDefaultValue( $def, "hasMicroRNAOnly",              0 );
+  initDefaultValue( $def, "hasYRNA",              0 );
+  initDefaultValue( $def, "nonhost_table_option", "--outputReadTable" );
+
+  initDefaultValue( $def, "consider_miRNA_NTA", 1 );
+
+  #search database
+  initDefaultValue( $def, "search_nonhost_genome_custom_group_only",        0 );
+  if (getValue( $def, "search_nonhost_genome_custom_group_only")){
+    $def->{"search_not_identical"} = 0;
+    $def->{"search_host_genome"} = 0;
+    $def->{"search_nonhost_genome"} = 1;
+    $def->{"search_nonhost_genome_custom_group"} = 1;
+    $def->{"search_nonhost_library"} = 0;
+    $def->{"perform_class_independent_analysis"} = 0;
+    $def->{"blast_unmapped_reads"} = 0;
+    $def->{"perform_report"} = 0;
+    $def->{perform_host_genome_reads_deseq2} = 0;
+  }else{
+    initDefaultValue( $def, "search_not_identical",               1 );
+    initDefaultValue( $def, "search_host_genome",                 1 );
+    initDefaultValue( $def, "host_remove_all_mapped_reads",       0 );
+    initDefaultValue( $def, "search_nonhost_genome",              1 );
+    initDefaultValue( $def, "search_nonhost_library",             1 );
+    initDefaultValue( $def, "perform_class_independent_analysis", 1 );
+    initDefaultValue( $def, "perform_host_genome_reads_deseq2", 0 );
+  }
+
+  #blastn
+  initDefaultValue( $def, "blast_top_reads",      0 );
+  initDefaultValue( $def, "blast_unmapped_reads", 0 );
+  initDefaultValue( $def, "blast_localdb",        "" );
+
+  initDefaultValue( $def, "consider_tRNA_NTA", 1 );
+
+  my $additionalOption = "";
+  if ( $def->{hasSnRNA} ) {
+    $additionalOption = $additionalOption . " --exportSnRNA";
+  }
+  if ( $def->{hasSnoRNA} ) {
+    $additionalOption = $additionalOption . " --exportSnoRNA";
+  }
+  if ( $def->{hasYRNA} ) {
+    $additionalOption = $additionalOption . " --exportYRNA";
+  }
+  my $defaultOption = getValue( $def, "host_smallrnacount_option", "" );
+  initDefaultValue( $def, "host_smallrnacount_option", $defaultOption . " --min_overlap 0.9 --offsets 0,1,2,-1,-2" . $additionalOption );
+
+  $defaultOption = getValue( $def, "host_smallrnacounttable_option", "" );
+  initDefaultValue( $def, "host_smallrnacounttable_option", $defaultOption . $additionalOption );
+
+  initDefaultValue( $def, "export_contig_details",       1 );
+  initDefaultValue( $def, "max_sequence_extension_base", 1 );
+  initDefaultValue( $def, "top_read_number",             100 );
+  my $defaultSequenceCountOption = "--maxExtensionBase " . getValue( $def, "max_sequence_extension_base" ) .    #base
+    " -n " . getValue( $def, "top_read_number" ) .                                                              #number of sequence
+    " --exportFastaNumber " . getValue( $def, "top_read_number" ) .                                             #fasta
+    ( getValue( $def, "export_contig_details" ) ? " --exportContigDetails" : "" );                              #contig_detail
+  initDefaultValue( $def, "sequence_count_option", $defaultSequenceCountOption );
+
+  #visualization
+  initDefaultValue( $def, "use_least_groups", 0 );
+
+  initDefaultValue( $def, "perform_nonhost_mappedToHost", 0 );
+
+  initDefaultValue( $def, "perform_host_tRH_analysis", 0 );
+
+  initDefaultValue( $def, "perform_host_tRnaFragmentHalves_analysis", 0 );
+
+  initDefaultValue( $def, "correlation_rcode", "" );
+  my $str = $def->{correlation_rcode};
+  $str =~ s/^\s+|\s+$//g;
+  if ( $str ne "" and $str !~ ";\$" ) {
+    $str = $str . ";";
+  }
+  $def->{correlation_rcode} = $str;
+
+  return $def;
+}
+
 sub addNonhostDatabase {
   my ( $config, $def, $individual, $summary, $taskKey, $parentDir, $bowtieIndex, $sourceRef, $countOption, $tableOption, $count_ref, $nonhostXml ) = @_;
 
@@ -231,150 +378,6 @@ sub addNonhostVis {
   );
 
   push @$summary, $taskName;
-}
-
-sub initializeSmallRNADefaultOptions {
-  my $def = shift;
-
-  initDefaultValue( $def, "cluster",    "slurm" );
-  initDefaultValue( $def, "max_thread", 8 );
-
-  initDefaultValue( $def, "host_xml2bam",                      0 );
-  initDefaultValue( $def, "bacteria_group1_count2bam",         0 );
-  initDefaultValue( $def, "bacteria_group2_count2bam",         0 );
-  initDefaultValue( $def, "fungus_group4_count2bam",           0 );
-  initDefaultValue( $def, "host_bamplot",                      0 );
-  initDefaultValue( $def, "read_correlation",                  1 );
-  initDefaultValue( $def, "perform_contig_analysis",           0 );
-  initDefaultValue( $def, "perform_annotate_unmapped_reads",   0 );
-  initDefaultValue( $def, "perform_nonhost_rRNA_coverage",     0 );
-  initDefaultValue( $def, "perform_nonhost_tRNA_coverage",     0 );
-  initDefaultValue( $def, "perform_host_tRNA_start_position",  1 );
-  initDefaultValue( $def, "perform_host_rRNA_coverage",        1 );
-  initDefaultValue( $def, "perform_host_length_dist_category", 1 );
-  initDefaultValue( $def, "search_combined_nonhost",           0 );
-  initDefaultValue( $def, "perform_report",                    1 );
-
-  initDefaultValue( $def, "perform_nonhost_genome_count",      0 );
-  initDefaultValue( $def, "nonhost_genome_count_no_virus",      0 );
-  
-
-  initDefaultValue( $def, "min_read_length",               16 );
-  initDefaultValue( $def, "bowtie1_option_2mm",            "-a --best --strata -v 2" );
-  initDefaultValue( $def, "bowtie1_option_1mm",            "-a --best -m 100 --strata -v 1" );
-  initDefaultValue( $def, "bowtie1_option_pm",             "-a --best -m 1000 --strata -v 0" );
-  initDefaultValue( $def, "bowtie1_output_to_same_folder", 1 );
-  initDefaultValue( $def, "fastq_remove_N",                1 );
-
-  if ( defined $def->{run_cutadapt} && not defined $def->{perform_cutadapt} ) {
-    $def->{perform_cutadapt} = $def->{run_cutadapt};
-    $def->{run_cutadapt}     = undef;
-  }
-  initDefaultValue( $def, "perform_cutadapt", 1 );
-  initDefaultValue( $def, "cutadapt_thread", 8 );
-
-  initDefaultValue( $def, "fastq_len", 1 );
-  
-  if ( $def->{perform_cutadapt} ) {
-    initDefaultValue( $def, "adapter",         "TGGAATTCTCGGGTGCCAAGG" );
-    initDefaultValue( $def, "cutadapt_option", "-m " . $def->{min_read_length} );
-    initDefaultValue( $def, "trim_poly_atgc",  1 );
-    initDefaultValue( $def, "trim_base_quality_after_adapter_trim",  0 );
-  }
-
-  initDefaultValue( $def, "remove_sequences",          "'CCACGTTCCCGTGG;ACAGTCCGACGATC'" );
-  initDefaultValue( $def, "fastq_remove_random",       0 );
-  initDefaultValue( $def, "mirbase_count_option",      "-p hsa" );
-  initDefaultValue( $def, "table_vis_group_text_size", 10 );
-  initDefaultValue( $def, "sequencetask_run_time",     12 );
-
-  initDefaultValue( $def, "DE_fold_change",              1.5 );
-  initDefaultValue( $def, "DE_min_median_read_top",      2 );
-  initDefaultValue( $def, "DE_min_median_read_smallRNA", 5 );
-  initDefaultValue( $def, "DE_pvalue",                   0.05 );
-  initDefaultValue( $def, "DE_use_raw_pvalue",           1 );
-  initDefaultValue( $def, "DE_detected_in_both_group",   0 );
-  initDefaultValue( $def, "DE_library_key",              "TotalReads" );
-  initDefaultValue( $def, "DE_cooksCutoff",              "FALSE" );
-  initDefaultValue( $def, "use_pearson_in_hca",          0 );
-
-  initDefaultValue( $def, "smallrnacount_option", "" );
-  initDefaultValue( $def, "hasMicroRNAOnly",              0 );
-  initDefaultValue( $def, "hasYRNA",              0 );
-  initDefaultValue( $def, "nonhost_table_option", "--outputReadTable" );
-
-  initDefaultValue( $def, "consider_miRNA_NTA", 1 );
-
-  #search database
-  initDefaultValue( $def, "search_nonhost_genome_custom_group_only",        0 );
-  if (getValue( $def, "search_nonhost_genome_custom_group_only")){
-    $def->{"search_not_identical"} = 0;
-    $def->{"search_host_genome"} = 0;
-    $def->{"search_nonhost_genome"} = 1;
-    $def->{"search_nonhost_genome_custom_group"} = 1;
-    $def->{"search_nonhost_library"} = 0;
-    $def->{"perform_class_independent_analysis"} = 0;
-    $def->{"blast_unmapped_reads"} = 0;
-    $def->{"perform_report"} = 0;
-    $def->{perform_host_genome_reads_deseq2} = 0;
-  }else{
-    initDefaultValue( $def, "search_not_identical",               1 );
-    initDefaultValue( $def, "search_host_genome",                 1 );
-    initDefaultValue( $def, "host_remove_all_mapped_reads",       0 );
-    initDefaultValue( $def, "search_nonhost_genome",              1 );
-    initDefaultValue( $def, "search_nonhost_library",             1 );
-    initDefaultValue( $def, "perform_class_independent_analysis", 1 );
-    initDefaultValue( $def, "perform_host_genome_reads_deseq2", 0 );
-  }
-
-  #blastn
-  initDefaultValue( $def, "blast_top_reads",      0 );
-  initDefaultValue( $def, "blast_unmapped_reads", 0 );
-  initDefaultValue( $def, "blast_localdb",        "" );
-
-  initDefaultValue( $def, "consider_tRNA_NTA", 1 );
-
-  my $additionalOption = "";
-  if ( $def->{hasSnRNA} ) {
-    $additionalOption = $additionalOption . " --exportSnRNA";
-  }
-  if ( $def->{hasSnoRNA} ) {
-    $additionalOption = $additionalOption . " --exportSnoRNA";
-  }
-  if ( $def->{hasYRNA} ) {
-    $additionalOption = $additionalOption . " --exportYRNA";
-  }
-  my $defaultOption = getValue( $def, "host_smallrnacount_option", "" );
-  initDefaultValue( $def, "host_smallrnacount_option", $defaultOption . " --min_overlap 0.9 --offsets 0,1,2,-1,-2" . $additionalOption );
-
-  $defaultOption = getValue( $def, "host_smallrnacounttable_option", "" );
-  initDefaultValue( $def, "host_smallrnacounttable_option", $defaultOption . $additionalOption );
-
-  initDefaultValue( $def, "export_contig_details",       1 );
-  initDefaultValue( $def, "max_sequence_extension_base", 1 );
-  initDefaultValue( $def, "top_read_number",             100 );
-  my $defaultSequenceCountOption = "--maxExtensionBase " . getValue( $def, "max_sequence_extension_base" ) .    #base
-    " -n " . getValue( $def, "top_read_number" ) .                                                              #number of sequence
-    " --exportFastaNumber " . getValue( $def, "top_read_number" ) .                                             #fasta
-    ( getValue( $def, "export_contig_details" ) ? " --exportContigDetails" : "" );                              #contig_detail
-  initDefaultValue( $def, "sequence_count_option", $defaultSequenceCountOption );
-
-  #visualization
-  initDefaultValue( $def, "use_least_groups", 0 );
-
-  initDefaultValue( $def, "perform_nonhost_mappedToHost", 0 );
-
-  initDefaultValue( $def, "perform_host_tRH_analysis", 0 );
-
-  initDefaultValue( $def, "correlation_rcode", "" );
-  my $str = $def->{correlation_rcode};
-  $str =~ s/^\s+|\s+$//g;
-  if ( $str ne "" and $str !~ ";\$" ) {
-    $str = $str . ";";
-  }
-  $def->{correlation_rcode} = $str;
-
-  return $def;
 }
 
 sub getSmallRNADefinition {
