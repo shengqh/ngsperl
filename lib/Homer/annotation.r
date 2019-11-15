@@ -24,6 +24,9 @@ stats$PeakNumber<-as.numeric(stats$PeakNumber)
 stats<-stats[stats$PeakNumber > 0,]
 stats<-stats[order(stats$PeakNumber, decreasing=T),]
 stats$Category<-factor(stats$Category, levels=(stats$Category))
+stats$Percentage<-stats$PeakNumber * 100 / sum(stats$PeakNumber)
+
+write.csv(stats, file=paste0(outputPrefix, ".csv"), row.names=F, quote=F)
 
 legend.font<-element_text(size=14)
 pdf(file=paste0(outputPrefix, ".pdf"), width=6, height=5)
