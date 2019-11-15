@@ -59,10 +59,10 @@ sub result {
   @output_perSample_file_exts = grep { $_ ne '' } @output_perSample_file_exts; #remove empty elements
 
   my $result       = {};
-  my @result_files = ();
 
   if ( $output_file eq "parameterSampleFile1" or $output_file eq "parameterSampleFile2" or $output_file eq "parameterSampleFile3" ) {
     if ( has_raw_files( $config, $section, $output_file ) ) {
+      my @result_files = ();
       my %temp = %{ get_raw_files( $config, $section, $output_file ) };
       foreach my $sample_name ( keys %temp ) {
 #        print "SampleName: $sample_name\n";
@@ -117,6 +117,7 @@ sub result {
     }
   }
   else {
+    my @result_files = ();
     foreach my $output_file_ext_one (@output_file_exts) {
       push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext_one}" );
     }
