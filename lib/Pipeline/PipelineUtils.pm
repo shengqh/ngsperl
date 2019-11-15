@@ -17,6 +17,7 @@ our %EXPORT_TAGS = (
   'all' => [
     qw(getValue 
     initPipelineOptions 
+    readChromosomeFromDictFile
     addPreprocess 
     addFastQC 
     addBlastn 
@@ -45,7 +46,8 @@ our %EXPORT_TAGS = (
     addAnnovarFilterGeneannotation
     addGATK4CNVGermlineCohortAnalysis 
     addXHMM
-    addGeneLocus)
+    addGeneLocus
+    annotateNearestGene)
   ]
 );
 
@@ -64,6 +66,34 @@ sub getValue {
   else {
     die "Define $name in user definition first.";
   }
+}
+
+sub readChromosomeFromDictFile {
+  my ($dictFile, $primaryOnly) = shift;
+  if(! defined $primaryOnly){
+    $primaryOnly = 1;
+  }
+
+  my $result = [];
+  open( my $fin, "<$dictFile" ) or die "Cannot open $dictFile";
+  while ( my $line = (<$fin>) ) {
+    chomp $line;
+    my @parts = split( '\t', $line );
+    if ($parts[0] eq "\@SQ"){
+      my $chrName = substr($parts[1], 3);
+      if ($primaryOnly){
+        my $maxLength = rindex($chrName, "chr", 0) == 0 ? 5 : 2;
+        if (length($chrName) <= $maxLength){
+          push @$result, $chrName;
+        }
+      }else{
+        push @$result, $chrName;
+      }
+    }
+  }
+  close($fin);
+
+  return($result);
 }
 
 sub getNextFolderIndex {
@@ -1292,6 +1322,33 @@ sub addGeneLocus {
     push( @$summary, $geneLocus );
   }
   return ($geneLocus);
+}
+
+sub annotateNearestGene {
+  my ($config, $def, $summary, $target_dir, $source_file_ref) = @_;
+
+  my $task_name = "nearest_gene";
+
+  $config->{$task_name} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => "${target_dir}/${task_name}",
+    rtemplate                => "../Annotation/findNearestGene.r",
+    output_file              => "",
+    output_file_ext          => ".Category.Table.csv",
+    parameterSampleFile1_ref => $source_file_ref,
+    parameterFile1           => getValue($def, "gene_bed"),
+    rCode                    => '',
+    sh_direct                => 1,
+    pbs                      => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push @$summary, ($task_name);
 }
 
 1;

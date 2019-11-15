@@ -40,6 +40,13 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "gatk_callvariants_vqsr_mode", 1 );
   initDefaultValue( $def, "has_chr_in_chromosome_name" , 0);
 
+  if(defined $def->{"ref_fasta_dict"} && (! defined $def->{"chromosome_names"})){
+    my $dictFile = getValue($def, "ref_fasta_dict");
+    my $primary_chromosome_only = getValue($def, "primary_chromosome_only", 1);
+    my $chromosomes = readChromosomeFromDictFile($dictFile, $primary_chromosome_only);
+    initDefaultValue( $def, "chromosome_names" , join(",", @$chromosomes));
+  }
+
   initDefaultValue( $def, "filter_variants_by_allele_frequency",            0 );
   initDefaultValue( $def, "filter_variants_by_allele_frequency_percentage", 0.9 );
   initDefaultValue( $def, "filter_variants_by_allele_frequency_maf",        0.3 );
@@ -325,31 +332,129 @@ sub getConfig {
         },
       };
       push @$individual, ($gvcf_name);
-      $filter_name = $gvcf_name . "_vqsr";
-      $config->{$filter_name} = {
-        class             => "GATK4::VariantFilter",
-        perform           => 1,
-        target_dir        => "${target_dir}/$filter_name",
-        option            => "",
-        vqsr_mode         => 1,
-        source_ref        => "$gvcf_name",
-        java_option       => "",
-        fasta_file        => $fasta,
-        dbsnp_vcf         => $dbsnp,
-        hapmap_vcf        => $def->{hapmap},
-        omni_vcf          => $def->{omni},
-        g1000_vcf         => $def->{g1000},
-        axiomPoly_vcf     => $def->{axiomPoly},
-        mills_vcf         => $mills,
-        sh_direct         => 1,
-        pbs               => {
-          "email"    => $email,
-          "nodes"    => "1:ppn=8",
-          "walltime" => "24",
-          "mem"      => "40gb"
-        },
-      };
-      push @$summary, ($filter_name);
+
+      if(getValue($def, "gatk4_variant_filter_by_chromosome", 0)){
+        my $filter_name_chr = $gvcf_name . "_vqsr_chr";
+        $config->{$filter_name_chr} = {
+          class             => "GATK4::VariantFilterChromosome",
+          perform           => 1,
+          target_dir        => "${target_dir}/$filter_name_chr",
+          option            => "",
+          vqsr_mode         => 1,
+          source_ref        => "$gvcf_name",
+          java_option       => "",
+          fasta_file        => $fasta,
+          dbsnp_vcf         => $dbsnp,
+          chromosome_names  => getValue($def, "chromosome_names"),
+          sh_direct         => 0,
+          pbs               => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=1",
+            "walltime" => "4",
+            "mem"      => "10gb"
+          },
+        };
+        push @$summary, ($filter_name_chr);
+
+        my $filter_name_chr_recalibrator = $gvcf_name . "_vqsr_chr_recal";
+        $config->{$filter_name_chr_recalibrator} = {
+          class             => "GATK4::VariantRecalibrator",
+          perform           => 1,
+          target_dir        => "${target_dir}/$filter_name_chr_recalibrator",
+          option            => "",
+          vqsr_mode         => 1,
+          source_ref        => ["$filter_name_chr",  "sites_only.vcf.gz"],
+          java_option       => "",
+          fasta_file        => $fasta,
+          dbsnp_vcf         => $dbsnp,
+          hapmap_vcf        => $def->{hapmap},
+          omni_vcf          => $def->{omni},
+          g1000_vcf         => $def->{g1000},
+          axiomPoly_vcf     => $def->{axiomPoly},
+          mills_vcf         => $mills,
+          chromosome_names  => getValue($def, "chromosome_names"),
+          sh_direct         => 0,
+          pbs               => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=1",
+            "walltime" => "4",
+            "mem"      => "10gb"
+          },
+        };
+        push @$summary, ($filter_name_chr_recalibrator);
+
+        my $filter_name_chr_recalibrator_apply = $gvcf_name . "_vqsr_chr_recal_apply";
+        $config->{$filter_name_chr_recalibrator_apply} = {
+          class             => "GATK4::VariantApplyVQSR",
+          perform           => 1,
+          target_dir        => "${target_dir}/$filter_name_chr_recalibrator_apply",
+          option            => "",
+          vqsr_mode         => 1,
+          source_ref        => [$filter_name_chr,  "variant_filtered.vcf.gz"],
+          java_option       => "",
+          indels_recalibration_ref => [$filter_name_chr_recalibrator, ".indels.recal.vcf.gz"],
+          indels_tranches_ref => [$filter_name_chr_recalibrator, ".indels.tranches"],
+          snps_recalibration_ref => [$filter_name_chr_recalibrator, ".snp.recal.vcf.gz"],
+          snps_tranches_ref => [$filter_name_chr_recalibrator, ".snp.tranches"],
+          chromosome_names  => getValue($def, "chromosome_names"),
+          sh_direct         => 1,
+          pbs               => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=1",
+            "walltime" => "4",
+            "mem"      => "10gb"
+          },
+        };
+        push @$summary, ($filter_name_chr_recalibrator_apply);
+
+        my $filter_name_chr_recalibrator_apply_gather = $gvcf_name . "_vqsr_chr_recal_apply_gather";
+        $config->{$filter_name_chr_recalibrator_apply_gather} = {
+          class             => "GATK4::VariantGather",
+          perform           => 1,
+          target_dir        => "${target_dir}/$filter_name_chr_recalibrator_apply_gather",
+          option            => "",
+          source_ref        => ["$filter_name_chr_recalibrator_apply",  "pass.vcf.gz"],
+          fasta_file        => $fasta,
+          java_option       => "",
+          chromosome_names  => getValue($def, "chromosome_names"),
+          sh_direct         => 1,
+          pbs               => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=1",
+            "walltime" => "4",
+            "mem"      => "10gb"
+          },
+        };
+        push @$summary, ($filter_name_chr_recalibrator_apply_gather);
+
+        $filter_name = $filter_name_chr_recalibrator_apply_gather;
+      }else{
+        $filter_name = $gvcf_name . "_vqsr";
+        $config->{$filter_name} = {
+          class             => "GATK4::VariantFilter",
+          perform           => 1,
+          target_dir        => "${target_dir}/$filter_name",
+          option            => "",
+          vqsr_mode         => 1,
+          source_ref        => "$gvcf_name",
+          java_option       => "",
+          fasta_file        => $fasta,
+          dbsnp_vcf         => $dbsnp,
+          hapmap_vcf        => $def->{hapmap},
+          omni_vcf          => $def->{omni},
+          g1000_vcf         => $def->{g1000},
+          axiomPoly_vcf     => $def->{axiomPoly},
+          mills_vcf         => $mills,
+          sh_direct         => 1,
+          pbs               => {
+            "email"    => $email,
+            "nodes"    => "1:ppn=8",
+            "walltime" => "24",
+            "mem"      => "40gb"
+          },
+        };
+        push @$summary, ($filter_name);
+      }
     }
     elsif ( $def->{perform_gatk_callvariants} ) {
       my $gvcf_name = $refine_name . "_hc_gvcf";
