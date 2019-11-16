@@ -308,9 +308,15 @@ sub getConfig {
       push @$summary, $countTable;
     }
 
+    my $gatk_index = {};
+    my $gatk_index_snv = "SNV_Index";
+
+    my $gatk_prefix = "";
+    my $snv_index = 0;
     my $filter_name = "";
     if ( $def->{perform_gatk4_callvariants} ) {
-      my $gvcf_name         = $bam_input . "_gatk4_hc_gvcf";
+      $gatk_prefix = $bam_input . "_gatk4_SNV_";
+      my $gvcf_name         = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_hc_gvcf";
       $config->{$gvcf_name} = {
         class             => "GATK4::HaplotypeCaller",
         perform           => 1,
@@ -334,7 +340,7 @@ sub getConfig {
       push @$individual, ($gvcf_name);
 
       if(getValue($def, "gatk4_variant_filter_by_chromosome", 0)){
-        my $filter_name_chr = $gvcf_name . "_vqsr_chr";
+        my $filter_name_chr = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_vqsr_chr";
         $config->{$filter_name_chr} = {
           class             => "GATK4::VariantFilterChromosome",
           perform           => 1,
@@ -356,7 +362,7 @@ sub getConfig {
         };
         push @$summary, ($filter_name_chr);
 
-        my $filter_name_chr_recalibrator = $gvcf_name . "_vqsr_chr_recal";
+        my $filter_name_chr_recalibrator = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_recalibrator";
         $config->{$filter_name_chr_recalibrator} = {
           class             => "GATK4::VariantRecalibrator",
           perform           => 1,
@@ -383,7 +389,7 @@ sub getConfig {
         };
         push @$summary, ($filter_name_chr_recalibrator);
 
-        my $filter_name_chr_recalibrator_apply = $gvcf_name . "_vqsr_chr_recal_apply";
+        my $filter_name_chr_recalibrator_apply = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_applyVQSR";
         $config->{$filter_name_chr_recalibrator_apply} = {
           class             => "GATK4::VariantApplyVQSR",
           perform           => 1,
@@ -407,7 +413,7 @@ sub getConfig {
         };
         push @$summary, ($filter_name_chr_recalibrator_apply);
 
-        my $filter_name_chr_recalibrator_apply_gather = $gvcf_name . "_vqsr_chr_recal_apply_gather";
+        my $filter_name_chr_recalibrator_apply_gather = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_gather";
         $config->{$filter_name_chr_recalibrator_apply_gather} = {
           class             => "GATK4::VariantGather",
           perform           => 1,
@@ -429,7 +435,7 @@ sub getConfig {
 
         $filter_name = $filter_name_chr_recalibrator_apply_gather;
       }else{
-        $filter_name = $gvcf_name . "_vqsr";
+        $filter_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_vqsr";
         $config->{$filter_name} = {
           class             => "GATK4::VariantFilter",
           perform           => 1,
@@ -457,7 +463,8 @@ sub getConfig {
       }
     }
     elsif ( $def->{perform_gatk_callvariants} ) {
-      my $gvcf_name = $refine_name . "_hc_gvcf";
+      $gatk_prefix = $bam_input . "_gatk3_SNV_Germline_";
+      my $gvcf_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_hc_gvcf";
       $config->{$gvcf_name} = {
         class         => "GATK::HaplotypeCaller",
         perform       => 1,
@@ -482,7 +489,7 @@ sub getConfig {
       push @$individual, ($gvcf_name);
 
       if ( $def->{gatk_callvariants_vqsr_mode} ) {
-        $filter_name = $gvcf_name . "_vqsr";
+        $filter_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_vqsr";
         $config->{$filter_name} = {
           class       => "GATK::VariantFilter",
           perform     => 1,
@@ -508,7 +515,7 @@ sub getConfig {
         };
       }
       else {
-        $filter_name = $gvcf_name . "_hardfilter";
+        $filter_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_hardfilter";
 
         $config->{$filter_name} = {
           class       => "GATK::VariantFilter",
@@ -536,7 +543,7 @@ sub getConfig {
     my $annovar_filter_geneannotation_name = undef;
     if ( $def->{perform_gatk4_callvariants} or $def->{perform_gatk_callvariants} ) {
       if ( $def->{filter_variants_by_allele_frequency} ) {
-        my $maf_filter_name = $filter_name . "_filterMAF";
+        my $maf_filter_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_filterMAF";
         $config->{$maf_filter_name} = {
           class                 => "CQS::ProgramWrapper",
           perform               => 1,
@@ -563,16 +570,16 @@ sub getConfig {
       }
 
       if ( $def->{perform_annovar} ) {
-        my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $filter_name, undef );
+        my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $filter_name, undef, $gatk_prefix, $gatk_index, $gatk_index_snv );
 
         if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
-          my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name );
+          my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name, $gatk_prefix, $gatk_index, $gatk_index_snv);
 
           if ( defined $def->{annotation_genes} ) {
             $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
           }
 
-          my $annovar_to_maf = $annovar_filter_name . "_toMAF";
+          my $annovar_to_maf = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_toMAF";
           $config->{$annovar_to_maf} = {
             class      => "Annotation::Annovar2Maf",
             perform    => 1,
@@ -590,7 +597,7 @@ sub getConfig {
           };
           push @$summary, $annovar_to_maf;
 
-          my $annovar_to_maf_report = $annovar_to_maf . "_report";
+          my $annovar_to_maf_report = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_report";
           $config->{$annovar_to_maf_report} = {
             class                    => "CQS::UniqueR",
             perform                  => 1,

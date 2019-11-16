@@ -16,6 +16,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(getValue 
+    getIndexName
     initPipelineOptions 
     readChromosomeFromDictFile
     addPreprocess 
@@ -37,6 +38,7 @@ our %EXPORT_TAGS = (
     addEnhancer 
     writeDesignTable 
     addMultiQC
+    getNextIndex
     getNextFolderIndex 
     addCleanBAM 
     getReportDir 
@@ -94,6 +96,21 @@ sub readChromosomeFromDictFile {
   close($fin);
 
   return($result);
+}
+
+sub getNextIndex {
+  my ($def, $key, $digital) = @_;
+
+  if (! defined $digital){
+    $digital = 2;
+  }
+
+  my $result = "";
+  my $index = getValue( $def, $key, 1 );
+  $result = sprintf( "%0" . $digital . "d", $index );
+  $def->{$key} = $index + 1;
+
+  return $result;
 }
 
 sub getNextFolderIndex {
@@ -884,9 +901,19 @@ sub getSequenceTaskClassname {
   return ($result);
 }
 
+sub getIndexName{
+  my ($prefix, $suffix, $indexDic, $indexKey) = @_;
+  my $index = defined $indexDic ? getNextIndex($indexDic, $indexKey) : "";
+  return($prefix . $index . $suffix);
+}
+
 sub addAnnovar {
-  my ( $config, $def, $summary, $target_dir, $source_name, $source_pattern ) = @_;
-  my $annovar_name = $source_name . "_annovar";
+  my ( $config, $def, $summary, $target_dir, $source_name, $source_pattern, $prefix, $indexDic, $indexKey ) = @_;
+  if (not defined $prefix){
+    $prefix = $source_name;
+  }
+
+  my $annovar_name = getIndexName($prefix, "_annovar", $indexDic, $indexKey);
   my $source_ref = ( defined($source_pattern) and ( $source_pattern ne "" ) ) ? [ $source_name, $source_pattern ] : $source_name;
   $config->{$annovar_name} = {
     class      => "Annotation::Annovar",
@@ -910,9 +937,12 @@ sub addAnnovar {
 }
 
 sub addAnnovarFilter {
-  my ( $config, $def, $summary, $target_dir, $annovar_name ) = @_;
-  my $annovar_filter_name = $annovar_name . "_filter";
+  my ( $config, $def, $summary, $target_dir, $annovar_name, $prefix, $indexDic, $indexKey ) = @_;
+  if (not defined $prefix){
+    $prefix = $annovar_name;
+  }
 
+  my $annovar_filter_name = getIndexName($prefix, "_filter", $indexDic, $indexKey);
   $config->{$annovar_filter_name} = {
     class               => "Annotation::FilterAnnovar",
     perform             => 1,
