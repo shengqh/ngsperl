@@ -16,7 +16,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_pbskey} = "groups";
-  $self->{_depend_all} = 1;
+  $self->{_depend_all} = 0;
   $self->{_group_keys} = ["groups"],
   bless $self, $class;
   return $self;
