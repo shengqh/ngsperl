@@ -17,6 +17,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_pbskey} = "groups";
   $self->{_depend_all} = 1;
+  $self->{_group_keys} = ["groups"],
   bless $self, $class;
   return $self;
 }
@@ -35,17 +36,24 @@ sub get_pbs_source {
 
   my $pbsFiles = $self->get_pbs_files( $config, $section );
   my $result = {};
-  my $groups = $config->{$section}{"groups"};
-  if (defined $groups){
-    for my $resKey ( keys %$pbsFiles ) {
-      $result->{ $pbsFiles->{$resKey}} = $groups->{$resKey};
-    }
-  }else{
-    for my $resKey ( keys %$pbsFiles ) {
-      $result->{ $pbsFiles->{$resKey} } = [$resKey];
-    }
-  }
-  return $result;
+  
+  my $group_keys = $self->{"_group_keys"};
+  
+  for my $group_key (@$group_keys){
+	  my $groups = $config->{$section}{$group_key};
+	  if (defined $groups){
+	    for my $resKey ( keys %$pbsFiles ) {
+	    	my $samples = $groups->{$resKey};
+	    	if(defined $result->{ $pbsFiles->{$resKey}}){
+	    		my $oldSamples = $result->{ $pbsFiles->{$resKey}};
+	    		push @$oldSamples, @$samples;
+	    	}else{
+	    	  $result->{ $pbsFiles->{$resKey}} = $samples;
+	    	}
+	    }
+	  }
+	}
+	return $result;
 }
 
 1;
