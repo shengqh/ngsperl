@@ -33,54 +33,56 @@ sub getAllDependentJobids {
 }
 
 sub getDependentJobids {
-  my ( $task_dep_pbs_map, $pbs_id_map, $task_section, $task_name, $samples ) = @_;
+  my ( $task_dep_pbs_map, $pbs_id_map, $depend_all, $task_section, $task_name, $dep_samples ) = @_;
   my $dep_pbs_map = $task_dep_pbs_map->{$task_section};
 
   my $result = "";
-  for my $sample (@$samples) {
-    if ( $task_name eq $sample ) {
-      if ( keys %$dep_pbs_map ) {
-        $result = "--dependency=afterany";
-        for my $sample ( keys %$dep_pbs_map ) {
-          my $sample_pbs_map = $dep_pbs_map->{$sample};
-          if ( keys %$sample_pbs_map ) {
-            for my $each_dep_pbs ( keys %$sample_pbs_map ) {
-              my $pid = $pbs_id_map->{$each_dep_pbs};
-              if ( !defined $pid ) {
-                die "Undefined $each_dep_pbs";
-              }
-              $result = $result . ":\$" . $pid->[0];
-              $pbs_id_map->{$each_dep_pbs}[1] = 1;
-            }
+  if (not keys %$dep_pbs_map){
+    return($result);
+  }
+
+  if ($depend_all){
+    $result = "--dependency=afterany";
+    for my $sample ( keys %$dep_pbs_map ) {
+      my $sample_pbs_map = $dep_pbs_map->{$sample};
+      if ( keys %$sample_pbs_map ) {
+        for my $each_dep_pbs ( keys %$sample_pbs_map ) {
+          my $pid = $pbs_id_map->{$each_dep_pbs};
+          if ( !defined $pid ) {
+            die "Undefined $each_dep_pbs";
           }
+          $result = $result . ":\$" . $pid->[0];
+          $pbs_id_map->{$each_dep_pbs}[1] = 1;
         }
       }
     }
-    else {
-      my $taskname_pbs_map = $dep_pbs_map->{$task_name};
-      my $dep_pbs          = $dep_pbs_map->{$sample};
+    return($result);
+  }
 
-      if ( defined $dep_pbs ) {
-        $result = "--dependency=afterany";
-        for my $each_dep_pbs ( keys %$dep_pbs ) {
-          if (!defined $pbs_id_map->{$each_dep_pbs}){
-            die "$each_dep_pbs is not in pbs_id_map: " . Dumper($pbs_id_map);
-          }
-          $result = $result . ":\$" . $pbs_id_map->{$each_dep_pbs}[0];
-          $pbs_id_map->{$each_dep_pbs}[1] = 1;
-        }
+  my $taskname_pbs_map = $dep_pbs_map->{$task_name};
+  if ( defined $taskname_pbs_map ) {
+    $result = "--dependency=afterany";
+    for my $each_dep_pbs ( keys %$taskname_pbs_map ) {
+      if ( !defined $pbs_id_map->{$each_dep_pbs} ) {
+        die "Didn't find $each_dep_pbs in $pbs_id_map";
       }
-      if ( defined $taskname_pbs_map ) {
-        if ( $result eq "" ) {
-          $result = "--dependency=afterany";
+      $result = $result . ":\$" . $pbs_id_map->{$each_dep_pbs}[0];
+      $pbs_id_map->{$each_dep_pbs}[1] = 1;
+    }
+  }
+
+  for my $sample (@$dep_samples){
+    my $dep_pbs          = $dep_pbs_map->{$sample};
+    if ( defined $dep_pbs ) {
+      if ($result eq ""){
+        $result = "--dependency=afterany";
+      }
+      for my $each_dep_pbs ( keys %$dep_pbs ) {
+        if (!defined $pbs_id_map->{$each_dep_pbs}){
+          die "$each_dep_pbs is not in pbs_id_map: " . Dumper($pbs_id_map);
         }
-        for my $each_dep_pbs ( keys %$taskname_pbs_map ) {
-          if ( !defined $pbs_id_map->{$each_dep_pbs} ) {
-            die "Didn't find $each_dep_pbs in $pbs_id_map";
-          }
-          $result = $result . ":\$" . $pbs_id_map->{$each_dep_pbs}[0];
-          $pbs_id_map->{$each_dep_pbs}[1] = 1;
-        }
+        $result = $result . ":\$" . $pbs_id_map->{$each_dep_pbs}[0];
+        $pbs_id_map->{$each_dep_pbs}[1] = 1;
       }
     }
   }
@@ -186,6 +188,10 @@ sub perform {
       }
       my $myclass = instantiate($classname);
 
+      my $depend_all = $myclass->{_depend_all};
+
+      #print($classname . " = " . $depend_all . "\n");
+
       my $expect_file_map;
       eval { $expect_file_map = $myclass->result( $config, $task_section, "(?<!version)\$", 1 ); } or do {
         my $e = $@;
@@ -213,14 +219,22 @@ sub perform {
       }
 
       my $pbs_source_map = $myclass->get_pbs_source( $config, $task_section );
+      #if($task_section eq "macs1callpeak"){
+      #  print Dumper(%$pbs_source_map);
+      #}
+      
       for my $sample ( sort keys %{$pbs_file_map} ) {
         my $samplepbs = $pbs_file_map->{$sample};
         if ( !-e $samplepbs ) {
           die "Task " . $task_section . ", file not exists " . $samplepbs . "\n";
         }
 
-        my $depSample = $pbs_source_map->{$samplepbs};
-        my $depjid = getDependentJobids( $task_dep_pbs_map, $final_pbs_id_map, $task_section, $task_name, $depSample );
+        my $dep_samples = $pbs_source_map->{$samplepbs};
+        my $depjid = getDependentJobids( $task_dep_pbs_map, $final_pbs_id_map, $depend_all, $task_section, $task_name, $dep_samples );
+
+        #if ($task_section eq "macs1callpeak"){
+        #  print Dumper $sample, $depjid;
+        #}
 
         $final_index = $final_index + 1;
 
@@ -258,6 +272,7 @@ sub perform {
   }
   close($result_list);
 
+  #print(Dumper(%$final_pbs_id_map));
   my $alldepids = getAllDependentJobids($final_pbs_id_map);
   $final_index = $final_index + 1;
   print $final_submit "jid" . $final_index . "=\$(sbatch $alldepids " . $report_pbs . " | awk '{print \$NF}')\n";

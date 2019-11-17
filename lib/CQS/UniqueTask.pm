@@ -12,6 +12,7 @@ sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_pbskey} = "";
+  $self->{_depend_all} = 1;
   bless $self, $class;
   return $self;
 }
