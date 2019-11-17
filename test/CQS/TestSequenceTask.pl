@@ -7,7 +7,7 @@ use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
-use CQS::SequenceTaskSlurm2;
+use CQS::SequenceTaskSlurmSlim;
 
 my $annovar_protocol  = "refGene,snp138,cosmic70";
 my $annovar_operation = "g,f,f";

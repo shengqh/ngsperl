@@ -28,8 +28,8 @@ sub new {
 sub get_pbs_files {
   my ( $self, $config, $section, $pattern ) = @_;
   my $result = {
-    G2 => ["/temp/G2.pbs"],
-    G1 => ["/temp/G1.pbs"],
+    G2 => "/temp/G2.pbs",
+    G1 => "/temp/G1.pbs",
   };
   return($result);
 }
@@ -47,10 +47,11 @@ my $config = {
 
 my $source = $test->get_pbs_source($config, "test");
 
-print(Dumper(%$source));
+#print(Dumper(%$source));
 
-is_deeply($source, {["/temp/G1.pbs"] => ["S1_1", "S1_2"],
-             ["/temp/G2.pbs"] => ["S2_1", "S2_2"]});
+is_deeply($source, 
+	{"/temp/G1.pbs" => ["S1_1", "S1_2"],
+     "/temp/G2.pbs" => ["S2_1", "S2_2"]});
 
 1;
 
