@@ -65,7 +65,7 @@ sub perform {
   print $sh get_run_command($sh_direct) . "\n";
 
   for my $chr (@chromosomes) {
-    my $chrTaskName = $self->get_key_name($task_name, $chr);
+    my $chrTaskName = get_key_name($task_name, $chr);
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $chrTaskName );
     my $pbs_name = basename($pbs_file);
