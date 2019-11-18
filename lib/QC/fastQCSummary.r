@@ -69,7 +69,7 @@ g<-ggplot(fp, aes(x=newBase, y=Mean)) +
             fill="cornsilk") +
   geom_rect(data=NULL,aes(xmin=0,xmax=max(fp$newBase),ymin=28,ymax=40),
             fill="darkseagreen1") +
-  geom_line(aes(group=File), color="limegreen") + ylab("Position in read (bp)") + xlab("Phred score") +
+  geom_line(aes(group=File), color="limegreen") + xlab("Position in read (bp)") + ylab("Phred score") +
   scale_x_continuous(breaks=seq(0, max(fp$newBase), 10)) +
   scale_y_continuous(breaks=seq(0, 40, 5)) +
   theme_classic() + 
@@ -86,7 +86,7 @@ fp<-group_by(fp, File) %>% mutate(Percent = Count * 100 /sum(Count))
 png(file=paste0(sequenceGCFile, ".png"), height=1600, width=2000, res=300)
 g<-ggplot(fp, aes(x=GC.Content, y=Percent, color=File, group=File)) + 
   geom_line() +
-  ylab("% GC") + xlab("Percentage") +
+  xlab("% GC") + ylab("Percentage") +
   theme_classic() + 
   theme(legend.position = "none",
         panel.grid.major.y = element_line( size=.1, color="gray" ) )
