@@ -9,6 +9,7 @@ use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::StringUtils;
+use CQS::TaskUtils;
 use GATK4::GATK4ChromosomeTask;
 
 our @ISA = qw(GATK4::GATK4ChromosomeTask);
@@ -18,6 +19,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_vfc";
+  $self->{_depend_all} = 1;
   bless $self, $class;
   return $self;
 }

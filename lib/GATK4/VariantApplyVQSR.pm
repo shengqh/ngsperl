@@ -11,6 +11,7 @@ use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use CQS::TaskUtils;
 use GATK4::GATK4ChromosomeTask;
 
 our @ISA = qw(GATK4::GATK4ChromosomeTask);
