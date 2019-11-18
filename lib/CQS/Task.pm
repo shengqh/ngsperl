@@ -5,11 +5,20 @@ use strict;
 use warnings;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
+use CQS::StringUtils;
 use Data::Dumper;
 
 sub new {
   my ($class) = @_;
-  my $self = { _name => __PACKAGE__, _suffix => "", _task_prefix => "", _task_suffix => "", _pbskey => "source", _docker_prefix => "", _export_home => 0 };
+  my $self = {
+    _name          => __PACKAGE__,
+    _suffix        => "",
+    _task_prefix   => "",
+    _task_suffix   => "",
+    _pbskey        => "source",
+    _docker_prefix => "",
+    _export_home   => 0
+  };
   bless $self, $class;
   return $self;
 }
@@ -24,30 +33,52 @@ sub perform {
 
 sub get_final_file {
   my ( $self, $config, $section, $result_dir, $sample ) = @_;
-  my $expect = $self->result($config, $section);
-  
-  if(not defined $sample){
+  my $expect = $self->result( $config, $section );
+
+  if ( not defined $sample ) {
     my @samples = sort keys %$expect;
-    @samples = sort {$b cmp $a} @samples;
-    $sample = $samples[0];
+    @samples = sort { $b cmp $a } @samples;
+    $sample  = $samples[0];
   }
-  
+
   my $final_files_ref = $expect->{$sample};
-  my @final_files = @$final_files_ref;
-  my $result = $final_files[-1];
-  
-  if (rindex($result, $result_dir) == 0){
-    $result = substr($result, length($result_dir));
-    my $firstChar = substr($result, 0, 1);
-    if (($firstChar eq '/') or ($firstChar eq '\\')){
-      $result = substr($result, 1);
+  my @final_files     = @$final_files_ref;
+  my $result          = $final_files[-1];
+
+  if ( rindex( $result, $result_dir ) == 0 ) {
+    $result = substr( $result, length($result_dir) );
+    my $firstChar = substr( $result, 0, 1 );
+    if ( ( $firstChar eq '/' ) or ( $firstChar eq '\\' ) ) {
+      $result = substr( $result, 1 );
     }
   }
-  return($result);
+  return ($result);
+}
+
+
+sub get_result_files {
+  my ( $self, $config, $section, $result_dir, $sample_name ) = @_;
+
+  die "Override get_result_files of " . $self->{_name} . " first.";
 }
 
 sub result {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
+
+  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
+  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+
   my $result = {};
+
+  my $raw_files = get_raw_files($config, $section);
+  for my $sample_name (sort keys %$raw_files){
+    if ( $self->acceptSample( $config, $section, $sample_name ) ) {
+      $result->{$sample_name} = $self->get_result_files( $config, $section, $result_dir, $sample_name );
+    }
+  }
+
   return $result;
 }
 
@@ -69,7 +100,7 @@ sub get_clear_map {
   my $self   = shift;
   my $result = $self->result(@_);
   for my $key ( keys %$result ) {
-    my $values = $result->{$key};
+    my $values    = $result->{$key};
     my @newvalues = grep { !/\/pbs\// } @$values;
     if ( scalar(@newvalues) > 0 ) {
       $result->{$key} = \@newvalues;
@@ -122,7 +153,7 @@ sub get_pbs_source {
   my ( $self, $config, $section ) = @_;
 
   my $pbsFiles = $self->get_pbs_files( $config, $section );
-  my $result = {};
+  my $result   = {};
   for my $resKey ( keys %$pbsFiles ) {
     $result->{ $pbsFiles->{$resKey} } = [$resKey];
   }
@@ -136,6 +167,74 @@ sub get_result_dependent_pbs {
   my ( $self, $config, $section ) = @_;
 
   return $self->get_pbs_files( $config, $section );
+}
+
+#get the task dependent pbs list map
+sub get_dependent_pbs_map {
+  my ( $self, $config, $section ) = @_;
+
+  my $result = {};
+
+  my $task_section = $config->{$section};
+  for my $key ( keys %$task_section ) {
+    my $mapname = $key;
+    if ( $mapname !~ /_ref$/ ) {
+      next;
+    }
+
+    $mapname =~ s/_config_ref//g;
+    $mapname =~ s/_ref//g;
+    my $refpbsmap = get_ref_section_pbs( $config, $section, $mapname );
+    for my $refkey ( keys %$refpbsmap ) {
+      my $refpbs = $refpbsmap->{$refkey};
+      my $curpbs = $result->{$refkey};
+      if ( !defined $curpbs ) {
+        $curpbs = {};
+      }
+      for my $eachrefpbs (@$refpbs) {
+        $curpbs->{$eachrefpbs} = 1;
+      }
+
+      $result->{$refkey} = $curpbs;
+    }
+  }
+  return ($result);
+
+}
+
+#get the dependent pbs list for each own pbs
+sub get_pbs_dependent_pbs {
+  my ( $self, $config, $section ) = @_;
+
+  my $result = {};
+
+  my $pbsFiles = $self->get_pbs_files( $config, $section );
+
+  my $taskdeppbsmap = {};
+
+  my $task_section = $config->{$section};
+  for my $key ( keys %$task_section ) {
+    my $mapname = $key;
+    if ( $mapname =~ /_ref$/ ) {
+      $mapname =~ s/_config_ref//g;
+      $mapname =~ s/_ref//g;
+      my $refpbsmap = get_ref_section_pbs( $config, $section, $mapname );
+      for my $refkey ( keys %$refpbsmap ) {
+        my $refpbs = $refpbsmap->{$refkey};
+        my $curpbs = $taskdeppbsmap->{$refkey};
+        if ( !defined $curpbs ) {
+          $curpbs = {};
+        }
+        for my $eachrefpbs (@$refpbs) {
+          $curpbs->{$eachrefpbs} = 1;
+        }
+
+        $taskdeppbsmap->{$refkey} = $curpbs;
+      }
+    }
+  }
+  return ($result);
+
 }
 
 sub require {
@@ -193,63 +292,68 @@ sub get_task_filename {
 }
 
 sub do_get_docker_value {
-  my ($self, $keyName) = @_;
+  my ( $self, $keyName ) = @_;
   my $result = undef;
 
   if ( defined $self->{_config} ) {
-    if ( ( defined $self->{_section} ) and ( defined $self->{_config}{ $self->{_section} }{$keyName} ) ) {
+    if (  ( defined $self->{_section} )
+      and ( defined $self->{_config}{ $self->{_section} }{$keyName} ) )
+    {
       $result = $self->{_config}{ $self->{_section} }{$keyName};
       if ( defined $result ) {
         return ($result);
       }
     }
 
-    if ( ( defined $self->{_config} ) and ( defined $self->{_config}{general} ) and ( defined $self->{_config}{general}{$keyName} ) ) {
+    if (  ( defined $self->{_config} )
+      and ( defined $self->{_config}{general} )
+      and ( defined $self->{_config}{general}{$keyName} ) )
+    {
       $result = $self->{_config}{general}{$keyName};
       if ( defined $result ) {
         return ($result);
       }
     }
   }
-  
+
   return ($result);
 }
 
 sub using_docker {
   my ($self) = @_;
-  my ($docker_command, $docker_init) = $self->get_docker_value();
+  my ( $docker_command, $docker_init ) = $self->get_docker_value();
   my $is_sequenceTask = ( $self->{_name} =~ /SequenceTask/ );
-  return(( defined $docker_command ) and ( not $is_sequenceTask ))
+  return ( ( defined $docker_command ) and ( not $is_sequenceTask ) );
 }
 
 sub get_docker_value {
-  my ($self, $required) = @_;
+  my ( $self, $required ) = @_;
   my $command = undef;
-  my $init = undef;
+  my $init    = undef;
 
   my $commandKey = $self->{_docker_prefix} . "docker_command";
-  my $initKey = $self->{_docker_prefix} . "docker_init";
+  my $initKey    = $self->{_docker_prefix} . "docker_init";
 
   $command = $self->do_get_docker_value($commandKey);
-  if (defined $command){
+  if ( defined $command ) {
     $init = $self->do_get_docker_value($initKey);
-    return ($command, $init);
+    return ( $command, $init );
   }
-  
+
   my $baseCommandKey = "docker_command";
-  my $baseInitKey = "docker_init";
+  my $baseInitKey    = "docker_init";
 
   $command = $self->do_get_docker_value($baseCommandKey);
-  if (defined $command){
+  if ( defined $command ) {
     $init = $self->do_get_docker_value($baseInitKey);
-    return ($command, $init);
+    return ( $command, $init );
   }
-  
-  if(defined $required and $required){
+
+  if ( defined $required and $required ) {
     die "Define $commandKey for task " . $self->{_name};
   }
-  
-  return (undef, undef);
+
+  return ( undef, undef );
 }
 
 sub open_pbs {
@@ -301,10 +405,12 @@ echo working in $result_dir ...
  
 ";
 
-  my ($docker_command, $docker_init) = $self->get_docker_value();
+  my ( $docker_command, $docker_init ) = $self->get_docker_value();
   my $is_sequenceTask = ( $module_name =~ /SequenceTask/ );
-  if ( ( defined $docker_command ) and ( (not $is_sequenceTask) or ($pbs_file =~ /report/) ) ) {
-    if(not defined $docker_init){
+  if (  ( defined $docker_command )
+    and ( ( not $is_sequenceTask ) or ( $pbs_file =~ /report/ ) ) )
+  {
+    if ( not defined $docker_init ) {
       $docker_init = "";
     }
     my $sh_file = $pbs_file . ".sh";
@@ -323,8 +429,8 @@ exit 0
 ";
     close $pbs;
     open( $pbs, ">$sh_file" ) or die $!;
-    if($self->{_export_home}){
-    print $pbs "
+    if ( $self->{_export_home} ) {
+      print $pbs "
 export HOME=$result_dir
 
 ";

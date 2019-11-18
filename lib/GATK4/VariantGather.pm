@@ -11,17 +11,48 @@ use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::StringUtils;
-use GATK4::GATK4UniqueTask;
+use CQS::GatherTask;
+use CQS::TaskUtils;
 
-our @ISA = qw(GATK4::GATK4UniqueTask);
+our @ISA = qw(CQS::GatherTask);
 
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_vr";
+  $self->{_docker_prefix} = "gatk4_";
+  $self->{_export_home} = 1;
   bless $self, $class;
   return $self;
+}
+
+#return a gather_name/scatter_name_list map
+sub get_gather_map {
+  my ($self, $config, $section) = @_;
+  my ($task_name) = get_task_name($config, $section);
+  
+  my $vcf_files = get_raw_files($config, $section);
+  
+  my @sample_names = ();
+  if (has_option($config, $section, "chromosome_names")){
+    my $chromosomeStr = get_option($config, $section, "chromosome_names");
+    my @chromosomes = split /,/, $chromosomeStr;
+    for my $chr (@chromosomes) {
+      my $chrTaskName = get_key_name($task_name, $chr);
+      push @sample_names, $chrTaskName;
+    }
+  }else{
+    @sample_names = sort keys %$vcf_files;
+  }
+  
+  return {$task_name => \@sample_names};  
+}
+
+sub get_result_files {
+  my ( $self, $config, $section, $result_dir, $gather_name ) = @_;
+  my $final_file = $result_dir . "/" . $gather_name . ".indels.snp.recal.pass.norm.nospan.vcf.gz";
+  return [$final_file];
 }
 
 sub perform {
@@ -61,19 +92,8 @@ if [ ! -s $pass_file ]; then
     --gather-type BLOCK \\
 ";
 
-  my @sample_names = ();
-  if (has_option($config, $section, "chromosome_names")){
-    my $chromosomeStr = get_option($config, $section, "chromosome_names");
-    my @chromosomes = split /,/, $chromosomeStr;
-    for my $chr (@chromosomes) {
-      my $chrTaskName = $task_name . "." . $chr;
-      push @sample_names, $chrTaskName;
-    }
-  }else{
-    @sample_names = sort keys %vcfFiles;
-  }
-
-  for my $sample_name ( @sample_names ) {
+  my $sample_names = $self->get_gather_map($config, $section)->{$task_name}; 
+  for my $sample_name ( @$sample_names ) {
     my @sample_files = @{ $vcfFiles{$sample_name} };
     my $individualPassFile     = $sample_files[0];
     print $pbs "    -I $individualPassFile \\\n";
@@ -104,19 +124,6 @@ fi
 
 ";
   $self->close_pbs( $pbs, $pbs_file );
-}
-
-sub result {
-  my ( $self, $config, $section, $pattern ) = @_;
-
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
-
-  my $final_file = $result_dir . "/" . $task_name . ".indels.snp.recal.pass.norm.nospan.vcf.gz";
-
-  my $result = {};
-  $result->{$task_name} = filter_array( [$final_file], $pattern );
-
-  return $result;
 }
 
 1;

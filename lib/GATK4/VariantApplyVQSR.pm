@@ -24,6 +24,12 @@ sub new {
   return $self;
 }
 
+sub get_sample_names {
+  my ($self, $config, $section) = @_;
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  return [$task_name];  
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -50,7 +56,7 @@ sub perform {
   print $sh get_run_command($sh_direct) . "\n";
 
   for my $chr (@chromosomes) {
-    my $chrTaskName = $task_name . "." . $chr;
+    my $chrTaskName = $self->get_key_name($task_name, $chr);
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $chrTaskName );
     my $pbs_name = basename($pbs_file);
@@ -123,23 +129,10 @@ fi
   print " !!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . " tasks. \n ";
 }
 
-sub result {
-  my ( $self, $config, $section, $pattern ) = @_;
-
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
-
-  my $chromosomeStr = get_option($config, $section, "chromosome_names");
-  my @chromosomes = split /,/, $chromosomeStr;
-
-  my $result = {};
-  for my $chr (@chromosomes) {
-    my $chrTaskName = $task_name . "." . $chr;
-    my $pass_file = $result_dir . "/" . $chrTaskName . ".indels.snp.recal.pass.vcf.gz";
-    $result->{$chrTaskName} = filter_array( [$pass_file], $pattern );
-  }
-
-
-  return $result;
+sub get_result_files {
+  my ( $self, $config, $section, $result_dir, $sample_name, $scatter_name, $key_name ) = @_;
+  my $pass_file = $result_dir . "/" . $key_name . ".indels.snp.recal.pass.vcf.gz";
+  return([$pass_file]);
 }
 
 1;

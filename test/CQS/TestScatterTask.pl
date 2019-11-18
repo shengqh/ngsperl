@@ -1,40 +1,48 @@
 #!/usr/bin/perl
-package CQS::TestTask;
+package CQS::TestScatterTask;
 
 use strict;
 use warnings;
-use File::Basename;
-use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
-use CQS::FileUtils;
-use CQS::NGSCommon;
 use CQS::StringUtils;
-use CQS::Task;
+use CQS::ScatterTask;
+use Data::Dumper;
 use Test::More tests => 3;
 
-our @ISA = qw(CQS::Task);
+
+our @ISA = qw(CQS::ScatterTask);
 
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
-  $self->{_suffix} = "_t";
+  $self->{_suffix} = "_st";
   bless $self, $class;
   return $self;
 }
 
-sub get_result_files {
-  my ( $self, $config, $section, $result_dir, $sample_name ) = @_;
-  return [$result_dir . "/" . $sample_name . ".csv", $result_dir . "/" . $sample_name . ".png"];
+sub get_sample_names {
+  return (["G1", "G2"]);
 }
+
+sub get_scatter_names {
+  return (["chr1", "chr2", "chr3"]);
+}
+
+sub get_result_files {
+  my ( $self, $config, $section, $result_dir, $sample_name, $scatter_name, $key_name ) = @_;
+  return [$result_dir . "/" . $key_name . ".csv", $result_dir . "/" . $key_name . ".png"];
+}
+
+my $test = CQS::TestScatterTask->new();
 
 my $config = {
   general => {
-    task_name => "task",
+    task_name => "scatter",
   },
   "test" => {
-    class => "CQS::Task",
+    class => "CQS::TestScatterTask",
     target_dir => "/test",
     source     => {
       "G1" => [ "S1_1", "S1_2" ],
@@ -46,14 +54,16 @@ my $config = {
   },
 };
 
-my $test = CQS::TestTask->new();
-
 #test result
 my $section = "test";
 my $source = $config->{$section}{source};
+my $scatter_names = $test->get_scatter_names($config, $section);
 my $key_sample_map = {};
 for my $sample_name (sort keys %$source){
-  $key_sample_map->{$sample_name} = [$sample_name];
+  for my $scatter_name (@$scatter_names){
+    my $key = $sample_name . "." . $scatter_name;
+    $key_sample_map->{$key} = [$sample_name];
+  }
 }
 
 #test result
@@ -67,7 +77,7 @@ is_deeply( $actual_result, $expect_result );
 #test pbs
 my $expect_pbs = {};
 for my $key (sort keys %$key_sample_map){
-  $expect_pbs->{$key} = "/test/pbs/" . $key . "_t.pbs";
+  $expect_pbs->{$key} = "/test/pbs/" . $key . "_st.pbs";
 }
 my $actual_pbs = $test->get_pbs_files( $config, "test" );
 is_deeply( $actual_pbs, $expect_pbs );
@@ -75,9 +85,9 @@ is_deeply( $actual_pbs, $expect_pbs );
 #test pbs source
 my $expect_source = {};
 for my $key (sort keys %$key_sample_map){
-  $expect_source->{"/test/pbs/" . $key . "_t.pbs"} = $key_sample_map->{$key};
+  $expect_source->{"/test/pbs/" . $key . "_st.pbs"} = $key_sample_map->{$key};
 }
 my $actual_source = $test->get_pbs_source( $config, "test" );
 is_deeply( $actual_source, $expect_source );
 
-1
+1;

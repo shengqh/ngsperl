@@ -25,6 +25,7 @@ our %EXPORT_TAGS = (
       get_option
       get_option_file
       get_java
+      get_task_name
       get_cluster
       get_parameter
       get_param_file
@@ -183,6 +184,16 @@ sub get_java {
   return ( get_value_in_section_or_general( $config, $section, "java", "java" ) );
 }
 
+sub get_task_name {
+  my ( $config, $section, $create_directory ) = @_;
+  my $task_name = get_option( $config, $section, "task_name", "" );
+  if ( $task_name eq "" ) {
+    $task_name = get_option( $config, "general", "task_name" );
+  }
+  $task_name =~ s/\s/_/g;
+  return ($task_name);  
+}
+
 sub get_parameter {
   my ( $config, $section, $create_directory ) = @_;
 
@@ -190,11 +201,7 @@ sub get_parameter {
 
   $create_directory = 1 if !defined($create_directory);
 
-  my $task_name = get_option( $config, $section, "task_name", "" );
-  if ( $task_name eq "" ) {
-    $task_name = get_option( $config, "general", "task_name" );
-  }
-  $task_name =~ s/\s/_/g;
+  my $task_name = get_task_name( $config, $section);
 
   my $cluster = get_cluster(@_);
 
