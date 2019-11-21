@@ -86,7 +86,7 @@ fp<-group_by(fp, File) %>% mutate(Percent = Count * 100 /sum(Count))
 png(file=paste0(sequenceGCFile, ".png"), height=1600, width=2000, res=300)
 g<-ggplot(fp, aes(x=GC.Content, y=Percent, color=File, group=File)) + 
   geom_line() +
-  xlab("% GC") + ylab("Percentage") +
+  xlab("% GC") + ylab("Percentage of Reads") +
   theme_classic() + 
   theme(legend.position = "none",
         panel.grid.major.y = element_line( size=.1, color="gray" ) )
