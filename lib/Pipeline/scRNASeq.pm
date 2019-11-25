@@ -126,7 +126,7 @@ sub getScRNASeqConfig {
   if ( getValue( $def, "perform_report" ) ) {
     my $additional_rmd_files = "Functions.Rmd";
     if (defined $def->{"Details.Rmd"}){
-      $additional_rmd_files = $additional_rmd_files . "," . $def->{"Details.Rmd"};
+      $additional_rmd_files = $additional_rmd_files . ";" . $def->{"Details.Rmd"};
     }
     $config->{seurat} = {
       class                    => "CQS::UniqueRmd",
@@ -144,6 +144,7 @@ sub getScRNASeqConfig {
         nCount_cutoff       => getValue( $def, "nCount_cutoff",       500 ),
         mt_cutoff           => getValue( $def, "mt_cutoff",           20 ),
         resolution          => getValue( $def, "resolution",          0.8 ),
+        pca_dims            => getValue( $def, "pca_dims",            20 ),
         species             => getValue( $def, "species" ),
         markers_file        => getValue( $def, "markers_file" ),
         prefix              => $taskName,

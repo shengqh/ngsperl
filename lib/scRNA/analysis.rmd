@@ -247,6 +247,8 @@ if(!file.exists(cluster_markers_file)){
 }else{
   obj_markers = readRDS(cluster_markers_file)
   if (Remove_Mt_rRNA) {
+    rRNA.genes <- grep(pattern = rRNApattern,  rownames(obj), value = TRUE)
+    Mt.genes<- grep (pattern= Mtpattern,rownames(obj), value=TRUE )
     var.genes <- dplyr::setdiff(VariableFeatures(obj), c(rRNA.genes,Mt.genes))
   } else {
     var.genes <- VariableFeatures(obj)
