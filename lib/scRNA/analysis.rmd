@@ -8,6 +8,7 @@ output:
     thumbnails: false
     lightbox: false    
     toc_depth: 3
+    number_sections: true
 ---
 
 <style type="text/css">
@@ -30,14 +31,27 @@ knitr::opts_chunk$set(
   tidy = TRUE,
   tidy.opts = list(width.cutoff = 120),
   message = FALSE,
-  warning = FALSE
+  warning = FALSE,
+  echo = FALSE
 )
+
+add_cluster<-function(object, new.cluster.name, new.cluster.ids){
+  seurat_clusters<-object[["seurat_clusters"]]$seurat_clusters
+  names(new.cluster.ids) <- levels(seurat_clusters)
+
+  new.cluster.values<-plyr::mapvalues(x = seurat_clusters, from = levels(seurat_clusters), to = new.cluster.ids)
+  names(new.cluster.values)<-names(seurat_clusters)
+  
+  object[[new.cluster.name]]<-new.cluster.values
+  object
+}
+
 ```
 
 ```{r, child="Functions.Rmd"} 
 ```
 
-```{r init, echo=FALSE}
+```{r init}
 library(dplyr)
 library(Seurat)
 library(knitr)
@@ -49,6 +63,8 @@ library(DT)
 library(data.table)
 library(digest)
 library(heatmap3)
+library(cowplot)
+library(scales)
 
 options_table<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
 options<-split(options_table$V1, options_table$V2)
@@ -108,7 +124,7 @@ allgenes<-obj@assays$RNA@counts@Dimnames[1]
 
 ```
 
-```{r celltypedatabase, echo=FALSE}
+```{r celltypedatabase}
 marker<-data.frame(fread(markerfile))
 hsind<-regexpr(species,marker[,1])
 marker_species<-marker[hsind>0 & marker$ubiquitousness.index<0.05,]
@@ -173,19 +189,19 @@ A few QC metrics [commonly used](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC47
     + We calculate mitochondrial QC metrics with the `PercentageFeatureSet` function, which calculates the percentage of counts originating from a set of features
     + We use the set of all genes starting with either `mt-` or `MT-` as a set of mitochondrial genes
 
-```{r mito, echo=FALSE}
+```{r mito}
 # The [[ operator can add columns to object metadata. This is a great place to stash QC stats
 obj[["percent.mt"]] <- PercentageFeatureSet(object = obj, pattern = Mtpattern)
 ```
 
 We visualize QC metrics.
 
-```{r qc2, echo=FALSE, fig.height=7, fig.width=13, fig.cap=figRef("qc_metrics_2", "Scatter plot of number of feature/percentage of mitochondrial vs number of read count")}
+```{r qc2, fig.height=6, fig.width=13, fig.cap=figRef("qc_metrics_2", "Scatter plot of number of feature/percentage of mitochondrial vs number of read count")}
 
 # FeatureScatter is typically used to visualize feature-feature relationships, but can be used for anything calculated by the object, i.e. columns in object metadata, PC scores etc.
 
-plot1 <- FeatureScatter(object = obj, feature1 = "nCount_RNA", feature2 = "percent.mt") 
-plot2 <- FeatureScatter(object = obj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA") 
+plot1 <- FeatureScatter(object = obj, feature1 = "nCount_RNA", feature2 = "percent.mt") + geom_hline(yintercept = mt_cutoff, color="black")  + geom_vline(xintercept = nCount_cutoff, color="black")
+plot2 <- FeatureScatter(object = obj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")  + geom_hline(yintercept = c( nFeature_cutoff_min, nFeature_cutoff_max), color="black")  + geom_vline(xintercept = nCount_cutoff, color="black") 
 CombinePlots(plots = list(plot1,plot2))
 
 ```
@@ -200,7 +216,7 @@ We use QC metrics to filter cells.
 
 Then we normalize the data and run non-linear dimensional reduction (UMAP/tSNE).
 
-```{r data_prepartion, echo=FALSE}
+```{r data_prepartion}
 random.seed=20191015
 cluster_umap_file = paste0(prefix, "_cluster_umap.rds")
 if(!file.exists(cluster_umap_file)){
@@ -230,6 +246,8 @@ if(!file.exists(cluster_umap_file)){
   saveRDS(obj, file=cluster_umap_file)
 }else{
   obj = readRDS(cluster_umap_file)
+  rRNA.genes <- grep(pattern = rRNApattern,  rownames(obj), value = TRUE)
+  Mt.genes<- grep (pattern= Mtpattern,rownames(obj), value=TRUE )
   if (Remove_Mt_rRNA) {
     var.genes <- dplyr::setdiff(VariableFeatures(obj), c(rRNA.genes,Mt.genes))
   } else {
@@ -238,7 +256,7 @@ if(!file.exists(cluster_umap_file)){
 }
 ```
 
-```{r markers, eval=T, echo=FALSE, results="asis"}
+```{r markers, eval=T, results="asis"}
 cat("\n\n## Marker genes for each cluster\n\n")
 
 allmarker_file = paste0(prefix, "_allmarkers.rds")
@@ -249,93 +267,113 @@ if(!file.exists(allmarker_file)){
   obj.markers <- readRDS(allmarker_file)
 }
 top10 <- obj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
-print(kable_styling(kable(top10, caption=tabRef("top10", "Top 10 marker genes in each cluster"))))
+top5 <- obj.markers %>% group_by(cluster) %>% top_n(n = 5, wt = avg_logFC)
+
+top10marker_file = paste0(prefix, "_top10markers.csv")
+write.csv(top10, file=top10marker_file, row.names=F, quote = F)
+```
+
+```{r top5table, results="asis"}
+print(kable_styling(kable(top5, caption=tabRef("top5", "Top 5 marker genes in each cluster"))))
 ```
 
 # Cell clusters
     
-```{r qc1, echo=FALSE, fig.height=7, fig.width=13, fig.cap=figRef("qc_metrics_1", "Violin plot of percentage of mitochondrial, number of feature, number of read count and first principle component")}
-VlnPlot(object = obj, features = c("percent.mt", "nFeature_RNA", "nCount_RNA", "PC_1" ), label=T)
+```{r qc1, fig.height=5, fig.width=13, fig.cap=figRef("qc_metrics_1", "Violin plot of percentage of mitochondrial, number of feature and number of read count")}
+p1<-VlnPlot(object = obj, features = c("percent.mt"), label=T)
+p2<-VlnPlot(object = obj, features = c("nFeature_RNA"), ncol=1, label=T)
+p3<-VlnPlot(object = obj, features = c("nCount_RNA"), ncol=1, label=T)
+plot_grid(p1,p2,p3,ncol=3)
+
 ```
 
-``` {r umap_cells, echo=FALSE, fig.height=10, fig.width=12, fig.cap=figRef("umap_cells", "UMAP of cells")}
+``` {r umap_cells, fig.height=8, fig.width=18, fig.cap=figRef("umap_cells", "UMAP of cells (left) and samples (right)")}
 # note that you can set `label = TRUE` or use the LabelClusters function to help label individual clusters
-DimPlot(object = obj, reduction = 'umap', label=TRUE)
+seurat_clusters<-unlist(obj[["seurat_clusters"]])
+seurat_colors<-hue_pal()(length(levels(seurat_clusters)))
+names(seurat_colors)<-levels(seurat_clusters)
+p1<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_clusters", cols=seurat_colors)
+p2<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="orig.ident")
+plot_grid(p1,p2)
 ```
 
-```{r umap_samples, echo=FALSE, fig.height=10, fig.width=12, fig.cap=figRef("umap_samples", "UMAP of samples")}
-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="orig.ident")
+```{r sample_cells_count, fig.height=8, fig.width=18, fig.cap=figRef("sample_cells_count", "Percentage of cell from samples in each cluster")}
+os<-table(obj$orig.ident, obj$seurat_clusters)
+osm<-melt(os)
+colnames(osm)<-c("Sample", "Cluster", "Cell")
+osm$Cluster<-paste0("Cluster ", osm$Cluster)
+osm$Cluster<-factor(osm$Cluster, levels=unique(osm$Cluster))
+osm_perc = osm %>% dplyr::group_by(Cluster) %>% dplyr::mutate(Percent = Cell/sum(Cell))
+
+ggplot(osm_perc, aes(x="",y=Percent,fill=Sample)) + geom_bar(stat="identity", width=1) + coord_polar("y", start=0) + facet_wrap(~Cluster) + theme_void()
+
 ```
 
-```{r heatmap_samples, echo=FALSE, fig.height=10, fig.width=12, fig.cap=figRef("heatmap_samples", "Marker genes in each cell type")}
-DoHeatmap(obj, features = top10$gene) + NoLegend()
+```{r heatmap_samples, fig.height=max(10, length(top10$gene) / 10), fig.width=12, fig.cap=figRef("heatmap_samples", "Marker genes in each cell type")}
+DoHeatmap(obj, features = top10$gene, group.colors=seurat_colors, angle = 90) + NoLegend()
 ```
 
 # Predict cell types
 
-```{r, fig.width=18, fig.height=10, results="asis"}
+```{r }
 #SCLC<-readRDS(cluster_umap_file)
 SCLC<-obj
 clusters<-SCLC@active.ident
 
 sumcounts<-t(apply(GetAssayData(SCLC,assay="RNA",slot="data"),1,function(x){tapply(x,clusters,sum)}))
 logsumcounts<-log2(sumcounts+1)
+```
 
-DoHeatmap_predictcelltype<-function(cta_mat) {
-   layout(matrix(c(2,0,0,1), 2, 2, byrow = TRUE),width=c(1,6),heights=c(1,6))
-      par(mar=c(3,1,1,10))
-      par(xaxs="i")
-      par(yaxs="i")
-   image(1:dim(cta_mat)[2],1:dim(cta_mat)[1],t(cta_mat),col=colorRampPalette(c("white","red"))(100),axes=F,xlab="",ylab="")
-   axis(4,1:dim(cta_mat)[1],labels=rownames(cta_mat),las=2,tick=F,cex.axis=0.8)
-   axis(1,1:dim(cta_mat)[2],labels=0:(dim(cta_mat)[2]-1),las=2,tick=F,cex.axis=0.8)
+```{r gene_expression_prediction_umap, include=(species == "Mm"), eval=(species == "Mm"), fig.width=18, fig.height=8, results="asis"}
+library(scUnifrac)
+load(system.file("extdata", "ref.expr.Rdata", package = "scUnifrac"))
 
-   par(mar=c(2,1,2,1))
-     maxval<-round(max(cta_mat),digits=1)
-      zval<-seq(0,maxval,0.1)
-      image(1:length(zval),1,matrix(zval,ncol=1),col= colorRampPalette(c("white", "red"))(100),axes=F,xlab="",ylab="")
-      mtext("0",side=1,line=0.5,at=1,cex=0.8)
-      mtext(maxval,side=1,line=0.5,at=length(zval),cex=0.8)
+commongene<-intersect(rownames(logsumcounts),rownames(ref.expr))
+sample_data<-logsumcounts[commongene,]
+ref_data=ref.expr[commongene,]
+combined_data = cbind(sample_data, ref_data)
+
+data.quantileAll <- apply(combined_data, 2, function(x){quantile(x, 0.75)})
+data.quantileAll<-data.quantileAll / median(data.quantileAll)
+
+data.norm <- t(t(combined_data) / data.quantileAll)
+sample_data.norm<-data.norm[,c(1:ncol(sample_data))]
+ref_data.norm<-data.norm[,c((ncol(sample_data)+1):ncol(data.norm))]
+
+preCell<-scUnifrac_predictCelltype(sample_data.norm,ref.expr=ref_data.norm,normalize=F,corcutoff=0.3, drawpicture=F)
+cat("\n\n## Cell type prediction using using expression database\n\n")
+colCell<-preCell
+new.cluster.ids = c()
+for(col in c(1:ncol(preCell))){
+  maxvalue = max(preCell[,col])
+  maxindex = which(preCell[, col]==maxvalue)[1]
+  new.cluster.ids=c(new.cluster.ids, rownames(preCell)[maxindex])
+  colCell[, col] = ifelse(preCell[, col]==maxvalue, paste("<font color=\"red\">", round(preCell[, col], 2), "</font>"), round(preCell[, col], 2))
 }
 
-if(species == "Mm"){
-  library(scUnifrac)
-  load(system.file("extdata", "ref.expr.Rdata", package = "scUnifrac"))
+cat("\n\n\n### Predicted cell types for each cluster\n\n")
 
-  commongene<-intersect(rownames(logsumcounts),rownames(ref.expr))
-  sample_data<-logsumcounts[commongene,]
-  ref_data=ref.expr[commongene,]
-  combined_data = cbind(sample_data, ref_data)
+SCLC<-add_cluster(SCLC, new.cluster.ids, "cell_expression_clusters")
 
-  data.quantileAll <- apply(combined_data, 2, function(x){quantile(x, 0.75)})
-  data.quantileAll<-data.quantileAll / median(data.quantileAll)
+p1<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_clusters")
+p2<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="cell_expression_clusters")
+plot_grid(p1,p2)
+```
 
-  data.norm <- t(t(combined_data) / data.quantileAll)
-  sample_data.norm<-data.norm[,c(1:ncol(sample_data))]
-  ref_data.norm<-data.norm[,c((ncol(sample_data)+1):ncol(data.norm))]
-  
-  preCell<-scUnifrac_predictCelltype(sample_data.norm,ref.expr=ref_data.norm,normalize=F,corcutoff=0.3, drawpicture=F)
-  cat("\n\n## Prediction using log2-upperquantile normalized cluster sum(count) with expression database\n\n")
-  colCell<-preCell
-  new.cluster.ids = c()
-  for(col in c(1:ncol(preCell))){
-    maxvalue = max(preCell[,col])
-    maxindex = which(preCell[, col]==maxvalue)[1]
-    new.cluster.ids=c(new.cluster.ids, rownames(preCell)[maxindex])
-    colCell[, col] = ifelse(preCell[, col]==maxvalue, paste("<font color=\"red\">", round(preCell[, col], 2), "</font>"), round(preCell[, col], 2))
-  }
-  
-  print(kable(colCell, escape = FALSE))
-  
-  heatmap3(preCell, scale="none")
-  
-  names(new.cluster.ids) <- levels(SCLC)
-  SCLC <- RenameIdents(SCLC, new.cluster.ids)
-  print(DimPlot(SCLC, reduction = "umap",label=T,label.size=4))
-  
-}
+```{r gene_expression_prediction_table, include=(species == "Mm"), eval=(species == "Mm"), results="asis"}
+cat("\n\n\n### Cell type prediction correlation table\n\n")
+print(kable(colCell, escape = FALSE))
+```
 
-cat("\n\n## Prediction using log2-upperquantile normalized cluster sum(count) with cell gene activity database\n\n")
+```{r gene_expression_prediction_heatmap, include=(species == "Mm"), eval=(species == "Mm"), fig.width=18, fig.height=10, results="asis"}
+
+cat("\n\n\n### Cell type prediction correlation heatmap\n\n")
+heatmap3(preCell, scale="none")
+```
+
+```{r gene_activity, results="asis"}
+
+cat("\n\n## Cell type prediction using gene activity database\n\n")
 
 data.quantileAll <- apply(logsumcounts, 2, function(x){quantile(x, 0.75)})
 data.quantileAll<-data.quantileAll / median(data.quantileAll)
@@ -343,12 +381,41 @@ data.quantileAll<-data.quantileAll / median(data.quantileAll)
 data.norm <- t(t(logsumcounts) / data.quantileAll)
 predict_celltype<-ORA_celltype(data.norm,cellType)
 
+SCLC<-readRDS(cluster_umap_file)
+
 #use the max_cta_score for each cluster
 new.cluster.ids<-names(predict_celltype$max_cta)
 names(new.cluster.ids) <- levels(SCLC)
-SCLC <- RenameIdents(SCLC, new.cluster.ids)
-print(DimPlot(SCLC, reduction = "umap",label=T,label.size=4))
-DoHeatmap(SCLC, features = top10$gene) + NoLegend()
+SCLC[["cellactivity_clusters"]] <- new.cluster.ids[unlist(SCLC[["seurat_clusters"]])]
+
+clusterDf<-data.frame(seurat=unlist(SCLC[["seurat_clusters"]]), cellactivity=unlist(SCLC[["cellactivity_clusters"]]))
+clusterDf$seurat_colors<-seurat_colors[clusterDf$seurat]
+
+clusterDf$seurat_cellactivity<-paste0(clusterDf$seurat, " : ", clusterDf$cellactivity)
+seurat_cellactivity<-clusterDf$seurat_cellactivity
+
+caCount<-table(clusterDf$cellactivity)
+clusterDf$caCount<-caCount[clusterDf$cellactivity]
+
+clusterDf<-clusterDf[order(-clusterDf$caCount, clusterDf$seurat),]
+seurat_cellactivity<-factor(seurat_cellactivity, levels=unique(clusterDf$seurat_cellactivity))
+seurat_cellactivity_colors<-unique(clusterDf$seurat_colors)
+SCLC[["seurat_cellactivity_clusters"]] <- seurat_cellactivity
+
+```
+
+```{r gene_activity_umap, fig.width=18, fig.height=10, results="asis"}
+cat("\n\n### Predicted cell types for each cluster\n\n")
+p1<-DimPlot(object = SCLC, reduction = 'umap', label=T, group.by="seurat_clusters", cols=seurat_colors)
+p2<-DimPlot(object = SCLC, reduction = "umap",label=T, group.by="seurat_cellactivity_clusters", cols=seurat_cellactivity_colors)
+plot_grid(p1,p2)
+```
+
+```{r gene_activity_heatmap, fig.width=18, fig.height=max(10, length(top10$gene) / 10), results="asis"}
+DoHeatmap(SCLC, features = top10$gene, group.by="seurat_cellactivity_clusters", group.colors=seurat_cellactivity_colors, angle=90) + NoLegend()
+```
+
+```{r gene_activity_cta_heatmap, fig.width=18, fig.height=10, results="asis"}
 cta_index<-apply(predict_celltype$cta,2,function(x){return(order(x,decreasing=T)[1:2])})
 cta_index<-unique(sort(cta_index))
 cta_mat<- predict_celltype$cta[cta_index,]
@@ -358,10 +425,25 @@ ora_index<-unique(sort(ora_index))
 ora_mat<- predict_celltype$ora[ora_index,]
 ora_mat<--log10(ora_mat)  
 
-cat("\n\n## Predict cell type by cell activity score\n\n")
-DoHeatmap_predictcelltype(cta_mat)
+cat("\n\n### Predict cell type by cell activity score\n\n")
+heatmap3(cta_mat, scale="none")
+```
 
-cat("\n\n## Predict cell type by over representive analysis\n\n")
-DoHeatmap_predictcelltype(ora_mat)
+```{r gene_activity_ora_heatmap, fig.width=18, fig.height=10, results="asis"}
+cat("\n\n### Predict cell type by over representive analysis\n\n")
+heatmap3(ora_mat, scale="none")
 
 ```
+
+```{r, child="Details.Rmd", eval=file.exists("Details.Rmd")} 
+```
+
+# Project options
+
+```{r options}
+colnames(options_table)<-c("Value", "Option")
+options_table<-options_table[,c("Option", "Value")]
+options_table<-options_table[!(options_table$Option %in% c("Mtpattern", "rRNApattern")),]
+kable(options_table)
+```
+

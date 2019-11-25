@@ -33,7 +33,6 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "cluster",   "slurm" );
 
   initDefaultValue( $def, "perform_scRNABatchQC", 1 );
-  initDefaultValue( $def, "perform_seurat",       1 );
 
   initDefaultValue( $def, "perform_preprocessing", 0 );
   initDefaultValue( $def, "perform_mapping",       0 );
@@ -124,13 +123,17 @@ sub getScRNASeqConfig {
     push( @$summary, "scRNABatchQC" );
   }
 
-  if ( getValue( $def, "perform_seurat" ) ) {
+  if ( getValue( $def, "perform_report" ) ) {
+    my $additional_rmd_files = "Functions.Rmd";
+    if (defined $def->{"Details.Rmd"}){
+      $additional_rmd_files = $additional_rmd_files . "," . $def->{"Details.Rmd"};
+    }
     $config->{seurat} = {
       class                    => "CQS::UniqueRmd",
       perform                  => 1,
-      target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "seurat",
-      report_rmd_file          => "../scRNA/seurat.rmd",
-      additional_rmd_files     => "Functions.Rmd",
+      target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "report",
+      report_rmd_file          => "../scRNA/analysis.rmd",
+      additional_rmd_files     => $additional_rmd_files,
       parameterSampleFile1_ref => "files",
       parameterSampleFile2     => {
         Mtpattern           => getValue( $def, "Mtpattern",           "^MT-|^Mt-" ),

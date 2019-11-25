@@ -13,8 +13,6 @@ library(DT)
 library(RCurl)
 library(htmltools)
 
-knitr::opts_chunk$set(echo = TRUE)
-
 addHtmlLinkTag<-function(text,link) {
   result<-paste0("<a href='",link,"' target='_blank'>",text,"</a>")
   return(result)
