@@ -57,7 +57,7 @@ sub perform {
       print $pbs "if [ ! -s $outputFolder/$annoFile ]; then
   findMotifsGenome.pl $file $genome $outputFolder $option
   annotatePeaks.pl $file $genome -annStats $outputFolder/$annoStatsFile > $outputFolder/$annoFile
-  R --vanilla -f $rscript --args $outputFolder/$annoFile $outputFolder/$annoFile
+  R --vanilla -f $rscript --args $outputFolder/$annoStatsFile $outputFolder/$annoStatsFile
 fi
 
 ";

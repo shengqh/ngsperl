@@ -179,7 +179,7 @@ sub get_pbs_source {
       my $end   = $loc->[1];
 
       my $cursample = $sample_name . "_" . $start . "_" . $end;
-      $result->{$self->get_pbs_filename( $pbs_dir, $cursample )} = [$sample_name];
+      $result->{$self->get_pbs_filename( $pbs_dir, $cursample )} = $sample_name;
     }
   }
 

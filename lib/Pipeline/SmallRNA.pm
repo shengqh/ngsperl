@@ -112,10 +112,7 @@ sub getSmallRNAConfig {
   }
 
   my $perform_host_tRH_analysis = getValue( $def, "perform_host_tRH_analysis", 0 ) && $notMicroRNAOnly;
-  my $tRH_folder = $def->{target_dir} . "/tRH";
-  if ($perform_host_tRH_analysis) {
-    create_directory_or_die($tRH_folder);
-  }
+  my $perform_host_tRnaFragmentHalves_analysis = getValue( $def, "perform_host_tRnaFragmentHalves_analysis", 0 ) && $notMicroRNAOnly;
 
   my $R_font_size = 'textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';';
 
@@ -458,9 +455,7 @@ sub getSmallRNAConfig {
     $config = merge( $config, $host_genome );
     push @$summary_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_info", "bowtie1_genome_1mm_NTA_smallRNA_category" );
 
-    my $tRHTask      = "bowtie1_genome_1mm_NTA_smallRNA_count_tRH_filtered";
-    my $tRHTableTask = $tRHTask . "_table";
-    my $tRHCategory  = $tRHTask . "_category";
+    my $tRnaAnalysis = {};
     if ($notMicroRNAOnly) {
       $config->{host_genome_tRNA_category} = {
         class                     => "CQS::UniqueR",
@@ -468,7 +463,7 @@ sub getSmallRNAConfig {
         target_dir                => $data_visualization_dir . "/host_genome_tRNA_category",
         rtemplate                 => "countTableVisFunctions.R,hostTrnaMappingVis.R",
         output_file               => ".tRNAMapping.Result",
-        output_file_ext           => ".tRNAType2.Barplot.png",
+        output_file_ext           => ".tRNAType1.Barplot.png;.tRNAType2.Barplot.png",
         parameterSampleFile1Order => $def->{groups_order},
         parameterSampleFile1      => $groups,
         parameterSampleFile2      => $def->{groups_vis_layout},
@@ -486,19 +481,48 @@ sub getSmallRNAConfig {
       };
       push @$summary_ref, ("host_genome_tRNA_category");
 
-      if ($perform_host_tRH_analysis) {
-        $config->{$tRHTask} = {
+      if ($perform_host_tRnaFragmentHalves_analysis) {
+        $tRnaAnalysis->{"tFragment"} = {
+          minLength => 0,
+          maxLength => 29
+        };
+        $tRnaAnalysis->{"tHalves"} = {
+          minLength => 30,
+          maxLength => 100
+        };
+      }
+
+      if($perform_host_tRH_analysis){
+        $tRnaAnalysis->{"tRH"} = {
+          minLength => 30,
+          maxLength => 40
+        };
+      }
+
+      for my $tKey (sort keys %$tRnaAnalysis){
+        my $minLength = $tRnaAnalysis->{$tKey}{minLength};
+        my $maxLength = $tRnaAnalysis->{$tKey}{maxLength};
+
+        my $tTask = "bowtie1_genome_1mm_NTA_smallRNA_count_" . $tKey;
+        my $tTableTask = $tTask . "_table";
+        my $tCategoryTask = $tTableTask . "_category";
+
+        $tRnaAnalysis->{$tKey}{"count_section"} = $tTask;
+        $tRnaAnalysis->{$tKey}{"table_section"} = $tTableTask;
+        $tRnaAnalysis->{$tKey}{"category_section"} = $tCategoryTask;
+
+        $config->{$tTask} = {
           class                 => "CQS::ProgramIndividualWrapper",
           perform               => 1,
-          target_dir            => $tRH_folder . "/$tRHTask",
-          option                => "--minLength 30 --maxLength 40",
+          target_dir            => $host_genome_dir . "/$tTask",
+          option                => "--minLength " . $minLength . " --maxLength " . $maxLength,
           interpretor           => "python",
           program               => "../SmallRNA/filterTrnaXml.py",
           source_arg            => "-i",
           source_ref            => [ $countTask, ".count.mapped.xml" ],
           output_to_same_folder => 1,
           output_arg            => "-o",
-          output_ext            => ".tRH.count.mapped.xml",
+          output_ext            => "." . $tKey . ".count.mapped.xml",
           sh_direct             => 1,
           pbs                   => {
             "email"     => $def->{email},
@@ -508,18 +532,17 @@ sub getSmallRNAConfig {
             "mem"       => "10gb"
           },
         };
-        push @$individual_ref, $tRHTask;
+        push @$individual_ref, $tTask;
 
-        $config->{$tRHTableTask} = {
+        $config->{$tTableTask} = {
           class      => "CQS::SmallRNATable",
           perform    => 1,
-          target_dir => $tRH_folder . "/$tRHTableTask",
+          target_dir => $host_genome_dir . "/$tTableTask",
           option     => $def->{host_smallrnacounttable_option},
-          source_ref => [ $tRHTask, ".tRH.count.mapped.xml" ],
+          source_ref => [ $tTask, "." . $tKey . ".count.mapped.xml" ],
           prefix     => "smallRNA_1mm_",
           sh_direct  => 1,
           is_tRH     => 1,
-          cluster    => $cluster,
           pbs        => {
             "email"     => $def->{email},
             "emailType" => $def->{emailType},
@@ -528,20 +551,19 @@ sub getSmallRNAConfig {
             "mem"       => "40gb"
           },
         };
+        push @$summary_ref, $tTableTask;
 
-        push @$summary_ref, $tRHTableTask;
-
-        $config->{$tRHCategory} = {
+        $config->{$tCategoryTask} = {
           class                     => "CQS::UniqueR",
           perform                   => 1,
-          target_dir                => $tRH_folder . "/host_genome_tRH_category",
+          target_dir                => $host_genome_dir . "/$tCategoryTask",
           rtemplate                 => "countTableVisFunctions.R,hostTrnaMappingVis.R",
-          output_file               => ".tRHMapping.Result",
-          output_file_ext           => ".tRNAType2.Barplot.png",
+          output_file               => "." . $tKey. ".Mapping.Result",
+          output_file_ext           => ".tRNAType1.Barplot.png;.tRNAType2.Barplot.png",
           parameterSampleFile1Order => $def->{groups_order},
           parameterSampleFile1      => $groups,
           parameterSampleFile2      => $def->{groups_vis_layout},
-          parameterFile1_ref        => [ $tRHTableTask, ".tRNA.count\$" ],
+          parameterFile1_ref        => [ $tTableTask, ".tRNA.count\$" ],
           parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
           rCode                     => 'maxCategory=3;' . $R_font_size,
           sh_direct                 => 1,
@@ -553,8 +575,78 @@ sub getSmallRNAConfig {
             "mem"       => "10gb"
           },
         };
-        push @$summary_ref, $tRHCategory;
+        push @$summary_ref, $tCategoryTask;
       }
+
+      # if ($perform_host_tRH_analysis) {
+      #   $config->{$tRHTask} = {
+      #     class                 => "CQS::ProgramIndividualWrapper",
+      #     perform               => 1,
+      #     target_dir            => $tRH_folder . "/$tRHTask",
+      #     option                => "--minLength 30 --maxLength 40",
+      #     interpretor           => "python",
+      #     program               => "../SmallRNA/filterTrnaXml.py",
+      #     source_arg            => "-i",
+      #     source_ref            => [ $countTask, ".count.mapped.xml" ],
+      #     output_to_same_folder => 1,
+      #     output_arg            => "-o",
+      #     output_ext            => ".tRH.count.mapped.xml",
+      #     sh_direct             => 1,
+      #     pbs                   => {
+      #       "email"     => $def->{email},
+      #       "emailType" => $def->{emailType},
+      #       "nodes"     => "1:ppn=1",
+      #       "walltime"  => "10",
+      #       "mem"       => "10gb"
+      #     },
+      #   };
+      #   push @$individual_ref, $tRHTask;
+
+      #   $config->{$tRHTableTask} = {
+      #     class      => "CQS::SmallRNATable",
+      #     perform    => 1,
+      #     target_dir => $tRH_folder . "/$tRHTableTask",
+      #     option     => $def->{host_smallrnacounttable_option},
+      #     source_ref => [ $tRHTask, ".tRH.count.mapped.xml" ],
+      #     prefix     => "smallRNA_1mm_",
+      #     sh_direct  => 1,
+      #     is_tRH     => 1,
+      #     cluster    => $cluster,
+      #     pbs        => {
+      #       "email"     => $def->{email},
+      #       "emailType" => $def->{emailType},
+      #       "nodes"     => "1:ppn=1",
+      #       "walltime"  => "10",
+      #       "mem"       => "40gb"
+      #     },
+      #   };
+
+      #   push @$summary_ref, $tRHTableTask;
+
+      #   $config->{$tRHCategory} = {
+      #     class                     => "CQS::UniqueR",
+      #     perform                   => 1,
+      #     target_dir                => $tRH_folder . "/host_genome_tRH_category",
+      #     rtemplate                 => "countTableVisFunctions.R,hostTrnaMappingVis.R",
+      #     output_file               => ".tRHMapping.Result",
+      #     output_file_ext           => ".tRNAType2.Barplot.png",
+      #     parameterSampleFile1Order => $def->{groups_order},
+      #     parameterSampleFile1      => $groups,
+      #     parameterSampleFile2      => $def->{groups_vis_layout},
+      #     parameterFile1_ref        => [ $tRHTableTask, ".tRNA.count\$" ],
+      #     parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
+      #     rCode                     => 'maxCategory=3;' . $R_font_size,
+      #     sh_direct                 => 1,
+      #     pbs                       => {
+      #       "email"     => $def->{email},
+      #       "emailType" => $def->{emailType},
+      #       "nodes"     => "1:ppn=1",
+      #       "walltime"  => "1",
+      #       "mem"       => "10gb"
+      #     },
+      #   };
+      #   push @$summary_ref, $tRHCategory;
+      # }
 
       if ( $def->{perform_host_tRNA_start_position} ) {
         my $tTask = "host_genome_tRNA_start_position_vis";
@@ -575,19 +667,21 @@ sub getSmallRNAConfig {
           }
         );
 
-        if ($perform_host_tRH_analysis) {
-          my $tRHStartPositionTask = "host_genome_tRH_start_position_vis";
+        for my $tKey (sort keys %$tRnaAnalysis){
+          my $tTableTask = $tRnaAnalysis->{$tKey}{"table_section"};
+
+          my $tStartPositionTask = $tTableTask . "_start_position_vis";
           addPositionVis(
             $config, $def,
             $summary_ref,
-            $tRHStartPositionTask,
+            $tStartPositionTask,
             $data_visualization_dir,
             {
-              target_dir         => $tRH_folder . "/" . $tRHStartPositionTask,
-              output_file        => ".tRHStartPositionVis",
+              target_dir         => $data_visualization_dir . "/" . $tStartPositionTask,
+              output_file        => ".${tKey}.StartPositionVis",
               output_file_ext    => ".barplot.png",
               rtemplate          => "tRnaStartPositionVis.R",
-              parameterFile1_ref => [ $tRHTableTask, ".tRNA.count.startpos\$" ],
+              parameterFile1_ref => [ $tTableTask, ".tRNA.count.startpos\$" ],
             }
           );
         }
@@ -720,9 +814,11 @@ sub getSmallRNAConfig {
         "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$"           #tRNA
       );
 
-      if ($perform_host_tRH_analysis) {
+      for my $tKey (sort keys %$tRnaAnalysis){
+        my $tTableTask = $tRnaAnalysis->{$tKey}{table_section};
+
         push @table_for_correlation, (
-          $tRHTableTask, ".tRNA.count\$"                                   #tRNA
+          $tTableTask, ".tRNA.count\$"                                   #tRNA
         );
       }
 
@@ -730,9 +826,11 @@ sub getSmallRNAConfig {
         push @table_for_correlation, (
           "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$"    #tRNA
         );
-        if ($perform_host_tRH_analysis) {
+        for my $tKey (sort keys %$tRnaAnalysis){
+          my $tTableTask = $tRnaAnalysis->{$tKey}{table_section};
+
           push @table_for_correlation, (
-            $tRHTableTask, ".tRNA.read.count\$"                            #tRNA
+            $tTableTask, ".tRNA.read.count\$"                                   #tRNA
           );
         }
       }
@@ -869,12 +967,11 @@ sub getSmallRNAConfig {
       addDeseq2Visualization( $config, $def, $summary_ref, "host_genome",       \@visual_source,       $data_visualization_dir, "pairs_host_deseq2_vis_layout",       $libraryKey );
       addDeseq2Visualization( $config, $def, $summary_ref, "host_genome_reads", \@visual_source_reads, $data_visualization_dir, "pairs_host_reads_deseq2_vis_layout", $libraryKey );
 
-      if ($notMicroRNAOnly) {
-        if ($perform_host_tRH_analysis) {
-          addDEseq2( $config, $def, $summary_ref, "tRH",           [ $tRHTableTask, ".tRNA.count\$" ],           $tRH_folder, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-          addDEseq2( $config, $def, $summary_ref, "tRH_reads",     [ $tRHTableTask, ".tRNA.read.count\$" ],      $tRH_folder, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-          addDEseq2( $config, $def, $summary_ref, "tRH_aminoacid", [ $tRHTableTask, ".tRNA.aminoacid.count\$" ], $tRH_folder, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        }
+      for my $tKey (sort keys %$tRnaAnalysis){
+        my $tTableTask = $tRnaAnalysis->{$tKey}{table_section};
+        addDEseq2( $config, $def, $summary_ref, $tKey,           [ $tTableTask, ".tRNA.count\$" ],           $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        addDEseq2( $config, $def, $summary_ref, "${tKey}_reads",     [ $tTableTask, ".tRNA.read.count\$" ],      $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        addDEseq2( $config, $def, $summary_ref, "${tKey}_aminoacid", [ $tTableTask, ".tRNA.aminoacid.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       }
     }
 
@@ -960,25 +1057,27 @@ sub getSmallRNAConfig {
             }
           );
         }
-        if ($perform_host_tRH_analysis) {
+
+        for my $tKey (sort keys %$tRnaAnalysis){
+          my $tTableTask = $tRnaAnalysis->{$tKey}{table_section};
           addPositionVis(
             $config, $def,
             $summary_ref,
-            "host_genome_tRH_PositionVis",
-            $tRH_folder,
+            "host_genome_${tKey}_PositionVis",
+            $data_visualization_dir,
             {
-              output_file        => ".tRHPositionVis",
-              parameterFile1_ref => [ $tRHTableTask, ".tRNA.aminoacid.count.position\$" ],
+              output_file        => ".${tKey}PositionVis",
+              parameterFile1_ref => [ $tTableTask, ".tRNA.aminoacid.count.position\$" ],
             }
           );
           addPositionVis(
             $config, $def,
             $summary_ref,
-            "host_genome_tRH_PositionVis_anticodon",
-            $tRH_folder,
+            "host_genome_${tKey}_PositionVis_anticodon",
+            $data_visualization_dir,
             {
-              output_file        => ".tRHAnticodonPositionVis",
-              parameterFile1_ref => [ $tRHTableTask, ".tRNA.count.position\$" ],
+              output_file        => ".${tKey}AnticodonPositionVis",
+              parameterFile1_ref => [ $tTableTask, ".tRNA.count.position\$" ],
             }
           );
         }
@@ -2088,13 +2187,13 @@ sub getSmallRNAConfig {
         }
 
         if(not $hasMicroRNAOnly){
-          push( @report_files, "count_table_correlation",  "^(?!.*tRH_filtered_table).+.tRNA.count.heatmap.png" );
-          push( @report_files, "count_table_correlation",  "^(?!.*tRH_filtered_table).+.tRNA.count.PCA.png" );
+          push( @report_files, "count_table_correlation",  "smallRNA_table/result/.+.tRNA.count.heatmap.png" );
+          push( @report_files, "count_table_correlation",  "smallRNA_table/result/.+.tRNA.count.PCA.png" );
           push( @report_names, "correlation_trna_heatmap", "correlation_trna_pca" );
 
           if ($hasGroupHeatmap) {
-            push( @report_files, "count_table_correlation",        "^(?!.*tRH_filtered_table).+.tRNA.count.Group.heatmap.png" );
-            push( @report_files, "count_table_correlation",        "^(?!.*tRH_filtered_table).+.tRNA.count.Group.Correlation.Cluster.png" );
+            push( @report_files, "count_table_correlation",        "smallRNA_table/result/.+.tRNA.count.Group.heatmap.png" );
+            push( @report_files, "count_table_correlation",        "smallRNA_table/result/.+.tRNA.count.Group.Correlation.Cluster.png" );
             push( @report_names, "correlation_trna_group_heatmap", "correlation_trna_corr_cluster" );
           }
         }

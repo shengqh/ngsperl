@@ -20,6 +20,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_macs";
+  $self->{_group_keys} = ["groups", "inputs", "controls"];
   bless $self, $class;
   return $self;
 }

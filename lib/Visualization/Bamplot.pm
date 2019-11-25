@@ -23,7 +23,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_bp";
-  $self->{_dockerCommandKey} = "bamplot_docker_command";
+  $self->{_docker_prefix} = "bamplot_";
   bless $self, $class;
   return $self;
 }
@@ -43,6 +43,10 @@ sub perform {
   my $draw_by_r        = get_option( $config, $section, "draw_by_r",        0 );
   my $draw_by_r_width  = get_option( $config, $section, "draw_by_r_width",  10 );
   my $draw_by_r_height = get_option( $config, $section, "draw_by_r_height", 10 );
+
+  if ($option !~ /-y/){
+    $option = $option . " -y uniform";
+  }
 
   my $colors;
   if ( has_raw_files( $config, $section, "colors" ) ) {
@@ -110,7 +114,7 @@ if [ ! -s $final_file ]; then
   if [ ! -s $curgff ]; then
     cp $gff_file $curgff
   fi
-  bamplot $option -v -b \"$bamFile\" -n \"$bamName\" -y uniform -i $curgff $colorStr -o .
+  bamplot $option -v -b \"$bamFile\" -n \"$bamName\" -i $curgff $colorStr -o .
 fi
 ";
       }
@@ -128,7 +132,7 @@ if [ ! -s $final_file ]; then
   if [ ! -s $curgff ]; then
     cp $gff_file $curgff
   fi
-  bamplot $option -v -b \"$curbam_fileStr\" -n \"$curbam_nameStr\" -y uniform -i $curgff $colorStr -o .
+  bamplot $option -v -b \"$curbam_fileStr\" -n \"$curbam_nameStr\" -i $curgff $colorStr -o .
 fi
 ";
 
