@@ -31,7 +31,8 @@ knitr::opts_chunk$set(
   tidy = TRUE,
   tidy.opts = list(width.cutoff = 120),
   message = FALSE,
-  warning = FALSE
+  warning = FALSE,
+  echo = TRUE
 )
 
 add_cluster<-function(object, new.cluster.name, new.cluster.ids){
@@ -68,7 +69,7 @@ run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims){
 ```{r, child="Functions.Rmd"} 
 ```
 
-```{r init, echo=FALSE}
+```{r init}
 library(dplyr)
 library(Seurat)
 library(knitr)
@@ -94,6 +95,11 @@ Remove_Mt_rRNA= ifelse(options$Remove_Mt_rRNA == "FALSE", FALSE, TRUE)
 resolution=as.numeric(options$resolution)
 species=options$species
 markerfile<-options$markers_file
+details_rmd<-options$details_rmd
+
+if(file.exists(details_rmd)){
+  file.copy(details_rmd, "Details.Rmd", overwrite=T)
+}
 
 nFeature_cutoff_min=as.numeric(options$nFeature_cutoff_min)
 nFeature_cutoff_max=as.numeric(options$nFeature_cutoff_max)
@@ -143,7 +149,7 @@ allgenes<-obj@assays$RNA@counts@Dimnames[1]
 
 ```
 
-```{r celltypedatabase, echo=FALSE}
+```{r celltypedatabase}
 marker<-data.frame(fread(markerfile))
 hsind<-regexpr(species,marker[,1])
 marker_species<-marker[hsind>0 & marker$ubiquitousness.index<0.05,]
@@ -208,14 +214,14 @@ A few QC metrics [commonly used](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC47
     + We calculate mitochondrial QC metrics with the `PercentageFeatureSet` function, which calculates the percentage of counts originating from a set of features
     + We use the set of all genes starting with either `mt-` or `MT-` as a set of mitochondrial genes
 
-```{r mito, echo=FALSE}
+```{r mito}
 # The [[ operator can add columns to object metadata. This is a great place to stash QC stats
 obj[["percent.mt"]] <- PercentageFeatureSet(object = obj, pattern = Mtpattern)
 ```
 
 We visualize QC metrics.
 
-```{r qc2, echo=FALSE, fig.height=6, fig.width=13, fig.cap=figRef("qc_metrics_2", "Scatter plot of number of feature/percentage of mitochondrial vs number of read count")}
+```{r qc2, fig.height=6, fig.width=13, fig.cap=figRef("qc_metrics_2", "Scatter plot of number of feature/percentage of mitochondrial vs number of read count")}
 
 # FeatureScatter is typically used to visualize feature-feature relationships, but can be used for anything calculated by the object, i.e. columns in object metadata, PC scores etc.
 
@@ -235,7 +241,7 @@ We use QC metrics to filter cells.
 
 Then we normalize the data and run non-linear dimensional reduction (UMAP/tSNE).
 
-```{r data_prepartion, echo=FALSE}
+```{r data_prepartion}
 random.seed=20191015
 cluster_markers_file = paste0(prefix, "_cluster_markers.rds")
 if(!file.exists(cluster_markers_file)){
@@ -258,7 +264,7 @@ obj <- obj_markers$object
 obj.markers <- obj_markers$markers
 ```
 
-```{r markers, eval=T, echo=FALSE, results="asis"}
+```{r markers, eval=T, results="asis"}
 cat("\n\n## Marker genes for each cluster\n\n")
 
 top10 <- obj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
@@ -266,14 +272,14 @@ top10marker_file = paste0(prefix, "_top10markers.csv")
 write.csv(top10, file=top10marker_file, row.names=F, quote = F)
 ```
 
-```{r top5table, echo=FALSE, results="asis"}
+```{r top5table, results="asis"}
 top5 <- obj.markers %>% group_by(cluster) %>% top_n(n = 5, wt = avg_logFC)
 print(kable_styling(kable(top5, caption=tabRef("top5", "Top 5 marker genes in each cluster"))))
 ```
 
 # Cell clusters
     
-```{r qc1, echo=FALSE, fig.height=5, fig.width=13, fig.cap=figRef("qc_metrics_1", "Violin plot of percentage of mitochondrial, number of feature and number of read count")}
+```{r qc1, fig.height=5, fig.width=13, fig.cap=figRef("qc_metrics_1", "Violin plot of percentage of mitochondrial, number of feature and number of read count")}
 p1<-VlnPlot(object = obj, features = c("percent.mt"), label=T)
 p2<-VlnPlot(object = obj, features = c("nFeature_RNA"), ncol=1, label=T)
 p3<-VlnPlot(object = obj, features = c("nCount_RNA"), ncol=1, label=T)
@@ -281,7 +287,7 @@ plot_grid(p1,p2,p3,ncol=3)
 
 ```
 
-``` {r umap_cells, echo=FALSE, fig.height=8, fig.width=18, fig.cap=figRef("umap_cells", "UMAP of cells (left) and samples (right)")}
+``` {r umap_cells, fig.height=8, fig.width=18, fig.cap=figRef("umap_cells", "UMAP of cells (left) and samples (right)")}
 # note that you can set `label = TRUE` or use the LabelClusters function to help label individual clusters
 seurat_clusters<-unlist(obj[["seurat_clusters"]])
 seurat_colors<-hue_pal()(length(levels(seurat_clusters)))
@@ -291,7 +297,7 @@ p2<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="orig.ident"
 plot_grid(p1,p2)
 ```
 
-```{r sample_cells_count, echo=FALSE, fig.height=8, fig.width=18, fig.cap=figRef("sample_cells_count", "Percentage of cell from samples in each cluster")}
+```{r sample_cells_count, fig.height=8, fig.width=18, fig.cap=figRef("sample_cells_count", "Percentage of cell from samples in each cluster")}
 os<-table(obj$orig.ident, obj$seurat_clusters)
 osm<-melt(os)
 colnames(osm)<-c("Sample", "Cluster", "Cell")
@@ -303,7 +309,7 @@ ggplot(osm_perc, aes(x="",y=Percent,fill=Sample)) + geom_bar(stat="identity", wi
 
 ```
 
-```{r heatmap_samples, echo=FALSE, fig.height=max(10, length(top10$gene) / 10), fig.width=12, fig.cap=figRef("heatmap_samples", "Marker genes in each cell type")}
+```{r heatmap_samples, fig.height=max(10, length(top10$gene) / 10), fig.width=12, fig.cap=figRef("heatmap_samples", "Marker genes in each cell type")}
 DoHeatmap(obj, features = top10$gene, group.colors=seurat_colors, angle = 90) + NoLegend()
 ```
 
@@ -435,6 +441,9 @@ heatmap3(ora_mat, scale="none")
 # Project options
 
 ```{r options, echo=F}
+if(file.exists(details_rmd)){
+  file.remove("Details.Rmd")
+}
 colnames(options_table)<-c("Value", "Option")
 options_table<-options_table[,c("Option", "Value")]
 options_table<-options_table[!(options_table$Option %in% c("Mtpattern", "rRNApattern")),]
