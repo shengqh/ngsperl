@@ -56,7 +56,6 @@ run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims){
   }
   object <- RunPCA(object = object, features = var.genes, verbose=FALSE)
   object <- RunUMAP(object = object, dims=pca_dims, verbose = FALSE)
-  #object <- FindNeighbors(object = object, reduction="UMAP", verbose=FALSE)
   object <- FindNeighbors(object = object, dims=pca_dims, verbose=FALSE)
   object <- FindClusters(object=object, verbose=FALSE, random.seed=random.seed, resolution=resolution)
 
@@ -137,10 +136,6 @@ if(!file.exists(rawdata_file)){
   }
   rm(objs)
   
-#  obj@assays$RNA@counts@Dimnames[[1]] <- toupper(obj@assays$RNA@counts@Dimnames[[1]])
-#  obj@assays$RNA@data@Dimnames[[1]] <- toupper(obj@assays$RNA@data@Dimnames[[1]])
-  
-  # calculate mitochodram percentage in each sample
   saveRDS(obj, file=rawdata_file)
 }else{
   obj=readRDS(rawdata_file)
@@ -449,4 +444,3 @@ options_table<-options_table[,c("Option", "Value")]
 options_table<-options_table[!(options_table$Option %in% c("Mtpattern", "rRNApattern")),]
 kable(options_table)
 ```
-
