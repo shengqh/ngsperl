@@ -31,8 +31,7 @@ knitr::opts_chunk$set(
   tidy = TRUE,
   tidy.opts = list(width.cutoff = 120),
   message = FALSE,
-  warning = FALSE,
-  echo = FALSE
+  warning = FALSE
 )
 
 add_cluster<-function(object, new.cluster.name, new.cluster.ids){
@@ -46,12 +45,30 @@ add_cluster<-function(object, new.cluster.name, new.cluster.ids){
   object
 }
 
+run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims){
+  if (Remove_Mt_rRNA) {
+    rRNA.genes <- grep(pattern = rRNApattern,  rownames(object), value = TRUE)
+    Mt.genes<- grep (pattern= Mtpattern,rownames(object), value=TRUE )
+    var.genes <- dplyr::setdiff(VariableFeatures(object), c(rRNA.genes,Mt.genes))
+  } else {
+    var.genes <- VariableFeatures(object)
+  }
+  object <- RunPCA(object = object, features = var.genes, verbose=FALSE)
+  object <- RunUMAP(object = object, dims=pca_dims, verbose = FALSE)
+  #object <- FindNeighbors(object = object, reduction="UMAP", verbose=FALSE)
+  object <- FindNeighbors(object = object, dims=pca_dims, verbose=FALSE)
+  object <- FindClusters(object=object, verbose=FALSE, random.seed=random.seed, resolution=resolution)
+
+  markers <- FindAllMarkers(object, features=var.genes, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+  markers <- markers[markers$p_val_adj < 0.01,]
+  return(list(object=object, markers=markers))
+}
 ```
 
 ```{r, child="Functions.Rmd"} 
 ```
 
-```{r init}
+```{r init, echo=FALSE}
 library(dplyr)
 library(Seurat)
 library(knitr)
@@ -82,6 +99,8 @@ nFeature_cutoff_min=as.numeric(options$nFeature_cutoff_min)
 nFeature_cutoff_max=as.numeric(options$nFeature_cutoff_max)
 nCount_cutoff=as.numeric(options$nCount_cutoff)
 mt_cutoff=as.numeric(options$mt_cutoff)
+
+pca_dims<-1:as.numeric(options$pca_dims)
 
 filelist1<-read.table("filelist1.txt", header=F)
 filestr<-paste0(filelist1$V1, collapse = "_")
@@ -124,7 +143,7 @@ allgenes<-obj@assays$RNA@counts@Dimnames[1]
 
 ```
 
-```{r celltypedatabase}
+```{r celltypedatabase, echo=FALSE}
 marker<-data.frame(fread(markerfile))
 hsind<-regexpr(species,marker[,1])
 marker_species<-marker[hsind>0 & marker$ubiquitousness.index<0.05,]
@@ -189,14 +208,14 @@ A few QC metrics [commonly used](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC47
     + We calculate mitochondrial QC metrics with the `PercentageFeatureSet` function, which calculates the percentage of counts originating from a set of features
     + We use the set of all genes starting with either `mt-` or `MT-` as a set of mitochondrial genes
 
-```{r mito}
+```{r mito, echo=FALSE}
 # The [[ operator can add columns to object metadata. This is a great place to stash QC stats
 obj[["percent.mt"]] <- PercentageFeatureSet(object = obj, pattern = Mtpattern)
 ```
 
 We visualize QC metrics.
 
-```{r qc2, fig.height=6, fig.width=13, fig.cap=figRef("qc_metrics_2", "Scatter plot of number of feature/percentage of mitochondrial vs number of read count")}
+```{r qc2, echo=FALSE, fig.height=6, fig.width=13, fig.cap=figRef("qc_metrics_2", "Scatter plot of number of feature/percentage of mitochondrial vs number of read count")}
 
 # FeatureScatter is typically used to visualize feature-feature relationships, but can be used for anything calculated by the object, i.e. columns in object metadata, PC scores etc.
 
@@ -216,70 +235,43 @@ We use QC metrics to filter cells.
 
 Then we normalize the data and run non-linear dimensional reduction (UMAP/tSNE).
 
-```{r data_prepartion}
+```{r data_prepartion, echo=FALSE}
 random.seed=20191015
-cluster_umap_file = paste0(prefix, "_cluster_umap.rds")
-if(!file.exists(cluster_umap_file)){
+cluster_markers_file = paste0(prefix, "_cluster_markers.rds")
+if(!file.exists(cluster_markers_file)){
   obj <- subset(obj, subset = nFeature_RNA > nFeature_cutoff_min & nFeature_RNA<nFeature_cutoff_max & nCount_RNA>nCount_cutoff & percent.mt < mt_cutoff)
 
   obj <- SCTransform(obj, vars.to.regress = "percent.mt", verbose = FALSE)
-
-  rRNA.genes <- grep(pattern = rRNApattern,  rownames(obj), value = TRUE)
-  Mt.genes<- grep (pattern= Mtpattern,rownames(obj), value=TRUE )
-
-  if (Remove_Mt_rRNA) {
-    var.genes <- dplyr::setdiff(VariableFeatures(obj), c(rRNA.genes,Mt.genes))
-  } else {
-    var.genes <- VariableFeatures(obj)
-  }
-
-  obj <- RunPCA(object = obj, features = var.genes, verbose=FALSE)
-
-  dims<-1:20
-  #PCA->UMAP
-  obj <- RunUMAP(object = obj, dims=dims, verbose = FALSE)
-  
-  #PCA->Neightbors->Clusters
-  obj <- FindNeighbors(object = obj, dims=dims, verbose=FALSE)
-  obj <- FindClusters(object=obj, verbose=FALSE, random.seed=random.seed, resolution=resolution)
-  
-  saveRDS(obj, file=cluster_umap_file)
+  obj_markers <- run_cluster(obj, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims)
+  saveRDS(obj_markers, file=cluster_markers_file)
 }else{
-  obj = readRDS(cluster_umap_file)
-  rRNA.genes <- grep(pattern = rRNApattern,  rownames(obj), value = TRUE)
-  Mt.genes<- grep (pattern= Mtpattern,rownames(obj), value=TRUE )
+  obj_markers = readRDS(cluster_markers_file)
   if (Remove_Mt_rRNA) {
     var.genes <- dplyr::setdiff(VariableFeatures(obj), c(rRNA.genes,Mt.genes))
   } else {
     var.genes <- VariableFeatures(obj)
   }
 }
+obj <- obj_markers$object
+obj.markers <- obj_markers$markers
 ```
 
-```{r markers, eval=T, results="asis"}
+```{r markers, eval=T, echo=FALSE, results="asis"}
 cat("\n\n## Marker genes for each cluster\n\n")
 
-allmarker_file = paste0(prefix, "_allmarkers.rds")
-if(!file.exists(allmarker_file)){
-  obj.markers <- FindAllMarkers(obj, features=var.genes, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
-  saveRDS(obj.markers, allmarker_file)
-}else{
-  obj.markers <- readRDS(allmarker_file)
-}
 top10 <- obj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
-top5 <- obj.markers %>% group_by(cluster) %>% top_n(n = 5, wt = avg_logFC)
-
 top10marker_file = paste0(prefix, "_top10markers.csv")
 write.csv(top10, file=top10marker_file, row.names=F, quote = F)
 ```
 
-```{r top5table, results="asis"}
+```{r top5table, echo=FALSE, results="asis"}
+top5 <- obj.markers %>% group_by(cluster) %>% top_n(n = 5, wt = avg_logFC)
 print(kable_styling(kable(top5, caption=tabRef("top5", "Top 5 marker genes in each cluster"))))
 ```
 
 # Cell clusters
     
-```{r qc1, fig.height=5, fig.width=13, fig.cap=figRef("qc_metrics_1", "Violin plot of percentage of mitochondrial, number of feature and number of read count")}
+```{r qc1, echo=FALSE, fig.height=5, fig.width=13, fig.cap=figRef("qc_metrics_1", "Violin plot of percentage of mitochondrial, number of feature and number of read count")}
 p1<-VlnPlot(object = obj, features = c("percent.mt"), label=T)
 p2<-VlnPlot(object = obj, features = c("nFeature_RNA"), ncol=1, label=T)
 p3<-VlnPlot(object = obj, features = c("nCount_RNA"), ncol=1, label=T)
@@ -287,7 +279,7 @@ plot_grid(p1,p2,p3,ncol=3)
 
 ```
 
-``` {r umap_cells, fig.height=8, fig.width=18, fig.cap=figRef("umap_cells", "UMAP of cells (left) and samples (right)")}
+``` {r umap_cells, echo=FALSE, fig.height=8, fig.width=18, fig.cap=figRef("umap_cells", "UMAP of cells (left) and samples (right)")}
 # note that you can set `label = TRUE` or use the LabelClusters function to help label individual clusters
 seurat_clusters<-unlist(obj[["seurat_clusters"]])
 seurat_colors<-hue_pal()(length(levels(seurat_clusters)))
@@ -297,7 +289,7 @@ p2<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="orig.ident"
 plot_grid(p1,p2)
 ```
 
-```{r sample_cells_count, fig.height=8, fig.width=18, fig.cap=figRef("sample_cells_count", "Percentage of cell from samples in each cluster")}
+```{r sample_cells_count, echo=FALSE, fig.height=8, fig.width=18, fig.cap=figRef("sample_cells_count", "Percentage of cell from samples in each cluster")}
 os<-table(obj$orig.ident, obj$seurat_clusters)
 osm<-melt(os)
 colnames(osm)<-c("Sample", "Cluster", "Cell")
@@ -309,18 +301,17 @@ ggplot(osm_perc, aes(x="",y=Percent,fill=Sample)) + geom_bar(stat="identity", wi
 
 ```
 
-```{r heatmap_samples, fig.height=max(10, length(top10$gene) / 10), fig.width=12, fig.cap=figRef("heatmap_samples", "Marker genes in each cell type")}
+```{r heatmap_samples, echo=FALSE, fig.height=max(10, length(top10$gene) / 10), fig.width=12, fig.cap=figRef("heatmap_samples", "Marker genes in each cell type")}
 DoHeatmap(obj, features = top10$gene, group.colors=seurat_colors, angle = 90) + NoLegend()
 ```
 
 # Predict cell types
 
-```{r }
-#SCLC<-readRDS(cluster_umap_file)
-SCLC<-obj
-clusters<-SCLC@active.ident
+```{r}
+#obj<-readRDS(cluster_umap_file)
+clusters<-obj@active.ident
 
-sumcounts<-t(apply(GetAssayData(SCLC,assay="RNA",slot="data"),1,function(x){tapply(x,clusters,sum)}))
+sumcounts<-t(apply(GetAssayData(obj,assay="RNA",slot="data"),1,function(x){tapply(x,clusters,sum)}))
 logsumcounts<-log2(sumcounts+1)
 ```
 
@@ -353,7 +344,7 @@ for(col in c(1:ncol(preCell))){
 
 cat("\n\n\n### Predicted cell types for each cluster\n\n")
 
-SCLC<-add_cluster(SCLC, new.cluster.ids, "cell_expression_clusters")
+obj<-add_cluster(obj, new.cluster.ids, "cell_expression_clusters")
 
 p1<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_clusters")
 p2<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="cell_expression_clusters")
@@ -381,14 +372,15 @@ data.quantileAll<-data.quantileAll / median(data.quantileAll)
 data.norm <- t(t(logsumcounts) / data.quantileAll)
 predict_celltype<-ORA_celltype(data.norm,cellType)
 
-SCLC<-readRDS(cluster_umap_file)
+obj_markers<-readRDS(cluster_markers_file)
+obj <- obj_markers$object
 
 #use the max_cta_score for each cluster
 new.cluster.ids<-names(predict_celltype$max_cta)
-names(new.cluster.ids) <- levels(SCLC)
-SCLC[["cellactivity_clusters"]] <- new.cluster.ids[unlist(SCLC[["seurat_clusters"]])]
+names(new.cluster.ids) <- levels(obj)
+obj[["cellactivity_clusters"]] <- new.cluster.ids[unlist(obj[["seurat_clusters"]])]
 
-clusterDf<-data.frame(seurat=unlist(SCLC[["seurat_clusters"]]), cellactivity=unlist(SCLC[["cellactivity_clusters"]]))
+clusterDf<-data.frame(seurat=unlist(obj[["seurat_clusters"]]), cellactivity=unlist(obj[["cellactivity_clusters"]]))
 clusterDf$seurat_colors<-seurat_colors[clusterDf$seurat]
 
 clusterDf$seurat_cellactivity<-paste0(clusterDf$seurat, " : ", clusterDf$cellactivity)
@@ -400,19 +392,19 @@ clusterDf$caCount<-caCount[clusterDf$cellactivity]
 clusterDf<-clusterDf[order(-clusterDf$caCount, clusterDf$seurat),]
 seurat_cellactivity<-factor(seurat_cellactivity, levels=unique(clusterDf$seurat_cellactivity))
 seurat_cellactivity_colors<-unique(clusterDf$seurat_colors)
-SCLC[["seurat_cellactivity_clusters"]] <- seurat_cellactivity
+obj[["seurat_cellactivity_clusters"]] <- seurat_cellactivity
 
 ```
 
 ```{r gene_activity_umap, fig.width=18, fig.height=10, results="asis"}
 cat("\n\n### Predicted cell types for each cluster\n\n")
-p1<-DimPlot(object = SCLC, reduction = 'umap', label=T, group.by="seurat_clusters", cols=seurat_colors)
-p2<-DimPlot(object = SCLC, reduction = "umap",label=T, group.by="seurat_cellactivity_clusters", cols=seurat_cellactivity_colors)
+p1<-DimPlot(object = obj, reduction = 'umap', label=T, group.by="seurat_clusters", cols=seurat_colors)
+p2<-DimPlot(object = obj, reduction = "umap",label=T, group.by="seurat_cellactivity_clusters", cols=seurat_cellactivity_colors)
 plot_grid(p1,p2)
 ```
 
 ```{r gene_activity_heatmap, fig.width=18, fig.height=max(10, length(top10$gene) / 10), results="asis"}
-DoHeatmap(SCLC, features = top10$gene, group.by="seurat_cellactivity_clusters", group.colors=seurat_cellactivity_colors, angle=90) + NoLegend()
+DoHeatmap(obj, features = top10$gene, group.by="seurat_cellactivity_clusters", group.colors=seurat_cellactivity_colors, angle=90) + NoLegend()
 ```
 
 ```{r gene_activity_cta_heatmap, fig.width=18, fig.height=10, results="asis"}
@@ -440,7 +432,7 @@ heatmap3(ora_mat, scale="none")
 
 # Project options
 
-```{r options}
+```{r options, echo=F}
 colnames(options_table)<-c("Value", "Option")
 options_table<-options_table[,c("Option", "Value")]
 options_table<-options_table[!(options_table$Option %in% c("Mtpattern", "rRNApattern")),]
