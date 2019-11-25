@@ -25,13 +25,15 @@ sub build_rmd_file {
 
   if ( defined $config->{$section}{additional_rmd_files} ) {
     my @additional_rmd_files = split( ';', $config->{$section}{additional_rmd_files} );
-    for my $rmd_file (@additional_rmd_files){
-      my $source_rmd = dirname(__FILE__) . "/" . trim($rmd_file);
-      my $target_rmd = $result_dir . "/" . basename(trim($rmd_file));
-      copy( $source_rmd, $target_rmd ) or die "Copy failed: $!";
-    } 
+    for my $rmd_file (@additional_rmd_files) {
+      if (! -e $rmd_file) {
+        $rmd_file=dirname(__FILE__) . "/" . $rmd_file;
+      }
+      my $additional_rmd_files_destination     = $result_dir . "/" . basename($rmd_file);
+      copy( $rmd_file, $additional_rmd_files_destination ) or die "Copy " . $rmd_file . " failed: $! ";
+    }
   }
-  
+
   if ( defined $config->{$section}{function_r_files} ) {
     my @function_r_files = split( ';', $config->{$section}{function_r_files} );
 
