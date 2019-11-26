@@ -120,13 +120,13 @@ sub getSmallRNAConfig {
   if ($perform_class_independent_analysis) {
     push @table_for_correlation, ( "identical_sequence_count_table", "^(?!.*?read).*\.count\$" );
   }
-  my @table_for_countSum     = ();
-  my @table_for_pieSummary   = ();
-  my @name_for_pieSummary    = ();
-  my @table_for_readSummary  = ();
-  my @name_for_readSummary   = ();
-  my @table_for_shortReadSource  = ();
-  my @name_for_shortReadSource   = ();
+  my @table_for_countSum        = ();
+  my @table_for_pieSummary      = ();
+  my @name_for_pieSummary       = ();
+  my @table_for_readSummary     = ();
+  my @name_for_readSummary      = ();
+  my @table_for_shortReadSource = ();
+  my @name_for_shortReadSource  = ();
 
   my @name_for_mapPercentage = ( "identical", "dupcount\$" );
 
@@ -142,6 +142,9 @@ sub getSmallRNAConfig {
   }
 
   if ( $def->{show_label_PCA} ) {
+    $def->{correlation_rcode} = $def->{correlation_rcode} . "showLabelInPCA<-TRUE;";
+  }
+  elsif ( ( not defined $def->{show_label_PCA} ) and ( not defined $def->{groups} ) ) {
     $def->{correlation_rcode} = $def->{correlation_rcode} . "showLabelInPCA<-TRUE;";
   }
   else {
@@ -492,23 +495,23 @@ sub getSmallRNAConfig {
         };
       }
 
-      if($perform_host_tRH_analysis){
+      if ($perform_host_tRH_analysis) {
         $tRnaAnalysis->{"tRH"} = {
           minLength => 30,
           maxLength => 40
         };
       }
 
-      for my $tKey (sort keys %$tRnaAnalysis){
+      for my $tKey ( sort keys %$tRnaAnalysis ) {
         my $minLength = $tRnaAnalysis->{$tKey}{minLength};
         my $maxLength = $tRnaAnalysis->{$tKey}{maxLength};
 
-        my $tTask = "bowtie1_genome_1mm_NTA_smallRNA_count_" . $tKey;
-        my $tTableTask = $tTask . "_table";
+        my $tTask         = "bowtie1_genome_1mm_NTA_smallRNA_count_" . $tKey;
+        my $tTableTask    = $tTask . "_table";
         my $tCategoryTask = $tTableTask . "_category";
 
-        $tRnaAnalysis->{$tKey}{"count_section"} = $tTask;
-        $tRnaAnalysis->{$tKey}{"table_section"} = $tTableTask;
+        $tRnaAnalysis->{$tKey}{"count_section"}    = $tTask;
+        $tRnaAnalysis->{$tKey}{"table_section"}    = $tTableTask;
         $tRnaAnalysis->{$tKey}{"category_section"} = $tCategoryTask;
 
         $config->{$tTask} = {
@@ -558,7 +561,7 @@ sub getSmallRNAConfig {
           perform                   => 1,
           target_dir                => $host_genome_dir . "/$tCategoryTask",
           rtemplate                 => "countTableVisFunctions.R,hostTrnaMappingVis.R",
-          output_file               => "." . $tKey. ".Mapping.Result",
+          output_file               => "." . $tKey . ".Mapping.Result",
           output_file_ext           => ".tRNAType1.Barplot.png;.tRNAType2.Barplot.png",
           parameterSampleFile1Order => $def->{groups_order},
           parameterSampleFile1      => $groups,
@@ -667,7 +670,7 @@ sub getSmallRNAConfig {
           }
         );
 
-        for my $tKey (sort keys %$tRnaAnalysis){
+        for my $tKey ( sort keys %$tRnaAnalysis ) {
           my $tTableTask = $tRnaAnalysis->{$tKey}{"table_section"};
 
           my $tStartPositionTask = $tTableTask . "_start_position_vis";
@@ -778,8 +781,8 @@ sub getSmallRNAConfig {
     push @table_for_pieSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_count", ".count\$" );
     push @name_for_pieSummary, "Host Small RNA";
 
-    push @table_for_shortReadSource, ( "bowtie1_genome_1mm_NTA_smallRNA_table", $task_name . ".read.count\$");
-    push @name_for_shortReadSource, ( "host smallRNA");
+    push @table_for_shortReadSource, ( "bowtie1_genome_1mm_NTA_smallRNA_table", $task_name . ".read.count\$" );
+    push @name_for_shortReadSource, ("host smallRNA");
 
     push @name_for_readSummary, (
       "Host miRNA",    #miRNA
@@ -814,11 +817,11 @@ sub getSmallRNAConfig {
         "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$"           #tRNA
       );
 
-      for my $tKey (sort keys %$tRnaAnalysis){
+      for my $tKey ( sort keys %$tRnaAnalysis ) {
         my $tTableTask = $tRnaAnalysis->{$tKey}{table_section};
 
         push @table_for_correlation, (
-          $tTableTask, ".tRNA.count\$"                                   #tRNA
+          $tTableTask, ".tRNA.count\$"                                     #tRNA
         );
       }
 
@@ -826,11 +829,11 @@ sub getSmallRNAConfig {
         push @table_for_correlation, (
           "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$"    #tRNA
         );
-        for my $tKey (sort keys %$tRnaAnalysis){
+        for my $tKey ( sort keys %$tRnaAnalysis ) {
           my $tTableTask = $tRnaAnalysis->{$tKey}{table_section};
 
           push @table_for_correlation, (
-            $tTableTask, ".tRNA.read.count\$"                                   #tRNA
+            $tTableTask, ".tRNA.read.count\$"                              #tRNA
           );
         }
       }
@@ -967,9 +970,9 @@ sub getSmallRNAConfig {
       addDeseq2Visualization( $config, $def, $summary_ref, "host_genome",       \@visual_source,       $data_visualization_dir, "pairs_host_deseq2_vis_layout",       $libraryKey );
       addDeseq2Visualization( $config, $def, $summary_ref, "host_genome_reads", \@visual_source_reads, $data_visualization_dir, "pairs_host_reads_deseq2_vis_layout", $libraryKey );
 
-      for my $tKey (sort keys %$tRnaAnalysis){
+      for my $tKey ( sort keys %$tRnaAnalysis ) {
         my $tTableTask = $tRnaAnalysis->{$tKey}{table_section};
-        addDEseq2( $config, $def, $summary_ref, $tKey,           [ $tTableTask, ".tRNA.count\$" ],           $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        addDEseq2( $config, $def, $summary_ref, $tKey,               [ $tTableTask, ".tRNA.count\$" ],           $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
         addDEseq2( $config, $def, $summary_ref, "${tKey}_reads",     [ $tTableTask, ".tRNA.read.count\$" ],      $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
         addDEseq2( $config, $def, $summary_ref, "${tKey}_aminoacid", [ $tTableTask, ".tRNA.aminoacid.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       }
@@ -1058,7 +1061,7 @@ sub getSmallRNAConfig {
           );
         }
 
-        for my $tKey (sort keys %$tRnaAnalysis){
+        for my $tKey ( sort keys %$tRnaAnalysis ) {
           my $tTableTask = $tRnaAnalysis->{$tKey}{table_section};
           addPositionVis(
             $config, $def,
@@ -1153,8 +1156,8 @@ sub getSmallRNAConfig {
       };
       $config = merge( $config, $unmapped_reads );
 
-      push @table_for_shortReadSource, ( "bowtie1_genome_host_reads_table", ".count\$");
-      push @name_for_shortReadSource, ( "host genome");
+      push @table_for_shortReadSource, ( "bowtie1_genome_host_reads_table", ".count\$" );
+      push @name_for_shortReadSource, ("host genome");
 
       push( @name_for_mapPercentage,      "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount\$" );
       push( @files_for_annotate_unmapped, "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount\$" );
@@ -1312,7 +1315,7 @@ sub getSmallRNAConfig {
       );
 
       push @table_for_shortReadSource, ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
-      push @name_for_shortReadSource, ( $nonhostGroup);
+      push @name_for_shortReadSource, ($nonhostGroup);
 
       if ($do_comparison) {
         addDEseq2( $config, $def, $summary_ref, "${nonhostGroup}", [ "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" ],
@@ -1332,8 +1335,8 @@ sub getSmallRNAConfig {
       push @table_for_readSummary, ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
       push @mapped,                ( "bowtie1_${nonhostGroup}_pm_count", ".xml" );
       push @overlap,               ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
-      
-      if((not $def->{nonhost_genome_count_no_virus}) or ($nonhostGroup !~ /virus/)){
+
+      if ( ( not $def->{nonhost_genome_count_no_virus} ) or ( $nonhostGroup !~ /virus/ ) ) {
         push @$nonhost_genome_count_xml, ( "bowtie1_${nonhostGroup}_pm_table", ".count.xml\$" );
       }
 
@@ -1360,20 +1363,20 @@ sub getSmallRNAConfig {
       }
     }
 
-    if ($def->{perform_nonhost_genome_count}){
+    if ( $def->{perform_nonhost_genome_count} ) {
       $config->{nonhost_genome_count} = {
-        class              => "CQS::ProgramWrapper",
-        perform            => 1,
-        target_dir         => $nonhost_genome_dir . "/nonhost_genome_count",
-        option             => "",
-        interpretor        => "python",
-        program            => "../SmallRNA/nonhostXmlCount.py",
+        class                    => "CQS::ProgramWrapper",
+        perform                  => 1,
+        target_dir               => $nonhost_genome_dir . "/nonhost_genome_count",
+        option                   => "",
+        interpretor              => "python",
+        program                  => "../SmallRNA/nonhostXmlCount.py",
         parameterSampleFile1_arg => "-i",
         parameterSampleFile1_ref => $nonhost_genome_count_xml,
-        output_arg         => "-o",
-        output_file_ext    => ".microbial.tsv",
-        sh_direct          => 1,
-        pbs                => {
+        output_arg               => "-o",
+        output_file_ext          => ".microbial.tsv",
+        sh_direct                => 1,
+        pbs                      => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
@@ -1383,9 +1386,9 @@ sub getSmallRNAConfig {
       };
       push( @$summary_ref, "nonhost_genome_count" );
     }
-    
+
     push @name_for_readSummary, @nonhost_genome_group_names;
-    push @overlapNames, @nonhost_genome_group_names;
+    push @overlapNames,         @nonhost_genome_group_names;
 
     if ( $do_comparison && ( !$search_nonhost_genome_custom_group_only ) ) {
       addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome",       \@nonhost_genome_groups,      $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey );
@@ -1538,7 +1541,7 @@ sub getSmallRNAConfig {
       }
     );
 
-    push @table_for_shortReadSource, ( "bowtie1_tRNA_pm_table", ".read.count\$",  "bowtie1_rRNA_pm_table", ".read.count\$" );
+    push @table_for_shortReadSource, ( "bowtie1_tRNA_pm_table", ".read.count\$", "bowtie1_rRNA_pm_table", ".read.count\$" );
     push @name_for_shortReadSource, ( "nonhost tRNA", "nonhost rRNA" );
 
     push( @name_for_mapPercentage,      "bowtie1_tRNA_pm_count", ".count.mapped.xml\$", "bowtie1_rRNA_pm_count", ".count.mapped.xml\$", );
@@ -1579,6 +1582,35 @@ sub getSmallRNAConfig {
 
       addDEseq2( $config, $def, $summary_ref, "nonhost_rRNA", [ "bowtie1_rRNA_pm_table", ".count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
     }
+  }
+
+  if ( $def->{perform_bacteria_count} and $search_nonhost_genome and $search_nonhost_library ) {
+    my $bacteria_count = "bacteria_count";
+    $config->{$bacteria_count} = {
+      class                    => "CQS::ProgramWrapper",
+      perform                  => 1,
+      target_dir               => "${data_visualization_dir}/$bacteria_count",
+      option                   => "",
+      interpretor              => "python",
+      program                  => "../SmallRNA/getBacteriaCount.py",
+      parameterSampleFile1_arg => "-g",
+      parameterSampleFile1_ref => [ "bowtie1_bacteria_group1_pm_count", ".xml\$", "bowtie1_bacteria_group2_pm_count", ".xml\$" ],
+      parameterSampleFile2_arg => "-d",
+      parameterSampleFile2_ref => [ "bowtie1_rRNA_pm_count", ".xml\$" ],
+      output_to_same_folder    => 1,
+      output_arg               => "-o",
+      output_ext               => ".baceria.count",
+      sh_direct                => 1,
+      pbs                      => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    };
+    push @$individual_ref, $bacteria_count;
+
   }
 
   if ( $def->{perform_nonhost_mappedToHost} ) {
@@ -1643,9 +1675,9 @@ sub getSmallRNAConfig {
 
   if ( $search_nonhost_database && ( !$search_nonhost_genome_custom_group_only ) ) {
     if ($perform_nonhost_overlap_vis) {
-      
-      my $rcode = "categoriesNames=c(\"" . join("\",\"", @overlapNames) . "\");";
-      
+
+      my $rcode = "categoriesNames=c(\"" . join( "\",\"", @overlapNames ) . "\");";
+
       $config->{nonhost_overlap_vis} = {
         class                     => "CQS::UniqueR",
         perform                   => 1,
@@ -1782,7 +1814,7 @@ sub getSmallRNAConfig {
   push @$summary_ref, ("count_table_correlation");
 
   my $paramFile = undef;
-  if(defined $config->{nonhost_genome_count}){
+  if ( defined $config->{nonhost_genome_count} ) {
     $paramFile = ["nonhost_genome_count"];
   }
   $config->{reads_in_tasks} = {
@@ -1808,9 +1840,9 @@ sub getSmallRNAConfig {
 
   if ( $search_host_genome && $search_nonhost_database ) {
     my $cur_r_code = $R_font_size;
-    if (defined $def->{unique_groups}){
-      my @uniqueGroups = split(/[,;]/, $def->{unique_groups});
-      $cur_r_code = $cur_r_code . "uniqueGroupNames=c('" . join("','", @uniqueGroups) . "');";
+    if ( defined $def->{unique_groups} ) {
+      my @uniqueGroups = split( /[,;]/, $def->{unique_groups} );
+      $cur_r_code = $cur_r_code . "uniqueGroupNames=c('" . join( "','", @uniqueGroups ) . "');";
     }
     $config->{reads_in_tasks_pie} = {
       class                => "CQS::UniqueR",
@@ -1938,7 +1970,7 @@ sub getSmallRNAConfig {
       'interpretor'              => 'python',
       'program'                  => '../SmallRNA/shortReadSource.py',
       'target_dir'               => $data_visualization_dir . "/short_reads_source_bar",
-      'output_file_ext'               => '.tsv',
+      'output_file_ext'          => '.tsv',
       'output_arg'               => '-o',
       'output_to_same_folder'    => 1,
       'sh_direct'                => 1,
@@ -2104,7 +2136,7 @@ sub getSmallRNAConfig {
   if ( $config->{fastqc_count_vis} && $config->{bowtie1_genome_1mm_NTA_smallRNA_category} ) {
 
     my $read_in_tasks_file = undef;
-    if( $config->{reads_in_tasks_pie}){
+    if ( $config->{reads_in_tasks_pie} ) {
       $read_in_tasks_file = [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv\$" ];
     }
     $config->{read_summary} = {
@@ -2186,7 +2218,7 @@ sub getSmallRNAConfig {
           push( @report_names, "correlation_mirna_group_heatmap", "correlation_mirna_corr_cluster" );
         }
 
-        if(not $hasMicroRNAOnly){
+        if ( not $hasMicroRNAOnly ) {
           push( @report_files, "count_table_correlation",  "smallRNA_table/result/.+.tRNA.count.heatmap.png" );
           push( @report_files, "count_table_correlation",  "smallRNA_table/result/.+.tRNA.count.PCA.png" );
           push( @report_names, "correlation_trna_heatmap", "correlation_trna_pca" );
@@ -2259,7 +2291,7 @@ sub getSmallRNAConfig {
         }
       }
     }
-    
+
     if ( defined $config->{host_length_dist_category} ) {
       push( @report_files, "host_length_dist_category", ".png" );
       push( @report_names, "host_length_dist_category" );
