@@ -92,7 +92,6 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "perform_nonhost_genome_count",      0 );
   initDefaultValue( $def, "nonhost_genome_count_no_virus",      0 );
   
-  initDefaultValue( $def, "perform_bacteria_count",      0 );
 
   initDefaultValue( $def, "min_read_length",               16 );
   initDefaultValue( $def, "bowtie1_option_2mm",            "-a --best --strata -v 2" );
