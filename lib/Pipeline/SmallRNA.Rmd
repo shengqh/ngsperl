@@ -184,7 +184,7 @@ check_and_include_graphics(files["host_length_dist_category",1])
 ```{r hostgenome, child=hostGenomeFile} 
 ```
 
-```{r,echo=FALSE,results='asis', fig.align="center", eval=file.exists(files["deseq2_host_vis",1]), fig.cap=figRef("deseq2_host_vis", "DESeq2 result of host smallRNA", trunk.eval=file.exists(files["deseq2_host_vis",1]))}
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("deseq2_host_vis", "DESeq2 result of host smallRNA", trunk.eval=file.exists(files["deseq2_host_vis",1]))}
 cat('## host smallRNA DESeq2 result\n') 
 
 check_and_include_graphics(files["deseq2_host_vis",1])
