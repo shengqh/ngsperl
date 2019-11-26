@@ -51,11 +51,14 @@ sub perform {
 
   my $interpretor = get_option( $config, $section, "interpretor", "" );
   my $program = get_option( $config, $section, "program" );
-  if ( !File::Spec->file_name_is_absolute($program) ) {
-    $program = dirname(__FILE__) . "/$program";
-  }
-  if ( !( -e $program ) ) {
-    die("program $program defined but not exists!");
+  
+  if (get_option($config, $section, "check_program", 0)){
+    if ( !File::Spec->file_name_is_absolute($program) ) {
+      $program = dirname(__FILE__) . "/$program";
+    }
+    if ( !( -e $program ) ) {
+      die("program $program defined but not exists!");
+    }
   }
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
