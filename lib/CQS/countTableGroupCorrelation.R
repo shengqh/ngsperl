@@ -286,6 +286,10 @@ for (i in 1:nrow(countTableFileAll)) {
     if (totalCountFile!="") { #normlize with total count *10^6
       totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
       totalCount<-unlist(totalCount[totalCountKey,])
+      notValidSamples = colnames(validCountNum)[!(colnames(validCountNum) %in% names(totalCount))]
+      if (length(notValidSamples) > 0){
+        stop(paste0("Sample ", notValidSamples, " not found in total count table ", totalCountFile, "\n"))
+      }
       countNumVsd<-10^6*t(t(validCountNum)/totalCount[colnames(validCountNum)])
       write.table(countNumVsd, paste0(outputFilePrefix,curSuffix,".RPM.txt"),col.names=NA, quote=F, sep="\t")
       countNumVsd<-log2(countNumVsd+1)
