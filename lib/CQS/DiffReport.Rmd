@@ -6,7 +6,6 @@ output:
     toc: yes
     toc_depth: 3
     number_sections: false
-    self_contained: no
     toc_float: 
       collapsed: true
     # code_folding: hide
@@ -52,22 +51,16 @@ files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
 ```
 
 
-```{r, results="asis", echo=FALSE, include = TRUE, eval = TRUE, fig.align="center"}
-interestedModuleInd=find_module_folder(files,pattern="limma")
-diffGeneFiles=files[interestedModuleInd,]
 
-vennFigInd=grep(".RawBoxplot.png$",diffGeneFiles[,1])
-check_and_include_graphics(diffGeneFiles[vennFigInd,1])
-
-
-
+```{r child = 'DiffGeneReport.Rmd',eval=file.exists("DiffGeneReport.Rmd")}
 ```
+
 
 
 # Funcional enrichment analysis \n <br> List of the top five significantly enriched elements
 
-```{r,include=FALSE,results='hide',message=TRUE}
-reportModules=c("DiffGeneReport.Rmd","webgestaltReport.Rmd","GSEAShortReport.Rmd")
+```{r,include=FALSE,results='hide',message=TRUE,eval=FALSE}
+reportModules=c("webgestaltReport.Rmd","GSEAShortReport.Rmd")
 out = NULL
 
 for (i in 1:length(reportModules)) {
@@ -84,9 +77,7 @@ for (i in 1:length(reportModules)) {
 
 ```
 
-`r paste(knit(text = out), collapse = '\n')`
+`r if (exists("out") && !is.null(out)) paste(knit(text = out), collapse = '\n')`
 
 
 
-```{r child = 'chapter2.Rmd',eval=file.exists("chapter2.Rmd")}
-```

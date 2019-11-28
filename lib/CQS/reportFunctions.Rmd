@@ -88,7 +88,7 @@ tabRef <- local({
 options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**")
 
 check_and_include_graphics<-function(graphicFile) {
-  if (file.exists(graphicFile)) {
+  if (!is.null(graphicFile) & file.exists(graphicFile)) {
     include_graphics(graphicFile)
   }
 }

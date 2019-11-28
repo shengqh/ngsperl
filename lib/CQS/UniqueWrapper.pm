@@ -85,7 +85,21 @@ sub result {
       die "output_file defined as " . $output_file . ", but " . $output_file . " not in configure\n";
     }
   }
-  elsif ( $output_perSample_file eq "parameterSampleFile1" or $output_perSample_file eq "parameterSampleFile2" or $output_perSample_file eq "parameterSampleFile3" ) {
+  else {
+    my @result_files = ();
+    foreach my $output_file_ext_one (@output_file_exts) {
+      push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext_one}" );
+    }
+    
+    if(scalar(@result_files) > 0){
+      my $filtered = filter_array( \@result_files, $pattern, 1 );
+      if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
+        $result->{$task_name} = $filtered;
+      }
+    }
+  }
+
+  if ( $output_perSample_file eq "parameterSampleFile1" or $output_perSample_file eq "parameterSampleFile2" or $output_perSample_file eq "parameterSampleFile3" ) {
     #per sample result
     if ( has_raw_files( $config, $section, $output_perSample_file ) ) {
       my %temp = %{ get_raw_files( $config, $section, $output_perSample_file ) };
@@ -114,19 +128,6 @@ sub result {
     }
     else {
       die "output_file defined as " . $output_file . ", but " . $output_file . " not in configure\n";
-    }
-  }
-  else {
-    my @result_files = ();
-    foreach my $output_file_ext_one (@output_file_exts) {
-      push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext_one}" );
-    }
-    
-    if(scalar(@result_files) > 0){
-      my $filtered = filter_array( \@result_files, $pattern, 1 );
-      if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
-        $result->{$task_name} = $filtered;
-      }
     }
   }
 
