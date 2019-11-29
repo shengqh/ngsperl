@@ -88,7 +88,9 @@ sub result {
   else {
     my @result_files = ();
     foreach my $output_file_ext_one (@output_file_exts) {
-      push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext_one}" );
+      if (($output_file ne "") or ($output_file_ext_one ne "")) {
+        push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext_one}" );
+      }
     }
     
     if(scalar(@result_files) > 0){
