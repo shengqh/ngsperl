@@ -56,15 +56,17 @@ sub perform {
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $final_file = basename( $expectFiles->{$sampleName}->[0] );
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+    my $cis_file = "${prefix}${sampleName}.cis.txt";
+    my $trans_file = "${prefix}${sampleName}.trans.txt";
+    #my $final_file = basename( $expectFiles->{$sampleName}->[0] );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $cis_file );
 
     my $snp_genotype_file    = $snp_genotype_files->{$sampleName}[0];
     my $snp_location_file    = $snp_location_files->{$sampleName}[0];
     my $gene_expression_file = $gene_expression_files->{$sampleName}[0];
     my $gene_location_file   = $gene_location_files->{$sampleName}[0];
 
-    print $pbs "R --vanilla -f $script --args $snp_genotype_file $snp_location_file $gene_expression_file $gene_location_file $sort_data_by_tcga $final_file\n";
+    print $pbs "R --vanilla -f $script --args $snp_genotype_file $snp_location_file $gene_expression_file $gene_location_file $sort_data_by_tcga $cis_file $trans_file\n";
     $self->close_pbs( $pbs, $pbs_file );
   }
 
@@ -89,6 +91,7 @@ sub result {
   for my $sampleName (keys %$snp_genotype_files) {
     my @result_files = ();
     push( @result_files, "${result_dir}/${prefix}${sampleName}.cis.txt" );
+    push( @result_files, "${result_dir}/${prefix}${sampleName}.trans.txt" );
     $result->{$sampleName} = filter_array( \@result_files, $pattern );
   }
   return $result;
