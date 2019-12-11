@@ -2308,6 +2308,12 @@ sub getSmallRNAConfig {
         push( @report_names, "deseq2_host_vis" );
       }
     }
+    
+    if(defined $config->{bacteria_count}){
+      push( @copy_files, "bacteria_count", ".tsv\$", "bacteria_count", ".summary.pdf", "bacteria_count", ".summary.rpm.csv" );
+      push( @report_files, "bacteria_count", ".summary.pdf",  "bacteria_count", ".summary.rpm.csv",  );
+      push( @report_names, "bacteria_count_pdf", "bacteria_count_rpm" );
+    }
 
     my $options = {
       "DE_fold_change" => [ getValue( $def, "DE_fold_change", 2 ) ],
