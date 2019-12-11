@@ -248,7 +248,7 @@ if(hasDEseq2 ){
 
 ```{r enrich, results="asis", echo=FALSE} 
 if(hasEnrichmentAnalysis ){
-  cat("# Funcional enrichment analysis\nList of the top five significantly enriched elements\n<br>\n")
+  cat("# Functional enrichment analysis\nList of the top five significantly enriched elements\n<br>\n")
 }
 ```
 
