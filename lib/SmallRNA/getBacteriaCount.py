@@ -7,20 +7,22 @@ import argparse
 import xml.etree.ElementTree as ET
 from CountXmlUtils import readCountXmlQueryLocationInFeatures
 
-DEBUG = True
+DEBUG = False
 NOT_DEBUG= not DEBUG
 
 if DEBUG:
   genomeListFile="/scratch/cqs/shengq2/vickers/20191112_smallRNA_3018-KCV_76_mouse_v4_tRNA_byTiger/data_visualization/bacteria_count/result/HDL_76__fileList1.list"
   databaseListFile = "/scratch/cqs/shengq2/vickers/20191112_smallRNA_3018-KCV_76_mouse_v4_tRNA_byTiger/data_visualization/bacteria_count/result/HDL_76__fileList2.list"
+  taskReadFile = "/scratch/cqs/shengq2/vickers/20191112_smallRNA_3018-KCV_76_mouse_v4_tRNA_byTiger/data_visualization/reads_in_tasks/result/HDL_76.NonParallel.TaskReads.csv"
   outputFile="/scratch/cqs/shengq2/vickers/20191112_smallRNA_3018-KCV_76_mouse_v4_tRNA_byTiger/data_visualization/bacteria_count/result/HDL_76.bacteria.count"
 else:
-  parser = argparse.ArgumentParser(description="Generate smallRNA BAM from mapped xml.",
+  parser = argparse.ArgumentParser(description="Generate smallRNA count from mapped xml.",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   parser.add_argument('-g', '--genomeListFile', action='store', nargs='?', help='Input bacteria genome count xml list file', required=NOT_DEBUG)
   parser.add_argument('-d', '--databaseListFile', action='store', nargs='?', help="Original rRNA database count xml list file", required=NOT_DEBUG)
-  parser.add_argument('-o', '--output', action='store', nargs='?', help="Output bam file", required=NOT_DEBUG)
+  parser.add_argument('-t', '--taskReadFile', action='store', nargs='?', help="Task read count file", required=NOT_DEBUG)
+  parser.add_argument('-o', '--output', action='store', nargs='?', help="Output count file", required=NOT_DEBUG)
 
   args = parser.parse_args()
   
@@ -28,6 +30,7 @@ else:
   
   genomeListFile = args.genomeListFile
   databaseListFile = args.databaseListFile
+  taskReadFile = args.taskReadFile
   outputFile = args.output
 
 logger = logging.getLogger('getBacteriaCount')
@@ -44,6 +47,8 @@ def readFileMap(fileName):
 genomeFileMap = readFileMap(genomeListFile)
 dbFileMap = readFileMap(databaseListFile)
 
+samples = sorted(set(sample for sample in genomeFileMap.keys()))
+
 result = {}
 for name in genomeFileMap.keys():
   logger.info("Parsing " + name)
@@ -56,8 +61,8 @@ for name in genomeFileMap.keys():
     queries = root.find('queries')
     for query in queries.findall('query'):
       query_count = int(query.get("count"))
-      query_name = query.get("name")
-      queryMap[query_name] = query_count
+      query_seq = query.get("seq")
+      result.setdefault(query_seq, {})[name] = query_count
     
   for dbFile in dbFileMap[name]:
     logger.info("  Parsing " + dbFile)
@@ -74,14 +79,34 @@ for name in genomeFileMap.keys():
       
       if is_bacteria:
         query_count = int(query.get("count"))
-        query_name = query.get("name")
-        queryMap[query_name] = query_count
-        
-  result[name] = sum(queryMap.values())   
+        query_seq = query.get("seq")
+        result.setdefault(query_seq, {})[name] = query_count
+
+seq_count = [ [seq, sum(result[seq].values())] for seq in result.keys()]
+
+def sortSecond(val): 
+    return val[1]
+
+seq_count.sort(key=sortSecond, reverse=True)
 
 with open(outputFile, "wt") as fout:
+  fout.write("Sequence\t%s\n" % "\t".join(samples) )
+  for query in seq_count:
+    query_seq = query[0]
+    fout.write(query_seq)
+    count_map = result[query_seq]
+    for sample in samples:
+      fout.write("\t%d" % (count_map[sample] if sample in count_map.keys() else 0))
+    fout.write("\n")
+
+summaryFile = outputFile + ".summary"
+with open(summaryFile, "wt") as fout:
   fout.write("Sample\tCount\n")
-  for name in sorted(result.keys()):
-    fout.write("%s\t%d\n" % (name, result[name]))
-    
+  for sample in samples:
+    sample_count = sum(result[seq][sample] if sample in result[seq].keys() else 0 for seq in result.keys())
+    fout.write("%s\t%d\n" % (sample, sample_count))
+
+rscript = os.path.realpath(__file__) + ".R"
+subprocess.call ("R --vanilla -f " + rscript + " --args \"" + summaryFile + "\" \"" + taskReadFile + "\" \"" + summaryFile + "\"", shell=True)
+
 logger.info("done.")

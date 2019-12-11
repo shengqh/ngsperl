@@ -87,6 +87,7 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "perform_host_rRNA_coverage",        1 );
   initDefaultValue( $def, "perform_host_length_dist_category", 1 );
   initDefaultValue( $def, "search_combined_nonhost",           0 );
+  initDefaultValue( $def, "perform_bacteria_count",            1 );
   initDefaultValue( $def, "perform_report",                    1 );
 
   initDefaultValue( $def, "perform_nonhost_genome_count",      0 );

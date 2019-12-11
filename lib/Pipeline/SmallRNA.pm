@@ -45,6 +45,8 @@ sub getSmallRNAConfig {
   my $perform_class_independent_analysis = getValue( $def, "perform_class_independent_analysis", 1 );
   my $perform_short_reads_source         = getValue( $def, "perform_short_reads_source", 0 );
 
+  my $perform_bacteria_count         = getValue( $def, "perform_bacteria_count", 0 );
+
   my $blast_top_reads      = getValue( $def, "blast_top_reads" );
   my $blast_unmapped_reads = getValue( $def, "blast_unmapped_reads" );
 
@@ -2128,6 +2130,36 @@ sub getSmallRNAConfig {
     };
     push @$summary_ref, ("read_summary");
   }
+
+  if ( $search_host_genome && $search_nonhost_database && $perform_bacteria_count ) {
+    $config->{bacteria_count} = {
+      'class'                    => 'CQS::ProgramWrapper',
+      'parameterSampleFile1_arg' => '-g',
+      'parameterSampleFile1_ref' => [ "bowtie1_bacteria_group1_pm_count", ".mapped.xml\$", "bowtie1_bacteria_group2_pm_count", ".mapped.xml\$", ],
+      'parameterSampleFile2_arg' => '-d',
+      'parameterSampleFile2_ref' => [ "bowtie1_rRNA_pm_count", ".mapped.xml\$" ],
+      'parameterFile3_arg'       => '-t',
+      'parameterFile3_ref'       => [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv\$" ],
+      'option'                   => "",
+      'interpretor'              => 'python',
+      'program'                  => '../SmallRNA/getBacteriaCount.py',
+      'target_dir'               => $data_visualization_dir . "/bacteria_count",
+      'output_file_ext'          => '.tsv.summary;.tsv',
+      'output_arg'               => '-o',
+      'output_to_same_folder'    => 1,
+      'sh_direct'                => 1,
+      'perform'                  => 1,
+      'pbs'                      => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "2",
+        "mem"       => "10gb"
+      },
+    };
+    push @$summary_ref, "bacteria_count";
+  }
+
   if ( getValue( $def, "perform_report" ) ) {
     my @report_files = ();
     my @report_names = ();
