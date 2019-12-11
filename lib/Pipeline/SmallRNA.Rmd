@@ -206,6 +206,12 @@ if(hasNonhostGenome | hasNonhostLibrary){
 ```{r nonhostlibrary, include=hasNonhostLibrary, child=nonhostLibraryFile} 
 ```
 
+```{r bacteria_count_vis,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("bacteria_count_vis", "Bacteria count", trunk.eval=file.exists(files["bacteria_count_vis",1]))}
+cat('## Non-Host bacteria count\n')
+
+check_and_include_graphics(files["bacteria_count_vis",1])
+```
+
 ```{r teardown, include=FALSE}
 if(file.exists(hostGenomeFile)){
   file.remove(hostGenomeFile)

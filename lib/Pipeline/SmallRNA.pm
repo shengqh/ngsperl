@@ -2144,7 +2144,7 @@ sub getSmallRNAConfig {
       'interpretor'              => 'python',
       'program'                  => '../SmallRNA/getBacteriaCount.py',
       'target_dir'               => $data_visualization_dir . "/bacteria_count",
-      'output_file_ext'          => '.tsv.summary;.tsv',
+      'output_file_ext'          => '.tsv.summary;.tsv.summary.png;.tsv.summary.rpm.csv;.tsv',
       'output_arg'               => '-o',
       'output_to_same_folder'    => 1,
       'sh_direct'                => 1,
@@ -2310,9 +2310,9 @@ sub getSmallRNAConfig {
     }
     
     if(defined $config->{bacteria_count}){
-      push( @copy_files, "bacteria_count", ".tsv\$", "bacteria_count", ".summary.pdf", "bacteria_count", ".summary.rpm.csv" );
-      push( @report_files, "bacteria_count", ".summary.pdf",  "bacteria_count", ".summary.rpm.csv",  );
-      push( @report_names, "bacteria_count_pdf", "bacteria_count_rpm" );
+      push( @copy_files, "bacteria_count", ".tsv\$", "bacteria_count", ".summary.png", "bacteria_count", ".summary.rpm.csv" );
+      push( @report_files, "bacteria_count", ".summary.png",  "bacteria_count", ".summary.rpm.csv",  );
+      push( @report_names, "bacteria_count_vis", "bacteria_count_rpm" );
     }
 
     my $options = {

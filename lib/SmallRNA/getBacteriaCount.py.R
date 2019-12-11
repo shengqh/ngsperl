@@ -49,7 +49,6 @@ textSize<-20
 xSize<-12
 width<-max(10, nrow(counts) * 0.5)
 
-pdf(file=paste0(outputFilePrefix, ".pdf"), width=width, height=8, onefile=T)
 p = ggplot(allFigure, aes_string(x="Sample", y="Count", fill="Category")) +
   geom_bar(width=1, stat='identity', color='black') +
   facet_wrap(~Type, scales = "free_y", strip.position="left", ncol=1) +
@@ -65,6 +64,13 @@ p = ggplot(allFigure, aes_string(x="Sample", y="Count", fill="Category")) +
         strip.background=element_blank()) + 
   ylab("") +
   xlab("")
-print(p)
 
+pdf(file=paste0(outputFilePrefix, ".pdf"), width=width, height=8, onefile=T)
+print(p)
 dev.off()
+
+png(file=paste0(outputFilePrefix, ".png"), width=max(4000, nrow(counts) * 200), height=3200, res=300)
+print(p)
+dev.off()
+
+
