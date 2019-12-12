@@ -42,14 +42,16 @@ def findSample(rnaseqFiles, rnaseqNames, famFiles, famNames, outputFilePrefix, p
   
   logger.info("common samples %d ..." % len(commonKey))
   commonSamples = sorted(commonKey)
-  for rnaseqName, idmap in rnaseqMap.iteritems():
+  for rnaseqName in rnaseqMap.keys():
+    idmap = rnaseqMap[rnaseqName]
     outputFile =outputFilePrefix + ".rnaseq." + rnaseqName + ".samples" 
     logger.info("writing %s ..." % outputFile)
     with open(outputFile, 'w') as sw:
       for commonSample in commonSamples:
         sw.write(idmap[commonSample] + "\n")
      
-  for famName, idmap in snpMap.iteritems():
+  for famName in snpMap.keys():
+    idmap = snpMap[famName]
     outputFile =outputFilePrefix + ".snp." + famName + ".samples" 
     logger.info("writing %s ..." % outputFile)
     with open(outputFile, 'w') as sw:
