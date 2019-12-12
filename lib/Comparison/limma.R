@@ -3,12 +3,13 @@ library(limma)
 library(ggplot2)
 library(reshape2)
 library(tidyverse)
+library(scales)
 
 ########################################################
 # Functions
 ########################################################
 
-makeDesignTable <- function(rawDataTable, factorTable,factorInDesign=NULL) {
+makeDesignTable <- function(rawDataTable, factorTable,factorInDesign=NULL,addIntercept=1) {
   if (is.null(factorInDesign)) {
     factorInDesign=as.character(unique(factorTable[, 2]))
   }
@@ -17,8 +18,10 @@ makeDesignTable <- function(rawDataTable, factorTable,factorInDesign=NULL) {
   colnames(designTable) <- factorInDesign
   
   designTable[as.matrix(factorTable)] <- 1
-  designTable
-  designTable <- cbind(Intercept = 1, designTable)
+  if (addIntercept) {
+    designTable <- cbind(Intercept = 1, designTable)
+  }
+  designTable=designTable[which(rowSums(designTable)>0),]
   return(designTable)
 }
 
@@ -213,7 +216,9 @@ venn.diagram1<-function (x, count=NULL,filename, height = 3000, width = 3000, re
   #	return(grob.list)
 }
 
-
+saveFigure=function(file,type="png",width=2000,height=2000,res=300) {
+  png(file,width=width,height=height,res=res)
+}
 
 
 ########################################################
@@ -256,13 +261,13 @@ factorInComparisons=read.delim(parSampleFile2,header=F,as.is=T)
 ################################################
 # Normlization and boxplot/density plot before and after
 ################################################
-png(paste0(outFile,".RawBoxplot.png"))
+saveFigure(paste0(outFile,".RawBoxplot.png"))
 boxplot(rawDataTable, las = 2)
 dev.off()
 
 dataForPlot=reshape2::melt(rawDataTable,variable.name="Sample")
 p=ggplot(dataForPlot,aes(x=value,colour=Sample))+geom_density()
-png(paste0(outFile,".RawDensity.png"))
+saveFigure(paste0(outFile,".RawDensity.png"))
 plot(p)
 dev.off()
 
@@ -276,13 +281,13 @@ if (performNormlization) {
     return(as.data.frame(pep.qua))
   }
   rawDataTable <- qua.norm(rawDataTable)
-  png(paste0(outFile,".NormlizationBoxplot.png"))
+  saveFigure(paste0(outFile,".NormlizationBoxplot.png"))
   boxplot(rawDataTable, las = 2)
   dev.off()
   
   dataForPlot=reshape2::melt(rawDataTable,variable.name="Sample")
   p=ggplot(dataForPlot,aes(x=value,colour=Sample))+geom_density()
-  png(paste0(outFile,".NormlizationDensity.png"))
+  saveFigure(paste0(outFile,".NormlizationDensity.png"))
   plot(p)
   dev.off()
 }
@@ -305,15 +310,20 @@ naCount=apply(rawDataTable,1,function(x) length(which(is.na(x))))
 rawDataTableForHeatmap=rawDataTable[which(naCount/ncol(rawDataTable)<=1-notNaPropotion),]
 ht <- Heatmap(as.matrix(rawDataTableForHeatmap), cluster_rows = FALSE, top_annotation = ha, row_names_gp = gpar(fontsize = 6))
 
-png(paste0(outFile,".Heatmap.png"))
+saveFigure(paste0(outFile,".Heatmap.png"))
 print(ht)
 dev.off()
 
 ##################################
 # save overall design table
 ##################################
-designTableOverall=makeDesignTable(rawDataTable, factorTable)
+if (!exists("noFactorSampleAsIntercept") || noFactorSampleAsIntercept==1) { #use samples without factor define as Intercept in design
+  designTableOverall=makeDesignTable(rawDataTable, factorTable,addIntercept=1)
+} else {
+  designTableOverall=makeDesignTable(rawDataTable, factorTable,addIntercept=0)
+}
 write.csv(designTableOverall,paste0(outFile, ".OverallDesignTable.csv"))
+
 
 ##################################
 # save differential criteria
@@ -331,15 +341,35 @@ rawDataTableForDiffDetection=rawDataTable[which(naCount/ncol(rawDataTable)<=1-no
 
 DiffResultsOutTableAll=list() #record all results when needed
 DiffResultsOutDiffGenesAll=list() #record all diff genes when needed
+comprasionsTable=NULL #record comprasions information
 for (ComparisonOne in unique(factorInComparisons[,3])) {
-#  prefix=paste0(outFile,"_",ComparisonOne)
+  print(paste0("Working in ",ComparisonOne))
+  #  prefix=paste0(outFile,"_",ComparisonOne)
   prefix=paste0(ComparisonOne)
   
-  factorInDesign=unique(factorInComparisons[which(factorInComparisons[,3]==ComparisonOne),1])
-  designTable <- makeDesignTable(rawDataTableForDiffDetection, factorTable,factorInDesign=factorInDesign)
+  factorInDesign=unique(factorInComparisons[which(factorInComparisons[,3]==ComparisonOne & factorInComparisons[,2]!="contrast"),1])
+  if (!exists("noFactorSampleAsIntercept") || noFactorSampleAsIntercept==1) { #use samples without factor define as Intercept in design
+    rawDataTableForDiffDetectionOne=rawDataTableForDiffDetection
+    designTable <- makeDesignTable(rawDataTableForDiffDetectionOne, factorTable,factorInDesign=factorInDesign)
+  } else { #remove samples without factor define
+    rawDataTableForDiffDetectionOne=rawDataTableForDiffDetection[,unique(factorTable[which(factorTable[,2] %in% factorInDesign),1])]
+    designTable <- makeDesignTable(rawDataTableForDiffDetectionOne, factorTable,factorInDesign=factorInDesign,addIntercept=0)
+  }
   
-  fit3 <- performLimma(rawDataTableForDiffDetection, designTable)
-  DiffResults <- topTable(fit3, coef = colnames(designTable)[2],number=99999)
+  
+  if (any(factorInComparisons[,3]==ComparisonOne & factorInComparisons[,2]=="contrast")) {
+    contrastsText=factorInComparisons[which(factorInComparisons[,3]==ComparisonOne & factorInComparisons[,2]=="contrast")[1],1]
+  } else {
+    if (exists("noFactorSampleAsIntercept") && noFactorSampleAsIntercept==0) { #remove samples without factor define and no Intercept in design, contrast maybe needed
+      warning(paste0("No contrast defined and no Intercept in design, contrast maybe needed to get correct comparison"))
+    }
+    contrastsText=NULL
+  }
+  #record comprasions information in comprasionsTable
+  comprasionsTable=rbind(comprasionsTable,c(ComparisonOne,paste(factorInDesign,collapse=";"),ifelse(is.null(contrastsText),factorInDesign[1],contrastsText)))
+  
+  fit3 <- performLimma(rawDataTableForDiffDetectionOne, designTable,contrastsText=contrastsText)
+  DiffResults <- topTable(fit3, coef = 1,number=99999)
   
   ## Output differential genes table
   if (!is.null(rawDataAnnotation)) {
@@ -355,8 +385,10 @@ for (ComparisonOne in unique(factorInComparisons[,3])) {
   tbb=tbb %>% mutate(Significant=case_when(tbb[,log2FcCol]>0 ~ "SignificantUp",tbb[,log2FcCol]<0 ~ "SignificantDown"))
   tbb$Significant[which(!selectDiff)]="NotSignificant"
   
-  write.csv(as.data.frame(tbb),paste0(prefix, "_Diff.csv"))
-  write.csv(as.data.frame(tbb[selectDiff,]),paste0(prefix, "_Diff_sig.csv"))
+  tbb=as.data.frame(tbb)
+  row.names(tbb)=row.names(DiffResults) #give back row.names, which is gene ID, needed for KEGGprofile
+  write.csv(tbb,paste0(prefix, "_Diff.csv"))
+  write.csv(tbb[selectDiff,],paste0(prefix, "_Diff_sig.csv"))
   
   ##################################
   # Output formated files for WebGesnet, GSEA, KEGGprofile
@@ -393,6 +425,12 @@ for (ComparisonOne in unique(factorInComparisons[,3])) {
   }
 }
 
+##################################
+# save all comprasions designs
+##################################
+colnames(comprasionsTable)=c("Comparison","Factors in Comparison","Contrast")
+write.csv(comprasionsTable,paste0(outFile, ".ComparisonsTable.csv"))
+
 
 ########################################################
 # Export figures based on all results
@@ -416,14 +454,14 @@ if (useRawPvalue==1) {
   p=ggplot(dataForPlot,aes(x=logFC,y=adj.P.Val,colour=Significant))+scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
 }
 p=p+geom_point()+facet_wrap(~Comparison,scales="free")+scale_color_manual(values=changeColours,guide = FALSE)
-png(paste0(outFile,".VolcanoPlot.png"))
+saveFigure(paste0(outFile,".VolcanoPlot.png"))
 print(p)
 dev.off()
 
 #venn plot of differential genes
 #library("VennDiagram")
 if (length(DiffResultsOutDiffGenesAll)>=1 & length(DiffResultsOutDiffGenesAll)<=5) {
-  png(paste0(outFile,".Venn.png"))
+  saveFigure(paste0(outFile,".Venn.png"))
   venn.diagram1(DiffResultsOutDiffGenesAll)
   dev.off()
 }
