@@ -224,7 +224,7 @@ if(hasDEseq2 ){
     deseq2<-read.csv(DESeq2_files[i,1], header=TRUE, row.names=1)
     if(nrow(deseq2) > 0){
       maxrow<-min(nrow(deseq2), 10)
-      comp <- unlist(strsplit(gsub("deseq2_","", comparisonName), "_vs_"))
+      comp <- unlist(strsplit(gsub("deseq2_","", comparisonName), "_vs_|_VS_|_Vs_"))
       fpkm_agg2 <- fpkm_agg[,which(colnames(fpkm_agg) %in% comp==T)]
       colnames(fpkm_agg2) <- paste0(colnames(fpkm_agg2), "_mean_FPKM")
       
