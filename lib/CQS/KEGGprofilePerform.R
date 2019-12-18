@@ -148,9 +148,9 @@ for (i in which(resultTable[,pValueCol]>pCut)) {
     temp[i,1]<-max(-log2(2),temp[i,1])
   }
 }
-temp=reshape2::dcast(temp,rownames~Comparison,value.var="logFC")
+temp=reshape2::dcast(temp,rownames~Comparison,value.var=log2fcCol)
 row.names(temp)=temp$rownames
-temp=temp[,-1]
+temp=temp[,-1,drop=FALSE]
 #	head(temp)
 if (species=="hsa") {
   dataset="hsapiens_gene_ensembl"

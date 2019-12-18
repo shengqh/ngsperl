@@ -546,7 +546,12 @@ sub getRNASeqConfig {
     }
 
     if ( $def->{perform_keggprofile} ) {
-      my $keggprofile_useRawPValue = defined( $def->{keggprofile_useRawPValue} ) or die "Define keggprofile_useRawPValue at definition first";
+      my $keggprofile_useRawPValue;
+      if ( defined( $def->{keggprofile_useRawPValue} ) ) {
+        $keggprofile_useRawPValue = $def->{keggprofile_useRawPValue};
+      } else {
+        die "Define keggprofile_useRawPValue at definition first";
+      }
       my $keggprofile_species;
       if ( defined( $def->{keggprofile_species} ) ) {
         $keggprofile_species = $def->{keggprofile_species};
