@@ -26,6 +26,9 @@ We next use the count matrix to create a `Seurat` object. The object serves as a
 ```{r init}
 library(dplyr)
 library(Seurat)
+library(knitr)
+
+knitr::opts_chunk$set(fig.width=8, fig.height=6, out.width="80%")
 
 filelist1<-read.table("fileList1.txt", header=F)
 finalobj<-NULL
