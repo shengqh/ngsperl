@@ -1,0 +1,28 @@
+
+## KEGGprofile Analysis Report
+
+<br>
+
+```{r,echo=FALSE}
+interestedModuleInd=find_module_folder(files,pattern="keggprofile")
+keggprofileFiles=files[interestedModuleInd,]
+
+```
+
+### Overall Gene Expression Changes in KEGG Pathway
+
+```{r, results="asis", echo=FALSE, fig.align="center",fig.cap=figRef("gene_exp_in_kegg", "Overall Gene Expression Changes in KEGG Pathway")}
+selectedFigInd=grep(".KEGG.OverallExpression.png$",keggprofileFiles[,1])
+check_and_include_graphics(keggprofileFiles[selectedFigInd,1])
+```
+
+### Gene Expression Changes in individual Pathway
+
+```{r, echo = FALSE, out.width="30%", out.height="30%"}
+#library(knitr)
+selectedFigDir=dirname(keggprofileFiles[1,1])
+selectedFigs=list.files(selectedFigDir, pattern = "_fc.png$", full.names = TRUE)
+
+check_and_include_graphics(selectedFigs)
+```
+

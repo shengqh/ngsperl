@@ -1,5 +1,6 @@
 ---
 title: "Differential Analysis Report"
+author: "Shilin Zhao<br><small>Department of Biostatistics<br>Vanderbilt University School of Medicine</small>"
 date: "<small>`r Sys.Date()`</small>"
 output:
   html_document:
@@ -26,7 +27,7 @@ description: "Differential Analysis Report"
 ```{r setup, include=FALSE}
 library(knitr)
 
-options(width = 3000)
+options(width = 3000,warning=FALSE)
 
 ```
 
@@ -59,8 +60,8 @@ files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
 
 # Funcional enrichment analysis \n <br> List of the top five significantly enriched elements
 
-```{r,include=FALSE,results='hide',message=TRUE,eval=FALSE}
-reportModules=c("webgestaltReport.Rmd","GSEAShortReport.Rmd")
+```{r,include=FALSE,results='hide',message=TRUE,eval=TRUE}
+reportModules=c("webgestaltReport.Rmd","GSEAShortReport.Rmd","KEGGprofileReport.Rmd")
 out = NULL
 
 for (i in 1:length(reportModules)) {

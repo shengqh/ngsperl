@@ -35,6 +35,11 @@ diffDesignTable=read.csv(diffGeneFiles[diffDesignTableFileInd,1],row.names=1)
 print(kable_styling(kable(diffDesignTable,caption = tabRef("design_table","Differential Detection Design Table"))))
 ```
 
+```{r, results="asis", echo=FALSE}
+ComparisonsTableFileInd=grep(".ComparisonsTable.csv$",diffGeneFiles[,1])
+ComparisonsTableFile=read.csv(diffGeneFiles[ComparisonsTableFileInd,1],row.names=1)
+print(kable_styling(kable(ComparisonsTableFile,caption = tabRef("comparisons_table","Differential Detection Comparisons"))))
+```
 
 
 ```{r, results="asis", echo=FALSE}
@@ -73,6 +78,14 @@ boxplotFigInd=grep(".VolcanoPlot.png$",diffGeneFiles[,1])
 check_and_include_graphics(diffGeneFiles[boxplotFigInd,1])
 ```
 
+### Venn plot
+
+```{r, results="asis", echo=FALSE, fig.align="center",fig.cap=figRef("diff_gene_Venn", "Venn Plot of Differential Gene Detection")}
+vennFigInd=grep(".Venn.png$",diffGeneFiles[,1])
+check_and_include_graphics(diffGeneFiles[vennFigInd,1])
+```
+
+
 ### Top Differential Genes
 
 ```{r diffGeneTable, results="asis", echo=FALSE, fig.align="center"}
@@ -89,7 +102,7 @@ if (length(diffGeneTableInd)>0) {
       cnames<-c("AveExpr", "logFC", "t", "P.Value", "adj.P.Val")
       cnames=c(intersect(c("GeneSymbol","entry_name"),colnames(deseq2)),cnames)
       deseq2table<-deseq2[c(1:maxrow), cnames]
-      print(kable_styling(kable(deseq2table, row.names=1, caption= tabRef(comparisonName, paste0(comparisonName, " top ", maxrow, " differential expressed genes")))%>% 
+      print(kable_styling(kable(deseq2table, row.names=0, caption= tabRef(comparisonName, paste0(comparisonName, " top ", maxrow, " differential expressed genes")))%>% 
           row_spec(which(deseq2table$logFC > 0), color = "black", background = "bisque") %>% 
           row_spec(which(deseq2table$logFC < 0), color = "black", background = "honeydew")))
     }
