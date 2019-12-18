@@ -5,6 +5,7 @@ import os
 import logging
 import argparse
 import xml.etree.ElementTree as ET
+import subprocess
 from CountXmlUtils import readCountXmlQueryLocationInFeatures
 
 DEBUG = False
@@ -107,6 +108,6 @@ with open(summaryFile, "wt") as fout:
     fout.write("%s\t%d\n" % (sample, sample_count))
 
 rscript = os.path.realpath(__file__) + ".R"
-subprocess.call ("R --vanilla -f " + rscript + " --args \"" + summaryFile + "\" \"" + taskReadFile + "\" \"" + summaryFile + "\"", shell=True)
+subprocess.call("R --vanilla -f " + rscript + " --args \"" + summaryFile + "\" \"" + taskReadFile + "\" \"" + summaryFile + "\"", shell=True)
 
 logger.info("done.")
