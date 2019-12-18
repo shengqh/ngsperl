@@ -47,7 +47,7 @@ save(counts, perc, rpm, file=paste0(outputFilePrefix, ".rdata") )
 
 textSize<-20
 xSize<-12
-width<-max(10, nrow(counts) * 0.5)
+width<-max(10, nrow(counts) * 0.3)
 
 p = ggplot(allFigure, aes_string(x="Sample", y="Count", fill="Category")) +
   geom_bar(width=1, stat='identity', color='black') +
