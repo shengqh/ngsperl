@@ -69,7 +69,7 @@ pdf(file=paste0(outputFilePrefix, ".pdf"), width=width, height=8, onefile=T)
 print(p)
 dev.off()
 
-png(file=paste0(outputFilePrefix, ".png"), width=max(4000, nrow(counts) * 200), height=3200, res=300)
+png(file=paste0(outputFilePrefix, ".png"), width=max(4000, nrow(counts) * 100), height=3200, res=300)
 print(p)
 dev.off()
 
