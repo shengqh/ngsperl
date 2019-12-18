@@ -6,7 +6,7 @@ output:
   html_document:
     toc: yes
     toc_depth: 3
-    number_sections: false
+    number_sections: true
     toc_float: 
       collapsed: true
     # code_folding: hide
@@ -39,7 +39,7 @@ options(width = 3000,warning=FALSE)
 ```{r loadData, include=FALSE}
 
 
-knitr::opts_chunk$set(fig.width=7, fig.height=6, out.width=800, out.height=600)
+#knitr::opts_chunk$set(fig.width=7, fig.height=6, out.width=800, out.height=600)
 
 ##Test folder
 #setwd("/scratch/cqs/zhaos/AnthonyDaniels/20190903_proteomicsTumorNormalPair_Limma/report/result/")

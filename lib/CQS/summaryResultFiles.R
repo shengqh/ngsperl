@@ -125,7 +125,7 @@ for (step in unique(ResultOut$StepName)) {
     png(file=paste0(fileListName,"_",step,".RelativeFileSize.png"),height=height, width=width, res=300)
     g<-ggplot(tableForPlot, aes(SampleName, Task))+
         geom_tile(data=tableForPlot, aes(fill=Log2RelativeSize), color="white") +
-        scale_fill_gradient2(low="light green", high="red") +
+        scale_fill_gradient2(low="lightgreen", high="red") +
         theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.5, face="bold"),
             axis.text.y = element_text(size=11, face="bold")) +
         labs(title = paste0(step,": Relative File Size"))+

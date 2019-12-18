@@ -4,6 +4,8 @@
 <br>
 
 ```{r,echo=FALSE}
+options(width = 3000,warning=FALSE)
+
 interestedModuleInd=find_module_folder(files,pattern="keggprofile")
 keggprofileFiles=files[interestedModuleInd,]
 
