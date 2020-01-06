@@ -539,6 +539,9 @@ tableBarplotToFile<-function(dat,fileName,totalCountFile="",groupFileList="",out
 			write.csv(dat,outFileName)
 		}
 	}
+	
+	write.csv(paste0(fileName, ".csv"), dat, quote=F)
+	
 	width<-max(3000,75*ncol(dat))
 	height<-height
 	png(fileName,width=width,height=height,res=300)
