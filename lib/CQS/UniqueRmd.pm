@@ -7,7 +7,7 @@ use File::Basename;
 use File::Copy;
 use Data::Dumper;
 use String::Util ':all';
-use CQS::UniqueTask;
+use CQS::UniqueWrapper;
 use CQS::PBS;
 use CQS::SystemUtils;
 use CQS::FileUtils;
@@ -17,7 +17,7 @@ use CQS::ConfigUtils;
 use CQS::ClassFactory;
 use CQS::RmdUtils;
 
-our @ISA = qw(CQS::UniqueTask);
+our @ISA = qw(CQS::UniqueWrapper);
 
 sub new {
   my ($class) = @_;
@@ -56,19 +56,6 @@ R -e \"library(knitr);rmarkdown::render('$rfilename');\"
 ";
 
   $self->close_pbs( $final, $final_pbs );
-}
-
-sub result {
-  my ( $self, $config, $section, $pattern ) = @_;
-
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
-
-  my $result       = {};
-  my @result_files = ();
-  my $final_file = ${task_name}. $self->{_suffix} . ".html";
-  push( @result_files, $final_file );
-  $result->{$task_name} = filter_array( \@result_files, $pattern );
-  return $result;
 }
 
 1;
