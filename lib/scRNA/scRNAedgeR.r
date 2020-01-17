@@ -1,3 +1,4 @@
+
 library(edgeR)
 library(heatmap3)
 
@@ -66,6 +67,16 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
   }
 }
 
+sumcount<-function(ct_count, names, sample_df){
+  result<-lapply(names, function(x){
+    res<-ct_count[,sample_df$Cell[sample_df$Sample ==x],drop=F]
+    apply(res, 1, sum)
+  })
+  rescount<-do.call(cbind, result)
+  colnames(rescount)<-names
+  return(rescount)
+}
+
 comparisons<-read.table(parSampleFile2, stringsAsFactors = F)
 comparisonNames<-unique(comparisons$V3)
 
@@ -73,7 +84,7 @@ cts_cluster<-read.csv(parFile1)
 cts_folder<-dirname(parFile1)
 cts_unique<-rev(unique(cts_cluster$DE))
 
-ct<-"20_T_cells"
+ct<-cts_unique[1]
 cts_name<-paste0(outFile, ".")
 
 for(ct in cts_unique){
@@ -97,13 +108,31 @@ for(ct in cts_unique){
     comp_groups<-comparisons[comparisons$V3==comp,]
     control_names<-comp_groups$V1[comp_groups$V2=="control"]
     sample_names<-comp_groups$V1[comp_groups$V2=="sample"]
-  
-    cell_control<-ct_count[,sample_df$Cell[sample_df$Sample %in% control_names]]
-    cell_control_group<-rep(1, ncol(cell_control))
-  
-    cell_sample<-ct_count[,sample_df$Cell[sample_df$Sample %in% sample_names]]
-    cell_sample_group<-rep(2, ncol(cell_sample))
 
+    control_names<-control_names[control_names %in% sample_df$Sample]
+    sample_names<-sample_names[sample_names %in% sample_df$Sample]
+    
+    if(DE_by_cell){
+      cell_control<-ct_count[,sample_df$Cell[sample_df$Sample %in% control_names]]
+      cell_control_group<-rep(1, ncol(cell_control))
+      
+      cell_sample<-ct_count[,sample_df$Cell[sample_df$Sample %in% sample_names]]
+      cell_sample_group<-rep(2, ncol(cell_sample))
+    }else{
+      cell_control<-sumcount(ct_count, control_names, sample_df)
+      cell_control_group<-rep(1, ncol(cell_control))
+      
+      cell_sample<-sumcount(ct_count, sample_names, sample_df)
+      cell_sample_group<-rep(2, ncol(cell_sample))
+    }
+
+    cells<-cbind(cell_control, cell_sample)
+    cells<-cells[rowSums(cells)>0,]
+    groups<-c(cell_control_group, cell_sample_group)
+
+    designdata<-data.frame("Group"=groups, "Sample"=colnames(cells))
+    write.csv(designdata, file=paste0(prefix, ".design"), row.names=F, quote=F)
+    
     cat(prefix, "\n")
     
     dge<-DGEList(cbind(cell_control, cell_sample), group = c(cell_control_group, cell_sample_group))

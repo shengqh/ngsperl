@@ -257,8 +257,7 @@ if(isCalc){
     if(length(objs) == 1){
       obj <- objs[[1]]
     }else{
-      cellids<-unlist(lapply(objs, function(x) x@project.name))
-      obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), add.cell.ids = cellids, project = "integrated")
+      obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
     }
     if(by_sctransform){
       #perform sctransform
@@ -285,16 +284,25 @@ if(isCalc){
   sumcounts<-t(apply(GetAssayData(obj,assay="RNA",slot="counts"),1,function(x){tapply(x,clusters,sum)}))
   logsumcounts<-log2(sumcounts+1)
   data.quantileAll <- apply(logsumcounts, 2, function(x){quantile(x, 0.75)})
-  data.quantileAll<-data.quantileAll / median(data.quantileAll)
   
-  data.norm <- t(t(logsumcounts) / data.quantileAll)
-  
+  norm_method=""
+  if(any(data.quantileAll == 0)){
+    norm_method = ".normByTotal"
+    data.all <- apply(logsumcounts, 2, sum)
+    data.all<-data.all / median(data.all)
+    data.norm <- t(t(logsumcounts) / data.all)
+  }else{
+    norm_method = ".normByUpQuantile"
+    data.quantileAll<-data.quantileAll / median(data.quantileAll)
+    data.norm <- t(t(logsumcounts) / data.quantileAll)
+  }
+
   colnames(sumcounts)<-paste0("Cluster", colnames(sumcounts))
   write.csv(sumcounts, file=paste0(prefix, ".cluster.count.csv"))
   
   oldname<-colnames(data.norm)
   colnames(data.norm)<-paste0("Cluster", oldname)
-  write.csv(data.norm, file=paste0(prefix, ".cluster.norm.csv"))
+  write.csv(data.norm, file=paste0(prefix, ".cluster", norm_method, ".csv"))
   colnames(data.norm)<-oldname
   
   predict_celltype<-ORA_celltype(data.norm,finalList$cell_activity_database$cellType,finalList$cell_activity_database$weight)
