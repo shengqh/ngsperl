@@ -68,6 +68,7 @@ sub initializeDefaultOptions {
     }
   }
 
+  initDefaultValue( $def, "remove_duplicate", 1 );
   initDefaultValue( $def, "perform_multiqc", 0 );
 
   return $def;
@@ -197,7 +198,7 @@ sub getConfig {
       vcf_files                => $vcf,
       gatk_jar                 => $gatk_jar,
       picard_jar               => $picard_jar,
-      remove_duplicate         => 0,
+      remove_duplicate         => getValue($def, "remove_duplicate"),
       sh_direct                => 0,
       slim_print_reads         => 1,
       samtools_baq_calibration => 0,
