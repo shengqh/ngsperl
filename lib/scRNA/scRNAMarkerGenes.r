@@ -3,13 +3,13 @@ library(Seurat)
 library(ggplot2)
 
 finalList<-readRDS(parFile1)
-geneFile<-unlist(strsplit(genes, ";"))
+geneFile<-parFile2
 
 obj<-finalList$obj
 seurat_colors<-finalList$seurat_colors
 seurat_cellactivity_colors<-finalList$seurat_cellactivity_colors
 
-celltypes<-read.table(genes, sep="\t", header=T, stringsAsFactors = F)
+celltypes<-read.table(geneFile, sep="\t", header=T, stringsAsFactors = F)
 celltypes$Gene<-gsub("\\s.+", "", celltypes$Gene)
 #celltypes$Gene<-paste0(substr(celltypes$Gene,1,1),substr(tolower(celltypes$Gene),2,nchar(celltypes$Gene)))
 

@@ -454,14 +454,27 @@ DoHeatmap(obj, features = top10$gene, group.colors=seurat_colors, angle = 90) + 
 predicted<-finalList$cell_activity_database$predicted
 cta_table<-data.frame(Cluster=c(1:length(predicted$max_cta))-1, 
                       CellType=names(predicted$max_cta),
-                      CtaScore=predicted$max_cta,
+                      CtaScore=round(predicted$max_cta * 10) / 10.0,
                       stringsAsFactors = F)
 cta_table$OraPvalue=apply(cta_table, 1, function(x){
   ct=x[2]
   cl=as.numeric(x[1]) + 1
   predicted$ora[ct, cl]
 })
-print(kable_styling(kable(cta_table, caption=tabRef("cta_table", "Cell type prediction result"))))
+
+cluster_sample<-as.data.frame.matrix(table(obj$seurat_clusters, obj$orig.ident))
+
+nc<-apply(cluster_sample, 2, function(x){
+  tc=sum(x)
+  perc<-x/tc
+  return(round(perc*1000) / 10.0)
+})
+colnames(nc)<-paste0(colnames(nc), "_perc")
+
+cta_combined<-cbind(cta_table, cluster_sample, nc)
+write.csv(cta_combined, file=paste0(prefix, ".cluster.summary.csv"), row.names=F, quote=F)
+
+print(kable_styling(kable(cta_combined, caption=tabRef("cta_table", "Cell type prediction result"))))
 ```
 
 ```{r gene_activity_umap, fig.width=18, fig.height=10, results="asis", fig.cap=figRef("umap_cluster_cell", "Predicted cell types")}

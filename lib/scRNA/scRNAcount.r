@@ -11,7 +11,7 @@ output_cluster<-function(obj, cts, cts_name, DE_by_celltype=TRUE){
     cts_cluster$DE<-paste0(cts_cluster$Cluster, "_", cts_files)
   }  
   
-  write.csv(cts_cluster, file=paste0(cts_name, ".cluster.csv"), row.names=F, quote=F)
+  write.csv(cts_cluster, file=paste0(cts_name, ".count.files.csv"), row.names=F, quote=F)
   
   des_unique<-unique(cts_cluster$DE)
   for(de in des_unique){

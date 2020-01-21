@@ -87,6 +87,7 @@ cts_unique<-rev(unique(cts_cluster$DE))
 ct<-cts_unique[1]
 cts_name<-paste0(outFile, ".")
 
+result<-NULL
 for(ct in cts_unique){
   ct_file_name<-paste0(cts_folder, "/", cts_name, ct, ".count")
   rds_file = paste0(ct_file_name,".rds")
@@ -101,9 +102,9 @@ for(ct in cts_unique){
     prefix<-paste0(cts_name, ct, ".", comp , ".edgeR")
     dge_filename <-paste0(prefix, ".csv")
     
-    if(file.exists(dge_filename)){
-      next
-    }
+    #if(file.exists(dge_filename)){
+    #  next
+    #}
 
     comp_groups<-comparisons[comparisons$V3==comp,]
     control_names<-comp_groups$V1[comp_groups$V2=="control"]
@@ -127,41 +128,71 @@ for(ct in cts_unique){
     }
 
     cells<-cbind(cell_control, cell_sample)
-    cells<-cells[rowSums(cells)>0,]
     groups<-c(cell_control_group, cell_sample_group)
+
+    #filter genes with zero count
+    cells<-cells[rowSums(cells)>0,]
+    
+    #filter genes by tpm
+    tpm = sweep(cells, 2, colSums(cells)/1e6, "/")
+    min_sample<-filter_cellPercentage * ncol(cells)
+    keep_rows <- rowSums(tpm > filter_minTPM) >= min_sample
+    
+    cells<-cells[keep_rows,]
+    tpm<-tpm[keep_rows,]
 
     designdata<-data.frame("Group"=groups, "Sample"=colnames(cells))
     write.csv(designdata, file=paste0(prefix, ".design"), row.names=F, quote=F)
     
     cat(prefix, "\n")
     
-    dge<-DGEList(cbind(cell_control, cell_sample), group = c(cell_control_group, cell_sample_group))
+    dge<-DGEList(cells, group=groups)
     cat("  calcNormFactors", "\n")
     dge<-calcNormFactors(dge)
     
-    group<-dge$samples[,"group"]
-    design<-model.matrix(~group)
+    cdr <- scale(colMeans(cells > 0))
+    design <- model.matrix(~ cdr + groups)
+    
     cat("  estimateDisp", "\n")
-    dge<-estimateDisp(dge,design)
+    dge<-estimateDisp(dge,design=design)
     
     cat("  glmQLFit", "\n")
-    fitqlf<-glmQLFit(dge,design)
-    qlf<-glmQLFTest(fitqlf,coef=2)
-    out<-topTags(qlf, n=Inf, adjust.method = "BH")
+    fitqlf<-glmQLFit(dge,design=design)
+    qlf<-glmQLFTest(fitqlf)
+    out<-topTags(qlf, n=Inf)
+    outTpm<-tpm[rownames(out$table),]
+    write.csv(cbind(out$table, outTpm), file=dge_filename, quote=F)
+
+    if(useRawPvalue){
+      sigout<-out$table[(out$table$PValue<=pvalue) & (abs(out$table$logFC)>=log2(foldChange)),]
+    }else{
+      sigout<-out$table[(out$table$FDR<=pvalue) & (abs(out$table$logFC)>=log2(foldChange)),]
+    }
+    sigTpm<-tpm[rownames(sigout),]
+    sigFile<-paste0(prefix, "_sig.csv")
+    write.csv(cbind(sigout, sigTpm), file=sigFile, quote=F)
     
-    write.csv(out, file=dge_filename)
+    siggenes<-data.frame(gene=rownames(sigout))
+    sigGenenameFile<-paste0(prefix, "_sig_genename.txt")
+    write.table(siggenes, file=sigGenenameFile, row.names=F, col.names=F, sep="\t", quote=F)
     
-    sigout<-data.frame(gene=rownames(out)[(out$table$FDR<=0.05) & (abs(out$table$logFC)>=1)])
-    write.table(sigout, file=paste0(prefix, "_sig_genename.txt"), row.names=F, col.names=F, sep="\t", quote=F)
-    
+    gseaFile<-paste0(prefix, "_GSEA.rnk")
     rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * out$table$F)
-    write.table(rankout, file=paste0(prefix, "_GSEA.rnk"), row.names=F, col.names=F, sep="\t", quote=F)
+    write.table(rankout, file=gseaFile, row.names=F, col.names=F, sep="\t", quote=F)
     
     #cat("  heatmap", "\n")
     #y <- cpm(dge, log=TRUE)
     #conditionColors<-as.matrix(data.frame(Group=c("red", "blue")[group]))
     #gnames<-c(control_name, sample_name)
     #drawHCA(prefix, y, FALSE, NULL, conditionColors, gnames, "png", usePearsonInHCA=TRUE)
+    
+    curDF<-data.frame("celltype"=ct, "comparison"=comp, "sigFile"=sigFile, "sigGenenameFile"=sigGenenameFile, "gseaFile"=gseaFile)
+    if(is.null(result)){
+      result<-curDF
+    }else{
+      result<-rbind(result, curDF)
+    }
   }
 }
 
+write.csv(result, file=paste0(outFile, ".edgeR.files.csv"), quote=F)
