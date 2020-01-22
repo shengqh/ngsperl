@@ -198,6 +198,40 @@ sub getScRNASeqConfig {
       },
     };
     push( @$summary, $seurat_name );
+    
+    if(getValue($def, "perform_recluster")){
+      my $recluster_name = $seurat_name . "_recluster";
+      $config->{$recluster_name} = {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $recluster_name,
+        rtemplate          => "../scRNA/scRNArecluster.r",
+        parameterFile1_ref => [ $seurat_name, ".final.rds" ],
+        parameterSampleFile2     => {
+          recluster_celltypes => getValue( $def, "recluster_celltypes" ),
+          Mtpattern           => getValue( $def, "Mtpattern" ),
+          rRNApattern         => getValue( $def, "rRNApattern" ),
+          Remove_Mt_rRNA      => getValue( $def, "Remove_Mt_rRNA" ),
+          resolution          => getValue( $def, "resolution" ),
+          pca_dims            => getValue( $def, "pca_dims" ),
+          species             => getValue( $def, "species" ),
+          markers_file        => getValue( $def, "markers_file" ),
+          by_integration      => getValue( $def, "by_integration" ),
+          by_sctransform      => getValue( $def, "by_sctransform" ),
+          prefix              => $taskName,
+        },
+        output_file_ext => ".recluster.rds",
+        sh_direct       => 1,
+        pbs             => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$summary, $recluster_name );
+    }
 
     if ( defined $def->{marker_genes_file} ) {
       my $markerGenesTaskname = $seurat_name . "_marker_genes";

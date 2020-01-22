@@ -478,13 +478,12 @@ print(kable_styling(kable(cta_combined, caption=tabRef("cta_table", "Cell type p
 ```
 
 ```{r gene_activity_umap, fig.width=18, fig.height=10, results="asis", fig.cap=figRef("umap_cluster_cell", "Predicted cell types")}
-p1<-DimPlot(object = obj, reduction = 'umap', label=T, group.by="seurat_clusters", cols=seurat_colors)
 p2<-DimPlot(object = obj, reduction = "umap",label=T, group.by="seurat_cellactivity_clusters", cols=seurat_cellactivity_colors)
-plot_grid(p1,p2)
+print(p2)
 ```
 
 ```{r gene_activity_umap_samples, eval=hasMultipleSamples, fig.height=8, fig.width=18, fig.cap=figRef("gene_activity_umap_samples", "Predicted cell types by sample")}
-DimPlot(obj, reduction = "umap", label=TRUE, group.by="seurat_cellactivity_clusters", cols=seurat_cellactivity_colors, split.by = "orig.ident")
+DimPlot(obj, reduction = "umap", label=T, group.by="seurat_clusters", cols=seurat_colors, split.by = "orig.ident") + NoLegend()
 ```
 
 ```{r gene_activity_heatmap, fig.width=18, fig.height=max(10, length(top10$gene) / 10), results="asis", fig.cap=figRef("cell_activity_heatmap", "Predicted cell type cluster heatmap")}

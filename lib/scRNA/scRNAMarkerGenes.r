@@ -11,6 +11,14 @@ seurat_cellactivity_colors<-finalList$seurat_cellactivity_colors
 
 celltypes<-read.table(geneFile, sep="\t", header=T, stringsAsFactors = F)
 celltypes$Gene<-gsub("\\s.+", "", celltypes$Gene)
+celltypes$Gene<-toupper(celltypes$Gene)
+
+missGenes<-celltypes[!(celltypes$Gene %in% rownames(obj)),]
+write.csv(missGenes, "miss_gene.csv")
+celltypes<-celltypes[celltypes$Gene %in% rownames(obj),]
+
+#allgenes<-data.frame(Gene=rownames(obj))
+#write.csv(allgenes, "all_gene.csv")
 #celltypes$Gene<-paste0(substr(celltypes$Gene,1,1),substr(tolower(celltypes$Gene),2,nchar(celltypes$Gene)))
 
 max_cta<-finalList$cell_activity_database$predicted$max_cta

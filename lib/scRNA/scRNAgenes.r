@@ -1,6 +1,7 @@
 
 library(Seurat)
 library(ggplot2)
+library(ggpubr)
 
 finalList<-readRDS(parFile1)
 genes<-unlist(strsplit(genes, ";"))
@@ -18,19 +19,11 @@ genes<-genes[genes %in% rownames(obj)]
 
 gene=genes[1]
 for(gene in genes){
-  g1<-DimPlot(obj, reduction = "umap", label=T, group.by="seurat_cellactivity_clusters", cols=seurat_cellactivity_colors) + NoLegend()
-  l<-list(umap=g1)
-  
-  sample=samples[1]
-  for (sample in samples){
-    cells<-colnames(obj)[obj$orig.ident==sample]
-    g2<-FeaturePlot(object = obj, cells = cells, features=gene) + ggtitle(sample)
-    l[[sample]]=g2
-  }
+  p1<-DimPlot(obj, reduction = "umap", label=T, group.by="seurat_cellactivity_clusters", cols=seurat_cellactivity_colors) + NoLegend()
+  p2<-FeaturePlot(object = obj, features=gene, split.by = "orig.ident")
 
-  sh<-floor (sqrt(length(l)))
-  sw<-ceiling(length(l) / sh)
-  png(filename=paste0(outFile, ".", gene, ".png"), width=sw * 3000, height=sh * 3000, res=300)
-  print(CombinePlots(l, nrow=2))
+  png(filename=paste0(outFile, ".", gene, ".png"), width= (length(samples) + 1) * 3000, height=3000, res=300)
+  g<-ggarrange(p1, p2, widths = c(1,length(samples)))
+  print(g)
   dev.off()
 }
