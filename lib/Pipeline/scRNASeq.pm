@@ -97,6 +97,8 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "by_integration", 0 );
   initDefaultValue( $def, "by_sctransform", 0 );
 
+  initDefaultValue( $def, "perform_recluster", 0 );
+
   initDefaultValue( $def, "perform_edgeR", 0 );
 
   initDefaultValue( $def, "DE_by_celltype", 1 );
