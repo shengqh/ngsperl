@@ -25,9 +25,9 @@ max_cta<-finalList$cell_activity_database$predicted$max_cta
 cta_df<-data.frame(Cluster=c(1:length(max_cta))-1, Celltype=names(max_cta), stringsAsFactors = F)
 ct_unique<-unique(cta_df$Celltype)
 
-ct<-unique(celltypes$Subtype)[1]
-for(ct in unique(celltypes$Subtype)){
-  subcelltypes<-celltypes[celltypes$Subtype==ct,]
+ct<-unique(celltypes$Celltype)[1]
+for(ct in unique(celltypes$Celltype)){
+  subcelltypes<-celltypes[celltypes$Celltype==ct,]
   expressedGenes<-subcelltypes$Gene[subcelltypes$Status=="expressed"]
   absentGenes<-toupper(subcelltypes$Gene[subcelltypes$Status=="absent"])
   
