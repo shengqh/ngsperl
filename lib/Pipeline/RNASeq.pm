@@ -927,8 +927,8 @@ sub getRNASeqConfig {
         push( @report_files, $deseq2taskname, "/" . $key . $suffix . "_DESeq2_sig.csv" );
         push( @report_names, "deseq2_" . $key );
 
-        push( @report_files, $deseq2taskname, "/" . $key . ".design" );
-        push( @report_names, "deseq2_" . $key . "_design" );
+        #push( @report_files, $deseq2taskname, "/" . $key . ".design" );
+        #push( @report_names, "deseq2_" . $key . "_design" );
 
         push( @report_files, $deseq2taskname, "/" . $key . $suffix . "_geneAll_DESeq2-vsd-heatmap.png" );
         push( @report_names, "deseq2_" . $key . "_heatmap" );
