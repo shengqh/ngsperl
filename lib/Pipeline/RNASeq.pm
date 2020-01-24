@@ -45,14 +45,19 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_webgestalt",    0 );
   initDefaultValue( $def, "perform_report",        1 );
 
-  initDefaultValue( $def, "perform_gsea", 0 );
+  if ( not $def->{has_gsea} ) {
+    $def->{"perform_gsea"} = 0;
+  }
+  else {
+    initDefaultValue( $def, "perform_gsea", 0 );
+  }
 
   #$def->{gsea_jar}        or die "Define gsea_jar at definition first";
   #$def->{gsea_db}         or die "Define gsea_db at definition first";
   #$def->{gsea_categories}
 
   initDefaultValue( $def, "perform_cutadapt", 0 );
-  initDefaultValue( $def, "cutadapt_thread", 1 );
+  initDefaultValue( $def, "cutadapt_thread",  1 );
 
   initDefaultValue( $def, "featureCount_option",        "-g gene_id -t exon" );
   initDefaultValue( $def, "aligner",                    "star" );
@@ -71,7 +76,7 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "keggprofile_species",      "hsa" );
   initDefaultValue( $def, "keggprofile_pCut",         0.1 );
 
-  initDefaultValue( $def, "is_paired_end",                         1 );
+  initDefaultValue( $def, "is_paired_end",                   1 );
   initDefaultValue( $def, "DE_pvalue",                       0.05 );
   initDefaultValue( $def, "DE_use_raw_pvalue",               0 );
   initDefaultValue( $def, "DE_fold_change",                  2 );
@@ -146,11 +151,11 @@ sub getRNASeqConfig {
 
   my $count_file_ref = $def->{count_file};
   if ( $def->{perform_mapping} && $def->{perform_counting} && ( $aligner eq "star" ) && $def->{perform_star_featurecount} ) {
-    my $aligner_index   = $def->{star_index} or die "Define star_index at definition first";
-    my $starFolder      = $target_dir . "/" . getNextFolderIndex($def) . "star_featurecount";
-    my $transcript_gtf  = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
-    my $star_featurecount_walltime = getValue($def, "star_featurecount_walltime", 23);
-    my $configAlignment = {
+    my $aligner_index              = $def->{star_index} or die "Define star_index at definition first";
+    my $starFolder                 = $target_dir . "/" . getNextFolderIndex($def) . "star_featurecount";
+    my $transcript_gtf             = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
+    my $star_featurecount_walltime = getValue( $def, "star_featurecount_walltime", 23 );
+    my $configAlignment            = {
       "star_featurecount" => {
         class                     => "Alignment::STARFeatureCount",
         perform                   => 1,
@@ -163,7 +168,7 @@ sub getRNASeqConfig {
         featureCount_option       => getValue( $def, "featureCount_option" ),
         star_location             => $def->{star_location},
         gff_file                  => $transcript_gtf,
-        is_paired_end                 => is_paired_end( $def ),
+        is_paired_end             => is_paired_end($def),
         sh_direct                 => 0,
         pbs                       => {
           "email"     => $email,
@@ -294,15 +299,15 @@ sub getRNASeqConfig {
 
       my $featureCountFolder = $target_dir . "/" . getNextFolderIndex($def) . "featurecount";
       $config->{"featurecount"} = {
-        class      => "Count::FeatureCounts",
-        perform    => 1,
-        target_dir => $featureCountFolder,
-        option     => "-g gene_id -t exon",
-        source_ref => $source_ref,
-        gff_file   => $transcript_gtf,
-        is_paired_end  => is_paired_end($def),
-        sh_direct  => 0,
-        pbs        => {
+        class         => "Count::FeatureCounts",
+        perform       => 1,
+        target_dir    => $featureCountFolder,
+        option        => "-g gene_id -t exon",
+        source_ref    => $source_ref,
+        gff_file      => $transcript_gtf,
+        is_paired_end => is_paired_end($def),
+        sh_direct     => 0,
+        pbs           => {
           "email"     => $email,
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
@@ -484,29 +489,30 @@ sub getRNASeqConfig {
       push @$summary, "$webgestaltTaskName";
 
       #if ( defined $def->{perform_link_webgestalt_deseq2} ) {
-        $linkTaskName = $webgestaltTaskName . "_link_deseq2";
-        $config->{$linkTaskName} = {
-          class                      => "CQS::UniqueR",
-          perform                    => 1,
-          target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $linkTaskName,
-          rtemplate                  => "../Annotation/WebGestaltDeseq2.r",
-          rReportTemplate            => "../Annotation/WebGestaltDeseq2.rmd",
-          output_to_result_directory => 1,
-          output_perSample_file      => "parameterSampleFile1",
-          output_perSample_file_ext  => ".html;.html.rds",
-          parameterSampleFile1_ref   => [ $webgestaltTaskName, ".txt\$" ],
-          parameterSampleFile2_ref   => [ $deseq2taskname, "sig.csv\$" ],
-          sh_direct                  => 1,
-          rCode                      => "",
-          pbs                        => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "23",
-            "mem"       => "10gb"
-          },
-        };
-        push( @$summary, $linkTaskName );
+      $linkTaskName = $webgestaltTaskName . "_link_deseq2";
+      $config->{$linkTaskName} = {
+        class                      => "CQS::UniqueR",
+        perform                    => 1,
+        target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $linkTaskName,
+        rtemplate                  => "../Annotation/WebGestaltDeseq2.r",
+        rReportTemplate            => "../Annotation/WebGestaltDeseq2.rmd",
+        output_to_result_directory => 1,
+        output_perSample_file      => "parameterSampleFile1",
+        output_perSample_file_ext  => ".html;.html.rds",
+        parameterSampleFile1_ref   => [ $webgestaltTaskName, ".txt\$" ],
+        parameterSampleFile2_ref   => [ $deseq2taskname, "sig.csv\$" ],
+        sh_direct                  => 1,
+        rCode                      => "",
+        pbs                        => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "23",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$summary, $linkTaskName );
+
       #}
     }
 
@@ -549,7 +555,8 @@ sub getRNASeqConfig {
       my $keggprofile_useRawPValue;
       if ( defined( $def->{keggprofile_useRawPValue} ) ) {
         $keggprofile_useRawPValue = $def->{keggprofile_useRawPValue};
-      } else {
+      }
+      else {
         die "Define keggprofile_useRawPValue at definition first";
       }
       my $keggprofile_species;
@@ -809,7 +816,7 @@ sub getRNASeqConfig {
     my @report_files = ();
     my @report_names = ();
     my @copy_files   = ();
-    
+
     my $version_files = get_version_files($config);
 
     if ( defined $config->{fastqc_raw_summary} ) {
@@ -921,11 +928,11 @@ sub getRNASeqConfig {
         push( @report_names, "deseq2_" . $key );
 
         push( @report_files, $deseq2taskname, "/" . $key . ".design" );
-        push( @report_names, "deseq2_" . $key . "_design");
+        push( @report_names, "deseq2_" . $key . "_design" );
 
         push( @report_files, $deseq2taskname, "/" . $key . $suffix . "_geneAll_DESeq2-vsd-heatmap.png" );
         push( @report_names, "deseq2_" . $key . "_heatmap" );
-        
+
         push( @report_files, $deseq2taskname, "/" . $key . $suffix . "_geneAll_DESeq2-vsd-pca.png" );
         push( @report_names, "deseq2_" . $key . "_pca" );
       }
@@ -948,13 +955,14 @@ sub getRNASeqConfig {
 
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
-        if(defined $linkTaskName && defined $config->{$linkTaskName}){
+        if ( defined $linkTaskName && defined $config->{$linkTaskName} ) {
           push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_geneontology_Biological_Process.txt.html.rds" );
           push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_geneontology_Cellular_Component.txt.html.rds" );
           push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_geneontology_Molecular_Function.txt.html.rds" );
           push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_pathway_KEGG.txt.html.rds" );
-          push( @copy_files, $linkTaskName, "txt.html\$" );
-        }else{
+          push( @copy_files,   $linkTaskName, "txt.html\$" );
+        }
+        else {
           push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_geneontology_Biological_Process.txt" );
           push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_geneontology_Cellular_Component.txt" );
           push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_geneontology_Molecular_Function.txt" );
@@ -982,9 +990,9 @@ sub getRNASeqConfig {
     my $fcOptions = getValue( $def, "featureCount_option" );
     my $fcMultiMapping = ( $fcOptions =~ /-m/ ) ? "TRUE" : "FALSE";
     my $options = {
-      "DE_fold_change"                     => [ getValue( $def, "DE_fold_change", 2 ) ],
-      "DE_pvalue"                          => [ getValue( $def, "DE_pvalue",      0.05 ) ],
-      "DE_use_raw_pvalue"                  => [ getValue( $def, "DE_use_raw_pvalue",      0 ) ],
+      "DE_fold_change"                     => [ getValue( $def, "DE_fold_change",    2 ) ],
+      "DE_pvalue"                          => [ getValue( $def, "DE_pvalue",         0.05 ) ],
+      "DE_use_raw_pvalue"                  => [ getValue( $def, "DE_use_raw_pvalue", 0 ) ],
       "featureCounts_UseMultiMappingReads" => [$fcMultiMapping]
     };
 
