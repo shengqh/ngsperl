@@ -18,6 +18,8 @@ cat("sort_data_by_tcga=", sort_data_by_tcga, "\n")
 cat("output_cis_file=", output_cis_file, "\n")
 cat("output_trans_file=", output_trans_file, "\n")
 
+pvalue <- 1e-2
+
 checkFileExists<-function(fileName){
   if(!file.exists(fileName)){
     stop(paste0("File not exists ", fileName))
@@ -32,8 +34,11 @@ checkFileExists(gene_location_file)
 useModel = modelLINEAR
 
 # perform local (cis) only
-pvOutputThreshold_tra = 0;
-pvOutputThreshold_cis = 1e-2;
+#pvOutputThreshold_tra = 0;
+
+# perform both cis and trans
+pvOutputThreshold_tra = pvalue;
+pvOutputThreshold_cis = pvalue;
 
 # Error covariance matrix
 # Set to numeric() for identity.
