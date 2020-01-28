@@ -176,6 +176,11 @@ if(file.exists(finalListFile) && file.exists(finalListFileOptionsMd5)){
   isCalc=(oldMd5 != prefixMd5)
 }
 
+toMouseGeneSymbol<-function(x){
+  result=paste0(toupper(substr(x,1,1)),tolower(substr(x,2,nchar(x))))
+  return(result)
+}
+
 if(isCalc){
   #preparing cell activity database
   marker<-data.frame(fread(markerfile))
@@ -183,7 +188,10 @@ if(isCalc){
   marker_species<-marker[hsind>0 & marker$ubiquitousness.index<0.05,]
   if (species=="Mm") {
     ##change the gene symbol only keep the first letter capitalize
-    marker_species$official.gene.symbol<-paste0(substr(marker_species$official.gene.symbol,1,1),substr(tolower(marker_species$official.gene.symbol),2,nchar(marker_species$official.gene.symbol)))
+    marker_species$official.gene.symbol<-toMouseGeneSymbol(marker_species$official.gene.symbol)
+  }
+  if (species=="Hs") {
+    marker_species$official.gene.symbol<-toupper(marker_species$official.gene.symbol)
   }
   cellType<-tapply(marker_species$official.gene.symbol,marker_species$cell.type,list)
   freq<-sort((table(unlist(cellType)))/length(cellType))
@@ -191,7 +199,7 @@ if(isCalc){
   finalList$cell_activity_database<-list(cellType=cellType, weight=weight)
     
   #read raw count dat
-  filelist1<-read.table("filelist1.txt", header=F)
+  filelist1<-read.table("filelist1.txt", header=F, stringsAsFactors = F)
   rawobjs<-apply(filelist1, 1, function(x){
     fileName  = x[[1]]
     fileTitle = x[[2]]
@@ -199,6 +207,12 @@ if(isCalc){
       counts = Read10X(fileName)
     } else {
       counts = Read10X_h5(fileName)
+    }
+    if (species=="Mm") {
+      rownames(counts)<-toMouseGeneSymbol(rownames(counts))
+    }
+    if (species=="Hs") {
+      rownames(counts)<-toupper(rownames(counts))
     }
     sobj = CreateSeuratObject(counts = counts, project = fileTitle)
     sobj[["percent.mt"]] <- PercentageFeatureSet(object = sobj, pattern = Mtpattern)
@@ -410,11 +424,8 @@ print(kable_styling(kable(top5, caption=tabRef("top5", "Top 5 marker genes in ea
 # Cell clusters
     
 ```{r qc1, fig.height=5, fig.width=13, fig.cap=figRef("qc_metrics_1", "Violin plot of percentage of mitochondrial, number of feature and number of read count")}
-p1<-VlnPlot(object = obj, features = c("percent.mt"), label=T)
-p2<-VlnPlot(object = obj, features = c("nFeature_RNA"), ncol=1, label=T)
-p3<-VlnPlot(object = obj, features = c("nCount_RNA"), ncol=1, label=T)
-plot_grid(p1,p2,p3,ncol=3)
-
+g<-VlnPlot(object = obj, features = c("percent.mt", "nFeature_RNA", "nCount_RNA"))
+print(g)
 ```
 
 ```{r umap_cells, fig.height=8, fig.width=18, fig.cap=figRef("umap_cells", ifelse(hasMultipleSamples, "UMAP of cells (left) and samples (right)", "UMAP of cells"))}
