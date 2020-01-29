@@ -22,7 +22,12 @@ if DEBUG:
 logger = logging.getLogger('topmed2annovar')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
-with gzip.open(args.input, 'rt') as fin:
+if args.input.endswith(".gz"):
+  fin = gzip.open(args.input, 'rt')
+else:
+  fin = open(args.input, "rt")
+  
+with fin:
   tmpFile = args.output + ".tmp"
   with open(tmpFile, "w") as fout:
     fout.write("#Chr\tStart\tEnd\tRef\tAlt\tTOPMed\n")
