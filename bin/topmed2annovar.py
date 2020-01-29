@@ -5,7 +5,7 @@ import os
 import csv
 import gzip
   
-DEBUG=True
+DEBUG=False
 NotDEBUG=not DEBUG
 
 parser = argparse.ArgumentParser(description="Convert TOPMed database to annovar format.",
