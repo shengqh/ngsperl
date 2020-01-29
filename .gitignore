@@ -16,6 +16,7 @@ nytprof.out
 pm_to_blib
 /.idea
 lib/Visualization/.Rhistory
-/lib/SmallRNA/__pycache__
+lib/SmallRNA/__pycache__
 lib/CPD/DemultiplexUtils.pyc
-lib/CPD/__pycache__/
+lib/CPD/__pycache__
+*.pyc
