@@ -358,7 +358,7 @@ sub getRNASeqConfig {
         "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "23",
-        "mem"       => "10gb"
+        "mem"       => "40gb"
       },
     };
 
@@ -397,7 +397,7 @@ sub getRNASeqConfig {
         "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "23",
-        "mem"       => "20gb"
+        "mem"       => "40gb"
       },
     };
     if ( ref($count_file_ref) eq "ARRAY" ) {
