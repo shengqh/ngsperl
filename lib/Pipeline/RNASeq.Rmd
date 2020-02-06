@@ -225,7 +225,7 @@ if(hasDEseq2 ){
     if(nrow(deseq2) > 0){
       maxrow<-min(nrow(deseq2), 10)
       comp <- unlist(strsplit(gsub("deseq2_","", comparisonName), "_vs_|_VS_|_Vs_"))
-      fpkm_agg2 <- fpkm_agg[,which(colnames(fpkm_agg) %in% comp==T)]
+      fpkm_agg2 <- fpkm_agg[,which(colnames(fpkm_agg) %in% comp==T),drop=FALSE]
       colnames(fpkm_agg2) <- paste0(colnames(fpkm_agg2), "_mean_FPKM")
       
       deseq2table <- merge(deseq2, fpkm_agg2, by ="row.names", sort=F)
