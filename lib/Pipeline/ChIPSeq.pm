@@ -215,6 +215,13 @@ sub getConfig {
   my $bam_ref = [ $def->{aligner}, ".bam\$" ];
 
   push @$individual, ( $def->{aligner} );
+
+  if ( $def->{perform_cleanbam} ) {
+    my $taskName = $def->{aligner} . "_cleanbam";
+    addCleanBAM( $config, $def, $individual, $taskName, "${target_dir}/" . getNextFolderIndex($def) . $taskName, $bam_ref);
+    $bam_ref = [ $taskName, ".bam\$" ];
+  }
+
   if ( getValue( $def, "perform_bamplot" ) ) {
     my $plotgroups = $def->{plotgroups};
     if ( !defined $plotgroups ) {
@@ -253,7 +260,6 @@ sub getConfig {
     }else{
       getValue( $def, "bamplot_gff" );
     }
-
     $config->{"bamplot"} = {
       class              => "Visualization::Bamplot",
       perform            => 1,
@@ -274,12 +280,6 @@ sub getConfig {
       },
     };
     push @$summary, ("bamplot");
-  }
-
-  if ( $def->{perform_cleanbam} ) {
-    my $taskName = $def->{aligner} . "_cleanbam";
-    addCleanBAM( $config, $def, $individual, $taskName, "${target_dir}/" . getNextFolderIndex($def) . $taskName, $bam_ref);
-    $bam_ref = [ $taskName, ".bam\$" ];
   }
 
   if(defined $def->{annotation_locus} or defined $def->{annotation_genes}){
