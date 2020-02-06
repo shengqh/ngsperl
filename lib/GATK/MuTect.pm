@@ -20,6 +20,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_mt";
+  $self->{_docker_prefix} = "mutect_";
   bless $self, $class;
   return $self;
 }
