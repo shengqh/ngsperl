@@ -857,6 +857,12 @@ sub getRNASeqConfig {
 
     if ( defined $config->{genetable} ) {
       push( @copy_files, "genetable", ".count\$", "genetable", ".fpkm.tsv" );
+      if($def->{perform_proteincoding_gene}){
+        push( @report_files, "genetable",    ".fpkm.proteincoding.tsv\$" );
+      }else{
+        push( @report_files, "genetable",    ".fpkm.tsv\$" );
+      }
+      push( @report_names, "genetable_fpkm" );
     }
 
     if ( defined $config->{genetable_correlation} ) {
@@ -1008,6 +1014,7 @@ sub getRNASeqConfig {
       parameterSampleFile3_ref   => \@copy_files,
       parameterSampleFile4       => $version_files,
       parameterSampleFile5       => $def->{software_version},
+      parameterSampleFile6       => $def->{groups},
       sh_direct                  => 1,
       pbs                        => {
         "email"     => $def->{email},

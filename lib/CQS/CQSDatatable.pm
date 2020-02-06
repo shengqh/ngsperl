@@ -93,19 +93,23 @@ sub result {
 
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+
+  my $mapFile = $config->{$section}{name_map_file};
+  my $output_proteincoding_gene=get_option( $config, $section, "output_proteincoding_gene", 0 );
+  if ($output_proteincoding_gene eq '' && $mapFile ne "") {
+    $output_proteincoding_gene=1;
+  }
+
   my $result       = {};
   my @result_files = ();
   push( @result_files, $self->get_file( $result_dir, $task_name, ".count", 0 ) );
   push( @result_files, $self->get_file( $pbs_dir, $task_name, ".filelist" ) );
 
-  my $mapFile = $config->{$section}{name_map_file};
   if ( defined $config->{$section}{name_map_file} ) {
     push( @result_files, $self->get_file( $result_dir, $task_name, ".fpkm.tsv", 0 ) );
-  }
-
-  my $output_proteincoding_gene=get_option( $config, $section, "output_proteincoding_gene", 0 );
-  if ($output_proteincoding_gene eq '' && $mapFile ne "") {
-    $output_proteincoding_gene=1;
+    if ($output_proteincoding_gene) {
+      push( @result_files, $self->get_file( $result_dir, $task_name, ".fpkm.proteincoding.tsv", 0 ) );
+    }
   }
   if ($output_proteincoding_gene) {
         push( @result_files, $self->get_file( $result_dir, $task_name, ".proteincoding.count", 0 ) );

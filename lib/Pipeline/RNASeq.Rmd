@@ -209,15 +209,16 @@ if(hasDEseq2 ){
   output_table3<-data.frame(c(gsub("_DESeq2_sig.csv","",basename(DESeq2_files[,1]))), c(unlist(lapply(DESeq2_list, nrow))))
   colnames(output_table3)<-c("Comparison", "Number of DEGs")
   print(kable_styling(kable(output_table3, caption= tabRef("deseq2_table", paste0("DEG numbers under FC > ", rnaseqOptions["DE_fold_change", 1], " & ",pValueText," < ", rnaseqOptions["DE_pvalue", 1])))))
-  fpkm <- data.frame(fread(list.files(path="../../genetable/result/", pattern="fpkm.tsv$", full.names=T), drop=c(2:9), data.table=F), row.names=1)
-  groups_def <- read.table("../../genetable/result/fileList2.txt", sep="\t")
+
+  fpkm_file <- files["genetable_fpkm", 1]
+  fpkm <- data.frame(fread(fpkm_file, drop=c(2:9), data.table=F), row.names=1)
+  groups_def <- read.table("fileList6.txt", sep="\t")
   fpkm_t <- t(fpkm)
   fpkm2 <- merge(groups_def[,1:2], fpkm_t, by.x="V1", by.y="row.names", sort=F)
   colnames(fpkm2)[1:2] <- c("sample", "group")
   fpkm_agg <- aggregate(fpkm2[,3:ncol(fpkm2)], list(fpkm2$group), mean)
   fpkm_agg <- data.frame(fpkm_agg[,2:ncol(fpkm_agg)], row.names=fpkm_agg[,1])
   fpkm_agg <- t(fpkm_agg)
-  
 
   for (i in 1:nrow(DESeq2_files)){
     comparisonName<-DESeq2_files[i,2]
@@ -225,8 +226,9 @@ if(hasDEseq2 ){
     if(nrow(deseq2) > 0){
       maxrow<-min(nrow(deseq2), 10)
       comp <- unlist(strsplit(gsub("deseq2_","", comparisonName), "_vs_|_VS_|_Vs_"))
-      fpkm_agg2 <- fpkm_agg[,which(colnames(fpkm_agg) %in% comp==T)]
-      colnames(fpkm_agg2) <- paste0(colnames(fpkm_agg2), "_mean_FPKM")
+      
+      fpkm_agg2 <- fpkm_agg[,which(colnames(fpkm_agg) %in% comp)]
+      colnames(fpkm_agg2) <- paste0("mean_FPKM_", colnames(fpkm_agg2))
       
       deseq2table <- merge(deseq2, fpkm_agg2, by ="row.names", sort=F)
       deseq2table <- data.frame(deseq2table[,2:ncol(deseq2table)], row.names=deseq2table[,1])
