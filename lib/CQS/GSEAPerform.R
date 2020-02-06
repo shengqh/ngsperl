@@ -2,9 +2,9 @@
 # Author: Shilin Zhao, Quanhu Sheng
 ###############################################################################
 
-runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="/home/zhaos/bin/gsea-3.0.jar",gseaDb="/scratch/TBI/Data/Reference_genome/GSEA/human/V6.0",
-#		gseaCategories=c('h.all.v6.1.symbols.gmt', 'c2.all.v6.1.symbols.gmt', 'c5.all.v6.1.symbols.gmt', 'c6.all.v6.1.symbols.gmt', 'c7.all.v6.1.symbols.gmt'),
-		gseaCategories=c("h.all.v6.1.symbols.gmt"),
+runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb="/scratch/cqs_share/references/gsea/v7.0",
+#		gseaCategories=c('h.all.v7.0.symbols.gmt', 'c2.all.v7.0.symbols.gmt', 'c5.all.v7.0.symbols.gmt', 'c6.all.v7.0.symbols.gmt', 'c7.all.v7.0.symbols.gmt'),
+		gseaCategories=c("h.all.v7.0.symbols.gmt"),
 		gseaReportTemplt="GSEAReport.Rmd",
 		makeReport=FALSE
 )
@@ -26,10 +26,15 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="/home/zhaos/bin/gsea
 		if (gseaCategoryName %in% names(fileToName)) {
 			gseaCategoryName<-fileToName[gseaCategoryName]
 		}
-		runCommond=paste0("java -Xmx8198m -cp ",gseaJar," xtools.gsea.GseaPreranked -gmx ",gseaDb,"/",gseaCategory,
-				" -collapse false -nperm 1000 -rnk ",preRankedGeneFile," -scoring_scheme weighted -make_sets true -rpt_label '",gseaCategoryName,"' -plot_top_x 20 -set_max 500 -set_min 15 -zip_report -out ",gesaResultDir)
-		print(runCommond)
-		system(runCommond)
+
+		if (grepl("cli.sh", gseaJar)){
+			runCommand=paste0(gseaJar," GseaPreranked")
+		}else{
+			runCommand=paste0("java -Xmx8198m -cp ",gseaJar," xtools.gsea.GseaPreranked")
+		}
+		runCommand = paste0(runCommand, " -zip_report true -gmx ",gseaDb,"/",gseaCategory,	" -collapse false -nperm 1000 -rnk ",preRankedGeneFile," -scoring_scheme weighted -make_sets true -rpt_label '",gseaCategoryName,"' -plot_top_x 20 -set_max 500 -set_min 15 -out ", gesaResultDir)
+		print(runCommand)
+		system(runCommand)
 	}
 
   resultDirSubs<-list.dirs(gesaResultDir,recursive=FALSE,full.names=TRUE)
