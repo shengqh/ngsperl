@@ -45,7 +45,7 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_webgestalt",    0 );
   initDefaultValue( $def, "perform_report",        1 );
 
-  if ( not $def->{has_gsea} ) {
+  if ( not $def->{"perform_gsea"} ) {
     $def->{"perform_gsea"} = 0;
   }
   else {
