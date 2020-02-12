@@ -98,6 +98,7 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "by_sctransform", 0 );
 
   initDefaultValue( $def, "perform_recluster", 0 );
+  initDefaultValue( $def, "perform_rename_cluster", 0 );
 
   initDefaultValue( $def, "perform_edgeR", 0 );
 
@@ -200,6 +201,28 @@ sub getScRNASeqConfig {
       },
     };
     push( @$summary, $seurat_name );
+
+    if(getValue($def, "perform_rename_cluster")){
+      my $rename_cluster = $seurat_name . "_rename_cluster";
+      $config->{$rename_cluster} = {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $rename_cluster,
+        rtemplate          => "../scRNA/renameCluster.r",
+        parameterFile1_ref => [ $seurat_name, ".final.rds" ],
+        parameterSampleFile2     => $def->{rename_cluster},
+        output_file_ext => ".rename_cluster.rds",
+        sh_direct       => 1,
+        pbs             => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$summary, $rename_cluster );
+    }
     
     if(getValue($def, "perform_recluster")){
       my $recluster_name = $seurat_name . "_recluster";
