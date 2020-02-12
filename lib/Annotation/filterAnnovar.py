@@ -13,7 +13,8 @@ parser.add_argument('-r', '--sample_name_pattern', action='store', nargs='?', de
 parser.add_argument('-o', '--output_prefix', action='store', nargs='?', required=NOT_DEBUG, help='Output file prefix')
 parser.add_argument('--exac_key', action='store', nargs='?', default="ExAC_ALL", help='ExAC name in vcf')
 parser.add_argument('--g1000_key', action='store', nargs='?', default="1000g2015aug_all", help='1000g name in vcf')
-parser.add_argument('--gnomad_key', action='store', nargs='?', default="gnomAD_genome_ALL", help='gnomAD name in vcf')
+#parser.add_argument('--gnomad_key', action='store', nargs='?', default="gnomAD_genome_ALL", help='gnomAD name in vcf')
+parser.add_argument('--gnomad_key', action='store', nargs='?', default="AF", help='gnomAD name in vcf')
 parser.add_argument('--topmed_key', action='store', nargs='?', default="TOPMed", help='TOPMed name in vcf')
 parser.add_argument('--filter_fq_equal_1', action='store_true', default=False, help='Filter out SNV detected at all samples')
 
