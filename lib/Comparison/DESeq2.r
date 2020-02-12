@@ -635,16 +635,19 @@ for(countfile_index in c(1:length(countfiles))){
 			assayvsd<-assay(vsd)
 			write.csv(assayvsd, file=paste0(prefix, "_DESeq2-vsd.csv"))
 			
-			vsdiqr<-apply(assayvsd, 1, IQR)
-			assayvsd<-assayvsd[order(vsdiqr, decreasing=T),]
-			
 			rldmatrix=as.matrix(assayvsd)
 			
 			#draw pca graph
 			drawPCA(paste0(prefix,"_geneAll"), rldmatrix, showLabelInPCA, designData, designData$Condition, outputFormat)
 			
-			#draw heatmap
-			drawHCA(paste0(prefix,"_geneAll"), rldmatrix, ispaired, designData, conditionColors, gnames, outputFormat)
+      if(exists("top25cvInHCA") && top25cvInHCA){
+        rv<-rowVars(rldmatrix)
+        countHT<-rldmatrix[rv>=quantile(rv)[4],]
+				drawHCA(paste0(prefix,"_geneTop25variance"), countHT, ispaired, designData, conditionColors, gnames, outputFormat)
+      }else{
+				#draw heatmap
+				drawHCA(paste0(prefix,"_geneAll"), rldmatrix, ispaired, designData, conditionColors, gnames, outputFormat)
+			}
 		}
 		
 		#different expression analysis
