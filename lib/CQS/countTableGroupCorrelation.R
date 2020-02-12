@@ -4,6 +4,7 @@ library(heatmap3)
 library(DESeq2)  
 library(RColorBrewer)
 library(colorRamps)
+library(genefilter)
 
 countTableFileList<-parSampleFile1
 groupFileList<-parSampleFile2
@@ -322,18 +323,7 @@ for (i in 1:nrow(countTableFileAll)) {
       print(paste0("There are ", nrow(countNumVsd), " genes will be used for visualization."))
       write.csv(countNumVsd, paste0(outputFilePrefix,curSuffix,".genes.csv"), quote=F)
     }
-    
-    #heatmap
-    
-    countHT<-countNumVsd
-    if(exists("top25cvInHCA") && top25cvInHCA){
-      CV <- function(x){
-        (sd(x)/mean(x))*100
-      }
-      cvs <- apply(countNumVsd,1,CV)
-      countHT<-countNumVsd[cvs>=quantile(cvs)[4],]
-    }
-    
+
     hasMultipleGroup<-length(unique(validSampleToGroup$V2)) > 1
     if (hasMultipleGroup) {
       groups<-validSampleToGroup$V2
@@ -349,6 +339,9 @@ for (i in 1:nrow(countTableFileAll)) {
       conditionColors<-NA
     }
     
+    #visualization    
+    countHT<-countNumVsd
+
     #density plot
     dataForPlot<-melt(countHT)
     colnames(dataForPlot)[2]<-"Sample"
@@ -364,9 +357,11 @@ for (i in 1:nrow(countTableFileAll)) {
       dev.off()
     }
     
+    #pca plot
     print(paste0("Drawing PCA for ", title, " samples."))
     drawPCA(paste0(outputFilePrefix,curSuffix,".PCA"), countHT, showLabelInPCA, groups, colors, outputFormat)
     
+    #hca plot
     hcaOption<-getHeatmapOption(countHT)
     if(!is.na(hasRowNames) & hasRowNames){
       hcaOption$labRow<-NULL
@@ -380,6 +375,13 @@ for (i in 1:nrow(countTableFileAll)) {
       }else{
         legendfun<-NULL
       }
+      
+      if(exists("top25cvInHCA") && top25cvInHCA){
+        rv<-rowVars(countNumVsd)
+        countHT<-countNumVsd[rv>=quantile(rv)[4],]
+        write.csv(countHT, paste0(outputFilePrefix,curSuffix,".heatmap.top25variance.csv"))
+      }
+
       for(format in outputFormat){
         if("PDF" == format){
           pdf(paste0(outputFilePrefix,curSuffix,".heatmap.pdf"),width=10,height=10)
