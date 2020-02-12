@@ -1,6 +1,5 @@
 ---
 title: "GSEA Report"
-author: "Shilin Zhao"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
