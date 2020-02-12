@@ -158,6 +158,7 @@ nFeature_cutoff_min=as.numeric(options$nFeature_cutoff_min)
 nFeature_cutoff_max=as.numeric(options$nFeature_cutoff_max)
 nCount_cutoff=as.numeric(options$nCount_cutoff)
 mt_cutoff=as.numeric(options$mt_cutoff)
+nCount_sd_cutoff=as.numeric(options$nCount_sd_cutoff)
 
 pca_dims<-1:as.numeric(options$pca_dims)
 
@@ -228,8 +229,24 @@ if(isCalc){
   finalList$rawobj<-rawobj
 
   #filter cells
+  finalList$filter<-list(nFeature_cutoff_min=nFeature_cutoff_min,
+                        nFeature_cutoff_max=nFeature_cutoff_max,
+                        mt_cutoff=mt_cutoff,
+                        nCount_cutoff=nCount_cutoff,
+                        nCount_sd_cutoff=nCount_sd_cutoff)
   objs<-lapply(rawobjs, function(x){
-    sobj<-subset(x, subset = nFeature_RNA > nFeature_cutoff_min & nFeature_RNA<nFeature_cutoff_max & nCount_RNA>nCount_cutoff & percent.mt < mt_cutoff)
+    sobj<-subset(x, subset = nFeature_RNA > nFeature_cutoff_min & nFeature_RNA<nFeature_cutoff_max & nCount_RNA > nCount_cutoff & percent.mt < mt_cutoff)
+
+    if(nCount_sd_cutoff > 0){
+      nCount_mean = mean(sobj[["nCount_RNA"]])
+      nCount_sd = sd(sobj[["nCount_RNA"]])
+      nCount_sd_min = nCount_mean - nCount_sd_cutoff * nCount_sd
+      nCount_sd_max = nCount_mean + nCount_sd_cutoff * nCount_sd
+      sobj<-subset(sobj, subset = nCount_RNA > nCount_sd_min & nCount_RNA < nCount_sd_max)
+      finalList$filter$nCount_sd_min = nCount_sd_min
+      finalList$filter$nCount_sd_max = nCount_sd_max
+    }
+
     sobj<-RenameCells(object=sobj, add.cell.id = unique(sobj$orig.ident))
     return(sobj)
   })  
