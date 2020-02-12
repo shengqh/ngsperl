@@ -338,6 +338,7 @@ sub result {
       push( @result_files, $result_dir . "/${prefix}_quantile_wilcox.csv" );
       push( @result_files, $result_dir . "/${prefix}_quantile_wilcox_sig.csv" );
     }
+    push( @result_files, $result_dir . "/${comparison_name}.design" );
 
     my $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
     if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
