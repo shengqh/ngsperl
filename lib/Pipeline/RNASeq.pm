@@ -933,8 +933,8 @@ sub getRNASeqConfig {
         push( @report_files, $deseq2taskname, "/" . $key . $suffix . "_DESeq2_sig.csv" );
         push( @report_names, "deseq2_" . $key );
 
-        #push( @report_files, $deseq2taskname, "/" . $key . ".design" );
-        #push( @report_names, "deseq2_" . $key . "_design" );
+        push( @report_files, $deseq2taskname, "/" . $key . ".design" );
+        push( @report_names, "deseq2_" . $key . "_design" );
 
         push( @report_files, $deseq2taskname, "/" . $key . $suffix . "_geneAll_DESeq2-vsd-heatmap.png" );
         push( @report_names, "deseq2_" . $key . "_heatmap" );
@@ -999,7 +999,8 @@ sub getRNASeqConfig {
       "DE_fold_change"                     => [ getValue( $def, "DE_fold_change",    2 ) ],
       "DE_pvalue"                          => [ getValue( $def, "DE_pvalue",         0.05 ) ],
       "DE_use_raw_pvalue"                  => [ getValue( $def, "DE_use_raw_pvalue", 0 ) ],
-      "featureCounts_UseMultiMappingReads" => [$fcMultiMapping]
+      "featureCounts_UseMultiMappingReads" => [$fcMultiMapping],
+      "top25cv_in_hca" => [ getValue( $def, "top25cv_in_hca") ? "TRUE" : "FALSE" ]
     };
 
     $config->{report} = {

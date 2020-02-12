@@ -44,8 +44,14 @@ corNames<-gsub("_correlation_density", "", rownames(files)[grepl("_correlation_d
 corNames<-sort(corNames)
 
 getFigure<-function(category, description){
-  return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", category, "', '",description, "', trunk.eval=file.exists(files['", category, "',1]))}\n",
+  return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", category, "', '",gsub("_", " ", description), "', trunk.eval=file.exists(files['", category, "',1]))}\n",
 "  check_and_include_graphics(files['", category, "',1])\n```\n"))
+}
+
+if(rnaseqOptions["top25cv_in_hca", 1] == "FALSE"){
+  hca_gene_used<-" using top 25% variant genes"
+}else{
+  hca_gene_used<-" using all genes"
 }
 
 corrFile<-"corr.Rmd"
@@ -56,7 +62,7 @@ figureRmd<-function(corNames, section){
     heatmap<-paste0(name, "_correlation_heatmap")
     pca<-paste0(name, "_correlation_PCA")
     corr_heatmap<-paste0(name, "_correlation_cluster")
-    lines<-paste0("\n\n", section, " ", name, " samples\n\n", getFigure(heatmap, heatmap), getFigure(pca, pca), getFigure(corr_heatmap, corr_heatmap) )
+    lines<-paste0("\n\n", section, " ", name, " samples\n\n", getFigure(heatmap, paste0(heatmap, hca_gene_used)), getFigure(pca, pca), getFigure(corr_heatmap, corr_heatmap) )
     result<-paste0(result, lines)
   }
   return(result)
@@ -212,22 +218,23 @@ if(hasDEseq2 ){
 
   fpkm_file <- files["genetable_fpkm", 1]
   fpkm <- data.frame(fread(fpkm_file, drop=c(2:9), data.table=F), row.names=1)
-  groups_def <- read.table("fileList6.txt", sep="\t")
   fpkm_t <- t(fpkm)
-  fpkm2 <- merge(groups_def[,1:2], fpkm_t, by.x="V1", by.y="row.names", sort=F)
-  colnames(fpkm2)[1:2] <- c("sample", "group")
-  fpkm_agg <- aggregate(fpkm2[,3:ncol(fpkm2)], list(fpkm2$group), mean)
-  fpkm_agg <- data.frame(fpkm_agg[,2:ncol(fpkm_agg)], row.names=fpkm_agg[,1])
-  fpkm_agg <- t(fpkm_agg)
 
   for (i in 1:nrow(DESeq2_files)){
     comparisonName<-DESeq2_files[i,2]
     deseq2<-read.csv(DESeq2_files[i,1], header=TRUE, row.names=1)
+    
+    designFile<-files[paste0(comparisonName, "_design"),1]
+    comparisonDesign<-read.table(designFile, sep="\t", head=T, stringsAsFactors = F)
     if(nrow(deseq2) > 0){
       maxrow<-min(nrow(deseq2), 10)
-      comp <- unlist(strsplit(gsub("deseq2_","", comparisonName), "_vs_|_VS_|_Vs_"))
-      
-      fpkm_agg2 <- fpkm_agg[,which(colnames(fpkm_agg) %in% comp)]
+
+      fpkm2 <- merge(comparisonDesign[,1:2], fpkm_t, by.x="Sample", by.y="row.names", sort=F)
+      colnames(fpkm2)[1:2] <- c("sample", "group")
+      fpkm_agg <- aggregate(fpkm2[,3:ncol(fpkm2)], list(fpkm2$group), mean)
+      fpkm_agg <- data.frame(fpkm_agg[,2:ncol(fpkm_agg)], row.names=fpkm_agg[,1])
+      fpkm_agg2 <- t(fpkm_agg)
+    
       colnames(fpkm_agg2) <- paste0("mean_FPKM_", colnames(fpkm_agg2))
       
       deseq2table <- merge(deseq2, fpkm_agg2, by ="row.names", sort=F)
@@ -425,6 +432,6 @@ if(file.exists("fileList5.txt")){
 df<-unique(df)
 df<-df[order(df$V1),]
 colnames(df)<-c("Software", "Version")
-print(kable_styling(kable(df, caption=tabRef("versionFiles", "Software versions"))))
+print(kable_styling(kable(df, caption=tabRef("versionFiles", "Software versions"), row.names=F)))
 
 ```
