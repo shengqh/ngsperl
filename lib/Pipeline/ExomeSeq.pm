@@ -699,23 +699,23 @@ sub getConfig {
 
       if ( $def->{perform_annovar} ) {
         my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $combineVariantsName, ".vcf\$" );
-        my $annovar_to_maf = $annovar_name . "_toMAF";
-        $config->{$annovar_to_maf} = {
-          class      => "Annotation::Annovar2Maf",
-          perform    => 1,
-          target_dir => $target_dir . "/" . $annovar_to_maf,
-          source_ref => [$annovar_name],
-          refBuild   => getValue( $def, "annovar_buildver" ),
-          sh_direct  => 1,
-          pbs        => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
-            "mem"       => "10gb"
-          },
-        };
-        push @$summary, $annovar_to_maf;
+        # my $annovar_to_maf = $annovar_name . "_toMAF";
+        # $config->{$annovar_to_maf} = {
+        #   class      => "Annotation::Annovar2Maf",
+        #   perform    => 1,
+        #   target_dir => $target_dir . "/" . $annovar_to_maf,
+        #   source_ref => [$annovar_name],
+        #   refBuild   => getValue( $def, "annovar_buildver" ),
+        #   sh_direct  => 1,
+        #   pbs        => {
+        #     "email"     => $def->{email},
+        #     "emailType" => $def->{emailType},
+        #     "nodes"     => "1:ppn=1",
+        #     "walltime"  => "1",
+        #     "mem"       => "10gb"
+        #   },
+        # };
+        # push @$summary, $annovar_to_maf;
       }
     }
 
