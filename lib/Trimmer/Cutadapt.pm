@@ -79,6 +79,8 @@ sub perform {
     $thread_option = "-j $thread";
   }
 
+  my $hard_trim = get_option( $config, $section, "hard_trim", 0 );
+
   my $remove_bases_option = "";
   my $random_bases_remove_after_trim = get_option( $config, $section, "random_bases_remove_after_trim", 0 );
   if ( $random_bases_remove_after_trim > 0 ) {
@@ -201,6 +203,7 @@ sub perform {
     my @final_files = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_files[0] );
 
+    my @rmlist = ();
     for my $sample_file (@sample_files) {
       print $pbs "
 if [ ! -s $sample_file ]; then
@@ -208,16 +211,28 @@ if [ ! -s $sample_file ]; then
   exit 0
 fi
 ";
-
     }
+
+    if ($hard_trim > 0){
+      for my $sample_file (@sample_files) {
+        my $temp_file = basename($sample_file) . ".hardtrim.fastq";
+        print $pbs "
+cutadapt $thread_option -l $hard_trim -o $temp_file $sample_file
+    ";
+        push @rmlist, $temp_file;
+      }
+      @sample_files = @rmlist;
+    }
+
     if ($ispairend) {
-      die "should be pair-end data but not!" if ( scalar(@sample_files) != 2 );
+      die "should be pair-end data but not! " .  $sample_name . ": " . "; ".join(@sample_files) if ( scalar(@sample_files) != 2 );
 
       #pair-end data
       my $read1file = $sample_files[0];
       my $read2file = $sample_files[1];
 
       my ( $read1name, $read2name, $finalShortFile_1, $finalShortFile_2, $finalLongFile_1, $finalLongFile_2 ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
+
       my $limit_file_options = "";
       if ($shortLimited) {
         $limit_file_options = " --too-short-output=$finalShortFile_1 --too-short-paired-output=$finalShortFile_2";
@@ -243,6 +258,7 @@ cutadapt $thread_option $option $adapter_option -o $read1name -p $read2name $lim
     }
     else {
       my ( $final_file, $finalShortFile, $finalLongFile ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
+
       my $limit_file_options = "";
       if ($shortLimited) {
         $limit_file_options = " --too-short-output=$finalShortFile";
@@ -323,6 +339,14 @@ mv ${temp_file}.gz $final_file
         }
       }
     }
+
+    if(scalar(@rmlist) > 0){
+      my $rmstr = join(" ",  @rmlist);
+      print $pbs "
+rm $rmstr
+";
+    }
+
     print $pbs "
 cutadapt --version | awk '{print \"Cutadapt,v\"\$1}' > ${sample_name}.version
 ";
