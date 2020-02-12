@@ -16,6 +16,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(getValue 
+    getIntermidiateDir
     getIndexName
     initPipelineOptions 
     readChromosomeFromDictFile
@@ -68,6 +69,17 @@ sub getValue {
   else {
     die "Define $name in user definition first.";
   }
+}
+
+sub getIntermidiateDir {
+  my ($defaultDir, $def) = @_;
+
+  my $result = $defaultDir;
+  if($def->{use_intermediate_dir} ){
+    $result = create_directory_or_die( $def->{target_dir} . "/intermediate_data" );
+  }
+
+  return $result;
 }
 
 sub readChromosomeFromDictFile {
@@ -129,10 +141,13 @@ sub getNextFolderIndex {
 
 sub addFastQC {
   my ( $config, $def, $individual, $summary, $fastqcTask, $source_ref, $parentDir ) = @_;
-  $config->{"$fastqcTask"} = {
+
+  my $intermediateDir = getIntermidiateDir($parentDir, $def);
+
+  $config->{$fastqcTask} = {
     class      => "QC::FastQC",
     perform    => 1,
-    target_dir => $parentDir . "/" . getNextFolderIndex($def) . "$fastqcTask",
+    target_dir => $intermediateDir . "/" . getNextFolderIndex($def) . $fastqcTask,
     option     => "",
     source_ref => $source_ref,
     cluster    => $def->{cluster},
@@ -150,7 +165,7 @@ sub addFastQC {
   $config->{$summaryTask} = {
     class      => "QC::FastQCSummary",
     perform    => 1,
-    target_dir => $config->{"$fastqcTask"}->{target_dir},
+    target_dir => $parentDir . "/" . getNextFolderIndex($def) . $summaryTask,
     option     => "",
     cluster    => $def->{cluster},
     source_ref => [$fastqcTask, "data.txt"],
@@ -198,10 +213,12 @@ sub addBowtie {
     $hours = "23";
   }
 
+  my $intermediateDir = getIntermidiateDir($parentDir, $def);
+
   $config->{$taskName} = {
     class                 => "Alignment::Bowtie1",
     perform               => 1,
-    target_dir            => $parentDir . "/" . getNextFolderIndex($def) . $taskName,
+    target_dir            => $intermediateDir . "/" . getNextFolderIndex($def) . $taskName,
     option                => $bowtieOption,
     source_ref            => $sourceRef,
     bowtie1_index         => $bowtieIndex,
@@ -361,6 +378,9 @@ sub addDEseq2 {
     $libraryFileKey = "library_file_ref";
   }
 
+  my $rCode = getOutputFormat( $def, getValue($def, "DE_rCode", "") );
+  $rCode = addOutputOption( $def, $rCode, "top25cv_in_hca",             $def->{top25cv_in_hca},             "top25cvInHCA" );
+
   my $groupNames = defined $def->{deseq2_groups} ? "deseq2_groups" : "groups";
   $config->{$taskName} = {
     class                        => "Comparison::DESeq2",
@@ -387,7 +407,7 @@ sub addDEseq2 {
     cooksCutoff                  => $def->{DE_cooksCutoff},
     $libraryFileKey              => $libraryFile,
     library_key                  => $libraryKey,
-    rCode                        => getOutputFormat( $def, getValue($def, "DE_rCode", "") ),
+    rCode                        => $rCode,
     pbs                          => {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
@@ -948,7 +968,7 @@ sub addAnnovarFilter {
     perform             => 1,
     target_dir          => "${target_dir}/$annovar_filter_name",
     source_ref          => $annovar_name,
-    option              => "",
+    option              => $def->{annovar_filter},
     sh_direct           => 1,
     maximum_freq_values => "0.001,0.01,0.1,1.0",
     filter_fq_equal_1   => $def->{filter_variants_fq_equal_1},
