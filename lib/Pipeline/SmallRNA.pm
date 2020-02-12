@@ -28,8 +28,7 @@ sub getSmallRNAConfig {
   $def->{VERSION} = $VERSION;
 
   initializeSmallRNADefaultOptions($def);
-
-  my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir ) = getPrepareConfig( $def, 1 );
+  my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir, $identical_ref, $host_identical_ref ) = getPrepareConfig( $def, 1 );
   my $task_name = $def->{task_name};
 
   my $hasMicroRNAOnly = getValue( $def, "hasMicroRNAOnly", 0 );
@@ -56,11 +55,6 @@ sub getSmallRNAConfig {
 
   my $real_genome_bowtie1_index = $def->{"real_genome_bowtie1_index"};
   my $isHomologyAnalysis        = defined $real_genome_bowtie1_index;
-
-  my $real_genome_dir;
-  if ($isHomologyAnalysis) {
-    $real_genome_dir = create_directory_or_die( $def->{target_dir} . "/real_genome" );
-  }
 
   my $host_genome_dir;
   my $host_genome_suffix = getValue( $def, "host_genome_suffix", "" );
@@ -118,9 +112,10 @@ sub getSmallRNAConfig {
 
   my $R_font_size = 'textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';';
 
+  my $notReadCountPattern = "^.*\/(?!.*?read).*\.count\$";
   my @table_for_correlation = ();
   if ($perform_class_independent_analysis) {
-    push @table_for_correlation, ( "identical_sequence_count_table", "^(?!.*?read).*\.count\$" );
+    push @table_for_correlation, ( "identical_sequence_count_table", $notReadCountPattern );
   }
   my @table_for_countSum     = ();
   my @table_for_pieSummary   = ();
@@ -321,27 +316,28 @@ sub getSmallRNAConfig {
   my $bowtie1CountTask;
   my $bowtie1TableTask;
 
-  my $identical_ref       = [ "identical", ".fastq.gz\$" ];
-  my $identical_count_ref = [ "identical", ".dupcount\$" ];
+  my $identical_count_ref = [$identical_ref->[0], ".dupcount\$" ];
 
+  my $host_intermediate_dir = getIntermidiateDir($host_genome_dir, $def);
+  
   if ($search_host_genome) {
     getValue( $def, "coordinate" );
 
     #1 mismatch search, NTA
     my $hostBowtieTask = "bowtie1_genome_1mm_NTA";
-    addBowtie( $config, $def, $individual_ref, $hostBowtieTask, $host_genome_dir, $def->{bowtie1_index}, [ "identical_NTA", ".fastq.gz\$" ], $def->{bowtie1_option_1mm} );
+    addBowtie( $config, $def, $individual_ref, $hostBowtieTask, $host_intermediate_dir, $def->{bowtie1_index}, $host_identical_ref, $def->{bowtie1_option_1mm} );
 
     my $bamSource = $hostBowtieTask;
 
     if ($isHomologyAnalysis) {
       my $realBowtieTask = "bowtie1_real_genome_1mm_NTA";
-      addBowtie( $config, $def, $individual_ref, $realBowtieTask, $real_genome_dir, $real_genome_bowtie1_index, [ "identical_NTA", ".fastq.gz\$" ], $def->{bowtie1_option_1mm} );
+      addBowtie( $config, $def, $individual_ref, $realBowtieTask, $host_intermediate_dir, $real_genome_bowtie1_index, $host_identical_ref, $def->{bowtie1_option_1mm} );
 
       my $homologyTask = "bowtie1_genome_1mm_NTA_homology";
       $config->{$homologyTask} = {
         class              => "SmallRNA::FilterIndividualHomologyBAM",
         perform            => 1,
-        target_dir         => $host_genome_dir . "/$homologyTask",
+        target_dir         => $host_intermediate_dir . "/$homologyTask",
         option             => "",
         samonly            => 0,
         source_ref         => $hostBowtieTask,
@@ -366,10 +362,10 @@ sub getSmallRNAConfig {
       bowtie1_genome_1mm_NTA_smallRNA_count => {
         class           => "CQS::SmallRNACount",
         perform         => 1,
-        target_dir      => $host_genome_dir . "/bowtie1_genome_1mm_NTA_smallRNA_count",
+        target_dir      => $host_intermediate_dir . "/bowtie1_genome_1mm_NTA_smallRNA_count",
         option          => $def->{host_smallrnacount_option},
         source_ref      => $bamSource,
-        fastq_files_ref => "identical_NTA",
+        fastq_files_ref => $host_identical_ref,
         seqcount_ref    => $identical_count_ref,
         coordinate_file => $def->{coordinate},
         fasta_file      => $def->{coordinate_fasta},
@@ -516,7 +512,7 @@ sub getSmallRNAConfig {
         $config->{$tTask} = {
           class                 => "CQS::ProgramIndividualWrapper",
           perform               => 1,
-          target_dir            => $host_genome_dir . "/$tTask",
+          target_dir            => $host_intermediate_dir . "/$tTask",
           option                => "--minLength " . $minLength . " --maxLength " . $maxLength,
           interpretor           => "python",
           program               => "../SmallRNA/filterTrnaXml.py",
@@ -719,7 +715,7 @@ sub getSmallRNAConfig {
       $config->{bowtie1_genome_xml2bam} = {
         class         => "SmallRNA::HostXmlToBam",
         perform       => 1,
-        target_dir    => $host_genome_dir . "/bowtie1_genome_xml2bam",
+        target_dir    => $host_intermediate_dir . "/bowtie1_genome_xml2bam",
         source_ref    => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
         bam_files_ref => [ $bamSource, ".bam" ],
         sh_direct     => 1,
@@ -1103,7 +1099,7 @@ sub getSmallRNAConfig {
         $readTask => {
           class      => $readClass,
           perform    => 1,
-          target_dir => $host_genome_dir . "/" . $readTask,
+          target_dir => $host_intermediate_dir . "/" . $readTask,
           option     => "",
           source_ref => "bowtie1_genome_1mm_NTA",
           sh_direct  => 1,
@@ -1120,7 +1116,7 @@ sub getSmallRNAConfig {
         bowtie1_genome_unmapped_reads => {
           class       => "CQS::Perl",
           perform     => 1,
-          target_dir  => $host_genome_dir . "/bowtie1_genome_unmapped_reads",
+          target_dir  => $host_intermediate_dir . "/bowtie1_genome_unmapped_reads",
           perlFile    => "unmappedReadsToFastq.pl",
           source_ref  => $identical_ref,
           source2_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
@@ -1397,7 +1393,6 @@ sub getSmallRNAConfig {
 
   #Mapping unmapped reads to nonhost library
   if ($search_nonhost_library) {
-
     #Mapping unmapped reads to miRBase library
     addNonhostDatabase(
       $config, $def, $individual_ref, $summary_ref, "miRBase_pm", $nonhost_library_dir,    #general option
@@ -1547,7 +1542,7 @@ sub getSmallRNAConfig {
     push( @files_for_annotate_unmapped, "bowtie1_tRNA_pm_count", ".count.mapped.xml\$", "bowtie1_rRNA_pm_count", ".count.mapped.xml\$", );
     push( @names_for_annotate_unmapped, "tRNA",                  "rRNA" );
 
-    push @table_for_correlation, ( "bowtie1_tRNA_pm_table", "^(?!.*?read).*\.count\$", "bowtie1_rRNA_pm_table", "^(?!.*?read).*\.count\$" );
+    push @table_for_correlation, ( "bowtie1_tRNA_pm_table", $notReadCountPattern, "bowtie1_rRNA_pm_table", $notReadCountPattern );
     if ( $def->{read_correlation} ) {
       push @table_for_correlation, ( "bowtie1_tRNA_pm_table", ".read.count\$", );
       push @table_for_correlation, ( "bowtie1_rRNA_pm_table", ".read.count\$", );

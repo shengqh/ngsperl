@@ -73,6 +73,8 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "cluster",    "slurm" );
   initDefaultValue( $def, "max_thread", 8 );
 
+  initDefaultValue( $def, "use_intermediate_dir", 1 );
+
   initDefaultValue( $def, "host_xml2bam",                      0 );
   initDefaultValue( $def, "bacteria_group1_count2bam",         0 );
   initDefaultValue( $def, "bacteria_group2_count2bam",         0 );
@@ -109,6 +111,8 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "cutadapt_thread", 8 );
 
   initDefaultValue( $def, "fastq_len", 1 );
+
+  initDefaultValue( $def, "use_first_read_after_trim", 1);
   
   if ( $def->{perform_cutadapt} ) {
     initDefaultValue( $def, "adapter",         "TGGAATTCTCGGGTGCCAAGG" );
@@ -153,7 +157,7 @@ sub initializeSmallRNADefaultOptions {
     $def->{"perform_report"} = 0;
     $def->{perform_host_genome_reads_deseq2} = 0;
   }else{
-    initDefaultValue( $def, "search_not_identical",               1 );
+    initDefaultValue( $def, "search_not_identical",               0 );
     initDefaultValue( $def, "search_host_genome",                 1 );
     initDefaultValue( $def, "host_remove_all_mapped_reads",       0 );
     initDefaultValue( $def, "search_nonhost_genome",              1 );
@@ -225,11 +229,14 @@ sub addNonhostDatabase {
     $count_ref = [ "identical", ".dupcount\$" ];
   }
 
+  my $intermediate_dir = getIntermidiateDir($parentDir, $def);
+  #die($intermediate_dir);
+
   addBowtie( $config, $def, $individual, $bowtie1Task, $parentDir, $bowtieIndex, $sourceRef, $def->{bowtie1_option_pm} );
   $config->{$bowtie1CountTask} = {
     class        => "CQS::CQSChromosomeCount",
     perform      => 1,
-    target_dir   => $parentDir . "/" . $bowtie1CountTask,
+    target_dir   => $intermediate_dir . "/" . $bowtie1CountTask,
     option       => $countOption,
     source_ref   => $bowtie1Task,
     seqcount_ref => $count_ref,
@@ -271,7 +278,7 @@ sub addNonhostDatabase {
     $config->{$bowtie1readTask} = {
       class                    => "CQS::ProgramIndividualWrapper",
       perform                  => 1,
-      target_dir               => "${parentDir}/$bowtie1readTask",
+      target_dir               => "${intermediate_dir}/$bowtie1readTask",
       option                   => "",
       interpretor              => "python",
       program                  => "../SmallRNA/nonhostXmlToFastq.py",
@@ -404,6 +411,8 @@ sub getPrepareConfig {
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
+  my $intermediate_dir = getIntermidiateDir($preprocessing_dir, $def);
+
   #nta for microRNA and tRNA
   my $hasMicroRNAOnly = getValue( $def, "hasMicroRNAOnly", 0 );
   my $consider_miRNA_NTA = getValue( $def, "consider_miRNA_NTA" );
@@ -421,11 +430,12 @@ sub getPrepareConfig {
     identical => {
       class      => "CQS::FastqIdentical",
       perform    => 1,
-      target_dir => $preprocessing_dir . "/identical",
+      target_dir => $intermediate_dir . "/identical",
       option     => "-l " . $def->{min_read_length},
       source_ref => $source_ref,
       extension  => "_clipped_identical.fastq.gz",
       sh_direct  => 1,
+      use_first_read_after_trim => $def->{use_first_read_after_trim},
       cluster    => $cluster,
       pbs        => {
         "email"    => $def->{email},
@@ -437,12 +447,13 @@ sub getPrepareConfig {
   };
   push @$individual, ("identical");
   my $identical_ref = [ 'identical', '.fastq.gz$' ];
+  my $host_identical_ref = [ 'identical', '.fastq.gz$' ];
 
   if ( $consider_tRNA_NTA ) {
     $preparation->{identical_check_cca} = {
       class              => "SmallRNA::tRNACheckCCA",
       perform            => 1,
-      target_dir         => $preprocessing_dir . "/identical_check_cca",
+      target_dir         => $intermediate_dir . "/identical_check_cca",
       option             => "",
       source_ref         => [ 'identical', '.fastq.gz$' ],
       untrimmedFastq_ref => $untrimed_ref,
@@ -510,7 +521,7 @@ sub getPrepareConfig {
     $preparation->{identical_NTA} = {
       class      => "SmallRNA::FastqSmallRnaNTA",
       perform    => 1,
-      target_dir => $preprocessing_dir . "/identical_NTA",
+      target_dir => $intermediate_dir . "/identical_NTA",
       option     => $ccaaOption . " -l " . $def->{min_read_length},
       source_ref => [ "identical", ".fastq.gz\$" ],
       extension  => "_clipped_identical_NTA.fastq.gz",
@@ -524,12 +535,12 @@ sub getPrepareConfig {
       },
     };
     push @$individual, ("identical_NTA");
-    $identical_ref = [ "identical_NTA", ".fastq.gz\$" ];
+    $host_identical_ref = [ "identical_NTA", ".fastq.gz\$" ];
   }
 
   $config = merge( $config, $preparation );
 
-  return ( $config, $individual, $summary, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir, $identical_ref );
+  return ( $config, $individual, $summary, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir, $identical_ref, $host_identical_ref );
 }
 
 1;
