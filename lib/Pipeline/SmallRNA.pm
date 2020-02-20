@@ -76,9 +76,9 @@ sub getSmallRNAConfig {
   if ($search_nonhost_genome) {
     $nonhost_genome_dir = create_directory_or_die( $def->{target_dir} . "/nonhost_genome" );
     if ( !$search_nonhost_genome_custom_group_only ) {
-      @nonhost_genome_groups      = qw( bacteria_group1 bacteria_group2 fungus_group4 virus_group6 );
-      @nonhost_genome_group_reads = qw( bacteria_group1_reads bacteria_group2_reads fungus_group4_reads virus_group6_reads );
-      @nonhost_genome_group_names = ( "Microbiome Bacteria", "Environment Bacteria", "Fungus", "Virus" );
+      @nonhost_genome_groups      = qw( bacteria_group1 bacteria_group2 fungus_group4 algae_group5 virus_group6 );
+      @nonhost_genome_group_reads = qw( bacteria_group1_reads bacteria_group2_reads fungus_group4_reads algae_group5_reads virus_group6_reads );
+      @nonhost_genome_group_names = ( "Microbiome Bacteria", "Environment Bacteria", "Fungus", "Algae", "Virus" );
     }
 
     if ( getValue( $def, "search_nonhost_genome_custom_group", 0 ) ) {
