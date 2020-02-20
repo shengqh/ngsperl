@@ -92,9 +92,9 @@ sub result {
       my $outputFolder  = scalar(@$files) == 1 ? "" : $output . "/";
       my $annoFile      = $output . ".annotation.txt";
       my $annoStatsFile = $output . ".annotation.stats";
-      push( @result_files, "${result_dir}/${outputFolder}$annoFile" );
-      push( @result_files, "${result_dir}/${outputFolder}$annoStatsFile" );
-      push( @result_files, "${result_dir}/${outputFolder}homerResults.html" );
+      push( @result_files, "${result_dir}/${pairName}/${outputFolder}$annoFile" );
+      push( @result_files, "${result_dir}/${pairName}/${outputFolder}$annoStatsFile" );
+      push( @result_files, "${result_dir}/${pairName}/${outputFolder}homerResults.html" );
     }
     $result->{$pairName} = filter_array( \@result_files, $pattern );
   }
