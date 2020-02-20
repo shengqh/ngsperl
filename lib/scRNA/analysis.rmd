@@ -93,7 +93,7 @@ ORA_celltype<-function(medianexp,cellType,weight){
       ind<-match(names(weight_ss),genenames)
       exp_ss<-clusterexp_z[ind[!is.na(ind)]]
       weight_ss<-weight_ss[!is.na(ind)]
-      CTA_result[i,j]<-sum(exp_ss*weight_ss)/(length(exp_ss)^0.3)
+      CTA_result[i,j]<-sum(exp_ss*weight_ss)/(length(exp_ss)^(1/3))
     }
   }
   rownames(ORA_result)<-rownames(CTA_result)<-names(cellType)
@@ -158,7 +158,8 @@ nFeature_cutoff_min=as.numeric(options$nFeature_cutoff_min)
 nFeature_cutoff_max=as.numeric(options$nFeature_cutoff_max)
 nCount_cutoff=as.numeric(options$nCount_cutoff)
 mt_cutoff=as.numeric(options$mt_cutoff)
-nCount_sd_cutoff=as.numeric(options$nCount_sd_cutoff)
+#nCount_sd_cutoff=as.numeric(options$nCount_sd_cutoff)
+nCount_sd_cutoff=0
 
 pca_dims<-1:as.numeric(options$pca_dims)
 

@@ -27,3 +27,9 @@ for(gene in genes){
   print(g)
   dev.off()
 }
+
+png(filename=paste0(outFile, ".dot.png"), width=5000, height=2500, res=300)
+p<-DotPlot(obj, group.by="seurat_cellactivity_clusters", features=genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
+  xlab(paste0(ct, " expressed genes"))
+print(p)
+dev.off()
