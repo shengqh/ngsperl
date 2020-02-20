@@ -135,6 +135,8 @@ else
   echo performing star ...
   $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
   rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
+  
+  $index_command
 
   mv ${sample_name}* $cur_dir
   cd $cur_dir
