@@ -391,15 +391,15 @@ for (i in 1:nrow(countTableFileAll)) {
         
         if(!is.na(conditionColors[1])){
           if(is.null(legendfun)){
-            heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,ColSideColors=conditionColors)
+            heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,ColSideColors=conditionColors,cexCol=hcaOption$cexCol)
           }else{
-            heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,legendfun=legendfun,ColSideColors=conditionColors)
+            heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,legendfun=legendfun,ColSideColors=conditionColors,cexCol=hcaOption$cexCol)
           }
         } else {
           if(is.null(legendfun)){
-            heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols)
+            heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,cexCol=hcaOption$cexCol)
           }else{
-            heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,legendfun=legendfun)
+            heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,legendfun=legendfun,cexCol=hcaOption$cexCol)
           }
         }
         
@@ -449,7 +449,7 @@ for (i in 1:nrow(countTableFileAll)) {
           png(paste0(outputFilePrefix,curSuffix,".Correlation.png"),width=width,height=width,res=300)
         }
         labRow=NULL
-        hcaOption<-getHeatmapOption(countNumCor)
+        hcaOption<-getHeatmapOption(countNumCor, TRUE)
         if(all(!is.na(conditionColors))) { #has group information
           heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,ColSideColors=conditionColors)
         }else{
@@ -523,7 +523,7 @@ for (i in 1:nrow(countTableFileAll)) {
           axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
         }
         
-        hcaOption<-getHeatmapOption(countNumCor)
+        hcaOption<-getHeatmapOption(countNumCor, TRUE)
         for(format in outputFormat){
           if("PDF" == format){
             pdf(paste0(outputFilePrefix,curSuffix,".Group.Correlation.pdf"),width=10,height=10)
