@@ -21,12 +21,16 @@ if(!exists("useLeastGroups")){
   useLeastGroups<-FALSE
 }
 
-getHeatmapOption<-function(countHT){
+getHeatmapOption<-function(countHT, isCorr=FALSE){
 	labRow=""
 	Rowv=NULL
 	showRowDendro=FALSE
-	cmargin=max(5, min(12,max(nchar(colnames(countHT)))/2))
-	rmargin=5
+	cmargin=max(8, min(12,max(nchar(colnames(countHT)))/2))
+	if(isCorr){
+		rmargin=cmargin
+	}else{
+		rmargin=5
+	}
 	if(nrow(countHT) < 30){
 		showRowDendro=TRUE
 		labRow=NULL
@@ -36,7 +40,8 @@ getHeatmapOption<-function(countHT){
 		Rowv=NA
 	}
 	margin=c(cmargin,rmargin)
-	return(list(labRow=labRow, Rowv=Rowv, showRowDendro=showRowDendro, margin=margin))
+	cexCol=max(1,0.2 + 1/log10(ncol(countHT)))
+	return(list(labRow=labRow, Rowv=Rowv, showRowDendro=showRowDendro, margin=margin, cexCol=cexCol))
 }
 
 theme_bw2 <- function () { 
