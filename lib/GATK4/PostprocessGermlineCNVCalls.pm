@@ -59,7 +59,7 @@ sub perform {
     my $sample_name = $sample_names[$i];
 
     my $sample_dir = create_directory_or_die( $result_dir . "/" . $sample_name );
-
+    my $denoised_copy_ratios_filename = $sample_name . ".denoised_copy_ratios.tsv";
     my $genotyped_intervals_vcf_filename = $sample_name . ".genotyped_intervals.vcf.gz";
     my $genotyped_segments_vcf_filename  = $sample_name . ".genotyped_segments.vcf.gz";
 
@@ -83,6 +83,7 @@ gatk --java-options \"$java_option\" PostprocessGermlineCNVCalls $option \\
   --allosomal-contig ${chrPrefix}X \\
   --allosomal-contig ${chrPrefix}Y $parameters \\
   --contig-ploidy-calls $contig_ploidy_calls_dir \\
+  --output-denoised-copy-ratios $denoised_copy_ratios_filename \\
   --output-genotyped-intervals $genotyped_intervals_vcf_filename \\
   --output-genotyped-segments $genotyped_segments_vcf_filename
 
@@ -120,7 +121,10 @@ sub result {
     my $sample_dir                       = $result_dir . "/" . $sample_name;
     my $genotyped_intervals_vcf_filename = $sample_name . ".genotyped_intervals.vcf.gz";
     my $genotyped_segments_vcf_filename  = $sample_name . ".genotyped_segments.vcf.gz";
-    $result->{$sample_name} = filter_array( [ "${sample_dir}/$genotyped_intervals_vcf_filename", "${sample_dir}/$genotyped_segments_vcf_filename" ], $pattern );
+    my $denoised_copy_ratios_filename = $sample_name . ".denoised_copy_ratios.tsv";
+    $result->{$sample_name} = filter_array( [ "${sample_dir}/$genotyped_intervals_vcf_filename", 
+                                              "${sample_dir}/$genotyped_segments_vcf_filename",
+                                              "${sample_dir}/$denoised_copy_ratios_filename" ], $pattern );
   }
 
   return $result;
