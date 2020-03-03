@@ -127,6 +127,8 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "table_vis_group_text_size", 10 );
   initDefaultValue( $def, "sequencetask_run_time",     12 );
 
+  initDefaultValue( $def, "top25cv_in_hca",     0 );
+
   initDefaultValue( $def, "DE_fold_change",              1.5 );
   initDefaultValue( $def, "DE_min_median_read_top",      2 );
   initDefaultValue( $def, "DE_min_median_read_smallRNA", 5 );
@@ -430,7 +432,7 @@ sub getPrepareConfig {
     identical => {
       class      => "CQS::FastqIdentical",
       perform    => 1,
-      target_dir => $intermediate_dir . "/identical",
+      target_dir => $preprocessing_dir . "/identical",
       option     => "-l " . $def->{min_read_length},
       source_ref => $source_ref,
       extension  => "_clipped_identical.fastq.gz",
