@@ -217,7 +217,7 @@ if(hasDEseq2 ){
   print(kable_styling(kable(output_table3, caption= tabRef("deseq2_table", paste0("DEG numbers under FC > ", rnaseqOptions["DE_fold_change", 1], " & ",pValueText," < ", rnaseqOptions["DE_pvalue", 1])))))
 
   fpkm_file <- files["genetable_fpkm", 1]
-  fpkm <- data.frame(fread(fpkm_file, data.table=F), row.names=1)
+  fpkm <- data.frame(fread(fpkm_file, data.table=F), row.names=1, check.names=F)
 
   for (i in 1:nrow(DESeq2_files)){
     comparisonName<-DESeq2_files[i,2]

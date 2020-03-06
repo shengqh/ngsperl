@@ -12,16 +12,16 @@ DEBUG = False
 NOT_DEBUG= not DEBUG
 
 if DEBUG:
-  genomeListFile="/scratch/cqs/shengq2/vickers/20191112_smallRNA_3018-KCV_76_mouse_v4_tRNA_byTiger/data_visualization/bacteria_count/result/HDL_76__fileList1.list"
-  databaseListFile = "/scratch/cqs/shengq2/vickers/20191112_smallRNA_3018-KCV_76_mouse_v4_tRNA_byTiger/data_visualization/bacteria_count/result/HDL_76__fileList2.list"
-  taskReadFile = "/scratch/cqs/shengq2/vickers/20191112_smallRNA_3018-KCV_76_mouse_v4_tRNA_byTiger/data_visualization/reads_in_tasks/result/HDL_76.NonParallel.TaskReads.csv"
-  outputFile="/scratch/cqs/shengq2/vickers/20191112_smallRNA_3018-KCV_76_mouse_v4_tRNA_byTiger/data_visualization/bacteria_count/result/HDL_76.bacteria.count"
+  genomeListFile="/scratch/stein_lab/shengq2/20200226_4233_4263_michelle_smallRNA_human_v5_byTiger/data_visualization/bacteria_count/result/StaRRA_human_4233_4263__fileList1.list"
+  databaseFile = "/scratch/stein_lab/shengq2/20200226_4233_4263_michelle_smallRNA_human_v5_byTiger/nonhost_library/bowtie1_rRNA_pm_table/result/rRNA_pm_StaRRA_human_4233_4263.count.xml"
+  taskReadFile = "/scratch/stein_lab/shengq2/20200226_4233_4263_michelle_smallRNA_human_v5_byTiger/data_visualization/reads_in_tasks/result/StaRRA_human_4233_4263.NonParallel.TaskReads.csv"
+  outputFile="/scratch/stein_lab/shengq2/20200226_4233_4263_michelle_smallRNA_human_v5_byTiger/data_visualization/bacteria_count/result/StaRRA_human_4233_4263.tsv"
 else:
-  parser = argparse.ArgumentParser(description="Generate smallRNA count from mapped xml.",
+  parser = argparse.ArgumentParser(description="Generate smallRNA count from count xml.",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   parser.add_argument('-g', '--genomeListFile', action='store', nargs='?', help='Input bacteria genome count xml list file', required=NOT_DEBUG)
-  parser.add_argument('-d', '--databaseListFile', action='store', nargs='?', help="Original rRNA database count xml list file", required=NOT_DEBUG)
+  parser.add_argument('-d', '--databaseFile', action='store', nargs='?', help="Original rRNA database count xml file", required=NOT_DEBUG)
   parser.add_argument('-t', '--taskReadFile', action='store', nargs='?', help="Task read count file", required=NOT_DEBUG)
   parser.add_argument('-o', '--output', action='store', nargs='?', help="Output count file", required=NOT_DEBUG)
 
@@ -30,59 +30,59 @@ else:
   print(args)
   
   genomeListFile = args.genomeListFile
-  databaseListFile = args.databaseListFile
+  databaseFile = args.databaseFile
   taskReadFile = args.taskReadFile
   outputFile = args.output
 
 logger = logging.getLogger('getBacteriaCount')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
-def readFileMap(fileName):
-  result = {}
+def readFileList(fileName):
+  result = []
   with open(fileName) as fh:
     for line in fh:
-      filepath, name = line.strip().split('\t', 1)
-      result.setdefault(name, []).append(filepath.strip())
+      filepath = line.strip().split('\t', 1)[0]
+      result.append(filepath)
   return(result)
    
-genomeFileMap = readFileMap(genomeListFile)
-dbFileMap = readFileMap(databaseListFile)
+genomeFiles = readFileList(genomeListFile)
 
-samples = sorted(set(sample for sample in genomeFileMap.keys()))
-
+sample_names = set()
 result = {}
-for name in genomeFileMap.keys():
-  logger.info("Parsing " + name)
+for genomeFile in genomeFiles:
+  logger.info("Parsing " + genomeFile)
   queryMap = {}
 
-  for genomeFile in genomeFileMap[name]:
-    logger.info("  Parsing " + genomeFile)
-    tree = ET.parse(genomeFile)
-    root = tree.getroot()
-    queries = root.find('queries')
-    for query in queries.findall('query'):
-      query_count = int(query.get("count"))
-      query_seq = query.get("seq")
-      result.setdefault(query_seq, {})[name] = query_count
+  tree = ET.parse(genomeFile)
+  root = tree.getroot()
+  queries = root.find('queries')
+  for query in queries.findall('query'):
+    query_count = int(query.get("count"))
+    query_seq = query.get("seq")
+    sample_name = query.get("sample")
+    sample_names.add(sample_name)
+    result.setdefault(query_seq, {})[sample_name] = query_count
     
-  for dbFile in dbFileMap[name]:
-    logger.info("  Parsing " + dbFile)
-    tree = ET.parse(dbFile)
-    root = tree.getroot()
-    queries = root.find('queries')
-    for query in queries.findall('query'):
-      is_bacteria = False
-      for loc in query.findall('location'):
-        seqname = loc.get("seqname")
-        if seqname == "Bacteria":
-          is_bacteria = True
-          break
-      
-      if is_bacteria:
-        query_count = int(query.get("count"))
-        query_seq = query.get("seq")
-        result.setdefault(query_seq, {})[name] = query_count
+logger.info("Parsing " + databaseFile)
+tree = ET.parse(databaseFile)
+root = tree.getroot()
+queries = root.find('queries')
+for query in queries.findall('query'):
+  is_bacteria = False
+  for loc in query.findall('location'):
+    seqname = loc.get("seqname")
+    if seqname == "Bacteria":
+      is_bacteria = True
+      break
+  
+  if is_bacteria:
+    query_count = int(query.get("count"))
+    query_seq = query.get("seq")
+    sample_name = query.get("sample")
+    sample_names.add(sample_name)
+    result.setdefault(query_seq, {})[sample_name] = query_count
 
+samples = sorted(sample_names)
 seq_count = [ [seq, sum(result[seq].values())] for seq in result.keys()]
 
 def sortSecond(val): 

@@ -2130,9 +2130,9 @@ sub getSmallRNAConfig {
     $config->{bacteria_count} = {
       'class'                    => 'CQS::ProgramWrapper',
       'parameterSampleFile1_arg' => '-g',
-      'parameterSampleFile1_ref' => [ "bowtie1_bacteria_group1_pm_count", ".mapped.xml\$", "bowtie1_bacteria_group2_pm_count", ".mapped.xml\$", ],
-      'parameterSampleFile2_arg' => '-d',
-      'parameterSampleFile2_ref' => [ "bowtie1_rRNA_pm_count", ".mapped.xml\$" ],
+      'parameterSampleFile1_ref' => [ "bowtie1_bacteria_group1_pm_table", ".count.xml\$", "bowtie1_bacteria_group2_pm_table", ".count.xml\$", ],
+      'parameterFile2_arg' => '-d',
+      'parameterFile2_ref' => [ "bowtie1_rRNA_pm_table", ".count.xml\$" ],
       'parameterFile3_arg'       => '-t',
       'parameterFile3_ref'       => [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv\$" ],
       'option'                   => "",
