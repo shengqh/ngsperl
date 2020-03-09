@@ -164,8 +164,9 @@ if (species=="hsa") {
 resultTableFcToGene<-convertId(temp,filters=geneIdType,dataset=dataset)
 #	geneExpr<-resultTableFcToGene[,1]
 #	names(geneExpr)<-row.names(resultTableFcToGene)
-png(paste0(outFile,".KEGG.OverallExpression.png"),width=2000,height=4000,res=300)
-plot_pathway_overall(resultTableFcToGene,species = species,pathwayNumInFigure = 10)
+png(paste0(outFile,".KEGG.OverallExpression.png"),width=3000,height=4000,res=300)
+p=plot_pathway_overall(resultTableFcToGene,species = species,pathwayNumInFigure = 10)
+plot(p + theme(legend.position="top"))
 dev.off()
 keggEnrichedPathway<-find_enriched_pathway(row.names(resultTableFcToGene),species=species,returned_genenumber = 5,returned_pvalue=1,returned_adjpvalue = 1)
 #dim(KEGGresult1[[1]])
