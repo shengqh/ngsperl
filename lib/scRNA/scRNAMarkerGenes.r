@@ -19,22 +19,17 @@ celltypes<-celltypes[celltypes$Gene %in% rownames(obj),]
 #write.csv(allgenes, "all_gene.csv")
 #celltypes$Gene<-paste0(substr(celltypes$Gene,1,1),substr(tolower(celltypes$Gene),2,nchar(celltypes$Gene)))
 
-if(exists("parFile3") && file.exists(parFile3)){
-  clusterDf<-read.csv(parFile3)
+clusterDf<-read.csv(parFile3, stringsAsFactors = F)
+clusters<-clusterDf[,cluster_name]
 
-  final_seurat_clusters<-clusterDf$final_seurat_clusters
-  
-  caCount<-table(clusterDf$cellactivity_clusters)
-  clusterDf$caCount<-caCount[clusterDf$cellactivity_clusters]
-  
-  clusterDf<-clusterDf[order(-clusterDf$caCount, clusterDf$seurat_cluters),]
-  
-  final_seurat_clusters<-factor(final_seurat_clusters, levels=unique(clusterDf$final_seurat_clusters))
+caCount<-table(clusters)
+clusterDf$caCount<-caCount[clusters]
 
-  obj$final_seurat_clusters<-final_seurat_clusters
-}else{
-  obj$final_seurat_clusters<-obj$seurat_cellactivity_clusters
-}
+clusterDf<-clusterDf[order(-clusterDf$caCount, clusterDf$seurat_cluters),]
+
+clusters<-factor(clusters, levels=unique(clusterDf[,cluster_name]))
+
+obj$final_seurat_clusters<-clusters
 
 ct<-unique(celltypes$Celltype)[1]
 for(ct in unique(celltypes$Celltype)){
