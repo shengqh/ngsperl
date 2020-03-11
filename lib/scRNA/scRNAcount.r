@@ -1,24 +1,26 @@
+
 library(Seurat)
 
 finalList<-readRDS(parFile1)
 
-output_cluster<-function(obj, cts, cts_name, DE_by_celltype=TRUE){
-  cts_cluster<-data.frame(Cluster=levels(obj), CellType=names(cts), Score=cts )
-  cts_files<-gsub(" ", "_", cts_cluster$CellType)
-  if(DE_by_celltype){
-    cts_cluster$DE<-cts_files
-  }else{
-    cts_cluster$DE<-paste0(cts_cluster$Cluster, "_", cts_files)
-  }  
+output_cluster<-function(obj, outFile, cluster_name){
+  clusterCells<-obj[[cluster_name]]
+  cluster<-data.frame(Cluster=unique(clusterCells[,1]))
+  files<-gsub(" ", "_", cluster$Cluster)
+  files<-gsub(":", "_", files)
+  files<-gsub("_+", "_", files)
+  cluster$DE<-files
+
+  write.csv(cluster, file=paste0(outFile, ".count.files.csv"), row.names=F, quote=F)
   
-  write.csv(cts_cluster, file=paste0(cts_name, ".count.files.csv"), row.names=F, quote=F)
-  
-  des_unique<-unique(cts_cluster$DE)
+  des_unique<-unique(cluster$DE)
+  de<-des_unique[1]
   for(de in des_unique){
-    de_ids<-cts_cluster$Cluster[cts_cluster$DE == de]
-    de_obj<-subset(obj, ident=de_ids)
+    de_ids<-cluster$Cluster[cluster$DE == de]
+    cells<-rownames(clusterCells)[clusterCells[,1] %in% de_ids]
+    de_obj<-obj[, cells]
     de_count<-as.matrix(de_obj[["RNA"]]@counts)
-    de_file_name<-paste0(cts_name, ".", de, ".count")
+    de_file_name<-paste0(outFile, ".", de, ".count")
     saveRDS(de_count, paste0(de_file_name,".rds"))
     
     orig.ident<-de_obj[["orig.ident"]]
@@ -27,6 +29,9 @@ output_cluster<-function(obj, cts, cts_name, DE_by_celltype=TRUE){
   }
 }
 
-cts<-finalList$cell_activity_database$predicted$max_cta
 obj<-finalList$obj
-output_cluster(obj, cts, outFile, DE_by_celltype)
+
+clusterDf<-read.csv(parFile2, stringsAsFactors = F, row.names=1)
+obj[[cluster_name]]<-clusterDf[names(obj$orig.ident), cluster_name]
+
+output_cluster(obj, outFile, cluster_name)
