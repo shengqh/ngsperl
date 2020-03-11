@@ -23,12 +23,21 @@ clusters<-clusters[order(clusters$cell),]
 clusters$final_clusters<-clusters$renamed_cellactivity_clusters
 clusters$final_seurat_clusters<-clusters$renamed_seurat_cellactivity_clusters
 
-write.csv(clusters, file=paste0(outFile, ".rename_clusters.csv"))
+write.csv(clusters, file=paste0(outFile, ".rename_cluster.csv"))
 
 obj$renamed_cellactivity_clusters<-clusters$renamed_cellactivity_clusters
 obj$renamed_seurat_cellactivity_clusters<-clusters$renamed_seurat_cellactivity_clusters
 
-png(file=paste0(outFile, ".rename_clusters.png"), width=3200, height=3000, res=300)
+png(file=paste0(outFile, ".rename_cluster.png"), width=3200, height=3000, res=300)
 g<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="renamed_seurat_cellactivity_clusters")
 print(g)
 dev.off()
+
+cellcounts<-data.frame(Sample=obj$orig.ident, Cluster=obj$renamed_seurat_cellactivity_clusters)
+ctable<-t(table(cellcounts))
+
+ctable_perThousand <- round(ctable / colSums(ctable) * 1000)
+colnames(ctable_perThousand)<-paste0(colnames(ctable), "_perThousand")
+
+final<-cbind(ctable, ctable_perThousand)
+write.csv(final, file=paste0(outFile, ".rename_clusters.cells.csv"))
