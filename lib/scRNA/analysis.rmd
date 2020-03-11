@@ -357,6 +357,10 @@ if(isCalc){
   seurat_cellactivity_colors<-unique(clusterDf$seurat_colors)
   obj[["seurat_cellactivity_clusters"]] <- seurat_cellactivity
   
+  clusters<-data.frame("cell" = c(1:length(obj$seurat_clusters)), "seurat_cluters"=as.numeric(as.character(obj$seurat_clusters)), "cellactivity_clusters"=obj$cellactivity_clusters, "seurat_cellactivity_clusters"=obj$seurat_cellactivity_clusters, stringsAsFactors = F)
+  rownames(clusters)<-names(obj$seurat_clusters)
+  write.csv(clusters, file=paste0(prefix, ".cluster.csv"))
+    
   cta_index<-apply(predict_celltype$cta,2,function(x){return(order(x,decreasing=T)[1:2])})
   cta_index<-unique(sort(cta_index))
   
