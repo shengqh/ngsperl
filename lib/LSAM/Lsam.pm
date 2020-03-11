@@ -31,8 +31,16 @@ sub perform {
   my ( $raw_files, $samples ) = get_raw_files_and_keys( $config, $section );
 
   my $lsamSoftware = get_option( $config, $section, "liver_model_console" );
-  my $randomSeed   = get_option( $config, $section, "random_seed" );
   my $iteration    = get_option( $config, $section, "iteration" );
+  
+  my $patient_files = get_option( $config, $section, "patient_files", [] );
+  my $donor_files = get_option( $config, $section, "donor_files", [] );
+  my $status_files = get_option( $config, $section, "status_files", [] );
+  my $random_seeds = get_option( $config, $section, "random_seeds", [] );
+  my $randomSeed = '0';
+  if (scalar(@$random_seeds) == 0){
+    $randomSeed   = get_option( $config, $section, "random_seed" );
+  }
 
   my $shfile = $self->get_file( $pbs_dir, $task_name, ".bat" );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -50,7 +58,6 @@ sub perform {
     my $sampleFolder = create_directory_or_die( $result_dir . "/" . $name );
 
     my $pbs = $self->open_pbs( $pbs_file, "", "", $path_file, $sampleFolder );
-    my $curRandomSeed = $randomSeed;
 
     print $pbs "
 \@echo off
@@ -58,12 +65,27 @@ sub perform {
 set minbytesize=200
 
 ";
-    for my $iter ( 1 .. $iteration ) {
-      my $curName = sprintf( "${name}_iter%02d_", $iter );
-      my $curFinalFile = $curName . "Summary.out";
-      my $command = "$lsamSoftware $option -i:$sample -o:$sampleFolder -n:$curName -s:$curRandomSeed";
-      
-      print $pbs "
+    if (scalar(@$patient_files) > 0){
+      die "patients_files should has same length as donor_files" if (scalar(@$patient_files) != scalar(@$donor_files));
+      die "patients_files should has same length as status_files" if (scalar(@$patient_files) != scalar(@$status_files));
+      if (scalar(@$random_seeds) > 0){
+        die "patients_files should has same length as random_seeds" if (scalar(@$patient_files) != scalar(@$random_seeds));
+      }
+      for my $iter ( 1 .. scalar(@$patient_files) ) {
+        my $curName = sprintf( "${name}_iter%02d_", $iter );
+        my $curFinalFile = $curName . "Summary.out";
+        my $curPatientFile = $patient_files->[$iter-1];
+        my $curDonorFile = $donor_files->[$iter-1];
+        my $curStatusFile = $status_files->[$iter-1];
+        
+        my $curRandomSeed = $randomSeed;
+        if (scalar(@$random_seeds) > 0){
+          $curRandomSeed = $random_seeds->[$iter-1];
+        }
+        
+        my $command = "$lsamSoftware $option -i:$sample -o:$sampleFolder -n:$curName -s:$curRandomSeed -c:$curPatientFile -r:$curDonorFile -t:$curStatusFile";
+        
+        print $pbs "
 echo Checking $curFinalFile ...
 set file=$curFinalFile
 if EXIST \%file\% (
@@ -83,7 +105,36 @@ if EXIST \%file\% (
   $command
 )
 ";
-      $curRandomSeed = $curRandomSeed + 1;
+      }
+    }else{
+      for my $iter ( 1 .. $iteration ) {
+        my $curName = sprintf( "${name}_iter%02d_", $iter );
+        my $curFinalFile = $curName . "Summary.out";
+        my $curRandomSeed = $randomSeed;
+        my $command = "$lsamSoftware $option -i:$sample -o:$sampleFolder -n:$curName -s:$curRandomSeed";
+        
+        print $pbs "
+echo Checking $curFinalFile ...
+set file=$curFinalFile
+if EXIST \%file\% (
+  echo \%file\% exists, check file size ...
+  set curSize=0
+  FOR /F \"usebackq\" \%\%A IN ('\%file\%') DO (
+    echo filesize=\%\%~zA
+    if \%\%~zA LSS \%minbytesize\% (
+      echo failed, do simulation, start at %date% %time%
+      $command
+    ) ELSE (
+      echo simulation has been done, ignored.
+    )
+  )
+) ELSE (
+  echo no result, do simulation, start at %date% %time%
+  $command
+)
+";
+        $curRandomSeed = $curRandomSeed + 1;
+      }
     }
     $self->close_pbs( $pbs, $pbs_file );
 

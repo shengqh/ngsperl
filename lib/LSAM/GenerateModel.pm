@@ -32,6 +32,8 @@ sub perform {
   my $timeRanges = get_option( $config, $section, "time_ranges" );
   my $dsaFiles = $config->{$section}{dsa_files};
 
+  my $mortalityFiles = $config->{$section}{motarlity_files};
+
   my $defOption = "";
   if ( defined $config->{$section}{"def_data_def"} ) {
     $defOption = $defOption . " --defdatadef " . $config->{$section}{"def_data_def"};
@@ -58,29 +60,51 @@ sub perform {
     my $start    = $timeRanges->{$timeName}->[0];
     my $end      = $timeRanges->{$timeName}->[1];
     my $template = $timeRanges->{$timeName}->[2];
+
+    die "template file not exists: " . $template if !-e $template;
+
     for my $methodName ( keys %$methods ) {
       my $methodFile = $methods->{$methodName}[0];
+      die "method file not exists: " . $methodFile if !-e $methodFile;
+
       if ( defined $dsaFiles ) {
         my @dsaNames = keys %$dsaFiles;
         for my $dsaName (@dsaNames) {
           my $dsaFile = $dsaFiles->{$dsaName}[0];
-          my $finalFile;
+          die "dsa file not exists: " . $dsaFile if !-e $dsaFile;
+
+          my $key = $timeName . "_" . $methodName;
           if ( scalar(@dsaNames) > 1 ) {
-            $finalFile = $timeName . "_" . $methodName . "_" . $dsaName . ".inp";
+            $key = $key . "_" . $dsaName;
           }
-          else {
-            $finalFile = $timeName . "_" . $methodName . ".inp";
-          }
+          my $finalFile = $key . ".inp";
 
           print $pbs "
-python $py_script -i $template -o $finalFile $defOption --name ${timeName}_${methodName} --method $methodFile --dsa $dsaFile --start \"$start\" --end \"$end\" 
+python $py_script -i $template -o $finalFile $defOption --name $key --method $methodFile --dsa $dsaFile --start \"$start\" --end \"$end\" 
+";
+        }
+      }
+      elsif ( defined $mortalityFiles ) {
+        my @mNames = keys %$mortalityFiles;
+        for my $mName (@mNames) {
+          my $mFile = $mortalityFiles->{$mName};
+          die "motarlity file not exists: " . $mFile if !-e $mFile;
+
+          my $key = $timeName . "_" . $methodName;
+          if ( scalar(@mNames) > 1 ) {
+            $key = $key . "_" . $mName;
+          }
+          my $finalFile = $key . ".inp";
+
+          print $pbs "
+python $py_script -i $template -o $finalFile $defOption --name $key --method $methodFile --mortality $mFile --startTime \"$start\" --endTime \"$end\" 
 ";
         }
       }
       else {
         my $finalFile = $timeName . "_" . $methodName . ".inp";
         print $pbs "
-python $py_script -i $template -o $finalFile $defOption --name ${timeName}_${methodName} --method $methodFile --start \"$start\" --end \"$end\"
+python $py_script -i $template -o $finalFile $defOption --name ${timeName}_${methodName} --method $methodFile --startTime \"$start\" --endTime \"$end\"
 ";
       }
     }
@@ -96,8 +120,9 @@ sub result {
   $result_dir =~ s/\//\\/g;
 
   my $methods = get_raw_files( $config, $section );
-  my $timeRanges = get_option( $config, $section, "time_ranges" );
-  my $dsaFiles = $config->{$section}{dsa_files};
+  my $timeRanges     = get_option( $config, $section, "time_ranges" );
+  my $dsaFiles       = $config->{$section}{dsa_files};
+  my $mortalityFiles = $config->{$section}{motarlity_files};
 
   my $result = {};
   for my $timeName ( keys %$timeRanges ) {
@@ -105,10 +130,21 @@ sub result {
       if ( defined $dsaFiles ) {
         my @dsaNames = keys %$dsaFiles;
         for my $dsaName (@dsaNames) {
-          my $dsaFile = $dsaFiles->{$dsaName}[0];
-          my $key     = $timeName . "_" . $methodName;
+          my $key = $timeName . "_" . $methodName;
           if ( scalar(@dsaNames) > 1 ) {
-            $key = $key . "_" . $dsaName . ".inp";
+            $key = $key . "_" . $dsaName;
+          }
+          my $finalFile    = $key . ".inp";
+          my @result_files = ( $result_dir . "\\" . $finalFile );
+          $result->{$key} = filter_array( \@result_files, $pattern );
+        }
+      }
+      elsif ( defined $mortalityFiles ) {
+        my @mNames = keys %$mortalityFiles;
+        for my $mName (@mNames) {
+          my $key = $timeName . "_" . $methodName;
+          if ( scalar(@mNames) > 1 ) {
+            $key = $key . "_" . $mName;
           }
           my $finalFile    = $key . ".inp";
           my @result_files = ( $result_dir . "\\" . $finalFile );
