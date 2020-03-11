@@ -93,7 +93,9 @@ for(ct in cts_unique){
   rds_file = paste0(ct_file_name,".rds")
   sample_file = paste0(ct_file_name,".sample.csv")
   
-  ct_count<-readRDS(rds_file)
+  de_obj<-readRDS(rds_file)
+  ct_count<-as.matrix(de_obj[["RNA"]]@counts)
+
   sample_df<-read.csv(sample_file)
   colnames(sample_df)<-c("Cell","Sample")
   
@@ -175,6 +177,19 @@ for(ct in cts_unique){
     siggenes<-data.frame(gene=rownames(sigout))
     sigGenenameFile<-paste0(prefix, "_sig_genename.txt")
     write.table(siggenes, file=sigGenenameFile, row.names=F, col.names=F, sep="\t", quote=F)
+
+    if (nrow(siggenes) > 0){
+      cell_obj=de_obj[,colnames(cells)]
+      ddata<-designdata
+      rownames(ddata)<-ddata$Sample
+      cell_obj$Group=ifelse(ddata[colnames(cells), "Group"]==1, "Control", "Sample")
+      pdf(file=paste0(prefix, ".sig_genename.pdf"), onefile = T, width=14, height=7)
+      siggene<-siggenes$gene[1]
+      for (siggene in siggenes$gene){
+        print(FeaturePlot(cell_obj, features=siggene, split.by = "Group"))
+      }
+      dev.off()
+    }
     
     gseaFile<-paste0(prefix, "_GSEA.rnk")
     rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * out$table$F)
