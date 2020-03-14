@@ -19,9 +19,8 @@ output_cluster<-function(obj, outFile, cluster_name){
     de_ids<-cluster$Cluster[cluster$DE == de]
     cells<-rownames(clusterCells)[clusterCells[,1] %in% de_ids]
     de_obj<-obj[, cells]
-    de_count<-as.matrix(de_obj[["RNA"]]@counts)
     de_file_name<-paste0(outFile, ".", de, ".count")
-    saveRDS(de_count, paste0(de_file_name,".rds"))
+    saveRDS(de_obj, paste0(de_file_name,".rds"))
     
     orig.ident<-de_obj[["orig.ident"]]
     colnames(orig.ident)<-c("Sample")

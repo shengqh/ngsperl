@@ -6,18 +6,18 @@ finalList<-readRDS(parFile1)
 obj<-finalList$obj
 
 newnames<-read.table(parSampleFile2, stringsAsFactors = F, sep="\t", header=F)
-clusters<-data.frame("cell" = c(1:length(obj$seurat_clusters)), "seurat_cluters"=as.numeric(as.character(obj$seurat_clusters)), "cellactivity_clusters"=obj$cellactivity_clusters, "seurat_cellactivity_clusters"=obj$seurat_cellactivity_clusters, stringsAsFactors = F)
-clusters<-clusters[order(clusters$seurat_cluters),]
+clusters<-data.frame("cell" = c(1:length(obj$seurat_clusters)), "seurat_clusters"=as.numeric(as.character(obj$seurat_clusters)), "cellactivity_clusters"=obj$cellactivity_clusters, "seurat_cellactivity_clusters"=obj$seurat_cellactivity_clusters, stringsAsFactors = F)
+clusters<-clusters[order(clusters$seurat_clusters),]
 clusters$renamed_cellactivity_clusters<-clusters$cellactivity_clusters
 
 idx<-1
 for(idx in c(1:nrow(newnames))){
   oldcluster<-newnames$V2[idx]
   newcluster<-newnames$V1[idx]
-  clusters$renamed_cellactivity_clusters[clusters$seurat_cluters==oldcluster]<-newcluster
+  clusters$renamed_cellactivity_clusters[clusters$seurat_clusters==oldcluster]<-newcluster
 }
 
-clusters$renamed_seurat_cellactivity_clusters<-paste0(clusters$seurat_cluters, " : ", clusters$renamed_cellactivity_clusters)
+clusters$renamed_seurat_cellactivity_clusters<-paste0(clusters$seurat_clusters, " : ", clusters$renamed_cellactivity_clusters)
 clusters$renamed_seurat_cellactivity_clusters<-factor(clusters$renamed_seurat_cellactivity_clusters, levels=unique(clusters$renamed_seurat_cellactivity_clusters))
 clusters<-clusters[order(clusters$cell),]
 clusters$final_clusters<-clusters$renamed_cellactivity_clusters

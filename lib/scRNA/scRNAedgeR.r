@@ -1,71 +1,8 @@
 
 library(edgeR)
-library(heatmap3)
-
-openPlot<-function(filePrefix, format, pdfWidth, pdfHeight, otherWidth, otherHeight, figureName){
-  fileName<-paste0(filePrefix, ".", tolower(format))
-  if(format == "PDF"){
-    pdf(fileName, width=pdfWidth, height=pdfHeight, useDingbats=FALSE)
-  }else if(format == "TIFF"){
-    tiff(filename=fileName, width=otherWidth, height=otherHeight, res=300)
-  }else {
-    png(filename=fileName, width=otherWidth, height=otherHeight, res=300)
-  }
-  cat("saving", figureName, "to ", fileName, "\n")
-}
-
-drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnames, outputFormat, usePearsonInHCA=TRUE){
-  genecount<-nrow(rldselect)
-  showRowDendro = genecount <= 50
-  if(genecount > 2){
-    cexCol = max(1.0, 0.2 + 1/log10(ncol(rldselect)))
-    if(ispaired){
-      htColors<-rainbow(length(unique(designData$Paired)))
-      gsColors<-as.matrix(data.frame(Group=conditionColors, Sample=htColors[designData$Paired]))
-    }else{
-      gsColors = conditionColors;
-    }
-    if (genecount<=30) {
-      labRow=row.names(rldselect)
-      margins=c(12,8)
-    } else {
-      labRow=NA
-      margins=c(12,5)
-    }
-    
-    filePrefix<-paste0(prefix, ".heatmap")
-    for(format in outputFormat){
-      openPlot(filePrefix, format, 10, 10, 3000, 3000, "HCA")
-      if(usePearsonInHCA){
-        heatmap3(rldselect, 
-                 col = hmcols, 
-                 ColSideColors = gsColors, 
-                 margins=margins, 
-                 scale="r", 
-                 labRow=labRow,
-                 showRowDendro=showRowDendro,
-                 main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
-                 cexCol=cexCol, 
-                 useRaster=FALSE,
-                 legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
-      }else{
-        heatmap3(rldselect, 
-                 col = hmcols, 
-                 ColSideColors = gsColors, 
-                 margins=margins, 
-                 scale="r", 
-                 distfun=dist, 
-                 labRow=labRow,
-                 showRowDendro=showRowDendro,
-                 main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
-                 cexCol=cexCol, 
-                 useRaster=FALSE,
-                 legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
-      }
-      dev.off()
-    }
-  }
-}
+library(ggplot2)
+library(ggpubr)
+library(Seurat)
 
 sumcount<-function(ct_count, names, sample_df){
   result<-lapply(names, function(x){
@@ -77,12 +14,17 @@ sumcount<-function(ct_count, names, sample_df){
   return(rescount)
 }
 
-comparisons<-read.table(parSampleFile2, stringsAsFactors = F)
-comparisonNames<-unique(comparisons$V3)
-
 cts_cluster<-read.csv(parFile1)
 cts_folder<-dirname(parFile1)
+
 cts_unique<-rev(unique(cts_cluster$DE))
+
+sampleGroups<-read.table(parSampleFile1, stringsAsFactors = F)
+colnames(sampleGroups)<-c("Sample","Group")
+
+comparisons<-read.table(parSampleFile2, stringsAsFactors = F)
+colnames(comparisons)<-c("Group", "Comparison")
+comparisonNames<-unique(comparisons$Comparison)
 
 ct<-cts_unique[1]
 cts_name<-paste0(outFile, ".")
@@ -92,46 +34,47 @@ for(ct in cts_unique){
   ct_file_name<-paste0(cts_folder, "/", cts_name, ct, ".count")
   rds_file = paste0(ct_file_name,".rds")
   sample_file = paste0(ct_file_name,".sample.csv")
+  sample_df<-read.csv(sample_file, stringsAsFactors = F)
+  colnames(sample_df)<-c("Cell","Sample")
   
   de_obj<-readRDS(rds_file)
   ct_count<-as.matrix(de_obj[["RNA"]]@counts)
 
-  sample_df<-read.csv(sample_file)
-  colnames(sample_df)<-c("Cell","Sample")
-  
   comp <-comparisonNames[1]
   for (comp in comparisonNames){
     prefix<-paste0(cts_name, ct, ".", comp , ".edgeR")
-    dge_filename <-paste0(prefix, ".csv")
+    comp_groups<-comparisons[comparisons$Comparison==comp,]
     
-    #if(file.exists(dge_filename)){
-    #  next
-    #}
-
-    comp_groups<-comparisons[comparisons$V3==comp,]
-    control_names<-comp_groups$V1[comp_groups$V2=="control"]
-    sample_names<-comp_groups$V1[comp_groups$V2=="sample"]
-
-    control_names<-control_names[control_names %in% sample_df$Sample]
-    sample_names<-sample_names[sample_names %in% sample_df$Sample]
+    controlGroup<-comp_groups$Group[1]
+    sampleGroup<-comp_groups$Group[2]
+    
+    control_names<-sampleGroups$Sample[sampleGroups$Group==controlGroup]
+    sample_names<-sampleGroups$Sample[sampleGroups$Group==sampleGroup]
+    
+    allsamples<-unique(sample_df$Sample)
+    
+    control_names<-control_names[control_names %in% allsamples]
+    sample_names<-sample_names[sample_names %in% allsamples]
     
     if(DE_by_cell){
       cell_control<-ct_count[,sample_df$Cell[sample_df$Sample %in% control_names]]
-      cell_control_group<-rep(1, ncol(cell_control))
+      cell_control_group<-rep("control", ncol(cell_control))
       
       cell_sample<-ct_count[,sample_df$Cell[sample_df$Sample %in% sample_names]]
-      cell_sample_group<-rep(2, ncol(cell_sample))
+      cell_sample_group<-rep("sample", ncol(cell_sample))
     }else{
       cell_control<-sumcount(ct_count, control_names, sample_df)
-      cell_control_group<-rep(1, ncol(cell_control))
+      cell_control_group<-rep("control", ncol(cell_control))
       
       cell_sample<-sumcount(ct_count, sample_names, sample_df)
-      cell_sample_group<-rep(2, ncol(cell_sample))
+      cell_sample_group<-rep("sample", ncol(cell_sample))
     }
-
+    
     cells<-cbind(cell_control, cell_sample)
     groups<-c(cell_control_group, cell_sample_group)
 
+    dge_filename <-paste0(prefix, ".csv")
+    
     #filter genes with zero count
     cells<-cells[rowSums(cells)>0,]
     
@@ -143,7 +86,11 @@ for(ct in cts_unique){
     cells<-cells[keep_rows,]
     tpm<-tpm[keep_rows,]
 
-    designdata<-data.frame("Group"=groups, "Sample"=colnames(cells))
+    designdata<-data.frame("Group"=groups, "Cell"=colnames(cells))
+    if(bComparingCluster){
+      designdata$Sample=samples
+    }
+    
     write.csv(designdata, file=paste0(prefix, ".design"), row.names=F, quote=F)
     
     cat(prefix, "\n")
@@ -153,13 +100,19 @@ for(ct in cts_unique){
     dge<-calcNormFactors(dge)
     
     cdr <- scale(colMeans(cells > 0))
-    design <- model.matrix(~ cdr + groups)
+    if(bComparingCluster){
+      design <- model.matrix(~ cdr + samples + groups)
+    }else{
+      design <- model.matrix(~ cdr + groups)
+    }
+    rownames(design)<-colnames(cells)
+    write.csv(design, file=paste0(prefix, ".design_matrix.csv"), quote=F)
     
     cat("  estimateDisp", "\n")
     dge<-estimateDisp(dge,design=design)
     
     cat("  glmQLFit", "\n")
-    fitqlf<-glmQLFit(dge,design=design)
+    fitqlf<-glmQLFit(dge,design=design,robust=TRUE)
     qlf<-glmQLFTest(fitqlf)
     out<-topTags(qlf, n=Inf)
     outTpm<-tpm[rownames(out$table),]
@@ -174,19 +127,59 @@ for(ct in cts_unique){
     sigFile<-paste0(prefix, "_sig.csv")
     write.csv(cbind(sigout, sigTpm), file=sigFile, quote=F)
     
-    siggenes<-data.frame(gene=rownames(sigout))
+    siggenes<-data.frame(gene=rownames(sigout), stringsAsFactors = F)
     sigGenenameFile<-paste0(prefix, "_sig_genename.txt")
     write.table(siggenes, file=sigGenenameFile, row.names=F, col.names=F, sep="\t", quote=F)
 
     if (nrow(siggenes) > 0){
       cell_obj=de_obj[,colnames(cells)]
+      geneexps=FetchData(cell_obj,vars=siggenes$gene)
+      geneexps=t(geneexps)
+      geneexps<-geneexps[siggenes$gene,colnames(cells)]
+      sigFile<-paste0(prefix, "_sig_exp.csv")
+      write.csv(cbind(sigout, geneexps), file=sigFile, quote=F)
+
+      coords<-data.frame(cell_obj@reductions$umap@cell.embeddings)
+      xlim<-c(min(coords$UMAP_1-0.1), max(coords$UMAP_1+0.1))
+      ylim<-c(min(coords$UMAP_2-0.1), max(coords$UMAP_2+0.1))
+      
       ddata<-designdata
-      rownames(ddata)<-ddata$Sample
-      cell_obj$Group=ifelse(ddata[colnames(cells), "Group"]==1, "Control", "Sample")
-      pdf(file=paste0(prefix, ".sig_genename.pdf"), onefile = T, width=14, height=7)
+      rownames(ddata)<-ddata$Cell
+      cell_obj$Group=ifelse(ddata[colnames(cells), "Group"]=="control", controlGroup, sampleGroup)
+      pdf(file=paste0(prefix, ".sig_genename.pdf"), onefile = T, width=21, height=7)
       siggene<-siggenes$gene[1]
       for (siggene in siggenes$gene){
-        print(FeaturePlot(cell_obj, features=siggene, split.by = "Group"))
+        logFC<-sigout[siggene, "logFC"]
+        FDR<-sigout[siggene,"FDR"]
+        
+        geneexp=FetchData(cell_obj,vars=c(siggene))
+        colorRange<-c(min(geneexp), max(geneexp))
+        fix.sc <- scale_color_gradientn(colors=c("lightgrey", "blue"), limits = colorRange)
+        
+        title<-paste0(siggene, ' : logFC = ', round(logFC, 2), ", FDR = ", formatC(FDR, format = "e", digits = 2))
+        p0<-VlnPlot(cell_obj, feature=siggene, group.by ="Group") + NoLegend()
+        if(bComparingCluster){
+          p1<-DimPlot(cell_obj, reduction = "umap", label=T, group.by="seurat_clusters") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5)) + xlim(xlim) + ylim(ylim)
+          p2<-FeaturePlot(object = cell_obj, features=as.character(siggene), order=T)
+        }else{
+          subcells<-colnames(cell_obj)[cell_obj$Group == controlGroup]
+          subobj<-subset(cell_obj, cells=subcells)
+          p1<-FeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Control: ", controlGroup))
+          p1<-suppressMessages(expr = p1 + xlim(xlim) + ylim(ylim) + fix.sc)
+          
+          subcells<-colnames(cell_obj)[cell_obj$Group == sampleGroup]
+          subobj<-subset(cell_obj, cells=subcells)
+          p2<-FeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Sample: ", sampleGroup))
+          p2<-suppressMessages(expr = p2  + xlim(xlim) + ylim(ylim) + fix.sc)
+          
+        }
+        p<-ggarrange(plotlist=list(p0,p1,p2),nrow =1)
+        g<-ggpubr::annotate_figure(
+          p = p,
+          top = ggpubr::text_grob(label = title, face = 'bold', size=20)
+        )
+        print(g)
+        #break
       }
       dev.off()
     }
