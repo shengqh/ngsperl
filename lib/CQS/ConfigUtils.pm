@@ -13,6 +13,7 @@ use CQS::CQSDebug;
 use Data::Dumper;
 use Hash::Merge qw( merge );
 use Tie::IxHash;
+use String::Util qw(trim);
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -62,7 +63,13 @@ our %EXPORT_TAGS = (
       get_rawfiles_option
       get_parameter_options
       get_pair_group_sample_map
-      get_version_files)
+      get_version_files
+      get_output_ext
+      get_output_ext_list
+      get_program_param
+      get_program
+      get_interation_sample_subsample_map
+      get_interation_subsample_sample_map)
   ]
 );
 
@@ -76,7 +83,7 @@ our $VERSION = '0.01';
 sub get_config_section {
   my ( $config, $section ) = @_;
   my @sections = split( '::', $section );
-  my $result = $config;
+  my $result   = $config;
   for my $curSection (@sections) {
     $result = $result->{$curSection};
     die "Cannot find section $section!" if ( !defined $result );
@@ -87,7 +94,7 @@ sub get_config_section {
 sub has_config_section {
   my ( $config, $section ) = @_;
   my @sections = split( '::', $section );
-  my $result = $config;
+  my $result   = $config;
   for my $curSection (@sections) {
     $result = $result->{$curSection};
     return 0 if ( !defined $result );
@@ -98,8 +105,8 @@ sub has_config_section {
 sub has_option {
   my ( $config, $section, $key ) = @_;
   my $curSection = get_config_section( $config, $section );
-  my $result = $curSection->{$key};
-  return (defined $result);
+  my $result     = $curSection->{$key};
+  return ( defined $result );
 }
 
 sub get_option {
@@ -191,7 +198,7 @@ sub get_task_name {
     $task_name = get_option( $config, "general", "task_name" );
   }
   $task_name =~ s/\s/_/g;
-  return ($task_name);  
+  return ($task_name);
 }
 
 sub get_parameter {
@@ -201,7 +208,7 @@ sub get_parameter {
 
   $create_directory = 1 if !defined($create_directory);
 
-  my $task_name = get_task_name( $config, $section);
+  my $task_name = get_task_name( $config, $section );
 
   my $cluster = get_cluster(@_);
 
@@ -313,7 +320,7 @@ sub get_result_file {
   my $refSection = get_config_section( $config, $refSectionName );
   if ( defined $refSection->{class} ) {
     my $myclass = instantiate( $refSection->{class} );
-    my $result = $myclass->result( $config, $refSectionName, $pattern, 1 );
+    my $result  = $myclass->result( $config, $refSectionName, $pattern, 1 );
     return ($result);
   }
 
@@ -325,7 +332,7 @@ sub get_first_result_file {
   my $refSection = get_config_section( $config, $refSectionName );
   if ( defined $refSection->{class} ) {
     my $myclass = instantiate( $refSection->{class} );
-    my $result = $myclass->result( $config, $refSectionName, $pattern, 1 );
+    my $result  = $myclass->result( $config, $refSectionName, $pattern, 1 );
     foreach my $k ( sort keys %{$result} ) {
       my @files = @{ $result->{$k} };
       if ( scalar(@files) > 0 ) {
@@ -496,7 +503,7 @@ sub get_raw_file_list {
       return $refmap;
     }
 
-    my $result = [];
+    my $result     = [];
     my @sortedKeys = sort { $a <=> $b } keys %$refmap;
     for my $index (@sortedKeys) {
       my $values       = $refmap->{$index};
@@ -563,7 +570,7 @@ sub do_get_unsorted_raw_files {
       return ( $refmap, 1 );
     }
 
-    my %result = ();
+    my %result     = ();
     my @sortedKeys = sort { $a <=> $b } keys %$refmap;
     for my $index (@sortedKeys) {
       my $values       = $refmap->{$index};
@@ -702,7 +709,7 @@ sub get_ref_section_pbs {
 
 sub do_get_raw_files_keys {
   my $resultUnsorted = shift;
-  my @keys = grep { $_ !~ /^\./ } keys %$resultUnsorted;
+  my @keys           = grep { $_ !~ /^\./ } keys %$resultUnsorted;
   my @result;
   if ( exists $resultUnsorted->{".order"} ) {
     my $orders = $resultUnsorted->{".order"};
@@ -722,7 +729,7 @@ sub get_raw_files_keys {
 
 sub get_sorted_raw_files {
   my $resultUnsorted = shift;
-  my @keys = grep { $_ !~ /^\./ } keys %$resultUnsorted;
+  my @keys           = grep { $_ !~ /^\./ } keys %$resultUnsorted;
   my %result;
   tie %result, 'Tie::IxHash';
   my @orderedKeys;
@@ -875,14 +882,14 @@ sub get_group_sample_map {
   my ( $config, $section, $samplePattern ) = @_;
 
   my $raw_files = get_raw_files( $config, $section, "source", $samplePattern );
-  my $groups = get_raw_files( $config, $section, "groups" );
+  my $groups    = get_raw_files( $config, $section, "groups" );
   my %group_sample_map = ();
   for my $group_name ( sort keys %{$groups} ) {
     my @samples = @{ $groups->{$group_name} };
     my @gfiles  = ();
     foreach my $sample_name (@samples) {
       my @bam_files = @{ $raw_files->{$sample_name} };
-      my @sambam = ( $sample_name, @bam_files );
+      my @sambam    = ( $sample_name, @bam_files );
       push( @gfiles, \@sambam );
     }
     $group_sample_map{$group_name} = \@gfiles;
@@ -905,7 +912,7 @@ sub get_group_samplefile_map_key {
   my ( $config, $section, $sample_pattern, $group_key ) = @_;
 
   my $raw_files = get_raw_files( $config, $section, "source", $sample_pattern );
-  my $groups = get_raw_files( $config, $section, $group_key );
+  my $groups    = get_raw_files( $config, $section, $group_key );
   my %group_sample_map = ();
   for my $group_name ( sort keys %{$groups} ) {
     my @gfiles        = ();
@@ -916,7 +923,7 @@ sub get_group_samplefile_map_key {
     else {
       my @samples = @{$group_samples};
       foreach my $sample_name (@samples) {
-        if (not defined $raw_files->{$sample_name}){
+        if ( not defined $raw_files->{$sample_name} ) {
           die "Cannot find $sample_name of group $group_name in raw_files of section $section, check your sample names";
         }
         my @bam_files = @{ $raw_files->{$sample_name} };
@@ -1079,7 +1086,7 @@ sub writeParameterSampleFile {
     my $nameIndex = -1;
     foreach my $sample_name (@orderedSampleNames) {
       my $subSampleFiles = $temp->{$sample_name};
-      my $refstr = ref($subSampleFiles);
+      my $refstr         = ref($subSampleFiles);
       if ( $refstr eq 'HASH' ) {
         foreach my $groupName ( sort keys %$subSampleFiles ) {
           my $groupSampleNames = $subSampleFiles->{$groupName};
@@ -1116,7 +1123,7 @@ sub fix_task_name {
 
 sub get_parameter_file {
   my ( $config, $section, $key ) = @_;
-  my $result = parse_param_file( $config, $section, $key, 0 );
+  my $result    = parse_param_file( $config, $section, $key, 0 );
   my $resultArg = get_option( $config, $section, $key . "_arg", "" );
   if ( !defined($result) ) {
     $result = "";
@@ -1133,9 +1140,10 @@ sub get_parameter_sample_files {
   if ( has_raw_files( $config, $section, $key ) ) {
     $result = get_raw_files( $config, $section, $key );
   }
-  my $resultArg = get_option( $config, $section, $key . "_arg", "" );
+  my $resultArg           = get_option( $config, $section, $key . "_arg",            "" );
+  my $resultJoinDelimiter = get_option( $config, $section, $key . "_join_delimiter", "," );
 
-  return ( $result, $resultArg );
+  return ( $result, $resultArg, $resultJoinDelimiter );
 }
 
 sub is_paired_end {
@@ -1158,15 +1166,15 @@ sub is_paired_end {
 
 sub get_is_paired_end_option {
   my ( $config, $section, $default ) = @_;
-  
+
   my $curSection = get_config_section( $config, $section );
-  
+
   my $result = is_paired_end($curSection);
-  if(not defined $result and defined $default){
+  if ( not defined $result and defined $default ) {
     $result = $default;
   }
-  
-  return($result);
+
+  return ($result);
 }
 
 sub get_rawfiles_option {
@@ -1187,7 +1195,7 @@ sub get_parameter_options {
   my ( $config, $section, $prefix, $parameters, $defaults ) = @_;
 
   my $curSection = get_config_section( $config, $section );
-  my $result = "";
+  my $result     = "";
   foreach my $i ( 0 .. ( scalar(@$parameters) - 1 ) ) {
     my $parameter = $parameters->[$i];
     my $value     = $curSection->{$parameter};
@@ -1204,7 +1212,7 @@ sub get_parameter_options {
 
 sub get_version_files {
   my ($config) = @_;
-  
+
   my $result = {};
   for my $task_section ( keys %$config ) {
     my $classname = $config->{$task_section}{class};
@@ -1214,16 +1222,101 @@ sub get_version_files {
     my $myclass = instantiate($classname);
 
     my $expect_file_map = $myclass->result( $config, $task_section, "version\$" );
-    if(%$expect_file_map){
+    if (%$expect_file_map) {
       my $versionFiles = [];
-      for my $key (keys %$expect_file_map){
+      for my $key ( keys %$expect_file_map ) {
         my $expectFiles = $expect_file_map->{$key};
         push @$versionFiles, @$expectFiles;
       }
-      if(scalar(@$versionFiles) > 0){
+      if ( scalar(@$versionFiles) > 0 ) {
         $result->{$task_section} = $versionFiles;
       }
     }
+  }
+  return ($result);
+}
+
+sub get_output_ext {
+  my ( $config, $section ) = @_;
+
+  my $result = get_option( $config, $section, "output_file_ext", "" );
+  if ( $result eq "" ) {
+    $result = get_option( $config, $section, "output_ext", "" );
+  }
+
+  return ($result);
+}
+
+sub get_output_ext_list {
+  my ( $config, $section ) = @_;
+
+  my $output_file_ext = get_output_ext( $config, $section );
+
+  my $result = [$output_file_ext];
+
+  my $output_other_ext = get_option( $config, $section, "output_other_ext", "" );
+  if ( $output_other_ext ne "" ) {
+    my @output_other_exts = split( ",", $output_other_ext );
+    push( @$result, @output_other_exts );
+  }
+
+  return ($result);
+}
+
+sub get_program_param {
+  my ( $files, $arg, $joinDelimiter, $sample_name ) = @_;
+  
+  my $result = "";
+  my $pfiles = $files->{$sample_name};
+  if(defined $pfiles){
+    my $pfile  = join($joinDelimiter, @$pfiles );
+    $result = trim($arg . " " . $pfile);
+  }
+  
+  return ($result);
+}
+
+sub get_program {
+  my ($config, $section) = @_;  
+
+  my $result     = get_option( $config, $section, "program" );
+
+  if ( get_option( $config, $section, "check_program", 1 ) ) {
+    if ( !File::Spec->file_name_is_absolute($result) ) {
+      $result = dirname(__FILE__) . "/$result";
+    }
+    if ( !( -e $result ) ) {
+      die("program $result defined but not exists!");
+    }
+  }
+  
+  return ($result);
+}
+
+sub get_interation_sample_subsample_map {
+  my $source_files = shift;
+  my $sample_name_map      = {};
+  for my $individual_sample_name ( sort keys %$source_files ) {
+    my $sample_name = $individual_sample_name;
+    $sample_name =~ s/_ITER_.*//g;
+    if ( not defined $sample_name_map->{$sample_name} ) {
+      $sample_name_map->{$sample_name} = [$individual_sample_name];
+    }
+    else {
+      my $names = $sample_name_map->{$sample_name};
+      push( @$names, $individual_sample_name );
+    }
+  }
+  return ($sample_name_map);
+}
+
+sub get_interation_subsample_sample_map {
+  my $source_files = shift;
+  my $result      = {};
+  for my $individual_sample_name ( sort keys %$source_files ) {
+    my $sample_name = $individual_sample_name;
+    $sample_name =~ s/_ITER_.*//g;
+    $result->{$individual_sample_name} = $sample_name;
   }
   return ($result);
 }

@@ -70,9 +70,9 @@ sub perform {
   my $output_arg            = get_option( $config, $section, "output_arg", "" );
   my $join_arg              = get_option( $config, $section, "join_arg", 0 );
 
-  my ( $parameterSampleFile1, $parameterSampleFile1arg ) = get_parameter_sample_files( $config, $section, "source" );
-  my ( $parameterSampleFile2, $parameterSampleFile2arg ) = get_parameter_sample_files( $config, $section, "parameterSampleFile2" );
-  my ( $parameterSampleFile3, $parameterSampleFile3arg ) = get_parameter_sample_files( $config, $section, "parameterSampleFile3" );
+  my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, "source" );
+  my ( $parameterSampleFile2, $parameterSampleFile2arg, $parameterSampleFile2JoinDelimiter ) = get_parameter_sample_files( $config, $section, "parameterSampleFile2" );
+  my ( $parameterSampleFile3, $parameterSampleFile3arg, $parameterSampleFile3JoinDelimiter ) = get_parameter_sample_files( $config, $section, "parameterSampleFile3" );
 
   my ( $parameterFile1, $parameterFile1arg ) = get_parameter_file( $config, $section, "parameterFile1" );
   my ( $parameterFile2, $parameterFile2arg ) = get_parameter_file( $config, $section, "parameterFile2" );
@@ -181,8 +181,8 @@ sub result {
 
   my $first_file_only = get_option( $config, $section, "first_file_only", 0 );
 
-  my $output_file = get_option( $config, $section, "output_file", "source");
-  my ( $parameterSampleFile1, $parameterSampleFile1arg ) = get_parameter_sample_files( $config, $section, $output_file );
+  my $output_file  = get_option( $config, $section, "output_file", "source" );
+  my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, $output_file );
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
   my $output_file_ext            = get_option( $config, $section, "output_file_ext",            "" );
@@ -197,8 +197,8 @@ sub result {
   }
 
   my $result = {};
-  for my $sample_name ( sort keys %$parameterSampleFile1 ) {
-    my $pfiles1 = $parameterSampleFile1->{$sample_name};
+  for my $sample_name ( sort keys %$source_files ) {
+    my $pfiles1 = $source_files->{$sample_name};
     my $pfiles  = getFiles( $pfiles1, $join_arg, $first_file_only );
     my $idxend  = scalar(@$pfiles) - 1;
 
