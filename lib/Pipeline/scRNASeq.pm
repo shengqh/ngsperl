@@ -183,36 +183,46 @@ sub addEdgeRTask {
   my ( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell ) = @_;
   my $rCode = "pvalue=" . getValue( $def, "DE_pvalue" ) . ";useRawPvalue=" . getValue( $def, "DE_use_raw_pvalue" ) . ";foldChange=" . getValue( $def, "DE_fold_change" );
 
-  my $edgeRtaskname = "";
+  my $edgeRtaskname = $cluster_task_name . "_edgeR";
   my $groups        = undef;
   my $pairs         = undef;
+  my $curClusterName = undef;
   if ($bBetweenCluster) {
-    $edgeRtaskname = $cluster_task_name . "_edgeR_betweenCluster_byCell";
+    $edgeRtaskname = $edgeRtaskname . "_betweenCluster_byCell";
+    $curClusterName = getValue( $def, "DE_cluster_name" );
     $rCode =
         $rCode
       . ";filter_minTPM="
       . getValue( $def, "DE_by_cell_filter_minTPM" )
       . ";filter_cellPercentage="
       . getValue( $def, "DE_by_cell_filter_cellPercentage" )
-      . ";bBetweenCluster=1"
-      . ";cluster_name='"
-      . getValue( $def, "DE_cluster_name" ) . "'";
+      . ";bBetweenCluster=1";
     $groups = getValue( $def, "DE_cluster_groups" );
     $pairs  = getValue( $def, "DE_cluster_pairs" );
   }
   else {
-    $edgeRtaskname = $cluster_task_name . "_edgeR" . ( $DE_by_celltype ? "_inCelltype" : "_inCluster" ) . ( $DE_by_cell ? "_byCell" : "_bySample" );
+    if($DE_by_celltype){
+      $curClusterName =  $celltype_name;
+      $edgeRtaskname = $edgeRtaskname . "_inCelltype";
+    }else{
+      $curClusterName =  $cluster_name;
+      $edgeRtaskname = $edgeRtaskname . "_inCluster";
+    }
+    
     if ($DE_by_cell) {
       $rCode = $rCode . ";DE_by_cell=1;filter_minTPM=" . getValue( $def, "DE_by_cell_filter_minTPM" ) . ";filter_cellPercentage=" . getValue( $def, "DE_by_cell_filter_cellPercentage" );
+      $edgeRtaskname = $edgeRtaskname . "_byCell";
     }
     else {
       $rCode = $rCode . ";DE_by_cell=0;filter_minTPM=" . getValue( $def, "DE_by_sample_filter_minTPM" ) . ";filter_samplePercentage=" . getValue( $def, "DE_by_sample_filter_cellPercentage" );
+      $edgeRtaskname = $edgeRtaskname . "_bySample";
     }
 
-    $rCode = $rCode . ";bBetweenCluster=0;cluster_name='" . ( $DE_by_celltype ? $celltype_name : $cluster_name ) . "'";
+    $rCode = $rCode . ";bBetweenCluster=0";
     $groups = getValue( $def, "groups" );
     $pairs  = getValue( $def, "pairs" );
   }
+  $rCode = $rCode . ";cluster_name='" . $curClusterName . "'";
 
   $config->{$edgeRtaskname} = {
     class                => "CQS::UniqueR",
@@ -244,8 +254,9 @@ sub addEdgeRTask {
     rtemplate          => "../scRNA/edgeRvis.r",
     parameterFile1_ref => [ $seurat_name, ".final.rds" ],
     parameterFile2_ref => [$edgeRtaskname],
+    parameterFile3_ref   => [ $cluster_task_name, $cluster_file ],
     output_file_ext    => ".edgeRvis.files.csv",
-    rCode              => "",
+    rCode              => "cluster_name='" . $curClusterName . "';bBetweenCluster=" . $bBetweenCluster,
     sh_direct          => 1,
     pbs                => {
       "email"     => $def->{email},
