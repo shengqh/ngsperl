@@ -62,7 +62,7 @@ def main():
   
   if DEBUG:
     args.input = "W:/SequenceData/20191121_4145-DM-1/4145-DM-1_1-AACCAGAT-TCTTTCCC_S99_R1_001.fastq.gz,W:/SequenceData/20191121_4145-DM-1/4145-DM-1_1-AACCAGAT-TCTTTCCC_S99_R2_001.fastq.gz"
-    args.outputPrefox = "E:/temp/splitFastqTest"
+    args.outputPrefix = "E:/temp/splitFastqTest"
     args.trunk = 3
   
   logger = logging.getLogger('splitFastq')
@@ -77,7 +77,7 @@ def main():
   else:
     raise ArgumentError('inputFile should be only one file (single end) or two files (pair end): %s ' % args.input)
 
-  split(logger, inputFiles, isPairedEnd, args.outputPrefox, args.trunk)
+  split(logger, inputFiles, isPairedEnd, args.outputPrefix, args.trunk)
   
 if __name__ == "__main__":
     main()

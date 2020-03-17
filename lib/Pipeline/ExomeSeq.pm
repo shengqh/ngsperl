@@ -121,18 +121,53 @@ sub getConfig {
     push( @$summary, $geneLocus );
   }
 
+  my $alignment_source_ref = $source_ref;
+
+  if ($def->{aligner_scatter_count}){
+    my $splitFastq = "splitFastq";
+    $config->{ $splitFastq } = {
+      class       => "CQS::ProgramWrapperOneToMany",
+      perform     => 1,
+      target_dir  => "$target_dir/$splitFastq",
+      option      => "",
+      interpretor => "python",
+      program     => "../Format/splitFastq.py",
+      source_ref      => $source_ref,
+      source_arg            => "-i",
+      source_join_delimiter => ",",
+      output_to_same_folder => 1,
+      output_arg            => "-o",
+      output_file_prefix    => "",
+      output_file_ext       => "._ITER_.1.fastq.gz",
+      output_other_ext      => "._ITER_.2.fastq.gz",
+      iteration_arg         => "--trunk",
+      iteration             => $def->{aligner_scatter_count},
+      sh_direct             => 1,
+      pbs                   => {
+        "email"     => $email,
+        "emailType" => "FAIL",
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    };
+    $alignment_source_ref = $splitFastq;
+    push @$individual, $splitFastq;
+  }
+
   my $bam_ref;
   my $fasta;
   #based on paper https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-016-1097-3, we don't do markduplicate anymore
   if ( $def->{aligner} eq "bwa" ) {
     $fasta = getValue( $def, "bwa_fasta" );
-    $config->{ $def->{aligner} } = {
+    my $bwa = "bwa";
+    $config->{ $bwa } = {
       class                 => "Alignment::BWA",
       perform               => 1,
       target_dir            => "${target_dir}/" . getNextFolderIndex($def) . $def->{aligner},
       option                => getValue( $def, "bwa_option" ),
       bwa_index             => $fasta,
-      source_ref            => $source_ref,
+      source_ref            => $alignment_source_ref,
       output_to_same_folder => 1,
       picard_jar            => getValue( $def, "picard_jar" ),
       mark_duplicates       => 0,
@@ -145,12 +180,41 @@ sub getConfig {
       },
     };
     $bam_ref = [ "bwa", ".bam\$" ];
+    push @$individual, ( "bwa" );
   }
   else {
     die "Unknown alinger " . $def->{aligner};
   }
 
-  push @$individual, ( $def->{aligner} );
+  if ($def->{aligner_scatter_count}){
+    my $mergeBam = $def->{aligner} . "_merge";
+    $config->{$mergeBam} = {
+      class                 => "CQS::ProgramWrapperManyToOne",
+      perform               => 1,
+      target_dir            => "$target_dir/$mergeBam",
+      option                => "-t 8 __OUTPUT__ __INPUT__",
+      interpretor           => "",
+      check_program         => 0,
+      program               => "sambamba merge",
+      source_ref            => $bam_ref,
+      source_arg            => "",
+      source_join_delimiter => " ",
+      output_to_same_folder => 1,
+      output_arg            => "-o",
+      output_file_prefix    => ".bam",
+      output_file_ext       => ".bam",
+      sh_direct             => 1,
+      pbs                   => {
+        "email"     => $email,
+        "emailType" => "FAIL",
+        "nodes"     => "1:ppn=8",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    };
+    $bam_ref = [ $mergeBam, ".bam\$" ];
+    push @$individual, (  $mergeBam );
+  }
 
   my $perform_cnv = $def->{perform_cnv_cnMOPs} || $def->{perform_cnv_gatk4_cohort} || $def->{perform_cnv_xhmm};
 

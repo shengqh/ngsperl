@@ -135,8 +135,20 @@ sub perform {
       }
     }
 
+    my $g_option = $option;
+    if ($g_option =~ /__INPUT__/){
+      $g_option =~ s/__INPUT__/$input_file/g;
+    }else{
+      $g_option = "$g_option $parameterSampleFile1arg $input_file";
+    }
+    if ($g_option =~ /__OUTPUT__/){
+      $g_option =~ s/__OUTPUT__/$final_prefix/g;
+    }else{
+      $g_option = "$g_option $output_arg $final_prefix";
+    }
+
     print $pbs "
-$interpretor $program $option $parameterSampleFile1arg $input_file $curOption $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_arg $final_prefix
+$interpretor $program $curOption $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $g_option
 
 ";
     $self->close_pbs( $pbs, $pbs_file );

@@ -86,6 +86,8 @@ sub perform {
   my $expect_result = $self->result( $config, $section );
 
   for my $sample_name ( sort keys %$parameterSampleFile1 ) {
+    my $curOption = $option;
+
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -101,7 +103,13 @@ sub perform {
 
     my $final_prefix = $sample_name . $output_file_prefix;
 
-    my $curOption = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name );
+    my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name );
+    if ($curOption =~ /__FILE__/){
+      $curOption =~ s/__FILE__/$param_option1/g;
+    }else{
+      $curOption = $curOption . " " . $param_option1;
+    }
+
     if ( not $bFound2 ) {
       $curOption = $curOption . " " . $param_option2;
     }
@@ -117,7 +125,7 @@ sub perform {
     }
 
     print $pbs "
-$interpretor $program $option $curOption $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_arg $final_prefix
+$interpretor $program $curOption $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_arg $final_prefix
 
 ";
     $self->close_pbs( $pbs, $pbs_file );

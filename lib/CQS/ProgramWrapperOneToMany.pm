@@ -36,7 +36,12 @@ sub perform {
   my $interpretor = get_option( $config, $section, "interpretor", "" );
   my $program     = get_program( $config, $section );
 
+  my $iteration_arg = get_option( $config, $section, "iteration_arg", "" );
   my $iteration = int(get_option( $config, $section, "iteration" ));
+
+  if ($iteration_arg ne ""){
+    $option = $option . " " . $iteration_arg . " " . $iteration;
+  }
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
   my $output_file_prefix    = get_option( $config, $section, "output_file_prefix" );
