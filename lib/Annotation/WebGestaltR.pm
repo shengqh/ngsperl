@@ -80,7 +80,7 @@ sub result {
 
   my $result       = {};
   for my $sample_name ( sort keys %$comparisons ) {
-    my $cur_dir = scalar( keys %$comparisons ) == 1 ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+    my $cur_dir = scalar( keys %$comparisons ) == 1 ? $result_dir : $result_dir . "/$sample_name" ;
     my @result_files = ();
     push( @result_files, "$cur_dir/Project_${sample_name}_geneontology_Biological_Process/enrichment_results_${sample_name}_geneontology_Biological_Process.txt" );
     push( @result_files, "$cur_dir/Project_${sample_name}_geneontology_Cellular_Component/enrichment_results_${sample_name}_geneontology_Cellular_Component.txt" );
