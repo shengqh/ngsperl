@@ -18,7 +18,7 @@ obj[[cluster_name]]<-clusterDf[names(obj$orig.ident), cluster_name]
 df<-data.frame(c1=obj$seurat_clusters, c2=obj[[cluster_name]])
 df<-unique(df)
 df<-df[order(df$c1),]
-obj[[cluster_name]]<-factor(unlist(obj[[cluster_name]]), levels=df[,2])
+obj[[cluster_name]]<-factor(unlist(obj[[cluster_name]]), levels=df[,cluster_name])
 
 result<-NULL
 prefix<-rownames(edgeRres)[2]
