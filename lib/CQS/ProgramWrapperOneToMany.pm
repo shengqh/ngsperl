@@ -143,9 +143,9 @@ sub result {
   $self->{_task_suffix} = $task_suffix;
 
   my $iteration = int(get_option( $config, $section, "iteration" ));
+  my $max_length = length("$iteration");
 
-  my $output_file  = get_option( $config, $section, "output_file", "source" );
-  my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, $output_file );
+  my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, "source" );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
   my $output_exts = get_output_ext_list( $config, $section );
 
@@ -153,7 +153,6 @@ sub result {
   for my $sample_name ( sort keys %$source_files ) {
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
-    my $max_length = length("$iteration");
     for my $iter (1 .. $iteration){
       my $key = $sample_name . "_ITER_" . "0" x ($max_length -length("$iter")) . $iter;
       my @result_files = ();
@@ -167,6 +166,49 @@ sub result {
     }
   }
   return $result;
+}
+
+#get current pbs and its dependent sample names
+#TODO: consider other ref links
+sub get_pbs_source {
+  my ( $self, $config, $section ) = @_;
+  
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  
+  my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, "source" );
+  
+  my $result = {};
+  
+  for my $sample_name ( sort keys %$source_files ) {
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    $result->{$pbs_file} = [$sample_name];
+  }
+  
+  return ($result);
+}
+
+#get result sample name and its depedent current pbs
+sub get_result_pbs {
+  my ( $self, $config, $section ) = @_;
+  
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  
+  my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, "source" );
+
+  my $iteration = int(get_option( $config, $section, "iteration" ));
+  my $max_length = length("$iteration");
+
+  my $result = {};
+  
+  for my $sample_name ( sort keys %$source_files ) {
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    for my $iter (1 .. $iteration){
+      my $key = $sample_name . "_ITER_" . "0" x ($max_length -length("$iter")) . $iter;
+      $result->{$key} = $pbs_file;
+    }
+  }
+  
+  return ($result);
 }
 
 1;

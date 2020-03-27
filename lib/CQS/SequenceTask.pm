@@ -100,6 +100,13 @@ sub get_dependent_pbs_map {
     for my $task_section_name (@tasks) {
       #print $task_section_name . "\n";
       my $task_section = $config->{$task_section_name};
+      
+      if ( not defined $task_section->{class} ) {
+        next
+      }
+      
+      my $myclass = instantiate( $task_section->{class} );
+      my $pbs_sample_map = $myclass->get_pbs_source( $config, $task_section_name );
       my $taskdeppbsmap = {};
       for my $key ( keys %$task_section ) {
         my $mapname = $key;
@@ -107,17 +114,24 @@ sub get_dependent_pbs_map {
           $mapname =~ s/_config_ref//g;
           $mapname =~ s/_ref//g;
           my $refpbsmap = get_ref_section_pbs( $config, $task_section_name, $mapname );
-          for my $refkey ( keys %$refpbsmap ) {
-            my $refpbs = $refpbsmap->{$refkey};
-            my $curpbs = $taskdeppbsmap->{$refkey};
+          
+          for my $pbs (keys %$pbs_sample_map){
+            my $curpbs = $taskdeppbsmap->{$pbs};
             if ( !defined $curpbs ) {
               $curpbs = {};
             }
-            for my $eachrefpbs (@$refpbs){
-              $curpbs->{$eachrefpbs} = 1;
-            }
             
-            $taskdeppbsmap->{$refkey} = $curpbs;
+            my $sample_names = $pbs_sample_map->{$pbs};
+            for my $sample_name (@$sample_names) {
+              my $ref_pbs_list = $refpbsmap->{$sample_name};
+              if (defined $ref_pbs_list){
+                for my $ref_pbs (@$ref_pbs_list){
+                  $curpbs->{$ref_pbs} = 1;
+                }
+              }
+            }
+
+            $taskdeppbsmap->{$pbs} = $curpbs;
           }
         }
       }

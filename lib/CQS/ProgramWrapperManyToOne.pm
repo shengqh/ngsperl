@@ -232,14 +232,10 @@ sub get_pbs_source {
 
   for my $sample_name (keys %$sample_subsample_map) {
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
-    my $keys = [$sample_name];
-    my $sub_samples = $sample_subsample_map->{$sample_name};
-    push (@$keys, @$sub_samples);
-    $result->{$pbs_file} = $keys;
+    $result->{$pbs_file} = $sample_subsample_map->{$sample_name};
   }
 
   return $result;
 }
-
 
 1;

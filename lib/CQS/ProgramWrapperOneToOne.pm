@@ -168,34 +168,4 @@ sub result {
   return $result;
 }
 
-sub get_pbs_source {
-  my ( $self, $config, $section ) = @_;
-
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
-
-  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
-  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
-
-  my ( $source_files, $source_file_arg, $source_file_join_delimiter ) = get_parameter_sample_files( $config, $section, "source" );
-  my $is_source_one2many   = get_option( $config, $section, "is_source_one2many", 0 );
-  my $subsample_sample_map = {};
-  if ($is_source_one2many) {
-    $subsample_sample_map = get_interation_subsample_sample_map($source_files);
-  }
-
-  my $result = {};
-
-  for my $sample_name (keys %$source_files) {
-    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
-    if ($is_source_one2many) {
-      $result->{$pbs_file} = [ $sample_name, $subsample_sample_map->{$sample_name} ];
-    }
-    else {
-      $result->{$pbs_file} = [$sample_name];
-    }
-  }
-
-  return $result;
-}
-
 1;

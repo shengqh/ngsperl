@@ -32,6 +32,31 @@ sub getAllDependentJobids {
   return $result;
 }
 
+sub get_dependent_job_ids {
+  my ( $task_dep_pbs_map, $pbs_id_map, $task_section, $task_name, $pbs_file ) = @_;
+  my $dep_pbs_map = $task_dep_pbs_map->{$task_section}{$pbs_file};
+
+  my $result = "";
+  if(not defined $dep_pbs_map){
+    return($result);
+  }
+
+  for my $dep_pbs (keys %$dep_pbs_map){
+    if (!defined $pbs_id_map->{$dep_pbs}){
+      die "$dep_pbs is not in pbs_id_map: " . Dumper($pbs_id_map);
+    }
+    
+    if ($result eq ""){
+      $result = "--dependency=afterany";
+    }
+    
+    $result = $result . ":\$" . $pbs_id_map->{$dep_pbs}[0];
+    $pbs_id_map->{$dep_pbs}[1] = 1;
+  }
+
+  return $result;
+}
+
 sub getDependentJobids {
   my ( $task_dep_pbs_map, $pbs_id_map, $depend_all, $task_section, $task_name, $dep_sample_names ) = @_;
   my $dep_pbs_map = $task_dep_pbs_map->{$task_section};
@@ -194,6 +219,9 @@ sub perform {
       if ( !defined $classname ) {
         die "$task_section is not a valid task section.";
       }
+      
+      my $cur_task_dep_pbs_map = $task_dep_pbs_map->{$task_section};
+      
       my $myclass = instantiate($classname);
 
       my $depend_all = $myclass->{_depend_all};
@@ -226,23 +254,13 @@ sub perform {
         print $result_list $step_name, "\t", $task_section, "\t", $expect_name, "\t", $expect_file_list, "\t", $canEmptyStr, "\n";
       }
 
-      my $pbs_source_map = $myclass->get_pbs_source( $config, $task_section );
-      #if($task_section eq "fastqc_post_trim"){
-      #  print Dumper(%$pbs_source_map);
-      #}
-      
       for my $sample ( sort keys %{$pbs_file_map} ) {
         my $samplepbs = $pbs_file_map->{$sample};
         if ( !-e $samplepbs ) {
           die "Task " . $task_section . ", file not exists " . $samplepbs . "\n";
         }
 
-        my $dep_sample_name = $pbs_source_map->{$samplepbs};
-        my $depjid = getDependentJobids( $task_dep_pbs_map, $final_pbs_id_map, $depend_all, $task_section, $task_name, $dep_sample_name );
-
-        #if ($task_section eq "fastqc_post_trim"){
-        #  print Dumper $sample, $depjid;
-        #}
+        my $depjid = get_dependent_job_ids( $task_dep_pbs_map, $final_pbs_id_map, $task_section, $task_name, $samplepbs );
 
         $final_index = $final_index + 1;
 
