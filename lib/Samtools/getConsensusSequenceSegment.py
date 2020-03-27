@@ -33,7 +33,7 @@ else:
   region = args.region
   outputFile = args.output
 
-logger = logging.getLogger('getConsensusSequence')
+logger = logging.getLogger('getConsensusSequenceSegment')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
 bamFile = inputFile
@@ -45,41 +45,49 @@ if not path.exists(tmpFile):
 
 gapChar = '.'
 consensusSequence = ""
-with open(tmpFile, "rt") as fin:
-  for line in fin:
-    parts = line.split('\t')
-    refBase = parts[2][0]
-    bases = parts[4]
-    refMap = {'A':0, 'T':0, 'G':0, 'C':0, gapChar:0}
-    for base in bases:
-      if base == '^' or base == '$':
+contigIndex = 1
+with open(outputFile + ".fasta", "wt") as fout:
+  with open(tmpFile, "rt") as fin:
+    for line in fin:
+      parts = line.split('\t')
+      refBase = parts[2][0]
+      bases = parts[4]
+      refMap = {'A':0, 'T':0, 'G':0, 'C':0, gapChar:0}
+      for base in bases:
+        if base == '^' or base == '$':
+          continue
+        
+        if base == '.' or base == ',' :
+          refMap[refBase] = refMap[refBase] + 1
+          continue
+
+        if base == '>' or base == '<':
+          refMap[gapChar] = refMap[gapChar] + 1
+          continue
+        
+        refMap[base] = refMap[refBase] + 1
+      
+      maxValue = max(refMap.values())
+      if refMap[refBase] == maxValue:
+        consensusSequence = consensusSequence + refBase
+        continue
+
+      if refMap[gapChar] == maxValue:
+        if consensusSequence == "":
+          continue
+
+        name = "Contig%d" % contigIndex
+        fout.write(">%s\n%s\n" % (name, consensusSequence))
+        contigIndex = contigIndex + 1
+        consensusSequence = ""
         continue
       
-      if base == '.' or base == ',' :
-        refMap[refBase] = refMap[refBase] + 1
-        continue
-
-      if base == '>' or base == '<':
-        refMap[gapChar] = refMap[gapChar] + 1
-        continue
-      
-      refMap[base] = refMap[refBase] + 1
-    
-    maxValue = max(refMap.values())
-    if refMap[refBase] == maxValue:
-      consensusSequence = consensusSequence + refBase
-      continue
-
-    if refMap[gapChar] == maxValue:
-      consensusSequence = consensusSequence + refBase.lower()
-      continue
-    
-    for base in refMap.keys():
-      if refMap[base] == maxValue:
-        consensusSequence = consensusSequence + base
-        break
-
-with open(outputFile, "wt") as fout:
-  fout.write(consensusSequence + "\n")
+      for base in refMap.keys():
+        if refMap[base] == maxValue:
+          consensusSequence = consensusSequence + base
+          break
+  if consensusSequence != "":
+    name = "Contig%d" % contigIndex
+    fout.write(">%s\n%s\n" % (name, consensusSequence))
 
 logger.info("Done")

@@ -54,7 +54,7 @@ my $config = {
     output_arg            => "-o",
     output_file_prefix    => ".bam",
     output_file_ext       => ".bam",
-    is_source_one2many    => 1,
+    #is_source_one2many    => 1,
     sh_direct             => 1,
     pbs                   => {
       "email"     => "quanhu.sheng.1\@vumc.org",
@@ -109,6 +109,6 @@ my $config = {
   }
 };
 
-performConfig($config);
+performTask($config, "sequencetask");
 
 1;

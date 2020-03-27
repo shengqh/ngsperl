@@ -163,7 +163,7 @@ sub get_pbs_source {
 #get result pbs map which indicates which pbs the result name related.
 #for bed file split which has 1 pbs and multiple result files, the multiple result names
 #should be mapped to same pbs
-sub get_result_dependent_pbs {
+sub get_result_pbs {
   my ( $self, $config, $section ) = @_;
 
   return $self->get_pbs_files( $config, $section );
@@ -199,42 +199,6 @@ sub get_dependent_pbs_map {
     }
   }
   return ($result);
-
-}
-
-#get the dependent pbs list for each own pbs
-sub get_pbs_dependent_pbs {
-  my ( $self, $config, $section ) = @_;
-
-  my $result = {};
-
-  my $pbsFiles = $self->get_pbs_files( $config, $section );
-
-  my $taskdeppbsmap = {};
-
-  my $task_section = $config->{$section};
-  for my $key ( keys %$task_section ) {
-    my $mapname = $key;
-    if ( $mapname =~ /_ref$/ ) {
-      $mapname =~ s/_config_ref//g;
-      $mapname =~ s/_ref//g;
-      my $refpbsmap = get_ref_section_pbs( $config, $section, $mapname );
-      for my $refkey ( keys %$refpbsmap ) {
-        my $refpbs = $refpbsmap->{$refkey};
-        my $curpbs = $taskdeppbsmap->{$refkey};
-        if ( !defined $curpbs ) {
-          $curpbs = {};
-        }
-        for my $eachrefpbs (@$refpbs) {
-          $curpbs->{$eachrefpbs} = 1;
-        }
-
-        $taskdeppbsmap->{$refkey} = $curpbs;
-      }
-    }
-  }
-  return ($result);
-
 }
 
 sub require {

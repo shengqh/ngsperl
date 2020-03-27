@@ -20,7 +20,7 @@ clusters<-clusterDf[,cluster_name]
 caCount<-table(clusters)
 clusterDf$caCount<-caCount[clusters]
 
-clusterDf<-clusterDf[order(-clusterDf$caCount, clusterDf$seurat_cluters),]
+clusterDf<-clusterDf[order(clusterDf$caCount, clusterDf$seurat_clusters, decreasing = c(1,0)),]
 
 clusters<-factor(clusters, levels=unique(clusterDf[,cluster_name]))
 

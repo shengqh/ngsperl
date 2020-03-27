@@ -38,7 +38,10 @@ sub getSmallRNAConfig {
   my $search_host_genome     = getValue( $def, "search_host_genome" );
   my $search_nonhost_genome  = getValue( $def, "search_nonhost_genome" ) && $notMicroRNAOnly;
   my $search_nonhost_library = getValue( $def, "search_nonhost_library" ) && $notMicroRNAOnly;
-  my $search_nonhost_database = $search_nonhost_genome || $search_nonhost_library;
+
+  my $search_refseq_genome     = getValue( $def, "search_refseq_genome", 0 ) && $notMicroRNAOnly;
+
+  my $search_nonhost_database = $search_nonhost_genome || $search_nonhost_library || $search_refseq_genome;
 
   my $perform_annotate_unmapped_reads    = getValue( $def, "perform_annotate_unmapped_reads" );
   my $perform_class_independent_analysis = getValue( $def, "perform_class_independent_analysis", 1 );
@@ -1277,6 +1280,65 @@ sub getSmallRNAConfig {
     );
   }
 
+  if ($search_refseq_genome) {
+    my $refseq_genomes = ["bacteria", "viruses"];
+    for my $refseq (@$refseq_genomes){
+      my $spcount_bowtie = "bowtie1_${refseq}_pm";
+      $config->{$spcount_bowtie} = {
+        class              => "CQS::ProgramIndividualWrapper",
+        perform            => 1,
+        target_dir         => "$host_intermediate_dir/$spcount_bowtie",
+        option             => "bowtie -t 8 -d " . getValue($def, "bowtie_${refseq}_index_list_file"),
+        interpretor        => "",
+        program            => "spcount",
+        check_program     => 0,
+        source_arg => "-i",
+        source_ref => $identical_ref,
+        output_arg         => "-o",
+        output_file_ext    => ".txt",
+        output_to_same_folder => 1,
+        sh_direct          => 0,
+        pbs                => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=8",
+          "walltime"  => "4",
+          "mem"       => "20gb"
+        },
+      };
+
+      push( @$individual_ref, $spcount_bowtie );
+
+      my $spcount_count = $spcount_bowtie . "_table";
+      $config->{$spcount_count} = {
+        class              => "CQS::ProgramWrapper",
+        perform            => 1,
+        target_dir         => "$nonhost_genome_dir/$spcount_count",
+        option             => "count",
+        interpretor        => "",
+        program            => "spcount",
+        check_program     => 0,
+        parameterSampleFile1_arg => "-i",
+        parameterSampleFile1_ref => $spcount_bowtie,
+        parameterSampleFile2_arg => "-c",
+        parameterSampleFile2_ref => $identical_count_ref,
+        output_arg         => "-o",
+        output_file_ext    => ".count",
+        output_to_same_folder => 1,
+        sh_direct          => 1,
+        pbs                => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "4",
+          "mem"       => "10gb"
+        },
+      };
+
+      push( @$summary_ref, $spcount_count );
+    }
+  }
+
   my $nonhostXml   = [];
   my @mapped       = ();
   my @overlap      = ();
@@ -1380,6 +1442,35 @@ sub getSmallRNAConfig {
         },
       };
       push( @$summary_ref, "nonhost_genome_count" );
+
+      my $rCode = '';
+      if (defined $def->{host_microbial_vis_groups}){
+        my $visgroups = $def->{host_microbial_vis_groups};
+        $rCode = 'groupNames=c("' . join('", "', @$visgroups) . '"';
+      }
+      
+      $config->{host_microbial_vis} = {
+        class                     => "CQS::UniqueR",
+        perform                   => 1,
+        target_dir                => $data_visualization_dir . "/host_microbial_vis",
+        rtemplate                 => "../SmallRNA/hostMicrobialVis.r",
+        output_file               => ".reads",
+        output_file_ext           => ".pdf",
+        parameterSampleFile1      => $groups,
+        parameterSampleFile2      => $def->{groups_vis_layout},
+        parameterFile1_ref        => [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv"],
+        parameterFile2_ref        => [ "nonhost_genome_count", ".microbial.tsv\$" ],
+        sh_direct                 => 1,
+        rCode                     => $rCode,
+        pbs                       => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary_ref, "host_microbial_vis";
     }
     
     push @name_for_readSummary, @nonhost_genome_group_names;
