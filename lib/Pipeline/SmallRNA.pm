@@ -39,7 +39,7 @@ sub getSmallRNAConfig {
   my $search_nonhost_genome  = getValue( $def, "search_nonhost_genome" ) && $notMicroRNAOnly;
   my $search_nonhost_library = getValue( $def, "search_nonhost_library" ) && $notMicroRNAOnly;
 
-  my $search_refseq_genome     = getValue( $def, "search_refseq_genome" ) && $notMicroRNAOnly;
+  my $search_refseq_genome     = getValue( $def, "search_refseq_genome", 0 ) && $notMicroRNAOnly;
 
   my $search_nonhost_database = $search_nonhost_genome || $search_nonhost_library || $search_refseq_genome;
 
@@ -1442,20 +1442,26 @@ sub getSmallRNAConfig {
         },
       };
       push( @$summary_ref, "nonhost_genome_count" );
+
+      my $rCode = '';
+      if (defined $def->{host_microbial_vis_groups}){
+        my $visgroups = $def->{host_microbial_vis_groups};
+        $rCode = 'groupNames=c("' . join('", "', @$visgroups) . '"';
+      }
       
       $config->{host_microbial_vis} = {
         class                     => "CQS::UniqueR",
         perform                   => 1,
         target_dir                => $data_visualization_dir . "/host_microbial_vis",
-        rtemplate                 => "../smallRNA/hostMicrobialVis.r",
+        rtemplate                 => "../SmallRNA/hostMicrobialVis.r",
         output_file               => ".reads",
         output_file_ext           => ".pdf",
-        parameterSampleFile1_ref  => ["reads_in_tasks", ".NonParallel.TaskReads.csv"],
-        parameterSampleFile2      => $groups,
-        parameterSampleFile3      => $def->{groups_vis_layout},
-        parameterFile1_ref        => [ "nonhost_genome_count", ".microbial.tsv\$" ],
+        parameterSampleFile1      => $groups,
+        parameterSampleFile2      => $def->{groups_vis_layout},
+        parameterFile1_ref        => [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv"],
+        parameterFile2_ref        => [ "nonhost_genome_count", ".microbial.tsv\$" ],
         sh_direct                 => 1,
-        rCode                     => '',
+        rCode                     => $rCode,
         pbs                       => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
