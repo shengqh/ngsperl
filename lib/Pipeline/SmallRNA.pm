@@ -39,9 +39,9 @@ sub getSmallRNAConfig {
   my $search_nonhost_genome  = getValue( $def, "search_nonhost_genome" ) && $notMicroRNAOnly;
   my $search_nonhost_library = getValue( $def, "search_nonhost_library" ) && $notMicroRNAOnly;
 
-  my $search_bacteria_genome     = getValue( $def, "search_bacteria_genome" ) && $notMicroRNAOnly;
+  my $search_refseq_genome     = getValue( $def, "search_refseq_genome" ) && $notMicroRNAOnly;
 
-  my $search_nonhost_database = $search_nonhost_genome || $search_nonhost_library || $search_bacteria_genome;
+  my $search_nonhost_database = $search_nonhost_genome || $search_nonhost_library || $search_refseq_genome;
 
   my $perform_annotate_unmapped_reads    = getValue( $def, "perform_annotate_unmapped_reads" );
   my $perform_class_independent_analysis = getValue( $def, "perform_class_independent_analysis", 1 );
@@ -1280,58 +1280,63 @@ sub getSmallRNAConfig {
     );
   }
 
-  if ($search_bacteria_genome) {
-    my $spcount_bowtie_bacteria = "bowtie1_bacteria_pm";
-    $config->{$spcount_bowtie_bacteria} = {
-      class              => "CQS::ProgramIndividualWrapper",
-      perform            => 1,
-      target_dir         => "$host_intermediate_dir/$spcount_bowtie_bacteria",
-      option             => "bowtie -t 8 -d " . getValue($def, "bowtie_bacteria_index_list_file"),
-      interpretor        => "python",
-      program            => "/home/shengq2/program/spcount/spcount/__main__.py",
-      source_arg => "-i",
-      source_ref => $identical_ref,
-      output_arg         => "-o",
-      output_file_ext    => ".txt",
-      output_to_same_folder => 1,
-      sh_direct          => 0,
-      pbs                => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=8",
-        "walltime"  => "4",
-        "mem"       => "20gb"
-      },
-    };
+  if ($search_refseq_genome) {
+    my $refseq_genomes = ["bacteria", "viruses"];
+    for my $refseq (@$refseq_genomes){
+      my $spcount_bowtie = "bowtie1_${refseq}_pm";
+      $config->{$spcount_bowtie} = {
+        class              => "CQS::ProgramIndividualWrapper",
+        perform            => 1,
+        target_dir         => "$host_intermediate_dir/$spcount_bowtie",
+        option             => "bowtie -t 8 -d " . getValue($def, "bowtie_${refseq}_index_list_file"),
+        interpretor        => "",
+        program            => "spcount",
+        check_program     => 0,
+        source_arg => "-i",
+        source_ref => $identical_ref,
+        output_arg         => "-o",
+        output_file_ext    => ".txt",
+        output_to_same_folder => 1,
+        sh_direct          => 0,
+        pbs                => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=8",
+          "walltime"  => "4",
+          "mem"       => "20gb"
+        },
+      };
 
-    push( @$individual_ref, $spcount_bowtie_bacteria );
+      push( @$individual_ref, $spcount_bowtie );
 
-    my $spcount_count_bacteria = $spcount_bowtie_bacteria . "_table";
-    $config->{$spcount_count_bacteria} = {
-      class              => "CQS::ProgramWrapper",
-      perform            => 1,
-      target_dir         => "$nonhost_genome_dir/$spcount_count_bacteria",
-      option             => "count",
-      interpretor        => "python",
-      program            => "/home/shengq2/program/spcount/spcount/__main__.py",
-      parameterSampleFile1_arg => "-i",
-      parameterSampleFile1_ref => $spcount_bowtie_bacteria,
-      parameterSampleFile2_arg => "-c",
-      parameterSampleFile2_ref => $identical_count_ref,
-      output_arg         => "-o",
-      output_file_ext    => ".count",
-      output_to_same_folder => 1,
-      sh_direct          => 1,
-      pbs                => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "4",
-        "mem"       => "10gb"
-      },
-    };
+      my $spcount_count = $spcount_bowtie . "_table";
+      $config->{$spcount_count} = {
+        class              => "CQS::ProgramWrapper",
+        perform            => 1,
+        target_dir         => "$nonhost_genome_dir/$spcount_count",
+        option             => "count",
+        interpretor        => "",
+        program            => "spcount",
+        check_program     => 0,
+        parameterSampleFile1_arg => "-i",
+        parameterSampleFile1_ref => $spcount_bowtie,
+        parameterSampleFile2_arg => "-c",
+        parameterSampleFile2_ref => $identical_count_ref,
+        output_arg         => "-o",
+        output_file_ext    => ".count",
+        output_to_same_folder => 1,
+        sh_direct          => 1,
+        pbs                => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "4",
+          "mem"       => "10gb"
+        },
+      };
 
-    push( @$summary_ref, $spcount_count_bacteria );
+      push( @$summary_ref, $spcount_count );
+    }
   }
 
   my $nonhostXml   = [];
