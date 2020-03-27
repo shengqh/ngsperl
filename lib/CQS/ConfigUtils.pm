@@ -685,7 +685,7 @@ sub get_ref_section_pbs {
         my $myclass = instantiate( $targetSection->{class} );
 
         #print ($targetSection->{class} . " " . $section. "\n");
-        my $result_pbs_map = $myclass->get_result_dependent_pbs( $config, $section );
+        my $result_pbs_map = $myclass->get_result_pbs( $config, $section );
         for my $resultKey ( keys %$result_pbs_map ) {
           my $newpbs  = $result_pbs_map->{$resultKey};
           my $pbslist = $result->{$resultKey};
