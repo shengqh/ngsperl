@@ -7,7 +7,8 @@ use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
 
-my $rootDir = "C:/temp";
+#my $rootDir = "C:/temp";
+my $rootDir = "/scratch/cqs/shengq2/test";
 my $config = {
   general => {
     task_name => "TestOneToMany",
