@@ -1437,6 +1437,29 @@ sub getSmallRNAConfig {
         },
       };
       push( @$summary_ref, "nonhost_genome_count" );
+      
+      $config->{host_microbial_vis} = {
+        class                     => "CQS::UniqueR",
+        perform                   => 1,
+        target_dir                => $data_visualization_dir . "/host_microbial_vis",
+        rtemplate                 => "../smallRNA/hostMicrobialVis.r",
+        output_file               => ".reads",
+        output_file_ext           => ".pdf",
+        parameterSampleFile1_ref  => ["reads_in_tasks", ".NonParallel.TaskReads.csv"],
+        parameterSampleFile2      => $groups,
+        parameterSampleFile3      => $def->{groups_vis_layout},
+        parameterFile1_ref        => [ "nonhost_genome_count", ".microbial.tsv\$" ],
+        sh_direct                 => 1,
+        rCode                     => '',
+        pbs                       => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary_ref, "host_microbial_vis";
     }
     
     push @name_for_readSummary, @nonhost_genome_group_names;
