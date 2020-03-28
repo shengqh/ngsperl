@@ -8,7 +8,7 @@ use CQS::SystemUtils;
 use CQS::StringUtils;
 use CQS::ScatterTask;
 use Data::Dumper;
-use Test::More tests => 3;
+use Test::More tests => 4;
 
 
 our @ISA = qw(CQS::ScatterTask);
@@ -62,7 +62,7 @@ my $key_sample_map = {};
 for my $sample_name (sort keys %$source){
   for my $scatter_name (@$scatter_names){
     my $key = $sample_name . "." . $scatter_name;
-    $key_sample_map->{$key} = [$sample_name];
+    $key_sample_map->{$key} = $sample_name;
   }
 }
 
@@ -85,9 +85,18 @@ is_deeply( $actual_pbs, $expect_pbs );
 #test pbs source
 my $expect_source = {};
 for my $key (sort keys %$key_sample_map){
-  $expect_source->{"/test/pbs/" . $key . "_st.pbs"} = $key_sample_map->{$key};
+  $expect_source->{"/test/pbs/" . $key . "_st.pbs"} = [$key_sample_map->{$key}];
 }
 my $actual_source = $test->get_pbs_source( $config, "test" );
 is_deeply( $actual_source, $expect_source );
+
+#test result_pbs
+my $expect_result_pbs_map = {};
+for my $key (sort keys %$key_sample_map){
+  $expect_result_pbs_map->{$key} = "/test/pbs/" . $key . "_st.pbs";
+}
+
+my $result_pbs_map = $test->get_result_pbs($config, "test");
+is_deeply( $result_pbs_map, $expect_result_pbs_map );
 
 1;

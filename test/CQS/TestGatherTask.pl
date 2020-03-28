@@ -8,7 +8,7 @@ use CQS::SystemUtils;
 use CQS::StringUtils;
 use CQS::GatherTask;
 use Data::Dumper;
-use Test::More tests => 3;
+use Test::More tests => 4;
 
 our @ISA = qw(CQS::GatherTask);
 
@@ -79,5 +79,14 @@ for my $key (sort keys %$gather_map){
 }
 my $actual_source = $test->get_pbs_source( $config, "test" );
 is_deeply( $actual_source, $expect_source );
+
+#test result_pbs
+my $expect_result_pbs_map = {};
+for my $key (sort keys %$gather_map){
+  $expect_result_pbs_map->{$key} = "/test/pbs/" . $key . "_gt.pbs";
+}
+
+my $result_pbs_map = $test->get_result_pbs($config, "test");
+is_deeply( $result_pbs_map, $expect_result_pbs_map );
 
 1;

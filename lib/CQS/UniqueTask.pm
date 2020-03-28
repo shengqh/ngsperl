@@ -50,7 +50,7 @@ sub get_pbs_source {
       }
     }
   }
-  my $sourceNames = [keys %$sources];
+  my $sourceNames = [sort keys %$sources];
 
   my $pbsFiles = $self->get_pbs_files( $config, $section );
   my $result   = {};
