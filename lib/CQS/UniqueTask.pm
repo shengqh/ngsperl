@@ -34,4 +34,30 @@ sub get_clear_map {
   return $result;
 }
 
+sub get_pbs_source {
+  my ( $self, $config, $section ) = @_;
+
+  my $task_section = $config->{$section};
+  my $sources = {};
+  for my $key ( keys %$task_section ) {
+    my $mapname = $key;
+    if ( $mapname =~ /_ref$/ ) {
+      $mapname =~ s/_config_ref//g;
+      $mapname =~ s/_ref//g;
+      my $refpbsmap = get_ref_section_pbs( $config, $section, $mapname );
+      for my $refkey (keys %$refpbsmap){
+        $sources->{$refkey} = 1;
+      }
+    }
+  }
+  my $sourceNames = [keys %$sources];
+
+  my $pbsFiles = $self->get_pbs_files( $config, $section );
+  my $result   = {};
+  for my $resKey ( keys %$pbsFiles ) {
+    $result->{ $pbsFiles->{$resKey} } = [$resKey, @$sourceNames];
+  }
+  return $result;
+}
+
 1;

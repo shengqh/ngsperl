@@ -7,11 +7,12 @@ use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
 
-#my $rootDir = "C:/temp";
-my $rootDir = "/scratch/cqs/shengq2/test";
+my $rootDir = "C:/temp";
+#my $rootDir = "/scratch/cqs/shengq2/test";
 my $config = {
   general => {
-    task_name => "TestOneToMany",
+    task_name => "testUniqueTaskSequence",
+    cluster => "slurm",
   },
   "perl1" => {
     class       => "CQS::Perl",
@@ -40,12 +41,36 @@ my $config = {
       "mem"       => "10gb"
     },
   },
-  "perl2" => {
-    class       => "CQS::Perl",
+#  "perl2" => {
+#    class       => "CQS::Perl",
+#    perform     => 1,
+#    target_dir  => "$rootDir/perl2",
+#    option      => "",
+#    perlFile     => "../SmallRNA/filterTrnaXml.py",
+#    source_ref      => ["perl1"],
+#    source_arg            => "-i",
+#    source_join_delimiter => ",",
+#    output_to_same_folder => 1,
+#    output_arg            => "-o",
+#    output_file_prefix    => "",
+#    output_file_ext       => "._ITER_.1.fastq.gz",
+#    output_other_ext      => "._ITER_.2.fastq.gz",
+#    iteration             => 3,
+#    sh_direct             => 1,
+#    pbs                   => {
+#      "email"     => "quanhu.sheng.1\@vumc.org",
+#      "emailType" => "FAIL",
+#      "nodes"     => "1:ppn=1",
+#      "walltime"  => "10",
+#      "mem"       => "10gb"
+#    },
+#  },
+  "r1" => {
+    class       => "CQS::UniqueR",
     perform     => 1,
-    target_dir  => "$rootDir/perl2",
+    target_dir  => "$rootDir/r1",
     option      => "",
-    perlFile     => "../SmallRNA/filterTrnaXml.py",
+    rtemplate     => "../SmallRNA/filterTrnaXml.py",
     source_ref      => ["perl1"],
     source_arg            => "-i",
     source_join_delimiter => ",",
@@ -70,7 +95,8 @@ my $config = {
     target_dir => "$rootDir/sequencetask",
     option     => "",
     source     => {
-      step1 => ["perl1", "perl2"],
+      #step1 => ["perl1", "perl2", "r1"],
+      step1 => ["perl1", "r1"],
     },
     sh_direct => 0,
     cluster   => "slurm",
