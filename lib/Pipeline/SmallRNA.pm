@@ -54,6 +54,8 @@ sub getSmallRNAConfig {
 
   my $perform_nonhost_overlap_vis = getValue( $def, "perform_nonhost_overlap_vis", 1 ) && $notMicroRNAOnly;
 
+  my $perform_nonhost_genome_count = getValue( $def, "perform_nonhost_genome_count", 0 ) && $notMicroRNAOnly;
+
   my $top_read_number = getValue( $def, "top_read_number" );
 
   my $real_genome_bowtie1_index = $def->{"real_genome_bowtie1_index"};
@@ -1420,7 +1422,7 @@ sub getSmallRNAConfig {
       }
     }
 
-    if ($def->{perform_nonhost_genome_count}){
+    if ($perform_nonhost_genome_count){
       $config->{nonhost_genome_count} = {
         class              => "CQS::ProgramWrapper",
         perform            => 1,
@@ -1442,35 +1444,6 @@ sub getSmallRNAConfig {
         },
       };
       push( @$summary_ref, "nonhost_genome_count" );
-
-      my $rCode = '';
-      if (defined $def->{host_microbial_vis_groups}){
-        my $visgroups = $def->{host_microbial_vis_groups};
-        $rCode = 'groupNames=c("' . join('", "', @$visgroups) . '"';
-      }
-      
-      $config->{host_microbial_vis} = {
-        class                     => "CQS::UniqueR",
-        perform                   => 1,
-        target_dir                => $data_visualization_dir . "/host_microbial_vis",
-        rtemplate                 => "../SmallRNA/hostMicrobialVis.r",
-        output_file               => ".reads",
-        output_file_ext           => ".pdf",
-        parameterSampleFile1      => $groups,
-        parameterSampleFile2      => $def->{groups_vis_layout},
-        parameterFile1_ref        => [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv"],
-        parameterFile2_ref        => [ "nonhost_genome_count", ".microbial.tsv\$" ],
-        sh_direct                 => 1,
-        rCode                     => $rCode,
-        pbs                       => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      };
-      push @$summary_ref, "host_microbial_vis";
     }
     
     push @name_for_readSummary, @nonhost_genome_group_names;
@@ -1944,6 +1917,35 @@ sub getSmallRNAConfig {
     };
     push @$summary_ref, ( "reads_in_tasks_pie", "reads_in_tasks_all" );
 
+    if($perform_nonhost_genome_count){  
+      my $rCode = '';
+      if (defined $def->{host_microbial_vis_groups}){
+        my $visgroups = $def->{host_microbial_vis_groups};
+        $rCode = 'groupNames=c("' . join('", "', @$visgroups) . '"';
+      }
+      $config->{host_microbial_vis} = {
+        class                     => "CQS::UniqueR",
+        perform                   => 1,
+        target_dir                => $data_visualization_dir . "/host_microbial_vis",
+        rtemplate                 => "../SmallRNA/hostMicrobialVis.r",
+        output_file               => ".reads",
+        output_file_ext           => ".pdf",
+        parameterSampleFile1      => $groups,
+        parameterSampleFile2      => $def->{groups_vis_layout},
+        parameterFile1_ref        => [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv"],
+        parameterFile2_ref        => [ "nonhost_genome_count", ".microbial.tsv\$" ],
+        sh_direct                 => 1,
+        rCode                     => $rCode,
+        pbs                       => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary_ref, "host_microbial_vis";
+    }
   }
 
   if ($perform_class_independent_analysis) {
