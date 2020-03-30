@@ -35,6 +35,8 @@ Assume you download the NGSPERL package to "/home/user/ngsperl", add "/home/user
 
 NGSPERL just provide the interface to generate PBS scripts but not running the actual scripts. So, the tools used in the pipeline should be installed individually before the scripts being executed, for example, bwa for genome alignment.
 
+If you want to use ngsperl to download data from GEO/SRA, you will need to install [EDirect](https://dataguide.nlm.nih.gov/edirect/install.html).
+
 <a name="framework"/>
 
 # Framework
