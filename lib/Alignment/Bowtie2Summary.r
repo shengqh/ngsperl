@@ -24,14 +24,30 @@ for(i in c(1:nrow(filelist))){
   subdata = read.table(filelocation, sep=":", header=F, strip.white=T, fill=T, stringsAsFactors = F, comment='*')
   totalReads = gsub("\\s.+", "", subdata[1,1])
   
-  unmappedReads <- subdata$V1[grepl("aligned concordantly 0 times$", subdata$V1)]
-  unmappedReads<-gsub("\\s.+", "", unmappedReads)
 
-  uniqueReads <- subdata$V1[grepl("aligned concordantly exactly 1 time$", subdata$V1)]
-  uniqueReads<-gsub("\\s.+", "", uniqueReads)
-  
-  multiMappedReads <- subdata$V1[grepl("aligned concordantly >1 times$", subdata$V1)]
-  multiMappedReads<-gsub("\\s.+", "", multiMappedReads)
+  subdata = read.table(filelocation, sep=":", header=F, strip.white=T, fill=T, stringsAsFactors = F, comment='*')
+  isPairedEnd <- any(grepl("concordantly", subdata$V1))
+  totalReads = gsub("\\s.+", "", subdata[1,1])
+
+  if (isPairedEnd) {
+    unmappedReads <- subdata$V1[grepl("aligned concordantly 0 times$", subdata$V1)]
+    unmappedReads<-gsub("\\s.+", "", unmappedReads)
+
+    uniqueReads <- subdata$V1[grepl("aligned concordantly exactly 1 time$", subdata$V1)]
+    uniqueReads<-gsub("\\s.+", "", uniqueReads)
+
+    multiMappedReads <- subdata$V1[grepl("aligned concordantly >1 times$", subdata$V1)]
+    multiMappedReads<-gsub("\\s.+", "", multiMappedReads)
+  }else{
+    unmappedReads <- subdata$V1[grepl("aligned 0 times$", subdata$V1)]
+    unmappedReads<-gsub("\\s.+", "", unmappedReads)
+
+    uniqueReads <- subdata$V1[grepl("aligned exactly 1 time$", subdata$V1)]
+    uniqueReads<-gsub("\\s.+", "", uniqueReads)
+
+    multiMappedReads <- subdata$V1[grepl("aligned >1 times$", subdata$V1)]
+    multiMappedReads<-gsub("\\s.+", "", multiMappedReads)
+  }
 
   if(is.null(final )){
     final = data.frame("TotalReads"=totalReads, "UnmappedReads"=unmappedReads, "UniqueReads"=uniqueReads, "MultiMappedReads"=multiMappedReads, stringsAsFactors = F)
