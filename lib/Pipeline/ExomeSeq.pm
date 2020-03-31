@@ -95,6 +95,8 @@ sub getConfig {
   my $geneLocus = undef;
   my $chrCode = getValue($def, "has_chr_in_chromosome_name") ? ";addChr=1" : "";
 
+  my $species = getValue($def, "species");
+
   if ( defined $def->{annotation_genes} ) {
     $geneLocus = "annotation_genes_locus";
     $config->{$geneLocus} = {
@@ -516,6 +518,7 @@ sub getConfig {
           g1000_vcf         => $def->{g1000},
           axiomPoly_vcf     => $def->{axiomPoly},
           mills_vcf         => $mills,
+          species    => $species,
           sh_direct         => 1,
           pbs               => {
             "email"    => $email,
@@ -699,7 +702,7 @@ sub getConfig {
           vcf2maf_pl => getValue( $def, "vcf2maf_pl" ),
           vep_path   => getValue( $def, "vep_path" ),
           vep_data   => getValue( $def, "vep_data" ),
-          species    => getValue( $def, "species" ),
+          species    => $species,
           ncbi_build => getValue( $def, "ncbi_build" ),
           filter_vcf => $def->{"vep_filter_vcf"},
           ref_fasta  => $fasta,

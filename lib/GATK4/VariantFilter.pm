@@ -46,12 +46,14 @@ sub perform {
   my $one_thousand_genomes_resource_vcf;
 
   if ($vqsrMode) {
+    my $species = get_option($config, $section, "species");
+    my $isHuman = $species eq "homo_sapiens";
     $gvcf   = 1;
-    $hapmap_resource_vcf = get_param_file( $config->{$section}{hapmap_vcf}, "hapmap_vcf", 1 );
+    $hapmap_resource_vcf = get_param_file( $config->{$section}{hapmap_vcf}, "hapmap_vcf", $isHuman );
     $omni_resource_vcf   = get_param_file( $config->{$section}{omni_vcf}, "omni_vcf", 0 );
     $one_thousand_genomes_resource_vcf  = get_param_file( $config->{$section}{g1000_vcf}, "g1000_vcf", 0 );
-    $mills_resource_vcf  = get_param_file( $config->{$section}{mills_vcf}, "mills_vcf", 1 );
-    $dbsnp_resource_vcf  = get_param_file( $config->{$section}{dbsnp_vcf}, "dbsnp_vcf", 1 );
+    $mills_resource_vcf  = get_param_file( $config->{$section}{mills_vcf}, "mills_vcf", $isHuman );
+    $dbsnp_resource_vcf  = get_param_file( $config->{$section}{dbsnp_vcf}, "dbsnp_vcf", $isHuman );
     $axiomPoly_resource_vcf  = get_param_file( $config->{$section}{axiomPoly_vcf}, "axiomPoly_vcf", 0 );
   }
   
