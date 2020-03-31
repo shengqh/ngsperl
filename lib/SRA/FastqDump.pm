@@ -82,7 +82,7 @@ sub GsmToSrr {
 
   #my $cmd = "grep $gsm $sraTable | grep -e \"^SRR\" | cut -f1";
   my $cmd = "esearch -db sra -query $gsm |efetch -format docsum |xtract -pattern DocumentSummary -element Run\@acc";
-  #print $cmd . "\n";
+  print $cmd . "\n";
   my $res = ` $cmd `;
   $res = trim($res);
   $res =~ s/\n/ /g;
@@ -123,7 +123,7 @@ sub perform {
       if ($is_restricted_data){
         print $pbs "
 ln -s $sample_file ${sample_name}.sra 
-fastq-dump --split-3 --gzip --origfmt --helicos ${sample_name}.sra
+fastq-dump --split-e --gzip --origfmt --helicos ${sample_name}.sra
 rm ${sample_name}.sra
 ";
       } else {
@@ -131,7 +131,7 @@ rm ${sample_name}.sra
 if [ -z \${SLURM_JOBID+x} ]; then 
   echo \"in bash mode\"; 
   ln -s $sample_file ${sample_name}.sra 
-  fastq-dump --split-3 --gzip --origfmt --helicos ${sample_name}.sra
+  fastq-dump --split-e --gzip --origfmt --helicos ${sample_name}.sra
   rm ${sample_name}.sra
 else 
   echo \"in cluster mode\"; 
@@ -167,7 +167,7 @@ fi
     elsif ( $sample_file =~ /SRR/ ) {
       my @sample_files = split( '\s+', $sample_file );
       if ( scalar(@sample_files) == 1 ) {
-        print $pbs "fastq-dump --split-3 --gzip --origfmt --helicos $sample_file \n";
+        print $pbs "fastq-dump --split-e --gzip --origfmt --helicos $sample_file \n";
         if($ispaired){
           print $pbs "mv ${sample_file}_1.fastq.gz ${sample_name}_1.fastq.gz \n";
           print $pbs "mv ${sample_file}_2.fastq.gz ${sample_name}_2.fastq.gz \n";
@@ -178,7 +178,7 @@ fi
       else {
         print $pbs "if [[ -s ${sample_name}.fastq ]]; then\n  rm ${sample_name}.fastq \nfi \n";
         for my $sf (@sample_files) {
-          print $pbs "fastq-dump --split-3 --origfmt --helicos $sf -Z >> ${sample_name}.fastq \n";
+          print $pbs "fastq-dump --split-e --origfmt --helicos $sf -Z >> ${sample_name}.fastq \n";
         }
         print $pbs "gzip ${sample_name}.fastq \n";
       }
