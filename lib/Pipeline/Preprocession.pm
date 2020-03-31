@@ -26,6 +26,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_preprocessing",     1 );
   initDefaultValue( $def, "cluster",                   'slurm' );
   initDefaultValue( $def, "sra_to_fastq",              0 );
+  initDefaultValue( $def, "check_file_exists",         1 );
   initDefaultValue( $def, "merge_fastq",               0 );
   initDefaultValue( $def, "fastq_remove_N",            0 );
   initDefaultValue( $def, "perform_fastqc",            1 );
@@ -79,7 +80,7 @@ sub getPreprocessionConfig {
   my $task    = getValue( $def, "task_name" );
   my $email   = getValue( $def, "email" );
 
-  if (! $def->{sra_to_fastq}){
+  if ((! $def->{sra_to_fastq}) && $def->{check_file_exists}){
     #all file defined in $files should be hard-coding with absolute path, check file
     my $sourcefiles   = getValue( $def, "files" );
     foreach my $filename (keys %$sourcefiles){
