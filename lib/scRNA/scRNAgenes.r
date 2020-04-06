@@ -37,7 +37,7 @@ for(gene in genes){
   sample<-samples[1]
   for (sample in samples){
     sobj<-subset(obj, cells=colnames(obj)[obj$orig.ident==sample])
-    pgene<-FeaturePlot(object = obj, features=gene)  + NoLegend() + ggtitle(sample) + theme(plot.title = element_text(hjust=0.5))
+    pgene<-FeaturePlot(object = sobj, features=gene)  + NoLegend() + ggtitle(sample) + theme(plot.title = element_text(hjust=0.5))
     lst[[sample]]=pgene
   }
 
