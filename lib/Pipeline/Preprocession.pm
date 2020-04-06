@@ -375,13 +375,15 @@ sub getPreprocessionConfig {
   my $untrimed_ref = $source_ref;
 
   if ($run_cutadapt_test){
+    my $test_dir = create_directory_or_die( $target_dir . "/test_cutadapt" );
+  
     my $extractTask = "test_extract";
     my $output_file_ext = $is_pairend? ".1.fastq.gz;.2.fastq.gz":".fastq.gz";
     my $extract_option = $is_pairend? "-p":"";
     $config->{$extractTask} = {
       class                    => "CQS::ProgramWrapper",
       perform                  => 1,
-      target_dir               =>  $intermediate_dir . "/" . getNextFolderIndex($def) . $extractTask,
+      target_dir               =>  $test_dir . "/" . $extractTask,
       option                   => $extract_option,
       interpretor              => "python",
       program                  => "../Pipeline/extractFirstNFastq.py",
@@ -401,64 +403,65 @@ sub getPreprocessionConfig {
     };
     push( @$summary, $extractTask );
 
-    my $test_ref = addCutadapt($config, $def, $summary, $summary, "test_cutadapt", "test_fastqc_post_trim", $intermediate_dir, $preprocessing_dir, $extractTask, $is_pairend, $cluster);
-    addFastqLen($config, $def, $summary, $summary, "test_fastq_len", $intermediate_dir, $test_ref, $cluster );
+    my $test_ref = addCutadapt($config, $def, $summary, $summary, "test_cutadapt", "test_fastqc_post_trim", $test_dir, $test_dir, $extractTask, $is_pairend, $cluster);
+    addFastqLen($config, $def, $summary, $summary, "test_fastq_len", $test_dir, $test_ref, $cluster );
   }
-  
-  if ($run_cutadapt) {
-    $source_ref = addCutadapt($config, $def, $individual, $summary, "cutadapt", "fastqc_post_trim", $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster);
-    addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, $source_ref, $cluster );
-  }elsif ($def->{fastq_len} ) {
-    addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, $source_ref, $cluster );
-  }
-
-  if ( $def->{perform_fastqc} ) {
-    my $fastqc_count_vis_files = undef;
-    if ( length($remove_sequences) && $run_cutadapt ) {
-      $fastqc_count_vis_files = {
-        target_dir         => $config->{fastqc_post_trim_summary}->{target_dir},
-        parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.reads.tsv\$" ],
-        parameterFile3_ref => [ "fastqc_post_trim_summary", ".FastQC.reads.tsv\$" ],
-      };
-    }
-    elsif ( length($remove_sequences) ) {
-      $fastqc_count_vis_files = {
-        target_dir         => $config->{fastqc_post_remove_summary}->{target_dir},
-        parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.reads.tsv\$" ],
-      };
-    }
-    elsif ($run_cutadapt) {
-      $fastqc_count_vis_files = {
-        target_dir         => $config->{fastqc_post_trim_summary}->{target_dir},
-        parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.reads.tsv\$" ],
-      };
+  else{
+    if ($run_cutadapt) {
+      $source_ref = addCutadapt($config, $def, $individual, $summary, "cutadapt", "fastqc_post_trim", $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster);
+      addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, $source_ref, $cluster );
+    }elsif ($def->{fastq_len} ) {
+      addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, $source_ref, $cluster );
     }
 
-    if ( defined $fastqc_count_vis_files ) {
-      $config->{"fastqc_count_vis"} = merge(
-        {
-          class              => "CQS::UniqueR",
-          perform            => 1,
-          rtemplate          => "countInFastQcVis.R",
-          output_file        => ".countInFastQcVis.Result",
-          output_file_ext    => ".Reads.csv;.pdf",
-          sh_direct          => 1,
-          parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.reads.tsv\$" ],
-          pbs                => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
-            "mem"       => "10gb"
+    if ( $def->{perform_fastqc} ) {
+      my $fastqc_count_vis_files = undef;
+      if ( length($remove_sequences) && $run_cutadapt ) {
+        $fastqc_count_vis_files = {
+          target_dir         => $config->{fastqc_post_trim_summary}->{target_dir},
+          parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.reads.tsv\$" ],
+          parameterFile3_ref => [ "fastqc_post_trim_summary", ".FastQC.reads.tsv\$" ],
+        };
+      }
+      elsif ( length($remove_sequences) ) {
+        $fastqc_count_vis_files = {
+          target_dir         => $config->{fastqc_post_remove_summary}->{target_dir},
+          parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.reads.tsv\$" ],
+        };
+      }
+      elsif ($run_cutadapt) {
+        $fastqc_count_vis_files = {
+          target_dir         => $config->{fastqc_post_trim_summary}->{target_dir},
+          parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.reads.tsv\$" ],
+        };
+      }
+
+      if ( defined $fastqc_count_vis_files ) {
+        $config->{"fastqc_count_vis"} = merge(
+          {
+            class              => "CQS::UniqueR",
+            perform            => 1,
+            rtemplate          => "countInFastQcVis.R",
+            output_file        => ".countInFastQcVis.Result",
+            output_file_ext    => ".Reads.csv;.pdf",
+            sh_direct          => 1,
+            parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.reads.tsv\$" ],
+            pbs                => {
+              "email"     => $def->{email},
+              "emailType" => $def->{emailType},
+              "nodes"     => "1:ppn=1",
+              "walltime"  => "1",
+              "mem"       => "10gb"
+            },
           },
-        },
-        $fastqc_count_vis_files
-      );
-      push @$summary, ("fastqc_count_vis");
+          $fastqc_count_vis_files
+        );
+        push @$summary, ("fastqc_count_vis");
+      }
     }
   }
 
-  return ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster );
+  return ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster, $run_cutadapt_test );
 }
 
 1;
