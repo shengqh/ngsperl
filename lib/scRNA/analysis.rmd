@@ -210,6 +210,11 @@ if(isCalc){
     } else {
       counts = Read10X_h5(fileName)
     }
+    
+    if (is.list(counts)){
+      counts<-counts$`Gene Expression` 
+    }
+
     if (species=="Mm") {
       rownames(counts)<-toMouseGeneSymbol(rownames(counts))
     }
