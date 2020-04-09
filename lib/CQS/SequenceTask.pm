@@ -86,7 +86,7 @@ sub get_task_pbs_map {
   return ($result);
 }
 
-sub get_dependent_pbs_map {
+sub get_all_dependent_pbs_map {
   my ( $self, $config, $section ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
@@ -107,6 +107,22 @@ sub get_dependent_pbs_map {
       
       my $myclass = instantiate( $task_section->{class} );
       my $pbs_sample_map = $myclass->get_pbs_source( $config, $task_section_name );
+      
+      if ($config->{general}{debug} && $task_section_name eq "bwa_refine_nosoftclip_gatk4_CNV_Germline_06_PostprocessGermlineCNVCalls"){
+        print("Before \n");
+        print Dumper($pbs_sample_map);
+      }
+      for my $pbs (keys %$pbs_sample_map){
+        my $sample_names = $pbs_sample_map->{$pbs};
+        my %params = map { $_ => 1 } @$sample_names;
+        $params{$task_name} = 1;
+        $pbs_sample_map->{$pbs} = [keys %params];
+      }
+      if ($config->{general}{debug} && $task_section_name eq "bwa_refine_nosoftclip_gatk4_CNV_Germline_06_PostprocessGermlineCNVCalls"){
+        print("After  \n");
+        print Dumper($pbs_sample_map);
+      }
+
       my $taskdeppbsmap = {};
       for my $key ( keys %$task_section ) {
         my $mapname = $key;
@@ -114,7 +130,7 @@ sub get_dependent_pbs_map {
           $mapname =~ s/_config_ref//g;
           $mapname =~ s/_ref//g;
           my $refpbsmap = get_ref_section_pbs( $config, $task_section_name, $mapname );
-          
+
           for my $pbs (keys %$pbs_sample_map){
             my $curpbs = $taskdeppbsmap->{$pbs};
             if ( !defined $curpbs ) {
@@ -122,6 +138,7 @@ sub get_dependent_pbs_map {
             }
             
             my $sample_names = $pbs_sample_map->{$pbs};
+
             for my $sample_name (@$sample_names) {
               my $ref_pbs_list = $refpbsmap->{$sample_name};
               if (defined $ref_pbs_list){
