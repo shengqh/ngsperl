@@ -150,7 +150,10 @@ with open(outputFile, 'w') as sw:
               curgenemap = {}
               genes[curgene] = curgenemap
               for idx in sampleIndecies:
-                curgenemap[idx] = parts[idx]
+                if parts[idx] != "0":
+                  curgenemap[idx] = "1"
+                else:
+                  curgenemap[idx] = "0"
 
 fsorted = sorted(filtered, key=getKey, reverse=True)
 with open(outputprefix + ".snv.missense.tsv", 'w') as snvw:
