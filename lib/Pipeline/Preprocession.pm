@@ -28,6 +28,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "sra_to_fastq",              0 );
   initDefaultValue( $def, "check_file_exists",         1 );
   initDefaultValue( $def, "merge_fastq",               0 );
+  initDefaultValue( $def, "perform_dedup_fastq",       0 );
   initDefaultValue( $def, "fastq_remove_N",            0 );
   initDefaultValue( $def, "perform_fastqc",            1 );
   initDefaultValue( $def, "perform_cutadapt_test",     0 );
@@ -207,6 +208,7 @@ sub getPreprocessionConfig {
       emailType  => getValue( $def, "emailType", "ALL" ),
       constraint => $def->{constraint},
       account    => $def->{account},
+      debug      => $def->{debug},
     },
     files                => $def->{files},
     groups               => $def->{groups},
@@ -312,6 +314,32 @@ sub getPreprocessionConfig {
     };
     $source_ref = "merge_fastq";
     push @$individual, ("merge_fastq");
+  }
+
+  if ($def->{perform_dedup_fastq}){
+    $config->{dedup_fastq} = {
+      class => "CQS::ProgramWrapperOneToOne",
+      target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "dedup_fastq",
+      interpretor => "python",
+      program => "../Format/dedupFastq.py",
+      source_arg => "-i",
+      source_ref => $source_ref,
+      output_arg => "-o",
+      output_file_prefix => ".dedup",
+      output_file_ext => ".dedup.1.fastq.gz",
+      output_other_ext => ".dedup.2.fastq.gz",
+      output_to_same_folder => 1,
+      sh_direct   => 0,
+      pbs => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      }
+    };
+    $source_ref = "dedup_fastq";
+    push @$individual, ("dedup_fastq");
   }
 
   if ($fastq_remove_N) {
