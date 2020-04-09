@@ -132,9 +132,11 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
 
-  my $task_dep_pbs_map = $self->get_dependent_pbs_map( $config, $section );
+  my $task_dep_pbs_map = $self->get_all_dependent_pbs_map( $config, $section );
 
-  #print Dumper($task_dep_pbs_map);
+  if ($config->{general}{debug}){
+    #print Dumper($task_dep_pbs_map->{bwa_refine_nosoftclip_gatk4_CNV_Germline_06_PostprocessGermlineCNVCalls});
+  }
 
   my %step_map = %{ get_raw_files( $config, $section ) };
 
