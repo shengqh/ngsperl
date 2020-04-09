@@ -12,6 +12,7 @@ use CQS::NGSCommon;
 use CQS::StringUtils;
 use CQS::Task;
 use File::Spec;
+use Data::Dumper;
 
 our @ISA = qw(CQS::Task);
 
@@ -103,6 +104,8 @@ sub perform {
 
     my $final_prefix = $sample_name . $output_file_prefix;
 
+    #print Dumper($parameterSampleFile1->{$sample_name});
+    
     my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name );
     if ($curOption =~ /__FILE__/){
       $curOption =~ s/__FILE__/$param_option1/g;
