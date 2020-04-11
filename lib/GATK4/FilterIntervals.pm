@@ -62,7 +62,13 @@ sub perform {
     ]
   );
 
+  my $script = dirname(__FILE__) . "/fixLeftTrimDeletion.py";
+  if ( !-e $script ) {
+    die "File not found : " . $script;
+  }
+
   my $final_file = $task_name . ".filtered.interval_list";
+  my $final_file_tmp = $task_name . ".filtered.all.interval_list";
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
@@ -89,7 +95,11 @@ cd $result_dir
 gatk --java-options \"$java_option\" FilterIntervals $option \\
   -L ${intervals} $blacklist_intervals_option $inputOption \\
   --interval-merging-rule OVERLAPPING_ONLY $parameters \\
-  --output $final_file
+  --output $final_file_tmp
+
+python $script -i $final_file_tmp -o $final_file
+
+rm $final_file_tmp
 ";
   $self->close_pbs( $pbs, $pbs_file );
 }
