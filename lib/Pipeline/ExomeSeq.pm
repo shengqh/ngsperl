@@ -407,9 +407,10 @@ sub getConfig {
       push @$individual, ($gvcf_name);
 
       if(getValue($def, "gatk4_variant_filter_by_chromosome", 0)){
-        my $filter_name_chr = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_vqsr_chr";
+        my $vqsr_prefix = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) ;
+        my $filter_name_chr = $vqsr_prefix . "_vqsr_1_scatter";
         $config->{$filter_name_chr} = {
-          class             => "GATK4::VariantFilterChromosome",
+          class             => "GATK4::VariantFilterScatterChromosome",
           perform           => 1,
           target_dir        => "${target_dir}/$filter_name_chr",
           option            => "",
@@ -429,9 +430,9 @@ sub getConfig {
         };
         push @$summary, ($filter_name_chr);
 
-        my $filter_name_chr_recalibrator = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_recalibrator";
+        my $filter_name_chr_recalibrator = $vqsr_prefix . "_vqsr_2_recalibrator";
         $config->{$filter_name_chr_recalibrator} = {
-          class             => "GATK4::VariantRecalibrator",
+          class             => "GATK4::VariantFilterRecalibrator",
           perform           => 1,
           target_dir        => "${target_dir}/$filter_name_chr_recalibrator",
           option            => "",
@@ -456,9 +457,9 @@ sub getConfig {
         };
         push @$summary, ($filter_name_chr_recalibrator);
 
-        my $filter_name_chr_recalibrator_apply = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_applyVQSR";
+        my $filter_name_chr_recalibrator_apply = $vqsr_prefix . "_vqsr_3_applyVQSR";
         $config->{$filter_name_chr_recalibrator_apply} = {
-          class             => "GATK4::VariantApplyVQSR",
+          class             => "GATK4::VariantFilterApplyVQSR",
           perform           => 1,
           target_dir        => "${target_dir}/$filter_name_chr_recalibrator_apply",
           option            => "",
@@ -480,9 +481,9 @@ sub getConfig {
         };
         push @$summary, ($filter_name_chr_recalibrator_apply);
 
-        my $filter_name_chr_recalibrator_apply_gather = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_gather";
+        my $filter_name_chr_recalibrator_apply_gather = $vqsr_prefix . "_vqsr_4_gather";
         $config->{$filter_name_chr_recalibrator_apply_gather} = {
-          class             => "GATK4::VariantGather",
+          class             => "GATK4::VariantFilterGather",
           perform           => 1,
           target_dir        => "${target_dir}/$filter_name_chr_recalibrator_apply_gather",
           option            => "",

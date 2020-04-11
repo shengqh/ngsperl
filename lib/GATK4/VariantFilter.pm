@@ -12,6 +12,7 @@ use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 use GATK4::GATK4UniqueTask;
+use GATK4::VariantFilterUtils;
 
 our @ISA = qw(GATK4::GATK4UniqueTask);
 
@@ -69,28 +70,13 @@ sub perform {
   my $java_option = $self->get_java_option($config, $section, $memory);
   $self->get_docker_value(1);
 
-  my %vcfFiles = %{ get_raw_files( $config, $section ) };
+  my $vcfFiles = get_raw_files( $config, $section );
 
   my $script = dirname(__FILE__) . "/fixLeftTrimDeletion.py";
   if ( !-e $script ) {
     die "File not found : " . $script;
   }
 
-  my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
-  my $pbs_name = basename($pbs_file);
-  my $log      = $self->get_log_filename( $log_dir, $task_name );
-
-  my $mergedFile                    = $task_name . ".merged.vcf.gz";
-  my $callFile                      = $task_name . ".raw.vcf.gz";
-  my $variant_filtered_vcf = $task_name . ".variant_filtered.vcf.gz";
-  my $sites_only_variant_filtered_vcf       = $task_name . ".sites_only.variant_filtered.vcf.gz";
-  
-  my $indels_recalibration  = $task_name . ".indels.recal.vcf.gz";
-  my $indels_tranches = $task_name . ".indels.tranches";
-  
-  my $snps_recalibration  = $task_name . ".snp.recal.vcf.gz";
-  my $snps_tranches = $task_name . ".snp.tranches";
-  
   my $indel_tranche_values = ["100.0", "99.95", "99.9", "99.5", "99.0", "97.0", "96.0", "95.0", "94.0", "93.5", "93.0", "92.0", "91.0", "90.0"];
   my $snp_tranche_values = ["100.0", "99.95", "99.9", "99.8", "99.6", "99.5", "99.4", "99.3", "99.0", "98.0", "97.0", "90.0" ];
   my $recalibration_annotation_values = ["QD", "MQRankSum", "ReadPosRankSum", "FS", "MQ", "SOR", "DP"];
@@ -108,141 +94,23 @@ sub perform {
   my $fix_file = $task_name . ".indels.snp.recal.pass.norm.nospan.vcf";
   my $final_file = $task_name . ".indels.snp.recal.pass.norm.nospan.vcf.gz";
 
-  my $reader_threads = min( 5, $thread );
+  my ($pbs_file, $pbs, $variant_filtered_vcf, $sites_only_variant_filtered_vcf, $rmlist) = start_variant_filter_pbs($self, $task_name, $pbs_dir, $pbs_desc, $log_dir, $thread, $cluster, $path_file, $result_dir, $init_command, $java_option, $faFile, $vcfFiles, $dbsnp_resource_vcf, $excess_het_threshold);
 
-  my $log_desc = $cluster->get_log_description($log);
+  my ($indels_recalibration, $indels_tranches, $snps_recalibration, $snps_tranches, $recal_rmlist) = add_indel_snv_recalibrator_pbs($self, $config, $section, $pbs, $task_name, $sites_only_variant_filtered_vcf, $memory);
 
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
-  print $pbs "  
-if [ ! -s $mergedFile ]; then
-  echo CombineGVCFs=`date` 
-  gatk --java-options \"$java_option\" \\
-    CombineGVCFs \\
-    -R $faFile \\
-";
+  my ($apply_vqsr_rmlist) = add_apply_vqsr_pbs($self, $config, $section, $pbs, $task_name, $variant_filtered_vcf, $indels_recalibration, $indels_tranches, $snps_recalibration, $snps_tranches, $pass_file, $option, $thread, $memory );
 
-  for my $sample_name ( sort keys %vcfFiles ) {
-    my @sample_files = @{ $vcfFiles{$sample_name} };
-    my $gvcfFile     = $sample_files[0];
-    print $pbs "    -V $gvcfFile \\\n";
-  }
+  my ($left_trim_rmlist) = add_left_trim_pbs($self, $config, $section, $pbs, $task_name, $pass_file, $final_file);
 
-  print $pbs "    -O $mergedFile
-fi
-
-if [[ -s $mergedFile && ! -s $callFile ]]; then
-  echo GenotypeGVCFs=`date` 
-  gatk --java-options \"$java_option\" \\
-    GenotypeGVCFs \\
-    -R $faFile \\
-    -D $dbsnp_resource_vcf \\
-    -O $callFile \\
-    -V $mergedFile 
-fi
-
-if [[ -s $callFile && ! -s $variant_filtered_vcf ]]; then
-  echo VariantFiltration=`date` 
-  gatk --java-options \"$java_option\" \\
-    VariantFiltration \\
-    --filter-expression \"ExcessHet > ${excess_het_threshold}\" \\
-    --filter-name ExcessHet \\
-    -O $variant_filtered_vcf \\
-    -V ${callFile}
-fi
-
-if [[ -s $variant_filtered_vcf && ! -s $sites_only_variant_filtered_vcf ]]; then
-  echo MakeSitesOnlyVcf=`date` 
-  gatk --java-options \"$java_option\" \\
-    MakeSitesOnlyVcf \\
-    --INPUT $variant_filtered_vcf \\
-    --OUTPUT $sites_only_variant_filtered_vcf
-fi
-
-if [[ -s $sites_only_variant_filtered_vcf && ! -s $indels_recalibration ]]; then
-  echo IndelVariantRecalibrator=`date`
-  gatk --java-options \"$java_option\" \\
-    VariantRecalibrator \\
-    -V ${sites_only_variant_filtered_vcf} \\
-    -O $indels_recalibration \\
-    --tranches-file $indels_tranches \\
-    --trust-all-polymorphic \\
-    $indel_tranche_option \\
-    $recalibration_annotation_option \\
-    --max-gaussians 4 \\
-    $mills_option $axiomPoly_option -mode INDEL 
-fi
-
-if [[ -s $sites_only_variant_filtered_vcf && ! -s $snps_recalibration ]]; then
-  echo SnpVariantRecalibrator=`date`
-  gatk --java-options \"$java_option\" \\
-    VariantRecalibrator \\
-    -V ${sites_only_variant_filtered_vcf} \\
-    -O $snps_recalibration \\
-    --tranches-file $snps_tranches \\
-    --trust-all-polymorphic \\
-    $snp_tranche_option \\
-    $recalibration_annotation_option \\
-    --max-gaussians 6 \\
-    ${hapmap_option} ${omni_option} ${g1000_option} ${dbsnp_option} -mode SNP
-fi
-
-if [[ -s $indels_recalibration && ! -s $indel_recalibration_tmp_vcf ]]; then
-  echo IndelApplyVQSR=`date`
-  gatk --java-options \"$java_option\" \\
-    ApplyVQSR \\
-    -O $indel_recalibration_tmp_vcf \\
-    -V $variant_filtered_vcf \\
-    --recal-file $indels_recalibration \\
-    --tranches-file $indels_tranches \\
-    --truth-sensitivity-filter-level $indel_filter_level \\
-    --create-output-variant-index true \\
-    -mode INDEL
-fi
-
-if [[ -s $snps_recalibration && ! -s $recalibrated_vcf_filename ]]; then
-  echo SnpApplyVQSR=`date`
-  gatk --java-options \"$java_option\" \\
-    ApplyVQSR \\
-    -O $recalibrated_vcf_filename \\
-    -V $indel_recalibration_tmp_vcf \\
-    --recal-file $snps_recalibration \\
-    --tranches-file $snps_tranches \\
-    --truth-sensitivity-filter-level $snp_filter_level \\
-    --create-output-variant-index true \\
-    -mode SNP
-fi
-
-if [[ -s $recalibrated_vcf_filename && ! -s $pass_file ]]; then
-  echo SelectVariant=`date`
-  gatk --java-options \"$java_option\" \\
-    SelectVariants \\
-    -O $pass_file \\
-    -V $recalibrated_vcf_filename \\
-    --exclude-filtered
-fi
-
-if [[ -s $pass_file && ! -s $left_trim_file ]]; then
-  echo LeftAlignAndNorm=`date`
-  bcftools norm -m- -o $split_file $pass_file 
-  bcftools norm -f $faFile -o $left_trim_file $split_file 
-fi
-
-if [[ -s $left_trim_file && ! -s $final_file ]]; then
-  echo noSpanDeletion=`date`
-  python $script -i $left_trim_file -o $fix_file
-  bgzip $fix_file
-  tabix -p vcf $final_file
-fi
-
+  print $pbs "
 if [[ -s $final_file ]]; then
-  rm $mergedFile ${mergedFile}.tbi \\
-    $callFile ${callFile}.tbi \\
-    $variant_filtered_vcf ${variant_filtered_vcf}.tbi \\
+  rm $rmlist \\
+    $recal_rmlist \\
     $sites_only_variant_filtered_vcf ${sites_only_variant_filtered_vcf}.tbi \\
-    $indels_recalibration ${indels_recalibration}.tbi \\
-    $snps_recalibration ${snps_recalibration}.tbi \\
-    $indel_recalibration_tmp_vcf ${indel_recalibration_tmp_vcf}.tbi \\
-    $split_file ${split_file}.idx $left_trim_file ${left_trim_file}.idx \\
+    $apply_vqsr_rmlist \\
+    $indels_recalibration ${indels_recalibration}.tbi $indels_tranches  \\
+    $snps_recalibration ${snps_recalibration}.tbi $snps_tranches \\
+    $left_trim_rmlist \\
     .conda
 fi
 

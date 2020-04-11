@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package GATK4::VariantFilterChromosome;
+package GATK4::VariantFilterScatterChromosome;
 
 use strict;
 use warnings;
@@ -11,6 +11,7 @@ use CQS::FileUtils;
 use CQS::StringUtils;
 use CQS::TaskUtils;
 use GATK4::GATK4ChromosomeTask;
+use GATK4::VariantFilterUtils;
 
 our @ISA = qw(GATK4::GATK4ChromosomeTask);
 
@@ -60,84 +61,23 @@ sub perform {
   my $java_option = $self->get_java_option($config, $section, $memory);
   $self->get_docker_value(1);
 
-  my %vcfFiles = %{ get_raw_files( $config, $section ) };
+  my $vcfFiles = get_raw_files( $config, $section );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct) . "\n";
 
   for my $chr (@chromosomes) {
-    my $chrTaskName = get_key_name($task_name, $chr);
-
-    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $chrTaskName );
+    my ($pbs_file, $pbs, $variant_filtered_vcf, $final_file, $rmlist) = start_variant_filter_pbs($self, $task_name, $pbs_dir, $pbs_desc, $log_dir, $thread, $cluster, $path_file, $result_dir, $init_command, $java_option, $faFile, $vcfFiles, $dbsnp_resource_vcf, $excess_het_threshold, $chr);
     my $pbs_name = basename($pbs_file);
-    my $log      = $self->get_log_filename( $log_dir, $chrTaskName );
-
     print $sh "\$MYCMD ./$pbs_name \n";
 
-    my $mergedFile                    = $chrTaskName . ".merged.vcf.gz";
-    my $callFile                      = $chrTaskName . ".raw.vcf.gz";
-    my $variant_filtered_vcf = $chrTaskName . ".variant_filtered.vcf.gz";
-    my $final_file       = $chrTaskName . ".variant_filtered.sites_only.vcf.gz";
-    
-    my $reader_threads = min( 5, $thread );
+    print $pbs "
+if [[ -s $final_file ]]; then
+  rm $rmlist .conda
+fi
 
-    my $log_desc = $cluster->get_log_description($log);
-
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
-    print $pbs "  
-  if [ ! -s $mergedFile ]; then
-    echo CombineGVCFs=`date` 
-    gatk --java-options \"$java_option\" \\
-      CombineGVCFs \\
-      -R $faFile \\
-      -L $chr \\
 ";
-
-    for my $sample_name ( sort keys %vcfFiles ) {
-      my @sample_files = @{ $vcfFiles{$sample_name} };
-      my $gvcfFile     = $sample_files[0];
-      print $pbs "      -V $gvcfFile \\\n";
-    }
-
-    print $pbs "      -O $mergedFile
-  fi
-
-  if [[ -s $mergedFile && ! -s $callFile ]]; then
-    echo GenotypeGVCFs=`date` 
-    gatk --java-options \"$java_option\" \\
-      GenotypeGVCFs \\
-      -R $faFile \\
-      -D $dbsnp_resource_vcf \\
-      -O $callFile \\
-      -V $mergedFile 
-  fi
-
-  if [[ -s $callFile && ! -s $variant_filtered_vcf ]]; then
-    echo VariantFiltration=`date` 
-    gatk --java-options \"$java_option\" \\
-      VariantFiltration \\
-      --filter-expression \"ExcessHet > ${excess_het_threshold}\" \\
-      --filter-name ExcessHet \\
-      -O $variant_filtered_vcf \\
-      -V ${callFile}
-  fi
-
-  if [[ -s $variant_filtered_vcf && ! -s $final_file ]]; then
-    echo MakeSitesOnlyVcf=`date` 
-    gatk --java-options \"$java_option\" \\
-      MakeSitesOnlyVcf \\
-      --INPUT $variant_filtered_vcf \\
-      --OUTPUT $final_file
-  fi
-
-  if [[ -s $final_file ]]; then
-    rm $mergedFile ${mergedFile}.tbi \\
-      $callFile ${callFile}.tbi \\
-      .conda
-  fi
-
-  ";
     $self->close_pbs( $pbs, $pbs_file );
   }
 

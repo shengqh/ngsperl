@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package GATK4::VariantGather;
+package GATK4::VariantFilterGather;
 
 use strict;
 use warnings;
@@ -13,6 +13,7 @@ use CQS::NGSCommon;
 use CQS::StringUtils;
 use CQS::GatherTask;
 use CQS::TaskUtils;
+use GATK4::VariantFilterUtils;
 
 our @ISA = qw(CQS::GatherTask);
 
@@ -64,12 +65,6 @@ sub perform {
   $self->get_docker_value(1);
 
   my %vcfFiles = %{ get_raw_files( $config, $section ) };
-  my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
-
-  my $script = dirname(__FILE__) . "/fixLeftTrimDeletion.py";
-  if ( !-e $script ) {
-    die "File not found : " . $script;
-  }
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
@@ -77,9 +72,6 @@ sub perform {
   my $log_desc = $cluster->get_log_description($log);
 
   my $pass_file = $task_name . ".indels.snp.recal.pass.vcf.gz";
-  my $split_file = $task_name . ".indels.snp.recal.pass.split.vcf";
-  my $left_trim_file = $task_name . ".indels.snp.recal.pass.norm.vcf";
-  my $fix_file = $task_name . ".indels.snp.recal.pass.norm.nospan.vcf";
   my $final_file = $task_name . ".indels.snp.recal.pass.norm.nospan.vcf.gz";
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
@@ -103,22 +95,13 @@ if [ ! -s $pass_file ]; then
 
   tabix -p vcf $pass_file
 fi
+";
 
-if [[ -s $pass_file && ! -s $left_trim_file ]]; then
-  echo LeftAlignAndNorm=`date`
-  bcftools norm -m- -o $split_file $pass_file 
-  bcftools norm -f $faFile -o $left_trim_file $split_file 
-fi
+  my ($rmlist) = add_left_trim_pbs($self, $config, $section, $pbs, $task_name, $pass_file, $final_file);
 
-if [[ -s $left_trim_file && ! -s $final_file ]]; then
-  echo noSpanDeletion=`date`
-  python $script -i $left_trim_file -o $fix_file
-  bgzip $fix_file
-  tabix -p vcf $final_file
-fi
-
+print $pbs "
 if [[ -s $final_file ]]; then
-  rm -rf $split_file ${split_file}.idx $left_trim_file ${left_trim_file}.idx \\
+  rm -rf $rmlist \\
     .conda
 fi
 

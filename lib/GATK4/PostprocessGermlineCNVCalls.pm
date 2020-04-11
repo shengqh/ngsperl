@@ -86,14 +86,6 @@ gatk --java-options \"$java_option\" PostprocessGermlineCNVCalls $option \\
   --output-denoised-copy-ratios $denoised_copy_ratios_filename \\
   --output-genotyped-intervals $genotyped_intervals_vcf_filename \\
   --output-genotyped-segments $genotyped_segments_vcf_filename
-
-if [[ -s genotyped_intervals_vcf_filename ]]; then
-  tabix -p vcf $genotyped_intervals_vcf_filename
-fi
-
-if [[ -s genotyped_segments_vcf_filename ]]; then
-  tabix -p vcf $genotyped_segments_vcf_filename
-fi
             
 rm -rf .cache .conda .config .theano
 
