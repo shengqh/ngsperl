@@ -114,8 +114,8 @@ sub result {
     my $genotyped_intervals_vcf_filename = $sample_name . ".genotyped_intervals.vcf.gz";
     my $genotyped_segments_vcf_filename  = $sample_name . ".genotyped_segments.vcf.gz";
     my $denoised_copy_ratios_filename = $sample_name . ".denoised_copy_ratios.tsv";
-    $result->{$sample_name} = filter_array( [ "${sample_dir}/$genotyped_intervals_vcf_filename", 
-                                              "${sample_dir}/$genotyped_segments_vcf_filename",
+    $result->{$sample_name} = filter_array( [ "${sample_dir}/$genotyped_segments_vcf_filename",
+                                              "${sample_dir}/$genotyped_intervals_vcf_filename", 
                                               "${sample_dir}/$denoised_copy_ratios_filename" ], $pattern );
   }
 
