@@ -109,8 +109,8 @@ sub get_all_dependent_pbs_map {
       my $pbs_sample_map = $myclass->get_pbs_source( $config, $task_section_name );
       
       if ($config->{general}{debug} && $task_section_name eq "bwa_refine_nosoftclip_gatk4_CNV_Germline_06_PostprocessGermlineCNVCalls"){
-        print("Before \n");
-        print Dumper($pbs_sample_map);
+        #print("Before \n");
+        #print Dumper($pbs_sample_map);
       }
       for my $pbs (keys %$pbs_sample_map){
         my $sample_names = $pbs_sample_map->{$pbs};
@@ -119,8 +119,8 @@ sub get_all_dependent_pbs_map {
         $pbs_sample_map->{$pbs} = [keys %params];
       }
       if ($config->{general}{debug} && $task_section_name eq "bwa_refine_nosoftclip_gatk4_CNV_Germline_06_PostprocessGermlineCNVCalls"){
-        print("After  \n");
-        print Dumper($pbs_sample_map);
+        #print("After  \n");
+        #print Dumper($pbs_sample_map);
       }
 
       my $taskdeppbsmap = {};
