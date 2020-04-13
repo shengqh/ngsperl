@@ -62,11 +62,12 @@ sub perform {
     ]
   );
 
-  my $script = dirname(__FILE__) . "/fixLeftTrimDeletion.py";
+  my $script = dirname(__FILE__) . "/filterIntervals.py";
   if ( !-e $script ) {
     die "File not found : " . $script;
   }
 
+  my $gc_file = $task_name . ".annotated.tsv";
   my $final_file = $task_name . ".filtered.interval_list";
   my $final_file_tmp = $task_name . ".filtered.all.interval_list";
   my %raw_files = %{ get_raw_files( $config, $section ) };
@@ -91,15 +92,21 @@ export PYTHONPATH=
 source activate gatk
 
 cd $result_dir
+gatk --java-options \"$java_option\" AnnotateIntervals \\
+  -L ${intervals} $blacklist_intervals_option \\
+  -R $ref_fasta \\
+  -imr OVERLAPPING_ONLY \\
+  -O $gc_file
 
 gatk --java-options \"$java_option\" FilterIntervals $option \\
   -L ${intervals} $blacklist_intervals_option $inputOption \\
+  --annotated-intervals $gc_file \\
   --interval-merging-rule OVERLAPPING_ONLY $parameters \\
   --output $final_file_tmp
 
 python $script -i $final_file_tmp -o $final_file
 
-rm $final_file_tmp
+#rm $final_file_tmp
 ";
   $self->close_pbs( $pbs, $pbs_file );
 }
