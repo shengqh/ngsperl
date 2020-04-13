@@ -5,6 +5,7 @@ class LocusItem(object):
     self.Start = 0
     self.End = 0
     self._name = ""
+    self.Overlapped = False
 
   def setLocus(self, chromosome, start, end):
     self.Chromosome = chromosome
@@ -39,6 +40,31 @@ class LocusItem(object):
   def str(self):
     return self.getLocusString()
 
+    
+  def overlapPosition(self, locus, distance = 0):
+    if self.Start > locus.End + distance:
+      return False
+    if locus.Start > self.End + distance:
+      return False
+    return True
+
+  def overlap(self, locus, distance = 0):
+    if self.Chromosome != locus.Chromosome:
+      return(False)
+    return self.overlapPosition(locus, distance)
+  
+  def containsPosition(self, chromosome, position):
+    if self.Start > position:
+      return(False)
+    if self.End < position:
+      return(False)
+    return(True)
+
+  def contains(self, chromosome, position):
+    if self.Chromosome != chromosome:
+      return(False)
+    return self.containsPosition(chromosome, position)
+
 def readBedFile(fileName):
   """Read bed file to list of LocusItem
   
@@ -51,6 +77,8 @@ def readBedFile(fileName):
   result = []
   with open(fileName, "r") as fin:
     for line in fin:
+      if line.startswith("#"):
+        continue
       parts = line.rstrip().split('\t')
       chrom = parts[0]
       start = int(parts[1])
@@ -66,3 +94,8 @@ def readBedFile(fileName):
 
   return(result)
 
+def getChromosomeMap(bedItems):
+  result = {}
+  for bi in bedItems:
+    result.setdefault(bi.Chromosome, []).append(bi)
+  return(result)
