@@ -81,7 +81,7 @@ annovarInputFile = args.output + ".avinput"
 logger.info("outputing to " + combinedFile + " ...")
 with open(annovarInputFile, "w") as fav:
   with open(combinedFile, "w") as fout:
-    fout.write("Locus\tName\tGene\t%s\n" % "\t".join(samples))
+    fout.write("#Chrom\tStart\tEnd\tName\tGene\t%s\n" % "\t".join(samples))
     intervalCount = len(vcf1)
     for idx in range(0, intervalCount):
       chrom = vcf1[idx][0]
@@ -138,7 +138,7 @@ with open(annovarInputFile, "w") as fav:
       
       cnvs = [v for v in values if v != ""]
       if len(cnvs) < len(values) * args.percentage:
-        fout.write("%s:%d-%d\t%s\t\t%s\n" % (chrom, start, end, annotation, "\t".join(values)))
+        fout.write("%s\t%d\t%d\t%s\t\t%s\n" % (chrom, start, end, annotation, "\t".join(values)))
         fav.write("%s\t%d\t%d\t0\t0\n" % (chrom, start, end))
 
 if args.annovar_db == None:
@@ -160,7 +160,7 @@ else:
           lineAnno = fann.readline()
           annoParts = lineAnno.split('\t')
           parts = line.split('\t')
-          parts[2] = annoParts[6]
+          parts[4] = annoParts[6]
           fout.write("\t".join(parts))
 
   os.remove(annovarOutputFile)
