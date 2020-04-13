@@ -15,6 +15,7 @@ parser.add_argument('-o', '--output', action='store', nargs='?', help="Output fi
 parser.add_argument('-b', '--bedfile', action='store', nargs='?', help="Interval file in bed format", required=NotDEBUG)
 parser.add_argument('-s', '--minimumScoreDifference', action='store', nargs='?', help="The minimum phred-scaled log posterior score difference between CNV event and normal event", default=30)
 parser.add_argument('-f', '--minimumDuplicationFold', action='store', nargs='?', help="The minimum copy number fold change as duplication", default=2)
+parser.add_argument('-p', '--percentage', action='store', default=0.9, type=float, nargs='?', help='Max sample percentage allowed')
 
 args = parser.parse_args()
 
@@ -128,4 +129,6 @@ with open(args.output, "w") as fout:
         annotation = ann[2]
       break 
     
-    fout.write("%s:%d-%d\t%s\t%s\n" % (chrom, start, end, annotation, "\t".join(values)))
+    cnvs = [v for v in values if v != ""]
+    if len(cnvs) < len(values) * args.percentage:
+      fout.write("%s:%d-%d\t%s\t%s\n" % (chrom, start, end, annotation, "\t".join(values)))
