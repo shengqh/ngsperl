@@ -1,53 +1,16 @@
-import sys
-import os
+import os,sys,inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+cqsdir = os.path.abspath(os.path.dirname(currentdir) + "/CQS")
+sys.path.insert(0,cqsdir) 
+
 import logging
 import argparse
 import string
 import subprocess
 import pysam
 
-def readHashMap(fileName):
-  result = {}
-  with open(fileName, "r") as f:
-    for line in f:
-      parts = line.rstrip().split('\t')
-      if(len(parts) > 1):
-        if parts[1] not in result:
-          result[parts[1]] = [parts[0]]
-        else:
-          result[parts[1]].append(parts[0])
-  #print(result)
-  return(result)
-
-class LocusItem(object):
-  def __init__(self, chromosome, start, end, name):
-    self.Chromosome = chromosome
-    self.Start = start
-    self.End = end
-    self.Name = name
-    self.Locus = "%s:%d-%d" % (chromosome, start, end)
-
-def readBedFile(fileName):
-  result = []
-  with open(fileName, "r") as fin:
-    for line in fin:
-      parts = line.rstrip().split('\t')
-      if len(parts) >= 4:
-        item = LocusItem(parts[0], int(parts[1]), int(parts[2]), parts[3])
-      else:
-        item = LocusItem(parts[0], int(parts[1]), int(parts[2]), "%s:%s-%s" % (parts[0], parts[1], parts[2]))
-
-      result.append(item)
-  return(result)
-
-def readCNVName(fileName):
-  result = []
-  with open(fileName, "r") as fin:
-    headers = fin.readline().rstrip().split('\t')
-    for line in fin:
-      parts = line.rstrip().split('\t')
-      result.append(parts[1])
-  return(result)
+from LocusItem import LocusItem, readBedFile, getChromosomeMap
+from FileListUtils import readHashMap 
 
 def main():
   DEBUG = False
@@ -64,10 +27,6 @@ def main():
   args = parser.parse_args()
 
   if(DEBUG):
-#    args.input = "/scratch/cqs/shengq2/vickers/20190504_smallRNA_as_chipseq_GCF_000005845.2_ASM584v2/plotPeak/result/20190504_smallRNA_as_chipseq__fileList1.list"
-#    args.groupsFile = "/scratch/cqs/shengq2/vickers/20190504_smallRNA_as_chipseq_GCF_000005845.2_ASM584v2/plotPeak/result/20190504_smallRNA_as_chipseq__fileList2.list"
-#    args.bamListFile = "/scratch/cqs/shengq2/vickers/20190504_smallRNA_as_chipseq_GCF_000005845.2_ASM584v2/plotPeak/result/20190504_smallRNA_as_chipseq__fileList3.list"
-#    args.output = "/scratch/cqs/shengq2/vickers/20190504_smallRNA_as_chipseq_GCF_000005845.2_ASM584v2/plotPeak/result/Control.pdf"
     args.input = "/scratch/cqs/references/exomeseq/IDT/xgen-exome-research-panel-targetsae255a1532796e2eaa53ff00001c1b3c.slop50.nochr.bed"
     args.bamListFile = "/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/GATK4_CNV_Germline_9_CNVGenesPlot/result/linton_exomeseq_3321__fileList3.list"
     args.cnvFile =  "/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/GATK4_CNV_Germline_7_CombineGCNV/result/linton_exomeseq_3321.txt"
@@ -78,33 +37,45 @@ def main():
 
   print(args)
 
+  #if not os.path.isfile(args.output):
   bamMap = readHashMap(args.bamListFile)
   samples = sorted(bamMap.keys())
 
   bedItems = readBedFile(args.input)
-  cnvNames = set(readCNVName(args.cnvFile))
+  cnvItems = readBedFile(args.cnvFile)
 
-  validBedItems = []
-  startIndex = 0
-  while True:
-    while (startIndex < len(bedItems)) and (bedItems[startIndex].Name in cnvNames):
-      startIndex = startIndex + 1
+  bedMap = getChromosomeMap(bedItems)
+  cnvMap = getChromosomeMap(cnvItems)
 
-    if startIndex == len(bedItems):
-      break
+  logger.info("Before excluding, there are %d intervals" % len(bedItems))
+  for chrom in bedMap.keys():
+    logger.info(chrom)
+    if not chrom in cnvMap:
+      continue
+    curBedItems = bedMap[chrom]
+    curExcludeItems = cnvMap[chrom]
+      
+    for bi in curBedItems:
+      for ci in curExcludeItems:
+        if bi.overlapPosition(ci):
+          bi.Overlapped = True
+          break
 
-    startChromosome = bedItems[startIndex].Chromosome
+  bedItems = [bi for bi in bedItems if not bi.Overlapped]
+  logger.info("After excluding, there are %d intervals" % len(bedItems))
 
-    endIndex = startIndex + 1
-    while (endIndex < len(bedItems)) and (not bedItems[endIndex].Name in cnvNames) and (bedItems[endIndex].Chromosome == startChromosome):
-      endIndex = endIndex + 1
-
-    if endIndex == len(bedItems):
-      validBedItems.append(LocusItem(bedItems[startIndex].Chromosome, bedItems[startIndex].Start, bedItems[-1].End, ""))
-      break
-
-    validBedItems.append(LocusItem(bedItems[startIndex].Chromosome, bedItems[startIndex].Start, bedItems[endIndex-1].End, ""))
-    startIndex = endIndex
+  for chrom in bedMap.keys():
+    curBedItems = bedMap[chrom]
+      
+    for idx in range(len(curBedItems)-1, 1, -1):
+      curItem = curBedItems[idx]
+      prevItem = curBedItems[idx - 1]
+      if (not curItem.Overlapped) and (not prevItem.Overlapped):
+        prevItem.End = curItem.End
+        curItem.Overlapped = True
+  
+  validBedItems = [bi for bi in bedItems if not bi.Overlapped]
+  logger.info("After merge, there are %d intervals" % len(validBedItems))
 
   chromosomes = sorted(set(bi.Chromosome for bi in validBedItems))
   print(chromosomes)
@@ -124,12 +95,10 @@ def main():
           logger.info("%s ~ %s : %d" % (sample, chromosome, chromCount))
           fout.write("%s\t%s\t%d\n" % (chromosome, sample, chromCount))
 
-
-
   realpath = os.path.dirname(os.path.realpath(__file__))
   rPath = realpath + "/getBackgroundCount.r"
 
-  targetR = bedResultFile + ".r"
+  targetR = args.output + ".r"
   with open(targetR, "wt") as fout:
     fout.write("inputFile<-\"%s\"\n" % args.output)
     fout.write("outputFile<-\"%s\"\n\n" % (args.output + ".sizefactor"))
