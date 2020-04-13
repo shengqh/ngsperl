@@ -39,6 +39,8 @@ sub perform {
   }
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
+  my $blacklist_intervals = get_param_file( $config->{$section}{blacklist_file}, "blacklist_file", 0 );
+  my $blacklist_intervals_option = $blacklist_intervals ? "-XL " . $blacklist_intervals : "";
 
   my $extension = get_option( $config, $section, "extension", ".g.vcf" );
 
@@ -84,7 +86,7 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $snvOutIndex );
     print $pbs "
 gatk --java-options \"$java_option\" \\
-  HaplotypeCaller $option $restrict_intervals \\
+  HaplotypeCaller $option $restrict_intervals $blacklist_intervals_option \\
   --native-pair-hmm-threads $thread \\
   -R $faFile \\
   -I $bam_file \\
