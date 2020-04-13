@@ -3,6 +3,7 @@ import sys
 import logging
 import os
 import gzip
+import subprocess
 
 DEBUG=False
 NotDEBUG=not DEBUG
@@ -16,6 +17,8 @@ parser.add_argument('-b', '--bedfile', action='store', nargs='?', help="Interval
 parser.add_argument('-s', '--minimumScoreDifference', action='store', nargs='?', help="The minimum phred-scaled log posterior score difference between CNV event and normal event", default=30)
 parser.add_argument('-f', '--minimumDuplicationFold', action='store', nargs='?', help="The minimum copy number fold change as duplication", default=2)
 parser.add_argument('-p', '--percentage', action='store', default=0.9, type=float, nargs='?', help='Max sample percentage allowed')
+parser.add_argument('--annovar_db', action='store', nargs='?', help='Annovar database folder')
+parser.add_argument('--annovar_buildver', action='store', nargs='?', help='Annovar genome buildver')
 
 args = parser.parse_args()
 
@@ -39,7 +42,7 @@ vcfMap = {}
 bFirst = True
 for name in fileMap.keys():
   filepath=fileMap[name]
-  print("reading " + name + " ...")
+  logger.info("reading " + name + " ...")
   samples.append(name)
   with gzip.open(filepath, "rt") as fh:
     lines = []
@@ -55,7 +58,7 @@ for name in fileMap.keys():
   #if len(samples) == 2:
   #  break
   
-print("reading " + args.bedfile + " ...")
+logger.info("reading " + args.bedfile + " ...")
 annotationMap = {}
 with open(args.bedfile, "r") as fin:
   for line in fin:
@@ -70,65 +73,97 @@ with open(args.bedfile, "r") as fin:
     else:
       chrList.append([int(parts[1]), int(parts[2]), "%s:%s-%s" % (parts[0], parts[1], parts[2])])
   
-print("outputing to " + args.output + " ...")
 samples = sorted(samples)  
 # samples = sorted(fileMap.keys())
-with open(args.output, "w") as fout:
-  fout.write("Locus\tName\t%s\n" % "\t".join(samples))
-  intervalCount = len(vcf1)
-  for idx in range(0, intervalCount):
-    chrom = vcf1[idx][0]
-    values = []
-    for sample in samples:
-      gt = vcfMap[sample][idx]
-      if (gt.startswith("0:")):
-        values.append("")
-      else:
-        parts = gt.split(":")
-        cn = int(parts[1])
-        expectCN = 2
-        if chrom == 'X' or chrom == 'Y':
-          expectCN = 1
-        scores = parts[2].split(",")
-        cnScore = int(scores[cn])
-        expectScore = int(scores[expectCN])
-        diffScore = expectScore - cnScore
-        if cn > expectCN:
-          if cn < expectCN * args.minimumDuplicationFold:
-            values.append("")
-            continue
-          cnType = "DUP"
-        else:
-          cnType = "DEL"
-        
-        if expectScore - cnScore < args.minimumScoreDifference:
+
+combinedFile = args.output + ".combined.txt"
+annovarInputFile = args.output + ".avinput"
+logger.info("outputing to " + combinedFile + " ...")
+with open(annovarInputFile, "w") as fav:
+  with open(combinedFile, "w") as fout:
+    fout.write("Locus\tName\tGene\t%s\n" % "\t".join(samples))
+    intervalCount = len(vcf1)
+    for idx in range(0, intervalCount):
+      chrom = vcf1[idx][0]
+      values = []
+      for sample in samples:
+        gt = vcfMap[sample][idx]
+        if (gt.startswith("0:")):
           values.append("")
         else:
-          values.append("%s,%s,%s,%d" % (cnType, parts[0], cn, diffScore))
-        
-    if (all(gt == "" for gt in values)):
-      continue
-
-    chrom = vcf1[idx][0]
-    start = int(vcf1[idx][1])
-    end = int(vcf1[idx][7][4:])
-    
-    annotation = "";
-    annList = annotationMap[vcf1[idx][0]]
-    for idx, ann in enumerate(annList):
-      if ann[1] < start:
+          parts = gt.split(":")
+          cn = int(parts[1])
+          expectCN = 2
+          if chrom == 'X' or chrom == 'Y':
+            expectCN = 1
+          scores = parts[2].split(",")
+          cnScore = int(scores[cn])
+          expectScore = int(scores[expectCN])
+          diffScore = expectScore - cnScore
+          if cn > expectCN:
+            if cn < expectCN * args.minimumDuplicationFold:
+              values.append("")
+              continue
+            cnType = "DUP"
+          else:
+            cnType = "DEL"
+          
+          if expectScore - cnScore < args.minimumScoreDifference:
+            values.append("")
+          else:
+            values.append("%s,%s,%s,%d" % (cnType, parts[0], cn, diffScore))
+          
+      if (all(gt == "" for gt in values)):
         continue
-      if ann[0] > end:
-        if idx == 0:
-          annotation = ann[2]
-        elif (ann[0] - end) < (start - annList[idx-1][1]):
-          annotation = ann[2]
+
+      chrom = vcf1[idx][0]
+      start = int(vcf1[idx][1])
+      end = int(vcf1[idx][7][4:])
+      
+      annotation = "";
+      annList = annotationMap[vcf1[idx][0]]
+      for idx, ann in enumerate(annList):
+        if ann[1] < start:
+          continue
+        if ann[0] > end:
+          if idx == 0:
+            annotation = ann[2]
+          elif (ann[0] - end) < (start - annList[idx-1][1]):
+            annotation = ann[2]
+          else:
+            annotation = annList[idx-1][2]
         else:
-          annotation = annList[idx-1][2]
-      else:
-        annotation = ann[2]
-      break 
-    
-    cnvs = [v for v in values if v != ""]
-    if len(cnvs) < len(values) * args.percentage:
-      fout.write("%s:%d-%d\t%s\t%s\n" % (chrom, start, end, annotation, "\t".join(values)))
+          annotation = ann[2]
+        break 
+      
+      cnvs = [v for v in values if v != ""]
+      if len(cnvs) < len(values) * args.percentage:
+        fout.write("%s:%d-%d\t%s\t\t%s\n" % (chrom, start, end, annotation, "\t".join(values)))
+        fav.write("%s\t%d\t%d\t0\t0\n" % (chrom, start, end))
+
+if args.annovar_db == None:
+  if os.path.isfile(args.output):
+    os.remove(args.output)
+  os.rename(combinedFile, args.output)
+else:
+  logger.info("performing annovar ...")
+  annovarOutput = annovarInputFile + ".annovar"
+  subprocess.call(['table_annovar.pl', annovarInputFile, args.annovar_db, '-buildver', args.annovar_buildver, '-protocol', 'refGene','-operation', 'g', '--remove', '--outfile', annovarOutput])
+
+  annovarOutputFile = annovarOutput + ".%s_multianno.txt" % args.annovar_buildver
+  with open(args.output, "wt") as fout:
+    with open(combinedFile, "rt") as fin:
+      fout.write(fin.readline())
+      with open(annovarOutputFile, "rt") as fann:
+        fann.readline()
+        for line in fin:
+          lineAnno = fann.readline()
+          annoParts = lineAnno.split('\t')
+          parts = line.split('\t')
+          parts[2] = annoParts[6]
+          fout.write("\t".join(parts))
+
+  os.remove(annovarOutputFile)
+  os.remove(combinedFile)
+
+logger.info("done.")

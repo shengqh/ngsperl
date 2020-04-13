@@ -17,12 +17,13 @@ def readCNVFile(fileName):
   samples = []
   with open(fileName, "r") as fin:
     headers = fin.readline().rstrip().split('\t')
-    samples = headers[2:]
+    startIndex = 3 if headers[2] == "Gene" else 2
+    samples = headers[startIndex:]
     for line in fin:
       parts = line.rstrip().split('\t')
       #print(parts)
       sampleCNVMap = {}
-      for sampleIndex in range(2, len(parts)):
+      for sampleIndex in range(startIndex, len(parts)):
         cnv = parts[sampleIndex]
         if cnv != "":
           sampleCNVMap[headers[sampleIndex]] = cnv[0:3]
