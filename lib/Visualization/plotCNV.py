@@ -8,27 +8,9 @@ import argparse
 import string
 import subprocess
 import pysam
-from LocusItem import LocusItem, readBedFile
-from CNVItem import CNVItem
+from LocusItem import LocusItem, readBedFile, getChromosomeMap
 from FileListUtils import readUniqueHashMap
-
-def readCNVFile(fileName):
-  result = []
-  samples = []
-  with open(fileName, "r") as fin:
-    headers = fin.readline().rstrip().split('\t')
-    startIndex = 3 if headers[2] == "Gene" else 2
-    samples = headers[startIndex:]
-    for line in fin:
-      parts = line.rstrip().split('\t')
-      #print(parts)
-      sampleCNVMap = {}
-      for sampleIndex in range(startIndex, len(parts)):
-        cnv = parts[sampleIndex]
-        if cnv != "":
-          sampleCNVMap[headers[sampleIndex]] = cnv[0:3]
-      result.append(CNVItem(parts[0], parts[1], sampleCNVMap))
-  return(result, samples)
+from CNVItem import CNVItem, readCNVFile
 
 def main():
   DEBUG = False
@@ -62,6 +44,7 @@ def main():
   
   bamMap = readUniqueHashMap(args.bamListFile)
   cnvs, samples = readCNVFile(args.cnvFile)
+  cnvMap = getChromosomeMap(cnvs)
   
   outputFolder = os.path.dirname(args.output)
 
@@ -69,6 +52,29 @@ def main():
   logger.info("processing " + bedFile + "...")
 
   locusList = readBedFile(bedFile)
+  locusMap = getChromosomeMap(locusList)
+
+  for locus in locusList:
+    locus.CNVSampleCount = 0
+
+  for chrom in locusMap.keys():
+    if chrom not in cnvMap:
+      continue
+    
+    curLocus = locusMap[chrom]
+    curCnv = cnvMap[chrom]
+
+    for locus in curLocus:
+      curSampleMap = {}
+      for cnv in curCnv:
+        if locus.overlapPosition(cnv):
+          sampleMap = cnv.SampleCNVMap
+          for sample in sampleMap.keys():
+            curSampleMap[sample] = 1
+      locus.CNVSampleCount = len(curSampleMap)
+  
+  locusList.sort(key=lambda x:x.CNVSampleCount, reverse=True)
+  locusList = locusList[0: (min(50, len(locusList))-1)]
 
   bedResultFile = args.output
   bedResultTmpFile = bedResultFile + ".tmp"
@@ -89,7 +95,7 @@ def main():
         if (len(overlapCNVs) == 0) and args.geneWithCNVOnly:
           continue
 
-        logger.info("  processing " + locusString + " ...")
+        logger.info("  processing " + locusString + ":" + locusName + " ...")
 
         sampleCNVMap = {}
         for cnv in overlapCNVs:
