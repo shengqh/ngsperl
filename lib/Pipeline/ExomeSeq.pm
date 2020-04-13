@@ -51,7 +51,11 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "filter_variants_by_allele_frequency_percentage", 0.9 );
   initDefaultValue( $def, "filter_variants_by_allele_frequency_maf",        0.3 );
   initDefaultValue( $def, "filter_variants_fq_equal_1",                     0 );
-  
+
+  initDefaultValue( $def, "perform_cnv_gatk4_cohort", 1 );
+  initDefaultValue( $def, "gatk4_cnv_by_scatter",     1 );
+  initDefaultValue( $def, "gatk4_cnv_scatter_count",  100 );
+   
   initDefaultValue( $def, "perform_muTect",       0 );
   initDefaultValue( $def, "perform_muTect2indel", 0 );
   initDefaultValue( $def, "perform_annovar",      0 );
@@ -394,6 +398,7 @@ sub getConfig {
         fasta_file        => $fasta,
         extension         => ".g.vcf",
         bed_file          => $def->{covered_bed},
+        blacklist_file    => $def->{blacklist_file},
         by_chromosome     => 0,
         gvcf              => 1,
         sh_direct         => 0,
