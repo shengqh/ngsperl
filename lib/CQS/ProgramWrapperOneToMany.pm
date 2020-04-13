@@ -55,9 +55,14 @@ sub perform {
   my ( $parameterFile2, $parameterFile2arg ) = get_parameter_file( $config, $section, "parameterFile2" );
   my ( $parameterFile3, $parameterFile3arg ) = get_parameter_file( $config, $section, "parameterFile3" );
 
-  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
-  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
-  print $sh get_run_command($sh_direct) . "\n";
+  my $hasMultiple = scalar(keys %$parameterSampleFile1) > 1;
+  my $shfile;
+  my $sh;
+  if ($hasMultiple){
+    $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+    open( $sh, ">$shfile" ) or die "Cannot create $shfile";
+    print $sh get_run_command($sh_direct) . "\n";
+  }
 
   my $bFound2 = 0;
   my $bFound3 = 0;
@@ -95,7 +100,9 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
+    if ($hasMultiple){
+      print $sh "\$MYCMD ./$pbs_name \n";
+    }
 
     my $log_desc = $cluster->get_log_description($log);
 
@@ -125,12 +132,14 @@ $interpretor $program $option $curOption $parameterFile1arg $parameterFile1 $par
     $self->close_pbs( $pbs, $pbs_file );
   }
 
-  close $sh;
-  if ( is_linux() ) {
-    chmod 0755, $shfile;
-  }
+  if ($hasMultiple){
+    close $sh;
+    if ( is_linux() ) {
+      chmod 0755, $shfile;
+    }
 
-  print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
+    print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
+  }
 }
 
 sub result {
