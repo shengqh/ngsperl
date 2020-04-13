@@ -1,0 +1,321 @@
+---
+title: "ChIP-Seq Analysis Report"
+date: "`r format(Sys.time())`"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+```{r, child="Functions.Rmd"} 
+```
+  
+```{r setup, include=FALSE}
+library(XML)
+library(rlist)
+library(stringr)
+options(bitmapType='cairo')
+
+files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
+rownames(files)<-files$V2
+
+chipseqOptions<-read.table("fileList2.txt", sep="\t", header=FALSE, as.is=TRUE)
+rownames(chipseqOptions)<-chipseqOptions$V2
+
+has_fastqc_raw<-any(grepl("fastqc_raw_", rownames(files)))
+has_fastqc_post<-any(grepl("fastqc_post_trim_", rownames(files)))
+has_bowtie2 <- any(grepl("bowtie2_", rownames(files)))
+
+project_dir <- dir("../..", full.names=T)
+
+macs2 <- project_dir[grep("macs2callpeak_narrow$", project_dir)]
+homer <- project_dir[grep("homer_annotation", project_dir)]
+chipqc <- project_dir[grep("chipqc", project_dir)]
+diffbind <- project_dir[grep("diffbind", project_dir)]
+report <- project_dir[grep("report", project_dir)]
+
+has_macs2 <- any(macs2)
+has_homer <- any(homer)
+has_homer <- FALSE
+has_chipqc <- any(chipqc)
+has_diffbind <- any(diffbind)
+has_report <- any(report)
+
+getFigure <- function(category, description){
+  return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", category, "', '",description, "')}\n",
+"  check_and_include_graphics(files['", category, "',1])\n```\n"))
+}
+
+```
+
+<br>
+  
+# Summary
+
+```{r summary, results="asis", echo=FALSE} 
+cat("This report includes quality check for raw sequencing data (section 2), reads mapping, duplication level, reads enrichment in genomic features, ChIP signal distribution and structure (section 3), and the correlation between samples (section 4).")
+cat(" The results of differential analysis of peak intensity are summarized in section 5, ")
+cat("and the results folder structure are described in section 6.")
+cat("\n")
+```
+
+<br>
+
+# Sequencing Quality
+  
+```{r fastqc_raw_per_base_sequence_quality,echo=FALSE,results='asis', include = has_fastqc_raw, eval = has_fastqc_raw, fig.align="center", fig.cap=figRef("fastqc_raw_per_base_sequence_quality", "The mean quality scores of sequencing reads in each position", trunk.eval=file.exists(files["fastqc_raw_per_base_sequence_quality",1]))}
+check_and_include_graphics(files["fastqc_raw_per_base_sequence_quality",1])
+```
+
+<br>
+
+```{r fastqc_raw_per_sequence_gc_content,echo=FALSE,results='asis', include = has_fastqc_raw, eval = has_fastqc_raw, fig.align="center", fig.cap=figRef("fastqc_raw_per_sequence_gc_content", "The average GC content of sequencing reads", trunk.eval=file.exists(files["fastqc_raw_per_sequence_gc_content",1]))}
+check_and_include_graphics(files["fastqc_raw_per_sequence_gc_content",1])
+```
+
+<br>
+  
+```{r fastqc_raw_adapter_content,echo=FALSE,results='asis', include = has_fastqc_raw, eval = has_fastqc_raw, fig.align="center", fig.cap=figRef("fastqc_raw_adapter_content", "Adapter content of sequencing reads", trunk.eval=file.exists(files["fastqc_raw_adapter_content",1]))}
+check_and_include_graphics(files["fastqc_raw_adapter_content",1])
+```
+
+<br>
+  
+```{r fastqc_post_trim_adapter_content,echo=FALSE,results='asis', include = has_fastqc_post, eval = has_fastqc_post, fig.align="center", fig.cap=figRef("fastqc_post_trim_adapter_content", "Adapter content of sequencing reads after cutadapt", trunk.eval=file.exists(files["fastqc_post_trim_adapter_content",1]))}
+check_and_include_graphics(files["fastqc_post_trim_adapter_content",1])
+```
+
+<br>
+  
+# Mapping quality
+
+## Mapping, filtering and duplication rate
+```{r bowtie2_summary,echo=FALSE,results='asis', eval = has_bowtie2, warning=FALSE, fig.align="center", fig.cap=figRef("bowtie2_summary", "The statistics of ChIP-seq mapping results")}
+check_and_include_graphics(files["bowtie2_summary",1])
+```
+
+<br>
+
+```{r ChipQC_summary_table, echo=FALSE, results='asis', eval=has_chipqc}
+QCtables <- readHTMLTable(paste0(chipqc, "/result/ChIPQCreport/ChIPQC.html"))
+QCtables <- list.clean(QCtables, fun = is.null, recursive = FALSE)
+QCtable <- QCtables[[2]]
+colnames(QCtable) <- gsub('\n','',colnames(QCtable))
+print(kable(QCtable, caption=tabRef("mapSummary", "Summary of ChIP-seq filtering and quality metrics.")))
+```
+
+<br>
+
+* **ID** - Unique sample ID.  
+* **Tissue/Factor/Condition** - Metadata associated to sample.  
+* **Replicate** - Number of replicate within sample group  
+* **Reads** - Number of sample reads within analysed chromosomes.  
+* **Dup%** - Percentage of MapQ filter passing reads marked as duplicates  
+* **FragLen** - Estimated fragment length by cross-coverage method  
+* **SSD** - SSD score (htSeqTools)  
+* **FragLenCC** - Cross-Coverage score at the fragment length  
+* **RelativeCC** - Cross-coverage score at the fragment length over Cross-coverage at the read length  
+* **RIP%** - Percentage of reads wthin peaks  
+* **RIBL%** - Percentage of reads wthin Blacklist regions  
+
+<br>
+
+## Enrichment of reads in genomic features
+
+```{r genomic_features,echo=FALSE,results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("feature_enrichment", "Heatmap of log2 enrichment of reads in genomic features"), out.width="40%", out.height="20%"}
+include_graphics(paste0(chipqc, "/result/ChIPQCreport/GenomicFeatureEnrichment.png"))
+```
+
+<br>
+
+## ChIP signal distribution and structure
+
+```{r CrossCoverage,echo=FALSE,results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("cross_coverage", "Plot of CrossCoverage score after successive strand shifts"), out.width="40%", out.height="20%"}
+include_graphics(paste0(chipqc, "/result/ChIPQCreport/CCPlot.png"))
+```
+
+<br>
+
+# Peak calling and correlation between samples
+## Summary of peak calling
+```{r peak_calling_summary, echo=FALSE, results='asis', eval=has_macs2}
+
+peaks_xls <- list.files(paste0(macs2, "/result"), recursive=T, pattern="peaks.xls", full.names=T)
+peaks_annot <- list.files(paste0(homer, "/result"), recursive=T, pattern=".bed.annotation.stats$", full.names=T)
+sample_names <- gsub("_peaks.xls", "", basename(peaks_xls))
+
+df <- data.frame()
+for(i in 1:length(peaks_xls)){
+lines <- readLines(peaks_xls[i], n=29)
+df[i,1] <- sample_names[i]
+df[i,2] <- word(lines[19], 7)
+df[i,3] <- word(lines[28], 4)
+df[i,4] <- dim(fread(peaks_xls[i], data.table = F))[1]
+
+stats <- fread(peaks_annot[i], data.table=F)
+df[i,5] <- stats[9,4]
+df[i,6] <- stats[10,4]
+}
+colnames(df) <- c("Sample", "Read length", "Fragment length", "Peak # (q<0.05)",
+				"log2 enrichment promoter", "log2 enrichment 5UTR")
+
+print(kable(df, caption=tabRef("peakSummary", "Summary of peak calling and enrichment.")))
+```
+
+<br>
+
+## Motif enrichment
+```{r homer_motif, echo=FALSE, results='asis', warning=F, eval=has_homer}
+
+dirs <- paste0(list.dirs(paste0(homer, "/result"), full.names=T, recursive=F), "/knownResults")
+curwd<-getwd()
+for (i in 1:length(dirs)){
+    setwd(dirs[i])
+    x <- ' for i in known1.logo.svg known2.logo.svg known3.logo.svg known4.logo.svg known5.logo.svg; do
+convert -density 1200 -resize 200x200 "$i" "${i/%.svg/.png}" 
+done '
+system(x)
+setwd(curwd)
+}
+
+homer_png <- list.files(paste0(homer, "/result"), pattern=".logo.png", full.names=T, recursive=T)
+
+knownRes <- unique(dirname(dirname(homer_png)))
+knownRes_files <- list.files(knownRes, pattern="knownResults.txt", full.names=T, recursive=T)
+
+motif_files <- c(paste0("<img src= ", homer_png, " >"))
+
+res_table <- data.frame()
+for (i in 1:length(knownRes_files)){
+res_txt <- fread(knownRes_files[i], header=T, nrows=5, data.table=F)
+res_table <- rbind(res_table, res_txt[,c("Motif Name", "P-value", "q-value (Benjamini)")])
+}
+
+tab <- tibble::tibble(Sample = rep(basename(knownRes), each=5),
+                      Name = res_table[,1],
+                      Motif = noquote(motif_files),
+                      Pvalue= res_table[,2], FDR = res_table[,3])
+knitr::kable(tab)
+
+```
+<br>
+
+## Correlation between samples
+
+```{r Correlation,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("peak_correlation", "Plot of correlation between peaksets"), out.width="40%", out.height="40%"}
+include_graphics(list.files(paste0(chipqc, "/result/ChIPQCreport"), pattern="PeakCorHeatmap.png", full.names=T, recursive=T))
+```
+
+```{r PCA,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("pca", "PCA of peaksets"), out.width="40%", out.height="40%"}
+include_graphics(list.files(paste0(chipqc, "/result/ChIPQCreport"), pattern="PeakPCA.png", full.names=T, recursive=T))
+```
+
+* Replicate samples of high quality can be expected to cluster together in the heatmap and be spatially grouped within the PCA plot.  
+
+```{r diffbind_1, results="asis", echo=FALSE, eval=has_diffbind} 
+#if(hasdiffbind){
+  cat("## 5. Differential binding affinity analysis\n<br>\n\n### 5.1 Binding sites overlaps\n<br>\n")
+#}
+```
+
+```{r bindiff_Venn,echo=FALSE,results='asis', eval=has_diffbind, fig.align="center", fig.cap=figRef("diffbindVenn", "Binding sites overlaps across replicates"), out.width="20%", out.height="10%",fig.show='hold'}
+diff_files <- list.files(paste0(diffbind, "/result"), pattern=".pdf", full.names=T, recursive=T)
+
+for (i in 1:length(diff_files)){
+    x <- paste0("convert ", diff_files[i], " ", gsub("pdf", "png", diff_files[i]))
+    system(x)
+}
+
+venn <- list.files(paste0(diffbind, "/result"), pattern=".png", full.names=T, recursive=T)
+venn <- venn[-grep("condition.png", venn)]
+
+include_graphics(venn)
+```
+
+<br>
+
+```{r bindiff_Venn2,echo=FALSE,results='asis', eval=has_diffbind, fig.align="center", fig.cap=figRef("diffbindVennOverlap", "Binding sites overlaps across conditions"), out.width="20%", out.height="10%",fig.show='hold'}
+include_graphics(list.files(paste0(diffbind, "/result"), pattern="condition.png", full.names=T, recursive=T))
+```
+
+<br>
+
+```{r bindiff_2, eval=has_diffbind, results="asis", echo=FALSE} 
+if(has_diffbind){
+  cat("### 5.2 Dysregulation between conditions\n<br>\n")
+}
+```
+
+```{r peak_diff_summary, eval=has_diffbind, echo=FALSE, results='asis'}
+if (hasdiffbind){
+  sig_table <- data.frame()
+  sig_files <- list.files(paste0(diffbind, "/result"), pattern="sig.tsv$", full.names=T, recursive=T)
+  comp_names <- gsub(".sig.tsv$", "", basename(sig_files))
+    for (i in 1:length(sig_files)){
+      sig <- read.table(sig_files[i], header=T, sep="\t")
+      up <- length(which(sig$Fold > 0))
+      dn <- length(which(sig$Fold < 0))
+      up_dn <- data.frame(Comparison=comp_names[i], Up=up, Down=dn)
+      sig_table <- rbind(sig_table, up_dn)
+    }
+  print(kable(sig_table, caption=tabRef("peakSummary", "Differential peaks based on FDR < 0.05 and fold change > 1.5.")))
+}
+```
+<br>
+ 
+```{r copyfiles, include=FALSE, results='asis', message=FALSE, warning=FALSE}
+system("mkdir ChIP_seq_results")
+system("mkdir ChIP_seq_results/macs2")
+system("mkdir ChIP_seq_results/homer_annotation")
+#system("mkdir ChIP_seq_results/diffbind")
+
+files_macs <- list.files(paste0(macs2, "/result"), pattern="peaks.narrowPeak", full.names=T, recursive=T)
+file.copy(from = files_macs, to="ChIP_seq_results/macs2/")
+
+files_homer <- list.files(paste0(homer, "/result"), pattern="homerMotifs.all.motifs", full.names=T, recursive=T)
+homer_names <- gsub("/", "_", gsub(".*result/", "", files_homer))
+
+for (i in 1:length(files_homer)){
+    file.copy(from = files_homer[i], to = paste0("ChIP_seq_results/homer_annotation/", homer_names[i]))
+}
+
+#files_diff <- c(list.files(paste0(diffbind, "/result"), pattern=".png", full.names=T, recursive=T),
+#list.files(paste0(diffbind, "/result"), pattern=".sig\\.", full.names=T, recursive=T))
+#file.copy(from = files_diff, to = "ChIP_seq_results/diffbind/")
+```
+
+```{r structure_link, echo=FALSE, results='asis', message=FALSE, warning=FALSE}
+structureIndex<-ifelse(has_diffbind, 6, 5)
+cat(paste0("## ", structureIndex, " Results folder structure\n"))
+#cat(paste0("## 6 Results folder structure\n"))
+
+files_list <- list.dirs('./ChIP_seq_results', full.names=TRUE)
+
+df<-NULL
+peakFiles <- grep("macs2", files_list, value=T)
+if(length(peakFiles) > 0){
+  df<-rbind(df, data.frame(File=addLinkTag(peakFiles, peakFiles), Description="Peak file for each sample"))
+}
+
+homerFiles <- grep("homer_annotation", files_list, value=T)
+if(length(homerFiles) > 0){
+  df<-rbind(df, data.frame(File=addLinkTag(homerFiles, homerFiles), Description="Homer annotation and motif analysis"))
+}
+
+#bindiffFiles <- grep("diffbind", files_list, value=T)
+#if(length(bindiffFiles) > 0){
+#  df<-rbind(df, data.frame(File=addLinkTag(bindiffFiles, bindiffFiles), Description="Differential binding analysis"))
+#}
+
+print(kable(df, caption=tabRef("resultFiles", "Result files")))
+
+``` 
