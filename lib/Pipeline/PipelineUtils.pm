@@ -1249,7 +1249,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
   my $cnvIndex = "09";
   if($def->{plotCNVGenes} && $def->{annotation_genes}){
-    my $cnvGenes = $prefix . "_gatk4_CNV_Germline_09_CNVGenes";
+    my $cnvGenes = $prefix . "_gatk4_CNV_Germline_09_CNVGenesLocus";
     $config->{$cnvGenes} = {
       class                    => "CQS::UniqueR",
       perform                  => 1,
