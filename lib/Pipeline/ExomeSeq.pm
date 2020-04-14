@@ -88,6 +88,7 @@ sub initializeDefaultOptions {
     "DUP_height" => 0.25,
     "DEL_color" => "blue",
     "DEL_height" => 0.25,
+    "MANUAL_order" => 0,
   };
 
   if (defined $def->{onco_options}) {
