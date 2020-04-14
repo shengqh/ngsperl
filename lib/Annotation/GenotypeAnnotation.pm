@@ -4,6 +4,7 @@ package Annotation::GenotypeAnnotation;
 use strict;
 use warnings;
 use File::Basename;
+use Hash::Merge qw( merge );
 use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
@@ -43,8 +44,6 @@ sub perform {
 
   my $onco_script;
   if ($oncoPrint) {
-    $picture_width  = get_option( $config, $section, "onco_picture_width" );
-    $picture_height = get_option( $config, $section, "onco_picture_height" );
     $onco_script    = dirname(__FILE__) . "/oncoPrint.r";
     if ( !-e $onco_script ) {
       die "File not found : " . $onco_script;
@@ -70,6 +69,11 @@ sub perform {
     die "File not found : " . $gene_filter_script;
   }
 
+  my $onco_options = get_option($config, $section, "onco_options");
+  my $optionFileName = "onco_options.txt";
+  my $optionFile = $result_dir . "/$optionFileName";
+  writeFileList($optionFile, $onco_options, 0, 1);
+
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $log = $self->get_log_filename( $log_dir, $task_name );
   my $log_desc = $cluster->get_log_description($log);
@@ -85,7 +89,7 @@ sub perform {
       if ($oncoPrint) {
         my $finalFile = change_extension( $filename, "${sampleNameSuffix}.oncoprint.tsv" );
         print $pbs " 
-R --vanilla -f $onco_script --args $inputFile $finalFile $picture_width $picture_height $sampleNamePattern $geneNames
+R --vanilla -f $onco_script --args $inputFile $finalFile $optionFileName $geneNames
 ";
       }
 
