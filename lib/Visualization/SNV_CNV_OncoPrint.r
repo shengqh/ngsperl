@@ -12,7 +12,6 @@ width = as.numeric(options["picture_width", "V1"])
 height = as.numeric(options["picture_height", "V1"])
 sampleNamePattern=options["sampleNamePattern", "V1"]
 
-BACKGROUND_color=options["BACKGROUND_color", "V1"]
 MISSENSE_color=options["MISSENSE_color", "V1"]
 MISSENSE_height=as.numeric(options["MISSENSE_height", "V1"])
 TRUNC_color=options["TRUNC_color", "V1"]
@@ -22,11 +21,13 @@ DUP_height=as.numeric(options["DUP_height", "V1"])
 DEL_color=options["DEL_color", "V1"]
 DEL_height=as.numeric(options["DEL_height", "V1"])
 
+MANUAL_order=options["MANUAL_order", "V1"] != "0"
+
 col = c("MISSENSE" = MISSENSE_color, "TRUNC" = TRUNC_color, "DUP" = DUP_color, "DEL" = DEL_color)
 
 alter_fun = list(
   background = function(x, y, w, h) {
-    grid.rect(x, y, w-unit(0.5, "mm"), h-unit(0.5, "mm"), gp = gpar(fill = BACKGROUND_color, col = NA))
+    grid.rect(x, y, w-unit(0.5, "mm"), h-unit(0.5, "mm"), gp = gpar(fill = "#CCCCCC", col = NA))
   },
   MISSENSE = function(x, y, w, h) {
     grid.rect(x, y, w-unit(0.5, "mm"), h*MISSENSE_height, gp = gpar(fill = col["MISSENSE"], col = NA))
@@ -64,17 +65,20 @@ for(inputFile in inputFileData$V1){
       oncoData[gene, sample] = paste0(oldvalue, cnv, ";")
     }
   }
-
+  oncoData[is.na(oncoData)]<-''
+  variantCount = apply(oncoData !='', 1, sum)
+  variantOrder = order(variantCount, decreasing = T)
+  
   df<-data.frame("V1"=colnames(oncoData), "V2"="")
   if (parSampleFile3 != ""){
     sg<-read.table(parSampleFile3, sep="\t", header=F, stringsAsFactors=F)
     df<-rbind(df, sg)
   }
-
+  
   for (name in unique(df$V2)){
     cellSamples = df$V1[df$V2 == name]
-    curOncoData = oncoData[,colnames(oncoData) %in% cellSamples,drop=F]
-
+    curOncoData = oncoData[, cellSamples,drop=F]
+    
     if (name == ""){
       outputTextFile = paste0(outputDirectory, "/", basename(inputFile), ".snv_cnv.txt")
     }else{
@@ -85,22 +89,30 @@ for(inputFile in inputFileData$V1){
     if(width == 0){
       width=max(2000, ncol(curOncoData) * 70 + 300)
     }
-
+    
     if(height == 0){
       height=max(1000, nrow(curOncoData) * 70 + 300)
     }
-
+    
+    if (MANUAL_order){
+      columnOrder = c(1:length(cellSamples))
+    } else{
+      columnOrder = NULL
+    }
+    
     ##oncoprint
     png(paste0(outputTextFile, ".png"), width=width, height=height, res=300)
     ht=oncoPrint(curOncoData, get_type = function(x) strsplit(x, ";")[[1]],
-                alter_fun = alter_fun, col = col, 
-                column_title = "",
-                show_column_names = T,
-                right_annotation = rowAnnotation(
-                  rbar = anno_oncoprint_barplot(
-                    width = unit(1, "cm"))),
-                heatmap_legend_param = list(title = "Genetic alternations", at = c("MISSENSE", "TRUNC", "DUP", "DEL"), 
-                                            labels = c("Missense mutation", "Truncating mutation     ", "CNV duplication", "CNV deletion")))
+                 alter_fun = alter_fun, col = col, 
+                 column_title = "",
+                 column_order = columnOrder,
+                 row_order = variantOrder,
+                 show_column_names = T,
+                 right_annotation = rowAnnotation(
+                   rbar = anno_oncoprint_barplot(
+                     width = unit(1, "cm"))),
+                 heatmap_legend_param = list(title = "Genetic alternations", at = c("MISSENSE", "TRUNC", "DUP", "DEL"), 
+                                             labels = c("Missense mutation", "Truncating mutation     ", "CNV duplication", "CNV deletion")))
     draw(ht)
     dev.off()
   }
