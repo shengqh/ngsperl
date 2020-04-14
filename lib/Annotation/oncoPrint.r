@@ -26,6 +26,7 @@ width = as.numeric(options["picture_width", "V1"])
 height = as.numeric(options["picture_height", "V1"])
 sampleNamePattern=options["sampleNamePattern", "V1"]
 
+BACKGROUND_color=options["BACKGROUND_color", "V1"]
 MISSENSE_color=options["MISSENSE_color", "V1"]
 MISSENSE_height=as.numeric(options["MISSENSE_height", "V1"])
 TRUNC_color=options["TRUNC_color", "V1"]
@@ -33,7 +34,7 @@ TRUNC_height=as.numeric(options["TRUNC_height", "V1"])
 
 alter_fun = list(
   background = function(x, y, w, h) {
-    grid.rect(x, y, w-unit(0.5, "mm"), h-unit(0.5, "mm"), gp = gpar(fill = "#CCCCCC", col = NA))
+    grid.rect(x, y, w-unit(0.5, "mm"), h-unit(0.5, "mm"), gp = gpar(fill = BACKGROUND_color, col = NA))
   },
   MISSENSE = function(x, y, w, h) {
     grid.rect(x, y, w-unit(0.5, "mm"), h*0.66, gp = gpar(fill = MISSENSE_color, col = NA))
