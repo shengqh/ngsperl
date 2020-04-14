@@ -34,18 +34,16 @@ with open(args.input, "rt") as fin:
     for line in fin:
       parts = line.split('\t')
 
-      list_set = set(part.split(',')[0] for part in parts[2:])
+      list_set = set(part.split(',')[0] for part in parts[5:])
       if len(list_set) == 1:
         continue
 
-      locusparts = parts[0].split(":")
-      chr = locusparts[0]
-      positionparts = locusparts[1].split("-")
-      start = int(positionparts[0])
-      end = int(positionparts[1])
+      chrom = parts[0]
+      start = int(parts[1])
+      end = int(parts[2])
       median = (start + end) / 2
       fout.write("%s\t%d\t%d\t%d" % (chr, start, end, median))
-      for part in parts[2:]:
+      for part in parts[5:]:
         part = part.rstrip()
         uf = random.uniform(-0.01, 0.01)
         if part == "":
