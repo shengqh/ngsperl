@@ -5,40 +5,44 @@ library(ComplexHeatmap)
 args = commandArgs(trailingOnly=TRUE)
 inputFile = args[1]
 outputFile = args[2]
-width = args[3]
-height = args[4]
-sampleNamePattern=args[5]
-genelist=args[6:length(args)]
+optionFile = args[3]
+genelist = args[4:length(args)]
 
 DEBUG = FALSE
 if (DEBUG) {
-  inputFile = "/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/bwa_refine_gatk4_hc_gvcf_vqsr_filterMAF_annovar_filter/result/linton_exomeseq_3321.freq0.001.snv.missense.tsv"
-  outputFile = "/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/bwa_refine_gatk4_hc_gvcf_vqsr_filterMAF_annovar_filter/result/linton_exomeseq_3321.freq0.001.snv.missense.oncoprint.tsv"
-  width = 0
-  height = 0
-  sampleNamePattern="."
-  genelist=c("LDLR")
+  inputFile = "/scratch/cqs/shengq2/jennifer/20200407_lindsay_exomeseq_3772_hg38/bwa_refine_nosoftclip_gatk4_SNV_05_filter/result/lindsay_exomeseq_3772.freq0.001.snv.missense.oncoprint.tsv"
+  outputFile = "/scratch/cqs/shengq2/jennifer/20200407_lindsay_exomeseq_3772_hg38/bwa_refine_nosoftclip_gatk4_SNV_05_filter/result/lindsay_exomeseq_3772.freq0.001.snv.missense.oncoprint.tsv"
+  optionFile = "/scratch/cqs/shengq2/jennifer/20200407_lindsay_exomeseq_3772_hg38/bwa_refine_nosoftclip_gatk4_SNV_05_filter/result/onco_options.txt"
+  genelist = c("TP53")
 }
-
 cat("inputFile=", inputFile, "\n")
 cat("outputFile=", outputFile, "\n")
-cat("width=", width, "\n")
-cat("height=", height, "\n")
-cat("sampleNamePattern=", sampleNamePattern, "\n")
-cat("genelist=", genelist, "\n")
+cat("optionFile=", optionFile, "\n")
+
+options <- read.table(optionFile, sep="\t", stringsAsFactors = F, header=F)
+rownames(options)<-options$V2
+
+width = as.numeric(options["picture_width", "V1"])
+height = as.numeric(options["picture_height", "V1"])
+sampleNamePattern=options["sampleNamePattern", "V1"]
+
+MISSENSE_color=options["MISSENSE_color", "V1"]
+MISSENSE_height=as.numeric(options["MISSENSE_height", "V1"])
+TRUNC_color=options["TRUNC_color", "V1"]
+TRUNC_height=as.numeric(options["TRUNC_height", "V1"])
 
 alter_fun = list(
   background = function(x, y, w, h) {
     grid.rect(x, y, w-unit(0.5, "mm"), h-unit(0.5, "mm"), gp = gpar(fill = "#CCCCCC", col = NA))
   },
   MISSENSE = function(x, y, w, h) {
-    grid.rect(x, y, w-unit(0.5, "mm"), h*0.66, gp = gpar(fill = "darkgreen", col = NA))
+    grid.rect(x, y, w-unit(0.5, "mm"), h*0.66, gp = gpar(fill = MISSENSE_color, col = NA))
   },
   TRUNC = function(x, y, w, h) {
-    grid.rect(x, y, w-unit(0.5, "mm"), h*0.33, gp = gpar(fill = "red", col = NA))
+    grid.rect(x, y, w-unit(0.5, "mm"), h*0.33, gp = gpar(fill = TRUNC_color, col = NA))
   }
 )
-col = c("MISSENSE" = "darkgreen", "TRUNC" = "red")
+col = c("MISSENSE" = MISSENSE_color, "TRUNC" = TRUNC_color)
 
 mutdata<-read.delim(inputFile,as.is=T,header=TRUE,sep="\t",stringsAsFactors = F)
 cnames=colnames(mutdata)
@@ -113,7 +117,7 @@ if(width == 0){
 }
 
 if(height == 0){
-  height=max(1600, nrow(oncoprint) * 70 + 300)
+  height=max(1000, nrow(oncoprint) * 70 + 300)
 }
 
 png(paste0(outputFile, ".png"), width=width, height=height, res=300)
@@ -124,7 +128,7 @@ ht=oncoPrint(oncoprint, get_type = function(x) strsplit(x, ";")[[1]],
              right_annotation = rowAnnotation(
                rbar = anno_oncoprint_barplot(
                  width = unit(1, "cm"))),
-             heatmap_legend_param = list(title = "Genetic alternations", at = c("MISSENSE", "TRUNC"), 
-                                         labels = c("Missense mutation", "Truncating mutation")))
+             heatmap_legend_param = list(title = "Mutation", at = c("MISSENSE", "TRUNC"), 
+                                         labels = c("Missense  ", "Truncating  ")))
 draw(ht)
 dev.off()
