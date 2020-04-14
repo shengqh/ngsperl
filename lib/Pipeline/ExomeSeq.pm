@@ -878,6 +878,7 @@ sub getConfig {
         parameterSampleFile1_ref   => [ $annovar_filter_geneannotation_name, ".oncoprint.tsv\$" ],
         parameterFile1_ref         => [ $cnvAnnotationGenesPlot, ".position.txt.slim" ],
         parameterSampleFile2       => $def->{onco_options},
+        parameterSampleFile3       => $def->{onco_sample_groups},
         output_to_result_directory => 1,
         output_file                => "parameterSampleFile1",
         output_file_ext            => ".snv_cnv.txt.png;.snv_cnv.txt",
