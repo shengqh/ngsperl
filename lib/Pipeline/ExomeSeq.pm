@@ -75,6 +75,26 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "remove_duplicate", 1 );
   initDefaultValue( $def, "perform_multiqc", 0 );
 
+  my $default_onco_options = {
+    "picture_width" => "0",
+    "picture_height" => "0",
+    "sampleNamePattern" => ".",
+    "MISSENSE_color" => "darkgreen",
+    "MISSENSE_height" => 0.75,
+    "TRUNC_color" => "red",
+    "TRUMC_height" => 0.5, 
+    "DUP_color" => "brown", 
+    "DUP_height" => 0.25,
+    "DEL_color" => "blue",
+    "DEL_height" => 0.25,
+  };
+
+  if (defined $def->{onco_options}) {
+    $def->{onco_options} = merge($def->{onco_options}, $default_onco_options);
+  }else{
+    $def->{onco_options} = $default_onco_options;
+  }
+
   return $def;
 }
 
@@ -857,6 +877,7 @@ sub getConfig {
         rtemplate                  => "../Visualization/SNV_CNV_OncoPrint.r",
         parameterSampleFile1_ref   => [ $annovar_filter_geneannotation_name, ".oncoprint.tsv\$" ],
         parameterFile1_ref         => [ $cnvAnnotationGenesPlot, ".position.txt.slim" ],
+        parameterSampleFile2       => $def->{onco_options},
         output_to_result_directory => 1,
         output_file                => "parameterSampleFile1",
         output_file_ext            => ".snv_cnv.txt.png;.snv_cnv.txt",
