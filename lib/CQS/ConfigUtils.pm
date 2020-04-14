@@ -1053,7 +1053,7 @@ sub writeFileList {
       }
     }else{
       if ($fileFirst) {
-        print $fl $files->[0], "\t", $sample_name, "\n";
+        print $fl $files, "\t", $sample_name, "\n";
       }else{
         print $fl $sample_name, "\t", $files, "\n";
       }
