@@ -1030,17 +1030,33 @@ sub saveConfig {
 }
 
 sub writeFileList {
-  my ( $fileName, $fileMap, $exportAllFiles ) = @_;
+  my ( $fileName, $fileMap, $exportAllFiles, $fileFirst ) = @_;
   open( my $fl, ">$fileName" ) or die "Cannot create $fileName";
   for my $sample_name ( sort keys %$fileMap ) {
-    my @files = @{ $fileMap->{$sample_name} };
-    if ( defined $exportAllFiles and $exportAllFiles ) {
-      for my $eachFile (@files) {
-        print $fl $sample_name, "\t", $eachFile, "\n";
+    my $files = $fileMap->{$sample_name};
+    if(ref($files) eq 'ARRAY'){
+      if ( defined $exportAllFiles and $exportAllFiles ) {
+        for my $eachFile (@$files) {
+          if ($fileFirst) {
+            print $fl $eachFile, "\t", $sample_name, "\n";
+          }else{
+            print $fl $sample_name, "\t", $eachFile, "\n";
+          }
+        }
       }
-    }
-    else {
-      print $fl $sample_name, "\t", $files[0], "\n";
+      else {
+          if ($fileFirst) {
+            print $fl $files->[0], "\t", $sample_name, "\n";
+          }else{
+            print $fl $sample_name, "\t", $files->[0], "\n";
+          }
+      }
+    }else{
+      if ($fileFirst) {
+        print $fl $files, "\t", $sample_name, "\n";
+      }else{
+        print $fl $sample_name, "\t", $files, "\n";
+      }
     }
   }
   close($fl);
@@ -1082,34 +1098,6 @@ sub writeParameterSampleFile {
     }
 
     $result = "fileList${index}${task_suffix}.txt";
-    open( my $list, ">$resultDir/$result" ) or die "Cannot create $result";
-    my $nameIndex = -1;
-    foreach my $sample_name (@orderedSampleNames) {
-      my $subSampleFiles = $temp->{$sample_name};
-      my $refstr         = ref($subSampleFiles);
-      if ( $refstr eq 'HASH' ) {
-        foreach my $groupName ( sort keys %$subSampleFiles ) {
-          my $groupSampleNames = $subSampleFiles->{$groupName};
-          for my $groupSampleName (@$groupSampleNames) {
-            print $list "${groupSampleName}\t${groupName}\t${sample_name}\n";
-          }
-        }
-      }
-      elsif ( $refstr eq 'ARRAY' ) {
-        foreach my $subSampleFile (@$subSampleFiles) {
-          my $curSampleName = $sample_name;
-          if ( scalar(@outputNames) > 0 ) {
-            $nameIndex     = $nameIndex + 1;
-            $curSampleName = $outputNames[$nameIndex];
-          }
-          print $list $subSampleFile . "\t$curSampleName\n";
-        }
-      }
-      else {
-        print $list $subSampleFiles . "\t$sample_name\n";
-      }
-    }
-    close($list);
   }
   return $result;
 }
