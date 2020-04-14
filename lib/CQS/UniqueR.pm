@@ -115,6 +115,8 @@ sub perform {
   if ( defined($rCode) ) {
     print $rf $rCode . "\n";
   }
+  
+  print $rf "\nsetwd('$result_dir')\n\n";
 
   my $rtemplates = get_option( $config, $section, "rtemplate" );
   my @rtemplates = split( ",|;", $rtemplates );
