@@ -33,6 +33,7 @@ sub initializeDefaultOptions {
     initDefaultValue( $def, "bwa_option", "" );
   }
 
+  initDefaultValue( $def, "perform_extract_bam", 0 );
   initDefaultValue( $def, "perform_featureCounts",  0 );
 
   initDefaultValue( $def, "perform_gatk_callvariants",   0 );
@@ -172,8 +173,6 @@ sub getConfig {
       iteration             => $def->{aligner_scatter_count},
       sh_direct             => 1,
       pbs                   => {
-        "email"     => $email,
-        "emailType" => "FAIL",
         "nodes"     => "1:ppn=1",
         "walltime"  => "10",
         "mem"       => "10gb"
@@ -201,7 +200,6 @@ sub getConfig {
       mark_duplicates       => 0,
       sh_direct             => 0,
       pbs                   => {
-        "email"    => $email,
         "nodes"    => "1:ppn=" . $max_thread,
         "walltime" => "24",
         "mem"      => "40gb"
@@ -233,8 +231,6 @@ sub getConfig {
       output_file_ext       => ".bam",
       sh_direct             => 1,
       pbs                   => {
-        "email"     => $email,
-        "emailType" => "FAIL",
         "nodes"     => "1:ppn=8",
         "walltime"  => "10",
         "mem"       => "10gb"
@@ -298,7 +294,6 @@ sub getConfig {
       indel_vcf_files          => $indel_vcf_files,
       sorted                   => 1,
       pbs                      => {
-        "email"    => $email,
         "nodes"    => "1:ppn=1",
         "walltime" => "24",
         "mem"      => "40gb"
@@ -324,8 +319,6 @@ sub getConfig {
         output_file_ext       => ".nosoftclip.bam",
         sh_direct             => 0,
         pbs                   => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "10",
           "mem"       => "10gb"
@@ -333,6 +326,31 @@ sub getConfig {
       };
       push @$individual, ($soft_clip_name);
       $bam_input = $soft_clip_name;
+    }
+
+    if($def->{perform_extract_bam}){
+      my $extract_bam_locus = getValue($def, "extract_bam_locus");
+      my $extract_bam_task = "extract_bam_locus";
+      $config->{$extract_bam_task} = {
+        class => "CQS::ProgramWrapperOneToOne",
+        target_dir => $target_dir . "/" . getNextFolderIndex($def) . $extract_bam_task,
+        interpretor => "",
+        check_program => 0,
+        option => "view -b -o __OUTPUT__ __FILE__ " . $extract_bam_locus . "; samtools index __OUTPUT__; ",
+        program => "samtools",
+        source_ref => $bam_input,
+        output_arg => "",
+        output_file_prefix => ".bam",
+        output_file_ext => ".bam",
+        output_to_same_folder => 1,
+        sh_direct   => 1,
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        }
+      };
+      push @$individual, ($extract_bam_task);
     }
 
     if($def->{perform_featureCounts}){
