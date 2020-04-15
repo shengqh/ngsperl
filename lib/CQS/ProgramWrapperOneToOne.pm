@@ -113,6 +113,12 @@ sub perform {
       $curOption = $curOption . " " . $param_option1;
     }
 
+    my $output_option = "$output_arg $final_prefix";
+    if ($curOption =~ /__OUTPUT__/){
+      $curOption =~ s/__OUTPUT__/$final_prefix/g;
+      $output_option = "";
+    }
+    
     if ( not $bFound2 ) {
       $curOption = $curOption . " " . $param_option2;
     }
@@ -128,7 +134,7 @@ sub perform {
     }
 
     print $pbs "
-$interpretor $program $curOption $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_arg $final_prefix
+$interpretor $program $curOption $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_option
 
 ";
     $self->close_pbs( $pbs, $pbs_file );
