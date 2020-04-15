@@ -346,7 +346,10 @@ for (i in 1:nrow(countTableFileAll)) {
     dataForPlot<-melt(countHT)
     colnames(dataForPlot)[2]<-"Sample"
     p<-ggplot(dataForPlot, aes(value, colour = Sample)) +geom_density() + theme_bw2() + xlab(ylab)
-    
+    if(ncol(countHT) > 20){
+      p<-p+theme(legend.position = "none")
+    }
+ 
     for(format in outputFormat){
       if("PDF" == format){
         pdf(paste0(outputFilePrefix,curSuffix,".density.pdf"),width=7,height=7)
