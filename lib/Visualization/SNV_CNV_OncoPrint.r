@@ -101,7 +101,6 @@ for(inputFile in inputFileData$V1){
     }
     
     ##oncoprint
-    png(paste0(outputTextFile, ".png"), width=width, height=height, res=300)
     ht=oncoPrint(curOncoData, get_type = function(x) strsplit(x, ";")[[1]],
                  alter_fun = alter_fun, col = col, 
                  column_title = "",
@@ -113,6 +112,10 @@ for(inputFile in inputFileData$V1){
                      width = unit(1, "cm"))),
                  heatmap_legend_param = list(title = "Genetic alternations", at = c("MISSENSE", "TRUNC", "DUP", "DEL"), 
                                              labels = c("Missense mutation", "Truncating mutation     ", "CNV duplication", "CNV deletion")))
+    png(paste0(outputTextFile, ".png"), width=width, height=height, res=300)
+    draw(ht)
+    dev.off()
+    pdf(paste0(outputTextFile, ".pdf"), width=10, height=10*height/width)
     draw(ht)
     dev.off()
   }
