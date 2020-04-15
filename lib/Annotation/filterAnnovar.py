@@ -107,7 +107,7 @@ with open(outputFile, 'w') as sw:
             if float(parts[g1000Index]) > threshold:
               continue
             
-          freq = len([idx for idx in sampleIndecies if parts[idx].startswith("0/1") or parts[idx].startswith("0|1") or parts[idx].startswith("1/1") or parts[idx].startswith("1|1")])
+          freq = len([idx for idx in sampleIndecies if parts[idx].startswith("0/1") or parts[idx].startswith("0|1") or parts[idx].startswith("1/0") or parts[idx].startswith("1|0") or parts[idx].startswith("1/1") or parts[idx].startswith("1|1")])
 
           if freq == 0:
             continue
@@ -128,7 +128,7 @@ with open(outputFile, 'w') as sw:
           swMis.write(values)
   
           for idx in sampleIndecies:
-            if parts[idx].startswith("0/1") or parts[idx].startswith("0|1"):
+            if parts[idx].startswith("0/1") or parts[idx].startswith("0|1") or parts[idx].startswith("1/0") or parts[idx].startswith("1|0") :
               parts[idx] = "1"
             elif parts[idx].startswith("1/1") or parts[idx].startswith("1|1"):
               parts[idx] = "2"
