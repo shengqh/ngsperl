@@ -123,7 +123,7 @@ sub addFastqLen {
       rtemplate                => "countTableVisFunctions.R,fastqLengthVis.R",
       output_file              => ".lengthDistribution",
       output_file_ext          => ".png;.csv",
-      parameterSampleFile1_ref => [ "fastq_len", ".len\$" ],
+      parameterSampleFile1_ref => [ $fastqLenName, ".len\$" ],
       parameterSampleFile2     => $def->{groups},
       sh_direct                => 1,
       pbs                      => {
@@ -162,6 +162,12 @@ sub initCutadaptOption {
     my $min_read_length = getValue( $config, "min_read_length" );
     $cutadapt_option = $cutadapt_option . " -m " . $min_read_length;
   }
+
+  if ( $cutadapt_option !~ /\-n/ ) {
+    my $max_adapter_count = getValue( $config, "max_adapter_count", 3 );
+    $cutadapt_option = $cutadapt_option . " -n " . $max_adapter_count;
+  }
+
   $config->{cutadapt_option} = $cutadapt_option;
 }
 
@@ -205,7 +211,7 @@ sub getPreprocessionConfig {
       task_name  => $task,
       cluster    => $cluster,
       email      => $email,
-      emailType  => getValue( $def, "emailType", "ALL" ),
+      emailType  => getValue( $def, "emailType", "FAIL" ),
       constraint => $def->{constraint},
       account    => $def->{account},
       debug      => $def->{debug},
@@ -403,6 +409,7 @@ sub getPreprocessionConfig {
   my $untrimed_ref = $source_ref;
 
   if ($run_cutadapt_test){
+    my $tasks = [];
     my $test_dir = create_directory_or_die( $target_dir . "/test_cutadapt" );
   
     my $extractTask = "test_extract";
@@ -429,63 +436,81 @@ sub getPreprocessionConfig {
         "mem"       => "10gb"
       },
     };
-    push( @$summary, $extractTask );
+    push( @$tasks, $extractTask );
 
-    my $test_ref = addCutadapt($config, $def, $summary, $summary, "test_cutadapt", "test_fastqc_post_trim", $test_dir, $test_dir, $extractTask, $is_pairend, $cluster);
-    addFastqLen($config, $def, $summary, $summary, "test_fastq_len", $test_dir, $test_ref, $cluster );
+    my $test_ref = addCutadapt($config, $def, $tasks, $tasks, "test_cutadapt", "test_fastqc_post_trim", $test_dir, $test_dir, $extractTask, $is_pairend, $cluster);
+    addFastqLen($config, $def, $tasks, $tasks, "test_fastq_len", $test_dir, $test_ref, $cluster );
+
+    print(join(',', @$tasks));
+    $config->{"test_sequencetask"} = {
+      class      => getSequenceTaskClassname($cluster),
+      perform    => 1,
+      target_dir => "${test_dir}/test_sequencetask",
+      option     => "",
+      source     => {
+        step_1 => $tasks,
+      },
+      sh_direct => 0,
+      pbs       => {
+        "nodes"    => "1:ppn=8",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    };
+    performConfig($config);
+    delete $config->{test_sequencetask};
   }
-  else{
-    if ($run_cutadapt) {
-      $source_ref = addCutadapt($config, $def, $individual, $summary, "cutadapt", "fastqc_post_trim", $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster);
-      addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, $source_ref, $cluster );
-    }elsif ($def->{fastq_len} ) {
-      addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, $source_ref, $cluster );
+
+  if ($run_cutadapt) {
+    $source_ref = addCutadapt($config, $def, $individual, $summary, "cutadapt", "fastqc_post_trim", $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster);
+    addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, $source_ref, $cluster );
+  }elsif ($def->{fastq_len} ) {
+    addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, $source_ref, $cluster );
+  }
+
+  if ( $def->{perform_fastqc} ) {
+    my $fastqc_count_vis_files = undef;
+    if ( length($remove_sequences) && $run_cutadapt ) {
+      $fastqc_count_vis_files = {
+        target_dir         => $config->{fastqc_post_trim_summary}->{target_dir},
+        parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.reads.tsv\$" ],
+        parameterFile3_ref => [ "fastqc_post_trim_summary", ".FastQC.reads.tsv\$" ],
+      };
+    }
+    elsif ( length($remove_sequences) ) {
+      $fastqc_count_vis_files = {
+        target_dir         => $config->{fastqc_post_remove_summary}->{target_dir},
+        parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.reads.tsv\$" ],
+      };
+    }
+    elsif ($run_cutadapt) {
+      $fastqc_count_vis_files = {
+        target_dir         => $config->{fastqc_post_trim_summary}->{target_dir},
+        parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.reads.tsv\$" ],
+      };
     }
 
-    if ( $def->{perform_fastqc} ) {
-      my $fastqc_count_vis_files = undef;
-      if ( length($remove_sequences) && $run_cutadapt ) {
-        $fastqc_count_vis_files = {
-          target_dir         => $config->{fastqc_post_trim_summary}->{target_dir},
-          parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.reads.tsv\$" ],
-          parameterFile3_ref => [ "fastqc_post_trim_summary", ".FastQC.reads.tsv\$" ],
-        };
-      }
-      elsif ( length($remove_sequences) ) {
-        $fastqc_count_vis_files = {
-          target_dir         => $config->{fastqc_post_remove_summary}->{target_dir},
-          parameterFile2_ref => [ "fastqc_post_remove_summary", ".FastQC.reads.tsv\$" ],
-        };
-      }
-      elsif ($run_cutadapt) {
-        $fastqc_count_vis_files = {
-          target_dir         => $config->{fastqc_post_trim_summary}->{target_dir},
-          parameterFile2_ref => [ "fastqc_post_trim_summary", ".FastQC.reads.tsv\$" ],
-        };
-      }
-
-      if ( defined $fastqc_count_vis_files ) {
-        $config->{"fastqc_count_vis"} = merge(
-          {
-            class              => "CQS::UniqueR",
-            perform            => 1,
-            rtemplate          => "countInFastQcVis.R",
-            output_file        => ".countInFastQcVis.Result",
-            output_file_ext    => ".Reads.csv;.pdf",
-            sh_direct          => 1,
-            parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.reads.tsv\$" ],
-            pbs                => {
-              "email"     => $def->{email},
-              "emailType" => $def->{emailType},
-              "nodes"     => "1:ppn=1",
-              "walltime"  => "1",
-              "mem"       => "10gb"
-            },
+    if ( defined $fastqc_count_vis_files ) {
+      $config->{"fastqc_count_vis"} = merge(
+        {
+          class              => "CQS::UniqueR",
+          perform            => 1,
+          rtemplate          => "countInFastQcVis.R",
+          output_file        => ".countInFastQcVis.Result",
+          output_file_ext    => ".Reads.csv;.pdf",
+          sh_direct          => 1,
+          parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.reads.tsv\$" ],
+          pbs                => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
           },
-          $fastqc_count_vis_files
-        );
-        push @$summary, ("fastqc_count_vis");
-      }
+        },
+        $fastqc_count_vis_files
+      );
+      push @$summary, ("fastqc_count_vis");
     }
   }
 
