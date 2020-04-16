@@ -38,6 +38,7 @@ sub perform {
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1 );
   my $output_sort_by_coordinate = getSortByCoordinate( $config, $section, 1 );
+  my $delete_star_featureCount_bam  = get_option( $config, $section, "delete_star_featureCount_bam", 0 );
 
   my $output_unsorted = get_option( $config, $section, "output_unsorted", 0 );
   if ( !$output_sort_by_coordinate && !$output_unsorted ) {
@@ -168,7 +169,25 @@ fi
       print $pbs "
 if [ -s $final_file ]; then
   rm $unsorted 
-fi";
+fi
+";
+    }
+
+    if ($delete_star_featureCount_bam){
+      if ($output_sort_by_coordinate) {
+        print $pbs "
+  if [ -s $final_file ]; then
+    rm ${sample_name}_Aligned.sortedByCoord.out.bam 
+  fi
+  ";
+      }
+      if ($output_unsorted) {
+        print $pbs "
+  if [ -s $final_file ]; then
+    rm ${sample_name}_Aligned.out.bam 
+  fi
+  ";
+      }
     }
 
     $self->close_pbs( $pbs, $pbs_file );
@@ -192,6 +211,7 @@ sub result {
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $output_sort_by_coordinate = getSortByCoordinate( $config, $section );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 0 );
+  my $delete_star_featureCount_bam  = get_option( $config, $section, "delete_star_featureCount_bam", 0 );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
@@ -203,12 +223,15 @@ sub result {
     if ( !$output_sort_by_coordinate && !$output_unsorted ) {
       $output_unsorted = 1;
     }
-    if ($output_sort_by_coordinate) {
-      push( @result_files, "$cur_dir/${sample_name}_Aligned.sortedByCoord.out.bam" );
 
-    }
-    if ($output_unsorted) {
-      push( @result_files, "$cur_dir/${sample_name}_Aligned.out.bam" );
+    if ($delete_star_featureCount_bam) {
+      if ($output_sort_by_coordinate) {
+        push( @result_files, "$cur_dir/${sample_name}_Aligned.sortedByCoord.out.bam" );
+
+      }
+      if ($output_unsorted) {
+        push( @result_files, "$cur_dir/${sample_name}_Aligned.out.bam" );
+      }
     }
     push( @result_files, "$cur_dir/${sample_name}_Log.final.out" );
     push( @result_files, "$cur_dir/${sample_name}.count" );

@@ -170,6 +170,7 @@ sub getRNASeqConfig {
         star_location             => $def->{star_location},
         gff_file                  => $transcript_gtf,
         is_paired_end             => is_paired_end($def),
+        delete_star_featureCount_bam => $def->{delete_star_featureCount_bam},
         sh_direct                 => 0,
         pbs                       => {
           "email"     => $email,
