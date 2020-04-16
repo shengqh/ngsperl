@@ -37,7 +37,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "table_vis_group_text_size", '10' );
   initDefaultValue( $def, "max_thread",                '8' );
   initDefaultValue( $def, "sequencetask_run_time",     '12' );
-  initDefaultValue( $def, "emailType",                 "ALL" );
+  initDefaultValue( $def, "emailType",                 "FAIL" );
 
   return $def;
 }
