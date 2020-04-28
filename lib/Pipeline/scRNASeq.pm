@@ -99,6 +99,8 @@ sub initializeScRNASeqDefaultOptions {
 
   initDefaultValue( $def, "perform_recluster",      0 );
   initDefaultValue( $def, "perform_rename_cluster", 0 );
+  initDefaultValue( $def, "perform_antibody_vis", 0 );
+  initDefaultValue( $def, "antibody_pattern", "^CD");
 
   initDefaultValue( $def, "perform_edgeR", 0 );
 
@@ -122,6 +124,33 @@ sub initializeScRNASeqDefaultOptions {
 
   initDefaultValue( $def, "perform_webgestalt", 0 );
   return $def;
+}
+
+sub addAntibodyTask {
+  my ( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name ) = @_;
+
+  my $pattern = getValue($def, "antibody_pattern");
+  
+  my $taskname = $cluster_task_name . "_antibody_vis";
+  $config->{$taskname} = {
+    class              => "CQS::UniqueR",
+    perform            => 1,
+    target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $taskname,
+    rtemplate          => "../scRNA/scRNAantibody.r",
+    parameterFile1_ref => [ $seurat_name, ".final.rds" ],
+    parameterFile3_ref => [ $cluster_task_name, $cluster_file ],
+    output_file_ext    => ".cluster.csv",
+    rCode              => "celltype_name='$celltype_name'; cluster_name='$cluster_name'; antibody_pattern='$pattern'; ",
+    sh_direct          => 1,
+    pbs                => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$summary, $taskname );
 }
 
 sub addGeneTask {
@@ -223,7 +252,7 @@ sub addEdgeRTask {
     $pairs  = getValue( $def, "pairs" );
   }
   $rCode = $rCode . ";cluster_name='" . $curClusterName . "'";
-
+  
   $config->{$edgeRtaskname} = {
     class                => "CQS::UniqueR",
     perform              => 1,
@@ -498,6 +527,10 @@ sub getScRNASeqConfig {
         },
       };
       push( @$summary, $recluster_name );
+    }
+
+    if ($def->{perform_antibody_vis}){
+      addAntibodyTask( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name );
     }
 
     if ( $def->{t_cell_clusters} ) {

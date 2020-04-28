@@ -211,7 +211,9 @@ if(isCalc){
       counts = Read10X_h5(fileName)
     }
     
+    adt.counts<-NULL
     if (is.list(counts)){
+      adt.counts<-counts$`Antibody Capture`
       counts<-counts$`Gene Expression` 
     }
 
@@ -223,6 +225,13 @@ if(isCalc){
     }
     sobj = CreateSeuratObject(counts = counts, project = fileTitle)
     sobj[["percent.mt"]] <- PercentageFeatureSet(object = sobj, pattern = Mtpattern)
+    if (!is.null(adt.counts)){
+      mat<-as.matrix(adt.counts)
+      rowsum<-apply(mat>0, 1, sum)
+      mat<-mat[rowsum > (ncol(mat) / 2),]
+      sobj[["ADT"]] <- CreateAssayObject(counts = mat)
+    }
+      
     return(sobj)
   })
   if(length(rawobjs) == 1){
