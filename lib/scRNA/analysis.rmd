@@ -234,6 +234,28 @@ if(isCalc){
       
     return(sobj)
   })
+  
+  if(file.exists("fileList3.txt")){
+    pools = read.table("filelist3.txt", header=F, stringsAsFactors = F)
+    poolNames = unique(pools$V2)
+    pooledObjs = lapply(poolNames, function(pn){
+      curPools<-pools[pools$V2==pn,]
+      curListIndecies<-which(unlist(lapply(rawobjs, function(x) x@project.name %in% curPools$V1)))
+      curObjs<-rawobjs[curListIndecies]
+      cellids<-unlist(lapply(curObjs, function(x) x@project.name))
+      curobj <- merge(curObjs[[1]], y = unlist(curObjs[2:length(curObjs)]), add.cell.ids = cellids, project = "integrated")
+      curobj@project.name=pn
+      return(curobj)
+    });
+    notPoolIndecies<-which(unlist(lapply(rawobjs, function(x) !(x@project.name %in% pools$V1))))
+    if(length(notPoolIndecies) > 0){
+      notPoolObjs<-rawobjs[notPoolIndecies]
+      rawobjs<-c(pooled, notPoolObjs)
+    }else{
+      rawobjs<-pooled
+    }
+  }
+  
   if(length(rawobjs) == 1){
     rawobj <- rawobjs[[1]]
   }else{
