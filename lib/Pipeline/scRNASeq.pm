@@ -447,7 +447,7 @@ sub getScRNASeqConfig {
         by_sctransform      => getValue( $def, "by_sctransform" ),
         prefix              => $taskName,
       },
-      parameterSampleFile3 => $def->{"pools"},
+      parameterSampleFile3 => $def->{"batch_for_integration"},
       output_file_ext => ".final.rds;.cluster.csv;.allmarkers.csv;.top10markers.csv;_ur.html",
       sh_direct       => 1,
       pbs             => {
