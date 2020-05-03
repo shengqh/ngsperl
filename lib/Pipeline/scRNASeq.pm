@@ -94,13 +94,15 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "pca_dims",            20 );
   initDefaultValue( $def, "details_rmd",         "" );
 
-  initDefaultValue( $def, "by_integration", 0 );
-  initDefaultValue( $def, "by_sctransform", 0 );
+  initDefaultValue( $def, "by_integration",        0 );
+  initDefaultValue( $def, "by_sctransform",        0 );
+  initDefaultValue( $def, "pool_sample",           0 );
+  initDefaultValue( $def, "batch_for_integration", 0 );
 
   initDefaultValue( $def, "perform_recluster",      0 );
   initDefaultValue( $def, "perform_rename_cluster", 0 );
-  initDefaultValue( $def, "perform_antibody_vis", 0 );
-  initDefaultValue( $def, "antibody_pattern", "^CD");
+  initDefaultValue( $def, "perform_antibody_vis",   0 );
+  initDefaultValue( $def, "antibody_pattern",       "^CD" );
 
   initDefaultValue( $def, "perform_edgeR", 0 );
 
@@ -129,8 +131,8 @@ sub initializeScRNASeqDefaultOptions {
 sub addAntibodyTask {
   my ( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name ) = @_;
 
-  my $pattern = getValue($def, "antibody_pattern");
-  
+  my $pattern = getValue( $def, "antibody_pattern" );
+
   my $taskname = $cluster_task_name . "_antibody_vis";
   $config->{$taskname} = {
     class              => "CQS::UniqueR",
@@ -212,47 +214,42 @@ sub addEdgeRTask {
   my ( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell ) = @_;
   my $rCode = "pvalue=" . getValue( $def, "DE_pvalue" ) . ";useRawPvalue=" . getValue( $def, "DE_use_raw_pvalue" ) . ";foldChange=" . getValue( $def, "DE_fold_change" );
 
-  my $edgeRtaskname = $cluster_task_name . "_edgeR";
-  my $groups        = undef;
-  my $pairs         = undef;
+  my $edgeRtaskname  = $cluster_task_name . "_edgeR";
+  my $groups         = undef;
+  my $pairs          = undef;
   my $curClusterName = undef;
   if ($bBetweenCluster) {
-    $edgeRtaskname = $edgeRtaskname . "_betweenCluster_byCell";
+    $edgeRtaskname  = $edgeRtaskname . "_betweenCluster_byCell";
     $curClusterName = getValue( $def, "DE_cluster_name" );
-    $rCode =
-        $rCode
-      . ";filter_minTPM="
-      . getValue( $def, "DE_by_cell_filter_minTPM" )
-      . ";filter_cellPercentage="
-      . getValue( $def, "DE_by_cell_filter_cellPercentage" )
-      . ";bBetweenCluster=1";
+    $rCode  = $rCode . ";filter_minTPM=" . getValue( $def, "DE_by_cell_filter_minTPM" ) . ";filter_cellPercentage=" . getValue( $def, "DE_by_cell_filter_cellPercentage" ) . ";bBetweenCluster=1";
     $groups = getValue( $def, "DE_cluster_groups" );
     $pairs  = getValue( $def, "DE_cluster_pairs" );
   }
   else {
-    if($DE_by_celltype){
-      $curClusterName =  $celltype_name;
-      $edgeRtaskname = $edgeRtaskname . "_inCelltype";
-    }else{
-      $curClusterName =  $cluster_name;
-      $edgeRtaskname = $edgeRtaskname . "_inCluster";
+    if ($DE_by_celltype) {
+      $curClusterName = $celltype_name;
+      $edgeRtaskname  = $edgeRtaskname . "_inCelltype";
     }
-    
+    else {
+      $curClusterName = $cluster_name;
+      $edgeRtaskname  = $edgeRtaskname . "_inCluster";
+    }
+
     if ($DE_by_cell) {
-      $rCode = $rCode . ";DE_by_cell=1;filter_minTPM=" . getValue( $def, "DE_by_cell_filter_minTPM" ) . ";filter_cellPercentage=" . getValue( $def, "DE_by_cell_filter_cellPercentage" );
+      $rCode         = $rCode . ";DE_by_cell=1;filter_minTPM=" . getValue( $def, "DE_by_cell_filter_minTPM" ) . ";filter_cellPercentage=" . getValue( $def, "DE_by_cell_filter_cellPercentage" );
       $edgeRtaskname = $edgeRtaskname . "_byCell";
     }
     else {
-      $rCode = $rCode . ";DE_by_cell=0;filter_minTPM=" . getValue( $def, "DE_by_sample_filter_minTPM" ) . ";filter_samplePercentage=" . getValue( $def, "DE_by_sample_filter_cellPercentage" );
+      $rCode         = $rCode . ";DE_by_cell=0;filter_minTPM=" . getValue( $def, "DE_by_sample_filter_minTPM" ) . ";filter_samplePercentage=" . getValue( $def, "DE_by_sample_filter_cellPercentage" );
       $edgeRtaskname = $edgeRtaskname . "_bySample";
     }
 
-    $rCode = $rCode . ";bBetweenCluster=0";
+    $rCode  = $rCode . ";bBetweenCluster=0";
     $groups = getValue( $def, "groups" );
     $pairs  = getValue( $def, "pairs" );
   }
   $rCode = $rCode . ";cluster_name='" . $curClusterName . "'";
-  
+
   $config->{$edgeRtaskname} = {
     class                => "CQS::UniqueR",
     perform              => 1,
@@ -283,7 +280,7 @@ sub addEdgeRTask {
     rtemplate          => "../scRNA/edgeRvis.r",
     parameterFile1_ref => [ $seurat_name, ".final.rds" ],
     parameterFile2_ref => [$edgeRtaskname],
-    parameterFile3_ref   => [ $cluster_task_name, $cluster_file ],
+    parameterFile3_ref => [ $cluster_task_name, $cluster_file ],
     output_file_ext    => ".edgeRvis.files.csv",
     rCode              => "cluster_name='" . $curClusterName . "';bBetweenCluster=" . $bBetweenCluster,
     sh_direct          => 1,
@@ -422,7 +419,7 @@ sub getScRNASeqConfig {
   if ( getValue( $def, "perform_seurat" ) ) {
     my $additional_rmd_files = "Functions.Rmd";
 
-    my $seurat_name = "seurat" . ( getValue( $def, "by_sctransform" ) ? "_sct" : "" );
+    my $seurat_name = "seurat" . ( getValue( $def, "by_sctransform" ) ? "_sct" : "" ) . ( getValue( $def, "by_integration" ) ? "_igr" : "" ) . ( getValue( $def, "pool_sample" ) ? "_pool" : "" );
     $config->{$seurat_name} = {
       class                    => "CQS::UniqueRmd",
       perform                  => 1,
@@ -431,26 +428,29 @@ sub getScRNASeqConfig {
       additional_rmd_files     => $additional_rmd_files,
       parameterSampleFile1_ref => "files",
       parameterSampleFile2     => {
-        Mtpattern           => getValue( $def, "Mtpattern" ),
-        rRNApattern         => getValue( $def, "rRNApattern" ),
-        Remove_Mt_rRNA      => getValue( $def, "Remove_Mt_rRNA" ),
-        nFeature_cutoff_min => getValue( $def, "nFeature_cutoff_min" ),
-        nFeature_cutoff_max => getValue( $def, "nFeature_cutoff_max" ),
-        nCount_cutoff       => getValue( $def, "nCount_cutoff" ),
-        mt_cutoff           => getValue( $def, "mt_cutoff" ),
-        resolution          => getValue( $def, "resolution" ),
-        pca_dims            => getValue( $def, "pca_dims" ),
-        species             => getValue( $def, "species" ),
-        markers_file        => getValue( $def, "markers_file" ),
-        details_rmd         => getValue( $def, "details_rmd" ),
-        by_integration      => getValue( $def, "by_integration" ),
-        by_sctransform      => getValue( $def, "by_sctransform" ),
-        prefix              => $taskName,
+        Mtpattern             => getValue( $def, "Mtpattern" ),
+        rRNApattern           => getValue( $def, "rRNApattern" ),
+        Remove_Mt_rRNA        => getValue( $def, "Remove_Mt_rRNA" ),
+        nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
+        nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
+        nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
+        mt_cutoff             => getValue( $def, "mt_cutoff" ),
+        resolution            => getValue( $def, "resolution" ),
+        pca_dims              => getValue( $def, "pca_dims" ),
+        species               => getValue( $def, "species" ),
+        markers_file          => getValue( $def, "markers_file" ),
+        details_rmd           => getValue( $def, "details_rmd" ),
+        by_integration        => getValue( $def, "by_integration" ),
+        by_sctransform        => getValue( $def, "by_sctransform" ),
+        pool_sample           => getValue( $def, "pool_sample" ),
+        batch_for_integration => getValue( $def, "batch_for_integration" ),
+        prefix                => $taskName,
       },
-      parameterSampleFile3 => $def->{"batch_for_integration"},
-      output_file_ext => ".final.rds;.cluster.csv;.allmarkers.csv;.top10markers.csv;_ur.html",
-      sh_direct       => 1,
-      pbs             => {
+      parameterSampleFile3 => $def->{"batch_for_integration_groups"},
+      parameterSampleFile4 => $def->{"pool_sample_groups"},
+      output_file_ext      => ".final.rds;.cluster.csv;.allmarkers.csv;.top10markers.csv;_ur.html",
+      sh_direct            => 1,
+      pbs                  => {
         "email"     => $def->{email},
         "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
@@ -530,7 +530,7 @@ sub getScRNASeqConfig {
       push( @$summary, $recluster_name );
     }
 
-    if ($def->{perform_antibody_vis}){
+    if ( $def->{perform_antibody_vis} ) {
       addAntibodyTask( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name );
     }
 
