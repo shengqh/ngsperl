@@ -44,7 +44,9 @@ sub initializeDefaultOptions {
 
 sub addCutadapt {
   my ($config, $def, $individual, $summary, $cutadaptName, $fastqcName, $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster) = @_;
-  my $cutadapt_thread = getValue($def, "cutadapt_thread", 1);
+  my $default_thread = $is_pairend?2:1;
+  my $cutadapt_thread = getValue($def, "cutadapt_thread", $default_thread);
+  print("cutadapt_thread=" . $cutadapt_thread . "\n");
   my $cutadapt_class = ( defined $def->{cutadapt_config} ) ? "Trimmer::CutadaptByConfig" : "Trimmer::Cutadapt";
   my $cutadapt = {
     "$cutadaptName" => {
@@ -164,7 +166,7 @@ sub initCutadaptOption {
   }
 
   if ( $cutadapt_option !~ /\-n/ ) {
-    my $max_adapter_count = getValue( $config, "max_adapter_count", 3 );
+    my $max_adapter_count = getValue( $config, "max_adapter_count", 2 );
     $cutadapt_option = $cutadapt_option . " -n " . $max_adapter_count;
   }
 
@@ -186,6 +188,7 @@ sub getPreprocessionConfig {
   my $intermediate_dir = getIntermidiateDir($preprocessing_dir, $def);
 
   my $is_pairend = is_paired_end($def);
+  print ("is_pairend=" . $is_pairend . "\n");
 
   #general
   my $cluster = getValue( $def, "cluster" );
