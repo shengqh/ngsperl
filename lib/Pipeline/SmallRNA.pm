@@ -651,7 +651,7 @@ sub getSmallRNAConfig {
       #   push @$summary_ref, $tRHCategory;
       # }
 
-      if ( $def->{perform_host_tRNA_start_position} ) {
+      if ( $def->{perform_host_tRNA_start_position} && $def->{groups}) {
         my $tTask = "host_genome_tRNA_start_position_vis";
         if ( !defined $def->{tRNA_vis_group} ) {
           $def->{tRNA_vis_group} = $groups;
