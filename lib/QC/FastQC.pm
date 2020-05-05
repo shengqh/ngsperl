@@ -4,6 +4,7 @@ package QC::FastQC;
 use strict;
 use warnings;
 use File::Basename;
+use List::Util qw(min);
 use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
@@ -45,7 +46,7 @@ sub parsePairedSamples {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -72,10 +73,12 @@ sub perform {
     my @expectresult = @{ $result->{$sample_name} };
     my $expectname   = $expectresult[0];
 
+    my $curThreadCount = min($thread, $sampleCount);
+
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $expectname, "", 0, $first_sample_file );
-    print $pbs "fastqc $option --extract -t $sampleCount -o $cur_dir $samples 
+    print $pbs "fastqc $option --extract -t $curThreadCount -o $cur_dir $samples 
 fastqc --version | cut -d ' ' -f2 | awk '{print \"FastQC,\"\$1}' > $cur_dir/fastqc.version
 ";
     $self->close_pbs( $pbs, $pbs_file );
