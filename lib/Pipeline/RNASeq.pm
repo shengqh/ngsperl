@@ -57,7 +57,6 @@ sub initializeRNASeqDefaultOptions {
   #$def->{gsea_categories}
 
   initDefaultValue( $def, "perform_cutadapt", 0 );
-  initDefaultValue( $def, "cutadapt_thread",  1 );
 
   initDefaultValue( $def, "featureCount_option",        "-g gene_id -t exon" );
   initDefaultValue( $def, "aligner",                    "star" );
