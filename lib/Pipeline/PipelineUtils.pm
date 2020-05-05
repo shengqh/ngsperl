@@ -144,6 +144,9 @@ sub addFastQC {
 
   my $intermediateDir = getIntermidiateDir($parentDir, $def);
 
+  my $pairend = is_paired_end( $def );
+  my $curThread = $pairend? 2: 1;
+
   $config->{$fastqcTask} = {
     class      => "QC::FastQC",
     perform    => 1,
@@ -154,9 +157,9 @@ sub addFastQC {
     sh_direct  => 1,
     pbs        => {
       "email"    => $def->{email},
-      "nodes"    => "1:ppn=1",
-      "walltime" => "2",
-      "mem"      => "10gb"
+      "nodes"    => "1:ppn=" . $curThread,
+      "walltime" => "4",
+      "mem"      => "4gb"
     },
   };
 
