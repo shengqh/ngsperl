@@ -56,7 +56,9 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-    print $pbs "R --vanilla -f $script --args $cancerName $cur_dir \"$geneLengthFile\" \n";
+    print $pbs "R --vanilla -f $script --args $cancerName $cur_dir \"$geneLengthFile\" 
+rm -rf GDCdata
+";
     $self->close_pbs( $pbs, $pbs_file );
   }
 
