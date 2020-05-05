@@ -40,6 +40,10 @@ sub perform {
   my $output_sort_by_coordinate = getSortByCoordinate( $config, $section, 1 );
   my $delete_star_featureCount_bam  = get_option( $config, $section, "delete_star_featureCount_bam", 0 );
 
+  if ($delete_star_featureCount_bam) {
+    $output_sort_by_coordinate = 0;
+  }
+
   my $output_unsorted = get_option( $config, $section, "output_unsorted", 0 );
   if ( !$output_sort_by_coordinate && !$output_unsorted ) {
     $output_unsorted = 1;
@@ -174,20 +178,12 @@ fi
     }
 
     if ($delete_star_featureCount_bam){
-      if ($output_sort_by_coordinate) {
-        print $pbs "
-  if [ -s $final_file ]; then
-    rm ${sample_name}_Aligned.sortedByCoord.out.bam 
-  fi
-  ";
-      }
-      if ($output_unsorted) {
-        print $pbs "
-  if [ -s $final_file ]; then
-    rm ${sample_name}_Aligned.out.bam 
-  fi
-  ";
-      }
+      print $pbs "
+if [ -s $final_file ]; then
+  rm ${sample_name}_Aligned.out.bam ${sample_name}_Aligned.out.bam.bai
+  rm ${sample_name}_SJ.out.tab ${sample_name}.splicing.bed
+fi
+";
     }
 
     $self->close_pbs( $pbs, $pbs_file );
@@ -224,7 +220,9 @@ sub result {
       $output_unsorted = 1;
     }
 
-    if ($delete_star_featureCount_bam) {
+    push( @result_files, "$cur_dir/${sample_name}.count.summary" );
+    push( @result_files, "$cur_dir/${sample_name}_Log.final.out" );
+    if (!$delete_star_featureCount_bam) {
       if ($output_sort_by_coordinate) {
         push( @result_files, "$cur_dir/${sample_name}_Aligned.sortedByCoord.out.bam" );
 
@@ -233,9 +231,7 @@ sub result {
         push( @result_files, "$cur_dir/${sample_name}_Aligned.out.bam" );
       }
     }
-    push( @result_files, "$cur_dir/${sample_name}_Log.final.out" );
     push( @result_files, "$cur_dir/${sample_name}.count" );
-    push( @result_files, "$cur_dir/${sample_name}.count.summary" );
     push( @result_files, "$cur_dir/${sample_name}.count.star.version" );
     push( @result_files, "$cur_dir/${sample_name}.count.featureCounts.version" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
