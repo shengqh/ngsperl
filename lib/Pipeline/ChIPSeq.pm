@@ -772,7 +772,7 @@ sub getConfig {
     #   };
     #   push( @$summary, "report" );
     # }
-    if ( getValue( $def, "perform_report_test" ) ) {
+    if ( getValue( $def, "perform_report_test", 0 ) ) {
       my @report_files = ();
       my @report_names = ();
       my @copy_files   = ();
