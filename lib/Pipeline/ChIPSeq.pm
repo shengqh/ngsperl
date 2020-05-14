@@ -93,6 +93,8 @@ sub getConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
 
+  checkFileGroupPairNames($def, ["treatments", "controls"]);
+
   my $target_dir = $def->{target_dir};
   create_directory_or_die($target_dir);
 

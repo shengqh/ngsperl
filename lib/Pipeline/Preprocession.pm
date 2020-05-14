@@ -177,6 +177,8 @@ sub getPreprocessionConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
 
+  checkFileGroupPairNames($def);
+
   my $target_dir = create_directory_or_die( getValue( $def, "target_dir" ) );
   $def = initializeDefaultOptions($def);
 

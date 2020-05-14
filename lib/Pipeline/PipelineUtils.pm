@@ -50,7 +50,8 @@ our %EXPORT_TAGS = (
     addGATK4CNVGermlineCohortAnalysis 
     addXHMM
     addGeneLocus
-    annotateNearestGene)
+    annotateNearestGene
+    checkFileGroupPairNames)
   ]
 );
 
@@ -1454,6 +1455,62 @@ sub annotateNearestGene {
     },
   };
   push @$summary, ($task_name);
+}
+
+sub checkFileGroupPairNames {
+  my ($def, $groupKeys, $pairKeys) = @_;
+  my $files = getValue($def, "files");
+  my $bFailed = 0;
+
+  if (!defined $groupKeys){
+    $groupKeys = ["groups"];
+  }
+
+  if (!defined $pairKeys){
+    $pairKeys = ["pairs"];
+  }
+
+  my $allGroupNames = {};
+  for my $groupKey (@$groupKeys){
+    if(defined $def->{$groupKey}){
+      my $groups = $def->{$groupKey};
+      for my $groupName (keys %$groups){
+        my $sampleNames = $groups->{$groupName};
+        for my $sampleName (@$sampleNames){
+          if (!defined $files->{$sampleName}){
+            print STDERR "Sample $sampleName in $groupKey $groupName is not defined in files.\n";
+            $bFailed = 1;
+          }
+        }
+
+        $allGroupNames->{$groupName} = 1;
+      }
+    }
+  }
+
+  if(scalar(keys %$allGroupNames) > 0){
+    for my $pairKey (@$pairKeys){
+      if (defined $def->{$pairKey}){
+        my $pairs = $def->{$pairKey};
+        for my $pairName (keys %$pairs){
+          my $groupNames = $pairs->{$pairName};
+          if (ref($groupNames) eq 'ARRAY') {
+            for my $groupName (@$groupNames){
+              if (!defined $allGroupNames->{$groupName}){
+                print STDERR "Group $groupName in $pairKey $pairName is not defined in groups.\n";
+                $bFailed = 1;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if ($bFailed){
+    print("Wrong definition detected, please fix it and run again.\n");
+    exit;
+  }
 }
 
 1;
