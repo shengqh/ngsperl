@@ -9,8 +9,32 @@ genes<-unique(genes)
 
 obj<-finalList$obj
 
-missgenes<-genes[!(genes %in% rownames(obj))]
-write.table(data.frame("Gene"=missgenes), file="missed_genes.txt", row.names = F, col.names=F)
+getCells<-function(curassay, assay_name, genes){
+  inrawcount<-genes %in% rownames(curassay)
+  cells<-lapply(c(1:length(genes)), function(x){
+    inraw<-inrawcount[x]
+    gene<-genes[x]
+    #cat(inraw, gene, "\n")
+    if (!inraw){
+      return(c(0, ncol(curassay)))
+    }else{
+      incell<-sum(curassay[gene,] > 0)
+      notincell<-ncol(curassay)-incell
+      return(c(incell, notincell))
+    }
+  })
+  cells<-data.frame(matrix(unlist(cells), nrow=length(cells), byrow=T))
+  result<-data.frame(X1 =inrawcount, X2=cells$X1, X3=cells$X2)
+  colnames(result)<-c(paste0("InAssay_",assay_name), paste0("InCell_", assay_name), paste0("NotInCell_", assay_name))
+  rownames(result)<-genes
+  return(result)
+}
+
+rawgenes<-getCells(obj@assays$RNA, "RNA", genes)
+activegenes<-getCells(obj@assays[[obj@active.assay]], obj@active.assay, genes)
+
+geneinfo<-cbind(rawgenes, activegenes)
+write.table(geneinfo, file="gene_summary.txt", sep="\t")
 
 genes<-genes[genes %in% rownames(obj)]
 
@@ -40,7 +64,7 @@ for(gene in genes){
     pgene<-FeaturePlot(object = sobj, features=gene)  + NoLegend() + ggtitle(sample) + theme(plot.title = element_text(hjust=0.5))
     lst[[sample]]=pgene
   }
-
+  
   png(filename=paste0(outFile, ".", gene, ".png"), width= ncol * 3000, height=nrow * 3000, res=300)
   g<-ggarrange(plotlist=lst, ncol=ncol, nrow=nrow)
   print(g)

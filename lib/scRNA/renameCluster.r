@@ -28,8 +28,8 @@ write.csv(clusters, file=paste0(outFile, ".rename_cluster.csv"))
 obj$renamed_cellactivity_clusters<-clusters$renamed_cellactivity_clusters
 obj$renamed_seurat_cellactivity_clusters<-clusters$renamed_seurat_cellactivity_clusters
 
-png(file=paste0(outFile, ".rename_cluster.png"), width=3200, height=3000, res=300)
-g<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="renamed_seurat_cellactivity_clusters")
+png(file=paste0(outFile, ".rename_cluster.png"), width=4000, height=3000, res=300)
+g<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="renamed_seurat_cellactivity_clusters") + guides(colour = guide_legend(override.aes = list(size = 3), ncol=1))
 print(g)
 dev.off()
 
