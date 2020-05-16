@@ -11,96 +11,15 @@ import re
 
 import argparse as arg
 from argparse import RawTextHelpFormatter
-ps = arg.ArgumentParser(description=__doc__, formatter_class=RawTextHelpFormatter)
-ps.add_argument('-pw', help="""output file path""")
-ps.add_argument('-srr', help="""single SRR ID""")
-ps.add_argument('-single', help="""toggle, if the reads is single, use this toggle, default is consider to be pairend""", action='store_true')
-args = ps.parse_args()
+from common_utils import checkFileExists, runCmd, initializeLogger
 
-# load logging
-import logging
-import logging.config
-import yaml
-home = os.path.expanduser('~')
-fl_log_conf = f'{home}/jb/config/logging_setting.yaml'
-log_prefix = 'sv_call_pipeline'
-log_prefix = log_prefix + '_' if log_prefix else ''
-with open(fl_log_conf) as f:
-    cfg = yaml.safe_load(f.read())
-    cfg['handlers']['file']['filename'] = log_prefix + cfg['handlers']['file']['filename']
-    cfg['handlers']['error']['filename'] = log_prefix + cfg['handlers']['error']['filename']
-    logging.config.dictConfig(cfg)
-logger = logging.getLogger('main')
-
-logger.debug(f'input args={args}')
-
-
-pw = args.pw
-srr_raw = args.srr
-paired = not args.single
-
-
-def main():
-    # validate the SRR
-    m = re.match(r'.*([SED]RR\d+)', srr_raw)
-    if not m:
-        logger.fatal('input is not a valid srr ID, please check')
-        sys.exit(1)
-    srr = m.group(1)
-
-    part1 = srr[:6]
-    part2 = f'00{srr[-1]}'
-    ftp_folder = f'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/{part1}/{part2}/{srr}/'
-    logger.debug(f'srr = {srr}, ftp folder={ftp_folder}')
-
-    # check availablity of the sra fastq on EBI
-    res = sra_ebi_query(srr)
-    res_new = []
-    logger.debug(f'EBI fastq query result={res}')
-
-    # create folder
-    _, err = Popen(['mkdir', '-p', f'{pw}/sra2fastq/result/{srr}'], stderr=PIPE, stdout=PIPE, encoding='utf-8').communicate()
-    if err:
-        logger.debug(f'mkdirs error {err}')
-
-    if res == 1:   # fail to get fastq file on EBI server
-        logger.info('now running fastq dump')
-        split = '--split-e' if paired else ''
-        os.system(f'fastq-dump --gzip --helicos {split} --origfmt -O {pw}/sra2fastq/result {srr}')
-    else:
-        # first check if the file already exist
-        for ifl in res:
-            ifl_local = f'{pw}/sra2fastq/result/{srr}/{ifl}'
-            if os.path.exists(ifl_local) and check_fastq_integrity(ifl, srr, ftp_folder):
-                logger.info('file already exist and complete: {ifl_local}')
-                # the file already exist, so don't download it
-            else:
-                res_new.append(ifl)
-
-        # download the file
-        url = ' '.join([f'{ftp_folder}{ifl}' for ifl in res_new])
-        # logger.debug(url)
-        # the actual download command
-        os.system(f"cd {pw}/sra2fastq/result/{srr}; parallel 'wget -c {{}}' ::: {url} ")
-
-        # verify the downloaded file
-        fail = 0
-        for ifl in res:
-            valid = check_fastq_integrity(ifl, srr, ftp_folder)
-            if valid:
-                logger.debug(f'{ifl} is complete')
-            else:
-                fail = 1
-
-        return fail
-
-def check_fastq_integrity(ifl, srr, ftp_folder):
+def check_fastq_integrity(file_local, srr, ftp_folder):
     """
     return 1 if the file is complete
     return 0 if the filesize is not the same as EBI
     """
 
-    size_local = os.popen(f"ls -l {pw}/sra2fastq/result/{srr}/{ifl} | awk '{{print $5}}'").read().strip()
+    size_local = os.popen(f"ls -l {file_local} | awk '{{print $5}}'").read().strip()
     size_ebi = os.popen(f"""curl {ftp_folder}|awk '{{print $5}}'""").read().strip()
 
     if size_local != size_ebi:
@@ -109,8 +28,7 @@ def check_fastq_integrity(ifl, srr, ftp_folder):
     else:
         return 1
 
-
-def sra_ebi_query(sra_acc):
+def sra_ebi_query(logger, sra_acc):
     """
     check if the fastq file exist on the EBI server
     """
@@ -130,8 +48,71 @@ def sra_ebi_query(sra_acc):
     else:
         return flist
 
+def download(logger, srr_raw, is_single_end, output_folder): 
+    paired = not is_single_end
+
+    # validate the SRR
+    m = re.match(r'.*([SED]RR\d+)', srr_raw)
+    if not m:
+        logger.fatal(f'Input {srr_raw} is not a valid srr ID, please have a check.')
+        sys.exit(1)
+    srr = m.group(1)
+
+    part1 = srr[:6]
+    part2 = f'00{srr[-1]}'
+    ftp_folder = f'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/{part1}/{part2}/{srr}/'
+    logger.debug(f'srr={srr}, ftp folder={ftp_folder}')
+
+    # check availablity of the sra fastq on EBI
+    res = sra_ebi_query(logger, srr)
+    res_new = []
+    logger.debug(f'EBI fastq query result={res}')
+
+    if res == 1:   # fail to get fastq file on EBI server
+        logger.info('now running fastq dump')
+        split = '--split-e' if paired else ''
+        runCmd(logger, f'fastq-dump --gzip --helicos {split} --origfmt -O {output_folder} {srr}')
+    else:
+        # first check if the file already exist
+        for ifl in res:
+            ifl_local = f'{output_folder}/{ifl}'
+            if os.path.exists(ifl_local) and check_fastq_integrity(ifl_local, srr, ftp_folder):
+                logger.info('file already exist and complete: {ifl_local}')
+                # the file already exist, so don't download it
+            else:
+                res_new.append(ifl)
+
+        # download the file
+        url = ' '.join([f'{ftp_folder}{ifl}' for ifl in res_new])
+        # logger.debug(url)
+        # the actual download command
+        runCmd(logger, f"cd {output_folder}; parallel 'wget -c {{}}' ::: {url} ")
+
+        # verify the downloaded file
+        fail = 0
+        for ifl in res:
+            valid = check_fastq_integrity(ifl, srr, ftp_folder)
+            if valid:
+                logger.debug(f'{ifl} is complete')
+            else:
+                fail = 1
+
+        return fail
+
+def main():
+    DEBUG = False
+    NOT_DEBUG = not DEBUG
+
+    ps = arg.ArgumentParser(description="Download FASTQ files based on SRR ID", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    ps.add_argument("-i", "--input", help="Input SRR ID", required=NOT_DEBUG)
+    ps.add_argument("-s", "--is_single_end", action='store_true', help="Is the sample single-end data?")
+    ps.add_argument("-o", "--output", help="Output file prefix", required=NOT_DEBUG)
+    args = ps.parse_args()
+
+    logger = initializeLogger(args.output + ".log", "download_fastq")
+    logger.debug(f'input args={args}')
+
+    download(logger, args.input, args.is_single_end, args.output)
 
 if __name__ == "__main__":
-    res = main()
-    if res:
-        sys.exit(res)
+    main()
