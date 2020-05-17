@@ -8,7 +8,7 @@ def checkFileExists(file):
   if not os.path.exists(file):
     raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), file)
 
-def runCmd(cmd, logger):
+def runCmd(logger, cmd):
   logger.info(cmd)
   os.system(cmd)
 
