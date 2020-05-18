@@ -37,8 +37,9 @@ sub perform {
   my $interpretor = get_option( $config, $section, "interpretor", "" );
   my $program     = get_program( $config, $section );
 
-  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
-  my $output_file_prefix    = get_option( $config, $section, "output_file_prefix" );
+  my $output_to_folder = get_option( $config, $section, "output_to_folder", 0 );
+  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1);
+  my $output_file_prefix    = get_option( $config, $section, "output_file_prefix", (!$output_to_folder) );
   my $output_arg            = get_option( $config, $section, "output_arg" );
 
   my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, "source" );
@@ -102,7 +103,7 @@ sub perform {
     my $final_file = $expect_result->{$sample_name}[-1];
     my $pbs        = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-    my $final_prefix = $sample_name . $output_file_prefix;
+    my $final_prefix = $output_to_folder ? "." : $sample_name . $output_file_prefix;
 
     #print Dumper($parameterSampleFile1->{$sample_name});
     
