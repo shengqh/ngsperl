@@ -94,7 +94,7 @@ sub addCutadapt {
     addFastQC( $config, $def, $individual, $summary, $fastqcName, [ $cutadaptName, ".fastq.gz" ], $preprocessing_dir );
   }
   $source_ref = [ $cutadaptName, ".fastq.gz" ];
-  return ($source_ref);
+  return ($source_ref, $cutadaptName);
 }
 
 sub addFastqLen {
@@ -443,8 +443,8 @@ sub getPreprocessionConfig {
     };
     push( @$tasks, $extractTask );
 
-    my $test_ref = addCutadapt($config, $def, $tasks, $tasks, "test_cutadapt", "test_fastqc_post_trim", $test_dir, $test_dir, $extractTask, $is_pairend, $cluster);
-    addFastqLen($config, $def, $tasks, $tasks, "test_fastq_len", $test_dir, $test_ref, $cluster );
+    my ($test_ref, $cutadapt_name) = addCutadapt($config, $def, $tasks, $tasks, "test_cutadapt", "test_fastqc_post_trim", $test_dir, $test_dir, $extractTask, $is_pairend, $cluster);
+    addFastqLen($config, $def, $tasks, $tasks, "test_fastq_len", $test_dir, [$cutadapt_name, ".gz"], $cluster );
 
     print(join(',', @$tasks));
     $config->{"test_sequencetask"} = {
@@ -467,8 +467,9 @@ sub getPreprocessionConfig {
   }
 
   if ($run_cutadapt) {
-    $source_ref = addCutadapt($config, $def, $individual, $summary, "cutadapt", "fastqc_post_trim", $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster);
-    addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, $source_ref, $cluster );
+    my $cutadapt_name;
+    ($source_ref, $cutadapt_name)  = addCutadapt($config, $def, $individual, $summary, "cutadapt", "fastqc_post_trim", $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster);
+    addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, [$cutadapt_name, ".gz"], $cluster );
   }elsif ($def->{fastq_len} ) {
     addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, $source_ref, $cluster );
   }
