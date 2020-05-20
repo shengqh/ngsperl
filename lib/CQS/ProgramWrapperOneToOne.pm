@@ -105,7 +105,11 @@ sub perform {
     my $final_prefix = $sample_name . $output_file_prefix;
 
     #print Dumper($parameterSampleFile1->{$sample_name});
-    
+
+    if ($curOption =~ /__NAME__/){
+      $curOption =~ s/__NAME__/$sample_name/g;
+    }
+
     my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name );
     if ($curOption =~ /__FILE__/){
       $curOption =~ s/__FILE__/$param_option1/g;
