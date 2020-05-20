@@ -176,8 +176,10 @@ sub initCutadaptOption {
 sub getPreprocessionConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
+  
+  my $fileKey = $def->{pool_sample}?"pool_sample_groups":"files";
 
-  checkFileGroupPairNames($def);
+  checkFileGroupPairNames($def, ["groups"], ["pairs"], $fileKey);
 
   my $target_dir = create_directory_or_die( getValue( $def, "target_dir" ) );
   $def = initializeDefaultOptions($def);
