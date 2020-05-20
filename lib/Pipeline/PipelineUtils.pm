@@ -1458,8 +1458,11 @@ sub annotateNearestGene {
 }
 
 sub checkFileGroupPairNames {
-  my ($def, $groupKeys, $pairKeys) = @_;
-  my $files = getValue($def, "files");
+  my ($def, $groupKeys, $pairKeys, $fileKey) = @_;
+  if(!defined $fileKey){
+    $fileKey = "files";
+  }
+  my $files = getValue($def, $fileKey);
   my $bFailed = 0;
 
   if (!defined $groupKeys){
