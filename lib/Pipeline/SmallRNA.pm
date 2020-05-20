@@ -54,7 +54,7 @@ sub getSmallRNAConfig {
 
   my $perform_nonhost_overlap_vis = getValue( $def, "perform_nonhost_overlap_vis", 1 ) && $notMicroRNAOnly;
 
-  my $perform_nonhost_genome_count = getValue( $def, "perform_nonhost_genome_count", 0 ) && $notMicroRNAOnly;
+  my $perform_nonhost_genome_count = getValue( $def, "perform_nonhost_genome_count", 1 ) && $notMicroRNAOnly;
 
   my $top_read_number = getValue( $def, "top_read_number" );
 
