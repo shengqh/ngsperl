@@ -190,7 +190,9 @@ sub getPreprocessionConfig {
   my $intermediate_dir = getIntermidiateDir($preprocessing_dir, $def);
 
   my $is_pairend = is_paired_end($def);
-  print ("is_pairend=" . $is_pairend . "\n");
+  if (defined $is_pairend){
+    print ("is_pairend=" . $is_pairend . "\n");
+  }
 
   #general
   my $cluster = getValue( $def, "cluster" );
