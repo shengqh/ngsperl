@@ -1422,6 +1422,8 @@ sub getSmallRNAConfig {
       }
     }
 
+print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
+
     if ($perform_nonhost_genome_count){
       $config->{nonhost_genome_count} = {
         class              => "CQS::ProgramWrapper",
