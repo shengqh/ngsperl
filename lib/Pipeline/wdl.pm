@@ -1,0 +1,143 @@
+#!/usr/bin/perl
+package Pipeline::wdl;
+
+use strict;
+use warnings;
+use File::Basename;
+use CQS::PBS;
+use CQS::ConfigUtils;
+use CQS::SystemUtils;
+use CQS::FileUtils;
+use CQS::Task;
+use CQS::NGSCommon;
+use CQS::StringUtils;
+use Alignment::AlignmentUtils;
+use Gcloud::GcloudUtils;
+
+our @ISA = qw(CQS::Task);
+
+sub new {
+  my ($class) = @_;
+  my $self = $class->SUPER::new();
+  $self->{_name}   = __PACKAGE__;
+  $self->{_suffix} = "_wdl";
+  bless $self, $class;
+  return $self;
+}
+
+sub perform {
+  my ( $self, $config, $section ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
+
+  my $pipeline_file = get_option_file( $config, $section, "pipeline_file" );
+  my $wdl_file = get_option_file( $config, $section, "wdl_file");
+  my $input_json_file = get_option_file( $config, $section, "input_json_file" );
+  my $input_option_file = get_option_file( $config, $section, "input_option_file" );
+  my $input_json_options = get_option($config, $section, "input_json_options");
+
+  my %raw_files = %{ get_raw_files( $config, $section ) };
+
+  my $json_dic = read_json($input_json_file);
+
+  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct);
+
+  for my $sample_name ( sort keys %raw_files ) {
+    my @sample_files = @{ $raw_files{$sample_name} };
+
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
+
+    print $sh "\$MYCMD ./$pbs_name \n";
+
+    my $log_desc = $cluster->get_log_description($log);
+
+    my $final_file = $gsresult . "/" . $sample_name . "/" . $sample_name . ".g.vcf.gz";
+    my $sample_input_file = $self->get_file( $result_dir, $sample_name, ".inputs.json" );
+    
+    my $fh;
+    my $fo;
+    my $row;
+    open($fh, '<', $input_json_file);
+    open($fo, '>', $sample_input_file);
+    while ($row = <$fh>) {
+      if ($row =~ /dnaseq.sample_name/){
+        print $fo "    \"dnaseq.sample_name\": \"$sample_name\",\n";
+      }elsif($row =~ /dnaseq.base_file_name/){
+        print $fo "    \"dnaseq.base_file_name\": \"$sample_name\",\n";
+      }elsif($row =~ /dnaseq.final_gvcf_base_name/){
+        print $fo "    \"dnaseq.final_gvcf_base_name\": \"$sample_name\",\n";
+      }elsif($row =~ /dnaseq.raw_fastq1/){
+        print $fo "    \"dnaseq.raw_fastq1\": \"$fastq1\",\n";
+      }elsif($row =~ /dnaseq.raw_fastq2/){
+        print $fo "    \"dnaseq.raw_fastq2\": \"$fastq2\",\n";
+      }elsif($row =~ /dnaseq.bwa_commandline/){
+        my $newbwa = replaceSampleNameBWACommand($row, $sample_name);
+        print $fo $newbwa;
+      }elsif($row =~ /dnaseq.wgs_calling_interval_list/){
+        if($calling_interval_file ne ""){
+          print $fo "    \"dnaseq.wgs_calling_interval_list\": \"$calling_interval_file\",\n";
+        }else{
+          print $fo $row;
+        }
+      }else{
+        print $fo $row;
+      }
+    }
+    close($fh);
+    close($fo);
+    
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+
+    print $pbs "
+gcloud config set project $project
+
+aa=\$(gsutil stat $final_file)
+echo \"\"
+
+if [[ \$aa ]]; then
+  echo result has been generated $final_file, exit.
+  exit 0
+fi
+  
+gcloud \\
+  alpha genomics pipelines run \\
+  --pipeline-file $pipeline_file \\
+  --inputs-from-file WDL=$wdl_file,\\
+WORKFLOW_INPUTS=$sample_input_file,\\
+WORKFLOW_OPTIONS=$input_option_file \\
+  --env-vars WORKSPACE=$gsworkspace,\\
+OUTPUTS=${gsresult}/${sample_name} \\
+  --logging ${gslog}/${sample_name}.log $option 2>&1 | tee ${pbs_file}.id
+    
+";
+    $self->close_pbs( $pbs, $pbs_file );
+  }
+  close $sh;
+
+  if ( is_linux() ) {
+    chmod 0755, $shfile;
+  }
+
+  print "!!!shell file $shfile created, you can run this shell file to submit all tasks.\n";
+}
+
+sub result {
+  my ( $self, $config, $section, $pattern ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+
+  my %raw_files = %{ get_raw_files( $config, $section ) };
+  
+  my $result = {};
+  for my $sample_name ( keys %raw_files ) {
+    my @result_files = ();
+    $result->{$sample_name} = filter_array( \@result_files, $pattern );
+  }
+  return $result;
+}
+
+1;

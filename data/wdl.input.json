@@ -1,0 +1,14 @@
+{
+  "Mutect2.gatk_docker":"gatk.latest",
+  "Mutect2.intervals":"/data/h_vangard_1/WilsonKeith_data/20190501_3197MouseWES/S0276129_Covered.NoHeaderForPipeline_mm9Tomm10_Map95.bed",
+  "Mutect2.scatter_count":  7,
+  "Mutect2.ref_fasta":"/scratch/cqs_share/references/gencode/GRCm38.p6/bwa_index_0.7.17/GRCm38.primary_assembly.genome.fa",
+  "Mutect2.ref_dict":"/scratch/cqs_share/references/gencode/GRCm38.p6/bwa_index_0.7.17/GRCm38.primary_assembly.genome.dict",
+  "Mutect2.ref_fai":"/scratch/cqs_share/references/gencode/GRCm38.p6/bwa_index_0.7.17/GRCm38.primary_assembly.genome.fa.fai",
+  "Mutect2.normal_reads":"/scratch/cqs/zhaos/WilsonKeith/20200330_EtHOBAMouseSomatic/20200330_preprocessing_cromwell/result/cromwell_finalOutputs//HpEtHOBA8_Ear.mm10.bam",
+  "Mutect2.normal_reads_index":"/scratch/cqs/zhaos/WilsonKeith/20200330_EtHOBAMouseSomatic/20200330_preprocessing_cromwell/result/cromwell_finalOutputs//HpEtHOBA8_Ear.mm10.bai",
+  "Mutect2.tumor_reads":"/scratch/cqs/zhaos/WilsonKeith/20200330_EtHOBAMouseSomatic/20200330_preprocessing_cromwell/result/cromwell_finalOutputs//HpEtHOBA8_Stomach.mm10.bam",
+  "Mutect2.tumor_reads_index":"/scratch/cqs/zhaos/WilsonKeith/20200330_EtHOBAMouseSomatic/20200330_preprocessing_cromwell/result/cromwell_finalOutputs//HpEtHOBA8_Stomach.mm10.bai",
+  "Mutect2.pon":"/scratch/cqs/zhaos/WilsonKeith/20200330_EtHOBAMouseSomatic/20200330_mutect2PON_cromwell/result/cromwell_finalOutputs/panel_of_normal.vcf",
+  "Mutect2.pon_idx":"/scratch/cqs/zhaos/WilsonKeith/20200330_EtHOBAMouseSomatic/20200330_mutect2PON_cromwell/result/cromwell_finalOutputs/panel_of_normal.vcf.idx"
+}
