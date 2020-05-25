@@ -23,3 +23,4 @@ curl -L http://cpanmin.us | perl -  Test::Deep
 curl -L http://cpanmin.us | perl -  Test::Simple
 curl -L http://cpanmin.us | perl -  WWW::Mechanize
 curl -L http://cpanmin.us | perl -  Algorithm::Loops
+curl -L http://cpanmin.us | perl -  JSON::Streaming::Reader

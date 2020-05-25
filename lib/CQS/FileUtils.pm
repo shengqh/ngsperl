@@ -4,12 +4,16 @@ use strict;
 use warnings;
 
 use CQS::CQSDebug;
+use JSON;
+use JSON::Streaming::Reader;
+use JSON 'to_json';
+use Tie::IxHash;
 
 require Exporter;
 
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw( list_directories list_files has_file create_directory_or_die change_extension change_extension_gzipped file_exists check_file_exists_command)] );
+our %EXPORT_TAGS = ( 'all' => [qw( list_directories list_files has_file create_directory_or_die change_extension change_extension_gzipped file_exists check_file_exists_command read_json)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -130,4 +134,58 @@ ${intent}fi
   return $result;
 }
 
+sub read_json_old {
+  my ($input_json_file) = @_;
+  
+  my $json_text;
+  {
+   open(my $json_fh, "<:encoding(UTF-8)", $input_json_file)
+      or die("Can't open \$filename\": $!\n");
+   local $/;
+   $json_text = <$json_fh>;
+   close($json_fh);
+  };
+
+  my $json = JSON->new;
+  my $result = $json->decode($json_text);
+  
+  for my $key (keys %$result){
+    my $value  =$result->{$key};
+    print("$key:$value\n");
+  }
+  
+  return($result);
+}
+
+
+sub read_json {
+  my ($input_json_file) = @_;
+  
+ open(my $fh, "<:encoding(UTF-8)", $input_json_file) or die("Can't open \$input_json_file\": $!\n");
+  
+  my $result = {};
+  tie %$result, 'Tie::IxHash';
+  
+  my $jsonr = JSON::Streaming::Reader->for_stream($fh);
+  $jsonr->process_tokens(
+    start_object => sub {
+    },
+    end_object => sub {
+    },
+    start_property => sub {
+      my ($name) = @_;
+      my $value = $jsonr->slurp();
+      $result->{$name} = $value;
+    }
+  );
+  
+  close($fh);  
+#  for my $key (keys %$result){
+#    print($key . ":" . $result->{$key} . "\n");
+#  }
+
+  return($result);
+}
+
 1;
+
