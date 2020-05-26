@@ -41,8 +41,15 @@ sub perform {
   my $input_parameters = get_option($config, $section, "input_parameters");
   die "input_parameters should be hash" if(ref($input_parameters) ne 'HASH');
 
+  my $input_list = get_option($config, $section, "input_list", {});
+  die "$input_list should be hash" if(ref($input_list) ne 'HASH');
+
+  my $input_single = get_option($config, $section, "input_single", {});
+  die "$input_single should be hash" if(ref($input_single) ne 'HASH');
+
   my $replace_dics = {};
   my $replace_values = {};
+
   for my $input_key (keys %$input_parameters){
     my $input_value = $input_parameters->{$input_key};
     if (ref($input_value) ne "ARRAY"){
@@ -61,6 +68,60 @@ sub perform {
       $replace_values->{$input_key} = $input_parameters->{$input_key};
     }
   }
+
+  for my $input_key (keys %$input_list){
+    my $input_name = $input_key;
+    my $input_value = $input_list->{$input_key};
+    if (ref($input_value) eq "ARRAY"){
+      die "$input_key should include _ref suffix" if (substr($input_key, -4) ne "_ref");
+      $input_name =~ s/_config_ref$//g;
+      $input_name =~ s/_ref$//g;
+      $config->{$section}{$input_key} = $input_parameters->{$input_key};
+      $input_value = get_raw_files( $config, $section, $input_name );
+      delete $config->{$section}{$input_key};
+    }
+
+    die "$input_key should point to hash" if (ref($input_value) ne "HASH");
+    
+    my $cur_dic = {};
+    for my $sample_name (keys %$input_value){
+      my $sample_values = $input_value->{$sample_name};
+      die "value for $sample_name in input_list should be array" if (ref($sample_values) ne "ARRAY");
+      
+      my $list_file = $self->get_file( $result_dir, $sample_name, "." . $input_key . ".list" );
+      open( my $list, ">$list_file" ) or die "Cannot create $list_file";
+      for my $sample_value (@$sample_values) {
+        print $list $sample_value . "\n";
+      }
+      close($list);
+      
+      $cur_dic->{$sample_name} = [basename($list_file)];
+    }
+    
+    $replace_dics->{$input_name} = $cur_dic;
+  }
+  
+  for my $input_key (keys %$input_single){
+    my $input_value = $input_single->{$input_key};
+    
+    if ((substr($input_key, -4) ne "_ref") and (ref($input_value) eq ref(""))){
+      $replace_values->{$input_key} = $input_value;
+      next;
+    }
+    die "value of $input_key in input_single should be ARRAY" if (ref($input_value) ne "ARRAY");
+    
+    if (substr($input_key, -4) eq "_ref") {
+      my $input_name = $input_key;
+      $input_name =~ s/_config_ref$//g;
+      $input_name =~ s/_ref$//g;
+      $config->{$section}{$input_key} = $input_parameters->{$input_key};
+      $replace_dics->{$input_name} = get_raw_files( $config, $section, $input_name );
+      delete $config->{$section}{$input_key};
+    }else{
+      $replace_values->{$input_key} = $input_parameters->{$input_key};
+    }
+  }
+  
   
   my $json_dic = read_json($input_json_file);
   for my $input_key (keys %$replace_dics){
