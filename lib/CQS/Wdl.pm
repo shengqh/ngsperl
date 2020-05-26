@@ -35,7 +35,17 @@ sub perform {
   my $input_option_file = get_option_file( $config, $section, "input_option_file" );
 
   my $input_json_file = get_option_file( $config, $section, "input_json_file" );
-  
+
+  #softlink singularity_image_files to result folder
+  my $singularity_image_files = get_raw_files( $config, $section, "singularity_image_files" ); 
+  for my $image_name ( sort keys %$singularity_image_files ) {
+    my $simgSoftlinkCommand="cp -P ".$singularity_image_files->{$image_name}[0]." ".$result_dir."/".$image_name;
+    print($simgSoftlinkCommand."\n");
+  #  print $singularity_image_files->{$image_name}[0]."\n";
+    system($simgSoftlinkCommand);
+    #`ls -la`;
+  }
+
   my $raw_files = get_raw_files( $config, $section );
   
   my $input_parameters = get_option($config, $section, "input_parameters");
@@ -72,7 +82,7 @@ sub perform {
   my @json_keys_toSampleNames=();
   for my $replace_key (keys %$replace_values){
     $json_dic->{$replace_key} = $replace_values->{$replace_key};
-    if ($replace_values->{$replace_key}=="SAMPLE_NAME") {
+    if ($replace_values->{$replace_key} eq "SAMPLE_NAME") {
       push @json_keys_toSampleNames,$replace_key;
     }
   }
