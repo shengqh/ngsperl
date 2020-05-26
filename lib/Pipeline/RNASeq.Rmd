@@ -21,6 +21,7 @@ output:
   
 ```{r setup, include=FALSE}
 library(kableExtra)
+library(tidyverse)
 
 knitr::opts_chunk$set(fig.width=8, fig.height=6, out.width="80%")
 
@@ -83,8 +84,59 @@ check_and_include_graphics(files["fastqc_raw_per_base_sequence_quality",1])
 
 <br>
 
+```{r fastqc_raw_per_base_sequence_quality_table,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc,warning=FALSE}
+
+tableFile=gsub(".png$","",files["fastqc_raw_per_base_sequence_quality",1])
+table<-read.delim(tableFile)
+
+QualityMin=30
+if (any(table$Mean<=QualityMin)) { #use this as cutoff to show the quality table
+  output_table1=data.frame(table[,c("File","Mean","Base")])
+  output_table1$Base=factor(as.character(output_table1$Base),levels = unique(output_table1$Base))
+  output_table1=tidyr::pivot_wider(output_table1,names_from=Base,values_from=Mean)
+  output_table1=output_table1[which(apply(output_table1[,-1],1,min)< QualityMin),]
+  
+  print(kable_styling(kable(output_table1, caption=tabRef("Quality Summary", "Samples with Low RNA-seq Quality"), row.names=F) %>% 
+          row_spec(which(apply(output_table1[,-1],1,min)< QualityMin), color = "black", background = "honeydew")))
+}
+
+
+```
+
+<br>
+
 ```{r fastqc_raw_per_sequence_gc_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_per_sequence_gc_content", "The average GC content of sequencing reads", trunk.eval=file.exists(files["fastqc_raw_per_sequence_gc_content",1]))}
 check_and_include_graphics(files["fastqc_raw_per_sequence_gc_content",1])
+```
+
+
+<br>
+
+```{r fastqc_raw_per_sequence_gc_content_table,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc,warning=FALSE}
+
+tableFile=gsub(".png$","",files["fastqc_raw_per_sequence_gc_content",1])
+tableContent<-read.delim(tableFile)
+
+tableContentSummary=tableContent %>% group_by(File) %>% summarise(GC25=sum(Count[which(GC.Content<=25)])/sum(Count),
+                                              GC50=sum(Count[which(GC.Content<=50)])/sum(Count),
+                                              GC75=sum(Count[which(GC.Content>=75)])/sum(Count))
+
+
+
+GcDistributionCutoff=0.4 #GC content cutoff
+gcSampleInd=which(tableContentSummary$GC25>=GcDistributionCutoff | tableContentSummary$GC75>=GcDistributionCutoff )
+if (any(gcSampleInd)) { #use this as cutoff to show GC distribution
+  output_table1=tableContentSummary[gcSampleInd,]
+  colnames(output_table1)[-1]=c("Percent of Reads <=25% GC","Percent of Reads <=50% GC","Percent of Reads >=75% GC")
+  for (i in 2:4) {
+    output_table1[[i]]=paste0(round(output_table1[[i]]*100,1),"%")
+  }
+  
+  print(kable_styling(kable(output_table1, caption=tabRef("GC content Distribution Summary", "Samples with abnormal GC content Distribution"), row.names=F) %>% 
+          row_spec(which(apply(output_table1[,-1],1,min)< QualityMin), color = "black", background = "honeydew")))
+}
+
+
 ```
 
 <br>

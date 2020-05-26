@@ -69,8 +69,12 @@ sub perform {
     }
   }
   
+  my @json_keys_toSampleNames=();
   for my $replace_key (keys %$replace_values){
-    $json_dic->{$replace_key} = $replace_values->{$replace_key};    
+    $json_dic->{$replace_key} = $replace_values->{$replace_key};
+    if ($replace_values->{$replace_key}=="SAMPLE_NAME") {
+      push @json_keys_toSampleNames,$replace_key;
+    }
   }
 
   my $json = JSON->new;
@@ -89,10 +93,15 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
     
-    for my $json_key (keys %$json_dic){
-      if ($json_dic->{$json_key} =~ /SAMPLE_NAME/){
-        $json_dic->{$json_key} =~ s/SAMPLE_NAME/$sample_name/g;
-      }
+    # for my $json_key (keys %$json_dic){
+    #   if ($json_dic->{$json_key} =~ /SAMPLE_NAME/){
+    #     $json_dic->{$json_key} =~ s/SAMPLE_NAME/$sample_name/g;
+    #   }
+    # }
+    if (scalar(@json_keys_toSampleNames) != 0) {
+        foreach my $json_key_toSampleNames (@json_keys_toSampleNames) {
+          $json_dic->{$json_key_toSampleNames} = $sample_name;
+        }
     }
     
     for my $input_key (keys %$replace_dics){
