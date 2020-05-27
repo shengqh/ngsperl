@@ -125,13 +125,14 @@ sub perform {
       $input_name =~ s/_config_ref$//g;
       $input_name =~ s/_ref$//g;
       $config->{$section}{$input_key} = $input_parameters->{$input_key};
-      $replace_dics->{$input_name} = get_raw_files( $config, $section, $input_name );
+      my $singles = get_raw_files( $config, $section, $input_name );
       delete $config->{$section}{$input_key};
+      my $single_file = $singles->{$task_name}[0];
+      $replace_values->{$input_key} = $single_file;
     }else{
-      $replace_values->{$input_key} = $input_parameters->{$input_key};
+      $replace_values->{$input_key} = $input_single->{$input_key}[0];
     }
   }
-  
   
   my $json_dic = read_json($input_json_file);
   for my $input_key (keys %$replace_dics){
