@@ -177,7 +177,12 @@ sub getPreprocessionConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
 
-  checkFileGroupPairNames($def);
+  if (defined $def->{pool_sample}){
+    checkFileGroupPairNames($def, ["pool_sample_groups"], ["pairs"], "files");
+    checkFileGroupPairNames($def, ["groups"], ["pairs"], "pool_sample_groups");
+  }else{
+    checkFileGroupPairNames($def, ["groups"], ["pairs"], "files");
+  }
 
   my $target_dir = create_directory_or_die( getValue( $def, "target_dir" ) );
   $def = initializeDefaultOptions($def);
