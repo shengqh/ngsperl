@@ -1349,6 +1349,7 @@ sub getSmallRNAConfig {
   #Mapping unmapped reads to nonhost genome
   if ($search_nonhost_genome) {
     my $nonhost_genome_count_xml = [];
+    my $microbial_genome_count_xml = [];
     for my $nonhostGroup (@nonhost_genome_groups) {
       addNonhostDatabase(
         $config, $def, $individual_ref, $summary_ref, "${nonhostGroup}_pm", $nonhost_genome_dir,    #general option
@@ -1395,8 +1396,9 @@ sub getSmallRNAConfig {
       push @mapped,                ( "bowtie1_${nonhostGroup}_pm_count", ".xml" );
       push @overlap,               ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
       
-      if((not $def->{nonhost_genome_count_no_virus}) or ($nonhostGroup !~ /virus/)){
-        push @$nonhost_genome_count_xml, ( "bowtie1_${nonhostGroup}_pm_table", ".count.xml\$" );
+      push @$nonhost_genome_count_xml, ( "bowtie1_${nonhostGroup}_pm_table", ".count.xml\$" );
+      if( ($nonhostGroup !~ /virus/) and ($nonhostGroup !~ /algae/)){
+        push @$microbial_genome_count_xml, ( "bowtie1_${nonhostGroup}_pm_table", ".count.xml\$" );
       }
 
       my $nonhost_count2bam = ${nonhostGroup} . "_count2bam";
@@ -1435,6 +1437,29 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
         parameterSampleFile1_arg => "-i",
         parameterSampleFile1_ref => $nonhost_genome_count_xml,
         output_arg         => "-o",
+        output_file_ext    => ".nonhost_genome.tsv",
+        sh_direct          => 1,
+        pbs                => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+
+      push( @$summary_ref, "nonhost_genome_count" );
+
+      $config->{microbial_genome_count} = {
+        class              => "CQS::ProgramWrapper",
+        perform            => 1,
+        target_dir         => $nonhost_genome_dir . "/microbial_genome_count",
+        option             => "",
+        interpretor        => "python",
+        program            => "../SmallRNA/nonhostXmlCount.py",
+        parameterSampleFile1_arg => "-i",
+        parameterSampleFile1_ref => $microbial_genome_count_xml,
+        output_arg         => "-o",
         output_file_ext    => ".microbial.tsv",
         sh_direct          => 1,
         pbs                => {
@@ -1445,7 +1470,7 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
           "mem"       => "10gb"
         },
       };
-      push( @$summary_ref, "nonhost_genome_count" );
+      push( @$summary_ref, "microbial_genome_count" );
     }
     
     push @name_for_readSummary, @nonhost_genome_group_names;
@@ -1935,7 +1960,7 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
         parameterSampleFile1      => $groups,
         parameterSampleFile2      => $def->{groups_vis_layout},
         parameterFile1_ref        => [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv"],
-        parameterFile2_ref        => [ "nonhost_genome_count", ".microbial.tsv\$" ],
+        parameterFile2_ref        => [ "microbial_genome_count", ".microbial.tsv\$" ],
         sh_direct                 => 1,
         rCode                     => $rCode,
         pbs                       => {
