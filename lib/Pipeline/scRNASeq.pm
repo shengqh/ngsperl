@@ -155,31 +155,44 @@ sub addAntibodyTask {
   push( @$summary, $taskname );
 }
 
+sub addMarkerGenes {
+  my ( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name, $marker_name, $marker_file, $samples ) = @_;
+  
+  my $markerGenesTaskname = $cluster_task_name . "_" . $marker_name;
+  $config->{$markerGenesTaskname} = {
+    class              => "CQS::UniqueR",
+    perform            => 1,
+    target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $markerGenesTaskname,
+    rtemplate          => "../scRNA/scRNAMarkerGenes.r",
+    parameterFile1_ref => [ $seurat_name, ".final.rds" ],
+    parameterFile2     => $marker_file,
+    parameterFile3_ref => [ $cluster_task_name, $cluster_file ],
+    output_file_ext    => ".cluster.csv",
+    rCode              => "celltype_name='$celltype_name'; cluster_name='$cluster_name';",
+    sh_direct          => 1,
+    pbs                => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  
+  if (defined $samples){
+    $config->{$markerGenesTaskname}{rCode} = $config->{$markerGenesTaskname}{rCode} . "samples='$samples';";
+  }
+  push( @$summary, $markerGenesTaskname );
+}
 sub addGeneTask {
   my ( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name ) = @_;
 
   if ( defined $def->{marker_genes_file} ) {
-    my $markerGenesTaskname = $cluster_task_name . "_marker_genes";
-    $config->{$markerGenesTaskname} = {
-      class              => "CQS::UniqueR",
-      perform            => 1,
-      target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $markerGenesTaskname,
-      rtemplate          => "../scRNA/scRNAMarkerGenes.r",
-      parameterFile1_ref => [ $seurat_name, ".final.rds" ],
-      parameterFile2     => $def->{marker_genes_file},
-      parameterFile3_ref => [ $cluster_task_name, $cluster_file ],
-      output_file_ext    => ".cluster.csv",
-      rCode              => "celltype_name='$celltype_name'; cluster_name='$cluster_name';",
-      sh_direct          => 1,
-      pbs                => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "1",
-        "mem"       => "10gb"
-      },
-    };
-    push( @$summary, $markerGenesTaskname );
+    addMarkerGenes($config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name, "marker_genes", $def->{marker_genes_file}, $def->{marker_genes_samples});
+  }
+  
+  if (defined $def->{pathway_genes_file}){
+    addMarkerGenes($config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name, "pathway_genes", $def->{pathway_genes_file}, $def->{pathway_genes_samples});
   }
 
   if ( defined $def->{genes} ) {

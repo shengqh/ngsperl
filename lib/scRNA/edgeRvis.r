@@ -23,6 +23,7 @@ obj[[cluster_name]]<-factor(unlist(obj[[cluster_name]]), levels=unique(df[,clust
 result<-NULL
 prefix<-rownames(edgeRres)[2]
 for (prefix in rownames(edgeRres)){
+  comparison<-edgeRres[prefix, "comparison"]
   sigGenenameFile<-paste0(edgeRfolder, "/", edgeRres[prefix, "sigGenenameFile"])
   cellType<-edgeRres[prefix, "cellType"]
   deFile=gsub(".sig_genename.txt", ".csv", sigGenenameFile)
@@ -108,7 +109,7 @@ for (prefix in rownames(edgeRres)){
       dev.off()
     #}
   }
-  curDF<-data.frame("prefix"=prefix, "sigGeneVisFile"=visFile, "sigGene"=sigGene, "totalGene"=totalGene, "cluster"=cellType)
+  curDF<-data.frame("prefix"=prefix, "sigGeneVisFile"=visFile, "sigGene"=sigGene, "totalGene"=totalGene, "cluster"=cellType, "comparison"=comparison)
   if(is.null(result)){
     result<-curDF
   }else{
@@ -124,15 +125,18 @@ if(!bBetweenCluster){
   allcoords<-data.frame(obj@reductions$umap@cell.embeddings)
   allcoords$Cluster=obj[[cluster_name]]
   
-  rownames(result)=result$cluster
-  
-  obj$sigRate=result[unlist(obj[[cluster_name]]), "sigRate"]
-  
-  pdf(paste0(outFile, ".sigGenePerc.pdf"), width=14, height=7)
-  p1<-DimPlot(obj, group.by = cluster_name, label=T) + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
-  p2<-FeaturePlot(obj, feature="sigRate", cols=c("lightgrey", "red")) + ggtitle("Percentage of DE genes in each cluster") + theme(plot.title = element_text(hjust=0.5))
-  g<-ggarrange(p1, p2, ncol = 2, labels = c("A", "B"))
-  print(g)
-  dev.off()
+  for (comp in unique(result$comparison)) {
+    compRes = result[result$comparison == comp,]
+    rownames(compRes)=compRes$cluster
+    
+    obj$sigRate=compRes[unlist(obj[[cluster_name]]), "sigRate"]
+    
+    pdf(paste0(outFile, ".", comp, ".sigGenePerc.pdf"), width=14, height=7)
+    p1<-DimPlot(obj, group.by = cluster_name, label=T) + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
+    p2<-FeaturePlot(obj, feature="sigRate", cols=c("lightgrey", "red")) + ggtitle("Percentage of DE genes in each cluster") + theme(plot.title = element_text(hjust=0.5))
+    g<-ggarrange(p1, p2, ncol = 2, labels = c("A", "B"))
+    print(g)
+    dev.off()
+  }
 }
 

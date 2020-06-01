@@ -35,14 +35,31 @@ sub perform {
   my $input_option_file = get_option_file( $config, $section, "input_option_file" );
 
   my $input_json_file = get_option_file( $config, $section, "input_json_file" );
-  
+
+  #softlink singularity_image_files to result folder
+  my $singularity_image_files = get_raw_files( $config, $section, "singularity_image_files" ); 
+  for my $image_name ( sort keys %$singularity_image_files ) {
+    my $simgSoftlinkCommand="cp -P ".$singularity_image_files->{$image_name}[0]." ".$result_dir."/".$image_name;
+    print($simgSoftlinkCommand."\n");
+  #  print $singularity_image_files->{$image_name}[0]."\n";
+    system($simgSoftlinkCommand);
+    #`ls -la`;
+  }
+
   my $raw_files = get_raw_files( $config, $section );
   
   my $input_parameters = get_option($config, $section, "input_parameters");
   die "input_parameters should be hash" if(ref($input_parameters) ne 'HASH');
 
+  my $input_list = get_option($config, $section, "input_list", {});
+  die "$input_list should be hash" if(ref($input_list) ne 'HASH');
+
+  my $input_single = get_option($config, $section, "input_single", {});
+  die "$input_single should be hash" if(ref($input_single) ne 'HASH');
+
   my $replace_dics = {};
   my $replace_values = {};
+
   for my $input_key (keys %$input_parameters){
     my $input_value = $input_parameters->{$input_key};
     if (ref($input_value) ne "ARRAY"){
@@ -61,6 +78,61 @@ sub perform {
       $replace_values->{$input_key} = $input_parameters->{$input_key};
     }
   }
+
+  for my $input_key (keys %$input_list){
+    my $input_name = $input_key;
+    my $input_value = $input_list->{$input_key};
+    if (ref($input_value) eq "ARRAY"){
+      die "$input_key should include _ref suffix" if (substr($input_key, -4) ne "_ref");
+      $input_name =~ s/_config_ref$//g;
+      $input_name =~ s/_ref$//g;
+      $config->{$section}{$input_key} = $input_parameters->{$input_key};
+      $input_value = get_raw_files( $config, $section, $input_name );
+      delete $config->{$section}{$input_key};
+    }
+
+    die "$input_key should point to hash" if (ref($input_value) ne "HASH");
+    
+    my $cur_dic = {};
+    for my $sample_name (keys %$input_value){
+      my $sample_values = $input_value->{$sample_name};
+      die "value for $sample_name in input_list should be array" if (ref($sample_values) ne "ARRAY");
+      
+      my $list_file = $self->get_file( $result_dir, $sample_name, "." . $input_key . ".list" );
+      open( my $list, ">$list_file" ) or die "Cannot create $list_file";
+      for my $sample_value (@$sample_values) {
+        print $list $sample_value . "\n";
+      }
+      close($list);
+      
+      $cur_dic->{$sample_name} = [basename($list_file)];
+    }
+    
+    $replace_dics->{$input_name} = $cur_dic;
+  }
+  
+  for my $input_key (keys %$input_single){
+    my $input_value = $input_single->{$input_key};
+    
+    if ((substr($input_key, -4) ne "_ref") and (ref($input_value) eq ref(""))){
+      $replace_values->{$input_key} = $input_value;
+      next;
+    }
+    die "value of $input_key in input_single should be ARRAY" if (ref($input_value) ne "ARRAY");
+    
+    if (substr($input_key, -4) eq "_ref") {
+      my $input_name = $input_key;
+      $input_name =~ s/_config_ref$//g;
+      $input_name =~ s/_ref$//g;
+      $config->{$section}{$input_key} = $input_parameters->{$input_key};
+      my $singles = get_raw_files( $config, $section, $input_name );
+      delete $config->{$section}{$input_key};
+      my $single_file = $singles->{$task_name}[0];
+      $replace_values->{$input_key} = $single_file;
+    }else{
+      $replace_values->{$input_key} = $input_single->{$input_key}[0];
+    }
+  }
   
   my $json_dic = read_json($input_json_file);
   for my $input_key (keys %$replace_dics){
@@ -69,8 +141,12 @@ sub perform {
     }
   }
   
+  my @json_keys_toSampleNames=();
   for my $replace_key (keys %$replace_values){
-    $json_dic->{$replace_key} = $replace_values->{$replace_key};    
+    $json_dic->{$replace_key} = $replace_values->{$replace_key};
+    if ($replace_values->{$replace_key} eq "SAMPLE_NAME") {
+      push @json_keys_toSampleNames,$replace_key;
+    }
   }
 
   my $json = JSON->new;
@@ -89,10 +165,15 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
     
-    for my $json_key (keys %$json_dic){
-      if ($json_dic->{$json_key} =~ /SAMPLE_NAME/){
-        $json_dic->{$json_key} =~ s/SAMPLE_NAME/$sample_name/g;
-      }
+    # for my $json_key (keys %$json_dic){
+    #   if ($json_dic->{$json_key} =~ /SAMPLE_NAME/){
+    #     $json_dic->{$json_key} =~ s/SAMPLE_NAME/$sample_name/g;
+    #   }
+    # }
+    if (scalar(@json_keys_toSampleNames) != 0) {
+        foreach my $json_key_toSampleNames (@json_keys_toSampleNames) {
+          $json_dic->{$json_key_toSampleNames} = $sample_name;
+        }
     }
     
     for my $input_key (keys %$replace_dics){
