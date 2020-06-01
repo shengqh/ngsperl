@@ -35,7 +35,8 @@ sub perform {
   }
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, not $self->using_docker());
   my $fgbio_jar = get_param_file( $config->{$section}{fgbio_jar}, "fgbio_jar", 1, not $self->using_docker());
- 
+  my $alignConsensusReads = getValue( $def, "alignConsensusReads", 0 );
+  
   my %unmapped_bam_files = %{ get_raw_files( $config, $section ) };
   
   my $extension = get_option( $config, $section, "extension", "_umi" );
@@ -113,6 +114,7 @@ fi
 ##################################
 # remap the filtered reads
 ##################################
+if ($alignConsensusReads) {
     print $pbs "echo 3. Remap the filtered reads \n"; 
         my $unmapped_consensus_fastq_prefix=$sample_name.$extension."_consensus";
     print $pbs "
@@ -132,7 +134,7 @@ if [[ ! -s ${umi_mapped_consensus_bam_prefix}.bam ]]; then
   java $java_option -jar $picard_jar MergeBamAlignment UNMAPPED=${umi_consensus_filtered_bam_prefix}.bam ALIGNED=${mapped_consensus_sam_prefix}.sam O=${umi_mapped_consensus_bam_prefix}.bam R=$bwa_index SO=coordinate ALIGNER_PROPER_PAIR_FLAGS=true MAX_GAPS=-1 ORIENTATIONS=FR VALIDATION_STRINGENCY=SILENT CREATE_INDEX=true 
 fi
 ";
-
+}
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
@@ -153,7 +155,12 @@ sub result {
 
   my %unmapped_bam_files = %{ get_raw_files( $config, $section ) };
   for my $sample_name ( sort keys %unmapped_bam_files ) {
-    my $bamOut       = $sample_name.$extension."_consensus_mapped.bam";
+    if ($alignConsensusReads) {
+      my $bamOut       = $sample_name.$extension."_consensus_mapped.bam";
+    } else {
+      my $bamOut       = $sample_name.$extension."_UnmappedConsensusReads_PostFilter.bam";
+    }
+    
     my @result_files = ();
     push( @result_files, "${result_dir}/${bamOut}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
