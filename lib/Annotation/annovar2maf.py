@@ -35,23 +35,42 @@ with open(args.input, "r") as fin:
     for line in fin:
       maf_items = line.rstrip().split("\t")
       new_items = maf_items[0: (sample_index-1)]
+
+      #get AD and DP column
+      sampleFormats=maf_items[(sample_index-1)]
+      sampleFormatsSplit = sampleFormats.split(":")
+      if "AF" in sampleFormatsSplit:
+        format_AF_index=sampleFormatsSplit.index("AF")
+      else:
+        format_AF_index=NA
+      if "DP" in sampleFormatsSplit:
+        format_DP_index=sampleFormatsSplit.index("DP")
+      else:
+        format_DP_index=2
+      if "AD" in sampleFormatsSplit:
+        format_AD_index=sampleFormatsSplit.index("AD")
+      else:
+        format_AD_index=1
+      
       for sample_idx in range(sample_index, len(mafheaders)):
         sample_name = mafheaders[sample_idx]
         new_items[Tumor_Sample_Barcode_index] = sample_name
 
         sample_data = maf_items[sample_idx]
 
-        if sample_data.startswith("0/0:") or sample_data.startswith("0|0:") or sample_data.startswith("./.:")  or sample_data.startswith(".|.:") :
+        if sample_data.startswith("0/0") or sample_data.startswith("0|0") or sample_data.startswith("./.")  or sample_data.startswith(".|.") :
           continue
 
-        if not (sample_data.startswith("0/1:") or sample_data.startswith("0|1:") or sample_data.startswith("1/0:") or sample_data.startswith("1/1:") or sample_data.startswith("1|1:")):
+        if not (sample_data.startswith("0/1:") or sample_data.startswith("0|1:") or sample_data.startswith("1/0:") or sample_data.startswith("1|0:") or sample_data.startswith("1/1:") or sample_data.startswith("1|1:")):
           raise Exception('I don\'t know genotype: ' + sample_data)
         
         parts = sample_data.split(":")
-        alleles = parts[1].split(",")
-        t_depth = parts[2]
+        alleles = parts[format_AD_index].split(",")
         t_ref_count = alleles[0]
         t_alt_count = alleles[1]
+
+        t_depth = parts[format_DP_index]
+
         
         fout.write("\t".join(new_items) + "\t" + sample_name + "\t" + t_depth + "\t" + t_ref_count + "\t" + t_alt_count + "\t" + maf_items[sample_index-1] + "\t" + sample_data + "\n")
     
