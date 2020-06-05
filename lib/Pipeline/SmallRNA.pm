@@ -393,6 +393,11 @@ sub getSmallRNAConfig {
 
     my $countTask = "bowtie1_genome_1mm_NTA_smallRNA_count";
 
+    my $category_ext = ".Category.Table.csv;.Category1.Barplot.png;.Category2.Barplot.png;";
+    if (defined $def->{groups}) {
+      $category_ext = ".Category1.Group.Piechart.png;.Category2.Group.Piechart.png;",
+    }
+
     $host_genome = merge(
       $host_genome,
       {
@@ -438,7 +443,7 @@ sub getSmallRNAConfig {
           target_dir                => $host_genome_dir . "/bowtie1_genome_1mm_NTA_smallRNA_category",
           rtemplate                 => "countTableVisFunctions.R,smallRnaCategory.R",
           output_file               => "",
-          output_file_ext           => ".Category.Table.csv;.Category1.Barplot.png;.Category1.Group.Piechart.png;.Category2.Barplot.png;.Category2.Group.Piechart.png;",
+          output_file_ext           => $category_ext,
           parameterSampleFile1_ref  => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info" ],
           parameterSampleFile2      => $groups,
           parameterSampleFile2Order => $def->{groups_order},
@@ -1291,9 +1296,9 @@ sub getSmallRNAConfig {
         perform            => 1,
         target_dir         => "$host_intermediate_dir/$spcount_bowtie",
         option             => "bowtie -t 8 -d " . getValue($def, "bowtie_${refseq}_index_list_file"),
-        interpretor        => "",
-        program            => "spcount",
-        check_program     => 0,
+        interpretor        => "python",
+        program            => "/scratch/cqs_share/softwares/spcount/debug.py",
+        check_program     => 1,
         source_arg => "-i",
         source_ref => $identical_ref,
         output_arg         => "-o",
@@ -1317,9 +1322,9 @@ sub getSmallRNAConfig {
         perform            => 1,
         target_dir         => "$nonhost_genome_dir/$spcount_count",
         option             => "count",
-        interpretor        => "",
-        program            => "spcount",
-        check_program     => 0,
+        interpretor        => "python",
+        program            => "/scratch/cqs_share/softwares/spcount/debug.py",
+        check_program     => 1,
         parameterSampleFile1_arg => "-i",
         parameterSampleFile1_ref => $spcount_bowtie,
         parameterSampleFile2_arg => "-c",
@@ -2311,9 +2316,11 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
         push( @report_names, "category_mapped_bar",                      "category_smallrna_bar" );
       }
 
-      push( @report_files, "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category1.Group.Piechart.png" );
-      push( @report_files, "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category2.Group.Piechart.png" );
-      push( @report_names, "category_mapped_group",                    "category_smallrna_group" );
+      if (defined $def->{groups}){
+        push( @report_files, "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category1.Group.Piechart.png" );
+        push( @report_files, "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category2.Group.Piechart.png" );
+        push( @report_names, "category_mapped_group",                    "category_smallrna_group" );
+      }
     }
 
     if ( defined $config->{count_table_correlation} ) {
