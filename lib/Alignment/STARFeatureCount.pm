@@ -49,9 +49,6 @@ sub perform {
     $output_unsorted = 1;
   }
   my $output_format = "--outSAMtype BAM";
-  if ($output_sort_by_coordinate) {
-    $output_format = $output_format . " SortedByCoordinate";
-  }
 
   #always output unsorted
   $output_format = $output_format . " Unsorted";
@@ -104,7 +101,6 @@ sub perform {
     my $unsorted = $sample_name . "_Aligned.out.bam";
 
     my $final_bam = $output_sort_by_coordinate ? $sample_name . "_Aligned.sortedByCoord.out.bam" : $unsorted;
-    my $index_command = $output_sort_by_coordinate ? "if [ ! -s ${final_bam}.bai ]; then \n  echo building index ...\n samtools index $final_bam\n  fi" : "";
 
     my $final_file = "${sample_name}.count";
 
@@ -115,46 +111,26 @@ sub perform {
     my $chromosome_grep_command = $output_sort_by_coordinate ? getChromosomeFilterCommand( $final_bam, $chromosome_grep_pattern ) : "";
 
     print $pbs "
-if [ -z \${SLURM_JOBID+x} ]; then 
-  echo \"in bash mode\"; 
-  if [[ ! -s $final_bam && -s $sample_file_1 ]]; then
-    echo performing star ...
-    $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
-    $star --version | awk '{print \"STAR,v\"\$1}' > ${final_file}.star.version
-    rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
-  fi  
-else 
-  echo \"in cluster mode\"; 
-  localdir=/tmp/myjob_\${SLURM_JOBID}
-  tmp_cleaner()
-  {
-    rm -rf \${localdir}
-    exit -1
-  }
-  trap 'tmp_cleaner' TERM
-
-  echo creating local directory \${localdir}
-  mkdir \${localdir} # create unique directory on compute node
-  cd \${localdir}
-
+if [[ ! -s $final_bam && -s $sample_file_1 ]]; then
   echo performing star ...
   $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
-  rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
-  
-  $index_command
-
-  mv ${sample_name}* $cur_dir
-  cd $cur_dir
-  rm -rf \${localdir}
   $star --version | awk '{print \"STAR,v\"\$1}' > ${final_file}.star.version
+  rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
 fi
-
 ";
 
+  if ($output_sort_by_coordinate) {
     print $pbs "
+if [ ! -s ${final_bam} ]; then
+  sambamba sort -m $memory -t $thread -o $final_bam $unsorted
+  sambamba index $final_bam
+fi  
+";
+  }
+
+print $pbs "
 
 if [ -s $final_bam ]; then
-  $index_command
   $chromosome_grep_command
   
   if [ ! -s ${sample_name}.splicing.bed ]; then
@@ -225,7 +201,6 @@ sub result {
     if (!$delete_star_featureCount_bam) {
       if ($output_sort_by_coordinate) {
         push( @result_files, "$cur_dir/${sample_name}_Aligned.sortedByCoord.out.bam" );
-
       }
       if ($output_unsorted) {
         push( @result_files, "$cur_dir/${sample_name}_Aligned.out.bam" );
