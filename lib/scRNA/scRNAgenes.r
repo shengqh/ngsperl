@@ -34,7 +34,7 @@ rawgenes<-getCells(obj@assays$RNA, "RNA", genes)
 activegenes<-getCells(obj@assays[[obj@active.assay]], obj@active.assay, genes)
 
 geneinfo<-cbind(rawgenes, activegenes)
-write.table(geneinfo, file="gene_summary.txt", sep="\t")
+write.csv(geneinfo, file="gene_summary.csv")
 
 genes<-genes[genes %in% rownames(obj)]
 
