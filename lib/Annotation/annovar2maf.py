@@ -39,10 +39,6 @@ with open(args.input, "r") as fin:
       #get AD and DP column
       sampleFormats=maf_items[(sample_index-1)]
       sampleFormatsSplit = sampleFormats.split(":")
-      if "AF" in sampleFormatsSplit:
-        format_AF_index=sampleFormatsSplit.index("AF")
-      else:
-        format_AF_index=NA
       if "DP" in sampleFormatsSplit:
         format_DP_index=sampleFormatsSplit.index("DP")
       else:
