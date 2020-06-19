@@ -182,6 +182,12 @@ sub getPreprocessionConfig {
     checkFileGroupPairNames($def, ["groups"], ["pairs"], "pool_sample_groups");
   }else{
     checkFileGroupPairNames($def, ["groups"], ["pairs"], "files");
+
+    if(not defined $def->{groups}){
+      my $files = $def->{files};
+      my $sampleNames = [keys %$files];
+      $def->{groups} = {"All" => $sampleNames};
+    }
   }
 
   my $target_dir = create_directory_or_die( getValue( $def, "target_dir" ) );
