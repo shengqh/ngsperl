@@ -1,0 +1,7 @@
+{
+  "crc_pipeline.enhancer_file": "/scratch/jbrown_lab/shengq2/projects/crc-test/SRR5855055_peaks_SuperEnhancers_ENHANCER_TO_GENE.txt",
+  "crc_pipeline.genome": "HG19",
+  "crc_pipeline.project_name": "crc",
+  "crc_pipeline.chrom_path": "/scratch/jbrown_lab/shengq2/projects/crc-test/hg19",
+  "crc_pipeline.sub_peaks_file": "/scratch/jbrown_lab/shengq2/projects/crc-test/SRR5855055_all_subpeak.bed"
+}
