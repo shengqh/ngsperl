@@ -765,7 +765,12 @@ sub getConfig {
     }
 
     if ( $def->{"perform_muTect"} ) {
-      my $mutectName = "${bam_input}_muTect";
+      my $mutect_index = {};
+      my $mutect_index_name = "mutect_Index";
+      my $mutect_prefix = "${bam_input}_muTect_";
+
+      my $mutectName = $mutect_prefix . getNextIndex($mutect_index, $mutect_index_name) . "_call";
+      #print($mutectName);
       $config->{$mutectName} = {
         class        => "GATK::MuTect",
         perform      => 1,
@@ -789,29 +794,80 @@ sub getConfig {
       };
       push @$summary, "${mutectName}";
 
-      my $combineVariantsName = $mutectName . "_combined";
+      my $combineVariantsName = $mutect_prefix . getNextIndex($mutect_index, $mutect_index_name) . "_merge";
       $config->{$combineVariantsName} = {
-        class       => "GATK::CombineVariants",
-        perform     => 1,
-        target_dir  => "${target_dir}/$combineVariantsName",
-        option      => "",
-        source_ref  => [ $mutectName, ".pass.vcf\$" ],
-        java_option => "",
-        fasta_file  => $fasta,
-        gatk_jar    => $gatk_jar,
-        extension   => "_pass.combined.vcf",
-        pbs         => {
+        class                 => "CQS::ProgramWrapper",
+        perform               => 1,
+        target_dir            => "${target_dir}/${combineVariantsName}",
+        option                => "merge -m none",
+        interpretor           => "",
+        program               => "bcftools",
+        check_program         => 0,
+        parameterSampleFile1_arg    => "-l",
+        parameterSampleFile1_ref    => [ $mutectName, ".pass.vcf.gz\$" ],
+        parameterSampleFile1_fileonly  => 1,
+        output_to_same_folder => 1,
+        output_arg            => "-o",
+        output_file_ext       => "_pass.combined.vcf",
+        sh_direct             => 1,
+        pbs                   => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
+          "walltime"  => "10",
           "mem"       => "10gb"
         },
       };
       push @$summary, $combineVariantsName;
 
+      # my $combineVariantsName ="${bam_input}_02_merge";
+      # $config->{$combineVariantsName} = {
+      #   class       => "GATK::CombineVariants",
+      #   perform     => 1,
+      #   target_dir  => "${target_dir}/$combineVariantsName",
+      #   option      => "",
+      #   source_ref  => [ $mutectName, ".pass.vcf\$" ],
+      #   java_option => "",
+      #   fasta_file  => $fasta,
+      #   gatk_jar    => $gatk_jar,
+      #   is_mutect   => 1,
+      #   extension   => "_pass.combined.vcf",
+      #   pbs         => {
+      #     "email"     => $def->{email},
+      #     "emailType" => $def->{emailType},
+      #     "nodes"     => "1:ppn=1",
+      #     "walltime"  => "1",
+      #     "mem"       => "10gb"
+      #   },
+      # };
+      # push @$summary, $combineVariantsName;
+
+      # my $combineVariantsName_py = $mutectName . "_combined_py";
+      # $config->{$combineVariantsName_py} = {
+      #   class                 => "CQS::ProgramWrapper",
+      #   perform               => 1,
+      #   target_dir            => "${target_dir}/${combineVariantsName_py}",
+      #   option                => "",
+      #   interpretor           => "python",
+      #   program               => "../GATK/filterMutect.py",
+      #   parameterSampleFile1_arg    => "-i",
+      #   parameterSampleFile1_ref    => [ $mutectName, ".pass.vcf\$" ],
+      #   output_to_same_folder => 1,
+      #   output_arg            => "-o",
+      #   output_file_ext       => "_pass.combined.vcf",
+      #   sh_direct             => 1,
+      #   pbs                   => {
+      #     "email"     => $def->{email},
+      #     "emailType" => $def->{emailType},
+      #     "nodes"     => "1:ppn=1",
+      #     "walltime"  => "10",
+      #     "mem"       => "10gb"
+      #   },
+      # };
+      # push @$summary, $combineVariantsName_py;
+
       if ( $def->{perform_annovar} ) {
-        my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $combineVariantsName, ".vcf\$" );
+        my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $combineVariantsName, ".vcf\$", $mutect_prefix, $mutect_index, $mutect_index_name );
         # my $annovar_to_maf = $annovar_name . "_toMAF";
         # $config->{$annovar_to_maf} = {
         #   class      => "Annotation::Annovar2Maf",

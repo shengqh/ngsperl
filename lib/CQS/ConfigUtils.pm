@@ -981,10 +981,17 @@ sub save_parameter_sample_file {
     else {
       @orderedSampleNames = sort keys %temp;
     }
+
+    my $fileOnly = get_option( $config, $section, $key . "_fileonly", 0 );
+
     open( my $list, '>', $outputFile ) or die "Cannot create $outputFile";
     foreach my $sample_name (@orderedSampleNames) {
       foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
-        print $list $subSampleFile . "\t$sample_name\n";
+        if ($fileOnly){
+          print $list $subSampleFile . "\n";
+        }else{
+          print $list $subSampleFile . "\t$sample_name\n";
+        }
       }
     }
     close($list);
