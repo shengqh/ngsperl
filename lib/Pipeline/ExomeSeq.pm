@@ -693,47 +693,7 @@ sub getConfig {
             $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
           }
 
-          my $annovar_to_maf = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_toMAF";
-          $config->{$annovar_to_maf} = {
-            class      => "Annotation::Annovar2Maf",
-            perform    => 1,
-            target_dir => $target_dir . "/" . $annovar_to_maf,
-            source_ref => [ $annovar_filter_name, "\\.freq0\\..*.filtered.tsv" ],
-            refBuild   => getValue( $def, "annovar_buildver" ),
-            sh_direct  => 1,
-            pbs        => {
-              "email"     => $def->{email},
-              "emailType" => $def->{emailType},
-              "nodes"     => "1:ppn=1",
-              "walltime"  => "1",
-              "mem"       => "10gb"
-            },
-          };
-          push @$summary, $annovar_to_maf;
-
-          my $annovar_to_maf_report = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_report";
-          $config->{$annovar_to_maf_report} = {
-            class                    => "CQS::UniqueR",
-            perform                  => 1,
-            target_dir               => $target_dir . "/" . $annovar_to_maf_report,
-            rtemplate                => "../Annotation/mafReport.r",
-            output_file              => "parameterSampleFile1",
-            output_file_ext          => ".report.html",
-            parameterSampleFile1_ref => [ $annovar_to_maf, ".tsv.maf\$" ],
-            parameterFile1           => $def->{family_info_file},
-            sh_direct                => 1,
-            rCode                    => ( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" ),
-#            rCode                    => ( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" )
-#              . ( defined $def->{annotation_genes} ? "interestedGeneStr=\"" . $def->{annotation_genes} . "\"" : "" ),
-            pbs => {
-              "email"     => $def->{email},
-              "emailType" => $def->{emailType},
-              "nodes"     => "1:ppn=1",
-              "walltime"  => "24",
-              "mem"       => "10gb"
-            },
-          };
-          push @$summary, $annovar_to_maf_report;
+          addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $gatk_prefix, $gatk_index, $gatk_index_snv)
         }
       }
 
@@ -765,11 +725,11 @@ sub getConfig {
     }
 
     if ( $def->{"perform_muTect"} ) {
-      my $mutect_index = {};
-      my $mutect_index_name = "mutect_Index";
+      my $mutect_index_dic = {};
+      my $mutect_index_key = "mutect_Index";
       my $mutect_prefix = "${bam_input}_muTect_";
 
-      my $mutectName = $mutect_prefix . getNextIndex($mutect_index, $mutect_index_name) . "_call";
+      my $mutectName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_call";
       #print($mutectName);
       $config->{$mutectName} = {
         class        => "GATK::MuTect",
@@ -794,7 +754,7 @@ sub getConfig {
       };
       push @$summary, "${mutectName}";
 
-      my $combineVariantsName = $mutect_prefix . getNextIndex($mutect_index, $mutect_index_name) . "_merge";
+      my $combineVariantsName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_merge";
       $config->{$combineVariantsName} = {
         class                 => "CQS::ProgramWrapper",
         perform               => 1,
@@ -820,51 +780,42 @@ sub getConfig {
       };
       push @$summary, $combineVariantsName;
 
-      # my $combineVariantsName = $mutect_prefix . getNextIndex($mutect_index, $mutect_index_name) . "_merge";
-      # $config->{$combineVariantsName} = {
-      #   class                 => "CQS::ProgramWrapper",
-      #   perform               => 1,
-      #   target_dir            => "${target_dir}/${combineVariantsName}",
-      #   option                => "merge -m none",
-      #   interpretor           => "",
-      #   program               => "bcftools",
-      #   check_program         => 0,
-      #   parameterSampleFile1_arg    => "-l",
-      #   parameterSampleFile1_ref    => [ $mutectName, ".pass.vcf.gz\$" ],
-      #   parameterSampleFile1_fileonly  => 1,
-      #   output_to_same_folder => 1,
-      #   output_arg            => "-o",
-      #   output_file_ext       => "_pass.combined.vcf",
-      #   sh_direct             => 1,
-      #   pbs                   => {
-      #     "email"     => $def->{email},
-      #     "emailType" => $def->{emailType},
-      #     "nodes"     => "1:ppn=1",
-      #     "walltime"  => "10",
-      #     "mem"       => "10gb"
-      #   },
-      # };
-      # push @$summary, $combineVariantsName;
+      my $filterVariantsName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_filter";
+      $config->{$filterVariantsName} = {
+        class                 => "CQS::ProgramWrapper",
+        perform               => 1,
+        target_dir            => "${target_dir}/${filterVariantsName}",
+        option                => "",
+        interpretor           => "python",
+        program               => "../GATK/filterMutect.py",
+        check_program         => 1,
+        parameterFile1_arg    => "-i",
+        parameterFile1_ref    => [ $combineVariantsName ],
+        output_to_same_folder => 1,
+        output_arg            => "-o",
+        output_file_ext       => ".filtered.vcf",
+        sh_direct             => 1,
+        pbs                   => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary, $filterVariantsName;
 
       if ( $def->{perform_annovar} ) {
-        my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $combineVariantsName, ".vcf\$", $mutect_prefix, $mutect_index, $mutect_index_name );
-        # my $annovar_to_maf = $annovar_name . "_toMAF";
-        # $config->{$annovar_to_maf} = {
-        #   class      => "Annotation::Annovar2Maf",
-        #   perform    => 1,
-        #   target_dir => $target_dir . "/" . $annovar_to_maf,
-        #   source_ref => [$annovar_name],
-        #   refBuild   => getValue( $def, "annovar_buildver" ),
-        #   sh_direct  => 1,
-        #   pbs        => {
-        #     "email"     => $def->{email},
-        #     "emailType" => $def->{emailType},
-        #     "nodes"     => "1:ppn=1",
-        #     "walltime"  => "1",
-        #     "mem"       => "10gb"
-        #   },
-        # };
-        # push @$summary, $annovar_to_maf;
+        my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $filterVariantsName, ".vcf\$", $mutect_prefix, $mutect_index_dic, $mutect_index_key );
+        if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
+          my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name, $mutect_prefix, $mutect_index_dic, $mutect_index_key);
+
+          if ( defined $def->{annotation_genes} ) {
+            $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
+          }
+
+          addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $mutect_prefix, $mutect_index_dic, $mutect_index_key)
+        }
       }
     }
 

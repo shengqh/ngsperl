@@ -47,6 +47,7 @@ our %EXPORT_TAGS = (
     addAnnovar 
     addAnnovarFilter 
     addAnnovarFilterGeneannotation
+    addAnnovarMafReport
     addGATK4CNVGermlineCohortAnalysis 
     addXHMM
     addGeneLocus
@@ -1014,6 +1015,52 @@ sub addAnnovarFilterGeneannotation {
 
   push @$summary, $annovar_filter_geneannotation_name;
   return ($annovar_filter_geneannotation_name);
+}
+
+sub addAnnovarMafReport {
+  my ( $config, $def, $summary, $target_dir, $annovar_filter_name, $prefix, $indexDic, $indexKey ) = @_;
+
+  my $annovar_to_maf = $prefix . getNextIndex($indexDic, $indexKey) . "_toMAF";
+  $config->{$annovar_to_maf} = {
+    class      => "Annotation::Annovar2Maf",
+    perform    => 1,
+    target_dir => $target_dir . "/" . $annovar_to_maf,
+    source_ref => [ $annovar_filter_name, "\\.freq0\\..*.filtered.tsv" ],
+    refBuild   => getValue( $def, "annovar_buildver" ),
+    sh_direct  => 1,
+    pbs        => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push @$summary, $annovar_to_maf;
+
+  my $annovar_to_maf_report = $prefix . getNextIndex($indexDic, $indexKey) . "_report";
+  $config->{$annovar_to_maf_report} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . $annovar_to_maf_report,
+    rtemplate                => "../Annotation/mafReport.r",
+    output_file              => "parameterSampleFile1",
+    output_file_ext          => ".report.html",
+    parameterSampleFile1_ref => [ $annovar_to_maf, ".tsv.maf\$" ],
+    parameterFile1           => $def->{family_info_file},
+    sh_direct                => 1,
+    rCode                    => ( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" ),
+#            rCode                    => ( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" )
+#              . ( defined $def->{annotation_genes} ? "interestedGeneStr=\"" . $def->{annotation_genes} . "\"" : "" ),
+    pbs => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "24",
+      "mem"       => "10gb"
+    },
+  };
+  push @$summary, $annovar_to_maf_report;
 }
 
 sub addGATK4PreprocessIntervals {

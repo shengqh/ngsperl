@@ -14,35 +14,52 @@ def check_file_exists(file):
 def filterMutect(logger, inputFile, outputFile, minNormalDepth, minTumorDepth, minMinorAlleleDepth): 
   check_file_exists(inputFile) 
 
-  logger.info("Reading %s ..." % inputFile)
+  logger.info("Processing %s ..." % inputFile)
 
   mutect = MultiMutectResult()
   mutect.readFromFile(inputFile)
 
+  lineCount = 0
   passedCount = 0
   failedCount = 0
   with open(outputFile, "wt") as fout:
-    for comment in mutect.Comments:
-      fout.write("%s" % comment)
-    
-    for item in mutect.Data:
-      passed = False
-      for sample in item.Samples:
-        if sample.NormalDepth >= minNormalDepth and sample.TumorDepth >= minTumorDepth and sample.MinorAlleleDepth >= minMinorAlleleDepth:
-          passed = True
-          break
+    if filePath.endswith(".gz"):
+      fin = gzip.open(filePath,'rt')
+    else:
+      fin = open(filePath, "rt")
 
-      if passed:
-        fout.write(item.Line)
-        passedCount += 1
-      else:
-        failedCount += 1
+    with fin:
+      for line in fin:
+        if line.startswith("#"):
+          fout.write(line)
+          continue
+
+        lineCount += 1
+        if lineCount % 10 == 0:
+          logger.info("%d" % lineCount)
+
+        item = MultiMutectItem(line)
+
+        passed = False
+        for sample in item.Samples:
+          if sample.NormalDepth >= minNormalDepth and sample.TumorDepth >= minTumorDepth and sample.MinorAlleleDepth >= minMinorAlleleDepth:
+            passed = True
+            break
+
+        if passed:
+          fout.write(line)
+          passedCount += 1
+        else:
+          failedCount += 1
       #  logger.info("Discarded:" + item.Line)
       
+  with open(outputFile + ".stat", "wt") as fout:
+    fout.write("Passed\t%d\nFailed\t%d\n" % (passedCount, failedCount))
+
   logger.info("Passed=%d, failed=%d" % (passedCount, failedCount))
     
 def main():
-  DEBUG=True
+  DEBUG=False
   NotDEBUG=not DEBUG
 
   parser = argparse.ArgumentParser(description="filter mutect result to keep tumor sample only.",
