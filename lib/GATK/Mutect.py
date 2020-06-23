@@ -136,26 +136,3 @@ class MultiMutectItem:
       minorAlleleDepth = int(alleleParts[1])
 
       self.Samples.append(MutectSampleItem(sampleData, normalDepth, tumorDepth, majorAlleleDepth, minorAlleleDepth))
-
-class MultiMutectResult:
-  def clear(self):
-    self.Comments = []
-    self.Data = []
-
-  def __init__(self):
-    self.clear()
-
-  def readFromFile(self, filePath):
-    self.clear()
-
-    if filePath.endswith(".gz"):
-      fin = gzip.open(filePath,'rt')
-    else:
-      fin = open(filePath, "rt")
-
-    with fin:
-      for line in fin:
-        if line.startswith("#"):
-          self.Comments.append(line)
-        else:
-          self.Data.append(MultiMutectItem(line))

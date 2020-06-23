@@ -5,7 +5,7 @@ import os
 import errno
 from asyncore import read
 
-from Mutect import MultiMutectResult
+from Mutect import MultiMutectItem
 
 def check_file_exists(file):
   if not os.path.exists(file):
@@ -16,17 +16,14 @@ def filterMutect(logger, inputFile, outputFile, minNormalDepth, minTumorDepth, m
 
   logger.info("Processing %s ..." % inputFile)
 
-  mutect = MultiMutectResult()
-  mutect.readFromFile(inputFile)
-
   lineCount = 0
   passedCount = 0
   failedCount = 0
   with open(outputFile, "wt") as fout:
-    if filePath.endswith(".gz"):
-      fin = gzip.open(filePath,'rt')
+    if inputFile.endswith(".gz"):
+      fin = gzip.open(inputFile,'rt')
     else:
-      fin = open(filePath, "rt")
+      fin = open(inputFile, "rt")
 
     with fin:
       for line in fin:
@@ -35,7 +32,7 @@ def filterMutect(logger, inputFile, outputFile, minNormalDepth, minTumorDepth, m
           continue
 
         lineCount += 1
-        if lineCount % 10 == 0:
+        if lineCount % 10000 == 0:
           logger.info("%d" % lineCount)
 
         item = MultiMutectItem(line)
