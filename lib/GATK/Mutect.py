@@ -126,7 +126,7 @@ class MultiMutectItem:
       sampleData = parts[sampleIndex]
       if sampleData.startswith("./."):
         self.Samples.append(MutectSampleItem(sampleData, 0, 0, 0, 0))
-        next
+        continue
 
       sampleParts = sampleData.split(':')
       normalDepth = int(sampleParts[ND_index])

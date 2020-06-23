@@ -19,22 +19,30 @@ def filterMutect(logger, inputFile, outputFile, minNormalDepth, minTumorDepth, m
   mutect = MultiMutectResult()
   mutect.readFromFile(inputFile)
 
+  passedCount = 0
+  failedCount = 0
   with open(outputFile, "wt") as fout:
     for comment in mutect.Comments:
-      fout.write("%s\n" % comment)
+      fout.write("%s" % comment)
     
     for item in mutect.Data:
       passed = False
       for sample in item.Samples:
-        if sample.NormalDepth >= minNormalDepth and sample.TumorDepth >= minTumorDepth and sample.minMinorAlleleDepth >= minMinorAlleleDepth:
+        if sample.NormalDepth >= minNormalDepth and sample.TumorDepth >= minTumorDepth and sample.MinorAlleleDepth >= minMinorAlleleDepth:
           passed = True
           break
 
       if passed:
-        fout.write(item.line)
+        fout.write(item.Line)
+        passedCount += 1
+      else:
+        failedCount += 1
+      #  logger.info("Discarded:" + item.Line)
+      
+  logger.info("Passed=%d, failed=%d" % (passedCount, failedCount))
     
 def main():
-  DEBUG=False
+  DEBUG=True
   NotDEBUG=not DEBUG
 
   parser = argparse.ArgumentParser(description="filter mutect result to keep tumor sample only.",
@@ -42,7 +50,7 @@ def main():
 
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input vcf file', required=NotDEBUG)
   parser.add_argument('--min_normal_depth', action='store', type=int, default=8, help='Input minimum depth in normal sample')
-  parser.add_argument('--min_tumor_depth', action='store', type=int, default=14, help='Input minimum depth in tumor sample')
+  parser.add_argument('--min_tumor_depth', action='store', type=int, default=10, help='Input minimum depth in tumor sample')
   parser.add_argument('--min_minor_allele', action='store', type=int, default=3, help='Input minimum minor allele depth in tumor sample')
   parser.add_argument('-o', '--output', action='store', nargs='?', help="Output vcf file", required=NotDEBUG)
 
