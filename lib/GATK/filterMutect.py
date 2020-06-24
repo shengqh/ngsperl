@@ -51,7 +51,11 @@ def filterMutect(logger, inputFile, outputFile, minNormalDepth, minTumorDepth, m
       #  logger.info("Discarded:" + item.Line)
       
   with open(outputFile + ".stat", "wt") as fout:
-    fout.write("Passed\t%d\nFailed\t%d\n" % (passedCount, failedCount))
+    fout.write("minNormalDepth\t%d\n" % minNormalDepth)
+    fout.write("minTumorDepth\t%d\n" % minTumorDepth)
+    fout.write("minMinorAlleleDepth\t%d\n" % minMinorAlleleDepth)
+    fout.write("Passed\t%d\n" % passedCount)
+    fout.write("Failed\t%d\n" % failedCount)
 
   logger.info("Passed=%d, failed=%d" % (passedCount, failedCount))
     

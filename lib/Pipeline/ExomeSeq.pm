@@ -780,7 +780,7 @@ sub getConfig {
       };
       push @$summary, $combineVariantsName;
 
-      my $filterVariantsName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_filter";
+      my $filterVariantsName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_filterDepth";
       $config->{$filterVariantsName} = {
         class                 => "CQS::ProgramWrapper",
         perform               => 1,
