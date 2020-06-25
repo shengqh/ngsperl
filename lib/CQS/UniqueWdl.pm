@@ -89,7 +89,7 @@ sub perform {
       die "$input_key should include _ref suffix" if (substr($input_key, -4) ne "_ref");
       $input_name =~ s/_config_ref$//g;
       $input_name =~ s/_ref$//g;
-      $config->{$section}{$input_key} = $input_parameters->{$input_key};
+      $config->{$section}{$input_key} = $input_array->{$input_key};
       $input_value = get_raw_files( $config, $section, $input_name );
       delete $config->{$section}{$input_key};
     }
@@ -120,22 +120,19 @@ sub perform {
 
     die "$input_key should point to hash" if (ref($input_value) ne "HASH");
     
-    my $cur_dic = {};
+    my $list_file = $self->get_file( $result_dir, $task_name, "." . $input_key . ".list" );
+    open( my $list, ">$list_file" ) or die "Cannot create $list_file";
     for my $sample_name (keys %$input_value){
       my $sample_values = $input_value->{$sample_name};
       die "value for $sample_name in input_list should be array" if (ref($sample_values) ne "ARRAY");
       
-      my $list_file = $self->get_file( $result_dir, $sample_name, "." . $input_key . ".list" );
-      open( my $list, ">$list_file" ) or die "Cannot create $list_file";
       for my $sample_value (@$sample_values) {
         print $list $sample_value . "\n";
       }
-      close($list);
-      
-      $cur_dic->{$sample_name} = [basename($list_file)];
     }
+    close($list);
     
-    $replace_dics->{$input_name} = $cur_dic;
+    $replace_dics->{$input_name} = $list_file;
   }
   
   for my $input_key (keys %$input_single){
@@ -165,14 +162,6 @@ sub perform {
   for my $input_key (keys %$replace_dics){
     if (!defined $json_dic->{$input_key}){
       die "Cannot find " . $input_key . " in json file";
-    }
-  }
-  
-  my @json_keys_toSampleNames=();
-  for my $replace_key (keys %$replace_values){
-    $json_dic->{$replace_key} = $replace_values->{$replace_key};
-    if ($replace_values->{$replace_key} eq "SAMPLE_NAME") {
-      push @json_keys_toSampleNames,$replace_key;
     }
   }
 
@@ -215,16 +204,14 @@ sub result {
   my $output_exts = get_output_ext_list( $config, $section );
   
   my $result = {};
-  for my $sample_name ( keys %raw_files ) {
-    my @result_files = ();
-    for my $output_ext (@$output_exts) {
-      if ( $output_ext ne "" ) {
-        my $result_file = $sample_name . $output_ext;
-        push( @result_files, "${cur_dir}/$result_file" );
-      }
+  my @result_files = ();
+  for my $output_ext (@$output_exts) {
+    if ( $output_ext ne "" ) {
+      my $result_file = $task_name . $output_ext;
+      push( @result_files, "${cur_dir}/$result_file" );
     }
-    $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
+  $result->{$task_name} = filter_array( \@result_files, $pattern );
   return $result;
 }
 
