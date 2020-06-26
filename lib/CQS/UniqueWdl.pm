@@ -149,13 +149,13 @@ sub prepare_wdl_values {
   my $replace_dics = {};
   my $replace_values = {};
   
-  $self->prepare_wdl_parameters($config, $section, $task_name, $replace_dics, $replace_values);
+  $self->prepare_wdl_parameters($config, $section, $task_name, $result_dir, $replace_dics, $replace_values);
   
-  $self->prepare_wdl_single($config, $section, $task_name, $replace_dics, $replace_values);
+  $self->prepare_wdl_single($config, $section, $task_name, $result_dir, $replace_dics, $replace_values);
 
   $self->prepare_wdl_list($config, $section, $task_name, $result_dir, $replace_dics, $replace_values);
     
-  $self->prepare_wdl_array($config, $section, $task_name, $replace_dics, $replace_values);
+  $self->prepare_wdl_array($config, $section, $task_name, $result_dir, $replace_dics, $replace_values);
   
   return($replace_dics, $replace_values);
 }
