@@ -819,6 +819,49 @@ sub getConfig {
       }
     }
 
+    if ( $def->{"perform_muTect2"}) {
+      my $mutect2_index_dic = {};
+      my $mutect2_index_key = "mutect2_Index";
+      my $mutect2_prefix = "${bam_input}_muTect2_";
+      my $wdl_key = get_value($def, "wdl_key", "local");
+      
+      my $normal_samples = [];
+      my $groups = $def->{groups};
+      
+      for my $sample_name (sort keys %$groups){
+        my $samples = $groups->{$sample_name};
+        my $normal_sample = $samples->[0];
+        push @$normal_samples, $normal_sample;
+      }
+      
+      my $mutect2pon_name = $mutect2_prefix . getNextIndex($mutect2_index_dic, $mutect2_index_key) . "_pon";
+      $config->{$mutect2pon_name} = {     
+        "class" => "CQS::UniqueWdl",
+        "target_dir" => "${target_dir}/PON",
+        "source_ref" => ["normal_files", ".bam\$"],
+        "cromwell_config_file" => $def->{cromwell_config_file}{$wdl_key},
+        "cromwell_jar" => getValue($def, "cromwell_jar"),
+        "sample_names" => $normal_samples,
+        "input_option_file" => getValue($def, "cromwell_option_file"),
+        "singularity_image_files_ref" => ["singularity_image_files"],
+        "wdl_file" => $def->{wdl}{mutect2_pon}{wdl_file},
+        "input_json_file" => $def->{wdl}{mutect2_pon}{input_file},
+        "input_array" => {
+          "Mutect2_Panel.normal_bams_ref" => ["$bam_input", ".bam\$"],
+          "Mutect2_Panel.normal_bais_ref" => ["$bam_input", ".bai\$"]
+        },
+        "input_parameters" => {
+          "Mutect2_Panel.pon_name" => $config->{general}{task_name},
+        },
+        pbs=> {
+          "nodes"     => "1:ppn=8",
+          "walltime"  => "2",
+          "mem"       => "40gb"
+        },
+      };
+      push @$summary, $mutect2pon_name;
+    }
+    
     if ( $def->{"perform_muTect2indel"} ) {
       my $mutect2Name = "${bam_input}_muTect2indel";
       $config->{$mutect2Name} = {
