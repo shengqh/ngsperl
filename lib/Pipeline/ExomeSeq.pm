@@ -823,7 +823,7 @@ sub getConfig {
       my $mutect2_index_dic = {};
       my $mutect2_index_key = "mutect2_Index";
       my $mutect2_prefix = "${bam_input}_muTect2_";
-      my $wdl_key = get_value($def, "wdl_key", "local");
+      my $wdl_key = getValue($def, "wdl_key", "local");
       
       my $normal_samples = [];
       my $groups = $def->{groups};
@@ -837,7 +837,7 @@ sub getConfig {
       my $mutect2pon_name = $mutect2_prefix . getNextIndex($mutect2_index_dic, $mutect2_index_key) . "_pon";
       $config->{$mutect2pon_name} = {     
         "class" => "CQS::UniqueWdl",
-        "target_dir" => "${target_dir}/PON",
+        "target_dir" => "${target_dir}/$mutect2pon_name",
         "source_ref" => ["normal_files", ".bam\$"],
         "cromwell_config_file" => $def->{cromwell_config_file}{$wdl_key},
         "cromwell_jar" => getValue($def, "cromwell_jar"),
