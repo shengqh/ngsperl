@@ -239,6 +239,7 @@ sub getPreprocessionConfig {
     deseq2_groups        => $def->{deseq2_groups},
     pairs                => $def->{pairs},
     additional_bam_files => $def->{additional_bam_files},
+    singularity_image_files => $def->{singularity_image_files},
   };
   
   if(not defined $def->{ignore_docker} or not $def->{ignore_docker}){
