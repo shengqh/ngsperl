@@ -72,7 +72,6 @@ java $java_option -jar $gatk_jar \\
   fi 
 ";
 
-
   $self->close_pbs( $pbs, $pbs_file );
 }
 
