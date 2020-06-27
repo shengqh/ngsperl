@@ -395,7 +395,7 @@ sub getSmallRNAConfig {
 
     my $category_ext = ".Category.Table.csv;.Category1.Barplot.png;.Category2.Barplot.png;";
     if (defined $def->{groups}) {
-      $category_ext = ".Category1.Group.Piechart.png;.Category2.Group.Piechart.png;",
+      $category_ext = $category_ext . ".Category1.Group.Piechart.png;.Category2.Group.Piechart.png;",
     }
 
     $host_genome = merge(

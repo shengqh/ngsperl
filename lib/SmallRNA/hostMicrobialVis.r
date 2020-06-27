@@ -13,12 +13,17 @@ all$Other<-100 - all$Host - all$Microbial
 
 figData<-all[,c("Host", "Microbial", "Other")]
 
-group<-read.delim(parSampleFile1, stringsAsFactors = F, header=F)
-if (exists("groupNames")){
-  group<-group[group$V2 %in% groupNames,]
+hasGroup = parSampleFile1 != ""
+if(hasGroup){
+  group<-read.delim(parSampleFile1, stringsAsFactors = F, header=F)
+  if (exists("groupNames")){
+    group<-group[group$V2 %in% groupNames,]
+  }
+  rownames(group)<-group$V1
+  figData$Group<-group[rownames(figData), "V2"]
+} else {
+  figData$Group<-"All"
 }
-rownames(group)<-group$V1
-figData$Group<-group[rownames(figData), "V2"]
 figData$Sample<-rownames(figData)
 
 figData<-figData[!(rownames(figData) %in% c("B020", "B114", "D031")),]

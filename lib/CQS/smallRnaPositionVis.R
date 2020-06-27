@@ -191,11 +191,11 @@ if (visLayoutFileList!="") {
   rowGroupCount=length(unique(allPositionByGroup$Row_Group))
   colGroupCount=length(unique(allPositionByGroup$Col_Group))
   height=max(rowGroupCount*2000,3000)
-  width=max(colGroupCount*2000,3000)
+  width=max(colGroupCount*2000,3000) + 3000
 } else {
   height=3000
   groupCount=length(unique(allPositionByGroup$Group))
-  width=max(groupCount*2000, height)
+  width=max(groupCount*2000, height) + 3000
 }
 
 ncols<-ifelse(length(unique(allPositionByGroup$Feature))>=5, 2, 1)
@@ -223,7 +223,7 @@ dev.off()
 
 height=max(featureNumber*200,3000)
 groupCount=length(unique(allPositionByGroup$Group))
-width=max(groupCount*1000, 3000)
+width=max(groupCount*1000, 3000) + 3000
 
 png(paste0(outFile,".PositionBar.png"),width=width,height=height,res=300)
 m <- ggplot(allPositionByGroup, aes(x = Position,y=GroupPositionCountFraction)) +

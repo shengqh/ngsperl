@@ -37,7 +37,12 @@ def readDict(filename):
 
 xmlfiles = readDict(inputFile)
 
-with open(outputFile, "w") as sw:
+if os.path.isfile(outputFile):
+  os.remove(outputFile)
+
+tmpFile = outputFile + ".tmp"
+
+with open(tmpFile, "w") as sw:
   sw.write("File\tFeature\tStrand\tTotalCount\tPositionCount\tPosition\tPercentage\n")
 
   sampleFeatureMap = {}  
@@ -78,6 +83,8 @@ with open(outputFile, "w") as sw:
       if featureName not in sampleFeatureMap[sampleName]:
         sw.write("%s\t%s\t*\t0\t0\t0\t0\n" % (sampleName, featureName ))
   
+os.rename(tmpFile, outputFile)
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 coverageR = dir_path + "/coverage.R"
 logger.info("Generate heatmap ...")

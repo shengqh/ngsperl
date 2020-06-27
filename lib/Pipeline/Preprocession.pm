@@ -182,6 +182,12 @@ sub getPreprocessionConfig {
     checkFileGroupPairNames($def, ["groups"], ["pairs"], "pool_sample_groups");
   }else{
     checkFileGroupPairNames($def, ["groups"], ["pairs"], "files");
+
+    if(not defined $def->{groups}){
+      my $files = $def->{files};
+      my $sampleNames = [keys %$files];
+      $def->{groups} = {"All" => $sampleNames};
+    }
   }
 
   my $target_dir = create_directory_or_die( getValue( $def, "target_dir" ) );
@@ -233,6 +239,7 @@ sub getPreprocessionConfig {
     deseq2_groups        => $def->{deseq2_groups},
     pairs                => $def->{pairs},
     additional_bam_files => $def->{additional_bam_files},
+    singularity_image_files => $def->{singularity_image_files},
   };
   
   if(not defined $def->{ignore_docker} or not $def->{ignore_docker}){

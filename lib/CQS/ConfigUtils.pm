@@ -69,7 +69,8 @@ our %EXPORT_TAGS = (
       get_program_param
       get_program
       get_interation_sample_subsample_map
-      get_interation_subsample_sample_map)
+      get_interation_subsample_sample_map
+      get_groups)
   ]
 );
 
@@ -981,10 +982,17 @@ sub save_parameter_sample_file {
     else {
       @orderedSampleNames = sort keys %temp;
     }
+
+    my $fileOnly = get_option( $config, $section, $key . "_fileonly", 0 );
+
     open( my $list, '>', $outputFile ) or die "Cannot create $outputFile";
     foreach my $sample_name (@orderedSampleNames) {
       foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
-        print $list $subSampleFile . "\t$sample_name\n";
+        if ($fileOnly){
+          print $list $subSampleFile . "\n";
+        }else{
+          print $list $subSampleFile . "\t$sample_name\n";
+        }
       }
     }
     close($list);
@@ -1337,4 +1345,30 @@ sub get_interation_subsample_sample_map {
   return ($result);
 }
 
+sub get_groups {
+  my ($files, $pattern) = @_;
+  my $groups = {};
+  for my $name (keys %$files){
+    if ( $name =~ $pattern ) {
+      my $group = $1;
+
+      my $names = $groups->{$group};
+      if (defined $names) {
+        push @$names, ($name);
+      }else{
+        $groups->{$group} = [$name];
+      }
+    }else{
+      die "Cannot find pattern $pattern in $name.";
+    }
+  }
+
+  print("  groups => {\n");
+  for my $group (sort keys %$groups){
+    my $names = $groups->{$group};
+    my @sorted_names = sort @$names;
+    print('    "' . $group . '" => ["' . join('","', @sorted_names) . '"],' . "\n");
+  }
+  print("  },\n");
+}
 1;
