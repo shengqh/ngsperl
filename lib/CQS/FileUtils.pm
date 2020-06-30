@@ -176,6 +176,11 @@ sub read_json {
       my ($name) = @_;
       my $value = $jsonr->slurp();
       $result->{$name} = $value;
+    },
+    error => sub {
+      my ($error_msg) = @_;
+      close($fh);
+      die "parsing json " . $input_json_file . " error: '" . $error_msg ."'";
     }
   );
   
