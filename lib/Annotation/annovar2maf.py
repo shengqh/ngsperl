@@ -3,6 +3,7 @@ import sys
 import logging
 import os
 import csv
+import warnings
 
 DEBUG=False
 NotDEBUG=not DEBUG
@@ -46,7 +47,9 @@ with open(args.input, "r") as fin:
       if "AD" in sampleFormatsSplit:
         format_AD_index=sampleFormatsSplit.index("AD")
       else:
-        format_AD_index=1
+        format_AD_index="NA"
+        #warnings.warn("Can't find AD in " + line)
+        #continue
       
       for sample_idx in range(sample_index, len(mafheaders)):
         sample_name = mafheaders[sample_idx]
@@ -61,13 +64,16 @@ with open(args.input, "r") as fin:
           raise Exception('I don\'t know genotype: ' + sample_data)
         
         parts = sample_data.split(":")
-        alleles = parts[format_AD_index].split(",")
-        t_ref_count = alleles[0]
-        t_alt_count = alleles[1]
-
         t_depth = parts[format_DP_index]
+        if (format_AD_index=="NA"):
+          t_af = float(parts[format_AF_index])
+          t_alt_count=str(int(int(t_depth)*float(t_af)))
+          t_ref_count=str(int(t_depth)-int(t_alt_count))
+        else:
+          alleles = parts[format_AD_index].split(",")
+          t_ref_count = alleles[0]
+          t_alt_count = alleles[1]
 
-        
         fout.write("\t".join(new_items) + "\t" + sample_name + "\t" + t_depth + "\t" + t_ref_count + "\t" + t_alt_count + "\t" + maf_items[sample_index-1] + "\t" + sample_data + "\n")
     
   if os.path.isfile(args.output):

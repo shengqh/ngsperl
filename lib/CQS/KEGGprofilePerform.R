@@ -212,10 +212,16 @@ if (length(sigPathwayInd)>0) {
 }
 
 
-
-
-
-
+########################
+#generate report
+########################
+#make files to include all keggprofile result, to be used in the Rmd file which is designed for limma pipeline
+keggprofilePathwayFigures=list.files(getwd(),pattern = "_fc.png$",full.names = TRUE)
+keggprofileOverallFigures=list.files(getwd(),pattern = ".KEGG.OverallExpression.png$",full.names = TRUE)
+files=cbind(c(keggprofilePathwayFigures,keggprofileOverallFigures))
+#render report
+keggReportFile=paste0(basename(keggprofileOverallFigures[1]),".Report.html")
+rmarkdown::render("KEGGprofileReport.Rmd",output_file=keggReportFile,output_dir=getwd())
 
 
 # 
