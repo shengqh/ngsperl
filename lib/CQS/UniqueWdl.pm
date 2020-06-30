@@ -19,8 +19,14 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_uwdl";
+  $self->{_can_use_docker} = 0;
   bless $self, $class;
   return $self;
+}
+
+sub can_use_docker(){
+  my ($self) = @_;
+  return(0);
 }
 
 sub get_input_value {
@@ -83,7 +89,7 @@ sub prepare_wdl_array {
     }
     
     my $res_array = [];
-    for my $sample_name (keys %$input_value){
+    for my $sample_name (sort keys %$input_value){
       my $sample_values = $input_value->{$sample_name};
       die "value for $sample_name in input_list should be array" if (ref($sample_values) ne "ARRAY");
       push @$res_array, @$sample_values;
