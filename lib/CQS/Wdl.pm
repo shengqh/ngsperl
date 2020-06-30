@@ -19,8 +19,14 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_wdl";
+  $self->{_can_use_docker} = 0;
   bless $self, $class;
   return $self;
+}
+
+sub can_use_docker(){
+  my ($self) = @_;
+  return(0);
 }
 
 sub perform {
@@ -39,11 +45,13 @@ sub perform {
   #softlink singularity_image_files to result folder
   my $singularity_image_files = get_raw_files( $config, $section, "singularity_image_files" ); 
   for my $image_name ( sort keys %$singularity_image_files ) {
-    my $simgSoftlinkCommand="cp -P ".$singularity_image_files->{$image_name}[0]." ".$result_dir."/".$image_name;
-    print($simgSoftlinkCommand."\n");
-  #  print $singularity_image_files->{$image_name}[0]."\n";
-    system($simgSoftlinkCommand);
-    #`ls -la`;
+    my $target_image = $result_dir."/".$image_name;
+
+    if (! -e $target_image) {
+      my $simgSoftlinkCommand="cp -P ".$singularity_image_files->{$image_name}[0]." ".$target_image;
+      print($simgSoftlinkCommand."\n");
+      system($simgSoftlinkCommand);
+    }
   }
 
   my $raw_files = get_raw_files( $config, $section );
