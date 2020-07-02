@@ -384,17 +384,13 @@ sub addDEseq2 {
   }
 
   my $rCode = getOutputFormat( $def, getValue($def, "DE_rCode", "") );
-  $rCode = addOutputOption( $def, $rCode, "top25cv_in_hca",             $def->{top25cv_in_hca},             "top25cvInHCA" );
+  $rCode = addOutputOption( $def, $rCode, "top25cv_in_hca", $def->{top25cv_in_hca}, "top25cvInHCA" );
 
-  my $groupNames = defined $def->{deseq2_groups} ? "deseq2_groups" : "groups";
   $config->{$taskName} = {
-    class                        => "Comparison::DESeq2",
     perform                      => 1,
     target_dir                   => $deseq2Dir . "/" . getNextFolderIndex($def) . "$taskName",
     output_to_dir                => getReportDir($def),
     option                       => "",
-    source_ref                   => "pairs",
-    groups_ref                   => $groupNames,
     sh_direct                    => 1,
     show_label_PCA               => $def->{show_label_PCA},
     use_pearson_in_hca           => $def->{use_pearson_in_hca},
@@ -421,6 +417,16 @@ sub addDEseq2 {
       "mem"       => "20gb"
     },
   };
+
+  if (defined $def->{pairs_config}) {
+    $config->{$taskName}{class} = "Comparison::DESeq2config";
+    $config->{$taskName}{source} = $def->{pairs_config};
+  }else{
+    $config->{$taskName}{class} = "Comparison::DESeq2";
+    my $groupNames = defined $def->{deseq2_groups} ? "deseq2_groups" : "groups";
+    $config->{$taskName}{source_ref} = "pairs";
+    $config->{$taskName}{groups_ref} = $groupNames;
+  }
 
   if ( ref($countfileRef) eq "ARRAY" ) {
     $config->{$taskName}{countfile_ref} = $countfileRef;
@@ -1525,6 +1531,9 @@ sub checkFileGroupPairNames {
     if(defined $def->{$groupKey}){
       my $groups = $def->{$groupKey};
       for my $groupName (keys %$groups){
+        if ($groupName =~ /^./) {
+          next;
+        }
         my $sampleNames = $groups->{$groupName};
         for my $sampleName (@$sampleNames){
           if (!defined $files->{$sampleName}){
