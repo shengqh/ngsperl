@@ -203,9 +203,14 @@ sub getSmallRNAConfig {
     }
   }
 
-  my $do_comparison = defined $def->{pairs};
+  #print(Dumper($def->{pairs_config}));
+  my $do_comparison = (defined $def->{pairs}) || (defined $def->{pairs_config});
+  print("do_comparison=" . $do_comparison . "\n");
   if ($do_comparison) {
     my $pairs = $def->{pairs};
+    if(not defined $pairs){
+      $pairs = $def->{pairs_config};
+    }
 
     my $sampleComparisons;
     if ( defined $pairs->{".order"} ) {
@@ -302,9 +307,9 @@ sub getSmallRNAConfig {
         "Groups" => string_combination( [ ["nonhost_tRNA"], [ "", "species", "type", "anticodon", "reads" ], [ $nonhostLibraryStr . $DE_task_suffix ], $sampleComparisons ], '_' )
       };
     }
-  }
 
-  $def->{pure_pairs} = get_pure_pairs( $def->{pairs} );
+    $def->{pure_pairs} = get_pure_pairs( $pairs );
+  }
 
   my $DE_min_median_read_top      = getValue( $def, "DE_min_median_read_top" );
   my $DE_min_median_read_smallRNA = getValue( $def, "DE_min_median_read_smallRNA" );
@@ -983,7 +988,7 @@ sub getSmallRNAConfig {
       }
     }
 
-    if ( $do_comparison or defined $groups or defined $def->{tRNA_vis_group} ) {
+    if ( $do_comparison || defined $groups || defined $def->{tRNA_vis_group} ) {
       addPositionVis(
         $config, $def,
         $summary_ref,
@@ -1092,7 +1097,7 @@ sub getSmallRNAConfig {
       }
     }
 
-    if ( $search_nonhost_database or $blast_unmapped_reads or $def->{perform_host_length_dist_category} or $def->{perform_host_genome_reads_deseq2} ) {
+    if ( $search_nonhost_database || $blast_unmapped_reads || $def->{perform_host_length_dist_category} || $def->{perform_host_genome_reads_deseq2} ) {
       my $readClass;
       my $readTask;
       if ( $def->{host_remove_all_mapped_reads} ) {
