@@ -14,7 +14,11 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(getPreprocessionConfig)] );
+our %EXPORT_TAGS = ( 'all' => [qw(
+  getPreprocessionConfig
+  addCutadapt
+  addFastqLen)
+  ] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 

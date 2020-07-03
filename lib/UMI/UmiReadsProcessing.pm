@@ -35,7 +35,8 @@ sub perform {
   }
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, not $self->using_docker());
   my $fgbio_jar = get_param_file( $config->{$section}{fgbio_jar}, "fgbio_jar", 1, not $self->using_docker());
-  my $alignConsensusReads = getValue( $config, "alignConsensusReads", 0 );
+  my $alignConsensusReads = get_option( $config, $section, "alignConsensusReads", 0 );
+  my $cutadapt = get_option( $config, $section, "cutadapt", 1 );
   
   my %unmapped_bam_files = %{ get_raw_files( $config, $section ) };
   
@@ -70,15 +71,28 @@ sub perform {
 ##################################
     print $pbs "echo 1. Align unmapped bam \n"; 
     my $unmapped_fastq_prefix=basename($bam_file);
+    my $unmapped_fastq_file="${unmapped_fastq_prefix}.fastq.gz";
     print $pbs "
-if [[ ! -s ${unmapped_fastq_prefix}.fastq ]]; then
-  java $java_option -jar $picard_jar SamToFastq I=$bam_file F=${unmapped_fastq_prefix}.fastq INTERLEAVE=true
+if [[ ! -s ${unmapped_fastq_file} ]]; then
+  java $java_option -jar $picard_jar SamToFastq I=$bam_file F=${unmapped_fastq_file} INTERLEAVE=true --COMPRESS_OUTPUTS_PER_RG
 fi
 ";
+    #cutadapt on fastq
+    if ($cutadapt) {
+      my $trimmed_fastq_file="${unmapped_fastq_prefix}.trimmed.fastq.gz";
+          print $pbs "
+if [[ ! -s ${trimmed_fastq_prefix}.fastq ]]; then
+  cutadapt --interleaved -n 2 -O 1 -q 20 -a AGATCGGAAGAGCACACGTC -A AGATCGGAAGAGCGTCGTGT -m 30 --trim-n -o ${trimmed_fastq_file} ${unmapped_fastq_file}
+fi
+";
+      #change unmapped_fastq_prefix to trimmed file for next step
+      $unmapped_fastq_prefix=$trimmed_fastq_prefix;
+    }
+
     my $mapped_sam_prefix=$sample_name.$extension;
     print $pbs "
 if [[ ! -s ${mapped_sam_prefix}.sam ]]; then
-  bwa mem -p -t 8 $bwa_index ${unmapped_fastq_prefix}.fastq > ${mapped_sam_prefix}.sam
+  bwa mem -M -p -t 8 $bwa_index ${unmapped_fastq_prefix}.fastq > ${mapped_sam_prefix}.sam
 fi
 ";
     my $umi_mapped_bam_prefix=$mapped_sam_prefix."_mapped";
@@ -107,7 +121,7 @@ fi
     my $umi_consensus_filtered_bam_prefix=$umi_consensus_bam_prefix."_PostFilter";
     print $pbs "
 if [[ ! -s ${umi_consensus_filtered_bam_prefix}.bam ]]; then
-  java $java_option -jar $fgbio_jar FilterConsensusReads --input=${umi_consensus_bam_prefix}.bam --output=${umi_consensus_filtered_bam_prefix}.bam --ref=$bwa_index --reverse-per-base-tags=true --min-reads=1 -E 0.05 -N 40 -e 0.1 -n 0.1
+  java $java_option -jar $fgbio_jar FilterConsensusReads --input=${umi_consensus_bam_prefix}.bam --output=${umi_consensus_filtered_bam_prefix}.bam --ref=$bwa_index --reverse-per-base-tags=true --min-reads=1 -E 0.05 -N 28 -e 0.1 -n 0.3
 fi
 ";
 
@@ -152,7 +166,7 @@ sub result {
   my $result = {};
 
   my $extension = get_option( $config, $section, "extension", "_umi" );
-  my $alignConsensusReads = getValue( $config, "alignConsensusReads", 0 );
+  my $alignConsensusReads = get_option( $config, $section, "alignConsensusReads", 1 );
 
   my %unmapped_bam_files = %{ get_raw_files( $config, $section ) };
   for my $sample_name ( sort keys %unmapped_bam_files ) {
