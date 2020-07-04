@@ -70,7 +70,8 @@ our %EXPORT_TAGS = (
       get_program
       get_interation_sample_subsample_map
       get_interation_subsample_sample_map
-      get_groups)
+      get_groups
+      get_covariances)
   ]
 );
 
@@ -865,6 +866,7 @@ sub get_pure_pairs {
       $result->{$pair_name} = $group_names;
     }
   }
+
   return ($result);
 }
 
@@ -1371,4 +1373,28 @@ sub get_groups {
   }
   print("  },\n");
 }
+
+sub get_covariances {
+  my ($pairs, $groups, $covname, $covpattern) = @_;
+
+  print("  \"pairs\" => {\n");
+  for my $pairName (sort keys %$pairs){
+    print("    \"$pairName\" => {\n");
+    my $groupNames = $pairs->{$pairName}{groups};
+    print('      groups => ["'. join('", "', @$groupNames) . '"], ' . "\n");
+    my $covs = [];
+    for my $groupName (@$groupNames){
+      my $samples = $groups->{$groupName};
+      for my $sampleName (@$samples){
+        $sampleName =~ /$covpattern/;
+        my $cov = $1;
+        push(@$covs, $cov);
+      }
+    }
+    print('      ' . $covname . ' => ["'. join('", "', @$covs) . '"] '. "\n");
+    print("    }, \n");
+  }
+  print("  },\n");
+}
+
 1;
