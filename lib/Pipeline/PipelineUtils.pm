@@ -158,7 +158,7 @@ sub addFastQC {
     cluster    => $def->{cluster},
     sh_direct  => 1,
     pbs        => {
-      "email"    => $def->{email},
+#      "email"    => $def->{email},
       "nodes"    => "1:ppn=" . $curThread,
       "walltime" => "4",
       "mem"      => "4gb"
@@ -177,7 +177,7 @@ sub addFastQC {
     sh_direct  => 1,
     can_result_be_empty_file => 1,
     pbs        => {
-      "email"    => $def->{email},
+#      "email"    => $def->{email},
       "nodes"    => "1:ppn=1",
       "walltime" => "2",
       "mem"      => "10gb"

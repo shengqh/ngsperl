@@ -36,6 +36,7 @@ sub perform {
   my $cleansam                = get_option( $config, $section, "cleansam",                0 );
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
   my $sortByCoordinate        = get_option( $config, $section, "sort_by_coordinate",      1 );
+  my $alignmentOnly        = get_option( $config, $section, "alignmentOnly",      0 );
   my $mark_duplicates         = hasMarkDuplicate( $config->{$section} );
 
   $option = $option . " -M";
@@ -95,6 +96,19 @@ if [[ (1 -eq \$1) || (! -s $unsorted_bam_file) ]]; then
 fi
 ";
     my $rmlist = "";
+
+    if ($alignmentOnly) { #only alignment, no sort or other works. For UMI pipeline
+      print $pbs "
+if [ -s $unsorted_bam_file ]; then
+  samtools flagstat $unsorted_bam_file > ${unsorted_bam_file}.stat 
+  rm $rmlist
+fi
+";
+
+      $self->close_pbs( $pbs, $pbs_file );
+      next;
+    }
+
     if ($cleansam) {
       print $pbs "
 if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $clean_bam_file)) ]]; then

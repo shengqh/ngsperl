@@ -81,18 +81,18 @@ fi
     if ($cutadapt) {
       my $trimmed_fastq_file="${unmapped_fastq_prefix}.trimmed.fastq.gz";
           print $pbs "
-if [[ ! -s ${trimmed_fastq_prefix}.fastq ]]; then
+if [[ ! -s ${trimmed_fastq_file} ]]; then
   cutadapt --interleaved -n 2 -O 1 -q 20 -a AGATCGGAAGAGCACACGTC -A AGATCGGAAGAGCGTCGTGT -m 30 --trim-n -o ${trimmed_fastq_file} ${unmapped_fastq_file}
 fi
 ";
       #change unmapped_fastq_prefix to trimmed file for next step
-      $unmapped_fastq_prefix=$trimmed_fastq_prefix;
+      $unmapped_fastq_file=$trimmed_fastq_file;
     }
 
     my $mapped_sam_prefix=$sample_name.$extension;
     print $pbs "
 if [[ ! -s ${mapped_sam_prefix}.sam ]]; then
-  bwa mem -M -p -t 8 $bwa_index ${unmapped_fastq_prefix}.fastq > ${mapped_sam_prefix}.sam
+  bwa mem -M -p -t 8 $bwa_index ${unmapped_fastq_file} > ${mapped_sam_prefix}.sam
 fi
 ";
     my $umi_mapped_bam_prefix=$mapped_sam_prefix."_mapped";
