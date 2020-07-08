@@ -94,7 +94,7 @@ sub perform {
       die "$input_key should include _ref suffix" if (substr($input_key, -4) ne "_ref");
       $input_name =~ s/_config_ref$//g;
       $input_name =~ s/_ref$//g;
-      $config->{$section}{$input_key} = $input_parameters->{$input_key};
+      $config->{$section}{$input_key} = $input_list->{$input_key};
       $input_value = get_raw_files( $config, $section, $input_name );
       delete $config->{$section}{$input_key};
     }
