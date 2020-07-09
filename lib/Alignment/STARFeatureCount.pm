@@ -182,7 +182,7 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $output_sort_by_coordinate = getSortByCoordinate( $config, $section );
-  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 0 );
+  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1 );
   my $delete_star_featureCount_bam  = get_option( $config, $section, "delete_star_featureCount_bam", 0 );
 
   my $result = {};
