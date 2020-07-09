@@ -45,10 +45,20 @@ sub perform {
   #softlink singularity_image_files to result folder
   my $singularity_image_files = get_raw_files( $config, $section, "singularity_image_files" ); 
   for my $image_name ( sort keys %$singularity_image_files ) {
+    my $source_image=$singularity_image_files->{$image_name};
+    if(ref($source_image) eq 'ARRAY') {
+      $source_image=${$source_image}[0];
+    }
+    # print $image_name."\n";
+    # print $source_image."\n";
     my $target_image = $result_dir."/".$image_name;
-
     if (! -e $target_image) {
-      my $simgSoftlinkCommand="cp -P ".$singularity_image_files->{$image_name}[0]." ".$target_image;
+      my $simgSoftlinkCommand;
+      if (-l $singularity_image_files->{$image_name}) { #softlink, copy
+          $simgSoftlinkCommand="cp -P ".$source_image." ".$target_image;
+      } else { #file, make softlink
+          $simgSoftlinkCommand="ln -s ".$source_image." ".$target_image;
+      }
       print($simgSoftlinkCommand."\n");
       system($simgSoftlinkCommand);
     }

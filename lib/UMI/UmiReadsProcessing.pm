@@ -101,10 +101,14 @@ sub perform {
 ##################################
 # merge alignment result with UMI tag
 ##################################
-    my $umi_mapped_bam_prefix=$bam_file."_mapped";
+    my $umi_mapped_bam_prefix=basename($sample_name);
+    my $umi_mapped_bam_merged_prefix=$umi_mapped_bam_prefix."_mappedAndMerged";
     print $pbs "
-if [[ ! -s ${umi_mapped_bam_prefix}.bam ]]; then
-  gatk $java_option MergeBamAlignment UNMAPPED=${unmapped_bam_file} ALIGNED=${bam_file} O=${umi_mapped_bam_prefix}.bam R=$bwa_index SO=coordinate ALIGNER_PROPER_PAIR_FLAGS=true MAX_GAPS=-1 ORIENTATIONS=FR VALIDATION_STRINGENCY=SILENT CREATE_INDEX=true 
+if [[ ! -s ${umi_mapped_bam_merged_prefix}.bam ]]; then
+  echo 1. MergeBamAlignment 
+  gatk MergeBamAlignment --UNMAPPED_BAM ${unmapped_bam_file} --ALIGNED_BAM ${bam_file} --OUTPUT ${umi_mapped_bam_merged_prefix}.bam -R $bwa_index \\
+  -SO coordinate --ALIGNER_PROPER_PAIR_FLAGS true --ALIGNED_READS_ONLY true -MAX_GAPS -1 \\
+  -ORIENTATIONS FR --VALIDATION_STRINGENCY SILENT --CREATE_INDEX true
 fi
 ";
 
@@ -112,10 +116,10 @@ fi
 # generate consensus reads
 ##################################
     print $pbs "echo 2. Generate consensus reads \n"; 
-    my $umi_mapped_grouped_bam_prefix=$umi_mapped_bam_prefix."_grouped";
+    my $umi_mapped_grouped_bam_prefix=$umi_mapped_bam_merged_prefix."_grouped";
     print $pbs "
 if [[ ! -s ${umi_mapped_grouped_bam_prefix}.bam ]]; then
-  java $java_option -jar $fgbio_jar GroupReadsByUmi --input=${umi_mapped_bam_prefix}.bam --output=${umi_mapped_grouped_bam_prefix}.bam --strategy=adjacency --edits=1 --min-map-q=20 
+  java $java_option -jar $fgbio_jar GroupReadsByUmi --input=${umi_mapped_bam_merged_prefix}.bam --output=${umi_mapped_grouped_bam_prefix}.bam --strategy=adjacency --edits=1 --min-map-q=20 
 fi
 ";
     my $umi_consensus_bam_prefix=$sample_name.$extension."_UnmappedConsensusReads";
