@@ -33,6 +33,9 @@ sub perform {
   #    $option = $option . "  --outSAMprimaryFlag AllBestScore";
   #  }
   #
+
+  my $sambamba_memory = int($memory * 0.95);
+
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
   my $star                    = get_option( $config, $section, "star_location",           "STAR" );
 
@@ -122,7 +125,7 @@ fi
   if ($output_sort_by_coordinate) {
     print $pbs "
 if [ ! -s ${final_bam} ]; then
-  sambamba sort -m $memory -t $thread -o $final_bam $unsorted
+  sambamba sort -m ${sambamba_memory}G -t $thread -o $final_bam $unsorted
   sambamba index $final_bam
 fi  
 ";
