@@ -36,6 +36,7 @@ sub perform {
   my $cleansam                = get_option( $config, $section, "cleansam",                0 );
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
   my $sortByCoordinate        = get_option( $config, $section, "sort_by_coordinate",      1 );
+  my $alignmentOnly        = get_option( $config, $section, "alignmentOnly",      0 );
   my $mark_duplicates         = hasMarkDuplicate( $config->{$section} );
 
   $option = $option . " -M";
@@ -74,7 +75,12 @@ sub perform {
     my $rmdup_bam_file    = $sample_name . ($sortByCoordinate? ".sortedByCoord.rmdup.bam":".sortedByQuery.rmdup.bam");
     my $tag               = get_bam_tag($sample_name);
 
-    my $rg = "\@RG\\tID:${sample_name}\\tPU:illumina\\tLB:${sample_name}\\tSM:${sample_name}\\tPL:illumina";
+    my $rg;
+    if ($alignmentOnly) { #only alignment, no sort or other works. For UMI pipeline
+      $rg ="";
+    } else {
+      $rg = "-R \@RG\\tID:${sample_name}\\tPU:illumina\\tLB:${sample_name}\\tSM:${sample_name}\\tPL:illumina";
+    }
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -90,11 +96,24 @@ sub perform {
     print $pbs "
 if [[ (1 -eq \$1) || (! -s $unsorted_bam_file) ]]; then
   echo bwa_mem=`date`
-  bwa mem $option -R '$rg' $bwa_index $sample_files_str | samtools view -bS -o $unsorted_bam_file
+  bwa mem $option $rg $bwa_index $sample_files_str | samtools view -bS -o $unsorted_bam_file
   bwa 2>\&1 | grep Version | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${sample_name}.bwa.version
 fi
 ";
     my $rmlist = "";
+
+    if ($alignmentOnly) { #only alignment, no sort or other works. For UMI pipeline
+      print $pbs "
+if [ -s $unsorted_bam_file ]; then
+  samtools flagstat $unsorted_bam_file > ${unsorted_bam_file}.stat 
+  rm $rmlist
+fi
+";
+
+      $self->close_pbs( $pbs, $pbs_file );
+      next;
+    }
+
     if ($cleansam) {
       print $pbs "
 if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $clean_bam_file)) ]]; then
@@ -178,9 +197,15 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $sorted_bam_file    = $sample_name . ($sortByCoordinate? ".sortedByCoord.bam":".sortedByQuery.bam");
-    my $rmdup_bam_file    = $sample_name . ($sortByCoordinate? ".sortedByCoord.rmdup.bam":".sortedByQuery.rmdup.bam");
-    my $final_file =  $mark_duplicates ? $rmdup_bam_file : $sorted_bam_file;
+    my $final_file;
+    my $alignmentOnly        = get_option( $config, $section, "alignmentOnly",      0 );
+    if ($alignmentOnly) { #only alignment, no sort or other works. For UMI pipeline
+      $final_file=$sample_name.".unsorted.bam";
+    } else { #all other bwa tasks, with sort or mark_duplicates
+      my $sorted_bam_file    = $sample_name . ($sortByCoordinate? ".sortedByCoord.bam":".sortedByQuery.bam");
+      my $rmdup_bam_file    = $sample_name . ($sortByCoordinate? ".sortedByCoord.rmdup.bam":".sortedByQuery.rmdup.bam");
+      $final_file =  $mark_duplicates ? $rmdup_bam_file : $sorted_bam_file;
+    }
     $final_file = "${result_dir}/$final_file";
     my @result_files = ();
     push( @result_files, $final_file );

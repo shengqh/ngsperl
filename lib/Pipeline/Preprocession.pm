@@ -77,8 +77,8 @@ sub addCutadapt {
       sh_direct                        => 0,
       cluster                          => $cluster,
       pbs                              => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
+#        "email"     => $def->{email},
+#        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=" . $cutadapt_thread,
         "walltime"  => "23",
         "mem"       => "20gb"

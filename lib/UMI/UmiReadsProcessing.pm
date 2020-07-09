@@ -33,12 +33,13 @@ sub perform {
   if ( !defined $bwa_index ) {
     $bwa_index = $config->{$section}{fasta_file} or die "define ${section}::bwa_index first";
   }
-  my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, not $self->using_docker());
+  #my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, not $self->using_docker());
   my $fgbio_jar = get_param_file( $config->{$section}{fgbio_jar}, "fgbio_jar", 1, not $self->using_docker());
   my $alignConsensusReads = get_option( $config, $section, "alignConsensusReads", 0 );
-  my $cutadapt = get_option( $config, $section, "cutadapt", 1 );
+  #my $cutadapt = get_option( $config, $section, "cutadapt", 1 );
   
-  my %unmapped_bam_files = %{ get_raw_files( $config, $section ) };
+  my %mapped_bam_files = %{ get_raw_files( $config, $section ) };
+  my %unmapped_bam_files = %{ get_raw_files( $config, $section,"unmapped_bam_files" ) };
   
   my $extension = get_option( $config, $section, "extension", "_umi" );
   my $java_option = $config->{$section}{java_option};
@@ -50,9 +51,10 @@ sub perform {
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct) . "\n";
   
-  for my $sample_name ( sort keys %unmapped_bam_files ) {
-    my @sample_files = @{ $unmapped_bam_files{$sample_name} };
+  for my $sample_name ( sort keys %mapped_bam_files ) {
+    my @sample_files = @{ $mapped_bam_files{$sample_name} };
     my $bam_file     = $sample_files[0];
+    my $unmapped_bam_file = @{ $unmapped_bam_files{$sample_name} }[0];
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -66,39 +68,47 @@ sub perform {
 
     print $pbs "echo Processing $sample_name \n"; 
     
-##################################
-# align unmapped bam
-##################################
-    print $pbs "echo 1. Align unmapped bam \n"; 
-    my $unmapped_fastq_prefix=basename($bam_file);
-    my $unmapped_fastq_file="${unmapped_fastq_prefix}.fastq.gz";
-    print $pbs "
-if [[ ! -s ${unmapped_fastq_file} ]]; then
-  java $java_option -jar $picard_jar SamToFastq I=$bam_file F=${unmapped_fastq_file} INTERLEAVE=true --COMPRESS_OUTPUTS_PER_RG
-fi
-";
-    #cutadapt on fastq
-    if ($cutadapt) {
-      my $trimmed_fastq_file="${unmapped_fastq_prefix}.trimmed.fastq.gz";
-          print $pbs "
-if [[ ! -s ${trimmed_fastq_prefix}.fastq ]]; then
-  cutadapt --interleaved -n 2 -O 1 -q 20 -a AGATCGGAAGAGCACACGTC -A AGATCGGAAGAGCGTCGTGT -m 30 --trim-n -o ${trimmed_fastq_file} ${unmapped_fastq_file}
-fi
-";
-      #change unmapped_fastq_prefix to trimmed file for next step
-      $unmapped_fastq_prefix=$trimmed_fastq_prefix;
-    }
+# ##################################
+# # align unmapped bam
+# ##################################
+#     print $pbs "echo 1. Align unmapped bam \n"; 
+#     my $unmapped_fastq_prefix=basename($bam_file);
+#     my $unmapped_fastq_file="${unmapped_fastq_prefix}.fastq.gz";
+#     print $pbs "
+# if [[ ! -s ${unmapped_fastq_file} ]]; then
+#   java $java_option -jar $picard_jar SamToFastq I=$bam_file F=${unmapped_fastq_file} INTERLEAVE=true --COMPRESS_OUTPUTS_PER_RG
+# fi
+# ";
+#     #cutadapt on fastq
+#     if ($cutadapt) {
+#       my $trimmed_fastq_file="${unmapped_fastq_prefix}.trimmed.fastq.gz";
+#           print $pbs "
+# if [[ ! -s ${trimmed_fastq_file} ]]; then
+#   cutadapt --interleaved -n 2 -O 1 -q 20 -a AGATCGGAAGAGCACACGTC -A AGATCGGAAGAGCGTCGTGT -m 30 --trim-n -o ${trimmed_fastq_file} ${unmapped_fastq_file}
+# fi
+# ";
+#       #change unmapped_fastq_prefix to trimmed file for next step
+#       $unmapped_fastq_file=$trimmed_fastq_file;
+#     }
 
-    my $mapped_sam_prefix=$sample_name.$extension;
+#     my $mapped_sam_prefix=$sample_name.$extension;
+#     print $pbs "
+# if [[ ! -s ${mapped_sam_prefix}.sam ]]; then
+#   bwa mem -M -p -t 8 $bwa_index ${unmapped_fastq_file} > ${mapped_sam_prefix}.sam
+# fi
+# ";
+
+##################################
+# merge alignment result with UMI tag
+##################################
+    my $umi_mapped_bam_prefix=basename($sample_name);
+    my $umi_mapped_bam_merged_prefix=$umi_mapped_bam_prefix."_mappedAndMerged";
     print $pbs "
-if [[ ! -s ${mapped_sam_prefix}.sam ]]; then
-  bwa mem -M -p -t 8 $bwa_index ${unmapped_fastq_prefix}.fastq > ${mapped_sam_prefix}.sam
-fi
-";
-    my $umi_mapped_bam_prefix=$mapped_sam_prefix."_mapped";
-    print $pbs "
-if [[ ! -s ${umi_mapped_bam_prefix}.bam ]]; then
-  java $java_option -jar $picard_jar MergeBamAlignment UNMAPPED=$bam_file ALIGNED=${mapped_sam_prefix}.sam O=${umi_mapped_bam_prefix}.bam R=$bwa_index SO=coordinate ALIGNER_PROPER_PAIR_FLAGS=true MAX_GAPS=-1 ORIENTATIONS=FR VALIDATION_STRINGENCY=SILENT CREATE_INDEX=true 
+if [[ ! -s ${umi_mapped_bam_merged_prefix}.bam ]]; then
+  echo 1. MergeBamAlignment 
+  gatk MergeBamAlignment --UNMAPPED_BAM ${unmapped_bam_file} --ALIGNED_BAM ${bam_file} --OUTPUT ${umi_mapped_bam_merged_prefix}.bam -R $bwa_index \\
+  -SO coordinate --ALIGNER_PROPER_PAIR_FLAGS true --ALIGNED_READS_ONLY true -MAX_GAPS -1 \\
+  -ORIENTATIONS FR --VALIDATION_STRINGENCY SILENT --CREATE_INDEX true
 fi
 ";
 
@@ -106,10 +116,10 @@ fi
 # generate consensus reads
 ##################################
     print $pbs "echo 2. Generate consensus reads \n"; 
-    my $umi_mapped_grouped_bam_prefix=$umi_mapped_bam_prefix."_grouped";
+    my $umi_mapped_grouped_bam_prefix=$umi_mapped_bam_merged_prefix."_grouped";
     print $pbs "
 if [[ ! -s ${umi_mapped_grouped_bam_prefix}.bam ]]; then
-  java $java_option -jar $fgbio_jar GroupReadsByUmi --input=${umi_mapped_bam_prefix}.bam --output=${umi_mapped_grouped_bam_prefix}.bam --strategy=adjacency --edits=1 --min-map-q=20 
+  java $java_option -jar $fgbio_jar GroupReadsByUmi --input=${umi_mapped_bam_merged_prefix}.bam --output=${umi_mapped_grouped_bam_prefix}.bam --strategy=adjacency --edits=1 --min-map-q=20 
 fi
 ";
     my $umi_consensus_bam_prefix=$sample_name.$extension."_UnmappedConsensusReads";
@@ -133,7 +143,7 @@ if ($alignConsensusReads) {
         my $unmapped_consensus_fastq_prefix=$sample_name.$extension."_consensus";
     print $pbs "
 if [[ ! -s ${unmapped_consensus_fastq_prefix}.fastq ]]; then
-  java $java_option -jar $picard_jar SamToFastq I=${umi_consensus_filtered_bam_prefix}.bam F=${unmapped_consensus_fastq_prefix}.fastq INTERLEAVE=true
+  gatk $java_option SamToFastq I=${umi_consensus_filtered_bam_prefix}.bam F=${unmapped_consensus_fastq_prefix}.fastq INTERLEAVE=true
 fi
 ";
     my $mapped_consensus_sam_prefix=$unmapped_consensus_fastq_prefix;
@@ -145,7 +155,7 @@ fi
     my $umi_mapped_consensus_bam_prefix=$mapped_consensus_sam_prefix."_mapped";
     print $pbs "
 if [[ ! -s ${umi_mapped_consensus_bam_prefix}.bam ]]; then
-  java $java_option -jar $picard_jar MergeBamAlignment UNMAPPED=${umi_consensus_filtered_bam_prefix}.bam ALIGNED=${mapped_consensus_sam_prefix}.sam O=${umi_mapped_consensus_bam_prefix}.bam R=$bwa_index SO=coordinate ALIGNER_PROPER_PAIR_FLAGS=true MAX_GAPS=-1 ORIENTATIONS=FR VALIDATION_STRINGENCY=SILENT CREATE_INDEX=true 
+  gatk $java_option MergeBamAlignment UNMAPPED=${umi_consensus_filtered_bam_prefix}.bam ALIGNED=${mapped_consensus_sam_prefix}.sam O=${umi_mapped_consensus_bam_prefix}.bam R=$bwa_index SO=coordinate ALIGNER_PROPER_PAIR_FLAGS=true MAX_GAPS=-1 ORIENTATIONS=FR VALIDATION_STRINGENCY=SILENT CREATE_INDEX=true 
 fi
 ";
 }

@@ -152,6 +152,10 @@ sub addMutect2 {
   }
 
   my $mutect2_call = $mutect2_prefix . getNextIndex($mutect2_index_dic, $mutect2_index_key) . "_call";
+  my $run_funcotator="false";
+  if ($def->{ncbi_build} eq "GRCh38",) { #based on genome, hg38=true, else false
+    $run_funcotator="true";
+  }
   $config->{$mutect2_call} = {     
     "class" => "CQS::Wdl",
     "target_dir" => "${target_dir}/$mutect2_call",
@@ -171,6 +175,7 @@ sub addMutect2 {
       "Mutect2.normal_reads_index_ref" => [$mutect2_normal_files, ".bai\$"],
       "Mutect2.tumor_reads_ref" => [$mutect2_tumor_files, ".bam\$"],
       "Mutect2.tumor_reads_index_ref" => [$mutect2_tumor_files, ".bai\$"],
+      "Mutect2.run_funcotator" => $run_funcotator,
     },
     "input_single" => $pon,
     pbs=> {
