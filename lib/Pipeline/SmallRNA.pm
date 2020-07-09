@@ -1378,7 +1378,7 @@ sub getSmallRNAConfig {
         {
           rtemplate          => "countTableVisFunctions.R,countTableVis.R",
           output_file        => ".${nonhostGroup}Mapping.Result",
-          output_file_ext    => ".Piechart.png",
+          output_file_ext    => ".Group.Piechart.png",
           parameterFile1_ref => [ "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" ],
           rCode              => 'maxCategory=4;' . $R_font_size,
         }
