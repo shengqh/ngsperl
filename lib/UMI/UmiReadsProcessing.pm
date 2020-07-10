@@ -133,7 +133,13 @@ fi
 if [[ ! -s ${umi_consensus_filtered_bam_prefix}.bam ]]; then
   java $java_option -jar $fgbio_jar FilterConsensusReads --input=${umi_consensus_bam_prefix}.bam --output=${umi_consensus_filtered_bam_prefix}.bam --ref=$bwa_index --reverse-per-base-tags=true --min-reads=1 -E 0.05 -N 28 -e 0.1 -n 0.3
 fi
+
+#sort by query name so that SamToFastq won't have out of memory error
+if [[ ! -s ${umi_consensus_filtered_bam_prefix}.sortByQuery.bam ]]; then
+  sambamba sort -t 8 --sort-picard -o ${umi_consensus_filtered_bam_prefix}.sortByQuery.bam ${umi_consensus_filtered_bam_prefix}.bam
+fi
 ";
+
 
 ##################################
 # remap the filtered reads
@@ -184,7 +190,7 @@ sub result {
     if ($alignConsensusReads) {
       $bamOut       = $sample_name.$extension."_consensus_mapped.bam";
     } else {
-      $bamOut       = $sample_name.$extension."_UnmappedConsensusReads_PostFilter.bam";
+      $bamOut       = $sample_name.$extension."_UnmappedConsensusReads_PostFilter.sortByQuery.bam";
     }
     
     my @result_files = ();

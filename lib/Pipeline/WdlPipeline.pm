@@ -57,9 +57,11 @@ sub addMutect2 {
     $config->{$mutect2_pon} = {     
       "class" => "CQS::UniqueWdl",
       "target_dir" => "${target_dir}/$mutect2_pon",
-      "cromwell_config_file" => $def->{cromwell_config_file}{$wdl_key},
-      "cromwell_jar" => getValue($def, "cromwell_jar"),
-      "input_option_file" => getValue($def, "cromwell_option_file"),
+      "cromwell_config_file" => $def->{wdl}{$wdl_key}{cromwell_config_file},
+#      "cromwell_jar" => getValue($def, "cromwell_jar"),
+#      "input_option_file" => getValue($def, "cromwell_option_file"),
+      "cromwell_jar" => $def->{wdl}{cromwell_jar},
+      "input_option_file" => $def->{wdl}{cromwell_option_file},
       "singularity_image_files_ref" => ["singularity_image_files"],
       "wdl_file" => $pon_def->{wdl_file},
       "input_json_file" => $pon_def->{input_file},
@@ -96,12 +98,14 @@ sub addMutect2 {
     "class" => "CQS::Wdl",
     "target_dir" => "${target_dir}/$mutect2_call",
     "source_ref" => [$mutect2_normal_files, ".bam\$"],
-    "cromwell_config_file" => $def->{cromwell_config_file}{$wdl_key},
-    "cromwell_jar" => getValue($def, "cromwell_jar"),
+    "cromwell_config_file" => $def->{wdl}{$wdl_key}{cromwell_config_file},
+#    "cromwell_jar" => getValue($def, "cromwell_jar"),
+    "cromwell_jar" => $def->{wdl}{cromwell_jar},
+    "input_option_file" => $def->{wdl}{cromwell_option_file},
     "singularity_image_files_ref" => ["singularity_image_files"],
     "wdl_file" => $def->{wdl}{$wdl_key}{mutect2}{wdl_file},
     "input_json_file" => $def->{wdl}{$wdl_key}{mutect2}{input_file},
-    "input_option_file" => getValue($def, "cromwell_option_file"),
+#    "input_option_file" => getValue($def, "cromwell_option_file"),
     "input_parameters" => {
       "Mutect2.intervals" => $def->{covered_bed},
       "Mutect2.ref_fasta" => $def->{ref_fasta},
@@ -116,7 +120,7 @@ sub addMutect2 {
     "input_single" => $pon,
     pbs=> {
       "nodes"     => "1:ppn=8",
-      "walltime"  => "2",
+      "walltime"  => "12",
       "mem"       => "40gb"
     },
   };
