@@ -111,6 +111,8 @@ sub pairedFastqToProcessedBam {
   my $server = $wdl->{$server_key};
   my $pipeline = $server->{$pipeline_key};
 
+  my $PreProcessing_DoMarkDuplicates = getValue($def, "PreProcessing_DoMarkDuplicates", "true");
+
   my $task = $pipeline_key;
   $config->{$task} = {     
     "class" => "CQS::Wdl",
@@ -124,7 +126,7 @@ sub pairedFastqToProcessedBam {
     "input_json_file" => $pipeline->{"input_file"},
     "input_parameters" => {
       "PreProcessingForVariantDiscovery_GATK4.sample_name" => "SAMPLE_NAME",
-      "PreProcessingForVariantDiscovery_GATK4.DoMarkDuplicates" => "true"
+      "PreProcessingForVariantDiscovery_GATK4.DoMarkDuplicates" =>$PreProcessing_DoMarkDuplicates,
     },
     "input_list" => {
       "PreProcessingForVariantDiscovery_GATK4.flowcell_unmapped_bams_list_ref" => [$files_ref,".fastq"]
