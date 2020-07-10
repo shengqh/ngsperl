@@ -12,6 +12,7 @@ use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 use Alignment::AlignmentUtils;
+use List::Util qw[min max];
 
 our @ISA = qw(CQS::Task);
 
@@ -34,7 +35,7 @@ sub perform {
   #  }
   #
 
-  my $sambamba_memory = int($memory * 0.95);
+  my $sambamba_memory = min(int($memory * 0.9), 20);
 
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
   my $star                    = get_option( $config, $section, "star_location",           "STAR" );

@@ -1620,7 +1620,7 @@ sub addStarFeaturecount {
     target_dir               => $starFolder,
     option                   => "",
     rtemplate                => "../Alignment/STARFeatureCount.r",
-    output_file_ext          => ".STARSummary.csv;.STARSummary.csv.png;.FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
+    output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png;.STARSummary.csv;.STARSummary.csv.png",
     parameterSampleFile1_ref => [ $star_task, "_Log.final.out" ],
     parameterSampleFile2_ref => [ $star_task, ".count.summary" ],
     sh_direct                => 1,
