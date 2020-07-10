@@ -103,6 +103,8 @@ sub get_log_description {
 
   my $result = <<SBATCH;
 #SBATCH -o $pbs_file
+
+smemwatch -k 99 -d 50 \$\$ \& 
 SBATCH
 
   return ($result);

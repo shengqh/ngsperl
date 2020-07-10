@@ -33,6 +33,9 @@ sub perform {
   #    $option = $option . "  --outSAMprimaryFlag AllBestScore";
   #  }
   #
+
+  my $sambamba_memory = int($memory * 0.95);
+
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
   my $star                    = get_option( $config, $section, "star_location",           "STAR" );
 
@@ -122,7 +125,7 @@ fi
   if ($output_sort_by_coordinate) {
     print $pbs "
 if [ ! -s ${final_bam} ]; then
-  sambamba sort -m $memory -t $thread -o $final_bam $unsorted
+  sambamba sort -m ${sambamba_memory}G -t $thread -o $final_bam $unsorted
   sambamba index $final_bam
 fi  
 ";
@@ -182,7 +185,7 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $output_sort_by_coordinate = getSortByCoordinate( $config, $section );
-  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 0 );
+  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1 );
   my $delete_star_featureCount_bam  = get_option( $config, $section, "delete_star_featureCount_bam", 0 );
 
   my $result = {};

@@ -10,13 +10,17 @@ use CQS::ClassFactory;
 use Pipeline::PipelineUtils;
 use Data::Dumper;
 use Hash::Merge qw( merge );
+use POSIX qw(strftime);
 
 require Exporter;
 our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(addMutect2)
+    qw(
+      addPairedFastqToUnmappedBam
+      addMutect2
+    )
   ]
 );
 
@@ -24,13 +28,69 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
+sub addPairedFastqToUnmappedBam {
+  my ($config, $def, $individual, $target_dir, $files_ref) = @_;
+
+  my $datestring = strftime("%Y-%m-%dT%H:%M:%S%z", localtime);
+
+  my $fastq_1 = "fastq_1";
+  $config->{$fastq_1} = {     
+    "class" => "CQS::FilePickTask",
+    "source_ref" => $files_ref,
+    "sample_index" => 0, 
+  };
+  
+  my $fastq_2 = "fastq_2";
+  $config->{$fastq_2} = {     
+    "class" => "CQS::FilePickTask",
+    "source_ref" => $files_ref,
+    "sample_index" => 1, 
+  };
+  
+  my $server_key = getValue($def, "wdl_key", "local");
+  my $pipeline_key = "paired_fastq_to_unmapped_bam";
+  my $wdl = $def->{"wdl"};
+  my $server = $wdl->{$server_key};
+  my $pipeline = $server->{$pipeline_key};
+
+  my $task = $pipeline_key;
+  $config->{$task} = {     
+    "class" => "CQS::Wdl",
+    "target_dir" => "${target_dir}/$pipeline_key",
+    "source_ref" => $files_ref,
+    "singularity_image_files_ref" => ["singularity_image_files"],
+    "cromwell_jar" => $wdl->{"cromwell_jar"},
+    "input_option_file" => $wdl->{"cromwell_option_file"},
+    "cromwell_config_file" => $server->{"cromwell_config_file"},
+    "wdl_file" => $pipeline->{"wdl_file"},
+    "input_json_file" => $pipeline->{"input_file"},
+    "input_parameters" => {
+      "ConvertPairedFastQsToUnmappedBamWf.readgroup_name" => "SAMPLE_NAME",
+      "ConvertPairedFastQsToUnmappedBamWf.sample_name" => "SAMPLE_NAME",
+      "ConvertPairedFastQsToUnmappedBamWf.library_name" => "SAMPLE_NAME",
+      "ConvertPairedFastQsToUnmappedBamWf.platform_unit" => "illumina",
+      "ConvertPairedFastQsToUnmappedBamWf.run_date" => $datestring,
+      "ConvertPairedFastQsToUnmappedBamWf.platform_name" => "illumina",
+      "ConvertPairedFastQsToUnmappedBamWf.sequencing_center" => "Unknown",
+      "ConvertPairedFastQsToUnmappedBamWf.fastq_1_ref" => [$fastq_1],
+      "ConvertPairedFastQsToUnmappedBamWf.fastq_2_ref" => [$fastq_2]
+    },
+    pbs=> {
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "2",
+      "mem"       => "40gb"
+    },
+  };
+  push @$individual, $task;
+  return ($task);
+}
+
 sub addMutect2 {
   my ($config, $def, $summary, $target_dir, $bam_input) = @_;
 
   my $mutect2_index_dic = {};
   my $mutect2_index_key = "mutect2_Index";
   my $mutect2_prefix = "${bam_input}_muTect2_";
-  my $wdl_key = getValue($def, "wdl_key", "local");
   
   my $mutect2_normal_files = $mutect2_prefix . "_normal_files";
   $config->{$mutect2_normal_files} = {     
@@ -48,23 +108,25 @@ sub addMutect2 {
     "sample_index_in_group" => 1, 
   };
 
-  my $mutect2_def = $def->{wdl}{$wdl_key}{mutect2};
+  my $server_key = getValue($def, "wdl_key", "local");
+  my $wdl = $def->{"wdl"};
+  my $server = $wdl->{$server_key};
+  my $mutect2_pipeline = $server->{"mutect2"};
 
   my $pon = {};
-  if ($mutect2_def->{perform_mutect2_pon}){
-    my $pon_def = $def->{wdl}{$wdl_key}{mutect2_pon};
+  if ($mutect2_pipeline->{"perform_mutect2_pon"}){
+    my $pon_pipeline = $server->{"mutect2_pon"};
+
     my $mutect2_pon = $mutect2_prefix . getNextIndex($mutect2_index_dic, $mutect2_index_key) . "_pon";
     $config->{$mutect2_pon} = {     
       "class" => "CQS::UniqueWdl",
       "target_dir" => "${target_dir}/$mutect2_pon",
-      "cromwell_config_file" => $def->{wdl}{$wdl_key}{cromwell_config_file},
-#      "cromwell_jar" => getValue($def, "cromwell_jar"),
-#      "input_option_file" => getValue($def, "cromwell_option_file"),
-      "cromwell_jar" => $def->{wdl}{cromwell_jar},
-      "input_option_file" => $def->{wdl}{cromwell_option_file},
       "singularity_image_files_ref" => ["singularity_image_files"],
-      "wdl_file" => $pon_def->{wdl_file},
-      "input_json_file" => $pon_def->{input_file},
+      "cromwell_jar" => $wdl->{"cromwell_jar"},
+      "input_option_file" => $wdl->{"cromwell_option_file"},
+      "cromwell_config_file" => $server->{"cromwell_config_file"},
+      "wdl_file" => $pon_pipeline->{"wdl_file"},
+      "input_json_file" => $pon_pipeline->{"input_file"},
       "input_array" => {
         "Mutect2_Panel.normal_bams_ref" => [$mutect2_normal_files, ".bam\$"],
         "Mutect2_Panel.normal_bais_ref" => [$mutect2_normal_files, ".bai\$"]
@@ -98,14 +160,12 @@ sub addMutect2 {
     "class" => "CQS::Wdl",
     "target_dir" => "${target_dir}/$mutect2_call",
     "source_ref" => [$mutect2_normal_files, ".bam\$"],
-    "cromwell_config_file" => $def->{wdl}{$wdl_key}{cromwell_config_file},
-#    "cromwell_jar" => getValue($def, "cromwell_jar"),
-    "cromwell_jar" => $def->{wdl}{cromwell_jar},
-    "input_option_file" => $def->{wdl}{cromwell_option_file},
     "singularity_image_files_ref" => ["singularity_image_files"],
-    "wdl_file" => $def->{wdl}{$wdl_key}{mutect2}{wdl_file},
-    "input_json_file" => $def->{wdl}{$wdl_key}{mutect2}{input_file},
-#    "input_option_file" => getValue($def, "cromwell_option_file"),
+    "cromwell_jar" => $wdl->{"cromwell_jar"},
+    "input_option_file" => $wdl->{"cromwell_option_file"},
+    "cromwell_config_file" => $server->{"cromwell_config_file"},
+    "wdl_file" => $mutect2_pipeline->{"wdl_file"},
+    "input_json_file" => $mutect2_pipeline->{"input_file"},
     "input_parameters" => {
       "Mutect2.intervals" => $def->{covered_bed},
       "Mutect2.ref_fasta" => $def->{ref_fasta},
@@ -127,3 +187,5 @@ sub addMutect2 {
   push @$summary, $mutect2_call;
   return ($mutect2_call);
 }
+
+1;

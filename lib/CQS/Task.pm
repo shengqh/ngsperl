@@ -346,8 +346,7 @@ sub open_pbs {
 
   open( my $pbs, ">$pbs_file" ) or die $!;
 
-  print $pbs "$pbs_desc
-$log_desc
+  print $pbs "${pbs_desc}${log_desc}
 
 $path_file
 $init_command

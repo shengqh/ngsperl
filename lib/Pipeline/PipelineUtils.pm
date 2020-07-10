@@ -52,7 +52,8 @@ our %EXPORT_TAGS = (
     addXHMM
     addGeneLocus
     annotateNearestGene
-    checkFileGroupPairNames)
+    checkFileGroupPairNames
+    addStarFeaturecount)
   ]
 );
 
@@ -1571,5 +1572,69 @@ sub checkFileGroupPairNames {
     exit;
   }
 }
+
+sub addStarFeaturecount {
+  my ($config, $def, $individual, $summary, $target_dir, $source_ref, $suffix) = @_;
+  my $aligner_index              = $def->{star_index} or die "Define star_index at definition first";
+  my $transcript_gtf             = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
+  my $star_featurecount_walltime = getValue( $def, "star_featurecount_walltime", 23 );
+  my $star_memory = getValue( $def, "star_memory", 40 );
+  my $star_option     = $def->{star_option};
+
+  if(not defined $suffix) {
+    $suffix = "";
+  }
+  my $starFolder                 = $target_dir . "/" . getNextFolderIndex($def) . "star_featurecount" . $suffix;
+
+  my $star_task = "star_featurecount" . $suffix;
+  
+  $config->{$star_task} = {
+    class                     => "Alignment::STARFeatureCount",
+    perform                   => 1,
+    target_dir                => $starFolder,
+    option                    => $star_option,
+    source_ref                => $source_ref,
+    genome_dir                => $aligner_index,
+    output_sort_by_coordinate => 1,
+    output_to_same_folder     => $def->{output_bam_to_same_folder},
+    featureCount_option       => getValue( $def, "featureCount_option" ),
+    star_location             => $def->{star_location},
+    gff_file                  => $transcript_gtf,
+    is_paired_end             => is_paired_end($def),
+    delete_star_featureCount_bam => $def->{delete_star_featureCount_bam},
+    sh_direct                 => 0,
+    pbs                       => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=" . $def->{max_thread},
+      "walltime"  => "$star_featurecount_walltime",
+      "mem"       => "${star_memory}gb"
+    },
+  };
+  push @$individual, ($star_task);
+  
+  my $summary_task = "star_featurecount${suffix}_summary";
+  $config->{$summary_task} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $starFolder,
+    option                   => "",
+    rtemplate                => "../Alignment/STARFeatureCount.r",
+    output_file_ext          => ".STARSummary.csv;.STARSummary.csv.png;.FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
+    parameterSampleFile1_ref => [ $star_task, "_Log.final.out" ],
+    parameterSampleFile2_ref => [ $star_task, ".count.summary" ],
+    sh_direct                => 1,
+    pbs                      => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "2",
+      "mem"       => "10gb"
+    },
+  };
+  push @$summary, ($summary_task);
+
+  return($star_task);
+};
 
 1;

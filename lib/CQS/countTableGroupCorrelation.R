@@ -373,7 +373,7 @@ for (i in 1:nrow(countTableFileAll)) {
     width=min(8000, max(2000, 50 * ncol(countHT)))
     if (ncol(countHT)>1 & nrow(countHT)>1) {
       print(paste0("Drawing heatmap for ", title, " samples."))
-      if (groupFileList!="") {
+      if (hasMultipleGroup) {
         legendfun<-function() showLegend(legend=unique(groups),col=unique(conditionColors[,1]))
       }else{
         legendfun<-NULL
@@ -392,18 +392,10 @@ for (i in 1:nrow(countTableFileAll)) {
           png(paste0(outputFilePrefix,curSuffix,".heatmap.png"),width=width,height=width,res=300)
         }
         
-        if(!is.na(conditionColors[1])){
-          if(is.null(legendfun)){
-            heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,ColSideColors=conditionColors,cexCol=hcaOption$cexCol)
-          }else{
-            heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,legendfun=legendfun,ColSideColors=conditionColors,cexCol=hcaOption$cexCol)
-          }
+        if(hasMultipleGroup){
+          heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,legendfun=legendfun,ColSideColors=conditionColors,cexCol=hcaOption$cexCol)
         } else {
-          if(is.null(legendfun)){
-            heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,cexCol=hcaOption$cexCol)
-          }else{
-            heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,legendfun=legendfun,cexCol=hcaOption$cexCol)
-          }
+          heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,cexCol=hcaOption$cexCol)
         }
         
         dev.off()
@@ -442,7 +434,7 @@ for (i in 1:nrow(countTableFileAll)) {
         image(x=1:length(colAll),y=1,z=matrix(1:length(colAll),ncol=1),xlab="",xaxt="n",yaxt="n",col=colAll);
         axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
       }
-      if (groupFileList!="") {
+      if (hasMultipleGroup) {
         legendfun<-function() showLegend(legend=unique(groups),col=unique(conditionColors[,1]))
       }
       for(format in outputFormat){
@@ -453,7 +445,7 @@ for (i in 1:nrow(countTableFileAll)) {
         }
         labRow=NULL
         hcaOption<-getHeatmapOption(countNumCor, TRUE)
-        if(all(!is.na(conditionColors))) { #has group information
+        if(hasMultipleGroup) { #has group information
           heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun,ColSideColors=conditionColors)
         }else{
           heatmap3(countNumCor[nrow(countNumCor):1,],scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,Rowv=NA,Colv=NA,col=col,legendfun=legendfun)
@@ -471,10 +463,10 @@ for (i in 1:nrow(countTableFileAll)) {
             }else{
               png(paste0(outputFilePrefix,curSuffix,".Correlation.Cluster.png"),width=width,height=width,res=300)
             }
-            if(!is.na(conditionColors)){
+            if(hasMultipleGroup){
               temp=try(heatmap3(countNumCor,scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,col=col,legendfun=legendfun,ColSideColors=conditionColors))
             }else{
-              temp=try(heatmap3(countNumCor,scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,col=col,legendfun=legendfun))
+              temp=try(heatmap3(countNumCor,scale="none",balanceColor=T,labRow=hcaOption$labRow,margin=hcaOption$margin,col=col))
             }
             dev.off()
           }
