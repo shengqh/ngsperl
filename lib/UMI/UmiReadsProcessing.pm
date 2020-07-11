@@ -65,6 +65,8 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+    my $final_file;
+    my $rmlist = "";
 
     print $pbs "echo Processing $sample_name \n"; 
     
@@ -103,6 +105,7 @@ sub perform {
 ##################################
     my $umi_mapped_bam_prefix=basename($sample_name);
     my $umi_mapped_bam_merged_prefix=$umi_mapped_bam_prefix."_mappedAndMerged";
+    $rmlist = $rmlist . " " . "${umi_mapped_bam_merged_prefix}.bam";
     print $pbs "
 if [[ ! -s ${umi_mapped_bam_merged_prefix}.bam ]]; then
   echo 1. MergeBamAlignment 
@@ -117,18 +120,22 @@ fi
 ##################################
     print $pbs "echo 2. Generate consensus reads \n"; 
     my $umi_mapped_grouped_bam_prefix=$umi_mapped_bam_merged_prefix."_grouped";
+    $rmlist = $rmlist . " " . "${umi_mapped_grouped_bam_prefix}.bam";
     print $pbs "
 if [[ ! -s ${umi_mapped_grouped_bam_prefix}.bam ]]; then
   java $java_option -jar $fgbio_jar GroupReadsByUmi --input=${umi_mapped_bam_merged_prefix}.bam --output=${umi_mapped_grouped_bam_prefix}.bam --strategy=adjacency --edits=1 --min-map-q=20 
 fi
 ";
     my $umi_consensus_bam_prefix=$sample_name.$extension."_UnmappedConsensusReads";
+    $rmlist = $rmlist . " " . "${umi_consensus_bam_prefix}.bam";
     print $pbs "
 if [[ ! -s ${umi_consensus_bam_prefix}.bam ]]; then
   java $java_option -jar $fgbio_jar CallMolecularConsensusReads --input=${umi_mapped_grouped_bam_prefix}.bam --output=${umi_consensus_bam_prefix}.bam --error-rate-post-umi=30 --min-reads=1
 fi
 ";
     my $umi_consensus_filtered_bam_prefix=$umi_consensus_bam_prefix."_PostFilter";
+    $rmlist = $rmlist . " " . "${umi_consensus_filtered_bam_prefix}.bam";
+    $final_file="${umi_consensus_filtered_bam_prefix}.sortByQuery.bam";
     print $pbs "
 if [[ ! -s ${umi_consensus_filtered_bam_prefix}.bam ]]; then
   java $java_option -jar $fgbio_jar FilterConsensusReads --input=${umi_consensus_bam_prefix}.bam --output=${umi_consensus_filtered_bam_prefix}.bam --ref=$bwa_index --reverse-per-base-tags=true --min-reads=1 -E 0.05 -N 28 -e 0.1 -n 0.3
@@ -146,25 +153,36 @@ fi
 ##################################
 if ($alignConsensusReads) {
     print $pbs "echo 3. Remap the filtered reads \n"; 
-        my $unmapped_consensus_fastq_prefix=$sample_name.$extension."_consensus";
+    my $unmapped_consensus_fastq_prefix=$sample_name.$extension."_consensus";
+    $rmlist = $rmlist . " " . "${umi_consensus_filtered_bam_prefix}.sortByQuery.bam". " " . "${unmapped_consensus_fastq_prefix}.fastq";
     print $pbs "
 if [[ ! -s ${unmapped_consensus_fastq_prefix}.fastq ]]; then
   gatk $java_option SamToFastq I=${umi_consensus_filtered_bam_prefix}.bam F=${unmapped_consensus_fastq_prefix}.fastq INTERLEAVE=true
 fi
 ";
     my $mapped_consensus_sam_prefix=$unmapped_consensus_fastq_prefix;
+    $rmlist = $rmlist . " " . "${mapped_consensus_sam_prefix}.sam";
     print $pbs "
 if [[ ! -s ${mapped_consensus_sam_prefix}.sam ]]; then
   bwa mem -p -t 8 $bwa_index ${unmapped_consensus_fastq_prefix}.fastq > ${mapped_consensus_sam_prefix}.sam
 fi
 ";
     my $umi_mapped_consensus_bam_prefix=$mapped_consensus_sam_prefix."_mapped";
+     $final_file="${umi_mapped_consensus_bam_prefix}.bam";
     print $pbs "
 if [[ ! -s ${umi_mapped_consensus_bam_prefix}.bam ]]; then
   gatk $java_option MergeBamAlignment UNMAPPED=${umi_consensus_filtered_bam_prefix}.bam ALIGNED=${mapped_consensus_sam_prefix}.sam O=${umi_mapped_consensus_bam_prefix}.bam R=$bwa_index SO=coordinate ALIGNER_PROPER_PAIR_FLAGS=true MAX_GAPS=-1 ORIENTATIONS=FR VALIDATION_STRINGENCY=SILENT CREATE_INDEX=true 
 fi
 ";
 }
+
+  if ($rmlist ne "") {
+              print $pbs "
+if [ -s $final_file ]; then
+  rm $rmlist
+fi
+";
+  } 
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;

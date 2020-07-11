@@ -106,9 +106,15 @@ fi
       print $pbs "
 if [ -s $unsorted_bam_file ]; then
   samtools flagstat $unsorted_bam_file > ${unsorted_bam_file}.stat 
+fi
+";
+  if ($rmlist ne "") {
+        print $pbs "
+if [ -s $unsorted_bam_file ]; then
   rm $rmlist
 fi
 ";
+}
 
       $self->close_pbs( $pbs, $pbs_file );
       next;
@@ -168,12 +174,20 @@ fi
       $rmlist = $rmlist . " " . $sorted_bam_file;
     }
 
+
     print $pbs "
 if [ -s $final_file ]; then
   samtools flagstat $final_file > ${final_file}.stat 
+fi
+";
+
+  if ($rmlist ne "") {
+        print $pbs "
+if [ -s $final_file ]; then
   rm $rmlist
 fi
 ";
+  }
 
     $self->close_pbs( $pbs, $pbs_file );
   }
