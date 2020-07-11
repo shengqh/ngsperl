@@ -210,8 +210,14 @@ sub addMutect2 {
 
   my $mutect2_call = $mutect2_prefix . getNextIndex($mutect2_index_dic, $mutect2_index_key) . "_call";
   my $run_funcotator="false";
-  if ($def->{ncbi_build} eq "GRCh38",) { #based on genome, hg38=true, else false
+  if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
     $run_funcotator="true";
+  }
+  my $output_sample_ext="hg19";
+  if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
+    $output_sample_ext="hg38";
+  } elsif ($def->{ncbi_build} eq "GRCm38")  {
+    $output_sample_ext="mm10";
   }
   $config->{$mutect2_call} = {     
     "class" => "CQS::Wdl",
@@ -222,8 +228,8 @@ sub addMutect2 {
     "input_option_file" => $wdl->{"cromwell_option_file"},
     "cromwell_config_file" => $server->{"cromwell_config_file"},
     "wdl_file" => $mutect2_pipeline->{"wdl_file"},
-    output_file_ext => "-filtered.annotated.maf",
-    output_other_exts => "-filtered.vcf",
+    output_file_ext => ".".$output_sample_ext."-filtered.annotated.maf",
+    output_other_ext => ".".$output_sample_ext."-filtered.vcf",
     "input_json_file" => $mutect2_pipeline->{"input_file"},
     "input_parameters" => {
       "Mutect2.intervals" => $def->{covered_bed},
