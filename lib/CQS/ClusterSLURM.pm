@@ -3,6 +3,7 @@ package CQS::ClusterSLURM;
 
 use strict;
 use warnings;
+use POSIX;
 use CQS::ClusterScript;
 
 our @ISA = qw(CQS::ClusterScript);
@@ -79,6 +80,11 @@ sub get_cluster_desc {
   $mem =~ s/mb/M/g;
   $mem =~ s/gb/G/g;
 
+  $mem =~ /(\d+)(\S+)/;
+  my $memNum = ceil($1 * 1.06);
+  my $memUnit = $2;
+  $mem = $memNum . $memUnit;
+
   my $pbs_desc = <<SBATCH;
 #!/bin/bash
 #SBATCH --mail-user=$email
@@ -104,7 +110,10 @@ sub get_log_description {
   my $result = <<SBATCH;
 #SBATCH -o $pbs_file
 
-smemwatch -k 99 -d 50 \$\$ \& 
+if [ -n "\${SLURM_JOB_ID}" ] ; then
+  smemwatch -k 95 -d 50 \$\$ \&
+fi
+
 SBATCH
 
   return ($result);
