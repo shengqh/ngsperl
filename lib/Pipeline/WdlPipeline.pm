@@ -20,6 +20,7 @@ our %EXPORT_TAGS = (
     qw(
       addPairedFastqToUnmappedBam
       pairedFastqToProcessedBam
+      addUmiReadsToProcessedBam
       addMutect2
     )
   ]
@@ -88,22 +89,6 @@ sub addPairedFastqToUnmappedBam {
 
 sub pairedFastqToProcessedBam {
   my ($config, $def, $individual, $target_dir, $files_ref) = @_;
-
-  # my $datestring = strftime("%Y-%m-%dT%H:%M:%S%z", localtime);
-
-  # my $fastq_1 = "fastq_1";
-  # $config->{$fastq_1} = {     
-  #   "class" => "CQS::FilePickTask",
-  #   "source_ref" => $files_ref,
-  #   "sample_index" => 0, 
-  # };
-  
-  # my $fastq_2 = "fastq_2";
-  # $config->{$fastq_2} = {     
-  #   "class" => "CQS::FilePickTask",
-  #   "source_ref" => $files_ref,
-  #   "sample_index" => 1, 
-  # };
   
   my $server_key = getValue($def, "wdl_key", "local");
   my $pipeline_key = "paired_fastq_to_processed_bam";
@@ -140,6 +125,44 @@ sub pairedFastqToProcessedBam {
   push @$individual, $task;
   return ($task);
 }
+
+sub addUmiReadsToProcessedBam {
+  my ($config, $def, $individual, $target_dir, $files_ref, $unmapped_bam_ref) = @_;
+  
+  my $server_key = getValue($def, "wdl_key", "local");
+  my $pipeline_key = "paired_fastq_to_processed_bam";
+  my $wdl = $def->{"wdl"};
+  my $server = $wdl->{$server_key};
+  my $pipeline = $server->{$pipeline_key};
+
+  my $task = $pipeline_key;
+  $config->{$task} = {     
+    "class" => "CQS::Wdl",
+    "target_dir" => "${target_dir}/$pipeline_key",
+    "source_ref" => $files_ref,
+    "singularity_image_files_ref" => ["singularity_image_files"],
+    "cromwell_jar" => $wdl->{"cromwell_jar"},
+    "input_option_file" => $wdl->{"cromwell_option_file"},
+    "cromwell_config_file" => $server->{"cromwell_config_file"},
+    "wdl_file" => "/home/zhaos/source/perl_cqs/workflow/gatk4-data-processing/processing-for-variant-discovery-gatk4-UMI.wdl",
+    "input_json_file" => $pipeline->{"input_file"},
+    "input_parameters" => {
+      "PreProcessingForVariantDiscovery_GATK4.sample_name" => "SAMPLE_NAME",
+      "PreProcessingForVariantDiscovery_GATK4.unmapped_bam_file_ref" => [$unmapped_bam_ref,".bam"],
+    },
+    "input_list" => {
+      "PreProcessingForVariantDiscovery_GATK4.flowcell_unmapped_bams_list_ref" => [$files_ref,".fastq"]
+    },
+    pbs=> {
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "24",
+      "mem"       => "60gb"
+    },
+  };
+  push @$individual, $task;
+  return ($task);
+}
+
 
 
 sub addMutect2 {

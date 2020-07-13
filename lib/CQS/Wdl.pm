@@ -2,7 +2,7 @@
 package CQS::Wdl;
 
 use strict;
-use warnings;
+use warnings::register;
 use File::Basename;
 use CQS::PBS;
 use CQS::ConfigUtils;
@@ -155,7 +155,8 @@ sub perform {
   my $json_dic = read_json($input_json_file);
   for my $input_key (keys %$replace_dics){
     if (!defined $json_dic->{$input_key}){
-      die "Cannot find " . $input_key . " in json file";
+  #    die "Cannot find " . $input_key . " in json file";
+      warnings::warn("Cannot find " . $input_key . " in json file");
     }
   }
   

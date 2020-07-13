@@ -105,7 +105,7 @@ sub perform {
 ##################################
     my $umi_mapped_bam_prefix=basename($sample_name);
     my $umi_mapped_bam_merged_prefix=$umi_mapped_bam_prefix."_mappedAndMerged";
-    $rmlist = $rmlist . " " . "${umi_mapped_bam_merged_prefix}.bam";
+    $rmlist = $rmlist . " " . "${umi_mapped_bam_merged_prefix}.bam". " " . "${umi_mapped_bam_merged_prefix}.bai";
     print $pbs "
 if [[ ! -s ${umi_mapped_bam_merged_prefix}.bam ]]; then
   echo 1. MergeBamAlignment 
