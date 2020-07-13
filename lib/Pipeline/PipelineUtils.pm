@@ -79,7 +79,14 @@ sub getIntermidiateDir {
 
   my $result = $defaultDir;
   if($def->{use_intermediate_dir} ){
-    $result = create_directory_or_die( $def->{target_dir} . "/intermediate_data" );
+    $result = $def->{target_dir} . "/intermediate_data";
+    if (-e $result) {
+      return($result);
+    }
+    if ($def->{use_intermediate_dir_aside}){
+      $result = $def->{target_dir} . ".intermediate_data";
+    }
+    $result = create_directory_or_die( $result );
   }
 
   return $result;

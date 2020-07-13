@@ -74,7 +74,8 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "max_thread", 8 );
 
   initDefaultValue( $def, "use_intermediate_dir", 1 );
-
+  initDefaultValue( $def, "use_intermediate_dir_aside", 0 );
+  
   initDefaultValue( $def, "host_xml2bam",                      0 );
   initDefaultValue( $def, "bacteria_group1_count2bam",         0 );
   initDefaultValue( $def, "bacteria_group2_count2bam",         0 );
