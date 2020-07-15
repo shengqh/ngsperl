@@ -2,9 +2,11 @@ import argparse
 import sys
 import logging
 import os
+import os.path
 import csv
 import gzip
 import re
+from Bio import SeqIO, bgzf
 
 def is_version_2():
   return sys.version_info[0] < 3
@@ -57,8 +59,11 @@ frequency=float(args.frequency)
 logger = initialize_logger(args.output + ".log", 'filterVcf', args.debug)
 logger.info(str(args))
 
-with open(args.output, "w") as fout:
-  with open(args.output + ".discard", "w") as fdiscard:
+basename = os.path.splitext(args.output)[0]
+
+outputTemp = basename + ".tmp.gz"
+with bgzf.BgzfWriter(outputTemp, "wb") as fout:
+  with bgzf.BgzfWriter(basename + ".discard.gz", "wb") as fdiscard:
     if args.input.endswith(".gz"):
       if is_version_2():
         fin = gzip.open(args.input, 'rb')
@@ -71,6 +76,7 @@ with open(args.output, "w") as fout:
         line = fin.readline()
         if line.find("#CHROM") != -1:
           fout.write(line)
+          fdiscard.write(line)
           vcfheaders = line.rstrip().split("\t")
           format_index = vcfheaders.index("FORMAT")
           info_index = vcfheaders.index("INFO")
@@ -86,10 +92,14 @@ with open(args.output, "w") as fout:
       FailInbreedingCoeff = 0
       FailQuality = 0
       FailPercentage = 0
+      lastChrom = ""
+
       for line in fin:
         snv = line.split('\t')
         
         totalsnv = totalsnv + 1
+        if totalsnv % 10000 == 0:
+          logger.info("Chrom=%s,Processed=%d,FailInbreedingCoeff=%d,FailQuality=%d,FailPercentage=%d,Passed=%d" % (snv[0], totalsnv, FailInbreedingCoeff, FailQuality, FailPercentage, totalsnv - FailInbreedingCoeff - FailQuality - FailPercentage))
         
         gt1count = 0
         gt1lessCount = 0
@@ -121,10 +131,18 @@ with open(args.output, "w") as fout:
             if gq >= args.min_genotype_quality and dp >= args.min_depth:
               highQuality = True
 
-          if sampleData.startswith("0/") or sampleData.startswith("0|"):
-            gt1count = gt1count + 1
+          is_gt1 = sampleData.startswith("0/")
+          if is_gt1:
+            split_gt1 = "/"
+          else:
+            is_gt1 = sampleData.startswith("0|")
+            if is_gt1:
+              split_gt1 = "|"
+
+          if is_gt1:
+            gt1count += 1
             
-            gts = parts[0].split("/") if sampleData.startswith("0/") else  parts[0].split("|")
+            gts = parts[0].split(split_gt1)
             gt = int(gts[1])
             
             adList = parts[AD_index].split(",")
@@ -161,3 +179,8 @@ with open(args.output, "w") as fout:
     finally:
       fin.close()
       
+if os.path.isfile(args.output):
+  os.remove(args.output)
+os.rename(outputTemp, args.output)
+
+logger.info("done.")
