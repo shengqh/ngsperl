@@ -49,7 +49,7 @@ sub initializeDefaultOptions {
     initDefaultValue( $def, "chromosome_names" , join(",", @$chromosomes));
   }
 
-  initDefaultValue( $def, "filter_variants_by_allele_frequency",            0 );
+  initDefaultValue( $def, "filter_variants_by_allele_frequency",            1 );
   initDefaultValue( $def, "filter_variants_by_allele_frequency_percentage", 0.9 );
   initDefaultValue( $def, "filter_variants_by_allele_frequency_maf",        0.3 );
   initDefaultValue( $def, "filter_variants_fq_equal_1",                     0 );
@@ -63,6 +63,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_annovar",      0 );
   initDefaultValue( $def, "perform_cnv",          1 );
   initDefaultValue( $def, "perform_vep",          0 );
+  initDefaultValue( $def, "perform_IBS",          0 );
 
   if ( $def->{perform_muTect} || $def->{perform_muTect2indel} ) {
     if ( defined $def->{mills} ) {
@@ -698,8 +699,40 @@ sub getConfig {
         }
       }
 
+      if ($def->{perform_IBS}){
+        if ($def->{perform_muTect} || $def->{perform_muTect2} ) {
+          my $ibs_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_IBS";
+          $config->{$ibs_name} = {
+            class                 => "CQS::ProgramWrapper",
+            perform               => 1,
+            target_dir            => "${target_dir}/${ibs_name}",
+            option                => "",
+            interpretor           => "python",
+            program               => "../Variants/IBS.py",
+            check_program         => 1,
+            parameterFile1_arg    => "-i",
+            parameterFile1_ref    => $filter_name,
+            parameterSampleFile1_arg    => "-f",
+            parameterSampleFile1_ref    => "groups",
+            output_to_same_folder => 1,
+            output_arg            => "-o",
+            output_file           => "",
+            output_file_ext       => ".ibs_score.mean.csv;.ibs_score.csv",
+            sh_direct             => 1,
+            pbs                   => {
+              "email"     => $def->{email},
+              "emailType" => $def->{emailType},
+              "nodes"     => "1:ppn=1",
+              "walltime"  => "10",
+              "mem"       => "10gb"
+            },
+          };
+          push @$summary, $ibs_name;
+        }
+      }
+
       if ( $def->{perform_vep} ) {
-        my $vep_name = $filter_name . "_vep";
+        my $vep_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_vep";
         $config->{$vep_name} = {
           class      => "Annotation::Vcf2Maf",
           perform    => 1,
