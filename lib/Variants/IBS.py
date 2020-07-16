@@ -31,6 +31,9 @@ def initialize_logger(logfile, logname, isDebug):
  
   return(logger)
 
+def isSexChromosome(chrom):
+  return chrom == "X" or chrom == "Y" or chrom == "chrX" or chrom == "chrY"
+
 def genotypeValid(sdata, MAX_index, GQ_index, DP_index, min_gq, min_dp):
   if sdata.startswith("."):
     return(False)
@@ -141,6 +144,10 @@ try:
     #  break
 
     snv = line.rstrip().split('\t')
+    chrom = snv[0]
+    if isSexChromosome(chrom):
+      continue
+    
     if GQ_index == -1:
       format_parts = snv[format_index].split(":")
       GQ_index = format_parts.index("GQ")
