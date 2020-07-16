@@ -223,7 +223,7 @@ sub addMutect2 {
         "mem"       => "40gb"
       },
     };
-    push @$summary, $mutect2_pon;
+    #push @$summary, $mutect2_pon;
 
     $pon = {
       "Mutect2.pon" => [$mutect2_pon, ".vcf\$"],
@@ -272,7 +272,7 @@ sub addMutect2 {
       "mem"       => "40gb"
     },
   };
-  push @$summary, $mutect2_call;
+  #push @$summary, $mutect2_call;
   return ($mutect2_call);
 }
 

@@ -71,7 +71,8 @@ our %EXPORT_TAGS = (
       get_interation_sample_subsample_map
       get_interation_subsample_sample_map
       get_groups
-      get_covariances)
+      get_covariances
+      getGroupPickResult)
   ]
 );
 
@@ -1395,6 +1396,22 @@ sub get_covariances {
     print("    }, \n");
   }
   print("  },\n");
+}
+
+sub getGroupPickResult {
+  my ($config, $source_ref, $sample_index_in_group, $pattern ) = @_;
+
+  my $temp_section = "temp_section";
+  $config->{$temp_section} = {     
+    "class" => "CQS::GroupPickTask",
+    "source_ref" => [$source_ref],
+    "groups_ref" => ["groups"],
+    "sample_index_in_group" => $sample_index_in_group, 
+  };
+  my $myclass = instantiate("CQS::GroupPickTask");
+  my $result = $myclass->result($config, $temp_section, $pattern);
+  delete $config->{$temp_section};
+  return ($result);
 }
 
 1;

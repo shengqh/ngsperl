@@ -244,7 +244,8 @@ sub getConfig {
 
   my $perform_cnv = $def->{perform_cnv_cnMOPs} || $def->{perform_cnv_gatk4_cohort} || $def->{perform_cnv_xhmm};
 
-  if ( $def->{perform_gatk_callvariants} || $def->{perform_muTect} || $def->{perform_muTect2_indel} || $perform_cnv ) {
+  #if ( $def->{perform_gatk_callvariants} || $def->{perform_muTect} || $def->{perform_muTect2_indel} || $perform_cnv ) {
+  if ( 1 ) {
     my $gatk_jar   = getValue( $def, "gatk3_jar" );
     my $picard_jar = getValue( $def, "picard_jar" );
 

@@ -183,4 +183,8 @@ if os.path.isfile(args.output):
   os.remove(args.output)
 os.rename(outputTemp, args.output)
 
+cmd = "tabix %s" % (args.output)
+logger.info(cmd)
+os.system(cmd)
+
 logger.info("done.")
