@@ -18,7 +18,7 @@ for (i in 1:nrow(allMafFiles)) {
   } else {
     next;
   }
-  mafFilter=filterMaf(mafFile)
+  mafFilter=filterMaf(mafFile,mafMax = 0.01,ExAC_FILTER=FALSE)
   mafFilterAll=rbind(mafFilterAll,mafFilter)
 }
 write.table(mafFilterAll,mafFileAllSamples,sep="\t",quote = FALSE,row.names=FALSE)

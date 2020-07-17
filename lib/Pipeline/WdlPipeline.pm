@@ -89,7 +89,7 @@ sub addPairedFastqToUnmappedBam {
   return ($task);
 }
 
-sub pairedFastqToProcessedBam {
+sub addPairedFastqToProcessedBam {
   my ($config, $def, $individual, $target_dir, $files_ref) = @_;
   
   my $server_key = getValue($def, "wdl_key", "local");
