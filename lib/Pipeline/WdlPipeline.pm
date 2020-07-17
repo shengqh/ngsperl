@@ -19,7 +19,7 @@ our %EXPORT_TAGS = (
   'all' => [
     qw(
       addPairedFastqToUnmappedBam
-      pairedFastqToProcessedBam
+      addPairedFastqToProcessedBam
       addUmiReadsToProcessedBam
       addMutect2
     )
