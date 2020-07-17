@@ -425,7 +425,7 @@ sub get_refmap {
       my $partlength = scalar(@parts);
       for ( my $index = 0 ; $index < $partlength ; ) {
         if ( !has_config_section( $config, $parts[$index] ) ) {
-          die "undefined section $parts[$index]";
+          die "undefined section " . Dumper($parts[$index]) . " in $section for $mapname ";
         }
         get_config_section( $config, $parts[$index] );
 
