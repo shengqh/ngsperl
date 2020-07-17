@@ -38,4 +38,39 @@ sub result {
   return $result;
 }
 
+
+sub get_pbs_files {
+  my ( $self, $config, $section ) = @_;
+
+  my $raw_files = get_raw_files($config, $section);
+  my $groups = get_raw_files($config, $section, "groups");
+  my $pick_index = get_option( $config, $section, "sample_index_in_group", 0);
+
+  my $result = {};
+  my $previous_section = $config->{$section}{"source_ref"};
+  if (defined $config->{$previous_section}) {
+    my $previous_classname = $config->{$previous_section}{class};
+
+    if (defined $previous_classname) {
+      my $myclass = instantiate($previous_classname);
+      my $previous_pbs = $myclass->get_pbs_files($config, $previous_section);
+
+      my $task_name = get_task_name( $config, $section );
+
+      for my $group_name (keys %$groups) {
+        my $samples = $groups->{$group_name};
+        my $sample_name = $samples->[$pick_index];
+        my $result_files = $raw_files->{$sample_name};
+        if (defined $previous_pbs->{$sample_name}) {
+          $result->{$group_name} = $previous_pbs->{$sample_name};
+        }else{
+          $result->{$group_name} = $previous_pbs->{$task_name};
+        }
+      }
+    }
+  }
+  
+  return $result;
+}
+
 1;
