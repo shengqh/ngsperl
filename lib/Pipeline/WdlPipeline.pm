@@ -19,7 +19,7 @@ our %EXPORT_TAGS = (
   'all' => [
     qw(
       addPairedFastqToUnmappedBam
-      pairedFastqToProcessedBam
+      addPairedFastqToProcessedBam
       addUmiReadsToProcessedBam
       addMutect2
     )
@@ -78,7 +78,7 @@ sub addPairedFastqToUnmappedBam {
       "ConvertPairedFastQsToUnmappedBamWf.fastq_2_ref" => [$fastq_2]
     },
     output_file_ext => ".bam",
-    output_other_exts => ".bai",
+    output_other_ext => ".bai",
     pbs=> {
       "nodes"     => "1:ppn=8",
       "walltime"  => "2",
@@ -116,8 +116,11 @@ sub addPairedFastqToProcessedBam {
       "PreProcessingForVariantDiscovery_GATK4.DoMarkDuplicates" =>$PreProcessing_DoMarkDuplicates,
     },
     "input_list" => {
-      "PreProcessingForVariantDiscovery_GATK4.flowcell_unmapped_bams_list_ref" => [$files_ref,".fastq"]
+      #"PreProcessingForVariantDiscovery_GATK4.flowcell_unmapped_bams_list_ref" => [$files_ref,".fastq"]
+      "PreProcessingForVariantDiscovery_GATK4.flowcell_unmapped_bams_list_ref" => $files_ref
     },
+    output_file_ext => ".bam",
+    output_other_ext => ".bai",
     pbs=> {
       "nodes"     => "1:ppn=8",
       "walltime"  => "24",
@@ -218,7 +221,7 @@ sub addMutect2 {
         "Mutect2_Panel.intervals" => $def->{covered_bed}
       },
       output_file_ext => ".vcf",
-      output_other_exts => ".vcf.idx",
+      output_other_ext => ".vcf.idx",
       pbs=> {
         "nodes"     => "1:ppn=8",
         "walltime"  => "2",
