@@ -77,6 +77,8 @@ sub addPairedFastqToUnmappedBam {
       "ConvertPairedFastQsToUnmappedBamWf.fastq_1_ref" => [$fastq_1],
       "ConvertPairedFastQsToUnmappedBamWf.fastq_2_ref" => [$fastq_2]
     },
+    output_file_ext => ".bam",
+    output_other_exts => ".bai",
     pbs=> {
       "nodes"     => "1:ppn=8",
       "walltime"  => "2",
@@ -175,16 +177,16 @@ sub addMutect2 {
   my $mutect2_normal_files = $mutect2_prefix . "_normal_files";
   $config->{$mutect2_normal_files} = {     
     "class" => "CQS::GroupPickTask",
-    "source_ref" => [$bam_input],
-    "groups_ref" => ["groups"],
+    "source_ref" => $bam_input,
+    "groups_ref" => "groups",
     "sample_index_in_group" => 0, 
   };
   
   my $mutect2_tumor_files = $mutect2_prefix . "_tumor_files";
   $config->{$mutect2_tumor_files} = {     
     "class" => "CQS::GroupPickTask",
-    "source_ref" => [$bam_input],
-    "groups_ref" => ["groups"],
+    "source_ref" => $bam_input,
+    "groups_ref" => "groups",
     "sample_index_in_group" => 1, 
   };
 
