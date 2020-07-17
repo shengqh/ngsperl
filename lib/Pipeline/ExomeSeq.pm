@@ -155,11 +155,17 @@ sub getConfig {
   }
 
   my $bam_ref;
+  my $bam_input;
   my $fasta;
+  my $dbsnp = $def->{dbsnp};
+  my $mills = $def->{mills};
+  my $gatk_jar   = getValue( $def, "gatk3_jar" );
+  my $picard_jar = getValue( $def, "picard_jar" );
 
   my $alignment_source_ref = $source_ref;
   if ($def->{perform_gatk4_pairedfastq2bam}){
-    $bam_ref = pairedFastqToProcessedBam($config, $def, $individual, $target_dir, $alignment_source_ref);
+    $bam_input = addPairedFastqToProcessedBam($config, $def, $individual, $target_dir, $alignment_source_ref);
+    $bam_ref = [$bam_input, ".bam\$"];
     $fasta = getValue( $def, "bwa_fasta" );
   }else{
     if ($def->{aligner_scatter_count}){
@@ -214,6 +220,7 @@ sub getConfig {
         },
       };
       $bam_ref = [ "bwa", ".bam\$" ];
+      $bam_input = "bwa";
       push @$individual, ( "bwa" );
     }
     else {
@@ -244,19 +251,13 @@ sub getConfig {
           "mem"       => "10gb"
         },
       };
+      $bam_input = $mergeBam;
       $bam_ref = [ $mergeBam, ".bam\$" ];
       push @$individual, (  $mergeBam );
     }
-  }
 
-  my $perform_cnv = $def->{perform_cnv_cnMOPs} || $def->{perform_cnv_gatk4_cohort} || $def->{perform_cnv_xhmm};
+    my $perform_cnv = $def->{perform_cnv_cnMOPs} || $def->{perform_cnv_gatk4_cohort} || $def->{perform_cnv_xhmm};
 
-  #if ( $def->{perform_gatk_callvariants} || $def->{perform_muTect} || $def->{perform_muTect2_indel} || $perform_cnv ) {
-  if ( 1 ) {
-    my $gatk_jar   = getValue( $def, "gatk3_jar" );
-    my $picard_jar = getValue( $def, "picard_jar" );
-
-    my $dbsnp = $def->{dbsnp};
     my $indel_vcf_files;
     if ( $def->{indel_realignment} ) {
       if ( !defined $def->{indel_vcf_files} & defined $dbsnp ) {
@@ -266,7 +267,6 @@ sub getConfig {
         $indel_vcf_files = getValue( $def, "indel_vcf_files" );
       }
     }
-    my $mills = $def->{mills};
     my $vcf;
     if ( defined $dbsnp & defined $mills ) {
       $vcf = [ $dbsnp, $mills ];
@@ -311,375 +311,423 @@ sub getConfig {
     };
     push @$individual, ($refine_name);
 
-    my $bam_input = $refine_name;
+    $bam_input = $refine_name;
+    $bam_ref = [ $refine_name, ".bam\$" ];
+  }
 
-    if($def->{filter_soft_clip}){
-      my $soft_clip_name = $refine_name . "_nosoftclip";
-      $config->{$soft_clip_name} = {
-        class                 => "CQS::ProgramIndividualWrapper",
-        perform               => 1,
-        target_dir            => "${target_dir}/${soft_clip_name}",
-        option                => "--min-mapq " . getValue($def, "soft_clip_min_mapq", 10),
-        interpretor           => "python",
-        program               => "../GATK/filterSoftClip.py",
-        source_arg            => "-i",
-        source_ref            => [ $refine_name, ".bam" ],
-        output_to_same_folder => 1,
-        output_arg            => "-o",
-        output_file_ext       => ".nosoftclip.bam",
-        sh_direct             => 0,
-        pbs                   => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      };
-      push @$individual, ($soft_clip_name);
-      $bam_input = $soft_clip_name;
-    }
+  if($def->{filter_soft_clip}){
+    my $soft_clip_name = $bam_input . "_nosoftclip";
+    $config->{$soft_clip_name} = {
+      class                 => "CQS::ProgramIndividualWrapper",
+      perform               => 1,
+      target_dir            => "${target_dir}/${soft_clip_name}",
+      option                => "--min-mapq " . getValue($def, "soft_clip_min_mapq", 10),
+      interpretor           => "python",
+      program               => "../GATK/filterSoftClip.py",
+      source_arg            => "-i",
+      source_ref            => $bam_ref,
+      output_to_same_folder => 1,
+      output_arg            => "-o",
+      output_file_ext       => ".nosoftclip.bam",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    };
+    push @$individual, ($soft_clip_name);
+    $bam_input = $soft_clip_name;
+  }
 
-    if($def->{perform_extract_bam}){
-      my $extract_bam_locus = getValue($def, "extract_bam_locus");
-      my $extract_bam_task = "extract_bam_locus";
-      $config->{$extract_bam_task} = {
-        class => "CQS::ProgramWrapperOneToOne",
-        target_dir => $target_dir . "/" . getNextFolderIndex($def) . $extract_bam_task,
-        interpretor => "",
-        check_program => 0,
-        option => "view -b -o __OUTPUT__ __FILE__ " . $extract_bam_locus . "; samtools index __OUTPUT__; ",
-        program => "samtools",
-        source_ref => $bam_input,
-        output_arg => "",
-        output_file_prefix => ".bam",
-        output_file_ext => ".bam",
-        output_to_same_folder => 1,
-        sh_direct   => 1,
-        pbs => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        }
-      };
-      push @$individual, ($extract_bam_task);
-    }
+  if($def->{perform_extract_bam}){
+    my $extract_bam_locus = getValue($def, "extract_bam_locus");
+    my $extract_bam_task = "extract_bam_locus";
+    $config->{$extract_bam_task} = {
+      class => "CQS::ProgramWrapperOneToOne",
+      target_dir => $target_dir . "/" . getNextFolderIndex($def) . $extract_bam_task,
+      interpretor => "",
+      check_program => 0,
+      option => "view -b -o __OUTPUT__ __FILE__ " . $extract_bam_locus . "; samtools index __OUTPUT__; ",
+      program => "samtools",
+      source_ref => $bam_input,
+      output_arg => "",
+      output_file_prefix => ".bam",
+      output_file_ext => ".bam",
+      output_to_same_folder => 1,
+      sh_direct   => 1,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      }
+    };
+    push @$individual, ($extract_bam_task);
+  }
 
-    if($def->{perform_featureCounts}){
-      my $featureCounts = $bam_input . "_featureCounts";
-      my $featureCountFolder = "${target_dir}/${featureCounts}";
-      $config->{$featureCounts} = {
-        class      => "Count::FeatureCounts",
-        perform    => 1,
-        target_dir => $featureCountFolder,
-        option     => "-F SAF",
-        source_ref => $bam_input,
-        gff_file   => getValue($def, "saf_file"),
-        is_paired_end  => is_paired_end($def),
-        sh_direct  => 1,
-        pbs        => {
-          "email"     => $email,
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "23",
-          "mem"       => "40gb"
-        },
-      };
-      push @$individual, ($featureCounts);
+  if($def->{perform_featureCounts}){
+    my $featureCounts = $bam_input . "_featureCounts";
+    my $featureCountFolder = "${target_dir}/${featureCounts}";
+    $config->{$featureCounts} = {
+      class      => "Count::FeatureCounts",
+      perform    => 1,
+      target_dir => $featureCountFolder,
+      option     => "-F SAF",
+      source_ref => $bam_input,
+      gff_file   => getValue($def, "saf_file"),
+      is_paired_end  => is_paired_end($def),
+      sh_direct  => 1,
+      pbs        => {
+        "email"     => $email,
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "23",
+        "mem"       => "40gb"
+      },
+    };
+    push @$individual, ($featureCounts);
 
-      my $featureCountsSummary = $featureCounts . "_summary";
-      $config->{$featureCountsSummary} = {
-        class                    => "CQS::UniqueR",
-        perform                  => 1,
-        target_dir               => $featureCountFolder,
-        option                   => "",
-        rtemplate                => "../Alignment/STARFeatureCount.r",
-        output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
-        parameterSampleFile2_ref => [ $featureCounts, ".count.summary" ],
-        sh_direct                => 1,
-        pbs                      => {
-          "email"     => $email,
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "2",
-          "mem"       => "10gb"
-        },
-      };
+    my $featureCountsSummary = $featureCounts . "_summary";
+    $config->{$featureCountsSummary} = {
+      class                    => "CQS::UniqueR",
+      perform                  => 1,
+      target_dir               => $featureCountFolder,
+      option                   => "",
+      rtemplate                => "../Alignment/STARFeatureCount.r",
+      output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
+      parameterSampleFile2_ref => [ $featureCounts, ".count.summary" ],
+      sh_direct                => 1,
+      pbs                      => {
+        "email"     => $email,
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "2",
+        "mem"       => "10gb"
+      },
+    };
 
-      push @$summary, $featureCountsSummary;
+    push @$summary, $featureCountsSummary;
 
-      my $name_map_file = $def->{name_map_file};
-      my $countTable = $featureCounts . "_table";
-      $config->{$countTable} = {
-        class                     => "CQS::CQSDatatable",
-        perform                   => 1,
-        target_dir                => $target_dir . "/" . $countTable,
-        option                    => "-k 0 -v 6 -e --fillMissingWithZero",
-        source_ref                => [$featureCounts, ".count\$"],
-        output_proteincoding_gene => 0,
-        name_map_file             => $name_map_file,
-        sh_direct                 => 1,
-        pbs                       => {
-          "email"     => $email,
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "23",
-          "mem"       => "10gb"
-        },
-      };
+    my $name_map_file = $def->{name_map_file};
+    my $countTable = $featureCounts . "_table";
+    $config->{$countTable} = {
+      class                     => "CQS::CQSDatatable",
+      perform                   => 1,
+      target_dir                => $target_dir . "/" . $countTable,
+      option                    => "-k 0 -v 6 -e --fillMissingWithZero",
+      source_ref                => [$featureCounts, ".count\$"],
+      output_proteincoding_gene => 0,
+      name_map_file             => $name_map_file,
+      sh_direct                 => 1,
+      pbs                       => {
+        "email"     => $email,
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "23",
+        "mem"       => "10gb"
+      },
+    };
 
-      push @$summary, $countTable;
-    }
+    push @$summary, $countTable;
+  }
 
-    my $gatk_index = {};
-    my $gatk_index_snv = "SNV_Index";
+  my $gatk_index = {};
+  my $gatk_index_snv = "SNV_Index";
 
-    my $gatk_prefix = "";
-    my $snv_index = 0;
-    my $filter_name = "";
-    if ( $def->{perform_gatk4_callvariants} ) {
-      $gatk_prefix = $bam_input . "_gatk4_SNV_";
-      my $gvcf_name         = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_hc_gvcf";
-      $config->{$gvcf_name} = {
-        class             => "GATK4::HaplotypeCaller",
+  my $gatk_prefix = "";
+  my $snv_index = 0;
+  my $filter_name = "";
+  if ( $def->{perform_gatk4_callvariants} ) {
+    $gatk_prefix = $bam_input . "_gatk4_SNV_";
+    my $gvcf_name         = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_hc_gvcf";
+    $config->{$gvcf_name} = {
+      class             => "GATK4::HaplotypeCaller",
+      perform           => 1,
+      target_dir        => "${target_dir}/$gvcf_name",
+      option            => "",
+      source_ref        => $bam_ref,
+      java_option       => "",
+      fasta_file        => $fasta,
+      extension         => ".g.vcf",
+      bed_file          => $def->{covered_bed},
+      blacklist_file    => $def->{blacklist_file},
+      by_chromosome     => 0,
+      gvcf              => 1,
+      sh_direct         => 0,
+      pbs               => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=" . $max_thread,
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    };
+    push @$individual, ($gvcf_name);
+
+    if(getValue($def, "gatk4_variant_filter_by_chromosome", 0)){
+      my $vqsr_prefix = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) ;
+      my $filter_name_chr = $vqsr_prefix . "_vqsr_1_scatter";
+      $config->{$filter_name_chr} = {
+        class             => "GATK4::VariantFilterScatterChromosome",
         perform           => 1,
-        target_dir        => "${target_dir}/$gvcf_name",
+        target_dir        => "${target_dir}/$filter_name_chr",
         option            => "",
-        source_ref        => $bam_input,
+        vqsr_mode         => 1,
+        source_ref        => "$gvcf_name",
         java_option       => "",
         fasta_file        => $fasta,
-        extension         => ".g.vcf",
-        bed_file          => $def->{covered_bed},
-        blacklist_file    => $def->{blacklist_file},
-        by_chromosome     => 0,
-        gvcf              => 1,
+        dbsnp_vcf         => $dbsnp,
+        chromosome_names  => getValue($def, "chromosome_names"),
         sh_direct         => 0,
         pbs               => {
           "email"    => $email,
-          "nodes"    => "1:ppn=" . $max_thread,
-          "walltime" => "24",
+          "nodes"    => "1:ppn=1",
+          "walltime" => "4",
           "mem"      => "40gb"
         },
       };
-      push @$individual, ($gvcf_name);
+      push @$summary, ($filter_name_chr);
 
-      if(getValue($def, "gatk4_variant_filter_by_chromosome", 0)){
-        my $vqsr_prefix = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) ;
-        my $filter_name_chr = $vqsr_prefix . "_vqsr_1_scatter";
-        $config->{$filter_name_chr} = {
-          class             => "GATK4::VariantFilterScatterChromosome",
-          perform           => 1,
-          target_dir        => "${target_dir}/$filter_name_chr",
-          option            => "",
-          vqsr_mode         => 1,
-          source_ref        => "$gvcf_name",
-          java_option       => "",
-          fasta_file        => $fasta,
-          dbsnp_vcf         => $dbsnp,
-          chromosome_names  => getValue($def, "chromosome_names"),
-          sh_direct         => 0,
-          pbs               => {
-            "email"    => $email,
-            "nodes"    => "1:ppn=1",
-            "walltime" => "4",
-            "mem"      => "40gb"
-          },
-        };
-        push @$summary, ($filter_name_chr);
-
-        my $filter_name_chr_recalibrator = $vqsr_prefix . "_vqsr_2_recalibrator";
-        $config->{$filter_name_chr_recalibrator} = {
-          class             => "GATK4::VariantFilterRecalibrator",
-          perform           => 1,
-          target_dir        => "${target_dir}/$filter_name_chr_recalibrator",
-          option            => "",
-          vqsr_mode         => 1,
-          source_ref        => ["$filter_name_chr",  "sites_only.vcf.gz"],
-          java_option       => "",
-          fasta_file        => $fasta,
-          dbsnp_vcf         => $dbsnp,
-          hapmap_vcf        => $def->{hapmap},
-          omni_vcf          => $def->{omni},
-          g1000_vcf         => $def->{g1000},
-          axiomPoly_vcf     => $def->{axiomPoly},
-          mills_vcf         => $mills,
-          chromosome_names  => getValue($def, "chromosome_names"),
-          sh_direct         => 0,
-          pbs               => {
-            "email"    => $email,
-            "nodes"    => "1:ppn=1",
-            "walltime" => "4",
-            "mem"      => "10gb"
-          },
-        };
-        push @$summary, ($filter_name_chr_recalibrator);
-
-        my $filter_name_chr_recalibrator_apply = $vqsr_prefix . "_vqsr_3_applyVQSR";
-        $config->{$filter_name_chr_recalibrator_apply} = {
-          class             => "GATK4::VariantFilterApplyVQSR",
-          perform           => 1,
-          target_dir        => "${target_dir}/$filter_name_chr_recalibrator_apply",
-          option            => "",
-          vqsr_mode         => 1,
-          source_ref        => [$filter_name_chr,  "variant_filtered.vcf.gz"],
-          java_option       => "",
-          indels_recalibration_ref => [$filter_name_chr_recalibrator, ".indels.recal.vcf.gz"],
-          indels_tranches_ref => [$filter_name_chr_recalibrator, ".indels.tranches"],
-          snps_recalibration_ref => [$filter_name_chr_recalibrator, ".snp.recal.vcf.gz"],
-          snps_tranches_ref => [$filter_name_chr_recalibrator, ".snp.tranches"],
-          chromosome_names  => getValue($def, "chromosome_names"),
-          sh_direct         => 1,
-          pbs               => {
-            "email"    => $email,
-            "nodes"    => "1:ppn=1",
-            "walltime" => "4",
-            "mem"      => "10gb"
-          },
-        };
-        push @$summary, ($filter_name_chr_recalibrator_apply);
-
-        my $filter_name_chr_recalibrator_apply_gather = $vqsr_prefix . "_vqsr_4_gather";
-        $config->{$filter_name_chr_recalibrator_apply_gather} = {
-          class             => "GATK4::VariantFilterGather",
-          perform           => 1,
-          target_dir        => "${target_dir}/$filter_name_chr_recalibrator_apply_gather",
-          option            => "",
-          source_ref        => ["$filter_name_chr_recalibrator_apply",  "pass.vcf.gz"],
-          fasta_file        => $fasta,
-          java_option       => "",
-          chromosome_names  => getValue($def, "chromosome_names"),
-          sh_direct         => 1,
-          pbs               => {
-            "email"    => $email,
-            "nodes"    => "1:ppn=1",
-            "walltime" => "4",
-            "mem"      => "10gb"
-          },
-        };
-        push @$summary, ($filter_name_chr_recalibrator_apply_gather);
-
-        $filter_name = $filter_name_chr_recalibrator_apply_gather;
-      }else{
-        $filter_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_vqsr";
-        $config->{$filter_name} = {
-          class             => "GATK4::VariantFilter",
-          perform           => 1,
-          target_dir        => "${target_dir}/$filter_name",
-          option            => "",
-          vqsr_mode         => 1,
-          source_ref        => "$gvcf_name",
-          java_option       => "",
-          fasta_file        => $fasta,
-          dbsnp_vcf         => $dbsnp,
-          hapmap_vcf        => $def->{hapmap},
-          omni_vcf          => $def->{omni},
-          g1000_vcf         => $def->{g1000},
-          axiomPoly_vcf     => $def->{axiomPoly},
-          mills_vcf         => $mills,
-          species    => $species,
-          sh_direct         => 1,
-          pbs               => {
-            "email"    => $email,
-            "nodes"    => "1:ppn=8",
-            "walltime" => "24",
-            "mem"      => "40gb"
-          },
-        };
-        push @$summary, ($filter_name);
-      }
-    }
-    elsif ( $def->{perform_gatk_callvariants} ) {
-      $gatk_prefix = $bam_input . "_gatk3_SNV_Germline_";
-      my $gvcf_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_hc_gvcf";
-      $config->{$gvcf_name} = {
-        class         => "GATK::HaplotypeCaller",
-        perform       => 1,
-        target_dir    => "${target_dir}/$gvcf_name",
-        option        => "",
-        source_ref    => $refine_name,
-        java_option   => "",
-        fasta_file    => $fasta,
-        gatk_jar      => $gatk_jar,
-        extension     => ".g.vcf",
-        bed_file      => $def->{covered_bed},
-        by_chromosome => 0,
-        gvcf          => 1,
-        sh_direct     => 0,
-        pbs           => {
+      my $filter_name_chr_recalibrator = $vqsr_prefix . "_vqsr_2_recalibrator";
+      $config->{$filter_name_chr_recalibrator} = {
+        class             => "GATK4::VariantFilterRecalibrator",
+        perform           => 1,
+        target_dir        => "${target_dir}/$filter_name_chr_recalibrator",
+        option            => "",
+        vqsr_mode         => 1,
+        source_ref        => ["$filter_name_chr",  "sites_only.vcf.gz"],
+        java_option       => "",
+        fasta_file        => $fasta,
+        dbsnp_vcf         => $dbsnp,
+        hapmap_vcf        => $def->{hapmap},
+        omni_vcf          => $def->{omni},
+        g1000_vcf         => $def->{g1000},
+        axiomPoly_vcf     => $def->{axiomPoly},
+        mills_vcf         => $mills,
+        chromosome_names  => getValue($def, "chromosome_names"),
+        sh_direct         => 0,
+        pbs               => {
           "email"    => $email,
-          "nodes"    => "1:ppn=" . $max_thread,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "4",
+          "mem"      => "10gb"
+        },
+      };
+      push @$summary, ($filter_name_chr_recalibrator);
+
+      my $filter_name_chr_recalibrator_apply = $vqsr_prefix . "_vqsr_3_applyVQSR";
+      $config->{$filter_name_chr_recalibrator_apply} = {
+        class             => "GATK4::VariantFilterApplyVQSR",
+        perform           => 1,
+        target_dir        => "${target_dir}/$filter_name_chr_recalibrator_apply",
+        option            => "",
+        vqsr_mode         => 1,
+        source_ref        => [$filter_name_chr,  "variant_filtered.vcf.gz"],
+        java_option       => "",
+        indels_recalibration_ref => [$filter_name_chr_recalibrator, ".indels.recal.vcf.gz"],
+        indels_tranches_ref => [$filter_name_chr_recalibrator, ".indels.tranches"],
+        snps_recalibration_ref => [$filter_name_chr_recalibrator, ".snp.recal.vcf.gz"],
+        snps_tranches_ref => [$filter_name_chr_recalibrator, ".snp.tranches"],
+        chromosome_names  => getValue($def, "chromosome_names"),
+        sh_direct         => 1,
+        pbs               => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "4",
+          "mem"      => "10gb"
+        },
+      };
+      push @$summary, ($filter_name_chr_recalibrator_apply);
+
+      my $filter_name_chr_recalibrator_apply_gather = $vqsr_prefix . "_vqsr_4_gather";
+      $config->{$filter_name_chr_recalibrator_apply_gather} = {
+        class             => "GATK4::VariantFilterGather",
+        perform           => 1,
+        target_dir        => "${target_dir}/$filter_name_chr_recalibrator_apply_gather",
+        option            => "",
+        source_ref        => ["$filter_name_chr_recalibrator_apply",  "pass.vcf.gz"],
+        fasta_file        => $fasta,
+        java_option       => "",
+        chromosome_names  => getValue($def, "chromosome_names"),
+        sh_direct         => 1,
+        pbs               => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "4",
+          "mem"      => "10gb"
+        },
+      };
+      push @$summary, ($filter_name_chr_recalibrator_apply_gather);
+
+      $filter_name = $filter_name_chr_recalibrator_apply_gather;
+    }else{
+      $filter_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_vqsr";
+      $config->{$filter_name} = {
+        class             => "GATK4::VariantFilter",
+        perform           => 1,
+        target_dir        => "${target_dir}/$filter_name",
+        option            => "",
+        vqsr_mode         => 1,
+        source_ref        => "$gvcf_name",
+        java_option       => "",
+        fasta_file        => $fasta,
+        dbsnp_vcf         => $dbsnp,
+        hapmap_vcf        => $def->{hapmap},
+        omni_vcf          => $def->{omni},
+        g1000_vcf         => $def->{g1000},
+        axiomPoly_vcf     => $def->{axiomPoly},
+        mills_vcf         => $mills,
+        species    => $species,
+        sh_direct         => 1,
+        pbs               => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=8",
           "walltime" => "24",
           "mem"      => "40gb"
         },
       };
-      push @$individual, ($gvcf_name);
-
-      if ( $def->{gatk_callvariants_vqsr_mode} ) {
-        $filter_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_vqsr";
-        $config->{$filter_name} = {
-          class       => "GATK::VariantFilter",
-          perform     => 1,
-          target_dir  => "${target_dir}/$filter_name",
-          option      => "",
-          vqsr_mode   => 1,
-          source_ref  => "$gvcf_name",
-          java_option => "",
-          fasta_file  => $fasta,
-          dbsnp_vcf   => $dbsnp,
-          hapmap_vcf  => $def->{hapmap},
-          omni_vcf    => $def->{omni},
-          g1000_vcf   => $def->{g1000},
-          mills_vcf   => $mills,
-          gatk_jar    => $gatk_jar,
-          sh_direct   => 1,
-          pbs         => {
-            "email"    => $email,
-            "nodes"    => "1:ppn=1",
-            "walltime" => "24",
-            "mem"      => "40gb"
-          },
-        };
-      }
-      else {
-        $filter_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_hardfilter";
-
-        $config->{$filter_name} = {
-          class       => "GATK::VariantFilter",
-          perform     => 1,
-          target_dir  => "${target_dir}/$filter_name",
-          option      => "",
-          source_ref  => $gvcf_name,
-          java_option => "",
-          gatk_jar    => $gatk_jar,
-          fasta_file  => $fasta,
-          sh_direct   => 1,
-          vqsr_mode   => 0,
-          is_rna      => 0,
-          pbs         => {
-            "email"    => $email,
-            "nodes"    => "1:ppn=1",
-            "walltime" => "24",
-            "mem"      => "40gb"
-          },
-        };
-      }
       push @$summary, ($filter_name);
     }
+  }
+  elsif ( $def->{perform_gatk_callvariants} ) {
+    $gatk_prefix = $bam_input . "_gatk3_SNV_Germline_";
+    my $gvcf_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_hc_gvcf";
+    $config->{$gvcf_name} = {
+      class         => "GATK::HaplotypeCaller",
+      perform       => 1,
+      target_dir    => "${target_dir}/$gvcf_name",
+      option        => "",
+      source_ref    => $bam_ref,
+      java_option   => "",
+      fasta_file    => $fasta,
+      gatk_jar      => $gatk_jar,
+      extension     => ".g.vcf",
+      bed_file      => $def->{covered_bed},
+      by_chromosome => 0,
+      gvcf          => 1,
+      sh_direct     => 0,
+      pbs           => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=" . $max_thread,
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    };
+    push @$individual, ($gvcf_name);
 
-    my $annovar_filter_geneannotation_name = undef;
-    if ( $def->{perform_gatk4_callvariants} or $def->{perform_gatk_callvariants} ) {
-      if ( $def->{filter_variants_by_allele_frequency} ) {
-        my $maf_filter_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_filterMAF";
-        $config->{$maf_filter_name} = {
+    if ( $def->{gatk_callvariants_vqsr_mode} ) {
+      $filter_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_vqsr";
+      $config->{$filter_name} = {
+        class       => "GATK::VariantFilter",
+        perform     => 1,
+        target_dir  => "${target_dir}/$filter_name",
+        option      => "",
+        vqsr_mode   => 1,
+        source_ref  => "$gvcf_name",
+        java_option => "",
+        fasta_file  => $fasta,
+        dbsnp_vcf   => $dbsnp,
+        hapmap_vcf  => $def->{hapmap},
+        omni_vcf    => $def->{omni},
+        g1000_vcf   => $def->{g1000},
+        mills_vcf   => $mills,
+        gatk_jar    => $gatk_jar,
+        sh_direct   => 1,
+        pbs         => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "24",
+          "mem"      => "40gb"
+        },
+      };
+    }
+    else {
+      $filter_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_hardfilter";
+
+      $config->{$filter_name} = {
+        class       => "GATK::VariantFilter",
+        perform     => 1,
+        target_dir  => "${target_dir}/$filter_name",
+        option      => "",
+        source_ref  => $gvcf_name,
+        java_option => "",
+        gatk_jar    => $gatk_jar,
+        fasta_file  => $fasta,
+        sh_direct   => 1,
+        vqsr_mode   => 0,
+        is_rna      => 0,
+        pbs         => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "24",
+          "mem"      => "40gb"
+        },
+      };
+    }
+    push @$summary, ($filter_name);
+  }
+
+  my $annovar_filter_geneannotation_name = undef;
+  if ( $def->{perform_gatk4_callvariants} or $def->{perform_gatk_callvariants} ) {
+    if ( $def->{filter_variants_by_allele_frequency} ) {
+      my $maf_filter_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_filterMAF";
+      $config->{$maf_filter_name} = {
+        class                 => "CQS::ProgramWrapper",
+        perform               => 1,
+        target_dir            => "${target_dir}/${maf_filter_name}",
+        option                => "-p " . $def->{"filter_variants_by_allele_frequency_percentage"} . " -f " . $def->{"filter_variants_by_allele_frequency_maf"},
+        interpretor           => "python",
+        program               => "../Annotation/filterVcf.py",
+        parameterFile1_arg    => "-i",
+        parameterFile1_ref    => $filter_name,
+        output_to_same_folder => 1,
+        output_arg            => "-o",
+        output_file_ext       => ".maf_filtered.vcf.gz",
+        sh_direct             => 1,
+        pbs                   => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary, $maf_filter_name;
+      $filter_name = $maf_filter_name;
+    }
+
+    if ( $def->{perform_annovar} ) {
+      my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $filter_name, undef, $gatk_prefix, $gatk_index, $gatk_index_snv );
+
+      if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
+        my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name, $gatk_prefix, $gatk_index, $gatk_index_snv);
+
+        if ( defined $def->{annotation_genes} ) {
+          $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
+        }
+
+        addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $gatk_prefix, $gatk_index, $gatk_index_snv)
+      }
+    }
+
+    if ($def->{perform_IBS}){
+      if ($def->{perform_muTect} || $def->{perform_muTect2} ) {
+        my $ibs_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_IBS";
+        $config->{$ibs_name} = {
           class                 => "CQS::ProgramWrapper",
           perform               => 1,
-          target_dir            => "${target_dir}/${maf_filter_name}",
-          option                => "-p " . $def->{"filter_variants_by_allele_frequency_percentage"} . " -f " . $def->{"filter_variants_by_allele_frequency_maf"},
+          target_dir            => "${target_dir}/${ibs_name}",
+          option                => "",
           interpretor           => "python",
-          program               => "../Annotation/filterVcf.py",
+          program               => "../Variants/IBS.py",
+          check_program         => 1,
           parameterFile1_arg    => "-i",
           parameterFile1_ref    => $filter_name,
+          parameterSampleFile1_arg    => "-f",
+          parameterSampleFile1_ref    => "groups",
           output_to_same_folder => 1,
           output_arg            => "-o",
-          output_file_ext       => ".maf_filtered.vcf.gz",
+          output_file           => "",
+          output_file_ext       => ".ibs_score.mean.csv;.ibs_score.csv",
           sh_direct             => 1,
           pbs                   => {
             "email"     => $def->{email},
@@ -689,265 +737,218 @@ sub getConfig {
             "mem"       => "10gb"
           },
         };
-        push @$summary, $maf_filter_name;
-        $filter_name = $maf_filter_name;
-      }
-
-      if ( $def->{perform_annovar} ) {
-        my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $filter_name, undef, $gatk_prefix, $gatk_index, $gatk_index_snv );
-
-        if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
-          my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name, $gatk_prefix, $gatk_index, $gatk_index_snv);
-
-          if ( defined $def->{annotation_genes} ) {
-            $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
-          }
-
-          addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $gatk_prefix, $gatk_index, $gatk_index_snv)
-        }
-      }
-
-      if ($def->{perform_IBS}){
-        if ($def->{perform_muTect} || $def->{perform_muTect2} ) {
-          my $ibs_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_IBS";
-          $config->{$ibs_name} = {
-            class                 => "CQS::ProgramWrapper",
-            perform               => 1,
-            target_dir            => "${target_dir}/${ibs_name}",
-            option                => "",
-            interpretor           => "python",
-            program               => "../Variants/IBS.py",
-            check_program         => 1,
-            parameterFile1_arg    => "-i",
-            parameterFile1_ref    => $filter_name,
-            parameterSampleFile1_arg    => "-f",
-            parameterSampleFile1_ref    => "groups",
-            output_to_same_folder => 1,
-            output_arg            => "-o",
-            output_file           => "",
-            output_file_ext       => ".ibs_score.mean.csv;.ibs_score.csv",
-            sh_direct             => 1,
-            pbs                   => {
-              "email"     => $def->{email},
-              "emailType" => $def->{emailType},
-              "nodes"     => "1:ppn=1",
-              "walltime"  => "10",
-              "mem"       => "10gb"
-            },
-          };
-          push @$summary, $ibs_name;
-        }
-      }
-
-      if ( $def->{perform_vep} ) {
-        my $vep_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_vep";
-        $config->{$vep_name} = {
-          class      => "Annotation::Vcf2Maf",
-          perform    => 1,
-          target_dir => "${target_dir}/$vep_name",
-          option     => "",
-          source_ref => [ $filter_name, ".vcf" ],
-          vcf2maf_pl => getValue( $def, "vcf2maf_pl" ),
-          vep_path   => getValue( $def, "vep_path" ),
-          vep_data   => getValue( $def, "vep_data" ),
-          species    => $species,
-          ncbi_build => getValue( $def, "ncbi_build" ),
-          filter_vcf => $def->{"vep_filter_vcf"},
-          ref_fasta  => $fasta,
-          sh_direct  => 1,
-          pbs        => {
-            "email"    => $email,
-            "nodes"    => "1:ppn=" . $max_thread,
-            "walltime" => "24",
-            "mem"      => "40gb"
-          },
-        };
-        push @$summary, $vep_name;
+        push @$summary, $ibs_name;
       }
     }
 
-    if ( $def->{"perform_muTect"} ) {
-      my $mutect_index_dic = {};
-      my $mutect_index_key = "mutect_Index";
-      my $mutect_prefix = "${bam_input}_muTect_";
-
-      my $mutectName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_call";
-      #print($mutectName);
-      $config->{$mutectName} = {
-        class        => "GATK::MuTect",
-        perform      => 1,
-        init_command => $def->{muTect_init_command},
-        target_dir   => "${target_dir}/$mutectName",
-        option       => getValue( $def, "muTect_option" ),
-        java_option  => "-Xmx40g",
-        source_ref   => [ $bam_input, ".bam\$" ],
-        groups_ref   => "groups",
-        fasta_file   => $fasta,
-        dbsnp_file   => $def->{"dbsnp"},
-        bychromosome => 0,
-        sh_direct    => 0,
-        muTect_jar   => getValue( $def, "muTect_jar" ),
-        pbs          => {
-          "email"    => $email,
-          "nodes"    => "1:ppn=1",
-          "walltime" => "24",
-          "mem"      => "40gb"
-        },
-      };
-      push @$summary, "${mutectName}";
-
-      my $combineVariantsName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_merge";
-      $config->{$combineVariantsName} = {
-        class                 => "CQS::ProgramWrapper",
-        perform               => 1,
-        target_dir            => "${target_dir}/${combineVariantsName}",
-        option                => "",
-        interpretor           => "python",
-        program               => "../GATK/mergeMutect.py",
-        check_program         => 1,
-        parameterSampleFile1_arg    => "-i",
-        parameterSampleFile1_ref    => [ $mutectName, ".pass.vcf.gz\$" ],
-        parameterSampleFile1_fileonly  => 0,
-        output_to_same_folder => 1,
-        output_arg            => "-o",
-        output_file_ext       => "_pass.combined.vcf",
-        sh_direct             => 1,
-        pbs                   => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      };
-      push @$summary, $combineVariantsName;
-
-      my $filterVariantsName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_filterDepth";
-      $config->{$filterVariantsName} = {
-        class                 => "CQS::ProgramWrapper",
-        perform               => 1,
-        target_dir            => "${target_dir}/${filterVariantsName}",
-        option                => "",
-        interpretor           => "python",
-        program               => "../GATK/filterMutect.py",
-        check_program         => 1,
-        parameterFile1_arg    => "-i",
-        parameterFile1_ref    => [ $combineVariantsName ],
-        output_to_same_folder => 1,
-        output_arg            => "-o",
-        output_file_ext       => ".filtered.vcf",
-        sh_direct             => 1,
-        pbs                   => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      };
-      push @$summary, $filterVariantsName;
-
-      if ( $def->{perform_annovar} ) {
-        my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $filterVariantsName, ".vcf\$", $mutect_prefix, $mutect_index_dic, $mutect_index_key );
-        if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
-          my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name, $mutect_prefix, $mutect_index_dic, $mutect_index_key);
-
-          if ( defined $def->{annotation_genes} ) {
-            $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
-          }
-
-          addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $mutect_prefix, $mutect_index_dic, $mutect_index_key)
-        }
-      }
-    }
-
-    if ( $def->{"perform_muTect2"}) {
-      my $mutect2call = addMutect2($config, $def, $summary, $target_dir, $bam_input);
-    }
-    
-    if ( $def->{"perform_muTect2indel"} ) {
-      my $mutect2Name = "${bam_input}_muTect2indel";
-      $config->{$mutect2Name} = {
-        class        => "GATK::MuTect2Indel",
-        perform      => 1,
-        init_command => $def->{muTect2_init_command},
-        target_dir   => "${target_dir}/$mutect2Name",
-        option       => getValue( $def, "muTect2_option" ),
-        java_option  => "-Xmx40g",
-        source_ref   => [ $bam_input, ".bam\$" ],
-        groups_ref   => "groups",
-        fasta_file   => $fasta,
-        dbsnp_file   => $def->{"dbsnp"},
-        bychromosome => 0,
-        sh_direct    => 0,
-        gatk_jar     => getValue( $def, "gatk_jar" ),
-        pbs          => {
-          "email"    => $email,
-          "nodes"    => "1:ppn=1",
-          "walltime" => "24",
-          "mem"      => "40gb"
-        },
-      };
-      push @$summary, $mutect2Name;
-
-      if ( $def->{perform_annovar} ) {
-        my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $mutect2Name, ".pass.vcf\$" );
-      }
-    }
-
-    if ( $def->{perform_cnv_cnMOPS} ) {
-      my $cnmopsName = "${bam_input}_cnMOPS";
-      $config->{$cnmopsName} = {
-        class       => "CNV::cnMops",
-        perform     => 1,
-        target_dir  => "${target_dir}/$cnmopsName",
-        option      => "",
-        source_ref  => [ $bam_input, ".bam\$" ],
-        bedfile     => $def->{covered_bed},
-        isbamsorted => 1,
-        sh_direct   => 1,
-        pbs         => {
+    if ( $def->{perform_vep} ) {
+      my $vep_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_vep";
+      $config->{$vep_name} = {
+        class      => "Annotation::Vcf2Maf",
+        perform    => 1,
+        target_dir => "${target_dir}/$vep_name",
+        option     => "",
+        source_ref => [ $filter_name, ".vcf" ],
+        vcf2maf_pl => getValue( $def, "vcf2maf_pl" ),
+        vep_path   => getValue( $def, "vep_path" ),
+        vep_data   => getValue( $def, "vep_data" ),
+        species    => $species,
+        ncbi_build => getValue( $def, "ncbi_build" ),
+        filter_vcf => $def->{"vep_filter_vcf"},
+        ref_fasta  => $fasta,
+        sh_direct  => 1,
+        pbs        => {
           "email"    => $email,
           "nodes"    => "1:ppn=" . $max_thread,
           "walltime" => "24",
           "mem"      => "40gb"
-        }
-      };
-      push @$summary, $cnmopsName;
-    }
-
-    my $cnvAnnotationGenesPlot = undef;
-    if ( $def->{perform_cnv_gatk4_cohort} ) {
-      $cnvAnnotationGenesPlot = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, [ $bam_input, ".bam\$" ], $bam_input, $individual, $summary, $step3, $step4, $step5, $step6 );
-    }
-
-    if ( ( defined $annovar_filter_geneannotation_name ) and ( defined $cnvAnnotationGenesPlot ) ) {
-      my $oncoPlotTask = "${bam_input}_SNV_CNV_Oncoplot";
-      $config->{$oncoPlotTask} = {
-        class                      => "CQS::UniqueR",
-        perform                    => 1,
-        target_dir                 => $target_dir . '/' . $oncoPlotTask,
-        rtemplate                  => "../Visualization/SNV_CNV_OncoPrint.r",
-        parameterSampleFile1_ref   => [ $annovar_filter_geneannotation_name, ".oncoprint.tsv\$" ],
-        parameterFile1_ref         => [ $cnvAnnotationGenesPlot, ".position.txt.slim" ],
-        parameterSampleFile2       => $def->{onco_options},
-        parameterSampleFile3       => $def->{onco_sample_groups},
-        output_to_result_directory => 1,
-        output_file                => "parameterSampleFile1",
-        output_file_ext            => ".snv_cnv.txt.png;.snv_cnv.txt",
-        sh_direct                  => 1,
-        'pbs'                      => {
-          'nodes'    => '1:ppn=1',
-          'mem'      => '40gb',
-          'walltime' => '10'
         },
       };
-      push @$step6, $oncoPlotTask;
+      push @$summary, $vep_name;
     }
+  }
 
-    if ( $def->{perform_cnv_xhmm} ) {
-      addXHMM( $config, $def, $target_dir, [ $bam_input, ".bam\$" ], $individual, $summary, $step3, $step4, $step5, $step6 );
+  if ( $def->{"perform_muTect"} ) {
+    my $mutect_index_dic = {};
+    my $mutect_index_key = "mutect_Index";
+    my $mutect_prefix = "${bam_input}_muTect_";
+
+    my $mutectName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_call";
+    #print($mutectName);
+    $config->{$mutectName} = {
+      class        => "GATK::MuTect",
+      perform      => 1,
+      init_command => $def->{muTect_init_command},
+      target_dir   => "${target_dir}/$mutectName",
+      option       => getValue( $def, "muTect_option" ),
+      java_option  => "-Xmx40g",
+      source_ref   => [ $bam_input, ".bam\$" ],
+      groups_ref   => "groups",
+      fasta_file   => $fasta,
+      dbsnp_file   => $def->{"dbsnp"},
+      bychromosome => 0,
+      sh_direct    => 0,
+      muTect_jar   => getValue( $def, "muTect_jar" ),
+      pbs          => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    };
+    push @$summary, "${mutectName}";
+
+    my $combineVariantsName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_merge";
+    $config->{$combineVariantsName} = {
+      class                 => "CQS::ProgramWrapper",
+      perform               => 1,
+      target_dir            => "${target_dir}/${combineVariantsName}",
+      option                => "",
+      interpretor           => "python",
+      program               => "../GATK/mergeMutect.py",
+      check_program         => 1,
+      parameterSampleFile1_arg    => "-i",
+      parameterSampleFile1_ref    => [ $mutectName, ".pass.vcf.gz\$" ],
+      parameterSampleFile1_fileonly  => 0,
+      output_to_same_folder => 1,
+      output_arg            => "-o",
+      output_file_ext       => "_pass.combined.vcf",
+      sh_direct             => 1,
+      pbs                   => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    };
+    push @$summary, $combineVariantsName;
+
+    my $filterVariantsName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_filterDepth";
+    $config->{$filterVariantsName} = {
+      class                 => "CQS::ProgramWrapper",
+      perform               => 1,
+      target_dir            => "${target_dir}/${filterVariantsName}",
+      option                => "",
+      interpretor           => "python",
+      program               => "../GATK/filterMutect.py",
+      check_program         => 1,
+      parameterFile1_arg    => "-i",
+      parameterFile1_ref    => [ $combineVariantsName ],
+      output_to_same_folder => 1,
+      output_arg            => "-o",
+      output_file_ext       => ".filtered.vcf",
+      sh_direct             => 1,
+      pbs                   => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    };
+    push @$summary, $filterVariantsName;
+
+    if ( $def->{perform_annovar} ) {
+      my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $filterVariantsName, ".vcf\$", $mutect_prefix, $mutect_index_dic, $mutect_index_key );
+      if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
+        my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name, $mutect_prefix, $mutect_index_dic, $mutect_index_key);
+
+        if ( defined $def->{annotation_genes} ) {
+          $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
+        }
+
+        addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $mutect_prefix, $mutect_index_dic, $mutect_index_key)
+      }
     }
+  }
+
+  if ( $def->{"perform_muTect2"}) {
+    my $mutect2call = addMutect2($config, $def, $summary, $target_dir, $bam_input);
+  }
+  
+  if ( $def->{"perform_muTect2indel"} ) {
+    my $mutect2Name = "${bam_input}_muTect2indel";
+    $config->{$mutect2Name} = {
+      class        => "GATK::MuTect2Indel",
+      perform      => 1,
+      init_command => $def->{muTect2_init_command},
+      target_dir   => "${target_dir}/$mutect2Name",
+      option       => getValue( $def, "muTect2_option" ),
+      java_option  => "-Xmx40g",
+      source_ref   => [ $bam_input, ".bam\$" ],
+      groups_ref   => "groups",
+      fasta_file   => $fasta,
+      dbsnp_file   => $def->{"dbsnp"},
+      bychromosome => 0,
+      sh_direct    => 0,
+      gatk_jar     => getValue( $def, "gatk_jar" ),
+      pbs          => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=1",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    };
+    push @$summary, $mutect2Name;
+
+    if ( $def->{perform_annovar} ) {
+      my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $mutect2Name, ".pass.vcf\$" );
+    }
+  }
+
+  if ( $def->{perform_cnv_cnMOPS} ) {
+    my $cnmopsName = "${bam_input}_cnMOPS";
+    $config->{$cnmopsName} = {
+      class       => "CNV::cnMops",
+      perform     => 1,
+      target_dir  => "${target_dir}/$cnmopsName",
+      option      => "",
+      source_ref  => [ $bam_input, ".bam\$" ],
+      bedfile     => $def->{covered_bed},
+      isbamsorted => 1,
+      sh_direct   => 1,
+      pbs         => {
+        "email"    => $email,
+        "nodes"    => "1:ppn=" . $max_thread,
+        "walltime" => "24",
+        "mem"      => "40gb"
+      }
+    };
+    push @$summary, $cnmopsName;
+  }
+
+  my $cnvAnnotationGenesPlot = undef;
+  if ( $def->{perform_cnv_gatk4_cohort} ) {
+    $cnvAnnotationGenesPlot = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, [ $bam_input, ".bam\$" ], $bam_input, $individual, $summary, $step3, $step4, $step5, $step6 );
+  }
+
+  if ( ( defined $annovar_filter_geneannotation_name ) and ( defined $cnvAnnotationGenesPlot ) ) {
+    my $oncoPlotTask = "${bam_input}_SNV_CNV_Oncoplot";
+    $config->{$oncoPlotTask} = {
+      class                      => "CQS::UniqueR",
+      perform                    => 1,
+      target_dir                 => $target_dir . '/' . $oncoPlotTask,
+      rtemplate                  => "../Visualization/SNV_CNV_OncoPrint.r",
+      parameterSampleFile1_ref   => [ $annovar_filter_geneannotation_name, ".oncoprint.tsv\$" ],
+      parameterFile1_ref         => [ $cnvAnnotationGenesPlot, ".position.txt.slim" ],
+      parameterSampleFile2       => $def->{onco_options},
+      parameterSampleFile3       => $def->{onco_sample_groups},
+      output_to_result_directory => 1,
+      output_file                => "parameterSampleFile1",
+      output_file_ext            => ".snv_cnv.txt.png;.snv_cnv.txt",
+      sh_direct                  => 1,
+      'pbs'                      => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '40gb',
+        'walltime' => '10'
+      },
+    };
+    push @$step6, $oncoPlotTask;
+  }
+
+  if ( $def->{perform_cnv_xhmm} ) {
+    addXHMM( $config, $def, $target_dir, $bam_ref, $individual, $summary, $step3, $step4, $step5, $step6 );
   }
 
   #qc
