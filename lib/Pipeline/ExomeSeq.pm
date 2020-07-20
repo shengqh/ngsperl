@@ -200,6 +200,7 @@ sub getConfig {
 
     #based on paper https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-016-1097-3, we don't do markduplicate anymore
     if ( $def->{aligner} eq "bwa" ) {
+      my $bwa_memory = getValue($def, "bwa_memory", "40gb");
       $fasta = getValue( $def, "bwa_fasta" );
       my $bwa = "bwa";
       $config->{ $bwa } = {
@@ -216,7 +217,7 @@ sub getConfig {
         pbs                   => {
           "nodes"    => "1:ppn=" . $max_thread,
           "walltime" => "24",
-          "mem"      => "40gb"
+          "mem"      => $bwa_memory
         },
       };
       $bam_ref = [ "bwa", ".bam\$" ];
@@ -283,6 +284,7 @@ sub getConfig {
 
     #based on paper https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-016-1097-3, we don't do markduplicate anymore
     my $refine_name = $def->{aligner} . "_refine";
+    my $refine_memory = getValue($def, "refine_memory", "40gb");
     $config->{$refine_name} = {
       class      => "GATK::Refine",
       perform    => 1,
@@ -305,8 +307,8 @@ sub getConfig {
       sorted                   => 1,
       pbs                      => {
         "nodes"    => "1:ppn=1",
-        "walltime" => "24",
-        "mem"      => "40gb"
+        "walltime" => "48",
+        "mem"      => $refine_memory
       },
     };
     push @$individual, ($refine_name);
