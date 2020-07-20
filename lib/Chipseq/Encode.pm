@@ -44,35 +44,49 @@ sub perform {
   for my $sample_name ( sort keys %$raw_files ) {
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
 
-    my $sample_files = $raw_files->{$sample_name};
-    if (scalar(@$sample_files) != 2) {
-      die "Only paired end data supported now. Sample " . $sample_name . " is not paired-end data";
-    }
-    my $sample_file_1 = $sample_files->[0];
-    my $sample_file_2 = $sample_files->[1];
-
-    my $control_files = $control_files->{$sample_name};
-    if (scalar(@$control_files) != 2) {
-      die "Only paired end data supported now. Control " . $sample_name . " is not paired-end data";
-    }
-    my $control_file_1 = $control_files->[0];
-    my $control_file_2 = $control_files->[1];
-
     my $jsonfile = "$cur_dir/${sample_name}.json";
     open(my $fjson, ">:utf8", $jsonfile) or die $!;
     print $fjson "{
     \"chip.pipeline_type\" : \"histone\",
     \"chip.genome_tsv\" : \"$chip_genome_tsv\",
+";
+
+    my $sample_files = $raw_files->{$sample_name};
+    if (scalar(@$sample_files) == 2) {
+      my $sample_file_1 = $sample_files->[0];
+      my $sample_file_2 = $sample_files->[1];
+      print $fjson "    \"chip.paired_end\" : true,
     \"chip.fastqs_rep1_R1\" : [\"$sample_file_1\" ],
     \"chip.fastqs_rep1_R2\" : [\"$sample_file_2\" ],
+";
+    }else{
+      my $sample_file_1 = $sample_files->[0];
+      print $fjson "    \"chip.paired_end\" : false,
+    \"chip.fastqs_rep1_R1\" : [\"$sample_file_1\" ],
+";
+    }
+
+    my $control_files = $control_files->{$sample_name};
+    if (scalar(@$control_files) == 2) {
+      my $control_file_1 = $control_files->[0];
+      my $control_file_2 = $control_files->[1];
+      print $fjson "    \"chip.ctl_paired_end\" : true,
     \"chip.ctl_fastqs_rep1_R1\" : [\"$control_file_1\" ],
     \"chip.ctl_fastqs_rep1_R2\" : [\"$control_file_2\" ],
-    \"chip.paired_end\" : true,
-    \"chip.always_use_pooled_ctl\" : false,
+";
+    }else{
+      my $control_file_1 = $control_files->[0];
+      print $fjson "    \"chip.ctl_paired_end\" : false,
+    \"chip.ctl_fastqs_rep1_R1\" : [\"$control_file_1\" ],
+";
+    }
+
+    print $fjson "    \"chip.always_use_pooled_ctl\" : false,
     \"chip.title\" : \"$sample_name\",
     \"chip.description\" : \"$sample_name\"
 }
 ";
+
     close($fjson);
 
     my $final_file = "${sample_name}_peaks.txt";
