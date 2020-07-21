@@ -81,7 +81,7 @@ sub get_cluster_desc {
   $mem =~ s/gb/G/g;
 
   $mem =~ /(\d+)(\S+)/;
-  my $memNum = ceil($1 * 1.06);
+  my $memNum = ceil($1 * 1.1);
   my $memUnit = $2;
   $mem = $memNum . $memUnit;
 

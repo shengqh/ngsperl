@@ -72,8 +72,13 @@ sub perform {
     my $snvOut    = $sample_name . $extension;
     
     #if the program throw exception, the idx file will not be generated.
-    my $snvOutIndex = $snvOut . ".idx";
-    my $snvOutTmp = $sample_name . ".tmp" . $extension;
+    my $snvOutIndex;
+    if ($extension =~ ".gz\$") {
+      $snvOutIndex = $snvOut . ".tbi";
+    } else {
+      $snvOutIndex = $snvOut . ".idx";
+    }
+
     my $snvStat   = $sample_name . ".stat";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );

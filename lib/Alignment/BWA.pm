@@ -4,6 +4,7 @@ package Alignment::BWA;
 use strict;
 use warnings;
 use File::Basename;
+use POSIX;
 use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
@@ -29,7 +30,11 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
 
-  my $sort_memory = $thread == 1 ? $memory : "4G";
+  my $sort_memory = $memory;
+  $sort_memory =~ /(\d+)(\S+)/;
+  my $memNum = $1;
+  my $memUnit = $2;
+  $sort_memory = floor($memNum / $thread) . $memUnit;
 
   my $selfname = $self->{_name};
 
@@ -105,6 +110,7 @@ fi
     if ($alignmentOnly) { #only alignment, no sort or other works. For UMI pipeline
       print $pbs "
 if [ -s $unsorted_bam_file ]; then
+  echo flagstat=`date` 
   samtools flagstat $unsorted_bam_file > ${unsorted_bam_file}.stat 
 fi
 ";
@@ -137,8 +143,9 @@ fi
       print $pbs "    
 if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
   echo sort_bam=`date`
-  sambamba sort -t $thread -o $sorted_bam_file $unsorted_bam_file
-  samtools index $sorted_bam_file 
+  sambamba sort -m $sort_memory -t $thread -o $sorted_bam_file $unsorted_bam_file
+  echo index_bam=`date`
+  sambamba index -t $thread $sorted_bam_file 
   $chromosome_grep_command
 fi
 ";
@@ -147,7 +154,7 @@ fi
       print $pbs "    
 if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
   echo sort_bam=`date`
-  sambamba sort -t $thread --sort-picard -o $sorted_bam_file $unsorted_bam_file
+  sambamba sort -m $sort_memory -t $thread --sort-picard -o $sorted_bam_file $unsorted_bam_file
 fi
 ";
     }
@@ -177,6 +184,7 @@ fi
 
     print $pbs "
 if [ -s $final_file ]; then
+  echo flagstat=`date` 
   samtools flagstat $final_file > ${final_file}.stat 
 fi
 ";
