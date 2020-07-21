@@ -167,6 +167,27 @@ sub getConfig {
     $bam_input = addPairedFastqToProcessedBam($config, $def, $individual, $target_dir, $alignment_source_ref);
     $bam_ref = [$bam_input, ".bam\$"];
     $fasta = getValue( $def, "bwa_fasta" );
+
+    #TEQC for target region coverage
+    $config->{"TEQC"} = {
+      class      => "CQS::UniqueR",
+      perform    => 1,
+      target_dir => $target_dir . '/' . "TEQC",
+      parameterSampleFile1_ref=> $bam_ref,
+      parameterFile1=> $def->{covered_bed},
+      rtemplate  => "runTEQC.R",
+      rCode      => "genome=\""
+        . getValue($def, "annovar_buildver", "hg38")
+        . "\";",
+      output_file_ext => ".TEQC",
+      sh_direct       => 1,
+      'pbs'           => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '20gb',
+        'walltime' => '10'
+      },
+    };
+
   }else{
     if ($def->{aligner_scatter_count}){
       my $splitFastq = "splitFastq";

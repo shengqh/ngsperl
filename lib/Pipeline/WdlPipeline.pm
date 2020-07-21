@@ -99,6 +99,7 @@ sub addPairedFastqToProcessedBam {
   my $pipeline = $server->{$pipeline_key};
 
   my $PreProcessing_DoMarkDuplicates = getValue($def, "PreProcessing_DoMarkDuplicates", "true");
+  my $genomeForOutputExt=getValue($def, "annovar_buildver", "hg38");
 
   my $task = $pipeline_key;
   $config->{$task} = {     
@@ -119,8 +120,8 @@ sub addPairedFastqToProcessedBam {
       #"PreProcessingForVariantDiscovery_GATK4.flowcell_unmapped_bams_list_ref" => [$files_ref,".fastq"]
       "PreProcessingForVariantDiscovery_GATK4.flowcell_unmapped_bams_list_ref" => $files_ref
     },
-    output_file_ext => ".bam",
-    output_other_ext => ".bai",
+    output_file_ext => ".".$genomeForOutputExt.".bam",
+    output_other_ext => ".".$genomeForOutputExt.".bai",
     pbs=> {
       "nodes"     => "1:ppn=8",
       "walltime"  => "24",
