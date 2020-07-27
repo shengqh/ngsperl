@@ -80,7 +80,7 @@ sub addCutadapt {
 #        "email"     => $def->{email},
 #        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=" . $cutadapt_thread,
-        "walltime"  => "23",
+        "walltime"  => "14",
         "mem"       => "20gb"
       },
     }

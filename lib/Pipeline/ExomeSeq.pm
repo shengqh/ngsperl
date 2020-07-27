@@ -888,6 +888,25 @@ sub getConfig {
 
   if ( $def->{"perform_muTect2"}) {
     my $mutect2call = addMutect2($config, $def, $summary, $target_dir, $bam_input);
+
+    my $rCode=( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" );
+    $rCode=$rCode."genome=\"" . getValue($def, "annovar_buildver", "hg38") . "\";";
+    $config->{muTect2_02_mergeAndMafreport}={
+    class      => "CQS::UniqueR",
+    perform    => 1,
+    target_dir => "${target_dir}/muTect2_02_mergeAndMafreport",
+    rtemplate                  => "../CQS/muTect2MergeAndMafreport.R",
+#    parameterFile1_ref => [$mutect2task, ".maf"],
+    parameterSampleFile1_ref=> [$mutect2call, ".maf"],
+    parameterFile1           => $def->{family_info_file},
+    rCode                    => $rCode,
+    sh_direct  => 0,
+    pbs        => {
+      "nodes"    => "1:ppn=8",
+      "walltime" => "4",
+      "mem"      => "30gb"
+    }
+};
   }
   
   if ( $def->{"perform_muTect2indel"} ) {

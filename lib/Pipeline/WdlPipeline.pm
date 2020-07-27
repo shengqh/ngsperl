@@ -248,6 +248,7 @@ sub addMutect2 {
   } elsif ($def->{ncbi_build} eq "GRCm38")  {
     $output_sample_ext="mm10";
   }
+
   $config->{$mutect2_call} = {     
     "class" => "CQS::Wdl",
     "target_dir" => "${target_dir}/$mutect2_call",

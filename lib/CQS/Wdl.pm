@@ -233,7 +233,7 @@ sub result {
   my $cur_dir = $result_dir . "/cromwell_finalOutputs";
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $output_exts = get_output_ext_list( $config, $section );
-  
+
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my @result_files = ();
