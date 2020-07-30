@@ -22,6 +22,7 @@ our %EXPORT_TAGS = (
       addPairedFastqToProcessedBam
       addUmiReadsToProcessedBam
       addMutect2
+      addSomaticCNV
     )
   ]
 );
@@ -225,15 +226,15 @@ sub addMutect2 {
       output_other_ext => ".vcf.idx",
       pbs=> {
         "nodes"     => "1:ppn=8",
-        "walltime"  => "2",
-        "mem"       => "40gb"
+        "walltime"  => "24",
+        "mem"       => "70gb"
       },
     };
     #push @$summary, $mutect2_pon;
 
     $pon = {
-      "Mutect2.pon" => [$mutect2_pon, ".vcf\$"],
-      "Mutect2.pon_idx" =>[$mutect2_pon, ".vcf.idx\$"],
+      "Mutect2.pon_ref" => [$mutect2_pon, ".vcf\$"],
+      "Mutect2.pon_idx_ref" =>[$mutect2_pon, ".vcf.idx\$"],
     };
   }
 
@@ -275,12 +276,129 @@ sub addMutect2 {
     "input_single" => $pon,
     pbs=> {
       "nodes"     => "1:ppn=8",
-      "walltime"  => "12",
-      "mem"       => "40gb"
+      "walltime"  => "24",
+      "mem"       => "70gb"
     },
   };
   #push @$summary, $mutect2_call;
   return ($mutect2_call);
 }
+
+
+
+sub addSomaticCNV {
+  my ($config, $def, $summary, $target_dir, $bam_input) = @_;
+
+  my $somaticCNV_index_dic = {};
+  my $somaticCNV_index_key = "somaticCNV_Index";
+  my $somaticCNV_prefix = "${bam_input}_somaticCNV_";
+  
+  my $somaticCNV_normal_files = $somaticCNV_prefix . "_normal_files";
+  $config->{$somaticCNV_normal_files} = {     
+    "class" => "CQS::GroupPickTask",
+    "source_ref" => $bam_input,
+    "groups_ref" => "groups",
+    "sample_index_in_group" => 0, 
+  };
+  
+  my $somaticCNV_tumor_files = $somaticCNV_prefix . "_tumor_files";
+  $config->{$somaticCNV_tumor_files} = {     
+    "class" => "CQS::GroupPickTask",
+    "source_ref" => $bam_input,
+    "groups_ref" => "groups",
+    "sample_index_in_group" => 1, 
+  };
+
+  my $server_key = getValue($def, "wdl_key", "local");
+  my $wdl = $def->{"wdl"};
+  my $server = $wdl->{$server_key};
+  my $somaticCNV_pipeline = $server->{"somaticCNV"};
+
+  my $pon = {};
+  #if ($somaticCNV_pipeline->{"perform_somaticCNV_pon"}){
+  if (1) {
+    my $pon_pipeline = $server->{"somaticCNV_pon"};
+
+    my $somaticCNV_pon = $somaticCNV_prefix . getNextIndex($somaticCNV_index_dic, $somaticCNV_index_key) . "_pon";
+    $config->{$somaticCNV_pon} = {     
+      "class" => "CQS::UniqueWdl",
+      "target_dir" => "${target_dir}/$somaticCNV_pon",
+      "singularity_image_files_ref" => ["singularity_image_files"],
+      "cromwell_jar" => $wdl->{"cromwell_jar"},
+      "input_option_file" => $wdl->{"cromwell_option_file"},
+      "cromwell_config_file" => $server->{"cromwell_config_file"},
+      "wdl_file" => $pon_pipeline->{"wdl_file"},
+      "input_json_file" => $pon_pipeline->{"input_file"},
+      "input_array" => {
+        "CNVSomaticPanelWorkflow.normal_bams_ref" => ["files", ".bam\$"],
+        "CNVSomaticPanelWorkflow.normal_bais_ref" => ["files", ".bai\$"]
+      },
+      "input_parameters" => {
+        "CNVSomaticPanelWorkflow.pon_entity_id" => $config->{general}{task_name},
+        "CNVSomaticPanelWorkflow.intervals" => $def->{covered_bed},
+      },
+      output_file_ext => ".pon.hdf5",
+      pbs=> {
+        "nodes"     => "1:ppn=8",
+        "walltime"  => "48",
+        "mem"       => "70gb"
+      },
+    };
+    #push @$summary, $somaticCNV_pon;
+
+#    $pon=[$somaticCNV_pon, ".pon.hdf5\$"];
+     $pon = {
+       "CNVSomaticPairWorkflow.read_count_pon_ref" => [$somaticCNV_pon, ".pon.hdf5\$"],
+# #      "somaticCNV.pon_idx" =>[$somaticCNV_pon, ".vcf.idx\$"],
+     };
+  }
+
+  my $somaticCNV_call = $somaticCNV_prefix . getNextIndex($somaticCNV_index_dic, $somaticCNV_index_key) . "_call";
+  # my $run_funcotator="false";
+  # if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
+  #   $run_funcotator="true";
+  # }
+  # my $output_sample_ext="hg19";
+  # if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
+  #   $output_sample_ext="hg38";
+  # } elsif ($def->{ncbi_build} eq "GRCm38")  {
+  #   $output_sample_ext="mm10";
+  # }
+
+  $config->{$somaticCNV_call} = {     
+    "class" => "CQS::Wdl",
+    "target_dir" => "${target_dir}/$somaticCNV_call",
+    "source_ref" => [$somaticCNV_normal_files, ".bam\$"],
+    "singularity_image_files_ref" => ["singularity_image_files"],
+    "cromwell_jar" => $wdl->{"cromwell_jar"},
+    "input_option_file" => $wdl->{"cromwell_option_file"},
+    "cromwell_config_file" => $server->{"cromwell_config_file"},
+    "wdl_file" => $somaticCNV_pipeline->{"wdl_file"},
+#    output_file_ext => ".".$output_sample_ext."-filtered.annotated.maf",
+#    output_other_ext => ".".$output_sample_ext."-filtered.vcf",
+    "input_json_file" => $somaticCNV_pipeline->{"input_file"},
+    "input_parameters" => {
+      "CNVSomaticPairWorkflow.intervals" => $def->{covered_bed},
+      "CNVSomaticPairWorkflow.normal_bam_ref" => [$somaticCNV_normal_files, ".bam\$"],
+      "CNVSomaticPairWorkflow.normal_bam_idx_ref" => [$somaticCNV_normal_files, ".bai\$"],
+      "CNVSomaticPairWorkflow.tumor_bam_ref" => [$somaticCNV_tumor_files, ".bam\$"],
+      "CNVSomaticPairWorkflow.tumor_bam_idx_ref" => [$somaticCNV_tumor_files, ".bai\$"],
+    },
+    "input_single" => $pon,
+    pbs=> {
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "24",
+      "mem"       => "70gb"
+    },
+  };
+
+  if (defined($def->{"CNVSomaticPairWorkflow.common_sites"}) and $def->{"CNVSomaticPairWorkflow.common_sites"} ne "") {
+    $config->{$somaticCNV_call}->{input_parameters}->{"CNVSomaticPairWorkflow.common_sites"}=$def->{"CNVSomaticPairWorkflow.common_sites"};
+  }
+
+  #push @$summary, $somaticCNV_call;
+  return ($somaticCNV_call);
+}
+
 
 1;

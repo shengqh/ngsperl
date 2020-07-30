@@ -237,7 +237,7 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
   my $cur_dir = $result_dir . "/cromwell_finalOutputs";
-  my %raw_files = %{ get_raw_files( $config, $section ) };
+#  my %raw_files = %{ get_raw_files( $config, $section ) };
   my $output_exts = get_output_ext_list( $config, $section );
   
   my $result = {};
