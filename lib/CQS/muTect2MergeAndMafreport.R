@@ -23,7 +23,7 @@ for (i in 1:nrow(allMafFiles)) {
     next;
   }
   mafFilter=filterMaf(mafFile,mafMax = 0.01,ExAC_FILTER=FALSE)
-  mafFilterAll=rbind(mafFilterAll,mafFilter)
+  mafFilterAll=rbind(mafFilterAll,mafFilter,fill=TRUE)
 }
 #write.table(mafFilterAll,mafFileAllSamples,sep="\t",quote = FALSE,row.names=FALSE)
 write.table(mafFilterAll,mafFileAllSamples,sep="\t",row.names=FALSE)
@@ -36,7 +36,7 @@ reportOutDir=getwd()
 
 if (genome=="hg19") {
   dndscv.refdb=genome
-} else if (1) {
+} else if (genome=="hg38") {
   dndscv.refdb="/scratch/cqs_share/references/dndscv/RefCDS_human_GRCh38.p12.rda"
 }
 

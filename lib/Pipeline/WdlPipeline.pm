@@ -330,8 +330,8 @@ sub addSomaticCNV {
       "wdl_file" => $pon_pipeline->{"wdl_file"},
       "input_json_file" => $pon_pipeline->{"input_file"},
       "input_array" => {
-        "CNVSomaticPanelWorkflow.normal_bams_ref" => ["files", ".bam\$"],
-        "CNVSomaticPanelWorkflow.normal_bais_ref" => ["files", ".bai\$"]
+        "CNVSomaticPanelWorkflow.normal_bams_ref" => [$somaticCNV_normal_files, ".bam\$"],
+        "CNVSomaticPanelWorkflow.normal_bais_ref" => [$somaticCNV_normal_files, ".bai\$"]
       },
       "input_parameters" => {
         "CNVSomaticPanelWorkflow.pon_entity_id" => $config->{general}{task_name},
@@ -354,10 +354,15 @@ sub addSomaticCNV {
   }
 
   my $somaticCNV_call = $somaticCNV_prefix . getNextIndex($somaticCNV_index_dic, $somaticCNV_index_key) . "_call";
-  # my $run_funcotator="false";
-  # if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
-  #   $run_funcotator="true";
-  # }
+  my $run_funcotator="true";
+  my $funcotator_ref_version="";
+  if ($def->{ncbi_build} eq "GRCh19") { #based on genome, hg38=true, else false
+    $funcotator_ref_version="hg19";
+  } elsif ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
+    $funcotator_ref_version="hg38";
+  } else {
+    $run_funcotator="false";
+  }
   # my $output_sample_ext="hg19";
   # if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
   #   $output_sample_ext="hg38";
@@ -379,6 +384,8 @@ sub addSomaticCNV {
     "input_json_file" => $somaticCNV_pipeline->{"input_file"},
     "input_parameters" => {
       "CNVSomaticPairWorkflow.intervals" => $def->{covered_bed},
+      "CNVSomaticPairWorkflow.funcotator_ref_version" => $funcotator_ref_version,
+      "CNVSomaticPairWorkflow.is_run_funcotator" => $run_funcotator,
       "CNVSomaticPairWorkflow.normal_bam_ref" => [$somaticCNV_normal_files, ".bam\$"],
       "CNVSomaticPairWorkflow.normal_bam_idx_ref" => [$somaticCNV_normal_files, ".bai\$"],
       "CNVSomaticPairWorkflow.tumor_bam_ref" => [$somaticCNV_tumor_files, ".bam\$"],

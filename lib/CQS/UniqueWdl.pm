@@ -11,6 +11,7 @@ use CQS::FileUtils;
 use CQS::Task;
 use CQS::StringUtils;
 use JSON;
+use List::MoreUtils qw(uniq);
 
 our @ISA = qw(CQS::Task);
 
@@ -95,6 +96,7 @@ sub prepare_wdl_array {
       push @$res_array, @$sample_values;
     }
     
+    $res_array=[uniq(@$res_array)];
     $replace_values->{$input_name} = $res_array;
   }
 }

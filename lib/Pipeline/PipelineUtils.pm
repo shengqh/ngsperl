@@ -1081,10 +1081,14 @@ sub addAnnovarMafReport {
 sub addFilterMafAndReport {
   my ( $config, $def, $summary, $target_dir, $mutect2call ) = @_;
 
+#  my $mutect2_index_dic = {};
+#  my $mutect2_index_key = "mafReport_Index";
+#  my $taskName = $mutect2call . getNextIndex($mutect2_index_dic, $mutect2_index_key) . "_mergeAndMafreport";
+  my $taskName = $mutect2call . "_mergeAndMafreport";
+
     my $rCode=( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" );
     $rCode=$rCode."genome=\"" . getValue($def, "annovar_buildver", "hg38") . "\";";
 
-    my $taskName="muTect2_02_mergeAndMafreport";
     $config->{$taskName}={
       class      => "CQS::UniqueR",
       perform    => 1,
