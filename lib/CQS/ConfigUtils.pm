@@ -3,6 +3,7 @@ package CQS::ConfigUtils;
 
 use strict;
 use warnings;
+use Carp qw<longmess>;
 use File::Basename;
 use File::Copy;
 use CQS::FileUtils;
@@ -72,7 +73,8 @@ our %EXPORT_TAGS = (
       get_interation_subsample_sample_map
       get_groups
       get_covariances
-      getGroupPickResult)
+      getGroupPickResult
+      getMemoryPerThread)
   ]
 );
 
@@ -86,6 +88,11 @@ our $VERSION = '0.01';
 sub get_config_section {
   my ( $config, $section ) = @_;
   my @sections = split( '::', $section );
+  if (ref($section) eq ref({})){
+    my $mess = longmess();
+    print Dumper( $mess );    
+  }
+  #print(Dumper($section));
   my $result   = $config;
   for my $curSection (@sections) {
     $result = $result->{$curSection};
@@ -1412,6 +1419,20 @@ sub getGroupPickResult {
   my $result = $myclass->result($config, $temp_section, $pattern);
   delete $config->{$temp_section};
   return ($result);
+}
+
+sub getMemoryPerThread {
+  my ($memory_in_gb, $thread) = @_;
+  my $result = $memory_in_gb;
+  $result =~ /(\d+)(\S+)/;
+  my $memNum = $1;
+  $result = $memNum / $thread;
+  my $isMB = 0;
+  if ($result < 1) {
+    $result = floor($result * 1024);
+    $isMB = 1;
+  }
+  return($result, $isMB);
 }
 
 1;
