@@ -111,7 +111,7 @@ sub get_log_description {
 #SBATCH -o $pbs_file
 
 if [ -n "\${SLURM_JOB_ID}" ] ; then
-  smemwatch -k 95 -d 50 \$\$ \&
+  smemwatch -k 99 -d 50 \$\$ \&
 fi
 
 SBATCH
