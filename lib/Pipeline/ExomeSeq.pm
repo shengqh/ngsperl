@@ -167,6 +167,27 @@ sub getConfig {
     $bam_input = addPairedFastqToProcessedBam($config, $def, $individual, $target_dir, $alignment_source_ref);
     $bam_ref = [$bam_input, ".bam\$"];
     $fasta = getValue( $def, "bwa_fasta" );
+
+    #TEQC for target region coverage
+    $config->{"TEQC"} = {
+      class      => "CQS::UniqueR",
+      perform    => 1,
+      target_dir => $target_dir . '/' . "TEQC",
+      parameterSampleFile1_ref=> $bam_ref,
+      parameterFile1=> $def->{covered_bed},
+      rtemplate  => "runTEQC.R",
+      rCode      => "genome=\""
+        . getValue($def, "annovar_buildver", "hg38")
+        . "\";",
+      output_file_ext => ".TEQC",
+      sh_direct       => 1,
+      'pbs'           => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '20gb',
+        'walltime' => '10'
+      },
+    };
+
   }else{
     if ($def->{aligner_scatter_count}){
       my $splitFastq = "splitFastq";
@@ -867,6 +888,25 @@ sub getConfig {
 
   if ( $def->{"perform_muTect2"}) {
     my $mutect2call = addMutect2($config, $def, $summary, $target_dir, $bam_input);
+
+    my $rCode=( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" );
+    $rCode=$rCode."genome=\"" . getValue($def, "annovar_buildver", "hg38") . "\";";
+    $config->{muTect2_02_mergeAndMafreport}={
+    class      => "CQS::UniqueR",
+    perform    => 1,
+    target_dir => "${target_dir}/muTect2_02_mergeAndMafreport",
+    rtemplate                  => "../CQS/muTect2MergeAndMafreport.R",
+#    parameterFile1_ref => [$mutect2task, ".maf"],
+    parameterSampleFile1_ref=> [$mutect2call, ".maf"],
+    parameterFile1           => $def->{family_info_file},
+    rCode                    => $rCode,
+    sh_direct  => 0,
+    pbs        => {
+      "nodes"    => "1:ppn=8",
+      "walltime" => "4",
+      "mem"      => "30gb"
+    }
+};
   }
   
   if ( $def->{"perform_muTect2indel"} ) {

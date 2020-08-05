@@ -142,11 +142,11 @@ sub perform {
       my $input_name = $input_key;
       $input_name =~ s/_config_ref$//g;
       $input_name =~ s/_ref$//g;
-      $config->{$section}{$input_key} = $input_parameters->{$input_key};
+      $config->{$section}{$input_key} = $input_single->{$input_key};
       my $singles = get_raw_files( $config, $section, $input_name );
       delete $config->{$section}{$input_key};
       my $single_file = $singles->{$task_name}[0];
-      $replace_values->{$input_key} = $single_file;
+      $replace_values->{$input_name} = $single_file;
     }else{
       $replace_values->{$input_key} = $input_single->{$input_key}[0];
     }
@@ -233,7 +233,7 @@ sub result {
   my $cur_dir = $result_dir . "/cromwell_finalOutputs";
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $output_exts = get_output_ext_list( $config, $section );
-  
+
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my @result_files = ();

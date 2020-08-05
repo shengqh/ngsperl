@@ -48,6 +48,7 @@ our %EXPORT_TAGS = (
     addAnnovarFilter 
     addAnnovarFilterGeneannotation
     addAnnovarMafReport
+    addFilterMafAndReport
     addGATK4CNVGermlineCohortAnalysis 
     addXHMM
     addGeneLocus
@@ -1076,6 +1077,36 @@ sub addAnnovarMafReport {
   };
   push @$summary, $annovar_to_maf_report;
 }
+
+sub addFilterMafAndReport {
+  my ( $config, $def, $summary, $target_dir, $mutect2call ) = @_;
+
+#  my $mutect2_index_dic = {};
+#  my $mutect2_index_key = "mafReport_Index";
+#  my $taskName = $mutect2call . getNextIndex($mutect2_index_dic, $mutect2_index_key) . "_mergeAndMafreport";
+  my $taskName = $mutect2call . "_mergeAndMafreport";
+
+    my $rCode=( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" );
+    $rCode=$rCode."genome=\"" . getValue($def, "annovar_buildver", "hg38") . "\";";
+
+    $config->{$taskName}={
+      class      => "CQS::UniqueR",
+      perform    => 1,
+      target_dir => "${target_dir}/${taskName}",
+      rtemplate                  => "../CQS/muTect2MergeAndMafreport.R",
+      parameterSampleFile1_ref=> [$mutect2call, ".maf"],
+      parameterFile1           => $def->{family_info_file},
+      rCode                    => $rCode,
+      sh_direct  => 0,
+      pbs        => {
+        "nodes"    => "1:ppn=8",
+        "walltime" => "4",
+        "mem"      => "30gb"
+      }
+    };
+    push @$summary, $taskName;
+}
+
 
 sub addGATK4PreprocessIntervals {
   my ( $config, $def, $target_dir, $bam_ref, $prefix, $step1, $step2, $step3, $step4, $step5, $step6, $index ) = @_;
