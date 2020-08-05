@@ -365,9 +365,12 @@ sub getRNASeqConfig {
 
       if ( defined $def->{correlation_groups} ) {
         my $correlationGroups = get_pair_group_sample_map( $def->{correlation_groups}, $def->{groups} );
-        if ( getValue( $def, "correlation_all", 1 ) ) {
+        if ( getValue( $def, "correlation_all", 1 ) and (not defined $correlationGroups->{all}) ) {
           $correlationGroups->{all} = $def->{groups};
         }
+        #print("correlationGroups=");
+        #print(Dumper($correlationGroups));
+        #stop("here");
         $config->{genetable_correlation}{parameterSampleFile2} = $correlationGroups;
       }
 
