@@ -123,13 +123,13 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
 
-  my %raw_files = %{$self->get_raw_files($config, $section)};
+  my $raw_files = get_grouped_raw_files($config, $section, "treatments");
 
   my $result = {};
-  for my $sample_name ( sort keys %raw_files ) {
-    my $cur_dir      = $result_dir . "/$sample_name";
+  for my $sample_name ( sort keys %$raw_files ) {
+    my $cur_dir      = $result_dir . "/$sample_name/chip";
     my @result_files = ();
-    push( @result_files, $cur_dir . "/${sample_name}_peaks.txt" );
+    push( @result_files, $cur_dir );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
