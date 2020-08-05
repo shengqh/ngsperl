@@ -1877,6 +1877,16 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
     },
   };
 
+  if ( defined $def->{groups}) {
+    if ( defined $def->{correlation_groups} ) {
+      my $correlationGroups = get_pair_group_sample_map( $def->{correlation_groups}, $def->{groups} );
+      if ( getValue( $def, "correlation_all", 1 ) and (not defined $correlationGroups->{all}) ) {
+        $correlationGroups->{all} = $def->{groups};
+      }
+      $config->{count_table_correlation}{parameterSampleFile2} = $correlationGroups;
+    }
+  }
+
   push @$summary_ref, ("count_table_correlation");
 
   my $paramFile = undef;
