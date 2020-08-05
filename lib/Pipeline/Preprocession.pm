@@ -28,6 +28,7 @@ sub initializeDefaultOptions {
   my $def = shift;
 
   initDefaultValue( $def, "perform_preprocessing",     1 );
+  initDefaultValue( $def, "perform_check_fastq_duplicate", 1);
   initDefaultValue( $def, "cluster",                   'slurm' );
   initDefaultValue( $def, "sra_to_fastq",              0 );
   initDefaultValue( $def, "check_file_exists",         1 );
@@ -343,6 +344,31 @@ sub getPreprocessionConfig {
     };
     $source_ref = "merge_fastq";
     push @$individual, ("merge_fastq");
+  }
+
+  if ($def->{perform_check_fastq_duplicate}){
+    $config->{qc_check_fastq_duplicate} = {
+      class => "CQS::ProgramWrapperOneToOne",
+      target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "qc_check_fastq_duplicate",
+      interpretor => "python",
+      program => "../QC/checkFastqDuplicate.py",
+      source_arg => "-i",
+      source_ref => $source_ref,
+      output_arg => "-o",
+      output_file_prefix => "",
+      output_file_ext => ".txt",
+      output_to_same_folder => 1,
+      can_result_be_empty_file => 1,
+      sh_direct   => 1,
+      pbs => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "40gb"
+      }
+    };
+    push @$individual, ("qc_check_fastq_duplicate");
   }
 
   if ($def->{perform_dedup_fastq}){
