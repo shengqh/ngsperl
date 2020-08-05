@@ -30,11 +30,12 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
 
-  my $sort_memory = $memory;
-  $sort_memory =~ /(\d+)(\S+)/;
-  my $memNum = $1;
-  my $memUnit = $2;
-  $sort_memory = floor($memNum / $thread) . $memUnit;
+  my ($sort_memory, $isMB) = getMemoryPerThread($memory, $thread);
+  if ($isMB) {
+    $sort_memory = $sort_memory . "M";
+  }else{
+    $sort_memory = $sort_memory . "G";
+  }
 
   my $selfname = $self->{_name};
 

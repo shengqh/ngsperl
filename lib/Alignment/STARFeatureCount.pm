@@ -35,7 +35,12 @@ sub perform {
   #  }
   #
 
-  my $sambamba_memory = min(int($memory * 0.9), 20);
+  my ($sort_memory, $isMB) = getMemoryPerThread($memory, $thread);
+  if ($isMB) {
+    $sort_memory = $sort_memory . "M";
+  }else{
+    $sort_memory = $sort_memory . "G";
+  }
 
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
   my $star                    = get_option( $config, $section, "star_location",           "STAR" );
@@ -126,7 +131,7 @@ fi
   if ($output_sort_by_coordinate) {
     print $pbs "
 if [ ! -s ${final_bam} ]; then
-  sambamba sort -m ${sambamba_memory}G -t $thread -o $final_bam $unsorted
+  sambamba sort -m $sort_memory -t $thread -o $final_bam $unsorted
   sambamba index $final_bam
 fi  
 ";
