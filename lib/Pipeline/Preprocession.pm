@@ -14,7 +14,11 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(getPreprocessionConfig)] );
+our %EXPORT_TAGS = ( 'all' => [qw(
+  getPreprocessionConfig
+  addCutadapt
+  addFastqLen)
+  ] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -24,6 +28,7 @@ sub initializeDefaultOptions {
   my $def = shift;
 
   initDefaultValue( $def, "perform_preprocessing",     1 );
+  initDefaultValue( $def, "perform_check_fastq_duplicate", 1);
   initDefaultValue( $def, "cluster",                   'slurm' );
   initDefaultValue( $def, "sra_to_fastq",              0 );
   initDefaultValue( $def, "check_file_exists",         1 );
@@ -73,10 +78,10 @@ sub addCutadapt {
       sh_direct                        => 0,
       cluster                          => $cluster,
       pbs                              => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
+#        "email"     => $def->{email},
+#        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=" . $cutadapt_thread,
-        "walltime"  => "23",
+        "walltime"  => "14",
         "mem"       => "20gb"
       },
     }
@@ -182,6 +187,12 @@ sub getPreprocessionConfig {
     checkFileGroupPairNames($def, ["groups"], ["pairs"], "pool_sample_groups");
   }else{
     checkFileGroupPairNames($def, ["groups"], ["pairs"], "files");
+
+    if(not defined $def->{groups}){
+      my $files = $def->{files};
+      my $sampleNames = [keys %$files];
+      $def->{groups} = {"All" => $sampleNames};
+    }
   }
 
   my $target_dir = create_directory_or_die( getValue( $def, "target_dir" ) );
@@ -233,6 +244,7 @@ sub getPreprocessionConfig {
     deseq2_groups        => $def->{deseq2_groups},
     pairs                => $def->{pairs},
     additional_bam_files => $def->{additional_bam_files},
+    singularity_image_files => $def->{singularity_image_files},
   };
   
   if(not defined $def->{ignore_docker} or not $def->{ignore_docker}){
@@ -332,6 +344,31 @@ sub getPreprocessionConfig {
     };
     $source_ref = "merge_fastq";
     push @$individual, ("merge_fastq");
+  }
+
+  if ($def->{perform_check_fastq_duplicate}){
+    $config->{qc_check_fastq_duplicate} = {
+      class => "CQS::ProgramWrapperOneToOne",
+      target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "qc_check_fastq_duplicate",
+      interpretor => "python",
+      program => "../QC/checkFastqDuplicate.py",
+      source_arg => "-i",
+      source_ref => $source_ref,
+      output_arg => "-o",
+      output_file_prefix => "",
+      output_file_ext => ".txt",
+      output_to_same_folder => 1,
+      can_result_be_empty_file => 1,
+      sh_direct   => 1,
+      pbs => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "40gb"
+      }
+    };
+    push @$individual, ("qc_check_fastq_duplicate");
   }
 
   if ($def->{perform_dedup_fastq}){

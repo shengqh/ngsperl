@@ -319,8 +319,10 @@ sub result {
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my $final_file = "${sample_name}${rmdupResultName}${indelResultName}.recal${baqResultName}.bam";
+    my $bai_file = "${sample_name}${rmdupResultName}${indelResultName}.recal${baqResultName}.bai";
     my @result_files = ();
     push( @result_files, "${result_dir}/${final_file}" );
+    push( @result_files, "${result_dir}/${bai_file}" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;

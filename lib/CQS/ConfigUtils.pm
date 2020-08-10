@@ -3,6 +3,7 @@ package CQS::ConfigUtils;
 
 use strict;
 use warnings;
+use Carp qw<longmess>;
 use File::Basename;
 use File::Copy;
 use CQS::FileUtils;
@@ -69,7 +70,11 @@ our %EXPORT_TAGS = (
       get_program_param
       get_program
       get_interation_sample_subsample_map
-      get_interation_subsample_sample_map)
+      get_interation_subsample_sample_map
+      get_groups
+      get_covariances
+      getGroupPickResult
+      getMemoryPerThread)
   ]
 );
 
@@ -83,6 +88,11 @@ our $VERSION = '0.01';
 sub get_config_section {
   my ( $config, $section ) = @_;
   my @sections = split( '::', $section );
+  if (ref($section) eq ref({})){
+    my $mess = longmess();
+    print Dumper( $mess );    
+  }
+  #print(Dumper($section));
   my $result   = $config;
   for my $curSection (@sections) {
     $result = $result->{$curSection};
@@ -422,7 +432,7 @@ sub get_refmap {
       my $partlength = scalar(@parts);
       for ( my $index = 0 ; $index < $partlength ; ) {
         if ( !has_config_section( $config, $parts[$index] ) ) {
-          die "undefined section $parts[$index]";
+          die "undefined section " . Dumper($parts[$index]) . " in $section for $mapname ";
         }
         get_config_section( $config, $parts[$index] );
 
@@ -864,6 +874,7 @@ sub get_pure_pairs {
       $result->{$pair_name} = $group_names;
     }
   }
+
   return ($result);
 }
 
@@ -981,10 +992,17 @@ sub save_parameter_sample_file {
     else {
       @orderedSampleNames = sort keys %temp;
     }
+
+    my $fileOnly = get_option( $config, $section, $key . "_fileonly", 0 );
+
     open( my $list, '>', $outputFile ) or die "Cannot create $outputFile";
     foreach my $sample_name (@orderedSampleNames) {
       foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
-        print $list $subSampleFile . "\t$sample_name\n";
+        if ($fileOnly){
+          print $list $subSampleFile . "\n";
+        }else{
+          print $list $subSampleFile . "\t$sample_name\n";
+        }
       }
     }
     close($list);
@@ -1335,6 +1353,86 @@ sub get_interation_subsample_sample_map {
     $result->{$individual_sample_name} = $sample_name;
   }
   return ($result);
+}
+
+sub get_groups {
+  my ($files, $pattern) = @_;
+  my $groups = {};
+  for my $name (keys %$files){
+    if ( $name =~ $pattern ) {
+      my $group = $1;
+
+      my $names = $groups->{$group};
+      if (defined $names) {
+        push @$names, ($name);
+      }else{
+        $groups->{$group} = [$name];
+      }
+    }else{
+      die "Cannot find pattern $pattern in $name.";
+    }
+  }
+
+  print("  groups => {\n");
+  for my $group (sort keys %$groups){
+    my $names = $groups->{$group};
+    my @sorted_names = sort @$names;
+    print('    "' . $group . '" => ["' . join('","', @sorted_names) . '"],' . "\n");
+  }
+  print("  },\n");
+}
+
+sub get_covariances {
+  my ($pairs, $groups, $covname, $covpattern) = @_;
+
+  print("  \"pairs\" => {\n");
+  for my $pairName (sort keys %$pairs){
+    print("    \"$pairName\" => {\n");
+    my $groupNames = $pairs->{$pairName}{groups};
+    print('      groups => ["'. join('", "', @$groupNames) . '"], ' . "\n");
+    my $covs = [];
+    for my $groupName (@$groupNames){
+      my $samples = $groups->{$groupName};
+      for my $sampleName (@$samples){
+        $sampleName =~ /$covpattern/;
+        my $cov = $1;
+        push(@$covs, $cov);
+      }
+    }
+    print('      ' . $covname . ' => ["'. join('", "', @$covs) . '"] '. "\n");
+    print("    }, \n");
+  }
+  print("  },\n");
+}
+
+sub getGroupPickResult {
+  my ($config, $source_ref, $sample_index_in_group, $pattern ) = @_;
+
+  my $temp_section = "temp_section";
+  $config->{$temp_section} = {     
+    "class" => "CQS::GroupPickTask",
+    "source_ref" => [$source_ref],
+    "groups_ref" => ["groups"],
+    "sample_index_in_group" => $sample_index_in_group, 
+  };
+  my $myclass = instantiate("CQS::GroupPickTask");
+  my $result = $myclass->result($config, $temp_section, $pattern);
+  delete $config->{$temp_section};
+  return ($result);
+}
+
+sub getMemoryPerThread {
+  my ($memory_in_gb, $thread) = @_;
+  my $result = $memory_in_gb;
+  $result =~ /(\d+)(\S+)/;
+  my $memNum = $1;
+  $result = $memNum / $thread;
+  my $isMB = 0;
+  if ($result < 1) {
+    $result = floor($result * 1024);
+    $isMB = 1;
+  }
+  return($result, $isMB);
 }
 
 1;

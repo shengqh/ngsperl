@@ -74,7 +74,8 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "max_thread", 8 );
 
   initDefaultValue( $def, "use_intermediate_dir", 1 );
-
+  initDefaultValue( $def, "use_intermediate_dir_aside", 0 );
+  
   initDefaultValue( $def, "host_xml2bam",                      0 );
   initDefaultValue( $def, "bacteria_group1_count2bam",         0 );
   initDefaultValue( $def, "bacteria_group2_count2bam",         0 );
@@ -144,6 +145,17 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "nonhost_table_option", "--outputReadTable" );
 
   initDefaultValue( $def, "consider_miRNA_NTA", 1 );
+
+  if ($def->{search_nonhost_genome_custom_group}){
+    my $custom_group_name = getValue($def, "nonhost_genome_custom_group_name");
+    if (defined $def->{customed_db}) {
+      if (defined $def->{customed_db}{$custom_group_name}){
+        $def->{bowtie1_custom_group_index} = $def->{customed_db}{$custom_group_name}{bowtie1_index};
+        $def->{custom_group_species_map} = $def->{customed_db}{$custom_group_name}{species_map};
+        die "File not exists: " . $def->{custom_group_species_map}  if !-e $def->{custom_group_species_map};
+      }
+    }
+  }
 
   #search database
   initDefaultValue( $def, "search_nonhost_genome_custom_group_only",        0 );

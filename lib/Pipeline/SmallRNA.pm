@@ -203,9 +203,14 @@ sub getSmallRNAConfig {
     }
   }
 
-  my $do_comparison = defined $def->{pairs};
+  #print(Dumper($def->{pairs_config}));
+  my $do_comparison = (defined $def->{pairs}) || (defined $def->{pairs_config});
+  print("do_comparison=" . $do_comparison . "\n");
   if ($do_comparison) {
     my $pairs = $def->{pairs};
+    if(not defined $pairs){
+      $pairs = $def->{pairs_config};
+    }
 
     my $sampleComparisons;
     if ( defined $pairs->{".order"} ) {
@@ -302,9 +307,9 @@ sub getSmallRNAConfig {
         "Groups" => string_combination( [ ["nonhost_tRNA"], [ "", "species", "type", "anticodon", "reads" ], [ $nonhostLibraryStr . $DE_task_suffix ], $sampleComparisons ], '_' )
       };
     }
-  }
 
-  $def->{pure_pairs} = get_pure_pairs( $def->{pairs} );
+    $def->{pure_pairs} = get_pure_pairs( $pairs );
+  }
 
   my $DE_min_median_read_top      = getValue( $def, "DE_min_median_read_top" );
   my $DE_min_median_read_smallRNA = getValue( $def, "DE_min_median_read_smallRNA" );
@@ -393,6 +398,11 @@ sub getSmallRNAConfig {
 
     my $countTask = "bowtie1_genome_1mm_NTA_smallRNA_count";
 
+    my $category_ext = ".Category.Table.csv;.Category1.Barplot.png;.Category2.Barplot.png;";
+    if (defined $def->{groups}) {
+      $category_ext = $category_ext . ".Category1.Group.Piechart.png;.Category2.Group.Piechart.png;",
+    }
+
     $host_genome = merge(
       $host_genome,
       {
@@ -438,7 +448,7 @@ sub getSmallRNAConfig {
           target_dir                => $host_genome_dir . "/bowtie1_genome_1mm_NTA_smallRNA_category",
           rtemplate                 => "countTableVisFunctions.R,smallRnaCategory.R",
           output_file               => "",
-          output_file_ext           => ".Category.Table.csv;.Category1.Barplot.png;.Category1.Group.Piechart.png;.Category2.Barplot.png;.Category2.Group.Piechart.png;",
+          output_file_ext           => $category_ext,
           parameterSampleFile1_ref  => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info" ],
           parameterSampleFile2      => $groups,
           parameterSampleFile2Order => $def->{groups_order},
@@ -978,7 +988,7 @@ sub getSmallRNAConfig {
       }
     }
 
-    if ( $do_comparison or defined $groups or defined $def->{tRNA_vis_group} ) {
+    if ( $do_comparison || defined $groups || defined $def->{tRNA_vis_group} ) {
       addPositionVis(
         $config, $def,
         $summary_ref,
@@ -1087,7 +1097,7 @@ sub getSmallRNAConfig {
       }
     }
 
-    if ( $search_nonhost_database or $blast_unmapped_reads or $def->{perform_host_length_dist_category} or $def->{perform_host_genome_reads_deseq2} ) {
+    if ( $search_nonhost_database || $blast_unmapped_reads || $def->{perform_host_length_dist_category} || $def->{perform_host_genome_reads_deseq2} ) {
       my $readClass;
       my $readTask;
       if ( $def->{host_remove_all_mapped_reads} ) {
@@ -1291,9 +1301,9 @@ sub getSmallRNAConfig {
         perform            => 1,
         target_dir         => "$host_intermediate_dir/$spcount_bowtie",
         option             => "bowtie -t 8 -d " . getValue($def, "bowtie_${refseq}_index_list_file"),
-        interpretor        => "",
-        program            => "spcount",
-        check_program     => 0,
+        interpretor        => "python",
+        program            => "/scratch/cqs_share/softwares/spcount/debug.py",
+        check_program     => 1,
         source_arg => "-i",
         source_ref => $identical_ref,
         output_arg         => "-o",
@@ -1317,9 +1327,9 @@ sub getSmallRNAConfig {
         perform            => 1,
         target_dir         => "$nonhost_genome_dir/$spcount_count",
         option             => "count",
-        interpretor        => "",
-        program            => "spcount",
-        check_program     => 0,
+        interpretor        => "python",
+        program            => "/scratch/cqs_share/softwares/spcount/debug.py",
+        check_program     => 1,
         parameterSampleFile1_arg => "-i",
         parameterSampleFile1_ref => $spcount_bowtie,
         parameterSampleFile2_arg => "-c",
@@ -1349,6 +1359,7 @@ sub getSmallRNAConfig {
   #Mapping unmapped reads to nonhost genome
   if ($search_nonhost_genome) {
     my $nonhost_genome_count_xml = [];
+    my $microbial_genome_count_xml = [];
     for my $nonhostGroup (@nonhost_genome_groups) {
       addNonhostDatabase(
         $config, $def, $individual_ref, $summary_ref, "${nonhostGroup}_pm", $nonhost_genome_dir,    #general option
@@ -1367,7 +1378,7 @@ sub getSmallRNAConfig {
         {
           rtemplate          => "countTableVisFunctions.R,countTableVis.R",
           output_file        => ".${nonhostGroup}Mapping.Result",
-          output_file_ext    => ".Piechart.png",
+          output_file_ext    => ".Group.Piechart.png",
           parameterFile1_ref => [ "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" ],
           rCode              => 'maxCategory=4;' . $R_font_size,
         }
@@ -1395,8 +1406,9 @@ sub getSmallRNAConfig {
       push @mapped,                ( "bowtie1_${nonhostGroup}_pm_count", ".xml" );
       push @overlap,               ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
       
-      if((not $def->{nonhost_genome_count_no_virus}) or ($nonhostGroup !~ /virus/)){
-        push @$nonhost_genome_count_xml, ( "bowtie1_${nonhostGroup}_pm_table", ".count.xml\$" );
+      push @$nonhost_genome_count_xml, ( "bowtie1_${nonhostGroup}_pm_table", ".count.xml\$" );
+      if( ($nonhostGroup !~ /virus/) and ($nonhostGroup !~ /algae/)){
+        push @$microbial_genome_count_xml, ( "bowtie1_${nonhostGroup}_pm_table", ".count.xml\$" );
       }
 
       my $nonhost_count2bam = ${nonhostGroup} . "_count2bam";
@@ -1435,6 +1447,29 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
         parameterSampleFile1_arg => "-i",
         parameterSampleFile1_ref => $nonhost_genome_count_xml,
         output_arg         => "-o",
+        output_file_ext    => ".nonhost_genome.tsv",
+        sh_direct          => 1,
+        pbs                => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+
+      push( @$summary_ref, "nonhost_genome_count" );
+
+      $config->{microbial_genome_count} = {
+        class              => "CQS::ProgramWrapper",
+        perform            => 1,
+        target_dir         => $nonhost_genome_dir . "/microbial_genome_count",
+        option             => "",
+        interpretor        => "python",
+        program            => "../SmallRNA/nonhostXmlCount.py",
+        parameterSampleFile1_arg => "-i",
+        parameterSampleFile1_ref => $microbial_genome_count_xml,
+        output_arg         => "-o",
         output_file_ext    => ".microbial.tsv",
         sh_direct          => 1,
         pbs                => {
@@ -1445,7 +1480,7 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
           "mem"       => "10gb"
         },
       };
-      push( @$summary_ref, "nonhost_genome_count" );
+      push( @$summary_ref, "microbial_genome_count" );
     }
     
     push @name_for_readSummary, @nonhost_genome_group_names;
@@ -1842,6 +1877,16 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
     },
   };
 
+  if ( defined $def->{groups}) {
+    if ( defined $def->{correlation_groups} ) {
+      my $correlationGroups = get_pair_group_sample_map( $def->{correlation_groups}, $def->{groups} );
+      if ( getValue( $def, "correlation_all", 1 ) and (not defined $correlationGroups->{all}) ) {
+        $correlationGroups->{all} = $def->{groups};
+      }
+      $config->{count_table_correlation}{parameterSampleFile2} = $correlationGroups;
+    }
+  }
+
   push @$summary_ref, ("count_table_correlation");
 
   my $paramFile = undef;
@@ -1935,7 +1980,7 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
         parameterSampleFile1      => $groups,
         parameterSampleFile2      => $def->{groups_vis_layout},
         parameterFile1_ref        => [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv"],
-        parameterFile2_ref        => [ "nonhost_genome_count", ".microbial.tsv\$" ],
+        parameterFile2_ref        => [ "microbial_genome_count", ".microbial.tsv\$" ],
         sh_direct                 => 1,
         rCode                     => $rCode,
         pbs                       => {
@@ -2286,9 +2331,11 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
         push( @report_names, "category_mapped_bar",                      "category_smallrna_bar" );
       }
 
-      push( @report_files, "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category1.Group.Piechart.png" );
-      push( @report_files, "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category2.Group.Piechart.png" );
-      push( @report_names, "category_mapped_group",                    "category_smallrna_group" );
+      if (defined $def->{groups}){
+        push( @report_files, "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category1.Group.Piechart.png" );
+        push( @report_files, "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category2.Group.Piechart.png" );
+        push( @report_names, "category_mapped_group",                    "category_smallrna_group" );
+      }
     }
 
     if ( defined $config->{count_table_correlation} ) {

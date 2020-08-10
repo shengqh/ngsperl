@@ -151,61 +151,12 @@ sub getRNASeqConfig {
 
   my $count_file_ref = $def->{count_file};
   if ( $def->{perform_mapping} && $def->{perform_counting} && ( $aligner eq "star" ) && $def->{perform_star_featurecount} ) {
-    my $aligner_index              = $def->{star_index} or die "Define star_index at definition first";
-    my $starFolder                 = $target_dir . "/" . getNextFolderIndex($def) . "star_featurecount";
-    my $transcript_gtf             = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
-    my $star_featurecount_walltime = getValue( $def, "star_featurecount_walltime", 23 );
-    my $configAlignment            = {
-      "star_featurecount" => {
-        class                     => "Alignment::STARFeatureCount",
-        perform                   => 1,
-        target_dir                => $starFolder,
-        option                    => $star_option,
-        source_ref                => $source_ref,
-        genome_dir                => $aligner_index,
-        output_sort_by_coordinate => 1,
-        output_to_same_folder     => $def->{output_bam_to_same_folder},
-        featureCount_option       => getValue( $def, "featureCount_option" ),
-        star_location             => $def->{star_location},
-        gff_file                  => $transcript_gtf,
-        is_paired_end             => is_paired_end($def),
-        delete_star_featureCount_bam => $def->{delete_star_featureCount_bam},
-        sh_direct                 => 0,
-        pbs                       => {
-          "email"     => $email,
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=" . $def->{max_thread},
-          "walltime"  => "$star_featurecount_walltime",
-          "mem"       => "40gb"
-        },
-      },
-      "star_featurecount_summary" => {
-        class                    => "CQS::UniqueR",
-        perform                  => 1,
-        target_dir               => $starFolder,
-        option                   => "",
-        rtemplate                => "../Alignment/STARFeatureCount.r",
-        output_file_ext          => ".STARSummary.csv;.STARSummary.csv.png;.FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
-        parameterSampleFile1_ref => [ "star_featurecount", "_Log.final.out" ],
-        parameterSampleFile2_ref => [ "star_featurecount", ".count.summary" ],
-        sh_direct                => 1,
-        pbs                      => {
-          "email"     => $email,
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "2",
-          "mem"       => "10gb"
-        },
-      },
-    };
+    my $sf_task = addStarFeaturecount($config, $def, $individual, $summary, $target_dir, $source_ref, "" );
 
-    $source_ref      = [ "star_featurecount", "_Aligned.sortedByCoord.out.bam\$" ];
-    $count_table_ref = [ "star_featurecount", ".count\$" ];
-    push @$individual, ("star_featurecount");
-    push @$summary,    ("star_featurecount_summary");
-    $config = merge( $config, $configAlignment );
+    $source_ref      = [ $sf_task, "_Aligned.sortedByCoord.out.bam\$" ];
+    $count_table_ref = [ $sf_task, ".count\$" ];
 
-    $multiqc_depedents = "star_featurecount";
+    $multiqc_depedents = $sf_task;
   }
   else {
 
@@ -414,9 +365,12 @@ sub getRNASeqConfig {
 
       if ( defined $def->{correlation_groups} ) {
         my $correlationGroups = get_pair_group_sample_map( $def->{correlation_groups}, $def->{groups} );
-        if ( getValue( $def, "correlation_all", 1 ) ) {
+        if ( getValue( $def, "correlation_all", 1 ) and (not defined $correlationGroups->{all}) ) {
           $correlationGroups->{all} = $def->{groups};
         }
+        #print("correlationGroups=");
+        #print(Dumper($correlationGroups));
+        #stop("here");
         $config->{genetable_correlation}{parameterSampleFile2} = $correlationGroups;
       }
 
@@ -578,7 +532,8 @@ sub getRNASeqConfig {
         class                    => "CQS::UniqueR",
         perform                  => 1,
         target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "keggprofile",
-        rtemplate                => "KEGGprofilePerform.R",
+        rtemplate                => "reportFunctions.R;KEGGprofilePerform.R",
+        rReportTemplate          => "KEGGprofileReport.Rmd",
         output_file              => "",
         output_file_ext          => ".KEGGprofile.RData",
         parameterSampleFile1_ref => [ $deseq2taskname, "_DESeq2.csv\$" ],

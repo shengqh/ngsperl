@@ -2,7 +2,7 @@
 package CQS::Wdl;
 
 use strict;
-use warnings;
+use warnings::register;
 use File::Basename;
 use CQS::PBS;
 use CQS::ConfigUtils;
@@ -19,8 +19,14 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_wdl";
+  $self->{_can_use_docker} = 0;
   bless $self, $class;
   return $self;
+}
+
+sub can_use_docker(){
+  my ($self) = @_;
+  return(0);
 }
 
 sub perform {
@@ -39,11 +45,23 @@ sub perform {
   #softlink singularity_image_files to result folder
   my $singularity_image_files = get_raw_files( $config, $section, "singularity_image_files" ); 
   for my $image_name ( sort keys %$singularity_image_files ) {
-    my $simgSoftlinkCommand="cp -P ".$singularity_image_files->{$image_name}[0]." ".$result_dir."/".$image_name;
-    print($simgSoftlinkCommand."\n");
-  #  print $singularity_image_files->{$image_name}[0]."\n";
-    system($simgSoftlinkCommand);
-    #`ls -la`;
+    my $source_image=$singularity_image_files->{$image_name};
+    if(ref($source_image) eq 'ARRAY') {
+      $source_image=${$source_image}[0];
+    }
+    # print $image_name."\n";
+    # print $source_image."\n";
+    my $target_image = $result_dir."/".$image_name;
+    if (! -e $target_image) {
+      my $simgSoftlinkCommand;
+      if (-l $singularity_image_files->{$image_name}) { #softlink, copy
+          $simgSoftlinkCommand="cp -P ".$source_image." ".$target_image;
+      } else { #file, make softlink
+          $simgSoftlinkCommand="ln -s ".$source_image." ".$target_image;
+      }
+      print($simgSoftlinkCommand."\n");
+      system($simgSoftlinkCommand);
+    }
   }
 
   my $raw_files = get_raw_files( $config, $section );
@@ -86,7 +104,7 @@ sub perform {
       die "$input_key should include _ref suffix" if (substr($input_key, -4) ne "_ref");
       $input_name =~ s/_config_ref$//g;
       $input_name =~ s/_ref$//g;
-      $config->{$section}{$input_key} = $input_parameters->{$input_key};
+      $config->{$section}{$input_key} = $input_list->{$input_key};
       $input_value = get_raw_files( $config, $section, $input_name );
       delete $config->{$section}{$input_key};
     }
@@ -124,11 +142,11 @@ sub perform {
       my $input_name = $input_key;
       $input_name =~ s/_config_ref$//g;
       $input_name =~ s/_ref$//g;
-      $config->{$section}{$input_key} = $input_parameters->{$input_key};
+      $config->{$section}{$input_key} = $input_single->{$input_key};
       my $singles = get_raw_files( $config, $section, $input_name );
       delete $config->{$section}{$input_key};
       my $single_file = $singles->{$task_name}[0];
-      $replace_values->{$input_key} = $single_file;
+      $replace_values->{$input_name} = $single_file;
     }else{
       $replace_values->{$input_key} = $input_single->{$input_key}[0];
     }
@@ -137,7 +155,8 @@ sub perform {
   my $json_dic = read_json($input_json_file);
   for my $input_key (keys %$replace_dics){
     if (!defined $json_dic->{$input_key}){
-      die "Cannot find " . $input_key . " in json file";
+  #    die "Cannot find " . $input_key . " in json file";
+      warnings::warn("Cannot find " . $input_key . " in json file");
     }
   }
   
@@ -214,7 +233,7 @@ sub result {
   my $cur_dir = $result_dir . "/cromwell_finalOutputs";
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $output_exts = get_output_ext_list( $config, $section );
-  
+
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my @result_files = ();

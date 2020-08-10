@@ -27,7 +27,7 @@ sub new {
 }
 
 sub getSuffix {
-  my ( $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue, $pvalue ) = @_;
+  my ( $self, $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue, $pvalue ) = @_;
   my $suffix = "";
   if ($top25only) {
     $suffix = $suffix . "_top25";
@@ -99,7 +99,7 @@ sub perform {
     $libraryKey = get_option( $config, $section, "library_key", "TotalReads" );
   }
 
-  my $suffix = getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue, $pvalue );
+  my $suffix = $self->getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue, $pvalue );
 
   my %tpgroups = ();
   for my $group_name ( sort keys %{$groups} ) {
@@ -306,7 +306,7 @@ sub result {
   my $exportSignificantGeneName = get_option( $config, $section, "export_significant_gene_name", 0 );
   my $useRawPvalue              = get_option( $config, $section, "use_raw_p_value",              0 );
   my $pvalue                    = get_option( $config, $section, "pvalue",                       0.05 );
-  my $suffix = getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue, $pvalue );
+  my $suffix = $self->getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue, $pvalue );
   my $result = {};
 
   my $tasknameFiles = [$result_dir . "/${task_name}.define.DESeq2.version"];

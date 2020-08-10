@@ -71,10 +71,11 @@ sub perform {
     my $out_file = "${group_name}.somatic.out";
     my $vcf      = "${group_name}.somatic.vcf";
     my $passvcf  = "${group_name}.somatic.pass.vcf";
+    my $final = "${group_name}.somatic.pass.vcf.gz";
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $passvcf, $init_command );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final, $init_command );
     print $pbs "
 if [ ! -s ${normal}.bai ]; then
   samtools index ${normal}
@@ -106,7 +107,13 @@ if [[ -s $vcf && ! -s $passvcf ]]; then
   fi
 fi
 
-";
+if [[ -s $passvcf && ! -s $final ]]; then
+  bgzip $passvcf
+  tabix $final
+  rm ${passvcf}.idx
+fi
+"
+;
 
     $self->close_pbs( $pbs, $pbs_file );
 
@@ -132,7 +139,7 @@ sub result {
   for my $group_name ( keys %{$groups} ) {
     my @result_files = ();
     my $cur_dir      = $result_dir . "/$group_name";
-    push( @result_files, "$cur_dir/${group_name}.somatic.pass.vcf" );
+    push( @result_files, "$cur_dir/${group_name}.somatic.pass.vcf.gz" );
     push( @result_files, "$cur_dir/${group_name}.somatic.vcf" );
     $result->{$group_name} = filter_array( \@result_files, $pattern );
   }

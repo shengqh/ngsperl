@@ -47,11 +47,14 @@ our %EXPORT_TAGS = (
     addAnnovar 
     addAnnovarFilter 
     addAnnovarFilterGeneannotation
+    addAnnovarMafReport
+    addFilterMafAndReport
     addGATK4CNVGermlineCohortAnalysis 
     addXHMM
     addGeneLocus
     annotateNearestGene
-    checkFileGroupPairNames)
+    checkFileGroupPairNames
+    addStarFeaturecount)
   ]
 );
 
@@ -77,7 +80,14 @@ sub getIntermidiateDir {
 
   my $result = $defaultDir;
   if($def->{use_intermediate_dir} ){
-    $result = create_directory_or_die( $def->{target_dir} . "/intermediate_data" );
+    $result = $def->{target_dir} . "/intermediate_data";
+    if (-e $result) {
+      return($result);
+    }
+    if ($def->{use_intermediate_dir_aside}){
+      $result = $def->{target_dir} . ".intermediate_data";
+    }
+    $result = create_directory_or_die( $result );
   }
 
   return $result;
@@ -157,7 +167,7 @@ sub addFastQC {
     cluster    => $def->{cluster},
     sh_direct  => 1,
     pbs        => {
-      "email"    => $def->{email},
+#      "email"    => $def->{email},
       "nodes"    => "1:ppn=" . $curThread,
       "walltime" => "4",
       "mem"      => "4gb"
@@ -176,7 +186,7 @@ sub addFastQC {
     sh_direct  => 1,
     can_result_be_empty_file => 1,
     pbs        => {
-      "email"    => $def->{email},
+#      "email"    => $def->{email},
       "nodes"    => "1:ppn=1",
       "walltime" => "2",
       "mem"      => "10gb"
@@ -383,17 +393,13 @@ sub addDEseq2 {
   }
 
   my $rCode = getOutputFormat( $def, getValue($def, "DE_rCode", "") );
-  $rCode = addOutputOption( $def, $rCode, "top25cv_in_hca",             $def->{top25cv_in_hca},             "top25cvInHCA" );
+  $rCode = addOutputOption( $def, $rCode, "top25cv_in_hca", $def->{top25cv_in_hca}, "top25cvInHCA" );
 
-  my $groupNames = defined $def->{deseq2_groups} ? "deseq2_groups" : "groups";
   $config->{$taskName} = {
-    class                        => "Comparison::DESeq2",
     perform                      => 1,
     target_dir                   => $deseq2Dir . "/" . getNextFolderIndex($def) . "$taskName",
     output_to_dir                => getReportDir($def),
     option                       => "",
-    source_ref                   => "pairs",
-    groups_ref                   => $groupNames,
     sh_direct                    => 1,
     show_label_PCA               => $def->{show_label_PCA},
     use_pearson_in_hca           => $def->{use_pearson_in_hca},
@@ -420,6 +426,16 @@ sub addDEseq2 {
       "mem"       => "20gb"
     },
   };
+
+  if (defined $def->{pairs_config}) {
+    $config->{$taskName}{class} = "Comparison::DESeq2config";
+    $config->{$taskName}{source} = $def->{pairs_config};
+  }else{
+    $config->{$taskName}{class} = "Comparison::DESeq2";
+    my $groupNames = defined $def->{deseq2_groups} ? "deseq2_groups" : "groups";
+    $config->{$taskName}{source_ref} = "pairs";
+    $config->{$taskName}{groups_ref} = $groupNames;
+  }
 
   if ( ref($countfileRef) eq "ARRAY" ) {
     $config->{$taskName}{countfile_ref} = $countfileRef;
@@ -1016,6 +1032,82 @@ sub addAnnovarFilterGeneannotation {
   return ($annovar_filter_geneannotation_name);
 }
 
+sub addAnnovarMafReport {
+  my ( $config, $def, $summary, $target_dir, $annovar_filter_name, $prefix, $indexDic, $indexKey ) = @_;
+
+  my $annovar_to_maf = $prefix . getNextIndex($indexDic, $indexKey) . "_toMAF";
+  $config->{$annovar_to_maf} = {
+    class      => "Annotation::Annovar2Maf",
+    perform    => 1,
+    target_dir => $target_dir . "/" . $annovar_to_maf,
+    source_ref => [ $annovar_filter_name, "\\.freq0\\..*.filtered.tsv" ],
+    refBuild   => getValue( $def, "annovar_buildver" ),
+    sh_direct  => 1,
+    pbs        => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push @$summary, $annovar_to_maf;
+
+  my $annovar_to_maf_report = $prefix . getNextIndex($indexDic, $indexKey) . "_report";
+  $config->{$annovar_to_maf_report} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . $annovar_to_maf_report,
+    rtemplate                => "../Annotation/mafReport.r",
+    output_file              => "parameterSampleFile1",
+    output_file_ext          => ".report.html",
+    parameterSampleFile1_ref => [ $annovar_to_maf, ".tsv.maf\$" ],
+    parameterFile1           => $def->{family_info_file},
+    sh_direct                => 1,
+    rCode                    => ( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" ),
+#            rCode                    => ( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" )
+#              . ( defined $def->{annotation_genes} ? "interestedGeneStr=\"" . $def->{annotation_genes} . "\"" : "" ),
+    pbs => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "24",
+      "mem"       => "10gb"
+    },
+  };
+  push @$summary, $annovar_to_maf_report;
+}
+
+sub addFilterMafAndReport {
+  my ( $config, $def, $summary, $target_dir, $mutect2call ) = @_;
+
+#  my $mutect2_index_dic = {};
+#  my $mutect2_index_key = "mafReport_Index";
+#  my $taskName = $mutect2call . getNextIndex($mutect2_index_dic, $mutect2_index_key) . "_mergeAndMafreport";
+  my $taskName = $mutect2call . "_mergeAndMafreport";
+
+    my $rCode=( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" );
+    $rCode=$rCode."genome=\"" . getValue($def, "annovar_buildver", "hg38") . "\";";
+
+    $config->{$taskName}={
+      class      => "CQS::UniqueR",
+      perform    => 1,
+      target_dir => "${target_dir}/${taskName}",
+      rtemplate                  => "../CQS/muTect2MergeAndMafreport.R",
+      parameterSampleFile1_ref=> [$mutect2call, ".maf"],
+      parameterFile1           => $def->{family_info_file},
+      rCode                    => $rCode,
+      sh_direct  => 0,
+      pbs        => {
+        "nodes"    => "1:ppn=8",
+        "walltime" => "4",
+        "mem"      => "30gb"
+      }
+    };
+    push @$summary, $taskName;
+}
+
+
 sub addGATK4PreprocessIntervals {
   my ( $config, $def, $target_dir, $bam_ref, $prefix, $step1, $step2, $step3, $step4, $step5, $step6, $index ) = @_;
   if (!defined $index){
@@ -1478,6 +1570,9 @@ sub checkFileGroupPairNames {
     if(defined $def->{$groupKey}){
       my $groups = $def->{$groupKey};
       for my $groupName (keys %$groups){
+        if ($groupName =~ /^./) {
+          next;
+        }
         my $sampleNames = $groups->{$groupName};
         for my $sampleName (@$sampleNames){
           if (!defined $files->{$sampleName}){
@@ -1515,5 +1610,69 @@ sub checkFileGroupPairNames {
     exit;
   }
 }
+
+sub addStarFeaturecount {
+  my ($config, $def, $individual, $summary, $target_dir, $source_ref, $suffix) = @_;
+  my $aligner_index              = $def->{star_index} or die "Define star_index at definition first";
+  my $transcript_gtf             = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
+  my $star_featurecount_walltime = getValue( $def, "star_featurecount_walltime", 23 );
+  my $star_memory = getValue( $def, "star_memory", 40 );
+  my $star_option     = $def->{star_option};
+
+  if(not defined $suffix) {
+    $suffix = "";
+  }
+  my $starFolder                 = $target_dir . "/" . getNextFolderIndex($def) . "star_featurecount" . $suffix;
+
+  my $star_task = "star_featurecount" . $suffix;
+  
+  $config->{$star_task} = {
+    class                     => "Alignment::STARFeatureCount",
+    perform                   => 1,
+    target_dir                => $starFolder,
+    option                    => $star_option,
+    source_ref                => $source_ref,
+    genome_dir                => $aligner_index,
+    output_sort_by_coordinate => 1,
+    output_to_same_folder     => $def->{output_bam_to_same_folder},
+    featureCount_option       => getValue( $def, "featureCount_option" ),
+    star_location             => $def->{star_location},
+    gff_file                  => $transcript_gtf,
+    is_paired_end             => is_paired_end($def),
+    delete_star_featureCount_bam => $def->{delete_star_featureCount_bam},
+    sh_direct                 => 0,
+    pbs                       => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=" . $def->{max_thread},
+      "walltime"  => "$star_featurecount_walltime",
+      "mem"       => "${star_memory}gb"
+    },
+  };
+  push @$individual, ($star_task);
+  
+  my $summary_task = "star_featurecount${suffix}_summary";
+  $config->{$summary_task} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $starFolder,
+    option                   => "",
+    rtemplate                => "../Alignment/STARFeatureCount.r",
+    output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png;.STARSummary.csv;.STARSummary.csv.png",
+    parameterSampleFile1_ref => [ $star_task, "_Log.final.out" ],
+    parameterSampleFile2_ref => [ $star_task, ".count.summary" ],
+    sh_direct                => 1,
+    pbs                      => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "2",
+      "mem"       => "10gb"
+    },
+  };
+  push @$summary, ($summary_task);
+
+  return($star_task);
+};
 
 1;

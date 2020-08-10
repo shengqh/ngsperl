@@ -171,8 +171,14 @@ sub result {
 
     my @result_files = ();
     for my $output_ext (@$output_exts) {
+      my $result_file;
       if ( $output_ext ne "" ) {
-        my $result_file = $sample_name . $output_ext;
+        if ($output_ext =~ /__NAME__/) {
+          $result_file = $output_ext;
+          $result_file =~ s/__NAME__/$sample_name/g;
+        }else{
+          $result_file = $sample_name . $output_ext;
+        }
         push( @result_files, "${cur_dir}/$result_file" );
       }
     }

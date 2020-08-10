@@ -100,7 +100,7 @@ sub perform {
   writeParameterSampleFile( $config, $section, $result_dir, 6, 1 );
 
   my $final_file = "${task_name}.html";
-  my $final = $self->open_pbs( $final_pbs, $pbs_desc, $final_log_desp, $path_file, $result_dir, $final_file );
+  my $final = $self->open_pbs( $final_pbs, $pbs_desc, $final_log_desp, $path_file, $result_dir );
 
   my $copy_file_list = get_raw_file_list( $config, $section, "parameterSampleFile3" );
   if ( scalar(@$copy_file_list) > 0 ) {

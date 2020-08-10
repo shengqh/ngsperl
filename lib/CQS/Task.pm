@@ -17,7 +17,8 @@ sub new {
     _task_suffix   => "",
     _pbskey        => "source",
     _docker_prefix => "",
-    _export_home   => 0
+    _export_home   => 0,
+    _can_use_docker => 1
   };
   bless $self, $class;
   return $self;
@@ -283,8 +284,18 @@ sub do_get_docker_value {
   return ($result);
 }
 
+sub can_use_docker(){
+  my ($self) = @_;
+  return(1);
+}
+
 sub using_docker {
   my ($self) = @_;
+
+  if (not $self->{_can_use_docker}){
+    return(0);
+  }
+
   my ( $docker_command, $docker_init ) = $self->get_docker_value();
   my $is_sequenceTask = ( $self->{_name} =~ /SequenceTask/ );
   return ( ( defined $docker_command ) and ( not $is_sequenceTask ) );
@@ -294,6 +305,10 @@ sub get_docker_value {
   my ( $self, $required ) = @_;
   my $command = undef;
   my $init    = undef;
+
+  if (not $self->{_can_use_docker}){
+    return ( $command, $init );
+  }
 
   my $commandKey = $self->{_docker_prefix} . "docker_command";
   my $initKey    = $self->{_docker_prefix} . "docker_init";
@@ -331,8 +346,7 @@ sub open_pbs {
 
   open( my $pbs, ">$pbs_file" ) or die $!;
 
-  print $pbs "$pbs_desc
-$log_desc
+  print $pbs "${pbs_desc}${log_desc}
 
 $path_file
 $init_command

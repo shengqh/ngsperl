@@ -59,7 +59,12 @@ def addCoverage(speciesMap, read, count):
 bamfiles = readDict(inputFile)
 countfiles = readDict(countFile)
 
-with open(outputFile, "w") as sw:
+if os.path.isfile(outputFile):
+  os.remove(outputFile)
+
+tmpFile = outputFile + ".tmp"
+
+with open(tmpFile, "w") as sw:
   sw.write("File\tFeature\tStrand\tTotalCount\tPositionCount\tPosition\tPercentage\n")
   
   for sampleName in sorted(bamfiles.keys()):
@@ -91,6 +96,8 @@ with open(outputFile, "w") as sw:
       poslist = sorted(covs.keys())
       for position in poslist:
         sw.write("%s\t%s\t*\t%d\t%d\t%d\t%.2f\n" %(sampleName, spec, totalCount, covs[position], position, covs[position] * 1.0 / totalCount))
+  
+os.rename(tmpFile, outputFile)
  
 dir_path = os.path.dirname(os.path.realpath(__file__))
 coverageR = dir_path + "/coverage.R"

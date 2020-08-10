@@ -47,6 +47,7 @@ my $unmappedReads = 0;
 #match to small RNA reads
 #my $smallRNAreadsFile=$resultFolder.'/bowtie1_genome_1mm_NTA_smallRNA_count/result/'.$sampleName."/$sampleName.bam.count.mapped.xml";
 foreach my $smallRNAreadsFileEach ( split( ",", $smallRNAreadsFile ) ) {
+  die "no smallRNA reads file:" . $smallRNAreadsFileEach if ! -e $smallRNAreadsFileEach;
   open XML, "grep 'query name=' $smallRNAreadsFileEach|" or die "Can't read $smallRNAreadsFileEach\n";
   print "Reading $smallRNAreadsFileEach\n";
   while (<XML>) {
@@ -60,7 +61,7 @@ foreach my $smallRNAreadsFileEach ( split( ",", $smallRNAreadsFile ) ) {
 my %perfectmatchOnlyReads;
 if ( defined $perfectmatchReadsFile ) {
   foreach my $perfectmatchReadsFileEach ( split( ",", $perfectmatchReadsFile ) ) {
-
+    die "no perfectmatchReadsFile:" . $perfectmatchReadsFileEach if ! -e $perfectmatchReadsFileEach;
     #perfect match reads
     #my $perfectmatchReadsFile=$resultFolder.'/bowtie1_genome_1mm_NTA_pmnames/result/'.$sampleName.'.pmnames';
     open READ, "<$perfectmatchReadsFileEach" or die $!;

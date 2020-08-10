@@ -46,14 +46,14 @@ write.csv(resultTable,paste0(resultFile,".TaskReads.csv"))
 
 tableBarplotToFile(dat=resultTable,fileName=paste0(resultFile,".TaskReads.Barplot.png"),
 		totalCountFile="",maxCategory=NA,textSize=textSize,height=2500,
-		fill=NA,facet="Category")
+		fill=NA,facet="Category",proportionBar=FALSE)
 tableBarplotToFile(dat=resultTable,fileName=paste0(resultFile,".TaskReads.PerMillion.Barplot.png"),
 		totalCountFile=totalCountFile,maxCategory=NA,textSize=textSize,height=2500,
-		fill=NA,facet="Category")
+		fill=NA,facet="Category",proportionBar=FALSE)
 tableBarplotToFile(dat=resultTable,fileName=paste0(resultFile,".TaskReads.Barplot2.png"),
 		totalCountFile="",maxCategory=NA,textSize=textSize,height=2500,
-		fill=NA,facet="Sample",x="Category",y="Reads",varName=c("Category","Sample","Reads"))
+		fill=NA,facet="Sample",x="Category",y="Reads",varName=c("Category","Sample","Reads"),proportionBar=FALSE)
 tableBarplotToFile(dat=resultTable,fileName=paste0(resultFile,".TaskReads.PerMillion.Barplot2.png"),
 		totalCountFile=totalCountFile,maxCategory=NA,textSize=textSize,height=2500,
-		fill=NA,facet="Sample",x="Category",y="Reads",varName=c("Category","Sample","Reads"))
+		fill=NA,facet="Sample",x="Category",y="Reads",varName=c("Category","Sample","Reads"),proportionBar=FALSE)
 

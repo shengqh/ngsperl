@@ -12,6 +12,7 @@ use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 use Alignment::AlignmentUtils;
+use List::Util qw[min max];
 
 our @ISA = qw(CQS::Task);
 
@@ -33,6 +34,14 @@ sub perform {
   #    $option = $option . "  --outSAMprimaryFlag AllBestScore";
   #  }
   #
+
+  my ($sort_memory, $isMB) = getMemoryPerThread($memory, $thread);
+  if ($isMB) {
+    $sort_memory = $sort_memory . "M";
+  }else{
+    $sort_memory = $sort_memory . "G";
+  }
+
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
   my $star                    = get_option( $config, $section, "star_location",           "STAR" );
 
@@ -49,9 +58,6 @@ sub perform {
     $output_unsorted = 1;
   }
   my $output_format = "--outSAMtype BAM";
-  if ($output_sort_by_coordinate) {
-    $output_format = $output_format . " SortedByCoordinate";
-  }
 
   #always output unsorted
   $output_format = $output_format . " Unsorted";
@@ -104,7 +110,6 @@ sub perform {
     my $unsorted = $sample_name . "_Aligned.out.bam";
 
     my $final_bam = $output_sort_by_coordinate ? $sample_name . "_Aligned.sortedByCoord.out.bam" : $unsorted;
-    my $index_command = $output_sort_by_coordinate ? "if [ ! -s ${final_bam}.bai ]; then \n  echo building index ...\n samtools index $final_bam\n  fi" : "";
 
     my $final_file = "${sample_name}.count";
 
@@ -115,46 +120,26 @@ sub perform {
     my $chromosome_grep_command = $output_sort_by_coordinate ? getChromosomeFilterCommand( $final_bam, $chromosome_grep_pattern ) : "";
 
     print $pbs "
-if [ -z \${SLURM_JOBID+x} ]; then 
-  echo \"in bash mode\"; 
-  if [[ ! -s $final_bam && -s $sample_file_1 ]]; then
-    echo performing star ...
-    $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
-    $star --version | awk '{print \"STAR,v\"\$1}' > ${final_file}.star.version
-    rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
-  fi  
-else 
-  echo \"in cluster mode\"; 
-  localdir=/tmp/myjob_\${SLURM_JOBID}
-  tmp_cleaner()
-  {
-    rm -rf \${localdir}
-    exit -1
-  }
-  trap 'tmp_cleaner' TERM
-
-  echo creating local directory \${localdir}
-  mkdir \${localdir} # create unique directory on compute node
-  cd \${localdir}
-
+if [[ ! -s $final_bam && -s $sample_file_1 ]]; then
   echo performing star ...
   $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
-  rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
-  
-  $index_command
-
-  mv ${sample_name}* $cur_dir
-  cd $cur_dir
-  rm -rf \${localdir}
   $star --version | awk '{print \"STAR,v\"\$1}' > ${final_file}.star.version
+  rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
 fi
-
 ";
 
+  if ($output_sort_by_coordinate) {
     print $pbs "
+if [ ! -s ${final_bam} ]; then
+  sambamba sort -m $sort_memory -t $thread -o $final_bam $unsorted
+  sambamba index $final_bam
+fi  
+";
+  }
+
+print $pbs "
 
 if [ -s $final_bam ]; then
-  $index_command
   $chromosome_grep_command
   
   if [ ! -s ${sample_name}.splicing.bed ]; then
@@ -206,7 +191,7 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $output_sort_by_coordinate = getSortByCoordinate( $config, $section );
-  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 0 );
+  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1 );
   my $delete_star_featureCount_bam  = get_option( $config, $section, "delete_star_featureCount_bam", 0 );
 
   my $result = {};
@@ -225,7 +210,6 @@ sub result {
     if (!$delete_star_featureCount_bam) {
       if ($output_sort_by_coordinate) {
         push( @result_files, "$cur_dir/${sample_name}_Aligned.sortedByCoord.out.bam" );
-
       }
       if ($output_unsorted) {
         push( @result_files, "$cur_dir/${sample_name}_Aligned.out.bam" );

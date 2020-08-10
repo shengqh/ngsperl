@@ -40,12 +40,8 @@ textTitle<-element_text(face= "bold", color = "black", size=22, hjust=0.5)
 text20Bold<-element_text(face= "bold", color = "black", size=20)
 text20<-element_text(color = "black", size=20)
 
-facetColCount=getFacetColCount(groupFileList)
-
 sampleCount<-ncol(lengthAllTable)
-if(facetColCount == 0){
-  facetColCount = ceiling(sqrt(sampleCount))
-}
+facetColCount = ceiling(sqrt(sampleCount))
 facetRowCount = ceiling( sampleCount * 1.0 / facetColCount)
 width=max(2000, cellWidth * facetColCount) + 100
 height=max(2000, cellWidth * facetRowCount)

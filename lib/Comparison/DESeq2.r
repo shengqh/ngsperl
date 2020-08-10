@@ -439,6 +439,13 @@ for(countfile_index in c(1:length(countfiles))){
 			designData<-designData[,which(colnames(designData)%in% c("Sample","Condition"))]
 		}
 		
+		missedSamples<-as.character(designData$Sample)[!(as.character(designData$Sample) %in% colnames(countData))]
+		if(length(missedSamples) > 0){
+			message=paste0("There are missed sample defined in design file but not in real data: ", missedSamples)
+			warning(message)
+			writeLines(message,paste0(comparisonName,".error"))
+			next
+		}
 		comparisonData<-countData[,colnames(countData) %in% as.character(designData$Sample),drop=F]
 		if(ncol(comparisonData) != nrow(designData)){
 			message=paste0("Data not matched, there are ", nrow(designData), " samples in design file ", designFile, " but ", ncol(comparisonData), " samples in data ")
