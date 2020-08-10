@@ -34,7 +34,7 @@ rawgenes<-getCells(obj@assays$RNA, "RNA", genes)
 activegenes<-getCells(obj@assays[[obj@active.assay]], obj@active.assay, genes)
 
 geneinfo<-cbind(rawgenes, activegenes)
-write.table(geneinfo, file="gene_summary.txt", sep="\t")
+write.csv(geneinfo, file="gene_summary.csv")
 
 genes<-genes[genes %in% rownames(obj)]
 
@@ -52,27 +52,46 @@ obj$final_seurat_clusters<-clusters
 
 samples<-unique(obj$orig.ident)
 
-gene=genes[1]
-ncol=ceiling(sqrt(1 + length(samples)))
-nrow=ceiling((1 + length(samples)) / ncol)
-for(gene in genes){
-  p1<-DimPlot(obj, reduction = "umap", label=T, group.by="final_seurat_clusters") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
-  lst<-list("Cluster" = p1)
-  sample<-samples[1]
-  for (sample in samples){
-    sobj<-subset(obj, cells=colnames(obj)[obj$orig.ident==sample])
-    pgene<-FeaturePlot(object = sobj, features=gene)  + NoLegend() + ggtitle(sample) + theme(plot.title = element_text(hjust=0.5))
-    lst[[sample]]=pgene
-  }
-  
-  png(filename=paste0(outFile, ".", gene, ".png"), width= ncol * 3000, height=nrow * 3000, res=300)
-  g<-ggarrange(plotlist=lst, ncol=ncol, nrow=nrow)
-  print(g)
-  dev.off()
+if(!exists("dotPlotOnly")){
+  dotPlotOnly<-FALSE
 }
 
-png(filename=paste0(outFile, ".dot.png"), width=max(length(genes) * 100, 5000), height=2500, res=300)
+if(!dotPlotOnly){
+  gene=genes[1]
+  ncol=ceiling(sqrt(1 + length(samples)))
+  nrow=ceiling((1 + length(samples)) / ncol)
+  for(gene in genes){
+    p1<-DimPlot(obj, reduction = "umap", label=T, group.by="final_seurat_clusters") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
+    lst<-list("Cluster" = p1)
+    sample<-samples[1]
+    for (sample in samples){
+      sobj<-subset(obj, cells=colnames(obj)[obj$orig.ident==sample])
+      pgene<-FeaturePlot(object = sobj, features=gene)  + NoLegend() + ggtitle(sample) + theme(plot.title = element_text(hjust=0.5))
+      lst[[sample]]=pgene
+    }
+    
+    png(filename=paste0(outFile, ".", gene, ".png"), width= ncol * 3000, height=nrow * 3000, res=300)
+    g<-ggarrange(plotlist=lst, ncol=ncol, nrow=nrow)
+    print(g)
+    dev.off()
+  }
+}
+
+pdf(file=paste0(outFile, ".dot.pdf"), width=max(length(genes) * 0.4, 10), height=10, onefile = T)
+
+alltitle = ifelse(length(samples) == 1, "", "All samples")
+
+#png(filename=paste0(outFile, ".dot.png"), width=max(length(genes) * 100, 5000), height=2500, res=300)
 p<-DotPlot(obj, group.by="final_seurat_clusters", features=genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
-  xlab("genes")
+  xlab("genes") + ggtitle(alltitle) + theme(plot.title = element_text(hjust = 0.5))
 print(p)
+
+if (length(samples) > 1) {
+  for (sample in samples){
+    sobj<-subset(obj, cells=colnames(obj)[obj$orig.ident==sample])
+    p<-DotPlot(sobj, group.by="final_seurat_clusters", features=genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
+      xlab("genes") + ggtitle(paste0("Sample ", sample)) + theme(plot.title = element_text(hjust = 0.5))
+    print(p)
+  }
+}
 dev.off()
