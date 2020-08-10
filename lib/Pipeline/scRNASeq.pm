@@ -187,15 +187,32 @@ sub addMarkerGenes {
 sub addGeneTask {
   my ( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name ) = @_;
 
+  my $marker_genes = $def->{plot_marker_genes};
+  if (not defined $marker_genes){
+    $marker_genes = {};
+  }
+  
   if ( defined $def->{marker_genes_file} ) {
-    addMarkerGenes($config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name, "marker_genes", $def->{marker_genes_file}, $def->{marker_genes_samples});
+    $marker_genes->{"marker"} = {
+      file => $def->{marker_genes_file}
+    };
   }
   
   if (defined $def->{pathway_genes_file}){
-    addMarkerGenes($config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name, "pathway_genes", $def->{pathway_genes_file}, $def->{pathway_genes_samples});
+    $marker_genes->{"pathway"} = {
+      file => $def->{pathway_genes_file}
+    };
   }
 
+  for my $key (sort keys %$marker_genes){
+    my $file = $marker_genes->{$key}{file};
+    my $samples = $marker_genes->{$key}{samples};
+    addMarkerGenes($config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name, "genes_" . $key, $file, $samples);
+  }
+
+
   if ( defined $def->{genes} ) {
+    my $dotPlotOnly = getValue($def, "genesDotPlotOnly", "0");
     my $genes = $def->{genes};
     $genes =~ s/\n/;/g;
     $genes =~ s/\s/;/g;
@@ -209,7 +226,7 @@ sub addGeneTask {
       parameterFile1_ref => [ $seurat_name, ".final.rds" ],
       parameterFile3_ref => [ $cluster_task_name, $cluster_file ],
       output_file_ext    => ".cluster.csv",
-      rCode              => "genes='" . $genes . "'; celltype_name='$celltype_name'; cluster_name='$cluster_name';",
+      rCode              => "genes='" . $genes . "'; celltype_name='$celltype_name'; cluster_name='$cluster_name'; dotPlotOnly=$dotPlotOnly;",
       sh_direct          => 1,
       pbs                => {
         "email"     => $def->{email},
