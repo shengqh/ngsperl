@@ -1,6 +1,7 @@
 
 library(Seurat)
 library(ggplot2)
+library(patchwork)
 
 finalList<-readRDS(parFile1)
 geneFile<-parFile2
@@ -12,12 +13,12 @@ celltypes$Gene<-gsub("\\s.+", "", celltypes$Gene)
 celltypes$Gene<-toupper(celltypes$Gene)
 
 missGenes<-celltypes[!(celltypes$Gene %in% rownames(obj)),]
-write.csv(missGenes, "miss_gene.csv")
+write.csv(missGenes, "miss_gene.csv", row.names=F)
 celltypes<-celltypes[celltypes$Gene %in% rownames(obj),]
 
-#allgenes<-data.frame(Gene=rownames(obj))
-#write.csv(allgenes, "all_gene.csv")
-#celltypes$Gene<-paste0(substr(celltypes$Gene,1,1),substr(tolower(celltypes$Gene),2,nchar(celltypes$Gene)))
+allgenes<-rownames(obj)
+allgenes<-allgenes[order(allgenes)]
+writeLines(allgenes, con="all_genes.txt")
 
 clusterDf<-read.csv(parFile3, stringsAsFactors = F, row.names=1)
 clusterDf<-clusterDf[colnames(obj),]
@@ -53,7 +54,7 @@ for(ct in unique(celltypes$Celltype)){
   if(length(absentGenes) > 0){
     e<-DotPlot(obj, group.by="final_seurat_clusters", features=absentGenes, cols = c("lightgrey", "blue"), dot.scale = 8) + RotatedAxis()+
       xlab(paste0(ct, " absent genes"))
-    p2<-CombinePlots(plots = list(p, e))
+    p2<-p+e
     print(p2)
   }else{
     print(p)
