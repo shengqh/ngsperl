@@ -59,7 +59,8 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_cnv_gatk4_cohort", 1 );
   initDefaultValue( $def, "gatk4_cnv_by_scatter",     1 );
   initDefaultValue( $def, "gatk4_cnv_scatter_count",  100 );
-   
+  initDefaultValue( $def, "perform_cnv_gatk4_somatic", 0 );
+
   initDefaultValue( $def, "perform_muTect",       0 );
   initDefaultValue( $def, "perform_muTect2indel", 0 );
   initDefaultValue( $def, "perform_annovar",      0 );
@@ -220,7 +221,7 @@ sub getConfig {
     }
 
     #based on paper https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-016-1097-3, we don't do markduplicate anymore
-    if ( $def->{aligner} eq "bwa" ) {
+    if ( $def->{aligner} eq "bwa" & !$def->{perform_gatk4_pairedfastq2bam}) {
       my $bwa_memory = getValue($def, "bwa_memory", "40gb");
       $fasta = getValue( $def, "bwa_fasta" );
       my $bwa = "bwa";
@@ -338,7 +339,7 @@ sub getConfig {
     $bam_ref = [ $refine_name, ".bam\$" ];
   }
 
-  if($def->{filter_soft_clip}){
+  if($def->{filter_soft_clip} & !$def->{perform_gatk4_pairedfastq2bam}){
     my $soft_clip_name = $bam_input . "_nosoftclip";
     $config->{$soft_clip_name} = {
       class                 => "CQS::ProgramIndividualWrapper",
@@ -888,26 +889,35 @@ sub getConfig {
 
   if ( $def->{"perform_muTect2"}) {
     my $mutect2call = addMutect2($config, $def, $summary, $target_dir, $bam_input);
+    push @$individual, ($mutect2call);
 
-    my $rCode=( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" );
-    $rCode=$rCode."genome=\"" . getValue($def, "annovar_buildver", "hg38") . "\";";
-    $config->{muTect2_02_mergeAndMafreport}={
-    class      => "CQS::UniqueR",
-    perform    => 1,
-    target_dir => "${target_dir}/muTect2_02_mergeAndMafreport",
-    rtemplate                  => "../CQS/muTect2MergeAndMafreport.R",
-#    parameterFile1_ref => [$mutect2task, ".maf"],
-    parameterSampleFile1_ref=> [$mutect2call, ".maf"],
-    parameterFile1           => $def->{family_info_file},
-    rCode                    => $rCode,
-    sh_direct  => 0,
-    pbs        => {
-      "nodes"    => "1:ppn=8",
-      "walltime" => "4",
-      "mem"      => "30gb"
-    }
-};
+    my $mutect2callReport = addFilterMafAndReport($config, $def, $summary, $target_dir, $mutect2call);
+    push @$summary, $mutect2callReport;
+
+
+#     my $rCode=( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" );
+#     $rCode=$rCode."genome=\"" . getValue($def, "annovar_buildver", "hg38") . "\";";
+#     $config->{muTect2_02_mergeAndMafreport}={
+#     class      => "CQS::UniqueR",
+#     perform    => 1,
+#     target_dir => "${target_dir}/muTect2_02_mergeAndMafreport",
+#     rtemplate                  => "../CQS/muTect2MergeAndMafreport.R",
+# #    parameterFile1_ref => [$mutect2task, ".maf"],
+#     parameterSampleFile1_ref=> [$mutect2call, ".maf"],
+#     parameterFile1           => $def->{family_info_file},
+#     rCode                    => $rCode,
+#     sh_direct  => 0,
+#     pbs        => {
+#       "nodes"    => "1:ppn=8",
+#       "walltime" => "4",
+#       "mem"      => "30gb"
+#     }
+# };
   }
+
+if ( $def->{"perform_cnv_gatk4_somatic"}) {
+      my $somaticCNVtask = addSomaticCNV($config, $def, $summary, $target_dir, $bam_input);
+}
   
   if ( $def->{"perform_muTect2indel"} ) {
     my $mutect2Name = "${bam_input}_muTect2indel";

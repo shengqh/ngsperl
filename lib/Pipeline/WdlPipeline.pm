@@ -126,7 +126,7 @@ sub addPairedFastqToProcessedBam {
     pbs=> {
       "nodes"     => "1:ppn=8",
       "walltime"  => "24",
-      "mem"       => "60gb"
+      "mem"       => "80gb"
     },
   };
   push @$individual, $task;

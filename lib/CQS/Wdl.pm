@@ -240,6 +240,7 @@ sub result {
     for my $output_ext (@$output_exts) {
       if ( $output_ext ne "" ) {
         my $result_file = $sample_name . $output_ext;
+#        print $result_file."\n";
         push( @result_files, "${cur_dir}/$result_file" );
       }
     }
