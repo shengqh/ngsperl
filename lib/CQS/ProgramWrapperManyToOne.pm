@@ -49,6 +49,7 @@ sub perform {
   my $interpretor = get_option( $config, $section, "interpretor", "" );
   my $program     = get_program( $config, $section );
 
+  my $output_to_folder = get_option( $config, $section, "output_to_folder", 0 );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
   my $output_file_prefix    = get_option( $config, $section, "output_file_prefix" );
   my $output_arg            = get_option( $config, $section, "output_arg", "" );
@@ -138,11 +139,13 @@ sub perform {
     my $g_option = $option;
     if ($g_option =~ /__INPUT__/){
       $g_option =~ s/__INPUT__/$input_file/g;
+    }elsif (($parameterSampleFile1arg ne "") && (index($g_option, $parameterSampleFile1arg) != -1)) {
     }else{
       $g_option = "$g_option $parameterSampleFile1arg $input_file";
     }
     if ($g_option =~ /__OUTPUT__/){
       $g_option =~ s/__OUTPUT__/$final_prefix/g;
+    }elsif (($output_arg ne "") && (index($g_option, $output_arg) != -1)) {
     }else{
       $g_option = "$g_option $output_arg $final_prefix";
     }
