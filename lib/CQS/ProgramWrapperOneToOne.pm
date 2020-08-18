@@ -34,6 +34,8 @@ sub perform {
   my $task_suffix = get_option( $config, $section, "suffix", "" );
   $self->{_task_suffix} = $task_suffix;
 
+  my $init_command = get_option( $config, $section, "init_command", "" );
+
   my $interpretor = get_option( $config, $section, "interpretor", "" );
   my $program     = get_program( $config, $section );
 
@@ -111,10 +113,12 @@ sub perform {
       $curOption =~ s/__NAME__/$sample_name/g;
     }
 
-    my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name );
     if ($curOption =~ /__FILE__/){
+      my $param_option1 = get_program_param( $parameterSampleFile1, "", $parameterSampleFile1JoinDelimiter, $sample_name );
       $curOption =~ s/__FILE__/$param_option1/g;
-    }else{
+    } elsif (($parameterSampleFile1arg ne "") && (index($curOption, $parameterSampleFile1arg) != -1)) {
+    } else{
+      my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name );
       $curOption = $curOption . " " . $param_option1;
     }
 
@@ -123,7 +127,17 @@ sub perform {
       $curOption =~ s/__OUTPUT__/$final_prefix/g;
       $output_option = "";
     }
-    
+
+    my $cur_init_command = $init_command;
+    if ($cur_init_command =~ /__NAME__/){
+      $cur_init_command =~ s/__NAME__/$sample_name/g;
+    }
+
+    if ($cur_init_command =~ /__FILE__/){
+      my $param_option1 = get_program_param( $parameterSampleFile1, "", $parameterSampleFile1JoinDelimiter, $sample_name );
+      $cur_init_command =~ s/__FILE__/$param_option1/g;
+    }
+
     if ( not $bFound2 ) {
       $curOption = $curOption . " " . $param_option2;
     }
@@ -139,6 +153,8 @@ sub perform {
     }
 
     print $pbs "
+$cur_init_command    
+
 $interpretor $program $curOption $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_option
 
 ";
