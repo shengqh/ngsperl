@@ -49,13 +49,22 @@ sub perform {
   if($output_ext eq ""){
      $output_ext = get_option( $config, $section, "output_file_ext", "" );
   }
-  my $output_arg = get_option($config, $section, "output_arg", "");
 
-  my $parameterSampleFile1 = save_parameter_sample_file( $config, $section, "parameterSampleFile1", "${result_dir}/${task_name}_${task_suffix}_fileList1.list" );
-  if($parameterSampleFile1 ne ""){
-    $parameterSampleFile1 = basename($parameterSampleFile1);
+  my $sourceKey = "source";
+  if ((not defined $config->{$section}{"source"} ) && (not defined $config->{$section}{"source_ref"} )) {
+    $sourceKey = "parameterSampleFile1";
   }
-  my $parameterSampleFile1arg = get_option($config, $section, "parameterSampleFile1_arg", "");
+  my $parameterSampleFile1arg = get_option($config, $section, "${sourceKey}_arg", "");
+  if (($parameterSampleFile1arg ne "") && (index($option, $parameterSampleFile1arg) != -1)) {
+    #print("source already defined in option, ignored\n");
+  }else{
+    #print("sourceKey = $sourceKey, parameterSampleFile1arg = $parameterSampleFile1arg, option = $option\n");
+    my $parameterSampleFile1 = save_parameter_sample_file( $config, $section, $sourceKey, "${result_dir}/${task_name}_${task_suffix}_fileList1.list" );
+    if($parameterSampleFile1 ne ""){
+      $parameterSampleFile1 = basename($parameterSampleFile1);
+    }
+    $option = $option . " " . $parameterSampleFile1arg . " \"" . $parameterSampleFile1 . "\"";
+  }
   
   my $parameterSampleFile2 = save_parameter_sample_file( $config, $section, "parameterSampleFile2", "${result_dir}/${task_name}_${task_suffix}_fileList2.list" );
   if($parameterSampleFile2 ne ""){
@@ -110,8 +119,15 @@ sub perform {
     $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $checkFile);
   }
 
+  my $output_arg = get_option($config, $section, "output_arg", "");
+  if (($output_arg ne "") && (index($option, $output_arg) != -1)) {
+    #print("output already defined in option, ignored\n");
+    $output_arg = "";
+    $final_file = "";
+  }
+
   print $pbs "
-$interpretor $program $option $parameterSampleFile1arg $parameterSampleFile1 $parameterSampleFile2arg $parameterSampleFile2 $parameterSampleFile3arg $parameterSampleFile3 $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_arg $final_file
+$interpretor $program $option $parameterSampleFile2arg $parameterSampleFile2 $parameterSampleFile3arg $parameterSampleFile3 $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_arg $final_file
 ";
 
   $self->close_pbs( $pbs, $pbs_file );
