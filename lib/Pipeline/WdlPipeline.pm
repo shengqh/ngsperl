@@ -141,6 +141,7 @@ sub addUmiReadsToProcessedBam {
   my $wdl = $def->{"wdl"};
   my $server = $wdl->{$server_key};
   my $pipeline = $server->{$pipeline_key};
+  my $genomeForOutputExt=getValue($def, "annovar_buildver", "hg38");
 
   my $task = $pipeline_key;
   $config->{$task} = {     
@@ -160,6 +161,8 @@ sub addUmiReadsToProcessedBam {
     "input_list" => {
       "PreProcessingForVariantDiscovery_GATK4.flowcell_unmapped_bams_list_ref" => [$files_ref,".fastq"]
     },
+    output_file_ext => ".".$genomeForOutputExt.".bam",
+    output_other_ext => ".".$genomeForOutputExt.".bai",
     pbs=> {
       "nodes"     => "1:ppn=8",
       "walltime"  => "24",

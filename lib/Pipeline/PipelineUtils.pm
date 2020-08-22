@@ -1086,7 +1086,7 @@ sub addFilterMafAndReport {
 #  my $taskName = $mutect2call . getNextIndex($mutect2_index_dic, $mutect2_index_key) . "_mergeAndMafreport";
   my $taskName = $mutect2call . "_mergeAndMafreport";
 
-    my $rCode=( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" );
+    my $rCode=( defined $def->{family_info_file} ? "clinicalFeatures=" . $def->{family_info_feature} . ";" : "" );
     $rCode=$rCode."genome=\"" . getValue($def, "annovar_buildver", "hg38") . "\";";
 
     $config->{$taskName}={
