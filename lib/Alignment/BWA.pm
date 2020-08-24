@@ -21,6 +21,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_bwa";
+  $self->init_docker_prefix(__PACKAGE__);
   bless $self, $class;
   return $self;
 }
