@@ -9,6 +9,7 @@ use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use Data::Dumper;
 
 our @ISA = qw(CQS::Task);
 
@@ -38,10 +39,9 @@ sub get_pbs_source {
   my $result = {};
   
   my $group_keys = $self->{"_group_keys"};
-  
   for my $group_key (@$group_keys){
-	  my $groups = $config->{$section}{$group_key};
-	  if (defined $groups){
+    if (has_raw_files($config, $section, $group_key)) {
+  	  my $groups = get_raw_files($config, $section, $group_key);
 	    for my $resKey ( keys %$pbsFiles ) {
 	    	my $samples = $groups->{$resKey};
 	    	if(defined $result->{ $pbsFiles->{$resKey}}){
@@ -51,8 +51,9 @@ sub get_pbs_source {
 	    	  $result->{ $pbsFiles->{$resKey}} = $samples;
 	    	}
 	    }
-	  }
+    }
 	}
+
 	return $result;
 }
 
