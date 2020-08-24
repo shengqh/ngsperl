@@ -164,7 +164,7 @@ nCount_sd_cutoff=0
 
 pca_dims<-1:as.numeric(options$pca_dims)
 
-filelist1<-read.table("filelist1.txt", header=F)
+filelist1<-read.table("fileList1.txt", header=F)
 filestr<-paste0(filelist1$V1, collapse = "_")
 
 prefixMd5=digest(paste0(optionstr, filestr), "md5", serialize = FALSE)
@@ -202,7 +202,7 @@ if(isCalc){
   finalList$cell_activity_database<-list(cellType=cellType, weight=weight)
     
   #read raw count dat
-  filelist1<-read.table("filelist1.txt", header=F, stringsAsFactors = F)
+  filelist1<-read.table("fileList1.txt", header=F, stringsAsFactors = F)
   rawobjs<-apply(filelist1, 1, function(x){
     fileName  = x[[1]]
     fileTitle = x[[2]]
