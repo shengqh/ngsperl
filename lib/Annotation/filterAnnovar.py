@@ -127,15 +127,19 @@ with open(outputFile, 'w') as sw:
 
           swMis.write(values)
   
+          naCount = 0
           for idx in sampleIndecies:
             if parts[idx].startswith("0/1") or parts[idx].startswith("0|1") or parts[idx].startswith("1/0") or parts[idx].startswith("1|0") :
               parts[idx] = "1"
             elif parts[idx].startswith("1/1") or parts[idx].startswith("1|1"):
               parts[idx] = "2"
+            elif parts[idx].startswith("./.") or parts[idx].startswith(".|."):
+              parts[idx] = "NA"
+              naCount += 1
             else:
               parts[idx] = "0"
   
-          freqperc = float(freq) / sampleCount
+          freqperc = float(freq) / (sampleCount - naCount)
           freqfold = "NA" if norm_freq == -1 else "100" if norm_freq == 0 else str(freqperc / norm_freq)
           filtered.append([freqperc, "%s\t%f\t%s\t\t%s\n" % ("\t".join(parts[i] for i in snvHeaderIndecies), freqperc, freqfold, "\t".join(parts[i] for i in sampleIndecies))])
   
@@ -144,13 +148,18 @@ with open(outputFile, 'w') as sw:
             if curgene in genes:
               curgenemap = genes[curgene]
               for idx in sampleIndecies:
-                if parts[idx] != "0":
-                  curgenemap[idx] = "1"
+                if (parts[idx] != "NA"):
+                  if (parts[idx] != "0"):
+                    curgenemap[idx] = "1"
+                  elif curgenemap[idx] == "NA":
+                    curgenemap[idx] = "0"
             else:
               curgenemap = {}
               genes[curgene] = curgenemap
               for idx in sampleIndecies:
-                if parts[idx] != "0":
+                if (parts[idx] == "NA"):
+                  curgenemap[idx] = "NA"
+                if (parts[idx] != "0"):
                   curgenemap[idx] = "1"
                 else:
                   curgenemap[idx] = "0"
@@ -164,8 +173,9 @@ with open(outputprefix + ".snv.missense.tsv", 'w') as snvw:
 genelist = []
 for gene in genes:
   genemap=genes[gene]
-  freq = [v for k,v in genemap.items() if v == "1"]
-  freqperc = len(freq) * 1.0 / sampleCount
+  freq = [v for v in genemap.values() if v == "1"]
+  valid = [v for v in genemap.values() if v != "NA"]
+  freqperc = len(freq) * 1.0 / len(valid)
   genelist.append([freqperc, gene])
 
 gsorted = sorted(genelist, key=getKey, reverse=True)
