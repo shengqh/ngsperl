@@ -705,7 +705,7 @@ sub getConfig {
         parameterFile1_ref    => $filter_name,
         output_to_same_folder => 1,
         output_arg            => "-o",
-        output_file_ext       => ".maf_filtered.vcf.gz",
+        output_file_ext       => ".maf_filtered.vcf",
         sh_direct             => 1,
         pbs                   => {
           "email"     => $def->{email},
