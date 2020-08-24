@@ -61,11 +61,12 @@ sub initializeDefaultOptions {
   }
 
   initDefaultValue( $def, "perform_bamplot", 0 );
+
   if ( !defined $def->{"treatments"} ) {
     my $files = getValue( $def, "files" );
     my $groups = {};
-    for my $file ( sort keys %$files ) {
-      $groups->{$file} = $file;
+    for my $sample_name ( sort keys %$files ) {
+      $groups->{$sample_name} = [$sample_name];
     }
     $def->{"treatments"} = $groups;
   }
@@ -121,7 +122,7 @@ sub getConfig {
     pbs                => {
       "email"    => $email,
       "nodes"    => "1:ppn=8",
-      "walltime" => "72",
+      "walltime" => "24",
       "mem"      => "40gb"
     },
   };
@@ -148,6 +149,7 @@ sub getConfig {
   push @$summary, "bwa_insertsize";
 
   my $cleanbam_option = $pairend ? "-f 3 -F 3852" : "-F 3844";
+  my $cleanbam_walltime = getValue( $def, "bwa_cleanbam_walltime", "24");
   $config->{"bwa_cleanbam"} = {
     class                   => "ATACseq::CleanBam",
     perform                 => 1,
@@ -166,7 +168,7 @@ sub getConfig {
     pbs                     => {
       "email"    => $email,
       "nodes"    => "1:ppn=1",
-      "walltime" => "240",
+      "walltime" => "$cleanbam_walltime",
       "mem"      => "40gb"
     },
   };
@@ -274,13 +276,14 @@ sub getConfig {
           $callName = $callName . "_CallAsSingleEnd";
         }
       }
+
       $config->{$callName} = {
         class      => $callClass,
         perform    => 1,
         target_dir => "${target_dir}/" . $callName,
         option     => $curCallOption,
         source_ref => [ "bwa_cleanbam", ".bam\$" ],
-        groups_ref => "treatments",
+        groups_ref  => "treatments",
         sh_direct  => 0,
         pbs        => {
           "email"    => $email,
@@ -290,6 +293,30 @@ sub getConfig {
         },
       };
       push @$individual, ($callName);
+
+      my $peak_count = $callName . "_count";
+      $config->{$peak_count} = {
+        class      => "CQS::ProgramWrapper",
+        perform    => 1,
+        suffix     => "_pc",
+        target_dir => "${target_dir}/" . $peak_count,
+        interpretor => "python",
+        program    => "../Count/bedCount.py",
+        option     => "",
+        source_arg => "-i",
+        source_ref => [ $callName, ".bed\$" ],
+        output_arg => "-o",
+        output_prefix => ".txt",
+        output_ext => ".txt",
+        sh_direct  => 0,
+        pbs        => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "2gb"
+        },
+      };
+      push @$summary, ($peak_count);
 
       if ( getValue( $def, "perform_enhancer" ) ) {
         addEnhancer( $config, $def, $individual, $summary, $target_dir, $callName . "_enhancer", [ "bwa_cleanbam", ".bam\$" ], [$callName, $callFilePattern] );
@@ -498,6 +525,9 @@ sub getConfig {
     },
   };
 
+  #print(Dumper($def->{treatments}));
+  #print(Dumper($def));
+
   return ($config);
 }
 
@@ -508,6 +538,7 @@ sub performATACSeq {
   }
 
   my $config = getConfig($def);
+  #print(Dumper($def));
 
   if ($perform) {
     saveConfig( $def, $config );
