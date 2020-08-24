@@ -50,6 +50,10 @@ with open(args.input, "r") as fin:
         format_AD_index="NA"
         #warnings.warn("Can't find AD in " + line)
         #continue
+      if "AF" in sampleFormatsSplit:
+        format_AF_index=sampleFormatsSplit.index("AF")
+      else:
+        format_AF_index="NA"
       
       for sample_idx in range(sample_index, len(mafheaders)):
         sample_name = mafheaders[sample_idx]
