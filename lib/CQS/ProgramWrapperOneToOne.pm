@@ -128,6 +128,10 @@ sub perform {
       $output_option = "";
     }
 
+    if (($output_arg ne "") && (index($curOption, $output_arg) != -1)) {
+      $output_option = "";
+    }
+
     my $cur_init_command = $init_command;
     if ($cur_init_command =~ /__NAME__/){
       $cur_init_command =~ s/__NAME__/$sample_name/g;
