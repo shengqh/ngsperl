@@ -35,11 +35,8 @@ sub getRcode {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
-
-  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
-  my $task_suffix = get_option( $config, $section, "suffix", "" );
-  $self->{_task_suffix} = $task_suffix;
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
+  my $task_suffix = $self->{_task_suffix};
 
   my $rCode = $self->getRcode( $config, $section );
   my $output_file     = get_option( $config, $section, "output_file",     "" );

@@ -43,11 +43,8 @@ sub getFiles {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
-
-  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
-  my $task_suffix = get_option( $config, $section, "suffix", "" );
-  $self->{_task_suffix} = $task_suffix;
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
+  my $task_suffix = $self->{_task_suffix};
 
   my $interpretor = get_option( $config, $section, "interpretor", "" );
   my $program = get_option( $config, $section, "program" );
@@ -173,11 +170,8 @@ $interpretor $program $option $parameterSampleFile1arg \"$pfile1\" $curOption $p
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
-
-  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
-  my $task_suffix = get_option( $config, $section, "suffix", "" );
-  $self->{_task_suffix} = $task_suffix;
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
+  my $task_suffix = $self->{_task_suffix};
 
   my $first_file_only = get_option( $config, $section, "first_file_only", 0 );
 

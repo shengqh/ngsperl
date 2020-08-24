@@ -27,7 +27,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
 
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   my $task_suffix = get_option( $config, $section, "suffix", "" );
@@ -62,8 +62,8 @@ sub perform {
     my $parameterSampleFile1 = save_parameter_sample_file( $config, $section, $sourceKey, "${result_dir}/${task_name}_${task_suffix}_fileList1.list" );
     if($parameterSampleFile1 ne ""){
       $parameterSampleFile1 = basename($parameterSampleFile1);
+      $option = $option . " " . $parameterSampleFile1arg . " \"" . $parameterSampleFile1 . "\"";
     }
-    $option = $option . " " . $parameterSampleFile1arg . " \"" . $parameterSampleFile1 . "\"";
   }
   
   my $parameterSampleFile2 = save_parameter_sample_file( $config, $section, "parameterSampleFile2", "${result_dir}/${task_name}_${task_suffix}_fileList2.list" );
