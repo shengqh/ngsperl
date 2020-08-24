@@ -61,17 +61,26 @@ logger.info(str(args))
 
 basename = os.path.splitext(args.output)[0]
 
-outputTemp = basename + ".tmp.gz"
-with bgzf.BgzfWriter(outputTemp, "wb") as fout:
-  with bgzf.BgzfWriter(basename + ".discard.gz", "wb") as fdiscard:
-    if args.input.endswith(".gz"):
-      if is_version_2():
-        fin = gzip.open(args.input, 'rb')
-      else:
-        fin = gzip.open(args.input, 'rt')
-    else:
-      fin = open(args.input, "r")
-    try:
+if args.output.endswith(".gz"):
+  outputTemp = basename + ".tmp.gz"
+  fout = bgzf.BgzfWriter(outputTemp, "wb")
+  fdiscard = bgzf.BgzfWriter(basename + ".discard.gz", "wb")
+else:
+  outputTemp = basename + ".tmp"
+  fout = open(outputTemp, "wt")
+  fdiscard = open(basename + ".discard", "wt")
+
+if args.input.endswith(".gz"):
+  if is_version_2():
+    fin = gzip.open(args.input, 'rb')
+  else:
+    fin = gzip.open(args.input, 'rt')
+else:
+  fin = open(args.input, "r")
+
+with fout:
+  with fdiscard:
+    with fin:
       while True:
         line = fin.readline()
         if line.find("#CHROM") != -1:
@@ -176,15 +185,14 @@ with bgzf.BgzfWriter(outputTemp, "wb") as fout:
       logger.info("FailQuality\t%d" % (FailQuality))
       logger.info("FailPercentage\t%d" % (FailPercentage))
       logger.info("Done")
-    finally:
-      fin.close()
       
 if os.path.isfile(args.output):
   os.remove(args.output)
 os.rename(outputTemp, args.output)
 
-cmd = "tabix %s" % (args.output)
-logger.info(cmd)
-os.system(cmd)
+if args.output.endswith(".gz"):
+  cmd = "tabix %s" % (args.output)
+  logger.info(cmd)
+  os.system(cmd)
 
 logger.info("done.")
