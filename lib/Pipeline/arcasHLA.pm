@@ -55,7 +55,7 @@ sub getConfig {
     perform               => 1,
     target_dir            => "$target_dir/extract",
     init_command          => "ln -s __FILE__ __NAME__.bam",
-    option                => "extract --log __NAME__.log --paired __NAME__.bam",
+    option                => "extract -t 8 -v --log __NAME__.log --paired __NAME__.bam",
     interpretor           => "",
     check_program         => 0,
     program               => "arcasHLA",
@@ -70,7 +70,7 @@ sub getConfig {
     output_other_ext      => ".extracted.2.fq.gz",
     sh_direct             => 0,
     pbs                   => {
-      "nodes"     => "1:ppn=1",
+      "nodes"     => "1:ppn=8",
       "walltime"  => "10",
       "mem"       => "40gb"
     },
@@ -80,7 +80,7 @@ sub getConfig {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
     target_dir            => "$target_dir/genotype",
-    option                => "genotype --log __NAME__.log",
+    option                => "genotype -t 8 -v --log __NAME__.log",
     interpretor           => "",
     check_program         => 0,
     program               => "arcasHLA",
@@ -95,8 +95,8 @@ sub getConfig {
     output_other_ext       => ".genes.json,.alignment.p",
     sh_direct             => 0,
     pbs                   => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "24",
       "mem"       => "40gb"
     },
   };
