@@ -10,6 +10,7 @@ use Data::Dumper;
 
 sub new {
   my ($class) = @_;
+
   my $self = {
     _name          => __PACKAGE__,
     _suffix        => "",
@@ -22,6 +23,14 @@ sub new {
   };
   bless $self, $class;
   return $self;
+}
+
+sub init_docker_prefix {
+  my ($self, $package) = @_;
+  my $docker_prefix = $package;
+  $docker_prefix =~ s/.+://g;
+  $docker_prefix = $docker_prefix . "_";
+  $self->{_docker_prefix} = $docker_prefix;
 }
 
 sub name {
@@ -66,10 +75,7 @@ sub get_result_files {
 sub result {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
-
-  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
-  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section );
 
   my $result = {};
 
@@ -121,12 +127,7 @@ sub get_pbs_key {
 sub get_pbs_files {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
-
-  #print  "task_name = " . $task_name . "\n";
-
-  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
-  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section );
 
   my $result = {};
 
@@ -286,7 +287,7 @@ sub do_get_docker_value {
 
 sub can_use_docker(){
   my ($self) = @_;
-  return(1);
+  return($self->{_can_use_docker});
 }
 
 sub using_docker {
@@ -309,6 +310,8 @@ sub get_docker_value {
   if (not $self->{_can_use_docker}){
     return ( $command, $init );
   }
+
+  #print("_docker_prefix = " . $self->{_docker_prefix} . "\n");
 
   my $commandKey = $self->{_docker_prefix} . "docker_command";
   my $initKey    = $self->{_docker_prefix} . "docker_init";
@@ -453,6 +456,20 @@ sub get_java_option {
     $result = "-Xmx${memory}";
   }
   return ($result);
+}
+
+sub init_parameter {
+  my ( $self, $config, $section, $create_directory ) = @_;
+
+  $self->{_docker_prefix} = get_option( $config, $section, "docker_prefix", "" );
+  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
+  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+
+  if ($self->{_task_suffix} ne ""){
+    $self->{_suffix} = "";
+  }
+
+  return (get_parameter( $config, $section, $create_directory ));
 }
 
 1;
