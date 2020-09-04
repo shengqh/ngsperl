@@ -7,27 +7,42 @@ import re
 from asyncore import read
 
 def write_reads(fout, refmap, reads, counts):
-  hasHost = False
+  hostReads = []
+  feedReads = []
+  hasSecondary = False
   for read in reads:
+    if read.is_secondary:
+      hasSecondary = True
+      continue
     if refmap[read.reference_id]:
-      hasHost = True
-      break
+      hostReads.append(read)
+    else:
+      feedReads.append(read)
 
-  if hasHost:
-    hasFeed = False
-    for read in reads:
-      if refmap[read.reference_id]:
-        fout.write(read)
-      else:
-        hasFeed = True
-    if hasFeed:
+  hasBoth = False
+  savedReads = []
+  if len(hostReads) > 0:
+    savedReads = hostReads
+    if len(feedReads) > 0:
       counts["both"] += 1
     else:
       counts["host"] += 1
   else:
-    for read in reads:
-      fout.write(read)
+    savedReads = feedReads
     counts["feed"] += 1
+
+  if hasBoth or hasSecondary:
+    readCount = {True:0, False:0}
+    for read in savedReads:
+      readCount[read.is_read1] += 1
+    numberOfHit = max(readCount.values())
+    #oldNumberOfHit = read.get_tag("NH")
+    #print("hasSecondary:%s, hasBoth:%s, old:%d, new:%d" % (str(hasSecondary), str(hasBoth), oldNumberOfHit, numberOfHit))
+    for read in savedReads:
+      read.set_tag("NH", numberOfHit)
+
+  for read in savedReads:
+    fout.write(read)
 
 DEBUG = False
 NOT_DEBUG= not DEBUG
