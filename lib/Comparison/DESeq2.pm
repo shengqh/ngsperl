@@ -50,7 +50,7 @@ sub getSuffix {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = $self->init_parameter( $config, $section );
 
   my $comparisons = get_raw_files( $config, $section );
   my @comparison_names = keys %{$comparisons};
@@ -296,7 +296,7 @@ libraryKey<-\"$libraryKey\"
 sub result {
   my ( $self, $config, $section, $pattern, $removeEmpty ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my $comparisons = get_raw_files( $config, $section );
   my $minMedianInGroup          = get_option( $config, $section, "min_median_read",              0 );

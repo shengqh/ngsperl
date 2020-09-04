@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
 
   my $faFile     = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, not $self->using_docker() );
@@ -75,7 +75,7 @@ samtools index $final_file
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $sort_by_query = get_option_value( $config->{$section}{sort_by_query}, 0 );

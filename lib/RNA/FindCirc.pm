@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = $self->init_parameter( $config, $section );
 
   my $FindCircDir = get_option( $config, $section, "FindCircDir", dirname(__FILE__) );
   my $bowtie2_index = $config->{$section}{bowtie2_index} or die "define ${section}::bowtie2_index first";
@@ -93,7 +93,7 @@ bowtie2 -p 16 --score-min=C,-15,0 --reorder --mm -q -U ${sample_name}_anchors.fa
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 

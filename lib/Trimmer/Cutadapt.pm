@@ -70,7 +70,7 @@ sub get_extension {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = $self->init_parameter( $config, $section );
 
   my $curSection = get_config_section( $config, $section );
 
@@ -366,7 +366,7 @@ cutadapt --version | awk '{print \"Cutadapt,v\"\$1}' > ${sample_name}.version
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my $ispairend = get_is_paired_end_option( $config, $section );
   my ( $extension, $fastqextension ) = $self->get_extension( $config, $section );

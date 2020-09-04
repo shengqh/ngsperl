@@ -23,7 +23,7 @@ sub getOutputToSameFolder {
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my $sort_by_coordinate = get_option( $config, $section, "sort_by_coordinate",    1 );
   my $mark_duplicates    = hasMarkDuplicate( $config->{$section} );

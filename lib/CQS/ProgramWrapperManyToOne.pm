@@ -40,7 +40,7 @@ sub get_joined_files {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
 
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   my $task_suffix = get_option( $config, $section, "suffix", "" );
@@ -54,9 +54,9 @@ sub perform {
   my $output_file_prefix    = get_option( $config, $section, "output_file_prefix" );
   my $output_arg            = get_option( $config, $section, "output_arg", "" );
 
-  my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, "source" );
-  my ( $parameterSampleFile2, $parameterSampleFile2arg, $parameterSampleFile2JoinDelimiter ) = get_parameter_sample_files( $config, $section, "parameterSampleFile2" );
-  my ( $parameterSampleFile3, $parameterSampleFile3arg, $parameterSampleFile3JoinDelimiter ) = get_parameter_sample_files( $config, $section, "parameterSampleFile3" );
+  my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = $self->get_parameter_sample_files( $config, $section, "source" );
+  my ( $parameterSampleFile2, $parameterSampleFile2arg, $parameterSampleFile2JoinDelimiter ) = $self->get_parameter_sample_files( $config, $section, "parameterSampleFile2" );
+  my ( $parameterSampleFile3, $parameterSampleFile3arg, $parameterSampleFile3JoinDelimiter ) = $self->get_parameter_sample_files( $config, $section, "parameterSampleFile3" );
 
   my ( $parameterFile1, $parameterFile1arg ) = get_parameter_file( $config, $section, "parameterFile1" );
   my ( $parameterFile2, $parameterFile2arg ) = get_parameter_file( $config, $section, "parameterFile2" );
@@ -168,12 +168,12 @@ $interpretor $program $curOption $parameterFile1arg $parameterFile1 $parameterFi
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
-  my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, "source" );
+  my ($source_files, $source_file_arg, $source_file_join_delimiter) = $self->get_parameter_sample_files( $config, $section, "source" );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
   my $output_exts = get_output_ext_list( $config, $section );
 
@@ -199,7 +199,7 @@ sub result {
 sub get_pbs_files {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section );
 
   #print  "task_name = " . $task_name . "\n";
 
@@ -208,7 +208,7 @@ sub get_pbs_files {
 
   my $result = {};
 
-  my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, "source" );
+  my ($source_files, $source_file_arg, $source_file_join_delimiter) = $self->get_parameter_sample_files( $config, $section, "source" );
   my $sample_name_map = get_interation_sample_subsample_map($source_files);
 
   for my $sample_name ( sort keys %$sample_name_map ) {
@@ -223,12 +223,12 @@ sub get_pbs_files {
 sub get_pbs_source {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section );
 
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
-  my ( $source_files, $source_file_arg, $source_file_join_delimiter ) = get_parameter_sample_files( $config, $section, "source" );
+  my ( $source_files, $source_file_arg, $source_file_join_delimiter ) = $self->get_parameter_sample_files( $config, $section, "source" );
   my $sample_subsample_map = get_interation_sample_subsample_map($source_files);
 
   my $result = {};

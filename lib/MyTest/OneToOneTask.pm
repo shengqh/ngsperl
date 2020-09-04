@@ -20,7 +20,7 @@ sub new {
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
   my $result = {};
 
   my $raw_files = get_raw_files($config, $section, "source");

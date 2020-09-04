@@ -27,7 +27,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = $self->init_parameter( $config, $section );
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
@@ -81,7 +81,7 @@ sub perform {
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = $self->init_parameter( $config, $section );
 
   my $snp_genotype_files = get_raw_files( $config, $section );
   my $prefix = get_option( $config, $section, "prefix", "" );

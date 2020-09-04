@@ -28,7 +28,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = $self->init_parameter( $config, $section );
 
   my $java_option = $self->get_java_option( $config, $section, $memory );
 
@@ -42,7 +42,7 @@ sub perform {
   my $ref_fasta_dict = get_param_file( $config->{$section}{ref_fasta_dict}, "ref_fasta_dict", 1 );
   my $ref_fasta      = get_param_file( $config->{$section}{ref_fasta},      "ref_fasta",      1 );
 
-  my $parameters = get_parameter_options(
+  my $parameters = $self->init_parameter_options(
     $config, $section, "--",
     [
       "minimum-gc-content",                      "maximum-gc-content",                         #
@@ -113,7 +113,7 @@ python $script -i $final_file_tmp -o $final_file
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my $final_file = $task_name . ".filtered.interval_list";
   my $result = { $task_name => filter_array( ["${result_dir}/${final_file}"], $pattern ) };

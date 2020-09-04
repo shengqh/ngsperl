@@ -29,7 +29,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
 
   my %group_sample_treat   = %{ get_raw_files( $config, $section, "source", "_treat_pileup.bdg" ) };
   my %group_sample_control = %{ get_raw_files( $config, $section, "source", "_control_lambda.bdg" ) };
@@ -86,7 +86,7 @@ macs2 bdgdiff $option --t1 $condition1treat --t2 $condition2treat --c1 $conditio
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my $comparisons = get_raw_files( $config, $section, "groups" );
   my $result = {};

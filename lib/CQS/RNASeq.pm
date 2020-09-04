@@ -252,7 +252,7 @@ sub compare_cuffdiff {
 sub novoalign {
   my ( $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option ) = $self->init_parameter( $config, $section );
 
   my $novoindex = get_param_file( $config->{$section}{novoindex}, "novoindex", 1 );
 
@@ -322,7 +322,7 @@ echo finished=`date`
 sub shrimp2 {
   my ( $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section );
 
   my $genome_index = $config->{$section}{genome_index} or die "define ${section}::genome_index first";
   die "genome index ${genome_index}.genome not exist" if ( !-e "${genome_index}.genome" );

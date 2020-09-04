@@ -28,7 +28,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = get_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = $self->init_parameter( $config, $section );
 
   my $java_option = $self->get_java_option( $config, $section, $memory );
 
@@ -38,7 +38,7 @@ sub perform {
   my $intervals               = parse_param_file( $config, $section, "filtered_intervals",      1 );
   my $contig_ploidy_calls_dir = parse_param_file( $config, $section, "contig_ploidy_calls_dir", 1 );
 
-  my $parameters = get_parameter_options(
+  my $parameters = $self->init_parameter_options(
     $config, $section, "--",
     [
       "p-alt",                            "p-active",                               "cnv-coherence-length",                   "class-coherence-length",               #
@@ -106,7 +106,7 @@ rm -rf .cache .conda .config .theano
 
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = get_parameter( $config, $section, 0 );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my $result = { $task_name => filter_array( [ "${result_dir}/${task_name}-model", "${result_dir}/${task_name}-calls", "${result_dir}/${task_name}-tracking" ], $pattern ) };
 
