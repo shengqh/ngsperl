@@ -116,6 +116,11 @@ sub getConfig {
   $def = initializeDefaultOptions($def);
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
+
+  if ($def->{perform_preprocessing_only}) {
+    return $config;
+  }
+
   my $step3 = [];
   my $step4 = [];
   my $step5 = [];
@@ -245,6 +250,28 @@ sub getConfig {
       $bam_ref = [ "bwa", ".bam\$" ];
       $bam_input = "bwa";
       push @$individual, ( "bwa" );
+
+      my $bwa_summary = $bwa . "_summary";
+      $config->{ $bwa_summary } = {
+        class                 => "CQS::ProgramWrapper",
+        perform               => 1,
+        target_dir            => "${target_dir}/" . getNextFolderIndex($def) . $bwa_summary,
+        option                => "",
+        interpretor           => "python",
+        program               => "../Count/countTable.py",
+        parameterSampleFile1_arg    => "-i",
+        parameterSampleFile1_ref    => [$bwa, ".bamstat"],
+        output_to_same_folder => 1,
+        output_arg            => "-o",
+        output_file_ext       => ".summary.txt",
+        sh_direct             => 1,
+        pbs                   => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary, $bwa_summary;
     }
     else {
       die "Unknown alinger " . $def->{aligner};
@@ -339,7 +366,7 @@ sub getConfig {
     $bam_ref = [ $refine_name, ".bam\$" ];
   }
 
-  if($def->{filter_soft_clip} & !$def->{perform_gatk4_pairedfastq2bam}){
+  if($def->{filter_soft_clip} && ((!defined $def->{perform_gatk4_pairedfastq2bam}) || (!$def->{perform_gatk4_pairedfastq2bam}))){
     my $soft_clip_name = $bam_input . "_nosoftclip";
     $config->{$soft_clip_name} = {
       class                 => "CQS::ProgramIndividualWrapper",
