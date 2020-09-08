@@ -35,6 +35,11 @@ sub perform {
   #  }
   #
 
+  my $py_script = dirname(__FILE__) . "/bamStat.py";
+  if ( !-e $py_script ) {
+    die "File not found : " . $py_script;
+  }
+
   my ($sort_memory, $isMB) = getMemoryPerThread($memory, $thread);
   if ($isMB) {
     $sort_memory = $sort_memory . "M";
@@ -108,6 +113,7 @@ sub perform {
     my $rgline = "ID:$sample_name SM:$sample_name LB:$sample_name PL:ILLUMINA PU:ILLUMINA";
 
     my $unsorted = $sample_name . "_Aligned.out.bam";
+    my $bam_stat = $sample_name . ".bamstat";
 
     my $final_bam = $output_sort_by_coordinate ? $sample_name . "_Aligned.sortedByCoord.out.bam" : $unsorted;
 
@@ -127,6 +133,14 @@ if [[ ! -s $final_bam && -s $sample_file_1 ]]; then
   rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
 fi
 ";
+
+    print $pbs "
+if [ -s $unsorted ]; then
+  echo bamStat=`date` 
+  python $py_script -i $unsorted -o $bam_stat
+fi
+";
+
 
   if ($output_sort_by_coordinate) {
     print $pbs "
@@ -207,6 +221,7 @@ sub result {
 
     push( @result_files, "$cur_dir/${sample_name}.count.summary" );
     push( @result_files, "$cur_dir/${sample_name}_Log.final.out" );
+    push( @result_files, "$cur_dir/${sample_name}.bamstat" );
     if (!$delete_star_featureCount_bam) {
       if ($output_sort_by_coordinate) {
         push( @result_files, "$cur_dir/${sample_name}_Aligned.sortedByCoord.out.bam" );

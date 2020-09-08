@@ -59,6 +59,11 @@ sub perform {
     $bwa_index = $config->{$section}{fasta_file} or die "define ${section}::bwa_index first";
   }
 
+  my $py_script = dirname(__FILE__) . "/bamStat.py";
+  if ( !-e $py_script ) {
+    die "File not found : " . $py_script;
+  }
+
   my $picard_jar;
   
   if($cleansam || $mark_duplicates) {
@@ -77,6 +82,7 @@ sub perform {
     my $sample_files_str = ( scalar(@sample_files) == 2 ) ? "\"" . $sample_file_0 . "\" \"" . $sample_files[1] . "\"" : "\"" . $sample_file_0 . "\"";
 
     my $unsorted_bam_file = $sample_name . ".unsorted.bam";
+    my $bam_stat = $sample_name . ".bamstat";
     my $clean_bam_file    = $sample_name . ".unsorted.clean.bam";
     my $sorted_bam_file    = $sample_name . ($sortByCoordinate? ".sortedByCoord.bam":".sortedByQuery.bam");
     my $rmdup_bam_file    = $sample_name . ($sortByCoordinate? ".sortedByCoord.rmdup.bam":".sortedByQuery.rmdup.bam");
@@ -107,6 +113,13 @@ if [[ (1 -eq \$1) || (! -s $unsorted_bam_file) ]]; then
   bwa 2>\&1 | grep Version | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${sample_name}.bwa.version
 fi
 ";
+    print $pbs "
+if [ -s $unsorted_bam_file ]; then
+  echo bamStat=`date` 
+  python $py_script -i $unsorted_bam_file -o $bam_stat
+fi
+";
+
     my $rmlist = "";
 
     if ($alignmentOnly) { #only alignment, no sort or other works. For UMI pipeline
@@ -234,6 +247,7 @@ sub result {
     my @result_files = ();
     push( @result_files, $final_file );
     push( @result_files, $final_file . ".stat" );
+    push( @result_files, "${result_dir}/${sample_name}.bamstat" );
     push( @result_files, "${result_dir}/${sample_name}.bwa.version" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
