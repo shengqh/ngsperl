@@ -1656,7 +1656,7 @@ sub addStarFeaturecount {
   $config->{$summary_task} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
-    target_dir               => $starFolder,
+    target_dir               => $starFolder . "_summary",
     option                   => "",
     rtemplate                => "../Alignment/STARFeatureCount.r",
     output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png;.STARSummary.csv;.STARSummary.csv.png",
