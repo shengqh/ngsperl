@@ -122,13 +122,21 @@ col_by_value<-
 #figure for all comparisions
 ###############################
 resultTable=NULL
+resultTableList=list()
 for (j in 1:nrow(deseq2ResultFileTable)) {
   deseq2ResultTable=deseq2ResultFileTable[j,1]
   resultTableOne<-read.csv(deseq2ResultTable,header=T,as.is=T,row.names=1)
   row.names(resultTableOne)=gsub("\\.\\d+$","",row.names(resultTableOne))
   resultTableOne$rownames=row.names(resultTableOne)
   resultTableOne$Comparison=tools::file_path_sans_ext(basename(deseq2ResultTable))
-  resultTable=rbind(resultTable,resultTableOne)
+  resultTableList[[j]]=resultTableOne
+#  resultTable=rbind(resultTable,resultTableOne)
+}
+colToMerge=lapply(resultTableList,colnames)
+colToMerge=table(unlist(colToMerge))
+colToMerge=names(colToMerge[which(colToMerge==max(colToMerge))])
+for (j in 1:length(resultTableList)) {
+  resultTable=rbind(resultTable,resultTableList[[j]][,colToMerge])
 }
 
 log2fcCol=intersect(colnames(resultTable),log2fcColAll)

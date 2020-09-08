@@ -264,8 +264,23 @@ if(hasDEseq2 ){
   for (i in 1:nrow(DESeq2_files)){
     DESeq2_list[[i]]<-read.csv(DESeq2_files[i,1], header=TRUE)
   }
-  output_table3<-data.frame(c(gsub("_DESeq2_sig.csv","",basename(DESeq2_files[,1]))), c(unlist(lapply(DESeq2_list, nrow))))
-  colnames(output_table3)<-c("Comparison", "Number of DEGs")
+  diffGeneCount=sapply(DESeq2_list, function(x) 
+    if("log2FoldChange" %in% colnames(x)) {
+      return(c(nrow(x),length(which(x[,"log2FoldChange"]>=0)),length(which(x[,"log2FoldChange"]<0))))
+    } else if ("FoldChange" %in% colnames(x)) {
+      return(c(nrow(x),length(which(x[,"FoldChange"]>=1)),length(which(x[,"FoldChange"]<1))))
+    } else {
+      return(nrow(x))
+    }
+  )
+#  output_table3<-data.frame(c(gsub("_DESeq2_sig.csv","",basename(DESeq2_files[,1]))), c(unlist(lapply(DESeq2_list, nrow))))
+#  colnames(output_table3)<-c("Comparison", "Number of DEGs")
+  output_table3<-data.frame(c(gsub("_DESeq2_sig.csv","",basename(DESeq2_files[,1]))), t(diffGeneCount))
+  if (ncol(output_table3)==2) {
+    colnames(output_table3)<-c("Comparison", "Number of DEGs")
+  } else {
+    colnames(output_table3)<-c("Comparison", "Number of DEGs","Up-regulated DEGs","Down-regulated DEGs")
+  }
   print(kable_styling(kable(output_table3, caption= tabRef("deseq2_table", paste0("DEG numbers under FC > ", rnaseqOptions["DE_fold_change", 1], " & ",pValueText," < ", rnaseqOptions["DE_pvalue", 1])))))
 
   fpkm_file <- files["genetable_fpkm", 1]
