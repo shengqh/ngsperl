@@ -6,6 +6,10 @@ import pybedtools
 import requests
 import shutil
 
+def runCmd(cmd, logger):
+  logger.info(cmd)
+  os.system(cmd)
+
 DEBUG=False
 NotDEBUG=not DEBUG
 
@@ -48,16 +52,23 @@ os.remove(annotation_file)
 
 logger.info("generate active genes ...")
 
-promoters = pybedtools.BedTool(region_file)
-bed = pybedtools.BedTool(args.input)
-intersect = promoters.intersect(bed)
+tmp_bed = args.output + ".tmp.bed"
+method_command = "bedtools intersect -a \"%s\" -b \"%s\" > %s" % (region_file, args.input, tmp_bed)
+runCmd(method_command, logger)
 
-os.remove(region_file)
+intersect = pybedtools.BedTool(tmp_bed)
+
+# promoters = pybedtools.BedTool(tmp_bed)
+# bed = pybedtools.BedTool(args.input)
+# intersect = promoters.intersect(bed)
 
 gene_list = [line[6] for line in intersect]
 gene_list = sorted(list(set(gene_list)))
 
 with open(args.output + ".TSS_ACTIVE_-1000_1000.txt", 'w') as outfile:
   outfile.write('\n'.join(gene_list))
+
+os.remove(region_file)
+os.remove(tmp_bed)
 
 logger.info("done.")
