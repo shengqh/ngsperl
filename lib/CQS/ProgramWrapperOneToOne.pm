@@ -43,7 +43,8 @@ sub perform {
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1);
   my $output_file_prefix    = get_option( $config, $section, "output_file_prefix", (!$output_to_folder) );
   my $output_arg            = get_option( $config, $section, "output_arg" );
-
+  my $no_output            = get_option( $config, $section, "no_output", 0 );
+  
   my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, "source" );
   my ( $parameterSampleFile2, $parameterSampleFile2arg, $parameterSampleFile2JoinDelimiter ) = get_parameter_sample_files( $config, $section, "parameterSampleFile2" );
   my ( $parameterSampleFile3, $parameterSampleFile3arg, $parameterSampleFile3JoinDelimiter ) = get_parameter_sample_files( $config, $section, "parameterSampleFile3" );
@@ -129,6 +130,10 @@ sub perform {
     }
 
     if (($output_arg ne "") && (index($curOption, $output_arg) != -1)) {
+      $output_option = "";
+    }
+
+    if ($no_output){
       $output_option = "";
     }
 
