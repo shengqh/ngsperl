@@ -4,10 +4,20 @@ workflow crc_pipeline {
   String? custom_active_gene_script
   String genome
   String sample_name
+  
   File sub_peaks_file
+  String sub_peaks_file_prefix
 
-  #File enhancer_file
-  #File chrom_path 
+  String rose2_genome
+
+  File bam_file
+  File bam_file_index
+
+  File enhancer_file
+  File active_gene_file
+  
+  File chrom_file 
+  String chrom_file_folder
 
   call active_gene {
     input:
@@ -17,25 +27,35 @@ workflow crc_pipeline {
       sample_name = sample_name
   }
 
-  # Run the validation 
-  #call crc {
-  #  input:
-  #    enhancer_file = enhancer_file,
-  #    genome = genome,
-  #    chrom_path = chrom_path,
-  #    sample_name = sample_name,
-  #    sub_peaks_file = sub_peaks_file,
-  #}
+  call rose2 {
+    input :
+      bam_file = bam_file,
+      bam_file_index = bam_file_index,
+      genome = rose2_genome,
+      sub_peaks_file = sub_peaks_file,
+      sub_peaks_file_prefix = sub_peaks_file_prefix
+  }
+
+  call crc {
+    input:
+      enhancer_file = rose2.enhancer_file,
+      genome = genome,
+      chrom_file = chrom_file,
+      chrom_file_folder = chrom_file_folder,
+      sample_name = sample_name,
+      sub_peaks_file = sub_peaks_file,
+      active_gene_file = active_gene.active_gene_file
+  }
 
   # Outputs that will be retained when execution is complete
   output {
-    File active_gene_file = active_gene.active_gene_file
-    #Array[File] crc_results = crc.results
+    #File active_gene_file = active_gene.active_gene_file
+    #File enhancer_file = rose2.enhancer_file
+    Array[File] crc_results = crc.results
   }
 }
 
 # TASK DEFINITIONS
-
 
 task active_gene {
   # Command parameters
@@ -63,24 +83,47 @@ task active_gene {
   }
 }
 
-task crc {
+task rose2 {
   # Command parameters
-  File enhancer_file
+  File bam_file
+  File bam_file_index
   String genome
-  String sample_name
-  File chrom_path 
   File sub_peaks_file
+  String sub_peaks_file_prefix
 
   Int? machine_mem_gb
   Int? disk_space_gb
 
   command {
-    crc -e ${enhancer_file} \\
-        -g ${genome} \\
-        -n ${sample_name} \\
-        -c ${chrom_path} \\
-        -s ${sub_peaks_file} \\
-        -o .
+    ROSE2 -g ${genome} -o . -i ${sub_peaks_file} -r ${bam_file}
+  }
+  runtime {
+    memory: select_first([machine_mem_gb, 10]) + " GB"
+    cpu: "1"
+    docker: "shengqh/bioinfo:novartis"
+    disks: "local-disk " + select_first([disk_space_gb, 20]) + " HDD"
+  }
+  output {
+    File enhancer_file = "${sub_peaks_file_prefix}_SuperEnhancers_ENHANCER_TO_GENE.txt"
+  }
+}
+
+task crc {
+  # Command parameters
+  File enhancer_file
+  String genome
+  String sample_name
+  File chrom_file 
+  String chrom_file_folder
+  File sub_peaks_file
+  File active_gene_file
+
+  Int? machine_mem_gb
+  Int? disk_space_gb
+
+  command {
+    tar -xzvf ${chrom_file}
+    crc -e ${enhancer_file} -g ${genome} -n ${sample_name} -c ${chrom_file_folder} -s ${sub_peaks_file} -a ${active_gene_file} -o .
   }
   runtime {
     memory: select_first([machine_mem_gb, 10]) + " GB"

@@ -1,7 +1,14 @@
 {
-  "crc_pipeline.enhancer_file": "/scratch/jbrown_lab/shengq2/projects/crc-test/SRR5855055_peaks_SuperEnhancers_ENHANCER_TO_GENE.txt",
-  "crc_pipeline.genome": "HG19",
-  "crc_pipeline.project_name": "crc",
-  "crc_pipeline.chrom_path": "/scratch/jbrown_lab/shengq2/projects/crc-test/hg19",
-  "crc_pipeline.sub_peaks_file": "/scratch/jbrown_lab/shengq2/projects/crc-test/SRR5855055_all_subpeak.bed"
+  "crc_pipeline.custom_active_gene_script" : "/home/shengq2/program/ngsperl/lib/Chipseq/activeGene.py",
+  "crc_pipeline.genome" : "mm10",
+  "crc_pipeline.rose2_genome" : "MM10",
+  "crc_pipeline.sample_name" : "H3K27ac_25mg",
+  "crc_pipeline.sub_peaks_file" : "/scratch/jbrown_lab/shengq2/projects/20200409_chipseq_4615_human_encode_afterTrimming/croo/result/H3K27ac_25mg/peak/overlap_reproducibility/overlap.optimal_peak.narrowPeak.gz.bed",
+  "crc_pipeline.sub_peaks_file_prefix" : "overlap",
+  "crc_pipeline.bam_file" : "/scratch/jbrown_lab/shengq2/projects/20200409_chipseq_4615_human_encode_afterTrimming/croo/result/H3K27ac_25mg/align/rep1/H3K27ac_25mg_clipped.1.nodup.bam",
+  "crc_pipeline.bam_file_index" : "/scratch/jbrown_lab/shengq2/projects/20200409_chipseq_4615_human_encode_afterTrimming/croo/result/H3K27ac_25mg/align/rep1/H3K27ac_25mg_clipped.1.nodup.bam.bai",
+  "crc_pipeline.enhancer_file" : "/scratch/jbrown_lab/shengq2/projects/20200409_chipseq_4615_human_encode_afterTrimming/rose2/result/H3K27ac_25mg/overlap_SuperEnhancers_ENHANCER_TO_GENE.txt",
+  "crc_pipeline.chrom_file" : "/scratch/cqs_share/references/mm10/mm10.individual.tar.gz",
+  "crc_pipeline.chrom_file_folder" : "individual",
+  "crc_pipeline.active_gene_file" : "/scratch/jbrown_lab/shengq2/projects/20200409_chipseq_4615_human_encode_afterTrimming/activeGene/result/H3K27ac_25mg.TSS_ACTIVE_-1000_1000.txt"
 }
