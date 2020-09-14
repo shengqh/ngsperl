@@ -139,13 +139,13 @@ sub perform {
     my $g_option = $option;
     if ($g_option =~ /__INPUT__/){
       $g_option =~ s/__INPUT__/$input_file/g;
-    }elsif (($parameterSampleFile1arg ne "") && (index($g_option, $parameterSampleFile1arg) != -1)) {
+    }elsif (option_contains_arg($g_option, $parameterSampleFile1arg)) {
     }else{
       $g_option = "$g_option $parameterSampleFile1arg $input_file";
     }
     if ($g_option =~ /__OUTPUT__/){
       $g_option =~ s/__OUTPUT__/$final_prefix/g;
-    }elsif (($output_arg ne "") && (index($g_option, $output_arg) != -1)) {
+    }elsif (option_contains_arg($g_option, $output_arg)) {
     }else{
       $g_option = "$g_option $output_arg $final_prefix";
     }

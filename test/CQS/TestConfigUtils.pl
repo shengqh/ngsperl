@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 4;
+use Test::More tests => 8;
 use CQS::ConfigUtils;
 
 my $def = {
@@ -71,5 +71,10 @@ is_deeply(
     },
   }
 );
+
+ok(option_contains_arg("-i __SAMPLE__", "-i"));
+ok(option_contains_arg("-o __OUTPUT__ -i", "-i"));
+ok(option_contains_arg("-o __OUTPUT__ -i __INPUT__", "-i"));
+ok(! option_contains_arg("-o __OUTPUT__ -impossible __INPUT__", "-i"));
 
 1;

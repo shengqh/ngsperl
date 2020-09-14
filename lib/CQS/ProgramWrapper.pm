@@ -55,14 +55,14 @@ sub perform {
     $sourceKey = "parameterSampleFile1";
   }
   my $parameterSampleFile1arg = get_option($config, $section, "${sourceKey}_arg", "");
-  if (($parameterSampleFile1arg ne "") && (index($option, $parameterSampleFile1arg) != -1)) {
+  if (option_contains_arg($option, $parameterSampleFile1arg)) {
     #print("source already defined in option, ignored\n");
   }else{
     #print("sourceKey = $sourceKey, parameterSampleFile1arg = $parameterSampleFile1arg, option = $option\n");
     my $parameterSampleFile1 = save_parameter_sample_file( $config, $section, $sourceKey, "${result_dir}/${task_name}_${task_suffix}_fileList1.list" );
     if($parameterSampleFile1 ne ""){
       $parameterSampleFile1 = basename($parameterSampleFile1);
-      $option = $option . " " . $parameterSampleFile1arg . " \"" . $parameterSampleFile1 . "\"";
+      $option = $option . " " . $parameterSampleFile1arg . " " . $parameterSampleFile1;
     }
   }
   
@@ -120,7 +120,7 @@ sub perform {
   }
 
   my $output_arg = get_option($config, $section, "output_arg", "");
-  if (($output_arg ne "") && (index($option, $output_arg) != -1)) {
+  if (option_contains_arg($option, $output_arg)) {
     #print("output already defined in option, ignored\n");
     $output_arg = "";
     $final_file = "";

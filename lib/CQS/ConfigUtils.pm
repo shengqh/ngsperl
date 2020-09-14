@@ -74,7 +74,8 @@ our %EXPORT_TAGS = (
       get_groups
       get_covariances
       getGroupPickResult
-      getMemoryPerThread)
+      getMemoryPerThread
+      option_contains_arg)
   ]
 );
 
@@ -1433,6 +1434,28 @@ sub getMemoryPerThread {
     $isMB = 1;
   }
   return($result, $isMB);
+}
+
+sub option_contains_arg {
+  my ($option, $arg) = @_;
+
+  if ($arg eq "") {
+    return(0);
+  }
+  
+  if (index($option, " " . $arg . " ") != -1) {
+    return(1);
+  }
+
+  if (substr($option, 0, length($arg)) eq $arg){
+    return(1);
+  }
+
+  if (substr($option, -length($arg)) eq $arg){
+    return(1);
+  }
+
+  return(0);
 }
 
 1;

@@ -117,7 +117,7 @@ sub perform {
     if ($curOption =~ /__FILE__/){
       my $param_option1 = get_program_param( $parameterSampleFile1, "", $parameterSampleFile1JoinDelimiter, $sample_name );
       $curOption =~ s/__FILE__/$param_option1/g;
-    } elsif (($parameterSampleFile1arg ne "") && (index($curOption, $parameterSampleFile1arg) != -1)) {
+    } elsif (option_contains_arg($curOption, $parameterSampleFile1arg)) {
     } else{
       my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name );
       $curOption = $curOption . " " . $param_option1;
@@ -129,7 +129,7 @@ sub perform {
       $output_option = "";
     }
 
-    if (($output_arg ne "") && (index($curOption, $output_arg) != -1)) {
+    if (option_contains_arg($curOption, $output_arg)) {
       $output_option = "";
     }
 
