@@ -394,6 +394,12 @@ echo working in $result_dir ...
     if ( not defined $docker_init ) {
       $docker_init = "";
     }
+
+    my $sing = "singularity exec -e";
+    if ((substr($docker_command, 0, length($sing)) eq $sing) &&  ($docker_command !~ / -H /)) {
+      $docker_command = $sing . " -H " . $result_dir . " " . substr($docker_command, length($sing));
+    }
+
     my $sh_file = $pbs_file . ".sh";
 
     print $pbs "
