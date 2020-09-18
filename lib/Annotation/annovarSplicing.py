@@ -67,7 +67,7 @@ annovar_outputfile = outputfile + "." + annovar_buildver + "_multianno.txt"
 
 if os.path.isfile(annovar_outputfile):
   splicing_map = {}
-  prog = re.compile("p\.\w(\d+)\w")
+  prog = re.compile("p\.\w(\d+)[\w|\?]")
   with open(annovar_outputfile, "r") as f:
     splicingHeaders = f.readline().rstrip().split('\t')
     splicingFuncRefGeneIndex=splicingHeaders.index("Func.refGene")
@@ -91,7 +91,10 @@ if os.path.isfile(annovar_outputfile):
           if a != 'UNKNOWN':
             aparts = a.split(':')
             ma = prog.match(aparts[-1])
-            anno[aparts[1]] = ':'.join(aparts[0:3]) + ':p.X' + ma.group(1) + 'X'
+            if ma == None:
+              print(line)
+            else:
+              anno[aparts[1]] = ':'.join(aparts[0:3]) + ':p.X' + ma.group(1) + 'X'
       
       locus = parts[0] + ":" + str(originalposition)
       if locus in splicing_map:
