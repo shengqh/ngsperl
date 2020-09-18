@@ -145,6 +145,12 @@ sub get_option_file {
 
   my $result = $curSection->{$key};
   if ( !defined $result ) {
+    if (defined $config->{general}){
+      $result = $config->{general}{$key};
+    }
+  }
+
+  if ( !defined $result ) {
     die "Define ${section}::${key} first!";
   }
 
