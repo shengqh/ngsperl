@@ -238,6 +238,7 @@ sub getPreprocessionConfig {
       constraint => $def->{constraint},
       account    => $def->{account},
       debug      => $def->{debug},
+      sratoolkit_setting_file => $def->{sratoolkit_setting_file},
     },
     files                => $def->{files},
     groups               => $def->{groups},
