@@ -165,6 +165,23 @@ fi
       }
     }
     elsif ( $sample_file =~ /SRR/ ) {
+      my $sratoolkit_setting_file = get_option_file($config, $section, "sratoolkit_setting_file");
+
+      print $pbs "
+if [[ ! -s \${HOME}/.ncbi ]]; then
+  echo mkdir \${HOME}/.ncbi
+  mkdir \${HOME}/.ncbi
+fi
+
+if [[ ! -s \${HOME}/.ncbi/user-settings.mkfg ]]; then
+  echo cp user-settings.mkfg
+  cp $sratoolkit_setting_file \${HOME}/.ncbi
+fi
+
+echo dump $sample_name
+
+";
+
       my @sample_files = split( '\s+', $sample_file );
       if ( scalar(@sample_files) == 1 ) {
         print $pbs "fastq-dump --split-e --gzip --origfmt --helicos $sample_file \n";
