@@ -1,5 +1,9 @@
 library(mafreport)
 
+#https://github.com/PoisonAlien/maftools/issues/532
+library("wordcloud")
+devtools::source_gist(id = "https://gist.github.com/PoisonAlien/3f8752a89c1d63f64afe55b441621223")
+
 mafFileList = parSampleFile1
 #reportOutDir = "."
 reportOutDir = getwd()
