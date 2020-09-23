@@ -28,11 +28,15 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = $self->init_parameter( $config, $section );
 
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   my $task_suffix = get_option( $config, $section, "suffix", "" );
   $self->{_task_suffix} = $task_suffix;
+
+  if ($option =~ /__MEMORY__/) {
+    $option =~ s/__MEMORY__/$memory/g;
+  }
 
   my $init_command = get_option( $config, $section, "init_command", "" );
 
@@ -116,6 +120,7 @@ sub perform {
 
     if ($curOption =~ /__FILE__/){
       my $param_option1 = get_program_param( $parameterSampleFile1, "", $parameterSampleFile1JoinDelimiter, $sample_name );
+      #print("delimiter=" . $parameterSampleFile1JoinDelimiter . "\n");
       $curOption =~ s/__FILE__/$param_option1/g;
     } elsif (option_contains_arg($curOption, $parameterSampleFile1arg)) {
     } else{

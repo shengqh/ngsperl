@@ -38,6 +38,7 @@ sub perform {
 
   my $iteration_arg = get_option( $config, $section, "iteration_arg", "" );
   my $iteration = int(get_option( $config, $section, "iteration" ));
+  my $iteration_zerobased = get_option( $config, $section, "iteration_zerobased", 0 );
 
   if ($iteration_arg ne ""){
     $option = $option . " " . $iteration_arg . " " . $iteration;
@@ -47,9 +48,9 @@ sub perform {
   my $output_file_prefix    = get_option( $config, $section, "output_file_prefix" );
   my $output_arg      = get_option( $config, $section, "output_arg" );
 
-  my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = $self->get_parameter_sample_files( $config, $section, "source" );
-  my ( $parameterSampleFile2, $parameterSampleFile2arg, $parameterSampleFile2JoinDelimiter ) = $self->get_parameter_sample_files( $config, $section, "parameterSampleFile2" );
-  my ( $parameterSampleFile3, $parameterSampleFile3arg, $parameterSampleFile3JoinDelimiter ) = $self->get_parameter_sample_files( $config, $section, "parameterSampleFile3" );
+  my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, "source" );
+  my ( $parameterSampleFile2, $parameterSampleFile2arg, $parameterSampleFile2JoinDelimiter ) = get_parameter_sample_files( $config, $section, "parameterSampleFile2" );
+  my ( $parameterSampleFile3, $parameterSampleFile3arg, $parameterSampleFile3JoinDelimiter ) = get_parameter_sample_files( $config, $section, "parameterSampleFile3" );
 
   my ( $parameterFile1, $parameterFile1arg ) = get_parameter_file( $config, $section, "parameterFile1" );
   my ( $parameterFile2, $parameterFile2arg ) = get_parameter_file( $config, $section, "parameterFile2" );
@@ -94,6 +95,8 @@ sub perform {
   my $expect_result = $self->result( $config, $section );
 
   for my $sample_name ( sort keys %$parameterSampleFile1 ) {
+    my $curOption = $option;
+
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -106,13 +109,31 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $sample_name_iteration = $sample_name . "_ITER_" . $iteration;
+    my $sample_name_iteration = $iteration_zerobased ?  $sample_name . "_ITER_" . ($iteration -1) :  $sample_name . "_ITER_" . $iteration;
     my $final_file            = $expect_result->{$sample_name_iteration}[-1];
     my $pbs                   = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
     my $final_prefix = $sample_name . $output_file_prefix;
 
-    my $curOption = get_program_param($parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name);
+    my $output_option = "$output_arg $final_prefix";
+    if ($curOption =~ /__OUTPUT__/){
+      $curOption =~ s/__OUTPUT__/$final_prefix/g;
+      $output_option = "";
+    }
+
+    if (option_contains_arg($curOption, $output_arg)) {
+      $output_option = "";
+    }
+
+    if ($curOption =~ /__FILE__/){
+      my $param_option1 = get_program_param( $parameterSampleFile1, "", $parameterSampleFile1JoinDelimiter, $sample_name );
+      $curOption =~ s/__FILE__/$param_option1/g;
+    } elsif (option_contains_arg($curOption, $parameterSampleFile1arg)) {
+    } else{
+      my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name );
+      $curOption = $curOption . " " . $param_option1;
+    }
+
     if ( not $bFound2 ) {
       $curOption = $curOption . " " . $param_option2;
     }else{
@@ -126,7 +147,7 @@ sub perform {
     }
 
     print $pbs "
-$interpretor $program $option $curOption $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_arg $final_prefix
+$interpretor $program $curOption $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_option
 
 ";
     $self->close_pbs( $pbs, $pbs_file );
@@ -151,24 +172,28 @@ sub result {
   my $task_suffix = get_option( $config, $section, "suffix", "" );
   $self->{_task_suffix} = $task_suffix;
 
+  my $iteration_zerobased = get_option( $config, $section, "iteration_zerobased", 0 );
   my $iteration = int(get_option( $config, $section, "iteration" ));
-  my $max_length = length("$iteration");
+  my $max_length = int(get_option( $config, $section, "iteration_fill_length", length("$iteration"));
+  my $samplename_in_result = get_option( $config, $section, "samplename_in_result", 1 );
 
-  my ($source_files, $source_file_arg, $source_file_join_delimiter) = $self->get_parameter_sample_files( $config, $section, "source" );
+  my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, "source" );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
   my $output_exts = get_output_ext_list( $config, $section );
 
+  my $iter_start = $iteration_zerobased ? 0: 1;
+  my $iter_end = $iteration_zerobased ? ($iteration - 1): $iteration;
   my $result = {};
   for my $sample_name ( sort keys %$source_files ) {
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
-    for my $iter (1 .. $iteration){
-      my $key = $sample_name . "_ITER_" . "0" x ($max_length -length("$iter")) . $iter;
+    for my $iter ($iter_start .. $iter_end){
+      my $key = $sample_name . "_ITER_" . left_pad($iter, $max_length);
       my @result_files = ();
       for my $ext (@$output_exts){
         my $cur_ext = $ext;
         $cur_ext =~ s/_ITER_/$iter/g;
-        my $final_file = $sample_name . $cur_ext;
+        my $final_file = $samplename_in_result ? $sample_name . $cur_ext : $cur_ext;
         push( @result_files, "${cur_dir}/$final_file" );
       }
       $result->{$key} = filter_array( \@result_files, $pattern );
@@ -184,7 +209,7 @@ sub get_pbs_source {
   
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
   
-  my ($source_files, $source_file_arg, $source_file_join_delimiter) = $self->get_parameter_sample_files( $config, $section, "source" );
+  my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, "source" );
   
   my $result = {};
   
@@ -202,17 +227,22 @@ sub get_result_pbs {
   
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
   
-  my ($source_files, $source_file_arg, $source_file_join_delimiter) = $self->get_parameter_sample_files( $config, $section, "source" );
+  my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, "source" );
 
+  my $iteration_zerobased = get_option( $config, $section, "iteration_zerobased", 0 );
   my $iteration = int(get_option( $config, $section, "iteration" ));
-  my $max_length = length("$iteration");
+  my $max_length = int(get_option( $config, $section, "iteration_fill_length", length("$iteration"));
+  my $samplename_in_result = get_option( $config, $section, "samplename_in_result", 1 );
+
+  my $iter_start = $iteration_zerobased ? 0: 1;
+  my $iter_end = $iteration_zerobased ? ($iteration - 1): $iteration;
 
   my $result = {};
   
   for my $sample_name ( sort keys %$source_files ) {
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
-    for my $iter (1 .. $iteration){
-      my $key = $sample_name . "_ITER_" . "0" x ($max_length -length("$iter")) . $iter;
+    for my $iter ($iter_start .. $iter_end){
+      my $key = $sample_name . "_ITER_" . leftpad($iter, $max_length);
       $result->{$key} = $pbs_file;
     }
   }
