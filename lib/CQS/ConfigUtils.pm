@@ -75,7 +75,10 @@ our %EXPORT_TAGS = (
       get_covariances
       getGroupPickResult
       getMemoryPerThread
-      option_contains_arg)
+      option_contains_arg
+      left_pad
+      get_key_name
+      get_interval_file_map)
   ]
 );
 
@@ -1184,6 +1187,8 @@ sub get_parameter_sample_files {
   my $resultArg           = get_option( $config, $section, $key . "_arg",            "" );
   my $resultJoinDelimiter = get_option( $config, $section, $key . "_join_delimiter", "," );
 
+  #print($key . " delimiter=" . $resultJoinDelimiter . "\n");
+
   return ( $result, $resultArg, $resultJoinDelimiter );
 }
 
@@ -1462,6 +1467,40 @@ sub option_contains_arg {
   }
 
   return(0);
+}
+
+sub left_pad {
+  my ($iter, $max_length) = @_;
+  return("0" x ($max_length -length("$iter")) . $iter);
+}
+
+sub get_key_name {
+  my ($sample_name, $scatter_name) = @_;
+  return ($sample_name . "." . $scatter_name);
+}
+
+sub get_interval_file_map {
+  my ($config, $section) = @_;
+  my $interval_list_file = get_option_file($config, $section, "interval_list_file");
+  my $files = [];
+  open(FH, '<', $interval_list_file) or die $!;
+  while(<FH>){
+    my $file = $_;
+    chomp($file);
+    push(@$files, $file);
+  }
+
+  #print(Dumper($files));
+
+  my $result = {};
+  tie %$result, 'Tie::IxHash';
+
+  my $iter_end = scalar(@$files) - 1;
+  for my $iter (0..$iter_end){
+    my $key = left_pad($iter, length("$iter_end"));
+    $result->{$key} = $files->[$iter]
+  }
+  return $result;
 }
 
 1;
