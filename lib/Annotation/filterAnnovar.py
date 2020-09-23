@@ -159,7 +159,7 @@ with open(outputFile, 'w') as sw:
               for idx in sampleIndecies:
                 if (parts[idx] == "NA"):
                   curgenemap[idx] = "NA"
-                if (parts[idx] != "0"):
+                elif (parts[idx] != "0"):
                   curgenemap[idx] = "1"
                 else:
                   curgenemap[idx] = "0"
