@@ -9,7 +9,6 @@ use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::StringUtils;
 use CQS::Task;
-use CQS::TaskUtils;
 use Data::Dumper;
 
 our @ISA = qw(CQS::Task);
@@ -27,16 +26,24 @@ sub new {
   return $self;
 }
 
+#get sample names, default is from "source"
+sub get_sample_names {
+  my ($self, $config, $section) = @_;
+  my $raw_files = get_raw_files($config, $section);
+  return [sort keys %$raw_files];
+}
+
 #return a list of string
 sub get_scatter_names {
   my ($self, $config, $section) = @_;
   die "Override get_scatter_names of " . $self->{_name} . " first.";
 }
 
-#get input file list
-sub get_sample_names {
-  my ($self, $config, $section) = @_;
-  die "Override get_sample_names of " . $self->{_name} . " first.";
+#return result based on $result_dir, $sample_name, $key_name.
+sub get_result_files {
+  my ( $self, $config, $section, $result_dir, $sample_name, $scatter_name, $key_name ) = @_;
+
+  die "Override get_result_files of " . $self->{_name} . " first.";
 }
 
 sub get_pbs_files {
@@ -86,12 +93,6 @@ sub get_pbs_source {
   }
 
   return $result;
-}
-
-sub get_result_files {
-  my ( $self, $config, $section, $result_dir, $sample_name, $scatter_name, $key_name ) = @_;
-
-  die "Override get_result_files of " . $self->{_name} . " first.";
 }
 
 sub result {
