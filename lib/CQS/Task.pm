@@ -311,8 +311,6 @@ sub get_docker_value {
     return ( $command, $init );
   }
 
-  #print("_docker_prefix = " . $self->{_docker_prefix} . "\n");
-
   my $commandKey = $self->{_docker_prefix} . "docker_command";
   my $initKey    = $self->{_docker_prefix} . "docker_init";
 
@@ -467,7 +465,7 @@ sub get_java_option {
 sub init_parameter {
   my ( $self, $config, $section, $create_directory ) = @_;
 
-  $self->{_docker_prefix} = get_option( $config, $section, "docker_prefix", "" );
+  $self->{_docker_prefix} = get_option( $config, $section, "docker_prefix", $self->{_docker_prefix} );
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
