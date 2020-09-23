@@ -43,8 +43,11 @@ sub perform {
   my $cleansam                = get_option( $config, $section, "cleansam",                0 );
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
   my $sortByCoordinate        = get_option( $config, $section, "sort_by_coordinate",      1 );
+  my $bwa_only        = get_option( $config, $section, "bwa_only",      0 );
   my $alignmentOnly        = get_option( $config, $section, "alignmentOnly",      0 );
   my $mark_duplicates         = hasMarkDuplicate( $config->{$section} );
+  my $rg_name_regex        = get_option( $config, $section, "rg_name_regex",      "" );
+  my $rg_id_regex        = get_option( $config, $section, "rg_id_regex",      "" );
 
   $option = $option . " -M";
 
@@ -88,11 +91,24 @@ sub perform {
     my $rmdup_bam_file    = $sample_name . ($sortByCoordinate? ".sortedByCoord.rmdup.bam":".sortedByQuery.rmdup.bam");
     my $tag               = get_bam_tag($sample_name);
 
+    my $rg_sample_name = $sample_name;
+    if ($rg_name_regex ne ""){
+      if ($sample_name =~ /$rg_name_regex/ ) {
+        $rg_sample_name = $1;
+      }
+    }
+    my $rg_sample_id = $rg_sample_name;
+    if ($rg_id_regex ne ""){
+      if ($sample_name =~ /$rg_id_regex/ ) {
+        $rg_sample_id = $1;
+      }
+    }
+
     my $rg;
     if ($alignmentOnly) { #only alignment, no sort or other works. For UMI pipeline
       $rg ="";
     } else {
-      $rg = "-R \"\@RG\\tID:${sample_name}\\tPU:illumina\\tLB:${sample_name}\\tSM:${sample_name}\\tPL:illumina\"";
+      $rg = "-R \"\@RG\\tID:${rg_sample_id}\\tPU:${rg_sample_name}\\tLB:${rg_sample_name}\\tSM:${rg_sample_name}\\tPL:illumina\"";
     }
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -107,12 +123,18 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, 0, $sample_file_0 );
 
     print $pbs "
-if [[ (1 -eq \$1) || (! -s $unsorted_bam_file) ]]; then
+if [[ ! -s $unsorted_bam_file ]]; then
   echo bwa_mem=`date`
   bwa mem $option $rg $bwa_index $sample_files_str | samtools view -bS -o $unsorted_bam_file
   bwa 2>\&1 | grep Version | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${sample_name}.bwa.version
 fi
 ";
+
+    if ($bwa_only) {
+      $self->close_pbs( $pbs, $pbs_file );
+      next;
+    }
+
     print $pbs "
 if [ -s $unsorted_bam_file ]; then
   echo bamStat=`date` 
@@ -129,13 +151,13 @@ if [ -s $unsorted_bam_file ]; then
   samtools flagstat $unsorted_bam_file > ${unsorted_bam_file}.stat 
 fi
 ";
-  if ($rmlist ne "") {
+      if ($rmlist ne "") {
         print $pbs "
 if [ -s $unsorted_bam_file ]; then
   rm $rmlist
 fi
 ";
-}
+      }
 
       $self->close_pbs( $pbs, $pbs_file );
       next;
