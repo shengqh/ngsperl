@@ -11,6 +11,7 @@ use CQS::FileUtils;
 use CQS::Task;
 use CQS::StringUtils;
 use JSON;
+use Data::Dumper;
 
 our @ISA = qw(CQS::Task);
 
@@ -41,6 +42,8 @@ sub perform {
   my $input_option_file = get_option_file( $config, $section, "input_option_file" );
 
   my $input_json_file = get_option_file( $config, $section, "input_json_file" );
+
+  my $sample_name_regex = get_option( $config, $section, "sample_name_regex", "" );
 
   #softlink singularity_image_files to result folder
   my $singularity_image_files = get_raw_files( $config, $section, "singularity_image_files" ); 
@@ -91,6 +94,10 @@ sub perform {
       $input_name =~ s/_ref$//g;
       $config->{$section}{$input_key} = $input_parameters->{$input_key};
       $replace_dics->{$input_name} = get_raw_files( $config, $section, $input_name );
+
+      #print($input_name);
+      #print(Dumper($replace_dics->{$input_name}));
+
       delete $config->{$section}{$input_key};
     }else{
       $replace_values->{$input_key} = $input_parameters->{$input_key};
@@ -190,9 +197,13 @@ sub perform {
     #   }
     # }
     if (scalar(@json_keys_toSampleNames) != 0) {
-        foreach my $json_key_toSampleNames (@json_keys_toSampleNames) {
-          $json_dic->{$json_key_toSampleNames} = $sample_name;
-        }
+      my $cur_sample_name = $sample_name;
+      if ($sample_name_regex ne ""){
+        $cur_sample_name = $1 if ($sample_name =~ /$sample_name_regex/);
+      }
+      foreach my $json_key_toSampleNames (@json_keys_toSampleNames) {
+        $json_dic->{$json_key_toSampleNames} = $cur_sample_name;
+      }
     }
     
     for my $input_key (keys %$replace_dics){
