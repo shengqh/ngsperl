@@ -23,6 +23,7 @@ our %EXPORT_TAGS = (
       addUmiReadsToProcessedBam
       addMutect2
       addSomaticCNV
+      addHaplotypecaller
     )
   ]
 );
@@ -99,7 +100,7 @@ sub addPairedFastqToProcessedBam {
   my $server = $wdl->{$server_key};
   my $pipeline = $server->{$pipeline_key};
 
-  my $PreProcessing_DoMarkDuplicates = getValue($def, "PreProcessing_DoMarkDuplicates", "true");
+  my $PreProcessing_DoMarkDuplicates = getValue($def, "PreProcessing_DoMarkDuplicates", "false");
   my $genomeForOutputExt=getValue($def, "annovar_buildver", "hg38");
 
   my $task = $pipeline_key;
@@ -126,9 +127,48 @@ sub addPairedFastqToProcessedBam {
     pbs=> {
       "nodes"     => "1:ppn=8",
       "walltime"  => "24",
-      "mem"       => "80gb"
+      "mem"       => getValue($def, "PreProcessingForVariantDiscovery_GATK4.memory", "40gb")
     },
   };
+
+  print(Dumper($config->{$task}));
+  push @$individual, $task;
+  return ($task);
+}
+
+sub addHaplotypecaller {
+  my ($config, $def, $individual, $target_dir, $files_ref) = @_;
+  
+  my $server_key = getValue($def, "wdl_key", "local");
+  my $pipeline_key = "haplotypecaller";
+  my $wdl = $def->{"wdl"};
+  my $server = $wdl->{$server_key};
+  my $pipeline = $server->{$pipeline_key};
+
+  my $task = $pipeline_key;
+  $config->{$task} = {     
+    "class" => "CQS::Wdl",
+    "target_dir" => "${target_dir}/$pipeline_key",
+    "source_ref" => [$files_ref],
+    "singularity_image_files_ref" => ["singularity_image_files"],
+    "cromwell_jar" => $wdl->{"cromwell_jar"},
+    "input_option_file" => $wdl->{"cromwell_option_file"},
+    "cromwell_config_file" => $server->{"cromwell_config_file"},
+    "wdl_file" => $pipeline->{"wdl_file"},
+    "input_json_file" => $pipeline->{"input_file"},
+    "input_parameters" => {
+      "HaplotypeCallerGvcf_GATK4.input_bam_ref" =>  [$files_ref,".bam\$"],
+      "HaplotypeCallerGvcf_GATK4.input_bam_index_ref" =>  [$files_ref,".bai\$"]
+    },
+    output_file_ext => ".gvcf",
+    pbs=> {
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "24",
+      "mem"       => getValue($def, "HaplotypeCallerGvcf_GATK4.memory", "40gb")
+    },
+  };
+
+  print(Dumper($config->{$task}));
   push @$individual, $task;
   return ($task);
 }
