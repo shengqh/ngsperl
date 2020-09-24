@@ -17,34 +17,64 @@ def rawgencount(filename):
       f_gen = _make_gen(f.read)
       return sum( buf.count(b'\n') for buf in f_gen )
 
-def split(logger, inputFiles, isPairedEnd, outputFilePrefix, trunkNumber):  
+def get_record_per_file(logger, input_files, trunk_number):
+  total_line_count = 0
+  for input_file in input_files:
+    logger.info("Check line count of %s ..." % input_file)
+    total_line_count += rawgencount(input_file)
+  total_record = total_line_count / 4
+  result = math.ceil(total_record / trunk_number)
+  logger.info("Total %d reads, each file should have almost %d reads." % (total_record, result))
+  return (result)
+
+def split(logger, inputFiles, isPairedEnd, outputFilePrefix, trunkNumber): 
+  if isPairedEnd:
+    read1files = [inputFiles[idx] for idx in range(0, len(inputFiles)) if idx % 2 == 0]
+    read2files = [inputFiles[idx] for idx in range(0, len(inputFiles)) if idx % 2 == 1]
+    input_array = [read1files, read2files]
+  else:
+    input_array = [inputFiles]
+
+  recordPerFile = get_record_per_file(logger, input_array[0], trunkNumber)
+
   fileIndex = 0
-  for inputFile in inputFiles:
+  for read_files in input_array:
     fileIndex = fileIndex + 1
-    logger.info("Processing %s ..." % inputFile)
-    totalLineCount = rawgencount(inputFile)
-    totalRecord = totalLineCount / 4
-    recordPerFile = math.ceil(totalRecord / trunkNumber)
-    logger.info("Total %d reads, each file should have almost %d reads." % (totalRecord, recordPerFile))
-    
-    with gzip.open(inputFile, "rt") as fin:
-      for trunk in range(1, (trunkNumber + 1)):
-        if isPairedEnd:
-          fileName = "%s.%d.%d.fastq.gz" % (outputFilePrefix, trunk, fileIndex)
-        else:
-          fileName = "%s.%d.fastq.gz" % (outputFilePrefix, trunk)
-        
-        logger.info("Writing reads to %s ..." % fileName)
-        with gzip.open(fileName, "wt") as fout:
-          for idx in range(0, recordPerFile):
-            line1 = fin.readline()
-            if not line1:
-              break
-            fout.write(line1)
-            fout.write(fin.readline())
-            fout.write(fin.readline())
-            fout.write(fin.readline())
-        
+    trunk = 1
+    read_count = 0
+    fout = None
+    for inputFile in read_files:
+      logger.info("Processing %s ..." % inputFile)
+      
+      with gzip.open(inputFile, "rt") as fin:
+        while(True):
+          line1 = fin.readline()
+          if not line1:
+            break
+          line2 = fin.readline()
+          line3 = fin.readline()
+          line4 = fin.readline()
+
+          if read_count == recordPerFile:
+            fout.close()
+            trunk += 1
+            read_count = 0
+          
+          if read_count == 0:
+            if isPairedEnd:
+              fileName = "%s.%d.%d.fastq.gz" % (outputFilePrefix, trunk, fileIndex)
+            else:
+              fileName = "%s.%d.fastq.gz" % (outputFilePrefix, trunk)
+            logger.info("Writing reads to %s ..." % fileName)
+            fout = gzip.open(fileName, "wt")
+
+          read_count += 1
+          fout.write(line1)
+          fout.write(line2)
+          fout.write(line3)
+          fout.write(line4)
+    fout.close()
+
   logger.info("done")
 
 def main():
@@ -56,28 +86,24 @@ def main():
   
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input Fastq files (first,second for pairend data)', required=NOT_DEBUG)
   parser.add_argument('-o', '--outputPrefix', action='store', nargs='?', default="-", help="Output file prefix", required=NOT_DEBUG)
+  parser.add_argument('--is_single_end', action='store', nargs='?', help="Is single end?")
   parser.add_argument('--trunk', action='store', nargs='?', type=int, default=50, help="Number of small files")
   
   args = parser.parse_args()
   
   if DEBUG:
-    args.input = "W:/SequenceData/20191121_4145-DM-1/4145-DM-1_1-AACCAGAT-TCTTTCCC_S99_R1_001.fastq.gz,W:/SequenceData/20191121_4145-DM-1/4145-DM-1_1-AACCAGAT-TCTTTCCC_S99_R2_001.fastq.gz"
-    args.outputPrefix = "E:/temp/splitFastqTest"
-    args.trunk = 3
+    dfolder = "/scratch/vickers_lab/projects/20200708_smallRNA_KCV_3018_45_46_human_v5_byTiger/preprocessing/identical/result/"
+    args.input = "%sCB10C_clipped_identical.fastq.gz,%sCB10C_clipped_identical.fastq.gz,%sCB11C_clipped_identical.fastq.gz,%sCB11C_clipped_identical.fastq.gz" % (dfolder, dfolder, dfolder, dfolder)
+    args.outputPrefix = "/scratch/cqs/shengq2/temp/splitFastqTest"
+    args.is_single_end = True
+    args.trunk = 4
   
   logger = logging.getLogger('splitFastq')
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
   
   inputFiles = args.input.split(",")
   
-  if len(inputFiles) == 1:
-    isPairedEnd = False
-  elif len(inputFiles) == 2:
-    isPairedEnd = True
-  else:
-    raise ArgumentError('inputFile should be only one file (single end) or two files (pair end): %s ' % args.input)
-
-  split(logger, inputFiles, isPairedEnd, args.outputPrefix, args.trunk)
+  split(logger, inputFiles, not args.is_single_end, args.outputPrefix, args.trunk)
   
 if __name__ == "__main__":
     main()
