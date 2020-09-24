@@ -24,6 +24,18 @@ sub new {
   return $self;
 }
 
+sub get_joined_files {
+  my ( $parameterSampleFile1, $join_delimiter ) = @_;
+  my $pfiles                  = [];
+  for my $individual_sample_name (sort keys %$parameterSampleFile1) {
+    my $p_invividual_files = $parameterSampleFile1->{$individual_sample_name};
+    my $p_invividual_file  = $p_invividual_files->[0];
+    push( @$pfiles, $p_invividual_file );
+  }
+  my $result = join( $join_delimiter, @$pfiles );
+  return ($result);
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -58,11 +70,19 @@ sub perform {
   if (option_contains_arg($option, $parameterSampleFile1arg)) {
     #print("source already defined in option, ignored\n");
   }else{
-    #print("sourceKey = $sourceKey, parameterSampleFile1arg = $parameterSampleFile1arg, option = $option\n");
-    my $parameterSampleFile1 = save_parameter_sample_file( $config, $section, $sourceKey, "${result_dir}/${task_name}_${task_suffix}_fileList1.list" );
-    if($parameterSampleFile1 ne ""){
-      $parameterSampleFile1 = basename($parameterSampleFile1);
-      $option = $option . " " . $parameterSampleFile1arg . " " . $parameterSampleFile1;
+    if (defined $config->{$section}{$sourceKey . "_type"} && ($config->{$section}{$sourceKey . "_type"} eq "array")){
+      my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, "source" );
+      my $param1 = get_joined_files($parameterSampleFile1, $parameterSampleFile1JoinDelimiter);
+      if ($param1 ne ""){
+        $option = $option . " " . $parameterSampleFile1arg . " " .$param1 . "";
+      }
+    }else{
+      #print("sourceKey = $sourceKey, parameterSampleFile1arg = $parameterSampleFile1arg, option = $option\n");
+      my $parameterSampleFile1 = save_parameter_sample_file( $config, $section, $sourceKey, "${result_dir}/${task_name}_${task_suffix}_fileList1.list" );
+      if($parameterSampleFile1 ne ""){
+        $parameterSampleFile1 = basename($parameterSampleFile1);
+        $option = $option . " " . $parameterSampleFile1arg . " " . $parameterSampleFile1;
+      }
     }
   }
   
