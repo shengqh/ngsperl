@@ -108,7 +108,7 @@ sub perform {
     if ($alignmentOnly) { #only alignment, no sort or other works. For UMI pipeline
       $rg ="";
     } else {
-      $rg = "-R \"\@RG\\tID:${rg_sample_id}\\tPU:${rg_sample_name}\\tLB:${rg_sample_name}\\tSM:${rg_sample_name}\\tPL:illumina\"";
+      $rg = "-R \"\@RG\\tID:${rg_sample_id}\\tPU:${rg_sample_name}\\tLB:${rg_sample_name}\\tSM:${rg_sample_name}\\tPL:ILLUMINA\"";
     }
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
