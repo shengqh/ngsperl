@@ -12,50 +12,39 @@ parser = argparse.ArgumentParser(description="Get first N reads from FASTQ file.
                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument('-i', '--input', action='store', nargs='?', help='Input FASEQ file (use "," to join pair end files)', required=NOT_DEBUG)
-parser.add_argument('-o', '--output_prefix', action='store', nargs='?', help="Output file prefix", required=NOT_DEBUG)
+parser.add_argument('-p', '--pair_end', action='store_true', help='Is pair end data?')
+parser.add_argument('-n', '--number', action='store', type=int, nargs='?', default=10000, help='Input number of reads')
+parser.add_argument('-o', '--output', action='store', nargs='?', help="Output file", required=NOT_DEBUG)
 
 args = parser.parse_args()
 if DEBUG:
   args.input = ""
-  sourceFile="/scratch/jbrown_lab/shengq2/projects/20200402_chipseq_4615_human_cqs/test_extract/result/Chipseq_4615_liver__fileList1.list"
-  isPairEnd=True
-  outputFile="/scratch/jbrown_lab/shengq2/projects/20200402_chipseq_4615_human_cqs/test_extract/result/Chipseq_4615_liver.2.fastq.gz"
-else:
+  args.output = ""
   
-  print(args)
-  
-  sourceFile = args.input
-  outputFile = args.output
+print(args)
+
+sourceFile = args.input
+isPairEnd = args.pair_end
+number = args.number
+outputFile = args.output
 
 logger = logging.getLogger('getFirstNReads')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
-def getFirstFileList(fileName, isPairEnd):
-  result = None
-  with open(fileName) as fh:
-    for line in fh:
-      read1 = line.strip().split('\t', 1)[0]
-      if isPairEnd:
-        read2 = line.strip().split('\t', 1)[0]
-        result = [read1, read2]
-      else:
-        result = [read1]
-      break
-  return(result)
-
-def extract(sourceFile, targetFile):
-  extractCount = 10000
+def extract(sourceFile, extractCount, targetFile):
+  linecount = extractCount * 4
   with gzip.open(sourceFile, "rt") as fin:
     with gzip.open(targetFile, "wt") as fout:
-      for count in range(0, extractCount * 4):
+      for count in range(0, linecount):
         fout.write(fin.readline())
 
-fastqFiles = getFirstFileList(sourceFile, isPairEnd)
 if isPairEnd:
+  f1 = sourceFile.split(',')[0]
+  f2 = sourceFile.split(',')[1]
   read1 = outputFile.replace("2.fastq.gz", "1.fastq.gz")
-  extract(fastqFiles[0], read1)
-  extract(fastqFiles[1], outputFile)
+  extract(f1, number, read1)
+  extract(f2, number, outputFile)
 else:
-  extract(fastqFiles[0], outputFile)
+  extract(sourceFile, number, outputFile)
 
 logger.info("done.")
