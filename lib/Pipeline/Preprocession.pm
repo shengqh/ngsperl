@@ -339,7 +339,7 @@ sub getPreprocessionConfig {
         "email"     => $def->{email},
         "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
-        "walltime"  => "4",
+        "walltime"  => getValue($def, "merge_fastq_time", 4),
         "mem"       => "10gb"
       }
     };
