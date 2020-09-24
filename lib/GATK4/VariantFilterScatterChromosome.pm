@@ -9,7 +9,6 @@ use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
 use CQS::StringUtils;
-use CQS::TaskUtils;
 use GATK4::GATK4ChromosomeTask;
 use GATK4::VariantFilterUtils;
 

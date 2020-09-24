@@ -12,7 +12,6 @@ use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::StringUtils;
 use CQS::GatherTask;
-use CQS::TaskUtils;
 use GATK4::VariantFilterUtils;
 
 our @ISA = qw(CQS::GatherTask);
