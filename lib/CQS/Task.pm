@@ -18,7 +18,6 @@ sub new {
     _task_suffix   => "",
     _pbskey        => "source",
     _docker_prefix => "",
-    _export_home   => 0,
     _can_use_docker => 1
   };
   bless $self, $class;
@@ -414,12 +413,6 @@ exit 0
 ";
     close $pbs;
     open( $pbs, ">$sh_file" ) or die $!;
-    if ( $self->{_export_home} ) {
-      print $pbs "
-export HOME=$result_dir
-
-";
-    }
     print $pbs "
 cd $result_dir
 
@@ -436,9 +429,10 @@ sub close_pbs {
 
   my $module_name = $self->{_name};
 
-  my $docker_command = $self->get_docker_value();
+  my ( $docker_command, $docker_init ) = $self->get_docker_value();
 
   if ( not defined $docker_command ) {
+    #print "not defined docker_command";
     print $pbs "
 
 echo ${module_name}_end=`date`
