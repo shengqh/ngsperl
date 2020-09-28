@@ -101,27 +101,29 @@ sub add_indel_snv_recalibrator_pbs {
   my $omni_resource_vcf;
   my $one_thousand_genomes_resource_vcf;
 
+  my $downsampleFactor = get_option($config, $section, "SNP_VQSR_downsampleFactor", 10);
+
   my $vqsrMode = get_option( $config, $section, "vqsr_mode" );
   my $gvcf = get_option( $config, $section, "gvcf", 1 );
 
   if ($vqsrMode) {
     $gvcf   = 1;
-    $hapmap_resource_vcf = get_param_file( $config->{$section}{hapmap_vcf}, "hapmap_vcf", 1 );
+    $hapmap_resource_vcf = get_param_file( $config->{$section}{hapmap_vcf}, "hapmap_vcf", 0 );
     $omni_resource_vcf   = get_param_file( $config->{$section}{omni_vcf}, "omni_vcf", 0 );
     $one_thousand_genomes_resource_vcf  = get_param_file( $config->{$section}{g1000_vcf}, "g1000_vcf", 0 );
-    $mills_resource_vcf  = get_param_file( $config->{$section}{mills_vcf}, "mills_vcf", 1 );
+    $mills_resource_vcf  = get_param_file( $config->{$section}{mills_vcf}, "mills_vcf", 0 );
     $dbsnp_resource_vcf  = get_param_file( $config->{$section}{dbsnp_vcf}, "dbsnp_vcf", 1 );
     $axiomPoly_resource_vcf  = get_param_file( $config->{$section}{axiomPoly_vcf}, "axiomPoly_vcf", 0 );
   }
   
-  my $hapmap_option = defined $hapmap_resource_vcf?"-resource:hapmap,known=false,training=true,truth=true,prior=15 ${hapmap_resource_vcf} \\\n    ":"";
-  my $omni_option = defined $omni_resource_vcf?"-resource:omni,known=false,training=true,truth=true,prior=12 ${omni_resource_vcf} \\\n    ":"";
-  my $g1000_option = defined $one_thousand_genomes_resource_vcf? "-resource:1000G,known=false,training=true,truth=false,prior=10 ${one_thousand_genomes_resource_vcf} \\\n    ":"";
-  my $axiomPoly_option = defined $axiomPoly_resource_vcf? "-resource:axiomPoly,known=false,training=true,truth=false,prior=10 ${axiomPoly_resource_vcf} \\\n    ":"";
-  my $mills_option = defined $mills_resource_vcf? "-resource:mills,known=false,training=true,truth=true,prior=12 ${mills_resource_vcf} \\\n    ":"";
-  my $dbsnp_option = defined $dbsnp_resource_vcf? "-resource:dbsnp,known=true,training=false,truth=false,prior=2 ${dbsnp_resource_vcf} \\\n    ":"";
+  my $hapmap_option = defined $hapmap_resource_vcf?"--resource:hapmap,known=false,training=true,truth=true,prior=15 ${hapmap_resource_vcf} \\\n    ":"";
+  my $omni_option = defined $omni_resource_vcf?"--resource:omni,known=false,training=true,truth=true,prior=12 ${omni_resource_vcf} \\\n    ":"";
+  my $g1000_option = defined $one_thousand_genomes_resource_vcf? "--resource:1000G,known=false,training=true,truth=false,prior=10 ${one_thousand_genomes_resource_vcf} \\\n    ":"";
+  my $axiomPoly_option = defined $axiomPoly_resource_vcf? "--resource:axiomPoly,known=false,training=true,truth=false,prior=10 ${axiomPoly_resource_vcf} \\\n    ":"";
+  my $mills_option = defined $mills_resource_vcf? "--resource:mills,known=false,training=true,truth=true,prior=12 ${mills_resource_vcf} \\\n    ":"";
+  my $dbsnp_option = defined $dbsnp_resource_vcf? "--resource:dbsnp,known=true,training=false,truth=false,prior=2 ${dbsnp_resource_vcf} \\\n    ":"";
 
-  my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
+  my $faFile = get_option( $config, $section, "fasta_file", 1 );
 
   my $java_option = $classobj->get_java_option($config, $section, $memory);
 
@@ -156,7 +158,7 @@ if [[ -s $sites_only_variant_filtered_vcf && ! -s $indels_recalibration ]]; then
     $indel_tranche_option \\
     $recalibration_annotation_option \\
     --max-gaussians 4 \\
-    $mills_option $axiomPoly_option -mode INDEL 
+    $mills_option $axiomPoly_option ${dbsnp_option} -mode INDEL 
 fi
 
 if [[ -s $sites_only_variant_filtered_vcf && ! -s $snps_recalibration ]]; then
@@ -169,6 +171,7 @@ if [[ -s $sites_only_variant_filtered_vcf && ! -s $snps_recalibration ]]; then
     --trust-all-polymorphic \\
     $snp_tranche_option \\
     $recalibration_annotation_option \\
+    --sample-every-Nth-variant ${downsampleFactor} \
     --max-gaussians 6 \\
     ${hapmap_option} ${omni_option} ${g1000_option} ${dbsnp_option} -mode SNP
 fi
@@ -246,9 +249,10 @@ sub add_left_trim_pbs {
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
 
-  my $split_file = $sample_name . ".indels.snp.recal.pass.split.vcf";
-  my $left_trim_file = $sample_name . ".indels.snp.recal.pass.norm.vcf";
-  my $fix_file = $sample_name . ".indels.snp.recal.pass.norm.nospan.vcf";
+  my $split_file = $sample_name . ".split.vcf";
+  my $left_trim_file = $sample_name . ".norm.vcf";
+  my $fix_file = $final_file;
+  $fix_file =~ s/.gz//g;
 
 print $pbs "
 if [[ -s $pass_file && ! -s $left_trim_file ]]; then

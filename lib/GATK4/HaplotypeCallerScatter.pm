@@ -34,7 +34,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = $self->init_parameter( $config, $section );
 
-  my $scatter_map = $self->get_interval_file_map($config, $section);
+  my $scatter_map = get_interval_file_map($config, $section);
 
   my $gvcf =get_option( $config, $section, "gvcf", 1 );
   if($gvcf){
@@ -49,7 +49,7 @@ sub perform {
 
   my $java_option = $self->get_java_option($config, $section, $memory);
 
-  $self->get_docker_value(1);
+  $self->get_docker_value(0);
 
   my $interval_padding   = get_option( $config, $section, "interval_padding", 0 );
   my $restrict_intervals="";
@@ -73,13 +73,17 @@ sub perform {
       my $interval_file = $scatter_map->{$scatter_name};
       my $prefix = get_key_name($sample_name, $scatter_name);
       my $snvOut = $prefix . $extension;
-      
+      my $snvTmp = $prefix . ".tmp". $extension;
+      my $snvTmpIndex;
+
       #if the program throw exception, the idx file will not be generated.
       my $snvOutIndex;
       if ($extension =~ ".gz\$") {
         $snvOutIndex = $snvOut . ".tbi";
+        $snvTmpIndex = $snvTmp . ".tbi";
       } else {
         $snvOutIndex = $snvOut . ".idx";
+        $snvTmpIndex = $snvTmp . ".idx";
       }
 
       my $snvStat   = $prefix . ".stat";
@@ -88,18 +92,26 @@ sub perform {
       my $pbs_name = basename($pbs_file);
       my $log      = $self->get_log_filename( $log_dir, $prefix );
 
-      print $sh "\$MYCMD ./$pbs_name \n";
+      print $sh "if [[ ! -s $cur_dir/$snvOutIndex ]]; then 
+  \$MYCMD ./$pbs_name 
+fi
+";
 
       my $log_desc = $cluster->get_log_description($log);
       my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $snvOutIndex );
       print $pbs "
 gatk --java-options \"$java_option\" \\
-  HaplotypeCaller $option -L $interval_file $blacklist_intervals_option \\
+  HaplotypeCaller $option \\
+  -L $interval_file $blacklist_intervals_option \\
   --native-pair-hmm-threads $thread \\
-  --sample-name $sample_name \\
   -R $faFile \\
   -I $bam_file \\
-  -O $snvOut
+  -O $snvTmp
+
+if [[ -s $snvTmpIndex ]]; then
+  mv $snvTmp $snvOut
+  mv $snvTmpIndex $snvOutIndex
+fi
 ";
       
       $self->close_pbs( $pbs, $pbs_file );
