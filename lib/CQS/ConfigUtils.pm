@@ -265,6 +265,14 @@ sub get_parameter {
 
   my $thread = $cluster->get_cluster_thread($refPbs);
   my $memory = $cluster->get_cluster_memory($refPbs);
+  
+  if ($option =~ /__MEMORY__/) {
+    $option =~ s/__MEMORY__/$memory/g;
+  }
+  
+  if ($option =~ /__THREAD__/) {
+    $option =~ s/__THREAD__/$thread/g;
+  }
 
   return ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command );
 }
@@ -1058,32 +1066,39 @@ sub saveConfig {
 }
 
 sub writeFileList {
-  my ( $fileName, $fileMap, $exportAllFiles, $fileFirst ) = @_;
+  my ( $fileName, $fileMap, $exportAllFiles, $fileFirst, $fileOnly ) = @_;
+  if (not defined $exportAllFiles) {
+    $exportAllFiles = 0;
+  }
+
+  if (not defined $fileFirst) {
+    $fileFirst = 0;
+  }
+
+  if (not defined $fileOnly) {
+    $fileOnly = 0;
+  }
+
   open( my $fl, ">$fileName" ) or die "Cannot create $fileName";
   for my $sample_name ( sort keys %$fileMap ) {
     my $files = $fileMap->{$sample_name};
     if(ref($files) eq 'ARRAY'){
-      if ( defined $exportAllFiles and $exportAllFiles ) {
-        for my $eachFile (@$files) {
-          if ($fileFirst) {
-            print $fl $eachFile, "\t", $sample_name, "\n";
-          }else{
-            print $fl $sample_name, "\t", $eachFile, "\n";
-          }
-        }
-      }
-      else {
-          if ($fileFirst) {
-            print $fl $files->[0], "\t", $sample_name, "\n";
-          }else{
-            print $fl $sample_name, "\t", $files->[0], "\n";
-          }
-      }
+      if ( not $exportAllFiles ) {
+        $files = [$files->[0]]
+      }  
     }else{
-      if ($fileFirst) {
-        print $fl $files, "\t", $sample_name, "\n";
-      }else{
-        print $fl $sample_name, "\t", $files, "\n";
+      $files = [$files]
+    }
+
+    for my $eachFile (@$files) {
+      if ($fileOnly) {
+        print $fl $eachFile, "\n";
+      }else {
+        if ($fileFirst) {
+          print $fl $eachFile, "\t", $sample_name, "\n";
+        }else{
+          print $fl $sample_name, "\t", $eachFile, "\n";
+        }
       }
     }
   }
