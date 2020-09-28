@@ -33,7 +33,7 @@ sub perform {
   my $scatter_map = get_interval_file_map($config, $section);
 
   my $ref_fasta = get_option_file( $config, $section, "fasta_file", 1 );
-  my $dbSNP_vcf = get_option_file( $config, $section, "dbSNP_vcf", 1 );
+  my $dbsnp_vcf = get_option_file( $config, $section, "dbsnp_vcf", 1 );
   my $known_indels_sites_VCFs = get_option( $config, $section, "known_indels_sites_VCFs", 0 );
  
   my $known_indels_sites_VCFs_option = "";
@@ -43,7 +43,7 @@ sub perform {
 
   my $java_option = $self->get_java_option($config, $section, $memory);
 
-  $self->get_docker_value(1);
+  #$self->get_docker_value(0);
 
   my %bam_files = %{ get_raw_files( $config, $section ) };
 
@@ -66,7 +66,10 @@ sub perform {
       my $pbs_name = basename($pbs_file);
       my $log      = $self->get_log_filename( $log_dir, $prefix );
 
-      print $sh "\$MYCMD ./$pbs_name \n";
+      print $sh "if [[ ! -s $cur_dir/$recalibration_report_filename ]]; then 
+  \$MYCMD ./$pbs_name 
+fi
+";
 
       my $log_desc = $cluster->get_log_description($log);
       my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $recalibration_report_filename );
@@ -78,7 +81,7 @@ gatk --java-options \"$java_option\" \\
   --use-original-qualities \\
   -O ${recalibration_report_filename} \\
   -L ${interval_file} \\
-  --known-sites ${dbSNP_vcf} $known_indels_sites_VCFs_option
+  --known-sites ${dbsnp_vcf} $known_indels_sites_VCFs_option
 ";
       
       $self->close_pbs( $pbs, $pbs_file );
