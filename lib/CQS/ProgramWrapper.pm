@@ -24,6 +24,65 @@ sub new {
   return $self;
 }
 
+sub replace_tag {
+  my ($config, $section, $task_name, $result_dir, $option, $source_key, $sample_name, $final_prefix) = @_;
+
+  my $task_suffix = get_option( $config, $section, "suffix", "" );
+
+  my $cur_option = $option;
+  if ($cur_option =~ /__NAME__/){
+    $cur_option =~ s/__NAME__/$sample_name/g;
+  }
+
+  my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, $source_key );
+  my $input = "";
+  if (defined $config->{$section}{$source_key . "_type"} && ($config->{$section}{$source_key . "_type"} eq "array")){
+    my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, "source" );
+    $input = get_joined_files($parameterSampleFile1, $parameterSampleFile1JoinDelimiter);
+  }else{
+    my $parameterSampleFile1 = save_parameter_sample_file( $config, $section, $source_key, "${result_dir}/${task_name}_${task_suffix}_fileList1.list" );
+    if($parameterSampleFile1 ne ""){
+      $input = basename($parameterSampleFile1);
+    }
+  }
+
+  if ($cur_option =~ /__FILE__/){
+    $cur_option =~ s/__FILE__/$input/g;
+  } elsif (option_contains_arg($cur_option, $parameterSampleFile1arg)) {
+  } else{
+    my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name );
+    $cur_option = $cur_option . " " . $parameterSampleFile1arg . " " . $input;
+  }
+
+  my $output_arg            = get_option( $config, $section, "output_arg" );
+  my $no_output            = get_option( $config, $section, "no_output", 0 );
+
+  my $output_option = "$output_arg $final_prefix";
+  if ($cur_option =~ /__OUTPUT__/){
+    $cur_option =~ s/__OUTPUT__/$final_prefix/g;
+    $output_option = "";
+  }
+
+  if (option_contains_arg($cur_option, $output_arg)) {
+    $output_option = "";
+  }
+
+  if ($no_output){
+    $output_option = "";
+  }
+
+  my $cur_init_command = get_option( $config, $section, "init_command", "" );
+  if ($cur_init_command =~ /__NAME__/){
+    $cur_init_command =~ s/__NAME__/$sample_name/g;
+  }
+
+  if ($cur_init_command =~ /__FILE__/){
+    $cur_init_command =~ s/__FILE__/$input/g;
+  }
+
+  return($cur_option, $output_option, $cur_init_command);
+}
+
 sub get_joined_files {
   my ( $parameterSampleFile1, $join_delimiter ) = @_;
   my $pfiles                  = [];
@@ -62,30 +121,11 @@ sub perform {
      $output_ext = get_option( $config, $section, "output_file_ext", "" );
   }
 
-  my $sourceKey = "source";
+  my $source_key = "source";
   if ((not defined $config->{$section}{"source"} ) && (not defined $config->{$section}{"source_ref"} )) {
-    $sourceKey = "parameterSampleFile1";
+    $source_key = "parameterSampleFile1";
   }
-  my $parameterSampleFile1arg = get_option($config, $section, "${sourceKey}_arg", "");
-  if (option_contains_arg($option, $parameterSampleFile1arg)) {
-    #print("source already defined in option, ignored\n");
-  }else{
-    if (defined $config->{$section}{$sourceKey . "_type"} && ($config->{$section}{$sourceKey . "_type"} eq "array")){
-      my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, "source" );
-      my $param1 = get_joined_files($parameterSampleFile1, $parameterSampleFile1JoinDelimiter);
-      if ($param1 ne ""){
-        $option = $option . " " . $parameterSampleFile1arg . " " .$param1 . "";
-      }
-    }else{
-      #print("sourceKey = $sourceKey, parameterSampleFile1arg = $parameterSampleFile1arg, option = $option\n");
-      my $parameterSampleFile1 = save_parameter_sample_file( $config, $section, $sourceKey, "${result_dir}/${task_name}_${task_suffix}_fileList1.list" );
-      if($parameterSampleFile1 ne ""){
-        $parameterSampleFile1 = basename($parameterSampleFile1);
-        $option = $option . " " . $parameterSampleFile1arg . " " . $parameterSampleFile1;
-      }
-    }
-  }
-  
+
   my $parameterSampleFile2 = save_parameter_sample_file( $config, $section, "parameterSampleFile2", "${result_dir}/${task_name}_${task_suffix}_fileList2.list" );
   if($parameterSampleFile2 ne ""){
     $parameterSampleFile2 = basename($parameterSampleFile2);
@@ -139,15 +179,12 @@ sub perform {
     $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $checkFile);
   }
 
-  my $output_arg = get_option($config, $section, "output_arg", "");
-  if (option_contains_arg($option, $output_arg)) {
-    #print("output already defined in option, ignored\n");
-    $output_arg = "";
-    $final_file = "";
-  }
+  my ($cur_option, $output_option, $cur_init_command) = replace_tag( $config, $section, $task_name, $result_dir, $option, $source_key, $task_name, $final_file);
 
   print $pbs "
-$interpretor $program $option $parameterSampleFile2arg $parameterSampleFile2 $parameterSampleFile3arg $parameterSampleFile3 $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_arg $final_file
+$cur_init_command
+
+$interpretor $program $cur_option $parameterSampleFile2arg $parameterSampleFile2 $parameterSampleFile3arg $parameterSampleFile3 $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_option
 ";
 
   $self->close_pbs( $pbs, $pbs_file );
