@@ -28,21 +28,41 @@ def initialize_logger(logfile, name):
  
   return(logger)
 
-def summary(logger, input_file, sample_name, thread, output_file):
+def reheader(logger, input_file, sample_name, sorted, thread, output_file):
   header_file = output_file + ".header"
   subprocess.call(f"samtools view -H {input_file} > {header_file}", shell=True)
 
+  ids = set()
   headers = []
   with open(header_file, "rt") as fin:
-    bfirst = True
     for line in fin:
-      if line.startswith("@RG") and ("SM:" in line):
-        if bfirst:
-          line = f"@RG\tID:1\tSM:{sample_name}\tPU:{sample_name}\tLB:{sample_name}\tPL:ILLUMINA"
-          headers.append(line)
-          bfirst = False
+      if line.startswith("@HD") and ("SO:" in line):
+        line = line.rstrip()
+        if sorted != None:
+          line = line.split("SO:")[0] + "SO:" + sorted
+        headers.append(line)
         continue
-      elif line.startswith("@PG") and ("ID:samtools" in line) and ("PP:samtools" in line):
+
+      # if line.startswith("@SQ") and ("SN:pBACe3.6" in line):
+      #   line = "@SQ\tSN:pBACe3.6\tLN:11612\tAS:combined_aav_genome.ndx"
+      #   headers.append(line)
+      #have to keep old ID, PU and LB, otherwise the field in read "RG:Z" (id) will be wrong
+      if line.startswith("@RG") and ("SM:" in line):
+        parts = line.rstrip().split('\t')
+        for idx in range(0, len(parts)):
+          part = parts[idx]
+          if part.startswith("SM"):
+            parts[idx] = f"SM:{sample_name}"
+        if not "PU:" in line:
+          parts.append(f"PU:{sample_name}")
+        if not "LB:" in line:
+          parts.append(f"LB:{sample_name}")
+        if not "PL:" in line:
+          parts.append("PL:ILLUMINA")
+        line = "\t".join(parts)
+        headers.append(line)
+        continue
+      elif line.startswith("@PG") and ("ID:samtools" in line) and (("PP:samtools" in line) or ("PN:samtools" in line)):
         continue
       else:
         headers.append(line.rstrip())
@@ -51,13 +71,22 @@ def summary(logger, input_file, sample_name, thread, output_file):
     for line in headers:
       fout.write(line + "\n")
   
-  cmd = f"samtools reheader -P {header_file} {input_file} > {output_file}"
+  tmpfile = output_file + ".tmp.bam"
+  cmd = f"samtools reheader -P {header_file} {input_file} > {tmpfile}"
   print(cmd)
   subprocess.call(cmd, shell=True)
   
-  cmd = f"sambamba index -t {thread} {output_file}"
+  cmd = f"sambamba index -t {thread} {tmpfile}"
   print(cmd)
   subprocess.call(cmd, shell=True)
+
+  if os.path.isfile(output_file):
+    os.delete(output_file)
+  os.rename(tmpfile, output_file)
+
+  if os.path.isfile(output_file + ".bai"):
+    os.delete(output_file + ".bai")
+  os.rename(tmpfile + ".bai", output_file + ".bai")
 
   logger.info("done")
 
@@ -71,6 +100,7 @@ if __name__ == '__main__':
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input bam file', required=NotDEBUG)
   parser.add_argument('-n', '--name', action='store', nargs='?', help="Input sample name", required=NotDEBUG)
   parser.add_argument('-t', '--thread', action='store', nargs='?', default="8", help="Input thread number", required=NotDEBUG)
+  parser.add_argument('-s', '--sorted', action='store', nargs='?', choices=["coordinate", "queryname"], help="Replace with sorted (coordinate or queryname, default as original)")
   parser.add_argument('-o', '--output', action='store', nargs='?', help="Output bam file", required=NotDEBUG)
 
   args = parser.parse_args()
@@ -81,4 +111,4 @@ if __name__ == '__main__':
   
   logger = initialize_logger(args.output + ".log", "replace_rg")
   
-  summary(logger, args.input, args.name, args.thread, args.output)
+  reheader(logger, args.input, args.name, args.sorted, args.thread, args.output)
