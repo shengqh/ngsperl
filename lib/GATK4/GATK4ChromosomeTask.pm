@@ -19,7 +19,6 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name} = __PACKAGE__;
   $self->{_docker_prefix} = "gatk4_";
-  $self->{_export_home} = 1;
   bless $self, $class;
   return $self;
 }
