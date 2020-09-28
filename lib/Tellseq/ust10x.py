@@ -6,14 +6,6 @@ import subprocess
 import gzip
 import shutil
 
-def gzip_file(logger, input_file, output_file):
-  logger.info(f"compressing {input_file}")
-  with open(input_file, 'rb') as f_in:
-    with gzip.open(output_file, 'wb') as f_out:
-        shutil.copyfileobj(f_in, f_out)
-  logger.info(f"{output_file} saved.")
-  return(output_file)
-
 def run_cmd(logger, cmd):
   logger.info(cmd)
   subprocess.call(cmd, shell=True)
@@ -32,13 +24,12 @@ def convert(logger, i1, read1, read2, whitelist, output_prefix):
     if not os.path.isfile(cvt_r1_file_unzipped):
       cmd = f"ust10x -wl {whitelist} -i1 {i1} -r1 {read1} -r2 {read2}"
       run_cmd(logger, cmd)
-    gzip_file(logger, cvt_r1_file_unzipped, cvt_r1_file)
-    gzip_file(logger, cvt_r2_file_unzipped, cvt_r2_file)
-    os.delete(cvt_r1_file_unzipped)
-    os.delete(cvt_r2_file_unzipped)
+
+    run_cmd(logger, f"gzip {cvt_r1_file_unzipped}")
+    run_cmd(logger, f"gzip {cvt_r2_file_unzipped}")
   
-  os.rename(cvt_r1_file_unzipped, res_r1_file)
-  os.rename(cvt_r2_file_unzipped, res_r2_file)
+  os.rename(cvt_r1_file, res_r1_file)
+  os.rename(cvt_r2_file, res_r2_file)
 
   logger.info("done")
     
