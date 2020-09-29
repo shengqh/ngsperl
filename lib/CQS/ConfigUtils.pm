@@ -78,7 +78,8 @@ our %EXPORT_TAGS = (
       option_contains_arg
       left_pad
       get_key_name
-      get_interval_file_map)
+      get_interval_file_map
+      read_table)
   ]
 );
 
@@ -1516,6 +1517,55 @@ sub get_interval_file_map {
     $result->{$key} = $files->[$iter]
   }
   return $result;
+}
+
+sub read_table {
+  my ($filename, $name_index) = @_;
+  if(not defined $name_index){
+    $name_index = 0;
+  }
+  
+  my $result = {};
+  tie %$result, 'Tie::IxHash';
+
+  open(my $fh, '<', $filename) or die $!;
+  my $header = <$fh>;
+  chomp($header);
+  my @headers = split('\t', $header);
+  #print(Dumper(@headers));
+  
+  my $names = {};
+  tie %$names, 'Tie::IxHash';
+  for my $idx (0..(scalar(@headers)-1)){
+    if ($idx == $name_index){
+      next;
+    }
+    $names->{$headers[$idx]} = 1;
+  }
+  
+  while(<$fh>){
+    my $line = $_;
+    #print($line);
+    my @parts = split('\t', $line);
+    #print(Dumper(@parts));
+    my $dic = {};
+    tie %$dic, 'Tie::IxHash';
+    for my $idx (0..(scalar(@headers)-1)){
+      if ($idx == $name_index){
+        next;
+      }
+      
+      my $column = $headers[$idx];
+      my $value = $parts[$idx];
+      chomp($value);
+      $dic->{$column} = $value;
+    }
+    my $name = $parts[$name_index];
+    $result->{$name} = $dic;
+  }
+  
+  #print(Dumper($result));
+  return($result, $names);
 }
 
 1;

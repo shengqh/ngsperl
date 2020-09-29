@@ -1,0 +1,3 @@
+Feature	Tumor	Normal
+TP53	35	2
+MYC	25	1

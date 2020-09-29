@@ -1,0 +1,3 @@
+Sample	Age	Gender	Stage
+Tumor	35	M	2
+Normal	25	F	1
