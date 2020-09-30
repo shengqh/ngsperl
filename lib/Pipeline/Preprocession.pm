@@ -182,6 +182,32 @@ sub getPreprocessionConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
 
+  if(defined $def->{ignore_samples}){
+    my $ignore_samples = $def->{ignore_samples};
+
+    my %ignore_sample_map = map { $_ => 1 } @$ignore_samples;
+    
+    my $files = $def->{files};
+    for my $ignore_sample (@$ignore_samples){
+      delete $files->{$ignore_sample};
+    }
+    $def->{files} = $files;
+
+    my $groups = $def->{groups};
+    my $group_names = [keys %$groups];
+    for my $group_name (@$group_names){
+      my $filter_samples = [];
+      my $cur_samples = $groups->{$group_name};
+      for my $sample (@$cur_samples){
+        if (not defined $ignore_sample_map{$sample}) {
+          push @$filter_samples, $sample;
+        }
+      }
+      $groups->{$group_name} = $filter_samples;
+    }
+    $def->{groups} = $groups;
+  }
+
   if (defined $def->{pool_sample}){
     checkFileGroupPairNames($def, ["pool_sample_groups"], ["pairs"], "files");
     checkFileGroupPairNames($def, ["groups"], ["pairs"], "pool_sample_groups");
@@ -347,7 +373,7 @@ sub getPreprocessionConfig {
     push @$individual, ("merge_fastq");
   }
 
-  if ($def->{perform_check_fastq_duplicate}){
+  if ($def->{perform_qc_check_fastq_duplicate}){
     $config->{qc_check_fastq_duplicate} = {
       class => "CQS::ProgramWrapperOneToOne",
       target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "qc_check_fastq_duplicate",
