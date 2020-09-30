@@ -432,10 +432,15 @@ sub addDEseq2 {
     $config->{$taskName}{class} = "Comparison::DESeq2config";
     $config->{$taskName}{source} = $def->{pairs_config};
   }else{
-    $config->{$taskName}{class} = "Comparison::DESeq2";
     my $groupNames = defined $def->{deseq2_groups} ? "deseq2_groups" : "groups";
     $config->{$taskName}{source_ref} = "pairs";
     $config->{$taskName}{groups_ref} = $groupNames;
+    if(defined $def->{covariance_file}){
+      $config->{$taskName}{class} = "Comparison::DESeq2covariance";
+      $config->{$taskName}{covariance_file} = $def->{covariance_file};
+    }else{
+      $config->{$taskName}{class} = "Comparison::DESeq2";
+    }
   }
 
   if ( ref($countfileRef) eq "ARRAY" ) {
