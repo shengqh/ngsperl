@@ -16,7 +16,7 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(performWGS performWGSTask)] );
+our %EXPORT_TAGS = ( 'all' => [qw(performWGS performWGSTask add_bam_to_genotype add_hard_filter_and_merge)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -35,6 +35,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "bam_file_section", "files" );
   initDefaultValue( $def, "gatk_prefix", "gatk4_" );
   initDefaultValue( $def, "use_hard_filter", "1" );
+  initDefaultValue( $def, "perform_replace_read_group", 0);
     
   initDefaultValue( $def, "max_thread", 8 );
   initDefaultValue( $def, "subdir",     0 );
@@ -118,59 +119,8 @@ sub initializeDefaultOptions {
   return $def;
 }
 
-sub getConfig {
-  my ($def) = @_;
-  $def->{VERSION} = $VERSION;
-
-  my $target_dir = $def->{target_dir};
-  create_directory_or_die($target_dir);
-
-  $def = initializeDefaultOptions($def);
-
-  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
-
-  $config->{general}{interval_list_file} = getValue($def, "interval_list_file");
-
-  my $gatk_prefix = getValue($def, "gatk_prefix");
-  my $gatk_index_snv = "SNV_index";
-  my $use_hard_filter = getValue($def, "use_hard_filter");
-
-  my $perform_mark_duplicates = getValue($def, "perform_mark_duplicates", 1);
-
-  my $bam_section = $def->{bam_file_section};
-  if ($perform_mark_duplicates) {
-    $config->{markduplicates} = {
-      class                 => "CQS::ProgramWrapperOneToOne",
-      perform               => 1,
-      target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_markduplicates_sambamba",
-      option                => "markdup -p -t __THREAD__ --tmpdir tmp __FILE__ __NAME__.tmp.bam && touch __OUTPUT__.done
-      
-  if [[ -s __OUTPUT__.done ]]; then
-    mv __NAME__.tmp.bam __OUTPUT__
-    mv __NAME__.tmp.bam.bai __OUTPUT__.bai
-  fi
-  ",
-      interpretor           => "",
-      program               => "sambamba",
-      check_program         => 0,
-      source_arg            => "",
-      source_ref            => $bam_section,
-      source_join_delimiter => " ",
-      output_to_same_folder => 1,
-      output_arg            => "",
-      output_file_prefix    => ".duplicates_marked.bam",
-      output_file_ext       => ".duplicates_marked.bam",
-      sh_direct             => 0,
-      pbs                   => {
-        "nodes"    => "1:ppn=8",
-        "walltime" => "24",
-        "mem"      => "80gb"
-      },
-    };
-
-    $bam_section = "markduplicates";
-    push(@$summary, "markduplicates");
-  }
+sub add_bam_to_genotype {
+  my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
 
   my $bam_to_genotype = {
     BaseRecalibratorScatter => {
@@ -178,7 +128,7 @@ sub getConfig {
       perform           => 1,
       target_dir        => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_BaseRecalibratorScatter",
       option            => "",
-      source_ref        => $bam_section,
+      source_ref        => $source,
       fasta_file        => $def->{ref_fasta},
       dbsnp_vcf         => $def->{dbsnp_vcf},
       known_indels_sites_VCFs => $def->{known_indels_sites_VCFs},
@@ -194,7 +144,7 @@ sub getConfig {
       perform               => 1,
       target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_GatherBQSRReports",
       option                => "",
-      gather_name_ref       => $bam_section,
+      gather_name_ref       => $source,
       source_ref            => "BaseRecalibratorScatter",
       sh_direct             => 0,
       pbs                   => {
@@ -208,7 +158,7 @@ sub getConfig {
       perform           => 1,
       target_dir        => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_ApplyBQSRScatter",
       option            => "",
-      source_ref        => $bam_section,
+      source_ref        => $source,
       fasta_file        => $def->{ref_fasta},
       bqsr_report_files_ref => "GatherBQSRReports",
       sh_direct         => 0,
@@ -223,7 +173,7 @@ sub getConfig {
       perform               => 1,
       target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_GatherSortedBamFiles",
       option                => "",
-      gather_name_ref       => $bam_section,
+      gather_name_ref       => $source,
       source_ref            => ["ApplyBQSRScatter"],
       extension             => ".recalibrated.bam",
       sh_direct             => 0,
@@ -260,7 +210,7 @@ sub getConfig {
       perform               => 1,
       target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_GatherVcfs",
       option                => "",
-      gather_name_ref       => $bam_section,
+      gather_name_ref       => $source,
       source_ref            => ["HaplotypeCallerScatter"],
       extension             => ".g.vcf.gz",
       sh_direct             => 0,
@@ -302,8 +252,8 @@ sub getConfig {
     }
   };
 
-  $config = merge($config, $bam_to_genotype);
-  push(@$summary, 
+  my $result = merge($config, $bam_to_genotype);
+  push(@$tasks, 
     ( "BaseRecalibratorScatter", 
       "GatherBQSRReports", 
       "ApplyBQSRScatter", 
@@ -313,7 +263,159 @@ sub getConfig {
       "GenomicsDBImportScatter",
       "GenotypeGVCFs"));
 
-  my $combine;
+  return ($result, "GenotypeGVCFs");
+}
+
+sub add_hard_filter_and_merge {
+  my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
+
+  my $filter = {
+    VariantFilterHard  => {
+      class                 => "GATK4::VariantFilterHard",
+      perform               => 1,
+      target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_VariantFilterHard",
+      source_ref            => $source,
+      option                => "",
+      docker_prefix         => "gatk4_",
+      is_sample_size_small  => 1,
+      sh_direct             => 1,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    },
+    LeftTrim  => {
+      class                 => "GATK4::LeftTrim",
+      perform               => 1,
+      target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_LeftTrim",
+      source_ref            => "VariantFilterHard",
+      option                => "",
+      docker_prefix         => "cqs_",
+      fasta_file            => $def->{ref_fasta},
+      extension             => ".indels.snp.hardfilter.pass.norm.nospan.vcf.gz",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "2",
+        "mem"      => "10gb"
+      },
+    },
+    MergeVcfs => {
+      class                 => "GATK4::MergeVcfs",
+      perform               => 1,
+      target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_MergeVcfs",
+      option                => "",
+      source_ref            => ["LeftTrim"],
+      extension             => ".vcf.gz",
+      docker_prefix         => "gatk4_",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "4",
+        "mem"      => "10gb"
+      },
+    },
+  };
+
+  my $merged_vcf_section = "MergeVcfs";
+  push(@$tasks, 
+    ( "VariantFilterHard", 
+      "LeftTrim", 
+      "MergeVcfs"));
+
+  my $result = merge($config, $filter);
+
+  return($result, $merged_vcf_section);
+}
+
+sub getConfig {
+  my ($def) = @_;
+  $def->{VERSION} = $VERSION;
+
+  my $target_dir = $def->{target_dir};
+  create_directory_or_die($target_dir);
+
+  $def = initializeDefaultOptions($def);
+
+  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
+
+  $config->{general}{interval_list_file} = getValue($def, "interval_list_file");
+
+  my $gatk_prefix = getValue($def, "gatk_prefix");
+  my $gatk_index_snv = "SNV_index";
+  my $use_hard_filter = getValue($def, "use_hard_filter");
+
+  my $bam_section = $def->{bam_file_section};
+
+  my $perform_replace_read_group = getValue($def, "perform_replace_read_group", 0);
+  if ($perform_replace_read_group) {
+    $config->{replace_read_group} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/". $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_replace_read_group",
+      option                => getValue($def, "replace_read_group_option"),
+      interpretor           => "python",
+      program               => "../Format/replace_rg.py",
+      docker_prefix         => "cqs_",
+      check_program         => 1,
+      source_arg            => "-i",
+      source_ref            => $bam_section,
+      source_join_delimiter => "",
+      output_to_same_folder => 1,
+      output_arg            => "-o",
+      output_file_prefix    => ".rg.bam",
+      output_file_ext       => ".rg.bam",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=8",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    };
+    $bam_section = "replace_read_group";
+    push(@$summary, $bam_section);
+  }
+
+  my $perform_mark_duplicates = getValue($def, "perform_mark_duplicates", 1);
+  if ($perform_mark_duplicates) {
+    $config->{markduplicates} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_markduplicates_sambamba",
+      option                => "markdup -p -t __THREAD__ --tmpdir tmp __FILE__ __NAME__.tmp.bam && touch __OUTPUT__.done
+      
+  if [[ -e __OUTPUT__.done ]]; then
+    mv __NAME__.tmp.bam __OUTPUT__
+    mv __NAME__.tmp.bam.bai __OUTPUT__.bai
+  fi
+  ",
+      interpretor           => "",
+      program               => "sambamba",
+      check_program         => 0,
+      source_arg            => "",
+      source_ref            => $bam_section,
+      source_join_delimiter => " ",
+      docker_prefix         => "cqs_",
+      output_to_same_folder => 1,
+      output_arg            => "",
+      output_file_prefix    => ".duplicates_marked.bam",
+      output_file_ext       => ".duplicates_marked.bam",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=8",
+        "walltime" => "24",
+        "mem"      => "80gb"
+      },
+    };
+
+    $bam_section = "markduplicates";
+    push(@$summary, "markduplicates");
+  }
+
+  my $genotypeGVCFs_section;
+  ($config, $genotypeGVCFs_section) = add_bam_to_genotype($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section);
+
   my $merged_vcf_section;
   if (not $use_hard_filter){
 # We will have to do hard filter directly for mouse dataset
@@ -379,63 +481,10 @@ sub getConfig {
 #       "mem"      => "10gb"
 #     },
 #   },
-  }else{
-    $combine = {
-      VariantFilterHard  => {
-        class                 => "GATK4::VariantFilterHard",
-        perform               => 1,
-        target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_VariantFilterHard",
-        source_ref            => "GenotypeGVCFs",
-        option                => "",
-        docker_prefix         => "gatk4_",
-        is_sample_size_small  => 1,
-        sh_direct             => 1,
-        pbs                   => {
-          "nodes"    => "1:ppn=1",
-          "walltime" => "24",
-          "mem"      => "40gb"
-        },
-      },
-      LeftTrim  => {
-        class                 => "GATK4::LeftTrim",
-        perform               => 1,
-        target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_LeftTrim",
-        source_ref            => "VariantFilterHard",
-        option                => "",
-        docker_prefix         => "cqs_",
-        fasta_file            => $def->{ref_fasta},
-        extension             => ".indels.snp.hardfilter.pass.norm.nospan.vcf.gz",
-        sh_direct             => 0,
-        pbs                   => {
-          "nodes"    => "1:ppn=1",
-          "walltime" => "2",
-          "mem"      => "10gb"
-        },
-      },
-      MergeVcfs => {
-        class                 => "GATK4::MergeVcfs",
-        perform               => 1,
-        target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_MergeVcfs",
-        option                => "",
-        source_ref            => ["LeftTrim"],
-        extension             => ".vcf.gz",
-        docker_prefix         => "gatk4_",
-        sh_direct             => 0,
-        pbs                   => {
-          "nodes"    => "1:ppn=1",
-          "walltime" => "4",
-          "mem"      => "10gb"
-        },
-      },
-    };
-    $merged_vcf_section = "MergeVcfs";
-    push(@$summary, 
-      ( "VariantFilterHard", 
-        "LeftTrim", 
-        "MergeVcfs"));
+  } else {
+    ($config, $merged_vcf_section) = add_hard_filter_and_merge($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $genotypeGVCFs_section);
   }
 
-  $config = merge($config, $combine);
   addAnnovar($config, $def, $summary, $target_dir, $merged_vcf_section, , "", $gatk_prefix, $def, $gatk_index_snv );
 
   $config->{sequencetask} = {
