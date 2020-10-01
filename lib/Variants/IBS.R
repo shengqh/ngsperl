@@ -6,7 +6,6 @@ library(pheatmap)
 library(forcats)
 library(dendextend)
 library(getopt)
-library(Cairo)
 spec =matrix(c(
   'output','o', 1,"character",
   'inputscore','i', 1,"character",
