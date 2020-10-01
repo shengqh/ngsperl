@@ -34,9 +34,16 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_preprocessing", 0 );
   initDefaultValue( $def, "bam_file_section", "files" );
   initDefaultValue( $def, "gatk_prefix", "gatk4_" );
-  initDefaultValue( $def, "use_hard_filter", "1" );
+
   initDefaultValue( $def, "perform_replace_read_group", 0);
+  initDefaultValue( $def, "replace_read_group_by_gatk4", 0);
+  
+  initDefaultValue( $def, "perform_mark_duplicates", 1);
+
+  initDefaultValue( $def, "perform_gvcf_to_genotype", 1);
+
   initDefaultValue( $def, "perform_filter_and_merge", 1);
+  initDefaultValue( $def, "use_hard_filter", "1" );
       
   initDefaultValue( $def, "max_thread", 8 );
   initDefaultValue( $def, "subdir",     0 );
@@ -47,16 +54,6 @@ sub initializeDefaultOptions {
   if ( $def->{aligner} eq "bwa" ) {
     initDefaultValue( $def, "bwa_option", "" );
   }
-
-  initDefaultValue( $def, "perform_extract_bam", 0 );
-  initDefaultValue( $def, "perform_featureCounts",  0 );
-
-  initDefaultValue( $def, "perform_gatk_callvariants",   0 );
-  initDefaultValue( $def, "perform_gatk4_callvariants",  1 );
-  initDefaultValue( $def, "gatk_callvariants_vqsr_mode", 1 );
-  initDefaultValue( $def, "has_chr_in_chromosome_name" , 0);
-  initDefaultValue( $def, "perform_gatk4_pairedfastq2bam",  0 );
-
 
   if(defined $def->{"ref_fasta_dict"} && (! defined $def->{"chromosome_names"})){
     my $dictFile = getValue($def, "ref_fasta_dict");
@@ -120,10 +117,10 @@ sub initializeDefaultOptions {
   return $def;
 }
 
-sub add_bam_to_genotype {
+sub add_bam_to_gvcf {
   my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
 
-  my $bam_to_genotype = {
+  my $bam_to_gvcf = {
     BaseRecalibratorScatter => {
       class             => "GATK4::BaseRecalibratorScatter",
       perform           => 1,
@@ -221,12 +218,34 @@ sub add_bam_to_genotype {
         "mem"      => "10gb"
       },
     },
+  };
+
+  my @newtasks = ("BaseRecalibratorScatter", 
+      "GatherBQSRReports", 
+      "ApplyBQSRScatter", 
+      "GatherSortedBamFiles",
+      "HaplotypeCallerScatter", 
+      "GatherVcfs");
+
+  push(@$tasks, @newtasks);
+
+  foreach my $task (@newtasks){
+    $config->{$task} = $bam_to_gvcf->{$task};
+  }
+
+  return "GatherVcfs";
+}
+
+sub add_gvcf_to_genotype {
+  my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
+
+  my $gvcf_to_genotype = {
     GenomicsDBImportScatter => {
       class             => "GATK4::GenomicsDBImportScatter",
       perform           => 1,
       target_dir        => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_GenomicsDBImportScatter",
       option            => "",
-      source_ref        => ["GatherVcfs", ".g.vcf.gz\$"],
+      source_ref        => [$source, ".g.vcf.gz\$"],
       java_option       => "",
       sh_direct         => 0,
       pbs               => {
@@ -253,18 +272,15 @@ sub add_bam_to_genotype {
     }
   };
 
-  my $result = merge($config, $bam_to_genotype);
-  push(@$tasks, 
-    ( "BaseRecalibratorScatter", 
-      "GatherBQSRReports", 
-      "ApplyBQSRScatter", 
-      "GatherSortedBamFiles",
-      "HaplotypeCallerScatter", 
-      "GatherVcfs",
-      "GenomicsDBImportScatter",
-      "GenotypeGVCFs"));
+  my @newtasks = ("GenomicsDBImportScatter", "GenotypeGVCFs");
 
-  return ($result, "GenotypeGVCFs");
+  push(@$tasks, @newtasks);
+
+  foreach my $task (@newtasks){
+    $config->{$task} = $gvcf_to_genotype->{$task};
+  }
+
+  return "GenotypeGVCFs";
 }
 
 sub add_hard_filter_and_merge {
@@ -319,15 +335,15 @@ sub add_hard_filter_and_merge {
     },
   };
 
-  my $merged_vcf_section = "MergeVcfs";
-  push(@$tasks, 
-    ( "VariantFilterHard", 
-      "LeftTrim", 
-      "MergeVcfs"));
+  my @newtasks = ("VariantFilterHard", "LeftTrim", "MergeVcfs");
 
-  my $result = merge($config, $filter);
+  push(@$tasks, @newtasks);
 
-  return($result, $merged_vcf_section);
+  foreach my $task (@newtasks){
+    $config->{$task} = $filter->{$task};
+  }
+
+  return "MergeVcfs";
 }
 
 sub getConfig {
@@ -453,81 +469,85 @@ fi
     push(@$summary, "markduplicates");
   }
 
-  my $genotypeGVCFs_section;
-  ($config, $genotypeGVCFs_section) = add_bam_to_genotype($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section);
+  my $gvcf_section = add_bam_to_gvcf($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section);
 
-  if ($def->{perform_filter_and_merge}) {
-    my $merged_vcf_section;
-    if (not $use_hard_filter){
-  # We will have to do hard filter directly for mouse dataset
-  #   #https://github.com/gatk-workflows/gatk4-germline-snps-indels/blob/master/JointGenotyping.wdl
-  #   HardFilterAndMakeSitesOnlyVcf => {
-  #     class                 => "CQS::ProgramWrapperOneToOne",
-  #     perform               => 1,
-  #     target_dir            => "${target_dir}/nih_bam_10_HardFilterAndMakeSitesOnlyVcf",
-  #     option                => "--java-options \"-Xms10g -Xmx10g\" \\
-  #   VariantFiltration \\
-  #   --filter-expression \"ExcessHet > 54.69\" \\
-  #   --filter-name ExcessHet \\
-  #   -O __NAME__.variant_filtered.vcf.gz \\
-  #   -V __FILE__
+  if ($def->{perform_gvcf_to_genotype}) {
+    my $genotypeGVCFs_section = add_gvcf_to_genotype($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $gvcf_section);
 
-  # gatk --java-options \"-Xms10g -Xmx10g\" \\
-  #   MakeSitesOnlyVcf \\
-  #   -I __NAME__.variant_filtered.vcf.gz \\
-  #   -O __NAME__.sites_only.variant_filtered.vcf.gz
+    if ($def->{perform_filter_and_merge}) {
+      my $merged_vcf_section;
+      if (not $use_hard_filter){
+    # We will have to do hard filter directly for mouse dataset
+    #   #https://github.com/gatk-workflows/gatk4-germline-snps-indels/blob/master/JointGenotyping.wdl
+    #   HardFilterAndMakeSitesOnlyVcf => {
+    #     class                 => "CQS::ProgramWrapperOneToOne",
+    #     perform               => 1,
+    #     target_dir            => "${target_dir}/nih_bam_10_HardFilterAndMakeSitesOnlyVcf",
+    #     option                => "--java-options \"-Xms10g -Xmx10g\" \\
+    #   VariantFiltration \\
+    #   --filter-expression \"ExcessHet > 54.69\" \\
+    #   --filter-name ExcessHet \\
+    #   -O __NAME__.variant_filtered.vcf.gz \\
+    #   -V __FILE__
 
-  # ",
-  #     interpretor           => "",
-  #     program               => "gatk",
-  #     docker_prefix         => "gatk4_",
-  #     check_program         => 0,
-  #     source_arg            => "",
-  #     source_ref            => ["GenotypeGVCFs"],
-  #     source_join_delimiter => " ",
-  #     output_to_same_folder => 1,
-  #     output_arg            => "-O",
-  #     output_file_prefix    => "",
-  #     output_file_ext       => ".variant_filtered.vcf.gz",
-  #     output_other_ext      => ".sites_only.variant_filtered.vcf.gz",
-  #     sh_direct             => 0,
-  #     pbs                   => {
-  #       "nodes"    => "1:ppn=1",
-  #       "walltime" => "24",
-  #       "mem"      => "20gb"
-  #     },
-  #   },
-  #   SitesOnlyGatherVcf => {
-  #     class                 => "CQS::ProgramWrapper",
-  #     perform               => 1,
-  #     target_dir            => "${target_dir}/nih_bam_11_SitesOnlyGatherVcf",
-  #     option                => "--java-options -Xms6g GatherVcfsCloud  \\
-  #   --input __FILE__ \\
-  #   --output __NAME__.sites_only.vcf.gz && tabix __NAME__.sites_only.vcf.gz",
-  #     interpretor           => "",
-  #     program               => "gatk",
-  #     docker_prefix         => "gatk4_",
-  #     check_program         => 0,
-  #     source_arg            => "--input",
-  #     source_type           => "array",
-  #     source_ref            => ["HardFilterAndMakeSitesOnlyVcf"],
-  #     source_join_delimiter => " \\\n  --input ",
-  #     output_arg            => "--output",
-  #     output_file_prefix    => "",
-  #     output_file_ext       => ".sites_only.vcf.gz",
-  #     sh_direct             => 0,
-  #     pbs                   => {
-  #       "nodes"    => "1:ppn=1",
-  #       "walltime" => "4",
-  #       "mem"      => "10gb"
-  #     },
-  #   },
-    } else {
-      ($config, $merged_vcf_section) = add_hard_filter_and_merge($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $genotypeGVCFs_section);
+    # gatk --java-options \"-Xms10g -Xmx10g\" \\
+    #   MakeSitesOnlyVcf \\
+    #   -I __NAME__.variant_filtered.vcf.gz \\
+    #   -O __NAME__.sites_only.variant_filtered.vcf.gz
+
+    # ",
+    #     interpretor           => "",
+    #     program               => "gatk",
+    #     docker_prefix         => "gatk4_",
+    #     check_program         => 0,
+    #     source_arg            => "",
+    #     source_ref            => ["GenotypeGVCFs"],
+    #     source_join_delimiter => " ",
+    #     output_to_same_folder => 1,
+    #     output_arg            => "-O",
+    #     output_file_prefix    => "",
+    #     output_file_ext       => ".variant_filtered.vcf.gz",
+    #     output_other_ext      => ".sites_only.variant_filtered.vcf.gz",
+    #     sh_direct             => 0,
+    #     pbs                   => {
+    #       "nodes"    => "1:ppn=1",
+    #       "walltime" => "24",
+    #       "mem"      => "20gb"
+    #     },
+    #   },
+    #   SitesOnlyGatherVcf => {
+    #     class                 => "CQS::ProgramWrapper",
+    #     perform               => 1,
+    #     target_dir            => "${target_dir}/nih_bam_11_SitesOnlyGatherVcf",
+    #     option                => "--java-options -Xms6g GatherVcfsCloud  \\
+    #   --input __FILE__ \\
+    #   --output __NAME__.sites_only.vcf.gz && tabix __NAME__.sites_only.vcf.gz",
+    #     interpretor           => "",
+    #     program               => "gatk",
+    #     docker_prefix         => "gatk4_",
+    #     check_program         => 0,
+    #     source_arg            => "--input",
+    #     source_type           => "array",
+    #     source_ref            => ["HardFilterAndMakeSitesOnlyVcf"],
+    #     source_join_delimiter => " \\\n  --input ",
+    #     output_arg            => "--output",
+    #     output_file_prefix    => "",
+    #     output_file_ext       => ".sites_only.vcf.gz",
+    #     sh_direct             => 0,
+    #     pbs                   => {
+    #       "nodes"    => "1:ppn=1",
+    #       "walltime" => "4",
+    #       "mem"      => "10gb"
+    #     },
+    #   },
+      } else {
+        $merged_vcf_section = add_hard_filter_and_merge($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $genotypeGVCFs_section);
+      }
+
+      addAnnovar($config, $def, $summary, $target_dir, $merged_vcf_section, , "", $gatk_prefix, $def, $gatk_index_snv );
     }
-
-    addAnnovar($config, $def, $summary, $target_dir, $merged_vcf_section, , "", $gatk_prefix, $def, $gatk_index_snv );
   }
+
   $config->{sequencetask} = {
     class => "CQS::SequenceTaskSlurmSlim",
     perform => 1,
