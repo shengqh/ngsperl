@@ -20,6 +20,7 @@ params:
 library(knitr)
 library(kableExtra)
 library(reshape2)
+library(htmltools)
 
 knitr::opts_chunk$set(echo = TRUE, autodep=TRUE, cache.comments=FALSE, message=FALSE, warning=FALSE, dpi=300)
 
@@ -116,9 +117,11 @@ enriched<-updateEnrichedTable(enriched)
 rowCount<-nrow(enriched)
 
 curTable<-enriched[c(1:rowCount),c(1:9, 12,13)]
-print(kable_styling(kable(curTable)) %>% 
+print(kable(curTable) %>% 
+		kable_styling() %>%
 		row_spec(which(curTable$geneUp > curTable$geneDown), color = "black", background = "bisque") %>% 
-		row_spec(which(curTable$geneUp < curTable$geneDown), color = "black", background = "honeydew"))
+		row_spec(which(curTable$geneUp < curTable$geneDown), color = "black", background = "honeydew") %>%
+		htmltools::HTML())
 cat("\n\n<hr>")
 
 idx<-1
@@ -127,9 +130,11 @@ for(idx in c(1:rowCount)){
 	userIds<-unlist(strsplit( entry$userId[1], ';'))
 	entryTable<-deseq2[deseq2$Feature_gene_name %in% userIds,]
 	cat(paste0("### ", entry$tblLongCaption, " {#", entry$tblLink, "}\n\n" ))
-	print(kable_styling(kable(entryTable)) %>% 
+	print(kable(entryTable) %>% 
+		kable_styling() %>%
 		row_spec(which(entryTable$FoldChange > 1), color = "black", background = "bisque") %>% 
-		row_spec(which(entryTable$FoldChange < 1), color = "black", background = "honeydew"))
+		row_spec(which(entryTable$FoldChange < 1), color = "black", background = "honeydew") %>%
+		htmltools::HTML())
 	cat("\n\n<hr>")
 }
 

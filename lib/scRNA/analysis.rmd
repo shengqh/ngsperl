@@ -126,6 +126,7 @@ library(heatmap3)
 library(cowplot)
 library(scales)
 library(stringr)
+library(htmltools)
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
@@ -500,7 +501,7 @@ qcsummary<-merge(rawCells, filteredCells, by = "Var1")
 colnames(qcsummary)<-c("Sample", "RawCell", "ValidCell")
 qcsummary$DiscardCell<-qcsummary$RawCell-qcsummary$ValidCell
 qcsummary$DiscardRate<-qcsummary$DiscardCell / qcsummary$RawCell
-print(kable_styling(kable(qcsummary, caption=tabRef("qcsummary", "Cell count in sample"))))
+print(kable(qcsummary, caption=tabRef("qcsummary", "Cell count in sample")) %>% kable_styling() %>% htmltools::HTML())
 ```
 
 ## Marker genes for each cluster
@@ -514,7 +515,7 @@ top10marker_file = paste0(prefix, ".top10markers.csv")
 write.csv(top10, file=top10marker_file, row.names=F, quote = F)
 
 top5 <- finalList$markers %>% group_by(cluster) %>% top_n(n = 5, wt = avg_logFC)
-print(kable_styling(kable(top5, caption=tabRef("top5", "Top 5 marker genes in each cluster"))))
+print(kable(top5, caption=tabRef("top5", "Top 5 marker genes in each cluster")) %>% kable_styling() %>% htmltools::HTML())
 ```
 
 # Cell clusters
@@ -581,7 +582,7 @@ colnames(nc)<-paste0(colnames(nc), "_perc")
 cta_combined<-cbind(cta_table, cluster_sample, nc)
 write.csv(cta_combined, file=paste0(prefix, ".cluster.summary.csv"), row.names=F, quote=F)
 
-print(kable_styling(kable(cta_combined, caption=tabRef("cta_table", "Cell type prediction result"))))
+print(kable(cta_combined, caption=tabRef("cta_table", "Cell type prediction result")) %>% kable_styling() %>% htmltools::HTML())
 ```
 
 ```{r gene_activity_umap, fig.width=18, fig.height=10, results="asis", fig.cap=figRef("umap_cluster_cell", "Predicted cell types")}

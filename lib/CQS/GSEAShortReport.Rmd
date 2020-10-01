@@ -54,7 +54,9 @@ if (length(interestedModuleInd)>0) { #hasWebGestaltAnalysis
           rawTableOut<-processGesaTable(posTableFile)
           if(!is.null(rawTableOut)){
             ename<-paste0(gname, " ", gfolders$GseaCategory[j], " Positive-regulated")
-            print(kable_styling(kable(rawTableOut, caption=tabRef(ename, ename))))
+            print(kable(rawTableOut, caption=tabRef(ename, ename)) %>%	
+  kable_styling() %>%
+  htmltools::HTML())
           }else{
             warning(paste0("Can't find significant positive-regulated GSEA gene set in ", resultDirSub))
           }
@@ -67,7 +69,9 @@ if (length(interestedModuleInd)>0) { #hasWebGestaltAnalysis
           rawTableOut<-processGesaTable(negTableFile)
           if(!is.null(rawTableOut)){
             ename<-paste0(gname, " ", gfolders$GseaCategory[j], " Negative-regulated")
-            print(kable_styling(kable(rawTableOut, caption=tabRef(ename, ename))))
+            print(kable(rawTableOut, caption=tabRef(ename, ename)) %>%	
+  kable_styling() %>%
+  htmltools::HTML())
           }else{
             warning(paste0("Can't find significant negative-regulated GSEA gene set in ", resultDirSub))
           }
