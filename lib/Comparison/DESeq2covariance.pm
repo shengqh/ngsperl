@@ -39,7 +39,7 @@ sub perform {
 
   my $covariance_file = get_option_file($config, $section, "covariance_file", 1);
   my ($cov_table, $cov_names) = read_table($covariance_file, 0);
-  
+
   my $comparisonAttributes = get_raw_files_attributes( $config, $section );
   my $comparisonTitles = \@comparison_names;
   if ( defined $comparisonAttributes->{".order"} && defined $comparisonAttributes->{".col"} ) {
@@ -97,7 +97,7 @@ sub perform {
   my $designfilename = "${task_name}.define";
   my $designfile     = "$result_dir/$designfilename";
   open( my $df, ">$designfile" ) or die "Cannot create $designfile";
-  print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\n";
+  print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\tdesignFormula\tcontrast\n";
 
   for my $comparisonIndex ( 0 .. $#comparison_names ) {
     my $comparison_name = $comparison_names[$comparisonIndex];
@@ -118,8 +118,16 @@ sub perform {
         die "Cannot find covariance $covariance of comparison $comparison_name in covariance file $covariance_file";
       }
     }
-    
     my @covariances_keys = @$covariance_names;
+
+    my $contrast="";
+    my $designFormula="";
+    if (exists($$comp_def{"designFormula"})) {
+        $designFormula = ${$comp_def->{designFormula}}[0];
+    }
+    if (exists($$comp_def{"contrast"})) {
+        $contrast = ${$comp_def->{contrast}}[0];
+    }
 
     #print( Dumper(@group_names) );
 
@@ -184,7 +192,7 @@ sub perform {
     if ( ref $curcountfile eq ref [] ) {
       $curcountfile = $curcountfile->[0];
     }
-    print $df "$comparison_name\t$curcountfile\t$cdfile\t$g1\t$g2\t$comparisonTitle\n";
+    print $df "$comparison_name\t$curcountfile\t$cdfile\t$g1\t$g2\t$comparisonTitle\t$designFormula\t$contrast\n";
   }
   close($df);
 
