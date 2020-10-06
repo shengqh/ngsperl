@@ -91,13 +91,17 @@ sub perform {
         $sampleFile = $filename;
       }
 
+      my $cat = ( $filename =~ /.gz/ ) ? "zcat" : "cat";
+
+      $filename =~ s/.gz$//g;
+      $filename =~ s/.vcf$//g;
+
       my $annovar       = $filename . ".annovar";
       my $result        = "${annovar}.${buildver}_multianno.txt";
       my $refine_result = "${annovar}.splicing.${buildver}_multianno.txt";
       my $final         = $annovar . ".final.tsv";
       my $excel         = $final . ".xls";
 
-      my $cat = ( $filename =~ /.gz/ ) ? "zcat" : "cat";
 
       my $runcmd;
       my $passinput;
@@ -198,6 +202,12 @@ sub result {
     my @result_files = ();
     for my $sampleFile (@sample_files) {
       my ( $filename, $dir ) = fileparse($sampleFile);
+
+      my $cat = ( $filename =~ /.gz/ ) ? "zcat" : "cat";
+
+      $filename =~ s/.gz$//g;
+      $filename =~ s/.vcf$//g;
+
       my $annovar = $filename . ".annovar";
       my $final   = $annovar . ".final.tsv";
       if ( $toExcel ) {
