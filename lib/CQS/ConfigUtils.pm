@@ -79,7 +79,9 @@ our %EXPORT_TAGS = (
       left_pad
       get_key_name
       get_interval_file_map
-      read_table)
+      read_table
+      merge_hash_left_precedent
+      merge_hash_right_precedent)
   ]
 );
 
@@ -648,7 +650,7 @@ sub do_get_unsorted_raw_files {
           if ( exists $result{$mykey} ) {
             my $oldvalues = $result{$mykey};
             if ( ref($oldvalues) eq 'HASH' ) {
-              $result{$mykey} = merge( $oldvalues, $myvalues );
+              $result{$mykey} = merge_hash_right_precedent( $oldvalues, $myvalues );
             }
             else {
               die "The source of $section->$mapname should be all HASH or all ARRAY";
@@ -1566,6 +1568,18 @@ sub read_table {
   
   #print(Dumper($result));
   return($result, $names);
+}
+
+sub merge_hash_left_precedent {
+  my ($a, $b) = @_;
+  my $merge_c = Hash::Merge->new('LEFT_PRECEDENT');
+  return $merge_c->merge($a, $b);
+}
+
+sub merge_hash_right_precedent {
+  my ($a, $b) = @_;
+  my $merge_c = Hash::Merge->new('RIGHT_PRECEDENT');
+  return $merge_c->merge($a, $b);
 }
 
 1;
