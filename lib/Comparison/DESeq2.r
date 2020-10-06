@@ -633,7 +633,6 @@ for(countfile_index in c(1:length(countfiles))){
                                design = ~1)
     
     colnames(dds)<-colnames(comparisonData)
-		
 		dds<-myEstimateSizeFactors(dds)
 		
 		if(filterBaseMean){
@@ -644,8 +643,6 @@ for(countfile_index in c(1:length(countfiles))){
 		  comparisonData=comparisonData[baseMeans > filterBaseMeanValue,]
 		}
     
-    #draw density graph
-    rldmatrix<-as.matrix(log2(counts(dds,normalized=FALSE) + 1))
     rsdata<-melt(rldmatrix)
     colnames(rsdata)<-c("Gene", "Sample", "log2Count")
     png(filename=paste0(prefix, "_DESeq2-log2-density.png"), width=4000, height=3000, res=300)
