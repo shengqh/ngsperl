@@ -154,7 +154,7 @@ sub getTGIRTSmallRNAConfig {
   push @individual, ( "check_cca", "fastq_trna", "star_tRNA", "star_otherSmallRNA", "star_tgirt_count" );
   push @summary, ( "star_tgirt_table", "star_tgirt_category" );
 
-  $config = merge( $config, $tgirt );
+  $config = merge_hash_right_precedent( $config, $tgirt );
   $config->{sequencetask} = {
     class      => getSequenceTaskClassname($cluster),
     perform    => 1,

@@ -9,7 +9,6 @@ use CQS::ConfigUtils;
 use CQS::ClassFactory;
 use Pipeline::SmallRNAUtils;
 use Data::Dumper;
-use Hash::Merge qw( merge );
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -79,7 +78,7 @@ sub getConfig {
     },
   };
 
-  $config = merge( $config, $def );
+  $config = merge_hash_right_precedent( $config, $def );
 
   my $source_ref = "files";
   my @individual;
@@ -187,7 +186,7 @@ sub getConfig {
     },
   };
 
-  $config = merge( $config, $processing );
+  $config = merge_hash_right_precedent( $config, $processing );
 
   my $tagAlignSource = ["bam2tagalign"];
   if ( defined $def->{merge_tagaligns_files} ) {

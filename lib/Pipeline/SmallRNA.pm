@@ -403,7 +403,7 @@ sub getSmallRNAConfig {
       $category_ext = $category_ext . ".Category1.Group.Piechart.png;.Category2.Group.Piechart.png;",
     }
 
-    $host_genome = merge(
+    $host_genome = merge_hash_right_precedent(
       $host_genome,
       {
         bowtie1_genome_1mm_NTA_smallRNA_table => {
@@ -465,7 +465,7 @@ sub getSmallRNAConfig {
         },
       }
     );
-    $config = merge( $config, $host_genome );
+    $config = merge_hash_right_precedent( $config, $host_genome );
     push @$summary_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_info", "bowtie1_genome_1mm_NTA_smallRNA_category" );
 
     my $tRnaAnalysis = {};
@@ -1164,7 +1164,7 @@ sub getSmallRNAConfig {
           },
         },
       };
-      $config = merge( $config, $unmapped_reads );
+      $config = merge_hash_right_precedent( $config, $unmapped_reads );
 
       push @table_for_shortReadSource, ( "bowtie1_genome_host_reads_table", ".count\$");
       push @name_for_shortReadSource, ( "host genome");

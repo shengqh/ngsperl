@@ -238,7 +238,7 @@ sub getRNASeqConfig {
         $source_ref = [ "hisat2", ".bam\$" ];
       }
 
-      $config = merge( $config, $configAlignment );
+      $config = merge_hash_right_precedent( $config, $configAlignment );
       push @$individual, $aligner;
       $multiqc_depedents = "hisat2";
     }
@@ -494,6 +494,7 @@ sub getRNASeqConfig {
         output_perSample_file_ext  => ".gsea.html;.gsea.csv;.gsea;",
         parameterSampleFile1_ref   => [ $deseq2taskname, "_GSEA.rnk\$" ],
         sh_direct                  => 1,
+        
         rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=" . $gsea_makeReport . ";",
         pbs                        => {
           "email"     => $def->{email},

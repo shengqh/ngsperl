@@ -10,7 +10,6 @@ use CQS::ClassFactory;
 use Pipeline::PipelineUtils;
 use Pipeline::Preprocession;
 use Data::Dumper;
-use Hash::Merge qw( merge );
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -348,7 +347,7 @@ sub addNonhostDatabase {
 
 sub addPositionVis {
   my ( $config, $def, $summary, $taskName, $parentDir, $optionHash ) = @_;
-  $config->{$taskName} = merge(
+  $config->{$taskName} = merge_hash_left_precedent(
     $optionHash,
     {
       class                => "CQS::UniqueR",
@@ -375,7 +374,7 @@ sub addPositionVis {
 sub addNonhostVis {
   my ( $config, $def, $summary, $taskName, $parentDir, $optionHash ) = @_;
 
-  $config->{$taskName} = merge(
+  $config->{$taskName} = merge_hash_left_precedent(
     $optionHash,
     {
       class      => "CQS::UniqueR",
@@ -404,7 +403,7 @@ sub addNonhostVis {
 sub getSmallRNADefinition {
   my ( $userdef, $genome ) = @_;
 
-  my $def = merge( $userdef, $genome );
+  my $def = merge_hash_left_precedent( $userdef, $genome );
 
   $def = initializeSmallRNADefaultOptions($def);
 
@@ -551,7 +550,7 @@ sub getPrepareConfig {
     $host_identical_ref = [ "identical_NTA", ".fastq.gz\$" ];
   }
 
-  $config = merge( $config, $preparation );
+  $config = merge_hash_right_precedent( $config, $preparation );
 
   return ( $config, $individual, $summary, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir, $identical_ref, $host_identical_ref );
 }

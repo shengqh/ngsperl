@@ -145,7 +145,7 @@ sub perform {
       my $sampleConfig = $cutConfig->{$key};
       my $samples      = $cutConfig->{$key}{samples};
       for my $sample (@$samples) {
-        my $sConfig = merge( $sampleConfig, $curSection );
+        my $sConfig = merge_hash_left_precedent( $sampleConfig, $curSection );
         $sampleConfigMap->{$sample} = $sConfig;
       }
     }

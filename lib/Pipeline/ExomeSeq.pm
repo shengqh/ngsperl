@@ -11,7 +11,6 @@ use Pipeline::PipelineUtils;
 use Pipeline::Preprocession;
 use Pipeline::WdlPipeline;
 use Data::Dumper;
-use Hash::Merge qw( merge );
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -98,7 +97,7 @@ sub initializeDefaultOptions {
   };
 
   if (defined $def->{onco_options}) {
-    $def->{onco_options} = merge($def->{onco_options}, $default_onco_options);
+    $def->{onco_options} = merge_hash_left_precedent($def->{onco_options}, $default_onco_options);
   }else{
     $def->{onco_options} = $default_onco_options;
   }
