@@ -73,50 +73,55 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file, $init_command );
     print $pbs "  
 
-  gatk SelectVariants \\
-    -V ${vcf} \\
-    -select-type SNP \\
-    -O snps.vcf.gz
+gatk SelectVariants \\
+  -V ${vcf} \\
+  -select-type SNP \\
+  -O snps.vcf.gz
 
-  gatk SelectVariants \\
-    -V ${vcf} \\
-    -select-type INDEL \\
-    -select-type MIXED \\
-    -O indels.vcf.gz
+gatk SelectVariants \\
+  -V ${vcf} \\
+  -select-type INDEL \\
+  -select-type MIXED \\
+  -O indels.vcf.gz
 
-  gatk VariantFiltration \\
-    -V snps.vcf.gz \\
-    -filter \"QD < 2.0\" --filter-name \"QD2\" \\
-    -filter \"QUAL < 30.0\" --filter-name \"QUAL30\" \\
-    -filter \"SOR > 3.0\" --filter-name \"SOR3\" \\
-    -filter \"FS > 60.0\" --filter-name \"FS60\" \\
-    -filter \"MQ < 40.0\" --filter-name \"MQ40\" \\
-    -filter \"MQRankSum < -12.5\" --filter-name \"MQRankSum-12.5\" \\
-    -filter \"ReadPosRankSum < -8.0\" --filter-name \"ReadPosRankSum-8\" $ExcessHet_filter $ExcessHet_filter \\
-    -O snps_filtered.vcf.gz
+gatk VariantFiltration \\
+  -V snps.vcf.gz \\
+  -filter \"QD < 2.0\" --filter-name \"QD2\" \\
+  -filter \"QUAL < 30.0\" --filter-name \"QUAL30\" \\
+  -filter \"SOR > 3.0\" --filter-name \"SOR3\" \\
+  -filter \"FS > 60.0\" --filter-name \"FS60\" \\
+  -filter \"MQ < 40.0\" --filter-name \"MQ40\" \\
+  -filter \"MQRankSum < -12.5\" --filter-name \"MQRankSum-12.5\" \\
+  -filter \"ReadPosRankSum < -8.0\" --filter-name \"ReadPosRankSum-8\" $ExcessHet_filter $ExcessHet_filter \\
+  -O snps_filtered.vcf.gz
 
-  gatk VariantFiltration \\
-    -V indels.vcf.gz \\
-    -filter \"QD < 2.0\" --filter-name \"QD2\" \\
-    -filter \"QUAL < 30.0\" --filter-name \"QUAL30\" \\
-    -filter \"FS > 200.0\" --filter-name \"FS200\" \\
-    -filter \"ReadPosRankSum < -20.0\" --filter-name \"ReadPosRankSum-20\" $InbreedingCoeff_filter  \\
-    -O indels_filtered.vcf.gz
+gatk VariantFiltration \\
+  -V indels.vcf.gz \\
+  -filter \"QD < 2.0\" --filter-name \"QD2\" \\
+  -filter \"QUAL < 30.0\" --filter-name \"QUAL30\" \\
+  -filter \"FS > 200.0\" --filter-name \"FS200\" \\
+  -filter \"ReadPosRankSum < -20.0\" --filter-name \"ReadPosRankSum-20\" $InbreedingCoeff_filter  \\
+  -O indels_filtered.vcf.gz
 
-  gatk MergeVcfs \\
-    -I snps_filtered.vcf.gz \\
-    -I indels_filtered.vcf.gz \\
-    -O ${final_file}
+gatk MergeVcfs \\
+  -I snps_filtered.vcf.gz \\
+  -I indels_filtered.vcf.gz \\
+  -O merged_filtered.vcf.gz
 
-  ";
+gatk SelectVariants \\
+  -O $final_file \\
+  -V merged_filtered.vcf.gz \\
+  --exclude-filtered
+";
 
     print $pbs "
-  if [[ -s $final_file ]]; then
-    rm snps.vcf.gz snps.vcf.gz.tbi \\
-       indels.vcf.gz indels.vcf.gz.tbi \\
-       snps_filtered.vcf.gz snps_filtered.vcf.gz.tbi \\
-       indels_filtered.vcf.gz indels_filtered.vcf.gz.tbi
-  fi
+if [[ -s $final_file ]]; then
+  rm snps.vcf.gz snps.vcf.gz.tbi \\
+      indels.vcf.gz indels.vcf.gz.tbi \\
+      snps_filtered.vcf.gz snps_filtered.vcf.gz.tbi \\
+      indels_filtered.vcf.gz indels_filtered.vcf.gz.tbi \\
+      merged_filtered.vcf.gz merged_filtered.vcf.gz.tbi
+fi
 
   ";
     $self->close_pbs( $pbs, $pbs_file );
