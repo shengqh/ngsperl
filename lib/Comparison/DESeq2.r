@@ -71,6 +71,14 @@ if(!exists("outputTIFF")){
   outputTIFF<-FALSE
 }
 
+if(!exists("filterBaseMean")){
+  filterBaseMean<-0
+}
+
+if(!exists("filterBaseMeanValue")){
+	filterBaseMeanValue<-30
+}
+
 outputFormat<-c()
 if(outputPdf){
   outputFormat<-c("PDF")
@@ -438,7 +446,7 @@ for(countfile_index in c(1:length(countfiles))){
 			cat("\n")
 			designData<-designData[,which(colnames(designData)%in% c("Sample","Condition"))]
 		}
-		
+
 		missedSamples<-as.character(designData$Sample)[!(as.character(designData$Sample) %in% colnames(countData))]
 		if(length(missedSamples) > 0){
 			message=paste0("There are missed sample defined in design file but not in real data: ", missedSamples)
@@ -575,13 +583,23 @@ for(countfile_index in c(1:length(countfiles))){
 		conditionColors<-as.matrix(data.frame(Group=c("red", "blue")[designData$Condition]))
 		
 		write.csv(comparisonData, file=paste0(prefix, ".csv"))
-		
+
 		#some basic graph
 		dds=DESeqDataSetFromMatrix(countData = comparisonData,
 				colData = designData,
 				design = ~1)
 		
 		colnames(dds)<-colnames(comparisonData)
+		
+		dds<-myEstimateSizeFactors(dds)
+		
+		if(filterBaseMean){
+		  cat(paste0("filter by basemean: ", filterBaseMeanValue, "\n"))
+		  baseMeans = rowMeans(counts(dds, normalized=TRUE))
+		  write.csv(baseMeans, file=paste0(prefix, ".basemean.csv"))
+		  dds<-dds[baseMeans > filterBaseMeanValue,]
+		  comparisonData=comparisonData[baseMeans > filterBaseMeanValue,]
+		}
 		
 		#draw density graph
 		rldmatrix<-as.matrix(log2(counts(dds,normalized=FALSE) + 1))
@@ -600,8 +618,6 @@ for(countfile_index in c(1:length(countfiles))){
 		dev.off()
 		
 		#varianceStabilizingTransformation
-		
-		dds<-myEstimateSizeFactors(dds)
 		
 		fitType<-"parametric"
 		if(nrow(comparisonData) < 5){
