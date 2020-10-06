@@ -396,6 +396,13 @@ sub addDEseq2 {
   my $rCode = getOutputFormat( $def, getValue($def, "DE_rCode", "") );
   $rCode = addOutputOption( $def, $rCode, "top25cv_in_hca", $def->{top25cv_in_hca}, "top25cvInHCA" );
 
+  my $raw_rCode = $rCode;
+  my $filterBaseMean = (defined $def->{filterBaseMean}) && $def->{filterBaseMean};
+  if($filterBaseMean){
+    #die("filterBaseMean");
+    $rCode = $rCode . "filterBaseMean=1;filterBaseMeanValue=" . getValue($def, "filterBaseMeanValue", 30) . ";";
+  }
+
   $config->{$taskName} = {
     perform                      => 1,
     target_dir                   => $deseq2Dir . "/" . getNextFolderIndex($def) . "$taskName",
@@ -449,8 +456,21 @@ sub addDEseq2 {
   else {
     $config->{$taskName}{countfile} = $countfileRef;
   }
-
   push @$summary, $taskName;
+
+  if($filterBaseMean){
+    my $raw_section = $taskName . "_noFilterBaseMean";
+    my $base_mean_task = {};
+    my $filterSection = $config->{$taskName};
+    for my $task_key (sort keys %$filterSection){
+      $base_mean_task->{$task_key} = $filterSection->{$task_key};
+    }
+    $base_mean_task->{rCode} = $raw_rCode;
+    $base_mean_task->{target_dir} = $base_mean_task->{target_dir} . "_noFilterBaseMean";
+    $config->{$raw_section} = $base_mean_task;
+    push @$summary, $raw_section;
+  }
+
   return $taskName;
 }
 
