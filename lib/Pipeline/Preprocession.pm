@@ -87,7 +87,7 @@ sub addCutadapt {
     }
   };
   if ( defined $def->{cutadapt} ) {
-    $cutadapt->{cutadapt} = merge( $def->{cutadapt}, $cutadapt->{cutadapt} );
+    $cutadapt->{cutadapt} = merge_hash_right_precedent( $def->{cutadapt}, $cutadapt->{cutadapt} );
   }
 
   for my $key (keys %$cutadapt){
@@ -568,7 +568,7 @@ sub getPreprocessionConfig {
     }
 
     if ( defined $fastqc_count_vis_files ) {
-      $config->{"fastqc_count_vis"} = merge(
+      $config->{"fastqc_count_vis"} = merge_hash_right_precedent(
         {
           class              => "CQS::UniqueR",
           perform            => 1,
