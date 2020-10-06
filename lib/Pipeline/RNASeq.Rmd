@@ -98,8 +98,8 @@ if (any(table$Mean<=QualityMin)) { #use this as cutoff to show the quality table
   
   print(kable(output_table1, caption=tabRef("Quality Summary", "Samples with Low RNA-seq Quality"), row.names=F) %>% 
           kable_styling() %>%
-          htmltools::HTML() %>%
-          row_spec(which(apply(output_table1[,-1],1,min)< QualityMin), color = "black", background = "honeydew"))
+          row_spec(which(apply(output_table1[,-1],1,min)< QualityMin), color = "black", background = "honeydew") %>%
+          htmltools::HTML())
 }
 
 
