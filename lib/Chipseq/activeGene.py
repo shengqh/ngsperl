@@ -32,11 +32,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 url="https://raw.githubusercontent.com/linlabcode/pipeline-tools/master/pipeline_tools/annotation/%s_refseq.ucsc" % args.genome
 annotation_file="%s_refseq.ucsc" % args.genome
 
-logger.info("download %s ..." % url)
-r = requests.get(url, auth=('usrname', 'password'), verify=False,stream=True)
-r.raw.decode_content = True
-with open(annotation_file, 'wb') as f:
-  shutil.copyfileobj(r.raw, f) 
+if not os.path.isfile(annotation_file):
+  logger.info("download %s ..." % url)
+  download_command = "wget " + url
+  runCmd(download_command, logger)
 
 region_file = '%s_promoter_regions.bed' % args.output
 logger.info("convert to %s ..." % region_file)
@@ -47,8 +46,6 @@ with open(annotation_file, "rt") as infile, open(region_file, 'wt') as outfile:
     chrom, strand, start, stop, name = values[2:6] + values[12:13]
     choord = int(start) if strand == '+' else int(stop)
     outfile.write('\t'.join([chrom, str(max(0, choord - 1000)), str(choord + 1000), '.', '', strand, name]) + '\n')
-
-os.remove(annotation_file)
 
 logger.info("generate active genes ...")
 
@@ -68,6 +65,7 @@ gene_list = sorted(list(set(gene_list)))
 with open(args.output + ".TSS_ACTIVE_-1000_1000.txt", 'w') as outfile:
   outfile.write('\n'.join(gene_list))
 
+os.remove(annotation_file)
 os.remove(region_file)
 os.remove(tmp_bed)
 
