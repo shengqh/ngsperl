@@ -61,34 +61,28 @@ sub perform {
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct) . "\n";
 
-  my $bFound2 = 0;
-  my $bFound3 = 0;
-  for my $sample_name ( sort keys %$parameterSampleFile1 ) {
-    if ( defined $parameterSampleFile2->{$sample_name} ) {
-      $bFound2 = 1;
+  my $paramFileMap = {};
+  for my $index (2..10){
+    my $key = "parameterSampleFile" . $index;
+    if (not has_raw_files($config, $section, $key)){
+      next;
     }
-    if ( defined $parameterSampleFile3->{$sample_name} ) {
-      $bFound3 = 1;
-    }
-  }
 
-  my $param_option2 = "";
-  if ( not $bFound2 ) {
-    my $file2 = save_parameter_sample_file( $config, $section, "parameterSampleFile2", "${result_dir}/${task_name}_${task_suffix}_fileList2.list" );
-    if ( $file2 ne "" ) {
-      $file2 = basename($parameterSampleFile2);
-      my $arg2 = get_option( $config, $section, "parameterSampleFile2_arg", "" );
-      $param_option2 = $arg2 . " " . $file2;
+    my ( $parameterSampleFile, $parameterSampleFilearg, $parameterSampleFileJoinDelimiter ) = get_parameter_sample_files( $config, $section, $key );
+    my $bFound = 0;
+    for my $sample_name ( sort keys %$parameterSampleFile1 ) {
+      if ( defined $parameterSampleFile->{$sample_name} ) {
+        $bFound = 1;
+      }
     }
-  }
-
-  my $param_option3 = "";
-  if ( not $bFound3 ) {
-    my $file3 = save_parameter_sample_file( $config, $section, "parameterSampleFile3", "${result_dir}/${task_name}_${task_suffix}_fileList3.list" );
-    if ( $file3 ne "" ) {
-      $file3 = basename($file3);
-      my $arg3 = get_option( $config, $section, "parameterSampleFile3_arg", "" );
-      $param_option3 = $arg3 . " " . $file3;
+    if ( not $bFound ) {
+      my $listfile = save_parameter_sample_file( $config, $section, $key, "${result_dir}/${task_name}_${task_suffix}_fileList${index}.list" );
+      if ( $listfile ne "" ) {
+        $listfile = basename($listfile);
+        $option = $option . " " . $parameterSampleFilearg . " " . $listfile;
+      }
+    }else{
+      $paramFileMap->{$key} = [$parameterSampleFile, $parameterSampleFilearg, $parameterSampleFileJoinDelimiter];
     }
   }
 
@@ -152,18 +146,9 @@ sub perform {
       $cur_init_command =~ s/__FILE__/$param_option1/g;
     }
 
-    if ( not $bFound2 ) {
-      $curOption = $curOption . " " . $param_option2;
-    }
-    else {
-      $curOption = $curOption . " " . get_program_param( $parameterSampleFile2, $parameterSampleFile2arg, $parameterSampleFile2JoinDelimiter, $sample_name );
-    }
-
-    if ( not $bFound3 ) {
-      $curOption = $curOption . " " . $param_option3;
-    }
-    else {
-      $curOption = $curOption . " " . get_program_param( $parameterSampleFile3, $parameterSampleFile3arg, $parameterSampleFile3JoinDelimiter, $sample_name );
+    for my $key (sort keys %$paramFileMap){
+      my $values = $paramFileMap->{$key};
+      $curOption = $curOption . " " . get_program_param( $values->[0], $values->[1],$values->[2], $sample_name );
     }
 
     print $pbs "
