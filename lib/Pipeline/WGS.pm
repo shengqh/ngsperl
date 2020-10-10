@@ -16,7 +16,7 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(performWGS performWGSTask add_bam_to_genotype add_hard_filter_and_merge)] );
+our %EXPORT_TAGS = ( 'all' => [qw(performWGS performWGSTask add_bam_to_gvcf add_gvcf_to_genotype add_hard_filter_and_merge)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -27,7 +27,8 @@ sub initializeDefaultOptions {
 
   #check files
   getValue($def, "ref_fasta");
-  getValue($def, "dbsnp_vcf");
+  getValue($def, "dbsnp");
+  getValue($def, "interval_list_file");
   getValue($def, "known_indels_sites_VCFs");
 
   #let's start from bam file
@@ -128,7 +129,7 @@ sub add_bam_to_gvcf {
       option            => "",
       source_ref        => $source,
       fasta_file        => $def->{ref_fasta},
-      dbsnp_vcf         => $def->{dbsnp_vcf},
+      dbsnp_vcf         => $def->{dbsnp},
       known_indels_sites_VCFs => $def->{known_indels_sites_VCFs},
       sh_direct         => 0,
       pbs               => {
@@ -245,7 +246,7 @@ sub add_gvcf_to_genotype {
       perform           => 1,
       target_dir        => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_GenomicsDBImportScatter",
       option            => "",
-      source_ref        => [$source, ".g.vcf.gz\$"],
+      source_ref        => $source,
       java_option       => "",
       sh_direct         => 0,
       pbs               => {
@@ -261,7 +262,7 @@ sub add_gvcf_to_genotype {
       option            => "",
       source_ref        => ["GenomicsDBImportScatter"],
       fasta_file        => $def->{ref_fasta},
-      dbsnp_vcf         => $def->{dbsnp_vcf},
+      dbsnp_vcf         => $def->{dbsnp},
       java_option       => "",
       sh_direct         => 0,
       pbs               => {
