@@ -1112,25 +1112,26 @@ sub addFilterMafAndReport {
 #  my $taskName = $mutect2call . getNextIndex($mutect2_index_dic, $mutect2_index_key) . "_mergeAndMafreport";
   my $taskName = $mutect2call . "_mergeAndMafreport";
 
-    my $rCode=( defined $def->{family_info_file} ? "clinicalFeatures=" . $def->{family_info_feature} . ";" : "" );
-    $rCode=$rCode."genome=\"" . getValue($def, "annovar_buildver", "hg38") . "\";";
+  my $rCode=( defined $def->{family_info_file} ? "clinicalFeatures=" . $def->{family_info_feature} . ";" : "" );
+  $rCode=$rCode."genome=\"" . getValue($def, "annovar_buildver", "hg38") . "\";";
 
-    $config->{$taskName}={
-      class      => "CQS::UniqueR",
-      perform    => 1,
-      target_dir => "${target_dir}/${taskName}",
-      rtemplate                  => "../CQS/muTect2MergeAndMafreport.R",
-      parameterSampleFile1_ref=> [$mutect2call, ".maf"],
-      parameterFile1           => $def->{family_info_file},
-      rCode                    => $rCode,
-      sh_direct  => 0,
-      pbs        => {
-        "nodes"    => "1:ppn=8",
-        "walltime" => "4",
-        "mem"      => "30gb"
-      }
-    };
-    push @$summary, $taskName;
+  $config->{$taskName}={
+    class      => "CQS::UniqueR",
+    perform    => 1,
+    target_dir => "${target_dir}/${taskName}",
+    rtemplate                  => "../CQS/muTect2MergeAndMafreport.R",
+    parameterSampleFile1_ref=> [$mutect2call, ".maf"],
+    parameterFile1           => $def->{family_info_file},
+    rCode                    => $rCode,
+    sh_direct  => 0,
+    pbs        => {
+      "nodes"    => "1:ppn=8",
+      "walltime" => "4",
+      "mem"      => "30gb"
+    }
+  };
+  push @$summary, $taskName;
+  return($taskName);
 }
 
 
