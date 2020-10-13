@@ -224,6 +224,7 @@ sub perform {
       $count = $count + 1;
       my $classname = $config->{$task_section}{class};
       if ( !defined $classname ) {
+        print(Dumper(@tasks));
         die "$task_section is not a valid task section.";
       }
       
