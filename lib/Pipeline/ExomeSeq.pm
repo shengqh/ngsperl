@@ -42,6 +42,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "has_chr_in_chromosome_name" , 0);
   initDefaultValue( $def, "perform_gatk4_pairedfastq2bam",  0 );
 
+  initDefaultValue( $def, "perform_target_coverage",  0 );
 
   if(defined $def->{"ref_fasta_dict"} && (! defined $def->{"chromosome_names"})){
     my $dictFile = getValue($def, "ref_fasta_dict");
@@ -388,6 +389,42 @@ sub getConfig {
     };
     push @$individual, ($soft_clip_name);
     $bam_input = $soft_clip_name;
+  }
+
+
+  if ($def->{perform_target_coverage}){
+    my $target_coverage_task = $bam_input . "_target_coverage";
+    my $bait_intervals = getValue($def, "bait_intervals_file");
+    my $target_intervals = getValue($def, "target_intervals_file");
+    $config->{$target_coverage_task} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/${target_coverage_task}",
+      option                => "--java-options \"-Xms__MEMORY__\" CollectHsMetrics \\
+      --INPUT __FILE__ \\
+      --OUTPUT __OUTPUT__ \\
+      --BAIT_INTERVALS ${bait_intervals} \\
+      --TARGET_INTERVALS ${target_intervals}
+  ",
+      interpretor           => "",
+      docker_prefix         => "gatk4_",
+      program               => "gatk",
+      check_program         => 0,
+      source_arg            => "",
+      source_ref            => [ $bam_input, ".bam\$" ],
+      source_join_delimiter => " ",
+      output_to_same_folder => 1,
+      output_arg            => "",
+      output_file_prefix    => "_hs_metrics.txt",
+      output_file_ext       => "_hs_metrics.txt",
+      sh_direct             => 1,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    };
+    push @$individual, ($target_coverage_task);
   }
 
   if($def->{perform_extract_bam}){
@@ -760,7 +797,7 @@ sub getConfig {
     }
 
     if ($def->{perform_IBS}){
-      if ($def->{perform_muTect} || $def->{perform_muTect2} ) {
+      if ($def->{perform_muTect} || $def->{perform_muTect2indel} ) {
         my $ibs_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_IBS";
         $config->{$ibs_name} = {
           class                 => "CQS::ProgramWrapper",
@@ -770,6 +807,7 @@ sub getConfig {
           interpretor           => "python",
           program               => "../Variants/IBS.py",
           check_program         => 1,
+          docker_prefix         => "gatk4_",
           parameterFile1_arg    => "-i",
           parameterFile1_ref    => $filter_name,
           parameterSampleFile1_arg    => "-f",
@@ -941,26 +979,28 @@ sub getConfig {
 # };
   }
 
-if ( $def->{"perform_cnv_gatk4_somatic"}) {
-      my $somaticCNVtask = addSomaticCNV($config, $def, $summary, $target_dir, $bam_input);
-}
+  if ( $def->{"perform_cnv_gatk4_somatic"}) {
+    my $somaticCNVtask = addSomaticCNV($config, $def, $summary, $target_dir, $bam_input);
+  }
   
   if ( $def->{"perform_muTect2indel"} ) {
-    my $mutect2Name = "${bam_input}_muTect2indel";
-    $config->{$mutect2Name} = {
-      class        => "GATK::MuTect2Indel",
+    my $mutect2indel = "${bam_input}_muTect2indel";
+    $config->{$mutect2indel} = {
+      class        => "GATK4::MuTect2indel",
       perform      => 1,
-      init_command => $def->{muTect2_init_command},
-      target_dir   => "${target_dir}/$mutect2Name",
       option       => getValue( $def, "muTect2_option" ),
       java_option  => "-Xmx40g",
+      init_command => $def->{muTect2_init_command},
+      target_dir   => "${target_dir}/$mutect2indel",
+      germline_resource => $def->{germline_resource},
+      panel_of_normals => $def->{panel_of_normals},
+      intervals => $def->{muTect2_intervals},
+      interval_padding => $def->{muTect2_interval_padding},
       source_ref   => [ $bam_input, ".bam\$" ],
       groups_ref   => "groups",
       fasta_file   => $fasta,
-      dbsnp_file   => $def->{"dbsnp"},
-      bychromosome => 0,
+      ERC_mode     => $def->{mutect2_ERC_mode},
       sh_direct    => 0,
-      gatk_jar     => getValue( $def, "gatk_jar" ),
       pbs          => {
         "email"    => $email,
         "nodes"    => "1:ppn=1",
@@ -968,10 +1008,43 @@ if ( $def->{"perform_cnv_gatk4_somatic"}) {
         "mem"      => "40gb"
       },
     };
-    push @$summary, $mutect2Name;
+    push @$summary, $mutect2indel;
+
+    my $mutect2indel_merge = $mutect2indel . "_merge";
+    $config->{$mutect2indel_merge} = {
+      class                 => "CQS::ProgramWrapper",
+      perform               => 1,
+      target_dir            => "${target_dir}/${mutect2indel_merge}",
+      option                => "--java-options \"-Xmx40g\" CombineGVCFs \\
+      -R $fasta \\
+      -V __FILE__ \\
+      --OUTPUT __OUTPUT__ \\
+      --drop-somatic-filtering-annotations \\
+      --input-is-somatic
+  ",
+      interpretor           => "",
+      docker_prefix         => "gatk4_",
+      program               => "gatk",
+      check_program         => 0,
+      source_arg            => "",
+      source_type           => "array",
+      source_ref            => [ $mutect2indel, ".pass.indel." ],
+      source_join_delimiter => " \\\n      -V ",
+      output_to_same_folder => 1,
+      output_arg            => "",
+      output_file_prefix    => ".vcf.gz",
+      output_file_ext       => ".vcf.gz",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "48",
+        "mem"      => "40gb"
+      },
+    };
+    push @$summary, $mutect2indel_merge;
 
     if ( $def->{perform_annovar} ) {
-      my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $mutect2Name, ".pass.vcf\$" );
+      my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $mutect2indel_merge, ".vcf.gz\$" );
     }
   }
 
@@ -1026,9 +1099,9 @@ if ( $def->{"perform_cnv_gatk4_somatic"}) {
   }
 
   if ( $def->{perform_cnv_xhmm} ) {
-    addXHMM( $config, $def, $target_dir, $bam_ref, $individual, $summary, $step3, $step4, $step5, $step6 );
+    addXHMM( $config, $def, $target_dir, $bam_ref, $individual, $summary, $summary, $summary, $summary, $summary );
   }
-
+  
   #qc
   if ( getValue( $def, "perform_multiqc" ) ) {
     addMultiQC( $config, $def, $summary, $target_dir, $target_dir );
