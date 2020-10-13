@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package GATK::MuTect2Indel;
+package GATK4::MuTect2indel;
 
 use strict;
 use warnings;
@@ -20,6 +20,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_mt2";
+  $self->{_docker_prefix} = "gatk4_";
   bless $self, $class;
   return $self;
 }
@@ -29,46 +30,32 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = $self->init_parameter( $config, $section );
 
-  my $gatk_jar =
-    get_param_file( $config->{$section}{gatk_jar}, "gatk_jar", 1, not $self->using_docker() );
-  my $faFile =
-    get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
-  my $dbsnpfile =
-    get_param_file( $config->{$section}{dbsnp_file}, "dbsnp_file", 1 );
+  my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
+  my $ERC_mode = get_option($config, $section, "ERC_mode", "NONE");
+  my $suffix = ($ERC_mode eq "GCVF") ? ".g.vcf.gz" : ".vcf.gz";
 
-  #mouse genome has no corresponding cosmic database
-  my $cosmic_param = "";
-  my $cosmicfile =
-    get_param_file( $config->{$section}{cosmic_file}, "cosmic_file", 0 );
-  if ( defined $cosmicfile ) {
-    $cosmic_param = "--cosmic $cosmicfile";
+  my $germline_resource = get_param_file( $config->{$section}{germline_resource}, "germline_resource", 0 );
+  if(defined $germline_resource and ($germline_resource ne "")){
+    $option = $option . " --germline-resource $germline_resource ";
   }
 
-  #normal panel vcf
-  my $normalPanel_param = "";
-  my $normalPanelfile =
-    get_param_file( $config->{$section}{normal_panel_file}, "normal_panel_file", 0 );
-  if ( defined $normalPanelfile ) {
-    $normalPanel_param = "--normal_panel $normalPanelfile";
+  my $panel_of_normals = get_param_file( $config->{$section}{panel_of_normals}, "panel_of_normals", 0 );
+  if(defined $panel_of_normals and ($panel_of_normals ne "")){
+    $option = $option . " --panel-of-normals $panel_of_normals ";
   }
 
   #target region
-  my $bedFile =
-    get_param_file( $config->{$section}{bed_file}, "bed_file", 0 );
+  my $intervals = get_param_file( $config->{$section}{intervals}, "intervals", 0 );
   my $interval_padding = get_option( $config, $section, "interval_padding", 0 );
   my $restrict_intervals = "";
-  if ( defined $bedFile and $bedFile ne "" ) {
+  if ( defined $intervals and ($intervals ne "") ) {
+    $option = $option . " -L $intervals";
     if ( defined $interval_padding and $interval_padding != 0 ) {
-      $restrict_intervals = "-L $bedFile -ip $interval_padding";
-    }
-    else {
-      $restrict_intervals = "-L $bedFile";
+      $option = $option . " -ip $interval_padding";
     }
   }
 
-  my $java = get_java( $config, $section );
-
-  my $java_option = get_option( $config, $section, "java_option", "-Xmx" . lc($memory) );
+  my $java_option = get_option( $config, $section, "java_option", "-Xms" . lc($memory) );
 
   #Sample and Group
   my %raw_files = %{ get_raw_files( $config, $section ) };
@@ -93,22 +80,20 @@ sub perform {
 
     my $normal;
     my $tumor;
-    my $sample_parm;
+    my $sample_param;
     if ( $sampleCount == 1 ) {
       $normal      = "";
       $tumor       = $sample_files[0];
-      $sample_parm = "-I:tumor $tumor";
-      if ( $normalPanel_param eq "" ) {    #Only one sample, no normal panel, then is is a normal only sample, need to add --artifact_detection_mode
-        $sample_parm = " --artifact_detection_mode " . $sample_parm;
-      }
+      $sample_param = "-I $tumor";
     }
     elsif ( $sampleCount != 2 ) {
       die "SampleFile should be tumor only or normal,tumor paired.";
     }
     else {
+      my $normal_name = $sample_files[0][0];
       $normal      = $sample_files[0][1];
       $tumor       = $sample_files[1][1];
-      $sample_parm = "-I:tumor $tumor -I:normal $normal";
+      $sample_param = "-I $tumor -I $normal -normal $normal_name";
     }
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
@@ -117,12 +102,12 @@ sub perform {
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
-    #		my $out_file = "${group_name}.somatic.out";
-    my $vcf            = "${group_name}.somatic.vcf";
-    my $indelFilterOut = "${group_name}.somatic.indel.vcf";
-    my $indelPass      = "${group_name}.somatic.indel.pass.vcf";
+    my $tmp_vcf        = "${group_name}.somatic.tmp${suffix}";
+    my $vcf            = "${group_name}.somatic${suffix}";
+    my $passvcf        = "${group_name}.somatic.pass${suffix}";
+    my $snpPass        = "${group_name}.somatic.snp.pass${suffix}";
+    my $indelPass      = "${group_name}.somatic.indel.pass${suffix}";
 
-    #		my $passvcf  = "${group_name}.somatic.pass.vcf";
 
     my $log_desc = $cluster->get_log_description($log);
 
@@ -144,14 +129,38 @@ fi
 
 if [ ! -s $vcf ]; then
   echo calling variation ...
-  $java $java_option -jar $gatk_jar -T MuTect2 $option -R $faFile $cosmic_param $normalPanel_param --dbsnp $dbsnpfile $sample_parm $restrict_intervals -o $vcf
+  gatk Mutect2 --java-options \"$java_option\" $option \\
+    -R $faFile \\
+    $sample_param \\
+    -ERC $ERC_mode \\
+    -O $tmp_vcf
+
+  if [[ -s ${tmp_vcf}.tbi ]]; then
+    mv $tmp_vcf $vcf
+    mv ${tmp_vcf}.tbi ${vcf}.tbi
+  fi
 fi 
 
-if [[ -s $vcf && ! -s $indelPass ]]; then
+if [[ -s $vcf && ! -s $passvcf ]]; then
+  echo filtering pass ...
+  gatk SelectVariants --java-options \"$java_option\" \\
+    --exclude-filtered \\
+    -V $vcf \\
+    -O $passvcf
+fi
+
+if [[ -s $passvcf && ! -s $indelPass ]]; then
+  echo filtering snp ...
+  gatk SelectVariants --java-options \"$java_option\" \\
+    -select-type SNP \\
+    -V $passvcf \\
+    -O $snpPass
+
   echo filtering indel ...
-  $java $java_option -jar $gatk_jar -T SelectVariants -V $vcf -o $indelFilterOut -selectType INDEL -R $faFile
-  cat $indelFilterOut | awk '\$1 ~ \"#\" || \$7 == \"PASS\"' > $indelPass
-  rm ${indelFilterOut}*
+  gatk SelectVariants --java-options \"$java_option\" \\
+    -select-type INDEL \\
+    -V $passvcf \\
+    -O $indelPass
 fi
 
 ";
@@ -172,13 +181,18 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
+  my $ERC_mode = get_option($config, $section, "ERC_mode", "None");
+  my $suffix = ($ERC_mode eq "GCVF") ? ".g.vcf.gz" : ".vcf.gz";
+
   my $groups = get_raw_files( $config, $section, "groups" );
 
   my $result = {};
   for my $group_name ( keys %{$groups} ) {
     my @result_files = ();
-    push( @result_files, "$result_dir/${group_name}.somatic.indel.pass.vcf" );
-    push( @result_files, "$result_dir/${group_name}.somatic.vcf" );
+    push( @result_files, "$result_dir/${group_name}.somatic.pass.indel${suffix}" );
+    push( @result_files, "$result_dir/${group_name}.somatic.pass.snp${suffix}" );
+    push( @result_files, "$result_dir/${group_name}.somatic.pass${suffix}" );
+    push( @result_files, "$result_dir/${group_name}.somatic${suffix}" );
     $result->{$group_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
