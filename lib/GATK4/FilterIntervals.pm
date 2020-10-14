@@ -42,7 +42,7 @@ sub perform {
   my $ref_fasta_dict = get_param_file( $config->{$section}{ref_fasta_dict}, "ref_fasta_dict", 1 );
   my $ref_fasta      = get_param_file( $config->{$section}{ref_fasta},      "ref_fasta",      1 );
 
-  my $parameters = $self->init_parameter_options(
+  my $parameters = get_parameter_options(
     $config, $section, "--",
     [
       "minimum-gc-content",                      "maximum-gc-content",                         #

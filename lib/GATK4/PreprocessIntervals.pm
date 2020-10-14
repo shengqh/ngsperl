@@ -43,7 +43,7 @@ sub perform {
   my $ref_fasta      = get_param_file( $config->{$section}{ref_fasta},      "ref_fasta",      1 );
 
   #use default value in software rather than assign here since GATK team is still tunning the parameters.
-  my $parameters = $self->init_parameter_options( $config, $section, "--", [ "padding", "bin-length" ] );
+  my $parameters = get_parameter_options( $config, $section, "--", [ "padding", "bin-length" ] );
 
   my $final_file = $task_name . ".preprocessed.interval_list";
 
