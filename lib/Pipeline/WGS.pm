@@ -16,7 +16,14 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(performWGS performWGSTask add_bam_to_gvcf add_gvcf_to_genotype add_hard_filter_and_merge)] );
+our %EXPORT_TAGS = ( 'all' => [qw(performWGS 
+  performWGSTask 
+  add_bam_to_gvcf 
+  add_gvcf_to_genotype
+  add_gvcf_to_genotype_scatter 
+  add_hard_filter_and_left_trim
+  add_merge,
+  add_hard_filter_and_merge)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -237,7 +244,7 @@ sub add_bam_to_gvcf {
   return "GatherVcfs";
 }
 
-sub add_gvcf_to_genotype {
+sub add_gvcf_to_genotype_scatter {
   my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
 
   my $gvcf_to_genotype = {
@@ -255,10 +262,10 @@ sub add_gvcf_to_genotype {
         "mem"      => "40gb"
       },
     },
-    GenotypeGVCFs => {
-      class             => "GATK4::GenotypeGVCFs",
+    GenotypeGVCFsScatter => {
+      class             => "GATK4::GenotypeGVCFsScatter",
       perform           => 1,
-      target_dir        => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_GenotypeGVCFs",
+      target_dir        => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_GenotypeGVCFsScatter",
       option            => "",
       source_ref        => ["GenomicsDBImportScatter"],
       fasta_file        => $def->{ref_fasta},
@@ -273,7 +280,56 @@ sub add_gvcf_to_genotype {
     }
   };
 
-  my @newtasks = ("GenomicsDBImportScatter", "GenotypeGVCFs");
+  my @newtasks = ("GenomicsDBImportScatter", "GenotypeGVCFsScatter");
+
+  push(@$tasks, @newtasks);
+
+  foreach my $task (@newtasks){
+    $config->{$task} = $gvcf_to_genotype->{$task};
+  }
+
+  return "GenotypeGVCFsScatter";
+}
+
+sub add_gvcf_to_genotype {
+  my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source, $interval_key ) = @_;
+
+  my $gvcf_to_genotype = {
+    GenomicsDBImport => {
+      class             => "GATK4::GenomicsDBImport",
+      perform           => 1,
+      target_dir        => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_GenomicsDBImport",
+      option            => "",
+      source_ref        => $source,
+      target_intervals_file => getValue($def, $interval_key),
+      java_option       => "",
+      sh_direct         => 0,
+      pbs               => {
+        "nodes"    => "1:ppn=4",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    },
+    GenotypeGVCFs => {
+      class             => "GATK4::GenotypeGVCFs",
+      perform           => 1,
+      target_dir        => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_GenotypeGVCFs",
+      option            => "",
+      source_ref        => ["GenomicsDBImport"],
+      fasta_file        => $def->{ref_fasta},
+      dbsnp_vcf         => $def->{dbsnp},
+      target_intervals_file => getValue($def, $interval_key),
+      java_option       => "",
+      sh_direct         => 0,
+      pbs               => {
+        "nodes"    => "1:ppn=4",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    }
+  };
+
+  my @newtasks = ("GenomicsDBImport", "GenotypeGVCFs");
 
   push(@$tasks, @newtasks);
 
@@ -284,7 +340,7 @@ sub add_gvcf_to_genotype {
   return "GenotypeGVCFs";
 }
 
-sub add_hard_filter_and_merge {
+sub add_hard_filter_and_left_trim {
   my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
 
   my $filter = {
@@ -319,24 +375,9 @@ sub add_hard_filter_and_merge {
         "mem"      => "10gb"
       },
     },
-    MergeVcfs => {
-      class                 => "GATK4::MergeVcfs",
-      perform               => 1,
-      target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_MergeVcfs",
-      option                => "",
-      source_ref            => ["LeftTrim"],
-      extension             => ".vcf.gz",
-      docker_prefix         => "gatk4_",
-      sh_direct             => 0,
-      pbs                   => {
-        "nodes"    => "1:ppn=1",
-        "walltime" => "4",
-        "mem"      => "10gb"
-      },
-    },
   };
 
-  my @newtasks = ("VariantFilterHard", "LeftTrim", "MergeVcfs");
+  my @newtasks = ("VariantFilterHard", "LeftTrim");
 
   push(@$tasks, @newtasks);
 
@@ -344,7 +385,41 @@ sub add_hard_filter_and_merge {
     $config->{$task} = $filter->{$task};
   }
 
-  return "MergeVcfs";
+  return "LeftTrim";
+}
+
+sub add_merge {
+  my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
+
+  my $task_name = "MergeVcfs";
+  $config->{$task_name} = {
+    class                 => "GATK4::MergeVcfs",
+    perform               => 1,
+    target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_MergeVcfs",
+    option                => "",
+    source_ref            => ["LeftTrim"],
+    extension             => ".vcf.gz",
+    docker_prefix         => "gatk4_",
+    sh_direct             => 0,
+    pbs                   => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "4",
+      "mem"      => "10gb"
+    },
+  };
+
+  push(@$tasks, $task_name);
+
+  return $task_name;
+}
+
+sub add_hard_filter_and_merge {
+  my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
+
+  my $filter = add_hard_filter_and_left_trim($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source);
+  my $merge = add_merge($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $filter);
+
+  return $merge;
 }
 
 sub getConfig {
@@ -473,7 +548,7 @@ fi
   my $gvcf_section = add_bam_to_gvcf($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section);
 
   if ($def->{perform_gvcf_to_genotype}) {
-    my $genotypeGVCFs_section = add_gvcf_to_genotype($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $gvcf_section);
+    my $genotypeGVCFs_section = add_gvcf_to_genotype_scatter($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $gvcf_section);
 
     if ($def->{perform_filter_and_merge}) {
       my $merged_vcf_section;
