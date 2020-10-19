@@ -10,6 +10,7 @@ use CQS::ClassFactory;
 use Pipeline::PipelineUtils;
 use Pipeline::Preprocession;
 use Pipeline::WdlPipeline;
+use Pipeline::WGS;
 use Data::Dumper;
 
 require Exporter;
@@ -38,7 +39,8 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "perform_gatk_callvariants",   0 );
   initDefaultValue( $def, "perform_gatk4_callvariants",  1 );
-  initDefaultValue( $def, "gatk_callvariants_vqsr_mode", 1 );
+  initDefaultValue( $def, "callvariants_vqsr_mode", 1 );
+  initDefaultValue( $def, "gatk_callvariants_vqsr_mode", getValue($def, "callvariants_vqsr_mode") );
   initDefaultValue( $def, "has_chr_in_chromosome_name" , 0);
   initDefaultValue( $def, "perform_gatk4_pairedfastq2bam",  0 );
 
@@ -168,6 +170,7 @@ sub getConfig {
   my $gatk_jar   = getValue( $def, "gatk3_jar" );
   my $picard_jar = getValue( $def, "picard_jar" );
 
+  my $rg_name_regex = undef;
   my $alignment_source_ref = $source_ref;
   if ($def->{perform_gatk4_pairedfastq2bam}){
     $bam_input = addPairedFastqToProcessedBam($config, $def, $individual, $target_dir, $alignment_source_ref);
@@ -196,7 +199,7 @@ sub getConfig {
 
   }else{
     if ($def->{aligner_scatter_count}){
-      my $splitFastq = "splitFastq";
+      my $splitFastq = "bwa_01_splitFastq";
       $config->{ $splitFastq } = {
         class       => "CQS::ProgramWrapperOneToMany",
         perform     => 1,
@@ -221,25 +224,25 @@ sub getConfig {
           "mem"       => "10gb"
         },
       };
+      $rg_name_regex = "(.+)._ITER_";
       $alignment_source_ref = $splitFastq;
       push @$individual, $splitFastq;
     }
 
     #based on paper https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-016-1097-3, we don't do markduplicate anymore
-    if ( $def->{aligner} eq "bwa" & !$def->{perform_gatk4_pairedfastq2bam}) {
+    if ( $def->{aligner} eq "bwa") {
       my $bwa_memory = getValue($def, "bwa_memory", "40gb");
       $fasta = getValue( $def, "bwa_fasta" );
-      my $bwa = "bwa";
+      my $bwa = $def->{aligner_scatter_count}?"bwa_02_alignment":"bwa";
       $config->{ $bwa } = {
         class                 => "Alignment::BWA",
         perform               => 1,
-        target_dir            => "${target_dir}/" . getNextFolderIndex($def) . $def->{aligner},
+        target_dir            => "${target_dir}/" . getNextFolderIndex($def) . $bwa,
         option                => getValue( $def, "bwa_option" ),
         bwa_index             => $fasta,
         source_ref            => $alignment_source_ref,
         output_to_same_folder => 1,
-        picard_jar            => getValue( $def, "picard_jar" ),
-        mark_duplicates       => 0,
+        rg_name_regex         => $rg_name_regex,
         sh_direct             => 0,
         pbs                   => {
           "nodes"    => "1:ppn=" . $max_thread,
@@ -247,23 +250,20 @@ sub getConfig {
           "mem"      => $bwa_memory
         },
       };
-      $bam_ref = [ "bwa", ".bam\$" ];
-      $bam_input = "bwa";
-      push @$individual, ( "bwa" );
+      $bam_ref = [ $bwa, ".bam\$" ];
+      $bam_input = $bwa;
+      push @$individual, ( $bwa );
 
-      my $bwa_summary = $bwa . "_summary";
+      my $bwa_summary = $def->{aligner_scatter_count}?"bwa_04_summary":"bwa_summary";
       $config->{ $bwa_summary } = {
-        class                 => "CQS::ProgramWrapper",
+        class                 => "CQS::UniqueR",
         perform               => 1,
         target_dir            => "${target_dir}/" . getNextFolderIndex($def) . $bwa_summary,
         option                => "",
-        interpretor           => "python",
-        program               => "../Count/countTable.py",
-        parameterSampleFile1_arg    => "-i",
+        rtemplate             => "../Alignment/BWASummary.r",
         parameterSampleFile1_ref    => [$bwa, ".bamstat"],
-        output_to_same_folder => 1,
-        output_arg            => "-o",
-        output_file_ext       => ".summary.txt",
+        output_file           => "",
+        output_file_ext       => ".BWASummary.csv;.BWASummary.png;.BWASummary.sorted.png",
         sh_direct             => 1,
         pbs                   => {
           "nodes"     => "1:ppn=1",
@@ -271,6 +271,11 @@ sub getConfig {
           "mem"       => "10gb"
         },
       };
+
+      if ($def->{aligner_scatter_count}) {
+        $config->{ $bwa_summary }{rCode} = "rg_name_regex = '$rg_name_regex'";
+      }
+
       push @$summary, $bwa_summary;
     }
     else {
@@ -278,7 +283,7 @@ sub getConfig {
     }
 
     if ($def->{aligner_scatter_count}){
-      my $mergeBam = $def->{aligner} . "_merge";
+      my $mergeBam = "bwa_03_merge";
       $config->{$mergeBam} = {
         class                 => "CQS::ProgramWrapperManyToOne",
         perform               => 1,
@@ -305,6 +310,7 @@ sub getConfig {
       $bam_ref = [ $mergeBam, ".bam\$" ];
       push @$individual, (  $mergeBam );
     }
+
 
     my $perform_cnv = $def->{perform_cnv_cnMOPs} || $def->{perform_cnv_gatk4_cohort} || $def->{perform_cnv_xhmm};
 
@@ -391,6 +397,30 @@ sub getConfig {
     $bam_input = $soft_clip_name;
   }
 
+  if ($def->{perform_TEQC}) {
+    $fasta = getValue( $def, "bwa_fasta" );
+
+    #TEQC for target region coverage
+    $config->{"TEQC"} = {
+      class      => "CQS::UniqueR",
+      perform    => 1,
+      target_dir => $target_dir . '/' . "TEQC",
+      parameterSampleFile1_ref=> $bam_ref,
+      parameterFile1=> $def->{covered_bed},
+      rtemplate  => "runTEQC.R",
+      rCode      => "genome=\""
+        . getValue($def, "annovar_buildver", "hg38")
+        . "\";",
+      output_file_ext => ".TEQC",
+      sh_direct       => 1,
+      'pbs'           => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '20gb',
+        'walltime' => '10'
+      },
+    };
+    push @$summary, ("TEQC");
+  }
 
   if ($def->{perform_target_coverage}){
     my $target_coverage_task = $bam_input . "_target_coverage";
@@ -417,7 +447,7 @@ sub getConfig {
       output_arg            => "",
       output_file_prefix    => "_hs_metrics.txt",
       output_file_ext       => "_hs_metrics.txt",
-      sh_direct             => 1,
+      sh_direct             => 0,
       pbs                   => {
         "nodes"    => "1:ppn=1",
         "walltime" => "24",
@@ -518,7 +548,7 @@ sub getConfig {
     push @$summary, $countTable;
   }
 
-  my $gatk_index = {};
+  my $gatk_index = $def;
   my $gatk_index_snv = "SNV_Index";
 
   my $gatk_prefix = "";
@@ -535,7 +565,7 @@ sub getConfig {
       source_ref        => $bam_ref,
       java_option       => "",
       fasta_file        => $fasta,
-      extension         => ".g.vcf",
+      extension         => ".g.vcf.gz",
       bed_file          => $def->{covered_bed},
       blacklist_file    => $def->{blacklist_file},
       by_chromosome     => 0,
@@ -550,7 +580,11 @@ sub getConfig {
     };
     push @$individual, ($gvcf_name);
 
-    if(getValue($def, "gatk4_variant_filter_by_chromosome", 0)){
+    if(not getValue($def, "callvariants_vqsr_mode")){
+      my $genotypeGVCFs_section = add_gvcf_to_genotype($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $gvcf_name, "covered_bed");
+      my $filter_name = add_hard_filter_and_merge($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $genotypeGVCFs_section);
+    }
+    elsif(getValue($def, "gatk4_variant_filter_by_chromosome", 0)){
       my $vqsr_prefix = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) ;
       my $filter_name_chr = $vqsr_prefix . "_vqsr_1_scatter";
       $config->{$filter_name_chr} = {
