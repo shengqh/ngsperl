@@ -1009,6 +1009,7 @@ sub addAnnovarFilter {
   }
 
   my $annovar_filter_name = getIndexName($prefix, "_filter", $indexDic, $indexKey);
+  
   $config->{$annovar_filter_name} = {
     class               => "Annotation::FilterAnnovar",
     perform             => 1,
@@ -1016,7 +1017,7 @@ sub addAnnovarFilter {
     source_ref          => $annovar_name,
     option              => $def->{annovar_filter},
     sh_direct           => 1,
-    maximum_freq_values => "0.001,0.01,0.1,1.0",
+    maximum_freq_values => getValue($def, "maximum_freq_values", "0.001,0.01,0.1,1.0"),
     filter_fq_equal_1   => $def->{filter_variants_fq_equal_1},
     pbs                 => {
       "nodes"    => "1:ppn=1",
