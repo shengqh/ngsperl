@@ -97,7 +97,7 @@ sub perform {
         $rg_sample_name = $1;
       }
     }
-    my $rg_sample_id = $rg_sample_name;
+    my $rg_sample_id = "1";
     if ($rg_id_regex ne ""){
       if ($sample_name =~ /$rg_id_regex/ ) {
         $rg_sample_id = $1;
