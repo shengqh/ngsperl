@@ -74,10 +74,10 @@ sub perform {
       my $cur_maf_file   = basename($sample_file) . ".tmp";
       my $cur_final_file = basename($sample_file) . ".maf";
       print $pbs "
-R --vanilla -f $r_script --args $sample_file $cur_maf_file $refBuild
+Rscript --vanilla $r_script $sample_file $cur_maf_file $refBuild
   
 if [[ -s $cur_maf_file ]]; then
-  python $py_script -i $cur_maf_file -o $cur_final_file
+  python3 $py_script -i $cur_maf_file -o $cur_final_file
 fi
 
 if [[ -s $cur_final_file ]]; then
