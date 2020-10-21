@@ -1,7 +1,10 @@
+
 options(bitmapType='cairo')
 
 library(reshape2)
 library(ggplot2)
+library(stringr)
+library(dplyr)
 
 #parSampleFile1 = "/scratch/cqs/shengq2/dnaseq/20201014_liuqi_gene_panel_dbsnp150_bigbed/bwa_summary/result/Adenoma__fileList1.list"
 #outFile = "/scratch/cqs/shengq2/dnaseq/20201014_liuqi_gene_panel_dbsnp150_bigbed/bwa_summary/result/Adenoma"
@@ -22,6 +25,18 @@ for(i in c(1:nrow(filelist))){
   }
 }
 
+if (exists("rg_name_regex")) {
+  sample_names<-str_match(colnames(final), rg_name_regex)[,2]
+  unique_sample_names<-unique(sample_names)
+
+  for (sample_name in unique_sample_names){
+    columns = which(sample_names == sample_name)
+    col_eqn <- paste(colnames(final)[columns], collapse = " + ")
+    newdata = final %>% mutate(combined = eval(parse(text = col_eqn)))
+    final[, sample_name] = newdata$combined
+  }
+  final<-final[,unique_sample_names,drop=F]
+}
 write.csv(file=paste0(outFile, ".BWASummary.details.csv"), final)
 
 reads=final[c("UnmappedFragments", "UniquelyMappedFragments", "MultipleMappedFragments"),]
@@ -54,5 +69,3 @@ g=ggplot(meltreads, aes(x=Sample, y=Count, fill=Read)) +
   theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
         axis.text.y = element_text(size=11, face="bold"))
 print(g)
-
-  
