@@ -1069,6 +1069,7 @@ sub addAnnovarMafReport {
     target_dir => $target_dir . "/" . $annovar_to_maf,
     source_ref => [ $annovar_filter_name, "\\.freq0\\..*.filtered.tsv" ],
     refBuild   => getValue( $def, "annovar_buildver" ),
+    docker_prefix => "mafreport_",
     sh_direct  => 1,
     pbs        => {
       "email"     => $def->{email},
@@ -1088,6 +1089,7 @@ sub addAnnovarMafReport {
     rtemplate                => "../Annotation/mafReport.r",
     output_file              => "parameterSampleFile1",
     output_file_ext          => ".report.html",
+    docker_prefix            => "mafreport_",
     parameterSampleFile1_ref => [ $annovar_to_maf, ".tsv.maf\$" ],
     parameterFile1           => $def->{family_info_file},
     sh_direct                => 1,
