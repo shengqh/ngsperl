@@ -22,7 +22,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(performWGS
   add_gvcf_to_genotype
   add_gvcf_to_genotype_scatter 
   add_hard_filter_and_left_trim
-  add_merge,
+  add_merge
   add_hard_filter_and_merge)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
