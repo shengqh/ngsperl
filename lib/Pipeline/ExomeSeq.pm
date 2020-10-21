@@ -39,6 +39,7 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "perform_gatk_callvariants",   0 );
   initDefaultValue( $def, "perform_gatk4_callvariants",  1 );
+  initDefaultValue( $def, "gatk4_scatter_count",  0 );
   initDefaultValue( $def, "callvariants_vqsr_mode", 1 );
   initDefaultValue( $def, "gatk_callvariants_vqsr_mode", getValue($def, "callvariants_vqsr_mode") );
   initDefaultValue( $def, "has_chr_in_chromosome_name" , 0);
@@ -130,6 +131,7 @@ sub getConfig {
 
   my $email      = getValue( $def, "email" );
   my $max_thread = getValue( $def, "max_thread" );
+  my $covered_bed = getValue( $def, "covered_bed" );
 
   my $geneLocus = undef;
   my $chrCode = getValue($def, "has_chr_in_chromosome_name") ? ";addChr=1" : "";
@@ -183,7 +185,7 @@ sub getConfig {
       perform    => 1,
       target_dir => $target_dir . '/' . "TEQC",
       parameterSampleFile1_ref=> $bam_ref,
-      parameterFile1=> $def->{covered_bed},
+      parameterFile1=> $covered_bed,
       rtemplate  => "runTEQC.R",
       rCode      => "genome=\""
         . getValue($def, "annovar_buildver", "hg38")
@@ -224,7 +226,7 @@ sub getConfig {
           "mem"       => "10gb"
         },
       };
-      $rg_name_regex = "(.+)._ITER_";
+      $rg_name_regex = "(.+)_ITER_";
       $alignment_source_ref = $splitFastq;
       push @$individual, $splitFastq;
     }
@@ -273,7 +275,7 @@ sub getConfig {
       };
 
       if ($def->{aligner_scatter_count}) {
-        $config->{ $bwa_summary }{rCode} = "rg_name_regex = '$rg_name_regex'";
+        $config->{ $bwa_summary }{rCode} = "rg_name_regex='$rg_name_regex'";
       }
 
       push @$summary, $bwa_summary;
@@ -310,7 +312,6 @@ sub getConfig {
       $bam_ref = [ $mergeBam, ".bam\$" ];
       push @$individual, (  $mergeBam );
     }
-
 
     my $perform_cnv = $def->{perform_cnv_cnMOPs} || $def->{perform_cnv_gatk4_cohort} || $def->{perform_cnv_xhmm};
 
@@ -406,7 +407,7 @@ sub getConfig {
       perform    => 1,
       target_dir => $target_dir . '/' . "TEQC",
       parameterSampleFile1_ref=> $bam_ref,
-      parameterFile1=> $def->{covered_bed},
+      parameterFile1=> $covered_bed,
       rtemplate  => "runTEQC.R",
       rCode      => "genome=\""
         . getValue($def, "annovar_buildver", "hg38")
@@ -556,6 +557,51 @@ sub getConfig {
   my $filter_name = "";
   if ( $def->{perform_gatk4_callvariants} ) {
     $gatk_prefix = $bam_input . "_gatk4_SNV_";
+
+    my $perform_gatk4_by_scatter = getValue($def, "perform_gatk4_by_scatter", 0);
+
+    if ($perform_gatk4_by_scatter){
+      if (not defined $def->{interval_list_file}){
+        my $gatk4_scatter_count = getValue($def, "gatk4_scatter_count", 0);
+        my $scatterIntervalTask = $gatk_prefix . "00_scatter_intervals";
+        $config->{$scatterIntervalTask} = {
+          class                 => "CQS::ProgramWrapperOneToOne",
+          perform               => 1,
+          target_dir            => "${target_dir}${scatterIntervalTask}",
+          option                => "--java-options \"-Xmx40g\" SplitIntervals \\
+          -L __FILE__ \\
+          -O __NAME__.intervals \\
+          -scatter $gatk4_scatter_count \\
+          -R $fasta 
+
+ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
+",
+          interpretor           => "",
+          docker_prefix         => "gatk4_",
+          program               => "gatk",
+          check_program         => 0,
+          source_arg            => "",
+          source            => {
+            $def->{task_name} => [$covered_bed]
+          },
+          output_to_same_folder => 1,
+          output_arg            => "",
+          no_output => 1,
+          output_file_prefix    => ".intervals_list",
+          output_file_ext       => ".intervals_list",
+          sh_direct             => 1,
+          pbs                   => {
+            "nodes"    => "1:ppn=1",
+            "walltime" => "2",
+            "mem"      => "10gb"
+          },
+        };
+
+        performTask($config, $scatterIntervalTask);
+        die "\n\nRun task ${target_dir}${scatterIntervalTask} first, then add following line to configuration: \n\ninterval_list_file => '" . $config->{$scatterIntervalTask}{target_dir} . "/" . $def->{task_name} . ".intervals_list', \n\n";
+      }
+    }
+
     my $gvcf_name         = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_hc_gvcf";
     $config->{$gvcf_name} = {
       class             => "GATK4::HaplotypeCaller",
@@ -566,7 +612,7 @@ sub getConfig {
       java_option       => "",
       fasta_file        => $fasta,
       extension         => ".g.vcf.gz",
-      bed_file          => $def->{covered_bed},
+      bed_file          => $covered_bed,
       blacklist_file    => $def->{blacklist_file},
       by_chromosome     => 0,
       gvcf              => 1,
@@ -581,8 +627,14 @@ sub getConfig {
     push @$individual, ($gvcf_name);
 
     if(not getValue($def, "callvariants_vqsr_mode")){
-      my $genotypeGVCFs_section = add_gvcf_to_genotype($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $gvcf_name, "covered_bed");
-      my $filter_name = add_hard_filter_and_merge($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $genotypeGVCFs_section);
+      my $genotypeGVCFs_section;
+      
+      if ($perform_gatk4_by_scatter) {
+        $genotypeGVCFs_section = add_gvcf_to_genotype_scatter($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $gvcf_name, "covered_bed");
+      }else{
+        $genotypeGVCFs_section = add_gvcf_to_genotype($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $gvcf_name, "covered_bed");
+      }
+      $filter_name = add_hard_filter_and_merge($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $genotypeGVCFs_section);
     }
     elsif(getValue($def, "gatk4_variant_filter_by_chromosome", 0)){
       my $vqsr_prefix = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) ;
@@ -722,7 +774,7 @@ sub getConfig {
       fasta_file    => $fasta,
       gatk_jar      => $gatk_jar,
       extension     => ".g.vcf",
-      bed_file      => $def->{covered_bed},
+      bed_file      => $covered_bed,
       by_chromosome => 0,
       gvcf          => 1,
       sh_direct     => 0,
@@ -787,6 +839,8 @@ sub getConfig {
     push @$summary, ($filter_name);
   }
 
+  #print($filter_name);
+
   my $annovar_filter_geneannotation_name = undef;
   if ( $def->{perform_gatk4_callvariants} or $def->{perform_gatk_callvariants} ) {
     if ( $def->{filter_variants_by_allele_frequency} ) {
@@ -802,7 +856,7 @@ sub getConfig {
         parameterFile1_ref    => $filter_name,
         output_to_same_folder => 1,
         output_arg            => "-o",
-        output_file_ext       => ".maf_filtered.vcf",
+        output_file_ext       => ".maf_filtered.vcf.gz",
         sh_direct             => 1,
         pbs                   => {
           "email"     => $def->{email},
@@ -1090,7 +1144,7 @@ sub getConfig {
       target_dir  => "${target_dir}/$cnmopsName",
       option      => "",
       source_ref  => [ $bam_input, ".bam\$" ],
-      bedfile     => $def->{covered_bed},
+      bedfile     => $covered_bed,
       isbamsorted => 1,
       sh_direct   => 1,
       pbs         => {
