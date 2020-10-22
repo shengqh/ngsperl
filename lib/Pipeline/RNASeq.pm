@@ -43,6 +43,7 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_call_variants", 0 );
   initDefaultValue( $def, "perform_multiqc",       0 );
   initDefaultValue( $def, "perform_webgestalt",    0 );
+  initDefaultValue( $def, "perform_webgestaltHeatmap",    0 );
   initDefaultValue( $def, "perform_report",        1 );
 
   if ( not $def->{"perform_gsea"} ) {
@@ -413,6 +414,7 @@ sub getRNASeqConfig {
   my $webgestaltTaskName;
   my $gseaTaskName;
   my $linkTaskName;
+  my $webgestaltHeatmapTaskName;
   if ( defined $def->{pairs} ) {
     if ( $def->{perform_proteincoding_gene} ) {
       $deseq2taskname = addDEseq2( $config, $def, $summary, "proteincoding_genetable", [ "genetable", ".proteincoding.count\$" ], $def->{target_dir}, $def->{DE_min_median_read} );
@@ -468,6 +470,32 @@ sub getRNASeqConfig {
       };
       push( @$summary, $linkTaskName );
 
+      if (getValue( $def, "perform_webgestaltHeatmap" )) {
+        $webgestaltHeatmapTaskName = $webgestaltTaskName . "_heatmap_deseq2";
+        $config->{$webgestaltHeatmapTaskName} = {
+          class                      => "CQS::UniqueR",
+          perform                    => 1,
+          target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $webgestaltHeatmapTaskName,
+          rtemplate                  => "../Annotation/WebGestaltHeatmap.r",
+          output_to_result_directory => 1,
+          output_perSample_file      => "parameterSampleFile1",
+          output_perSample_file_ext  => ".heatmap.png",
+          parameterSampleFile1_ref   => [ $webgestaltTaskName, ".txt\$" ],
+          parameterSampleFile2_ref   => [ $deseq2taskname, "sig.csv\$" ],
+          parameterSampleFile3_ref   => [ $deseq2taskname, "vsd.csv\$" ],
+          parameterSampleFile4_ref   => [ $deseq2taskname, ".design\$" ],
+          sh_direct                  => 1,
+          rCode                      => "",
+          pbs                        => {
+            "email"     => $def->{email},
+            "emailType" => $def->{emailType},
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "23",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$summary, $webgestaltHeatmapTaskName );
+      }
       #}
     }
 
