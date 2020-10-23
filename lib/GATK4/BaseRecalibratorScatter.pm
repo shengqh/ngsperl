@@ -37,7 +37,7 @@ sub perform {
   my $known_indels_sites_VCFs = get_option( $config, $section, "known_indels_sites_VCFs", 0 );
  
   my $known_indels_sites_VCFs_option = "";
-  if (defined $known_indels_sites_VCFs) {
+  if ($known_indels_sites_VCFs != 0) {
     $known_indels_sites_VCFs_option = "--known-sites " . join(" --known-sites ", @$known_indels_sites_VCFs);
   }
 
