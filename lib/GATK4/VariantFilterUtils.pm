@@ -171,7 +171,7 @@ if [[ -s $sites_only_variant_filtered_vcf && ! -s $snps_recalibration ]]; then
     --trust-all-polymorphic \\
     $snp_tranche_option \\
     $recalibration_annotation_option \\
-    --sample-every-Nth-variant ${downsampleFactor} \
+    --sample-every-Nth-variant ${downsampleFactor} \\
     --max-gaussians 6 \\
     ${hapmap_option} ${omni_option} ${g1000_option} ${dbsnp_option} -mode SNP
 fi
