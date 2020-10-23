@@ -180,7 +180,7 @@ fi
       print $pbs "    
 if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
   echo sort_bam=`date`
-  sambamba sort -m $sort_memory -t $thread -o $sorted_bam_file $unsorted_bam_file
+  sambamba sort -m $sort_memory -t $thread --tmpdir tmp -o $sorted_bam_file $unsorted_bam_file
   echo index_bam=`date`
   sambamba index -t $thread $sorted_bam_file 
   $chromosome_grep_command
