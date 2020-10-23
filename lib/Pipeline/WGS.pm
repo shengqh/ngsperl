@@ -38,9 +38,13 @@ sub initializeDefaultOptions {
   getValue($def, "interval_list_file");
   getValue($def, "known_indels_sites_VCFs");
 
+  #start from FASTQ
+  initDefaultValue( $def, "perform_preprocessing", 1 );
+
   #let's start from bam file
-  initDefaultValue( $def, "perform_preprocessing", 0 );
-  initDefaultValue( $def, "bam_file_section", "files" );
+  #initDefaultValue( $def, "perform_preprocessing", 0 );
+  #initDefaultValue( $def, "bam_file_section", "files" );
+
   initDefaultValue( $def, "gatk_prefix", "gatk4_" );
 
   initDefaultValue( $def, "perform_replace_read_group", 0);
@@ -137,7 +141,7 @@ sub add_bam_to_gvcf {
       source_ref        => $source,
       fasta_file        => $def->{ref_fasta},
       dbsnp_vcf         => $def->{dbsnp},
-      known_indels_sites_VCFs => $def->{known_indels_sites_VCFs},
+      known_indels_sites_VCFs => getValue($def, "known_indels_sites_VCFs"),
       sh_direct         => 0,
       pbs               => {
         "nodes"    => "1:ppn=1",
@@ -440,6 +444,20 @@ sub getConfig {
   my $use_hard_filter = getValue($def, "use_hard_filter");
 
   my $bam_section = $def->{bam_file_section};
+  if (not defined $bam_section) {
+    my $aligner_scatter_count = getValue($def, "aligner_scatter_count", 0);
+
+    my $bam_ref;
+    my $bam_task;
+    if ($aligner_scatter_count > 0){
+      my ($bam_ref, $bam_task) = add_BWA_and_summary_scatter($config, $def, $individual, $target_dir, "files");
+      $bam_section = $bam_ref;
+    } else {
+      my $bam_task = "bwa_wgs";
+      add_BWA_WGS($config, $def, $individual, $target_dir, $bam_task, "files");
+      $bam_section = [ $bam_task, ".bam\$" ];
+    }
+  }
 
   my $perform_replace_read_group = getValue($def, "perform_replace_read_group", 0);
   if ($perform_replace_read_group) {
@@ -511,35 +529,9 @@ fi
 
   my $perform_mark_duplicates = getValue($def, "perform_mark_duplicates", 1);
   if ($perform_mark_duplicates) {
-    $config->{markduplicates} = {
-      class                 => "CQS::ProgramWrapperOneToOne",
-      perform               => 1,
-      target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_markduplicates_sambamba",
-      option                => "markdup -p -t __THREAD__ --tmpdir tmp __FILE__ __NAME__.tmp.bam && touch __OUTPUT__.done
-      
-  if [[ -e __OUTPUT__.done ]]; then
-    mv __NAME__.tmp.bam __OUTPUT__
-    mv __NAME__.tmp.bam.bai __OUTPUT__.bai
-  fi
-  ",
-      interpretor           => "",
-      program               => "sambamba",
-      check_program         => 0,
-      source_arg            => "",
-      source_ref            => $bam_section,
-      source_join_delimiter => " ",
-      docker_prefix         => "cqs_",
-      output_to_same_folder => 1,
-      output_arg            => "",
-      output_file_prefix    => ".duplicates_marked.bam",
-      output_file_ext       => ".duplicates_marked.bam",
-      sh_direct             => 0,
-      pbs                   => {
-        "nodes"    => "1:ppn=8",
-        "walltime" => "24",
-        "mem"      => "80gb"
-      },
-    };
+    my $markduplicates = "markduplicates";
+
+    addMarkduplicates($config, $def, $summary, $target_dir, $markduplicates, $bam_section);
 
     $bam_section = "markduplicates";
     push(@$summary, "markduplicates");
@@ -624,13 +616,16 @@ fi
     }
   }
 
+  my $tasks = [@$individual, @$summary];
+
   $config->{sequencetask} = {
     class => "CQS::SequenceTaskSlurmSlim",
     perform => 1,
     target_dir            => "${target_dir}/sequencetask",
     option                => "",
     source                => {
-      processing => $summary,
+      
+      processing => $tasks,
     },
     sh_direct             => 1,
     pbs                   => {
