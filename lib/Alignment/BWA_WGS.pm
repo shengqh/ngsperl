@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use File::Basename;
 use POSIX;
+use List::Util qw[min max];
 use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
@@ -32,10 +33,11 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = $self->init_parameter( $config, $section );
 
   my ($sort_memory, $isMB) = getMemoryPerThread($memory, $thread);
+  my $max_useful_memory = max(5, ($sort_memory * $thread - 10));
   if ($isMB) {
-    $sort_memory = $sort_memory . "M";
+    $sort_memory = $max_useful_memory . "M";
   }else{
-    $sort_memory = $sort_memory . "G";
+    $sort_memory = $max_useful_memory . "G";
   }
 
   my $selfname = $self->{_name};
@@ -93,7 +95,7 @@ sub perform {
 
     print $pbs "
 echo bwa_mem=`date`
-bwa mem $option $rg $bwa_index $sample_files_str | samtools view -bhu - | sambamba sort -m $memory -l 0 -u -t $thread -o ${final_file} /dev/stdin
+bwa mem $option $rg $bwa_index $sample_files_str | samtools view -bhu - | sambamba sort -m $memory -l 0 -u -t $thread --tmpdir tmp -o ${final_file} /dev/stdin
 bwa 2>\&1 | grep Version | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${sample_name}.bwa.version
 sambamba index ${final_file}
 ";
