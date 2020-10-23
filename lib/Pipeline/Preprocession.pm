@@ -202,10 +202,9 @@ sub getPreprocessionConfig {
       }
     }
 
-    #print(Dumper($groups));
+    #print("groups=" . Dumper($groups));
     $def->{groups} = $groups;
   }
-
 
   if (defined $def->{covariance_patterns}){
     my $files = $def->{files};
@@ -234,7 +233,7 @@ sub getPreprocessionConfig {
       }
     }
 
-    #print(Dumper($cov_map));
+    #print("covariances=" . Dumper($cov_map));
 
     my $cov_file = $target_dir . "/covariance.txt";
     open( my $cov, ">$cov_file" ) or die "Cannot create $cov_file";
