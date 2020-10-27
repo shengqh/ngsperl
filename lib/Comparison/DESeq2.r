@@ -432,7 +432,8 @@ for(countfile_index in c(1:length(countfiles))){
     comparisonTitle=comparisons$ComparisonTitle[comparison_index]
     if ("designFormula" %in% colnames(comparisons)) {
       designFormula=comparisons$designFormula[comparison_index]
-      if (designFormula=="") {
+      print(paste0("designFormula = ", designFormula, "\n"))
+      if (is.na(designFormula) || (designFormula=="")) {
         designFormula=NULL
       } else {
         designFormula=as.formula(designFormula)
@@ -442,7 +443,7 @@ for(countfile_index in c(1:length(countfiles))){
     }
     if ("contrast" %in% colnames(comparisons)) {
       contrast=comparisons$contrast[comparison_index]
-      if (contrast=="") {
+      if (is.na(contrast) || (contrast=="")) {
         contrast=NULL
       } else {
         contrast=list(strsplit(contrast,";")[[1]])

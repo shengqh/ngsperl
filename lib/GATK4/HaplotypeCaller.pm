@@ -42,7 +42,7 @@ sub perform {
   my $blacklist_intervals = get_param_file( $config->{$section}{blacklist_file}, "blacklist_file", 0 );
   my $blacklist_intervals_option = $blacklist_intervals ? "-XL " . $blacklist_intervals : "";
 
-  my $extension = get_option( $config, $section, "extension", ".g.vcf" );
+  my $extension = get_option( $config, $section, "extension", ".g.vcf.gz" );
 
   my $java_option = $self->get_java_option($config, $section, $memory);
 
@@ -70,16 +70,19 @@ sub perform {
     my $bam_file     = $sample_files[0];
 
     my $snvOut    = $sample_name . $extension;
-    
+
+    my $snvTmp = $sample_name . ".tmp". $extension;
+    my $snvTmpIndex;
+
     #if the program throw exception, the idx file will not be generated.
     my $snvOutIndex;
     if ($extension =~ ".gz\$") {
       $snvOutIndex = $snvOut . ".tbi";
+      $snvTmpIndex = $snvTmp . ".tbi";
     } else {
       $snvOutIndex = $snvOut . ".idx";
+      $snvTmpIndex = $snvTmp . ".idx";
     }
-
-    my $snvStat   = $sample_name . ".stat";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -95,7 +98,12 @@ gatk --java-options \"$java_option\" \\
   --native-pair-hmm-threads $thread \\
   -R $faFile \\
   -I $bam_file \\
-  -O $snvOut
+  -O $snvTmp
+
+if [[ -s $snvTmpIndex ]]; then
+  mv $snvTmp $snvOut
+  mv $snvTmpIndex $snvOutIndex
+fi
 ";
     
     $self->close_pbs( $pbs, $pbs_file );
@@ -114,7 +122,7 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
   my $result = {};
 
-  my $extension = get_option( $config, $section, "extension", ".g.vcf" );
+  my $extension = get_option( $config, $section, "extension", ".g.vcf.gz" );
 
   my %bam_files = %{ get_raw_files( $config, $section ) };
   for my $sample_name ( sort keys %bam_files ) {

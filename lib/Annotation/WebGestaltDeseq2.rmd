@@ -115,6 +115,10 @@ cat(paste0("### ", tabRef("enriched", plotData$category), "\n\n"))
 enriched<-updateEnrichedTable(enriched)
 
 rowCount<-nrow(enriched)
+if (rowCount>=200) {
+  rowCount=200
+  cat("\nMore than 200 categories in WebGestalt Result. Only top 200 were kept.\n")
+}
 
 curTable<-enriched[c(1:rowCount),c(1:9, 12,13)]
 print(kable(curTable) %>% 

@@ -92,8 +92,9 @@ sub perform {
     else {
       my $normal_name = $sample_files[0][0];
       $normal      = $sample_files[0][1];
+      my $tumor_name = $sample_files[1][0];
       $tumor       = $sample_files[1][1];
-      $sample_param = "-I $tumor -I $normal -normal $normal_name";
+      $sample_param = "-I $tumor -tumor $tumor_name -I $normal -normal $normal_name";
     }
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );

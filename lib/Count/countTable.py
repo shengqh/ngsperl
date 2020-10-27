@@ -23,7 +23,7 @@ def readFileMap(fileName):
       check_file_exists(filepath.strip())
   return(result)
 
-DEBUG=True
+DEBUG=False
 NotDEBUG=not DEBUG
 
 parser = argparse.ArgumentParser(description="Get count table",

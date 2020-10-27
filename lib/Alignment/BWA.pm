@@ -97,7 +97,7 @@ sub perform {
         $rg_sample_name = $1;
       }
     }
-    my $rg_sample_id = $rg_sample_name;
+    my $rg_sample_id = "1";
     if ($rg_id_regex ne ""){
       if ($sample_name =~ /$rg_id_regex/ ) {
         $rg_sample_id = $1;
@@ -180,7 +180,7 @@ fi
       print $pbs "    
 if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
   echo sort_bam=`date`
-  sambamba sort -m $sort_memory -t $thread -o $sorted_bam_file $unsorted_bam_file
+  sambamba sort -m $sort_memory -t $thread --tmpdir tmp -o $sorted_bam_file $unsorted_bam_file
   echo index_bam=`date`
   sambamba index -t $thread $sorted_bam_file 
   $chromosome_grep_command

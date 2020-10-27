@@ -42,7 +42,7 @@ sub perform {
   my $model_shard_path = get_raw_files( $config, $section, "model_shard_path" );
   my $model_args = get_rawfiles_option( $model_shard_path, "--model-shard-path" );
 
-  my $parameters = $self->init_parameter_options( $config, $section, "--", ["autosomal-ref-copy-number"], ["2"] );
+  my $parameters = get_parameter_options( $config, $section, "--", ["autosomal-ref-copy-number"], ["2"] );
 
   my $hasChrInChromosomeName = get_option($config, $section, "has_chr_in_chromosome_name" , 0);
   my $chrPrefix = $hasChrInChromosomeName ? "chr":"";

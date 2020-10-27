@@ -34,6 +34,9 @@ if (useRawPValuePathway) {
 if (!exists("geneIdType")) {
   geneIdType="ensembl_gene_id"
 }
+if (!exists("pathwaysToPlot")) {
+  pathwaysToPlot=NULL
+}
 ###############################
 #end parameters
 ###############################
@@ -113,6 +116,40 @@ col_by_value<-
     }
   }
 
+plot_pathway_overall<-
+function (gene_values, species = "hsa", pathwayNumInFigure = 5, 
+    rankByVar = colnames(gene_values)[1]) 
+{
+    kegg_enriched_pathway = find_enriched_pathway(row.names(gene_values), 
+        species = species, returned_pvalue = 1, returned_adjpvalue = 1, 
+        returned_genenumber = 5)
+    names(kegg_enriched_pathway[[2]]) = make.names(kegg_enriched_pathway[[1]]$Pathway_Name)
+    geneValuesInPathway <- lapply(kegg_enriched_pathway[[2]], 
+        function(x) gene_values[intersect(x, row.names(gene_values)), 
+            , drop = FALSE])
+    dataForPlot = NULL
+    for (i in 1:length(geneValuesInPathway)) {
+        dataForPlot = rbind(dataForPlot, cbind(geneValuesInPathway[[i]], 
+            Pathway = names(geneValuesInPathway)[i],Id=row.names(kegg_enriched_pathway[[1]])[i]))
+    }
+    dataForPlot = reshape2::melt(dataForPlot, id.vars = c("Pathway","Id"), 
+        variable.name = "Sample", value.name = "value")
+    temp = dataForPlot[which(dataForPlot[, "Sample"] == rankByVar), 
+        ]
+    pathwayOrder = tapply(temp$value, temp$Pathway, median, na.rm = T)
+    pathwayOrder = names(pathwayOrder)[order(pathwayOrder)]
+    if (length(pathwayOrder) > pathwayNumInFigure * 2) {
+        pathwayOrder = unique(c(head(pathwayOrder, pathwayNumInFigure), 
+            tail(pathwayOrder, pathwayNumInFigure)))
+    }
+    dataForPlot = dataForPlot[which(dataForPlot$Pathway %in% 
+        pathwayOrder), ]
+    dataForPlot$Pathway = factor(dataForPlot$Pathway, levels = pathwayOrder)
+    p = ggplot(dataForPlot, aes_string(x = "Pathway", y = "value")) + 
+        geom_boxplot(aes_string(colour = "Sample"))
+    return(p + coord_flip() + theme(axis.text.x = element_text(angle = 90, 
+        hjust = 1)))
+}
 ###############################
 #end functions
 ###############################
@@ -176,9 +213,9 @@ png(paste0(outFile,".KEGG.OverallExpression.png"),width=3000,height=4000,res=300
 p=plot_pathway_overall(resultTableFcToGene,species = species,pathwayNumInFigure = 10)
 plot(p + theme(legend.position="top"))
 dev.off()
-keggEnrichedPathway<-find_enriched_pathway(row.names(resultTableFcToGene),species=species,returned_genenumber = 5,returned_pvalue=1,returned_adjpvalue = 1)
+#keggEnrichedPathway<-find_enriched_pathway(row.names(resultTableFcToGene),species=species,returned_genenumber = 5,returned_pvalue=1,returned_adjpvalue = 1)
 #dim(KEGGresult1[[1]])
-
+pathwaysToPlot=c(pathwaysToPlot,unique(p$data$Id))
 
 ###################################################
 #If any significant pathway, plot gene expression changes in it
@@ -198,6 +235,10 @@ if (nrow(resultTablePSig)>10) { #at least 10 genes to do enrichment, or meaningl
 #differential genes enriched pathways
 sigPathwayInd=which(keggSigGeneEnrichedPathway[[1]][,pValuePathwayCol]<=pCutPathway)
 if (length(sigPathwayInd)>0) {
+  pathwaysToPlot=unique(c(pathwaysToPlot,row.names(keggSigGeneEnrichedPathway[[1]])[sigPathwayInd]))
+}
+
+if (length(pathwaysToPlot)>0) {
   #In case of unbalance fold change. balance the color
   colPart<-col_part(c(-2.5,2.5), range(resultTableFcToGene[,1:ncol(resultTableFcToGene)],na.rm=T),col=colorRampPalette(c('green','black','red'))(1024))
   png(paste0(outFile,"_","FoldChange_colorBar",".png"),width=300)
@@ -209,7 +250,7 @@ if (length(sigPathwayInd)>0) {
   row.names(resultTableFcToGeneBorderCol)=row.names(resultTableFcToGene)
   resultTableFcToGeneBorderCol[row.names(resultTablePSigToGene),]="darkorange1"
   
-  for (pathway_id in row.names(keggSigGeneEnrichedPathway[[1]])[sigPathwayInd]) {
+  for (pathway_id in pathwaysToPlot) {
     #			pathway_id=i
     #			download_KEGGfile(pathway_id)
     result_name=paste0(outFile,"_",species,"_",pathway_id,"_fc",".png")

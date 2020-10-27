@@ -48,7 +48,7 @@ sub perform {
   my $intervals               = parse_param_file( $config, $section, "filtered_intervals",      1 );
   my $contig_ploidy_calls_dir = parse_param_file( $config, $section, "contig_ploidy_calls_dir", 1 );
 
-  my $parameters = $self->init_parameter_options(
+  my $parameters = get_parameter_options(
     $config, $section, "--",
     [
       "p-alt",                            "p-active",                               "cnv-coherence-length",                   "class-coherence-length",               #

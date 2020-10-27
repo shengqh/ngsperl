@@ -174,7 +174,7 @@ sub result {
 
   my $iteration_zerobased = get_option( $config, $section, "iteration_zerobased", 0 );
   my $iteration = int(get_option( $config, $section, "iteration" ));
-  my $max_length = int(get_option( $config, $section, "iteration_fill_length", length("$iteration"));
+  my $max_length = int(get_option( $config, $section, "iteration_fill_length", length("$iteration")));
   my $samplename_in_result = get_option( $config, $section, "samplename_in_result", 1 );
 
   my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, "source" );
@@ -231,7 +231,7 @@ sub get_result_pbs {
 
   my $iteration_zerobased = get_option( $config, $section, "iteration_zerobased", 0 );
   my $iteration = int(get_option( $config, $section, "iteration" ));
-  my $max_length = int(get_option( $config, $section, "iteration_fill_length", length("$iteration"));
+  my $max_length = int(get_option( $config, $section, "iteration_fill_length", length("$iteration")));
   my $samplename_in_result = get_option( $config, $section, "samplename_in_result", 1 );
 
   my $iter_start = $iteration_zerobased ? 0: 1;
@@ -242,7 +242,7 @@ sub get_result_pbs {
   for my $sample_name ( sort keys %$source_files ) {
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     for my $iter ($iter_start .. $iter_end){
-      my $key = $sample_name . "_ITER_" . leftpad($iter, $max_length);
+      my $key = $sample_name . "_ITER_" . left_pad($iter, $max_length);
       $result->{$key} = $pbs_file;
     }
   }

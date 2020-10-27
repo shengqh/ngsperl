@@ -86,8 +86,6 @@ sub perform {
         $snvTmpIndex = $snvTmp . ".idx";
       }
 
-      my $snvStat   = $prefix . ".stat";
-
       my $pbs_file = $self->get_pbs_filename( $pbs_dir, $prefix );
       my $pbs_name = basename($pbs_file);
       my $log      = $self->get_log_filename( $log_dir, $prefix );

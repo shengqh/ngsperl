@@ -54,7 +54,14 @@ our %EXPORT_TAGS = (
     addGeneLocus
     annotateNearestGene
     checkFileGroupPairNames
-    addStarFeaturecount)
+    addStarFeaturecount
+    add_BWA
+    add_BWA_WGS
+    add_BWA_summary
+    add_BWA_and_summary
+    add_BWA_and_summary_scatter
+    addMarkduplicates
+    addSequenceTask)
   ]
 );
 
@@ -1009,6 +1016,7 @@ sub addAnnovarFilter {
   }
 
   my $annovar_filter_name = getIndexName($prefix, "_filter", $indexDic, $indexKey);
+  
   $config->{$annovar_filter_name} = {
     class               => "Annotation::FilterAnnovar",
     perform             => 1,
@@ -1016,7 +1024,7 @@ sub addAnnovarFilter {
     source_ref          => $annovar_name,
     option              => $def->{annovar_filter},
     sh_direct           => 1,
-    maximum_freq_values => "0.001,0.01,0.1,1.0",
+    maximum_freq_values => getValue($def, "maximum_freq_values", "0.001,0.01,0.1,1.0"),
     filter_fq_equal_1   => $def->{filter_variants_fq_equal_1},
     pbs                 => {
       "nodes"    => "1:ppn=1",
@@ -1068,6 +1076,7 @@ sub addAnnovarMafReport {
     target_dir => $target_dir . "/" . $annovar_to_maf,
     source_ref => [ $annovar_filter_name, "\\.freq0\\..*.filtered.tsv" ],
     refBuild   => getValue( $def, "annovar_buildver" ),
+    docker_prefix => "mafreport_",
     sh_direct  => 1,
     pbs        => {
       "email"     => $def->{email},
@@ -1087,6 +1096,7 @@ sub addAnnovarMafReport {
     rtemplate                => "../Annotation/mafReport.r",
     output_file              => "parameterSampleFile1",
     output_file_ext          => ".report.html",
+    docker_prefix            => "mafreport_",
     parameterSampleFile1_ref => [ $annovar_to_maf, ".tsv.maf\$" ],
     parameterFile1           => $def->{family_info_file},
     sh_direct                => 1,
@@ -1123,6 +1133,7 @@ sub addFilterMafAndReport {
     parameterSampleFile1_ref=> [$mutect2call, ".maf"],
     parameterFile1           => $def->{family_info_file},
     rCode                    => $rCode,
+    docker_prefix => "mafreport_",
     sh_direct  => 0,
     pbs        => {
       "nodes"    => "1:ppn=8",
@@ -1701,5 +1712,226 @@ sub addStarFeaturecount {
 
   return($star_task);
 };
+
+sub add_BWA {
+  my ($config, $def, $tasks, $target_dir, $bwa_name, $source_ref, $rg_name_regex) = @_;
+
+  $config->{ $bwa_name } = {
+    class                 => "Alignment::BWA",
+    perform               => 1,
+    target_dir            => "${target_dir}/${bwa_name}",
+    option                => getValue( $def, "bwa_option" ),
+    bwa_index             => getValue( $def, "bwa_fasta" ),
+    source_ref            => $source_ref,
+    output_to_same_folder => 1,
+    rg_name_regex         => $rg_name_regex,
+    sh_direct             => 0,
+    pbs                   => {
+      "nodes"    => "1:ppn=" . getValue( $def, "max_thread"),
+      "walltime" => "24",
+      "mem"      => getValue($def, "bwa_memory", "40gb")
+    },
+  };
+
+  push @$tasks, ( $bwa_name );
+}
+
+sub add_BWA_WGS {
+  my ($config, $def, $tasks, $target_dir, $bwa_name, $source_ref, $rg_name_regex) = @_;
+
+  $config->{ $bwa_name } = {
+    class                 => "Alignment::BWA_WGS",
+    perform               => 1,
+    target_dir            => "${target_dir}/${bwa_name}",
+    option                => getValue( $def, "bwa_option" ),
+    bwa_index             => getValue( $def, "bwa_fasta" ),
+    source_ref            => $source_ref,
+    output_to_same_folder => 1,
+    rg_name_regex         => $rg_name_regex,
+    output_to_same_folder => 1,
+    sh_direct             => 0,
+    pbs                   => {
+      "nodes"    => "1:ppn=" . getValue( $def, "max_thread"),
+      "walltime" => getValue($def, "bwa_walltime", "24"),
+      "mem"      => getValue($def, "bwa_memory", "40gb")
+    },
+  };
+
+  push @$tasks, ( $bwa_name );
+}
+
+sub add_BWAsummary {
+  my ($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex) = @_;
+
+  $config->{ $bwa_summary } = {
+    class                 => "CQS::UniqueR",
+    perform               => 1,
+    target_dir            => "${target_dir}/${bwa_summary}",
+    option                => "",
+    rtemplate             => "../Alignment/BWASummary.r",
+    parameterSampleFile1_ref    => [$bwa, ".bamstat"],
+    output_file           => "",
+    output_file_ext       => ".BWASummary.csv;.BWASummary.png;.BWASummary.sorted.png",
+    sh_direct             => 1,
+    pbs                   => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    },
+  };
+
+  if (defined $rg_name_regex) {
+    $config->{ $bwa_summary }{rCode} = "rg_name_regex='$rg_name_regex'";
+  }
+
+  push @$tasks, $bwa_summary;
+}
+
+sub add_BWA_and_summary {
+  my ($config, $def, $tasks, $target_dir, $source_ref, $rg_name_regex) = @_;
+
+  my $bwa = "bwa";
+  add_BWA($config, $def, $tasks, $target_dir, $bwa, $source_ref, $rg_name_regex); 
+
+  my $bwa_summary = "bwa_summary";
+  add_BWAsummary($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex); 
+
+  return( [$bwa, ".bam\$"], $bwa);
+}
+
+sub add_merge_bam {
+  my ($config, $def, $tasks, $target_dir, $merge_name, $source_ref) = @_;
+
+  $config->{$merge_name} = {
+    class                 => "CQS::ProgramWrapperManyToOne",
+    perform               => 1,
+    target_dir            => "$target_dir/$merge_name",
+    option                => "-t 8 __OUTPUT__ __INPUT__",
+    interpretor           => "",
+    check_program         => 0,
+    program               => "sambamba merge",
+    source_ref            => $source_ref,
+    source_arg            => "",
+    source_join_delimiter => " ",
+    output_to_same_folder => 1,
+    output_arg            => "-o",
+    output_file_prefix    => ".bam",
+    output_file_ext       => ".bam",
+    sh_direct             => 1,
+    pbs                   => {
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    },
+  };
+
+  push @$tasks, (  $merge_name );
+}
+
+sub add_split_fastq {
+  my ($config, $def, $tasks, $target_dir, $split_fastq, $source_ref) = @_;
+
+  $config->{ $split_fastq } = {
+    class       => "CQS::ProgramWrapperOneToMany",
+    perform     => 1,
+    target_dir  => "$target_dir/$split_fastq",
+    option      => "",
+    interpretor => "python",
+    program     => "../Format/splitFastq.py",
+    source_ref      => $source_ref,
+    source_arg            => "-i",
+    source_join_delimiter => ",",
+    output_to_same_folder => 1,
+    output_arg            => "-o",
+    output_file_prefix    => "",
+    output_file_ext       => "._ITER_.1.fastq.gz",
+    output_other_ext      => "._ITER_.2.fastq.gz",
+    iteration_arg         => "--trunk",
+    iteration             => getValue($def, "aligner_scatter_count"),
+    sh_direct             => 1,
+    pbs                   => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    },
+  };
+
+  push @$tasks, (  $split_fastq );
+}
+
+sub add_BWA_and_summary_scatter {
+  my ($config, $def, $tasks, $target_dir, $source_ref) = @_;
+
+  my $splitFastq = "bwa_01_splitFastq";
+  add_split_fastq($config, $def, $tasks, $target_dir, $splitFastq, $source_ref);
+
+  my $rg_name_regex = "(.+)_ITER_";
+
+  my $bwa = "bwa_02_alignment";
+  add_BWA($config, $def, $tasks, $target_dir, $bwa, $splitFastq, $rg_name_regex); 
+
+  my $mergeBam = "bwa_03_merge";
+  add_merge_bam($config, $def, $tasks, $target_dir, $mergeBam, $bwa, $rg_name_regex); 
+
+  my $bwa_summary = "bwa_04_summary";
+  add_BWA_summary($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex);
+
+  return( [ $mergeBam, ".bam\$" ], $mergeBam);
+}
+
+sub addMarkduplicates {
+  my ($config, $def, $tasks, $target_dir, $task_name, $source_ref) = @_;
+
+  $config->{$task_name} = {
+    class                 => "CQS::ProgramWrapperOneToOne",
+    perform               => 1,
+    target_dir            => "$target_dir/$task_name",
+    option                => "markdup -p -t __THREAD__ --tmpdir tmp __FILE__ __NAME__.tmp.bam && touch __OUTPUT__.done
+    
+if [[ -e __OUTPUT__.done ]]; then
+  mv __NAME__.tmp.bam __OUTPUT__
+  mv __NAME__.tmp.bam.bai __OUTPUT__.bai
+fi
+",
+    interpretor           => "",
+    program               => "sambamba",
+    check_program         => 0,
+    source_arg            => "",
+    source_ref            => $source_ref,
+    source_join_delimiter => " ",
+    docker_prefix         => "cqs_",
+    output_to_same_folder => 1,
+    output_arg            => "",
+    output_file_prefix    => ".duplicates_marked.bam",
+    output_file_ext       => ".duplicates_marked.bam",
+    sh_direct             => 0,
+    pbs                   => {
+      "nodes"    => "1:ppn=8",
+      "walltime" => "24",
+      "mem"      => getValue($def, "mark_duplicates_memory", "40gb")
+    },
+  };
+
+  push(@$tasks, $task_name);
+}
+
+sub addSequenceTask {
+  my ($config, $def, $tasks, $target_dir) = @_;
+  $config->{sequencetask} =  {
+    class      => getSequenceTaskClassname(getValue($def, "cluster")),
+    perform    => 1,
+    target_dir => "${target_dir}/sequencetask",
+    option     => "",
+    source     => {
+      tasks => $tasks,
+    },
+    sh_direct => 0,
+    pbs       => {
+      "nodes"     => "1:ppn=" . getValue($def, "max_thread"),
+      "walltime"  => getValue($def, "sequencetask_run_time", 48),
+      "mem"       => "40gb"
+    },
+  };
+}
 
 1;

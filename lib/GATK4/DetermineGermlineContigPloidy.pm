@@ -37,7 +37,7 @@ sub perform {
   my $intervals = parse_param_file( $config, $section, "filtered_intervals", 1 );
   my $contig_ploidy_priors = get_param_file( $config->{$section}{contig_ploidy_priors}, "contig_ploidy_priors", 0 );
 
-  my $parameters = $self->init_parameter_options(
+  my $parameters = get_parameter_options(
     $config, $section, "--",
     [ "mean-bias-standard-deviation", "mapping-error-rate", "global-psi-scale", "sample-psi-scale" ],    #
     [ "0.01",                         "0.01",               "0.001",            "0.0001" ]
