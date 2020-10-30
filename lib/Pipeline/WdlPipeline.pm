@@ -221,12 +221,29 @@ sub addMutect2 {
   my $mutect2_index_dic = {};
   my $mutect2_index_key = "mutect2_Index";
   my $mutect2_prefix = "${bam_input}_muTect2_";
+
+  if (not defined $def->{mutect2_groups}){
+    #for wdl mutect2, the result file will use tumor sample name in output
+    my $mutect2_groups = {};
+    my $groups = $def->{groups};
+    for my $group_name (sort keys %$groups) {
+      my $samples = $groups->{$group_name};
+      if (scalar(@$samples) == 1) {
+        $mutect2_groups->{$samples->[0]} = $samples;
+      }else{
+        $mutect2_groups->{$samples->[1]} = $samples;
+      }
+    }
+    $config->{mutect2_groups} = $mutect2_groups;
+  }else{
+    $config->{mutect2_groups} = $def->{mutect2_groups};
+  }
   
   my $mutect2_normal_files = $mutect2_prefix . "_normal_files";
   $config->{$mutect2_normal_files} = {     
     "class" => "CQS::GroupPickTask",
     "source_ref" => $bam_input,
-    "groups_ref" => "groups",
+    "groups_ref" => "mutect2_groups",
     "sample_index_in_group" => 0, 
   };
   
@@ -234,7 +251,7 @@ sub addMutect2 {
   $config->{$mutect2_tumor_files} = {     
     "class" => "CQS::GroupPickTask",
     "source_ref" => $bam_input,
-    "groups_ref" => "groups",
+    "groups_ref" => "mutect2_groups",
     "sample_index_in_group" => 1, 
   };
 
@@ -286,11 +303,26 @@ sub addMutect2 {
   if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
     $run_funcotator="true";
   }
-  my $output_sample_ext="hg19";
-  if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
-    $output_sample_ext="hg38";
-  } elsif ($def->{ncbi_build} eq "GRCm38")  {
-    $output_sample_ext="mm10";
+
+  my $output_sample_ext;
+  if($def->{muTect2_suffix}) {
+    $output_sample_ext = $def->{muTect2_suffix};
+  }else {
+    $output_sample_ext=".hg19";
+    if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
+      $output_sample_ext=".hg38";
+    } elsif ($def->{ncbi_build} eq "GRCm38")  {
+      $output_sample_ext=".mm10";
+    }
+  }
+
+  my $output_file_ext;
+  my $output_other_ext;
+  if ($def->{ncbi_build} eq "GRCh38"){
+    $output_file_ext = $output_sample_ext."-filtered.annotated.maf";
+    $output_other_ext = $output_sample_ext."-filtered.vcf";
+  }else{
+    $output_file_ext = $output_sample_ext."-filtered.vcf";
   }
 
   $config->{$mutect2_call} = {     
@@ -302,8 +334,8 @@ sub addMutect2 {
     "input_option_file" => $wdl->{"cromwell_option_file"},
     "cromwell_config_file" => $server->{"cromwell_config_file"},
     "wdl_file" => $mutect2_pipeline->{"wdl_file"},
-    output_file_ext => ".".$output_sample_ext."-filtered.annotated.maf",
-    output_other_ext => ".".$output_sample_ext."-filtered.vcf",
+    output_file_ext => $output_file_ext,
+    output_other_ext => $output_other_ext,
     "input_json_file" => $mutect2_pipeline->{"input_file"},
     "input_parameters" => {
       "Mutect2.intervals" => $def->{covered_bed},
