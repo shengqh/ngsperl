@@ -1,9 +1,10 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 11;
+use File::Spec;
 use CQS::ConfigUtils;
 use Data::Dumper;
+use Test::More tests => 14;
 
 my $def = {
   unsorted => {
@@ -79,6 +80,7 @@ ok( option_contains_arg( "-o __OUTPUT__ -i __INPUT__", "-i" ) );
 ok( !option_contains_arg( "-o __OUTPUT__ -impossible __INPUT__", "-i" ) );
 
 {    #test read_table
+  #print(File::Spec->rel2abs("../../data/cnv.txt"));
   my ( $tbl, $names ) = read_table( "../../data/cnv.txt", 3 );
   ok( 9 == scalar( keys %$tbl ) );
   is_deeply(
@@ -178,5 +180,70 @@ ok( !option_contains_arg( "-o __OUTPUT__ -impossible __INPUT__", "-i" ) );
     }
   );
 }
+
+my $def3 = {
+  target_dir => "/scratch/cqs/shengq2/temp",
+  files => {
+    "MB02v1" => ["/data/stein_lab/mjo_sRNA_data/rawdata_4829/4829-JS-1_1_S01_L005_R1_001.fastq.gz"],
+    "MB02v2" => ["/data/stein_lab/mjo_sRNA_data/rawdata_4829/4829-JS-1_2_S01_L005_R1_001.fastq.gz"],
+    "posJFS" => ["/data/stein_lab/mjo_sRNA_data/rawdata_4829/4829-JS-1_35_S01_L005_R1_001.fastq.gz"],
+    "negctrl" => ["/data/stein_lab/mjo_sRNA_data/rawdata_4829/4829-JS-1_36_S01_L005_R1_001.fastq.gz"],
+  },
+
+  covariance_patterns => {
+    subject => {
+      pattern => "(.*)v"
+    }
+  },
+};
+
+$def3->{groups_pattern} = "(v\\d)";
+my $groups = get_groups_by_pattern($def3);
+my $expect_groups = {
+          'negctrl' => [
+                         'negctrl'
+                       ],
+          'v2' => [
+                    'MB02v2'
+                  ],
+          'posJFS' => [
+                        'posJFS'
+                      ],
+          'v1' => [
+                    'MB02v1'
+                  ]
+        };
+is_deeply( $groups, $expect_groups );     
+
+$def3->{groups_pattern} = {
+  "v1" => "v1",
+  "v2" => "v2",
+  "other" => "pos|neg"
+};
+$groups = get_groups_by_pattern($def3);
+$expect_groups = {
+         'v1' => [
+                    'MB02v1'
+                  ],
+          'v2' => [
+                    'MB02v2'
+                  ],
+          'other' => [
+                       'negctrl',
+                       'posJFS'
+                     ]
+                  };
+is_deeply( $groups, $expect_groups );     
+
+my ($cov_map, $covariances, $samplenames) = get_covariances_by_pattern($def3);
+my $cov_expect = {
+          'subject' => {
+                         'negctrl' => 'negctrl',
+                         'posJFS' => 'posJFS',
+                         'MB02v1' => 'MB02',
+                         'MB02v2' => 'MB02'
+                       }
+        };
+is_deeply( $cov_map, $cov_expect );     
 
 1;
