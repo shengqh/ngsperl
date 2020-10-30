@@ -44,7 +44,10 @@ class MutectItem:
     self.TumorMinorAllele = self.findMinorAllele(tumorParts, AD_index)
     
     self.FORMAT = self.FORMAT
-    lodParts = self.INFO.split(";LOD=")
+    if ";LOD=" in self.INFO:
+      lodParts = self.INFO.split(";LOD=")
+    else:
+      lodParts = self.INFO.split(";TLOD=")
     self.LOD = lodParts[1]
     self.INFO = lodParts[0]
 
@@ -68,10 +71,17 @@ class MutectResult:
         result.append(parts[0])
     return(result)
 
-  def findSampleName(self, line, sampleKey):
+  def findMutect1SampleName(self, line, sampleKey):
     sampleKeyEQ = sampleKey + "="
     if not sampleKeyEQ in line:
       raise Exception("The file is not mutect format, I cannot find %s in GATKCommandLine: %s" % (sampleKey, line))
+    parts = line.split(sampleKeyEQ)[1]
+    return(parts.split(" ")[0])
+
+  def findMutect2SampleName(self, line, sampleKey):
+    sampleKeyEQ = sampleKey + " "
+    if not sampleKeyEQ in line:
+      raise Exception("The file is not mutect format2, I cannot find %s in GATKCommandLine: %s" % (sampleKey, line))
     parts = line.split(sampleKeyEQ)[1]
     return(parts.split(" ")[0])
 
@@ -88,9 +98,13 @@ class MutectResult:
       self.NormalSampleName = ""
       for line in fin:
         if line.startswith("##"):
-          if line.startswith("##GATKCommandLine"):
-            self.TumorSampleName = self.findSampleName(line, "tumor_sample_name")
-            self.NormalSampleName = self.findSampleName(line, "normal_sample_name")
+          if line.startswith("##GATKCommandLine") and (not "ID=FilterMutectCalls" in line):
+            if ("Mutect2" in line):
+              self.TumorSampleName = self.findMutect2SampleName(line, "--tumor-sample")
+              self.NormalSampleName = self.findMutect2SampleName(line, "--normal-sample")
+            else:
+              self.TumorSampleName = self.findMutect1SampleName(line, "tumor_sample_name")
+              self.NormalSampleName = self.findMutect1SampleName(line, "normal_sample_name")
           else:
             self.Comments.append(line.rstrip())
         elif line.startswith("#CHROM"):
@@ -102,7 +116,8 @@ class MutectResult:
           logger.info("file=%s; tumor=%s; tumor_index=%d" % (os.path.basename(fileName), self.TumorSampleName, tumorIndex))
         else:
           item = MutectItem(fileName, line, normalIndex, tumorIndex)
-          self.ChromosomeItemMap.setdefault(item.CHROM, []).append(item)
+          if item.FILTER == "PASS":
+            self.ChromosomeItemMap.setdefault(item.CHROM, []).append(item)
 
 class MutectSampleItem:
   def __init__(self, data, normalDepth, tumorDepth, majorAlleleDepth, minorAlleleDepth):
@@ -118,7 +133,10 @@ class MultiMutectItem:
     self.Samples = []
     parts = line.rstrip().split('\t')
     formatParts = parts[8].split(':')
-    ND_index = formatParts.index("ND")
+    if formatParts[-2] == "ND":
+      ND_index = -2
+    else:
+      ND_index = formatParts.index("ND")
     DP_index = formatParts.index("DP")
     AD_index = formatParts.index("AD")
 
@@ -129,6 +147,7 @@ class MultiMutectItem:
         continue
 
       sampleParts = sampleData.split(':')
+
       normalDepth = int(sampleParts[ND_index])
       tumorDepth = int(sampleParts[DP_index])
       alleleParts = sampleParts[AD_index].split(',')
