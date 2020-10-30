@@ -3,6 +3,7 @@ import sys
 import logging
 import os
 import errno
+import gzip
 from asyncore import read
 
 from Mutect import MultiMutectItem
@@ -19,7 +20,9 @@ def filterMutect(logger, inputFile, outputFile, minNormalDepth, minTumorDepth, m
   lineCount = 0
   passedCount = 0
   failedCount = 0
-  with open(outputFile, "wt") as fout:
+
+  tmpFile = outputFile + ".tmp.vcf"
+  with open(tmpFile, "wt") as fout:
     if inputFile.endswith(".gz"):
       fin = gzip.open(inputFile,'rt')
     else:
@@ -56,6 +59,10 @@ def filterMutect(logger, inputFile, outputFile, minNormalDepth, minTumorDepth, m
     fout.write("minMinorAlleleDepth\t%d\n" % minMinorAlleleDepth)
     fout.write("Passed\t%d\n" % passedCount)
     fout.write("Failed\t%d\n" % failedCount)
+
+  if os.path.isfile(outputFile):
+    os.remove(outputFile)
+  os.rename(tmpFile, outputFile)
 
   logger.info("Passed=%d, failed=%d" % (passedCount, failedCount))
     
