@@ -69,19 +69,6 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
-sub getValue {
-  my ( $def, $name, $defaultValue ) = @_;
-  if ( defined $def->{$name} ) {
-    return $def->{$name};
-  }
-  elsif ( defined $defaultValue ) {
-    return $defaultValue;
-  }
-  else {
-    die "Define $name in user definition first.";
-  }
-}
-
 sub getIntermidiateDir {
   my ($defaultDir, $def) = @_;
 
