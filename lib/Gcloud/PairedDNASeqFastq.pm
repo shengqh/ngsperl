@@ -125,22 +125,22 @@ done
     open($fh, '<', $input_json_file);
     open($fo, '>', $sample_input_file);
     while ($row = <$fh>) {
-      if ($row =~ /dnaseq.sample_name/){
-        print $fo "    \"dnaseq.sample_name\": \"$sample_name\",\n";
-      }elsif($row =~ /dnaseq.base_file_name/){
-        print $fo "    \"dnaseq.base_file_name\": \"$sample_name\",\n";
-      }elsif($row =~ /dnaseq.final_gvcf_base_name/){
-        print $fo "    \"dnaseq.final_gvcf_base_name\": \"$sample_name\",\n";
-      }elsif($row =~ /dnaseq.raw_fastq1/){
-        print $fo "    \"dnaseq.raw_fastq1\": \"$fastq1\",\n";
-      }elsif($row =~ /dnaseq.raw_fastq2/){
-        print $fo "    \"dnaseq.raw_fastq2\": \"$fastq2\",\n";
-      }elsif($row =~ /dnaseq.bwa_commandline/){
+      if ($row =~ /PreProcessingForVariantDiscovery_GATK4.sample_name/){
+        print $fo "    \"PreProcessingForVariantDiscovery_GATK4.sample_name\": \"$sample_name\",\n";
+      }elsif($row =~ /PreProcessingForVariantDiscovery_GATK4.base_file_name/){
+        print $fo "    \"PreProcessingForVariantDiscovery_GATK4.base_file_name\": \"$sample_name\",\n";
+      }elsif($row =~ /PreProcessingForVariantDiscovery_GATK4.final_gvcf_base_name/){
+        print $fo "    \"PreProcessingForVariantDiscovery_GATK4.final_gvcf_base_name\": \"$sample_name\",\n";
+      }elsif($row =~ /PreProcessingForVariantDiscovery_GATK4.raw_fastq1/){
+        print $fo "    \"PreProcessingForVariantDiscovery_GATK4.raw_fastq1\": \"$fastq1\",\n";
+      }elsif($row =~ /PreProcessingForVariantDiscovery_GATK4.raw_fastq2/){
+        print $fo "    \"PreProcessingForVariantDiscovery_GATK4.raw_fastq2\": \"$fastq2\",\n";
+      }elsif($row =~ /PreProcessingForVariantDiscovery_GATK4.bwa_commandline/){
         my $newbwa = replaceSampleNameBWACommand($row, $sample_name);
         print $fo $newbwa;
-      }elsif($row =~ /dnaseq.wgs_calling_interval_list/){
+      }elsif($row =~ /PreProcessingForVariantDiscovery_GATK4.wgs_calling_interval_list/){
         if($calling_interval_file ne ""){
-          print $fo "    \"dnaseq.wgs_calling_interval_list\": \"$calling_interval_file\",\n";
+          print $fo "    \"PreProcessingForVariantDiscovery_GATK4.wgs_calling_interval_list\": \"$calling_interval_file\",\n";
         }else{
           print $fo $row;
         }
