@@ -186,72 +186,11 @@ sub getPreprocessionConfig {
   my $task    = getValue( $def, "task_name" );
 
   if (defined $def->{groups_pattern}) {
-    my $gpattern = $def->{groups_pattern};
-    my $files = $def->{files};
-    my $groups = {};
-    for my $samplename (sort keys %$files) {
-      $samplename =~ /$gpattern/;
-      my $groupname = $1;
-      #print($groupname . " : " . $samplename . "\n");
-      if (not defined $groups->{$groupname}){
-        $groups->{$groupname} = [$samplename];
-      }
-      else{
-        my $samples = $groups->{$groupname};
-        push (@$samples, $samplename);
-      }
-    }
-
-    #print("groups=" . Dumper($groups));
-    $def->{groups} = $groups;
+    $def->{groups} = get_groups_by_pattern($def);
   }
 
   if (defined $def->{covariance_patterns}){
-    my $files = $def->{files};
-    my $covariance_patterns = $def->{covariance_patterns};
-    my @covariances = (sort keys %$covariance_patterns);
-    my $cov_map = {};
-    for my $covariance (@covariances) {
-      my $cov_pattern_def = $covariance_patterns->{$covariance};
-
-      my $cov_pattern;
-      my $cov_prefix;
-      if (ref $cov_pattern_def eq 'HASH'){
-        $cov_pattern = $cov_pattern_def->{pattern};
-        $cov_prefix = $cov_pattern_def->{prefix};
-      }
-      else{
-        $cov_pattern = $cov_pattern_def;
-        $cov_prefix = "";
-      }
-
-      $cov_map->{$covariance} = {};
-      for my $samplename (sort keys %$files) {
-        $samplename =~ /$cov_pattern/;
-        my $cov_value = $1;
-        $cov_map->{$covariance}{$samplename} = $cov_prefix . $cov_value;
-      }
-    }
-
-    #print("covariances=" . Dumper($cov_map));
-
-    my $cov_file = $target_dir . "/covariance.txt";
-    open( my $cov, ">$cov_file" ) or die "Cannot create $cov_file";
-    print $cov "Sample";
-    for my $covariance (@covariances) {
-      print $cov "\t" . $covariance;
-    }
-    print $cov "\n";
-    for my $samplename (sort keys %$files) {
-      print $cov "$samplename";
-      for my $covariance (@covariances) {
-        print $cov "\t" . $cov_map->{$covariance}{$samplename};
-      }
-      print $cov "\n";
-    }
-    close($cov);
-
-    $def->{covariance_file} = $cov_file;
+    $def->{covariance_file} = create_covariance_file_by_pattern($def);
   }
 
   if(defined $def->{ignore_samples}){
