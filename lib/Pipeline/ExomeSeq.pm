@@ -11,6 +11,7 @@ use Pipeline::PipelineUtils;
 use Pipeline::Preprocession;
 use Pipeline::WdlPipeline;
 use Pipeline::WGS;
+use Variants::VariantsUtils;
 use Data::Dumper;
 
 require Exporter;
@@ -1043,28 +1044,22 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
     my $mutect2call = addMutect2($config, $def, $summary, $target_dir, $bam_input);
     push @$individual, ($mutect2call);
 
-    my $mutect2callReport = addFilterMafAndReport($config, $def, $summary, $target_dir, $mutect2call);
-    push @$summary, $mutect2callReport;
+    my $mutect_prefix = "${bam_input}_muTect2_";
+    my $mutect_index_key = "mutect2_key";
+    my $mutect_index_dic = { $mutect_index_key => 2 };
+    my $mutect_ref = [$mutect2call, ".vcf\$"];
+
+    add_post_mutect($config, $def, $target_dir, $summary, $mutect_prefix, $mutect_index_dic, $mutect_index_key, [$mutect2call, ".vcf\$"]);
+    #my $mutect2merge = "${bam_input}_muTect2_02_merge";
+    #add_combine_mutect($config, $def, $summary, $target_dir, $mutect2merge, [$mutect2call, ".vcf\$"]);
+    
+    if ($def->{ncbi_build} eq "GRCh38") {
+      my $mutect2callReport = addFilterMafAndReport($config, $def, $summary, $target_dir, $mutect2call);
+      push @$summary, $mutect2callReport;
+    }
 
 
-#     my $rCode=( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" );
-#     $rCode=$rCode."genome=\"" . getValue($def, "annovar_buildver", "hg38") . "\";";
-#     $config->{muTect2_02_mergeAndMafreport}={
-#     class      => "CQS::UniqueR",
-#     perform    => 1,
-#     target_dir => "${target_dir}/muTect2_02_mergeAndMafreport",
-#     rtemplate                  => "../CQS/muTect2MergeAndMafreport.R",
-# #    parameterFile1_ref => [$mutect2task, ".maf"],
-#     parameterSampleFile1_ref=> [$mutect2call, ".maf"],
-#     parameterFile1           => $def->{family_info_file},
-#     rCode                    => $rCode,
-#     sh_direct  => 0,
-#     pbs        => {
-#       "nodes"    => "1:ppn=8",
-#       "walltime" => "4",
-#       "mem"      => "30gb"
-#     }
-# };
+
   }
 
   if ( $def->{"perform_cnv_gatk4_somatic"}) {
