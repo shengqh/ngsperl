@@ -21,7 +21,9 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(get_config_section
+    qw(
+      getValue
+      get_config_section
       has_config_section
       has_option
       get_option
@@ -81,13 +83,30 @@ our %EXPORT_TAGS = (
       get_interval_file_map
       read_table
       merge_hash_left_precedent
-      merge_hash_right_precedent)
+      merge_hash_right_precedent
+      get_groups_by_pattern
+      get_covariances_by_pattern
+      create_covariance_file_by_pattern)
   ]
 );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
+
+
+sub getValue {
+  my ( $def, $name, $defaultValue ) = @_;
+  if ( defined $def->{$name} ) {
+    return $def->{$name};
+  }
+  elsif ( defined $defaultValue ) {
+    return $defaultValue;
+  }
+  else {
+    die "Define $name in user definition first.";
+  }
+}
 
 ####
 # Get section definition from config definition. section can be multiple layers, such as "task1::task2" which indicates $config->{task1}->{task2}
@@ -1580,6 +1599,124 @@ sub merge_hash_right_precedent {
   my ($a, $b) = @_;
   my $merge_c = Hash::Merge->new('RIGHT_PRECEDENT');
   return $merge_c->merge($a, $b);
+}
+
+sub get_groups_by_pattern_dic {
+  my ($def) = @_;
+  my $gpattern_dic = $def->{groups_pattern};
+  my $files = $def->{files};
+
+  my $groups = {};
+
+  for my $groupname (sort keys %$gpattern_dic){
+    my $gpattern = $gpattern_dic->{$groupname};
+    for my $samplename (sort keys %$files) {
+      if($samplename =~ /$gpattern/){
+        if (not defined $groups->{$groupname}){
+          $groups->{$groupname} = [$samplename];
+        }
+        else{
+          my $samples = $groups->{$groupname};
+          push (@$samples, $samplename);
+        }
+      }
+    }
+  }
+  return ($groups);
+}
+
+sub get_groups_by_pattern_value {
+  my ($def) = @_;
+  my $gpattern = $def->{groups_pattern};
+  my $files = $def->{files};
+
+  #print($gpattern);
+  #print(Dumper($files));
+  my $groups = {};
+  for my $samplename (sort keys %$files) {
+    my $groupname = $samplename;
+    if($samplename =~ /$gpattern/){
+      $groupname = $1;
+    }
+    #print($groupname . " : " . $samplename . "\n");
+    if (not defined $groups->{$groupname}){
+      $groups->{$groupname} = [$samplename];
+    }
+    else{
+      my $samples = $groups->{$groupname};
+      push (@$samples, $samplename);
+    }
+  }
+  return ($groups);
+}
+
+sub get_groups_by_pattern {
+  my ($def) = @_;
+  my $gpattern = $def->{groups_pattern};
+  if (ref $gpattern eq 'HASH'){
+    return(get_groups_by_pattern_dic($def));
+  }else{
+    return(get_groups_by_pattern_value($def));
+  }
+}
+
+sub get_covariances_by_pattern {
+  my ($def) = @_;
+
+  my $files = $def->{files};
+  my $covariance_patterns = $def->{covariance_patterns};
+  my $covariances = [sort keys %$covariance_patterns];
+  my $samplenames = [sort keys %$files];
+  my $cov_map = {};
+  for my $covariance (@$covariances) {
+    my $cov_pattern_def = $covariance_patterns->{$covariance};
+
+    my $cov_pattern;
+    my $cov_prefix;
+    if (ref $cov_pattern_def eq 'HASH'){
+      $cov_pattern = getValue($cov_pattern_def, "pattern");
+      $cov_prefix = getValue($cov_pattern_def, "prefix", "");
+    }
+    else{
+      $cov_pattern = $cov_pattern_def;
+      $cov_prefix = "";
+    }
+
+    $cov_map->{$covariance} = {};
+    for my $samplename (@$samplenames) {
+      my $cov_value = $samplename;
+      if ($samplename =~ /$cov_pattern/){
+        $cov_value = $1;
+      }
+      $cov_map->{$covariance}{$samplename} = $cov_prefix . $cov_value;
+    }
+  }
+  return ($cov_map, $covariances, $samplenames);
+}
+
+sub create_covariance_file_by_pattern {
+  my ($def) = @_;
+
+  my ($cov_map, $covariances, $samplenames) = get_covariances_by_pattern($def);
+
+  my $target_dir = getValue($def, "target_dir");
+  my $cov_file = $target_dir . "/covariance.txt";
+  open( my $cov, ">$cov_file" ) or die "Cannot create $cov_file";
+  print $cov "Sample";
+  for my $covariance (@$covariances) {
+    print $cov "\t" . $covariance;
+  }
+  print $cov "\n";
+  for my $samplename (@$samplenames) {
+    print $cov "$samplename";
+    for my $covariance (@$covariances) {
+      print $cov "\t" . $cov_map->{$covariance}{$samplename};
+    }
+    print $cov "\n";
+  }
+  close($cov);
+
+  return($cov_file);
 }
 
 1;
