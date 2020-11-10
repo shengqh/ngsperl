@@ -8,7 +8,7 @@ require Exporter;
 
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(instantiate getTaskClass performTask performConfig performTrace)] );
+our %EXPORT_TAGS = ( 'all' => [qw(instantiate getTaskClass performTask performConfig performTrace getResult)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -55,6 +55,13 @@ sub performTask {
       `bash $pbsfile 1 `;
     }
   }
+}
+
+sub getResult {
+  my ( $config, $section, $pattern ) = @_;
+  my $obj = getTaskClass($config, $section);
+  my $result = $obj->result( $config, $section, $pattern );
+  return ($result);
 }
 
 sub performConfig {
