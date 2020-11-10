@@ -310,6 +310,14 @@ sub get_docker_value {
     return ( $command, $init );
   }
 
+  if ( defined $self->{_config} ) {
+    if (  ( defined $self->{_section} )
+      and ( $self->{_config}{ $self->{_section} }{"no_docker"} ) ) 
+    {
+      return ( $command, $init );
+    }
+  }
+
   my $commandKey = $self->{_docker_prefix} . "docker_command";
   my $initKey    = $self->{_docker_prefix} . "docker_init";
 
