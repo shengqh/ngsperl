@@ -219,7 +219,7 @@ sub getPreprocessionConfig {
     $def->{groups} = $groups;
   }
 
-  if (defined $def->{pool_sample}){
+  if ( $def->{pool_sample} ){
     checkFileGroupPairNames($def, ["pool_sample_groups"], ["pairs"], "files");
     checkFileGroupPairNames($def, ["groups"], ["pairs"], "pool_sample_groups");
   }else{
