@@ -65,7 +65,7 @@ gene_list = sorted(list(set(gene_list)))
 with open(args.output + ".TSS_ACTIVE_-1000_1000.txt", 'w') as outfile:
   outfile.write('\n'.join(gene_list))
 
-os.remove(annotation_file)
+#os.remove(annotation_file)
 os.remove(region_file)
 os.remove(tmp_bed)
 
