@@ -47,6 +47,8 @@ if len(peaks_files) > 1:
     for line in fin:
       index += 1
       fout.write("%s\tPeak_%d\n" % (line.rstrip(), index))
+
+  os.remove(otmpfile)
 else:
   cmd = "gunzip -c %s > %s" % (args.input, args.output)
   runCmd(cmd, logger)
