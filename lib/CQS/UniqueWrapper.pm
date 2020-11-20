@@ -32,6 +32,9 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
+  my $output_no_name             = get_option( $config, $section, "output_no_name",                0 );
+  my $output_taskname = $output_no_name ? "" : $task_name . "_";
+
   my $output_file                = get_option( $config, $section, "output_file",                "" );
   my $output_file_ext            = get_option( $config, $section, "output_file_ext",            "" );
   if($output_file_ext eq ""){
@@ -48,7 +51,11 @@ sub result {
   }else{
     @output_file_exts = ($output_file_ext );
   }
+
   @output_file_exts = grep { $_ ne '' } @output_file_exts; #remove empty elements
+  if (scalar(@output_file_exts) == 0){
+    @output_file_exts = ('');
+  }
 
   my @output_perSample_file_exts;
   if ( $output_perSample_file_ext =~ /;/ ) {
@@ -89,7 +96,7 @@ sub result {
     my @result_files = ();
     foreach my $output_file_ext_one (@output_file_exts) {
       if (($output_file ne "") or ($output_file_ext_one ne "")) {
-        push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext_one}" );
+        push( @result_files, "${result_dir}/${output_taskname}${output_file}${output_file_ext_one}" );
       }
     }
     
