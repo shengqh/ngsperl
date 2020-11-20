@@ -14,6 +14,7 @@ use Pipeline::PipelineUtils;
 use Pipeline::Preprocession;
 use Data::Dumper;
 use Hash::Merge qw( merge );
+use scRNA::Modules;
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -425,6 +426,14 @@ sub getScRNASeqConfig {
   my $aligner         = $def->{aligner};
   my $star_option     = $def->{star_option};
   my $count_table_ref = "files";
+
+  if (defined $def->{vdj_files}){
+    $config->{vdj_files} = $def->{vdj_files};
+    addClonotypeMerge($config, $def, $summary, $target_dir, "clonotype_merge", ["vdj_files", "all_contig_annotations.json"]);
+    addEnclone($config, $def, $summary, "clonotype_merge_enclone", $target_dir, "clonotype_merge");
+    #addClonotypeTask($config, $def, $individual, $target_dir, "clonotype_cell");
+    #addEnclone($config, $def, $individual, "enclone", $target_dir, "vdj_files");
+  }
 
   if ( getValue( $def, "perform_scRNABatchQC" ) ) {
     $config->{scRNABatchQC} = {
