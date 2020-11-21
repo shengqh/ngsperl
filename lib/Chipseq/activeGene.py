@@ -64,7 +64,9 @@ intersect = pybedtools.BedTool(tmp_bed)
 gene_list = [line[6] for line in intersect]
 gene_list = sorted(list(set(gene_list)))
 
-with open(args.output + ".TSS_ACTIVE_-1000_1000.txt", 'w') as outfile:
+final_file = args.output + ".TSS_ACTIVE_-1000_1000.txt"
+logger.info(f"writing result to {final_file} ...")
+with open(final_file, 'wt') as outfile:
   outfile.write('\n'.join(gene_list))
 
 #os.remove(annotation_file)
