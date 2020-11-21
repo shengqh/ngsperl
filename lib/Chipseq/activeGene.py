@@ -29,13 +29,15 @@ if DEBUG:
 logger = logging.getLogger('activeGenes')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
-url="https://raw.githubusercontent.com/linlabcode/pipeline-tools/master/pipeline_tools/annotation/%s_refseq.ucsc" % args.genome
-annotation_file="%s_refseq.ucsc" % args.genome
-
-if not os.path.isfile(annotation_file):
-  logger.info("download %s ..." % url)
-  download_command = "wget " + url
-  runCmd(download_command, logger)
+if not os.path.isfile(args.genome):
+  annotation_file="%s_refseq.ucsc" % args.genome
+  if not os.path.isfile(annotation_file):
+    logger.info("download %s ..." % url)
+    url="https://raw.githubusercontent.com/linlabcode/pipeline-tools/master/pipeline_tools/annotation/%s_refseq.ucsc" % args.genome
+    download_command = "wget " + url
+    runCmd(download_command, logger)
+else:
+  annotation_file=args.genome
 
 region_file = '%s_promoter_regions.bed' % args.output
 logger.info("convert to %s ..." % region_file)
