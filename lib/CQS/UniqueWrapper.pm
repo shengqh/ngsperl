@@ -33,7 +33,7 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my $output_no_name             = get_option( $config, $section, "output_no_name",                0 );
-  my $output_taskname = $output_no_name ? "" : $task_name . "_";
+  my $output_taskname = $output_no_name ? "" : $task_name;
 
   my $output_file                = get_option( $config, $section, "output_file",                "" );
   my $output_file_ext            = get_option( $config, $section, "output_file_ext",            "" );
