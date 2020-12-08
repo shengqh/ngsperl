@@ -101,7 +101,7 @@ sub add_indel_snv_recalibrator_pbs {
   my $omni_resource_vcf;
   my $one_thousand_genomes_resource_vcf;
 
-  my $downsampleFactor = get_option($config, $section, "SNP_VQSR_downsampleFactor", 10);
+  #my $downsampleFactor = get_option($config, $section, "SNP_VQSR_downsampleFactor", 10);
 
   my $vqsrMode = get_option( $config, $section, "vqsr_mode" );
   my $gvcf = get_option( $config, $section, "gvcf", 1 );
@@ -171,7 +171,6 @@ if [[ -s $sites_only_variant_filtered_vcf && ! -s $snps_recalibration ]]; then
     --trust-all-polymorphic \\
     $snp_tranche_option \\
     $recalibration_annotation_option \\
-    --sample-every-Nth-variant ${downsampleFactor} \\
     --max-gaussians 6 \\
     ${hapmap_option} ${omni_option} ${g1000_option} ${dbsnp_option} -mode SNP
 fi
