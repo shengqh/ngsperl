@@ -1756,7 +1756,7 @@ sub get_parameter_file_option {
     my $parameterFile = parse_param_file( $config, $section, $key, 0 );
     my $parameterFileArg = get_option($config, $section, "${key}_arg", "");
 
-    if (defined($parameterFile1)){
+    if (defined($parameterFile)){
       $result = $result . " " . $parameterFileArg . " " . $parameterFile;
     }
   }
