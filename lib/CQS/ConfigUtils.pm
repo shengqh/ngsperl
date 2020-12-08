@@ -1347,13 +1347,41 @@ sub get_output_ext_list {
 }
 
 sub get_program_param {
-  my ( $files, $arg, $joinDelimiter, $sample_name ) = @_;
+  my ( $files, $arg, $joinDelimiter, $sample_name, $result_dir, $index ) = @_;
   
   my $result = "";
   my $pfiles = $files->{$sample_name};
   if(defined $pfiles){
-    my $pfile  = join($joinDelimiter, @$pfiles );
-    $result = trim($arg . " " . $pfile);
+    if (ref $pfiles eq ref {}){
+      my $configfile = $result_dir . "/fileList_${index}_${sample_name}.txt";
+      open( my $list, ">$configfile" ) or die "Cannot create $configfile";
+      foreach my $sub_name (sort keys %$pfiles) {
+        my $subSampleFiles = $pfiles->{$sub_name};
+        my $refstr         = ref($subSampleFiles);
+        if ( $refstr eq 'HASH' ) {
+          foreach my $groupName ( sort keys %$subSampleFiles ) {
+            my $groupSampleNames = $subSampleFiles->{$groupName};
+            for my $groupSampleName (@$groupSampleNames) {
+              print $list "${groupSampleName}\t${groupName}\t${sub_name}\n";
+            }
+          }
+        }
+        elsif ( $refstr eq 'ARRAY' ) {
+          foreach my $subSampleFile (@$subSampleFiles) {
+            my $curSampleName = $sample_name;
+            print $list $subSampleFile . "\t$curSampleName\n";
+          }
+        }
+        else {
+          print $list $subSampleFiles . "\t$sub_name\n";
+        }
+      }
+      close($list);
+      $result = trim($arg . " " . $configfile);
+    }else{
+      my $pfile  = join($joinDelimiter, @$pfiles );
+      $result = trim($arg . " " . $pfile);
+    }
   }
   
   return ($result);
