@@ -928,8 +928,8 @@ sub getRNASeqConfig {
         push( @report_names, "deseq2_" . $key . "_pca" );
       }
       push( @copy_files, $deseq2taskname, "_DESeq2.csv" );
-
       push( @copy_files, $deseq2taskname, "_DESeq2_sig.csv" );
+      push( @copy_files, $deseq2taskname, "_DESeq2-vsd.csv" );
 
       #push( @copy_files, $deseq2taskname, "_DESeq2_GSEA.rnk" );
       #push( @copy_files, $deseq2taskname, "_DESeq2_sig_genename.txt" );
