@@ -71,9 +71,7 @@ sub perform {
   my ( $parameterSampleFile2, $parameterSampleFile2arg, $parameterSampleFile2JoinDelimiter ) = get_parameter_sample_files( $config, $section, "parameterSampleFile2" );
   my ( $parameterSampleFile3, $parameterSampleFile3arg, $parameterSampleFile3JoinDelimiter ) = get_parameter_sample_files( $config, $section, "parameterSampleFile3" );
 
-  my ( $parameterFile1, $parameterFile1arg ) = get_parameter_file( $config, $section, "parameterFile1" );
-  my ( $parameterFile2, $parameterFile2arg ) = get_parameter_file( $config, $section, "parameterFile2" );
-  my ( $parameterFile3, $parameterFile3arg ) = get_parameter_file( $config, $section, "parameterFile3" );
+  $option = $option . " " . get_parameter_file_option($config, $section);
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -152,7 +150,7 @@ sub perform {
       }
 
       print $pbs "
-$interpretor $program $option $parameterSampleFile1arg \"$pfile1\" $curOption $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_arg $final_file
+$interpretor $program $option $parameterSampleFile1arg \"$pfile1\" $curOption $output_arg $final_file
 
 ";
     }

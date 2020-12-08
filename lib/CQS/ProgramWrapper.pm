@@ -126,36 +126,21 @@ sub perform {
     $source_key = "parameterSampleFile1";
   }
 
-  my $parameterSampleFile2 = save_parameter_sample_file( $config, $section, "parameterSampleFile2", "${result_dir}/${task_name}_${task_suffix}_fileList2.list" );
-  if($parameterSampleFile2 ne ""){
-    $parameterSampleFile2 = basename($parameterSampleFile2);
-  }
-  my $parameterSampleFile2arg = get_option($config, $section, "parameterSampleFile2_arg", "");
+  for my $index (2..10){
+    my $key = "parameterSampleFile" . $index;
+    if (not has_raw_files($config, $section, $key)){
+      next;
+    }
 
-  my $parameterSampleFile3 = save_parameter_sample_file( $config, $section, "parameterSampleFile3", "${result_dir}/${task_name}_${task_suffix}_fileList3.list" );
-  if($parameterSampleFile3 ne ""){
-    $parameterSampleFile3 = basename($parameterSampleFile3);
+    my ( $parameterSampleFile, $parameterSampleFilearg, $parameterSampleFileJoinDelimiter ) = get_parameter_sample_files( $config, $section, $key );
+    my $listfile = save_parameter_sample_file( $config, $section, $key, "${result_dir}/${task_name}_${task_suffix}_fileList${index}.list" );
+    if ( $listfile ne "" ) {
+      $listfile = basename($listfile);
+      $option = $option . " " . $parameterSampleFilearg . " " . $listfile;
+    }
   }
-  my $parameterSampleFile3arg = get_option($config, $section, "parameterSampleFile3_arg", "");
 
-  my $parameterFile1 = parse_param_file( $config, $section, "parameterFile1", 0 );
-  my $parameterFile1arg = get_option($config, $section, "parameterFile1_arg", "");
-
-  my $parameterFile2 = parse_param_file( $config, $section, "parameterFile2", 0 );
-  my $parameterFile2arg = get_option($config, $section, "parameterFile2_arg", "");
-
-  my $parameterFile3 = parse_param_file( $config, $section, "parameterFile3", 0 );
-  my $parameterFile3arg = get_option($config, $section, "parameterFile3_arg", "");
-
-  if ( !defined($parameterFile1) ) {
-    $parameterFile1 = "";
-  }
-  if ( !defined($parameterFile2) ) {
-    $parameterFile2 = "";
-  }
-  if ( !defined($parameterFile3) ) {
-    $parameterFile3 = "";
-  }
+  $option = $option . " " . get_parameter_file_option($config, $section);
 
   my $pbs_file   = $self->get_pbs_filename( $pbs_dir, $task_name, ".pbs" );
   my $pbs_name   = basename($pbs_file);
@@ -184,7 +169,7 @@ sub perform {
   print $pbs "
 $cur_init_command
 
-$interpretor $program $cur_option $parameterSampleFile2arg $parameterSampleFile2 $parameterSampleFile3arg $parameterSampleFile3 $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_option
+$interpretor $program $cur_option $output_option
 ";
 
   $self->close_pbs( $pbs, $pbs_file );

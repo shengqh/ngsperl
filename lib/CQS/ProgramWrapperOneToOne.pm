@@ -50,12 +50,8 @@ sub perform {
   my $no_output            = get_option( $config, $section, "no_output", 0 );
   
   my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, "source" );
-  my ( $parameterSampleFile2, $parameterSampleFile2arg, $parameterSampleFile2JoinDelimiter ) = get_parameter_sample_files( $config, $section, "parameterSampleFile2" );
-  my ( $parameterSampleFile3, $parameterSampleFile3arg, $parameterSampleFile3JoinDelimiter ) = get_parameter_sample_files( $config, $section, "parameterSampleFile3" );
 
-  my ( $parameterFile1, $parameterFile1arg ) = get_parameter_file( $config, $section, "parameterFile1" );
-  my ( $parameterFile2, $parameterFile2arg ) = get_parameter_file( $config, $section, "parameterFile2" );
-  my ( $parameterFile3, $parameterFile3arg ) = get_parameter_file( $config, $section, "parameterFile3" );
+  $option = $option . " " . get_parameter_file_option($config, $section);
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -82,7 +78,7 @@ sub perform {
         $option = $option . " " . $parameterSampleFilearg . " " . $listfile;
       }
     }else{
-      $paramFileMap->{$key} = [$parameterSampleFile, $parameterSampleFilearg, $parameterSampleFileJoinDelimiter];
+      $paramFileMap->{$key} = [$parameterSampleFile, $parameterSampleFilearg, $parameterSampleFileJoinDelimiter, $index];
     }
   }
 
@@ -113,12 +109,12 @@ sub perform {
     }
 
     if ($curOption =~ /__FILE__/){
-      my $param_option1 = get_program_param( $parameterSampleFile1, "", $parameterSampleFile1JoinDelimiter, $sample_name );
+      my $param_option1 = get_program_param( $parameterSampleFile1, "", $parameterSampleFile1JoinDelimiter, $sample_name, $result_dir, 1 );
       #print("delimiter=" . $parameterSampleFile1JoinDelimiter . "\n");
       $curOption =~ s/__FILE__/$param_option1/g;
     } elsif (option_contains_arg($curOption, $parameterSampleFile1arg)) {
     } else{
-      my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name );
+      my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name, $result_dir, 1 );
       $curOption = $curOption . " " . $param_option1;
     }
 
@@ -142,19 +138,19 @@ sub perform {
     }
 
     if ($cur_init_command =~ /__FILE__/){
-      my $param_option1 = get_program_param( $parameterSampleFile1, "", $parameterSampleFile1JoinDelimiter, $sample_name );
+      my $param_option1 = get_program_param( $parameterSampleFile1, "", $parameterSampleFile1JoinDelimiter, $sample_name, $result_dir, 1 );
       $cur_init_command =~ s/__FILE__/$param_option1/g;
     }
 
     for my $key (sort keys %$paramFileMap){
       my $values = $paramFileMap->{$key};
-      $curOption = $curOption . " " . get_program_param( $values->[0], $values->[1],$values->[2], $sample_name );
+      $curOption = $curOption . " " . get_program_param( $values->[0], $values->[1],$values->[2], $sample_name, $result_dir, $values->[3] );
     }
 
     print $pbs "
 $cur_init_command    
 
-$interpretor $program $curOption $parameterFile1arg $parameterFile1 $parameterFile2arg $parameterFile2 $parameterFile3arg $parameterFile3 $output_option
+$interpretor $program $curOption $output_option
 
 ";
     $self->close_pbs( $pbs, $pbs_file );
@@ -182,7 +178,7 @@ sub result {
 
   my $result = {};
   for my $sample_name ( sort keys %$source_files ) {
-    my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+    my $cur_dir = $output_to_same_folder ? $result_dir : $result_dir . "/$sample_name";
 
     my @result_files = ();
     for my $output_ext (@$output_exts) {
