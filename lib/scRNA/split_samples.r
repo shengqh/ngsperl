@@ -1,7 +1,7 @@
 library(Seurat)
 library(ggplot2)
 
-split<-function(h5file, output_prefix) {
+split<-function(h5file, output_prefix, hashtag_regex=NA) {
   sdata<-Read10X_h5(h5file)
 
   exp<-sdata[[1]]
@@ -11,7 +11,12 @@ split<-function(h5file, output_prefix) {
   mat<-mat[rowsum > (ncol(mat) / 2),]
   rownames(mat)<-gsub("\\.1$", "", rownames(mat))
   
-  htos<-mat[grepl("Hash", rownames(mat)),]
+  if (!is.na(hashtag_regex)) {
+    htos<-mat[grepl(hashtag_regex, rownames(mat)),]
+  }
+  else{
+    htos<-mat
+  }
   rownames(htos)<-gsub("_.*", "", rownames(htos))
   
   pbmc.hashtag <- CreateSeuratObject(counts = exp)
@@ -27,7 +32,7 @@ split<-function(h5file, output_prefix) {
   
   table(pbmc.hashtag$HTO_classification.global)
   
-  Idents(pbmc.hashtag) <- "HTO_maxID"
+  Idents(pbmc.hashtag) <- "HTO_classification"
   tagnames=rownames(pbmc.hashtag[["HTO"]])
   
   width=max(10, length(tagnames) * 5)
@@ -68,5 +73,10 @@ args = commandArgs(trailingOnly=TRUE)
 
 inputFile = args[1]
 outputPrefix = args[2]
+hashtag_regex = args[3]
 
-split(inputFile, outputPrefix)
+print(paste0("inputFile=", inputFile))
+print(paste0("outputPrefix=", outputPrefix))
+print(paste0("hashtag_regex=", hashtag_regex))
+
+split(inputFile, outputPrefix, hashtag_regex)

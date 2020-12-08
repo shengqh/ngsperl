@@ -42,7 +42,7 @@ with pysam.Samfile(args.bam, "rb") as sam:
   for read in sam.fetch(until_eof=True):
     index += 1
     if index % 1000000 == 0:
-      logger.info(index)
+      logger.info("%s : %d" % (read.reference_name, index))
 
     if not read.has_tag('CB'):
       continue
