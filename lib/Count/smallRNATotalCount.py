@@ -42,14 +42,17 @@ with open(args.count, "rt") as fin:
     parts = line.split('\t')
     countMap[parts[0]] = int(parts[1])
 
+qnames = set()
 logger.info(f"processing {args.input} ...")
 totalCount = 0
 with pysam.AlignmentFile(args.input, "rb") as sf:
   for s in sf.fetch():
     if s.is_unmapped:
       continue
-
+    if s.query_name in qnames:
+      continue
     totalCount += countMap[s.query_name]
+    qnames.add(s.query_name)
 
 with open(args.output, "wt") as fout:
   fout.write(f"Total\t{totalCount}\n")
