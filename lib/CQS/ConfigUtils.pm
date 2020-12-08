@@ -86,7 +86,8 @@ our %EXPORT_TAGS = (
       merge_hash_right_precedent
       get_groups_by_pattern
       get_covariances_by_pattern
-      create_covariance_file_by_pattern)
+      create_covariance_file_by_pattern
+      get_parameter_file_option)
   ]
 );
 
@@ -1745,6 +1746,21 @@ sub create_covariance_file_by_pattern {
   close($cov);
 
   return($cov_file);
+}
+
+sub get_parameter_file_option {
+  my ($config, $section) = @_;
+  my $result = "";
+  for my $index (1..10){
+    my $key = "parameterFile" . $index;
+    my $parameterFile = parse_param_file( $config, $section, $key, 0 );
+    my $parameterFileArg = get_option($config, $section, "${key}_arg", "");
+
+    if (defined($parameterFile1)){
+      $result = $result . " " . $parameterFileArg . " " . $parameterFile;
+    }
+  }
+  return($result);
 }
 
 1;
