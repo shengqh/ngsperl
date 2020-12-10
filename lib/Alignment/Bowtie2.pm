@@ -90,7 +90,7 @@ if [ ! -s $sam_file ]; then
   bowtie2 --version | grep bowtie2 | grep version | cut -d ' ' -f3 | awk '{print \"bowtie2,v\"\$1}' > ${final_file}.version
 fi
 
-if [ -s $sam_file ]; then
+if [ -s $log_file ]; then
   samtools view -Shu -F 256 $sam_file | samtools sort -o $bam_file -T $sample_name -
   if [ -s $bam_file ]; then
     samtools index $bam_file 
