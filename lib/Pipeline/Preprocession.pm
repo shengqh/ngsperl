@@ -185,6 +185,14 @@ sub getPreprocessionConfig {
   my $target_dir = create_directory_or_die( getValue( $def, "target_dir" ) );
   my $task    = getValue( $def, "task_name" );
 
+  if ($def->{sra_to_fastq}) {
+    if (not defined $def->{files}) {
+      if (defined $def->{SraRunTable_file}){
+        addFilesFromSraRunTable($def, $def->{SraRunTable_file});
+      }
+    }
+  }
+
   if (defined $def->{groups_pattern}) {
     $def->{groups} = get_groups_by_pattern($def);
   }

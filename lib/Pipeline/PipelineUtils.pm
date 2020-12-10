@@ -8,6 +8,8 @@ use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
 use Data::Dumper;
+use Text::CSV;
+use List::MoreUtils qw(first_index);
 use Hash::Merge qw( merge );
 
 require Exporter;
@@ -61,7 +63,8 @@ our %EXPORT_TAGS = (
     add_BWA_and_summary
     add_BWA_and_summary_scatter
     addMarkduplicates
-    addSequenceTask)
+    addSequenceTask
+    addFilesFromSraRunTable)
   ]
 );
 
@@ -1919,6 +1922,30 @@ sub addSequenceTask {
       "mem"       => "40gb"
     },
   };
+}
+
+sub addFilesFromSraRunTable {
+  my ($config, $filename) = @_;
+
+  my $csv = Text::CSV->new ({
+    binary    => 1,
+    auto_diag => 1,
+    sep_char  => ','    # not really needed as this is the default
+  });
+
+  my $files = {};
+  open(my $fh, '<:encoding(utf8)', $filename) or die $!;
+  my $headers = $csv->getline( $fh );
+  my $sample_name_index = first_index { $_ eq 'Sample Name' } @$headers;
+  #print("$sample_name_index = " . $headers->[$sample_name_index]);
+  while (my $fields = $csv->getline( $fh )) {
+    my $srr = $fields->[0];
+    my $name = $fields->[$sample_name_index];
+    $files->{$name} = [$srr];
+  }
+  close($fh);
+
+  $config->{files} = $files;
 }
 
 1;
