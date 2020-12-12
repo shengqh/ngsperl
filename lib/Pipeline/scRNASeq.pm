@@ -432,7 +432,8 @@ sub getScRNASeqConfig {
   if (defined $def->{vdj_files}){
     $config->{vdj_files} = $def->{vdj_files};
     addClonotypeMerge($config, $def, $summary, $target_dir, "clonotype_merge", ["vdj_files", "all_contig_annotations.json"]);
-    addEnclone($config, $def, $summary, "clonotype_merge_enclone", $target_dir, "clonotype_merge");
+    addEnclone($config, $def, $summary, "clonotype_merge_enclone", $target_dir, ["clonotype_merge", ".json\$"] );
+    addEncloneToClonotype($config, $def, $summary, $target_dir, "clonotype_enclone_to_clonotypes", "clonotype_merge_enclone", ["clonotype_merge", ".cdr3\$"]);
   }
 
   if (defined $def->{files}){

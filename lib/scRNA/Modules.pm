@@ -7,7 +7,7 @@ require Exporter;
 
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(addEnclone addClonotypeMerge)] );
+our %EXPORT_TAGS = ( 'all' => [qw(addEnclone addClonotypeMerge addEncloneToClonotype)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -34,7 +34,6 @@ dn=`dirname __FILE__`
     output_to_folder      => 1,
     output_arg            => ">",
     output_file_ext       => ".csv",
-    output_other_ext      => ".csv",
     sh_direct             => 1,
     pbs                   => {
       "nodes"     => "1:ppn=1",
@@ -54,13 +53,46 @@ sub addClonotypeMerge {
     perform                  => 1,
     target_dir               => "${target_dir}/$taskname",
     option                   => "",
-    interpretor              => "python",
+    interpretor              => "python3",
     program                  => "../scRNA/clonotype_merge.py",
     source_arg               => "-i",
     source_ref               => $source_ref,
     output_arg               => "-o",
-    output_file              => "all_contig_annotations.json",
+    output_file              => "all_contig_annotations",
+    output_file_ext          => ".json;.json.cdr3",
+    output_other_ext         => ".json.cdr3",
     output_no_name           => 1,
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    },
+  };
+  push @$tasks, $taskname;
+}
+
+sub addEncloneToClonotype {
+  my ( $config, $def, $tasks, $target_dir, $taskname, $source_ref, $cdr3_ref ) = @_;
+
+  $config->{$taskname} = {
+    class                    => "CQS::ProgramWrapper",
+    perform                  => 1,
+    target_dir               => "${target_dir}/$taskname",
+    option                   => "",
+    interpretor              => "python3",
+    program                  => "../scRNA/enclone_to_clonotype.py",
+    # source_arg               => "-i",
+    # source_ref               => $source_ref,
+    parameterFile1_arg => "-i",
+    parameterFile1_ref => $source_ref,
+    parameterFile2_arg => "-c",
+    parameterFile2_ref => $cdr3_ref,
+    output_arg               => "-o",
+    output_file              => "clonotypes",
+    output_file_ext          => ".csv",
+    output_no_name           => 1,
+    output_to_same_folder    => 1,
     sh_direct                => 1,
     pbs                      => {
       "nodes"     => "1:ppn=1",

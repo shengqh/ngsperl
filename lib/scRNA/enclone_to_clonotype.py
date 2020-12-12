@@ -136,7 +136,7 @@ def main():
   parser = argparse.ArgumentParser(description="merge clonotype data",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   
-  DEBUG = True
+  DEBUG = False
   NOT_DEBUG = not DEBUG
   
   parser.add_argument('-i', '--input', action='store', nargs='?', help="Input enclone file", required=NOT_DEBUG)
