@@ -52,6 +52,7 @@ def read_file_map(fileName):
 def merge(json_file_list, output_file, logger):
   json_files = read_file_map(json_file_list)
   finaldata = []
+  cdr3map = {}
   for json_file_name in json_files:
     json_file = json_files[json_file_name]
     logger.info("reading %s" % json_file)
@@ -62,10 +63,23 @@ def merge(json_file_list, output_file, logger):
         for key in record['info']:
           record['info'][key] = json_file_name + "_" + record['info'][key]
         finaldata.append(record)
-        
+
+        cdr3=record['cdr3']
+        if cdr3 == None:
+          continue
+
+        for ann in record['annotations']:
+          chain = ann['feature']['chain']
+          cdr3map[cdr3] = chain
+  
   logger.info("writing %s" % output_file)
   with open(output_file, "wt") as fout:
     json.dump(finaldata, fout, indent=4)
+  
+  with open(output_file + ".cdr3", "wt") as fout:
+    fout.write("cdr3\tchain\n")
+    for cdr3 in sorted(cdr3map.keys()):
+      fout.write(f"{cdr3}\t{cdr3map[cdr3]}\n")
 
   logger.info("done")
 
@@ -73,7 +87,7 @@ def main():
   parser = argparse.ArgumentParser(description="merge clonotype data",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   
-  DEBUG = True
+  DEBUG = False
   NOT_DEBUG = not DEBUG
   
   parser.add_argument('-i', '--input', action='store', nargs='?', help="Input clone type json file list", required=NOT_DEBUG)
