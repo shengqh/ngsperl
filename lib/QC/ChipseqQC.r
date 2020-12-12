@@ -9,6 +9,10 @@ configFile=args[1]
 annotationName=args[2]
 chromosomes=args[3]
 
+if (annotationName == "hg38") {
+  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+}
+
 cat("configFile=", configFile, "\n")
 cat("annotationName=", annotationName, "\n")
 cat("chromosomes=", chromosomes, "\n")
