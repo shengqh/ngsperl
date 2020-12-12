@@ -113,8 +113,10 @@ sub perform {
 
     print $sh "\$MYCMD ./$pbs_name \n";
 
+    my $current_dir = create_directory_or_die($result_dir . "/" . $sample_name);
+
     my $final_file = $ispaired ? $sample_name . "_1.fastq.gz" : $sample_name . ".fastq.gz";
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $current_dir, $final_file );
 
     if ( $sample_file =~ /GSM/ ) {
       $sample_file = GsmToSrr( $sample_file );
