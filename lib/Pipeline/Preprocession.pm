@@ -227,16 +227,18 @@ sub getPreprocessionConfig {
     $def->{groups} = $groups;
   }
 
-  if ( $def->{pool_sample} ){
-    checkFileGroupPairNames($def, ["pool_sample_groups"], ["pairs"], "files");
-    checkFileGroupPairNames($def, ["groups"], ["pairs"], "pool_sample_groups");
-  }else{
-    checkFileGroupPairNames($def, ["groups"], ["pairs"], "files");
+  if (defined $def->{files}) {
+    if ( $def->{pool_sample} ){
+      checkFileGroupPairNames($def, ["pool_sample_groups"], ["pairs"], "files");
+      checkFileGroupPairNames($def, ["groups"], ["pairs"], "pool_sample_groups");
+    }else{
+      checkFileGroupPairNames($def, ["groups"], ["pairs"], "files");
 
-    if(not defined $def->{groups}){
-      my $files = $def->{files};
-      my $sampleNames = [keys %$files];
-      $def->{groups} = {"All" => $sampleNames};
+      if(not defined $def->{groups}){
+        my $files = $def->{files};
+        my $sampleNames = [keys %$files];
+        $def->{groups} = {"All" => $sampleNames};
+      }
     }
   }
 
@@ -258,7 +260,7 @@ sub getPreprocessionConfig {
   my $cluster = getValue( $def, "cluster" );
   my $email   = getValue( $def, "email" );
 
-  if ((! $def->{sra_to_fastq}) && $def->{check_file_exists}){
+  if ((! $def->{sra_to_fastq}) && (defined $def->{files}) && $def->{check_file_exists}){
     #all file defined in $files should be hard-coding with absolute path, check file
     my $sourcefiles   = getValue( $def, "files" );
     foreach my $filename (keys %$sourcefiles){
@@ -321,6 +323,11 @@ sub getPreprocessionConfig {
 
   my $fastq_remove_N   = getValue( $def, "fastq_remove_N" );
   my $remove_sequences = getValue( $def, "remove_sequences" );    #remove contamination sequences from sequence kit before adapter trimming
+
+  if ( (defined $remove_sequences) and ($remove_sequences ne "") ) {
+    defined $is_pairend or die "Define is_paired_end first!";
+  }
+
   my $run_cutadapt     = getValue( $def, "perform_cutadapt" );
   my $run_cutadapt_test  = getValue( $def, "perform_cutadapt_test" );
   
@@ -356,8 +363,6 @@ sub getPreprocessionConfig {
       not_clean  => getValue( $def, "sra_not_clean", 1 ),
       is_restricted_data => getValue($def, "is_restricted_data"),
       pbs        => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "10",
         "mem"       => "10gb"
@@ -380,8 +385,6 @@ sub getPreprocessionConfig {
       is_collated => $def->{is_collated},
       cluster     => $def->{cluster},
       pbs         => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => getValue($def, "merge_fastq_time", 4),
         "mem"       => "10gb"
@@ -406,8 +409,6 @@ sub getPreprocessionConfig {
       can_result_be_empty_file => 1,
       sh_direct   => 1,
       pbs => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "10",
         "mem"       => "40gb"
@@ -431,8 +432,6 @@ sub getPreprocessionConfig {
       output_to_same_folder => 1,
       sh_direct   => 0,
       pbs => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "10",
         "mem"       => "10gb"
@@ -453,8 +452,6 @@ sub getPreprocessionConfig {
       sh_direct  => 1,
       cluster    => $def->{cluster},
       pbs        => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "2",
         "mem"       => "10gb"
@@ -473,25 +470,47 @@ sub getPreprocessionConfig {
     addFastQC( $config, $def, $individual, $summary, "fastqc_raw", $source_ref, $preprocessing_dir );
   }
 
-  if ( length($remove_sequences) ) {
-    $config->{"remove_contamination_sequences"} = {
-      class      => "CQS::Perl",
-      perform    => 1,
-      target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "remove_contamination_sequences",
-      option     => $remove_sequences,
-      output_ext => "_removeSeq.fastq.gz",
-      perlFile   => "removeSequenceInFastq.pl",
-      source_ref => $source_ref,
-      sh_direct  => 1,
-      cluster    => $cluster,
-      pbs        => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "2",
-        "mem"       => "20gb"
-      },
-    };
+  if ( $remove_sequences ne "" ) {
+    if ($is_pairend){
+      $config->{"remove_contamination_sequences"} = {
+        class => "CQS::ProgramWrapperOneToOne",
+        target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "remove_contamination_sequences",
+        option => "-s " . $remove_sequences,
+        interpretor => "python3",
+        program => "../Format/removeSequence.py",
+        source_arg => "-i",
+        source_ref => $source_ref,
+        source_join => ",",
+        output_arg => "-o",
+        output_file_prefix => "_removeSeq",
+        output_file_ext => "_removeSeq.1.fastq.gz",
+        output_other_ext => "_removeSeq.2.fastq.gz",
+        output_to_same_folder => 1,
+        sh_direct   => 0,
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        }
+      };
+    }else{
+      $config->{"remove_contamination_sequences"} = {
+        class      => "CQS::Perl",
+        perform    => 1,
+        target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "remove_contamination_sequences",
+        option     => $remove_sequences,
+        output_ext => "_removeSeq.fastq.gz",
+        perlFile   => "removeSequenceInFastq.pl",
+        source_ref => $source_ref,
+        sh_direct  => 1,
+        cluster    => $cluster,
+        pbs        => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "2",
+          "mem"       => "20gb"
+        },
+      };
+    }
     push @$individual, ("remove_contamination_sequences");
     $source_ref = [ "remove_contamination_sequences", ".fastq.gz" ];
 
