@@ -118,24 +118,24 @@ sub perform {
     }
 
     if ( defined $curSection->{adapter_3} && length( $curSection->{adapter_3} ) > 0 ) {
-      my $adapters = split /,/, $curSection->{adapter_3};
+      my @adapters = split /,/, $curSection->{adapter_3};
       if ($ispairend) {
-        $adapter_option = " -a " . join(' -a ', $adapters) . " -A " . join(' -A ', $adapters);
+        $adapter_option = " -a " . join(' -a ', @adapters) . " -A " . join(' -A ', @adapters);
       }
       else {
-        $adapter_option = " -a " . join(' -a ', $adapters);
+        $adapter_option = " -a " . join(' -a ', @adapters);
       }
     }
   }
 
   if ( $option !~ /-g/ ) {
     if ( defined $curSection->{adapter_5} && length( $curSection->{adapter_5} ) > 0 ) {
-      my $adapters = split /,/, $curSection->{adapter_5};
+      my @adapters = split /,/, $curSection->{adapter_5};
       if ($ispairend) {
-        $adapter_option = $adapter_option . " -g " . join(' -g ', $adapters) . " -G " . join(' -G ', $adapters);
+        $adapter_option = $adapter_option . " -g " . join(' -g ', @adapters) . " -G " . join(' -G ', @adapters);
       }
       else {
-        $adapter_option = $adapter_option . " -g " .  join(' -g ', $adapters);
+        $adapter_option = $adapter_option . " -g " .  join(' -g ', @adapters);
       }
     }
   }
