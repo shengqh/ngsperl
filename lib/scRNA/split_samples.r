@@ -13,8 +13,7 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   
   if (!is.na(hashtag_regex)) {
     htos<-mat[grepl(hashtag_regex, rownames(mat)),]
-  }
-  else{
+  }else{
     htos<-mat
   }
   rownames(htos)<-gsub("_.*", "", rownames(htos))
@@ -71,12 +70,18 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
 
 args = commandArgs(trailingOnly=TRUE)
 
-inputFile = args[1]
-outputPrefix = args[2]
-hashtag_regex = args[3]
+if (length(args) == 0) {
+  h5file = "/data/cqs/paula_hurley_data/202011_scRNA/Count/4701-HYW-1/filtered_feature_bc_matrix.h5"
+  output_prefix = "/scratch/cqs/paula_hurley_projects/20201208_scRNA_split/split_samples/result/HYW_4701.HTO"
+  hashtag_regex = NA
+}else{
+  h5file = args[1]
+  output_prefix = args[2]
+  hashtag_regex = args[3]
+}
 
-print(paste0("inputFile=", inputFile))
-print(paste0("outputPrefix=", outputPrefix))
+print(paste0("h5file=", h5file))
+print(paste0("output_prefix=", output_prefix))
 print(paste0("hashtag_regex=", hashtag_regex))
 
-split(inputFile, outputPrefix, hashtag_regex)
+split(h5file, output_prefix, hashtag_regex)
