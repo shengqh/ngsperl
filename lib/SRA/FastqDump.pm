@@ -233,11 +233,11 @@ sub result {
 
     my @result_files = ();
     if ($ispaired) {
-      push( @result_files, $result_dir . "/" . $sample_name . "_1.fastq.gz" );
-      push( @result_files, $result_dir . "/" . $sample_name . "_2.fastq.gz" );
+      push( @result_files, $result_dir . "/$sample_name/" . $sample_name . "_1.fastq.gz" );
+      push( @result_files, $result_dir . "/$sample_name/" . $sample_name . "_2.fastq.gz" );
     }
     else {
-      push( @result_files, $result_dir . "/" . $sample_name . ".fastq.gz" );
+      push( @result_files, $result_dir . "/$sample_name/" . $sample_name . ".fastq.gz" );
     }
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
