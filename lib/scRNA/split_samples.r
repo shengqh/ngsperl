@@ -31,9 +31,23 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   
   table(pbmc.hashtag$HTO_classification.global)
   
-  Idents(pbmc.hashtag) <- "HTO_classification"
+  
+  #Idents(pbmc.hashtag) <- "HTO_classification"
   tagnames=rownames(pbmc.hashtag[["HTO"]])
   
+  Idents(pbmc.hashtag) <- "orig.ident"
+  width=max(10, length(tagnames) * 5)
+  pdf(paste0(output_prefix, ".tag.dist.pdf"), width=width, height=8)
+  print(RidgePlot(pbmc.hashtag, assay = "HTO", features = tagnames, ncol = length(tagnames), cols = "black", fill="white"))
+  dev.off()
+
+  if (length(tagnames) == 2) {
+    pdf(paste0(output_prefix, ".tag.point.pdf"), width=width, height=8)
+    print(FeatureScatter(object = pbmc.hashtag, feature1 = tagnames[1], feature2 = tagnames[2], cols = "black"))
+    dev.off()
+  }
+
+  Idents(pbmc.hashtag) <- "HTO_classification"
   width=max(10, length(tagnames) * 5)
   pdf(paste0(output_prefix, ".dist.pdf"), width=width, height=8)
   print(RidgePlot(pbmc.hashtag, assay = "HTO", features = tagnames, ncol = length(tagnames)))
@@ -71,8 +85,8 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
 args = commandArgs(trailingOnly=TRUE)
 
 if (length(args) == 0) {
-  h5file = "/data/cqs/paula_hurley_data/202011_scRNA/Count/4701-HYW-1/filtered_feature_bc_matrix.h5"
-  output_prefix = "/scratch/cqs/paula_hurley_projects/20201208_scRNA_split/split_samples/result/HYW_4701.HTO"
+  h5file = r"(C:/Users/sheng/projects/paula_hurley/20201208_scRNA_split/filtered_feature_bc_matrix.h5)"
+  output_prefix = r"(C:\Users\sheng\projects\paula_hurley\20201208_scRNA_split\split_samples\result\HYW_4701\HYW_4701.HTO)"
   hashtag_regex = NA
 }else{
   h5file = args[1]
