@@ -436,6 +436,35 @@ sub getScRNASeqConfig {
     addEncloneToClonotype($config, $def, $summary, $target_dir, "clonotype_enclone_to_clonotypes", "clonotype_merge_enclone", ["clonotype_merge", ".cdr3\$"]);
   }
 
+  if(defined $def->{perform_split_hto_samples}) {
+    $config->{"split_hto_samples"} = {
+      class => "CQS::ProgramWrapperOneToOne",
+      target_dir => "${target_dir}/split_hto_samples_cutoff",
+      interpretor => "R --vanilla -f ",
+      program => "../scRNA/split_samples_cutoff.r",
+      check_program => 1,
+      option => "--args __FILE__ __OUTPUT__ " . getValue($def, "hto_regex", ""),
+      source_arg => "",
+      source_ref => [ "files" ],
+      output_arg => "",
+      output_file_prefix => ".HTO",
+      output_file_ext => ".HTO.csv",
+      output_to_same_folder => 0,
+      can_result_be_empty_file => 0,
+      sh_direct   => 1,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    };
+    push( @$individual, "split_hto_samples" );
+  }
+
+  if(defined $def->{HTO_samples}){
+    write_HTO_sample_file($def);
+  }
+
   if (defined $def->{files}){
     if ( getValue( $def, "perform_scRNABatchQC" ) ) {
       $config->{scRNABatchQC} = {
