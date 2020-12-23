@@ -85,8 +85,8 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
 args = commandArgs(trailingOnly=TRUE)
 
 if (length(args) == 0) {
-  h5file = r"(C:/Users/sheng/projects/paula_hurley/20201208_scRNA_split/filtered_feature_bc_matrix.h5)"
-  output_prefix = r"(C:\Users\sheng\projects\paula_hurley\20201208_scRNA_split\split_samples\result\HYW_4701\HYW_4701.HTO)"
+  h5file = "C:/Users/sheng/projects/paula_hurley/20201208_scRNA_split/filtered_feature_bc_matrix.h5"
+  output_prefix = "C:/Users/sheng/projects/paula_hurley/20201208_scRNA_split/split_samples/result/HYW_4701/HYW_4701.HTO"
   hashtag_regex = NA
 }else{
   h5file = args[1]
