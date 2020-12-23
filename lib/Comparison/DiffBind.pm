@@ -125,11 +125,11 @@ sub result {
     my $finalPrefix = $name;
     for my $comparison (@$comparisons) {
       my $comparisonName = $comparison->[0];
-      my $finalFile      = $name . "." . $comparisonName . ".sig.tsv";
-      push( @result_files, $curdir . "/" . $finalFile );
+      push( @result_files, "${curdir}/${name}.${comparisonName}.sig.tsv" );
+      push( @result_files, "${curdir}/${name}.${comparisonName}.sig.bed" );
       if ( $homer_annotation_genome ne "" ) {
-        push( @result_files, $curdir . "/" . $name . "." . $comparisonName . ".sig.stat.tsv" );
-        push( @result_files, $curdir . "/" . $name . "." . $comparisonName . ".sig.genes.tsv" );
+        push( @result_files, "${curdir}/${name}.${comparisonName}.sig.stat.tsv" );
+        push( @result_files, "${curdir}/${name}.${comparisonName}.sig.genes.tsv" );
       }
     }
     for my $oKey (sort keys %$minOverlap){

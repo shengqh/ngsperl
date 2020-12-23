@@ -85,4 +85,5 @@ for (idx in c(1:nrow(comparisons))){
   select<-(!is.na(res$FDR)) & (res$FDR<pvalue) & (abs(res$Fold) >= log2(foldChange))
   res_sig<-res[select,]
   write.table(as.data.frame(res_sig,row.names=NULL),file=paste0(compPrefix, ".sig.tsv"),quote=F,sep="\t",row.names=F)
+  write.table(as.data.frame(res_sig,row.names=NULL)[,c(1:3)],file=paste0(compPrefix, ".sig.bed"),quote=F,sep="\t",row.names=F, col.names=F)
 }
