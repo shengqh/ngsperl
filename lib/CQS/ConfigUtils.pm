@@ -87,6 +87,7 @@ our %EXPORT_TAGS = (
       get_groups_by_pattern
       get_covariances_by_pattern
       create_covariance_file_by_pattern
+      write_HTO_sample_file
       get_parameter_file_option)
   ]
 );
@@ -1742,6 +1743,26 @@ sub create_covariance_file_by_pattern {
       print $cov "\t" . $cov_map->{$covariance}{$samplename};
     }
     print $cov "\n";
+  }
+  close($cov);
+
+  return($cov_file);
+}
+
+sub write_HTO_sample_file {
+  my ($def) = @_;
+
+  my $HTO_samples = $def->{HTO_samples};
+  my $target_dir = getValue($def, "target_dir");
+  my $cov_file = $target_dir . "/hto_samples.txt";
+  open( my $cov, ">$cov_file" ) or die "Cannot create $cov_file";
+  print $cov "File\tTagname\tSample\n";
+  for my $fname (sort keys %$HTO_samples) {
+    my $htos = $HTO_samples->{$fname};
+    for my $hto (sort keys %$htos) {
+      my $sample = $htos->{$hto};
+      print $cov "${fname}\t${hto}\t${sample}\n";
+    }
   }
   close($cov);
 
