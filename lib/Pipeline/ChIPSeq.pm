@@ -549,6 +549,10 @@ sub getConfig {
         },
       };
       push @$summary, ($bindName);
+
+      if ( getValue( $def, "perform_homer" ) ) {
+        addHomerAnnotation( $config, $def, $summary, $target_dir, $bindName, ".sig.bed" );
+      }
     }
 
     if ( getValue( $def, "perform_enhancer" ) ) {
