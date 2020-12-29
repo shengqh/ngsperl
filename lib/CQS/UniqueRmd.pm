@@ -43,11 +43,9 @@ sub perform {
   my $rfile     = build_rmd_file($config, $section, $result_dir, $rfilename);
 
   my $removeEmpty = get_option( $config, $section, "remove_empty_parameter", 0 );
-  my $parametersample_files1 = writeParameterSampleFile( $config, $section, $result_dir, 1, $removeEmpty );
-  my $parametersample_files2 = writeParameterSampleFile( $config, $section, $result_dir, 2, $removeEmpty );
-  my $parametersample_files3 = writeParameterSampleFile( $config, $section, $result_dir, 3, $removeEmpty );
-  my $parametersample_files4 = writeParameterSampleFile( $config, $section, $result_dir, 4, $removeEmpty );
-
+  for my $myidx (1..10) {
+    writeParameterSampleFile( $config, $section, $result_dir, $myidx, $removeEmpty );
+  }
   
   my $final_file = ${task_name}. $self->{_suffix} . ".html";
   my $final = $self->open_pbs( $final_pbs, $pbs_desc, $final_log_desp, $path_file, $result_dir, $final_file );
