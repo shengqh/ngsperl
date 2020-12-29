@@ -149,6 +149,32 @@ batch_for_integration<-ifelse(options$batch_for_integration == "0", FALSE, TRUE)
 by_integration<-ifelse(options$by_integration == "0", FALSE, TRUE)
 by_sctransform<-ifelse(options$by_sctransform == "0", FALSE, TRUE)
 
+hto_str = ""
+hto_data = list()
+hto_sample_file<-options$hto_sample_file
+has_hto = (hto_sample_file != "")
+if (has_hto) {
+  hto_samples = read.table(hto_sample_file, sep="\t", header=T, stringsAsFactors=FALSE)
+  hto_md5 = list()
+  hto_md5[["hto_samples"]] = digest(hto_sample_file, file=TRUE)
+  hto_cell_files = read.table("fileList5.txt", sep="\t", stringsAsFactors=FALSE, row.names=2)
+  #sample = rownames(hto_cell_files)[1]
+  for (sample in rownames(hto_cell_files)){
+    cell_file = hto_cell_files[sample, "V1"]
+    cell_data = read.csv(cell_file, stringsAsFactors=FALSE, header=TRUE)
+    hto_md5[[sample]] = digest(cell_file, file=TRUE)
+    cell_data$Sample = ""
+    cur_samples = hto_samples[hto_samples$File == sample,]
+    for (cidx in c(1:nrow(cur_samples))){
+      tagname = cur_samples$Tagname[cidx]
+      samplename = cur_samples$Sample[cidx]
+      cell_data$Sample[cell_data$HTO == tagname] = samplename
+    }
+    sample_cell_data = cell_data[cell_data$Sample != "",]
+    hto_data[[sample]] = sample_cell_data
+  }
+  hto_str = paste0(hto_md5, collapse="_")
+}
 prefix<-options$prefix
 
 hasDetails<-file.exists(details_rmd)
@@ -168,7 +194,7 @@ pca_dims<-1:as.numeric(options$pca_dims)
 filelist1<-read.table("fileList1.txt", header=F)
 filestr<-paste0(filelist1$V1, collapse = "_")
 
-prefixMd5=digest(paste0(optionstr, filestr), "md5", serialize = FALSE)
+prefixMd5=digest(paste0(optionstr, filestr, hto_str), "md5", serialize = FALSE)
 
 finalList<-list()
 finalListFile<-paste0(prefix, ".final.rds")
@@ -204,9 +230,11 @@ if(isCalc){
     
   #read raw count dat
   filelist1<-read.table("fileList1.txt", header=F, stringsAsFactors = F)
-  rawobjs<-apply(filelist1, 1, function(x){
-    fileName  = x[[1]]
-    fileTitle = x[[2]]
+  rawobjs = list()
+  #fidx=1
+  for (fidx in c(1:nrow(filelist1))) {
+    fileName  = filelist1[fidx, 1]
+    fileTitle = filelist1[fidx, 2]
     if(dir.exists(fileName)){
       counts = Read10X(fileName)
     } else {
@@ -233,9 +261,23 @@ if(isCalc){
       mat<-mat[rowsum > (ncol(mat) / 2),]
       sobj[["ADT"]] <- CreateAssayObject(counts = mat)
     }
-    sobj<-RenameCells(object=sobj, new.names=paste0(fileTitle, "_", colnames(sobj)))
-    return(sobj)
-  })
+
+    if(has_hto) {
+      cell_data = hto_data[[fileTitle]]
+      validobj = subset(sobj, cells=cell_data$X)
+      #tagname = unique(cell_data$HTO)[1]
+      for (tagname in unique(cell_data$HTO)){
+        tagcells = cell_data[cell_data$HTO == tagname,]
+        sample = tagcells$Sample[1]
+        sample_obj = subset(validobj, cells=tagcells$X)
+        sample_obj<-RenameCells(object=sample_obj, new.names=paste0(sample, "_", colnames(sample_obj)))
+        rawobjs[[sample]] = sample_obj
+      }
+    }else{
+      sobj<-RenameCells(object=sobj, new.names=paste0(fileTitle, "_", colnames(sobj)))
+      rawobjs[[fileTitle]] = sobj
+    }
+  }
   
   if(pool_sample){
     if(!file.exists("filelist4.txt")){
@@ -390,7 +432,7 @@ if(isCalc){
   clusters<-obj@active.ident
   sumcounts<-t(apply(GetAssayData(obj,assay="RNA",slot="counts"),1,function(x){tapply(x,clusters,sum)}))
   logsumcounts<-log2(sumcounts+1)
-  data.quantileAll <- apply(logsumcounts, 2, function(x){quantile(x, 0.75)})
+  data.quantileAll<-apply(logsumcounts, 2, function(x){quantile(x, 0.75)})
   
   norm_method=""
   if(any(data.quantileAll == 0)){
