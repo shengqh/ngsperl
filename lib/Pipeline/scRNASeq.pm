@@ -436,36 +436,49 @@ sub getScRNASeqConfig {
     addEncloneToClonotype($config, $def, $summary, $target_dir, "clonotype_enclone_to_clonotypes", "clonotype_merge_enclone", ["clonotype_merge", ".cdr3\$"]);
   }
 
-  if(defined $def->{perform_split_hto_samples}) {
-    $config->{"split_hto_samples"} = {
-      class => "CQS::ProgramWrapperOneToOne",
-      target_dir => "${target_dir}/split_hto_samples_cutoff",
-      interpretor => "R --vanilla -f ",
-      program => "../scRNA/split_samples_cutoff.r",
-      check_program => 1,
-      option => "--args __FILE__ __OUTPUT__ " . getValue($def, "hto_regex", ""),
-      source_arg => "",
-      source_ref => [ "files" ],
-      output_arg => "",
-      output_file_prefix => ".HTO",
-      output_file_ext => ".HTO.csv",
-      output_to_same_folder => 0,
-      can_result_be_empty_file => 0,
-      sh_direct   => 1,
-      pbs => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "1",
-        "mem"       => "10gb"
-      },
-    };
-    push( @$individual, "split_hto_samples" );
-  }
-
-  if(defined $def->{HTO_samples}){
-    write_HTO_sample_file($def);
-  }
-
   if (defined $def->{files}){
+    my $split_hto_ref = undef;
+    my $hto_sample_file = undef;
+    if((defined $def->{perform_split_hto_samples}) and $def->{perform_split_hto_samples}) {
+      my $r_script = undef;
+      my $folder = undef;
+      if ((defined $def->{split_hto_samples_by_cutoff}) and $def->{split_hto_samples_by_cutoff}) {
+        $r_script = "../scRNA/split_samples_cutoff.r";
+        $folder = "split_hto_samples_cutoff";
+      } else {
+        $r_script = "../scRNA/split_samples.r";
+        $folder = "split_hto_samples_HTODemux";
+      }
+      $config->{"split_hto_samples"} = {
+        class => "CQS::ProgramWrapperOneToOne",
+        target_dir => "${target_dir}/$folder",
+        interpretor => "R --vanilla -f ",
+        program => $r_script,
+        check_program => 1,
+        option => "--args __FILE__ __OUTPUT__ " . getValue($def, "hto_regex", ""),
+        source_arg => "",
+        source_ref => [ "files" ],
+        output_arg => "",
+        output_file_prefix => ".HTO",
+        output_file_ext => ".HTO.csv",
+        output_to_same_folder => 0,
+        can_result_be_empty_file => 0,
+        sh_direct   => 1,
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$individual, "split_hto_samples" );
+
+      $split_hto_ref = ["split_hto_samples", ".HTO.csv" ];
+
+      if(defined $def->{HTO_samples}){
+        $hto_sample_file = write_HTO_sample_file($def);
+      }
+    }
+
     if ( getValue( $def, "perform_scRNABatchQC" ) ) {
       $config->{scRNABatchQC} = {
         class                    => "CQS::UniqueR",
@@ -514,10 +527,12 @@ sub getScRNASeqConfig {
           by_sctransform        => getValue( $def, "by_sctransform" ),
           pool_sample           => getValue( $def, "pool_sample" ),
           batch_for_integration => getValue( $def, "batch_for_integration" ),
+          hto_sample_file       => $hto_sample_file,
           prefix                => $taskName,
         },
         parameterSampleFile3 => $def->{"batch_for_integration_groups"},
         parameterSampleFile4 => $def->{"pool_sample_groups"},
+        parameterSampleFile5_ref => $split_hto_ref,
         output_file_ext      => ".final.rds;.cluster.csv;.allmarkers.csv;.top10markers.csv;_ur.html",
         sh_direct            => 1,
         pbs                  => {
