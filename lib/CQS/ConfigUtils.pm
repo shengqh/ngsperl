@@ -1637,7 +1637,6 @@ sub get_groups_by_pattern_dic {
   my $files = $def->{files};
 
   my $groups = {};
-
   for my $groupname (sort keys %$gpattern_dic){
     my $gpattern = $gpattern_dic->{$groupname};
     for my $samplename (sort keys %$files) {
@@ -1660,10 +1659,24 @@ sub get_groups_by_pattern_value {
   my $gpattern = $def->{groups_pattern};
   my $files = $def->{files};
 
+  my @samplenames = ();
+  if (getValue($def, "perform_split_hto_samples", 0)){
+    my $HTO_samples = getValue($def, "HTO_samples");
+    for my $hto (keys %$HTO_samples){
+      my $hto_map = $HTO_samples->{$hto};
+      my @hto_sub_samples = (values %$hto_map);
+      push (@samplenames, @hto_sub_samples);
+    }
+  }else{
+    push (@samplenames, (keys %$files));
+  }
+  @samplenames = sort @samplenames;
+  #print(Dumper(@samplenames));
+  
   #print($gpattern);
   #print(Dumper($files));
   my $groups = {};
-  for my $samplename (sort keys %$files) {
+  for my $samplename (@samplenames) {
     my $groupname = $samplename;
     if($samplename =~ /$gpattern/){
       $groupname = $1;
