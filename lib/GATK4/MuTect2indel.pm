@@ -4,6 +4,7 @@ package GATK4::MuTect2indel;
 use strict;
 use warnings;
 use File::Basename;
+use Data::Dumper;
 use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
@@ -68,6 +69,7 @@ sub perform {
   else {
     %group_sample_map = %raw_files;
   }
+  #print(Dumper(%group_sample_map));
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
@@ -83,8 +85,9 @@ sub perform {
     my $sample_param;
     if ( $sampleCount == 1 ) {
       $normal      = "";
-      $tumor       = $sample_files[0];
-      $sample_param = "-I $tumor";
+      my $tumor_name = $sample_files[0][0];
+      $tumor       = $sample_files[0][1];
+      $sample_param = "-I $tumor -tumor $tumor_name";
     }
     elsif ( $sampleCount != 2 ) {
       die "SampleFile should be tumor only or normal,tumor paired.";
