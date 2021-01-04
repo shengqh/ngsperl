@@ -124,24 +124,24 @@ sub perform {
     }
 
     if ($curOption =~ /__FILE__/){
-      my $param_option1 = get_program_param( $parameterSampleFile1, "", $parameterSampleFile1JoinDelimiter, $sample_name );
+      my $param_option1 = get_program_param( $parameterSampleFile1, "", $parameterSampleFile1JoinDelimiter, $sample_name, $result_dir, 1 );
       $curOption =~ s/__FILE__/$param_option1/g;
     } elsif (option_contains_arg($curOption, $parameterSampleFile1arg)) {
     } else{
-      my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name );
+      my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name, $result_dir, 1 );
       $curOption = $curOption . " " . $param_option1;
     }
 
     if ( not $bFound2 ) {
       $curOption = $curOption . " " . $param_option2;
     }else{
-      $curOption = $curOption . " " . get_program_param($parameterSampleFile2, $parameterSampleFile2arg, $parameterSampleFile2JoinDelimiter, $sample_name);
+      $curOption = $curOption . " " . get_program_param($parameterSampleFile2, $parameterSampleFile2arg, $parameterSampleFile2JoinDelimiter, $sample_name, $result_dir, 2);
     }
 
     if ( not $bFound3 ) {
       $curOption = $curOption . " " . $param_option3;
     }else{
-      $curOption = $curOption . " " . get_program_param($parameterSampleFile3, $parameterSampleFile3arg, $parameterSampleFile3JoinDelimiter, $sample_name);
+      $curOption = $curOption . " " . get_program_param($parameterSampleFile3, $parameterSampleFile3arg, $parameterSampleFile3JoinDelimiter, $sample_name, $result_dir, 3);
     }
 
     print $pbs "

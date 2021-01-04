@@ -50,7 +50,7 @@ sub replace_tag {
     $cur_option =~ s/__FILE__/$input/g;
   } elsif (option_contains_arg($cur_option, $parameterSampleFile1arg)) {
   } else{
-    my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name );
+    my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name, $result_dir, 1 );
     $cur_option = $cur_option . " " . $parameterSampleFile1arg . " " . $input;
   }
 
@@ -116,11 +116,6 @@ sub perform {
     }
   }
 
-  my $output_ext = get_option( $config, $section, "output_ext", "" );
-  if($output_ext eq ""){
-     $output_ext = get_option( $config, $section, "output_file_ext", "" );
-  }
-
   my $source_key = "source";
   if ((not defined $config->{$section}{"source"} ) && (not defined $config->{$section}{"source_ref"} )) {
     $source_key = "parameterSampleFile1";
@@ -153,8 +148,9 @@ sub perform {
   my $pbs;
   my $final_file;
   if (defined $result_files){
-    $final_file = $result_files->[-1];
-    $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+    $final_file = $result_files->[0];
+    my $checkFile = $result_files->[-1];
+    $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $checkFile );
   }else{
     $final_file = $target_dir . "/";
     
