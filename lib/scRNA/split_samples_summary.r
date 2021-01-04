@@ -12,6 +12,9 @@ if (length(args) == 0) {
   outputPrefix = args[2]
   nameMapFile = args[3]
 }
+cat("inputFile=", inputFile, "\n")
+cat("outputPrefix=", outputPrefix, "\n")
+cat("nameMapFile=", nameMapFile, "\n")
 
 files=read.table(inputFile, sep="\t", stringsAsFactor=F)
 
@@ -32,9 +35,12 @@ g<-ggplot(mdat, aes(x=Sample, y=Cell, fill=Class, label=Cell)) + geom_bar(positi
 print(g)
 dev.off()
 
-df = read.table(nameMapFile, sep="\t", stringsAsFactor=F)
-namemap=df$V1
-names(namemap)=df$V2
+hasNameMap = ! is.na(nameMapFile)
+if (hasNameMap) {
+  df = read.table(nameMapFile, sep="\t", stringsAsFactor=F)
+  namemap=df$V1
+  names(namemap)=df$V2
+}
 
 dat=apply(files, 1, function(x){
   dname=x[[2]]
@@ -49,7 +55,9 @@ dat=apply(files, 1, function(x){
 })
 mdat=do.call("rbind", dat)
 mdat$Cell=mdat$Var1
-mdat$Cell[mdat$Var1 %in% names(namemap)] = namemap[mdat$Var1[mdat$Var1 %in% names(namemap)]]
+if (hasNameMap) {
+  mdat$Cell[mdat$Var1 %in% names(namemap)] = namemap[mdat$Var1[mdat$Var1 %in% names(namemap)]]
+}
 mdat=mdat[,c("Sample", "Cell", "Freq")]
 colnames(mdat)=c("Sample", "Class", "Cell")
 
