@@ -59,7 +59,7 @@ sub addClonotypeMerge {
     source_ref               => $source_ref,
     output_arg               => "-o",
     output_file              => "all_contig_annotations",
-    output_file_ext          => ".json;.json.cdr3",
+    output_file_ext          => ".json",
     output_other_ext         => ".json.cdr3",
     output_no_name           => 1,
     sh_direct                => 1,
