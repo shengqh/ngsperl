@@ -73,8 +73,19 @@ for (comp in comparisonNames){
       prefix = paste0(outFile, ".", prefixList[idx], ".", comp, ".edgeR")
       
       clusterCt<-clusterDf[clusterDf[,cluster_name] == ct,]
-      de_obj<-subset(obj, cells=clusterCt$cell)
+      de_obj<-subset(obj, cells=rownames(clusterCt))
       clusterCt$sample=de_obj$orig.ident
+
+      invalid_control_names= control_names[!(control_names %in% unique(clusterCt$sample))]
+      invalid_sample_names= sample_names[!(sample_names %in% unique(clusterCt$sample))]
+
+      if (length(invalid_control_names) == length(control_names)){
+        stop(paste0("There were no control ", paste0(invalid_control_names, collapse=","), " found in object sample names!"))
+      }
+      
+      if (length(invalid_sample_names)  == length(sample_names)){
+        stop(paste0("There were no sample ", paste0(invalid_sample_names, collapse=","), " found in object sample names!"))
+      }
       
       control_cells<-rownames(clusterCt)[clusterCt$sample %in% control_names]  
       sample_cells<-rownames(clusterCt)[clusterCt$sample %in% sample_names]  
