@@ -474,8 +474,107 @@ sub getScRNASeqConfig {
 
       $split_hto_ref = ["split_hto_samples", ".HTO.csv" ];
 
+      $config->{"split_hto_samples_summary"} = {
+        class => "CQS::ProgramWrapper",
+        target_dir => "${target_dir}/${folder}_summary",
+        interpretor => "R --vanilla -f ",
+        program => "../scRNA/split_samples_summary.r",
+        check_program => 1,
+        option => "--args __FILE__ __OUTPUT__",
+        source_arg => "",
+        source_ref => $split_hto_ref,
+        output_arg => "",
+        output_file_prefix => ".HTO.summary",
+        output_file_ext => ".HTO.summary.csv",
+        sh_direct   => 1,
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      },
+
+      push( @$individual, "split_hto_samples_summary" );
+
       if(defined $def->{HTO_samples}){
         $hto_sample_file = write_HTO_sample_file($def);
+      }
+
+      if(defined $def->{bam_files}){
+        if (not defined $def->{HTO_samples}) {
+          die "Define HTO_samples for split bam files";
+        }
+
+        $config->{HTO_samples} = $def->{HTO_samples};
+        $config->{bam_files} = $def->{bam_files};
+        $config->{"split_hto_bam"} = {
+          class => "CQS::ProgramWrapperOneToOne",
+          target_dir => "${target_dir}/split_hto_bam",
+          interpretor => "python3",
+          program => "../scRNA/split_samples.py",
+          check_program => 1,
+          option => "-o .",
+          source_arg => "-i",
+          source_ref => $split_hto_ref,
+          parameterSampleFile2_arg => "-b",
+          parameterSampleFile2_ref => ["bam_files"],
+          parameterSampleFile3_arg => "-s",
+          parameterSampleFile3_ref => ["HTO_samples"],
+          output_arg => "-o",
+          output_file_prefix => "",
+          output_file_ext => ".bam",
+          output_to_same_folder => 1,
+          can_result_be_empty_file => 0,
+          sh_direct   => 1,
+          pbs => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$individual, "split_hto_bam" );
+      }
+
+      if(defined $def->{vdj_json_files}){
+        if (not defined $def->{HTO_samples}) {
+          die "Define HTO_samples for split vdj json files";
+        }
+
+        $config->{HTO_samples} = $def->{HTO_samples};
+        $config->{vdj_json_files} = $def->{vdj_json_files};
+        $config->{"split_hto_clonotype"} = {
+          class => "CQS::ProgramWrapperOneToManyFile",
+          target_dir => "${target_dir}/split_hto_clonotype",
+          interpretor => "python3",
+          program => "../scRNA/clonotype_split.py",
+          check_program => 1,
+          option => "-o .",
+          source_arg => "-i",
+          source_ref => "vdj_json_files",
+          parameterSampleFile2_arg => "-c",
+          parameterSampleFile2_ref => $split_hto_ref,
+          parameterSampleFile3_arg => "-s",
+          parameterSampleFile3_ref => ["HTO_samples"],
+          output_file => "parameterSampleFile3",
+          output_arg => "-o",
+          output_file_prefix => "",
+          output_file_ext => "all_contig_annotations.json",
+          output_to_same_folder => 0,
+          samplename_in_result => 0,
+          output_file_key => 0,
+          can_result_be_empty_file => 0,
+          sh_direct   => 1,
+          pbs => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$individual, "split_hto_clonotype" );
+
+        addClonotypeMerge($config, $def, $summary, $target_dir, "split_hto_clonotype_merge", ["split_hto_clonotype", "all_contig_annotations.json"]);
+        addEnclone($config, $def, $summary, "split_hto_clonotype_merge_enclone", $target_dir, ["split_hto_clonotype_merge", ".json\$"] );
+        addEncloneToClonotype($config, $def, $summary, $target_dir, "split_hto_clonotype_merge_enclone_clonotypes", "split_hto_clonotype_merge_enclone", ["split_hto_clonotype_merge", ".cdr3\$"]);
       }
     }
 
