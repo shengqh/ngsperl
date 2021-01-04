@@ -36,26 +36,12 @@ sub result {
   my $output_taskname = $output_no_name ? "" : $task_name;
 
   my $output_file                = get_option( $config, $section, "output_file",                "" );
-  my $output_file_ext            = get_option( $config, $section, "output_file_ext",            "" );
-  if($output_file_ext eq ""){
-    $output_file_ext            = get_option( $config, $section, "output_ext",            "" );
-  }
+  my $output_file_exts = get_output_ext_list( $config, $section );
+
   my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
   my $output_perSample_file                = get_option( $config, $section, "output_perSample_file",                "" );
   my $output_perSample_file_byName         = get_option( $config, $section, "output_perSample_file_byName",                0 );
   my $output_perSample_file_ext            = get_option( $config, $section, "output_perSample_file_ext",            "" );
-
-  my @output_file_exts;
-  if ( $output_file_ext =~ /;/ ) {
-    @output_file_exts = split( ";", $output_file_ext );
-  }else{
-    @output_file_exts = ($output_file_ext );
-  }
-
-  @output_file_exts = grep { $_ ne '' } @output_file_exts; #remove empty elements
-  if (scalar(@output_file_exts) == 0){
-    @output_file_exts = ('');
-  }
 
   my @output_perSample_file_exts;
   if ( $output_perSample_file_ext =~ /;/ ) {
@@ -74,14 +60,14 @@ sub result {
       foreach my $sample_name ( keys %temp ) {
 #        print "SampleName: $sample_name\n";
         if ( ref( $temp{$sample_name} ) eq "HASH" ) {
-          foreach my $output_file_ext_one (@output_file_exts) {
+          foreach my $output_file_ext_one (@$output_file_exts) {
             push( @result_files, "${result_dir}/${sample_name}${output_file_ext_one}" );
           }
         }
         else {
           foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
             my $subSampleName = $output_to_result_directory ? $result_dir . "/" . basename($subSampleFile) : $subSampleFile;
-            foreach my $output_file_ext_one (@output_file_exts) {
+            foreach my $output_file_ext_one (@$output_file_exts) {
               push( @result_files, "${subSampleName}${output_file_ext_one}" );
             }
           }
@@ -94,7 +80,7 @@ sub result {
   }
   else {
     my @result_files = ();
-    foreach my $output_file_ext_one (@output_file_exts) {
+    foreach my $output_file_ext_one (@$output_file_exts) {
       if (($output_file ne "") or ($output_file_ext_one ne "")) {
         push( @result_files, "${result_dir}/${output_taskname}${output_file}${output_file_ext_one}" );
       }
@@ -139,6 +125,8 @@ sub result {
       die "output_file defined as " . $output_file . ", but " . $output_file . " not in configure\n";
     }
   }
+
+  #print(Dumper($result));
 
   return $result;
 }
