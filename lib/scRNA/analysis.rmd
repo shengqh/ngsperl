@@ -270,6 +270,7 @@ if(isCalc){
         tagcells = cell_data[cell_data$HTO == tagname,]
         sample = tagcells$Sample[1]
         sample_obj = subset(validobj, cells=tagcells$X)
+        sample_obj$orig.ident = sample
         sample_obj<-RenameCells(object=sample_obj, new.names=paste0(sample, "_", colnames(sample_obj)))
         rawobjs[[sample]] = sample_obj
       }
