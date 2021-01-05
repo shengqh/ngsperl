@@ -50,12 +50,18 @@ sub perform {
   my $no_output            = get_option( $config, $section, "no_output", 0 );
   
   my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, "source" );
+  my @sample_names = ( sort keys %$parameterSampleFile1 );
+  my $has_multi_samples = scalar(@sample_names) > 1;
 
   $option = $option . " " . get_parameter_file_option($config, $section);
 
-  my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
-  open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
-  print $sh get_run_command($sh_direct) . "\n";
+  my $shfile;
+  my $sh;
+  if ($has_multi_samples) {
+    $shfile = $self->get_task_filename( $pbs_dir, $task_name );
+    open( $sh, ">$shfile" ) or die "Cannot create $shfile";
+    print $sh get_run_command($sh_direct) . "\n";
+  }
 
   my $paramFileMap = {};
   for my $index (2..10){
@@ -93,7 +99,9 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
+    if ( $has_multi_samples ) {
+      print $sh "\$MYCMD ./$pbs_name \n";
+    }
 
     my $log_desc = $cluster->get_log_description($log);
 
@@ -156,12 +164,14 @@ $interpretor $program $curOption $output_option
     $self->close_pbs( $pbs, $pbs_file );
   }
 
-  close $sh;
-  if ( is_linux() ) {
-    chmod 0755, $shfile;
-  }
+  if ( $has_multi_samples ) {
+    close $sh;
+    if ( is_linux() ) {
+      chmod 0755, $shfile;
+    }
 
-  print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
+    print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
+  }
 }
 
 sub result {
