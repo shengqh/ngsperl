@@ -117,14 +117,14 @@ sub perform {
   }
 
   my $expect_result = $self->result( $config, $section );
+  #print(Dumper($expect_result));
+
   my $namemap = $self->get_output_name_map($config, $section);
 
   for my $sample_name ( sort keys %$parameterSampleFile1 ) {
     my $curnames = $namemap->{$sample_name};
 
     my $curOption = $option;
-
-    my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -137,7 +137,7 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $final_file            = $expect_result->{$curnames->[0]}[-1];
-    my $pbs                   = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    my $pbs                   = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     my $final_prefix = $sample_name . $output_file_prefix;
 
