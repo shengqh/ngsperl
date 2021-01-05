@@ -417,7 +417,7 @@ sub getScRNASeqConfig {
 
   $def = initializeScRNASeqDefaultOptions($def);
 
-  my $taskName = $def->{task_name};
+  my $task_name = $def->{task_name};
 
   my $email = $def->{email};
 
@@ -429,27 +429,32 @@ sub getScRNASeqConfig {
   my $star_option     = $def->{star_option};
   my $count_table_ref = "files";
 
-  if (defined $def->{vdj_files}){
-    $config->{vdj_files} = $def->{vdj_files};
-    addClonotypeMerge($config, $def, $summary, $target_dir, "clonotype_merge", ["vdj_files", "all_contig_annotations.json"]);
-    addEnclone($config, $def, $summary, "clonotype_merge_enclone", $target_dir, ["clonotype_merge", ".json\$"] );
-    addEncloneToClonotype($config, $def, $summary, $target_dir, "clonotype_enclone_to_clonotypes", "clonotype_merge_enclone", ["clonotype_merge", ".cdr3\$"]);
+  my $perform_split_hto_samples = getValue($def, "perform_split_hto_samples", 0);
+  my $has_vdj_json_files = defined $def->{vdj_json_files};
+
+  if (defined $def->{vdj_json_files}){
+    if ((not defined $def->{files}) || (not $perform_split_hto_samples)) {
+    $config->{vdj_json_files} = $def->{vdj_json_files};
+      addClonotypeMerge($config, $def, $summary, $target_dir, "clonotype_1_merge", ["vdj_json_files", "all_contig_annotations.json"]);
+      addEnclone($config, $def, $summary, "clonotype_2_enclone", $target_dir, ["clonotype_1_merge", ".json\$"] );
+      addEncloneToClonotype($config, $def, $summary, $target_dir, "clonotype_3_convert", "clonotype_2_enclone", ["clonotype_1_merge", ".cdr3\$"]);
+    }
   }
 
   if (defined $def->{files}){
-    my $split_hto_ref = undef;
+    my $hto_ref = undef;
     my $hto_sample_file = undef;
-    if((defined $def->{perform_split_hto_samples}) and $def->{perform_split_hto_samples}) {
+    if( $perform_split_hto_samples ) {
       my $r_script = undef;
       my $folder = undef;
-      if ((defined $def->{split_hto_samples_by_cutoff}) and $def->{split_hto_samples_by_cutoff}) {
+      if ( getValue($def, "split_hto_samples_by_cutoff", 0) ) {
         $r_script = "../scRNA/split_samples_cutoff.r";
-        $folder = "split_hto_samples_cutoff";
+        $folder = "hto_samples_cutoff";
       } else {
         $r_script = "../scRNA/split_samples.r";
-        $folder = "split_hto_samples_HTODemux";
+        $folder = "hto_samples_HTODemux";
       }
-      $config->{"split_hto_samples"} = {
+      $config->{"hto_samples"} = {
         class => "CQS::ProgramWrapperOneToOne",
         target_dir => "${target_dir}/$folder",
         interpretor => "R --vanilla -f ",
@@ -470,11 +475,11 @@ sub getScRNASeqConfig {
           "mem"       => "10gb"
         },
       };
-      push( @$individual, "split_hto_samples" );
+      push( @$individual, "hto_samples" );
 
-      $split_hto_ref = ["split_hto_samples", ".HTO.csv" ];
+      $hto_ref = ["hto_samples", ".HTO.csv" ];
 
-      $config->{"split_hto_samples_summary"} = {
+      $config->{"hto_samples_summary"} = {
         class => "CQS::ProgramWrapper",
         target_dir => "${target_dir}/${folder}_summary",
         interpretor => "R --vanilla -f ",
@@ -482,7 +487,8 @@ sub getScRNASeqConfig {
         check_program => 1,
         option => "--args __FILE__ __OUTPUT__",
         source_arg => "",
-        source_ref => $split_hto_ref,
+        source_ref => $hto_ref,
+        parameterSampleFile2 => $def->{"HTO_name_map"},
         output_arg => "",
         output_file_prefix => ".HTO.summary",
         output_file_ext => ".HTO.summary.csv",
@@ -494,7 +500,7 @@ sub getScRNASeqConfig {
         },
       },
 
-      push( @$individual, "split_hto_samples_summary" );
+      push( @$individual, "hto_samples_summary" );
 
       if(defined $def->{HTO_samples}){
         $hto_sample_file = write_HTO_sample_file($def);
@@ -507,15 +513,15 @@ sub getScRNASeqConfig {
 
         $config->{HTO_samples} = $def->{HTO_samples};
         $config->{bam_files} = $def->{bam_files};
-        $config->{"split_hto_bam"} = {
+        $config->{"hto_bam"} = {
           class => "CQS::ProgramWrapperOneToOne",
-          target_dir => "${target_dir}/split_hto_bam",
+          target_dir => "${target_dir}/hto_bam",
           interpretor => "python3",
           program => "../scRNA/split_samples.py",
           check_program => 1,
           option => "-o .",
           source_arg => "-i",
-          source_ref => $split_hto_ref,
+          source_ref => $hto_ref,
           parameterSampleFile2_arg => "-b",
           parameterSampleFile2_ref => ["bam_files"],
           parameterSampleFile3_arg => "-s",
@@ -532,7 +538,9 @@ sub getScRNASeqConfig {
             "mem"       => "10gb"
           },
         };
-        push( @$individual, "split_hto_bam" );
+        push( @$individual, "hto_bam" );
+
+        addArcasHLA($config, $def, $individual, $target_dir, $task_name, "hto_bam", "hto_bam");        
       }
 
       if(defined $def->{vdj_json_files}){
@@ -542,9 +550,9 @@ sub getScRNASeqConfig {
 
         $config->{HTO_samples} = $def->{HTO_samples};
         $config->{vdj_json_files} = $def->{vdj_json_files};
-        $config->{"split_hto_clonotype"} = {
+        $config->{"hto_clonotype_1_split"} = {
           class => "CQS::ProgramWrapperOneToManyFile",
-          target_dir => "${target_dir}/split_hto_clonotype",
+          target_dir => "${target_dir}/hto_clonotype_1_split",
           interpretor => "python3",
           program => "../scRNA/clonotype_split.py",
           check_program => 1,
@@ -552,7 +560,7 @@ sub getScRNASeqConfig {
           source_arg => "-i",
           source_ref => "vdj_json_files",
           parameterSampleFile2_arg => "-c",
-          parameterSampleFile2_ref => $split_hto_ref,
+          parameterSampleFile2_ref => $hto_ref,
           parameterSampleFile3_arg => "-s",
           parameterSampleFile3_ref => ["HTO_samples"],
           output_file => "parameterSampleFile3",
@@ -570,11 +578,11 @@ sub getScRNASeqConfig {
             "mem"       => "10gb"
           },
         };
-        push( @$individual, "split_hto_clonotype" );
+        push( @$individual, "hto_clonotype_1_split" );
 
-        addClonotypeMerge($config, $def, $summary, $target_dir, "split_hto_clonotype_merge", ["split_hto_clonotype", "all_contig_annotations.json"]);
-        addEnclone($config, $def, $summary, "split_hto_clonotype_merge_enclone", $target_dir, ["split_hto_clonotype_merge", ".json\$"] );
-        addEncloneToClonotype($config, $def, $summary, $target_dir, "split_hto_clonotype_merge_enclone_clonotypes", "split_hto_clonotype_merge_enclone", ["split_hto_clonotype_merge", ".cdr3\$"]);
+        addClonotypeMerge($config, $def, $summary, $target_dir, "hto_clonotype_2_merge", ["hto_clonotype_1_split", "all_contig_annotations.json"]);
+        addEnclone($config, $def, $summary, "hto_clonotype_3_enclone", $target_dir, ["hto_clonotype_2_merge", ".json\$"] );
+        addEncloneToClonotype($config, $def, $summary, $target_dir, "hto_clonotype_4_convert", "hto_clonotype_3_enclone", ["hto_clonotype_2_merge", ".cdr3\$"]);
       }
     }
 
@@ -627,11 +635,11 @@ sub getScRNASeqConfig {
           pool_sample           => getValue( $def, "pool_sample" ),
           batch_for_integration => getValue( $def, "batch_for_integration" ),
           hto_sample_file       => $hto_sample_file,
-          prefix                => $taskName,
+          prefix                => $task_name,
         },
         parameterSampleFile3 => $def->{"batch_for_integration_groups"},
         parameterSampleFile4 => $def->{"pool_sample_groups"},
-        parameterSampleFile5_ref => $split_hto_ref,
+        parameterSampleFile5_ref => $hto_ref,
         output_file_ext      => ".final.rds;.cluster.csv;.allmarkers.csv;.top10markers.csv;_ur.html",
         sh_direct            => 1,
         pbs                  => {
@@ -699,7 +707,7 @@ sub getScRNASeqConfig {
             markers_file        => getValue( $def, "markers_file" ),
             by_integration      => getValue( $def, "by_integration" ),
             by_sctransform      => getValue( $def, "by_sctransform" ),
-            prefix              => $taskName,
+            prefix              => $task_name,
           },
           output_file_ext => ".recluster.rds",
           sh_direct       => 1,
