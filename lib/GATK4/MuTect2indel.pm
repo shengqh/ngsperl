@@ -33,7 +33,8 @@ sub perform {
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $ERC_mode = get_option($config, $section, "ERC_mode", "NONE");
-  my $suffix = ($ERC_mode eq "GCVF") ? ".g.vcf.gz" : ".vcf.gz";
+  #my $ERC_mode = get_option($config, $section, "ERC_mode", "GVCF");
+  my $suffix = ($ERC_mode eq "GVCF") ? ".g.vcf.gz" : ".vcf.gz";
 
   my $germline_resource = get_param_file( $config->{$section}{germline_resource}, "germline_resource", 0 );
   if(defined $germline_resource and ($germline_resource ne "")){
@@ -44,6 +45,11 @@ sub perform {
   if(defined $panel_of_normals and ($panel_of_normals ne "")){
     $option = $option . " --panel-of-normals $panel_of_normals ";
   }
+
+  # my $script = dirname(__FILE__) . "/addEND.py";
+  # if ( !-e $script ) {
+  #   die "File not found : " . $script;
+  # }
 
   #target region
   my $intervals = get_param_file( $config->{$section}{intervals}, "intervals", 0 );
@@ -140,6 +146,11 @@ if [ ! -s $vcf ]; then
     -O $tmp_vcf
 
   if [[ -s ${tmp_vcf}.tbi ]]; then
+    # python \$script -i \$tmp_vcf -o \$vcf
+    # if [[ -s \${vcf}.tbi ]]; then
+    #   rm \$tmp_vcf 
+    #   rm \${tmp_vcf}.tbi
+    # fi
     mv $tmp_vcf $vcf
     mv ${tmp_vcf}.tbi ${vcf}.tbi
   fi
