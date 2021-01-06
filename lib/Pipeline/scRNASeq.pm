@@ -640,7 +640,8 @@ sub getScRNASeqConfig {
         parameterSampleFile3 => $def->{"batch_for_integration_groups"},
         parameterSampleFile4 => $def->{"pool_sample_groups"},
         parameterSampleFile5_ref => $hto_ref,
-        output_file_ext      => ".final.rds;.cluster.csv;.allmarkers.csv;.top10markers.csv;_ur.html",
+        output_file_ext      => ".final.rds",
+        output_other_ext  => ".cluster.csv;.allmarkers.csv;.top10markers.csv;_ur.html",
         sh_direct            => 1,
         pbs                  => {
           "email"     => $def->{email},
