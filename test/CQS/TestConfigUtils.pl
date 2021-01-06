@@ -2,86 +2,94 @@
 use strict;
 use warnings;
 use File::Spec;
+use File::Basename;
 use CQS::ConfigUtils;
 use Data::Dumper;
-use Test::More tests => 14;
+use Test::More tests => 15;
 
-my $def = {
-  unsorted => {
-    B => 1,
-    A => 1,
-    C => 1
-  },
-  sorted => {
-    B        => 1,
-    A        => 1,
-    C        => 1,
-    ".order" => [ "C", "B", "A" ],
-    ".col"   => [ "CC", "BB", "AA" ]
-  },
-  unsorted_section => {
-    source_ref => "unsorted"
-  },
-  sorted_section => {
-    source_ref => "sorted"
-  },
-};
-
-my $unsorted = get_raw_files( $def, "unsorted_section" );
-my @unsortedKeys = keys %$unsorted;
-is_deeply( \@unsortedKeys, [ "A", "B", "C" ] );
-
-my $sorted = get_raw_files( $def, "sorted_section" );
-my @sortedKeys = keys %$sorted;
-is_deeply( \@sortedKeys, [ "C", "B", "A" ] );
-
-my $sortedAttr = get_raw_files_attributes( $def, "sorted_section" );
-is_deeply(
-  $sortedAttr,
-  {
-    ".order" => [ "C",  "B",  "A" ],
-    ".col"   => [ "CC", "BB", "AA" ]
-  }
-);
-
-my $def2 = {
-  groups => {
-    "g1" => [ "g1s1", "g1s2" ],
-    "g2" => [ "g2s1", "g2s2" ],
-    "g3" => [ "g3s1", "g3s2" ],
-  },
-  correlation_groups => {
-    "g1g2" => {
-      groups => [ "g1", "g2" ],
-      cov    => [ 1,    2, 1, 2 ],
+{
+  my $def = {
+    unsorted => {
+      B => 1,
+      A => 1,
+      C => 1
     },
-    "g1g3" => [ "g1", "g3" ],
-  },
-};
+    sorted => {
+      B        => 1,
+      A        => 1,
+      C        => 1,
+      ".order" => [ "C", "B", "A" ],
+      ".col"   => [ "CC", "BB", "AA" ]
+    },
+    unsorted_section => {
+      source_ref => "unsorted"
+    },
+    sorted_section => {
+      source_ref => "sorted"
+    },
+  };
 
-my $map = get_pair_group_sample_map( $def2->{correlation_groups}, $def2->{groups} );
-is_deeply(
-  $map,
-  {
-    "g1g2" => {
+  my $unsorted = get_raw_files( $def, "unsorted_section" );
+  my @unsortedKeys = keys %$unsorted;
+  is_deeply( \@unsortedKeys, [ "A", "B", "C" ] );
+
+  my $sorted = get_raw_files( $def, "sorted_section" );
+  my @sortedKeys = keys %$sorted;
+  is_deeply( \@sortedKeys, [ "C", "B", "A" ] );
+
+  my $sortedAttr = get_raw_files_attributes( $def, "sorted_section" );
+  is_deeply(
+    $sortedAttr,
+    {
+      ".order" => [ "C",  "B",  "A" ],
+      ".col"   => [ "CC", "BB", "AA" ]
+    }
+  );
+}
+
+{ # test_get_pair_group_sample_map 
+  my $def2 = {
+    groups => {
       "g1" => [ "g1s1", "g1s2" ],
       "g2" => [ "g2s1", "g2s2" ],
-    },
-    "g1g3" => {
-      "g1" => [ "g1s1", "g1s2" ],
       "g3" => [ "g3s1", "g3s2" ],
     },
-  }
-);
+    correlation_groups => {
+      "g1g2" => {
+        groups => [ "g1", "g2" ],
+        cov    => [ 1,    2, 1, 2 ],
+      },
+      "g1g3" => [ "g1", "g3" ],
+    },
+  };
 
-ok( option_contains_arg( "-i __SAMPLE__",              "-i" ) );
-ok( option_contains_arg( "-o __OUTPUT__ -i",           "-i" ) );
-ok( option_contains_arg( "-o __OUTPUT__ -i __INPUT__", "-i" ) );
-ok( !option_contains_arg( "-o __OUTPUT__ -impossible __INPUT__", "-i" ) );
+  my $map = get_pair_group_sample_map( $def2->{correlation_groups}, $def2->{groups} );
+
+  is_deeply(
+    $map,
+    {
+      "g1g2" => {
+        "g1" => [ "g1s1", "g1s2" ],
+        "g2" => [ "g2s1", "g2s2" ],
+      },
+      "g1g3" => {
+        "g1" => [ "g1s1", "g1s2" ],
+        "g3" => [ "g3s1", "g3s2" ],
+      },
+    }
+  );
+}
+
+{ # test option_contains_arg
+  ok( option_contains_arg( "-i __SAMPLE__",              "-i" ) );
+  ok( option_contains_arg( "-o __OUTPUT__ -i",           "-i" ) );
+  ok( option_contains_arg( "-o __OUTPUT__ -i __INPUT__", "-i" ) );
+  ok( !option_contains_arg( "-o __OUTPUT__ -impossible __INPUT__", "-i" ) );
+}
 
 {    #test read_table
-  #print(File::Spec->rel2abs("../../data/cnv.txt"));
-  my ( $tbl, $names ) = read_table( "../../data/cnv.txt", 3 );
+  my $datafile = File::Spec->rel2abs(dirname(__FILE__) . "/../../data/cnv.txt");
+  my ( $tbl, $names ) = read_table( $datafile , 3 );
   ok( 9 == scalar( keys %$tbl ) );
   is_deeply(
     $tbl->{'chr1:1705591-1705782'},
@@ -245,5 +253,24 @@ my $cov_expect = {
                        }
         };
 is_deeply( $cov_map, $cov_expect );     
+
+{ # test get_output_ext_list
+  my $config = {
+    "test" => {
+      output_file_ext      => ".final.rds",
+      output_other_ext  => ".cluster.csv; .allmarkers.csv,.top10markers.csv ;_ur.html; ",
+    }
+  };
+  my $exts = get_output_ext_list($config, "test");
+  #print(Dumper($exts));
+  is_deeply( $exts, 
+        [
+          '.final.rds',
+          '.cluster.csv',
+          '.allmarkers.csv',
+          '.top10markers.csv',
+          '_ur.html'
+        ] );     
+}
 
 1;
