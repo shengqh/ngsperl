@@ -135,30 +135,13 @@ sub result {
 	) = $self->init_parameter( $config, $section, 0 );
 
 	my %raw_files = %{ get_raw_files( $config, $section ) };
-	my $output_ext = get_option( $config, $section, "output_ext", "" );
-	my $output_other_ext =
-	  get_option( $config, $section, "output_other_ext", "" );
-	my @output_other_exts;
-	if ( $output_other_ext ne "" ) {
-		@output_other_exts = split( ",", $output_other_ext );
-	}
+	my $output_exts = get_output_ext_list( $config, $section );
 
 	my $result = {};
 	for my $sample_name ( keys %raw_files ) {
-
-		#    my @sample_files = @{ $raw_files{$sample_name} };
-		#    my @result_files = ();
-		#    for my $sampleFile (@sample_files) {
-		#      my $name = basename($sampleFile);
-		#		push( @result_files, "${result_dir}/${name}${output_ext}" );
-		#    }
 		my @result_files = ();
-		push( @result_files, "${result_dir}/${sample_name}${output_ext}" );
-		if ( $output_other_ext ne "" ) {
-			foreach my $output_other_ext_each (@output_other_exts) {
-				push( @result_files,
-					"${result_dir}/${sample_name}${output_other_ext_each}" );
-			}
+		for my $ext (@$output_exts) {
+			push( @result_files, "${result_dir}/${sample_name}${ext}" );
 		}
 
 		$result->{$sample_name} = filter_array( \@result_files, $pattern );

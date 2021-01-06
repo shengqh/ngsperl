@@ -177,36 +177,21 @@ sub result {
   my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, $output_file );
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
-  my $output_file_ext            = get_option( $config, $section, "output_file_ext",            "" );
-  if($output_file_ext eq ""){
-    $output_file_ext            = get_option( $config, $section, "output_ext",            "" );
-  }
   my $join_arg              = get_option( $config, $section, "join_arg", 0 );
-  my $output_other_ext      = get_option( $config, $section, "output_other_ext", "" );
-  my @output_other_exts;
-  if ( $output_other_ext ne "" ) {
-    @output_other_exts = split( ",", $output_other_ext );
-  }
+	my $output_exts = get_output_ext_list( $config, $section );
 
   my $result = {};
   for my $sample_name ( sort keys %$source_files ) {
-    my $pfiles1 = $source_files->{$sample_name};
-    my $pfiles  = getFiles( $pfiles1, $join_arg, $first_file_only );
-    my $idxend  = scalar(@$pfiles) - 1;
-
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
-    my @result_files = ();
-    for my $i ( 0 .. $idxend ) {
-      my $pfile1 = $pfiles->[$i];
-      my $final_file = ( $first_file_only or ( 1 == scalar(@$pfiles) ) ) ? $sample_name . $output_file_ext : basename($pfile1) . $output_file_ext;
+    my $pfiles1 = $source_files->{$sample_name};
+    my $pfiles  = getFiles( $pfiles1, $join_arg, $first_file_only );
 
-      push( @result_files, "${cur_dir}/$final_file" );
-      if ( $output_other_ext ne "" ) {
-        foreach my $output_other_ext_each (@output_other_exts) {
-          my $other_file = $first_file_only ? $sample_name . $output_other_ext_each : basename($pfile1) . $output_other_ext_each;
-          push( @result_files, "${cur_dir}/$other_file" );
-        }
+    my @result_files = ();
+    for my $pfile ( @pfiles ) {
+      foreach my $ext (@output_exts) {
+        my $other_file = $first_file_only ? $sample_name . $ext : basename($pfile) . $ext;
+        push( @result_files, "${cur_dir}/$other_file" );
       }
     }
 
