@@ -1337,12 +1337,17 @@ sub get_output_ext_list {
 
   my $output_file_ext = get_output_ext( $config, $section );
 
-  my $result = [$output_file_ext];
+  my $result = [ trim($output_file_ext) ];
 
   my $output_other_ext = get_option( $config, $section, "output_other_ext", "" );
   if ( $output_other_ext ne "" ) {
-    my @output_other_exts = split( ",", $output_other_ext );
-    push( @$result, @output_other_exts );
+    my @output_other_exts = split( "[,;]+", $output_other_ext );
+    for my $other_ext (@output_other_exts) {
+      my $trim_ext = trim($other_ext);
+      if ($trim_ext ne "") {
+        push( @$result, $trim_ext );
+      }
+    }
   }
 
   return ($result);
