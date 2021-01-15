@@ -39,7 +39,7 @@ class Gene:
     fout.write("%s\t%d\t%d\t%s\t%d\t%s\n" %(self.chrom, self.gb_start, self.gb_end, self.name, 0 if self.overlap else 1000, self.strand))
 
   def output_tss_gene_body(self, fout):
-    fout.write("%s\t%d\t%d\t%s\t%d\t%s\n" %(self.chrom, self.all_start, self.all_end, self.name, 0 if self.overlap else 1000, self.strand))
+    fout.write("%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\n" %(self.chrom, self.tss_start, self.tss_end, self.name, 0 if self.overlap else 1000, self.strand, self.gb_start, self.gb_end))
 
   def mark_overlap(self, another):
     if self.all_end < another.all_start:
@@ -62,7 +62,7 @@ parser = argparse.ArgumentParser(description="Get bed file for TSS and gene body
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument('-i', '--input', action='store', nargs='?', help='Input gtf file', required=NotDEBUG)
-parser.add_argument('-o', '--output', action='store', nargs='?', help="Output prefix", required=NotDEBUG)
+parser.add_argument('-o', '--output', action='store', nargs='?', help="Output tss gene bed file", required=NotDEBUG)
 
 args = parser.parse_args()
 if DEBUG:
