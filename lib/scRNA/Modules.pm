@@ -4,10 +4,11 @@ package scRNA::Modules;
 use strict;
 use warnings;
 require Exporter;
+use CQS::ConfigUtils;
 
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(addEnclone addClonotypeMerge addEncloneToClonotype addArcasHLA)] );
+our %EXPORT_TAGS = ( 'all' => [qw(addEnclone addClonotypeMerge addEncloneToClonotype addArcasHLA addScMRMA)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -182,6 +183,34 @@ sub addArcasHLA {
   };
 
   push (@$tasks, ("${prefix}_arcasHLA_1_extract", "${prefix}_arcasHLA_2_genotype", "${prefix}_arcasHLA_3_merge"));
+}
+
+sub addScMRMA {
+  my ( $config, $def, $tasks, $target_dir, $task_name, $seurat_name ) = @_;
+
+  my $scMRMA_name = $seurat_name . "_scMRMA";
+  $config->{$scMRMA_name} = {
+    class                => "CQS::UniqueR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . $scMRMA_name,
+    rtemplate            => "../scRNA/scMRMA.r",
+    parameterFile1_ref   => [ $seurat_name, ".final.rds" ],
+    parameterFile2_ref   => [ $seurat_name, ".cluster.normByUpQuantile.csv" ],
+    parameterSampleFile2 => {
+      species             => getValue( $def, "species" ),
+      prefix              => $task_name,
+      db                  => getValue( $def, "scMRMA_db", "hybrid" ),
+      p                   => getValue( $def, "scMRMA_pvalue", "0.05" ),
+    },
+    output_file_ext => ".scMRMA.rds",
+    sh_direct       => 1,
+    pbs             => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$tasks, $scMRMA_name );
 }
 
 1;
