@@ -311,10 +311,14 @@ sub get_docker_value {
   }
 
   if ( defined $self->{_config} ) {
-    if (  ( defined $self->{_section} )
-      and ( $self->{_config}{ $self->{_section} }{"no_docker"} ) ) 
-    {
-      return ( $command, $init );
+    if ( defined $self->{_section} ) {
+      if ( $self->{_config}{ $self->{_section} }{"no_docker"} ) {
+        return ( $command, $init );
+      }
+
+      if (defined $self->{_config}{ $self->{_section} }{docker_prefix}) {
+        $self->{_docker_prefix} = $self->{_config}{ $self->{_section} }{docker_prefix};
+      }
     }
   }
 
