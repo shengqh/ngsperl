@@ -32,8 +32,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 if not os.path.isfile(args.genome):
   annotation_file="%s_refseq.ucsc" % args.genome
   if not os.path.isfile(annotation_file):
-    logger.info("download %s ..." % url)
     url="https://raw.githubusercontent.com/linlabcode/pipeline-tools/master/pipeline_tools/annotation/%s_refseq.ucsc" % args.genome
+    logger.info("download %s ..." % url)
     download_command = "wget " + url
     runCmd(download_command, logger)
 else:
