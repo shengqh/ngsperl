@@ -208,7 +208,7 @@ sub result {
     my $curnames = $namemap->{$sample_name};
 
     for my $curname (@$curnames) {
-      my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$curname" );
+      my $cur_dir = $output_to_same_folder ? $result_dir : $result_dir . "/$curname";
 
       my $result_files = [];
       foreach my $cur_ext (@$output_exts) {
