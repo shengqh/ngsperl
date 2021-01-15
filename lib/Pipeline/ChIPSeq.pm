@@ -449,6 +449,32 @@ sub getConfig {
     }
     push @$step2, ($peakCallerTask);
 
+    if (getValue($def, "perform_activeGene")) {
+      $config->{"activeGene"} = {
+        class => "CQS::ProgramWrapperOneToOne",
+        target_dir => "${target_dir}/" . getNextFolderIndex($def) . "activeGene",
+        interpretor => "python3",
+        program => "../Chipseq/activeGene.py",
+        option => "-g " . getValue($def, "active_gene_genome"),
+        source_arg => "-i",
+        source_ref => [$peakCallerTask, ".bed"],
+        output_arg => "-o",
+        output_file_prefix => "",
+        output_file_ext => ".TSS_ACTIVE_-1000_1000.txt",
+        output_to_same_folder => 1,
+        can_result_be_empty_file => 0,
+        docker_prefix => "crc_",
+        sh_direct   => 1,
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push (@$step2, "activeGene");
+      my $activeGeneRef = ["activeGene", ".txt"];
+    }
+
     if ( getValue( $def, "perform_merge_peaks" )) {
       my $mergePeakTask = $peakCallerTask . "_mergePeaks";
       $config->{$mergePeakTask} = {
