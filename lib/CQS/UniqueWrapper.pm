@@ -38,6 +38,8 @@ sub result {
   my $output_file                = get_option( $config, $section, "output_file",                "" );
   my $output_file_exts = get_output_ext_list( $config, $section );
 
+  #print($section .  Dumper($output_file_exts));
+
   my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
   my $output_perSample_file                = get_option( $config, $section, "output_perSample_file",                "" );
   my $output_perSample_file_byName         = get_option( $config, $section, "output_perSample_file_byName",                0 );
