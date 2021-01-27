@@ -59,10 +59,7 @@ sub perform {
   }
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
-  my $output_file_ext            = get_option( $config, $section, "output_file_ext",            "" );
-  if($output_file_ext eq ""){
-    $output_file_ext            = get_option( $config, $section, "output_ext",            "" );
-  }
+  my $output_file_ext       = get_file_ext( $config, $section );
   my $first_file_only       = get_option( $config, $section, "first_file_only", 0 );
   my $output_arg            = get_option( $config, $section, "output_arg", "" );
   my $join_arg              = get_option( $config, $section, "join_arg", 0 );
