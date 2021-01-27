@@ -8,12 +8,12 @@ use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
-use CQS::Task;
+use CQS::UniqueTask;
 use CQS::StringUtils;
 use JSON;
 use List::MoreUtils qw(uniq);
 
-our @ISA = qw(CQS::Task);
+our @ISA = qw(CQS::UniqueTask);
 
 sub new {
   my ($class) = @_;
