@@ -398,9 +398,10 @@ sub getSmallRNAConfig {
 
     my $countTask = "bowtie1_genome_1mm_NTA_smallRNA_count";
 
-    my $category_ext = ".Category.Table.csv;.Category1.Barplot.png;.Category2.Barplot.png;";
+    my $category_ext = ".Category.Table.csv";
+    my $category_other_ext = ".Category1.Barplot.png;.Category2.Barplot.png";
     if (defined $def->{groups}) {
-      $category_ext = $category_ext . ".Category1.Group.Piechart.png;.Category2.Group.Piechart.png;",
+      $category_other_ext = $category_other_ext . ";.Category1.Group.Piechart.png;.Category2.Group.Piechart.png";
     }
 
     $host_genome = merge_hash_right_precedent(
@@ -449,6 +450,7 @@ sub getSmallRNAConfig {
           rtemplate                 => "countTableVisFunctions.R,smallRnaCategory.R",
           output_file               => "",
           output_file_ext           => $category_ext,
+          output_other_ext          => $category_other_ext,
           parameterSampleFile1_ref  => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".info" ],
           parameterSampleFile2      => $groups,
           parameterSampleFile2Order => $def->{groups_order},

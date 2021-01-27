@@ -527,7 +527,8 @@ sub getPreprocessionConfig {
     my $test_dir = create_directory_or_die( $target_dir . "/test_cutadapt" );
   
     my $extractTask = "test_extract";
-    my $output_file_ext = $is_pairend? ".1.fastq.gz;.2.fastq.gz":".fastq.gz";
+    my $output_file_ext = $is_pairend? ".1.fastq.gz":".fastq.gz";
+    my $output_other_ext = $is_pairend? ".2.fastq.gz":undef;
     my $extract_option = $is_pairend? "-p":"";
     $config->{$extractTask} = {
       class                    => "CQS::ProgramWrapper",
@@ -541,6 +542,7 @@ sub getPreprocessionConfig {
       output_arg               => "-o",
       output_file              => "",
       output_file_ext          => $output_file_ext,
+      output_other_ext         => $output_other_ext,
       sh_direct                => 1,
       pbs                      => {
         "email"     => $def->{email},

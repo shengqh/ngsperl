@@ -266,7 +266,8 @@ sub getConfig {
         rtemplate             => "../Alignment/BWASummary.r",
         parameterSampleFile1_ref    => [$bwa, ".bamstat"],
         output_file           => "",
-        output_file_ext       => ".BWASummary.csv;.BWASummary.png;.BWASummary.sorted.png",
+        output_file_ext       => ".BWASummary.csv",
+        output_other_ext      => ".BWASummary.png;.BWASummary.sorted.png",
         sh_direct             => 1,
         pbs                   => {
           "nodes"     => "1:ppn=1",
@@ -513,7 +514,8 @@ sub getConfig {
       target_dir               => $featureCountFolder,
       option                   => "",
       rtemplate                => "../Alignment/STARFeatureCount.r",
-      output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
+      output_file_ext          => ".FeatureCountSummary.csv",
+      output_other_ext         => ".FeatureCountSummary.csv.png",
       parameterSampleFile2_ref => [ $featureCounts, ".count.summary" ],
       sh_direct                => 1,
       pbs                      => {
@@ -904,7 +906,8 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
           output_to_same_folder => 1,
           output_arg            => "-o",
           output_file           => "",
-          output_file_ext       => ".ibs_score.mean.csv;.ibs_score.csv",
+          output_file_ext       => ".ibs_score.mean.csv",
+          output_other_ext      => ".ibs_score.csv",
           sh_direct             => 1,
           pbs                   => {
             "email"     => $def->{email},
@@ -1170,7 +1173,8 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       parameterSampleFile3       => $def->{onco_sample_groups},
       output_to_result_directory => 1,
       output_file                => "parameterSampleFile1",
-      output_file_ext            => ".snv_cnv.txt.png;.snv_cnv.txt",
+      output_file_ext            => ".snv_cnv.txt.png",
+      output_other_ext           => ".snv_cnv.txt",
       sh_direct                  => 1,
       'pbs'                      => {
         'nodes'    => '1:ppn=1',
