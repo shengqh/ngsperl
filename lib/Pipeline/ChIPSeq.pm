@@ -201,7 +201,8 @@ sub getConfig {
         parameterSampleFile1_ref => [ "bowtie2", ".log" ],
         rtemplate                => "../Alignment/Bowtie2Summary.r",
         output_file              => "",
-        output_file_ext          => ".csv;.png",
+        output_file_ext          => ".csv",
+        output_other_ext         => ".png",
         pbs                      => {
           "email"    => $email,
           "nodes"    => "1:ppn=1",
@@ -296,7 +297,8 @@ sub getConfig {
         parameterSampleFile1_arg => "-b",
         parameterSampleFile1_ref => $bam_ref,
         output_arg               => "-o",
-        output_file_ext          => ".txt.sizefactor;.txt",
+        output_file_ext          => ".txt.sizefactor",
+        output_other_ext         => ".txt",
         sh_direct                => 1,
         'pbs'                    => {
           'nodes'    => '1:ppn=1',
@@ -345,7 +347,8 @@ sub getConfig {
           parameterSampleFile1_ref => $bam_ref,
           output_to_result_directory => 1,
           output_arg            => "-o",
-          output_file_ext       => ".position.txt.slim;.position.txt",
+          output_file_ext       => ".position.txt.slim",
+          output_other_ext      => ".position.txt",
           sh_direct             => 1,
           pbs                   => {
             "email"     => $def->{email},
@@ -377,7 +380,8 @@ sub getConfig {
           parameterSampleFile1_ref => $bam_ref,
           output_to_result_directory => 1,
           output_arg            => "-o",
-          output_file_ext       => ".position.txt.slim;.position.txt",
+          output_file_ext       => ".position.txt.slim",
+          output_other_ext      => ".position.txt",
           sh_direct             => 1,
           pbs                   => {
             "email"     => $def->{email},
@@ -494,8 +498,9 @@ sub getConfig {
       push @$summary, $mergePeakTask;
     }
 
+    my $homer_name;
     if ( getValue( $def, "perform_homer" ) ) {
-      addHomerAnnotation( $config, $def, $summary, $target_dir, $peakCallerTask, $callFilePattern );
+      $homer_name = addHomerAnnotation( $config, $def, $summary, $target_dir, $peakCallerTask, $callFilePattern );
     }
 
     if ( $def->{perform_rose} ) {
@@ -522,9 +527,9 @@ sub getConfig {
       push @$step2, ($roseTask);
     }
 
+    my $chipqc_taskname = $peakCallerTask . "_chipqc";
     if ($perform_chipqc) {
       my $genome = getValue( $def, "chipqc_genome" );      #hg19, check R ChIPQC package;
-      my $chipqc_taskname = $peakCallerTask . "_chipqc";
       $config->{$chipqc_taskname} = {
         class          => "QC::ChipseqQC",
         perform        => 1,
@@ -552,8 +557,9 @@ sub getConfig {
       push @$summary, ($chipqc_taskname);
     }
 
+    my $bindName = $peakCallerTask . "_diffbind";
+    my $bind_homer_name;
     if ($perform_diffbind) {
-      my $bindName = $peakCallerTask . "_diffbind";
       $config->{$bindName} = {
         class                   => "Comparison::DiffBind",
         perform                 => 1,
@@ -577,7 +583,7 @@ sub getConfig {
       push @$summary, ($bindName);
 
       if ( getValue( $def, "perform_homer" ) ) {
-        addHomerAnnotation( $config, $def, $summary, $target_dir, $bindName, ".sig.bed" );
+        $bind_homer_name = addHomerAnnotation( $config, $def, $summary, $target_dir, $bindName, ".sig.bed" );
       }
     }
 
@@ -830,6 +836,11 @@ sub getConfig {
         push( @report_names, "bowtie2_summary" );
       }
 
+      if ( $perform_chipqc ) {
+        push( @report_files, $chipqc_taskname, ".html" );
+        push( @report_names, "chipqc_html" );
+      }
+
       my $options = {
         "perform_cutadapt"                     => [ getValue( $def, "perform_cutadapt") ],
         "cutadapt_option"                          => [ getValue( $def, "cutadapt_option",  "" ) ],
@@ -838,6 +849,21 @@ sub getConfig {
         "aligner" => [ getValue( $def, "aligner") ],
         "peak_caller" => [ getValue( $def, "peak_caller") ]
       };
+
+      if ($peakCallerTask =~ /macs2/){
+        $options->{macs2_result} = $config->{$peakCallerTask}{target_dir};
+      }
+
+      if(getValue( $def, "perform_homer" )) {
+        $options->{homer_result} = $config->{$homer_name}{target_dir};
+      }
+
+      if($perform_diffbind) {
+        $options->{diffbind_result} = $config->{$bindName}{target_dir};
+        if(getValue( $def, "perform_homer" )) {
+          $options->{diffbind_homer_result} = $config->{$bind_homer_name}{target_dir};
+        }
+      }
 
       $config->{report} = {
         class                      => "CQS::BuildReport",
