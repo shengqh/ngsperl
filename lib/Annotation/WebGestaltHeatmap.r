@@ -114,7 +114,7 @@ for (comparison in comparisons){
     geneExpression<-read.csv(deseq2VsdFile, header=T, row.names=1, stringsAsFactors = F)
     designData<-read.delim(deseq2DesignFile, header=T,  stringsAsFactors = F)
     conditionColors=as.matrix(data.frame(Group=c("red", "blue")[as.factor(designData[,2])]))
-    gnames=unique(designData[,2])
+    gnames=levels(as.factor(designData[,2]))
     
     rowCount<-min(maxCategory,nrow(enriched))
     idx<-1
