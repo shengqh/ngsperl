@@ -5,7 +5,7 @@ use File::Spec;
 use File::Basename;
 use CQS::ConfigUtils;
 use Data::Dumper;
-use Test::More tests => 15;
+use Test::More tests => 16;
 
 {
   my $def = {
@@ -257,7 +257,7 @@ is_deeply( $cov_map, $cov_expect );
 { # test get_output_ext_list
   my $config = {
     "test" => {
-      output_file_ext      => ".final.rds",
+      output_file_ext      => ".final.rds;.aaa.csv",
       output_other_ext  => ".cluster.csv; .allmarkers.csv,.top10markers.csv ;_ur.html; ",
     }
   };
@@ -266,11 +266,14 @@ is_deeply( $cov_map, $cov_expect );
   is_deeply( $exts, 
         [
           '.final.rds',
+          '.aaa.csv',
           '.cluster.csv',
           '.allmarkers.csv',
           '.top10markers.csv',
           '_ur.html'
-        ] );     
+        ] );    
+
+  is(get_output_ext($config, "test"), ".final.rds");
 }
 
 1;
