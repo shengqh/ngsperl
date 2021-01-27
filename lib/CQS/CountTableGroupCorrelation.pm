@@ -50,7 +50,7 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my $output_to_result_dir = get_option( $config, $section, "output_to_result_dir", 0 );
-  my $output_file_ext      = get_option( $config, $section, "output_file_ext",      "" );
+  my $output_file_exts     = get_output_ext_list( $config, $section );
   my $output_file_task_ext = get_option( $config, $section, "output_file_task_ext", "" );
   my $suffix               = get_option( $config, $section, "suffix",               "" );
   my $result               = {};
@@ -97,20 +97,14 @@ sub result {
 
         $prefix = $prefix . $curSuffix;
 
-        if ( $output_file_ext =~ /;/ ) {
-          my @output_file_exts = split( ";", $output_file_ext );
-          foreach my $output_file_ext_one (@output_file_exts) {
-            push( @result_files, "${prefix}${output_file_ext_one}" );
-          }
-        }
-        else {
-          push( @result_files, "${prefix}${output_file_ext}" );
+        foreach my $output_file_ext_one (@$output_file_exts) {
+          push( @result_files, "${prefix}${output_file_ext_one}" );
         }
 
         if ( ( $output_file_task_ext =~ "" ) && ( $sample_name eq $task_name ) ) {
           if ( $output_file_task_ext =~ /;/ ) {
-            my @output_file_exts = split( ";", $output_file_task_ext );
-            foreach my $output_file_ext_one (@output_file_exts) {
+            my @output_file_task_exts = split( ";", $output_file_task_ext );
+            foreach my $output_file_ext_one (@output_file_task_exts) {
               push( @result_files, "${prefix}${output_file_ext_one}" );
             }
           }
