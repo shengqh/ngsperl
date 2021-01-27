@@ -397,7 +397,7 @@ getFacetColCount<-function(groupFileList){
 		sampleToGroup=read.delim(groupFileList,as.is=T,header=F)
 		groupCount=unique(table(sampleToGroup$V2))
 		if(length(groupCount) == 1){
-			result=groupCount
+			result=ceiling(sqrt(groupCount))
 		}
 	}
 	return(result)
@@ -693,8 +693,8 @@ ggpieToFile<-function(dat,fileName,fill="Category", maxCategory=5,textSize=9,tra
     }
     rowLength<-ceiling(totalSample * 1.0 / colLength)
   }
-  width<-max(1600, colLength * perHeight) + 400
-  height<-max(1000, rowLength * (perHeight + 50))
+  width<-min(10000, max(1600, colLength * perHeight) + 400)
+  height<-min(10000, max(1000, rowLength * (perHeight + 50)))
   
   png(fileName,width=width,height=height,res=300)
   p<-ggpie(dat,fill=fill, maxCategory=maxCategory,textSize=textSize,transformTable=transformTable,visLayoutFileList=visLayoutFileList,visLayoutAlphabet=visLayoutAlphabet,facetColCount=facetColCount,...)
