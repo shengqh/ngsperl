@@ -86,6 +86,8 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_homer", 1 );
   initDefaultValue( $def, "perform_merge_peaks", 0 );
 
+  initDefaultValue( $def, "perform_report", 1 );
+  
   return $def;
 }
 
@@ -810,7 +812,7 @@ sub getConfig {
     #   };
     #   push( @$summary, "report" );
     # }
-    if ( getValue( $def, "perform_report_test", 0 ) ) {
+    if ( getValue( $def, "perform_report", 0 ) ) {
       my @report_files = ();
       my @report_names = ();
       my @copy_files   = ();
