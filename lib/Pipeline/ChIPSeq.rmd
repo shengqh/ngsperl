@@ -23,6 +23,8 @@ output:
 library(XML)
 library(rlist)
 library(stringr)
+library(kableExtra)
+library(tidyverse)
 options(bitmapType='cairo')
 
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
@@ -34,21 +36,30 @@ rownames(chipseqOptions)<-chipseqOptions$V2
 has_fastqc_raw<-any(grepl("fastqc_raw_", rownames(files)))
 has_fastqc_post<-any(grepl("fastqc_post_trim_", rownames(files)))
 has_bowtie2 <- any(grepl("bowtie2_", rownames(files)))
+has_chipqc <- "chipqc_html" %in% rownames(files)
+
+if(has_chipqc) {
+  chipqc_html = files["chipqc_html",1]
+  chipqc = dirname(chipqc_html)
+}
 
 project_dir <- dir("../..", full.names=T)
 
 macs2 <- project_dir[grep("macs2callpeak_narrow$", project_dir)]
-homer <- project_dir[grep("homer_annotation", project_dir)]
-chipqc <- project_dir[grep("chipqc", project_dir)]
-diffbind <- project_dir[grep("diffbind", project_dir)]
 report <- project_dir[grep("report", project_dir)]
 
 has_macs2 <- any(macs2)
-has_homer <- any(homer)
-has_homer <- FALSE
-has_chipqc <- any(chipqc)
-has_diffbind <- any(diffbind)
-has_report <- any(report)
+has_report <- FALSE
+
+has_homer<-"homer_result" %in% rownames(chipseqOptions)
+if(has_homer) {
+  homer <- chipseqOptions["homer_result", 1]
+}
+
+has_diffbind<-"diffbind_result" %in% rownames(chipseqOptions)
+if(has_diffbind) {
+  diffbind <- chipseqOptions["diffbind_result", 1]
+}
 
 getFigure <- function(category, description){
   return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", category, "', '",description, "')}\n",
@@ -106,11 +117,13 @@ check_and_include_graphics(files["bowtie2_summary",1])
 <br>
 
 ```{r ChipQC_summary_table, echo=FALSE, results='asis', eval=has_chipqc}
-QCtables <- readHTMLTable(paste0(chipqc, "/result/ChIPQCreport/ChIPQC.html"))
+QCtables <- readHTMLTable(chipqc_html)
 QCtables <- list.clean(QCtables, fun = is.null, recursive = FALSE)
 QCtable <- QCtables[[2]]
 colnames(QCtable) <- gsub('\n','',colnames(QCtable))
-print(kable(QCtable, caption=tabRef("mapSummary", "Summary of ChIP-seq filtering and quality metrics.")))
+print(kable(QCtable, caption=tabRef("mapSummary", "Summary of ChIP-seq filtering and quality metrics."))%>%
+    kable_styling() %>%
+    htmltools::HTML())
 ```
 
 <br>
@@ -132,7 +145,7 @@ print(kable(QCtable, caption=tabRef("mapSummary", "Summary of ChIP-seq filtering
 ## Enrichment of reads in genomic features
 
 ```{r genomic_features,echo=FALSE,results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("feature_enrichment", "Heatmap of log2 enrichment of reads in genomic features"), out.width="40%", out.height="20%"}
-include_graphics(paste0(chipqc, "/result/ChIPQCreport/GenomicFeatureEnrichment.png"))
+include_graphics(paste0(chipqc, "/GenomicFeatureEnrichment.png"))
 ```
 
 <br>
@@ -140,7 +153,7 @@ include_graphics(paste0(chipqc, "/result/ChIPQCreport/GenomicFeatureEnrichment.p
 ## ChIP signal distribution and structure
 
 ```{r CrossCoverage,echo=FALSE,results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("cross_coverage", "Plot of CrossCoverage score after successive strand shifts"), out.width="40%", out.height="20%"}
-include_graphics(paste0(chipqc, "/result/ChIPQCreport/CCPlot.png"))
+include_graphics(paste0(chipqc, "/CCPlot.png"))
 ```
 
 <br>
@@ -179,12 +192,16 @@ print(kable(df, caption=tabRef("peakSummary", "Summary of peak calling and enric
 dirs <- paste0(list.dirs(paste0(homer, "/result"), full.names=T, recursive=F), "/knownResults")
 curwd<-getwd()
 for (i in 1:length(dirs)){
-    setwd(dirs[i])
-    x <- ' for i in known1.logo.svg known2.logo.svg known3.logo.svg known4.logo.svg known5.logo.svg; do
-convert -density 1200 -resize 200x200 "$i" "${i/%.svg/.png}" 
-done '
-system(x)
-setwd(curwd)
+  curdir = dirs[i]
+  for (j in 1:5) {
+    svgfile = paste0(curdir, "/known", j, ".logo.svg")
+    pngfile = paste0(curdir, "/known", j, ".logo.png")
+    if (!file.exists(pngfile)){
+      x <- paste0("convert -density 1200 -resize 200x200 ", svgfile, " ", pngfile) 
+      cat(x, "\n")
+      system(x)
+    }
+  }
 }
 
 homer_png <- list.files(paste0(homer, "/result"), pattern=".logo.png", full.names=T, recursive=T)
@@ -193,36 +210,38 @@ knownRes <- unique(dirname(dirname(homer_png)))
 knownRes_files <- list.files(knownRes, pattern="knownResults.txt", full.names=T, recursive=T)
 
 motif_files <- c(paste0("<img src= ", homer_png, " >"))
+#motif_files <- c(paste0("[", basename(homer_png), "](",homer_png, ")"))
 
 res_table <- data.frame()
 for (i in 1:length(knownRes_files)){
-res_txt <- fread(knownRes_files[i], header=T, nrows=5, data.table=F)
-res_table <- rbind(res_table, res_txt[,c("Motif Name", "P-value", "q-value (Benjamini)")])
+  res_txt <- fread(knownRes_files[i], header=T, nrows=5, data.table=F)
+  res_table <- rbind(res_table, res_txt[,c("Motif Name", "P-value", "q-value (Benjamini)")])
 }
 
 tab <- tibble::tibble(Sample = rep(basename(knownRes), each=5),
-                      Name = res_table[,1],
+                      Name = gsub("/Homer","",res_table[,1]),
                       Motif = noquote(motif_files),
                       Pvalue= res_table[,2], FDR = res_table[,3])
-knitr::kable(tab)
-
+print(kable(tab, caption= tabRef("homer_table", "Homer annotation for peaks"), escape = F) %>%
+    kable_styling() %>%
+    htmltools::HTML())
 ```
 <br>
 
 ## Correlation between samples
 
-```{r Correlation,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("peak_correlation", "Plot of correlation between peaksets"), out.width="40%", out.height="40%"}
-include_graphics(list.files(paste0(chipqc, "/result/ChIPQCreport"), pattern="PeakCorHeatmap.png", full.names=T, recursive=T))
+```{r Correlation,echo=FALSE,results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("peak_correlation", "Plot of correlation between peaksets"), out.width="40%", out.height="40%"}
+include_graphics(list.files(chipqc, pattern="PeakCorHeatmap.png", full.names=T, recursive=T))
 ```
 
-```{r PCA,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("pca", "PCA of peaksets"), out.width="40%", out.height="40%"}
-include_graphics(list.files(paste0(chipqc, "/result/ChIPQCreport"), pattern="PeakPCA.png", full.names=T, recursive=T))
+```{r PCA,echo=FALSE,results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("pca", "PCA of peaksets"), out.width="40%", out.height="40%"}
+include_graphics(list.files(chipqc, pattern="PeakPCA.png", full.names=T, recursive=T))
 ```
 
 * Replicate samples of high quality can be expected to cluster together in the heatmap and be spatially grouped within the PCA plot.  
 
 ```{r diffbind_1, results="asis", echo=FALSE, eval=has_diffbind} 
-#if(hasdiffbind){
+#if(has_diffbind){
   cat("## 5. Differential binding affinity analysis\n<br>\n\n### 5.1 Binding sites overlaps\n<br>\n")
 #}
 ```
@@ -256,7 +275,7 @@ if(has_diffbind){
 ```
 
 ```{r peak_diff_summary, eval=has_diffbind, echo=FALSE, results='asis'}
-if (hasdiffbind){
+if (has_diffbind){
   sig_table <- data.frame()
   sig_files <- list.files(paste0(diffbind, "/result"), pattern="sig.tsv$", full.names=T, recursive=T)
   comp_names <- gsub(".sig.tsv$", "", basename(sig_files))
