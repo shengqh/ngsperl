@@ -1321,33 +1321,44 @@ sub get_version_files {
   return ($result);
 }
 
-sub get_output_ext {
-  my ( $config, $section ) = @_;
+sub ext_to_list {
+  my $ext = shift;
+  my $result = [];
 
-  my $result = get_option( $config, $section, "output_file_ext", "" );
-  if ( $result eq "" ) {
-    $result = get_option( $config, $section, "output_ext", "" );
+  my @output_other_exts = split( "[,;]+", $ext );
+  for my $other_ext (@output_other_exts) {
+    my $trim_ext = trim($other_ext);
+    if ($trim_ext ne "") {
+      push( @$result, $trim_ext );
+    }
   }
 
-  return ($result);
+  return($result);
+}
+
+sub get_output_ext {
+  my ( $config, $section, $defaultValue ) = @_;
+  my $ext_list = get_output_ext_list($config, $section);
+  if (($ext_list->[0] ne "") or (not defined $defaultValue)) {
+    return $ext_list->[0];
+  }else{
+    return $defaultValue;
+  }
 }
 
 sub get_output_ext_list {
   my ( $config, $section ) = @_;
 
-  my $output_file_ext = get_output_ext( $config, $section );
-
-  my $result = [ trim($output_file_ext) ];
-
-  my $output_other_ext = get_option( $config, $section, "output_other_ext", "" );
-  if ( $output_other_ext ne "" ) {
-    my @output_other_exts = split( "[,;]+", $output_other_ext );
-    for my $other_ext (@output_other_exts) {
-      my $trim_ext = trim($other_ext);
-      if ($trim_ext ne "") {
-        push( @$result, $trim_ext );
-      }
+  my $result = [];
+  for my $key ("output_file_ext", "output_ext", "output_other_ext") {
+    my $other_result = ext_to_list(get_option( $config, $section, $key, "" ));
+    if ($other_result ne "") {
+      push (@$result, @$other_result);
     }
+  }
+
+  if (scalar(@$result) == 0){
+    push(@$result, "");
   }
 
   return ($result);
