@@ -40,11 +40,6 @@ sub perform {
 
   my $rCode = $self->getRcode( $config, $section );
   my $output_file     = get_option( $config, $section, "output_file",     "" );
-  my $output_file_ext = get_option( $config, $section, "output_file_ext", "" );
-  my @output_file_exts = split( ";", $output_file_ext );
-  if ( scalar(@output_file_exts) == 0 ) {
-    push( @output_file_exts, "" );
-  }
   my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
 
   my $removeEmpty = get_option( $config, $section, "remove_empty_parameter", 0 );
