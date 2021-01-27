@@ -38,7 +38,7 @@ sub perform {
 
     my $output_file_label     = get_option( $config, $section, "output_file_label",     "" );
 	my $output_file     = get_option( $config, $section, "output_file",     "" );
-	my $output_file_ext = get_option( $config, $section, "output_file_ext", "" );
+	my $output_file_ext = get_output_ext( $config, $section );
 
 	my $parametersample_files1 = "";
 	if ( has_raw_files( $config, $section, "parameterSampleFile1" ) ) {
@@ -202,7 +202,7 @@ sub result {
 	my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
 	my $output_file     = get_option( $config, $section, "output_file",     "" );
-	my $output_file_ext = get_option( $config, $section, "output_file_ext", "" );
+	my $output_file_exts = get_output_ext_list( $config, $section );
 	my $result          = {};
 	my @result_files    = ();
 
@@ -211,7 +211,9 @@ sub result {
 			my %temp = %{ get_raw_files( $config, $section, $output_file ) };
 			foreach my $sample_name ( keys %temp ) {
 				foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
-					push( @result_files, "${subSampleFile}${output_file_ext}" );
+					for my $output_file_ext (@$output_file_exts) {
+						push( @result_files, "${subSampleFile}${output_file_ext}" );
+					}
 				}
 			}
 		}
@@ -220,7 +222,9 @@ sub result {
 		}
 	}
 	else {
-		push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext}" );
+		for my $output_file_ext (@$output_file_exts) {
+			push( @result_files, "${result_dir}/${task_name}${output_file}${output_file_ext}" );
+		}
 	}
 
 	$result->{$task_name} = filter_array( \@result_files, $pattern );
