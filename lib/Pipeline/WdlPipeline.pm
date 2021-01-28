@@ -216,7 +216,7 @@ sub addUmiReadsToProcessedBam {
 
 
 sub addMutect2 {
-  my ($config, $def, $summary, $target_dir, $bam_input) = @_;
+  my ($config, $def, $tasks, $target_dir, $bam_input) = @_;
 
   my $mutect2_index_dic = {};
   my $mutect2_index_key = "mutect2_Index";
@@ -273,6 +273,7 @@ sub addMutect2 {
       "input_option_file" => $wdl->{"cromwell_option_file"},
       "cromwell_config_file" => $server->{"cromwell_config_file"},
       "wdl_file" => $pon_pipeline->{"wdl_file"},
+      "source_ref" => [$mutect2_normal_files, ".bam\$"],
       "input_json_file" => $pon_pipeline->{"input_file"},
       "input_array" => {
         "Mutect2_Panel.normal_bams_ref" => [$mutect2_normal_files, ".bam\$"],
@@ -290,7 +291,7 @@ sub addMutect2 {
         "mem"       => "70gb"
       },
     };
-    #push @$summary, $mutect2_pon;
+    push @$tasks, $mutect2_pon;
 
     $pon = {
       "Mutect2.pon_ref" => [$mutect2_pon, ".vcf\$"],
@@ -355,7 +356,7 @@ sub addMutect2 {
       "mem"       => "70gb"
     },
   };
-  #push @$summary, $mutect2_call;
+  push @$tasks, $mutect2_call;
   return ($mutect2_call);
 }
 

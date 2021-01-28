@@ -1045,7 +1045,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
 
   if ( $def->{"perform_muTect2"}) {
     my $mutect2call = addMutect2($config, $def, $summary, $target_dir, $bam_input);
-    push @$individual, ($mutect2call);
+    #push @$individual, ($mutect2call);
 
     my $mutect_prefix = "${bam_input}_muTect2_";
     my $mutect_index_key = "mutect2_key";
