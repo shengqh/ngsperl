@@ -60,6 +60,9 @@ def getRatio(sample_rpm, control_rpm):
     return(math.log2(sample_rpm / control_rpm))
 
 def getReadCount(logger, output_file, gene_file, bed_file, sample_bam, control_bam):
+  if os.path.isfile(output_file):
+    return
+
   genes = readGenes(gene_file)
   logger.info("Total %d genes from gene file" % len(genes))
 
@@ -144,16 +147,38 @@ if __name__ == "__main__":
 
   deseq2file="/scratch/jbrown_lab/shengq2/projects/20201208_rnaseq_464_hg38_endothelial_cell/deseq2_proteincoding_genetable/result/TNF_Veh_vs_No_Treatment_min5_fdr0.05_DESeq2_sig.csv"
 
+  # getReadCount(logger, 
+  #         "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/THZ_TNF_886_vs_TNF_Veh.tss_genebody.tsv", 
+  #         deseq2file,
+  #         "/scratch/cqs_share/references/gencode/GRCh38.p13/gencode.v36.annotation.tss_genebody.bed", 
+  #         "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/bowtie2_cleanbam/result/THZ_TNF_886.noChrM.bam", 
+  #         "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/bowtie2_cleanbam/result/TNF_Veh_886.noChrM.bam")
+  
   getReadCount(logger, 
-          "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/THZ_TNF_886_vs_TNF_Veh.tss_genebody.tsv", 
+          "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/TNF_Veh_886_vs_No_Treatment.tss_genebody.tsv", 
+          deseq2file,
+          "/scratch/cqs_share/references/gencode/GRCh38.p13/gencode.v36.annotation.tss_genebody.bed", 
+          "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/bowtie2_cleanbam/result/TNF_Veh_886.noChrM.bam", 
+          "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/bowtie2_cleanbam/result/No_Treatment_886.noChrM.bam")
+  
+  getReadCount(logger, 
+          "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/THZ_TNF_886_vs_No_Treatment.tss_genebody.tsv", 
           deseq2file,
           "/scratch/cqs_share/references/gencode/GRCh38.p13/gencode.v36.annotation.tss_genebody.bed", 
           "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/bowtie2_cleanbam/result/THZ_TNF_886.noChrM.bam", 
-          "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/bowtie2_cleanbam/result/TNF_Veh_886.noChrM.bam")
+          "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/bowtie2_cleanbam/result/No_Treatment_886.noChrM.bam")
   
-  # getReadCount(logger, 
-  #         "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/THZ_Veh_886_vs_No_Treatment.tss_genebody.tsv", 
-  #         deseq2file,
-  #         "/scratch/cqs_share/references/gencode/GRCh38.p13/gencode.v36.annotation.tss_genebody.bed", 
-  #         "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/bowtie2_cleanbam/result/TNF_Veh_886.noChrM.bam", 
-  #         "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/bowtie2_cleanbam/result/No_Treatment_886.noChrM.bam")
+  
+  getReadCount(logger, 
+          "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/TNF_Veh_485_vs_No_Treatment.tss_genebody.tsv", 
+          deseq2file,
+          "/scratch/cqs_share/references/gencode/GRCh38.p13/gencode.v36.annotation.tss_genebody.bed", 
+          "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/bowtie2_cleanbam/result/TNF_Veh_485.noChrM.bam", 
+          "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/bowtie2_cleanbam/result/No_Treatment_485.noChrM.bam")
+  
+  getReadCount(logger, 
+          "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/THZ_TNF_485_vs_No_Treatment.tss_genebody.tsv", 
+          deseq2file,
+          "/scratch/cqs_share/references/gencode/GRCh38.p13/gencode.v36.annotation.tss_genebody.bed", 
+          "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/bowtie2_cleanbam/result/THZ25_TNF_485.noChrM.bam", 
+          "/scratch/jbrown_lab/shengq2/projects/20201208_chipseq_485_886_hg38/bowtie2_cleanbam/result/No_Treatment_485.noChrM.bam")
