@@ -637,6 +637,21 @@ print(p2)
 DimPlot(obj, reduction = "umap", label=T, group.by="seurat_clusters", cols=seurat_colors, split.by = "orig.ident") + NoLegend()
 ```
 
+```{r activity_by_samples, eval=hasMultipleSamples, fig.height=8, fig.width=18, fig.cap=figRef("activity_by_samples", "Predicted cell types by sample")}
+
+os<-table(obj$orig.ident, obj$cellactivity_clusters)
+osn<-os / rowSums(os) * 5000
+osm<-reshape2::melt(osn)
+colnames(osm)<-c("Sample", "Cluster", "Cell")
+# osm_perc = osm %>% dplyr::group_by(Cluster) %>% dplyr::mutate(Percent = Cell/sum(Cell))
+# g<-ggplot(osm_perc, aes(x="",y=Percent,fill=Sample)) + geom_bar(stat="identity", width=1) + coord_polar("y", start=0) + facet_wrap(~Cluster) + theme_void()
+# print(g)
+
+osm_perc = osm %>% dplyr::group_by(Sample) %>% dplyr::mutate(Percent = Cell/sum(Cell))
+g<-ggplot(osm_perc, aes(x="",y=Percent,fill=Cluster)) + geom_bar(stat="identity", width=1) + coord_polar("y", start=0) + facet_wrap(~Sample) + theme_void()
+print(g)
+```
+
 ```{r gene_activity_heatmap, fig.width=18, fig.height=max(10, length(top10$gene) / 10), results="asis", fig.cap=figRef("cell_activity_heatmap", "Predicted cell type cluster heatmap")}
 DoHeatmap(obj, features = top10$gene, group.by="seurat_cellactivity_clusters", group.colors=seurat_cellactivity_colors, angle=90) + NoLegend()
 ```
