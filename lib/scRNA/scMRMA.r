@@ -4,6 +4,7 @@ library(plyr)
 
 finalList<-readRDS(parFile1)
 obj<-finalList$obj
+
 options_table<-read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)
 options<-split(options_table$V1, options_table$V2)
 
@@ -25,14 +26,15 @@ for(layer in colnames(res)){
   curcelltype=plyr::mapvalues(colnames(obj), rownames(res), curlayer)
 
   layer_name = paste0("scMRMA_", layer)
-  obj[[layer_name]] <- curcelltype
+  obj[[layer_name]] <- as.character(curcelltype)
 
   png(paste0(prefix, layer_name, ".png"), width=4000, height=3000, res=300)
   print(DimPlot(obj,reduction = "umap",group.by = layer_name,label = TRUE,repel = TRUE)+ggplot2::ggtitle(layer_name))
   dev.off()
 
   layer_cluster = paste0(layer_name, "_cluster")
-  obj[[layer_cluster]] <- paste0(obj$seurat_clusters, ":", curcelltype)
+  cur_cluster_celltype<- paste0(obj$seurat_clusters, ":", as.character(curcelltype))
+  obj[[layer_cluster]] <- cur_cluster_celltype
 
   png(paste0(prefix, layer_cluster, ".png"), width=4000, height=3000, res=300)
   print(DimPlot(obj,reduction = "umap",group.by = layer_cluster,label = TRUE,repel = TRUE)+ggplot2::ggtitle(layer_name))
@@ -48,6 +50,7 @@ saveRDS(finalList, file=finalListFile)
 clusters<-data.frame("cell" = c(1:length(obj$seurat_clusters)), "seurat_clusters"=as.numeric(as.character(obj$seurat_clusters)), stringsAsFactors = F)
 rownames(clusters)<-names(obj$seurat_clusters)
 for(cluster_name in cluster_names){
-  clusters[[cluster_name]] = obj[[cluster_name]]
+  cur_cluster = obj[[cluster_name]][,1]
+  clusters[,cluster_name] = cur_cluster
 }
 write.csv(clusters, file=paste0(prefix, ".cluster.csv"))
