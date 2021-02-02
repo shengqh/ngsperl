@@ -23,7 +23,7 @@ cluster_names=c()
 layer=colnames(res)[6]
 for(layer in colnames(res)){
   curlayer = res[[layer]]
-  curcelltype=plyr::mapvalues(colnames(obj), rownames(res), curlayer)
+  curcelltype=plyr::mapvalues(colnames(obj), rownames(res), as.character(curlayer))
 
   layer_name = paste0("scMRMA_", layer)
   obj[[layer_name]] <- as.character(curcelltype)
