@@ -115,9 +115,9 @@ cat(paste0("### ", tabRef("enriched", plotData$category), "\n\n"))
 enriched<-updateEnrichedTable(enriched)
 
 rowCount<-nrow(enriched)
-if (rowCount>=200) {
-  rowCount=200
-  cat("\nMore than 200 categories in WebGestalt Result. Only top 200 were kept.\n")
+if (rowCount>=50) {
+  rowCount=50
+  cat("\nMore than 50 categories in WebGestalt Result. Only top 50 were kept.\n")
 }
 
 curTable<-enriched[c(1:rowCount),c(1:9, 12,13)]
@@ -132,12 +132,13 @@ idx<-1
 for(idx in c(1:rowCount)){
 	entry<-enriched[idx,]
 	userIds<-unlist(strsplit( entry$userId[1], ';'))
-	entryTable<-deseq2[deseq2$Feature_gene_name %in% userIds,]
+	#entryTable<-deseq2[deseq2$Feature_gene_name %in% userIds,]
+	entryTable<-deseq2[deseq2[,geneCol] %in% userIds,]
 	cat(paste0("### ", entry$tblLongCaption, " {#", entry$tblLink, "}\n\n" ))
 	print(kable(entryTable) %>% 
 		kable_styling() %>%
-		row_spec(which(entryTable$FoldChange > 1), color = "black", background = "bisque") %>% 
-		row_spec(which(entryTable$FoldChange < 1), color = "black", background = "honeydew") %>%
+		row_spec(which(entryTable[,diffCol] > diffCenterValue), color = "black", background = "bisque") %>% 
+		row_spec(which(entryTable[,diffCol] < diffCenterValue), color = "black", background = "honeydew") %>%
 		htmltools::HTML())
 	cat("\n\n<hr>")
 }
