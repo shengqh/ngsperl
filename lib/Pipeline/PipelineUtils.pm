@@ -64,7 +64,8 @@ our %EXPORT_TAGS = (
     add_BWA_and_summary_scatter
     addMarkduplicates
     addSequenceTask
-    addFilesFromSraRunTable)
+    addFilesFromSraRunTable
+    addWebgestalt)
   ]
 );
 
@@ -1952,6 +1953,31 @@ sub addFilesFromSraRunTable {
   close($fh);
 
   $config->{files} = $files;
+}
+
+sub addWebgestalt {
+  my ($config, $def, $tasks, $target_dir, $prefix, $source_ref) = @_;
+
+  my $webgestaltTaskName = $prefix . "_WebGestalt";
+  $config->{$webgestaltTaskName} = {
+    class            => "Annotation::WebGestaltR",
+    perform          => 1,
+    target_dir       => $target_dir . "/" . getNextFolderIndex($def) . $webgestaltTaskName,
+    option           => "",
+    source_ref       => $source_ref,
+    organism         => getValue( $def, "webgestalt_organism" ),
+    interestGeneType => $def->{interestGeneType},
+    referenceSet     => $def->{referenceSet},
+    sh_direct        => 1,
+    pbs              => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "23",
+      "mem"       => "10gb"
+    },
+  };
+  push @$tasks, "$webgestaltTaskName";
+
+  return($webgestaltTaskName);
 }
 
 1;
