@@ -68,11 +68,20 @@ enrichDatabases<-c("geneontology_Biological_Process",
 )
 
 for(enrichDatabase in enrichDatabases){
-  WebGestaltR(enrichMethod="ORA",organism=organism,
+  temp=WebGestaltR(enrichMethod="ORA",organism=organism,
             enrichDatabase=enrichDatabase,interestGene=genes,
             interestGeneType=interestGeneType,referenceSet=referenceSet,
-            isOutput=TRUE,
+            isOutput=TRUE,minNum=5,
             outputDirectory=outputDirectory,projectName=paste0(sampleName, "_", enrichDatabase))
+  if (is.null(temp)) { #no enrichment. report top 5 categories
+    warning(paste0("No significant category (FDR<=0.05) identified in ",enrichDatabase,", reporting top 10 categories instead."))
+    temp=WebGestaltR(enrichMethod="ORA",organism=organism,
+                     enrichDatabase=enrichDatabase,interestGene=genes,
+                     interestGeneType=interestGeneType,referenceSet=referenceSet,
+                     isOutput=TRUE,minNum=5,
+                     outputDirectory=outputDirectory,projectName=paste0(sampleName, "_", enrichDatabase),
+                     sigMethod="top",topThr=10)
+  }
 }
 
 webGestaltR_version<-paste0('WebGestaltR,v', packageVersion('WebGestaltR'))
