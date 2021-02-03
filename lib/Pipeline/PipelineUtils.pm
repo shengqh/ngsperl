@@ -1092,7 +1092,7 @@ sub addAnnovarMafReport {
     parameterSampleFile1_ref => [ $annovar_to_maf, ".tsv.maf\$" ],
     parameterFile1           => $def->{family_info_file},
     sh_direct                => 1,
-    rCode                    => ( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" ),
+    rCode                    => ( defined $def->{family_info_file} ? "clinicalFeatures=" . $def->{family_info_feature} . ";" : "" ),
 #            rCode                    => ( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" )
 #              . ( defined $def->{annotation_genes} ? "interestedGeneStr=\"" . $def->{annotation_genes} . "\"" : "" ),
     pbs => {

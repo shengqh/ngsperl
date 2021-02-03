@@ -34,12 +34,28 @@ if (all(info$size == 0)) {
   stop(paste0("Gene file is empty: ", geneFile, "\n"))
 }
 
-geneList<-read.table(geneFile,header=FALSE,sep="\t",stringsAsFactors=FALSE)
-genes<-geneList$V1
-
-if(grepl("Gene", genes[1])){
-  genes<-genes[2:length(genes)]
+if (grepl(".csv$",basename(geneFile))) { #csv file
+  geneList<-read.csv(geneFile,header=FALSE,stringsAsFactors=FALSE)
+} else {
+  geneList<-read.table(geneFile,header=FALSE,sep="\t",stringsAsFactors=FALSE)
 }
+
+if (ncol(geneList)==1) {
+  genes<-geneList$V1
+} else { #try to find gene column
+  geneInd=grep("Gene|gene",geneList[1,])
+  if (length(geneInd)>0) {
+    genes<-geneList[,geneInd[1]]
+    genes<-genes[2:length(genes)]
+  } else { #guess gene column, by contents with both number and character (so not all numeric data, can be gene IDs)
+    geneInd=which.max(apply(geneList[-1,],2,function(x) length(intersect(grep("[a-zA-Z][a-zA-Z]",x),grep("[0-9]",x)))))
+    genes<-geneList[,geneInd]
+  }
+}
+
+# if(grepl("Gene", genes[1])){
+#   genes<-genes[2:length(genes)]
+# }
 
 enrichDatabases<-c("geneontology_Biological_Process", 
                    "geneontology_Cellular_Component", 
@@ -52,11 +68,20 @@ enrichDatabases<-c("geneontology_Biological_Process",
 )
 
 for(enrichDatabase in enrichDatabases){
-  WebGestaltR(enrichMethod="ORA",organism=organism,
+  temp=WebGestaltR(enrichMethod="ORA",organism=organism,
             enrichDatabase=enrichDatabase,interestGene=genes,
             interestGeneType=interestGeneType,referenceSet=referenceSet,
-            isOutput=TRUE,
+            isOutput=TRUE,minNum=5,
             outputDirectory=outputDirectory,projectName=paste0(sampleName, "_", enrichDatabase))
+  if (is.null(temp)) { #no enrichment. report top 5 categories
+    warning(paste0("No significant category (FDR<=0.05) identified in ",enrichDatabase,", reporting top 10 categories instead."))
+    temp=WebGestaltR(enrichMethod="ORA",organism=organism,
+                     enrichDatabase=enrichDatabase,interestGene=genes,
+                     interestGeneType=interestGeneType,referenceSet=referenceSet,
+                     isOutput=TRUE,minNum=5,
+                     outputDirectory=outputDirectory,projectName=paste0(sampleName, "_", enrichDatabase),
+                     sigMethod="top",topThr=10)
+  }
 }
 
 webGestaltR_version<-paste0('WebGestaltR,v', packageVersion('WebGestaltR'))

@@ -20,17 +20,24 @@ for (comparison in comparisons){
     category <- gsub("_", " ", category )
     
     enriched<-read.table(compAnnoFile, sep="\t", header=T, stringsAsFactors = F)
-    deseq2<-read.csv(compDeseq2File, header=T, row.names=1, stringsAsFactors = F)
-    deseq2<-deseq2[,c("Feature_gene_name", "baseMean", "pvalue", "padj", "FoldChange") ]
-
+    deseq2=readFilesAndFormat(compDeseq2File)
+    #deseq2<-read.csv(compDeseq2File, header=T, row.names=1, stringsAsFactors = F)
+    #deseq2<-deseq2[,c("Feature_gene_name", "baseMean", "pvalue", "padj", "FoldChange") ]
+    diffCol=getDiffCol(deseq2)[["colName"]]
+    diffCenterValue=getDiffCol(deseq2)[["centerValue"]]
+    geneCol=getGeneCol(deseq2)[["colName"]]
+    
     rowCount<-nrow(enriched)
     idx<-1
     for(idx in c(1:rowCount)){
 	    entry<-enriched[idx,]
 	    userIds<-unlist(strsplit( entry$userId[1], ';'))
-	    entryTable<-deseq2[deseq2$Feature_gene_name %in% userIds,]
-	    geneUp<-sum(entryTable$FoldChange > 1)
-	    geneDown<-sum(entryTable$FoldChange < 1)
+	    #entryTable<-deseq2[deseq2$Feature_gene_name %in% userIds,]
+	    #geneUp<-sum(entryTable$FoldChange > 1)
+	    #geneDown<-sum(entryTable$FoldChange < 1)
+	    entryTable<-deseq2[deseq2[,geneCol] %in% userIds,]
+	    geneUp<-sum(entryTable[,diffCol] > diffCenterValue)
+	    geneDown<-sum(entryTable[,diffCol] < diffCenterValue)
 	    enriched$geneUp[idx]<-geneUp
 	    enriched$geneDown[idx]<-geneDown
   		enriched$geneSet[idx]<-paste0("[", entry$geneSet, "](", entry$link, ")")
