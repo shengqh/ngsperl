@@ -526,7 +526,32 @@ We visualize QC metrics.
 ```{r qc2, fig.height=6, fig.width=13, fig.cap=figRef("qc_metrics_2", "Scatter plot of number of feature/percentage of mitochondrial vs number of read count")}
 plot1 <- FeatureScatter(object = finalList$rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt") + geom_hline(yintercept = mt_cutoff, color="black")  + geom_vline(xintercept = nCount_cutoff, color="black")
 plot2 <- FeatureScatter(object = finalList$rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")  + geom_hline(yintercept = c( nFeature_cutoff_min, nFeature_cutoff_max), color="black")  + geom_vline(xintercept = nCount_cutoff, color="black") 
-CombinePlots(plots = list(plot1,plot2))
+p<-CombinePlots(plots = list(plot1,plot2))
+print(p)
+```
+
+```{r qc2_1, fig.height=10, fig.width=13, fig.cap=figRef("qc_metrics_2_1", "Density plot of number of read vs percentage of mitochondrial")}
+mt<-data.frame(mt=finalList$rawobj$percent.mt, Sample=finalList$rawobj$orig.ident, nFeature=log10(finalList$rawobj$nFeature_RNA), nCount=log10(finalList$rawobj$nCount_RNA))
+g1<-ggplot(mt, aes(x=mt,y=nCount) ) +
+  geom_bin2d(bins = 70) + 
+  scale_fill_continuous(type = "viridis") + 
+  geom_vline(xintercept = mt_cutoff, color="red")  + 
+  geom_hline(yintercept = log10(nCount_cutoff), color="red") +
+  xlab("Percentage of mitochondrial") + ylab("log10(number of read)") +
+  facet_wrap(~Sample) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+print(g1)
+```
+
+```{r qc2_2, fig.height=10, fig.width=13, fig.cap=figRef("qc_metrics_2_2", "Density plot of number of feature vs percentage of mitochondrial")}
+g1<-ggplot(mt, aes(x=mt,y=nFeature) ) +
+  geom_bin2d(bins = 70) + 
+  scale_fill_continuous(type = "viridis") + 
+  geom_vline(xintercept = mt_cutoff, color="red")  + 
+  geom_hline(yintercept = log10(nFeature_cutoff_min), color="red") +
+  geom_hline(yintercept = log10(nFeature_cutoff_max), color="red") +
+  xlab("Percentage of mitochondrial") + ylab("log10(number of feature)") +
+  facet_wrap(~Sample) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+print(g1)
 ```
 
 # Data filter and cluster analysis 
@@ -582,7 +607,7 @@ if(hasMultipleSamples){
 ```{r sample_cells_count, eval=hasMultipleSamples, fig.height=8, fig.width=18, fig.cap=figRef("sample_cells_count", "Percentage of cell from samples in each cluster (total cell in each sample were normalized to equal number)")}
 os<-table(obj$orig.ident, obj$seurat_clusters)
 osn<-os / rowSums(os) * 5000
-osm<-melt(osn)
+osm<-reshape2::melt(osn)
 colnames(osm)<-c("Sample", "Cluster", "Cell")
 osm$Cluster<-paste0("Cluster ", osm$Cluster)
 osm$Cluster<-factor(osm$Cluster, levels=unique(osm$Cluster))
