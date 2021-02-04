@@ -15,9 +15,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r,echo=FALSE,warning=FALSE,message=FALSE}
-#This is your GESA Java Result Dir
-#resultDir<-"D:\\OneDriveWork\\OneDriveVanderbilt\\work\\projects\\20170606_ShyrBrownRnaSeq\\out\\GESA\\"
-
 library(ggplot2)
 library(RColorBrewer)
 library(reshape2)
@@ -42,10 +39,22 @@ addImageTag<-function(imageFile,width=NULL,height=NULL) {
 	return(result)
 }
 
-processGesaTable<-function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=10,absLinkPath=FALSE) {
+myGetRelativePath<-function(path, root_dir) {
+  prefix_dir = substr(path, 1, nchar(root_dir))
+  if (prefix_dir == root_dir) {
+    result = substr(path, nchar(root_dir)+2, nchar(path))
+  }else{
+    result = path
+  }
+  return(result)
+}
+
+processGesaTable<-function(gseaTableFile, rootDir,maxCategoryFdr=0.05,maxCategory=10,absLinkPath=FALSE) {
 	rawTable<-read.delim(gseaTableFile,header=T,as.is=T)
 	rawTableOut<-NULL
+	i=2
 	for (i in head(which(rawTable$FDR.q.val<=maxCategoryFdr),maxCategory)) {
+	  cat(i)
 		categoryName=rawTable[i,1]
 		gseaUrl=paste0("http://software.broadinstitute.org/gsea/msigdb/cards/",categoryName)
 		categoryNameInTable<-addLinkTag(text=categoryName,link=gseaUrl)
@@ -61,7 +70,7 @@ processGesaTable<-function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=10,absL
 		}
 		
     figurePath<-list.files(dirname(gseaTableFile),pattern=paste0("enplot_",categoryName),full.names=TRUE)[1]
-		figurePath<-R.utils::getRelativePath(figurePath,resultDir) #resultDir is outside this Rmd file, the location of result html file
+		figurePath<-myGetRelativePath(figurePath,rootDir) #resultDir is outside this Rmd file, the location of result html file
 		if (absLinkPath) {
 		  reportPath<-paste0(dirname(gseaTableFile),"/",categoryName,".html")
 		} else {
@@ -86,35 +95,30 @@ processGesaTable<-function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=10,absL
 ```
 
 ```{r,echo=FALSE,results='asis'}
-  	out<-list()
+root_dir = R.utils::getAbsolutePath(".")
+resultDirs = list.dirs(root_dir,recursive=FALSE,full.names =TRUE)
+resultDir=resultDirs[1]
+for(resultDir in resultDirs){
+  resultDirSubs<-list.dirs(resultDir,recursive=FALSE,full.names =TRUE)
+  resultDirSub=resultDirSubs[1]
+  for (resultDirSub in resultDirSubs) {
+   	posTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_pos_\\d+\\.tsv$",full.names=TRUE)
+   	negTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_neg_\\d+\\.tsv$",full.names=TRUE)
+   	if (length(negTableFile)!=1) {
+   		warning(paste0("Can't find positive-regulated GSEA table file"))
+   	}
+   	if (length(negTableFile)!=1) {
+   		warning(paste0("Can't find negative-regulated GSEA table file"))
+   	}
+   	
+   	rawTableOut<-processGesaTable(posTableFile, root_dir)
+   	tableOne=datatable(rawTableOut,escape=c(-1,-2,-7))
+   	print(kable(rawTableOut))
 
- resultDirSubs<-list.dirs(gesaResultDir,recursive=FALSE,full.names =TRUE)
- 
-for (resultDirSub in resultDirSubs) {
- 	posTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_pos_\\d+\\.xls$",full.names=TRUE)
- 	negTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_neg_\\d+\\.xls$",full.names=TRUE)
- 	if (length(negTableFile)!=1) {
- 		warning(paste0("Can't find positive-regulated GSEA table file"))
- 	}
- 	if (length(negTableFile)!=1) {
- 		warning(paste0("Can't find negative-regulated GSEA table file"))
- 	}
- 	
- 	out<-append(out,list(tags$h1(paste0(basename(resultDirSub)))))
- 	
- 	rawTableOut<-processGesaTable(posTableFile)
- 	tableOne=datatable(rawTableOut,escape=c(-1,-2,-7))
-  out<-append(out,list(tags$h3("Positive-regulated")))
-  out<-append(out,list(tableOne))
-  
-  rawTableOut<-processGesaTable(negTableFile)
- 	tableOne=datatable(rawTableOut,escape=c(-1,-2,-7))
-  out<-append(out,list(tags$h3("Negative-regulated")))
-  out<-append(out,list(tableOne))
+    rawTableOut<-processGesaTable(negTableFile, root_dir)
+   	tableOne=datatable(rawTableOut,escape=c(-1,-2,-7))
+   	print(kable(rawTableOut))
+  }
 }
-tagList(out)
 
 ```
- 
-
-
