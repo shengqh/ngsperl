@@ -251,9 +251,11 @@ sub addEdgeRTask {
   my $groups         = undef;
   my $pairs          = undef;
   my $curClusterName = undef;
+  my $curClusterDisplayName = undef;
   if ($bBetweenCluster) {
     $edgeRtaskname  = $edgeRtaskname . "_betweenCluster_byCell";
     $curClusterName = getValue( $def, "DE_cluster_name" );
+    $curClusterDisplayName = getValue( $def, "DE_cluster_display_name", $curClusterName );
     $rCode  = $rCode . ";filter_minTPM=" . getValue( $def, "DE_by_cell_filter_minTPM" ) . ";filter_cellPercentage=" . getValue( $def, "DE_by_cell_filter_cellPercentage" ) . ";bBetweenCluster=1";
     $groups = getValue( $def, "DE_cluster_groups" );
     $pairs  = getValue( $def, "DE_cluster_pairs" );
@@ -326,6 +328,30 @@ sub addEdgeRTask {
     },
   };
   push( @$summary, $vistaskname );
+
+  if($bBetweenCluster) {
+    my $vistaskname2 = $edgeRtaskname . "_dotplot";
+    $config->{$vistaskname2} = {
+      class              => "CQS::UniqueR",
+      perform            => 1,
+      target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $vistaskname2,
+      rtemplate          => "../scRNA/edgeRdotplot.r",
+      parameterFile1_ref => [ $seurat_name, ".final.rds" ],
+      parameterFile2_ref => [$edgeRtaskname],
+      parameterFile3_ref => [ $cluster_task_name, $cluster_file ],
+      output_file_ext    => ".edgeRvis2.files.csv",
+      rCode              => "cluster_name='" . $curClusterDisplayName . "';gene_number=" . getValue( $def, "DE_dot_gene_number", 20 ),
+      sh_direct          => 1,
+      pbs                => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    };
+    push( @$summary, $vistaskname2 );
+  }
 
   if ( getValue( $def, "perform_webgestalt" ) ) {
     my $webgestaltTaskName = $edgeRtaskname . "_WebGestalt";
@@ -730,6 +756,35 @@ sub getScRNASeqConfig {
       if ( $def->{perform_antibody_vis} ) {
         addAntibodyTask( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name );
       }
+
+      if ( $def->{perform_marker_dotplot} ) {
+        my $biomarker_dotplot_task  = $cluster_task_name . "_biomarker_dotplot";
+        $config->{$biomarker_dotplot_task} = {
+          class              => "CQS::UniqueR",
+          perform            => 1,
+          target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $biomarker_dotplot_task,
+          rtemplate          => "../scRNA/biomarker_dotplot.r",
+          source             => getValue( $def, "marker_dotplot_clusters" ),
+          parameterFile1_ref => [ $seurat_name, ".final.rds" ],
+          parameterFile2_ref => [ $cluster_task_name, $cluster_file ],
+          parameterSampleFile1 => getValue( $def, "marker_dotplot_clusters" ),
+          parameterSampleFile2 => {
+            cluster_name => "seurat_clusters",
+            display_cluster_name => $cluster_name,
+            gene_number => getValue( $def, "marker_dotplot_gene_number", 20 ),
+          },
+          output_file => "parameterSampleFile1",
+          output_file_ext    => ".count.files.csv",
+          sh_direct          => 1,
+          pbs                => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$summary, $biomarker_dotplot_task );
+      }
+
 
       if ( $def->{t_cell_clusters} ) {
         my $tcell_clusters = $def->{t_cell_clusters};
