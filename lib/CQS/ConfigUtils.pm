@@ -88,7 +88,8 @@ our %EXPORT_TAGS = (
       get_covariances_by_pattern
       create_covariance_file_by_pattern
       write_HTO_sample_file
-      get_parameter_file_option)
+      get_parameter_file_option
+      get_hash_level2)
   ]
 );
 
@@ -1809,6 +1810,16 @@ sub get_parameter_file_option {
     if (defined($parameterFile)){
       $result = $result . " " . $parameterFileArg . " " . $parameterFile;
     }
+  }
+  return($result);
+}
+
+sub get_hash_level2 {
+  my ($hash, $level2_key) = @_;
+  my $result = {};
+  for my $level1_key (keys %$hash){
+    my $value = $hash->{$level1_key};
+    $result->{$level1_key} = $value->{$level2_key};
   }
   return($result);
 }

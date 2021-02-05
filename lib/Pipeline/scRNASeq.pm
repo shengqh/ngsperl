@@ -14,6 +14,7 @@ use Pipeline::PipelineUtils;
 use Pipeline::Preprocession;
 use Data::Dumper;
 use Hash::Merge qw( merge );
+use Storable qw(dclone);
 use scRNA::Modules;
 
 require Exporter;
@@ -298,8 +299,6 @@ sub addEdgeRTask {
     rCode                => $rCode,
     sh_direct            => 1,
     pbs                  => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
       "walltime"  => "1",
       "mem"       => "10gb"
@@ -320,8 +319,6 @@ sub addEdgeRTask {
     rCode              => "cluster_name='" . $curClusterName . "';bBetweenCluster=" . $bBetweenCluster,
     sh_direct          => 1,
     pbs                => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
       "walltime"  => "1",
       "mem"       => "10gb"
@@ -339,12 +336,15 @@ sub addEdgeRTask {
       parameterFile1_ref => [ $seurat_name, ".final.rds" ],
       parameterFile2_ref => [$edgeRtaskname],
       parameterFile3_ref => [ $cluster_task_name, $cluster_file ],
+      parameterSampleFile1 => {
+        cluster_name => getValue( $def, "DE_clusters_name", $curClusterName ),
+        display_cluster_name => getValue( $def, "DE_clusters_display_name", $curClusterDisplayName ),
+        gene_number => getValue( $def, "DE_dotplot_gene_number", 20 ),
+      },
       output_file_ext    => ".edgeRvis2.files.csv",
-      rCode              => "cluster_name='" . $curClusterDisplayName . "';gene_number=" . getValue( $def, "DE_dot_gene_number", 20 ),
+      rCode              => "",
       sh_direct          => 1,
       pbs                => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "1",
         "mem"       => "10gb"
@@ -366,8 +366,6 @@ sub addEdgeRTask {
       referenceSet     => $def->{referenceSet},
       sh_direct        => 1,
       pbs              => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "23",
         "mem"       => "10gb"
@@ -390,8 +388,6 @@ sub addEdgeRTask {
       sh_direct                  => 1,
       rCode                      => "",
       pbs                        => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "23",
         "mem"       => "10gb"
@@ -424,8 +420,6 @@ sub addEdgeRTask {
       sh_direct                  => 1,
       rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=" . $gsea_makeReport . ";",
       pbs                        => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "23",
         "mem"       => "10gb"
@@ -763,14 +757,14 @@ sub getScRNASeqConfig {
           class              => "CQS::UniqueR",
           perform            => 1,
           target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $biomarker_dotplot_task,
-          rtemplate          => "../scRNA/biomarker_dotplot.r",
+          rtemplate          => "../scRNA/scRNA_func.r;../scRNA/biomarker_dotplot.r",
           source             => getValue( $def, "marker_dotplot_clusters" ),
           parameterFile1_ref => [ $seurat_name, ".final.rds" ],
           parameterFile2_ref => [ $cluster_task_name, $cluster_file ],
           parameterSampleFile1 => getValue( $def, "marker_dotplot_clusters" ),
           parameterSampleFile2 => {
-            cluster_name => "seurat_clusters",
-            display_cluster_name => $cluster_name,
+            cluster_name => getValue( $def, "marker_dotplot_clusters_name", "seurat_clusters" ),
+            display_cluster_name => getValue( $def, "marker_dotplot_clusters_display_name", $cluster_name ),
             gene_number => getValue( $def, "marker_dotplot_gene_number", 20 ),
           },
           output_file => "parameterSampleFile1",
@@ -785,6 +779,38 @@ sub getScRNASeqConfig {
         push( @$summary, $biomarker_dotplot_task );
       }
 
+      if($def->{perform_curated_gene_dotplot}){
+        my $curated_gene_dotplot_task  = $cluster_task_name . "_curated_gene_dotplot";
+        my $curated_gene_def = $def->{curated_gene_dotplot};
+
+        my $clusters = get_hash_level2($curated_gene_def, "clusters");
+        my $genes = get_hash_level2($curated_gene_def, "genes");
+        $config->{$curated_gene_dotplot_task} = {
+          class              => "CQS::UniqueR",
+          perform            => 1,
+          target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $curated_gene_dotplot_task,
+          rtemplate          => "../scRNA/scRNA_func.r;../scRNA/curated_gene_dotplot.r",
+          source             => getValue( $def, "curated_gene_dotplot" ),
+          parameterFile1_ref => [ $seurat_name, ".final.rds" ],
+          parameterFile2_ref => [ $cluster_task_name, $cluster_file ],
+          parameterSampleFile1 => $genes,
+          parameterSampleFile2 => $clusters,
+          parameterSampleFile3 => {
+            cluster_name => "seurat_clusters",
+            display_cluster_name => $cluster_name,
+            gene_number => getValue( $def, "marker_dotplot_gene_number", 20 ),
+          },
+          output_file => "parameterSampleFile1",
+          output_file_ext    => ".count.files.csv",
+          sh_direct          => 1,
+          pbs                => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$summary, $curated_gene_dotplot_task );
+      }
 
       if ( $def->{t_cell_clusters} ) {
         my $tcell_clusters = $def->{t_cell_clusters};

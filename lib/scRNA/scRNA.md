@@ -131,3 +131,25 @@ For specific clusters, we perform Seurat::FindAllMarkers for those cluster only,
   },
   marker_dotplot_gene_number => 20,
 ```
+
+# perform_curated_gene_dotplot
+
+We can draw dotplot for specific geneset on specific clusters. You can have multiple definitions, each contains key clusters and genes.
+
+```
+  perform_curated_gene_dotplot => 1,
+  curated_gene_dotplot => {
+    "Microphage" => {
+      clusters => ["1","6","20"],
+      genes => {
+        "IL-17A_pathway_1" => [qw(IL17A
+    IL17RC
+    IL17F
+    TLR4)],
+      "mTOR" => [qw(PIH1D1
+    SPAAR
+    DYRK3)],
+      }
+    }
+  },
+```

@@ -5,8 +5,7 @@ library(ggpubr)
 finalList<-readRDS(parFile1)
 obj<-finalList$obj
 
-cell_df<-read.csv(parFile2, stringsAsFactors = F, row.names = 1)
-cell_df<-cell_df[colnames(obj),]
+cell_df<-read_cell_cluster_file(parFile2)
 
 cluster_df=read.table(parSampleFile1)
 cluster_request <- tapply(cluster_df$V1,cluster_df$V2,list)
@@ -17,12 +16,14 @@ gene_number=as.numeric(params['gene_number'])
 cluster_name=params['cluster_name']
 display_cluster_name=params['display_cluster_name']
 
-cell_df[,cluster_name]=as.character(cell_df[,cluster_name])
+if(display_cluster_name == "seurat_clusters"){
+  display_cluster_name = "display_seurat_clusters"
+}
 obj[["final_seurat_clusters"]]=cell_df[,display_cluster_name]
 
 cnames=unique(cell_df[,c(cluster_name, display_cluster_name)])
 rownames(cnames)=cnames[,cluster_name]
-cnames[,display_cluster_name] = gsub('[ :]+', '_', cnames[,display_cluster_name])
+cnames[,"filename"] = gsub('[ :]+', '_', cnames[,display_cluster_name])
 
 idx=1
 for(idx in c(1:length(cluster_request))) {
@@ -40,17 +41,27 @@ for(idx in c(1:length(cluster_request))) {
 
   dms=tapply(markers$gene,markers$cluster,list)
 
+  all_genes=c()
   idy=1
   for(idy in c(1:length(dms))) {
     cluster = names(dms)[idy]
     allgenes=unlist(dms[idy])
     genes=unname(allgenes[1:min(gene_number, length(allgenes))])
-    display_name=cnames[cluster,display_cluster_name]
+    display_name=as.character(cnames[cluster,display_cluster_name])
+    file_name=cnames[cluster,"filename"]
+    
+    all_genes = c(all_genes, genes)
 
-    pdf(file=paste0(curname, ".", display_name, ".dot.pdf"), width=max(length(genes) * 0.4, 10), height=max(6, min(10, length(clusternames))))
+    pdf(file=paste0(curname, ".", file_name, ".dot.pdf"), width=max(length(genes) * 0.4, 10), height=max(6, min(10, length(clusternames))))
     p<-DotPlot(subobj, group.by="final_seurat_clusters", features=genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
-      xlab("genes") + ggtitle(display_name) + theme(plot.title = element_text(hjust = 0.5)) + xlab("Biomarker genes") + ylab(display_cluster_name)
+      xlab("") + ylab("")
     print(p)
     dev.off()
   }
+  
+  pdf(file=paste0(curname, ".dot.pdf"), width=max(length(all_genes) * 0.4, 10), height=max(6, min(10, length(clusternames))))
+  p<-DotPlot(subobj, group.by="final_seurat_clusters", features=all_genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
+    xlab("") + ylab("") + ggtitle("Seurat Marker Genes") + theme(plot.title = element_text(hjust = 0.5))
+  print(p)
+  dev.off()
 }
