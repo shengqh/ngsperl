@@ -18,6 +18,8 @@ output:
 
 ```{r, child="Functions.Rmd"} 
 ```
+```{r, child="Pipeline.Rmd"} 
+```
   
 ```{r setup, include=FALSE}
 library(kableExtra)

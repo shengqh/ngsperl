@@ -5,7 +5,7 @@ use File::Spec;
 use File::Basename;
 use CQS::ConfigUtils;
 use Data::Dumper;
-use Test::More tests => 16;
+use Test::More tests => 18;
 
 {
   my $def = {
@@ -274,6 +274,32 @@ is_deeply( $cov_map, $cov_expect );
         ] );    
 
   is(get_output_ext($config, "test"), ".final.rds");
+}
+
+{ #test get_hash_level2
+  my $curated_gene_dotplot = {
+    "Microphage" => {
+      clusters => ["1","6","20"],
+      genes => {
+        IL_17A_pathway_1 => [qw(IL17A IL17RC)],
+        IL_17A_pathway_2 => [qw(CXCL3 CSF3)],
+      }
+    }
+  };
+
+  my $clusters = get_hash_level2($curated_gene_dotplot, "clusters");
+  is_deeply( $clusters, 
+    {
+      "Microphage" => ["1","6","20"]
+    });
+  my $genes = get_hash_level2($curated_gene_dotplot, "genes");
+  is_deeply( $genes, 
+    {
+      "Microphage" => {
+        IL_17A_pathway_1 => [qw(IL17A IL17RC)],
+        IL_17A_pathway_2 => [qw(CXCL3 CSF3)],
+      }
+    });
 }
 
 1;

@@ -1,0 +1,73 @@
+```{r pipeline, results="asis", echo=FALSE, warning=FALSE} 
+processGesaTable<-function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=5,absLinkPath=FALSE) {
+  rawTable<-read.delim(gseaTableFile,header=T,as.is=T)
+  rawTableOut<-NULL
+  for (i in head(which(rawTable$FDR.q.val<=maxCategoryFdr),maxCategory)) {
+    categoryName=rawTable[i,1]
+    gseaUrl=paste0("http://software.broadinstitute.org/gsea/msigdb/cards/",categoryName)
+    categoryNameInTable<-addLinkTag(text=categoryName,link=gseaUrl)
+    
+    gseaWeb<-getURL(gseaUrl)
+    temp<-strsplit(gseaWeb,"description|\\<td\\>")[[1]]
+    j=grep("Brief",temp)
+    categoryDescription<-gsub("^>","",temp[j+2])
+    categoryDescription<-gsub("<\\/$","",categoryDescription)
+    
+    rawTableOut<-rbind(rawTableOut,unlist(c(categoryNameInTable,categoryDescription,rawTable[i,c(4,5,6,8)])))
+  }
+  if(!is.null(rawTableOut)){
+    colnames(rawTableOut)[1:2]<-c("Name","Description")
+  }
+  return(rawTableOut)
+}
+
+display_gsea<-function(files) {
+  cat(paste0("  \n## GSEA  \n"))
+  gsea_files<-files[grepl("gsea_", rownames(files)),]
+  gsea_files$Comparisons<-gsub("gsea_", "", gsea_files$V2)
+  comparisons<-unique(gsea_files$Comparisons)
+  for (j in 1:length(comparisons)){
+    comparison<-comparisons[j]
+    comp_files<-gsea_files[gsea_files$Comparisons == comparison,]
+    cat(paste0("  \n### ", comparison, "  \n"))
+  
+    for (i in 1:nrow(comp_files)){
+      gfolders<-read.csv(comp_files[i,1],header=T,stringsAsFactor=F)
+      gname<-gsub(".rnk.*", "", basename(comp_files[i,1]))
+      for (j in 1:nrow(gfolders)){
+        resultDirSub<-gfolders$Folder[j]
+        
+        posTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_pos_\\d+\\.xls$",full.names=TRUE)
+        if (length(posTableFile)!=1) {
+          warning(paste0("Can't find positive-regulated GSEA table file in ", resultDirSub))
+        }else{
+          rawTableOut<-processGesaTable(posTableFile)
+          if(!is.null(rawTableOut)){
+            ename<-paste0(gname, " ", gfolders$GseaCategory[j], " Positive-regulated")
+            print(kable(rawTableOut, caption=tabRef(ename, ename)) %>%
+                kable_styling() %>%
+                htmltools::HTML())
+          }else{
+            warning(paste0("Can't find significant positive-regulated GSEA gene set in ", resultDirSub))
+          }
+        }
+        
+        negTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_neg_\\d+\\.xls$",full.names=TRUE)
+        if (length(negTableFile)!=1) {
+          warning(paste0("Can't find negative-regulated GSEA table file in ", resultDirSub))
+        }else{
+          rawTableOut<-processGesaTable(negTableFile)
+          if(!is.null(rawTableOut)){
+            ename<-paste0(gname, " ", gfolders$GseaCategory[j], " Negative-regulated")
+            print(kable(rawTableOut, caption=tabRef(ename, ename)) %>%
+                kable_styling() %>%
+                htmltools::HTML())
+          }else{
+            warning(paste0("Can't find significant negative-regulated GSEA gene set in ", resultDirSub))
+          }
+        }
+      }
+    }  
+  }
+}
+```
