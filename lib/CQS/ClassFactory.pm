@@ -87,7 +87,7 @@ sub performConfig {
         }
 
         if ( !defined $perform || $perform ) {
-          print "Preforming $section by $classname \n";
+          print "Performing $section by $classname \n";
           my $obj = instantiate($classname);
           $obj->{_config} = $config;
           $obj->{_section} = $section;
@@ -116,7 +116,7 @@ sub performConfig {
           }
 
           if ( defined $perform && $perform ) {
-            print "Preforming $section by $classname \n";
+            print "Performing $section by $classname \n";
             my $obj = instantiate($classname);
             $obj->{_config} = $config;
             $obj->{_section} = $section;
