@@ -993,7 +993,7 @@ sub getRNASeqConfig {
       perform                    => 1,
       target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . "report",
       report_rmd_file            => "../Pipeline/RNASeq.Rmd",
-      additional_rmd_files       => "Functions.Rmd",
+      additional_rmd_files       => "../Pipeline/Pipeline.Rmd;Functions.Rmd",
       parameterSampleFile1_ref   => \@report_files,
       parameterSampleFile1_names => \@report_names,
       parameterSampleFile2       => $options,
