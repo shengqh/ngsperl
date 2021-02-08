@@ -28,7 +28,7 @@ for(idx in c(1:nrow(sigGeneList))) {
   clusternames=unique(subobj[["final_seurat_clusters"]])
 
   pdf(file=paste0(comparison, ".dot.pdf"), width=max(length(genes) * 0.4, 10), height=max(6, min(10, length(clusternames))))
-  p<-DotPlot(subobj, group.by="final_seurat_clusters", features=genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
+  p<-DotPlot(subobj, assay = "RNA", group.by="final_seurat_clusters", features=genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
     xlab("genes") + ggtitle(comparison) + theme(plot.title = element_text(hjust = 0.5)) + xlab("Up-regulated genes") + ylab(cluster_name)
   print(p)
   dev.off()
