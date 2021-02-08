@@ -39,6 +39,10 @@ display_gsea<-function(files) {
         
         posTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_pos_\\d+\\.xls$",full.names=TRUE)
         if (length(posTableFile)!=1) {
+          posTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_pos_\\d+\\.tsv$",full.names=TRUE)
+        }
+
+        if (length(posTableFile)!=1) {
           warning(paste0("Can't find positive-regulated GSEA table file in ", resultDirSub))
         }else{
           rawTableOut<-processGesaTable(posTableFile)
@@ -53,6 +57,10 @@ display_gsea<-function(files) {
         }
         
         negTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_neg_\\d+\\.xls$",full.names=TRUE)
+        if (length(negTableFile)!=1) {
+          negTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_neg_\\d+\\.tsv$",full.names=TRUE)
+        }
+
         if (length(negTableFile)!=1) {
           warning(paste0("Can't find negative-regulated GSEA table file in ", resultDirSub))
         }else{
