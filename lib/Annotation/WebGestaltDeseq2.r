@@ -1,7 +1,11 @@
 library("rmarkdown")
 
-annoFiles<-read.table(parSampleFile1, header=F, sep="\t", stringsAsFactors = F)
-deseq2Files<-read.table(parSampleFile2, header=F, sep="\t", stringsAsFactors = F)
+if (!exists("annoFiles")) {
+  annoFiles<-read.table(parSampleFile1, header=F, sep="\t", stringsAsFactors = F)
+}
+if (!exists("deseq2Files")) {
+  deseq2Files<-read.table(parSampleFile2, header=F, sep="\t", stringsAsFactors = F)
+}
 
 comparisons<-unique(annoFiles$V2)
 comparison<-comparisons[1]
@@ -36,10 +40,12 @@ for (comparison in comparisons){
 	    #geneUp<-sum(entryTable$FoldChange > 1)
 	    #geneDown<-sum(entryTable$FoldChange < 1)
 	    entryTable<-deseq2[deseq2[,geneCol] %in% userIds,]
-	    geneUp<-sum(entryTable[,diffCol] > diffCenterValue)
-	    geneDown<-sum(entryTable[,diffCol] < diffCenterValue)
-	    enriched$geneUp[idx]<-geneUp
-	    enriched$geneDown[idx]<-geneDown
+	    if (!is.null(diffCol)) {
+	      geneUp<-sum(entryTable[,diffCol] > diffCenterValue)
+	      geneDown<-sum(entryTable[,diffCol] < diffCenterValue)
+	      enriched$geneUp[idx]<-geneUp
+	      enriched$geneDown[idx]<-geneDown
+	    }
   		enriched$geneSet[idx]<-paste0("[", entry$geneSet, "](", entry$link, ")")
   		enriched$link[idx]<-""
     }
