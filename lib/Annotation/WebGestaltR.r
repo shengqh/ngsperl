@@ -35,27 +35,19 @@ if (all(info$size == 0)) {
 }
 
 if (grepl(".csv$",basename(geneFile))) { #csv file
-  geneList<-read.csv(geneFile,header=FALSE,stringsAsFactors=FALSE)
+  geneList<-read.csv(geneFile,header=TRUE,stringsAsFactors=FALSE)
 } else {
-  geneList<-read.table(geneFile,header=FALSE,sep="\t",stringsAsFactors=FALSE)
+  geneList<-read.table(geneFile,header=TRUE,sep="\t",stringsAsFactors=FALSE)
 }
 
 if (ncol(geneList)==1) {
-  genes<-geneList$V1
+  genes<-readLines(geneFile)
 } else { #try to find gene column
-  geneInd=grep("Gene|gene",geneList[1,])
-  if (length(geneInd)>0) {
-    genes<-geneList[,geneInd[1]]
-    genes<-genes[2:length(genes)]
-  } else { #guess gene column, by contents with both number and character (so not all numeric data, can be gene IDs)
-    geneInd=which.max(apply(geneList[-1,],2,function(x) length(intersect(grep("[a-zA-Z][a-zA-Z]",x),grep("[0-9]",x)))))
-    genes<-geneList[,geneInd]
-  }
+  geneCol=getGeneCol(geneList)[["colName"]]
+  genes<-geneList[,geneCol]
 }
+genes=unique(genes)
 
-# if(grepl("Gene", genes[1])){
-#   genes<-genes[2:length(genes)]
-# }
 
 enrichDatabases<-c("geneontology_Biological_Process", 
                    "geneontology_Cellular_Component", 
