@@ -534,7 +534,7 @@ sub getRNASeqConfig {
       }
 
       my $gsea_report = $gseaTaskName . "_report";
-      $config->{gsea_report} = {
+      $config->{$gsea_report} = {
         class                      => "CQS::BuildReport",
         perform                    => 1,
         target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . "gsea_report",
@@ -542,6 +542,7 @@ sub getRNASeqConfig {
         additional_rmd_files       => "../Pipeline/Pipeline.Rmd;Functions.Rmd",
         parameterSampleFile1_ref   => \@gsea_report_files,
         parameterSampleFile1_names => \@gsea_report_names,
+        parameterSampleFile3       => [],
         sh_direct                  => 1,
         pbs                        => {
           "nodes"     => "1:ppn=1",
