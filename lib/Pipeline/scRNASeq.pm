@@ -332,7 +332,7 @@ sub addEdgeRTask {
       class              => "CQS::UniqueR",
       perform            => 1,
       target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $vistaskname2,
-      rtemplate          => "../scRNA/edgeRdotplot.r",
+      rtemplate          => "../scRNA/scRNA_func.r;../scRNA/edgeRdotplot.r",
       parameterFile1_ref => [ $seurat_name, ".final.rds" ],
       parameterFile2_ref => [$edgeRtaskname],
       parameterFile3_ref => [ $cluster_task_name, $cluster_file ],
