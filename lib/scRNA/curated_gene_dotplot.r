@@ -40,7 +40,7 @@ for(idx in c(1:length(cluster_request))) {
     genes=unique(unname(unlist(dms[idy])))
     genes=genes[order(genes)]
     
-    fgenes<-FetchData(subobj, genes)
+    fgenes<-FetchData(subobj, genes, assay = "RNA")
     valid_genes<-genes[genes %in% colnames(fgenes)]
     
     pdf(file=paste0(curname, ".", gsub(" ", "_", geneset_name), ".dot.pdf"), width=max(length(valid_genes) * 0.4, 10), height=max(6, min(10, length(clusternames))))
