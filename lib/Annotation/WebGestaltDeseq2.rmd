@@ -120,6 +120,8 @@ if (rowCount>=20) {
   cat("\nMore than 20 categories in WebGestalt Result. Only top 20 were kept.\n")
 }
 
+curTable=enriched
+
 if (("geneUp" %in% colnames(curTable)) & ("geneDown" %in% colnames(curTable)) ) {
   curTable<-enriched[c(1:rowCount),c(1:9, 12,13)]
   print(kable(curTable) %>%
