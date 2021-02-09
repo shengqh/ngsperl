@@ -100,6 +100,34 @@ sub initializeRNASeqDefaultOptions {
   return $def;
 }
 
+sub getDeseq2Suffix {
+  my ($config, $def, $deseq2taskname) = @_;
+
+  my $suffix = "";
+  if ( ( defined $deseq2taskname ) && ( defined $config->{$deseq2taskname} ) ) {
+    if ( getValue( $def, "DE_top25only", 0 ) ) {
+      $suffix = $suffix . "_top25";
+    }
+
+    if ( getValue( $def, "DE_detected_in_both_group", 0 ) ) {
+      $suffix = $suffix . "_detectedInBothGroup";
+    }
+
+    my $minMedianInGroup = getValue( $def, "DE_min_median_read", 5 );
+    if ( $minMedianInGroup > 0 ) {
+      $suffix = $suffix . "_min" . $minMedianInGroup;
+    }
+    if ( getValue( $def, "DE_use_raw_pvalue", 0 ) ) {
+      $suffix = $suffix . "_pvalue" . $def->{DE_pvalue};
+    }
+    else {
+      $suffix = $suffix . "_fdr" . $def->{DE_pvalue};
+    }
+  }
+
+  return($suffix);
+}
+
 sub getRNASeqConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
@@ -533,6 +561,34 @@ sub getRNASeqConfig {
         },
       };
       push( @$summary, $gseaTaskName );
+
+      my $suffix = getDeseq2Suffix($config, $def, $deseq2taskname);
+
+      my @gsea_report_files = ();
+      my @gsea_report_names = ();
+      my $pairs = $config->{pairs};
+      for my $key ( keys %$pairs ) {
+        push( @gsea_report_files, $gseaTaskName, "/" . $key . $suffix . ".*gsea.csv" );
+        push( @gsea_report_names, "gsea_" . $key );
+      }
+
+      my $gsea_report = $gseaTaskName . "_report";
+      $config->{gsea_report} = {
+        class                      => "CQS::BuildReport",
+        perform                    => 1,
+        target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . "gsea_report",
+        report_rmd_file            => "GSEAReport.Rmd",
+        additional_rmd_files       => "../Pipeline/Pipeline.Rmd;Functions.Rmd",
+        parameterSampleFile1_ref   => \@gsea_report_files,
+        parameterSampleFile1_names => \@gsea_report_names,
+        sh_direct                  => 1,
+        pbs                        => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$summary, $gsea_report );
     }
 
     if ( $def->{perform_keggprofile} ) {
@@ -883,26 +939,8 @@ sub getRNASeqConfig {
       }
     }
 
-    my $suffix = "";
     if ( ( defined $deseq2taskname ) && ( defined $config->{$deseq2taskname} ) ) {
-      if ( getValue( $def, "DE_top25only", 0 ) ) {
-        $suffix = $suffix . "_top25";
-      }
-
-      if ( getValue( $def, "DE_detected_in_both_group", 0 ) ) {
-        $suffix = $suffix . "_detectedInBothGroup";
-      }
-
-      my $minMedianInGroup = getValue( $def, "DE_min_median_read", 5 );
-      if ( $minMedianInGroup > 0 ) {
-        $suffix = $suffix . "_min" . $minMedianInGroup;
-      }
-      if ( getValue( $def, "DE_use_raw_pvalue", 0 ) ) {
-        $suffix = $suffix . "_pvalue" . $def->{DE_pvalue};
-      }
-      else {
-        $suffix = $suffix . "_fdr" . $def->{DE_pvalue};
-      }
+      my $suffix = getDeseq2Suffix($config, $def, $deseq2taskname);      
 
       my $pairs = $config->{pairs};
 
@@ -969,6 +1007,7 @@ sub getRNASeqConfig {
 
     if ( defined $gseaTaskName ) {
       push( @copy_files, $gseaTaskName, ".gsea\$" );
+      my $suffix = getDeseq2Suffix($config, $deseq2taskname);      
 
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
