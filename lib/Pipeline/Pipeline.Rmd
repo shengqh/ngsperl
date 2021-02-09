@@ -1,5 +1,46 @@
 ```{r pipeline, results="asis", echo=FALSE, warning=FALSE} 
-processGesaTable<-function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=5,absLinkPath=FALSE) {
+display_webgestalt=function(files) {
+  cat(paste0("  \n## WebGestalt  \n"))
+  enrich_files<-files[grepl("WebGestalt_", rownames(files)),]
+  enrich_files$Comparisons<-gsub("WebGestalt_GO....", "", enrich_files$V2)
+  enrich_files$Comparisons<-gsub("WebGestalt_KEGG_", "", enrich_files$Comparisons)
+  comparisons<-unique(enrich_files$Comparisons)
+  for (j in 1:length(comparisons)){
+    comparison<-comparisons[j]
+    comp_files<-enrich_files[enrich_files$Comparisons == comparison,]
+    cat(paste0("  \n### ", comparison, "  \n"))
+  
+    for (i in 1:nrow(comp_files)){
+      if (!file.exists(comp_files[i,1])) {
+        next;
+      }
+      ename<-rownames(comp_files)[i]
+      if(grepl(".html.rds", comp_files[i,1])){
+        plotData <-readRDS(comp_files[i,1])
+        fdata<-plotData$enriched
+        fdata<-fdata[c(1:min(nrow(fdata),5)),c(1,2,4,5,6,7,8,9,12,13)]
+        print(kable(fdata, caption=tabRef(ename, ename)) %>% 
+          kable_styling() %>%
+          row_spec(which(fdata$geneUp > fdata$geneDown), color = "black", background = "bisque") %>% 
+          row_spec(which(fdata$geneUp < fdata$geneDown), color = "black", background = "honeydew") %>%
+          htmltools::HTML())
+        cat("\n\n<hr>")
+      }else{
+        #txtFile<-gsub(".html.rds$", "", comp_files[i,1])
+        #fdata<-read.table(txtFile, sep="\t", header=T, stringsAsFactors = F)
+        fdata<-read.table(comp_files[i,1], sep="\t", header=T, stringsAsFactors = F)
+        fdata<-fdata[c(1:min(nrow(fdata))),]
+        fdata$geneSet<-paste0("[", fdata$geneSet, "](", fdata$link, ")")
+        fdata<-fdata[,c(1,2,4,5,6,7,8,9)]
+        print(kable(fdata, caption=tabRef(ename, ename)) %>%
+        kable_styling() %>%
+        htmltools::HTML())
+      }
+    }  
+  }
+}
+
+processGseaTable=function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=5,absLinkPath=FALSE) {
   rawTable<-read.delim(gseaTableFile,header=T,as.is=T)
   rawTableOut<-NULL
   for (i in head(which(rawTable$FDR.q.val<=maxCategoryFdr),maxCategory)) {
@@ -21,7 +62,29 @@ processGesaTable<-function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=5,absLi
   return(rawTableOut)
 }
 
-display_gsea<-function(files) {
+print_gsea_subfolder=function(resultDirSub, is_positive){
+  pstr = ifelse(is_positive, "pos", "neg")
+  title = ifelse(is_positive, "Positive-regulated", "Negative-regulated")
+  pattern = paste0("gsea_report_for_na_", pstr, "_\\d+\\[.xls|.tsv]$")
+        
+  posTableFile<-list.files(resultDirSub,pattern=pattern,full.names=TRUE)
+
+  if (length(posTableFile)!=1) {
+    warning(paste("Can't find ", title, "GSEA table file in", resultDirSub))
+  }else{
+    rawTableOut<-processGseaTable(posTableFile)
+    if(!is.null(rawTableOut)){
+      ename<-paste(gname, gfolders$GseaCategory[j], title)
+      print(kable(rawTableOut, caption=tabRef(ename, ename)) %>%
+          kable_styling() %>%
+          htmltools::HTML())
+    }else{
+      warning(paste("Can't find significant", title, "GSEA gene set in", resultDirSub))
+    }
+  }
+}
+
+display_gsea=function(files) {
   cat(paste0("  \n## GSEA  \n"))
   gsea_files<-files[grepl("gsea_", rownames(files)),]
   gsea_files$Comparisons<-gsub("gsea_", "", gsea_files$V2)
@@ -36,44 +99,8 @@ display_gsea<-function(files) {
       gname<-gsub(".rnk.*", "", basename(comp_files[i,1]))
       for (j in 1:nrow(gfolders)){
         resultDirSub<-gfolders$Folder[j]
-        
-        posTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_pos_\\d+\\.xls$",full.names=TRUE)
-        if (length(posTableFile)!=1) {
-          posTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_pos_\\d+\\.tsv$",full.names=TRUE)
-        }
-
-        if (length(posTableFile)!=1) {
-          warning(paste0("Can't find positive-regulated GSEA table file in ", resultDirSub))
-        }else{
-          rawTableOut<-processGesaTable(posTableFile)
-          if(!is.null(rawTableOut)){
-            ename<-paste0(gname, " ", gfolders$GseaCategory[j], " Positive-regulated")
-            print(kable(rawTableOut, caption=tabRef(ename, ename)) %>%
-                kable_styling() %>%
-                htmltools::HTML())
-          }else{
-            warning(paste0("Can't find significant positive-regulated GSEA gene set in ", resultDirSub))
-          }
-        }
-        
-        negTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_neg_\\d+\\.xls$",full.names=TRUE)
-        if (length(negTableFile)!=1) {
-          negTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_neg_\\d+\\.tsv$",full.names=TRUE)
-        }
-
-        if (length(negTableFile)!=1) {
-          warning(paste0("Can't find negative-regulated GSEA table file in ", resultDirSub))
-        }else{
-          rawTableOut<-processGesaTable(negTableFile)
-          if(!is.null(rawTableOut)){
-            ename<-paste0(gname, " ", gfolders$GseaCategory[j], " Negative-regulated")
-            print(kable(rawTableOut, caption=tabRef(ename, ename)) %>%
-                kable_styling() %>%
-                htmltools::HTML())
-          }else{
-            warning(paste0("Can't find significant negative-regulated GSEA gene set in ", resultDirSub))
-          }
-        }
+        print_gsea_subfolder(resultDIrSub, TRUE)
+        print_gsea_subfolder(resultDIrSub, FALSE)
       }
     }  
   }
