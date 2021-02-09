@@ -49,10 +49,10 @@ for(ct in unique(celltypes$Celltype)){
   
   width=max(5000, nrow(subcelltypes) * 70)
   png(filename=paste0(outFile, ".", ct, ".png"), width=width, height=2500, res=300)
-  p<-DotPlot(obj, group.by="final_seurat_clusters", features=expressedGenes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
+  p<-DotPlot(obj, assay = "RNA", group.by="final_seurat_clusters", features=expressedGenes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
     xlab(paste0(ct, " expressed genes"))
   if(length(absentGenes) > 0){
-    e<-DotPlot(obj, group.by="final_seurat_clusters", features=absentGenes, cols = c("lightgrey", "blue"), dot.scale = 8) + RotatedAxis()+
+    e<-DotPlot(obj, assay = "RNA", group.by="final_seurat_clusters", features=absentGenes, cols = c("lightgrey", "blue"), dot.scale = 8) + RotatedAxis()+
       xlab(paste0(ct, " absent genes"))
     p2<-p+e
     print(p2)

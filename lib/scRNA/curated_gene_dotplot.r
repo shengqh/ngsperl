@@ -44,7 +44,7 @@ for(idx in c(1:length(cluster_request))) {
     valid_genes<-genes[genes %in% colnames(fgenes)]
     
     pdf(file=paste0(curname, ".", gsub(" ", "_", geneset_name), ".dot.pdf"), width=max(length(valid_genes) * 0.4, 10), height=max(6, min(10, length(clusternames))))
-    p<-DotPlot(subobj, group.by="final_seurat_clusters", features=valid_genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
+    p<-DotPlot(subobj, assay = "RNA", group.by="final_seurat_clusters", features=valid_genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
       theme(plot.title = element_text(hjust = 0.5)) + xlab(gsub("_", " ", geneset_name)) + ylab("")
     
     if(!is_one_cluster){
