@@ -578,11 +578,18 @@ print(kable(qcsummary, caption=tabRef("qcsummary", "Cell count in sample")) %>% 
 clusterMarkers<-finalList$markers %>% group_by(cluster)
 write.csv(clusterMarkers, file=paste0(prefix, ".allmarkers.csv"), row.names=F, quote = F)
 
-top10 <- finalList$markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
+if ("Seurat" %in% names(sessionInfo()$otherPkgs) & grepl("^4",sessionInfo()$otherPkgs$Seurat$Version)) { #Seurat version4
+  logFcColName="avg_log2FC"
+} else {
+  logFcColName="avg_logFC"
+}
+
+#top10 <- finalList$markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
+top10 <- finalList$markers %>% group_by(cluster) %>% top_n(n = 10, wt = .data[[logFcColName]])
 top10marker_file = paste0(prefix, ".top10markers.csv")
 write.csv(top10, file=top10marker_file, row.names=F, quote = F)
 
-top5 <- finalList$markers %>% group_by(cluster) %>% top_n(n = 5, wt = avg_logFC)
+top5 <- finalList$markers %>% group_by(cluster) %>% top_n(n = 5, wt = .data[[logFcColName]])
 print(kable(top5, caption=tabRef("top5", "Top 5 marker genes in each cluster")) %>% kable_styling() %>% htmltools::HTML())
 ```
 
