@@ -47,10 +47,18 @@ sub perform {
     writeParameterSampleFile( $config, $section, $result_dir, $myidx, $removeEmpty );
   }
   
+  my $rscript = get_option_include_general($config, $section, "R", "R");
+
   my $final_file = ${task_name}. $self->{_suffix} . ".html";
   my $final = $self->open_pbs( $final_pbs, $pbs_desc, $final_log_desp, $path_file, $result_dir, $final_file );
+
+  my $rlibs = get_option_include_general($config, $section, "R_LIBS", "");
+  if($rlibs ne ""){
+    print $final "export R_LIBS=$rlibs \n\n";
+  }
+
   print $final "
-R -e \"library(knitr);rmarkdown::render('$rfilename');\"
+$rscript -e \"library(knitr);rmarkdown::render('$rfilename');\"
 ";
 
   $self->close_pbs( $final, $final_pbs );

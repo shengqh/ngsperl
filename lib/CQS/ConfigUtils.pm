@@ -27,6 +27,7 @@ our %EXPORT_TAGS = (
       has_config_section
       has_option
       get_option
+      get_option_include_general
       get_option_file
       get_java
       get_task_name
@@ -160,6 +161,28 @@ sub get_option {
     }
     else {
       $result = $default;
+    }
+  }
+
+  return ($result);
+}
+
+#get option from task section and general section
+sub get_option_include_general {
+  my ( $config, $section, $key, $default ) = @_;
+
+  my $curSection = get_config_section( $config, $section );
+
+  my $result = $curSection->{$key};
+  if ( !defined $result ) {
+    $result = $config->{general}{$key};
+    if (!defined $result) {
+      if ( !defined $default ) {
+        die "Define ${section}::${key} first!";
+      }
+      else {
+        $result = $default;
+      }
     }
   }
 

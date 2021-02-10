@@ -163,11 +163,18 @@ sub perform {
   my $log_desc = $cluster->get_log_description($log);
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+
+  my $rlibs = get_option_include_general($config, $section, "R_LIBS", "");
+  if($rlibs ne ""){
+    print $pbs "export R_LIBS=$rlibs \n\n";
+  }
+
+  my $rscript = get_option_include_general($config, $section, "Rscript", "Rscript");
   if ( defined($option) and $option ne "" ) {
-    print $pbs "Rscript --vanilla " . basename($rfile) . " $option";
+    print $pbs "$rscript --vanilla " . basename($rfile) . " $option";
   }
   else {
-    print $pbs "Rscript --vanilla " . basename($rfile);
+    print $pbs "$rscript --vanilla " . basename($rfile);
   }
   $self->close_pbs( $pbs, $pbs_file );
 }
