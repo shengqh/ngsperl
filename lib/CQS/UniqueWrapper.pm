@@ -61,7 +61,7 @@ sub result {
       my %temp = %{ get_raw_files( $config, $section, $output_file ) };
       foreach my $sample_name ( keys %temp ) {
 #        print "SampleName: $sample_name\n";
-        if ( ref( $temp{$sample_name} ) eq "HASH" ) {
+        if ( is_hash( $temp{$sample_name} ) ) {
           foreach my $output_file_ext_one (@$output_file_exts) {
             push( @result_files, "${result_dir}/${sample_name}${output_file_ext_one}" );
           }
@@ -103,7 +103,7 @@ sub result {
       foreach my $sample_name ( keys %temp ) {
 #        print "SampleName: $sample_name\n";
         my @result_perSample_files = ();
-        if ( (ref( $temp{$sample_name} ) eq "HASH") or $output_perSample_file_byName ) {
+        if ( is_hash( $temp{$sample_name}) or $output_perSample_file_byName ) {
           foreach my $output_file_ext_one (@output_perSample_file_exts) {
             push( @result_perSample_files, "${result_dir}/${sample_name}${output_file_ext_one}" );
           }

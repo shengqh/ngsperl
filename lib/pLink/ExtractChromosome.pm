@@ -49,7 +49,7 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
     my $bedPrefix = $plinkFiles->{$sampleName};
-    if((ref($bedPrefix) eq 'ARRAY')){
+    if( is_array($bedPrefix) ){
       $bedPrefix = $bedPrefix->[0];
     }
 

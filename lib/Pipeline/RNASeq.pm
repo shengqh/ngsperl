@@ -367,7 +367,7 @@ sub getRNASeqConfig {
         "mem"       => "40gb"
       },
     };
-    if ( ref($count_file_ref) eq "ARRAY" ) {
+    if ( is_array($count_file_ref) ) {
       $config->{genetable_correlation}{parameterSampleFile1_ref} = $count_file_ref;
     }
     else {
@@ -856,7 +856,7 @@ sub getRNASeqConfig {
       my $pcoding = $def->{perform_proteincoding_gene} ? ".proteincoding.count" : "";
 
       my $titles = { "all" => "" };
-      if ( ref($count_file_ref) ne "ARRAY" ) {    #count file directly
+      if ( is_not_array($count_file_ref) ) {    #count file directly
         $titles->{all} = basename($count_file_ref);
         $pcoding = "";
       }
@@ -864,7 +864,7 @@ sub getRNASeqConfig {
         my $correlationGroups = $config->{genetable_correlation}{parameterSampleFile2};
         for my $correlationTitle ( keys %$correlationGroups ) {
           my $groups = $correlationGroups->{$correlationTitle};
-          if ( ref($groups) eq 'HASH' ) {
+          if ( is_hash($groups) ) {
             if ( $correlationTitle ne "all" ) {
               $correlationTitle =~ s/\\s+/_/g;
               $titles->{$correlationTitle} = "." . $correlationTitle;

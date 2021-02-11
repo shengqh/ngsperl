@@ -22,6 +22,11 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(
+      is_string
+      is_array
+      is_not_array
+      is_hash
+      is_not_hash
       getValue
       get_config_section
       has_config_section
@@ -98,6 +103,28 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
+sub is_string {
+  my $data = shift;
+  return(ref $data eq ref "");
+}
+
+sub is_array {
+  my $data = shift;
+  return(ref $data eq ref []);
+}
+
+sub is_not_array {
+  return not is_array(@_);
+}
+
+sub is_hash {
+  my $data = shift;
+  return(ref $data eq ref {});
+}
+
+sub is_not_hash {
+  return not is_hash(@_);
+}
 
 sub getValue {
   my ( $def, $name, $defaultValue ) = @_;
@@ -118,7 +145,7 @@ sub getValue {
 sub get_config_section {
   my ( $config, $section ) = @_;
   my @sections = split( '::', $section );
-  if (ref($section) eq ref({})){
+  if ( is_hash($section) ){
     my $mess = longmess();
     print Dumper( $mess );    
   }
@@ -436,7 +463,7 @@ sub parse_param_file {
   if ( defined $curSection->{$key_ref} ) {
     my $refSectionName = $curSection->{$key_ref};
     my $pattern;
-    if ( ref($refSectionName) eq 'ARRAY' ) {
+    if ( is_array($refSectionName) ) {
       my @parts = @{$refSectionName};
       if ( scalar(@parts) == 2 ) {
         $pattern        = $parts[1];
@@ -489,11 +516,11 @@ sub get_refmap {
     #in same config
     my $targetSection = $curSection->{$mapname_ref};
 
-    if ( ref($targetSection) eq 'HASH' ) {
+    if ( is_hash($targetSection) ) {
       return ( $result, 0 );
     }
 
-    if ( ref($targetSection) eq 'ARRAY' ) {
+    if ( is_array($targetSection) ) {
       my @parts      = @{$targetSection};
       my $partlength = scalar(@parts);
       for ( my $index = 0 ; $index < $partlength ; ) {
@@ -523,7 +550,7 @@ sub get_refmap {
 
     #in another config, has to be array
     my $refSectionName = $curSection->{$mapname_config_ref};
-    if ( !( ref($refSectionName) eq 'ARRAY' ) ) {
+    if ( is_not_array($refSectionName) ) {
       die "$mapname_config_ref has to be defined as ARRAY with [config, section, pattern]";
     }
     my @parts      = @{$refSectionName};
@@ -532,7 +559,7 @@ sub get_refmap {
       my $targetConfig  = $parts[$index];
       my $targetSection = $parts[ $index + 1 ];
 
-      if ( !( ref($targetConfig) eq 'HASH' ) ) {
+      if ( is_not_hash($targetConfig) ) {
         die
 "$mapname_config_ref has to be defined as ARRAY with [config1, section1, pattern1,config2, section2, pattern2] or [config1, section1,config2, section2] format. config should be hash and section should be string";
       }
@@ -541,7 +568,7 @@ sub get_refmap {
         die "undefined section $targetSection in $mapname_config_ref of $section";
       }
 
-      if ( $index == ( $partlength - 2 ) || ref( $parts[ $index + 2 ] ) eq 'HASH' ) {
+      if ( $index == ( $partlength - 2 ) || is_hash( $parts[ $index + 2 ] ) ) {
         $result->{$index} = { config => $targetConfig, section => $targetSection, pattern => $pattern };
         $index += 2;
       }
@@ -602,7 +629,7 @@ sub get_raw_file_list {
       my $bFound    = 0;
       my @curResult = ();
       for my $myvalues ( values %myres ) {
-        die "Return value should be array." if ( ref($myvalues) ne 'ARRAY' );
+        die "Return value should be array." if ( is_not_array($myvalues) );
         if ( scalar(@$myvalues) > 0 ) {
           push( @curResult, @$myvalues );
           $bFound = 1;
@@ -669,14 +696,14 @@ sub do_get_unsorted_raw_files {
       my $refcount = keys %myres;
       for my $mykey ( keys %myres ) {
         my $myvalues = $myres{$mykey};
-        if ( ref($myvalues) eq '' ) {
+        if ( is_string($myvalues) ) {
           $myvalues = [$myvalues];
         }
 
-        if ( ( ref($myvalues) eq 'ARRAY' ) && ( scalar( @{$myvalues} ) > 0 ) ) {
+        if ( is_array($myvalues) && ( scalar( @{$myvalues} ) > 0 ) ) {
           if ( exists $result{$mykey} ) {
             my $oldvalues = $result{$mykey};
-            if ( ref($oldvalues) eq 'ARRAY' ) {
+            if ( is_array($oldvalues) ) {
               my @merged = ( @{$oldvalues}, @{$myvalues} );
 
               #print "merged ARRAY ", Dumper(\@merged);
@@ -691,10 +718,10 @@ sub do_get_unsorted_raw_files {
           }
         }
 
-        if ( ( ref($myvalues) eq 'HASH' ) && ( scalar( keys %{$myvalues} ) > 0 ) ) {
+        if ( is_hash($myvalues) && ( scalar( keys %{$myvalues} ) > 0 ) ) {
           if ( exists $result{$mykey} ) {
             my $oldvalues = $result{$mykey};
-            if ( ref($oldvalues) eq 'HASH' ) {
+            if ( is_hash($oldvalues) ) {
               $result{$mykey} = merge_hash_right_precedent( $oldvalues, $myvalues );
             }
             else {
@@ -753,7 +780,7 @@ sub get_ref_section_pbs {
       my $section      = $values->{section};
 
       my $targetSection = get_config_section( $targetConfig, $section );
-      if ( ref($targetSection) ne 'HASH' ) {
+      if ( is_not_hash($targetSection) ) {
         next;
       }
 
@@ -893,7 +920,7 @@ sub get_pair_groups {
   my $group_names;
   my $ispaired       = 0;
   my $tmpgroup_names = $pairs->{$pair_name};
-  if ( ref($tmpgroup_names) eq 'HASH' ) {
+  if ( is_hash($tmpgroup_names) ) {
     $group_names = $tmpgroup_names->{"groups"};
     $ispaired    = $tmpgroup_names->{"paired"};
   }
@@ -911,7 +938,7 @@ sub get_pair_groups_names {
   my $group_names;
   my $pairedNames;
   my $tmpgroup_names = $pairs->{$pair_name};
-  if ( ref($tmpgroup_names) eq 'HASH' ) {
+  if ( is_hash($tmpgroup_names) ) {
     $group_names = $tmpgroup_names->{"groups"};
     $pairedNames = $tmpgroup_names->{"paired"};
   }
@@ -935,7 +962,7 @@ sub get_pure_pairs {
 
   for my $pair_name ( keys %$result ) {
     my $tmpgroup_names = $result->{$pair_name};
-    if ( ref($tmpgroup_names) eq 'HASH' ) {
+    if ( is_hash($tmpgroup_names) ) {
       my $group_names = $tmpgroup_names->{"groups"};
       $result->{$pair_name} = $group_names;
     }
@@ -1130,7 +1157,7 @@ sub writeFileList {
   open( my $fl, ">$fileName" ) or die "Cannot create $fileName";
   for my $sample_name ( sort keys %$fileMap ) {
     my $files = $fileMap->{$sample_name};
-    if(ref($files) eq 'ARRAY'){
+    if( is_array($files) ){
       if ( not $exportAllFiles ) {
         $files = [$files->[0]]
       }  
@@ -1213,7 +1240,11 @@ sub writeParameterSampleFile {
         }
       }
       else {
-        print $list $subSampleFiles . "\t$sample_name\n";
+        if(!defined $subSampleFiles) {
+          print $list "\t$sample_name\n";
+        }else{
+          print $list $subSampleFiles . "\t$sample_name\n";
+        }
       }
     }
     close($list);
@@ -1847,4 +1878,17 @@ sub get_hash_level2 {
   return($result);
 }
 
+sub parse_curated_genes {
+  my $curated_gene_def = @_;
+  my $expanded_def = {};
+
+
+  for my $key (keys %$curated_gene_def) {
+    my $value = $curated_gene_def->{$key};
+  }
+
+  my $result_hash = expand_curated_genes($curated_gene_def);
+  my $clusters = get_hash_level2($curated_gene_def, "clusters");
+  my $genes = get_hash_level2($curated_gene_def, "genes");
+}
 1;

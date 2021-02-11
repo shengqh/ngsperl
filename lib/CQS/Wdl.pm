@@ -49,7 +49,7 @@ sub perform {
   my $singularity_image_files = get_raw_files( $config, $section, "singularity_image_files" ); 
   for my $image_name ( sort keys %$singularity_image_files ) {
     my $source_image=$singularity_image_files->{$image_name};
-    if(ref($source_image) eq 'ARRAY') {
+    if( is_array($source_image) ) {
       $source_image=${$source_image}[0];
     }
     # print $image_name."\n";
@@ -70,20 +70,20 @@ sub perform {
   my $raw_files = get_raw_files( $config, $section );
   
   my $input_parameters = get_option($config, $section, "input_parameters");
-  die "input_parameters should be hash" if(ref($input_parameters) ne 'HASH');
+  die "input_parameters should be hash" if is_not_hash($input_parameters);
 
   my $input_list = get_option($config, $section, "input_list", {});
-  die "$input_list should be hash" if(ref($input_list) ne 'HASH');
+  die "$input_list should be hash" if is_not_hash($input_list);
 
   my $input_single = get_option($config, $section, "input_single", {});
-  die "$input_single should be hash" if(ref($input_single) ne 'HASH');
+  die "$input_single should be hash" if is_not_hash($input_single);
 
   my $replace_dics = {};
   my $replace_values = {};
 
   for my $input_key (keys %$input_parameters){
     my $input_value = $input_parameters->{$input_key};
-    if (ref($input_value) ne "ARRAY"){
+    if ( is_not_array($input_value) ){
       $replace_values->{$input_key} = $input_value;
       next;
     }
@@ -107,7 +107,7 @@ sub perform {
   for my $input_key (keys %$input_list){
     my $input_name = $input_key;
     my $input_value = $input_list->{$input_key};
-    if (ref($input_value) eq "ARRAY"){
+    if ( is_array($input_value) ){
       die "$input_key should include _ref suffix" if (substr($input_key, -4) ne "_ref");
       $input_name =~ s/_config_ref$//g;
       $input_name =~ s/_ref$//g;
@@ -116,12 +116,12 @@ sub perform {
       delete $config->{$section}{$input_key};
     }
 
-    die "$input_key should point to hash" if (ref($input_value) ne "HASH");
+    die "$input_key should point to hash" if is_not_hash($input_value);
     
     my $cur_dic = {};
     for my $sample_name (keys %$input_value){
       my $sample_values = $input_value->{$sample_name};
-      die "value for $sample_name in input_list should be array" if (ref($sample_values) ne "ARRAY");
+      die "value for $sample_name in input_list should be array" if is_not_array($sample_values);
       
       my $list_file = $self->get_file( $result_dir, $sample_name, "." . $input_key . ".list" );
       open( my $list, ">$list_file" ) or die "Cannot create $list_file";
@@ -139,11 +139,11 @@ sub perform {
   for my $input_key (keys %$input_single){
     my $input_value = $input_single->{$input_key};
     
-    if ((substr($input_key, -4) ne "_ref") and (ref($input_value) eq ref(""))){
+    if ((substr($input_key, -4) ne "_ref") and is_string($input_value)){
       $replace_values->{$input_key} = $input_value;
       next;
     }
-    die "value of $input_key in input_single should be ARRAY" if (ref($input_value) ne "ARRAY");
+    die "value of $input_key in input_single should be ARRAY" if is_not_array($input_value);
     
     if (substr($input_key, -4) eq "_ref") {
       my $input_name = $input_key;

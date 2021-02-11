@@ -311,7 +311,7 @@ sub perform {
       my $pbs_file_map = $myclass->get_pbs_files( $config, $task_section );
       for my $sample ( sort keys %{$pbs_file_map} ) {
         my $samplepbs = $pbs_file_map->{$sample};
-        if ( ref($samplepbs) eq 'ARRAY' ) {
+        if ( is_array($samplepbs) ) {
           for my $subpbs ( @{$samplepbs} ) {
             if ( !-e $subpbs ) {
               die "Task " . $task_section . ", file not exists " . $subpbs . "\n";
@@ -352,7 +352,7 @@ sub perform {
         my $pbs_map = $taskpbs->{$task_section};
         if ( defined $pbs_map->{$sample} ) {
           my $samplepbs = $pbs_map->{$sample};
-          if ( ref($samplepbs) eq 'ARRAY' ) {
+          if ( is_array($samplepbs) ) {
             for my $subpbs ( @{$samplepbs} ) {
               print $pbs "$task_shell " . $subpbs . "\n";
             }

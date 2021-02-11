@@ -67,7 +67,7 @@ sub result {
     my $correlationGroups = get_raw_files( $config, $section, "parameterSampleFile2" );
     for my $correlationTitle ( keys %$correlationGroups ) {
       my $groups = $correlationGroups->{$correlationTitle};
-      if ( ref($groups) eq 'HASH' ) {
+      if ( is_hash($groups) ) {
         if ($correlationTitle ne "all"){
           push( @$titles, $correlationTitle );
         }
