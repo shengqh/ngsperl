@@ -95,7 +95,10 @@ our %EXPORT_TAGS = (
       create_covariance_file_by_pattern
       write_HTO_sample_file
       get_parameter_file_option
-      get_hash_level2)
+      get_hash_level2
+      get_expanded_genes
+      parse_curated_genes
+      )
   ]
 );
 
@@ -1878,17 +1881,45 @@ sub get_hash_level2 {
   return($result);
 }
 
-sub parse_curated_genes {
-  my $curated_gene_def = @_;
-  my $expanded_def = {};
+sub get_expanded_genes {
+  my $curated_gene_def = shift;
+  my $result = {};
 
-
-  for my $key (keys %$curated_gene_def) {
-    my $value = $curated_gene_def->{$key};
+  if (is_array($curated_gene_def)) {
+    $result->{"interesting_genes"} = {
+      clusters => [],
+      genes => $curated_gene_def
+    };
+    return($result);
   }
 
-  my $result_hash = expand_curated_genes($curated_gene_def);
-  my $clusters = get_hash_level2($curated_gene_def, "clusters");
-  my $genes = get_hash_level2($curated_gene_def, "genes");
+  if(is_hash($curated_gene_def)) {
+    for my $key (keys %$curated_gene_def) {
+      my $value = $curated_gene_def->{$key};
+      if (is_array($value)) {
+        $result->{$key} = {
+          clusters => [],
+          genes => $value
+        };
+      }else{
+        $result->{$key} = $value;
+      }
+    }
+
+    return($result);
+  }
+
+  die "curated_gene_def should be either array or hash";
 }
+
+sub parse_curated_genes {
+  my $curated_gene_def = shift;
+  my $result = get_expanded_genes($curated_gene_def);
+
+  my $clusters = get_hash_level2($result, "clusters");
+  my $genes = get_hash_level2($result, "genes");
+
+  return($result, $clusters, $genes)
+}
+
 1;
