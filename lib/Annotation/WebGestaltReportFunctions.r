@@ -1,3 +1,4 @@
+
 readFilesAndFormat=function(compDeseq2File) {
   if (grepl(".csv$",basename(compDeseq2File))) { #csv file
     readFun<-function(...) read.csv(...)
@@ -11,7 +12,9 @@ readFilesAndFormat=function(compDeseq2File) {
   
   if (all(c("Feature_gene_name", "baseMean", "pvalue", "padj", "FoldChange") %in% colnames(deseq2))) { #DESeq2 result format
     deseq2<-deseq2[,c("Feature_gene_name", "baseMean", "pvalue", "padj", "FoldChange") ]
-  } else {
+  }else if(all(c("logFC", "logCPM", "F", "PValue", "FDR") %in% colnames(deseq2))) {
+    deseq2$GENE<-rownames(deseq2)
+    deseq2=deseq2[c("GENE", "logFC", "logCPM", "F", "PValue", "FDR")]
   }
   return(deseq2)
 }
@@ -53,4 +56,3 @@ getGeneCol=function(deseq2) { #try to find gene column
   }
   return(result)
 }
-
