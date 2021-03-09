@@ -506,6 +506,13 @@ obj<-finalList$obj
 seurat_colors<-finalList$seurat_colors
 seurat_cellactivity_colors<-finalList$seurat_cellactivity_colors
 hasMultipleSamples<-length(unique(obj$orig.ident))>1
+
+samples<-unique(finalList$rawobj$orig.ident)
+if(length(samples) < 3){
+  sampleHeight=5
+}else{
+  sampleHeight=min(13, ceiling(length(samples) / 3) * 5)
+}
 ```
 
 # Quality control
@@ -530,7 +537,7 @@ p<-CombinePlots(plots = list(plot1,plot2))
 print(p)
 ```
 
-```{r qc2_1, fig.height=10, fig.width=13, fig.cap=figRef("qc_metrics_2_1", "Density plot of number of read vs percentage of mitochondrial")}
+```{r qc2_1, fig.height=sampleHeight, fig.width=13, fig.cap=figRef("qc_metrics_2_1", "Density plot of number of read vs percentage of mitochondrial")}
 mt<-data.frame(mt=finalList$rawobj$percent.mt, Sample=finalList$rawobj$orig.ident, nFeature=log10(finalList$rawobj$nFeature_RNA), nCount=log10(finalList$rawobj$nCount_RNA))
 g1<-ggplot(mt, aes(x=mt,y=nCount) ) +
   geom_bin2d(bins = 70) + 
@@ -542,7 +549,7 @@ g1<-ggplot(mt, aes(x=mt,y=nCount) ) +
 print(g1)
 ```
 
-```{r qc2_2, fig.height=10, fig.width=13, fig.cap=figRef("qc_metrics_2_2", "Density plot of number of feature vs percentage of mitochondrial")}
+```{r qc2_2, fig.height=sampleHeight, fig.width=13, fig.cap=figRef("qc_metrics_2_2", "Density plot of number of feature vs percentage of mitochondrial")}
 g1<-ggplot(mt, aes(x=mt,y=nFeature) ) +
   geom_bin2d(bins = 70) + 
   scale_fill_continuous(type = "viridis") + 
