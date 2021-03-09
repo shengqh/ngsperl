@@ -37,6 +37,25 @@ for(idx in c(1:length(cluster_request))) {
 
   markers=FindAllMarkers(subobj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
 
+  # Try to find pairwise biomarker
+  # allmarkers=NULL
+  # for(c1 in clusternames){
+  #   c1markers=subset(markers, markers$cluster==c1)
+  #   c1markers$sig_count=0
+  #   for(c2 in clusternames){
+  #     if(c1 == c2){
+  #       next
+  #     }
+  #     c1c2_markers = FindMarkers(subobj, ident.1 = c1, ident.2=c2, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+  #     sig_c1c2 = ifelse(rownames(c1markers) %in% rownames(c1c2_markers), 1, 0)
+  #     c1markers$sig_count = c1markers$sig_count + sig_c1c2
+  #   }
+  #   allmarkers=rbind(allmarkers, c1markers)
+  # }
+  # allmarkers=subset(allmarkers, allmarkers$p_val_adj < 0.01)
+  # allmarkers=allmarkers[order(allmarkers$cluster, -allmarkers$sig_count, allmarkers$p_val_adj),]
+  # markers=allmarkers
+
   write.csv(markers, paste0(curname, ".markers.csv"))
 
   dms=tapply(markers$gene,markers$cluster,list)
