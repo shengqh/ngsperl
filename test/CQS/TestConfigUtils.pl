@@ -5,7 +5,37 @@ use File::Spec;
 use File::Basename;
 use CQS::ConfigUtils;
 use Data::Dumper;
-use Test::More tests => 18;
+use Test::More tests => 35;
+
+{ #test is_string
+  ok(is_string("string"));
+  ok(! is_string([]));
+  ok(! is_string({}));
+}
+
+{ #test is_array
+  ok(! is_array("string"));
+  ok(is_array([]));
+  ok(! is_array({}));
+}
+
+{ #test is_not_array
+  ok(is_not_array("string"));
+  ok(!is_not_array([]));
+  ok(is_not_array({}));
+}
+
+{ #test is_hash
+  ok(! is_hash("string"));
+  ok(! is_hash([]));
+  ok(is_hash({}));
+}
+
+{ #test is_not_hash
+  ok(is_not_hash("string"));
+  ok(is_not_hash([]));
+  ok(!is_not_hash({}));
+}
 
 {
   my $def = {
@@ -300,6 +330,79 @@ is_deeply( $cov_map, $cov_expect );
         IL_17A_pathway_2 => [qw(CXCL3 CSF3)],
       }
     });
+}
+
+{ # get_expanded_genes, input array
+  my $gene_array = [qw(G1 G2)];
+  my $actual = get_expanded_genes($gene_array);
+  is_deeply( $actual, 
+    {
+      "interesting_genes" => {
+        clusters => [],
+        genes => $gene_array
+      }
+    });
+}
+
+{ # get_expanded_genes, input array and hash
+  my $curated_gene_dotplot = {
+    "GeneArray" => [qw(G1 G2)],
+    "Microphage" => {
+      clusters => ["1","6","20"],
+      genes => {
+        IL_17A_pathway_1 => [qw(IL17A IL17RC)],
+        IL_17A_pathway_2 => [qw(CXCL3 CSF3)],
+      }
+    }
+  };
+
+  my $actual = get_expanded_genes($curated_gene_dotplot);
+  is_deeply( $actual, 
+    {
+      "GeneArray" => {
+        clusters => [],
+        genes =>  [qw(G1 G2)]
+      },
+      "Microphage" => {
+        clusters => ["1","6","20"],
+        genes => {
+          IL_17A_pathway_1 => [qw(IL17A IL17RC)],
+          IL_17A_pathway_2 => [qw(CXCL3 CSF3)],
+        }
+      }      
+    });
+}
+
+{ # test parse_curated_genes
+  my $curated_gene_dotplot = {
+    "GeneArray" => [qw(G1 G2)],
+    "Microphage" => {
+      clusters => ["1","6","20"],
+      genes => {
+        IL_17A_pathway_1 => [qw(IL17A IL17RC)],
+        IL_17A_pathway_2 => [qw(CXCL3 CSF3)],
+      }
+    }
+  };
+
+  my ($parsed, $clusters, $genes) = parse_curated_genes($curated_gene_dotplot);
+
+  is_deeply( $clusters, 
+    {
+      "GeneArray" => [],
+      "Microphage" => ["1","6","20"]
+    });
+
+  is_deeply( $genes, 
+    {
+      "GeneArray" => [qw(G1 G2)],
+      "Microphage" => {
+        IL_17A_pathway_1 => [qw(IL17A IL17RC)],
+        IL_17A_pathway_2 => [qw(CXCL3 CSF3)],
+      }
+    });
+
+
 }
 
 1;
