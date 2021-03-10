@@ -1193,6 +1193,11 @@ sub writeParameterSampleFile {
     my $nameIndex = -1;
     foreach my $sample_name (@orderedSampleNames) {
       my $subSampleFiles = $temp->{$sample_name};
+      if(not defined $subSampleFiles) {
+        print $list "\t$sample_name\n";
+        next;
+      }
+
       my $refstr         = ref($subSampleFiles);
       if ( $refstr eq 'HASH' ) {
         foreach my $groupName ( sort keys %$subSampleFiles ) {
