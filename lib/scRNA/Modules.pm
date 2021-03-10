@@ -102,6 +102,7 @@ sub addEncloneToClonotype {
     },
   };
   push @$tasks, $taskname;
+  return($taskname);
 }
 
 sub addArcasHLA {
