@@ -35,6 +35,22 @@ knitr::opts_chunk$set(
   echo = TRUE
 )
 
+get_cluster_matrix<-function(counts, clusters){
+  #cluster<-levels(clusters)[1]
+  csums=lapply(levels(clusters), function(cluster){
+    cells=names(clusters)[clusters==cluster]
+    subcounts=counts[,cells]
+    rowSums(subcounts)
+  })
+  
+  result=do.call(cbind, csums)
+  colnames(result)=levels(clusters)
+  
+  gcount=rowSums(result)
+  result=result[gcount > 0,]
+  return(result)
+}
+
 add_cluster<-function(object, new.cluster.name, new.cluster.ids){
   seurat_clusters<-object[["seurat_clusters"]]$seurat_clusters
   names(new.cluster.ids) <- levels(seurat_clusters)
@@ -63,13 +79,14 @@ run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, 
   object <- FindNeighbors(object = object, dims=pca_dims, verbose=FALSE)
   object <- FindClusters(object=object, verbose=FALSE, random.seed=random.seed, resolution=resolution)
 
-  if (by_sctransform) {
-    markers <- FindAllMarkers(object, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
-  }else{
-    markers <- FindAllMarkers(object, features=var.genes, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
-  }
-  markers <- markers[markers$p_val_adj < 0.01,]
-  return(list(object=object, markers=markers))
+  # if (by_sctransform) {
+  #   markers <- FindAllMarkers(object, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+  # }else{
+  #   markers <- FindAllMarkers(object, features=var.genes, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+  # }
+  # markers <- markers[markers$p_val_adj < 0.01,]
+  #return(list(object=object, markers=markers))
+  return(list(object=object, markers=NULL))
 }
 
 ORA_celltype<-function(medianexp,cellType,weight){
@@ -316,7 +333,7 @@ if(isCalc){
   }else{
     rawobj <- merge(rawobjs[[1]], y = unlist(rawobjs[2:length(rawobjs)]), project = "integrated")
   }
-  
+
   finalList$rawobj<-rawobj
 
   #filter cells
@@ -419,6 +436,7 @@ if(isCalc){
       obj <- ScaleData(obj, features = all.genes, verbose = FALSE)
     }
   }
+  rm(objs)
   
   obj_markers <- run_cluster(obj, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform)
   
@@ -430,11 +448,11 @@ if(isCalc){
   
   finalList$seurat_colors<-seurat_colors
   
-  clusters<-obj@active.ident
-  sumcounts<-t(apply(GetAssayData(obj,assay="RNA",slot="counts"),1,function(x){tapply(x,clusters,sum)}))
+  sumcounts=get_cluster_matrix(GetAssayData(obj,assay="RNA",slot="counts"), obj@active.ident)
   logsumcounts<-log2(sumcounts+1)
+
   data.quantileAll<-apply(logsumcounts, 2, function(x){quantile(x, 0.75)})
-  
+
   norm_method=""
   if(any(data.quantileAll == 0)){
     norm_method = ".normByTotal"
@@ -506,6 +524,7 @@ obj<-finalList$obj
 seurat_colors<-finalList$seurat_colors
 seurat_cellactivity_colors<-finalList$seurat_cellactivity_colors
 hasMultipleSamples<-length(unique(obj$orig.ident))>1
+hasBiomarker<-!is.null(finalList$markers)
 
 samples<-unique(finalList$rawobj$orig.ident)
 if(length(samples) < 3){
@@ -581,7 +600,7 @@ print(kable(qcsummary, caption=tabRef("qcsummary", "Cell count in sample")) %>% 
 
 ## Marker genes for each cluster
 
-```{r markers, results="asis"}
+```{r markers, results="asis", eval=hasBiomarker}
 clusterMarkers<-finalList$markers %>% group_by(cluster)
 write.csv(clusterMarkers, file=paste0(prefix, ".allmarkers.csv"), row.names=F, quote = F)
 
