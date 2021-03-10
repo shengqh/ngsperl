@@ -4,9 +4,9 @@ library(reshape2)
 args = commandArgs(trailingOnly=TRUE)
 
 if (length(args) == 0) {
-  inputFile = "/scratch/cqs/paula_hurley_projects/20201208_scRNA_split/split_samples_summary/result/scRNA__fileList1.list"
-  nameMapFile = "/scratch/cqs/paula_hurley_projects/20201208_scRNA_split/split_samples_summary/result/scRNA__fileList2.list"
-  outputPrefix = "/scratch/cqs/paula_hurley_projects/20201208_scRNA_split/split_samples_summary/result/scRNA.HTO.summary"
+  inputFile = "/scratch/cqs/shengq2/paula_hurley_projects/20210303_scRNA_human/hto_samples_cutoff_summary/result/scRNA__fileList1.list"
+  nameMapFile = "/scratch/cqs/shengq2/paula_hurley_projects/20210303_scRNA_human/hto_samples_cutoff_summary/result/scRNA__fileList2.list"
+  outputPrefix = "/scratch/cqs/shengq2/paula_hurley_projects/20210303_scRNA_human/hto_samples_cutoff_summary/result/scRNA.HTO.summary"
 }else{
   inputFile = args[1]
   outputPrefix = args[2]
