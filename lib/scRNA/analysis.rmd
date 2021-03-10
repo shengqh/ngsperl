@@ -79,14 +79,14 @@ run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, 
   object <- FindNeighbors(object = object, dims=pca_dims, verbose=FALSE)
   object <- FindClusters(object=object, verbose=FALSE, random.seed=random.seed, resolution=resolution)
 
-  # if (by_sctransform) {
-  #   markers <- FindAllMarkers(object, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
-  # }else{
-  #   markers <- FindAllMarkers(object, features=var.genes, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
-  # }
-  # markers <- markers[markers$p_val_adj < 0.01,]
-  #return(list(object=object, markers=markers))
-  return(list(object=object, markers=NULL))
+  if (by_sctransform) {
+    markers <- FindAllMarkers(object, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+  }else{
+    markers <- FindAllMarkers(object, features=var.genes, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+  }
+  markers <- markers[markers$p_val_adj < 0.01,]
+  return(list(object=object, markers=markers))
+#  return(list(object=object, markers=NULL))
 }
 
 ORA_celltype<-function(medianexp,cellType,weight){
