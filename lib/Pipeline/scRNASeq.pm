@@ -91,10 +91,10 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "rRNApattern",         "^Rp[sl][[:digit:]]|^RP[SL][[:digit:]]" );
   initDefaultValue( $def, "Remove_Mt_rRNA",      "FALSE" );
   initDefaultValue( $def, "nFeature_cutoff_min", 200 );
-  initDefaultValue( $def, "nFeature_cutoff_max", 5000 );
+  initDefaultValue( $def, "nFeature_cutoff_max", 10000 );
   initDefaultValue( $def, "nCount_cutoff",       500 );
   initDefaultValue( $def, "mt_cutoff",           20 );
-  initDefaultValue( $def, "resolution",          0.8 );
+  initDefaultValue( $def, "resolution",          0.5 );
   initDefaultValue( $def, "pca_dims",            20 );
   initDefaultValue( $def, "details_rmd",         "" );
 
@@ -452,12 +452,13 @@ sub getScRNASeqConfig {
   my $perform_split_hto_samples = getValue($def, "perform_split_hto_samples", 0);
   my $has_vdj_json_files = defined $def->{vdj_json_files};
 
+  my $clonotype_4_convert;
   if (defined $def->{vdj_json_files}){
     if ((not defined $def->{files}) || (not $perform_split_hto_samples)) {
     $config->{vdj_json_files} = $def->{vdj_json_files};
       addClonotypeMerge($config, $def, $summary, $target_dir, "clonotype_1_merge", ["vdj_json_files", "all_contig_annotations.json"]);
       addEnclone($config, $def, $summary, "clonotype_2_enclone", $target_dir, ["clonotype_1_merge", ".json\$"] );
-      addEncloneToClonotype($config, $def, $summary, $target_dir, "clonotype_3_convert", "clonotype_2_enclone", ["clonotype_1_merge", ".cdr3\$"]);
+      $clonotype_4_convert = addEncloneToClonotype($config, $def, $summary, $target_dir, "clonotype_3_convert", "clonotype_2_enclone", ["clonotype_1_merge", ".cdr3\$"]);
     }
   }
 
@@ -477,7 +478,7 @@ sub getScRNASeqConfig {
       $config->{"hto_samples"} = {
         class => "CQS::ProgramWrapperOneToOne",
         target_dir => "${target_dir}/$folder",
-        interpretor => "R --vanilla -f ",
+        interpretor => getValue($def, "R", "R") . " --vanilla -f ",
         program => $r_script,
         check_program => 1,
         option => "--args __FILE__ __OUTPUT__ " . getValue($def, "hto_regex", ""),
@@ -502,7 +503,7 @@ sub getScRNASeqConfig {
       $config->{"hto_samples_summary"} = {
         class => "CQS::ProgramWrapper",
         target_dir => "${target_dir}/${folder}_summary",
-        interpretor => "R --vanilla -f ",
+        interpretor => getValue($def, "R", "R") . " --vanilla -f ",
         program => "../scRNA/split_samples_summary.r",
         check_program => 1,
         option => "--args __FILE__ __OUTPUT__",
@@ -602,7 +603,7 @@ sub getScRNASeqConfig {
 
         addClonotypeMerge($config, $def, $summary, $target_dir, "hto_clonotype_2_merge", ["hto_clonotype_1_split", "all_contig_annotations.json"]);
         addEnclone($config, $def, $summary, "hto_clonotype_3_enclone", $target_dir, ["hto_clonotype_2_merge", ".json\$"] );
-        addEncloneToClonotype($config, $def, $summary, $target_dir, "hto_clonotype_4_convert", "hto_clonotype_3_enclone", ["hto_clonotype_2_merge", ".cdr3\$"]);
+        $clonotype_4_convert = addEncloneToClonotype($config, $def, $summary, $target_dir, "hto_clonotype_4_convert", "hto_clonotype_3_enclone", ["hto_clonotype_2_merge", ".cdr3\$"]);
       }
     }
 
@@ -626,10 +627,11 @@ sub getScRNASeqConfig {
       push( @$summary, "scRNABatchQC" );
     }
 
+    my $seurat_name;
     if ( getValue( $def, "perform_seurat" ) ) {
       my $additional_rmd_files = "Functions.Rmd";
 
-      my $seurat_name = "seurat" . ( getValue( $def, "by_sctransform" ) ? "_sct" : "" ) . ( getValue( $def, "by_integration" ) ? "_igr" : "" ) . ( getValue( $def, "pool_sample" ) ? "_pool" : "" );
+      $seurat_name = "seurat" . ( getValue( $def, "by_sctransform" ) ? "_sct" : "" ) . ( getValue( $def, "by_integration" ) ? "_igr" : "" ) . ( getValue( $def, "pool_sample" ) ? "_pool" : "" );
       $config->{$seurat_name} = {
         class                    => "CQS::UniqueRmd",
         perform                  => 1,
@@ -751,17 +753,40 @@ sub getScRNASeqConfig {
         addAntibodyTask( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name );
       }
 
+      if(defined $clonotype_4_convert){
+        my $clonotype_vis = $clonotype_4_convert;
+        $clonotype_vis =~ s/4_convert/5_vis/ig;
+        $config->{$clonotype_vis} = {
+          class                      => "CQS::UniqueR",
+          perform                    => 1,
+          target_dir                 => $target_dir . "/" . $clonotype_vis,
+          rtemplate                  => "../scRNA/scRNA_func.r;../scRNA/clonotype_vis.r",
+          output_to_result_directory => 1,
+          output_file_ext            => ".clonotype_vis.csv",
+          parameterFile1_ref         => [ $seurat_name, ".final.rds" ],
+          parameterFile2_ref         => [ $cluster_task_name, $cluster_file ],
+          parameterFile3_ref         => [ $clonotype_4_convert ],
+          sh_direct                  => 1,
+          pbs                        => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "23",
+            "mem"       => "10gb"
+          },
+        }
+      }
+
       if ( $def->{perform_marker_dotplot} ) {
         my $biomarker_dotplot_task  = $cluster_task_name . "_biomarker_dotplot";
+        my $marker_dotplot_clusters = getValue( $def, "marker_dotplot_clusters", {"all" => ["all"]});
         $config->{$biomarker_dotplot_task} = {
           class              => "CQS::UniqueR",
           perform            => 1,
           target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $biomarker_dotplot_task,
           rtemplate          => "../scRNA/scRNA_func.r;../scRNA/biomarker_dotplot.r",
-          source             => getValue( $def, "marker_dotplot_clusters" ),
+          source             => $marker_dotplot_clusters,
           parameterFile1_ref => [ $seurat_name, ".final.rds" ],
           parameterFile2_ref => [ $cluster_task_name, $cluster_file ],
-          parameterSampleFile1 => getValue( $def, "marker_dotplot_clusters" ),
+          parameterSampleFile1 => $marker_dotplot_clusters,
           parameterSampleFile2 => {
             cluster_name => getValue( $def, "marker_dotplot_clusters_name", "seurat_clusters" ),
             display_cluster_name => getValue( $def, "marker_dotplot_clusters_display_name", $cluster_name ),
