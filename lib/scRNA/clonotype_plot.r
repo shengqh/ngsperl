@@ -30,12 +30,8 @@ for(idx in c(1:length(cluster_request))) {
   curname=names(cluster_request)[idx]
   clusternames = as.character(cluster_request[[idx]])
 
-  if(clusternames == "all"){
-    subobj=obj
-  }else{
-    cells=rownames(cell_df)[cell_df[,cluster_name] %in% clusternames]
-    subobj=subset(obj, cells=cells)
-  }
+  cells=rownames(cell_df)[cell_df[,cluster_name] %in% clusternames]
+  subobj=subset(obj, cells=cells)
 
   cname_df=data.frame("cluster_name"=subobj[[cluster_name]], "display_cluster_name"=subobj[["final_seurat_clusters"]])
 
@@ -82,7 +78,6 @@ for(idx in c(1:length(cluster_request))) {
     dev.off()
   }
   
-  all_genes=unique(all_genes)
   pdf(file=paste0(curname, ".dot.pdf"), width=max(length(all_genes) * 0.4, 10), height=max(6, min(10, length(clusternames))))
   p<-DotPlot(subobj, assay = "RNA", group.by="final_seurat_clusters", features=all_genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
     xlab("") + ylab("") + ggtitle("Seurat Marker Genes") + theme(plot.title = element_text(hjust = 0.5))

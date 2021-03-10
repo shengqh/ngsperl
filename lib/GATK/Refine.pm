@@ -37,7 +37,7 @@ sub getKnownSitesVcf {
 
   if ( defined $config->{$section}{indel_vcf_files} ) {
     my $vcfFiles     = $config->{$section}{indel_vcf_files};
-    my @vcfFileArray = ( ref($vcfFiles) eq "ARRAY" ) ? @{$vcfFiles} : ($vcfFiles);
+    my @vcfFileArray = is_array($vcfFiles) ? @{$vcfFiles} : ($vcfFiles);
     my @out          = keys %{ { map { ( $_ => 1 ) } ( @sitesVcfFiles, @vcfFileArray ) } };
     @sitesVcfFiles = @out;
   }
@@ -90,7 +90,7 @@ sub perform {
   my $indel_vcf = "";
   if ($indelRealignment) {
     my $vcfFiles = $config->{$section}{indel_vcf_files} or die "Define indel_vcf_files in section $section first.";
-    my @vcfFileArray = ( ref($vcfFiles) eq "ARRAY" ) ? @{$vcfFiles} : ($vcfFiles);
+    my @vcfFileArray = is_array($vcfFiles) ? @{$vcfFiles} : ($vcfFiles);
     foreach my $vcf (@vcfFileArray) {
       $indel_vcf = $indel_vcf . " -known $vcf";
     }

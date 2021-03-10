@@ -29,9 +29,11 @@ sub perform {
   my $comparisons = get_raw_files( $config, $section, undef, undef, 1 );
   my @comparison_names = keys %{$comparisons};
 
-  my $organism         = get_option( $config, $section, "organism" );
-  my $interestGeneType = get_option( $config, $section, "interestGeneType", "genesymbol" );
-  my $referenceSet     = get_option( $config, $section, "referenceSet", "genome" );
+  writeParameterSampleFile( $config, $section, $result_dir, 1 );
+
+  # my $organism         = get_option( $config, $section, "organism" );
+  # my $interestGeneType = get_option( $config, $section, "interestGeneType", "genesymbol" );
+  # my $referenceSet     = get_option( $config, $section, "referenceSet", "genome" );
 
   # my $script = dirname(__FILE__) . "/WebGestaltR.r";
   # if ( !-e $script ) {
@@ -81,7 +83,7 @@ if [[ ! -s $final_file || ! -d $final_file ]]; then
   cd $cur_dir 
   if [[ -f $inputFile ]]; then
     if [[ -s $inputFile ]]; then
-      R --vanilla -f $script --args $organism $sample_name $inputFile . $interestGeneType $referenceSet
+      R --vanilla -f $script
       rm */*/*.zip
     else
       echo \"Empty gene file\" > ${sample_name}.empty

@@ -136,7 +136,7 @@ sub performTrace {
     foreach my $key ( keys %{$cursection} ) {
       if ( $key =~ /_ref$/ ) {
         my $refSectionName = $cursection->{$key};
-        if ( ref($refSectionName) eq 'ARRAY' ) {
+        if ( is_array($refSectionName) ) {
           my @parts = @{$refSectionName};
           $refSectionName = $parts[0];
         }

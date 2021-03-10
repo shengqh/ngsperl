@@ -356,18 +356,22 @@ sub addEdgeRTask {
   if ( getValue( $def, "perform_webgestalt" ) ) {
     my $webgestaltTaskName = $edgeRtaskname . "_WebGestalt";
     $config->{$webgestaltTaskName} = {
-      class            => "Annotation::WebGestaltR",
-      perform          => 1,
-      target_dir       => $target_dir . "/" . getNextFolderIndex($def) . $webgestaltTaskName,
-      option           => "",
-      source_ref       => [ $edgeRtaskname, "sig_genename.txt\$" ],
-      organism         => getValue( $def, "webgestalt_organism" ),
-      interestGeneType => $def->{interestGeneType},
-      referenceSet     => $def->{referenceSet},
-      sh_direct        => 1,
-      pbs              => {
+      class              => "CQS::UniqueR",
+      perform            => 1,
+      target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $webgestaltTaskName,
+      rtemplate          => "../Annotation/WebGestaltReportFunctions.r;../Annotation/WebGestaltR_all.r",
+      parameterFile1_ref => [$edgeRtaskname],
+      parameterSampleFile1 => {
+        organism         => getValue( $def, "webgestalt_organism" ),
+        interestGeneType => $def->{interestGeneType},
+        referenceSet     => $def->{referenceSet},
+      },
+      output_file_ext    => ".WebGestaltR.files.csv",
+      rCode              => "",
+      sh_direct          => 1,
+      pbs                => {
         "nodes"     => "1:ppn=1",
-        "walltime"  => "23",
+        "walltime"  => "1",
         "mem"       => "10gb"
       },
     };
@@ -378,13 +382,12 @@ sub addEdgeRTask {
       class                      => "CQS::UniqueR",
       perform                    => 1,
       target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $linkTaskName,
-      rtemplate                  => "../Annotation/WebGestaltDeseq2.r",
+      rtemplate                  => "../Annotation/WebGestaltReportFunctions.r;../Annotation/WebGestaltDeseq2_all.r",
       rReportTemplate            => "../Annotation/WebGestaltDeseq2.rmd",
       output_to_result_directory => 1,
-      output_perSample_file      => "parameterSampleFile1",
-      output_perSample_file_ext  => ".html;.html.rds",
-      parameterSampleFile1_ref   => [ $webgestaltTaskName, ".txt\$" ],
-      parameterSampleFile2_ref   => [ $edgeRtaskname, "sig.csv\$" ],
+      parameterFile1_ref   => [ $webgestaltTaskName ],
+      parameterFile2_ref   => [ $edgeRtaskname ],
+      output_file_ext    => ".link.files.csv",
       sh_direct                  => 1,
       rCode                      => "",
       pbs                        => {
@@ -426,8 +429,37 @@ sub addEdgeRTask {
       },
     };
     push( @$summary, $gseaTaskName );
-  }
 
+  #   if($bBetweenCluster) {
+  #     my @gsea_report_files = ();
+  #     my @gsea_report_names = ();
+  #     my $pairs = $config->{pairs};
+  #     for my $key ( keys %$pairs ) {
+  #       push( @gsea_report_files, $gseaTaskName, "/.*." . $key . ".edgeR_GSEA.rnk.gsea.csv" );
+  #       push( @gsea_report_names, "gsea_" . $key );
+  #     }
+
+  #     my $gsea_report = $gseaTaskName . "_report";
+  #     $config->{$gsea_report} = {
+  #       class                      => "CQS::BuildReport",
+  #       perform                    => 1,
+  #       target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gsea_report,
+  #       report_rmd_file            => "GSEAReport.Rmd",
+  #       additional_rmd_files       => "../Pipeline/Pipeline.Rmd;Functions.Rmd",
+  #       parameterSampleFile1_ref   => \@gsea_report_files,
+  #       parameterSampleFile1_names => \@gsea_report_names,
+  #       parameterSampleFile3       => [],
+  #       sh_direct                  => 1,
+  #       pbs                        => {
+  #         "nodes"     => "1:ppn=1",
+  #         "walltime"  => "1",
+  #         "mem"       => "10gb"
+  #       },
+  #     };
+  #     push( @$summary, $gsea_report );
+  #   }
+  }
+  
   return ($edgeRtaskname);
 }
 
@@ -687,7 +719,7 @@ sub getScRNASeqConfig {
       addGeneTask( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name );
 
       if ( getValue( $def, "perform_rename_cluster" ) ) {
-        my $rename_cluster = $seurat_name . "_rename_cluster";
+        my $rename_cluster = $seurat_name . "_rename";
         $config->{$rename_cluster} = {
           class                => "CQS::UniqueR",
           perform              => 1,
@@ -807,15 +839,14 @@ sub getScRNASeqConfig {
       if($def->{perform_curated_gene_dotplot}){
         my $curated_gene_dotplot_task  = $cluster_task_name . "_curated_gene_dotplot";
         my $curated_gene_def = $def->{curated_gene_dotplot};
+        my ($expanded_gene_def, $clusters, $genes) = parse_curated_genes($curated_gene_def);
 
-        my $clusters = get_hash_level2($curated_gene_def, "clusters");
-        my $genes = get_hash_level2($curated_gene_def, "genes");
         $config->{$curated_gene_dotplot_task} = {
           class              => "CQS::UniqueR",
           perform            => 1,
           target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $curated_gene_dotplot_task,
           rtemplate          => "../scRNA/scRNA_func.r;../scRNA/curated_gene_dotplot.r",
-          source             => getValue( $def, "curated_gene_dotplot" ),
+          source             => $expanded_gene_def,
           parameterFile1_ref => [ $seurat_name, ".final.rds" ],
           parameterFile2_ref => [ $cluster_task_name, $cluster_file ],
           parameterSampleFile1 => $genes,
@@ -823,7 +854,6 @@ sub getScRNASeqConfig {
           parameterSampleFile3 => {
             cluster_name => "seurat_clusters",
             display_cluster_name => $cluster_name,
-            gene_number => getValue( $def, "marker_dotplot_gene_number", 20 ),
           },
           output_file => "parameterSampleFile1",
           output_file_ext    => ".count.files.csv",

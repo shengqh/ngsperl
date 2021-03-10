@@ -387,7 +387,7 @@ sub addDEseq2 {
   my $taskName = getDEseq2TaskName( $taskKey, $libraryKey, $def );
 
   my $libraryFileKey = "library_file";
-  if ( ref($libraryFile) eq 'ARRAY' ) {
+  if ( is_array($libraryFile) ) {
     $libraryFileKey = "library_file_ref";
   }
 
@@ -448,7 +448,7 @@ sub addDEseq2 {
     }
   }
 
-  if ( ref($countfileRef) eq "ARRAY" ) {
+  if ( is_array($countfileRef) ) {
     $config->{$taskName}{countfile_ref} = $countfileRef;
   }
   else {
@@ -1625,7 +1625,7 @@ sub checkFileGroupPairNames {
         my $pairs = $def->{$pairKey};
         for my $pairName (keys %$pairs){
           my $groupNames = $pairs->{$pairName};
-          if (ref($groupNames) eq 'ARRAY') {
+          if (is_array($groupNames)) {
             for my $groupName (@$groupNames){
               if (!defined $allGroupNames->{$groupName}){
                 print STDERR "Group $groupName in $pairKey $pairName is not defined in groups.\n";

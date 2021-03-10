@@ -39,7 +39,7 @@ sub get_input_value {
   my $is_key_ref = substr($input_key, -4) eq "_ref";
   
   if ($is_key_ref){
-    die "Key-ref $input_key should point to array!" if ref($result) ne "ARRAY";
+    die "Key-ref $input_key should point to array!" if ( is_not_array($result) );
     $input_name =~ s/_config_ref$//g;
     $input_name =~ s/_ref$//g;
     $config->{$section}{$input_key} = $result;
@@ -63,7 +63,7 @@ sub prepare_wdl_parameters {
   my ($self, $config, $section, $task_name, $result_dir, $replace_dics, $replace_values) = @_;
   
   my $input_parameters = get_option($config, $section, "input_parameters");
-  die "input_parameters should be hash in section $section!" if(ref($input_parameters) ne 'HASH');
+  die "input_parameters should be hash in section $section!" if(is_not_hash($input_parameters));
 
   for my $input_key (keys %$input_parameters){
     my ($input_name, $input_value, $is_key_ref) = get_input_value($config, $section, $input_parameters, $input_key);
@@ -80,19 +80,19 @@ sub prepare_wdl_array {
   my ($self, $config, $section, $task_name, $result_dir, $replace_dics, $replace_values) = @_;
   
   my $input_array = get_option($config, $section, "input_array", {});
-  die "$input_array should be hash" if(ref($input_array) ne 'HASH');
+  die "$input_array should be hash" if(is_not_hash($input_array));
 
   for my $input_key (keys %$input_array){
     my ($input_name, $input_value, $is_key_ref) = get_input_value($config, $section, $input_array, $input_key);
 
-    if ((not $is_key_ref) and (ref($input_value) ne 'HASH')) {
+    if ((not $is_key_ref) and (is_not_hash($input_value))) {
       die "Key $input_key in input_array of $section should point to HASH!";
     }
     
     my $res_array = [];
     for my $sample_name (sort keys %$input_value){
       my $sample_values = $input_value->{$sample_name};
-      die "value for $sample_name in input_list should be array" if (ref($sample_values) ne "ARRAY");
+      die "value for $sample_name in input_list should be array" if ( is_not_array($sample_values) );
       push @$res_array, @$sample_values;
     }
     
@@ -105,12 +105,12 @@ sub prepare_wdl_list {
   my ($self, $config, $section, $task_name, $result_dir, $replace_dics, $replace_values) = @_;
   
   my $input_list = get_option($config, $section, "input_list", {});
-  die "$input_list should be hash" if(ref($input_list) ne 'HASH');
+  die "$input_list should be hash" if(is_not_hash($input_list));
 
   for my $input_key (keys %$input_list){
     my ($input_name, $input_value, $is_key_ref) = get_input_value($config, $section, $input_list, $input_key);
 
-    if ((not $is_key_ref) and (ref($input_value) ne 'HASH')) {
+    if ((not $is_key_ref) and (is_not_hash($input_value))) {
       die "Key $input_key in input_list of $section should point to HASH!";
     }
     
@@ -118,7 +118,7 @@ sub prepare_wdl_list {
     open( my $list, ">$list_file" ) or die "Cannot create $list_file";
     for my $sample_name (keys %$input_value){
       my $sample_values = $input_value->{$sample_name};
-      die "value for $sample_name in input_list should be array" if (ref($sample_values) ne "ARRAY");
+      die "value for $sample_name in input_list should be array" if (is_not_array($sample_values));
       
       for my $sample_value (@$sample_values) {
         print $list $sample_value . "\n";
@@ -134,12 +134,12 @@ sub prepare_wdl_single {
   my ($self, $config, $section, $task_name, $result_dir, $replace_dics, $replace_values) = @_;
   
   my $input_single = get_option($config, $section, "input_single", {});
-  die "$input_single should be hash" if(ref($input_single) ne 'HASH');
+  die "$input_single should be hash" if(is_not_hash($input_single));
 
   for my $input_key (keys %$input_single){
     my ($input_name, $input_value, $is_key_ref) = get_input_value($config, $section, $input_single, $input_key);
 
-    if ((not $is_key_ref) and (ref($input_value) ne 'HASH')) {
+    if ((not $is_key_ref) and (is_not_hash($input_value))) {
       die "Key $input_key in input_array of $section should point to HASH!";
     }
     

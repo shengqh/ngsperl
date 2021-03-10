@@ -35,7 +35,7 @@ sub get_output_name_map {
   my $temp = get_raw_files( $config, $section, $output_file );
   foreach my $sample_name ( keys %$temp ) {
     my $samples = $temp->{$sample_name};
-    if ( ref( $samples ) ne "HASH" ) {
+    if ( is_not_hash( $samples ) ) {
       die "Should be hash for sample $sample_name in " . Dumper($temp);
     }
 
@@ -46,7 +46,7 @@ sub get_output_name_map {
         $curname = $cursample;
       }else{
         $curname = $samples->{$cursample};
-        if ( ref( $curname ) eq "ARRAY" ) {
+        if ( is_array( $curname ) ) {
           $curname = $curname->[0];
         } 
       }
@@ -257,7 +257,7 @@ sub get_result_pbs {
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
 
     my $samples = $temp{$sample_name};
-    if ( ref( $samples ) ne "HASH" ) {
+    if ( is_not_hash( $samples ) ) {
       die "Should be hash for sample $sample_name in " . Dumper(%temp);
     }
 
@@ -267,7 +267,7 @@ sub get_result_pbs {
         $curname = $cursample;
       }else{
         $curname = $samples->{$cursample};
-        if ( ref( $curname ) eq "ARRAY" ) {
+        if ( is_array( $curname ) ) {
           $curname = $curname->[0];
         } 
       }
