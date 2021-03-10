@@ -22,7 +22,8 @@ rplot<-function(object, features, assay, identName, withAllCells=FALSE){
   for(feature in features){
     ddata=mdata[mdata$variable==feature,]
     g<-ggplot(ddata, aes_string(x="value")) + 
-      geom_density() + 
+      geom_histogram(aes(y=..density..), bins=50, colour="black", fill="white", position="identity") + 
+      geom_density(color="red") +
       facet_grid(reformulate(".", identName), scale="free_y") + 
       xlab(feature) + theme_bw() + theme(strip.background=element_rect(colour="black", fill=NA))
     if (feature != features[1]){  
@@ -160,6 +161,8 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
     htos<-mat
   }
   rownames(htos)<-gsub("_.*", "", rownames(htos))
+
+  write.csv(htos, file=paste0(output_prefix, ".hto.exp.csv"))
   
   pbmc.hashtag <- CreateSeuratObject(counts = exp)
   pbmc.hashtag[["HTO"]] <- CreateAssayObject(counts = htos)
