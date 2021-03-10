@@ -36,17 +36,19 @@ knitr::opts_chunk$set(
 )
 
 get_cluster_matrix<-function(counts, clusters){
-  #cluster<-levels(clusters)[1]
+  cluster<-levels(clusters)[1]
   csums=lapply(levels(clusters), function(cluster){
+    #cat(cluster, "\n")
     cells=names(clusters)[clusters==cluster]
     subcounts=counts[,cells]
-    rowSums(subcounts)
+    #cat(ncol(subcounts), "\n")
+    Matrix::rowSums(subcounts)
   })
   
   result=do.call(cbind, csums)
   colnames(result)=levels(clusters)
   
-  gcount=rowSums(result)
+  gcount=Matrix::rowSums(result)
   result=result[gcount > 0,]
   return(result)
 }
@@ -149,26 +151,26 @@ options(future.globals.maxSize= 10779361280)
 random.seed=20200107
 
 options_table<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
-options<-split(options_table$V1, options_table$V2)
+myoptions<-split(options_table$V1, options_table$V2)
 
 dynamic_options<-options_table[!(options_table$V2 %in% c("details_rmd")),]
 optionstr<-paste0(dynamic_options$V1, collapse = "_")
 
-Mtpattern= options$Mtpattern
-rRNApattern=options$rRNApattern
-Remove_Mt_rRNA= ifelse(options$Remove_Mt_rRNA == "FALSE", FALSE, TRUE)
-resolution=as.numeric(options$resolution)
-species=options$species
-markerfile<-options$markers_file
-details_rmd<-options$details_rmd
-pool_sample<-ifelse(options$pool_sample == "0", FALSE, TRUE)
-batch_for_integration<-ifelse(options$batch_for_integration == "0", FALSE, TRUE)
-by_integration<-ifelse(options$by_integration == "0", FALSE, TRUE)
-by_sctransform<-ifelse(options$by_sctransform == "0", FALSE, TRUE)
+Mtpattern= myoptions$Mtpattern
+rRNApattern=myoptions$rRNApattern
+Remove_Mt_rRNA= ifelse(myoptions$Remove_Mt_rRNA == "FALSE", FALSE, TRUE)
+resolution=as.numeric(myoptions$resolution)
+species=myoptions$species
+markerfile<-myoptions$markers_file
+details_rmd<-myoptions$details_rmd
+pool_sample<-ifelse(myoptions$pool_sample == "0", FALSE, TRUE)
+batch_for_integration<-ifelse(myoptions$batch_for_integration == "0", FALSE, TRUE)
+by_integration<-ifelse(myoptions$by_integration == "0", FALSE, TRUE)
+by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
 
 hto_str = ""
 hto_data = list()
-hto_sample_file<-options$hto_sample_file
+hto_sample_file<-myoptions$hto_sample_file
 has_hto = (hto_sample_file != "")
 if (has_hto) {
   hto_samples = read.table(hto_sample_file, sep="\t", header=T, stringsAsFactors=FALSE)
@@ -192,21 +194,21 @@ if (has_hto) {
   }
   hto_str = paste0(hto_md5, collapse="_")
 }
-prefix<-options$prefix
+prefix<-myoptions$prefix
 
 hasDetails<-file.exists(details_rmd)
 if(hasDetails){
   hasDetails<-file.copy(details_rmd, "Details.Rmd", overwrite=T)
 }
 
-nFeature_cutoff_min=as.numeric(options$nFeature_cutoff_min)
-nFeature_cutoff_max=as.numeric(options$nFeature_cutoff_max)
-nCount_cutoff=as.numeric(options$nCount_cutoff)
-mt_cutoff=as.numeric(options$mt_cutoff)
+nFeature_cutoff_min=as.numeric(myoptions$nFeature_cutoff_min)
+nFeature_cutoff_max=as.numeric(myoptions$nFeature_cutoff_max)
+nCount_cutoff=as.numeric(myoptions$nCount_cutoff)
+mt_cutoff=as.numeric(myoptions$mt_cutoff)
 #nCount_sd_cutoff=as.numeric(options$nCount_sd_cutoff)
 nCount_sd_cutoff=0
 
-pca_dims<-1:as.numeric(options$pca_dims)
+pca_dims<-1:as.numeric(myoptions$pca_dims)
 
 filelist1<-read.table("fileList1.txt", header=F)
 filestr<-paste0(filelist1$V1, collapse = "_")
@@ -448,7 +450,9 @@ if(isCalc){
   
   finalList$seurat_colors<-seurat_colors
   
-  sumcounts=get_cluster_matrix(GetAssayData(obj,assay="RNA",slot="counts"), obj@active.ident)
+  counts=GetAssayData(obj,assay="RNA",slot="counts")
+  clusters=obj@active.ident
+  sumcounts=get_cluster_matrix(counts, clusters)
   logsumcounts<-log2(sumcounts+1)
 
   data.quantileAll<-apply(logsumcounts, 2, function(x){quantile(x, 0.75)})
