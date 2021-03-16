@@ -101,7 +101,7 @@ sub addEncloneToClonotype {
       "mem"       => "10gb"
     },
   };
-  push @$tasks, $taskname;
+  push(@$tasks, $taskname);
   return($taskname);
 }
 
