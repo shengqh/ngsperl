@@ -120,7 +120,7 @@ sub result {
     my $comparisons = $sampleList->{Comparison};
     my $minOverlap = $sampleList->{MinOverlap};
 
-    my $curdir = create_directory_or_die( $result_dir . "/" . $name );
+    my $curdir = $result_dir . "/" . $name;
 
     my $finalPrefix = $name;
     for my $comparison (@$comparisons) {
