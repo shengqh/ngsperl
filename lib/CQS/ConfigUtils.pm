@@ -1288,10 +1288,11 @@ sub get_parameter_sample_files {
   }
   my $resultArg           = get_option( $config, $section, $key . "_arg",            "" );
   my $resultJoinDelimiter = get_option( $config, $section, $key . "_join_delimiter", "," );
+  my $resultNameJoinDelimiter = get_option( $config, $section, $key . "_name_join_delimiter", "," );
 
   #print($key . " delimiter=" . $resultJoinDelimiter . "\n");
 
-  return ( $result, $resultArg, $resultJoinDelimiter );
+  return ( $result, $resultArg, $resultJoinDelimiter, $resultNameJoinDelimiter );
 }
 
 sub is_paired_end {
