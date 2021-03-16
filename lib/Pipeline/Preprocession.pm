@@ -59,6 +59,7 @@ sub addCutadapt {
       perform                          => 1,
       target_dir                       => $intermediate_dir . "/" . getNextFolderIndex($def) . "$cutadaptName",
       option                           => $def->{cutadapt_option},
+      use_option_only                  => $def->{use_cutadapt_option_only},
       source_ref                       => $source_ref,
       config                           => $def->{cutadapt_config},
       adapter                          => $def->{adapter},
@@ -70,6 +71,7 @@ sub addCutadapt {
       fastq_remove_random              => $def->{"fastq_remove_random"},
       fastq_remove_random_5            => $def->{"fastq_remove_random_5"},
       fastq_remove_random_3            => $def->{"fastq_remove_random_3"},
+      trim_poly_atgc                   => $def->{trim_poly_atgc},
       trim_poly_atgc                   => $def->{trim_poly_atgc},
       trim_base_quality_after_adapter_trim => $def->{trim_base_quality_after_adapter_trim},
       hard_trim                        => $def->{"hard_trim"},
@@ -158,25 +160,26 @@ sub initCutadaptOption {
   my ( $config, $def, $fastq_remove_N ) = @_;
 
   if ( $def != $config ) {
-    initDefaultValue( $config, "min_read_length", $def->{"min_read_length"} );
+    initDefaultValue( $config, "min_read_length", getValue($def, "min_read_length", 0) );
   }
   my $cutadapt_option = getValue( $config, "cutadapt_option", getValue( $def, "cutadapt_option", "" ) );
+  if(! getValue($def, "use_cutadapt_option_only", 0)){
+    if ( ( $cutadapt_option !~ /-a/ ) && ( $cutadapt_option !~ /-g/ ) ) {
+      defined $config->{"adapter_5"} or defined $config->{"adapter_3"} or getValue( $config, "adapter" );
+    }
 
-  if ( ( $cutadapt_option !~ /-a/ ) && ( $cutadapt_option !~ /-g/ ) ) {
-    defined $config->{"adapter_5"} or defined $config->{"adapter_3"} or getValue( $config, "adapter" );
+    if ( $cutadapt_option !~ /\-m/ ) {
+      my $min_read_length = getValue( $config, "min_read_length" );
+      $cutadapt_option = $cutadapt_option . " -m " . $min_read_length;
+    }
+
+    if ( $cutadapt_option !~ /\-n/ ) {
+      my $max_adapter_count = getValue( $config, "max_adapter_count", 2 );
+      $cutadapt_option = $cutadapt_option . " -n " . $max_adapter_count;
+    }
+
+    $config->{cutadapt_option} = $cutadapt_option;
   }
-
-  if ( $cutadapt_option !~ /\-m/ ) {
-    my $min_read_length = getValue( $config, "min_read_length" );
-    $cutadapt_option = $cutadapt_option . " -m " . $min_read_length;
-  }
-
-  if ( $cutadapt_option !~ /\-n/ ) {
-    my $max_adapter_count = getValue( $config, "max_adapter_count", 2 );
-    $cutadapt_option = $cutadapt_option . " -n " . $max_adapter_count;
-  }
-
-  $config->{cutadapt_option} = $cutadapt_option;
 }
 
 sub getPreprocessionConfig {
