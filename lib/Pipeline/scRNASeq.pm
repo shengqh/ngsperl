@@ -787,6 +787,7 @@ sub getScRNASeqConfig {
 
       if(defined $clonotype_4_convert){
         my $clonotype_vis = $clonotype_4_convert;
+        $clonotype_vis =~ s/3_convert/4_vis/ig;
         $clonotype_vis =~ s/4_convert/5_vis/ig;
         $config->{$clonotype_vis} = {
           class                      => "CQS::UniqueR",
