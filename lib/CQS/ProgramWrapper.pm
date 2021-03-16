@@ -34,10 +34,15 @@ sub replace_tag {
     $cur_option =~ s/__NAME__/$sample_name/g;
   }
 
-  my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, $source_key );
+  my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $parameterSampleFile1NameJoinDelimiter, ) = get_parameter_sample_files( $config, $section, $source_key );
+
+  if ($cur_option =~ /__SAMPLE_NAMES__/){
+    my $sample_names = get_joined_names($parameterSampleFile1, $parameterSampleFile1NameJoinDelimiter);
+    $cur_option =~ s/__SAMPLE_NAMES__/$sample_names/g;
+  }
+
   my $input = "";
   if (defined $config->{$section}{$source_key . "_type"} && ($config->{$section}{$source_key . "_type"} eq "array")){
-    my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, "source" );
     $input = get_joined_files($parameterSampleFile1, $parameterSampleFile1JoinDelimiter);
   }else{
     my $parameterSampleFile1 = save_parameter_sample_file( $config, $section, $source_key, "${result_dir}/${task_name}_${task_suffix}_fileList1.list" );
@@ -95,6 +100,13 @@ sub get_joined_files {
   return ($result);
 }
 
+sub get_joined_names {
+  my ( $parameterSampleFile1, $join_delimiter ) = @_;
+  my @pfiles = sort keys %$parameterSampleFile1;
+  my $result = join( $join_delimiter, @pfiles );
+  return ($result);
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -149,6 +161,11 @@ sub perform {
   my $final_file;
   if (defined $result_files){
     $final_file = $result_files->[0];
+
+    if (rindex($final_file, $result_dir, 0) == 0){
+      $final_file=substr($final_file, length($result_dir)+1);
+    }
+    
     my $checkFile = $result_files->[-1];
     $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $checkFile );
   }else{
