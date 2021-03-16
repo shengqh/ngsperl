@@ -74,55 +74,55 @@ sub get_remove_option {
 sub get_cutadapt_option {
   my $curSection = shift;
 
-  my $base_option = "";
-
-  my $random_bases_remove_after_trim = get_remove_option( $curSection, "fastq_remove_random", "random_bases_remove_after_trim" );
-  if ( $random_bases_remove_after_trim > 0 ) {
-    $base_option = "-u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim";
-  }
-  else {
-    my $random_bases_remove_after_trim_5 = get_remove_option( $curSection, "fastq_remove_random_5", "random_bases_remove_after_trim_5" );
-    if ( $random_bases_remove_after_trim_5 > 0 ) {
-      $base_option = "-u $random_bases_remove_after_trim_5";
-    }
-    my $random_bases_remove_after_trim_3 = get_remove_option( $curSection, "fastq_remove_random_3", "random_bases_remove_after_trim_3" );
-    if ( $random_bases_remove_after_trim_3 > 0 ) {
-      $base_option = $base_option . "-u -$random_bases_remove_after_trim_3";
-    }
-  }
-
   my $ispairend = is_paired_end($curSection);
-
-  my $adapter_option = "";
-  if ( defined $curSection->{adapter} && length( $curSection->{adapter} ) > 0 ) {
-    if ($ispairend) {
-      $adapter_option = " -a " . $curSection->{adapter} . " -A " . $curSection->{adapter};
+  my $base_option = "";
+  my $adapter_option = getValue($curSection, "option", "");
+  if(not getValue($curSection, "use_option_only", 0)) {
+    my $random_bases_remove_after_trim = get_remove_option( $curSection, "fastq_remove_random", "random_bases_remove_after_trim" );
+    if ( $random_bases_remove_after_trim > 0 ) {
+      $base_option = "-u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim";
     }
     else {
-      $adapter_option = " -a " . $curSection->{adapter};
+      my $random_bases_remove_after_trim_5 = get_remove_option( $curSection, "fastq_remove_random_5", "random_bases_remove_after_trim_5" );
+      if ( $random_bases_remove_after_trim_5 > 0 ) {
+        $base_option = "-u $random_bases_remove_after_trim_5";
+      }
+      my $random_bases_remove_after_trim_3 = get_remove_option( $curSection, "fastq_remove_random_3", "random_bases_remove_after_trim_3" );
+      if ( $random_bases_remove_after_trim_3 > 0 ) {
+        $base_option = $base_option . "-u -$random_bases_remove_after_trim_3";
+      }
     }
-  }
 
-  if ( defined $curSection->{adapter_3} && length( $curSection->{adapter_3} ) > 0 ) {
-    if ($ispairend) {
-      $adapter_option = " -a " . $curSection->{adapter_3} . " -A " . $curSection->{adapter_3};
+    if ( defined $curSection->{adapter} && length( $curSection->{adapter} ) > 0 ) {
+      if ($ispairend) {
+        $adapter_option = " -a " . $curSection->{adapter} . " -A " . $curSection->{adapter};
+      }
+      else {
+        $adapter_option = " -a " . $curSection->{adapter};
+      }
     }
-    else {
-      $adapter_option = " -a " . $curSection->{adapter_3};
-    }
-  }
 
-  if ( defined $curSection->{adapter_5} && length( $curSection->{adapter_5} ) > 0 ) {
-    if ($ispairend) {
-      $adapter_option = $adapter_option . " -g " . $curSection->{adapter_5} . " -G " . $curSection->{adapter_5};
+    if ( defined $curSection->{adapter_3} && length( $curSection->{adapter_3} ) > 0 ) {
+      if ($ispairend) {
+        $adapter_option = " -a " . $curSection->{adapter_3} . " -A " . $curSection->{adapter_3};
+      }
+      else {
+        $adapter_option = " -a " . $curSection->{adapter_3};
+      }
     }
-    else {
-      $adapter_option = $adapter_option . " -g " . $curSection->{adapter_5};
-    }
-  }
 
-  if ( not defined $curSection->{trim_n} or $curSection->{trim_n} ) {
-    $adapter_option = $adapter_option . " --trim-n";
+    if ( defined $curSection->{adapter_5} && length( $curSection->{adapter_5} ) > 0 ) {
+      if ($ispairend) {
+        $adapter_option = $adapter_option . " -g " . $curSection->{adapter_5} . " -G " . $curSection->{adapter_5};
+      }
+      else {
+        $adapter_option = $adapter_option . " -g " . $curSection->{adapter_5};
+      }
+    }
+
+    if ( not defined $curSection->{trim_n} or $curSection->{trim_n} ) {
+      $adapter_option = $adapter_option . " --trim-n";
+    }
   }
 
   return ( $ispairend, $adapter_option, $base_option );
@@ -138,37 +138,33 @@ sub perform {
 
   my ( $extension, $fastqextension ) = $self->get_extension( $config, $section );
 
-  my $sampleConfigMap = {};
+  my $default_key = "default_key";
+
+  my $sampleConfigMap = {
+    $default_key => $curSection
+  };
+
   my $cutConfig       = $curSection->{config};
   if ( defined $cutConfig ) {
     for my $key ( sort keys %$cutConfig ) {
       my $sampleConfig = $cutConfig->{$key};
       my $samples      = $cutConfig->{$key}{samples};
-      for my $sample (@$samples) {
+
+      if ((not defined $samples) or ($samples eq "default")) {
         my $sConfig = merge_hash_left_precedent( $sampleConfig, $curSection );
-        $sampleConfigMap->{$sample} = $sConfig;
+        $sampleConfigMap->{$default_key} = $sConfig;
+      }else{
+        for my $sample (@$samples) {
+          my $sConfig = merge_hash_left_precedent( $sampleConfig, $curSection );
+          $sampleConfigMap->{$sample} = $sConfig;
+        }
       }
     }
   }
   for my $sample ( keys %raw_files ) {
     if ( !defined $sampleConfigMap->{$sample} ) {
-      $sampleConfigMap->{$sample} = $curSection;
+      $sampleConfigMap->{$sample} = $sampleConfigMap->{$default_key};
     }
-  }
-
-  my $optionOnlyLimited   = '';
-  my $optionRemoveLimited = $option;
-  my $shortLimited        = $option =~ /(-m\s+\d+\s*)/;
-  if ($shortLimited) {
-    $shortLimited      = $1;
-    $optionOnlyLimited = $optionOnlyLimited . " " . $shortLimited;
-    $optionRemoveLimited =~ s/$shortLimited//;
-  }
-  my $longLimited = $option =~ /(-M\s+\d+\s*)/;
-  if ($longLimited) {
-    $longLimited       = $1;
-    $optionOnlyLimited = $optionOnlyLimited . " " . $longLimited;
-    $optionRemoveLimited =~ s/$longLimited//;
   }
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -179,6 +175,21 @@ sub perform {
 
     my $sampleConfig = $sampleConfigMap->{$sample_name};
     my ( $ispairend, $adapter_option, $random_bases_option ) = get_cutadapt_option($sampleConfig);
+
+    my $optionOnlyLimited   = '';
+    my $optionRemoveLimited = $adapter_option;
+    my $shortLimited        = $adapter_option =~ /(-m\s+\d+\s*)/;
+    if ($shortLimited) {
+      $shortLimited      = $1;
+      $optionOnlyLimited = $optionOnlyLimited . " " . $shortLimited;
+      $optionRemoveLimited =~ s/$shortLimited//;
+    }
+    my $longLimited = $optionRemoveLimited =~ /(-M\s+\d+\s*)/;
+    if ($longLimited) {
+      $longLimited       = $1;
+      $optionOnlyLimited = $optionOnlyLimited . " " . $longLimited;
+      $optionRemoveLimited =~ s/$longLimited//;
+    }
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -215,7 +226,7 @@ fi
         my $temp1_file = $read1name . ".cutAdapter.fastq";
         my $temp2_file = $read2name . ".cutAdapter.fastq";
         print $pbs "
-cutadapt $option $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
+cutadapt $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
 cutadapt $random_bases_option -o $read1name -p $read2name $temp1_file $temp2_file
 rm $temp1_file $temp2_file
 ";
@@ -240,7 +251,7 @@ cutadapt $option $adapter_option -o $read1name -p $read2name $read1file $read2fi
         my $temp_file = $final_file . ".cutAdapter.fastq";
         if ( scalar(@sample_files) == 1 ) {
           print $pbs "
-cutadapt $optionRemoveLimited $adapter_option -o $temp_file $sample_files[0]
+cutadapt $optionRemoveLimited -o $temp_file $sample_files[0]
 cutadapt $optionOnlyLimited $limit_file_options $random_bases_option -o $final_file $temp_file
 rm $temp_file
 ";
@@ -253,7 +264,7 @@ fi
 ";
           for my $sample_file (@sample_files) {
             print $pbs "
-cutadapt $optionRemoveLimited $adapter_option -o temp.fastq $sample_file
+cutadapt $optionRemoveLimited -o temp.fastq $sample_file
 cat temp.fastq >> $temp_file
 rm temp.fastq
 ";
@@ -268,7 +279,7 @@ rm $temp_file
       else {    #NOT remove top random bases
         if ( scalar(@sample_files) == 1 ) {
           print $pbs "
-cutadapt $option $adapter_option $limit_file_options -o $final_file $sample_files[0]
+cutadapt $adapter_option $limit_file_options -o $final_file $sample_files[0]
 ";
         }
         else {
@@ -281,7 +292,7 @@ fi
           if ( length($limit_file_options) > 0 ) {
             for my $sample_file (@sample_files) {
               print $pbs "
-cutadapt $optionRemoveLimited $adapter_option -o temp.fastq $sample_file
+cutadapt $optionRemoveLimited -o temp.fastq $sample_file
 cat temp.fastq >> $temp_file
 rm temp.fastq
 ";
@@ -295,7 +306,7 @@ rm $temp_file
           else {
             for my $sample_file (@sample_files) {
               print $pbs "
-cutadapt $option $adapter_option -o temp.fastq $sample_file
+cutadapt $adapter_option -o temp.fastq $sample_file
 cat temp.fastq >> $temp_file
 rm temp.fastq
 ";
