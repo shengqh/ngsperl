@@ -7,61 +7,45 @@ obj<-finalList$obj
 
 cell_df<-read_cell_cluster_file(parFile2)
 
-cluster_df=read.table(parSampleFile1)
-cluster_request <- tapply(cluster_df$V1,cluster_df$V2,list)
+clonotypes<-read.csv(parFile3)
+clonotypes<-clonotypes[c(1:min(10, nrow(clonotypes))),,drop=F]
 
-params_def=read.table(parSampleFile2)
-params <- setNames(as.character(params_def$V1), params_def$V2)
-gene_number=as.numeric(params['gene_number'])
-cluster_name=params['cluster_name']
-display_cluster_name=params['display_cluster_name']
+clonocells<-unlist(strsplit(clonotypes$cells, split = ";"))
+cell_df_clono<-subset(cell_df, rownames(cell_df) %in% clonocells)
+cell_df_clono<-cell_df_clono[order(cell_df_clono$seurat_clusters),]
+clono_clusters<-unique(cell_df_clono$seurat_clusters)
+display_clusters<-as.character(unique(cell_df_clono$seurat_cellactivity_clusters))
 
-if(display_cluster_name == "seurat_clusters"){
-  display_cluster_name = "display_seurat_clusters"
+valid_cell_df<-subset(cell_df, cell_df$seurat_clusters %in% clono_clusters)
+
+valid_obj=subset(obj, cells=rownames(valid_cell_df))
+rm(obj)
+
+valid_obj[["final_seurat_clusters"]]=valid_cell_df$seurat_cellactivity_clusters
+
+gcell<-DimPlot(valid_obj, group.by="final_seurat_clusters", reduction = "umap", label=T) + theme(legend.position = "none") + ggtitle("")
+
+gg_color_hue <- function(n) {
+  hues = seq(15, 375, length = n + 1)
+  hcl(h = hues, l = 65, c = 100)[1:n]
 }
-obj[["final_seurat_clusters"]]=cell_df[,display_cluster_name]
-
-cnames=unique(cell_df[,c(cluster_name, display_cluster_name)])
-rownames(cnames)=cnames[,cluster_name]
-cnames[,"filename"] = gsub('[ :]+', '_', cnames[,display_cluster_name])
 
 idx=1
-for(idx in c(1:length(cluster_request))) {
-  curname=names(cluster_request)[idx]
-  clusternames = as.character(cluster_request[[idx]])
-
-  cells=rownames(cell_df)[cell_df[,cluster_name] %in% clusternames]
-  subobj=subset(obj, cells=cells)
-
-  cname_df=data.frame("cluster_name"=subobj[[cluster_name]], "display_cluster_name"=subobj[["final_seurat_clusters"]])
-
-  markers=FindAllMarkers(subobj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
-
-  write.csv(markers, paste0(curname, ".markers.csv"))
-
-  dms=tapply(markers$gene,markers$cluster,list)
-
-  all_genes=c()
-  idy=1
-  for(idy in c(1:length(dms))) {
-    cluster = names(dms)[idy]
-    allgenes=unlist(dms[idy])
-    genes=unname(allgenes[1:min(gene_number, length(allgenes))])
-    display_name=as.character(cnames[cluster,display_cluster_name])
-    file_name=cnames[cluster,"filename"]
-    
-    all_genes = c(all_genes, genes)
-
-    pdf(file=paste0(curname, ".", file_name, ".dot.pdf"), width=max(length(genes) * 0.4, 10), height=max(6, min(10, length(clusternames))))
-    p<-DotPlot(subobj, assay = "RNA", group.by="final_seurat_clusters", features=genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
-      xlab("") + ylab("")
-    print(p)
-    dev.off()
-  }
+for(idx in c(1:nrow(clonotypes))) {
+  curname=clonotypes$clonotype_id[idx]
+  cdr3s_aa=clonotypes$cdr3s_aa[idx]
+  cdr3s_cells=strsplit(clonotypes$cells[idx], split = ";")
+  names(cdr3s_cells)<-cdr3s_aa
+  cg<-DimPlot(valid_obj, reduction = "umap", cells.highlight = cdr3s_cells, label=F) + theme(legend.position = "none") + 
+    scale_color_manual(values = c("lightgrey", "red")) + ggtitle(cdr3s_aa)
   
-  pdf(file=paste0(curname, ".dot.pdf"), width=max(length(all_genes) * 0.4, 10), height=max(6, min(10, length(clusternames))))
-  p<-DotPlot(subobj, assay = "RNA", group.by="final_seurat_clusters", features=all_genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
-    xlab("") + ylab("") + ggtitle("Seurat Marker Genes") + theme(plot.title = element_text(hjust = 0.5))
+  cobj=subset(valid_obj, cells=unlist(cdr3s_cells))
+  sc<-data.frame(cell=colnames(cobj), sample=cobj$orig.ident)
+  samplelist<-tapply(sc$cell,sc$sample,list)
+  sg<-DimPlot(valid_obj, reduction = "umap", cells.highlight = samplelist, cols.highlight=gg_color_hue(length(samplelist)) , label=F) + theme(legend.position = "top")
+  
+  pdf(file=paste0(curname, ".umap.pdf"), width=21, height=7)
+  p<-ggarrange(gcell, cg, sg, ncol=3)
   print(p)
   dev.off()
 }
