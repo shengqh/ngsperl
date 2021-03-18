@@ -9,6 +9,7 @@ use CQS::ConfigUtils;
 use CQS::ClassFactory;
 use Data::Dumper;
 use Text::CSV;
+#use Pipeline::WdlPipeline qw(addCollectAllelicCounts);
 use List::MoreUtils qw(first_index);
 use Hash::Merge qw( merge );
 
@@ -1104,6 +1105,12 @@ sub addAnnovarMafReport {
     },
   };
   push @$summary, $annovar_to_maf_report;
+
+  #get alilic counts for all mutation sites in all samples, foc clonal analysis
+  #my $CollectAllelicCountsCall = addCollectAllelicCounts($config, $def, $summary, $target_dir, $prefix, $indexDic, $indexKey);
+  
+
+
 }
 
 sub addFilterMafAndReport {

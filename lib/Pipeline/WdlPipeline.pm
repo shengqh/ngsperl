@@ -24,6 +24,7 @@ our %EXPORT_TAGS = (
       addMutect2
       addSomaticCNV
       addHaplotypecaller
+      addCollectAllelicCounts
     )
   ]
 );
@@ -505,5 +506,79 @@ sub addSomaticCNV {
   return ($somaticCNV_call);
 }
 
+sub addCollectAllelicCounts {
+  my ($config, $def, $individual, $target_dir,$bam_input) = @_;
+  
+  my $server_key = getValue($def, "wdl_key", "local");
+  my $pipeline_key = "CollectAllelicCounts";
+  my $wdl = $def->{"wdl"};
+  my $server = $wdl->{$server_key};
+  my $pipeline = $server->{$pipeline_key};
+
+
+  #only need tumor bam.
+  #$config->{$mutect2_tumor_files} was predefined in mutect2 task, here use it to get tumor samples/bams
+  #so don't need redefined it again
+  #my $mutect2_tumor_files = $mutect_prefix . "_tumor_files";
+
+  # if (not defined $def->{mutect2_groups}){
+  #   #for wdl mutect2, the result file will use tumor sample name in output
+  #   my $mutect2_groups = {};
+  #   my $groups = $def->{groups};
+  #   for my $group_name (sort keys %$groups) {
+  #     my $samples = $groups->{$group_name};
+  #     if (scalar(@$samples) == 1) {
+  #       $mutect2_groups->{$samples->[0]} = $samples;
+  #     }else{
+  #       $mutect2_groups->{$samples->[1]} = $samples;
+  #     }
+  #   }
+  #   $config->{mutect2_groups} = $mutect2_groups;
+  # }else{
+  #   $config->{mutect2_groups} = $def->{mutect2_groups};
+  # }
+  # $config->{$mutect2_tumor_files} = {     
+  #   "class" => "CQS::GroupPickTask",
+  #   "source_ref" => $bam_input,
+  #   "groups_ref" => "mutect2_groups",
+  #   "sample_index_in_group" => 1, 
+  # };
+
+#  my $PreProcessing_DoMarkDuplicates = getValue($def, "PreProcessing_DoMarkDuplicates", "false");
+#  my $genomeForOutputExt=getValue($def, "annovar_buildver", "hg38");
+
+  #if addMutect2 was run before, $mutect2_tumor_files exists in $config
+  if (1) {
+
+  }
+  
+  my $task = "CollectAllelicCounts";
+  $config->{$task} = {     
+    "class" => "CQS::Wdl",
+    "target_dir" => "${target_dir}/$task",
+    "source_ref" => [$bam_input, ".bam\$"],
+    "singularity_image_files_ref" => ["singularity_image_files"],
+    "cromwell_jar" => $wdl->{"cromwell_jar"},
+    "input_option_file" => $wdl->{"cromwell_option_file"},
+    "cromwell_config_file" => $server->{"cromwell_config_file"},
+    "wdl_file" => $pipeline->{"wdl_file"},
+    "input_json_file" => $pipeline->{"input_file"},
+    "input_parameters" => {
+      "CollectAllelicCountsWorkflow.tumor_bam_ref" =>  [$bam_input, ".bam\$"],
+      "CollectAllelicCountsWorkflow.tumor_bam_idx_ref" =>  [$bam_input, ".bai\$"],
+    },
+#    output_file_ext => ".".$genomeForOutputExt.".bam",
+#    output_other_ext => ".".$genomeForOutputExt.".bai",
+    pbs=> {
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "24",
+      "mem"       => getValue($def, "CollectAllelicCountsWorkflow.memory", "40gb")
+    },
+  };
+
+  print(Dumper($config->{$task}));
+  push @$individual, $task;
+  return ($task);
+}
 
 1;

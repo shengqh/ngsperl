@@ -1044,6 +1044,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
   }
 
   if ( $def->{"perform_muTect2"}) {
+
     my $mutect2call = addMutect2($config, $def, $summary, $target_dir, $bam_input);
     #push @$individual, ($mutect2call);
 
@@ -1061,7 +1062,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       push @$summary, $mutect2callReport;
     }
 
-
+    my $addCollectAllelicCountsCall = addCollectAllelicCounts($config, $def, $summary, $target_dir, $bam_input);
 
   }
 
