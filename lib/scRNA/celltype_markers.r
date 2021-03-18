@@ -25,7 +25,7 @@ cellTypeClusters=tapply(uniqueClusters$seurat_clusters, uniqueClusters$cellactiv
 ae=AverageExpression(obj, group.by = "seurat_clusters", assays = "SCT")$SCT
 aemax=colnames(ae)[max.col(ae, ties.method = "first")]
 genemax=data.frame(gene=rownames(ae), max_cluster=aemax)
-write.csv(genemax, "genemax.csv", row.names=F)
+write.csv(genemax, paste0(outFile, ".genemax.csv"), row.names=F)
 
 allclusters=unique(clusters$seurat_clusters)
 
@@ -34,6 +34,7 @@ all_in_markers=NULL
 all_both_markers=NULL
 all_max_markers=NULL
 all_display_markers=NULL
+all_figures=NULL
 idx=12
 for(idx in c(1:length(cellTypeClusters))){
   ctc_name = names(cellTypeClusters)[idx]
@@ -51,8 +52,9 @@ for(idx in c(1:length(cellTypeClusters))){
     bw_markers$celltype=ctc_name
 
     all_bw_markers=rbind(all_bw_markers, bw_markers)
+
+    suffix=""
     
-    c_filename=paste0(c, "_", ctc_filename, ".csv")
     if(length(ctc) > 1){
       cat(paste0("  finding markers for cluster ", c, " in cell types\n"))
       other_ctc=ctc[ctc != c]
@@ -69,12 +71,16 @@ for(idx in c(1:length(cellTypeClusters))){
       
       if(nrow(both_markers) >= 5){
         cur_markers=both_markers
+        suffix=".both"
       }else{
         cur_markers=bw_markers
+        suffix=".between"
       }
     }else{
       cur_markers=bw_markers
+      suffix=".between"
     }
+    c_filename=paste0(c, "_", ctc_filename, suffix, ".csv")
     write.csv(cur_markers, file=c_filename)
     
     cluster_max_genes=subset(genemax, genemax$max_cluster==as.character(c))
@@ -85,25 +91,28 @@ for(idx in c(1:length(cellTypeClusters))){
       display_markers=cur_markers %>% top_n(n = 20, wt = .data[[logFcColName]])
     }else{
       display_markers=max_markers %>% top_n(n = 20, wt = .data[[logFcColName]])
+      suffix=paste0(suffix, ".max")
     }
 
     cur_display_markers=rownames(display_markers)
-    pdf(file=paste0(c_filename, ".dot.pdf"), width=14, height=7)
+    dot_filename=paste0(c, "_", ctc_filename, suffix, ".dot.pdf")
+    pdf(file=dot_filename, width=14, height=7)
     g=DotPlot(obj, features=cur_display_markers, assay="SCT", group.by="seurat_cellactivity_clusters" ) + 
       xlab("") + ylab("") + theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 90, hjust=1))
     print(g)
     dev.off()
     
+    all_figures=rbind(all_figures, data.frame("Cluster"=c, "Dotfile"=dot_filename))
     all_display_markers=rbind(all_display_markers, data.frame("Cluster"=c, "Gene"=cur_display_markers))
   }
 }
 
-write.csv(all_display_markers, file="all_display_markers.csv")
-write.csv(all_max_markers, file="all_max_markers.csv")
-write.csv(all_bw_markers, file="all_bw_markers.csv")
-write.csv(all_in_markers, file="all_in_markers.csv")
-write.csv(all_both_markers, file="all_both_markers.csv")
-
+write.csv(all_display_markers, file=paste0(outFile, ".all_display_markers.csv"))
+write.csv(all_max_markers, file=paste0(outFile, ".all_max_markers.csv"))
+write.csv(all_bw_markers, file=paste0(outFile, ".all_bw_markers.csv"))
+write.csv(all_in_markers, file=paste0(outFile, ".all_in_markers.csv"))
+write.csv(all_both_markers, file=paste0(outFile, ".all_both_markers.csv"))
+write.csv(all_figures, file=paste0(outFile, ".all_figures.csv"))
 
 # unique_cell_types=unique(clusters$cellactivity_clusters)
 # 
