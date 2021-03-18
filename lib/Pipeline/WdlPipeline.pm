@@ -227,6 +227,14 @@ sub addMutect2 {
     #for wdl mutect2, the result file will use tumor sample name in output
     my $mutect2_groups = {};
     my $groups = $def->{groups};
+    if(not defined $groups){
+      $groups = $config->{groups};
+    }
+
+    if(not defined $groups){
+      die "Define groups or mutect2_groups in user definition or configuration";
+    }
+    
     for my $group_name (sort keys %$groups) {
       my $samples = $groups->{$group_name};
       if (scalar(@$samples) == 1) {
