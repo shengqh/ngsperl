@@ -1062,8 +1062,8 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       push @$summary, $mutect2callReport;
     }
 
-    #my $common_sites=$annovarMaf;
-    my $common_sites="123456";
+    #make maf of all patients as common_sites and in GATK Intervals format
+    my $common_sites=addMafToIntervals( $config, $def, $target_dir, $summary,$mutect_prefix, $mutect_index_dic, $mutect_index_key ,$annovarMaf);
 
     my $addCollectAllelicCountsCall = addCollectAllelicCounts($config, $def, $summary, $target_dir, $bam_input,$common_sites);
 

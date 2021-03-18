@@ -566,9 +566,11 @@ sub addCollectAllelicCounts {
       "CollectAllelicCountsWorkflow.ref_fasta" => $def->{ref_fasta},
       "CollectAllelicCountsWorkflow.ref_dict" => $def->{ref_fasta_dict},
       "CollectAllelicCountsWorkflow.ref_fai" => $def->{ref_fasta} . ".fai",
-      "CollectAllelicCountsWorkflow.common_sites" =>  $common_sites,
       "CollectAllelicCountsWorkflow.tumor_bam_ref" =>  [$bam_input, ".bam\$"],
       "CollectAllelicCountsWorkflow.tumor_bam_idx_ref" =>  [$bam_input, ".bai\$"],
+    },
+    "input_single" => {
+      "CollectAllelicCountsWorkflow.common_sites_ref" =>  [$common_sites, ".intervals\$"],
     },
 #    output_file_ext => ".".$genomeForOutputExt.".bam",
 #    output_other_ext => ".".$genomeForOutputExt.".bai",

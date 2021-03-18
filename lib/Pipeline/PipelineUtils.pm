@@ -52,6 +52,7 @@ our %EXPORT_TAGS = (
     addAnnovarFilterGeneannotation
     addAnnovarMafReport
     addFilterMafAndReport
+    addMafToIntervals
     addGATK4CNVGermlineCohortAnalysis 
     addXHMM
     addGeneLocus
@@ -1140,21 +1141,18 @@ sub addFilterMafAndReport {
 }
 
 sub addMafToIntervals {
-  my ( $config, $def, $target_dir, $mafResults,$prefix, $indexDic, $indexKey ) = @_;
+  my ( $config, $def, $target_dir,$summary, $prefix, $indexDic, $indexKey,$mafResults ) = @_;
 
   my $task = $prefix . getNextIndex($indexDic, $indexKey) . "_mafToIntervals";
   $config->{$task} = {
       class                      => "CQS::UniqueR",
       perform                    => 1,
       target_dir                 => $target_dir . '/' . $task,
-      rtemplate                  => "../CNV/GATKsomaticCNVSummary.R",
+      rtemplate                  => "../Variants/mafToIntervals.R",
       parameterSampleFile1_ref   => [ $mafResults, ".maf\$" ],
- #     parameterFile1_ref         => [ $cnvAnnotationGenesPlot, ".position.txt.slim" ],
-#      parameterSampleFile2       => $def->{onco_options},
-#      parameterSampleFile3       => $def->{onco_sample_groups},
       output_to_result_directory => 1,
       output_file                => "",
-      output_file_ext            => ".intervals",
+      output_file_ext            => ".maf.intervals",
       sh_direct                  => 1,
       'pbs'                      => {
         'nodes'    => '1:ppn=1',
@@ -1162,6 +1160,8 @@ sub addMafToIntervals {
         'walltime' => '10'
       },
     };
+  push @$summary, $task;
+  return($task);
 }
 
 
