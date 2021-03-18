@@ -1103,7 +1103,8 @@ sub addAnnovarMafReport {
       "mem"       => "10gb"
     },
   };
-  push @$summary, $annovar_to_maf_report;
+  push (@$summary, $annovar_to_maf_report);
+  return($annovar_to_maf, $annovar_to_maf_report);
 }
 
 sub addFilterMafAndReport {
