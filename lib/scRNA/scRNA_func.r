@@ -30,3 +30,10 @@ read_cell_cluster_file<-function(fileName, sort_cluster_name="seurat_clusters"){
   return(result)
 }
 
+find_markers<-function(object, by_sctransform, ident.1, ident.2, min.pct = 0.5, logfc.threshold = 0.6){
+  assay=ifelse(by_sctransform, "SCT", "RNA")
+  markers=FindMarkers(object, assay=assay, ident.1=ident.1, ident.2=ident.2, only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+  markers=markers[markers$p_val_adj < 0.01,]
+  return(markers)
+}
+
