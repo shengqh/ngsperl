@@ -64,7 +64,7 @@ add_cluster<-function(object, new.cluster.name, new.cluster.ids){
   object
 }
 
-run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform){
+run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, min.pct = 0.5, logfc.threshold = 0.6){
   if (by_sctransform) {
     object <- RunPCA(object = object, verbose=FALSE)
   }else{
@@ -82,9 +82,9 @@ run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, 
   object <- FindClusters(object=object, verbose=FALSE, random.seed=random.seed, resolution=resolution)
 
   if (by_sctransform) {
-    markers <- FindAllMarkers(object, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+    markers <- FindAllMarkers(object, only.pos = TRUE, min.pct = min.pct, logfc.threshold = logfc.threshold)
   }else{
-    markers <- FindAllMarkers(object, features=var.genes, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+    markers <- FindAllMarkers(object, features=var.genes, only.pos = TRUE, min.pct = min.pct, logfc.threshold = logfc.threshold)
   }
   markers <- markers[markers$p_val_adj < 0.01,]
   return(list(object=object, markers=markers))
@@ -536,6 +536,14 @@ if(length(samples) < 3){
 }else{
   sampleHeight=min(13, ceiling(length(samples) / 3) * 5)
 }
+
+isLargeDataset=ncol(obj) > 30000
+if(isLargeDataset){
+  downsample=round(300/length(unique(obj$seurat_clusters))) * 100
+  heatmap_obj=subset(obj, downsample=downsample)
+}else{
+  heatmap_obj=obj
+}
 ```
 
 # Quality control
@@ -649,12 +657,22 @@ colnames(osm)<-c("Sample", "Cluster", "Cell")
 osm$Cluster<-paste0("Cluster ", osm$Cluster)
 osm$Cluster<-factor(osm$Cluster, levels=unique(osm$Cluster))
 osm_perc = osm %>% dplyr::group_by(Cluster) %>% dplyr::mutate(Percent = Cell/sum(Cell))
-ggplot(osm_perc, aes(x="",y=Percent,fill=Sample)) + geom_bar(stat="identity", width=1) + coord_polar("y", start=0) + facet_wrap(~Cluster) + theme_void()
+g<-ggplot(osm_perc, aes(x="",y=Percent,fill=Sample)) + geom_bar(stat="identity", width=1) + coord_polar("y", start=0) + facet_wrap(~Cluster) + theme_void()
+print(g)
 
 ```
 
-```{r heatmap_samples, fig.height=max(10, length(top10$gene) / 10), fig.width=12, fig.cap=figRef("heatmap_samples", "Marker genes in each cell type")}
-DoHeatmap(obj, features = top10$gene, group.colors=seurat_colors, angle = 90) + NoLegend()
+```{r eval=isLargeDataset, comment=''}
+cat("There are total ", ncol(obj), " cells, so each cluster was downsampled to ", downsample, " cells for heatmap.")
+```
+
+```{r heatmap_samples, fig.height=max(10, length(top10$gene) / 10), fig.width=12, fig.cap=figRef("heatmap_cluster", "Marker genes in cluster")}
+g<-DoHeatmap(heatmap_obj, features = top10$gene, group.colors=seurat_colors, angle = 90) + NoLegend()
+print(g)
+
+pdf(file=paste0(prefix, ".marker_cluster.heatmap.pdf"), width=12, height=max(10, length(top10$gene) / 10))
+g<-DoHeatmap(obj, features = top10$gene, group.colors=seurat_colors, angle = 90) + NoLegend()
+print(g)
 ```
 
 # Predict cell types
@@ -696,7 +714,8 @@ print(p2)
 ```
 
 ```{r gene_activity_umap_samples, eval=hasMultipleSamples, fig.height=8, fig.width=18, fig.cap=figRef("gene_activity_umap_samples", "Predicted cell types by sample")}
-DimPlot(obj, reduction = "umap", label=T, group.by="seurat_clusters", cols=seurat_colors, split.by = "orig.ident") + NoLegend()
+g=DimPlot(obj, reduction = "umap", label=T, group.by="seurat_clusters", cols=seurat_colors, split.by = "orig.ident") + NoLegend()
+print(g)
 ```
 
 ```{r activity_by_samples, eval=hasMultipleSamples, fig.height=8, fig.width=18, fig.cap=figRef("activity_by_samples", "Predicted cell types by sample")}
@@ -714,8 +733,15 @@ g<-ggplot(osm_perc, aes(x="",y=Percent,fill=Cluster)) + geom_bar(stat="identity"
 print(g)
 ```
 
-```{r gene_activity_heatmap, fig.width=18, fig.height=max(10, length(top10$gene) / 10), results="asis", fig.cap=figRef("cell_activity_heatmap", "Predicted cell type cluster heatmap")}
-DoHeatmap(obj, features = top10$gene, group.by="seurat_cellactivity_clusters", group.colors=seurat_cellactivity_colors, angle=90) + NoLegend()
+```{r gene_activity_heatmap, fig.width=12, fig.height=max(10, length(top10$gene) / 10), results="asis", fig.cap=figRef("cell_activity_heatmap", "Predicted cell type cluster heatmap")}
+g=DoHeatmap(heatmap_obj, features = top10$gene, group.by="seurat_cellactivity_clusters", group.colors=seurat_cellactivity_colors, angle=90) + NoLegend()
+print(g)
+
+
+pdf(file=paste0(prefix, ".markers_celltype.heatmap.pdf"), width=12, height=max(10, length(top10$gene) / 10))
+g=DoHeatmap(obj, features = top10$gene, group.by="seurat_cellactivity_clusters", group.colors=seurat_cellactivity_colors, angle=90) + NoLegend()
+print(g)
+
 ```
 
 ```{r gene_activity_cta_score_heatmap, fig.width=18, fig.height=10, results="asis", fig.cap=figRef("cell_activity_cta_heatmap", "Predicted cell type activity score")}
@@ -734,5 +760,5 @@ if(hasDetails){
 colnames(options_table)<-c("Value", "Option")
 options_table<-options_table[,c("Option", "Value")]
 options_table<-options_table[!(options_table$Option %in% c("Mtpattern", "rRNApattern")),]
-kable(options_table)
+print(kable(options_table))
 ```

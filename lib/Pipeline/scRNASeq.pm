@@ -707,6 +707,27 @@ sub getScRNASeqConfig {
       };
       push( @$summary, $seurat_name );
 
+      my $find_markers = $seurat_name . "_celltype_markers";
+      $config->{$find_markers} = {
+        class                => "CQS::UniqueR",
+        perform              => 1,
+        target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $find_markers,
+        rtemplate            => "../scRNA/scRNA_func.r,../scRNA/celltype_markers.r",
+        parameterFile1_ref   => [ $seurat_name, ".final.rds" ],
+        parameterFile2_ref   => [ $seurat_name, ".cluster.csv" ],
+        parameterSampleFile1 => {
+          by_sctransform        => getValue( $def, "by_sctransform" ),
+        },
+        output_file_ext      => ".markers.csv",
+        sh_direct            => 1,
+        pbs                  => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$summary, $find_markers );
+
       if (getValue( $def, "perform_scMRMA" ) ) {
         addScMRMA( $config, $def, $summary, $target_dir, $task_name, $seurat_name );
       }

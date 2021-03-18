@@ -1104,13 +1104,8 @@ sub addAnnovarMafReport {
       "mem"       => "10gb"
     },
   };
-  push @$summary, $annovar_to_maf_report;
-
-  #get alilic counts for all mutation sites in all samples, foc clonal analysis
-  #my $CollectAllelicCountsCall = addCollectAllelicCounts($config, $def, $summary, $target_dir, $prefix, $indexDic, $indexKey);
-  
-
-
+  push (@$summary, $annovar_to_maf_report);
+  return($annovar_to_maf, $annovar_to_maf_report);
 }
 
 sub addFilterMafAndReport {
