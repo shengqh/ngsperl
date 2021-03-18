@@ -439,12 +439,12 @@ sub addSomaticCNV {
   } else {
     $run_funcotator="false";
   }
-  # my $output_sample_ext="hg19";
-  # if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
-  #   $output_sample_ext="hg38";
-  # } elsif ($def->{ncbi_build} eq "GRCm38")  {
-  #   $output_sample_ext="mm10";
-  # }
+  my $output_genome_ext="hg19";
+  if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
+    $output_genome_ext="hg38";
+  } elsif ($def->{ncbi_build} eq "GRCm38")  {
+    $output_genome_ext="mm10";
+  }
 
   $config->{$somaticCNV_call} = {     
     "class" => "CQS::Wdl",
@@ -455,7 +455,7 @@ sub addSomaticCNV {
     "input_option_file" => $wdl->{"cromwell_option_file"},
     "cromwell_config_file" => $server->{"cromwell_config_file"},
     "wdl_file" => $somaticCNV_pipeline->{"wdl_file"},
-#    output_file_ext => ".".$output_sample_ext."-filtered.annotated.maf",
+    output_file_ext => ".".$output_genome_ext.".called.seg",
 #    output_other_ext => ".".$output_sample_ext."-filtered.vcf",
     "input_json_file" => $somaticCNV_pipeline->{"input_file"},
     "input_parameters" => {
@@ -478,6 +478,28 @@ sub addSomaticCNV {
   if (defined($def->{"CNVSomaticPairWorkflow.common_sites"}) and $def->{"CNVSomaticPairWorkflow.common_sites"} ne "") {
     $config->{$somaticCNV_call}->{input_parameters}->{"CNVSomaticPairWorkflow.common_sites"}=$def->{"CNVSomaticPairWorkflow.common_sites"};
   }
+
+#summary CNV results
+  my $somaticCNV_call_summary = $somaticCNV_prefix . getNextIndex($somaticCNV_index_dic, $somaticCNV_index_key) . "_summary";
+    $config->{$somaticCNV_call_summary} = {
+      class                      => "CQS::UniqueR",
+      perform                    => 1,
+      target_dir                 => $target_dir . '/' . $somaticCNV_call_summary,
+      rtemplate                  => "../CNV/GATKsomaticCNVSummary.R",
+      parameterSampleFile1_ref   => [ $somaticCNV_call, "..called.seg\$" ],
+ #     parameterFile1_ref         => [ $cnvAnnotationGenesPlot, ".position.txt.slim" ],
+#      parameterSampleFile2       => $def->{onco_options},
+#      parameterSampleFile3       => $def->{onco_sample_groups},
+      output_to_result_directory => 1,
+      output_file                => "",
+      output_file_ext            => ".allCNV.seg;.allCNV.filter.seg",
+      sh_direct                  => 1,
+      'pbs'                      => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '20gb',
+        'walltime' => '10'
+      },
+    };
 
   #push @$summary, $somaticCNV_call;
   return ($somaticCNV_call);
