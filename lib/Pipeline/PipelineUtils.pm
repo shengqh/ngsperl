@@ -1139,6 +1139,31 @@ sub addFilterMafAndReport {
   return($taskName);
 }
 
+sub addMafToIntervals {
+  my ( $config, $def, $target_dir, $mafResults,$prefix, $indexDic, $indexKey ) = @_;
+
+  my $task = $prefix . getNextIndex($indexDic, $indexKey) . "_mafToIntervals";
+  $config->{$task} = {
+      class                      => "CQS::UniqueR",
+      perform                    => 1,
+      target_dir                 => $target_dir . '/' . $task,
+      rtemplate                  => "../CNV/GATKsomaticCNVSummary.R",
+      parameterSampleFile1_ref   => [ $mafResults, ".maf\$" ],
+ #     parameterFile1_ref         => [ $cnvAnnotationGenesPlot, ".position.txt.slim" ],
+#      parameterSampleFile2       => $def->{onco_options},
+#      parameterSampleFile3       => $def->{onco_sample_groups},
+      output_to_result_directory => 1,
+      output_file                => "",
+      output_file_ext            => ".intervals",
+      sh_direct                  => 1,
+      'pbs'                      => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '20gb',
+        'walltime' => '10'
+      },
+    };
+}
+
 
 sub addGATK4PreprocessIntervals {
   my ( $config, $def, $target_dir, $bam_ref, $prefix, $step1, $step2, $step3, $step4, $step5, $step6, $index ) = @_;

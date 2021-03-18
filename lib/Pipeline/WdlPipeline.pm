@@ -487,7 +487,7 @@ sub addSomaticCNV {
       perform                    => 1,
       target_dir                 => $target_dir . '/' . $somaticCNV_call_summary,
       rtemplate                  => "../CNV/GATKsomaticCNVSummary.R",
-      parameterSampleFile1_ref   => [ $somaticCNV_call, "..called.seg\$" ],
+      parameterSampleFile1_ref   => [ $somaticCNV_call, ".called.seg\$" ],
  #     parameterFile1_ref         => [ $cnvAnnotationGenesPlot, ".position.txt.slim" ],
 #      parameterSampleFile2       => $def->{onco_options},
 #      parameterSampleFile3       => $def->{onco_sample_groups},
@@ -507,7 +507,7 @@ sub addSomaticCNV {
 }
 
 sub addCollectAllelicCounts {
-  my ($config, $def, $individual, $target_dir,$bam_input) = @_;
+  my ($config, $def, $individual, $target_dir,$bam_input,$common_sites) = @_;
   
   my $server_key = getValue($def, "wdl_key", "local");
   my $pipeline_key = "CollectAllelicCounts";
@@ -515,6 +515,7 @@ sub addCollectAllelicCounts {
   my $server = $wdl->{$server_key};
   my $pipeline = $server->{$pipeline_key};
 
+  my $task = "${bam_input}_CollectAllelicCounts";
 
   #only need tumor bam.
   #$config->{$mutect2_tumor_files} was predefined in mutect2 task, here use it to get tumor samples/bams
@@ -544,19 +545,17 @@ sub addCollectAllelicCounts {
   #   "sample_index_in_group" => 1, 
   # };
 
-#  my $PreProcessing_DoMarkDuplicates = getValue($def, "PreProcessing_DoMarkDuplicates", "false");
-#  my $genomeForOutputExt=getValue($def, "annovar_buildver", "hg38");
-
-  #if addMutect2 was run before, $mutect2_tumor_files exists in $config
-  if (1) {
-
+  #if addMutect2 was run before, $mutect2_tumor_files exists in $config. Can use it to skip normal bam files
+  my $mutect2_prefix = "${bam_input}_muTect2_";
+  my $mutect2_tumor_files = $mutect2_prefix . "_tumor_files";
+  if (exists($config->{$mutect2_tumor_files})) {
+    $bam_input=$mutect2_tumor_files;
   }
-  
-  my $task = "CollectAllelicCounts";
+
   $config->{$task} = {     
     "class" => "CQS::Wdl",
     "target_dir" => "${target_dir}/$task",
-    "source_ref" => [$bam_input, ".bam\$"],
+    "source_ref" => $bam_input,
     "singularity_image_files_ref" => ["singularity_image_files"],
     "cromwell_jar" => $wdl->{"cromwell_jar"},
     "input_option_file" => $wdl->{"cromwell_option_file"},
@@ -564,6 +563,10 @@ sub addCollectAllelicCounts {
     "wdl_file" => $pipeline->{"wdl_file"},
     "input_json_file" => $pipeline->{"input_file"},
     "input_parameters" => {
+      "CollectAllelicCountsWorkflow.ref_fasta" => $def->{ref_fasta},
+      "CollectAllelicCountsWorkflow.ref_dict" => $def->{ref_fasta_dict},
+      "CollectAllelicCountsWorkflow.ref_fai" => $def->{ref_fasta} . ".fai",
+      "CollectAllelicCountsWorkflow.common_sites" =>  $common_sites,
       "CollectAllelicCountsWorkflow.tumor_bam_ref" =>  [$bam_input, ".bam\$"],
       "CollectAllelicCountsWorkflow.tumor_bam_idx_ref" =>  [$bam_input, ".bai\$"],
     },

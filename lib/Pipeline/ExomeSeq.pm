@@ -1053,7 +1053,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
     my $mutect_index_dic = { $mutect_index_key => 2 };
     my $mutect_ref = [$mutect2call, ".vcf\$"];
 
-    add_post_mutect($config, $def, $target_dir, $summary, $mutect_prefix, $mutect_index_dic, $mutect_index_key, [$mutect2call, ".vcf\$"]);
+    my ($annovarMaf,$annovarMafReport) = add_post_mutect($config, $def, $target_dir, $summary, $mutect_prefix, $mutect_index_dic, $mutect_index_key, [$mutect2call, ".vcf\$"]);
     #my $mutect2merge = "${bam_input}_muTect2_02_merge";
     #add_combine_mutect($config, $def, $summary, $target_dir, $mutect2merge, [$mutect2call, ".vcf\$"]);
     
@@ -1062,7 +1062,10 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       push @$summary, $mutect2callReport;
     }
 
-    my $addCollectAllelicCountsCall = addCollectAllelicCounts($config, $def, $summary, $target_dir, $bam_input);
+    #my $common_sites=$annovarMaf;
+    my $common_sites="123456";
+
+    my $addCollectAllelicCountsCall = addCollectAllelicCounts($config, $def, $summary, $target_dir, $bam_input,$common_sites);
 
   }
 

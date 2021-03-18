@@ -85,7 +85,8 @@ sub add_post_mutect {
         addAnnovarFilterGeneannotation( $config, $def, $tasks, $target_dir, $annovar_filter_name );
       }
 
-      addAnnovarMafReport($config, $def, $tasks, $target_dir, $annovar_filter_name, $mutect_prefix, $mutect_index_dic, $mutect_index_key)
+      my ($annovarMaf,$annovarMafReport)=addAnnovarMafReport($config, $def, $tasks, $target_dir, $annovar_filter_name, $mutect_prefix, $mutect_index_dic, $mutect_index_key);
+      return($annovarMaf,$annovarMafReport)
     }
   }
 }
