@@ -718,7 +718,8 @@ sub getScRNASeqConfig {
         parameterSampleFile1 => {
           by_sctransform        => getValue( $def, "by_sctransform" ),
         },
-        output_file_ext      => ".markers.csv",
+        output_file_ext      => ".all_display_markers.csv",
+        output_other_ext     => ".all_in_markers.csv",
         sh_direct            => 1,
         pbs                  => {
           "nodes"     => "1:ppn=1",
