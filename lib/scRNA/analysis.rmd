@@ -738,7 +738,7 @@ g=DoHeatmap(heatmap_obj, features = top10$gene, group.by="seurat_cellactivity_cl
 print(g)
 
 
-pdf(file=paste0(prefix, ".markers_celltype.heatmap.pdf"), width=12, height=max(10, length(top10$gene) / 10))
+pdf(file=paste0(prefix, ".marker_celltype.heatmap.pdf"), width=12, height=max(10, length(top10$gene) / 10))
 g=DoHeatmap(obj, features = top10$gene, group.by="seurat_cellactivity_clusters", group.colors=seurat_cellactivity_colors, angle=90) + NoLegend()
 print(g)
 
