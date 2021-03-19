@@ -877,6 +877,7 @@ sub getScRNASeqConfig {
           parameterSampleFile3 => {
             cluster_name => "seurat_clusters",
             display_cluster_name => $cluster_name,
+            by_sctransform => getValue($def, "by_sctransform"),
           },
           output_file => "parameterSampleFile1",
           output_file_ext    => ".count.files.csv",
