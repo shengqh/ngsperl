@@ -29,16 +29,16 @@ sub perform {
   my $comparisons = get_raw_files( $config, $section, undef, undef, 1 );
   my @comparison_names = keys %{$comparisons};
 
-  writeParameterSampleFile( $config, $section, $result_dir, 1 );
+  #writeParameterSampleFile( $config, $section, $result_dir, 1 );
 
-  # my $organism         = get_option( $config, $section, "organism" );
-  # my $interestGeneType = get_option( $config, $section, "interestGeneType", "genesymbol" );
-  # my $referenceSet     = get_option( $config, $section, "referenceSet", "genome" );
+  my $organism         = get_option( $config, $section, "organism" );
+  my $interestGeneType = get_option( $config, $section, "interestGeneType", "genesymbol" );
+  my $referenceSet     = get_option( $config, $section, "referenceSet", "genome" );
 
-  # my $script = dirname(__FILE__) . "/WebGestaltR.r";
-  # if ( !-e $script ) {
-  #   die "File not found : " . $script;
-  # }
+  my $script = dirname(__FILE__) . "/WebGestaltR.r";
+  if ( !-e $script ) {
+    die "File not found : " . $script;
+  }
 
   my $script1 = dirname(__FILE__) . "/WebGestaltReportFunctions.r";
   my $script2 = dirname(__FILE__) . "/WebGestaltR.r";
@@ -83,7 +83,7 @@ if [[ ! -s $final_file || ! -d $final_file ]]; then
   cd $cur_dir 
   if [[ -f $inputFile ]]; then
     if [[ -s $inputFile ]]; then
-      R --vanilla -f $script
+      R --vanilla -f $script --args $organism $sample_name $inputFile . $interestGeneType $referenceSet
       rm */*/*.zip
     else
       echo \"Empty gene file\" > ${sample_name}.empty
