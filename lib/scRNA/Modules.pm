@@ -8,7 +8,13 @@ use CQS::ConfigUtils;
 
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(addEnclone addClonotypeMerge addEncloneToClonotype addArcasHLA addScMRMA addCellRangerCount addCellRangerVdj)] );
+our %EXPORT_TAGS = ( 'all' => [qw(addEnclone 
+  addClonotypeMerge 
+  addEncloneToClonotype 
+  addArcasHLA 
+  addScMRMA 
+  addCellRangerCount 
+  addCellRangerVdj)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -108,11 +114,17 @@ sub addEncloneToClonotype {
 sub addArcasHLA {
   my ( $config, $def, $tasks, $target_dir, $task_name, $prefix, $source_ref ) = @_;
 
-  $config->{"${prefix}_arcasHLA_1_extract"} = {
+  $config->{"${prefix}arcasHLA_1_extract"} = {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
-    target_dir            => "$target_dir/${prefix}_arcasHLA_1_extract",
-    init_command          => "ln -s __FILE__ __NAME__.bam",
+    target_dir            => "$target_dir/${prefix}arcasHLA_1_extract",
+    init_command          => "ln -s __FILE__ __NAME__.bam 
+
+if [[ -s __FILE__.bai ]]; then
+  ln -s __FILE__.bai __NAME__.bam.bai
+fi
+
+",
     option                => "extract -t 8 -v --log __NAME__.log --paired __NAME__.bam",
     interpretor           => "",
     check_program         => 0,
@@ -134,15 +146,15 @@ sub addArcasHLA {
     },
   };
 
-  $config->{"${prefix}_arcasHLA_2_genotype"} = {
+  $config->{"${prefix}arcasHLA_2_genotype"} = {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
-    target_dir            => "$target_dir/${prefix}_arcasHLA_2_genotype",
+    target_dir            => "$target_dir/${prefix}arcasHLA_2_genotype",
     option                => "genotype -t 8 -v --log __NAME__.log",
     interpretor           => "",
     check_program         => 0,
     program               => "arcasHLA",
-    source_ref            => "${prefix}_arcasHLA_1_extract",
+    source_ref            => "${prefix}arcasHLA_1_extract",
     source_arg            => "",
     source_join_delimiter => " ",
     output_to_same_folder => 1,
@@ -159,15 +171,15 @@ sub addArcasHLA {
     },
   };
 
-  $config->{"${prefix}_arcasHLA_3_merge"} = {
+  $config->{"${prefix}arcasHLA_3_merge"} = {
     class                 => "CQS::ProgramWrapper",
     perform               => 1,
-    target_dir            => "$target_dir/${prefix}_arcasHLA_3_merge",
+    target_dir            => "$target_dir/${prefix}arcasHLA_3_merge",
     option                => "merge -i $target_dir/genotype/result --run $task_name -o .",
     interpretor           => "",
     check_program         => 0,
     program               => "arcasHLA",
-    source_ref            => "${prefix}_arcasHLA_2_genotype",
+    source_ref            => "${prefix}arcasHLA_2_genotype",
     source_arg            => "-i",
     source_join_delimiter => " ",
     output_to_same_folder => 1,
@@ -183,7 +195,7 @@ sub addArcasHLA {
     },
   };
 
-  push (@$tasks, ("${prefix}_arcasHLA_1_extract", "${prefix}_arcasHLA_2_genotype", "${prefix}_arcasHLA_3_merge"));
+  push (@$tasks, ("${prefix}arcasHLA_1_extract", "${prefix}arcasHLA_2_genotype", "${prefix}arcasHLA_3_merge"));
 }
 
 sub addScMRMA {
