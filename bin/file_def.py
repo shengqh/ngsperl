@@ -17,10 +17,10 @@ def get_dir_name(file_name, use_dir_name):
   result=os.path.basename(result)
   return(result)
 
-def get_sample_name(f, file_pattern):
+def get_sample_name(f, name_pattern):
   result = os.path.basename(f)
-  if file_pattern != None:
-    m = re.search(file_pattern, result)
+  if name_pattern != None:
+    m = re.search(name_pattern, result)
     if m != None:
       result=m.group()
   return(result)
@@ -43,7 +43,7 @@ def find_files(logger, source_dir, file_pattern, name_pattern, use_dir_name=0, r
         result[sample_name].append(f)
   else:
     for f in files:
-      sample_name = get_sample_name(f, file_pattern)
+      sample_name = get_sample_name(f, name_pattern)
       if sample_name not in result:
         result[sample_name] = [f]
       else:
@@ -52,7 +52,7 @@ def find_files(logger, source_dir, file_pattern, name_pattern, use_dir_name=0, r
   print("  files => {")
   for sample_name in sorted(result.keys()):
     sample_files = result[sample_name]
-    print("    %s => [ '%s' ], " % (sample_name, "', '".join(sample_files) ))
+    print("    '%s' => [ '%s' ], " % (sample_name, "', '".join(sample_files) ))
   print("  }, ")
 
   return(result)
