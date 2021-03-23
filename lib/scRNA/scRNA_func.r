@@ -37,3 +37,34 @@ find_markers<-function(object, by_sctransform, ident.1, ident.2, min.pct = 0.5, 
   return(markers)
 }
 
+get_cluster_count<-function(counts, clusters){
+  if(is.null(levels(clusters))){
+    allClusters=unique(clusters)
+  }else{
+    allClusters=levels(clusters)
+  }
+  cluster<-allClusters[1]
+  csums=lapply(allClusters, function(cluster){
+    #cat(cluster, "\n")
+    cells=names(clusters)[clusters==cluster]
+    subcounts=counts[,cells]
+    #cat(ncol(subcounts), "\n")
+    Matrix::rowSums(subcounts)
+  })
+  
+  result=do.call(cbind, csums)
+  colnames(result)=allClusters
+  
+  gcount=Matrix::rowSums(result)
+  result=result[gcount > 0,]
+  return(result)
+}
+
+get_group_count=function(curobj, groupName="active.ident") {
+  counts=GetAssayData(curobj,assay="RNA",slot="counts")
+  curgroups=curobj[[groupName]]
+  clusters=curgroups[,1]
+  names(clusters)=rownames(curgroups)
+  result=get_cluster_count(counts, clusters)
+  return(result)
+}
