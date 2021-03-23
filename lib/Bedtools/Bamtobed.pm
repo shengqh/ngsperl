@@ -30,7 +30,7 @@ sub perform {
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $blacklistfile = get_param_file( $config->{$section}{"blacklist_file"}, "blacklist_file", 0 );
-  my $isPairedEnd       = get_option( $config, $section, "is_paired_end" );
+  my $isPairedEnd = get_is_paired_end_option( $config, $section);
   my $is_sorted_by_name = get_option( $config, $section, "is_sorted_by_name" );
   my $sort_memory = $thread == 1 ? $memory : "4G";
 
