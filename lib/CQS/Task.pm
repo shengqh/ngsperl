@@ -405,8 +405,15 @@ echo working in $result_dir ...
     }
 
     my $sing = "singularity exec -e";
-    if ((substr($docker_command, 0, length($sing)) eq $sing) &&  ($docker_command !~ / -H /)) {
-      $docker_command = $sing . " -H " . $result_dir . " " . substr($docker_command, length($sing));
+    if (substr($docker_command, 0, length($sing)) eq $sing) {
+      my $additional = "";
+      if($docker_command !~ / -H /) {
+        $additional = " -H $result_dir ";
+      }
+      if ($docker_command !~ / -B /) {
+        $additional = $additional . " -B /home ";
+      }
+      $docker_command = $sing . $additional . substr($docker_command, length($sing));
     }
 
     my $sh_file = $pbs_file . ".sh";
