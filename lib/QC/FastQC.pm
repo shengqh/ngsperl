@@ -21,6 +21,7 @@ sub new {
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_fq";
   bless $self, $class;
+  $self->init_docker_prefix(__PACKAGE__);
   return $self;
 }
 
@@ -50,6 +51,8 @@ sub perform {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
+  my $fastqc=get_option($config, $section, "fastqc", "fastqc");
+
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
@@ -78,8 +81,8 @@ sub perform {
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $expectname, "", 0, $first_sample_file );
-    print $pbs "fastqc $option --extract -t $curThreadCount -o $cur_dir $samples 
-fastqc --version | cut -d ' ' -f2 | awk '{print \"FastQC,\"\$1}' > $cur_dir/fastqc.version
+    print $pbs "$fastqc $option --extract -t $curThreadCount -o $cur_dir $samples 
+$fastqc --version | cut -d ' ' -f2 | awk '{print \"FastQC,\"\$1}' > $cur_dir/fastqc.version
 ";
     $self->close_pbs( $pbs, $pbs_file );
   }
