@@ -5,7 +5,7 @@ use File::Spec;
 use File::Basename;
 use CQS::ConfigUtils;
 use Data::Dumper;
-use Test::More tests => 35;
+use Test::More tests => 40;
 
 { #test is_string
   ok(is_string("string"));
@@ -401,8 +401,23 @@ is_deeply( $cov_map, $cov_expect );
         IL_17A_pathway_2 => [qw(CXCL3 CSF3)],
       }
     });
+}
 
+{#test get_first_result_file
+  my $config = {
+    my_file1 => "file1",
+    my_file2 => ["file2", "file3"],
+    my_file3 => {task_name => ["file3", "file4"]},
+  };
 
+  is(get_first_result_file($config, "my_file1", ""),
+    "file1");
+
+  is(get_first_result_file($config, "my_file2", ""),
+    "file2");
+
+  is(get_first_result_file($config, "my_file3", ""),
+    "file3");
 }
 
 1;
