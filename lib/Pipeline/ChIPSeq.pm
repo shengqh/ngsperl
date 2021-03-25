@@ -455,7 +455,7 @@ sub getConfig {
     }
     push @$step2, ($peakCallerTask);
 
-    if (getValue($def, "perform_activeGene")) {
+    if (getValue($def, "perform_activeGene", 0)) {
       $config->{"activeGene"} = {
         class => "CQS::ProgramWrapperOneToOne",
         target_dir => "${target_dir}/" . getNextFolderIndex($def) . "activeGene",
