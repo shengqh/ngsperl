@@ -9,13 +9,11 @@ workflow CollectAllelicCountsWorkflow {
       #### required basic arguments ####
       ##################################
       File common_sites
-      File intervals
       File? blacklist_intervals
       File tumor_bam
       File tumor_bam_idx
       File? normal_bam
       File? normal_bam_idx
-      File read_count_pon
       File ref_fasta_dict
       File ref_fasta_fai
       File ref_fasta
@@ -45,7 +43,9 @@ workflow CollectAllelicCountsWorkflow {
 
     Int gatk4_override_size = if defined(gatk4_jar_override) then ceil(size(gatk4_jar_override, "GB")) else 0
     # This is added to every task as padding, should increase if systematically you need more disk for every call
-    Int disk_pad = 20 + ceil(size(intervals, "GB")) + ceil(size(common_sites, "GB")) + gatk4_override_size + select_first([emergency_extra_disk, 0])
+    Int disk_pad = 20 + ceil(size(common_sites, "GB")) + gatk4_override_size + select_first([emergency_extra_disk, 0])
+
+    Int ref_size = ceil(size(ref_fasta, "GB") + size(ref_fasta_dict, "GB") + size(ref_fasta_fai, "GB"))
 
     Int collect_allelic_counts_tumor_disk = tumor_bam_size + ref_size + disk_pad
     call CNVTasks.CollectAllelicCounts as CollectAllelicCountsTumor {

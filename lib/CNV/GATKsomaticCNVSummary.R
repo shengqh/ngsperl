@@ -50,6 +50,10 @@ for (i in 1:nrow(cnvSegFilesTable)) {
 }
 
 segmentAll$copy_number=2^(segmentAll$MEAN_LOG2_COPY_RATIO)*2
+chrYInd=which(segmentAll$Chromosome=="chrY" | segmentAll$Chromosome=="Y")
+if (length(chrYInd)>0) { #chrY, normal copy_number=1, not 2
+  segmentAll$copy_number[chrYInd]=2^(segmentAll$MEAN_LOG2_COPY_RATIO)
+}
 segmentAll$major_CN=(1-segmentAll$Segment_Mean)*segmentAll$copy_number
 segmentAll$minor_CN=segmentAll$Segment_Mean*segmentAll$copy_number
 segmentAll$segment_length=segmentAll$End-segmentAll$Start

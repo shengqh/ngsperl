@@ -53,7 +53,8 @@ our %EXPORT_TAGS = (
     addAnnovarMafReport
     addFilterMafAndReport
     addMafToIntervals
-    addGATK4CNVGermlineCohortAnalysis 
+    addGATK4CNVGermlineCohortAnalysis
+    addAllelicCountsForClonalAnalysis
     addXHMM
     addGeneLocus
     annotateNearestGene
@@ -1128,6 +1129,7 @@ sub addFilterMafAndReport {
     parameterSampleFile1_ref=> [$mutect2call, ".maf"],
     parameterFile1           => $def->{family_info_file},
     rCode                    => $rCode,
+    output_file_ext            => ".filter.allSamples.maf;.filter.allSamples.maf.report.html.RData",
     docker_prefix => "mafreport_",
     sh_direct  => 0,
     pbs        => {
@@ -1160,6 +1162,40 @@ sub addMafToIntervals {
         'walltime' => '10'
       },
     };
+  push @$summary, $task;
+  return($task);
+}
+
+
+sub addAllelicCountsForClonalAnalysis {
+  my ( $config, $def, $summary,$target_dir,$AllelicCountsFiles,$mafResults,$cnvFile ) = @_;
+
+  if (!defined($def->{family_info_file}) | !defined($def->{patient_info_feature}) ) {
+    die("Need define family_info_file and patient_info_feature in def so that samples from the same patients can be extracted")
+  }
+  my $rCode=( defined $def->{family_info_file} ? "patientFeature='" . $def->{patient_info_feature} . "';" : "" );
+
+  my $task = "${AllelicCountsFiles}_PrepareClonalAnalysis";
+  $config->{$task} = {
+      class                      => "CQS::UniqueR",
+      perform                    => 1,
+      target_dir                 => $target_dir . '/' . $task,
+      rtemplate                  => "../Variants/AllelicCountsForClonalAnalysis.R",
+      parameterSampleFile1_ref   => [ $AllelicCountsFiles, ".allelicCounts.tsv\$" ],
+      parameterFile1             => getValue( $def, "family_info_file" ),
+      parameterFile2_ref         => [ $mafResults, ".maf\$" ],
+      parameterFile3_ref         => [ $cnvFile, ".seg\$" ],
+      output_to_result_directory => 1,
+      output_file                => "parameterSampleFile1",
+      output_file_ext            => ".sciClone.txt;.pyClone.txt",
+      rCode                      => $rCode,
+      sh_direct                  => 1,
+      'pbs'                      => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '20gb',
+        'walltime' => '10'
+      },
+  };
   push @$summary, $task;
   return($task);
 }
