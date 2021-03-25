@@ -523,6 +523,7 @@ sub addCollectAllelicCounts {
   my $server = $wdl->{$server_key};
   my $pipeline = $server->{$pipeline_key};
 
+  my $genomeForOutputExt=getValue($def, "annovar_buildver", "hg38");
   my $task = "${bam_input}_CollectAllelicCounts";
 
   #only need tumor bam.
@@ -572,15 +573,15 @@ sub addCollectAllelicCounts {
     "input_json_file" => $pipeline->{"input_file"},
     "input_parameters" => {
       "CollectAllelicCountsWorkflow.ref_fasta" => $def->{ref_fasta},
-      "CollectAllelicCountsWorkflow.ref_dict" => $def->{ref_fasta_dict},
-      "CollectAllelicCountsWorkflow.ref_fai" => $def->{ref_fasta} . ".fai",
+      "CollectAllelicCountsWorkflow.ref_fasta_dict" => $def->{ref_fasta_dict},
+      "CollectAllelicCountsWorkflow.ref_fasta_fai" => $def->{ref_fasta} . ".fai",
       "CollectAllelicCountsWorkflow.tumor_bam_ref" =>  [$bam_input, ".bam\$"],
       "CollectAllelicCountsWorkflow.tumor_bam_idx_ref" =>  [$bam_input, ".bai\$"],
     },
     "input_single" => {
       "CollectAllelicCountsWorkflow.common_sites_ref" =>  [$common_sites, ".intervals\$"],
     },
-#    output_file_ext => ".".$genomeForOutputExt.".bam",
+    output_file_ext => ".$genomeForOutputExt.allelicCounts.tsv",
 #    output_other_ext => ".".$genomeForOutputExt.".bai",
     pbs=> {
       "nodes"     => "1:ppn=8",
