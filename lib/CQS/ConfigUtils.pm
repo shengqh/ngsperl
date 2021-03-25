@@ -436,9 +436,44 @@ sub get_result_file {
 sub get_first_result_file {
   my ( $config, $refSectionName, $pattern ) = @_;
   my $refSection = get_config_section( $config, $refSectionName );
-  if ( defined $refSection->{class} ) {
-    my $myclass = instantiate( $refSection->{class} );
-    my $result  = $myclass->result( $config, $refSectionName, $pattern, 1 );
+
+  if (is_string($refSection)) {
+    if ((defined $pattern) and ($pattern ne "")){
+      if ($refSection =~ /$pattern/){
+        return($refSection);
+      }else{
+        die "$refSection doesn't match pattern $pattern";
+      }
+    }else{
+      return($refSection);
+    }
+  }
+
+  if (is_array($refSection)) {
+    if ( scalar(@$refSection) > 0 ) {
+      if ((defined $pattern) and ($pattern ne "")){
+        for my $file (@$refSection){
+          if ($file =~ /$pattern/){
+            return($file);
+          } 
+        }
+        die "no file in $refSectionName matches pattern $pattern";
+      }else{
+        return($refSection->[0]);
+      }
+    }else{
+      die "no file in $refSectionName";
+    }
+  }
+
+  if (is_hash($refSection)) {
+    my $result;
+    if ( defined $refSection->{class} ) {
+      my $myclass = instantiate( $refSection->{class} );
+      $result  = $myclass->result( $config, $refSectionName, $pattern, 1 );
+    }else{
+      $result = $refSection;
+    }
     foreach my $k ( sort keys %{$result} ) {
       my @files = @{ $result->{$k} };
       if ( scalar(@files) > 0 ) {
@@ -448,7 +483,7 @@ sub get_first_result_file {
     die "section $refSectionName return nothing!";
   }
 
-  return (undef);
+  die "section $refSectionName return nothing!";
 }
 
 sub parse_param_file {
