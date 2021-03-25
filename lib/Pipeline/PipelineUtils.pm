@@ -164,10 +164,10 @@ sub addFastQC {
     target_dir => $intermediateDir . "/" . getNextFolderIndex($def) . $fastqcTask,
     option     => "",
     source_ref => $source_ref,
-    cluster    => $def->{cluster},
+    cluster    => $def->{"cluster"},
+    fastqc     => $def->{"fastqc"},
     sh_direct  => 1,
     pbs        => {
-#      "email"    => $def->{email},
       "nodes"    => "1:ppn=" . $curThread,
       "walltime" => "4",
       "mem"      => "4gb"
