@@ -55,6 +55,8 @@ our %EXPORT_TAGS = (
     addMafToIntervals
     addGATK4CNVGermlineCohortAnalysis
     addAllelicCountsForClonalAnalysis
+    addSciCloneAndClonevol
+    addPyCloneVIAndClonevol
     addXHMM
     addGeneLocus
     annotateNearestGene
@@ -1186,8 +1188,8 @@ sub addAllelicCountsForClonalAnalysis {
       parameterFile2_ref         => [ $mafResults, ".maf\$" ],
       parameterFile3_ref         => [ $cnvFile, ".seg\$" ],
       output_to_result_directory => 1,
-      output_file                => "parameterSampleFile1",
-      output_file_ext            => ".sciClone.txt;.pyClone.txt",
+      output_file                => "",
+      output_file_ext            => ".pyCloneVIInputList.txt;.sciCloneInputList.txt",
       rCode                      => $rCode,
       sh_direct                  => 1,
       'pbs'                      => {
@@ -1200,6 +1202,53 @@ sub addAllelicCountsForClonalAnalysis {
   return($task);
 }
 
+sub addSciCloneAndClonevol {
+  my ( $config, $def, $summary,$target_dir,$prepareClonalAnalysis ) = @_;
+
+  my $task = "${prepareClonalAnalysis}_SciCloneAndClonevol";
+  $config->{$task} = {
+      class                      => "CQS::UniqueR",
+      perform                    => 1,
+      target_dir                 => $target_dir . '/' . $task,
+      rtemplate                  => "../Variants/sciCloneAndClonEov.R",
+      parameterFile1_ref         => [ $prepareClonalAnalysis, ".sciCloneInputList.txt\$" ],
+      output_to_result_directory => 1,
+      output_file                => "",
+      output_file_ext            => "",
+      sh_direct                  => 1,
+      'pbs'                      => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '20gb',
+        'walltime' => '10'
+      },
+  };
+  push @$summary, $task;
+  return($task);
+}
+
+sub addPyCloneVIAndClonevol {
+  my ( $config, $def, $summary,$target_dir,$prepareClonalAnalysis ) = @_;
+
+  my $task = "${prepareClonalAnalysis}_PyCloneVIAndClonevol";
+  $config->{$task} = {
+      class                      => "CQS::UniqueR",
+      perform                    => 1,
+      target_dir                 => $target_dir . '/' . $task,
+      rtemplate                  => "../Variants/pyCloneVIAndClonEov.R",
+      parameterFile1_ref         => [ $prepareClonalAnalysis, ".pyCloneVIInputList.txt\$" ],
+      output_to_result_directory => 1,
+      output_file                => "",
+      output_file_ext            => "",
+      sh_direct                  => 1,
+      'pbs'                      => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '20gb',
+        'walltime' => '10'
+      },
+  };
+  push @$summary, $task;
+  return($task);
+}
 
 sub addGATK4PreprocessIntervals {
   my ( $config, $def, $target_dir, $bam_ref, $prefix, $step1, $step2, $step3, $step4, $step5, $step6, $index ) = @_;
