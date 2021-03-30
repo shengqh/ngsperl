@@ -18,7 +18,10 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(performCRISPRScreen)] );
+our %EXPORT_TAGS = ( 'all' => [qw(
+  writeBatchFile
+  performCRISPRScreen
+)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -34,6 +37,20 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_preprocessing",   1 );
 
   return $def;
+}
+
+sub writeBatchFile {
+  my ($batch_values, $batch_file) = @_;
+  open( my $batch, '>', $batch_file ) or die "Cannot create $batch_file";
+  print $batch "Sample_name\tBatch\n";
+  for my $batch_index (0 .. scalar(@$batch_values)){
+    my $batch_samples = $batch_values->[$batch_index];
+    my $idx=$batch_index+1;
+    for my $sample (@$batch_samples){
+      print $batch "$sample\t$idx\n";
+    }
+  }
+  close($batch);
 }
 
 sub getConfig {
@@ -58,7 +75,7 @@ sub getConfig {
     target_dir            => "$target_dir/mageck_count",
     docker_prefix         => "mageck_",
     #init_command          => "ln -s __FILE__ __NAME__.bam",
-    option                => "count --pdf-report --sample-label \"__SAMPLE_NAMES__\" -n __NAME__ -l $mageck_library ",
+    option                => "count --pdf-report -n __NAME__ -l $mageck_library ",
     interpretor           => "",
     check_program         => 0,
     program               => "mageck",
@@ -66,7 +83,9 @@ sub getConfig {
     source_type           => "array",
     source_arg            => "--fastq",
     source_join_delimiter => " ",
+    source_name_arg       => "--sample-label",
     source_name_join_delimiter => ",",
+    source_name_has_comma => 1,
     output_to_same_folder => 0,
     output_arg            => "-n",
     output_to_folder      => 1,
@@ -82,6 +101,13 @@ sub getConfig {
   };
 
   push(@$summary, "mageck_count");
+
+  my $count_task = "mageck_count";
+  if(defined $def->{batch}){
+    my $batch_values=$def->{batch};
+    my $batch_file=$target_dir . "/" . $task_name . "_batch.txt";
+    writeBatchFile($batch_values, $batch_file);
+  }
 
   # $config->{"mageck_count"} = {
   #   class                 => "CQS::ProgramWrapperOneToOne",
