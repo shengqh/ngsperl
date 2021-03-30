@@ -98,6 +98,9 @@ our %EXPORT_TAGS = (
       get_hash_level2
       get_expanded_genes
       parse_curated_genes
+      get_joined_files
+      get_joined_names
+      process_parameter_sample_file
       )
   ]
 );
@@ -1323,11 +1326,12 @@ sub get_parameter_sample_files {
   }
   my $resultArg           = get_option( $config, $section, $key . "_arg",            "" );
   my $resultJoinDelimiter = get_option( $config, $section, $key . "_join_delimiter", "," );
+  my $resultNameArg = get_option( $config, $section, $key . "_name_arg", "" );
   my $resultNameJoinDelimiter = get_option( $config, $section, $key . "_name_join_delimiter", "," );
 
   #print($key . " delimiter=" . $resultJoinDelimiter . "\n");
 
-  return ( $result, $resultArg, $resultJoinDelimiter, $resultNameJoinDelimiter );
+  return ( $result, $resultArg, $resultJoinDelimiter, $resultNameArg, $resultNameJoinDelimiter );
 }
 
 sub is_paired_end {
@@ -1961,6 +1965,64 @@ sub parse_curated_genes {
   my $genes = get_hash_level2($result, "genes");
 
   return($result, $clusters, $genes)
+}
+
+sub get_joined_files {
+  my ( $files, $join_delimiter ) = @_;
+  my $pfiles                  = [];
+  for my $individual_sample_name (sort keys %$files) {
+    my $p_invividual_files = $files->{$individual_sample_name};
+    my $p_invividual_file  = $p_invividual_files->[0];
+    push( @$pfiles, $p_invividual_file );
+  }
+  my $result = join( $join_delimiter, @$pfiles );
+  return ($result);
+}
+
+sub get_joined_names {
+  my ( $files, $join_delimiter ) = @_;
+  my @pfiles = sort keys %$files;
+  my $result = join( $join_delimiter, @pfiles );
+  return ($result);
+}
+
+sub process_parameter_sample_file {
+  my ($config, $section, $result_dir, $task_name, $task_suffix, $cur_option, $source_key, $index) = @_;
+  my ( $fileMap, $fileArg, $fileJoinDelimiter, $nameArg, $nameJoinDelimiter) = get_parameter_sample_files( $config, $section, $source_key );
+
+  if($index == 1){
+    if ($cur_option =~ /__SAMPLE_NAMES__/){
+      my $sample_names = get_joined_names($fileMap, $nameJoinDelimiter);
+      $cur_option =~ s/__SAMPLE_NAMES__/$sample_names/g;
+    }
+  }
+
+  my $input = "";
+  if (defined $config->{$section}{$source_key . "_type"} && ($config->{$section}{$source_key . "_type"} eq "array")){
+    $input = get_joined_files($fileMap, $fileJoinDelimiter);
+
+    if((defined $nameArg) && ($nameArg ne "")){
+      my $sample_names = get_joined_names($fileMap, $nameJoinDelimiter);
+      if ($config->{$section}{$source_key . "_name_has_comma"}){
+        $input = $input . " " . $nameArg . " \"" . $sample_names . "\"";
+      }else{
+        $input = $input . " " . $nameArg . " " . $sample_names;
+      }
+    }
+  }else{
+    my $list_file = save_parameter_sample_file( $config, $section, $source_key, "${result_dir}/${task_name}_${task_suffix}_fileList${index}.list" );
+    if($list_file ne ""){
+      $input = basename($list_file);
+    }
+  }
+
+  if (($index == 1) && ($cur_option =~ /__FILE__/)){
+    $cur_option =~ s/__FILE__/$input/g;
+  } elsif (option_contains_arg($cur_option, $fileArg)) {
+  } else{
+    $cur_option = $cur_option . " " . $fileArg . " " . $input;
+  }
+  return($cur_option, $input);
 }
 
 1;
