@@ -33,31 +33,8 @@ sub replace_tag {
   if ($cur_option =~ /__NAME__/){
     $cur_option =~ s/__NAME__/$sample_name/g;
   }
-
-  my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $parameterSampleFile1NameJoinDelimiter, ) = get_parameter_sample_files( $config, $section, $source_key );
-
-  if ($cur_option =~ /__SAMPLE_NAMES__/){
-    my $sample_names = get_joined_names($parameterSampleFile1, $parameterSampleFile1NameJoinDelimiter);
-    $cur_option =~ s/__SAMPLE_NAMES__/$sample_names/g;
-  }
-
-  my $input = "";
-  if (defined $config->{$section}{$source_key . "_type"} && ($config->{$section}{$source_key . "_type"} eq "array")){
-    $input = get_joined_files($parameterSampleFile1, $parameterSampleFile1JoinDelimiter);
-  }else{
-    my $parameterSampleFile1 = save_parameter_sample_file( $config, $section, $source_key, "${result_dir}/${task_name}_${task_suffix}_fileList1.list" );
-    if($parameterSampleFile1 ne ""){
-      $input = basename($parameterSampleFile1);
-    }
-  }
-
-  if ($cur_option =~ /__FILE__/){
-    $cur_option =~ s/__FILE__/$input/g;
-  } elsif (option_contains_arg($cur_option, $parameterSampleFile1arg)) {
-  } else{
-    my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name, $result_dir, 1 );
-    $cur_option = $cur_option . " " . $parameterSampleFile1arg . " " . $input;
-  }
+  my $input;
+  ($cur_option, $input) = process_parameter_sample_file($config, $section, $result_dir, $task_name, $task_suffix, $cur_option, $source_key, 1);
 
   my $output_arg            = get_option( $config, $section, "output_arg" );
   my $no_output            = get_option( $config, $section, "no_output", 0 );
@@ -86,25 +63,6 @@ sub replace_tag {
   }
 
   return($cur_option, $output_option, $cur_init_command);
-}
-
-sub get_joined_files {
-  my ( $parameterSampleFile1, $join_delimiter ) = @_;
-  my $pfiles                  = [];
-  for my $individual_sample_name (sort keys %$parameterSampleFile1) {
-    my $p_invividual_files = $parameterSampleFile1->{$individual_sample_name};
-    my $p_invividual_file  = $p_invividual_files->[0];
-    push( @$pfiles, $p_invividual_file );
-  }
-  my $result = join( $join_delimiter, @$pfiles );
-  return ($result);
-}
-
-sub get_joined_names {
-  my ( $parameterSampleFile1, $join_delimiter ) = @_;
-  my @pfiles = sort keys %$parameterSampleFile1;
-  my $result = join( $join_delimiter, @pfiles );
-  return ($result);
 }
 
 sub perform {
