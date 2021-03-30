@@ -288,6 +288,43 @@ sub getConfig {
       push @$summary, ("bamplot");
     }
 
+    if($def->{perform_bamsnap}){
+      my $bamsnap_task = "bamsnap";
+      $config->{$bamsnap_task} = {
+        class                 => "CQS::ProgramWrapperOneToOne",
+        perform               => 1,
+        target_dir            => "$target_dir/$bamsnap_task",
+        docker_prefix         => "bamsnap_",
+        #init_command          => "ln -s __FILE__ __NAME__.bam",
+        option                => "-draw coordinates bamplot gene -bamplot coverage -width 2000 -height 3000 -out __NAME__.png",
+        interpretor           => "",
+        check_program         => 0,
+        program               => "bamsnap",
+        source                => getValue($def, "bamsnap_locus"),
+        source_arg            => "-pos",
+        parameterSampleFile2_ref => $bam_ref,
+        parameterSampleFile2_arg => "-bam",
+        parameterSampleFile2_type => "array",
+        parameterSampleFile2_join_delimiter => " ",
+        parameterSampleFile2_name_arg => "-title",
+        parameterSampleFile2_name_join_delimiter => '" "',
+        parameterSampleFile2_name_has_comma => 1,
+        output_to_same_folder => 1,
+        output_arg            => "-out",
+        output_to_folder      => 1,
+        output_file_prefix    => "",
+        output_file_ext       => ".png",
+        output_other_ext      => "",
+        sh_direct             => 1,
+        pbs                   => {
+          "nodes"     => "1:ppn=8",
+          "walltime"  => "10",
+          "mem"       => "40gb"
+        },
+      };
+      push( @$summary, $bamsnap_task );
+    }
+
     if(defined $def->{annotation_locus} or defined $def->{annotation_genes}){
       my $sizeFactorTask = "size_factor";
       $config->{$sizeFactorTask} = {
@@ -365,7 +402,19 @@ sub getConfig {
       }
 
       if(defined $def->{annotation_genes}){
+        my $genes_str = $def->{annotation_genes};
+        my @genes = split /[;, ]+/, $genes_str;
+        my %gene_map = map { $_ => 1 } @genes;
+        $config->{annotation_genes} = \%gene_map;
+        #print(Dumper($config->{annotation_genes}));
+
         my $geneLocus = addGeneLocus($config, $def, $summary, $target_dir);
+
+        if($def->{perform_bamsnap}){
+          my $bamsnap_task = "annotation_genes_bamsnap";
+          addBamsnap($config, $def, $summary, $target_dir, $bamsnap_task, [$geneLocus, "bed"], $bam_ref);
+        }
+
         my $annotationGenesPlot = "annotation_genes_plot";
         $config->{$annotationGenesPlot} = {
           class                 => "CQS::ProgramWrapper",
