@@ -68,7 +68,8 @@ our %EXPORT_TAGS = (
     addMarkduplicates
     addSequenceTask
     addFilesFromSraRunTable
-    addWebgestalt)
+    addWebgestalt
+    addBamsnap)
   ]
 );
 
@@ -1596,15 +1597,15 @@ sub addGeneLocus {
       perform    => 1,
       target_dir => $target_dir . '/' . $geneLocus,
       rtemplate  => "../Annotation/getGeneLocus.r",
-      rCode      => "host=\""
-        . getValue( $def, "biomart_host" )
-        . "\";dataset=\""
-        . getValue( $def, "biomart_dataset" )
-        . "\";symbolKey=\""
-        . getValue( $def, "biomart_symbolKey" )
-        . "\";genesStr=\""
-        . getValue( $def, "annotation_genes" ) 
-        . "\";shift=" . getValue( $def, "annotation_genes_shift", 0),
+      parameterSampleFile1 => {
+        host=>getValue( $def, "biomart_host" ),
+        dataset=>getValue( $def, "biomart_dataset" ),
+        symbolKey=>getValue( $def, "biomart_symbolKey" ),
+        genesStr=>getValue( $def, "annotation_genes" ),
+        shift=>getValue( $def, "annotation_genes_shift", 0),
+        add_chr => getValue($def, "annotation_genes_add_chr", 0)
+      },
+      rCode      =>"",
       output_file_ext => ".bed;.missing",
       sh_direct       => 1,
       'pbs'           => {
@@ -2041,6 +2042,43 @@ sub addWebgestalt {
   push @$tasks, "$webgestaltTaskName";
 
   return($webgestaltTaskName);
+}
+
+sub addBamsnap {
+  my ($config, $def, $tasks, $target_dir, $task_name, $bed_ref, $bam_ref) = @_;
+
+  my $parameterFile1_key = "parameterFile1_ref";
+  if( -e $bed_ref) {
+    $parameterFile1_key = "parameterFile1";
+  }
+
+  $config->{$task_name} = {
+    class                 => "CQS::ProgramWrapper",
+    perform               => 1,
+    target_dir            => "$target_dir/$task_name",
+    docker_prefix         => "bamsnap_",
+    option                => "",
+    interpretor           => "python3",
+    check_program         => 1,
+    program               => "../Visualization/bamsnap.py",
+    parameterSampleFile1_arg => "-b",
+    parameterSampleFile1_ref => $bam_ref,
+    parameterFile1_arg    => "-i",
+    $parameterFile1_key   => $bed_ref,
+    output_to_same_folder => 1,
+    output_arg            => "-o",
+    output_to_folder      => 0,
+    output_file_prefix    => "",
+    output_file_ext       => ".txt",
+    output_other_ext      => "",
+    sh_direct             => 1,
+    pbs                   => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "2",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$tasks, $task_name );
 }
 
 1;
