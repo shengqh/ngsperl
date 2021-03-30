@@ -1,33 +1,16 @@
+
 require(biomaRt)
 require(stringr)
 
-if(!exists("host")){
-  host="grch37.ensembl.org"
-}
+params_def=read.table(parSampleFile1, stringsAsFactor=F)
+params<-split(params_def$V1, params_def$V2)
 
-if(!exists("dataset")){
-  dataset = "hsapiens_gene_ensembl"
-}
-
-if(!exists("symbolKey")){
-  symbolKey = "hgnc_symbol"
-}
-
-if(!exists('genesStr')){
-  genesStr<-"LDLR APOB PCSK9 LDLRAP1 STAP1 LIPA ABCG5 ABCGB APOE LPA PNPLA5 CH25H INSIG2 SIRT1"
-}
-
-if(!exists('shift')){
-  shift = 0
-}
-
-if(!exists('outFile')){
-  outFile='test'
-}
-
-if(!exists('addChr')){
-  addChr = 0
-}
+host=params$host
+dataset=params$dataset
+symbolKey=params$symbolKey
+genesStr<-params$genesStr
+shift<-as.numeric(params$shift)
+addChr<-params$add_chr=="1"
 
 if(!file.exists(genesStr)){
   genesStr = gsub(",", " ", genesStr)
@@ -51,6 +34,8 @@ ensembl <- useMart("ensembl", host=host, dataset=dataset)
 
 geneLocus<-getBM(attributes=c("chromosome_name", "start_position", "end_position", symbolKey, "strand", "ensembl_gene_id"),
                  filters=symbolKey, values=genes, mart=ensembl, uniqueRows=TRUE)
+
+geneLocus<-geneLocus[nchar(geneLocus$chromosome_name) < 6,]
 
 geneLocus$score<-1000
 
