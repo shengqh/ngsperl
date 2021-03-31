@@ -288,7 +288,7 @@ sub getConfig {
       push @$summary, ("bamplot");
     }
 
-    if($def->{perform_bamsnap}){
+    if($def->{perform_bamsnap} && $def->{"bamsnap_locus"}){
       my $bamsnap_task = "bamsnap";
       $config->{$bamsnap_task} = {
         class                 => "CQS::ProgramWrapperOneToOne",
