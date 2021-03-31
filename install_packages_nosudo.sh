@@ -25,5 +25,3 @@ curl -L http://cpanmin.us | perl - WWW::Mechanize
 curl -L http://cpanmin.us | perl - Algorithm::Loops
 curl -L http://cpanmin.us | perl - JSON::Streaming::Reader
 curl -L http://cpanmin.us | perl - Tie::IxHash
-
-#pip3 install pysamstats
