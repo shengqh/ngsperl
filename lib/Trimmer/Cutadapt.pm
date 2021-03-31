@@ -348,7 +348,7 @@ rm $rmstr
     }
 
     print $pbs "
-cutadapt --version | awk '{print \"Cutadapt,v\"\$1}' > ${sample_name}.version
+cutadapt --version 2>&1 | awk '{print \"Cutadapt,v\"\$1}' > ${sample_name}.version
 ";
     $self->close_pbs( $pbs, $pbs_file );
   }
