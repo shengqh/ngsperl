@@ -411,7 +411,7 @@ echo working in $result_dir ...
         $additional = " -H $result_dir ";
       }
       if ($docker_command !~ / -B /) {
-        $additional = $additional . " -B /home ";
+        $additional = $additional . " -B `pwd` -B /home ";
       }
       $docker_command = $sing . $additional . substr($docker_command, length($sing));
     }
