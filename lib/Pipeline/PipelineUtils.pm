@@ -57,6 +57,8 @@ our %EXPORT_TAGS = (
     addAllelicCountsForClonalAnalysis
     addSciCloneAndClonevol
     addPyCloneVIAndClonevol
+    AddMothurPipeline
+    AddMothurPipelineVis
     addXHMM
     addGeneLocus
     annotateNearestGene
@@ -1249,6 +1251,80 @@ sub addPyCloneVIAndClonevol {
   push @$summary, $task;
   return($task);
 }
+
+sub AddMothurPipeline {
+  my ( $config, $def, $summary,$target_dir,$files ) = @_;
+
+#ln -s /scratch/cqs/zhaos/reference/mothur/silva/silva.seed_v132.pcr.align silva.v4.fasta
+#ln -s /scratch/cqs/zhaos/reference/mothur/trainset16_022016.pds/* .
+
+my $taskName="mothur_pipeline";
+#my $stability_batch = "$target_dir/$taskName/result/sampleToFiles.txt";
+my $stability_batch = "$target_dir/$taskName/result/stability.files";
+my $mothurPipelineCodeFile = "/home/zhaos/source/ngsperl/lib/Microbiome/mothurPipeline.code";
+
+  #make a samplt to file table
+  open FILES,">$stability_batch";
+  for my $sample_name ( sort keys %{$config->{$files}} ) {
+    my @sample_files = @{ $config->{$files}->{$sample_name} };
+    print FILES $sample_name."\t".$sample_files[0]."\t".$sample_files[1]."\n";
+  }
+
+$config->{$taskName} = {
+    class                 => "CQS::ProgramWrapper",
+    perform               => 1,
+    target_dir            => "$target_dir/$taskName",
+    #init_command          => "",
+    option                => "$mothurPipelineCodeFile
+#__FILE__           
+#__OUTPUT__
+",
+    interpretor           => "",
+    check_program         => 0,
+    program               => "mothur",
+    source_ref            => 'files',
+    source_arg            => "",
+#    output_to_same_folder => 0,
+    output_arg            => "",
+    output_to_folder      => 1,
+    output_file_prefix    => "",
+    output_file_ext       => ".shared",
+    output_other_ext      => "",
+    sh_direct             => 0,
+    pbs                   => {
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "24",
+      "mem"       => "40gb"
+    },
+  };
+  return($taskName)
+}
+
+sub AddMothurPipelineVis {
+  my ( $config, $def, $summary,$target_dir,$mothurPipelineTask,$groups ) = @_;
+
+  my $task = "${mothurPipelineTask}_vis";
+  $config->{$task} = {
+      class                      => "CQS::UniqueR",
+      perform                    => 1,
+      target_dir                 => $target_dir . '/' . $task,
+      rtemplate                  => "../Variants/pyCloneVIAndClonEov.R",
+      parameterSampleFile1_ref   => $groups,
+      parameterFile1_ref         => [ $mothurPipelineTask, ".shared\$" ],
+      output_to_result_directory => 1,
+      output_file                => "",
+      output_file_ext            => "",
+      sh_direct                  => 1,
+      'pbs'                      => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '20gb',
+        'walltime' => '10'
+      },
+  };
+  push @$summary, $task;
+  return($task);
+}
+
 
 sub addGATK4PreprocessIntervals {
   my ( $config, $def, $target_dir, $bam_ref, $prefix, $step1, $step2, $step3, $step4, $step5, $step6, $index ) = @_;
