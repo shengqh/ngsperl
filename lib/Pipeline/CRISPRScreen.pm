@@ -18,7 +18,10 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(performCRISPRScreen)] );
+our %EXPORT_TAGS = ( 'all' => [qw(
+  writeBatchFile
+  performCRISPRScreen
+)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -34,6 +37,43 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_preprocessing",   1 );
 
   return $def;
+}
+
+sub writeBatchFile {
+  my ($batch_values, $batch_file) = @_;
+  open( my $batch, '>', $batch_file ) or die "Cannot create $batch_file";
+  my $hasCondition = 0;
+  for my $sample (sort keys %$batch_values){
+    my $sample_values = $batch_values->{$sample};
+    if(is_hash($sample_values)){
+      for my $key (keys %$sample_values) {
+        if ($key =~ "Condition") {
+          $hasCondition = 1;
+          last;
+        }
+      }
+    }
+  }
+
+  if ($hasCondition){
+    print $batch "Samples\tBatch\tConditions\n";
+  }else{
+    print $batch "Samples\tBatch\n";
+  }
+
+  for my $sample (sort keys %$batch_values){
+    my $sample_values = $batch_values->{$sample};
+    if(is_hash($sample_values)){
+      if($hasCondition){
+        print $batch "$sample\t" . $sample_values->{Batch} . "\t" . $sample_values->{Condition} . "\n";
+      }else{
+        print $batch "$sample\t" . $sample_values->{Batch} . "\n";
+      }
+    }else{
+      print $batch "$sample\t" . $sample_values . "\n";
+    }
+  }
+  close($batch);
 }
 
 sub getConfig {
@@ -58,7 +98,7 @@ sub getConfig {
     target_dir            => "$target_dir/mageck_count",
     docker_prefix         => "mageck_",
     #init_command          => "ln -s __FILE__ __NAME__.bam",
-    option                => "count --pdf-report --sample-label \"__SAMPLE_NAMES__\" -n __NAME__ -l $mageck_library ",
+    option                => "count --pdf-report -n __NAME__ -l $mageck_library ",
     interpretor           => "",
     check_program         => 0,
     program               => "mageck",
@@ -66,7 +106,9 @@ sub getConfig {
     source_type           => "array",
     source_arg            => "--fastq",
     source_join_delimiter => " ",
+    source_name_arg       => "--sample-label",
     source_name_join_delimiter => ",",
+    source_name_has_comma => 1,
     output_to_same_folder => 0,
     output_arg            => "-n",
     output_to_folder      => 1,
@@ -83,68 +125,47 @@ sub getConfig {
 
   push(@$summary, "mageck_count");
 
-  # $config->{"mageck_count"} = {
-  #   class                 => "CQS::ProgramWrapperOneToOne",
-  #   perform               => 1,
-  #   target_dir            => "$target_dir/mageck_count",
-  #   docker_prefix         => "mageck_",
-  #   #init_command          => "ln -s __FILE__ __NAME__.bam",
-  #   option                => "count --pdf-report --sample-label \"__NAME__\" --fastq __FILE__ -n __NAME__ -l $mageck_library ",
-  #   interpretor           => "",
-  #   check_program         => 0,
-  #   program               => "mageck",
-  #   source_ref            => $source_ref,
-  #   source_arg            => "",
-  #   source_join_delimiter => "",
-  #   output_to_same_folder => 0,
-  #   output_arg            => "-n",
-  #   output_to_folder      => 1,
-  #   output_file_prefix    => "",
-  #   output_file_ext       => ".count.txt",
-  #   output_other_ext      => "",
-  #   sh_direct             => 0,
-  #   pbs                   => {
-  #     "nodes"     => "1:ppn=8",
-  #     "walltime"  => "10",
-  #     "mem"       => "40gb"
-  #   },
-  # };
+  my $count_task = ["mageck_count", ".count.txt"];
+  if(defined $def->{batch}){
+    my $batch_values=$def->{batch};
+    my $batch_file=$target_dir . "/" . $task_name . "_batch.txt";
+    writeBatchFile($batch_values, $batch_file);
 
-  # push(@$individual, "mageck_count");
+    my $rm_batch_task="mageck_rm_batch";
+    $config->{$rm_batch_task} = {
+      class                    => "CQS::UniqueR",
+      perform                  => 1,
+      rCode                    => "",
+      target_dir               => "${target_dir}/$rm_batch_task",
+      option                   => "",
+      parameterFile1_ref => $count_task,
+      parameterFile2 => $batch_file,
+      rtemplate                => "../CRISPR/rm-batch.R",
+      output_file              => "",
+      output_file_ext          => ".corrected-count.txt",
+      pbs                      => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "10gb"
+      },
+    };
 
-  # $config->{"mageck_count_table"} = {
-  #   class                 => "CQS::ProgramWrapper",
-  #   perform               => 1,
-  #   target_dir            => "$target_dir/mageck_count_table",
-  #   docker_prefix         => "",
-  #   option                => "",
-  #   interpretor           => "python3",
-  #   check_program         => 1,
-  #   program               => "../CRISPR/countTable.py",
-  #   source_ref            => [ "mageck_count", ".count.txt" ],
-  #   source_arg            => "-i",
-  #   output_arg            => "-o",
-  #   output_to_folder      => 0,
-  #   output_file_prefix    => ".count.txt",
-  #   output_file_ext       => ".count.txt",
-  #   output_other_ext      => "",
-  #   sh_direct             => 0,
-  #   pbs                   => {
-  #     "nodes"     => "1:ppn=8",
-  #     "walltime"  => "10",
-  #     "mem"       => "40gb"
-  #   },
-  # };
-
-  # push(@$summary, "mageck_count_table");
+    push(@$summary, $rm_batch_task);
+    $count_task = $rm_batch_task;
+  }
 
   if(defined $def->{mageck_test}){
+    my $cnv_option = "";
+    if(defined $def->{cnv_norm}){
+      $cnv_option = "--cell-line " . getValue($def, "cnv_norm_cell_line");
+    }
+
     $config->{"mageck_test"} = {
       class                 => "CQS::ProgramWrapperOneToOne",
       perform               => 1,
       target_dir            => "$target_dir/mageck_test",
       docker_prefix         => "mageck_",
-      option                => "test --pdf-report __FILE__ -n __NAME__ ",
+      option                => "test --pdf-report __FILE__ -n __NAME__ $cnv_option",
       interpretor           => "",
       check_program         => 0,
       program               => "mageck",
@@ -152,8 +173,10 @@ sub getConfig {
       source_arg            => "",
       source_join_delimiter => "",
       output_to_same_folder => 0,
-      parameterFile1_ref    => ["mageck_count", ".count.txt"],
+      parameterFile1_ref    => $count_task,
       parameterFile1_arg    => "-k",
+      parameterFile2        => $def->{cnv_norm},
+      parameterFile2_arg    => "--cnv-norm",
       output_arg            => "-n",
       output_to_folder      => 1,
       output_file_prefix    => "",

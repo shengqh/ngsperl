@@ -70,7 +70,7 @@ sub perform {
       next;
     }
 
-    my ( $parameterSampleFile, $parameterSampleFilearg, $parameterSampleFileJoinDelimiter ) = get_parameter_sample_files( $config, $section, $key );
+    my ( $parameterSampleFile, $parameterSampleFilearg, $parameterSampleFileJoinDelimiter, $paramterSampleFileNameArg, $parameterSampleFileNameJoinDelimiter ) = get_parameter_sample_files( $config, $section, $key );
     my $bFound = 0;
     for my $sample_name ( sort keys %$parameterSampleFile1 ) {
       if ( defined $parameterSampleFile->{$sample_name} ) {
@@ -78,11 +78,8 @@ sub perform {
       }
     }
     if ( not $bFound ) {
-      my $listfile = save_parameter_sample_file( $config, $section, $key, "${result_dir}/${task_name}_${task_suffix}_fileList${index}.list" );
-      if ( $listfile ne "" ) {
-        $listfile = basename($listfile);
-        $option = $option . " " . $parameterSampleFilearg . " " . $listfile;
-      }
+      my $input;
+      ($option, $input) = process_parameter_sample_file($config, $section, $result_dir, $task_name, $task_suffix, $option, $key, $index);
     }else{
       $paramFileMap->{$key} = [$parameterSampleFile, $parameterSampleFilearg, $parameterSampleFileJoinDelimiter, $index];
     }

@@ -1143,8 +1143,6 @@ sub getSmallRNAConfig {
 "_clipped_identical.unmapped.fastq.dupcount,_clipped_identical.mappedToHostGenome.fastq.gz,_clipped_identical.mappedToHostGenome.fastq.dupcount,_clipped_identical.short.fastq.gz,_clipped_identical.short.fastq.dupcount,_clipped_identical.unmapped.fastq.gz.info",
           sh_direct => 1,
           pbs       => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
             "mem"       => "10gb"
@@ -1158,8 +1156,6 @@ sub getSmallRNAConfig {
           option     => "-k 2 -v 1 --fillMissingWithZero",
           sh_direct  => 1,
           pbs        => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
             "mem"       => "40gb"
@@ -1167,7 +1163,6 @@ sub getSmallRNAConfig {
         },
       };
       $config = merge_hash_right_precedent( $config, $unmapped_reads );
-
       push @table_for_shortReadSource, ( "bowtie1_genome_host_reads_table", ".count\$");
       push @name_for_shortReadSource, ( "host genome");
 
@@ -1189,6 +1184,36 @@ sub getSmallRNAConfig {
       if ( $do_comparison and $def->{perform_host_genome_reads_deseq2} ) {
         addDEseq2( $config, $def, $summary_ref, "bowtie1_genome_host_reads", [ "bowtie1_genome_host_reads_table", ".count\$" ],
           $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      }
+
+      if($def->{perform_short_reads_deseq2}){
+        $config->{bowtie1_genome_short_reads_table} = {
+          class                 => "CQS::ProgramWrapper",
+          perform               => 1,
+          target_dir            => "$host_genome_dir/bowtie1_genome_short_reads_table",
+          option                => "",
+          interpretor           => "python",
+          check_program         => 1,
+          program               => "../SmallRNA/shortReadTable.py",
+          source_ref            => [ "bowtie1_genome_unmapped_reads", "_clipped_identical.short.fastq.dupcount" ],
+          source_arg            => "-i",
+          output_arg            => "-o",
+          output_file_prefix    => "",
+          output_file_ext       => ".count.txt",
+          output_other_ext      => "",
+          sh_direct             => 1,
+          pbs                   => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        };
+        push @$summary_ref, ("bowtie1_genome_short_reads_table");
+
+        if ( $do_comparison ) {
+          addDEseq2( $config, $def, $summary_ref, "short_reads", [ "bowtie1_genome_short_reads_table", ".count.txt\$" ],
+            $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        }
       }
     }
 
