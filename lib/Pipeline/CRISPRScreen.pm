@@ -126,7 +126,8 @@ sub getConfig {
   push(@$summary, "mageck_count");
 
   my $count_task = ["mageck_count", ".count.txt"];
-  if(defined $def->{batch}){
+  if(getValue($def, "perform_batch_correction", 0)){
+    defined $def->{batch} or die "define batch in configuration for batch correction.";
     my $batch_values=$def->{batch};
     my $batch_file=$target_dir . "/" . $task_name . "_batch.txt";
     writeBatchFile($batch_values, $batch_file);
@@ -135,6 +136,7 @@ sub getConfig {
     $config->{$rm_batch_task} = {
       class                    => "CQS::UniqueR",
       perform                  => 1,
+      docker_prefix            => "mageck_",
       rCode                    => "",
       target_dir               => "${target_dir}/$rm_batch_task",
       option                   => "",
@@ -143,6 +145,7 @@ sub getConfig {
       rtemplate                => "../CRISPR/rm-batch.R",
       output_file              => "",
       output_file_ext          => ".corrected-count.txt",
+      sh_direct                => 1,
       pbs                      => {
         "nodes"    => "1:ppn=1",
         "walltime" => "10",
@@ -156,7 +159,13 @@ sub getConfig {
 
   if(defined $def->{mageck_test}){
     my $cnv_option = "";
-    if(defined $def->{cnv_norm}){
+    if(getValue($def, "perform_cnv_correction", 0)){
+      if (! -e $def->{cnv_norm}){
+        die "define cnv_norm file for cnv correction in mageck test.";
+      }
+      if (! $def->{cnv_norm_cell_line}){
+        die "define cnv_norm_cell_line for cnv correction in mageck test.";
+      }
       $cnv_option = "--cell-line " . getValue($def, "cnv_norm_cell_line");
     }
 
@@ -182,7 +191,7 @@ sub getConfig {
       output_file_prefix    => "",
       output_file_ext       => ".count.txt",
       output_other_ext      => "",
-      sh_direct             => 0,
+      sh_direct             => 1,
       pbs                   => {
         "nodes"     => "1:ppn=8",
         "walltime"  => "10",
