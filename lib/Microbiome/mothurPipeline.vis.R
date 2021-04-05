@@ -207,3 +207,5 @@ dev.off()
 #export corrdinate to Alain so that he can make figure by himself
 write.csv(gp_bray_pcoa$vectors[,1:2],paste0(PERMANOVAOutFile,".PCA.csv"))
 
+
+save.image(paste0(outFile,".RData"))
