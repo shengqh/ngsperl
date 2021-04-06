@@ -94,31 +94,44 @@ sub perform {
   my $mapFiles = writeDesignTable( $result_dir, $section, $qctable, $sourceBamFiles, $peaksfiles, $peakSoftware, $combined, $task_name, $treatments, $controls );
 
   if ($combined) {
+    my $mapFileName = basename($mapFiles->{$task_name});
+    my $rdataFile=$mapFileName . ".rdata";
+
     if ($paired_end){
       #for paired end data, keep the first read only for ChipQC
+      print $pbs "
+if [[ ! -s $rdataFile ]]; then
+";
       for my $bamName (keys %$bamfiles){
         my $oldFile = $bamfiles->{$bamName}->[0];
-        my $newFile = $bamName . ".filtered.bam";
-        print $pbs "if [[ ! -s $newFile ]]; then
-  samtools view -b -f 65 -o $newFile $oldFile
-  samtools index $newFile
-fi
+        my $newFile = $bamName . ".firstread.bam";
+        print $pbs "
+  if [[ ! -s $newFile ]]; then
+    samtools view -b -f 65 -o $newFile $oldFile
+    samtools index $newFile
+  fi
 ";
         $sourceBamFiles->{$bamName} = [$result_dir . "/" . $newFile ];
       } 
+      print $pbs "
+fi
+
+";
     }
     
-    my $mapFileName = $mapFiles->{$task_name};
     print $pbs "R --vanilla -f $script --args $mapFileName $genome $chromosomes\n\n";
     
     if ($paired_end){
+      print $pbs "if [[ -s $final_file ]]; then 
+";
       for my $bamName (keys %$sourceBamFiles){
-        my $newFile = $sourceBamFiles->{$bamName}->[0];
-        print $pbs "if [[ -s $final_file ]]; then 
-  rm $newFile ${newFile}.bai
-fi
+        my $newFile = basename($sourceBamFiles->{$bamName}->[0]);
+        print $pbs "  rm $newFile ${newFile}.bai
 ";
       } 
+      print $pbs "fi
+
+";
     }
   }
   else {
