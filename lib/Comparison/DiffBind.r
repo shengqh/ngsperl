@@ -26,12 +26,12 @@ cat("overlapDef=", overlapDef, "\n")
 cat("outputPrefix=", outputPrefix, "\n")
 
 samplesheet<-read.table(configFile, sep="\t", header=T, stringsAsFactors=F)
-mb1<-dba(sampleSheet=samplesheet, bCorPlot=F)
+mb1<-dba(sampleSheet=samplesheet)
 #minOverlap<-ifelse(nrow(mb1) == 1, 1, 2)
 #mb1<-dba.count(mb1,score=DBA_SCORE_READS, minOverlap=minOverlap)
 
 #get consensus peaks and plot Venn for each condition, and generate count table for combined peaks across conditions 
-mb1_consensus <- dba(sampleSheet=samplesheet, bCorPlot=F)
+mb1_consensus <- dba(sampleSheet=samplesheet)
 overlapsheet <- read.table(overlapDef, sep="\t", header=T) 
 
 cindex <- 1
