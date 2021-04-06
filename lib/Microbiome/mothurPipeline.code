@@ -4,7 +4,7 @@
 #####################################
 #merge pair end reads and screen (filter). The V4 region of the 16S rRNA gene has short length (~250bp) so usually pair end reads will be overlap with each other.
 #See their wet lab sop for more details
-make.contigs(file=stability.files, processors=8) #make .trim.contigs
+#make.contigs(file=stability.files, processors=8) #make .trim.contigs
 screen.seqs(fasta=current, group=current, maxambig=0, maxlength=275) #make .good.fasta
 
 #get unique sequences for alignment

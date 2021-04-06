@@ -200,6 +200,8 @@ sub addFastQC {
   };
   push @$individual, $fastqcTask;
   push @$summary,    $summaryTask;
+
+  return($summaryTask);
 }
 
 sub addBlastn {
@@ -1256,27 +1258,50 @@ sub addPyCloneVIAndClonevol {
 sub AddMothurPipeline {
   my ( $config, $def, $summary,$target_dir,$files ) = @_;
 
+my $taskName="mothur_pipeline";
+my $projectName=$config->{general}{task_name};
+
+my $mothurPipelineCodeFile = "/home/zhaos/source/ngsperl/lib/Microbiome/mothurPipeline.code";
+#copy mothur code to current folder and add $batch file name to the beginning 
+my $mothurPipelineCodeFileOut = "$target_dir/$taskName/result/$projectName.mothurPipeline.code";
+
+#softlink of
 #ln -s /scratch/cqs/zhaos/reference/mothur/silva/silva.seed_v132.pcr.align silva.v4.fasta
 #ln -s /scratch/cqs/zhaos/reference/mothur/trainset16_022016.pds/* .
+my $mothurSilvaFile = "/scratch/cqs/zhaos/reference/mothur/silva/silva.seed_v132.pcr.align";
+my $mothurTrainsetFastaFile = "/scratch/cqs/zhaos/reference/mothur/trainset16_022016.pds/trainset16_022016.pds.fasta";
+my $mothurTrainsetTaxFile = "/scratch/cqs/zhaos/reference/mothur/trainset16_022016.pds/trainset16_022016.pds.tax";
+symlink ( $mothurSilvaFile, "$target_dir/$taskName/result/silva.v4.fasta" );
+symlink ( $mothurTrainsetFastaFile, "$target_dir/$taskName/result/trainset16_022016.pds.fasta" );
+symlink ( $mothurTrainsetTaxFile, "$target_dir/$taskName/result/trainset16_022016.pds.tax" );
 
-my $taskName="mothur_pipeline";
-#my $stability_batch = "$target_dir/$taskName/result/sampleToFiles.txt";
-my $stability_batch = "$target_dir/$taskName/result/stability.files";
-my $mothurPipelineCodeFile = "/home/zhaos/source/ngsperl/lib/Microbiome/mothurPipeline.code";
+#my $stability_batch = "$target_dir/$taskName/result/stability.files";
+my $sampleToFiles = "$target_dir/$taskName/result/$projectName.files";
 
   #make a samplt to file table
-  open FILES,">$stability_batch";
+  open FILES,">$sampleToFiles";
   for my $sample_name ( sort keys %{$config->{$files}} ) {
     my @sample_files = @{ $config->{$files}->{$sample_name} };
     print FILES $sample_name."\t".$sample_files[0]."\t".$sample_files[1]."\n";
   }
+
+
+
+open CODESIN,"<$mothurPipelineCodeFile";
+open CODESOUT,">$mothurPipelineCodeFileOut";
+print CODESOUT "make.contigs(file=$sampleToFiles, processors=8) #make .trim.contigs";
+while(<CODESIN>) {
+  print CODESOUT $_;
+}
+close(CODESIN);
+close(CODESOUT);
 
 $config->{$taskName} = {
     class                 => "CQS::ProgramWrapper",
     perform               => 1,
     target_dir            => "$target_dir/$taskName",
     #init_command          => "",
-    option                => "$mothurPipelineCodeFile
+    option                => "$mothurPipelineCodeFileOut
 #__FILE__           
 #__OUTPUT__
 ",
@@ -1289,7 +1314,8 @@ $config->{$taskName} = {
     output_arg            => "",
     output_to_folder      => 1,
     output_file_prefix    => "",
-    output_file_ext       => ".shared",
+    output_file_ext       => 
+    ".trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.opti_mcc.shared;.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.opti_mcc.0.03.cons.taxonomy",
     output_other_ext      => "",
     sh_direct             => 0,
     pbs                   => {
@@ -1302,16 +1328,18 @@ $config->{$taskName} = {
 }
 
 sub AddMothurPipelineVis {
-  my ( $config, $def, $summary,$target_dir,$mothurPipelineTask,$groups ) = @_;
+  my ( $config, $def, $summary,$target_dir,$mothurPipelineTask,$groups ,$fastqQC_summary ) = @_;
 
   my $task = "${mothurPipelineTask}_vis";
   $config->{$task} = {
       class                      => "CQS::UniqueR",
       perform                    => 1,
       target_dir                 => $target_dir . '/' . $task,
-      rtemplate                  => "../Variants/pyCloneVIAndClonEov.R",
+      rtemplate                  => "../Microbiome/mothurPipeline.vis.R",
       parameterSampleFile1_ref   => $groups,
       parameterFile1_ref         => [ $mothurPipelineTask, ".shared\$" ],
+      parameterFile2_ref         => [ $mothurPipelineTask, ".taxonomy\$" ],
+      parameterFile3_ref         => [ $fastqQC_summary, ".reads.tsv\$" ],
       output_to_result_directory => 1,
       output_file                => "",
       output_file_ext            => "",
