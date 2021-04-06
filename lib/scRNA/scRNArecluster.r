@@ -1,7 +1,9 @@
 
+#source("scRNA_func.r")
+
 library(Seurat)
 library(ggplot2)
-
+library(patchwork)
 
 run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, resolution, random.seed){
   if (by_sctransform) {
@@ -64,12 +66,6 @@ ORA_celltype<-function(medianexp,cellType,weight){
   return(list(ora=ORA_result,cta=CTA_result,min_ora=minp_ora,max_cta=max_cta))
 }
 
-
-finalList<-readRDS(parFile1)
-obj<-finalList$obj
-seurat_colors<-finalList$seurat_colors
-seurat_cellactivity_colors<-finalList$seurat_cellactivity_colors
-
 random.seed=20200107
 
 options_table<-read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)
@@ -92,23 +88,38 @@ pca_dims<-1:as.numeric(options$pca_dims)
 recluster_celltypes<-options$recluster_celltypes
 recluster_celltypes<-unlist(strsplit(recluster_celltypes, ";"))
 
-cts<-finalList$cell_activity_database$predicted$max_cta
-cts_cluster<-data.frame(Cluster=levels(obj), CellType=names(cts) )
+cts_cluster=read_cell_cluster_file(parFile2)
+cts=cts_cluster[,options$celltype_name]
+all_celltypes=unique(cts_cluster[,options$celltype_name])
+missed=recluster_celltypes[!(recluster_celltypes %in% all_celltypes)]
+if(length(missed) > 0){
+  stop(paste0("There are missed celltypes ", paste0(missed, collapse="/"), " not in file ", parFile2))
+}
+
+celltype_cells=data.frame(Cell=rownames(cts_cluster), CellType=cts_cluster[,options$celltype_name])
+cclist=split(celltype_cells$Cell, celltype_cells$CellType)
+
+finalList<-readRDS(parFile1)
+obj<-finalList$obj
+
+obj[[options$cluster_name]]=cts_cluster[colnames(obj),options$cluster_name]
+
+seurat_colors<-finalList$seurat_colors
+seurat_cellactivity_colors<-finalList$seurat_cellactivity_colors
 
 ct<-recluster_celltypes[1]
 for(ct in recluster_celltypes){
-  ctPrefix<-paste0(prefix, ".", ct)
-  cluster_ids<-cts_cluster$Cluster[ cts_cluster$CellType == ct]
-  cluster_obj<-subset(obj, ident=cluster_ids)
+  ctPrefix<-paste0(prefix, ".", gsub(' ', '_', ct))
+  cells=unlist(cclist[ct])
+  cluster_obj<-subset(obj, cells=cells)
   
   png(paste0(ctPrefix, ".pre.png"), width=3000, height=3000, res=300)
-  p<-DimPlot(object = cluster_obj, reduction = 'umap', label=TRUE, group.by="seurat_clusters")
+  p<-DimPlot(object = cluster_obj, reduction = 'umap', label=TRUE, group.by=options$cluster_name) + ggtitle("")
   print(p)
   dev.off()
   
   rdsFile = paste0(ctPrefix, ".rds")
   if(!file.exists(rdsFile)){
-    
     cluster_obj <- SCTransform(cluster_obj, verbose = FALSE)
     obj_markers <- run_cluster(cluster_obj, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, resolution, random.seed)
     cluster_obj<-obj_markers$object
@@ -158,14 +169,17 @@ for(ct in recluster_celltypes){
     cluster_obj<-readRDS(rdsFile)
   }
   png(paste0(ctPrefix, ".post.png"), width=3000, height=3000, res=300)
-  p<-DimPlot(object = cluster_obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters")
+  p<-DimPlot(object = cluster_obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters") + ggtitle("")
   print(p)
   dev.off()
   
-  samples<-unique(cluster_obj[["orig.ident"]])
+  samples<-unique(unlist(cluster_obj[["orig.ident"]]))
+  nc=ceiling(sqrt(length(samples)))
+  nn=ceiling(length(samples) / nc)
   
-  png(paste0(ctPrefix, ".post_sample.png"), width=nrow(samples) * 3000, height=3000, res=300)
-  p<-DimPlot(object = cluster_obj, reduction = 'umap', label=F, group.by="seurat_cellactivity_clusters", split.by = "orig.ident")
+  png(paste0(ctPrefix, ".post_sample.png"), width= nc*1000+200, height=nn*1000, res=300)
+  p<-DimPlot(object = cluster_obj, reduction = 'umap', label=F, group.by="seurat_cellactivity_clusters", split.by="orig.ident", combine=F)
+  p<-p[[1]] + facet_wrap(~orig.ident) + ggtitle("")
   print(p)
   dev.off()
 }
