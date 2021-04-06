@@ -57,6 +57,7 @@ our %EXPORT_TAGS = (
     addAllelicCountsForClonalAnalysis
     addSciCloneAndClonevol
     addPyCloneVIAndClonevol
+    addApePhylogeneticTree
     AddMothurPipeline
     AddMothurPipelineVis
     addXHMM
@@ -1254,6 +1255,38 @@ sub addPyCloneVIAndClonevol {
   push @$summary, $task;
   return($task);
 }
+
+sub addApePhylogeneticTree {
+  my ( $config, $def, $summary,$target_dir,$mafResults ) = @_;
+
+  if (!defined($def->{family_info_file}) | !defined($def->{patient_info_feature}) ) {
+    die("Need define family_info_file and patient_info_feature in def so that samples from the same patients can be extracted")
+  }
+  my $rCode=( defined $def->{family_info_file} ? "patientFeature='" . $def->{patient_info_feature} . "';" : "" );
+
+  my $task = "${mafResults}_ApePhylogeneticTree";
+  $config->{$task} = {
+      class                      => "CQS::UniqueR",
+      perform                    => 1,
+      target_dir                 => $target_dir . '/' . $task,
+      rtemplate                  => "../Variants/ApePhylogeneticTree.R.R",
+      parameterFile1             => getValue( $def, "family_info_file" ),
+      parameterFile2_ref         => [ $mafResults, ".maf\$" ],
+      output_to_result_directory => 1,
+      output_file                => "",
+      output_file_ext            => ".ApePhylogeneticTree.txt",
+      rCode                      => $rCode,
+      sh_direct                  => 1,
+      'pbs'                      => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '20gb',
+        'walltime' => '10'
+      },
+  };
+  push @$summary, $task;
+  return($task);
+}
+
 
 sub AddMothurPipeline {
   my ( $config, $def, $summary,$target_dir,$files ) = @_;

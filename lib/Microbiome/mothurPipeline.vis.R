@@ -1,4 +1,7 @@
 
+#Instructions####
+#https://rpubs.com/dillmcfarlan/R_microbiotaSOP
+
 
 sampleGroupFile=parSampleFile1
 mothur_shared_file=parFile1
@@ -177,6 +180,14 @@ permanova <- adonis(t(otu) ~ group, data = meta, permutations=1000, method = "br
 # P-value
 permanova
 #print(as.data.frame(permanova$aov.tab)["group", "Pr(>F)"])
+
+
+# Investigate the top factors in PERMANOVA
+coef <- coefficients(permanova)["group1",]
+top.coef <- coef[rev(order(abs(coef)))[1:20]]
+pdf(paste0(PERMANOVAOutFile,".TopCoef.pdf"))
+barplot(sort(top.coef), horiz = T, las = 1, main = "Top OTU")
+dev.off()
 
 emptyInd=which(apply(otu,1,function(x) all(x==0)))
 if (length(emptyInd)>0) {
