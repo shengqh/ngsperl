@@ -922,6 +922,7 @@ sub getConfig {
         target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . "report",
         report_rmd_file            => "../Pipeline/ChIPSeq.rmd",
         additional_rmd_files       => "Functions.Rmd",
+        docker_prefix              => "report_",
         parameterSampleFile1_ref   => \@report_files,
         parameterSampleFile1_names => \@report_names,
         parameterSampleFile2       => $options,
