@@ -40,6 +40,7 @@ sub perform {
 
   my $selfname = $self->{_name};
 
+  my $use_sambamba = get_option( $config, $section, "use_sambamba",                0 );
   my $cleansam                = get_option( $config, $section, "cleansam",                0 );
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
   my $sortByCoordinate        = get_option( $config, $section, "sort_by_coordinate",      1 );
@@ -176,8 +177,8 @@ fi
 
     if ($sortByCoordinate) {
       my $chromosome_grep_command = getChromosomeFilterCommand( $sorted_bam_file, $chromosome_grep_pattern );
-
-      print $pbs "    
+      if($use_sambamba){
+        print $pbs "    
 if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
   echo sort_bam=`date`
   sambamba sort -m $sort_memory -t $thread --tmpdir tmp -o $sorted_bam_file $unsorted_bam_file
@@ -186,14 +187,34 @@ if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; th
   $chromosome_grep_command
 fi
 ";
+      }else{
+        print $pbs "    
+if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
+  echo sort_bam=`date`
+  samtools sort -m $sort_memory -@ $thread -T $sample_name -o $sorted_bam_file $unsorted_bam_file
+  echo index_bam=`date`
+  samtools index -@ $thread $sorted_bam_file 
+  $chromosome_grep_command
+fi
+";
+      }
     }
     else {
-      print $pbs "    
+      if($use_sambamba){
+        print $pbs "    
 if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
   echo sort_bam=`date`
   sambamba sort -m $sort_memory -t $thread --sort-picard -o $sorted_bam_file $unsorted_bam_file
 fi
 ";
+      }else{
+        print $pbs "    
+if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
+  echo sort_bam=`date`
+  samtools sort -m $sort_memory -@ $thread -n -o $sorted_bam_file $unsorted_bam_file
+fi
+";
+      }
     }
     $rmlist = $rmlist . " " . $unsorted_bam_file;
 
