@@ -203,17 +203,18 @@ for(i in 1:length(peaks_xls)){
   lines <- readLines(peaks_xls[i], n=29)
   df[i,1] <- sample_names[i]
   df[i,2] <- word(lines[19], 7)
-  df[i,3] <- word(lines[28], 4)
-  df[i,4] <- dim(fread(peaks_xls[i], data.table = F))[1]
+  df[i,3] <- word(lines[24], 4)
+  df[i,4] <- paste0("<= ", word(lines[11], 5))
+  df[i,5] <- dim(fread(peaks_xls[i], data.table = F))[1]
 
   stats <- fread(peaks_annot[i], data.table=F)
-  df[i,5] <- stats[9,4]
-  df[i,6] <- stats[10,4]
+  df[i,6] <- stats[9,4]
+  df[i,7] <- stats[10,4]
 }
-colnames(df) <- c("Sample", "Read length", "Fragment length", "Peak # (q<0.05)",
+colnames(df) <- c("Sample", "Read length", "Fragment length", "qvalue", "Peak number", 
 				"log2 enrichment promoter", "log2 enrichment 5UTR")
 
-print(kable(df, caption=tabRef("peakSummary", "Summary of peak calling and enrichment.")) %>%
+print(kable(df, caption=tabRef("peakSummary", "Summary of peak calling and enrichment")) %>%
     kable_styling() %>%
     htmltools::HTML())
 ```
