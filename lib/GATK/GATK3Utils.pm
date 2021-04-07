@@ -24,7 +24,7 @@ sub addCombineVariants {
     perform     => 1,
     target_dir  => "$target_dir/$task_name",
     option      => "",
-    interpretor => "python",
+    interpretor => "python3",
     program     => "../Format/splitFastq.py",
     source_ref      => $source_ref,
     source_arg            => "-i",

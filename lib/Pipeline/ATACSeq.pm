@@ -300,7 +300,7 @@ sub getConfig {
         perform    => 1,
         suffix     => "_pc",
         target_dir => "${target_dir}/" . $peak_count,
-        interpretor => "python",
+        interpretor => "python3",
         program    => "../Count/bedCount.py",
         option     => "",
         source_arg => "-i",

@@ -330,14 +330,15 @@ sub getConfig {
       $config->{$sizeFactorTask} = {
         class                    => "CQS::ProgramWrapper",
         perform                  => 1,
+        #docker_prefix            => "report_",
         target_dir               => $target_dir . '/' . $sizeFactorTask,
-        interpretor              => "python",
+        interpretor              => "python3",
         program                  => "../Annotation/getBackgroundCount.py",
         parameterSampleFile1_arg => "-b",
         parameterSampleFile1_ref => $bam_ref,
         output_arg               => "-o",
-        output_file_ext          => ".txt.sizefactor",
-        output_other_ext         => ".txt",
+        output_file_ext          => ".count",
+        output_other_ext         => ".count.sizefactor",
         sh_direct                => 1,
         'pbs'                    => {
           'nodes'    => '1:ppn=1',
@@ -370,35 +371,7 @@ sub getConfig {
         }
         close($fh);
 
-        my $annotationLocusPlot = "annotation_locus_plot";
-        $config->{$annotationLocusPlot} = {
-          class                 => "CQS::ProgramWrapper",
-          perform               => 1,
-          target_dir            => $def->{target_dir} . "/$annotationLocusPlot",
-          option                => "",
-          interpretor           => "python",
-          program               => "../Visualization/plotGene.py",
-          parameterFile1_arg => "-i",
-          parameterFile1     => $locusFile,
-          parameterFile3_arg => "-s",
-          parameterFile3_ref => [$sizeFactorTask, ".sizefactor"],
-          parameterSampleFile1_arg => "-b",
-          parameterSampleFile1_ref => $bam_ref,
-          output_to_result_directory => 1,
-          output_arg            => "-o",
-          output_file_ext       => ".position.txt.slim",
-          output_other_ext      => ".position.txt",
-          sh_direct             => 1,
-          pbs                   => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "10",
-            "mem"       => "10gb"
-          },
-        };
-
-        push( @$summary, $annotationLocusPlot );
+        addPlotGene($config, $def, $summary, $target_dir, "annotation_locus_plot", $sizeFactorTask, $locusFile, $bam_ref);
       }
 
       if(defined $def->{annotation_genes}){
@@ -415,35 +388,7 @@ sub getConfig {
           addBamsnap($config, $def, $summary, $target_dir, $bamsnap_task, [$geneLocus, "bed"], $bam_ref);
         }
 
-        my $annotationGenesPlot = "annotation_genes_plot";
-        $config->{$annotationGenesPlot} = {
-          class                 => "CQS::ProgramWrapper",
-          perform               => 1,
-          target_dir            => $def->{target_dir} . "/$annotationGenesPlot",
-          option                => "",
-          interpretor           => "python",
-          program               => "../Visualization/plotGene.py",
-          parameterFile1_arg => "-i",
-          parameterFile1_ref => [ $geneLocus, ".bed" ],
-          parameterFile3_arg => "-s",
-          parameterFile3_ref => [$sizeFactorTask, ".sizefactor"],
-          parameterSampleFile1_arg => "-b",
-          parameterSampleFile1_ref => $bam_ref,
-          output_to_result_directory => 1,
-          output_arg            => "-o",
-          output_file_ext       => ".position.txt.slim",
-          output_other_ext      => ".position.txt",
-          sh_direct             => 1,
-          pbs                   => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "10",
-            "mem"       => "10gb"
-          },
-        };
-
-        push( @$summary, $annotationGenesPlot );
+        addPlotGene($config, $def, $summary, $target_dir, "annotation_genes_plot", $sizeFactorTask, [ $geneLocus, ".bed" ], $bam_ref);
       }
     }
 

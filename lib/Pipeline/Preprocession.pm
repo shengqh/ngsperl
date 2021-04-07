@@ -405,7 +405,7 @@ sub getPreprocessionConfig {
     $config->{qc_check_fastq_duplicate} = {
       class => "CQS::ProgramWrapperOneToOne",
       target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "qc_check_fastq_duplicate",
-      interpretor => "python",
+      interpretor => "python3",
       program => "../QC/checkFastqDuplicate.py",
       source_arg => "-i",
       source_ref => $source_ref,
@@ -428,7 +428,7 @@ sub getPreprocessionConfig {
     $config->{dedup_fastq} = {
       class => "CQS::ProgramWrapperOneToOne",
       target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "dedup_fastq",
-      interpretor => "python",
+      interpretor => "python3",
       program => "../Format/dedupFastq.py",
       source_arg => "-i",
       source_ref => $source_ref,
@@ -541,7 +541,7 @@ sub getPreprocessionConfig {
       perform                  => 1,
       target_dir               =>  $test_dir . "/" . $extractTask,
       option                   => $extract_option,
-      interpretor              => "python",
+      interpretor              => "python3",
       program                  => "../Pipeline/extractFirstNFastq.py",
       parameterSampleFile1_arg => "-i",
       parameterSampleFile1_ref => $source_ref,
