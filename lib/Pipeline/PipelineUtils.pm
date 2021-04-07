@@ -73,7 +73,8 @@ our %EXPORT_TAGS = (
     addSequenceTask
     addFilesFromSraRunTable
     addWebgestalt
-    addBamsnap)
+    addBamsnap
+    addPlotGene)
   ]
 );
 
@@ -828,7 +829,6 @@ sub addCleanBAM {
     is_sorted_by_coordinate => 1,
     sh_direct               => 0,
     pbs                     => {
-      "email"    => $def->{email},
       "nodes"    => "1:ppn=1",
       "walltime" => "48",
       "mem"      => "40gb"
@@ -1461,7 +1461,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
       perform     => 1,
       target_dir  => "$target_dir/$ScatterIntervals",
       option      => "",
-      interpretor => "python",
+      interpretor => "python3",
       program     => "../GATK4/scatterIntervals.py",
       source_ref      => $FilterIntervals,
       source_arg            => "-i",
@@ -1544,7 +1544,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
     class                    => "CQS::ProgramWrapper",
     perform                  => 1,
     target_dir               => $target_dir . '/' . $CombineGCNV,
-    interpretor              => "python",
+    interpretor              => "python3",
     program                  => "../GATK4/combineGCNV.py",
     parameterSampleFile1_arg => "-i",
     parameterSampleFile1_ref => [ $PostprocessGermlineCNVCalls, ".genotyped_intervals.vcf.gz" ],
@@ -1570,7 +1570,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
     class                    => "CQS::ProgramWrapper",
     perform                  => 1,
     target_dir               => $target_dir . '/' . $sizeFactorTask,
-    interpretor              => "python",
+    interpretor              => "python3",
     program                  => "../GATK4/getBackgroundCount.py",
     parameterSampleFile1_arg => "-b",
     parameterSampleFile1_ref => $bam_ref,
@@ -1617,7 +1617,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
       perform               => 1,
       target_dir            => $def->{target_dir} . "/$plotCNVgenes",
       option                => "",
-      interpretor           => "python",
+      interpretor           => "python3",
       program               => "../Visualization/plotCNV.py",
       parameterFile1_arg => "-i",
       parameterFile1_ref => [ $cnvGenes, ".bed" ],
@@ -1652,7 +1652,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
       perform               => 1,
       target_dir            => $def->{target_dir} . "/$annotationGenesPlot",
       option                => "",
-      interpretor           => "python",
+      interpretor           => "python3",
       program               => "../Visualization/plotCNV.py",
       parameterFile1_arg => "-i",
       parameterFile1_ref => [ "annotation_genes_locus", ".bed" ],
@@ -1759,7 +1759,7 @@ sub addGeneLocus {
         add_chr => getValue($def, "annotation_genes_add_chr", 0)
       },
       rCode      =>"",
-      output_file_ext => ".bed;.missing",
+      output_file_ext => ".missing;.bed",
       sh_direct       => 1,
       'pbs'           => {
         'nodes'    => '1:ppn=1',
@@ -2050,7 +2050,7 @@ sub add_split_fastq {
     perform     => 1,
     target_dir  => "$target_dir/$split_fastq",
     option      => "",
-    interpretor => "python",
+    interpretor => "python3",
     program     => "../Format/splitFastq.py",
     source_ref      => $source_ref,
     source_arg            => "-i",
@@ -2231,6 +2231,42 @@ sub addBamsnap {
       "mem"       => "10gb"
     },
   };
+  push( @$tasks, $task_name );
+}
+
+sub addPlotGene {
+  my ($config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, $bed_ref, $bam_ref) = @_;
+
+  my $parameterFile1_key = "parameterFile1_ref";
+  if( -e $bed_ref) {
+    $parameterFile1_key = "parameterFile1";
+  }
+
+  $config->{$task_name} = {
+    class                 => "CQS::ProgramWrapper",
+    perform               => 1,
+    target_dir            => $target_dir . "/$task_name",
+    option                => "",
+    interpretor           => "python3",
+    program               => "../Visualization/plotGene.py",
+    parameterFile1_arg    => "-i",
+    $parameterFile1_key   => $bed_ref,
+    parameterFile3_arg    => "-s",
+    parameterFile3_ref    => [$sizeFactorTask, ".sizefactor"],
+    parameterSampleFile1_arg => "-b",
+    parameterSampleFile1_ref => $bam_ref,
+    output_to_result_directory => 1,
+    output_arg            => "-o",
+    output_file_ext       => ".position.txt.slim",
+    output_other_ext      => ".position.txt",
+    sh_direct             => 1,
+    pbs                   => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    },
+  };
+
   push( @$tasks, $task_name );
 }
 
