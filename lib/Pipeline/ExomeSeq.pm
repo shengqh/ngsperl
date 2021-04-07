@@ -1060,22 +1060,21 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
     if ($def->{ncbi_build} eq "GRCh38") {
       my $mutect2callReport = addFilterMafAndReport($config, $def, $summary, $target_dir, $mutect2call);
       push @$summary, $mutect2callReport;
+   
+      if (defined($def->{family_info_file}) & defined($def->{patient_info_feature}) ) { #both family_info_file and patient_info_feature defined. Can run Clonevol analysis and ape PhylogeneticTree 
+        #make maf of all patients as common_sites and in GATK Intervals format
+        my $common_sites=addMafToIntervals( $config, $def, $target_dir, $summary,$mutect_prefix, $mutect_index_dic, $mutect_index_key ,$annovarMaf);
+        my $addCollectAllelicCountsCall = addCollectAllelicCounts($config, $def, $summary, $target_dir, $bam_input,$common_sites);
+
+        my $addPrepareClonalAnalysisTask = addAllelicCountsForClonalAnalysis($config, $def, $summary, $target_dir,$addCollectAllelicCountsCall,$mutect2callReport,"cnv_summaryTable");
+        my $addSciCloneAndClonevolTask = addSciCloneAndClonevol($config, $def, $summary, $target_dir,$addPrepareClonalAnalysisTask);
+        my $addPyCloneVIAndClonevolTask = addPyCloneVIAndClonevol($config, $def, $summary, $target_dir,$addPrepareClonalAnalysisTask);
+
+        my $addApePhylogeneticTreeTask = addApePhylogeneticTree($config, $def, $summary, $target_dir,$mutect2callReport);
+
+        push @$summary, $common_sites,$addCollectAllelicCountsCall,$addPrepareClonalAnalysisTask,$addSciCloneAndClonevolTask,$addPyCloneVIAndClonevolTask,$addApePhylogeneticTreeTask;
+      }
     }
-
-    if (defined($def->{family_info_file}) & defined($def->{patient_info_feature}) ) { #both family_info_file and patient_info_feature defined. Can run Clonevol analysis and ape PhylogeneticTree 
-      #make maf of all patients as common_sites and in GATK Intervals format
-      my $common_sites=addMafToIntervals( $config, $def, $target_dir, $summary,$mutect_prefix, $mutect_index_dic, $mutect_index_key ,$annovarMaf);
-      my $addCollectAllelicCountsCall = addCollectAllelicCounts($config, $def, $summary, $target_dir, $bam_input,$common_sites);
-
-      my $addPrepareClonalAnalysisTask = addAllelicCountsForClonalAnalysis($config, $def, $summary, $target_dir,$addCollectAllelicCountsCall,$mutect2callReport,"cnv_summaryTable");
-      my $addSciCloneAndClonevolTask = addSciCloneAndClonevol($config, $def, $summary, $target_dir,$addPrepareClonalAnalysisTask);
-      my $addPyCloneVIAndClonevolTask = addPyCloneVIAndClonevol($config, $def, $summary, $target_dir,$addPrepareClonalAnalysisTask);
-
-      my $addApePhylogeneticTreeTask = addApePhylogeneticTree($config, $def, $summary, $target_dir,$mutect2callReport);
-
-      push @$summary, $common_sites,$addCollectAllelicCountsCall,$addPrepareClonalAnalysisTask,$addSciCloneAndClonevolTask,$addPyCloneVIAndClonevolTask,$addApePhylogeneticTreeTask;
-    }
-
   }
 
   if ( $def->{"perform_cnv_gatk4_somatic"}) {
