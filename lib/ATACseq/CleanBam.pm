@@ -76,7 +76,7 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $finalFile );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $finalFile . ".bai" );
     my $rmlist = "";
     if ( !$isSortedByCoordinate ) {
       my $sorted = $sample_name . ".sortedByCoordinate.bam";
@@ -110,7 +110,7 @@ fi
     my $input = $sampleFile;
     if ($mark_duplicates) {
       print $pbs "
-if [[ -s $sampleFile && ! -s $redupFile ]]; then
+if [[ -s $sampleFile && ! -s ${redupFile}.bai ]]; then
   echo RemoveDuplicate=`date` 
   java -jar $picard_jar MarkDuplicates I=$sampleFile O=$redupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT M=${redupFile}.metrics
   samtools index $redupFile
@@ -125,7 +125,7 @@ fi
     if ( defined $maxInsertSize && $maxInsertSize > 0 ) {
       my $insertFile = $sample_name . ".insertsize.bam";
       print $pbs "
-if [[ -s $input && ! -s $insertFile ]]; then
+if [[ -s $input && ! -s ${insertFile}.bai ]]; then
   echo FilterInsertSize=`date`
   samtools view -h $input | awk -F '\\t' 'function abs(v) {return v < 0 ? -v : v} {if(substr(\$1,1,1) == \"\@\") {print \$0} else { if(abs(\$9) < $maxInsertSize) print \$0}}' | samtools view -b > $insertFile
   samtools index $insertFile
@@ -136,7 +136,7 @@ fi
     }
 
     print $pbs "
-if [[ -s $input && ! -s $filterFile ]]; then 
+if [[ -s $input && ! -s ${filterFile}.bai ]]; then 
   echo FilterBam=`date` 
   samtools idxstats $input | cut -f 1 | grep -v $remove_chromosome $keep_chromosome | xargs samtools view $option -b -q $minimum_maq $input $filterOption 
   samtools index $filterFile 
@@ -144,7 +144,7 @@ fi
 ";
     if ($is_paired_end) {
       print $pbs "
-if [[ -s $filterFile && ! -s $finalFile ]]; then 
+if [[ -s ${filterFile}.bai && ! -s ${finalFile}.bai ]]; then 
   echo RemoveUnpaired=`date` 
   samtools sort -n $filterFile | samtools fixmate -O bam - -| samtools view $option -b | samtools sort -T $sample_name -o $finalFile 
   samtools index $finalFile 
@@ -154,7 +154,7 @@ fi
     }
 
     print $pbs "
-if [[ -s $finalFile && ! -s ${finalFile}.stat ]]; then
+if [[ -s ${finalFile}.bai && ! -s ${finalFile}.stat ]]; then
   echo Stat=`date`
   samtools flagstat $finalFile > ${finalFile}.stat
 fi
