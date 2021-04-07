@@ -48,19 +48,22 @@ sub perform {
     my $log      = $self->get_log_filename( $log_dir, $pairName );
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
+    my $final_file = "";
+    my @lines = ();
     for my $file (@$files) {
       my $output        = basename($file);
       my $outputFolder  = scalar(@$files) == 1 ? "." : $output;
       my $annoFile      = $output . ".annotation.txt";
       my $annoStatsFile = $output . ".annotation.stats";
-      print $pbs "if [ ! -s $outputFolder/$annoFile ]; then
-  findMotifsGenome.pl $file $genome $outputFolder $option
-  annotatePeaks.pl $file $genome -annStats $outputFolder/$annoStatsFile > $outputFolder/$annoFile
-  R --vanilla -f $rscript --args $outputFolder/$annoStatsFile $outputFolder/$annoStatsFile
-fi
-
-";
+      push(@lines, "");
+      push(@lines, "findMotifsGenome.pl $file $genome $outputFolder $option");
+      push(@lines, "annotatePeaks.pl $file $genome -annStats $outputFolder/$annoStatsFile > $outputFolder/$annoFile");
+      push(@lines, "R --vanilla -f $rscript --args $outputFolder/$annoStatsFile $outputFolder/$annoStatsFile");
+      $final_file = $annoFile;
+    }
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    for my $line (@lines) {
+      print $pbs $line . "\n";
     }
     $self->close_pbs( $pbs, $pbs_file );
 
