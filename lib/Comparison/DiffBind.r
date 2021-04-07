@@ -59,7 +59,8 @@ mb1_consensus <- dba(mb1_consensus,mask=mb1_consensus$masks$Consensus,minOverlap
 consensus_peaks <- dba.peakset(mb1_consensus, bRetrieve=TRUE)
 mb1 <- dba.count(mb1,score=DBA_SCORE_READS, peaks=consensus_peaks, bRemoveDuplicates=TRUE)
 mbt = dba(mb1,bSummarizedExperiment=TRUE)
-write.table(cbind(data.frame(seqnames=seqnames(consensus_peaks),starts=start(consensus_peaks),ends=end(consensus_peaks),strands=strand(consensus_peaks)),assay(mbt)),file=paste0("counttable_raw-",outputPrefix,".txt"),quote=F,sep="\t",row.names=F)
+#write.table(cbind(data.frame(seqnames=seqnames(consensus_peaks),starts=start(consensus_peaks),ends=end(consensus_peaks),strands=strand(consensus_peaks)),assay(mbt)),file=paste0("counttable_raw-",outputPrefix,".txt"),quote=F,sep="\t",row.names=F)
+write.table(data.frame(as.data.frame(rowRanges(mbt)),assay(mbt)),file=paste0("counttable_raw-",outputPrefix,".txt"),quote=F,sep="\t",row.names=F)
 mb1
 
 
@@ -77,6 +78,8 @@ for (idx in c(1:nrow(comparisons))){
 #  mb2<-dba.contrast(mb1,group1=group1, group2=group2, name1=group1name, name2=group2name, categories=c(DBA_CONDITION), minMembers=2)
   mb2<-dba.contrast(mb1,group1=group1, group2=group2, name1=group1name, name2=group2name)
 
+ # mb2<-dba.analyze(mb2, bSubControl=FALSE, bFullLibrarySize=TRUE, bTagwise=FALSE, bCorPlot=FALSE)
+ #all normalizing parameters in dba.normalize
   mb2<-dba.analyze(mb2, bSubControl=FALSE, bFullLibrarySize=TRUE, bTagwise=FALSE, bCorPlot=FALSE)
 #  res<-dba.report(mb2,bCounts=TRUE,th=1)
   res<-dba.report(mb2,bCounts=TRUE,bNormalized=TRUE,th=1)
