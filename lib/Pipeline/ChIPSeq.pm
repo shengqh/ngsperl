@@ -184,8 +184,6 @@ sub getConfig {
         bowtie2_index         => getValue( $def, "bowtie2_index" ),
         source_ref            => $source_ref,
         output_to_same_folder => 1,
-        picard_jar            => getValue( $def, "picard_jar" ),
-        mark_duplicates       => getValue( $def, "mark_duplicates", 1),
         sh_direct             => 0,
         pbs                   => {
           "email"    => $email,
