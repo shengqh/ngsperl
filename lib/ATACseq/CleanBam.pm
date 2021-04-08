@@ -83,7 +83,7 @@ sub perform {
       print $pbs "
 if [ ! -s $sorted ]; then
   echo SortByCoordinate=`date` 
-  samtools sort -@ $thread -m $sort_memory -o $sorted $sampleFile 
+  samtools sort -m $sort_memory -o $sorted $sampleFile 
 fi
 ";
       $sampleFile = $sorted;

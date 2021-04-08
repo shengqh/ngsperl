@@ -72,7 +72,7 @@ sub perform {
     if ( !$sorted ) {
       my $presortedPrefix = $sample_name . ".sorted";
       $presortedFile = $presortedPrefix . ".bam";
-      $sortCmd       = "samtools sort -@ $thread -m 4G $sampleFile $presortedPrefix";
+      $sortCmd       = "samtools sort -m 4G $sampleFile $presortedPrefix";
       $inputFile     = $presortedFile;
       $rmFiles       = $presortedFile;
     }

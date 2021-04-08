@@ -155,7 +155,7 @@ sub perform {
       print $pbs "
 if [[ (-s $inputFile) && ! (-s $presortedFile) ]]; then
   echo sort=`date` 
-  samtools sort -@ $thread -m 4G -o $presortedFile $inputFile
+  samtools sort -m 4G -o $presortedFile $inputFile
   samtools index $presortedFile
 fi
 ";

@@ -106,7 +106,7 @@ fi
 
       print $pbs "
 if [[ -s $bowtiesam && ! -s $bam_file ]]; then
-  samtools view -Shu $mappedonlyoption $bowtiesam | samtools sort -@ $thread -T ${sample_name}_tmp -o $bam_file -
+  samtools view -Shu $mappedonlyoption $bowtiesam | samtools sort -T ${sample_name}_tmp -o $bam_file -
   if [ -s $bam_file ]; then
     rm $bowtiesam
     samtools index $bam_file 

@@ -73,7 +73,7 @@ hisat2 -p $thread --dta -x $genome_dir $samples --novel-splicesite-outfile ${sam
 
 if [ -s $finalSam ]; then
   echo Samtools::Sort_start=`date`
-  samtools sort -@ $thread -o ${final}.tmp $finalSam
+  samtools sort -o ${final}.tmp $finalSam
   mv ${final}.tmp $final
   rm $finalSam
 fi

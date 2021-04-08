@@ -62,7 +62,7 @@ sub perform {
       print $pbs "
 if [ ! -s $sortedFile ]; then
   echo sort=`date`
-  samtools sort -n -@ $thread -m $sort_memory -o $sortedFile $bam_file
+  samtools sort -n -m $sort_memory -o $sortedFile $bam_file
 fi
 ";
       $rmlist   = $rmlist . " " . $sortedFile;
