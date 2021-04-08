@@ -36,6 +36,7 @@ if(length(grlist) == 1){
     ol=findOverlapsOfPeaks(grlist[[1]], grlist[[2]], grlist[[3]], grlist[[4]], grlist[[5]])
   }
   op = ol$mergedPeaks
+  op@ranges@NAMES<-paste0("ConsensusPeak_", c(1:length(op@ranges@width)))
 }
 
 export.bed(op,con=outFile)
