@@ -88,8 +88,13 @@ sub perform {
     my $unsorted_bam_file = $sample_name . ".unsorted.bam";
     my $bam_stat = $sample_name . ".bamstat";
     my $clean_bam_file    = $sample_name . ".unsorted.clean.bam";
+
     my $sorted_bam_file    = $sample_name . ($sortByCoordinate? ".sortedByCoord.bam":".sortedByQuery.bam");
+    my $sorted_bam_file_index    = "${sorted_bam_file}.bai";
+
     my $rmdup_bam_file    = $sample_name . ($sortByCoordinate? ".sortedByCoord.rmdup.bam":".sortedByQuery.rmdup.bam");
+    my $rmdup_bam_file_index    = change_extension($rmdup_bam_file, ".bai");
+
     my $tag               = get_bam_tag($sample_name);
 
     my $rg_sample_name = $sample_name;
@@ -121,7 +126,8 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $final_file =  $mark_duplicates ? $rmdup_bam_file : $sorted_bam_file;
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, 0, $sample_file_0 );
+    my $check_file = $sortByCoordinate? ($mark_duplicates?$rmdup_bam_file_index:$sorted_bam_file_index) :$final_file;
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $check_file, $init_command, 0, $sample_file_0 );
 
     print $pbs "
 if [[ ! -s $unsorted_bam_file ]]; then
@@ -137,9 +143,9 @@ fi
     }
 
     print $pbs "
-if [ -s $unsorted_bam_file ]; then
+if [[ -s $unsorted_bam_file ]]; then
   echo bamStat=`date` 
-  python $py_script -i $unsorted_bam_file -o $bam_stat
+  python3 $py_script -i $unsorted_bam_file -o $bam_stat
 fi
 ";
 
@@ -192,8 +198,12 @@ fi
 if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
   echo sort_bam=`date`
   samtools sort -m $sort_memory -@ $thread -T $sample_name -o $sorted_bam_file $unsorted_bam_file
-  echo index_bam=`date`
-  samtools index -@ $thread $sorted_bam_file 
+
+  if [[ -s $sorted_bam_file ]]; then
+    echo index_bam=`date`
+    samtools index -@ $thread $sorted_bam_file 
+  fi
+
   $chromosome_grep_command
 fi
 ";
@@ -239,17 +249,17 @@ fi
       $rmlist = $rmlist . " " . $sorted_bam_file;
     }
 
-
     print $pbs "
-if [ -s $final_file ]; then
+if [[ (-s $final_file) && (-s $check_file) ]]; then
   echo flagstat=`date` 
   samtools flagstat $final_file > ${final_file}.stat 
 fi
 ";
 
   if ($rmlist ne "") {
-        print $pbs "
-if [ -s $final_file ]; then
+    my $check_file = $sortByCoordinate?"${final_file}.bai":$final_file;
+    print $pbs "
+if [[ -s $check_file ]]; then
   rm $rmlist
 fi
 ";

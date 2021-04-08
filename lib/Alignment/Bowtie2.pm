@@ -91,11 +91,14 @@ if [ ! -s $sam_file ]; then
 fi
 
 if [ -s $log_file ]; then
-  samtools view -Shu -F 256 $sam_file | samtools sort -o $bam_file -T $sample_name -
-  if [ -s $bam_file ]; then
-    samtools index $bam_file 
-    $chromosome_grep_command
-    rm $sam_file
+  isSucceed=\$(cat $log_file | grep -c \"overall alignment rate\")
+  if [ isSucceed ]; then
+    samtools view -Shu -F 256 $sam_file | samtools sort -o $bam_file -T $sample_name -
+    if [ -s $bam_file ]; then
+      samtools index $bam_file 
+      $chromosome_grep_command
+      rm $sam_file
+    fi
   fi
 fi
 ";
