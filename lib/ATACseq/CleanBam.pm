@@ -39,7 +39,7 @@ sub perform {
   my $maxInsertSize = get_option( $config, $section, "maximum_insert_size", 0 );
   my $is_paired_end = get_is_paired_end_option( $config, $section, 1 );
 
-  my $mark_duplicates = hasMarkDuplicate( $config->{$section} );
+  my $mark_duplicates = hasMarkDuplicate( $config->{$section}, 1 );
   my $picard_jar      = "";
   if ($mark_duplicates) {
     $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, not $self->using_docker() );
