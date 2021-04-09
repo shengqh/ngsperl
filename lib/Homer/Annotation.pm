@@ -59,7 +59,7 @@ sub perform {
       push(@lines, "findMotifsGenome.pl $file $genome $outputFolder $option");
       push(@lines, "annotatePeaks.pl $file $genome -annStats $outputFolder/$annoStatsFile > $outputFolder/$annoFile");
       push(@lines, "R --vanilla -f $rscript --args $outputFolder/$annoStatsFile $outputFolder/$annoStatsFile");
-      $final_file = $annoFile;
+      $final_file = "$outputFolder/$annoFile";
     }
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
     for my $line (@lines) {
