@@ -685,6 +685,7 @@ sub addHomerAnnotation {
     target_dir   => $target_dir . "/" . getNextFolderIndex($def) . $homerName,
     source_ref   => [ $callName, $callFilePattern ],
     homer_genome => getValue( $def, "homer_genome" ),
+    can_result_be_empty_file => 1,
     sh_direct    => 1,
     pbs          => {
       "email"     => $def->{email},
@@ -1635,7 +1636,6 @@ sub addGATK4CNVGermlineCohortAnalysis {
       rCode                    => "host=\"" . getValue($def, "biomart_host") . "\";dataset=\"" . getValue($def, "biomart_dataset") . "\";symbolKey=\"" . getValue($def, "biomart_symbolKey") . "\"" . $chrCode,
       parameterFile1_ref       => [$CombineGCNV, ".txt"],
       output_file_ext          => ".bed",
-      output_other_ext         => ".missing",
       sh_direct                => 1,
       'pbs'                    => {
         'nodes'    => '1:ppn=1',
@@ -1793,7 +1793,7 @@ sub addGeneLocus {
         add_chr => getValue($def, "annotation_genes_add_chr", 0)
       },
       rCode      =>"",
-      output_file_ext => ".missing;.bed",
+      output_file_ext => ".bed",
       sh_direct       => 1,
       'pbs'           => {
         'nodes'    => '1:ppn=1',
@@ -2259,6 +2259,7 @@ sub addBamsnap {
     output_file_ext       => ".txt",
     output_other_ext      => "",
     sh_direct             => 1,
+    can_result_be_empty_file => 1,
     pbs                   => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "2",
@@ -2291,8 +2292,7 @@ sub addPlotGene {
     parameterSampleFile1_ref => $bam_ref,
     output_to_result_directory => 1,
     output_arg            => "-o",
-    output_file_ext       => ".position.txt.slim",
-    output_other_ext      => ".position.txt",
+    output_file_ext       => ".position.txt",
     sh_direct             => 1,
     pbs                   => {
       "nodes"     => "1:ppn=1",
