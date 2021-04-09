@@ -118,6 +118,7 @@ sub getConfig {
     picard_jar         => getValue( $def, "picard_jar" ),
     source_ref         => $source_ref,
     sort_by_coordinate => 1,
+    mark_duplicates    => 0,
     sh_direct          => 0,
     pbs                => {
       "email"    => $email,
@@ -127,7 +128,7 @@ sub getConfig {
     },
   };
   push @$individual, "bwa";
-  addBamStat( $config, $def, $summary, "bwa_stat", $target_dir . "/bwa", [ "bwa", ".stat\$" ] );
+  addBamStat( $config, $def, $summary, "bwa_stat", $target_dir . "/bwa_summary", [ "bwa", ".stat\$" ] );
 
   $config->{bwa_insertsize} = {
     class                    => "CQS::UniqueR",
@@ -164,6 +165,7 @@ sub getConfig {
     maximum_insert_size     => getValue( $def, "maximum_insert_size" ),
     blacklist_file          => $def->{blacklist_file},
     is_sorted_by_coordinate => 1,
+    mark_duplicates         => 1,
     sh_direct               => 0,
     pbs                     => {
       "email"    => $email,
@@ -173,7 +175,7 @@ sub getConfig {
     },
   };
   push @$individual, "bwa_cleanbam";
-  addBamStat( $config, $def, $summary, "bwa_cleanbam_stat", $target_dir . "/bwa_cleanbam", [ "bwa_cleanbam", ".stat\$" ] );
+  addBamStat( $config, $def, $summary, "bwa_cleanbam_stat", $target_dir . "/bwa_cleanbam_summary", [ "bwa_cleanbam", ".stat\$" ] );
 
   #  if ( defined $config->{fastqc_count_vis} ) {
   #    my $files = $config->{fastqc_count_vis}{parameterFile1_ref};
