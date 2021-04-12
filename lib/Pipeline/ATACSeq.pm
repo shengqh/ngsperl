@@ -106,7 +106,7 @@ sub getConfig {
 
   my $perform_diffbind = getValue( $def, "perform_diffbind" );
   if ($perform_diffbind) {
-    getValue( $def, "diffbind_table" );
+    getValue( $def, "design_table" );
   }
 
   $config->{"bwa"} = {
@@ -121,14 +121,13 @@ sub getConfig {
     mark_duplicates    => 0,
     sh_direct          => 0,
     pbs                => {
-      "email"    => $email,
       "nodes"    => "1:ppn=8",
       "walltime" => "24",
       "mem"      => "40gb"
     },
   };
   push @$individual, "bwa";
-  addBamStat( $config, $def, $summary, "bwa_stat", $target_dir . "/bwa_summary", [ "bwa", ".stat\$" ] );
+  addBamStat( $config, $def, $summary, "bwa_stat", $target_dir . "/bwa_summary", [ "bwa", "bam.stat\$" ] );
 
   $config->{bwa_insertsize} = {
     class                    => "CQS::UniqueR",
@@ -140,8 +139,6 @@ sub getConfig {
     parameterSampleFile1_ref => [ "bwa", ".bam\$" ],
     cluster                  => $def->{cluster},
     pbs                      => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
       "walltime"  => "10",
       "mem"       => "10gb"
@@ -168,7 +165,6 @@ sub getConfig {
     mark_duplicates         => 1,
     sh_direct               => 0,
     pbs                     => {
-      "email"    => $email,
       "nodes"    => "1:ppn=1",
       "walltime" => "$cleanbam_walltime",
       "mem"      => "40gb"
@@ -288,7 +284,6 @@ sub getConfig {
         groups_ref  => "treatments",
         sh_direct  => 0,
         pbs        => {
-          "email"    => $email,
           "nodes"    => "1:ppn=1",
           "walltime" => "72",
           "mem"      => "40gb"
@@ -310,9 +305,9 @@ sub getConfig {
         output_arg => "-o",
         output_prefix => ".txt",
         output_ext => ".txt",
-        sh_direct  => 0,
+        can_result_be_empty_file => 1,
+        sh_direct  => 1,
         pbs        => {
-          "email"    => $email,
           "nodes"    => "1:ppn=1",
           "walltime" => "1",
           "mem"      => "2gb"
@@ -326,27 +321,7 @@ sub getConfig {
 
       if ($perform_diffbind) {
         my $bindName = $callName . "_diffbind";
-        $config->{$bindName} = {
-          class                   => "Comparison::DiffBind",
-          perform                 => 1,
-          target_dir              => "${target_dir}/${bindName}",
-          option                  => "",
-          source_ref              => "bwa_cleanbam",
-          groups                  => $def->{"treatments"},
-          controls                => $def->{"controls"},
-          design_table             => getValue( $def, "diffbind_table" ),
-          peaks_ref               => [ $callName, $callFilePattern ],
-          peak_software           => "bed",
-          homer_annotation_genome => $def->{homer_annotation_genome},
-          sh_direct               => 0,
-          pbs                     => {
-            "email"    => $email,
-            "nodes"    => "1:ppn=1",
-            "walltime" => "72",
-            "mem"      => "40gb"
-          },
-        };
-        push @$summary, ($bindName);
+        addDiffbind($config, $def, $summary, $target_dir, $bindName, "bwa_cleanbam", [ $callName, $callFilePattern ]);
       }
 
       if ( getValue( $def, "perform_homer_motifs" ) ) {
@@ -367,7 +342,6 @@ sub getConfig {
           binding_site_bed_ref => [ $callName, $callFilePattern ],
           sh_direct            => 1,
           pbs                  => {
-            "email"    => $email,
             "nodes"    => "1:ppn=1",
             "walltime" => "72",
             "mem"      => "40gb"
@@ -389,7 +363,6 @@ sub getConfig {
             pipeline_dir       => getValue( $def, "rose_folder" ),
             sh_direct          => 1,
             pbs                => {
-              "email"    => $email,
               "nodes"    => "1:ppn=1",
               "walltime" => "72",
               "mem"      => "40gb"
@@ -412,7 +385,6 @@ sub getConfig {
             groups     => $def->{"replicates"},
             sh_direct  => 0,
             pbs        => {
-              "email"    => $email,
               "nodes"    => "1:ppn=1",
               "walltime" => "72",
               "mem"      => "40gb"
@@ -436,7 +408,6 @@ sub getConfig {
           groups     => $def->{comparison},
           sh_direct  => 0,
           pbs        => {
-            "email"    => $email,
             "nodes"    => "1:ppn=1",
             "walltime" => "72",
             "mem"      => "40gb"
@@ -458,8 +429,6 @@ sub getConfig {
             rCode                    => '',
             sh_direct                => 1,
             pbs                      => {
-              "email"     => $def->{email},
-              "emailType" => $def->{emailType},
               "nodes"     => "1:ppn=1",
               "walltime"  => "1",
               "mem"       => "10gb"
@@ -500,7 +469,6 @@ sub getConfig {
       is_single_pdf      => 1,
       sh_direct          => 1,
       pbs                => {
-        "email"    => $email,
         "nodes"    => "1:ppn=1",
         "walltime" => "1",
         "mem"      => "10gb"
@@ -520,7 +488,6 @@ sub getConfig {
     },
     sh_direct => 0,
     pbs       => {
-      "email"    => $email,
       "nodes"    => "1:ppn=8",
       "walltime" => "72",
       "mem"      => "40gb"
