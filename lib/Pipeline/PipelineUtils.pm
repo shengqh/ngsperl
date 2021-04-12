@@ -38,6 +38,7 @@ our %EXPORT_TAGS = (
     addDeseq2SignificantSequenceBlastn
     getBatchGroups 
     addHomerMotif 
+    addDiffbind    
     addHomerAnnotation 
     addEnhancer 
     writeDesignTable 
@@ -673,6 +674,32 @@ sub addHomerMotif {
   };
   push @$summary, ($homerName);
   return $homerName;
+}
+
+sub addDiffbind {
+  my ( $config, $def, $tasks, $target_dir, $task_name, $bam_ref, $peaks_ref ) = @_;
+
+  $config->{$task_name} = {
+    class                   => "Comparison::DiffBind",
+    perform                 => 1,
+    target_dir              => "${target_dir}/" . getNextFolderIndex($def) . "${task_name}",
+    option                  => "",
+    source_ref              => $bam_ref,
+    groups                  => getValue($def, "treatments"),
+    controls                => $def->{"controls"},
+    design_table            => getValue($def, "design_table"),
+    peaks_ref               => $peaks_ref,
+    peak_software           => "bed",
+    homer_annotation_genome => $def->{homer_annotation_genome},
+    can_result_be_empty_file => 1,
+    sh_direct               => 0,
+    pbs                     => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "72",
+      "mem"      => "40gb"
+    },
+  };
+  push @$tasks, $task_name;
 }
 
 sub addHomerAnnotation {
