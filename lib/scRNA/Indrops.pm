@@ -98,17 +98,17 @@ parameters :
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
     print $pbs "  
-echo python $indrops_script ${sample_name}.yaml filter -l $sample_name
-python $indrops_script ${sample_name}.yaml filter -l $sample_name
+echo python3 $indrops_script ${sample_name}.yaml filter -l $sample_name
+python3 $indrops_script ${sample_name}.yaml filter -l $sample_name
 
-echo python $indrops_script ${sample_name}.yaml identify_abundant_barcodes -l $sample_name
-python $indrops_script ${sample_name}.yaml identify_abundant_barcodes -l $sample_name
+echo python3 $indrops_script ${sample_name}.yaml identify_abundant_barcodes -l $sample_name
+python3 $indrops_script ${sample_name}.yaml identify_abundant_barcodes -l $sample_name
 
-echo python $indrops_script ${sample_name}.yaml sort -l $sample_name
-python $indrops_script ${sample_name}.yaml sort -l $sample_name
+echo python3 $indrops_script ${sample_name}.yaml sort -l $sample_name
+python3 $indrops_script ${sample_name}.yaml sort -l $sample_name
 
-echo python $indrops_script ${sample_name}.yaml quantify -l $sample_name
-python $indrops_script ${sample_name}.yaml quantify -l $sample_name
+echo python3 $indrops_script ${sample_name}.yaml quantify -l $sample_name
+python3 $indrops_script ${sample_name}.yaml quantify -l $sample_name
 ";
     $self->close_pbs( $pbs, $pbs_file );
   }

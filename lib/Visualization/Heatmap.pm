@@ -73,7 +73,7 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $finalFile );
     print $pbs "if [ ! -s $lastGff ]; then
-  python $python_script --bamliquidator $bamliquidator -i $curBedFile -d $bamListFile -o $outputPrefix -w $window -e $extension
+  python3 $python_script --bamliquidator $bamliquidator -i $curBedFile -d $bamListFile -o $outputPrefix -w $window -e $extension
 fi
 
 if [ -s $lastGff ]; then

@@ -62,7 +62,7 @@ sub perform {
   #      my @sample_files = @{ $vcfFiles{$sample_name} };
   #      my $vcfFile      = $sample_files[0];
   #      my $mutectFile = $sample_name . "_mutect.vcf";
-  #      print $pbs "python $py_script -i $vcfFile -o $mutectFile \n";
+  #      print $pbs "python3 $py_script -i $vcfFile -o $mutectFile \n";
   #      $vcfFiles{$sample_name} = [$mutectFile];
   #    }
   #  }

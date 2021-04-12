@@ -70,7 +70,7 @@ task active_gene {
   Int? disk_space_gb
 
   command {
-    python ${pyScript} -g ${genome} -i ${sub_peaks_file} -o ${sample_name}
+    python3 ${pyScript} -g ${genome} -i ${sub_peaks_file} -o ${sample_name}
   }
   runtime {
     memory: select_first([machine_mem_gb, 10]) + " GB"

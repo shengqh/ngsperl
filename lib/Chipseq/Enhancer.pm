@@ -83,7 +83,7 @@ fi
     my $final_file = "${fileName}/${fileName}_GENE_TABLE.txt";
 
     print $pbs "if [ ! -s $final_file ]; then
-  python $pipeline_dir/enhancerPromoter.py $option -b $bamFile -i ${result_dir}/$peakFile -g $genome -o . --name $fileName --genomeDirectory $genomeDirectory --gseaPath $gseaPath --gmxPath $gmxPath --cpgPath $cpgPath
+  python3 $pipeline_dir/enhancerPromoter.py $option -b $bamFile -i ${result_dir}/$peakFile -g $genome -o . --name $fileName --genomeDirectory $genomeDirectory --gseaPath $gseaPath --gmxPath $gmxPath --cpgPath $cpgPath
 fi
 
 ";

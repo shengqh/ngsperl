@@ -80,7 +80,7 @@ sub perform {
           my $finalFile = $key . ".inp";
 
           print $pbs "
-python $py_script -i $template -o $finalFile $defOption --name $key --method $methodFile --dsa $dsaFile --start \"$start\" --end \"$end\" 
+python3 $py_script -i $template -o $finalFile $defOption --name $key --method $methodFile --dsa $dsaFile --start \"$start\" --end \"$end\" 
 ";
         }
       }
@@ -97,14 +97,14 @@ python $py_script -i $template -o $finalFile $defOption --name $key --method $me
           my $finalFile = $key . ".inp";
 
           print $pbs "
-python $py_script -i $template -o $finalFile $defOption --name $key --method $methodFile --mortality $mFile --startTime \"$start\" --endTime \"$end\" 
+python3 $py_script -i $template -o $finalFile $defOption --name $key --method $methodFile --mortality $mFile --startTime \"$start\" --endTime \"$end\" 
 ";
         }
       }
       else {
         my $finalFile = $timeName . "_" . $methodName . ".inp";
         print $pbs "
-python $py_script -i $template -o $finalFile $defOption --name ${timeName}_${methodName} --method $methodFile --startTime \"$start\" --endTime \"$end\"
+python3 $py_script -i $template -o $finalFile $defOption --name ${timeName}_${methodName} --method $methodFile --startTime \"$start\" --endTime \"$end\"
 ";
       }
     }

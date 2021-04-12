@@ -72,7 +72,7 @@ sub perform {
     my $matrixeqtl_file    = $matrixEQTL_files->{$sampleName}[0];
     my $snpbim_file    = $snpbim_files->{$sampleName}[0];
 
-    print $pbs "python $script -i $matrixeqtl_file -b $snpbim_file -g $gtex_file -o $final_file\n";
+    print $pbs "python3 $script -i $matrixeqtl_file -b $snpbim_file -g $gtex_file -o $final_file\n";
     $self->close_pbs( $pbs, $pbs_file );
   }
 

@@ -72,7 +72,7 @@ sub perform {
   print $pbs "
 if [[ ! -s $rd_file ]]; then
   xhmm --mergeGATKdepths -o $rd_file $inputOption
-  python $c2r_script $rd_file $rd_c2r_file
+  python3 $c2r_script $rd_file $rd_c2r_file
 fi
 
 if [[ ! -s $rd_centered_file ]]; then
@@ -111,7 +111,7 @@ if [[ ! -s $rd_filtered_file ]]; then
     --excludeSamples $rd_centered_filtered_samples_file \\
     --excludeSamples $rd_centered_pca_normalized_zscore_filtered_samples_file \\
     -o $rd_filtered_file
-  python $c2r_script $rd_filtered_file $rd_filtered_c2r_file
+  python3 $c2r_script $rd_filtered_file $rd_filtered_c2r_file
 fi
   
 if [[ ! -s $rd_xcnv_file ]]; then

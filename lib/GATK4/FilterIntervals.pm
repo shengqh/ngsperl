@@ -104,7 +104,7 @@ gatk --java-options \"$java_option\" FilterIntervals $option \\
   --interval-merging-rule OVERLAPPING_ONLY $parameters \\
   --output $final_file_tmp
 
-python $script -i $final_file_tmp -o $final_file
+python3 $script -i $final_file_tmp -o $final_file
 
 #rm $final_file_tmp
 ";

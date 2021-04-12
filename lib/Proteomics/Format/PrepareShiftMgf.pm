@@ -64,7 +64,7 @@ sub perform {
       my $result_file    = $result_prefix . ".optimal.mgf";
 
       print $pbs "if [ ! -s $result_file ]; then
-  python $python_script -i $sampleFile -o $result_prefix -d $shift_dalton -p $shift_software -c $shift_option_file
+  python3 $python_script -i $sampleFile -o $result_prefix -d $shift_dalton -p $shift_software -c $shift_option_file
 fi
 ";
     }

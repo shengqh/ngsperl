@@ -48,7 +48,7 @@ sub perform {
     for my $bed_file (@bed_files) {
       my $finalFile = $bed_file . ".overlap.tsv";
       print $pbs " 
-python $script $option -i $bed_file -o $finalFile -g $gene_sorted_bed
+python3 $script $option -i $bed_file -o $finalFile -g $gene_sorted_bed
 ";
     }
   }

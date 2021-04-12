@@ -137,7 +137,7 @@ fi
     print $pbs "
 if [ -s $unsorted ]; then
   echo bamStat=`date` 
-  python $py_script -i $unsorted -o $bam_stat
+  python3 $py_script -i $unsorted -o $bam_stat
 fi
 ";
 

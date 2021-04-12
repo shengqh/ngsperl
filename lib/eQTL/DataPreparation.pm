@@ -121,7 +121,7 @@ fi
 
 if [ ! -s ${common_prefix}_filtered.tsv ]; then
   echo convering ${common_prefix}_filtered.traw to ${common_prefix}_filtered.tsv
-  python $format_snp_data_script -i ${common_prefix}_filtered.traw -o ${common_prefix}_filtered.tsv
+  python3 $format_snp_data_script -i ${common_prefix}_filtered.traw -o ${common_prefix}_filtered.tsv
 fi
 
 cd ..
