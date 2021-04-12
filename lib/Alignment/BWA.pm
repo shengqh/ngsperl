@@ -212,7 +212,7 @@ if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; th
   samtools sort -m $sort_memory $samtools_sort_thread -T $sample_name -o $sorted_bam_file $unsorted_bam_file
 fi
 
-if [[ (-s $sorted_bam_file) && && ((1 -eq \$1) || (! -s ${sorted_bam_file}.bai)) ]]; then
+if [[ (-s $sorted_bam_file) && ((1 -eq \$1) || (! -s ${sorted_bam_file}.bai)) ]]; then
   echo index_bam=`date`
   samtools index $samtools_index_thread $sorted_bam_file 
 fi
