@@ -507,6 +507,21 @@ sub getScRNASeqConfig {
         $r_script = "../scRNA/split_samples.r";
         $folder = "hto_samples_HTODemux";
       }
+
+      my $files = $def->{files};
+      my $hto_file_names = $def->{hto_file_names};
+      my $hto_file_ref = "files";
+      if(defined $hto_file_names){
+        my $hto_files = {};
+        for my $hto_name (@$hto_file_names){
+          $hto_files->{$hto_name} = $files->{$hto_name};
+        }
+        $config->{hto_files} = $hto_files;
+        $hto_file_ref = "hto_files";
+        #print("hto_files=" . Dumper($hto_files));
+      }
+      #print("hto_file_ref=" . $hto_file_ref . "\n");
+
       $config->{"hto_samples"} = {
         class => "CQS::ProgramWrapperOneToOne",
         target_dir => "${target_dir}/$folder",
@@ -515,7 +530,7 @@ sub getScRNASeqConfig {
         check_program => 1,
         option => "--args __FILE__ __OUTPUT__ " . getValue($def, "hto_regex", ""),
         source_arg => "",
-        source_ref => [ "files" ],
+        source_ref => $hto_file_ref,
         output_arg => "",
         output_file_prefix => ".HTO",
         output_file_ext => ".HTO.csv",
