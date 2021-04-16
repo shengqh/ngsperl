@@ -173,6 +173,25 @@ sub getConfig {
   push @$individual, "bwa_cleanbam";
   addBamStat( $config, $def, $summary, "bwa_cleanbam_stat", $target_dir . "/bwa_cleanbam_summary", [ "bwa_cleanbam", ".stat\$" ] );
 
+  my $bam_ref = ["bwa_cleanbam", ".bam\$"];
+  if($def->{perform_bamsnap} && $def->{"bamsnap_locus"}){
+    addBamsnapLocus($config, $def, $summary, $target_dir, "bamsnap_locus", $bam_ref);
+  }
+
+  if(defined $def->{annotation_locus} or defined $def->{annotation_genes}){
+    my $sizeFactorTask = "size_factor";
+    addSizeFactor($config, $def, $summary, $target_dir, $sizeFactorTask, $bam_ref);
+
+    if(defined $def->{annotation_locus}){
+      addAnnotationLocus($config, $def, $summary, $target_dir, "annotation_locus_plot", $sizeFactorTask, $bam_ref);
+    }
+
+    if(defined $def->{annotation_genes}){
+      addAnnotationGenes($config, $def, $summary, $target_dir, "annotation_genes_plot", $sizeFactorTask, $bam_ref);
+    }
+  }
+
+
   #  if ( defined $config->{fastqc_count_vis} ) {
   #    my $files = $config->{fastqc_count_vis}{parameterFile1_ref};
   #    if ( defined $config->{fastqc_count_vis}{parameterFile2_ref} ) {
@@ -322,6 +341,9 @@ sub getConfig {
       if ($perform_diffbind) {
         my $bindName = $callName . "_diffbind";
         addDiffbind($config, $def, $summary, $target_dir, $bindName, "bwa_cleanbam", [ $callName, $callFilePattern ]);
+        if ( getValue( $def, "perform_homer" ) ) {
+          addHomerAnnotation( $config, $def, $summary, $target_dir, $bindName, ".sig.bed" );
+        }
       }
 
       if ( getValue( $def, "perform_homer_motifs" ) ) {
