@@ -78,7 +78,7 @@ sub perform {
   my $featureCountOption = get_option( $config, $section, "featureCount_option", "" );
   my $ispaired = get_is_paired_end_option( $config, $section );
   if ($ispaired) {
-    $featureCountOption = $featureCountOption . " -p";
+    $featureCountOption = $featureCountOption . " -p --countReadPairs";
   }
 
   if ( $featureCountOption !~ /-g/ ) {
