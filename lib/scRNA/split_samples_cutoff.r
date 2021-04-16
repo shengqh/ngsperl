@@ -168,6 +168,7 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   pbmc.hashtag[["HTO"]] <- CreateAssayObject(counts = htos)
   # Normalize HTO data, here we use centered log-ratio (CLR) transformation
   pbmc.hashtag <- NormalizeData(pbmc.hashtag, assay = "HTO", normalization.method = "CLR")
+  DefaultAssay(object = pbmc.hashtag) <- "HTO"
   
   #Idents(pbmc.hashtag) <- "HTO_classification"
   tagnames=rownames(pbmc.hashtag[["HTO"]])
@@ -245,11 +246,11 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
 args = commandArgs(trailingOnly=TRUE)
 
 if (length(args) == 0) {
-  h5file = "/data/cqs/paula_hurley_data/202011_scRNA/Count/4701-HYW-1/filtered_feature_bc_matrix.h5"
-  output_prefix = "/scratch/cqs/paula_hurley_projects/20201208_scRNA_split/split_samples/pbs/HYW_4701.HTO"
+  h5file = "/data/cqs/alexander_gelbard_data/AG_3855_LTS_samples/Count/3855-AG-4/filtered_feature_bc_matrix.h5"
+  output_prefix = "/scratch/cqs/shengq2/alexander_gelbard_projects/20210414_3855_LTS/hto_samples_cutoff/result/LTS4/LTS4.HTO"
+  hashtag_regex="TotalSeqC_Hash"
   #h5file = "C:/Users/sheng/projects/paula_hurley/20201208_scRNA_split/filtered_feature_bc_matrix.h5"
   #output_prefix = "C:/Users/sheng/projects/paula_hurley/20201208_scRNA_split/split_samples/HYW_4701.HTO"
-  hashtag_regex = NA
 }else{
   h5file = args[1]
   output_prefix = args[2]
