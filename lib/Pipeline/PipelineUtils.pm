@@ -76,7 +76,12 @@ our %EXPORT_TAGS = (
     addFilesFromSraRunTable
     addWebgestalt
     addBamsnap
-    addPlotGene)
+    addBamsnapLocus
+    addPlotGene
+    addSizeFactor
+    addAnnotationLocus
+    addAnnotationGenes
+    )
   ]
 );
 
@@ -2271,7 +2276,7 @@ sub addBamsnap {
     perform               => 1,
     target_dir            => "$target_dir/$task_name",
     docker_prefix         => "bamsnap_",
-    option                => "",
+    option                => $def->{bamsnap_option},
     interpretor           => "python3",
     check_program         => 1,
     program               => "../Visualization/bamsnap.py",
@@ -2291,6 +2296,43 @@ sub addBamsnap {
       "nodes"     => "1:ppn=1",
       "walltime"  => "2",
       "mem"       => "10gb"
+    },
+  };
+  push( @$tasks, $task_name );
+}
+
+sub addBamsnapLocus {
+  my ($config, $def, $tasks, $target_dir, $task_name, $bam_ref) = @_;
+  $config->{$task_name} = {
+    class                 => "CQS::ProgramWrapperOneToOne",
+    perform               => 1,
+    target_dir            => "$target_dir/$task_name",
+    docker_prefix         => "bamsnap_",
+    #init_command          => "ln -s __FILE__ __NAME__.bam",
+    option                => "-draw coordinates bamplot gene -bamplot coverage -width 2000 -height 3000 -out __NAME__.png",
+    interpretor           => "",
+    check_program         => 0,
+    program               => "bamsnap",
+    source                => getValue($def, "bamsnap_locus"),
+    source_arg            => "-pos",
+    parameterSampleFile2_ref => $bam_ref,
+    parameterSampleFile2_arg => "-bam",
+    parameterSampleFile2_type => "array",
+    parameterSampleFile2_join_delimiter => " ",
+    parameterSampleFile2_name_arg => "-title",
+    parameterSampleFile2_name_join_delimiter => '" "',
+    parameterSampleFile2_name_has_comma => 1,
+    output_to_same_folder => 1,
+    output_arg            => "-out",
+    output_to_folder      => 1,
+    output_file_prefix    => "",
+    output_file_ext       => ".png",
+    output_other_ext      => "",
+    sh_direct             => 1,
+    pbs                   => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "40gb"
     },
   };
   push( @$tasks, $task_name );
@@ -2329,6 +2371,105 @@ sub addPlotGene {
   };
 
   push( @$tasks, $task_name );
+}
+
+sub addSizeFactor {
+  my ($config, $def, $tasks, $target_dir, $sizeFactorTask, $bam_ref) = @_;
+  $config->{$sizeFactorTask} = {
+    class                    => "CQS::ProgramWrapper",
+    perform                  => 1,
+    #docker_prefix            => "report_",
+    target_dir               => $target_dir . '/' . $sizeFactorTask,
+    interpretor              => "python3",
+    program                  => "../Annotation/getBackgroundCount.py",
+    parameterSampleFile1_arg => "-b",
+    parameterSampleFile1_ref => $bam_ref,
+    output_arg               => "-o",
+    output_file_ext          => ".count",
+    output_other_ext         => ".count.sizefactor",
+    sh_direct                => 1,
+    'pbs'                    => {
+      'nodes'    => '1:ppn=1',
+      'mem'      => '40gb',
+      'walltime' => '10'
+    },
+  };
+  push( @$tasks, $sizeFactorTask );
+}
+
+sub writeAnnotationLocus {
+  my ($locusList, $locusFile) = @_;
+  open(my $fh, '>', $locusFile) or die "Could not open file '$locusFile' $!";
+
+  my $locusName;
+  if(is_array($locusList)){
+    my $count = 0;
+    for my $locus (@$locusList){
+      $count = $count + 1;
+      $locus =~ s/,//g;
+
+      $locusName = $locus;
+      $locusName =~ s/:/_/g; 
+      $locusName =~ s/-/_/g; 
+
+      my @parts = split /:/, $locus;
+      my $chr = $parts[0];
+      my $positions = $parts[1];
+      my @pos = split /-/, $positions;
+      my $start = $pos[0];
+      my $end = $pos[1];
+      print $fh $chr . "\t" . $start . "\t" . $end . "\t1000\t" . $locusName . "\t+\t" . $locusName . "\n";
+    }
+    close($fh);
+  }elsif(is_hash($locusList)){
+    for $locusName (sort keys %$locusList){
+      my $locus = $locusList->{$locusName};
+      my @parts = split /:/, $locus;
+      my $chr = $parts[0];
+      my $positions = $parts[1];
+      my @pos = split /-/, $positions;
+      my $start = $pos[0];
+      my $end = $pos[1];
+      print $fh $chr . "\t" . $start . "\t" . $end . "\t1000\t" . $locusName . "\t+\t" . $locusName . "\n";
+    }
+    close($fh);
+  }else{
+    close($fh);
+    die("locus should be either array or hash");
+  }
+}
+
+sub addAnnotationLocus {
+  my ($config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, $bam_ref) = @_;
+
+  my $locusFile = $target_dir . "/annotation_locus.bed";
+  writeAnnotationLocus($def->{annotation_locus}, $locusFile);
+
+  if($def->{perform_bamsnap}){
+    my $bamsnap_task = $task_name . "_bamsnap";
+    addBamsnap($config, $def, $tasks, $target_dir, $bamsnap_task, $locusFile, $bam_ref);
+  }
+
+  addPlotGene($config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, $locusFile, $bam_ref);
+}
+
+sub addAnnotationGenes {
+  my ($config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, $bam_ref) = @_;
+
+  my $genes_str = $def->{annotation_genes};
+  my @genes = split /[;, ]+/, $genes_str;
+  my %gene_map = map { $_ => 1 } @genes;
+  $config->{annotation_genes} = \%gene_map;
+  #print(Dumper($config->{annotation_genes}));
+
+  my $geneLocus = addGeneLocus($config, $def, $tasks, $target_dir);
+
+  if($def->{perform_bamsnap}){
+    my $bamsnap_task = $task_name . "_bamsnap";
+    addBamsnap($config, $def, $tasks, $target_dir, $bamsnap_task, [$geneLocus, "bed"], $bam_ref);
+  }
+
+  addPlotGene($config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, [ $geneLocus, ".bed" ], $bam_ref);
 }
 
 1;
