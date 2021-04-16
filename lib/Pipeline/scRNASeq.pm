@@ -244,6 +244,54 @@ sub addGeneTask {
   }
 }
 
+sub addDeseq2BySampleTask {
+  my ( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype) = @_;
+  my $rCode = "pvalue=" . getValue( $def, "DE_pvalue" ) . ";useRawPvalue=" . getValue( $def, "DE_use_raw_pvalue" ) . ";foldChange=" . getValue( $def, "DE_fold_change" );
+
+  #die "Found";
+
+  my $prefix  = $cluster_task_name;
+  my $curClusterName = undef;
+  my $curClusterDisplayName = undef;
+  if ($DE_by_celltype) {
+    $curClusterName = $celltype_name;
+    $prefix  = $prefix . "_inCelltype";
+  }
+  else {
+    $curClusterName = $cluster_name;
+    $prefix  = $prefix . "_inCluster";
+  }
+
+  $rCode         = $rCode . ";DE_by_cell=0;filter_minTPM=" . getValue( $def, "DE_by_sample_filter_minTPM" ) . ";filter_samplePercentage=" . getValue( $def, "DE_by_sample_filter_cellPercentage" );
+  $prefix = $prefix . "_bySample";
+
+  $rCode  = $rCode . ";bBetweenCluster=0";
+  my $groups = getValue( $def, "groups" );
+  my $pairs  = getValue( $def, "pairs" );
+  $rCode = $rCode . ";cluster_name='" . $curClusterName . "'";
+
+  my $deseq2table_taskname=$prefix . "_table";
+  $config->{$deseq2table_taskname} = {
+    class                => "CQS::UniqueR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $deseq2table_taskname,
+    rtemplate            => "../scRNA/deseq2table.r",
+    parameterFile1_ref   => [ $seurat_name, ".final.rds" ],
+    parameterFile2_ref   => [ $cluster_task_name, $cluster_file ],
+    parameterSampleFile1 => $groups,
+    parameterSampleFile2 => $pairs,
+    output_file_ext      => ".deseq2.define.txt",
+    rCode                => $rCode,
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$summary, $deseq2table_taskname );
+}
+
 sub addEdgeRTask {
   my ( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell ) = @_;
   my $rCode = "pvalue=" . getValue( $def, "DE_pvalue" ) . ";useRawPvalue=" . getValue( $def, "DE_use_raw_pvalue" ) . ";foldChange=" . getValue( $def, "DE_fold_change" );
@@ -481,6 +529,8 @@ sub getScRNASeqConfig {
   my $star_option     = $def->{star_option};
   my $count_table_ref = "files";
 
+  $config->{bam_files} = $def->{bam_files};
+
   my $perform_split_hto_samples = getValue($def, "perform_split_hto_samples", 0);
   my $has_vdj_json_files = defined $def->{vdj_json_files};
 
@@ -637,6 +687,10 @@ sub getScRNASeqConfig {
         addEnclone($config, $def, $summary, "hto_clonotype_3_enclone", $target_dir, ["hto_clonotype_2_merge", ".json\$"] );
         $clonotype_4_convert = addEncloneToClonotype($config, $def, $summary, $target_dir, "hto_clonotype_4_convert", "hto_clonotype_3_enclone", ["hto_clonotype_2_merge", ".cdr3\$"]);
       }
+    }else{
+      if(defined $def->{bam_files}){
+        addArcasHLA($config, $def, $individual, $target_dir, $task_name, "", "bam_files");        
+      }
     }
 
     if ( getValue( $def, "perform_scRNABatchQC" ) ) {
@@ -770,13 +824,14 @@ sub getScRNASeqConfig {
       }
 
       if ( getValue( $def, "perform_recluster" ) ) {
-        my $recluster_name = $seurat_name . "_recluster";
+        my $recluster_name = $cluster_task_name . "_recluster";
         $config->{$recluster_name} = {
           class                => "CQS::UniqueR",
           perform              => 1,
           target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $recluster_name,
-          rtemplate            => "../scRNA/scRNArecluster.r",
+          rtemplate            => "../scRNA/scRNA_func.r;../scRNA/scRNArecluster.r",
           parameterFile1_ref   => [ $seurat_name, ".final.rds" ],
+          parameterFile2_ref => [ $cluster_task_name, $cluster_file ],
           parameterSampleFile2 => {
             recluster_celltypes => getValue( $def, "recluster_celltypes" ),
             Mtpattern           => getValue( $def, "Mtpattern" ),
@@ -789,6 +844,8 @@ sub getScRNASeqConfig {
             by_integration      => getValue( $def, "by_integration" ),
             by_sctransform      => getValue( $def, "by_sctransform" ),
             prefix              => $task_name,
+            celltype_name     => $celltype_name,
+            cluster_name      => $cluster_name
           },
           output_file_ext => ".recluster.rds",
           sh_direct       => 1,
@@ -797,7 +854,7 @@ sub getScRNASeqConfig {
             "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
-            "mem"       => "10gb"
+            "mem"       => "40gb"
           },
         };
         push( @$summary, $recluster_name );
@@ -916,6 +973,10 @@ sub getScRNASeqConfig {
         push( @$summary, $tcellTaskname );
       }
 
+      my $perform_comparison = getValue( $def, "perform_comparison", 0 ) | getValue( $def, "perform_edgeR" );
+      my $DE_by_sample = getValue( $def, "DE_by_sample" );
+      my $DE_by_cell = getValue( $def, "DE_by_cell" );
+
       my @deByOptions = ();
       if ( getValue( $def, "DE_by_celltype" ) ) {
         push( @deByOptions, "DE_by_celltype" );
@@ -924,27 +985,24 @@ sub getScRNASeqConfig {
         push( @deByOptions, "DE_by_cluster" );
       }
 
-      my @deByOptions2 = ();
-      if ( getValue( $def, "DE_by_cell" ) ) {
-        push( @deByOptions2, "DE_by_cell" );
-      }
-      if ( getValue( $def, "DE_by_sample" ) ) {
-        push( @deByOptions2, "DE_by_sample" );
+      print("Perform_comparison=" . $perform_comparison , "\n");
+      print("DE_by_sample=" . $DE_by_sample , "\n");
+      
+      if ( $perform_comparison & $DE_by_sample ) {
+        for my $deByOption (@deByOptions) {
+          my $DE_by_celltype = $deByOption eq "DE_by_celltype";
+          addDeseq2BySampleTask( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, 0 );
+        }
       }
 
-      if ( getValue( $def, "perform_edgeR" ) ) {
+      if ( $perform_comparison & $DE_by_cell ) {
         if ( defined $def->{"DE_cluster_pairs"} ) {
           addEdgeRTask( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name, 1, 0, 0 );
         }
 
         for my $deByOption (@deByOptions) {
           my $DE_by_celltype = $deByOption eq "DE_by_celltype";
-
-          for my $deByOption2 (@deByOptions2) {
-            my $DE_by_cell = $deByOption2 eq "DE_by_cell";
-
-            addEdgeRTask( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell );
-          }
+          addEdgeRTask( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, 1 );
         }
       }
     }
