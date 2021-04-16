@@ -87,7 +87,7 @@ sub perform {
   if ($paired_end){
     $sourceBamFiles = {};
     for my $bamName (keys %$bamfiles){
-      $sourceBamFiles->{$bamName} = [$result_dir . "/" . $bamName . ".filtered.bam"];
+      $sourceBamFiles->{$bamName} = [$result_dir . "/" . $bamName . ".firstread.bam"];
     } 
   }
 
