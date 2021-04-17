@@ -1825,7 +1825,8 @@ sub addGeneLocus {
         add_chr => getValue($def, "annotation_genes_add_chr", 0)
       },
       rCode      =>"",
-      output_file_ext => ".shift" . getValue( $def, "annotation_genes_shift", 0) . ".bed",
+      output_file => ".shift" . getValue( $def, "annotation_genes_shift", 0),
+      output_file_ext => ".bed",
       sh_direct       => 1,
       'pbs'           => {
         'nodes'    => '1:ppn=1',
