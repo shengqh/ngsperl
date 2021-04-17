@@ -78,7 +78,7 @@ sub perform {
   my $featureCountOption = get_option( $config, $section, "featureCount_option", "" );
   my $ispaired = get_is_paired_end_option( $config, $section );
   if ($ispaired) {
-    $featureCountOption = $featureCountOption . " -p";
+    $featureCountOption = $featureCountOption . " -p --countReadPairs";
   }
 
   if ( $featureCountOption !~ /-g/ ) {
@@ -137,7 +137,7 @@ fi
     print $pbs "
 if [ -s $unsorted ]; then
   echo bamStat=`date` 
-  python $py_script -i $unsorted -o $bam_stat
+  python3 $py_script -i $unsorted -o $bam_stat
 fi
 ";
 

@@ -566,6 +566,7 @@ sub getConfig {
         peaks_ref               => [ $peakCallerTask, ".bed\$" ],
         peak_software           => "bed",
         homer_annotation_genome => $def->{homer_annotation_genome},
+        can_result_be_empty_file => 1,
         sh_direct               => 0,
         pbs                     => {
           "email"    => $email,

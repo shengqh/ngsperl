@@ -108,7 +108,7 @@ R --vanilla -f $cbioportal_script --args $inputFile $prefix $sampleNamePattern $
       my $geneFile = change_extension( $filename, "${sampleNameSuffix}.geneDetails.txt" );
       my $genes    = join( ",", split( "\\s+", $detailGeneNames ) );
       print $pbs " 
-python $gene_script -i $inputFile -o $geneFile -g $genes
+python3 $gene_script -i $inputFile -o $geneFile -g $genes
 ";
     }
     for my $inputFile (@detailFiles) {
@@ -116,7 +116,7 @@ python $gene_script -i $inputFile -o $geneFile -g $genes
       my $geneFile = change_extension( $filename, "${sampleNameSuffix}.geneFilter.txt" );
       my $genes    = join( ",", split( "\\s+", $detailGeneNames ) );
       print $pbs " 
-python $gene_filter_script -i $inputFile -o $geneFile -g $genes
+python3 $gene_filter_script -i $inputFile -o $geneFile -g $genes
 ";
     }
   }

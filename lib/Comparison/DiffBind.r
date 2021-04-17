@@ -78,7 +78,6 @@ for (idx in c(1:nrow(comparisons))){
 #  mb2<-dba.contrast(mb1,group1=group1, group2=group2, name1=group1name, name2=group2name, categories=c(DBA_CONDITION), minMembers=2)
   mb2<-dba.contrast(mb1,group1=group1, group2=group2, name1=group1name, name2=group2name)
 
- # mb2<-dba.analyze(mb2, bSubControl=FALSE, bFullLibrarySize=TRUE, bTagwise=FALSE, bCorPlot=FALSE)
  #all normalizing parameters in dba.normalize
   mb2<-dba.analyze(mb2)
 #  res<-dba.report(mb2,bCounts=TRUE,th=1)

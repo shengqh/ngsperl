@@ -1131,11 +1131,34 @@ sub save_parameter_sample_file {
 
     open( my $list, '>', $outputFile ) or die "Cannot create $outputFile";
     foreach my $sample_name (@orderedSampleNames) {
-      foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
+      my $subSampleFiles = $temp{$sample_name};
+      my $refstr         = ref($subSampleFiles);
+      if ( $refstr eq 'HASH' ) {
+        foreach my $groupName ( sort keys %$subSampleFiles ) {
+          my $groupSampleNames = $subSampleFiles->{$groupName};
+          for my $groupSampleName (@$groupSampleNames) {
+            if ($fileOnly){
+              print $list $groupSampleName . "\n";
+            }else{
+              print $list "${groupSampleName}\t${groupName}\t${sample_name}\n";
+            }
+          }
+        }
+      }
+      elsif ( $refstr eq 'ARRAY' ) {
+        foreach my $subSampleFile (@$subSampleFiles) {
+          if ($fileOnly){
+            print $list $subSampleFile . "\n";
+          }else{
+            print $list $subSampleFile . "\t$sample_name\n";
+          }
+        }
+      }
+      else {
         if ($fileOnly){
-          print $list $subSampleFile . "\n";
+          print $list $subSampleFiles . "\n";
         }else{
-          print $list $subSampleFile . "\t$sample_name\n";
+          print $list $subSampleFiles . "\t$sample_name\n";
         }
       }
     }
@@ -2011,6 +2034,7 @@ sub process_parameter_sample_file {
     }
   }else{
     my $list_file = save_parameter_sample_file( $config, $section, $source_key, "${result_dir}/${task_name}_${task_suffix}_fileList${index}.list" );
+
     if($list_file ne ""){
       $input = basename($list_file);
     }

@@ -35,11 +35,6 @@ sub perform {
   my $interestGeneType = get_option( $config, $section, "interestGeneType", "genesymbol" );
   my $referenceSet     = get_option( $config, $section, "referenceSet", "genome" );
 
-  my $script = dirname(__FILE__) . "/WebGestaltR.r";
-  if ( !-e $script ) {
-    die "File not found : " . $script;
-  }
-
   my $script1 = dirname(__FILE__) . "/WebGestaltReportFunctions.r";
   my $script2 = dirname(__FILE__) . "/WebGestaltR.r";
   if ( (!-e $script1) | (!-e $script2) ) {

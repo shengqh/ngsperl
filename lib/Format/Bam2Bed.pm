@@ -75,7 +75,7 @@ sub perform {
     print $pbs "
 if [ ! -s $bed_file ]; then
   echo bamtobed=`date` 
-  python $python_bam2bed $option -i $bam_file -o $bed_file 
+  python3 $python_bam2bed $option -i $bam_file -o $bed_file 
 fi
 ";
     if ( defined $blacklistfile ) {

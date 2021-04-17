@@ -4,7 +4,15 @@ import logging
 import os
 import subprocess
 
-def bamsnap(logger, bed_file, bam_list_file, output_file):
+def bamsnap(logger, bed_file, bam_list_file, output_file, bamsnap_option_file, no_gene_track):
+  bamsnap_option = ""
+  with open(bamsnap_option_file, "r") as fin:
+    for line in fin:
+      parts = line.rstrip().split('\t')
+      if parts[0] != '':
+        bamsnap_option = bamsnap_option + " " + parts[1] + " " + parts[0]
+  logger.info("bamsnap_option=" + bamsnap_option)
+
   gene_locus_map = {}
   with open(bed_file, "r") as ins:
     for line in ins:
@@ -25,12 +33,14 @@ def bamsnap(logger, bed_file, bam_list_file, output_file):
 
   height = max(len(bam_names) * 300 + 1100, 2000)
 
+  gene_option = "" if no_gene_track else "gene "
+
   gene_file_map={}
   for gene in sorted(gene_locus_map.keys()):
     locus = gene_locus_map[gene]
     logger.info("Drawing " + gene + " " + locus + " ...")
     pngfile = gene + ".png"
-    snapCommand = "bamsnap -draw coordinates bamplot gene -bamplot coverage -width 1000 -height %d -pos %s -out %s %s %s" % (height, locus, pngfile, bam_name_str, bam_file_str)
+    snapCommand = "bamsnap %s -draw coordinates bamplot %s -bamplot coverage -width 1000 -height %d -pos %s -out %s %s %s" % (bamsnap_option, gene_option, height, locus, pngfile, bam_name_str, bam_file_str)
     print(snapCommand)
     subprocess.run(snapCommand, check=True, shell=True)
     gene_file_map[gene] = pngfile
@@ -49,20 +59,24 @@ def main():
   NOT_DEBUG = not DEBUG
   
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input bed file', required=NOT_DEBUG)
-  parser.add_argument('-o', '--output', action='store', nargs='?', help="Output list file", required=NOT_DEBUG)
   parser.add_argument('-b', '--bam', action='store', nargs='?', help="Bam list file", required=NOT_DEBUG)
+  parser.add_argument('-c', '--bamsnap_option_file', action='store', nargs='?', help="bamsnap option file")
+  parser.add_argument('--no_gene_track', action='store_true', help="No gene track")
+  parser.add_argument('-o', '--output', action='store', nargs='?', help="Output list file", required=NOT_DEBUG)
   
   args = parser.parse_args()
   
   if DEBUG:
-    args.input="/scratch/jbrown_lab/shengq2/projects/20210321_cutrun_6048_human/annotation_genes_locus/result/cutrun_6048.bed"
-    args.bam="/scratch/jbrown_lab/shengq2/projects/20210321_cutrun_6048_human/annotation_genes_bamsnap/result/cutrun_6048__fileList1.list"
-    args.output="/scratch/jbrown_lab/shengq2/projects/20210321_cutrun_6048_human/annotation_genes_bamsnap/result/cutrun_6048.csv"
+    args.input="/scratch/jbrown_lab/shengq2/projects/20210413_cutrun_6133_human/annotation_genes_locus/result/cutrun_6133.shift10000.bed"
+    args.bam="/scratch/jbrown_lab/shengq2/projects/20210413_cutrun_6133_human/annotation_genes_bamsnap/result/cutrun_6133__fileList1.list"
+    args.bamsnap_option_file="/scratch/jbrown_lab/shengq2/projects/20210413_cutrun_6133_human/annotation_genes_bamsnap/result/cutrun_6133__fileList2.list"
+    args.no_gene_track=False
+    args.output="/scratch/jbrown_lab/shengq2/projects/20210413_cutrun_6133_human/annotation_genes_bamsnap/result/cutrun_6133.txt"
   
   logger = logging.getLogger('bamsnap')
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
   
-  bamsnap(logger, args.input, args.bam, args.output)
+  bamsnap(logger, args.input, args.bam, args.output, args.bamsnap_option_file, args.no_gene_track)
   
 if __name__ == "__main__":
     main()

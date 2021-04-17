@@ -67,7 +67,7 @@ sub perform {
   print $pbs "
 #qcimg2pdf.sh -o $task_name
 
-python $python_script -i $fastqc_file_list -o ${task_name}.FastQC
+python3 $python_script -i $fastqc_file_list -o ${task_name}.FastQC
 
 R --vanilla -f $r_script --args ${task_name}.FastQC $rmdfile
 ";

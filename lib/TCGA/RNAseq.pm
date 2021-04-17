@@ -98,7 +98,7 @@ echo 2. Format fastq 2 for Mapsplice
 $sample2command
 
 echo 3. Mapsplice
-python $mapsplicebin/mapsplice_multi_thread.py --fusion --all-chromosomes-files ${tcgabin}/hg19_M_rCRS/hg19_M_rCRS.fa --pairend -X 8 -Q fq --chromosome-files-dir ${tcgabin}/hg19_M_rCRS/chromosomes --Bowtieidx ${tcgabin}/hg19_M_rCRS/ebwt/humanchridx_M_rCRS -1 working/prep_1.fastq -2 working/prep_2.fastq -o . 
+python3 $mapsplicebin/mapsplice_multi_thread.py --fusion --all-chromosomes-files ${tcgabin}/hg19_M_rCRS/hg19_M_rCRS.fa --pairend -X 8 -Q fq --chromosome-files-dir ${tcgabin}/hg19_M_rCRS/chromosomes --Bowtieidx ${tcgabin}/hg19_M_rCRS/ebwt/humanchridx_M_rCRS -1 working/prep_1.fastq -2 working/prep_2.fastq -o . 
 
 echo 4. Add read groups
 java -Xmx2G -jar $picardbin/AddOrReplaceReadGroups.jar INPUT=alignments.bam OUTPUT=working/rg_alignments.bam RGSM=$sample_name RGID=$sample_name RGLB=TruSeq RGPL=illumina RGPU=$sample_name VALIDATION_STRINGENCY=SILENT TMP_DIR=./add_rg_tag_tmp

@@ -281,7 +281,7 @@ if(isCalc){
       sobj[["ADT"]] <- CreateAssayObject(counts = mat)
     }
 
-    if(has_hto) {
+    if(has_hto && fileTitle %in% names(hto_data)) {
       cell_data = hto_data[[fileTitle]]
       validobj = subset(sobj, cells=cell_data$X)
       #tagname = unique(cell_data$HTO)[1]
@@ -532,9 +532,9 @@ hasBiomarker<-!is.null(finalList$markers)
 
 samples<-unique(finalList$rawobj$orig.ident)
 if(length(samples) < 3){
-  sampleHeight=5
+  sampleHeight=4
 }else{
-  sampleHeight=min(13, ceiling(length(samples) / 3) * 5)
+  sampleHeight=min(10, ceiling(length(samples) / 3) * 4)
 }
 
 isLargeDataset=ncol(obj) > 30000
@@ -753,12 +753,12 @@ heatmap3(finalList$cta_mat, scale="none", margins=c(10,5))
 
 # Project options
 
-```{r options, echo=F}
+```{r options, echo=F, result="asis"}
 if(hasDetails){
   file.remove("Details.Rmd")
 }
 colnames(options_table)<-c("Value", "Option")
 options_table<-options_table[,c("Option", "Value")]
 options_table<-options_table[!(options_table$Option %in% c("Mtpattern", "rRNApattern")),]
-print(kable(options_table))
+print(kable(options_table) %>% kable_styling() %>% htmltools::HTML())
 ```

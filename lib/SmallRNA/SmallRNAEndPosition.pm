@@ -46,7 +46,7 @@ sub perform {
   my $log_desc = $cluster->get_log_description($log);
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-  print $pbs "python $py_script -i $file_list_file -o $final_file \n";
+  print $pbs "python3 $py_script -i $file_list_file -o $final_file \n";
   $self->close_pbs( $pbs, $pbs_file );
 }
 

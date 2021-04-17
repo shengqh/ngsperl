@@ -71,7 +71,7 @@ plink2 --bfile $qc3_hwe --mind $thres_maf --make-bed --out $qc4_mind
 plink2 --bfile $qc4_mind --set-all-var-ids \@:#\\\$r_\\\$a --make-bed --out $qc5_resetid 
 plink2 --bfile $qc5_resetid --rm-dup force-first --make-bed --out $qc6_rmdupid
 plink2 --bfile $qc6_rmdupid --missing sample-only --out $qc7_rmdupsample
-python $py_script -i ${qc7_rmdupsample}.smiss -o ${qc7_rmdupsample}.smiss.dupsample
+python3 $py_script -i ${qc7_rmdupsample}.smiss -o ${qc7_rmdupsample}.smiss.dupsample
 plink2 --bfile $qc6_rmdupid --remove ${qc7_rmdupsample}.smiss.dupsample --make-bed --out $output_file
 plink2 --bfile $output_file --export oxford --out $output_file_gen
 
