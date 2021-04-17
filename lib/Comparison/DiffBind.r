@@ -80,7 +80,7 @@ for (idx in c(1:nrow(comparisons))){
 
  # mb2<-dba.analyze(mb2, bSubControl=FALSE, bFullLibrarySize=TRUE, bTagwise=FALSE, bCorPlot=FALSE)
  #all normalizing parameters in dba.normalize
-  mb2<-dba.analyze(mb2, bSubControl=FALSE, bFullLibrarySize=TRUE, bTagwise=FALSE, bCorPlot=FALSE)
+  mb2<-dba.analyze(mb2)
 #  res<-dba.report(mb2,bCounts=TRUE,th=1)
   res<-dba.report(mb2,bCounts=TRUE,bNormalized=TRUE,th=1)
   write.table(as.data.frame(res,row.names=NULL),file=paste0(compPrefix, ".tsv"),quote=F,sep="\t",row.names=F)
