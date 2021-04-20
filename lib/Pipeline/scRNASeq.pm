@@ -517,7 +517,7 @@ sub getScRNASeqConfig {
 
   $def = initializeScRNASeqDefaultOptions($def);
 
-  my $task_name = $def->{task_name};
+  my $project_name = $def->{task_name};
 
   my $email = $def->{email};
 
@@ -658,7 +658,7 @@ sub getScRNASeqConfig {
         };
         push( @$individual, "hto_bam" );
 
-        addArcasHLA($config, $def, $individual, $target_dir, $task_name, "hto_bam", "hto_bam");        
+        addArcasHLA($config, $def, $individual, $target_dir, $project_name, "hto_bam", "hto_bam");        
       }
 
       if(defined $def->{vdj_json_files}){
@@ -704,7 +704,7 @@ sub getScRNASeqConfig {
       }
     }else{
       if(defined $def->{bam_files}){
-        addArcasHLA($config, $def, $individual, $target_dir, $task_name, "", "bam_files");        
+        addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", "bam_files");        
       }
     }
 
@@ -752,13 +752,16 @@ sub getScRNASeqConfig {
           pca_dims              => getValue( $def, "pca_dims" ),
           species               => getValue( $def, "species" ),
           markers_file          => getValue( $def, "markers_file" ),
+          annotate_tcell        => getValue( $def, "annotate_tcell", 0),
+          HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
+          tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
           details_rmd           => getValue( $def, "details_rmd" ),
           by_integration        => getValue( $def, "by_integration" ),
           by_sctransform        => getValue( $def, "by_sctransform" ),
           pool_sample           => getValue( $def, "pool_sample" ),
           batch_for_integration => getValue( $def, "batch_for_integration" ),
           hto_sample_file       => $hto_sample_file,
-          prefix                => $task_name,
+          prefix                => $project_name,
         },
         parameterSampleFile3 => $def->{"batch_for_integration_groups"},
         parameterSampleFile4 => $def->{"pool_sample_groups"},
@@ -799,7 +802,11 @@ sub getScRNASeqConfig {
       push( @$summary, $find_markers );
 
       if (getValue( $def, "perform_scMRMA" ) ) {
-        addScMRMA( $config, $def, $summary, $target_dir, $task_name, $seurat_name );
+        addScMRMA( $config, $def, $summary, $target_dir, $project_name, $seurat_name );
+      }
+
+      if (getValue( $def, "perform_CHETAH" ) ) {
+        addCHETAH( $config, $def, $summary, $target_dir, $project_name, $seurat_name . "_CHETAH", $seurat_name );
       }
 
       my $cluster_task_name = $seurat_name;
@@ -858,7 +865,7 @@ sub getScRNASeqConfig {
             markers_file        => getValue( $def, "markers_file" ),
             by_integration      => getValue( $def, "by_integration" ),
             by_sctransform      => getValue( $def, "by_sctransform" ),
-            prefix              => $task_name,
+            prefix              => $project_name,
             celltype_name     => $celltype_name,
             cluster_name      => $cluster_name
           },
