@@ -276,7 +276,7 @@ include_graphics(list.files(chipqc, pattern="PeakPCA.png", full.names=T, recursi
 
 ```{r diffbind_1, results="asis", echo=FALSE, eval=has_diffbind} 
 #if(has_diffbind){
-  cat("## 5. Differential binding affinity analysis\n<br>\n\n### 5.1 Binding sites overlaps\n<br>\n")
+  cat("## Differential binding affinity analysis\n<br>\n\n### Binding sites overlaps\n<br>\n")
 #}
 ```
 
@@ -304,7 +304,7 @@ include_graphics(list.files(paste0(diffbind, "/result"), pattern="condition.png"
 
 ```{r bindiff_2, eval=has_diffbind, results="asis", echo=FALSE} 
 if(has_diffbind){
-  cat("### 5.2 Dysregulation between conditions\n<br>\n")
+  cat("### Dysregulation between conditions\n<br>\n")
 }
 ```
 
@@ -330,7 +330,7 @@ if (has_diffbind){
 ```{r structure_link, echo=FALSE, results='asis', message=FALSE, warning=FALSE}
 structureIndex<-ifelse(has_diffbind, 6, 5)
 cat(paste0("## ", structureIndex, " Results folder structure\n"))
-#cat(paste0("## 6 Results folder structure\n"))
+#cat(paste0("## Results folder structure\n"))
 
 files_list <- list.dirs('./ChIP_seq_results', full.names=TRUE)
 
