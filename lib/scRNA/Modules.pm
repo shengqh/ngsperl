@@ -13,6 +13,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(addEnclone
   addEncloneToClonotype 
   addArcasHLA 
   addScMRMA 
+  addCHETAH
   addCellRangerCount 
   addCellRangerVdj)] );
 
@@ -237,6 +238,32 @@ sub addScMRMA {
     },
   };
   push( @$tasks, $scMRMA_name );
+}
+
+sub addCHETAH {
+  my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $seurat_name ) = @_;
+
+  $config->{$task_name} = {
+    class                => "CQS::UniqueR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . $task_name,
+    rtemplate            => "../scRNA/scMRMA.r",
+    parameterFile1_ref   => [ $seurat_name, ".final.rds" ],
+    parameterFile2   => getValue($def, "chetah_reference_file"),
+    parameterFile3   => getValue($def, "chetah_ribosomal_file"),
+    parameterSampleFile2 => {
+      species             => getValue( $def, "species" ),
+      prefix              => $project_name,
+    },
+    output_file_ext => ".CHETAH.rds",
+    sh_direct       => 1,
+    pbs             => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$tasks, $task_name );
 }
 
 sub addCellRangerCount {
