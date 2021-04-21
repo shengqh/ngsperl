@@ -67,12 +67,14 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "perform_muTect",       0 );
   initDefaultValue( $def, "perform_muTect2indel", 0 );
+  initDefaultValue( $def, "perform_muTect2",       0 );
   initDefaultValue( $def, "perform_annovar",      0 );
   initDefaultValue( $def, "perform_cnv",          1 );
   initDefaultValue( $def, "perform_vep",          0 );
   initDefaultValue( $def, "perform_IBS",          0 );
 
-  if ( $def->{perform_muTect} || $def->{perform_muTect2indel} ) {
+  if ( $def->{perform_muTect} || $def->{perform_muTect2indel} || $def->{perform_muTect2} ) {
+    initDefaultValue( $def, "perform_CrosscheckFingerprints", 1 );
     if ( defined $def->{mills} ) {
       initDefaultValue( $def, "indel_realignment", 1 );
       initDefaultValue( $def, "indel_vcf_files",   $def->{mills} );
@@ -80,6 +82,8 @@ sub initializeDefaultOptions {
     else {
       initDefaultValue( $def, "indel_realignment", 0 );
     }
+  }else{
+    initDefaultValue( $def, "perform_CrosscheckFingerprints", 0 );
   }
 
   initDefaultValue( $def, "remove_duplicate", 1 );
@@ -423,6 +427,47 @@ sub getConfig {
       },
     };
     push @$summary, ("TEQC");
+  }
+
+  if ($def->{perform_CrosscheckFingerprints}){
+      my $CrosscheckFingerprints_name = $bam_input . "_CrosscheckFingerprints";
+      my $hapmap = getValue($def, "hapmap_file");
+      $config->{$CrosscheckFingerprints_name} = {
+        class                 => "CQS::ProgramWrapper",
+        perform               => 1,
+        target_dir            => "${target_dir}/${CrosscheckFingerprints_name}",
+        option                => "
+java -Xmx40g -jar $picard_jar CrosscheckFingerprints INPUT=__FILE__ \\
+  H=$hapmap \\
+  CROSSCHECK_BY=SAMPLE \\
+  LOD_THRESHOLD=-5 \\
+  EXPECT_ALL_GROUPS_TO_MATCH=true \\
+  NUM_THREADS=8 \\
+  OUTPUT=__NAME__.crosscheck_metrics 
+
+java -Xmx40g -jar $picard_jar ClusterCrosscheckMetrics INPUT=__NAME__.crosscheck_metrics \\
+  LOD_THRESHOLD=-5 \\
+  OUTPUT=__NAME__.clustered.crosscheck_metrics
+
+",
+        interpretor           => "",
+        check_program         => 0,
+        program               => "",
+        parameterSampleFile1_arg    => "INPUT=",
+        parameterSampleFile1_ref    => $bam_ref,
+        parameterSampleFile1_fileonly    => 1,
+        output_to_same_folder => 1,
+        no_output             => 1,
+        output_arg            => "OUTPUT=",
+        output_file_ext       => ".clustered.crosscheck_metrics",
+        sh_direct             => 1,
+        pbs                   => {
+          "nodes"     => "1:ppn=8",
+          "walltime"  => "10",
+          "mem"       => "40gb"
+        },
+      };
+      push @$summary, $CrosscheckFingerprints_name;
   }
 
   if ($def->{perform_target_coverage}){
@@ -888,7 +933,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
     }
 
     if ($def->{perform_IBS}){
-      if ($def->{perform_muTect} || $def->{perform_muTect2indel} ) {
+      if ($def->{perform_muTect} || $def->{perform_muTect2indel} || $def->{perform_muTect2}) {
         my $ibs_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_IBS";
         $config->{$ibs_name} = {
           class                 => "CQS::ProgramWrapper",
