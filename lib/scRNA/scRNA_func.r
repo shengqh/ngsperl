@@ -1,3 +1,76 @@
+require(data.table)
+
+read_cell_markers_file<-function(panglao5_file, species, remove_subtype_of="", HLA_panglao5_file=""){
+  #preparing cell activity database
+  marker<-data.frame(fread(panglao5_file))
+  if(remove_subtype_of != ""){
+    remove_subtype_of<-unlist(strsplit(remove_subtype_of, ","))
+    pangdb_ct <- read.table(HLA_panglao5_file,header = T,row.names = 1,sep = "\t",stringsAsFactors = F)
+    layer="Layer2"
+    removed<-c()
+    for(layer in c("Layer1","Layer2", "Layer3")){
+      layer_ct<-unique(pangdb_ct[,layer])
+      for(rs in remove_subtype_of){
+        if(rs %in% removed){
+          next
+        }
+        
+        if(rs %in% layer_ct){
+          subdb<-rownames(pangdb_ct)[pangdb_ct[,layer]==rs]
+          if(rs %in% subdb){ 
+            subdb<-subdb[subdb != rs]
+            marker<-marker[!(marker$cell.type %in% subdb),]
+          }else{
+            marker$cell.type[marker$cell.type %in% subdb] = rs
+          }
+          removed<-c(removed, rs)
+        }
+      }
+    }
+  }
+  
+  hsind<-regexpr(species,marker$species)
+  marker_species<-marker[hsind>0 & marker$ubiquitousness.index<0.05,]
+  if (species=="Mm") {
+    ##change the gene symbol only keep the first letter capitalize
+    marker_species$official.gene.symbol<-toMouseGeneSymbol(marker_species$official.gene.symbol)
+  }
+  if (species=="Hs") {
+    marker_species$official.gene.symbol<-toupper(marker_species$official.gene.symbol)
+  }
+  cellType<-tapply(marker_species$official.gene.symbol,marker_species$cell.type,list)
+  freq<-sort((table(unlist(cellType)))/length(cellType))
+  weight<-1+sqrt((max(freq)-freq)/(max(freq)-min(freq)))
+  return(list(cellType=cellType, weight=weight))
+}
+
+toMouseGeneSymbol<-function(x){
+  result=paste0(toupper(substr(x,1,1)),tolower(substr(x,2,nchar(x))))
+  return(result)
+}
+
+read_cell_markers_file<-function(panglao5_file, species, remove_subtype_of="", HLA_panglao5_file=""){
+  #preparing cell activity database
+  marker<-data.frame(fread(panglao5_file))
+  if(remove_subtype_of != ""){
+    pangdb_ct <- read.table(HLA_panglao5_file,header = F,row.names = 1,sep = "\t",stringsAsFactors = F)
+
+  }
+
+  hsind<-regexpr(species,marker[,1])
+  marker_species<-marker[hsind>0 & marker$ubiquitousness.index<0.05,]
+  if (species=="Mm") {
+    ##change the gene symbol only keep the first letter capitalize
+    marker_species$official.gene.symbol<-toMouseGeneSymbol(marker_species$official.gene.symbol)
+  }
+  if (species=="Hs") {
+    marker_species$official.gene.symbol<-toupper(marker_species$official.gene.symbol)
+  }
+  cellType<-tapply(marker_species$official.gene.symbol,marker_species$cell.type,list)
+  freq<-sort((table(unlist(cellType)))/length(cellType))
+  weight<-1+sqrt((max(freq)-freq)/(max(freq)-min(freq)))
+  finalList$cell_activity_database<-list(cellType=cellType, weight=weight)
+}
 
 read_cell_cluster_file<-function(fileName, sort_cluster_name="seurat_clusters"){
   result<-read.csv(fileName, stringsAsFactors = F, row.names = 1)
