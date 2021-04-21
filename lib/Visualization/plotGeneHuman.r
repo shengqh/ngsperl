@@ -1,6 +1,13 @@
 library(ggplot2)
 library(data.table)
 library(dplyr)
+library(Homo.sapiens)
+library(ggbio)
+library(GenomicRanges)
+library(biovizBase)
+library(cowplot)
+
+data(genesymbol, package = "biovizBase")
 
 if(! exists("inputFile")){
   args <- commandArgs(TRUE)
@@ -9,6 +16,8 @@ if(! exists("inputFile")){
     inputFile<-"linton_exomeseq_3321.position.txt.1000"
     outputPrefix<-'linton_exomeseq_3321.position'
     sizeFactorFile<-"/scratch/cqs/shengq2/macrae_linton/20190517_linton_exomeseq_3321_human/GATK4_CNV_Germline_08_SizeFactor/result/linton_exomeseq_3321.txt.sizefactor"
+    #inputFile<-'/scratch/cqs/shengq2/vickers/20190504_smallRNA_as_chipseq_GCF_000005845.2_ASM584v2/plotPeak/result/Control.position.txt'
+    #outputPrefix<-'/scratch/cqs/shengq2/vickers/20190504_smallRNA_as_chipseq_GCF_000005845.2_ASM584v2/plotPeak/result/Control.position'
   }else{
     inputFile<-args[1]
     outputPrefix<-args[2]
@@ -39,6 +48,24 @@ for (selectedFeature in unique(rawTable$Feature)) {
   dataForPlot<-rawTable[which(rawTable$Feature==selectedFeature),]
   dataForPlot$NormalizedPositionCount<-round(dataForPlot$PositionCount * sizeFactors[dataForPlot$File])
   dataForPlot$FileName<-gsub("_", " ", dataForPlot$File)
+  
+  locus=unique(dataForPlot$Locus)
+  
+  fileNumber=length(unique(dataForPlot$FileName))
+  xlim=c(floor(min(dataForPlot$Position) / 1000) * 1000, ceiling(max(dataForPlot$Position) / 1000) * 1000)
+
+  if(selectedFeature != locus){
+    wh <- genesymbol[c(selectedFeature)]
+    wh <- range(wh, ignore.strand = FALSE)
+    g2<-autoplot(Homo.sapiens, which = wh) + 
+      xlim(xlim) + 
+      theme_classic() + 
+      theme(axis.line=element_blank(),
+            axis.title.x=element_blank(),
+            axis.text.x=element_blank(),
+            axis.ticks.x=element_blank(),
+            plot.margin = margin(0, 1, 0, 0, "cm"))
+  }
 
   hasCNV<-(("CNV" %in% colnames(dataForPlot)) & (length(unique(dataForPlot$CNV)) > 1))
 
@@ -63,29 +90,35 @@ for (selectedFeature in unique(rawTable$Feature)) {
     #if (file.exists(outputFile)){
     #  next
     #}
-    pdf(outputFile, height=max(4, length(unique(dataForPlot$FileName))), width=6, onefile=TRUE)
+    pdf(outputFile, height=max(6, length(unique(dataForPlot$FileName))), width=8, onefile=TRUE)
     g <- ggplot(dataForPlot, aes_string("Position", column)) +
       ylab(columns[column]) +
-      xlab(unique(dataForPlot$Locus))+ 
-      geom_line() 
+      xlim(xlim) +
+      geom_line()
 
-    if(featureName != unique(dataForPlot$Locus)){
-      g <- g + ggtitle(featureName)
+    if(featureName != locus){
+      g <- g + ggtitle(paste0(featureName, " (", locus, ")"))
     }
 
     if(hasCNV){
       g <- g + geom_area(aes(fill=CNV), alpha=.5)+
         scale_fill_manual(values=cols)
     }else{
-      g <- g + geom_area(fill = "black")
+      g <- g + geom_area()
     }
 
     g <- g +
       facet_grid(FileName~.) +
       theme_bw() +
-      theme(strip.background=element_blank())
+      theme(strip.background=element_blank(),
+            axis.title.x=element_blank())
 
+    if(selectedFeature != locus){
+      g<-plot_grid(g, g2@ggplot, ncol = 1, align = 'v', axis = "lr", rel_heights=c(fileNumber, 1) )
+    }
+    
     print(g)
     dev.off()
   }
 }
+

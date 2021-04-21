@@ -85,6 +85,13 @@ find_markers<-function(object, by_sctransform, ident.1, ident.2, min.pct = 0.5, 
   return(markers)
 }
 
+find_all_markers<-function(object, by_sctransform, min.pct = 0.5, logfc.threshold = 0.6){
+  assay=ifelse(by_sctransform, "SCT", "RNA")
+  markers=FindAllMarkers(object, assay=assay, only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+  markers=markers[markers$p_val_adj < 0.01,]
+  return(markers)
+}
+
 get_cluster_count<-function(counts, clusters){
   if(is.null(levels(clusters))){
     allClusters=unique(clusters)
@@ -152,7 +159,6 @@ run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, 
   }
   markers <- markers[markers$p_val_adj < 0.01,]
   return(list(object=object, markers=markers))
-#  return(list(object=object, markers=NULL))
 }
 
 ORA_celltype<-function(medianexp,cellType,weight){
@@ -281,5 +287,4 @@ get_selfdefinedCelltype <- function(file){
   weight<-1+sqrt((max(freq)-freq)/(max(freq)-min(freq)))
   return(list(cellType=cellType, weight=weight))
 }
-
 

@@ -20,6 +20,8 @@ def main():
   parser.add_argument('-i', '--input', action='store', nargs='?', required=NOT_DEBUG, help="Input bed file")
   parser.add_argument('-b', '--bamListFile', action='store', nargs='?', required=NOT_DEBUG, help="Sample bam file list")
   parser.add_argument('-s', '--sizeFactorFile', action='store', nargs='?', required=NOT_DEBUG, help="Sample chromosome size factor file")
+  parser.add_argument('-e', '--extend_bases', action='store', type=int, default=0, nargs='?', help="Extending X bases before and after coordinates")
+  parser.add_argument('-g', '--plot_gene', action='store_true', help="Plot hg38 gene track")
   parser.add_argument('-o', '--output', action='store', nargs='?', required=NOT_DEBUG, help="Output folder")
 
   args = parser.parse_args()
@@ -73,11 +75,10 @@ def main():
     posData = []
 
     locusList = readBedFile(bedFile)
-
     for locus in locusList:
       locus.Chromosome = chrMap[locus.Chromosome]
       locusName = locus.getName()
-      locusString = locus.getLocusString()
+      locusString = locus.getLocusString(args.extend_bases)
 
       logger.info("  processing " + locus.getLocusString() + " ...")
 
@@ -139,7 +140,9 @@ def main():
   os.rename(bedResultTmpFile, bedResultFile)
     
   realpath = os.path.dirname(os.path.realpath(__file__))
-  rPath = realpath + "/plotGene.r"
+  #rPath = realpath + "/plotGeneHuman.r" if args.plot_gene else realpath + "/plotGene.r"
+  #plotGeneHuman is still under development
+  rPath = realpath + "/plotGene.r" if args.plot_gene else realpath + "/plotGene.r"
 
   targetR = bedResultFile + ".r"
   with open(targetR, "wt") as fout:

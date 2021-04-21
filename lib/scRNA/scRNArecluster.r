@@ -4,67 +4,8 @@
 library(Seurat)
 library(ggplot2)
 library(patchwork)
-
-run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, resolution, random.seed){
-  if (by_sctransform) {
-    object <- RunPCA(object = object, verbose=FALSE)
-  }else{
-    if (Remove_Mt_rRNA) {
-      rRNA.genes <- grep(pattern = rRNApattern,  rownames(object), value = TRUE)
-      Mt.genes<- grep (pattern= Mtpattern,rownames(object), value=TRUE )
-      var.genes <- dplyr::setdiff(VariableFeatures(object), c(rRNA.genes,Mt.genes))
-    } else {
-      var.genes <- VariableFeatures(object)
-    }
-    object <- RunPCA(object = object, features = var.genes, verbose=FALSE)
-  }
-  object <- RunUMAP(object = object, dims=pca_dims, verbose = FALSE)
-  object <- FindNeighbors(object = object, dims=pca_dims, verbose=FALSE)
-  object <- FindClusters(object=object, verbose=FALSE, random.seed=random.seed, resolution=resolution)
-  
-  if (by_sctransform) {
-    markers <- FindAllMarkers(object, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
-  }else{
-    markers <- FindAllMarkers(object, features=var.genes, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
-  }
-  markers <- markers[markers$p_val_adj < 0.01,]
-  return(list(object=object, markers=markers))
-}
-
-ORA_celltype<-function(medianexp,cellType,weight){
-  ORA_result<-matrix(NA, nrow=length(cellType),ncol=dim(medianexp)[2])
-  CTA_result<-matrix(0,nrow=length(cellType),ncol=dim(medianexp)[2])
-  exp_z<-scale(medianexp)
-  genenames<-rownames(medianexp)   
-  for (j in 1: dim(medianexp)[2]){
-    clusterexp<-medianexp[,j] 
-    clusterexp_z<-exp_z[,j]
-    for (i in 1:length(cellType)){
-      
-      ct_exp<-length(intersect(genenames[clusterexp>0],cellType[[i]]))
-      ct_not_exp<-length(cellType[[i]])-ct_exp
-      exp_not_ct<-sum(clusterexp>0)-ct_exp
-      not_exp_not_ct<-length(clusterexp)-ct_not_exp 
-      cont.table<-matrix(c(ct_exp,ct_not_exp,exp_not_ct,not_exp_not_ct),nrow=2)
-      ORA_result[i,j]<-fisher.test(cont.table,alternative="greater")$p.value
-      ###
-      weight_ss<-weight[names(weight)%in%cellType[[i]]]
-      ind<-match(names(weight_ss),genenames)
-      exp_ss<-clusterexp_z[ind[!is.na(ind)]]
-      weight_ss<-weight_ss[!is.na(ind)]
-      CTA_result[i,j]<-sum(exp_ss*weight_ss)/(length(exp_ss)^0.3)
-    }
-  }
-  rownames(ORA_result)<-rownames(CTA_result)<-names(cellType)
-  minp_ora_ind<- apply(ORA_result,2,function(x){which.min(x)})
-  minp_ora<-apply(ORA_result,2,min)
-  names(minp_ora)<-rownames(ORA_result)[minp_ora_ind]
-  
-  max_cta_ind<- apply(CTA_result,2,function(x){which.max(x)})
-  max_cta<-apply(CTA_result,2,max,na.rm=T)
-  names(max_cta)<-rownames(CTA_result)[max_cta_ind]
-  return(list(ora=ORA_result,cta=CTA_result,min_ora=minp_ora,max_cta=max_cta))
-}
+library(kableExtra)
+library(dplyr)
 
 random.seed=20200107
 
@@ -107,11 +48,16 @@ obj[[options$cluster_name]]=cts_cluster[colnames(obj),options$cluster_name]
 seurat_colors<-finalList$seurat_colors
 seurat_cellactivity_colors<-finalList$seurat_cellactivity_colors
 
+allrds<-NULL
+
 ct<-recluster_celltypes[1]
 for(ct in recluster_celltypes){
   ctPrefix<-paste0(prefix, ".", gsub(' ', '_', ct))
   cells=unlist(cclist[ct])
   cluster_obj<-subset(obj, cells=cells)
+
+  dir.create(ctPrefix, showWarnings = FALSE)
+  ctPrefix=file.path(ctPrefix, ctPrefix)
   
   png(paste0(ctPrefix, ".pre.png"), width=3000, height=3000, res=300)
   p<-DimPlot(object = cluster_obj, reduction = 'umap', label=TRUE, group.by=options$cluster_name) + ggtitle("")
@@ -120,9 +66,33 @@ for(ct in recluster_celltypes){
   
   rdsFile = paste0(ctPrefix, ".rds")
   if(!file.exists(rdsFile)){
-    cluster_obj <- SCTransform(cluster_obj, verbose = FALSE)
+    if(by_sctransform){
+      cluster_obj <- SCTransform(cluster_obj, verbose = FALSE)
+    }
+
     obj_markers <- run_cluster(cluster_obj, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, resolution, random.seed)
     cluster_obj<-obj_markers$object
+
+    clusterMarkers<-obj_markers$markers %>% group_by(cluster)
+    write.csv(clusterMarkers, file=paste0(ctPrefix, ".allmarkers.csv"), row.names=F, quote = F)
+
+    if ("Seurat" %in% names(sessionInfo()$otherPkgs) & grepl("^4",sessionInfo()$otherPkgs$Seurat$Version)) { #Seurat version4
+      logFcColName="avg_log2FC"
+    } else {
+      logFcColName="avg_logFC"
+    }
+
+    top10 <- obj_markers$markers %>% group_by(cluster) %>% top_n(n = 10, wt = .data[[logFcColName]])
+    top10marker_file = paste0(ctPrefix, ".top10markers.csv")
+    write.csv(top10, file=top10marker_file, row.names=F, quote = F)
+
+    cur_display_markers=rownames(top10)
+    dot_filename=paste0(ctPrefix, ".top10markers.dot.pdf")
+    pdf(file=dot_filename, width=14, height=7)
+    g=DotPlot(obj, features=cur_display_markers, assay="SCT", group.by="seurat_cellactivity_clusters" ) + 
+      xlab("") + ylab("") + theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 90, hjust=1))
+    print(g)
+    dev.off()
     
     clusters<-cluster_obj@active.ident
     sumcounts<-t(apply(GetAssayData(cluster_obj,assay="RNA",slot="counts"),1,function(x){tapply(x,clusters,sum)}))
@@ -168,6 +138,9 @@ for(ct in recluster_celltypes){
   }else{
     cluster_obj<-readRDS(rdsFile)
   }
+
+  allrds <-rbind(allrds, data.frame(category=ct, rds=rdsFile))
+
   png(paste0(ctPrefix, ".post.png"), width=3000, height=3000, res=300)
   p<-DimPlot(object = cluster_obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters") + ggtitle("")
   print(p)
@@ -183,3 +156,5 @@ for(ct in recluster_celltypes){
   print(p)
   dev.off()
 }
+
+write.csv(allrds, file=paste0(outFile, ".rds.list"), row.names=F)

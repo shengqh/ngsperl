@@ -1821,11 +1821,10 @@ sub addGeneLocus {
         dataset=>getValue( $def, "biomart_dataset" ),
         symbolKey=>getValue( $def, "biomart_symbolKey" ),
         genesStr=>getValue( $def, "annotation_genes" ),
-        shift=>getValue( $def, "annotation_genes_shift", 0),
         add_chr => getValue($def, "annotation_genes_add_chr", 0)
       },
       rCode      =>"",
-      output_file => ".shift" . getValue( $def, "annotation_genes_shift", 0),
+      output_file => "",
       output_file_ext => ".bed",
       sh_direct       => 1,
       'pbs'           => {
@@ -2353,7 +2352,7 @@ sub addPlotGene {
     class                 => "CQS::ProgramWrapper",
     perform               => 1,
     target_dir            => $target_dir . "/$task_name",
-    option                => "",
+    option                => getValue($def, "plot_gene_option", ""),
     interpretor           => "python3",
     program               => "../Visualization/plotGene.py",
     parameterFile1_arg    => "-i",
