@@ -12,8 +12,8 @@ class LocusItem(object):
     self.Start = start
     self.End = end
     
-  def getLocusString(self):
-    return("%s:%d-%d" % (self.Chromosome, self.Start, self.End))
+  def getLocusString(self, extend_bases=0):
+    return("%s:%d-%d" % (self.Chromosome, self.Start - extend_bases, self.End + extend_bases))
   
   def setLocusString(self, locus):
     #print(locus)
