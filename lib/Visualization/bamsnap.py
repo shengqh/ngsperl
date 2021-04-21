@@ -4,7 +4,7 @@ import logging
 import os
 import subprocess
 
-def bamsnap(logger, bed_file, bam_list_file, output_file, bamsnap_option_file, no_gene_track):
+def bamsnap(logger, bed_file, bam_list_file, output_file, bamsnap_option_file, no_gene_track, extend_bases):
   bamsnap_option = ""
   with open(bamsnap_option_file, "r") as fin:
     for line in fin:
@@ -17,7 +17,11 @@ def bamsnap(logger, bed_file, bam_list_file, output_file, bamsnap_option_file, n
   with open(bed_file, "r") as ins:
     for line in ins:
       parts = line.strip().split('\t')
-      locus = "%s:%s-%s" % (parts[0], parts[1], parts[2])
+      if extend_bases > 0:
+        locus = "%s:%d-%d" % (parts[0], int(parts[1]) - extend_bases, int(parts[2]) + extend_bases)
+      else:
+        locus = "%s:%s-%s" % (parts[0], parts[1], parts[2])
+
       gene = parts[4]
       gene_locus_map[gene] = locus
 
@@ -61,6 +65,7 @@ def main():
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input bed file', required=NOT_DEBUG)
   parser.add_argument('-b', '--bam', action='store', nargs='?', help="Bam list file", required=NOT_DEBUG)
   parser.add_argument('-c', '--bamsnap_option_file', action='store', nargs='?', help="bamsnap option file")
+  parser.add_argument('-e', '--extend_bases', action='store', type=int, default=1000, nargs='?', help="Extending X bases before and after coordinates")
   parser.add_argument('--no_gene_track', action='store_true', help="No gene track")
   parser.add_argument('-o', '--output', action='store', nargs='?', help="Output list file", required=NOT_DEBUG)
   
@@ -76,7 +81,7 @@ def main():
   logger = logging.getLogger('bamsnap')
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
   
-  bamsnap(logger, args.input, args.bam, args.output, args.bamsnap_option_file, args.no_gene_track)
+  bamsnap(logger, args.input, args.bam, args.output, args.bamsnap_option_file, args.no_gene_track, args.extend_bases)
   
 if __name__ == "__main__":
     main()
