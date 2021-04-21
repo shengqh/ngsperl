@@ -248,21 +248,40 @@ sub addMutect2 {
     $config->{mutect2_groups} = $def->{mutect2_groups};
   }
   
-  my $mutect2_normal_files = $mutect2_prefix . "_normal_files";
-  $config->{$mutect2_normal_files} = {     
-    "class" => "CQS::GroupPickTask",
-    "source_ref" => $bam_input,
-    "groups_ref" => "mutect2_groups",
-    "sample_index_in_group" => 0, 
-  };
-  
-  my $mutect2_tumor_files = $mutect2_prefix . "_tumor_files";
-  $config->{$mutect2_tumor_files} = {     
-    "class" => "CQS::GroupPickTask",
-    "source_ref" => $bam_input,
-    "groups_ref" => "mutect2_groups",
-    "sample_index_in_group" => 1, 
-  };
+  my $mutect2_groups = $config->{mutect2_groups};
+  my $mutect2_tumor_only = 0;
+  for my $files (values %$mutect2_groups){
+    if (scalar(@$files) == 1){
+      $mutect2_tumor_only = 1;
+      last;
+    }
+  }
+
+  #die "tumor only " if $mutect2_tumor_only;
+
+  my $mutect2_normal_files=$mutect2_prefix . "_normal_files";
+  my $mutect2_tumor_files=$mutect2_prefix . "_tumor_files";
+  if($mutect2_tumor_only){
+    $config->{$mutect2_tumor_files} = {     
+      "class" => "CQS::GroupPickTask",
+      "source_ref" => $bam_input,
+      "groups_ref" => "mutect2_groups",
+      "sample_index_in_group" => 0, 
+    };
+  }else{
+    $config->{$mutect2_normal_files} = {     
+      "class" => "CQS::GroupPickTask",
+      "source_ref" => $bam_input,
+      "groups_ref" => "mutect2_groups",
+      "sample_index_in_group" => 0, 
+    };
+    $config->{$mutect2_tumor_files} = {     
+      "class" => "CQS::GroupPickTask",
+      "source_ref" => $bam_input,
+      "groups_ref" => "mutect2_groups",
+      "sample_index_in_group" => 1, 
+    };
+  }
 
   my $server_key = getValue($def, "wdl_key", "local");
   my $wdl = $def->{"wdl"};
@@ -270,7 +289,7 @@ sub addMutect2 {
   my $mutect2_pipeline = $server->{"mutect2"};
 
   my $pon = {};
-  if ($mutect2_pipeline->{"perform_mutect2_pon"}){
+  if ((not $mutect2_tumor_only) && $mutect2_pipeline->{"perform_mutect2_pon"}){
     my $pon_pipeline = $server->{"mutect2_pon"};
 
     my $mutect2_pon = $mutect2_prefix . getNextIndex($mutect2_index_dic, $mutect2_index_key) . "_pon";
@@ -338,7 +357,7 @@ sub addMutect2 {
   $config->{$mutect2_call} = {     
     "class" => "CQS::Wdl",
     "target_dir" => "${target_dir}/$mutect2_call",
-    "source_ref" => [$mutect2_normal_files, ".bam\$"],
+    "source_ref" => [$mutect2_tumor_files, ".bam\$"],
     "singularity_image_files_ref" => ["singularity_image_files"],
     "cromwell_jar" => $wdl->{"cromwell_jar"},
     "input_option_file" => $wdl->{"cromwell_option_file"},
@@ -352,8 +371,6 @@ sub addMutect2 {
       "Mutect2.ref_fasta" => $def->{ref_fasta},
       "Mutect2.ref_dict" => $def->{ref_fasta_dict},
       "Mutect2.ref_fai" => $def->{ref_fasta} . ".fai",
-      "Mutect2.normal_reads_ref" => [$mutect2_normal_files, ".bam\$"],
-      "Mutect2.normal_reads_index_ref" => [$mutect2_normal_files, ".bai\$"],
       "Mutect2.tumor_reads_ref" => [$mutect2_tumor_files, ".bam\$"],
       "Mutect2.tumor_reads_index_ref" => [$mutect2_tumor_files, ".bai\$"],
       "Mutect2.run_funcotator" => $run_funcotator,
@@ -365,6 +382,14 @@ sub addMutect2 {
       "mem"       => "70gb"
     },
   };
+
+  if($mutect2_tumor_only){
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.normal_reads"} = "";
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.normal_reads_index"} = "";
+  }else{
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.normal_reads_ref"} = [$mutect2_normal_files, ".bam\$"];
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.normal_reads_index_ref"} = [$mutect2_normal_files, ".bai\$"];
+  }
   push @$tasks, $mutect2_call;
   return ($mutect2_call);
 }
