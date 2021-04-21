@@ -9,7 +9,6 @@ host=params$host
 dataset=params$dataset
 symbolKey=params$symbolKey
 genesStr<-params$genesStr
-shift<-as.numeric(params$shift)
 addChr<-params$add_chr=="1"
 
 if(!file.exists(genesStr)){
@@ -42,18 +41,12 @@ geneLocus$score<-1000
 geneLocus<-geneLocus[,c("chromosome_name", "start_position", "end_position", "score", symbolKey, "strand", "ensembl_gene_id")]
 geneLocus<-geneLocus[order(geneLocus$chromosome_name, geneLocus$start_position),]
 
-if(shift != 0){
-  geneLocus$start_position[geneLocus$strand == 1] <- geneLocus$start_position[geneLocus$strand == 1] - shift
-  geneLocus$end_position[geneLocus$strand == -1] <- geneLocus$end_position[geneLocus$strand == -1] + shift
-}
-
 geneLocus$strand[geneLocus$strand == 1]<-"+"
 geneLocus$strand[geneLocus$strand == -1]<-"-"
 
 if(addChr & (!any(grepl("chr", geneLocus$chromosome_name)))){
   geneLocus$chromosome_name = paste0("chr", geneLocus$chromosome_name)
 }
-
 
 bedFile<-paste0(outFile, ".bed")
 write.table(geneLocus, file=bedFile, row.names=F, col.names = F, sep="\t", quote=F)
