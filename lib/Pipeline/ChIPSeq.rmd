@@ -28,33 +28,31 @@ library(tidyverse)
 options(bitmapType='cairo')
 
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
-rownames(files)<-files$V2
+files<-split(files$V1, files$V2)
 
 chipseqOptions_df<-read.table("fileList2.txt", sep="\t", header=FALSE, as.is=TRUE)
 chipseqOptions<-split(chipseqOptions_df$V1, chipseqOptions_df$V2)
 
-has_fastqc_raw<-any(grepl("fastqc_raw_", rownames(files)))
-has_fastqc_post<-any(grepl("fastqc_post_trim_", rownames(files)))
-has_bowtie2 <- any(grepl("bowtie2_", rownames(files)))
-has_chipqc <- "chipqc_html" %in% rownames(files)
+has_fastqc_raw<-any(grepl("fastqc_raw_", names(files)))
+has_fastqc_post<-any(grepl("fastqc_post_trim_", names(files)))
+has_bowtie2 <- any(grepl("bowtie2_", names(files)))
+has_bowtie2_cleanbam <- any(grepl("bowtie2_cleanbam_", names(files)))
+has_chipqc <- "chipqc_html" %in% names(files)
+has_homer<-any(grepl("homer_", names(files)))
+
+homer<-chipseqOptions$homer_result
+macs2<-chipseqOptions$macs2_result
 
 if(has_chipqc) {
-  chipqc_html = files["chipqc_html",1]
-  chipqc = dirname(chipqc_html)
+  chipqc_html = files$chipqc_html
 }
 
 project_dir <- dir("../..", full.names=T)
 
-macs2 <- project_dir[grep("macs2callpeak_narrow$", project_dir)]
 report <- project_dir[grep("report", project_dir)]
 
-has_macs2 <- any(macs2)
+has_macs2 <- file.exists(macs2)
 has_report <- FALSE
-
-has_homer<-"homer_result" %in% names(chipseqOptions)
-if(has_homer) {
-  homer <- chipseqOptions$homer_result
-}
 
 has_diffbind<-"diffbind_result" %in% names(chipseqOptions)
 if(has_diffbind) {
@@ -69,30 +67,7 @@ getFigure <- function(category, description){
 ```
  
 ```{r copyfiles, include=FALSE, eval=has_macs2, results='asis', message=FALSE, warning=FALSE}
-system("mkdir ChIP_seq_results")
-
-files_macs <- list.files(paste0(macs2, "/result"), pattern="peaks.narrowPeak", full.names=T, recursive=T)
-if(length(files_macs) > 0){
-  if(!dir.exists("ChIP_seq_results/macs2")){
-    dir.create("ChIP_seq_results/macs2")
-  }
-}
-file.copy(from = files_macs, to="ChIP_seq_results/macs2/")
-
-files_homer <- list.files(paste0(homer, "/result"), pattern="homerMotifs.all.motifs", full.names=T, recursive=T)
-if(length(files_homer) > 0){
-  homer_names <- gsub("/", "_", gsub(".*result/", "", files_homer))
-  if(length(files_homer) > 0){
-    if(!dir.exists("ChIP_seq_results/homer_annotation")){
-      dir.create("ChIP_seq_results/homer_annotation")
-    }
-  }
-
-  for (i in 1:length(files_homer)){
-    file.copy(from = files_homer[i], to = paste0("ChIP_seq_results/homer_annotation/", homer_names[i]))
-  }
-}
-
+#system("mkdir ChIP_seq_results")
 #system("mkdir ChIP_seq_results/diffbind")
 #files_diff <- c(list.files(paste0(diffbind, "/result"), pattern=".png", full.names=T, recursive=T),
 #list.files(paste0(diffbind, "/result"), pattern=".sig\\.", full.names=T, recursive=T))
@@ -115,26 +90,26 @@ cat("\n")
 
 # Sequencing Quality
   
-```{r fastqc_raw_per_base_sequence_quality,echo=FALSE,results='asis', include = has_fastqc_raw, eval = has_fastqc_raw, fig.align="center", fig.cap=figRef("fastqc_raw_per_base_sequence_quality", "The mean quality scores of sequencing reads in each position", trunk.eval=file.exists(files["fastqc_raw_per_base_sequence_quality",1]))}
-check_and_include_graphics(files["fastqc_raw_per_base_sequence_quality",1])
+```{r fastqc_raw_per_base_sequence_quality,echo=FALSE,results='asis', include = has_fastqc_raw, eval = has_fastqc_raw, fig.align="center", fig.cap=figRef("fastqc_raw_per_base_sequence_quality", "The mean quality scores of sequencing reads in each position", trunk.eval=file.exists(files$fastqc_raw_per_base_sequence_quality))}
+check_and_include_graphics(files$fastqc_raw_per_base_sequence_quality)
 ```
 
 <br>
 
-```{r fastqc_raw_per_sequence_gc_content,echo=FALSE,results='asis', include = has_fastqc_raw, eval = has_fastqc_raw, fig.align="center", fig.cap=figRef("fastqc_raw_per_sequence_gc_content", "The average GC content of sequencing reads", trunk.eval=file.exists(files["fastqc_raw_per_sequence_gc_content",1]))}
-check_and_include_graphics(files["fastqc_raw_per_sequence_gc_content",1])
-```
-
-<br>
-  
-```{r fastqc_raw_adapter_content,echo=FALSE,results='asis', include = has_fastqc_raw, eval = has_fastqc_raw, fig.align="center", fig.cap=figRef("fastqc_raw_adapter_content", "Adapter content of sequencing reads", trunk.eval=file.exists(files["fastqc_raw_adapter_content",1]))}
-check_and_include_graphics(files["fastqc_raw_adapter_content",1])
+```{r fastqc_raw_per_sequence_gc_content,echo=FALSE,results='asis', include = has_fastqc_raw, eval = has_fastqc_raw, fig.align="center", fig.cap=figRef("fastqc_raw_per_sequence_gc_content", "The average GC content of sequencing reads", trunk.eval=file.exists(files$fastqc_raw_per_sequence_gc_content))}
+check_and_include_graphics(files$fastqc_raw_per_sequence_gc_content)
 ```
 
 <br>
   
-```{r fastqc_post_trim_adapter_content,echo=FALSE,results='asis', include = has_fastqc_post, eval = has_fastqc_post, fig.align="center", fig.cap=figRef("fastqc_post_trim_adapter_content", "Adapter content of sequencing reads after cutadapt", trunk.eval=file.exists(files["fastqc_post_trim_adapter_content",1]))}
-check_and_include_graphics(files["fastqc_post_trim_adapter_content",1])
+```{r fastqc_raw_adapter_content,echo=FALSE,results='asis', include = has_fastqc_raw, eval = has_fastqc_raw, fig.align="center", fig.cap=figRef("fastqc_raw_adapter_content", "Adapter content of sequencing reads", trunk.eval=file.exists(files$fastqc_raw_adapter_content))}
+check_and_include_graphics(files$fastqc_raw_adapter_content)
+```
+
+<br>
+  
+```{r fastqc_post_trim_adapter_content,echo=FALSE,results='asis', include = has_fastqc_post, eval = has_fastqc_post, fig.align="center", fig.cap=figRef("fastqc_post_trim_adapter_content", "Adapter content of sequencing reads after cutadapt", trunk.eval=file.exists(files$fastqc_post_trim_adapter_content))}
+check_and_include_graphics(files$fastqc_post_trim_adapter_content)
 ```
 
 <br>
@@ -142,9 +117,18 @@ check_and_include_graphics(files["fastqc_post_trim_adapter_content",1])
 # Mapping quality
 
 ## Mapping, filtering and duplication rate
-```{r bowtie2_summary,echo=FALSE,results='asis', eval = has_bowtie2, warning=FALSE, fig.align="center", fig.cap=figRef("bowtie2_summary", "The statistics of ChIP-seq mapping results")}
-check_and_include_graphics(files["bowtie2_summary",1])
+```{r bowtie2_reads,echo=FALSE,results='asis', eval = has_bowtie2, warning=FALSE, fig.align="center", fig.cap=figRef("bowtie2_summary_reads", "The statistics of ChIP-seq mapping results by reads")}
+check_and_include_graphics(files$bowtie2_summary_reads)
 ```
+
+```{r bowtie2_chromosome,echo=FALSE,results='asis', eval = has_bowtie2, warning=FALSE, fig.align="center", fig.cap=figRef("bowtie2_summary_chromosome", "The statistics of ChIP-seq mapping results by chromsome")}
+check_and_include_graphics(files$bowtie2_summary_chromosome)
+```
+
+```{r bowtie2_cleanbam_chromosome,echo=FALSE,results='asis', eval = has_bowtie2_cleanbam, warning=FALSE, fig.align="center", fig.cap=figRef("bowtie2_cleanbam_chromosome", "The statistics of ChIP-seq mapping results by chromsome after cleaning bam files")}
+check_and_include_graphics(files$bowtie2_cleanbam_summary_chromosome)
+```
+
 
 <br>
 
@@ -177,7 +161,7 @@ print(kable(QCtable, caption=tabRef("mapSummary", "Summary of ChIP-seq filtering
 ## Enrichment of reads in genomic features
 
 ```{r genomic_features,echo=FALSE,results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("feature_enrichment", "Heatmap of log2 enrichment of reads in genomic features"), out.width="40%", out.height="20%"}
-include_graphics(paste0(chipqc, "/GenomicFeatureEnrichment.png"))
+check_and_include_graphics(files$chipqc_GenomicFeatureEnrichment)
 ```
 
 <br>
@@ -185,7 +169,7 @@ include_graphics(paste0(chipqc, "/GenomicFeatureEnrichment.png"))
 ## ChIP signal distribution and structure
 
 ```{r CrossCoverage,echo=FALSE,results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("cross_coverage", "Plot of CrossCoverage score after successive strand shifts"), out.width="40%", out.height="20%"}
-include_graphics(paste0(chipqc, "/CCPlot.png"))
+check_and_include_graphics(files$chipqc_CCPlot)
 ```
 
 <br>
@@ -195,7 +179,9 @@ include_graphics(paste0(chipqc, "/CCPlot.png"))
 ```{r peak_calling_summary, echo=FALSE, results='asis', eval=has_macs2}
 
 peaks_xls <- list.files(paste0(macs2, "/result"), recursive=T, pattern="peaks.xls", full.names=T)
-peaks_annot <- list.files(paste0(homer, "/result"), recursive=T, pattern=".bed.annotation.stats$", full.names=T)
+if(has_homer){
+  peaks_annot <- list.files(paste0(homer, "/result"), recursive=T, pattern=".bed.annotation.stats$", full.names=T)
+}
 sample_names <- gsub("_peaks.xls", "", basename(peaks_xls))
 
 df <- data.frame()
@@ -206,13 +192,18 @@ for(i in 1:length(peaks_xls)){
   df[i,3] <- word(lines[24], 4)
   df[i,4] <- paste0("<= ", word(lines[11], 5))
   df[i,5] <- dim(fread(peaks_xls[i], data.table = F))[1]
-
-  stats <- fread(peaks_annot[i], data.table=F)
-  df[i,6] <- stats[9,4]
-  df[i,7] <- stats[10,4]
+  if(has_homer){
+    stats <- fread(peaks_annot[i], data.table=F)
+    df[i,6] <- stats[9,4]
+    df[i,7] <- stats[10,4]
+  }
 }
-colnames(df) <- c("Sample", "Read length", "Fragment length", "qvalue", "Peak number", 
+if(has_homer){
+  colnames(df) <- c("Sample", "Read length", "Fragment length", "qvalue", "Peak number", 
 				"log2 enrichment promoter", "log2 enrichment 5UTR")
+}else{
+  colnames(df) <- c("Sample", "Read length", "Fragment length", "qvalue", "Peak number")
+}
 
 print(kable(df, caption=tabRef("peakSummary", "Summary of peak calling and enrichment")) %>%
     kable_styling() %>%
@@ -225,8 +216,6 @@ print(kable(df, caption=tabRef("peakSummary", "Summary of peak calling and enric
 ```{r homer_motif, echo=FALSE, results='asis', warning=F, eval=has_homer}
 
 dirs <- paste0(list.dirs(paste0(homer, "/result"), full.names=T, recursive=F), "/knownResults")
-
-homer_dir="ChIP_seq_results/homer_annotation"
 
 res_table <- data.frame()
 i=1
@@ -241,12 +230,14 @@ for (i in 1:length(dirs)){
   for (j in 1:nrow(res_txt)) {
     svgfile = paste0(curdir, "/known", j, ".logo.svg")
     pngfile = paste0(curdir, "/known", j, ".logo.png")
-    if (file.exists(svgfile) && (!file.exists(pngfile))){
-      x <- paste0("convert -density 1200 -resize 200x200 ", svgfile, " ", pngfile) 
+    if (file.exists(svgfile)){
+      if(!file.exists(pngfile)){
+        x <- paste0("convert -density 1200 -resize 200x200 ", svgfile, " ", pngfile) 
       #cat(x, "\n")
-      system(x)
+        system(x)
+      }
+      res_txt$Motif[j]=paste0("<img src= ", pngfile, " >")
     }
-    res_txt$Motif[j]=paste0("<img src= ", pngfile, " >")
   }
 
   res_table <- rbind(res_table, res_txt[,c("Motif Name", "P-value", "q-value (Benjamini)", "Sample", "Motif")])
@@ -265,11 +256,11 @@ print(kable(tab, caption= tabRef("homer_table", "Homer annotation for peaks"), e
 ## Correlation between samples
 
 ```{r Correlation,echo=FALSE,results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("peak_correlation", "Plot of correlation between peaksets"), out.width="60%", out.height="60%"}
-include_graphics(list.files(chipqc, pattern="PeakCorHeatmap.png", full.names=T, recursive=T))
+check_and_include_graphics(files$chipqc_PeakCorHeatmap)
 ```
 
 ```{r PCA,echo=FALSE,results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("pca", "PCA of peaksets"), out.width="60%", out.height="60%"}
-include_graphics(list.files(chipqc, pattern="PeakPCA.png", full.names=T, recursive=T))
+check_and_include_graphics(files$chipqc_PeakPCA)
 ```
 
 * Replicate samples of high quality can be expected to cluster together in the heatmap and be spatially grouped within the PCA plot.  
