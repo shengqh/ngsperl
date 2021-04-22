@@ -192,26 +192,8 @@ sub getConfig {
           "mem"      => "40gb"
         },
       };
-      $config->{bowtie2_summary} = {
-        class                    => "CQS::UniqueR",
-        perform                  => 1,
-        rCode                    => "",
-        target_dir               => "${target_dir}/" . getNextFolderIndex($def) . "bowtie2_summary",
-        option                   => "",
-        parameterSampleFile1_ref => [ "bowtie2", ".log" ],
-        rtemplate                => "../Alignment/Bowtie2Summary.r",
-        output_file              => "",
-        output_file_ext          => ".csv",
-        output_other_ext         => ".png",
-        pbs                      => {
-          "email"    => $email,
-          "nodes"    => "1:ppn=1",
-          "walltime" => "72",
-          "mem"      => "10gb"
-        },
-      };
 
-      push @$summary, ("bowtie2_summary");
+      add_alignment_summary($config, $def, $summary, $target_dir, "bowtie2_summary", ["bowtie2", ".chromosome.count"], [ "bowtie2", ".log" ]);
     }
     else {
       die "Unknown alinger " . $def->{aligner};
@@ -224,6 +206,8 @@ sub getConfig {
       my $taskName = $def->{aligner} . "_cleanbam";
       addCleanBAM( $config, $def, $individual, $taskName, "${target_dir}/" . getNextFolderIndex($def) . $taskName, $bam_ref);
       $bam_ref = [ $taskName, ".bam\$" ];
+
+      add_alignment_summary($config, $def, $summary, $target_dir, "${taskName}_summary", [$taskName, ".chromosome.count"]);
     }
 
     if ( getValue( $def, "perform_bamplot" ) ) {
@@ -445,7 +429,9 @@ sub getConfig {
     else {
       die "Unknown peak caller " . $def->{"peak_caller"};
     }
-    push @$step2, ($peakCallerTask);
+    push (@$step2, $peakCallerTask);
+
+    my $peak_count_task = add_peak_count($config, $def, $summary, $target_dir, $peakCallerTask . "_count", $peakCallerTask);
 
     if (getValue($def, "perform_activeGene", 0)) {
       $config->{"activeGene"} = {
@@ -590,222 +576,7 @@ sub getConfig {
       addMultiQC( $config, $def, $summary, $target_dir, $target_dir );
     }
 
-    # if ( getValue( $def, "perform_report_test" ) ) {
-    #   my @report_files = ();
-    #   my @report_names = ();
-    #   my @copy_files   = ();
-
-    #   my $version_files = get_version_files($config);
-
-    #   if ( defined $config->{fastqc_raw_summary} ) {
-    #     push( @report_files, "fastqc_raw_summary",                   ".FastQC.baseQuality.tsv.png" );
-    #     push( @report_files, "fastqc_raw_summary",                   ".FastQC.sequenceGC.tsv.png" );
-    #     push( @report_files, "fastqc_raw_summary",                   ".FastQC.adapter.tsv.png" );
-    #     push( @report_names, "fastqc_raw_per_base_sequence_quality", "fastqc_raw_per_sequence_gc_content", "fastqc_raw_adapter_content" );
-    #   }
-
-    #   if ( defined $config->{fastqc_post_trim_summary} ) {
-    #     push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.baseQuality.tsv.png" );
-    #     push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.sequenceGC.tsv.png" );
-    #     push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.adapter.tsv.png" );
-    #     push( @report_names, "fastqc_post_trim_per_base_sequence_quality", "fastqc_post_trim_per_sequence_gc_content", "fastqc_post_trim_adapter_content" );
-    #   }
-
-    #   if ( defined $config->{bowtie2_summary} ) {
-    #     push( @report_files, "bowtie2_summary", ".ChIPseq.png" );
-    #     push( @report_files, "star_featurecount_summary", ".STARSummary.csv\$" );
-    #     push( @report_names, "STAR_summary",              "STAR_summary_table" );
-
-    #     push( @report_files, "star_featurecount_summary", ".FeatureCountSummary.csv.png\$" );
-    #     push( @report_files, "star_featurecount_summary", ".FeatureCountSummary.csv\$" );
-    #     push( @report_names, "featureCounts_table_png",   "featureCounts_table" );
-    #   }
-
-    #   if ( defined $config->{star_summary} ) {
-    #     push( @report_files, "star_summary", ".STARSummary.csv.png" );
-    #     push( @report_files, "star_summary", ".STARSummary.csv\$" );
-    #     push( @report_names, "STAR_summary", "STAR_summary_table" );
-    #   }
-
-    #   if ( defined $config->{featurecount_summary} ) {
-    #     push( @report_files, "featurecount_summary",    ".FeatureCountSummary.csv.png\$" );
-    #     push( @report_files, "featurecount_summary",    ".FeatureCountSummary.csv\$" );
-    #     push( @report_names, "featureCounts_table_png", "featureCounts_table" );
-    #   }
-
-    #   if ( defined $config->{genetable} ) {
-    #     push( @copy_files, "genetable", ".count\$", "genetable", ".fpkm.tsv" );
-    #     if($def->{perform_proteincoding_gene}){
-    #       push( @report_files, "genetable",    ".fpkm.proteincoding.tsv\$" );
-    #     }else{
-    #       push( @report_files, "genetable",    ".fpkm.tsv\$" );
-    #     }
-    #     push( @report_names, "genetable_fpkm" );
-    #   }
-
-    #   if ( defined $config->{genetable_correlation} ) {
-    #     my $suffix = $config->{genetable_correlation}{suffix};
-    #     if ( !defined $suffix ) {
-    #       $suffix = "";
-    #     }
-    #     my $pcoding = $def->{perform_proteincoding_gene} ? ".proteincoding.count" : "";
-
-    #     my $titles = { "all" => "" };
-    #     if ( is_not_array($count_file_ref) ) {    #count file directly
-    #       $titles->{all} = basename($count_file_ref);
-    #       $pcoding = "";
-    #     }
-    #     if ( defined $config->{genetable_correlation}{parameterSampleFile2} ) {
-    #       my $correlationGroups = $config->{genetable_correlation}{parameterSampleFile2};
-    #       for my $correlationTitle ( keys %$correlationGroups ) {
-    #         my $groups = $correlationGroups->{$correlationTitle};
-    #         if ( is_hash($groups) ) {
-    #           if ( $correlationTitle ne "all" ) {
-    #             $correlationTitle =~ s/\\s+/_/g;
-    #             $titles->{$correlationTitle} = "." . $correlationTitle;
-    #           }
-    #         }
-    #       }
-    #     }
-
-    #     for my $title ( keys %$titles ) {
-    #       push( @report_files,
-    #         "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".density.png", "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".heatmap.png",
-    #         "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".PCA.png",     "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".Correlation.Cluster.png" );
-    #       push( @report_names, $title . "_correlation_density", $title . "_correlation_heatmap", $title . "_correlation_PCA", $title . "_correlation_cluster" );
-    #     }
-    #   }
-
-    #   my $suffix = "";
-    #   if ( ( defined $deseq2taskname ) && ( defined $config->{$deseq2taskname} ) ) {
-    #     if ( getValue( $def, "DE_top25only", 0 ) ) {
-    #       $suffix = $suffix . "_top25";
-    #     }
-
-    #     if ( getValue( $def, "DE_detected_in_both_group", 0 ) ) {
-    #       $suffix = $suffix . "_detectedInBothGroup";
-    #     }
-
-    #     my $minMedianInGroup = getValue( $def, "DE_min_median_read", 5 );
-    #     if ( $minMedianInGroup > 0 ) {
-    #       $suffix = $suffix . "_min" . $minMedianInGroup;
-    #     }
-    #     if ( getValue( $def, "DE_use_raw_pvalue", 0 ) ) {
-    #       $suffix = $suffix . "_pvalue" . $def->{DE_pvalue};
-    #     }
-    #     else {
-    #       $suffix = $suffix . "_fdr" . $def->{DE_pvalue};
-    #     }
-
-    #     my $pairs = $config->{pairs};
-
-    #     if ( scalar( keys %$pairs ) > 1 ) {
-    #       push( @report_files, $deseq2taskname, "/" . $taskName . ".define.*DESeq2_volcanoPlot.png" );
-    #       push( @report_names, "deseq2_volcano_plot" );
-    #     }
-    #     else {
-    #       push( @report_files, $deseq2taskname, "_DESeq2_volcanoPlot.png" );
-    #       push( @report_names, "deseq2_volcano_plot" );
-    #     }
-    #     for my $key ( keys %$pairs ) {
-    #       push( @report_files, $deseq2taskname, "/" . $key . $suffix . "_DESeq2_sig.csv" );
-    #       push( @report_names, "deseq2_" . $key );
-
-    #       push( @report_files, $deseq2taskname, "/" . $key . ".design" );
-    #       push( @report_names, "deseq2_" . $key . "_design" );
-
-    #       push( @report_files, $deseq2taskname, "/" . $key . $suffix . "_geneAll_DESeq2-vsd-heatmap.png" );
-    #       push( @report_names, "deseq2_" . $key . "_heatmap" );
-
-    #       push( @report_files, $deseq2taskname, "/" . $key . $suffix . "_geneAll_DESeq2-vsd-pca.png" );
-    #       push( @report_names, "deseq2_" . $key . "_pca" );
-    #     }
-    #     push( @copy_files, $deseq2taskname, "_DESeq2.csv" );
-
-    #     push( @copy_files, $deseq2taskname, "_DESeq2_sig.csv" );
-
-    #     #push( @copy_files, $deseq2taskname, "_DESeq2_GSEA.rnk" );
-    #     #push( @copy_files, $deseq2taskname, "_DESeq2_sig_genename.txt" );
-    #     #push( @copy_files, $deseq2taskname, "heatmap.png" );
-    #     #push( @copy_files, $deseq2taskname, "pca.pdf" );
-    #   }
-
-    #   my $hasFunctionalEnrichment = 0;
-    #   if ( defined $webgestaltTaskName ) {
-    #     push( @copy_files, $webgestaltTaskName, "_geneontology_Biological_Process\$" );
-    #     push( @copy_files, $webgestaltTaskName, "_geneontology_Cellular_Component\$" );
-    #     push( @copy_files, $webgestaltTaskName, "_geneontology_Molecular_Function\$" );
-    #     push( @copy_files, $webgestaltTaskName, "_pathway_KEGG\$" );
-
-    #     my $pairs = $config->{pairs};
-    #     for my $key ( keys %$pairs ) {
-    #       if ( defined $linkTaskName && defined $config->{$linkTaskName} ) {
-    #         push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_geneontology_Biological_Process.txt.html.rds" );
-    #         push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_geneontology_Cellular_Component.txt.html.rds" );
-    #         push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_geneontology_Molecular_Function.txt.html.rds" );
-    #         push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_pathway_KEGG.txt.html.rds" );
-    #         push( @copy_files,   $linkTaskName, "txt.html\$" );
-    #       }
-    #       else {
-    #         push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_geneontology_Biological_Process.txt" );
-    #         push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_geneontology_Cellular_Component.txt" );
-    #         push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_geneontology_Molecular_Function.txt" );
-    #         push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_pathway_KEGG.txt" );
-    #       }
-    #       push( @report_names, "WebGestalt_GO_BP_" . $key );
-    #       push( @report_names, "WebGestalt_GO_CC_" . $key );
-    #       push( @report_names, "WebGestalt_GO_MF_" . $key );
-    #       push( @report_names, "WebGestalt_KEGG_" . $key );
-    #     }
-    #     $hasFunctionalEnrichment = 1;
-    #   }
-
-    #   if ( defined $gseaTaskName ) {
-    #     push( @copy_files, $gseaTaskName, ".gsea\$" );
-
-    #     my $pairs = $config->{pairs};
-    #     for my $key ( keys %$pairs ) {
-    #       push( @report_files, $gseaTaskName, "/" . $key . $suffix . ".*gsea.csv" );
-    #       push( @report_names, "gsea_" . $key );
-    #     }
-    #     $hasFunctionalEnrichment = 1;
-    #   }
-
-    #   my $fcOptions = getValue( $def, "featureCount_option" );
-    #   my $fcMultiMapping = ( $fcOptions =~ /-m/ ) ? "TRUE" : "FALSE";
-    #   my $options = {
-    #     "DE_fold_change"                     => [ getValue( $def, "DE_fold_change",    2 ) ],
-    #     "DE_pvalue"                          => [ getValue( $def, "DE_pvalue",         0.05 ) ],
-    #     "DE_use_raw_pvalue"                  => [ getValue( $def, "DE_use_raw_pvalue", 0 ) ],
-    #     "featureCounts_UseMultiMappingReads" => [$fcMultiMapping],
-    #     "top25cv_in_hca" => [ getValue( $def, "top25cv_in_hca") ? "TRUE" : "FALSE" ]
-    #   };
-
-    #   $config->{report} = {
-    #     class                      => "CQS::BuildReport",
-    #     perform                    => 1,
-    #     target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . "report",
-    #     report_rmd_file            => "../Pipeline/RNASeq.Rmd",
-    #     additional_rmd_files       => "Functions.Rmd",
-    #     parameterSampleFile1_ref   => \@report_files,
-    #     parameterSampleFile1_names => \@report_names,
-    #     parameterSampleFile2       => $options,
-    #     parameterSampleFile3_ref   => \@copy_files,
-    #     parameterSampleFile4       => $version_files,
-    #     parameterSampleFile5       => $def->{software_version},
-    #     parameterSampleFile6       => $def->{groups},
-    #     sh_direct                  => 1,
-    #     pbs                        => {
-    #       "email"     => $def->{email},
-    #       "emailType" => $def->{emailType},
-    #       "nodes"     => "1:ppn=1",
-    #       "walltime"  => "1",
-    #       "mem"       => "10gb"
-    #     },
-    #   };
-    #   push( @$summary, "report" );
-    # }
-    if ( getValue( $def, "perform_report", 0 ) ) {
+    if ( getValue( $def, "perform_report" ) ) {
       my @report_files = ();
       my @report_names = ();
       my @copy_files   = ();
@@ -827,13 +598,39 @@ sub getConfig {
       }
 
       if ( defined $config->{bowtie2_summary} ) {
-        push( @report_files, "bowtie2_summary", ".png" );
-        push( @report_names, "bowtie2_summary" );
+        push( @report_files, "bowtie2_summary", ".reads.png" );
+        push( @report_files, "bowtie2_summary", ".chromosome.png" );
+        push( @report_names, "bowtie2_summary_reads", "bowtie2_summary_chromosome" );
       }
+
+      if ( defined $config->{bowtie2_cleanbam_summary} ) {
+        push( @report_files, "bowtie2_cleanbam_summary", ".chromosome.png" );
+        push( @report_names, "bowtie2_cleanbam_summary_chromosome" );
+      }
+
+      push( @copy_files, $peakCallerTask, ".bed\$" );
+
+      push( @report_files, $peak_count_task, ".txt" );
+      push( @report_names, "peak_count" );
 
       if ( $perform_chipqc ) {
         push( @report_files, $chipqc_taskname, ".html" );
-        push( @report_names, "chipqc_html" );
+        push( @report_files, $chipqc_taskname, "GenomicFeatureEnrichment.png" );
+        push( @report_files, $chipqc_taskname, "CCPlot.png" );
+        push( @report_files, $chipqc_taskname, "PeakCorHeatmap.png" );
+        push( @report_files, $chipqc_taskname, "PeakPCA.png" );
+        push( @report_names, "chipqc_html", "chipqc_GenomicFeatureEnrichment", "chipqc_CCPlot", "chipqc_PeakCorHeatmap", "chipqc_PeakPCA" );
+      }
+
+      if(defined $homer_name){
+        my $treatments = $def->{treatments};
+
+        for my $key ( keys %$treatments ) {
+          push( @report_files, $homer_name, "$key/knownResults.txt" );
+          push( @report_names, "homer_" . $key );
+
+          push( @copy_files, $homer_name, "$key/homerMotifs.all.motifs" );
+        }
       }
 
       my $options = {
