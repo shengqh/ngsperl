@@ -309,30 +309,8 @@ sub getConfig {
         },
       };
       push @$individual, ($callName);
-
-      my $peak_count = $callName . "_count";
-      $config->{$peak_count} = {
-        class      => "CQS::ProgramWrapper",
-        perform    => 1,
-        suffix     => "_pc",
-        target_dir => "${target_dir}/" . $peak_count,
-        interpretor => "python3",
-        program    => "../Count/bedCount.py",
-        option     => "",
-        source_arg => "-i",
-        source_ref => [ $callName, ".bed\$" ],
-        output_arg => "-o",
-        output_prefix => ".txt",
-        output_ext => ".txt",
-        can_result_be_empty_file => 1,
-        sh_direct  => 1,
-        pbs        => {
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "2gb"
-        },
-      };
-      push @$summary, ($peak_count);
+      
+      add_peak_count($config, $def, $summary, $target_dir, $callName . "_count", $callName);
 
       if ( getValue( $def, "perform_enhancer" ) ) {
         addEnhancer( $config, $def, $individual, $summary, $target_dir, $callName . "_enhancer", [ "bwa_cleanbam", ".bam\$" ], [$callName, $callFilePattern] );
