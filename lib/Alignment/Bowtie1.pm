@@ -112,6 +112,7 @@ if [[ -s $bowtiesam && ! -s $bam_file ]]; then
     samtools index $bam_file 
     $chromosome_grep_command
     $addRgCommand
+    samtools idxstats $bam_file > ${bam_file}.chromosome.count
   fi
 fi
 ";
@@ -121,8 +122,9 @@ if [ -s $bam_file ]; then
   echo MarkDuplicate=`date` 
   java -jar $picard_jar MarkDuplicates I=$bam_file O=$final_file ASSUME_SORTED=true REMOVE_DUPLICATES=false VALIDATION_STRINGENCY=SILENT M=${final_file}.metrics
   if [ -s $final_file ]; then
-    rm $bam_file ${bam_file}.bai
+    rm $bam_file ${bam_file}.bai ${bam_file}.chromosome.count
     samtools index $final_file 
+    samtools idxstats $final_file > ${final_file}.chromosome.count
   fi
 fi
 ";
@@ -132,6 +134,7 @@ fi
       print $pbs "
 if [ -s $bowtiesam ]; then
   samtools view -S $mappedonlyoption -b $bowtiesam > ${sample_name}.bam
+  samtools idxstats ${sample_name}.bam > ${sample_name}.bam.chromosome.count
   if [ -s $bam_file ]; then
     $addRgCommand
     rm $bowtiesam
