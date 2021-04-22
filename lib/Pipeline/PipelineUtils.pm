@@ -81,6 +81,8 @@ our %EXPORT_TAGS = (
     addSizeFactor
     addAnnotationLocus
     addAnnotationGenes
+    add_peak_count
+    add_alignment_summary
     )
   ]
 );
@@ -2472,6 +2474,62 @@ sub addAnnotationGenes {
   }
 
   addPlotGene($config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, [ $geneLocus, ".bed" ], $bam_ref);
+}
+
+sub add_peak_count {
+  my ($config, $def, $tasks, $target_dir, $task_name, $callName) = @_;
+  $config->{$task_name} = {
+    class      => "CQS::ProgramWrapper",
+    perform    => 1,
+    suffix     => "_pc",
+    target_dir => "${target_dir}/" . $task_name,
+    interpretor => "python3",
+    program    => "../Count/bedCount.py",
+    option     => "",
+    source_arg => "-i",
+    source_ref => [ $callName, ".bed\$" ],
+    output_arg => "-o",
+    output_prefix => ".txt",
+    output_ext => ".txt",
+    can_result_be_empty_file => 1,
+    sh_direct  => 1,
+    pbs        => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "1",
+      "mem"      => "2gb"
+    },
+  };
+  push @$tasks, ($task_name);
+  return($task_name);
+}
+
+sub add_alignment_summary {
+  my ($config, $def, $tasks, $target_dir, $task_name, $chromosome_ref, $reads_ref ) = @_;
+
+  my $output_other_ext = ".chromosome.png";
+  if (defined $reads_ref){
+    $output_other_ext = $output_other_ext . ";.reads.csv;.reads.png";
+  }
+  $config->{$task_name} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    rCode                    => "",
+    target_dir               => "${target_dir}/" . getNextFolderIndex($def) . ${task_name},
+    option                   => "",
+    parameterSampleFile1_ref => $chromosome_ref,
+    parameterSampleFile2_ref => $reads_ref,
+    rtemplate                => "../Alignment/Bowtie2Summary.r",
+    output_file              => "",
+    output_file_ext          => ".chromosome.csv",
+    output_other_ext         => $output_other_ext,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "1",
+      "mem"      => "5gb"
+    },
+  };
+  push(@$tasks, $task_name);
+  return($task_name);
 }
 
 1;
