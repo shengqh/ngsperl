@@ -247,15 +247,15 @@ sub addCHETAH {
     class                => "CQS::UniqueR",
     perform              => 1,
     target_dir           => $target_dir . "/" . $task_name,
-    rtemplate            => "../scRNA/scMRMA.r",
+    rtemplate            => "../scRNA/CHETAH.r",
     parameterFile1_ref   => [ $seurat_name, ".final.rds" ],
     parameterFile2   => getValue($def, "chetah_reference_file"),
     parameterFile3   => getValue($def, "chetah_ribosomal_file"),
-    parameterSampleFile2 => {
+    parameterSampleFile1 => {
       species             => getValue( $def, "species" ),
       prefix              => $project_name,
     },
-    output_file_ext => ".CHETAH.rds",
+    output_file_ext => ".CHETAH.png;.CHETAH.rds;.CHETAH.csv",
     sh_direct       => 1,
     pbs             => {
       "nodes"     => "1:ppn=1",
