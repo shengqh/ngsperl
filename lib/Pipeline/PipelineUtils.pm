@@ -2049,7 +2049,7 @@ sub add_BWAsummary {
     perform               => 1,
     target_dir            => "${target_dir}/${bwa_summary}",
     option                => "",
-    rtemplate             => "../Alignment/BWASummary.r",
+    rtemplate             => "../Alignment/AlignmentUtils.r;../Alignment/BWASummary.r",
     parameterSampleFile1_ref    => [$bwa, ".bamstat"],
     output_file           => "",
     output_file_ext       => ".BWASummary.csv",
@@ -2504,24 +2504,19 @@ sub add_peak_count {
 }
 
 sub add_alignment_summary {
-  my ($config, $def, $tasks, $target_dir, $task_name, $chromosome_ref, $reads_ref ) = @_;
+  my ($config, $def, $tasks, $target_dir, $task_name, $rtemplate, $output_file_ext, $read_1_ref, $read_2_ref ) = @_;
 
-  my $output_other_ext = ".chromosome.png";
-  if (defined $reads_ref){
-    $output_other_ext = $output_other_ext . ";.reads.csv;.reads.png";
-  }
   $config->{$task_name} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
     rCode                    => "",
     target_dir               => "${target_dir}/" . getNextFolderIndex($def) . ${task_name},
     option                   => "",
-    parameterSampleFile1_ref => $chromosome_ref,
-    parameterSampleFile2_ref => $reads_ref,
-    rtemplate                => "../Alignment/Bowtie2Summary.r",
+    parameterSampleFile1_ref => $read_1_ref,
+    parameterSampleFile2_ref => $read_2_ref,
+    rtemplate                => $rtemplate,
     output_file              => "",
-    output_file_ext          => ".chromosome.csv",
-    output_other_ext         => $output_other_ext,
+    output_file_ext          => $output_file_ext,
     pbs                      => {
       "nodes"    => "1:ppn=1",
       "walltime" => "1",
