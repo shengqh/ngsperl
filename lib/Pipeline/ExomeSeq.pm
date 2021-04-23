@@ -270,9 +270,10 @@ sub getConfig {
         option                => "",
         rtemplate             => "../Alignment/BWASummary.r",
         parameterSampleFile1_ref    => [$bwa, ".bamstat"],
+        parameterSampleFile2_ref    => [$bwa, ".chromosome.count"],
         output_file           => "",
         output_file_ext       => ".BWASummary.csv",
-        output_other_ext      => ".BWASummary.png;.BWASummary.sorted.png",
+        output_other_ext      => ".reads.png;.reads.sorted.png",
         sh_direct             => 1,
         pbs                   => {
           "nodes"     => "1:ppn=1",
