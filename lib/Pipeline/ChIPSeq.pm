@@ -9,6 +9,7 @@ use CQS::ConfigUtils;
 use CQS::ClassFactory;
 use Pipeline::PipelineUtils;
 use Pipeline::Preprocession;
+use Pipeline::PeakPipelineUtils;
 use Data::Dumper;
 use Hash::Merge qw( merge );
 
@@ -192,8 +193,7 @@ sub getConfig {
           "mem"      => "40gb"
         },
       };
-
-      add_alignment_summary($config, $def, $summary, $target_dir, "bowtie2_summary", ["bowtie2", ".chromosome.count"], [ "bowtie2", ".log" ]);
+      add_alignment_summary($config, $def, $summary, $target_dir, "bowtie2_summary", "../Alignment/AlignmentUtils.r;../Samtools/Bowtie2Summary.r", ".reads.csv;.reads.png;.chromosome.csv;.chromosome.png", [ "bowtie2", ".log" ], ["bowtie2", ".chromosome.count"] );
     }
     else {
       die "Unknown alinger " . $def->{aligner};
@@ -207,7 +207,7 @@ sub getConfig {
       addCleanBAM( $config, $def, $individual, $taskName, "${target_dir}/" . getNextFolderIndex($def) . $taskName, $bam_ref);
       $bam_ref = [ $taskName, ".bam\$" ];
 
-      add_alignment_summary($config, $def, $summary, $target_dir, "${taskName}_summary", [$taskName, ".chromosome.count"]);
+      add_alignment_summary($config, $def, $summary, $target_dir, "${taskName}_summary", "../Alignment/AlignmentUtils.r;../Samtools/Bowtie2Summary.r", ".chromosome.csv;.chromosome.png", undef, ["bowtie2", ".chromosome.count"] );
     }
 
     if ( getValue( $def, "perform_bamplot" ) ) {
@@ -509,32 +509,7 @@ sub getConfig {
 
     my $chipqc_taskname = $peakCallerTask . "_chipqc";
     if ($perform_chipqc) {
-      my $genome = getValue( $def, "chipqc_genome" );      #hg19, check R ChIPQC package;
-      $config->{$chipqc_taskname} = {
-        class          => "QC::ChipseqQC",
-        perform        => 1,
-        target_dir     => "${target_dir}/" . getNextFolderIndex($def) . $chipqc_taskname,
-        option         => "",
-        source_ref     => $bam_ref,
-        groups         => $def->{"treatments"},
-        controls       => $def->{"controls"},
-        qctable        => $def->{"design_table"},
-        peaks_ref      => [ $peakCallerTask, ".bed\$" ],
-        peak_software  => "bed",
-        genome         => $genome,
-        combined       => getValue( $def, "chipqc_combined", 1 ),
-        blacklist_file => $def->{"blacklist_file"},
-        chromosomes    => $def->{"chipqc_chromosomes"},
-        is_paired_end => getValue($def, "is_paired_end"),
-        sh_direct      => 0,
-        pbs            => {
-          "email"    => $email,
-          "nodes"    => "1:ppn=1",
-          "walltime" => "72",
-          "mem"      => "40gb"
-        },
-      };
-      push @$summary, ($chipqc_taskname);
+      add_chipqc($config, $def, $summary, $target_dir, $chipqc_taskname, [ $peakCallerTask, ".bed\$" ], $bam_ref);
     }
 
     my $bindName = $peakCallerTask . "_diffbind";
@@ -577,112 +552,28 @@ sub getConfig {
     }
 
     if ( getValue( $def, "perform_report" ) ) {
-      my @report_files = ();
-      my @report_names = ();
-      my @copy_files   = ();
-
-      my $version_files = get_version_files($config);
-
-      if ( defined $config->{fastqc_raw_summary} ) {
-        push( @report_files, "fastqc_raw_summary",                   ".FastQC.baseQuality.tsv.png" );
-        push( @report_files, "fastqc_raw_summary",                   ".FastQC.sequenceGC.tsv.png" );
-        push( @report_files, "fastqc_raw_summary",                   ".FastQC.adapter.tsv.png" );
-        push( @report_names, "fastqc_raw_per_base_sequence_quality", "fastqc_raw_per_sequence_gc_content", "fastqc_raw_adapter_content" );
-      }
-
-      if ( defined $config->{fastqc_post_trim_summary} ) {
-        push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.baseQuality.tsv.png" );
-        push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.sequenceGC.tsv.png" );
-        push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.adapter.tsv.png" );
-        push( @report_names, "fastqc_post_trim_per_base_sequence_quality", "fastqc_post_trim_per_sequence_gc_content", "fastqc_post_trim_adapter_content" );
-      }
-
-      if ( defined $config->{bowtie2_summary} ) {
-        push( @report_files, "bowtie2_summary", ".reads.png" );
-        push( @report_files, "bowtie2_summary", ".chromosome.png" );
-        push( @report_names, "bowtie2_summary_reads", "bowtie2_summary_chromosome" );
-      }
-
-      if ( defined $config->{bowtie2_cleanbam_summary} ) {
-        push( @report_files, "bowtie2_cleanbam_summary", ".chromosome.png" );
-        push( @report_names, "bowtie2_cleanbam_summary_chromosome" );
-      }
-
-      push( @copy_files, $peakCallerTask, ".bed\$" );
-
-      push( @report_files, $peak_count_task, ".txt" );
-      push( @report_names, "peak_count" );
-
-      if ( $perform_chipqc ) {
-        push( @report_files, $chipqc_taskname, ".html" );
-        push( @report_files, $chipqc_taskname, "GenomicFeatureEnrichment.png" );
-        push( @report_files, $chipqc_taskname, "CCPlot.png" );
-        push( @report_files, $chipqc_taskname, "PeakCorHeatmap.png" );
-        push( @report_files, $chipqc_taskname, "PeakPCA.png" );
-        push( @report_names, "chipqc_html", "chipqc_GenomicFeatureEnrichment", "chipqc_CCPlot", "chipqc_PeakCorHeatmap", "chipqc_PeakPCA" );
-      }
-
-      if(defined $homer_name){
-        my $treatments = $def->{treatments};
-
-        for my $key ( keys %$treatments ) {
-          push( @report_files, $homer_name, "$key/knownResults.txt" );
-          push( @report_names, "homer_" . $key );
-
-          push( @copy_files, $homer_name, "$key/homerMotifs.all.motifs" );
-        }
-      }
-
-      my $options = {
-        "perform_cutadapt"                     => [ getValue( $def, "perform_cutadapt") ],
-        "cutadapt_option"                          => [ getValue( $def, "cutadapt_option",  "" ) ],
-        "cutadapt_min_read_length"                  => [ getValue( $def, "min_read_length", 0 ) ],
-        "is_paired_end" => [getValue( $def, "is_paired_end", 0 ) ? "TRUE" : "FALSE"],
-        "aligner" => [ getValue( $def, "aligner") ],
-        "peak_caller" => [ getValue( $def, "peak_caller") ]
+      my $task_dic = {
+        peak_caller => $peakCallerTask,
+        peak_count => $peak_count_task,
       };
-
-      if ($peakCallerTask =~ /macs2/){
-        $options->{macs2_result} = $config->{$peakCallerTask}{target_dir};
+      
+      if ( $perform_chipqc ) {
+        $task_dic->{chipqc} = $chipqc_taskname;
       }
 
-      if(getValue( $def, "perform_homer" )) {
-        $options->{homer_result} = $config->{$homer_name}{target_dir};
+      if( $def->{perform_homer}) {
+        $task_dic->{homer} = $homer_name;
       }
 
       if($perform_diffbind) {
-        $options->{diffbind_result} = $config->{$bindName}{target_dir};
-        if(getValue( $def, "perform_homer" )) {
-          $options->{diffbind_homer_result} = $config->{$bind_homer_name}{target_dir};
+        $task_dic->{diffbind} = $bindName;
+        if( $def->{"perform_homer"}) {
+          $task_dic->{diffbind_homer} = $bind_homer_name;
         }
       }
 
-      $config->{report} = {
-        class                      => "CQS::BuildReport",
-        perform                    => 1,
-        target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . "report",
-        report_rmd_file            => "../Pipeline/ChIPSeq.rmd",
-        additional_rmd_files       => "Functions.Rmd",
-        docker_prefix              => "report_",
-        parameterSampleFile1_ref   => \@report_files,
-        parameterSampleFile1_names => \@report_names,
-        parameterSampleFile2       => $options,
-        parameterSampleFile3_ref   => \@copy_files,
-        parameterSampleFile4       => $version_files,
-        # parameterSampleFile5       => $def->{software_version},
-        # parameterSampleFile6       => $def->{groups},
-        sh_direct                  => 1,
-        pbs                        => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      };
-      push( @$summary, "report" );
+      addPeakPipelineReport($config, $def, $summary, $target_dir, $task_dic);
     }
-
   }
 
   $config->{"sequencetask"} = {
