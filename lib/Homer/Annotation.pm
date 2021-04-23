@@ -11,6 +11,7 @@ use CQS::FileUtils;
 use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use Data::Dumper;
 
 our @ISA = qw(CQS::Task);
 
@@ -102,6 +103,7 @@ sub result {
       push( @result_files, "${result_dir}/${pairName}/${outputFolder}homerResults.html" );
       push( @result_files, "${result_dir}/${pairName}/${outputFolder}knownResults.html" );
       push( @result_files, "${result_dir}/${pairName}/${outputFolder}knownResults.txt" );
+      push( @result_files, "${result_dir}/${pairName}/${outputFolder}homerMotifs.all.motifs" );
     }
     $result->{$pairName} = filter_array( \@result_files, $pattern );
   }

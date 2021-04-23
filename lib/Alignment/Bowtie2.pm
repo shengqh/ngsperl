@@ -51,6 +51,7 @@ sub perform {
     my $sam_file     = $sample_name . ".sam";
     my $bam_file     = $sample_name . ".bam";
     my $log_file     = $sample_name . ".log";
+    my $sort_log_file     = $sample_name . ".sort.log";
 
     my $indent = "";
     my $tag    = "--sam-RG ID:$sample_name --sam-RG LB:$sample_name --sam-RG SM:$sample_name --sam-RG PL:ILLUMINA";
@@ -93,11 +94,15 @@ fi
 if [ -s $log_file ]; then
   isSucceed=\$(cat $log_file | grep -c \"overall alignment rate\")
   if [ isSucceed ]; then
-    samtools view -Shu -F 256 $sam_file | samtools sort -o $bam_file -T $sample_name -
-    if [ -s $bam_file ]; then
+    samtools view -Shu -F 256 $sam_file | samtools sort -o $bam_file -T $sample_name - 2>&1 >/dev/tty | tee $sort_log_file
+    #check sort log file for failed
+    isFailed=\$(cat $sort_log_file | grep -c \"failed\")
+    if [[ -s $bam_file && ! isFailed ]]; then
       samtools index $bam_file 
       $chromosome_grep_command
       rm $sam_file
+
+      samtools idxstats $bam_file > ${bam_file}.chromosome.count
     fi
   fi
 fi
@@ -109,8 +114,9 @@ if [ -s $bam_file ]; then
   echo RemoveDuplicate=`date` 
   java $option -jar $picard_jar MarkDuplicates I=$bam_file O=$final_file ASSUME_SORTED=true REMOVE_DUPLICATES=false VALIDATION_STRINGENCY=SILENT M=${final_file}.metrics
   if [ -s $final_file ]; then
-    rm $bam_file ${bam_file}.bai
+    rm $bam_file ${bam_file}.bai ${bam_file}.chromosome.count
     samtools index $final_file 
+    samtools idxstats $final_file > ${final_file}.chromosome.count
   fi
 fi
 ";

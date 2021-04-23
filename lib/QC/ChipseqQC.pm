@@ -158,6 +158,11 @@ sub result {
     my @result_files = ();
     my $targetDir    = $result_dir . "/ChIPQCreport";
     push( @result_files, $targetDir . "/ChIPQC.html" );
+    push( @result_files, $targetDir . "/GenomicFeatureEnrichment.png" );
+    push( @result_files, $targetDir . "/CCPlot.png" );
+    push( @result_files, $targetDir . "/PeakCorHeatmap.png" );
+    push( @result_files, $targetDir . "/PeakPCA.png" );
+    push( @result_files, $targetDir . "/CoverageHistogramPlot.png" );
     $result->{$task_name} = filter_array( \@result_files, $pattern );
   }
   else {
@@ -170,6 +175,11 @@ sub result {
       my $curdir       = $result_dir . "/" . $qcname;
       my $targetDir    = $curdir . "/ChIPQCreport";
       push( @result_files, $targetDir . "/ChIPQC.html" );
+      push( @result_files, $targetDir . "/GenomicFeatureEnrichment.png" );
+      push( @result_files, $targetDir . "/CCPlot.png" );
+      push( @result_files, $targetDir . "/PeakCorHeatmap.png" );
+      push( @result_files, $targetDir . "/PeakPCA.png" );
+      push( @result_files, $targetDir . "/CoverageHistogramPlot.png" );
       $result->{$qcname} = filter_array( \@result_files, $pattern );
     }
   }

@@ -3,7 +3,12 @@ options(bitmapType='cairo')
 library(ChIPpeakAnno)
 genes <- toGRanges(parFile1, format="BED", skip=1)
 files<-read.table(parSampleFile1, sep="\t", header=F)
-for (file in files$V1){
+
+res=NULL
+for (i in c(1:nrow(files))){
+  file = files[i,1]
+  name = files[i,2]
+
   macsOutput <- toGRanges(file, format="BED", skip=1)
   annotated <- annotatePeakInBatch(macsOutput, AnnotationData=genes)
   
@@ -16,4 +21,8 @@ for (file in files$V1){
   colnames(df)<-c("chr", "start", "end", "feature", "score", "gene", "gene_start", "gene_end", "insideGene", "distanceToGene", "shortestDistanceToGene")
   
   write.table(df, file=paste0(file, ".nearest_gene.txt"), quote=F, row.names=F, sep="\t")
+
+  res=rbind(res, data.frame("File"=paste0(name, ".nearest_gene.txt"), "Sample"=name))
 }
+
+write.csv(res, paste0(outFile, ".csv"), row.names=F)

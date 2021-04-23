@@ -36,11 +36,16 @@ sub result {
     my $cur_dir = $outputToSameFolder ? $result_dir : $result_dir . "/$sample_name";
 
     my @result_files = ();
+    my $bam_file;
     if ( $sort_by_coordinate && $mark_duplicates ) {
-      push( @result_files, "${cur_dir}/${sample_name}.rmdup.bam" );
+      $bam_file = "${cur_dir}/${sample_name}.rmdup.bam";
     }
     else {
-      push( @result_files, "${cur_dir}/${sample_name}.bam" );
+      $bam_file = "${cur_dir}/${sample_name}.bam";
+    }
+    push( @result_files, $bam_file );
+    if($sort_by_coordinate){
+      push( @result_files, "${bam_file}.chromosome.count" );
     }
     
     if($self->{log_result}){

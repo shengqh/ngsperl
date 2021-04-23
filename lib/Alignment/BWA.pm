@@ -201,6 +201,7 @@ fi
 if [[ (-s $sorted_bam_file) && ((1 -eq \$1) || (! -s ${sorted_bam_file}.bai)) ]]; then
   echo index_bam=`date`
   sambamba index $sambamba_index_thread $sorted_bam_file 
+  samtools idxstats $sorted_bam_file > ${sorted_bam_file}.chromosome.count
 fi
 
 $chromosome_grep_command
@@ -215,6 +216,7 @@ fi
 if [[ (-s $sorted_bam_file) && ((1 -eq \$1) || (! -s ${sorted_bam_file}.bai)) ]]; then
   echo index_bam=`date`
   samtools index $samtools_index_thread $sorted_bam_file 
+  samtools idxstats $sorted_bam_file > ${sorted_bam_file}.chromosome.count
 fi
 
 $chromosome_grep_command
@@ -258,6 +260,9 @@ if [[ (-s $sorted_bam_file) && ((1 -eq \$1) || (! -s $rmdup_bam_file)) ]]; then
     CREATE_INDEX=true \\
     REMOVE_DUPLICATES=true
 fi
+
+samtools idxstats $rmdup_bam_file > ${rmdup_bam_file}.chromosome.count
+
 ";
       $rmlist = $rmlist . " " . $sorted_bam_file;
     }
@@ -312,6 +317,7 @@ sub result {
     my @result_files = ();
     push( @result_files, $final_file );
     push( @result_files, $final_file . ".stat" );
+    push( @result_files, $final_file . ".chromosome.count" );
     push( @result_files, "${result_dir}/${sample_name}.bamstat" );
     push( @result_files, "${result_dir}/${sample_name}.bwa.version" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );

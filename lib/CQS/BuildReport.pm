@@ -118,6 +118,11 @@ sub perform {
       } elsif ( $copy_file =~ /_GSEA/ & $copy_file !~ /_GSEA.rnk$/ ) {
         create_directory_or_die("$report_folder/gsea");
         $to_folder = ("$task_name/gsea");
+      } elsif ( $copy_file =~ /_homer/ ) {
+        my $treatment=basename(dirname($copy_file));
+        create_directory_or_die("$report_folder/homer");
+        create_directory_or_die("$report_folder/homer/$treatment");
+        $to_folder = ("$task_name/homer/$treatment");
       }
       print $final "cp -r -u $copy_file $to_folder \n";
     }

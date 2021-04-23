@@ -13,6 +13,7 @@ use Pipeline::WdlPipeline;
 use Pipeline::WGS;
 use Variants::VariantsUtils;
 use Data::Dumper;
+use List::Util qw(max);
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -74,7 +75,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_IBS",          0 );
 
   if ( $def->{perform_muTect} || $def->{perform_muTect2indel} || $def->{perform_muTect2} ) {
-    initDefaultValue( $def, "perform_CrosscheckFingerprints", 1 );
+    initDefaultValue( $def, "perform_CrosscheckFingerprints", defined $def->{hapmap_file} );
     if ( defined $def->{mills} ) {
       initDefaultValue( $def, "indel_realignment", 1 );
       initDefaultValue( $def, "indel_vcf_files",   $def->{mills} );
@@ -269,9 +270,10 @@ sub getConfig {
         option                => "",
         rtemplate             => "../Alignment/BWASummary.r",
         parameterSampleFile1_ref    => [$bwa, ".bamstat"],
+        parameterSampleFile2_ref    => [$bwa, ".chromosome.count"],
         output_file           => "",
         output_file_ext       => ".BWASummary.csv",
-        output_other_ext      => ".BWASummary.png;.BWASummary.sorted.png",
+        output_other_ext      => ".reads.png;.reads.sorted.png",
         sh_direct             => 1,
         pbs                   => {
           "nodes"     => "1:ppn=1",
@@ -431,6 +433,10 @@ sub getConfig {
 
   if ($def->{perform_CrosscheckFingerprints}){
       my $CrosscheckFingerprints_name = $bam_input . "_CrosscheckFingerprints";
+      my $files = $def->{files};
+      my $files_count = scalar(keys %$files);
+      my $height = max($files_count * 60, 3000);
+      my $width = $height + 300;
       my $hapmap = getValue($def, "hapmap_file");
       $config->{$CrosscheckFingerprints_name} = {
         class                 => "CQS::ProgramWrapper",
@@ -448,6 +454,23 @@ java -Xmx40g -jar $picard_jar CrosscheckFingerprints INPUT=__FILE__ \\
 java -Xmx40g -jar $picard_jar ClusterCrosscheckMetrics INPUT=__NAME__.crosscheck_metrics \\
   LOD_THRESHOLD=-5 \\
   OUTPUT=__NAME__.clustered.crosscheck_metrics
+
+cat <<EOT >> __NAME__.r
+library('ggplot2')
+mat<-read.table('__NAME__.crosscheck_metrics', sep='\\t', header=T)
+
+png('__NAME__.crosscheck_metrics.png', width=$width, height=$height, res=300)
+
+g<-ggplot(mat, aes(x=LEFT_GROUP_VALUE, y=RIGHT_GROUP_VALUE)) + 
+  geom_point(aes(size=LOD_SCORE, color=RESULT)) + theme_classic() + 
+  theme(axis.text.x = element_text(angle = 90, hjust=1,vjust=0),
+        axis.title = element_blank())
+print(g)
+dev.off()
+
+EOT
+
+R --vanilla -f __NAME__.clustered.crosscheck_metrics.r
 
 ",
         interpretor           => "",

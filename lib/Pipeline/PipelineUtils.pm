@@ -81,6 +81,8 @@ our %EXPORT_TAGS = (
     addSizeFactor
     addAnnotationLocus
     addAnnotationGenes
+    add_peak_count
+    add_alignment_summary
     )
   ]
 );
@@ -2047,7 +2049,7 @@ sub add_BWAsummary {
     perform               => 1,
     target_dir            => "${target_dir}/${bwa_summary}",
     option                => "",
-    rtemplate             => "../Alignment/BWASummary.r",
+    rtemplate             => "../Alignment/AlignmentUtils.r;../Alignment/BWASummary.r",
     parameterSampleFile1_ref    => [$bwa, ".bamstat"],
     output_file           => "",
     output_file_ext       => ".BWASummary.csv",
@@ -2472,6 +2474,57 @@ sub addAnnotationGenes {
   }
 
   addPlotGene($config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, [ $geneLocus, ".bed" ], $bam_ref);
+}
+
+sub add_peak_count {
+  my ($config, $def, $tasks, $target_dir, $task_name, $callName) = @_;
+  $config->{$task_name} = {
+    class      => "CQS::ProgramWrapper",
+    perform    => 1,
+    suffix     => "_pc",
+    target_dir => "${target_dir}/" . $task_name,
+    interpretor => "python3",
+    program    => "../Count/bedCount.py",
+    option     => "",
+    source_arg => "-i",
+    source_ref => [ $callName, ".bed\$" ],
+    output_arg => "-o",
+    output_prefix => ".txt",
+    output_ext => ".txt",
+    can_result_be_empty_file => 1,
+    sh_direct  => 1,
+    pbs        => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "1",
+      "mem"      => "2gb"
+    },
+  };
+  push @$tasks, ($task_name);
+  return($task_name);
+}
+
+sub add_alignment_summary {
+  my ($config, $def, $tasks, $target_dir, $task_name, $rtemplate, $output_file_ext, $read_1_ref, $read_2_ref ) = @_;
+
+  $config->{$task_name} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    rCode                    => "",
+    target_dir               => "${target_dir}/" . getNextFolderIndex($def) . ${task_name},
+    option                   => "",
+    parameterSampleFile1_ref => $read_1_ref,
+    parameterSampleFile2_ref => $read_2_ref,
+    rtemplate                => $rtemplate,
+    output_file              => "",
+    output_file_ext          => $output_file_ext,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "1",
+      "mem"      => "5gb"
+    },
+  };
+  push(@$tasks, $task_name);
+  return($task_name);
 }
 
 1;

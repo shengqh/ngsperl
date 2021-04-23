@@ -148,6 +148,7 @@ if [[ -s ${filterFile}.bai && ! -s ${finalFile}.bai ]]; then
   echo RemoveUnpaired=`date` 
   samtools sort -n $filterFile | samtools fixmate -O bam - -| samtools view $option -b | samtools sort -T $sample_name -o $finalFile 
   samtools index $finalFile 
+  samtools idxstats $finalFile > ${finalFile}.chromosome.count
 fi
 ";
       $rmlist = $rmlist . " $filterFile ${filterFile}.bai";
@@ -193,6 +194,7 @@ sub result {
     my @result_files = ();
     push( @result_files, "${result_dir}/${finalFile}" );
     push( @result_files, "${result_dir}/${finalFile}.stat" );
+    push( @result_files, "${result_dir}/${finalFile}.chromosome.count" );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
