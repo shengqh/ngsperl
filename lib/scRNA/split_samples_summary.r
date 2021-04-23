@@ -1,17 +1,11 @@
+
 library(ggplot2)
 library(reshape2)
 
-args = commandArgs(trailingOnly=TRUE)
+inputFile=parSampleFile1
+nameMapFile=parSampleFile2
+outputPrefix=paste0(outFile, ".HTO.summary")
 
-if (length(args) == 0) {
-  inputFile = "/scratch/cqs/shengq2/paula_hurley_projects/20210303_scRNA_human/hto_samples_cutoff_summary/result/scRNA__fileList1.list"
-  nameMapFile = "/scratch/cqs/shengq2/paula_hurley_projects/20210303_scRNA_human/hto_samples_cutoff_summary/result/scRNA__fileList2.list"
-  outputPrefix = "/scratch/cqs/shengq2/paula_hurley_projects/20210303_scRNA_human/hto_samples_cutoff_summary/result/scRNA.HTO.summary"
-}else{
-  inputFile = args[1]
-  outputPrefix = args[2]
-  nameMapFile = args[3]
-}
 cat("inputFile=", inputFile, "\n")
 cat("outputPrefix=", outputPrefix, "\n")
 cat("nameMapFile=", nameMapFile, "\n")
@@ -27,7 +21,7 @@ dat=apply(files, 1, function(x){
 colnames(dat)=files$V2
 write.csv(dat, file=paste0(outputPrefix, ".csv"), quote=F)
 
-mdat=melt(dat)
+mdat=reshape2::melt(dat)
 colnames(mdat)=c("Class", "Sample", "Cell")
 
 pdf(paste0(outputPrefix, ".global.pdf"))
@@ -61,7 +55,7 @@ if (hasNameMap) {
 mdat=mdat[,c("Sample", "Cell", "Freq")]
 colnames(mdat)=c("Sample", "Class", "Cell")
 
-dat=dcast(mdat, formula="Sample~Class")
+dat=reshape2::dcast(mdat, formula="Sample~Class")
 write.csv(dat, file=paste0(outputPrefix, ".csv"), quote=F, row.names=F)
 
 pdf(paste0(outputPrefix, ".global.pdf"))
