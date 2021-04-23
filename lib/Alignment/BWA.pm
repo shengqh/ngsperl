@@ -317,6 +317,7 @@ sub result {
     my @result_files = ();
     push( @result_files, $final_file );
     push( @result_files, $final_file . ".stat" );
+    push( @result_files, $final_file . ".chromosome.count" );
     push( @result_files, "${result_dir}/${sample_name}.bamstat" );
     push( @result_files, "${result_dir}/${sample_name}.bwa.version" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
