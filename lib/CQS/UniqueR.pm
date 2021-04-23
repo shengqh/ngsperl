@@ -43,10 +43,13 @@ sub perform {
   my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
 
   my $removeEmpty = get_option( $config, $section, "remove_empty_parameter", 0 );
-  my $parametersample_files1 = writeParameterSampleFile( $config, $section, $result_dir, 1, $removeEmpty );
-  my $parametersample_files2 = writeParameterSampleFile( $config, $section, $result_dir, 2, $removeEmpty );
-  my $parametersample_files3 = writeParameterSampleFile( $config, $section, $result_dir, 3, $removeEmpty );
-  my $parametersample_files4 = writeParameterSampleFile( $config, $section, $result_dir, 4, $removeEmpty );
+  my $paramSampleFiles = {};
+  for my $myidx (1..10) {
+    my $paramSampleFile = writeParameterSampleFile( $config, $section, $result_dir, $myidx, $removeEmpty );
+    if ($paramSampleFile ne ""){
+      $paramSampleFiles->{"parSampleFile" . $myidx} = $paramSampleFile;
+    }
+  }
 
   my $parameterFile1 = parse_param_file( $config, $section, "parameterFile1", 0 );
   my $parameterFile2 = parse_param_file( $config, $section, "parameterFile2", 0 );
@@ -76,17 +79,8 @@ sub perform {
   }
 
   my $rParameter = "outFile='$output_file_r'\n";
-  if ( defined($parametersample_files1) ) {
-    $rParameter = $rParameter . "parSampleFile1='$parametersample_files1'\n";
-  }
-  if ( defined($parametersample_files2) ) {
-    $rParameter = $rParameter . "parSampleFile2='$parametersample_files2'\n";
-  }
-  if ( defined($parametersample_files3) ) {
-    $rParameter = $rParameter . "parSampleFile3='$parametersample_files3'\n";
-  }
-  if ( defined($parametersample_files4) ) {
-    $rParameter = $rParameter . "parSampleFile4='$parametersample_files4'\n";
+  for my $file_key (sort keys %$paramSampleFiles) {
+    $rParameter = $rParameter . $file_key . "='" . $paramSampleFiles->{$file_key} . "'\n";
   }
   if ( defined($parameterFile1) ) {
     $rParameter = $rParameter . "parFile1='$parameterFile1'\n";
