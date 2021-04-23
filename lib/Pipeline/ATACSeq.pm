@@ -9,6 +9,7 @@ use CQS::ConfigUtils;
 use CQS::ClassFactory;
 use Pipeline::Preprocession;
 use Pipeline::PipelineUtils;
+use Pipeline::PeakPipelineUtils;
 use Data::Dumper;
 use Hash::Merge qw( merge );
 
@@ -71,6 +72,8 @@ sub initializeDefaultOptions {
     $def->{"treatments"} = $groups;
   }
 
+  initDefaultValue( $def, "perform_report", 1 );
+
   return $def;
 }
 
@@ -109,6 +112,7 @@ sub getConfig {
     getValue( $def, "design_table" );
   }
 
+  $def->{aligner} = "bwa";
   $config->{"bwa"} = {
     class              => "Alignment::BWA",
     perform            => 1,
@@ -127,7 +131,7 @@ sub getConfig {
     },
   };
   push @$individual, "bwa";
-  addBamStat( $config, $def, $summary, "bwa_stat", $target_dir . "/bwa_summary", [ "bwa", "bam.stat\$" ] );
+  add_alignment_summary($config, $def, $summary, $target_dir, "bwa_summary", "../Alignment/AlignmentUtils.r;../Samtools/BamStat.r", ".reads.csv;.reads.png;.chromosome.csv;.chromosome.png", [ "bwa", "bam.stat" ], ["bwa", ".chromosome.count"] );
 
   $config->{bwa_insertsize} = {
     class                    => "CQS::UniqueR",
@@ -171,7 +175,7 @@ sub getConfig {
     },
   };
   push @$individual, "bwa_cleanbam";
-  addBamStat( $config, $def, $summary, "bwa_cleanbam_stat", $target_dir . "/bwa_cleanbam_summary", [ "bwa_cleanbam", ".stat\$" ] );
+  add_alignment_summary($config, $def, $summary, $target_dir, "bwa_cleanbam_summary", "../Alignment/AlignmentUtils.r;../Samtools/BamStat.r", ".chromosome.csv;.chromosome.png", undef, ["bwa", ".chromosome.count"] );
 
   my $bam_ref = ["bwa_cleanbam", ".bam\$"];
   if($def->{perform_bamsnap} && $def->{"bamsnap_locus"}){
@@ -191,38 +195,6 @@ sub getConfig {
     }
   }
 
-
-  #  if ( defined $config->{fastqc_count_vis} ) {
-  #    my $files = $config->{fastqc_count_vis}{parameterFile1_ref};
-  #    if ( defined $config->{fastqc_count_vis}{parameterFile2_ref} ) {
-  #      my $f = $config->{fastqc_count_vis}{parameterFile2_ref};
-  #      push @$files, @$f;
-  #    }
-  #    if ( defined $config->{fastqc_count_vis}{parameterFile3_ref} ) {
-  #      my $f = $config->{fastqc_count_vis}{parameterFile3_ref};
-  #      push @$files, @$f;
-  #    }
-  #    push @$files, ( "bwa_stat",          ".csv\$" );
-  #    push @$files, ( "bwa_cleanbam_stat", ".csv\$" );
-  #    $config->{"reads_in_task"} = {
-  #      class                    => "CQS::UniqueR",
-  #      target_dir               => "${target_dir}/reads_in_task",
-  #      perform                  => 1,
-  #      rtemplate                => "countInTasks.R",
-  #      output_file              => ".countInTasks.Result",
-  #      output_file_ext          => ".Reads.csv",
-  #      sh_direct                => 1,
-  #      parameterSampleFile1_ref => $files,
-  #      pbs                      => {
-  #        "email"    => $def->{email},
-  #        "nodes"    => "1:ppn=1",
-  #        "walltime" => "1",
-  #        "mem"      => "10gb"
-  #      },
-  #    };
-  #    push @$summary, ("reads_in_task");
-  #  }
-
   my $callerType = getValue( $def, "caller_type" );
   my @callers = ();
   if ( $callerType eq "both" ) {
@@ -234,6 +206,9 @@ sub getConfig {
   else {
     push( @callers, ("macs2") );
   }
+
+  my $task_dic = {
+  };
 
   for my $caller (@callers) {
     my @peakTypes = ();
@@ -309,8 +284,44 @@ sub getConfig {
         },
       };
       push @$individual, ($callName);
-      
+
       add_peak_count($config, $def, $summary, $target_dir, $callName . "_count", $callName);
+
+      if ($annotate_nearest_gene) {
+        my $geneName = $callName . "_gene";
+        $config->{$geneName} = {
+          class                    => "CQS::UniqueR",
+          perform                  => 1,
+          target_dir               => "${target_dir}/${callName}",
+          rtemplate                => "../Annotation/findNearestGene.r",
+          output_file              => "",
+          output_file_ext          => ".Category.Table.csv",
+          parameterSampleFile1_ref => [ $callName, $callFilePattern ],
+          parameterFile1           => $gene_bed,
+          rCode                    => '',
+          sh_direct                => 1,
+          pbs                      => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push @$summary, ($geneName);
+      }
+
+      $task_dic->{peak_caller} = $callName;
+      $task_dic->{peak_count} = $callName . "_count";
+
+      my $chipqc_taskname = $callName . "_chipqc";
+      if ($def->{perform_chipqc}) {
+        add_chipqc($config, $def, $summary, $target_dir, $chipqc_taskname, [ $callName, $callFilePattern ], [ "bwa_cleanbam", ".bam\$" ]);
+        $task_dic->{chipqc} = $chipqc_taskname;
+      }
+
+      if ( getValue( $def, "perform_homer" ) ) {
+        my $homer = addHomerAnnotation( $config, $def, $summary, $target_dir, $callName, $callFilePattern );
+        $task_dic->{homer} = $homer;
+      }
 
       if ( getValue( $def, "perform_enhancer" ) ) {
         addEnhancer( $config, $def, $individual, $summary, $target_dir, $callName . "_enhancer", [ "bwa_cleanbam", ".bam\$" ], [$callName, $callFilePattern] );
@@ -319,8 +330,10 @@ sub getConfig {
       if ($perform_diffbind) {
         my $bindName = $callName . "_diffbind";
         addDiffbind($config, $def, $summary, $target_dir, $bindName, "bwa_cleanbam", [ $callName, $callFilePattern ]);
+        $task_dic->{diff_bind} = $bindName;
         if ( getValue( $def, "perform_homer" ) ) {
-          addHomerAnnotation( $config, $def, $summary, $target_dir, $bindName, ".sig.bed" );
+          my $diffbind_homer = addHomerAnnotation( $config, $def, $summary, $target_dir, $bindName, ".sig.bed" );
+          $task_dic->{diff_bind_homer} = $diffbind_homer;
         }
       }
 
@@ -434,7 +447,7 @@ sub getConfig {
               "mem"       => "10gb"
             },
           };
-          push @$summary, ($diffName);
+          push @$summary, ($geneName);
         }
 
         if ( getValue( $def, "perform_homer_motifs" ) ) {
@@ -475,6 +488,10 @@ sub getConfig {
       },
     };
     push @$summary, ("bamplot");
+  }
+
+  if ( getValue( $def, "perform_report" ) ) {
+    addPeakPipelineReport($config, $def, $summary, $target_dir, $task_dic);
   }
 
   $config->{"sequencetask"} = {
