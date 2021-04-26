@@ -294,7 +294,8 @@ sub getRNASeqConfig {
         target_dir               => $featureCountFolder,
         option                   => "",
         rtemplate                => "../Alignment/STARFeatureCount.r",
-        output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
+        #output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
+        output_file_ext          => ".STARSummary.csv;.STARSummary.csv.png",
         parameterSampleFile2_ref => [ "featurecount", ".count.summary" ],
         sh_direct                => 1,
         pbs                      => {
