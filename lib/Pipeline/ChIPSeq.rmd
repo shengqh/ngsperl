@@ -188,9 +188,17 @@ df <- data.frame()
 for(i in 1:length(peaks_xls)){
   lines <- readLines(peaks_xls[i], n=29)
   df[i,1] <- sample_names[i]
-  df[i,2] <- word(lines[19], 7)
-  df[i,3] <- word(lines[24], 4)
-  df[i,4] <- paste0("<= ", word(lines[11], 5))
+  df[i,2] <- word(lines[grep("# fragment size is determined as", lines)], 7)
+  df[i,3] <- word(lines[grep("# d = ", lines)], 4)
+  qvalue_index = grep("# qvalue cutoff for broad/weak regions", lines)
+  if(qvalue_index == 0){
+    qvalue_index = grep("# qvalue cutoff for narrow/strong regions", lines)
+  }
+  if(qvalue_index == 0){#pvalue
+    df[i,4] <- paste0("<= ", word(lines[11], 5))
+  }else{
+    df[i,4] <- paste0("<= ", word(lines[qvalue_index], 8))
+  }
   df[i,5] <- dim(fread(peaks_xls[i], data.table = F))[1]
   if(has_homer){
     stats <- fread(peaks_annot[i], data.table=F)
@@ -288,33 +296,27 @@ include_graphics(venn)
 <br>
 
 ```{r bindiff_Venn2,echo=FALSE,results='asis', eval=has_diffbind, fig.align="center", fig.cap=figRef("diffbindVennOverlap", "Binding sites overlaps across conditions"), out.width="30%", out.height="15%",fig.show='hold'}
-include_graphics(list.files(paste0(diffbind, "/result"), pattern="condition.png", full.names=T, recursive=T))
+condition_file = list.files(paste0(diffbind, "/result"), pattern="Overlap-condition.png", full.names=T, recursive=T)
+include_graphics(condition_file)
 ```
 
 <br>
 
 ```{r bindiff_2, eval=has_diffbind, results="asis", echo=FALSE} 
-if(has_diffbind){
-  cat("### Dysregulation between conditions\n<br>\n")
-}
-```
-
-```{r peak_diff_summary, eval=has_diffbind, echo=FALSE, results='asis'}
-if (has_diffbind){
-  sig_table <- data.frame()
-  sig_files <- list.files(paste0(diffbind, "/result"), pattern="sig.tsv$", full.names=T, recursive=T)
-  comp_names <- gsub(".sig.tsv$", "", basename(sig_files))
-    for (i in 1:length(sig_files)){
-      sig <- read.table(sig_files[i], header=T, sep="\t")
-      up <- length(which(sig$Fold > 0))
-      dn <- length(which(sig$Fold < 0))
-      up_dn <- data.frame(Comparison=comp_names[i], Up=up, Down=dn)
-      sig_table <- rbind(sig_table, up_dn)
-    }
-  print(kable(sig_table, caption=tabRef("peakSummary", "Differential peaks based on FDR < 0.05 and fold change > 1.5.")) %>%
-    kable_styling() %>%
-    htmltools::HTML())
-}
+cat("### Dysregulation between conditions\n<br>\n")
+sig_table <- data.frame()
+sig_files <- list.files(paste0(diffbind, "/result"), pattern="sig.tsv$", full.names=T, recursive=T)
+comp_names <- gsub(".sig.tsv$", "", basename(sig_files))
+  for (i in 1:length(sig_files)){
+    sig <- read.table(sig_files[i], header=T, sep="\t")
+    up <- length(which(sig$Fold > 0))
+    dn <- length(which(sig$Fold < 0))
+    up_dn <- data.frame(Comparison=comp_names[i], Up=up, Down=dn)
+    sig_table <- rbind(sig_table, up_dn)
+  }
+print(kable(sig_table, caption=tabRef("peakSummary", "Differential peaks based on FDR < 0.05 and fold change > 1.5.")) %>%
+  kable_styling() %>%
+  htmltools::HTML())
 ```
 <br>
 

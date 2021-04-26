@@ -330,10 +330,10 @@ sub getConfig {
       if ($perform_diffbind) {
         my $bindName = $callName . "_diffbind";
         addDiffbind($config, $def, $summary, $target_dir, $bindName, "bwa_cleanbam", [ $callName, $callFilePattern ]);
-        $task_dic->{diff_bind} = $bindName;
+        $task_dic->{diffbind} = $bindName;
         if ( getValue( $def, "perform_homer" ) ) {
           my $diffbind_homer = addHomerAnnotation( $config, $def, $summary, $target_dir, $bindName, ".sig.bed" );
-          $task_dic->{diff_bind_homer} = $diffbind_homer;
+          $task_dic->{diffbind_homer} = $diffbind_homer;
         }
       }
 
