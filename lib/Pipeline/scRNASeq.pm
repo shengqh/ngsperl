@@ -896,12 +896,16 @@ sub getScRNASeqConfig {
       };
       push( @$summary, $find_markers );
 
-      if (getValue( $def, "perform_scMRMA" ) ) {
+      if (getValue( $def, "perform_scMRMA", 0 ) ) {
         addScMRMA( $config, $def, $summary, $target_dir, $project_name, $seurat_name );
       }
 
-      if (getValue( $def, "perform_CHETAH" ) ) {
+      if (getValue( $def, "perform_CHETAH", 0 ) ) {
         addCHETAH( $config, $def, $summary, $target_dir, $project_name, $seurat_name . "_CHETAH", $seurat_name );
+      }
+
+      if (getValue( $def, "perform_signac", 0 ) ) {
+        addSignac( $config, $def, $summary, $target_dir, $project_name, $seurat_name . "_signac", $seurat_name );
       }
 
       addGeneTask( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name );

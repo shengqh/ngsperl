@@ -14,6 +14,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(addEnclone
   addArcasHLA 
   addScMRMA 
   addCHETAH
+  addSignac
   addCellRangerCount 
   addCellRangerVdj)] );
 
@@ -256,6 +257,30 @@ sub addCHETAH {
       prefix              => $project_name,
     },
     output_file_ext => ".CHETAH.png;.CHETAH.rds;.CHETAH.csv",
+    sh_direct       => 1,
+    pbs             => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$tasks, $task_name );
+}
+
+sub addSignac {
+  my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $seurat_name ) = @_;
+
+  $config->{$task_name} = {
+    class                => "CQS::UniqueR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . $task_name,
+    rtemplate            => "../scRNA/Signac.r",
+    parameterFile1_ref   => [ $seurat_name, ".final.rds" ],
+    parameterSampleFile1 => {
+      species             => getValue( $def, "species" ),
+      prefix              => $project_name,
+    },
+    output_file_ext => ".CellStates.fast.png;.CellStates.fast.rds",
     sh_direct       => 1,
     pbs             => {
       "nodes"     => "1:ppn=1",
