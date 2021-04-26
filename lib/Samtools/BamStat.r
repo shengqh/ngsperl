@@ -4,11 +4,11 @@ library(ggplot2)
 
 options(bitmapType='cairo')
 
-if (parSampleFile2 != ""){
+if (exists("parSampleFile2")){
   draw_chromosome_count(parSampleFile2, outFile)
 }
 
-if (parSampleFile1 != ""){
+if (exists("parSampleFile1")){
   filelist<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactor=F)
   if(nrow(filelist) != length(unique(filelist$V2))){
     stop(paste0("Cannot have replicated sample names in ", parSampleFile1, " ."))

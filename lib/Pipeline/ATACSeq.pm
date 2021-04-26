@@ -175,7 +175,7 @@ sub getConfig {
     },
   };
   push @$individual, "bwa_cleanbam";
-  add_alignment_summary($config, $def, $summary, $target_dir, "bwa_cleanbam_summary", "../Alignment/AlignmentUtils.r;../Samtools/BamStat.r", ".chromosome.csv;.chromosome.png", undef, ["bwa", ".chromosome.count"] );
+  add_alignment_summary($config, $def, $summary, $target_dir, "bwa_cleanbam_summary", "../Alignment/AlignmentUtils.r;../Samtools/BamStat.r", ".chromosome.csv;.chromosome.png", undef, ["bwa_cleanbam", ".chromosome.count"] );
 
   my $bam_ref = ["bwa_cleanbam", ".bam\$"];
   if($def->{perform_bamsnap} && $def->{"bamsnap_locus"}){
