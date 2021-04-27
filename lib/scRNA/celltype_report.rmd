@@ -321,6 +321,11 @@ print(kable(cta_combined, row.names=F,  caption=tabRef("tcell_cta_table", "T cel
 ```{r gene_activity_umap, fig.width=18, fig.height=10, results="asis", fig.cap=figRef("umap_cluster_cell", "Predicted cell types")}
 p2<-DimPlot(object = obj, reduction = "umap",label=T, group.by="seurat_cellactivity_clusters", cols=seurat_cellactivity_colors)
 print(p2)
+
+png(file=paste0(prefix, ".seurat_cellactivity_clusters.png"), width=3300, height=3000, res=300)
+print(p2)
+dev.off()
+
 ```
 
 ```{r gene_activity_umap_samples, eval=hasMultipleSamples, fig.height=8, fig.width=18, fig.cap=figRef("gene_activity_umap_samples", "Predicted cell types by sample")}
