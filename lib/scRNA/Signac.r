@@ -4,6 +4,18 @@ library(Seurat)
 finalList=readRDS(parFile1)
 obj=finalList$obj
 
+if(DefaultAssay(obj) == "integrated"){
+  if("SCT" %in% names(obj@assays)){
+    DefaultAssay(obj)="SCT"
+  }else{
+    DefaultAssay(obj)="RNA"
+  }
+  obj <- SCTransform(obj, verbose = FALSE)
+  obj <- RunPCA(obj, verbose = FALSE)
+  obj <- RunUMAP(obj, dims = 1:50, verbose = FALSE)
+  obj <- FindNeighbors(obj, dims = 1:50, verbose = FALSE)  
+}
+
 labels <- SignacFast(obj)
 celltypes_fast = GenerateLabels(labels, E = obj)
 
