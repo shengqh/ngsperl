@@ -548,8 +548,12 @@ sub getScRNASeqConfig {
   }
 
   if (defined $def->{files}){
+    my @report_files = ();
+    my @report_names = ();
+    my $hto_name = undef;
     my $hto_ref = undef;
     my $hto_sample_file = undef;
+    my $hto_summary = undef;
     if( $perform_split_hto_samples ) {
       my $r_script = undef;
       my $folder = undef;
@@ -574,8 +578,8 @@ sub getScRNASeqConfig {
         #print("hto_files=" . Dumper($hto_files));
       }
       #print("hto_file_ref=" . $hto_file_ref . "\n");
-
-      $config->{"hto_samples"} = {
+      $hto_name = "hto_samples";
+      $config->{$hto_name} = {
         class => "CQS::ProgramWrapperOneToOne",
         target_dir => "${target_dir}/$folder",
         interpretor => getValue($def, "R", "R") . " --vanilla -f ",
@@ -586,7 +590,7 @@ sub getScRNASeqConfig {
         source_ref => $hto_file_ref,
         output_arg => "",
         output_file_prefix => ".HTO",
-        output_file_ext => ".HTO.csv",
+        output_file_ext => ".HTO.class.dist.png;.HTO.csv",
         output_to_same_folder => 0,
         can_result_be_empty_file => 0,
         sh_direct   => 1,
@@ -598,9 +602,10 @@ sub getScRNASeqConfig {
       };
       push( @$individual, "hto_samples" );
 
-      $hto_ref = ["hto_samples", ".HTO.csv" ];
+      $hto_ref = [ $hto_name, ".HTO.csv" ];
 
-      $config->{"hto_samples_summary"} = {
+      $hto_summary = $hto_name . "_summary";
+      $config->{$hto_summary} = {
         class => "CQS::UniqueR",
         target_dir => "${target_dir}/${folder}_summary",
         rtemplate => "../scRNA/split_samples_summary.r",
@@ -608,7 +613,7 @@ sub getScRNASeqConfig {
         parameterSampleFile1_ref => $hto_ref,
         parameterSampleFile2 => $def->{"HTO_name_map"},
         output_file => "",
-        output_file_ext => ".HTO.summary.csv",
+        output_file_ext => ".HTO.summary.csv;.HTO.summary.global.png",
         sh_direct   => 1,
         pbs => {
           "nodes"     => "1:ppn=1",
@@ -617,7 +622,10 @@ sub getScRNASeqConfig {
         },
       },
 
-      push( @$individual, "hto_samples_summary" );
+      push( @$individual, $hto_summary );
+
+      push (@report_files, ($hto_summary, ".HTO.summary.global.png"));
+      push (@report_names, "hto_summary_png");
 
       if(defined $def->{HTO_samples}){
         $hto_sample_file = write_HTO_sample_file($def);
@@ -803,28 +811,8 @@ sub getScRNASeqConfig {
       my $celltype_name     = "cellactivity_clusters";
       my $cluster_name      = "seurat_cellactivity_clusters";
 
-      my $report_name= $celltype . "_report";
-      my $additional_rmd_files = "Functions.Rmd";
-      $config->{$report_name} = {
-        class                    => "CQS::UniqueRmd",
-        perform                  => 1,
-        target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $report_name,
-        report_rmd_file          => "../scRNA/celltype_report.rmd",
-        additional_rmd_files     => $additional_rmd_files,
-        parameterSampleFile1_ref => [$seurat_name, ".final.rds"],
-        parameterSampleFile2_ref => [$celltype, ".celltype.csv"],
-        parameterSampleFile3_ref => [$celltype, ".celltype.rds"],
-        parameterSampleFile4 => merge({prefix=>$project_name}, merge($config->{$seurat_name}{parameterSampleFile2}, $config->{$celltype}{parameterSampleFile1})),
-        output_file_ext      => "_ur.html",
-        sh_direct            => 1,
-        pbs                  => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      };
-      push( @$summary, $report_name );
-
+      push(@report_files, ($seurat_name, ".final.rds", $celltype, ".celltype.csv", $celltype, ".celltype.rds"));
+      push(@report_names, ("seurat_rds", "activity_celltype", "activity_rds"));
 
       # my $additional_rmd_files = "Functions.Rmd";
       # $config->{$seurat_name} = {
@@ -900,13 +888,46 @@ sub getScRNASeqConfig {
         addScMRMA( $config, $def, $summary, $target_dir, $project_name, $seurat_name );
       }
 
+      my $parameterSampleFile5_ref = undef;
       if (getValue( $def, "perform_CHETAH", 0 ) ) {
-        addCHETAH( $config, $def, $summary, $target_dir, $project_name, $seurat_name . "_CHETAH", $seurat_name );
+        my $CHETAH_name= $seurat_name . "_CHETAH";
+        addCHETAH( $config, $def, $summary, $target_dir, $project_name, $CHETAH_name, $seurat_name );
+        push @report_files, ($CHETAH_name, ".CHETAH.png");
+        push @report_names, "chetah_png";
       }
 
+      my $parameterSampleFile6_ref = undef;
       if (getValue( $def, "perform_signac", 0 ) ) {
-        addSignac( $config, $def, $summary, $target_dir, $project_name, $seurat_name . "_signac", $seurat_name );
+        my $signac_name = $seurat_name . "_signac";
+        addSignac( $config, $def, $summary, $target_dir, $project_name, $signac_name, $seurat_name );
+        push @report_files, ($signac_name, ".signac.png");
+        push @report_names, "signac_png";
       }
+
+      my $report_name= "report";
+      my $additional_rmd_files = "Functions.Rmd;../scRNA/scRNA_func.r";
+      $config->{$report_name} = {
+        class                    => "CQS::BuildReport",
+        perform                  => 1,
+        target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $report_name,
+        report_rmd_file          => "../scRNA/report.rmd",
+        additional_rmd_files     => $additional_rmd_files,
+        parameterSampleFile1_ref => \@report_files,
+        parameterSampleFile1_names => \@report_names,
+        parameterSampleFile2 => merge({prefix=>$project_name}, merge($config->{$seurat_name}{parameterSampleFile2}, $config->{$celltype}{parameterSampleFile1})),
+        parameterSampleFile3 => [],
+        output_file_ext      => "_ur.html",
+        sh_direct            => 1,
+        pbs                  => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      if(defined $hto_name){
+        $config->{$report_name}{parameterSampleFile4_ref} = [$hto_name, ".HTO.class.dist.png"];
+      }
+      push( @$summary, $report_name );
 
       addGeneTask( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name );
 
