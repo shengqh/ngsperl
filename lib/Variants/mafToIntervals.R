@@ -3,7 +3,7 @@
 #traform maf file to intervals file for GATK
 #https://gatk.broadinstitute.org/hc/en-us/articles/360035531852
 
-mafFileTable=read.delim(parSampleFile1,as.is=T)
+mafFileTable=read.delim(parSampleFile1,as.is=T,check.names=F)
 
 
 #use the largest freq0* file as mafFile to output variant locations

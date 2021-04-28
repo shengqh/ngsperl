@@ -13,7 +13,7 @@ chrToKeep=c(1:22,"X","Y",paste0("chr",c(1:22,"X","Y")))
 # cnvSegFiles=cnvSegFiles[-grep("PBMC",cnvSegFiles[,2]),]
 # write.table(cnvSegFiles,"/scratch/cqs/zhaos/Pierre/WES/20200729_UMI_somaticCNV_simpleProcessing/somaticCNV_03_summary/fileList1.txt",row.names=FALSE,quote=FALSE,sep="\t",col.names=FALSE)
 
-cnvSegFilesTable=read.delim(cnvSegFiles,header=F,as.is=T)
+cnvSegFilesTable=read.delim(cnvSegFiles,header=F,as.is=T,check.names=F)
 
 #find matched af segment files
 afDir="/out/"
@@ -33,8 +33,8 @@ for (i in 1:nrow(cnvSegFilesTable)) {
   sampleName=cnvSegFilesTable[i,2]
   
   print(sampleName)
-  segmentTableOne=read.delim(segmentFile,as.is=TRUE,header=TRUE,comment="@")
-  segmentAfTableOne=read.delim(segmentAfFile,as.is=TRUE,header=TRUE)
+  segmentTableOne=read.delim(segmentFile,as.is=TRUE,header=TRUE,comment="@",check.names=F)
+  segmentAfTableOne=read.delim(segmentAfFile,as.is=TRUE,header=TRUE,check.names=F)
   
   if (
     identical(segmentAfTableOne[,"Chromosome"],segmentTableOne[,"CONTIG"]) &

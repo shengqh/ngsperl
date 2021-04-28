@@ -17,7 +17,7 @@ curSample<-samples[1]
 for (curSample in samples) {
   resFile<-paste0(curSample, ".csv")
   if(file.exists(resFile)){
-    df<-read.csv(resFile)
+    df<-read.csv(resFile,check.names=F)
   }else{
     curFiles<-readFiles[readFiles$V2==curSample, ]
     curFiles$Category<-"Nonhost"

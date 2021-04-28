@@ -4,7 +4,7 @@ library(data.table)
 library(GenomicRanges)
 
 familyInfoFile=parFile1
-familyInfoTable=read.delim(familyInfoFile,row.names=1,header=T,as.is=T)
+familyInfoTable=read.delim(familyInfoFile,row.names=1,header=T,as.is=T,check.names=F)
 
 if (!exists("patientFeature")) {
   patientFeature=colnames(familyInfoTable)[2]
@@ -26,7 +26,7 @@ cnvTable=fread(cnvFile)
 
 
 AllelicCountsFiles=parSampleFile1
-AllelicCountsSampleToFile=read.delim(AllelicCountsFiles,header=FALSE,as.is=T)
+AllelicCountsSampleToFile=read.delim(AllelicCountsFiles,header=FALSE,as.is=T,check.names=F)
 
 
 

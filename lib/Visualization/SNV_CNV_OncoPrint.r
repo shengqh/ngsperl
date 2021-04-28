@@ -44,13 +44,13 @@ alter_fun = list(
 )
 
 cnvFile = parFile1
-cnvdata<-read.delim(cnvFile, as.is=T, header=T, sep="\t", stringsAsFactors = F)
+cnvdata<-read.delim(cnvFile, as.is=T, header=T, sep="\t", stringsAsFactors = F,check.names=F)
 
 inputFileData<-read.delim(inputFiles, header=F, sep="\t", stringsAsFactors = F)
 
 inputFile<-inputFileData$V1[[1]]
 for(inputFile in inputFileData$V1){
-  oncoData<-read.delim(inputFile,as.is=T,header=TRUE,sep="\t", row.names=1, stringsAsFactors = F)
+  oncoData<-read.delim(inputFile,as.is=T,header=TRUE,sep="\t", row.names=1, stringsAsFactors = F,check.names=F)
   oncoData[oncoData==" "]<-NA
   oncoData[oncoData==""]<-NA
   

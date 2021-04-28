@@ -12,7 +12,7 @@ vIdCols=c("Hugo_Symbol", "Protein_Change" ,"Chromosome" ,       "Start_Position"
 
 
 familyInfoFile=parFile1
-familyInfoTable=read.delim(familyInfoFile,row.names=1,header=T,as.is=T)
+familyInfoTable=read.delim(familyInfoFile,row.names=1,header=T,as.is=T,check.names=F)
 
 if (!exists("patientFeature")) {
   patientFeature=colnames(familyInfoTable)[2]
