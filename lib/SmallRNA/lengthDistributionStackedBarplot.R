@@ -5,7 +5,7 @@ library(data.table)
 fileList1 <- read.table("fileList1.txt", header=FALSE, sep="\t", stringsAsFactors = F, row.names=2)
 RNA_class <- rownames(fileList1)[!(rownames(fileList1) %in% c("category"))]
 
-category <- read.csv(fileList1["category",1], header=T, row.names=1)
+category <- read.csv(fileList1["category",1], header=T, row.names=1, check.names=F)
 totalReads<-unlist(category["TotalReads",])
 
 final<-NULL

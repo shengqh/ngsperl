@@ -145,7 +145,7 @@ if (is.na(tRNASigFileList) | tRNASigFileList=="") {
 	for (i in 1:nrow(tRNASigFiles)) {
 		tRNASigFileEach<-tRNASigFiles[i,1]
 		if (file.exists(tRNASigFileEach)) {
-			tRNASig<-read.csv(tRNASigFileEach,header=T,row.names=1)
+			tRNASig<-read.csv(tRNASigFileEach,header=T,row.names=1, check.names=F)
 		} else {
 			tRNASig<-matrix(NA,ncol=0,nrow=0)
 		}

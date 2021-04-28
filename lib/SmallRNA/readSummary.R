@@ -64,13 +64,13 @@ truncNames=function(x,ncharMax=20) {
 
 hasReadCategory <- readCategoryFile != ''
 
-allreads<-read.csv(allreadsFile, row.names=1)
+allreads<-read.csv(allreadsFile, row.names=1, check.names=F)
 colnames(allreads)=truncNames(colnames(allreads)) #make names shorter for figure if they are too long
 if(hasReadCategory){
   readCategory<-read.csv(readCategoryFile, row.names=1)
   colnames(readCategory)=truncNames(colnames(readCategory))
 }
-smallRNACategory<-read.csv(smallRNACategoryFile, row.names=1)
+smallRNACategory<-read.csv(smallRNACategoryFile, row.names=1, check.names=F)
 smallRNACategory<-smallRNACategory[grepl("RNA", rownames(smallRNACategory)),]
 colnames(smallRNACategory)=truncNames(colnames(smallRNACategory))
 

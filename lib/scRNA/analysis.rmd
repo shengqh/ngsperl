@@ -226,7 +226,7 @@ if (has_hto) {
   #sample = rownames(hto_cell_files)[1]
   for (sample in rownames(hto_cell_files)){
     cell_file = hto_cell_files[sample, "V1"]
-    cell_data = read.csv(cell_file, stringsAsFactors=FALSE, header=TRUE)
+    cell_data = read.csv(cell_file, stringsAsFactors=FALSE, header=TRUE, check.names=F)
     hto_md5[[sample]] = digest(cell_file, file=TRUE)
     cell_data$Sample = ""
     cur_samples = hto_samples[hto_samples$File == sample,]

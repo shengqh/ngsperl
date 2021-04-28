@@ -95,7 +95,7 @@ display_gsea=function(files) {
     cat(paste0("  \n### ", comparison, "  \n"))
   
     for (i in 1:nrow(comp_files)){
-      gfolders<-read.csv(comp_files[i,1],header=T,stringsAsFactor=F)
+      gfolders<-read.csv(comp_files[i,1],header=T,stringsAsFactor=F, check.names=F)
       gname<-gsub(".rnk.*", "", basename(comp_files[i,1]))
       for (j in 1:nrow(gfolders)){
         resultDirSub<-gfolders$Folder[j]
