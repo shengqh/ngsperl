@@ -25,6 +25,8 @@ cell_clusters$seurat_clusters=as.character(cell_clusters$seurat_clusters)
 celltype=read.csv(parFile3)
 
 draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_prefix){
+  assay=ifelse("SCT" %in% names(all_obj@assays), "SCT", "RNA")
+
   obj = subset(all_obj, seurat_clusters %in% names(new.cluster.ids))
 
   obj[["cellactivity_clusters"]] <- unlist(new.cluster.ids[as.character(unlist(obj[["seurat_clusters"]]))])
@@ -125,7 +127,7 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
       cur_display_markers=rownames(display_markers)
       dot_filename=paste0(celltype_prefix, c, "_", ctc_filename, suffix, ".dot.pdf")
       pdf(file=dot_filename, width=14, height=7)
-      g=DotPlot(obj, features=cur_display_markers, assay="SCT", group.by="seurat_cellactivity_clusters" ) + 
+      g=DotPlot(obj, features=cur_display_markers, assay=assay, group.by="seurat_cellactivity_clusters" ) + 
         xlab("") + ylab("") + theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 90, hjust=1))
       print(g)
       dev.off()
