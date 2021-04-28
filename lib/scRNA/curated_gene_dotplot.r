@@ -6,6 +6,8 @@ library(ggpubr)
 finalList<-readRDS(parFile1)
 obj<-finalList$obj
 
+assay=ifelse("SCT" %in% names(obj@assays), "SCT", "RNA")
+
 genes_df=read.table(parSampleFile1, sep="\t", stringsAsFactors=F)
 
 cluster_df=read.table(parSampleFile2, sep="\t", stringsAsFactors=F)
@@ -18,8 +20,7 @@ cell_df<-read_cell_cluster_file(parFile2)
 
 obj[["final_seurat_clusters"]]=cell_df[,params$display_cluster_name]
 
-assay=ifelse(params$by_sctransform=="1", "SCT", "RNA")
-  
+#assay=ifelse(params$by_sctransform=="1", "SCT", "RNA")
 assaydata=GetAssayData(obj, assay=assay)
 allgenes=rownames(assaydata)
 rm(assaydata)

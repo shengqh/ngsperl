@@ -35,31 +35,7 @@ knitr::opts_chunk$set(
   echo = TRUE
 )
 
-get_cta_combined<-function(obj, predicted){
-  cta_table<-data.frame(Cluster=colnames(predicted$cta), 
-                        CellType=names(predicted$max_cta),
-                        CtaScore=round(predicted$max_cta * 10) / 10.0,
-                        stringsAsFactors = F)
-  cta_table$OraPvalue=apply(cta_table, 1, function(x){
-    ct=x[2]
-    cl=x[1]
-    predicted$ora[ct, cl]
-  })
-
-  cluster_sample<-as.data.frame.matrix(table(obj$seurat_clusters, obj$orig.ident))
-  cluster_sample<-cluster_sample[as.character(cta_table$Cluster),]
-
-  nc<-apply(cluster_sample, 2, function(x){
-    tc=sum(x)
-    perc<-x/tc
-    return(round(perc*1000) / 10.0)
-  })
-  colnames(nc)<-paste0(colnames(nc), "_perc")
-
-  cta_combined<-cbind(cta_table, cluster_sample, nc)
-
-  return(cta_combined)
-}
+source("scRNA_func.r")
 
 ```
 
@@ -82,11 +58,12 @@ library(cowplot)
 library(scales)
 library(stringr)
 library(htmltools)
+library(patchwork)
 require(data.table)
 
 options(future.globals.maxSize= 10779361280)
 
-options_table<-read.table("fileList4.txt", sep="\t", header=F, stringsAsFactors = F)
+options_table<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
 Mtpattern= myoptions$Mtpattern
@@ -115,13 +92,14 @@ nCount_sd_cutoff=0
 pca_dims<-1:as.numeric(myoptions$pca_dims)
 
 filelist1<-read.table("fileList1.txt", header=F)
-finalList<-readRDS(file=filelist1[1,1])
+files<-split(filelist1$V1, filelist1$V2)
 
-filelist2<-read.table("fileList2.txt", header=F)
-celltype<-read.csv(file=filelist2[1,1])
+finalList<-readRDS(file=files$seurat_rds)
+celltype<-read.csv(file=files$activity_celltype)
+celltype_db<-readRDS(file=files$activity_rds)
 
-filelist3<-read.table("fileList3.txt", header=F)
-celltype_db<-readRDS(file=filelist3[1,1])
+has_chetah<-"chetah_png" %in% names(files)
+has_signac<-"signac_png" %in% names(files)
 
 obj<-finalList$obj
 seurat_colors<-finalList$seurat_colors
@@ -129,7 +107,8 @@ hasMultipleSamples<-length(unique(obj$orig.ident))>1
 
 hasBiomarker<-!is.null(finalList$markers)
 
-new.cluster.ids<-split(celltype$cell_type, celltype$seurat_clusters)
+new.cluster.ids<-split(celltype$final_cell_type, celltype$seurat_clusters)
+#new.cluster.ids<-split(celltype$cell_type, celltype$seurat_clusters)
 
 obj[["cellactivity_clusters"]] <- unlist(new.cluster.ids[unlist(obj[["seurat_clusters"]])])
 
@@ -157,6 +136,8 @@ if(length(samples) < 3){
 }else{
   sampleHeight=min(10, ceiling(length(samples) / 3) * 4)
 }
+sampleCol=ceiling(sqrt(length(samples)))
+sampleRow=ceiling(length(samples) / sampleCol)
 
 isLargeDataset=ncol(obj) > 30000
 if(isLargeDataset){
@@ -164,6 +145,19 @@ if(isLargeDataset){
   heatmap_obj=subset(obj, downsample=downsample)
 }else{
   heatmap_obj=obj
+}
+
+has_hto = file.exists("fileList4.txt")
+```
+
+```{r hto, results="asis", eval=has_hto, fig.width=12, fig.height=10}
+cat("# HTO Demultiplex \n\n")
+hto_files = read.table("fileList4.txt", sep="\t")
+file_map = split(hto_files$V1, hto_files$V2)
+for(sample in sort(names(file_map))){
+  cat("## ", sample, "\n\n")
+  hto_file=file_map[[sample]]
+  cat("![](",hto_file,")\n\n")
 }
 ```
 
@@ -269,7 +263,7 @@ if(hasMultipleSamples){
 }
 ```
 
-```{r sample_cells_count, eval=hasMultipleSamples, fig.height=8, fig.width=18, fig.cap=figRef("sample_cells_count", "Percentage of cell from samples in each cluster (total cell in each sample were normalized to equal number)")}
+```{r sample_cells_count, eval=hasMultipleSamples, fig.height=18, fig.width=18, fig.cap=figRef("sample_cells_count", "Percentage of cell from samples in each cluster (total cell in each sample were normalized to equal number)")}
 os<-table(obj$orig.ident, obj$seurat_clusters)
 osn<-os / rowSums(os) * 5000
 osm<-reshape2::melt(osn)
@@ -318,22 +312,26 @@ write.csv(cta_combined, file=paste0(prefix, ".tcell.cluster.summary.csv"), row.n
 print(kable(cta_combined, row.names=F,  caption=tabRef("tcell_cta_table", "T cell subtype prediction result")) %>% kable_styling() %>% htmltools::HTML())
 ```
 
-```{r gene_activity_umap, fig.width=18, fig.height=10, results="asis", fig.cap=figRef("umap_cluster_cell", "Predicted cell types")}
+```{r gene_activity_umap, fig.width=12, fig.height=8, results="asis", fig.cap=figRef("umap_cluster_cell", "Predicted cell types")}
 p2<-DimPlot(object = obj, reduction = "umap",label=T, group.by="seurat_cellactivity_clusters", cols=seurat_cellactivity_colors)
+p2<-p2+guides(colour = guide_legend(ncol = 1))
 print(p2)
-
+```
+```{r save_seurat_cellactivity_clusters, echo=FALSE, results=FALSE}
 png(file=paste0(prefix, ".seurat_cellactivity_clusters.png"), width=3300, height=3000, res=300)
 print(p2)
 dev.off()
 
 ```
 
-```{r gene_activity_umap_samples, eval=hasMultipleSamples, fig.height=8, fig.width=18, fig.cap=figRef("gene_activity_umap_samples", "Predicted cell types by sample")}
-g=DimPlot(obj, reduction = "umap", label=T, group.by="seurat_clusters", cols=seurat_colors, split.by = "orig.ident") + NoLegend()
-print(g)
+```{r gene_activity_umap_samples, eval=hasMultipleSamples, fig.height=max(6, ceiling(12*sampleRow/sampleCol)), fig.width=12, fig.cap=figRef("gene_activity_umap_samples", "Predicted cell types by sample")}
+g=DimPlot(obj, reduction = "umap", label=T, group.by="seurat_clusters", cols=seurat_colors, split.by = "orig.ident", combine=F)
+g<-g[[1]]
+g2=g+facet_wrap(~orig.ident, ncol=sampleCol) + theme_bw() + theme(strip.background = element_blank()) + NoLegend()
+print(g2)
 ```
 
-```{r activity_by_samples, eval=hasMultipleSamples, fig.height=8, fig.width=18, fig.cap=figRef("activity_by_samples", "Predicted cell types by sample")}
+```{r activity_by_samples, eval=hasMultipleSamples, fig.height=max(6, ceiling(12*sampleRow/sampleCol)), fig.width=12, fig.cap=figRef("activity_by_samples", "Predicted cell types by sample")}
 
 os<-table(obj$orig.ident, obj$cellactivity_clusters)
 osn<-os / rowSums(os) * 5000
@@ -359,13 +357,25 @@ print(g)
 
 ```
 
-```{r gene_activity_cta_score_heatmap, fig.width=18, fig.height=10, results="asis", fig.cap=figRef("cell_activity_cta_heatmap", "Predicted cell type activity score")}
+```{r gene_activity_cta_score_heatmap, fig.width=12, fig.height=10, results="asis", fig.cap=figRef("cell_activity_cta_heatmap", "Predicted cell type activity score")}
 heatmap3(celltype_db$cell_activity_database$cta_mat, scale="none", margins=c(10,5))
 ```
 
 
-```{r gene_activity_tcell_cta_score_heatmap, fig.width=18, fig.height=10, results="asis", eval=annotate_tcell, fig.cap=figRef("tcell_activity_cta_heatmap", "Predicted T cell subtype activity score")}
+```{r gene_activity_tcell_cta_score_heatmap, fig.width=12, fig.height=10, results="asis", eval=annotate_tcell, fig.cap=figRef("tcell_activity_cta_heatmap", "Predicted T cell subtype activity score")}
 heatmap3(celltype_db$tcell_activity_database$cta_mat, scale="none", margins=c(10,5))
+```
+
+
+```{r chetah_png, fig.width=18, fig.height=10, results="asis", eval=has_chetah, fig.cap=figRef("chetah_png", "Predicted cell type by CHETAH")}
+cat("## CHETAH prediction\n\n")
+include_graphics(files$chetah_png)
+```
+
+
+```{r signac_png, fig.width=18, fig.height=10, results="asis", eval=has_signac, fig.cap=figRef("signac_png", "Predicted cell type by SIGNAC")}
+cat("## Signac prediction\n\n")
+include_graphics(files$signac_png)
 ```
 
 # Project options

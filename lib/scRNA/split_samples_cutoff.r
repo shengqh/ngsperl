@@ -25,7 +25,10 @@ rplot<-function(object, features, assay, identName, withAllCells=FALSE){
       geom_histogram(aes(y=..density..), bins=50, colour="black", fill="white", position="identity") + 
       geom_density(color="red") +
       facet_grid(reformulate(".", identName), scale="free_y") + 
-      xlab(feature) + theme_bw() + theme(strip.background=element_rect(colour="black", fill=NA))
+      xlab(feature) + theme_bw() + theme(strip.background=element_rect(colour="black", fill=NA),
+                                         strip.text = element_text(size = 24),
+                                         axis.text=element_text(size=18),
+                                         axis.title=element_text(size=24))
     if (feature != features[1]){  
       g = g + ylab("")
     }
@@ -218,13 +221,15 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   pbmc.hashtag[["HTO_classification"]] = data$HTO_classification
   pbmc.hashtag[["HTO_classification.global"]] = data$HTO_classification.global
   
-  width=max(10, length(tagnames) * 5)
-  pdf(paste0(output_prefix, ".class.dist.pdf"), width=width, height=8)
+  width=max(1600, length(tagnames) * 600)
+  height=1400
+
+  png(paste0(output_prefix, ".class.dist.png"), width=width, height=height)
   rplot(pbmc.hashtag, assay = "HTO", features = tagnames, identName="HTO_classification")
   dev.off()
   
   if (length(tagnames) == 2) {
-    pdf(paste0(output_prefix, ".class.point.pdf"), width=width, height=8)
+    pdf(paste0(output_prefix, ".class.point.png"), width=width, height=height)
     print(FeatureScatter(object = pbmc.hashtag, feature1 = tagnames[1], feature2 = tagnames[2],group.by="HTO_classification"))
     dev.off()
   }

@@ -280,7 +280,7 @@ sub addSignac {
       species             => getValue( $def, "species" ),
       prefix              => $project_name,
     },
-    output_file_ext => ".CellStates.fast.png;.CellStates.fast.rds",
+    output_file_ext => ".signac.png;.signac.rds",
     sh_direct       => 1,
     pbs             => {
       "nodes"     => "1:ppn=1",

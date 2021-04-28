@@ -40,7 +40,7 @@ print(g)
 dev.off()
 
 png(filename=paste0(outFile, ".dot.png"), width=max(length(genes) * 100, 5000), height=2500, res=300)
-p<-DotPlot(obj, assay = "RNA", group.by="final_seurat_clusters", features=paste0("adt_", genes), cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
+p<-DotPlot(obj, assay = assay, group.by="final_seurat_clusters", features=paste0("adt_", genes), cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
   xlab("genes")
 print(p)
 dev.off()
