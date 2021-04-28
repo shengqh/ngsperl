@@ -1461,7 +1461,7 @@ sub getSmallRNAConfig {
       }
     }
 
-print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
+    #print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
 
     if ($perform_nonhost_genome_count){
       $config->{nonhost_genome_count} = {
@@ -2302,7 +2302,7 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
       'parameterFile2_ref' => [ "bowtie1_rRNA_pm_table", ".count.xml\$" ],
       'parameterFile3_arg'       => '-t',
       'parameterFile3_ref'       => [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv\$" ],
-      'option'                   => "",
+      'option'                   => "-o __NAME__",
       'interpretor'              => 'python',
       'program'                  => '../SmallRNA/getBacteriaCount.py',
       'target_dir'               => $data_visualization_dir . "/bacteria_count",
