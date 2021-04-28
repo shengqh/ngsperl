@@ -34,7 +34,7 @@ readsMappingTable<-NULL
 readFiles<-read.delim(readFileList,header=F,as.is=T)
 for (i in 1:nrow(readFiles)) {
   cat("reading ", readFiles[i,1], "...\n")
-  temp<-read.delim(readFiles[i,1],header=T,row.names=1,as.is=T)
+  temp<-read.delim(readFiles[i,1],header=T,row.names=1,as.is=T,check.names=F)
   readsMappingNames[[i]]<-row.names(temp)
   readsMappingTable<-rbindFillWithName(readsMappingTable,temp)
 }
