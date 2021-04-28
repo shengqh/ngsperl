@@ -13,6 +13,7 @@ use CQS::NGSCommon;
 use CQS::UniqueWrapper;
 use CQS::StringUtils;
 use File::Spec;
+use File::Copy;
 
 our @ISA = qw(CQS::UniqueWrapper);
 
@@ -42,11 +43,13 @@ sub perform {
   my $output_file     = get_option( $config, $section, "output_file",     "" );
   my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
 
+  my $copy_template = get_option( $config, $section, "copy_template", 1 );
+
   my $removeEmpty = get_option( $config, $section, "remove_empty_parameter", 0 );
   my $paramSampleFiles = {};
   for my $myidx (1..10) {
     my $paramSampleFile = writeParameterSampleFile( $config, $section, $result_dir, $myidx, $removeEmpty );
-    if ($paramSampleFile ne ""){
+    if (($paramSampleFile ne "") or ($myidx <= 3)){
       $paramSampleFiles->{"parSampleFile" . $myidx} = $paramSampleFile;
     }
   }
@@ -106,7 +109,11 @@ sub perform {
 
   my $rtemplates = get_option( $config, $section, "rtemplate" );
   my @rtemplates = split( ",|;", $rtemplates );
-  foreach my $rtemplate (@rtemplates) {
+
+  my $rnum = scalar(@rtemplates);
+
+  for my $index (0 .. $#rtemplates){
+    my $rtemplate = $rtemplates[$index];
     my $is_absolute = File::Spec->file_name_is_absolute($rtemplate);
     if ( !$is_absolute ) {
       $rtemplate = dirname(__FILE__) . "/$rtemplate";
@@ -114,13 +121,20 @@ sub perform {
     if ( !( -e $rtemplate ) ) {
       die("rtemplate $rtemplate defined but not exists!");
     }
-    open( my $rt, "<$rtemplate" ) or die $!;
-    while ( my $row = <$rt> ) {
-      chomp($row);
-      $row =~ s/\r//g;
-      print $rf "$row\n";
+
+    if($copy_template && ($index < $rnum-1)){
+      my $remote_r = $result_dir . "/" . basename($rtemplate);
+      copy($rtemplate, $remote_r);
+      print $rf "source('" . basename($rtemplate) . "')\n\n";
+    }else{
+      open( my $rt, "<$rtemplate" ) or die $!;
+      while ( my $row = <$rt> ) {
+        chomp($row);
+        $row =~ s/\r//g;
+        print $rf "$row\n";
+      }
+      close($rt);
     }
-    close($rt);
   }
   close($rf);
 
