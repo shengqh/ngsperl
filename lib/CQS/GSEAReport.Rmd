@@ -4,6 +4,7 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
     toc: true
+    toc_depth: 4
 ---
 
 <style type="text/css">

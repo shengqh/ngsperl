@@ -65,7 +65,7 @@ processGseaTable=function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=5,absLin
 print_gsea_subfolder=function(resultDirSub, gname, gseaCategory, is_positive){
   pstr = ifelse(is_positive, "pos", "neg")
   title = ifelse(is_positive, "Positive-regulated", "Negative-regulated")
-  pattern = paste0("gsea_report_for_na_", pstr, "_\\d+\\.xls|.tsv$")
+  pattern = paste0("gsea_report_for_na_", pstr, '_\\d+\\.(tsv|xls)$')
         
   posTableFile<-list.files(resultDirSub,pattern=pattern,full.names=TRUE)
 
@@ -89,18 +89,23 @@ display_gsea=function(files) {
   gsea_files<-files[grepl("gsea_", rownames(files)),]
   gsea_files$Comparisons<-gsub("gsea_", "", gsea_files$V2)
   comparisons<-unique(gsea_files$Comparisons)
+  j=1
   for (j in 1:length(comparisons)){
     comparison<-comparisons[j]
     comp_files<-gsea_files[gsea_files$Comparisons == comparison,]
     cat(paste0("  \n### ", comparison, "  \n"))
   
+    i=1
     for (i in 1:nrow(comp_files)){
       gfolders<-read.csv(comp_files[i,1],header=T,stringsAsFactor=F, check.names=F)
       gname<-gsub(".rnk.*", "", basename(comp_files[i,1]))
-      for (j in 1:nrow(gfolders)){
-        resultDirSub<-gfolders$Folder[j]
-        print_gsea_subfolder(resultDirSub, gname, gfolders$GseaCategory[j], TRUE)
-        print_gsea_subfolder(resultDirSub, gname, gfolders$GseaCategory[j], FALSE)
+
+      k=1
+      for (k in 1:nrow(gfolders)){
+        resultDirSub<-gfolders$Folder[k]
+        gseaCategory<-gfolders$GseaCategory[k]
+        print_gsea_subfolder(resultDirSub, gname, gseaCategory, TRUE)
+        print_gsea_subfolder(resultDirSub, gname, gseaCategory, FALSE)
       }
     }  
   }
