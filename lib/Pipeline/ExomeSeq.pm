@@ -263,30 +263,11 @@ sub getConfig {
       push @$individual, ( $bwa );
 
       my $bwa_summary = $def->{aligner_scatter_count}?"bwa_04_summary":"bwa_summary";
-      $config->{ $bwa_summary } = {
-        class                 => "CQS::UniqueR",
-        perform               => 1,
-        target_dir            => "${target_dir}/" . getNextFolderIndex($def) . $bwa_summary,
-        option                => "",
-        rtemplate             => "../Alignment/BWASummary.r",
-        parameterSampleFile1_ref    => [$bwa, ".bamstat"],
-        parameterSampleFile2_ref    => [$bwa, ".chromosome.count"],
-        output_file           => "",
-        output_file_ext       => ".BWASummary.csv",
-        output_other_ext      => ".reads.png;.reads.sorted.png",
-        sh_direct             => 1,
-        pbs                   => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      };
-
       if ($def->{aligner_scatter_count}) {
-        $config->{ $bwa_summary }{rCode} = "rg_name_regex='$rg_name_regex'";
+        add_BWAsummary($config, $def, $summary, $target_dir, $bwa_summary, $bwa, $rg_name_regex);
+      }else{
+        add_BWAsummary($config, $def, $summary, $target_dir, $bwa_summary, $bwa);
       }
-
-      push @$summary, $bwa_summary;
     }
     else {
       die "Unknown alinger " . $def->{aligner};
