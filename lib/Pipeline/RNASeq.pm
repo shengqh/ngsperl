@@ -950,11 +950,11 @@ sub getRNASeqConfig {
 
     if ( defined $gseaTaskName ) {
       push( @copy_files, $gseaTaskName, ".gsea\$" );
-      my $suffix = getDeseq2Suffix($config, $deseq2taskname);      
+      my $suffix = getDeseq2Suffix($config, $def, $deseq2taskname);      
 
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
-        push( @report_files, $gseaTaskName, "/" . $key . $suffix . ".*gsea.csv" );
+        push( @report_files, $gseaTaskName, "/" . $key . $suffix . "_.*gsea.csv" );
         push( @report_names, "gsea_" . $key );
       }
       $hasFunctionalEnrichment = 1;
