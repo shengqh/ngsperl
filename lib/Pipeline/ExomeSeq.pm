@@ -264,9 +264,9 @@ sub getConfig {
 
       my $bwa_summary = $def->{aligner_scatter_count}?"bwa_04_summary":"bwa_summary";
       if ($def->{aligner_scatter_count}) {
-        add_BWAsummary($config, $def, $summary, $target_dir, $bwa_summary, $bwa, $rg_name_regex);
+        add_BWA_summary($config, $def, $summary, $target_dir, $bwa_summary, $bwa, $rg_name_regex);
       }else{
-        add_BWAsummary($config, $def, $summary, $target_dir, $bwa_summary, $bwa);
+        add_BWA_summary($config, $def, $summary, $target_dir, $bwa_summary, $bwa);
       }
     }
     else {

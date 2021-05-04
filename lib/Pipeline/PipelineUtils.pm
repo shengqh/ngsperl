@@ -2041,7 +2041,7 @@ sub add_BWA_WGS {
   push @$tasks, ( $bwa_name );
 }
 
-sub add_BWAsummary {
+sub add_BWA_summary {
   my ($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex) = @_;
 
   $config->{ $bwa_summary } = {
