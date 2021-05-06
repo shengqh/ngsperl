@@ -101,7 +101,7 @@ sub result {
           push( @result_files, "${prefix}${output_file_ext_one}" );
         }
 
-        if ( ( $output_file_task_ext =~ "" ) && ( $sample_name eq $task_name ) ) {
+        if ( ( $output_file_task_ext ne "" ) && ( $sample_name eq $task_name ) ) {
           if ( $output_file_task_ext =~ /;/ ) {
             my @output_file_task_exts = split( ";", $output_file_task_ext );
             foreach my $output_file_ext_one (@output_file_task_exts) {
