@@ -19,6 +19,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_rf";
+  $self->{_use_tmp_folder} = 1;
   bless $self, $class;
   return $self;
 }
@@ -224,9 +225,17 @@ fi
     }
 
     print $pbs "
-if [[ (-s $final_file) && (-s $final_file_index) && (! -s ${final_file}.stat) ]]; then 
-  echo flagstat = `date` 
-  samtools flagstat $final_file > ${final_file}.stat 
+if [[ (-s $final_file) && (-s $final_file_index) ]]; then
+  if [[ ! -s ${final_file}.stat ]]; then 
+    echo flagstat = `date` 
+    samtools flagstat $final_file > ${final_file}.stat 
+  fi
+
+  if [[ ! -s ${final_file}.chromosome.count ]]; then 
+    echo flagstat = `date` 
+    samtools idxstats $final_file > ${final_file}.chromosome.count 
+  fi
+
   rm $rmlist 
 fi
 ";
