@@ -1,5 +1,5 @@
 
-#source("scRNA_func.r")
+source("scRNA_func.r")
 
 library(Seurat)
 library(ggplot2)
@@ -10,40 +10,42 @@ library(dplyr)
 random.seed=20200107
 
 options_table<-read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)
-options<-split(options_table$V1, options_table$V2)
+myoptions<-split(options_table$V1, options_table$V2)
 
-Mtpattern= options$Mtpattern
-rRNApattern=options$rRNApattern
-Remove_Mt_rRNA= ifelse(options$Remove_Mt_rRNA == "FALSE", FALSE, TRUE)
-resolution=as.numeric(options$resolution)
-species=options$species
-markerfile<-options$markers_file
+Mtpattern= myoptions$Mtpattern
+rRNApattern=myoptions$rRNApattern
+Remove_Mt_rRNA= ifelse(myoptions$Remove_Mt_rRNA == "FALSE", FALSE, TRUE)
+resolution=as.numeric(myoptions$resolution)
+species=myoptions$species
+markerfile<-myoptions$markers_file
 
-by_integration<-ifelse(options$by_integration == "0", FALSE, TRUE)
-by_sctransform<-ifelse(options$by_sctransform == "0", FALSE, TRUE)
+by_integration<-ifelse(myoptions$by_integration == "0", FALSE, TRUE)
+by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
 
-prefix<-options$prefix
+prefix<-myoptions$prefix
 
-pca_dims<-1:as.numeric(options$pca_dims)
-
-recluster_celltypes<-options$recluster_celltypes
-recluster_celltypes<-unlist(strsplit(recluster_celltypes, ";"))
+pca_dims<-1:as.numeric(myoptions$pca_dims)
 
 cts_cluster=read_cell_cluster_file(parFile2)
-cts=cts_cluster[,options$celltype_name]
-all_celltypes=unique(cts_cluster[,options$celltype_name])
-missed=recluster_celltypes[!(recluster_celltypes %in% all_celltypes)]
-if(length(missed) > 0){
-  stop(paste0("There are missed celltypes ", paste0(missed, collapse="/"), " not in file ", parFile2))
+
+recluster_celltypes<-myoptions$recluster_celltypes
+if(recluster_celltypes != ""){
+  recluster_celltypes<-unlist(strsplit(recluster_celltypes, ";"))
+  cts=cts_cluster[,myoptions$celltype_name]
+  all_celltypes=unique(cts_cluster[,myoptions$celltype_name])
+  missed=recluster_celltypes[!(recluster_celltypes %in% all_celltypes)]
+  if(length(missed) > 0){
+    stop(paste0("There are missed celltypes ", paste0(missed, collapse="/"), " not in file ", parFile2))
+  }
 }
 
-celltype_cells=data.frame(Cell=rownames(cts_cluster), CellType=cts_cluster[,options$celltype_name])
+celltype_cells=data.frame(Cell=rownames(cts_cluster), CellType=cts_cluster[,myoptions$celltype_name])
 cclist=split(celltype_cells$Cell, celltype_cells$CellType)
 
 finalList<-readRDS(parFile1)
 obj<-finalList$obj
 
-obj[[options$cluster_name]]=cts_cluster[colnames(obj),options$cluster_name]
+obj[[myoptions$cluster_name]]=cts_cluster[colnames(obj),myoptions$cluster_name]
 
 seurat_colors<-finalList$seurat_colors
 seurat_cellactivity_colors<-finalList$seurat_cellactivity_colors
@@ -60,7 +62,7 @@ for(ct in recluster_celltypes){
   ctPrefix=file.path(ctPrefix, ctPrefix)
   
   png(paste0(ctPrefix, ".pre.png"), width=3000, height=3000, res=300)
-  p<-DimPlot(object = cluster_obj, reduction = 'umap', label=TRUE, group.by=options$cluster_name) + ggtitle("")
+  p<-DimPlot(object = cluster_obj, reduction = 'umap', label=TRUE, group.by=myoptions$cluster_name) + ggtitle("")
   print(p)
   dev.off()
   
