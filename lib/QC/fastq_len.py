@@ -22,6 +22,10 @@ if DEBUG:
 logger = logging.getLogger('fastq_len')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
+error_file = args.output + ".error"
+if os.path.exists(error_file):
+  os.remove(error_file)
+
 fastq_files = args.input.split(',')
 
 result={}
@@ -31,22 +35,39 @@ for fq in fastq_files:
   fin = gzip.open(fq, "rt") if fq.endswith(".gz") else open(fq, "rt")
   with fin:
     while True:
-      query = fin.readline()
+      try:
+        query = fin.readline()
+        sequence = fin.readline().rstrip()
+        fin.readline()
+        score = fin.readline().rstrip()
+      except Exception as e:
+        with open(error_file, "wt") as fout:
+          fout.write("Read count=%d\nError=%s\n" % (reads_count, str(e)))
+        raise
+
       if not query:
         break
       if not query.startswith("@"):
-        raise Exception("Wrong format: " + query)
+        error_msg = "Read count=%d\nError query=%s\n" % (reads_count, query)
+        with open(error_file, "wt") as fout:
+          fout.write("%s\n" % error_msg)
+        raise Exception(error_msg)
 
       reads_count += 1
       if reads_count % 1000000 == 0:
         logger.info("%d reads processed." % reads_count)
         #break
 
-      sequence = fin.readline().rstrip()
-      fin.readline()
-      fin.readline()
 
       seqlen = len(sequence)
+      scorelen = len(score)
+
+      if seqlen != scorelen:
+        error_msg = "Read count=%d\nError query=%s\nError sequence=%s\nError score=%s\n" % (reads_count, query.rstrip(), sequence, score)
+        with open(error_file, "wt") as fout:
+          fout.write("%s\n" % error_msg)
+        raise Exception(error_msg)
+
       result[seqlen] = result.setdefault(seqlen, 0) + 1
 
 with open(args.output, "wt") as fout:
