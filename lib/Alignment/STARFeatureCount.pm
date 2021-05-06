@@ -21,6 +21,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_sf";
+  $self->{_use_tmp_folder} = 1;
   bless $self, $class;
   return $self;
 }
@@ -126,6 +127,7 @@ sub perform {
     my $chromosome_grep_command = $output_sort_by_coordinate ? getChromosomeFilterCommand( $final_bam, $chromosome_grep_pattern ) : "";
 
     print $pbs "
+
 if [[ ! -s $final_bam && -s $sample_file_1 ]]; then
   echo performing star ...
   $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
@@ -145,8 +147,9 @@ fi
   if ($output_sort_by_coordinate) {
     print $pbs "
 if [ ! -s ${final_bam} ]; then
-  sambamba sort -m $sort_memory -t $thread -o $final_bam $unsorted
-  sambamba index $final_bam
+  samtools sort -m $sort_memory -T ${sample_name} -t $thread -o $final_bam $unsorted
+  samtools index $final_bam
+  samtools idxstats $final_bam > ${final_bam}.chromosome.count
 fi  
 ";
   }
@@ -170,7 +173,7 @@ fi
 
     if ( !$output_unsorted ) {
       print $pbs "
-if [ -s $final_file ]; then
+if [ -s $final_file && -s $bam_stat ]; then
   rm $unsorted 
 fi
 ";
@@ -225,6 +228,7 @@ sub result {
     if (!$delete_star_featureCount_bam) {
       if ($output_sort_by_coordinate) {
         push( @result_files, "$cur_dir/${sample_name}_Aligned.sortedByCoord.out.bam" );
+        push( @result_files, "$cur_dir/${sample_name}_Aligned.sortedByCoord.out.bam.chromosome.count" );
       }
       if ($output_unsorted) {
         push( @result_files, "$cur_dir/${sample_name}_Aligned.out.bam" );
