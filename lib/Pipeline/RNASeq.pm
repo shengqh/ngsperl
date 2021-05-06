@@ -312,6 +312,25 @@ sub getRNASeqConfig {
     }
   }
 
+  if(defined $def->{annotation_genes}){
+    my $genes_str = $def->{annotation_genes};
+    my @genes = split /[;, ]+/, $genes_str;
+    my %gene_map = map { $_ => 1 } @genes;
+    $config->{annotation_genes} = \%gene_map;
+    #print(Dumper($config->{annotation_genes}));
+
+    my $geneLocus = addGeneLocus($config, $def, $summary, $target_dir);
+
+    if($def->{perform_bamsnap}){
+      my $bamsnap_task = "annotation_genes_bamsnap";
+      addBamsnap($config, $def, $summary, $target_dir, $bamsnap_task, [$geneLocus, "bed"], $source_ref);
+    }
+
+    my $sizeFactorTask = "size_factor";
+    addSizeFactor($config, $def, $summary, $target_dir, $sizeFactorTask, $source_ref);
+    addPlotGene($config, $def, $summary, $target_dir, "annotation_genes_plot", $sizeFactorTask, [ $geneLocus, ".bed" ], $source_ref);
+  }
+
   my $perform_count_table = $def->{perform_counting} || $def->{perform_count_table};
 
   if ($perform_count_table) {
