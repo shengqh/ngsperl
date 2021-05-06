@@ -1,9 +1,17 @@
+
+calc_weight<-function(cellType){
+  freq<-sort((table(unlist(cellType)))/length(cellType))
+  weight<-1+sqrt((max(freq)-freq)/(max(freq)-min(freq)))
+  return(weight)
+}
+
 read_cell_markers_file<-function(panglao5_file, species, remove_subtype_of="", HLA_panglao5_file=""){
   #preparing cell activity database
   marker<-data.frame(fread(panglao5_file))
   if(remove_subtype_of != ""){
-    remove_subtype_of<-unlist(strsplit(remove_subtype_of, ","))
+    remove_subtype_of<-unique(unlist(strsplit(remove_subtype_of, ",")))
     pangdb_ct <- read.table(HLA_panglao5_file,header = T,row.names = 1,sep = "\t",stringsAsFactors = F)
+    remove_subtype_of<-remove_subtype_of[remove_subtype_of %in% marker$cell.type]
     layer="Layer2"
     removed<-c()
     for(layer in c("Layer1","Layer2", "Layer3")){
@@ -16,7 +24,7 @@ read_cell_markers_file<-function(panglao5_file, species, remove_subtype_of="", H
         if(rs %in% layer_ct){
           subdb<-rownames(pangdb_ct)[pangdb_ct[,layer]==rs]
           if(rs %in% subdb){ 
-            subdb<-subdb[subdb != rs]
+            subdb<-subdb[!(subdb %in% remove_subtype_of)]
             marker<-marker[!(marker$cell.type %in% subdb),]
           }else{
             marker$cell.type[marker$cell.type %in% subdb] = rs
@@ -37,8 +45,54 @@ read_cell_markers_file<-function(panglao5_file, species, remove_subtype_of="", H
     marker_species$official.gene.symbol<-toupper(marker_species$official.gene.symbol)
   }
   cellType<-tapply(marker_species$official.gene.symbol,marker_species$cell.type,list)
-  freq<-sort((table(unlist(cellType)))/length(cellType))
-  weight<-1+sqrt((max(freq)-freq)/(max(freq)-min(freq)))
+  weight<-calc_weight(cellType)
+  return(list(cellType=cellType, weight=weight))
+}
+
+get_selfdefinedCelltype <- function(file, finalLayer="layer3"){
+  file.ori <- scan(file,what = "",sep="\n")
+  marker.ori <- matrix("undefined",nrow=length(file.ori)/2,ncol = 2)
+  for (i in 1:length(file.ori)){if(i%%2==1){marker.ori[(i+1)/2,1]=substr(file.ori[i],2,nchar(file.ori[i]))}else{marker.ori[i/2,2]=file.ori[i]}}
+  ref <- as.data.frame(marker.ori[,1])
+  ref <- tidyr::separate(ref,col=colnames(ref),into = c("celltype","subtypeOf"),sep = ",")
+  rownames(ref) <- ref$celltype
+  celltype.ori <- sapply(tapply(marker.ori[,2],marker.ori[,1],list), function(x) strsplit(x,","))
+
+  celltype.tem <- as.data.frame(matrix(unlist(celltype.ori)))
+  celltype.tem[,2] <- rep(names(celltype.ori),lengths(celltype.ori))
+  celltype.tem <- tidyr::separate(celltype.tem,col=V2,into = c("celltype","subtypeOf"),sep = ",")
+
+  ct <- as.data.frame(matrix("Undefined",nrow = nrow(celltype.tem),ncol = length(unique(celltype.tem$subtypeOf))+2),stringsAsFactors=FALSE)
+  ct[,1:2] <- celltype.tem[,1:2]
+  for (i in 3:ncol(ct)){
+    for (j in 1:nrow(ct)) {if(ct[j,i-1] %in% rownames(ref)){ct[j,i]<-ref[ct[j,i-1],2]}else{ct[j,i]<-ct[j,i-1]}}
+  }
+
+  layer <- ncol(ct)
+  if(! identical(ct[,ncol(ct)],ct[,ncol(ct)-1])){layer <- ncol(ct)}else{
+    for (i in 1:ncol(ct)) {if(identical(ct[,i],ct[,i+1])){layer <- i;break}}
+  }
+
+  celltype.trim <- ct[,1:layer]
+  for (i in 1:nrow(celltype.trim)){
+    tag <- which(celltype.trim[i,]==celltype.trim[i,ncol(celltype.trim)])
+    if(length(tag)>1){
+      if(ncol(celltype.trim)+1-length(tag)==3){suf <- ct[i,3]}
+      else{suf <- ct[i,3:(ncol(celltype.trim)+1-length(tag))]}
+      pre <- rep(celltype.trim[i,2],length(tag)-1)
+      celltype.trim[i,] <- c(celltype.trim[i,][1:2],pre,suf)
+    }
+  }
+
+  for (i in 1:ncol(celltype.trim)){if(i == 1){colnames(celltype.trim)[i]="gene"}else{colnames(celltype.trim)[i]=paste0("layer",(ncol(celltype.trim)+1-i),"")}}
+
+  ct.final <- celltype.trim
+  for (i in 1:ncol(ct.final)){
+    if(i >1){ct.final[,i]=celltype.trim[,ncol(celltype.trim)+2-i];colnames(ct.final)[i] <- colnames(celltype.trim)[ncol(celltype.trim)+2-i]}
+  }
+
+  cellType<-tapply(ct.final$gene,ct.final[[finalLayer]],list)
+  weight<-calc_weight(cellType)
   return(list(cellType=cellType, weight=weight))
 }
 
@@ -135,6 +189,16 @@ add_cluster<-function(object, new.cluster.name, new.cluster.ids){
   object
 }
 
+add_celltype<-function(obj, celltype_df, celltype_column){
+  new.cluster.ids<-split(celltype_df[,celltype_column], celltype$seurat_clusters)
+  obj[[celltype_column]] = unlist(new.cluster.ids[as.character(obj$seurat_clusters)])
+
+  celltype_df$seurat_column = paste0(celltype_df$seurat_clusters, " : ", celltype_df[,celltype_column])
+  new.cluster.ids<-split(celltype_df$seurat_column, celltype$seurat_clusters)
+  obj[[paste0("seurat_", celltype_column)]] = unlist(new.cluster.ids[as.character(obj$seurat_clusters)])
+  return(obj)
+}
+
 run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, min.pct = 0.5, logfc.threshold = 0.6){
   if (by_sctransform) {
     object <- RunPCA(object = object, verbose=FALSE)
@@ -148,7 +212,7 @@ run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, 
     }
     object <- RunPCA(object = object, features = var.genes, verbose=FALSE)
   }
-  object <- RunUMAP(object = object, dims=pca_dims, verbose = FALSE)
+  object <- RunUMAP(object = object, reduction = "pca", dims=pca_dims, verbose = FALSE)
   object <- FindNeighbors(object = object, dims=pca_dims, verbose=FALSE)
   object <- FindClusters(object=object, verbose=FALSE, random.seed=random.seed, resolution=resolution)
 
@@ -239,52 +303,3 @@ get_cta_combined<-function(obj, predicted){
 
   return(cta_combined)
 }
-
-get_selfdefinedCelltype <- function(file){
-  file.ori <- scan(file,what = "",sep="\n")
-  marker.ori <- matrix("undefined",nrow=length(file.ori)/2,ncol = 2)
-  for (i in 1:length(file.ori)){if(i%%2==1){marker.ori[(i+1)/2,1]=substr(file.ori[i],2,nchar(file.ori[i]))}else{marker.ori[i/2,2]=file.ori[i]}}
-  ref <- as.data.frame(marker.ori[,1])
-  ref <- tidyr::separate(ref,col=colnames(ref),into = c("celltype","subtypeOf"),sep = ",")
-  rownames(ref) <- ref$celltype
-  celltype.ori <- sapply(tapply(marker.ori[,2],marker.ori[,1],list), function(x) strsplit(x,","))
-
-  celltype.tem <- as.data.frame(matrix(unlist(celltype.ori)))
-  celltype.tem[,2] <- rep(names(celltype.ori),lengths(celltype.ori))
-  celltype.tem <- tidyr::separate(celltype.tem,col=V2,into = c("celltype","subtypeOf"),sep = ",")
-
-  ct <- as.data.frame(matrix("Undefined",nrow = nrow(celltype.tem),ncol = length(unique(celltype.tem$subtypeOf))+2),stringsAsFactors=FALSE)
-  ct[,1:2] <- celltype.tem[,1:2]
-  for (i in 3:ncol(ct)){
-    for (j in 1:nrow(ct)) {if(ct[j,i-1] %in% rownames(ref)){ct[j,i]<-ref[ct[j,i-1],2]}else{ct[j,i]<-ct[j,i-1]}}
-  }
-
-  layer <- ncol(ct)
-  if(! identical(ct[,ncol(ct)],ct[,ncol(ct)-1])){layer <- ncol(ct)}else{
-    for (i in 1:ncol(ct)) {if(identical(ct[,i],ct[,i+1])){layer <- i;break}}
-  }
-
-  celltype.trim <- ct[,1:layer]
-  for (i in 1:nrow(celltype.trim)){
-    tag <- which(celltype.trim[i,]==celltype.trim[i,ncol(celltype.trim)])
-    if(length(tag)>1){
-      if(ncol(celltype.trim)+1-length(tag)==3){suf <- ct[i,3]}
-      else{suf <- ct[i,3:(ncol(celltype.trim)+1-length(tag))]}
-      pre <- rep(celltype.trim[i,2],length(tag)-1)
-      celltype.trim[i,] <- c(celltype.trim[i,][1:2],pre,suf)
-    }
-  }
-
-  for (i in 1:ncol(celltype.trim)){if(i == 1){colnames(celltype.trim)[i]="gene"}else{colnames(celltype.trim)[i]=paste0("layer",(ncol(celltype.trim)+1-i),"")}}
-
-  ct.final <- celltype.trim
-  for (i in 1:ncol(ct.final)){
-    if(i >1){ct.final[,i]=celltype.trim[,ncol(celltype.trim)+2-i];colnames(ct.final)[i] <- colnames(celltype.trim)[ncol(celltype.trim)+2-i]}
-  }
-
-  cellType<-tapply(ct.final$gene,ct.final$layer3,list)
-  freq<-sort((table(unlist(cellType)))/length(cellType))
-  weight<-1+sqrt((max(freq)-freq)/(max(freq)-min(freq)))
-  return(list(cellType=cellType, weight=weight))
-}
-
