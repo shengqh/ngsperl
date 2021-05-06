@@ -1952,6 +1952,7 @@ sub addStarFeaturecount {
     source_ref                => $source_ref,
     genome_dir                => $aligner_index,
     output_sort_by_coordinate => 1,
+    use_tmp_folder            => $def->{star_use_tmp_folder},
     output_to_same_folder     => $def->{output_bam_to_same_folder},
     featureCount_option       => getValue( $def, "featureCount_option" ),
     star_location             => $def->{star_location},
@@ -2041,7 +2042,7 @@ sub add_BWA_WGS {
   push @$tasks, ( $bwa_name );
 }
 
-sub add_BWAsummary {
+sub add_BWA_summary {
   my ($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex) = @_;
 
   $config->{ $bwa_summary } = {
@@ -2051,6 +2052,7 @@ sub add_BWAsummary {
     option                => "",
     rtemplate             => "../Alignment/AlignmentUtils.r;../Alignment/BWASummary.r",
     parameterSampleFile1_ref    => [$bwa, ".bamstat"],
+    parameterSampleFile2_ref    => [$bwa, ".chromosome.count"],
     output_file           => "",
     output_file_ext       => ".BWASummary.csv",
     output_other_ext      => ".BWASummary.png;.BWASummary.sorted.png",

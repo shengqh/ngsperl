@@ -18,6 +18,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_cut";
+  $self->{_use_tmp_folder} = 1;
   bless $self, $class;
   return $self;
 }

@@ -59,7 +59,7 @@ with pysam.Samfile(args.input, "rb") as sam:
   reads = []
   for read in sam.fetch(until_eof=True):
     processed += 1
-    if processed % 100000 == 0:
+    if processed % 1000000 == 0:
       logger.info("reads %d = fragments %d: unmapped %d, uniquely mapped %d, multiple_mapped %d" % 
         (processed, sum(type_dic.values()), type_dic[ReadType.UNMAPPED], type_dic[ReadType.UNIQUELY_MAPPED], type_dic[ReadType.MULTIPLE_MAPPED] ))
 

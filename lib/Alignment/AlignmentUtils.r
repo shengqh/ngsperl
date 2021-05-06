@@ -20,9 +20,9 @@ draw_chromosome_count<-function(listFile, outFilePrefix) {
   }
   write.csv(file=paste0(outFilePrefix, ".chromosome.csv"), final, row.names=F)
 
-  chroms=paste0("chr", c(1:22,'X','Y','M'))
+  chroms=paste0("chr", c(1:22,'X','Y','M', 'MT'))
   if(!any(final$Chrom %in% chroms)){
-    chroms=paste0("", c(1:22,'X','Y','M'))
+    chroms=paste0("", c(1:22,'X','Y','M', 'MT'))
   }
   chroms=chroms[chroms %in% final$Chrom]
   final$Chrom=factor(final$Chrom, levels=chroms)
@@ -31,7 +31,7 @@ draw_chromosome_count<-function(listFile, outFilePrefix) {
   colors=c("black","red")
   names(colors)=c("FALSE","TRUE")
 
-  height=max(1000, 100 * length(unique(final$Sample)))
+  height=max(1000, 60 * length(unique(final$Sample)))
   png(file=paste0(outFilePrefix, ".chromosome.png"), height=height, width=3000, res=300)
   g<-ggplot(final, aes(x=Chrom, y=Sample)) + 
     geom_point(aes(size=Reads, color=NoRead)) + theme_classic() + 

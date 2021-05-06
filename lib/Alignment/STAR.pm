@@ -20,6 +20,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_star";
+  $self->{_use_tmp_folder} = 1;
   bless $self, $class;
   return $self;
 }
@@ -104,7 +105,7 @@ if [[ ! -s temp ]]; then
   mkdir temp
 fi
 
-sambamba sort -m ${memory} --tmpdir temp -o $final -t $thread $unsorted
+samtools sort -m ${memory} -T ${sample_name} -o $final -t $thread $unsorted
 ";
   }
 

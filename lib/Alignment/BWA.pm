@@ -21,6 +21,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_bwa";
+  $self->{_use_tmp_folder} = 1;
   $self->init_docker_prefix(__PACKAGE__);
   bless $self, $class;
   return $self;
@@ -210,7 +211,7 @@ $chromosome_grep_command
         print $pbs "    
 if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
   echo sort_bam=`date`
-  samtools sort -m $sort_memory $samtools_sort_thread -T $sample_name -o $sorted_bam_file $unsorted_bam_file
+  samtools sort -m $sort_memory $samtools_sort_thread -T /tmp/bwa_${sample_name} -o $sorted_bam_file $unsorted_bam_file
 fi
 
 if [[ (-s $sorted_bam_file) && ((1 -eq \$1) || (! -s ${sorted_bam_file}.bai)) ]]; then
@@ -236,7 +237,7 @@ fi
         print $pbs "    
 if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
   echo sort_bam=`date`
-  samtools sort -m $sort_memory $samtools_sort_thread -n -o $sorted_bam_file $unsorted_bam_file
+  samtools sort -m $sort_memory $samtools_sort_thread -T /tmp/bwa_${sample_name} -n -o $sorted_bam_file $unsorted_bam_file
 fi
 ";
       }
@@ -276,7 +277,7 @@ fi
 
   if ($rmlist ne "") {
     print $pbs "
-if [[ -s $check_file ]]; then
+if [[ -s $check_file && -s $bam_stat ]]; then
   rm $rmlist
 fi
 ";

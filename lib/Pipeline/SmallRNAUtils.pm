@@ -92,6 +92,9 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "perform_bacteria_count",            1 );
   initDefaultValue( $def, "perform_report",                    1 );
 
+  initDefaultValue( $def, "perform_short_reads_deseq2",        1 );
+  initDefaultValue( $def, "perform_short_reads_source",        1 );
+
   initDefaultValue( $def, "perform_nonhost_genome_count",      1 );
   initDefaultValue( $def, "nonhost_genome_count_no_virus",     0 );
 
