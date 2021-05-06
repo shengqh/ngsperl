@@ -5,16 +5,29 @@ options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors =
 myoptions<-split(options_table$V1, options_table$V2)
 
 species=myoptions$species
-markerfile<-myoptions$markers_file
+markerfile<-myoptions$db_markers_file
+remove_subtype<-myoptions$remove_subtype
 annotate_tcell<-ifelse(myoptions$annotate_tcell == "0", FALSE, TRUE)
 HLA_panglao5_file<-myoptions$HLA_panglao5_file
 tcell_markers_file<-myoptions$tcell_markers_file
 
 remove_subtype_of=ifelse(annotate_tcell, "T cells", "")
+remove_subtype_of=paste0(remove_subtype_of, ";", remove_subtype)
 
 data.norm=read.csv(parFile1, row.names=1,check.names = F)
 
 cell_activity_database<-read_cell_markers_file(markerfile, species, remove_subtype_of, HLA_panglao5_file)
+if("curated_markers_file" %in% names(myoptions)){
+  curated_markerfile<-myoptions$curated_markers_file
+  curated_markers_df<-read.table(curated_markerfile, sep="\t", header=F, stringsAsFactors=F)
+  curated_markers_celltype<-split(curated_markers_df$V2, curated_markers_df$V1)
+  cellType=cell_activity_database$cellType
+  for(cmct in names(curated_markers_celltype)){
+    cellType[[cmct]]=curated_markers_celltype[[cmct]]
+  }
+  weight=calc_weight(cellType)
+  cell_activity_database=list(cellType=cellType, weight=weight)
+}
 
 predict_celltype<-ORA_celltype(data.norm,cell_activity_database$cellType,cell_activity_database$weight)
 
@@ -53,7 +66,7 @@ if (annotate_tcell){
   cell_type$tcell_activity_database=tcell_activity_database
 }
 
-id_tbl$final_cell_type=new.cluster.ids
+id_tbl$cellactivity_clusters=new.cluster.ids
 write.csv(id_tbl, file=paste0(outFile, ".celltype.csv"), row.names=F)
 saveRDS(cell_type, file=paste0(outFile, ".celltype.rds"))
 
