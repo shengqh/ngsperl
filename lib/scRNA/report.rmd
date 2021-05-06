@@ -81,6 +81,9 @@ batch_for_integration<-ifelse(myoptions$batch_for_integration == "0", FALSE, TRU
 by_integration<-ifelse(myoptions$by_integration == "0", FALSE, TRUE)
 by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
 
+has_summary_layer<-!is.null(myoptions$summary_layer_file)
+has_rename_file<-!is.null(myoptions$rename_png)
+
 prefix<-myoptions$prefix
 
 nFeature_cutoff_min=as.numeric(myoptions$nFeature_cutoff_min)
@@ -107,28 +110,7 @@ hasMultipleSamples<-length(unique(obj$orig.ident))>1
 
 hasBiomarker<-!is.null(finalList$markers)
 
-new.cluster.ids<-split(celltype$final_cell_type, celltype$seurat_clusters)
-#new.cluster.ids<-split(celltype$cell_type, celltype$seurat_clusters)
-
-obj[["cellactivity_clusters"]] <- unlist(new.cluster.ids[unlist(obj[["seurat_clusters"]])])
-
-clusterDf<-data.frame(seurat=unlist(obj[["seurat_clusters"]]), cellactivity=unlist(obj[["cellactivity_clusters"]]))
-clusterDf$seurat_colors<-seurat_colors[clusterDf$seurat]
-
-clusterDf$seurat_cellactivity<-paste0(clusterDf$seurat, " : ", clusterDf$cellactivity)
-seurat_cellactivity<-clusterDf$seurat_cellactivity
-
-caCount<-table(clusterDf$cellactivity)
-clusterDf$caCount<-caCount[clusterDf$cellactivity]
-
-clusterDf<-clusterDf[order(-clusterDf$caCount, clusterDf$seurat),]
-seurat_cellactivity<-factor(seurat_cellactivity, levels=unique(clusterDf$seurat_cellactivity))
-seurat_cellactivity_colors<-unique(clusterDf$seurat_colors)
-obj[["seurat_cellactivity_clusters"]] <- seurat_cellactivity
-
-clusters<-data.frame("cell" = c(1:length(obj$seurat_clusters)), "seurat_clusters"=as.numeric(as.character(obj$seurat_clusters)), "cellactivity_clusters"=obj$cellactivity_clusters, "seurat_cellactivity_clusters"=obj$seurat_cellactivity_clusters, stringsAsFactors = F)
-rownames(clusters)<-names(obj$seurat_clusters)
-write.csv(clusters, file=paste0(prefix, ".cluster.csv"))
+obj = add_celltype(obj, celltype, "cellactivity_clusters")
 
 samples<-unique(finalList$rawobj$orig.ident)
 if(length(samples) < 3){
@@ -312,6 +294,23 @@ write.csv(cta_combined, file=paste0(prefix, ".tcell.cluster.summary.csv"), row.n
 print(kable(cta_combined, row.names=F,  caption=tabRef("tcell_cta_table", "T cell subtype prediction result")) %>% kable_styling() %>% htmltools::HTML())
 ```
 
+```{r gene_activity_umap_layer, fig.width=12, fig.height=8, results="asis", fig.cap=figRef("umap_cluster_cell_layer", "Predicted cell types layer 1"), eval=has_summary_layer}
+celltype<-read.csv(file=files$activity_celltype)
+layers<-read.csv(file=myoptions$summary_layer_file)
+lastLayer=colnames(layers)[ncol(layers)]
+layers_map<-split(layers[, lastLayer], layers[,1])
+
+miss_celltype=celltype$cell_type[!(celltype$cell_type %in% names(layers_map))]
+for (mct in miss_celltype){
+  layers_map[mct]=mct
+}
+celltype$summary_layer=unlist(layers_map[celltype$cell_type])
+new.cluster.ids<-split(celltype$summary_layer, celltype$seurat_clusters)
+obj[["summary_layer"]] <- unlist(new.cluster.ids[unlist(obj[["seurat_clusters"]])])
+p2<-DimPlot(object = obj, reduction = "umap",label=T, group.by="summary_layer")
+print(p2)
+```
+
 ```{r gene_activity_umap, fig.width=12, fig.height=8, results="asis", fig.cap=figRef("umap_cluster_cell", "Predicted cell types")}
 p2<-DimPlot(object = obj, reduction = "umap",label=T, group.by="seurat_cellactivity_clusters", cols=seurat_cellactivity_colors)
 p2<-p2+guides(colour = guide_legend(ncol = 1))
@@ -376,6 +375,11 @@ include_graphics(files$chetah_png)
 ```{r signac_png, fig.width=18, fig.height=10, results="asis", eval=has_signac, fig.cap=figRef("signac_png", "Predicted cell type by SIGNAC")}
 cat("## Signac prediction\n\n")
 include_graphics(files$signac_png)
+```
+
+```{r rename_png, fig.width=18, fig.height=10, results="asis", eval=has_rename_file, fig.cap=figRef("rename_png", "Rename cell type by expert")}
+cat("## Renamed cell type\n\n")
+include_graphics(files$rename_png)
 ```
 
 # Project options
