@@ -112,6 +112,7 @@ sub perform {
 
   my $rnum = scalar(@rtemplates);
 
+  my $ignore_lines={};
   for my $index (0 .. $#rtemplates){
     my $rtemplate = $rtemplates[$index];
     my $is_absolute = File::Spec->file_name_is_absolute($rtemplate);
@@ -122,19 +123,37 @@ sub perform {
       die("rtemplate $rtemplate defined but not exists!");
     }
 
-    if($copy_template && ($index < $rnum-1)){
-      my $remote_r = $result_dir . "/" . basename($rtemplate);
-      copy($rtemplate, $remote_r);
-      print $rf "source('" . basename($rtemplate) . "')\n\n";
-    }else{
-      open( my $rt, "<$rtemplate" ) or die $!;
-      while ( my $row = <$rt> ) {
-        chomp($row);
-        $row =~ s/\r//g;
-        print $rf "$row\n";
+    if($copy_template) {
+      if ($index < $rnum-1){
+        my $remote_r = $result_dir . "/" . basename($rtemplate);
+        copy($rtemplate, $remote_r);
+        my $line = 'source("' . basename($rtemplate) . '")';
+        $ignore_lines->{$line} = 1;
+        $line =~ s/"/'/g;
+        $ignore_lines->{$line} = 0;
+        next;
+      }else{
+        for my $line (keys %$ignore_lines){
+          if($ignore_lines->{$line}){
+            print $rf "$line\n";
+          }
+        }
       }
-      close($rt);
     }
+    
+    open( my $rt, "<$rtemplate" ) or die $!;
+    while ( my $row = <$rt> ) {
+      chomp($row);
+      $row =~ s/\r//g;
+      if($copy_template && ($row =~/^source/)){
+        if(defined $ignore_lines->{$row}){
+          next;
+        }
+      }
+
+      print $rf "$row\n";
+    }
+    close($rt);
   }
   close($rf);
 
