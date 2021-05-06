@@ -119,6 +119,26 @@ sub getConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
 
+  if($def->{files} && $def->{groups}){
+    my $groups = $def->{groups};
+    my $files = $def->{files};
+    my @errors;
+    for my $gname (keys %$groups){
+      my $samples = $groups->{$gname};
+      for my $sample (@$samples){
+        if (not defined $files->{$sample}){
+          push(@errors, "ERROR: $sample in group $gname was not defined in files.");
+        }
+      }
+    }
+    if(scalar(@errors) > 0){
+      for my $error (@errors){
+        print $error . "\n";
+      }
+      die "Please have a check at configuration.";
+    }
+  }
+
   my $target_dir = $def->{target_dir};
   create_directory_or_die($target_dir);
 
@@ -249,6 +269,7 @@ sub getConfig {
         option                => getValue( $def, "bwa_option" ),
         bwa_index             => $fasta,
         source_ref            => $alignment_source_ref,
+        use_tmp_folder        => $def->{"bwa_use_tmp_folder"},
         output_to_same_folder => 1,
         rg_name_regex         => $rg_name_regex,
         sh_direct             => 0,
@@ -344,6 +365,7 @@ sub getConfig {
       gatk_jar                 => $gatk_jar,
       picard_jar               => $picard_jar,
       remove_duplicate         => getValue($def, "remove_duplicate"),
+      use_tmp_folder           => $def->{"bwa_use_tmp_folder"},
       sh_direct                => 0,
       slim_print_reads         => 1,
       samtools_baq_calibration => 0,
@@ -365,7 +387,7 @@ sub getConfig {
   if($def->{filter_soft_clip} && ((!defined $def->{perform_gatk4_pairedfastq2bam}) || (!$def->{perform_gatk4_pairedfastq2bam}))){
     my $soft_clip_name = $bam_input . "_nosoftclip";
     $config->{$soft_clip_name} = {
-      class                 => "CQS::ProgramIndividualWrapper",
+      class                 => "CQS::ProgramWrapperOneToOne",
       perform               => 1,
       target_dir            => "${target_dir}/${soft_clip_name}",
       option                => "--min-mapq " . getValue($def, "soft_clip_min_mapq", 10),
@@ -375,7 +397,9 @@ sub getConfig {
       source_ref            => $bam_ref,
       output_to_same_folder => 1,
       output_arg            => "-o",
-      output_file_ext       => ".nosoftclip.bam",
+      output_file_prefix    => ".nosoftclip.bam",
+      output_file_ext       => ".nosoftclip.bam;.nosoftclip.bam.bai",
+      use_tmp_folder        => 1,
       sh_direct             => 0,
       pbs                   => {
         "nodes"     => "1:ppn=1",
