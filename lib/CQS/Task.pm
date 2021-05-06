@@ -6,6 +6,7 @@ use warnings;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::StringUtils;
+use File::Basename;
 use Data::Dumper;
 
 sub new {
@@ -18,7 +19,8 @@ sub new {
     _task_suffix   => "",
     _pbskey        => "source",
     _docker_prefix => "",
-    _can_use_docker => 1
+    _can_use_docker => 1,
+    _use_tmp_folder => 0,
   };
   bless $self, $class;
   return $self;
@@ -121,6 +123,33 @@ sub get_clear_map {
 sub get_pbs_key {
   my ( $self, $config, $section ) = @_;
   return $self->{_pbskey};
+}
+
+sub init_tmp_folder {
+  my ( $self, $pbs, $result_dir ) = @_;
+  if( $self->{"_use_tmp_folder"}){
+    print $pbs "
+res_dir='$result_dir'
+tmp_dir=\$(mktemp -d -t ci-\$(date +\%Y-\%m-\%d-\%H-\%M-\%S)-XXXXXXXXXX)
+echo using tmp_dir=\$tmp_dir
+cd \$tmp_dir
+
+";
+  }
+}
+
+sub clean_tmp_folder {
+  my ( $self, $pbs ) = @_;
+  if( $self->{"_use_tmp_folder"}){
+    print $pbs "
+cd \$res_dir
+echo copy result from \$tmp_dir to \$res_dir
+cp -r \$tmp_dir/* .
+echo delete tmp folder \$tmp_dir
+rm -rf \$tmp_dir
+echo move file and clean tmp folder done.
+";
+  }
 }
 
 sub get_pbs_files {
@@ -363,7 +392,7 @@ sub open_pbs {
 $path_file
 $init_command
 
-cd \"$result_dir\"
+cd '$result_dir'
 
 ";
   if ( defined $final_file ) {
@@ -417,6 +446,7 @@ echo working in $result_dir ...
     }
 
     my $sh_file = $pbs_file . ".sh";
+    my $sh_base_file = basename($sh_file);
 
     print $pbs "
 export R_LIBS=
@@ -433,18 +463,21 @@ exit 0
     close $pbs;
     open( $pbs, ">$sh_file" ) or die $!;
     print $pbs "
-cd $result_dir
+cd '$result_dir'
 
 $docker_init
 ";
 
   }
+  $self->init_tmp_folder($pbs, $result_dir);
 
   return $pbs;
 }
 
 sub close_pbs {
   my ( $self, $pbs, $pbs_file ) = @_;
+
+  $self->clean_tmp_folder($pbs);
 
   my $module_name = $self->{_name};
 
@@ -481,6 +514,7 @@ sub init_parameter {
   $self->{_docker_prefix} = get_option( $config, $section, "docker_prefix", $self->{_docker_prefix} );
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+  $self->{_use_tmp_folder} = get_option( $config, $section, "use_tmp_folder", $self->{_use_tmp_folder} );
 
   if ($self->{_task_suffix} ne ""){
     $self->{_suffix} = "";
