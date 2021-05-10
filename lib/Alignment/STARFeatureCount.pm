@@ -101,8 +101,6 @@ sub perform {
   for my $sample_name ( sort keys %fqFiles ) {
     my @sample_files = @{ $fqFiles{$sample_name} };
 
-    my $uncompress = ( $sample_file_1 =~ /.gz$/ ) ? " --readFilesCommand zcat" : "";
-
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
@@ -127,6 +125,7 @@ sub perform {
     @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files)};
     my $samples = join( " ", @sample_files );
     my $sample_file_1 = $sample_files[0];
+    my $uncompress = ( $sample_file_1 =~ /.gz$/ ) ? " --readFilesCommand zcat" : "";
 
     print $pbs "
 
