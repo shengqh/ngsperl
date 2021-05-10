@@ -12,6 +12,7 @@ use CQS::NGSCommon;
 use CQS::StringUtils;
 use CQS::Fasta;
 use CQS::GroupTask;
+use Data::Dumper;
 
 our @ISA = qw(CQS::GroupTask);
 
@@ -21,6 +22,7 @@ sub new {
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_mt";
   $self->{_docker_prefix} = "mutect_";
+  $self->{_use_tmp_folder} = 1;
   bless $self, $class;
   return $self;
 }
@@ -59,6 +61,8 @@ sub perform {
       die "SampleFile should be normal,tumor paired.";
     }
 
+    #print(Dumper(@sample_files));
+
     my $normal = $sample_files[0][1];
     my $tumor  = $sample_files[1][1];
 
@@ -66,16 +70,31 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $group_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
     my $out_file = "${group_name}.somatic.out";
     my $vcf      = "${group_name}.somatic.vcf";
     my $passvcf  = "${group_name}.somatic.pass.vcf";
     my $final = "${group_name}.somatic.pass.vcf.gz";
 
+    print $sh "
+if [[ ( ! -s $result_dir/$final ) && ( -s $normal ) && ( -s $tumor ) ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+
+";
+
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final, $init_command );
+
+    my $localized_files = [];
+    $self->localize_files_in_tmp_folder($pbs, [$normal, $tumor], $localized_files, [".bai"]);
+    if(scalar(@$localized_files) == 2){
+      $normal =  $localized_files->[0];
+      $tumor =  $localized_files->[1];
+      push(@$localized_files, $localized_files->[0] . ".bai");
+      push(@$localized_files, $localized_files->[1] . ".bai");
+    }
+
     print $pbs "
 if [ ! -s ${normal}.bai ]; then
   samtools index ${normal}
@@ -114,6 +133,8 @@ if [[ -s $passvcf && ! -s $final ]]; then
 fi
 "
 ;
+
+    $self->clean_temp_files($pbs, $localized_files);
 
     $self->close_pbs( $pbs, $pbs_file );
 

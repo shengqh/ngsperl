@@ -141,7 +141,10 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
+    print $sh "if [[ ! -s $result_dir/$final_file_index ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
 
     my $log_desc = $cluster->get_log_description($log);
 
@@ -151,6 +154,9 @@ sub perform {
     my $resultPrefix = $sample_name;
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file_index, $init_command, 0, $inputFile );
+
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files, [".bai"])};
 
     if ( !$sorted ) {
       print $pbs "
@@ -226,6 +232,8 @@ fi
 
     print $pbs "
 if [[ (-s $final_file) && (-s $final_file_index) ]]; then
+  ln $final_file_index ${final_file}.bai
+
   if [[ ! -s ${final_file}.stat ]]; then 
     echo flagstat = `date` 
     samtools flagstat $final_file > ${final_file}.stat 
@@ -239,6 +247,9 @@ if [[ (-s $final_file) && (-s $final_file_index) ]]; then
   rm $rmlist 
 fi
 ";
+
+    $self->clean_temp_files($pbs, $localized_files);
+
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
@@ -337,6 +348,7 @@ sub result {
     my @result_files = ();
     push( @result_files, "${result_dir}/${final_file}" );
     push( @result_files, "${result_dir}/${bai_file}" );
+    push( @result_files, "${result_dir}/${final_file}.chromosome.count" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;

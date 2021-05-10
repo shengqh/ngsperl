@@ -135,6 +135,9 @@ echo using tmp_dir=\$tmp_dir
 cd \$tmp_dir
 
 ";
+    return(1);
+  }else{
+    return(0);
   }
 }
 
@@ -376,6 +379,53 @@ sub get_docker_value {
   return ( undef, undef );
 }
 
+sub localize_files_in_tmp_folder {
+  my ($self, $pbs, $sample_files, $localized_files, $other_exts) = @_;
+  if($self->{_use_tmp_folder}){
+    my $result = [];
+    print $pbs "
+echo localize start at `date`
+";
+    for my $old_file (@$sample_files){
+      my $new_file = basename($old_file);
+      print $pbs "
+echo $old_file      
+cp $old_file $new_file
+";
+      push(@$result, $new_file);
+      push(@$localized_files, $new_file);
+
+      if(defined $other_exts){
+        for my $other_ext (@$other_exts){
+          my $old_ext_file = $old_file . $other_ext;
+          my $new_ext_file = $new_file . $other_ext;
+          print $pbs "cp $old_ext_file $new_ext_file
+";
+          push(@$localized_files, $new_ext_file);
+        }
+      }
+    }
+      print $pbs "
+ls *
+echo localize end at `date`
+
+";
+    return($result);
+  }else{
+    return($sample_files);
+  }
+}
+
+sub clean_temp_files {
+  my ($self, $pbs, $temp_files) = @_;
+  if(scalar(@$temp_files) > 0){
+    my $rmstr = join(" ",  @$temp_files);
+    print $pbs "
+rm $rmstr
+";
+  }
+}
+
 sub open_pbs {
   my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, $final_file_can_empty, $input_file ) = @_;
 
@@ -462,14 +512,20 @@ exit 0
 ";
     close $pbs;
     open( $pbs, ">$sh_file" ) or die $!;
-    print $pbs "
+
+    if(!$self->init_tmp_folder($pbs, $result_dir)){
+      print $pbs "
 cd '$result_dir'
+";
+    }
+    print $pbs "
 
 $docker_init
 ";
 
+  }else{
+    $self->init_tmp_folder($pbs, $result_dir);
   }
-  $self->init_tmp_folder($pbs, $result_dir);
 
   return $pbs;
 }

@@ -100,11 +100,8 @@ sub perform {
 
   for my $sample_name ( sort keys %fqFiles ) {
     my @sample_files = @{ $fqFiles{$sample_name} };
-    my $sample_file_1 = $sample_files[0];
 
     my $uncompress = ( $sample_file_1 =~ /.gz$/ ) ? " --readFilesCommand zcat" : "";
-
-    my $samples = join( " ", @sample_files );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -125,6 +122,11 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
     my $chromosome_grep_command = $output_sort_by_coordinate ? getChromosomeFilterCommand( $final_bam, $chromosome_grep_pattern ) : "";
+
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files)};
+    my $samples = join( " ", @sample_files );
+    my $sample_file_1 = $sample_files[0];
 
     print $pbs "
 
@@ -173,7 +175,7 @@ fi
 
     if ( !$output_unsorted ) {
       print $pbs "
-if [ -s $final_file && -s $bam_stat ]; then
+if [[ -s $final_file && -s $bam_stat ]]; then
   rm $unsorted 
 fi
 ";
@@ -188,8 +190,15 @@ fi
 ";
     }
 
+    $self->clean_temp_files($pbs, $localized_files);
+
     $self->close_pbs( $pbs, $pbs_file );
-    print $sh "\$MYCMD ./$pbs_name \n";
+
+    print $sh "
+if [[ ! -s $result_dir/$final_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
   }
   print $sh "exit 0\n";
   close $sh;

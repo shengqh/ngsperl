@@ -4,6 +4,7 @@ package Trimmer::Cutadapt;
 use strict;
 use warnings;
 use File::Basename;
+use File::Copy;
 use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
@@ -189,22 +190,29 @@ sub perform {
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
 
+  my $expect_result = $self->result( $config, $section );
+
   for my $sample_name ( sort keys %raw_files ) {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
     my $log_desc = $cluster->get_log_description($log);
 
     my @sample_files = @{ $raw_files{$sample_name} };
 
     my @final_files = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_files[0] );
+    my $final_file = $final_files[0];
 
-    my @rmlist = ();
+    my $expect_file = $expect_result->{$sample_name}[0];
+    print $sh "if [[ ! -s $expect_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
+
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+
     for my $sample_file (@sample_files) {
       print $pbs "
 if [ ! -s $sample_file ]; then
@@ -214,6 +222,10 @@ fi
 ";
     }
 
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files)};
+
+    my @rmlist = ();
     if ($hard_trim > 0){
       for my $sample_file (@sample_files) {
         my $temp_file = basename($sample_file) . ".hardtrim.fastq";
@@ -341,12 +353,8 @@ mv ${temp_file}.gz $final_file
       }
     }
 
-    if(scalar(@rmlist) > 0){
-      my $rmstr = join(" ",  @rmlist);
-      print $pbs "
-rm $rmstr
-";
-    }
+    $self->clean_temp_files($pbs, $localized_files);
+    $self->clean_temp_files($pbs, \@rmlist);
 
     print $pbs "
 cutadapt --version 2>&1 | awk '{print \"Cutadapt,v\"\$1}' > ${sample_name}.version
