@@ -985,6 +985,7 @@ sub getScRNASeqConfig {
           rtemplate            => "../scRNA/scRNA_func.r;../scRNA/seurat_recluster.r",
           parameterFile1_ref   => [ $seurat_name, ".final.rds" ],
           parameterFile2_ref => [ $cluster_task_name, $cluster_file ],
+          parameterFile3_ref => [ $celltype, ".rds" ],
           parameterSampleFile1 => $def->{recluster},
           parameterSampleFile2 => {
             recluster_celltypes => getValue( $def, "recluster_celltypes", "" ),
