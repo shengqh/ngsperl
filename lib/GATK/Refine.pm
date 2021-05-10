@@ -150,13 +150,14 @@ fi
 
     my $rmlist       = "";
     my $inputFile    = $sampleFile;
-    my $inputFileIndex    = "${sampleFile}.bai";
     my $resultPrefix = $sample_name;
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file_index, $init_command, 0, $inputFile );
 
     my $localized_files = [];
     @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files, [".bai"])};
+    my $inputFile    = $sample_files[0];
+    my $inputFileIndex    = "${sampleFile}.bai";
 
     if ( !$sorted ) {
       print $pbs "
