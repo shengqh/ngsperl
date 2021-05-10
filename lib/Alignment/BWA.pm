@@ -91,8 +91,6 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sample_file_0 = $sample_files[0];
-    my $sample_files_str = ( scalar(@sample_files) == 2 ) ? "\"" . $sample_file_0 . "\" \"" . $sample_files[1] . "\"" : "\"" . $sample_file_0 . "\"";
 
     my $unsorted_bam_file = $sample_name . ".unsorted.bam";
     my $bam_stat = $sample_name . ".bamstat";
@@ -130,13 +128,24 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
     my $log_desc = $cluster->get_log_description($log);
 
     my $final_file =  $mark_duplicates ? $rmdup_bam_file : $sorted_bam_file;
     my $check_file = $sortByCoordinate? ($mark_duplicates?$rmdup_bam_file_index:$sorted_bam_file_index) :$final_file;
+
+    my $sample_file_0 = $sample_files[0];
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $check_file, $init_command, 0, $sample_file_0 );
+
+    print $sh "
+if [[ ! -s $result_dir/$final_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
+
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files)};
+    $sample_file_0 = $sample_files[0];
+    my $sample_files_str = ( scalar(@sample_files) == 2 ) ? "\"" . $sample_file_0 . "\" \"" . $sample_files[1] . "\"" : "\"" . $sample_file_0 . "\"";
 
     print $pbs "
 if [[ ! -s $unsorted_bam_file ]]; then
@@ -174,6 +183,8 @@ if [ -s $unsorted_bam_file ]; then
 fi
 ";
       }
+
+      $self->clean_temp_files($pbs, $localized_files);
 
       $self->close_pbs( $pbs, $pbs_file );
       next;
@@ -282,6 +293,8 @@ if [[ -s $check_file && -s $bam_stat ]]; then
 fi
 ";
   }
+
+    $self->clean_temp_files($pbs, $localized_files);
 
     $self->close_pbs( $pbs, $pbs_file );
   }

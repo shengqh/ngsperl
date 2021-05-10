@@ -159,28 +159,19 @@ sub perform {
 
   my $rReportTemplates = get_option( $config, $section, "rReportTemplate", "" );
   if ( $rReportTemplates ne "" ) {
-    #my $rReportFile = $result_dir . "/" . basename($rReportTemplates);
-    my $rReportFile = $result_dir . "/" . basename($rReportTemplates);
-    open( my $rf, ">$rReportFile" ) or die "Cannot create $rReportFile";
-
     my @rReportTemplates = split( ",|;", $rReportTemplates );
-    foreach my $rReportTemplate (@rReportTemplates) {
-      my $is_absolute = File::Spec->file_name_is_absolute($rReportTemplate);
+    for my $rtemplate (@rReportTemplates){
+      my $is_absolute = File::Spec->file_name_is_absolute($rtemplate);
       if ( !$is_absolute ) {
-        $rReportTemplate = dirname(__FILE__) . "/$rReportTemplate";
+        $rtemplate = dirname(__FILE__) . "/$rtemplate";
       }
-      if ( !( -e $rReportTemplate ) ) {
-        die("rReportTemplate $rReportTemplate defined but not exists!");
+      if ( !( -e $rtemplate ) ) {
+        die("rmd template $rtemplate defined but not exists!");
       }
-      open( my $rt, "<$rReportTemplate" ) or die $!;
-      while ( my $row = <$rt> ) {
-        chomp($row);
-        $row =~ s/\r//g;
-        print $rf "$row\n";
-      }
-      close($rt);
+
+      my $remote_r = $result_dir . "/" . basename($rtemplate);
+      copy($rtemplate, $remote_r);
     }
-    close($rf);
   }
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );

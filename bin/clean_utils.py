@@ -62,7 +62,7 @@ def find_error_samples_by_bwa(logger, bwa_dir):
   return(result)
 
 def find_error_samples_by_star(logger, star_dir):
-  remove_patterns=["__STARgenome", "__STARtmp", "_Aligned.out.bam"]
+  remove_patterns=[".0000.bam", "__STARgenome", "__STARtmp", "_Aligned.out.bam"]
   files=[y for y in glob(os.path.join(star_dir, "result", "*"))]
   check_suffix=["_SJ.out.tab", ".bamstat", ".count", ".splicing.bed"]
   result =set()
@@ -72,7 +72,7 @@ def find_error_samples_by_star(logger, star_dir):
       next
 
     for suffix in check_suffix:
-      if cfile.endswith(suffix):
+      if cfile.endswith(suffix) and not cfile.endswith(".chromosome.count"):
         sample = os.path.basename(cfile).replace(suffix, "")
         bamfile = os.path.join(star_dir, "result", "%s_Aligned.sortedByCoord.out.bam" % sample)
         if not os.path.exists(bamfile):
@@ -82,5 +82,5 @@ def find_error_samples_by_star(logger, star_dir):
       if cfile.endswith(rpattern):
         sample = os.path.basename(cfile).replace(rpattern, "")
         result.add(sample)
-    
+  result=sorted(result) 
   return(result)

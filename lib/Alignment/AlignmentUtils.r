@@ -5,11 +5,23 @@ require("stringr")
 draw_chromosome_count<-function(listFile, outFilePrefix) {
   filelist = read.table(listFile, sep="\t", header=F, stringsAsFactors = F)
 
+  missing = c()
+  missing_file=paste0(outFilePrefix, ".chromosome.missing")
+  if(file.exists(missing_file)){
+    file.remove(missing_file)
+  }
+
   final=NULL
   i=1
   for(i in c(1:nrow(filelist))){
     filename = filelist$V2[i]
     filelocation =filelist$V1[i]
+
+    if(!file.exists(filelocation)){
+      missing = c(missing, filelocation)
+      next
+    }
+
     subdata = read.table(filelocation, sep="\t", header=F, stringsAsFactors = F)
     subdata=subdata[,c(1,3)]
     colnames(subdata)<-c("Chrom", "Reads")
@@ -19,6 +31,10 @@ draw_chromosome_count<-function(listFile, outFilePrefix) {
     final=rbind(final, subdata )
   }
   write.csv(file=paste0(outFilePrefix, ".chromosome.csv"), final, row.names=F)
+
+  if(length(missing) > 0){
+    writeLines(missing, paste0(outFilePrefix, ".chromosome.missing"))
+  }
 
   chroms=paste0("chr", c(1:22,'X','Y','M', 'MT'))
   if(!any(final$Chrom %in% chroms)){

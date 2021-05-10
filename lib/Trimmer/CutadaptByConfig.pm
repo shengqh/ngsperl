@@ -212,8 +212,21 @@ if [ ! -s $sample_file ]; then
   exit 0
 fi
 ";
-
     }
+
+    if($self->{_use_tmp_folder}){
+      my @old_files=@sample_files;
+      @sample_files = ();
+      for my $old_file (@old_files){
+        my $new_file = basename($old_file);
+        print $pbs "
+cp $old_file $new_file
+";
+        push(@sample_files, $new_file);
+        push(@rmlist, $new_file);
+      }
+    }
+
     if ($ispairend) {
       die "should be pair-end data but not!" if ( scalar(@sample_files) != 2 );
 

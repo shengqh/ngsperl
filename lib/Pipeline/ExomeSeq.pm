@@ -382,6 +382,8 @@ sub getConfig {
 
     $bam_input = $refine_name;
     $bam_ref = [ $refine_name, ".bam\$" ];
+
+    add_alignment_summary($config, $def, $summary, $target_dir, "${refine_name}_summary", "../Alignment/AlignmentUtils.r;../Alignment/BWASummary.r", ".chromosome.csv;.chromosome.png", undef, [$refine_name, ".chromosome.count"] );
   }
 
   if($def->{filter_soft_clip} && ((!defined $def->{perform_gatk4_pairedfastq2bam}) || (!$def->{perform_gatk4_pairedfastq2bam}))){
@@ -390,15 +392,20 @@ sub getConfig {
       class                 => "CQS::ProgramWrapperOneToOne",
       perform               => 1,
       target_dir            => "${target_dir}/${soft_clip_name}",
-      option                => "--min-mapq " . getValue($def, "soft_clip_min_mapq", 10),
+      option                => "--min-mapq " . getValue($def, "soft_clip_min_mapq", 10) . " -i __FILE__ -o __NAME__.nosoftclip.bam
+
+samtools index __NAME__.nosoftclip.bam.bai
+samtools idxstats __NAME__.nosoftclip.bam > __NAME__.nosoftclip.bam.chromosome.count
+",
       interpretor           => "python3",
       program               => "../GATK/filterSoftClip.py",
       source_arg            => "-i",
       source_ref            => $bam_ref,
       output_to_same_folder => 1,
+      use_tmp_folder        => 1,
       output_arg            => "-o",
       output_file_prefix    => ".nosoftclip.bam",
-      output_file_ext       => ".nosoftclip.bam;.nosoftclip.bam.bai",
+      output_file_ext       => ".nosoftclip.bam;.nosoftclip.bam.bai;.nosoftclip.bam.chromosome.count",
       use_tmp_folder        => 1,
       sh_direct             => 0,
       pbs                   => {
@@ -409,6 +416,9 @@ sub getConfig {
     };
     push @$individual, ($soft_clip_name);
     $bam_input = $soft_clip_name;
+    $bam_ref = [$bam_input, ".bam\$"];
+
+    add_alignment_summary($config, $def, $summary, $target_dir, "${soft_clip_name}_summary", "../Alignment/AlignmentUtils.r;../Alignment/BWASummary.r", ".chromosome.csv;.chromosome.png", undef, [$soft_clip_name, ".chromosome.count"] );
   }
 
   if ($def->{perform_TEQC}) {
@@ -517,7 +527,7 @@ R --vanilla -f __NAME__.clustered.crosscheck_metrics.r
       program               => "gatk",
       check_program         => 0,
       source_arg            => "",
-      source_ref            => [ $bam_input, ".bam\$" ],
+      source_ref            => $bam_ref,
       source_join_delimiter => " ",
       output_to_same_folder => 1,
       output_arg            => "",
@@ -533,6 +543,11 @@ R --vanilla -f __NAME__.clustered.crosscheck_metrics.r
     push @$individual, ($target_coverage_task);
   }
 
+  if($def->{perform_bamsnap} && $def->{"bamsnap_locus"}){
+    #addBamsnapLocus($config, $def, $summary, $target_dir, "bamsnap_locus", $bam_ref);
+    addBamsnapLocus($config, $def, $summary, $target_dir, "bamsnap_locus", ['bwa', '.bam$']);
+  }
+
   if($def->{perform_extract_bam}){
     my $extract_bam_locus = getValue($def, "extract_bam_locus");
     my $extract_bam_task = "extract_bam_locus";
@@ -543,7 +558,7 @@ R --vanilla -f __NAME__.clustered.crosscheck_metrics.r
       check_program => 0,
       option => "view -b -o __OUTPUT__ __FILE__ " . $extract_bam_locus . "; samtools index __OUTPUT__; ",
       program => "samtools",
-      source_ref => $bam_input,
+      source_ref => [ $bam_input, ".bam\$" ],
       output_arg => "",
       output_file_prefix => ".bam",
       output_file_ext => ".bam",

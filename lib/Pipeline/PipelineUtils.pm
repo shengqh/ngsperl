@@ -83,6 +83,7 @@ our %EXPORT_TAGS = (
     addAnnotationGenes
     add_peak_count
     add_alignment_summary
+    add_gsea
     )
   ]
 );
@@ -182,7 +183,7 @@ sub addFastQC {
     source_ref => $source_ref,
     cluster    => $def->{"cluster"},
     fastqc     => $def->{"fastqc"},
-    sh_direct  => 1,
+    sh_direct  => 0,
     pbs        => {
       "nodes"    => "1:ppn=" . $curThread,
       "walltime" => "4",
@@ -1970,27 +1971,29 @@ sub addStarFeaturecount {
   };
   push @$individual, ($star_task);
   
-  my $summary_task = "star_featurecount${suffix}_summary";
-  $config->{$summary_task} = {
-    class                    => "CQS::UniqueR",
-    perform                  => 1,
-    target_dir               => $starFolder . "_summary",
-    option                   => "",
-    rtemplate                => "../Alignment/STARFeatureCount.r",
-    output_file_ext          => ".FeatureCountSummary.csv",
-    output_other_ext          => ".FeatureCountSummary.csv.png;.STARSummary.csv;.STARSummary.csv.png",
-    parameterSampleFile1_ref => [ $star_task, "_Log.final.out" ],
-    parameterSampleFile2_ref => [ $star_task, ".count.summary" ],
-    sh_direct                => 1,
-    pbs                      => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "2",
-      "mem"       => "10gb"
-    },
-  };
-  push @$summary, ($summary_task);
+  add_alignment_summary($config, $def, $summary, $target_dir, "${star_task}_summary", "../Alignment/AlignmentUtils.r;../Alignment/STARFeatureCount.r", ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png;.STARSummary.csv;.STARSummary.csv.png;.chromosome.csv;.chromosome.png", [ $star_task, "_Log.final.out" ], [ $star_task, ".count.summary" ], [$star_task, ".chromosome.count"] );
+
+  # my $summary_task = "star_featurecount${suffix}_summary";
+  # $config->{$summary_task} = {
+  #   class                    => "CQS::UniqueR",
+  #   perform                  => 1,
+  #   target_dir               => $starFolder . "_summary",
+  #   option                   => "",
+  #   rtemplate                => "../Alignment/STARFeatureCount.r",
+  #   output_file_ext          => ".FeatureCountSummary.csv",
+  #   output_other_ext          => ".FeatureCountSummary.csv.png;.STARSummary.csv;.STARSummary.csv.png",
+  #   parameterSampleFile1_ref => [ $star_task, "_Log.final.out" ],
+  #   parameterSampleFile2_ref => [ $star_task, ".count.summary" ],
+  #   sh_direct                => 1,
+  #   pbs                      => {
+  #     "email"     => $def->{email},
+  #     "emailType" => $def->{emailType},
+  #     "nodes"     => "1:ppn=1",
+  #     "walltime"  => "2",
+  #     "mem"       => "10gb"
+  #   },
+  # };
+  # push @$summary, ($summary_task);
 
   return($star_task);
 };
@@ -2309,13 +2312,22 @@ sub addBamsnap {
 
 sub addBamsnapLocus {
   my ($config, $def, $tasks, $target_dir, $task_name, $bam_ref) = @_;
+
+  my $bamsnap_raw_option = $def->{bamsnap_raw_option};
+  my $option = "";
+  if(defined $bamsnap_raw_option) {
+    for my $key (keys %$bamsnap_raw_option){
+      $option = $option . " " . $key . " " . $bamsnap_raw_option->{$key};
+    }
+  }
+
   $config->{$task_name} = {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
     target_dir            => "$target_dir/$task_name",
     docker_prefix         => "bamsnap_",
     #init_command          => "ln -s __FILE__ __NAME__.bam",
-    option                => "-draw coordinates bamplot gene -bamplot coverage -width 2000 -height 3000 -out __NAME__.png",
+    option                => $option . " -draw coordinates bamplot gene -bamplot coverage -width 2000 -height 3000 -out __NAME__.png",
     interpretor           => "",
     check_program         => 0,
     program               => "bamsnap",
@@ -2506,7 +2518,7 @@ sub add_peak_count {
 }
 
 sub add_alignment_summary {
-  my ($config, $def, $tasks, $target_dir, $task_name, $rtemplate, $output_file_ext, $read_1_ref, $read_2_ref ) = @_;
+  my ($config, $def, $tasks, $target_dir, $task_name, $rtemplate, $output_file_ext, $read_1_ref, $read_2_ref, $read_3_ref ) = @_;
 
   $config->{$task_name} = {
     class                    => "CQS::UniqueR",
@@ -2516,6 +2528,7 @@ sub add_alignment_summary {
     option                   => "",
     parameterSampleFile1_ref => $read_1_ref,
     parameterSampleFile2_ref => $read_2_ref,
+    parameterSampleFile3_ref => $read_3_ref,
     rtemplate                => $rtemplate,
     output_file              => "",
     output_file_ext          => $output_file_ext,
@@ -2527,6 +2540,61 @@ sub add_alignment_summary {
   };
   push(@$tasks, $task_name);
   return($task_name);
+}
+
+sub add_gsea {
+  my ($config, $def, $tasks, $target_dir, $gseaTaskName, $rnk_file_ref, $keys, $suffix ) = @_;
+
+  my $gsea_jar        = getValue($def, "gsea_jar");
+  my $gsea_db         = getValue($def, "gsea_db");
+  my $gsea_categories = getValue($def, "gsea_categories");
+
+  #my $gseaCategories = "'h.all.v6.1.symbols.gmt','c2.all.v6.1.symbols.gmt','c5.all.v6.1.symbols.gmt','c6.all.v6.1.symbols.gmt','c7.all.v6.1.symbols.gmt'";
+  $config->{$gseaTaskName} = {
+    class                      => "CQS::UniqueR",
+    perform                    => 1,
+    target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
+    rtemplate                  => "GSEAPerform.R",
+    output_to_result_directory => 1,
+    output_perSample_file      => "parameterSampleFile1",
+    output_perSample_file_ext  => ".gsea.html;.gsea.csv;.gsea;",
+    parameterSampleFile1_ref   => $rnk_file_ref,
+    sh_direct                  => 1,
+    rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=0;",
+    pbs                        => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "23",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$tasks, $gseaTaskName );
+
+  my @gsea_report_files = ();
+  my @gsea_report_names = ();
+  my $pairs = $config->{pairs};
+  for my $key ( @$keys ) {
+    push( @gsea_report_files, $gseaTaskName, "/" . $key . $suffix . ".*gsea.csv" );
+    push( @gsea_report_names, "gsea_" . $key );
+  }
+
+  my $gsea_report = $gseaTaskName . "_report";
+  $config->{$gsea_report} = {
+    class                      => "CQS::BuildReport",
+    perform                    => 1,
+    target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gsea_report,
+    report_rmd_file            => "GSEAReport.Rmd",
+    additional_rmd_files       => "../Pipeline/Pipeline.Rmd;Functions.Rmd",
+    parameterSampleFile1_ref   => \@gsea_report_files,
+    parameterSampleFile1_names => \@gsea_report_names,
+    parameterSampleFile3       => [],
+    sh_direct                  => 1,
+    pbs                        => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$tasks, $gsea_report );
 }
 
 1;
