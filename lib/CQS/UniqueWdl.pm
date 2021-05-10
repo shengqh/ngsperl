@@ -21,6 +21,7 @@ sub new {
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_uwdl";
   $self->{_can_use_docker} = 0;
+  $self->{_use_tmp_folder} = 0;
   bless $self, $class;
   return $self;
 }
