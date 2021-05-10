@@ -96,16 +96,22 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    if ( $has_multi_samples ) {
-      print $sh "\$MYCMD ./$pbs_name \n";
-    }
-
     my $log_desc = $cluster->get_log_description($log);
 
     my $final_file = $expect_result->{$sample_name}[-1];
     my $pbs        = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
+    if ( $has_multi_samples ) {
+      print $sh "if [[ ! -s $final_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
+    }
+
     my $final_prefix = $output_to_folder ? "." : $sample_name . $output_file_prefix;
+
+    my $localized_files = [];
+    $parameterSampleFile1->{$sample_name} = $self->localize_files_in_tmp_folder($pbs, $parameterSampleFile1->{$sample_name}, $localized_files);
 
     #print Dumper($parameterSampleFile1->{$sample_name});
 
@@ -158,6 +164,9 @@ $cur_init_command
 $interpretor $program $curOption $output_option
 
 ";
+
+    $self->clean_temp_files($pbs, $localized_files);
+
     $self->close_pbs( $pbs, $pbs_file );
   }
 
