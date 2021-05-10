@@ -15,6 +15,22 @@ def clean_by_cutadapt(logger, project_dir, remove_patterns):
   samples = do_clean_by_cutadapt(logger, project_dir, cutadapt_result_folder, remove_patterns)
   return(samples)
 
+def clean_by_posttrim_fastqc_and_fastq_len(logger, project_dir, remove_patterns):
+  post_trim_fastqc_log_folder = os.path.join(project_dir, "fastqc_post_trim", "log")
+  f_samples = find_error_samples_by_fastqc(logger, post_trim_fastqc_log_folder)
+  fastq_len_result_folder = os.path.join(project_dir, "fastq_len", "result")
+  l_samples = find_error_samples_by_fastq_len(logger, fastq_len_result_folder)
+  samples = [f for f in set(f_samples).intersection(set(l_samples))]
+  remove_files(logger, project_dir, samples, remove_patterns)
+  return(samples)
+
+def clean_fastq_len(logger, project_dir, remove_patterns):
+  fastq_len_result_folder = os.path.join(project_dir, "fastq_len", "result")
+  samples = find_error_samples_by_fastq_len(logger, fastq_len_result_folder)
+  remove_files(logger, project_dir, samples, remove_patterns)
+  return(samples)
+
+
 def clean_by_posttrim_fastqc(logger, project_dir, remove_patterns):
   post_trim_fastqc_log_folder = os.path.join(project_dir, "fastqc_post_trim", "log")
   samples = find_error_samples_by_fastqc(logger, post_trim_fastqc_log_folder)
@@ -27,11 +43,14 @@ def clean_fastq_len(logger, project_dir, remove_patterns):
   remove_files(logger, project_dir, samples, remove_patterns)
   return(samples)
 
-def clean_star(logger, project_dir, remove_patterns):
+def clean_star(logger, project_dir, remove_patterns, delete):
   star_folder =  os.path.join(project_dir, "star_featurecount")
   samples = find_error_samples_by_star(logger, star_folder)
-  #print(samples)
-  remove_files(logger, project_dir, samples, remove_patterns)
+  if delete:
+    remove_files(logger, project_dir, samples, remove_patterns)
+  else:
+    print(samples)
+  
   return(samples)
 
 def main():
@@ -42,6 +61,7 @@ def main():
   NOT_DEBUG = not DEBUG
   
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input project root folder', required=NOT_DEBUG)
+  parser.add_argument('-d', '--delete', action='store_true', help='Delete files')
   
   if not DEBUG and len(sys.argv)==1:
     parser.print_help()
@@ -79,6 +99,7 @@ def main():
   remove_star_files = [
     ["star_featurecount/result", ".count*"],
     ["star_featurecount/result", ".bamstat"],
+    ["star_featurecount/result", ".00??.bam"],
     ["star_featurecount/result", "__*"],
     ["star_featurecount/result", "_Aligned*"],
     ["star_featurecount/result", "_Log*"],
@@ -87,10 +108,13 @@ def main():
     ["star_featurecount/log", "_sf.log"],
   ]
 
-  clean_by_cutadapt(logger, project_dir=args.input, remove_patterns=remove_cutadapt_files)
-  clean_by_posttrim_fastqc(logger, project_dir=args.input, remove_patterns=remove_cutadapt_files+remove_posttrim_fastqc_files+remove_star_files+remove_posttrim_fastq_len_files)
-  clean_fastq_len(logger, project_dir=args.input, remove_patterns=remove_cutadapt_files+remove_posttrim_fastqc_files+remove_star_files+remove_posttrim_fastq_len_files)
-  clean_star(logger, project_dir=args.input, remove_patterns=remove_star_files)
+  #clean_by_posttrim_fastqc(logger, project_dir=args.input, remove_patterns=remove_posttrim_fastqc_files)
+  #clean_by_posttrim_fastqc_and_fastq_len(logger, project_dir=args.input, remove_patterns=remove_cutadapt_files+remove_posttrim_fastqc_files+remove_star_files+remove_posttrim_fastq_len_files)
+
+  #clean_by_cutadapt(logger, project_dir=args.input, remove_patterns=remove_cutadapt_files)
+  #clean_by_posttrim_fastqc(logger, project_dir=args.input, remove_patterns=remove_cutadapt_files+remove_posttrim_fastqc_files+remove_star_files+remove_posttrim_fastq_len_files)
+  #clean_fastq_len(logger, project_dir=args.input, remove_patterns=remove_cutadapt_files+remove_posttrim_fastqc_files+remove_star_files+remove_posttrim_fastq_len_files)
+  clean_star(logger, project_dir=args.input, remove_patterns=remove_star_files, delete=args.delete)
 
 if __name__ == "__main__":
     main()
