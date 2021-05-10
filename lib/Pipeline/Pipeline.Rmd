@@ -45,7 +45,7 @@ processGseaTable=function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=5,absLin
   rawTableOut<-NULL
   for (i in head(which(rawTable$FDR.q.val<=maxCategoryFdr),maxCategory)) {
     categoryName=rawTable[i,1]
-    gseaUrl=paste0("http://software.broadinstitute.org/gsea/msigdb/cards/",categoryName)
+    gseaUrl=paste0("http://www.gsea-msigdb.org/gsea/msigdb/geneset_page.jsp?geneSetName=",categoryName)
     categoryNameInTable<-addLinkTag(text=categoryName,link=gseaUrl)
     
     gseaWeb<-getURL(gseaUrl)
