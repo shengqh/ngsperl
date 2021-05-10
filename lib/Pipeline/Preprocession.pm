@@ -112,6 +112,9 @@ sub addFastqLen {
     "$fastqLenName" => {
       class => "CQS::ProgramWrapperOneToOne",
       target_dir => $fastq_len_dir,
+      #option => "-c",
+      option => "",
+      use_tmp_folder => 1,
       suffix  => "_flen",
       interpretor => "python3",
       program => "../QC/fastq_len.py",
@@ -122,7 +125,7 @@ sub addFastqLen {
       output_file_ext => ".len",
       output_to_same_folder => 1,
       can_result_be_empty_file => 0,
-      sh_direct   => 1,
+      sh_direct   => 0,
       pbs => {
         "nodes"     => "1:ppn=1",
         "walltime"  => "2",
