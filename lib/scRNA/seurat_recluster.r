@@ -1,5 +1,5 @@
-
 source("scRNA_func.r")
+
 
 library(Seurat)
 library(ggplot2)
@@ -72,10 +72,11 @@ for(ct in names(cclist)){
   ctPrefix=file.path(ct, ctPrefix)
   
   png(paste0(ctPrefix, ".pre.png"), width=3000, height=3000, res=300)
-  p<-DimPlot(object = cluster_obj, reduction = 'umap', label=TRUE, group.by=myoptions$cluster_name) + ggtitle("")
-  print(p)
+  pre<-DimPlot(object = cluster_obj, reduction = 'umap', label=TRUE, group.by=myoptions$cluster_name) + ggtitle("")
+  print(pre)
   dev.off()
   
+  full_umap = cluster_obj@reductions$umap
   cluster_obj[[myoptions$cluster_name]]=NULL
   
   rdsFile = paste0(ctPrefix, ".rds")
@@ -157,7 +158,15 @@ for(ct in names(cclist)){
   allrds <-rbind(allrds, data.frame(category=ct, rds=rdsFile))
   
   png(paste0(ctPrefix, ".post.png"), width=3000, height=3000, res=300)
-  p<-DimPlot(object = cluster_obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters") + ggtitle("")
+  post<-DimPlot(object = cluster_obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters") + ggtitle("")
+  print(post)
+  dev.off()
+  
+  cluster_obj@reductions$full_umap=full_umap
+  
+  png(paste0(ctPrefix, ".combined.png"), width=9600, height=3000, res=300)
+  post_full<-DimPlot(object = cluster_obj, reduction = 'full_umap', label=TRUE, group.by="seurat_cellactivity_clusters") + ggtitle("")
+  p<-pre+post_full+post
   print(p)
   dev.off()
   
