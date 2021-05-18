@@ -29,7 +29,7 @@ labels <- Signac(obj)
 celltypes = GenerateLabels(labels, E = obj)
 
 obj <- AddMetaData(obj, metadata = celltypes$CellStates, col.name = "CellStates")
-png(paste0(outFile, "..signac.png"), width=3300, height=3000, res=300)
+png(paste0(outFile, ".signac.png"), width=3300, height=3000, res=300)
 g1=DimPlot(obj, group.by = "CellStates", reduction="umap", label=T)
 print(g1)
 dev.off()
