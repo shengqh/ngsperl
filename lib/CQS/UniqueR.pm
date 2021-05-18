@@ -54,19 +54,6 @@ sub perform {
     }
   }
 
-  my $parameterFile1 = parse_param_file( $config, $section, "parameterFile1", 0 );
-  my $parameterFile2 = parse_param_file( $config, $section, "parameterFile2", 0 );
-  my $parameterFile3 = parse_param_file( $config, $section, "parameterFile3", 0 );
-  if ( !defined($parameterFile1) ) {
-    $parameterFile1 = "";
-  }
-  if ( !defined($parameterFile2) ) {
-    $parameterFile2 = "";
-  }
-  if ( !defined($parameterFile3) ) {
-    $parameterFile3 = "";
-  }
-
   my $rfile = $result_dir . "/${task_name}${task_suffix}.r";
   open( my $rf, ">$rfile" ) or die "Cannot create $rfile";
   print $rf "rm(list=ls()) \n";
@@ -85,14 +72,16 @@ sub perform {
   for my $file_key (sort keys %$paramSampleFiles) {
     $rParameter = $rParameter . $file_key . "='" . $paramSampleFiles->{$file_key} . "'\n";
   }
-  if ( defined($parameterFile1) ) {
-    $rParameter = $rParameter . "parFile1='$parameterFile1'\n";
-  }
-  if ( defined($parameterFile2) ) {
-    $rParameter = $rParameter . "parFile2='$parameterFile2'\n";
-  }
-  if ( defined($parameterFile3) ) {
-    $rParameter = $rParameter . "parFile3='$parameterFile3'\n";
+
+  for my $index (1..10){
+    my $key = "parameterFile" . $index;
+    my $parameterFile = parse_param_file( $config, $section, $key, 0 );
+    if ( !defined($parameterFile) && $index < 4 ) {
+      $parameterFile = "";
+    }
+    if ( defined($parameterFile) ) {
+      $rParameter = $rParameter . "parFile$index='$parameterFile'\n";
+    }
   }
   if ($output_to_result_directory) {
     $rParameter = $rParameter . "outputDirectory='.'\n";
