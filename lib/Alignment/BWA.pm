@@ -207,7 +207,7 @@ fi
         print $pbs "    
 if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
   echo sort_bam=`date`
-  sambamba sort -m $sort_memory $sambamba_sort_thread --tmpdir tmp -o $sorted_bam_file $unsorted_bam_file
+  sambamba sort -m $sort_memory $sambamba_sort_thread --tmpdir tmp_${sample_name} -o $sorted_bam_file $unsorted_bam_file
 fi
 
 if [[ (-s $sorted_bam_file) && ((1 -eq \$1) || (! -s ${sorted_bam_file}.bai)) ]]; then
@@ -289,7 +289,7 @@ fi
   if ($rmlist ne "") {
     print $pbs "
 if [[ -s $check_file && -s $bam_stat ]]; then
-  rm $rmlist
+  rm $rmlist tmp_${sample_name}
 fi
 ";
   }
