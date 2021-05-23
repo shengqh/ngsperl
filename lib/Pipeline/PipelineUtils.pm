@@ -83,7 +83,9 @@ our %EXPORT_TAGS = (
     addAnnotationGenes
     add_peak_count
     add_alignment_summary
+    add_bam_validation
     add_gsea
+    add_unique_r
     )
   ]
 );
@@ -378,7 +380,10 @@ sub addOutputOption {
   my $result = $rcode;
   my $newkey = ( defined $alternativeKey ) ? $alternativeKey : $key;
   if ( $result !~ /$key/ ) {
-    if ( getValue( $def, $key, $defaultValue ) ) {
+    my $value = getValue( $def, $key, $defaultValue );
+    if($value eq "FALSE"){
+      $result = $result . "$newkey<-FALSE;";
+    }elsif( $value ) {
       $result = $result . "$newkey<-TRUE;";
     }
     else {
@@ -1962,8 +1967,6 @@ sub addStarFeaturecount {
     delete_star_featureCount_bam => $def->{delete_star_featureCount_bam},
     sh_direct                 => 0,
     pbs                       => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=" . $def->{max_thread},
       "walltime"  => "$star_featurecount_walltime",
       "mem"       => "${star_memory}gb"
@@ -2321,13 +2324,15 @@ sub addBamsnapLocus {
     }
   }
 
+  my $gene_track = ($def->{bamsnap_option} =~ /no_gene_track/) ? "" : "gene";
+
   $config->{$task_name} = {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
     target_dir            => "$target_dir/$task_name",
     docker_prefix         => "bamsnap_",
     #init_command          => "ln -s __FILE__ __NAME__.bam",
-    option                => $option . " -draw coordinates bamplot gene -bamplot coverage -width 2000 -height 3000 -out __NAME__.png",
+    option                => $option . " -draw coordinates bamplot $gene_track -bamplot coverage -width 2000 -height 3000 -out __NAME__.png",
     interpretor           => "",
     check_program         => 0,
     program               => "bamsnap",
@@ -2538,6 +2543,64 @@ sub add_alignment_summary {
       "mem"      => "5gb"
     },
   };
+  push(@$tasks, $task_name);
+  return($task_name);
+}
+
+sub add_bam_validation {
+  my ($config, $def, $tasks, $target_dir, $task_name, $source_ref) = @_;
+
+  my $bam_validation_option = getValue($def, "bam_validation_option", "--IGNORE_WARNINGS --SKIP_MATE_VALIDATION --CREATE_MD5_FILE true --INDEX_VALIDATION_STRINGENCY NONE");
+
+  $config->{$task_name} = {
+    class                 => "CQS::ProgramWrapperOneToOne",
+    perform               => 1,
+    target_dir            => "$target_dir/$task_name",
+    option                => "ValidateSamFile -I __FILE__ -O __NAME__.txt $bam_validation_option",
+    interpretor           => "",
+    program               => "gatk",
+    check_program         => 0,
+    source_arg            => "",
+    source_ref            => $source_ref,
+    docker_prefix         => "gatk4_",
+    output_to_same_folder => 1,
+    output_arg            => "-O",
+    output_file_prefix    => ".txt",
+    output_file_ext       => ".txt",
+    sh_direct             => 0,
+    pbs                   => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "24",
+      "mem"      => "5gb"
+    },
+  };
+
+  push(@$tasks, $task_name);
+}
+
+sub add_unique_r {
+  my ($config, $def, $tasks, $target_dir, $task_name, $rtemplate, $output_file_ext, $ref_array ) = @_;
+
+  $config->{$task_name} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    rCode                    => "",
+    target_dir               => "${target_dir}/" . getNextFolderIndex($def) . ${task_name},
+    option                   => "",
+    rtemplate                => $rtemplate,
+    output_file              => "",
+    output_file_ext          => $output_file_ext,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "1",
+      "mem"      => "5gb"
+    },
+  };
+
+  for my $idx (0..scalar(@$ref_array)){
+    my $idx2 = $idx+1;
+    $config->{$task_name}{"parameterSampleFile${idx2}_ref"} = $ref_array->[$idx];
+  }
   push(@$tasks, $task_name);
   return($task_name);
 }
