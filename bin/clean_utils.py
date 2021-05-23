@@ -32,16 +32,26 @@ def do_clean_by_cutadapt(logger, project_dir, cutadapt_result_folder, remove_pat
   remove_files(logger, project_dir, samples, remove_patterns, remove=remove)
   return(samples)
 
-def find_error_samples_by_fastqc(logger, post_trim_fastqc_log_folder):
-  files=[y for y in glob(os.path.join(post_trim_fastqc_log_folder, "*.log"))]
+
+def find_error_samples_by_keyword_in_log(logger, log_folder, keyword, suffix):
+  files=[y for y in glob(os.path.join(log_folder, "*" + suffix))]
   result = []
   for cfile in files:
     with open(cfile, "rt") as fin:
       for line in fin:
-        if 'SequenceFormatException' in line:
-          result.append(os.path.basename(cfile).replace("_fq.log",""))
+        if keyword in line:
+          result.append(os.path.basename(cfile).replace(suffix,""))
           break
   return(result)
+
+def find_error_samples_by_fastqc(logger, post_trim_fastqc_log_folder):
+  return(find_error_samples_by_keyword_in_log(logger, post_trim_fastqc_log_folder, 'SequenceFormatException', "_fq.log"))
+
+def find_error_samples_by_mutect(logger, mutect_log_folder):
+  return(find_error_samples_by_keyword_in_log(logger, mutect_log_folder, 'A USER ERROR has occurred', "_mt.log"))
+
+def find_error_samples_by_mutect2(logger, mutect2_log_folder):
+  return(find_error_samples_by_keyword_in_log(logger, mutect2_log_folder, 'Exception', "_mt2.log"))
 
 def find_error_samples_by_fastq_len(logger, fastq_len_result_folder):
   files=[y for y in glob(os.path.join(fastq_len_result_folder, "*.len.error"))]
