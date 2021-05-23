@@ -8,6 +8,7 @@ use CQS::SystemUtils;
 use CQS::StringUtils;
 use File::Basename;
 use Data::Dumper;
+use List::MoreUtils qw(uniq);
 
 sub new {
   my ($class) = @_;
@@ -21,6 +22,7 @@ sub new {
     _docker_prefix => "",
     _can_use_docker => 1,
     _use_tmp_folder => 0,
+    _use_local_folder => 0,
   };
   bless $self, $class;
   return $self;
@@ -145,12 +147,28 @@ sub clean_tmp_folder {
   my ( $self, $pbs ) = @_;
   if( $self->{"_use_tmp_folder"}){
     print $pbs "
-cd \$res_dir
-echo copy result from \$tmp_dir to \$res_dir
-cp -r \$tmp_dir/* .
-echo delete tmp folder \$tmp_dir
-rm -rf \$tmp_dir
-echo move file and clean tmp folder done.
+if [[ -d \$tmp_dir && \$tmp_dir != '/' ]]; then
+  echo copy result from \$tmp_dir to \$res_dir
+  #if the pbs was generated again during task is running, copy may be unpredictable. 
+  #make sure to change to tmp_dir before copy result
+
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+
+  cp -r ./* \$res_dir
+  cd \$res_dir
+  echo delete tmp folder \$tmp_dir
+  rm -rf \$tmp_dir
+  echo move file and clean tmp folder done.
+fi
 ";
   }
 }
@@ -379,9 +397,19 @@ sub get_docker_value {
   return ( undef, undef );
 }
 
-sub localize_files_in_tmp_folder {
+sub localize_files {
   my ($self, $pbs, $sample_files, $localized_files, $other_exts) = @_;
-  if($self->{_use_tmp_folder}){
+  if($self->{_use_tmp_folder} || $self->{_use_local_folder} ){
+    if($sample_files->[0] =~ /.bam$/){
+      if(defined $other_exts){
+        push(@$other_exts, ".bai");
+      }else{
+        $other_exts = [".bai"];
+      }
+      my @unique_words = uniq @$other_exts;
+      $other_exts = \@unique_words;
+    }
+
     my $result = [];
     print $pbs "
 echo localize start at `date`
@@ -390,6 +418,10 @@ echo localize start at `date`
       my $new_file = basename($old_file);
       print $pbs "
 echo $old_file      
+if [[ ! -s $old_file ]]; then
+  echo file not exists: $old_file
+  exit 1
+fi
 cp $old_file $new_file
 ";
       push(@$result, $new_file);
@@ -399,7 +431,12 @@ cp $old_file $new_file
         for my $other_ext (@$other_exts){
           my $old_ext_file = $old_file . $other_ext;
           my $new_ext_file = $new_file . $other_ext;
-          print $pbs "cp $old_ext_file $new_ext_file
+          print $pbs "
+if [[ ! -s $old_ext_file ]]; then
+  echo file not exists: $old_ext_file
+  exit 1
+fi
+cp $old_ext_file $new_ext_file
 ";
           push(@$localized_files, $new_ext_file);
         }
@@ -414,6 +451,10 @@ echo localize end at `date`
   }else{
     return($sample_files);
   }
+}
+
+sub localize_files_in_tmp_folder {
+  return( localize_files(@_)); 
 }
 
 sub clean_temp_files {
@@ -503,6 +544,8 @@ export R_LIBS=
 export PYTHONPATH=
 export JAVA_HOME=
  
+$docker_init
+
 $docker_command bash $sh_file 
 
 echo ${module_name}_end=`date`
@@ -570,7 +613,12 @@ sub init_parameter {
   $self->{_docker_prefix} = get_option( $config, $section, "docker_prefix", $self->{_docker_prefix} );
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
-  $self->{_use_tmp_folder} = get_option( $config, $section, "use_tmp_folder", $self->{_use_tmp_folder} );
+  $self->{_use_local_folder} = get_option( $config, $section, "use_local_folder", $self->{_use_local_folder} );
+  if($self->{_use_local_folder}){
+    $self->{_use_tmp_folder} = 0;  
+  }else{
+    $self->{_use_tmp_folder} = get_option( $config, $section, "use_tmp_folder", $self->{_use_tmp_folder} );
+  }
 
   if ($self->{_task_suffix} ne ""){
     $self->{_suffix} = "";
