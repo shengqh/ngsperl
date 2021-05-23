@@ -233,6 +233,7 @@ sub result {
     push( @result_files, "$cur_dir/${sample_name}.count.summary" );
     push( @result_files, "$cur_dir/${sample_name}_Log.final.out" );
     push( @result_files, "$cur_dir/${sample_name}.bamstat" );
+    push( @result_files, "$cur_dir/${sample_name}.count" );
     if (!$delete_star_featureCount_bam) {
       if ($output_sort_by_coordinate) {
         push( @result_files, "$cur_dir/${sample_name}_Aligned.sortedByCoord.out.bam" );
@@ -242,7 +243,6 @@ sub result {
         push( @result_files, "$cur_dir/${sample_name}_Aligned.out.bam" );
       }
     }
-    push( @result_files, "$cur_dir/${sample_name}.count" );
     push( @result_files, "$cur_dir/${sample_name}.count.star.version" );
     push( @result_files, "$cur_dir/${sample_name}.count.featureCounts.version" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
