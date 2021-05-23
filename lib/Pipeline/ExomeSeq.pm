@@ -270,6 +270,7 @@ sub getConfig {
         bwa_index             => $fasta,
         source_ref            => $alignment_source_ref,
         use_tmp_folder        => $def->{"bwa_use_tmp_folder"},
+        use_sambamba          => $def->{"use_sambamba"},
         output_to_same_folder => 1,
         rg_name_regex         => $rg_name_regex,
         sh_direct             => 0,
@@ -321,6 +322,10 @@ sub getConfig {
       $bam_input = $mergeBam;
       $bam_ref = [ $mergeBam, ".bam\$" ];
       push @$individual, (  $mergeBam );
+    }
+
+    if(getValue($def, "perform_bam_validation", 0)){
+      add_bam_validation($config, $def, $individual, $target_dir, $bam_input . "_bam_validation", $bam_ref );
     }
 
     my $perform_cnv = $def->{perform_cnv_cnMOPs} || $def->{perform_cnv_gatk4_cohort} || $def->{perform_cnv_xhmm};
@@ -384,6 +389,10 @@ sub getConfig {
     $bam_ref = [ $refine_name, ".bam\$" ];
 
     add_alignment_summary($config, $def, $summary, $target_dir, "${refine_name}_summary", "../Alignment/AlignmentUtils.r;../Alignment/BWASummary.r", ".chromosome.csv;.chromosome.png", undef, [$refine_name, ".chromosome.count"] );
+
+    if(getValue($def, "perform_bam_validation", 0)){
+      add_bam_validation($config, $def, $individual, $target_dir, $refine_name . "_bam_validation", $bam_ref );
+    }
   }
 
   if($def->{filter_soft_clip} && ((!defined $def->{perform_gatk4_pairedfastq2bam}) || (!$def->{perform_gatk4_pairedfastq2bam}))){
@@ -1041,6 +1050,11 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
     my $mutect_index_key = "mutect_Index";
     my $mutect_prefix = "${bam_input}_muTect_";
 
+    my $intervals = $def->{intervals};
+    if(!defined $intervals){
+      $intervals = $def->{target_intervals_file};
+    }
+
     my $mutectName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_call";
     #print($mutectName);
     $config->{$mutectName} = {
@@ -1049,22 +1063,23 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       init_command => $def->{muTect_init_command},
       target_dir   => "${target_dir}/$mutectName",
       option       => getValue( $def, "muTect_option" ),
-      java_option  => "-Xmx40g",
       source_ref   => [ $bam_input, ".bam\$" ],
       groups_ref   => "groups",
       fasta_file   => $fasta,
       dbsnp_file   => $def->{"dbsnp"},
+      intervals    => $intervals,
       bychromosome => 0,
       sh_direct    => 0,
       muTect_jar   => getValue( $def, "muTect_jar" ),
       pbs          => {
-        "email"    => $email,
         "nodes"    => "1:ppn=1",
-        "walltime" => "24",
-        "mem"      => "40gb"
+        "walltime" => getValue($def, "mutect_walltime", "24"),
+        "mem"      => getValue($def, "mutect_memory", "40gb"),
       },
     };
     push @$summary, "${mutectName}";
+
+    add_unique_r($config, $def, $summary, $target_dir, $mutectName . "_qc", "../QC/QCUtils.r,../QC/VcfChromosome.r", ".chromosome.png", [[$mutectName, ".pass.vcf.chromosome.count"]] );
 
     my $combineVariantsName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_merge";
     $config->{$combineVariantsName} = {
@@ -1171,16 +1186,19 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
   
   if ( $def->{"perform_muTect2indel"} ) {
     my $mutect2indel = "${bam_input}_muTect2indel";
+    my $intervals = $def->{muTect2_intervals};
+    if(!defined $intervals){
+      $intervals = $def->{target_intervals_file};
+    }
     $config->{$mutect2indel} = {
       class        => "GATK4::MuTect2indel",
       perform      => 1,
       option       => getValue( $def, "muTect2_option" ),
-      java_option  => "-Xmx40g",
       init_command => $def->{muTect2_init_command},
       target_dir   => "${target_dir}/$mutect2indel",
       germline_resource => $def->{germline_resource},
       panel_of_normals => $def->{panel_of_normals},
-      intervals => $def->{muTect2_intervals},
+      intervals => $intervals,
       interval_padding => $def->{muTect2_interval_padding},
       source_ref   => [ $bam_input, ".bam\$" ],
       groups_ref   => "groups",
@@ -1188,13 +1206,14 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       ERC_mode     => $def->{mutect2_ERC_mode},
       sh_direct    => 0,
       pbs          => {
-        "email"    => $email,
         "nodes"    => "1:ppn=1",
-        "walltime" => "24",
-        "mem"      => "40gb"
+        "walltime" => getValue($def, "mutect2_walltime", "24"),
+        "mem"      => getValue($def, "mutect2_memory", "40gb"),
       },
     };
     push @$summary, $mutect2indel;
+
+    add_unique_r($config, $def, $summary, $target_dir, $mutect2indel . "_summary", "../QC/QCUtils.r,../QC/VcfChromosome.r", ".chromosome.png", [[$mutect2indel, ".chromosome.count"]] );
 
     my $mutect2indel_merge = $mutect2indel . "_merge";
     $config->{$mutect2indel_merge} = {
