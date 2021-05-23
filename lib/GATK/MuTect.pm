@@ -43,7 +43,13 @@ sub perform {
 
   my $java = get_java( $config, $section );
 
-  my $java_option = get_option( $config, $section, "java_option", "" );
+  my $intervals = get_param_file( $config->{$section}{intervals}, "intervals", 0 );
+  my $restrict_intervals = "";
+  if ( defined $intervals and ($intervals ne "") ) {
+    $option = $option . " -L $intervals";
+  }
+
+  my $java_option = get_option( $config, $section, "java_option", "-Xmx" . lc($memory) );
 
   my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
 
@@ -76,7 +82,7 @@ sub perform {
     my $final = "${group_name}.somatic.pass.vcf.gz";
 
     print $sh "
-if [[ ( ! -s $result_dir/$final ) && ( -s $normal ) && ( -s $tumor ) ]]; then
+if [[ ( ! -s $result_dir/$group_name/${final}.tbi ) && ( -s $normal ) && ( -s $tumor ) ]]; then
   \$MYCMD ./$pbs_name 
 fi
 
@@ -84,16 +90,12 @@ fi
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final, $init_command );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, "${final}.tbi", $init_command );
 
     my $localized_files = [];
-    $self->localize_files_in_tmp_folder($pbs, [$normal, $tumor], $localized_files, [".bai"]);
-    if(scalar(@$localized_files) == 2){
-      $normal =  $localized_files->[0];
-      $tumor =  $localized_files->[1];
-      push(@$localized_files, $localized_files->[0] . ".bai");
-      push(@$localized_files, $localized_files->[1] . ".bai");
-    }
+    my $actual_files = $self->localize_files_in_tmp_folder($pbs, [$normal, $tumor], $localized_files, [".bai"]);
+    $normal = $actual_files->[0];
+    $tumor = $actual_files->[1];
 
     print $pbs "
 if [ ! -s ${normal}.bai ]; then
@@ -119,7 +121,7 @@ if [[ -s $vcf && ! -s $passvcf ]]; then
     grep -v \"^#\" $vcf | cut -f9- > ${vcf}.second
     paste ${vcf}.first_lod ${vcf}.second | grep -v \"^#CHROM\" | grep -v REJECT >> $passvcf
     rm ${out_file}.lod ${vcf}.first ${vcf}.first_lod ${vcf}.second
-    grep -v \"^#\" $passvcf | cut -f1 | uniq -c | awk '{print \$2\"\\t\"\$1}' > ${passvcf}.chromosome
+    grep -v \"^#\" $passvcf | cut -f1 | uniq -c | awk '{print \$2\"\\t\"\$1}' > ${passvcf}.chromosome.count
     
   else
     grep -v REJECT $vcf > $passvcf
@@ -162,6 +164,7 @@ sub result {
     my $cur_dir      = $result_dir . "/$group_name";
     push( @result_files, "$cur_dir/${group_name}.somatic.pass.vcf.gz" );
     push( @result_files, "$cur_dir/${group_name}.somatic.vcf" );
+    push( @result_files, "$cur_dir/${group_name}.somatic.pass.vcf.chromosome.count" );
     $result->{$group_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
