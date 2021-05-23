@@ -199,23 +199,31 @@ add_celltype<-function(obj, celltype_df, celltype_column){
   return(obj)
 }
 
-run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, min.pct = 0.5, logfc.threshold = 0.6){
-  if (by_sctransform) {
-    object <- RunPCA(object = object, verbose=FALSE)
-  }else{
-    if (Remove_Mt_rRNA) {
-      rRNA.genes <- grep(pattern = rRNApattern,  rownames(object), value = TRUE)
-      Mt.genes<- grep (pattern= Mtpattern,rownames(object), value=TRUE )
-      var.genes <- dplyr::setdiff(VariableFeatures(object), c(rRNA.genes,Mt.genes))
-    } else {
-      var.genes <- VariableFeatures(object)
+run_cluster_only<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, min.pct = 0.5, logfc.threshold = 0.6, reduction="pca"){
+  if(reduction == "pca"){
+    if (by_sctransform) {
+      object <- RunPCA(object = object, verbose=FALSE)
+    }else{
+      if (Remove_Mt_rRNA) {
+        rRNA.genes <- grep(pattern = rRNApattern,  rownames(object), value = TRUE)
+        Mt.genes<- grep (pattern= Mtpattern,rownames(object), value=TRUE )
+        var.genes <- dplyr::setdiff(VariableFeatures(object), c(rRNA.genes,Mt.genes))
+      } else {
+        var.genes <- VariableFeatures(object)
+      }
+      object <- RunPCA(object = object, features = var.genes, verbose=FALSE)
     }
-    object <- RunPCA(object = object, features = var.genes, verbose=FALSE)
   }
-  object <- RunUMAP(object = object, reduction = "pca", dims=pca_dims, verbose = FALSE)
+  
+  object <- RunUMAP(object = object, reduction = reduction, dims=pca_dims, verbose = FALSE)
   object <- FindNeighbors(object = object, dims=pca_dims, verbose=FALSE)
   object <- FindClusters(object=object, verbose=FALSE, random.seed=random.seed, resolution=resolution)
+  return(object)
+}
 
+
+run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, min.pct = 0.5, logfc.threshold = 0.6, reduction="pca"){
+  object=run_cluster_only(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, min.pct, logfc.threshold, reduction)
   if (by_sctransform) {
     markers <- FindAllMarkers(object, only.pos = TRUE, min.pct = min.pct, logfc.threshold = logfc.threshold)
   }else{
@@ -302,4 +310,93 @@ get_cta_combined<-function(obj, predicted){
   cta_combined<-cbind(cta_table, cluster_sample, nc)
 
   return(cta_combined)
+}
+
+get_batch_samples<-function(batch_file, all_sample_names){
+  if(file.exists(batch_file)){
+    pools = read.table(batch_file, header=F, stringsAsFactors = F)
+    missnames<-all_sample_names[!(all_sample_names %in% pools$V1)]
+    if(length(missnames) > 0){
+      pools<-rbind(pools, data.frame(V1=missnames, V2=missnames))
+    }
+    poolmap=split(pools$V2, pools$V1)
+  }else{
+    poolmap=split(all_sample_names, all_sample_names)
+  }
+  return(poolmap)
+}
+
+draw_dimplot<-function(mt, filename, split.by) {
+  nSplit = length(unique(mt[,split.by]))
+  nWidth=ceiling(sqrt(nSplit))
+  nHeight=ceiling(nSplit / nWidth)
+
+  png(filename, width=nWidth * 600, height=nHeight*600, res=300)
+  g1<-ggplot(mt, aes(x=UMAP_1,y=UMAP_2)) +
+    geom_bin2d(bins = 70) + 
+    scale_fill_continuous(type = "viridis") + 
+    facet_wrap(as.formula(paste("~", split.by))) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+  print(g1)
+  dev.off()
+}
+
+do_harmony<-function(objs, by_sctransform, batch_file) {
+  if(by_sctransform){
+    cat("performing SCTransform ...")
+    #perform sctransform
+    objs<-lapply(objs, function(x){
+      cat("SCTransform of ", x)
+      x <- SCTransform(x, verbose = FALSE)
+      return(x)
+    })  
+    assay="SCT"
+    cat("SelectIntegrationFeatures ... ")
+    objs.features <- SelectIntegrationFeatures(object.list = objs, nfeatures = 3000)  
+    cat("merge samples ... ")
+    obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
+    VariableFeatures(obj) <- objs.features        
+  }else{
+    cat("merge samples ... ")
+    obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
+    cat("NormalizeData ... ")
+    obj <- NormalizeData(obj, verbose = FALSE)
+    cat("FindVariableFeatures ... ")
+    obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 3000, verbose = FALSE)
+    all.genes <- rownames(obj)  
+    cat("ScaleData ... ")
+    obj <- ScaleData(obj, features = all.genes, verbose = FALSE)
+  }
+  cat("RunPCA ... ")
+  obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
+
+  if(file.exists(parSampleFile2)){
+    pool_map = get_batch_samples(parSampleFile2, unique(rawobj$orig.ident))
+    obj$batch <- unlist(poolmap[obj$orig.ident])
+  }else{
+    obj$batch <- obj$orig.ident
+  }
+
+  cat("RunHarmony ... ")
+  obj <- RunHarmony(object = obj,
+                    assay.use = "SCT",
+                    reduction = "pca",
+                    dims.use = pca_dims,
+                    group.by.vars = "batch")
+  return(obj)
+}
+
+cluster_to_cell_type<-function(clusterDf){
+  result=clusterDf[!duplicated(clusterDf$seurat_clusters),]
+  result<-result[order(result$seurat_clusters),]
+  result<-result[,colnames(result) != "cell"]
+  rownames(result)<-result$seurat_clusters
+  return(result)
+}
+
+sort_cell_type<-function(cts, sort_column){
+  result<-cts[order(cts$seurat_clusters),]
+  ct_uniq<-result[!duplicated(result[,sort_column]),]
+  result[,sort_column]=factor(result[,sort_column], levels=ct_uniq[,sort_column])
+  result<-result[order(result[,sort_column], result[,"seurat_clusters"]),]
+  return(result)
 }
