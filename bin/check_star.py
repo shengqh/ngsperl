@@ -11,7 +11,7 @@ from glob import glob
 from clean_utils import *
 
 def check_star(logger, project_dir, remove_patterns, delete):
-  star_folder =  os.path.join(project_dir, "star_featurecount.v2")
+  star_folder =  os.path.join(project_dir, "star_featurecount.pathseq")
   samples = find_error_samples_by_star(logger, star_folder)
   if delete:
     remove_files(logger, project_dir, samples, remove_patterns)
@@ -47,15 +47,15 @@ def main():
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
   
   remove_star_files = [
-    ["star_featurecount.v2/result", ".count*"],
-    ["star_featurecount.v2/result", ".bamstat"],
-    ["star_featurecount.v2/result", ".00??.bam"],
-    ["star_featurecount.v2/result", "__*"],
-    ["star_featurecount.v2/result", "_Aligned*"],
-    ["star_featurecount.v2/result", "_Log*"],
-    ["star_featurecount.v2/result", "_SJ.out.tab"],
-    ["star_featurecount.v2/result", ".splicing.bed"],
-    ["star_featurecount.v2/log", "_sf.log"],
+    ["star_featurecount.pathseq/result", ".count*"],
+    ["star_featurecount.pathseq/result", ".bamstat"],
+    ["star_featurecount.pathseq/result", ".00??.bam"],
+    ["star_featurecount.pathseq/result", "__*"],
+    ["star_featurecount.pathseq/result", "_Aligned*"],
+    ["star_featurecount.pathseq/result", "_Log*"],
+    ["star_featurecount.pathseq/result", "_SJ.out.tab"],
+    ["star_featurecount.pathseq/result", ".splicing.bed"],
+    ["star_featurecount.pathseq/log", "_sf.log"],
   ]
 
   #clean_by_posttrim_fastqc(logger, project_dir=args.input, remove_patterns=remove_posttrim_fastqc_files)
