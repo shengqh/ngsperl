@@ -7,8 +7,16 @@ draw_chromosome_count<-function(listFile, outFilePrefix) {
 
   missing = c()
   missing_file=paste0(outFilePrefix, ".chromosome.missing")
+  valid_csv=paste0(outFilePrefix, ".chromosome.valid.csv")
+  valid_png=paste0(outFilePrefix, ".chromosome.valid.png")
   if(file.exists(missing_file)){
     file.remove(missing_file)
+  }
+  if(file.exists(valid_csv)){
+    file.remove(valid_csv);
+  }
+  if(file.exists(valid_png)){
+    file.remove(valid_png);
   }
 
   final=NULL
@@ -30,25 +38,34 @@ draw_chromosome_count<-function(listFile, outFilePrefix) {
     subdata$Sample=filename
     final=rbind(final, subdata )
   }
-  write.csv(file=paste0(outFilePrefix, ".chromosome.csv"), final, row.names=F)
 
   if(length(missing) > 0){
     writeLines(missing, paste0(outFilePrefix, ".chromosome.missing"))
+    chromosomeFilePrefix = paste0(outFilePrefix, ".chromosome.valid")
+  }else{
+    chromosomeFilePrefix = paste0(outFilePrefix, ".chromosome")
   }
+
+  write.csv(file=paste0(chromosomeFilePrefix, ".chromosome.csv"), final, row.names=F)
 
   chroms=paste0("chr", c(1:22,'X','Y','M', 'MT'))
   if(!any(final$Chrom %in% chroms)){
     chroms=paste0("", c(1:22,'X','Y','M', 'MT'))
   }
   chroms=chroms[chroms %in% final$Chrom]
+
+  fc<-reshape2::dcast(final, "Sample ~ Chrom", value.var="Reads", fill=0)
+  final<-melt(fc, id="Sample")
+  colnames(final)<-c("Sample", "Chrom", "Reads")
   final$Chrom=factor(final$Chrom, levels=chroms)
+
   final$NoRead=final$Reads==0
 
   colors=c("black","red")
   names(colors)=c("FALSE","TRUE")
 
   height=max(1000, 60 * length(unique(final$Sample)))
-  png(file=paste0(outFilePrefix, ".chromosome.png"), height=height, width=3000, res=300)
+  png(file=paste0(chromosomeFilePrefix, ".png"), height=height, width=3000, res=300)
   g<-ggplot(final, aes(x=Chrom, y=Sample)) + 
     geom_point(aes(size=Reads, color=NoRead)) + theme_classic() + 
     scale_color_manual(values=colors) +
