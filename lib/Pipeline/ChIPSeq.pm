@@ -193,21 +193,23 @@ sub getConfig {
           "mem"      => "40gb"
         },
       };
-      add_alignment_summary($config, $def, $summary, $target_dir, "bowtie2_summary", "../Alignment/AlignmentUtils.r;../Samtools/Bowtie2Summary.r", ".reads.csv;.reads.png;.chromosome.csv;.chromosome.png", [ "bowtie2", ".log" ], ["bowtie2", ".chromosome.count"] );
+      add_alignment_summary($config, $def, $summary, $target_dir, "bowtie2_summary", "../Alignment/AlignmentUtils.r;../Alignment/Bowtie2Summary.r", ".reads.csv;.reads.png;.chromosome.csv;.chromosome.png", [ "bowtie2", ".log" ], ["bowtie2", ".chromosome.count"] );
     }
     else {
       die "Unknown alinger " . $def->{aligner};
     }
     my $bam_ref = [ $def->{aligner}, ".bam\$" ];
-
     push @$individual, ( $def->{aligner} );
+
+    add_bam_validation($config, $def, $individual, $target_dir, $def->{aligner} . "_bam_validation", $bam_ref );
 
     if ( $def->{perform_cleanbam} ) {
       my $taskName = $def->{aligner} . "_cleanbam";
       addCleanBAM( $config, $def, $individual, $taskName, "${target_dir}/" . getNextFolderIndex($def) . $taskName, $bam_ref);
       $bam_ref = [ $taskName, ".bam\$" ];
 
-      add_alignment_summary($config, $def, $summary, $target_dir, "${taskName}_summary", "../Alignment/AlignmentUtils.r;../Samtools/Bowtie2Summary.r", ".chromosome.csv;.chromosome.png", undef, ["bowtie2", ".chromosome.count"] );
+      add_alignment_summary($config, $def, $summary, $target_dir, "${taskName}_summary", "../Alignment/AlignmentUtils.r;../Alignment/Bowtie2Summary.r", ".chromosome.csv;.chromosome.png", undef, [$taskName, ".chromosome.count"] );
+      add_bam_validation($config, $def, $individual, $target_dir, "${taskName}_bam_validation", [$taskName, ".bam\$"] );
     }
 
     if ( getValue( $def, "perform_bamplot" ) ) {
