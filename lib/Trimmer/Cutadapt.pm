@@ -213,17 +213,8 @@ fi
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-    for my $sample_file (@sample_files) {
-      print $pbs "
-if [ ! -s $sample_file ]; then
-  echo input file not exist: $sample_file
-  exit 0
-fi
-";
-    }
-
     my $localized_files = [];
-    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files)};
+    @sample_files = @{$self->localize_files($pbs, \@sample_files, $localized_files)};
 
     my @rmlist = ();
     if ($hard_trim > 0){
