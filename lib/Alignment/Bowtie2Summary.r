@@ -60,6 +60,7 @@ if (parSampleFile1 != ""){
   meltreads=melt(t(reads))
   colnames(meltreads)<-c("Read", "Sample", "Count")
   meltreads$Count<-as.numeric(as.character(meltreads$Count))
+  meltreads$Read<-factor(meltreads$Read, levels=c("MultiMappedReads", "UnmappedReads", "UniqueReads"))
 
   width=max(2000, 50 * nrow(meltreads))
   png(file=paste0(outFile, ".reads.png"), height=1500, width=width, res=300)
