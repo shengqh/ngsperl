@@ -259,7 +259,6 @@ sub getConfig {
 
     #based on paper https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-016-1097-3, we don't do markduplicate anymore
     if ( $def->{aligner} eq "bwa") {
-      my $bwa_memory = getValue($def, "bwa_memory", "40gb");
       $fasta = getValue( $def, "bwa_fasta" );
       my $bwa = $def->{aligner_scatter_count}?"bwa_02_alignment":"bwa";
       $config->{ $bwa } = {
@@ -276,8 +275,8 @@ sub getConfig {
         sh_direct             => 0,
         pbs                   => {
           "nodes"    => "1:ppn=" . $max_thread,
-          "walltime" => "24",
-          "mem"      => $bwa_memory
+          "walltime" => getValue($def, "bwa_walltime", "22"),
+          "mem"      => getValue($def, "bwa_memory", "40gb")
         },
       };
       $bam_ref = [ $bwa, ".bam\$" ];
