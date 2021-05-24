@@ -189,8 +189,8 @@ sub getConfig {
         pbs                   => {
           "email"    => $email,
           "nodes"    => "1:ppn=8",
-          "walltime" => "72",
-          "mem"      => "40gb"
+          "walltime" => getValue($def, "bowtie2_walltime", "72"),
+          "mem"      => getValue($def, "bowtie2_mem", "40gb")
         },
       };
       add_alignment_summary($config, $def, $summary, $target_dir, "bowtie2_summary", "../Alignment/AlignmentUtils.r;../Alignment/Bowtie2Summary.r", ".reads.csv;.reads.png;.chromosome.csv;.chromosome.png", [ "bowtie2", ".log" ], ["bowtie2", ".chromosome.count"] );
