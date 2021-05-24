@@ -1973,8 +1973,14 @@ sub addStarFeaturecount {
     },
   };
   push @$individual, ($star_task);
+
+  my $bam_validation_ref = undef;
+  if(getValue($def, "perform_bam_validation", 0)){
+    add_bam_validation($config, $def, $individual, $target_dir, $star_task . "_bam_validation", $source_ref );
+    $bam_validation_ref = $star_task . "_bam_validation";
+  }
   
-  add_alignment_summary($config, $def, $summary, $target_dir, "${star_task}_summary", "../Alignment/AlignmentUtils.r;../Alignment/STARFeatureCount.r", ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png;.STARSummary.csv;.STARSummary.csv.png;.chromosome.csv;.chromosome.png", [ $star_task, "_Log.final.out" ], [ $star_task, ".count.summary" ], [$star_task, ".chromosome.count"] );
+  add_alignment_summary($config, $def, $summary, $target_dir, "${star_task}_summary", "../Alignment/AlignmentUtils.r;../Alignment/STARFeatureCount.r", ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png;.STARSummary.csv;.STARSummary.csv.png;.chromosome.csv;.chromosome.png", [ $star_task, "_Log.final.out" ], [ $star_task, ".count.summary" ], [$star_task, ".chromosome.count"], $bam_validation_ref );
 
   # my $summary_task = "star_featurecount${suffix}_summary";
   # $config->{$summary_task} = {
@@ -2523,7 +2529,7 @@ sub add_peak_count {
 }
 
 sub add_alignment_summary {
-  my ($config, $def, $tasks, $target_dir, $task_name, $rtemplate, $output_file_ext, $read_1_ref, $read_2_ref, $read_3_ref ) = @_;
+  my ($config, $def, $tasks, $target_dir, $task_name, $rtemplate, $output_file_ext, $read_1_ref, $read_2_ref, $read_3_ref, $read_4_ref, $read_5_ref ) = @_;
 
   $config->{$task_name} = {
     class                    => "CQS::UniqueR",
@@ -2534,6 +2540,8 @@ sub add_alignment_summary {
     parameterSampleFile1_ref => $read_1_ref,
     parameterSampleFile2_ref => $read_2_ref,
     parameterSampleFile3_ref => $read_3_ref,
+    parameterSampleFile4_ref => $read_4_ref,
+    parameterSampleFile5_ref => $read_5_ref,
     rtemplate                => $rtemplate,
     output_file              => "",
     output_file_ext          => $output_file_ext,
@@ -2550,7 +2558,7 @@ sub add_alignment_summary {
 sub add_bam_validation {
   my ($config, $def, $tasks, $target_dir, $task_name, $source_ref) = @_;
 
-  my $bam_validation_option = getValue($def, "bam_validation_option", "--IGNORE_WARNINGS --SKIP_MATE_VALIDATION --CREATE_MD5_FILE true --INDEX_VALIDATION_STRINGENCY NONE");
+  my $bam_validation_option = getValue($def, "bam_validation_option", "--IGNORE_WARNINGS --SKIP_MATE_VALIDATION --VALIDATE_INDEX false --INDEX_VALIDATION_STRINGENCY NONE");
 
   $config->{$task_name} = {
     class                 => "CQS::ProgramWrapperOneToOne",
@@ -2570,8 +2578,8 @@ sub add_bam_validation {
     sh_direct             => 0,
     pbs                   => {
       "nodes"    => "1:ppn=1",
-      "walltime" => "24",
-      "mem"      => "5gb"
+      "walltime" => getValue($def, "bam_validation_walltime", "24"),
+      "mem"      => getValue($def, "bam_validation_mem", "5gb")
     },
   };
 
