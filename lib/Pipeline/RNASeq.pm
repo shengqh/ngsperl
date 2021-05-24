@@ -186,10 +186,6 @@ sub getRNASeqConfig {
     $count_table_ref = [ $sf_task, "(?!chromosome).count\$" ];
 
     $multiqc_depedents = $sf_task;
-
-    if(getValue($def, "perform_bam_validation", 0)){
-      add_bam_validation($config, $def, $individual, $target_dir, $sf_task . "_bam_validation", $source_ref );
-    }
   }
   else {
 
