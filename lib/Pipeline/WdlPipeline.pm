@@ -25,6 +25,7 @@ our %EXPORT_TAGS = (
       addSomaticCNV
       addHaplotypecaller
       addCollectAllelicCounts
+      addEncodeATACseq
     )
   ]
 );
@@ -616,6 +617,63 @@ sub addCollectAllelicCounts {
   };
 
   print(Dumper($config->{$task}));
+  push @$individual, $task;
+  return ($task);
+}
+
+sub addEncodeATACseq {
+  my ($config, $def, $individual, $target_dir, $files_ref) = @_;
+
+  my $fastq_1 = "fastq_1";
+  $config->{$fastq_1} = {     
+    "class" => "CQS::FilePickTask",
+    "source_ref" => $files_ref,
+    "sample_index" => 0, 
+  };
+  
+  my $fastq_2 = "fastq_2";
+  $config->{$fastq_2} = {     
+    "class" => "CQS::FilePickTask",
+    "source_ref" => $files_ref,
+    "sample_index" => 1, 
+  };
+  
+  my $server_key = getValue($def, "wdl_key", "local");
+  my $pipeline_key = "encode_atacseq";
+  my $wdl = $def->{"wdl"};
+  my $server = $wdl->{$server_key};
+  my $pipeline = $server->{$pipeline_key};
+
+  my $task = $pipeline_key;
+  $config->{$task} = {     
+    "class" => "CQS::Wdl",
+    "option" => "--no-build-singularity",
+    "target_dir" => "${target_dir}/$pipeline_key",
+    "source_ref" => $files_ref,
+    "singularity_image_files_ref" => ["singularity_image_files"],
+    "cromwell_jar" => $wdl->{"cromwell_jar"},
+    "input_option_file" => $wdl->{"cromwell_option_file"},
+    "cromwell_config_file" => $server->{"cromwell_config_file"},
+    "wdl_file" => $pipeline->{"wdl_file"},
+    "input_json_file" => $pipeline->{"input_file"},
+    "input_parameters" => {
+      "atac.title" => "SAMPLE_NAME",
+      "atac.description" => "SAMPLE_NAME",
+      "atac.genome_tsv" => getValue($def, "encode_atacseq_genome_tsv"),
+      "atac.paired_end" => is_paired_end($def) ? "true" : "false",
+      "atac.adapter" => getValue($def, "adapter"),
+      "atac.fastqs_rep1_R1_ref" => [$fastq_1],
+      "atac.fastqs_rep1_R2_ref" => [$fastq_2]
+    },
+    output_file_ext => ".bam",
+    output_other_ext => ".bai",
+    use_caper => 1,
+    pbs=> {
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "12",
+      "mem"       => "40gb"
+    },
+  };
   push @$individual, $task;
   return ($task);
 }
