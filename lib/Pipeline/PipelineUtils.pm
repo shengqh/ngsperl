@@ -2212,14 +2212,15 @@ fi
 }
 
 sub addSequenceTask {
-  my ($config, $def, $tasks, $target_dir) = @_;
+  my ($config, $def, $tasks, $target_dir, $summary_tasks) = @_;
   $config->{sequencetask} =  {
     class      => getSequenceTaskClassname(getValue($def, "cluster")),
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",
     source     => {
-      tasks => $tasks,
+      step_1 => $tasks,
+      step_2 => $summary_tasks,
     },
     sh_direct => 0,
     pbs       => {
