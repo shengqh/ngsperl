@@ -163,7 +163,7 @@ if [[ -d \$tmp_dir && \$tmp_dir != '/' ]]; then
   cd \$tmp_dir
   cd \$tmp_dir
 
-  cp -r ./* \$res_dir
+  cp -r * \$res_dir
   cd \$res_dir
   echo delete tmp folder \$tmp_dir
   rm -rf \$tmp_dir
