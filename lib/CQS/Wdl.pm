@@ -45,13 +45,19 @@ sub perform {
 
   my $sample_name_regex = get_option( $config, $section, "sample_name_regex", "" );
 
+  my $use_caper = get_option( $config, $section, "use_caper", 0 );
+
   #softlink singularity_image_files to result folder
   my $singularity_image_files = get_raw_files( $config, $section, "singularity_image_files" ); 
+  my $singularity_option = "";
   for my $image_name ( sort keys %$singularity_image_files ) {
     my $source_image=$singularity_image_files->{$image_name};
     if( is_array($source_image) ) {
       $source_image=${$source_image}[0];
     }
+
+    $singularity_option="--singularity $image_name";
+
     # print $image_name."\n";
     # print $source_image."\n";
     my $target_image = $result_dir."/".$image_name;
@@ -72,9 +78,15 @@ sub perform {
   my $input_parameters = get_option($config, $section, "input_parameters");
   die "input_parameters should be hash" if is_not_hash($input_parameters);
 
+  #write input to list file
   my $input_list = get_option($config, $section, "input_list", {});
   die "$input_list should be hash" if is_not_hash($input_list);
 
+  #replace value with vector of value/file
+  my $input_sample_vector = get_option($config, $section, "input_sample_vector", {});
+  die "$input_sample_vector should be hash" if is_not_hash($input_sample_vector);
+
+  #replace value with single value/file
   my $input_single = get_option($config, $section, "input_single", {});
   die "$input_single should be hash" if is_not_hash($input_single);
 
@@ -135,7 +147,7 @@ sub perform {
     
     $replace_dics->{$input_name} = $cur_dic;
   }
-  
+
   for my $input_key (keys %$input_single){
     my $input_value = $input_single->{$input_key};
     
@@ -206,12 +218,18 @@ sub perform {
       }
     }
     
+    
     for my $input_key (keys %$replace_dics){
       my $input_values = $replace_dics->{$input_key}{$sample_name};
-      my $input_value = $input_values->[0];
-      $json_dic->{$input_key} = $input_value;
+      if (is_array($json_dic->{$input_key})){
+        $json_dic->{$input_key} = $input_values;
+      }else{
+        $json_dic->{$input_key} = $input_values->[0];
+      }
     }
     
+    #print(Dumper($json_dic));
+
     my $sample_input_file = $self->get_file( $result_dir, $sample_name, ".inputs.json" );
     open my $fh, ">", $sample_input_file;
     print $fh $json->encode($json_dic);
@@ -221,10 +239,17 @@ sub perform {
     
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
-    print $pbs "
-java -Dconfig.file=$cromwell_config_file -jar $cromwell_jar run $wdl_file --inputs $input_file --options $input_option_file
+    if($use_caper){
+      print $pbs "
+caper run $wdl_file $option -i $input_file $singularity_option
     
 ";
+    }else{
+      print $pbs "
+java -Dconfig.file=$cromwell_config_file -jar $cromwell_jar run $wdl_file $option --inputs $input_file --options $input_option_file
+    
+";
+    }
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
