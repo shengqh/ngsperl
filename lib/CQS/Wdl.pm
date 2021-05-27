@@ -5,6 +5,7 @@ use strict;
 use warnings::register;
 use File::Basename;
 use CQS::PBS;
+use CQS::NGSCommon;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
@@ -47,6 +48,8 @@ sub perform {
 
   my $use_caper = get_option( $config, $section, "use_caper", 0 );
 
+  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1);
+
   #softlink singularity_image_files to result folder
   my $singularity_image_files = get_raw_files( $config, $section, "singularity_image_files" ); 
   my $singularity_option = "";
@@ -56,7 +59,7 @@ sub perform {
       $source_image=${$source_image}[0];
     }
 
-    $singularity_option="--singularity $image_name";
+    $singularity_option="--singularity $source_image";
 
     # print $image_name."\n";
     # print $source_image."\n";
@@ -199,6 +202,8 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
+    my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
@@ -230,14 +235,14 @@ sub perform {
     
     #print(Dumper($json_dic));
 
-    my $sample_input_file = $self->get_file( $result_dir, $sample_name, ".inputs.json" );
+    my $sample_input_file = $self->get_file( $cur_dir, $sample_name, ".inputs.json" );
     open my $fh, ">", $sample_input_file;
     print $fh $json->encode($json_dic);
     close $fh;
     
     my $input_file = basename($sample_input_file);
     
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
 
     if($use_caper){
       print $pbs "
