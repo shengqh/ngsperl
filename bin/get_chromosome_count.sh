@@ -2,12 +2,13 @@
 
 for f in *.bam;
 do 
-  if [[ ! -s ${f}.bai ]]; then
-    echo "samtools index $f"
-    singularity exec -e /scratch/cqs_share/softwares/singularity/cqs-exomeseq.simg samtools index $f 
+  af="$(pwd)/$f"
+  if [[ ! -e ${af}.bai ]]; then
+    echo "samtools index $af"
+    singularity exec -c -B /gpfs52/data:/data,/workspace -e /data/cqs/softwares/singularity/cqs-exomeseq.simg samtools index "$af" 
   fi
-  if [[ ! -s ${f}.chromosome.count ]]; then
-    echo "samtools idxstats $f > ${f}.chromosome.count"
-    singularity exec -e /scratch/cqs_share/softwares/singularity/cqs-exomeseq.simg samtools idxstats $f > ${f}.chromosome.count
+  if [[ ! -e ${af}.chromosome.count ]]; then
+    cho "samtools idxstats $af > ${af}.chromosome.count"
+    echo singularity exec -c -B /gpfs52/data:/data,/workspace -e /data/cqs/softwares/singularity/cqs-exomeseq.simg samtools idxstats "$af" > "${af}.chromosome.count"
   fi
 done
