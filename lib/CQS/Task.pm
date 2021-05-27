@@ -6,6 +6,7 @@ use warnings;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::StringUtils;
+use CQS::NGSCommon;
 use File::Basename;
 use Data::Dumper;
 use List::MoreUtils qw(uniq);
@@ -22,7 +23,7 @@ sub new {
     _docker_prefix => "",
     _can_use_docker => 1,
     _use_tmp_folder => 0,
-    _use_local_folder => 0,
+    _localize_to_local_folder => 0,
   };
   bless $self, $class;
   return $self;
@@ -399,7 +400,7 @@ sub get_docker_value {
 
 sub localize_files {
   my ($self, $pbs, $sample_files, $localized_files, $other_exts) = @_;
-  if($self->{_use_tmp_folder} || $self->{_use_local_folder} ){
+  if($self->{_use_tmp_folder} || $self->{_localize_to_local_folder} ){
     if($sample_files->[0] =~ /.bam$/){
       if(defined $other_exts){
         push(@$other_exts, ".bai");
@@ -613,12 +614,23 @@ sub init_parameter {
   $self->{_docker_prefix} = get_option( $config, $section, "docker_prefix", $self->{_docker_prefix} );
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
-  $self->{_use_local_folder} = get_option( $config, $section, "use_local_folder", $self->{_use_local_folder} );
-  if($self->{_use_local_folder}){
+  $self->{_localize_to_local_folder} = $config->{general}{localize_to_local_folder} || get_option( $config, $section, "localize_to_local_folder", $self->{_localize_to_local_folder});
+  if($self->{_localize_to_local_folder} ){
     $self->{_use_tmp_folder} = 0;  
   }else{
-    $self->{_use_tmp_folder} = get_option( $config, $section, "use_tmp_folder", $self->{_use_tmp_folder} );
+    if(defined $config->{general}{use_tmp_folder}){
+      $self->{_use_tmp_folder} = $config->{general}{use_tmp_folder};  
+    }else{
+      if(should_use_tmp_folder($config->{$section}{target_dir})){
+        $self->{_use_tmp_folder} = get_option( $config, $section, "use_tmp_folder", $self->{_use_tmp_folder} );
+      }else{
+        $self->{_use_tmp_folder} = 0;  
+      }
+    }
   }
+
+  #print("target_dir=" . $config->{$section}{target_dir} . "\n");
+  #print("_use_tmp_folder=" . $self->{_use_tmp_folder} . "\n");
 
   if ($self->{_task_suffix} ne ""){
     $self->{_suffix} = "";
