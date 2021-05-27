@@ -665,6 +665,7 @@ sub addEncodeATACseq {
       "atac.fastqs_rep1_R1_ref" => [$fastq_1],
       "atac.fastqs_rep1_R2_ref" => [$fastq_2]
     },
+    output_to_same_folder => 0,
     output_file_ext => ".bam",
     output_other_ext => ".bai",
     use_caper => 1,
@@ -675,6 +676,31 @@ sub addEncodeATACseq {
     },
   };
   push @$individual, $task;
+
+  my $croo_task = $task . "_croo";
+  $config->{$croo_task} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => "${target_dir}/$croo_task",
+    interpretor => "python",
+    program => "../Chipseq/croo.py",
+    option => "-n __NAME__",
+    source_arg => "-i",
+    source_ref => [$task],
+    output_arg => "-o",
+    output_file_prefix => "",
+    output_file_ext => "__NAME__/peak/overlap_reproducibility/overlap.optimal_peak.narrowPeak.gz.bed",
+    output_other_ext => "__NAME__/qc/qc.html,__NAME__/align/rep1/__NAME__.nodup.bam,__NAME__/align/ctl1/input.nodup.bam",
+    output_to_same_folder => 1,
+    can_result_be_empty_file => 0,
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push @$individual, $croo_task;
+
   return ($task);
 }
 
