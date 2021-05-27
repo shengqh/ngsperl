@@ -10,13 +10,23 @@ require Exporter;
 
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(get_bam_tag get_sorted_bam get_sam2bam_command get_sort_index_command get_sort_command get_index_command get_stat_command transcript_gtf_index_exists)] );
+our %EXPORT_TAGS = ( 'all' => [qw(should_use_tmp_folder get_bam_tag get_sorted_bam get_sam2bam_command get_sort_index_command get_sort_command get_index_command get_stat_command transcript_gtf_index_exists)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
 use Cwd;
+
+#if target folder is at local storage, tmp folder should not be used
+sub should_use_tmp_folder {
+  my ($target_dir) = @_;
+  if($target_dir =~ /^\/workspace/ || $target_dir =~ /^\/data1/){
+    return(0)
+  }else{
+    return(1);
+  }
+}
 
 sub get_bam_tag {
   my ($sample_name) = @_;
