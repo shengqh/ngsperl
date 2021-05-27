@@ -31,7 +31,7 @@ def find_files(logger, source_dir, file_pattern, name_pattern, use_dir_name=0, r
   else:
     files=[y for y in glob(os.path.join(source_dir, file_pattern))]
 
-  print(files)
+  #print(files)
 
   result={}
   if use_dir_name > 0:
@@ -52,6 +52,7 @@ def find_files(logger, source_dir, file_pattern, name_pattern, use_dir_name=0, r
   print("  files => {")
   for sample_name in sorted(result.keys()):
     sample_files = result[sample_name]
+    sample_files = sorted(sample_files)
     print("    '%s' => [ '%s' ], " % (sample_name, "', '".join(sample_files) ))
   print("  }, ")
 
