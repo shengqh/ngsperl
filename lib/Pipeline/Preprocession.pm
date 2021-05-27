@@ -299,6 +299,8 @@ sub getPreprocessionConfig {
       R          => getValue($def, "R", "R"),
       Rscript    => getValue($def, "Rscript", "Rscript"),
       R_LIBS     => $def->{"R_LIBS"},
+      localize_to_local_folder => getValue($def, "localize_to_local_folder", 0),
+      use_tmp_folder => getValue($def, "use_tmp_folder", 0),
     },
     files                => $def->{files},
     groups               => $def->{groups},
