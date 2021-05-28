@@ -271,18 +271,23 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
-  my $cur_dir = $result_dir . "/cromwell_finalOutputs";
+  my $cromwell_finalOutputs = get_option($config, $section, "cromwell_finalOutputs", 1);
+  my $cur_dir = $cromwell_finalOutputs ? $result_dir . "/cromwell_finalOutputs" : $result_dir;
+
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $output_exts = get_output_ext_list( $config, $section );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
+    my $sample_dir = get_option($config, $section, "output_to_same_folder", 1) ? $cur_dir : $cur_dir . "/" . $sample_name;
     my @result_files = ();
     for my $output_ext (@$output_exts) {
       if ( $output_ext ne "" ) {
-        my $result_file = $sample_name . $output_ext;
-#        print $result_file."\n";
-        push( @result_files, "${cur_dir}/$result_file" );
+        if($cromwell_finalOutputs){
+          push( @result_files, "${sample_dir}/${sample_name}${output_ext}" );
+        }else{
+          push( @result_files, "${sample_dir}/$output_ext" );
+        }
       }
     }
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
