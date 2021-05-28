@@ -46,6 +46,8 @@ sub perform {
 
   my $sample_name_regex = get_option( $config, $section, "sample_name_regex", "" );
 
+  my $check_output_file_pattern = get_option( $config, $section, "check_output_file_pattern", "" );
+
   my $use_caper = get_option( $config, $section, "use_caper", 0 );
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1);
@@ -243,6 +245,16 @@ sub perform {
     my $input_file = basename($sample_input_file);
     
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
+
+    if($check_output_file_pattern ne ""){
+      print $pbs "
+file_count=$(find . -name $check_output_file_pattern | wc -l) 
+if [[ \$file_count -gt 0 ]]; then
+    echo 'Warning: $check_output_file_pattern found \$file_count times in $cur_dir!'
+    exit(0)
+fi
+"      
+    }
 
     if($use_caper){
       print $pbs "

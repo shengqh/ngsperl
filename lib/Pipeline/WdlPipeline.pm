@@ -667,6 +667,7 @@ sub addEncodeATACseq {
     },
     output_to_same_folder => 0,
     cromwell_finalOutputs => 0,
+    check_output_file_pattern => "metadata.json",
     output_file_ext => "atac/",
     use_caper => 1,
     pbs=> {
