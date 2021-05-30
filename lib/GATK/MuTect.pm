@@ -98,6 +98,10 @@ fi
     $tumor = $actual_files->[1];
 
     print $pbs "
+mkdir tmp_${group_name}
+";
+
+    print $pbs "
 if [ ! -s ${normal}.bai ]; then
   samtools index ${normal}
 fi
@@ -107,7 +111,7 @@ if [ ! -s ${tumor}.bai ]; then
 fi
 
 if [ ! -s $vcf ]; then
-  $java $java_option -jar $muTect_jar --analysis_type MuTect $option --reference_sequence $faFile $cosmicOption $dbsnpOption --input_file:normal $normal --input_file:tumor $tumor -o $out_file --vcf $vcf --enable_extended_output
+  $java -Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option -jar $muTect_jar --analysis_type MuTect $option --reference_sequence $faFile $cosmicOption $dbsnpOption --input_file:normal $normal --input_file:tumor $tumor -o $out_file --vcf $vcf --enable_extended_output
 fi 
 
 if [[ -s $vcf && ! -s $passvcf ]]; then
@@ -133,6 +137,8 @@ if [[ -s $passvcf && ! -s $final ]]; then
   tabix $final
   rm ${passvcf}.idx
 fi
+
+rm -rf tmp_${group_name}
 "
 ;
 
