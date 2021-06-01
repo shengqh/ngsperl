@@ -159,6 +159,10 @@ fi
     $inputFile    = $sample_files[0];
     my $inputFileIndex    = "${inputFile}.bai";
 
+    print $pbs "
+mkdir tmp_${sample_name}
+";
+
     if ( !$sorted ) {
       print $pbs "
 if [[ (-s $inputFile) && ! (-s $presortedFile) ]]; then
@@ -176,9 +180,10 @@ fi
     if ( $remove_duplicate or $mark_duplicate ) {
       my $rmdupFileIndex = change_extension( $rmdupFile, ".bai" );
       print $pbs "
+
 if [[ (-s $inputFile) && (-s $inputFileIndex) && (! -s $rmdupFile) ]]; then
   echo MarkDuplicates=`date` 
-  java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=$removeDupLabel CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
+  java -Djava.io.tmpdir=`pwd`/tmp_${sample_name} $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=$removeDupLabel CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
 fi
 ";
       $inputFile = $rmdupFile;
@@ -192,13 +197,13 @@ fi
       print $pbs "
 if [[ (-s $inputFile) && (-s $inputFileIndex) && (! -s $indelFile) ]]; then
   echo RealignerTargetCreator=`date` 
-  java $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $inputFile -R $faFile $indel_vcf -o $intervalFile $restrict_intervals
+  java -Djava.io.tmpdir=`pwd`/tmp_${sample_name} $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $inputFile -R $faFile $indel_vcf -o $intervalFile $restrict_intervals
 fi
 
 if [[ (-s $intervalFile) && (! -s $indelFile) ]]; then
   echo IndelRealigner=`date` 
   #InDel parameter referenced: http://www.broadinstitute.org/gatk/guide/tagged?tag=local%20realignment
-  java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $fixMisencodedQuals -I $inputFile -R $faFile -targetIntervals $intervalFile $indel_vcf --consensusDeterminationModel USE_READS -LOD 0.4 -o $indelFile 
+  java -Djava.io.tmpdir=`pwd`/tmp_${sample_name} $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $fixMisencodedQuals -I $inputFile -R $faFile -targetIntervals $intervalFile $indel_vcf --consensusDeterminationModel USE_READS -LOD 0.4 -o $indelFile 
 fi  
 ";
       $inputFile = $indelFile;
@@ -212,12 +217,12 @@ fi
     print $pbs "
 if [[ (-s $inputFile) && (-s $inputFileIndex) && (! -s $recalTable) ]]; then
   echo BaseRecalibrator=`date` 
-  java $option -jar $gatk_jar -T BaseRecalibrator -nct $thread -rf BadCigar -R $faFile -I $inputFile $knownsitesvcf -o $recalTable $restrict_intervals
+  java -Djava.io.tmpdir=`pwd`/tmp_${sample_name} $option -jar $gatk_jar -T BaseRecalibrator -nct $thread -rf BadCigar -R $faFile -I $inputFile $knownsitesvcf -o $recalTable $restrict_intervals
 fi
 
 if [[ (-s $recalTable) && (! -s $recalFile) ]]; then
   echo PrintReads=`date`
-  java $option -jar $gatk_jar -T PrintReads --simplifyBAM -nct $thread -rf BadCigar -R $faFile -I $inputFile -BQSR $recalTable -o $recalFile 
+  java -Djava.io.tmpdir=`pwd`/tmp_${sample_name} $option -jar $gatk_jar -T PrintReads --simplifyBAM -nct $thread -rf BadCigar -R $faFile -I $inputFile -BQSR $recalTable -o $recalFile 
 fi
 ";
     if ($baq) {
@@ -247,6 +252,9 @@ if [[ (-s $final_file) && (-s $final_file_index) ]]; then
 
   rm $rmlist 
 fi
+
+rm -rf tmp_${sample_name}
+
 ";
 
     $self->clean_temp_files($pbs, $localized_files);
