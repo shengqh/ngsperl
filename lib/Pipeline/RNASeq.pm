@@ -509,6 +509,7 @@ sub getRNASeqConfig {
         target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
         rtemplate                  => "GSEAPerform.R",
         rReportTemplate            => "GSEAReport.Rmd",
+        additional_rmd_files       => "../Pipeline/Pipeline.Rmd;Functions.Rmd",
         output_to_result_directory => 1,
         output_perSample_file      => "parameterSampleFile1",
         output_perSample_file_ext  => ".gsea.html;.gsea.csv;.gsea;",

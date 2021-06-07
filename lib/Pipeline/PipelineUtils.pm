@@ -1347,14 +1347,13 @@ symlink ( $mothurTrainsetTaxFile, "$target_dir/$taskName/result/trainset16_02201
 #my $stability_batch = "$target_dir/$taskName/result/stability.files";
 my $sampleToFiles = "$target_dir/$taskName/result/$projectName.files";
 
-  #make a samplt to file table
-  open FILES,">$sampleToFiles";
-  for my $sample_name ( sort keys %{$config->{$files}} ) {
-    my @sample_files = @{ $config->{$files}->{$sample_name} };
-    print FILES $sample_name."\t".$sample_files[0]."\t".$sample_files[1]."\n";
-  }
-
-
+#make a sample to file table
+open FILES,">$sampleToFiles";
+for my $sample_name ( sort keys %{$config->{$files}} ) {
+  my @sample_files = @{ $config->{$files}->{$sample_name} };
+  print FILES $sample_name."\t".$sample_files[0]."\t".$sample_files[1]."\n";
+}
+close(FILES);
 
 open CODESIN,"<$mothurPipelineCodeFile";
 open CODESOUT,">$mothurPipelineCodeFileOut";

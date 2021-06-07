@@ -8,7 +8,12 @@ library(genefilter)
 
 countTableFileList<-parSampleFile1
 groupFileList<-parSampleFile2
-colorFileList<-parSampleFile3
+if (exists("parSampleFile3")) {
+  colorFileList<-parSampleFile3
+} else {
+    colorFileList<-""
+}
+
 fixColorRange<-TRUE
 
 geneFile<-parFile1
