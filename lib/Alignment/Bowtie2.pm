@@ -120,7 +120,7 @@ fi
       print $pbs "
 if [ -s $bam_file ]; then
   echo RemoveDuplicate=`date` 
-  java $option -jar $picard_jar MarkDuplicates I=$bam_file O=$final_file ASSUME_SORTED=true REMOVE_DUPLICATES=false VALIDATION_STRINGENCY=SILENT M=${final_file}.metrics
+  java -jar $picard_jar MarkDuplicates I=$bam_file O=$final_file ASSUME_SORTED=true REMOVE_DUPLICATES=false VALIDATION_STRINGENCY=SILENT M=${final_file}.metrics
   if [ -s $final_file ]; then
     rm $bam_file ${bam_file}.bai ${bam_file}.chromosome.count
     samtools index $final_file 
