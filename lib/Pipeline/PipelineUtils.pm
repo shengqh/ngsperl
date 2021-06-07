@@ -2089,7 +2089,7 @@ sub add_BWA_and_summary {
   add_BWA($config, $def, $tasks, $target_dir, $bwa, $source_ref, $rg_name_regex); 
 
   my $bwa_summary = "bwa_summary";
-  add_BWAsummary($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex); 
+  add_BWA_summary($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex); 
 
   return( [$bwa, ".bam\$"], $bwa);
 }
