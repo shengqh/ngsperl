@@ -5,6 +5,7 @@ use strict;
 use warnings::register;
 use File::Basename;
 use CQS::PBS;
+use CQS::NGSCommon;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
@@ -45,13 +46,23 @@ sub perform {
 
   my $sample_name_regex = get_option( $config, $section, "sample_name_regex", "" );
 
+  my $check_output_file_pattern = get_option( $config, $section, "check_output_file_pattern", "" );
+
+  my $use_caper = get_option( $config, $section, "use_caper", 0 );
+
+  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1);
+
   #softlink singularity_image_files to result folder
   my $singularity_image_files = get_raw_files( $config, $section, "singularity_image_files" ); 
+  my $singularity_option = "";
   for my $image_name ( sort keys %$singularity_image_files ) {
     my $source_image=$singularity_image_files->{$image_name};
     if( is_array($source_image) ) {
       $source_image=${$source_image}[0];
     }
+
+    $singularity_option="--singularity $source_image";
+
     # print $image_name."\n";
     # print $source_image."\n";
     my $target_image = $result_dir."/".$image_name;
@@ -72,9 +83,15 @@ sub perform {
   my $input_parameters = get_option($config, $section, "input_parameters");
   die "input_parameters should be hash" if is_not_hash($input_parameters);
 
+  #write input to list file
   my $input_list = get_option($config, $section, "input_list", {});
   die "$input_list should be hash" if is_not_hash($input_list);
 
+  #replace value with vector of value/file
+  my $input_sample_vector = get_option($config, $section, "input_sample_vector", {});
+  die "$input_sample_vector should be hash" if is_not_hash($input_sample_vector);
+
+  #replace value with single value/file
   my $input_single = get_option($config, $section, "input_single", {});
   die "$input_single should be hash" if is_not_hash($input_single);
 
@@ -135,7 +152,7 @@ sub perform {
     
     $replace_dics->{$input_name} = $cur_dic;
   }
-  
+
   for my $input_key (keys %$input_single){
     my $input_value = $input_single->{$input_key};
     
@@ -187,6 +204,8 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
+    my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+
     print $sh "\$MYCMD ./$pbs_name \n";
 
     my $log_desc = $cluster->get_log_description($log);
@@ -206,25 +225,48 @@ sub perform {
       }
     }
     
+    
     for my $input_key (keys %$replace_dics){
       my $input_values = $replace_dics->{$input_key}{$sample_name};
-      my $input_value = $input_values->[0];
-      $json_dic->{$input_key} = $input_value;
+      if (is_array($json_dic->{$input_key})){
+        $json_dic->{$input_key} = $input_values;
+      }else{
+        $json_dic->{$input_key} = $input_values->[0];
+      }
     }
     
-    my $sample_input_file = $self->get_file( $result_dir, $sample_name, ".inputs.json" );
+    #print(Dumper($json_dic));
+
+    my $sample_input_file = $self->get_file( $cur_dir, $sample_name, ".inputs.json" );
     open my $fh, ">", $sample_input_file;
     print $fh $json->encode($json_dic);
     close $fh;
     
     my $input_file = basename($sample_input_file);
     
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
 
-    print $pbs "
-java -Dconfig.file=$cromwell_config_file -jar $cromwell_jar run $wdl_file --inputs $input_file --options $input_option_file
+    if($check_output_file_pattern ne ""){
+      print $pbs "
+file_count=$(find . -name $check_output_file_pattern | wc -l) 
+if [[ \$file_count -gt 0 ]]; then
+    echo 'Warning: $check_output_file_pattern found \$file_count times in $cur_dir!'
+    exit(0)
+fi
+"      
+    }
+
+    if($use_caper){
+      print $pbs "
+caper run $wdl_file $option -i $input_file $singularity_option
     
 ";
+    }else{
+      print $pbs "
+java -Dconfig.file=$cromwell_config_file -jar $cromwell_jar run $wdl_file $option --inputs $input_file --options $input_option_file
+    
+";
+    }
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
@@ -241,18 +283,23 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
-  my $cur_dir = $result_dir . "/cromwell_finalOutputs";
+  my $cromwell_finalOutputs = get_option($config, $section, "cromwell_finalOutputs", 1);
+  my $cur_dir = $cromwell_finalOutputs ? $result_dir . "/cromwell_finalOutputs" : $result_dir;
+
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $output_exts = get_output_ext_list( $config, $section );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
+    my $sample_dir = get_option($config, $section, "output_to_same_folder", 1) ? $cur_dir : $cur_dir . "/" . $sample_name;
     my @result_files = ();
     for my $output_ext (@$output_exts) {
       if ( $output_ext ne "" ) {
-        my $result_file = $sample_name . $output_ext;
-#        print $result_file."\n";
-        push( @result_files, "${cur_dir}/$result_file" );
+        if($cromwell_finalOutputs){
+          push( @result_files, "${sample_dir}/${sample_name}${output_ext}" );
+        }else{
+          push( @result_files, "${sample_dir}/$output_ext" );
+        }
       }
     }
     $result->{$sample_name} = filter_array( \@result_files, $pattern );

@@ -191,7 +191,7 @@ if(colorFileList != ""){
 }
 
 #start work:
-countTableFileAll<-read.delim(countTableFileList,header=F,as.is=T)
+countTableFileAll<-read.delim(countTableFileList,header=F,as.is=T,check.names=F)
 i<-1
 for (i in 1:nrow(countTableFileAll)) {
   countTableFile<-countTableFileAll[i,1]

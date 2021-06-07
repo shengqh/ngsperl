@@ -40,6 +40,7 @@ reads=final[c("Mapped", "Failed", "Suppressed"),]
 meltreads=melt(t(reads))
 colnames(meltreads)<-c("Sample", "Read", "Count")
 meltreads$Count<-as.numeric(as.character(meltreads$Count))
+meltreads$Read<-factor(meltreads$Read, levels=c("Suppressed", "Failed", "Mapped"))
 
 width=max(2000, 50 * nrow(meltreads))
 png(file=paste0(outputFile, ".png"), height=1500, width=width, res=300)

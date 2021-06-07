@@ -13,6 +13,7 @@ use CQS::NGSCommon;
 use CQS::UniqueWrapper;
 use CQS::StringUtils;
 use File::Spec;
+use File::Copy;
 
 our @ISA = qw(CQS::UniqueWrapper);
 
@@ -42,26 +43,15 @@ sub perform {
   my $output_file     = get_option( $config, $section, "output_file",     "" );
   my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
 
+  my $copy_template = get_option( $config, $section, "copy_template", 1 );
+
   my $removeEmpty = get_option( $config, $section, "remove_empty_parameter", 0 );
   my $paramSampleFiles = {};
   for my $myidx (1..10) {
     my $paramSampleFile = writeParameterSampleFile( $config, $section, $result_dir, $myidx, $removeEmpty );
-    if ($paramSampleFile ne ""){
+    if (($paramSampleFile ne "") or ($myidx <= 3)){
       $paramSampleFiles->{"parSampleFile" . $myidx} = $paramSampleFile;
     }
-  }
-
-  my $parameterFile1 = parse_param_file( $config, $section, "parameterFile1", 0 );
-  my $parameterFile2 = parse_param_file( $config, $section, "parameterFile2", 0 );
-  my $parameterFile3 = parse_param_file( $config, $section, "parameterFile3", 0 );
-  if ( !defined($parameterFile1) ) {
-    $parameterFile1 = "";
-  }
-  if ( !defined($parameterFile2) ) {
-    $parameterFile2 = "";
-  }
-  if ( !defined($parameterFile3) ) {
-    $parameterFile3 = "";
   }
 
   my $rfile = $result_dir . "/${task_name}${task_suffix}.r";
@@ -82,14 +72,16 @@ sub perform {
   for my $file_key (sort keys %$paramSampleFiles) {
     $rParameter = $rParameter . $file_key . "='" . $paramSampleFiles->{$file_key} . "'\n";
   }
-  if ( defined($parameterFile1) ) {
-    $rParameter = $rParameter . "parFile1='$parameterFile1'\n";
-  }
-  if ( defined($parameterFile2) ) {
-    $rParameter = $rParameter . "parFile2='$parameterFile2'\n";
-  }
-  if ( defined($parameterFile3) ) {
-    $rParameter = $rParameter . "parFile3='$parameterFile3'\n";
+
+  for my $index (1..10){
+    my $key = "parameterFile" . $index;
+    my $parameterFile = parse_param_file( $config, $section, $key, 0 );
+    if ( !defined($parameterFile) && $index < 4 ) {
+      $parameterFile = "";
+    }
+    if ( defined($parameterFile) ) {
+      $rParameter = $rParameter . "parFile$index='$parameterFile'\n";
+    }
   }
   if ($output_to_result_directory) {
     $rParameter = $rParameter . "outputDirectory='.'\n";
@@ -106,7 +98,12 @@ sub perform {
 
   my $rtemplates = get_option( $config, $section, "rtemplate" );
   my @rtemplates = split( ",|;", $rtemplates );
-  foreach my $rtemplate (@rtemplates) {
+
+  my $rnum = scalar(@rtemplates);
+
+  my $ignore_lines={};
+  for my $index (0 .. $#rtemplates){
+    my $rtemplate = $rtemplates[$index];
     my $is_absolute = File::Spec->file_name_is_absolute($rtemplate);
     if ( !$is_absolute ) {
       $rtemplate = dirname(__FILE__) . "/$rtemplate";
@@ -114,10 +111,35 @@ sub perform {
     if ( !( -e $rtemplate ) ) {
       die("rtemplate $rtemplate defined but not exists!");
     }
+
+    if($copy_template) {
+      if ($index < $rnum-1){
+        my $remote_r = $result_dir . "/" . basename($rtemplate);
+        copy($rtemplate, $remote_r);
+        my $line = 'source("' . basename($rtemplate) . '")';
+        $ignore_lines->{$line} = 1;
+        $line =~ s/"/'/g;
+        $ignore_lines->{$line} = 0;
+        next;
+      }else{
+        for my $line (keys %$ignore_lines){
+          if($ignore_lines->{$line}){
+            print $rf "$line\n";
+          }
+        }
+      }
+    }
+    
     open( my $rt, "<$rtemplate" ) or die $!;
     while ( my $row = <$rt> ) {
       chomp($row);
       $row =~ s/\r//g;
+      if($copy_template && ($row =~/^source/)){
+        if(defined $ignore_lines->{$row}){
+          next;
+        }
+      }
+
       print $rf "$row\n";
     }
     close($rt);
@@ -126,28 +148,19 @@ sub perform {
 
   my $rReportTemplates = get_option( $config, $section, "rReportTemplate", "" );
   if ( $rReportTemplates ne "" ) {
-    #my $rReportFile = $result_dir . "/" . basename($rReportTemplates);
-    my $rReportFile = $result_dir . "/" . basename($rReportTemplates);
-    open( my $rf, ">$rReportFile" ) or die "Cannot create $rReportFile";
-
     my @rReportTemplates = split( ",|;", $rReportTemplates );
-    foreach my $rReportTemplate (@rReportTemplates) {
-      my $is_absolute = File::Spec->file_name_is_absolute($rReportTemplate);
+    for my $rtemplate (@rReportTemplates){
+      my $is_absolute = File::Spec->file_name_is_absolute($rtemplate);
       if ( !$is_absolute ) {
-        $rReportTemplate = dirname(__FILE__) . "/$rReportTemplate";
+        $rtemplate = dirname(__FILE__) . "/$rtemplate";
       }
-      if ( !( -e $rReportTemplate ) ) {
-        die("rReportTemplate $rReportTemplate defined but not exists!");
+      if ( !( -e $rtemplate ) ) {
+        die("rmd template $rtemplate defined but not exists!");
       }
-      open( my $rt, "<$rReportTemplate" ) or die $!;
-      while ( my $row = <$rt> ) {
-        chomp($row);
-        $row =~ s/\r//g;
-        print $rf "$row\n";
-      }
-      close($rt);
+
+      my $remote_r = $result_dir . "/" . basename($rtemplate);
+      copy($rtemplate, $remote_r);
     }
-    close($rf);
   }
 
   my $additional_rmd_files = get_option( $config, $section, "additional_rmd_files","" );

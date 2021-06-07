@@ -33,7 +33,7 @@ check_and_include_graphics(diffGeneFiles[boxplotFigInd,1])
 
 ```{r, results="asis", echo=FALSE}
 diffDesignTableFileInd=grep(".OverallDesignTable.csv$",diffGeneFiles[,1])
-diffDesignTable=read.csv(diffGeneFiles[diffDesignTableFileInd,1],row.names=1)
+diffDesignTable=read.csv(diffGeneFiles[diffDesignTableFileInd,1],row.names=1, check.names=F)
 print(kable(diffDesignTable,caption = tabRef("design_table","Differential Detection Design Table")) %>%	
   kable_styling() %>%
   htmltools::HTML())
@@ -69,7 +69,7 @@ if (length(diffGeneTableInd)>0) {
   #summary Table
   DESeq2_list<-list()
   for (i in 1:nrow(DESeq2_files)){
-    DESeq2_list[[i]]<-read.csv(DESeq2_files[i,1], header=TRUE)
+    DESeq2_list[[i]]<-read.csv(DESeq2_files[i,1], header=TRUE, check.names=F)
   }
   output_table3<-data.frame(c(gsub("_DESeq2_sig.csv","",basename(DESeq2_files[,1]))), c(unlist(lapply(DESeq2_list, nrow))))
   colnames(output_table3)<-c("Comparison", "Number of DEGs")
@@ -104,7 +104,7 @@ if (length(diffGeneTableInd)>0) {
 
   for (i in 1:nrow(DESeq2_files)){
     comparisonName<-DESeq2_files[i,2]
-    deseq2<-read.csv(DESeq2_files[i,1], header=TRUE, row.names=1)
+    deseq2<-read.csv(DESeq2_files[i,1], header=TRUE, row.names=1, check.names=F)
     if(nrow(deseq2) > 0){
       maxrow<-min(nrow(deseq2), 10)
 #      cnames<-c("baseMean", "log2FoldChange","lfcSE", "stat", "pvalue", "padj", "FoldChange")

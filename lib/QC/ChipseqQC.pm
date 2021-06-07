@@ -94,7 +94,8 @@ sub perform {
   my $mapFiles = writeDesignTable( $result_dir, $section, $qctable, $sourceBamFiles, $peaksfiles, $peakSoftware, $combined, $task_name, $treatments, $controls );
 
   if ($combined) {
-    my $mapFileName = basename($mapFiles->{$task_name});
+    my $mapFile=$mapFiles->{$task_name};
+    my $mapFileName = basename($mapFile);
     my $rdataFile=$mapFileName . ".rdata";
 
     if ($paired_end){
@@ -119,7 +120,7 @@ fi
 ";
     }
     
-    print $pbs "R --vanilla -f $script --args $mapFileName $genome $chromosomes\n\n";
+    print $pbs "R --vanilla -f $script --args $mapFile $genome $chromosomes\n\n";
     
     if ($paired_end){
       print $pbs "if [[ -s $final_file ]]; then 

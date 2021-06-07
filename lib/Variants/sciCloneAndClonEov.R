@@ -55,7 +55,7 @@ for (i in 1:nrow(sciCloneResultForClonevol)) {
   cloneResultFile=sciCloneResultForClonevol[i,2]
   #cloneResultFile="6359.sciClone.txt"
   
-  cloneResult=read.delim(cloneResultFile,header=T,as.is=T)
+  cloneResult=read.delim(cloneResultFile,header=T,as.is=T,check.names=F)
   
   ########################################
   #format sciClone result, export cluster column and vaf column

@@ -4,7 +4,7 @@ args <- commandArgs(TRUE)
 positionFile<-args[1]
 outputPrefix<-args[2]
 
-rawTable<-read.delim(positionFile,header=T,as.is=T)
+rawTable<-read.delim(positionFile,header=T,as.is=T,check.names=F)
 
 for (selectedFeature in unique(rawTable$Feature)) {
   dataForPlot<-rawTable[which(rawTable$Feature==selectedFeature),]

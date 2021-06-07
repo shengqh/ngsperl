@@ -16,7 +16,7 @@ process<-function(signalFileList, colIndex, colName, resultFilePrefix){
   for (i in c(1:nrow(signalFileList))){
     signalFile<-signalFileList[i,1]
     signalName<-signalFileList[i,2]
-    signalData<-read.delim(signalFile, stringsAsFactor=F)
+    signalData<-read.delim(signalFile, stringsAsFactor=F,check.names=F)
     curData<-signalData[,c(1,colIndex)]
     colnames(curData)<-c("Gene", signalName)
     
@@ -101,7 +101,7 @@ i<-1
 for (i in c(1:nrow(signalFileList))){
   signalFile<-signalFileList[i,1]
   signalName<-signalFileList[i,2]
-  signalData<-read.delim(signalFile, stringsAsFactor=F)
+  signalData<-read.delim(signalFile, stringsAsFactor=F,check.names=F)
   colnames(signalData)<-c("Gene", "TSS", "Distal")
   signalData<-signalData[rowSums(signalData[,c(-1)])>0,]
   signalMeltData<-melt(signalData, id="Gene")

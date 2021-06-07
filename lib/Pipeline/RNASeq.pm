@@ -183,7 +183,7 @@ sub getRNASeqConfig {
     my $sf_task = addStarFeaturecount($config, $def, $individual, $summary, $target_dir, $source_ref, "" );
 
     $source_ref      = [ $sf_task, "_Aligned.sortedByCoord.out.bam\$" ];
-    $count_table_ref = [ $sf_task, ".count\$" ];
+    $count_table_ref = [ $sf_task, "(?!chromosome).count\$" ];
 
     $multiqc_depedents = $sf_task;
   }
@@ -310,6 +310,25 @@ sub getRNASeqConfig {
       $count_table_ref = [ "featurecount", ".count\$" ];
       $multiqc_depedents = "featurecount";
     }
+  }
+
+  if(defined $def->{annotation_genes}){
+    my $genes_str = $def->{annotation_genes};
+    my @genes = split /[;, ]+/, $genes_str;
+    my %gene_map = map { $_ => 1 } @genes;
+    $config->{annotation_genes} = \%gene_map;
+    #print(Dumper($config->{annotation_genes}));
+
+    my $geneLocus = addGeneLocus($config, $def, $summary, $target_dir);
+
+    if($def->{perform_bamsnap}){
+      my $bamsnap_task = "annotation_genes_bamsnap";
+      addBamsnap($config, $def, $summary, $target_dir, $bamsnap_task, [$geneLocus, "bed"], $source_ref);
+    }
+
+    my $sizeFactorTask = "size_factor";
+    addSizeFactor($config, $def, $summary, $target_dir, $sizeFactorTask, $source_ref);
+    addPlotGene($config, $def, $summary, $target_dir, "annotation_genes_plot", $sizeFactorTask, [ $geneLocus, ".bed" ], $source_ref);
   }
 
   my $perform_count_table = $def->{perform_counting} || $def->{perform_count_table};
@@ -495,10 +514,6 @@ sub getRNASeqConfig {
       my $gsea_jar        = $def->{gsea_jar}        or die "Define gsea_jar at definition first";
       my $gsea_db         = $def->{gsea_db}         or die "Define gsea_db at definition first";
       my $gsea_categories = $def->{gsea_categories} or die "Define gsea_categories at definition first";
-      my $gsea_makeReport = 1;
-      if ( defined $def->{gsea_makeReport} ) {
-        $gsea_makeReport = $def->{gsea_makeReport};
-      }
 
       $gseaTaskName = $deseq2taskname . "_GSEA";
 
@@ -508,15 +523,13 @@ sub getRNASeqConfig {
         perform                    => 1,
         target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
         rtemplate                  => "GSEAPerform.R",
-        rReportTemplate            => "GSEAReport.Rmd",
-        additional_rmd_files       => "../Pipeline/Pipeline.Rmd;Functions.Rmd",
         output_to_result_directory => 1,
         output_perSample_file      => "parameterSampleFile1",
         output_perSample_file_ext  => ".gsea.html;.gsea.csv;.gsea;",
         parameterSampleFile1_ref   => [ $deseq2taskname, "_GSEA.rnk\$" ],
         sh_direct                  => 1,
         
-        rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=" . $gsea_makeReport . ";",
+        rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=0;",
         pbs                        => {
           "nodes"     => "1:ppn=1",
           "walltime"  => "23",
@@ -951,11 +964,11 @@ sub getRNASeqConfig {
 
     if ( defined $gseaTaskName ) {
       push( @copy_files, $gseaTaskName, ".gsea\$" );
-      my $suffix = getDeseq2Suffix($config, $deseq2taskname);      
+      my $suffix = getDeseq2Suffix($config, $def, $deseq2taskname);      
 
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
-        push( @report_files, $gseaTaskName, "/" . $key . $suffix . ".*gsea.csv" );
+        push( @report_files, $gseaTaskName, "/" . $key . $suffix . "_.*gsea.csv" );
         push( @report_names, "gsea_" . $key );
       }
       $hasFunctionalEnrichment = 1;

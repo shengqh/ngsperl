@@ -20,6 +20,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_cb";
+  $self->{_use_tmp_folder} = 1;
   bless $self, $class;
   return $self;
 }
@@ -57,7 +58,6 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sampleFile   = $sample_files[0];
 
     my $redupFile = undef;
     my $finalFile = undef;
@@ -72,11 +72,20 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $finalFile . ".bai" );
+
+    print $sh "
+if [[ ! -s $result_dir/${finalFile}.bai ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
+
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files, [".bai"])};
+    my $sampleFile   = $sample_files[0];
+
     my $rmlist = "";
     if ( !$isSortedByCoordinate ) {
       my $sorted = $sample_name . ".sortedByCoordinate.bam";
@@ -166,6 +175,8 @@ if [ -s ${finalFile}.stat ]; then
   rm $rmlist  
 fi
 ";
+
+    $self->clean_temp_files($pbs, $localized_files);
 
     $self->close_pbs( $pbs, $pbs_file );
   }

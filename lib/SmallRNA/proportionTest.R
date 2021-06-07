@@ -15,7 +15,7 @@ library(ggplot2)
 library(DirichletReg)
 library(pheatmap)
 
-comp<-read.csv(parFile1,row.names=1)
+comp<-read.csv(parFile1,row.names=1, check.names=F)
 
 getSampleInGroup<-function(groupDefineFile, samples, useLeastGroups=FALSE,onlySamplesInGroup=FALSE){
   allGroupData<-read.delim(groupDefineFile,as.is=T,header=F)

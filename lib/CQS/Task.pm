@@ -6,7 +6,10 @@ use warnings;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::StringUtils;
+use CQS::NGSCommon;
+use File::Basename;
 use Data::Dumper;
+use List::MoreUtils qw(uniq);
 
 sub new {
   my ($class) = @_;
@@ -18,7 +21,9 @@ sub new {
     _task_suffix   => "",
     _pbskey        => "source",
     _docker_prefix => "",
-    _can_use_docker => 1
+    _can_use_docker => 1,
+    _use_tmp_folder => 0,
+    _localize_to_local_folder => 0,
   };
   bless $self, $class;
   return $self;
@@ -121,6 +126,52 @@ sub get_clear_map {
 sub get_pbs_key {
   my ( $self, $config, $section ) = @_;
   return $self->{_pbskey};
+}
+
+sub init_tmp_folder {
+  my ( $self, $pbs, $result_dir ) = @_;
+  if( $self->{"_use_tmp_folder"}){
+    print $pbs "
+res_dir='$result_dir'
+tmp_dir=\$(mktemp -d -t ci-\$(date +\%Y-\%m-\%d-\%H-\%M-\%S)-XXXXXXXXXX)
+echo using tmp_dir=\$tmp_dir
+cd \$tmp_dir
+
+";
+    return(1);
+  }else{
+    return(0);
+  }
+}
+
+sub clean_tmp_folder {
+  my ( $self, $pbs ) = @_;
+  if( $self->{"_use_tmp_folder"}){
+    print $pbs "
+if [[ -d \$tmp_dir && \$tmp_dir != '/' ]]; then
+  echo copy result from \$tmp_dir to \$res_dir
+  #if the pbs was generated again during task is running, copy may be unpredictable. 
+  #make sure to change to tmp_dir before copy result
+
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+
+  cp -r * \$res_dir
+  cd \$res_dir
+  echo delete tmp folder \$tmp_dir
+  rm -rf \$tmp_dir
+  echo move file and clean tmp folder done.
+fi
+";
+  }
 }
 
 sub get_pbs_files {
@@ -347,6 +398,76 @@ sub get_docker_value {
   return ( undef, undef );
 }
 
+sub localize_files {
+  my ($self, $pbs, $sample_files, $localized_files, $other_exts) = @_;
+  if($self->{_use_tmp_folder} || $self->{_localize_to_local_folder} ){
+    if($sample_files->[0] =~ /.bam$/){
+      if(defined $other_exts){
+        push(@$other_exts, ".bai");
+      }else{
+        $other_exts = [".bai"];
+      }
+      my @unique_words = uniq @$other_exts;
+      $other_exts = \@unique_words;
+    }
+
+    my $result = [];
+    print $pbs "
+echo localize start at `date`
+";
+    for my $old_file (@$sample_files){
+      my $new_file = basename($old_file);
+      print $pbs "
+echo $old_file      
+if [[ ! -s $old_file ]]; then
+  echo file not exists: $old_file
+  exit 1
+fi
+cp $old_file $new_file
+";
+      push(@$result, $new_file);
+      push(@$localized_files, $new_file);
+
+      if(defined $other_exts){
+        for my $other_ext (@$other_exts){
+          my $old_ext_file = $old_file . $other_ext;
+          my $new_ext_file = $new_file . $other_ext;
+          print $pbs "
+if [[ ! -s $old_ext_file ]]; then
+  echo file not exists: $old_ext_file
+  exit 1
+fi
+cp $old_ext_file $new_ext_file
+";
+          push(@$localized_files, $new_ext_file);
+        }
+      }
+    }
+      print $pbs "
+ls *
+echo localize end at `date`
+
+";
+    return($result);
+  }else{
+    return($sample_files);
+  }
+}
+
+sub localize_files_in_tmp_folder {
+  return( localize_files(@_)); 
+}
+
+sub clean_temp_files {
+  my ($self, $pbs, $temp_files) = @_;
+  if(scalar(@$temp_files) > 0){
+    my $rmstr = join(" ",  @$temp_files);
+    print $pbs "
+rm $rmstr
+";
+  }
+}
+
 sub open_pbs {
   my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, $final_file_can_empty, $input_file ) = @_;
 
@@ -363,7 +484,7 @@ sub open_pbs {
 $path_file
 $init_command
 
-cd \"$result_dir\"
+cd '$result_dir'
 
 ";
   if ( defined $final_file ) {
@@ -417,12 +538,15 @@ echo working in $result_dir ...
     }
 
     my $sh_file = $pbs_file . ".sh";
+    my $sh_base_file = basename($sh_file);
 
     print $pbs "
 export R_LIBS=
 export PYTHONPATH=
 export JAVA_HOME=
  
+$docker_init
+
 $docker_command bash $sh_file 
 
 echo ${module_name}_end=`date`
@@ -432,12 +556,19 @@ exit 0
 ";
     close $pbs;
     open( $pbs, ">$sh_file" ) or die $!;
+
+    if(!$self->init_tmp_folder($pbs, $result_dir)){
+      print $pbs "
+cd '$result_dir'
+";
+    }
     print $pbs "
-cd $result_dir
 
 $docker_init
 ";
 
+  }else{
+    $self->init_tmp_folder($pbs, $result_dir);
   }
 
   return $pbs;
@@ -445,6 +576,8 @@ $docker_init
 
 sub close_pbs {
   my ( $self, $pbs, $pbs_file ) = @_;
+
+  $self->clean_tmp_folder($pbs);
 
   my $module_name = $self->{_name};
 
@@ -481,6 +614,23 @@ sub init_parameter {
   $self->{_docker_prefix} = get_option( $config, $section, "docker_prefix", $self->{_docker_prefix} );
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+  $self->{_localize_to_local_folder} = $config->{general}{localize_to_local_folder} || get_option( $config, $section, "localize_to_local_folder", $self->{_localize_to_local_folder});
+  if($self->{_localize_to_local_folder} ){
+    $self->{_use_tmp_folder} = 0;  
+  }else{
+    if(defined $config->{general}{use_tmp_folder}){
+      $self->{_use_tmp_folder} = $config->{general}{use_tmp_folder};  
+    }else{
+      if(should_use_tmp_folder($config->{$section}{target_dir})){
+        $self->{_use_tmp_folder} = get_option( $config, $section, "use_tmp_folder", $self->{_use_tmp_folder} );
+      }else{
+        $self->{_use_tmp_folder} = 0;  
+      }
+    }
+  }
+
+  #print("target_dir=" . $config->{$section}{target_dir} . "\n");
+  #print("_use_tmp_folder=" . $self->{_use_tmp_folder} . "\n");
 
   if ($self->{_task_suffix} ne ""){
     $self->{_suffix} = "";

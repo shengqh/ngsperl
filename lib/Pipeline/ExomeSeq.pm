@@ -119,6 +119,26 @@ sub getConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
 
+  if($def->{files} && $def->{groups}){
+    my $groups = $def->{groups};
+    my $files = $def->{files};
+    my @errors;
+    for my $gname (keys %$groups){
+      my $samples = $groups->{$gname};
+      for my $sample (@$samples){
+        if (not defined $files->{$sample}){
+          push(@errors, "ERROR: $sample in group $gname was not defined in files.");
+        }
+      }
+    }
+    if(scalar(@errors) > 0){
+      for my $error (@errors){
+        print $error . "\n";
+      }
+      die "Please have a check at configuration.";
+    }
+  }
+
   my $target_dir = $def->{target_dir};
   create_directory_or_die($target_dir);
 
@@ -239,7 +259,6 @@ sub getConfig {
 
     #based on paper https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-016-1097-3, we don't do markduplicate anymore
     if ( $def->{aligner} eq "bwa") {
-      my $bwa_memory = getValue($def, "bwa_memory", "40gb");
       $fasta = getValue( $def, "bwa_fasta" );
       my $bwa = $def->{aligner_scatter_count}?"bwa_02_alignment":"bwa";
       $config->{ $bwa } = {
@@ -249,13 +268,15 @@ sub getConfig {
         option                => getValue( $def, "bwa_option" ),
         bwa_index             => $fasta,
         source_ref            => $alignment_source_ref,
+        use_tmp_folder        => $def->{"bwa_use_tmp_folder"},
+        use_sambamba          => $def->{"use_sambamba"},
         output_to_same_folder => 1,
         rg_name_regex         => $rg_name_regex,
         sh_direct             => 0,
         pbs                   => {
           "nodes"    => "1:ppn=" . $max_thread,
-          "walltime" => "24",
-          "mem"      => $bwa_memory
+          "walltime" => getValue($def, "bwa_walltime", "22"),
+          "mem"      => getValue($def, "bwa_memory", "40gb")
         },
       };
       $bam_ref = [ $bwa, ".bam\$" ];
@@ -263,30 +284,11 @@ sub getConfig {
       push @$individual, ( $bwa );
 
       my $bwa_summary = $def->{aligner_scatter_count}?"bwa_04_summary":"bwa_summary";
-      $config->{ $bwa_summary } = {
-        class                 => "CQS::UniqueR",
-        perform               => 1,
-        target_dir            => "${target_dir}/" . getNextFolderIndex($def) . $bwa_summary,
-        option                => "",
-        rtemplate             => "../Alignment/BWASummary.r",
-        parameterSampleFile1_ref    => [$bwa, ".bamstat"],
-        parameterSampleFile2_ref    => [$bwa, ".chromosome.count"],
-        output_file           => "",
-        output_file_ext       => ".BWASummary.csv",
-        output_other_ext      => ".reads.png;.reads.sorted.png",
-        sh_direct             => 1,
-        pbs                   => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      };
-
       if ($def->{aligner_scatter_count}) {
-        $config->{ $bwa_summary }{rCode} = "rg_name_regex='$rg_name_regex'";
+        add_BWA_summary($config, $def, $summary, $target_dir, $bwa_summary, $bwa, $rg_name_regex);
+      }else{
+        add_BWA_summary($config, $def, $summary, $target_dir, $bwa_summary, $bwa);
       }
-
-      push @$summary, $bwa_summary;
     }
     else {
       die "Unknown alinger " . $def->{aligner};
@@ -319,6 +321,10 @@ sub getConfig {
       $bam_input = $mergeBam;
       $bam_ref = [ $mergeBam, ".bam\$" ];
       push @$individual, (  $mergeBam );
+    }
+
+    if(getValue($def, "perform_bam_validation", 0)){
+      add_bam_validation($config, $def, $individual, $target_dir, $bam_input . "_bam_validation", $bam_ref );
     }
 
     my $perform_cnv = $def->{perform_cnv_cnMOPs} || $def->{perform_cnv_gatk4_cohort} || $def->{perform_cnv_xhmm};
@@ -363,6 +369,7 @@ sub getConfig {
       gatk_jar                 => $gatk_jar,
       picard_jar               => $picard_jar,
       remove_duplicate         => getValue($def, "remove_duplicate"),
+      use_tmp_folder           => $def->{"bwa_use_tmp_folder"},
       sh_direct                => 0,
       slim_print_reads         => 1,
       samtools_baq_calibration => 0,
@@ -379,22 +386,35 @@ sub getConfig {
 
     $bam_input = $refine_name;
     $bam_ref = [ $refine_name, ".bam\$" ];
+
+    add_alignment_summary($config, $def, $summary, $target_dir, "${refine_name}_summary", "../Alignment/AlignmentUtils.r;../Alignment/BWASummary.r", ".chromosome.csv;.chromosome.png", undef, [$refine_name, ".chromosome.count"] );
+
+    if(getValue($def, "perform_bam_validation", 0)){
+      add_bam_validation($config, $def, $individual, $target_dir, $refine_name . "_bam_validation", $bam_ref );
+    }
   }
 
   if($def->{filter_soft_clip} && ((!defined $def->{perform_gatk4_pairedfastq2bam}) || (!$def->{perform_gatk4_pairedfastq2bam}))){
     my $soft_clip_name = $bam_input . "_nosoftclip";
     $config->{$soft_clip_name} = {
-      class                 => "CQS::ProgramIndividualWrapper",
+      class                 => "CQS::ProgramWrapperOneToOne",
       perform               => 1,
       target_dir            => "${target_dir}/${soft_clip_name}",
-      option                => "--min-mapq " . getValue($def, "soft_clip_min_mapq", 10),
+      option                => "--min-mapq " . getValue($def, "soft_clip_min_mapq", 10) . " -i __FILE__ -o __NAME__.nosoftclip.bam
+
+samtools index __NAME__.nosoftclip.bam.bai
+samtools idxstats __NAME__.nosoftclip.bam > __NAME__.nosoftclip.bam.chromosome.count
+",
       interpretor           => "python3",
       program               => "../GATK/filterSoftClip.py",
       source_arg            => "-i",
       source_ref            => $bam_ref,
       output_to_same_folder => 1,
+      use_tmp_folder        => 1,
       output_arg            => "-o",
-      output_file_ext       => ".nosoftclip.bam",
+      output_file_prefix    => ".nosoftclip.bam",
+      output_file_ext       => ".nosoftclip.bam;.nosoftclip.bam.bai;.nosoftclip.bam.chromosome.count",
+      use_tmp_folder        => 1,
       sh_direct             => 0,
       pbs                   => {
         "nodes"     => "1:ppn=1",
@@ -404,6 +424,9 @@ sub getConfig {
     };
     push @$individual, ($soft_clip_name);
     $bam_input = $soft_clip_name;
+    $bam_ref = [$bam_input, ".bam\$"];
+
+    add_alignment_summary($config, $def, $summary, $target_dir, "${soft_clip_name}_summary", "../Alignment/AlignmentUtils.r;../Alignment/BWASummary.r", ".chromosome.csv;.chromosome.png", undef, [$soft_clip_name, ".chromosome.count"] );
   }
 
   if ($def->{perform_TEQC}) {
@@ -512,7 +535,7 @@ R --vanilla -f __NAME__.clustered.crosscheck_metrics.r
       program               => "gatk",
       check_program         => 0,
       source_arg            => "",
-      source_ref            => [ $bam_input, ".bam\$" ],
+      source_ref            => $bam_ref,
       source_join_delimiter => " ",
       output_to_same_folder => 1,
       output_arg            => "",
@@ -528,6 +551,11 @@ R --vanilla -f __NAME__.clustered.crosscheck_metrics.r
     push @$individual, ($target_coverage_task);
   }
 
+  if($def->{perform_bamsnap} && $def->{"bamsnap_locus"}){
+    #addBamsnapLocus($config, $def, $summary, $target_dir, "bamsnap_locus", $bam_ref);
+    addBamsnapLocus($config, $def, $summary, $target_dir, "bamsnap_locus", ['bwa', '.bam$']);
+  }
+
   if($def->{perform_extract_bam}){
     my $extract_bam_locus = getValue($def, "extract_bam_locus");
     my $extract_bam_task = "extract_bam_locus";
@@ -538,7 +566,7 @@ R --vanilla -f __NAME__.clustered.crosscheck_metrics.r
       check_program => 0,
       option => "view -b -o __OUTPUT__ __FILE__ " . $extract_bam_locus . "; samtools index __OUTPUT__; ",
       program => "samtools",
-      source_ref => $bam_input,
+      source_ref => [ $bam_input, ".bam\$" ],
       output_arg => "",
       output_file_prefix => ".bam",
       output_file_ext => ".bam",
@@ -1021,6 +1049,11 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
     my $mutect_index_key = "mutect_Index";
     my $mutect_prefix = "${bam_input}_muTect_";
 
+    my $intervals = $def->{intervals};
+    if(!defined $intervals){
+      $intervals = $def->{target_intervals_file};
+    }
+
     my $mutectName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_call";
     #print($mutectName);
     $config->{$mutectName} = {
@@ -1029,22 +1062,23 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       init_command => $def->{muTect_init_command},
       target_dir   => "${target_dir}/$mutectName",
       option       => getValue( $def, "muTect_option" ),
-      java_option  => "-Xmx40g",
       source_ref   => [ $bam_input, ".bam\$" ],
       groups_ref   => "groups",
       fasta_file   => $fasta,
       dbsnp_file   => $def->{"dbsnp"},
+      intervals    => $intervals,
       bychromosome => 0,
       sh_direct    => 0,
       muTect_jar   => getValue( $def, "muTect_jar" ),
       pbs          => {
-        "email"    => $email,
         "nodes"    => "1:ppn=1",
-        "walltime" => "24",
-        "mem"      => "40gb"
+        "walltime" => getValue($def, "mutect_walltime", "24"),
+        "mem"      => getValue($def, "mutect_memory", "40gb"),
       },
     };
     push @$summary, "${mutectName}";
+
+    add_unique_r($config, $def, $summary, $target_dir, $mutectName . "_qc", "../QC/QCUtils.r,../QC/VcfChromosome.r", ".chromosome.png", [[$mutectName, ".pass.vcf.chromosome.count"]] );
 
     my $combineVariantsName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_merge";
     $config->{$combineVariantsName} = {
@@ -1151,16 +1185,19 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
   
   if ( $def->{"perform_muTect2indel"} ) {
     my $mutect2indel = "${bam_input}_muTect2indel";
+    my $intervals = $def->{muTect2_intervals};
+    if(!defined $intervals){
+      $intervals = $def->{target_intervals_file};
+    }
     $config->{$mutect2indel} = {
       class        => "GATK4::MuTect2indel",
       perform      => 1,
       option       => getValue( $def, "muTect2_option" ),
-      java_option  => "-Xmx40g",
       init_command => $def->{muTect2_init_command},
       target_dir   => "${target_dir}/$mutect2indel",
       germline_resource => $def->{germline_resource},
       panel_of_normals => $def->{panel_of_normals},
-      intervals => $def->{muTect2_intervals},
+      intervals => $intervals,
       interval_padding => $def->{muTect2_interval_padding},
       source_ref   => [ $bam_input, ".bam\$" ],
       groups_ref   => "groups",
@@ -1168,13 +1205,14 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       ERC_mode     => $def->{mutect2_ERC_mode},
       sh_direct    => 0,
       pbs          => {
-        "email"    => $email,
         "nodes"    => "1:ppn=1",
-        "walltime" => "24",
-        "mem"      => "40gb"
+        "walltime" => getValue($def, "mutect2_walltime", "24"),
+        "mem"      => getValue($def, "mutect2_memory", "40gb"),
       },
     };
     push @$summary, $mutect2indel;
+
+    add_unique_r($config, $def, $summary, $target_dir, $mutect2indel . "_summary", "../QC/QCUtils.r,../QC/VcfChromosome.r", ".chromosome.png", [[$mutect2indel, ".chromosome.count"]] );
 
     my $mutect2indel_merge = $mutect2indel . "_merge";
     $config->{$mutect2indel_merge} = {

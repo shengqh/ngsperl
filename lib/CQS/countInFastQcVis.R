@@ -18,7 +18,7 @@ library(cowplot)
 #countInFastQcTrim2<-"/scratch/cqs/zhaos/vickers/20151017_3018-KCV-45-46/fastqc_post_remove/result/3018-KCV-45-46.FastQC.summary.reads.tsv"
 #resultFile<-"test"
 readCount<-function(fileName){
-  count1<-read.delim(fileName,header=T)
+  count1<-read.delim(fileName,header=T,check.names=F)
   count1<-count1[!duplicated(count1$Sample), ]
   rownames(count1)<-count1$Sample
   return(count1)

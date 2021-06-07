@@ -108,6 +108,16 @@ with open(summaryFile, "wt") as fout:
     fout.write("%s\t%d\n" % (sample, sample_count))
 
 rscript = os.path.realpath(__file__) + ".R"
-subprocess.call("R --vanilla -f " + rscript + " --args \"" + summaryFile + "\" \"" + taskReadFile + "\" \"" + summaryFile + "\"", shell=True)
+target_r = os.path.basename(rscript)
+with open(target_r, "wt") as fout:
+  fout.write("outFile='%s'\n" % summaryFile)
+  fout.write("parFile1='%s'\n" % summaryFile)
+  fout.write("parFile2='%s'\n" % taskReadFile)
+  fout.write("setwd('%s')\n\n" % os.path.dirname(os.path.realpath(outputFile)))
+  with open(rscript, "rt") as fin:
+    for line in fin:
+      fout.write(line)
+
+subprocess.call("R --vanilla -f " + target_r, shell=True)
 
 logger.info("done.")

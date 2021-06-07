@@ -1,3 +1,4 @@
+source("scRNA_func.r")
 
 library(data.table)
 
@@ -5,16 +6,33 @@ options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors =
 myoptions<-split(options_table$V1, options_table$V2)
 
 species=myoptions$species
-markerfile<-myoptions$markers_file
+markerfile<-myoptions$db_markers_file
+remove_subtype<-myoptions$remove_subtype
 annotate_tcell<-ifelse(myoptions$annotate_tcell == "0", FALSE, TRUE)
 HLA_panglao5_file<-myoptions$HLA_panglao5_file
 tcell_markers_file<-myoptions$tcell_markers_file
+assay=ifelse(myoptions$by_sctransform == "0", "RNA", "SCT")
 
-remove_subtype_of=ifelse(annotate_tcell, "T cells", "")
+remove_subtype_of=unlist(strsplit(remove_subtype, ",|;"))
+if(annotate_tcell){
+  remove_subtype_of=unique(c(remove_subtype_of, "T cells"))
+}
+remove_subtype_of=paste0(remove_subtype_of, collapse=";")
 
 data.norm=read.csv(parFile1, row.names=1,check.names = F)
 
 cell_activity_database<-read_cell_markers_file(markerfile, species, remove_subtype_of, HLA_panglao5_file)
+if("curated_markers_file" %in% names(myoptions)){
+  curated_markerfile<-myoptions$curated_markers_file
+  curated_markers_df<-read.table(curated_markerfile, sep="\t", header=F, stringsAsFactors=F)
+  curated_markers_celltype<-split(curated_markers_df$V2, curated_markers_df$V1)
+  cellType=cell_activity_database$cellType
+  for(cmct in names(curated_markers_celltype)){
+    cellType[[cmct]]=curated_markers_celltype[[cmct]]
+  }
+  weight=calc_weight(cellType)
+  cell_activity_database=list(cellType=cellType, weight=weight)
+}
 
 predict_celltype<-ORA_celltype(data.norm,cell_activity_database$cellType,cell_activity_database$weight)
 
@@ -53,7 +71,7 @@ if (annotate_tcell){
   cell_type$tcell_activity_database=tcell_activity_database
 }
 
-id_tbl$final_cell_type=new.cluster.ids
+id_tbl$cellactivity_clusters=new.cluster.ids
 write.csv(id_tbl, file=paste0(outFile, ".celltype.csv"), row.names=F)
 saveRDS(cell_type, file=paste0(outFile, ".celltype.rds"))
 
@@ -61,3 +79,22 @@ clusters=read.csv(parFile2, header=T, stringsAsFactors = F, row.names=1)
 clusters$cellactivity_clusters=new.cluster.ids[as.character(clusters$seurat_clusters)]
 clusters$seurat_cellactivity_clusters=paste0(clusters$seurat_clusters, " : ", clusters$cellactivity_clusters)
 write.csv(clusters, file=paste0(outFile, ".celltype_cluster.csv"))
+
+if(file.exists(parFile3)){
+  finalList=readRDS(parFile3)
+  obj=finalList$obj
+  
+  id_tbl$seurat_cellactivity_clusters = paste0(id_tbl$seurat_clusters, " : ", id_tbl$cell_type )
+  id_tbl$seurat_cellactivity_clusters=factor(id_tbl$seurat_cellactivity_clusters, levels=id_tbl$seurat_cellactivity_clusters)
+  idmap = split(id_tbl$seurat_cellactivity_clusters, id_tbl$seurat_clusters)
+  
+  obj$seurat_cellactivity_clusters = unlist(idmap[as.character(obj$seurat_clusters)])
+  cat("draw pictures ... ")
+  p1<-DimPlot(object = obj, reduction = 'umap', assay=assay, label=TRUE, group.by="seurat_cellactivity_clusters") + guides(colour = guide_legend(override.aes = list(size = 3), ncol=1))
+  p2<-DimPlot(object = obj, reduction = 'umap', assay=assay, label=FALSE, group.by="orig.ident")
+  width=6000
+  p=p1+p2
+  png(paste0(outFile, ".cluster.png"), width=width, height=3000, res=300)
+  print(p)
+  dev.off()
+}

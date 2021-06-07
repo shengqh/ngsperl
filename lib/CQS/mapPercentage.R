@@ -17,13 +17,13 @@ curSample<-samples[1]
 for (curSample in samples) {
   resFile<-paste0(curSample, ".csv")
   if(file.exists(resFile)){
-    df<-read.csv(resFile)
+    df<-read.csv(resFile,check.names=F, check.names=F)
   }else{
     curFiles<-readFiles[readFiles$V2==curSample, ]
     curFiles$Category<-"Nonhost"
     curFiles$Category[2]<-"Host smallRNA"
     curFiles$Category[3]<-"Host genome"
-    allReads<-read.table(curFiles[1,1], sep="\t", header=T, row.names=1)[,c("Count"),drop=F]
+    allReads<-read.table(curFiles[1,1], sep="\t", header=T, row.names=1, check.names=F)[,c("Count"),drop=F]
     allReads$Mapped<-"Unmapped"
     mapIndex<-3
     for (mapIndex in c(2:nrow(curFiles))){

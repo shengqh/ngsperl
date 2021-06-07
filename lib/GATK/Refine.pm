@@ -19,6 +19,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_rf";
+  $self->{_use_tmp_folder} = 1;
   bless $self, $class;
   return $self;
 }
@@ -140,16 +141,27 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
+    print $sh "if [[ ! -s $result_dir/$final_file_index ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
 
     my $log_desc = $cluster->get_log_description($log);
 
     my $rmlist       = "";
-    my $inputFile    = $sampleFile;
-    my $inputFileIndex    = "${sampleFile}.bai";
     my $resultPrefix = $sample_name;
+    my $inputFile    = $sample_files[0];
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file_index, $init_command, 0, $inputFile );
+
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files, [".bai"])};
+    $inputFile    = $sample_files[0];
+    my $inputFileIndex    = "${inputFile}.bai";
+
+    print $pbs "
+mkdir tmp_${sample_name}
+";
 
     if ( !$sorted ) {
       print $pbs "
@@ -168,9 +180,10 @@ fi
     if ( $remove_duplicate or $mark_duplicate ) {
       my $rmdupFileIndex = change_extension( $rmdupFile, ".bai" );
       print $pbs "
+
 if [[ (-s $inputFile) && (-s $inputFileIndex) && (! -s $rmdupFile) ]]; then
   echo MarkDuplicates=`date` 
-  java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=$removeDupLabel CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
+  java -Djava.io.tmpdir=`pwd`/tmp_${sample_name} $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=$removeDupLabel CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
 fi
 ";
       $inputFile = $rmdupFile;
@@ -184,13 +197,13 @@ fi
       print $pbs "
 if [[ (-s $inputFile) && (-s $inputFileIndex) && (! -s $indelFile) ]]; then
   echo RealignerTargetCreator=`date` 
-  java $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $inputFile -R $faFile $indel_vcf -o $intervalFile $restrict_intervals
+  java -Djava.io.tmpdir=`pwd`/tmp_${sample_name} $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $inputFile -R $faFile $indel_vcf -o $intervalFile $restrict_intervals
 fi
 
 if [[ (-s $intervalFile) && (! -s $indelFile) ]]; then
   echo IndelRealigner=`date` 
   #InDel parameter referenced: http://www.broadinstitute.org/gatk/guide/tagged?tag=local%20realignment
-  java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $fixMisencodedQuals -I $inputFile -R $faFile -targetIntervals $intervalFile $indel_vcf --consensusDeterminationModel USE_READS -LOD 0.4 -o $indelFile 
+  java -Djava.io.tmpdir=`pwd`/tmp_${sample_name} $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $fixMisencodedQuals -I $inputFile -R $faFile -targetIntervals $intervalFile $indel_vcf --consensusDeterminationModel USE_READS -LOD 0.4 -o $indelFile 
 fi  
 ";
       $inputFile = $indelFile;
@@ -204,12 +217,12 @@ fi
     print $pbs "
 if [[ (-s $inputFile) && (-s $inputFileIndex) && (! -s $recalTable) ]]; then
   echo BaseRecalibrator=`date` 
-  java $option -jar $gatk_jar -T BaseRecalibrator -nct $thread -rf BadCigar -R $faFile -I $inputFile $knownsitesvcf -o $recalTable $restrict_intervals
+  java -Djava.io.tmpdir=`pwd`/tmp_${sample_name} $option -jar $gatk_jar -T BaseRecalibrator -nct $thread -rf BadCigar -R $faFile -I $inputFile $knownsitesvcf -o $recalTable $restrict_intervals
 fi
 
 if [[ (-s $recalTable) && (! -s $recalFile) ]]; then
   echo PrintReads=`date`
-  java $option -jar $gatk_jar -T PrintReads --simplifyBAM -nct $thread -rf BadCigar -R $faFile -I $inputFile -BQSR $recalTable -o $recalFile 
+  java -Djava.io.tmpdir=`pwd`/tmp_${sample_name} $option -jar $gatk_jar -T PrintReads --simplifyBAM -nct $thread -rf BadCigar -R $faFile -I $inputFile -BQSR $recalTable -o $recalFile 
 fi
 ";
     if ($baq) {
@@ -224,12 +237,28 @@ fi
     }
 
     print $pbs "
-if [[ (-s $final_file) && (-s $final_file_index) && (! -s ${final_file}.stat) ]]; then 
-  echo flagstat = `date` 
-  samtools flagstat $final_file > ${final_file}.stat 
+if [[ (-s $final_file) && (-s $final_file_index) ]]; then
+  ln $final_file_index ${final_file}.bai
+
+  if [[ ! -s ${final_file}.stat ]]; then 
+    echo flagstat = `date` 
+    samtools flagstat $final_file > ${final_file}.stat 
+  fi
+
+  if [[ ! -s ${final_file}.chromosome.count ]]; then 
+    echo flagstat = `date` 
+    samtools idxstats $final_file > ${final_file}.chromosome.count 
+  fi
+
   rm $rmlist 
 fi
+
+rm -rf tmp_${sample_name}
+
 ";
+
+    $self->clean_temp_files($pbs, $localized_files);
+
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
@@ -328,6 +357,7 @@ sub result {
     my @result_files = ();
     push( @result_files, "${result_dir}/${final_file}" );
     push( @result_files, "${result_dir}/${bai_file}" );
+    push( @result_files, "${result_dir}/${final_file}.chromosome.count" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;

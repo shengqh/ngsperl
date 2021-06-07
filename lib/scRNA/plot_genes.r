@@ -1,14 +1,22 @@
 
+source("scRNA_func.r")
+
 library(Seurat)
 library(ggplot2)
 library(patchwork)
+
+options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+
+assay=ifelse(myoptions$by_sctransform == "0", "RNA", "SCT")
+celltype_name=myoptions$celltype_name
+cluster_name=myoptions$cluster_name
+samples=myoptions$samples
 
 finalList<-readRDS(parFile1)
 geneFile<-parFile2
 
 obj<-finalList$obj
-
-assay=ifelse("SCT" %in% names(obj@assays), "SCT", "RNA")
 
 celltypes<-read.table(geneFile, sep="\t", header=T, stringsAsFactors = F)
 celltypes$Gene<-gsub("\\s.+", "", celltypes$Gene)
@@ -23,21 +31,17 @@ allgenes<-allgenes[order(allgenes)]
 writeLines(allgenes, con="all_genes.txt")
 
 clusterDf<-read.csv(parFile3, stringsAsFactors = F, row.names=1)
+
+cts=cluster_to_cell_type(clusterDf)
+
+cts<-sort_cell_type(cts, celltype_name)
+
 clusterDf<-clusterDf[colnames(obj),]
 clusterDf$sample<-obj$orig.ident
 
-clusters<-clusterDf[,cluster_name]
+obj$final_seurat_clusters<-factor(clusterDf[,cluster_name], levels=cts[,cluster_name])
 
-caCount<-table(clusters)
-clusterDf$caCount<-caCount[clusters]
-
-clusterDf<-clusterDf[order(-clusterDf$caCount, clusterDf[,cluster_name]),]
-
-clusters<-factor(clusters, levels=unique(clusterDf[,cluster_name]))
-
-obj$final_seurat_clusters<-clusters
-
-if (exists("samples")){
+if (!is.null(samples) && samples !=""){
   sample_idents = unlist(strsplit(samples, ";"))
   sample_cells<-rownames(clusterDf)[clusterDf$sample %in% sample_idents]
   obj=subset(obj, cells=sample_cells)
@@ -45,6 +49,7 @@ if (exists("samples")){
 
 ct<-unique(celltypes$Celltype)[1]
 for(ct in unique(celltypes$Celltype)){
+  cat(ct, "\n")
   subcelltypes<-celltypes[celltypes$Celltype==ct,]
   expressedGenes<-toupper(unique(subcelltypes$Gene[subcelltypes$Status=="expressed"]))
   absentGenes<-toupper(unique(subcelltypes$Gene[subcelltypes$Status=="absent"]))

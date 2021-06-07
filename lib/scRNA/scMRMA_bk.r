@@ -150,7 +150,7 @@ get_annotation_normdata <- function(data.norm, species,db="panglaodb",p=0.05){
 finalList<-readRDS(parFile1)
 obj<-finalList$obj
 
-data.norm<-read.csv(parFile2, header=T, row.names=1)
+data.norm<-read.csv(parFile2, header=T, row.names=1, check.names=F)
 colnames(data.norm)<-gsub("Cluster","",colnames(data.norm))
 
 options_table<-read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)

@@ -1033,7 +1033,11 @@ sub get_group_sample_map {
     my @samples = @{ $groups->{$group_name} };
     my @gfiles  = ();
     foreach my $sample_name (@samples) {
-      my @bam_files = @{ $raw_files->{$sample_name} };
+      my $sample_files = $raw_files->{$sample_name};
+      if(!defined $sample_files){
+        die "Cannot find file of $sample_name for group $group_name";
+      }
+      my @bam_files = @$sample_files;
       my @sambam    = ( $sample_name, @bam_files );
       push( @gfiles, \@sambam );
     }
@@ -1797,8 +1801,12 @@ sub get_groups_by_pattern_dic {
 }
 
 sub get_groups_by_pattern_value {
-  my ($def) = @_;
-  my $gpattern = $def->{groups_pattern};
+  my ($def, $gpattern) = @_;
+  
+  if(!defined $gpattern){
+    $gpattern = $def->{groups_pattern};
+  }
+
   my $files = $def->{files};
 
   my @samplenames = ();
@@ -1822,6 +1830,12 @@ sub get_groups_by_pattern_value {
     my $groupname = $samplename;
     if($samplename =~ /$gpattern/){
       $groupname = $1;
+      if(defined $2){
+        $groupname = $groupname . $2;
+      }
+      if(defined $3){
+        $groupname = $groupname . $3;
+      }
     }
     #print($groupname . " : " . $samplename . "\n");
     if (not defined $groups->{$groupname}){
@@ -1835,11 +1849,30 @@ sub get_groups_by_pattern_value {
   return ($groups);
 }
 
+sub get_groups_by_pattern_array {
+  my ($def) = @_;
+  my $gpatterns = $def->{groups_pattern};
+  my $files = $def->{files};
+
+  my @samplenames = (keys %$files);
+  
+  #print($gpattern);
+  #print(Dumper($files));
+  my $groups = {};
+  for my $gpattern (@$gpatterns){
+    my $subgroups = get_groups_by_pattern_value($def, $gpattern);
+    $groups = merge_hash_right_precedent($groups, $subgroups);
+  }
+  return($groups);
+}
+
 sub get_groups_by_pattern {
   my ($def) = @_;
   my $gpattern = $def->{groups_pattern};
-  if (ref $gpattern eq 'HASH'){
+  if (is_hash($gpattern)){
     return(get_groups_by_pattern_dic($def));
+  }elsif (is_array($gpattern)){
+    return(get_groups_by_pattern_array($def));
   }else{
     return(get_groups_by_pattern_value($def));
   }

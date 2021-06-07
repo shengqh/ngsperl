@@ -2,9 +2,9 @@
 library(ggplot2)
 library(reshape2)
 
-microbial<-read.delim(parFile2, header=T, row.names=1)
+microbial<-read.delim(parFile2, header=T, row.names=1,check.names=F)
 
-all<-read.csv(parFile1, row.names=1)
+all<-read.csv(parFile1, row.names=1,check.names=F)
 all<-data.frame(t(all))
 all$all<-rowSums(all)
 all$Host<-(all$Host.Small.RNA + all$Mapped.to.Host.Genome) / all$all * 100

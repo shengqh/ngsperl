@@ -123,7 +123,7 @@ for (comparison in comparisons){
     #geneExpression<-read.csv(deseq2VsdFile, header=T, row.names=1, stringsAsFactors = F)
     geneExpression<-readFilesAndFormat(deseq2VsdFile)
     
-    designData<-read.delim(deseq2DesignFile, header=T,  stringsAsFactors = F)
+    designData<-read.delim(deseq2DesignFile, header=T,  stringsAsFactors = F,check.names=F)
     conditionColors=as.matrix(data.frame(Group=c("red", "blue")[as.factor(designData[,2])]))
     gnames=levels(as.factor(designData[,2]))
     

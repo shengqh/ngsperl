@@ -1,10 +1,10 @@
+
 library(ggplot2)
 library(reshape2)
 
-args = commandArgs(trailingOnly=TRUE)
-countFile = args[1]
-taskReadFile = args[2]
-outputFilePrefix = args[3]
+countFile = parFile1
+taskReadFile = parFile2
+outputFilePrefix = outFile
 
 #countFile = "/scratch/cqs/kasey_vickers_projects/20191112_smallRNA_3018-KCV_76_mouse_v4_tRNA_byTiger/data_visualization/bacteria_count/result/HDL_76.tsv.summary"
 #taskReadFile = "/scratch/cqs/kasey_vickers_projects/20191112_smallRNA_3018-KCV_76_mouse_v4_tRNA_byTiger/data_visualization/reads_in_tasks/result/HDL_76.NonParallel.TaskReads.csv"
@@ -12,8 +12,8 @@ outputFilePrefix = args[3]
 
 options(bitmapType='cairo')
 
-counts <- read.table(countFile, sep="\t", header=T, row.names=1)
-taskCounts <- data.frame(t(read.csv(taskReadFile, header=T, row.names=1, stringsAsFactor=F)))
+counts <- read.table(countFile, sep="\t", header=T, row.names=1, check.names=F)
+taskCounts <- data.frame(t(read.csv(taskReadFile, header=T, row.names=1, stringsAsFactor=F, check.names=F)))
 
 totalCounts<-rowSums(taskCounts)
 counts$HostSmallRNA<-taskCounts[rownames(counts), "Host.Small.RNA"]
@@ -72,5 +72,3 @@ dev.off()
 png(file=paste0(outputFilePrefix, ".png"), width=max(4000, nrow(counts) * 100), height=3200, res=300)
 print(p)
 dev.off()
-
-

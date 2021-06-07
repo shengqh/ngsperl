@@ -12,6 +12,7 @@ use CQS::NGSCommon;
 use CQS::StringUtils;
 use CQS::Fasta;
 use CQS::GroupTask;
+use Data::Dumper;
 
 our @ISA = qw(CQS::GroupTask);
 
@@ -21,6 +22,7 @@ sub new {
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_mt";
   $self->{_docker_prefix} = "mutect_";
+  $self->{_use_tmp_folder} = 1;
   bless $self, $class;
   return $self;
 }
@@ -41,7 +43,13 @@ sub perform {
 
   my $java = get_java( $config, $section );
 
-  my $java_option = get_option( $config, $section, "java_option", "" );
+  my $intervals = get_param_file( $config->{$section}{intervals}, "intervals", 0 );
+  my $restrict_intervals = "";
+  if ( defined $intervals and ($intervals ne "") ) {
+    $option = $option . " -L $intervals";
+  }
+
+  my $java_option = get_option( $config, $section, "java_option", "-Xmx" . lc($memory) );
 
   my %group_sample_map = %{ get_group_sample_map( $config, $section ) };
 
@@ -59,6 +67,8 @@ sub perform {
       die "SampleFile should be normal,tumor paired.";
     }
 
+    #print(Dumper(@sample_files));
+
     my $normal = $sample_files[0][1];
     my $tumor  = $sample_files[1][1];
 
@@ -66,16 +76,31 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $group_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
     my $out_file = "${group_name}.somatic.out";
     my $vcf      = "${group_name}.somatic.vcf";
     my $passvcf  = "${group_name}.somatic.pass.vcf";
     my $final = "${group_name}.somatic.pass.vcf.gz";
 
+    print $sh "
+if [[ ( ! -s $result_dir/$group_name/${final}.tbi ) && ( -s $normal ) && ( -s $tumor ) ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+
+";
+
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final, $init_command );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, "${final}.tbi", $init_command );
+
+    my $localized_files = [];
+    my $actual_files = $self->localize_files_in_tmp_folder($pbs, [$normal, $tumor], $localized_files, [".bai"]);
+    $normal = $actual_files->[0];
+    $tumor = $actual_files->[1];
+
+    print $pbs "
+mkdir tmp_${group_name}
+";
+
     print $pbs "
 if [ ! -s ${normal}.bai ]; then
   samtools index ${normal}
@@ -86,7 +111,7 @@ if [ ! -s ${tumor}.bai ]; then
 fi
 
 if [ ! -s $vcf ]; then
-  $java $java_option -jar $muTect_jar --analysis_type MuTect $option --reference_sequence $faFile $cosmicOption $dbsnpOption --input_file:normal $normal --input_file:tumor $tumor -o $out_file --vcf $vcf --enable_extended_output
+  $java -Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option -jar $muTect_jar --analysis_type MuTect $option --reference_sequence $faFile $cosmicOption $dbsnpOption --input_file:normal $normal --input_file:tumor $tumor -o $out_file --vcf $vcf --enable_extended_output
 fi 
 
 if [[ -s $vcf && ! -s $passvcf ]]; then
@@ -100,7 +125,7 @@ if [[ -s $vcf && ! -s $passvcf ]]; then
     grep -v \"^#\" $vcf | cut -f9- > ${vcf}.second
     paste ${vcf}.first_lod ${vcf}.second | grep -v \"^#CHROM\" | grep -v REJECT >> $passvcf
     rm ${out_file}.lod ${vcf}.first ${vcf}.first_lod ${vcf}.second
-    grep -v \"^#\" $passvcf | cut -f1 | uniq -c | awk '{print \$2\"\\t\"\$1}' > ${passvcf}.chromosome
+    grep -v \"^#\" $passvcf | cut -f1 | uniq -c | awk '{print \$2\"\\t\"\$1}' > ${passvcf}.chromosome.count
     
   else
     grep -v REJECT $vcf > $passvcf
@@ -112,8 +137,12 @@ if [[ -s $passvcf && ! -s $final ]]; then
   tabix $final
   rm ${passvcf}.idx
 fi
+
+rm -rf tmp_${group_name}
 "
 ;
+
+    $self->clean_temp_files($pbs, $localized_files);
 
     $self->close_pbs( $pbs, $pbs_file );
 
@@ -141,6 +170,7 @@ sub result {
     my $cur_dir      = $result_dir . "/$group_name";
     push( @result_files, "$cur_dir/${group_name}.somatic.pass.vcf.gz" );
     push( @result_files, "$cur_dir/${group_name}.somatic.vcf" );
+    push( @result_files, "$cur_dir/${group_name}.somatic.pass.vcf.chromosome.count" );
     $result->{$group_name} = filter_array( \@result_files, $pattern );
   }
   return $result;

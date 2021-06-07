@@ -25,6 +25,7 @@ our %EXPORT_TAGS = (
       addSomaticCNV
       addHaplotypecaller
       addCollectAllelicCounts
+      addEncodeATACseq
     )
   ]
 );
@@ -617,6 +618,89 @@ sub addCollectAllelicCounts {
 
   print(Dumper($config->{$task}));
   push @$individual, $task;
+  return ($task);
+}
+
+sub addEncodeATACseq {
+  my ($config, $def, $individual, $target_dir, $files_ref) = @_;
+
+  my $fastq_1 = "fastq_1";
+  $config->{$fastq_1} = {     
+    "class" => "CQS::FilePickTask",
+    "source_ref" => $files_ref,
+    "sample_index" => 0, 
+  };
+  
+  my $fastq_2 = "fastq_2";
+  $config->{$fastq_2} = {     
+    "class" => "CQS::FilePickTask",
+    "source_ref" => $files_ref,
+    "sample_index" => 1, 
+  };
+  
+  my $server_key = getValue($def, "wdl_key", "local");
+  my $pipeline_key = "encode_atacseq";
+  my $wdl = $def->{"wdl"};
+  my $server = $wdl->{$server_key};
+  my $pipeline = $server->{$pipeline_key};
+
+  my $task = $pipeline_key;
+  $config->{$task} = {     
+    "class" => "CQS::Wdl",
+    "option" => "--no-build-singularity",
+    "target_dir" => "${target_dir}/$pipeline_key",
+    "source_ref" => $files_ref,
+    "singularity_image_files_ref" => ["singularity_image_files"],
+    "cromwell_jar" => $wdl->{"cromwell_jar"},
+    "input_option_file" => $wdl->{"cromwell_option_file"},
+    "cromwell_config_file" => $server->{"cromwell_config_file"},
+    "wdl_file" => $pipeline->{"wdl_file"},
+    "input_json_file" => $pipeline->{"input_file"},
+    "input_parameters" => {
+      "atac.title" => "SAMPLE_NAME",
+      "atac.description" => "SAMPLE_NAME",
+      "atac.genome_tsv" => getValue($def, "encode_atacseq_genome_tsv"),
+      "atac.paired_end" => is_paired_end($def) ? "true" : "false",
+      "atac.adapter" => getValue($def, "adapter", ""),
+      "atac.fastqs_rep1_R1_ref" => [$fastq_1],
+      "atac.fastqs_rep1_R2_ref" => [$fastq_2]
+    },
+    output_to_same_folder => 0,
+    cromwell_finalOutputs => 0,
+    check_output_file_pattern => "metadata.json",
+    output_file_ext => "atac/",
+    use_caper => 1,
+    pbs=> {
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "12",
+      "mem"       => "40gb"
+    },
+  };
+  push @$individual, $task;
+
+  my $croo_task = $task . "_croo";
+  $config->{$croo_task} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => "${target_dir}/$croo_task",
+    interpretor => "python3",
+    program => "../Chipseq/croo.py",
+    option => "-n __NAME__ --croo " . getValue($def, "croo", "croo") . " --out_def_json " . getValue($def, "croo_out_def_json"),
+    source_arg => "-i",
+    source_ref => [$task],
+    output_arg => "-o",
+    output_file_prefix => "",
+    output_file_ext => "__NAME__/peak/overlap_reproducibility/overlap.optimal_peak.narrowPeak.gz",
+    output_to_same_folder => 1,
+    can_result_be_empty_file => 0,
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push @$individual, $croo_task;
+
   return ($task);
 }
 

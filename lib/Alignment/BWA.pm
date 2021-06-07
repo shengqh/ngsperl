@@ -21,6 +21,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_bwa";
+  $self->{_use_tmp_folder} = 1;
   $self->init_docker_prefix(__PACKAGE__);
   bless $self, $class;
   return $self;
@@ -90,8 +91,6 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sample_file_0 = $sample_files[0];
-    my $sample_files_str = ( scalar(@sample_files) == 2 ) ? "\"" . $sample_file_0 . "\" \"" . $sample_files[1] . "\"" : "\"" . $sample_file_0 . "\"";
 
     my $unsorted_bam_file = $sample_name . ".unsorted.bam";
     my $bam_stat = $sample_name . ".bamstat";
@@ -129,13 +128,24 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
     my $log_desc = $cluster->get_log_description($log);
 
     my $final_file =  $mark_duplicates ? $rmdup_bam_file : $sorted_bam_file;
     my $check_file = $sortByCoordinate? ($mark_duplicates?$rmdup_bam_file_index:$sorted_bam_file_index) :$final_file;
+
+    my $sample_file_0 = $sample_files[0];
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $check_file, $init_command, 0, $sample_file_0 );
+
+    print $sh "
+if [[ ! -s $result_dir/$final_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
+
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files)};
+    $sample_file_0 = $sample_files[0];
+    my $sample_files_str = ( scalar(@sample_files) == 2 ) ? "\"" . $sample_file_0 . "\" \"" . $sample_files[1] . "\"" : "\"" . $sample_file_0 . "\"";
 
     print $pbs "
 if [[ ! -s $unsorted_bam_file ]]; then
@@ -174,6 +184,8 @@ fi
 ";
       }
 
+      $self->clean_temp_files($pbs, $localized_files);
+
       $self->close_pbs( $pbs, $pbs_file );
       next;
     }
@@ -195,7 +207,7 @@ fi
         print $pbs "    
 if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
   echo sort_bam=`date`
-  sambamba sort -m $sort_memory $sambamba_sort_thread --tmpdir tmp -o $sorted_bam_file $unsorted_bam_file
+  sambamba sort -m $sort_memory $sambamba_sort_thread --tmpdir tmp_${sample_name} -o $sorted_bam_file $unsorted_bam_file
 fi
 
 if [[ (-s $sorted_bam_file) && ((1 -eq \$1) || (! -s ${sorted_bam_file}.bai)) ]]; then
@@ -210,7 +222,7 @@ $chromosome_grep_command
         print $pbs "    
 if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
   echo sort_bam=`date`
-  samtools sort -m $sort_memory $samtools_sort_thread -T $sample_name -o $sorted_bam_file $unsorted_bam_file
+  samtools sort -m $sort_memory $samtools_sort_thread -T /tmp/bwa_${sample_name} -o $sorted_bam_file $unsorted_bam_file
 fi
 
 if [[ (-s $sorted_bam_file) && ((1 -eq \$1) || (! -s ${sorted_bam_file}.bai)) ]]; then
@@ -236,7 +248,7 @@ fi
         print $pbs "    
 if [[ (-s $unsorted_bam_file) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
   echo sort_bam=`date`
-  samtools sort -m $sort_memory $samtools_sort_thread -n -o $sorted_bam_file $unsorted_bam_file
+  samtools sort -m $sort_memory $samtools_sort_thread -T /tmp/bwa_${sample_name} -n -o $sorted_bam_file $unsorted_bam_file
 fi
 ";
       }
@@ -276,11 +288,13 @@ fi
 
   if ($rmlist ne "") {
     print $pbs "
-if [[ -s $check_file ]]; then
-  rm $rmlist
+if [[ -s $check_file && -s $bam_stat ]]; then
+  rm $rmlist tmp_${sample_name}
 fi
 ";
   }
+
+    $self->clean_temp_files($pbs, $localized_files);
 
     $self->close_pbs( $pbs, $pbs_file );
   }

@@ -46,9 +46,9 @@ sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
 positionRawAllSamples<-NULL
 for (i in 1:nrow(sampleTotRNAPositionFile)) {
 
-	positionRaw<-read.delim(sampleTotRNAPositionFile[i,1],header=T,as.is=T)
+	positionRaw<-read.delim(sampleTotRNAPositionFile[i,1],header=T,as.is=T,check.names=F)
 	bamInfoFile<-gsub(".tRNA.position$",".info",sampleTotRNAPositionFile[i,1])
-	bamInfo<-read.delim(bamInfoFile,header=F,as.is=T,row.names=1)
+	bamInfo<-read.delim(bamInfoFile,header=F,as.is=T,row.names=1,check.names=F)
 	totalReads<-as.integer(bamInfo["MappedReads",1]) #normlize by total mapped reads
 	
 	#positionRaw$Group<-sampleToGroup[row.names(sampleTotRNAPositionFile)[i],1]
@@ -145,7 +145,7 @@ if (is.na(tRNASigFileList) | tRNASigFileList=="") {
 	for (i in 1:nrow(tRNASigFiles)) {
 		tRNASigFileEach<-tRNASigFiles[i,1]
 		if (file.exists(tRNASigFileEach)) {
-			tRNASig<-read.csv(tRNASigFileEach,header=T,row.names=1)
+			tRNASig<-read.csv(tRNASigFileEach,header=T,row.names=1, check.names=F)
 		} else {
 			tRNASig<-matrix(NA,ncol=0,nrow=0)
 		}

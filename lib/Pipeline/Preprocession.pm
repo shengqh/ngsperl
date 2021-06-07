@@ -110,20 +110,27 @@ sub addFastqLen {
   my $fastq_len_dir = $parentFolder . "/" . getNextFolderIndex($def) . $fastqLenName;
   my $fastq_len     = {
     "$fastqLenName" => {
-      class      => "CQS::FastqLen",
-      perform    => 1,
+      class => "CQS::ProgramWrapperOneToOne",
       target_dir => $fastq_len_dir,
-      option     => "",
+      #option => "-c",
+      option => "",
+      use_tmp_folder => 1,
+      suffix  => "_flen",
+      interpretor => "python3",
+      program => "../QC/fastq_len.py",
+      source_arg => "-i",
       source_ref => $source_ref,
-      sh_direct  => 1,
-      cluster    => $cluster,
-      pbs        => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
+      output_arg => "-o",
+      output_file_prefix => ".len",
+      output_file_ext => ".len",
+      output_to_same_folder => 1,
+      can_result_be_empty_file => 0,
+      sh_direct   => 0,
+      pbs => {
         "nodes"     => "1:ppn=1",
-        "walltime"  => "23",
-        "mem"       => "20gb"
-      },
+        "walltime"  => "2",
+        "mem"       => "10gb"
+      }
     },
     "${fastqLenName}_vis" => {
       class                    => "CQS::UniqueR",
@@ -292,6 +299,8 @@ sub getPreprocessionConfig {
       R          => getValue($def, "R", "R"),
       Rscript    => getValue($def, "Rscript", "Rscript"),
       R_LIBS     => $def->{"R_LIBS"},
+      localize_to_local_folder => getValue($def, "localize_to_local_folder", 0),
+      use_tmp_folder => getValue($def, "use_tmp_folder", 0),
     },
     files                => $def->{files},
     groups               => $def->{groups},

@@ -15,7 +15,7 @@ files=read.table(inputFile, sep="\t", stringsAsFactor=F)
 dat=apply(files, 1, function(x){
   dname=x[[2]]
   dfile=x[[1]]
-  dd=read.csv(dfile)
+  dd=read.csv(dfile, check.names=F)
   table(dd$HTO.global)
 })
 colnames(dat)=files$V2
@@ -39,7 +39,7 @@ if (hasNameMap) {
 dat=apply(files, 1, function(x){
   dname=x[[2]]
   dfile=x[[1]]
-  dd=read.csv(dfile, stringsAsFactors=F)
+  dd=read.csv(dfile, stringsAsFactors=F, check.names=F)
   dd$HTO.final=dd$HTO.global
   dd$HTO.final[dd$HTO.global=="Singlet"] = dd$HTO[dd$HTO.global=="Singlet"]
   dt=data.frame(table(dd$HTO.final), stringsAsFactors=F)

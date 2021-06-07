@@ -54,6 +54,7 @@ if (parSampleFile1 != ""){
   treads$Sample=rownames(treads)
 
   meltreads=melt(treads, id="Sample", variable.name="Read", value.name="Count")
+  meltreads$Read<-factor(meltreads$Read, levels=c("Multiple", "Unmapped", "Unique"))
 
   width=max(2000, 50 * nrow(treads))
   png(file=paste0(outFile, ".reads.png"), height=1500, width=width, res=300)

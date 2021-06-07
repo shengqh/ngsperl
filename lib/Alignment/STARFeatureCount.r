@@ -1,7 +1,13 @@
+source("AlignmentUtils.r")
+
 options(bitmapType='cairo')
 
 library(reshape2)
 library(ggplot2)
+
+if (parSampleFile3 != '') {
+  draw_chromosome_count(parSampleFile3, outFile)
+}
 
 if (parSampleFile1 != '') {
   outputPrefix = paste0(outFile, ".STARSummary")
