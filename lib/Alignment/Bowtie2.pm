@@ -128,7 +128,17 @@ if [ -s $bam_file ]; then
   fi
 fi
 ";
+    } else { #prepare to do flagstat if not mark_duplicates
+      $final_file=$bam_file;
     }
+
+    print $pbs "
+if [[ (-s $final_file) ]]; then
+  echo flagstat=`date` 
+  samtools flagstat $final_file > ${final_file}.stat 
+fi
+";
+
 
     $self->clean_temp_files($pbs, $localized_files);
 
