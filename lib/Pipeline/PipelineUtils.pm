@@ -1353,14 +1353,13 @@ symlink ( $mothurTrainsetTaxFile, "$target_dir/$taskName/result/trainset16_02201
 #my $stability_batch = "$target_dir/$taskName/result/stability.files";
 my $sampleToFiles = "$target_dir/$taskName/result/$projectName.files";
 
-  #make a samplt to file table
-  open FILES,">$sampleToFiles";
-  for my $sample_name ( sort keys %{$config->{$files}} ) {
-    my @sample_files = @{ $config->{$files}->{$sample_name} };
-    print FILES $sample_name."\t".$sample_files[0]."\t".$sample_files[1]."\n";
-  }
-
-
+#make a sample to file table
+open FILES,">$sampleToFiles";
+for my $sample_name ( sort keys %{$config->{$files}} ) {
+  my @sample_files = @{ $config->{$files}->{$sample_name} };
+  print FILES $sample_name."\t".$sample_files[0]."\t".$sample_files[1]."\n";
+}
+close(FILES);
 
 open CODESIN,"<$mothurPipelineCodeFile";
 open CODESOUT,">$mothurPipelineCodeFileOut";
@@ -2090,7 +2089,7 @@ sub add_BWA_and_summary {
   add_BWA($config, $def, $tasks, $target_dir, $bwa, $source_ref, $rg_name_regex); 
 
   my $bwa_summary = "bwa_summary";
-  add_BWAsummary($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex); 
+  add_BWA_summary($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex); 
 
   return( [$bwa, ".bam\$"], $bwa);
 }

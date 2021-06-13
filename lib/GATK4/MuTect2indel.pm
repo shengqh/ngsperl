@@ -137,7 +137,10 @@ fi
       $sample_param = "-I $tumor -tumor $tumor_name -I $normal -normal $normal_name";
     }
 
-    print $pbs "$init_command \n";
+    print $pbs "$init_command 
+
+mkdir tmp_${group_name}    
+";
 
     if ( $sampleCount == 2 ) {
       print $pbs "
@@ -154,7 +157,7 @@ fi
 
 if [ ! -s $vcf ]; then
   echo calling variation ...
-  gatk Mutect2 --java-options \"$java_option\" $option \\
+  gatk --java-options \"-Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option\" Mutect2 $option \\
     -R $faFile \\
     $sample_param \\
     -ERC $ERC_mode \\
@@ -173,7 +176,7 @@ fi
 
 if [[ -s $vcf && ! -s $passvcf ]]; then
   echo filtering pass ...
-  gatk SelectVariants --java-options \"$java_option\" \\
+  gatk --java-options \"-Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option\" SelectVariants \\
     --exclude-filtered \\
     -V $vcf \\
     -O $passvcf
@@ -181,13 +184,13 @@ fi
 
 if [[ -s $passvcf && ! -s $indelPass ]]; then
   echo filtering snp ...
-  gatk SelectVariants --java-options \"$java_option\" \\
+  gatk --java-options \"-Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option\" SelectVariants \\
     -select-type SNP \\
     -V $passvcf \\
     -O $snpPass
 
   echo filtering indel ...
-  gatk SelectVariants --java-options \"$java_option\" \\
+  gatk --java-options \"-Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option\" SelectVariants \\
     -select-type INDEL \\
     -V $passvcf \\
     -O $indelPass

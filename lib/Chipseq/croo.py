@@ -1,9 +1,7 @@
 import argparse
-import sys
+import glob
 import logging
 import os
-import csv
-import gzip
   
 DEBUG=False
 NotDEBUG=not DEBUG
@@ -14,12 +12,16 @@ parser = argparse.ArgumentParser(description="Perform croo to retrive wdl result
 parser.add_argument('-i', '--input', action='store', nargs='?', help='Input wdl result folder', required=NotDEBUG)
 parser.add_argument('-n', '--name', action='store', nargs='?', help='Input sample name', required=NotDEBUG)
 parser.add_argument('-o', '--output', action='store', nargs='?', help="Output folder", required=NotDEBUG)
+parser.add_argument('--croo', action='store', nargs='?', default="croo", help='Input croo command', required=NotDEBUG)
+parser.add_argument('--out_def_json', action='store', nargs='?', default="croo", help='Input output definition JSON file for a WDL file', required=NotDEBUG)
 
 args = parser.parse_args()
 if DEBUG:
-  args.input = "/scratch/jbrown_lab/shengq2/projects/20200720_chipseq_GSE140641_mouse/Encode/result/H3K27ac_activated/chip"
-  args.name = "H3K27ac_activated"
-  args.output = "/scratch/jbrown_lab/shengq2/projects/20200720_chipseq_GSE140641_mouse/croo/result/H3K27ac_activated"
+  args.input = "/workspace/shengq2/20210522_atacseq_6314_human_encode/encode_atacseq/result/IFNg_Rep_1/atac"
+  args.name = "IFNg_Rep_1"
+  args.output = "/workspace/shengq2/20210522_atacseq_6314_human_encode/encode_atacseq_croo/result/IFNg_Rep_1"
+  args.croo = "singularity exec -c -B /gpfs52/data:/data,/workspace -e /data/cqs/softwares/singularity/cqs_encode.sif croo"
+  args.out_def_json = "/data/cqs/softwares/encode/atac-seq-pipeline/atac.croo.v5.json"
 
 logger = logging.getLogger('croo')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
@@ -32,25 +34,14 @@ if len(metafiles) > 1:
 elif len(metafiles) == 0:
   raise Exception("No metadata.json found: %s" % args.input)
 
-cmd = "croo --out-dir %s %s" % (args.output, metafiles[0])
+cmd = "%s --method copy --out-dir %s %s" % (args.croo, args.output, metafiles[0])
 logger.info(cmd)
 os.system(cmd)
 
-rep1bam = "%s/align/rep1/%s.nodup.bam" % (args.output, args.name)
-ctl1bam = "%s/align/ctl1/input.nodup.bam" % (args.output)
-peak = "%s/peak/overlap_reproducibility/overlap.optimal_peak.narrowPeak.gz" % args.output
+bamfiles = glob.glob(args.output + "/**/*.bam", recursive = True)
+for bamfile in bamfiles:
+  cmd = "samtools index %s " % bamfile
+  logger.info(cmd)
+  os.system(cmd)
 
-cmd = "samtools index %s" % rep1bam
-logger.info(cmd)
-os.system(cmd)
-
-cmd = "samtools index %s" % ctl1bam
-logger.info(cmd)
-os.system(cmd)
-
-cmd = "gunzip -c %s > %s.bed" % (peak, peak)
-logger.info(cmd)
-os.system(cmd)
-
-logger.info("done.")
-
+logger.info("done")

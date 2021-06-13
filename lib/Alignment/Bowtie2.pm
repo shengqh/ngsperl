@@ -120,7 +120,7 @@ fi
       print $pbs "
 if [ -s $bam_file ]; then
   echo RemoveDuplicate=`date` 
-  java $option -jar $picard_jar MarkDuplicates I=$bam_file O=$final_file ASSUME_SORTED=true REMOVE_DUPLICATES=false VALIDATION_STRINGENCY=SILENT M=${final_file}.metrics
+  java -jar $picard_jar MarkDuplicates I=$bam_file O=$final_file ASSUME_SORTED=true REMOVE_DUPLICATES=false VALIDATION_STRINGENCY=SILENT M=${final_file}.metrics
   if [ -s $final_file ]; then
     rm $bam_file ${bam_file}.bai ${bam_file}.chromosome.count
     samtools index $final_file 
@@ -128,7 +128,17 @@ if [ -s $bam_file ]; then
   fi
 fi
 ";
+    } else { #prepare to do flagstat if not mark_duplicates
+      $final_file=$bam_file;
     }
+
+    print $pbs "
+if [[ (-s $final_file) ]]; then
+  echo flagstat=`date` 
+  samtools flagstat $final_file > ${final_file}.stat 
+fi
+";
+
 
     $self->clean_temp_files($pbs, $localized_files);
 
