@@ -148,3 +148,20 @@ p2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeat
 p<-p1+p2+plot_layout(ncol=2)
 print(p)
 dev.off()
+
+nsample=length(unique(rawobj$orig.ident))
+mt<-data.frame(mt=rawobj$percent.mt, Sample=rawobj$orig.ident, nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
+png(file=paste0(outFile, ".qc.individual.png"), width=3000, height=1200 * nsample, res=300)
+p1<-ggplot(mt, aes(x=mt,y=nCount) ) +
+  geom_bin2d(bins = 70) + 
+  scale_fill_continuous(type = "viridis") + 
+  xlab("Percentage of mitochondrial") + ylab("log10(number of read)") +
+  facet_grid(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+p2<-ggplot(mt, aes(x=mt,y=nFeature) ) +
+  geom_bin2d(bins = 70) + 
+  scale_fill_continuous(type = "viridis") + 
+  xlab("Percentage of mitochondrial") + ylab("log10(number of feature)") +
+  facet_grid(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+p<-p1+p2+plot_layout(ncol=2)
+print(p)
+dev.off()

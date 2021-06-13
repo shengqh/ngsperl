@@ -743,127 +743,127 @@ sub getScRNASeqConfig {
 
     my $seurat_name;
     if ( getValue( $def, "perform_seurat" ) ) {
-      my $seurat_rawdata = "seurat_rawdata";
-      $config->{$seurat_rawdata} = {
-        class                    => "CQS::UniqueR",
-        perform                  => 1,
-        target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_rawdata,
-        rtemplate                => "../scRNA/seurat_rawdata.r",
-        parameterSampleFile1_ref => "files",
-        parameterSampleFile2     => {
-          Mtpattern             => getValue( $def, "Mtpattern" ),
-          rRNApattern           => getValue( $def, "rRNApattern" ),
-          species               => getValue( $def, "species" ),
-          pool_sample           => getValue( $def, "pool_sample" ),
-          hto_sample_file       => $hto_sample_file,
-        },
-        parameterSampleFile3 => $def->{"pool_sample_groups"},
-        parameterSampleFile4_ref => $hto_ref,
-        output_file_ext      => ".rawobjs.rds,.rawobj.rds",
-        sh_direct            => 1,
-        pbs                  => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      };
-      push( @$summary, $seurat_rawdata );
-
-      my @sample_names = keys %{$def->{files}};
-      my $nsamples = scalar(@sample_names);
-      my $by_integration = $nsamples > 1 ? getValue( $def, "by_integration" ) : 0;
-
-      my $seurat_name;
-      my $preprocessing_rscript;
-
-      if($by_integration){
-        my $integration_by_harmony = getValue( $def, "integration_by_harmony", 1);
-        if($integration_by_harmony){
-          $seurat_name = "seurat_harmony";
-          $preprocessing_rscript = "../scRNA/seurat_harmony.r";
-        }else{
-          $seurat_name = "seurat_integration";
-          $preprocessing_rscript = "../scRNA/seurat_integration.r";
-        }
+      if (getValue($def, "perform_seurat_oldversion", 0)){
+        $seurat_name = "seurat" . ( getValue( $def, "by_sctransform" ) ? "_sct" : "" ) . ( getValue( $def, "by_integration" ) ? "_igr" : "" ) . ( getValue( $def, "pool_sample" ) ? "_pool" : "" );
+        $config->{$seurat_name} = {
+          class                    => "CQS::UniqueR",
+          perform                  => 1,
+          target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_name,
+          rtemplate                => "../scRNA/scRNA_func.r,../scRNA/analysis.rmd",
+          parameterSampleFile1_ref => "files",
+          parameterSampleFile2     => {
+            Mtpattern             => getValue( $def, "Mtpattern" ),
+            rRNApattern           => getValue( $def, "rRNApattern" ),
+            Remove_rRNA        => getValue( $def, "Remove_rRNA" ),
+            Remove_MtRNA        => getValue( $def, "Remove_MtRNA" ),
+            nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
+            nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
+            nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
+            mt_cutoff             => getValue( $def, "mt_cutoff" ),
+            species               => getValue( $def, "species" ),
+            resolution            => getValue( $def, "resolution" ),
+            pca_dims              => getValue( $def, "pca_dims" ),
+            by_integration        => getValue( $def, "by_integration" ),
+            by_sctransform        => getValue( $def, "by_sctransform" ),
+            pool_sample           => getValue( $def, "pool_sample" ),
+            batch_for_integration => getValue( $def, "batch_for_integration" ),
+            integration_by_harmony=> getValue( $def, "integration_by_harmony", 1),
+            hto_sample_file       => $hto_sample_file,
+          },
+          parameterSampleFile3 => $def->{"batch_for_integration_groups"},
+          parameterSampleFile4 => $def->{"pool_sample_groups"},
+          parameterSampleFile5_ref => $hto_ref,
+          output_file_ext      => ".final.rds",
+          output_other_ext  => ".cluster.csv;.allmarkers.csv;.top10markers.csv;.cluster.normByUpQuantile.csv",
+          sh_direct            => 1,
+          pbs                  => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$summary, $seurat_name );
       }else{
-          $seurat_name = "seurat_merge";
-          $preprocessing_rscript = "../scRNA/seurat_merge.r";
+        my $seurat_rawdata = "seurat_rawdata";
+        $config->{$seurat_rawdata} = {
+          class                    => "CQS::UniqueR",
+          perform                  => 1,
+          target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_rawdata,
+          rtemplate                => "../scRNA/seurat_rawdata.r",
+          parameterSampleFile1_ref => "files",
+          parameterSampleFile2     => {
+            Mtpattern             => getValue( $def, "Mtpattern" ),
+            rRNApattern           => getValue( $def, "rRNApattern" ),
+            species               => getValue( $def, "species" ),
+            pool_sample           => getValue( $def, "pool_sample" ),
+            hto_sample_file       => $hto_sample_file,
+          },
+          parameterSampleFile3 => $def->{"pool_sample_groups"},
+          parameterSampleFile4_ref => $hto_ref,
+          output_file_ext      => ".rawobjs.rds,.rawobj.rds",
+          sh_direct            => 1,
+          pbs                  => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$summary, $seurat_rawdata );
+
+        my @sample_names = keys %{$def->{files}};
+        my $nsamples = scalar(@sample_names);
+        my $by_integration = $nsamples > 1 ? getValue( $def, "by_integration" ) : 0;
+
+        my $preprocessing_rscript;
+
+        if($by_integration){
+          my $integration_by_harmony = getValue( $def, "integration_by_harmony", 1);
+          if($integration_by_harmony){
+            $seurat_name = "seurat_harmony";
+            $preprocessing_rscript = "../scRNA/seurat_harmony.r";
+          }else{
+            $seurat_name = "seurat_integration";
+            $preprocessing_rscript = "../scRNA/seurat_integration.r";
+          }
+        }else{
+            $seurat_name = "seurat_merge";
+            $preprocessing_rscript = "../scRNA/seurat_merge.r";
+        }
+
+        $config->{$seurat_name} = {
+          class                    => "CQS::UniqueR",
+          perform                  => 1,
+          target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_name,
+          rtemplate                => "../scRNA/scRNA_func.r,$preprocessing_rscript",
+          parameterFile1_ref => [$seurat_rawdata, ".rawobj.rds"],
+          parameterSampleFile1     => {
+            Mtpattern             => getValue( $def, "Mtpattern" ),
+            rRNApattern           => getValue( $def, "rRNApattern" ),
+            Remove_rRNA        => getValue( $def, "Remove_rRNA" ),
+            Remove_MtRNA        => getValue( $def, "Remove_MtRNA" ),
+            nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
+            nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
+            nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
+            mt_cutoff             => getValue( $def, "mt_cutoff" ),
+            species               => getValue( $def, "species" ),
+            resolution            => getValue( $def, "resolution" ),
+            pca_dims              => getValue( $def, "pca_dims" ),
+            by_integration        => $by_integration,
+            by_sctransform        => getValue( $def, "by_sctransform" ),
+            batch_for_integration => getValue( $def, "batch_for_integration" ),
+          },
+          parameterSampleFile2 => $def->{"batch_for_integration_groups"},
+          output_file_ext      => ".final.rds",
+          output_other_ext  => ".cluster.csv;.cluster.normByUpQuantile.csv",
+          sh_direct            => 1,
+          pbs                  => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$summary, $seurat_name );
       }
-
-      $config->{$seurat_name} = {
-        class                    => "CQS::UniqueR",
-        perform                  => 1,
-        target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_name,
-        rtemplate                => "../scRNA/scRNA_func.r,$preprocessing_rscript",
-        parameterFile1_ref => [$seurat_rawdata, ".rawobj.rds"],
-        parameterSampleFile1     => {
-          Mtpattern             => getValue( $def, "Mtpattern" ),
-          rRNApattern           => getValue( $def, "rRNApattern" ),
-          Remove_rRNA        => getValue( $def, "Remove_rRNA" ),
-          Remove_MtRNA        => getValue( $def, "Remove_MtRNA" ),
-          nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
-          nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
-          nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
-          mt_cutoff             => getValue( $def, "mt_cutoff" ),
-          species               => getValue( $def, "species" ),
-          resolution            => getValue( $def, "resolution" ),
-          pca_dims              => getValue( $def, "pca_dims" ),
-          by_integration        => $by_integration,
-          by_sctransform        => getValue( $def, "by_sctransform" ),
-          batch_for_integration => getValue( $def, "batch_for_integration" ),
-        },
-        parameterSampleFile2 => $def->{"batch_for_integration_groups"},
-        output_file_ext      => ".final.rds",
-        output_other_ext  => ".cluster.csv;.cluster.normByUpQuantile.csv",
-        sh_direct            => 1,
-        pbs                  => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      };
-      push( @$summary, $seurat_name );
-
-      # $seurat_name = "seurat" . ( getValue( $def, "by_sctransform" ) ? "_sct" : "" ) . ( getValue( $def, "by_integration" ) ? "_igr" : "" ) . ( getValue( $def, "pool_sample" ) ? "_pool" : "" );
-      # $config->{$seurat_name} = {
-      #   class                    => "CQS::UniqueR",
-      #   perform                  => 1,
-      #   target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_name,
-      #   rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_cluster.r",
-      #   parameterSampleFile1_ref => "files",
-      #   parameterSampleFile2     => {
-      #     Mtpattern             => getValue( $def, "Mtpattern" ),
-      #     rRNApattern           => getValue( $def, "rRNApattern" ),
-      #     Remove_rRNA        => getValue( $def, "Remove_rRNA" ),
-      #     Remove_MtRNA        => getValue( $def, "Remove_MtRNA" ),
-      #     nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
-      #     nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
-      #     nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
-      #     mt_cutoff             => getValue( $def, "mt_cutoff" ),
-      #     species               => getValue( $def, "species" ),
-      #     resolution            => getValue( $def, "resolution" ),
-      #     pca_dims              => getValue( $def, "pca_dims" ),
-      #     by_integration        => getValue( $def, "by_integration" ),
-      #     by_sctransform        => getValue( $def, "by_sctransform" ),
-      #     pool_sample           => getValue( $def, "pool_sample" ),
-      #     batch_for_integration => getValue( $def, "batch_for_integration" ),
-      #     integration_by_harmony=> getValue( $def, "integration_by_harmony", 1),
-      #     hto_sample_file       => $hto_sample_file,
-      #   },
-      #   parameterSampleFile3 => $def->{"batch_for_integration_groups"},
-      #   parameterSampleFile4 => $def->{"pool_sample_groups"},
-      #   parameterSampleFile5_ref => $hto_ref,
-      #   output_file_ext      => ".final.rds",
-      #   output_other_ext  => ".cluster.csv;.allmarkers.csv;.top10markers.csv;.cluster.normByUpQuantile.csv",
-      #   sh_direct            => 1,
-      #   pbs                  => {
-      #     "nodes"     => "1:ppn=1",
-      #     "walltime"  => "1",
-      #     "mem"       => "10gb"
-      #   },
-      # };
-      # push( @$summary, $seurat_name );
-
       my $celltype=$seurat_name . "_celltype";
 
       if(getValue( $def, "annotate_tcell", 0)){
@@ -1017,17 +1017,42 @@ sub getScRNASeqConfig {
       }
 
       my $parameterSampleFile6_ref = undef;
-      if (getValue( $def, "perform_signac", 0 ) ) {
-        my $signac_name = $seurat_name . "_signac";
-        addSignac( $config, $def, $summary, $target_dir, $project_name, $signac_name, $seurat_name, 0 );
-        push @report_files, ($signac_name, ".signac.png");
-        push @report_names, "signac_png";
+      if (getValue( $def, "perform_SignacX", 0 ) ) {
+        my $signacX_name = $seurat_name . "_SignacX";
+        addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, $seurat_name, 0 );
+        push @report_files, ($signacX_name, ".SignacX.png");
+        push @report_names, "signacx_png";
+
+        if(getValue($def, "perform_celltype_integration", 0)){
+          my $integration_name = $celltype . "_integration";
+          $config->{$integration_name} = {
+            class                => "CQS::UniqueR",
+            perform              => 1,
+            target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $integration_name,
+            rtemplate            => "../scRNA/scRNA_func.r,../scRNA/celltype_integration.r",
+            parameterFile1_ref   => [ $seurat_name, ".final.rds" ],
+            parameterFile2_ref   => [ $celltype, ".cluster.csv" ],
+            parameterFile3_ref   => [ $celltype, ".celltype.csv" ],
+            parameterFile4_ref   => [ $signacX_name, ".SignacX.rds" ],
+            parameterSampleFile1 => {
+              by_sctransform        => getValue( $def, "by_sctransform" ),
+            },
+            output_file_ext      => ".celltype.csv",
+            sh_direct            => 1,
+            pbs                  => {
+              "nodes"     => "1:ppn=1",
+              "walltime"  => "1",
+              "mem"       => "10gb"
+            },
+          };
+          push( @$summary, $integration_name );
+        }
       }
 
       if (getValue( $def, "perform_tcell_signac", 0 ) ) {
-        my $tcell_signac_name = $celltype . "_tcell_signac";
-        addSignac( $config, $def, $summary, $target_dir, $project_name, $tcell_signac_name, $seurat_name, 1, $celltype );
-        push @report_files, ($tcell_signac_name, ".signac.png");
+        my $tcell_signacX_name = $celltype . "_tcell_signac";
+        addSignac( $config, $def, $summary, $target_dir, $project_name, $tcell_signacX_name, $seurat_name, 1, $celltype );
+        push @report_files, ($tcell_signacX_name, ".signac.png");
         push @report_names, "tcell_signac_png";
       }
       

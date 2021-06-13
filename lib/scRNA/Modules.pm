@@ -274,14 +274,14 @@ sub addSignac {
     class                => "CQS::UniqueR",
     perform              => 1,
     target_dir           => $target_dir . "/" . $task_name,
-    rCode                => "tcell_only=" . $tcell_only,
-    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/Signac.r",
+    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SignacX.r",
     parameterFile1_ref   => [ $seurat_name, ".final.rds" ],
     parameterSampleFile1 => {
       species             => getValue( $def, "species" ),
       prefix              => $project_name,
+      tcell_only          => $tcell_only
     },
-    output_file_ext => ".signac.png;.signac.rds",
+    output_file_ext => ".SignacX.png;.SignacX.rds",
     sh_direct       => 1,
     pbs             => {
       "nodes"     => "1:ppn=1",

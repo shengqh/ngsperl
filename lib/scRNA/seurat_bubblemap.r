@@ -12,6 +12,10 @@ assay=ifelse(myoptions$by_sctransform == "0", "RNA", "SCT")
 finalList<-readRDS(parFile1)
 obj=finalList$obj
 
+assaydata=GetAssayData(obj, assay=assay)
+allgenes=rownames(assaydata)
+rm(assaydata)
+
 genes <- read_xlsx(parFile4, sheet = 1)
 for(idx in c(2:nrow(genes))){
   if(is.na(genes[idx,"Cell Type"])){
@@ -24,8 +28,12 @@ gene_names=genes$`Marker Gene`
 gene_names[gene_names=="PECAM"] = "PECAM1"
 gene_names[gene_names=="HGD1B"] = "HGD"
 gene_names[gene_names=="EpCAM"] = "EPCAM"
-gene_names=factor(gene_names, levels=gene_names)
 genes$`Marker Gene`<-gene_names
+
+miss_genes=genes$`Marker Gene`[!(genes$`Marker Gene` %in% allgenes)]
+writeLines(miss_genes, con="miss_gene.csv")
+
+genes<-genes[genes$`Marker Gene` %in% allgenes,]
 
 gene_groups=split(genes$`Marker Gene`, genes$`Cell Type`)
 
