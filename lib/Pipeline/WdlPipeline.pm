@@ -10,6 +10,7 @@ use CQS::ClassFactory;
 use Pipeline::PipelineUtils;
 use Data::Dumper;
 use Hash::Merge qw( merge );
+use List::Util qw(max);
 use POSIX qw(strftime);
 
 require Exporter;
@@ -624,20 +625,6 @@ sub addCollectAllelicCounts {
 sub addEncodeATACseq {
   my ($config, $def, $individual, $target_dir, $files_ref) = @_;
 
-  my $fastq_1 = "fastq_1";
-  $config->{$fastq_1} = {     
-    "class" => "CQS::FilePickTask",
-    "source_ref" => $files_ref,
-    "sample_index" => 0, 
-  };
-  
-  my $fastq_2 = "fastq_2";
-  $config->{$fastq_2} = {     
-    "class" => "CQS::FilePickTask",
-    "source_ref" => $files_ref,
-    "sample_index" => 1, 
-  };
-  
   my $server_key = getValue($def, "wdl_key", "local");
   my $pipeline_key = "encode_atacseq";
   my $wdl = $def->{"wdl"};
@@ -649,7 +636,6 @@ sub addEncodeATACseq {
     "class" => "CQS::Wdl",
     "option" => "--no-build-singularity",
     "target_dir" => "${target_dir}/$pipeline_key",
-    "source_ref" => $files_ref,
     "singularity_image_files_ref" => ["singularity_image_files"],
     "cromwell_jar" => $wdl->{"cromwell_jar"},
     "input_option_file" => $wdl->{"cromwell_option_file"},
@@ -662,20 +648,75 @@ sub addEncodeATACseq {
       "atac.genome_tsv" => getValue($def, "encode_atacseq_genome_tsv"),
       "atac.paired_end" => is_paired_end($def) ? "true" : "false",
       "atac.adapter" => getValue($def, "adapter", ""),
-      "atac.fastqs_rep1_R1_ref" => [$fastq_1],
-      "atac.fastqs_rep1_R2_ref" => [$fastq_2]
     },
     output_to_same_folder => 0,
     cromwell_finalOutputs => 0,
     check_output_file_pattern => "metadata.json",
     output_file_ext => "atac/",
     use_caper => 1,
+    sh_direct   => 1,
     pbs=> {
       "nodes"     => "1:ppn=8",
       "walltime"  => "12",
       "mem"       => "40gb"
     },
   };
+
+  if(defined $def->{replicates}){
+    my $replicates = $def->{replicates};
+    $config->{$task}{"source"} = $replicates;
+    my $max_len = 0;
+    for my $values (values %$replicates){
+      $max_len = max($max_len, scalar(@$values))
+    }
+    my $pick_index = 0;
+    while($pick_index < $max_len){
+      my $pick_str = $pick_index + 1;
+      my $group_i = "group_" . $pick_str;
+      $config->{$group_i} = {     
+        "class" => "CQS::GroupPickTask",
+        "source_ref" => $files_ref,
+        "groups"     => $def->{replicates},
+        "sample_index_in_group" => $pick_index,
+      };
+
+      my $fastq_1 = "fastq_${pick_str}_1";
+      $config->{$fastq_1} = {     
+        "class" => "CQS::FilePickTask",
+        "source_ref" => [$group_i],
+        "sample_index" => 0, 
+      };
+      
+      my $fastq_2 = "fastq_${pick_str}_2";
+      $config->{$fastq_2} = {     
+        "class" => "CQS::FilePickTask",
+        "source_ref" => [$group_i],
+        "sample_index" => 1, 
+      };
+      $config->{$task}{input_parameters}{"atac.fastqs_rep${pick_str}_R1_ref"} = [$fastq_1];
+      $config->{$task}{input_parameters}{"atac.fastqs_rep${pick_str}_R2_ref"} = [$fastq_2];
+
+      $pick_index = $pick_index + 1;
+    }
+  }else{
+    $config->{$task}{source_ref} = $files_ref;
+    my $fastq_1 = "fastq_1";
+    $config->{$fastq_1} = {     
+      "class" => "CQS::FilePickTask",
+      "source_ref" => $files_ref,
+      "sample_index" => 0, 
+    };
+    
+    my $fastq_2 = "fastq_2";
+    $config->{$fastq_2} = {     
+      "class" => "CQS::FilePickTask",
+      "source_ref" => $files_ref,
+      "sample_index" => 1, 
+    };
+    $config->{$task}{input_parameters}{"atac.fastqs_rep1_R1_ref"} = [$fastq_1];
+    $config->{$task}{input_parameters}{"atac.fastqs_rep1_R2_ref"} = [$fastq_2];
+  }
+
   push @$individual, $task;
 
   my $croo_task = $task . "_croo";
