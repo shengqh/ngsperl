@@ -1,4 +1,6 @@
 
+source("scRNA_func.r")
+
 library(Seurat)
 library(ggplot2)
 library(kableExtra)
@@ -65,7 +67,7 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
   all_max_markers=NULL
   all_display_markers=NULL
   all_figures=NULL
-  idx=1
+  idx=5
   for(idx in c(1:length(cellTypeClusters))){
     ctc_name = names(cellTypeClusters)[idx]
     ctc_filename=gsub(" ", "_", ctc_name)
@@ -90,21 +92,26 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
         other_ctc=ctc[ctc != c]
         in_markers=find_markers(obj, by_sctransform=by_sctransform, ident.1=c, ident.2=other_ctc)
         cat(paste0("    ", nrow(in_markers), " found in cell types\n"))
-        in_markers$cluster=c
-        in_markers$celltype=ctc_name
-  
-        all_in_markers=rbind(all_in_markers, in_markers)
-        
-        both_markers=bw_markers[rownames(bw_markers) %in% rownames(in_markers),,drop=F]
-        cat(paste0("  there are ", nrow(both_markers), " markers found in both between and in cell types\n"))
-        all_both_markers=rbind(all_both_markers, both_markers)
-        
-        if(nrow(both_markers) >= 5){
-          cur_markers=both_markers
-          suffix=".both"
-        }else{
+        if(nrow(in_markers) == 0){
           cur_markers=bw_markers
           suffix=".between"
+        }else{
+          in_markers$cluster=c
+          in_markers$celltype=ctc_name
+    
+          all_in_markers=rbind(all_in_markers, in_markers)
+          
+          both_markers=bw_markers[rownames(bw_markers) %in% rownames(in_markers),,drop=F]
+          cat(paste0("  there are ", nrow(both_markers), " markers found in both between and in cell types\n"))
+          all_both_markers=rbind(all_both_markers, both_markers)
+          
+          if(nrow(both_markers) >= 5){
+            cur_markers=both_markers
+            suffix=".both"
+          }else{
+            cur_markers=bw_markers
+            suffix=".between"
+          }
         }
       }else{
         cur_markers=bw_markers

@@ -163,6 +163,30 @@ sub perform {
     }
   }
 
+  my $additional_rmd_files = get_option( $config, $section, "additional_rmd_files","" );
+  if ( $additional_rmd_files ne "" ) {
+    my @additional_rmd_files = split( ",|;", $additional_rmd_files );
+    foreach my $additional_rmd_files (@additional_rmd_files) {
+      my $is_absolute = File::Spec->file_name_is_absolute($additional_rmd_files);
+      if ( !$is_absolute ) {
+        $additional_rmd_files = dirname(__FILE__) . "/$additional_rmd_files";
+      }
+      if ( !( -e $additional_rmd_files ) ) {
+        die("additional_rmd_files $additional_rmd_files defined but not exists!");
+      }
+      my $additional_rmd_files_inResult = $result_dir . "/" . basename($additional_rmd_files);
+      open( my $rf, ">$additional_rmd_files_inResult" ) or die "Cannot create $additional_rmd_files_inResult";
+      open( my $rt, "<$additional_rmd_files" ) or die $!;
+      while ( my $row = <$rt> ) {
+        chomp($row);
+        $row =~ s/\r//g;
+        print $rf "$row\n";
+      }
+      close($rt);
+      close($rf);
+    }
+  }
+
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
   my $log      = $self->get_log_filename( $log_dir, $task_name );

@@ -1,4 +1,4 @@
-include 'scRNA_func.r'
+source('scRNA_func.r')
 
 library(dplyr)
 library(Seurat)

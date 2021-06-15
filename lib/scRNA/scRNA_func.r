@@ -342,41 +342,41 @@ draw_dimplot<-function(mt, filename, split.by) {
 
 do_harmony<-function(objs, by_sctransform, batch_file) {
   if(by_sctransform){
-    cat("performing SCTransform ...")
+    cat("performing SCTransform ...\n")
     #perform sctransform
     objs<-lapply(objs, function(x){
-      cat("SCTransform of ", x)
+      #cat("SCTransform of ", x)
       x <- SCTransform(x, verbose = FALSE)
       return(x)
     })  
     assay="SCT"
-    cat("SelectIntegrationFeatures ... ")
+    cat("SelectIntegrationFeatures ... \n")
     objs.features <- SelectIntegrationFeatures(object.list = objs, nfeatures = 3000)  
-    cat("merge samples ... ")
+    cat("merge samples ... \n")
     obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
     VariableFeatures(obj) <- objs.features        
   }else{
-    cat("merge samples ... ")
+    cat("merge samples ... \n")
     obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
-    cat("NormalizeData ... ")
+    cat("NormalizeData ... \n")
     obj <- NormalizeData(obj, verbose = FALSE)
-    cat("FindVariableFeatures ... ")
+    cat("FindVariableFeatures ... \n")
     obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 3000, verbose = FALSE)
     all.genes <- rownames(obj)  
-    cat("ScaleData ... ")
+    cat("ScaleData ... \n")
     obj <- ScaleData(obj, features = all.genes, verbose = FALSE)
   }
-  cat("RunPCA ... ")
+  cat("RunPCA ... \n")
   obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
 
   if(file.exists(parSampleFile2)){
-    pool_map = get_batch_samples(parSampleFile2, unique(rawobj$orig.ident))
+    poolmap = get_batch_samples(parSampleFile2, unique(obj$orig.ident))
     obj$batch <- unlist(poolmap[obj$orig.ident])
   }else{
     obj$batch <- obj$orig.ident
   }
 
-  cat("RunHarmony ... ")
+  cat("RunHarmony ... \n")
   obj <- RunHarmony(object = obj,
                     assay.use = "SCT",
                     reduction = "pca",

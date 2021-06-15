@@ -1,35 +1,23 @@
-
 source("scRNA_func.r")
 
 library(data.table)
-library(Seurat)
 
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
-species=myoptions$species
-markerfile<-myoptions$db_markers_file
-remove_subtype<-myoptions$remove_subtype
-annotate_tcell<-ifelse(myoptions$annotate_tcell == "0", FALSE, TRUE)
-HLA_panglao5_file<-myoptions$HLA_panglao5_file
-tcell_markers_file<-myoptions$tcell_markers_file
 assay=ifelse(myoptions$by_sctransform == "0", "RNA", "SCT")
 
-remove_subtype_of=remove_subtype
-if(annotate_tcell){
-  if(remove_subtype_of != ""){
-    remove_subtype_of = paste0(remove_subtype_of, ",T cells")
-  }else{
-    remove_subtype_of = "T cells"
-  }
-}
+signac<-readRDS(parFile4)
+table(signac$CellStates)
 
-if(!file.exists(parFile1)){
-  parFile1_tmp = gsub(".normByUpQuantile.csv", ".normByTotal.csv", parFile1)
-  if(file.exists(parFile1_tmp)){
-    parFile1 = parFile1_tmp
-  }
+cells<-read.csv(parFile2, row.names=1)
+
+remove_subtype_of=unlist(strsplit(remove_subtype, ",|;"))
+if(annotate_tcell){
+  remove_subtype_of=unique(c(remove_subtype_of, "T cells"))
 }
+remove_subtype_of=paste0(remove_subtype_of, collapse=";")
+
 data.norm=read.csv(parFile1, row.names=1,check.names = F)
 
 cell_activity_database<-read_cell_markers_file(markerfile, species, remove_subtype_of, HLA_panglao5_file)
@@ -65,7 +53,7 @@ if (annotate_tcell){
   tcell_clusters<-names(new.cluster.ids)[new.cluster.ids=="T cells"]
   tcell_data.norm<-data.norm[,tcell_clusters,drop=F]
   tcell_predict_celltype<-ORA_celltype(tcell_data.norm,tcell_activity_database$cellType,tcell_activity_database$weight)
-
+  
   cta_ora_mat = get_cta_ora_mat(tcell_predict_celltype)
   tcell_activity_database$predicted<-tcell_predict_celltype
   tcell_activity_database$cta_mat=cta_ora_mat$cta_mat
@@ -104,8 +92,9 @@ if(file.exists(parFile3)){
   cat("draw pictures ... ")
   p1<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters") + guides(colour = guide_legend(override.aes = list(size = 3), ncol=1))
   p2<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="orig.ident")
+  width=6000
   p=p1+p2
-  png(paste0(outFile, ".cluster.png"), width=6600, height=3000, res=300)
+  png(paste0(outFile, ".cluster.png"), width=width, height=3000, res=300)
   print(p)
   dev.off()
 }

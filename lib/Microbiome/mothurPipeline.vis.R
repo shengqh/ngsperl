@@ -131,6 +131,10 @@ for (level in c("Rank2","Rank5","Rank6")) {
   pdf(paste0(compositionOutFile,".groupAverage.pdf"),width=9)
   print(p)
   dev.off()
+  #export group level data
+  pseqCompositionalOtuGroupMean=apply(otu_table(pseqCompositional),1,function(x) tapply(x,meta(pseqCompositional)$group,mean))
+  pseqCompositionalOtuGroupMean=t(pseqCompositionalOtuGroupMean)
+  write.csv(pseqCompositionalOtuGroupMean,paste0(compositionOutFile,".groupAverage.csv"))
   
   #kruskal.test
   percentData=otu_table(pseqCompositional)
@@ -150,6 +154,7 @@ for (level in c("Rank2","Rank5","Rank6")) {
   pdf(paste0(compositionOutFile,".heatmap.pdf"),width=9)
   print(p+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)))
   dev.off()
+
   
   # #Plot taxa prevalence
   # p0 <- core(pseq, detection = 0.1/100, prevalence = 1/100)
