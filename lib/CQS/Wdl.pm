@@ -248,17 +248,17 @@ sub perform {
 
     if($check_output_file_pattern ne ""){
       print $pbs "
-file_count=$(find . -name $check_output_file_pattern | wc -l) 
+file_count=\$(find . -name $check_output_file_pattern | wc -l) 
 if [[ \$file_count -gt 0 ]]; then
-    echo 'Warning: $check_output_file_pattern found \$file_count times in $cur_dir!'
-    exit(0)
+  echo \"Warning: $check_output_file_pattern found \$file_count times in $cur_dir !\"
+  exit 0
 fi
 "      
     }
 
     if($use_caper){
       print $pbs "
-caper run $wdl_file $option -i $input_file $singularity_option
+caper run $wdl_file $option -i $input_file $singularity_option -m $cur_dir/metadata.json
     
 ";
     }else{
@@ -283,7 +283,9 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
-  my $cromwell_finalOutputs = get_option($config, $section, "cromwell_finalOutputs", 1);
+  my $use_caper = get_option( $config, $section, "use_caper", 0 );
+
+  my $cromwell_finalOutputs = $use_caper? 0 : get_option($config, $section, "cromwell_finalOutputs", 1);
   my $cur_dir = $cromwell_finalOutputs ? $result_dir . "/cromwell_finalOutputs" : $result_dir;
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
