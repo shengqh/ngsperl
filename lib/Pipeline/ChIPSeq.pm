@@ -70,6 +70,18 @@ sub initializeDefaultOptions {
     }
   }
 
+  if(defined $def->{treatments}){
+    $def->{treatments_auto} = 0;
+  }else{
+    initDefaultValue( $def, "treatments_auto",     0 );
+  }
+
+  if(defined $def->{design_table}){
+    $def->{design_table_auto} = 0;
+  }else{
+    initDefaultValue( $def, "design_table_auto",     0 );
+  }
+
   initDefaultValue( $def, "perform_rose",     0 );
   initDefaultValue( $def, "perform_bamplot",  0 );
   initDefaultValue( $def, "perform_cleanbam", 0 );
@@ -97,12 +109,38 @@ sub getConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
 
-  checkFileGroupPairNames($def, ["treatments", "controls"]);
-
   my $target_dir = $def->{target_dir};
   create_directory_or_die($target_dir);
 
   $def = initializeDefaultOptions($def);
+
+  if (getValue($def, "treatments_auto")){
+    my $files = getValue($def, "files");
+    my $treatments = {};
+    for my $sample (sort keys %$files){
+      $treatments->{$sample} = [$sample];
+    }
+    $def->{treatments} = $treatments;
+  }
+
+  checkFileGroupPairNames($def, ["treatments", "controls"]);
+
+  if(getValue($def, "design_table_auto")){
+    my $task_name = getValue($def, "task_name");
+    my $treatments = getValue($def, "treatments");
+    my $design_table = {};
+
+    for my $sample (sort keys %$treatments){
+      $design_table->{$sample} = {
+        Condition => $sample,
+        Replicate => "1"
+      };
+    }
+
+    $def->{design_table} = {
+      $task_name => $design_table
+    };
+  }
 
   my $perform_chipqc = getValue( $def, "perform_chipqc" );
 
@@ -274,40 +312,7 @@ sub getConfig {
     }
 
     if($def->{perform_bamsnap} && $def->{"bamsnap_locus"}){
-      my $bamsnap_task = "bamsnap";
-      $config->{$bamsnap_task} = {
-        class                 => "CQS::ProgramWrapperOneToOne",
-        perform               => 1,
-        target_dir            => "$target_dir/$bamsnap_task",
-        docker_prefix         => "bamsnap_",
-        #init_command          => "ln -s __FILE__ __NAME__.bam",
-        option                => "-draw coordinates bamplot gene -bamplot coverage -width 2000 -height 3000 -out __NAME__.png",
-        interpretor           => "",
-        check_program         => 0,
-        program               => "bamsnap",
-        source                => getValue($def, "bamsnap_locus"),
-        source_arg            => "-pos",
-        parameterSampleFile2_ref => $bam_ref,
-        parameterSampleFile2_arg => "-bam",
-        parameterSampleFile2_type => "array",
-        parameterSampleFile2_join_delimiter => " ",
-        parameterSampleFile2_name_arg => "-title",
-        parameterSampleFile2_name_join_delimiter => '" "',
-        parameterSampleFile2_name_has_comma => 1,
-        output_to_same_folder => 1,
-        output_arg            => "-out",
-        output_to_folder      => 1,
-        output_file_prefix    => "",
-        output_file_ext       => ".png",
-        output_other_ext      => "",
-        sh_direct             => 1,
-        pbs                   => {
-          "nodes"     => "1:ppn=8",
-          "walltime"  => "10",
-          "mem"       => "40gb"
-        },
-      };
-      push( @$summary, $bamsnap_task );
+      addBamsnapLocus($config, $def, $summary, $target_dir, "bamsnap_locus", $bam_ref);
     }
 
     if(defined $def->{annotation_locus} or defined $def->{annotation_genes}){
@@ -370,7 +375,14 @@ sub getConfig {
 
         if($def->{perform_bamsnap}){
           my $bamsnap_task = "annotation_genes_bamsnap";
-          addBamsnap($config, $def, $summary, $target_dir, $bamsnap_task, [$geneLocus, "bed"], $bam_ref);
+          my $annotation_genes_shift = $def->{"annotation_genes_shift"};
+          my $bamsnap_option = defined $annotation_genes_shift ? "-e " . $annotation_genes_shift : "";
+          my $params = {
+            bamsnap_option => $bamsnap_option,
+            bamsnap_raw_option => $def->{bamsnap_raw_option}
+          };
+
+          addBamsnap($config, $def, $summary, $target_dir, $bamsnap_task, [$geneLocus, "bed"], $bam_ref, $params);
         }
 
         addPlotGene($config, $def, $summary, $target_dir, "annotation_genes_plot", $sizeFactorTask, [ $geneLocus, ".bed" ], $bam_ref);

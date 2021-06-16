@@ -18,7 +18,17 @@ def bamsnap(logger, bed_file, bam_list_file, output_file, bamsnap_option_file, n
     for line in ins:
       parts = line.strip().split('\t')
       if extend_bases > 0:
-        locus = "%s:%d-%d" % (parts[0], int(parts[1]) - extend_bases, int(parts[2]) + extend_bases)
+        min_bases = min(1000, extend_bases)
+        if len(parts) > 5:
+          strand = parts[5]
+        else:
+          strand = '*'
+        if strand == '*':
+          locus = "%s:%d-%d" % (parts[0], int(parts[1]) - extend_bases, int(parts[2]) + extend_bases)
+        elif strand == '-':
+          locus = "%s:%d-%d" % (parts[0], int(parts[1]) - min_bases, int(parts[2]) + extend_bases)
+        else:
+          locus = "%s:%d-%d" % (parts[0], int(parts[1]) - extend_bases, int(parts[2]) + min_bases)
       else:
         locus = "%s:%s-%s" % (parts[0], parts[1], parts[2])
 

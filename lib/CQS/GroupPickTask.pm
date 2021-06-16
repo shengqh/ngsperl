@@ -33,8 +33,10 @@ sub result {
   for my $group_name (keys %$groups) {
     my $samples = $groups->{$group_name};
     my $sample_name = $samples->[$pick_index];
-    if($can_be_empty && (not defined $sample_name)){
-      $result->{$group_name} = [];
+    if(not defined $sample_name) {
+      if($can_be_empty){
+        $result->{$group_name} = [];
+      }
     }else{
       my $result_files = $raw_files->{$sample_name};
       $result->{$group_name} = filter_array( $result_files, $pattern );

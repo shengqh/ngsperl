@@ -16,10 +16,12 @@ my $config = {
       "S1_2" => ["S1_2.txt"],
       "S2_1" => ["S2_1.txt"],
       "S2_2" => ["S2_2.txt"],
+      "S3_1" => ["S3_1.txt"],
     },
     groups => {
       "G1" => ["S1_1", "S1_2"],
       "G2" => ["S2_1", "S2_2"],
+      "G3" => ["S3_1"],
     },
     sample_index_in_group => 0,
   }
@@ -31,7 +33,8 @@ my $picked_0 = $test->result($config, "test");
 
 is_deeply($picked_0, 
   { "G1" => ["S1_1.txt"],
-    "G2" => ["S2_1.txt"]
+    "G2" => ["S2_1.txt"],
+    "G3" => ["S3_1.txt"],
   });
 
 $config->{"test"}{sample_index_in_group} = 1;
@@ -43,9 +46,6 @@ is_deeply($picked_1,
   { "G1" => ["S1_2.txt"],
     "G2" => ["S2_2.txt"]
   });
-
-
-
 
 1;
 

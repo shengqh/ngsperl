@@ -2280,11 +2280,15 @@ sub addWebgestalt {
 }
 
 sub addBamsnap {
-  my ($config, $def, $tasks, $target_dir, $task_name, $bed_ref, $bam_ref) = @_;
+  my ($config, $def, $tasks, $target_dir, $task_name, $bed_ref, $bam_ref, $params) = @_;
 
   my $parameterFile1_key = "parameterFile1_ref";
   if( -e $bed_ref) {
     $parameterFile1_key = "parameterFile1";
+  }
+
+  if(not defined $params){
+    $params = $def;
   }
 
   $config->{$task_name} = {
@@ -2292,14 +2296,14 @@ sub addBamsnap {
     perform               => 1,
     target_dir            => "$target_dir/$task_name",
     docker_prefix         => "bamsnap_",
-    option                => getValue($def, "bamsnap_option", ""),
+    option                => getValue($params, "bamsnap_option", ""),
     interpretor           => "python3",
     check_program         => 1,
     program               => "../Visualization/bamsnap.py",
     parameterSampleFile1_arg => "-b",
     parameterSampleFile1_ref => $bam_ref,
     parameterSampleFile2_arg => "-c",
-    parameterSampleFile2  => getValue($def, "bamsnap_raw_option", {}),
+    parameterSampleFile2  => getValue($params, "bamsnap_raw_option", {}),
     parameterFile1_arg    => "-i",
     $parameterFile1_key   => $bed_ref,
     output_to_same_folder => 1,
