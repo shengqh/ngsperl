@@ -1277,6 +1277,38 @@ sub getScRNASeqConfig {
         push( @$summary, $tcellTaskname );
       }
 
+      if(defined $def->{localization_genes} && $def->{localization_genes} ne ""){
+        my $gene_localization_map_task  = $cluster_task_name . "_gene_localization_map";
+        my $genes = {
+          $def->{task_name} => [$def->{localization_genes}],
+        };
+        #print(Dumper($genes));
+        $config->{$gene_localization_map_task} = {
+          class              => "CQS::UniqueR",
+          perform            => 1,
+          target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $gene_localization_map_task,
+          rtemplate          => "../scRNA/scRNA_func.r;../scRNA/gene_localization_map.r",
+          source             => $genes,
+          parameterFile1_ref => [ $seurat_name, ".final.rds" ],
+          parameterSampleFile1 => $genes,
+          parameterSampleFile2 => $def->{groups},
+          parameterSampleFile3 => {
+            cluster_name => "seurat_clusters",
+            display_cluster_name => $cluster_name,
+            by_sctransform => getValue($def, "by_sctransform"),
+          },
+          output_file => "parameterSampleFile1",
+          output_file_ext    => ".figure.files.csv",
+          sh_direct          => 1,
+          pbs                => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$summary, $gene_localization_map_task );
+      }
+
       my $perform_comparison = getValue( $def, "perform_comparison", 0 ) | getValue( $def, "perform_edgeR" );
       my $DE_by_sample = getValue( $def, "DE_by_sample" );
       my $DE_by_cell = getValue( $def, "DE_by_cell" );
