@@ -1,4 +1,3 @@
-
 source("scRNA_func.r")
 
 library(data.table)
@@ -106,6 +105,27 @@ if(file.exists(parFile3)){
   p2<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="orig.ident")
   p=p1+p2
   png(paste0(outFile, ".cluster.png"), width=6600, height=3000, res=300)
+  print(p)
+  dev.off()
+}
+
+if(file.exists(myoptions$summary_layer_file)){
+  layers<-read.csv(file=myoptions$summary_layer_file)
+  lastLayer=colnames(layers)[ncol(layers)]
+  layers_map<-split(layers[, lastLayer], layers[,1])
+  
+  miss_celltype=id_tbl$cell_type[!(id_tbl$cell_type %in% names(layers_map))]
+  for (mct in miss_celltype){
+    layers_map[mct]=mct
+  }
+  id_tbl$summary_layer=unlist(layers_map[id_tbl$cell_type])
+  idmap<-split(id_tbl$summary_layer, id_tbl$seurat_clusters)
+  obj$summary_layer = unlist(idmap[as.character(obj$seurat_clusters)])
+  
+  p1<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters") + guides(colour = guide_legend(override.aes = list(size = 3), ncol=1))
+  p2<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="summary_layer")
+  p=p1+p2
+  png(paste0(outFile, ".summary_layer.png"), width=6600, height=3000, res=300)
   print(p)
   dev.off()
 }
