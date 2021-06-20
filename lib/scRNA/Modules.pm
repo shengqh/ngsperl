@@ -268,7 +268,7 @@ sub addCHETAH {
 }
 
 sub addSignac {
-  my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $seurat_name, $tcell_only, $celltype ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $seurat_name, $tcell_only, $celltype, $reduction ) = @_;
 
   $config->{$task_name} = {
     class                => "CQS::UniqueR",
@@ -279,7 +279,9 @@ sub addSignac {
     parameterSampleFile1 => {
       species             => getValue( $def, "species" ),
       prefix              => $project_name,
-      tcell_only          => $tcell_only
+      tcell_only          => $tcell_only,
+      reduction           => $reduction,
+      pca_dims            => getValue( $def, "pca_dims" ),
     },
     output_file_ext => ".SignacX.png;.SignacX.rds",
     sh_direct       => 1,
