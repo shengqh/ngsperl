@@ -50,8 +50,14 @@ if(length(sheets) > 1){
   obj[["seurat_renamed_cellactivity_clusters"]]=cell_type[as.character(obj$seurat_clusters),"seurat_renamed_cellactivity_clusters"]
   group.by="seurat_renamed_cellactivity_clusters"
 }else{
+  ct_levels<-c("B cells", "Plasma cells", "NK cells", "T cells", "Macrophages", "Mast cells", "Endothelial cells", "Fibroblasts", "Epithelial cells", "Basal cells", "Olfactory epithelial cells", "Ciliated cells")
   ct<-cell_type[!duplicated(cell_type$cell_type),]
-  cell_type$cell_type<-factor(cell_type$cell_type, levels=ct$cell_type)
+  missed = ct$cell_type[!(ct$cell_type %in% ct_levels)]
+  if(length(missed) > 0){
+    ct_levels = c(ct_levels, missed)
+  }
+  ct_levels = ct_levels[ct_levels %in% ct$cell_type]
+  cell_type$cell_type<-factor(cell_type$cell_type, levels=ct_levels)
   cell_type<-cell_type[order(cell_type$cell_type, cell_type$seurat_clusters),]
   cell_type$seurat_celltype_clusters=paste0(cell_type$seurat_clusters, " : ", cell_type$cell_type)
   cell_type$seurat_celltype_clusters=factor(cell_type$seurat_celltype_clusters, levels=cell_type$seurat_celltype_clusters)
