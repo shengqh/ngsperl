@@ -110,7 +110,16 @@ if(file.exists(parFile3)){
 }
 
 if(file.exists(myoptions$summary_layer_file)){
-  layers<-read.csv(file=myoptions$summary_layer_file)
+  if(grepl(".xlsx$", myoptions$summary_layer_file)){
+    require(xlsx)
+    layers=read.xlsx(myoptions$summary_layer_file, 1, header = TRUE)
+    isna<-apply(layers, 2, function(x){
+      all(is.na(x))
+    })
+    layers=layers[,!isna]
+  }else{
+    layers<-read.csv(file=myoptions$summary_layer_file)
+  }
   lastLayer=colnames(layers)[ncol(layers)]
   layers_map<-split(layers[, lastLayer], layers[,1])
   
