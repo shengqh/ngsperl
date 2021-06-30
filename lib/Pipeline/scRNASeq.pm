@@ -717,7 +717,12 @@ sub getScRNASeqConfig {
       }
     }else{
       if(defined $def->{bam_files}){
-        addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", "bam_files");        
+        if (defined $def->{singleend_bam_files}){
+          $config->{singleend_bam_files} = $def->{singleend_bam_files};
+          addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", "bam_files", "singleend_bam_files");        
+        }else{
+          addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", "bam_files");        
+        }
       }
     }
 
