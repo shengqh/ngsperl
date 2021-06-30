@@ -119,6 +119,17 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
+    print $pbs "
+
+if [[ -e $result_dir/${sample_name}.star.failed ]]; then
+  rm $result_dir/${sample_name}.star.failed
+fi
+
+if [[ -e $result_dir/${sample_name}.featureCount.failed ]]; then
+  rm $result_dir/${sample_name}.featureCount.failed
+fi
+";
+
     my $chromosome_grep_command = $output_sort_by_coordinate ? getChromosomeFilterCommand( $final_bam, $chromosome_grep_pattern ) : "";
 
     my $localized_files = [];
@@ -128,36 +139,47 @@ sub perform {
     my $uncompress = ( $sample_file_1 =~ /.gz$/ ) ? " --readFilesCommand zcat" : "";
 
     print $pbs "
+status=1
 
-if [[ ! -s $final_bam && -s $sample_file_1 ]]; then
+if [[ -s $sample_file_1 ]]; then
   echo performing star ...
   $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch ${sample_name}.star.succeed
+  else
+    rm $unsorted
+    touch ${sample_name}.star.failed
+  fi
+
   $star --version | awk '{print \"STAR,v\"\$1}' > ${final_file}.star.version
   rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
 fi
-";
 
-    print $pbs "
-if [ -s $unsorted ]; then
+if [[ \$status -eq 0 ]]; then
   echo bamStat=`date` 
   python3 $py_script -i $unsorted -o $bam_stat
 fi
 ";
 
-
   if ($output_sort_by_coordinate) {
     print $pbs "
-if [ ! -s ${final_bam} ]; then
-  samtools sort -m $sort_memory -T ${sample_name} -t $thread -o $final_bam $unsorted
-  samtools index $final_bam
-  samtools idxstats $final_bam > ${final_bam}.chromosome.count
+if [[ \$status -eq 0 ]]; then
+  echo bamSort=`date` 
+  samtools sort -m $sort_memory -T ${sample_name} -t $thread -o $final_bam $unsorted && touch ${final_bam}.succeed
+  if [[ ! -e ${final_bam}.succeed ]]; then
+    rm $final_bam
+  else
+    samtools index $final_bam
+    samtools idxstats $final_bam > ${final_bam}.chromosome.count
+  fi
 fi  
 ";
   }
 
 print $pbs "
 
-if [ -s $final_bam ]; then
+if [[ \$status -eq 0 && -s $final_bam ]]; then
   $chromosome_grep_command
   
   if [ ! -s ${sample_name}.splicing.bed ]; then
@@ -165,9 +187,17 @@ if [ -s $final_bam ]; then
   fi
 fi
 
-if [ -s $unsorted ]; then
+if [[ \$status -eq 0 ]]; then
   echo performing featureCounts ...
   featureCounts $featureCountOption -T $thread -a $gffFile -o $final_file $unsorted
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch ${sample_name}.featureCount.succeed
+  else
+    touch ${sample_name}.featureCount.failed
+    rm $final_file
+  fi
+
   featureCounts -v 2>\&1 | grep featureCounts | cut -d ' ' -f2 | awk '{print \"featureCounts,\"\$1}' > ${final_file}.featureCounts.version
 fi 
 ";
