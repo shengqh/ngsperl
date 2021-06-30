@@ -948,6 +948,7 @@ sub getScRNASeqConfig {
           by_sctransform        => getValue( $def, "by_sctransform" ),
           summary_layer_file => $def->{summary_layer_file},
         },
+        parameterSampleFile2_ref   => "groups",
         output_file_ext      => ".celltype.csv",
         output_other_ext  => ".celltype_cluster.csv;.celltype.rds",
         sh_direct            => 1,
@@ -1021,6 +1022,31 @@ sub getScRNASeqConfig {
           },
         };
         push( @$summary, $bubblemap_name );
+      }
+
+      if(getValue($def, "plot_gsea_genes", 0)){
+        my $gesa_genes_task  = $celltype . "_gesa_genes";
+        $config->{$gesa_genes_task} = {
+          class              => "CQS::UniqueR",
+          perform            => 1,
+          target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $gesa_genes_task,
+          rtemplate          => "../scRNA/scRNA_func.r;../scRNA/gsea_genes.r",
+          parameterSampleFile1 => {
+            by_sctransform        => getValue( $def, "by_sctransform" ),
+          },
+          parameterFile1_ref => [ $seurat_name, ".final.rds" ],
+          parameterFile2_ref   => [ $celltype, ".celltype.csv" ],
+          parameterFile3     => getValue($def, "gsea_genes_gmt"),
+          parameterSampleFile2 => $def->{groups},
+          output_file_ext    => ".figure.files.csv",
+          sh_direct          => 1,
+          pbs                => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$summary, $gesa_genes_task );
       }
 
       if (getValue( $def, "perform_scMRMA", 0 ) ) {
