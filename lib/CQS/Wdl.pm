@@ -277,7 +277,11 @@ caper run $wdl_file $option -i $input_file $singularity_option -m $cur_dir/metad
 ";
     }else{
       print $pbs "
-java -Dconfig.file=$cromwell_config_file -jar $cromwell_jar run $wdl_file $option --inputs $input_file --options $input_option_file
+java -Dconfig.file=$cromwell_config_file \\
+  -jar $cromwell_jar \\
+  run $wdl_file $option \\
+  --inputs $input_file \\
+  --options $input_option_file
     
 ";
     }
@@ -288,6 +292,11 @@ java -Dconfig.file=$cromwell_config_file -jar $cromwell_jar run $wdl_file $optio
 rm *.simg
 rm $input_file
 ";
+      if(not $use_caper){
+      print $pbs "
+rm -rf cromwell-executions
+";
+      }
     }
     $self->close_pbs( $pbs, $pbs_file );
   }
