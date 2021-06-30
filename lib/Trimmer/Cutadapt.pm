@@ -256,7 +256,16 @@ rm $temp1_file $temp2_file
       }
       else {                         # NOT remove top random bases
         print $pbs "
-cutadapt $thread_option $option $adapter_option -o $read1name -p $read2name $limit_file_options $read1file $read2file
+cutadapt $thread_option $option $adapter_option -o $read1name -p $read2name $limit_file_options $read1file $read2file 1> >(tee ${sample_name}.stdout.log ) 2> >(tee ${sample_name}.stderr.log >\&2)
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch ${sample_name}.succeed
+  md5sum $read1file > ${read1file}.md5
+  md5sum $read2file > ${read2file}.md5
+else
+  touch ${sample_name}.failed
+fi
+
 ";
       }
     }
