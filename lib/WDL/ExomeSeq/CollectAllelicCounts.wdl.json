@@ -2,12 +2,12 @@
   "CollectAllelicCountsWorkflow.tumor_bam_idx": "",
   "CollectAllelicCountsWorkflow.tumor_bam": "",
 
-  "CollectAllelicCountsWorkflow.ref_fasta": "/scratch/cqs_share/references/broad/hg38/v0/Homo_sapiens_assembly38.fasta",
-  "CollectAllelicCountsWorkflow.ref_fasta_fai": "/scratch/cqs_share/references/broad/hg38/v0/Homo_sapiens_assembly38.fasta.fai",
-  "CollectAllelicCountsWorkflow.ref_fasta_dict": "/scratch/cqs_share/references/broad/hg38/v0/Homo_sapiens_assembly38.dict",
+  "CollectAllelicCountsWorkflow.ref_fasta": "/data/cqs/references/broad/hg38/v0/Homo_sapiens_assembly38.fasta",
+  "CollectAllelicCountsWorkflow.ref_fasta_fai": "/data/cqs/references/broad/hg38/v0/Homo_sapiens_assembly38.fasta.fai",
+  "CollectAllelicCountsWorkflow.ref_fasta_dict": "/data/cqs/references/broad/hg38/v0/Homo_sapiens_assembly38.dict",
   "CollectAllelicCountsWorkflow.common_sites": "/scratch/cqs_share/references/broad/CNV/gnomad_grch38_snps_sitesonly.vcf.gz",
   "CollectAllelicCountsWorkflow.gatk_docker": "gatk.latest",
-  "CollectAllelicCountsWorkflow.gatk4_jar_override": "/scratch/cqs_share/softwares/gatk-4.1.8.1/gatk-package-4.1.8.1-local.jar"
+  "CollectAllelicCountsWorkflow.gatk4_jar_override": "/data/cqs/softwares/gatk-4.1.8.1/gatk-package-4.1.8.1-local.jar"
 
 }
 
