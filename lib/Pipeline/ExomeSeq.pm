@@ -115,6 +115,194 @@ sub initializeDefaultOptions {
   return $def;
 }
 
+sub addMutect2 {
+  my ($config, $def, $tasks, $target_dir, $bam_input, $mutect2_call, $option, $use_germline_resource, $pon) = @_;
+
+  my $run_funcotator="false";
+  if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
+    $run_funcotator="true";
+  }
+
+  my $output_sample_ext;
+  if($def->{muTect2_suffix}) {
+    $output_sample_ext = $def->{muTect2_suffix};
+  }else {
+    $output_sample_ext=".hg19";
+    if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
+      $output_sample_ext=".hg38";
+    } elsif ($def->{ncbi_build} eq "GRCm38")  {
+      $output_sample_ext=".mm10";
+    }
+  }
+
+  my $output_file_ext;
+  my $output_other_ext;
+  if ($def->{ncbi_build} eq "GRCh38"){
+    $output_file_ext = $output_sample_ext."-filtered.annotated.maf";
+    $output_other_ext = $output_sample_ext."-filtered.vcf";
+  }else{
+    $output_file_ext = $output_sample_ext."-filtered.vcf";
+  }
+
+  $config->{$mutect2_call} = {     
+    "class" => "GATK4::MuTect2",
+    "target_dir" => "${target_dir}/$mutect2_call",
+    "option" => $option,
+    "m2_extra_filtering_args" => $def->{m2_extra_filtering_args},
+    "source_ref" => [ $bam_input, '.bam$' ],
+    "variants_for_contamination" => $def->{variants_for_contamination},
+    "run_orientation_bias_mixture_model_filter" => $def->{'Mutect2.run_orientation_bias_mixture_model_filter'},
+    "intervals" => $def->{covered_bed},
+    "fasta_file" => $def->{ref_fasta},
+    pbs=> {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => getValue($def, "mutect2_walltime", "22"),
+      "mem"       => getValue($def, "mutect2_memory", "40gb"),
+    },
+  };
+
+  if($use_germline_resource){
+    $config->{$mutect2_call}{germline_resource} = $def->{germline_resource};
+  }
+
+  if(defined $pon){
+    my $pon_key = (-e $pon) ? "panel_of_normals" : "panel_of_normals_ref";
+    $config->{$mutect2_call}{$pon_key} = $pon;
+  }
+
+  push @$tasks, $mutect2_call;
+}
+
+sub init_muTect2_groups {
+  my ($config, $def) = @_;
+
+  if (not defined $def->{mutect2_groups}){
+    #for wdl mutect2, the result file will use tumor sample name in output
+    my $mutect2_groups = {};
+    my $groups = $def->{groups};
+    if(not defined $groups){
+      $groups = $config->{groups};
+    }
+
+    if(not defined $groups){
+      die "Define groups or mutect2_groups in user definition or configuration";
+    }
+
+    for my $group_name (sort keys %$groups) {
+      my $samples = $groups->{$group_name};
+      if (scalar(@$samples) == 1) {
+        $mutect2_groups->{$samples->[0]} = $samples;
+      }else{
+        $mutect2_groups->{$samples->[1]} = $samples;
+      }
+    }
+    $config->{mutect2_groups} = $mutect2_groups;
+  }else{
+    $config->{mutect2_groups} = $def->{mutect2_groups};
+  }
+}
+
+sub add_muTect2_PON {
+  my ($config, $def, $individual, $summary, $target_dir, $bam_input, $task_prefix) = @_;
+    
+  my $mutect2_pon_normal_files="mutect2_pon_normal_files";
+
+  if($def->{pon_samples}){
+    #https://gatk.broadinstitute.org/hc/en-us/articles/360035531132
+    $config->{$mutect2_pon_normal_files} = {     
+      "class" => "CQS::SamplePickTask",
+      "source_ref" => $bam_input,
+      "sample_names" => $def->{pon_samples},
+    };
+  }else{
+    init_muTect2_groups($config, $def);
+
+    if(is_muTect2_tumor_only($config)){
+      die "Cannot generate PON for tumor only project!";
+    }
+
+    $config->{$mutect2_pon_normal_files} = {     
+      "class" => "CQS::GroupPickTask",
+      "source_ref" => $bam_input,
+      "groups_ref" => "mutect2_groups",
+      "sample_index_in_group" => 0, 
+    };
+  }
+  
+  my $perform_mutect2_by_wdl = getValue($def, "perform_mutect2_by_wdl", 1);
+
+  my $pon_mutect2call_ref;
+  my $pon_mutect2_option = getValue($def, "pon_mutect2_option", "--max-mnp-distance 0");
+  if($perform_mutect2_by_wdl){
+    my $pon_mutect2call = addMutect2Wdl($config, $def, $individual, $target_dir, $task_prefix, $pon_mutect2_option, 1, 1, $mutect2_pon_normal_files, undef, undef);
+    $pon_mutect2call_ref = [ $pon_mutect2call, '.vcf$' ];
+  }else{
+    my $pon_mutect2call = $task_prefix . "01_call";
+    addMutect2($config, $def, $individual, $target_dir, $mutect2_pon_normal_files, $pon_mutect2call, $pon_mutect2_option, 0, undef);
+    $pon_mutect2call_ref = [ $pon_mutect2call, '.pass.vcf.gz$' ];
+  }
+
+  my $pon_task = $task_prefix . "02_table";
+  $config->{$pon_task} = {
+    class => "GATK4::CreateSomaticPanelOfNormals",
+    option => "",
+    source_ref => $pon_mutect2call_ref,
+    target_dir   => "${target_dir}/$pon_task",
+    germline_resource => $def->{germline_resource},
+    "intervals" => $def->{covered_bed},
+    "fasta_file" => $def->{ref_fasta},
+    sh_direct    => 1,
+    pbs          => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => getValue($def, "pon_walltime", "22"),
+      "mem"      => getValue($def, "pon_memory", "40gb"),
+    },
+  };
+  push (@$summary, $pon_task);
+  return($pon_task);
+}
+
+sub init_normal_tumor_files {
+  my ($config, $def, $bam_input) = @_;
+
+  if($def->{pon_samples}){
+    #https://gatk.broadinstitute.org/hc/en-us/articles/360035531132
+    $config->{"muTect2_tumor_files"} = {     
+      "class" => "CQS::SamplePickTask",
+      "source_ref" => $bam_input,
+      "not_sample_names" => $def->{pon_samples},
+    };
+    return("muTect2_tumor_files");
+  }else{
+    init_muTect2_groups($config, $def);
+
+    my $is_tumor_only = is_muTect2_tumor_only($config);
+    if($is_tumor_only){
+      $config->{"muTect2_tumor_files"} = {     
+        "class" => "CQS::GroupPickTask",
+        "source_ref" => $bam_input,
+        "groups_ref" => "mutect2_groups",
+        "sample_index_in_group" => 0, 
+      };
+      return("muTect2_tumor_files");
+    }else{
+      $config->{"muTect2_tumor_files"} = {     
+        "class" => "CQS::GroupPickTask",
+        "source_ref" => $bam_input,
+        "groups_ref" => "mutect2_groups",
+        "sample_index_in_group" => 1, 
+      };
+      $config->{"muTect2_normal_files"} = {     
+        "class" => "CQS::GroupPickTask",
+        "source_ref" => $bam_input,
+        "groups_ref" => "mutect2_groups",
+        "sample_index_in_group" => 0, 
+      };
+      return("muTect2_tumor_files", "muTect2_normal_files");
+    }
+  }
+}
+
 sub getConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
@@ -353,10 +541,10 @@ sub getConfig {
     }
 
     #based on paper https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-016-1097-3, we don't do markduplicate anymore
-    my $refine_name = $def->{aligner} . "_refine";
+    my $refine_name = getValue($def, "perform_gatk4_refine", 0) ? $def->{aligner} . "_g4_refine" : $def->{aligner} . "_refine";
     my $refine_memory = getValue($def, "refine_memory", "40gb");
     $config->{$refine_name} = {
-      class      => "GATK::Refine",
+      class      => getValue($def, "perform_gatk4_refine", 0) ? "GATK4::Refine" : "GATK::Refine",
       perform    => 1,
       target_dir => "${target_dir}/$refine_name",
       option     => "-Xmx40g",
@@ -466,6 +654,10 @@ samtools idxstats __NAME__.nosoftclip.bam > __NAME__.nosoftclip.bam.chromosome.c
         perform               => 1,
         target_dir            => "${target_dir}/${CrosscheckFingerprints_name}",
         option                => "
+if [[ -e __NAME__.failed ]]; then
+  rm __NAME__.failed
+fi
+
 java -Xmx40g -jar $picard_jar CrosscheckFingerprints INPUT=__FILE__ \\
   H=$hapmap \\
   CROSSCHECK_BY=SAMPLE \\
@@ -474,11 +666,15 @@ java -Xmx40g -jar $picard_jar CrosscheckFingerprints INPUT=__FILE__ \\
   NUM_THREADS=8 \\
   OUTPUT=__NAME__.crosscheck_metrics 
 
-java -Xmx40g -jar $picard_jar ClusterCrosscheckMetrics INPUT=__NAME__.crosscheck_metrics \\
-  LOD_THRESHOLD=-5 \\
-  OUTPUT=__NAME__.clustered.crosscheck_metrics
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch __NAME__.failed
+else
+  java -Xmx40g -jar $picard_jar ClusterCrosscheckMetrics INPUT=__NAME__.crosscheck_metrics \\
+    LOD_THRESHOLD=-5 \\
+    OUTPUT=__NAME__.clustered.crosscheck_metrics
 
-cat <<EOT >> __NAME__.r
+  cat >__NAME__.r <<EOT
 library('ggplot2')
 mat<-read.table('__NAME__.crosscheck_metrics', sep='\\t', header=T)
 
@@ -493,7 +689,8 @@ dev.off()
 
 EOT
 
-R --vanilla -f __NAME__.clustered.crosscheck_metrics.r
+  R --vanilla -f __NAME__.clustered.crosscheck_metrics.r
+fi
 
 ",
         interpretor           => "",
@@ -1146,21 +1343,54 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
   }
 
   if ( $def->{"perform_muTect2"}) {
+    my $mutect2_normal_files="mutect2_normal_files";
+    my $mutect2_tumor_files="mutect2_tumor_files";
 
-    my $mutect2call = addMutect2($config, $def, $summary, $target_dir, $bam_input);
-    #push @$individual, ($mutect2call);
+    my $pon = getValue($def, "panel_of_normals", "");
+    if($def->{"perform_mutect2_pon"}){
+      $pon = add_muTect2_PON($config, $def, $individual, $summary, $target_dir, $bam_input, "PON_muTect2_");
+    }
 
-    my $mutect_prefix = "${bam_input}_muTect2_";
     my $mutect_index_key = "mutect2_key";
     my $mutect_index_dic = { $mutect_index_key => 2 };
-    my $mutect_ref = [$mutect2call, ".vcf\$"];
+    my $mutect_prefix = "muTect2_";
 
-    my ($annovarMaf,$annovarMafReport) = add_post_mutect($config, $def, $target_dir, $summary, $mutect_prefix, $mutect_index_dic, $mutect_index_key, [$mutect2call, ".vcf\$"]);
+    my $mutect_ref;
+    my $mutect2_option = getValue($def, "muTect2_option", "");
+
+    my $perform_mutect2_by_wdl = getValue($def, "perform_mutect2_by_wdl", 1);
+    if($perform_mutect2_by_wdl){
+      my ($tumor_files, $normal_files) = init_normal_tumor_files($config, $def, $bam_input);
+
+      # print("tumor_files=" . $tumor_files . "\n");
+      # print("normal_files=" . $normal_files . "\n");
+
+      my $is_tumor_only = not defined $normal_files;
+      #print("is_tumor_only=" . $is_tumor_only . "\n");
+
+      if ($pon eq ""){
+        my $mutect2call = addMutect2Wdl($config, $def, $individual, $target_dir, $mutect_prefix, $mutect2_option, 0, $is_tumor_only, $tumor_files, $normal_files, undef, undef);
+        $mutect_ref = [ $mutect2call, '.vcf$' ];
+      }elsif(-e $pon){
+        my $suffix = ($pon =~ /vcf.gz/) ? ".tbi" : ".idx";
+        my $mutect2call = addMutect2Wdl($config, $def, $individual, $target_dir, $mutect_prefix, $mutect2_option, 0, $is_tumor_only, $tumor_files, $normal_files, $pon, $pon . $suffix);
+        $mutect_ref = [ $mutect2call, '.vcf$' ];
+      }else{
+        my $mutect2call = addMutect2Wdl($config, $def, $individual, $target_dir, $mutect_prefix, $mutect2_option, 0, $is_tumor_only, $tumor_files, $normal_files, [$pon, 'vcf.gz$'], [$pon, 'vcf.gz.tbi$']);
+        $mutect_ref = [ $mutect2call, '.vcf$' ];
+      }
+    }else{
+      my $mutect2call = $mutect_prefix . "01_call";
+      addMutect2($config, $def, $individual, $target_dir, $bam_input, $mutect2call, $mutect2_option, 1, $pon);
+      $mutect_ref = [ $mutect2call, '.pass.vcf.gz$' ];
+    }
+
+    my ($annovarMaf,$annovarMafReport) = add_post_mutect($config, $def, $target_dir, $summary, $mutect_prefix, $mutect_index_dic, $mutect_index_key, $mutect_ref);
     #my $mutect2merge = "${bam_input}_muTect2_02_merge";
     #add_combine_mutect($config, $def, $summary, $target_dir, $mutect2merge, [$mutect2call, ".vcf\$"]);
     
-    if ($def->{ncbi_build} eq "GRCh38") {
-      my $mutect2callReport = addFilterMafAndReport($config, $def, $summary, $target_dir, $mutect2call);
+    if ($def->{ncbi_build} eq "GRCh38" && $def->{'perform_mutect2_by_wdl'}) {
+      my $mutect2callReport = addFilterMafAndReport($config, $def, $summary, $target_dir, $mutect_ref);
       push @$summary, $mutect2callReport;
    
       if (defined($def->{family_info_file}) & defined($def->{patient_info_feature}) ) { #both family_info_file and patient_info_feature defined. Can run Clonevol analysis and ape PhylogeneticTree 

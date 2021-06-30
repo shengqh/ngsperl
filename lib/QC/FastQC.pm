@@ -95,14 +95,16 @@ fi
 ";
     }
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $expectname, "", 0, $first_sample_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, \@expectresult, "", 0, $first_sample_file );
 
     my $localized_files = [];
     @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files)};
 
     my $samples     = '"' . join( '" "', @sample_files ) . '"';
-    print $pbs "$fastqc $option --extract -t $curThreadCount -o $cur_dir $samples 
-$fastqc --version | cut -d ' ' -f2 | awk '{print \"FastQC,\"\$1}' > $cur_dir/fastqc.version
+    print $pbs "
+$fastqc $option --extract -t $curThreadCount -o `pwd` $samples 2> >(tee ${sample_name}.fastqc.stderr.log >\&2)
+
+$fastqc --version | cut -d ' ' -f2 | awk '{print \"FastQC,\"\$1}' > `pwd`/fastqc.version
 ";
 
     $self->clean_temp_files($pbs, $localized_files);

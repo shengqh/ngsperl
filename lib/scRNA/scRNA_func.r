@@ -406,3 +406,28 @@ sort_cell_type<-function(cts, sort_column){
   result<-result[order(result[,sort_column], result[,"seurat_clusters"]),]
   return(result)
 }
+
+plot_violin<-function(obj, features=c("FKBP1A", "CD79A")){
+  library(reshape2)
+  library(Seurat)
+
+  glist=VlnPlot(all_obj, features=features, combine = F)
+
+  gdata<-glist[[1]]$data
+  for(idx in c(2:length(glist))){
+    cdata=glist[[idx]]$data
+    gdata<-cbind(gdata, cdata[,1])
+    colnames(gdata)[ncol(gdata)]=colnames(cdata)[1]
+  }
+
+  mdata<-melt(gdata, id="ident")
+
+  ggplot(mdata, aes(ident, value)) + 
+    geom_violin(aes(fill = ident), trim=TRUE, scale="width") + 
+    geom_jitter(width=0.5,size=0.5) + 
+    facet_grid(variable~.) + 
+    theme_classic() + NoLegend() + 
+    xlab("Cluster") + ylab("Expression") +
+    theme(strip.background=element_blank(),
+          strip.text.y = element_text(angle =0))
+}

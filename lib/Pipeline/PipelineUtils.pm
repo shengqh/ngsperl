@@ -1166,6 +1166,7 @@ sub addFilterMafAndReport {
 #  my $mutect2_index_dic = {};
 #  my $mutect2_index_key = "mafReport_Index";
 #  my $taskName = $mutect2call . getNextIndex($mutect2_index_dic, $mutect2_index_key) . "_mergeAndMafreport";
+  $mutect2call = (is_array($mutect2call) ? $mutect2call->[0] : $mutect2call);
   my $taskName = $mutect2call . "_mergeAndMafreport";
 
   my $rCode=( defined $def->{family_info_file} ? "clinicalFeatures=" . $def->{family_info_feature} . ";" : "" );
@@ -2568,7 +2569,14 @@ sub add_bam_validation {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
     target_dir            => "$target_dir/$task_name",
-    option                => "ValidateSamFile -I __FILE__ -O __NAME__.txt $bam_validation_option",
+    option                => "ValidateSamFile -I __FILE__ -O __NAME__.txt $bam_validation_option
+    
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch __NAME__.failed
+fi
+
+",
     interpretor           => "",
     program               => "gatk",
     check_program         => 0,

@@ -76,7 +76,7 @@ sub perform {
     my $tag    = "--sam-RG ID:$sample_name --sam-RG LB:$sample_name --sam-RG SM:$sample_name --sam-RG PL:ILLUMINA --sam-RG PU:$sample_name";
 
     my $fastqs = join( ',', @sample_files );
-    my $bowtie1_aln_command = "bowtie $option $m_option -S $tag $bowtie1_index $fastqs $bowtiesam 2>$alignlog";
+    my $bowtie1_aln_command = "bowtie $option $m_option -S $tag -x $bowtie1_index $fastqs $bowtiesam 2>$alignlog";
 
     my $cmd_file_exists = check_file_exists_command(\@sample_files, "  ");
 

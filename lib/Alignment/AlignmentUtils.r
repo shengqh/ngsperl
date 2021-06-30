@@ -19,6 +19,11 @@ draw_chromosome_count<-function(listFile, outFilePrefix) {
     file.remove(valid_png);
   }
 
+  filelist$size=file.info(filelist$V1)$size
+
+  missing = filelist$V1[is.na(filelist$size) | filelist$size==0]
+  filelist=filelist[!(filelist$V1 %in% missing),]
+
   final=NULL
   i=1
   for(i in c(1:nrow(filelist))){
@@ -60,6 +65,10 @@ draw_chromosome_count<-function(listFile, outFilePrefix) {
   final$Chrom=factor(final$Chrom, levels=chroms)
 
   final$NoRead=final$Reads==0
+
+  noreads<-final[final$NoRead,]
+  noreads<-noreads[!duplicated(noreads$Sample),]
+  write.table(file=paste0(chromosomeFilePrefix, ".noread.txt"), noreads, sep="\t", quote=F, row.names=F)
 
   colors=c("black","red")
   names(colors)=c("FALSE","TRUE")
