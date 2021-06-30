@@ -46,6 +46,8 @@ sub perform {
     $option = $option . " --panel-of-normals $panel_of_normals ";
   }
 
+  my $run_orientation_bias_mixture_model_filter = get_option($config, $section, "run_orientation_bias_mixture_model_filter", "true");  
+
   #target region
   my $intervals_option = "";
   my $intervals = get_param_file( $config->{$section}{intervals}, "intervals", 0 );
@@ -90,7 +92,7 @@ sub perform {
     my $filtered_vcf   = "${group_name}.filtered${suffix}";
     my $passvcf        = "${group_name}.pass${suffix}";
 
-    print $sh "if [[ ! -s $result_dir/$passvcf ]]; then
+    print $sh "if [[ ! -s $cur_dir/$passvcf ]]; then
   \$MYCMD ./$pbs_name 
 fi
     
@@ -137,6 +139,7 @@ fi
       $sample_param = "-I $tumor -tumor $tumor_name -I $normal -normal $normal_name";
     }
 
+    my $rm_list = "tmp_${group_name}";
     print $pbs "$init_command 
 
 mkdir tmp_${group_name}    
@@ -150,6 +153,13 @@ fi
 
 ";
     }
+    
+    my $f1r2_option = "";
+    if ($run_orientation_bias_mixture_model_filter eq "true") {
+      $f1r2_option = "--f1r2-tar-gz f1r2.tar.gz";
+      $rm_list = $rm_list . " f1r2.tar.gz";
+    }
+
     print $pbs "
 if [ ! -s ${tumor}.bai ]; then
   samtools index ${tumor}
@@ -158,19 +168,26 @@ fi
 echo Mutect2 ...
 gatk --java-options \"-Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option\" Mutect2 $option \\
   -R $faFile \\
-  $sample_param \\
-  --f1r2-tar-gz f1r2.tar.gz \\
+  $sample_param $f1r2_option \\
   -O $vcf
 
 m2_exit_code=\$?
 if [[ \$m2_exit_code -eq 0 ]]; then
+";
+
+    my $orientation_bias_option = "";
+    if ($run_orientation_bias_mixture_model_filter eq "true") {
+      print $pbs "
   echo LearnReadOrientationModel ...
   gatk --java-options \"-Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option\" LearnReadOrientationModel -I f1r2.tar.gz -O read-orientation-model.tar.gz
 ";
+      $orientation_bias_option = "--ob-priors read-orientation-model.tar.gz";
+      $rm_list = $rm_list . " read-orientation-model.tar.gz";
+    }
 
-  my $contamination_table_option="";
-  if (defined $variants_for_contamination){
-    print $pbs "
+    my $contamination_table_option="";
+    if (defined $variants_for_contamination){
+      print $pbs "
   echo GetPileupSummaries tumor ...
   gatk --java-options \"-Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option\" GetPileupSummaries \\
     -R $faFile $intervals_option \\
@@ -179,9 +196,9 @@ if [[ \$m2_exit_code -eq 0 ]]; then
     -L $variants_for_contamination \\
     -O ${group_name}.tumor_pileups.table 
 ";
-    my $normal_option = "";
-    if (defined $normal){
-      print $pbs "
+      my $normal_option = "";
+      if (defined $normal){
+        print $pbs "
   echo GetPileupSummaries normal ...
   gatk --java-options \"-Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option\" GetPileupSummaries \\
     -R $faFile $intervals_option \\
@@ -190,10 +207,10 @@ if [[ \$m2_exit_code -eq 0 ]]; then
     -L $variants_for_contamination \\
     -O ${group_name}.normal_pileups.table 
 ";
-      $normal_option = "-matched ${group_name}.normal_pileups.table";
-    }
+        $normal_option = "-matched ${group_name}.normal_pileups.table";
+      }
 
-    print $pbs "
+      print $pbs "
   echo CalculateContamination ...
   gatk --java-options \"-Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option\" CalculateContamination \\
     -I ${group_name}.tumor_pileups.table \\
@@ -201,17 +218,16 @@ if [[ \$m2_exit_code -eq 0 ]]; then
     --tumor-segmentation ${group_name}.segments.table $normal_option
 ";
 
-    $contamination_table_option = "--contamination-table ${group_name}.contamination.table --tumor-segmentation ${group_name}.segments.table";
-  }
+      $contamination_table_option = "--contamination-table ${group_name}.contamination.table --tumor-segmentation ${group_name}.segments.table";
+    }
 
-  print $pbs "
+    print $pbs "
   echo FilterMutectCalls ...
   gatk --java-options \"-Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option\" FilterMutectCalls \\
     -V ${vcf} \\
     -R $faFile \\
-    -O $filtered_vcf $contamination_table_option $m2_extra_filtering_args \\
+    -O $filtered_vcf $contamination_table_option $m2_extra_filtering_args $orientation_bias_option \\
     --stats ${vcf}.stats \\
-    --ob-priors read-orientation-model.tar.gz \\
     --filtering-stats ${filtered_vcf}.stats
 
   filter_exit_code=\$?
@@ -236,7 +252,7 @@ else
   touch ${vcf}.failed
 fi
 
-rm -rf tmp_${group_name} f1r2.tar.gz read-orientation-model.tar.gz
+rm -rf $rm_list
 
 ";
 
