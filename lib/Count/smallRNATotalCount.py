@@ -45,16 +45,24 @@ with open(args.count, "rt") as fin:
 qnames = set()
 logger.info(f"processing {args.input} ...")
 totalCount = 0
+totalPMCount = 0
 with pysam.AlignmentFile(args.input, "rb") as sf:
   for s in sf.fetch():
     if s.is_unmapped:
       continue
     if s.query_name in qnames:
       continue
-    totalCount += countMap[s.query_name]
+    nm = s.get_tag("NM")
+    curCount = countMap[s.query_name]
+    totalCount += curCount
+
+    if nm == 0:
+      totalPMCount += curCount
+      
     qnames.add(s.query_name)
 
 with open(args.output, "wt") as fout:
   fout.write(f"Total\t{totalCount}\n")
+  fout.write(f"TotalPM\t{totalPMCount}\n")
 
 logger.info("done.")
