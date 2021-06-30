@@ -53,6 +53,7 @@ sub initializeDefaultOptions {
   }
   elsif ( $def->{peak_caller} eq "macs2" ) {
     initDefaultValue( $def, "macs2_peak_type", "narrow" );
+#    initDefaultValue( $def, "macs2_output_bigwig", 0 );
     if ( not defined $def->{"macs2_option"} ) {
       my $macs2_genome    = getValue( $def, "macs2_genome" );      #hs
       my $macs2_peak_type = getValue( $def, "macs2_peak_type" );
@@ -421,7 +422,9 @@ sub getConfig {
       else {
         $callFilePattern = "narrowPeak.bed\$";
       }
-
+      my $macs2_output_bigwig = getValue( $def, "macs2_output_bigwig" ,0);
+      #my $chr_size_file = "/scratch/cqs_share/references/gencode/GRCh38.p13/bowtie2_index_2.4.3/GRCh38.primary_assembly.genome.len";
+      my $chr_size_file = getValue( $def, "chr_size_file" ,"");
       $peakCallerTask = $peakCallerTask . "_" . $def->{macs2_peak_type};
       $config->{$peakCallerTask} = {
         class      => "Chipseq::MACS2Callpeak",
@@ -431,6 +434,8 @@ sub getConfig {
         source_ref => $bam_ref,
         groups     => $def->{"treatments"},
         controls   => $def->{"controls"},
+        output_bigwig=>$macs2_output_bigwig,
+        chr_size_file   => $chr_size_file,
         sh_direct  => 0,
         pbs        => {
           "email"    => $email,
@@ -555,6 +560,26 @@ sub getConfig {
       if ( getValue( $def, "perform_homer" ) ) {
         $bind_homer_name = addHomerAnnotation( $config, $def, $summary, $target_dir, $bindName, ".sig.bed" );
       }
+    }
+
+    #if ($perform_bdgdiff) {
+    if (1) {
+      my $bindName = $peakCallerTask . "_bdgdiff";
+      $config->{$bindName} = {
+        class                   => "Chipseq::MACS2Bdgdiff",
+        perform                 => 1,
+        target_dir              => "${target_dir}/" . getNextFolderIndex($def) . "${bindName}",
+        option                  => "",
+        source_ref              => $peakCallerTask,
+        groups                  => $def->{"treatments_bdgdiff"},
+        sh_direct               => 0,
+        pbs                     => {
+          "email"    => $email,
+          "nodes"    => "1:ppn=1",
+          "walltime" => "72",
+          "mem"      => "40gb"
+        },
+      };
     }
 
     if ( getValue( $def, "perform_enhancer" ) ) {

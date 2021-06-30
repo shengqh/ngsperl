@@ -748,6 +748,8 @@ sub getScRNASeqConfig {
 
     my $seurat_name;
     if ( getValue( $def, "perform_seurat" ) ) {
+      my $reduction = "pca";
+
       if (getValue($def, "perform_seurat_oldversion", 0)){
         $seurat_name = "seurat" . ( getValue( $def, "by_sctransform" ) ? "_sct" : "" ) . ( getValue( $def, "by_integration" ) ? "_igr" : "" ) . ( getValue( $def, "pool_sample" ) ? "_pool" : "" );
         $config->{$seurat_name} = {
@@ -826,6 +828,7 @@ sub getScRNASeqConfig {
           if($integration_by_harmony){
             $seurat_name = "seurat_harmony";
             $preprocessing_rscript = "../scRNA/seurat_harmony.r";
+            $reduction = "harmony";
           }else{
             $seurat_name = "seurat_integration";
             $preprocessing_rscript = "../scRNA/seurat_integration.r";
@@ -859,7 +862,6 @@ sub getScRNASeqConfig {
           },
           parameterSampleFile2 => $def->{"batch_for_integration_groups"},
           output_file_ext      => ".final.rds",
-          output_other_ext  => ".cluster.csv;.cluster.normByUpQuantile.csv",
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
@@ -869,7 +871,63 @@ sub getScRNASeqConfig {
         };
         push( @$summary, $seurat_name );
       }
-      my $celltype=$seurat_name . "_celltype";
+
+      if(defined $def->{localization_genes} && $def->{localization_genes} ne ""){
+        my $gene_localization_map_task  = $seurat_name . "_gene_localization_map";
+        my $genes = {
+          $def->{task_name} => $def->{localization_genes},
+        };
+        #print(Dumper($genes));
+        $config->{$gene_localization_map_task} = {
+          class              => "CQS::UniqueR",
+          perform            => 1,
+          target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $gene_localization_map_task,
+          rtemplate          => "../scRNA/scRNA_func.r;../scRNA/gene_localization_map.r",
+          source             => $genes,
+          parameterFile1_ref => [ $seurat_name, ".final.rds" ],
+          parameterSampleFile1 => $genes,
+          parameterSampleFile2 => $def->{groups},
+          output_file => "parameterSampleFile1",
+          output_file_ext    => ".figure.files.csv",
+          sh_direct          => 1,
+          pbs                => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$summary, $gene_localization_map_task );
+      }
+
+      my $cluster_task = $seurat_name . "_cluster_res" . getValue( $def, "resolution" );
+      $config->{$cluster_task} = {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $cluster_task,
+        rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_cluster.r",
+        parameterFile1_ref => [$seurat_name, ".rds"],
+        parameterSampleFile1     => {
+          Mtpattern             => getValue( $def, "Mtpattern" ),
+          rRNApattern           => getValue( $def, "rRNApattern" ),
+          Remove_rRNA        => getValue( $def, "Remove_rRNA" ),
+          Remove_MtRNA        => getValue( $def, "Remove_MtRNA" ),
+          resolution            => getValue( $def, "resolution" ),
+          pca_dims              => getValue( $def, "pca_dims" ),
+          by_sctransform        => getValue( $def, "by_sctransform" ),
+          reduction             => $reduction,
+        },
+        output_file_ext      => ".final.rds",
+        output_other_ext  => ".cluster.csv;.cluster.normByUpQuantile.csv",
+        sh_direct            => 1,
+        pbs                  => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$summary, $cluster_task );
+
+      my $celltype=$cluster_task . "_celltype";
 
       if(getValue( $def, "annotate_tcell", 0)){
         getValue( $def, "HLA_panglao5_file");
@@ -881,9 +939,9 @@ sub getScRNASeqConfig {
         perform                  => 1,
         target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $celltype,
         rtemplate                => "../scRNA/scRNA_func.r,../scRNA/celltype_annotation.r",
-        parameterFile1_ref =>  [$seurat_name, ".cluster.normByUpQuantile.csv"],
-        parameterFile2_ref =>  [$seurat_name, ".cluster.csv"],
-        parameterFile3_ref =>  [$seurat_name, ".final.rds"],
+        parameterFile1_ref =>  [$cluster_task, ".cluster.normByUpQuantile.csv"],
+        parameterFile2_ref =>  [$cluster_task, ".cluster.csv"],
+        parameterFile3_ref =>  [$cluster_task, ".final.rds"],
         parameterSampleFile1    => {
           species               => getValue( $def, "species" ),
           db_markers_file       => getValue( $def, "markers_file" ),
@@ -893,6 +951,7 @@ sub getScRNASeqConfig {
           HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
           tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
           by_sctransform        => getValue( $def, "by_sctransform" ),
+          summary_layer_file => $def->{summary_layer_file},
         },
         output_file_ext      => ".celltype.csv",
         output_other_ext  => ".celltype_cluster.csv;.celltype.rds",
@@ -910,64 +969,24 @@ sub getScRNASeqConfig {
       my $celltype_name     = "cellactivity_clusters";
       my $cluster_name      = "seurat_cellactivity_clusters";
 
-      push(@report_files, ($seurat_name, ".final.rds", $celltype, ".celltype.csv", $celltype, ".celltype.rds"));
+      push(@report_files, ($cluster_task, ".final.rds", $celltype, ".celltype.csv", $celltype, ".celltype.rds"));
       push(@report_names, ("seurat_rds", "activity_celltype", "activity_rds"));
 
-      # my $additional_rmd_files = "Functions.Rmd";
-      # $config->{$seurat_name} = {
-      #   class                    => "CQS::UniqueRmd",
-      #   perform                  => 1,
-      #   target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_name,
-      #   report_rmd_file          => "../scRNA/analysis.rmd",
-      #   additional_rmd_files     => $additional_rmd_files,
-      #   parameterSampleFile1_ref => "files",
-      #   parameterSampleFile2     => {
-      #     Mtpattern             => getValue( $def, "Mtpattern" ),
-      #     rRNApattern           => getValue( $def, "rRNApattern" ),
-      #     Remove_Mt_rRNA        => getValue( $def, "Remove_Mt_rRNA" ),
-      #     nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
-      #     nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
-      #     nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
-      #     mt_cutoff             => getValue( $def, "mt_cutoff" ),
-      #     resolution            => getValue( $def, "resolution" ),
-      #     pca_dims              => getValue( $def, "pca_dims" ),
-      #     species               => getValue( $def, "species" ),
-      #     markers_file          => getValue( $def, "markers_file" ),
-      #     annotate_tcell        => getValue( $def, "annotate_tcell", 0),
-      #     HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
-      #     tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
-      #     details_rmd           => getValue( $def, "details_rmd" ),
-      #     by_integration        => getValue( $def, "by_integration" ),
-      #     by_sctransform        => getValue( $def, "by_sctransform" ),
-      #     pool_sample           => getValue( $def, "pool_sample" ),
-      #     batch_for_integration => getValue( $def, "batch_for_integration" ),
-      #     hto_sample_file       => $hto_sample_file,
-      #     prefix                => $project_name,
-      #   },
-      #   parameterSampleFile3 => $def->{"batch_for_integration_groups"},
-      #   parameterSampleFile4 => $def->{"pool_sample_groups"},
-      #   parameterSampleFile5_ref => $hto_ref,
-      #   output_file_ext      => ".final.rds",
-      #   output_other_ext  => ".cluster.csv;.allmarkers.csv;.top10markers.csv;.cluster.normByUpQuantile.csv;_ur.html",
-      #   sh_direct            => 1,
-      #   pbs                  => {
-      #     "email"     => $def->{email},
-      #     "emailType" => $def->{emailType},
-      #     "nodes"     => "1:ppn=1",
-      #     "walltime"  => "1",
-      #     "mem"       => "10gb"
-      #   },
-      # };
-      # push( @$summary, $seurat_name );
+      if (getValue( $def, "perform_SignacX_tcell", 0 ) ) {
+        my $signacX_name = $celltype . "_SignacX_tcell";
+        addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, $cluster_task, 1, $celltype, $reduction );
+        push @report_files, ($signacX_name, ".SignacX.png");
+        push @report_names, "signacx_tcell_png";
+      }
 
-      my $find_markers = $seurat_name . "_celltype_markers";
+      my $find_markers = $cluster_task . "_celltype_markers";
       $config->{$find_markers} = {
         class                => "CQS::UniqueR",
         perform              => 1,
         target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $find_markers,
         rtemplate            => "../scRNA/scRNA_func.r,../scRNA/celltype_markers.r",
-        parameterFile1_ref   => [ $seurat_name, ".final.rds" ],
-        parameterFile2_ref   => [ $seurat_name, ".cluster.csv" ],
+        parameterFile1_ref   => [ $cluster_task, ".final.rds" ],
+        parameterFile2_ref   => [ $cluster_task, ".cluster.csv" ],
         parameterFile3_ref   => [ $celltype, ".celltype.csv" ],
         parameterSampleFile1 => {
           by_sctransform        => getValue( $def, "by_sctransform" ),
@@ -991,8 +1010,8 @@ sub getScRNASeqConfig {
           perform              => 1,
           target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $bubblemap_name,
           rtemplate            => "../scRNA/scRNA_func.r,../scRNA/seurat_bubblemap.r",
-          parameterFile1_ref   => [ $seurat_name, ".final.rds" ],
-          parameterFile2_ref   => [ $seurat_name, ".cluster.csv" ],
+          parameterFile1_ref   => [ $cluster_task, ".final.rds" ],
+          parameterFile2_ref   => [ $cluster_task, ".cluster.csv" ],
           parameterFile3_ref   => [ $celltype, ".celltype.csv" ],
           parameterFile4       => $def->{bubblemap_file},
           parameterSampleFile1 => {
@@ -1010,21 +1029,21 @@ sub getScRNASeqConfig {
       }
 
       if (getValue( $def, "perform_scMRMA", 0 ) ) {
-        addScMRMA( $config, $def, $summary, $target_dir, $project_name, $seurat_name );
+        addScMRMA( $config, $def, $summary, $target_dir, $project_name, $cluster_task );
       }
 
       my $parameterSampleFile5_ref = undef;
       if (getValue( $def, "perform_CHETAH", 0 ) ) {
-        my $CHETAH_name= $seurat_name . "_CHETAH";
-        addCHETAH( $config, $def, $summary, $target_dir, $project_name, $CHETAH_name, $seurat_name );
+        my $CHETAH_name= $cluster_task . "_CHETAH";
+        addCHETAH( $config, $def, $summary, $target_dir, $project_name, $CHETAH_name, $cluster_task );
         push @report_files, ($CHETAH_name, ".CHETAH.png");
         push @report_names, "chetah_png";
       }
 
       my $parameterSampleFile6_ref = undef;
       if (getValue( $def, "perform_SignacX", 0 ) ) {
-        my $signacX_name = $seurat_name . "_SignacX";
-        addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, $seurat_name, 0 );
+        my $signacX_name = $cluster_task . "_SignacX";
+        addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, $cluster_task, 0 );
         push @report_files, ($signacX_name, ".SignacX.png");
         push @report_names, "signacx_png";
 
@@ -1056,12 +1075,12 @@ sub getScRNASeqConfig {
 
       if (getValue( $def, "perform_tcell_signac", 0 ) ) {
         my $tcell_signacX_name = $celltype . "_tcell_signac";
-        addSignac( $config, $def, $summary, $target_dir, $project_name, $tcell_signacX_name, $seurat_name, 1, $celltype );
+        addSignac( $config, $def, $summary, $target_dir, $project_name, $tcell_signacX_name, $cluster_task, 1, $celltype );
         push @report_files, ($tcell_signacX_name, ".signac.png");
         push @report_names, "tcell_signac_png";
       }
       
-      addGeneTask( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name );
+      addGeneTask( $config, $def, $summary, $target_dir, $cluster_task, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name );
 
       if ( getValue( $def, "perform_rename_cluster" ) ) {
         my $rename_cluster = $celltype . "_rename";
@@ -1070,7 +1089,7 @@ sub getScRNASeqConfig {
           perform              => 1,
           target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $rename_cluster,
           rtemplate            => "../scRNA/scRNA_func.r,../scRNA/rename_cluster.r",
-          parameterFile1_ref   => [ $seurat_name, ".final.rds" ],
+          parameterFile1_ref   => [ $cluster_task, ".final.rds" ],
           parameterFile2_ref   => [ $celltype, ".cluster.csv" ],
           parameterFile3_ref   => [ $celltype, ".celltype.csv" ],
           parameterSampleFile1 => {
@@ -1097,7 +1116,7 @@ sub getScRNASeqConfig {
         $celltype_name     = "renamed_cellactivity_clusters";
         $cluster_name      = "seurat_renamed_cellactivity_clusters";
 
-        addGeneTask( $config, $def, $summary, $target_dir, $seurat_name, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name );
+        addGeneTask( $config, $def, $summary, $target_dir, $cluster_task, $cluster_task_name, $cluster_file, $celltype_name, $cluster_name );
       }
 
       my $report_name= "report";

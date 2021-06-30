@@ -199,28 +199,27 @@ add_celltype<-function(obj, celltype_df, celltype_column){
   return(obj)
 }
 
-run_cluster_only<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, min.pct = 0.5, logfc.threshold = 0.6, reduction="pca"){
-  if(reduction == "pca"){
-    if (by_sctransform) {
-      object <- RunPCA(object = object, verbose=FALSE)
-    }else{
-      if (Remove_Mt_rRNA) {
-        rRNA.genes <- grep(pattern = rRNApattern,  rownames(object), value = TRUE)
-        Mt.genes<- grep (pattern= Mtpattern,rownames(object), value=TRUE )
-        var.genes <- dplyr::setdiff(VariableFeatures(object), c(rRNA.genes,Mt.genes))
-      } else {
-        var.genes <- VariableFeatures(object)
-      }
-      object <- RunPCA(object = object, features = var.genes, verbose=FALSE)
+run_pca<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform){
+  if (by_sctransform) {
+    object <- RunPCA(object = object, verbose=FALSE)
+  }else{
+    if (Remove_Mt_rRNA) {
+      rRNA.genes <- grep(pattern = rRNApattern,  rownames(object), value = TRUE)
+      Mt.genes<- grep (pattern= Mtpattern,rownames(object), value=TRUE )
+      var.genes <- dplyr::setdiff(VariableFeatures(object), c(rRNA.genes,Mt.genes))
+    } else {
+      var.genes <- VariableFeatures(object)
     }
+    object <- RunPCA(object = object, features = var.genes, verbose=FALSE)
   }
-  
-  object <- RunUMAP(object = object, reduction = reduction, dims=pca_dims, verbose = FALSE)
-  object <- FindNeighbors(object = object, dims=pca_dims, verbose=FALSE)
-  object <- FindClusters(object=object, verbose=FALSE, random.seed=random.seed, resolution=resolution)
   return(object)
 }
 
+run_cluster_only<-function(object, pca_dims, resolution, random.seed, reduction="pca"){
+  object <- FindNeighbors(object = object, reduction=reduction, dims=pca_dims, verbose=FALSE)
+  object <- FindClusters(object=object, verbose=FALSE, random.seed=random.seed, resolution=resolution)
+  return(object)
+}
 
 run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, min.pct = 0.5, logfc.threshold = 0.6, reduction="pca"){
   object=run_cluster_only(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, min.pct, logfc.threshold, reduction)
@@ -331,16 +330,16 @@ draw_dimplot<-function(mt, filename, split.by) {
   nWidth=ceiling(sqrt(nSplit))
   nHeight=ceiling(nSplit / nWidth)
 
-  png(filename, width=nWidth * 600, height=nHeight*600, res=300)
+  png(filename, width=nWidth * 600 + 200, height=nHeight*600, res=300)
   g1<-ggplot(mt, aes(x=UMAP_1,y=UMAP_2)) +
     geom_bin2d(bins = 70) + 
     scale_fill_continuous(type = "viridis") + 
-    facet_wrap(as.formula(paste("~", split.by))) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+    facet_wrap(as.formula(paste("~", split.by)), ncol=nWidth, nrow=nHeight) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
   print(g1)
   dev.off()
 }
 
-do_harmony<-function(objs, by_sctransform, batch_file) {
+do_harmony<-function(objs, by_sctransform, Remove_Mt_rRNA, Mtpattern, rRNApattern, npcs, batch_file) {
   if(by_sctransform){
     cat("performing SCTransform ...\n")
     #perform sctransform
@@ -366,6 +365,13 @@ do_harmony<-function(objs, by_sctransform, batch_file) {
     cat("ScaleData ... \n")
     obj <- ScaleData(obj, features = all.genes, verbose = FALSE)
   }
+
+  if (Remove_Mt_rRNA) {
+    rRNA.genes <- grep(pattern = rRNApattern,  rownames(obj), value = TRUE)
+    Mt.genes<- grep (pattern= Mtpattern,rownames(obj), value=TRUE )
+    VariableFeatures(obj) <- dplyr::setdiff(VariableFeatures(obj), c(rRNA.genes,Mt.genes))      
+  }
+
   cat("RunPCA ... \n")
   obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
 
