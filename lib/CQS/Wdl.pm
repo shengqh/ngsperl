@@ -148,7 +148,7 @@ sub perform {
       }
       close($list);
       
-      $cur_dic->{$sample_name} = [basename($list_file)];
+      $cur_dic->{$sample_name} = [$list_file];
     }
     
     $replace_dics->{$input_name} = $cur_dic;
@@ -196,6 +196,8 @@ sub perform {
   my $json = JSON->new;
   $json = $json->pretty([1]);
 
+  my $expected = $self->result($config, $section);
+
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
@@ -206,8 +208,15 @@ sub perform {
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+    my $cromwell_finalOutputs = $use_caper ? 0 : get_option($config, $section, "cromwell_finalOutputs", 1);
+    my $final_dir = $cromwell_finalOutputs ? $cur_dir . "/cromwell_finalOutputs" : $cur_dir;
 
-    print $sh "\$MYCMD ./$pbs_name \n";
+    my $expect_file = $expected->{$sample_name}[0];
+
+    print $sh "if [[ ! -s $expect_file ]]; then
+  \$MYCMD ./$pbs_name
+fi
+";
 
     my $log_desc = $cluster->get_log_description($log);
     
@@ -251,7 +260,7 @@ sub perform {
     
     my $input_file = basename($sample_input_file);
     
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $expect_file );
 
     if( $self->{"_use_tmp_folder"}){
       print $pbs "
@@ -270,6 +279,11 @@ fi
 "      
     }
 
+    print $pbs "
+if [[ -e $final_dir/${sample_name}.failed ]]; then
+  rm $final_dir/${sample_name}.failed
+fi
+";
     if($use_caper){
       print $pbs "
 caper run $wdl_file $option -i $input_file $singularity_option -m $cur_dir/metadata.json
@@ -282,10 +296,15 @@ java -Dconfig.file=$cromwell_config_file \\
   run $wdl_file $option \\
   --inputs $input_file \\
   --options $input_option_file
-    
 ";
     }
 
+    print $pbs "
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch $final_dir/${sample_name}.failed
+fi
+";
 
     if( $self->{"_use_tmp_folder"}){
       print $pbs "
@@ -315,23 +334,27 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my $use_caper = get_option( $config, $section, "use_caper", 0 );
-
-  my $cromwell_finalOutputs = $use_caper? 0 : get_option($config, $section, "cromwell_finalOutputs", 1);
-  my $cur_dir = $cromwell_finalOutputs ? $result_dir . "/cromwell_finalOutputs" : $result_dir;
+  my $output_to_same_folder = get_option($config, $section, "output_to_same_folder", 1);
+  my $cromwell_finalOutputs = $use_caper ? 0 : get_option($config, $section, "cromwell_finalOutputs", 1);
+  my $use_filename_in_result = get_option($config, $section, "use_filename_in_result", 0);
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $output_exts = get_output_ext_list( $config, $section );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $sample_dir = get_option($config, $section, "output_to_same_folder", 1) ? $cur_dir : $cur_dir . "/" . $sample_name;
+    my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+    my $final_dir = $cromwell_finalOutputs ? $cur_dir . "/cromwell_finalOutputs" : $cur_dir;
+
+    my $sample_file = $raw_files{$sample_name}[0];
+    my $sample_prefix = $use_filename_in_result ? change_extension(basename($sample_file), "") : $sample_name;
     my @result_files = ();
     for my $output_ext (@$output_exts) {
       if ( $output_ext ne "" ) {
         if($cromwell_finalOutputs){
-          push( @result_files, "${sample_dir}/${sample_name}${output_ext}" );
+          push( @result_files, "${final_dir}/${sample_prefix}${output_ext}" );
         }else{
-          push( @result_files, "${sample_dir}/$output_ext" );
+          push( @result_files, "${final_dir}/$output_ext" );
         }
       }
     }
