@@ -22,6 +22,7 @@ sub new {
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_wdl";
   $self->{_can_use_docker} = 0;
+  #$self->{_forbid_tmp_folder}  = 1;
   bless $self, $class;
   return $self;
 }
@@ -225,7 +226,6 @@ sub perform {
       }
     }
     
-    
     for my $input_key (keys %$replace_dics){
       my $input_values = $replace_dics->{$input_key}{$sample_name};
       if (is_array($json_dic->{$input_key})){
@@ -235,7 +235,14 @@ sub perform {
       }
     }
     
-    #print(Dumper($json_dic));
+    #print("Before deletion: " . Dumper($json_dic));
+    my @keys = keys %$json_dic;
+    for my $key (@keys){
+      if ($json_dic->{$key} eq ""){
+        delete($json_dic->{$key});
+      }
+    }
+    #print("After deletion: " . Dumper($json_dic));
 
     my $sample_input_file = $self->get_file( $cur_dir, $sample_name, ".inputs.json" );
     open my $fh, ">", $sample_input_file;
@@ -245,6 +252,13 @@ sub perform {
     my $input_file = basename($sample_input_file);
     
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
+
+    if( $self->{"_use_tmp_folder"}){
+      print $pbs "
+cp -P \$res_dir/*.simg .
+cp $sample_input_file $input_file
+";
+    }
 
     if($check_output_file_pattern ne ""){
       print $pbs "
@@ -265,6 +279,14 @@ caper run $wdl_file $option -i $input_file $singularity_option -m $cur_dir/metad
       print $pbs "
 java -Dconfig.file=$cromwell_config_file -jar $cromwell_jar run $wdl_file $option --inputs $input_file --options $input_option_file
     
+";
+    }
+
+
+    if( $self->{"_use_tmp_folder"}){
+      print $pbs "
+rm *.simg
+rm $input_file
 ";
     }
     $self->close_pbs( $pbs, $pbs_file );
