@@ -151,12 +151,13 @@ sub addMutect2 {
     "m2_extra_filtering_args" => $def->{m2_extra_filtering_args},
     "source_ref" => [ $bam_input, '.bam$' ],
     "variants_for_contamination" => $def->{variants_for_contamination},
+    "run_orientation_bias_mixture_model_filter" => $def->{'Mutect2.run_orientation_bias_mixture_model_filter'},
     "intervals" => $def->{covered_bed},
     "fasta_file" => $def->{ref_fasta},
     pbs=> {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "22",
-      "mem"       => "40gb"
+      "walltime"  => getValue($def, "mutect2_walltime", "22"),
+      "mem"       => getValue($def, "mutect2_memory", "40gb"),
     },
   };
 
@@ -653,6 +654,10 @@ samtools idxstats __NAME__.nosoftclip.bam > __NAME__.nosoftclip.bam.chromosome.c
         perform               => 1,
         target_dir            => "${target_dir}/${CrosscheckFingerprints_name}",
         option                => "
+if [[ -e __NAME__.failed ]]; then
+  rm __NAME__.failed
+fi
+
 java -Xmx40g -jar $picard_jar CrosscheckFingerprints INPUT=__FILE__ \\
   H=$hapmap \\
   CROSSCHECK_BY=SAMPLE \\
@@ -661,11 +666,15 @@ java -Xmx40g -jar $picard_jar CrosscheckFingerprints INPUT=__FILE__ \\
   NUM_THREADS=8 \\
   OUTPUT=__NAME__.crosscheck_metrics 
 
-java -Xmx40g -jar $picard_jar ClusterCrosscheckMetrics INPUT=__NAME__.crosscheck_metrics \\
-  LOD_THRESHOLD=-5 \\
-  OUTPUT=__NAME__.clustered.crosscheck_metrics
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch __NAME__.failed
+else
+  java -Xmx40g -jar $picard_jar ClusterCrosscheckMetrics INPUT=__NAME__.crosscheck_metrics \\
+    LOD_THRESHOLD=-5 \\
+    OUTPUT=__NAME__.clustered.crosscheck_metrics
 
-cat <<EOT >> __NAME__.r
+  cat >__NAME__.r <<EOT
 library('ggplot2')
 mat<-read.table('__NAME__.crosscheck_metrics', sep='\\t', header=T)
 
@@ -680,7 +689,8 @@ dev.off()
 
 EOT
 
-R --vanilla -f __NAME__.clustered.crosscheck_metrics.r
+  R --vanilla -f __NAME__.clustered.crosscheck_metrics.r
+fi
 
 ",
         interpretor           => "",
@@ -1336,7 +1346,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
     my $mutect2_normal_files="mutect2_normal_files";
     my $mutect2_tumor_files="mutect2_tumor_files";
 
-    my $pon = getValue($def, "pon", "");
+    my $pon = getValue($def, "panel_of_normals", "");
     if($def->{"perform_mutect2_pon"}){
       $pon = add_muTect2_PON($config, $def, $individual, $summary, $target_dir, $bam_input, "PON_muTect2_");
     }
@@ -1358,8 +1368,17 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       my $is_tumor_only = not defined $normal_files;
       #print("is_tumor_only=" . $is_tumor_only . "\n");
 
-      my $mutect2call = addMutect2Wdl($config, $def, $individual, $target_dir, $mutect_prefix, $mutect2_option, 0, $is_tumor_only, $tumor_files, $normal_files, [$pon, 'vcf.gz$'], [$pon, 'vcf.gz.tbi$']);
-      $mutect_ref = [ $mutect2call, '.vcf$' ];
+      if ($pon eq ""){
+        my $mutect2call = addMutect2Wdl($config, $def, $individual, $target_dir, $mutect_prefix, $mutect2_option, 0, $is_tumor_only, $tumor_files, $normal_files, undef, undef);
+        $mutect_ref = [ $mutect2call, '.vcf$' ];
+      }elsif(-e $pon){
+        my $suffix = ($pon =~ /vcf.gz/) ? ".tbi" : ".idx";
+        my $mutect2call = addMutect2Wdl($config, $def, $individual, $target_dir, $mutect_prefix, $mutect2_option, 0, $is_tumor_only, $tumor_files, $normal_files, $pon, $pon . $suffix);
+        $mutect_ref = [ $mutect2call, '.vcf$' ];
+      }else{
+        my $mutect2call = addMutect2Wdl($config, $def, $individual, $target_dir, $mutect_prefix, $mutect2_option, 0, $is_tumor_only, $tumor_files, $normal_files, [$pon, 'vcf.gz$'], [$pon, 'vcf.gz.tbi$']);
+        $mutect_ref = [ $mutect2call, '.vcf$' ];
+      }
     }else{
       my $mutect2call = $mutect_prefix . "01_call";
       addMutect2($config, $def, $individual, $target_dir, $bam_input, $mutect2call, $mutect2_option, 1, $pon);
@@ -1370,7 +1389,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
     #my $mutect2merge = "${bam_input}_muTect2_02_merge";
     #add_combine_mutect($config, $def, $summary, $target_dir, $mutect2merge, [$mutect2call, ".vcf\$"]);
     
-    if ($def->{ncbi_build} eq "GRCh38") {
+    if ($def->{ncbi_build} eq "GRCh38" && $def->{'perform_mutect2_by_wdl'}) {
       my $mutect2callReport = addFilterMafAndReport($config, $def, $summary, $target_dir, $mutect_ref);
       push @$summary, $mutect2callReport;
    
