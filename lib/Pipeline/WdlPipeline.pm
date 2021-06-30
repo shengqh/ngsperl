@@ -120,7 +120,8 @@ sub addPairedFastqToProcessedBam {
     "input_json_file" => $pipeline->{"input_file"},
     "input_parameters" => {
       "PreProcessingForVariantDiscovery_GATK4.sample_name" => "SAMPLE_NAME",
-      "PreProcessingForVariantDiscovery_GATK4.DoMarkDuplicates" =>$PreProcessing_DoMarkDuplicates,
+      "PreProcessingForVariantDiscovery_GATK4.SamToFastqAndBwaMem.num_cpu" => "8",
+      "PreProcessingForVariantDiscovery_GATK4.DoMarkDuplicates" => $PreProcessing_DoMarkDuplicates,
     },
     "input_list" => {
       #"PreProcessingForVariantDiscovery_GATK4.flowcell_unmapped_bams_list_ref" => [$files_ref,".fastq"]
@@ -135,7 +136,7 @@ sub addPairedFastqToProcessedBam {
     },
   };
 
-  print(Dumper($config->{$task}));
+  #print(Dumper($config->{$task}));
   push @$individual, $task;
   return ($task);
 }
@@ -250,17 +251,19 @@ sub addMutect2Wdl {
     $run_funcotator="true";
   }
 
-  my $output_sample_ext;
-  if($def->{muTect2_suffix}) {
-    $output_sample_ext = $def->{muTect2_suffix};
-  }else {
-    $output_sample_ext=".hg19";
-    if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
-      $output_sample_ext=".hg38";
-    } elsif ($def->{ncbi_build} eq "GRCm38")  {
-      $output_sample_ext=".mm10";
-    }
-  }
+  my $run_orientation_bias_mixture_model_filter = getValue($def, "Mutect2.run_orientation_bias_mixture_model_filter", "true");
+
+  my $output_sample_ext = "";
+  # if($def->{muTect2_suffix}) {
+  #   $output_sample_ext = $def->{muTect2_suffix};
+  # }else {
+  #   $output_sample_ext=".hg19";
+  #   if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
+  #     $output_sample_ext=".hg38";
+  #   } elsif ($def->{ncbi_build} eq "GRCm38")  {
+  #     $output_sample_ext=".mm10";
+  #   }
+  # }
 
   my $output_file_ext;
   my $output_other_ext;
@@ -283,6 +286,7 @@ sub addMutect2Wdl {
     "output_file_ext" => $output_file_ext,
     "output_other_ext" => $output_other_ext,
     "input_json_file" => $mutect2_pipeline->{"input_file"},
+    "use_filename_in_result" => 1,
     "input_parameters" => {
       "Mutect2.m2_extra_args" => $mutect2_option,
       "Mutect2.intervals" => $def->{covered_bed},
@@ -292,6 +296,7 @@ sub addMutect2Wdl {
       "Mutect2.tumor_reads_ref" => [$mutect2_tumor_files, ".bam\$"],
       "Mutect2.tumor_reads_index_ref" => [$mutect2_tumor_files, ".bai\$"],
       "Mutect2.run_funcotator" => $run_funcotator,
+      "Mutect2.run_orientation_bias_mixture_model_filter" => $run_orientation_bias_mixture_model_filter
     },
     "input_single" => {},
     pbs=> {
@@ -324,9 +329,12 @@ sub addMutect2Wdl {
     if( -e $pon ){
       $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon"} = $pon;
       $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon_idx"} = $pon_idx;
-    }else{
+    }elsif(defined $pon){
       $config->{$mutect2_call}{"input_single"}{"Mutect2.pon_ref"} = $pon;
       $config->{$mutect2_call}{"input_single"}{"Mutect2.pon_idx_ref"} = $pon_idx;
+    }else{
+      $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon"} = "";
+      $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon_idx"} = "";
     }
   }
 
