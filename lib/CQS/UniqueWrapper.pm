@@ -23,6 +23,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_uw";
+  $self->{_forbid_tmp_folder} = 1;
   bless $self, $class;
   return $self;
 }

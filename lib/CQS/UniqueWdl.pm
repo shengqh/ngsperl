@@ -185,11 +185,21 @@ sub perform {
   #softlink singularity_image_files to result folder
   my $singularity_image_files = get_raw_files( $config, $section, "singularity_image_files" ); 
   for my $image_name ( sort keys %$singularity_image_files ) {
-    my $simgSoftlinkCommand="cp -P ".$singularity_image_files->{$image_name}[0]." ".$result_dir."/".$image_name;
-    print($simgSoftlinkCommand."\n");
-  #  print $singularity_image_files->{$image_name}[0]."\n";
-    system($simgSoftlinkCommand);
-    #`ls -la`;
+    my $source_image=$singularity_image_files->{$image_name};
+    if( is_array($source_image) ) {
+      $source_image=${$source_image}[0];
+    }
+    my $target_image = $result_dir."/".$image_name;
+    if (! -e $target_image) {
+      my $simgSoftlinkCommand;
+      if (-l $singularity_image_files->{$image_name}) { #softlink, copy
+          $simgSoftlinkCommand="cp -P ".$source_image." ".$target_image;
+      } else { #file, make softlink
+          $simgSoftlinkCommand="ln -s ".$source_image." ".$target_image;
+      }
+      print($simgSoftlinkCommand."\n");
+      system($simgSoftlinkCommand);
+    }
   }
 
   my ($replace_dics, $replace_values) = $self->prepare_wdl_values($config, $section, $task_name, $result_dir);
