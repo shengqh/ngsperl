@@ -60,14 +60,51 @@ def find_error_samples_by_fastq_len(logger, fastq_len_result_folder):
     result.append(os.path.basename(cfile).replace(".len.error",""))
   return(result)
 
+def find_error(line, errors):
+  for error in errors:
+    if error in line:
+      return(True)
+  return(False)
+
 def find_error_samples_by_bwa(logger, bwa_dir):
+  errors = ["[mem_sam_pe]", 'error', '[W::bseq_read]']
+
+  files=[y for y in glob(os.path.join(bwa_dir, "result", "*.unsorted.bam.failed"))]
+  result = set()
+  for cfile in files:
+    result.add(os.path.basename(cfile).replace(".unsorted.bam.failed",""))
+
   files=[y for y in glob(os.path.join(bwa_dir, "log", "*.log"))]
+  for cfile in files:
+    sample_name = os.path.basename(cfile).replace("_bwa.log","")
+    if sample_name in result:
+      continue
+
+    with open(cfile, "rt") as fin:
+      bFindSucceed = False
+      for line in fin:
+        if find_error(line, errors):
+          result.add(sample_name)
+          break
+        
+        if "[main] Real time" in line:
+          bFindSucceed = True
+      
+      if not bFindSucceed:
+        if not sample_name in result:
+          result.add(sample_name)
+
+  result = sorted(result)
+  return(result)
+
+def find_error_samples_by_bwa_refine(logger, dir):
+  files=[y for y in glob(os.path.join(dir, "log", "*.log"))]
   result = []
   for cfile in files:
     with open(cfile, "rt") as fin:
       for line in fin:
-        if 'error' in line:
-          result.append(os.path.basename(cfile).replace("_bwa.log",""))
+        if ('CANCELLED' in line) or ("[W::bseq_read]" in line):
+          result.append(os.path.basename(cfile).replace("_rf.log",""))
           break
   return(result)
 
