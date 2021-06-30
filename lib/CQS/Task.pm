@@ -22,6 +22,7 @@ sub new {
     _pbskey        => "source",
     _docker_prefix => "",
     _can_use_docker => 1,
+    _forbid_tmp_folder  => 0,
     _use_tmp_folder => 0,
     _localize_to_local_folder => 0,
   };
@@ -134,6 +135,14 @@ sub init_tmp_folder {
     print $pbs "
 res_dir='$result_dir'
 tmp_dir=\$(mktemp -d -t ci-\$(date +\%Y-\%m-\%d-\%H-\%M-\%S)-XXXXXXXXXX)
+
+tmp_cleaner()
+{
+rm -rf \${tmp_dir}
+exit -1
+}
+trap 'tmp_cleaner' TERM
+
 echo using tmp_dir=\$tmp_dir
 cd \$tmp_dir
 
@@ -164,7 +173,7 @@ if [[ -d \$tmp_dir && \$tmp_dir != '/' ]]; then
   cd \$tmp_dir
   cd \$tmp_dir
 
-  cp -r * \$res_dir
+  cp -p -r * \$res_dir
   cd \$res_dir
   echo delete tmp folder \$tmp_dir
   rm -rf \$tmp_dir
@@ -401,6 +410,7 @@ sub get_docker_value {
 sub localize_files {
   my ($self, $pbs, $sample_files, $localized_files, $other_exts) = @_;
   if($self->{_use_tmp_folder} || $self->{_localize_to_local_folder} ){
+    my $target_dir = $self->{_use_tmp_folder} ? '$res_dir/':'';
     if($sample_files->[0] =~ /.bam$/){
       if(defined $other_exts){
         push(@$other_exts, ".bai");
@@ -417,29 +427,71 @@ echo localize start at `date`
 ";
     for my $old_file (@$sample_files){
       my $new_file = basename($old_file);
+
+      push(@$result, $new_file);
+      push(@$localized_files, $new_file);
+
+      my $all_local_file = join(" ", @$localized_files);
+
       print $pbs "
 echo $old_file      
 if [[ ! -s $old_file ]]; then
   echo file not exists: $old_file
+  touch ${target_dir}${new_file}.not.exist
+  rm $all_local_file
   exit 1
 fi
-cp $old_file $new_file
+
+for i in {1..5}; do 
+  echo iteration \$i ...
+  cp -f $old_file $new_file
+  diff $old_file $new_file
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    break
+  fi
+done
+
+if [[ \$status -ne 0 ]]; then
+  echo file copied is not idential to original file, quit.
+  touch ${target_dir}${new_file}.copy.failed
+  rm $all_local_file
+  exit 1
+fi
 ";
-      push(@$result, $new_file);
-      push(@$localized_files, $new_file);
 
       if(defined $other_exts){
         for my $other_ext (@$other_exts){
           my $old_ext_file = $old_file . $other_ext;
           my $new_ext_file = $new_file . $other_ext;
+          my $before_local_file = join(" ", @$localized_files);
+          push(@$localized_files, $new_ext_file);
+          my $after_local_file = join(" ", @$localized_files);
           print $pbs "
 if [[ ! -s $old_ext_file ]]; then
   echo file not exists: $old_ext_file
+  touch ${target_dir}${new_ext_file}.not.exist
+  rm $before_local_file
   exit 1
 fi
-cp $old_ext_file $new_ext_file
+
+for i in {1..5}; do 
+  echo iteration \$i ...
+  cp -f $old_ext_file $new_ext_file
+  diff $old_ext_file $new_ext_file
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    break
+  fi
+done
+
+if [[ \$status -ne 0 ]]; then
+  echo file copied is not idential to original file, quit.
+  touch ${target_dir}${new_ext_file}.copy.failed
+  rm $all_local_file
+  exit 1
+fi
 ";
-          push(@$localized_files, $new_ext_file);
         }
       }
     }
@@ -484,14 +536,37 @@ sub open_pbs {
 $path_file
 $init_command
 
+set -o pipefail
+
 cd '$result_dir'
 
 ";
   if ( defined $final_file ) {
-    my $delete_file = ( $final_file =~ /^\// ) ? $final_file : "${result_dir}/${final_file}";
-
     my $checkFile = $final_file_can_empty ? "-e" : "-s";
-    print $pbs "
+    if (is_array($final_file)){
+      my @final_files = @$final_file;
+      if(scalar(@final_files) > 1){
+        my $final_files_1 = $final_files[0];
+        my $final_files_2 = $final_files[1];
+
+        my $delete_file = ( $final_files_1 =~ /^\// ) ? $final_files_1 : "${result_dir}/${final_files_1}";
+        print $pbs "
+if [[ !(1 -eq \$1) ]]; then
+  if [[ ( $checkFile $final_files_1 && $checkFile $final_files_2 ) || ( -d $final_files_1 && -d $final_files_2 ) ]]; then
+    echo job has already been done. if you want to do again, delete $delete_file and submit job again.
+    exit 0
+  fi
+fi
+";
+      }else{
+        $final_file = $final_files[0];
+      }
+    }
+    
+    if(!is_array($final_file)){
+      my $delete_file = ( $final_file =~ /^\// ) ? $final_file : "${result_dir}/${final_file}";
+
+      print $pbs "
 if [[ !(1 -eq \$1) ]]; then
   if [[ ( $checkFile $final_file ) || ( -d $final_file ) ]]; then
     echo job has already been done. if you want to do again, delete $delete_file and submit job again.
@@ -499,6 +574,7 @@ if [[ !(1 -eq \$1) ]]; then
   fi
 fi
 ";
+    }
   }
 
   if ( defined $input_file ) {
@@ -563,6 +639,7 @@ cd '$result_dir'
 ";
     }
     print $pbs "
+set -o pipefail
 
 $docker_init
 ";
@@ -617,16 +694,16 @@ sub init_parameter {
   $self->{_localize_to_local_folder} = $config->{general}{localize_to_local_folder} || get_option( $config, $section, "localize_to_local_folder", $self->{_localize_to_local_folder});
   if($self->{_localize_to_local_folder} ){
     $self->{_use_tmp_folder} = 0;  
+  }elsif($self->{_forbid_tmp_folder}){
+    $self->{_use_tmp_folder} = 0;
+  }elsif(defined $config->{$section}{"use_tmp_folder"}){
+    $self->{_use_tmp_folder} = $config->{$section}{"use_tmp_folder"};
+  }elsif(defined $config->{general}{use_tmp_folder}){
+    $self->{_use_tmp_folder} = $config->{general}{"use_tmp_folder"};  
+  }elsif(should_use_tmp_folder($config->{$section}{target_dir})){
+    $self->{_use_tmp_folder} = get_option( $config, $section, "use_tmp_folder", $self->{_use_tmp_folder} );
   }else{
-    if(defined $config->{general}{use_tmp_folder}){
-      $self->{_use_tmp_folder} = $config->{general}{use_tmp_folder};  
-    }else{
-      if(should_use_tmp_folder($config->{$section}{target_dir})){
-        $self->{_use_tmp_folder} = get_option( $config, $section, "use_tmp_folder", $self->{_use_tmp_folder} );
-      }else{
-        $self->{_use_tmp_folder} = 0;  
-      }
-    }
+    $self->{_use_tmp_folder} = 0;  
   }
 
   #print("target_dir=" . $config->{$section}{target_dir} . "\n");
