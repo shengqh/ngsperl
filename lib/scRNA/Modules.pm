@@ -113,16 +113,13 @@ sub addEncloneToClonotype {
   return($taskname);
 }
 
-sub addArcasHLA {
-  my ( $config, $def, $tasks, $target_dir, $task_name, $prefix, $source_ref ) = @_;
+sub addArcasHLA_extract {
+  my ( $config, $def, $tasks, $target_dir, $task_name, $extract_task, $source_ref, $ispairend ) = @_;
 
-  my $ispairend = is_paired_end( $def );
-
-  my $ispairend_option = $ispairend ? "--paired" : "";
+  my $ispairend_option = $ispairend ? "" : "--single";
   my $output_file_ext = $ispairend ? ".extracted.1.fq.gz" : ".extracted.fq.gz";
   my $output_other_ext = $ispairend ? ".extracted.2.fq.gz" : undef;
 
-  my $extract_task="${prefix}arcasHLA_1_extract";
   $config->{$extract_task} = {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
@@ -134,7 +131,7 @@ if [[ -s __FILE__.bai ]]; then
 fi
 
 ",
-    option                => "extract -t 8 --log __NAME__.log $ispairend_option -v __NAME__.bam
+    option                => "extract -t 8 --log __NAME__.log $ispairend_option -v __NAME__.bam -o .
 
 rm __NAME__.bam  
 rm __NAME__.bam.bai
@@ -151,7 +148,8 @@ rm __NAME__.bam.bai
     output_file_prefix    => "",
     output_file_ext       => $output_file_ext,
     output_other_ext      => $output_other_ext,
-    sh_direct             => 0,
+    docker_prefix         => "arcashla_",
+    sh_direct             => 1,
     pbs                   => {
       "nodes"     => "1:ppn=8",
       "walltime"  => "10",
@@ -159,7 +157,12 @@ rm __NAME__.bam.bai
     },
   };
 
-  my $genotype_task="${prefix}arcasHLA_2_genotype";
+  push (@$tasks, $extract_task);
+}
+
+sub addArcasHLA_genotype {
+  my ( $config, $def, $tasks, $target_dir, $task_name, $genotype_task, $source_ref, $genotype_options ) = @_;
+
   $config->{$genotype_task} = {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
@@ -168,22 +171,63 @@ rm __NAME__.bam.bai
     interpretor           => "",
     check_program         => 0,
     program               => "arcasHLA",
-    source_ref            => "$extract_task",
+    source_ref            => $source_ref,
     source_arg            => "",
     source_join_delimiter => " ",
+    parameterSampleFile2  => $genotype_options,
+    parameterSampleFile2_arg => "",
+    parameterSampleFile2_type => "array",
     output_to_same_folder => 1,
     output_to_folder      => 1,
     output_arg            => "-o",
     output_file_prefix    => "",
     output_file_ext       => ".genotype.json",
     output_other_ext       => ".genes.json,.alignment.p",
-    sh_direct             => 0,
+    docker_prefix         => "arcashla_",
+    sh_direct             => 1,
     pbs                   => {
       "nodes"     => "1:ppn=8",
       "walltime"  => "24",
       "mem"       => "40gb"
     },
   };
+
+  push (@$tasks, $genotype_task);
+}
+
+sub addArcasHLA {
+  my ( $config, $def, $tasks, $target_dir, $task_name, $prefix, $source_ref, $singleend_ref ) = @_;
+
+  my $ispairend = is_paired_end( $def );
+
+  my $extract_task_1 = "${prefix}arcasHLA_1_extract";
+  addArcasHLA_extract($config, $def, $tasks, $target_dir, $task_name, $extract_task_1, $source_ref, $ispairend );
+
+  my $result1 = get_result_file($config, $extract_task_1);
+  my $genotype_options = {};
+  for my $sample_name (keys %$result1){
+    if($ispairend){
+      $genotype_options->{$sample_name} = [""];
+    }else{
+      $genotype_options->{$sample_name} = ["--single"];
+    }
+  }
+
+  my $extract_task = $extract_task_1;
+  if (defined $singleend_ref){
+    my $extract_task_2 = "${prefix}arcasHLA_1_extract_singleend";
+    addArcasHLA_extract($config, $def, $tasks, $target_dir, $task_name, $extract_task_2, $singleend_ref, 0 );
+
+    my $result2 = get_result_file($config, $extract_task_2);
+    for my $sample_name (keys %$result2){
+      $genotype_options->{$sample_name} = ["--single"];
+    }
+
+    $extract_task = [ $extract_task_1, $extract_task_2 ];
+  }
+
+  my $genotype_task = "${prefix}arcasHLA_2_genotype";
+  addArcasHLA_genotype($config, $def, $tasks, $target_dir, $task_name, $genotype_task, $extract_task, $genotype_options );
 
   my $merge_task="${prefix}arcasHLA_3_merge";
   $config->{$merge_task} = {
@@ -194,7 +238,7 @@ rm __NAME__.bam.bai
     interpretor           => "",
     check_program         => 0,
     program               => "arcasHLA",
-    source_ref            => "$genotype_task",
+    source_ref            => $genotype_task,
     source_arg            => "-i",
     source_join_delimiter => " ",
     output_to_same_folder => 1,
@@ -202,6 +246,7 @@ rm __NAME__.bam.bai
     output_arg            => "-o",
     output_file_prefix    => "",
     output_file_ext       => ".genotype.txt",
+    docker_prefix         => "arcashla_",
     sh_direct             => 1,
     pbs                   => {
       "nodes"     => "1:ppn=1",
@@ -210,7 +255,7 @@ rm __NAME__.bam.bai
     },
   };
 
-  push (@$tasks, ($extract_task, $genotype_task, $merge_task));
+  push (@$tasks, $merge_task);
 }
 
 sub addScMRMA {
