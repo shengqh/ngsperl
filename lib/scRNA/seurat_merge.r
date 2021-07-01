@@ -91,6 +91,11 @@ if(by_sctransform){
 cat("run_pca ... \n")
 obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
 
+png(paste0(outFile, ".elbowplot.pca.png"), width=1500, height=1200, res=300)
+p<-ElbowPlot(obj, ndims = 20, reduction = "pca")
+print(p)
+dev.off()
+
 cat("run_umap ... \n")
 obj <- RunUMAP(object = obj, dims=pca_dims, verbose = FALSE)
 
