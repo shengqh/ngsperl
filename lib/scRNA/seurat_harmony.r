@@ -1,4 +1,3 @@
-
 source("scRNA_func.r")
 
 library(dplyr)
@@ -75,6 +74,13 @@ finalList$filter<-list(nFeature_cutoff_min=nFeature_cutoff_min,
 obj=do_harmony(objs, by_sctransform, Remove_Mt_rRNA, Mtpattern, rRNApattern, npcs, parSampleFile2)
 reduction="harmony"
 rm(objs)
+
+for (reduct in c("pca", "harmony")){
+  png(paste0(outFile, ".elbowplot.", reduct, ".png"), width=1500, height=1200, res=300)
+  p<-ElbowPlot(obj, ndims = 20, reduction = reduct)
+  print(p)
+  dev.off()
+}
 
 cat("run_umap ... ")
 obj <- RunUMAP(object = obj, reduction=reduction, dims=pca_dims, verbose = FALSE)
