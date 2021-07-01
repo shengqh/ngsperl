@@ -90,51 +90,121 @@ clusters$cellactivity_clusters=new.cluster.ids[as.character(clusters$seurat_clus
 clusters$seurat_cellactivity_clusters=paste0(clusters$seurat_clusters, " : ", clusters$cellactivity_clusters)
 write.csv(clusters, file=paste0(outFile, ".celltype_cluster.csv"))
 
+cellColor <- function(style) 
+{
+  fg  <- style$getFillForegroundXSSFColor()
+  rgb <- tryCatch(fg$getRgb(), error = function(e) NULL)
+  rgb <- paste0("#", paste(rgb, collapse = ""))
+  return(rgb)
+}
+
 if(file.exists(parFile3)){
   library(ggplot2)
   finalList=readRDS(parFile3)
   obj=finalList$obj
-  
+
   id_tbl$seurat_cellactivity_clusters = paste0(id_tbl$seurat_clusters, " : ", id_tbl$cell_type )
   id_tbl$seurat_cellactivity_clusters=factor(id_tbl$seurat_cellactivity_clusters, levels=id_tbl$seurat_cellactivity_clusters)
   idmap = split(id_tbl$seurat_cellactivity_clusters, id_tbl$seurat_clusters)
   
   obj$seurat_cellactivity_clusters = unlist(idmap[as.character(obj$seurat_clusters)])
   cat("draw pictures ... ")
-  p1<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters") + guides(colour = guide_legend(override.aes = list(size = 3), ncol=1))
-  p2<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="orig.ident")
+  p1<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters") + guides(colour = guide_legend(override.aes = list(size = 3), ncol=1)) + ggtitle("")
+  p2<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="orig.ident") + ggtitle("")
   p=p1+p2
   png(paste0(outFile, ".cluster.png"), width=6600, height=3000, res=300)
   print(p)
   dev.off()
-}
-
-if(file.exists(myoptions$summary_layer_file)){
-  if(grepl(".xlsx$", myoptions$summary_layer_file)){
+  
+  png(paste0(outFile, ".celltype.label.png"), width=3300, height=3000, res=300)
+  p1<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters") + guides(colour = guide_legend(override.aes = list(size = 3), ncol=1)) + ggtitle("")
+  print(p1)
+  dev.off()
+  
+  png(paste0(outFile, ".celltype.nolabel.png"), width=3300, height=3000, res=300)
+  p1<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="seurat_cellactivity_clusters") + guides(colour = guide_legend(override.aes = list(size = 3), ncol=1)) + ggtitle("")
+  print(p1)
+  dev.off()
+  
+  if(file.exists(myoptions$summary_layer_file)){
     require(xlsx)
     layers=read.xlsx(myoptions$summary_layer_file, 1, header = TRUE)
     isna<-apply(layers, 2, function(x){
       all(is.na(x))
     })
     layers=layers[,!isna]
-  }else{
-    layers<-read.csv(file=myoptions$summary_layer_file)
-  }
-  lastLayer=colnames(layers)[ncol(layers)]
-  layers_map<-split(layers[, lastLayer], layers[,1])
+    
+    wb     <- loadWorkbook(myoptions$summary_layer_file)
+    sheet1 <- getSheets(wb)[[1]]
+    
+    # get all rows
+    color_map = list()
+    rows  <- getRows(sheet1)
+    cells <- getCells(rows, colIndex = 6)
+    for(i in c(2:length(cells))){
+      v = getCellValue(cells[[i]])
+      s = getCellStyle(cells[[i]])
+      c = cellColor(s)
+      color_map[[v]]=c
+    }
   
-  miss_celltype=id_tbl$cell_type[!(id_tbl$cell_type %in% names(layers_map))]
-  for (mct in miss_celltype){
-    layers_map[mct]=mct
+    lastLayer=colnames(layers)[ncol(layers)]
+    layers_map<-split(layers[, lastLayer], layers[,1])
+    
+    miss_celltype=id_tbl$cell_type[!(id_tbl$cell_type %in% names(layers_map))]
+    for (mct in miss_celltype){
+      layers_map[mct]=mct
+    }
+    id_tbl$summary_layer=unlist(layers_map[id_tbl$cell_type])
+    idmap<-split(id_tbl$summary_layer, id_tbl$seurat_clusters)
+    obj$summary_layer = unlist(idmap[as.character(obj$seurat_clusters)])
+    
+    summary_color=color_map[unique(obj$summary_layer)]
+    
+    p1<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters") + 
+      guides(colour = guide_legend(override.aes = list(size = 3), ncol=1)) +
+      ggtitle("Cluster Cell Type")
+    p2<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="summary_layer") + 
+      scale_color_manual(values=summary_color) + 
+      ggtitle("Broad Cell Type")
+    p=p1+p2
+    png(paste0(outFile, ".summary_layer.png"), width=6600, height=3000, res=300)
+    print(p)
+    dev.off()
+    
+    if(file.exists(parSampleFile2)){
+      groups<-read.table(parSampleFile2, sep="\t", stringsAsFactors = F) 
+      sample_map<-split(groups$V2, groups$V1)
+      obj$group=unlist(sample_map[as.character(obj$orig.ident)])
+      
+      width=2000 * length(unique(groups$V2)) + 300
+      png(paste0(outFile, ".summary_layer.group.png"), width=width, height=2000, res=300)
+      p<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="summary_layer", split.by="group") + 
+        ggtitle("") +
+        scale_color_manual(values=summary_color)+
+        annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf)+
+        annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
+      print(p)
+      dev.off()
+
+      width=3000 * length(unique(groups$V2)) + 300
+      png(paste0(outFile, ".celltype.group.label.png"), width=width, height=3000, res=300)
+      p<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters", split.by="group") + 
+        guides(colour = guide_legend(override.aes = list(size = 3), ncol=1)) +
+        ggtitle("") +
+        annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf)+
+        annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
+      print(p)
+      dev.off()
+      
+      png(paste0(outFile, ".celltype.group.nolabel.png"), width=width, height=3000, res=300)
+      p<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="seurat_cellactivity_clusters", split.by="group") + 
+        guides(colour = guide_legend(override.aes = list(size = 3), ncol=1)) +
+        ggtitle("") +
+        annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf)+
+        annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
+      print(p)
+      dev.off()
+    }
   }
-  id_tbl$summary_layer=unlist(layers_map[id_tbl$cell_type])
-  idmap<-split(id_tbl$summary_layer, id_tbl$seurat_clusters)
-  obj$summary_layer = unlist(idmap[as.character(obj$seurat_clusters)])
-  
-  p1<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters") + guides(colour = guide_legend(override.aes = list(size = 3), ncol=1))
-  p2<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="summary_layer")
-  p=p1+p2
-  png(paste0(outFile, ".summary_layer.png"), width=6600, height=3000, res=300)
-  print(p)
-  dev.off()
 }
