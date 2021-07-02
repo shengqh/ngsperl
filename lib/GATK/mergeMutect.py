@@ -47,11 +47,14 @@ def mergeMutect(logger, listFile, outputFile):
       chroms = mutect.findChromosomeFromComments()
       comments = mutect.Comments
 
+  has_normal = any(v.NormalSampleName != None for v in fileValueMap.values())
+
   logger.info("Output result to %s ..." % outputFile)
   with open(outputFile, "wt") as fout:
     for comment in comments:
       if comment.startswith("##INFO=<ID=LOD"):
-        fout.write('##FORMAT=<ID=ND,Number=1,Type=Integer,Description="Approximate normal sample read depth (reads with MQ=255 or with bad mates are filtered)">\n')
+        if has_normal:
+          fout.write('##FORMAT=<ID=ND,Number=1,Type=Integer,Description="Approximate normal sample read depth (reads with MQ=255 or with bad mates are filtered)">\n')
         fout.write("%s\n" % comment.replace("##INFO=", "##FORMAT="))
       else:
         fout.write("%s\n" % comment)
@@ -72,11 +75,18 @@ def mergeMutect(logger, listFile, outputFile):
         for locus in sorted(locusMap.keys()):
           sampleMap = locusMap[locus]
           item = [v for v in sampleMap.values()][0]
-          fout.write("%s\t%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s:ND:LOD" % (item.CHROM, item.POS, item.ID, item.REF, item.ALT, item.QUAL, item.FILTER, item.INFO, item.FORMAT))
+          if has_normal:
+            fout.write("%s\t%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s:ND:LOD" % (item.CHROM, item.POS, item.ID, item.REF, item.ALT, item.QUAL, item.FILTER, item.INFO, item.FORMAT))
+          else:
+            fout.write("%s\t%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s:LOD" % (item.CHROM, item.POS, item.ID, item.REF, item.ALT, item.QUAL, item.FILTER, item.INFO, item.FORMAT))
+
           for sampleName in fileNames:
             if sampleName in sampleMap:
               item = sampleMap[sampleName]
-              fout.write("\t%s:%d:%s" % (item.TumorData, item.NormalDepth, item.LOD))
+              if has_normal:
+                fout.write("\t%s:%d:%s" % (item.TumorData, item.NormalDepth, item.LOD))
+              else:
+                fout.write("\t%s:%s" % (item.TumorData, item.LOD))
             else:
               fout.write("\t./.")
           fout.write("\n")
