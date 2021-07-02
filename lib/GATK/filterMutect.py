@@ -42,9 +42,14 @@ def filterMutect(logger, inputFile, outputFile, minNormalDepth, minTumorDepth, m
 
         passed = False
         for sample in item.Samples:
-          if sample.NormalDepth >= minNormalDepth and sample.TumorDepth >= minTumorDepth and sample.MinorAlleleDepth >= minMinorAlleleDepth:
-            passed = True
-            break
+          if sample.NormalDepth == None:
+            if sample.TumorDepth >= minTumorDepth and sample.MinorAlleleDepth >= minMinorAlleleDepth:
+              passed = True
+              break
+          else:
+            if sample.NormalDepth >= minNormalDepth and sample.TumorDepth >= minTumorDepth and sample.MinorAlleleDepth >= minMinorAlleleDepth:
+              passed = True
+              break
 
         if passed:
           fout.write(line)

@@ -153,10 +153,13 @@ class MultiMutectItem:
     self.Samples = []
     parts = line.rstrip().split('\t')
     formatParts = parts[8].split(':')
-    if formatParts[-2] == "ND":
-      ND_index = -2
+    if ":ND" in parts[8]:
+      if formatParts[-2] == "ND":
+        ND_index = -2
+      else:
+        ND_index = formatParts.index("ND")
     else:
-      ND_index = formatParts.index("ND")
+      ND_index = None
     DP_index = formatParts.index("DP")
     AD_index = formatParts.index("AD")
 
@@ -168,7 +171,10 @@ class MultiMutectItem:
 
       sampleParts = sampleData.split(':')
 
-      normalDepth = int(sampleParts[ND_index])
+      if ND_index != None:
+        normalDepth = int(sampleParts[ND_index])
+      else:
+        normalDepth = None
       tumorDepth = int(sampleParts[DP_index])
       alleleParts = sampleParts[AD_index].split(',')
       majorAlleleDepth = int(alleleParts[0])
