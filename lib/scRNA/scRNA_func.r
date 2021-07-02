@@ -101,32 +101,25 @@ toMouseGeneSymbol<-function(x){
   return(result)
 }
 
-read_cell_cluster_file<-function(fileName, sort_cluster_name="seurat_clusters"){
+read_cell_cluster_file<-function(fileName, sort_cluster_name="seurat_clusters", display_cluster_name=sort_cluster_name, prefix=""){
   result<-read.csv(fileName, stringsAsFactors = F, row.names = 1)
   
-  display_sort_cluster_name = paste0("display_", sort_cluster_name)
-  result[,display_sort_cluster_name] = paste0("Cluster ", result[,sort_cluster_name])
+  if(!display_cluster_name %in% colnames(result)){
+    result[,display_cluster_name] = paste0(prefix, result[,sort_cluster_name])
+  }
   
-  cluster_names=colnames(result)[grepl("_clusters", colnames(result))]
+  if(sort_cluster_name=="seurat_clusters"){
+    clusters = result[!duplicated(result$seurat_clusters),]
+    clusters = clusters[order(clusters$seurat_clusters),]
+  }else{
+    clusters = result[!duplicated(result[,c("seurat_clusters", sort_cluster_name)]),]
+    clusters = clusters[order(clusters[,sort_cluster_name], clusters$seurat_clusters),]
+  }
   
-  sort_clusters_num = length(unique(result[,sort_cluster_name]))
-  for(cluster_name in cluster_names){
-    cluster_num = length(unique(result[,cluster_name]))
-    if(cluster_name == sort_cluster_name){
-      next
-    }
+  cluster_names=colnames(clusters)[grepl("_clusters", colnames(clusters))]
 
-    if (cluster_num != sort_clusters_num) {
-      next
-    }
-      
-    cf<-unique(result[,c(sort_cluster_name, cluster_name)])
-    if(nrow(cf) != sort_clusters_num){
-      next
-    }
-    
-    cf<-cf[order(as.numeric(cf[,sort_cluster_name]), decreasing = T),]
-    cf_levels=cf[,cluster_name]
+  for(cluster_name in cluster_names){
+    cf_levels=unique(clusters[,cluster_name])
     result[,cluster_name] = factor(result[,cluster_name], levels=cf_levels)
   }
   return(result)

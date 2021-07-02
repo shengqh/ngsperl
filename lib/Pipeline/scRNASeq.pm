@@ -6,6 +6,7 @@ use warnings;
 use List::Util qw(first);
 use File::Basename;
 use Storable qw(dclone);
+use File::Slurp;
 use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
@@ -872,10 +873,26 @@ sub getScRNASeqConfig {
         push( @$summary, $seurat_name );
       }
 
-      if(defined $def->{localization_genes} && $def->{localization_genes} ne ""){
+      if(getValue($def, "perform_localization_genes_plot", 0)){
         my $gene_localization_map_task  = $seurat_name . "_gene_localization_map";
+
+        my $all_genes=[];
+        if(defined $def->{localization_genes} && $def->{localization_genes} ne ""){
+          $all_genes = $def->{localization_genes};
+        }
+
+        if(defined $def->{localization_genes_file}){
+          die "FILE_NOT_FOUND: localization_genes_file " . $def->{localization_genes_file} if (! -e $def->{localization_genes_file});
+          my @genes_in_file = read_file($def->{localization_genes_file}, chomp => 1);
+          for my $gene (@genes_in_file){
+            push(@$all_genes, $gene);
+          }
+        }
+
+        die "No localization_genes or localization_genes_file defined." if(scalar(@$all_genes) == 0);
+
         my $genes = {
-          $def->{task_name} => $def->{localization_genes},
+          $def->{task_name} => $all_genes,
         };
         #print(Dumper($genes));
         $config->{$gene_localization_map_task} = {
@@ -1272,8 +1289,33 @@ sub getScRNASeqConfig {
 
       if($def->{perform_curated_gene_dotplot}){
         my $curated_gene_dotplot_task  = $cluster_task_name . "_curated_gene_dotplot";
-        my $curated_gene_def = $def->{curated_gene_dotplot};
-        my ($expanded_gene_def, $clusters, $genes) = parse_curated_genes($curated_gene_def);
+
+        my $curated_gene_dotplot = $def->{curated_gene_dotplot};
+        my $curated_gene_files = $def->{curated_gene_files};
+
+        if(not defined $curated_gene_dotplot and not defined $curated_gene_files) {
+          die "Define curated_gene_dotplot or curated_gene_files first.";
+        }
+
+        if (not defined $curated_gene_dotplot){
+          $curated_gene_dotplot = {};
+        }
+
+        if(defined $curated_gene_files){
+          for my $cf (keys %$curated_gene_files){
+            my $cf_file = $curated_gene_files->{$cf};
+            my @cf_genes = read_file($cf_file, chomp => 1);
+            my @pure_genes = grep { /\S/ } @cf_genes;
+            $curated_gene_dotplot->{$cf} = {
+              clusters => ["all"],
+              genes => \@pure_genes
+            };
+          }
+        }
+
+        #print(Dumper($curated_gene_dotplot));
+
+        my ($expanded_gene_def, $clusters, $genes) = parse_curated_genes($curated_gene_dotplot);
 
         $config->{$curated_gene_dotplot_task} = {
           class              => "CQS::UniqueR",
@@ -1287,9 +1329,11 @@ sub getScRNASeqConfig {
           parameterSampleFile2 => $clusters,
           parameterSampleFile3 => {
             cluster_name => "seurat_clusters",
+            sort_cluster_name => $celltype_name,
             display_cluster_name => $cluster_name,
             by_sctransform => getValue($def, "by_sctransform"),
           },
+          parameterSampleFile4_ref   => "groups",
           output_file => "parameterSampleFile1",
           output_file_ext    => ".count.files.csv",
           sh_direct          => 1,
