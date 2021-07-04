@@ -592,7 +592,7 @@ sub getScRNASeqConfig {
         interpretor => getValue($def, "R", "R") . " --vanilla -f ",
         program => $r_script,
         check_program => 1,
-        option => "--args __FILE__ __OUTPUT__ " . getValue($def, "hto_regex", ""),
+        option => "--args __FILE__ __OUTPUT__ ",
         source_arg => "",
         source_ref => $hto_file_ref,
         output_arg => "",
@@ -607,6 +607,11 @@ sub getScRNASeqConfig {
           "mem"       => "10gb"
         },
       };
+
+      my $hto_regex = getValue($def, "hto_regex", "");
+      if($hto_regex ne ""){
+        $config->{$hto_name}{option} = $config->{$hto_name}{option} . "'" . $hto_regex . "'";
+      }
       push( @$individual, "hto_samples" );
 
       $hto_ref = [ $hto_name, ".HTO.csv" ];
