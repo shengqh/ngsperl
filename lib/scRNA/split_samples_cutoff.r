@@ -49,6 +49,7 @@ my_startval <- function(values,D1="normal",D2="normal") {
   delta <- y.max - y.smooth[-c(1:w, n+1-1:w)]
   i.max <- which(delta <= 0) + w
   res=data.frame(x=x[i.max], i=i.max, y=y[i.max])
+  res=res[res$x > 0,]
   res=res[order(res$y, decreasing = T),]
   if(nrow(res)>2){
     res=res[1:2,]
@@ -75,6 +76,7 @@ my_startval <- function(values,D1="normal",D2="normal") {
 t=1e-64
 my_em<-function(values, data_name="em", D1="normal", D2="normal", t=1e-64){
   start <- as.list(my_startval(values, D1, D2))
+  #print(start)
   
   D1b <- choisycutoff:::hash[[D1]]
   D2b <- choisycutoff:::hash[[D2]]
@@ -184,8 +186,9 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   data <- FetchData(object=pbmc.hashtag, vars=tagnames)
   colnames(data)<-gsub("hto_","",colnames(data))
 
-  tagname=tagnames[1]  
+  tagname=tagnames[3]  
   for (tagname in tagnames) {
+    tagname=tagnames[3]  
     values=data[,tagname]
     cat(paste0("get cutoff of ", tagname, " ...\n"))
     cutoff=get_cutoff(values, paste0(output_prefix, "_", tagname))
@@ -251,8 +254,8 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
 args = commandArgs(trailingOnly=TRUE)
 
 if (length(args) == 0) {
-  h5file = "/data/cqs/alexander_gelbard_data/AG_5126_10X/Count/5126-AG-3/filtered_feature_bc_matrix.h5"
-  output_prefix = "/scratch/cqs/shengq2/papers/20210703_scrna_hto/hto_samples_cutoff/result/SEB/SEB.HTO"
+  h5file = "C:/projects/data/cqs/alexander_gelbard_data/AG_5126_10X/Count/5126-AG-3/filtered_feature_bc_matrix.h5"
+  output_prefix = "C:/projects/scratch/cqs/shengq2/papers/20210703_scrna_hto/hto_samples_cutoff/result/SEB/SEB.HTO"
   hashtag_regex="Hashtag"
   #h5file = "C:/Users/sheng/projects/paula_hurley/20201208_scRNA_split/filtered_feature_bc_matrix.h5"
   #output_prefix = "C:/Users/sheng/projects/paula_hurley/20201208_scRNA_split/split_samples/HYW_4701.HTO"
