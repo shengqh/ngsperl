@@ -157,19 +157,13 @@ get_cutoff<-function(values, prefix){
 split<-function(h5file, output_prefix, hashtag_regex=NA) {
   if(grepl('.rds$', h5file)){
     meta<-readRDS(h5file)
-    expfile = gsub("hto_mtx.rds", "umi_mtx.rds", h5file)
-    exp<-readRDS(expfile)
-
     meta<-as.matrix(meta)
-
     #tag number should less than cell number
     if(ncol(meta) < nrow(meta)){
       meta=t(as.matrix(meta))
-      exp=t(exp)
     }
   }else{
     sdata<-Read10X_h5(h5file)
-    exp<-sdata[[1]]
     meta<-sdata[[2]]
   }
   mat<-as.matrix(meta)
@@ -191,23 +185,18 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
 
   write.csv(htos, file=paste0(output_prefix, ".hto.exp.csv"))
   
-  pbmc.hashtag <- CreateSeuratObject(counts = exp)
-  pbmc.hashtag[["HTO"]] <- CreateAssayObject(counts = htos)
+  pbmc.hashtag <- CreateSeuratObject(counts = htos)
   # Normalize HTO data, here we use centered log-ratio (CLR) transformation
-  pbmc.hashtag <- NormalizeData(pbmc.hashtag, assay = "HTO", normalization.method = "CLR")
-  DefaultAssay(object = pbmc.hashtag) <- "HTO"
+  pbmc.hashtag <- NormalizeData(pbmc.hashtag, normalization.method = "CLR")
   
-  #Idents(pbmc.hashtag) <- "HTO_classification"
-  tagnames=rownames(pbmc.hashtag[["HTO"]])
+  tagnames=rownames(pbmc.hashtag)
   
   width=max(10, length(tagnames) * 5)
   pdf(paste0(output_prefix, ".tag.dist.pdf"), width=width, height=6)
-  rplot(pbmc.hashtag, assay = "HTO", features = tagnames, identName="orig.ident")
+  rplot(pbmc.hashtag, assay="RNA", features = tagnames, identName="orig.ident")
   dev.off()
   
   data <- FetchData(object=pbmc.hashtag, vars=tagnames)
-  colnames(data)<-gsub("hto_","",colnames(data))
-
   write.csv(data, file=paste0(output_prefix, ".hto.norm_exp.csv"))
 
   tagname=tagnames[1]  
@@ -251,7 +240,7 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   height=1400
 
   png(paste0(output_prefix, ".class.dist.png"), width=width, height=height)
-  rplot(pbmc.hashtag, assay = "HTO", features = tagnames, identName="HTO_classification")
+  rplot(pbmc.hashtag, assay = "RNA", features = tagnames, identName="HTO_classification")
   dev.off()
   
   if (length(tagnames) == 2) {
