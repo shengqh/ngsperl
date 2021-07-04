@@ -1,9 +1,9 @@
 library(Seurat)
 library(ggplot2)
 
-#devtools::install_github("choisy/cutoff")
+#devtools::install_github("shengqh/cutoff")
 #install.packages("bbmle")
-library(cutoff)
+library('choisycutoff')
 library(zoo)
 library(reshape2)
 library(gridExtra)
@@ -76,8 +76,8 @@ t=1e-64
 my_em<-function(values, data_name="em", D1="normal", D2="normal", t=1e-64){
   start <- as.list(my_startval(values, D1, D2))
   
-  D1b <- cutoff:::hash[[D1]]
-  D2b <- cutoff:::hash[[D2]]
+  D1b <- choisycutoff:::hash[[D1]]
+  D2b <- choisycutoff:::hash[[D2]]
   lambda0 <- 0
   with(start, {
     while (abs(lambda0 - mean(lambda)) > t) {
@@ -86,7 +86,7 @@ my_em<-function(values, data_name="em", D1="normal", D2="normal", t=1e-64){
       distr1 <- lambda * D1b(values, mu1, sigma1)
       distr2 <- (1 - lambda) * D2b(values, mu2, sigma2)
       lambda <- distr1/(distr1 + distr2)
-      mLL2 <- function(mu1, sigma1, mu2, sigma2) return(cutoff:::mLL(mu1, 
+      mLL2 <- function(mu1, sigma1, mu2, sigma2) return(choisycutoff:::mLL(mu1, 
                                                                      sigma1, mu2, sigma2, lambda, values, D1b, D2b))
       start <- as.list(log(c(mu1 = mu1, sigma1 = sigma1, 
                              mu2 = mu2, sigma2 = sigma2)))
@@ -114,8 +114,8 @@ my_cutoff<-function (object, t = 1e-64, nb = 10, distr = 2, type1 = 0.05, level 
       names(x) <- the_names
       return(as.list(x))
   })
-  out <- sapply(coef, function(x) cutoff:::lci0(x, mean(object$lambda), 
-      cutoff:::hash[[object$D1]], cutoff:::hash[[object$D2]], object$data, t))
+  out <- sapply(coef, function(x) choisycutoff:::lci0(x, mean(object$lambda), 
+      choisycutoff:::hash[[object$D1]], choisycutoff:::hash[[object$D2]], object$data, t))
   lambda <- rnorm(nb, out[1, ], out[2, ])
   coef <- sapply(coef, function(x) unlist(x))
   the_names <- c(rownames(coef), "lambda")
@@ -124,7 +124,7 @@ my_cutoff<-function (object, t = 1e-64, nb = 10, distr = 2, type1 = 0.05, level 
       names(x) <- the_names
       return(as.list(x))
   })
-  out <- sapply(coef, function(x) with(x, cutoff:::cutoff0(mu1, 
+  out <- sapply(coef, function(x) with(x, choisycutoff:::cutoff0(mu1, 
       sigma1, mu2, sigma2, lambda, object$D1, object$D2, distr, type1)))
   out <- MASS::fitdistr(out, "normal")
   the_mean <- out$estimate["mean"]
@@ -251,9 +251,9 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
 args = commandArgs(trailingOnly=TRUE)
 
 if (length(args) == 0) {
-  h5file = "/data/cqs/alexander_gelbard_data/AG_3855_LTS_samples/Count/3855-AG-4/filtered_feature_bc_matrix.h5"
-  output_prefix = "/scratch/cqs/shengq2/alexander_gelbard_projects/20210414_3855_LTS/hto_samples_cutoff/result/LTS4/LTS4.HTO"
-  hashtag_regex="TotalSeqC_Hash"
+  h5file = "/data/cqs/alexander_gelbard_data/AG_5126_10X/Count/5126-AG-3/filtered_feature_bc_matrix.h5"
+  output_prefix = "/scratch/cqs/shengq2/papers/20210703_scrna_hto/hto_samples_cutoff/result/SEB/SEB.HTO"
+  hashtag_regex="Hashtag"
   #h5file = "C:/Users/sheng/projects/paula_hurley/20201208_scRNA_split/filtered_feature_bc_matrix.h5"
   #output_prefix = "C:/Users/sheng/projects/paula_hurley/20201208_scRNA_split/split_samples/HYW_4701.HTO"
 }else{
