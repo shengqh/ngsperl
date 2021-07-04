@@ -16,7 +16,12 @@ class MutectItem:
     self.INFO = parts[7]
     self.FORMAT = parts[8]
     self.LOD = 0
-    self.NormalData = parts[normalIndex]
+
+    if normalIndex != -1:
+      self.NormalData = parts[normalIndex]
+    else:
+      self.NormalData = None
+
     self.TumorData = parts[tumorIndex]
     self.LocusKey = "_".join([self.CHROM, str(self.POS), self.REF, self.ALT])
 
@@ -33,12 +38,14 @@ class MutectItem:
 
   def parseData(self):
     formatParts = self.FORMAT.split(':')
-    normalParts = self.NormalData.split(':')
     tumorParts = self.TumorData.split(':')
 
     DP_index = formatParts.index("DP")
-    self.NormalDepth = self.findDepth(normalParts, DP_index)
     self.TumorDepth = self.findDepth(tumorParts, DP_index)
+
+    if self.NormalData != None:
+      normalParts = self.NormalData.split(':')
+      self.NormalDepth = self.findDepth(normalParts, DP_index)
 
     AD_index = formatParts.index("AD")
     self.TumorMinorAllele = self.findMinorAllele(tumorParts, AD_index)
@@ -46,16 +53,20 @@ class MutectItem:
     self.FORMAT = self.FORMAT
     if ";LOD=" in self.INFO:
       lodParts = self.INFO.split(";LOD=")
-    else:
+      self.LOD = lodParts[1]
+      self.INFO = lodParts[0]
+    elif ";TLOD=" in self.INFO:
       lodParts = self.INFO.split(";TLOD=")
-    self.LOD = lodParts[1]
-    self.INFO = lodParts[0]
+      self.LOD = lodParts[1]
+      self.INFO = lodParts[0]
+    else:
+      self.LOD = None
 
 class MutectResult:
   def clear(self):
     self.Comments = []
     self.ChromosomeItemMap = {}
-    self.NormalSampleName = ""
+    self.NormalSampleName = None
     self.TumorSampleName = ""
 
   def __init__(self):
@@ -71,19 +82,21 @@ class MutectResult:
         result.append(parts[0])
     return(result)
 
-  def findMutect1SampleName(self, line, sampleKey):
-    sampleKeyEQ = sampleKey + "="
+  def doFindSampleName(self, line, sampleKey, eqValue, name, required):
+    sampleKeyEQ = sampleKey + eqValue
     if not sampleKeyEQ in line:
-      raise Exception("The file is not mutect format, I cannot find %s in GATKCommandLine: %s" % (sampleKey, line))
+      if required:
+        raise Exception("The file is not %s format, I cannot find %s in GATKCommandLine: %s" % (name, sampleKey, line))
+      else:
+        return(None)
     parts = line.split(sampleKeyEQ)[1]
     return(parts.split(" ")[0])
 
-  def findMutect2SampleName(self, line, sampleKey):
-    sampleKeyEQ = sampleKey + " "
-    if not sampleKeyEQ in line:
-      raise Exception("The file is not mutect format2, I cannot find %s in GATKCommandLine: %s" % (sampleKey, line))
-    parts = line.split(sampleKeyEQ)[1]
-    return(parts.split(" ")[0])
+  def findMutect1SampleName(self, line, sampleKey, required):
+    return self.doFindSampleName(line, sampleKey, "=", "mutect1", required)
+
+  def findMutect2SampleName(self, line, sampleKey, required):
+    return self.doFindSampleName(line, sampleKey, " ", "mutect2", required)
 
   def readFromFile(self, logger, fileName, filePath):
     self.clear()
@@ -93,26 +106,33 @@ class MutectResult:
     else:
       fin = open(filePath, "rt")
 
+    normalIndex = -1
+
     with fin:
-      self.TumorSampleName = ""
-      self.NormalSampleName = ""
+      self.TumorSampleName = None
+      self.NormalSampleName = None
       for line in fin:
         if line.startswith("##"):
-          if line.startswith("##GATKCommandLine") and (not "ID=FilterMutectCalls" in line):
-            if ("Mutect2" in line):
-              self.TumorSampleName = self.findMutect2SampleName(line, "--tumor-sample")
-              self.NormalSampleName = self.findMutect2SampleName(line, "--normal-sample")
-            else:
-              self.TumorSampleName = self.findMutect1SampleName(line, "tumor_sample_name")
-              self.NormalSampleName = self.findMutect1SampleName(line, "normal_sample_name")
-          else:
-            self.Comments.append(line.rstrip())
+          if line.startswith("##GATKCommandLine") and (self.TumorSampleName == None):
+            #print(line)
+            if "ID=Mutect2" in line:
+              self.TumorSampleName = self.findMutect2SampleName(line, "--tumor-sample", True)
+              self.NormalSampleName = self.findMutect2SampleName(line, "--normal-sample", False)
+            elif "ID=MuTect" in line:
+              self.TumorSampleName = self.findMutect1SampleName(line, "tumor_sample_name", True)
+              self.NormalSampleName = self.findMutect1SampleName(line, "normal_sample_name", False)
+          if line.startswith("##normal_sample="):
+            self.NormalSampleName = line.rstrip().split('=')[1]
+          if line.startswith("##tumor_sample="):
+            self.TumorSampleName = line.rstrip().split('=')[1]
+          self.Comments.append(line.rstrip())
         elif line.startswith("#CHROM"):
           if self.TumorSampleName == "":
             raise Exception("The file is not mutect format, I cannot find ##GATKCommandLine in %s" % args.input)
           parts = line.rstrip().split("\t")
           tumorIndex = parts.index(self.TumorSampleName)
-          normalIndex = parts.index(self.NormalSampleName)
+          if self.NormalSampleName != None:
+            normalIndex = parts.index(self.NormalSampleName)
           logger.info("file=%s; tumor=%s; tumor_index=%d" % (os.path.basename(fileName), self.TumorSampleName, tumorIndex))
         else:
           item = MutectItem(fileName, line, normalIndex, tumorIndex)
@@ -133,10 +153,13 @@ class MultiMutectItem:
     self.Samples = []
     parts = line.rstrip().split('\t')
     formatParts = parts[8].split(':')
-    if formatParts[-2] == "ND":
-      ND_index = -2
+    if ":ND" in parts[8]:
+      if formatParts[-2] == "ND":
+        ND_index = -2
+      else:
+        ND_index = formatParts.index("ND")
     else:
-      ND_index = formatParts.index("ND")
+      ND_index = None
     DP_index = formatParts.index("DP")
     AD_index = formatParts.index("AD")
 
@@ -148,7 +171,10 @@ class MultiMutectItem:
 
       sampleParts = sampleData.split(':')
 
-      normalDepth = int(sampleParts[ND_index])
+      if ND_index != None:
+        normalDepth = int(sampleParts[ND_index])
+      else:
+        normalDepth = None
       tumorDepth = int(sampleParts[DP_index])
       alleleParts = sampleParts[AD_index].split(',')
       majorAlleleDepth = int(alleleParts[0])

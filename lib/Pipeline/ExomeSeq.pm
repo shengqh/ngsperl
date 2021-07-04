@@ -1382,7 +1382,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
     }else{
       my $mutect2call = $mutect_prefix . "01_call";
       addMutect2($config, $def, $individual, $target_dir, $bam_input, $mutect2call, $mutect2_option, 1, $pon);
-      $mutect_ref = [ $mutect2call, '.pass.vcf.gz$' ];
+      $mutect_ref = [ $mutect2call, '\.filtered.vcf.gz$' ];
     }
 
     my ($annovarMaf,$annovarMafReport) = add_post_mutect($config, $def, $target_dir, $summary, $mutect_prefix, $mutect_index_dic, $mutect_index_key, $mutect_ref);

@@ -34,14 +34,16 @@ data.norm=read.csv(parFile1, row.names=1,check.names = F)
 cell_activity_database<-read_cell_markers_file(markerfile, species, remove_subtype_of, HLA_panglao5_file)
 if("curated_markers_file" %in% names(myoptions)){
   curated_markerfile<-myoptions$curated_markers_file
-  curated_markers_df<-read.table(curated_markerfile, sep="\t", header=F, stringsAsFactors=F)
-  curated_markers_celltype<-split(curated_markers_df$V2, curated_markers_df$V1)
-  cellType=cell_activity_database$cellType
-  for(cmct in names(curated_markers_celltype)){
-    cellType[[cmct]]=curated_markers_celltype[[cmct]]
+  if (curated_markerfile != "") {
+    curated_markers_df<-read.table(curated_markerfile, sep="\t", header=F, stringsAsFactors=F)
+    curated_markers_celltype<-split(curated_markers_df$V2, curated_markers_df$V1)
+    cellType=cell_activity_database$cellType
+    for(cmct in names(curated_markers_celltype)){
+      cellType[[cmct]]=curated_markers_celltype[[cmct]]
+    }
+    weight=calc_weight(cellType)
+    cell_activity_database=list(cellType=cellType, weight=weight)
   }
-  weight=calc_weight(cellType)
-  cell_activity_database=list(cellType=cellType, weight=weight)
 }
 
 predict_celltype<-ORA_celltype(data.norm,cell_activity_database$cellType,cell_activity_database$weight)

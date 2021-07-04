@@ -68,8 +68,9 @@ sub perform {
     }
 
     #print(Dumper(@sample_files));
-
+    my $normal_name = $sample_files[0][0];
     my $normal = $sample_files[0][1];
+    my $tumor_name = $sample_files[1][0];
     my $tumor  = $sample_files[1][1];
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
@@ -111,7 +112,14 @@ if [ ! -s ${tumor}.bai ]; then
 fi
 
 if [ ! -s $vcf ]; then
-  $java -Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option -jar $muTect_jar --analysis_type MuTect $option --reference_sequence $faFile $cosmicOption $dbsnpOption --input_file:normal $normal --input_file:tumor $tumor -o $out_file --vcf $vcf --enable_extended_output
+  $java -Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option -jar $muTect_jar \\
+    --analysis_type MuTect $option \\
+    --reference_sequence $faFile $cosmicOption $dbsnpOption \\
+    --input_file:normal $normal --normal_sample_name $normal_name \\
+    --input_file:tumor $tumor --tumor_sample_name $tumor_name \\
+    -o $out_file \\
+    --vcf $vcf \\
+    --enable_extended_output
 fi 
 
 if [[ -s $vcf && ! -s $passvcf ]]; then
