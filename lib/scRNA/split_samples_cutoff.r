@@ -151,21 +151,27 @@ get_cutoff<-function(values, prefix){
 }
 
 split<-function(h5file, output_prefix, hashtag_regex=NA) {
-  sdata<-Read10X_h5(h5file)
-  
-  exp<-sdata[[1]]
-  meta<-sdata[[2]]
+  if(grepl('.rds$', h5file)){
+    meta<-readRDS(h5file)
+    expfile = gsub("hto_mtx.rds", "umi_mtx.rds", h5file)
+    exp<-readRDS(expfile)
+  }else{
+    sdata<-Read10X_h5(h5file)
+    exp<-sdata[[1]]
+    meta<-sdata[[2]]
+  }
   mat<-as.matrix(meta)
   rowsum<-apply(mat>0, 1, sum)
   mat<-mat[rowsum > (ncol(mat) / 2),]
-  rownames(mat)<-gsub("\\.1$", "", rownames(mat))
+  write.csv(mat, file=paste0(output_prefix, ".alltags.exp.csv"))
   
   if (!is.na(hashtag_regex)) {
     htos<-mat[grepl(hashtag_regex, rownames(mat)),]
   }else{
     htos<-mat
   }
-  rownames(htos)<-gsub("_.*", "", rownames(htos))
+  rownames(htos)<-gsub("^TotalSeqC_", "", rownames(htos))
+  rownames(htos)<-gsub('.TotalSeqC$', "", rownames(htos))
 
   write.csv(htos, file=paste0(output_prefix, ".hto.exp.csv"))
   
@@ -186,9 +192,8 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   data <- FetchData(object=pbmc.hashtag, vars=tagnames)
   colnames(data)<-gsub("hto_","",colnames(data))
 
-  tagname=tagnames[3]  
+  tagname=tagnames[1]  
   for (tagname in tagnames) {
-    tagname=tagnames[3]  
     values=data[,tagname]
     cat(paste0("get cutoff of ", tagname, " ...\n"))
     cutoff=get_cutoff(values, paste0(output_prefix, "_", tagname))
@@ -255,8 +260,8 @@ args = commandArgs(trailingOnly=TRUE)
 
 if (length(args) == 0) {
   h5file = "C:/projects/data/cqs/alexander_gelbard_data/AG_5126_10X/Count/5126-AG-3/filtered_feature_bc_matrix.h5"
-  output_prefix = "C:/projects/scratch/cqs/shengq2/papers/20210703_scrna_hto/hto_samples_cutoff/result/SEB/SEB.HTO"
-  hashtag_regex="Hashtag"
+  output_prefix = "C:/projects/scratch/cqs/shengq2/papers/20210703_scrna_hto/hto_samples_cutoff/result/LTS4/LTS4.HTO"
+  hashtag_regex="Hashtag|TotalSeqC"
   #h5file = "C:/Users/sheng/projects/paula_hurley/20201208_scRNA_split/filtered_feature_bc_matrix.h5"
   #output_prefix = "C:/Users/sheng/projects/paula_hurley/20201208_scRNA_split/split_samples/HYW_4701.HTO"
 }else{
