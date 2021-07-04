@@ -51,6 +51,10 @@ my_startval <- function(values,D1="normal",D2="normal") {
   res=data.frame(x=x[i.max], i=i.max, y=y[i.max])
   res=res[res$x > 0,]
   res=res[order(res$y, decreasing = T),]
+
+  #the highest peaks should be the negative one, positive one is always in the right side.
+  res=res[res$x>=res$x[1],]
+
   if(nrow(res)>2){
     res=res[1:2,]
   }
@@ -155,6 +159,14 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
     meta<-readRDS(h5file)
     expfile = gsub("hto_mtx.rds", "umi_mtx.rds", h5file)
     exp<-readRDS(expfile)
+
+    meta<-as.matrix(meta)
+
+    #tag number should less than cell number
+    if(ncol(meta) < nrow(meta)){
+      meta=t(as.matrix(meta))
+      exp=t(exp)
+    }
   }else{
     sdata<-Read10X_h5(h5file)
     exp<-sdata[[1]]
@@ -167,10 +179,14 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   
   if (!is.na(hashtag_regex)) {
     htos<-mat[grepl(hashtag_regex, rownames(mat)),]
+    if (nrow(htos) == 0){
+      stop(paste0("Cannot find hashtag based on regex ", hashtag_regex, " for tags ", paste(rownames(mat), collapse=",")))
+    }
   }else{
     htos<-mat
   }
   rownames(htos)<-gsub("^TotalSeqC_", "", rownames(htos))
+  rownames(htos)<-gsub("^TotalSeq_", "", rownames(htos))
   rownames(htos)<-gsub('.TotalSeqC$', "", rownames(htos))
 
   write.csv(htos, file=paste0(output_prefix, ".hto.exp.csv"))
@@ -191,6 +207,8 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   
   data <- FetchData(object=pbmc.hashtag, vars=tagnames)
   colnames(data)<-gsub("hto_","",colnames(data))
+
+  write.csv(data, file=paste0(output_prefix, ".hto.norm_exp.csv"))
 
   tagname=tagnames[1]  
   for (tagname in tagnames) {
