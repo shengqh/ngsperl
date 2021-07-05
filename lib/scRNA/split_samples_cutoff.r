@@ -1,9 +1,9 @@
 library(Seurat)
 library(ggplot2)
 
-#devtools::install_github("shengqh/cutoff")
+#devtools::install_github("choisy/cutoff")
 #install.packages("bbmle")
-library('choisycutoff')
+library(cutoff)
 library(zoo)
 library(reshape2)
 library(gridExtra)
@@ -57,9 +57,7 @@ my_startval <- function(values,D1="normal",D2="normal") {
   delta <- y.max - y.smooth[-c(1:w, n+1-1:w)]
   i.max <- which(delta <= 0) + w
   res=data.frame(x=x[i.max], i=i.max, y=y[i.max])
-  res=res[res$x > 0,]
   res=res[order(res$y, decreasing = T),]
-
   if(nrow(res)>2){
     #the highest peaks should be the negative one, positive one is always in the right side.
     res=res[res$x>=res$x[1],]
@@ -90,10 +88,9 @@ my_startval <- function(values,D1="normal",D2="normal") {
 t=1e-64
 my_em<-function(values, data_name="em", D1="normal", D2="normal", t=1e-64){
   start <- as.list(my_startval(values, D1, D2))
-  #print(start)
   
-  D1b <- choisycutoff:::hash[[D1]]
-  D2b <- choisycutoff:::hash[[D2]]
+  D1b <- cutoff:::hash[[D1]]
+  D2b <- cutoff:::hash[[D2]]
   lambda0 <- 0
   with(start, {
     while (abs(lambda0 - mean(lambda)) > t) {
@@ -102,7 +99,7 @@ my_em<-function(values, data_name="em", D1="normal", D2="normal", t=1e-64){
       distr1 <- lambda * D1b(values, mu1, sigma1)
       distr2 <- (1 - lambda) * D2b(values, mu2, sigma2)
       lambda <- distr1/(distr1 + distr2)
-      mLL2 <- function(mu1, sigma1, mu2, sigma2) return(choisycutoff:::mLL(mu1, 
+      mLL2 <- function(mu1, sigma1, mu2, sigma2) return(cutoff:::mLL(mu1, 
                                                                      sigma1, mu2, sigma2, lambda, values, D1b, D2b))
       start <- as.list(log(c(mu1 = mu1, sigma1 = sigma1, 
                              mu2 = mu2, sigma2 = sigma2)))
@@ -130,8 +127,8 @@ my_cutoff<-function (object, t = 1e-64, nb = 10, distr = 2, type1 = 0.05, level 
       names(x) <- the_names
       return(as.list(x))
   })
-  out <- sapply(coef, function(x) choisycutoff:::lci0(x, mean(object$lambda), 
-      choisycutoff:::hash[[object$D1]], choisycutoff:::hash[[object$D2]], object$data, t))
+  out <- sapply(coef, function(x) cutoff:::lci0(x, mean(object$lambda), 
+      cutoff:::hash[[object$D1]], cutoff:::hash[[object$D2]], object$data, t))
   lambda <- rnorm(nb, out[1, ], out[2, ])
   coef <- sapply(coef, function(x) unlist(x))
   the_names <- c(rownames(coef), "lambda")
@@ -140,7 +137,7 @@ my_cutoff<-function (object, t = 1e-64, nb = 10, distr = 2, type1 = 0.05, level 
       names(x) <- the_names
       return(as.list(x))
   })
-  out <- sapply(coef, function(x) with(x, choisycutoff:::cutoff0(mu1, 
+  out <- sapply(coef, function(x) with(x, cutoff:::cutoff0(mu1, 
       sigma1, mu2, sigma2, lambda, object$D1, object$D2, distr, type1)))
   out <- MASS::fitdistr(out, "normal")
   the_mean <- out$estimate["mean"]
@@ -191,17 +188,17 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   }else{
     htos<-mat
   }
-  rownames(htos)<-gsub("^TotalSeqC_", "", rownames(htos))
-  rownames(htos)<-gsub("^TotalSeq_", "", rownames(htos))
-  rownames(htos)<-gsub('.TotalSeqC$', "", rownames(htos))
+  rownames(htos)<-gsub("_.*", "", rownames(htos))
 
   write.csv(htos, file=paste0(output_prefix, ".hto.exp.csv"))
   
   pbmc.hashtag <- CreateSeuratObject(counts = htos, assay="HTO")
   # Normalize HTO data, here we use centered log-ratio (CLR) transformation
-  pbmc.hashtag <- NormalizeData(pbmc.hashtag, normalization.method = "CLR")
+  pbmc.hashtag <- NormalizeData(pbmc.hashtag, assay = "HTO", normalization.method = "CLR")
+  DefaultAssay(object = pbmc.hashtag) <- "HTO"
   
-  tagnames=rownames(pbmc.hashtag)
+  #Idents(pbmc.hashtag) <- "HTO_classification"
+  tagnames=rownames(pbmc.hashtag[["HTO"]])
   
   width=max(10, length(tagnames) * 5)
   pdf(paste0(output_prefix, ".tag.dist.pdf"), width=width, height=6)
@@ -209,7 +206,7 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   dev.off()
   
   data <- FetchData(object=pbmc.hashtag, vars=tagnames)
-  write.csv(data, file=paste0(output_prefix, ".hto.norm_exp.csv"))
+  colnames(data)<-gsub("hto_","",colnames(data))
 
   tagname=tagnames[1]  
   for (tagname in tagnames) {
