@@ -568,7 +568,7 @@ sub getScRNASeqConfig {
         $r_script = "../scRNA/split_samples_cutoff.r";
         $folder = "hto_samples_cutoff";
       } else {
-        $r_script = "../scRNA/split_samples.r";
+        $r_script = "../scRNA/split_samples_seurat.r";
         $folder = "hto_samples_HTODemux";
       }
 
