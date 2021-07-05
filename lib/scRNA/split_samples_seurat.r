@@ -32,8 +32,11 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   rownames(htos)<-gsub("^TotalSeq_", "", rownames(htos))
   rownames(htos)<-gsub('.TotalSeqC$', "", rownames(htos))
 
+  empty_cell_sum<-apply(htos, 2, sum)
+  htos<-htos[,empty_cell_sum > 0]
+
   write.csv(htos, file=paste0(output_prefix, ".hto.exp.csv"))
-  
+
   pbmc.hashtag <- CreateSeuratObject(counts = htos, assay="HTO")
   pbmc.hashtag <- NormalizeData(pbmc.hashtag, normalization.method = "CLR")
   pbmc.hashtag <- HTODemux(pbmc.hashtag, assay = "HTO", positive.quantile = 0.99)
@@ -104,9 +107,9 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
 args = commandArgs(trailingOnly=TRUE)
 
 if (length(args) == 0) {
-  h5file = "/data/cqs/seurat_data/pbmc_hto_mtx.rds"
-  output_prefix = "/scratch/cqs/shengq2/papers/20210703_scrna_hto/hto_samples_HTODemux/result/pbmc/pbmc_HTO"
-  hashtag_regex = NA
+  h5file = "/data/cqs/seurat_data/hto12_hto_valid.rds"
+  output_prefix = "/scratch/cqs/shengq2/papers/20210703_scrna_hto/hto_samples_cutoff/result/hto12/hto12.HTO"
+  hashtag_regex='Hashtag|TotalSeqC_|C025|Benign|Tumor|HTO|HEK|THP|K562|KG1'
 }else{
   h5file = args[1]
   output_prefix = args[2]

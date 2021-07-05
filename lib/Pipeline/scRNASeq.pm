@@ -610,7 +610,7 @@ sub getScRNASeqConfig {
 
       my $hto_regex = getValue($def, "hto_regex", "");
       if($hto_regex ne ""){
-        $config->{$hto_name}{option} = $config->{$hto_name}{option} . "'" . $hto_regex . "'";
+        $config->{$hto_task}{option} = $config->{$hto_task}{option} . "'" . $hto_regex . "'";
       }
       push( @$individual, $hto_task );
 

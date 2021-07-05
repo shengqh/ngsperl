@@ -3,7 +3,7 @@ library(ggplot2)
 
 #devtools::install_github("choisy/cutoff")
 #install.packages("bbmle")
-library(cutoff)
+library(choisycutoff)
 library(zoo)
 library(reshape2)
 library(gridExtra)
@@ -89,8 +89,8 @@ t=1e-64
 my_em<-function(values, data_name="em", D1="normal", D2="normal", t=1e-64){
   start <- as.list(my_startval(values, D1, D2))
   
-  D1b <- cutoff:::hash[[D1]]
-  D2b <- cutoff:::hash[[D2]]
+  D1b <- choisycutoff:::hash[[D1]]
+  D2b <- choisycutoff:::hash[[D2]]
   lambda0 <- 0
   with(start, {
     while (abs(lambda0 - mean(lambda)) > t) {
@@ -99,7 +99,7 @@ my_em<-function(values, data_name="em", D1="normal", D2="normal", t=1e-64){
       distr1 <- lambda * D1b(values, mu1, sigma1)
       distr2 <- (1 - lambda) * D2b(values, mu2, sigma2)
       lambda <- distr1/(distr1 + distr2)
-      mLL2 <- function(mu1, sigma1, mu2, sigma2) return(cutoff:::mLL(mu1, 
+      mLL2 <- function(mu1, sigma1, mu2, sigma2) return(choisycutoff:::mLL(mu1, 
                                                                      sigma1, mu2, sigma2, lambda, values, D1b, D2b))
       start <- as.list(log(c(mu1 = mu1, sigma1 = sigma1, 
                              mu2 = mu2, sigma2 = sigma2)))
@@ -127,8 +127,8 @@ my_cutoff<-function (object, t = 1e-64, nb = 10, distr = 2, type1 = 0.05, level 
       names(x) <- the_names
       return(as.list(x))
   })
-  out <- sapply(coef, function(x) cutoff:::lci0(x, mean(object$lambda), 
-      cutoff:::hash[[object$D1]], cutoff:::hash[[object$D2]], object$data, t))
+  out <- sapply(coef, function(x) choisycutoff:::lci0(x, mean(object$lambda), 
+      choisycutoff:::hash[[object$D1]], choisycutoff:::hash[[object$D2]], object$data, t))
   lambda <- rnorm(nb, out[1, ], out[2, ])
   coef <- sapply(coef, function(x) unlist(x))
   the_names <- c(rownames(coef), "lambda")
@@ -137,7 +137,7 @@ my_cutoff<-function (object, t = 1e-64, nb = 10, distr = 2, type1 = 0.05, level 
       names(x) <- the_names
       return(as.list(x))
   })
-  out <- sapply(coef, function(x) with(x, cutoff:::cutoff0(mu1, 
+  out <- sapply(coef, function(x) with(x, choisycutoff:::cutoff0(mu1, 
       sigma1, mu2, sigma2, lambda, object$D1, object$D2, distr, type1)))
   out <- MASS::fitdistr(out, "normal")
   the_mean <- out$estimate["mean"]
@@ -188,7 +188,12 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   }else{
     htos<-mat
   }
-  rownames(htos)<-gsub("_.*", "", rownames(htos))
+  rownames(htos)<-gsub("^TotalSeqC_", "", rownames(htos))
+  rownames(htos)<-gsub("^TotalSeq_", "", rownames(htos))
+  rownames(htos)<-gsub('.TotalSeqC$', "", rownames(htos))
+
+  empty_cell_sum<-apply(htos, 2, sum)
+  htos<-htos[,empty_cell_sum > 0]
 
   write.csv(htos, file=paste0(output_prefix, ".hto.exp.csv"))
   
@@ -298,7 +303,7 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
 args = commandArgs(trailingOnly=TRUE)
 
 if (length(args) == 0) {
-  h5file = "/data/cqs/seurat_data/hto12_hto_mtx.rds"
+  h5file = "/data/cqs/seurat_data/hto12_hto_valid.rds"
   output_prefix = "/scratch/cqs/shengq2/papers/20210703_scrna_hto/hto_samples_cutoff/result/hto12/hto12.HTO"
   hashtag_regex='Hashtag|TotalSeqC_|C025|Benign|Tumor|HTO|HEK|THP|K562|KG1'
 }else{
