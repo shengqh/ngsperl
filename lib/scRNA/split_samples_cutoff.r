@@ -38,8 +38,16 @@ rplot<-function(object, features, assay, identName, withAllCells=FALSE){
 }
 
 my_startval <- function(values,D1="normal",D2="normal") {
-  den=density(values)
-  
+  den <- tryCatch(
+    expr = {
+      res=density(values, bw="SJ")
+      return(res)
+    },
+    error = function(e){ 
+      res=density(values)
+      return(res)
+    }
+  )
   w=1
   x=den$x
   y=den$y
@@ -52,11 +60,13 @@ my_startval <- function(values,D1="normal",D2="normal") {
   res=res[res$x > 0,]
   res=res[order(res$y, decreasing = T),]
 
-  #the highest peaks should be the negative one, positive one is always in the right side.
-  res=res[res$x>=res$x[1],]
-
   if(nrow(res)>2){
-    res=res[1:2,]
+    #the highest peaks should be the negative one, positive one is always in the right side.
+    res=res[res$x>=res$x[1],]
+
+    if(nrow(res)>2){
+      res=res[1:2,]
+    }
   }
   res=res[order(res$x),]
   
@@ -160,22 +170,24 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
     meta<-as.matrix(meta)
     #tag number should less than cell number
     if(ncol(meta) < nrow(meta)){
-      meta=t(as.matrix(meta))
+      meta=t(meta)
     }
   }else{
     sdata<-Read10X_h5(h5file)
     meta<-sdata[[2]]
+    meta<-as.matrix(meta)
   }
-  mat<-as.matrix(meta)
-  rowsum<-apply(mat>0, 1, sum)
-  mat<-mat[rowsum > (ncol(mat) / 2),]
+  mat<-meta
   write.csv(mat, file=paste0(output_prefix, ".alltags.exp.csv"))
+
+  cat("All tags: ", paste(rownames(mat), collapse=","), "\n")
   
   if (!is.na(hashtag_regex)) {
     htos<-mat[grepl(hashtag_regex, rownames(mat)),]
     if (nrow(htos) == 0){
       stop(paste0("Cannot find hashtag based on regex ", hashtag_regex, " for tags ", paste(rownames(mat), collapse=",")))
     }
+    cat("All hash tags matched regex: ", paste(rownames(htos), collapse=","), "\n")
   }else{
     htos<-mat
   }
@@ -185,7 +197,7 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
 
   write.csv(htos, file=paste0(output_prefix, ".hto.exp.csv"))
   
-  pbmc.hashtag <- CreateSeuratObject(counts = htos)
+  pbmc.hashtag <- CreateSeuratObject(counts = htos, assay="HTO")
   # Normalize HTO data, here we use centered log-ratio (CLR) transformation
   pbmc.hashtag <- NormalizeData(pbmc.hashtag, normalization.method = "CLR")
   
@@ -193,7 +205,7 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   
   width=max(10, length(tagnames) * 5)
   pdf(paste0(output_prefix, ".tag.dist.pdf"), width=width, height=6)
-  rplot(pbmc.hashtag, assay="RNA", features = tagnames, identName="orig.ident")
+  rplot(pbmc.hashtag, assay="HTO", features = tagnames, identName="orig.ident")
   dev.off()
   
   data <- FetchData(object=pbmc.hashtag, vars=tagnames)
@@ -202,6 +214,7 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   tagname=tagnames[1]  
   for (tagname in tagnames) {
     values=data[,tagname]
+    values=values[values>0]
     cat(paste0("get cutoff of ", tagname, " ...\n"))
     cutoff=get_cutoff(values, paste0(output_prefix, "_", tagname))
     data[,paste0(tagname,"_pos")] = ifelse(data[,tagname]>cutoff, tagname, "Negative")
@@ -240,7 +253,7 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   height=1400
 
   png(paste0(output_prefix, ".class.dist.png"), width=width, height=height)
-  rplot(pbmc.hashtag, assay = "RNA", features = tagnames, identName="HTO_classification")
+  rplot(pbmc.hashtag, assay = "HTO", features = tagnames, identName="HTO_classification")
   dev.off()
   
   if (length(tagnames) == 2) {
@@ -252,13 +265,35 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   tmat=data.frame(t(mat))
   tmat$HTO = pbmc.hashtag$HTO_classification
   tmat$HTO.global = pbmc.hashtag$HTO_classification.global
-  tmat$nCount_RNA = pbmc.hashtag$nCount_RNA
-  tmat$nFeature_RNA = pbmc.hashtag$nFeature_RNA
   write.csv(tmat, paste0(output_prefix, ".csv"))
   
-  width=length(tagnames) * 3
-  pdf(paste0(output_prefix, ".class.RNA_Feature.pdf"), width=width, height=4)
-  g<-ggplot(tmat, aes(x=nCount_RNA, y=nFeature_RNA)) + geom_point() + facet_grid(~HTO.global) + theme_bw() + theme(strip.background = element_blank())
+  VariableFeatures(pbmc.hashtag)<-rownames(pbmc.hashtag)
+  pbmc.hashtag<-ScaleData(pbmc.hashtag)
+  pbmc.hashtag<-RunUMAP(pbmc.hashtag, features=rownames(pbmc.hashtag))
+  
+  png(paste0(output_prefix, ".umap.class.png"), width=1000, height=800)
+  g<-DimPlot(pbmc.hashtag, reduction = "umap", group.by="HTO_classification")
+  print(g)
+  dev.off()
+  
+  png(paste0(output_prefix, ".umap.tag.png"), width=1600, height=1600)
+  g<-FeaturePlot(pbmc.hashtag, features=tagnames, reduction = "umap")
+  print(g)
+  dev.off()
+  
+  hto_names=unique(pbmc.hashtag$HTO_classification)
+  a_hto_names=hto_names[!(hto_names %in% c("Doublet","Negative"))]
+  a_hto_names=a_hto_names[order(a_hto_names)]
+  hto_names=c(a_hto_names, "Negative", "Doublet")
+  cols=rep("gray", length(hto_names))
+  names(cols)=hto_names
+  cols[['Negative']]="blue"
+  cols[["Doublet"]]="red"
+
+  pbmc.hashtag$HTO_classification=factor(pbmc.hashtag$HTO_classification, levels=hto_names)
+  png(paste0(output_prefix, ".umap.all.png"), width=1000, height=800)
+  g<-DimPlot(pbmc.hashtag, reduction = "umap", label=T, group.by="HTO_classification", order=c("Negative", "Doublet"))+
+    scale_color_manual(values=cols)
   print(g)
   dev.off()
 }
@@ -266,11 +301,9 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
 args = commandArgs(trailingOnly=TRUE)
 
 if (length(args) == 0) {
-  h5file = "C:/projects/data/cqs/alexander_gelbard_data/AG_5126_10X/Count/5126-AG-3/filtered_feature_bc_matrix.h5"
-  output_prefix = "C:/projects/scratch/cqs/shengq2/papers/20210703_scrna_hto/hto_samples_cutoff/result/LTS4/LTS4.HTO"
-  hashtag_regex="Hashtag|TotalSeqC"
-  #h5file = "C:/Users/sheng/projects/paula_hurley/20201208_scRNA_split/filtered_feature_bc_matrix.h5"
-  #output_prefix = "C:/Users/sheng/projects/paula_hurley/20201208_scRNA_split/split_samples/HYW_4701.HTO"
+  h5file = "/data/cqs/seurat_data/hto12_hto_mtx.rds"
+  output_prefix = "/scratch/cqs/shengq2/papers/20210703_scrna_hto/hto_samples_cutoff/result/hto12/hto12.HTO"
+  hashtag_regex='Hashtag|TotalSeqC_|C025|Benign|Tumor|HTO|HEK|THP|K562|KG1'
 }else{
   h5file = args[1]
   output_prefix = args[2]
