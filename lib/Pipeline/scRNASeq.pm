@@ -565,11 +565,11 @@ sub getScRNASeqConfig {
       my $r_script = undef;
       my $folder = undef;
       if ( getValue($def, "split_hto_samples_by_cutoff", 0) ) {
-        $r_script = "../scRNA/split_samples_cutoff.r";
-        $folder = "hto_samples_cutoff";
+        $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_cutoff_all.r";
+        $folder = "hto_samples_cutoff_all";
       } else {
-        $r_script = "../scRNA/split_samples_seurat.r";
-        $folder = "hto_samples_HTODemux";
+        $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_seurat_all.r";
+        $folder = "hto_samples_HTODemux_all";
       }
 
       my $files = $def->{files};
@@ -587,14 +587,16 @@ sub getScRNASeqConfig {
       #print("hto_file_ref=" . $hto_file_ref . "\n");
       $hto_task = "hto_samples";
       $config->{$hto_task} = {
-        class => "CQS::ProgramWrapperOneToOne",
+        class => "CQS::UniqueR",
         target_dir => "${target_dir}/$folder",
-        interpretor => getValue($def, "R", "R") . " --vanilla -f ",
-        program => $r_script,
-        check_program => 1,
-        option => "--args __FILE__ __OUTPUT__ ",
-        source_arg => "",
-        source_ref => $hto_file_ref,
+        rtemplate => $r_script,
+        option => "",
+        parameterSampleFile1_ref => $hto_file_ref,
+        parameterSampleFile2 => $def->{split_hto_samples_cutoff_point},
+        parameterSampleFile3 => {
+          hto_regex => getValue($def, "hto_regex", ""),
+          hto_ignore_exists => getValue($def, "hto_ignore_exists", 0),
+        },
         output_arg => "",
         output_file_prefix => ".HTO",
         output_file_ext => ".HTO.class.dist.png;.HTO.csv",
@@ -607,13 +609,7 @@ sub getScRNASeqConfig {
           "mem"       => "10gb"
         },
       };
-
-      my $hto_regex = getValue($def, "hto_regex", "");
-      if($hto_regex ne ""){
-        $config->{$hto_task}{option} = $config->{$hto_task}{option} . "'" . $hto_regex . "'";
-      }
       push( @$individual, $hto_task );
-
       $hto_ref = [ $hto_task, ".HTO.csv" ];
 
       $hto_summary_task = $hto_task . "_summary";

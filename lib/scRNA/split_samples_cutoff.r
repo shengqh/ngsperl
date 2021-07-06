@@ -264,9 +264,9 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
     dev.off()
   }
   
-  tmat=data.frame(t(mat))
-  tmat$HTO = pbmc.hashtag$HTO_classification
-  tmat$HTO.global = pbmc.hashtag$HTO_classification.global
+  tmat=data.frame(t(htos))
+  tmat$HTO = obj$HTO_classification
+  tmat$HTO.global = obj$HTO_classification.global
   write.csv(tmat, paste0(output_prefix, ".csv"))
   
   VariableFeatures(pbmc.hashtag)<-rownames(pbmc.hashtag)
