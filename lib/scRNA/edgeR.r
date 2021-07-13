@@ -24,7 +24,13 @@ sampleGroups<-read.table(parSampleFile1, stringsAsFactors = F)
 colnames(sampleGroups)<-c("Sample","Group")
 
 comparisons<-read.table(parSampleFile2, stringsAsFactors = F)
-colnames(comparisons)<-c("Group", "Comparison")
+if(ncol(comparisons) == 3){
+  colnames(comparisons)<-c("Value", "Key", "Comparison")
+}else{
+  colnames(comparisons)<-c("Value", "Comparison")
+  comparisons$Key = "groups"
+}
+
 comparisonNames<-unique(comparisons$Comparison)
 
 comp <-comparisonNames[1]
@@ -33,8 +39,9 @@ designMatrix<-NULL
 for (comp in comparisonNames){
   comp_groups<-comparisons[comparisons$Comparison==comp,]
   
-  controlGroup<-comp_groups$Group[1]
-  sampleGroup<-comp_groups$Group[2]
+  groups<-comp_groups$Value[comp_groups$Key=="groups"]
+  controlGroup<-groups[1]
+  sampleGroup<-groups[2]
   
   control_names<-sampleGroups$Sample[sampleGroups$Group==controlGroup]
   sample_names<-sampleGroups$Sample[sampleGroups$Group==sampleGroup]
@@ -50,12 +57,26 @@ for (comp in comparisonNames){
     de_obj<-subset(obj, cells=all_cells)
     de_obj$Group<-c(rep("control", length(control_cells)), rep("sample", length(sample_cells)))
     de_obj$DisplayGroup<-c(rep(controlGroup, length(control_cells)), rep(sampleGroup, length(sample_cells)))
-      
+    
+    #filter samples
+    if("samples" %in% comp_groups$Key){
+      samples<-comp_groups$Value[comp_groups$Key=="samples"]
+      de_obj=subset(de_obj, subset=orig.ident %in% samples)
+    }
+
     designdata<-data.frame("Group"=de_obj$Group, "Cell"=colnames(de_obj), "Sample"=de_obj$orig.ident, "DisplayGroup"=de_obj$DisplayGroup)
     designfile<-paste0(prefix, ".design")
     write.csv(designdata, file=designfile, row.names=F, quote=F)
     
-    curdf<-data.frame(prefix=prefix, cellType="", comparison=comp, sampleInGroup=1, design=designfile, stringsAsFactors = F)
+    #predefined genes
+    if("genes" %in% comp_groups$Key){
+      genes_list<-comp_groups$Value[comp_groups$Key=="genes"]
+      genes=paste(genes_list, collapse = ",")
+    }else{
+      genes=""
+    }
+    
+    curdf<-data.frame(prefix=prefix, cellType="", comparison=comp, sampleInGroup=1, design=designfile, genes=genes, stringsAsFactors = F)
     if (is.null(designMatrix)){
       designMatrix = curdf
     }else{
@@ -118,6 +139,7 @@ for(idx in c(1:nrow(designMatrix))){
   cellType=designMatrix[idx, "cellType"]
   comp=designMatrix[idx, "comparison"]
   sampleInGroup=designMatrix[idx, "sampleInGroup"]
+  genes=designMatrix[idx, "genes"]
   
   designdata<-read.csv(designfile, stringsAsFactors = F)
   groups<-designdata$Group
@@ -133,6 +155,12 @@ for(idx in c(1:nrow(designMatrix))){
   min_sample<-filter_cellPercentage * ncol(cells)
   keep_rows <- rowSums(tpm > filter_minTPM) >= min_sample
   rm(tpm)
+  
+  if(genes != ""){
+    gene_list=unlist(strsplit(genes, ','))
+    keep2<-rownames(cells) %in% gene_list
+    keep_rows = keep_rows | keep2
+  }
   
   cells<-cells[keep_rows,]
   cdr <- scale(colMeans(cells > 0))
@@ -155,6 +183,10 @@ for(idx in c(1:nrow(designMatrix))){
 
   cat("  estimateDisp", "\n")
   dge<-estimateDisp(dge,design=design)
+  
+  if(genes != ""){
+    dge<-dge[rownames(dge) %in% gene_list,]
+  }
   
   cat("  glmQLFit", "\n")
   fitqlf<-glmQLFit(dge,design=design,robust=TRUE)
