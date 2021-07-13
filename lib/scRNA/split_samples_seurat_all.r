@@ -13,13 +13,11 @@ params_lines=read.table(parSampleFile3, sep="\t")
 params=split(params_lines$V1, params_lines$V2)
 params$hto_ignore_exists=ifelse(params$hto_ignore_exists=="0", FALSE, TRUE)
 
-allres=NULL
 idx=3
 for(idx in c(1:length(files))){
   fname=names(files)[idx]
   output_prefix = paste0(fname, ".HTO")
   output_file=paste0(output_prefix, ".csv")
-  allres<-rbind(allres, data.frame(File=output_file, Sample=fname))
   
   if(file.exists(output_file) & params$hto_ignore_exists){
     next
@@ -28,7 +26,7 @@ for(idx in c(1:length(files))){
   h5file=files[[idx]]
   cat(fname, ":", h5file, " ...\n")
 
-  obj=read_hto(h5file, output_prefix, params$hto_regex)
+  obj=read_hto(h5file, output_prefix)
 
   obj <- HTODemux(obj, assay = "HTO", positive.quantile = 0.99)
 
@@ -36,5 +34,3 @@ for(idx in c(1:length(files))){
 
   output_post_classification(obj, output_prefix)
 }
-
-write.csv(allres, file=paste0(outFile, ".htofile.csv"), row.names=F)

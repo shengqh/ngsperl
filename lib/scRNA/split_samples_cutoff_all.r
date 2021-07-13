@@ -1,8 +1,9 @@
 source("split_samples_utils.r")
+
 library(Seurat)
 library(ggplot2)
 
-#devtools::install_github("choisy/cutoff")
+#devtools::install_github("shengqh/cutoff")
 #install.packages("bbmle")
 library(choisycutoff)
 library(zoo)
@@ -11,48 +12,40 @@ library(gridExtra)
 library(ggExtra)
 
 my_startval <- function(values,D1="normal",D2="normal",cutoff_point=0) {
-  den <- tryCatch(
-    expr = {
-      density(values, bw="SJ")
-    },
-    error = function(e){ 
-      density(values)
-    }
-  )
-  w=1
-  x=den$x
-  y=den$y
-  y.smooth=den$y
-  n <- length(y.smooth)
-  y.max <- rollapply(zoo(y.smooth), 2*w+1, max, align="center")
-  delta <- y.max - y.smooth[-c(1:w, n+1-1:w)]
-  i.max <- which(delta <= 0) + w
-  res=data.frame(x=x[i.max], i=i.max, y=y[i.max])
-  res=res[res$x>0,]
-  res=res[order(res$y, decreasing = T),]
-  #the highest peaks should be the negative one, positive one is always in the right side.
-  res=res[res$x>=res$x[1],]
+  if(cutoff_point >0){
+    thresh = cutoff_point
+  }else{
+    den <- tryCatch(
+      expr = {
+        density(values, bw="SJ")
+      },
+      error = function(e){ 
+        density(values)
+      }
+    )
+    w=1
+    x=den$x
+    y=den$y
+    y.smooth=den$y
+    n <- length(y.smooth)
+    y.max <- rollapply(zoo(y.smooth), 2*w+1, max, align="center")
+    delta <- y.max - y.smooth[-c(1:w, n+1-1:w)]
+    i.max <- which(delta <= 0) + w
+    res=data.frame(x=x[i.max], i=i.max, y=y[i.max])
+    res=res[res$x>0,]
+    res=res[order(res$y, decreasing = T),]
 
-  if(cutoff_point > 0){
-    if(res$x[1] > cutoff_point){
-      res=rbind(res[1,,drop=F], res[res$x < cutoff_point,,drop=F])
-    }else{
-      res=rbind(res[1,,drop=F], res[res$x > cutoff_point,,drop=F])
-    }
-  }
-  
-  if(nrow(res)>2){
     if(nrow(res)>2){
       res=res[1:2,]
     }
+
+    xx=x[x>min(res$x) & x<max(res$x)]
+    yy=y[x>min(res$x) & x<max(res$x)]
+    yy.min=min(yy)
+    ii.min=which(yy==yy.min)
+    thresh=xx[ii.min]
   }
 
-  xx=x[x>min(res$x) & x<max(res$x)]
-  yy=y[x>min(res$x) & x<max(res$x)]
-  yy.min=min(yy)
-  ii.min=which(yy==yy.min)
-  thresh=xx[ii.min]
-  
   sel <- values<thresh
   data1 <- values[sel]
   data2 <- values[!sel]
@@ -65,13 +58,14 @@ my_startval <- function(values,D1="normal",D2="normal",cutoff_point=0) {
 }
 
 t=1e-64
-my_em<-function(values, data_name="em", D1="normal", D2="normal", t=1e-64, cutoff_point=0){
+my_em<-function(values, data_name="em", D1="normal", D2="normal", t=1e-64, cutoff_point=0, max_iteration=1000){
   start <- as.list(my_startval(values, D1, D2, cutoff_point))
   
   D1b <- choisycutoff:::hash[[D1]]
   D2b <- choisycutoff:::hash[[D2]]
   lambda0 <- 0
   with(start, {
+    iteration = 0
     while (abs(lambda0 - mean(lambda)) > t) {
       lambda <- mean(lambda)
       lambda0 <- lambda
@@ -87,6 +81,11 @@ my_em<-function(values, data_name="em", D1="normal", D2="normal", t=1e-64, cutof
       coef_n <- names(coef)
       names(coef) <- NULL
       for (i in 1:4) assign(coef_n[i], exp(coef[i]))
+      iteration = iteration + 1
+      if(iteration >= max_iteration){
+        warning(paste0("reach ", max_iteration, " iterations, break."))
+        break
+      }
     }
     out <- list(lambda = lambda, param = exp(out@coef), D1 = D1, 
                 D2 = D2, deviance = out@min, data = values, data_name = data_name, 
@@ -150,22 +149,20 @@ params_lines=read.table(parSampleFile3, sep="\t")
 params=split(params_lines$V1, params_lines$V2)
 params$hto_ignore_exists=ifelse(params$hto_ignore_exists=="0", FALSE, TRUE)
 
-allres=NULL
-idx=3
+idx=14
 for(idx in c(1:length(files))){
   fname=names(files)[idx]
   output_prefix = paste0(fname, ".HTO")
   output_file=paste0(output_prefix, ".csv")
-  allres<-rbind(allres, data.frame(File=output_file, Sample=fname))
   
   if(file.exists(output_file) & params$hto_ignore_exists){
     next
   }
 
-  h5file=files[[idx]]
-  cat(fname, ":", h5file, " ...\n")
+  rdsfile=files[[idx]]
+  cat(fname, ":", rdsfile, " ...\n")
 
-  obj=read_hto(h5file, output_prefix, params$hto_regex)
+  obj=read_hto(rdsfile, output_prefix)
   
   cutoff_point=ifelse(fname %in% names(cutoffs), as.numeric(cutoffs[[fname]]), 0)
 
@@ -212,5 +209,3 @@ for(idx in c(1:length(files))){
   
   output_post_classification(obj, output_prefix)
 }
-
-write.csv(allres, file=paste0(outFile, ".htofile.csv"), row.names=F)
