@@ -31,7 +31,10 @@ for (gene in genes_tbl$V1){
     scale_colour_gradient(name=gene, low="grey", high="blue") + 
     facet_grid(~group) + 
     theme_bw() +
-    theme(strip.background=element_rect(fill="white"))
+    theme(strip.background=element_rect(fill="white"),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank()
+    )
   print(g)
   dev.off()
 }
