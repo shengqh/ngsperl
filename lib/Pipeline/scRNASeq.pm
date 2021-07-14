@@ -21,7 +21,7 @@ use scRNA::Modules;
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(initializeScRNASeqDefaultOptions performScRNASeq performScRNASeqTask)] );
+our %EXPORT_TAGS = ( 'all' => [qw(initializeScRNASeqDefaultOptions addEdgeRTask performScRNASeq performScRNASeqTask)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -317,7 +317,7 @@ sub addEdgeRTask {
     $curClusterName = getValue( $def, "DE_cluster_name" );
     $curClusterDisplayName = getValue( $def, "DE_cluster_display_name", $curClusterName );
     $rCode  = $rCode . ";filter_minTPM=" . getValue( $def, "DE_by_cell_filter_minTPM" ) . ";filter_cellPercentage=" . getValue( $def, "DE_by_cell_filter_cellPercentage" ) . ";bBetweenCluster=1";
-    $groups = getValue( $def, "DE_cluster_groups" );
+    $groups = getValue( $def, "DE_cluster_groups", {} );
     $pairs  = getValue( $def, "DE_cluster_pairs" );
   }
   else {
@@ -946,6 +946,33 @@ sub getScRNASeqConfig {
         push( @$summary, $gene_localization_map_task );
       }
 
+      if(getValue($def, "perform_localization_gene_ratio_plot", 0)){
+        my $gene_ratio_localization_map_task  = $seurat_task . "_gene_ratio_localization_map";
+        my $genes = {
+          $def->{task_name} => getValue($def, "localization_gene_ratio"),
+        };
+        #print(Dumper($genes));
+        $config->{$gene_ratio_localization_map_task} = {
+          class              => "CQS::UniqueR",
+          perform            => 1,
+          target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $gene_ratio_localization_map_task,
+          rtemplate          => "../scRNA/scRNA_func.r;../scRNA/gene_ratio_localization_map.r",
+          source             => $genes,
+          parameterFile1_ref => [ $seurat_task, ".final.rds" ],
+          parameterSampleFile1 => $genes,
+          parameterSampleFile2 => $def->{groups},
+          output_file => "parameterSampleFile1",
+          output_file_ext    => ".figure.files.csv",
+          sh_direct          => 1,
+          pbs                => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$summary, $gene_ratio_localization_map_task );
+      }
+
       my $cluster_task = $seurat_task . "_cluster_res" . getValue( $def, "resolution" );
       $config->{$cluster_task} = {
         class                    => "CQS::UniqueR",
@@ -974,8 +1001,28 @@ sub getScRNASeqConfig {
       };
       push( @$summary, $cluster_task );
 
-      my $celltype_task = $cluster_task . "_celltype";
+      if(getValue($def, "perform_heatmap", 0)){
+        my $heatmap_task = $cluster_task . "_heatmap";
+        $config->{$heatmap_task} = {
+          class                => "CQS::UniqueR",
+          perform              => 1,
+          target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $heatmap_task,
+          rtemplate            => "../scRNA/scRNA_func.r,../scRNA/seurat_heatmap.r",
+          parameterFile1_ref   => [ $cluster_task, ".final.rds" ],
+          parameterFile2_ref   => [ $cluster_task, ".cluster.csv" ],
+          parameterSampleFile1 => $def->{heatmap},
+          output_file_ext      => ".heatmap.files",
+          sh_direct            => 1,
+          pbs                  => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$summary, $heatmap_task );
+      }
 
+      my $celltype_task = $cluster_task . "_celltype";
       if(getValue( $def, "annotate_tcell", 0)){
         getValue( $def, "HLA_panglao5_file");
         getValue( $def, "tcell_markers_file");
