@@ -48,16 +48,16 @@ sub initializeDefaultOptions {
 }
 
 sub addCutadapt {
-  my ($config, $def, $individual, $summary, $cutadaptName, $fastqcName, $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster) = @_;
+  my ($config, $def, $individual, $summary, $cutadapt_task, $fastqcName, $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster) = @_;
   my $default_thread = $is_pairend?2:1;
   my $cutadapt_thread = getValue($def, "cutadapt_thread", $default_thread);
   print("cutadapt_thread=" . $cutadapt_thread . "\n");
   my $cutadapt_class = ( defined $def->{cutadapt_config} ) ? "Trimmer::CutadaptByConfig" : "Trimmer::Cutadapt";
   my $cutadapt = {
-    "$cutadaptName" => {
+    "$cutadapt_task" => {
       class                            => $cutadapt_class,
       perform                          => 1,
-      target_dir                       => $intermediate_dir . "/" . getNextFolderIndex($def) . "$cutadaptName",
+      target_dir                       => $intermediate_dir . "/" . getNextFolderIndex($def) . "$cutadapt_task",
       option                           => $def->{cutadapt_option},
       use_option_only                  => $def->{use_cutadapt_option_only},
       source_ref                       => $source_ref,
@@ -71,7 +71,6 @@ sub addCutadapt {
       fastq_remove_random              => $def->{"fastq_remove_random"},
       fastq_remove_random_5            => $def->{"fastq_remove_random_5"},
       fastq_remove_random_3            => $def->{"fastq_remove_random_3"},
-      trim_poly_atgc                   => $def->{trim_poly_atgc},
       trim_poly_atgc                   => $def->{trim_poly_atgc},
       trim_base_quality_after_adapter_trim => $def->{trim_base_quality_after_adapter_trim},
       hard_trim                        => $def->{"hard_trim"},
@@ -95,10 +94,10 @@ sub addCutadapt {
   for my $key (keys %$cutadapt){
     $config->{$key} = $cutadapt->{$key};
   }
-  push @$individual, ($cutadaptName);
+  push @$individual, ($cutadapt_task);
 
   if ($is_pairend) {
-    my $fastq_validator = $cutadaptName . "_validate";
+    my $fastq_validator = $cutadapt_task . "_validate";
     $config->{"$fastq_validator"} = {
       class => "CQS::ProgramWrapperOneToOne",
       target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "$fastq_validator",
@@ -108,7 +107,7 @@ sub addCutadapt {
       interpretor => "python3",
       program => "../QC/validatePairendFastq.py",
       source_arg => "-i",
-      source_ref => [$cutadaptName, ".fastq.gz"],
+      source_ref => [$cutadapt_task, ".fastq.gz"],
       output_arg => "-o",
       output_file_prefix => ".txt",
       output_file_ext => ".txt",
@@ -125,10 +124,10 @@ sub addCutadapt {
   }
 
   if ( $def->{perform_fastqc} ) {
-    addFastQC( $config, $def, $individual, $summary, $fastqcName, [ $cutadaptName, ".fastq.gz" ], $preprocessing_dir );
+    addFastQC( $config, $def, $individual, $summary, $fastqcName, [ $cutadapt_task, ".fastq.gz" ], $preprocessing_dir );
   }
-  $source_ref = [ $cutadaptName, ".fastq.gz" ];
-  return ($source_ref, $cutadaptName);
+  $source_ref = [ $cutadapt_task, ".fastq.gz" ];
+  return ($source_ref, $cutadapt_task);
 }
 
 sub addFastqLen {
@@ -596,8 +595,8 @@ sub getPreprocessionConfig {
     };
     push( @$tasks, $extractTask );
 
-    my ($test_ref, $cutadapt_name) = addCutadapt($config, $def, $tasks, $tasks, "test_cutadapt", "test_fastqc_post_trim", $test_dir, $test_dir, $extractTask, $is_pairend, $cluster);
-    addFastqLen($config, $def, $tasks, $tasks, "test_fastq_len", $test_dir, [$cutadapt_name, ".gz"], $cluster );
+    my ($test_ref, $cutadapt_task) = addCutadapt($config, $def, $tasks, $tasks, "test_cutadapt", "test_fastqc_post_trim", $test_dir, $test_dir, $extractTask, $is_pairend, $cluster);
+    addFastqLen($config, $def, $tasks, $tasks, "test_fastq_len", $test_dir, [$cutadapt_task, ".gz"], $cluster );
 
     print(join(',', @$tasks));
     $config->{"test_sequencetask"} = {
@@ -620,9 +619,9 @@ sub getPreprocessionConfig {
   }
 
   if ($run_cutadapt) {
-    my $cutadapt_name;
-    ($source_ref, $cutadapt_name)  = addCutadapt($config, $def, $individual, $summary, "cutadapt", "fastqc_post_trim", $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster);
-    addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, [$cutadapt_name, ".gz"], $cluster );
+    my $cutadapt_task;
+    ($source_ref, $cutadapt_task)  = addCutadapt($config, $def, $individual, $summary, "cutadapt", "fastqc_post_trim", $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster);
+    addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, [$cutadapt_task, ".gz"], $cluster );
   }elsif ($def->{fastq_len} ) {
     addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, $source_ref, $cluster );
   }
