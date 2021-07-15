@@ -106,8 +106,8 @@ sub perform {
 
   my $ispairend = get_is_paired_end_option( $config, $section );
 
-  my $adapter_option = "";
-  if ( $option !~ /-a/ ) {
+  my $adapter_option = $option;
+  if ( $adapter_option !~ /-a/ ) {
     if ( defined $curSection->{adapter} && length( $curSection->{adapter} ) > 0 ) {
       my @adapters = split(',', $curSection->{adapter});
       print(@adapters);
@@ -130,7 +130,7 @@ sub perform {
     }
   }
 
-  if ( $option !~ /-g/ ) {
+  if ( $adapter_option !~ /-g/ ) {
     if ( defined $curSection->{adapter_5} && length( $curSection->{adapter_5} ) > 0 ) {
       my @adapters = split /,/, $curSection->{adapter_5};
       if ($ispairend) {
@@ -143,6 +143,7 @@ sub perform {
   }
 
   my $trim_poly_atgc = get_option( $config, $section, "trim_poly_atgc", 1 );
+  print("trim_poly_atgc=" . $trim_poly_atgc.", adapter_option=" . $adapter_option . "\n");
   if ($trim_poly_atgc) {
     if ( $adapter_option =~ /-a/ ) {
       $adapter_option = $adapter_option . " -a \"A{50}\" -a \"T{50}\" -a \"G{50}\" -a \"C{50}\"";
@@ -249,19 +250,32 @@ cutadapt $thread_option -l $hard_trim -o $temp_file $sample_file
         my $temp1_file = $read1name . ".cutAdapter.fastq";
         my $temp2_file = $read2name . ".cutAdapter.fastq";
         print $pbs "
-cutadapt $thread_option $option $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
-cutadapt $thread_option $remove_bases_option -o $read1name -p $read2name $limit_file_options $temp1_file $temp2_file 
-rm $temp1_file $temp2_file
+cutadapt $thread_option $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  cutadapt $thread_option $remove_bases_option -o $read1name -p $read2name $limit_file_options $temp1_file $temp2_file 
+  status=\$?
+  rm $temp1_file $temp2_file
+  if [[ \$status -eq 0 ]]; then
+    touch ${sample_name}.succeed
+    md5sum $read1name > ${read1name}.md5
+    md5sum $read2name > ${read2name}.md5
+  else
+    touch ${sample_name}.failed
+else
+  touch ${sample_name}.failed
+fi
+
 ";
       }
       else {                         # NOT remove top random bases
         print $pbs "
-cutadapt $thread_option $option $adapter_option -o $read1name -p $read2name $limit_file_options $read1file $read2file 1> >(tee ${sample_name}.stdout.log ) 2> >(tee ${sample_name}.stderr.log >\&2)
+cutadapt $thread_option $adapter_option -o $read1name -p $read2name $limit_file_options $read1file $read2file 1> >(tee ${sample_name}.stdout.log ) 2> >(tee ${sample_name}.stderr.log >\&2)
 status=\$?
 if [[ \$status -eq 0 ]]; then
   touch ${sample_name}.succeed
-  md5sum $read1file > ${read1file}.md5
-  md5sum $read2file > ${read2file}.md5
+  md5sum $read1name > ${read1name}.md5
+  md5sum $read2name > ${read2name}.md5
 else
   touch ${sample_name}.failed
 fi
@@ -312,7 +326,7 @@ rm $temp_file
       else {    #NOT remove top random bases
         if ( scalar(@sample_files) == 1 ) {
           print $pbs "
-cutadapt $thread_option $option $adapter_option $limit_file_options -o $final_file $sample_files[0]
+cutadapt $thread_option $adapter_option $limit_file_options -o $final_file $sample_files[0]
 ";
         }
         else {
@@ -379,6 +393,7 @@ sub result {
 
   my $ispairend = get_is_paired_end_option( $config, $section );
   my ( $extension, $fastqextension ) = $self->get_extension( $config, $section );
+  my $shortLimited        = $option =~ /(-m\s+\d+\s*)/;
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -387,10 +402,14 @@ sub result {
   for my $sample_name ( keys %raw_files ) {
     my @result_files = ();
     if ($ispairend) {
-      my ( $read1name, $read2name ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
+      my ( $read1name, $read2name, $finalShortFile_1, $finalShortFile_2, $finalLongFile_1, $finalLongFile_2 ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
 
       push( @result_files, $result_dir . "/" . $read1name );
       push( @result_files, $result_dir . "/" . $read2name );
+      if ($shortLimited) {
+        push( @result_files, $result_dir . "/" . $finalShortFile_1 );
+        push( @result_files, $result_dir . "/" . $finalShortFile_2 );
+      }
     }
     else {
       my ( $final_file, $finalShortFile, $finalLongFile ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
