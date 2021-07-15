@@ -129,6 +129,21 @@ fi
       $curOption = $curOption . " " . $param_option1;
     }
 
+    my $ignored_map = {};
+    for my $index (2..10){
+      my $key = "parameterSampleFile" . $index;
+      $ignored_map->{$key} = 0;
+      my $place_hold = "__FILE${index}__";
+      if ($curOption =~ /$place_hold/){
+        my $file_options = $paramFileMap->{$key};
+        #$parameterSampleFile, $parameterSampleFilearg, $parameterSampleFileJoinDelimiter, $index
+        my $param_option = get_program_param( $file_options->[0], "", $file_options->[2], $sample_name, $result_dir, $index );
+        #print("delimiter=" . $parameterSampleFile1JoinDelimiter . "\n");
+        $curOption =~ s/$place_hold/$param_option/g;
+        $ignored_map->{$key} = 1;
+      }
+    }
+
     my $output_option = "$output_arg $final_prefix";
     if ($curOption =~ /__OUTPUT__/){
       $curOption =~ s/__OUTPUT__/$final_prefix/g;
@@ -155,7 +170,9 @@ fi
 
     for my $key (sort keys %$paramFileMap){
       my $values = $paramFileMap->{$key};
-      $curOption = $curOption . " " . get_program_param( $values->[0], $values->[1],$values->[2], $sample_name, $result_dir, $values->[3] );
+      if(!$ignored_map->{$key}) {
+        $curOption = $curOption . " " . get_program_param( $values->[0], $values->[1],$values->[2], $sample_name, $result_dir, $values->[3] );
+      }
     }
 
     print $pbs "
