@@ -37,6 +37,7 @@ def find_files(logger, source_dir, file_pattern, name_pattern, use_dir_name=0, r
   if use_dir_name > 0:
     for f in files:
       sample_name = get_dir_name(f, use_dir_name)
+      sample_name = get_sample_name(sample_name, name_pattern)
       if sample_name not in result:
         result[sample_name] = [f]
       else:
