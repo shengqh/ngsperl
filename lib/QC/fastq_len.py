@@ -95,7 +95,8 @@ logger.info("Output result to %s ..." % args.output)
 with open(args.output, "wt") as fout:
   fout.write("Len\tCount\n")
   maxlen = max(result.keys())
-  for len in range(1, maxlen):
-    fout.write("%d\t%d\n" % (len, result.setdefault(len, 0)))
+  for len in range(0, maxlen):
+    res="%d\t%d\n" % (len, result.setdefault(len, 0))
+    fout.write(res)
 
 logger.info("done")
