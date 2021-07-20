@@ -562,8 +562,8 @@ sub getConfig {
       }
     }
 
-    #if ($perform_bdgdiff) {
-    if (1) {
+    if (getValue($def, "perform_bdgdiff", 0)) {
+    #if (1) {
       my $bindName = $peakCallerTask . "_bdgdiff";
       $config->{$bindName} = {
         class                   => "Chipseq::MACS2Bdgdiff",
