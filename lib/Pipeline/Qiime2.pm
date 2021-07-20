@@ -72,6 +72,23 @@ sub getQiime2Config {
 
   my $files = $def->{files};
   my $groups = $def->{groups};
+  my $pairs = $def->{pairs};
+  my $pairs_map = {};
+  if(defined $pairs){
+    for my $comp (sort keys %$pairs){
+      #print(Dumper($pairs->{$comp}));
+
+      my $controls = $pairs->{$comp}{controls};
+      my $cases = $pairs->{$comp}{cases};
+
+      my %controls_h = map{$_ => 1} @$controls;
+      $pairs_map->{$comp}{controls} = \%controls_h;
+      my %cases_h = map{$_ => 1} @$cases;
+      $pairs_map->{$comp}{cases} = \%cases_h; 
+    }
+    #print(Dumper($pairs_map));
+  }
+
   my $file_group_map = {};
   my $group_header = "";
   if(defined $groups){
@@ -90,15 +107,42 @@ sub getQiime2Config {
   open(my $mani_fout, '>', $manifest_file) or die "Cannot create file $manifest_file";
   open(my $meta_fout, '>', $meta_file) or die "Cannot create file $meta_file";
   $mani_fout->print("sample-id,filename,direction\n");
-  $meta_fout->print("#SampleID\tBarcodeSequence\tLinkerPrimerSequence\tgroup\n");
-  $meta_fout->print("#q2:types\tcategorical\tcategorical\tcategorical\n");
+
+  $meta_fout->print("#SampleID\tBarcodeSequence\tLinkerPrimerSequence\tgroup");
+  if(defined $pairs){
+    for my $comp (sort keys %$pairs){
+      $meta_fout->print("\t$comp");
+    }
+  }
+  $meta_fout->print("\n");
+  $meta_fout->print("#q2:types\tcategorical\tcategorical\tcategorical");
+  if(defined $pairs){
+    for my $comp (sort keys %$pairs){
+      $meta_fout->print("\tcategorical");
+    }
+  }
+  $meta_fout->print("\n");
   
   for my $name (sort keys %$files){
     my $cfiles = $files->{$name};
     my $cfile1 = $cfiles->[0];
     my $cname = basename($cfile1);
     $cname =~ s/_S\d+_L\d+_R\d+.+//g;
-    $meta_fout->print("$cname\t\t\t" . ($group_header eq "" ? "" : $file_group_map->{$name}) . "\n");
+    $meta_fout->print("$cname\t\t\t" . ($group_header eq "" ? "" : $file_group_map->{$name}));
+    if(defined $pairs){
+      for my $comp (sort keys %$pairs){
+        my $controls = $pairs_map->{$comp}{controls};
+        my $cases = $pairs_map->{$comp}{cases};
+        if($controls->{$cname}){
+          $meta_fout->print("\tcontrol");
+        }elsif($cases->{$cname}){
+          $meta_fout->print("\tcase");
+        }else{
+          $meta_fout->print("\t");
+        }
+      }
+    }
+    $meta_fout->print("\n");
 
     my $idx = 0;
     for my $cfile (@$cfiles){
@@ -513,6 +557,72 @@ fi
     }
   };
   push (@$individual, $qiime2_taxonomic);
+
+  if(defined $pairs){
+    my $qiime2_composition = "qiime2_composition";
+    my $classifier_file = getValue($def, "classifier_file");
+    my $command = "";
+    for my $comp (sort keys %$pairs){
+      $command = $command . "
+echo perform compositon for $comp
+
+qiime feature-table filter-samples \\
+  --i-table __FILE__ \\
+  --m-metadata-file $meta_file \\
+  --p-where \"not [$comp]=''\" \\
+  --o-filtered-table $comp.qza
+
+qiime composition add-pseudocount \\
+  --i-table $comp.qza \\
+  --o-composition-table $comp.composition.qza
+
+qiime composition ancom \\
+  --i-table $comp.composition.qza \\
+  --m-metadata-file $meta_file \\
+  --m-metadata-column $comp \\
+  --o-visualization $comp.ancom.qzv
+";
+    }
+
+    $config->{$qiime2_composition} = {
+      class => "CQS::ProgramWrapperOneToOne",
+      target_dir => $target_dir . "/" . getNextFolderIndex($def) . $qiime2_composition,
+      option => "
+export CONDA_PREFIX=$cache_dir
+export MPLCONFIGDIR=$cache_dir
+
+if [[ -e __NAME__.failed ]]; then
+  rm __NAME__.failed
+fi
+
+$command
+
+#-pairs
+#__OUTPUT__
+",
+      use_tmp_folder => 0,
+      suffix  => "_qc",
+      docker_prefix => "qiime2_",
+      interpretor => "",
+      program => "",
+      check_program => 0,
+      source_arg => "--i-table",
+      source_ref => [ $qiime2_dada2, ".table.qza" ],
+      parameterSampleFile2_arg => "-pairs",
+      parameterSampleFile2 => $pairs,
+      output_arg => "--o-visualization",
+      output_file_prefix => ".ancom.qzv",
+      output_file_ext => ".ancom.qzv",
+      output_to_same_folder => 1,
+      sh_direct   => getValue($def, "sh_direct", 0),
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      }
+    };
+    push (@$individual, $qiime2_composition);
+  }
 
   $config->{sequencetask} = {
     class      => getSequenceTaskClassname($cluster),
