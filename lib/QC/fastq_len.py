@@ -33,7 +33,6 @@ fastq_files = args.input.split(',')
 
 result={}
 for fq in fastq_files:
-  logger.info("Processing %s ..." % fq)
   reads_count = 0
   if args.copy_to_local:
     openfq = os.path.basename(fq)
