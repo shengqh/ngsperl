@@ -1209,14 +1209,15 @@ if (! is.null(resultAllOut)) {
       theme_bw()+
       scale_size(range = c(3, 7))+
       facet_grid(. ~ Comparison)+
-      theme(axis.text = element_text(colour = "black",size=30),
-            axis.title = element_text(size=30),
-            legend.text= element_text(size=30),
-            legend.title= element_text(size=30),
-            strip.text.x = element_text(size = 30))
+      theme(axis.text = element_text(colour = "black",size=25),
+            axis.title = element_text(size=25),
+            legend.text= element_text(size=25),
+            legend.title= element_text(size=25),
+            strip.text.x = element_text(size = 25),
+            strip.background=element_rect(fill="white"))
     
-    pwidth<-max(7,3.5*length(allComparisons))
-    owidth<-max(2000,1500*length(allComparisons))
+    pwidth<-max(12,4*length(allComparisons)+4)
+    owidth<-max(4000, 1500*length(allComparisons)+1000)
     filePrefix<-paste0(allprefix,"_DESeq2_volcanoPlot")
     drawPlot(filePrefix, outputFormat, pwidth, 7, owidth, 2000, p, "Volcano")
     
