@@ -161,7 +161,7 @@ sub addFastqLen {
     "${fastqLenName}_vis" => {
       class                    => "CQS::UniqueR",
       perform                  => 1,
-      target_dir               => $fastq_len_dir,
+      target_dir               => $parentFolder . "/" . getNextFolderIndex($def) . "${fastqLenName}_summary",
       rtemplate                => "countTableVisFunctions.R,fastqLengthVis.R",
       output_file              => ".lengthDistribution",
       output_file_ext          => ".png",
@@ -250,18 +250,20 @@ sub getPreprocessionConfig {
     $def->{files} = $files;
 
     my $groups = $def->{groups};
-    my $group_names = [keys %$groups];
-    for my $group_name (@$group_names){
-      my $filter_samples = [];
-      my $cur_samples = $groups->{$group_name};
-      for my $sample (@$cur_samples){
-        if (not defined $ignore_sample_map{$sample}) {
-          push @$filter_samples, $sample;
+    if(defined $groups){
+      my $group_names = [keys %$groups];
+      for my $group_name (@$group_names){
+        my $filter_samples = [];
+        my $cur_samples = $groups->{$group_name};
+        for my $sample (@$cur_samples){
+          if (not defined $ignore_sample_map{$sample}) {
+            push @$filter_samples, $sample;
+          }
         }
+        $groups->{$group_name} = $filter_samples;
       }
-      $groups->{$group_name} = $filter_samples;
+      $def->{groups} = $groups;
     }
-    $def->{groups} = $groups;
   }
 
   if (defined $def->{files}) {
