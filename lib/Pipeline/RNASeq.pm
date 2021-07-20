@@ -633,6 +633,34 @@ sub getRNASeqConfig {
     push( @$summary, "rnaseqc" );
   }
 
+  if ( $def->{perform_rnaseqBamQC} ) {
+    my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
+    $config->{"rnaseqBamQC"} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "$target_dir/rnaseqBamQC",
+      init_command          => "",
+      option                => "-i __FILE__ -g '$transcript_gtf' -o __NAME__.txt",
+      interpretor           => "python3",
+      check_program         => 1,
+      program               => "../QC/rnaseqBamQC.py",
+      source_ref            => $source_ref,
+      source_arg            => "-i",
+      output_to_same_folder => 1,
+      output_arg            => "-o",
+      output_file_prefix    => "",
+      output_file_ext       => ".txt",
+      output_other_ext      => ".txt",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "40gb"
+      },
+    };
+    push (@$individual, "rnaseqBamQC");
+  }
+
   if ( $def->{perform_qc3bam} ) {
     my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
     $config->{qc3} = {
