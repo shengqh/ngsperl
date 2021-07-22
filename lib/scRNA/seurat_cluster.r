@@ -36,6 +36,9 @@ obj<-finalList$obj
 
 obj<-run_cluster_only(obj, pca_dims, resolution, random.seed, reduction=reduction)
 
+tbl<-table(obj$seurat_clusters, obj$orig.ident)
+write.csv(tbl, file=paste0(outFile, ".cluster_sample.csv"))
+
 seurat_clusters<-unlist(obj[["seurat_clusters"]])
 seurat_colors<-hue_pal()(length(levels(seurat_clusters)))
 names(seurat_colors)<-levels(seurat_clusters)
