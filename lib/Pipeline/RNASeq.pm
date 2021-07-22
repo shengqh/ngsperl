@@ -635,10 +635,12 @@ sub getRNASeqConfig {
 
   if ( $def->{perform_rnaseqBamQC} ) {
     my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
-    $config->{"rnaseqBamQC"} = {
+
+    my $rnaseqBamQC_task = "rnaseqBamQC";
+    $config->{$rnaseqBamQC_task} = {
       class                 => "CQS::ProgramWrapperOneToOne",
       perform               => 1,
-      target_dir            => "$target_dir/rnaseqBamQC",
+      target_dir            => "$target_dir/$rnaseqBamQC_task",
       init_command          => "",
       option                => "-i __FILE__ -g '$transcript_gtf' -o __NAME__.txt",
       interpretor           => "python3",
@@ -650,7 +652,6 @@ sub getRNASeqConfig {
       output_arg            => "-o",
       output_file_prefix    => "",
       output_file_ext       => ".txt",
-      output_other_ext      => ".txt",
       sh_direct             => 0,
       pbs                   => {
         "nodes"     => "1:ppn=1",
@@ -658,7 +659,26 @@ sub getRNASeqConfig {
         "mem"       => "40gb"
       },
     };
-    push (@$individual, "rnaseqBamQC");
+    push (@$individual, $rnaseqBamQC_task);
+
+    my $rnaseqBamQCsummary_task = $rnaseqBamQC_task . "_summary";
+    $config->{$rnaseqBamQCsummary_task} = {
+      class                    => "CQS::UniqueR",
+      perform                  => 1,
+      target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $rnaseqBamQCsummary_task,
+      rtemplate                => "../QC/rnaseqBamQCsummary.r",
+      output_file              => "",
+      output_file_ext          => ".txt",
+      parameterSampleFile1_ref => $rnaseqBamQC_task,
+      sh_direct                => 1,
+      rCode                    => "",
+      pbs                      => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "2",
+        "mem"       => "10gb"
+      },
+    };
+    push( @$summary, $rnaseqBamQCsummary_task );
   }
 
   if ( $def->{perform_qc3bam} ) {
