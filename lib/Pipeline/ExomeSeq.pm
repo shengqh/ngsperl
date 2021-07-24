@@ -18,7 +18,7 @@ use List::Util qw(max);
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(performExomeSeq performExomeSeqTask)] );
+our %EXPORT_TAGS = ( 'all' => [qw(performExomeSeq performExomeSeqTask addMutect2)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -152,7 +152,6 @@ sub addMutect2 {
     "source_ref" => [ $bam_input, '.bam$' ],
     "variants_for_contamination" => $def->{variants_for_contamination},
     "run_orientation_bias_mixture_model_filter" => $def->{'Mutect2.run_orientation_bias_mixture_model_filter'},
-    "intervals" => $def->{covered_bed},
     "fasta_file" => $def->{ref_fasta},
     pbs=> {
       "nodes"     => "1:ppn=1",
@@ -160,6 +159,13 @@ sub addMutect2 {
       "mem"       => getValue($def, "mutect2_memory", "40gb"),
     },
   };
+
+  if(defined $def->{covered_bed}) {
+    $config->{$mutect2_call}{intervals} = $def->{covered_bed};
+    #print($def->{covered_bed});
+  }elsif(defined $config->{intervals_ref}){
+    $config->{$mutect2_call}{intervals_ref} = $config->{intervals_ref};
+  }
 
   if($use_germline_resource){
     $config->{$mutect2_call}{germline_resource} = $def->{germline_resource};
