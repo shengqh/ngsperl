@@ -109,7 +109,6 @@ $fastqc $option --extract -t $curThreadCount -o `pwd` $samples 2> >(tee ${sample
 status=\$?
 if [[ \$status -ne 0 ]]; then
   touch $sample_name.fastqc.failed
-  rm $bowtiesam
 else
   touch $sample_name.fastqc.succeed
 fi
