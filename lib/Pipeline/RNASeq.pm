@@ -61,7 +61,7 @@ sub initializeRNASeqDefaultOptions {
 
   initDefaultValue( $def, "featureCount_option",        "-g gene_id -t exon" );
   initDefaultValue( $def, "aligner",                    "star" );
-  initDefaultValue( $def, "star_option",                "--outSAMmapqUnique 60 --twopassMode Basic --outSAMprimaryFlag AllBestScore" );
+  initDefaultValue( $def, "star_option",                "--twopassMode Basic --outSAMmapqUnique 60 --outSAMprimaryFlag AllBestScore" );
   initDefaultValue( $def, "use_pearson_in_hca",         1 );
   initDefaultValue( $def, "top25cv_in_hca",             0 );
   initDefaultValue( $def, "use_green_red_color_in_hca", 1 );
