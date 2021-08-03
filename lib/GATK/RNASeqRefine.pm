@@ -152,7 +152,7 @@ if [[ -s $recalFile && ! -s $finalFile ]]; then
   samtools index $finalFile
 fi      
 ";
-        $rmlist = $rmlist . " $recalFile $recalFileIndex";
+        $rmlist = $rmlist . " $recalFile ${recalFile}.bai";
       }
     }
 
@@ -196,6 +196,7 @@ fi
 if [[ -s $splitFile && -s $recalTable && ! -s $recalFile ]]; then
   echo PrintReads=`date`
   java $option -jar $gatk_jar -T PrintReads $printOptions -nct $thread -rf BadCigar -R $faFile -I $splitFile -BQSR $recalTable -o $recalFile 
+  mv $recalFileIndex ${recalFile}.bai
 fi
 
 $slimCmd
@@ -209,6 +210,9 @@ if [[ -s $finalFile && ! -s ${finalFile}.stat ]]; then
 fi
   
 ";
+
+    $self->clean_temp_files($pbs, $localized_files);
+
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
@@ -263,7 +267,7 @@ sub get_clear_map {
     my $splitFile      = $sample_name . ".rmdup.split.bam";
     my $recalTable     = $sample_name . ".rmdup.split.recal.table";
     my $recalFile      = $sample_name . ".rmdup.split.recal.bam";
-    my $recalFileIndex = change_extension( $recalFile, ".bai" );
+    my $recalFileIndex = $recalFile . ".bai";
 
     if ($slim) {
       my $slimFile = $sample_name . ".rmdup.split.recal.slim.bam";
