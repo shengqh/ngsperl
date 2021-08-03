@@ -5,6 +5,7 @@ library(Seurat)
 library(ggplot2)
 library(kableExtra)
 library(dplyr)
+library(scales)
 
 if ("Seurat" %in% names(sessionInfo()$otherPkgs) & grepl("^4",sessionInfo()$otherPkgs$Seurat$Version)) { #Seurat version4
   logFcColName="avg_log2FC"
@@ -17,16 +18,23 @@ myoptions<-split(options_table$V1, options_table$V2)
 
 by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
 
+min.pct<-ifelse(is.null(myoptions$min.pct), 0.5, as.numeric(myoptions$min.pct))
+logfc.threshold<-ifelse(is.null(myoptions$logfc.threshold), 0.6, as.numeric(myoptions$logfc.threshold))
+
 finalList=readRDS(parFile1)
-all_obj=finalList$obj
-seurat_colors=finalList$seurat_colors
+if(is.list(finalList)){
+  all_obj=finalList$obj
+  seurat_colors=finalList$seurat_colors
+  celltype=read.csv(parFile3)
+}else{
+  all_obj=finalList
+  celltype=all_obj@meta.data
+  celltype<-unique(celltype[,c("seurat_clusters", myoptions$celltype_name)])
+  colnames(celltype)<-c("seurat_clusters", "cell_type")
+  seurat_colors<-hue_pal()(nrow(celltype))
+}
 
-cell_clusters=read_cell_cluster_file(parFile2)
-cell_clusters$seurat_clusters=as.character(cell_clusters$seurat_clusters)
-
-celltype=read.csv(parFile3)
-
-draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_prefix){
+draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_prefix, min.pct, logfc.threshold ){
   assay=ifelse("SCT" %in% names(all_obj@assays), "SCT", "RNA")
 
   obj = subset(all_obj, seurat_clusters %in% names(new.cluster.ids))
@@ -37,6 +45,7 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
   clusterDf$seurat_colors<-seurat_colors[clusterDf$seurat]
   
   clusterDf$seurat_cellactivity<-paste0(clusterDf$seurat, " : ", clusterDf$cellactivity)
+  clusterDf<-clusterDf[order(clusterDf$seurat),]
   seurat_cellactivity<-clusterDf$seurat_cellactivity
   
   caCount<-table(clusterDf$cellactivity)
@@ -67,7 +76,7 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
   all_max_markers=NULL
   all_display_markers=NULL
   all_figures=NULL
-  idx=5
+  idx=1
   for(idx in c(1:length(cellTypeClusters))){
     ctc_name = names(cellTypeClusters)[idx]
     ctc_filename=gsub(" ", "_", ctc_name)
@@ -76,31 +85,31 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
     other=allclusters[!(allclusters %in% ctc)]
     c=2
     for(c in ctc){
-      cat(paste0("  finding markers for cluster ", c, " between cell types\n"))
-      bw_markers=find_markers(obj, by_sctransform=by_sctransform, ident.1=c, ident.2=other)
-      cat(paste0("    ", nrow(bw_markers), " found between cell types\n"))
-      
-      bw_markers$cluster=c
-      bw_markers$celltype=ctc_name
-  
-      all_bw_markers=rbind(all_bw_markers, bw_markers)
-  
+      if(length(other) > 0){
+        cat(paste0("  finding markers for cluster ", c, " between cell types\n"))
+        bw_markers=find_markers(obj, by_sctransform=by_sctransform, ident.1=c, ident.2=other,logfc.threshold = logfc.threshold, min.pct = min.pct)
+        cat(paste0("    ", nrow(bw_markers), " found between cell types\n"))
+        
+        bw_markers$cluster=c
+        bw_markers$celltype=ctc_name
+    
+        all_bw_markers=rbind(all_bw_markers, bw_markers)
+      }else{
+        bw_markers=NA
+      }
       suffix=""
       
       if(length(ctc) > 1){
         cat(paste0("  finding markers for cluster ", c, " in cell types\n"))
         other_ctc=ctc[ctc != c]
-        in_markers=find_markers(obj, by_sctransform=by_sctransform, ident.1=c, ident.2=other_ctc)
+        in_markers=find_markers(obj, by_sctransform=by_sctransform, ident.1=c, ident.2=other_ctc,logfc.threshold = logfc.threshold, min.pct = min.pct)
         cat(paste0("    ", nrow(in_markers), " found in cell types\n"))
-        if(nrow(in_markers) == 0){
-          cur_markers=bw_markers
-          suffix=".between"
-        }else{
-          in_markers$cluster=c
-          in_markers$celltype=ctc_name
-    
-          all_in_markers=rbind(all_in_markers, in_markers)
-          
+        in_markers$cluster=c
+        in_markers$celltype=ctc_name
+  
+        all_in_markers=rbind(all_in_markers, in_markers)
+        
+        if(!is.na(bw_markers)){
           both_markers=bw_markers[rownames(bw_markers) %in% rownames(in_markers),,drop=F]
           cat(paste0("  there are ", nrow(both_markers), " markers found in both between and in cell types\n"))
           all_both_markers=rbind(all_both_markers, both_markers)
@@ -112,6 +121,9 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
             cur_markers=bw_markers
             suffix=".between"
           }
+        }else{
+          cur_markers=in_markers
+          suffix=".in"
         }
       }else{
         cur_markers=bw_markers
@@ -146,14 +158,18 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
   
   write.csv(all_display_markers, file=paste0(file_prefix, ".all_display_markers.csv"))
   write.csv(all_max_markers, file=paste0(file_prefix, ".all_max_markers.csv"))
-  write.csv(all_bw_markers, file=paste0(file_prefix, ".all_bw_markers.csv"))
-  write.csv(all_in_markers, file=paste0(file_prefix, ".all_in_markers.csv"))
+  if(!is.null(all_bw_markers)){
+    write.csv(all_bw_markers, file=paste0(file_prefix, ".all_bw_markers.csv"))
+  }
+  if(!is.null(all_in_markers)){
+    write.csv(all_in_markers, file=paste0(file_prefix, ".all_in_markers.csv"))
+  }
   write.csv(all_both_markers, file=paste0(file_prefix, ".all_both_markers.csv"))
   write.csv(all_figures, file=paste0(file_prefix, ".all_figures.csv"))
 }
 
 new.cluster.ids=split(celltype$cell_type, celltype$seurat_clusters)
-draw_marker_genes(all_obj, new.cluster.ids, paste0(outFile, "_celltype"), "celltype_");
+draw_marker_genes(all_obj, new.cluster.ids, paste0(outFile, "_celltype"), "celltype_", min.pct=min.pct, logfc.threshold=logfc.threshold);
 
 if("tcell_type" %in% colnames(celltype)){
   tcelltype=celltype[celltype$tcell_type != "",]

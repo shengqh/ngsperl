@@ -1,6 +1,5 @@
 source("scRNA_func.r")
 
-
 library(Seurat)
 library(ggplot2)
 library(patchwork)
@@ -79,7 +78,9 @@ for(ct in names(cclist)){
   full_umap = cluster_obj@reductions$umap
   cluster_obj[[myoptions$cluster_name]]=NULL
   
-  rdsFile = paste0(ctPrefix, ".rds")
+  ctPrefix<-paste0(ctPrefix, ".", resolution)
+  
+  rdsFile = paste0(ctPrefix,  ".rds")
   if(!file.exists(rdsFile)){
     if(by_sctransform){
       cluster_obj <- SCTransform(cluster_obj, verbose = FALSE)
