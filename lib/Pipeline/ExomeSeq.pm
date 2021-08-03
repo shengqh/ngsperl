@@ -118,9 +118,15 @@ sub initializeDefaultOptions {
 sub addMutect2 {
   my ($config, $def, $tasks, $target_dir, $bam_input, $mutect2_call, $option, $use_germline_resource, $pon) = @_;
 
-  my $run_funcotator="false";
-  if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
-    $run_funcotator="true";
+  my $run_funcotator;
+  if(defined $def->{run_funcotator}){
+    $run_funcotator = $def->{run_funcotator};
+  }else{
+    if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
+      $run_funcotator="true";
+    }else{
+      $run_funcotator="false";
+    }
   }
 
   my $output_sample_ext;
@@ -144,6 +150,12 @@ sub addMutect2 {
     $output_file_ext = $output_sample_ext."-filtered.vcf";
   }
 
+  my $fasta_file = $def->{ref_fasta};
+  if(not defined $fasta_file){
+    $fasta_file = $def->{fasta_file};
+  }
+  die "define ref_fasta or fasta_file for mutect2" if not defined $fasta_file;
+
   $config->{$mutect2_call} = {     
     "class" => "GATK4::MuTect2",
     "target_dir" => "${target_dir}/$mutect2_call",
@@ -152,7 +164,7 @@ sub addMutect2 {
     "source_ref" => [ $bam_input, '.bam$' ],
     "variants_for_contamination" => $def->{variants_for_contamination},
     "run_orientation_bias_mixture_model_filter" => $def->{'Mutect2.run_orientation_bias_mixture_model_filter'},
-    "fasta_file" => $def->{ref_fasta},
+    "fasta_file" => $fasta_file,
     pbs=> {
       "nodes"     => "1:ppn=1",
       "walltime"  => getValue($def, "mutect2_walltime", "22"),
