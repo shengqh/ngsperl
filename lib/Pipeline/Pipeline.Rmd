@@ -1,4 +1,6 @@
 ```{r pipeline, results="asis", echo=FALSE, warning=FALSE} 
+library(stringr)
+
 display_webgestalt=function(files) {
   cat(paste0("  \n## WebGestalt  \n"))
   enrich_files<-files[grepl("WebGestalt_", rownames(files)),]
@@ -54,6 +56,20 @@ processGseaTable=function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=5,absLin
     categoryDescription<-gsub("^>","",temp[j+2])
     categoryDescription<-gsub("<\\/$","",categoryDescription)
     
+    reg_pattern = "<a href=.+?]</a>"
+
+    if(length(categoryDescription) > 0){
+      while(grepl(reg_pattern, categoryDescription)){
+        url = str_extract(categoryDescription, reg_pattern) 
+        
+        name=str_match(url, '\\[(.+?)]')[[2]]
+        name_url=str_match(url, "<a href='(.+)'")[[2]]
+        namelink=addLinkTag(name, name_url)
+        
+        categoryDescription<-gsub(url, namelink, fixed=TRUE, categoryDescription)
+      }
+    }
+
     rawTableOut<-rbind(rawTableOut,unlist(c(categoryNameInTable,categoryDescription,rawTable[i,c(4,5,6,8)])))
   }
   if(!is.null(rawTableOut)){
