@@ -50,7 +50,7 @@ sub perform {
 
   #target region
   my $intervals_option = "";
-  my $intervals = get_param_file( $config->{$section}{intervals}, "intervals", 0 );
+  my $intervals = parse_param_file( $config, $section, "intervals", 0 );
   if ( defined $intervals and ($intervals ne "") ) {
     $intervals_option = "--interval-set-rule INTERSECTION -L $intervals";
     $option = $option . " -L $intervals";

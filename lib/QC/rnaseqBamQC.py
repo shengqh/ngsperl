@@ -20,24 +20,6 @@ class Item(object):
   def __str__(self):
     return f"{self.chrom}\t{self.start}\t{self.end}\t{self.name}\t{self.category}\t{self.strand}"
   
-def read_items(filename):
-  result = []
-  with open(filename, "rt") as fin:
-    for line in fin:
-      parts = line.rstrip().split('\t')
-      item = Item(parts[0], int(parts[1]), int(parts[2]), parts[3], parts[4], parts[5])
-      result.append(item)
-  return(result)
-
-def write_items(filename, items):
-  with open(filename, "wt") as fout:
-    for item in items:
-      fout.write(f"{item}\n")
-
-def runCmd(cmd, logger):
-  logger.info(cmd)
-  os.system(cmd)
-
 def gtf_to_items(gtf, logger):
   logger.info("Processing " + gtf + " ...")
 
@@ -87,15 +69,6 @@ def gtf_to_items(gtf, logger):
   items = sorted(items, key = lambda x: (chrom_map[x.chrom], x.start))
 
   return(items)
-
-def gtf_to_bed(gtf, bed, logger):
-  items = gtf_to_items(gtf, logger)
-
-  logger.info("Writing result to " + bed + " ...")
-  with bgzf.BgzfWriter(bed, "wb") as fout:
-    for item in items:
-      fout.write(f"{item}\n")
-  runCmd("tabix -p bed %s " % bed, logger)
 
 def merge_bed(items, logger):
   i = 0
@@ -212,7 +185,7 @@ def main():
       #if count % 10000 == 0:
       #  logger.info(count)
 
-      if count % 100000 == 0:
+      if count % 1000000 == 0:
         logger.info(count)
       #  break
 

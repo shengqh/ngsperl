@@ -10,7 +10,7 @@ def main():
                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input Qiime2 qzv file', required=True)
-  parser.add_argument('-p', '--path', action='store', nargs='?', help="Input path in zipped file", required=True)
+  parser.add_argument('-p', '--path', action='store', default='/data/metadata.tsv', nargs='?', help="Input path in zipped file")
   parser.add_argument('-o', '--output', action='store', nargs='?', help="Output file name")
 
   args = parser.parse_args()

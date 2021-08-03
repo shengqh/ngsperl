@@ -67,8 +67,26 @@ sub perform {
       $mappedonlyoption = "-F 4";
     }
 
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
+    my $cur_dir  = $outputToSameFolder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+
     my $bam_file = $sample_name . ".bam";
     my $final_file = ( $output_sort_by_coordinate && $mark_duplicates ) ? $sample_name . ".rmdup.bam" : $bam_file;
+
+    print $sh "
+if [[ ! -s $cur_dir/$final_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
+
+    my $log_desc = $cluster->get_log_description($log);
+
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files)};
 
     my $m_option = ($option =~ /\-m/)? "--max ${final_file}.max.txt":""; 
 
@@ -80,21 +98,23 @@ sub perform {
 
     my $cmd_file_exists = check_file_exists_command(\@sample_files, "  ");
 
-    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
-    my $pbs_name = basename($pbs_file);
-    my $log      = $self->get_log_filename( $log_dir, $sample_name );
-    my $cur_dir  = $outputToSameFolder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
-
-    print $sh "\$MYCMD ./$pbs_name \n";
-
-    my $log_desc = $cluster->get_log_description($log);
-
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
-
     print $pbs "
 if [[ ! -s $bam_file && ! -s $bowtiesam ]]; then
-  $cmd_file_exists
+  if [[ -e ${sample_name}.bowtie.failed ]]; then
+    rm -e ${sample_name}.bowtie.failed
+  fi
+
+$cmd_file_exists
   $bowtie1_aln_command 
+
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.bowtie.failed
+    rm $bowtiesam
+  else
+    touch $sample_name.bowtie.succeed
+  fi
+
   bowtie --version | grep bowtie | grep version | cut -d ' ' -f3 | awk '{print \"bowtie,v\"\$1}' > ${final_file}.version
 fi
 ";
@@ -142,6 +162,8 @@ if [ -s $bowtiesam ]; then
 fi
 ";
     }
+
+    $self->clean_temp_files($pbs, $localized_files);
 
     $self->close_pbs( $pbs, $pbs_file );
   }

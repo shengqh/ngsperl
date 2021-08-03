@@ -70,6 +70,8 @@ sub getQiime2Config {
 
   my $cache_dir = create_directory_or_die($target_dir . "/qiime2_cache");
 
+  my $qiime2extract = dirname(__FILE__) . "/../Microbiome/Qiime2Extract.py";
+
   my $files = $def->{files};
   my $groups = $def->{groups};
   my $pairs = $def->{pairs};
@@ -316,13 +318,19 @@ if [[ \$status -eq 0 ]]; then
     --i-table __NAME__.dada2.table.qza \\
     --o-visualization __NAME__.dada2.table.qzv
 
+  python3 $qiime2extract -i __NAME__.dada2.table.qzv -p \"/data/metadata.tsv\" -o __NAME__.dada2.table.tsv
+
   qiime feature-table tabulate-seqs \\
     --i-data __NAME__.dada2.qza \\
     --o-visualization __NAME__.dada2.qzv  
 
+  python3 $qiime2extract -i __NAME__.dada2.qzv -p \"/data/sequences.fasta\" -o __NAME__.dada2.fasta
+
   qiime metadata tabulate \\
     --m-input-file __NAME__.dada2.stats.qza \\
     --o-visualization __NAME__.dada2.stats.qzv    
+
+  python3 $qiime2extract -i __NAME__.dada2.stats.qzv -p \"/data/metadata.tsv\" -o __NAME__.dada2.stats.tsv
 else
   touch __NAME__.failed
   rm __NAME__.dada2.qza
@@ -430,28 +438,40 @@ if [[ \$status -eq 0 ]]; then
     --m-input-file __NAME__/faith_pd_vector.qza \\
     --o-visualization __NAME__/faith_pd_vector.qzv
 
+  python3 $qiime2extract -i __NAME__/faith_pd_vector.qzv -o __NAME__/faith_pd_vector.tsv
+
   qiime diversity alpha-group-significance \\
     --i-alpha-diversity __NAME__/faith_pd_vector.qza \\
     --m-metadata-file $meta_file \\
     --o-visualization __NAME__/faith-pd-group-significance.qzv
 
+  python3 $qiime2extract -i __NAME__/faith-pd-group-significance.qzv -o __NAME__/faith-pd-group-significance.tsv
+
   qiime metadata tabulate \\
     --m-input-file __NAME__/shannon_vector.qza \\
     --o-visualization __NAME__/shannon_vector.qzv
+
+  python3 $qiime2extract -i __NAME__/shannon_vector.qzv -o __NAME__/shannon_vector.tsv
 
   qiime diversity alpha-group-significance \\
     --i-alpha-diversity __NAME__/shannon_vector.qza \\
     --m-metadata-file $meta_file \\
     --o-visualization __NAME__/shannon-group-significance.qzv
 
+  python3 $qiime2extract -i __NAME__/shannon-group-significance.qzv -o __NAME__/shannon-group-significance.tsv
+
   qiime metadata tabulate \\
     --m-input-file __NAME__/evenness_vector.qza \\
     --o-visualization __NAME__/evenness_vector.qzv
+
+  python3 $qiime2extract -i __NAME__/evenness_vector.qzv -o __NAME__/evenness_vector.tsv
 
   qiime diversity alpha-group-significance \\
     --i-alpha-diversity __NAME__/evenness_vector.qza \\
     --m-metadata-file $meta_file \\
     --o-visualization __NAME__/evenness-group-significance.qzv
+
+  python3 $qiime2extract -i __NAME__/evenness-group-significance.qzv -o __NAME__/evenness-group-significance.tsv
 
   qiime diversity beta-group-significance \\
     --i-distance-matrix __NAME__/unweighted_unifrac_distance_matrix.qza \\
@@ -460,12 +480,16 @@ if [[ \$status -eq 0 ]]; then
     --o-visualization __NAME__/unweighted-unifrac-group-significance.qzv \\
     --p-pairwise    
 
+  python3 $qiime2extract -i __NAME__/unweighted-unifrac-group-significance.qzv -p \"/data/raw_data.tsv\" -o __NAME__/unweighted-unifrac-group-significance.raw_data.tsv
+  python3 $qiime2extract -i __NAME__/unweighted-unifrac-group-significance.qzv -p \"/data/permanova-pairwise.csv\" -o __NAME__/unweighted-unifrac-group-significance.permanova-pairwise.csv
+
   qiime diversity alpha-rarefaction \\
     --i-table __FILE2__ \\
     --i-phylogeny __FILE__ \\
     --p-max-depth 4000 \\
     --m-metadata-file $meta_file \\
     --o-visualization __NAME__/alpha-rarefaction.qzv
+
 else
   touch __NAME__.failed
 fi
@@ -523,12 +547,21 @@ if [[ \$status -eq 0 ]]; then
     --m-input-file __NAME__.taxonomy.qza \\
     --o-visualization __NAME__.taxonomy.qzv
 
+  python3 $qiime2extract -i __NAME__.taxonomy.qzv -o __NAME__.taxonomy.tsv
+
   qiime taxa barplot \\
     --i-table __FILE2__ \\
     --i-taxonomy __NAME__.taxonomy.qza \\
     --m-metadata-file $meta_file \\
     --o-visualization __NAME__.taxa-bar-plots.qzv
 
+  python3 $qiime2extract -i __NAME__.taxa-bar-plots.qzv -p \"/data/level-1.csv\" -o __NAME__.level-1.csv
+  python3 $qiime2extract -i __NAME__.taxa-bar-plots.qzv -p \"/data/level-2.csv\" -o __NAME__.level-2.csv
+  python3 $qiime2extract -i __NAME__.taxa-bar-plots.qzv -p \"/data/level-3.csv\" -o __NAME__.level-3.csv
+  python3 $qiime2extract -i __NAME__.taxa-bar-plots.qzv -p \"/data/level-4.csv\" -o __NAME__.level-4.csv
+  python3 $qiime2extract -i __NAME__.taxa-bar-plots.qzv -p \"/data/level-5.csv\" -o __NAME__.level-5.csv
+  python3 $qiime2extract -i __NAME__.taxa-bar-plots.qzv -p \"/data/level-6.csv\" -o __NAME__.level-6.csv
+  python3 $qiime2extract -i __NAME__.taxa-bar-plots.qzv -p \"/data/level-7.csv\" -o __NAME__.level-7.csv
 else
   touch __NAME__.failed
 fi
@@ -581,6 +614,9 @@ qiime composition ancom \\
   --m-metadata-file $meta_file \\
   --m-metadata-column $comp \\
   --o-visualization $comp.ancom.qzv
+
+python3 $qiime2extract -i $comp.ancom.qzv -o $comp.ancom.tsv
+
 ";
     }
 

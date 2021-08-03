@@ -1976,7 +1976,7 @@ sub addStarFeaturecount {
 
   my $bam_validation_ref = undef;
   if(getValue($def, "perform_bam_validation", 0)){
-    add_bam_validation($config, $def, $individual, $target_dir, $star_task . "_bam_validation", $source_ref );
+    add_bam_validation($config, $def, $individual, $target_dir, $star_task . "_bam_validation", [ $star_task, '_Aligned.sortedByCoord.out.bam$' ] );
     $bam_validation_ref = $star_task . "_bam_validation";
   }
   

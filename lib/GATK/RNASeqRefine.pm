@@ -160,11 +160,19 @@ fi
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
+    print $sh "if [[ ! -s $result_dir/$finalFile ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
 
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $finalFile );
+
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files, [".bai"])};
+    $inputFile    = $sample_files[0];
+    my $inputFileIndex    = "${inputFile}.bai";
 
     print $pbs "
 if [ ! -s $rmdupFile ]; then

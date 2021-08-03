@@ -102,7 +102,16 @@ fi
 
     my $samples     = '"' . join( '" "', @sample_files ) . '"';
     print $pbs "
+rm -f $sample_name.fastqc.failed
+
 $fastqc $option --extract -t $curThreadCount -o `pwd` $samples 2> >(tee ${sample_name}.fastqc.stderr.log >\&2)
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch $sample_name.fastqc.failed
+else
+  touch $sample_name.fastqc.succeed
+fi
 
 $fastqc --version | cut -d ' ' -f2 | awk '{print \"FastQC,\"\$1}' > `pwd`/fastqc.version
 ";
