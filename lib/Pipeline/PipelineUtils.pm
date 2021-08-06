@@ -86,6 +86,8 @@ our %EXPORT_TAGS = (
     add_bam_validation
     add_gsea
     add_unique_r
+    add_maf_filter
+    add_bowtie_index
     )
   ]
 );
@@ -256,7 +258,6 @@ sub addBowtie {
     target_dir            => $intermediateDir . "/" . getNextFolderIndex($def) . $taskName,
     option                => $bowtieOption,
     source_ref            => $sourceRef,
-    bowtie1_index         => $bowtieIndex,
     samonly               => 0,
     sh_direct             => 0,
     mappedonly            => 1,
@@ -264,13 +265,18 @@ sub addBowtie {
     cluster               => $def->{cluster},
     output_to_same_folder => $def->{bowtie1_output_to_same_folder},
     pbs                   => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=" . $def->{max_thread},
       "walltime"  => $hours,
       "mem"       => "40gb"
     },
   };
+
+  if(is_array($bowtieIndex) or defined $config->{$bowtieIndex}){
+    $config->{$taskName}{bowtie1_index_ref} = $bowtieIndex;
+  }else{
+    $config->{$taskName}{bowtie1_index} = $bowtieIndex;
+  }
+
 
   push @$individual, $taskName;
 
@@ -2678,6 +2684,64 @@ sub add_gsea {
     },
   };
   push( @$tasks, $gsea_report );
+}
+
+sub add_maf_filter {
+  my ($config, $def, $tasks, $target_dir, $maf_filter_name, $source_ref ) = @_;
+  $config->{$maf_filter_name} = {
+    class                 => "CQS::ProgramWrapper",
+    perform               => 1,
+    target_dir            => "${target_dir}/${maf_filter_name}",
+    option                => "-p " . $def->{"filter_variants_by_allele_frequency_percentage"} . " -f " . $def->{"filter_variants_by_allele_frequency_maf"},
+    interpretor           => "python3",
+    program               => "../Annotation/filterVcf.py",
+    parameterFile1_arg    => "-i",
+    parameterFile1_ref    => $source_ref,
+    output_to_same_folder => 1,
+    output_arg            => "-o",
+    output_file_ext       => ".maf_filtered.vcf.gz",
+    sh_direct             => 1,
+    pbs                   => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    },
+  };
+  push @$tasks, $maf_filter_name;
+}
+
+sub add_bowtie_index {
+  my ($config, $def, $tasks, $bowtie_index_task, $parent_dir, $fasta) = @_;
+  
+  $config->{$bowtie_index_task} = {
+    class        => "CQS::ProgramWrapper",
+    perform      => 1,
+    target_dir   => $parent_dir . "/" . $bowtie_index_task,
+    option       => "
+bowtie-build $fasta __NAME__
+
+#__FILE__
+#__OUTPUT__
+",
+    source => {
+      $def->{task_name} => [$fasta]
+    },
+    interpretor           => "",
+    check_program         => 0,
+    program               => "",
+    output_result_folder  => 0,
+    output_arg            => "",
+    output_file_ext       => "",
+    output_to_same_folder => 1,
+    sh_direct             => 1,
+    pbs          => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "23",
+      "mem"       => "10gb"
+    },
+  };
+
+  push(@$tasks, $bowtie_index_task);
 }
 
 1;
