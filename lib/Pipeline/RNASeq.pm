@@ -765,79 +765,355 @@ sub getRNASeqConfig {
   if ( $def->{perform_call_variants} ) {
     my $fasta  = getValue( $def, "fasta_file" );
     my $dbsnp  = getValue( $def, "dbsnp" );
-    my $gatk   = getValue( $def, "gatk_jar" );
-    my $picard = getValue( $def, "picard_jar" );
 
-    $config->{refine} = {
-      class              => "GATK::RNASeqRefine",
-      perform            => 1,
-      target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "refine",
-      source_ref         => $source_ref,
-      option             => "-Xmx40g",
-      fasta_file         => $fasta,
-      vcf_files          => [$dbsnp],
-      gatk_jar           => $gatk,
-      picard_jar         => $picard,
-      fixMisencodedQuals => 0,
-      replace_read_group => 0,
-      reorderChromosome  => 0,
-      sorted             => 1,
-      sh_direct          => 0,
-      pbs                => {
-        "nodes"     => "1:ppn=8",
-        "walltime"  => "23",
-        "mem"       => "40gb"
-      },
-    };
+    my $gatk_index = $def;
+    my $gatk_index_snv = "SNV_Index";
+    my $gatk_prefix;
 
-    $multiqc_depedents = "refine";
+    my $refine_task;
+    my $hc_task;
+    my $filter_task;
+    my $merge_task;
+    if($def->{perform_call_variants_by_gatk4}){
+      $refine_task = "gatk4_refine";
+      $config->{$refine_task} = {
+        class => "CQS::ProgramWrapperOneToOne",
+        target_dir => $target_dir . "/" . getNextFolderIndex($def) . $refine_task,
+        option => "
 
-    $config->{refine_hc} = {
-      class         => "GATK::HaplotypeCaller",
-      perform       => 1,
-      target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "refine_hc",
-      option        => "-dontUseSoftClippedBases -stand_call_conf 20.0",
-      source_ref    => "refine",
-      java_option   => "",
-      fasta_file    => $fasta,
-      gatk_jar      => $gatk,
-      extension     => ".vcf",
-      by_chromosome => 0,                                                            #since we have the bed file, we cannot use by_chromosome.
-      gvcf          => 0,                                                            #http://gatkforums.broadinstitute.org/gatk/discussion/3891/calling-variants-in-rnaseq
-      sh_direct     => 0,
-      pbs           => {
-        "nodes"     => "1:ppn=8",
-        "walltime"  => "23",
-        "mem"       => "40gb"
-      },
-    };
+gatk MarkDuplicates \\
+  --INPUT __FILE__ \\
+  --OUTPUT __NAME__.rmdup.bam  \\
+  --CREATE_INDEX true \\
+  --VALIDATION_STRINGENCY SILENT \\
+  --ASSUME_SORTED true \\
+  --REMOVE_DUPLICATES true \\
+  --METRICS_FILE __NAME__.rmdup.metrics
 
-    $config->{refine_hc_filter} = {
-      class       => "GATK::VariantFilter",
-      perform     => 1,
-      target_dir  => $target_dir . "/" . getNextFolderIndex($def) . "refine_hc_filter",
-      option      => "",
-      gvcf        => 0,
-      vqsr_mode   => 0,
-      source_ref  => "refine_hc",
-      java_option => "",
-      fasta_file  => $fasta,
-      dbsnp_vcf   => $dbsnp,
-      gatk_jar    => $gatk,
-      is_rna      => 1,
-      sh_direct   => 1,
-      pbs         => {
-        "nodes"     => "1:ppn=8",
-        "walltime"  => "23",
-        "mem"       => "40gb"
-      },
-    };
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch __NAME__.rmdup.failed
+  rm -f __NAME__.rmdup.bam __NAME__.rmdup.bai
+else
+  gatk SplitNCigarReads \\
+    -R $fasta \\
+    -I __NAME__.rmdup.bam \\
+    -O __NAME__.rmdup.split.bam 
 
-    $config->{refine_hc_filter_annovar} = {
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch __NAME__.split.failed
+    rm -f __NAME__.rmdup.split.bam __NAME__.rmdup.split.bai
+  else
+    gatk --java-options \"-XX:GCTimeLimit=50 -XX:GCHeapFreeLimit=10 -XX:+PrintFlagsFinal \\
+      -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -XX:+PrintGCDetails \\
+      -Xloggc:gc_log.log -Xms4000m\" \\
+      BaseRecalibrator \\
+      -R $fasta \\
+      -I __NAME__.rmdup.split.bam \\
+      --use-original-qualities \\
+      -O __NAME__.rmdup.split.recal.table \\
+      -known-sites $dbsnp
+
+    status=\$?
+    if [[ \$status -ne 0 ]]; then
+      touch __NAME__.recal.failed
+      rm -f __NAME__.rmdup.split.recal.table
+    else
+      gatk --java-options \"-XX:+PrintFlagsFinal -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps \\
+        -XX:+PrintGCDetails -Xloggc:gc_log.log \\
+        -XX:GCTimeLimit=50 -XX:GCHeapFreeLimit=10 -Xms3000m\" \\
+        ApplyBQSR \\
+        --add-output-sam-program-record \\
+        -R $fasta \\
+        -I __NAME__.rmdup.split.bam \\
+        --use-original-qualities \\
+        -O __NAME__.rmdup.split.recal.bam \\
+        --bqsr-recal-file __NAME__.rmdup.split.recal.table   
+
+      status=\$?
+      if [[ \$status -ne 0 ]]; then
+        touch __NAME__.recal.failed
+        rm -f __NAME__.rmdup.split.recal.bam __NAME__.rmdup.split.recal.bai
+      else
+        touch __NAME__.recal.succeed
+        rm -f __NAME__.rmdup.bam __NAME__.rmdup.bai __NAME__.rmdup.split.bam __NAME__.rmdup.split.bai
+        mv __NAME__.rmdup.split.recal.bai __NAME__.rmdup.split.recal.bam.bai
+      fi
+    fi
+  fi
+fi
+
+#__OUTPUT__
+",
+        suffix  => "_rrf",
+        docker_prefix => "gatk4_",
+        interpretor => "",
+        program => "",
+        check_program => 0,
+        source_arg => "",
+        source_ref => $source_ref,
+        output_arg => "",
+        output_file_ext => ".rmdup.split.recal.bam",
+        output_to_same_folder => 1,
+        sh_direct   => getValue($def, "sh_direct", 0),
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "23",
+          "mem"       => "40gb"
+        }
+      };
+
+      push( @$individual, $refine_task );
+
+      $gatk_prefix = $refine_task . "_SNV_";
+
+      $hc_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_hc";
+      $config->{$hc_task} = {
+        class         => "GATK4::HaplotypeCaller",
+        perform       => 1,
+        target_dir    => $target_dir . "/" . getNextFolderIndex($def) . $hc_task,
+        option        => "-dont-use-soft-clipped-bases --standard-min-confidence-threshold-for-calling 20",
+        source_ref    => $refine_task,
+        java_option   => "",
+        bed_file      => $def->{covered_bed},
+        fasta_file    => $fasta,
+        extension     => ".vcf.gz",
+        by_chromosome => 0,                                                            #since we have the bed file, we cannot use by_chromosome.
+        gvcf          => 0,                                                            #http://gatkforums.broadinstitute.org/gatk/discussion/3891/calling-variants-in-rnaseq
+        sh_direct     => 0,
+        pbs           => {
+          "nodes"     => "1:ppn=8",
+          "walltime"  => "23",
+          "mem"       => "40gb"
+        },
+      };
+      push( @$individual, $hc_task );
+
+      $filter_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_filter";
+      $config->{$filter_task} = {
+        class => "CQS::ProgramWrapperOneToOne",
+        target_dir => $target_dir . "/" . $filter_task,
+        option => "
+gatk VariantFiltration \\
+  --R $fasta \\
+  --V __FILE__ \\
+  --window 35 \\
+  --cluster 3 \\
+  --filter-name \"FS\" \\
+  --filter \"FS > 30.0\" \\
+  --filter-name \"QD\" \\
+  --filter \"QD < 2.0\" \\
+  -O __NAME__.variant_filtered.vcf.gz
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch __NAME__.failed
+  rm -f __NAME__.variant_filtered.vcf.gz __NAME__.variant_filtered.vcf.gz.tbi
+else
+  gatk SelectVariants \\
+    -O __NAME__.pass.vcf.gz \\
+    -V __NAME__.variant_filtered.vcf.gz \\
+    --exclude-filtered
+
+  if [[ \$status -ne 0 ]]; then
+    touch __NAME__.failed
+    rm -f __NAME__.pass.vcf.gz __NAME__.pass.vcf.gz.tbi
+  else
+    touch __NAME__.succeed
+    rm -f __NAME__.variant_filtered.vcf.gz __NAME__.variant_filtered.vcf.gz.tbi
+  fi
+fi
+
+#__OUTPUT__
+",
+        suffix  => "_vf",
+        docker_prefix => "gatk4_",
+        interpretor => "",
+        program => "",
+        check_program => 0,
+        source_arg => "--V",
+        source_ref => $hc_task,
+        other_localization_ext_array => [".tbi"],
+        output_arg => "-O",
+        output_file_ext => ".pass.vcf.gz",
+        output_to_same_folder => 1,
+        sh_direct   => getValue($def, "sh_direct", 0),
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        }
+      };
+      push( @$individual, $filter_task );
+
+      my $lefttrim_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_lefttrim";
+      $config->{$lefttrim_task} = {
+        class                 => "GATK4::LeftTrim",
+        perform               => 1,
+        target_dir            => $target_dir . "/" . $lefttrim_task,
+        source_ref            => $filter_task,
+        option                => "",
+        docker_prefix         => "cqs_",
+        fasta_file            => $fasta,
+        extension             => ".indels.snp.hardfilter.pass.norm.nospan.vcf.gz",
+        sh_direct             => 0,
+        pbs                   => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "2",
+          "mem"      => "10gb"
+        },
+      };
+      push( @$individual, $lefttrim_task );
+
+      $merge_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_merge";
+      $config->{$merge_task} = {
+        class                 => "CQS::ProgramWrapper",
+        perform               => 1,
+        target_dir            => $target_dir . "/" . getNextFolderIndex($def) . $merge_task,
+        option                => "
+
+cp __FILE__ __FILE__.list
+
+gatk --java-options \"-Xms20g\"  \
+  MergeVcfs \\
+  --INPUT __FILE__.list \\
+  --OUTPUT __NAME__.vcf.gz
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch __NAME__.failed
+else
+  touch __NAME__.succeed
+fi
+
+#__OUTPUT__
+
+",
+        interpretor           => "",
+        check_program         => 0,
+        program               => "",
+        parameterSampleFile1_arg    => "",
+        parameterSampleFile1_ref    => $filter_task,
+        parameterSampleFile1_fileonly => 1,
+        output_to_same_folder => 1,
+        no_output             => 1,
+        output_arg            => "",
+        output_file_ext       => ".vcf.gz",
+        sh_direct             => 1,
+        pbs                   => {
+          "nodes"     => "1:ppn=8",
+          "walltime"  => "10",
+          "mem"       => "20gb"
+        },
+      };
+      push( @$summary, $merge_task );
+    }else{
+      my $gatk   = getValue( $def, "gatk_jar" );
+      my $picard = getValue( $def, "picard_jar" );
+
+      $refine_task = "refine";
+      $gatk_prefix = $refine_task . "_SNV_";
+
+      $config->{$refine_task} = {
+        class              => "GATK::RNASeqRefine",
+        perform            => 1,
+        target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $refine_task,
+        source_ref         => $source_ref,
+        option             => "-Xmx40g",
+        fasta_file         => $fasta,
+        vcf_files          => [$dbsnp],
+        gatk_jar           => $gatk,
+        picard_jar         => $picard,
+        fixMisencodedQuals => 0,
+        replace_read_group => 0,
+        reorderChromosome  => 0,
+        sorted             => 1,
+        sh_direct          => 0,
+        pbs                => {
+          "nodes"     => "1:ppn=8",
+          "walltime"  => "23",
+          "mem"       => "40gb"
+        },
+      };
+      push( @$individual, $refine_task );
+
+      $hc_task = $refine_task . "_hc";
+      $config->{$hc_task} = {
+        class         => "GATK::HaplotypeCaller",
+        perform       => 1,
+        target_dir    => $target_dir . "/" . getNextFolderIndex($def) . $hc_task,
+        option        => "-dontUseSoftClippedBases -stand_call_conf 20.0",
+        source_ref    => $refine_task,
+        java_option   => "",
+        fasta_file    => $fasta,
+        gatk_jar      => $gatk,
+        extension     => ".vcf",
+        by_chromosome => 0,                                                            #since we have the bed file, we cannot use by_chromosome.
+        gvcf          => 0,                                                            #http://gatkforums.broadinstitute.org/gatk/discussion/3891/calling-variants-in-rnaseq
+        sh_direct     => 0,
+        pbs           => {
+          "nodes"     => "1:ppn=8",
+          "walltime"  => "23",
+          "mem"       => "40gb"
+        },
+      };
+      push( @$individual, $hc_task );
+
+      $filter_task = $hc_task . "_filter";
+      $config->{$filter_task} = {
+        class       => "GATK::VariantFilter",
+        perform     => 1,
+        target_dir  => $target_dir . "/" . getNextFolderIndex($def) . $filter_task,
+        option      => "",
+        gvcf        => 0,
+        vqsr_mode   => 0,
+        source_ref  => $hc_task,
+        java_option => "",
+        fasta_file  => $fasta,
+        dbsnp_vcf   => $dbsnp,
+        gatk_jar    => $gatk,
+        is_rna      => 1,
+        sh_direct   => 1,
+        pbs         => {
+          "nodes"     => "1:ppn=8",
+          "walltime"  => "23",
+          "mem"       => "40gb"
+        },
+      };
+      push( @$summary, $filter_task );
+
+      $merge_task = $filter_task;
+    }
+
+    $multiqc_depedents = $refine_task;
+
+    if ( $def->{filter_variants_by_allele_frequency} ) {
+      my $maf_filter_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_filterMAF";
+      add_maf_filter($config, $def, $summary, $target_dir, $maf_filter_task, $merge_task);
+      $merge_task = $maf_filter_task;
+    }
+
+    if ( $def->{perform_annovar} ) {
+      my $annovar_task = addAnnovar( $config, $def, $summary, $target_dir, $merge_task, undef, $gatk_prefix, $gatk_index, $gatk_index_snv );
+
+      if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
+        my $annovar_filter_task = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_task, $gatk_prefix, $gatk_index, $gatk_index_snv);
+
+        if ( defined $def->{annotation_genes} ) {
+          addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_task );
+        }
+
+        addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_task, $gatk_prefix, $gatk_index, $gatk_index_snv);
+      }
+    }
+
+    my $annovar_task = $merge_task . "_annovar";
+    $config->{$annovar_task} = {
       class      => "Annotation::Annovar",
       perform    => 1,
-      target_dir => $target_dir . "/" . getNextFolderIndex($def) . "refine_hc_filter_annovar",
-      source_ref => "refine_hc_filter",
+      target_dir => $target_dir . "/" . getNextFolderIndex($def) . $annovar_task,
+      source_ref => $merge_task,
       option     => $def->{annovar_param},
       annovar_db => $def->{annovar_db},
       buildver   => $def->{annovar_buildver},
@@ -849,9 +1125,7 @@ sub getRNASeqConfig {
         "mem"       => "10gb"
       },
     };
-    push( @$individual, "refine",           "refine_hc" );
-    push( @$summary,    "refine_hc_filter", "refine_hc_filter_annovar" );
-
+    push( @$summary, $annovar_task );
   }
 
   if ( getValue( $def, "perform_multiqc" ) ) {
