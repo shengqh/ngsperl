@@ -97,30 +97,32 @@ sub addCutadapt {
   push @$individual, ($cutadapt_task);
 
   if ($is_pairend) {
-    my $fastq_validator = $cutadapt_task . "_validate";
-    $config->{"$fastq_validator"} = {
-      class => "CQS::ProgramWrapperOneToOne",
-      target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "$fastq_validator",
-      option => "",
-      use_tmp_folder => 1,
-      suffix  => "_qc",
-      interpretor => "python3",
-      program => "../QC/validatePairendFastq.py",
-      source_arg => "-i",
-      source_ref => [$cutadapt_task, ".fastq.gz"],
-      output_arg => "-o",
-      output_file_prefix => ".txt",
-      output_file_ext => ".txt",
-      output_to_same_folder => 1,
-      can_result_be_empty_file => 1,
-      sh_direct   => 0,
-      pbs => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "6",
-        "mem"       => "10gb"
-      }
-    };
-    push(@$individual, $fastq_validator);
+    if (getValue($def, "perform_cutadapt_validate", 0)){
+      my $fastq_validator = $cutadapt_task . "_validate";
+      $config->{"$fastq_validator"} = {
+        class => "CQS::ProgramWrapperOneToOne",
+        target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "$fastq_validator",
+        option => "",
+        use_tmp_folder => 1,
+        suffix  => "_qc",
+        interpretor => "python3",
+        program => "../QC/validatePairendFastq.py",
+        source_arg => "-i",
+        source_ref => [$cutadapt_task, ".fastq.gz"],
+        output_arg => "-o",
+        output_file_prefix => ".txt",
+        output_file_ext => ".txt",
+        output_to_same_folder => 1,
+        can_result_be_empty_file => 1,
+        sh_direct   => 0,
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "6",
+          "mem"       => "10gb"
+        }
+      };
+      push(@$individual, $fastq_validator);
+    }
   }
 
   if ( $def->{perform_fastqc} ) {
