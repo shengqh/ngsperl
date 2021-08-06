@@ -33,6 +33,14 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
+  my $result       = {};
+
+  my $output_result_folder             = get_option( $config, $section, "output_result_folder",                0 );
+  if($output_result_folder){
+    $result->{$task_name} = [$result_dir];
+    return($result);
+  }
+
   my $output_no_name             = get_option( $config, $section, "output_no_name",                0 );
   my $output_taskname = $output_no_name ? "" : $task_name;
 
@@ -53,8 +61,6 @@ sub result {
     @output_perSample_file_exts = ($output_perSample_file_ext );
   }
   @output_perSample_file_exts = grep { $_ ne '' } @output_perSample_file_exts; #remove empty elements
-
-  my $result       = {};
 
   if ( $output_file eq "parameterSampleFile1" or $output_file eq "parameterSampleFile2" or $output_file eq "parameterSampleFile3" ) {
     if ( has_raw_files( $config, $section, $output_file ) ) {
@@ -89,11 +95,13 @@ sub result {
       }
     }
     
-    if(scalar(@result_files) > 0){
-      my $filtered = filter_array( \@result_files, $pattern, 1 );
-      if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
-        $result->{$task_name} = $filtered;
-      }
+    if(scalar(@result_files) == 0){
+      push( @result_files, "${result_dir}/${output_taskname}${output_file}" );
+    }
+
+    my $filtered = filter_array( \@result_files, $pattern, 1 );
+    if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
+      $result->{$task_name} = $filtered;
     }
   }
 
