@@ -235,6 +235,7 @@ if [[ \$m2_exit_code -eq 0 ]]; then
     rm ${filtered_vcf}.*
     touch ${filtered_vcf}.failed
   else
+    rm ${vcf} ${vcf}.tbi
     echo SelectVariants ...
     gatk --java-options \"-Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option\" SelectVariants \\
       --exclude-filtered \\
@@ -245,6 +246,8 @@ if [[ \$m2_exit_code -eq 0 ]]; then
     if [[ \$select_exit_code -ne 0 ]]; then
       rm ${passvcf}.*
       touch ${passvcf}.failed
+    else
+      touch ${passvcf}.succeed
     fi
   fi
 else
