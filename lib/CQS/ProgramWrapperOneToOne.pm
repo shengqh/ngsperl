@@ -49,6 +49,8 @@ sub perform {
   my $output_arg            = get_option( $config, $section, "output_arg" );
   my $no_output            = get_option( $config, $section, "no_output", 0 );
   
+  my $other_localization_ext_array = get_option( $config, $section, "other_localization_ext_array", [] );
+
   my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, "source" );
   my @sample_names = ( sort keys %$parameterSampleFile1 );
   my $has_multi_samples = scalar(@sample_names) > 1;
@@ -111,7 +113,7 @@ fi
     my $final_prefix = $output_to_folder ? "." : $sample_name . $output_file_prefix;
 
     my $localized_files = [];
-    $parameterSampleFile1->{$sample_name} = $self->localize_files_in_tmp_folder($pbs, $parameterSampleFile1->{$sample_name}, $localized_files);
+    $parameterSampleFile1->{$sample_name} = $self->localize_files_in_tmp_folder($pbs, $parameterSampleFile1->{$sample_name}, $localized_files, $other_localization_ext_array);
 
     #print Dumper($parameterSampleFile1->{$sample_name});
 
