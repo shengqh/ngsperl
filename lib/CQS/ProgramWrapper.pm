@@ -12,6 +12,7 @@ use CQS::NGSCommon;
 use CQS::StringUtils;
 use CQS::UniqueWrapper;
 use File::Spec;
+use Data::Dumper;
 
 our @ISA = qw(CQS::UniqueWrapper);
 
@@ -114,26 +115,35 @@ sub perform {
 
   my $results = $self->result( $config, $section );
   my $result_files = $results->{$task_name};
+
+  #print(Dumper($result_files));
   
   my $pbs;
   my $final_file;
   if (defined $result_files){
     $final_file = $result_files->[0];
 
-    if (rindex($final_file, $result_dir, 0) == 0){
-      $final_file=substr($final_file, length($result_dir)+1);
+    if ($final_file ne $result_dir) {
+      if (rindex($final_file, $result_dir, 0) == 0){
+        $final_file=substr($final_file, length($result_dir)+1);
+      }
     }
     
     my $checkFile = $result_files->[-1];
     $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $checkFile );
   }else{
     $final_file = $target_dir . "/";
-    
-    my @sampleKeys = reverse sort(keys (%$results));
-    my $firstKey = $sampleKeys[0];
-    my $checkFile = $results->{$firstKey}[-1];
-    $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $checkFile);
+    if(defined $results){
+      my @sampleKeys = reverse sort(keys (%$results));
+      my $firstKey = $sampleKeys[0];
+      my $checkFile = $results->{$firstKey}[-1];
+      $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $checkFile);
+    }else{
+      $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir);
+    }
   }
+
+  #print($final_file);
 
   my ($cur_option, $output_option, $cur_init_command) = replace_tag( $config, $section, $task_name, $result_dir, $option, $source_key, $task_name, $final_file);
 
