@@ -14,7 +14,15 @@ use Data::Dumper;
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(initializeSmallRNADefaultOptions getSmallRNADefinition getPrepareConfig isVersion3 addNonhostDatabase addPositionVis addNonhostVis)] );
+our %EXPORT_TAGS = ( 'all' => [qw(initializeSmallRNADefaultOptions 
+  getSmallRNADefinition 
+  getPrepareConfig 
+  isVersion3 
+  addNonhostDatabase 
+  addPositionVis 
+  addNonhostVis
+  add_search_fasta
+  )] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -556,6 +564,102 @@ sub getPrepareConfig {
   $config = merge_hash_right_precedent( $config, $preparation );
 
   return ( $config, $individual, $summary, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir, $identical_ref, $host_identical_ref );
+}
+
+sub add_chromosome_count {
+  my ($config, $def, $tasks, $parent_dir, $count_task, $countOption, $bowtie1Task, $count_ref) = @_;
+
+  $config->{$count_task} = {
+    class        => "CQS::CQSChromosomeCount",
+    perform      => 1,
+    target_dir   => $parent_dir . "/" . $count_task,
+    option       => $countOption,
+    source_ref   => $bowtie1Task,
+    seqcount_ref => $count_ref,
+    sh_direct    => 1,
+    pbs          => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "40gb"
+    },
+  };
+  push(@$tasks, $count_task);
+}
+
+sub add_absolute_chromosome_count {
+  my ($config, $def, $tasks, $parent_dir, $count_task, $countOption, $bowtie1Task, $count_ref) = @_;
+
+  $config->{$count_task} = {
+    class                 => "CQS::ProgramWrapperOneToOne",
+    perform      => 1,
+    target_dir   => $parent_dir . "/" . $count_task,
+    option       => " -i __FILE__ -c __FILE2__ -o __NAME__.count
+
+#__OUTPUT__
+
+",
+    source_ref   => [$bowtie1Task, '.bam$'],
+    source_arg            => "-i",
+    parameterSampleFile2_ref => $count_ref,
+    parameterSampleFile2_arg => "-c",
+    interpretor           => "python3",
+    check_program         => 1,
+    program               => "../SmallRNA/absolute_chromosome_count.py",
+    output_to_same_folder => 1,
+    output_arg            => "-o",
+    output_to_folder      => 1,
+    output_file_prefix    => "",
+    output_file_ext       => ".count",
+    sh_direct    => 1,
+    pbs          => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "40gb"
+    },
+  };
+  push(@$tasks, $count_task);
+}
+
+sub add_search_fasta {
+  my ( $config, $def, $individual, $summary, $taskKey, $parentDir, $fasta, $sourceRef, $bowtieOption, $countOption, $tableOption, $count_ref ) = @_;
+
+  my $bowtie_index_task = "bowtie1_" . $taskKey . "_01_index";
+  my $bowtie1Task      = "bowtie1_" . $taskKey  . "_02_align";
+  my $bowtie1CountTask = "bowtie1_" . $taskKey . "_03_count";
+  my $bowtie1TableTask = "bowtie1_" . $taskKey . "_04_table";
+
+  if ( !defined $count_ref ) {
+    $count_ref = [ "identical", ".dupcount\$" ];
+  }
+
+  my $intermediate_dir = getIntermidiateDir($parentDir, $def);
+  #die($intermediate_dir);
+
+  add_bowtie_index($config, $def, $summary, $intermediate_dir, $bowtie_index_task, $fasta);
+
+  addBowtie( $config, $def, $individual, $bowtie1Task, $parentDir, $bowtie_index_task, $sourceRef, $bowtieOption );
+
+  add_absolute_chromosome_count($config, $def, $individual, $parentDir, $bowtie1CountTask, "", $bowtie1Task, $count_ref);
+
+  # $config->{$bowtie1TableTask} = {
+  #   class      => "CQS::CQSChromosomeTable",
+  #   perform    => 1,
+  #   target_dir => $parentDir . "/" . $bowtie1TableTask,
+  #   option     => $tableOption,
+  #   source_ref => [ $bowtie1CountTask, ".xml" ],
+  #   prefix     => $taskKey . "_",
+  #   sh_direct  => 1,
+  #   cluster    => $def->{cluster},
+  #   pbs        => {
+  #     "email"     => $def->{email},
+  #     "emailType" => $def->{emailType},
+  #     "nodes"     => "1:ppn=1",
+  #     "walltime"  => "10",
+  #     "mem"       => "40gb"
+  #   },
+  # };
+  # push @$individual, $bowtie1CountTask;
+  # push @$summary,    $bowtie1TableTask;
 }
 
 1;
