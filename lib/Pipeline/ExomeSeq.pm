@@ -1159,28 +1159,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
   if ( $def->{perform_gatk4_callvariants} or $def->{perform_gatk_callvariants} ) {
     if ( $def->{filter_variants_by_allele_frequency} ) {
       my $maf_filter_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_filterMAF";
-      $config->{$maf_filter_name} = {
-        class                 => "CQS::ProgramWrapper",
-        perform               => 1,
-        target_dir            => "${target_dir}/${maf_filter_name}",
-        option                => "-p " . $def->{"filter_variants_by_allele_frequency_percentage"} . " -f " . $def->{"filter_variants_by_allele_frequency_maf"},
-        interpretor           => "python3",
-        program               => "../Annotation/filterVcf.py",
-        parameterFile1_arg    => "-i",
-        parameterFile1_ref    => $filter_name,
-        output_to_same_folder => 1,
-        output_arg            => "-o",
-        output_file_ext       => ".maf_filtered.vcf.gz",
-        sh_direct             => 1,
-        pbs                   => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      };
-      push @$summary, $maf_filter_name;
+      add_maf_filter($config, $def, $summary, $target_dir, $maf_filter_name, $filter_name);
       $filter_name = $maf_filter_name;
     }
 
