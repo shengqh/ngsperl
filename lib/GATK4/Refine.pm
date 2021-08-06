@@ -194,6 +194,8 @@ if [[ -s ${rmdupFile}.md5 ]]; then
 
     rm $rmlist $rmdupFile $rmdupFileIndex ${rmdupFile}.md5
   fi
+else
+  touch ${rmdupFile}.failed
 fi
 
 ";
