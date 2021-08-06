@@ -30,7 +30,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = $self->init_parameter( $config, $section );
 
-  my $bowtie1_index = $config->{$section}{bowtie1_index} or die "define ${section}::bowtie1_index first";
+  my $bowtie1_index = parse_param_file($config, $section, "bowtie1_index");
   my $mappedonly = get_option( $config, $section, "mappedonly", 0 );
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
   my $outputToSameFolder = $self->getOutputToSameFolder( $config, $section );
@@ -101,7 +101,7 @@ fi
     print $pbs "
 if [[ ! -s $bam_file && ! -s $bowtiesam ]]; then
   if [[ -e ${sample_name}.bowtie.failed ]]; then
-    rm -e ${sample_name}.bowtie.failed
+    rm -f ${sample_name}.bowtie.failed
   fi
 
 $cmd_file_exists
