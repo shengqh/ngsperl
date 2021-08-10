@@ -771,9 +771,7 @@ sub getRNASeqConfig {
     my $gatk_prefix;
 
     my $refine_task;
-    my $hc_task;
-    my $filter_task;
-    my $merge_task;
+    my $pass_task;
     if($def->{perform_call_variants_by_gatk4}){
       $refine_task = "gatk4_refine";
       $config->{$refine_task} = {
@@ -868,7 +866,7 @@ fi
 
       $gatk_prefix = $refine_task . "_SNV_";
 
-      $hc_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_hc";
+      my $hc_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_hc";
       $config->{$hc_task} = {
         class         => "GATK4::HaplotypeCaller",
         perform       => 1,
@@ -884,13 +882,14 @@ fi
         sh_direct     => 0,
         pbs           => {
           "nodes"     => "1:ppn=8",
-          "walltime"  => "23",
+          "walltime"  => getValue($def, "HaplotypeCaller_walltime", "23"),
           "mem"       => "40gb"
         },
       };
       push( @$individual, $hc_task );
 
-      $filter_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_filter";
+      my $min_dp = getValue($def, "SNV_minimum_depth", 10);
+      my $filter_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_filter";
       $config->{$filter_task} = {
         class => "CQS::ProgramWrapperOneToOne",
         target_dir => $target_dir . "/" . $filter_task,
@@ -902,6 +901,8 @@ gatk VariantFiltration \\
   --cluster 3 \\
   --filter-name \"FS\" \\
   --filter \"FS > 30.0\" \\
+  --filter-name \"DP\" \\
+  --filter \"DP < $min_dp\" \\
   --filter-name \"QD\" \\
   --filter \"QD < 2.0\" \\
   -O __NAME__.variant_filtered.vcf.gz
@@ -911,18 +912,7 @@ if [[ \$status -ne 0 ]]; then
   touch __NAME__.failed
   rm -f __NAME__.variant_filtered.vcf.gz __NAME__.variant_filtered.vcf.gz.tbi
 else
-  gatk SelectVariants \\
-    -O __NAME__.pass.vcf.gz \\
-    -V __NAME__.variant_filtered.vcf.gz \\
-    --exclude-filtered
-
-  if [[ \$status -ne 0 ]]; then
-    touch __NAME__.failed
-    rm -f __NAME__.pass.vcf.gz __NAME__.pass.vcf.gz.tbi
-  else
-    touch __NAME__.succeed
-    rm -f __NAME__.variant_filtered.vcf.gz __NAME__.variant_filtered.vcf.gz.tbi
-  fi
+  touch __NAME__.succeed
 fi
 
 #__OUTPUT__
@@ -936,7 +926,7 @@ fi
         source_ref => $hc_task,
         other_localization_ext_array => [".tbi"],
         output_arg => "-O",
-        output_file_ext => ".pass.vcf.gz",
+        output_file_ext => ".variant_filtered.vcf.gz",
         output_to_same_folder => 1,
         sh_direct   => getValue($def, "sh_direct", 0),
         pbs => {
@@ -954,9 +944,9 @@ fi
         target_dir            => $target_dir . "/" . $lefttrim_task,
         source_ref            => $filter_task,
         option                => "",
-        docker_prefix         => "cqs_",
+        docker_prefix         => "exome_",
         fasta_file            => $fasta,
-        extension             => ".indels.snp.hardfilter.pass.norm.nospan.vcf.gz",
+        extension             => ".variant_filtered.norm.nospan.vcf.gz",
         sh_direct             => 0,
         pbs                   => {
           "nodes"    => "1:ppn=1",
@@ -966,48 +956,31 @@ fi
       };
       push( @$individual, $lefttrim_task );
 
-      $merge_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_merge";
-      $config->{$merge_task} = {
-        class                 => "CQS::ProgramWrapper",
-        perform               => 1,
-        target_dir            => $target_dir . "/" . getNextFolderIndex($def) . $merge_task,
-        option                => "
-
-cp __FILE__ __FILE__.list
-
-gatk --java-options \"-Xms20g\"  \
-  MergeVcfs \\
-  --INPUT __FILE__.list \\
-  --OUTPUT __NAME__.vcf.gz
-
-status=\$?
-if [[ \$status -ne 0 ]]; then
-  touch __NAME__.failed
-else
-  touch __NAME__.succeed
-fi
+      $pass_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_merge";
+      $config->{$pass_task} = {
+        class => "CQS::ProgramWrapper",
+        target_dir => $target_dir . "/" . $pass_task,
+        option => "-i __FILE__ -o __NAME__.pass.vcf.gz
 
 #__OUTPUT__
-
 ",
-        interpretor           => "",
-        check_program         => 0,
-        program               => "",
-        parameterSampleFile1_arg    => "",
-        parameterSampleFile1_ref    => $filter_task,
-        parameterSampleFile1_fileonly => 1,
-        output_to_same_folder => 1,
-        no_output             => 1,
-        output_arg            => "",
-        output_file_ext       => ".vcf.gz",
-        sh_direct             => 1,
-        pbs                   => {
-          "nodes"     => "1:ppn=8",
+        suffix  => "_mg",
+        interpretor => "python3",
+        docker_prefix => "exome_",
+        program => "../GATK4/combineVCFs.py",
+        check_program => 1,
+        source_arg => "-i",
+        source_ref => $lefttrim_task,
+        output_arg => "-o",
+        output_file_ext => ".pass.vcf.gz",
+        sh_direct   => 1,
+        pbs => {
+          "nodes"     => "1:ppn=1",
           "walltime"  => "10",
-          "mem"       => "20gb"
-        },
+          "mem"       => "10gb"
+        }
       };
-      push( @$summary, $merge_task );
+      push( @$summary, $pass_task );
     }else{
       my $gatk   = getValue( $def, "gatk_jar" );
       my $picard = getValue( $def, "picard_jar" );
@@ -1038,7 +1011,7 @@ fi
       };
       push( @$individual, $refine_task );
 
-      $hc_task = $refine_task . "_hc";
+      my $hc_task = $refine_task . "_hc";
       $config->{$hc_task} = {
         class         => "GATK::HaplotypeCaller",
         perform       => 1,
@@ -1060,7 +1033,7 @@ fi
       };
       push( @$individual, $hc_task );
 
-      $filter_task = $hc_task . "_filter";
+      my $filter_task = $hc_task . "_filter";
       $config->{$filter_task} = {
         class       => "GATK::VariantFilter",
         perform     => 1,
@@ -1083,19 +1056,19 @@ fi
       };
       push( @$summary, $filter_task );
 
-      $merge_task = $filter_task;
+      $pass_task = $filter_task;
     }
 
     $multiqc_depedents = $refine_task;
 
     if ( $def->{filter_variants_by_allele_frequency} ) {
       my $maf_filter_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_filterMAF";
-      add_maf_filter($config, $def, $summary, $target_dir, $maf_filter_task, $merge_task);
-      $merge_task = $maf_filter_task;
+      add_maf_filter($config, $def, $summary, $target_dir, $maf_filter_task, $pass_task);
+      $pass_task = $maf_filter_task;
     }
 
     if ( $def->{perform_annovar} ) {
-      my $annovar_task = addAnnovar( $config, $def, $summary, $target_dir, $merge_task, undef, $gatk_prefix, $gatk_index, $gatk_index_snv );
+      my $annovar_task = addAnnovar( $config, $def, $summary, $target_dir, $pass_task, undef, $gatk_prefix, $gatk_index, $gatk_index_snv );
 
       if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
         my $annovar_filter_task = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_task, $gatk_prefix, $gatk_index, $gatk_index_snv);
@@ -1107,25 +1080,6 @@ fi
         addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_task, $gatk_prefix, $gatk_index, $gatk_index_snv);
       }
     }
-
-    my $annovar_task = $merge_task . "_annovar";
-    $config->{$annovar_task} = {
-      class      => "Annotation::Annovar",
-      perform    => 1,
-      target_dir => $target_dir . "/" . getNextFolderIndex($def) . $annovar_task,
-      source_ref => $merge_task,
-      option     => $def->{annovar_param},
-      annovar_db => $def->{annovar_db},
-      buildver   => $def->{annovar_buildver},
-      sh_direct  => 1,
-      isvcf      => 1,
-      pbs        => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "23",
-        "mem"       => "10gb"
-      },
-    };
-    push( @$summary, $annovar_task );
   }
 
   if ( getValue( $def, "perform_multiqc" ) ) {

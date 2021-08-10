@@ -180,7 +180,7 @@ sub addMutect2 {
   }
 
   if($use_germline_resource){
-    $config->{$mutect2_call}{germline_resource} = $def->{germline_resource};
+    $config->{$mutect2_call}{germline_resource} = getValue($def, "germline_resource");
   }
 
   if(defined $pon){

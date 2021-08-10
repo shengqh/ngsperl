@@ -2711,7 +2711,7 @@ sub add_maf_filter {
 }
 
 sub add_bowtie_index {
-  my ($config, $def, $tasks, $bowtie_index_task, $parent_dir, $fasta) = @_;
+  my ($config, $def, $tasks, $parent_dir, $bowtie_index_task, $fasta) = @_;
   
   $config->{$bowtie_index_task} = {
     class        => "CQS::ProgramWrapper",

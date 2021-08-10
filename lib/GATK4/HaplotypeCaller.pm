@@ -83,7 +83,12 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
+
+    print $sh "if [[ ! -s $result_dir/$snvOutIndex ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+    
+";
 
     my $log_desc = $cluster->get_log_description($log);
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $snvOutIndex );
