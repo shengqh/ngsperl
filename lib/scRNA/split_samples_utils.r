@@ -79,8 +79,8 @@ output_post_classification<-function(obj, output_prefix){
   
   if(length(tagnames) > 2) {
     VariableFeatures(obj)<-tagnames
-    obj<-ScaleData(obj)
-    obj<-RunUMAP(obj, features=rownames(obj))
+    obj<-ScaleData(obj, assay="HTO")
+    obj<-RunUMAP(obj, assay="HTO", slot="scale.data", features=rownames(obj))
     
     png(paste0(output_prefix, ".umap.class.png"), width=2000, height=1800, res=300)
     g<-DimPlot(obj, reduction = "umap", group.by="HTO_classification")
@@ -90,7 +90,7 @@ output_post_classification<-function(obj, output_prefix){
     nwidth=ceiling(sqrt(length(tagnames)))
     nheight=ceiling(length(tagnames)/nwidth)
     png(paste0(output_prefix, ".umap.tag.png"), width=nwidth*1500, height=1500*nheight, res=300)
-    g<-FeaturePlot(obj, features=tagnames, reduction = "umap")
+    g<-FeaturePlot(obj, features=tagnames, reduction = "umap", ncol=nwidth)
     print(g)
     dev.off()
     
