@@ -6,9 +6,6 @@ library(ggplot2)
 files_lines=read.table(parSampleFile1, sep="\t")
 files=split(files_lines$V1, files_lines$V2)
 
-cutoffs_lines=read.table(parSampleFile2, sep="\t")
-cutoffs=split(cutoffs_lines$V1, cutoffs_lines$V2)
-
 params_lines=read.table(parSampleFile3, sep="\t")
 params=split(params_lines$V1, params_lines$V2)
 params$hto_ignore_exists=ifelse(params$hto_ignore_exists=="0", FALSE, TRUE)
