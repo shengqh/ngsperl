@@ -1,3 +1,4 @@
+
 library(Seurat)
 library(ggplot2)
 library(digest)
@@ -29,7 +30,7 @@ if (has_hto) {
     stop(paste0('hto_cell_file ', parSampleFile4, ' is not defined or not exists.'))
   }
   hto_cell_files = read.table(parSampleFile4, sep="\t", stringsAsFactors=FALSE, row.names=2)
-  #sample = rownames(hto_cell_files)[1]
+  sample = rownames(hto_cell_files)[1]
   for (sample in rownames(hto_cell_files)){
     cell_file = hto_cell_files[sample, "V1"]
     cell_data = read.csv(cell_file, stringsAsFactors=FALSE, header=TRUE, check.names=F)
