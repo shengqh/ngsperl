@@ -1364,7 +1364,7 @@ sub getScRNASeqConfig {
       }
 
       if($def->{perform_curated_gene_dotplot}){
-        my $curated_gene_dotplot_task  = $cluster_task . "_curated_gene_dotplot";
+        my $curated_gene_dotplot_task  = $celltype_task . "_curated_gene_dotplot";
 
         my $curated_gene_dotplot = $def->{curated_gene_dotplot};
         my $curated_gene_files = $def->{curated_gene_files};
