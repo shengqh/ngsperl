@@ -631,11 +631,11 @@ sub getScRNASeqConfig {
           output_file_ext => ".txt",
           output_to_same_folder => 0,
           can_result_be_empty_file => 0,
-          sh_direct   => 1,
+          sh_direct   => 0,
           pbs => {
             "nodes"     => "1:ppn=8",
-            "walltime"  => "23",
-            "mem"       => "400gb"
+            "walltime"  => "47",
+            "mem"       => "40gb"
           },
         };
         push( @$individual, $hto_soupercell_task );
