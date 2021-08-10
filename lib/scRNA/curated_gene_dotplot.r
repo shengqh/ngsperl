@@ -1,3 +1,4 @@
+
 source("scRNA_func.r")
 
 library(Seurat)
@@ -5,6 +6,7 @@ library(ggplot2)
 library(ggpubr)
 library(dendextend)
 library(ggdendro)
+library(reshape2)
 
 finalList<-readRDS(parFile1)
 obj<-finalList$obj
@@ -98,14 +100,20 @@ drawDotPlot<-function(object, geneset_name, genes, assay, split.by=NA){
     p$data$features.plot<-factor(p$data$features.plot, levels=valid_genes)
     
     data.plot=p$data
-    data.plot$split.by=unlist(lapply(data.plot$id, function(x){
+    
+    uids<-as.character(unique(data.plot$id))
+    
+    my.split.by=unlist(lapply(uids, function(x){
       res=x
       while(!(res %in% groupnames)){
-        res=gsub(".+?_", "", x)
+        res=gsub("^.+?_", "", res)
       }
       return(res)
     }))
+    names(my.split.by)=uids
     
+    data.plot$split.by=my.split.by[as.character(data.plot$id)]
+
     data.plot$split.color=cols[data.plot$split.by]
     
     data.plot$colors=unlist(apply(data.plot, 1, function(x){
