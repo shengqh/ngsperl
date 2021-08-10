@@ -55,10 +55,11 @@ with pysam.Samfile(inputFile) as sam:
     count_map.setdefault(refname, {})[read.query_name] = counts[read.query_name]
 
 with open(outputFile, "w") as sw:
-  sw.write("Chrom\tCount\n")
+  sw.write("Chrom\tUniqueCount\tReadCount\n")
   for chrom in sorted(count_map.keys()):
     chrom_map = count_map[chrom]
+    unique_count = len(chrom_map)
     chrom_count = sum(chrom_map.values())
-    sw.write(f"{chrom}\t{chrom_count}\n")
+    sw.write(f"{chrom}\t{unique_count}\t{chrom_count}\n")
 
 logger.info("Done")

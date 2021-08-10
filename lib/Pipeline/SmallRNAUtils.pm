@@ -641,6 +641,26 @@ sub add_search_fasta {
 
   add_absolute_chromosome_count($config, $def, $individual, $parentDir, $bowtie1CountTask, "", $bowtie1Task, $count_ref);
 
+  $config->{$bowtie1TableTask} = {
+    class                    => "CQS::ProgramWrapper",
+    perform                  => 1,
+    interpretor              => "python3",
+    program                  => "../SmallRNA/absolute_chromosome_count_table.py",
+    target_dir               => $parentDir . "/$bowtie1TableTask",
+    option                   => "",
+    parameterSampleFile1_arg => "-i",
+    parameterSampleFile1_ref => $bowtie1CountTask,
+    sh_direct                => 1,
+    output_arg               => "-o",
+    output_ext               => ".count.txt",
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "10",
+      "mem"      => "10gb"
+    },
+  };
+  push (@$summary, $bowtie1TableTask);
+
   # $config->{$bowtie1TableTask} = {
   #   class      => "CQS::CQSChromosomeTable",
   #   perform    => 1,
