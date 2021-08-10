@@ -549,7 +549,7 @@ sub getScRNASeqConfig {
   my $clonotype_4_convert;
   if (defined $def->{vdj_json_files}){
     if ((not defined $def->{files}) || (not $perform_split_hto_samples)) {
-    $config->{vdj_json_files} = $def->{vdj_json_files};
+      $config->{vdj_json_files} = $def->{vdj_json_files};
       addClonotypeMerge($config, $def, $summary, $target_dir, "clonotype_1_merge", ["vdj_json_files", "all_contig_annotations.json"]);
       addEnclone($config, $def, $summary, "clonotype_2_enclone", $target_dir, ["clonotype_1_merge", ".json\$"] );
       $clonotype_4_convert = addEncloneToClonotype($config, $def, $summary, $target_dir, "clonotype_3_convert", "clonotype_2_enclone", ["clonotype_1_merge", ".cdr3\$"]);
@@ -592,7 +592,7 @@ sub getScRNASeqConfig {
         },
         output_perSample_file => "parameterSampleFile1",
         output_perSample_file_byName => 1,
-        output_perSample_file_ext => ".hto.rds",
+        output_perSample_file_ext => ".hto.rds;.barcodes.tsv",
         output_to_same_folder => 1,
         can_result_be_empty_file => 0,
         sh_direct   => 1,
@@ -604,6 +604,42 @@ sub getScRNASeqConfig {
       };
       push( @$summary, $prepartion_task );
       $hto_file_ref = [ $prepartion_task, ".hto.rds"];
+
+      if(getValue($def, "perform_souporcell", 0)) {
+        my $hto_soupercell_task = "hto_soupercell";
+        my $fasta = getValue($def, "fasta_file");
+        my $clusters = getValue($def, "tag_number");
+        my $common_variants = getValue($def, "common_variants");
+
+        $config->{hto_soupercell} = {
+          class => "CQS::ProgramWrapperOneToOne",
+          target_dir => "${target_dir}/$hto_soupercell_task",
+          interpretor => "",
+          program => "souporcell_pipeline.py",
+          check_program => 0,
+          docker_prefix => "souporcell_",
+          option => "-i __FILE__ -b __FILE2__ -f $fasta -t 8 -o . -k $clusters --common_variants $common_variants --skip_remap SKIP_REMAP
+          
+#__OUTPUT__
+",
+          source_arg => "-i",
+          source_ref => "bam_files",
+          parameterSampleFile2_arg => "-b",
+          parameterSampleFile2_ref => [ $prepartion_task, ".barcodes.tsv"],
+          output_arg => "-o",
+          output_file_prefix => "",
+          output_file_ext => ".txt",
+          output_to_same_folder => 0,
+          can_result_be_empty_file => 0,
+          sh_direct   => 1,
+          pbs => {
+            "nodes"     => "1:ppn=8",
+            "walltime"  => "23",
+            "mem"       => "400gb"
+          },
+        };
+        push( @$individual, $hto_soupercell_task );
+      }
 
       my $r_script = undef;
       my $folder = undef;
