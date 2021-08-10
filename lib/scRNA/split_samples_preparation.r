@@ -19,6 +19,7 @@ for(cname in names(files)){
     if(grepl('.h5$', cfiles)){
       sdata<-Read10X_h5(cfiles)
       exp<-sdata[[1]]
+      writeLines(colnames(exp),con = paste0(cname, ".barcodes.tsv"))
       htos<-sdata[[2]]
       htos<-as.matrix(htos)
     }else{
