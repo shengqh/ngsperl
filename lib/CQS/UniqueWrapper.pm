@@ -96,7 +96,9 @@ sub result {
     }
     
     if(scalar(@result_files) == 0){
-      push( @result_files, "${result_dir}/${output_taskname}${output_file}" );
+      if ($output_perSample_file !~ /^parameterSampleFile/){
+        push( @result_files, "${result_dir}/${output_taskname}${output_file}" );
+      }
     }
 
     my $filtered = filter_array( \@result_files, $pattern, 1 );
@@ -105,7 +107,7 @@ sub result {
     }
   }
 
-  if ( $output_perSample_file eq "parameterSampleFile1" or $output_perSample_file eq "parameterSampleFile2" or $output_perSample_file eq "parameterSampleFile3" ) {
+  if ( $output_perSample_file =~ /^parameterSampleFile/ ) {
     #per sample result
     if ( has_raw_files( $config, $section, $output_perSample_file ) ) {
       my %temp = %{ get_raw_files( $config, $section, $output_perSample_file ) };
