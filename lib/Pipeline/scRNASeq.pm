@@ -606,10 +606,15 @@ sub getScRNASeqConfig {
       $hto_file_ref = [ $prepartion_task, ".hto.rds"];
 
       if(getValue($def, "perform_souporcell", 0)) {
-        my $hto_soupercell_task = "hto_soupercell";
         my $fasta = getValue($def, "fasta_file");
         my $clusters = getValue($def, "tag_number");
-        my $common_variants = getValue($def, "common_variants");
+        my $skip_remap = getValue($def, "skip_remap", 1);
+        my $common_variants = getValue($def, "common_variants", "");
+
+        my $hto_soupercell_task = "hto_soupercell" . ($skip_remap ? "_skip_remap" : "_remap");
+
+        my $skip_remap_option = $skip_remap ? "--skip_remap SKIP_REMAP" : "";
+        my $common_variants_option = ($common_variants eq "") ? "" : "--common_variants $common_variants";
 
         $config->{hto_soupercell} = {
           class => "CQS::ProgramWrapperOneToOne",
@@ -618,7 +623,7 @@ sub getScRNASeqConfig {
           program => "souporcell_pipeline.py",
           check_program => 0,
           docker_prefix => "souporcell_",
-          option => "-i __FILE__ -b __FILE2__ -f $fasta -t 8 -o . -k $clusters --common_variants $common_variants --skip_remap SKIP_REMAP
+          option => "-i __FILE__ -b __FILE2__ -f $fasta -t 8 -o . -k $clusters $common_variants_option $skip_remap_option
           
 #__OUTPUT__
 ",
@@ -631,6 +636,7 @@ sub getScRNASeqConfig {
           output_file_ext => ".txt",
           output_to_same_folder => 0,
           can_result_be_empty_file => 0,
+          use_tmp_folder => getValue($def, "use_tmp_folder", 1),
           sh_direct   => 0,
           pbs => {
             "nodes"     => "1:ppn=8",
