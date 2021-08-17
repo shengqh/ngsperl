@@ -144,16 +144,10 @@ if(hasNonhostLibrary){
 
 ```
 
-```{r,echo=FALSE,results='asis', fig.show="hold", out.width="45%", fig.align = "default", out.height=1024}
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("read_summary", "Read summary")}
 cat("## Read summary count\n")
-check_and_include_graphics(files$read_summary_count)
-check_and_include_graphics(files$read_summary_perc)
+check_and_include_graphics(files$read_summary)
 ```
-
-```{r,echo=FALSE,results='asis'}
-fig1ref<-figRef("read_summary", "Overall read count (left) and read percentage (right) distribution")
-```
-<center>`r fig1ref`</center>
 
 <br>
 
