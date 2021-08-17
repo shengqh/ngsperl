@@ -2235,15 +2235,14 @@ sub getSmallRNAConfig {
       perform            => 1,
       target_dir         => $data_visualization_dir . "/read_summary",
       rtemplate          => "../SmallRNA/readSummary.R",
-      output_file_ext    => ".perc.png;.count.png",
+      #output_file_ext    => ".perc.png;.count.png",
+      output_file_ext    => ".png",
       parameterFile1_ref => [ "fastqc_count_vis", ".countInFastQcVis.Result.Reads.csv\$" ],
       parameterFile2_ref => $read_in_tasks_file,
       parameterFile3_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category.Table.csv\$" ],
       rCode              => "",
       sh_direct          => 1,
       pbs                => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "12",
         "mem"       => "10gb"
@@ -2301,8 +2300,8 @@ sub getSmallRNAConfig {
     }
 
     if ( defined $config->{read_summary} ) {
-      push( @report_files, "read_summary", ".count.png", "read_summary", ".perc.png" );
-      push( @report_names, "read_summary_count", "read_summary_perc" );
+      push( @report_files, "read_summary", ".png" );
+      push( @report_names, "read_summary" );
     }
 
     if ( defined $config->{fastq_len} ) {
