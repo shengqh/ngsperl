@@ -607,23 +607,23 @@ sub getScRNASeqConfig {
 
       if(getValue($def, "perform_souporcell", 0)) {
         my $fasta = getValue($def, "fasta_file");
-        my $clusters = getValue($def, "tag_number");
         my $skip_remap = getValue($def, "skip_remap", 1);
         my $common_variants = getValue($def, "common_variants", "");
 
-        my $hto_soupercell_task = "hto_soupercell" . ($skip_remap ? "_skip_remap" : "_remap");
+        my $hto_souporcell_task = "hto_souporcell" . ($skip_remap ? "_skip_remap" : "_remap");
 
         my $skip_remap_option = $skip_remap ? "--skip_remap SKIP_REMAP" : "";
         my $common_variants_option = ($common_variants eq "") ? "" : "--common_variants $common_variants";
+        my $souporcell_thread = getValue($def, "souporcell_cpu", "16");
 
-        $config->{hto_soupercell} = {
+        $config->{$hto_souporcell_task} = {
           class => "CQS::ProgramWrapperOneToOne",
-          target_dir => "${target_dir}/$hto_soupercell_task",
+          target_dir => "${target_dir}/$hto_souporcell_task",
           interpretor => "",
           program => "souporcell_pipeline.py",
           check_program => 0,
           docker_prefix => "souporcell_",
-          option => "-i __FILE__ -b __FILE2__ -f $fasta -t 8 -o . -k $clusters $common_variants_option $skip_remap_option
+          option => "-i __FILE__ -b __FILE2__ -f $fasta -t $souporcell_thread -o . -k __FILE3__ $common_variants_option $skip_remap_option
           
 #__OUTPUT__
 ",
@@ -631,20 +631,23 @@ sub getScRNASeqConfig {
           source_ref => "bam_files",
           parameterSampleFile2_arg => "-b",
           parameterSampleFile2_ref => [ $prepartion_task, ".barcodes.tsv"],
+          parameterSampleFile3_arg => "-k",
+          parameterSampleFile3 => getValue($def, "souporcell_tag_number"),
           output_arg => "-o",
           output_file_prefix => "",
-          output_file_ext => ".txt",
+          output_no_name => 1,
+          output_file_ext => "clusters.tsv",
           output_to_same_folder => 0,
           can_result_be_empty_file => 0,
           use_tmp_folder => getValue($def, "use_tmp_folder", 1),
           sh_direct   => 0,
           pbs => {
-            "nodes"     => "1:ppn=8",
-            "walltime"  => "47",
-            "mem"       => "40gb"
+            "nodes"     => "1:ppn=" . $souporcell_thread,
+            "walltime"  => getValue($def, "souporcell_walltime", "47"),
+            "mem"       => getValue($def, "souporcell_mem", "40gb")
           },
         };
-        push( @$individual, $hto_soupercell_task );
+        push( @$individual, $hto_souporcell_task );
       }
 
       my $r_script = undef;
