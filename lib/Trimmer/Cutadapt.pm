@@ -299,8 +299,20 @@ fi
         if ( scalar(@sample_files) == 1 ) {
           print $pbs "
 cutadapt $thread_option $optionRemoveLimited $adapter_option -o $temp_file $sample_files[0]
-cutadapt $thread_option $optionOnlyLimited $limit_file_options $remove_bases_option -o $final_file $temp_file
-rm $temp_file
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  cutadapt $thread_option $optionOnlyLimited $limit_file_options $remove_bases_option -o $final_file $temp_file
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    rm $temp_file
+    touch ${sample_name}.succeed
+  else
+    touch ${sample_name}.failed
+  fi
+else
+  rm $temp_file
+  touch ${sample_name}.failed
+fi
 ";
         }
         else {
