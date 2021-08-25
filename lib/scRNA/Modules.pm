@@ -385,9 +385,9 @@ fi
     can_result_be_empty_file => 0,
     sh_direct   => $sh_direct,
     pbs => {
-      "nodes"     => "1:ppn=8",
-      "walltime"  => "24",
-      "mem"       => "40gb"
+      "nodes"     => "1:ppn=" . getValue($def, "cellranger_count_cpu", 8),
+      "walltime"  => getValue($def, "cellranger_count_walltime", 48),
+      "mem"       => getValue($def, "cellranger_count_mem", "40gb"),
     },
   };
 
