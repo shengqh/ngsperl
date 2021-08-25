@@ -24,7 +24,7 @@ draw_chromosome_count<-function(listFile, outFilePrefix) {
   missing = filelist$V1[is.na(filelist$size) | filelist$size==0]
   filelist=filelist[!(filelist$V1 %in% missing),]
 
-  final=NULL
+  all_chroms = c()
   i=1
   for(i in c(1:nrow(filelist))){
     filename = filelist$V2[i]
@@ -38,8 +38,29 @@ draw_chromosome_count<-function(listFile, outFilePrefix) {
     subdata = read.table(filelocation, sep="\t", header=F, stringsAsFactors = F)
     subdata=subdata[,c(1,3)]
     colnames(subdata)<-c("Chrom", "Reads")
-    subdata=subdata[str_length(subdata$Chrom) < 6,]
     subdata=subdata[subdata$Chrom != '*',]
+
+    chrdata=subdata[str_length(subdata$Chrom) < 6,]
+    mediancount<-median(chrdata$Reads)
+    sdata<-subdata[str_length(subdata$Chrom) < 6 | subdata$Reads > mediancount,]
+    all_chroms<-c(all_chroms, sdata$Chrom)
+  }
+  all_chroms<-sort(unique(all_chroms))
+
+  final=NULL
+  i=1
+  for(i in c(1:nrow(filelist))){
+    filename = filelist$V2[i]
+    filelocation =filelist$V1[i]
+
+    if(!file.exists(filelocation)){
+      next
+    }
+
+    subdata = read.table(filelocation, sep="\t", header=F, stringsAsFactors = F)
+    subdata=subdata[,c(1,3)]
+    colnames(subdata)<-c("Chrom", "Reads")
+    subdata=subdata[subdata$Chrom %in% all_chroms,]
     subdata$Sample=filename
     final=rbind(final, subdata )
   }
@@ -54,10 +75,11 @@ draw_chromosome_count<-function(listFile, outFilePrefix) {
   write.csv(file=paste0(chromosomeFilePrefix, ".chromosome.csv"), final, row.names=F)
 
   chroms=paste0("chr", c(1:22,'X','Y','M', 'MT'))
-  if(!any(final$Chrom %in% chroms)){
+  if(!any(all_chroms %in% chroms)){
     chroms=paste0("", c(1:22,'X','Y','M', 'MT'))
   }
-  chroms=chroms[chroms %in% final$Chrom]
+  chroms=chroms[chroms %in% all_chroms]
+  chroms<-c(chroms, all_chroms[!(all_chroms %in% chroms)])
 
   fc<-reshape2::dcast(final, "Sample ~ Chrom", value.var="Reads", fill=0)
   final<-melt(fc, id="Sample")
