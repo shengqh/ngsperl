@@ -13,6 +13,10 @@ class ReadType(Enum):
   UNIQUELY_MAPPED = 2
   MULTIPLE_MAPPED = 3
 
+def get_chromosomes(reads):
+  result = set([read.reference_name for read in reads])
+  return(result)
+
 def get_read_type(reads):
   read1_count = 0
   read2_count = 0
@@ -30,6 +34,15 @@ def get_read_type(reads):
     return(ReadType.UNIQUELY_MAPPED)
   else:
     return(ReadType.MULTIPLE_MAPPED)
+
+def handle_reads(reads, type_dic, chromosome_dic):
+  rt = get_read_type(reads)
+  type_dic[rt] += 1
+  if (rt != ReadType.UNMAPPED):
+    chroms = get_chromosomes(reads)
+    chr_dic = chromosome_dic[rt]
+    for chrom in chroms:
+      chr_dic[chrom] = chr_dic.setdefault(chrom, 0) + 1
 
 DEBUG = False
 NOT_DEBUG= not DEBUG
@@ -50,7 +63,10 @@ logger = logging.getLogger('bamSummary')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
 with pysam.Samfile(args.input, "rb") as sam:
+  chromosomes = [sam.get_reference_name(nf) for nf in range(0, sam.nreferences)]
+
   type_dic = {ReadType.UNMAPPED:0, ReadType.UNIQUELY_MAPPED:0, ReadType.MULTIPLE_MAPPED:0}
+  chromosome_dic = {ReadType.UNMAPPED:{}, ReadType.UNIQUELY_MAPPED:{}, ReadType.MULTIPLE_MAPPED:{}}
 
   read_types = {}
 
@@ -68,17 +84,25 @@ with pysam.Samfile(args.input, "rb") as sam:
       continue
 
     if len(reads) > 0:
-      type_dic[get_read_type(reads)] += 1
+      handle_reads(reads, type_dic, chromosome_dic)
 
     reads = [read]
     last_query = read.qname
 
 #last read group
-type_dic[get_read_type(reads)] += 1
+handle_reads(reads, type_dic, chromosome_dic)
 
 with open(args.output, "wt") as fout:
   fout.write("Category\tCount\n")
   fout.write("TotalEntries\t%d\nTotalFragments\t%d\nUnmappedFragments\t%d\nUniquelyMappedFragments\t%d\nMultipleMappedFragments\t%d\n" % 
         (processed, sum(type_dic.values()), type_dic[ReadType.UNMAPPED], type_dic[ReadType.UNIQUELY_MAPPED], type_dic[ReadType.MULTIPLE_MAPPED] ))
-  
+
+with open(args.output + ".chromosome", "wt") as fout:
+  fout.write("Category\tChromosome\tCount\n")
+  for rt in [ReadType.UNIQUELY_MAPPED, ReadType.MULTIPLE_MAPPED]:
+    chrom_dic = chromosome_dic[rt]
+    for chrom in chromosomes:
+      if chrom in chrom_dic:
+        fout.write(f"{rt.name}\t{chrom}\t{chrom_dic[chrom]}\n")
+
 logger.info("done")
