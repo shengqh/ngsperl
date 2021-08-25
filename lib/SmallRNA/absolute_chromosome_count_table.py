@@ -1,12 +1,14 @@
 import logging
 import argparse
+import subprocess
+import os
 from FileListUtils import readFileMap
 
 DEBUG = 0
 
 if DEBUG:
   inputFile="/scratch/vickers_lab/projects/20210504_6282_RA_smRNAseq_mouse_byTiger/covid19/bowtie1_covid19_04_table/result/RA_6282_mouse__fileList1.list"
-  outputFilePrefix="/scratch/vickers_lab/projects/20210504_6282_RA_smRNAseq_mouse_byTiger/covid19/bowtie1_covid19_04_table/result/RA_6282_mouse.count"
+  outputFile="/scratch/vickers_lab/projects/20210504_6282_RA_smRNAseq_mouse_byTiger/covid19/bowtie1_covid19_04_table/result/RA_6282_mouse.count"
   name_map_file=None
 else:
   parser = argparse.ArgumentParser(description="Build count table.",
@@ -20,7 +22,7 @@ else:
   print(args)
   
   inputFile = args.input
-  outputFilePrefix = args.output
+  outputFile = args.output
 
 logger = logging.getLogger('count')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
@@ -46,7 +48,7 @@ for sample_name in sample_names:
 sorted_chroms = sorted(chroms)
 count_names=["unique", "read"]
 
-with open(outputFilePrefix, "wt") as fout:
+with open(outputFile, "wt") as fout:
   fout.write("Feature\t%s\n" % "\t".join(sample_names))
   for chrom in sorted_chroms:
     for idx in [0,1]:
@@ -58,5 +60,8 @@ with open(outputFilePrefix, "wt") as fout:
         else:
           fout.write("\t0")
       fout.write("\n")
+
+rscript = os.path.realpath(__file__) + ".R"
+subprocess.call ("R --vanilla -f " + rscript + " --args \"" + outputFile + "\" \"" + outputFile + ".png\"", shell=True)
 
 logger.info("Done")

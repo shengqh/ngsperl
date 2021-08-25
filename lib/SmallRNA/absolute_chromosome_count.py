@@ -61,5 +61,6 @@ with open(outputFile, "w") as sw:
     unique_count = len(chrom_map)
     chrom_count = sum(chrom_map.values())
     sw.write(f"{chrom}\t{unique_count}\t{chrom_count}\n")
+  sw.write(f"total\t{len(counts)}\t{sum(counts.values())}\n")
 
 logger.info("Done")
