@@ -287,7 +287,10 @@ sub getPreprocessionConfig {
 
   my $preprocessing_dir = $target_dir;
   if ( $def->{perform_preprocessing} && $def->{subdir} ) {
-    $preprocessing_dir = create_directory_or_die( $target_dir . "/preprocessing" );
+    $preprocessing_dir = $target_dir . "/preprocessing";
+    if(!$def->{donot_create_directory_or_die}){
+      create_directory_or_die($preprocessing_dir);
+    }
   }
 
   my $intermediate_dir = getIntermidiateDir($preprocessing_dir, $def);
