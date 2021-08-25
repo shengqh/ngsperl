@@ -2280,6 +2280,62 @@ sub getSmallRNAConfig {
     push @$summary_ref, "bacteria_count";
   }
 
+  if (getValue($def, "perform_search_fasta", 0)){
+    my $old_use_intermediate_dir = $def->{"use_intermediate_dir"};
+
+    $def->{"use_intermediate_dir"} = 0;
+
+    my $fasta = getValue($def, "search_fasta_file");
+    my $fasta_name = getValue($def, "search_fasta_name");
+    my $search_fasta_folder = getValue($def, "search_fasta_folder", $def->{target_dir} . "/$fasta_name");
+    my $fasta_folder = create_directory_or_die($search_fasta_folder);
+
+    #my $bowtie1_option_1mm = "-a -m 100 --best --strata -v 1 -l 12 -p 8";
+    my $bowtie1_option_pm = "-a -m 100 --best --strata -v 0 -l 12 -p 8";
+
+    my $bowtie_index_task;
+
+    my $search_fasta_tasks = [];
+
+    if ( -e $fasta . ".4.ebwt") {
+      $bowtie_index_task = $fasta;
+    }else{
+      $bowtie_index_task = "bowtie1_" . $fasta_name . "_00_index";
+      add_bowtie_index($config, $def, $individual_ref, $fasta_folder, $bowtie_index_task, $fasta);
+      push(@$search_fasta_tasks, $bowtie_index_task);
+    }
+
+    if (getValue($def, "search_fasta_all_reads", 0)){
+      my @tasks = add_search_fasta($config, $def, $individual_ref, $summary_ref, $fasta_name . "_all", $fasta_folder, $bowtie_index_task, ["identical", "fastq.gz"], $bowtie1_option_pm, "", "" );
+      push(@$search_fasta_tasks, @tasks)
+    }
+
+    if (getValue($def, "search_fasta_nonhost_reads", 0)){
+      my @tasks =add_search_fasta($config, $def, $individual_ref, $summary_ref, $fasta_name . "_nonhost", $fasta_folder, $bowtie_index_task, ["bowtie1_genome_unmapped_reads", '.unmapped.fastq.gz$'], $bowtie1_option_pm, "", "" );
+      push(@$search_fasta_tasks, @tasks)
+    }
+
+    if(getValue($def, "search_fasta_sequencetask", 1)){
+      $config->{search_fasta_sequencetask} = {
+        class      => "CQS::SequenceTaskNoDependence",
+        perform    => 1,
+        target_dir => $fasta_folder . "/search_fasta_sequencetask",
+        option     => "",
+        source     => {
+          step1 => $search_fasta_tasks,
+        },
+        sh_direct => 1,
+        pbs       => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        },
+      };
+    }
+
+    $def->{"use_intermediate_dir"} = $old_use_intermediate_dir;
+  }
+
   if ( getValue( $def, "perform_report" ) ) {
     my @report_files = ();
     my @report_names = ();
