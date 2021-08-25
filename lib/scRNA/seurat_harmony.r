@@ -61,6 +61,10 @@ if(Remove_MtRNA){
   rawobj<-rawobj[!(rownames(rawobj) %in% Mt.genes),]
 }
 
+sample_read<-data.frame(table(rawobj$orig.ident))
+colnames(sample_read)<-c("Sample", "Cell")
+write.table(sample_read, file=paste0(outFile, ".cell.tsv"), sep="\t", row.names=F, quote=F)
+
 objs<-SplitObject(object = rawobj, split.by = "orig.ident")
 rm(rawobj)
 
@@ -71,7 +75,7 @@ finalList$filter<-list(nFeature_cutoff_min=nFeature_cutoff_min,
                       nCount_cutoff=nCount_cutoff,
                       nCount_sd_cutoff=nCount_sd_cutoff)
 
-obj=do_harmony(objs, by_sctransform, Remove_Mt_rRNA, Mtpattern, rRNApattern, npcs, parSampleFile2)
+obj=do_harmony(objs, by_sctransform, npcs, parSampleFile2)
 reduction="harmony"
 rm(objs)
 
