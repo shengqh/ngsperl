@@ -108,6 +108,11 @@ sub get_all_dependent_pbs_map {
       
       my $myclass = instantiate( $task_section->{class} );
       my $pbs_sample_map = $myclass->get_pbs_source( $config, $task_section_name );
+
+      # if ($config->{general}{debug} && $task_section_name eq "bowtie1_contamination_all_01_index"){
+      #   print("found\n");
+      #   print(Dumper($pbs_sample_map));
+      # }
       
       my $allSampleNameMap = {};
       for my $pbs (keys %$pbs_sample_map){
@@ -148,7 +153,7 @@ sub get_all_dependent_pbs_map {
             if ( !defined $curpbs ) {
               $curpbs = {};
             }
-            # if ($config->{general}{debug} && $task_section_name eq "bwa_refine_nosoftclip_gatk4_CNV_Germline_06_PostprocessGermlineCNVCalls"){
+            # if ($config->{general}{debug} && $task_section_name eq "bowtie1_contamination_all_02_align"){
             #   print ("before ...");
             #   print(Dumper($taskdeppbsmap->{$pbs}));
             # }
@@ -173,14 +178,18 @@ sub get_all_dependent_pbs_map {
             }
 
             $taskdeppbsmap->{$pbs} = $curpbs;
-            # if ($config->{general}{debug} && $task_section_name eq "bwa_refine_nosoftclip_gatk4_CNV_Germline_06_PostprocessGermlineCNVCalls"){
-            #   print ("before ...");
+            # if ($config->{general}{debug} && $task_section_name eq "bowtie1_contamination_all_02_align"){
+            #   print ("after ...");
             #   print(Dumper($taskdeppbsmap->{$pbs}));
             # }
           }
         }
       }
       $result->{$task_section_name} = $taskdeppbsmap;
+      # if ($config->{general}{debug} && $task_section_name eq "bowtie1_contamination_all_01_index"){
+      #   print(Dumper($taskdeppbsmap));
+      # }
+
     }
   }
   return ($result);
