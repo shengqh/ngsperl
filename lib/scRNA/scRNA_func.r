@@ -332,7 +332,7 @@ draw_dimplot<-function(mt, filename, split.by) {
   dev.off()
 }
 
-do_harmony<-function(objs, by_sctransform, Remove_Mt_rRNA, Mtpattern, rRNApattern, npcs, batch_file) {
+do_harmony<-function(objs, by_sctransform, npcs, batch_file) {
   if(by_sctransform){
     cat("performing SCTransform ...\n")
     #perform sctransform
@@ -359,17 +359,12 @@ do_harmony<-function(objs, by_sctransform, Remove_Mt_rRNA, Mtpattern, rRNApatter
     obj <- ScaleData(obj, features = all.genes, verbose = FALSE)
   }
 
-  if (Remove_Mt_rRNA) {
-    rRNA.genes <- grep(pattern = rRNApattern,  rownames(obj), value = TRUE)
-    Mt.genes<- grep (pattern= Mtpattern,rownames(obj), value=TRUE )
-    VariableFeatures(obj) <- dplyr::setdiff(VariableFeatures(obj), c(rRNA.genes,Mt.genes))      
-  }
-
   cat("RunPCA ... \n")
   obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
 
-  if(file.exists(parSampleFile2)){
-    poolmap = get_batch_samples(parSampleFile2, unique(obj$orig.ident))
+  if(file.exists(batch_file)){
+    cat("Setting batch ...\n")
+    poolmap = get_batch_samples(batch_file, unique(obj$orig.ident))
     obj$batch <- unlist(poolmap[obj$orig.ident])
   }else{
     obj$batch <- obj$orig.ident
