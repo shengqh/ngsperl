@@ -792,7 +792,8 @@ sub getScRNASeqConfig {
         $clonotype_4_convert = addEncloneToClonotype($config, $def, $summary, $target_dir, "hto_clonotype_4_convert", "hto_clonotype_3_enclone", ["hto_clonotype_2_merge", ".cdr3\$"]);
       }
     }else{
-      if(defined $def->{bam_files}){
+      if(getValue($def, "perform_arcasHLA", 0)){
+        getValue($def, "bam_files");
         if (defined $def->{singleend_bam_files}){
           $config->{singleend_bam_files} = $def->{singleend_bam_files};
           addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", "bam_files", "singleend_bam_files");        
@@ -1490,7 +1491,10 @@ sub getScRNASeqConfig {
         push( @$summary, $tcell_clusters_task );
       }
 
-      my $perform_comparison = getValue( $def, "perform_comparison", 0 ) | getValue( $def, "perform_edgeR" );
+      my $perform_comparison = getValue( $def, "perform_comparison", 0 );
+      if(getValue( $def, "perform_edgeR" )){
+        $perform_comparison = 1;
+      }
       my $DE_by_sample = getValue( $def, "DE_by_sample" );
       my $DE_by_cell = getValue( $def, "DE_by_cell" );
 
@@ -1502,7 +1506,7 @@ sub getScRNASeqConfig {
         push( @deByOptions, "DE_by_cluster" );
       }
 
-      print("Perform_comparison=" . $perform_comparison , "\n");
+      print("perform_comparison=" . $perform_comparison , "\n");
       print("DE_by_sample=" . $DE_by_sample , "\n");
       
       if ( $perform_comparison & $DE_by_sample ) {
