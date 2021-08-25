@@ -20,6 +20,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_cqc";
+  $self->{_docker_prefix} = "chipqc_";
   bless $self, $class;
   return $self;
 }
@@ -86,38 +87,52 @@ sub perform {
   if ($paired_end){
     $sourceBamFiles = {};
     for my $bamName (keys %$bamfiles){
-      $sourceBamFiles->{$bamName} = [$result_dir . "/" . $bamName . ".filtered.bam"];
+      $sourceBamFiles->{$bamName} = [$result_dir . "/" . $bamName . ".firstread.bam"];
     } 
   }
 
   my $mapFiles = writeDesignTable( $result_dir, $section, $qctable, $sourceBamFiles, $peaksfiles, $peakSoftware, $combined, $task_name, $treatments, $controls );
 
   if ($combined) {
+    my $mapFile=$mapFiles->{$task_name};
+    my $mapFileName = basename($mapFile);
+    my $rdataFile=$mapFileName . ".rdata";
+
     if ($paired_end){
       #for paired end data, keep the first read only for ChipQC
+      print $pbs "
+if [[ ! -s $rdataFile ]]; then
+";
       for my $bamName (keys %$bamfiles){
         my $oldFile = $bamfiles->{$bamName}->[0];
-        my $newFile = $bamName . ".filtered.bam";
-        print $pbs "if [[ ! -s $newFile ]]; then
-  samtools view -b -f 65 -o $newFile $oldFile
-  samtools index $newFile
-fi
+        my $newFile = $bamName . ".firstread.bam";
+        print $pbs "
+  if [[ ! -s $newFile ]]; then
+    samtools view -b -f 65 -o $newFile $oldFile
+    samtools index $newFile
+  fi
 ";
         $sourceBamFiles->{$bamName} = [$result_dir . "/" . $newFile ];
       } 
+      print $pbs "
+fi
+
+";
     }
     
-    my $mapFileName = $mapFiles->{$task_name};
-    print $pbs "R --vanilla -f $script --args $mapFileName $genome $chromosomes\n\n";
+    print $pbs "R --vanilla -f $script --args $mapFile $genome $chromosomes\n\n";
     
     if ($paired_end){
+      print $pbs "if [[ -s $final_file ]]; then 
+";
       for my $bamName (keys %$sourceBamFiles){
-        my $newFile = $sourceBamFiles->{$bamName}->[0];
-        print $pbs "if [[ -s $final_file ]]; then 
-  rm $newFile ${newFile}.bai
-fi
+        my $newFile = basename($sourceBamFiles->{$bamName}->[0]);
+        print $pbs "  rm $newFile ${newFile}.bai
 ";
       } 
+      print $pbs "fi
+
+";
     }
   }
   else {
@@ -144,6 +159,11 @@ sub result {
     my @result_files = ();
     my $targetDir    = $result_dir . "/ChIPQCreport";
     push( @result_files, $targetDir . "/ChIPQC.html" );
+    push( @result_files, $targetDir . "/GenomicFeatureEnrichment.png" );
+    push( @result_files, $targetDir . "/CCPlot.png" );
+    push( @result_files, $targetDir . "/PeakCorHeatmap.png" );
+    push( @result_files, $targetDir . "/PeakPCA.png" );
+    push( @result_files, $targetDir . "/CoverageHistogramPlot.png" );
     $result->{$task_name} = filter_array( \@result_files, $pattern );
   }
   else {
@@ -156,6 +176,11 @@ sub result {
       my $curdir       = $result_dir . "/" . $qcname;
       my $targetDir    = $curdir . "/ChIPQCreport";
       push( @result_files, $targetDir . "/ChIPQC.html" );
+      push( @result_files, $targetDir . "/GenomicFeatureEnrichment.png" );
+      push( @result_files, $targetDir . "/CCPlot.png" );
+      push( @result_files, $targetDir . "/PeakCorHeatmap.png" );
+      push( @result_files, $targetDir . "/PeakPCA.png" );
+      push( @result_files, $targetDir . "/CoverageHistogramPlot.png" );
       $result->{$qcname} = filter_array( \@result_files, $pattern );
     }
   }

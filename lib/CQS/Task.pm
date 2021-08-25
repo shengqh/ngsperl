@@ -6,7 +6,10 @@ use warnings;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::StringUtils;
+use CQS::NGSCommon;
+use File::Basename;
 use Data::Dumper;
+use List::MoreUtils qw(uniq);
 
 sub new {
   my ($class) = @_;
@@ -18,7 +21,10 @@ sub new {
     _task_suffix   => "",
     _pbskey        => "source",
     _docker_prefix => "",
-    _can_use_docker => 1
+    _can_use_docker => 1,
+    _forbid_tmp_folder  => 0,
+    _use_tmp_folder => 0,
+    _localize_to_local_folder => 0,
   };
   bless $self, $class;
   return $self;
@@ -121,6 +127,60 @@ sub get_clear_map {
 sub get_pbs_key {
   my ( $self, $config, $section ) = @_;
   return $self->{_pbskey};
+}
+
+sub init_tmp_folder {
+  my ( $self, $pbs, $result_dir ) = @_;
+  if( $self->{"_use_tmp_folder"}){
+    print $pbs "
+res_dir='$result_dir'
+tmp_dir=\$(mktemp -d -t ci-\$(date +\%Y-\%m-\%d-\%H-\%M-\%S)-XXXXXXXXXX)
+
+tmp_cleaner()
+{
+rm -rf \${tmp_dir}
+exit -1
+}
+trap 'tmp_cleaner' TERM
+
+echo using tmp_dir=\$tmp_dir
+cd \$tmp_dir
+
+";
+    return(1);
+  }else{
+    return(0);
+  }
+}
+
+sub clean_tmp_folder {
+  my ( $self, $pbs ) = @_;
+  if( $self->{"_use_tmp_folder"}){
+    print $pbs "
+if [[ -d \$tmp_dir && \$tmp_dir != '/' ]]; then
+  echo copy result from \$tmp_dir to \$res_dir
+  #if the pbs was generated again during task is running, copy may be unpredictable. 
+  #make sure to change to tmp_dir before copy result
+
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+  cd \$tmp_dir
+
+  cp -p -r * \$res_dir
+  cd \$res_dir
+  echo delete tmp folder \$tmp_dir
+  rm -rf \$tmp_dir
+  echo move file and clean tmp folder done.
+fi
+";
+  }
 }
 
 sub get_pbs_files {
@@ -347,6 +407,119 @@ sub get_docker_value {
   return ( undef, undef );
 }
 
+sub localize_files {
+  my ($self, $pbs, $sample_files, $localized_files, $other_exts) = @_;
+  if($self->{_use_tmp_folder} || $self->{_localize_to_local_folder} ){
+    my $target_dir = $self->{_use_tmp_folder} ? '$res_dir/':'';
+    if($sample_files->[0] =~ /.bam$/){
+      if(defined $other_exts){
+        push(@$other_exts, ".bai");
+      }else{
+        $other_exts = [".bai"];
+      }
+      my @unique_words = uniq @$other_exts;
+      $other_exts = \@unique_words;
+    }
+
+    my $result = [];
+    print $pbs "
+echo localize start at `date`
+";
+    for my $old_file (@$sample_files){
+      my $new_file = basename($old_file);
+
+      push(@$result, $new_file);
+      push(@$localized_files, $new_file);
+
+      my $all_local_file = join(" ", @$localized_files);
+
+      print $pbs "
+echo $old_file      
+if [[ ! -s $old_file ]]; then
+  echo file not exists: $old_file
+  touch ${target_dir}${new_file}.not.exist
+  rm $all_local_file
+  exit 1
+fi
+
+for i in {1..5}; do 
+  echo iteration \$i ...
+  cp -f $old_file $new_file
+  diff $old_file $new_file
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    break
+  fi
+done
+
+if [[ \$status -ne 0 ]]; then
+  echo file copied is not idential to original file, quit.
+  touch ${target_dir}${new_file}.copy.failed
+  rm $all_local_file
+  exit 1
+fi
+";
+
+      if(defined $other_exts){
+        for my $other_ext (@$other_exts){
+          my $old_ext_file = $old_file . $other_ext;
+          my $new_ext_file = $new_file . $other_ext;
+          my $before_local_file = join(" ", @$localized_files);
+          push(@$localized_files, $new_ext_file);
+          my $after_local_file = join(" ", @$localized_files);
+          print $pbs "
+if [[ ! -s $old_ext_file ]]; then
+  echo file not exists: $old_ext_file
+  touch ${target_dir}${new_ext_file}.not.exist
+  rm $before_local_file
+  exit 1
+fi
+
+for i in {1..5}; do 
+  echo iteration \$i ...
+  cp -f $old_ext_file $new_ext_file
+  diff $old_ext_file $new_ext_file
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    break
+  fi
+done
+
+if [[ \$status -ne 0 ]]; then
+  echo file copied is not idential to original file, quit.
+  touch ${target_dir}${new_ext_file}.copy.failed
+  rm $all_local_file
+  exit 1
+fi
+";
+        }
+      }
+    }
+      print $pbs "
+ls *
+echo localize end at `date`
+
+";
+    return($result);
+  }else{
+    return($sample_files);
+  }
+}
+
+sub localize_files_in_tmp_folder {
+  return( localize_files(@_)); 
+}
+
+sub clean_temp_files {
+  my ($self, $pbs, $temp_files) = @_;
+  if(scalar(@$temp_files) > 0){
+    my $rmstr = join(" ",  @$temp_files);
+    print $pbs "
+rm $rmstr
+";
+  }
+}
+
 sub open_pbs {
   my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, $final_file_can_empty, $input_file ) = @_;
 
@@ -363,14 +536,37 @@ sub open_pbs {
 $path_file
 $init_command
 
-cd \"$result_dir\"
+set -o pipefail
+
+cd '$result_dir'
 
 ";
   if ( defined $final_file ) {
-    my $delete_file = ( $final_file =~ /^\// ) ? $final_file : "${result_dir}/${final_file}";
-
     my $checkFile = $final_file_can_empty ? "-e" : "-s";
-    print $pbs "
+    if (is_array($final_file)){
+      my @final_files = @$final_file;
+      if(scalar(@final_files) > 1){
+        my $final_files_1 = $final_files[0];
+        my $final_files_2 = $final_files[1];
+
+        my $delete_file = ( $final_files_1 =~ /^\// ) ? $final_files_1 : "${result_dir}/${final_files_1}";
+        print $pbs "
+if [[ !(1 -eq \$1) ]]; then
+  if [[ ( $checkFile $final_files_1 && $checkFile $final_files_2 ) || ( -d $final_files_1 && -d $final_files_2 ) ]]; then
+    echo job has already been done. if you want to do again, delete $delete_file and submit job again.
+    exit 0
+  fi
+fi
+";
+      }else{
+        $final_file = $final_files[0];
+      }
+    }
+    
+    if(!is_array($final_file)){
+      my $delete_file = ( $final_file =~ /^\// ) ? $final_file : "${result_dir}/${final_file}";
+
+      print $pbs "
 if [[ !(1 -eq \$1) ]]; then
   if [[ ( $checkFile $final_file ) || ( -d $final_file ) ]]; then
     echo job has already been done. if you want to do again, delete $delete_file and submit job again.
@@ -378,6 +574,7 @@ if [[ !(1 -eq \$1) ]]; then
   fi
 fi
 ";
+    }
   }
 
   if ( defined $input_file ) {
@@ -405,17 +602,27 @@ echo working in $result_dir ...
     }
 
     my $sing = "singularity exec -e";
-    if ((substr($docker_command, 0, length($sing)) eq $sing) &&  ($docker_command !~ / -H /)) {
-      $docker_command = $sing . " -H " . $result_dir . " " . substr($docker_command, length($sing));
+    if (substr($docker_command, 0, length($sing)) eq $sing) {
+      my $additional = "";
+      if($docker_command !~ / -H /) {
+        $additional = " -H $result_dir ";
+      }
+      if ($docker_command !~ / -B /) {
+        $additional = $additional . " -B `pwd` -B /home ";
+      }
+      $docker_command = $sing . $additional . substr($docker_command, length($sing));
     }
 
     my $sh_file = $pbs_file . ".sh";
+    my $sh_base_file = basename($sh_file);
 
     print $pbs "
 export R_LIBS=
 export PYTHONPATH=
 export JAVA_HOME=
  
+$docker_init
+
 $docker_command bash $sh_file 
 
 echo ${module_name}_end=`date`
@@ -425,12 +632,20 @@ exit 0
 ";
     close $pbs;
     open( $pbs, ">$sh_file" ) or die $!;
+
+    if(!$self->init_tmp_folder($pbs, $result_dir)){
+      print $pbs "
+cd '$result_dir'
+";
+    }
     print $pbs "
-cd $result_dir
+set -o pipefail
 
 $docker_init
 ";
 
+  }else{
+    $self->init_tmp_folder($pbs, $result_dir);
   }
 
   return $pbs;
@@ -438,6 +653,8 @@ $docker_init
 
 sub close_pbs {
   my ( $self, $pbs, $pbs_file ) = @_;
+
+  $self->clean_tmp_folder($pbs);
 
   my $module_name = $self->{_name};
 
@@ -474,6 +691,23 @@ sub init_parameter {
   $self->{_docker_prefix} = get_option( $config, $section, "docker_prefix", $self->{_docker_prefix} );
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
+  $self->{_localize_to_local_folder} = $config->{general}{localize_to_local_folder} || get_option( $config, $section, "localize_to_local_folder", $self->{_localize_to_local_folder});
+  if($self->{_localize_to_local_folder} ){
+    $self->{_use_tmp_folder} = 0;  
+  }elsif($self->{_forbid_tmp_folder}){
+    $self->{_use_tmp_folder} = 0;
+  }elsif(defined $config->{$section}{"use_tmp_folder"}){
+    $self->{_use_tmp_folder} = $config->{$section}{"use_tmp_folder"};
+  }elsif(defined $config->{general}{use_tmp_folder}){
+    $self->{_use_tmp_folder} = $config->{general}{"use_tmp_folder"};  
+  }elsif(should_use_tmp_folder($config->{$section}{target_dir})){
+    $self->{_use_tmp_folder} = get_option( $config, $section, "use_tmp_folder", $self->{_use_tmp_folder} );
+  }else{
+    $self->{_use_tmp_folder} = 0;  
+  }
+
+  #print("target_dir=" . $config->{$section}{target_dir} . "\n");
+  #print("_use_tmp_folder=" . $self->{_use_tmp_folder} . "\n");
 
   if ($self->{_task_suffix} ne ""){
     $self->{_suffix} = "";

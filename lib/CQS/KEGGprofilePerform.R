@@ -6,7 +6,7 @@
 ###############################################################################
 
 deseq2ResultFileTable=parSampleFile1
-deseq2ResultFileTable=read.delim(deseq2ResultFileTable,header=F,as.is=T)
+deseq2ResultFileTable=read.delim(deseq2ResultFileTable,header=F,as.is=T,check.names=F)
 
 ###############################
 #parameters

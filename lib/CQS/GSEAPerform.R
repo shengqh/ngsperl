@@ -88,7 +88,8 @@ for (i in 1:nrow(preRankedGeneFileTable)) {
   compName=preRankedGeneFileTable[i,2]
 
   dt<-runGSEA(preRankedGeneFile,resultDir=resultDir,makeReport=makeReport,gseaJar=gseaJar,gseaDb=gseaDb,gseaCategories=gseaCategories)
+  dt$compName=compName
   alldt<-rbind(alldt, dt)
 }
 
-write.csv(alldt, file="GSEA_result.csv", row.names=F)
+write.csv(alldt, file=paste0(outFile, ".gsea.files.csv"), row.names=F)

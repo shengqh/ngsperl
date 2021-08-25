@@ -30,7 +30,7 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = $self->init_parameter( $config, $section );
 
-  my $bowtie1_index = $config->{$section}{bowtie1_index} or die "define ${section}::bowtie1_index first";
+  my $bowtie1_index = parse_param_file($config, $section, "bowtie1_index");
   my $mappedonly = get_option( $config, $section, "mappedonly", 0 );
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
   my $outputToSameFolder = $self->getOutputToSameFolder( $config, $section );
@@ -67,8 +67,26 @@ sub perform {
       $mappedonlyoption = "-F 4";
     }
 
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
+    my $cur_dir  = $outputToSameFolder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+
     my $bam_file = $sample_name . ".bam";
     my $final_file = ( $output_sort_by_coordinate && $mark_duplicates ) ? $sample_name . ".rmdup.bam" : $bam_file;
+
+    print $sh "
+if [[ ! -s $cur_dir/$final_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
+
+    my $log_desc = $cluster->get_log_description($log);
+
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files)};
 
     my $m_option = ($option =~ /\-m/)? "--max ${final_file}.max.txt":""; 
 
@@ -76,25 +94,27 @@ sub perform {
     my $tag    = "--sam-RG ID:$sample_name --sam-RG LB:$sample_name --sam-RG SM:$sample_name --sam-RG PL:ILLUMINA --sam-RG PU:$sample_name";
 
     my $fastqs = join( ',', @sample_files );
-    my $bowtie1_aln_command = "bowtie $option $m_option -S $tag $bowtie1_index $fastqs $bowtiesam 2>$alignlog";
+    my $bowtie1_aln_command = "bowtie $option $m_option -S $tag -x $bowtie1_index $fastqs $bowtiesam 2>$alignlog";
 
     my $cmd_file_exists = check_file_exists_command(\@sample_files, "  ");
 
-    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
-    my $pbs_name = basename($pbs_file);
-    my $log      = $self->get_log_filename( $log_dir, $sample_name );
-    my $cur_dir  = $outputToSameFolder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
-
-    print $sh "\$MYCMD ./$pbs_name \n";
-
-    my $log_desc = $cluster->get_log_description($log);
-
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
-
     print $pbs "
 if [[ ! -s $bam_file && ! -s $bowtiesam ]]; then
-  $cmd_file_exists
+  if [[ -e ${sample_name}.bowtie.failed ]]; then
+    rm -f ${sample_name}.bowtie.failed
+  fi
+
+$cmd_file_exists
   $bowtie1_aln_command 
+
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.bowtie.failed
+    rm $bowtiesam
+  else
+    touch $sample_name.bowtie.succeed
+  fi
+
   bowtie --version | grep bowtie | grep version | cut -d ' ' -f3 | awk '{print \"bowtie,v\"\$1}' > ${final_file}.version
 fi
 ";
@@ -106,12 +126,13 @@ fi
 
       print $pbs "
 if [[ -s $bowtiesam && ! -s $bam_file ]]; then
-  samtools view -Shu $mappedonlyoption $bowtiesam | samtools sort -@ $thread -T ${sample_name}_tmp -o $bam_file -
+  samtools view -Shu $mappedonlyoption $bowtiesam | samtools sort -T ${sample_name}_tmp -o $bam_file -
   if [ -s $bam_file ]; then
     rm $bowtiesam
     samtools index $bam_file 
     $chromosome_grep_command
     $addRgCommand
+    samtools idxstats $bam_file > ${bam_file}.chromosome.count
   fi
 fi
 ";
@@ -121,8 +142,9 @@ if [ -s $bam_file ]; then
   echo MarkDuplicate=`date` 
   java -jar $picard_jar MarkDuplicates I=$bam_file O=$final_file ASSUME_SORTED=true REMOVE_DUPLICATES=false VALIDATION_STRINGENCY=SILENT M=${final_file}.metrics
   if [ -s $final_file ]; then
-    rm $bam_file ${bam_file}.bai
+    rm $bam_file ${bam_file}.bai ${bam_file}.chromosome.count
     samtools index $final_file 
+    samtools idxstats $final_file > ${final_file}.chromosome.count
   fi
 fi
 ";
@@ -132,6 +154,7 @@ fi
       print $pbs "
 if [ -s $bowtiesam ]; then
   samtools view -S $mappedonlyoption -b $bowtiesam > ${sample_name}.bam
+  samtools idxstats ${sample_name}.bam > ${sample_name}.bam.chromosome.count
   if [ -s $bam_file ]; then
     $addRgCommand
     rm $bowtiesam
@@ -139,6 +162,8 @@ if [ -s $bowtiesam ]; then
 fi
 ";
     }
+
+    $self->clean_temp_files($pbs, $localized_files);
 
     $self->close_pbs( $pbs, $pbs_file );
   }

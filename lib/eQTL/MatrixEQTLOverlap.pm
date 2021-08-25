@@ -67,7 +67,7 @@ sub perform {
     my $compare_file    = $compare_files->{$sampleName}[0];
     my $compare_bim_file= $compare_bim_files->{$sampleName}[0];
     
-    print $pbs "python $script -i $input_file -b $input_bim_file --input_name $input_name -c $compare_file -p $compare_bim_file --compare_name $compare_name -o $final_file\n";
+    print $pbs "python3 $script -i $input_file -b $input_bim_file --input_name $input_name -c $compare_file -p $compare_bim_file --compare_name $compare_name -o $final_file\n";
     $self->close_pbs( $pbs, $pbs_file );
   }
 

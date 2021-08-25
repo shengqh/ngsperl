@@ -52,12 +52,12 @@ sub perform {
     if ($sort_by_query) {
       $finalPrefix = "${sample_name}.sortedname";
       $final_file  = "${finalPrefix}.bam";
-      $sortcmd     = "samtools sort $option -n -@ $thread $sampleFile $finalPrefix";
+      $sortcmd     = "samtools sort $option -n $sampleFile $finalPrefix";
     }
     else {
       $finalPrefix = "${sample_name}.sorted";
       $final_file  = "${finalPrefix}.bam";
-      $sortcmd     = "samtools sort $option -@ $thread $sampleFile $finalPrefix
+      $sortcmd     = "samtools sort $option $sampleFile $finalPrefix
 samtools index $final_file";
     }
 

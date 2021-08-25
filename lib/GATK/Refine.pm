@@ -19,6 +19,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_rf";
+  $self->{_use_tmp_folder} = 1;
   bless $self, $class;
   return $self;
 }
@@ -37,7 +38,7 @@ sub getKnownSitesVcf {
 
   if ( defined $config->{$section}{indel_vcf_files} ) {
     my $vcfFiles     = $config->{$section}{indel_vcf_files};
-    my @vcfFileArray = ( ref($vcfFiles) eq "ARRAY" ) ? @{$vcfFiles} : ($vcfFiles);
+    my @vcfFileArray = is_array($vcfFiles) ? @{$vcfFiles} : ($vcfFiles);
     my @out          = keys %{ { map { ( $_ => 1 ) } ( @sitesVcfFiles, @vcfFileArray ) } };
     @sitesVcfFiles = @out;
   }
@@ -90,7 +91,7 @@ sub perform {
   my $indel_vcf = "";
   if ($indelRealignment) {
     my $vcfFiles = $config->{$section}{indel_vcf_files} or die "Define indel_vcf_files in section $section first.";
-    my @vcfFileArray = ( ref($vcfFiles) eq "ARRAY" ) ? @{$vcfFiles} : ($vcfFiles);
+    my @vcfFileArray = is_array($vcfFiles) ? @{$vcfFiles} : ($vcfFiles);
     foreach my $vcf (@vcfFileArray) {
       $indel_vcf = $indel_vcf . " -known $vcf";
     }
@@ -134,30 +135,44 @@ sub perform {
     my $recalTable = "${sample_name}${rmdupResultName}${indelResultName}.recal.table";
     my $recalFile = "${sample_name}${rmdupResultName}${indelResultName}.recal.bam";
     my $final_file = "${sample_name}${rmdupResultName}${indelResultName}.recal${baqResultName}.bam";
+    my $final_file_index = change_extension( $final_file, ".bai" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
+    print $sh "if [[ ! -s $result_dir/$final_file_index ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
 
     my $log_desc = $cluster->get_log_description($log);
 
     my $rmlist       = "";
-    my $inputFile    = $sampleFile;
     my $resultPrefix = $sample_name;
+    my $inputFile    = $sample_files[0];
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, 0, $inputFile );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file_index, $init_command, 0, $inputFile );
+
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files, [".bai"])};
+    $inputFile    = $sample_files[0];
+    my $inputFileIndex    = "${inputFile}.bai";
+
+    print $pbs "
+mkdir tmp_${sample_name}
+";
 
     if ( !$sorted ) {
       print $pbs "
-if [[ -s $inputFile && ! -s $presortedFile ]]; then
+if [[ (-s $inputFile) && ! (-s $presortedFile) ]]; then
   echo sort=`date` 
-  samtools sort -@ $thread -m 4G -o $presortedFile $inputFile
+  samtools sort -m 4G -o $presortedFile $inputFile
   samtools index $presortedFile
 fi
 ";
       $inputFile = $presortedFile;
+      $inputFileIndex = "${presortedFile}.bai";
       $rmlist    = $rmlist . " $presortedFile ${presortedFile}.bai";
     }
 
@@ -165,12 +180,14 @@ fi
     if ( $remove_duplicate or $mark_duplicate ) {
       my $rmdupFileIndex = change_extension( $rmdupFile, ".bai" );
       print $pbs "
-if [[ -s $inputFile && ! -s $rmdupFile ]]; then
+
+if [[ (-s $inputFile) && (-s $inputFileIndex) && (! -s $rmdupFile) ]]; then
   echo MarkDuplicates=`date` 
-  java $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=$removeDupLabel CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
+  java -Djava.io.tmpdir=`pwd`/tmp_${sample_name} $option -jar $picard_jar MarkDuplicates I=$inputFile O=$rmdupFile ASSUME_SORTED=true REMOVE_DUPLICATES=$removeDupLabel CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=${rmdupFile}.metrics
 fi
 ";
       $inputFile = $rmdupFile;
+      $inputFileIndex = $rmdupFileIndex;
       $rmlist    = $rmlist . " $rmdupFile $rmdupFileIndex";
     }
 
@@ -178,18 +195,19 @@ fi
       my $indelFileIndex = change_extension( $indelFile, ".bai" );
       my $intervalFile = change_extension( $indelFile, ".intervals" );
       print $pbs "
-if [[ -s $inputFile && ! -s $indelFile ]]; then
+if [[ (-s $inputFile) && (-s $inputFileIndex) && (! -s $indelFile) ]]; then
   echo RealignerTargetCreator=`date` 
-  java $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $inputFile -R $faFile $indel_vcf -o $intervalFile $restrict_intervals
+  java -Djava.io.tmpdir=`pwd`/tmp_${sample_name} $option -jar $gatk_jar -T RealignerTargetCreator -nt $thread $fixMisencodedQuals -I $inputFile -R $faFile $indel_vcf -o $intervalFile $restrict_intervals
 fi
 
-if [[ -s $intervalFile && ! -s $indelFile ]]; then
+if [[ (-s $intervalFile) && (! -s $indelFile) ]]; then
   echo IndelRealigner=`date` 
   #InDel parameter referenced: http://www.broadinstitute.org/gatk/guide/tagged?tag=local%20realignment
-  java $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $fixMisencodedQuals -I $inputFile -R $faFile -targetIntervals $intervalFile $indel_vcf --consensusDeterminationModel USE_READS -LOD 0.4 -o $indelFile 
+  java -Djava.io.tmpdir=`pwd`/tmp_${sample_name} $option -Djava.io.tmpdir=tmpdir -jar $gatk_jar -T IndelRealigner $fixMisencodedQuals -I $inputFile -R $faFile -targetIntervals $intervalFile $indel_vcf --consensusDeterminationModel USE_READS -LOD 0.4 -o $indelFile 
 fi  
 ";
       $inputFile = $indelFile;
+      $inputFileIndex = $indelFileIndex;
       $rmlist    = $rmlist . " $indelFile $indelFileIndex $intervalFile";
     }
 
@@ -197,19 +215,19 @@ fi
     my $printOptions   = "";
 
     print $pbs "
-if [[ -s $inputFile && ! -s $recalTable ]]; then
+if [[ (-s $inputFile) && (-s $inputFileIndex) && (! -s $recalTable) ]]; then
   echo BaseRecalibrator=`date` 
-  java $option -jar $gatk_jar -T BaseRecalibrator -nct $thread -rf BadCigar -R $faFile -I $inputFile $knownsitesvcf -o $recalTable $restrict_intervals
+  java -Djava.io.tmpdir=`pwd`/tmp_${sample_name} $option -jar $gatk_jar -T BaseRecalibrator -nct $thread -rf BadCigar -R $faFile -I $inputFile $knownsitesvcf -o $recalTable $restrict_intervals
 fi
 
-if [[ -s $recalTable && ! -s $recalFile ]]; then
+if [[ (-s $recalTable) && (! -s $recalFile) ]]; then
   echo PrintReads=`date`
-  java $option -jar $gatk_jar -T PrintReads --simplifyBAM -nct $thread -rf BadCigar -R $faFile -I $inputFile -BQSR $recalTable -o $recalFile 
+  java -Djava.io.tmpdir=`pwd`/tmp_${sample_name} $option -jar $gatk_jar -T PrintReads --simplifyBAM -nct $thread -rf BadCigar -R $faFile -I $inputFile -BQSR $recalTable -o $recalFile 
 fi
 ";
     if ($baq) {
       print $pbs "
-if [[ -s $recalFile && ! -s $final_file ]]; then
+if [[ (-s $recalFile) && (-s $recalFileIndex) && (! -s $final_file) ]]; then
   echo baq = `date` 
   samtools calmd -Abr $recalFile $faFile > $final_file 
   samtools index $final_file 
@@ -219,12 +237,28 @@ fi
     }
 
     print $pbs "
-if [[ -s $final_file && ! -s ${final_file}.stat ]]; then 
-  echo flagstat = `date` 
-  samtools flagstat $final_file > ${final_file}.stat 
+if [[ (-s $final_file) && (-s $final_file_index) ]]; then
+  ln $final_file_index ${final_file}.bai
+
+  if [[ ! -s ${final_file}.stat ]]; then 
+    echo flagstat = `date` 
+    samtools flagstat $final_file > ${final_file}.stat 
+  fi
+
+  if [[ ! -s ${final_file}.chromosome.count ]]; then 
+    echo flagstat = `date` 
+    samtools idxstats $final_file > ${final_file}.chromosome.count 
+  fi
+
   rm $rmlist 
 fi
+
+rm -rf tmp_${sample_name}
+
 ";
+
+    $self->clean_temp_files($pbs, $localized_files);
+
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
@@ -323,6 +357,7 @@ sub result {
     my @result_files = ();
     push( @result_files, "${result_dir}/${final_file}" );
     push( @result_files, "${result_dir}/${bai_file}" );
+    push( @result_files, "${result_dir}/${final_file}.chromosome.count" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;

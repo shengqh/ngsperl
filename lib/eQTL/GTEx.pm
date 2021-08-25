@@ -54,7 +54,7 @@ sub perform {
 
     my $snp_file    = $snp_files->{$sampleName}[0];
 
-    print $pbs "python $script -i $snp_file -g $gtex_folder -o $final_file\n";
+    print $pbs "python3 $script -i $snp_file -g $gtex_folder -o $final_file\n";
     $self->close_pbs( $pbs, $pbs_file );
   }
 

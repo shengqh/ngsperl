@@ -1,6 +1,7 @@
 import sys
 import os
 import string
+from collections import OrderedDict
 
 def readHashMap(fileName):
   """Read file list file and return key/array of value hash map. Can be used to read group definition.
@@ -11,7 +12,7 @@ def readHashMap(fileName):
   Result:
     Hash map, key:array of values
   """
-  result = {}
+  result = OrderedDict()
   with open(fileName, "r") as f:
     for line in f:
       parts = line.rstrip().split('\t')
@@ -36,7 +37,7 @@ def readUniqueHashMap(fileName, keyIndex = 1):
   valueIndex = 1 if keyIndex == 0 else 0
   maxIndex = max(valueIndex, keyIndex)
 
-  result = {}
+  result = OrderedDict()
   with open(fileName, "r") as f:
     for line in f:
       parts = line.rstrip().split('\t')

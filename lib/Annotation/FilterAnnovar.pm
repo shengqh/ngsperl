@@ -87,7 +87,7 @@ sub perform {
         my $finalFilePrefix = "${sample_name}${sampleNameSuffix}.freq${freq_value}";
         my $finalFile       = $finalFilePrefix . ".gene.missense.tsv";
         print $pbs " 
-python $script $option -i $annovar_file -t $freq_value -o $finalFilePrefix $exac_key $g1000_key $gnomad_key $filter_fq_equal_1 $sampleNamePattern 
+python3 $script $option -i $annovar_file -t $freq_value -o $finalFilePrefix $exac_key $g1000_key $gnomad_key $filter_fq_equal_1 $sampleNamePattern 
 ";
       }
     }
@@ -95,7 +95,7 @@ python $script $option -i $annovar_file -t $freq_value -o $finalFilePrefix $exac
       my $finalFilePrefix = "${sample_name}${sampleNameSuffix}";
       my $finalFile       = $finalFilePrefix . ".gene.missense.tsv";
       print $pbs " 
-python $script $option -i $annovar_file -o $finalFilePrefix $sampleNamePattern
+python3 $script $option -i $annovar_file -o $finalFilePrefix $sampleNamePattern
 ";
     }
   }

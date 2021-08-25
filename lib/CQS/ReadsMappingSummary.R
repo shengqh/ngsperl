@@ -15,11 +15,11 @@ readFileList<-parSampleFile1
 groupFileList<-parSampleFile2
 groupVisLayoutFileList<-parSampleFile3
 
-top100Table<-read.delim(top100ReadFile,header=T,row.names=1,as.is=T)
+top100Table<-read.delim(top100ReadFile,header=T,row.names=1,as.is=T,check.names=F)
 readFiles<-read.delim(readFileList,header=F,as.is=T)[,1]
 mappingTable<-NULL
 for (readFile in readFiles) {
-	readsTable<-read.delim(readFile,header=T,row.names=1,as.is=T)
+	readsTable<-read.delim(readFile,header=T,row.names=1,as.is=T,check.names=F)
 	mappingResult<-rep("N",nrow(top100Table))
 	names(mappingResult)<-row.names(top100Table)
 	

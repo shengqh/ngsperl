@@ -4,14 +4,18 @@
 
 usePearsonInHCA<-TRUE
 hmcols <- colorRampPalette(c("green", "black", "red"))(256)
-maxCategory=10 #max 50 heatmap (categories)
+maxCategory=20 #max 20 heatmap (categories)
+if (!exists("fileTypePrefix")) { #to add in file name, GOID+fileTypePrefix.png
+  fileTypePrefix="_DESeq2-vsd-heatmap" 
+}
 
 library(heatmap3)
 
 #function from DESeq2.r
 drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnames, outputFormat,
                   main=paste0("Hierarchical Cluster Using ", nrow(rldselect), " Genes"),
-                  labRow=ifelse(nrow(rldselect)<=30,row.names(rldselect),NA)){
+                  labRow=ifelse(nrow(rldselect)<=30,row.names(rldselect),NA),
+                  fileTypePrefix="_DESeq2-vsd-heatmap"){
   genecount<-nrow(rldselect)
   showRowDendro = genecount <= 50
   if(genecount > 2){
@@ -30,7 +34,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
       margins=c(12,5)
     }
     
-    filePrefix<-paste0(prefix, "_DESeq2-vsd-heatmap")
+    filePrefix<-paste0(prefix, fileTypePrefix)
     for(format in outputFormat){
       openPlot(filePrefix, format, 10, 10, 3000, 3000, "HCA")
       if(usePearsonInHCA){
@@ -109,24 +113,33 @@ for (comparison in comparisons){
     category <- gsub("_", " ", category )
     
     enriched<-read.table(compAnnoFile, sep="\t", header=T, stringsAsFactors = F)
-    deseq2<-read.csv(compDeseq2File, header=T, row.names=1, stringsAsFactors = F)
-    deseq2<-deseq2[,c("Feature_gene_name", "baseMean", "pvalue", "padj", "FoldChange") ]
-    geneExpression<-read.csv(deseq2VsdFile, header=T, row.names=1, stringsAsFactors = F)
-    designData<-read.delim(deseq2DesignFile, header=T,  stringsAsFactors = F)
+    #deseq2<-read.csv(compDeseq2File, header=T, row.names=1, stringsAsFactors = F)
+    #deseq2<-deseq2[,c("Feature_gene_name", "baseMean", "pvalue", "padj", "FoldChange") ]
+    deseq2=readFilesAndFormat(compDeseq2File)
+    diffCol=getDiffCol(deseq2)[["colName"]]
+    diffCenterValue=getDiffCol(deseq2)[["centerValue"]]
+    geneCol=getGeneCol(deseq2)[["colName"]]
+    
+    #geneExpression<-read.csv(deseq2VsdFile, header=T, row.names=1, stringsAsFactors = F)
+    geneExpression<-readFilesAndFormat(deseq2VsdFile)
+    
+    designData<-read.delim(deseq2DesignFile, header=T,  stringsAsFactors = F,check.names=F)
     conditionColors=as.matrix(data.frame(Group=c("red", "blue")[as.factor(designData[,2])]))
-    gnames=unique(designData[,2])
+    gnames=levels(as.factor(designData[,2]))
     
     rowCount<-min(maxCategory,nrow(enriched))
     idx<-1
     for(idx in c(1:rowCount)){
       entry<-enriched[idx,]
       userIds<-unlist(strsplit( entry$userId[1], ';'))
-      entryTable<-geneExpression[row.names(deseq2)[which(deseq2$Feature_gene_name %in% userIds)],]
-      row.names(entryTable)=make.unique(deseq2[which(deseq2$Feature_gene_name %in% userIds),"Feature_gene_name"])
+      #entryTable<-geneExpression[row.names(deseq2)[which(deseq2$Feature_gene_name %in% userIds)],]
+      #row.names(entryTable)=make.unique(deseq2[which(deseq2$Feature_gene_name %in% userIds),"Feature_gene_name"])
+      entryTable<-geneExpression[row.names(deseq2)[which(deseq2[,geneCol] %in% userIds)],]
+      row.names(entryTable)=make.unique(deseq2[which(deseq2[,geneCol] %in% userIds),geneCol])
       
       drawHCA(prefix=make.names(enriched[idx,1]), rldselect=entryTable, ispaired=FALSE, designData=deseq2Design, 
                    conditionColors=conditionColors, gnames=gnames, outputFormat="PNG",
-              main=paste(enriched[idx,1:2],collapse=", "),labRow=row.names(entryTable))
+              main=paste(enriched[idx,1:2],collapse=", "),labRow=row.names(entryTable),fileTypePrefix=fileTypePrefix)
         
     }
     setwd(currentWd)

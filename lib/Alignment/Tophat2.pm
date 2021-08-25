@@ -86,7 +86,7 @@ sub perform {
     }
 
     my $final_file     = $rename_bam    ? "${sample_name}.bam"                                                                       : "accepted_hits.bam";
-    my $sort_cmd       = $sort_by_query ? "samtools sort -n -@ $thread accepted_hits.bam ${sample_name}.sortedname"                  : "";
+    my $sort_cmd       = $sort_by_query ? "samtools sort -n accepted_hits.bam ${sample_name}.sortedname"                  : "";
     my $rename_bam_cmd = $rename_bam    ? "mv accepted_hits.bam ${sample_name}.bam\nmv accepted_hits.bam.bai ${sample_name}.bam.bai" : "";
 
     my $log_desc = $cluster->get_log_description($log);

@@ -10,6 +10,7 @@ use CQS::ClassFactory;
 use Pipeline::PipelineUtils;
 use Data::Dumper;
 use Hash::Merge qw( merge );
+use List::Util qw(max);
 use POSIX qw(strftime);
 
 require Exporter;
@@ -21,9 +22,12 @@ our %EXPORT_TAGS = (
       addPairedFastqToUnmappedBam
       addPairedFastqToProcessedBam
       addUmiReadsToProcessedBam
-      addMutect2
+      is_muTect2_tumor_only
+      addMutect2Wdl
       addSomaticCNV
       addHaplotypecaller
+      addCollectAllelicCounts
+      addEncodeATACseq
     )
   ]
 );
@@ -116,7 +120,8 @@ sub addPairedFastqToProcessedBam {
     "input_json_file" => $pipeline->{"input_file"},
     "input_parameters" => {
       "PreProcessingForVariantDiscovery_GATK4.sample_name" => "SAMPLE_NAME",
-      "PreProcessingForVariantDiscovery_GATK4.DoMarkDuplicates" =>$PreProcessing_DoMarkDuplicates,
+      "PreProcessingForVariantDiscovery_GATK4.SamToFastqAndBwaMem.num_cpu" => "8",
+      "PreProcessingForVariantDiscovery_GATK4.DoMarkDuplicates" => $PreProcessing_DoMarkDuplicates,
     },
     "input_list" => {
       #"PreProcessingForVariantDiscovery_GATK4.flowcell_unmapped_bams_list_ref" => [$files_ref,".fastq"]
@@ -131,7 +136,7 @@ sub addPairedFastqToProcessedBam {
     },
   };
 
-  print(Dumper($config->{$task}));
+  #print(Dumper($config->{$task}));
   push @$individual, $task;
   return ($task);
 }
@@ -213,113 +218,56 @@ sub addUmiReadsToProcessedBam {
   return ($task);
 }
 
-
-
-sub addMutect2 {
-  my ($config, $def, $tasks, $target_dir, $bam_input) = @_;
-
-  my $mutect2_index_dic = {};
-  my $mutect2_index_key = "mutect2_Index";
-  my $mutect2_prefix = "${bam_input}_muTect2_";
-
-  if (not defined $def->{mutect2_groups}){
-    #for wdl mutect2, the result file will use tumor sample name in output
-    my $mutect2_groups = {};
-    my $groups = $def->{groups};
-    for my $group_name (sort keys %$groups) {
-      my $samples = $groups->{$group_name};
-      if (scalar(@$samples) == 1) {
-        $mutect2_groups->{$samples->[0]} = $samples;
-      }else{
-        $mutect2_groups->{$samples->[1]} = $samples;
-      }
+sub is_muTect2_tumor_only {
+  my $config = shift;    
+  my $mutect2_groups = $config->{mutect2_groups};
+  #print(Dumper($mutect2_groups));
+  for my $files (values %$mutect2_groups){
+    if (scalar(@$files) == 1){
+      return(1);
     }
-    $config->{mutect2_groups} = $mutect2_groups;
-  }else{
-    $config->{mutect2_groups} = $def->{mutect2_groups};
   }
-  
-  my $mutect2_normal_files = $mutect2_prefix . "_normal_files";
-  $config->{$mutect2_normal_files} = {     
-    "class" => "CQS::GroupPickTask",
-    "source_ref" => $bam_input,
-    "groups_ref" => "mutect2_groups",
-    "sample_index_in_group" => 0, 
-  };
-  
-  my $mutect2_tumor_files = $mutect2_prefix . "_tumor_files";
-  $config->{$mutect2_tumor_files} = {     
-    "class" => "CQS::GroupPickTask",
-    "source_ref" => $bam_input,
-    "groups_ref" => "mutect2_groups",
-    "sample_index_in_group" => 1, 
-  };
+  return(0);
+}
+
+sub addMutect2Wdl {
+  my ($config, $def, $tasks, $target_dir, $mutect2_prefix, $mutect2_option, $is_pon, $mutect2_tumor_only, $mutect2_tumor_files, $mutect2_normal_files, $pon, $pon_idx) = @_;
+
+  # if(!$is_pon){
+  #   print("tumors=" . $mutect2_tumor_files . "\n");
+  #   if (!$mutect2_tumor_only){
+  #     print("normal=" . $mutect2_normal_files . "\n");
+  #   }
+  # }
 
   my $server_key = getValue($def, "wdl_key", "local");
   my $wdl = $def->{"wdl"};
   my $server = $wdl->{$server_key};
   my $mutect2_pipeline = $server->{"mutect2"};
 
-  my $pon = {};
-  if ($mutect2_pipeline->{"perform_mutect2_pon"}){
-    my $pon_pipeline = $server->{"mutect2_pon"};
-
-    my $mutect2_pon = $mutect2_prefix . getNextIndex($mutect2_index_dic, $mutect2_index_key) . "_pon";
-    $config->{$mutect2_pon} = {     
-      "class" => "CQS::UniqueWdl",
-      "target_dir" => "${target_dir}/$mutect2_pon",
-      "singularity_image_files_ref" => ["singularity_image_files"],
-      "cromwell_jar" => $wdl->{"cromwell_jar"},
-      "input_option_file" => $wdl->{"cromwell_option_file"},
-      "cromwell_config_file" => $server->{"cromwell_config_file"},
-      "wdl_file" => $pon_pipeline->{"wdl_file"},
-      "source_ref" => [$mutect2_normal_files, ".bam\$"],
-      "input_json_file" => $pon_pipeline->{"input_file"},
-      "input_array" => {
-        "Mutect2_Panel.normal_bams_ref" => [$mutect2_normal_files, ".bam\$"],
-        "Mutect2_Panel.normal_bais_ref" => [$mutect2_normal_files, ".bai\$"]
-      },
-      "input_parameters" => {
-        "Mutect2_Panel.pon_name" => $config->{general}{task_name},
-        "Mutect2_Panel.intervals" => $def->{covered_bed}
-      },
-      output_file_ext => ".vcf",
-      output_other_ext => ".vcf.idx",
-      pbs=> {
-        "nodes"     => "1:ppn=8",
-        "walltime"  => "24",
-        "mem"       => "70gb"
-      },
-    };
-    push @$tasks, $mutect2_pon;
-
-    $pon = {
-      "Mutect2.pon_ref" => [$mutect2_pon, ".vcf\$"],
-      "Mutect2.pon_idx_ref" =>[$mutect2_pon, ".vcf.idx\$"],
-    };
-  }
-
-  my $mutect2_call = $mutect2_prefix . getNextIndex($mutect2_index_dic, $mutect2_index_key) . "_call";
+  my $mutect2_call = $mutect2_prefix . getNextIndex($def, $mutect2_prefix) . "_call_wdl";
   my $run_funcotator="false";
   if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
     $run_funcotator="true";
   }
 
-  my $output_sample_ext;
-  if($def->{muTect2_suffix}) {
-    $output_sample_ext = $def->{muTect2_suffix};
-  }else {
-    $output_sample_ext=".hg19";
-    if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
-      $output_sample_ext=".hg38";
-    } elsif ($def->{ncbi_build} eq "GRCm38")  {
-      $output_sample_ext=".mm10";
-    }
-  }
+  my $run_orientation_bias_mixture_model_filter = getValue($def, "Mutect2.run_orientation_bias_mixture_model_filter", "true");
+
+  my $output_sample_ext = "";
+  # if($def->{muTect2_suffix}) {
+  #   $output_sample_ext = $def->{muTect2_suffix};
+  # }else {
+  #   $output_sample_ext=".hg19";
+  #   if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
+  #     $output_sample_ext=".hg38";
+  #   } elsif ($def->{ncbi_build} eq "GRCm38")  {
+  #     $output_sample_ext=".mm10";
+  #   }
+  # }
 
   my $output_file_ext;
   my $output_other_ext;
-  if ($def->{ncbi_build} eq "GRCh38"){
+  if ( $def->{ncbi_build} eq "GRCh38" && ! $is_pon ){
     $output_file_ext = $output_sample_ext."-filtered.annotated.maf";
     $output_other_ext = $output_sample_ext."-filtered.vcf";
   }else{
@@ -329,38 +277,70 @@ sub addMutect2 {
   $config->{$mutect2_call} = {     
     "class" => "CQS::Wdl",
     "target_dir" => "${target_dir}/$mutect2_call",
-    "source_ref" => [$mutect2_normal_files, ".bam\$"],
+    "source_ref" => [$mutect2_tumor_files, ".bam\$"],
     "singularity_image_files_ref" => ["singularity_image_files"],
     "cromwell_jar" => $wdl->{"cromwell_jar"},
     "input_option_file" => $wdl->{"cromwell_option_file"},
     "cromwell_config_file" => $server->{"cromwell_config_file"},
     "wdl_file" => $mutect2_pipeline->{"wdl_file"},
-    output_file_ext => $output_file_ext,
-    output_other_ext => $output_other_ext,
+    "output_file_ext" => $output_file_ext,
+    "output_other_ext" => $output_other_ext,
     "input_json_file" => $mutect2_pipeline->{"input_file"},
+    "use_filename_in_result" => 1,
     "input_parameters" => {
+      "Mutect2.m2_extra_args" => $mutect2_option,
       "Mutect2.intervals" => $def->{covered_bed},
       "Mutect2.ref_fasta" => $def->{ref_fasta},
       "Mutect2.ref_dict" => $def->{ref_fasta_dict},
       "Mutect2.ref_fai" => $def->{ref_fasta} . ".fai",
-      "Mutect2.normal_reads_ref" => [$mutect2_normal_files, ".bam\$"],
-      "Mutect2.normal_reads_index_ref" => [$mutect2_normal_files, ".bai\$"],
       "Mutect2.tumor_reads_ref" => [$mutect2_tumor_files, ".bam\$"],
       "Mutect2.tumor_reads_index_ref" => [$mutect2_tumor_files, ".bai\$"],
       "Mutect2.run_funcotator" => $run_funcotator,
+      "Mutect2.run_orientation_bias_mixture_model_filter" => $run_orientation_bias_mixture_model_filter
     },
-    "input_single" => $pon,
+    "input_single" => {},
     pbs=> {
       "nodes"     => "1:ppn=8",
       "walltime"  => "24",
       "mem"       => "70gb"
     },
   };
+
+  if($mutect2_tumor_only){
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.normal_reads"} = "";
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.normal_reads_index"} = "";
+  }else{
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.normal_reads_ref"} = [$mutect2_normal_files, ".bam\$"];
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.normal_reads_index_ref"} = [$mutect2_normal_files, ".bai\$"];
+  }
+
+  if($is_pon){
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon"} = "";
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon_idx"} = "";
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.gnomad"} = "";
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.gnomad_idx"} = "";
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.variants_for_contamination"} = "";
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.variants_for_contamination_idx"} = "";
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.run_funcotator"} = "false";
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.funco_reference_version"} = "";
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.funco_data_sources_tar_gz"} = "";
+    $config->{$mutect2_call}{"input_parameters"}{"Mutect2.funco_transcript_selection_list"} = "";
+  }else{
+    if( -e $pon ){
+      $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon"} = $pon;
+      $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon_idx"} = $pon_idx;
+    }elsif(defined $pon){
+      $config->{$mutect2_call}{"input_single"}{"Mutect2.pon_ref"} = $pon;
+      $config->{$mutect2_call}{"input_single"}{"Mutect2.pon_idx_ref"} = $pon_idx;
+    }else{
+      $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon"} = "";
+      $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon_idx"} = "";
+    }
+  }
+
   push @$tasks, $mutect2_call;
   return ($mutect2_call);
 }
-
-
 
 sub addSomaticCNV {
   my ($config, $def, $summary, $target_dir, $bam_input) = @_;
@@ -439,12 +419,12 @@ sub addSomaticCNV {
   } else {
     $run_funcotator="false";
   }
-  # my $output_sample_ext="hg19";
-  # if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
-  #   $output_sample_ext="hg38";
-  # } elsif ($def->{ncbi_build} eq "GRCm38")  {
-  #   $output_sample_ext="mm10";
-  # }
+  my $output_genome_ext="hg19";
+  if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
+    $output_genome_ext="hg38";
+  } elsif ($def->{ncbi_build} eq "GRCm38")  {
+    $output_genome_ext="mm10";
+  }
 
   $config->{$somaticCNV_call} = {     
     "class" => "CQS::Wdl",
@@ -455,7 +435,7 @@ sub addSomaticCNV {
     "input_option_file" => $wdl->{"cromwell_option_file"},
     "cromwell_config_file" => $server->{"cromwell_config_file"},
     "wdl_file" => $somaticCNV_pipeline->{"wdl_file"},
-#    output_file_ext => ".".$output_sample_ext."-filtered.annotated.maf",
+    output_file_ext => ".".$output_genome_ext.".called.seg",
 #    output_other_ext => ".".$output_sample_ext."-filtered.vcf",
     "input_json_file" => $somaticCNV_pipeline->{"input_file"},
     "input_parameters" => {
@@ -479,9 +459,234 @@ sub addSomaticCNV {
     $config->{$somaticCNV_call}->{input_parameters}->{"CNVSomaticPairWorkflow.common_sites"}=$def->{"CNVSomaticPairWorkflow.common_sites"};
   }
 
+#summary CNV results
+  my $somaticCNV_call_summary = $somaticCNV_prefix . getNextIndex($somaticCNV_index_dic, $somaticCNV_index_key) . "_summary";
+    $config->{$somaticCNV_call_summary} = {
+      class                      => "CQS::UniqueR",
+      perform                    => 1,
+      target_dir                 => $target_dir . '/' . $somaticCNV_call_summary,
+      rtemplate                  => "../CNV/GATKsomaticCNVSummary.R",
+      parameterSampleFile1_ref   => [ $somaticCNV_call, ".called.seg\$" ],
+ #     parameterFile1_ref         => [ $cnvAnnotationGenesPlot, ".position.txt.slim" ],
+#      parameterSampleFile2       => $def->{onco_options},
+#      parameterSampleFile3       => $def->{onco_sample_groups},
+      output_to_result_directory => 1,
+      output_file                => "",
+      output_file_ext            => ".allCNV.seg;.allCNV.filter.seg",
+      sh_direct                  => 1,
+      'pbs'                      => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '20gb',
+        'walltime' => '10'
+      },
+    };
+
   #push @$summary, $somaticCNV_call;
   return ($somaticCNV_call);
 }
 
+sub addCollectAllelicCounts {
+  my ($config, $def, $individual, $target_dir,$bam_input,$common_sites) = @_;
+  
+  my $server_key = getValue($def, "wdl_key", "local");
+  my $pipeline_key = "CollectAllelicCounts";
+  my $wdl = $def->{"wdl"};
+  my $server = $wdl->{$server_key};
+  my $pipeline = $server->{$pipeline_key};
+
+  my $genomeForOutputExt=getValue($def, "annovar_buildver", "hg38");
+  my $task = "${bam_input}_CollectAllelicCounts";
+
+  #only need tumor bam.
+  #$config->{$mutect2_tumor_files} was predefined in mutect2 task, here use it to get tumor samples/bams
+  #so don't need redefined it again
+  #my $mutect2_tumor_files = $mutect_prefix . "_tumor_files";
+
+  # if (not defined $def->{mutect2_groups}){
+  #   #for wdl mutect2, the result file will use tumor sample name in output
+  #   my $mutect2_groups = {};
+  #   my $groups = $def->{groups};
+  #   for my $group_name (sort keys %$groups) {
+  #     my $samples = $groups->{$group_name};
+  #     if (scalar(@$samples) == 1) {
+  #       $mutect2_groups->{$samples->[0]} = $samples;
+  #     }else{
+  #       $mutect2_groups->{$samples->[1]} = $samples;
+  #     }
+  #   }
+  #   $config->{mutect2_groups} = $mutect2_groups;
+  # }else{
+  #   $config->{mutect2_groups} = $def->{mutect2_groups};
+  # }
+  # $config->{$mutect2_tumor_files} = {     
+  #   "class" => "CQS::GroupPickTask",
+  #   "source_ref" => $bam_input,
+  #   "groups_ref" => "mutect2_groups",
+  #   "sample_index_in_group" => 1, 
+  # };
+
+  #if addMutect2 was run before, $mutect2_tumor_files exists in $config. Can use it to skip normal bam files
+  my $mutect2_prefix = "${bam_input}_muTect2_";
+  my $mutect2_tumor_files = $mutect2_prefix . "_tumor_files";
+  if (exists($config->{$mutect2_tumor_files})) {
+    $bam_input=$mutect2_tumor_files;
+  }
+
+  $config->{$task} = {     
+    "class" => "CQS::Wdl",
+    "target_dir" => "${target_dir}/$task",
+    "source_ref" => $bam_input,
+    "singularity_image_files_ref" => ["singularity_image_files"],
+    "cromwell_jar" => $wdl->{"cromwell_jar"},
+    "input_option_file" => $wdl->{"cromwell_option_file"},
+    "cromwell_config_file" => $server->{"cromwell_config_file"},
+    "wdl_file" => $pipeline->{"wdl_file"},
+    "input_json_file" => $pipeline->{"input_file"},
+    "input_parameters" => {
+      "CollectAllelicCountsWorkflow.ref_fasta" => $def->{ref_fasta},
+      "CollectAllelicCountsWorkflow.ref_fasta_dict" => $def->{ref_fasta_dict},
+      "CollectAllelicCountsWorkflow.ref_fasta_fai" => $def->{ref_fasta} . ".fai",
+      "CollectAllelicCountsWorkflow.tumor_bam_ref" =>  [$bam_input, ".bam\$"],
+      "CollectAllelicCountsWorkflow.tumor_bam_idx_ref" =>  [$bam_input, ".bai\$"],
+    },
+    "input_single" => {
+      "CollectAllelicCountsWorkflow.common_sites_ref" =>  [$common_sites, ".intervals\$"],
+    },
+    output_file_ext => ".$genomeForOutputExt.allelicCounts.tsv",
+#    output_other_ext => ".".$genomeForOutputExt.".bai",
+    pbs=> {
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "24",
+      "mem"       => getValue($def, "CollectAllelicCountsWorkflow.memory", "40gb")
+    },
+  };
+
+  print(Dumper($config->{$task}));
+  push @$individual, $task;
+  return ($task);
+}
+
+sub addEncodeATACseq {
+  my ($config, $def, $individual, $target_dir, $files_ref) = @_;
+
+  my $server_key = getValue($def, "wdl_key", "local");
+  my $pipeline_key = "encode_atacseq";
+  my $wdl = $def->{"wdl"};
+  my $server = $wdl->{$server_key};
+  my $pipeline = $server->{$pipeline_key};
+
+  my $task = $pipeline_key;
+  $config->{$task} = {     
+    "class" => "CQS::Wdl",
+    "option" => "--no-build-singularity",
+    "target_dir" => "${target_dir}/$pipeline_key",
+    "singularity_image_files_ref" => ["singularity_image_files"],
+    "cromwell_jar" => $wdl->{"cromwell_jar"},
+    "input_option_file" => $wdl->{"cromwell_option_file"},
+    "cromwell_config_file" => $server->{"cromwell_config_file"},
+    "wdl_file" => $pipeline->{"wdl_file"},
+    "input_json_file" => $pipeline->{"input_file"},
+    "input_parameters" => {
+      "atac.title" => "SAMPLE_NAME",
+      "atac.description" => "SAMPLE_NAME",
+      "atac.genome_tsv" => getValue($def, "encode_atacseq_genome_tsv"),
+      "atac.paired_end" => is_paired_end($def) ? "true" : "false",
+      "atac.adapter" => getValue($def, "adapter", ""),
+    },
+    output_to_same_folder => 0,
+    cromwell_finalOutputs => 0,
+    check_output_file_pattern => "metadata.json",
+    output_file_ext => "atac/",
+    use_caper => 1,
+    sh_direct   => 1,
+    pbs=> {
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "12",
+      "mem"       => "40gb"
+    },
+  };
+
+  if(defined $def->{replicates}){
+    my $replicates = $def->{replicates};
+    $config->{$task}{"source"} = $replicates;
+    my $max_len = 0;
+    for my $values (values %$replicates){
+      $max_len = max($max_len, scalar(@$values))
+    }
+    my $pick_index = 0;
+    while($pick_index < $max_len){
+      my $pick_str = $pick_index + 1;
+      my $group_i = "group_" . $pick_str;
+      $config->{$group_i} = {     
+        "class" => "CQS::GroupPickTask",
+        "source_ref" => $files_ref,
+        "groups"     => $def->{replicates},
+        "sample_index_in_group" => $pick_index,
+      };
+
+      my $fastq_1 = "fastq_${pick_str}_1";
+      $config->{$fastq_1} = {     
+        "class" => "CQS::FilePickTask",
+        "source_ref" => [$group_i],
+        "sample_index" => 0, 
+      };
+      
+      my $fastq_2 = "fastq_${pick_str}_2";
+      $config->{$fastq_2} = {     
+        "class" => "CQS::FilePickTask",
+        "source_ref" => [$group_i],
+        "sample_index" => 1, 
+      };
+      $config->{$task}{input_parameters}{"atac.fastqs_rep${pick_str}_R1_ref"} = [$fastq_1];
+      $config->{$task}{input_parameters}{"atac.fastqs_rep${pick_str}_R2_ref"} = [$fastq_2];
+
+      $pick_index = $pick_index + 1;
+    }
+  }else{
+    $config->{$task}{source_ref} = $files_ref;
+    my $fastq_1 = "fastq_1";
+    $config->{$fastq_1} = {     
+      "class" => "CQS::FilePickTask",
+      "source_ref" => $files_ref,
+      "sample_index" => 0, 
+    };
+    
+    my $fastq_2 = "fastq_2";
+    $config->{$fastq_2} = {     
+      "class" => "CQS::FilePickTask",
+      "source_ref" => $files_ref,
+      "sample_index" => 1, 
+    };
+    $config->{$task}{input_parameters}{"atac.fastqs_rep1_R1_ref"} = [$fastq_1];
+    $config->{$task}{input_parameters}{"atac.fastqs_rep1_R2_ref"} = [$fastq_2];
+  }
+
+  push @$individual, $task;
+
+  my $croo_task = $task . "_croo";
+  $config->{$croo_task} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => "${target_dir}/$croo_task",
+    interpretor => "python3",
+    program => "../Chipseq/croo.py",
+    option => "-n __NAME__ --croo " . getValue($def, "croo", "croo") . " --out_def_json " . getValue($def, "croo_out_def_json"),
+    source_arg => "-i",
+    source_ref => [$task],
+    output_arg => "-o",
+    output_file_prefix => "",
+    output_file_ext => "__NAME__/peak/overlap_reproducibility/overlap.optimal_peak.narrowPeak.gz",
+    output_to_same_folder => 1,
+    can_result_be_empty_file => 0,
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push @$individual, $croo_task;
+
+  return ($task);
+}
 
 1;

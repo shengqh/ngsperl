@@ -67,7 +67,7 @@ sub perform {
       }
       close($fl);
 
-      my $pythonCode = $noCategory ? "" : ($is_tRH? "": "python $python_script \"$ntaFile\" \"$ntaBaseFile\"");
+      my $pythonCode = $noCategory ? "" : ($is_tRH? "": "python3 $python_script \"$ntaFile\" \"$ntaBaseFile\"");
       print $pbs "
 if [ ! -s $outputname ]; then
   cqstools smallrna_table $option -o $outputname -l $filelist
@@ -95,7 +95,7 @@ fi
     my $ntaFile     = basename( $self->get_file( $result_dir, ${task_name}, ".miRNA.NTA.count",      0 ) );
     my $ntaBaseFile = basename( $self->get_file( $result_dir, ${task_name}, ".miRNA.NTA.base.count", 0 ) );
 
-    my $pythonCode = $noCategory ? "" : ($is_tRH?"": "python $python_script \"$ntaFile\" \"$ntaBaseFile\"");
+    my $pythonCode = $noCategory ? "" : ($is_tRH?"": "python3 $python_script \"$ntaFile\" \"$ntaBaseFile\"");
     print $pbs "
 cqstools smallrna_table $option -o $outputname -l $filelist
 $pythonCode

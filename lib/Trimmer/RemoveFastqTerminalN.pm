@@ -56,7 +56,7 @@ sub perform {
       my $sampleFile = $sample_files[0];
       my $trimFile = get_trim_file( $sampleFile, $extension );
       print $pbs "if [ ! -s $trimFile ]; then
-  python $py_script $option -i $sampleFile -o $trimFile 
+  python3 $py_script $option -i $sampleFile -o $trimFile 
 fi
 ";
     }
@@ -66,7 +66,7 @@ fi
       my $trim1file = get_trim_file( $read1file, $extension );
       my $trim2file = get_trim_file( $read2file, $extension );
       print $pbs "if [ ! -s $trim1file ]; then
-  python $py_script $option -i $read1file,$read2file -o $trim1file,$trim2file
+  python3 $py_script $option -i $read1file,$read2file -o $trim1file,$trim2file
 fi
 ";
     }

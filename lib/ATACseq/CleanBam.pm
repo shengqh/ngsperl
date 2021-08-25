@@ -20,6 +20,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_cb";
+  $self->{_use_tmp_folder} = 1;
   bless $self, $class;
   return $self;
 }
@@ -39,7 +40,7 @@ sub perform {
   my $maxInsertSize = get_option( $config, $section, "maximum_insert_size", 0 );
   my $is_paired_end = get_is_paired_end_option( $config, $section, 1 );
 
-  my $mark_duplicates = hasMarkDuplicate( $config->{$section} );
+  my $mark_duplicates = hasMarkDuplicate( $config->{$section}, 1 );
   my $picard_jar      = "";
   if ($mark_duplicates) {
     $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, not $self->using_docker() );
@@ -57,7 +58,6 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sampleFile   = $sample_files[0];
 
     my $redupFile = undef;
     my $finalFile = undef;
@@ -72,18 +72,27 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $finalFile );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $finalFile . ".bai" );
+
+    print $sh "
+if [[ ! -s $result_dir/${finalFile}.bai ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
+
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files, [".bai"])};
+    my $sampleFile   = $sample_files[0];
+
     my $rmlist = "";
     if ( !$isSortedByCoordinate ) {
       my $sorted = $sample_name . ".sortedByCoordinate.bam";
       print $pbs "
 if [ ! -s $sorted ]; then
   echo SortByCoordinate=`date` 
-  samtools sort -@ $thread -m $sort_memory -o $sorted $sampleFile 
+  samtools sort -m $sort_memory -o $sorted $sampleFile 
 fi
 ";
       $sampleFile = $sorted;
@@ -110,7 +119,7 @@ fi
     my $input = $sampleFile;
     if ($mark_duplicates) {
       print $pbs "
-if [[ -s $sampleFile && ! -s $redupFile ]]; then
+if [[ -s $sampleFile && ! -s ${redupFile}.bai ]]; then
   echo RemoveDuplicate=`date` 
   java -jar $picard_jar MarkDuplicates I=$sampleFile O=$redupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT M=${redupFile}.metrics
   samtools index $redupFile
@@ -125,7 +134,7 @@ fi
     if ( defined $maxInsertSize && $maxInsertSize > 0 ) {
       my $insertFile = $sample_name . ".insertsize.bam";
       print $pbs "
-if [[ -s $input && ! -s $insertFile ]]; then
+if [[ -s $input && ! -s ${insertFile}.bai ]]; then
   echo FilterInsertSize=`date`
   samtools view -h $input | awk -F '\\t' 'function abs(v) {return v < 0 ? -v : v} {if(substr(\$1,1,1) == \"\@\") {print \$0} else { if(abs(\$9) < $maxInsertSize) print \$0}}' | samtools view -b > $insertFile
   samtools index $insertFile
@@ -136,7 +145,7 @@ fi
     }
 
     print $pbs "
-if [[ -s $input && ! -s $filterFile ]]; then 
+if [[ -s $input && ! -s ${filterFile}.bai ]]; then 
   echo FilterBam=`date` 
   samtools idxstats $input | cut -f 1 | grep -v $remove_chromosome $keep_chromosome | xargs samtools view $option -b -q $minimum_maq $input $filterOption 
   samtools index $filterFile 
@@ -144,17 +153,18 @@ fi
 ";
     if ($is_paired_end) {
       print $pbs "
-if [[ -s $filterFile && ! -s $finalFile ]]; then 
+if [[ -s ${filterFile}.bai && ! -s ${finalFile}.bai ]]; then 
   echo RemoveUnpaired=`date` 
   samtools sort -n $filterFile | samtools fixmate -O bam - -| samtools view $option -b | samtools sort -T $sample_name -o $finalFile 
   samtools index $finalFile 
+  samtools idxstats $finalFile > ${finalFile}.chromosome.count
 fi
 ";
       $rmlist = $rmlist . " $filterFile ${filterFile}.bai";
     }
 
     print $pbs "
-if [[ -s $finalFile && ! -s ${finalFile}.stat ]]; then
+if [[ -s ${finalFile}.bai && ! -s ${finalFile}.stat ]]; then
   echo Stat=`date`
   samtools flagstat $finalFile > ${finalFile}.stat
 fi
@@ -165,6 +175,8 @@ if [ -s ${finalFile}.stat ]; then
   rm $rmlist  
 fi
 ";
+
+    $self->clean_temp_files($pbs, $localized_files);
 
     $self->close_pbs( $pbs, $pbs_file );
   }
@@ -193,6 +205,7 @@ sub result {
     my @result_files = ();
     push( @result_files, "${result_dir}/${finalFile}" );
     push( @result_files, "${result_dir}/${finalFile}.stat" );
+    push( @result_files, "${result_dir}/${finalFile}.chromosome.count" );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }

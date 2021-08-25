@@ -21,6 +21,7 @@ sub new {
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_macs";
   $self->{_group_keys} = ["groups", "inputs", "controls"];
+  $self->{_use_tmp_folder} = 1;
   bless $self, $class;
   return $self;
 }
@@ -48,17 +49,6 @@ sub perform {
     my $cur_dir    = create_directory_or_die( $result_dir . "/$sample_name" );
     my $final_file = "${sample_name}_peaks.name.bed";
 
-    my @sample_files = @{ $treatment_files{$sample_name} };
-    my $treatment = "-t " . join( ",", @sample_files );
-
-    my $control = "";
-    if (%control_files) {
-      if ( defined $control_files{$sample_name} ) {
-        my @c_files = @{ $control_files{$sample_name} };
-        $control = "-c " . join( ",", @c_files );
-      }
-    }
-
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
@@ -66,6 +56,22 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+
+    my @sample_files = @{ $treatment_files{$sample_name} };
+
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files, [".bai"])};
+    my $treatment = "-t " . join( ",", @sample_files );
+
+    my $control = "";
+    if (%control_files) {
+      if ( defined $control_files{$sample_name} ) {
+        my @c_files = @{ $control_files{$sample_name} };
+
+         @c_files = @{$self->localize_files_in_tmp_folder($pbs, \@c_files, $localized_files, [".bai"])};
+        $control = "-c " . join( ",", @c_files );
+      }
+    }
 
     my $sname = $sample_name;
     $sname =~ s/ /_/g;
@@ -79,6 +85,8 @@ if [[ -e ${sample_name}_peaks.bed && ! -e ${sample_name}_peaks.name.bed ]]; then
   sed 's/\\tMACS_peak_/\\t${sname}_/' ${sample_name}_peaks.bed > ${sample_name}_peaks.name.bed
 fi
 ";
+
+    $self->clean_temp_files($pbs, $localized_files);
 
     $self->close_pbs( $pbs, $pbs_file );
 

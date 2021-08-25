@@ -49,7 +49,7 @@ sub perform {
       my $finalFile = $name . "_" . $targetName . ".txt";
       
       print $pbs "
-python $py_script -i $template -o $finalFile --originalName $originalName --targetName $targetName 
+python3 $py_script -i $template -o $finalFile --originalName $originalName --targetName $targetName 
 ";  
     }
   }

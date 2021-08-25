@@ -49,6 +49,8 @@ sub perform {
   my $output_arg            = get_option( $config, $section, "output_arg" );
   my $no_output            = get_option( $config, $section, "no_output", 0 );
   
+  my $other_localization_ext_array = get_option( $config, $section, "other_localization_ext_array", [] );
+
   my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, "source" );
   my @sample_names = ( sort keys %$parameterSampleFile1 );
   my $has_multi_samples = scalar(@sample_names) > 1;
@@ -70,7 +72,7 @@ sub perform {
       next;
     }
 
-    my ( $parameterSampleFile, $parameterSampleFilearg, $parameterSampleFileJoinDelimiter ) = get_parameter_sample_files( $config, $section, $key );
+    my ( $parameterSampleFile, $parameterSampleFilearg, $parameterSampleFileJoinDelimiter, $paramterSampleFileNameArg, $parameterSampleFileNameJoinDelimiter ) = get_parameter_sample_files( $config, $section, $key );
     my $bFound = 0;
     for my $sample_name ( sort keys %$parameterSampleFile1 ) {
       if ( defined $parameterSampleFile->{$sample_name} ) {
@@ -78,11 +80,8 @@ sub perform {
       }
     }
     if ( not $bFound ) {
-      my $listfile = save_parameter_sample_file( $config, $section, $key, "${result_dir}/${task_name}_${task_suffix}_fileList${index}.list" );
-      if ( $listfile ne "" ) {
-        $listfile = basename($listfile);
-        $option = $option . " " . $parameterSampleFilearg . " " . $listfile;
-      }
+      my $input;
+      ($option, $input) = process_parameter_sample_file($config, $section, $result_dir, $task_name, $task_suffix, $option, $key, $index);
     }else{
       $paramFileMap->{$key} = [$parameterSampleFile, $parameterSampleFilearg, $parameterSampleFileJoinDelimiter, $index];
     }
@@ -99,16 +98,22 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    if ( $has_multi_samples ) {
-      print $sh "\$MYCMD ./$pbs_name \n";
-    }
-
     my $log_desc = $cluster->get_log_description($log);
 
     my $final_file = $expect_result->{$sample_name}[-1];
     my $pbs        = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
+    if ( $has_multi_samples ) {
+      print $sh "if [[ ! -s $final_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
+    }
+
     my $final_prefix = $output_to_folder ? "." : $sample_name . $output_file_prefix;
+
+    my $localized_files = [];
+    $parameterSampleFile1->{$sample_name} = $self->localize_files_in_tmp_folder($pbs, $parameterSampleFile1->{$sample_name}, $localized_files, $other_localization_ext_array);
 
     #print Dumper($parameterSampleFile1->{$sample_name});
 
@@ -124,6 +129,21 @@ sub perform {
     } else{
       my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name, $result_dir, 1 );
       $curOption = $curOption . " " . $param_option1;
+    }
+
+    my $ignored_map = {};
+    for my $index (2..10){
+      my $key = "parameterSampleFile" . $index;
+      $ignored_map->{$key} = 0;
+      my $place_hold = "__FILE${index}__";
+      if ($curOption =~ /$place_hold/){
+        my $file_options = $paramFileMap->{$key};
+        #$parameterSampleFile, $parameterSampleFilearg, $parameterSampleFileJoinDelimiter, $index
+        my $param_option = get_program_param( $file_options->[0], "", $file_options->[2], $sample_name, $result_dir, $index );
+        #print("delimiter=" . $parameterSampleFile1JoinDelimiter . "\n");
+        $curOption =~ s/$place_hold/$param_option/g;
+        $ignored_map->{$key} = 1;
+      }
     }
 
     my $output_option = "$output_arg $final_prefix";
@@ -152,7 +172,9 @@ sub perform {
 
     for my $key (sort keys %$paramFileMap){
       my $values = $paramFileMap->{$key};
-      $curOption = $curOption . " " . get_program_param( $values->[0], $values->[1],$values->[2], $sample_name, $result_dir, $values->[3] );
+      if(!$ignored_map->{$key}) {
+        $curOption = $curOption . " " . get_program_param( $values->[0], $values->[1],$values->[2], $sample_name, $result_dir, $values->[3] );
+      }
     }
 
     print $pbs "
@@ -161,6 +183,9 @@ $cur_init_command
 $interpretor $program $curOption $output_option
 
 ";
+
+    $self->clean_temp_files($pbs, $localized_files);
+
     $self->close_pbs( $pbs, $pbs_file );
   }
 
@@ -182,6 +207,8 @@ sub result {
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
+  my $output_no_name = get_option( $config, $section, "output_no_name", 0 );
+
   my ( $source_files, $source_file_arg, $source_file_join_delimiter ) = get_parameter_sample_files( $config, $section, "source" );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
   my $output_exts           = get_output_ext_list( $config, $section );
@@ -194,7 +221,9 @@ sub result {
     for my $output_ext (@$output_exts) {
       my $result_file;
       if ( $output_ext ne "" ) {
-        if ($output_ext =~ /__NAME__/) {
+        if ($output_no_name) {
+          $result_file = $output_ext;
+        }elsif($output_ext =~ /__NAME__/) {
           $result_file = $output_ext;
           $result_file =~ s/__NAME__/$sample_name/g;
         }else{

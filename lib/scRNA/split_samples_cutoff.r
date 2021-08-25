@@ -3,7 +3,7 @@ library(ggplot2)
 
 #devtools::install_github("choisy/cutoff")
 #install.packages("bbmle")
-library(cutoff)
+library(choisycutoff)
 library(zoo)
 library(reshape2)
 library(gridExtra)
@@ -22,9 +22,13 @@ rplot<-function(object, features, assay, identName, withAllCells=FALSE){
   for(feature in features){
     ddata=mdata[mdata$variable==feature,]
     g<-ggplot(ddata, aes_string(x="value")) + 
-      geom_density() + 
+      geom_histogram(aes(y=..density..), bins=50, colour="black", fill="white", position="identity") + 
+      geom_density(color="red") +
       facet_grid(reformulate(".", identName), scale="free_y") + 
-      xlab(feature) + theme_bw() + theme(strip.background=element_rect(colour="black", fill=NA))
+      xlab(feature) + theme_bw() + theme(strip.background=element_rect(colour="black", fill=NA),
+                                         strip.text = element_text(size = 24),
+                                         axis.text=element_text(size=18),
+                                         axis.title=element_text(size=24))
     if (feature != features[1]){  
       g = g + ylab("")
     }
@@ -34,8 +38,16 @@ rplot<-function(object, features, assay, identName, withAllCells=FALSE){
 }
 
 my_startval <- function(values,D1="normal",D2="normal") {
-  den=density(values)
-  
+  den <- tryCatch(
+    expr = {
+      res=density(values, bw="SJ")
+      return(res)
+    },
+    error = function(e){ 
+      res=density(values)
+      return(res)
+    }
+  )
   w=1
   x=den$x
   y=den$y
@@ -47,7 +59,12 @@ my_startval <- function(values,D1="normal",D2="normal") {
   res=data.frame(x=x[i.max], i=i.max, y=y[i.max])
   res=res[order(res$y, decreasing = T),]
   if(nrow(res)>2){
-    res=res[1:2,]
+    #the highest peaks should be the negative one, positive one is always in the right side.
+    res=res[res$x>=res$x[1],]
+
+    if(nrow(res)>2){
+      res=res[1:2,]
+    }
   }
   res=res[order(res$x),]
   
@@ -72,8 +89,8 @@ t=1e-64
 my_em<-function(values, data_name="em", D1="normal", D2="normal", t=1e-64){
   start <- as.list(my_startval(values, D1, D2))
   
-  D1b <- cutoff:::hash[[D1]]
-  D2b <- cutoff:::hash[[D2]]
+  D1b <- choisycutoff:::hash[[D1]]
+  D2b <- choisycutoff:::hash[[D2]]
   lambda0 <- 0
   with(start, {
     while (abs(lambda0 - mean(lambda)) > t) {
@@ -82,7 +99,7 @@ my_em<-function(values, data_name="em", D1="normal", D2="normal", t=1e-64){
       distr1 <- lambda * D1b(values, mu1, sigma1)
       distr2 <- (1 - lambda) * D2b(values, mu2, sigma2)
       lambda <- distr1/(distr1 + distr2)
-      mLL2 <- function(mu1, sigma1, mu2, sigma2) return(cutoff:::mLL(mu1, 
+      mLL2 <- function(mu1, sigma1, mu2, sigma2) return(choisycutoff:::mLL(mu1, 
                                                                      sigma1, mu2, sigma2, lambda, values, D1b, D2b))
       start <- as.list(log(c(mu1 = mu1, sigma1 = sigma1, 
                              mu2 = mu2, sigma2 = sigma2)))
@@ -110,8 +127,8 @@ my_cutoff<-function (object, t = 1e-64, nb = 10, distr = 2, type1 = 0.05, level 
       names(x) <- the_names
       return(as.list(x))
   })
-  out <- sapply(coef, function(x) cutoff:::lci0(x, mean(object$lambda), 
-      cutoff:::hash[[object$D1]], cutoff:::hash[[object$D2]], object$data, t))
+  out <- sapply(coef, function(x) choisycutoff:::lci0(x, mean(object$lambda), 
+      choisycutoff:::hash[[object$D1]], choisycutoff:::hash[[object$D2]], object$data, t))
   lambda <- rnorm(nb, out[1, ], out[2, ])
   coef <- sapply(coef, function(x) unlist(x))
   the_names <- c(rownames(coef), "lambda")
@@ -120,7 +137,7 @@ my_cutoff<-function (object, t = 1e-64, nb = 10, distr = 2, type1 = 0.05, level 
       names(x) <- the_names
       return(as.list(x))
   })
-  out <- sapply(coef, function(x) with(x, cutoff:::cutoff0(mu1, 
+  out <- sapply(coef, function(x) with(x, choisycutoff:::cutoff0(mu1, 
       sigma1, mu2, sigma2, lambda, object$D1, object$D2, distr, type1)))
   out <- MASS::fitdistr(out, "normal")
   the_mean <- out$estimate["mean"]
@@ -145,33 +162,52 @@ get_cutoff<-function(values, prefix){
 }
 
 split<-function(h5file, output_prefix, hashtag_regex=NA) {
-  sdata<-Read10X_h5(h5file)
-  
-  exp<-sdata[[1]]
-  meta<-sdata[[2]]
-  mat<-as.matrix(meta)
-  rowsum<-apply(mat>0, 1, sum)
-  mat<-mat[rowsum > (ncol(mat) / 2),]
-  rownames(mat)<-gsub("\\.1$", "", rownames(mat))
+  if(grepl('.rds$', h5file)){
+    meta<-readRDS(h5file)
+    meta<-as.matrix(meta)
+    #tag number should less than cell number
+    if(ncol(meta) < nrow(meta)){
+      meta=t(meta)
+    }
+  }else{
+    sdata<-Read10X_h5(h5file)
+    meta<-sdata[[2]]
+    meta<-as.matrix(meta)
+  }
+  mat<-meta
+  write.csv(mat, file=paste0(output_prefix, ".alltags.exp.csv"))
+
+  cat("All tags: ", paste(rownames(mat), collapse=","), "\n")
   
   if (!is.na(hashtag_regex)) {
     htos<-mat[grepl(hashtag_regex, rownames(mat)),]
+    if (nrow(htos) == 0){
+      stop(paste0("Cannot find hashtag based on regex ", hashtag_regex, " for tags ", paste(rownames(mat), collapse=",")))
+    }
+    cat("All hash tags matched regex: ", paste(rownames(htos), collapse=","), "\n")
   }else{
     htos<-mat
   }
-  rownames(htos)<-gsub("_.*", "", rownames(htos))
+  rownames(htos)<-gsub("^TotalSeqC_", "", rownames(htos))
+  rownames(htos)<-gsub("^TotalSeq_", "", rownames(htos))
+  rownames(htos)<-gsub('.TotalSeqC$', "", rownames(htos))
+
+  empty_cell_sum<-apply(htos, 2, sum)
+  htos<-htos[,empty_cell_sum > 0]
+
+  write.csv(htos, file=paste0(output_prefix, ".hto.exp.csv"))
   
-  pbmc.hashtag <- CreateSeuratObject(counts = exp)
-  pbmc.hashtag[["HTO"]] <- CreateAssayObject(counts = htos)
+  pbmc.hashtag <- CreateSeuratObject(counts = htos, assay="HTO")
   # Normalize HTO data, here we use centered log-ratio (CLR) transformation
   pbmc.hashtag <- NormalizeData(pbmc.hashtag, assay = "HTO", normalization.method = "CLR")
+  DefaultAssay(object = pbmc.hashtag) <- "HTO"
   
   #Idents(pbmc.hashtag) <- "HTO_classification"
   tagnames=rownames(pbmc.hashtag[["HTO"]])
   
   width=max(10, length(tagnames) * 5)
   pdf(paste0(output_prefix, ".tag.dist.pdf"), width=width, height=6)
-  rplot(pbmc.hashtag, assay = "HTO", features = tagnames, identName="orig.ident")
+  rplot(pbmc.hashtag, assay="HTO", features = tagnames, identName="orig.ident")
   dev.off()
   
   data <- FetchData(object=pbmc.hashtag, vars=tagnames)
@@ -180,6 +216,7 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   tagname=tagnames[1]  
   for (tagname in tagnames) {
     values=data[,tagname]
+    values=values[values>0]
     cat(paste0("get cutoff of ", tagname, " ...\n"))
     cutoff=get_cutoff(values, paste0(output_prefix, "_", tagname))
     data[,paste0(tagname,"_pos")] = ifelse(data[,tagname]>cutoff, tagname, "Negative")
@@ -214,27 +251,51 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   pbmc.hashtag[["HTO_classification"]] = data$HTO_classification
   pbmc.hashtag[["HTO_classification.global"]] = data$HTO_classification.global
   
-  width=max(10, length(tagnames) * 5)
-  pdf(paste0(output_prefix, ".class.dist.pdf"), width=width, height=8)
+  width=max(1600, length(tagnames) * 600)
+  height=1400
+
+  png(paste0(output_prefix, ".class.dist.png"), width=width, height=height)
   rplot(pbmc.hashtag, assay = "HTO", features = tagnames, identName="HTO_classification")
   dev.off()
   
   if (length(tagnames) == 2) {
-    pdf(paste0(output_prefix, ".class.point.pdf"), width=width, height=8)
+    pdf(paste0(output_prefix, ".class.point.png"), width=width, height=height)
     print(FeatureScatter(object = pbmc.hashtag, feature1 = tagnames[1], feature2 = tagnames[2],group.by="HTO_classification"))
     dev.off()
   }
   
-  tmat=data.frame(t(mat))
-  tmat$HTO = pbmc.hashtag$HTO_classification
-  tmat$HTO.global = pbmc.hashtag$HTO_classification.global
-  tmat$nCount_RNA = pbmc.hashtag$nCount_RNA
-  tmat$nFeature_RNA = pbmc.hashtag$nFeature_RNA
+  tmat=data.frame(t(htos))
+  tmat$HTO = obj$HTO_classification
+  tmat$HTO.global = obj$HTO_classification.global
   write.csv(tmat, paste0(output_prefix, ".csv"))
   
-  width=length(tagnames) * 3
-  pdf(paste0(output_prefix, ".class.RNA_Feature.pdf"), width=width, height=4)
-  g<-ggplot(tmat, aes(x=nCount_RNA, y=nFeature_RNA)) + geom_point() + facet_grid(~HTO.global) + theme_bw() + theme(strip.background = element_blank())
+  VariableFeatures(pbmc.hashtag)<-rownames(pbmc.hashtag)
+  pbmc.hashtag<-ScaleData(pbmc.hashtag)
+  pbmc.hashtag<-RunUMAP(pbmc.hashtag, features=rownames(pbmc.hashtag))
+  
+  png(paste0(output_prefix, ".umap.class.png"), width=1000, height=800)
+  g<-DimPlot(pbmc.hashtag, reduction = "umap", group.by="HTO_classification")
+  print(g)
+  dev.off()
+  
+  png(paste0(output_prefix, ".umap.tag.png"), width=1600, height=1600)
+  g<-FeaturePlot(pbmc.hashtag, features=tagnames, reduction = "umap")
+  print(g)
+  dev.off()
+  
+  hto_names=unique(pbmc.hashtag$HTO_classification)
+  a_hto_names=hto_names[!(hto_names %in% c("Doublet","Negative"))]
+  a_hto_names=a_hto_names[order(a_hto_names)]
+  hto_names=c(a_hto_names, "Negative", "Doublet")
+  cols=rep("gray", length(hto_names))
+  names(cols)=hto_names
+  cols[['Negative']]="blue"
+  cols[["Doublet"]]="red"
+
+  pbmc.hashtag$HTO_classification=factor(pbmc.hashtag$HTO_classification, levels=hto_names)
+  png(paste0(output_prefix, ".umap.all.png"), width=1000, height=800)
+  g<-DimPlot(pbmc.hashtag, reduction = "umap", label=T, group.by="HTO_classification", order=c("Negative", "Doublet"))+
+    scale_color_manual(values=cols)
   print(g)
   dev.off()
 }
@@ -242,11 +303,9 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
 args = commandArgs(trailingOnly=TRUE)
 
 if (length(args) == 0) {
-  h5file = "/data/cqs/paula_hurley_data/202011_scRNA/Count/4701-HYW-1/filtered_feature_bc_matrix.h5"
-  output_prefix = "/scratch/cqs/paula_hurley_projects/20201208_scRNA_split/split_samples/pbs/HYW_4701.HTO"
-  #h5file = "C:/Users/sheng/projects/paula_hurley/20201208_scRNA_split/filtered_feature_bc_matrix.h5"
-  #output_prefix = "C:/Users/sheng/projects/paula_hurley/20201208_scRNA_split/split_samples/HYW_4701.HTO"
-  hashtag_regex = NA
+  h5file = "/data/cqs/seurat_data/hto12_hto_valid.rds"
+  output_prefix = "/scratch/cqs/shengq2/papers/20210703_scrna_hto/hto_samples_cutoff/result/hto12/hto12.HTO"
+  hashtag_regex='Hashtag|TotalSeqC_|C025|Benign|Tumor|HTO|HEK|THP|K562|KG1'
 }else{
   h5file = args[1]
   output_prefix = args[2]

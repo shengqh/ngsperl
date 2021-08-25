@@ -21,6 +21,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_sf";
+  $self->{_use_tmp_folder} = 1;
   bless $self, $class;
   return $self;
 }
@@ -76,9 +77,9 @@ sub perform {
   }
 
   my $featureCountOption = get_option( $config, $section, "featureCount_option", "" );
-  my $ispaired = get_option( $config, $section, "is_paired_end" );
+  my $ispaired = get_is_paired_end_option( $config, $section );
   if ($ispaired) {
-    $featureCountOption = $featureCountOption . " -p";
+    $featureCountOption = $featureCountOption . " -p --countReadPairs";
   }
 
   if ( $featureCountOption !~ /-g/ ) {
@@ -99,11 +100,6 @@ sub perform {
 
   for my $sample_name ( sort keys %fqFiles ) {
     my @sample_files = @{ $fqFiles{$sample_name} };
-    my $sample_file_1 = $sample_files[0];
-
-    my $uncompress = ( $sample_file_1 =~ /.gz$/ ) ? " --readFilesCommand zcat" : "";
-
-    my $samples = join( " ", @sample_files );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -123,37 +119,67 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
+    print $pbs "
+
+if [[ -e $result_dir/${sample_name}.star.failed ]]; then
+  rm $result_dir/${sample_name}.star.failed
+fi
+
+if [[ -e $result_dir/${sample_name}.featureCount.failed ]]; then
+  rm $result_dir/${sample_name}.featureCount.failed
+fi
+";
+
     my $chromosome_grep_command = $output_sort_by_coordinate ? getChromosomeFilterCommand( $final_bam, $chromosome_grep_pattern ) : "";
 
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files)};
+    my $samples = join( " ", @sample_files );
+    my $sample_file_1 = $sample_files[0];
+    my $uncompress = ( $sample_file_1 =~ /.gz$/ ) ? " --readFilesCommand zcat" : "";
+
     print $pbs "
-if [[ ! -s $final_bam && -s $sample_file_1 ]]; then
+status=1
+
+if [[ -s $sample_file_1 ]]; then
   echo performing star ...
   $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch ${sample_name}.star.succeed
+  else
+    rm $unsorted
+    touch ${sample_name}.star.failed
+  fi
+
   $star --version | awk '{print \"STAR,v\"\$1}' > ${final_file}.star.version
   rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
 fi
-";
 
-    print $pbs "
-if [ -s $unsorted ]; then
+if [[ \$status -eq 0 ]]; then
   echo bamStat=`date` 
-  python $py_script -i $unsorted -o $bam_stat
+  python3 $py_script -i $unsorted -o $bam_stat
 fi
 ";
 
-
   if ($output_sort_by_coordinate) {
     print $pbs "
-if [ ! -s ${final_bam} ]; then
-  sambamba sort -m $sort_memory -t $thread -o $final_bam $unsorted
-  sambamba index $final_bam
+if [[ \$status -eq 0 ]]; then
+  echo bamSort=`date` 
+  samtools sort -m $sort_memory -T ${sample_name} -t $thread -o $final_bam $unsorted && touch ${final_bam}.succeed
+  if [[ ! -e ${final_bam}.succeed ]]; then
+    rm $final_bam
+  else
+    samtools index $final_bam
+    samtools idxstats $final_bam > ${final_bam}.chromosome.count
+  fi
 fi  
 ";
   }
 
 print $pbs "
 
-if [ -s $final_bam ]; then
+if [[ \$status -eq 0 && -s $final_bam ]]; then
   $chromosome_grep_command
   
   if [ ! -s ${sample_name}.splicing.bed ]; then
@@ -161,16 +187,24 @@ if [ -s $final_bam ]; then
   fi
 fi
 
-if [ -s $unsorted ]; then
+if [[ \$status -eq 0 ]]; then
   echo performing featureCounts ...
   featureCounts $featureCountOption -T $thread -a $gffFile -o $final_file $unsorted
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch ${sample_name}.featureCount.succeed
+  else
+    touch ${sample_name}.featureCount.failed
+    rm $final_file
+  fi
+
   featureCounts -v 2>\&1 | grep featureCounts | cut -d ' ' -f2 | awk '{print \"featureCounts,\"\$1}' > ${final_file}.featureCounts.version
 fi 
 ";
 
     if ( !$output_unsorted ) {
       print $pbs "
-if [ -s $final_file ]; then
+if [[ -s $final_file && -s $bam_stat ]]; then
   rm $unsorted 
 fi
 ";
@@ -185,8 +219,15 @@ fi
 ";
     }
 
+    $self->clean_temp_files($pbs, $localized_files);
+
     $self->close_pbs( $pbs, $pbs_file );
-    print $sh "\$MYCMD ./$pbs_name \n";
+
+    print $sh "
+if [[ ! -s $result_dir/$final_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
   }
   print $sh "exit 0\n";
   close $sh;
@@ -222,15 +263,16 @@ sub result {
     push( @result_files, "$cur_dir/${sample_name}.count.summary" );
     push( @result_files, "$cur_dir/${sample_name}_Log.final.out" );
     push( @result_files, "$cur_dir/${sample_name}.bamstat" );
+    push( @result_files, "$cur_dir/${sample_name}.count" );
     if (!$delete_star_featureCount_bam) {
       if ($output_sort_by_coordinate) {
         push( @result_files, "$cur_dir/${sample_name}_Aligned.sortedByCoord.out.bam" );
+        push( @result_files, "$cur_dir/${sample_name}_Aligned.sortedByCoord.out.bam.chromosome.count" );
       }
       if ($output_unsorted) {
         push( @result_files, "$cur_dir/${sample_name}_Aligned.out.bam" );
       }
     }
-    push( @result_files, "$cur_dir/${sample_name}.count" );
     push( @result_files, "$cur_dir/${sample_name}.count.star.version" );
     push( @result_files, "$cur_dir/${sample_name}.count.featureCounts.version" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );

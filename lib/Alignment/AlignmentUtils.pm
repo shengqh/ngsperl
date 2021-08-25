@@ -66,8 +66,11 @@ sub getAddRgCommand {
 }
 
 sub hasMarkDuplicate {
-  my ($section) = @_;
-  return get_option_value( $section->{"mark_duplicates"}, 0 );
+  my ($section, $defaultValue) = @_;
+  if(not defined $defaultValue){
+    $defaultValue = 0;
+  }
+  return get_option_value( $section->{"mark_duplicates"}, $defaultValue );
 }
 
 1;

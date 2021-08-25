@@ -110,7 +110,7 @@ if [[ -s $sam_file ]]; then
 fi
 
 if [[ -s $final_file && -s $sam_file ]]; then
-  samtools sort -@ $thread -T ${sample_name}_tmp -o $bam_file $sam_file
+  samtools sort -T ${sample_name}_tmp -o $bam_file $sam_file
   if [ -s $bam_file ]; then
     rm $collapserFasta $sam_file 
     samtools index $bam_file 

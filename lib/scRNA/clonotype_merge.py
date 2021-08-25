@@ -60,8 +60,11 @@ def merge(json_file_list, output_file, logger):
       data = json.load(fin)
       for record in data:
         record['barcode'] = json_file_name + "_" + record['barcode']
-        for key in record['info']:
-          record['info'][key] = json_file_name + "_" + record['info'][key]
+        if 'info' in record:
+          for key in record['info']:
+            v = record['info'][key]
+            if v != None:
+              record['info'][key] = json_file_name + "_" + record['info'][key]
         finaldata.append(record)
 
         cdr3=record['cdr3']

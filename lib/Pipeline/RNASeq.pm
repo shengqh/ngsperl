@@ -61,7 +61,7 @@ sub initializeRNASeqDefaultOptions {
 
   initDefaultValue( $def, "featureCount_option",        "-g gene_id -t exon" );
   initDefaultValue( $def, "aligner",                    "star" );
-  initDefaultValue( $def, "star_option",                "--twopassMode Basic --outSAMprimaryFlag AllBestScore" );
+  initDefaultValue( $def, "star_option",                "--twopassMode Basic --outSAMmapqUnique 60 --outSAMprimaryFlag AllBestScore" );
   initDefaultValue( $def, "use_pearson_in_hca",         1 );
   initDefaultValue( $def, "top25cv_in_hca",             0 );
   initDefaultValue( $def, "use_green_red_color_in_hca", 1 );
@@ -98,6 +98,34 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "DE_showVolcanoLegend", 1 );
 
   return $def;
+}
+
+sub getDeseq2Suffix {
+  my ($config, $def, $deseq2taskname) = @_;
+
+  my $suffix = "";
+  if ( ( defined $deseq2taskname ) && ( defined $config->{$deseq2taskname} ) ) {
+    if ( getValue( $def, "DE_top25only", 0 ) ) {
+      $suffix = $suffix . "_top25";
+    }
+
+    if ( getValue( $def, "DE_detected_in_both_group", 0 ) ) {
+      $suffix = $suffix . "_detectedInBothGroup";
+    }
+
+    my $minMedianInGroup = getValue( $def, "DE_min_median_read", 5 );
+    if ( $minMedianInGroup > 0 ) {
+      $suffix = $suffix . "_min" . $minMedianInGroup;
+    }
+    if ( getValue( $def, "DE_use_raw_pvalue", 0 ) ) {
+      $suffix = $suffix . "_pvalue" . $def->{DE_pvalue};
+    }
+    else {
+      $suffix = $suffix . "_fdr" . $def->{DE_pvalue};
+    }
+  }
+
+  return($suffix);
 }
 
 sub getRNASeqConfig {
@@ -155,7 +183,7 @@ sub getRNASeqConfig {
     my $sf_task = addStarFeaturecount($config, $def, $individual, $summary, $target_dir, $source_ref, "" );
 
     $source_ref      = [ $sf_task, "_Aligned.sortedByCoord.out.bam\$" ];
-    $count_table_ref = [ $sf_task, ".count\$" ];
+    $count_table_ref = [ $sf_task, "(?!chromosome).count\$" ];
 
     $multiqc_depedents = $sf_task;
   }
@@ -186,8 +214,6 @@ sub getRNASeqConfig {
             sh_direct                 => 0,
             star_location             => $def->{star_location},
             pbs                       => {
-              "email"     => $email,
-              "emailType" => $def->{emailType},
               "nodes"     => "1:ppn=" . $def->{max_thread},
               "walltime"  => "23",
               "mem"       => "40gb"
@@ -203,8 +229,6 @@ sub getRNASeqConfig {
             parameterSampleFile1_ref => [ "star", "_Log.final.out" ],
             sh_direct                => 1,
             pbs                      => {
-              "email"     => $email,
-              "emailType" => $def->{emailType},
               "nodes"     => "1:ppn=1",
               "walltime"  => "2",
               "mem"       => "10gb"
@@ -228,8 +252,6 @@ sub getRNASeqConfig {
             output_to_same_folder => $def->{output_bam_to_same_folder},
             sh_direct             => 1,
             pbs                   => {
-              "email"     => $email,
-              "emailType" => $def->{emailType},
               "nodes"     => "1:ppn=" . $def->{max_thread},
               "walltime"  => "23",
               "mem"       => "40gb"
@@ -261,8 +283,6 @@ sub getRNASeqConfig {
         is_paired_end => is_paired_end($def),
         sh_direct     => 0,
         pbs           => {
-          "email"     => $email,
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "23",
           "mem"       => "40gb"
@@ -274,12 +294,11 @@ sub getRNASeqConfig {
         target_dir               => $featureCountFolder,
         option                   => "",
         rtemplate                => "../Alignment/STARFeatureCount.r",
-        output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
+        #output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
+        output_file_ext          => ".STARSummary.csv;.STARSummary.csv.png",
         parameterSampleFile2_ref => [ "featurecount", ".count.summary" ],
         sh_direct                => 1,
         pbs                      => {
-          "email"     => $email,
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "2",
           "mem"       => "10gb"
@@ -291,6 +310,25 @@ sub getRNASeqConfig {
       $count_table_ref = [ "featurecount", ".count\$" ];
       $multiqc_depedents = "featurecount";
     }
+  }
+
+  if(defined $def->{annotation_genes}){
+    my $genes_str = $def->{annotation_genes};
+    my @genes = split /[;, ]+/, $genes_str;
+    my %gene_map = map { $_ => 1 } @genes;
+    $config->{annotation_genes} = \%gene_map;
+    #print(Dumper($config->{annotation_genes}));
+
+    my $geneLocus = addGeneLocus($config, $def, $summary, $target_dir);
+
+    if($def->{perform_bamsnap}){
+      my $bamsnap_task = "annotation_genes_bamsnap";
+      addBamsnap($config, $def, $summary, $target_dir, $bamsnap_task, [$geneLocus, "bed"], $source_ref);
+    }
+
+    my $sizeFactorTask = "size_factor";
+    addSizeFactor($config, $def, $summary, $target_dir, $sizeFactorTask, $source_ref);
+    addPlotGene($config, $def, $summary, $target_dir, "annotation_genes_plot", $sizeFactorTask, [ $geneLocus, ".bed" ], $source_ref);
   }
 
   my $perform_count_table = $def->{perform_counting} || $def->{perform_count_table};
@@ -307,8 +345,6 @@ sub getRNASeqConfig {
       name_map_file             => $name_map_file,
       sh_direct                 => 1,
       pbs                       => {
-        "email"     => $email,
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "23",
         "mem"       => "40gb"
@@ -346,14 +382,12 @@ sub getRNASeqConfig {
       output_file_ext => ".Correlation.png;.density.png;.heatmap.png;.PCA.png;.Correlation.Cluster.png",
       sh_direct       => 1,
       pbs             => {
-        "email"     => $email,
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "23",
         "mem"       => "40gb"
       },
     };
-    if ( ref($count_file_ref) eq "ARRAY" ) {
+    if ( is_array($count_file_ref) ) {
       $config->{genetable_correlation}{parameterSampleFile1_ref} = $count_file_ref;
     }
     else {
@@ -424,26 +458,7 @@ sub getRNASeqConfig {
     }
 
     if ( getValue( $def, "perform_webgestalt" ) ) {
-      $webgestaltTaskName = $deseq2taskname . "_WebGestalt";
-      $config->{$webgestaltTaskName} = {
-        class            => "Annotation::WebGestaltR",
-        perform          => 1,
-        target_dir       => $target_dir . "/" . getNextFolderIndex($def) . $webgestaltTaskName,
-        option           => "",
-        source_ref       => [ $deseq2taskname, "sig_genename.txt\$" ],
-        organism         => getValue( $def, "webgestalt_organism" ),
-        interestGeneType => $def->{interestGeneType},
-        referenceSet     => $def->{referenceSet},
-        sh_direct        => 1,
-        pbs              => {
-          "email"     => $email,
-          "emailType" => $def->{emailType},
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "23",
-          "mem"       => "10gb"
-        },
-      };
-      push @$summary, "$webgestaltTaskName";
+      $webgestaltTaskName = addWebgestalt($config, $def, $summary, $target_dir, $deseq2taskname, [ $deseq2taskname, "sig_genename.txt\$" ]);
 
       #if ( defined $def->{perform_link_webgestalt_deseq2} ) {
       $linkTaskName = $webgestaltTaskName . "_link_deseq2";
@@ -451,7 +466,7 @@ sub getRNASeqConfig {
         class                      => "CQS::UniqueR",
         perform                    => 1,
         target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $linkTaskName,
-        rtemplate                  => "../Annotation/WebGestaltDeseq2.r",
+        rtemplate                  => "../Annotation/WebGestaltReportFunctions.r;../Annotation/WebGestaltDeseq2.r",
         rReportTemplate            => "../Annotation/WebGestaltDeseq2.rmd",
         output_to_result_directory => 1,
         output_perSample_file      => "parameterSampleFile1",
@@ -461,8 +476,6 @@ sub getRNASeqConfig {
         sh_direct                  => 1,
         rCode                      => "",
         pbs                        => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "23",
           "mem"       => "10gb"
@@ -476,7 +489,7 @@ sub getRNASeqConfig {
           class                      => "CQS::UniqueR",
           perform                    => 1,
           target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $webgestaltHeatmapTaskName,
-          rtemplate                  => "../Annotation/WebGestaltHeatmap.r",
+          rtemplate                  => "../Annotation/WebGestaltReportFunctions.r;../Annotation/WebGestaltHeatmap.r",
           output_to_result_directory => 1,
           output_perSample_file      => "parameterSampleFile1",
           output_perSample_file_ext  => ".heatmap.png",
@@ -487,8 +500,6 @@ sub getRNASeqConfig {
           sh_direct                  => 1,
           rCode                      => "",
           pbs                        => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "23",
             "mem"       => "10gb"
@@ -503,10 +514,6 @@ sub getRNASeqConfig {
       my $gsea_jar        = $def->{gsea_jar}        or die "Define gsea_jar at definition first";
       my $gsea_db         = $def->{gsea_db}         or die "Define gsea_db at definition first";
       my $gsea_categories = $def->{gsea_categories} or die "Define gsea_categories at definition first";
-      my $gsea_makeReport = 1;
-      if ( defined $def->{gsea_makeReport} ) {
-        $gsea_makeReport = $def->{gsea_makeReport};
-      }
 
       $gseaTaskName = $deseq2taskname . "_GSEA";
 
@@ -516,23 +523,49 @@ sub getRNASeqConfig {
         perform                    => 1,
         target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
         rtemplate                  => "GSEAPerform.R",
-        rReportTemplate            => "GSEAReport.Rmd",
         output_to_result_directory => 1,
         output_perSample_file      => "parameterSampleFile1",
         output_perSample_file_ext  => ".gsea.html;.gsea.csv;.gsea;",
         parameterSampleFile1_ref   => [ $deseq2taskname, "_GSEA.rnk\$" ],
         sh_direct                  => 1,
         
-        rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=" . $gsea_makeReport . ";",
+        rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=0;",
         pbs                        => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "23",
           "mem"       => "10gb"
         },
       };
       push( @$summary, $gseaTaskName );
+
+      my $suffix = getDeseq2Suffix($config, $def, $deseq2taskname);
+
+      my @gsea_report_files = ();
+      my @gsea_report_names = ();
+      my $pairs = $config->{pairs};
+      for my $key ( keys %$pairs ) {
+        push( @gsea_report_files, $gseaTaskName, "/" . $key . $suffix . ".*gsea.csv" );
+        push( @gsea_report_names, "gsea_" . $key );
+      }
+
+      my $gsea_report = $gseaTaskName . "_report";
+      $config->{$gsea_report} = {
+        class                      => "CQS::BuildReport",
+        perform                    => 1,
+        target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gsea_report,
+        report_rmd_file            => "GSEAReport.Rmd",
+        additional_rmd_files       => "../Pipeline/Pipeline.Rmd;Functions.Rmd",
+        parameterSampleFile1_ref   => \@gsea_report_files,
+        parameterSampleFile1_names => \@gsea_report_names,
+        parameterSampleFile3       => [],
+        sh_direct                  => 1,
+        pbs                        => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$summary, $gsea_report );
     }
 
     if ( $def->{perform_keggprofile} ) {
@@ -569,8 +602,6 @@ sub getRNASeqConfig {
         sh_direct                => 1,
         rCode                    => "useRawPValue=" . $keggprofile_useRawPValue . ";species='" . $keggprofile_species . "';pCut=" . $keggprofile_pCut . ";",
         pbs                      => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "23",
           "mem"       => "10gb"
@@ -594,14 +625,60 @@ sub getRNASeqConfig {
       rrna_fasta     => $def->{rrna_fasta},
       transcript_gtf => $transcript_gtf,
       pbs            => {
-        "email"     => $email,
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=" . $def->{max_thread},
         "walltime"  => "23",
         "mem"       => "40gb"
       },
     };
     push( @$summary, "rnaseqc" );
+  }
+
+  if ( $def->{perform_rnaseqBamQC} ) {
+    my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
+
+    my $rnaseqBamQC_task = "rnaseqBamQC";
+    $config->{$rnaseqBamQC_task} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "$target_dir/$rnaseqBamQC_task",
+      init_command          => "",
+      option                => "-i __FILE__ -g '$transcript_gtf' -o __NAME__.txt",
+      interpretor           => "python3",
+      check_program         => 1,
+      program               => "../QC/rnaseqBamQC.py",
+      source_ref            => $source_ref,
+      source_arg            => "-i",
+      output_to_same_folder => 1,
+      output_arg            => "-o",
+      output_file_prefix    => "",
+      output_file_ext       => ".txt",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "40gb"
+      },
+    };
+    push (@$individual, $rnaseqBamQC_task);
+
+    my $rnaseqBamQCsummary_task = $rnaseqBamQC_task . "_summary";
+    $config->{$rnaseqBamQCsummary_task} = {
+      class                    => "CQS::UniqueR",
+      perform                  => 1,
+      target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $rnaseqBamQCsummary_task,
+      rtemplate                => "../QC/rnaseqBamQCsummary.r",
+      output_file              => "",
+      output_file_ext          => ".txt",
+      parameterSampleFile1_ref => $rnaseqBamQC_task,
+      sh_direct                => 1,
+      rCode                    => "",
+      pbs                      => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "2",
+        "mem"       => "10gb"
+      },
+    };
+    push( @$summary, $rnaseqBamQCsummary_task );
   }
 
   if ( $def->{perform_qc3bam} ) {
@@ -615,8 +692,6 @@ sub getRNASeqConfig {
       qc3_perl       => $def->{qc3_perl},
       source_ref     => $source_ref,
       pbs            => {
-        "email"     => $email,
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "23",
         "mem"       => "40gb"
@@ -637,8 +712,6 @@ sub getRNASeqConfig {
         add_chr      => $def->{add_chr},
         output_gff   => 1,
         pbs          => {
-          "email"     => $email,
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "2",
           "mem"       => "10gb"
@@ -658,8 +731,6 @@ sub getRNASeqConfig {
         colors             => $def->{"colormaps"},
         sh_direct          => 1,
         pbs                => {
-          "email"     => $email,
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "23",
           "mem"       => "10gb"
@@ -682,8 +753,6 @@ sub getRNASeqConfig {
         colors             => $def->{"colormaps"},
         sh_direct          => 1,
         pbs                => {
-          "email"     => $email,
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "23",
           "mem"       => "10gb"
@@ -696,101 +765,321 @@ sub getRNASeqConfig {
   if ( $def->{perform_call_variants} ) {
     my $fasta  = getValue( $def, "fasta_file" );
     my $dbsnp  = getValue( $def, "dbsnp" );
-    my $gatk   = getValue( $def, "gatk_jar" );
-    my $picard = getValue( $def, "picard_jar" );
 
-    $config->{refine} = {
-      class              => "GATK::RNASeqRefine",
-      perform            => 1,
-      target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "refine",
-      source_ref         => $source_ref,
-      option             => "-Xmx40g",
-      fasta_file         => $fasta,
-      vcf_files          => [$dbsnp],
-      gatk_jar           => $gatk,
-      picard_jar         => $picard,
-      fixMisencodedQuals => 0,
-      replace_read_group => 0,
-      reorderChromosome  => 0,
-      sorted             => 1,
-      sh_direct          => 0,
-      pbs                => {
-        "email"     => $email,
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=8",
-        "walltime"  => "23",
-        "mem"       => "40gb"
-      },
-    };
+    my $gatk_index = $def;
+    my $gatk_index_snv = "SNV_Index";
+    my $gatk_prefix;
 
-    $multiqc_depedents = "refine";
+    my $refine_task;
+    my $pass_task;
+    if($def->{perform_call_variants_by_gatk4}){
+      $refine_task = "gatk4_refine";
+      $config->{$refine_task} = {
+        class => "CQS::ProgramWrapperOneToOne",
+        target_dir => $target_dir . "/" . getNextFolderIndex($def) . $refine_task,
+        option => "
 
-    $config->{refine_hc} = {
-      class         => "GATK::HaplotypeCaller",
-      perform       => 1,
-      target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "refine_hc",
-      option        => "-dontUseSoftClippedBases -stand_call_conf 20.0",
-      source_ref    => "refine",
-      java_option   => "",
-      fasta_file    => $fasta,
-      gatk_jar      => $gatk,
-      extension     => ".vcf",
-      by_chromosome => 0,                                                            #since we have the bed file, we cannot use by_chromosome.
-      gvcf          => 0,                                                            #http://gatkforums.broadinstitute.org/gatk/discussion/3891/calling-variants-in-rnaseq
-      sh_direct     => 0,
-      pbs           => {
-        "email"     => $email,
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=8",
-        "walltime"  => "23",
-        "mem"       => "40gb"
-      },
-    };
+gatk MarkDuplicates \\
+  --INPUT __FILE__ \\
+  --OUTPUT __NAME__.rmdup.bam  \\
+  --CREATE_INDEX true \\
+  --VALIDATION_STRINGENCY SILENT \\
+  --ASSUME_SORTED true \\
+  --REMOVE_DUPLICATES true \\
+  --METRICS_FILE __NAME__.rmdup.metrics
 
-    $config->{refine_hc_filter} = {
-      class       => "GATK::VariantFilter",
-      perform     => 1,
-      target_dir  => $target_dir . "/" . getNextFolderIndex($def) . "refine_hc_filter",
-      option      => "",
-      gvcf        => 0,
-      vqsr_mode   => 0,
-      source_ref  => "refine_hc",
-      java_option => "",
-      fasta_file  => $fasta,
-      dbsnp_vcf   => $dbsnp,
-      gatk_jar    => $gatk,
-      is_rna      => 1,
-      sh_direct   => 1,
-      pbs         => {
-        "email"     => $email,
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=8",
-        "walltime"  => "23",
-        "mem"       => "40gb"
-      },
-    };
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch __NAME__.rmdup.failed
+  rm -f __NAME__.rmdup.bam __NAME__.rmdup.bai
+else
+  gatk SplitNCigarReads \\
+    -R $fasta \\
+    -I __NAME__.rmdup.bam \\
+    -O __NAME__.rmdup.split.bam 
 
-    $config->{refine_hc_filter_annovar} = {
-      class      => "Annotation::Annovar",
-      perform    => 1,
-      target_dir => $target_dir . "/" . getNextFolderIndex($def) . "refine_hc_filter_annovar",
-      source_ref => "refine_hc_filter",
-      option     => $def->{annovar_param},
-      annovar_db => $def->{annovar_db},
-      buildver   => $def->{annovar_buildver},
-      sh_direct  => 1,
-      isvcf      => 1,
-      pbs        => {
-        "email"     => $email,
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "23",
-        "mem"       => "10gb"
-      },
-    };
-    push( @$individual, "refine",           "refine_hc" );
-    push( @$summary,    "refine_hc_filter", "refine_hc_filter_annovar" );
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch __NAME__.split.failed
+    rm -f __NAME__.rmdup.split.bam __NAME__.rmdup.split.bai
+  else
+    gatk --java-options \"-XX:GCTimeLimit=50 -XX:GCHeapFreeLimit=10 -XX:+PrintFlagsFinal \\
+      -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -XX:+PrintGCDetails \\
+      -Xloggc:gc_log.log -Xms4000m\" \\
+      BaseRecalibrator \\
+      -R $fasta \\
+      -I __NAME__.rmdup.split.bam \\
+      --use-original-qualities \\
+      -O __NAME__.rmdup.split.recal.table \\
+      -known-sites $dbsnp
 
+    status=\$?
+    if [[ \$status -ne 0 ]]; then
+      touch __NAME__.recal.failed
+      rm -f __NAME__.rmdup.split.recal.table
+    else
+      gatk --java-options \"-XX:+PrintFlagsFinal -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps \\
+        -XX:+PrintGCDetails -Xloggc:gc_log.log \\
+        -XX:GCTimeLimit=50 -XX:GCHeapFreeLimit=10 -Xms3000m\" \\
+        ApplyBQSR \\
+        --add-output-sam-program-record \\
+        -R $fasta \\
+        -I __NAME__.rmdup.split.bam \\
+        --use-original-qualities \\
+        -O __NAME__.rmdup.split.recal.bam \\
+        --bqsr-recal-file __NAME__.rmdup.split.recal.table   
+
+      status=\$?
+      if [[ \$status -ne 0 ]]; then
+        touch __NAME__.recal.failed
+        rm -f __NAME__.rmdup.split.recal.bam __NAME__.rmdup.split.recal.bai
+      else
+        touch __NAME__.recal.succeed
+        rm -f __NAME__.rmdup.bam __NAME__.rmdup.bai __NAME__.rmdup.split.bam __NAME__.rmdup.split.bai
+        mv __NAME__.rmdup.split.recal.bai __NAME__.rmdup.split.recal.bam.bai
+      fi
+    fi
+  fi
+fi
+
+#__OUTPUT__
+",
+        suffix  => "_rrf",
+        docker_prefix => "gatk4_",
+        interpretor => "",
+        program => "",
+        check_program => 0,
+        source_arg => "",
+        source_ref => $source_ref,
+        output_arg => "",
+        output_file_ext => ".rmdup.split.recal.bam",
+        output_to_same_folder => 1,
+        sh_direct   => getValue($def, "sh_direct", 0),
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "23",
+          "mem"       => "40gb"
+        }
+      };
+
+      push( @$individual, $refine_task );
+
+      $gatk_prefix = $refine_task . "_SNV_";
+
+      my $hc_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_hc";
+      $config->{$hc_task} = {
+        class         => "GATK4::HaplotypeCaller",
+        perform       => 1,
+        target_dir    => $target_dir . "/" . getNextFolderIndex($def) . $hc_task,
+        option        => "-dont-use-soft-clipped-bases --standard-min-confidence-threshold-for-calling 20",
+        source_ref    => $refine_task,
+        java_option   => "",
+        bed_file      => $def->{covered_bed},
+        fasta_file    => $fasta,
+        extension     => ".vcf.gz",
+        by_chromosome => 0,                                                            #since we have the bed file, we cannot use by_chromosome.
+        gvcf          => 0,                                                            #http://gatkforums.broadinstitute.org/gatk/discussion/3891/calling-variants-in-rnaseq
+        sh_direct     => 0,
+        pbs           => {
+          "nodes"     => "1:ppn=8",
+          "walltime"  => getValue($def, "HaplotypeCaller_walltime", "23"),
+          "mem"       => "40gb"
+        },
+      };
+      push( @$individual, $hc_task );
+
+      my $min_dp = getValue($def, "SNV_minimum_depth", 10);
+      my $filter_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_filter";
+      $config->{$filter_task} = {
+        class => "CQS::ProgramWrapperOneToOne",
+        target_dir => $target_dir . "/" . $filter_task,
+        option => "
+gatk VariantFiltration \\
+  --R $fasta \\
+  --V __FILE__ \\
+  --window 35 \\
+  --cluster 3 \\
+  --filter-name \"FS\" \\
+  --filter \"FS > 30.0\" \\
+  --filter-name \"DP\" \\
+  --filter \"DP < $min_dp\" \\
+  --filter-name \"QD\" \\
+  --filter \"QD < 2.0\" \\
+  -O __NAME__.variant_filtered.vcf.gz
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch __NAME__.failed
+  rm -f __NAME__.variant_filtered.vcf.gz __NAME__.variant_filtered.vcf.gz.tbi
+else
+  touch __NAME__.succeed
+fi
+
+#__OUTPUT__
+",
+        suffix  => "_vf",
+        docker_prefix => "gatk4_",
+        interpretor => "",
+        program => "",
+        check_program => 0,
+        source_arg => "--V",
+        source_ref => $hc_task,
+        other_localization_ext_array => [".tbi"],
+        output_arg => "-O",
+        output_file_ext => ".variant_filtered.vcf.gz",
+        output_to_same_folder => 1,
+        sh_direct   => getValue($def, "sh_direct", 0),
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        }
+      };
+      push( @$individual, $filter_task );
+
+      my $lefttrim_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_lefttrim";
+      $config->{$lefttrim_task} = {
+        class                 => "GATK4::LeftTrim",
+        perform               => 1,
+        target_dir            => $target_dir . "/" . $lefttrim_task,
+        source_ref            => $filter_task,
+        option                => "",
+        docker_prefix         => "exome_",
+        fasta_file            => $fasta,
+        extension             => ".variant_filtered.norm.nospan.vcf.gz",
+        sh_direct             => 0,
+        pbs                   => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "2",
+          "mem"      => "10gb"
+        },
+      };
+      push( @$individual, $lefttrim_task );
+
+      $pass_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_merge";
+      $config->{$pass_task} = {
+        class => "CQS::ProgramWrapper",
+        target_dir => $target_dir . "/" . $pass_task,
+        option => "-i __FILE__ -o __NAME__.pass.vcf.gz
+
+#__OUTPUT__
+",
+        suffix  => "_mg",
+        interpretor => "python3",
+        docker_prefix => "exome_",
+        program => "../GATK4/combineVCFs.py",
+        check_program => 1,
+        source_arg => "-i",
+        source_ref => $lefttrim_task,
+        output_arg => "-o",
+        output_file_ext => ".pass.vcf.gz",
+        sh_direct   => 1,
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        }
+      };
+      push( @$summary, $pass_task );
+    }else{
+      my $gatk   = getValue( $def, "gatk_jar" );
+      my $picard = getValue( $def, "picard_jar" );
+
+      $refine_task = "refine";
+      $gatk_prefix = $refine_task . "_SNV_";
+
+      $config->{$refine_task} = {
+        class              => "GATK::RNASeqRefine",
+        perform            => 1,
+        target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $refine_task,
+        source_ref         => $source_ref,
+        option             => "-Xmx40g",
+        fasta_file         => $fasta,
+        vcf_files          => [$dbsnp],
+        gatk_jar           => $gatk,
+        picard_jar         => $picard,
+        fixMisencodedQuals => 0,
+        replace_read_group => 0,
+        reorderChromosome  => 0,
+        sorted             => 1,
+        sh_direct          => 0,
+        pbs                => {
+          "nodes"     => "1:ppn=8",
+          "walltime"  => "23",
+          "mem"       => "40gb"
+        },
+      };
+      push( @$individual, $refine_task );
+
+      my $hc_task = $refine_task . "_hc";
+      $config->{$hc_task} = {
+        class         => "GATK::HaplotypeCaller",
+        perform       => 1,
+        target_dir    => $target_dir . "/" . getNextFolderIndex($def) . $hc_task,
+        option        => "-dontUseSoftClippedBases -stand_call_conf 20.0",
+        source_ref    => $refine_task,
+        java_option   => "",
+        fasta_file    => $fasta,
+        gatk_jar      => $gatk,
+        extension     => ".vcf",
+        by_chromosome => 0,                                                            #since we have the bed file, we cannot use by_chromosome.
+        gvcf          => 0,                                                            #http://gatkforums.broadinstitute.org/gatk/discussion/3891/calling-variants-in-rnaseq
+        sh_direct     => 0,
+        pbs           => {
+          "nodes"     => "1:ppn=8",
+          "walltime"  => "23",
+          "mem"       => "40gb"
+        },
+      };
+      push( @$individual, $hc_task );
+
+      my $filter_task = $hc_task . "_filter";
+      $config->{$filter_task} = {
+        class       => "GATK::VariantFilter",
+        perform     => 1,
+        target_dir  => $target_dir . "/" . getNextFolderIndex($def) . $filter_task,
+        option      => "",
+        gvcf        => 0,
+        vqsr_mode   => 0,
+        source_ref  => $hc_task,
+        java_option => "",
+        fasta_file  => $fasta,
+        dbsnp_vcf   => $dbsnp,
+        gatk_jar    => $gatk,
+        is_rna      => 1,
+        sh_direct   => 1,
+        pbs         => {
+          "nodes"     => "1:ppn=8",
+          "walltime"  => "23",
+          "mem"       => "40gb"
+        },
+      };
+      push( @$summary, $filter_task );
+
+      $pass_task = $filter_task;
+    }
+
+    $multiqc_depedents = $refine_task;
+
+    if ( $def->{filter_variants_by_allele_frequency} ) {
+      my $maf_filter_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_filterMAF";
+      add_maf_filter($config, $def, $summary, $target_dir, $maf_filter_task, $pass_task);
+      $pass_task = $maf_filter_task;
+    }
+
+    if ( $def->{perform_annovar} ) {
+      my $annovar_task = addAnnovar( $config, $def, $summary, $target_dir, $pass_task, undef, $gatk_prefix, $gatk_index, $gatk_index_snv );
+
+      if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
+        my $annovar_filter_task = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_task, $gatk_prefix, $gatk_index, $gatk_index_snv);
+
+        if ( defined $def->{annotation_genes} ) {
+          addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_task );
+        }
+
+        addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_task, $gatk_prefix, $gatk_index, $gatk_index_snv);
+      }
+    }
   }
 
   if ( getValue( $def, "perform_multiqc" ) ) {
@@ -858,7 +1147,7 @@ sub getRNASeqConfig {
       my $pcoding = $def->{perform_proteincoding_gene} ? ".proteincoding.count" : "";
 
       my $titles = { "all" => "" };
-      if ( ref($count_file_ref) ne "ARRAY" ) {    #count file directly
+      if ( is_not_array($count_file_ref) ) {    #count file directly
         $titles->{all} = basename($count_file_ref);
         $pcoding = "";
       }
@@ -866,7 +1155,7 @@ sub getRNASeqConfig {
         my $correlationGroups = $config->{genetable_correlation}{parameterSampleFile2};
         for my $correlationTitle ( keys %$correlationGroups ) {
           my $groups = $correlationGroups->{$correlationTitle};
-          if ( ref($groups) eq 'HASH' ) {
+          if ( is_hash($groups) ) {
             if ( $correlationTitle ne "all" ) {
               $correlationTitle =~ s/\\s+/_/g;
               $titles->{$correlationTitle} = "." . $correlationTitle;
@@ -883,26 +1172,8 @@ sub getRNASeqConfig {
       }
     }
 
-    my $suffix = "";
     if ( ( defined $deseq2taskname ) && ( defined $config->{$deseq2taskname} ) ) {
-      if ( getValue( $def, "DE_top25only", 0 ) ) {
-        $suffix = $suffix . "_top25";
-      }
-
-      if ( getValue( $def, "DE_detected_in_both_group", 0 ) ) {
-        $suffix = $suffix . "_detectedInBothGroup";
-      }
-
-      my $minMedianInGroup = getValue( $def, "DE_min_median_read", 5 );
-      if ( $minMedianInGroup > 0 ) {
-        $suffix = $suffix . "_min" . $minMedianInGroup;
-      }
-      if ( getValue( $def, "DE_use_raw_pvalue", 0 ) ) {
-        $suffix = $suffix . "_pvalue" . $def->{DE_pvalue};
-      }
-      else {
-        $suffix = $suffix . "_fdr" . $def->{DE_pvalue};
-      }
+      my $suffix = getDeseq2Suffix($config, $def, $deseq2taskname);      
 
       my $pairs = $config->{pairs};
 
@@ -969,10 +1240,11 @@ sub getRNASeqConfig {
 
     if ( defined $gseaTaskName ) {
       push( @copy_files, $gseaTaskName, ".gsea\$" );
+      my $suffix = getDeseq2Suffix($config, $def, $deseq2taskname);      
 
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
-        push( @report_files, $gseaTaskName, "/" . $key . $suffix . ".*gsea.csv" );
+        push( @report_files, $gseaTaskName, "/" . $key . $suffix . "_.*gsea.csv" );
         push( @report_names, "gsea_" . $key );
       }
       $hasFunctionalEnrichment = 1;
@@ -993,7 +1265,7 @@ sub getRNASeqConfig {
       perform                    => 1,
       target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . "report",
       report_rmd_file            => "../Pipeline/RNASeq.Rmd",
-      additional_rmd_files       => "Functions.Rmd",
+      additional_rmd_files       => "../Pipeline/Pipeline.Rmd;Functions.Rmd",
       parameterSampleFile1_ref   => \@report_files,
       parameterSampleFile1_names => \@report_names,
       parameterSampleFile2       => $options,

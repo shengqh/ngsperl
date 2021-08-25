@@ -21,11 +21,11 @@ if(!exists("uniqueGroupNames")){
 
 facetColCount=getFacetColCount(groupFileList)
 
-hostTable<-read.delim(hostFile,header=T,row.names=1,comment.char = '#')
+hostTable<-read.delim(hostFile,header=T,row.names=1,comment.char = '#',check.names=F)
 hostTable<-hostTable[c("FeatureReads", "GenomeReads", "TooShortReads"),,drop=F]
 rownames(hostTable)<-c('Host Small RNA','Mapped to Host Genome','Too Short for Mapping')
 
-nonhostTable<-read.delim(nonhostFile,header=T,row.names=1,comment.char = '#')
+nonhostTable<-read.delim(nonhostFile,header=T,row.names=1,comment.char = '#',check.names=F)
 if("UnmappedReads" %in% rownames(nonhostTable)){
   nonhostTable<-nonhostTable[c("FeatureReads", "UnmappedReads"),,drop=F]
 }else{
@@ -47,7 +47,7 @@ ggpieGroupToFile(tableForPieChart,fileName=paste0(resultFile,".NonParallel.TaskR
 if(file.exists(parFile3) & file.exists(groupFileList)){
   library(ggplot2)
   library(reshape2)
-  microbial<-read.delim(parFile3, header=T, row.names=1)
+  microbial<-read.delim(parFile3, header=T, row.names=1,check.names=F)
   all<-tableForPieChart
   all<-data.frame(t(all))
   all$all<-rowSums(all)
@@ -56,7 +56,7 @@ if(file.exists(parFile3) & file.exists(groupFileList)){
   all$Other<-100 - all$Human - all$Microbial
   figData<-all[,c("Human", "Microbial", "Other")]
   if(!is.null(uniqueGroupNames)){
-    group<-read.delim(groupFileList, stringsAsFactors = F, header=F)
+    group<-read.delim(groupFileList, stringsAsFactors = F, header=F,check.names=F)
     group<-group[group$V2 %in% uniqueGroupNames,]
   }else{
     group<-getSampleInGroup(groupFileList, rownames(microbial), useLeastGroups=TRUE, onlySamplesInGroup=TRUE)

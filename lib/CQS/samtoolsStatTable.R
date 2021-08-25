@@ -16,7 +16,7 @@ tbl=apply(statFiles, 1, function(x){
   file=x[1]
   statName=x[2]
   
-  stat=read.delim(file, header=F)
+  stat=read.delim(file, header=F,check.names=F)
   stat=head(stat, -1)
   
   reads=data.frame(Reads=str_match(stat$V1, "\\d+"))

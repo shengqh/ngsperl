@@ -20,7 +20,9 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_fq";
+  $self->{_use_tmp_folder} = 1;
   bless $self, $class;
+  $self->init_docker_prefix(__PACKAGE__);
   return $self;
 }
 
@@ -50,6 +52,8 @@ sub perform {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
+  my $fastqc=get_option($config, $section, "fastqc", "fastqc");
+
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
@@ -62,7 +66,6 @@ sub perform {
     my $first_sample_file = $sample_files[0];
 
     my $sampleCount = scalar(@sample_files);
-    my $samples     = '"' . join( '" "', @sample_files ) . '"';
     my $cur_dir     = create_directory_or_die( $result_dir . "/$sample_name" );
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -75,12 +78,46 @@ sub perform {
 
     my $curThreadCount = min($thread, $sampleCount);
 
-    print $sh "\$MYCMD ./$pbs_name \n";
+    if (scalar(@expectresult) == 1){
+      print $sh "
+if [[ ! -s $expectname ]]; then
+  \$MYCMD ./$pbs_name 
+fi
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $expectname, "", 0, $first_sample_file );
-    print $pbs "fastqc $option --extract -t $curThreadCount -o $cur_dir $samples 
-fastqc --version | cut -d ' ' -f2 | awk '{print \"FastQC,\"\$1}' > $cur_dir/fastqc.version
 ";
+    }else{
+      my $expectname2   = $expectresult[1];
+      print $sh "
+if [[ ! -s $expectname || ! -s $expectname2 ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+
+";
+    }
+
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, \@expectresult, "", 0, $first_sample_file );
+
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files)};
+
+    my $samples     = '"' . join( '" "', @sample_files ) . '"';
+    print $pbs "
+rm -f $sample_name.fastqc.failed
+
+$fastqc $option --extract -t $curThreadCount -o `pwd` $samples 2> >(tee ${sample_name}.fastqc.stderr.log >\&2)
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch $sample_name.fastqc.failed
+else
+  touch $sample_name.fastqc.succeed
+fi
+
+$fastqc --version | cut -d ' ' -f2 | awk '{print \"FastQC,\"\$1}' > `pwd`/fastqc.version
+";
+
+    $self->clean_temp_files($pbs, $localized_files);
+
     $self->close_pbs( $pbs, $pbs_file );
   }
 

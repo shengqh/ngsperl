@@ -23,11 +23,28 @@ output:
 knitr::opts_chunk$set(fig.width=8, fig.height=6, out.width="80%")
 
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
-rownames(files)<-files$V2
+files=split(files$V1, files$V2)
 
 #For RnaSeq only
 #rnaseqOptions<-read.table("fileList2.txt", header=FALSE, as.is=TRUE)
 #rownames(rnaseqOptions)<-rnaseqOptions$V2
+
+has_file<-function(files, name){
+  if(name %in% names(files)){
+    curfile=files[[name]]
+    return(file.exists(curfile))
+  }else{
+    return(FALSE);
+  }
+}
+
+get_file<-function(files, name){
+  if(name %in% names(files)){
+    return(files[[name]])
+  }else{
+    return("");
+  }
+}
 
 check_and_include_graphics<-function(graphicFile) {
   if (file.exists(graphicFile)) {
@@ -37,13 +54,13 @@ check_and_include_graphics<-function(graphicFile) {
 
 getCategory<-function(category, description){
   return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", category, "', '",description, "')}\n",
-"  check_and_include_graphics(files['", category, "',1])\n```\n"))
+"  check_and_include_graphics(get_file(files,'", category, "'))\n```\n"))
 }
 
 getCategory2<-function(category1, category2, description){
   return(paste0("```{r,echo=FALSE,results='asis', fig.show='hold', out.width='45%', fig.align = 'default'}\n",
-"check_and_include_graphics(files['", category1, "',1])\n",
-"check_and_include_graphics(files['", category2, "',1])\n",
+"check_and_include_graphics(get_file(files,'", category1, "'))\n",
+"check_and_include_graphics(get_file(files,'", category2, "'))\n",
 "```\n",
 "```{r,echo=FALSE,results='asis'}\n",
 "curFigRef<-figRef('", paste0(category1, category2), "', '",description, "')\n",
@@ -63,7 +80,7 @@ categoryRmd<-function(dfCategory, fileName, header){
     group_heatmap<-paste0("correlation_", category, "_group_heatmap")
     corr_heatmap<-paste0("correlation_", category, "_corr_cluster")
     
-    if(file.exists(files[heatmap,1])){
+    if(file.exists(files[[heatmap]])){
       hasFile<-TRUE
     }
     
@@ -80,14 +97,20 @@ categoryRmd<-function(dfCategory, fileName, header){
   }
 }
 
-hasLengthDistCategory<-file.exists(files["host_length_dist_category",1])
+hasLengthDistCategory<-has_file(files,"host_length_dist_category")
 
-hasAdapterRaw<-file.exists(files["fastqc_raw_adapter_content",1])
-hasAdapterPostTrim<-file.exists(files["fastqc_post_trim_adapter_content",1])
+has_fastq_len = has_file(files, "fastq_len") & (!hasLengthDistCategory)
+
+hasAdapterRaw<-has_file(files,"fastqc_raw_adapter_content")
+hasAdapterPostTrim<-has_file(files,"fastqc_post_trim_adapter_content")
 hasAdapterRawOnly<-hasAdapterRaw & (!hasAdapterPostTrim)
+
+has_category_mapped_bar<-has_file(files, "category_mapped_bar")
 
 hasFastqc<-any(grepl("fastqc_", rownames(files)))
 hasFastqcPosttrim<-any(grepl("fastqc_post_trim_", rownames(files)))
+
+
 
 hostGenomeFile="hostgenome.Rmd"
 hostGenome<-data.frame(Section=c("##", "##"), Category=c("mirna", "trna"), Name=c("miRNA", "tRNA"))
@@ -121,16 +144,10 @@ if(hasNonhostLibrary){
 
 ```
 
-```{r,echo=FALSE,results='asis', fig.show="hold", out.width="45%", fig.align = "default", out.height=1024}
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("read_summary", "Read summary")}
 cat("## Read summary count\n")
-check_and_include_graphics(files["read_summary_count",1])
-check_and_include_graphics(files["read_summary_perc",1])
+check_and_include_graphics(files$read_summary)
 ```
-
-```{r,echo=FALSE,results='asis'}
-fig1ref<-figRef("read_summary", "Overall read count (left) and read percentage (right) distribution")
-```
-<center>`r fig1ref`</center>
 
 <br>
 
@@ -138,13 +155,13 @@ fig1ref<-figRef("read_summary", "Overall read count (left) and read percentage (
   
 ```{r fastqc_raw_adapter_content,echo=FALSE,results='asis', include=hasAdapterRawOnly, eval=hasAdapterRawOnly, fig.align="center", fig.cap=figRef("fastqc_adapter", "Adapter content of sequencing reads", trunk.eval=hasAdapterRawOnly)}
 cat("## Adapter\n")
-check_and_include_graphics(files["fastqc_raw_adapter_content",1])
+check_and_include_graphics(files$fastqc_raw_adapter_content)
 ```
 
 ```{r,echo=FALSE,results='asis', fig.show="hold", out.width="45%", fig.align = "default", include=hasAdapterPostTrim, eval=hasAdapterPostTrim}
 cat("## Adapter before and after trimming\n")
-check_and_include_graphics(files["fastqc_raw_adapter_content",1])
-check_and_include_graphics(files["fastqc_post_trim_adapter_content",1])
+check_and_include_graphics(files$fastqc_raw_adapter_content)
+check_and_include_graphics(files$fastqc_post_trim_adapter_content)
 ```
 
 ```{r,echo=FALSE,results='asis', include=hasAdapterPostTrim, eval=hasAdapterPostTrim}
@@ -152,31 +169,31 @@ fig1ref<-figRef("fastqc_adapter_content", "Raw adapter (left) and post-trim adap
 cat(paste0("<center>", fig1ref, "</center>\n"))
 ```
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastq_len", "Read length distribution after adapter trimming", trunk.eval=(file.exists(files["fastq_len",1]) & (!hasLengthDistCategory)))}
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("fastq_len", "Read length distribution after adapter trimming", trunk.eval=has_fastq_len), eval=has_fastq_len}
 cat("## Read length distribution after adapter trimming\n")
-check_and_include_graphics(files["fastq_len",1])
+check_and_include_graphics(files$fastq_len)
 ```
 
 # Host genome
 ## Overall 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_mapped_bar", "Read distribution", trunk.eval=file.exists(files["category_mapped_bar",1]))}
-check_and_include_graphics(files["category_mapped_bar",1])
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_mapped_bar", "Read distribution", trunk.eval=has_category_mapped_bar), eval=has_category_mapped_bar}
+check_and_include_graphics(files$category_mapped_bar)
 ```
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_mapped_group", "Read distribution in grouped samples", trunk.eval=file.exists(files["category_mapped_group",1]))}
-check_and_include_graphics(files["category_mapped_group",1])
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_mapped_group", "Read distribution in grouped samples", trunk.eval=has_file(files,"category_mapped_group")),eval=has_file(files,"category_mapped_group")}
+check_and_include_graphics(files$category_mapped_group)
 ```
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_smallrna_bar", "smallRNA read distribution", trunk.eval=file.exists(files["category_smallrna_bar",1]))}
-check_and_include_graphics(files["category_smallrna_bar",1])
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_smallrna_bar", "smallRNA read distribution", trunk.eval=has_file(files,"category_smallrna_bar")), eval=has_file(files,"category_smallrna_bar")}
+check_and_include_graphics(files$category_smallrna_bar)
 ```
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_smallrna_group", "smallRNA read distribution in grouped samples", trunk.eval=file.exists(files["category_smallrna_group",1]))}
-check_and_include_graphics(files["category_smallrna_group",1])
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_smallrna_group", "smallRNA read distribution in grouped samples", trunk.eval=has_file(files,"category_smallrna_group")), eval=has_file(files,"category_smallrna_group")}
+check_and_include_graphics(files$category_smallrna_group)
 ```
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("host_length_dist_category", "Host read length distribution in categories", trunk.eval=file.exists(files["host_length_dist_category",1]))}
-check_and_include_graphics(files["host_length_dist_category",1])
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("host_length_dist_category", "Host read length distribution in categories", trunk.eval=has_file(files,"host_length_dist_category")), eval=has_file(files,"host_length_dist_category")}
+check_and_include_graphics(files$host_length_dist_category)
 ```
 
 <br>
@@ -184,10 +201,10 @@ check_and_include_graphics(files["host_length_dist_category",1])
 ```{r hostgenome, child=hostGenomeFile} 
 ```
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("deseq2_host_vis", "DESeq2 result of host smallRNA", trunk.eval=file.exists(files["deseq2_host_vis",1]))}
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("deseq2_host_vis", "DESeq2 result of host smallRNA", trunk.eval=has_file(files,"deseq2_host_vis")), eval=has_file(files,"deseq2_host_vis")}
 cat('## host smallRNA DESeq2 result\n') 
 
-check_and_include_graphics(files["deseq2_host_vis",1])
+check_and_include_graphics(files$deseq2_host_vis)
 ```
 
 ```{r, echo=FALSE, results='asis'}
@@ -206,10 +223,10 @@ if(hasNonhostGenome | hasNonhostLibrary){
 ```{r nonhostlibrary, include=hasNonhostLibrary, child=nonhostLibraryFile} 
 ```
 
-```{r bacteria_count_vis,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("bacteria_count_vis", "Bacteria count", trunk.eval=file.exists(files["bacteria_count_vis",1]))}
+```{r bacteria_count_vis,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("bacteria_count_vis", "Bacteria count", trunk.eval=has_file(files,"bacteria_count_vis")), eval=has_file(files,"bacteria_count_vis")}
 cat('## Non-Host bacteria count\n')
 
-check_and_include_graphics(files["bacteria_count_vis",1])
+check_and_include_graphics(files$bacteria_count_vis)
 ```
 
 ```{r teardown, include=FALSE}
@@ -230,6 +247,6 @@ if(hasNonhostGenome | hasNonhostLibrary){
 }
 ```
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("nonhost_overlap_bar", "Read overlapped in non-host genome/database", trunk.eval=file.exists(files["nonhost_overlap_bar",1]))}
-check_and_include_graphics(files["nonhost_overlap_bar",1])
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("nonhost_overlap_bar", "Read overlapped in non-host genome/database", trunk.eval=has_file(files,"nonhost_overlap_bar")), eval=has_file(files,"nonhost_overlap_bar")}
+check_and_include_graphics(files$nonhost_overlap_bar)
 ```

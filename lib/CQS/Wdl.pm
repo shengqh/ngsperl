@@ -5,6 +5,7 @@ use strict;
 use warnings::register;
 use File::Basename;
 use CQS::PBS;
+use CQS::NGSCommon;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
 use CQS::FileUtils;
@@ -21,6 +22,7 @@ sub new {
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_wdl";
   $self->{_can_use_docker} = 0;
+  #$self->{_forbid_tmp_folder}  = 1;
   bless $self, $class;
   return $self;
 }
@@ -45,13 +47,23 @@ sub perform {
 
   my $sample_name_regex = get_option( $config, $section, "sample_name_regex", "" );
 
+  my $check_output_file_pattern = get_option( $config, $section, "check_output_file_pattern", "" );
+
+  my $use_caper = get_option( $config, $section, "use_caper", 0 );
+
+  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1);
+
   #softlink singularity_image_files to result folder
   my $singularity_image_files = get_raw_files( $config, $section, "singularity_image_files" ); 
+  my $singularity_option = "";
   for my $image_name ( sort keys %$singularity_image_files ) {
     my $source_image=$singularity_image_files->{$image_name};
-    if(ref($source_image) eq 'ARRAY') {
+    if( is_array($source_image) ) {
       $source_image=${$source_image}[0];
     }
+
+    $singularity_option="--singularity $source_image";
+
     # print $image_name."\n";
     # print $source_image."\n";
     my $target_image = $result_dir."/".$image_name;
@@ -70,20 +82,26 @@ sub perform {
   my $raw_files = get_raw_files( $config, $section );
   
   my $input_parameters = get_option($config, $section, "input_parameters");
-  die "input_parameters should be hash" if(ref($input_parameters) ne 'HASH');
+  die "input_parameters should be hash" if is_not_hash($input_parameters);
 
+  #write input to list file
   my $input_list = get_option($config, $section, "input_list", {});
-  die "$input_list should be hash" if(ref($input_list) ne 'HASH');
+  die "$input_list should be hash" if is_not_hash($input_list);
 
+  #replace value with vector of value/file
+  my $input_sample_vector = get_option($config, $section, "input_sample_vector", {});
+  die "$input_sample_vector should be hash" if is_not_hash($input_sample_vector);
+
+  #replace value with single value/file
   my $input_single = get_option($config, $section, "input_single", {});
-  die "$input_single should be hash" if(ref($input_single) ne 'HASH');
+  die "$input_single should be hash" if is_not_hash($input_single);
 
   my $replace_dics = {};
   my $replace_values = {};
 
   for my $input_key (keys %$input_parameters){
     my $input_value = $input_parameters->{$input_key};
-    if (ref($input_value) ne "ARRAY"){
+    if ( is_not_array($input_value) ){
       $replace_values->{$input_key} = $input_value;
       next;
     }
@@ -107,7 +125,7 @@ sub perform {
   for my $input_key (keys %$input_list){
     my $input_name = $input_key;
     my $input_value = $input_list->{$input_key};
-    if (ref($input_value) eq "ARRAY"){
+    if ( is_array($input_value) ){
       die "$input_key should include _ref suffix" if (substr($input_key, -4) ne "_ref");
       $input_name =~ s/_config_ref$//g;
       $input_name =~ s/_ref$//g;
@@ -116,12 +134,12 @@ sub perform {
       delete $config->{$section}{$input_key};
     }
 
-    die "$input_key should point to hash" if (ref($input_value) ne "HASH");
+    die "$input_key should point to hash" if is_not_hash($input_value);
     
     my $cur_dic = {};
     for my $sample_name (keys %$input_value){
       my $sample_values = $input_value->{$sample_name};
-      die "value for $sample_name in input_list should be array" if (ref($sample_values) ne "ARRAY");
+      die "value for $sample_name in input_list should be array" if is_not_array($sample_values);
       
       my $list_file = $self->get_file( $result_dir, $sample_name, "." . $input_key . ".list" );
       open( my $list, ">$list_file" ) or die "Cannot create $list_file";
@@ -130,20 +148,20 @@ sub perform {
       }
       close($list);
       
-      $cur_dic->{$sample_name} = [basename($list_file)];
+      $cur_dic->{$sample_name} = [$list_file];
     }
     
     $replace_dics->{$input_name} = $cur_dic;
   }
-  
+
   for my $input_key (keys %$input_single){
     my $input_value = $input_single->{$input_key};
     
-    if ((substr($input_key, -4) ne "_ref") and (ref($input_value) eq ref(""))){
+    if ((substr($input_key, -4) ne "_ref") and is_string($input_value)){
       $replace_values->{$input_key} = $input_value;
       next;
     }
-    die "value of $input_key in input_single should be ARRAY" if (ref($input_value) ne "ARRAY");
+    die "value of $input_key in input_single should be ARRAY" if is_not_array($input_value);
     
     if (substr($input_key, -4) eq "_ref") {
       my $input_name = $input_key;
@@ -178,6 +196,8 @@ sub perform {
   my $json = JSON->new;
   $json = $json->pretty([1]);
 
+  my $expected = $self->result($config, $section);
+
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
@@ -187,7 +207,16 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
+    my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+    my $cromwell_finalOutputs = $use_caper ? 0 : get_option($config, $section, "cromwell_finalOutputs", 1);
+    my $final_dir = $cromwell_finalOutputs ? $cur_dir . "/cromwell_finalOutputs" : $cur_dir;
+
+    my $expect_file = $expected->{$sample_name}[0];
+
+    print $sh "if [[ ! -s $expect_file ]]; then
+  \$MYCMD ./$pbs_name
+fi
+";
 
     my $log_desc = $cluster->get_log_description($log);
     
@@ -208,23 +237,86 @@ sub perform {
     
     for my $input_key (keys %$replace_dics){
       my $input_values = $replace_dics->{$input_key}{$sample_name};
-      my $input_value = $input_values->[0];
-      $json_dic->{$input_key} = $input_value;
+      if (is_array($json_dic->{$input_key})){
+        $json_dic->{$input_key} = $input_values;
+      }else{
+        $json_dic->{$input_key} = $input_values->[0];
+      }
     }
     
-    my $sample_input_file = $self->get_file( $result_dir, $sample_name, ".inputs.json" );
+    #print("Before deletion: " . Dumper($json_dic));
+    my @keys = keys %$json_dic;
+    for my $key (@keys){
+      if ($json_dic->{$key} eq ""){
+        delete($json_dic->{$key});
+      }
+    }
+    #print("After deletion: " . Dumper($json_dic));
+
+    my $sample_input_file = $self->get_file( $cur_dir, $sample_name, ".inputs.json" );
     open my $fh, ">", $sample_input_file;
     print $fh $json->encode($json_dic);
     close $fh;
     
     my $input_file = basename($sample_input_file);
     
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $expect_file );
+
+    if( $self->{"_use_tmp_folder"}){
+      print $pbs "
+cp -P \$res_dir/*.simg .
+cp $sample_input_file $input_file
+";
+    }
+
+    if($check_output_file_pattern ne ""){
+      print $pbs "
+file_count=\$(find . -name $check_output_file_pattern | wc -l) 
+if [[ \$file_count -gt 0 ]]; then
+  echo \"Warning: $check_output_file_pattern found \$file_count times in $cur_dir !\"
+  exit 0
+fi
+"      
+    }
 
     print $pbs "
-java -Dconfig.file=$cromwell_config_file -jar $cromwell_jar run $wdl_file --inputs $input_file --options $input_option_file
+if [[ -e $final_dir/${sample_name}.failed ]]; then
+  rm $final_dir/${sample_name}.failed
+fi
+";
+    if($use_caper){
+      print $pbs "
+caper run $wdl_file $option -i $input_file $singularity_option -m $cur_dir/metadata.json
     
 ";
+    }else{
+      print $pbs "
+java -Dconfig.file=$cromwell_config_file \\
+  -jar $cromwell_jar \\
+  run $wdl_file $option \\
+  --inputs $input_file \\
+  --options $input_option_file
+";
+    }
+
+    print $pbs "
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch $final_dir/${sample_name}.failed
+fi
+";
+
+    if( $self->{"_use_tmp_folder"}){
+      print $pbs "
+rm *.simg
+rm $input_file
+";
+      if(not $use_caper){
+      print $pbs "
+rm -rf cromwell-executions
+";
+      }
+    }
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
@@ -241,18 +333,29 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
-  my $cur_dir = $result_dir . "/cromwell_finalOutputs";
+  my $use_caper = get_option( $config, $section, "use_caper", 0 );
+  my $output_to_same_folder = get_option($config, $section, "output_to_same_folder", 1);
+  my $cromwell_finalOutputs = $use_caper ? 0 : get_option($config, $section, "cromwell_finalOutputs", 1);
+  my $use_filename_in_result = get_option($config, $section, "use_filename_in_result", 0);
+
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $output_exts = get_output_ext_list( $config, $section );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
+    my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+    my $final_dir = $cromwell_finalOutputs ? $cur_dir . "/cromwell_finalOutputs" : $cur_dir;
+
+    my $sample_file = $raw_files{$sample_name}[0];
+    my $sample_prefix = $use_filename_in_result ? change_extension(basename($sample_file), "") : $sample_name;
     my @result_files = ();
     for my $output_ext (@$output_exts) {
       if ( $output_ext ne "" ) {
-        my $result_file = $sample_name . $output_ext;
-#        print $result_file."\n";
-        push( @result_files, "${cur_dir}/$result_file" );
+        if($cromwell_finalOutputs){
+          push( @result_files, "${final_dir}/${sample_prefix}${output_ext}" );
+        }else{
+          push( @result_files, "${final_dir}/$output_ext" );
+        }
       }
     }
     $result->{$sample_name} = filter_array( \@result_files, $pattern );

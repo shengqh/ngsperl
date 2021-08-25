@@ -29,14 +29,35 @@ sub perform {
   my $comparisons = get_raw_files( $config, $section, undef, undef, 1 );
   my @comparison_names = keys %{$comparisons};
 
+  #writeParameterSampleFile( $config, $section, $result_dir, 1 );
+
   my $organism         = get_option( $config, $section, "organism" );
   my $interestGeneType = get_option( $config, $section, "interestGeneType", "genesymbol" );
   my $referenceSet     = get_option( $config, $section, "referenceSet", "genome" );
 
-  my $script = dirname(__FILE__) . "/WebGestaltR.r";
-  if ( !-e $script ) {
-    die "File not found : " . $script;
+  my $script1 = dirname(__FILE__) . "/WebGestaltReportFunctions.r";
+  my $script2 = dirname(__FILE__) . "/WebGestaltR.r";
+  if ( (!-e $script1) | (!-e $script2) ) {
+     die "File not found : " . $script1." or ".$script2;
   }
+
+  my $script = $result_dir . "/${task_name}.WebGestaltR.r";
+  open( my $rf, ">$script" ) or die "Cannot create $script";
+  open( my $rt, "<$script1" ) or die $!;
+  while ( my $row = <$rt> ) {
+      chomp($row);
+      $row =~ s/\r//g;
+      print $rf "$row\n";
+  }
+  close($rt);
+  open( $rt, "<$script2" ) or die $!;
+  while ( my $row = <$rt> ) {
+      chomp($row);
+      $row =~ s/\r//g;
+      print $rf "$row\n";
+  }
+  close($rt);
+  close($rf);
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
@@ -58,7 +79,7 @@ if [[ ! -s $final_file || ! -d $final_file ]]; then
   if [[ -f $inputFile ]]; then
     if [[ -s $inputFile ]]; then
       R --vanilla -f $script --args $organism $sample_name $inputFile . $interestGeneType $referenceSet
-      rm */*.tar.gz
+      rm */*/*.zip
     else
       echo \"Empty gene file\" > ${sample_name}.empty
     fi 

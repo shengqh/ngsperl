@@ -1,0 +1,129 @@
+```{r pipeline, results="asis", echo=FALSE, warning=FALSE} 
+library(stringr)
+
+display_webgestalt=function(files) {
+  cat(paste0("  \n## WebGestalt  \n"))
+  enrich_files<-files[grepl("WebGestalt_", rownames(files)),]
+  enrich_files$Comparisons<-gsub("WebGestalt_GO....", "", enrich_files$V2)
+  enrich_files$Comparisons<-gsub("WebGestalt_KEGG_", "", enrich_files$Comparisons)
+  comparisons<-unique(enrich_files$Comparisons)
+  for (j in 1:length(comparisons)){
+    comparison<-comparisons[j]
+    comp_files<-enrich_files[enrich_files$Comparisons == comparison,]
+    cat(paste0("  \n### ", comparison, "  \n"))
+  
+    for (i in 1:nrow(comp_files)){
+      if (!file.exists(comp_files[i,1])) {
+        next;
+      }
+      ename<-rownames(comp_files)[i]
+      if(grepl(".html.rds", comp_files[i,1])){
+        plotData <-readRDS(comp_files[i,1])
+        fdata<-plotData$enriched
+        fdata<-fdata[c(1:min(nrow(fdata),5)),c(1,2,4,5,6,7,8,9,12,13)]
+        print(kable(fdata, caption=tabRef(ename, ename)) %>% 
+          kable_styling() %>%
+          row_spec(which(fdata$geneUp > fdata$geneDown), color = "black", background = "bisque") %>% 
+          row_spec(which(fdata$geneUp < fdata$geneDown), color = "black", background = "honeydew") %>%
+          htmltools::HTML())
+        cat("\n\n<hr>")
+      }else{
+        #txtFile<-gsub(".html.rds$", "", comp_files[i,1])
+        #fdata<-read.table(txtFile, sep="\t", header=T, stringsAsFactors = F)
+        fdata<-read.table(comp_files[i,1], sep="\t", header=T, stringsAsFactors = F)
+        fdata<-fdata[c(1:min(nrow(fdata))),]
+        fdata$geneSet<-paste0("[", fdata$geneSet, "](", fdata$link, ")")
+        fdata<-fdata[,c(1,2,4,5,6,7,8,9)]
+        print(kable(fdata, caption=tabRef(ename, ename)) %>%
+        kable_styling() %>%
+        htmltools::HTML())
+      }
+    }  
+  }
+}
+
+processGseaTable=function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=5,absLinkPath=FALSE) {
+  rawTable<-read.delim(gseaTableFile,header=T,as.is=T)
+  rawTableOut<-NULL
+  for (i in head(which(rawTable$FDR.q.val<=maxCategoryFdr),maxCategory)) {
+    categoryName=rawTable[i,1]
+    gseaUrl=paste0("http://www.gsea-msigdb.org/gsea/msigdb/geneset_page.jsp?geneSetName=",categoryName)
+    categoryNameInTable<-addLinkTag(text=categoryName,link=gseaUrl)
+    
+    gseaWeb<-getURL(gseaUrl)
+    temp<-strsplit(gseaWeb,"description|\\<td\\>")[[1]]
+    j=grep("Brief",temp)
+    categoryDescription<-gsub("^>","",temp[j+2])
+    categoryDescription<-gsub("<\\/$","",categoryDescription)
+    
+    reg_pattern = "<a href=.+?]</a>"
+
+    if(length(categoryDescription) > 0){
+      while(grepl(reg_pattern, categoryDescription)){
+        url = str_extract(categoryDescription, reg_pattern) 
+        
+        name=str_match(url, '\\[(.+?)]')[[2]]
+        name_url=str_match(url, "<a href='(.+)'")[[2]]
+        namelink=addLinkTag(name, name_url)
+        
+        categoryDescription<-gsub(url, namelink, fixed=TRUE, categoryDescription)
+      }
+    }
+
+    rawTableOut<-rbind(rawTableOut,unlist(c(categoryNameInTable,categoryDescription,rawTable[i,c(4,5,6,8)])))
+  }
+  if(!is.null(rawTableOut)){
+    colnames(rawTableOut)[1:2]<-c("Name","Description")
+  }
+  return(rawTableOut)
+}
+
+print_gsea_subfolder=function(resultDirSub, gname, gseaCategory, is_positive){
+  pstr = ifelse(is_positive, "pos", "neg")
+  title = ifelse(is_positive, "Positive-regulated", "Negative-regulated")
+  pattern = paste0("gsea_report_for_na_", pstr, '_\\d+\\.(tsv|xls)$')
+        
+  posTableFile<-list.files(resultDirSub,pattern=pattern,full.names=TRUE)
+
+  if (length(posTableFile)!=1) {
+    warning(paste("Can't find ", title, "GSEA table file in", resultDirSub))
+  }else{
+    rawTableOut<-processGseaTable(posTableFile)
+    if(!is.null(rawTableOut)){
+      ename<-paste(gname, gseaCategory, title)
+      print(kable(rawTableOut, caption=tabRef(ename, ename)) %>%
+          kable_styling() %>%
+          htmltools::HTML())
+    }else{
+      warning(paste("Can't find significant", title, "GSEA gene set in", resultDirSub))
+    }
+  }
+}
+
+display_gsea=function(files) {
+  cat(paste0("  \n## GSEA  \n"))
+  gsea_files<-files[grepl("gsea_", rownames(files)),]
+  gsea_files$Comparisons<-gsub("gsea_", "", gsea_files$V2)
+  comparisons<-unique(gsea_files$Comparisons)
+  j=1
+  for (j in 1:length(comparisons)){
+    comparison<-comparisons[j]
+    comp_files<-gsea_files[gsea_files$Comparisons == comparison,]
+    cat(paste0("  \n### ", comparison, "  \n"))
+  
+    i=1
+    for (i in 1:nrow(comp_files)){
+      gfolders<-read.csv(comp_files[i,1],header=T,stringsAsFactor=F, check.names=F)
+      gname<-gsub(".rnk.*", "", basename(comp_files[i,1]))
+
+      k=1
+      for (k in 1:nrow(gfolders)){
+        resultDirSub<-gfolders$Folder[k]
+        gseaCategory<-gfolders$GseaCategory[k]
+        print_gsea_subfolder(resultDirSub, gname, gseaCategory, TRUE)
+        print_gsea_subfolder(resultDirSub, gname, gseaCategory, FALSE)
+      }
+    }  
+  }
+}
+```

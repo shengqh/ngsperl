@@ -8,7 +8,12 @@ library(genefilter)
 
 countTableFileList<-parSampleFile1
 groupFileList<-parSampleFile2
-colorFileList<-parSampleFile3
+if (exists("parSampleFile3")) {
+  colorFileList<-parSampleFile3
+} else {
+    colorFileList<-""
+}
+
 fixColorRange<-TRUE
 
 geneFile<-parFile1
@@ -186,7 +191,7 @@ if(colorFileList != ""){
 }
 
 #start work:
-countTableFileAll<-read.delim(countTableFileList,header=F,as.is=T)
+countTableFileAll<-read.delim(countTableFileList,header=F,as.is=T,check.names=F)
 i<-1
 for (i in 1:nrow(countTableFileAll)) {
   countTableFile<-countTableFileAll[i,1]

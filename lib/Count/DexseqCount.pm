@@ -54,7 +54,7 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-    print $pbs "samtools view $bam_file | python $dexseqFile $gffFile -s no - $final_file";
+    print $pbs "samtools view $bam_file | python3 $dexseqFile $gffFile -s no - $final_file";
 
     $self->close_pbs( $pbs, $pbs_file );
 

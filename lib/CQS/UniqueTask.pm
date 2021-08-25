@@ -13,6 +13,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_pbskey} = "";
   $self->{_depend_all} = 1;
+  $self->{_forbid_tmp_folder} = 1;
   bless $self, $class;
   return $self;
 }

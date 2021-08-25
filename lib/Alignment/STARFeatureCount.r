@@ -1,7 +1,13 @@
+source("AlignmentUtils.r")
+
 options(bitmapType='cairo')
 
 library(reshape2)
 library(ggplot2)
+
+if (parSampleFile3 != '') {
+  draw_chromosome_count(parSampleFile3, outFile)
+}
 
 if (parSampleFile1 != '') {
   outputPrefix = paste0(outFile, ".STARSummary")
@@ -17,17 +23,20 @@ if (parSampleFile1 != '') {
     if(is.null(final)){
       final = subdata
     }else{
-      final = cbind(final, subdata)
+      final = cbind(final, subdata, stringsAsFactors=F)
     }
   }
   
   write.csv(file=paste0(outputPrefix, ".details.csv"), final)
   
   reads=final[c("Number of input reads", "Uniquely mapped reads number", "Number of reads mapped to multiple loci", "Number of reads mapped to too many loci"),]
-  treads=data.frame(t(data.matrix(reads)))
+  rownames(reads)=c("Total", "Unique", "Multiple1", "Multiple2")
+  reads[] <- lapply(reads, function(x) {
+    as.numeric(as.character(x))
+  })
+  treads=data.frame(t(reads))
   write.csv(file=paste0(outputPrefix, ".csv"), treads)
   
-  colnames(treads)=c("Total", "Unique", "Multiple1", "Multiple2")
   treads$Multiple=treads$Multiple1+treads$Multiple2
   treads$Unmapped=treads$Total-treads$Unique-treads$Multiple
   treads=treads[,c(2,5,6)]

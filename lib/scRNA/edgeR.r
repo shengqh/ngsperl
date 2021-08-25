@@ -1,4 +1,3 @@
-
 library(edgeR)
 library(ggplot2)
 library(ggpubr)
@@ -18,13 +17,24 @@ finalList<-readRDS(parFile1)
 obj<-finalList$obj
 
 clusterDf<-read.csv(parFile2, stringsAsFactors = F, row.names=1)
-obj[[cluster_name]]<-clusterDf[names(obj$orig.ident), cluster_name]
+if(!(cluster_name %in% colnames(obj@meta.data))){
+  if(all(names(obj$orig.ident) %in% rownames(clusterDf))){
+    obj[[cluster_name]]<-clusterDf[names(obj$orig.ident), cluster_name]
+  }else{
+    obj[[cluster_name]]<-clusterDf[obj$seurat_clusters, cluster_name]
+  }
+}
 
-sampleGroups<-read.table(parSampleFile1, stringsAsFactors = F)
-colnames(sampleGroups)<-c("Sample","Group")
+meta<-obj@meta.data
 
 comparisons<-read.table(parSampleFile2, stringsAsFactors = F)
-colnames(comparisons)<-c("Group", "Comparison")
+if(ncol(comparisons) == 3){
+  colnames(comparisons)<-c("Value", "Key", "Comparison")
+}else{
+  colnames(comparisons)<-c("Value", "Comparison")
+  comparisons$Key = "groups"
+}
+
 comparisonNames<-unique(comparisons$Comparison)
 
 comp <-comparisonNames[1]
@@ -32,30 +42,81 @@ comp <-comparisonNames[1]
 designMatrix<-NULL
 for (comp in comparisonNames){
   comp_groups<-comparisons[comparisons$Comparison==comp,]
+  comp_options = split(comp_groups$Value, comp_groups$Key)
   
-  controlGroup<-comp_groups$Group[1]
-  sampleGroup<-comp_groups$Group[2]
-  
-  control_names<-sampleGroups$Sample[sampleGroups$Group==controlGroup]
-  sample_names<-sampleGroups$Sample[sampleGroups$Group==sampleGroup]
-  
+  if("groups" %in% names(comp_options)){
+    sampleGroups<-read.table(parSampleFile1, stringsAsFactors = F)
+    colnames(sampleGroups)<-c("Sample","Group")
+    groups<-comp_options$groups
+    controlGroup<-groups[1]
+    sampleGroup<-groups[2]
+    
+    control_names<-sampleGroups$Sample[sampleGroups$Group==controlGroup]
+    sample_names<-sampleGroups$Sample[sampleGroups$Group==sampleGroup]
+  }else{
+    control_names<-as.numeric(comp_options$control_clusters)
+    controlGroup<-ifelse("control_name" %in% names(comp_options), comp_options$control_name, paste("Cluster", paste(control_names, collapse = "_"), sep="_"))
+    sample_names<-as.numeric(comp_options$sample_clusters)
+    sampleGroup<-ifelse("sample_name" %in% names(comp_options), comp_options$sample_name, paste("Cluster", paste(sample_names, collapse = "_"), sep="_"))
+  }
+
   if(bBetweenCluster){
     prefix<-paste0(outFile, ".", comp, ".edgeR")
     
-    control_cells<-rownames(clusterDf)[clusterDf[,cluster_name] %in% control_names]  
-    sample_cells<-rownames(clusterDf)[clusterDf[,cluster_name] %in% sample_names]  
-  
-    all_cells<-c(control_cells, sample_cells)
+    control_cells<-rownames(meta)[meta[,cluster_name] %in% control_names]  
+    if("control_file_regex" %in% names(comp_options)){
+      all_files = unique(meta$orig.ident)
+      control_files=all_files[grepl(comp_options$control_file_regex, all_files)]
+      control_cells = control_cells[meta[control_cells, "orig.ident"] %in% control_files]
+    }
+    if("control_files" %in% names(comp_options)){
+      control_files=comp_options$control_files
+      control_cells = control_cells[meta[control_cells, "orig.ident"] %in% control_files]
+    }
 
+    sample_cells<-rownames(meta)[meta[,cluster_name] %in% sample_names]  
+    if("sample_file_regex" %in% names(comp_options)){
+      all_files = unique(meta$orig.ident)
+      sample_files=all_files[grepl(comp_options$sample_file_regex, all_files)]
+      sample_cells = sample_cells[meta[sample_cells, "orig.ident"] %in% sample_files]
+    }
+    if("sample_files" %in% names(comp_options)){
+      sample_files=comp_options$sample_files
+      sample_cells = sample_cells[meta[sample_cells, "orig.ident"] %in% sample_files]
+    }
+    
+    control_files=unique(meta[control_cells, "orig.ident"])
+    sample_files=unique(meta[sample_cells, "orig.ident"])
+    
+    if(!all(control_files %in% sample_files)){
+      sampleInGroup = 0
+    }else{
+      sampleInGroup = 1
+    }
+    
+    all_cells<-c(control_cells, sample_cells)
+    if("samples" %in% names(comp_options)){
+      samples<-comp_options$samples
+      all_cells = all_cells[meta[all_cells, "orig.ident"] %in% samples]
+    }
+    
     de_obj<-subset(obj, cells=all_cells)
     de_obj$Group<-c(rep("control", length(control_cells)), rep("sample", length(sample_cells)))
     de_obj$DisplayGroup<-c(rep(controlGroup, length(control_cells)), rep(sampleGroup, length(sample_cells)))
-      
+    
     designdata<-data.frame("Group"=de_obj$Group, "Cell"=colnames(de_obj), "Sample"=de_obj$orig.ident, "DisplayGroup"=de_obj$DisplayGroup)
     designfile<-paste0(prefix, ".design")
     write.csv(designdata, file=designfile, row.names=F, quote=F)
     
-    curdf<-data.frame(prefix=prefix, cellType="", comparison=comp, sampleInGroup=1, design=designfile, stringsAsFactors = F)
+    #predefined genes
+    if("genes" %in% comp_groups$Key){
+      genes_list<-comp_groups$Value[comp_groups$Key=="genes"]
+      genes=paste(genes_list, collapse = ",")
+    }else{
+      genes=""
+    }
+    
+    curdf<-data.frame(prefix=prefix, cellType="", comparison=comp, sampleInGroup=sampleInGroup, design=designfile, genes=genes, stringsAsFactors = F)
     if (is.null(designMatrix)){
       designMatrix = curdf
     }else{
@@ -118,6 +179,7 @@ for(idx in c(1:nrow(designMatrix))){
   cellType=designMatrix[idx, "cellType"]
   comp=designMatrix[idx, "comparison"]
   sampleInGroup=designMatrix[idx, "sampleInGroup"]
+  genes=designMatrix[idx, "genes"]
   
   designdata<-read.csv(designfile, stringsAsFactors = F)
   groups<-designdata$Group
@@ -133,6 +195,12 @@ for(idx in c(1:nrow(designMatrix))){
   min_sample<-filter_cellPercentage * ncol(cells)
   keep_rows <- rowSums(tpm > filter_minTPM) >= min_sample
   rm(tpm)
+  
+  if(genes != ""){
+    gene_list=unlist(strsplit(genes, ','))
+    keep2<-rownames(cells) %in% gene_list
+    keep_rows = keep_rows | keep2
+  }
   
   cells<-cells[keep_rows,]
   cdr <- scale(colMeans(cells > 0))
@@ -155,6 +223,10 @@ for(idx in c(1:nrow(designMatrix))){
 
   cat("  estimateDisp", "\n")
   dge<-estimateDisp(dge,design=design)
+  
+  if(genes != ""){
+    dge<-dge[rownames(dge) %in% gene_list,]
+  }
   
   cat("  glmQLFit", "\n")
   fitqlf<-glmQLFit(dge,design=design,robust=TRUE)

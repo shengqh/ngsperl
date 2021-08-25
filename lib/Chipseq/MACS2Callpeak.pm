@@ -55,6 +55,13 @@ sub perform {
 
   my $peak_name = ( $option =~ /--broad/ ) ? "broadPeak" : "narrowPeak";
 
+  my $outputBigwig      = get_option( $config, $section, "output_bigwig",   0 );
+  my $chr_size_file ="";
+  if ($outputBigwig) {
+    $chr_size_file = $config->{$section}{chr_size_file} or die "define ${section}::chr_size_file first to be used in output_bigwig";
+  }
+
+
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
@@ -84,6 +91,15 @@ sub perform {
 macs2 callpeak $option $treatment $control -n $sample_name
 cut -f1-6 ${sample_name}_peaks.${peak_name} > ${sample_name}_peaks.${peak_name}.bed
 ";
+      if ($outputBigwig) {
+    $chr_size_file = $config->{$section}{chr_size_file} or die "define ${section}::chr_size_file first to be used in output_bigwig";
+  }
+    if ($outputBigwig) {
+    print $pbs "
+bedGraphToBigWig ${sample_name}_control_lambda.bdg $chr_size_file ${sample_name}_control_lambda.bigwig
+bedGraphToBigWig ${sample_name}_treat_pileup.bdg $chr_size_file ${sample_name}_treat_pileup.bigwig
+";
+    }
 
     $self->close_pbs( $pbs, $pbs_file );
 

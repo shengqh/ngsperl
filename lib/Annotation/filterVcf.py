@@ -104,7 +104,7 @@ with fout:
       lastChrom = ""
 
       for line in fin:
-        snv = line.split('\t')
+        snv = line.rstrip().split('\t')
         
         totalsnv = totalsnv + 1
         if totalsnv % 10000 == 0:
@@ -130,10 +130,12 @@ with fout:
         highQuality = False
         for si in range(sample_index, len(vcfheaders)):
           sampleData = snv[si]
-          if sampleData.startswith("0/0:") or sampleData.startswith("0|0"):
+          if sampleData == './.' or sampleData.startswith("0/0:") or sampleData.startswith("0|0"):
             continue
           
           parts = sampleData.split(":")
+          if len(parts) <= GQ_index or len(parts) <= DP_index:
+            logger.error('failed sample data %s in line %s' % (sampleData, line))
           if parts[GQ_index] != '.' and parts[DP_index] != '.':
             gq = int(parts[GQ_index])
             dp = int(parts[DP_index])

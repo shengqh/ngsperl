@@ -4,6 +4,7 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
     toc: true
+    toc_depth: 4
 ---
 
 <style type="text/css">
@@ -13,11 +14,12 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+```{r, child="Functions.Rmd"} 
+```
+```{r, child="Pipeline.Rmd"} 
+```
 
 ```{r,echo=FALSE,warning=FALSE,message=FALSE}
-#This is your GESA Java Result Dir
-#resultDir<-"D:\\OneDriveWork\\OneDriveVanderbilt\\work\\projects\\20170606_ShyrBrownRnaSeq\\out\\GESA\\"
-
 library(ggplot2)
 library(RColorBrewer)
 library(reshape2)
@@ -25,96 +27,12 @@ library(DT)
 library(RCurl)
 library(htmltools)
 library(knitr)
+library(kableExtra)
 
-addLinkTag<-function(text,link) {
-	result<-paste0("<a href='",link,"'>",text,"</a>")
-	return(result)
-}
-addImageTag<-function(imageFile,width=NULL,height=NULL) {
-	result<-paste0("<img src='",imageFile,"'")
-	if (!is.null(height)) {
-		result<-paste0(result," height='",height,"'")
-	}
-	if (!is.null(width)) {
-		result<-paste0(result," width='",width,"'")
-	}
-	result<-paste0(result,"></img>")
-	return(result)
-}
-
-processGesaTable<-function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=10,absLinkPath=FALSE) {
-	rawTable<-read.delim(gseaTableFile,header=T,as.is=T)
-	rawTableOut<-NULL
-	for (i in head(which(rawTable$FDR.q.val<=maxCategoryFdr),maxCategory)) {
-		categoryName=rawTable[i,1]
-		gseaUrl=paste0("http://software.broadinstitute.org/gsea/msigdb/cards/",categoryName)
-		categoryNameInTable<-addLinkTag(text=categoryName,link=gseaUrl)
-		
-		#gseaWeb<-getURL("http://software.broadinstitute.org/gsea/msigdb/cards/HALLMARK_MITOTIC_SPINDLE")
-		gseaWeb<-getURL(gseaUrl)
-		temp<-strsplit(gseaWeb,"description|\\<td\\>")[[1]]
-		j=grep("Brief",temp)
-		categoryDescription<-gsub("^>","",temp[j+2])
-		categoryDescription<-gsub("<\\/$","",categoryDescription)
-		if (length(categoryDescription)==0) {
-		  categoryDescription=NA
-		}
-		
-    figurePath<-list.files(dirname(gseaTableFile),pattern=paste0("enplot_",categoryName),full.names=TRUE)[1]
-		figurePath<-R.utils::getRelativePath(figurePath,resultDir) #resultDir is outside this Rmd file, the location of result html file
-		if (absLinkPath) {
-		  reportPath<-paste0(dirname(gseaTableFile),"/",categoryName,".html")
-		} else {
-		  reportPathFolders<-strsplit(dirname(gseaTableFile),"[\\/|\\\\]+")[[1]]
-		  reportPath<-paste0("./",reportPathFolders[length(reportPathFolders)-1],"/",reportPathFolders[length(reportPathFolders)],"/",categoryName,".html")
-		}
-		
-		
-		figurePathHtml<-addImageTag(figurePath,height=150,width=150)
-#		figurePathHtml<-paste0("<img src='",figurePath,"' height='150' width='150'></img>")
-		figurePathHtml<-addLinkTag(figurePathHtml,reportPath)
-		rawTableOut<-rbind(rawTableOut,unlist(c(categoryNameInTable,categoryDescription,rawTable[i,c(4,5,6,8)],figurePathHtml)))
-	}
-	if (!is.null(rawTableOut)) {
-	  	colnames(rawTableOut)[1:2]<-c("Name","Description")
-	    colnames(rawTableOut)[7]<-c("Figure")
-	}
-	return(rawTableOut)
-}
-
-
-```
-
-```{r,echo=FALSE,results='asis'}
-  	out<-list()
-
- resultDirSubs<-list.dirs(gesaResultDir,recursive=FALSE,full.names =TRUE)
- 
-for (resultDirSub in resultDirSubs) {
- 	posTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_pos_\\d+\\.xls$",full.names=TRUE)
- 	negTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_neg_\\d+\\.xls$",full.names=TRUE)
- 	if (length(negTableFile)!=1) {
- 		warning(paste0("Can't find positive-regulated GSEA table file"))
- 	}
- 	if (length(negTableFile)!=1) {
- 		warning(paste0("Can't find negative-regulated GSEA table file"))
- 	}
- 	
- 	out<-append(out,list(tags$h1(paste0(basename(resultDirSub)))))
- 	
- 	rawTableOut<-processGesaTable(posTableFile)
- 	tableOne=datatable(rawTableOut,escape=c(-1,-2,-7))
-  out<-append(out,list(tags$h3("Positive-regulated")))
-  out<-append(out,list(tableOne))
-  
-  rawTableOut<-processGesaTable(negTableFile)
- 	tableOne=datatable(rawTableOut,escape=c(-1,-2,-7))
-  out<-append(out,list(tags$h3("Negative-regulated")))
-  out<-append(out,list(tableOne))
-}
-tagList(out)
-
+files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
+rownames(files)<-files$V2
 ```
  
-
-
+```{r gsea, results="asis", echo=FALSE, warning=FALSE} 
+display_gsea(files)
+``` 

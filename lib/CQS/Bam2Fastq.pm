@@ -31,7 +31,7 @@ sub perform {
 
   my $sort_before_convert = get_option( $config, $section, "sort_before_convert" );
   my $sort_thread         = get_option( $config, $section, "sort_thread" );
-  my $sortoption = $sort_thread < 2 ? "" : "-@ $sort_thread";
+  my $sortoption = "";
 
   my $unmapped_only = get_option( $config, $section, "unmapped_only", 0 );
   my $unzipped      = get_option( $config, $section, "unzipped",      0 );

@@ -86,7 +86,7 @@ sub perform {
 
     print $pbs "
 echo findCommonSample=`date`
-python $find_common_sample_script -r $sampleRnaseqFilesStr --rnaseqNames $rnaseq_names -f $sampleFamFilesStr --famNames $fam_names -o $common_prefix -p $pattern
+python3 $find_common_sample_script -r $sampleRnaseqFilesStr --rnaseqNames $rnaseq_names -f $sampleFamFilesStr --famNames $fam_names -o $common_prefix -p $pattern
 ";
     $self->close_pbs( $pbs, $pbs_file );
   }

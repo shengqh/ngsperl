@@ -54,7 +54,7 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-    print $pbs "python $py_script -i $sampleFile -o ${sample_name}.bam -b $bamFile \n";
+    print $pbs "python3 $py_script -i $sampleFile -o ${sample_name}.bam -b $bamFile \n";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;

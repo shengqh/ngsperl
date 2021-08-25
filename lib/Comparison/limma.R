@@ -242,7 +242,7 @@ adjPvalueCol="adj.P.Val"
 ########################################################
 
 rawDataFile <- parFile1
-rawData <- read.csv(rawDataFile, header = T, row.names = 1, as.is = T)
+rawData <- read.csv(rawDataFile, header = T, row.names = 1, as.is = T, check.names=F)
 
 colClass <- sapply(rawData, class)
 countNotNumIndex <- which((colClass != "numeric" & colClass != "integer") | grepl("Gene_Id", colnames(rawData)))

@@ -262,7 +262,7 @@ fi
 
 if [[ -s $left_trim_file && ! -s $final_file ]]; then
   echo noSpanDeletion=`date`
-  python $script -i $left_trim_file -o $fix_file
+  python3 $script -i $left_trim_file -o $fix_file
   bgzip $fix_file
   tabix -p vcf $final_file
 fi

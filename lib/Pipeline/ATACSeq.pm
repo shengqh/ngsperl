@@ -9,6 +9,7 @@ use CQS::ConfigUtils;
 use CQS::ClassFactory;
 use Pipeline::Preprocession;
 use Pipeline::PipelineUtils;
+use Pipeline::PeakPipelineUtils;
 use Data::Dumper;
 use Hash::Merge qw( merge );
 
@@ -71,6 +72,8 @@ sub initializeDefaultOptions {
     $def->{"treatments"} = $groups;
   }
 
+  initDefaultValue( $def, "perform_report", 1 );
+
   return $def;
 }
 
@@ -106,9 +109,10 @@ sub getConfig {
 
   my $perform_diffbind = getValue( $def, "perform_diffbind" );
   if ($perform_diffbind) {
-    getValue( $def, "diffbind_table" );
+    getValue( $def, "design_table" );
   }
 
+  $def->{aligner} = "bwa";
   $config->{"bwa"} = {
     class              => "Alignment::BWA",
     perform            => 1,
@@ -118,16 +122,16 @@ sub getConfig {
     picard_jar         => getValue( $def, "picard_jar" ),
     source_ref         => $source_ref,
     sort_by_coordinate => 1,
+    mark_duplicates    => 0,
     sh_direct          => 0,
     pbs                => {
-      "email"    => $email,
       "nodes"    => "1:ppn=8",
       "walltime" => "24",
       "mem"      => "40gb"
     },
   };
   push @$individual, "bwa";
-  addBamStat( $config, $def, $summary, "bwa_stat", $target_dir . "/bwa", [ "bwa", ".stat\$" ] );
+  add_alignment_summary($config, $def, $summary, $target_dir, "bwa_summary", "../Alignment/AlignmentUtils.r;../Samtools/BamStat.r", ".reads.csv;.reads.png;.chromosome.csv;.chromosome.png", [ "bwa", "bam.stat" ], ["bwa", ".chromosome.count"] );
 
   $config->{bwa_insertsize} = {
     class                    => "CQS::UniqueR",
@@ -139,8 +143,6 @@ sub getConfig {
     parameterSampleFile1_ref => [ "bwa", ".bam\$" ],
     cluster                  => $def->{cluster},
     pbs                      => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
       "walltime"  => "10",
       "mem"       => "10gb"
@@ -164,47 +166,34 @@ sub getConfig {
     maximum_insert_size     => getValue( $def, "maximum_insert_size" ),
     blacklist_file          => $def->{blacklist_file},
     is_sorted_by_coordinate => 1,
+    mark_duplicates         => 1,
     sh_direct               => 0,
     pbs                     => {
-      "email"    => $email,
       "nodes"    => "1:ppn=1",
       "walltime" => "$cleanbam_walltime",
       "mem"      => "40gb"
     },
   };
   push @$individual, "bwa_cleanbam";
-  addBamStat( $config, $def, $summary, "bwa_cleanbam_stat", $target_dir . "/bwa_cleanbam", [ "bwa_cleanbam", ".stat\$" ] );
+  add_alignment_summary($config, $def, $summary, $target_dir, "bwa_cleanbam_summary", "../Alignment/AlignmentUtils.r;../Samtools/BamStat.r", ".chromosome.csv;.chromosome.png", undef, ["bwa_cleanbam", ".chromosome.count"] );
 
-  #  if ( defined $config->{fastqc_count_vis} ) {
-  #    my $files = $config->{fastqc_count_vis}{parameterFile1_ref};
-  #    if ( defined $config->{fastqc_count_vis}{parameterFile2_ref} ) {
-  #      my $f = $config->{fastqc_count_vis}{parameterFile2_ref};
-  #      push @$files, @$f;
-  #    }
-  #    if ( defined $config->{fastqc_count_vis}{parameterFile3_ref} ) {
-  #      my $f = $config->{fastqc_count_vis}{parameterFile3_ref};
-  #      push @$files, @$f;
-  #    }
-  #    push @$files, ( "bwa_stat",          ".csv\$" );
-  #    push @$files, ( "bwa_cleanbam_stat", ".csv\$" );
-  #    $config->{"reads_in_task"} = {
-  #      class                    => "CQS::UniqueR",
-  #      target_dir               => "${target_dir}/reads_in_task",
-  #      perform                  => 1,
-  #      rtemplate                => "countInTasks.R",
-  #      output_file              => ".countInTasks.Result",
-  #      output_file_ext          => ".Reads.csv",
-  #      sh_direct                => 1,
-  #      parameterSampleFile1_ref => $files,
-  #      pbs                      => {
-  #        "email"    => $def->{email},
-  #        "nodes"    => "1:ppn=1",
-  #        "walltime" => "1",
-  #        "mem"      => "10gb"
-  #      },
-  #    };
-  #    push @$summary, ("reads_in_task");
-  #  }
+  my $bam_ref = ["bwa_cleanbam", ".bam\$"];
+  if($def->{perform_bamsnap} && $def->{"bamsnap_locus"}){
+    addBamsnapLocus($config, $def, $summary, $target_dir, "bamsnap_locus", $bam_ref);
+  }
+
+  if(defined $def->{annotation_locus} or defined $def->{annotation_genes}){
+    my $sizeFactorTask = "size_factor";
+    addSizeFactor($config, $def, $summary, $target_dir, $sizeFactorTask, $bam_ref);
+
+    if(defined $def->{annotation_locus}){
+      addAnnotationLocus($config, $def, $summary, $target_dir, "annotation_locus_plot", $sizeFactorTask, $bam_ref);
+    }
+
+    if(defined $def->{annotation_genes}){
+      addAnnotationGenes($config, $def, $summary, $target_dir, "annotation_genes_plot", $sizeFactorTask, $bam_ref);
+    }
+  }
 
   my $callerType = getValue( $def, "caller_type" );
   my @callers = ();
@@ -217,6 +206,9 @@ sub getConfig {
   else {
     push( @callers, ("macs2") );
   }
+
+  my $task_dic = {
+  };
 
   for my $caller (@callers) {
     my @peakTypes = ();
@@ -286,7 +278,6 @@ sub getConfig {
         groups_ref  => "treatments",
         sh_direct  => 0,
         pbs        => {
-          "email"    => $email,
           "nodes"    => "1:ppn=1",
           "walltime" => "72",
           "mem"      => "40gb"
@@ -294,29 +285,43 @@ sub getConfig {
       };
       push @$individual, ($callName);
 
-      my $peak_count = $callName . "_count";
-      $config->{$peak_count} = {
-        class      => "CQS::ProgramWrapper",
-        perform    => 1,
-        suffix     => "_pc",
-        target_dir => "${target_dir}/" . $peak_count,
-        interpretor => "python",
-        program    => "../Count/bedCount.py",
-        option     => "",
-        source_arg => "-i",
-        source_ref => [ $callName, ".bed\$" ],
-        output_arg => "-o",
-        output_prefix => ".txt",
-        output_ext => ".txt",
-        sh_direct  => 0,
-        pbs        => {
-          "email"    => $email,
-          "nodes"    => "1:ppn=1",
-          "walltime" => "1",
-          "mem"      => "2gb"
-        },
-      };
-      push @$summary, ($peak_count);
+      add_peak_count($config, $def, $summary, $target_dir, $callName . "_count", $callName);
+
+      if ($annotate_nearest_gene) {
+        my $geneName = $callName . "_gene";
+        $config->{$geneName} = {
+          class                    => "CQS::UniqueR",
+          perform                  => 1,
+          target_dir               => "${target_dir}/${callName}",
+          rtemplate                => "../Annotation/findNearestGene.r",
+          output_file              => "",
+          output_file_ext          => ".Category.Table.csv",
+          parameterSampleFile1_ref => [ $callName, $callFilePattern ],
+          parameterFile1           => $gene_bed,
+          rCode                    => '',
+          sh_direct                => 1,
+          pbs                      => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push @$summary, ($geneName);
+      }
+
+      $task_dic->{peak_caller} = $callName;
+      $task_dic->{peak_count} = $callName . "_count";
+
+      my $chipqc_taskname = $callName . "_chipqc";
+      if ($def->{perform_chipqc}) {
+        add_chipqc($config, $def, $summary, $target_dir, $chipqc_taskname, [ $callName, $callFilePattern ], [ "bwa_cleanbam", ".bam\$" ]);
+        $task_dic->{chipqc} = $chipqc_taskname;
+      }
+
+      if ( getValue( $def, "perform_homer" ) ) {
+        my $homer = addHomerAnnotation( $config, $def, $summary, $target_dir, $callName, $callFilePattern );
+        $task_dic->{homer} = $homer;
+      }
 
       if ( getValue( $def, "perform_enhancer" ) ) {
         addEnhancer( $config, $def, $individual, $summary, $target_dir, $callName . "_enhancer", [ "bwa_cleanbam", ".bam\$" ], [$callName, $callFilePattern] );
@@ -324,27 +329,12 @@ sub getConfig {
 
       if ($perform_diffbind) {
         my $bindName = $callName . "_diffbind";
-        $config->{$bindName} = {
-          class                   => "Comparison::DiffBind",
-          perform                 => 1,
-          target_dir              => "${target_dir}/${bindName}",
-          option                  => "",
-          source_ref              => "bwa_cleanbam",
-          groups                  => $def->{"treatments"},
-          controls                => $def->{"controls"},
-          design_table             => getValue( $def, "diffbind_table" ),
-          peaks_ref               => [ $callName, $callFilePattern ],
-          peak_software           => "bed",
-          homer_annotation_genome => $def->{homer_annotation_genome},
-          sh_direct               => 0,
-          pbs                     => {
-            "email"    => $email,
-            "nodes"    => "1:ppn=1",
-            "walltime" => "72",
-            "mem"      => "40gb"
-          },
-        };
-        push @$summary, ($bindName);
+        addDiffbind($config, $def, $summary, $target_dir, $bindName, "bwa_cleanbam", [ $callName, $callFilePattern ]);
+        $task_dic->{diffbind} = $bindName;
+        if ( getValue( $def, "perform_homer" ) ) {
+          my $diffbind_homer = addHomerAnnotation( $config, $def, $summary, $target_dir, $bindName, ".sig.bed" );
+          $task_dic->{diffbind_homer} = $diffbind_homer;
+        }
       }
 
       if ( getValue( $def, "perform_homer_motifs" ) ) {
@@ -365,7 +355,6 @@ sub getConfig {
           binding_site_bed_ref => [ $callName, $callFilePattern ],
           sh_direct            => 1,
           pbs                  => {
-            "email"    => $email,
             "nodes"    => "1:ppn=1",
             "walltime" => "72",
             "mem"      => "40gb"
@@ -387,7 +376,6 @@ sub getConfig {
             pipeline_dir       => getValue( $def, "rose_folder" ),
             sh_direct          => 1,
             pbs                => {
-              "email"    => $email,
               "nodes"    => "1:ppn=1",
               "walltime" => "72",
               "mem"      => "40gb"
@@ -410,7 +398,6 @@ sub getConfig {
             groups     => $def->{"replicates"},
             sh_direct  => 0,
             pbs        => {
-              "email"    => $email,
               "nodes"    => "1:ppn=1",
               "walltime" => "72",
               "mem"      => "40gb"
@@ -434,7 +421,6 @@ sub getConfig {
           groups     => $def->{comparison},
           sh_direct  => 0,
           pbs        => {
-            "email"    => $email,
             "nodes"    => "1:ppn=1",
             "walltime" => "72",
             "mem"      => "40gb"
@@ -456,14 +442,12 @@ sub getConfig {
             rCode                    => '',
             sh_direct                => 1,
             pbs                      => {
-              "email"     => $def->{email},
-              "emailType" => $def->{emailType},
               "nodes"     => "1:ppn=1",
               "walltime"  => "1",
               "mem"       => "10gb"
             },
           };
-          push @$summary, ($diffName);
+          push @$summary, ($geneName);
         }
 
         if ( getValue( $def, "perform_homer_motifs" ) ) {
@@ -498,13 +482,16 @@ sub getConfig {
       is_single_pdf      => 1,
       sh_direct          => 1,
       pbs                => {
-        "email"    => $email,
         "nodes"    => "1:ppn=1",
         "walltime" => "1",
         "mem"      => "10gb"
       },
     };
     push @$summary, ("bamplot");
+  }
+
+  if ( getValue( $def, "perform_report" ) ) {
+    addPeakPipelineReport($config, $def, $summary, $target_dir, $task_dic);
   }
 
   $config->{"sequencetask"} = {
@@ -518,7 +505,6 @@ sub getConfig {
     },
     sh_direct => 0,
     pbs       => {
-      "email"    => $email,
       "nodes"    => "1:ppn=8",
       "walltime" => "72",
       "mem"      => "40gb"

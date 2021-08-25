@@ -48,17 +48,18 @@ sub initializeDefaultOptions {
 }
 
 sub addCutadapt {
-  my ($config, $def, $individual, $summary, $cutadaptName, $fastqcName, $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster) = @_;
+  my ($config, $def, $individual, $summary, $cutadapt_task, $fastqcName, $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster) = @_;
   my $default_thread = $is_pairend?2:1;
   my $cutadapt_thread = getValue($def, "cutadapt_thread", $default_thread);
   print("cutadapt_thread=" . $cutadapt_thread . "\n");
   my $cutadapt_class = ( defined $def->{cutadapt_config} ) ? "Trimmer::CutadaptByConfig" : "Trimmer::Cutadapt";
   my $cutadapt = {
-    "$cutadaptName" => {
+    "$cutadapt_task" => {
       class                            => $cutadapt_class,
       perform                          => 1,
-      target_dir                       => $intermediate_dir . "/" . getNextFolderIndex($def) . "$cutadaptName",
+      target_dir                       => $intermediate_dir . "/" . getNextFolderIndex($def) . "$cutadapt_task",
       option                           => $def->{cutadapt_option},
+      use_option_only                  => $def->{use_cutadapt_option_only},
       source_ref                       => $source_ref,
       config                           => $def->{cutadapt_config},
       adapter                          => $def->{adapter},
@@ -93,13 +94,42 @@ sub addCutadapt {
   for my $key (keys %$cutadapt){
     $config->{$key} = $cutadapt->{$key};
   }
-  push @$individual, ($cutadaptName);
+  push @$individual, ($cutadapt_task);
+
+  if ($is_pairend) {
+    if (getValue($def, "perform_cutadapt_validate", 0)){
+      my $fastq_validator = $cutadapt_task . "_validate";
+      $config->{"$fastq_validator"} = {
+        class => "CQS::ProgramWrapperOneToOne",
+        target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "$fastq_validator",
+        option => "",
+        use_tmp_folder => 1,
+        suffix  => "_qc",
+        interpretor => "python3",
+        program => "../QC/validatePairendFastq.py",
+        source_arg => "-i",
+        source_ref => [$cutadapt_task, ".fastq.gz"],
+        output_arg => "-o",
+        output_file_prefix => ".txt",
+        output_file_ext => ".txt",
+        output_to_same_folder => 1,
+        can_result_be_empty_file => 1,
+        sh_direct   => 0,
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "6",
+          "mem"       => "10gb"
+        }
+      };
+      push(@$individual, $fastq_validator);
+    }
+  }
 
   if ( $def->{perform_fastqc} ) {
-    addFastQC( $config, $def, $individual, $summary, $fastqcName, [ $cutadaptName, ".fastq.gz" ], $preprocessing_dir );
+    addFastQC( $config, $def, $individual, $summary, $fastqcName, [ $cutadapt_task, ".fastq.gz" ], $preprocessing_dir );
   }
-  $source_ref = [ $cutadaptName, ".fastq.gz" ];
-  return ($source_ref, $cutadaptName);
+  $source_ref = [ $cutadapt_task, ".fastq.gz" ];
+  return ($source_ref, $cutadapt_task);
 }
 
 sub addFastqLen {
@@ -108,25 +138,32 @@ sub addFastqLen {
   my $fastq_len_dir = $parentFolder . "/" . getNextFolderIndex($def) . $fastqLenName;
   my $fastq_len     = {
     "$fastqLenName" => {
-      class      => "CQS::FastqLen",
-      perform    => 1,
+      class => "CQS::ProgramWrapperOneToOne",
       target_dir => $fastq_len_dir,
-      option     => "",
+      #option => "-c",
+      option => "",
+      use_tmp_folder => 1,
+      suffix  => "_flen",
+      interpretor => "python3",
+      program => "../QC/fastq_len.py",
+      source_arg => "-i",
       source_ref => $source_ref,
-      sh_direct  => 1,
-      cluster    => $cluster,
-      pbs        => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
+      output_arg => "-o",
+      output_file_prefix => ".len",
+      output_file_ext => ".len",
+      output_to_same_folder => 1,
+      can_result_be_empty_file => 0,
+      sh_direct   => 0,
+      pbs => {
         "nodes"     => "1:ppn=1",
-        "walltime"  => "23",
-        "mem"       => "20gb"
-      },
+        "walltime"  => "2",
+        "mem"       => "10gb"
+      }
     },
     "${fastqLenName}_vis" => {
       class                    => "CQS::UniqueR",
       perform                  => 1,
-      target_dir               => $fastq_len_dir,
+      target_dir               => $parentFolder . "/" . getNextFolderIndex($def) . "${fastqLenName}_summary",
       rtemplate                => "countTableVisFunctions.R,fastqLengthVis.R",
       output_file              => ".lengthDistribution",
       output_file_ext          => ".png",
@@ -158,25 +195,26 @@ sub initCutadaptOption {
   my ( $config, $def, $fastq_remove_N ) = @_;
 
   if ( $def != $config ) {
-    initDefaultValue( $config, "min_read_length", $def->{"min_read_length"} );
+    initDefaultValue( $config, "min_read_length", getValue($def, "min_read_length", 0) );
   }
   my $cutadapt_option = getValue( $config, "cutadapt_option", getValue( $def, "cutadapt_option", "" ) );
+  if(! getValue($def, "use_cutadapt_option_only", 0)){
+    if ( ( $cutadapt_option !~ /-a/ ) && ( $cutadapt_option !~ /-g/ ) ) {
+      defined $config->{"adapter_5"} or defined $config->{"adapter_3"} or getValue( $config, "adapter" );
+    }
 
-  if ( ( $cutadapt_option !~ /-a/ ) && ( $cutadapt_option !~ /-g/ ) ) {
-    defined $config->{"adapter_5"} or defined $config->{"adapter_3"} or getValue( $config, "adapter" );
+    if ( $cutadapt_option !~ /\-m/ ) {
+      my $min_read_length = getValue( $config, "min_read_length" );
+      $cutadapt_option = $cutadapt_option . " -m " . $min_read_length;
+    }
+
+    if ( $cutadapt_option !~ /\-n/ ) {
+      my $max_adapter_count = getValue( $config, "max_adapter_count", 2 );
+      $cutadapt_option = $cutadapt_option . " -n " . $max_adapter_count;
+    }
+
+    $config->{cutadapt_option} = $cutadapt_option;
   }
-
-  if ( $cutadapt_option !~ /\-m/ ) {
-    my $min_read_length = getValue( $config, "min_read_length" );
-    $cutadapt_option = $cutadapt_option . " -m " . $min_read_length;
-  }
-
-  if ( $cutadapt_option !~ /\-n/ ) {
-    my $max_adapter_count = getValue( $config, "max_adapter_count", 2 );
-    $cutadapt_option = $cutadapt_option . " -n " . $max_adapter_count;
-  }
-
-  $config->{cutadapt_option} = $cutadapt_option;
 }
 
 sub getPreprocessionConfig {
@@ -214,18 +252,20 @@ sub getPreprocessionConfig {
     $def->{files} = $files;
 
     my $groups = $def->{groups};
-    my $group_names = [keys %$groups];
-    for my $group_name (@$group_names){
-      my $filter_samples = [];
-      my $cur_samples = $groups->{$group_name};
-      for my $sample (@$cur_samples){
-        if (not defined $ignore_sample_map{$sample}) {
-          push @$filter_samples, $sample;
+    if(defined $groups){
+      my $group_names = [keys %$groups];
+      for my $group_name (@$group_names){
+        my $filter_samples = [];
+        my $cur_samples = $groups->{$group_name};
+        for my $sample (@$cur_samples){
+          if (not defined $ignore_sample_map{$sample}) {
+            push @$filter_samples, $sample;
+          }
         }
+        $groups->{$group_name} = $filter_samples;
       }
-      $groups->{$group_name} = $filter_samples;
+      $def->{groups} = $groups;
     }
-    $def->{groups} = $groups;
   }
 
   if (defined $def->{files}) {
@@ -286,6 +326,11 @@ sub getPreprocessionConfig {
       debug      => $def->{debug},
       sratoolkit_setting_file => $def->{sratoolkit_setting_file},
       interval_list_file => $def->{interval_list_file},
+      R          => getValue($def, "R", "R"),
+      Rscript    => getValue($def, "Rscript", "Rscript"),
+      R_LIBS     => $def->{"R_LIBS"},
+      localize_to_local_folder => getValue($def, "localize_to_local_folder", 0),
+      use_tmp_folder => getValue($def, "use_tmp_folder", 0),
     },
     files                => $def->{files},
     groups               => $def->{groups},
@@ -399,7 +444,7 @@ sub getPreprocessionConfig {
     $config->{qc_check_fastq_duplicate} = {
       class => "CQS::ProgramWrapperOneToOne",
       target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "qc_check_fastq_duplicate",
-      interpretor => "python",
+      interpretor => "python3",
       program => "../QC/checkFastqDuplicate.py",
       source_arg => "-i",
       source_ref => $source_ref,
@@ -422,7 +467,7 @@ sub getPreprocessionConfig {
     $config->{dedup_fastq} = {
       class => "CQS::ProgramWrapperOneToOne",
       target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "dedup_fastq",
-      interpretor => "python",
+      interpretor => "python3",
       program => "../Format/dedupFastq.py",
       source_arg => "-i",
       source_ref => $source_ref,
@@ -535,7 +580,7 @@ sub getPreprocessionConfig {
       perform                  => 1,
       target_dir               =>  $test_dir . "/" . $extractTask,
       option                   => $extract_option,
-      interpretor              => "python",
+      interpretor              => "python3",
       program                  => "../Pipeline/extractFirstNFastq.py",
       parameterSampleFile1_arg => "-i",
       parameterSampleFile1_ref => $source_ref,
@@ -554,8 +599,8 @@ sub getPreprocessionConfig {
     };
     push( @$tasks, $extractTask );
 
-    my ($test_ref, $cutadapt_name) = addCutadapt($config, $def, $tasks, $tasks, "test_cutadapt", "test_fastqc_post_trim", $test_dir, $test_dir, $extractTask, $is_pairend, $cluster);
-    addFastqLen($config, $def, $tasks, $tasks, "test_fastq_len", $test_dir, [$cutadapt_name, ".gz"], $cluster );
+    my ($test_ref, $cutadapt_task) = addCutadapt($config, $def, $tasks, $tasks, "test_cutadapt", "test_fastqc_post_trim", $test_dir, $test_dir, $extractTask, $is_pairend, $cluster);
+    addFastqLen($config, $def, $tasks, $tasks, "test_fastq_len", $test_dir, [$cutadapt_task, ".gz"], $cluster );
 
     print(join(',', @$tasks));
     $config->{"test_sequencetask"} = {
@@ -578,9 +623,9 @@ sub getPreprocessionConfig {
   }
 
   if ($run_cutadapt) {
-    my $cutadapt_name;
-    ($source_ref, $cutadapt_name)  = addCutadapt($config, $def, $individual, $summary, "cutadapt", "fastqc_post_trim", $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster);
-    addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, [$cutadapt_name, ".gz"], $cluster );
+    my $cutadapt_task;
+    ($source_ref, $cutadapt_task)  = addCutadapt($config, $def, $individual, $summary, "cutadapt", "fastqc_post_trim", $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster);
+    addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, [$cutadapt_task, ".gz"], $cluster );
   }elsif ($def->{fastq_len} ) {
     addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, $source_ref, $cluster );
   }

@@ -1,0 +1,64 @@
+
+#####################################
+#stability.batch file
+#####################################
+#merge pair end reads and screen (filter). The V4 region of the 16S rRNA gene has short length (~250bp) so usually pair end reads will be overlap with each other.
+#See their wet lab sop for more details
+#make.contigs(file=stability.files, processors=8) #make .trim.contigs
+screen.seqs(fasta=current, group=current, maxambig=0, maxlength=275) #make .good.fasta
+
+#get unique sequences for alignment
+unique.seqs() #make .good.unique.fasta
+count.seqs(name=current, group=current) #make .good.count_table
+#summary.seqs()
+summary.seqs(count=current)
+
+align.seqs(fasta=current, reference=silva.v4.fasta) #make fasta  file .good.unique.align, only this file
+#review alignment position of most reads to see if start and end position are correct in pcr.seqs
+summary.seqs(count=current)
+
+#Only keep sequences overlap the same alignment coordinates. See results from summary.seqs above for start and end position
+screen.seqs(fasta=current,count=current,start=1968,end=11550, maxhomop=8) #make fasta file .good.unique.good.align and count file .good.good.count_table
+
+#remove columns with gap in all sequences (vertical=T) and terminal gap (trump=.))
+filter.seqs(fasta=current, vertical=T, trump=.) #make .filter.fasta (from .align)
+unique.seqs(fasta=current, count=current) #make .unique.fasta and .unique.count_table
+
+# de-noise our sequences is to pre-cluster the sequences, up to 2 differences between sequences (diffs=2)
+# We generally favor allowing 1 difference for every 100 bp of sequence. Here each sequence is ~200 bp so use 2.
+# This command will split the sequences by group and then sort them by abundance and go from most abundant to least
+pre.cluster(fasta=current, count=current, diffs=2) #make .precluster.count_table and .precluster.fasta. And map file for each sample
+
+#removing chimeras
+##chimera.uchime will not make count table
+chimera.uchime(fasta=current, count=current, dereplicate=t) #make .denovo.uchime.accnos, which are sequences to remove. And .denovo.uchime.pick.count_table
+##The SOP use chimera.vsearch, which will make count table
+#chimera.vsearch(fasta=current, count=current, dereplicate=t)
+remove.seqs(fasta=current, accnos=current) #remove accnos sequences from pre.cluster fasta. Make .pick.fasta
+summary.seqs(count=current) #sequences for a reduction of 8.2%; this is a reasonable number of sequences to be flagged as chimeric.
+get.current()
+
+#classify sequences and only keep Bacteria sequences (as the primers are supposed to only amplify them). 
+#Sequences from Eukaryota, Archaea, and mitochondria should be removed
+classify.seqs(fasta=current, count=current, reference=trainset16_022016.pds.fasta, taxonomy=trainset16_022016.pds.tax, cutoff=80) #make .pds.wang.taxonomy and pds.wang.tax.summary. Please note names here are from .pick.fasta. .denovo.uchime.pick.count_table were not used in result names.
+remove.lineage(fasta=current, count=current, taxonomy=current, taxon=Chloroplast-Mitochondria-unknown-Archaea-Eukaryota) #make .pick.taxonomy, .accnos, .pick.pick.count_table and .pick.pick.fasta. note files have two .pick as the input is .denovo.uchime.pick.count_table and .pick.fasta.
+#remove.groups(count=current, fasta=current, taxonomy=current, groups=Mock) #Mock sample is in the example data. We don't have this
+summary.tax(taxonomy=current, count=current)
+
+#You can Assessing error rates if you have "mock" sample
+
+#use the taxonomic information to split the sequences into bins and then cluster sequences into OTU level within each bin
+#taxlevel=4, which corresponds to the level of Order
+cluster.split(fasta=current, count=current, taxonomy=current, splitmethod=classify, taxlevel=4) #make .dist file, reads pair wise distance; .list is list for OTUs and reads; 
+#cluster.split(fasta=stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.fasta, count=stability.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.pick.pick.count_table, taxonomy=stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pds.wang.pick.taxonomy, splitmethod=classify, taxlevel=4)
+
+#how many sequences are in each OTU from each group
+make.shared(list=current, count=current, label=0.03) #.shared file, OTU counts in each sample
+#want to know the taxonomy for each of our OTUs
+classify.otu(list=current, count=current, taxonomy=current, label=0.03)
+
+
+#Cluster sequences into Phylotypes level. cutoff parameter 1-6 can be used, corresponding to Genus through Kingdom levels.
+phylotype(taxonomy=current)
+make.shared(list=current, count=current, label=1)
+classify.otu(list=current, count=current, taxonomy=current, label=1)

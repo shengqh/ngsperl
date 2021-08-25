@@ -56,7 +56,7 @@ sub perform {
     print $pbs "cqstools parclip_t2c $option -i $xmlFile -o $t2cFile 
     
 if [[ -s $t2cFile ]]; then
-  python $py_script -i ${t2cFile}.xml -c $xmlFile -o ${t2cFile}.xml.txt
+  python3 $py_script -i ${t2cFile}.xml -c $xmlFile -o ${t2cFile}.xml.txt
 fi
 ";
     $self->close_pbs( $pbs, $pbs_file );

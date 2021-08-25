@@ -23,6 +23,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_uw";
+  $self->{_forbid_tmp_folder} = 1;
   bless $self, $class;
   return $self;
 }
@@ -31,6 +32,14 @@ sub result {
   my ( $self, $config, $section, $pattern,$removeEmpty ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
+
+  my $result       = {};
+
+  my $output_result_folder             = get_option( $config, $section, "output_result_folder",                0 );
+  if($output_result_folder){
+    $result->{$task_name} = [$result_dir];
+    return($result);
+  }
 
   my $output_no_name             = get_option( $config, $section, "output_no_name",                0 );
   my $output_taskname = $output_no_name ? "" : $task_name;
@@ -53,15 +62,13 @@ sub result {
   }
   @output_perSample_file_exts = grep { $_ ne '' } @output_perSample_file_exts; #remove empty elements
 
-  my $result       = {};
-
   if ( $output_file eq "parameterSampleFile1" or $output_file eq "parameterSampleFile2" or $output_file eq "parameterSampleFile3" ) {
     if ( has_raw_files( $config, $section, $output_file ) ) {
       my @result_files = ();
       my %temp = %{ get_raw_files( $config, $section, $output_file ) };
       foreach my $sample_name ( keys %temp ) {
 #        print "SampleName: $sample_name\n";
-        if ( ref( $temp{$sample_name} ) eq "HASH" ) {
+        if ( is_hash( $temp{$sample_name} ) ) {
           foreach my $output_file_ext_one (@$output_file_exts) {
             push( @result_files, "${result_dir}/${sample_name}${output_file_ext_one}" );
           }
@@ -88,22 +95,26 @@ sub result {
       }
     }
     
-    if(scalar(@result_files) > 0){
-      my $filtered = filter_array( \@result_files, $pattern, 1 );
-      if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
-        $result->{$task_name} = $filtered;
+    if(scalar(@result_files) == 0){
+      if ($output_perSample_file !~ /^parameterSampleFile/){
+        push( @result_files, "${result_dir}/${output_taskname}${output_file}" );
       }
+    }
+
+    my $filtered = filter_array( \@result_files, $pattern, 1 );
+    if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
+      $result->{$task_name} = $filtered;
     }
   }
 
-  if ( $output_perSample_file eq "parameterSampleFile1" or $output_perSample_file eq "parameterSampleFile2" or $output_perSample_file eq "parameterSampleFile3" ) {
+  if ( $output_perSample_file =~ /^parameterSampleFile/ ) {
     #per sample result
     if ( has_raw_files( $config, $section, $output_perSample_file ) ) {
       my %temp = %{ get_raw_files( $config, $section, $output_perSample_file ) };
       foreach my $sample_name ( keys %temp ) {
 #        print "SampleName: $sample_name\n";
         my @result_perSample_files = ();
-        if ( (ref( $temp{$sample_name} ) eq "HASH") or $output_perSample_file_byName ) {
+        if ( is_hash( $temp{$sample_name}) or $output_perSample_file_byName ) {
           foreach my $output_file_ext_one (@output_perSample_file_exts) {
             push( @result_perSample_files, "${result_dir}/${sample_name}${output_file_ext_one}" );
           }

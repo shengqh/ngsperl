@@ -23,6 +23,7 @@ obj[[cluster_name]]<-factor(unlist(obj[[cluster_name]]), levels=unique(df[,clust
 result<-NULL
 prefix<-rownames(edgeRres)[2]
 for (prefix in rownames(edgeRres)){
+  cat("Processing ", prefix, "\n")
   comparison<-edgeRres[prefix, "comparison"]
   sigGenenameFile<-paste0(edgeRfolder, "/", edgeRres[prefix, "sigGenenameFile"])
   cellType<-edgeRres[prefix, "cellType"]
@@ -86,13 +87,13 @@ for (prefix in rownames(edgeRres)){
           
           subcells<-colnames(cell_obj)[cell_obj$DisplayGroup == controlGroup]
           subobj<-subset(cell_obj, cells=subcells)
-          p1<-FeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Control: ", controlGroup))
-          p1<-suppressMessages(expr = p1 + xlim(xlim) + ylim(ylim) + fix.sc)
+          p2<-FeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Control: ", controlGroup))
+          p2<-suppressMessages(expr = p2 + xlim(xlim) + ylim(ylim) + fix.sc)
           
           subcells<-colnames(cell_obj)[cell_obj$DisplayGroup == sampleGroup]
           subobj<-subset(cell_obj, cells=subcells)
-          p2<-FeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Sample: ", sampleGroup))
-          p2<-suppressMessages(expr = p2  + xlim(xlim) + ylim(ylim) + fix.sc)
+          p1<-FeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Sample: ", sampleGroup))
+          p1<-suppressMessages(expr = p1  + xlim(xlim) + ylim(ylim) + fix.sc)
         }
         p<-ggarrange(p0,                                                 # First row with scatter plot
                      ggarrange(p1, p2, ncol = 2, labels = c("B", "C")), # Second row with box and dot plots

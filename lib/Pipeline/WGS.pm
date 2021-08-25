@@ -504,7 +504,7 @@ fi
         perform               => 1,
         target_dir            => "${target_dir}/". $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_replace_read_group",
         option                => getValue($def, "replace_read_group_option"),
-        interpretor           => "python",
+        interpretor           => "python3",
         program               => "../Format/replace_rg.py",
         docker_prefix         => "cqs_",
         check_program         => 1,

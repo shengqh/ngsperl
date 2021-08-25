@@ -22,6 +22,7 @@ sub new {
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_mt2";
   $self->{_docker_prefix} = "gatk4_";
+  $self->{_use_tmp_folder} = 1;
   bless $self, $class;
   return $self;
 }
@@ -86,6 +87,27 @@ sub perform {
     my @sample_files = @{ $group_sample_map{$group_name} };
     my $sampleCount  = scalar(@sample_files);
 
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
+    my $pbs_name = basename($pbs_file);
+    my $log      = $self->get_log_filename( $log_dir, $group_name );
+
+    my $tmp_vcf        = "${group_name}.somatic.tmp${suffix}";
+    my $vcf            = "${group_name}.somatic${suffix}";
+    my $passvcf        = "${group_name}.somatic.pass${suffix}";
+    my $snpPass        = "${group_name}.somatic.snp.pass${suffix}";
+    my $indelPass      = "${group_name}.somatic.indel.pass${suffix}";
+
+    print $sh "if [[ ! -s $result_dir/$indelPass ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+    
+";
+
+    my $log_desc = $cluster->get_log_description($log);
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $indelPass );
+
+    my $localized_files = [];
+
     my $normal;
     my $tumor;
     my $sample_param;
@@ -93,6 +115,10 @@ sub perform {
       $normal      = "";
       my $tumor_name = $sample_files[0][0];
       $tumor       = $sample_files[0][1];
+
+      $self->localize_files_in_tmp_folder($pbs, [$tumor], $localized_files, [".bai"]);
+      $tumor = $localized_files->[0];
+
       $sample_param = "-I $tumor -tumor $tumor_name";
     }
     elsif ( $sampleCount != 2 ) {
@@ -103,26 +129,18 @@ sub perform {
       $normal      = $sample_files[0][1];
       my $tumor_name = $sample_files[1][0];
       $tumor       = $sample_files[1][1];
+
+      my $local_files = $self->localize_files_in_tmp_folder($pbs, [$normal, $tumor], $localized_files, [".bai"]);
+      $normal = $local_files->[0]; 
+      $tumor = $local_files->[1];
+
       $sample_param = "-I $tumor -tumor $tumor_name -I $normal -normal $normal_name";
     }
 
-    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
-    my $pbs_name = basename($pbs_file);
-    my $log      = $self->get_log_filename( $log_dir, $group_name );
+    print $pbs "$init_command 
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
-    my $tmp_vcf        = "${group_name}.somatic.tmp${suffix}";
-    my $vcf            = "${group_name}.somatic${suffix}";
-    my $passvcf        = "${group_name}.somatic.pass${suffix}";
-    my $snpPass        = "${group_name}.somatic.snp.pass${suffix}";
-    my $indelPass      = "${group_name}.somatic.indel.pass${suffix}";
-
-
-    my $log_desc = $cluster->get_log_description($log);
-
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $indelPass );
-    print $pbs "$init_command \n";
+mkdir tmp_${group_name}    
+";
 
     if ( $sampleCount == 2 ) {
       print $pbs "
@@ -139,7 +157,7 @@ fi
 
 if [ ! -s $vcf ]; then
   echo calling variation ...
-  gatk Mutect2 --java-options \"$java_option\" $option \\
+  gatk --java-options \"-Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option\" Mutect2 $option \\
     -R $faFile \\
     $sample_param \\
     -ERC $ERC_mode \\
@@ -158,7 +176,7 @@ fi
 
 if [[ -s $vcf && ! -s $passvcf ]]; then
   echo filtering pass ...
-  gatk SelectVariants --java-options \"$java_option\" \\
+  gatk --java-options \"-Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option\" SelectVariants \\
     --exclude-filtered \\
     -V $vcf \\
     -O $passvcf
@@ -166,19 +184,21 @@ fi
 
 if [[ -s $passvcf && ! -s $indelPass ]]; then
   echo filtering snp ...
-  gatk SelectVariants --java-options \"$java_option\" \\
+  gatk --java-options \"-Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option\" SelectVariants \\
     -select-type SNP \\
     -V $passvcf \\
     -O $snpPass
 
   echo filtering indel ...
-  gatk SelectVariants --java-options \"$java_option\" \\
+  gatk --java-options \"-Djava.io.tmpdir=`pwd`/tmp_${group_name} $java_option\" SelectVariants \\
     -select-type INDEL \\
     -V $passvcf \\
     -O $indelPass
 fi
 
 ";
+
+    $self->clean_temp_files($pbs, $localized_files);
 
     $self->close_pbs( $pbs, $pbs_file );
   }

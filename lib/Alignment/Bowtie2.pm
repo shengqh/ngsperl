@@ -20,6 +20,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_bt2";
+  $self->{_use_tmp_folder} = 1;
   $self->{log_result} = 1;
   bless $self, $class;
   return $self;
@@ -51,6 +52,30 @@ sub perform {
     my $sam_file     = $sample_name . ".sam";
     my $bam_file     = $sample_name . ".bam";
     my $log_file     = $sample_name . ".log";
+    my $sort_log_file     = $sample_name . ".sort.log";
+
+    my $pbs_name = $self->pbs_name($sample_name);
+    my $pbs_file = $pbs_dir . "/$pbs_name";
+    my $log      = $self->get_log_filename( $log_dir, $sample_name );
+
+    my $cur_dir  = $outputToSameFolder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+
+    my $final_file = $mark_duplicates ? $sample_name . ".rmdup.bam" : $bam_file;
+    my $chromosome_grep_command = getChromosomeFilterCommand( $bam_file, $chromosome_grep_pattern );
+
+
+    print $sh "
+if [[ ! -s $result_dir/${final_file}.bai ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
+
+    my $log_desc = $cluster->get_log_description($log);
+
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files)};
 
     my $indent = "";
     my $tag    = "--sam-RG ID:$sample_name --sam-RG LB:$sample_name --sam-RG SM:$sample_name --sam-RG PL:ILLUMINA";
@@ -68,21 +93,6 @@ sub perform {
     my $index_command = get_index_command( $bam_file, $indent );
     my $stat_command = get_stat_command( $bam_file, $indent );
 
-    my $pbs_name = $self->pbs_name($sample_name);
-    my $pbs_file = $pbs_dir . "/$pbs_name";
-    my $log      = $self->get_log_filename( $log_dir, $sample_name );
-
-    my $cur_dir  = $outputToSameFolder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
-
-    my $final_file = $mark_duplicates ? $sample_name . ".rmdup.bam" : $bam_file;
-    my $chromosome_grep_command = getChromosomeFilterCommand( $bam_file, $chromosome_grep_pattern );
-
-    print $sh "\$MYCMD ./$pbs_name \n";
-
-    my $log_desc = $cluster->get_log_description($log);
-
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
-
     print $pbs "
 
 if [ ! -s $sam_file ]; then
@@ -91,11 +101,17 @@ if [ ! -s $sam_file ]; then
 fi
 
 if [ -s $log_file ]; then
-  samtools view -Shu -F 256 $sam_file | samtools sort -o $bam_file -T $sample_name -
-  if [ -s $bam_file ]; then
-    samtools index $bam_file 
-    $chromosome_grep_command
-    rm $sam_file
+  isSucceed=\$(cat $log_file | grep -c \"overall alignment rate\")
+  if [ \$isSucceed ]; then
+    echo alignment succeed, sorting sam to bam ...
+    samtools view -Shu -F 256 $sam_file | samtools sort -o $bam_file -T $sample_name - 
+    if [[ -s $bam_file ]]; then
+      echo index bam ...
+      samtools index $bam_file 
+      $chromosome_grep_command
+      samtools idxstats $bam_file > ${bam_file}.chromosome.count
+      rm $sam_file
+    fi
   fi
 fi
 ";
@@ -104,14 +120,28 @@ fi
       print $pbs "
 if [ -s $bam_file ]; then
   echo RemoveDuplicate=`date` 
-  java $option -jar $picard_jar MarkDuplicates I=$bam_file O=$final_file ASSUME_SORTED=true REMOVE_DUPLICATES=false VALIDATION_STRINGENCY=SILENT M=${final_file}.metrics
+  java -jar $picard_jar MarkDuplicates I=$bam_file O=$final_file ASSUME_SORTED=true REMOVE_DUPLICATES=false VALIDATION_STRINGENCY=SILENT M=${final_file}.metrics
   if [ -s $final_file ]; then
-    rm $bam_file ${bam_file}.bai
+    rm $bam_file ${bam_file}.bai ${bam_file}.chromosome.count
     samtools index $final_file 
+    samtools idxstats $final_file > ${final_file}.chromosome.count
   fi
 fi
 ";
+    } else { #prepare to do flagstat if not mark_duplicates
+      $final_file=$bam_file;
     }
+
+    print $pbs "
+if [[ (-s $final_file) ]]; then
+  echo flagstat=`date` 
+  samtools flagstat $final_file > ${final_file}.stat 
+fi
+";
+
+
+    $self->clean_temp_files($pbs, $localized_files);
+
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;

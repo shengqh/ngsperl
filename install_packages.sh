@@ -25,3 +25,4 @@ curl -L http://cpanmin.us | perl - --sudo WWW::Mechanize
 curl -L http://cpanmin.us | perl - --sudo Algorithm::Loops
 curl -L http://cpanmin.us | perl - --sudo JSON::Streaming::Reader
 curl -L http://cpanmin.us | perl - --sudo Tie::IxHash
+curl -L http://cpanmin.us | perl - --sudo Text::CSV

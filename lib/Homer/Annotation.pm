@@ -11,6 +11,7 @@ use CQS::FileUtils;
 use CQS::Task;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use Data::Dumper;
 
 our @ISA = qw(CQS::Task);
 
@@ -48,19 +49,22 @@ sub perform {
     my $log      = $self->get_log_filename( $log_dir, $pairName );
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir );
+    my $final_file = "";
+    my @lines = ();
     for my $file (@$files) {
       my $output        = basename($file);
       my $outputFolder  = scalar(@$files) == 1 ? "." : $output;
       my $annoFile      = $output . ".annotation.txt";
       my $annoStatsFile = $output . ".annotation.stats";
-      print $pbs "if [ ! -s $outputFolder/$annoFile ]; then
-  findMotifsGenome.pl $file $genome $outputFolder $option
-  annotatePeaks.pl $file $genome -annStats $outputFolder/$annoStatsFile > $outputFolder/$annoFile
-  R --vanilla -f $rscript --args $outputFolder/$annoStatsFile $outputFolder/$annoStatsFile
-fi
-
-";
+      push(@lines, "");
+      push(@lines, "findMotifsGenome.pl $file $genome $outputFolder $option");
+      push(@lines, "annotatePeaks.pl $file $genome -annStats $outputFolder/$annoStatsFile > $outputFolder/$annoFile");
+      push(@lines, "R --vanilla -f $rscript --args $outputFolder/$annoStatsFile $outputFolder/$annoStatsFile");
+      $final_file = "$outputFolder/$annoFile";
+    }
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    for my $line (@lines) {
+      print $pbs $line . "\n";
     }
     $self->close_pbs( $pbs, $pbs_file );
 
@@ -92,9 +96,14 @@ sub result {
       my $outputFolder  = scalar(@$files) == 1 ? "" : $output . "/";
       my $annoFile      = $output . ".annotation.txt";
       my $annoStatsFile = $output . ".annotation.stats";
+      my $annoStatsCsvFile = $output . ".annotation.stats.csv";
       push( @result_files, "${result_dir}/${pairName}/${outputFolder}$annoFile" );
       push( @result_files, "${result_dir}/${pairName}/${outputFolder}$annoStatsFile" );
+      push( @result_files, "${result_dir}/${pairName}/${outputFolder}$annoStatsCsvFile" );
       push( @result_files, "${result_dir}/${pairName}/${outputFolder}homerResults.html" );
+      push( @result_files, "${result_dir}/${pairName}/${outputFolder}knownResults.html" );
+      push( @result_files, "${result_dir}/${pairName}/${outputFolder}knownResults.txt" );
+      push( @result_files, "${result_dir}/${pairName}/${outputFolder}homerMotifs.all.motifs" );
     }
     $result->{$pairName} = filter_array( \@result_files, $pattern );
   }

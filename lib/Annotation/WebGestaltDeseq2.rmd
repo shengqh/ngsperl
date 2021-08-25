@@ -115,32 +115,51 @@ cat(paste0("### ", tabRef("enriched", plotData$category), "\n\n"))
 enriched<-updateEnrichedTable(enriched)
 
 rowCount<-nrow(enriched)
-if (rowCount>=200) {
-  rowCount=200
-  cat("\nMore than 200 categories in WebGestalt Result. Only top 200 were kept.\n")
+if (rowCount>=20) {
+  rowCount=20
+  cat("\nMore than 20 categories in WebGestalt Result. Only top 20 were kept.\n")
 }
 
-curTable<-enriched[c(1:rowCount),c(1:9, 12,13)]
-print(kable(curTable) %>% 
-		kable_styling() %>%
-		row_spec(which(curTable$geneUp > curTable$geneDown), color = "black", background = "bisque") %>% 
-		row_spec(which(curTable$geneUp < curTable$geneDown), color = "black", background = "honeydew") %>%
-		htmltools::HTML())
+curTable=enriched
+
+if (("geneUp" %in% colnames(curTable)) & ("geneDown" %in% colnames(curTable)) ) {
+  curTable<-enriched[c(1:rowCount),c(1:9, 12,13)]
+  print(kable(curTable) %>%
+	  kable_styling() %>%
+	  row_spec(which(curTable$geneUp > curTable$geneDown), color = "black", background = "bisque") %>%
+	  row_spec(which(curTable$geneUp < curTable$geneDown), color = "black", background = "honeydew") %>%
+	  htmltools::HTML())
+} else {
+  curTable<-enriched[c(1:rowCount),c(1:9)]
+  print(kable(curTable) %>%
+	  kable_styling() %>%
+	  htmltools::HTML())
+}
 cat("\n\n<hr>")
 
 idx<-1
 for(idx in c(1:rowCount)){
 	entry<-enriched[idx,]
 	userIds<-unlist(strsplit( entry$userId[1], ';'))
-	entryTable<-deseq2[deseq2$Feature_gene_name %in% userIds,]
+	#entryTable<-deseq2[deseq2$Feature_gene_name %in% userIds,]
+	entryTable<-deseq2[deseq2[,geneCol] %in% userIds,]
 	cat(paste0("### ", entry$tblLongCaption, " {#", entry$tblLink, "}\n\n" ))
-	print(kable(entryTable) %>% 
-		kable_styling() %>%
-		row_spec(which(entryTable$FoldChange > 1), color = "black", background = "bisque") %>% 
-		row_spec(which(entryTable$FoldChange < 1), color = "black", background = "honeydew") %>%
-		htmltools::HTML())
+	# print(kable(entryTable) %>% 
+	# 	kable_styling() %>%
+	# 	row_spec(which(entryTable[,diffCol] > diffCenterValue), color = "black", background = "bisque") %>% 
+	# 	row_spec(which(entryTable[,diffCol] < diffCenterValue), color = "black", background = "honeydew") %>%
+	# 	htmltools::HTML())
+	temp=kable(entryTable) %>%		kable_styling()
+  if (!is.null(diffCol)) {
+    temp=temp %>% 
+	  	row_spec(which(entryTable[,diffCol] > diffCenterValue), color = "black", background = "bisque") %>% 
+	  	row_spec(which(entryTable[,diffCol] < diffCenterValue), color = "black", background = "honeydew")
+  }
+  print(temp %>% htmltools::HTML())
 	cat("\n\n<hr>")
 }
 
 ```
+
+
 

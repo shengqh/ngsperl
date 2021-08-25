@@ -49,7 +49,7 @@ sub perform {
   }
 
   my $files = join( ",", @significantFiles );
-  print $pbs "python $script -i $files -o $final_file \n";
+  print $pbs "python3 $script -i $files -o $final_file \n";
   $self->close_pbs( $pbs, $pbs_file );
 }
 

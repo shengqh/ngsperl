@@ -66,7 +66,7 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
     print $pbs "   
-python $conifer rpkm --probes $bedfile --input $bam_file --output $final_file 
+python3 $conifer rpkm --probes $bedfile --input $bam_file --output $final_file 
 ";
 
     $self->close_pbs( $pbs, $pbs_file );
@@ -96,14 +96,14 @@ python $conifer rpkm --probes $bedfile --input $bam_file --output $final_file
   print $pbs2 "
 #2 analysis
 echo analyze=`date`
-python $conifer analyze --probes $bedfile --rpkm_dir rpkm/ --output $hdf5File --svd 6 --write_svals $svalsFile --plot_scree $plotFile --write_sd $sdFile 
+python3 $conifer analyze --probes $bedfile --rpkm_dir rpkm/ --output $hdf5File --svd 6 --write_svals $svalsFile --plot_scree $plotFile --write_sd $sdFile 
 
 #3 call
 echo call=`date`
-python $conifer call --input $hdf5File --output $callFile 
+python3 $conifer call --input $hdf5File --output $callFile 
 
 #4 plot
-python $conifer plotcalls --input $hdf5File --calls $callFile --output call_images 
+python3 $conifer plotcalls --input $hdf5File --calls $callFile --output call_images 
 ";
 
   $self->close_pbs( $pbs2, $pbs_file2 );

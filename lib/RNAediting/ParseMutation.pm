@@ -61,7 +61,7 @@ sub perform {
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
   print $pbs "
-python $python_script $option -i $bamfile -o $final_file -f $sequence_fasta -p $positions
+python3 $python_script $option -i $bamfile -o $final_file -f $sequence_fasta -p $positions
 
 ";
 #R --vanilla -f $rTemplate --args ${task_name}.SNV.tsv ${task_name}.SNV $picture_width $picture_height $percentageThresholds

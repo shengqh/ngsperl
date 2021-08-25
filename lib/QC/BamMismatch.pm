@@ -57,7 +57,7 @@ sub perform {
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
   print $pbs "
-python $python_bamMismatch $option -i $bamfile -o $final_file 
+python3 $python_bamMismatch $option -i $bamfile -o $final_file 
 
 R --vanilla -f $r_bamMismatch --args $final_file ${final_file}.png $max_mismatch $height_width
 ";

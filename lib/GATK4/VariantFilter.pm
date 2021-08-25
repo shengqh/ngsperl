@@ -106,7 +106,6 @@ sub perform {
 if [[ -s $final_file ]]; then
   rm $rmlist \\
     $recal_rmlist \\
-    $sites_only_variant_filtered_vcf ${sites_only_variant_filtered_vcf}.tbi \\
     $apply_vqsr_rmlist \\
     $indels_recalibration ${indels_recalibration}.tbi $indels_tranches  \\
     $snps_recalibration ${snps_recalibration}.tbi $snps_tranches \\

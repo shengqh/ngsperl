@@ -23,7 +23,10 @@ sub get_run_now {
 
 sub is_linux {
     my $os = $^O;
-    return ( $os eq "linux" );
+		#print("os=". $os . "\n");
+		my $result = $os eq "linux" ? 1 : 0;
+		#print("result=". $result . "\n");
+    return ( $result );
 }
 
 1;

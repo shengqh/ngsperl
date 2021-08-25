@@ -32,25 +32,39 @@ makeColors<-function(n,colorNames="Set1") {
   return(colors)
 }
 
-tableBarplot<-function(dat,textSize=4,ylab="Reads",colorNames="Set1",barwidth=0.5, percent=FALSE) {
+doGetDatForFigure<-function(dat,percent){
   dat[is.na(dat)]<-0
   if(percent){
     dat<-prop.table(as.matrix(dat), 2)
-    ylab<-paste0("Percentage of ", ylab)
   }
-  datForFigure<-melt(as.matrix(dat))
-  colnames(datForFigure)<-c("Category","Sample","Reads")
+  result<-melt(as.matrix(dat))
+  colnames(result)<-c("Category","Sample","Reads")
+  result$Type=ifelse(percent, "Percentage", "Reads")
+  return(result)
+}
+
+getDatForFigure<-function(dat){
+  d1<-doGetDatForFigure(dat,percent=T)
+  d2<-doGetDatForFigure(dat,percent=F)
+  result<-rbind(d1,d2)
+  return(result)
+}
+
+tableBarplot<-function(dat,textSize=4,colorNames="Set1",barwidth=0.5) {
+  datForFigure<-getDatForFigure(dat)
   colors<-makeColors(length(unique(datForFigure[,"Category"])),colorNames)
   p<-ggplot(datForFigure) +
     geom_bar(aes(x=Sample,y=Reads,fill=Category), stat="identity", width=barwidth) +
     scale_fill_manual(values=colors) +
     theme_classic() +
+    facet_grid(Type~., scale="free_y") +
     theme(legend.position = "top")+
     guides(fill = guide_legend(nrow = 1)) +
     theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5)) +
     theme(axis.text = element_text(size=textSize),legend.text=element_text(size=textSize),
-          axis.title = element_text(size=textSize),legend.title= element_text(size=textSize))+
-    ylab(ylab)
+          axis.title = element_text(size=textSize),legend.title= element_text(size=textSize),
+          strip.background = element_blank()) +
+          xlab("") + ylab("")
   
   return(p)
 }
@@ -64,43 +78,46 @@ truncNames=function(x,ncharMax=20) {
 
 hasReadCategory <- readCategoryFile != ''
 
-allreads<-read.csv(allreadsFile, row.names=1)
+allreads<-read.csv(allreadsFile, row.names=1, check.names=F)
 colnames(allreads)=truncNames(colnames(allreads)) #make names shorter for figure if they are too long
 if(hasReadCategory){
   readCategory<-read.csv(readCategoryFile, row.names=1)
   colnames(readCategory)=truncNames(colnames(readCategory))
 }
-smallRNACategory<-read.csv(smallRNACategoryFile, row.names=1)
+smallRNACategory<-read.csv(smallRNACategoryFile, row.names=1, check.names=F)
 smallRNACategory<-smallRNACategory[grepl("RNA", rownames(smallRNACategory)),]
 colnames(smallRNACategory)=truncNames(colnames(smallRNACategory))
 
-for (perc in c(TRUE, FALSE)){
-  g1<-tableBarplot(allreads, percent=perc)
-  g3<-tableBarplot(smallRNACategory, percent=perc)
+g1<-tableBarplot(allreads)
+g3<-tableBarplot(smallRNACategory)
 
-  p1 <- ggplot_gtable(ggplot_build(g1))
-  p3 <- ggplot_gtable(ggplot_build(g3))
+p1 <- ggplot_gtable(ggplot_build(g1))
+dev.off()
+p3 <- ggplot_gtable(ggplot_build(g3))
+dev.off()
 
-  maxWidth = unit.pmax(p1$widths[2:3], p3$widths[2:3])
-  maxHeight = 1400
-  if(hasReadCategory) {
-    g2<-tableBarplot(readCategory, percent=perc)
-    p2 <- ggplot_gtable(ggplot_build(g2))
-    maxWidth = unit.pmax(maxWidth, p2$widths[2:3])
-    p2$widths[2:3] <- maxWidth
-    maxHeight = 2000
-  }
-
-  p1$widths[2:3] <- maxWidth
-  p3$widths[2:3] <- maxWidth
-
-  width<-max(1500, 20 * ncol(allreads))
-  png(file=paste0(resultPrefix, ifelse(perc, ".perc.png", ".count.png")), width=width, height=maxHeight, res=300)
-  if(hasReadCategory) {
-    gg1<-ggarrange(p1, p2, p3, ncol = 1, nrow=3, labels=c("A", "B", "C"))
-  }else{
-    gg1<-ggarrange(p1, p3, ncol = 1, nrow=2, labels=c("A", "B"))
-  }
-  print(gg1)
+maxWidth = unit.pmax(p1$widths[2:3], p3$widths[2:3])
+maxHeight = 1000
+if(hasReadCategory) {
+  g2<-tableBarplot(readCategory)
+  p2 <- ggplot_gtable(ggplot_build(g2))
   dev.off()
+  maxWidth = unit.pmax(maxWidth, p2$widths[2:3])
+  p2$widths[2:3] <- maxWidth
+  maxHeight = 1600
 }
+
+p1$widths[2:3] <- maxWidth
+p3$widths[2:3] <- maxWidth
+
+width<-max(2000, 40 * ncol(allreads))
+png(file=paste0(resultPrefix, ".png"), width=width, height=2 * maxHeight, res=300)
+if(hasReadCategory) {
+  gg1<-ggarrange(p1, p2, p3, ncol = 1, nrow=3, labels=c("A", "B", "C"))
+}else{
+  gg1<-ggarrange(p1, p3, ncol = 1, nrow=2, labels=c("A", "B"))
+}
+print(gg1)
+dev.off()
+
+

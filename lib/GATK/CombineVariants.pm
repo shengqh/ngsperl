@@ -30,9 +30,10 @@ sub perform {
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $gatk_jar = get_param_file( $config->{$section}{gatk_jar}, "gatk_jar", 1, not $self->using_docker() );
-  my $extension = get_option( $config, $section, "extension", ".vcf" );
 
   #my $is_mutect = get_option($config, $section, "is_mutect", 0);
+
+  my $filter_pass = get_option($config, $section, "filter_pass" , 0);
 
   my $java_option = $config->{$section}{java_option};
   if ( !defined $java_option || $java_option eq "" ) {
@@ -46,27 +47,12 @@ sub perform {
   my $log      = $self->get_log_filename( $log_dir, $task_name );
   my $log_desc = $cluster->get_log_description($log);
 
-  my $final_file  = $task_name . $extension;
+  my $final_vcf  = $task_name . ".vcf";
+  my $final_file  = $task_name . ".vcf.gz";
   my $merged_file = $task_name . ".tmp.vcf";
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-  #  if ($is_mutect){
-  #    my $py_script = dirname(__FILE__) . "/filterMutect.py";
-  #    if ( !-e $py_script ) {
-  #      die "File not found : " . $py_script;
-  #    }
-  #
-  #    my @sample_names = sort keys %vcfFiles;
-  #    for my $sample_name ( @sample_names ) {
-  #      my @sample_files = @{ $vcfFiles{$sample_name} };
-  #      my $vcfFile      = $sample_files[0];
-  #      my $mutectFile = $sample_name . "_mutect.vcf";
-  #      print $pbs "python $py_script -i $vcfFile -o $mutectFile \n";
-  #      $vcfFiles{$sample_name} = [$mutectFile];
-  #    }
-  #  }
-  #
   print $pbs "
 java $java_option -jar $gatk_jar \\
   -T CombineVariants \\
@@ -79,25 +65,25 @@ java $java_option -jar $gatk_jar \\
     print $pbs "  --variant $vcfFile \\\n";
   }
 
+  my $additional_filter = $filter_pass?"|awk '{ if (\$7 == \"PASS\") { print } }'":"";
+
   print $pbs "  -o $merged_file \\
   -genotypeMergeOptions UNIQUIFY
   
-if [[ -s $merged_file ]]; then
-  grep \"^##\" $merged_file > $final_file
-  grep -v \"^##\" $merged_file | grep \"^#\" | sed -e \"s/.variant\\S*//g\" >> $final_file
-  grep -v \"^#\" $merged_file |sed -e \"s/;set=variant\\S*//g\" >> $final_file
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch $task_name.combined.failed
   rm $merged_file ${merged_file}.idx
+else
+  awk '{if(\$1 ~ /^##/){print;}else{exit;}}' $merged_file > $final_vcf
+  awk '{if(\$1 ~ /^#/){print;}else{exit;}}' $merged_file | grep -v \"^##\" | sed -e \"s/.variant\\S*//g\" >> $final_vcf
+  grep -v \"^#\" $merged_file $additional_filter | sed -e \"s/;set=filterInvariant\\S*//g\"  | sed -e \"s/;set=variant\\S*//g\" >> $final_vcf
+  bgzip $final_vcf
+  tabix $final_file
+  rm -f $merged_file ${merged_file}.idx
+  touch $task_name.succeed
 fi 
 ";
-
-  #  if ($is_mutect){
-  #    print $pbs "
-  #if [[ -s $merged_file ]]; then
-  #  rm *_mutect.vcf
-  #fi
-  #";
-  #  }
-  #
 
   $self->close_pbs( $pbs, $pbs_file );
 }
@@ -107,12 +93,10 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
-  my $extension = get_option( $config, $section, "extension", ".vcf" );
-
   my @result_files = ();
-  my $merged_file  = $task_name . $extension;
+  my $final_file  = $task_name . ".vcf.gz";
 
-  push( @result_files, $result_dir . "/" . $merged_file );
+  push( @result_files, $result_dir . "/" . $final_file );
   my $result = {};
   $result->{$task_name} = filter_array( \@result_files, $pattern );
 

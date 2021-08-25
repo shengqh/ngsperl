@@ -26,14 +26,21 @@ sub result {
   my $raw_files = get_raw_files($config, $section);
   my $groups = get_raw_files($config, $section, "groups");
   my $pick_index = get_option( $config, $section, "sample_index_in_group", 0);
+  my $can_be_empty = get_option( $config, $section, "can_be_empty", 0);
 
   my $result = {};
 
   for my $group_name (keys %$groups) {
     my $samples = $groups->{$group_name};
     my $sample_name = $samples->[$pick_index];
-    my $result_files = $raw_files->{$sample_name};
-    $result->{$group_name} = filter_array( $result_files, $pattern );
+    if(not defined $sample_name) {
+      if($can_be_empty){
+        $result->{$group_name} = [];
+      }
+    }else{
+      my $result_files = $raw_files->{$sample_name};
+      $result->{$group_name} = filter_array( $result_files, $pattern );
+    }
   }
 
   return $result;

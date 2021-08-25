@@ -15,9 +15,9 @@ resultTable<-NULL
 taskFileWithReads<-NULL
 for (countFile in countFiles[,1]) {
 	if (grepl(".csv$",countFile)) {
-		countTable<-read.csv(countFile,header=T,row.names=1)
+		countTable<-read.csv(countFile,header=T,row.names=1,check.names=F)
 	} else {
-		countTable<-read.delim(countFile,header=T,row.names=1)
+		countTable<-read.delim(countFile,header=T,row.names=1,check.names=F)
 	}
 	if (nrow(countTable)==0) {
 		next;

@@ -27,7 +27,7 @@ sub add_combine_mutect {
     perform               => 1,
     target_dir            => "${target_dir}/${task_name}",
     option                => "",
-    interpretor           => "python",
+    interpretor           => "python3",
     program               => "../GATK/mergeMutect.py",
     check_program         => 1,
     parameterSampleFile1_arg    => "-i",
@@ -59,7 +59,7 @@ sub add_post_mutect {
     perform               => 1,
     target_dir            => "${target_dir}/${filterVariantsName}",
     option                => "",
-    interpretor           => "python",
+    interpretor           => "python3",
     program               => "../GATK/filterMutect.py",
     check_program         => 1,
     parameterFile1_arg    => "-i",
@@ -85,7 +85,8 @@ sub add_post_mutect {
         addAnnovarFilterGeneannotation( $config, $def, $tasks, $target_dir, $annovar_filter_name );
       }
 
-      addAnnovarMafReport($config, $def, $tasks, $target_dir, $annovar_filter_name, $mutect_prefix, $mutect_index_dic, $mutect_index_key)
+      my ($annovarMaf,$annovarMafReport)=addAnnovarMafReport($config, $def, $tasks, $target_dir, $annovar_filter_name, $mutect_prefix, $mutect_index_dic, $mutect_index_key);
+      return($annovarMaf,$annovarMafReport)
     }
   }
 }

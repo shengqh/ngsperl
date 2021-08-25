@@ -22,11 +22,17 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(
+      is_string
+      is_array
+      is_not_array
+      is_hash
+      is_not_hash
       getValue
       get_config_section
       has_config_section
       has_option
       get_option
+      get_option_include_general
       get_option_file
       get_java
       get_task_name
@@ -88,7 +94,14 @@ our %EXPORT_TAGS = (
       get_covariances_by_pattern
       create_covariance_file_by_pattern
       write_HTO_sample_file
-      get_parameter_file_option)
+      get_parameter_file_option
+      get_hash_level2
+      get_expanded_genes
+      parse_curated_genes
+      get_joined_files
+      get_joined_names
+      process_parameter_sample_file
+      )
   ]
 );
 
@@ -96,6 +109,28 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
+sub is_string {
+  my $data = shift;
+  return(ref $data eq ref "");
+}
+
+sub is_array {
+  my $data = shift;
+  return(ref $data eq ref []);
+}
+
+sub is_not_array {
+  return not is_array(@_);
+}
+
+sub is_hash {
+  my $data = shift;
+  return(ref $data eq ref {});
+}
+
+sub is_not_hash {
+  return not is_hash(@_);
+}
 
 sub getValue {
   my ( $def, $name, $defaultValue ) = @_;
@@ -116,7 +151,7 @@ sub getValue {
 sub get_config_section {
   my ( $config, $section ) = @_;
   my @sections = split( '::', $section );
-  if (ref($section) eq ref({})){
+  if ( is_hash($section) ){
     my $mess = longmess();
     print Dumper( $mess );    
   }
@@ -159,6 +194,28 @@ sub get_option {
     }
     else {
       $result = $default;
+    }
+  }
+
+  return ($result);
+}
+
+#get option from task section and general section
+sub get_option_include_general {
+  my ( $config, $section, $key, $default ) = @_;
+
+  my $curSection = get_config_section( $config, $section );
+
+  my $result = $curSection->{$key};
+  if ( !defined $result ) {
+    $result = $config->{general}{$key};
+    if (!defined $result) {
+      if ( !defined $default ) {
+        die "Define ${section}::${key} first!";
+      }
+      else {
+        $result = $default;
+      }
     }
   }
 
@@ -382,9 +439,44 @@ sub get_result_file {
 sub get_first_result_file {
   my ( $config, $refSectionName, $pattern ) = @_;
   my $refSection = get_config_section( $config, $refSectionName );
-  if ( defined $refSection->{class} ) {
-    my $myclass = instantiate( $refSection->{class} );
-    my $result  = $myclass->result( $config, $refSectionName, $pattern, 1 );
+
+  if (is_string($refSection)) {
+    if ((defined $pattern) and ($pattern ne "")){
+      if ($refSection =~ /$pattern/){
+        return($refSection);
+      }else{
+        die "$refSection doesn't match pattern $pattern";
+      }
+    }else{
+      return($refSection);
+    }
+  }
+
+  if (is_array($refSection)) {
+    if ( scalar(@$refSection) > 0 ) {
+      if ((defined $pattern) and ($pattern ne "")){
+        for my $file (@$refSection){
+          if ($file =~ /$pattern/){
+            return($file);
+          } 
+        }
+        die "no file in $refSectionName matches pattern $pattern";
+      }else{
+        return($refSection->[0]);
+      }
+    }else{
+      die "no file in $refSectionName";
+    }
+  }
+
+  if (is_hash($refSection)) {
+    my $result;
+    if ( defined $refSection->{class} ) {
+      my $myclass = instantiate( $refSection->{class} );
+      $result  = $myclass->result( $config, $refSectionName, $pattern, 1 );
+    }else{
+      $result = $refSection;
+    }
     foreach my $k ( sort keys %{$result} ) {
       my @files = @{ $result->{$k} };
       if ( scalar(@files) > 0 ) {
@@ -394,7 +486,7 @@ sub get_first_result_file {
     die "section $refSectionName return nothing!";
   }
 
-  return (undef);
+  die "section $refSectionName return nothing!";
 }
 
 sub parse_param_file {
@@ -412,7 +504,7 @@ sub parse_param_file {
   if ( defined $curSection->{$key_ref} ) {
     my $refSectionName = $curSection->{$key_ref};
     my $pattern;
-    if ( ref($refSectionName) eq 'ARRAY' ) {
+    if ( is_array($refSectionName) ) {
       my @parts = @{$refSectionName};
       if ( scalar(@parts) == 2 ) {
         $pattern        = $parts[1];
@@ -465,11 +557,11 @@ sub get_refmap {
     #in same config
     my $targetSection = $curSection->{$mapname_ref};
 
-    if ( ref($targetSection) eq 'HASH' ) {
+    if ( is_hash($targetSection) ) {
       return ( $result, 0 );
     }
 
-    if ( ref($targetSection) eq 'ARRAY' ) {
+    if ( is_array($targetSection) ) {
       my @parts      = @{$targetSection};
       my $partlength = scalar(@parts);
       for ( my $index = 0 ; $index < $partlength ; ) {
@@ -499,7 +591,7 @@ sub get_refmap {
 
     #in another config, has to be array
     my $refSectionName = $curSection->{$mapname_config_ref};
-    if ( !( ref($refSectionName) eq 'ARRAY' ) ) {
+    if ( is_not_array($refSectionName) ) {
       die "$mapname_config_ref has to be defined as ARRAY with [config, section, pattern]";
     }
     my @parts      = @{$refSectionName};
@@ -508,7 +600,7 @@ sub get_refmap {
       my $targetConfig  = $parts[$index];
       my $targetSection = $parts[ $index + 1 ];
 
-      if ( !( ref($targetConfig) eq 'HASH' ) ) {
+      if ( is_not_hash($targetConfig) ) {
         die
 "$mapname_config_ref has to be defined as ARRAY with [config1, section1, pattern1,config2, section2, pattern2] or [config1, section1,config2, section2] format. config should be hash and section should be string";
       }
@@ -517,7 +609,7 @@ sub get_refmap {
         die "undefined section $targetSection in $mapname_config_ref of $section";
       }
 
-      if ( $index == ( $partlength - 2 ) || ref( $parts[ $index + 2 ] ) eq 'HASH' ) {
+      if ( $index == ( $partlength - 2 ) || is_hash( $parts[ $index + 2 ] ) ) {
         $result->{$index} = { config => $targetConfig, section => $targetSection, pattern => $pattern };
         $index += 2;
       }
@@ -578,7 +670,7 @@ sub get_raw_file_list {
       my $bFound    = 0;
       my @curResult = ();
       for my $myvalues ( values %myres ) {
-        die "Return value should be array." if ( ref($myvalues) ne 'ARRAY' );
+        die "Return value should be array." if ( is_not_array($myvalues) );
         if ( scalar(@$myvalues) > 0 ) {
           push( @curResult, @$myvalues );
           $bFound = 1;
@@ -645,14 +737,14 @@ sub do_get_unsorted_raw_files {
       my $refcount = keys %myres;
       for my $mykey ( keys %myres ) {
         my $myvalues = $myres{$mykey};
-        if ( ref($myvalues) eq '' ) {
+        if ( is_string($myvalues) ) {
           $myvalues = [$myvalues];
         }
 
-        if ( ( ref($myvalues) eq 'ARRAY' ) && ( scalar( @{$myvalues} ) > 0 ) ) {
+        if ( is_array($myvalues) && ( scalar( @{$myvalues} ) > 0 ) ) {
           if ( exists $result{$mykey} ) {
             my $oldvalues = $result{$mykey};
-            if ( ref($oldvalues) eq 'ARRAY' ) {
+            if ( is_array($oldvalues) ) {
               my @merged = ( @{$oldvalues}, @{$myvalues} );
 
               #print "merged ARRAY ", Dumper(\@merged);
@@ -667,10 +759,10 @@ sub do_get_unsorted_raw_files {
           }
         }
 
-        if ( ( ref($myvalues) eq 'HASH' ) && ( scalar( keys %{$myvalues} ) > 0 ) ) {
+        if ( is_hash($myvalues) && ( scalar( keys %{$myvalues} ) > 0 ) ) {
           if ( exists $result{$mykey} ) {
             my $oldvalues = $result{$mykey};
-            if ( ref($oldvalues) eq 'HASH' ) {
+            if ( is_hash($oldvalues) ) {
               $result{$mykey} = merge_hash_right_precedent( $oldvalues, $myvalues );
             }
             else {
@@ -729,7 +821,7 @@ sub get_ref_section_pbs {
       my $section      = $values->{section};
 
       my $targetSection = get_config_section( $targetConfig, $section );
-      if ( ref($targetSection) ne 'HASH' ) {
+      if ( is_not_hash($targetSection) ) {
         next;
       }
 
@@ -869,7 +961,7 @@ sub get_pair_groups {
   my $group_names;
   my $ispaired       = 0;
   my $tmpgroup_names = $pairs->{$pair_name};
-  if ( ref($tmpgroup_names) eq 'HASH' ) {
+  if ( is_hash($tmpgroup_names) ) {
     $group_names = $tmpgroup_names->{"groups"};
     $ispaired    = $tmpgroup_names->{"paired"};
   }
@@ -887,7 +979,7 @@ sub get_pair_groups_names {
   my $group_names;
   my $pairedNames;
   my $tmpgroup_names = $pairs->{$pair_name};
-  if ( ref($tmpgroup_names) eq 'HASH' ) {
+  if ( is_hash($tmpgroup_names) ) {
     $group_names = $tmpgroup_names->{"groups"};
     $pairedNames = $tmpgroup_names->{"paired"};
   }
@@ -911,7 +1003,7 @@ sub get_pure_pairs {
 
   for my $pair_name ( keys %$result ) {
     my $tmpgroup_names = $result->{$pair_name};
-    if ( ref($tmpgroup_names) eq 'HASH' ) {
+    if ( is_hash($tmpgroup_names) ) {
       my $group_names = $tmpgroup_names->{"groups"};
       $result->{$pair_name} = $group_names;
     }
@@ -941,7 +1033,11 @@ sub get_group_sample_map {
     my @samples = @{ $groups->{$group_name} };
     my @gfiles  = ();
     foreach my $sample_name (@samples) {
-      my @bam_files = @{ $raw_files->{$sample_name} };
+      my $sample_files = $raw_files->{$sample_name};
+      if(!defined $sample_files){
+        die "Cannot find file of $sample_name for group $group_name";
+      }
+      my @bam_files = @$sample_files;
       my @sambam    = ( $sample_name, @bam_files );
       push( @gfiles, \@sambam );
     }
@@ -1039,11 +1135,34 @@ sub save_parameter_sample_file {
 
     open( my $list, '>', $outputFile ) or die "Cannot create $outputFile";
     foreach my $sample_name (@orderedSampleNames) {
-      foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
+      my $subSampleFiles = $temp{$sample_name};
+      my $refstr         = ref($subSampleFiles);
+      if ( $refstr eq 'HASH' ) {
+        foreach my $groupName ( sort keys %$subSampleFiles ) {
+          my $groupSampleNames = $subSampleFiles->{$groupName};
+          for my $groupSampleName (@$groupSampleNames) {
+            if ($fileOnly){
+              print $list $groupSampleName . "\n";
+            }else{
+              print $list "${groupSampleName}\t${groupName}\t${sample_name}\n";
+            }
+          }
+        }
+      }
+      elsif ( $refstr eq 'ARRAY' ) {
+        foreach my $subSampleFile (@$subSampleFiles) {
+          if ($fileOnly){
+            print $list $subSampleFile . "\n";
+          }else{
+            print $list $subSampleFile . "\t$sample_name\n";
+          }
+        }
+      }
+      else {
         if ($fileOnly){
-          print $list $subSampleFile . "\n";
+          print $list $subSampleFiles . "\n";
         }else{
-          print $list $subSampleFile . "\t$sample_name\n";
+          print $list $subSampleFiles . "\t$sample_name\n";
         }
       }
     }
@@ -1106,7 +1225,7 @@ sub writeFileList {
   open( my $fl, ">$fileName" ) or die "Cannot create $fileName";
   for my $sample_name ( sort keys %$fileMap ) {
     my $files = $fileMap->{$sample_name};
-    if(ref($files) eq 'ARRAY'){
+    if( is_array($files) ){
       if ( not $exportAllFiles ) {
         $files = [$files->[0]]
       }  
@@ -1169,6 +1288,11 @@ sub writeParameterSampleFile {
     my $nameIndex = -1;
     foreach my $sample_name (@orderedSampleNames) {
       my $subSampleFiles = $temp->{$sample_name};
+      if(not defined $subSampleFiles) {
+        print $list "\t$sample_name\n";
+        next;
+      }
+
       my $refstr         = ref($subSampleFiles);
       if ( $refstr eq 'HASH' ) {
         foreach my $groupName ( sort keys %$subSampleFiles ) {
@@ -1189,7 +1313,11 @@ sub writeParameterSampleFile {
         }
       }
       else {
-        print $list $subSampleFiles . "\t$sample_name\n";
+        if(!defined $subSampleFiles) {
+          print $list "\t$sample_name\n";
+        }else{
+          print $list $subSampleFiles . "\t$sample_name\n";
+        }
       }
     }
     close($list);
@@ -1225,10 +1353,12 @@ sub get_parameter_sample_files {
   }
   my $resultArg           = get_option( $config, $section, $key . "_arg",            "" );
   my $resultJoinDelimiter = get_option( $config, $section, $key . "_join_delimiter", "," );
+  my $resultNameArg = get_option( $config, $section, $key . "_name_arg", "" );
+  my $resultNameJoinDelimiter = get_option( $config, $section, $key . "_name_join_delimiter", "," );
 
   #print($key . " delimiter=" . $resultJoinDelimiter . "\n");
 
-  return ( $result, $resultArg, $resultJoinDelimiter );
+  return ( $result, $resultArg, $resultJoinDelimiter, $resultNameArg, $resultNameJoinDelimiter );
 }
 
 sub is_paired_end {
@@ -1671,8 +1801,12 @@ sub get_groups_by_pattern_dic {
 }
 
 sub get_groups_by_pattern_value {
-  my ($def) = @_;
-  my $gpattern = $def->{groups_pattern};
+  my ($def, $gpattern) = @_;
+  
+  if(!defined $gpattern){
+    $gpattern = $def->{groups_pattern};
+  }
+
   my $files = $def->{files};
 
   my @samplenames = ();
@@ -1696,6 +1830,12 @@ sub get_groups_by_pattern_value {
     my $groupname = $samplename;
     if($samplename =~ /$gpattern/){
       $groupname = $1;
+      if(defined $2){
+        $groupname = $groupname . $2;
+      }
+      if(defined $3){
+        $groupname = $groupname . $3;
+      }
     }
     #print($groupname . " : " . $samplename . "\n");
     if (not defined $groups->{$groupname}){
@@ -1709,11 +1849,30 @@ sub get_groups_by_pattern_value {
   return ($groups);
 }
 
+sub get_groups_by_pattern_array {
+  my ($def) = @_;
+  my $gpatterns = $def->{groups_pattern};
+  my $files = $def->{files};
+
+  my @samplenames = (keys %$files);
+  
+  #print($gpattern);
+  #print(Dumper($files));
+  my $groups = {};
+  for my $gpattern (@$gpatterns){
+    my $subgroups = get_groups_by_pattern_value($def, $gpattern);
+    $groups = merge_hash_right_precedent($groups, $subgroups);
+  }
+  return($groups);
+}
+
 sub get_groups_by_pattern {
   my ($def) = @_;
   my $gpattern = $def->{groups_pattern};
-  if (ref $gpattern eq 'HASH'){
+  if (is_hash($gpattern)){
     return(get_groups_by_pattern_dic($def));
+  }elsif (is_array($gpattern)){
+    return(get_groups_by_pattern_array($def));
   }else{
     return(get_groups_by_pattern_value($def));
   }
@@ -1811,6 +1970,116 @@ sub get_parameter_file_option {
     }
   }
   return($result);
+}
+
+sub get_hash_level2 {
+  my ($hash, $level2_key) = @_;
+  my $result = {};
+  for my $level1_key (keys %$hash){
+    my $value = $hash->{$level1_key};
+    $result->{$level1_key} = $value->{$level2_key};
+  }
+  return($result);
+}
+
+sub get_expanded_genes {
+  my $curated_gene_def = shift;
+  my $result = {};
+
+  if (is_array($curated_gene_def)) {
+    $result->{"interesting_genes"} = {
+      clusters => [],
+      genes => $curated_gene_def
+    };
+    return($result);
+  }
+
+  if(is_hash($curated_gene_def)) {
+    for my $key (keys %$curated_gene_def) {
+      my $value = $curated_gene_def->{$key};
+      if (is_array($value)) {
+        $result->{$key} = {
+          clusters => [],
+          genes => $value
+        };
+      }else{
+        $result->{$key} = $value;
+      }
+    }
+
+    return($result);
+  }
+
+  die "curated_gene_def should be either array or hash";
+}
+
+sub parse_curated_genes {
+  my $curated_gene_def = shift;
+  my $result = get_expanded_genes($curated_gene_def);
+
+  my $clusters = get_hash_level2($result, "clusters");
+  my $genes = get_hash_level2($result, "genes");
+
+  return($result, $clusters, $genes)
+}
+
+sub get_joined_files {
+  my ( $files, $join_delimiter ) = @_;
+  my $pfiles                  = [];
+  for my $individual_sample_name (sort keys %$files) {
+    my $p_invividual_files = $files->{$individual_sample_name};
+    my $p_invividual_file  = $p_invividual_files->[0];
+    push( @$pfiles, $p_invividual_file );
+  }
+  my $result = join( $join_delimiter, @$pfiles );
+  return ($result);
+}
+
+sub get_joined_names {
+  my ( $files, $join_delimiter ) = @_;
+  my @pfiles = sort keys %$files;
+  my $result = join( $join_delimiter, @pfiles );
+  return ($result);
+}
+
+sub process_parameter_sample_file {
+  my ($config, $section, $result_dir, $task_name, $task_suffix, $cur_option, $source_key, $index) = @_;
+  my ( $fileMap, $fileArg, $fileJoinDelimiter, $nameArg, $nameJoinDelimiter) = get_parameter_sample_files( $config, $section, $source_key );
+
+  if($index == 1){
+    if ($cur_option =~ /__SAMPLE_NAMES__/){
+      my $sample_names = get_joined_names($fileMap, $nameJoinDelimiter);
+      $cur_option =~ s/__SAMPLE_NAMES__/$sample_names/g;
+    }
+  }
+
+  my $input = "";
+  if (defined $config->{$section}{$source_key . "_type"} && ($config->{$section}{$source_key . "_type"} eq "array")){
+    $input = get_joined_files($fileMap, $fileJoinDelimiter);
+
+    if((defined $nameArg) && ($nameArg ne "")){
+      my $sample_names = get_joined_names($fileMap, $nameJoinDelimiter);
+      if ($config->{$section}{$source_key . "_name_has_comma"}){
+        $input = $input . " " . $nameArg . " \"" . $sample_names . "\"";
+      }else{
+        $input = $input . " " . $nameArg . " " . $sample_names;
+      }
+    }
+  }else{
+    my $list_file = save_parameter_sample_file( $config, $section, $source_key, "${result_dir}/${task_name}_${task_suffix}_fileList${index}.list" );
+
+    if($list_file ne ""){
+      $input = basename($list_file);
+    }
+  }
+
+  if (($index == 1) && ($cur_option =~ /__FILE__/)){
+    $cur_option =~ s/__FILE__/$input/g;
+  } elsif (option_contains_arg($cur_option, $fileArg)) {
+  } else{
+    $cur_option = $cur_option . " " . $fileArg . " " . $input;
+  }
+  return($cur_option, $input);
 }
 
 1;

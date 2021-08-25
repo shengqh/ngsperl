@@ -1,0 +1,426 @@
+
+calc_weight<-function(cellType){
+  freq<-sort((table(unlist(cellType)))/length(cellType))
+  weight<-1+sqrt((max(freq)-freq)/(max(freq)-min(freq)))
+  return(weight)
+}
+
+read_cell_markers_file<-function(panglao5_file, species, remove_subtype_of="", HLA_panglao5_file=""){
+  #preparing cell activity database
+  marker<-data.frame(fread(panglao5_file))
+  if(remove_subtype_of != ""){
+    remove_subtype_of<-unique(unlist(strsplit(remove_subtype_of, ",")))
+    pangdb_ct <- read.table(HLA_panglao5_file,header = T,row.names = 1,sep = "\t",stringsAsFactors = F)
+    remove_subtype_of<-remove_subtype_of[remove_subtype_of %in% marker$cell.type]
+    layer="Layer2"
+    removed<-c()
+    for(layer in c("Layer1","Layer2", "Layer3")){
+      layer_ct<-unique(pangdb_ct[,layer])
+      for(rs in remove_subtype_of){
+        if(rs %in% removed){
+          next
+        }
+        
+        if(rs %in% layer_ct){
+          subdb<-rownames(pangdb_ct)[pangdb_ct[,layer]==rs]
+          if(rs %in% subdb){ 
+            subdb<-subdb[!(subdb %in% remove_subtype_of)]
+            marker<-marker[!(marker$cell.type %in% subdb),]
+          }else{
+            marker$cell.type[marker$cell.type %in% subdb] = rs
+          }
+          removed<-c(removed, rs)
+        }
+      }
+    }
+  }
+  
+  hsind<-regexpr(species,marker$species)
+  marker_species<-marker[hsind>0 & marker$ubiquitousness.index<0.05,]
+  if (species=="Mm") {
+    ##change the gene symbol only keep the first letter capitalize
+    marker_species$official.gene.symbol<-toMouseGeneSymbol(marker_species$official.gene.symbol)
+  }
+  if (species=="Hs") {
+    marker_species$official.gene.symbol<-toupper(marker_species$official.gene.symbol)
+  }
+  cellType<-tapply(marker_species$official.gene.symbol,marker_species$cell.type,list)
+  weight<-calc_weight(cellType)
+  return(list(cellType=cellType, weight=weight))
+}
+
+get_selfdefinedCelltype <- function(file, finalLayer="layer3"){
+  file.ori <- scan(file,what = "",sep="\n")
+  marker.ori <- matrix("undefined",nrow=length(file.ori)/2,ncol = 2)
+  for (i in 1:length(file.ori)){if(i%%2==1){marker.ori[(i+1)/2,1]=substr(file.ori[i],2,nchar(file.ori[i]))}else{marker.ori[i/2,2]=file.ori[i]}}
+  ref <- as.data.frame(marker.ori[,1])
+  ref <- tidyr::separate(ref,col=colnames(ref),into = c("celltype","subtypeOf"),sep = ",")
+  rownames(ref) <- ref$celltype
+  celltype.ori <- sapply(tapply(marker.ori[,2],marker.ori[,1],list), function(x) strsplit(x,","))
+
+  celltype.tem <- as.data.frame(matrix(unlist(celltype.ori)))
+  celltype.tem[,2] <- rep(names(celltype.ori),lengths(celltype.ori))
+  celltype.tem <- tidyr::separate(celltype.tem,col=V2,into = c("celltype","subtypeOf"),sep = ",")
+
+  ct <- as.data.frame(matrix("Undefined",nrow = nrow(celltype.tem),ncol = length(unique(celltype.tem$subtypeOf))+2),stringsAsFactors=FALSE)
+  ct[,1:2] <- celltype.tem[,1:2]
+  for (i in 3:ncol(ct)){
+    for (j in 1:nrow(ct)) {if(ct[j,i-1] %in% rownames(ref)){ct[j,i]<-ref[ct[j,i-1],2]}else{ct[j,i]<-ct[j,i-1]}}
+  }
+
+  layer <- ncol(ct)
+  if(! identical(ct[,ncol(ct)],ct[,ncol(ct)-1])){layer <- ncol(ct)}else{
+    for (i in 1:ncol(ct)) {if(identical(ct[,i],ct[,i+1])){layer <- i;break}}
+  }
+
+  celltype.trim <- ct[,1:layer]
+  for (i in 1:nrow(celltype.trim)){
+    tag <- which(celltype.trim[i,]==celltype.trim[i,ncol(celltype.trim)])
+    if(length(tag)>1){
+      if(ncol(celltype.trim)+1-length(tag)==3){suf <- ct[i,3]}
+      else{suf <- ct[i,3:(ncol(celltype.trim)+1-length(tag))]}
+      pre <- rep(celltype.trim[i,2],length(tag)-1)
+      celltype.trim[i,] <- c(celltype.trim[i,][1:2],pre,suf)
+    }
+  }
+
+  for (i in 1:ncol(celltype.trim)){if(i == 1){colnames(celltype.trim)[i]="gene"}else{colnames(celltype.trim)[i]=paste0("layer",(ncol(celltype.trim)+1-i),"")}}
+
+  ct.final <- celltype.trim
+  for (i in 1:ncol(ct.final)){
+    if(i >1){ct.final[,i]=celltype.trim[,ncol(celltype.trim)+2-i];colnames(ct.final)[i] <- colnames(celltype.trim)[ncol(celltype.trim)+2-i]}
+  }
+
+  cellType<-tapply(ct.final$gene,ct.final[[finalLayer]],list)
+  weight<-calc_weight(cellType)
+  return(list(cellType=cellType, weight=weight))
+}
+
+toMouseGeneSymbol<-function(x){
+  result=paste0(toupper(substr(x,1,1)),tolower(substr(x,2,nchar(x))))
+  return(result)
+}
+
+read_cell_cluster_file<-function(fileName, sort_cluster_name="seurat_clusters", display_cluster_name=sort_cluster_name, prefix=""){
+  result<-read.csv(fileName, stringsAsFactors = F, row.names = 1)
+  
+  if(!display_cluster_name %in% colnames(result)){
+    result[,display_cluster_name] = paste0(prefix, result[,sort_cluster_name])
+  }
+  
+  if(sort_cluster_name=="seurat_clusters"){
+    clusters = result[!duplicated(result$seurat_clusters),]
+    clusters = clusters[order(clusters$seurat_clusters),]
+  }else{
+    clusters = result[!duplicated(result[,c("seurat_clusters", sort_cluster_name)]),]
+    clusters = clusters[order(clusters[,sort_cluster_name], clusters$seurat_clusters),]
+  }
+  
+  cluster_names=colnames(clusters)[grepl("_clusters", colnames(clusters))]
+
+  for(cluster_name in cluster_names){
+    cf_levels=unique(clusters[,cluster_name])
+    result[,cluster_name] = factor(result[,cluster_name], levels=cf_levels)
+  }
+  return(result)
+}
+
+find_markers<-function(object, by_sctransform, ident.1, ident.2, min.pct = 0.5, logfc.threshold = 0.6){
+  assay=ifelse(by_sctransform, "SCT", "RNA")
+  markers=FindMarkers(object, assay=assay, ident.1=ident.1, ident.2=ident.2, only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+  markers=markers[markers$p_val_adj < 0.01,]
+  return(markers)
+}
+
+find_all_markers<-function(object, by_sctransform, min.pct = 0.5, logfc.threshold = 0.6){
+  assay=ifelse(by_sctransform, "SCT", "RNA")
+  markers=FindAllMarkers(object, assay=assay, only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+  markers=markers[markers$p_val_adj < 0.01,]
+  return(markers)
+}
+
+get_cluster_count<-function(counts, clusters){
+  if(is.null(levels(clusters))){
+    allClusters=unique(clusters)
+  }else{
+    allClusters=levels(clusters)
+  }
+  cluster<-allClusters[1]
+  csums=lapply(allClusters, function(cluster){
+    #cat(cluster, "\n")
+    cells=names(clusters)[clusters==cluster]
+    subcounts=counts[,cells]
+    #cat(ncol(subcounts), "\n")
+    Matrix::rowSums(subcounts)
+  })
+  
+  result=do.call(cbind, csums)
+  colnames(result)=allClusters
+  
+  gcount=Matrix::rowSums(result)
+  result=result[gcount > 0,]
+  return(result)
+}
+
+get_group_count=function(curobj, groupName="active.ident") {
+  counts=GetAssayData(curobj,assay="RNA",slot="counts")
+  curgroups=curobj[[groupName]]
+  clusters=curgroups[,1]
+  names(clusters)=rownames(curgroups)
+  result=get_cluster_count(counts, clusters)
+  return(result)
+}
+
+add_cluster<-function(object, new.cluster.name, new.cluster.ids){
+  seurat_clusters<-object[["seurat_clusters"]]$seurat_clusters
+  names(new.cluster.ids) <- levels(seurat_clusters)
+
+  new.cluster.values<-plyr::mapvalues(x = seurat_clusters, from = levels(seurat_clusters), to = new.cluster.ids)
+  names(new.cluster.values)<-names(seurat_clusters)
+  
+  object[[new.cluster.name]]<-new.cluster.values
+  object
+}
+
+add_celltype<-function(obj, celltype_df, celltype_column){
+  new.cluster.ids<-split(celltype_df[,celltype_column], celltype$seurat_clusters)
+  obj[[celltype_column]] = unlist(new.cluster.ids[as.character(obj$seurat_clusters)])
+
+  celltype_df$seurat_column = paste0(celltype_df$seurat_clusters, " : ", celltype_df[,celltype_column])
+  new.cluster.ids<-split(celltype_df$seurat_column, celltype$seurat_clusters)
+  obj[[paste0("seurat_", celltype_column)]] = unlist(new.cluster.ids[as.character(obj$seurat_clusters)])
+  return(obj)
+}
+
+run_pca<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform){
+  if (by_sctransform) {
+    object <- RunPCA(object = object, verbose=FALSE)
+  }else{
+    if (Remove_Mt_rRNA) {
+      rRNA.genes <- grep(pattern = rRNApattern,  rownames(object), value = TRUE)
+      Mt.genes<- grep (pattern= Mtpattern,rownames(object), value=TRUE )
+      var.genes <- dplyr::setdiff(VariableFeatures(object), c(rRNA.genes,Mt.genes))
+    } else {
+      var.genes <- VariableFeatures(object)
+    }
+    object <- RunPCA(object = object, features = var.genes, verbose=FALSE)
+  }
+  return(object)
+}
+
+run_cluster_only<-function(object, pca_dims, resolution, random.seed, reduction="pca"){
+  object <- FindNeighbors(object = object, reduction=reduction, dims=pca_dims, verbose=FALSE)
+  object <- FindClusters(object=object, verbose=FALSE, random.seed=random.seed, resolution=resolution)
+  return(object)
+}
+
+run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, min.pct = 0.5, logfc.threshold = 0.6, reduction="pca"){
+  object=run_cluster_only(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, min.pct, logfc.threshold, reduction)
+  if (by_sctransform) {
+    markers <- FindAllMarkers(object, only.pos = TRUE, min.pct = min.pct, logfc.threshold = logfc.threshold)
+  }else{
+    markers <- FindAllMarkers(object, features=var.genes, only.pos = TRUE, min.pct = min.pct, logfc.threshold = logfc.threshold)
+  }
+  markers <- markers[markers$p_val_adj < 0.01,]
+  return(list(object=object, markers=markers))
+}
+
+ORA_celltype<-function(medianexp,cellType,weight){
+  ORA_result<-matrix(NA, nrow=length(cellType),ncol=dim(medianexp)[2])
+  CTA_result<-matrix(0,nrow=length(cellType),ncol=dim(medianexp)[2])
+
+  colnames(ORA_result)=colnames(medianexp)
+  colnames(CTA_result)=colnames(medianexp)
+
+  exp_z<-scale(medianexp)
+  genenames<-rownames(medianexp)   
+  for (j in 1: dim(medianexp)[2]){
+    clusterexp<-medianexp[,j] 
+    clusterexp_z<-exp_z[,j]
+    for (i in 1:length(cellType)){
+      
+      ct_exp<-length(intersect(genenames[clusterexp>0],cellType[[i]]))
+      ct_not_exp<-length(cellType[[i]])-ct_exp
+      exp_not_ct<-sum(clusterexp>0)-ct_exp
+      not_exp_not_ct<-length(clusterexp)-ct_not_exp 
+      cont.table<-matrix(c(ct_exp,ct_not_exp,exp_not_ct,not_exp_not_ct),nrow=2)
+      ORA_result[i,j]<-fisher.test(cont.table,alternative="greater")$p.value
+      ###
+      weight_ss<-weight[names(weight)%in%cellType[[i]]]
+      ind<-match(names(weight_ss),genenames)
+      exp_ss<-clusterexp_z[ind[!is.na(ind)]]
+      weight_ss<-weight_ss[!is.na(ind)]
+      CTA_result[i,j]<-sum(exp_ss*weight_ss)/(length(exp_ss)^(1/3))
+    }
+  }
+  rownames(ORA_result)<-rownames(CTA_result)<-names(cellType)
+  minp_ora_ind<- apply(ORA_result,2,function(x){which.min(x)})
+  minp_ora<-apply(ORA_result,2,min)
+  names(minp_ora)<-rownames(ORA_result)[minp_ora_ind]
+  
+  max_cta_ind<- apply(CTA_result,2,function(x){which.max(x)})
+  max_cta<-apply(CTA_result,2,max,na.rm=T)
+  names(max_cta)<-rownames(CTA_result)[max_cta_ind]
+  return(list(ora=ORA_result,cta=CTA_result,min_ora=minp_ora,max_cta=max_cta))
+}
+
+get_cta_ora_mat<-function(predict_celltype) {
+  cta_index<-apply(predict_celltype$cta,2,function(x){return(order(x,decreasing=T)[1:2])})
+  cta_index<-unique(sort(cta_index))
+  
+  cta_mat<- predict_celltype$cta[cta_index,]
+  colnames(cta_mat)<-paste0(names(predict_celltype$max_cta), " : ", colnames(predict_celltype$cta))
+  
+  ora_mat<- predict_celltype$ora[cta_index,]
+  ora_mat<--log10(ora_mat)  
+  colnames(ora_mat)<-colnames(cta_mat)
+  
+  return(list(cta_mat=cta_mat, ora_mat=ora_mat))
+}
+
+get_cta_combined<-function(obj, predicted){
+  cta_table<-data.frame(Cluster=colnames(predicted$cta), 
+                        CellType=names(predicted$max_cta),
+                        CtaScore=round(predicted$max_cta * 10) / 10.0,
+                        stringsAsFactors = F)
+  cta_table$OraPvalue=apply(cta_table, 1, function(x){
+    ct=x[2]
+    cl=x[1]
+    predicted$ora[ct, cl]
+  })
+
+  cluster_sample<-as.data.frame.matrix(table(obj$seurat_clusters, obj$orig.ident))
+  cluster_sample<-cluster_sample[as.character(cta_table$Cluster),]
+
+  nc<-apply(cluster_sample, 2, function(x){
+    tc=sum(x)
+    perc<-x/tc
+    return(round(perc*1000) / 10.0)
+  })
+  colnames(nc)<-paste0(colnames(nc), "_perc")
+
+  cta_combined<-cbind(cta_table, cluster_sample, nc)
+
+  return(cta_combined)
+}
+
+get_batch_samples<-function(batch_file, all_sample_names){
+  if(file.exists(batch_file)){
+    pools = read.table(batch_file, header=F, stringsAsFactors = F)
+    missnames<-all_sample_names[!(all_sample_names %in% pools$V1)]
+    if(length(missnames) > 0){
+      pools<-rbind(pools, data.frame(V1=missnames, V2=missnames))
+    }
+    poolmap=split(pools$V2, pools$V1)
+  }else{
+    poolmap=split(all_sample_names, all_sample_names)
+  }
+  return(poolmap)
+}
+
+draw_dimplot<-function(mt, filename, split.by) {
+  nSplit = length(unique(mt[,split.by]))
+  nWidth=ceiling(sqrt(nSplit))
+  nHeight=ceiling(nSplit / nWidth)
+
+  png(filename, width=nWidth * 600 + 200, height=nHeight*600, res=300)
+  g1<-ggplot(mt, aes(x=UMAP_1,y=UMAP_2)) +
+    geom_bin2d(bins = 70) + 
+    scale_fill_continuous(type = "viridis") + 
+    facet_wrap(as.formula(paste("~", split.by)), ncol=nWidth, nrow=nHeight) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+  print(g1)
+  dev.off()
+}
+
+do_harmony<-function(objs, by_sctransform, Remove_Mt_rRNA, Mtpattern, rRNApattern, npcs, batch_file) {
+  if(by_sctransform){
+    cat("performing SCTransform ...\n")
+    #perform sctransform
+    objs<-lapply(objs, function(x){
+      #cat("SCTransform of ", x)
+      x <- SCTransform(x, verbose = FALSE)
+      return(x)
+    })  
+    assay="SCT"
+    cat("SelectIntegrationFeatures ... \n")
+    objs.features <- SelectIntegrationFeatures(object.list = objs, nfeatures = 3000)  
+    cat("merge samples ... \n")
+    obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
+    VariableFeatures(obj) <- objs.features        
+  }else{
+    cat("merge samples ... \n")
+    obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
+    cat("NormalizeData ... \n")
+    obj <- NormalizeData(obj, verbose = FALSE)
+    cat("FindVariableFeatures ... \n")
+    obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 3000, verbose = FALSE)
+    all.genes <- rownames(obj)  
+    cat("ScaleData ... \n")
+    obj <- ScaleData(obj, features = all.genes, verbose = FALSE)
+  }
+
+  if (Remove_Mt_rRNA) {
+    rRNA.genes <- grep(pattern = rRNApattern,  rownames(obj), value = TRUE)
+    Mt.genes<- grep (pattern= Mtpattern,rownames(obj), value=TRUE )
+    VariableFeatures(obj) <- dplyr::setdiff(VariableFeatures(obj), c(rRNA.genes,Mt.genes))      
+  }
+
+  cat("RunPCA ... \n")
+  obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
+
+  if(file.exists(parSampleFile2)){
+    poolmap = get_batch_samples(parSampleFile2, unique(obj$orig.ident))
+    obj$batch <- unlist(poolmap[obj$orig.ident])
+  }else{
+    obj$batch <- obj$orig.ident
+  }
+
+  cat("RunHarmony ... \n")
+  obj <- RunHarmony(object = obj,
+                    assay.use = "SCT",
+                    reduction = "pca",
+                    dims.use = pca_dims,
+                    group.by.vars = "batch")
+  return(obj)
+}
+
+cluster_to_cell_type<-function(clusterDf){
+  result=clusterDf[!duplicated(clusterDf$seurat_clusters),]
+  result<-result[order(result$seurat_clusters),]
+  result<-result[,colnames(result) != "cell"]
+  rownames(result)<-result$seurat_clusters
+  return(result)
+}
+
+sort_cell_type<-function(cts, sort_column){
+  result<-cts[order(cts$seurat_clusters),]
+  ct_uniq<-result[!duplicated(result[,sort_column]),]
+  result[,sort_column]=factor(result[,sort_column], levels=ct_uniq[,sort_column])
+  result<-result[order(result[,sort_column], result[,"seurat_clusters"]),]
+  return(result)
+}
+
+plot_violin<-function(obj, features=c("FKBP1A", "CD79A")){
+  library(reshape2)
+  library(Seurat)
+
+  glist=VlnPlot(all_obj, features=features, combine = F)
+
+  gdata<-glist[[1]]$data
+  for(idx in c(2:length(glist))){
+    cdata=glist[[idx]]$data
+    gdata<-cbind(gdata, cdata[,1])
+    colnames(gdata)[ncol(gdata)]=colnames(cdata)[1]
+  }
+
+  mdata<-melt(gdata, id="ident")
+
+  ggplot(mdata, aes(ident, value)) + 
+    geom_violin(aes(fill = ident), trim=TRUE, scale="width") + 
+    geom_jitter(width=0.5,size=0.5) + 
+    facet_grid(variable~.) + 
+    theme_classic() + NoLegend() + 
+    xlab("Cluster") + ylab("Expression") +
+    theme(strip.background=element_blank(),
+          strip.text.y = element_text(angle =0))
+}

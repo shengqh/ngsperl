@@ -329,6 +329,8 @@ sub getSmallRNAConfig {
   my $identical_count_ref = [$identical_ref->[0], ".dupcount\$" ];
 
   my $host_intermediate_dir = getIntermidiateDir($host_genome_dir, $def);
+
+  my $short_reads_table;
   
   if ($search_host_genome) {
     getValue( $def, "coordinate" );
@@ -531,7 +533,7 @@ sub getSmallRNAConfig {
           perform               => 1,
           target_dir            => $host_intermediate_dir . "/$tTask",
           option                => "--minLength " . $minLength . " --maxLength " . $maxLength,
-          interpretor           => "python",
+          interpretor           => "python3",
           program               => "../SmallRNA/filterTrnaXml.py",
           source_arg            => "-i",
           source_ref            => [ $countTask, ".count.mapped.xml" ],
@@ -599,7 +601,7 @@ sub getSmallRNAConfig {
       #     perform               => 1,
       #     target_dir            => $tRH_folder . "/$tRHTask",
       #     option                => "--minLength 30 --maxLength 40",
-      #     interpretor           => "python",
+      #     interpretor           => "python3",
       #     program               => "../SmallRNA/filterTrnaXml.py",
       #     source_arg            => "-i",
       #     source_ref            => [ $countTask, ".count.mapped.xml" ],
@@ -709,7 +711,7 @@ sub getSmallRNAConfig {
           class                    => "CQS::ProgramWrapper",
           perform                  => 1,
           target_dir               => $folder,
-          interpretor              => "python",
+          interpretor              => "python3",
           program                  => "../SmallRNA/rRNAHostCoverage.py",
           parameterSampleFile1_arg => "-i",
           parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
@@ -1099,7 +1101,7 @@ sub getSmallRNAConfig {
       }
     }
 
-    if ( $search_nonhost_database || $blast_unmapped_reads || $def->{perform_host_length_dist_category} || $def->{perform_host_genome_reads_deseq2} ) {
+    if ( $search_nonhost_database || $blast_unmapped_reads || $def->{perform_host_length_dist_category} || $def->{perform_host_genome_reads_deseq2}  || $def->{perform_short_reads_deseq2} || $def->{perform_short_reads_source}) {
       my $readClass;
       my $readTask;
       if ( $def->{host_remove_all_mapped_reads} ) {
@@ -1143,8 +1145,6 @@ sub getSmallRNAConfig {
 "_clipped_identical.unmapped.fastq.dupcount,_clipped_identical.mappedToHostGenome.fastq.gz,_clipped_identical.mappedToHostGenome.fastq.dupcount,_clipped_identical.short.fastq.gz,_clipped_identical.short.fastq.dupcount,_clipped_identical.unmapped.fastq.gz.info",
           sh_direct => 1,
           pbs       => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
             "mem"       => "10gb"
@@ -1158,8 +1158,6 @@ sub getSmallRNAConfig {
           option     => "-k 2 -v 1 --fillMissingWithZero",
           sh_direct  => 1,
           pbs        => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
             "mem"       => "40gb"
@@ -1167,7 +1165,6 @@ sub getSmallRNAConfig {
         },
       };
       $config = merge_hash_right_precedent( $config, $unmapped_reads );
-
       push @table_for_shortReadSource, ( "bowtie1_genome_host_reads_table", ".count\$");
       push @name_for_shortReadSource, ( "host genome");
 
@@ -1189,6 +1186,37 @@ sub getSmallRNAConfig {
       if ( $do_comparison and $def->{perform_host_genome_reads_deseq2} ) {
         addDEseq2( $config, $def, $summary_ref, "bowtie1_genome_host_reads", [ "bowtie1_genome_host_reads_table", ".count\$" ],
           $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      }
+
+      if($def->{perform_short_reads_deseq2} || $def->{perform_short_reads_source}){
+        $short_reads_table = "bowtie1_genome_short_reads_table";
+        $config->{$short_reads_table} = {
+          class                 => "CQS::ProgramWrapper",
+          perform               => 1,
+          target_dir            => "$host_genome_dir/bowtie1_genome_short_reads_table",
+          option                => "",
+          interpretor           => "python3",
+          check_program         => 1,
+          program               => "../SmallRNA/shortReadTable.py",
+          source_ref            => [ "bowtie1_genome_unmapped_reads", "_clipped_identical.short.fastq.dupcount" ],
+          source_arg            => "-i",
+          output_arg            => "-o",
+          output_file_prefix    => "",
+          output_file_ext       => ".count.txt",
+          output_other_ext      => "",
+          sh_direct             => 1,
+          pbs                   => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        };
+        push @$summary_ref, ("bowtie1_genome_short_reads_table");
+
+        if ( $def->{perform_short_reads_deseq2} && $do_comparison ) {
+          addDEseq2( $config, $def, $summary_ref, "short_reads", [ $short_reads_table, ".count.txt\$" ],
+            $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        }
       }
     }
 
@@ -1303,7 +1331,7 @@ sub getSmallRNAConfig {
         perform            => 1,
         target_dir         => "$host_intermediate_dir/$spcount_bowtie",
         option             => "bowtie -t 8 -d " . getValue($def, "bowtie_${refseq}_index_list_file"),
-        interpretor        => "python",
+        interpretor        => "python3",
         program            => "/scratch/cqs_share/softwares/spcount/debug.py",
         check_program     => 1,
         source_arg => "-i",
@@ -1329,7 +1357,7 @@ sub getSmallRNAConfig {
         perform            => 1,
         target_dir         => "$nonhost_genome_dir/$spcount_count",
         option             => "count",
-        interpretor        => "python",
+        interpretor        => "python3",
         program            => "/scratch/cqs_share/softwares/spcount/debug.py",
         check_program     => 1,
         parameterSampleFile1_arg => "-i",
@@ -1436,7 +1464,7 @@ sub getSmallRNAConfig {
       }
     }
 
-print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
+    #print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
 
     if ($perform_nonhost_genome_count){
       $config->{nonhost_genome_count} = {
@@ -1444,7 +1472,7 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
         perform            => 1,
         target_dir         => $nonhost_genome_dir . "/nonhost_genome_count",
         option             => "",
-        interpretor        => "python",
+        interpretor        => "python3",
         program            => "../SmallRNA/nonhostXmlCount.py",
         parameterSampleFile1_arg => "-i",
         parameterSampleFile1_ref => $nonhost_genome_count_xml,
@@ -1467,7 +1495,7 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
         perform            => 1,
         target_dir         => $nonhost_genome_dir . "/microbial_genome_count",
         option             => "",
-        interpretor        => "python",
+        interpretor        => "python3",
         program            => "../SmallRNA/nonhostXmlCount.py",
         parameterSampleFile1_arg => "-i",
         parameterSampleFile1_ref => $microbial_genome_count_xml,
@@ -1543,7 +1571,7 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
         perform            => 1,
         target_dir         => $folder,
         option             => "-f " . $def->{bowtie1_tRNA_index} . ".fa -m " . $def->{trna_map} . " -s " . $def->{nonhost_tRNA_coverage_species},
-        interpretor        => "python",
+        interpretor        => "python3",
         program            => "../SmallRNA/tRNALibraryCoverage.py",
         parameterFile1_arg => "-i",
         parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".xml" ],
@@ -1592,7 +1620,7 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
         perform                  => 1,
         target_dir               => $folder,
         option                   => "-s " . getValue( $def, "nonhost_rRNA_coverage_species" ),
-        interpretor              => "python",
+        interpretor              => "python3",
         program                  => "../SmallRNA/rRNALibraryCoverage.py",
         parameterSampleFile1_arg => "-i",
         parameterSampleFile1_ref => [ "bowtie1_rRNA_pm", ".bam" ],
@@ -1688,7 +1716,7 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
       perform                  => 1,
       target_dir               => "${data_visualization_dir}/$bowtie1readTask",
       option                   => "",
-      interpretor              => "python",
+      interpretor              => "python3",
       program                  => "../SmallRNA/nonhostXmlToFastq.py",
       source_arg               => "-i",
       source_ref               => $nonhostXml,
@@ -1718,7 +1746,7 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
       perform                  => 1,
       target_dir               => "${data_visualization_dir}/$bowtie1readMapMismatchTask",
       option                   => "-m 2",
-      interpretor              => "python",
+      interpretor              => "python3",
       program                  => "../SmallRNA/bamMismatchTable.py",
       parameterSampleFile1_arg => "-i",
       parameterSampleFile1_ref => [ $bowtie1readMapTask, ".bam\$" ],
@@ -2022,35 +2050,17 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
     push @$summary_ref, "sequence_mapped_in_categories";
   }
   if ($perform_short_reads_source) {
-
-    # $config->{bowtie1_genome_host_too_short_reads_table} = {
-    #   class      => "CQS::CQSDatatable",
-    #   perform    => 1,
-    #   target_dir => $host_genome_dir . "/bowtie1_genome_host_too_short_reads_table",
-    #   source_ref => [ "bowtie1_genome_unmapped_reads", ".short.fastq.dupcount\$" ],
-    #   option     => "-k 2 -v 1 --fillMissingWithZero",
-    #   sh_direct  => 1,
-    #   pbs        => {
-    #     "email"     => $def->{email},
-    #     "emailType" => $def->{emailType},
-    #     "nodes"     => "1:ppn=1",
-    #     "walltime"  => "1",
-    #     "mem"       => "40gb"
-    #   },
-    # };
-    # push @$summary_ref, "bowtie1_genome_host_too_short_reads_table";
-
     $config->{short_reads_source} = {
       'class'                    => 'CQS::ProgramWrapper',
-      'parameterSampleFile1_arg' => '-i',
-      'parameterSampleFile1_ref' => [ "bowtie1_genome_unmapped_reads", ".short.fastq.dupcount\$" ],
-      'parameterSampleFile2_arg' => '-m',
-      'parameterSampleFile2_ref' => [ "bowtie1_genome_1mm_NTA", ".bam.max.txt" ],
-      'parameterSampleFile3_arg' => '-a',
-      'parameterSampleFile3_ref' => \@table_for_readSummary,
+      'parameterSampleFile1_arg' => '-m',
+      'parameterSampleFile1_ref' => [ "bowtie1_genome_1mm_NTA", ".bam.max.txt" ],
+      'parameterSampleFile2_arg' => '-a',
+      'parameterSampleFile2_ref' => \@table_for_readSummary,
+      'parameterFile1_arg'       => "-i",
+      'parameterFile1_ref'       => [ $short_reads_table, ".count.txt\$" ],
       'option'                   => "-n \"" . join( ",", @name_for_readSummary ) . "\"",
       'interpretor'              => 'python',
-      'program'                  => '../SmallRNA/explainShortReads.py',
+      'program'                  => '../SmallRNA/shortReadSource.py',
       'target_dir'               => $data_visualization_dir . "/short_reads_source",
       'output_ext'               => '.tsv',
       'output_arg'               => '-o',
@@ -2066,32 +2076,6 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
       },
     };
     push @$summary_ref, "short_reads_source";
-
-    $config->{short_reads_source_bar} = {
-      'class'                    => 'CQS::ProgramWrapper',
-      'parameterSampleFile1_arg' => '-i',
-      'parameterSampleFile1_ref' => [ "bowtie1_genome_unmapped_reads", ".short.fastq.dupcount\$" ],
-      'parameterSampleFile2_arg' => '-a',
-      'parameterSampleFile2_ref' => \@table_for_shortReadSource,
-      'option'                   => "-n \"" . join( ",", @name_for_shortReadSource ) . "\"",
-      'interpretor'              => 'python',
-      'program'                  => '../SmallRNA/shortReadSource.py',
-      'target_dir'               => $data_visualization_dir . "/short_reads_source_bar",
-      'output_file_ext'               => '.tsv',
-      'output_arg'               => '-o',
-      'output_to_same_folder'    => 1,
-      'sh_direct'                => 1,
-      'perform'                  => 1,
-      'pbs'                      => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "2",
-        "mem"       => "10gb"
-      },
-    };
-    push @$summary_ref, "short_reads_source";
-
   }
 
   #add time cost task in the end of pipeline
@@ -2251,15 +2235,14 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
       perform            => 1,
       target_dir         => $data_visualization_dir . "/read_summary",
       rtemplate          => "../SmallRNA/readSummary.R",
-      output_file_ext    => ".perc.png;.count.png",
+      #output_file_ext    => ".perc.png;.count.png",
+      output_file_ext    => ".png",
       parameterFile1_ref => [ "fastqc_count_vis", ".countInFastQcVis.Result.Reads.csv\$" ],
       parameterFile2_ref => $read_in_tasks_file,
       parameterFile3_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category.Table.csv\$" ],
       rCode              => "",
       sh_direct          => 1,
       pbs                => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "12",
         "mem"       => "10gb"
@@ -2281,7 +2264,7 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
       'interpretor'              => 'python',
       'program'                  => '../SmallRNA/getBacteriaCount.py',
       'target_dir'               => $data_visualization_dir . "/bacteria_count",
-      'output_file_ext'          => '.tsv.summary;.tsv.summary.png;.tsv.summary.rpm.csv;.tsv',
+      'output_file_ext'          => '.tsv;.tsv.summary;.tsv.summary.png;.tsv.summary.rpm.csv',
       'output_arg'               => '-o',
       'output_to_same_folder'    => 1,
       'sh_direct'                => 1,
@@ -2317,8 +2300,8 @@ print("perform_nonhost_genome_count=" . $perform_nonhost_genome_count . "\n");
     }
 
     if ( defined $config->{read_summary} ) {
-      push( @report_files, "read_summary", ".count.png", "read_summary", ".perc.png" );
-      push( @report_names, "read_summary_count", "read_summary_perc" );
+      push( @report_files, "read_summary", ".png" );
+      push( @report_names, "read_summary" );
     }
 
     if ( defined $config->{fastq_len} ) {

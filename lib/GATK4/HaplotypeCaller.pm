@@ -71,41 +71,52 @@ sub perform {
 
     my $snvOut    = $sample_name . $extension;
 
-    my $snvTmp = $sample_name . ".tmp". $extension;
-    my $snvTmpIndex;
-
     #if the program throw exception, the idx file will not be generated.
     my $snvOutIndex;
     if ($extension =~ ".gz\$") {
       $snvOutIndex = $snvOut . ".tbi";
-      $snvTmpIndex = $snvTmp . ".tbi";
     } else {
       $snvOutIndex = $snvOut . ".idx";
-      $snvTmpIndex = $snvTmp . ".idx";
     }
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
+
+    print $sh "if [[ ! -s $result_dir/$snvOutIndex ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+    
+";
 
     my $log_desc = $cluster->get_log_description($log);
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $snvOutIndex );
+
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files, [".bai"])};
+    $bam_file    = $sample_files[0];
+
     print $pbs "
 gatk --java-options \"$java_option\" \\
   HaplotypeCaller $option $restrict_intervals $blacklist_intervals_option \\
   --native-pair-hmm-threads $thread \\
   -R $faFile \\
   -I $bam_file \\
-  -O $snvTmp
+  -O $snvOut
 
-if [[ -s $snvTmpIndex ]]; then
-  mv $snvTmp $snvOut
-  mv $snvTmpIndex $snvOutIndex
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch $sample_name.hc.failed
+  rm -f $snvOut $snvOutIndex
+else
+  touch $sample_name.hc.succeed
 fi
+
 ";
-    
+
+    $self->clean_temp_files($pbs, $localized_files);
+
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;

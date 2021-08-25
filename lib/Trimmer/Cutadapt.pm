@@ -4,6 +4,7 @@ package Trimmer::Cutadapt;
 use strict;
 use warnings;
 use File::Basename;
+use File::Copy;
 use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
@@ -18,6 +19,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_cut";
+  $self->{_use_tmp_folder} = 1;
   bless $self, $class;
   return $self;
 }
@@ -104,8 +106,8 @@ sub perform {
 
   my $ispairend = get_is_paired_end_option( $config, $section );
 
-  my $adapter_option = "";
-  if ( $option !~ /-a/ ) {
+  my $adapter_option = $option;
+  if ( $adapter_option !~ /-a/ ) {
     if ( defined $curSection->{adapter} && length( $curSection->{adapter} ) > 0 ) {
       my @adapters = split(',', $curSection->{adapter});
       print(@adapters);
@@ -128,7 +130,7 @@ sub perform {
     }
   }
 
-  if ( $option !~ /-g/ ) {
+  if ( $adapter_option !~ /-g/ ) {
     if ( defined $curSection->{adapter_5} && length( $curSection->{adapter_5} ) > 0 ) {
       my @adapters = split /,/, $curSection->{adapter_5};
       if ($ispairend) {
@@ -141,6 +143,7 @@ sub perform {
   }
 
   my $trim_poly_atgc = get_option( $config, $section, "trim_poly_atgc", 1 );
+  print("trim_poly_atgc=" . $trim_poly_atgc.", adapter_option=" . $adapter_option . "\n");
   if ($trim_poly_atgc) {
     if ( $adapter_option =~ /-a/ ) {
       $adapter_option = $adapter_option . " -a \"A{50}\" -a \"T{50}\" -a \"G{50}\" -a \"C{50}\"";
@@ -188,31 +191,33 @@ sub perform {
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
 
+  my $expect_result = $self->result( $config, $section );
+
   for my $sample_name ( sort keys %raw_files ) {
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
     my $log_desc = $cluster->get_log_description($log);
 
     my @sample_files = @{ $raw_files{$sample_name} };
 
     my @final_files = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_files[0] );
+    my $final_file = $final_files[0];
 
-    my @rmlist = ();
-    for my $sample_file (@sample_files) {
-      print $pbs "
-if [ ! -s $sample_file ]; then
-  echo input file not exist: $sample_file
-  exit 0
+    my $expect_file = $expect_result->{$sample_name}[0];
+    print $sh "if [[ ! -s $expect_file ]]; then
+  \$MYCMD ./$pbs_name 
 fi
 ";
-    }
 
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files($pbs, \@sample_files, $localized_files)};
+
+    my @rmlist = ();
     if ($hard_trim > 0){
       for my $sample_file (@sample_files) {
         my $temp_file = basename($sample_file) . ".hardtrim.fastq";
@@ -245,14 +250,36 @@ cutadapt $thread_option -l $hard_trim -o $temp_file $sample_file
         my $temp1_file = $read1name . ".cutAdapter.fastq";
         my $temp2_file = $read2name . ".cutAdapter.fastq";
         print $pbs "
-cutadapt $thread_option $option $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
-cutadapt $thread_option $remove_bases_option -o $read1name -p $read2name $limit_file_options $temp1_file $temp2_file 
-rm $temp1_file $temp2_file
+cutadapt $thread_option $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  cutadapt $thread_option $remove_bases_option -o $read1name -p $read2name $limit_file_options $temp1_file $temp2_file 
+  status=\$?
+  rm $temp1_file $temp2_file
+  if [[ \$status -eq 0 ]]; then
+    touch ${sample_name}.succeed
+    md5sum $read1name > ${read1name}.md5
+    md5sum $read2name > ${read2name}.md5
+  else
+    touch ${sample_name}.failed
+else
+  touch ${sample_name}.failed
+fi
+
 ";
       }
       else {                         # NOT remove top random bases
         print $pbs "
-cutadapt $thread_option $option $adapter_option -o $read1name -p $read2name $limit_file_options $read1file $read2file
+cutadapt $thread_option $adapter_option -o $read1name -p $read2name $limit_file_options $read1file $read2file 1> >(tee ${sample_name}.stdout.log ) 2> >(tee ${sample_name}.stderr.log >\&2)
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch ${sample_name}.succeed
+  md5sum $read1name > ${read1name}.md5
+  md5sum $read2name > ${read2name}.md5
+else
+  touch ${sample_name}.failed
+fi
+
 ";
       }
     }
@@ -272,8 +299,20 @@ cutadapt $thread_option $option $adapter_option -o $read1name -p $read2name $lim
         if ( scalar(@sample_files) == 1 ) {
           print $pbs "
 cutadapt $thread_option $optionRemoveLimited $adapter_option -o $temp_file $sample_files[0]
-cutadapt $thread_option $optionOnlyLimited $limit_file_options $remove_bases_option -o $final_file $temp_file
-rm $temp_file
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  cutadapt $thread_option $optionOnlyLimited $limit_file_options $remove_bases_option -o $final_file $temp_file
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    rm $temp_file
+    touch ${sample_name}.succeed
+  else
+    touch ${sample_name}.failed
+  fi
+else
+  rm $temp_file
+  touch ${sample_name}.failed
+fi
 ";
         }
         else {
@@ -299,7 +338,7 @@ rm $temp_file
       else {    #NOT remove top random bases
         if ( scalar(@sample_files) == 1 ) {
           print $pbs "
-cutadapt $thread_option $option $adapter_option $limit_file_options -o $final_file $sample_files[0]
+cutadapt $thread_option $adapter_option $limit_file_options -o $final_file $sample_files[0]
 ";
         }
         else {
@@ -340,15 +379,11 @@ mv ${temp_file}.gz $final_file
       }
     }
 
-    if(scalar(@rmlist) > 0){
-      my $rmstr = join(" ",  @rmlist);
-      print $pbs "
-rm $rmstr
-";
-    }
+    $self->clean_temp_files($pbs, $localized_files);
+    $self->clean_temp_files($pbs, \@rmlist);
 
     print $pbs "
-cutadapt --version | awk '{print \"Cutadapt,v\"\$1}' > ${sample_name}.version
+cutadapt --version 2>&1 | awk '{print \"Cutadapt,v\"\$1}' > ${sample_name}.version
 ";
     $self->close_pbs( $pbs, $pbs_file );
   }
@@ -370,6 +405,7 @@ sub result {
 
   my $ispairend = get_is_paired_end_option( $config, $section );
   my ( $extension, $fastqextension ) = $self->get_extension( $config, $section );
+  my $shortLimited        = $option =~ /(-m\s+\d+\s*)/;
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -378,10 +414,14 @@ sub result {
   for my $sample_name ( keys %raw_files ) {
     my @result_files = ();
     if ($ispairend) {
-      my ( $read1name, $read2name ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
+      my ( $read1name, $read2name, $finalShortFile_1, $finalShortFile_2, $finalLongFile_1, $finalLongFile_2 ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
 
       push( @result_files, $result_dir . "/" . $read1name );
       push( @result_files, $result_dir . "/" . $read2name );
+      if ($shortLimited) {
+        push( @result_files, $result_dir . "/" . $finalShortFile_1 );
+        push( @result_files, $result_dir . "/" . $finalShortFile_2 );
+      }
     }
     else {
       my ( $final_file, $finalShortFile, $finalLongFile ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );

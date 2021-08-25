@@ -30,6 +30,8 @@ sub build_rmd_file {
         $rmd_file=dirname(__FILE__) . "/" . $rmd_file;
       }
       my $additional_rmd_files_destination     = $result_dir . "/" . basename($rmd_file);
+      unlink $additional_rmd_files_destination if -e $additional_rmd_files_destination;
+      print("copy " . $rmd_file . " to " . $additional_rmd_files_destination . "\n");
       copy( $rmd_file, $additional_rmd_files_destination ) or die "Copy " . $rmd_file . " failed: $! ";
     }
   }

@@ -106,7 +106,7 @@ sub perform {
       my $pbs_map = $taskpbs->{$taskSectionName};
       if ( defined $pbs_map->{$sample} ) {
         my $samplepbs = $pbs_map->{$sample};
-        if ( ref($samplepbs) eq 'ARRAY' ) {
+        if ( is_array($samplepbs) ) {
           for my $subpbs ( @{$samplepbs} ) {
             print $pbs "bash " . $subpbs . "\n";
           }
@@ -127,7 +127,7 @@ if [[ ( -s $finalFile ) || ( -d $finalFile ) ]]; then
       my $clear_map = $clears->{$taskSectionName};
       if ( defined $clear_map->{$sample} ) {
         my $clearFiles = $clear_map->{$sample};
-        if ( ref($clearFiles) eq 'ARRAY' ) {
+        if ( is_array($clearFiles) ) {
           for my $clearFile (@$clearFiles) {
             print $pbs "  rm " . $clearFile . "\n";
           }

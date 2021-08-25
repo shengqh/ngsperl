@@ -34,12 +34,20 @@ if (all(info$size == 0)) {
   stop(paste0("Gene file is empty: ", geneFile, "\n"))
 }
 
-geneList<-read.table(geneFile,header=FALSE,sep="\t",stringsAsFactors=FALSE)
-genes<-geneList$V1
-
-if(grepl("Gene", genes[1])){
-  genes<-genes[2:length(genes)]
+if (grepl(".csv$",basename(geneFile))) { #csv file
+  geneList<-read.csv(geneFile,header=TRUE,stringsAsFactors=FALSE)
+} else {
+  geneList<-read.table(geneFile,header=TRUE,sep="\t",stringsAsFactors=FALSE)
 }
+
+if (ncol(geneList)==1) {
+  genes<-readLines(geneFile)
+} else { #try to find gene column
+  geneCol=getGeneCol(geneList)[["colName"]]
+  genes<-geneList[,geneCol]
+}
+genes=unique(genes)
+
 
 enrichDatabases<-c("geneontology_Biological_Process", 
                    "geneontology_Cellular_Component", 
@@ -52,11 +60,20 @@ enrichDatabases<-c("geneontology_Biological_Process",
 )
 
 for(enrichDatabase in enrichDatabases){
-  WebGestaltR(enrichMethod="ORA",organism=organism,
+  temp=WebGestaltR(enrichMethod="ORA",organism=organism,
             enrichDatabase=enrichDatabase,interestGene=genes,
             interestGeneType=interestGeneType,referenceSet=referenceSet,
-            isOutput=TRUE,
+            isOutput=TRUE,minNum=5,
             outputDirectory=outputDirectory,projectName=paste0(sampleName, "_", enrichDatabase))
+  if (is.null(temp)) { #no enrichment. report top 5 categories
+    warning(paste0("No significant category (FDR<=0.05) identified in ",enrichDatabase,", reporting top 10 categories instead."))
+    temp=WebGestaltR(enrichMethod="ORA",organism=organism,
+                     enrichDatabase=enrichDatabase,interestGene=genes,
+                     interestGeneType=interestGeneType,referenceSet=referenceSet,
+                     isOutput=TRUE,minNum=5,
+                     outputDirectory=outputDirectory,projectName=paste0(sampleName, "_", enrichDatabase),
+                     sigMethod="top",topThr=10)
+  }
 }
 
 webGestaltR_version<-paste0('WebGestaltR,v', packageVersion('WebGestaltR'))

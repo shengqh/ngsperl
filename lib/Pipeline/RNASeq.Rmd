@@ -18,6 +18,8 @@ output:
 
 ```{r, child="Functions.Rmd"} 
 ```
+```{r, child="Pipeline.Rmd"} 
+```
   
 ```{r setup, include=FALSE}
 library(kableExtra)
@@ -166,7 +168,7 @@ include_graphics(files["STAR_summary",1])
 <br>
 
 ```{r STAR_summary_table, echo=FALSE, results='asis', include = hasSTAR, eval = hasSTAR}
-table<-read.csv(files["STAR_summary_table",1])
+table<-read.csv(files["STAR_summary_table",1], check.names=F)
 output_table1<-data.frame(table[,c(1,2,3,4,5)], table[,3]/table[,2], (table[,3]+table[,4])/table[,2])
 colnames(output_table1)<-c("Sample", "Input reads", "Uniquely mapped reads", "Mapped to multiple loci", "Mapped to too many loci", "Uniquely mapped ratio", "Mapped ratio")
 
@@ -210,7 +212,7 @@ include_graphics(files["featureCounts_table_png",1])
 <br>
 
 ```{r echo=FALSE,results='asis', include = hasFeatureCount, eval = hasFeatureCount}
-table<-read.csv(files["featureCounts_table",1])
+table<-read.csv(files["featureCounts_table",1], check.names=F)
 readsUsed = "reads"
 if(rnaseqOptions["featureCounts_UseMultiMappingReads", 1] == "FALSE"){
   readsUsed = "**UNIQUE** reads"
@@ -270,7 +272,7 @@ if(hasDEseq2 ){
   DESeq2_files<-files[grep("DESeq2_sig", files[,1]),]
   DESeq2_list<-list()
   for (i in 1:nrow(DESeq2_files)){
-    DESeq2_list[[i]]<-read.csv(DESeq2_files[i,1], header=TRUE)
+    DESeq2_list[[i]]<-read.csv(DESeq2_files[i,1], header=TRUE, check.names=F)
   }
   diffGeneCount=sapply(DESeq2_list, function(x) 
     if("log2FoldChange" %in% colnames(x)) {
@@ -298,7 +300,7 @@ if(hasDEseq2 ){
 
   for (i in 1:nrow(DESeq2_files)){
     comparisonName<-DESeq2_files[i,2]
-    deseq2<-read.csv(DESeq2_files[i,1], header=TRUE, row.names=1)
+    deseq2<-read.csv(DESeq2_files[i,1], header=TRUE, row.names=1, check.names=F)
     
     designFile<-files[paste0(comparisonName, "_design"),1]
     comparisonDesign<-read.table(designFile, sep="\t", head=T, stringsAsFactors = F)
@@ -343,46 +345,9 @@ if(hasEnrichmentAnalysis ){
 
 <br>
   
-```{r webgestalt, results="asis", echo=FALSE} 
+```{r webgestalt, results="asis", echo=FALSE, warning=FALSE} 
 if(hasWebGestaltAnalysis){
-  cat(paste0("  \n## WebGestalt  \n"))
-  enrich_files<-files[grepl("WebGestalt_", rownames(files)),]
-  enrich_files$Comparisons<-gsub("WebGestalt_GO....", "", enrich_files$V2)
-  enrich_files$Comparisons<-gsub("WebGestalt_KEGG_", "", enrich_files$Comparisons)
-  comparisons<-unique(enrich_files$Comparisons)
-  for (j in 1:length(comparisons)){
-    comparison<-comparisons[j]
-    comp_files<-enrich_files[enrich_files$Comparisons == comparison,]
-    cat(paste0("  \n### ", comparison, "  \n"))
-  
-    for (i in 1:nrow(comp_files)){
-      if (!file.exists(comp_files[i,1])) {
-        next;
-      }
-      ename<-rownames(comp_files)[i]
-      if(grepl(".html.rds", comp_files[i,1])){
-        plotData <-readRDS(comp_files[i,1])
-        fdata<-plotData$enriched
-        fdata<-fdata[c(1:min(nrow(fdata),5)),c(1,2,4,5,6,7,8,9,12,13)]
-        print(kable(fdata, caption=tabRef(ename, ename)) %>% 
-          kable_styling() %>%
-          row_spec(which(fdata$geneUp > fdata$geneDown), color = "black", background = "bisque") %>% 
-          row_spec(which(fdata$geneUp < fdata$geneDown), color = "black", background = "honeydew") %>%
-          htmltools::HTML())
-        cat("\n\n<hr>")
-      }else{
-        #txtFile<-gsub(".html.rds$", "", comp_files[i,1])
-        #fdata<-read.table(txtFile, sep="\t", header=T, stringsAsFactors = F)
-        fdata<-read.table(comp_files[i,1], sep="\t", header=T, stringsAsFactors = F)
-        fdata<-fdata[c(1:min(nrow(fdata))),]
-        fdata$geneSet<-paste0("[", fdata$geneSet, "](", fdata$link, ")")
-        fdata<-fdata[,c(1,2,4,5,6,7,8,9)]
-        print(kable(fdata, caption=tabRef(ename, ename)) %>%
-        kable_styling() %>%
-        htmltools::HTML())
-      }
-    }  
-  }
+  display_webgestalt(files)
 }
 ```
 
@@ -390,75 +355,7 @@ if(hasWebGestaltAnalysis){
   
 ```{r gsea, results="asis", echo=FALSE, warning=FALSE} 
 if(hasGseaAnalysis){
-  cat(paste0("  \n## GSEA  \n"))
-  processGesaTable<-function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=5,absLinkPath=FALSE) {
-    rawTable<-read.delim(gseaTableFile,header=T,as.is=T)
-    rawTableOut<-NULL
-    for (i in head(which(rawTable$FDR.q.val<=maxCategoryFdr),maxCategory)) {
-      categoryName=rawTable[i,1]
-      gseaUrl=paste0("http://software.broadinstitute.org/gsea/msigdb/cards/",categoryName)
-      categoryNameInTable<-addLinkTag(text=categoryName,link=gseaUrl)
-      
-      gseaWeb<-getURL(gseaUrl)
-      temp<-strsplit(gseaWeb,"description|\\<td\\>")[[1]]
-      j=grep("Brief",temp)
-      categoryDescription<-gsub("^>","",temp[j+2])
-      categoryDescription<-gsub("<\\/$","",categoryDescription)
-      
-      rawTableOut<-rbind(rawTableOut,unlist(c(categoryNameInTable,categoryDescription,rawTable[i,c(4,5,6,8)])))
-    }
-    if(!is.null(rawTableOut)){
-      colnames(rawTableOut)[1:2]<-c("Name","Description")
-    }
-    return(rawTableOut)
-  }
-  
-  gsea_files<-files[grepl("gsea_", rownames(files)),]
-  gsea_files$Comparisons<-gsub("gsea_", "", gsea_files$V2)
-  comparisons<-unique(gsea_files$Comparisons)
-  for (j in 1:length(comparisons)){
-    comparison<-comparisons[j]
-    comp_files<-gsea_files[gsea_files$Comparisons == comparison,]
-    cat(paste0("  \n### ", comparison, "  \n"))
-  
-    for (i in 1:nrow(comp_files)){
-      gfolders<-read.csv(comp_files[i,1],header=T,stringsAsFactor=F)
-      gname<-gsub(".rnk.*", "", basename(comp_files[i,1]))
-      for (j in 1:nrow(gfolders)){
-        resultDirSub<-gfolders$Folder[j]
-        
-        posTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_pos_\\d+\\.xls$",full.names=TRUE)
-        if (length(posTableFile)!=1) {
-          warning(paste0("Can't find positive-regulated GSEA table file in ", resultDirSub))
-        }else{
-          rawTableOut<-processGesaTable(posTableFile)
-          if(!is.null(rawTableOut)){
-            ename<-paste0(gname, " ", gfolders$GseaCategory[j], " Positive-regulated")
-            print(kable(rawTableOut, caption=tabRef(ename, ename)) %>%
-                kable_styling() %>%
-                htmltools::HTML())
-          }else{
-            warning(paste0("Can't find significant positive-regulated GSEA gene set in ", resultDirSub))
-          }
-        }
-        
-        negTableFile<-list.files(resultDirSub,pattern="gsea_report_for_na_neg_\\d+\\.xls$",full.names=TRUE)
-        if (length(negTableFile)!=1) {
-          warning(paste0("Can't find negative-regulated GSEA table file in ", resultDirSub))
-        }else{
-          rawTableOut<-processGesaTable(negTableFile)
-          if(!is.null(rawTableOut)){
-            ename<-paste0(gname, " ", gfolders$GseaCategory[j], " Negative-regulated")
-            print(kable(rawTableOut, caption=tabRef(ename, ename)) %>%
-                kable_styling() %>%
-                htmltools::HTML())
-          }else{
-            warning(paste0("Can't find significant negative-regulated GSEA gene set in ", resultDirSub))
-          }
-        }
-      }
-    }  
-  }
+  display_gsea(files)
 }
 ``` 
 
@@ -507,7 +404,7 @@ df<-NULL
 curfile<-files$V1[1]
 for(curfile in files$V1){
   if(file.exists(curfile)){
-    curdf<-read.csv(curfile, header=F)
+    curdf<-read.csv(curfile, header=F, check.names=F)
     df<-rbind(df, curdf)
   }
 }

@@ -30,7 +30,7 @@ sub perform {
 
   my $is_paired_end = get_is_paired_end_option( $config, $section);
   if ($is_paired_end) {
-    $option = $option . " -p";
+    $option = $option . " -p --countReadPairs";
   }
 
   if ( $option !~ /-F SAF/ ) {

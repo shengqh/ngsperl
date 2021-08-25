@@ -30,7 +30,7 @@ sub perform {
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $blacklistfile = get_param_file( $config->{$section}{"blacklist_file"}, "blacklist_file", 0 );
-  my $isPairedEnd       = get_option( $config, $section, "is_paired_end" );
+  my $isPairedEnd = get_is_paired_end_option( $config, $section);
   my $is_sorted_by_name = get_option( $config, $section, "is_sorted_by_name" );
   my $sort_memory = $thread == 1 ? $memory : "4G";
 
@@ -62,7 +62,7 @@ sub perform {
       print $pbs "
 if [ ! -s $sortedFile ]; then
   echo sort=`date`
-  samtools sort -n -@ $thread -m $sort_memory -o $sortedFile $bam_file
+  samtools sort -n -m $sort_memory -o $sortedFile $bam_file
 fi
 ";
       $rmlist   = $rmlist . " " . $sortedFile;
