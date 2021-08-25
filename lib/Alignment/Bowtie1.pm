@@ -99,24 +99,22 @@ fi
     my $cmd_file_exists = check_file_exists_command(\@sample_files, "  ");
 
     print $pbs "
-if [[ ! -s $bam_file && ! -s $bowtiesam ]]; then
-  if [[ -e ${sample_name}.bowtie.failed ]]; then
-    rm -f ${sample_name}.bowtie.failed
-  fi
+if [[ -e ${sample_name}.bowtie.failed ]]; then
+  rm -f ${sample_name}.bowtie.failed
+fi
 
 $cmd_file_exists
-  $bowtie1_aln_command 
+$bowtie1_aln_command 
 
-  status=\$?
-  if [[ \$status -ne 0 ]]; then
-    touch $sample_name.bowtie.failed
-    rm $bowtiesam
-  else
-    touch $sample_name.bowtie.succeed
-  fi
-
-  bowtie --version | grep bowtie | grep version | cut -d ' ' -f3 | awk '{print \"bowtie,v\"\$1}' > ${final_file}.version
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch $sample_name.bowtie.failed
+  rm $bowtiesam
+else
+  touch $sample_name.bowtie.succeed
 fi
+
+bowtie --version | grep bowtie | grep version | cut -d ' ' -f3 | awk '{print \"bowtie,v\"\$1}' > ${final_file}.version
 ";
 
     my $addRgCommand = getAddRgCommand( $picard_jar, $add_RG_to_read, $bam_file, $sample_name );
@@ -125,9 +123,15 @@ fi
       my $chromosome_grep_command = getChromosomeFilterCommand( $bam_file, $chromosome_grep_pattern );
 
       print $pbs "
-if [[ -s $bowtiesam && ! -s $bam_file ]]; then
+if [[ -s $bowtiesam ]]; then
   samtools view -Shu $mappedonlyoption $bowtiesam | samtools sort -T ${sample_name}_tmp -o $bam_file -
-  if [ -s $bam_file ]; then
+
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.sort.failed
+    rm $bam_file
+  else
+    touch $sample_name.sort.succeed
     rm $bowtiesam
     samtools index $bam_file 
     $chromosome_grep_command
