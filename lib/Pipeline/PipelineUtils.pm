@@ -259,7 +259,7 @@ sub addBowtie {
     option                => $bowtieOption,
     source_ref            => $sourceRef,
     samonly               => 0,
-    sh_direct             => 0,
+    sh_direct             => getValue($def, "bowtie1_direct", 0),
     mappedonly            => 1,
     export_max_mapped     => $def->{export_max_mapped},
     cluster               => $def->{cluster},
