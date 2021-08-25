@@ -32,14 +32,14 @@ sub perform {
 
   my $lsamSoftware = get_option( $config, $section, "liver_model_console" );
   my $iteration    = get_option( $config, $section, "iteration" );
-  
-  my $patient_files = get_option( $config, $section, "patient_files", [] );
-  my $donor_files = get_option( $config, $section, "donor_files", [] );
-  my $status_files = get_option( $config, $section, "status_files", [] );
-  my $random_seeds = get_option( $config, $section, "random_seeds", [] );
-  my $randomSeed = '0';
-  if (scalar(@$random_seeds) == 0){
-    $randomSeed   = get_option( $config, $section, "random_seed" );
+
+  my $patients_files = get_option( $config, $section, "patients_files", [] );
+  my $donor_files    = get_option( $config, $section, "donor_files",    [] );
+  my $status_files   = get_option( $config, $section, "status_files",   [] );
+  my $random_seeds   = get_option( $config, $section, "random_seeds",   [] );
+  my $randomSeed     = '0';
+  if ( scalar(@$random_seeds) == 0 ) {
+    $randomSeed = get_option( $config, $section, "random_seed" );
   }
 
   my $shfile = $self->get_file( $pbs_dir, $task_name, ".bat" );
@@ -65,26 +65,26 @@ sub perform {
 set minbytesize=200
 
 ";
-    if (scalar(@$patient_files) > 0){
-      die "patients_files should has same length as donor_files" if (scalar(@$patient_files) != scalar(@$donor_files));
-      die "patients_files should has same length as status_files" if (scalar(@$patient_files) != scalar(@$status_files));
-      if (scalar(@$random_seeds) > 0){
-        die "patients_files should has same length as random_seeds" if (scalar(@$patient_files) != scalar(@$random_seeds));
+    if ( scalar(@$patients_files) > 0 ) {
+      die "patients_files should has same length as donor_files"  if ( scalar(@$patients_files) != scalar(@$donor_files) );
+      die "patients_files should has same length as status_files" if ( scalar(@$patients_files) != scalar(@$status_files) );
+      if ( scalar(@$random_seeds) > 0 ) {
+        die "patients_files should has same length as random_seeds" if ( scalar(@$patients_files) != scalar(@$random_seeds) );
       }
-      for my $iter ( 1 .. scalar(@$patient_files) ) {
-        my $curName = sprintf( "${name}_iter%02d_", $iter );
-        my $curFinalFile = $curName . "Summary.out";
-        my $curPatientFile = $patient_files->[$iter-1];
-        my $curDonorFile = $donor_files->[$iter-1];
-        my $curStatusFile = $status_files->[$iter-1];
-        
+      for my $iter ( 1 .. scalar(@$patients_files) ) {
+        my $curName        = sprintf( "${name}_iter%02d_", $iter );
+        my $curFinalFile   = $curName . "Summary.out";
+        my $curPatientFile = $patients_files->[ $iter - 1 ];
+        my $curDonorFile   = $donor_files->[ $iter - 1 ];
+        my $curStatusFile  = $status_files->[ $iter - 1 ];
+
         my $curRandomSeed = $randomSeed;
-        if (scalar(@$random_seeds) > 0){
-          $curRandomSeed = $random_seeds->[$iter-1];
+        if ( scalar(@$random_seeds) > 0 ) {
+          $curRandomSeed = $random_seeds->[ $iter - 1 ];
         }
-        
+
         my $command = "$lsamSoftware $option -i:$sample -o:$sampleFolder -n:$curName -s:$curRandomSeed -c:$curPatientFile -r:$curDonorFile -t:$curStatusFile";
-        
+
         print $pbs "
 echo Checking $curFinalFile ...
 set file=$curFinalFile
@@ -106,13 +106,14 @@ if EXIST \%file\% (
 )
 ";
       }
-    }else{
+    }
+    else {
       for my $iter ( 1 .. $iteration ) {
-        my $curName = sprintf( "${name}_iter%02d_", $iter );
-        my $curFinalFile = $curName . "Summary.out";
+        my $curName       = sprintf( "${name}_iter%02d_", $iter );
+        my $curFinalFile  = $curName . "Summary.out";
         my $curRandomSeed = $randomSeed;
-        my $command = "$lsamSoftware $option -i:$sample -o:$sampleFolder -n:$curName -s:$curRandomSeed";
-        
+        my $command       = "$lsamSoftware $option -i:$sample -o:$sampleFolder -n:$curName -s:$curRandomSeed";
+
         print $pbs "
 echo Checking $curFinalFile ...
 set file=$curFinalFile
@@ -155,7 +156,7 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my $iteration    = get_option( $config, $section, "iteration" );
+  my $iteration = get_option( $config, $section, "iteration" );
 
   my $result = {};
 

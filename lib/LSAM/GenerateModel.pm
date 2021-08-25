@@ -28,6 +28,10 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = $self->init_parameter( $config, $section );
 
+  my $generate_iteration = get_option($config, $section, "generate_iteration", 0);
+  if ($generate_iteration) {
+    $option = $option . " --generate_iteration";
+  }
   my $methods = get_raw_files( $config, $section );
   my $timeRanges = get_option( $config, $section, "time_ranges" );
   my $dsaFiles = $config->{$section}{dsa_files};
@@ -80,7 +84,7 @@ sub perform {
           my $finalFile = $key . ".inp";
 
           print $pbs "
-python $py_script -i $template -o $finalFile $defOption --name $key --method $methodFile --dsa $dsaFile --start \"$start\" --end \"$end\" 
+python $py_script $option -i $template -o $finalFile $defOption --name $key --method $methodFile --dsa $dsaFile --start \"$start\" --end \"$end\" 
 ";
         }
       }
@@ -97,19 +101,41 @@ python $py_script -i $template -o $finalFile $defOption --name $key --method $me
           my $finalFile = $key . ".inp";
 
           print $pbs "
-python $py_script -i $template -o $finalFile $defOption --name $key --method $methodFile --mortality $mFile --startTime \"$start\" --endTime \"$end\" 
+python $py_script $option -i $template -o $finalFile $defOption --name $key --method $methodFile --mortality $mFile --startTime \"$start\" --endTime \"$end\" 
 ";
         }
       }
       else {
         my $finalFile = $timeName . "_" . $methodName . ".inp";
         print $pbs "
-python $py_script -i $template -o $finalFile $defOption --name ${timeName}_${methodName} --method $methodFile --startTime \"$start\" --endTime \"$end\"
+python $py_script $option -i $template -o $finalFile $defOption --name ${timeName}_${methodName} --method $methodFile --startTime \"$start\" --endTime \"$end\"
 ";
       }
     }
   }
   $self->close_pbs( $pbs, $pbs_file );
+}
+
+sub get_result_files {
+  my ($result_dir, $key, $generate_iteration) = @_;
+  if ($generate_iteration) {
+    my $result_files = [ 
+      "$result_dir\\${key}.01.inp",
+      "$result_dir\\${key}.02.inp",
+      "$result_dir\\${key}.03.inp",
+      "$result_dir\\${key}.04.inp",
+      "$result_dir\\${key}.05.inp",
+      "$result_dir\\${key}.06.inp",
+      "$result_dir\\${key}.07.inp",
+      "$result_dir\\${key}.08.inp",
+      "$result_dir\\${key}.09.inp",
+      "$result_dir\\${key}.10.inp" ];
+    return ($result_files);
+  }else{
+    my $finalFile    = $key . ".inp";
+    my $result_files = [ $result_dir . "\\" . $finalFile ];
+    return ($result_files);
+  }
 }
 
 sub result {
@@ -123,6 +149,7 @@ sub result {
   my $timeRanges     = get_option( $config, $section, "time_ranges" );
   my $dsaFiles       = $config->{$section}{dsa_files};
   my $mortalityFiles = $config->{$section}{motarlity_files};
+  my $generate_iteration = get_option($config, $section, "generate_iteration", 0);
 
   my $result = {};
   for my $timeName ( keys %$timeRanges ) {
@@ -134,9 +161,7 @@ sub result {
           if ( scalar(@dsaNames) > 1 ) {
             $key = $key . "_" . $dsaName;
           }
-          my $finalFile    = $key . ".inp";
-          my @result_files = ( $result_dir . "\\" . $finalFile );
-          $result->{$key} = filter_array( \@result_files, $pattern );
+          $result->{$key} = filter_array( get_result_files($result_dir, $key, $generate_iteration), $pattern );
         }
       }
       elsif ( defined $mortalityFiles ) {
@@ -146,16 +171,12 @@ sub result {
           if ( scalar(@mNames) > 1 ) {
             $key = $key . "_" . $mName;
           }
-          my $finalFile    = $key . ".inp";
-          my @result_files = ( $result_dir . "\\" . $finalFile );
-          $result->{$key} = filter_array( \@result_files, $pattern );
+          $result->{$key} = filter_array( get_result_files($result_dir, $key, $generate_iteration), $pattern );
         }
       }
       else {
         my $key          = $timeName . "_" . $methodName;
-        my $finalFile    = $key . ".inp";
-        my @result_files = ( $result_dir . "\\" . $finalFile );
-        $result->{$key} = filter_array( \@result_files, $pattern );
+        $result->{$key} = filter_array( get_result_files($result_dir, $key, $generate_iteration), $pattern );
       }
     }
   }
