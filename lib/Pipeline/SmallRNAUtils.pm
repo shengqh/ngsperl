@@ -621,21 +621,15 @@ sub add_absolute_chromosome_count {
 }
 
 sub add_search_fasta {
-  my ( $config, $def, $individual, $summary, $taskKey, $parentDir, $fasta, $sourceRef, $bowtieOption, $countOption, $tableOption, $count_ref ) = @_;
+  my ( $config, $def, $individual, $summary, $taskKey, $parentDir, $bowtie_index_task, $sourceRef, $bowtieOption, $countOption, $tableOption, $count_ref ) = @_;
 
-  my $bowtie_index_task = "bowtie1_" . $taskKey . "_01_index";
-  my $bowtie1Task      = "bowtie1_" . $taskKey  . "_02_align";
-  my $bowtie1CountTask = "bowtie1_" . $taskKey . "_03_count";
-  my $bowtie1TableTask = "bowtie1_" . $taskKey . "_04_table";
+  my $bowtie1Task      = "bowtie1_" . $taskKey . "_01_align";
+  my $bowtie1CountTask = "bowtie1_" . $taskKey . "_02_count";
+  my $bowtie1TableTask = "bowtie1_" . $taskKey . "_03_table";
 
   if ( !defined $count_ref ) {
     $count_ref = [ "identical", ".dupcount\$" ];
   }
-
-  my $intermediate_dir = getIntermidiateDir($parentDir, $def);
-  #die($intermediate_dir);
-
-  add_bowtie_index($config, $def, $summary, $intermediate_dir, $bowtie_index_task, $fasta);
 
   addBowtie( $config, $def, $individual, $bowtie1Task, $parentDir, $bowtie_index_task, $sourceRef, $bowtieOption );
 
@@ -661,25 +655,7 @@ sub add_search_fasta {
   };
   push (@$summary, $bowtie1TableTask);
 
-  # $config->{$bowtie1TableTask} = {
-  #   class      => "CQS::CQSChromosomeTable",
-  #   perform    => 1,
-  #   target_dir => $parentDir . "/" . $bowtie1TableTask,
-  #   option     => $tableOption,
-  #   source_ref => [ $bowtie1CountTask, ".xml" ],
-  #   prefix     => $taskKey . "_",
-  #   sh_direct  => 1,
-  #   cluster    => $def->{cluster},
-  #   pbs        => {
-  #     "email"     => $def->{email},
-  #     "emailType" => $def->{emailType},
-  #     "nodes"     => "1:ppn=1",
-  #     "walltime"  => "10",
-  #     "mem"       => "40gb"
-  #   },
-  # };
-  # push @$individual, $bowtie1CountTask;
-  # push @$summary,    $bowtie1TableTask;
+  return($bowtie1Task, $bowtie1CountTask, $bowtie1TableTask);
 }
 
 1;
