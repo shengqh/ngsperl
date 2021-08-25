@@ -134,9 +134,9 @@ sub perform {
 
   my $task_dep_pbs_map = $self->get_all_dependent_pbs_map( $config, $section );
 
-  if ($config->{general}{debug}){
-    #print Dumper($task_dep_pbs_map->{bwa_refine_nosoftclip_gatk4_CNV_Germline_06_PostprocessGermlineCNVCalls});
-  }
+  # if ($config->{general}{debug}){
+  #   print Dumper($task_dep_pbs_map->{bowtie1_contamination_all_02_align});
+  # }
 
   my %step_map = %{ get_raw_files( $config, $section ) };
 
