@@ -1,4 +1,3 @@
-
 source("scRNA_func.r")
 
 library(Seurat)
@@ -39,22 +38,22 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
 
   obj = subset(all_obj, seurat_clusters %in% names(new.cluster.ids))
 
-  obj[["cellactivity_clusters"]] <- unlist(new.cluster.ids[as.character(unlist(obj[["seurat_clusters"]]))])
+  obj$cellactivity_clusters <- unlist(new.cluster.ids[as.character(unlist(obj$seurat_clusters))])
   
   clusterDf<-data.frame(seurat=unlist(obj[["seurat_clusters"]]), cellactivity=unlist(obj[["cellactivity_clusters"]]))
   clusterDf$seurat_colors<-seurat_colors[clusterDf$seurat]
-  
   clusterDf$seurat_cellactivity<-paste0(clusterDf$seurat, " : ", clusterDf$cellactivity)
-  clusterDf<-clusterDf[order(clusterDf$seurat),]
   seurat_cellactivity<-clusterDf$seurat_cellactivity
   
+  clusterDf<-clusterDf[order(clusterDf$seurat),]
   caCount<-table(clusterDf$cellactivity)
   clusterDf$caCount<-caCount[clusterDf$cellactivity]
-  
   clusterDf<-clusterDf[order(-clusterDf$caCount, clusterDf$seurat),]
+
   seurat_cellactivity<-factor(seurat_cellactivity, levels=unique(clusterDf$seurat_cellactivity))
   seurat_cellactivity_colors<-unique(clusterDf$seurat_colors)
-  obj[["seurat_cellactivity_clusters"]] <- seurat_cellactivity
+  
+  obj$seurat_cellactivity_clusters <-seurat_cellactivity
   
   clusters<-data.frame("cell" = c(1:length(obj$seurat_clusters)), "seurat_clusters"=as.numeric(as.character(obj$seurat_clusters)), "cellactivity_clusters"=obj$cellactivity_clusters, "seurat_cellactivity_clusters"=obj$seurat_cellactivity_clusters, stringsAsFactors = F)
   rownames(clusters)<-names(obj$seurat_clusters)
