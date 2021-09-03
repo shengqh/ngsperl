@@ -2575,16 +2575,21 @@ sub add_bam_validation {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
     target_dir            => "$target_dir/$task_name",
-    option                => "ValidateSamFile -I __FILE__ -O __NAME__.txt $bam_validation_option
+    option                => "
+gatk ValidateSamFile -I __FILE__ -O __NAME__.txt $bam_validation_option
     
 status=\$?
 if [[ \$status -ne 0 ]]; then
-  touch __NAME__.failed
+  if [[ -e __NAME__.txt ]]; then
+    mv __NAME__.txt __NAME__.failed
+  else
+    touch __NAME__.failed
+  fi
 fi
 
 ",
     interpretor           => "",
-    program               => "gatk",
+    program               => "",
     check_program         => 0,
     source_arg            => "",
     source_ref            => $source_ref,
