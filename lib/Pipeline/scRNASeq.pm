@@ -462,10 +462,7 @@ sub addEdgeRTask {
     my $gsea_jar        = $def->{gsea_jar}        or die "Define gsea_jar at definition first";
     my $gsea_db         = $def->{gsea_db}         or die "Define gsea_db at definition first";
     my $gsea_categories = $def->{gsea_categories} or die "Define gsea_categories at definition first";
-    my $gsea_makeReport = 1;
-    if ( defined $def->{gsea_makeReport} ) {
-      $gsea_makeReport = $def->{gsea_makeReport};
-    }
+    my $gsea_makeReport = getValue($def, "gsea_makeReport", 0);
 
     my $gseaTaskName = $edgeRtaskname . "_GSEA";
 
@@ -474,6 +471,7 @@ sub addEdgeRTask {
       class                      => "CQS::UniqueR",
       perform                    => 1,
       target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
+      docker_prefix              => "gsea_",
       rtemplate                  => "GSEAPerform.R",
       rReportTemplate            => "GSEAReport.Rmd",
       output_to_result_directory => 1,
@@ -1377,7 +1375,31 @@ sub getScRNASeqConfig {
             "walltime"  => "23",
             "mem"       => "10gb"
           },
-        }
+        };
+        push(@$summary, $clonotype_vis);
+
+        my $clonotype_db = $clonotype_4_convert;
+        $clonotype_db =~ s/3_convert/5_db/ig;
+        $clonotype_db =~ s/4_convert/6_db/ig;
+        $config->{$clonotype_db} = {
+          class                      => "CQS::UniqueR",
+          perform                    => 1,
+          target_dir                 => $target_dir . "/" . $clonotype_db,
+          rtemplate                  => "../scRNA/clonotype_db.r",
+          output_to_result_directory => 1,
+          output_file_ext            => ".clonotype_db.csv",
+          parameterFile1_ref         => [ $clonotype_4_convert ],
+          parameterFile2         => getValue($def, "clonotype_McPAS_TCR"),
+          parameterFile3         => getValue($def, "clonotype_TBAdb"),
+          parameterFile4         => getValue($def, "clonotype_vdjdb"),
+          sh_direct                  => 1,
+          pbs                        => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "23",
+            "mem"       => "10gb"
+          },
+        };
+        push(@$summary, $clonotype_db);
       }
 
       if ( $def->{perform_marker_dotplot} ) {
