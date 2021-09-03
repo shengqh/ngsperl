@@ -85,6 +85,14 @@ if (annotate_tcell){
 
 id_tbl$cellactivity_clusters=new.cluster.ids
 
+cellColor <- function(style) 
+{
+  fg  <- style$getFillForegroundXSSFColor()
+  rgb <- tryCatch(fg$getRgb(), error = function(e) NULL)
+  rgb <- paste0("#", paste(rgb, collapse = ""))
+  return(rgb)
+}
+
 if(file.exists(myoptions$summary_layer_file)){
   require(xlsx)
   layers=read.xlsx(myoptions$summary_layer_file, 1, header = TRUE)
@@ -124,14 +132,6 @@ clusters=read.csv(parFile2, header=T, stringsAsFactors = F, row.names=1)
 clusters$cellactivity_clusters=new.cluster.ids[as.character(clusters$seurat_clusters)]
 clusters$seurat_cellactivity_clusters=paste0(clusters$seurat_clusters, " : ", clusters$cellactivity_clusters)
 write.csv(clusters, file=paste0(outFile, ".celltype_cluster.csv"))
-
-cellColor <- function(style) 
-{
-  fg  <- style$getFillForegroundXSSFColor()
-  rgb <- tryCatch(fg$getRgb(), error = function(e) NULL)
-  rgb <- paste0("#", paste(rgb, collapse = ""))
-  return(rgb)
-}
 
 if(file.exists(parFile3)){
   library(ggplot2)
