@@ -84,6 +84,39 @@ if (annotate_tcell){
 }
 
 id_tbl$cellactivity_clusters=new.cluster.ids
+
+if(file.exists(myoptions$summary_layer_file)){
+  require(xlsx)
+  layers=read.xlsx(myoptions$summary_layer_file, 1, header = TRUE)
+  isna<-apply(layers, 2, function(x){
+    all(is.na(x))
+  })
+  layers=layers[,!isna]
+  
+  wb     <- loadWorkbook(myoptions$summary_layer_file)
+  sheet1 <- getSheets(wb)[[1]]
+  
+  # get all rows
+  color_map = list()
+  rows  <- getRows(sheet1)
+  cells <- getCells(rows, colIndex = 6)
+  for(i in c(2:length(cells))){
+    v = getCellValue(cells[[i]])
+    s = getCellStyle(cells[[i]])
+    c = cellColor(s)
+    color_map[[v]]=c
+  }
+  
+  lastLayer=colnames(layers)[ncol(layers)]
+  layers_map<-split(layers[, lastLayer], layers[,1])
+  
+  miss_celltype=id_tbl$cell_type[!(id_tbl$cell_type %in% names(layers_map))]
+  for (mct in miss_celltype){
+    layers_map[mct]=mct
+  }
+  id_tbl$summary_layer=unlist(layers_map[id_tbl$cell_type])
+}
+
 write.csv(id_tbl, file=paste0(outFile, ".celltype.csv"), row.names=F)
 saveRDS(cell_type, file=paste0(outFile, ".celltype.rds"))
 
@@ -129,35 +162,6 @@ if(file.exists(parFile3)){
   dev.off()
   
   if(file.exists(myoptions$summary_layer_file)){
-    require(xlsx)
-    layers=read.xlsx(myoptions$summary_layer_file, 1, header = TRUE)
-    isna<-apply(layers, 2, function(x){
-      all(is.na(x))
-    })
-    layers=layers[,!isna]
-    
-    wb     <- loadWorkbook(myoptions$summary_layer_file)
-    sheet1 <- getSheets(wb)[[1]]
-    
-    # get all rows
-    color_map = list()
-    rows  <- getRows(sheet1)
-    cells <- getCells(rows, colIndex = 6)
-    for(i in c(2:length(cells))){
-      v = getCellValue(cells[[i]])
-      s = getCellStyle(cells[[i]])
-      c = cellColor(s)
-      color_map[[v]]=c
-    }
-  
-    lastLayer=colnames(layers)[ncol(layers)]
-    layers_map<-split(layers[, lastLayer], layers[,1])
-    
-    miss_celltype=id_tbl$cell_type[!(id_tbl$cell_type %in% names(layers_map))]
-    for (mct in miss_celltype){
-      layers_map[mct]=mct
-    }
-    id_tbl$summary_layer=unlist(layers_map[id_tbl$cell_type])
     idmap<-split(id_tbl$summary_layer, id_tbl$seurat_clusters)
     obj$summary_layer = unlist(idmap[as.character(obj$seurat_clusters)])
     
