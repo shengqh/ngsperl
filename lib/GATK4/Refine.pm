@@ -113,7 +113,7 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "if [[ ! -s $result_dir/$final_file_md5 ]]; then
+    print $sh "if [[ ! -s $result_dir/$final_file ]]; then
   \$MYCMD ./$pbs_name 
 fi
 ";
@@ -124,7 +124,7 @@ fi
     my $resultPrefix = $sample_name;
     my $inputFile    = $sample_files[0];
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file_md5, $init_command, 0, $inputFile );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, 0, $inputFile );
 
     my $localized_files = [];
     @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files, [".bai"])};
@@ -159,9 +159,13 @@ gatk --java-options \"$java_option\" \\
   --REMOVE_DUPLICATES $removeDupLabel \\
   --CREATE_INDEX true \\
   --ASSUME_SORTED true \\
-  --CREATE_MD5_FILE true
+  --CREATE_MD5_FILE false
 
-if [[ -s ${rmdupFile}.md5 ]]; then
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch $sample_name.MarkDuplicates.failed
+  rm -f $rmdupFile ${rmdupFile}.metrics $rmdupFileIndex
+else
   echo BaseRecalibrator=`date` 
   gatk --java-options \"$java_option\" \\
     BaseRecalibrator \\
@@ -171,31 +175,39 @@ if [[ -s ${rmdupFile}.md5 ]]; then
     $indel_vcf \\
     -O $recalibration_report_filename $restrict_intervals 
 
-  echo ApplyBQSR=`date`
-  gatk --java-options \"$java_option\" \\
-    ApplyBQSR \\
-    -R $faFile \\
-    -I $rmdupFile \\
-    -O $final_file \\
-    -bqsr $recalibration_report_filename \\
-    --static-quantized-quals 10 --static-quantized-quals 20 --static-quantized-quals 30 \\
-    --add-output-sam-program-record \\
-    --create-output-bam-md5 \\
-    --use-original-qualities
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.BaseRecalibrator.failed
+  else
+    echo ApplyBQSR=`date`
+    gatk --java-options \"$java_option\" \\
+      ApplyBQSR \\
+      -R $faFile \\
+      -I $rmdupFile \\
+      -O $final_file \\
+      -bqsr $recalibration_report_filename \\
+      --static-quantized-quals 10 --static-quantized-quals 20 --static-quantized-quals 30 \\
+      --add-output-sam-program-record \\
+      --create-output-bam-md5 \\
+      --use-original-qualities
 
-  if [[ -s ${final_file}.md5 ]]; then
-    ln $final_file_index ${final_file}.bai
+    status=\$?
+    if [[ \$status -ne 0 ]]; then
+      touch $sample_name.ApplyBQSR.failed
+    else
+      touch $sample_name.succeed
+      ln $final_file_index ${final_file}.bai
 
-    echo flagstat = `date` 
-    samtools flagstat $final_file > ${final_file}.stat 
+      echo flagstat = `date` 
+      samtools flagstat $final_file > ${final_file}.stat 
 
-    echo flagstat = `date` 
-    samtools idxstats $final_file > ${final_file}.chromosome.count 
+      echo flagstat = `date` 
+      samtools idxstats $final_file > ${final_file}.chromosome.count 
 
-    rm $rmlist $rmdupFile $rmdupFileIndex ${rmdupFile}.md5
+      rm $result_dir/$sample_name.*.failed
+      rm $rmlist $rmdupFile $rmdupFileIndex
+    fi
   fi
-else
-  touch ${rmdupFile}.failed
 fi
 
 ";
