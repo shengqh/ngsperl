@@ -1,3 +1,4 @@
+
 library(edgeR)
 library(ggplot2)
 library(ggpubr)
@@ -128,10 +129,11 @@ for (comp in comparisonNames){
     prefixList<-gsub(":", "_", prefixList)
     prefixList<-gsub("_+", "_", prefixList)
     
-    idx<-1
+    idx<-8
     for (idx in c(1:length(cts))){
       ct = cts[idx]
       prefix = paste0(outFile, ".", prefixList[idx], ".", comp, ".edgeR")
+      #print(prefix)
       
       clusterCt<-clusterDf[clusterDf[,cluster_name] == ct,]
       de_obj<-subset(obj, cells=rownames(clusterCt))
@@ -141,15 +143,27 @@ for (comp in comparisonNames){
       invalid_sample_names= sample_names[!(sample_names %in% unique(clusterCt$sample))]
 
       if (length(invalid_control_names) == length(control_names)){
-        stop(paste0("There were no control ", paste0(invalid_control_names, collapse=","), " found in object sample names!"))
+        writeLines("There is no cell from control group", con=paste0(prefix, ".error"))
+        next
       }
       
       if (length(invalid_sample_names)  == length(sample_names)){
-        stop(paste0("There were no sample ", paste0(invalid_sample_names, collapse=","), " found in object sample names!"))
+        writeLines("There is no cell from sample group", con=paste0(prefix, ".error"))
+        next
       }
       
       control_cells<-rownames(clusterCt)[clusterCt$sample %in% control_names]  
-      sample_cells<-rownames(clusterCt)[clusterCt$sample %in% sample_names]  
+      sample_cells<-rownames(clusterCt)[clusterCt$sample %in% sample_names] 
+
+      if(length(control_cells) < 10){
+        writeLines("There are less than 10 cells in control group", con=paste0(prefix, ".error"))
+        next
+      } 
+
+      if(length(sample_cells) < 10){
+        writeLines("There are less than 10 cells in sample group", con=paste0(prefix, ".error"))
+        next
+      } 
       
       all_cells<-c(control_cells, sample_cells)
       
@@ -179,7 +193,12 @@ for(idx in c(1:nrow(designMatrix))){
   cellType=designMatrix[idx, "cellType"]
   comp=designMatrix[idx, "comparison"]
   sampleInGroup=designMatrix[idx, "sampleInGroup"]
-  genes=designMatrix[idx, "genes"]
+  hasGenes<-"genes" %in% colnames(designMatrix)
+
+  if(hasGenes){
+    genes=designMatrix[idx, "genes"]
+    hasGenes=genes != ""
+  }
   
   designdata<-read.csv(designfile, stringsAsFactors = F)
   groups<-designdata$Group
@@ -196,7 +215,7 @@ for(idx in c(1:nrow(designMatrix))){
   keep_rows <- rowSums(tpm > filter_minTPM) >= min_sample
   rm(tpm)
   
-  if(genes != ""){
+  if(hasGenes){
     gene_list=unlist(strsplit(genes, ','))
     keep2<-rownames(cells) %in% gene_list
     keep_rows = keep_rows | keep2
@@ -224,7 +243,7 @@ for(idx in c(1:nrow(designMatrix))){
   cat("  estimateDisp", "\n")
   dge<-estimateDisp(dge,design=design)
   
-  if(genes != ""){
+  if(hasGenes){
     dge<-dge[rownames(dge) %in% gene_list,]
   }
   
