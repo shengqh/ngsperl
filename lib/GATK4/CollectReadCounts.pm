@@ -50,7 +50,6 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sampleFile   = $sample_files[0];
 
     my $final_file = ( $count_format eq "HDF5" ) ? $sample_name . ".count.hdf5" : $sample_name . ".count.tsv";
 
@@ -63,9 +62,12 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
-    print $pbs "  
 
-cd $result_dir
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files, [".bai"])};
+    my $sampleFile    = $sample_files[0];
+
+    print $pbs "  
 
 gatk --java-options \"$java_option\" CollectReadCounts $option \\
   -L ${preprocessed_intervals} \\
@@ -74,9 +76,20 @@ gatk --java-options \"$java_option\" CollectReadCounts $option \\
   --format $count_format \\
   --interval-merging-rule OVERLAPPING_ONLY \\
   --output $final_file
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch $sample_name.failed
+  rm -f $final_file
+else
+  touch $sample_name.succeed
+fi
             
 rm -rf .cache .conda .config .theano
 ";
+
+    $self->clean_temp_files($pbs, $localized_files);
+
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
