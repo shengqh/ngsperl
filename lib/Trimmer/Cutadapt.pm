@@ -110,22 +110,22 @@ sub perform {
   if ( $adapter_option !~ /-a/ ) {
     if ( defined $curSection->{adapter} && length( $curSection->{adapter} ) > 0 ) {
       my @adapters = split(',', $curSection->{adapter});
-      print(@adapters);
+      #print(@adapters);
       if ($ispairend) {
-        $adapter_option = " -a " . join(' -a ', @adapters) . " -A " . join(' -A ', @adapters);
+        $adapter_option = $adapter_option . " -a " . join(' -a ', @adapters) . " -A " . join(' -A ', @adapters);
       }
       else {
-        $adapter_option = " -a " . join(' -a ', @adapters);
+        $adapter_option = $adapter_option . " -a " . join(' -a ', @adapters);
       }
     }
 
     if ( defined $curSection->{adapter_3} && length( $curSection->{adapter_3} ) > 0 ) {
       my @adapters = split /,/, $curSection->{adapter_3};
       if ($ispairend) {
-        $adapter_option = " -a " . join(' -a ', @adapters) . " -A " . join(' -A ', @adapters);
+        $adapter_option = $adapter_option . " -a " . join(' -a ', @adapters) . " -A " . join(' -A ', @adapters);
       }
       else {
-        $adapter_option = " -a " . join(' -a ', @adapters);
+        $adapter_option = $adapter_option . " -a " . join(' -a ', @adapters);
       }
     }
   }
