@@ -533,6 +533,12 @@ sub getScRNASeqConfig {
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
+  if($cluster eq "slurm"){
+    push(@$individual, @$summary);
+    $summary = $individual;
+  }
+
+
   my $target_dir      = $def->{target_dir};
   my $groups_ref      = defined $def->{groups} ? "groups" : undef;
   my $aligner         = $def->{aligner};
@@ -576,10 +582,10 @@ sub getScRNASeqConfig {
     }
 
     if( $perform_split_hto_samples ) {
-      my $prepartion_task = "hto_samples_preparation";
-      $config->{$prepartion_task} = {
+      my $preparation_task = "hto_samples_preparation";
+      $config->{$preparation_task} = {
         class => "CQS::UniqueR",
-        target_dir => "${target_dir}/$prepartion_task",
+        target_dir => "${target_dir}/$preparation_task",
         rtemplate => "../scRNA/split_samples_utils.r,../scRNA/split_samples_preparation.r",
         option => "",
         parameterSampleFile1_ref => $hto_file_ref,
@@ -600,53 +606,8 @@ sub getScRNASeqConfig {
           "mem"       => "10gb"
         },
       };
-      push( @$summary, $prepartion_task );
-      $hto_file_ref = [ $prepartion_task, ".hto.rds"];
-
-      if(getValue($def, "perform_souporcell", 0)) {
-        my $fasta = getValue($def, "fasta_file");
-        my $skip_remap = getValue($def, "skip_remap", 1);
-        my $common_variants = getValue($def, "common_variants", "");
-
-        my $hto_souporcell_task = "hto_souporcell" . ($skip_remap ? "_skip_remap" : "_remap");
-
-        my $skip_remap_option = $skip_remap ? "--skip_remap SKIP_REMAP" : "";
-        my $common_variants_option = ($common_variants eq "") ? "" : "--common_variants $common_variants";
-        my $souporcell_thread = getValue($def, "souporcell_cpu", "16");
-
-        $config->{$hto_souporcell_task} = {
-          class => "CQS::ProgramWrapperOneToOne",
-          target_dir => "${target_dir}/$hto_souporcell_task",
-          interpretor => "",
-          program => "souporcell_pipeline.py",
-          check_program => 0,
-          docker_prefix => "souporcell_",
-          option => "-i __FILE__ -b __FILE2__ -f $fasta -t $souporcell_thread -o . -k __FILE3__ $common_variants_option $skip_remap_option
-          
-#__OUTPUT__
-",
-          source_arg => "-i",
-          source_ref => "bam_files",
-          parameterSampleFile2_arg => "-b",
-          parameterSampleFile2_ref => [ $prepartion_task, ".barcodes.tsv"],
-          parameterSampleFile3_arg => "-k",
-          parameterSampleFile3 => getValue($def, "souporcell_tag_number"),
-          output_arg => "-o",
-          output_file_prefix => "",
-          output_no_name => 1,
-          output_file_ext => "clusters.tsv",
-          output_to_same_folder => 0,
-          can_result_be_empty_file => 0,
-          use_tmp_folder => getValue($def, "use_tmp_folder", 1),
-          sh_direct   => 0,
-          pbs => {
-            "nodes"     => "1:ppn=" . $souporcell_thread,
-            "walltime"  => getValue($def, "souporcell_walltime", "47"),
-            "mem"       => getValue($def, "souporcell_mem", "40gb")
-          },
-        };
-        push( @$individual, $hto_souporcell_task );
-      }
+      push( @$summary, $preparation_task );
+      $hto_file_ref = [ $preparation_task, ".hto.rds"];
 
       my $r_script = undef;
       my $folder = undef;
@@ -672,7 +633,7 @@ sub getScRNASeqConfig {
         },
         output_perSample_file => "parameterSampleFile1",
         output_perSample_file_byName => 1,
-        output_perSample_file_ext => ".HTO.class.dist.png;.HTO.csv",
+        output_perSample_file_ext => ".HTO.class.dist.png;.HTO.csv;.HTO.umap.rds",
         sh_direct   => 1,
         pbs => {
           "nodes"     => "1:ppn=1",
@@ -705,11 +666,86 @@ sub getScRNASeqConfig {
       push (@report_files, ($hto_summary_task, ".HTO.summary.global.png"));
       push (@report_names, "hto_summary_png");
 
+      my $perform_souporcell = getValue($def, "perform_souporcell", 0);
+      if($perform_souporcell) {
+        my $fasta = getValue($def, "fasta_file");
+        my $skip_remap = getValue($def, "skip_remap", 0);
+        my $common_variants = getValue($def, "common_variants", "");
+
+        my $hto_souporcell_task = "hto_souporcell" . ($skip_remap ? "_skip_remap" : "_remap");
+
+        my $skip_remap_option = $skip_remap ? "--skip_remap SKIP_REMAP" : "";
+        my $common_variants_option = ($common_variants eq "") ? "" : "--common_variants $common_variants";
+        my $souporcell_thread = getValue($def, "souporcell_cpu", "16");
+
+        $config->{$hto_souporcell_task} = {
+          class => "CQS::ProgramWrapperOneToOne",
+          target_dir => "${target_dir}/$hto_souporcell_task",
+          interpretor => "",
+          program => "souporcell_pipeline.py",
+          check_program => 0,
+          docker_prefix => "souporcell_",
+          option => "-i __FILE__ -b __FILE2__ -f $fasta -t $souporcell_thread -o . -k __FILE3__ $common_variants_option $skip_remap_option
+          
+#__OUTPUT__
+",
+          source_arg => "-i",
+          source_ref => "bam_files",
+          parameterSampleFile2_arg => "-b",
+          parameterSampleFile2_ref => [ $preparation_task, ".barcodes.tsv"],
+          parameterSampleFile3_arg => "-k",
+          parameterSampleFile3 => getValue($def, "souporcell_tag_number"),
+          output_arg => "-o",
+          output_file_prefix => "",
+          output_no_name => 1,
+          output_file_ext => "clusters.tsv",
+          output_to_same_folder => 0,
+          can_result_be_empty_file => 0,
+          use_tmp_folder => getValue($def, "use_tmp_folder", 1),
+          sh_direct   => 0,
+          pbs => {
+            "nodes"     => "1:ppn=" . $souporcell_thread,
+            "walltime"  => getValue($def, "souporcell_walltime", "47"),
+            "mem"       => getValue($def, "souporcell_mem", "40gb")
+          },
+        };
+        push( @$individual, $hto_souporcell_task );
+
+        my $hto_integration_task = $hto_souporcell_task . "_cutoff_integration";
+        $config->{$hto_integration_task} = {
+          class => "CQS::UniqueR",
+          target_dir => "${target_dir}/${hto_integration_task}",
+          rtemplate => "../scRNA/hto_soupercell_integration.r",
+          option => "",
+          parameterSampleFile1_ref => $hto_souporcell_task,
+          parameterSampleFile2_ref => $hto_ref,
+          parameterSampleFile3_ref => [ $hto_task, ".umap.rds" ],
+          output_perSample_file => "parameterSampleFile1",
+          output_perSample_file_byName => 1,
+          output_perSample_file_ext => ".HTO.class.dist.png;.HTO.csv",
+          sh_direct   => 1,
+          pbs => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$summary, $hto_integration_task );
+
+        $hto_ref = [ $hto_integration_task, ".HTO.csv" ];
+      }
+
       if(defined $def->{HTO_samples}){
         $hto_sample_file = write_HTO_sample_file($def);
       }
 
-      if(defined $def->{bam_files}){
+      my $perform_ArcasHLA = getValue($def, "perform_ArcasHLA", 0);
+
+      if($perform_ArcasHLA){
+        if ( not defined $def->{bam_files}){
+          die "Define bam_files for perform_ArcasHLA";
+        }
+
         if (not defined $def->{HTO_samples}) {
           die "Define HTO_samples for split bam files";
         }
@@ -1558,18 +1594,19 @@ sub getScRNASeqConfig {
     option     => "",
     source     => {
       step1 => $individual,
-      step2 => $summary,
     },
     sh_direct => 0,
     cluster   => $cluster,
     pbs       => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=" . $def->{max_thread},
       "walltime"  => $def->{sequencetask_run_time},
       "mem"       => "40gb"
     },
   };
+
+  if($cluster ne "slurm"){
+    $config->{sequencetask}{source}{step2} = $summary;
+  }
 
   return ($config);
 }
