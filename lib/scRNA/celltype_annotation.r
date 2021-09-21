@@ -123,6 +123,8 @@ if(file.exists(myoptions$summary_layer_file)){
     layers_map[mct]=mct
   }
   id_tbl$summary_layer=unlist(layers_map[id_tbl$cell_type])
+
+  saveRDS(color_map, file=paste0(outFile, ".summary_layer_color.rds"))
 }
 
 write.csv(id_tbl, file=paste0(outFile, ".celltype.csv"), row.names=F)

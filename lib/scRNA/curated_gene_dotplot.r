@@ -72,14 +72,17 @@ drawDotPlot<-function(object, geneset_name, genes, assay, split.by=NA){
 
   cat(geneset_name, "sortExp \n")
   
-  minvalue=min(pdata$avg.exp.scaled[!is.na(pdata$avg.exp.scaled)])
-  pdata$avg.exp.scaled[is.na(pdata$avg.exp.scaled)] = minvalue
+  adata<-acast(pdata, features.plot~id, value.var = "avg.exp")
+  write.csv(adata, file=paste0(geneset_name, ".avgexp.csv"))
 
-  adata<-acast(pdata, features.plot~id, value.var = "avg.exp.scaled")
-  hc <- hclust(dist(adata))
-  ordered_genes=rownames(adata)[order.hclust(hc)]
-  p$data$features.plot<-factor(p$data$features.plot, ordered_genes)
-  
+  adata<-data.frame(adata)
+  maxcolumn<-unlist(colnames(adata)[apply(adata,1,which.max)])
+  maxvalue<-unlist(apply(adata,1,max))
+  adata$Maxcolumn <- maxcolumn
+  adata$Maxvalue <- -maxvalue
+
+  adata<-adata[order(adata$Maxcolumn, adata$Maxvalue),]
+  p$data$features.plot<-factor(p$data$features.plot, rownames(adata))
   pdf(file=paste0(geneset_name, ".dot.sortExp.pdf"), width=width, height=height)
   print(p)
   dev.off()

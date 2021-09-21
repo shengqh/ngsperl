@@ -1,3 +1,4 @@
+
 source("split_samples_utils.r")
 
 library(Seurat)
@@ -5,11 +6,13 @@ library(ggplot2)
 
 #devtools::install_github("shengqh/cutoff")
 #install.packages("bbmle")
-library(choisycutoff)
 library(zoo)
 library(reshape2)
 library(gridExtra)
 library(ggExtra)
+
+library(bbmle)
+library(choisycutoff)
 
 #still keep it here in case we need it later.
 my_startval <- function(values,D1="normal",D2="normal",cutoff_point=0) {

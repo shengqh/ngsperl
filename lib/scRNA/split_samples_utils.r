@@ -82,6 +82,8 @@ output_post_classification<-function(obj, output_prefix){
     obj<-ScaleData(obj, assay="HTO")
     obj<-RunUMAP(obj, assay="HTO", slot="scale.data", features=rownames(obj))
     
+    saveRDS(object = obj, file = paste0(output_prefix, ".umap.rds"))
+    
     png(paste0(output_prefix, ".umap.class.png"), width=2000, height=1800, res=300)
     g<-DimPlot(obj, reduction = "umap", group.by="HTO_classification")
     print(g)
