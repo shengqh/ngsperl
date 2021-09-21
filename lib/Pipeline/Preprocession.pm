@@ -51,7 +51,7 @@ sub addCutadapt {
   my ($config, $def, $individual, $summary, $cutadapt_task, $fastqcName, $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster) = @_;
   my $default_thread = $is_pairend?2:1;
   my $cutadapt_thread = getValue($def, "cutadapt_thread", $default_thread);
-  print("cutadapt_thread=" . $cutadapt_thread . "\n");
+  print("cutadapt_option=" . $def->{cutadapt_option} . "\n");
   my $cutadapt_class = ( defined $def->{cutadapt_config} ) ? "Trimmer::CutadaptByConfig" : "Trimmer::Cutadapt";
   my $cutadapt = {
     "$cutadapt_task" => {
