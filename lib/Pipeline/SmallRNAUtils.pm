@@ -593,7 +593,7 @@ sub add_absolute_chromosome_count {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform      => 1,
     target_dir   => $parent_dir . "/" . $count_task,
-    option       => " -i __FILE__ -c __FILE2__ -o __NAME__.count
+    option       => " -i __FILE__ -c __FILE2__ -o __NAME__.count $countOption
 
 #__OUTPUT__
 
@@ -609,7 +609,7 @@ sub add_absolute_chromosome_count {
     output_arg            => "-o",
     output_to_folder      => 1,
     output_file_prefix    => "",
-    output_file_ext       => ".count",
+    output_file_ext       => ".count,.count.obj",
     sh_direct    => 1,
     pbs          => {
       "nodes"     => "1:ppn=1",
@@ -633,7 +633,9 @@ sub add_search_fasta {
 
   addBowtie( $config, $def, $individual, $bowtie1Task, $parentDir, $bowtie_index_task, $sourceRef, $bowtieOption );
 
-  add_absolute_chromosome_count($config, $def, $individual, $parentDir, $bowtie1CountTask, "", $bowtie1Task, $count_ref);
+  my $count_option = getValue($def, "search_fasta_count_option", "");
+
+  add_absolute_chromosome_count($config, $def, $individual, $parentDir, $bowtie1CountTask, $count_option, $bowtie1Task, $count_ref);
 
   $config->{$bowtie1TableTask} = {
     class                    => "CQS::ProgramWrapper",
@@ -643,7 +645,9 @@ sub add_search_fasta {
     target_dir               => $parentDir . "/$bowtie1TableTask",
     option                   => "",
     parameterSampleFile1_arg => "-i",
-    parameterSampleFile1_ref => $bowtie1CountTask,
+    parameterSampleFile1_ref => [$bowtie1CountTask, '.count$'],
+    parameterSampleFile2_arg => "-s",
+    parameterSampleFile2_ref => [$bowtie1CountTask, '.count.obj$'],
     sh_direct                => 1,
     output_arg               => "-o",
     output_ext               => ".count.txt",
