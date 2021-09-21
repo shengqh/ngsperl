@@ -115,6 +115,16 @@ sub initializeDefaultOptions {
   return $def;
 }
 
+sub getFasta {
+  my $def = shift;
+  my $fasta_file = $def->{ref_fasta};
+  if(not defined $fasta_file){
+    $fasta_file = $def->{fasta_file};
+  }
+  die "define ref_fasta or fasta_file for mutect2" if not defined $fasta_file;
+  return($fasta_file);
+}
+
 sub addMutect2 {
   my ($config, $def, $tasks, $target_dir, $bam_input, $mutect2_call, $option, $use_germline_resource, $pon) = @_;
 
@@ -150,12 +160,8 @@ sub addMutect2 {
     $output_file_ext = $output_sample_ext."-filtered.vcf";
   }
 
-  my $fasta_file = $def->{ref_fasta};
-  if(not defined $fasta_file){
-    $fasta_file = $def->{fasta_file};
-  }
-  die "define ref_fasta or fasta_file for mutect2" if not defined $fasta_file;
-
+  my $fasta_file = getFasta($def);
+   
   $config->{$mutect2_call} = {     
     "class" => "GATK4::MuTect2",
     "target_dir" => "${target_dir}/$mutect2_call",
@@ -863,6 +869,43 @@ fi
     push @$summary, $countTable;
   }
 
+  if($def->{perform_CNV_Radar}){
+    my $CNV_Radar_roi_task = "CNV_Radar_01_roi";
+    $config->{$CNV_Radar_roi_task} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/${CNV_Radar_roi_task}",
+      option                => "
+
+ln -s __FILE__ __NAME__.bam
+ln -s __FILE__.bai __NAME__.bam.bai
+
+Rscript /opt/CNVRadar/bam2roi.r -b __NAME__.bam -d $covered_bed -z > __NAME__.roi.log 2>&1
+
+rm __NAME__.bam __NAME__.bam.bai
+",
+      interpretor           => "",
+      docker_prefix         => "CNVRadar_",
+      program               => "",
+      check_program         => 0,
+      source_arg            => "",
+      source_ref => [ $bam_input, ".bam\$" ],
+      output_to_same_folder => 1,
+      output_arg            => "",
+      no_output => 1,
+      output_file_prefix    => "",
+      output_file_ext       => "_roi.txt.gz",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "2",
+        "mem"      => "40gb"
+      },
+    };
+
+    push(@$individual, "$CNV_Radar_roi_task");
+  }
+
   my $gatk_index = $def;
   my $gatk_index_snv = "SNV_Index";
 
@@ -1408,6 +1451,354 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
 
   if ( $def->{"perform_cnv_gatk4_somatic"}) {
     my $somaticCNVtask = addSomaticCNV($config, $def, $summary, $target_dir, $bam_input);
+  }
+  
+  if ( $def->{"perform_cra_gatk4_somatic"}) {
+    my $index_key = "cra_gatk4_somatic";
+    my $index_dic = {
+      $index_key => 0,
+    };
+
+    my $cra_PreprocessIntervals = "gatk4_cra_". getNextIndex($index_dic, $index_key) . "_PreprocessIntervals";
+    my $intervals = getValue($def, "target_intervals_file");
+    my $fasta_file = getFasta($def);
+    my $cra_padding = getValue($def, "cra_padding", 250);
+    $config->{$cra_PreprocessIntervals} = {
+      class                 => "CQS::ProgramWrapper",
+      perform               => 1,
+      target_dir            => "${target_dir}/${cra_PreprocessIntervals}",
+      option                => "
+gatk PreprocessIntervals \\
+    -L $intervals \\
+    -R $fasta_file \\
+    --bin-length 0 \\
+    --padding $cra_padding \\
+    --interval-merging-rule OVERLAPPING_ONLY \\
+    -O __NAME__.preprocessed.interval_list
+
+#__FILE__ __OUTPUT__
+",
+      interpretor           => "",
+      docker_prefix         => "gatk4_",
+      program               => "",
+      check_program         => 0,
+      source_arg            => "",
+      source            => {
+        $def->{task_name} => [$intervals]
+      },
+      output_to_same_folder => 1,
+      output_arg            => "",
+      output_file_prefix    => ".preprocessed.interval_list",
+      output_file_ext       => ".preprocessed.interval_list",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "2",
+        "mem"      => "10gb"
+      },
+    };
+    push @$summary, $cra_PreprocessIntervals;
+
+    my $CollectReadCounts_task = "gatk4_cra_". getNextIndex($index_dic, $index_key) . "_CollectReadCounts";
+    $config->{$CollectReadCounts_task} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/${CollectReadCounts_task}",
+      option                => "
+
+gatk --java-options \"-Xmx40g\" CollectReadCounts  \\
+    -I __FILE__ \\
+    --interval-merging-rule OVERLAPPING_ONLY \\
+    -O __NAME__.counts.hdf5 \\
+  ",
+      interpretor           => "",
+      docker_prefix         => "gatk4_",
+      program               => "",
+      check_program         => 0,
+      source_arg            => "",
+      source_ref => [ $bam_input, ".bam\$" ],
+      parameterFile1_arg => "-L",
+      parameterFile1_ref => $cra_PreprocessIntervals,
+      output_to_same_folder => 1,
+      output_arg            => "",
+      no_output => 1,
+      output_file_prefix    => "",
+      output_file_ext       => ".counts.hdf5",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    };
+
+    push(@$summary, $CollectReadCounts_task);
+
+    #https://gatk.broadinstitute.org/hc/en-us/articles/360035531132
+    $config->{cra_pon_normal_files} = {     
+      "class" => "CQS::SamplePickTask",
+      "source_ref" => $CollectReadCounts_task,
+      "sample_names" => $def->{pon_samples},
+    };
+
+    $config->{cra_tumor_files} = {     
+      "class" => "CQS::SamplePickTask",
+      "source_ref" => $CollectReadCounts_task,
+      "not_sample_names" => $def->{pon_samples},
+    };
+
+    my $CreateReadCountPanelOfNormals_task = "gatk4_cra_". getNextIndex($index_dic, $index_key) . "_CreateReadCountPanelOfNormals";
+    $config->{$CreateReadCountPanelOfNormals_task} = {
+      class                 => "CQS::ProgramWrapper",
+      perform               => 1,
+      target_dir            => "${target_dir}/${CreateReadCountPanelOfNormals_task}",
+      option                => "
+
+gatk --java-options \"-Xmx40g\" CreateReadCountPanelOfNormals \\
+    -I __FILE__ \\
+    --minimum-interval-median-percentile 5.0 \\
+    -O __NAME__.pon.hdf5
+      ",
+      interpretor           => "",
+      docker_prefix         => "gatk4_",
+      program               => "",
+      check_program         => 0,
+      source_type           => "array",
+      source_join           => 1,
+      source_join_delimiter => " \\\n    -I ",
+      source_ref => "cra_pon_normal_files",
+      output_to_same_folder => 1,
+      output_arg            => "",
+      no_output => 1,
+      output_file_prefix    => "",
+      output_file_ext       => ".pon.hdf5",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "40gb"
+      },
+    };
+
+    push(@$summary, $CreateReadCountPanelOfNormals_task);
+
+    my $DenoiseReadCounts_task = "gatk4_cra_". getNextIndex($index_dic, $index_key) . "_DenoiseReadCounts";
+    $config->{$DenoiseReadCounts_task} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/${DenoiseReadCounts_task}",
+      option                => "
+
+gatk --java-options \"-Xmx40g\" DenoiseReadCounts \\
+    -I __FILE__ \\
+    --standardized-copy-ratios __NAME__.standardizedCR.tsv \\
+    --denoised-copy-ratios __NAME__.denoisedCR.tsv \\
+  ",
+      interpretor           => "",
+      docker_prefix         => "gatk4_",
+      program               => "",
+      check_program         => 0,
+      source_arg            => "-I",
+      source_ref            => "cra_tumor_files",
+      parameterFile1_arg => "--count-panel-of-normals",
+      parameterFile1_ref => $CreateReadCountPanelOfNormals_task,
+      output_to_same_folder => 1,
+      output_arg            => "",
+      no_output => 1,
+      output_file_prefix    => "",
+      output_file_ext       => ".standardizedCR.tsv;.denoisedCR.tsv",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "40gb"
+      },
+    };
+
+    push(@$summary, $DenoiseReadCounts_task);
+
+    my $PlotDenoisedCopyRatios_task = "gatk4_cra_". getNextIndex($index_dic, $index_key) . "_PlotDenoisedCopyRatios";
+    my $ref_fasta_dict = getValue($def, "ref_fasta_main_dict");
+    $config->{$PlotDenoisedCopyRatios_task} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/${PlotDenoisedCopyRatios_task}",
+      option                => "
+
+gatk --java-options \"-Xmx40g\" PlotDenoisedCopyRatios \\
+    --denoised-copy-ratios __FILE__ \\
+    --standardized-copy-ratios __FILE2__ \\
+    --sequence-dictionary $ref_fasta_dict \\
+    --minimum-contig-length 46709983 \\
+    --output . \\
+    --output-prefix __NAME__ 
+  ",
+      interpretor           => "",
+      docker_prefix         => "gatk4_",
+      program               => "",
+      check_program         => 0,
+      source_arg            => "--denoised-copy-ratios",
+      source_ref            => [$DenoiseReadCounts_task, ".denoisedCR.tsv"],
+      parameterSampleFile2_arg => "--standardized-copy-ratios",
+      parameterSampleFile2_ref => [$DenoiseReadCounts_task, ".standardizedCR.tsv"],
+      output_to_same_folder => 1,
+      output_arg            => "",
+      no_output => 1,
+      output_file_prefix    => "",
+      output_file_ext       => ".counts.hdf5",
+      sh_direct             => 1,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "40gb"
+      },
+    };
+
+    push(@$summary, $PlotDenoisedCopyRatios_task);
+
+    $config->{cra_tumor_bams} = {     
+      "class" => "CQS::SamplePickTask",
+      "source_ref" => $bam_ref,
+      "not_sample_names" => $def->{pon_samples},
+    };
+
+    my $CollectAllelicCounts_task = "gatk4_cra_". getNextIndex($index_dic, $index_key) . "_CollectAllelicCounts";
+    $config->{$CollectAllelicCounts_task} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/${CollectAllelicCounts_task}",
+      option                => "
+
+gatk --java-options \"-Xmx40g\" CollectAllelicCounts \\
+    -I __FILE__ \\
+    -R $fasta_file \\
+    -O __NAME__.allelicCounts.tsv \\
+  ",
+      interpretor           => "",
+      docker_prefix         => "gatk4_",
+      program               => "",
+      check_program         => 0,
+      source_arg            => "-I",
+      source_ref            => "cra_tumor_bams",
+      parameterFile1_arg => "-L",
+      parameterFile1_ref => $cra_PreprocessIntervals,
+      output_to_same_folder => 1,
+      output_arg            => "",
+      no_output => 1,
+      output_file_prefix    => "",
+      output_file_ext       => ".allelicCounts.tsv",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "40gb"
+      },
+    };
+
+    push(@$summary, $CollectAllelicCounts_task);
+
+    my $ModelSegments_task = "gatk4_cra_". getNextIndex($index_dic, $index_key) . "_ModelSegments";
+    $config->{$ModelSegments_task} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/${ModelSegments_task}",
+      option                => "
+
+gatk --java-options \"-Xmx40g\" ModelSegments \\
+    --denoised-copy-ratios __FILE__ \\
+    --output . \\
+    --output-prefix __NAME__
+  ",
+      interpretor           => "",
+      docker_prefix         => "gatk4_",
+      program               => "",
+      check_program         => 0,
+      source_arg            => "--denoised-copy-ratios",
+      source_ref            => [$DenoiseReadCounts_task, ".denoisedCR.tsv"],
+      output_to_same_folder => 0,
+      output_arg            => "",
+      no_output => 1,
+      output_file_prefix    => "",
+      output_file_ext       => ".cr.seg;.modelFinal.seg",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "40gb"
+      },
+    };
+
+    push(@$summary, $ModelSegments_task);
+
+    my $CallCopyRatioSegments_task = "gatk4_cra_". getNextIndex($index_dic, $index_key) . "_CallCopyRatioSegments";
+    $config->{$CallCopyRatioSegments_task} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/${CallCopyRatioSegments_task}",
+      option                => "
+
+gatk --java-options \"-Xmx10g\" CallCopyRatioSegments \\
+    --input __FILE__ \\
+    --output __NAME__.called.seg
+  ",
+      interpretor           => "",
+      docker_prefix         => "gatk4_",
+      program               => "",
+      check_program         => 0,
+      source_arg            => "--input",
+      source_ref            => [$ModelSegments_task, ".cr.seg"],
+      output_to_same_folder => 1,
+      output_arg            => "",
+      no_output => 1,
+      output_file_prefix    => "",
+      output_file_ext       => ".called.seg",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "2",
+        "mem"      => "10gb"
+      },
+    };
+
+    push(@$summary, $CallCopyRatioSegments_task);
+
+    my $PlotModeledSegments_task = "gatk4_cra_". getNextIndex($index_dic, $index_key) . "_PlotModeledSegments";
+    $config->{$PlotModeledSegments_task} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/${PlotModeledSegments_task}",
+      option                => "
+
+gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
+    --denoised-copy-ratios __FILE__ \\
+    --segments __FILE2__ \\
+    --sequence-dictionary $ref_fasta_dict \\
+    --minimum-contig-length 46709983 \\
+    --output . \\
+    --output-prefix __NAME__ 
+  ",
+      interpretor           => "",
+      docker_prefix         => "gatk4_",
+      program               => "",
+      check_program         => 0,
+      source_arg            => "--denoised-copy-ratios",
+      source_ref            => [$DenoiseReadCounts_task, ".denoisedCR.tsv"],
+      parameterSampleFile2_arg => "--segments",
+      parameterSampleFile2_ref => [$ModelSegments_task, ".modelFinal.seg"],
+      output_to_same_folder => 1,
+      output_arg            => "",
+      no_output => 1,
+      output_file_prefix    => "",
+      output_file_ext       => ".counts.hdf5",
+      sh_direct             => 1,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "40gb"
+      },
+    };
+
+    push(@$summary, $PlotModeledSegments_task);
   }
   
   if ( $def->{"perform_muTect2indel"} ) {
