@@ -567,7 +567,7 @@ sub addCollectAllelicCounts {
 }
 
 sub addEncodeATACseq {
-  my ($config, $def, $individual, $target_dir, $files_ref) = @_;
+  my ($config, $def, $individual, $target_dir, $files_ref, $task) = @_;
 
   my $server_key = getValue($def, "wdl_key", "local");
   my $pipeline_key = "encode_atacseq";
@@ -575,11 +575,14 @@ sub addEncodeATACseq {
   my $server = $wdl->{$server_key};
   my $pipeline = $server->{$pipeline_key};
 
-  my $task = $pipeline_key;
+  if(not defined $task){
+    $task = $pipeline_key;
+  }
+
   $config->{$task} = {     
     "class" => "CQS::Wdl",
     "option" => "--no-build-singularity",
-    "target_dir" => "${target_dir}/$pipeline_key",
+    "target_dir" => "${target_dir}/$task",
     "singularity_image_files_ref" => ["singularity_image_files"],
     "cromwell_jar" => $wdl->{"cromwell_jar"},
     "input_option_file" => $wdl->{"cromwell_option_file"},
