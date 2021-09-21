@@ -75,6 +75,8 @@ sub perform {
   my $task_suffix = get_option( $config, $section, "suffix", "" );
   $self->{_task_suffix} = $task_suffix;
 
+  my $check_file_ext = get_option($config, $section, "check_file_ext", "");
+
   my $interpretor = get_option( $config, $section, "interpretor", "" );
   my $program = get_option( $config, $section, "program" );
 
@@ -129,14 +131,14 @@ sub perform {
       }
     }
     
-    my $checkFile = $result_files->[-1];
+    my $checkFile = $result_files->[-1] . $check_file_ext;
     $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $checkFile );
   }else{
     $final_file = $target_dir . "/";
     if(defined $results){
       my @sampleKeys = reverse sort(keys (%$results));
       my $firstKey = $sampleKeys[0];
-      my $checkFile = $results->{$firstKey}[-1];
+      my $checkFile = $results->{$firstKey}[-1] . $check_file_ext;
       $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $checkFile);
     }else{
       $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir);
