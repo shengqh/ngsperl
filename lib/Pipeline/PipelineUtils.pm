@@ -2738,6 +2738,7 @@ bowtie-build $fasta __NAME__
     output_arg            => "",
     output_file_ext       => "",
     output_to_same_folder => 1,
+    check_file_ext        => ".4.ebwt",
     sh_direct             => 1,
     pbs          => {
       "nodes"     => "1:ppn=1",
