@@ -59,9 +59,9 @@ if(Remove_MtRNA){
   rawobj<-rawobj[!(rownames(rawobj) %in% Mt.genes),]
 }
 
-poolmap = get_batch_samples(parSampleFile2, unique(rawobj$orig.ident))
+poolmap = get_batch_samples(parSampleFile2, unique(rawobj$sample))
 
-rawobj$batch=unlist(poolmap[rawobj$orig.ident])
+rawobj$batch=unlist(poolmap[rawobj$sample])
 objs<-SplitObject(object = rawobj, split.by = "batch")
 rm(rawobj)
 
@@ -71,8 +71,6 @@ finalList$filter<-list(nFeature_cutoff_min=nFeature_cutoff_min,
                       mt_cutoff=mt_cutoff,
                       nCount_cutoff=nCount_cutoff,
                       nCount_sd_cutoff=nCount_sd_cutoff)
-
-do_seurat_integration<-function(objs, by_sctransform, batch_file) {
 
 if(by_sctransform){
   cat("performing SCTransform ...")

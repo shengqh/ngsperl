@@ -61,11 +61,11 @@ if(Remove_MtRNA){
   rawobj<-rawobj[!(rownames(rawobj) %in% Mt.genes),]
 }
 
-sample_read<-data.frame(table(rawobj$orig.ident))
+sample_read<-data.frame(table(rawobj$sample))
 colnames(sample_read)<-c("Sample", "Cell")
 write.table(sample_read, file=paste0(outFile, ".cell.tsv"), sep="\t", row.names=F, quote=F)
 
-objs<-SplitObject(object = rawobj, split.by = "orig.ident")
+objs<-SplitObject(object = rawobj, split.by = "sample")
 rm(rawobj)
 
 #filter cells

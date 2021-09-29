@@ -1,3 +1,4 @@
+
 source("scRNA_func.r")
 
 library(dplyr)
@@ -57,12 +58,11 @@ if(Remove_MtRNA){
   rawobj<-rawobj[!(rownames(rawobj) %in% Mt.genes),]
 }
 
-nsamples=length(unique(rawobj$orig.ident))
-
 if(by_sctransform){
   cat("performing SCTransform ...\n")
+  nsamples=length(unique(rawobj$sample))
   if(nsamples > 1){
-    objs<-SplitObject(object = rawobj, split.by = "orig.ident")
+    objs<-SplitObject(object = rawobj, split.by = "sample")
     rm(rawobj)
   
     #perform sctransform
@@ -85,6 +85,7 @@ if(by_sctransform){
   rm(rawobj)
   obj<-NormalizeData(obj, verbose = FALSE)
   obj<-FindVariableFeatures(obj, selection.method = "vst", nfeatures = 2000, verbose = FALSE)  
+  obj<-ScaleData(obj)
   assay="RNA"
 }
 
