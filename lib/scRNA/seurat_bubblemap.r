@@ -22,7 +22,6 @@ for(idx in c(2:nrow(genes))){
     genes[idx,"Cell Type"]=genes[idx-1,"Cell Type"]
   }
 }
-genes$`Cell Type`=factor(genes$`Cell Type`, levels=unique(genes$`Cell Type`))
 
 gene_names=genes$`Marker Gene`
 gene_names[gene_names=="PECAM"] = "PECAM1"
@@ -39,6 +38,7 @@ miss_genes=genes$`Marker Gene`[!(genes$`Marker Gene` %in% allgenes)]
 writeLines(miss_genes, con="miss_gene.csv")
 
 genes<-genes[genes$`Marker Gene` %in% allgenes,]
+genes$`Cell Type`=factor(genes$`Cell Type`, levels=unique(genes$`Cell Type`))
 
 gene_groups=split(genes$`Marker Gene`, genes$`Cell Type`)
 
