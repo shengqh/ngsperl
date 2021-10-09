@@ -1,3 +1,4 @@
+
 source("scRNA_func.r")
 
 library(dplyr)
@@ -39,6 +40,34 @@ obj<-run_cluster_only(obj, pca_dims, resolution, random.seed, reduction=reductio
 tbl<-table(obj$seurat_clusters, obj$orig.ident)
 write.csv(tbl, file=paste0(outFile, ".cluster_sample.csv"))
 
+osn<-tbl / rowSums(tbl) * 5000
+osm<-data.frame(osn)
+colnames(osm)<-c("Cluster", "Sample", "Cell")
+osm$Cluster<-paste0("Cluster ", osm$Cluster)
+osm$Cluster<-factor(osm$Cluster, levels=unique(osm$Cluster))
+osm_perc = osm %>% dplyr::group_by(Cluster) %>% dplyr::mutate(Percent = Cell/sum(Cell))
+
+height=max(1600, min(5000, nrow(tbl) * 100 ))
+width=max(1600, min(5000, ncol(tbl) * 100 ))
+png(paste0(outFile, ".cluster_sample_percByCluster.png"), width=width, height=height, res=300)
+g<-ggplot(osm_perc, aes(x=Sample,y=Cluster)) + geom_point(mapping = aes_string(size = "Percent")) + theme_bw() + xlab("") + ylab("") + theme(axis.text.x=element_text(angle = 90))
+print(g)
+dev.off()
+
+ttbl<-t(tbl)
+osn<-ttbl / rowSums(ttbl) * 100
+osm<-data.frame(osn)
+colnames(osm)<-c("Sample", "Cluster", "Percent")
+osm$Cluster<-paste0("Cluster ", osm$Cluster)
+osm$Cluster<-factor(osm$Cluster, levels=unique(osm$Cluster))
+
+height=max(1600, min(5000, ncol(ttbl) * 100 ))
+width=max(1600, min(5000, nrow(ttbl) * 100 ))
+png(paste0(outFile, ".cluster_sample_percBySample.png"), width=width, height=height, res=300)
+g<-ggplot(osm, aes(x=Sample,y=Cluster)) + geom_point(mapping = aes_string(size = "Percent")) + theme_bw() + xlab("") + ylab("") + theme(axis.text.x=element_text(angle = 90))
+print(g)
+dev.off()
+
 seurat_clusters<-unlist(obj[["seurat_clusters"]])
 seurat_colors<-hue_pal()(length(levels(seurat_clusters)))
 names(seurat_colors)<-levels(seurat_clusters)
@@ -78,6 +107,18 @@ p<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_cluste
 png(paste0(outFile, ".cluster.png"), width=3300, height=3000, res=300)
 print(p)
 dev.off()
+
+if(length(unique(obj$orig.ident)) > 1){
+  p2<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="orig.ident")
+  p3<-p+p2
+  png(paste0(outFile, ".umap.sample_cell.png"), width=6600, height=3000, res=300)
+  print(p3)
+  dev.off()
+}else{
+  png(paste0(outFile, ".umap.sample_cell.png"), width=3300, height=3000, res=300)
+  print(p)
+  dev.off()
+}
 
 finalList$obj<-obj
 finalListFile<-paste0(prefix, ".final.rds")

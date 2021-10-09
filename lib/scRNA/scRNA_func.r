@@ -330,6 +330,7 @@ draw_dimplot<-function(mt, filename, split.by) {
     facet_wrap(as.formula(paste("~", split.by)), ncol=nWidth, nrow=nHeight) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
   print(g1)
   dev.off()
+  return(g1)
 }
 
 do_harmony<-function(objs, by_sctransform, npcs, batch_file) {
@@ -418,4 +419,115 @@ plot_violin<-function(obj, features=c("FKBP1A", "CD79A")){
     xlab("Cluster") + ylab("Expression") +
     theme(strip.background=element_blank(),
           strip.text.y = element_text(angle =0))
+}
+
+preprocessing_rawobj<-function(rawobj, myoptions, prefix){
+  Mtpattern= myoptions$Mtpattern
+  rRNApattern=myoptions$rRNApattern
+  Remove_rRNA<-ifelse(myoptions$Remove_rRNA == "0", FALSE, TRUE)
+  Remove_MtRNA<-ifelse(myoptions$Remove_MtRNA == "0", FALSE, TRUE)
+  
+  nFeature_cutoff_min=as.numeric(myoptions$nFeature_cutoff_min)
+  nFeature_cutoff_max=as.numeric(myoptions$nFeature_cutoff_max)
+  nCount_cutoff=as.numeric(myoptions$nCount_cutoff)
+  mt_cutoff=as.numeric(myoptions$mt_cutoff)
+  
+  plot1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt") + geom_hline(yintercept = mt_cutoff, color="black")  + geom_vline(xintercept = nCount_cutoff, color="black")
+  plot2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")  + geom_hline(yintercept = c( nFeature_cutoff_min, nFeature_cutoff_max), color="black")  + geom_vline(xintercept = nCount_cutoff, color="black") 
+  p<-plot1+plot2
+  
+  png(paste0(prefix, ".qc.1.png"), width=3300, height=1500, res=300)
+  print(p)
+  dev.off()
+  
+  mt<-data.frame(mt=rawobj$percent.mt, Sample=rawobj$orig.ident, nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
+  g1<-ggplot(mt, aes(x=mt,y=nCount) ) +
+    geom_bin2d(bins = 70) + 
+    scale_fill_continuous(type = "viridis") + 
+    geom_vline(xintercept = mt_cutoff, color="red")  + 
+    geom_hline(yintercept = log10(nCount_cutoff), color="red") +
+    xlab("Percentage of mitochondrial") + ylab("log10(number of read)") +
+    facet_wrap(~Sample) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+  
+  png(paste0(prefix, ".qc.2.png"), width=3600, height=3000, res=300)
+  print(g1)
+  dev.off()
+  
+  g1<-ggplot(mt, aes(x=mt,y=nFeature) ) +
+    geom_bin2d(bins = 70) + 
+    scale_fill_continuous(type = "viridis") + 
+    geom_vline(xintercept = mt_cutoff, color="red")  + 
+    geom_hline(yintercept = log10(nFeature_cutoff_min), color="red") +
+    geom_hline(yintercept = log10(nFeature_cutoff_max), color="red") +
+    xlab("Percentage of mitochondrial") + ylab("log10(number of feature)") +
+    facet_wrap(~Sample) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+  png(paste0(prefix, ".qc.3.png"), width=3600, height=3000, res=300)
+  print(g1)
+  dev.off()
+  
+  finalList<-list()
+  
+  #filter cells
+  finalList$filter<-list(nFeature_cutoff_min=nFeature_cutoff_min,
+                         nFeature_cutoff_max=nFeature_cutoff_max,
+                         mt_cutoff=mt_cutoff,
+                         nCount_cutoff=nCount_cutoff)
+  
+  rawCells<-data.frame(table(rawobj$orig.ident))
+  
+  rawobj<-subset(rawobj, subset = nFeature_RNA > nFeature_cutoff_min & nFeature_RNA<nFeature_cutoff_max & nCount_RNA > nCount_cutoff & percent.mt < mt_cutoff)
+  
+  if(Remove_rRNA){
+    rawobj<-rawobj[!(rownames(rawobj) %in% rRNA.genes),]
+  }
+  
+  if(Remove_MtRNA){
+    rawobj<-rawobj[!(rownames(rawobj) %in% Mt.genes),]
+  }
+  
+  filteredCells<-data.frame(table(rawobj$orig.ident))
+  qcsummary<-merge(rawCells, filteredCells, by = "Var1")
+  colnames(qcsummary)<-c("Sample", "RawCell", "ValidCell")
+  qcsummary$DiscardCell<-qcsummary$RawCell-qcsummary$ValidCell
+  qcsummary$DiscardRate<-qcsummary$DiscardCell / qcsummary$RawCell
+  write.csv(qcsummary, file=paste0(prefix, ".sample_cell.csv"), row.names=F)
+  
+  g<-VlnPlot(object = rawobj, features = c("percent.mt", "nFeature_RNA", "nCount_RNA"))
+  png(paste0(prefix, ".qc.4.png"), width=3600, height=1600, res=300)
+  print(g)
+  dev.off()
+  
+  finalList$rawobj<-rawobj
+  return(finalList)
+}
+
+output_integraion_dimplot<-function(obj, outFile, has_batch_file){
+
+  mt<-data.frame(UMAP_1=obj@reductions$umap@cell.embeddings[,1], 
+                UMAP_2=obj@reductions$umap@cell.embeddings[,2],
+                Sample=obj$sample)
+  if(has_batch_file){
+    mt$batch=obj$batch
+  }
+
+  cat("draw pictures ... ")
+  p<-draw_dimplot(mt, paste0(outFile, ".sample.png"), "Sample")
+
+  nSplit = length(unique(mt[,"Sample"]))
+  nWidth=ceiling(sqrt(nSplit))
+  nHeight=ceiling(nSplit / nWidth)
+
+  width=nWidth * 600 + 200
+  height=nHeight*600
+
+  if(has_batch_file){
+    p2<-draw_dimplot(mt, paste0(outFile, ".batch.png"), "batch")
+    p<-p+p2
+    width=nWidth * 1200 + 200
+  }
+
+  png(paste0(outFile, ".final.png"), width=width, height=height, res=300)
+  print(p)
+  dev.off()
+
 }

@@ -1,4 +1,3 @@
-
 source("scRNA_func.r")
 
 library(dplyr)
@@ -18,45 +17,20 @@ random.seed=20200107
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
-Mtpattern= myoptions$Mtpattern
-rRNApattern=myoptions$rRNApattern
-Remove_rRNA<-ifelse(myoptions$Remove_rRNA == "0", FALSE, TRUE)
-Remove_MtRNA<-ifelse(myoptions$Remove_MtRNA == "0", FALSE, TRUE)
-resolution=as.numeric(myoptions$resolution)
 by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
 prefix<-outFile
 
-nFeature_cutoff_min=as.numeric(myoptions$nFeature_cutoff_min)
-nFeature_cutoff_max=as.numeric(myoptions$nFeature_cutoff_max)
-nCount_cutoff=as.numeric(myoptions$nCount_cutoff)
-mt_cutoff=as.numeric(myoptions$mt_cutoff)
 species=myoptions$species
 
 pca_dims<-1:as.numeric(myoptions$pca_dims)
 
-finalList<-list()
 finalListFile<-paste0(prefix, ".final.rds")
 
 rawobj<-readRDS(parFile1)
 
-rRNA.genes <- grep(pattern = rRNApattern,  rownames(rawobj), value = TRUE)
-Mt.genes<- grep (pattern= Mtpattern,rownames(rawobj), value=TRUE )
-
-#filter cells
-finalList$filter<-list(nFeature_cutoff_min=nFeature_cutoff_min,
-                       nFeature_cutoff_max=nFeature_cutoff_max,
-                       mt_cutoff=mt_cutoff,
-                       nCount_cutoff=nCount_cutoff)
-
-rawobj<-subset(rawobj, subset = nFeature_RNA > nFeature_cutoff_min & nFeature_RNA<nFeature_cutoff_max & nCount_RNA > nCount_cutoff & percent.mt < mt_cutoff)
-
-if(Remove_rRNA){
-  rawobj<-rawobj[!(rownames(rawobj) %in% rRNA.genes),]
-}
-
-if(Remove_MtRNA){
-  rawobj<-rawobj[!(rownames(rawobj) %in% Mt.genes),]
-}
+finalList<-preprocessing_rawobj(rawobj, myoptions, prefix)
+rawobj<-finalList$rawobj
+finalList<-finalList[names(finalList) != "rawobj"]
 
 if(by_sctransform){
   cat("performing SCTransform ...\n")
@@ -103,18 +77,4 @@ obj <- RunUMAP(object = obj, dims=pca_dims, verbose = FALSE)
 finalList$obj<-obj
 saveRDS(finalList, file=finalListFile)
 
-mt<-data.frame(UMAP_1=obj@reductions$umap@cell.embeddings[,1], 
-               UMAP_2=obj@reductions$umap@cell.embeddings[,2],
-               Sample=obj$orig.ident)
-
-nSamples = length(unique(obj$orig.ident))
-nWidth=ceiling(sqrt(nSamples))
-nHeight=ceiling(nSamples / nWidth)
-
-cat("draw pictures ... \n")
-draw_dimplot(mt, paste0(outFile, ".merge_sample.png"), "Sample")
-
-png(paste0(outFile, ".merge.png"), width=1500, height=1200, res=300)
-p<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="orig.ident")
-print(p)
-dev.off()
+output_integraion_dimplot(obj, outFile, FALSE)

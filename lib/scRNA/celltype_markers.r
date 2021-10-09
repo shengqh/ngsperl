@@ -1,5 +1,4 @@
 source("scRNA_func.r")
-
 library(Seurat)
 library(ggplot2)
 library(kableExtra)
@@ -25,12 +24,17 @@ if(is.list(finalList)){
   all_obj=finalList$obj
   seurat_colors=finalList$seurat_colors
   celltype=read.csv(parFile3)
+  celltype$seurat_cellactivity_clusters=paste0(celltype$seurat_clusters, " : ", celltype[,myoptions$celltype_name])
+  ctmap<-split(celltype$seurat_cellactivity_clusters, celltype$seurat_clusters)
+  all_obj$seurat_celltype<-unlist(ctmap[as.character(all_obj$seurat_clusters)])
+  all_obj$seurat_celltype<-factor(all_obj$seurat_celltype, levels=celltype$seurat_cellactivity_clusters)
 }else{
   all_obj=finalList
   celltype=all_obj@meta.data
   celltype<-unique(celltype[,c("seurat_clusters", myoptions$celltype_name)])
   colnames(celltype)<-c("seurat_clusters", "cell_type")
   seurat_colors<-hue_pal()(nrow(celltype))
+  all_obj$seurat_celltype<-all_obj[[myoptions$celltype_name]]
 }
 
 draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_prefix, min.pct, logfc.threshold ){
@@ -103,26 +107,32 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
         other_ctc=ctc[ctc != c]
         in_markers=find_markers(obj, by_sctransform=by_sctransform, ident.1=c, ident.2=other_ctc,logfc.threshold = logfc.threshold, min.pct = min.pct)
         cat(paste0("    ", nrow(in_markers), " found in cell types\n"))
-        in_markers$cluster=c
-        in_markers$celltype=ctc_name
-  
-        all_in_markers=rbind(all_in_markers, in_markers)
         
-        if(!is.na(bw_markers)){
-          both_markers=bw_markers[rownames(bw_markers) %in% rownames(in_markers),,drop=F]
-          cat(paste0("  there are ", nrow(both_markers), " markers found in both between and in cell types\n"))
-          all_both_markers=rbind(all_both_markers, both_markers)
-          
-          if(nrow(both_markers) >= 5){
-            cur_markers=both_markers
-            suffix=".both"
-          }else{
-            cur_markers=bw_markers
-            suffix=".between"
-          }
+        if(nrow(in_markers) == 0){
+          cur_markers=bw_markers
+          suffix=".between"
         }else{
-          cur_markers=in_markers
-          suffix=".in"
+          in_markers$cluster=c
+          in_markers$celltype=ctc_name
+    
+          all_in_markers=rbind(all_in_markers, in_markers)
+          
+          if(!is.na(bw_markers)){
+            both_markers=bw_markers[rownames(bw_markers) %in% rownames(in_markers),,drop=F]
+            cat(paste0("  there are ", nrow(both_markers), " markers found in both between and in cell types\n"))
+            all_both_markers=rbind(all_both_markers, both_markers)
+            
+            if(nrow(both_markers) >= 5){
+              cur_markers=both_markers
+              suffix=".both"
+            }else{
+              cur_markers=bw_markers
+              suffix=".between"
+            }
+          }else{
+            cur_markers=in_markers
+            suffix=".in"
+          }
         }
       }else{
         cur_markers=bw_markers
@@ -143,14 +153,14 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
       }
   
       cur_display_markers=rownames(display_markers)
-      dot_filename=paste0(celltype_prefix, c, "_", ctc_filename, suffix, ".dot.pdf")
-      pdf(file=dot_filename, width=14, height=7)
+      dot_filename=paste0(celltype_prefix, c, "_", ctc_filename, suffix, ".dot.png")
+      png(file=dot_filename, width=3000, height=1600, res=300)
       g=DotPlot(obj, features=cur_display_markers, assay=assay, group.by="seurat_cellactivity_clusters" ) + 
         xlab("") + ylab("") + theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 90, hjust=1))
       print(g)
       dev.off()
       
-      all_figures=rbind(all_figures, data.frame("Cluster"=c, "Dotfile"=dot_filename))
+      all_figures=rbind(all_figures, data.frame("Cluster"=c, "Dotfile"=paste0(getwd(), "/", dot_filename)))
       all_display_markers=rbind(all_display_markers, data.frame("Cluster"=c, "Gene"=cur_display_markers))
     }
   }
@@ -175,3 +185,27 @@ if("tcell_type" %in% colnames(celltype)){
   new.cluster.ids=split(tcelltype$tcell_type, tcelltype$seurat_clusters)
   draw_marker_genes(all_obj, new.cluster.ids, paste0(outFile, "_tcelltype"), "tcelltype_");
 }
+
+isLargeDataset=ncol(all_obj) > 30000
+if(isLargeDataset){
+  ncluster=length(unique(all_obj$seurat_clusters))
+  downsample=round(300/ncluster) * 100
+  heatmap_obj=subset(all_obj, downsample=downsample)
+}else{
+  heatmap_obj=all_obj
+}
+
+max_markers<-read.csv(paste0(outFile, "_celltype.all_max_markers.csv"))
+max_markers<-max_markers[order(max_markers$cluster),]
+
+top10 <- max_markers %>% group_by(cluster) %>% top_n(n = 10, wt = .data[["avg_log2FC"]])
+top10genes<-unique(top10$X)
+
+width<-min(10000, length(unique(heatmap_obj$seurat_celltype)) * 150 + 1000)
+height<-min(10000, length(top10genes) * 50 + 1000)
+
+max_wh<-max(width, height)
+
+png(paste0(outFile, ".top10.heatmap.png"), width=max_wh, height=max_wh, res=300)
+DoHeatmap(heatmap_obj, features = top10genes, group.by = "seurat_celltype", group.colors=seurat_colors, angle = 90) + NoLegend()
+dev.off()
