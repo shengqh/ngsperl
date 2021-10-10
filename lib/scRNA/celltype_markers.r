@@ -86,7 +86,7 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
     cat(paste0("finding markers for ", ctc_name, "\n"))
     ctc=unlist(cellTypeClusters[idx])
     other=allclusters[!(allclusters %in% ctc)]
-    c=2
+    c=4
     for(c in ctc){
       if(length(other) > 0){
         cat(paste0("  finding markers for cluster ", c, " between cell types\n"))
@@ -161,7 +161,9 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
       dev.off()
       
       all_figures=rbind(all_figures, data.frame("Cluster"=c, "Dotfile"=paste0(getwd(), "/", dot_filename)))
-      all_display_markers=rbind(all_display_markers, data.frame("Cluster"=c, "Gene"=cur_display_markers))
+      
+      display_markers$Cluster=c
+      all_display_markers=rbind(all_display_markers, display_markers)
     }
   }
   
@@ -178,7 +180,10 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
 }
 
 new.cluster.ids=split(celltype$cell_type, celltype$seurat_clusters)
-draw_marker_genes(all_obj, new.cluster.ids, paste0(outFile, "_celltype"), "celltype_", min.pct=min.pct, logfc.threshold=logfc.threshold);
+file_prefix=paste0(outFile, "_celltype")
+celltype_prefix="celltype_"
+
+draw_marker_genes(all_obj, new.cluster.ids, file_prefix, celltype_prefix, min.pct=min.pct, logfc.threshold=logfc.threshold);
 
 if("tcell_type" %in% colnames(celltype)){
   tcelltype=celltype[celltype$tcell_type != "",]
