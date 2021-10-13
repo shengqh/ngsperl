@@ -1198,8 +1198,8 @@ sub getScRNASeqConfig {
       };
       push( @$summary, $find_markers );
 
-      push(@report_files, ($find_markers, "_celltype.all_max_markers.csv", $find_markers, "_celltype.all_figures.csv", $find_markers, ".top10.heatmap.png"));
-      push(@report_names, ("celltype_max_markers_csv", "celltype_markers_png_list", "celltype_markers_heatmap_png"));
+      push(@report_files, ($find_markers, "_celltype.all_display_markers.csv", $find_markers, "_celltype.all_figures.csv", $find_markers, ".top10.heatmap.png"));
+      push(@report_names, ("celltype_markers_csv", "celltype_markers_png_list", "celltype_markers_heatmap_png"));
 
       if(defined $def->{bubblemap_file}){
         my $bubblemap_name = $celltype_task . "_bubblemap";
