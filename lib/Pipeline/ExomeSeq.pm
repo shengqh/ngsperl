@@ -1799,6 +1799,34 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
     };
 
     push(@$summary, $PlotModeledSegments_task);
+
+    my $mergeModelSegments_task = "gatk4_cra_". getNextIndex($index_dic, $index_key) . "_MergeModelSegments";
+    $config->{$mergeModelSegments_task} = {
+      class                 => "CQS::ProgramWrapper",
+      perform               => 1,
+      target_dir            => "${target_dir}/${mergeModelSegments_task}",
+      option                => " -i __FILE__ -o __NAME__.modelFinal.seg
+  ",
+      interpretor           => "python3",
+      docker_prefix         => "gatk4_",
+      program               => "../GATK4/combineCRA.py",
+      check_program         => 0,
+      source_arg            => "-i",
+      source_ref            => [$ModelSegments_task, ".modelFinal.seg"],
+      output_to_same_folder => 0,
+      output_arg            => "",
+      no_output => 1,
+      output_file_prefix    => "",
+      output_file_ext       => ".modelFinal.seg",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "40gb"
+      },
+    };
+
+    push(@$summary, $mergeModelSegments_task);
   }
   
   if ( $def->{"perform_muTect2indel"} ) {

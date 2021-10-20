@@ -1,4 +1,3 @@
-
 library(Seurat)
 library(ggplot2)
 library(digest)
@@ -19,6 +18,7 @@ hto_str = ""
 hto_data = list()
 hto_sample_file<-myoptions$hto_sample_file
 has_hto = (hto_sample_file != "")
+
 if (has_hto) {
   hto_samples = read.table(hto_sample_file, sep="\t", header=T, stringsAsFactors=FALSE)
   hto_md5 = list()
@@ -34,6 +34,7 @@ if (has_hto) {
   for (sample in rownames(hto_cell_files)){
     cell_file = hto_cell_files[sample, "V1"]
     cell_data = read.csv(cell_file, stringsAsFactors=FALSE, header=TRUE, check.names=F)
+    colnames(cell_data)[1]<-"cell"
     hto_md5[[sample]] = digest(cell_file, file=TRUE)
     cell_data$Sample = ""
     cur_samples = hto_samples[hto_samples$File == sample,]
@@ -82,14 +83,16 @@ for (fidx in c(1:nrow(filelist1))) {
     sobj[["ADT"]] <- CreateAssayObject(counts = mat)
   }
 
+  sobj$sample=fileTitle
+
   if(has_hto && fileTitle %in% names(hto_data)) {
     cell_data = hto_data[[fileTitle]]
-    validobj = subset(sobj, cells=cell_data$X)
+    validobj = subset(sobj, cells=cell_data$cell)
     #tagname = unique(cell_data$HTO)[1]
     for (tagname in unique(cell_data$HTO)){
       tagcells = cell_data[cell_data$HTO == tagname,]
       sample = tagcells$Sample[1]
-      sample_obj = subset(validobj, cells=tagcells$X)
+      sample_obj = subset(validobj, cells=tagcells$cell)
       sample_obj$orig.ident = sample
       sample_obj<-RenameCells(object=sample_obj, new.names=paste0(sample, "_", colnames(sample_obj)))
       rawobjs[[sample]] = sample_obj
@@ -150,9 +153,9 @@ p<-p1+p2+plot_layout(ncol=2)
 print(p)
 dev.off()
 
-nsample=length(unique(rawobj$orig.ident))
-mt<-data.frame(mt=rawobj$percent.mt, Sample=rawobj$orig.ident, nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
-png(file=paste0(outFile, ".qc.individual.png"), width=3000, height=1200 * nsample, res=300)
+nsample=length(unique(rawobj$sample))
+mt<-data.frame(mt=rawobj$percent.mt, Sample=rawobj$sample, nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
+png(file=paste0(outFile, ".qc.individual.png"), width=3000, height=min(20000, 1200 * nsample), res=300)
 p1<-ggplot(mt, aes(x=mt,y=nCount) ) +
   geom_bin2d(bins = 70) + 
   scale_fill_continuous(type = "viridis") + 

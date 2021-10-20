@@ -918,7 +918,7 @@ sub getScRNASeqConfig {
           },
           parameterSampleFile3 => $def->{"pool_sample_groups"},
           parameterSampleFile4_ref => $hto_ref,
-          output_file_ext      => ".rawobjs.rds,.rawobj.rds",
+          output_file_ext      => ".rawobj.rds",
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
@@ -928,12 +928,14 @@ sub getScRNASeqConfig {
         };
         push( @$summary, $seurat_rawdata );
 
+        push (@report_files, ($seurat_rawdata, "rawobj.rds"));
+        push (@report_names, "raw_obj");
+
         my @sample_names = keys %{$def->{files}};
         my $nsamples = scalar(@sample_names);
         my $by_integration = $nsamples > 1 ? getValue( $def, "by_integration" ) : 0;
 
         my $preprocessing_rscript;
-
         if($by_integration){
           my $integration_by_harmony = getValue( $def, "integration_by_harmony", 1);
           if($integration_by_harmony){
@@ -972,7 +974,7 @@ sub getScRNASeqConfig {
             batch_for_integration => getValue( $def, "batch_for_integration" ),
           },
           parameterSampleFile2 => $def->{"batch_for_integration_groups"},
-          output_file_ext      => ".final.rds",
+          output_file_ext      => ".final.rds,.qc.1.png,.qc.2.png,.qc.3.png,.qc.4.png,.sample_cell.csv,.final.png",
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
@@ -981,6 +983,15 @@ sub getScRNASeqConfig {
           },
         };
         push( @$summary, $seurat_task );
+
+        push (@report_files, ($seurat_task, ".final.png", 
+          $seurat_task, ".qc.1.png", 
+          $seurat_task, ".qc.2.png", 
+          $seurat_task, ".qc.3.png", 
+          $seurat_task, ".qc.4.png", 
+          $seurat_task, ".sample_cell.csv"));
+        push (@report_names, ("seurat_merge_png", "seurat_qc_1_png", "seurat_qc_2_png", "seurat_qc_3_png", "seurat_qc_4_png", 
+          "sample_cell_csv"));
       }
 
       if(getValue($def, "perform_localization_genes_plot", 0)){
@@ -1071,7 +1082,7 @@ sub getScRNASeqConfig {
           reduction             => $reduction,
         },
         output_file_ext      => ".final.rds",
-        output_other_ext  => ".cluster.csv;.cluster.normByUpQuantile.csv",
+        output_other_ext  => ".cluster.csv;.cluster.normByUpQuantile.csv;.umap.sample_cell.png;.cluster_sample.csv;.cluster_sample_percByCluster.png;.cluster_sample_percBySample.png",
         sh_direct            => 1,
         pbs                  => {
           "nodes"     => "1:ppn=1",
@@ -1080,6 +1091,9 @@ sub getScRNASeqConfig {
         },
       };
       push( @$summary, $cluster_task );
+
+      push(@report_files, ($cluster_task, ".umap.sample_cell.png", $cluster_task, ".cluster_sample.csv", $cluster_task, ".cluster_sample_percByCluster.png", $cluster_task, ".cluster_sample_percBySample.png" ));
+      push(@report_names, "cluster_umap_sample_cell_png", "cluster_sample_cell_csv", "cluster_sample_percByCluster_png", "cluster_sample_percBySample_png");
 
       if(getValue($def, "perform_heatmap", 0)){
         my $heatmap_task = $cluster_task . "_heatmap";
@@ -1129,7 +1143,7 @@ sub getScRNASeqConfig {
         },
         parameterSampleFile2_ref   => "groups",
         output_file_ext      => ".celltype.csv",
-        output_other_ext  => ".celltype_cluster.csv;.celltype.rds",
+        output_other_ext  => ".celltype_cluster.csv;.celltype.rds;.summary_layer.png;.cluster.png;.celltype.group.label.png;.score.png",
         sh_direct            => 1,
         pbs                  => {
           "nodes"     => "1:ppn=1",
@@ -1143,8 +1157,15 @@ sub getScRNASeqConfig {
       my $celltype_name     = "cellactivity_clusters";
       my $cluster_name      = "seurat_cellactivity_clusters";
 
-      push(@report_files, ($cluster_task, ".final.rds", $celltype_task, ".celltype.csv", $celltype_task, ".celltype.rds"));
-      push(@report_names, ("seurat_rds", "activity_celltype", "activity_rds"));
+      push(@report_files, ($cluster_task, ".final.rds", 
+                           $celltype_task, ".celltype.csv", 
+                           $celltype_task, ".celltype.rds",
+                           $celltype_task, ".summary_layer.png", 
+                           $celltype_task, ".cluster.png",
+                           $celltype_task, ".celltype.group.label.png",
+                           $celltype_task, ".score.png"
+                           ));
+      push(@report_names, ("seurat_rds", "activity_celltype", "activity_rds", "activity_summary_layer_png", "activity_cluster_png", "activity_group_png", "activity_score_png"));
 
       if (getValue( $def, "perform_SignacX_tcell", 0 ) ) {
         my $signacX_name = $celltype_task . "_SignacX_tcell";
@@ -1166,8 +1187,8 @@ sub getScRNASeqConfig {
           by_sctransform        => getValue( $def, "by_sctransform" ),
           celltype_name         => $celltype_name
         },
-        output_file_ext      => ".all_display_markers.csv",
-        output_other_ext     => ".all_in_markers.csv",
+        output_file_ext      => "_celltype.all_display_markers.csv",
+        output_other_ext     => "_celltype.all_max_markers.csv;_celltype.all_figures.csv;.top10.heatmap.png",
         sh_direct            => 1,
         pbs                  => {
           "nodes"     => "1:ppn=1",
@@ -1176,6 +1197,9 @@ sub getScRNASeqConfig {
         },
       };
       push( @$summary, $find_markers );
+
+      push(@report_files, ($find_markers, "_celltype.all_display_markers.csv", $find_markers, "_celltype.all_figures.csv", $find_markers, ".top10.heatmap.png"));
+      push(@report_names, ("celltype_markers_csv", "celltype_markers_png_list", "celltype_markers_heatmap_png"));
 
       if(defined $def->{bubblemap_file}){
         my $bubblemap_name = $celltype_task . "_bubblemap";
@@ -1200,6 +1224,10 @@ sub getScRNASeqConfig {
           },
         };
         push( @$summary, $bubblemap_name );
+
+        push(@report_files, ($bubblemap_name, ".bubblemap.png"));
+        push(@report_names, "bubblemap_png");
+
       }
 
       if(getValue($def, "plot_gsea_genes", 0)){
@@ -1321,6 +1349,13 @@ sub getScRNASeqConfig {
       if(getValue($def, "perform_report", 1)){
         my $report_task= "report";
         my $additional_rmd_files = "Functions.Rmd;../scRNA/scRNA_func.r";
+        my $report_options = merge({
+              prefix => $project_name,
+              summary_layer_file => $def->{summary_layer_file},
+              celltype_name => $celltype_name
+            }, merge($config->{$seurat_task}{parameterSampleFile1}, $config->{$celltype_task}{parameterSampleFile1}));
+        #print(Dumper($report_options));
+
         $config->{$report_task} = {
           class                    => "CQS::BuildReport",
           perform                  => 1,
@@ -1329,11 +1364,7 @@ sub getScRNASeqConfig {
           additional_rmd_files     => $additional_rmd_files,
           parameterSampleFile1_ref => \@report_files,
           parameterSampleFile1_names => \@report_names,
-          parameterSampleFile2 => merge({
-              prefix => $project_name,
-              summary_layer_file => $def->{summary_layer_file},
-              celltype_name => $celltype_name
-            }, merge($config->{$seurat_task}{parameterSampleFile2}, $config->{$celltype_task}{parameterSampleFile1})),
+          parameterSampleFile2 => $report_options,
           parameterSampleFile3 => [],
           output_file_ext      => "_ur.html",
           sh_direct            => 1,

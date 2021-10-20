@@ -1,7 +1,9 @@
+
 source("scRNA_func.r")
 
 library(data.table)
 library(Seurat)
+library(heatmap3)
 
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
@@ -130,6 +132,10 @@ if(file.exists(myoptions$summary_layer_file)){
 write.csv(id_tbl, file=paste0(outFile, ".celltype.csv"), row.names=F)
 saveRDS(cell_type, file=paste0(outFile, ".celltype.rds"))
 
+png(paste0(outFile, ".score.png"), width=3000, height=3000, res=300)
+heatmap3(cell_type$cell_activity_database$cta_mat, scale="none", margins=c(10,5))
+dev.off()
+
 clusters=read.csv(parFile2, header=T, stringsAsFactors = F, row.names=1)
 clusters$cellactivity_clusters=new.cluster.ids[as.character(clusters$seurat_clusters)]
 clusters$seurat_cellactivity_clusters=paste0(clusters$seurat_clusters, " : ", clusters$cellactivity_clusters)
@@ -216,3 +222,4 @@ if(file.exists(parFile3)){
     }
   }
 }
+

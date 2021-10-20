@@ -64,6 +64,7 @@ sub result {
 
   if ( $output_file eq "parameterSampleFile1" or $output_file eq "parameterSampleFile2" or $output_file eq "parameterSampleFile3" ) {
     if ( has_raw_files( $config, $section, $output_file ) ) {
+      #print("result=" . $output_file . "\n");
       my @result_files = ();
       my %temp = %{ get_raw_files( $config, $section, $output_file ) };
       foreach my $sample_name ( keys %temp ) {
@@ -81,6 +82,12 @@ sub result {
             }
           }
         }
+      }
+      #print("results=" . Dumper(@result_files));
+
+      my $filtered = filter_array( \@result_files, $pattern, 1 );
+      if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
+        $result->{$task_name} = $filtered;
       }
     }
     else {

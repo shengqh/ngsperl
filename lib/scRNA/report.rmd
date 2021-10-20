@@ -39,10 +39,10 @@ source("scRNA_func.r")
 
 ```
 
-```{r, child="Functions.Rmd"} 
+```{r, child="Functions.Rmd", include=FALSE} 
 ```
 
-```{r init}
+```{r init, include=FALSE}
 library(dplyr)
 library(Seurat)
 library(knitr)
@@ -66,53 +66,25 @@ options(future.globals.maxSize= 10779361280)
 options_table<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
-Mtpattern= myoptions$Mtpattern
-rRNApattern=myoptions$rRNApattern
-Remove_Mt_rRNA= ifelse(myoptions$Remove_Mt_rRNA == "FALSE", FALSE, TRUE)
-resolution=as.numeric(myoptions$resolution)
-species=myoptions$species
-markerfile<-myoptions$markers_file
-annotate_tcell<-ifelse(myoptions$annotate_tcell == "0", FALSE, TRUE)
-HLA_panglao5_file<-myoptions$HLA_panglao5_file
-tcell_markers_file<-myoptions$tcell_markers_file
-details_rmd<-myoptions$details_rmd
-pool_sample<-ifelse(myoptions$pool_sample == "0", FALSE, TRUE)
-batch_for_integration<-ifelse(myoptions$batch_for_integration == "0", FALSE, TRUE)
-by_integration<-ifelse(myoptions$by_integration == "0", FALSE, TRUE)
-by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
-
 has_summary_layer<-!is.null(myoptions$summary_layer_file)
 has_rename_file<-!is.null(myoptions$rename_png)
 
 prefix<-myoptions$prefix
 
-nFeature_cutoff_min=as.numeric(myoptions$nFeature_cutoff_min)
-nFeature_cutoff_max=as.numeric(myoptions$nFeature_cutoff_max)
-nCount_cutoff=as.numeric(myoptions$nCount_cutoff)
-mt_cutoff=as.numeric(myoptions$mt_cutoff)
-nCount_sd_cutoff=0
-
-pca_dims<-1:as.numeric(myoptions$pca_dims)
-
 filelist1<-read.table("fileList1.txt", header=F)
 files<-split(filelist1$V1, filelist1$V2)
 
-finalList<-readRDS(file=files$seurat_rds)
 celltype<-read.csv(file=files$activity_celltype)
 celltype_db<-readRDS(file=files$activity_rds)
 
 has_chetah<-"chetah_png" %in% names(files)
 has_signac<-"signac_png" %in% names(files)
 
-obj<-finalList$obj
-seurat_colors<-finalList$seurat_colors
-hasMultipleSamples<-length(unique(obj$orig.ident))>1
+sample_cell<-read.csv(files$sample_cell_csv)
 
-hasBiomarker<-!is.null(finalList$markers)
+hasMultipleSamples<-nrow(sample_cell)>1
 
-obj = add_celltype(obj, celltype, "cellactivity_clusters")
-
-samples<-unique(finalList$rawobj$orig.ident)
+samples<-sample_cell$Sample
 if(length(samples) < 3){
   sampleHeight=4
 }else{
@@ -121,15 +93,15 @@ if(length(samples) < 3){
 sampleCol=ceiling(sqrt(length(samples)))
 sampleRow=ceiling(length(samples) / sampleCol)
 
-isLargeDataset=ncol(obj) > 30000
+isLargeDataset=sum(sample_cell$ValidCell) > 30000
 if(isLargeDataset){
-  downsample=round(300/length(unique(obj$seurat_clusters))) * 100
-  heatmap_obj=subset(obj, downsample=downsample)
-}else{
-  heatmap_obj=obj
+  downsample=round(300/nrow(celltype)) * 100
 }
 
 has_hto = file.exists("fileList4.txt")
+
+hasBiomarker<-file.exists(files$celltype_max_markers_csv)
+annotate_tcell<-ifelse(myoptions$annotate_tcell=='0', FALSE, TRUE)
 ```
 
 ```{r hto, results="asis", eval=has_hto, fig.width=12, fig.height=10}
@@ -158,211 +130,164 @@ A few QC metrics [commonly used](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC47
 
 We visualize QC metrics.
 
-```{r qc2, fig.height=6, fig.width=13, fig.cap=figRef("qc_metrics_2", "Scatter plot of number of feature/percentage of mitochondrial vs number of read count")}
-plot1 <- FeatureScatter(object = finalList$rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt") + geom_hline(yintercept = mt_cutoff, color="black")  + geom_vline(xintercept = nCount_cutoff, color="black")
-plot2 <- FeatureScatter(object = finalList$rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")  + geom_hline(yintercept = c( nFeature_cutoff_min, nFeature_cutoff_max), color="black")  + geom_vline(xintercept = nCount_cutoff, color="black") 
-p<-CombinePlots(plots = list(plot1,plot2))
-print(p)
+```{r qc1, fig.height=6, fig.width=13, fig.cap=figRef("qc_metrics_2", "Scatter plot of number of feature/percentage of mitochondrial vs number of read count")}
+include_graphics(files$seurat_qc_1_png)
 ```
 
-```{r qc2_1, fig.height=sampleHeight, fig.width=13, fig.cap=figRef("qc_metrics_2_1", "Density plot of number of read vs percentage of mitochondrial")}
-mt<-data.frame(mt=finalList$rawobj$percent.mt, Sample=finalList$rawobj$orig.ident, nFeature=log10(finalList$rawobj$nFeature_RNA), nCount=log10(finalList$rawobj$nCount_RNA))
-g1<-ggplot(mt, aes(x=mt,y=nCount) ) +
-  geom_bin2d(bins = 70) + 
-  scale_fill_continuous(type = "viridis") + 
-  geom_vline(xintercept = mt_cutoff, color="red")  + 
-  geom_hline(yintercept = log10(nCount_cutoff), color="red") +
-  xlab("Percentage of mitochondrial") + ylab("log10(number of read)") +
-  facet_wrap(~Sample) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-print(g1)
+```{r qc2, fig.height=sampleHeight, fig.width=13, fig.cap=figRef("qc_metrics_2_1", "Density plot of number of read vs percentage of mitochondrial")}
+include_graphics(files$seurat_qc_2_png)
 ```
 
-```{r qc2_2, fig.height=sampleHeight, fig.width=13, fig.cap=figRef("qc_metrics_2_2", "Density plot of number of feature vs percentage of mitochondrial")}
-g1<-ggplot(mt, aes(x=mt,y=nFeature) ) +
-  geom_bin2d(bins = 70) + 
-  scale_fill_continuous(type = "viridis") + 
-  geom_vline(xintercept = mt_cutoff, color="red")  + 
-  geom_hline(yintercept = log10(nFeature_cutoff_min), color="red") +
-  geom_hline(yintercept = log10(nFeature_cutoff_max), color="red") +
-  xlab("Percentage of mitochondrial") + ylab("log10(number of feature)") +
-  facet_wrap(~Sample) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-print(g1)
+```{r qc3, fig.height=sampleHeight, fig.width=13, fig.cap=figRef("qc_metrics_2_2", "Density plot of number of feature vs percentage of mitochondrial")}
+include_graphics(files$seurat_qc_3_png)
 ```
 
-# Data filter and cluster analysis 
+# Data preprocessing and integration 
 
 We use QC metrics to filter cells.
 
-* We filter cells that have unique feature counts less than `r nFeature_cutoff_min` or larger than `r nFeature_cutoff_max` 
-* We filter cells that have read count less than `r nCount_cutoff`
-* We filter cells that have >`r mt_cutoff`% mitochondrial counts
+* We filter cells that have unique feature counts less than `r myoptions$nFeature_cutoff_min` or larger than `r myoptions$nFeature_cutoff_max` 
+* We filter cells that have read count less than `r myoptions$nCount_cutoff`
+* We filter cells that have >`r myoptions$mt_cutoff`% mitochondrial counts
+
+## Cell count in sample
 
 ```{r data_filter, results="asis"}
-rawCells<-data.frame(table(finalList$rawobj$orig.ident))
-filteredCells<-data.frame(table(finalList$obj$orig.ident))
-qcsummary<-merge(rawCells, filteredCells, by = "Var1")
-colnames(qcsummary)<-c("Sample", "RawCell", "ValidCell")
-qcsummary$DiscardCell<-qcsummary$RawCell-qcsummary$ValidCell
-qcsummary$DiscardRate<-qcsummary$DiscardCell / qcsummary$RawCell
-print(kable(qcsummary, caption=tabRef("qcsummary", "Cell count in sample")) %>% kable_styling() %>% htmltools::HTML())
+print(kable(sample_cell, caption=tabRef("qcsummary", "Cell count in sample")) %>% kable_styling() %>% htmltools::HTML())
+
 ```
 
-## Marker genes for each cluster
+## QC after preprocessing
+
+```{r qc4, fig.height=5, fig.width=13, fig.cap=figRef("qc_metrics_1", "Violin plot of percentage of mitochondrial, number of feature and number of read count")}
+include_graphics(files$seurat_qc_4_png)
+```
+
+## UMAP after sample integration
+
+```{r merge_umap, fig.width=13, fig.cap=figRef("merge_umap", "UMAP after sample integration")}
+include_graphics(files$seurat_merge_png)
+```
 
 ```{r markers, results="asis", eval=hasBiomarker}
-clusterMarkers<-finalList$markers %>% group_by(cluster)
+max_markers<-read.csv(files$celltype_max_markers_csv)
+max_markers<-max_markers[order(max_markers$cluster),]
 
-if ("Seurat" %in% names(sessionInfo()$otherPkgs) & grepl("^4",sessionInfo()$otherPkgs$Seurat$Version)) { #Seurat version4
-  logFcColName="avg_log2FC"
-} else {
-  logFcColName="avg_logFC"
-}
-
-#top10 <- finalList$markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
-top10 <- finalList$markers %>% group_by(cluster) %>% top_n(n = 10, wt = .data[[logFcColName]])
-top10marker_file = paste0(prefix, ".top10markers.csv")
-write.csv(top10, file=top10marker_file, row.names=F, quote = F)
-
-top5 <- finalList$markers %>% group_by(cluster) %>% top_n(n = 5, wt = .data[[logFcColName]])
+top5 <- max_markers %>% group_by(cluster) %>% top_n(n = 5, wt = .data[["avg_log2FC"]])
+  
+cat("## Marker genes for each cluster\n")
 print(kable(top5, caption=tabRef("top5", "Top 5 marker genes in each cluster")) %>% kable_styling() %>% htmltools::HTML())
 ```
 
+
 # Cell clusters
     
-```{r qc1, fig.height=5, fig.width=13, fig.cap=figRef("qc_metrics_1", "Violin plot of percentage of mitochondrial, number of feature and number of read count")}
-g<-VlnPlot(object = obj, features = c("percent.mt", "nFeature_RNA", "nCount_RNA"))
-print(g)
-```
-
 ```{r umap_cells, fig.height=8, fig.width=18, fig.cap=figRef("umap_cells", ifelse(hasMultipleSamples, "UMAP of cells (left) and samples (right)", "UMAP of cells"))}
-# note that you can set `label = TRUE` or use the LabelClusters function to help label individual clusters
-p1<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_clusters", cols=seurat_colors)
-if(hasMultipleSamples){
-  p2<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="orig.ident")
-  plot_grid(p1,p2)
-}else{
-  print(p1)
-}
+include_graphics(files$cluster_umap_sample_cell_png)
 ```
 
-```{r sample_cells_count, eval=hasMultipleSamples, fig.height=18, fig.width=18, fig.cap=figRef("sample_cells_count", "Percentage of cell from samples in each cluster (total cell in each sample were normalized to equal number)")}
-os<-table(obj$orig.ident, obj$seurat_clusters)
-osn<-os / rowSums(os) * 5000
-osm<-reshape2::melt(osn)
-colnames(osm)<-c("Sample", "Cluster", "Cell")
-osm$Cluster<-paste0("Cluster ", osm$Cluster)
-osm$Cluster<-factor(osm$Cluster, levels=unique(osm$Cluster))
-osm_perc = osm %>% dplyr::group_by(Cluster) %>% dplyr::mutate(Percent = Cell/sum(Cell))
-g<-ggplot(osm_perc, aes(x="",y=Percent,fill=Sample)) + geom_bar(stat="identity", width=1) + coord_polar("y", start=0) + facet_wrap(~Cluster) + theme_void()
-print(g)
+## Percentage of cell in each cluster (total cell in each sample were normalized to equal number)
+
+```{r cluster_sample_percByCluster_png, eval=hasMultipleSamples, fig.height=18, fig.width=18, fig.cap=figRef("cluster_sample_percByCluster_png", "Percentage of cell in each cluster (total cell in each sample were normalized to equal number)")}
+include_graphics(files$cluster_sample_percByCluster_png)
 
 ```
 
-```{r eval=isLargeDataset, comment=''}
-cat("There are total ", ncol(obj), " cells, so each cluster was downsampled to ", downsample, " cells for heatmap.")
-```
+## Percentage of cell in each sample
 
-```{r heatmap_samples, fig.height=max(10, length(top10$gene) / 10), fig.width=12, fig.cap=figRef("heatmap_cluster", "Marker genes in cluster")}
-g<-DoHeatmap(heatmap_obj, features = top10$gene, group.colors=seurat_colors, angle = 90) + NoLegend()
-print(g)
-
-pdf(file=paste0(prefix, ".marker_cluster.heatmap.pdf"), width=12, height=max(10, length(top10$gene) / 10))
-g<-DoHeatmap(obj, features = top10$gene, group.colors=seurat_colors, angle = 90) + NoLegend()
-print(g)
-```
-
-# Predict cell types
-
-## Cell type prediction using gene activity database
-
-### Predicted cell types for each cluster by cell activity analysis
-
-```{r gene_activity_tbl, results="asis"}
-
-cta_combined<-get_cta_combined(obj, celltype_db$cell_activity_database$predicted)
-
-write.csv(cta_combined, file=paste0(prefix, ".cluster.summary.csv"), row.names=F, quote=F)
-
-print(kable(cta_combined, row.names=F, caption=tabRef("cta_table", "Cell type prediction result")) %>% kable_styling() %>% htmltools::HTML())
-```
-
-```{r tcell_gene_activity_tbl, results="asis", eval=annotate_tcell}
-cta_combined<-get_cta_combined(obj, celltype_db$tcell_activity_database$predicted)
-
-write.csv(cta_combined, file=paste0(prefix, ".tcell.cluster.summary.csv"), row.names=F, quote=F)
-
-print(kable(cta_combined, row.names=F,  caption=tabRef("tcell_cta_table", "T cell subtype prediction result")) %>% kable_styling() %>% htmltools::HTML())
-```
-
-```{r gene_activity_umap_layer, fig.width=12, fig.height=8, results="asis", fig.cap=figRef("umap_cluster_cell_layer", "Predicted cell types layer 1"), eval=has_summary_layer}
-celltype<-read.csv(file=files$activity_celltype)
-layers<-read.csv(file=myoptions$summary_layer_file)
-lastLayer=colnames(layers)[ncol(layers)]
-layers_map<-split(layers[, lastLayer], layers[,1])
-
-miss_celltype=celltype$cell_type[!(celltype$cell_type %in% names(layers_map))]
-for (mct in miss_celltype){
-  layers_map[mct]=mct
-}
-celltype$summary_layer=unlist(layers_map[celltype$cell_type])
-new.cluster.ids<-split(celltype$summary_layer, celltype$seurat_clusters)
-obj[["summary_layer"]] <- unlist(new.cluster.ids[unlist(obj[["seurat_clusters"]])])
-p2<-DimPlot(object = obj, reduction = "umap",label=T, group.by="summary_layer")
-print(p2)
-```
-
-```{r gene_activity_umap, fig.width=12, fig.height=8, results="asis", fig.cap=figRef("umap_cluster_cell", "Predicted cell types")}
-p2<-DimPlot(object = obj, reduction = "umap",label=T, group.by="seurat_cellactivity_clusters", cols=seurat_cellactivity_colors)
-p2<-p2+guides(colour = guide_legend(ncol = 1))
-print(p2)
-```
-```{r save_seurat_cellactivity_clusters, echo=FALSE, results=FALSE}
-png(file=paste0(prefix, ".seurat_cellactivity_clusters.png"), width=3300, height=3000, res=300)
-print(p2)
-dev.off()
+```{r cluster_sample_percBySample_png, eval=hasMultipleSamples, fig.height=18, fig.width=18, fig.cap=figRef("cluster_sample_percBySample_png", "Percentage of cell in each sample")}
+include_graphics(files$cluster_sample_percBySample_png)
 
 ```
 
-```{r gene_activity_umap_samples, eval=hasMultipleSamples, fig.height=max(6, ceiling(12*sampleRow/sampleCol)), fig.width=12, fig.cap=figRef("gene_activity_umap_samples", "Predicted cell types by sample")}
-g=DimPlot(obj, reduction = "umap", label=T, group.by="seurat_clusters", cols=seurat_colors, split.by = "orig.ident", combine=F)
-g<-g[[1]]
-g2=g+facet_wrap(~orig.ident, ncol=sampleCol) + theme_bw() + theme(strip.background = element_blank()) + NoLegend()
-print(g2)
-```
+# Cell type annotation
 
-```{r activity_by_samples, eval=hasMultipleSamples, fig.height=max(6, ceiling(12*sampleRow/sampleCol)), fig.width=12, fig.cap=figRef("activity_by_samples", "Predicted cell types by sample")}
+## Cell type annotation using gene activity database
 
-os<-table(obj$orig.ident, obj$cellactivity_clusters)
-osn<-os / rowSums(os) * 5000
-osm<-reshape2::melt(osn)
-colnames(osm)<-c("Sample", "Cluster", "Cell")
-# osm_perc = osm %>% dplyr::group_by(Cluster) %>% dplyr::mutate(Percent = Cell/sum(Cell))
-# g<-ggplot(osm_perc, aes(x="",y=Percent,fill=Sample)) + geom_bar(stat="identity", width=1) + coord_polar("y", start=0) + facet_wrap(~Cluster) + theme_void()
-# print(g)
-
-osm_perc = osm %>% dplyr::group_by(Sample) %>% dplyr::mutate(Percent = Cell/sum(Cell))
-g<-ggplot(osm_perc, aes(x="",y=Percent,fill=Cluster)) + geom_bar(stat="identity", width=1) + coord_polar("y", start=0) + facet_wrap(~Sample) + theme_void()
-print(g)
-```
-
-```{r gene_activity_heatmap, fig.width=12, fig.height=max(10, length(top10$gene) / 10), results="asis", fig.cap=figRef("cell_activity_heatmap", "Predicted cell type cluster heatmap")}
-g=DoHeatmap(heatmap_obj, features = top10$gene, group.by="seurat_cellactivity_clusters", group.colors=seurat_cellactivity_colors, angle=90) + NoLegend()
-print(g)
-
-
-pdf(file=paste0(prefix, ".marker_celltype.heatmap.pdf"), width=12, height=max(10, length(top10$gene) / 10))
-g=DoHeatmap(obj, features = top10$gene, group.by="seurat_cellactivity_clusters", group.colors=seurat_cellactivity_colors, angle=90) + NoLegend()
-print(g)
-
-```
 
 ```{r gene_activity_cta_score_heatmap, fig.width=12, fig.height=10, results="asis", fig.cap=figRef("cell_activity_cta_heatmap", "Predicted cell type activity score")}
+celltype_db<-readRDS(files$activity_rds)
 heatmap3(celltype_db$cell_activity_database$cta_mat, scale="none", margins=c(10,5))
 ```
 
 
 ```{r gene_activity_tcell_cta_score_heatmap, fig.width=12, fig.height=10, results="asis", eval=annotate_tcell, fig.cap=figRef("tcell_activity_cta_heatmap", "Predicted T cell subtype activity score")}
 heatmap3(celltype_db$tcell_activity_database$cta_mat, scale="none", margins=c(10,5))
+```
+
+```{r gene_activity_tbl, results="asis"}
+# 
+# cta_combined<-get_cta_combined(obj, celltype_db$cell_activity_database$predicted)
+# 
+# print(kable(cta_combined, row.names=F, caption=tabRef("cta_table", "Cell type prediction result")) %>% kable_styling() %>% htmltools::HTML())
+```
+
+```{r tcell_gene_activity_tbl, results="asis", eval=annotate_tcell}
+# cta_combined<-get_cta_combined(obj, celltype_db$tcell_activity_database$predicted)
+# 
+# write.csv(cta_combined, file=paste0(prefix, ".tcell.cluster.summary.csv"), row.names=F, quote=F)
+# 
+# print(kable(cta_combined, row.names=F,  caption=tabRef("tcell_cta_table", "T cell subtype prediction result")) %>% kable_styling() %>% htmltools::HTML())
+```
+
+```{r gene_activity_umap_layer, fig.width=12, fig.height=8, results="asis", fig.cap=figRef("umap_cluster_cell_layer", "Predicted cell types layer 1"), eval=has_summary_layer}
+include_graphics(files$activity_summary_layer_png)
+```
+
+```{r gene_activity_umap, fig.width=12, fig.height=8, results="asis", fig.cap=figRef("umap_cluster_cell", "Predicted cell types")}
+include_graphics(files$activity_cluster_png)
+```
+
+```{r gene_activity_group_umap, fig.width=12, fig.height=8, results="asis", fig.cap=figRef("umap_cluster_cell_group", "Predicted cell types by groups")}
+include_graphics(files$activity_group_png)
+```
+
+# Marker genes
+
+## Cell type specific marker genes
+
+```{r gene_activity_bubble_map, fig.width=12, fig.height=8, results="asis", fig.cap=figRef("gene_activity_bubble_map", "Bubble map of marker genes")}
+include_graphics(files$bubblemap_png)
+```
+
+## Cluster specific marker genes
+
+### Cluster specific marker gene heatmap
+
+
+```{r eval=isLargeDataset, comment=''}
+cat("There are total ", ncol(obj), " cells, so each cluster was downsampled to ", downsample, " cells for heatmap.")
+```
+
+```{r cluster_marker_heatmap, fig.width=12, fig.height=8, results="asis", fig.cap=figRef("cluster_marker_heatmap", "Cluster marker genes heatmap")}
+include_graphics(files$celltype_markers_heatmap_png)
+```
+
+
+```{r marker_genes, results="asis", fig.width=12, fig.height=10}
+marker_files = read.csv(files$celltype_markers_png_list)
+
+ac<-read.csv(files$activity_celltype)
+acmap<-split(ac$cell_type, ac$seurat_clusters)
+
+for(idx in c(1:nrow(marker_files))){
+  cluster<-marker_files[idx, "Cluster"]
+  marker_file=marker_files[idx, "Dotfile"]
+  
+  celltype<-unlist(acmap[as.character(cluster)])
+  
+  cat("### Cluster ", cluster, " : ", celltype, "\n\n")
+  cat("![](",marker_file,")\n\n")
+}
+
+```
+
+
+```{r gene_activity_umap_samples, eval=hasMultipleSamples, fig.height=max(6, ceiling(12*sampleRow/sampleCol)), fig.width=12, fig.cap=figRef("gene_activity_umap_samples", "Predicted cell types by sample")}
+# g=DimPlot(obj, reduction = "umap", label=T, group.by="seurat_clusters", cols=seurat_colors, split.by = "orig.ident", combine=F)
+# g<-g[[1]]
+# g2=g+facet_wrap(~orig.ident, ncol=sampleCol) + theme_bw() + theme(strip.background = element_blank()) + NoLegend()
+# print(g2)
 ```
 
 
