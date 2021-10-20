@@ -4,6 +4,8 @@ library(tools)
 
 args = commandArgs(trailingOnly=TRUE)
 
+print(paste0("length of args = ", length(args)))
+
 if(length(args) == 0){
   inputFile = "/data/cqs/justin_turner_data/20210520_CRS/CRS_Swabs_Hisat2Counts.csv"
   outputFile = "/data/cqs/justin_turner_data/20210520_CRS/CRS_Swabs_Hisat2Counts.gene.csv"
@@ -13,6 +15,9 @@ if(length(args) == 0){
   outputFile = args[2]
   gtfMapFile = args[3]
 }
+print(paste0("inputFile=", inputFile))
+print(paste0("outputFile=", outputFile))
+print(paste0("gtfMapFile=", gtfMapFile))
 
 if(file_ext(inputFile) == "csv"){
   dat<-read.csv(inputFile, row.names=1)
