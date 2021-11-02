@@ -2,7 +2,7 @@
 require(biomaRt)
 require(stringr)
 
-params_def=read.table(parSampleFile1, stringsAsFactor=F)
+params_def=read.table(parSampleFile1, stringsAsFactor=F, sep="\t")
 params<-split(params_def$V1, params_def$V2)
 
 host=params$host
