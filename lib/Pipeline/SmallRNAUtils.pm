@@ -472,6 +472,30 @@ sub getPrepareConfig {
   my $identical_ref = [ 'identical', '.fastq.gz$' ];
   my $host_identical_ref = [ 'identical', '.fastq.gz$' ];
 
+  my $run_cutadapt     = getValue( $def, "perform_cutadapt");
+  if($run_cutadapt){
+    my $perform_identical_short = getValue( $def, "perform_identical_short", 0);
+    if($perform_identical_short){
+      $preparation->{identical_short} = {
+        class      => "CQS::FastqIdentical",
+        perform    => 1,
+        target_dir => $preprocessing_dir . "/identical_short",
+        option     => "-l 0",
+        source_ref => [$source_ref->[0], ".fastq.short.gz"],
+        extension  => "_clipped_identical_short.fastq.gz",
+        sh_direct  => 1,
+        use_first_read_after_trim => $def->{use_first_read_after_trim},
+        cluster    => $cluster,
+        pbs        => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "24",
+          "mem"      => "20gb"
+        },
+      };
+      push @$individual, ("identical_short");
+    }
+  }
+
   if ( $consider_tRNA_NTA ) {
     $preparation->{identical_check_cca} = {
       class              => "SmallRNA::tRNACheckCCA",
