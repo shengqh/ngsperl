@@ -10,10 +10,11 @@ genelist = args[4:length(args)]
 
 DEBUG = FALSE
 if (DEBUG) {
-  inputFile = "/scratch/cqs/shengq2/jennifer/20200407_lindsay_exomeseq_3772_hg38/bwa_refine_nosoftclip_gatk4_SNV_05_filter/result/lindsay_exomeseq_3772.freq0.001.snv.missense.oncoprint.tsv"
-  outputFile = "/scratch/cqs/shengq2/jennifer/20200407_lindsay_exomeseq_3772_hg38/bwa_refine_nosoftclip_gatk4_SNV_05_filter/result/lindsay_exomeseq_3772.freq0.001.snv.missense.oncoprint.tsv"
-  optionFile = "/scratch/cqs/shengq2/jennifer/20200407_lindsay_exomeseq_3772_hg38/bwa_refine_nosoftclip_gatk4_SNV_05_filter/result/onco_options.txt"
-  genelist = c("TP53")
+  setwd(r'(C:\projects\scratch\weissvl\shengq2\20210616_human_exomeseq\bwa_g4_refine_gatk4_SNV_05_filter\result)')
+  inputFile = "human_exomeseq.freq0.001.snv.missense.tsv"
+  outputFile = "human_exomeseq.freq0.001.snv.missense.oncoprint.tsv"
+  optionFile = "onco_options.txt"
+  genelist = c("BRAF","RAS", "NTRK2", "CDKN2A", "CDKN2B", "NF1", "KMT2D", "RB1", "MMR", "ARID2", "ATM")
 }
 cat("inputFile=", inputFile, "\n")
 cat("outputFile=", outputFile, "\n")
@@ -46,6 +47,7 @@ alter_fun = list(
 col = c("MISSENSE" = MISSENSE_color, "TRUNC" = TRUNC_color)
 
 mutdata<-read.delim(inputFile,as.is=T,header=TRUE,sep="\t",stringsAsFactors = F)
+mutdata[is.na(mutdata)] <- 0
 cnames=colnames(mutdata)
 
 countNotNumIndex<-which(grepl("Format", cnames))
@@ -71,7 +73,7 @@ sample_end<-ncol(mutdata_gene_samples)
 
 ##oncoprint
 oncoprint<-NULL
-gene=genelist[length(genelist)]
+gene=genelist[3]
 for (gene in genelist){
   cat("gene=", gene, "\n")
   genedata=mutdata_gene_samples[mutdata_gene_samples$Gene.refGene == gene,]
