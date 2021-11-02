@@ -80,7 +80,7 @@ categoryRmd<-function(dfCategory, fileName, header){
     group_heatmap<-paste0("correlation_", category, "_group_heatmap")
     corr_heatmap<-paste0("correlation_", category, "_corr_cluster")
     
-    if(file.exists(files[[heatmap]])){
+    if(has_file(files, heatmap)){
       hasFile<-TRUE
     }
     
