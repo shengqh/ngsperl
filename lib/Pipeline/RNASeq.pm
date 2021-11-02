@@ -27,6 +27,8 @@ our $VERSION = '0.01';
 sub initializeRNASeqDefaultOptions {
   my $def = shift;
 
+  #print("perform_gsea=" . $def->{perform_gsea} . "\n");
+
   fix_task_name($def);
 
   initDefaultValue( $def, "emailType", "ALL" );
@@ -510,62 +512,16 @@ sub getRNASeqConfig {
       #}
     }
 
-    if ( getValue( $def, "perform_gsea" ) ) {
-      my $gsea_jar        = $def->{gsea_jar}        or die "Define gsea_jar at definition first";
-      my $gsea_db         = $def->{gsea_db}         or die "Define gsea_db at definition first";
-      my $gsea_categories = $def->{gsea_categories} or die "Define gsea_categories at definition first";
+    #print(Dumper($def));
 
+    if ( getValue( $def, "perform_gsea" ) ) {
       $gseaTaskName = $deseq2taskname . "_GSEA";
 
-      #my $gseaCategories = "'h.all.v6.1.symbols.gmt','c2.all.v6.1.symbols.gmt','c5.all.v6.1.symbols.gmt','c6.all.v6.1.symbols.gmt','c7.all.v6.1.symbols.gmt'";
-      $config->{$gseaTaskName} = {
-        class                      => "CQS::UniqueR",
-        perform                    => 1,
-        target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
-        rtemplate                  => "GSEAPerform.R",
-        output_to_result_directory => 1,
-        output_perSample_file      => "parameterSampleFile1",
-        output_perSample_file_ext  => ".gsea.html;.gsea.csv;.gsea;",
-        parameterSampleFile1_ref   => [ $deseq2taskname, "_GSEA.rnk\$" ],
-        sh_direct                  => 1,
-        
-        rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=0;",
-        pbs                        => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "23",
-          "mem"       => "10gb"
-        },
-      };
-      push( @$summary, $gseaTaskName );
-
+      my $pairs = $config->{pairs};
+      my $keys = [keys %$pairs];
       my $suffix = getDeseq2Suffix($config, $def, $deseq2taskname);
 
-      my @gsea_report_files = ();
-      my @gsea_report_names = ();
-      my $pairs = $config->{pairs};
-      for my $key ( keys %$pairs ) {
-        push( @gsea_report_files, $gseaTaskName, "/" . $key . $suffix . ".*gsea.csv" );
-        push( @gsea_report_names, "gsea_" . $key );
-      }
-
-      my $gsea_report = $gseaTaskName . "_report";
-      $config->{$gsea_report} = {
-        class                      => "CQS::BuildReport",
-        perform                    => 1,
-        target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gsea_report,
-        report_rmd_file            => "GSEAReport.Rmd",
-        additional_rmd_files       => "../Pipeline/Pipeline.Rmd;Functions.Rmd",
-        parameterSampleFile1_ref   => \@gsea_report_files,
-        parameterSampleFile1_names => \@gsea_report_names,
-        parameterSampleFile3       => [],
-        sh_direct                  => 1,
-        pbs                        => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      };
-      push( @$summary, $gsea_report );
+      add_gsea($config, $def, $summary, $target_dir, $gseaTaskName, [ $deseq2taskname, "_GSEA.rnk\$" ], $keys, $suffix );
     }
 
     if ( $def->{perform_keggprofile} ) {
