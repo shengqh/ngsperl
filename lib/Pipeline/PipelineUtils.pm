@@ -1502,6 +1502,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
     ref_fasta_dict             => getValue( $def, "ref_fasta_dict" ),
     ref_fasta                  => getValue( $def, "ref_fasta" ),
     blacklist_file             => $def->{blacklist_file},
+    contig_ploidy_priors       => getValue( $def, "contig_ploidy_priors_file" ),
     'sh_direct'                => 0,
     'perform'                  => 1,
     'target_dir'               => $target_dir . '/' . $FilterIntervals,
@@ -1660,8 +1661,8 @@ sub addGATK4CNVGermlineCohortAnalysis {
     parameterFile2_arg       => "-c",
     parameterFile2_ref       => [ $CombineGCNV ],
     output_arg               => "-o",
-    output_file_ext          => ".txt.sizefactor",
-    output_other_ext         => ".txt",
+    output_file_ext          => ".txt",
+    output_other_ext         => ".txt.sizefactor",
     sh_direct                => 1,
     'pbs'                    => {
       'nodes'    => '1:ppn=1',
@@ -1744,8 +1745,8 @@ sub addGATK4CNVGermlineCohortAnalysis {
       parameterSampleFile1_ref => $bam_ref,
       output_to_result_directory => 1,
       output_arg            => "-o",
-      output_file_ext       => ".position.txt.slim",
-      output_other_ext      => ".position.txt",
+      output_file_ext       => ".position.txt",
+      output_other_ext      => ".position.txt.slim",
       sh_direct             => 1,
       pbs                   => {
         "email"     => $def->{email},
@@ -2642,6 +2643,15 @@ sub add_gsea {
   my $gsea_jar        = getValue($def, "gsea_jar");
   my $gsea_db         = getValue($def, "gsea_db");
   my $gsea_categories = getValue($def, "gsea_categories");
+  my $rCode = "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=0;";
+
+  if(defined $def->{"gsea_chip"}){
+    my $gsea_chip = getValue($def, "gsea_chip");
+    if( ! -e $gsea_chip ){
+      $gsea_chip = $gsea_db . "/" . $gsea_chip;
+    }
+    $rCode = $rCode . "gseaChip='" . $gsea_chip . "';";
+  }
 
   #my $gseaCategories = "'h.all.v6.1.symbols.gmt','c2.all.v6.1.symbols.gmt','c5.all.v6.1.symbols.gmt','c6.all.v6.1.symbols.gmt','c7.all.v6.1.symbols.gmt'";
   $config->{$gseaTaskName} = {
@@ -2654,7 +2664,7 @@ sub add_gsea {
     output_perSample_file_ext  => ".gsea.html;.gsea.csv;.gsea;",
     parameterSampleFile1_ref   => $rnk_file_ref,
     sh_direct                  => 1,
-    rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=0;",
+    rCode                      => $rCode,
     pbs                        => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "23",
