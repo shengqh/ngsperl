@@ -45,6 +45,7 @@ macs2<-chipseqOptions$macs2_result
 
 if(has_chipqc) {
   chipqc_html = files$chipqc_html
+  has_chipqc=file.exists(chipqc_html)
 }
 
 project_dir <- dir("../..", full.names=T)
@@ -158,17 +159,15 @@ print(kable(QCtable, caption=tabRef("mapSummary", "Summary of ChIP-seq filtering
 
 <br>
 
-## Enrichment of reads in genomic features
-
-```{r genomic_features,echo=FALSE,results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("feature_enrichment", "Heatmap of log2 enrichment of reads in genomic features"), out.width="40%", out.height="20%"}
+```{r genomic_features,echo=FALSE,warning=FALSE, results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("feature_enrichment", "Heatmap of log2 enrichment of reads in genomic features"), out.width="40%", out.height="20%"}
+cat("## Enrichment of reads in genomic features\n")
 check_and_include_graphics(files$chipqc_GenomicFeatureEnrichment)
 ```
 
 <br>
 
-## ChIP signal distribution and structure
-
-```{r CrossCoverage,echo=FALSE,results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("cross_coverage", "Plot of CrossCoverage score after successive strand shifts"), out.width="40%", out.height="20%"}
+```{r CrossCoverage,echo=FALSE,warning=FALSE, results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("cross_coverage", "Plot of CrossCoverage score after successive strand shifts"), out.width="40%", out.height="20%"}
+cat("## ChIP signal distribution and structure\n")
 check_and_include_graphics(files$chipqc_CCPlot)
 ```
 
@@ -176,7 +175,7 @@ check_and_include_graphics(files$chipqc_CCPlot)
 
 # Peak calling and correlation between samples
 ## Summary of peak calling
-```{r peak_calling_summary, echo=FALSE, results='asis', eval=has_macs2}
+```{r peak_calling_summary, echo=FALSE, warning=FALSE, results='asis', eval=has_macs2}
 
 peaks_xls <- list.files(paste0(macs2, "/result"), recursive=T, pattern="peaks.xls", full.names=T)
 if(has_homer){
@@ -191,10 +190,10 @@ for(i in 1:length(peaks_xls)){
   df[i,2] <- word(lines[grep("# fragment size is determined as", lines)], 7)
   df[i,3] <- word(lines[grep("# d = ", lines)], 4)
   qvalue_index = grep("# qvalue cutoff for broad/weak regions", lines)
-  if(qvalue_index == 0){
+  if(length(qvalue_index) == 0){
     qvalue_index = grep("# qvalue cutoff for narrow/strong regions", lines)
   }
-  if(qvalue_index == 0){#pvalue
+  if(length(qvalue_index) == 0){#pvalue
     df[i,4] <- paste0("<= ", word(lines[11], 5))
   }else{
     df[i,4] <- paste0("<= ", word(lines[qvalue_index], 8))
@@ -220,9 +219,8 @@ print(kable(df, caption=tabRef("peakSummary", "Summary of peak calling and enric
 
 <br>
 
-## Motif enrichment
 ```{r homer_motif, echo=FALSE, results='asis', warning=F, eval=has_homer}
-
+cat("## Motif enrichment\n")
 dirs <- paste0(list.dirs(paste0(homer, "/result"), full.names=T, recursive=F), "/knownResults")
 
 res_table <- data.frame()
@@ -261,17 +259,18 @@ print(kable(tab, caption= tabRef("homer_table", "Homer annotation for peaks"), e
 ```
 <br>
 
-## Correlation between samples
+
 
 ```{r Correlation,echo=FALSE,results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("peak_correlation", "Plot of correlation between peaksets"), out.width="60%", out.height="60%"}
+cat("## Correlation between samples\n")
 check_and_include_graphics(files$chipqc_PeakCorHeatmap)
+cat("* Replicate samples of high quality can be expected to cluster together in the heatmap and be spatially grouped within the PCA plot.\n\n")
 ```
 
 ```{r PCA,echo=FALSE,results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("pca", "PCA of peaksets"), out.width="60%", out.height="60%"}
 check_and_include_graphics(files$chipqc_PeakPCA)
 ```
 
-* Replicate samples of high quality can be expected to cluster together in the heatmap and be spatially grouped within the PCA plot.  
 
 ```{r diffbind_1, results="asis", echo=FALSE, eval=has_diffbind} 
 #if(has_diffbind){
@@ -320,7 +319,7 @@ print(kable(sig_table, caption=tabRef("peakSummary", "Differential peaks based o
 ```
 <br>
 
-```{r structure_link, echo=FALSE, results='asis', message=FALSE, warning=FALSE}
+```{r structure_link, echo=FALSE, results='asis', message=FALSE, warning=FALSE, eval=FALSE}
 structureIndex<-ifelse(has_diffbind, 6, 5)
 cat(paste0("## ", structureIndex, " Results folder structure\n"))
 #cat(paste0("## Results folder structure\n"))
