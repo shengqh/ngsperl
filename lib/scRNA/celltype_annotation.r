@@ -68,7 +68,7 @@ if (annotate_tcell){
   tcell_clusters<-names(new.cluster.ids)[new.cluster.ids=="T cells"]
   tcell_data.norm<-data.norm[,tcell_clusters,drop=F]
   tcell_predict_celltype<-ORA_celltype(tcell_data.norm,tcell_activity_database$cellType,tcell_activity_database$weight)
-
+  
   cta_ora_mat = get_cta_ora_mat(tcell_predict_celltype)
   tcell_activity_database$predicted<-tcell_predict_celltype
   tcell_activity_database$cta_mat=cta_ora_mat$cta_mat
@@ -125,9 +125,12 @@ if(file.exists(myoptions$summary_layer_file)){
     layers_map[mct]=mct
   }
   id_tbl$summary_layer=unlist(layers_map[id_tbl$cell_type])
-
+  
   saveRDS(color_map, file=paste0(outFile, ".summary_layer_color.rds"))
 }
+
+id_tbl$seurat_cellactivity_clusters = paste0(id_tbl$seurat_clusters, " : ", id_tbl$cell_type )
+id_tbl$seurat_cellactivity_clusters=factor(id_tbl$seurat_cellactivity_clusters, levels=id_tbl$seurat_cellactivity_clusters)
 
 write.csv(id_tbl, file=paste0(outFile, ".celltype.csv"), row.names=F)
 saveRDS(cell_type, file=paste0(outFile, ".celltype.rds"))
@@ -141,17 +144,49 @@ clusters$cellactivity_clusters=new.cluster.ids[as.character(clusters$seurat_clus
 clusters$seurat_cellactivity_clusters=paste0(clusters$seurat_clusters, " : ", clusters$cellactivity_clusters)
 write.csv(clusters, file=paste0(outFile, ".celltype_cluster.csv"))
 
+draw_celltype_bar<-function(obj, seurat_clusters, celltypes, celltype_name, outFilePrefix){
+  cmap<-split(seurat_clusters, celltypes)
+  cts_clusters<-lapply(cmap, function(x){paste0(x, collapse = ",")})
+  cts<-paste0(names(cmap), " (",cts_clusters ,")")
+  names(cts)<-names(cmap)
+  
+  celltype_cluster<-unlist(cts[celltypes])
+  ctmap<-split(celltype_cluster, id_tbl$seurat_clusters)
+  
+  meta_value<-unlist(ctmap[obj$seurat_clusters])
+  
+  tb<-table(meta_value)
+  tb<-tb[order(tb)]
+  meta_value<-factor(meta_value, levels=names(tb))
+  
+  tbl<-table(obj$orig.ident, meta_value)
+  tbl<-tbl/rowSums(tbl)*100
+  mtbl<-reshape2::melt(tbl)
+  colnames(mtbl)<-c("Sample", "Celltype", "Perc")
+  
+  g<-ggplot(mtbl, aes(x=Sample, y=Perc, fill=Celltype)) + geom_bar(stat="identity") + theme_classic() + 
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          axis.title.x = element_blank(),
+          plot.title = element_text(hjust = 0.5)) +
+    ylab("Percentage of total cell captured") + ggtitle(paste0("Frequency of ", celltype_name, "Cell Type per Sample"))
+  
+  png(paste0(outFilePrefix, ".bar.png"), width=2000, height=1400, res=300)
+  print(g)
+  dev.off()
+}  
+
 if(file.exists(parFile3)){
   library(ggplot2)
   finalList=readRDS(parFile3)
   obj=finalList$obj
-
-  id_tbl$seurat_cellactivity_clusters = paste0(id_tbl$seurat_clusters, " : ", id_tbl$cell_type )
-  id_tbl$seurat_cellactivity_clusters=factor(id_tbl$seurat_cellactivity_clusters, levels=id_tbl$seurat_cellactivity_clusters)
-  idmap = split(id_tbl$seurat_cellactivity_clusters, id_tbl$seurat_clusters)
   
+  idmap = split(id_tbl$seurat_cellactivity_clusters, id_tbl$seurat_clusters)
   obj$seurat_cellactivity_clusters = unlist(idmap[as.character(obj$seurat_clusters)])
+  
   cat("draw pictures ... ")
+  
+  draw_celltype_bar(obj, id_tbl$seurat_clusters, id_tbl$cell_type, "", paste0(outFile, ".celltype"))
+  
   p1<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters") + guides(colour = guide_legend(override.aes = list(size = 3), ncol=1)) + ggtitle("")
   p2<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="orig.ident") + ggtitle("")
   p=p1+p2
@@ -172,6 +207,8 @@ if(file.exists(parFile3)){
   if(file.exists(myoptions$summary_layer_file)){
     idmap<-split(id_tbl$summary_layer, id_tbl$seurat_clusters)
     obj$summary_layer = unlist(idmap[as.character(obj$seurat_clusters)])
+    
+    draw_celltype_bar(obj, id_tbl$seurat_clusters, id_tbl$summary_layer, "Broad ", paste0(outFile, ".summary_layer"))
     
     summary_color=color_map[unique(obj$summary_layer)]
     
@@ -200,7 +237,7 @@ if(file.exists(parFile3)){
         annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
       print(p)
       dev.off()
-
+      
       width=3000 * length(unique(groups$V2)) + 300
       png(paste0(outFile, ".celltype.group.label.png"), width=width, height=3000, res=300)
       p<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters", split.by="group") + 
