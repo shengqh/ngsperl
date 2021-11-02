@@ -42,6 +42,9 @@ sub perform {
   my $ref_fasta_dict = get_param_file( $config->{$section}{ref_fasta_dict}, "ref_fasta_dict", 1 );
   my $ref_fasta      = get_param_file( $config->{$section}{ref_fasta},      "ref_fasta",      1 );
 
+  my $contig_ploidy_priors = get_param_file($config->{$section}{contig_ploidy_priors}, "contig_ploidy_priors_file", 0 );
+  my $contig_ploidy_priors_option = $contig_ploidy_priors? "-c " . $contig_ploidy_priors:"";
+
   my $parameters = get_parameter_options(
     $config, $section, "--",
     [
@@ -104,7 +107,7 @@ gatk --java-options \"$java_option\" FilterIntervals $option \\
   --interval-merging-rule OVERLAPPING_ONLY $parameters \\
   --output $final_file_tmp
 
-python3 $script -i $final_file_tmp -o $final_file
+python3 $script -i $final_file_tmp -o $final_file $contig_ploidy_priors_option
 
 #rm $final_file_tmp
 ";

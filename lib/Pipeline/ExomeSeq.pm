@@ -42,9 +42,21 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_gatk_callvariants",   0 );
   initDefaultValue( $def, "perform_gatk4_callvariants",  1 );
   initDefaultValue( $def, "gatk4_scatter_count",  0 );
+
+  if (defined $def->{"gatk_callvariants_vqsr_mode"}){
+    if (not defined $def->{"callvariants_vqsr_mode"}){
+      $def->{"callvariants_vqsr_mode"} = $def->{"gatk_callvariants_vqsr_mode"};
+    }
+  }elsif(defined $def->{"callvariants_vqsr_mode"}){
+    if (not defined $def->{"gatk_callvariants_vqsr_mode"}){
+      $def->{"gatk_callvariants_vqsr_mode"} = $def->{"callvariants_vqsr_mode"};
+    }
+  }
   initDefaultValue( $def, "callvariants_vqsr_mode", 1 );
   initDefaultValue( $def, "gatk_callvariants_vqsr_mode", getValue($def, "callvariants_vqsr_mode") );
   initDefaultValue( $def, "has_chr_in_chromosome_name" , 0);
+  initDefaultValue( $def, "annotation_genes_add_chr" , $def->{"has_chr_in_chromosome_name"});
+  
   initDefaultValue( $def, "perform_gatk4_pairedfastq2bam",  0 );
 
   initDefaultValue( $def, "perform_target_coverage",  0 );
@@ -238,6 +250,13 @@ sub add_muTect2_PON {
       "source_ref" => $bam_input,
       "sample_names" => $def->{pon_samples},
     };
+  }elsif($def->{normal_samples}){
+    #https://gatk.broadinstitute.org/hc/en-us/articles/360035531132
+    $config->{$mutect2_pon_normal_files} = {     
+      "class" => "CQS::SamplePickTask",
+      "source_ref" => $bam_input,
+      "sample_names" => $def->{normal_samples},
+    };
   }else{
     init_muTect2_groups($config, $def);
 
@@ -371,35 +390,12 @@ sub getConfig {
   my $max_thread = getValue( $def, "max_thread" );
   my $covered_bed = getValue( $def, "covered_bed" );
 
-  my $geneLocus = undef;
   my $chrCode = getValue($def, "has_chr_in_chromosome_name") ? ";addChr=1" : "";
 
   my $species = getValue($def, "species");
 
-  if ( defined $def->{annotation_genes} ) {
-    $geneLocus = "annotation_genes_locus";
-    $config->{$geneLocus} = {
-      class      => "CQS::UniqueR",
-      perform    => 1,
-      target_dir => $target_dir . '/' . $geneLocus,
-      rtemplate  => "../Annotation/getGeneLocus.r",
-      rCode      => "host=\""
-        . getValue( $def, "biomart_host" )
-        . "\";dataset=\""
-        . getValue( $def, "biomart_dataset" )
-        . "\";symbolKey=\""
-        . getValue( $def, "biomart_symbolKey" )
-        . "\";genesStr=\""
-        . getValue( $def, "annotation_genes" ) . "\"" . $chrCode,
-      output_file_ext => ".missing;.bed",
-      sh_direct       => 1,
-      'pbs'           => {
-        'nodes'    => '1:ppn=1',
-        'mem'      => '40gb',
-        'walltime' => '10'
-      },
-    };
-    push( @$summary, $geneLocus );
+  if(defined $def->{annotation_genes}){
+    addGeneLocus($config, $def, $summary, $target_dir);
   }
 
   my $bam_ref;
@@ -641,6 +637,27 @@ samtools idxstats __NAME__.nosoftclip.bam > __NAME__.nosoftclip.bam.chromosome.c
     add_alignment_summary($config, $def, $summary, $target_dir, "${soft_clip_name}_summary", "../Alignment/AlignmentUtils.r;../Alignment/BWASummary.r", ".chromosome.csv;.chromosome.png", undef, [$soft_clip_name, ".chromosome.count"] );
   }
 
+  my $tumor_bam = $bam_ref;
+  my $normal_bam = undef;
+
+  if($def->{pon_samples}){
+    $tumor_bam = "tumor_bam";
+    #https://gatk.broadinstitute.org/hc/en-us/articles/360035531132
+    $config->{$tumor_bam} = {     
+      "class" => "CQS::SamplePickTask",
+      "source_ref" => $bam_ref,
+      "not_sample_names" => $def->{pon_samples},
+    };
+
+    $normal_bam = "normal_bam";
+    #https://gatk.broadinstitute.org/hc/en-us/articles/360035531132
+    $config->{$normal_bam} = {     
+      "class" => "CQS::SamplePickTask",
+      "source_ref" => $bam_ref,
+      "sample_names" => $def->{pon_samples},
+    };
+  }
+
   if ($def->{perform_TEQC}) {
     $fasta = getValue( $def, "bwa_fasta" );
 
@@ -836,8 +853,6 @@ fi
       parameterSampleFile2_ref => [ $featureCounts, ".count.summary" ],
       sh_direct                => 1,
       pbs                      => {
-        "email"     => $email,
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "2",
         "mem"       => "10gb"
@@ -858,8 +873,6 @@ fi
       name_map_file             => $name_map_file,
       sh_direct                 => 1,
       pbs                       => {
-        "email"     => $email,
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "23",
         "mem"       => "10gb"
@@ -965,7 +978,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       perform           => 1,
       target_dir        => "${target_dir}/$gvcf_name",
       option            => "",
-      source_ref        => $bam_ref,
+      source_ref        => $tumor_bam,
       java_option       => "",
       fasta_file        => $fasta,
       extension         => ".g.vcf.gz",
@@ -1036,7 +1049,6 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
         chromosome_names  => getValue($def, "chromosome_names"),
         sh_direct         => 0,
         pbs               => {
-          "email"    => $email,
           "nodes"    => "1:ppn=1",
           "walltime" => "4",
           "mem"      => "10gb"
@@ -1060,7 +1072,6 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
         chromosome_names  => getValue($def, "chromosome_names"),
         sh_direct         => 1,
         pbs               => {
-          "email"    => $email,
           "nodes"    => "1:ppn=1",
           "walltime" => "4",
           "mem"      => "10gb"
@@ -1080,7 +1091,6 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
         chromosome_names  => getValue($def, "chromosome_names"),
         sh_direct         => 1,
         pbs               => {
-          "email"    => $email,
           "nodes"    => "1:ppn=1",
           "walltime" => "4",
           "mem"      => "10gb"
@@ -1109,7 +1119,6 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
         species    => $species,
         sh_direct         => 1,
         pbs               => {
-          "email"    => $email,
           "nodes"    => "1:ppn=8",
           "walltime" => "24",
           "mem"      => "40gb"
@@ -1126,7 +1135,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       perform       => 1,
       target_dir    => "${target_dir}/$gvcf_name",
       option        => "",
-      source_ref    => $bam_ref,
+      source_ref    => $tumor_bam,
       java_option   => "",
       fasta_file    => $fasta,
       gatk_jar      => $gatk_jar,
@@ -1136,7 +1145,6 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       gvcf          => 1,
       sh_direct     => 0,
       pbs           => {
-        "email"    => $email,
         "nodes"    => "1:ppn=" . $max_thread,
         "walltime" => "24",
         "mem"      => "40gb"
@@ -1144,7 +1152,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
     };
     push @$individual, ($gvcf_name);
 
-    if ( $def->{gatk_callvariants_vqsr_mode} ) {
+    if ( $def->{callvariants_vqsr_mode} ) {
       $filter_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_vqsr";
       $config->{$filter_name} = {
         class       => "GATK::VariantFilter",
@@ -1163,7 +1171,6 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
         gatk_jar    => $gatk_jar,
         sh_direct   => 1,
         pbs         => {
-          "email"    => $email,
           "nodes"    => "1:ppn=1",
           "walltime" => "24",
           "mem"      => "40gb"
@@ -1186,7 +1193,6 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
         vqsr_mode   => 0,
         is_rna      => 0,
         pbs         => {
-          "email"    => $email,
           "nodes"    => "1:ppn=1",
           "walltime" => "24",
           "mem"      => "40gb"
@@ -1243,8 +1249,6 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
           output_other_ext      => ".ibs_score.csv",
           sh_direct             => 1,
           pbs                   => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "10",
             "mem"       => "10gb"
@@ -1271,7 +1275,6 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
         ref_fasta  => $fasta,
         sh_direct  => 1,
         pbs        => {
-          "email"    => $email,
           "nodes"    => "1:ppn=" . $max_thread,
           "walltime" => "24",
           "mem"      => "40gb"
@@ -1299,7 +1302,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       init_command => $def->{muTect_init_command},
       target_dir   => "${target_dir}/$mutectName",
       option       => getValue( $def, "muTect_option" ),
-      source_ref   => [ $bam_input, ".bam\$" ],
+      source_ref   => $bam_ref,
       groups_ref   => "groups",
       fasta_file   => $fasta,
       dbsnp_file   => $def->{"dbsnp"},
@@ -1334,8 +1337,6 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       output_file_ext       => "_pass.combined.vcf",
       sh_direct             => 1,
       pbs                   => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "10",
         "mem"       => "10gb"
@@ -1359,8 +1360,6 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       output_file_ext       => ".filtered.vcf",
       sh_direct             => 1,
       pbs                   => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "10",
         "mem"       => "10gb"
@@ -1905,12 +1904,11 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
       perform     => 1,
       target_dir  => "${target_dir}/$cnmopsName",
       option      => "",
-      source_ref  => [ $bam_input, ".bam\$" ],
+      source_ref  => $tumor_bam,
       bedfile     => $covered_bed,
       isbamsorted => 1,
       sh_direct   => 1,
       pbs         => {
-        "email"    => $email,
         "nodes"    => "1:ppn=" . $max_thread,
         "walltime" => "24",
         "mem"      => "40gb"
@@ -1921,7 +1919,7 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
 
   my $cnvAnnotationGenesPlot = undef;
   if ( $def->{perform_cnv_gatk4_cohort} ) {
-    $cnvAnnotationGenesPlot = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, [ $bam_input, ".bam\$" ], $bam_input, $individual, $summary, $step3, $step4, $step5, $step6 );
+    $cnvAnnotationGenesPlot = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, $tumor_bam, $bam_input, $individual, $summary, $step3, $step4, $step5, $step6 );
   }
 
   if ( ( defined $annovar_filter_geneannotation_name ) and ( defined $cnvAnnotationGenesPlot ) ) {

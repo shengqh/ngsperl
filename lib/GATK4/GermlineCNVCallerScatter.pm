@@ -79,7 +79,7 @@ sub perform {
 
   for my $scatterName (sort keys %$intervals){
     my $cur_dir  = create_directory_or_die( $result_dir . "/$scatterName" );
-    my $final_folder = "gcc-calls";
+    my $final_file = "$cur_dir/gcc-calls/SAMPLE_0/sample_name.txt";
 
     my $cohort_entity_id = $task_name . "_" . $scatterName;
   
@@ -90,9 +90,12 @@ sub perform {
     my $log      = $self->get_log_filename( $log_dir, $scatterName );
     my $log_desc = $cluster->get_log_description($log);
 
-    print $sh "\$MYCMD ./$pbs_name \n";
+    print $sh "if [[ ! -s $final_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_folder, $init_command );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file, $init_command );
     print $pbs "  
 
 cd $cur_dir
