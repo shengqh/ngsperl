@@ -261,8 +261,10 @@ if [[ \$status -eq 0 ]]; then
     md5sum $read1name > ${read1name}.md5
     md5sum $read2name > ${read2name}.md5
   else
+    rm $read1name $read2name
     touch ${sample_name}.failed
 else
+  rm $temp1_file $temp2_file
   touch ${sample_name}.failed
 fi
 
@@ -270,13 +272,14 @@ fi
       }
       else {                         # NOT remove top random bases
         print $pbs "
-cutadapt $thread_option $adapter_option -o $read1name -p $read2name $limit_file_options $read1file $read2file 1> >(tee ${sample_name}.stdout.log ) 2> >(tee ${sample_name}.stderr.log >\&2)
+cutadapt $thread_option $adapter_option -o $read1name -p $read2name $limit_file_options $read1file $read2file
 status=\$?
 if [[ \$status -eq 0 ]]; then
   touch ${sample_name}.succeed
   md5sum $read1name > ${read1name}.md5
   md5sum $read2name > ${read2name}.md5
 else
+  rm $read1name $read2name
   touch ${sample_name}.failed
 fi
 
@@ -307,6 +310,7 @@ if [[ \$status -eq 0 ]]; then
     rm $temp_file
     touch ${sample_name}.succeed
   else
+    rm $final_file $temp_file
     touch ${sample_name}.failed
   fi
 else
