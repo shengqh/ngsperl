@@ -478,10 +478,12 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
   rawobj<-subset(rawobj, subset = nFeature_RNA > nFeature_cutoff_min & nFeature_RNA<nFeature_cutoff_max & nCount_RNA > nCount_cutoff & percent.mt < mt_cutoff)
   
   if(Remove_rRNA){
+    rRNA.genes <- grep(pattern = rRNApattern,  rownames(rawobj), value = TRUE)
     rawobj<-rawobj[!(rownames(rawobj) %in% rRNA.genes),]
   }
   
   if(Remove_MtRNA){
+    Mt.genes<- grep (pattern= Mtpattern,rownames(rawobj), value=TRUE )
     rawobj<-rawobj[!(rownames(rawobj) %in% Mt.genes),]
   }
   
