@@ -80,6 +80,7 @@ our %EXPORT_TAGS = (
       get_interation_sample_subsample_map
       get_interation_subsample_sample_map
       get_groups
+      get_correlation_groups_by_pattern
       get_covariances
       getGroupPickResult
       getMemoryPerThread
@@ -1778,8 +1779,12 @@ sub merge_hash_right_precedent {
 }
 
 sub get_groups_by_pattern_dic {
-  my ($def) = @_;
-  my $gpattern_dic = $def->{groups_pattern};
+  my ($def, $gpattern_dic) = @_;
+  
+  if(!defined $gpattern_dic){
+    $gpattern_dic = $def->{groups_pattern};
+  }
+
   my $files = $def->{files};
 
   my $groups = {};
@@ -1850,8 +1855,12 @@ sub get_groups_by_pattern_value {
 }
 
 sub get_groups_by_pattern_array {
-  my ($def) = @_;
-  my $gpatterns = $def->{groups_pattern};
+  my ($def, $gpatterns) = @_;
+  
+  if(!defined $gpatterns){
+    $gpatterns = $def->{groups_pattern};
+  }
+
   my $files = $def->{files};
 
   my @samplenames = (keys %$files);
@@ -1867,14 +1876,38 @@ sub get_groups_by_pattern_array {
 }
 
 sub get_groups_by_pattern {
-  my ($def) = @_;
-  my $gpattern = $def->{groups_pattern};
+  my ($def, $gpattern) = @_;
+  if(not defined $gpattern){
+    $gpattern = $def->{groups_pattern};
+  }
   if (is_hash($gpattern)){
-    return(get_groups_by_pattern_dic($def));
+    return(get_groups_by_pattern_dic($def, $gpattern));
   }elsif (is_array($gpattern)){
-    return(get_groups_by_pattern_array($def));
+    return(get_groups_by_pattern_array($def, $gpattern));
   }else{
-    return(get_groups_by_pattern_value($def));
+    return(get_groups_by_pattern_value($def, $gpattern));
+  }
+}
+
+sub get_correlation_groups_by_pattern {
+  my ($def) = @_;
+
+  if(defined $def->{correlation_groups}){
+    return($def->{correlation_groups});
+  }
+
+  my $gpattern_dic = $def->{correlation_groups_pattern_dic};
+  if(defined $gpattern_dic){
+    die "correlation_groups_pattern has to be hash " if not is_hash($gpattern_dic);
+
+    my $result = {};
+    for my $gpattern_key (sort keys %$gpattern_dic){
+      my $gpattern = $gpattern_dic->{$gpattern_key};
+      $result->{$gpattern_key} = get_groups_by_pattern($def, $gpattern);
+    }
+    return($result);
+  }else{
+    return({group => $def->{groups}});
   }
 }
 
