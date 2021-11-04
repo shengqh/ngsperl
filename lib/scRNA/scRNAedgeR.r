@@ -14,192 +14,254 @@ sumcount<-function(ct_count, names, sample_df){
   return(rescount)
 }
 
-cts_cluster<-read.csv(parFile1)
-cts_folder<-dirname(parFile1)
+finalList<-readRDS(parFile1)
+obj<-finalList$obj
 
-cts_unique<-rev(unique(cts_cluster$DE))
+clusterDf<-read.csv(parFile2, stringsAsFactors = F, row.names=1)
+if(!(cluster_name %in% colnames(obj@meta.data))){
+  if(all(names(obj$orig.ident) %in% rownames(clusterDf))){
+    obj[[cluster_name]]<-clusterDf[names(obj$orig.ident), cluster_name]
+  }else{
+    obj[[cluster_name]]<-clusterDf[obj$seurat_clusters, cluster_name]
+  }
+}
 
-sampleGroups<-read.table(parSampleFile1, stringsAsFactors = F)
-colnames(sampleGroups)<-c("Sample","Group")
+meta<-obj@meta.data
 
 comparisons<-read.table(parSampleFile2, stringsAsFactors = F)
-colnames(comparisons)<-c("Group", "Comparison")
+if(ncol(comparisons) == 3){
+  colnames(comparisons)<-c("Value", "Key", "Comparison")
+}else{
+  colnames(comparisons)<-c("Value", "Comparison")
+  comparisons$Key = "groups"
+}
+
 comparisonNames<-unique(comparisons$Comparison)
 
-ct<-cts_unique[1]
-cts_name<-paste0(outFile, ".")
+comp <-comparisonNames[1]
 
-result<-NULL
-for(ct in cts_unique){
-  ct_file_name<-paste0(cts_folder, "/", cts_name, ct, ".count")
-  rds_file = paste0(ct_file_name,".rds")
-  sample_file = paste0(ct_file_name,".sample.csv")
-  sample_df<-read.csv(sample_file, stringsAsFactors = F)
-  colnames(sample_df)<-c("Cell","Sample")
+designMatrix<-NULL
+for (comp in comparisonNames){
+  comp_groups<-comparisons[comparisons$Comparison==comp,]
+  comp_options = split(comp_groups$Value, comp_groups$Key)
   
-  de_obj<-readRDS(rds_file)
-  ct_count<-as.matrix(de_obj[["RNA"]]@counts)
-
-  comp <-comparisonNames[1]
-  for (comp in comparisonNames){
-    prefix<-paste0(cts_name, ct, ".", comp , ".edgeR")
-    comp_groups<-comparisons[comparisons$Comparison==comp,]
-    
-    controlGroup<-comp_groups$Group[1]
-    sampleGroup<-comp_groups$Group[2]
+  if("groups" %in% names(comp_options)){
+    sampleGroups<-read.table(parSampleFile1, stringsAsFactors = F)
+    colnames(sampleGroups)<-c("Sample","Group")
+    groups<-comp_options$groups
+    controlGroup<-groups[1]
+    sampleGroup<-groups[2]
     
     control_names<-sampleGroups$Sample[sampleGroups$Group==controlGroup]
     sample_names<-sampleGroups$Sample[sampleGroups$Group==sampleGroup]
+  }else{
+    control_names<-as.numeric(comp_options$control_clusters)
+    controlGroup<-ifelse("control_name" %in% names(comp_options), comp_options$control_name, paste("Cluster", paste(control_names, collapse = "_"), sep="_"))
+    sample_names<-as.numeric(comp_options$sample_clusters)
+    sampleGroup<-ifelse("sample_name" %in% names(comp_options), comp_options$sample_name, paste("Cluster", paste(sample_names, collapse = "_"), sep="_"))
+  }
+
+  if(bBetweenCluster){
+    prefix<-comp
     
-    allsamples<-unique(sample_df$Sample)
+    control_cells<-rownames(meta)[meta[,cluster_name] %in% control_names]  
+    if("control_file_regex" %in% names(comp_options)){
+      all_files = unique(meta$orig.ident)
+      control_files=all_files[grepl(comp_options$control_file_regex, all_files)]
+      control_cells = control_cells[meta[control_cells, "orig.ident"] %in% control_files]
+    }
+    if("control_files" %in% names(comp_options)){
+      control_files=comp_options$control_files
+      control_cells = control_cells[meta[control_cells, "orig.ident"] %in% control_files]
+    }
+
+    sample_cells<-rownames(meta)[meta[,cluster_name] %in% sample_names]  
+    if("sample_file_regex" %in% names(comp_options)){
+      all_files = unique(meta$orig.ident)
+      sample_files=all_files[grepl(comp_options$sample_file_regex, all_files)]
+      sample_cells = sample_cells[meta[sample_cells, "orig.ident"] %in% sample_files]
+    }
+    if("sample_files" %in% names(comp_options)){
+      sample_files=comp_options$sample_files
+      sample_cells = sample_cells[meta[sample_cells, "orig.ident"] %in% sample_files]
+    }
     
-    control_names<-control_names[control_names %in% allsamples]
-    sample_names<-sample_names[sample_names %in% allsamples]
+    control_files=unique(meta[control_cells, "orig.ident"])
+    sample_files=unique(meta[sample_cells, "orig.ident"])
     
-    if(DE_by_cell){
-      cell_control<-ct_count[,sample_df$Cell[sample_df$Sample %in% control_names]]
-      cell_control_group<-rep("control", ncol(cell_control))
-      
-      cell_sample<-ct_count[,sample_df$Cell[sample_df$Sample %in% sample_names]]
-      cell_sample_group<-rep("sample", ncol(cell_sample))
+    if(!all(control_files %in% sample_files)){
+      sampleInGroup = 0
     }else{
-      cell_control<-sumcount(ct_count, control_names, sample_df)
-      cell_control_group<-rep("control", ncol(cell_control))
-      
-      cell_sample<-sumcount(ct_count, sample_names, sample_df)
-      cell_sample_group<-rep("sample", ncol(cell_sample))
+      sampleInGroup = 1
     }
     
-    cells<-cbind(cell_control, cell_sample)
-    groups<-c(cell_control_group, cell_sample_group)
-
-    dge_filename <-paste0(prefix, ".csv")
-    
-    #filter genes with zero count
-    cells<-cells[rowSums(cells)>0,]
-    
-    #filter genes by tpm
-    tpm = sweep(cells, 2, colSums(cells)/1e6, "/")
-    min_sample<-filter_cellPercentage * ncol(cells)
-    keep_rows <- rowSums(tpm > filter_minTPM) >= min_sample
-    
-    cells<-cells[keep_rows,]
-    tpm<-tpm[keep_rows,]
-
-    designdata<-data.frame("Group"=groups, "Cell"=colnames(cells))
-    if(bComparingCluster){
-      designdata$Sample=samples
+    all_cells<-c(control_cells, sample_cells)
+    if("samples" %in% names(comp_options)){
+      samples<-comp_options$samples
+      all_cells = all_cells[meta[all_cells, "orig.ident"] %in% samples]
     }
     
-    write.csv(designdata, file=paste0(prefix, ".design"), row.names=F, quote=F)
+    de_obj<-subset(obj, cells=all_cells)
+    de_obj$Group<-c(rep("control", length(control_cells)), rep("sample", length(sample_cells)))
+    de_obj$DisplayGroup<-c(rep(controlGroup, length(control_cells)), rep(sampleGroup, length(sample_cells)))
     
-    cat(prefix, "\n")
+    designdata<-data.frame("Group"=de_obj$Group, "Cell"=colnames(de_obj), "Sample"=de_obj$orig.ident, "DisplayGroup"=de_obj$DisplayGroup)
+    designfile<-paste0(prefix, ".design")
+    write.csv(designdata, file=designfile, row.names=F, quote=F)
     
-    dge<-DGEList(cells, group=groups)
-    cat("  calcNormFactors", "\n")
-    dge<-calcNormFactors(dge)
-    
-    cdr <- scale(colMeans(cells > 0))
-    if(bComparingCluster){
-      design <- model.matrix(~ cdr + samples + groups)
+    #predefined genes
+    if("genes" %in% comp_groups$Key){
+      genes_list<-comp_groups$Value[comp_groups$Key=="genes"]
+      genes=paste(genes_list, collapse = ",")
     }else{
-      design <- model.matrix(~ cdr + groups)
+      genes=""
     }
-    rownames(design)<-colnames(cells)
-    write.csv(design, file=paste0(prefix, ".design_matrix.csv"), quote=F)
     
-    cat("  estimateDisp", "\n")
-    dge<-estimateDisp(dge,design=design)
-    
-    cat("  glmQLFit", "\n")
-    fitqlf<-glmQLFit(dge,design=design,robust=TRUE)
-    qlf<-glmQLFTest(fitqlf)
-    out<-topTags(qlf, n=Inf)
-    outTpm<-tpm[rownames(out$table),]
-    write.csv(cbind(out$table, outTpm), file=dge_filename, quote=F)
-
-    if(useRawPvalue){
-      sigout<-out$table[(out$table$PValue<=pvalue) & (abs(out$table$logFC)>=log2(foldChange)),]
+    curdf<-data.frame(prefix=prefix, cellType="", comparison=comp, sampleInGroup=sampleInGroup, design=designfile, genes=genes, stringsAsFactors = F)
+    if (is.null(designMatrix)){
+      designMatrix = curdf
     }else{
-      sigout<-out$table[(out$table$FDR<=pvalue) & (abs(out$table$logFC)>=log2(foldChange)),]
+      designMatrix = rbind(designMatrix, curdf)
     }
-    sigTpm<-tpm[rownames(sigout),]
-    sigFile<-paste0(prefix, "_sig.csv")
-    write.csv(cbind(sigout, sigTpm), file=sigFile, quote=F)
+  }else{
+    cts = unique(clusterDf[order(clusterDf$seurat_clusters, decreasing = T), cluster_name])
+    prefixList<-gsub(" ", "_", cts)
+    prefixList<-gsub(":", "_", prefixList)
+    prefixList<-gsub("_+", "_", prefixList)
     
-    siggenes<-data.frame(gene=rownames(sigout), stringsAsFactors = F)
-    sigGenenameFile<-paste0(prefix, "_sig_genename.txt")
-    write.table(siggenes, file=sigGenenameFile, row.names=F, col.names=F, sep="\t", quote=F)
-
-    if (nrow(siggenes) > 0){
-      cell_obj=de_obj[,colnames(cells)]
-      geneexps=FetchData(cell_obj,vars=siggenes$gene)
-      geneexps=t(geneexps)
-      geneexps<-geneexps[siggenes$gene,colnames(cells)]
-      sigFile<-paste0(prefix, "_sig_exp.csv")
-      write.csv(cbind(sigout, geneexps), file=sigFile, quote=F)
-
-      coords<-data.frame(cell_obj@reductions$umap@cell.embeddings)
-      xlim<-c(min(coords$UMAP_1-0.1), max(coords$UMAP_1+0.1))
-      ylim<-c(min(coords$UMAP_2-0.1), max(coords$UMAP_2+0.1))
+    idx<-1
+    for (idx in c(1:length(cts))){
+      ct = cts[idx]
+      prefix = paste0(prefixList[idx], ".", comp)
       
-      ddata<-designdata
-      rownames(ddata)<-ddata$Cell
-      cell_obj$Group=ifelse(ddata[colnames(cells), "Group"]=="control", controlGroup, sampleGroup)
-      pdf(file=paste0(prefix, ".sig_genename.pdf"), onefile = T, width=21, height=7)
-      siggene<-siggenes$gene[1]
-      for (siggene in siggenes$gene){
-        logFC<-sigout[siggene, "logFC"]
-        FDR<-sigout[siggene,"FDR"]
-        
-        geneexp=FetchData(cell_obj,vars=c(siggene))
-        colorRange<-c(min(geneexp), max(geneexp))
-        fix.sc <- scale_color_gradientn(colors=c("lightgrey", "blue"), limits = colorRange)
-        
-        title<-paste0(siggene, ' : logFC = ', round(logFC, 2), ", FDR = ", formatC(FDR, format = "e", digits = 2))
-        p0<-VlnPlot(cell_obj, feature=siggene, group.by ="Group") + NoLegend()
-        if(bComparingCluster){
-          p1<-DimPlot(cell_obj, reduction = "umap", label=T, group.by="seurat_clusters") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5)) + xlim(xlim) + ylim(ylim)
-          p2<-FeaturePlot(object = cell_obj, features=as.character(siggene), order=T)
-        }else{
-          subcells<-colnames(cell_obj)[cell_obj$Group == controlGroup]
-          subobj<-subset(cell_obj, cells=subcells)
-          p1<-FeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Control: ", controlGroup))
-          p1<-suppressMessages(expr = p1 + xlim(xlim) + ylim(ylim) + fix.sc)
-          
-          subcells<-colnames(cell_obj)[cell_obj$Group == sampleGroup]
-          subobj<-subset(cell_obj, cells=subcells)
-          p2<-FeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Sample: ", sampleGroup))
-          p2<-suppressMessages(expr = p2  + xlim(xlim) + ylim(ylim) + fix.sc)
-          
-        }
-        p<-ggarrange(plotlist=list(p0,p1,p2),nrow =1)
-        g<-ggpubr::annotate_figure(
-          p = p,
-          top = ggpubr::text_grob(label = title, face = 'bold', size=20)
-        )
-        print(g)
-        #break
+      clusterCt<-clusterDf[clusterDf[,cluster_name] == ct,]
+      de_obj<-subset(obj, cells=rownames(clusterCt))
+      clusterCt$sample=de_obj$orig.ident
+
+      invalid_control_names= control_names[!(control_names %in% unique(clusterCt$sample))]
+      invalid_sample_names= sample_names[!(sample_names %in% unique(clusterCt$sample))]
+
+      if (length(invalid_control_names) == length(control_names)){
+        warning(paste0("There were no control ", paste0(invalid_control_names, collapse=","), " found in cluster ", ct))
+        next
       }
-      dev.off()
+      
+      if (length(invalid_sample_names)  == length(sample_names)){
+        warning(paste0("There were no sample ", paste0(invalid_sample_names, collapse=","), " found in cluster ", ct))
+        next
+      }
+      
+      control_cells<-rownames(clusterCt)[clusterCt$sample %in% control_names]  
+      sample_cells<-rownames(clusterCt)[clusterCt$sample %in% sample_names]  
+      
+      all_cells<-c(control_cells, sample_cells)
+      
+      de_obj<-subset(obj, cells=all_cells)
+      de_obj$Group<-c(rep("control", length(control_cells)), rep("sample", length(sample_cells)))
+      de_obj$DisplayGroup<-c(rep(controlGroup, length(control_cells)), rep(sampleGroup, length(sample_cells)))
+      
+      designdata<-data.frame("Group"=de_obj$Group, "Cell"=colnames(de_obj), "Sample"=de_obj$orig.ident, "DisplayGroup"=de_obj$DisplayGroup)
+      designfile<-paste0(prefix, ".design")
+      write.csv(designdata, file=designfile, row.names=F, quote=F)
+      
+      curdf<-data.frame(prefix=prefix, cellType=ct, comparison=comp, sampleInGroup=0, design=designfile, stringsAsFactors = F)
+      if (is.null(designMatrix)){
+        designMatrix = curdf
+      }else{
+        designMatrix = rbind(designMatrix, curdf)
+      }
     }
+  }
+}
+
+result<-NULL
+idx<-1
+for(idx in c(1:nrow(designMatrix))){
+  prefix=designMatrix[idx, "prefix"]
+  designfile=designMatrix[idx, "design"]
+  cellType=designMatrix[idx, "cellType"]
+  comp=designMatrix[idx, "comparison"]
+  sampleInGroup=designMatrix[idx, "sampleInGroup"]
+  genes=designMatrix[idx, "genes"]
+  if(is.null(genes)){
+    genes=""
+  }
+  
+  designdata<-read.csv(designfile, stringsAsFactors = F)
+  groups<-designdata$Group
+  
+  de_obj<-subset(obj, cells=designdata$Cell)
+  cells<-as.matrix(de_obj[["RNA"]]@counts)
     
-    gseaFile<-paste0(prefix, "_GSEA.rnk")
-    rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * out$table$F)
-    write.table(rankout, file=gseaFile, row.names=F, col.names=F, sep="\t", quote=F)
-    
-    #cat("  heatmap", "\n")
-    #y <- cpm(dge, log=TRUE)
-    #conditionColors<-as.matrix(data.frame(Group=c("red", "blue")[group]))
-    #gnames<-c(control_name, sample_name)
-    #drawHCA(prefix, y, FALSE, NULL, conditionColors, gnames, "png", usePearsonInHCA=TRUE)
-    
-    curDF<-data.frame("celltype"=ct, "comparison"=comp, "sigFile"=sigFile, "sigGenenameFile"=sigGenenameFile, "gseaFile"=gseaFile)
-    if(is.null(result)){
-      result<-curDF
-    }else{
-      result<-rbind(result, curDF)
-    }
+  #filter genes with zero count
+  cells<-cells[rowSums(cells)>0,]
+  
+  #filter genes by tpm
+  tpm = sweep(cells, 2, colSums(cells)/1e6, "/")
+  min_sample<-filter_cellPercentage * ncol(cells)
+  keep_rows <- rowSums(tpm > filter_minTPM) >= min_sample
+  rm(tpm)
+  
+  if(genes != ""){
+    gene_list=unlist(strsplit(genes, ','))
+    keep2<-rownames(cells) %in% gene_list
+    keep_rows = keep_rows | keep2
+  }
+  
+  cells<-cells[keep_rows,]
+  cdr <- scale(colMeans(cells > 0))
+  
+  if(sampleInGroup){
+    samples<-designdata$Sample
+    design <- model.matrix(~ cdr + samples + groups)
+  }else{
+    design <- model.matrix(~ cdr + groups)
+  }
+  
+  rownames(design)<-colnames(cells)
+  write.csv(design, file=paste0(prefix, ".design_matrix.csv"), quote=F)
+  
+  cat(prefix, "\n")
+  
+  dge<-DGEList(cells, group=groups)
+  cat("  calcNormFactors", "\n")
+  dge<-calcNormFactors(dge)
+
+  cat("  estimateDisp", "\n")
+  dge<-estimateDisp(dge,design=design)
+  
+  if(genes != ""){
+    dge<-dge[rownames(dge) %in% gene_list,]
+  }
+  
+  cat("  glmQLFit", "\n")
+  fitqlf<-glmQLFit(dge,design=design,robust=TRUE)
+  qlf<-glmQLFTest(fitqlf)
+  out<-topTags(qlf, n=Inf)
+  dge_filename <-paste0(prefix, ".csv")
+  write.csv(out$table, file=dge_filename, quote=F)
+
+  if(useRawPvalue){
+    sigout<-out$table[(out$table$PValue<=pvalue) & (abs(out$table$logFC)>=log2(foldChange)),]
+  }else{
+    sigout<-out$table[(out$table$FDR<=pvalue) & (abs(out$table$logFC)>=log2(foldChange)),]
+  }
+  sigFile<-paste0(prefix, ".sig.csv")
+  write.csv(sigout, file=sigFile, quote=F)
+  
+  siggenes<-data.frame(gene=rownames(sigout), stringsAsFactors = F)
+  sigGenenameFile<-paste0(prefix, ".sig_genename.txt")
+  write.table(siggenes, file=sigGenenameFile, row.names=F, col.names=F, sep="\t", quote=F)
+  
+  gseaFile<-paste0(prefix, "_GSEA.rnk")
+  rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * out$table$F)
+  write.table(rankout, file=gseaFile, row.names=F, col.names=F, sep="\t", quote=F)
+  
+  curDF<-data.frame("prefix"=prefix, "cellType"=cellType, "comparison"=comp, "betweenCluster"=bBetweenCluster, "sampleInGroup"=sampleInGroup, "deFile"=dge_filename, "sigFile"=sigFile, "sigGenenameFile"=sigGenenameFile, "gseaFile"=gseaFile, "designFile"=designfile)
+  if(is.null(result)){
+    result<-curDF
+  }else{
+    result<-rbind(result, curDF)
   }
 }
 
