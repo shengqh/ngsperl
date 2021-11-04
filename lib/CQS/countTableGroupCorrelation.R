@@ -1,3 +1,5 @@
+
+source("countTableVisFunctions.R")
 options(bitmapType='cairo')
 
 library(heatmap3)
@@ -6,13 +8,18 @@ library(RColorBrewer)
 library(colorRamps)
 library(genefilter)
 
+if(exists("parSampleFile4")){
+  myoptions_tbl<-read.table(parSampleFile4, sep="\t", stringsAsFactors = F)
+  myoptions<-split(myoptions_tbl$V1, myoptions_tbl$V2)
+
+  draw_all_groups_in_HCA<-myoptions$draw_all_groups_in_HCA == '1'
+}else{
+  draw_all_groups_in_HCA<-0
+}
+
 countTableFileList<-parSampleFile1
 groupFileList<-parSampleFile2
-if (exists("parSampleFile3")) {
-  colorFileList<-parSampleFile3
-} else {
-    colorFileList<-""
-}
+colorFileList<-parSampleFile3
 
 fixColorRange<-TRUE
 
@@ -46,7 +53,7 @@ if(!exists("hasRowNames")){
 if(exists("useGreenRedColorInHCA") && useGreenRedColorInHCA){
   hmcols <- colorRampPalette(c("green", "black", "red"))(256)
 }else{
-  hmcols <- colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(100)
+  hmcols <- colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(256)
 }
 
 if(exists("usePearsonInHCA") && usePearsonInHCA){
@@ -268,8 +275,37 @@ for (i in 1:nrow(countTableFileAll)) {
   }else{
     sampleToGroup<-data.frame("V1"=colnames(countNum), "V2"="all", "V3"="all")
   }
-  
+
   titles<-unique(sampleToGroup$V3)
+  if(draw_all_groups_in_HCA){
+    allSamples<-unique(sampleToGroup$V1)
+    conditionColors<-data.frame(Sample=allSamples)
+    rownames(conditionColors)=allSamples
+
+    title<-titles[1]
+    for(title in titles){
+      validSampleToGroup<-sampleToGroup[sampleToGroup$V3 == title,,drop=F]
+      validSampleToGroup$V2<-factor(validSampleToGroup$V2, levels=sort(unique(validSampleToGroup$V2)))
+      rownames(validSampleToGroup)<-validSampleToGroup$V1
+      validSampleToGroup<-validSampleToGroup[allSamples,]
+      
+      if(title == "all"){
+        title="Group"
+      }
+      
+      groups<-validSampleToGroup$V2
+      if (is.na(groupColors)){
+        colors<-makeColors(length(unique(groups)))
+      }else{
+        colors<-groupColors
+      }
+      curColors<-data.frame(Group=colors[groups])
+      conditionColors[,title]<-curColors
+    }
+    conditionColors<-conditionColors[,c(2:ncol(conditionColors)),drop=F]
+    conditionColors<-as.matrix(conditionColors)
+  }
+
   title<-titles[1]
   for(title in titles){
     print(paste0("Processing ", title, " samples"))
@@ -332,12 +368,18 @@ for (i in 1:nrow(countTableFileAll)) {
     hasMultipleGroup<-length(unique(validSampleToGroup$V2)) > 1
     if (hasMultipleGroup) {
       groups<-validSampleToGroup$V2
-      if (is.na(groupColors)){
-        colors<-makeColors(length(unique(groups)))
+      if(!draw_all_groups_in_HCA){
+        if (is.na(groupColors)){
+          colors<-makeColors(length(unique(groups)))
+        }else{
+          colors<-groupColors
+        }
+        conditionColors<-as.matrix(data.frame(Group=colors[groups]))
       }else{
-        colors<-groupColors
+        gname = ifelse(title == "all", "Group", title)
+        cnames=c(gname, colnames(conditionColors)[colnames(conditionColors) != gname])
+        conditionColors<-conditionColors[,cnames,drop=F]
       }
-      conditionColors<-as.matrix(data.frame(Group=colors[groups]))
     }else{
       groups<-NA
       colors<-NA
