@@ -1,14 +1,3 @@
-rm(list=ls()) 
-outFile='scRNA_6383'
-parSampleFile1='fileList1.txt'
-parSampleFile2=''
-parSampleFile3=''
-parFile1='C:/projects/scratch/cqs/shengq2/annet_kirabo_projects/20210809_6383_scRNA_human/seurat_rawdata/result/scRNA_6383.rawobj.rds'
-parFile2=''
-parFile3=''
-
-
-setwd('C:/projects/scratch/cqs/shengq2/annet_kirabo_projects/20210809_6383_scRNA_human/seurat_harmony/result')
 
 source("scRNA_func.r")
 
