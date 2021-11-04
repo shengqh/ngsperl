@@ -236,10 +236,6 @@ sub getPreprocessionConfig {
     $def->{groups} = get_groups_by_pattern($def);
   }
 
-  if (defined $def->{covariance_patterns}){
-    $def->{covariance_file} = create_covariance_file_by_pattern($def);
-  }
-
   if(defined $def->{ignore_samples}){
     my $ignore_samples = $def->{ignore_samples};
 
@@ -266,6 +262,24 @@ sub getPreprocessionConfig {
       }
       $def->{groups} = $groups;
     }
+  }
+
+  if(defined $def->{groups}){
+    if(not defined $def->{correlation_groups}){
+      if(defined $def->{correlation_groups_dic}){
+        my $correlationGroups = get_pair_group_sample_map( $def->{correlation_groups_dic}, $def->{groups} );
+        if ( getValue( $def, "correlation_all", 1 ) and (not defined $correlationGroups->{all}) ) {
+          $correlationGroups->{all} = $def->{groups};
+        }
+        $def->{correlation_groups} = $correlationGroups;
+      }else{
+        $def->{correlation_groups} = get_correlation_groups_by_pattern($def);
+      }
+    }
+  }
+
+  if (defined $def->{covariance_patterns}){
+    $def->{covariance_file} = create_covariance_file_by_pattern($def);
   }
 
   if (defined $def->{files}) {
