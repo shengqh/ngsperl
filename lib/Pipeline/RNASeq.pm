@@ -172,6 +172,9 @@ sub getRNASeqConfig {
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
+  #print(Dumper($def->{groups}));
+  #print(Dumper($def->{correlation_groups}));
+
   my $target_dir      = $def->{target_dir};
   my $groups_ref      = defined $def->{groups} ? "groups" : undef;
   my $aligner         = $def->{aligner};
@@ -379,6 +382,9 @@ sub getRNASeqConfig {
       perform         => 1,
       rCode           => $rCode,
       target_dir      => $cor_dir,
+      parameterSampleFile4 => {
+        "draw_all_groups_in_HCA" => getValue($def, "draw_all_groups_in_HCA", 0)
+      },
       rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
       output_file     => "parameterSampleFile1",
       output_file_ext => ".Correlation.png;.density.png;.heatmap.png;.PCA.png;.Correlation.Cluster.png",
@@ -399,36 +405,29 @@ sub getRNASeqConfig {
 
     if ( defined $def->{groups} ) {
       $config->{genetable_correlation}{parameterSampleFile2} = { all => $def->{groups} };
+    }
 
-      if ( defined $def->{correlation_groups} ) {
-        my $correlationGroups = get_pair_group_sample_map( $def->{correlation_groups}, $def->{groups} );
-        if ( getValue( $def, "correlation_all", 1 ) and (not defined $correlationGroups->{all}) ) {
-          $correlationGroups->{all} = $def->{groups};
-        }
-        #print("correlationGroups=");
-        #print(Dumper($correlationGroups));
-        #stop("here");
-        $config->{genetable_correlation}{parameterSampleFile2} = $correlationGroups;
-      }
+    if ( defined $def->{correlation_groups} ) {
+      $config->{genetable_correlation}{parameterSampleFile2} = $def->{correlation_groups};
+    }
 
-      if ( defined $def->{groups_colors} ) {
-        $config->{genetable_correlation}{parameterSampleFile3} = $def->{groups_colors};
-      }
+    if ( defined $def->{groups_colors} ) {
+      $config->{genetable_correlation}{parameterSampleFile3} = $def->{groups_colors};
+    }
 
-      if ( defined $def->{correlation_groups_colors} ) {
-        $config->{genetable_correlation}{parameterSampleFile3} = $def->{correlation_groups_colors};
-      }
+    if ( defined $def->{correlation_groups_colors} ) {
+      $config->{genetable_correlation}{parameterSampleFile3} = $def->{correlation_groups_colors};
+    }
 
-      if ( defined $config->{genetable_correlation}{parameterSampleFile3} ) {
-        my $colorGroups = $config->{genetable_correlation}{parameterSampleFile3};
-        my $corGroups   = $config->{genetable_correlation}{parameterSampleFile2};
-        for my $title ( keys %$corGroups ) {
-          my $titleGroups = $corGroups->{$title};
-          for my $subGroup ( keys %$titleGroups ) {
-            if ( !defined $colorGroups->{$subGroup} ) {
-              my %cgroups = %$colorGroups;
-              die "Color of group '$subGroup' was not define in " . Dumper($colorGroups);
-            }
+    if ( defined $config->{genetable_correlation}{parameterSampleFile3} ) {
+      my $colorGroups = $config->{genetable_correlation}{parameterSampleFile3};
+      my $corGroups   = $config->{genetable_correlation}{parameterSampleFile2};
+      for my $title ( keys %$corGroups ) {
+        my $titleGroups = $corGroups->{$title};
+        for my $subGroup ( keys %$titleGroups ) {
+          if ( !defined $colorGroups->{$subGroup} ) {
+            my %cgroups = %$colorGroups;
+            die "Color of group '$subGroup' was not define in " . Dumper($colorGroups);
           }
         }
       }
