@@ -100,7 +100,7 @@ if(isLargeDataset){
 
 has_hto = file.exists("fileList4.txt")
 
-hasBiomarker<-file.exists(files$celltype_max_markers_csv)
+hasBiomarker<-file.exists(files$celltype_markers_csv)
 annotate_tcell<-ifelse(myoptions$annotate_tcell=='0', FALSE, TRUE)
 ```
 
@@ -170,7 +170,7 @@ include_graphics(files$seurat_merge_png)
 ```
 
 ```{r markers, results="asis", eval=hasBiomarker}
-max_markers<-read.csv(files$celltype_max_markers_csv)
+max_markers<-read.csv(files$celltype_markers_csv)
 max_markers<-max_markers[order(max_markers$cluster),]
 
 top5 <- max_markers %>% group_by(cluster) %>% top_n(n = 5, wt = .data[["avg_log2FC"]])
