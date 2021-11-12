@@ -1147,7 +1147,7 @@ sub getSmallRNAConfig {
           pbs       => {
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
-            "mem"       => "10gb"
+            "mem"       => getValue($def, "bowtie1_genome_unmapped_reads_mem", "10gb")
           },
         },
         bowtie1_genome_host_reads_table => {
