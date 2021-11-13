@@ -111,7 +111,12 @@ if (length(diffGeneTableInd)>0) {
       cnames<-c("AveExpr", "logFC", "t", "P.Value", "adj.P.Val")
       cnames=c(intersect(c("GeneSymbol","entry_name"),colnames(deseq2)),cnames)
       deseq2table<-deseq2[c(1:maxrow), cnames]
-      print(kable(deseq2table, row.names=0, caption= tabRef(comparisonName, paste0(comparisonName, " top ", maxrow, " differential expressed genes")))%>% 
+      if (any(grepl("[A-Za-z]",row.names(deseq2table)))) {
+        keepRowNames=1
+      } else {
+        keepRowNames=0
+      }
+      print(kable(deseq2table, row.names=keepRowNames, caption= tabRef(comparisonName, paste0(comparisonName, " top ", maxrow, " differential expressed genes")))%>% 
           kable_styling() %>%
           row_spec(which(deseq2table$logFC > 0), color = "black", background = "bisque") %>% 
           row_spec(which(deseq2table$logFC < 0), color = "black", background = "honeydew") %>%
