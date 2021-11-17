@@ -122,6 +122,8 @@ sub getSmallRNAConfig {
   if ($perform_class_independent_analysis) {
     push @table_for_correlation, ( "identical_sequence_count_table", $notReadCountPattern );
   }
+
+  my @table_for_permanova = ();
   my @table_for_countSum     = ();
   my @table_for_pieSummary   = ();
   my @name_for_pieSummary    = ();
@@ -1918,6 +1920,32 @@ sub getSmallRNAConfig {
   }
 
   push @$summary_ref, ("count_table_correlation");
+
+  if($def->{perform_permanova}){
+    $config->{count_table_permanova} = {
+      class                     => "CQS::UniqueR",
+      perform                   => 1,
+      target_dir                => $data_visualization_dir . "/count_table_permanova",
+      rtemplate                 => "../SmallRNA/permanova.r",
+      output_file               => "",
+      output_file_ext           => ".permanova.txt",
+      output_file_task_ext      => ".betadisper.txt;.PCoA.pdf",
+      parameterSampleFile1_ref  => \@table_for_correlation,
+      parameterSampleFile2      => $config->{count_table_correlation}{parameterSampleFile2},
+      parameterSampleFile2Order => $def->{groups_order},
+      parameterSampleFile3_ref  => [ $deseq2Task, ".design\$"],
+      parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
+      rCode                     => "",
+      sh_direct                 => 1,
+      pbs                       => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    };
+
+    push @$summary_ref, ("count_table_permanova");
+  }
 
   my $paramFile = undef;
   if(defined $config->{nonhost_genome_count}){
