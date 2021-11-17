@@ -9,22 +9,30 @@ library(scales)
 # Functions
 ########################################################
 
-makeDesignTable <- function(rawDataTable, factorTable,factorInDesign=NULL,addIntercept=1) {
-  if (is.null(factorInDesign)) {
-    factorInDesign=as.character(unique(factorTable[, 2]))
-  }
-  designTable <- matrix(0, nrow = ncol(rawDataTable), ncol = length(factorInDesign))
-  row.names(designTable) <- colnames(rawDataTable)
-  colnames(designTable) <- factorInDesign
-  
-  designTable[as.matrix(factorTable)] <- 1
-  if (addIntercept) {
-    designTable <- cbind(Intercept = 1, designTable)
+makeDesignTable <- function(rawDataTable, factorTable,factorInDesign=NULL,addIntercept=1,designTableOverall=NULL) {
+  if (!is.null(designTableOverall)) {
+    if (is.null(factorInDesign)) {
+      factorInDesign=colnames(designTableOverall)
+    }
+    temp=designTableOverall[colnames(rawDataTable),factorInDesign]
+    designFormula=as.formula(paste0("~0+",paste(factorInDesign,collapse="+"),collapse=""))
+    designTable=model.matrix(designFormula, temp)
+  } else {
+    if (is.null(factorInDesign)) {
+      factorInDesign=as.character(unique(factorTable[, 2]))
+    }
+    designTable <- matrix(0, nrow = ncol(rawDataTable), ncol = length(factorInDesign))
+    row.names(designTable) <- colnames(rawDataTable)
+    colnames(designTable) <- factorInDesign
+    
+    designTable[as.matrix(factorTable)] <- 1
+    if (addIntercept) {
+      designTable <- cbind(Intercept = 1, designTable)
+    }
   }
   designTable=designTable[which(rowSums(designTable)>0),]
   return(designTable)
 }
-
 
 
 performLimma <- function(rawDataTable, designTable, contrastsText = NULL) {
@@ -225,9 +233,9 @@ saveFigure=function(file,type="png",width=2000,height=2000,res=300) {
 # Parameters
 ########################################################
 
-performNormlization = TRUE
+performNormlization = ifelse(exists("performNormlization"),performNormlization,TRUE)
 pvalue=0.05
-useRawPvalue=1
+useRawPvalue = ifelse(exists("useRawPvalue"),useRawPvalue,1)
 foldChange=0
 notNaPropotion=0.5
 
@@ -255,7 +263,20 @@ if (length(countNotNumIndex) == 0) {
 }
 
 
-factorTable=read.delim(parSampleFile1,header=F,as.is=T)
+if (file.exists(parSampleFile1)) {
+  factorTable=read.delim(parSampleFile1,header=F,as.is=T)
+  designTableOverall=NULL
+} else if (file.exists(parFile2)) {
+  factorTable=NULL
+  if (grepl(".csv$",parFile2)) {
+    designTableOverall=read.csv(parFile2,header=TRUE,as.is=T,row.names=1)
+  } else {
+    designTableOverall=read.delim(parFile2,header=TRUE,as.is=T,row.names=1)
+  }
+  for (i in 1:ncol(designTableOverall)) {
+    designTableOverall[,i]=make.names(designTableOverall[,i])
+  }
+}
 factorInComparisons=read.delim(parSampleFile2,header=F,as.is=T)
 
 ################################################
@@ -300,15 +321,27 @@ if (performNormlization) {
 ##################################
 library(ComplexHeatmap)
 
-designTableForHeatmap <- makeDesignTable(rawDataTable, factorTable)
-designTableForHeatmap <- as.data.frame(designTableForHeatmap[,-1,drop=FALSE])
+factorLevelsN=apply(designTableOverall,2,function(x) length(unique(x)))
+factorInDesign=names(factorLevelsN)[factorLevelsN<=10] #removing sample factors in paired test. NOT visulize them because of too many leveles
+if (is.null(designTableOverall)) {
+  designTableForHeatmap <- makeDesignTable(rawDataTable, factorTable=factorTable,factorInDesign=factorInDesign,designTableOverall=designTableOverall)
+} else {
+  designTableForHeatmap=designTableOverall[,factorInDesign]
+}
+if (all(designTableForHeatmap[,1]==1)) { #remove intercept if exists
+  designTableForHeatmap=designTableForHeatmap[,-1,drop=FALSE]
+}
+
+designTableForHeatmap <- as.data.frame(designTableForHeatmap)
 for (i in 1:ncol(designTableForHeatmap)) {
   designTableForHeatmap[[i]] <- as.character(designTableForHeatmap[[i]])
 }
 ha <- HeatmapAnnotation(df = designTableForHeatmap)
 naCount=apply(rawDataTable,1,function(x) length(which(is.na(x))))
 rawDataTableForHeatmap=rawDataTable[which(naCount/ncol(rawDataTable)<=1-notNaPropotion),]
-ht <- Heatmap(as.matrix(rawDataTableForHeatmap), cluster_rows = FALSE, top_annotation = ha, row_names_gp = gpar(fontsize = 6))
+#ht <- Heatmap(as.matrix(rawDataTableForHeatmap), cluster_rows = FALSE, top_annotation = ha, row_names_gp = gpar(fontsize = 6))
+temp=t(scale(t(rawDataTableForHeatmap)))
+ht <- Heatmap(temp, cluster_rows = FALSE, top_annotation = ha, row_names_gp = gpar(fontsize = 6))
 
 saveFigure(paste0(outFile,".Heatmap.png"))
 print(ht)
@@ -318,11 +351,11 @@ dev.off()
 # save overall design table
 ##################################
 if (!exists("noFactorSampleAsIntercept") || noFactorSampleAsIntercept==1) { #use samples without factor define as Intercept in design
-  designTableOverall=makeDesignTable(rawDataTable, factorTable,addIntercept=1)
+  designMatrixOverall=makeDesignTable(rawDataTable, factorTable,addIntercept=1,designTableOverall=designTableOverall)
 } else {
-  designTableOverall=makeDesignTable(rawDataTable, factorTable,addIntercept=0)
-}
-write.csv(designTableOverall,paste0(outFile, ".OverallDesignTable.csv"))
+  designMatrixOverall=makeDesignTable(rawDataTable, factorTable,addIntercept=0,designTableOverall=designTableOverall)
+} 
+write.csv(designMatrixOverall,paste0(outFile, ".OverallDesignTable.csv"))
 
 
 ##################################
@@ -348,15 +381,19 @@ for (ComparisonOne in unique(factorInComparisons[,3])) {
   prefix=paste0(ComparisonOne)
   
   factorInDesign=unique(factorInComparisons[which(factorInComparisons[,3]==ComparisonOne & factorInComparisons[,2]!="contrast"),1])
-  if (!exists("noFactorSampleAsIntercept") || noFactorSampleAsIntercept==1) { #use samples without factor define as Intercept in design
+  if (!is.null(factorTable)) {
+    if (!exists("noFactorSampleAsIntercept") || noFactorSampleAsIntercept==1) { #use samples without factor define as Intercept in design
+      rawDataTableForDiffDetectionOne=rawDataTableForDiffDetection
+      designMatrix <- makeDesignTable(rawDataTableForDiffDetectionOne, factorTable,factorInDesign=factorInDesign)
+    } else { #remove samples without factor define
+      rawDataTableForDiffDetectionOne=rawDataTableForDiffDetection[,unique(factorTable[which(factorTable[,2] %in% factorInDesign),1])]
+      designMatrix <- makeDesignTable(rawDataTableForDiffDetectionOne, factorTable,factorInDesign=factorInDesign,addIntercept=0)
+    }
+  } else { #Not using factorTable, using designTableOverall
     rawDataTableForDiffDetectionOne=rawDataTableForDiffDetection
-    designTable <- makeDesignTable(rawDataTableForDiffDetectionOne, factorTable,factorInDesign=factorInDesign)
-  } else { #remove samples without factor define
-    rawDataTableForDiffDetectionOne=rawDataTableForDiffDetection[,unique(factorTable[which(factorTable[,2] %in% factorInDesign),1])]
-    designTable <- makeDesignTable(rawDataTableForDiffDetectionOne, factorTable,factorInDesign=factorInDesign,addIntercept=0)
+    designMatrix <- makeDesignTable(rawDataTableForDiffDetectionOne, factorTable,factorInDesign=factorInDesign,designTableOverall=designTableOverall)
   }
-  
-  
+
   if (any(factorInComparisons[,3]==ComparisonOne & factorInComparisons[,2]=="contrast")) {
     contrastsText=factorInComparisons[which(factorInComparisons[,3]==ComparisonOne & factorInComparisons[,2]=="contrast")[1],1]
   } else {
@@ -368,7 +405,7 @@ for (ComparisonOne in unique(factorInComparisons[,3])) {
   #record comprasions information in comprasionsTable
   comprasionsTable=rbind(comprasionsTable,c(ComparisonOne,paste(factorInDesign,collapse=";"),ifelse(is.null(contrastsText),factorInDesign[1],contrastsText)))
   
-  fit3 <- performLimma(rawDataTableForDiffDetectionOne, designTable,contrastsText=contrastsText)
+  fit3 <- performLimma(rawDataTableForDiffDetectionOne, designMatrix,contrastsText=contrastsText)
   DiffResults <- topTable(fit3, coef = 1,number=99999)
   
   ## Output differential genes table
@@ -453,7 +490,7 @@ if (useRawPvalue==1) {
 } else {
   p=ggplot(dataForPlot,aes(x=logFC,y=adj.P.Val,colour=Significant))+scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
 }
-p=p+geom_point()+facet_wrap(~Comparison,scales="free")+scale_color_manual(values=changeColours,guide = FALSE)
+p=p+geom_point()+facet_wrap(~Comparison,scales="free")+scale_color_manual(values=changeColours,guide = "none")
 saveFigure(paste0(outFile,".VolcanoPlot.png"))
 print(p)
 dev.off()
