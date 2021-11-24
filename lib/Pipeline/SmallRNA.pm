@@ -313,6 +313,8 @@ sub getSmallRNAConfig {
     $def->{pure_pairs} = get_pure_pairs( $pairs );
   }
 
+  my $perform_nonhost_tRNA_bacteria_reads = getValue( $def, "perform_nonhost_tRNA_bacteria_reads", 0 );
+
   my $DE_min_median_read_top      = getValue( $def, "DE_min_median_read_top" );
   my $DE_min_median_read_smallRNA = getValue( $def, "DE_min_median_read_smallRNA" );
 
@@ -1564,6 +1566,30 @@ sub getSmallRNAConfig {
       }
     );
 
+    my $tRNA_bacteria_reads_task = "nonhost_tRNA_bacteria_reads";
+    if ( $perform_nonhost_tRNA_bacteria_reads ) {
+      my $folder            = $nonhost_library_dir . "/" . $tRNA_bacteria_reads_task;
+      $config->{$tRNA_bacteria_reads_task} = {
+        class              => "CQS::ProgramWrapper",
+        perform            => 1,
+        target_dir         => $folder,
+        option             => "-c Bacteria",
+        interpretor        => "python3",
+        program            => "../SmallRNA/nonhostXmlCategoryRead.py",
+        parameterFile1_arg => "-i",
+        parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".category.count" ],
+        output_arg         => "-o",
+        output_ext         => ".tRNA.Bacteria.read.count",
+        sh_direct          => 1,
+        pbs                => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$summary_ref, $tRNA_bacteria_reads_task );
+    }
+
     if ( getValue( $def, "perform_nonhost_tRNA_coverage", 0 ) ) {
       my $positionTask      = "nonhost_library_tRNA_position";
       my $visualizationTask = $positionTask . "_vis_anticodon";
@@ -1677,8 +1703,11 @@ sub getSmallRNAConfig {
 
     push @table_for_correlation, ( "bowtie1_tRNA_pm_table", $notReadCountPattern, "bowtie1_rRNA_pm_table", $notReadCountPattern );
     if ( $def->{read_correlation} ) {
-      push @table_for_correlation, ( "bowtie1_tRNA_pm_table", ".read.count\$", );
-      push @table_for_correlation, ( "bowtie1_rRNA_pm_table", ".read.count\$", );
+      push @table_for_correlation, ( "bowtie1_tRNA_pm_table", ".read.count\$" );
+      push @table_for_correlation, ( "bowtie1_rRNA_pm_table", ".read.count\$" );
+      if($perform_nonhost_tRNA_bacteria_reads){
+        push @table_for_correlation, ( $tRNA_bacteria_reads_task, ".read.count\$" );
+      }
     }
     push @table_for_countSum,    ( "bowtie1_tRNA_pm_table", ".category.count\$", "bowtie1_rRNA_pm_table", "$task_name\.count\$" );
     push @table_for_readSummary, ( "bowtie1_tRNA_pm_table", ".read.count\$",     "bowtie1_rRNA_pm_table", ".read.count\$" );
@@ -1703,6 +1732,12 @@ sub getSmallRNAConfig {
         addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_reads", [ "bowtie1_tRNA_pm_table", ".read.count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_category", [ "bowtie1_tRNA_pm_table", ".category.count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile,
         $libraryKey );
+
+      if($perform_nonhost_tRNA_bacteria_reads){
+        addDEseq2( $config, $def, $summary_ref, $tRNA_bacteria_reads_task, [ $tRNA_bacteria_reads_task, ".read.count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile,
+          $libraryKey );
+      }
+
 
       addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_tRNA", [ "nonhost_tRNA", "nonhost_tRNA_species", "nonhost_tRNA_type", "nonhost_tRNA_anticodon", "nonhost_tRNA_reads" ],
         $data_visualization_dir, "pairs_nonHostLibrary_deseq2_vis_layout", $libraryKey );
