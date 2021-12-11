@@ -86,11 +86,14 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_vep",          0 );
   initDefaultValue( $def, "perform_IBS",          0 );
 
+  if ( defined $def->{mills} ) {
+    initDefaultValue( $def, "indel_vcf_files",   $def->{mills} );
+  }
+
   if ( $def->{perform_muTect} || $def->{perform_muTect2indel} || $def->{perform_muTect2} ) {
     initDefaultValue( $def, "perform_CrosscheckFingerprints", defined $def->{hapmap_file} );
     if ( defined $def->{mills} ) {
       initDefaultValue( $def, "indel_realignment", 1 );
-      initDefaultValue( $def, "indel_vcf_files",   $def->{mills} );
     }
     else {
       initDefaultValue( $def, "indel_realignment", 0 );
@@ -538,7 +541,7 @@ sub getConfig {
     my $perform_cnv = $def->{perform_cnv_cnMOPs} || $def->{perform_cnv_gatk4_cohort} || $def->{perform_cnv_xhmm};
 
     my $indel_vcf_files;
-    if ( $def->{indel_realignment} ) {
+    if ( $def->{indel_realignment} or $def->{perform_gatk4_refine}) {
       if ( !defined $def->{indel_vcf_files} & defined $dbsnp ) {
         $indel_vcf_files = $dbsnp;
       }
@@ -1917,34 +1920,63 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
     push @$summary, $cnmopsName;
   }
 
-  my $cnvAnnotationGenesPlot = undef;
+  my $cnvMap = undef;
   if ( $def->{perform_cnv_gatk4_cohort} ) {
-    $cnvAnnotationGenesPlot = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, $tumor_bam, $bam_input, $individual, $summary, $step3, $step4, $step5, $step6 );
-  }
+    $cnvMap = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, $tumor_bam, $bam_input, $individual, $summary, $step3, $step4, $step5, $step6 );
+    if(defined $annovar_filter_geneannotation_name ) {
+      my $combineTask = $cnvMap->{CombineGCNV};
+      my $snvTop10cnvOncoPlotTask = "${bam_input}_SNV_top10_CNV_Oncoplot";
+      $cnvMap->{snvTop10cnvOncoPlot} = $snvTop10cnvOncoPlotTask;
+      $config->{$snvTop10cnvOncoPlotTask} = {
+        class                      => "CQS::UniqueR",
+        perform                    => 1,
+        target_dir                 => $target_dir . '/' . $snvTop10cnvOncoPlotTask,
+        rtemplate                  => "../Visualization/SNV_CNV_OncoPrint.r",
+        parameterSampleFile1_ref   => [ $annovar_filter_geneannotation_name, ".oncoprint.top10.tsv\$" ],
+        parameterFile1_ref         => [ $combineTask ],
+        parameterSampleFile2       => $def->{onco_options},
+        parameterSampleFile3       => $def->{onco_sample_groups},
+        output_to_result_directory => 1,
+        output_file                => "parameterSampleFile1",
+        output_file_ext            => ".snv_cnv.txt.png",
+        output_other_ext           => ".snv_cnv.txt",
+        sh_direct                  => 1,
+        'pbs'                      => {
+          'nodes'    => '1:ppn=1',
+          'mem'      => '40gb',
+          'walltime' => '10'
+        },
+      };
+      push @$step6, $snvTop10cnvOncoPlotTask;
 
-  if ( ( defined $annovar_filter_geneannotation_name ) and ( defined $cnvAnnotationGenesPlot ) ) {
-    my $oncoPlotTask = "${bam_input}_SNV_CNV_Oncoplot";
-    $config->{$oncoPlotTask} = {
-      class                      => "CQS::UniqueR",
-      perform                    => 1,
-      target_dir                 => $target_dir . '/' . $oncoPlotTask,
-      rtemplate                  => "../Visualization/SNV_CNV_OncoPrint.r",
-      parameterSampleFile1_ref   => [ $annovar_filter_geneannotation_name, ".oncoprint.tsv\$" ],
-      parameterFile1_ref         => [ $cnvAnnotationGenesPlot, ".position.txt.slim" ],
-      parameterSampleFile2       => $def->{onco_options},
-      parameterSampleFile3       => $def->{onco_sample_groups},
-      output_to_result_directory => 1,
-      output_file                => "parameterSampleFile1",
-      output_file_ext            => ".snv_cnv.txt.png",
-      output_other_ext           => ".snv_cnv.txt",
-      sh_direct                  => 1,
-      'pbs'                      => {
-        'nodes'    => '1:ppn=1',
-        'mem'      => '40gb',
-        'walltime' => '10'
-      },
-    };
-    push @$step6, $oncoPlotTask;
+      if(defined $cnvMap->{annotationGenesPlot}){
+        my $cnvAnnotationGenesPlot =  $cnvMap->{annotationGenesPlot};
+        my $snvcnvAnnotationGenesOncoPlot = "${bam_input}_SNV_CNV_AnnotationGenes_Oncoplot";
+        $cnvMap->{snvcnvAnnotationGenesOncoPlot} = $snvcnvAnnotationGenesOncoPlot;
+        $config->{$snvcnvAnnotationGenesOncoPlot} = {
+          class                      => "CQS::UniqueR",
+          perform                    => 1,
+          target_dir                 => $target_dir . '/' . $snvcnvAnnotationGenesOncoPlot,
+          rtemplate                  => "../Visualization/SNV_CNV_OncoPrint.r",
+          parameterSampleFile1_ref   => [ $annovar_filter_geneannotation_name, ".oncoprint.tsv\$" ],
+          parameterFile1_ref         => [ $cnvAnnotationGenesPlot, ".position.txt.slim" ],
+          parameterFile2_ref         => [ $combineTask ],
+          parameterSampleFile2       => $def->{onco_options},
+          parameterSampleFile3       => $def->{onco_sample_groups},
+          output_to_result_directory => 1,
+          output_file                => "parameterSampleFile1",
+          output_file_ext            => ".snv_cnv.txt.png",
+          output_other_ext           => ".snv_cnv.txt",
+          sh_direct                  => 1,
+          'pbs'                      => {
+            'nodes'    => '1:ppn=1',
+            'mem'      => '40gb',
+            'walltime' => '10'
+          },
+        };
+        push @$step6, $snvcnvAnnotationGenesOncoPlot;
+      }
+    }
   }
 
   if ( $def->{perform_cnv_xhmm} ) {
@@ -1954,6 +1986,75 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
   #qc
   if ( getValue( $def, "perform_multiqc" ) ) {
     addMultiQC( $config, $def, $summary, $target_dir, $target_dir );
+  }
+
+  if ( getValue( $def, "perform_report" ) ) {
+    my @report_files = ();
+    my @report_names = ();
+    my @copy_files   = ();
+    my $options = {
+      covered_bed => $def->{covered_bed}
+    };
+
+    my $version_files = get_version_files($config);
+
+    if ( defined $config->{fastqc_raw_summary} ) {
+      push( @report_files, "fastqc_raw_summary",                   ".FastQC.baseQuality.tsv.png" );
+      push( @report_files, "fastqc_raw_summary",                   ".FastQC.sequenceGC.tsv.png" );
+      push( @report_files, "fastqc_raw_summary",                   ".FastQC.adapter.tsv.png" );
+      push( @report_names, "fastqc_raw_per_base_sequence_quality", "fastqc_raw_per_sequence_gc_content", "fastqc_raw_adapter_content" );
+    }
+
+    if ( defined $config->{fastqc_post_trim_summary} ) {
+      push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.baseQuality.tsv.png" );
+      push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.sequenceGC.tsv.png" );
+      push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.adapter.tsv.png" );
+      push( @report_names, "fastqc_post_trim_per_base_sequence_quality", "fastqc_post_trim_per_sequence_gc_content", "fastqc_post_trim_adapter_content" );
+    }
+
+    if ( defined $config->{bwa_summary} ) {
+      push( @report_files, "bwa_summary", ".BWASummary.csv" );
+      push( @report_files, "bwa_summary", ".reads.png" );
+      push( @report_files, "bwa_summary", ".chromosome.png" );
+      push( @report_names, "bwa_reads_csv", "bwa_reads_png", "bwa_chromosome_png" );
+    }
+
+    if ( defined $config->{bwa_g4_refine_summary} ) {
+      push( @report_files, "bwa_g4_refine_summary", ".chromosome.png" );
+      push( @report_names, "bwa_g4_refine_chromosome_png" );
+    }
+
+    if( defined $annovar_filter_geneannotation_name){
+      push( @report_files, $annovar_filter_geneannotation_name, ".freq0.001.snv.missense.oncoprint.top10.tsv.png" );
+      push( @report_names, "snv_oncoprint_top10_png" );
+    }
+
+    if(defined $cnvMap){
+      push( @report_files, $cnvMap->{snvTop10cnvOncoPlot}, ".freq0.001.snv.missense.oncoprint.top10.tsv.snv_cnv.txt.png" );
+      push( @report_names, "snv_cnv_oncoprint_top10_png" );
+    } 
+
+    $config->{report} = {
+      class                      => "CQS::BuildReport",
+      perform                    => 1,
+      target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . "report",
+      report_rmd_file            => "../Pipeline/ExomeSeq.Rmd",
+      additional_rmd_files       => "../Pipeline/Pipeline.Rmd;Functions.Rmd",
+      parameterSampleFile1_ref   => \@report_files,
+      parameterSampleFile1_names => \@report_names,
+      parameterSampleFile2       => $options,
+      parameterSampleFile3_ref   => \@copy_files,
+      parameterSampleFile4       => $version_files,
+      parameterSampleFile5       => $def->{software_version},
+      parameterSampleFile6       => $def->{groups},
+      sh_direct                  => 1,
+      pbs                        => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    };
+    push( @$summary, "report" );
   }
 
   #pileup
