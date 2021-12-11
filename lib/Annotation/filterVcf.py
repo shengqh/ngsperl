@@ -49,8 +49,8 @@ parser.add_argument('--debug', action='store_true', help="Output debug informati
 
 args = parser.parse_args()
 if DEBUG:
-  args.input = "T:/Shared/Labs/Linton Lab/20180913_linton_exomeseq_2118_human_cutadapt/bwa_refine_hc_gvcf_hardfilter/result/linton_exomeseq_2118.pass.vcf"
-  args.output = "T:/Shared/Labs/Linton Lab/20180913_linton_exomeseq_2118_human_cutadapt/bwa_refine_hc_gvcf_hardfilter_vep/result/linton_exomeseq_2118.pass.filtered.vcf"
+  args.input = "/gpfs23/scratch/cqs/fanr1/202111_ICARE_BEST/DNA/20211207_DNAseq_Analysis/bwa_g4_refine_gatk4_SNV_02_vqsr/result/human_exomeseq.indels.snp.recal.pass.norm.nospan.vcf.gz"
+  args.output = "/scratch/cqs/shengq2/temp/human_exomeseq.maf_filtered.vcf.gz"
 
 
 percentage=float(args.percentage)
