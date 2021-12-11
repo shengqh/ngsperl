@@ -46,6 +46,20 @@ alter_fun = list(
 cnvFile = parFile1
 cnvdata<-read.delim(cnvFile, as.is=T, header=T, sep="\t", stringsAsFactors = F,check.names=F)
 
+bTop10=FALSE
+if('Gene' %in% colnames(cnvdata)){
+  geneind<-which(colnames(cnvdata)=="Gene")
+  gdata<-cnvdata[,geneind:ncol(cnvdata)]
+  library(reshape2)
+  mdata<-melt(gdata, id='Gene')
+  mdata<-mdata[mdata$value != '',]
+  mdata$value=gsub(",.+","",mdata$value)
+  colnames(mdata)<-c("Feature", "File", "CNV")
+  mdata$File=as.character(mdata$File)
+  cnvdata<-mdata
+  bTop10=TRUE
+}
+
 inputFileData<-read.delim(inputFiles, header=F, sep="\t", stringsAsFactors = F)
 
 inputFile<-inputFileData$V1[[1]]
@@ -53,11 +67,18 @@ for(inputFile in inputFileData$V1){
   oncoData<-read.delim(inputFile,as.is=T,header=TRUE,sep="\t", row.names=1, stringsAsFactors = F,check.names=F)
   oncoData[oncoData==" "]<-NA
   oncoData[oncoData==""]<-NA
+
+  if(bTop10){
+    curCNVdata=cnvdata[cnvdata$Feature %in% rownames(oncoData),,drop=F]
+  }else{
+    curCNVdata=cnvdata
+  }
   
-  for(idx in c(1:nrow(cnvdata))){
-    sample = cnvdata[idx, "File"]
-    gene = cnvdata[idx, "Feature"]
-    cnv = cnvdata[idx, "CNV"]
+  idx=1
+  for(idx in c(1:nrow(curCNVdata))){
+    sample = curCNVdata[idx, "File"]
+    gene = curCNVdata[idx, "Feature"]
+    cnv = curCNVdata[idx, "CNV"]
     oldvalue = oncoData[gene, sample]
     if(is.na(oldvalue)){
       oncoData[gene, sample] = paste0(cnv, ";")
@@ -91,7 +112,7 @@ for(inputFile in inputFileData$V1){
     }
     
     if(height == 0){
-      height=max(1000, nrow(curOncoData) * 70 + 300)
+      height=max(1000, nrow(curOncoData) * 70 + 500)
     }
     
     if (MANUAL_order){
