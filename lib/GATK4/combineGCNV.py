@@ -81,7 +81,7 @@ annovarInputFile = args.output + ".avinput"
 logger.info("outputing to " + combinedFile + " ...")
 with open(annovarInputFile, "w") as fav:
   with open(combinedFile, "w") as fout:
-    fout.write("#Chrom\tStart\tEnd\tName\tGene\t%s\n" % "\t".join(samples))
+    fout.write("#Chrom\tStart\tEnd\tName\tGene\tcytoBand\t%s\n" % "\t".join(samples))
     intervalCount = len(vcf1)
     for idx in range(0, intervalCount):
       chrom = vcf1[idx][0]
@@ -138,7 +138,7 @@ with open(annovarInputFile, "w") as fav:
       
       cnvs = [v for v in values if v != ""]
       if len(cnvs) < len(values) * args.percentage:
-        fout.write("%s\t%d\t%d\t%s\t\t%s\n" % (chrom, start, end, annotation, "\t".join(values)))
+        fout.write("%s\t%d\t%d\t%s\t\t\t%s\n" % (chrom, start, end, annotation, "\t".join(values)))
         fav.write("%s\t%d\t%d\t0\t0\n" % (chrom, start, end))
 
 if args.annovar_db == None:
@@ -148,7 +148,7 @@ if args.annovar_db == None:
 else:
   logger.info("performing annovar ...")
   annovarOutput = annovarInputFile + ".annovar"
-  subprocess.call(['table_annovar.pl', annovarInputFile, args.annovar_db, '-buildver', args.annovar_buildver, '-protocol', 'refGene','-operation', 'g', '--remove', '--outfile', annovarOutput])
+  subprocess.call(['table_annovar.pl', annovarInputFile, args.annovar_db, '-buildver', args.annovar_buildver, '-protocol', 'refGene,cytoBand','-operation', 'g,r', '--remove', '--outfile', annovarOutput])
 
   annovarOutputFile = annovarOutput + ".%s_multianno.txt" % args.annovar_buildver
   with open(args.output, "wt") as fout:
@@ -161,6 +161,7 @@ else:
           annoParts = lineAnno.split('\t')
           parts = line.split('\t')
           parts[4] = annoParts[6]
+          parts[5] = annoParts[10].rstrip()
           fout.write("\t".join(parts))
 
   os.remove(annovarOutputFile)
