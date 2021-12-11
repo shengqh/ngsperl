@@ -87,10 +87,16 @@ sub perform {
     for my $inputFile (@inputFiles) {
       my $filename = basename($inputFile);
       if ($oncoPrint) {
-        my $finalFile = change_extension( $filename, "${sampleNameSuffix}.oncoprint.tsv" );
-        print $pbs " 
+        if ($geneNames ne ""){
+          my $finalFile = change_extension( $filename, "${sampleNameSuffix}.oncoprint.tsv" );
+          print $pbs " 
 R --vanilla -f $onco_script --args $inputFile $finalFile $optionFileName $geneNames
-";
+";    
+        }
+        my $top10File = change_extension( $filename, "${sampleNameSuffix}.oncoprint.top10.tsv" );
+        print $pbs " 
+R --vanilla -f $onco_script --args $inputFile $top10File $optionFileName
+";    
       }
 
       if ($CBioPortal) {
@@ -144,6 +150,10 @@ sub result {
       if ($oncoPrint) {
         my $finalFile = change_extension( $filename, "${sampleNameSuffix}.oncoprint.tsv" );
         push( @result_files, "$result_dir/$finalFile" );
+        push( @result_files, "$result_dir/$finalFile.png" );
+        my $top10File = change_extension( $filename, "${sampleNameSuffix}.oncoprint.top10.tsv" );
+        push( @result_files, "$result_dir/$top10File" );
+        push( @result_files, "$result_dir/$top10File.png" );
       }
 
       if ($CBioPortal) {
