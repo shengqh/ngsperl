@@ -3,19 +3,21 @@ options(bitmapType='cairo')
 library(ComplexHeatmap)
 
 args = commandArgs(trailingOnly=TRUE)
-inputFile = args[1]
-outputFile = args[2]
-optionFile = args[3]
-genelist = args[4:length(args)]
 
-DEBUG = FALSE
-if (DEBUG) {
-  setwd(r'(C:\projects\scratch\weissvl\shengq2\20210616_human_exomeseq\bwa_g4_refine_gatk4_SNV_05_filter\result)')
+if(length(args) == 0){
+  setwd('/scratch/cqs/fanr1/202111_ICARE_BEST/DNA/20211207_DNAseq_Analysis/bwa_g4_refine_gatk4_SNV_05_filter/result')
   inputFile = "human_exomeseq.freq0.001.snv.missense.tsv"
-  outputFile = "human_exomeseq.freq0.001.snv.missense.oncoprint.tsv"
+  outputFile = "human_exomeseq.freq0.001.snv.missense.top10.oncoprint.tsv"
   optionFile = "onco_options.txt"
-  genelist = c("BRAF","RAS", "NTRK2", "CDKN2A", "CDKN2B", "NF1", "KMT2D", "RB1", "MMR", "ARID2", "ATM")
+  #genelist = c("BRAF","RAS", "NTRK2", "CDKN2A", "CDKN2B", "NF1", "KMT2D", "RB1", "MMR", "ARID2", "ATM")
+  genelist = NA
+}else{
+  inputFile = args[1]
+  outputFile = args[2]
+  optionFile = args[3]
+  genelist = ifelse(length(args) >= 4, args[4:length(args)], NA)
 }
+
 cat("inputFile=", inputFile, "\n")
 cat("outputFile=", outputFile, "\n")
 cat("optionFile=", optionFile, "\n")
@@ -65,6 +67,23 @@ if(length(samples) == 0){
   stop(paste0("No sample matches the pattern ", sampleNamePattern))
 }
 
+if(is.na(genelist)){
+  mdata<-mutdata[,c('Gene.refGene', cnames)]
+  library(dplyr)
+  mdata2 <- aggregate(. ~ Gene.refGene, data = mdata, max)
+  rownames(mdata2)<-mdata2$Gene.refGene
+  mdata2<-mdata2[,c(2:ncol(mdata2)),drop=F]
+  mdata3<-ifelse(mdata2 > 0, 1, 0)
+  mdata4<-apply(mdata3, 1, sum)
+  mdata5<-mdata4[order(mdata4,decreasing=T)]
+  if(length(mdata5) >= 10){
+    genelist<-names(mdata5)[1:10]
+  }else{
+    genelist<-names(mdata5)
+  }
+  cat("top genes: ", genelist, "\n")
+}
+
 geneind<-mutdata$Gene.refGene %in% genelist
 
 mutdata_gene_samples<-mutdata[geneind,c("Func.refGene", "Gene.refGene", "ExonicFunc.refGene", samples)]
@@ -88,13 +107,14 @@ for (gene in genelist){
       for (j in 1: length(mut_sample)) {
         if (genedata[j,i]>0) {
           type<-genedata[j,3]
-          if (type=="frameshift deletion" | type=="frameshift insertion" | type=="frameshift substitution" | type=="stopgain") 
+          if (type=="frameshift deletion" | type=="frameshift insertion" | type=="frameshift substitution" | type=="stopgain" | type=="stoploss" ) 
             type="TRUNC"
           else if (type=="nonsynonymous SNV") 
             type="MISSENSE"
           else if (genedata[j,1]=="splicing") 
             type="TRUNC"
           else
+            #stop(paste0("unknown genotype ", type))
             type="UNKNOWN"
           curvalues=c(curvalues, paste0(type, ";"))
         } 
