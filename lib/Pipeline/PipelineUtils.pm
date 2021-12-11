@@ -1140,6 +1140,12 @@ sub addAnnovarMafReport {
   push @$summary, $annovar_to_maf;
 
   my $annovar_to_maf_report = $prefix . getNextIndex($indexDic, $indexKey) . "_report";
+
+  my $re_rcode = ( defined $def->{family_info_file} ? "clinicalFeatures='" . $def->{family_info_feature} . "';" : "" );
+  if(defined $def->{annovar_buildver}){
+    $re_rcode = $re_rcode . "genome='" . $def->{annovar_buildver} . "'";
+  } 
+
   $config->{$annovar_to_maf_report} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
@@ -1151,12 +1157,8 @@ sub addAnnovarMafReport {
     parameterSampleFile1_ref => [ $annovar_to_maf, ".tsv.maf\$" ],
     parameterFile1           => $def->{family_info_file},
     sh_direct                => 1,
-    rCode                    => ( defined $def->{family_info_file} ? "clinicalFeatures=" . $def->{family_info_feature} . ";" : "" ),
-#            rCode                    => ( defined $def->{family_info_file} ? "clinicalFeatures=\"" . $def->{family_info_feature} . "\";" : "" )
-#              . ( defined $def->{annotation_genes} ? "interestedGeneStr=\"" . $def->{annotation_genes} . "\"" : "" ),
+    rCode                    => $re_rcode,
     pbs => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
       "walltime"  => "24",
       "mem"       => "10gb"
@@ -1468,12 +1470,16 @@ sub addGATK4PreprocessIntervals {
 sub addGATK4CNVGermlineCohortAnalysis {
   my ( $config, $def, $target_dir, $bam_ref, $prefix, $step1, $step2, $step3, $step4, $step5, $step6 ) = @_;
 
+  my $result = {};
+
   my $preprocessIntervalsTask = addGATK4PreprocessIntervals( $config, $def, $target_dir, $bam_ref, $prefix, $step1, $step2, $step3, $step4, $step5, $step6, "_01" );
+  $result->{interval} = $preprocessIntervalsTask;
 
   my $chrCode = getValue($def, "has_chr_in_chromosome_name") ? ";addChr=1" : "";
 
   #CollectReadCounts at sample level
   my $CollectReadCounts = $prefix . "_gatk4_CNV_Germline_02_CollectReadCounts";
+  $result->{CollectReadCounts} = $CollectReadCounts;
   $config->{$CollectReadCounts} = {
     class                      => "GATK4::CollectReadCounts",
     source_ref                 => $bam_ref,
@@ -1494,6 +1500,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
   #FilterIntervals at summary level
   my $FilterIntervals = $prefix . "_gatk4_CNV_Germline_03_FilterIntervals";
+  $result->{FilterIntervals} = $FilterIntervals;
   $config->{$FilterIntervals} = {
     class                      => "GATK4::FilterIntervals",
     source_ref                 => $CollectReadCounts,
@@ -1516,6 +1523,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
   #DetermineGermlineContigPloidy at summary level
   my $DetermineGermlineContigPloidyCohortMode = $prefix . "_gatk4_CNV_Germline_04_DetermineGermlineContigPloidyCohortMode";
+  $result->{DetermineGermlineContigPloidyCohortMode} = $DetermineGermlineContigPloidyCohortMode;
   $config->{$DetermineGermlineContigPloidyCohortMode} = {
     class                  => "GATK4::DetermineGermlineContigPloidy",
     source_ref             => $CollectReadCounts,
@@ -1598,9 +1606,11 @@ sub addGATK4CNVGermlineCohortAnalysis {
     };
     push( @$step4, $GermlineCNVCaller );
   }
+  $result->{GermlineCNVCaller} = $GermlineCNVCaller;
 
   #PostprocessGermlineCNVCalls at sample level
   my $PostprocessGermlineCNVCalls = $prefix . "_gatk4_CNV_Germline_06_PostprocessGermlineCNVCalls";
+  $result->{PostprocessGermlineCNVCalls} = $PostprocessGermlineCNVCalls;
   $config->{$PostprocessGermlineCNVCalls} = {
     class                       => "GATK4::PostprocessGermlineCNVCalls",
     source_ref                  => $CollectReadCounts,
@@ -1622,6 +1632,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
   #CombineGCNV at summary level
   my $CombineGCNV = $prefix . "_gatk4_CNV_Germline_07_CombineGCNV";
+  $result->{CombineGCNV} = $CombineGCNV;
   $config->{$CombineGCNV} = {
     class                    => "CQS::ProgramWrapper",
     perform                  => 1,
@@ -1648,6 +1659,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   push( @$step6, $CombineGCNV );
   
   my $sizeFactorTask = $prefix . "_gatk4_CNV_Germline_08_SizeFactor";
+  $result->{sizeFactor} = $sizeFactorTask;
   $config->{$sizeFactorTask} = {
     class                    => "CQS::ProgramWrapper",
     perform                  => 1,
@@ -1675,6 +1687,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   my $cnvIndex = "09";
   if($def->{plotCNVGenes} && $def->{annotation_genes}){
     my $cnvGenes = $prefix . "_gatk4_CNV_Germline_09_CNVGenesLocus";
+    $result->{cnvGenes} = $cnvGenes;
     $config->{$cnvGenes} = {
       class                    => "CQS::UniqueR",
       perform                  => 1,
@@ -1693,6 +1706,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
     push( @$step6, $cnvGenes );
     
     my $plotCNVgenes = $prefix . "_gatk4_CNV_Germline_10_CNVGenesPlot";
+    $result->{plotCNVgenes} = $plotCNVgenes;
     $config->{$plotCNVgenes} = {
       class                 => "CQS::ProgramWrapper",
       perform               => 1,
@@ -1728,6 +1742,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   my $annotationGenesPlot = undef;
   if(defined $def->{annotation_genes} && defined $config->{"annotation_genes_locus"}){
     $annotationGenesPlot = $prefix . "_gatk4_CNV_Germline_" . $cnvIndex . "_AnnotationGenesPlot";
+    $result->{annotationGenesPlot} = $annotationGenesPlot;
     $config->{$annotationGenesPlot} = {
       class                 => "CQS::ProgramWrapper",
       perform               => 1,
@@ -1760,7 +1775,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
     push( @$step6, $annotationGenesPlot );
   }
   
-  return($annotationGenesPlot);
+  return($result);
 }
 
 sub addXHMM {
@@ -2074,7 +2089,7 @@ sub add_BWA_summary {
     parameterSampleFile2_ref    => [$bwa, ".chromosome.count"],
     output_file           => "",
     output_file_ext       => ".BWASummary.csv",
-    output_other_ext      => ".BWASummary.png;.BWASummary.sorted.png",
+    output_other_ext      => ".reads.png;.chromosome.png",
     sh_direct             => 1,
     pbs                   => {
       "nodes"     => "1:ppn=1",
