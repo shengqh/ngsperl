@@ -451,12 +451,18 @@ sub getRNASeqConfig {
   my $linkTaskName;
   my $webgestaltHeatmapTaskName;
   if ( defined $def->{pairs} ) {
+    my $de_prefix;
+    my $de_source=$count_file_ref;
     if ( $def->{perform_proteincoding_gene} ) {
-      $deseq2taskname = addDEseq2( $config, $def, $summary, "proteincoding_genetable", [ "genetable", ".proteincoding.count\$" ], $def->{target_dir}, $def->{DE_min_median_read} );
+      $de_prefix="proteincoding_genetable";
+      if(defined $config->{gene_table}){
+        $de_source=[ "genetable", ".proteincoding.count\$" ];
+      }
     }
     else {
-      $deseq2taskname = addDEseq2( $config, $def, $summary, "genetable", $count_file_ref, $def->{target_dir}, $def->{DE_min_median_read} );
+      $de_prefix="genetable";
     }
+    $deseq2taskname = addDEseq2( $config, $def, $summary, $de_prefix, $de_source, $def->{target_dir}, $def->{DE_min_median_read} );
 
     if ( getValue( $def, "perform_webgestalt" ) ) {
       $webgestaltTaskName = addWebgestalt($config, $def, $summary, $target_dir, $deseq2taskname, [ $deseq2taskname, "sig_genename.txt\$" ]);
