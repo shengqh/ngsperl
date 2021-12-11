@@ -50,6 +50,12 @@ if [ ! -s $mergedFile ]; then
   }
 
   print $pbs "      -O $mergedFile
+
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $chrTaskName.CombinedGVCFs.failed
+    rm $mergedFile
+  fi
 fi
 
 if [[ -s $mergedFile && ! -s $callFile ]]; then
@@ -60,6 +66,12 @@ if [[ -s $mergedFile && ! -s $callFile ]]; then
     -D $dbsnp_resource_vcf \\
     -O $callFile \\
     -V $mergedFile 
+
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $chrTaskName.GenotypeGVCFs.failed
+    rm $callFile
+  fi
 fi
 
 if [[ -s $callFile && ! -s $variant_filtered_vcf ]]; then
@@ -70,6 +82,12 @@ if [[ -s $callFile && ! -s $variant_filtered_vcf ]]; then
     --filter-name ExcessHet \\
     -O $variant_filtered_vcf \\
     -V ${callFile}
+
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $chrTaskName.VariantFiltration.failed
+    rm $variant_filtered_vcf
+  fi
 fi
 
 if [[ -s $variant_filtered_vcf && ! -s $final_file ]]; then
@@ -78,6 +96,12 @@ if [[ -s $variant_filtered_vcf && ! -s $final_file ]]; then
     MakeSitesOnlyVcf \\
     --INPUT $variant_filtered_vcf \\
     --OUTPUT $final_file
+
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $chrTaskName.MakeSitesOnlyVcf.failed
+    rm $final_file
+  fi
 fi
 ";
 
@@ -159,6 +183,12 @@ if [[ -s $sites_only_variant_filtered_vcf && ! -s $indels_recalibration ]]; then
     $recalibration_annotation_option \\
     --max-gaussians 4 \\
     $mills_option $axiomPoly_option ${dbsnp_option} -mode INDEL 
+
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $task_name.MakeSitesOnlyVcf.failed
+    rm $indels_recalibration
+  fi
 fi
 
 if [[ -s $sites_only_variant_filtered_vcf && ! -s $snps_recalibration ]]; then
@@ -173,6 +203,12 @@ if [[ -s $sites_only_variant_filtered_vcf && ! -s $snps_recalibration ]]; then
     $recalibration_annotation_option \\
     --max-gaussians 6 \\
     ${hapmap_option} ${omni_option} ${g1000_option} ${dbsnp_option} -mode SNP
+
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $task_name.SnpVariantRecalibrator.failed
+    rm $snps_recalibration
+  fi
 fi
 ";
 
@@ -207,6 +243,12 @@ if [[ ! -s $indel_recalibration_tmp_vcf ]]; then
     --truth-sensitivity-filter-level $indel_filter_level \\
     --create-output-variant-index true \\
     -mode INDEL
+
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.IndelApplyVQSR.failed
+    rm $indel_recalibration_tmp_vcf
+  fi
 fi
 
 if [[ -s $snps_recalibration && ! -s $recalibrated_vcf_filename ]]; then
@@ -220,6 +262,12 @@ if [[ -s $snps_recalibration && ! -s $recalibrated_vcf_filename ]]; then
     --truth-sensitivity-filter-level $snp_filter_level \\
     --create-output-variant-index true \\
     -mode SNP
+
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.SnpApplyVQSR.failed
+    rm $recalibrated_vcf_filename
+  fi
 fi
 
 if [[ -s $recalibrated_vcf_filename && ! -s $pass_file ]]; then
@@ -229,6 +277,12 @@ if [[ -s $recalibrated_vcf_filename && ! -s $pass_file ]]; then
     -O $pass_file \\
     -V $recalibrated_vcf_filename \\
     --exclude-filtered
+
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.SelectVariant.failed
+    rm $pass_file
+  fi
 fi
 
 ";
