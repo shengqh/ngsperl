@@ -118,10 +118,11 @@ sub initializeScRNASeqDefaultOptions {
     initDefaultValue( $def, "DE_by_celltype", 1 );
   }
 
-  initDefaultValue( $def, "DE_by_sample", 0 );
-  initDefaultValue( $def, "DE_by_cell",   1 );
-  if ( ( not getValue( $def, "DE_by_sample" ) ) && ( not getValue( $def, "DE_by_sample" ) ) ) {
-    initDefaultValue( $def, "DE_by_cell", 1 );
+  if(defined $def->{"DE_by_sample"}){
+    $def->{"DE_by_cell"} = $def->{"DE_by_sample"} ? 0: 1;
+  }else{
+    $def->{"DE_by_sample"} = 0;
+    $def->{"DE_by_cell"} = 1;
   }
 
   initDefaultValue( $def, "DE_by_cell_filter_minTPM",         1 );
@@ -255,68 +256,74 @@ sub addGeneTask {
   }
 }
 
-sub addDeseq2BySampleTask {
-  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype) = @_;
-  my $rCode = "pvalue=" . getValue( $def, "DE_pvalue" ) . ";useRawPvalue=" . getValue( $def, "DE_use_raw_pvalue" ) . ";foldChange=" . getValue( $def, "DE_fold_change" );
+# sub addDeseq2BySampleTask {
+#   my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype) = @_;
+#   my $rCode = "pvalue=" . getValue( $def, "DE_pvalue" ) . ";useRawPvalue=" . getValue( $def, "DE_use_raw_pvalue" ) . ";foldChange=" . getValue( $def, "DE_fold_change" );
 
-  #die "Found";
+#   #die "Found";
 
-  my $prefix  = $cluster_task;
-  my $curClusterName = undef;
-  my $curClusterDisplayName = undef;
-  if ($DE_by_celltype) {
-    $curClusterName = $celltype_name;
-    $prefix  = $prefix . "_inCelltype";
-  }
-  else {
-    $curClusterName = $cluster_name;
-    $prefix  = $prefix . "_inCluster";
-  }
+#   my $prefix  = $cluster_task;
+#   my $curClusterName = undef;
+#   my $curClusterDisplayName = undef;
+#   if ($DE_by_celltype) {
+#     $curClusterName = $celltype_name;
+#     $prefix  = $prefix . "_inCelltype";
+#   }
+#   else {
+#     $curClusterName = $cluster_name;
+#     $prefix  = $prefix . "_inCluster";
+#   }
 
-  $rCode         = $rCode . ";DE_by_cell=0;filter_minTPM=" . getValue( $def, "DE_by_sample_filter_minTPM" ) . ";filter_samplePercentage=" . getValue( $def, "DE_by_sample_filter_cellPercentage" );
-  $prefix = $prefix . "_bySample";
+#   $rCode         = $rCode . ";DE_by_cell=0;filter_minTPM=" . getValue( $def, "DE_by_sample_filter_minTPM" ) . ";filter_samplePercentage=" . getValue( $def, "DE_by_sample_filter_cellPercentage" );
+#   $prefix = $prefix . "_bySample";
 
-  $rCode  = $rCode . ";bBetweenCluster=0";
-  my $groups = getValue( $def, "groups" );
-  my $pairs  = getValue( $def, "pairs" );
-  $rCode = $rCode . ";cluster_name='" . $curClusterName . "'";
+#   $rCode  = $rCode . ";bBetweenCluster=0";
+#   my $groups = getValue( $def, "groups" );
+#   my $pairs  = getValue( $def, "pairs" );
+#   $rCode = $rCode . ";cluster_name='" . $curClusterName . "'";
 
-  my $deseq2table_taskname=$prefix . "_table";
-  $config->{$deseq2table_taskname} = {
-    class                => "CQS::UniqueR",
-    perform              => 1,
-    target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $deseq2table_taskname,
-    rtemplate            => "../scRNA/deseq2table.r",
-    parameterFile1_ref   => [ $cluster_task, ".final.rds" ],
-    parameterFile2_ref   => [ $cluster_task, $celltype_cluster_file ],
-    parameterSampleFile1 => $groups,
-    parameterSampleFile2 => $pairs,
-    output_file_ext      => ".deseq2.define.txt",
-    rCode                => $rCode,
-    sh_direct            => 1,
-    pbs                  => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
-      "mem"       => "10gb"
-    },
-  };
-  push( @$summary, $deseq2table_taskname );
-}
+#   my $deseq2table_taskname=$prefix . "_table";
+#   $config->{$deseq2table_taskname} = {
+#     class                => "CQS::UniqueR",
+#     perform              => 1,
+#     target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $deseq2table_taskname,
+#     rtemplate            => "../scRNA/deseq2table.r",
+#     parameterFile1_ref   => [ $cluster_task, ".final.rds" ],
+#     parameterFile2_ref   => [ $cluster_task, $celltype_cluster_file ],
+#     parameterSampleFile1 => $groups,
+#     parameterSampleFile2 => $pairs,
+#     output_file_ext      => ".deseq2.define.txt",
+#     rCode                => $rCode,
+#     sh_direct            => 1,
+#     pbs                  => {
+#       "nodes"     => "1:ppn=1",
+#       "walltime"  => "1",
+#       "mem"       => "10gb"
+#     },
+#   };
+#   push( @$summary, $deseq2table_taskname );
+# }
 
 sub addEdgeRTask {
   my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell ) = @_;
-  my $rCode = "pvalue=" . getValue( $def, "DE_pvalue" ) . ";useRawPvalue=" . getValue( $def, "DE_use_raw_pvalue" ) . ";foldChange=" . getValue( $def, "DE_fold_change" );
+  my $rCodeDic = {
+    "pvalue" => getValue( $def, "DE_pvalue" ),
+    "useRawPvalue" => getValue( $def, "DE_use_raw_pvalue" ),
+    "foldChange" => getValue( $def, "DE_fold_change" )
+  };
 
   my $edgeRtaskname  = $celltype_task . "_edgeR";
   my $groups         = undef;
   my $pairs          = undef;
   my $curClusterName = undef;
   my $curClusterDisplayName = undef;
+  $rCodeDic->{"bBetweenCluster"}=$bBetweenCluster;
   if ($bBetweenCluster) {
     $edgeRtaskname  = $edgeRtaskname . "_betweenCluster_byCell";
     $curClusterName = getValue( $def, "DE_cluster_name" );
     $curClusterDisplayName = getValue( $def, "DE_cluster_display_name", $curClusterName );
-    $rCode  = $rCode . ";filter_minTPM=" . getValue( $def, "DE_by_cell_filter_minTPM" ) . ";filter_cellPercentage=" . getValue( $def, "DE_by_cell_filter_cellPercentage" ) . ";bBetweenCluster=1";
+    $rCodeDic->{"filter_minTPM"} = getValue( $def, "DE_by_cell_filter_minTPM" );
+    $rCodeDic->{"filter_cellPercentage"}=getValue( $def, "DE_by_cell_filter_cellPercentage" );
     $groups = getValue( $def, "DE_cluster_groups", {} );
     $pairs  = getValue( $def, "DE_cluster_pairs" );
   }
@@ -330,20 +337,22 @@ sub addEdgeRTask {
       $edgeRtaskname  = $edgeRtaskname . "_inCluster";
     }
 
+    $rCodeDic->{"DE_by_cell"} = $DE_by_cell;
     if ($DE_by_cell) {
-      $rCode         = $rCode . ";DE_by_cell=1;filter_minTPM=" . getValue( $def, "DE_by_cell_filter_minTPM" ) . ";filter_cellPercentage=" . getValue( $def, "DE_by_cell_filter_cellPercentage" );
+      $rCodeDic->{"filter_minTPM"}=getValue( $def, "DE_by_cell_filter_minTPM" );
+      $rCodeDic->{"filter_cellPercentage"}=getValue( $def, "DE_by_cell_filter_cellPercentage" );
       $edgeRtaskname = $edgeRtaskname . "_byCell";
     }
     else {
-      $rCode         = $rCode . ";DE_by_cell=0;filter_minTPM=" . getValue( $def, "DE_by_sample_filter_minTPM" ) . ";filter_samplePercentage=" . getValue( $def, "DE_by_sample_filter_cellPercentage" );
+      $rCodeDic->{"filter_minTPM"}=getValue( $def, "DE_by_sample_filter_minTPM" );
+      $rCodeDic->{"filter_samplePercentage"}=getValue( $def, "DE_by_sample_filter_cellPercentage" );
       $edgeRtaskname = $edgeRtaskname . "_bySample";
     }
 
-    $rCode  = $rCode . ";bBetweenCluster=0";
     $groups = getValue( $def, "groups" );
     $pairs  = getValue( $def, "pairs" );
   }
-  $rCode = $rCode . ";cluster_name='" . $curClusterName . "'";
+  $rCodeDic->{"cluster_name"} = $curClusterName;
 
   $config->{$edgeRtaskname} = {
     class                => "CQS::UniqueR",
@@ -354,6 +363,7 @@ sub addEdgeRTask {
     parameterFile2_ref   => [ $celltype_task, $celltype_cluster_file ],
     parameterSampleFile1 => $groups,
     parameterSampleFile2 => $pairs,
+    parameterSampleFile3 => $rCodeDic,
     output_file_ext      => ".edgeR.files.csv",
     rCode                => $rCode,
     sh_direct            => 1,
@@ -1598,14 +1608,16 @@ sub getScRNASeqConfig {
       print("perform_comparison=" . $perform_comparison , "\n");
       print("DE_by_sample=" . $DE_by_sample , "\n");
       
-      if ( $perform_comparison & $DE_by_sample ) {
-        for my $deByOption (@deByOptions) {
-          my $DE_by_celltype = $deByOption eq "DE_by_celltype";
-          addDeseq2BySampleTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, 0 );
-        }
-      }
+      # if ( $perform_comparison & $DE_by_sample ) {
+      #   for my $deByOption (@deByOptions) {
+      #     my $DE_by_celltype = $deByOption eq "DE_by_celltype";
+      #     addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, $DE_by_celltype, $DE_by_sample );
+      #     #addDeseq2BySampleTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, 0 );
+      #   }
+      # }
 
-      if ( $perform_comparison & $DE_by_cell ) {
+      # if ( $perform_comparison & $DE_by_cell ) {
+      if ( $perform_comparison ) {
         if ( defined $def->{"DE_cluster_pairs"} ) {
           addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, 0, 0 );
         }
