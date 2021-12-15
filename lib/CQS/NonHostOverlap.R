@@ -113,21 +113,15 @@ common12<-intersect(readsMappingNames[[1]],readsMappingNames[[2]])
 cat1only<-setdiff(readsMappingNames[[1]],common12)
 cat2only<-setdiff(readsMappingNames[[2]],common12)
 
-reads12MappingTable<-readsMappingTable[c(1:(length(readsMappingNames[[1]]) + length(readsMappingNames[[2]]))),]
-reads12MappingNames = c(readsMappingNames[[1]], readsMappingNames[[2]])
-
-common12table<-reads12MappingTable[reads12MappingNames %in% common12,]
-cat1onlytable<-reads12MappingTable[reads12MappingNames %in% cat1only,]
-cat2onlytable<-reads12MappingTable[reads12MappingNames %in% cat2only,]
+common12table<-readsMappingTable[common12,]
+cat1onlytable<-readsMappingTable[cat1only,]
+cat2onlytable<-readsMappingTable[cat2only,]
 
 resultOut<-rbind(common12table, cat1onlytable, cat2onlytable)
-resultOut<-data.frame(Read=c(reads12MappingNames[reads12MappingNames %in% common12], reads12MappingNames[reads12MappingNames %in% cat1only], reads12MappingNames[reads12MappingNames %in% cat2only]), 
-                 Category=c(rep("Both_Microbiome",length(common12)),
-                            rep("Both_Environment",length(common12)),
-                            rep("MicrobiomeOnly",nrow(cat1onlytable)),
-                            rep("EnvironmentOnly",nrow(cat2onlytable))),resultOut,stringsAsFactors=FALSE)
-resultOut<-resultOut[-which(resultOut$Category=="Both_Environment"),]
-resultOut$Category<-gsub("Both_Microbiome","Both",resultOut$Category)
+resultOut<-data.frame("Read"=rownames(resultOut),
+                      "Category"=c(rep("Both",length(common12)), rep("MicrobiomeOnly",length(cat1only)), rep("EnvironmentOnly",length(cat2only))),
+                      resultOut,stringsAsFactors=FALSE)
+
 write.csv(resultOut,paste0(resultFile,".MicrobiomeVsEnvironment.reads.csv"),row.names=F)
 
 common12colsums<-colSums(common12table)
