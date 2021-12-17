@@ -25,15 +25,18 @@ mdat=reshape2::melt(dat)
 colnames(mdat)=c("Class", "Sample", "Cell")
 
 png(paste0(outputPrefix, ".global.png"), width=1600, height=1200, res=300)
-g<-ggplot(mdat, aes(x=Sample, y=Cell, fill=Class, label=Cell)) + geom_bar(position="stack", stat="identity") + geom_text(size = 3, position = position_stack(vjust = 0.5)) + theme_bw()
+g<-ggplot(mdat, aes(x=Sample, y=Cell, fill=Class, label=Cell)) + 
+  geom_bar(position="stack", stat="identity") + 
+  geom_text(size = 3, position = position_stack(vjust = 0.5)) + 
+  theme_bw() +
+  theme(axis.text.x=element_text(angle = 90, hjust = 0, vjust=0.5)) + xlab("")
 print(g)
 dev.off()
 
 hasNameMap = ! is.na(nameMapFile)
 if (hasNameMap) {
   df = read.table(nameMapFile, sep="\t", stringsAsFactor=F)
-  namemap=df$V1
-  names(namemap)=df$V2
+  namemap=split(df$V1, df$V2)
 }
 
 dat=apply(files, 1, function(x){
@@ -50,7 +53,7 @@ dat=apply(files, 1, function(x){
 mdat=do.call("rbind", dat)
 mdat$Cell=mdat$Var1
 if (hasNameMap) {
-  mdat$Cell[mdat$Var1 %in% names(namemap)] = namemap[mdat$Var1[mdat$Var1 %in% names(namemap)]]
+  mdat$Cell[mdat$Var1 %in% names(namemap)] = unlist(namemap[mdat$Var1[mdat$Var1 %in% names(namemap)]])
 }
 mdat=mdat[,c("Sample", "Cell", "Freq")]
 colnames(mdat)=c("Sample", "Class", "Cell")
@@ -59,6 +62,10 @@ dat=reshape2::dcast(mdat, formula="Sample~Class")
 write.csv(dat, file=paste0(outputPrefix, ".csv"), quote=F, row.names=F)
 
 png(paste0(outputPrefix, ".sample.png"), width=1600, height=1200, res=300)
-g<-ggplot(mdat, aes(x=Sample, y=Cell, fill=Class, label=Cell)) + geom_bar(position="stack", stat="identity") + geom_text(size = 3, position = position_stack(vjust = 0.5)) + theme_bw()
+g<-ggplot(mdat, aes(x=Sample, y=Cell, fill=Class, label=Cell)) + 
+  geom_bar(position="stack", stat="identity") + 
+  geom_text(size = 3, position = position_stack(vjust = 0.5)) + 
+  theme_bw() +
+  theme(axis.text.x=element_text(angle = 90, hjust = 0, vjust=0.5)) + xlab("")
 print(g)
 dev.off()
