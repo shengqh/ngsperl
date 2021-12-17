@@ -256,7 +256,7 @@ include_graphics(files$bubblemap_png)
 
 
 ```{r eval=isLargeDataset, comment=''}
-cat("There are total ", ncol(obj), " cells, so each cluster was downsampled to ", downsample, " cells for heatmap.")
+cat("There are total ", sum(sample_cell$ValidCell), " cells, so each cluster was downsampled to ", downsample, " cells for heatmap.")
 ```
 
 ```{r cluster_marker_heatmap, fig.width=12, fig.height=8, results="asis", fig.cap=figRef("cluster_marker_heatmap", "Cluster marker genes heatmap")}

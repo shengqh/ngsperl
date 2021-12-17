@@ -1,5 +1,6 @@
 source("scRNA_func.r")
 
+
 library("Seurat")
 library("readxl")
 library(ggplot2)
@@ -38,11 +39,14 @@ miss_genes=genes$`Marker Gene`[!(genes$`Marker Gene` %in% allgenes)]
 writeLines(miss_genes, con="miss_gene.csv")
 
 genes<-genes[genes$`Marker Gene` %in% allgenes,]
+genes<-genes[order(genes[,1]),]
 genes$`Cell Type`=factor(genes$`Cell Type`, levels=unique(genes$`Cell Type`))
 
 gene_groups=split(genes$`Marker Gene`, genes$`Cell Type`)
 
-cell_type<-read.csv(parFile3)
+cell_type<-read.csv(parFile3, stringsAsFactors=F)
+cell_type$cell_type <- cell_type[,myoptions$celltype_name]
+cell_type$seurat_celltype_clusters<-cell_type[,myoptions$cluster_name]
 
 sheets=excel_sheets(parFile4)
 if(length(sheets) > 1){
@@ -50,10 +54,10 @@ if(length(sheets) > 1){
   cluster_ids<-clusters$`Order of Clusters`
   cell_type$seurat_clusters<-factor(cell_type$seurat_clusters, levels=cluster_ids)
   cell_type<-cell_type[order(cell_type$seurat_clusters),]
-  cell_type$seurat_renamed_cellactivity_clusters=factor(cell_type$seurat_renamed_cellactivity_clusters, levels=(cell_type$seurat_renamed_cellactivity_clusters))
+  cell_type$seurat_celltype_clusters=factor(cell_type$seurat_celltype_clusters, levels=(cell_type$seurat_celltype_clusters))
   rownames(cell_type)=cell_type$seurat_clusters
-  obj[["seurat_renamed_cellactivity_clusters"]]=cell_type[as.character(obj$seurat_clusters),"seurat_renamed_cellactivity_clusters"]
-  group.by="seurat_renamed_cellactivity_clusters"
+  obj[[myoptions$cluster_name]]=cell_type[as.character(obj$seurat_clusters),"seurat_celltype_clusters"]
+  group.by=myoptions$cluster_name
 }else{
   ct_levels<-c("B cells", "Plasma cells", "NK cells", "T cells", "Macrophages", "Mast cells", "Endothelial cells", "Fibroblasts", "Epithelial cells", "Basal cells", "Olfactory epithelial cells", "Ciliated cells")
   ct<-cell_type[!duplicated(cell_type$cell_type),]
@@ -67,8 +71,8 @@ if(length(sheets) > 1){
   cell_type$seurat_celltype_clusters=paste0(cell_type$seurat_clusters, " : ", cell_type$cell_type)
   cell_type$seurat_celltype_clusters=factor(cell_type$seurat_celltype_clusters, levels=cell_type$seurat_celltype_clusters)
   rownames(cell_type)=cell_type$seurat_clusters
-  obj[["seurat_celltype_clusters"]]=cell_type[as.character(obj$seurat_clusters),"seurat_celltype_clusters"]
-  group.by="seurat_celltype_clusters"
+  obj[[myoptions$cluster_name]]=cell_type[as.character(obj$seurat_clusters),"seurat_celltype_clusters"]
+  group.by=myoptions$cluster_name
 }
 
 genes=unique(unlist(gene_groups))

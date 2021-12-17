@@ -365,7 +365,7 @@ sub addEdgeRTask {
     parameterSampleFile2 => $pairs,
     parameterSampleFile3 => $rCodeDic,
     output_file_ext      => ".edgeR.files.csv",
-    rCode                => $rCode,
+    rCode                => "",
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
@@ -855,10 +855,9 @@ sub getScRNASeqConfig {
         rtemplate                => "../scRNA/scRNABatchQC.r",
         parameterSampleFile1_ref => "files",
         rCode                    => "webgestalt_organism='" . getValue( $def, "webgestalt_organism" ) . "'",
+        output_file_ext      => ".html",
         sh_direct                => 1,
         pbs                      => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "1",
           "mem"       => "10gb"
@@ -917,7 +916,7 @@ sub getScRNASeqConfig {
           class                    => "CQS::UniqueR",
           perform                  => 1,
           target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_rawdata,
-          rtemplate                => "../scRNA/seurat_rawdata.r",
+          rtemplate                => "../scRNA/scRNA_func.r;../scRNA/seurat_rawdata.r",
           parameterSampleFile1_ref => "files",
           parameterSampleFile2     => {
             Mtpattern             => getValue( $def, "Mtpattern" ),
@@ -1211,35 +1210,6 @@ sub getScRNASeqConfig {
       push(@report_files, ($find_markers, "_celltype.all_display_markers.csv", $find_markers, "_celltype.all_figures.csv", $find_markers, ".top10.heatmap.png"));
       push(@report_names, ("celltype_markers_csv", "celltype_markers_png_list", "celltype_markers_heatmap_png"));
 
-      if(defined $def->{bubblemap_file}){
-        my $bubblemap_name = $celltype_task . "_bubblemap";
-        $config->{$bubblemap_name} = {
-          class                => "CQS::UniqueR",
-          perform              => 1,
-          target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $bubblemap_name,
-          rtemplate            => "../scRNA/scRNA_func.r,../scRNA/seurat_bubblemap.r",
-          parameterFile1_ref   => [ $cluster_task, ".final.rds" ],
-          parameterFile2_ref   => [ $cluster_task, ".cluster.csv" ],
-          parameterFile3_ref   => [ $celltype_task, ".celltype.csv" ],
-          parameterFile4       => $def->{bubblemap_file},
-          parameterSampleFile1 => {
-            by_sctransform        => getValue( $def, "by_sctransform" ),
-          },
-          output_file_ext      => ".bubblemap.png",
-          sh_direct            => 1,
-          pbs                  => {
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
-            "mem"       => "10gb"
-          },
-        };
-        push( @$summary, $bubblemap_name );
-
-        push(@report_files, ($bubblemap_name, ".bubblemap.png"));
-        push(@report_names, "bubblemap_png");
-
-      }
-
       if(getValue($def, "plot_gsea_genes", 0)){
         my $gesa_genes_task  = $celltype_task . "_gesa_genes";
         $config->{$gesa_genes_task} = {
@@ -1354,6 +1324,38 @@ sub getScRNASeqConfig {
         $cluster_name      = "seurat_renamed_cellactivity_clusters";
 
         addGeneTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name );
+      }
+
+
+      if(defined $def->{bubblemap_file}){
+        my $bubblemap_name = $celltype_task . "_bubblemap";
+        $config->{$bubblemap_name} = {
+          class                => "CQS::UniqueR",
+          perform              => 1,
+          target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $bubblemap_name,
+          rtemplate            => "../scRNA/scRNA_func.r,../scRNA/seurat_bubblemap.r",
+          parameterFile1_ref   => [ $cluster_task, ".final.rds" ],
+          parameterFile2_ref   => [ $cluster_task, ".cluster.csv" ],
+          parameterFile3_ref   => [ $celltype_task, ".celltype.csv" ],
+          parameterFile4       => $def->{bubblemap_file},
+          parameterSampleFile1 => {
+            by_sctransform        => getValue( $def, "by_sctransform" ),
+            celltype_name => $celltype_name,
+            cluster_name => $cluster_name,
+          },
+          output_file_ext      => ".bubblemap.png",
+          sh_direct            => 1,
+          pbs                  => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$summary, $bubblemap_name );
+
+        push(@report_files, ($bubblemap_name, ".bubblemap.png"));
+        push(@report_names, "bubblemap_png");
+
       }
 
       if(getValue($def, "perform_report", 1)){
