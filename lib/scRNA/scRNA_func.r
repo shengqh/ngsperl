@@ -1,4 +1,20 @@
 
+file_not_empty<-function(filename){
+  if(is.null(filename)){
+    return(FALSE)
+  }
+  
+  if(is.na(filename)){
+    return(FALSE)
+  }
+  
+  if(!file.exists(filename)){
+    return(FALSE)
+  }
+  
+  return(file.info(filename)$size != 0)
+}
+
 calc_weight<-function(cellType){
   freq<-sort((table(unlist(cellType)))/length(cellType))
   weight<-1+sqrt((max(freq)-freq)/(max(freq)-min(freq)))
@@ -149,7 +165,10 @@ get_cluster_count<-function(counts, clusters){
   csums=lapply(allClusters, function(cluster){
     #cat(cluster, "\n")
     cells=names(clusters)[clusters==cluster]
-    subcounts=counts[,cells]
+    if(length(cells) == 0){
+      stop("no cells")
+    }
+    subcounts=counts[,cells,drop=F]
     #cat(ncol(subcounts), "\n")
     Matrix::rowSums(subcounts)
   })
