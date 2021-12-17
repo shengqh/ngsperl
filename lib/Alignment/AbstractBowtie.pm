@@ -57,6 +57,11 @@ sub result {
     }
     push( @result_files, "${cur_dir}/${sample_name}.version" );
 
+    my $export_unmapped_reads= get_option( $config, $section, "export_unmapped_reads",   0 );
+    if ($export_unmapped_reads) {
+      push( @result_files, "${cur_dir}/${sample_name}.unmapped.gz" );
+    }
+
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
 

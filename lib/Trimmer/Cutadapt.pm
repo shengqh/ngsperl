@@ -106,6 +106,24 @@ sub perform {
 
   my $ispairend = get_is_paired_end_option( $config, $section );
 
+  my $limit_options   = '';
+  my $shortLimited        = $option =~ /(-m\s+\d+\s*)/;
+  if ($shortLimited) {
+    $shortLimited      = $1;
+    $limit_options = $limit_options . " " . $shortLimited;
+    $option =~ s/$shortLimited//;
+  }
+  my $longLimited = $option =~ /(-M\s+\d+\s*)/;
+  if ($longLimited) {
+    $longLimited       = $1;
+    $limit_options = $limit_options . " " . $longLimited;
+    $option =~ s/$longLimited//;
+  }
+
+  if ( index( $option, "--trim-n" ) == -1 ) {
+    $option = $option . " --trim-n";
+  }
+
   my $adapter_option = $option;
   if ( $adapter_option !~ /-a/ ) {
     if ( defined $curSection->{adapter} && length( $curSection->{adapter} ) > 0 ) {
@@ -166,25 +184,6 @@ sub perform {
 
   my ( $extension, $fastqextension ) = $self->get_extension( $config, $section );
 
-  my $optionOnlyLimited   = '';
-  my $optionRemoveLimited = $option;
-  my $shortLimited        = $option =~ /(-m\s+\d+\s*)/;
-  if ($shortLimited) {
-    $shortLimited      = $1;
-    $optionOnlyLimited = $optionOnlyLimited . " " . $shortLimited;
-    $optionRemoveLimited =~ s/$shortLimited//;
-  }
-  my $longLimited = $option =~ /(-M\s+\d+\s*)/;
-  if ($longLimited) {
-    $longLimited       = $1;
-    $optionOnlyLimited = $optionOnlyLimited . " " . $longLimited;
-    $optionRemoveLimited =~ s/$longLimited//;
-  }
-
-  if ( index( $option, "--trim-n" ) == -1 ) {
-    $option = $option . " --trim-n";
-  }
-
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -238,9 +237,9 @@ cutadapt $thread_option -l $hard_trim -o $temp_file $sample_file
 
       my ( $read1name, $read2name, $finalShortFile_1, $finalShortFile_2, $finalLongFile_1, $finalLongFile_2 ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
 
-      my $limit_file_options = "";
+      my $limit_file_options = $limit_options;
       if ($shortLimited) {
-        $limit_file_options = " --too-short-output=$finalShortFile_1 --too-short-paired-output=$finalShortFile_2";
+        $limit_file_options = $limit_file_options . " --too-short-output=$finalShortFile_1 --too-short-paired-output=$finalShortFile_2";
       }
       if ($longLimited) {
         $limit_file_options = $limit_file_options . " --too-long-output=$finalLongFile_1 --too-long-paired-output=$finalLongFile_2";
@@ -286,12 +285,12 @@ fi
 ";
       }
     }
-    else {
+    else {#single end
       my ( $final_file, $finalShortFile, $finalLongFile ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
 
-      my $limit_file_options = "";
+      my $limit_file_options = $limit_options;
       if ($shortLimited) {
-        $limit_file_options = " --too-short-output=$finalShortFile";
+        $limit_file_options = $limit_file_options . " --too-short-output=$finalShortFile";
       }
       if ($longLimited) {
         $limit_file_options = $limit_file_options . " --too-long-output=$finalLongFile";
@@ -301,10 +300,36 @@ fi
         my $temp_file = $final_file . ".cutAdapter.fastq";
         if ( scalar(@sample_files) == 1 ) {
           print $pbs "
-cutadapt $thread_option $optionRemoveLimited $adapter_option -o $temp_file $sample_files[0]
+cutadapt $thread_option $adapter_option -o $temp_file $sample_files[0]
 status=\$?
+";
+        }
+        else {
+          print $pbs "
+if [ -s $temp_file ]; then
+  delete $temp_file
+fi
+
+\$status = 0
+";
+          for my $sample_file (@sample_files) {
+            print $pbs "
 if [[ \$status -eq 0 ]]; then
-  cutadapt $thread_option $optionOnlyLimited $limit_file_options $remove_bases_option -o $final_file $temp_file
+  cutadapt $thread_option $adapter_option -o temp.fastq $sample_file
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    cat temp.fastq >> $temp_file
+    rm temp.fastq
+  fi
+fi
+
+";
+          }
+        }
+
+        print $pbs "
+if [[ \$status -eq 0 ]]; then
+  cutadapt $thread_option $remove_bases_option $limit_file_options -o $final_file $temp_file
   status=\$?
   if [[ \$status -eq 0 ]]; then
     rm $temp_file
@@ -318,31 +343,19 @@ else
   touch ${sample_name}.failed
 fi
 ";
-        }
-        else {
-          print $pbs "
-if [ -s $temp_file ]; then
-  delete $temp_file
-fi
-";
-          for my $sample_file (@sample_files) {
-            print $pbs "
-cutadapt $thread_option $optionRemoveLimited $adapter_option -o temp.fastq $sample_file
-cat temp.fastq >> $temp_file
-rm temp.fastq
-";
-          }
-
-          print $pbs "
-cutadapt $thread_option $optionOnlyLimited $limit_file_options $remove_bases_option -o $final_file $temp_file 
-rm $temp_file
-";
-        }
       }
       else {    #NOT remove top random bases
         if ( scalar(@sample_files) == 1 ) {
           print $pbs "
 cutadapt $thread_option $adapter_option $limit_file_options -o $final_file $sample_files[0]
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch ${sample_name}.succeed
+else
+  rm $final_file
+  touch ${sample_name}.failed
+fi
+
 ";
         }
         else {
@@ -352,32 +365,17 @@ if [ -s $temp_file ]; then
   delete $temp_file
 fi
 ";
-          if ( length($limit_file_options) > 0 ) {
-            for my $sample_file (@sample_files) {
-              print $pbs "
-cutadapt $thread_option $optionRemoveLimited $adapter_option -o temp.fastq $sample_file
-cat temp.fastq >> $temp_file
-rm temp.fastq
-";
-            }
-
+          for my $sample_file (@sample_files) {
             print $pbs "
-cutadapt $thread_option $optionOnlyLimited $limit_file_options -o $final_file $temp_file
-rm $temp_file
-";
-          }
-          else {
-            for my $sample_file (@sample_files) {
-              print $pbs "
-cutadapt $thread_option $option $adapter_option -o temp.fastq $sample_file
+cutadapt $thread_option $adapter_option -o temp.fastq $sample_file
 cat temp.fastq >> $temp_file
 rm temp.fastq
 ";
-            }
           }
+
           print $pbs "
-gzip $temp_file
-mv ${temp_file}.gz $final_file
+cutadapt $thread_option $limit_file_options -o $final_file $temp_file
+rm $temp_file
 ";
         }
       }

@@ -1,0 +1,201 @@
+---
+title: "Exome Sequencing Data Analysis Report"
+date: "`r format(Sys.time())`"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+```{r, child="Functions.Rmd"} 
+```
+```{r, child="Pipeline.Rmd"} 
+```
+  
+```{r setup, include=FALSE}
+library(kableExtra)
+library(tidyverse)
+
+knitr::opts_chunk$set(fig.width=8, fig.height=6, out.width="80%")
+
+files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
+rownames(files)<-files$V2
+
+exomeseqOptions<-read.table("fileList2.txt", header=FALSE, as.is=TRUE)
+rownames(exomeseqOptions)<-exomeseqOptions$V2
+
+hasFastqc<-any(grepl("fastqc_", rownames(files)))
+hasFastqcPosttrim<-any(grepl("fastqc_post_trim_", rownames(files)))
+
+hasBWA<-any(grepl("bwa_", rownames(files)))
+hasBWARefine<-any(grepl("bwa_g4_refine_", rownames(files)))
+
+hasSNV<-any(grepl("snv_oncoprint_top10_png", rownames(files)))
+hasSNVCNV<-any(grepl("snv_cnv_oncoprint_top10_png", rownames(files)))
+
+getFigure<-function(category, description){
+  return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", category, "', '",gsub("_", " ", description), "', trunk.eval=file.exists(files['", category, "',1]))}\n",
+"  check_and_include_graphics(files['", category, "',1])\n```\n"))
+}
+
+```
+
+<br>
+  
+# Sequencing Quality
+  
+## Summary of sequencing quality
+  
+```{r fastqc_raw_per_base_sequence_quality,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_per_base_sequence_quality", "The mean quality scores of sequencing reads in each position", trunk.eval=file.exists(files["fastqc_raw_per_base_sequence_quality",1]))}
+check_and_include_graphics(files["fastqc_raw_per_base_sequence_quality",1])
+```
+
+<br>
+
+```{r fastqc_raw_per_base_sequence_quality_table,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc,warning=FALSE}
+
+tableFile=gsub(".png$","",files["fastqc_raw_per_base_sequence_quality",1])
+table<-read.delim(tableFile)
+
+QualityMin=30
+if (any(table$Mean<=QualityMin)) { #use this as cutoff to show the quality table
+  output_table1=data.frame(table[,c("File","Mean","Base")])
+  output_table1$Base=factor(as.character(output_table1$Base),levels = unique(output_table1$Base))
+  output_table1=tidyr::pivot_wider(output_table1,names_from=Base,values_from=Mean)
+  output_table1=output_table1[which(apply(output_table1[,-1],1,min)< QualityMin),]
+  
+  print(kable(output_table1, caption=tabRef("Quality Summary", "Samples with Low RNA-seq Quality"), row.names=F) %>% 
+          kable_styling() %>%
+          row_spec(which(apply(output_table1[,-1],1,min)< QualityMin), color = "black", background = "honeydew") %>%
+          htmltools::HTML())
+}
+
+
+```
+
+<br>
+
+```{r fastqc_raw_per_sequence_gc_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_per_sequence_gc_content", "The average GC content of sequencing reads", trunk.eval=file.exists(files["fastqc_raw_per_sequence_gc_content",1]))}
+check_and_include_graphics(files["fastqc_raw_per_sequence_gc_content",1])
+```
+
+
+<br>
+
+```{r fastqc_raw_per_sequence_gc_content_table,echo=FALSE,results='hide', include = hasFastqc, eval = FALSE,warning=FALSE}
+
+tableFile=gsub(".png$","",files["fastqc_raw_per_sequence_gc_content",1])
+tableContent<-read.delim(tableFile)
+
+tableContentSummary=tableContent %>% group_by(File) %>% summarise(GC25=sum(Count[which(GC.Content<=25)])/sum(Count),
+                                              GC50=sum(Count[which(GC.Content<=50)])/sum(Count),
+                                              GC75=sum(Count[which(GC.Content>=75)])/sum(Count))
+
+
+
+GcDistributionCutoff=0.4 #GC content cutoff
+gcSampleInd=which(tableContentSummary$GC25>=GcDistributionCutoff | tableContentSummary$GC75>=GcDistributionCutoff )
+if (any(gcSampleInd)) { #use this as cutoff to show GC distribution
+  output_table1=tableContentSummary[gcSampleInd,]
+  colnames(output_table1)[-1]=c("Percent of Reads <=25% GC","Percent of Reads <=50% GC","Percent of Reads >=75% GC")
+  for (i in 2:4) {
+    output_table1[[i]]=paste0(round(output_table1[[i]]*100,1),"%")
+  }
+  
+  print(kable(output_table1, caption=tabRef("GC content Distribution Summary", "Samples with abnormal GC content Distribution"), row.names=F) %>% 
+          kable_styling() %>%
+          htmltools::HTML() %>%
+          row_spec(which(apply(output_table1[,-1],1,min)< QualityMin), color = "black", background = "honeydew"))
+}
+
+
+```
+
+<br>
+  
+```{r fastqc_raw_adapter_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_adapter_content", "Adapter content of sequencing reads", trunk.eval=file.exists(files["fastqc_raw_adapter_content",1]))}
+check_and_include_graphics(files["fastqc_raw_adapter_content",1])
+```
+
+<br>
+  
+```{r fastqc_post_trim_adapter_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_post_trim_adapter_content", "Adapter content of sequencing reads after cutadapt", trunk.eval=file.exists(files["fastqc_post_trim_adapter_content",1]))}
+check_and_include_graphics(files["fastqc_post_trim_adapter_content",1])
+```
+
+<br>
+  
+# Mapping quality
+## Summary of mapping quality
+
+```{r bwa_summary_table, echo=FALSE, results='asis', include = hasBWA, eval = hasBWA}
+table<-read.csv(files["bwa_reads_csv",1], check.names=F)
+print(kable(table, caption=tabRef("mapSummary", "The summary of ExomeSeq mapping results"), row.names=F) %>% 
+          kable_styling() %>%
+          htmltools::HTML())
+```
+
+<br>
+```{r bwa_reads,echo=FALSE,results='asis', include = hasBWA, eval = hasBWA, fig.align="center", fig.cap=figRef("BWA_reads", "The statistics of ExomeSeq mapping results")}
+include_graphics(files["bwa_reads_png",1])
+```
+
+<br>
+```{r bwa_chromosome,echo=FALSE,results='asis', include = hasBWA, eval = hasBWA, fig.align="center", fig.cap=figRef("BWA_chromosome", "The chromosome reads of ExomeSeq mapping results")}
+include_graphics(files["bwa_chromosome_png",1])
+```
+
+<br>
+```{r bwa_refine_chromosome,echo=FALSE,results='asis', include = hasBWARefine, eval = hasBWARefine, fig.align="center", fig.cap=figRef("BWA_chromosome", "The chromosome reads after refinement")}
+include_graphics(files["bwa_g4_refine_chromosome_png",1])
+```
+
+```{r snv,echo=FALSE,results='asis', include = hasSNV, eval = hasSNV, fig.align="center", fig.cap=figRef("snvtop10", "Top 10 SNV genes oncoplot")}
+cat('# Single nucleotide variant\n\n')
+cat('## Top 10 genes\n\n')
+include_graphics(files["snv_oncoprint_top10_png",1])
+```
+
+```{r snvcnv,echo=FALSE,results='asis', include = hasSNVCNV, eval = hasSNVCNV, fig.align="center", fig.cap=figRef("snvtop10cnv", "Top 10 SNV genes CNV oncoplot")}
+cat('# Copy number variant\n\n')
+cat('## Top 10 SNV genes\n\n')
+include_graphics(files["snv_cnv_oncoprint_top10_png",1])
+```
+
+
+# Software versions
+```{r softwareVersion, echo=FALSE, results='asis'}
+files<-read.delim("fileList4.txt", header=F, stringsAsFactors = F)
+df<-NULL
+curfile<-files$V1[1]
+for(curfile in files$V1){
+  if(file.exists(curfile)){
+    curdf<-read.csv(curfile, header=F, check.names=F)
+    df<-rbind(df, curdf)
+  }
+}
+
+if(file.exists("fileList5.txt")){
+  vers<-read.delim("fileList5.txt", header=F, stringsAsFactors = F)
+  vers<-vers[,c(2,1)]
+  colnames(vers)<-c("V1","V2")
+  df<-rbind(df, vers)
+}
+
+df<-unique(df)
+df<-df[order(df$V1),]
+colnames(df)<-c("Software", "Version")
+print(kable(df, caption=tabRef("versionFiles", "Software versions"), row.names=F) %>%
+        kable_styling() %>%
+        htmltools::HTML())
+
+```

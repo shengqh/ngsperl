@@ -144,6 +144,8 @@ if(length(rawobjs) == 1){
 }
 rm(rawobjs)
 
+writeLines(rownames(rawobj), paste0(outFile, ".genes.txt"))
+
 saveRDS(rawobj, paste0(outFile, ".rawobj.rds"));
 
 png(file=paste0(outFile, ".qc.png"), width=3000, height=1200, res=300)

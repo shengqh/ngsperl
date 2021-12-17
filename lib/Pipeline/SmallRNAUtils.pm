@@ -535,7 +535,7 @@ sub getPrepareConfig {
         "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
         "walltime" => "10",
-        "mem"      => "10gb"
+        "mem"      => getValue($def, "identical_sequence_count_table_mem", "10gb")
       },
     };
     push @$summary, ("identical_sequence_count_table");

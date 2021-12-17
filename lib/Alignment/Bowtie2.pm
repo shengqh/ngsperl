@@ -34,6 +34,7 @@ sub perform {
   my $bowtie2_index = $config->{$section}{bowtie2_index} or die "define ${section}::bowtie2_index first";
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
   my $outputToSameFolder      = get_option( $config, $section, "output_to_same_folder",   1 );
+  my $export_unmapped_reads      = get_option( $config, $section, "export_unmapped_reads",   0 );
 
   my $mark_duplicates = hasMarkDuplicate( $config->{$section} );
   my $picard_jar      = "";
@@ -53,6 +54,10 @@ sub perform {
     my $bam_file     = $sample_name . ".bam";
     my $log_file     = $sample_name . ".log";
     my $sort_log_file     = $sample_name . ".sort.log";
+    my $export_unmapped_reads_file="";
+    if ($export_unmapped_reads) {
+        $export_unmapped_reads_file=" --un-conc-gz ".$sample_name.".unmapped.gz";
+    } 
 
     my $pbs_name = $self->pbs_name($sample_name);
     my $pbs_file = $pbs_dir . "/$pbs_name";
@@ -88,7 +93,7 @@ fi
       my $fastqs = join( ',', @sample_files );
       $input = "-U " . $fastqs;
     }
-    my $bowtie2_aln_command = "bowtie2 -p $thread $option -x $bowtie2_index $input $tag -S $sam_file 2> $log_file";
+    my $bowtie2_aln_command = "bowtie2 -p $thread $option -x $bowtie2_index $input $tag -S $sam_file $export_unmapped_reads_file 2> $log_file";
 
     my $index_command = get_index_command( $bam_file, $indent );
     my $stat_command = get_stat_command( $bam_file, $indent );

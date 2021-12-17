@@ -4,13 +4,15 @@ class CNVItem(LocusItem):
   def __init__(self):
     LocusItem.__init__(self)
     self.Gene = ""
+    self.CytoBand = ""
     self.SampleCNVMap = {}
 
 def readCNVFile(fileName, returnFullCNV=False):
   result = []
   with open(fileName, "r") as fin:
     headers = fin.readline().rstrip().split('\t')
-    startIndex = 5
+    hasCytoBand = "cytoBand" == headers[5]
+    startIndex = 6 if hasCytoBand else 5
     samples = headers[startIndex:]
 
     for line in fin:
@@ -23,6 +25,8 @@ def readCNVFile(fileName, returnFullCNV=False):
       ci.setLocus(chrom, start, end)
       ci.setName(parts[3])
       ci.Gene = parts[4]
+      if hasCytoBand:
+        ci.CytoBand = parts[5]
 
       sampleCNVMap = {}
       for sampleIndex in range(startIndex, len(parts)):
