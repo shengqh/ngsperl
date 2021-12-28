@@ -52,7 +52,7 @@ if(draw_nmds){
 }
 
 pdf(paste0(outFile, log_suffix, ".PCoA.pdf"))
-i=7
+i=1
 for (i in 1:nrow(file_list)){
   count_name=file_list$name[i]
   count_file=file_list$V1[i]
@@ -71,7 +71,7 @@ for (i in 1:nrow(file_list)){
   count_N <- t(count_N)
   count_N <- count_N[sort(rownames(count_N)),]
   
-  j=3
+  j=1
   for( j in 1:nrow(design_files)){
     design_name=design_files$V2[j]
     design_file=design_files$V1[j]
@@ -94,7 +94,11 @@ for (i in 1:nrow(file_list)){
     ordination <- wcmdscale(dist, eig = TRUE) 
     main_title = paste("PCoA", count_name, design_name, sep=" ")
 
-    plot(ordination,type="n",  main = main_title, xlab=paste0("PCoA 1 (", label_percent(0.01)(ordination$eig[1]),")"), ylab=paste0("PCoA 2 (", label_percent(0.01)(ordination$eig[2]),")"))
+    # Calculate variance explained
+    Eigenvalues <- eigenvals(ordination) 
+    Variance <- Eigenvalues / sum(Eigenvalues) 
+
+    plot(ordination,type="n",  main = main_title, xlab=paste0("PCoA 1 (", label_percent(0.01)(Variance[1]),")"), ylab=paste0("PCoA 2 (", label_percent(0.01)(Variance[2]),")"))
     ordiellipse(ord=ordination, groups = design_con_sel$Condition, col=gcolors, kind="ehull", label=F)
     ordihull(ord=ordination, groups = design_con_sel$Condition, col=gcolors, display = "sites")
     ordispider(ord=ordination, groups = design_con_sel$Condition, col=gcolors, label =F)
