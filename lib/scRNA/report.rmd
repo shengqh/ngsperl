@@ -32,7 +32,7 @@ knitr::opts_chunk$set(
   tidy.opts = list(width.cutoff = 120),
   message = FALSE,
   warning = FALSE,
-  echo = TRUE
+  echo = FALSE
 )
 
 source("scRNA_func.r")
@@ -238,7 +238,7 @@ include_graphics(files$activity_summary_layer_png)
 include_graphics(files$activity_cluster_png)
 ```
 
-```{r gene_activity_group_umap, fig.width=12, fig.height=8, results="asis", fig.cap=figRef("umap_cluster_cell_group", "Predicted cell types by groups")}
+```{r gene_activity_group_umap, fig.width=12, eval=file_not_empty(files$activity_group_png), fig.height=8, results="asis", fig.cap=figRef("umap_cluster_cell_group", "Predicted cell types by groups")}
 include_graphics(files$activity_group_png)
 ```
 
@@ -259,7 +259,7 @@ include_graphics(files$bubblemap_png)
 cat("There are total ", sum(sample_cell$ValidCell), " cells, so each cluster was downsampled to ", downsample, " cells for heatmap.")
 ```
 
-```{r cluster_marker_heatmap, fig.width=12, fig.height=8, results="asis", fig.cap=figRef("cluster_marker_heatmap", "Cluster marker genes heatmap")}
+```{r cluster_marker_heatmap, fig.width=12, fig.height=8, results="asis", eval=file_not_empty(files$celltype_markers_heatmap_png), fig.cap=figRef("cluster_marker_heatmap", "Cluster marker genes heatmap")}
 include_graphics(files$celltype_markers_heatmap_png)
 ```
 

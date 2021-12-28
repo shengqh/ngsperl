@@ -365,7 +365,6 @@ sub addEdgeRTask {
     parameterSampleFile2 => $pairs,
     parameterSampleFile3 => $rCodeDic,
     output_file_ext      => ".edgeR.files.csv",
-    rCode                => "",
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
@@ -1621,12 +1620,12 @@ sub getScRNASeqConfig {
       # if ( $perform_comparison & $DE_by_cell ) {
       if ( $perform_comparison ) {
         if ( defined $def->{"DE_cluster_pairs"} ) {
-          addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, 0, 0 );
+          addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, 0, $DE_by_cell );
         }
 
         for my $deByOption (@deByOptions) {
           my $DE_by_celltype = $deByOption eq "DE_by_celltype";
-          addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, 1 );
+          addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell );
         }
       }
     }

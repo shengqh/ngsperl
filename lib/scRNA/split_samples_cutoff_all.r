@@ -1,4 +1,3 @@
-
 source("split_samples_utils.r")
 
 library(Seurat)
@@ -65,11 +64,18 @@ get_cutoff<-function(values, prefix, cutoff_startval=NA){
   my_out <- em(values,"normal","normal", cutoff_startval=cutoff_startval)
   cut_off <- cutoff(my_out)
   png(paste0(prefix, ".cutoff.png"), width=2000, height=1600, res=300)
-  hist(values,200,F,xlab="concentration",ylab="density", main=NULL,col="grey")
+  his<-hist(values,200,F,xlab="concentration",ylab="density", main=NULL,col="grey")
   lines(density(values),lwd=1.5,col="blue")
   lines(my_out,lwd=1.5,col="red")
   abline(v=cut_off[1],lwd=1.5,col="brown")
   abline(v=my_out$start.val,lwd=1.5,col="green")
+  
+  minb=min(his$breaks)
+  maxb=max(his$breaks)
+  x=minb + (maxb-minb) * 3 /4
+  
+  y=max(his$density)
+  legend(x=x, y=y, legend=c("density", "fit", "fit", "cutoff", "start_val"), col=c("blue", "red", "red", "brown", "green"), lty=c(1,1,2,1,1))
   dev.off()
   return(list(em_out=my_out, cut_off=cut_off))
 }
@@ -78,10 +84,9 @@ files_lines=read.table(parSampleFile1, sep="\t")
 files=split(files_lines$V1, files_lines$V2)
 
 if(parSampleFile2 != ''){
-  cutoffs_lines=read.table(parSampleFile2, sep="\t")
-  cutoffs=split(cutoffs_lines$V1, cutoffs_lines$V2)
+  cutoffs=read.table(parSampleFile2, sep="\t")
 }else{
-  cutoffs=list()
+  cutoffs=NULL
 }
 
 params_lines=read.table(parSampleFile3, sep="\t")
@@ -114,6 +119,22 @@ for(idx in c(1:length(files))){
   for (tagname in tagnames) {
     values=data[,tagname]
     values=values[values>0]
+
+    cutoff_point=NA
+    if(!is.null(cutoffs)){
+      if(ncol(cutoffs) == 3){
+        cfs<-cutoffs[cutoffs$V3==fname & cutoffs$V2==tagname,]
+        if(nrow(cfs)>0){
+          cutoff_point<-cfs$V1[1]
+        }
+      }else{
+        cfs<-cutoffs[cutoffs$V2==fname,]
+        if(nrow(cfs)>0){
+          cutoff_point<-cfs$V1[1]
+        }
+      }
+    }
+
     cat(paste0("get cutoff of ", tagname, " ...\n"))
     my_cutoff=get_cutoff(values, paste0(output_prefix, "_", tagname), cutoff_point)
     data[,paste0(tagname,"_pos")] = ifelse(data[,tagname]>my_cutoff$cut_off[1], tagname, "Negative")

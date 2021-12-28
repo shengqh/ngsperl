@@ -303,8 +303,8 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
 args = commandArgs(trailingOnly=TRUE)
 
 if (length(args) == 0) {
-  h5file = "/data/cqs/seurat_data/hto12_hto_valid.rds"
-  output_prefix = "/scratch/cqs/shengq2/papers/20210703_scrna_hto/hto_samples_cutoff/result/hto12/hto12.HTO"
+  h5file = r"(C:\projects\scratch\cqs\shengq2\paula_hurley_projects\20211130_scRNA_human\hto_samples_preparation\result\HYW_4701.hto.rds)"
+  output_prefix = r"(C:\projects\scratch\cqs\shengq2\paula_hurley_projects\20211130_scRNA_human\HYW_4701.hto)"
   hashtag_regex='Hashtag|TotalSeqC_|C025|Benign|Tumor|HTO|HEK|THP|K562|KG1'
 }else{
   h5file = args[1]

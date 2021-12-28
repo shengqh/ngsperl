@@ -1,4 +1,3 @@
-
 source("split_samples_utils.r")
 
 library(Seurat)
@@ -89,7 +88,7 @@ for(cname in names(files)){
 
   tagnames=rownames(obj[["HTO"]])
   if (length(tagnames) == 2) {
-    png(paste0(output_prefix, ".tag.point.png"), width=2000, height=1800, res=300)
+    png(paste0(cname, ".tag.point.png"), width=2000, height=1800, res=300)
     print(FeatureScatter(object = obj, feature1 = tagnames[1], feature2 = tagnames[2], cols = "black"))
     dev.off()
   }
