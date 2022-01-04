@@ -39,7 +39,7 @@ for (i in 1:nrow(categoryFiles)) {
                                 Sample=sampleName)
   categoryFigure<-rbind(categoryFigure,categoryOneFigure)
 }
-categoryFigure$Sample<-factor(categoryFigure$Sample,levels=sort(unique(levels(categoryFigure$Sample))))
+categoryFigure$Sample<-factor(categoryFigure$Sample,levels=sort(unique(as.character(categoryFigure$Sample))))
 
 categoryAllTable<-acast(categoryAll,V1~Sample,value.var="V2")
 summaryInd<-which(row.names(categoryAllTable) %in% c("TotalReads","MappedReads","FeatureReads","GenomeReads","TooShortReads","UnannotatedReads"))

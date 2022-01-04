@@ -5,7 +5,7 @@ use File::Spec;
 use File::Basename;
 use CQS::ConfigUtils;
 use Data::Dumper;
-use Test::More tests => 40;
+use Test::More tests => 42;
 
 { #test is_string
   ok(is_string("string"));
@@ -418,6 +418,89 @@ is_deeply( $cov_map, $cov_expect );
 
   is(get_first_result_file($config, "my_file3", ""),
     "file3");
+}
+
+{# test get_correlation_groups_by_pattern
+  my $def = {
+    files => {                                       
+      'LDLR_PEL_01' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_1_S1_L005_R1_001.fastq.gz' ],
+      'LDLR_PEL_02' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_2_S1_L005_R1_001.fastq.gz' ],
+      'LDLR_PEL_03' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_3_S1_L005_R1_001.fastq.gz' ],
+      'DKO_PEL_04' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_4_S1_L005_R1_001.fastq.gz' ],
+      'DKO_PEL_05' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_5_S1_L005_R1_001.fastq.gz' ],
+      'DKO_PEL_06' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_6_S1_L005_R1_001.fastq.gz' ],
+      'LDLR_PEL_07' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_7_S1_L005_R1_001.fastq.gz' ],
+      'LDLR_PEL_08' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_8_S1_L005_R1_001.fastq.gz' ],
+      'LDLR_PEL_09' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_9_S1_L005_R1_001.fastq.gz' ],
+      'DKO_PEL_10' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_10_S1_L005_R1_001.fastq.gz' ],
+      'DKO_PEL_11' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_11_S1_L005_R1_001.fastq.gz' ],
+      'DKO_PEL_12' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_12_S1_L005_R1_001.fastq.gz' ],
+      'LDLR_SUP_13' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_13_S1_L005_R1_001.fastq.gz' ],
+      'LDLR_SUP_14' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_14_S1_L005_R1_001.fastq.gz' ],
+      'LDLR_SUP_15' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_15_S1_L005_R1_001.fastq.gz' ],
+      'DKO_SUP_16' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_16_S1_L005_R1_001.fastq.gz' ],
+      'DKO_SUP_17' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_17_S1_L005_R1_001.fastq.gz' ],
+      'DKO_SUP_18' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_18_S1_L005_R1_001.fastq.gz' ],
+      'LDLR_SUP_19' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_19_S1_L005_R1_001.fastq.gz' ],
+      'LDLR_SUP_20' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_20_S1_L005_R1_001.fastq.gz' ],
+      'LDLR_SUP_21' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_21_S1_L005_R1_001.fastq.gz' ],
+      'DKO_SUP_22' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_22_S1_L005_R1_001.fastq.gz' ],
+      'DKO_SUP_23' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_23_S1_L005_R1_001.fastq.gz' ],
+      'DKO_SUP_24' => [ '/data/vickers_lab/20211227_7377_RA_NextFlex_smRNA_mouse/7377-RA-1_24_S1_L005_R1_001.fastq.gz' ],
+    },
+    
+    groups_pattern => '(.+)_\d',
+    
+    "pairs" => {
+      "PEL_DKO_vs_LDLR" => ["LDLR_PEL", "DKO_PEL"],
+      "SUP_DKO_vs_LDLR" => ["LDLR_SUP", "DKO_SUP"],
+      "LDLR_PEL_vs_SUP" => ["LDLR_SUP", "LDLR_PEL"],
+      "DKO_PEL_vs_SUP" => ["DKO_SUP", "DKO_PEL"],
+    },
+  };
+
+  $def->{groups} = get_groups_by_pattern($def);
+  is_deeply($def->{groups} ,{
+          'DKO_PEL' => [
+                         'DKO_PEL_04',
+                         'DKO_PEL_05',
+                         'DKO_PEL_06',
+                         'DKO_PEL_10',
+                         'DKO_PEL_11',
+                         'DKO_PEL_12'
+                       ],
+          'LDLR_SUP' => [
+                          'LDLR_SUP_13',
+                          'LDLR_SUP_14',
+                          'LDLR_SUP_15',
+                          'LDLR_SUP_19',
+                          'LDLR_SUP_20',
+                          'LDLR_SUP_21'
+                        ],
+          'DKO_SUP' => [
+                         'DKO_SUP_16',
+                         'DKO_SUP_17',
+                         'DKO_SUP_18',
+                         'DKO_SUP_22',
+                         'DKO_SUP_23',
+                         'DKO_SUP_24'
+                       ],
+          'LDLR_PEL' => [
+                          'LDLR_PEL_01',
+                          'LDLR_PEL_02',
+                          'LDLR_PEL_03',
+                          'LDLR_PEL_07',
+                          'LDLR_PEL_08',
+                          'LDLR_PEL_09'
+                        ]
+        });
+
+  my $corr_groups = get_correlation_groups_by_pattern($def);
+
+  is_deeply( $corr_groups, 
+    {
+      "all" => ["DKO_PEL", "DKO_SUP", "LDLR_PEL", "LDLR_SUP"],
+    });
 }
 
 1;

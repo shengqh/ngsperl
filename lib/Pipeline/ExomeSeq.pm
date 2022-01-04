@@ -411,131 +411,141 @@ sub getConfig {
 
   my $rg_name_regex = undef;
   my $alignment_source_ref = $source_ref;
-  if ($def->{perform_gatk4_pairedfastq2bam}){
-    $bam_input = addPairedFastqToProcessedBam($config, $def, $individual, $target_dir, $alignment_source_ref);
-    $bam_ref = [$bam_input, ".bam\$"];
-    $fasta = getValue( $def, "bwa_fasta" );
 
-    #TEQC for target region coverage
-    $config->{"TEQC"} = {
-      class      => "CQS::UniqueR",
-      perform    => 1,
-      target_dir => $target_dir . '/' . "TEQC",
-      parameterSampleFile1_ref=> $bam_ref,
-      parameterFile1=> $covered_bed,
-      rtemplate  => "runTEQC.R",
-      rCode      => "genome=\""
-        . getValue($def, "annovar_buildver", "hg38")
-        . "\";",
-      output_file_ext => ".TEQC",
-      sh_direct       => 1,
-      'pbs'           => {
-        'nodes'    => '1:ppn=1',
-        'mem'      => '20gb',
-        'walltime' => '10'
-      },
-    };
+  my $perform_mapping = getValue($def, "perform_mapping", 1);
 
+
+  if(! $perform_mapping){
+    $bam_input = "files";
+    $bam_ref = "files";
+    $fasta = getValue($def, "fasta_file");
   }else{
-    if ($def->{aligner_scatter_count}){
-      my $splitFastq = "bwa_01_splitFastq";
-      $config->{ $splitFastq } = {
-        class       => "CQS::ProgramWrapperOneToMany",
-        perform     => 1,
-        target_dir  => "$target_dir/$splitFastq",
-        option      => "",
-        interpretor => "python3",
-        program     => "../Format/splitFastq.py",
-        source_ref      => $source_ref,
-        source_arg            => "-i",
-        source_join_delimiter => ",",
-        output_to_same_folder => 1,
-        output_arg            => "-o",
-        output_file_prefix    => "",
-        output_file_ext       => "._ITER_.1.fastq.gz",
-        output_other_ext      => "._ITER_.2.fastq.gz",
-        iteration_arg         => "--trunk",
-        iteration             => $def->{aligner_scatter_count},
-        sh_direct             => 1,
-        pbs                   => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      };
-      $rg_name_regex = "(.+)_ITER_";
-      $alignment_source_ref = $splitFastq;
-      push @$individual, $splitFastq;
-    }
-
-    #based on paper https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-016-1097-3, we don't do markduplicate anymore
-    if ( $def->{aligner} eq "bwa") {
+    if ($def->{perform_gatk4_pairedfastq2bam}){
+      $bam_input = addPairedFastqToProcessedBam($config, $def, $individual, $target_dir, $alignment_source_ref);
+      $bam_ref = [$bam_input, ".bam\$"];
       $fasta = getValue( $def, "bwa_fasta" );
-      my $bwa = $def->{aligner_scatter_count}?"bwa_02_alignment":"bwa";
-      $config->{ $bwa } = {
-        class                 => "Alignment::BWA",
-        perform               => 1,
-        target_dir            => "${target_dir}/" . getNextFolderIndex($def) . $bwa,
-        option                => getValue( $def, "bwa_option" ),
-        bwa_index             => $fasta,
-        source_ref            => $alignment_source_ref,
-        use_tmp_folder        => $def->{"bwa_use_tmp_folder"},
-        use_sambamba          => $def->{"use_sambamba"},
-        output_to_same_folder => 1,
-        rg_name_regex         => $rg_name_regex,
-        sh_direct             => 0,
-        pbs                   => {
-          "nodes"    => "1:ppn=" . $max_thread,
-          "walltime" => getValue($def, "bwa_walltime", "22"),
-          "mem"      => getValue($def, "bwa_memory", "40gb")
+
+      #TEQC for target region coverage
+      $config->{"TEQC"} = {
+        class      => "CQS::UniqueR",
+        perform    => 1,
+        target_dir => $target_dir . '/' . "TEQC",
+        parameterSampleFile1_ref=> $bam_ref,
+        parameterFile1=> $covered_bed,
+        rtemplate  => "runTEQC.R",
+        rCode      => "genome=\""
+          . getValue($def, "annovar_buildver", "hg38")
+          . "\";",
+        output_file_ext => ".TEQC",
+        sh_direct       => 1,
+        'pbs'           => {
+          'nodes'    => '1:ppn=1',
+          'mem'      => '20gb',
+          'walltime' => '10'
         },
       };
-      $bam_ref = [ $bwa, ".bam\$" ];
-      $bam_input = $bwa;
-      push @$individual, ( $bwa );
 
-      my $bwa_summary = $def->{aligner_scatter_count}?"bwa_04_summary":"bwa_summary";
-      if ($def->{aligner_scatter_count}) {
-        add_BWA_summary($config, $def, $summary, $target_dir, $bwa_summary, $bwa, $rg_name_regex);
-      }else{
-        add_BWA_summary($config, $def, $summary, $target_dir, $bwa_summary, $bwa);
+    }else{
+      if ($def->{aligner_scatter_count}){
+        my $splitFastq = "bwa_01_splitFastq";
+        $config->{ $splitFastq } = {
+          class       => "CQS::ProgramWrapperOneToMany",
+          perform     => 1,
+          target_dir  => "$target_dir/$splitFastq",
+          option      => "",
+          interpretor => "python3",
+          program     => "../Format/splitFastq.py",
+          source_ref      => $source_ref,
+          source_arg            => "-i",
+          source_join_delimiter => ",",
+          output_to_same_folder => 1,
+          output_arg            => "-o",
+          output_file_prefix    => "",
+          output_file_ext       => "._ITER_.1.fastq.gz",
+          output_other_ext      => "._ITER_.2.fastq.gz",
+          iteration_arg         => "--trunk",
+          iteration             => $def->{aligner_scatter_count},
+          sh_direct             => 1,
+          pbs                   => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        };
+        $rg_name_regex = "(.+)_ITER_";
+        $alignment_source_ref = $splitFastq;
+        push @$individual, $splitFastq;
       }
-    }
-    else {
-      die "Unknown alinger " . $def->{aligner};
-    }
 
-    if ($def->{aligner_scatter_count}){
-      my $mergeBam = "bwa_03_merge";
-      $config->{$mergeBam} = {
-        class                 => "CQS::ProgramWrapperManyToOne",
-        perform               => 1,
-        target_dir            => "$target_dir/$mergeBam",
-        option                => "-t 8 __OUTPUT__ __INPUT__",
-        interpretor           => "",
-        check_program         => 0,
-        program               => "sambamba merge",
-        source_ref            => $bam_ref,
-        source_arg            => "",
-        source_join_delimiter => " ",
-        output_to_same_folder => 1,
-        output_arg            => "-o",
-        output_file_prefix    => ".bam",
-        output_file_ext       => ".bam",
-        sh_direct             => 1,
-        pbs                   => {
-          "nodes"     => "1:ppn=8",
-          "walltime"  => "10",
-          "mem"       => "10gb"
-        },
-      };
-      $bam_input = $mergeBam;
-      $bam_ref = [ $mergeBam, ".bam\$" ];
-      push @$individual, (  $mergeBam );
-    }
+      #based on paper https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-016-1097-3, we don't do markduplicate anymore
+      if ( $def->{aligner} eq "bwa") {
+        $fasta = getValue( $def, "bwa_fasta" );
+        my $bwa = $def->{aligner_scatter_count}?"bwa_02_alignment":"bwa";
+        $config->{ $bwa } = {
+          class                 => "Alignment::BWA",
+          perform               => 1,
+          target_dir            => "${target_dir}/" . getNextFolderIndex($def) . $bwa,
+          option                => getValue( $def, "bwa_option" ),
+          bwa_index             => $fasta,
+          source_ref            => $alignment_source_ref,
+          use_tmp_folder        => $def->{"bwa_use_tmp_folder"},
+          use_sambamba          => $def->{"use_sambamba"},
+          output_to_same_folder => 1,
+          rg_name_regex         => $rg_name_regex,
+          sh_direct             => 0,
+          pbs                   => {
+            "nodes"    => "1:ppn=" . $max_thread,
+            "walltime" => getValue($def, "bwa_walltime", "22"),
+            "mem"      => getValue($def, "bwa_memory", "40gb")
+          },
+        };
+        $bam_ref = [ $bwa, ".bam\$" ];
+        $bam_input = $bwa;
+        push @$individual, ( $bwa );
 
-    if(getValue($def, "perform_bam_validation", 0)){
-      add_bam_validation($config, $def, $individual, $target_dir, $bam_input . "_bam_validation", $bam_ref );
+        my $bwa_summary = $def->{aligner_scatter_count}?"bwa_04_summary":"bwa_summary";
+        if ($def->{aligner_scatter_count}) {
+          add_BWA_summary($config, $def, $summary, $target_dir, $bwa_summary, $bwa, $rg_name_regex);
+        }else{
+          add_BWA_summary($config, $def, $summary, $target_dir, $bwa_summary, $bwa);
+        }
+      }
+      else {
+        die "Unknown alinger " . $def->{aligner};
+      }
+
+      if ($def->{aligner_scatter_count}){
+        my $mergeBam = "bwa_03_merge";
+        $config->{$mergeBam} = {
+          class                 => "CQS::ProgramWrapperManyToOne",
+          perform               => 1,
+          target_dir            => "$target_dir/$mergeBam",
+          option                => "-t 8 __OUTPUT__ __INPUT__",
+          interpretor           => "",
+          check_program         => 0,
+          program               => "sambamba merge",
+          source_ref            => $bam_ref,
+          source_arg            => "",
+          source_join_delimiter => " ",
+          output_to_same_folder => 1,
+          output_arg            => "-o",
+          output_file_prefix    => ".bam",
+          output_file_ext       => ".bam",
+          sh_direct             => 1,
+          pbs                   => {
+            "nodes"     => "1:ppn=8",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        };
+        $bam_input = $mergeBam;
+        $bam_ref = [ $mergeBam, ".bam\$" ];
+        push @$individual, (  $mergeBam );
+      }
+
+      if(getValue($def, "perform_bam_validation", 0)){
+        add_bam_validation($config, $def, $individual, $target_dir, $bam_input . "_bam_validation", $bam_ref );
+      }
     }
 
     my $perform_cnv = $def->{perform_cnv_cnMOPs} || $def->{perform_cnv_gatk4_cohort} || $def->{perform_cnv_xhmm};
@@ -793,8 +803,8 @@ fi
   }
 
   if($def->{perform_bamsnap} && $def->{"bamsnap_locus"}){
-    #addBamsnapLocus($config, $def, $summary, $target_dir, "bamsnap_locus", $bam_ref);
-    addBamsnapLocus($config, $def, $summary, $target_dir, "bamsnap_locus", ['bwa', '.bam$']);
+    addBamsnapLocus($config, $def, $summary, $target_dir, "bamsnap_locus", $bam_ref);
+    #addBamsnapLocus($config, $def, $summary, $target_dir, "bamsnap_locus", ['bwa', '.bam$']);
   }
 
   if($def->{perform_extract_bam}){
@@ -991,7 +1001,6 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       gvcf              => 1,
       sh_direct         => 0,
       pbs               => {
-        "email"    => $email,
         "nodes"    => "1:ppn=" . $max_thread,
         "walltime" => "24",
         "mem"      => "40gb"
@@ -1285,6 +1294,31 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       };
       push @$summary, $vep_name;
     }
+  }
+
+  if ($def->{perform_bamplot}){
+    defined $def->{dataset_name} or die "Define dataset_name for bamplot first!";
+    defined $def->{bamplot_gff} or die "Define bamplot_gff for bamplot first!";
+    $config->{bamplot} = {
+      class              => "Visualization::Bamplot",
+      perform            => 1,
+      target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "bamplot",
+      option             => "-g " . getValue($def, "dataset_name") . " -y uniform -r --save-temp",
+      source_ref         => $source_ref,
+      gff_file           => getValue($def, "bamplot_gff"),
+      is_rainbow_color   => 0,
+      is_single_pdf      => 0,
+      is_draw_individual => 0,
+      groups             => $def->{"plotgroups"},
+      colors             => $def->{"colormaps"},
+      sh_direct          => 1,
+      pbs                => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "23",
+        "mem"       => "10gb"
+      },
+    };
+    push( @$summary, "bamplot" );
   }
 
   if ( $def->{"perform_muTect"} ) {
