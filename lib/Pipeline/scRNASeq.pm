@@ -37,6 +37,8 @@ sub initializeScRNASeqDefaultOptions {
 
   initDefaultValue( $def, "perform_scRNABatchQC", 1 );
 
+  initDefaultValue( $def, "perform_individual_qc", 1 );
+
   initDefaultValue( $def, "perform_preprocessing", 0 );
   initDefaultValue( $def, "perform_mapping",       0 );
   initDefaultValue( $def, "perform_counting",      0 );
@@ -570,6 +572,49 @@ sub getScRNASeqConfig {
   }
 
   if (defined $def->{files}){
+    if($def->{perform_individual_qc}){
+      my $qc_individual_task = "qc_individual";
+      $config->{$qc_individual_task} = {
+        class => "CQS::UniqueRmd",
+        target_dir => "${target_dir}/$qc_individual_task",
+        report_rmd_file => "../scRNA/singlecell_mouse_aortas.Rmd",
+        additional_rmd_files => "../scRNA/markerCode_filter.R",
+        option => "",
+        parameterSampleFile1_ref => "files",
+        parameterSampleFile2 => {
+          species => getValue($def, "species"),
+          Mtpattern             => getValue( $def, "Mtpattern" ),
+          rRNApattern           => getValue( $def, "rRNApattern" ),
+          Remove_rRNA        => getValue( $def, "Remove_rRNA" ),
+          Remove_MtRNA        => getValue( $def, "Remove_MtRNA" ),
+          nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
+          nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
+          nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
+          mt_cutoff             => getValue( $def, "mt_cutoff" ),
+          species               => getValue( $def, "species" ),
+          resolution            => getValue( $def, "resolution" ),
+          pca_dims              => getValue( $def, "pca_dims" ),
+          markers_file     => getValue( $def, "markers_file" ),
+        },
+        output_perSample_file => "parameterSampleFile1",
+        output_perSample_file_byName => 1,
+        output_perSample_file_ext => ".qc.rds",
+        output_to_same_folder => 1,
+        can_result_be_empty_file => 0,
+        sh_direct   => 1,
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+
+      if (defined $def->{groups}){
+        $config->{$qc_individual_task}{parameterSampleFile3_ref} = "groups";
+      }
+      push( @$summary, $qc_individual_task );
+    }
+
     my @report_files = ();
     my @report_names = ();
     my $hto_task = undef;
@@ -943,19 +988,21 @@ sub getScRNASeqConfig {
         my $nsamples = scalar(@sample_names);
         my $by_integration = $nsamples > 1 ? getValue( $def, "by_integration" ) : 0;
 
+        my $sct_str = getValue( $def, "by_sctransform" ) ? "_sct":"";
+
         my $preprocessing_rscript;
         if($by_integration){
           my $integration_by_harmony = getValue( $def, "integration_by_harmony", 1);
           if($integration_by_harmony){
-            $seurat_task = "seurat_harmony";
+            $seurat_task = "seurat${sct_str}_harmony";
             $preprocessing_rscript = "../scRNA/seurat_harmony.r";
             $reduction = "harmony";
           }else{
-            $seurat_task = "seurat_integration";
+            $seurat_task = "seurat${sct_str}_integration";
             $preprocessing_rscript = "../scRNA/seurat_integration.r";
           }
         }else{
-          $seurat_task = "seurat_merge";
+          $seurat_task = "seurat${sct_str}_merge";
           $preprocessing_rscript = "../scRNA/seurat_merge.r";
         }
 
@@ -1090,7 +1137,7 @@ sub getScRNASeqConfig {
           reduction             => $reduction,
         },
         output_file_ext      => ".final.rds",
-        output_other_ext  => ".cluster.csv;.cluster.normByUpQuantile.csv;.umap.sample_cell.png;.cluster_sample.csv;.cluster_sample_percByCluster.png;.cluster_sample_percBySample.png",
+        output_other_ext  => ".cluster.csv;.cluster.meanexp.csv;.umap.sample_cell.png;.cluster_sample.csv;.cluster_sample_percByCluster.png;.cluster_sample_percBySample.png",
         sh_direct            => 1,
         pbs                  => {
           "nodes"     => "1:ppn=1",
@@ -1135,7 +1182,7 @@ sub getScRNASeqConfig {
         perform                  => 1,
         target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $celltype_task,
         rtemplate                => "../scRNA/scRNA_func.r,../scRNA/celltype_annotation.r",
-        parameterFile1_ref =>  [$cluster_task, ".cluster.normByUpQuantile.csv"],
+        parameterFile1_ref =>  [$cluster_task, ".cluster.meanexp.csv"],
         parameterFile2_ref =>  [$cluster_task, ".cluster.csv"],
         parameterFile3_ref =>  [$cluster_task, ".final.rds"],
         parameterSampleFile1    => {
