@@ -1,3 +1,4 @@
+
 source("scRNA_func.r")
 library(Seurat)
 library(ggplot2)
@@ -37,7 +38,7 @@ if(is.list(finalList)){
   all_obj$seurat_celltype<-all_obj[[myoptions$celltype_name]]
 }
 
-draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_prefix, min.pct, logfc.threshold ){
+draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_prefix, min.pct, logfc.threshold){
   assay=ifelse("SCT" %in% names(all_obj@assays), "SCT", "RNA")
 
   obj = subset(all_obj, seurat_clusters %in% names(new.cluster.ids))
@@ -66,7 +67,7 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
   uniqueClusters=unique(clusters[,c("seurat_clusters", "cellactivity_clusters")])
   cellTypeClusters=tapply(uniqueClusters$seurat_clusters, uniqueClusters$cellactivity_clusters, list)
   
-  ae=AverageExpression(obj, group.by = "seurat_clusters", assays = "SCT")$SCT
+  ae=AverageExpression(obj, group.by = "seurat_clusters", assays = assay)[[1]]
   aemax=colnames(ae)[max.col(ae, ties.method = "first")]
   genemax=data.frame(gene=rownames(ae), max_cluster=aemax)
   write.csv(genemax, paste0(file_prefix, ".genemax.csv"), row.names=F)
