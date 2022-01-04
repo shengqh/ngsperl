@@ -577,7 +577,7 @@ sub getScRNASeqConfig {
       $config->{$qc_individual_task} = {
         class => "CQS::UniqueRmd",
         target_dir => "${target_dir}/$qc_individual_task",
-        report_rmd_file => "../scRNA/singlecell_mouse_aortas.Rmd",
+        report_rmd_file => "../scRNA/individual_qc.Rmd",
         additional_rmd_files => "../scRNA/markerCode_filter.R",
         option => "",
         parameterSampleFile1_ref => "files",
