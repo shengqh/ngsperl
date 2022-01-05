@@ -1,90 +1,64 @@
 
-
-##compare to markerCode, add filter criteria for each sample
-
-marker<-data.frame(fread(markerfile))
-species_ind<-regexpr(species,marker[,1])
-marker_species<-marker[species_ind>0 & marker$ubiquitousness.index<0.05,]
-##change the gene symbol only keep the first letter capitalize
-if (species=="Mm") {
-  marker_species$official.gene.symbol<-paste0(substr(marker_species$official.gene.symbol,1,1),substr(tolower(marker_species$official.gene.symbol),2,nchar(marker_species$official.gene.symbol)))
-}
-##
-cellType<-tapply(marker_species$official.gene.symbol,marker_species$cell.type,list)
-
-###if add crc-specific signatures # if add_subtype==NULL, only use subtype but not markerfile
-if(is.null(add_Subtype)) {
-  subtype<-read.csv(subtypefile,as.is=T,header=F)
-  celltype_add<-tapply(subtype[,1],subtype[,2],list)
-  cellType<-celltype_add
-}else if (add_Subtype==TRUE) {
-      subtype<-read.csv(subtypefile,as.is=T,header=F)
-     celltype_add<-tapply(subtype[,1],subtype[,2],list)
-     cellType<-c(cellType,celltype_add)
-}
-
-
+library(dplyr)
 
 ################
 
 ORA_celltype<-function(medianexp,cellType,method="cta"){
-	
- 
-freq<-sort((table(unlist(cellType)))/length(cellType))
-weight<-1+sqrt((max(freq)-freq)/(max(freq)-min(freq)))	
-	
-ORA_result<-matrix(NA, nrow=length(cellType),ncol=dim(medianexp)[2])
-CTA_result<-matrix(0,nrow=length(cellType),ncol=dim(medianexp)[2])
-exp_z<-scale(medianexp)
- genenames<-rownames(medianexp)   
- for (j in 1: dim(medianexp)[2]){
+  freq<-sort((table(unlist(cellType)))/length(cellType))
+  weight<-1+sqrt((max(freq)-freq)/(max(freq)-min(freq)))	
+  
+  ORA_result<-matrix(NA, nrow=length(cellType),ncol=dim(medianexp)[2])
+  CTA_result<-matrix(0,nrow=length(cellType),ncol=dim(medianexp)[2])
+  exp_z<-scale(medianexp)
+  genenames<-rownames(medianexp)   
+  for (j in 1: dim(medianexp)[2]){
     clusterexp<-medianexp[,j] 
-	clusterexp_z<-exp_z[,j]
-  for (i in 1:length(cellType)){
+    clusterexp_z<-exp_z[,j]
+    for (i in 1:length(cellType)){
       
-	  ct_exp_names<-(intersect(genenames[clusterexp>0],cellType[[i]]))
-	  ct_exp<-length(ct_exp_names)
-	  ct_not_exp<-length(cellType[[i]])-ct_exp
+      ct_exp_names<-(intersect(genenames[clusterexp>0],cellType[[i]]))
+      ct_exp<-length(ct_exp_names)
+      ct_not_exp<-length(cellType[[i]])-ct_exp
       exp_not_ct<-sum(clusterexp>0)-ct_exp
-	  not_exp_not_ct<-length(clusterexp)-ct_not_exp 
-	  cont.table<-matrix(c(ct_exp,ct_not_exp,exp_not_ct,not_exp_not_ct),nrow=2)
-	  ORA_result[i,j]<-fisher.test(cont.table,alternative="greater")$p.value
-	  ###
-	  weight_ss<-weight[names(weight)%in%cellType[[i]]]
-	  ind<-match(names(weight_ss),genenames)
+      not_exp_not_ct<-length(clusterexp)-ct_not_exp 
+      cont.table<-matrix(c(ct_exp,ct_not_exp,exp_not_ct,not_exp_not_ct),nrow=2)
+      ORA_result[i,j]<-fisher.test(cont.table,alternative="greater")$p.value
+      ###
+      weight_ss<-weight[names(weight)%in%cellType[[i]]]
+      ind<-match(names(weight_ss),genenames)
       exp_ss<-clusterexp_z[ind[!is.na(ind)]]
       weight_ss<-weight_ss[!is.na(ind)]
-     CTA_result[i,j]<-sum(exp_ss*weight_ss)/(length(exp_ss)^0.3)
-	}
+      CTA_result[i,j]<-sum(exp_ss*weight_ss)/(length(exp_ss)^0.3)
+    }
   }
   rownames(ORA_result)<-rownames(CTA_result)<-names(cellType)
   minp_ora_ind<- apply(ORA_result,2,function(x){which.min(x)})
   minp_ora<-apply(ORA_result,2,min)
- names(minp_ora)<-rownames(ORA_result)[minp_ora_ind]
-
-max_cta_ind<- apply(CTA_result,2,function(x){which.max(x)})
-max_cta<-apply(CTA_result,2,max,na.rm=T)
-names(max_cta)<-rownames(CTA_result)[max_cta_ind]
- 
-if (method=="cta") {
-      cta_val<-max_cta
-      p_val<-ORA_result[cbind(match(names(max_cta),rownames(ORA_result)),seq(1:length(max_cta)))]
-                               
-      predict_result<-cbind(cta_val,p_val)
-      
-
-}
-if (method=="ora") {
-      p_val<-minp_ora
-      cta_val<-CTA_result[cbind(match(names(minp_ora),rownames(CTA_result)),seq(1:length(minp_ora)))]
-                               
-      predict_result<-cbind(cta_val,p_val)  
-      
-
-}
-
-
-
+  names(minp_ora)<-rownames(ORA_result)[minp_ora_ind]
+  
+  max_cta_ind<- apply(CTA_result,2,function(x){which.max(x)})
+  max_cta<-apply(CTA_result,2,max,na.rm=T)
+  names(max_cta)<-rownames(CTA_result)[max_cta_ind]
+  
+  if (method=="cta") {
+    cta_val<-max_cta
+    p_val<-ORA_result[cbind(match(names(max_cta),rownames(ORA_result)),seq(1:length(max_cta)))]
+    
+    predict_result<-cbind(cta_val,p_val)
+    
+    
+  }
+  if (method=="ora") {
+    p_val<-minp_ora
+    cta_val<-CTA_result[cbind(match(names(minp_ora),rownames(CTA_result)),seq(1:length(minp_ora)))]
+    
+    predict_result<-cbind(cta_val,p_val)  
+    
+    
+  }
+  
+  
+  
   return(list(predict_result=predict_result, method=method,ora=ORA_result,cta=CTA_result,minp_ora=minp_ora,max_cta=max_cta,ct_exp_names=ct_exp_names))
 }
 
@@ -104,12 +78,12 @@ Doheatmap_cellmarker_cellType<-function(SCLC,top10,cellType,predict_celltype) {
   data_h_scale<-MinMax(data_h_scale,min=-2.5,max=2.5)
   
   matchid<-NULL
-   ###
+  ###
   for (i in 1:length(levels(SCLC@active.ident))){
     
     matchid<-c(matchid,ifelse(is.na(match(top10$gene[top10$cluster==i-1],cellType[[rownames(predict_celltype$predict_result)[i]]])),0,1))
-      
-}
+    
+  }
   matchid<-rev(matchid)
   predict_result<-data.frame(predict_celltype$predict_result)
   
@@ -118,15 +92,15 @@ Doheatmap_cellmarker_cellType<-function(SCLC,top10,cellType,predict_celltype) {
   clustnum<-table(SCLC@active.ident)
   colind<-c(0,cumsum(clustnum))+c(clustnum/2,0)
   colind<-floor(colind)[-length(colind)]
-    
+  
   col_text<-ifelse(predict_result$p_val<1e-5,"blue","gray")
   names(colind)<-levels(SCLC@active.ident)
   
   markernum<-table(tapply(top10$gene,top10$cluster))
   markerind<-cumsum(rev(markernum))
   
-   old.par <- par(no.readonly = TRUE)  
-   par(mar=c(5,5,8,1))
+  old.par <- par(no.readonly = TRUE)  
+  par(mar=c(5,5,8,1))
   image(data_h_scale,col=PurpleAndYellow(),axes=F)
   abline(v=colrange[cumsum(clustnum)],col="white",lwd=2)
   abline(h=rowrange[markerind]+0.5/length(rowrange),col="white",lwd=2)
@@ -136,47 +110,47 @@ Doheatmap_cellmarker_cellType<-function(SCLC,top10,cellType,predict_celltype) {
   text(colrange[colind],-20/length(colrange),labels=paste0("cta:",round(predict_result$cta_val,1)),srt=45,xpd=T,cex=0.8) 
   text(colrange[colind+15],-20/length(colrange),labels=paste0("p:",format(predict_result$p_val,format="e",digits=1)),srt=45,xpd=T,cex=0.8)
   par(old.par)
- 
+  
 }
 
 
 ###plot the predict result 
 Plot_predictcelltype<-function(predict_celltype,method="cta",topn=3) {
-cta_index<-apply(predict_celltype$cta,2,function(x){return(order(x,decreasing=T)[1:topn])})
-cta_index<-unique(sort(cta_index))
-cta_mat<- predict_celltype$cta[cta_index,]
+  cta_index<-apply(predict_celltype$cta,2,function(x){return(order(x,decreasing=T)[1:topn])})
+  cta_index<-unique(sort(cta_index))
+  cta_mat<- predict_celltype$cta[cta_index,]
   
-ora_index<-apply(predict_celltype$ora,2,function(x){return(order(x,decreasing=F)[1:topn])})
-ora_index<-unique(sort(ora_index))
-ora_mat<- predict_celltype$ora[ora_index,]
-ora_mat<--log10(ora_mat) 
-if (method=="cta") plotfunction_celltype(cta_mat)
-if (method=="ora") plotfunction_celltype(ora_mat)
-      
-      
+  ora_index<-apply(predict_celltype$ora,2,function(x){return(order(x,decreasing=F)[1:topn])})
+  ora_index<-unique(sort(ora_index))
+  ora_mat<- predict_celltype$ora[ora_index,]
+  ora_mat<--log10(ora_mat) 
+  if (method=="cta") plotfunction_celltype(cta_mat)
+  if (method=="ora") plotfunction_celltype(ora_mat)
+  
+  
 }
 
 ##
 plotfunction_celltype<-function(cta_mat) {
-
- old.par <- par(no.readonly = TRUE)  
-
- layout(matrix(c(2,0,0,1), 2, 2, byrow = TRUE),width=c(1,6),heights=c(1,6))
-      par(mar=c(3,1,1,10))
-      par(xaxs="i")
-      par(yaxs="i")
-   image(1:dim(cta_mat)[2],1:dim(cta_mat)[1],t(cta_mat),col=colorRampPalette(c("white","red"))(100),axes=F,xlab="",ylab="")
+  
+  old.par <- par(no.readonly = TRUE)  
+  
+  layout(matrix(c(2,0,0,1), 2, 2, byrow = TRUE),width=c(1,6),heights=c(1,6))
+  par(mar=c(3,1,1,10))
+  par(xaxs="i")
+  par(yaxs="i")
+  image(1:dim(cta_mat)[2],1:dim(cta_mat)[1],t(cta_mat),col=colorRampPalette(c("white","red"))(100),axes=F,xlab="",ylab="")
   axis(4,1:dim(cta_mat)[1],labels=rownames(cta_mat),las=2,tick=F,cex.axis=0.8)
   axis(1,1:dim(cta_mat)[2],labels=0:(dim(cta_mat)[2]-1),las=2,tick=F,cex.axis=0.8)
-
+  
   par(mar=c(2,1,2,1))
-     maxval<-round(max(cta_mat),digits=1)
-      zval<-seq(0,maxval,0.1)
-      image(1:length(zval),1,matrix(zval,ncol=1),col= colorRampPalette(c("white", "red"))(100),axes=F,xlab="",ylab="")
-      mtext("0",side=1,line=0.5,at=1,cex=0.8)
-      mtext(maxval,side=1,line=0.5,at=length(zval),cex=0.8)
-    par(old.par)
-      
+  maxval<-round(max(cta_mat),digits=1)
+  zval<-seq(0,maxval,0.1)
+  image(1:length(zval),1,matrix(zval,ncol=1),col= colorRampPalette(c("white", "red"))(100),axes=F,xlab="",ylab="")
+  mtext("0",side=1,line=0.5,at=1,cex=0.8)
+  mtext(maxval,side=1,line=0.5,at=length(zval),cex=0.8)
+  par(old.par)
+  
 }  
 
 
@@ -186,8 +160,8 @@ convertEnsembltoGeneSymbol<-function(counts,convertfile) {
   converttable<-read.csv(convertfile,stringsAsFactors = F)
   ind<-match(rownames(counts),converttable[,2])
   if (sum(is.na(ind)>0)) {
-     counts<-counts[!is.na(ind),]
-     genename<-converttable[ind[!is.na(ind)],1]
+    counts<-counts[!is.na(ind),]
+    genename<-converttable[ind[!is.na(ind)],1]
     warning('convertfile is incorrect')} else {genename<-converttable[ind,1]}
   
   
@@ -203,18 +177,15 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
   
   countfile<-SampleInfo$countfile
   if(url.exists(countfile) | (file.exists(countfile) & !dir.exists(countfile))){
-    
-    
     if (length(grep (".rds$",countfile))>0) { 
-      
-      counts<-readRDS(countfile)$cm} else if (length(grep (".h5$",countfile))>0) {
-        
-        counts<-Read10X_h5(countfile)
-        #rownames(counts)<-gsub("GRCh38______","",rownames(counts))
-      } else  {
-        
-        counts = data.frame(fread(countfile),row.names = 1,check.names=F) }
-    
+      counts<-readRDS(countfile)$cm
+    } else if (length(grep (".h5$",countfile))>0) {
+      counts<-Read10X_h5(countfile)
+      #counts<-counts[,c(1:1000)]
+      #rownames(counts)<-gsub("GRCh38______","",rownames(counts))
+    } else  {
+      counts = data.frame(fread(countfile),row.names = 1,check.names=F) 
+    }
   } else {
     counts=Read10X(countfile)
   }
@@ -226,139 +197,118 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
     counts<-convertEnsembltoGeneSymbol(counts,Ensemblfile)
   }
   
- cat("\n\n# Sample", SampleInfo$SampleId,": Quality Check and Analysis\n\n")
- cat("\n\n## ", SampleInfo$SampleId,": Quality Check\n\n")
- 
- #remove countfile from sampleinfo..duplication
- SampleInfo<-subset(SampleInfo,select = -c(countfile))
- 
- metadata<-Reduce(rbind, list(SampleInfo)[rep(1L, times=ncol(counts))])
- rownames(metadata)<-colnames(counts)
+  cat("\n\n# Sample", SampleInfo$SampleId,": Quality Check and Analysis\n\n")
+  cat("\n\n## ", SampleInfo$SampleId,": Quality Check\n\n")
+  
+  #remove countfile from sampleinfo..duplication
+  SampleInfo<-subset(SampleInfo,select = -c(countfile))
+  
+  metadata<-Reduce(rbind, list(SampleInfo)[rep(1L, times=ncol(counts))])
+  rownames(metadata)<-colnames(counts)
   SCLC <- CreateSeuratObject(counts = counts, min.cells = 5, min.features = 10, meta.data=metadata, project=SampleInfo$SampleId)
   SCLC[["percent.mt"]] <- PercentageFeatureSet(SCLC, pattern = Mtpattern)
   cat("\n\n### ", "Fig.1 Violin plot of nGene,nUMI and mtRNA distribution\n\n")
-   print(VlnPlot(SCLC, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3))
-   plot1 <- FeatureScatter(SCLC, feature1 = "nCount_RNA", feature2 = "percent.mt")
-   plot2 <- FeatureScatter(SCLC, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
-   
-   cat("\n\n### ", "Fig.2 The scatterplot between mtRNA/nGene and nUMI \n\n")
-   print(CombinePlots(plots = list(plot1, plot2)))
-   cat("\n\n### ", "Fig.3  nUMI distribution\n\n")
-plot(sort(SCLC@meta.data$nCount_RNA,decreasing = T),ylab="UMI counts",lty=2,pch=16,log="xy")
-abline(h=1000)
-abline(h=500)
-
-rm(counts)
-
-if (min(SCLC[["percent.mt"]]) < Cutoff$mt_cutoff) 
+  print(VlnPlot(SCLC, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3))
+  plot1 <- FeatureScatter(SCLC, feature1 = "nCount_RNA", feature2 = "percent.mt")
+  plot2 <- FeatureScatter(SCLC, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+  
+  cat("\n\n### ", "Fig.2 The scatterplot between mtRNA/nGene and nUMI \n\n")
+  print(CombinePlots(plots = list(plot1, plot2)))
+  cat("\n\n### ", "Fig.3  nUMI distribution\n\n")
+  plot(sort(SCLC@meta.data$nCount_RNA,decreasing = T),ylab="UMI counts",lty=2,pch=16,log="xy")
+  abline(h=1000)
+  abline(h=500)
+  
+  rm(counts)
+  
+  if (min(SCLC[["percent.mt"]]) < Cutoff$mt_cutoff) 
   {  
-  
-      SCLC <- subset(SCLC, subset = nFeature_RNA > Cutoff$nFeature_cutoff_min & nFeature_RNA<Cutoff$nFeature_cutoff_max & nCount_RNA>Cutoff$nCount_cutoff & percent.mt < Cutoff$mt_cutoff)
-      SCLC <- NormalizeData(SCLC)
-      SCLC <- FindVariableFeatures(SCLC, selection.method = "vst", nfeatures = 2000)
+    
+    SCLC <- subset(SCLC, subset = nFeature_RNA > Cutoff$nFeature_cutoff_min & nFeature_RNA<Cutoff$nFeature_cutoff_max & nCount_RNA>Cutoff$nCount_cutoff & percent.mt < Cutoff$mt_cutoff)
+    SCLC <- NormalizeData(SCLC)
+    SCLC <- FindVariableFeatures(SCLC, selection.method = "vst", nfeatures = 2000)
+    
+    rRNA.genes <- grep(pattern = rRNApattern,  rownames(SCLC), value = TRUE)
+    Mt.genes<- grep (pattern= Mtpattern,rownames(SCLC), value=TRUE ) 
+    
+    if (Remove_Mt_rRNA) {
+      var.genes <- dplyr::setdiff(VariableFeatures(SCLC), c(rRNA.genes,Mt.genes))
+    } else {
+      (var.genes <- VariableFeatures(SCLC))
+    }
+
+    
+    if (analysis_individual & dim(SCLC)[2]>50){
+      SCLC <- ScaleData(SCLC)
       
-      rRNA.genes <- grep(pattern = rRNApattern,  rownames(SCLC), value = TRUE)
-      Mt.genes<- grep (pattern= Mtpattern,rownames(SCLC), value=TRUE ) 
-
-     if (Remove_Mt_rRNA) {
-        
-         var.genes <- dplyr::setdiff(VariableFeatures(SCLC), c(rRNA.genes,Mt.genes))
-     } else (var.genes <- VariableFeatures(SCLC))
-   
-   
-   
-   if (analysis_individual & dim(SCLC)[2]>50){
-   
-   
-        SCLC <- ScaleData(SCLC)
-
-#find variable genes and store them in the var.genes
-   
-
-
-       SCLC <- RunPCA(SCLC, features = var.genes)
-       SCLC <- FindNeighbors(SCLC, dims = 1:30)
-       SCLC <- FindClusters(SCLC, resolution = resolution)
-##
-       SCLC[["celltype_each"]] <- paste(SampleInfo$SampleId,SCLC@active.ident,sep="_")
-
-       SCLC <- RunUMAP(SCLC, dims = 1:30)
-       
-       cat("\n\n## ", SampleInfo$SampleId,": Quality Check by cell clusters\n\n")
-       cat("\n\n### ", "Fig.4 nGene,nUMI and mtRNA distribution in each cluster and PCA, UMAP results\n\n")
-       print(FeaturePlot(SCLC, features=c("percent.mt","nFeature_RNA","nCount_RNA","PC_1"),label=T))
-       
-       plot1<- ggplot(data=data.frame(cluster=SCLC@active.ident,nUMI=SCLC@meta.data$nCount_RNA),aes(x=cluster,y=nUMI))+geom_boxplot()+scale_y_log10()   
-       plot2<- ggplot(data=data.frame(cluster=SCLC@active.ident,ngene=SCLC@meta.data$nFeature_RNA),aes(x=cluster,y=ngene))+geom_boxplot()+scale_y_log10()
-       plot3<-ggplot(data=data.frame(cluster=SCLC@active.ident,MtRNA=SCLC@meta.data$percent.mt),aes(x=cluster,y=MtRNA))+geom_boxplot()  
-       plot4<- ggplot(data=data.frame(cluster=SCLC@active.ident),aes(x=cluster))+geom_bar(stat="count")+theme(axis.text.x = element_text(angle = 45))+ylab("nCells")+ggtitle(paste0("total cells:",dim(SCLC)[2])) 
-       plot5<- DimPlot(SCLC, reduction = "pca",label=T,label.size=4) 
-
-       plot6<-DimPlot(SCLC, reduction = "umap",label=T,label.size=4)
+      #find variable genes and store them in the var.genes
+      SCLC <- RunPCA(SCLC, features = var.genes)
+      SCLC <- FindNeighbors(SCLC, dims = 1:30)
+      SCLC <- FindClusters(SCLC, resolution = resolution)
+      ##
+      SCLC[["celltype_each"]] <- paste(SampleInfo$SampleId,SCLC@active.ident,sep="_")
       
-       cat("\n\n### ", "Fig.5 Boxplot of nUMI,nGene, mtRNA and nCells distribution and PCA, UMAP results\n\n") 
+      SCLC <- RunUMAP(SCLC, dims = 1:30)
+      
+      cat("\n\n## ", SampleInfo$SampleId,": Quality Check by cell clusters\n\n")
+      cat("\n\n### ", "Fig.4 nGene,nUMI and mtRNA distribution in each cluster and PCA, UMAP results\n\n")
+      print(FeaturePlot(SCLC, features=c("percent.mt","nFeature_RNA","nCount_RNA","PC_1"),label=T))
+      
+      plot1<- ggplot(data=data.frame(cluster=SCLC@active.ident,nUMI=SCLC@meta.data$nCount_RNA),aes(x=cluster,y=nUMI))+geom_boxplot()+scale_y_log10()   
+      plot2<- ggplot(data=data.frame(cluster=SCLC@active.ident,ngene=SCLC@meta.data$nFeature_RNA),aes(x=cluster,y=ngene))+geom_boxplot()+scale_y_log10()
+      plot3<-ggplot(data=data.frame(cluster=SCLC@active.ident,MtRNA=SCLC@meta.data$percent.mt),aes(x=cluster,y=MtRNA))+geom_boxplot()  
+      plot4<- ggplot(data=data.frame(cluster=SCLC@active.ident),aes(x=cluster))+geom_bar(stat="count")+theme(axis.text.x = element_text(angle = 45))+ylab("nCells")+ggtitle(paste0("total cells:",dim(SCLC)[2])) 
+      plot5<- DimPlot(SCLC, reduction = "pca",label=T,label.size=4) 
+      
+      plot6<-DimPlot(SCLC, reduction = "umap",label=T,label.size=4)
+      
+      cat("\n\n### ", "Fig.5 Boxplot of nUMI,nGene, mtRNA and nCells distribution and PCA, UMAP results\n\n") 
       print(CombinePlots(plots = list(plot1, plot2, plot3,plot4,plot5,plot6),rel_heights=c(1,1)))
-       
-      ##new figure to show nCount distribution
-      #tmp<-quantile(SCLC@meta.data$nCount_RNA,probs=c(0.1,0.9))
-      #SCLC[["group"]]<-"medium"
-      #SCLC@meta.data$group[SCLC@meta.data$nCount_RNA<tmp[1]]<-"low"
-      #SCLC@meta.data$group[SCLC@meta.data$nCount_RNA>tmp[2]]<-"high"
-      #print(DimPlot(SCLC,group.by="group",label=T))
-      ####
-
-    #  print(DimPlot(SCLC, reduction = "umap",label=T, label.size=4))
-   
-
+      
       if (Cutoff$cluster_remove!=""){
-  
-
-       removeIdent<-(unlist((strsplit(Cutoff$cluster_remove,",")))) 
-  
-       SCLC<-subset(SCLC,idents=removeIdent, invert=T)
-
-  #reselect highly variable genes and reclusters 
-
+        removeIdent<-(unlist((strsplit(Cutoff$cluster_remove,",")))) 
+        SCLC<-subset(SCLC,idents=removeIdent, invert=T)
       }
-
+      
       cat("\n\n## ", SampleInfo$SampleId,": Markers and annotations of cell clusters\n\n")
 
-
-
-##predict method
-   if (!is.null(celltype_predictmethod) & length(levels(SCLC@active.ident))>1 ) {
+      ##predict method
+      if (!is.null(celltype_predictmethod) & length(levels(SCLC@active.ident))>1 ) {
         medianexp<-t(apply(GetAssayData(SCLC,slot="data"),1,function(x){tapply(x,SCLC@active.ident,mean)}))
-         if (nrow(medianexp)==1) medianexp<-t(medianexp)
-         predict_celltype<-ORA_celltype(medianexp,cellType,method=celltype_predictmethod)
-         
-         ##
-         #gene_order<-unique(as.vector(apply(medianexp,2,function(x){order(x,decreasing=T)[1:40]})))
-         #markergenelist<-NULL
-         #for (i in length(predict_celltype$predict_result)) {markergenelist<-c(markergenelist,cellType[[rownames(predict_celltype$predict_result)[i]]])}
-        # print(DoHeatmap(SCLC, features = dplyr::setdiff(rownames(medianexp)[gene_order], c(rRNA.genes,Mt.genes)),slot="data"))
+        if (nrow(medianexp)==1) medianexp<-t(medianexp)
+        predict_celltype<-ORA_celltype(medianexp,cellType,method=celltype_predictmethod)
         
-
-#use the max_cta_score for each cluster
-
+        #use the max_cta_score for each cluster
         new.cluster.ids<-paste(levels(SCLC@active.ident),rownames(predict_celltype$predict_result),sep="_")
-
-         names(new.cluster.ids) <- levels(SCLC)
-         SCLC <- RenameIdents(SCLC, new.cluster.ids)
-         cat("\n\n### ", "Fig.6 UMAP result\n\n")
-          print(DimPlot(SCLC, reduction = "umap",label=T,label.size=6))
-     
-         SCLC.markers <- FindAllMarkers(SCLC, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
-         SCLC@misc$markers<-SCLC.markers
-         
-         top10 <- SCLC.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
-         #cat("\n\n### ", "Fig.7 Marker genes scaled expression in each cluster\n\n")
-         if (nrow(top10)>200) {genesize=5} else {
-           if (nrow(top10)>100) {genesize=6}  else {genesize=7} }
-       
+        
+        names(new.cluster.ids) <- levels(SCLC)
+        SCLC <- RenameIdents(SCLC, new.cluster.ids)
+        cat("\n\n### ", "Fig.6 UMAP result\n\n")
+        print(DimPlot(SCLC, reduction = "umap",label=T,label.size=6))
+        
+        SCLC.markers <- FindAllMarkers(SCLC, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
+        SCLC@misc$markers<-SCLC.markers
+        
+        if('avg_log2FC' %in% colnames(SCLC.markers)){
+          top10 <- SCLC.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_log2FC)
+        }else{
+          top10 <- SCLC.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
+        }
+        #cat("\n\n### ", "Fig.7 Marker genes scaled expression in each cluster\n\n")
+        if (nrow(top10)>200) {
+          genesize=5
+        } else {
+          if (nrow(top10)>100) {
+            genesize=6
+          }  else {
+            genesize=7
+          } 
+        }
+        
         #print(DoHeatmap(SCLC, features = top10$gene)+ theme(axis.text.y = element_text(size = genesize)) )
         cat("\n\n### ", "Fig.8 Marker genes expression in each cluster\n\n")
         print(DoHeatmap(SCLC, features = top10$gene,slot="data")+ theme(axis.text.y = element_text(size = genesize))) 
-       
+        
         ###
         #SCLC@misc$Qcluster <- EvalCluster(SCLC)
         #ViewQcluster(SCLC)
@@ -368,28 +318,24 @@ if (min(SCLC[["percent.mt"]]) < Cutoff$mt_cutoff)
         
         #Doheatmap_cellmarker_cellType(SCLC,top10,cellType,predict_celltype)
         def.par <- par(no.readonly = TRUE) 
-     #   layout(matrix(c(1,2), 1, 2, byrow = TRUE))
-     #   Plot_predictcelltype(predict_celltype,method="cta")
-     #   Plot_predictcelltype(predict_celltype,method="ora")
+        #   layout(matrix(c(1,2), 1, 2, byrow = TRUE))
+        #   Plot_predictcelltype(predict_celltype,method="cta")
+        #   Plot_predictcelltype(predict_celltype,method="ora")
         par(def.par)
-    
-     }
-
-
-   }
-
-}
+      }
+    }
+  }
   return(SCLC)
 }
 
 
 savelevel3and4<-function(SCLC,SampleInfo,Cutoff,resolution,outputdir) {
- 
+  
   SampleId<-SampleInfo$SampleId
- if (!dir.exists(paste0(outputdir, SampleId))) {
-     if (!dir.create(paste0(outputdir, SampleId)))
-        {stop("folder cannot be created")}
- }
+  if (!dir.exists(paste0(outputdir, SampleId))) {
+    if (!dir.create(paste0(outputdir, SampleId)))
+    {stop("folder cannot be created")}
+  }
   outputdir<-paste0(outputdir,SampleId)
   
   write.csv(c(SampleInfo,Cutoff,UMI_median=median(SCLC@meta.data$nCount_RNA),nGene_median=median(SCLC@meta.data$nFeature_RNA),nCells=ncol(SCLC),resolution=resolution),file=paste0(outputdir,"/QCparam.csv"))
@@ -411,29 +357,29 @@ savelevel3and4<-function(SCLC,SampleInfo,Cutoff,resolution,outputdir) {
 
 getMedianExp<-function(SCLC, chunk=1000) {
   
-    data<-GetAssayData(SCLC,slot="data",assay="RNA")
-    ngenes <- nrow(data)
-    ncol<-ncol(data)
-    
-    if (ngenes > chunk) {
-      by.chunk <- cut(seq_len(ngenes), ceiling(ngenes/chunk))
-    } else {
-      by.chunk <- factor(integer(ngenes))
-    }
-    
-    medianExp<-matrix(NA,nrow=ngenes,ncol=length(unique(SCLC@active.ident)))
-    for (element in levels(by.chunk)) {
-      current <- by.chunk == element
-      cur.exprs <- data[current, , drop = FALSE]
-      medianExp[current,]<-t(apply(cur.exprs,1,function(x){tapply(x,SCLC@active.ident,median)}))
-      
-    }
-    rownames(medianExp)<-rownames(data)
-    
-    
-    return(medianExp)
+  data<-GetAssayData(SCLC,slot="data",assay="RNA")
+  ngenes <- nrow(data)
+  ncol<-ncol(data)
+  
+  if (ngenes > chunk) {
+    by.chunk <- cut(seq_len(ngenes), ceiling(ngenes/chunk))
+  } else {
+    by.chunk <- factor(integer(ngenes))
   }
   
+  medianExp<-matrix(NA,nrow=ngenes,ncol=length(unique(SCLC@active.ident)))
+  for (element in levels(by.chunk)) {
+    current <- by.chunk == element
+    cur.exprs <- data[current, , drop = FALSE]
+    medianExp[current,]<-t(apply(cur.exprs,1,function(x){tapply(x,SCLC@active.ident,median)}))
+    
+  }
+  rownames(medianExp)<-rownames(data)
+  
+  
+  return(medianExp)
+}
+
 
 getMeanExp<-function(SCLC, chunk=1000) {
   
@@ -467,7 +413,7 @@ getSumExp<-function(SCLC, chunk=1000) {
   
   data<-GetAssayData(SCLC,slot="counts",assay="RNA")
   ngenes <- nrow(data)
- 
+  
   
   if (ngenes > chunk) {
     by.chunk <- cut(seq_len(ngenes), ceiling(ngenes/chunk))
@@ -484,32 +430,23 @@ getSumExp<-function(SCLC, chunk=1000) {
     tmp_exp<- tmp %>% group_by(PatientID, Location, Histo, Disease,cellcluster_ann) %>% summarise_each(funs(sum))
     SumExp<-cbind(SumExp,as.matrix(tmp_exp[,-c(1:5)]))
     if (element==levels(by.chunk)[1]) {
-        groupInfo<-as.data.frame(tmp_exp[,c(1:5)]) 
-        }
-  
-    
+      groupInfo<-as.data.frame(tmp_exp[,c(1:5)]) 
     }
-  
-   
-  
-  
+  }
   return(list(Exp=t(SumExp),group=groupInfo))
 }
-  
-  
+
+
 getDifferential<-function(SumExp) {
   library(DESeq2)
   cluster<-levels(SumExp$group$cellcluster_ann)
   for (i in cluster) {
-      tmp<-SumExp$Exp[,SumExp$group$cellcluster_ann==cluster[i]]
-      tmp_group<-SumExp$group[SumExp$group$cellcluster_ann==cluster[i],]
-      dds<-DESeq2::DESeqDataSetFromMatrix(countData=tmp,colData=tmp_group,design=~condition)
-      dds <- DESeq(dds)
-      res<-as.data.frame(results(dds))
-      
-      write.table(data.frame(res=res,celltype=cluster[i]),col.names = F,file="/Users/qiliu/Downloads/GSE155249_RAW (1)/analysis/diff_celltype.txt",sep="\t",quote=F,append = TRUE)
+    tmp<-SumExp$Exp[,SumExp$group$cellcluster_ann==cluster[i]]
+    tmp_group<-SumExp$group[SumExp$group$cellcluster_ann==cluster[i],]
+    dds<-DESeq2::DESeqDataSetFromMatrix(countData=tmp,colData=tmp_group,design=~condition)
+    dds <- DESeq(dds)
+    res<-as.data.frame(results(dds))
+    
+    write.table(data.frame(res=res,celltype=cluster[i]),col.names = F,file="/Users/qiliu/Downloads/GSE155249_RAW (1)/analysis/diff_celltype.txt",sep="\t",quote=F,append = TRUE)
   }
-  
-  
-  
 }

@@ -1,0 +1,148 @@
+---
+title: "singlecell_multiple_analysis"
+author: Qi Liu, Quanhu Sheng
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,  message=FALSE, warning=FALSE, results = 'hide', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#load the library and set the parameters and load our own function
+library(Seurat)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(pheatmap)
+library(RCurl)
+```
+
+
+```{r, echo=FALSE}
+
+cat("\n\n## Files Parameters\n\n")
+
+#raw scRNAseq data files and clinical information
+#work directory to save or load objectlist, objectintegrated and integratedmarkers; the raw files are in workdir/raw
+
+
+option_table<-read.table("filelist2.txt", stringsAsFactors = F)
+myoptions<-split(option_table$V1, option_table$V2)
+
+species=myoptions$species # Hs or Mm
+
+#raw data file locations
+SampleInfos<-read.table("filelist1.txt", stringsAsFactors = F)
+colnames(SampleInfos)<-c("countfile", "SampleId")
+
+if(file.exists('filelist3.txt')){
+  clinicalInfo<-read.table('filelist3.txt', stringsAsFactors = F)
+  colnames(clinicalInfo)<-c('SampleId','condition')
+  SampleInfos<-merge(SampleInfos, clinicalInfo, by="SampleId")
+}
+
+clinicalfeature<-c(1,1)
+
+```
+
+
+```{r,echo=FALSE}
+
+##cutoff dataframe for each sample to filter empty droplets
+Cutoffs<-data.frame(nFeature_cutoff_min = 500 ,nFeature_cutoff_max = 7000,nCount_cutoff=1000, mt_cutoff = 10, cluster_remove=c(""),stringsAsFactors = F)
+
+#every sample share the same cutoff, otherwise put every parameter in the Cutoff dataframe
+if (dim(Cutoffs)[1]==1){
+  Cutoffs<-data.frame(lapply(Cutoffs, rep, nrow(SampleInfos)),stringsAsFactors = F)
+}
+
+Mtpattern=myoptions$Mtpattern
+rRNApattern=myoptions$rRNApattern
+Remove_Mt_rRNA=ifelse(myoptions$Remove_MtRNA==0, FALSE, TRUE)
+resolution=as.numeric(myoptions$resolution)
+transpose=FALSE
+analysis_individual=TRUE
+Ensemblfile=NULL
+
+```
+
+
+
+```{r, echo=F}
+cat("\n\n## cell type annotation parameters\n")
+
+#cell type annotation
+
+celltype_predictmethod="cta" # cta: cell activity; ora: over-represent
+
+##specific marker database############
+
+markerfile<-myoptions$markers_file
+
+#these R will use markerfile, add_Subtype, species, so have to put at the end
+add_Subtype<-FALSE
+
+##compare to markerCode, add filter criteria for each sample
+
+marker<-data.frame(fread(markerfile))
+species_ind<-regexpr(species,marker[,1])
+marker_species<-marker[species_ind>0 & marker$ubiquitousness.index<0.05,]
+##change the gene symbol only keep the first letter capitalize
+if (species=="Mm") {
+  marker_species$official.gene.symbol<-paste0(substr(marker_species$official.gene.symbol,1,1),substr(tolower(marker_species$official.gene.symbol),2,nchar(marker_species$official.gene.symbol)))
+}
+##
+cellType<-tapply(marker_species$official.gene.symbol,marker_species$cell.type,list)
+
+###if add crc-specific signatures # if add_subtype==NULL, only use subtype but not markerfile
+if(is.null(add_Subtype)) {
+  subtype<-read.csv(subtypefile,as.is=T,header=F)
+  celltype_add<-tapply(subtype[,1],subtype[,2],list)
+  cellType<-celltype_add
+}else if (add_Subtype==TRUE) {
+  subtype<-read.csv(subtypefile,as.is=T,header=F)
+  celltype_add<-tapply(subtype[,1],subtype[,2],list)
+  cellType<-c(cellType,celltype_add)
+}
+
+
+source("markerCode_filter.R")
+
+knownmarkers<- c("COL1A1","COL1A2","DCN","TAGLN","MYH11","ATCA2","PECAM1","CDH5","CLDN5","CD68","C1QB","LYZ2","NKAIN4","LGFBP5","CD248","WIF1","CHAD","SULT1D1","CD3D","CD3G","NKG7","CD209A","H2-AB1","H2-EB1","KCNA1","PLP1","MYL1","CD79A")
+
+if(species=="Mm") {
+  knownmarkers<-paste0(substr(knownmarkers,1,1),substr(tolower(knownmarkers),2,nchar(knownmarkers)))
+}
+
+```
+
+```{r,fig.width=15, fig.height=15,eval=analysis_individual,results="asis"}
+
+cat("\n\n# QC and cell type identification in each sample\n")
+
+object.list<-NULL
+
+i=1
+for (i in 1:nrow(SampleInfos)) {
+  SampleInfo<-SampleInfos[i,]
+  Cutoff<-Cutoffs[i,]
+  object<-preprocess(SampleInfo,
+                     Cutoff,
+                     Mtpattern,
+                     resolution, 
+                     Remove_Mt_rRNA,
+                     celltype_predictmethod,
+                     transpose=transpose, 
+                     analysis_individual=analysis_individual,
+                     Ensemblfile=Ensemblfile)
+  print(DoHeatmap(object,features=knownmarkers,slot="data"))
+  object.list<-c(object.list,object)
+}
+
+save(object.list,file=paste0("objectlist.Rdata"))
+```

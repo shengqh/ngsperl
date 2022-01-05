@@ -377,6 +377,7 @@ do_harmony<-function(objs, by_sctransform, npcs, batch_file) {
     all.genes <- rownames(obj)  
     cat("ScaleData ... \n")
     obj <- ScaleData(obj, features = all.genes, verbose = FALSE)
+    assay='RNA'
   }
 
   cat("RunPCA ... \n")
@@ -392,10 +393,11 @@ do_harmony<-function(objs, by_sctransform, npcs, batch_file) {
 
   cat("RunHarmony ... \n")
   obj <- RunHarmony(object = obj,
-                    assay.use = "SCT",
+                    assay.use = assay,
                     reduction = "pca",
                     dims.use = pca_dims,
-                    group.by.vars = "batch")
+                    group.by.vars = "batch",
+                    do_pca=FALSE)
   return(obj)
 }
 
@@ -550,5 +552,4 @@ output_integraion_dimplot<-function(obj, outFile, has_batch_file){
   png(paste0(outFile, ".final.png"), width=width, height=height, res=300)
   print(p)
   dev.off()
-
 }

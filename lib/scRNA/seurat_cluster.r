@@ -74,27 +74,17 @@ names(seurat_colors)<-levels(seurat_clusters)
 
 finalList$seurat_colors<-seurat_colors
 
+assay=ifelse(by_sctransform, "SCT", "RNA")
+
+meanexp<-t(apply(GetAssayData(obj, assay=assay, slot="data"),1,function(x){tapply(x,obj$seurat_clusters,mean)}))
+#meanexp<-AverageExpression(obj, assays = assay, slot="scale.data", group.by="seurat_clusters" )[[1]]
+
 counts=GetAssayData(obj,assay="RNA",slot="counts")
-clusters=obj@active.ident
+clusters=obj$seurat_clusters
 sumcounts=get_cluster_count(counts, clusters)
-logsumcounts<-log2(sumcounts+1)
-
-data.quantileAll<-apply(logsumcounts, 2, function(x){quantile(x, 0.75)})
-
-norm_method=""
-if(any(data.quantileAll == 0)){
-  norm_method = ".normByTotal"
-  data.all <- apply(logsumcounts, 2, sum)
-  data.all<-data.all / median(data.all)
-  data.norm <- t(t(logsumcounts) / data.all)
-}else{
-  norm_method = ".normByUpQuantile"
-  data.quantileAll<-data.quantileAll / median(data.quantileAll)
-  data.norm <- t(t(logsumcounts) / data.quantileAll)
-}
 
 write.csv(sumcounts, file=paste0(prefix, ".cluster.count.csv"))
-write.csv(data.norm, file=paste0(prefix, ".cluster", norm_method, ".csv"))
+write.csv(meanexp, file=paste0(prefix, ".cluster.meanexp.csv"))
 
 clusters<-data.frame("cell" = c(1:length(obj$seurat_clusters)), "seurat_clusters"=as.numeric(as.character(obj$seurat_clusters)), stringsAsFactors = F)
 rownames(clusters)<-names(obj$seurat_clusters)
