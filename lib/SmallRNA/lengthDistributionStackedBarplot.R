@@ -55,6 +55,8 @@ textTitle<-element_text(face= "bold", color = "black", size=22, hjust=0.5)
 text20Bold<-element_text(face= "bold", color = "black", size=20)
 text20<-element_text(color = "black", size=20)
 
+fastq_length<-fastq_length[fastq_length$Length >= 10,]
+
 pdf(file=paste0(outFile,".pdf"), onefile=T, width=8, height=7)
 
 for(sample in unique(fastq_length$Sample)){
