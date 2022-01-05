@@ -1945,8 +1945,10 @@ sub getSmallRNAConfig {
   };
 
   if ( defined $def->{groups}) {
-    if ( defined $def->{correlation_groups} ) {
-      my $correlationGroups = get_pair_group_sample_map( $def->{correlation_groups}, $def->{groups} );
+    if(defined $def->{correlation_groups}){
+      $config->{count_table_correlation}{parameterSampleFile2} = $def->{correlation_groups};
+    }elsif ( defined $def->{correlation_groups_dic} ) {
+      my $correlationGroups = get_pair_group_sample_map( $def->{correlation_groups_dic}, $def->{groups} );
       if ( getValue( $def, "correlation_all", 1 ) and (not defined $correlationGroups->{all}) ) {
         $correlationGroups->{all} = $def->{groups};
       }
@@ -2330,7 +2332,7 @@ sub getSmallRNAConfig {
       'parameterFile3_arg'       => '-t',
       'parameterFile3_ref'       => [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv\$" ],
       'option'                   => "",
-      'interpretor'              => 'python',
+      'interpretor'              => 'python3',
       'program'                  => '../SmallRNA/getBacteriaCount.py',
       'target_dir'               => $data_visualization_dir . "/bacteria_count",
       'output_file_ext'          => '.tsv;.tsv.summary;.tsv.summary.png;.tsv.summary.rpm.csv',
