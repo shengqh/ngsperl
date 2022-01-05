@@ -53,9 +53,10 @@ def extract(sourceFile, targetFile):
 
 fastqFiles = getFirstFileList(sourceFile, isPairEnd)
 if isPairEnd:
-  read1 = outputFile.replace("2.fastq.gz", "1.fastq.gz")
+  read1 = outputFile
+  read2 = read1.replace("1.fastq.gz", "2.fastq.gz")
   extract(fastqFiles[0], read1)
-  extract(fastqFiles[1], outputFile)
+  extract(fastqFiles[1], read2)
 else:
   extract(fastqFiles[0], outputFile)
 
