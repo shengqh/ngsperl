@@ -8,13 +8,22 @@ library(RColorBrewer)
 library(colorRamps)
 library(genefilter)
 
+is_one<-function(value){
+  if(is.null(value)){
+    return(FALSE)
+  }
+  return(value == '1')
+}
+
 if(exists("parSampleFile4")){
   myoptions_tbl<-read.table(parSampleFile4, sep="\t", stringsAsFactors = F)
   myoptions<-split(myoptions_tbl$V1, myoptions_tbl$V2)
 
-  draw_all_groups_in_HCA<-myoptions$draw_all_groups_in_HCA == '1'
+  draw_all_groups_in_HCA<-is_one(myoptions$draw_all_groups_in_HCA)
+  draw_umap<-is_one(myoptions$draw_umap)
 }else{
-  draw_all_groups_in_HCA<-0
+  draw_all_groups_in_HCA<-FALSE
+  draw_umap<-FALSE
 }
 
 countTableFileList<-parSampleFile1
@@ -388,6 +397,30 @@ for (i in 1:nrow(countTableFileAll)) {
     
     #visualization    
     countHT<-countNumVsd
+
+    if(draw_umap){
+      library(magrittr)
+      library(umap)
+
+      set.seed(20211230)
+
+      normalized_counts<-t(countHT)
+      umap_results <- umap::umap(normalized_counts)
+
+      umap_plot_df <- data.frame(umap_results$layout) %>% tibble::rownames_to_column("Sample")
+      umap_plot_df$Group<-groups
+
+      g<-ggplot(umap_plot_df, aes(x = X1, y = X2, color = Group)) + geom_point() + theme_bw2() + xlab('UMAP_1') + ylab('UMAP_2')
+      for(format in outputFormat){
+        if("PDF" == format){
+          pdf(paste0(outputFilePrefix,curSuffix,".umap.pdf"),width=7,height=6)
+        }else{
+          png(paste0(outputFilePrefix,curSuffix,".umap.png"),width=2000,height=1600,res=300)
+        }
+        print(g)
+        dev.off()
+      }
+    }
 
     #density plot
     dataForPlot<-melt(countHT)
