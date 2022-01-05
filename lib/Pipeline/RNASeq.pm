@@ -383,7 +383,8 @@ sub getRNASeqConfig {
       rCode           => $rCode,
       target_dir      => $cor_dir,
       parameterSampleFile4 => {
-        "draw_all_groups_in_HCA" => getValue($def, "draw_all_groups_in_HCA", 0)
+        "draw_all_groups_in_HCA" => getValue($def, "draw_all_groups_in_HCA", 0),
+        "draw_umap" => getValue($def, "draw_umap", 0),
       },
       rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
       output_file     => "parameterSampleFile1",
