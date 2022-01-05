@@ -1908,8 +1908,7 @@ sub get_correlation_groups_by_pattern {
     return($result);
   }else{
     my $groups = $def->{groups};
-    my $groups_names = [sort keys %$groups];
-    return({all => $groups_names});
+    return({all => $groups});
   }
 }
 
