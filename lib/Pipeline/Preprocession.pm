@@ -209,7 +209,7 @@ sub initCutadaptOption {
     }
 
     if ( $cutadapt_option !~ /\-n/ ) {
-      my $max_adapter_count = getValue( $config, "max_adapter_count", 2 );
+      my $max_adapter_count = getValue( $config, "max_adapter_count", 3 );
       $cutadapt_option = $cutadapt_option . " -n " . $max_adapter_count;
     }
 
