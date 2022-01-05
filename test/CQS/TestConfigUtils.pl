@@ -499,7 +499,40 @@ is_deeply( $cov_map, $cov_expect );
 
   is_deeply( $corr_groups, 
     {
-      "all" => ["DKO_PEL", "DKO_SUP", "LDLR_PEL", "LDLR_SUP"],
+      "all" => {
+          'DKO_PEL' => [
+                         'DKO_PEL_04',
+                         'DKO_PEL_05',
+                         'DKO_PEL_06',
+                         'DKO_PEL_10',
+                         'DKO_PEL_11',
+                         'DKO_PEL_12'
+                       ],
+          'LDLR_SUP' => [
+                          'LDLR_SUP_13',
+                          'LDLR_SUP_14',
+                          'LDLR_SUP_15',
+                          'LDLR_SUP_19',
+                          'LDLR_SUP_20',
+                          'LDLR_SUP_21'
+                        ],
+          'DKO_SUP' => [
+                         'DKO_SUP_16',
+                         'DKO_SUP_17',
+                         'DKO_SUP_18',
+                         'DKO_SUP_22',
+                         'DKO_SUP_23',
+                         'DKO_SUP_24'
+                       ],
+          'LDLR_PEL' => [
+                          'LDLR_PEL_01',
+                          'LDLR_PEL_02',
+                          'LDLR_PEL_03',
+                          'LDLR_PEL_07',
+                          'LDLR_PEL_08',
+                          'LDLR_PEL_09'
+                        ]        
+      },
     });
 }
 
