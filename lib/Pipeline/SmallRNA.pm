@@ -28,6 +28,7 @@ sub getSmallRNAConfig {
   $def->{VERSION} = $VERSION;
 
   initializeSmallRNADefaultOptions($def);
+
   my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir, $identical_ref, $host_identical_ref ) = getPrepareConfig( $def, 1 );
   my $task_name = $def->{task_name};
 
@@ -152,8 +153,11 @@ sub getSmallRNAConfig {
     $def->{correlation_rcode} = $def->{correlation_rcode} . "showLabelInPCA<-FALSE;";
   }
 
-  if ( $def->{correlation_rcode} !~ /totalCountKey/ ) {    #use total normlization to do correlation analysis
-    $def->{correlation_rcode} = $def->{correlation_rcode} . "totalCountKey='Reads for Mapping';";
+  my $normalize_by = getValue($def, "normalize_by");
+
+  if ( $def->{correlation_rcode} !~ /totalCountKey/ ) {
+    my $correlation_totalCountKey = $normalize_by eq 'None' ? 'None':'Reads for Mapping';
+    $def->{correlation_rcode} = $def->{correlation_rcode} . "totalCountKey='$correlation_totalCountKey';";
   }
 
   if ( $def->{correlation_rcode} !~ /minMedian/ ) {        #set filter parameters
@@ -493,8 +497,6 @@ sub getSmallRNAConfig {
         rCode                     => 'maxCategory=3;' . $R_font_size,
         sh_direct                 => 1,
         pbs                       => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "1",
           "mem"       => "10gb"
@@ -589,8 +591,6 @@ sub getSmallRNAConfig {
           rCode                     => 'maxCategory=3;' . $R_font_size,
           sh_direct                 => 1,
           pbs                       => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
             "mem"       => "10gb"
@@ -1826,8 +1826,6 @@ sub getSmallRNAConfig {
         sh_direct                 => 1,
         rCode                     => 'maxCategory=8;' . $rcode . $R_font_size,
         pbs                       => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "1",
           "mem"       => "10gb"
@@ -1921,14 +1919,20 @@ sub getSmallRNAConfig {
     $corr_output_file_task_ext = ".Group.heatmap.png;.Group.Correlation.Cluster.png;";
   }
 
+  my $correlation_folder = "count_table_correlation";
+  if($normalize_by ne 'None'){
+    $correlation_folder = $correlation_folder . '_' . $normalize_by;
+  }
   $config->{count_table_correlation} = {
     class                     => "CQS::CountTableGroupCorrelation",
     perform                   => 1,
-    target_dir                => $data_visualization_dir . "/count_table_correlation",
+    target_dir                => "$data_visualization_dir/$correlation_folder",
     rtemplate                 => "countTableVisFunctions.R,countTableGroupCorrelation.R",
     output_file               => "parameterSampleFile1",
     output_file_ext           => $corr_output_file_ext,
     output_file_task_ext      => $corr_output_file_task_ext,
+    output_to_result_dir      => getValue($def, "correlation_output_to_result_dir", 0),
+    output_include_folder_name => getValue($def, "correlation_output_include_folder_name", 1),
     parameterSampleFile1_ref  => \@table_for_correlation,
     parameterSampleFile2      => $def->{tRNA_vis_group},
     parameterSampleFile2Order => $def->{groups_order},
@@ -1936,13 +1940,13 @@ sub getSmallRNAConfig {
     rCode                     => $def->{correlation_rcode} . $R_font_size,
     sh_direct                 => 1,
     pbs                       => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
       "walltime"  => "1",
       "mem"       => "10gb"
     },
   };
+
+  #print(Dumper($config->{count_table_correlation}));
 
   if ( defined $def->{groups}) {
     if(defined $def->{correlation_groups}){
@@ -2130,7 +2134,7 @@ sub getSmallRNAConfig {
       'parameterFile1_arg'       => "-i",
       'parameterFile1_ref'       => [ $short_reads_table, ".count.txt\$" ],
       'option'                   => "-n \"" . join( ",", @name_for_readSummary ) . "\"",
-      'interpretor'              => 'python',
+      'interpretor'              => 'python3',
       'program'                  => '../SmallRNA/shortReadSource.py',
       'target_dir'               => $data_visualization_dir . "/short_reads_source",
       'output_ext'               => '.tsv',
@@ -2468,13 +2472,29 @@ sub getSmallRNAConfig {
         }
 
         if(not $hasMicroRNAOnly){
-          push( @report_files, "count_table_correlation",  "smallRNA_table/result/.+.tRNA.count.heatmap.png" );
-          push( @report_files, "count_table_correlation",  "smallRNA_table/result/.+.tRNA.count.PCA.png" );
+          push( @report_files, "count_table_correlation",  'smallRNA_1mm_.+.tRNA.count.heatmap.png' );
+          push( @report_files, "count_table_correlation",  'smallRNA_1mm_.+.tRNA.count.PCA.png' );
           push( @report_names, "correlation_trna_heatmap", "correlation_trna_pca" );
 
+          push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.rRNA.count.heatmap.png" );
+          push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.rRNA.count.PCA.png" );
+          push( @report_names, "correlation_rrna_heatmap", "correlation_rrna_pca" );
+
+          push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.yRNA.count.heatmap.png" );
+          push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.yRNA.count.PCA.png" );
+          push( @report_names, "correlation_yrna_heatmap", "correlation_yrna_pca" );
+
+          push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.snRNA.count.heatmap.png" );
+          push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.snRNA.count.PCA.png" );
+          push( @report_names, "correlation_snrna_heatmap", "correlation_snrna_pca" );
+
+          push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.snoRNA.count.heatmap.png" );
+          push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.snoRNA.count.PCA.png" );
+          push( @report_names, "correlation_snorna_heatmap", "correlation_snorna_pca" );
+
           if ($hasGroupHeatmap) {
-            push( @report_files, "count_table_correlation",        "smallRNA_table/result/.+.tRNA.count.Group.heatmap.png" );
-            push( @report_files, "count_table_correlation",        "smallRNA_table/result/.+.tRNA.count.Group.Correlation.Cluster.png" );
+            push( @report_files, "count_table_correlation",        "smallRNA_1mm_.+.tRNA.count.Group.heatmap.png" );
+            push( @report_files, "count_table_correlation",        "smallRNA_1mm_.+.tRNA.count.Group.Correlation.Cluster.png" );
             push( @report_names, "correlation_trna_group_heatmap", "correlation_trna_corr_cluster" );
           }
         }
@@ -2560,7 +2580,7 @@ sub getSmallRNAConfig {
     
     if(defined $config->{bacteria_count}){
       push( @copy_files, "bacteria_count", ".tsv\$", "bacteria_count", ".summary.png", "bacteria_count", ".summary.rpm.csv" );
-      push( @report_files, "bacteria_count", ".summary.png",  "bacteria_count", ".summary.rpm.csv",  );
+      push( @report_files, "bacteria_count", ".summary.png",  "bacteria_count", ".summary.rpm.csv" );
       push( @report_names, "bacteria_count_vis", "bacteria_count_rpm" );
     }
 
