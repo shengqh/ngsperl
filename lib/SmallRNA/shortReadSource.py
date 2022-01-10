@@ -126,7 +126,7 @@ def match(logger, input, names, annotated, maxMapped, maxNumber, minReadCount, m
         annoSeq = ai.Sequence
         if shortSeq in annoSeq:
           bFound = True
-          sw.write("\t%s\t%s\t%s\t%s\n" % (annoSeq, ai.TotalCount, "/".join(ai.Categories), "\t".join([str(ai.SampleMap[sample]) if sample in ai.SampleMap else "" for sample in annotatedSamples])))
+          sw.write("\t%s\t%s\t%s\t%s\n" % (annoSeq, ai.TotalCount, "/".join(ai.Categories), "\t".join([str(ai.SampleMap[sample]) if sample in ai.SampleMap else "0" for sample in annotatedSamples])))
           break
       
       if not bFound:
