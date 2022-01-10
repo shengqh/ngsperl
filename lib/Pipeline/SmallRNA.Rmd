@@ -107,13 +107,37 @@ hasAdapterRawOnly<-hasAdapterRaw & (!hasAdapterPostTrim)
 
 has_category_mapped_bar<-has_file(files, "category_mapped_bar")
 
-hasFastqc<-any(grepl("fastqc_", rownames(files)))
-hasFastqcPosttrim<-any(grepl("fastqc_post_trim_", rownames(files)))
-
-
+hasFastqc<-any(grepl("fastqc_", names(files)))
+hasFastqcPosttrim<-any(grepl("fastqc_post_trim_", names(files)))
 
 hostGenomeFile="hostgenome.Rmd"
-hostGenome<-data.frame(Section=c("##", "##"), Category=c("mirna", "trna"), Name=c("miRNA", "tRNA"))
+hostGenome<-data.frame(Section=c("##"), Category=c("mirna"), Name=c("miRNA"))
+
+hasTRNA<-any(grepl("correlation_trna_", names(files)))
+if(hasTRNA){
+  hostGenome<-rbind(hostGenome, data.frame(Section=c("##"), Category=c("trna"), Name=c("tRNA")))
+}
+
+hasRRNA<-any(grepl("correlation_rrna_", names(files)))
+if(hasRRNA){
+  hostGenome<-rbind(hostGenome, data.frame(Section=c("##"), Category=c("rrna"), Name=c("rRNA")))
+}
+
+hasYRNA<-any(grepl("correlation_yrna_", names(files)))
+if(hasYRNA){
+  hostGenome<-rbind(hostGenome, data.frame(Section=c("##"), Category=c("yrna"), Name=c("yRNA")))
+}
+
+hasSNRNA<-any(grepl("correlation_snrna_", names(files)))
+if(hasSNRNA){
+  hostGenome<-rbind(hostGenome, data.frame(Section=c("##"), Category=c("snrna"), Name=c("snRNA")))
+}
+
+hasSNORNA<-any(grepl("correlation_snorna_", names(files)))
+if(hasSNORNA){
+  hostGenome<-rbind(hostGenome, data.frame(Section=c("##"), Category=c("snorna"), Name=c("snoRNA")))
+}
+
 hasHostGenome<-categoryRmd(hostGenome, hostGenomeFile, "")
 
 nonhostGenomeFile="nonhostgenome.Rmd"
