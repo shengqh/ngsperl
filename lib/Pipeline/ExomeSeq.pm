@@ -39,6 +39,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_extract_bam", 0 );
   initDefaultValue( $def, "perform_featureCounts",  0 );
 
+  initDefaultValue( $def, "perform_gatk4_refine", 1);
   initDefaultValue( $def, "perform_gatk_callvariants",   0 );
   initDefaultValue( $def, "perform_gatk4_callvariants",  1 );
   initDefaultValue( $def, "gatk4_scatter_count",  0 );
@@ -574,10 +575,10 @@ sub getConfig {
     }
 
     #based on paper https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-016-1097-3, we don't do markduplicate anymore
-    my $refine_name = getValue($def, "perform_gatk4_refine", 0) ? $def->{aligner} . "_g4_refine" : $def->{aligner} . "_refine";
+    my $refine_name = getValue($def, "perform_gatk4_refine") ? $def->{aligner} . "_g4_refine" : $def->{aligner} . "_refine";
     my $refine_memory = getValue($def, "refine_memory", "40gb");
     $config->{$refine_name} = {
-      class      => getValue($def, "perform_gatk4_refine", 0) ? "GATK4::Refine" : "GATK::Refine",
+      class      => getValue($def, "perform_gatk4_refine") ? "GATK4::Refine" : "GATK::Refine",
       perform    => 1,
       target_dir => "${target_dir}/$refine_name",
       option     => "-Xmx40g",
