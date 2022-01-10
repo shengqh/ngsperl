@@ -270,9 +270,10 @@ if(hasDEseq2 ){
 ```{r deseq2_2_sig, echo=FALSE,results='asis'}
 if(hasDEseq2 ){
   DESeq2_files<-files[grep("DESeq2_sig", files[,1]),]
+  DESeq2_files<-DESeq2_files[order(DESeq2_files$V2),]
   DESeq2_list<-list()
   for (i in 1:nrow(DESeq2_files)){
-    DESeq2_list[[i]]<-read.csv(DESeq2_files[i,1], header=TRUE, check.names=F)
+    DESeq2_list[[i]]<-read.csv(DESeq2_files[i,1], header=TRUE, row.names=1, check.names=F)
   }
   diffGeneCount=sapply(DESeq2_list, function(x) 
     if("log2FoldChange" %in% colnames(x)) {
@@ -295,36 +296,23 @@ if(hasDEseq2 ){
      kable_styling() %>%
      htmltools::HTML())
 
-  fpkm_file <- files["genetable_fpkm", 1]
-  fpkm <- data.frame(fread(fpkm_file, data.table=F), row.names=1, check.names=F)
-
   for (i in 1:nrow(DESeq2_files)){
     comparisonName<-DESeq2_files[i,2]
-    deseq2<-read.csv(DESeq2_files[i,1], header=TRUE, row.names=1, check.names=F)
+    deseq2<-DESeq2_list[[i]]
     
-    designFile<-files[paste0(comparisonName, "_design"),1]
-    comparisonDesign<-read.table(designFile, sep="\t", head=T, stringsAsFactors = F)
-
     if(nrow(deseq2) > 0){
       maxrow<-min(nrow(deseq2), 10)
       
-      fpkm_t <- t(fpkm[,colnames(fpkm) %in% comparisonDesign$Sample])
-      fpkm2 <- merge(comparisonDesign[,1:2], fpkm_t, by.x="Sample", by.y="row.names", sort=F)
-      colnames(fpkm2)[1:2] <- c("sample", "group")
-      fpkm_agg <- aggregate(fpkm2[,3:ncol(fpkm2)], list(fpkm2$group), mean)
-      fpkm_agg <- data.frame(fpkm_agg[,2:ncol(fpkm_agg)], row.names=fpkm_agg[,1])
-      fpkm_agg2 <- t(fpkm_agg)
-    
-      colnames(fpkm_agg2) <- paste0("mean_FPKM_", colnames(fpkm_agg2))
-      
-      deseq2table <- merge(deseq2, fpkm_agg2, by ="row.names", sort=F)
-      deseq2table <- data.frame(deseq2table[,2:ncol(deseq2table)], row.names=deseq2table[,1])
-      cnames<-c(colnames(fpkm_agg2), "log2FoldChange","lfcSE", "stat", "pvalue", "padj", "FoldChange")
+      cnames<-c("log2FoldChange","lfcSE", "stat", "pvalue", "padj", "FoldChange")
+      hasGroupBaseMean=grepl("baseMean_", colnames(deseq2))
+      if(any(hasGroupBaseMean)){
+        cnames<-c(colnames(deseq2)[hasGroupBaseMean], cnames)
+      }
       
       if("Feature_gene_name"%in%colnames(deseq2)){
         cnames<-c("Feature_gene_name", cnames)
       }
-      deseq2table<-deseq2table[c(1:maxrow), cnames]
+      deseq2table<-deseq2[c(1:maxrow), cnames]
       print(kable(deseq2table, row.names=1, caption= tabRef(comparisonName, paste0(comparisonName, " top ", maxrow, " differential expressed genes")))%>% 
           kable_styling() %>%
           row_spec(which(deseq2table$FoldChange > 1), color = "black", background = "bisque") %>% 
