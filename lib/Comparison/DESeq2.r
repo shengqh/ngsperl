@@ -103,14 +103,16 @@ if(!exists("exportSignificantGeneName")){
 }
 
 if(exists("libraryFile")){
-  if (grepl(".csv$", libraryFile)){
-    librarySize<-read.csv(libraryFile, row.names=1,check.names=FALSE)
-    librarySize<-unlist(librarySize[libraryKey,,drop=T])
-    cat("Using ", libraryKey, " in " , libraryFile , " as library size. \n")
-  }else{
-    librarySize<-read.table(libraryFile, row.names=1,check.names=FALSE,header=T,stringsAsFactor=F)
-    librarySize<-unlist(librarySize[,libraryKey,drop=T])
-    cat("Using ", libraryKey, " in " , libraryFile , " as library size. \n")
+  if (libraryKey != 'None'){
+    if (grepl(".csv$", libraryFile)){
+      librarySize<-read.csv(libraryFile, row.names=1,check.names=FALSE)
+      librarySize<-unlist(librarySize[libraryKey,,drop=T])
+      cat("Using ", libraryKey, " in " , libraryFile , " as library size. \n")
+    }else{
+      librarySize<-read.table(libraryFile, row.names=1,check.names=FALSE,header=T,stringsAsFactor=F)
+      librarySize<-unlist(librarySize[,libraryKey,drop=T])
+      cat("Using ", libraryKey, " in " , libraryFile , " as library size. \n")
+    }
   }
 }
 
@@ -635,7 +637,7 @@ for(countfile_index in c(1:length(countfiles))){
     
     colnames(dds)<-colnames(comparisonData)
 		dds<-myEstimateSizeFactors(dds)
-		
+
     if(filterBaseMean){
       cat(paste0("filter by basemean: ", filterBaseMeanValue, "\n"))
       baseMeans = rowMeans(counts(dds, normalized=TRUE))
@@ -643,7 +645,7 @@ for(countfile_index in c(1:length(countfiles))){
       dds<-dds[baseMeans > filterBaseMeanValue,]
       comparisonData=comparisonData[baseMeans > filterBaseMeanValue,]
     }
-    
+
     #draw density graph
     rldmatrix<-as.matrix(log2(counts(dds,normalized=FALSE) + 1))
 
@@ -731,7 +733,7 @@ for(countfile_index in c(1:length(countfiles))){
                                design = designFormula)
     
     dds<-myEstimateSizeFactors(dds)
-    
+
     bpparam<-MulticoreParam(thread)
 #    parallel<-ifelse(thread <= 1, FALSE, TRUE)
     parallel=FALSE
@@ -755,7 +757,13 @@ for(countfile_index in c(1:length(countfiles))){
     } else {
       res<-results(dds, cooksCutoff=cooksCutoff, alpha=alpha, parallel=parallel, BPPARAM=bpparam)
     }
-    
+
+    res$FoldChange<-2^res$log2FoldChange
+
+    baseMeanPerLvl <- sapply( levels(dds$Condition), function(lvl) rowMeans( counts(dds,normalized=TRUE)[,dds$Condition == lvl] ) )
+    colnames(baseMeanPerLvl)<-paste0("baseMean_", colnames(baseMeanPerLvl))
+    res<-cbind(res, baseMeanPerLvl)
+
     cat("DESeq2 finished.\n")
     
     if (useRawPvalue==1) {
@@ -771,8 +779,8 @@ for(countfile_index in c(1:length(countfiles))){
       tbb<-cbind(as.data.frame(comparisonData), res)
     }
     
-    tbb$FoldChange<-2^tbb$log2FoldChange
     tbbselect<-tbb[select,,drop=F]
+
     tbbAllOut<-as.data.frame(tbb[,resultAllOutVar,drop=F])
     tbbAllOut$Significant<-select
     colnames(tbbAllOut)<-paste0(colnames(tbbAllOut)," (",comparisonName,")")
