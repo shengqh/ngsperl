@@ -2,6 +2,8 @@ options(bitmapType='cairo')
 
 #load Rcpp package first because of the error with reshape2 package
 library(Rcpp)
+library(ggplot2)
+library(reshape2)
 
 ###############################################################################
 # Functions in pipeline
@@ -50,6 +52,15 @@ theme_bw2 <- function () {
 			panel.border = element_blank(),
 			axis.line = element_line(colour = "black", size = 0.5)
 		)
+}
+
+theme_bw3 <- function () { 
+	theme_bw() +
+	theme(
+		strip.background = element_rect(fill = NA, colour = 'black'),
+		panel.border = element_rect(fill = NA, color = "black"),			
+		axis.line = element_line(colour = "black", size = 0.5)
+	)
 }
 
 getSampleInGroup<-function(groupDefineFile, samples, useLeastGroups=FALSE,onlySamplesInGroup=FALSE){
@@ -494,13 +505,13 @@ tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",f
 		datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory)
 		
 #		datForFigure$Groups<-row.names(dat)
-		datForFigure<-melt(as.matrix(datForFigure))
+		datForFigure<-reshape2::melt(as.matrix(datForFigure))
 		colnames(datForFigure)<-varName
 	} else {
 		datForFigure<-dat
 	}
 	if (!is.na(fill)) {
-		p<-ggplot(datForFigure,aes_string(x=x,y=y,fill=fill))
+		p<-ggplot(datForFigure,aes_string(x=x,y=y,fill=fill)) + theme_bw3()
 		if (length(unique(datForFigure[,fill]))<=7 & sum(nchar(as.character(unique(datForFigure[,fill]))))<70) {
 			p<-p+theme(legend.position = "top")+
 					guides(fill = guide_legend(nrow = 1,keywidth = 2, keyheight = 2))
@@ -512,15 +523,15 @@ tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",f
 			p<-p+scale_fill_manual(values=colors)
 		}
 	} else if (!is.na(facet)) {
-		p<-ggplot(datForFigure,aes_string(x=x,y=y))+facet_wrap(c(facet))
+		p<-ggplot(datForFigure,aes_string(x=x,y=y))+facet_wrap(c(facet)) + theme_bw3()
 	} else {
-		p<-ggplot(datForFigure,aes_string(x=x,y=y))
+		p<-ggplot(datForFigure,aes_string(x=x,y=y)) + theme_bw3()
 	}
 	p<-p+geom_bar(stat="identity", width=barwidth)+
 #			guides(fill= guide_legend(title = groupName))+
-			theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5)) + 
-			theme(axis.text = element_text(size=textSize),legend.text=element_text(size=textSize),
-					axis.title = element_text(size=textSize),legend.title= element_text(size=textSize))+
+			theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+			      axis.text = element_text(size=textSize),legend.text=element_text(size=textSize),
+					  axis.title = element_text(size=textSize),legend.title= element_text(size=textSize))+
 			ylab(ylab)
 
 	return(p)
@@ -602,7 +613,7 @@ ggpie <- function (dat, fill="Category", y="Reads",facet="Sample",
     } else {
       categoryOrderedNames<-row.names(datForFigure)
     }
-    datForFigure<-melt(as.matrix(datForFigure),as.is=T)
+    datForFigure<-reshape2::melt(as.matrix(datForFigure),as.is=T)
     colnames(datForFigure)<-c(fill,facet,y)
   } else {
     datForFigure<-dat
