@@ -39,6 +39,8 @@ sub getRcode {
   my $output_to_result_dir = get_option( $config, $section, "output_to_result_dir", 0 );
   if ($output_to_result_dir) {
     $result = $result . 'outputDirectory=".";';
+    my $output_include_folder_name = get_option( $config, $section, "output_include_folder_name", 1 );
+    $result = $result . "output_include_folder_name=" . ($output_include_folder_name?"TRUE":"FALSE") . ";";
   }
 
   return $result;
@@ -54,6 +56,8 @@ sub result {
   my $output_file_task_ext = get_option( $config, $section, "output_file_task_ext", "" );
   my $suffix               = get_option( $config, $section, "suffix",               "" );
   my $result               = {};
+  my $output_include_folder_name = get_option( $config, $section, "output_include_folder_name", 1 );
+  #print("output_include_folder_name =". $output_include_folder_name."\n");
 
   my %temp = %{ get_raw_files( $config, $section, "parameterSampleFile1" ) };
   my @names = keys %temp;
@@ -88,11 +92,15 @@ sub result {
         my $prefix = $subSampleFile;
         if ($output_to_result_dir) {
           my $file = basename($subSampleFile);
-          my $pdir = dirname($subSampleFile);
-          while ( basename($pdir) eq "result" ) {
-            $pdir = dirname($pdir);
+          if($output_include_folder_name){
+            my $pdir = dirname($subSampleFile);
+            while ( basename($pdir) eq "result" ) {
+              $pdir = dirname($pdir);
+            }
+            $prefix = $result_dir . "/" . basename($pdir) . "." . $file;
+          }else{
+            $prefix = $result_dir . "/" . $file;
           }
-          $prefix = $result_dir . "/" . basename($pdir) . "." . $file;
         }
 
         $prefix = $prefix . $curSuffix;
@@ -117,6 +125,8 @@ sub result {
     }
   }
   $result->{$task_name} = filter_array( \@result_files, $pattern );
+
+  #print(Dumper($result));
   return $result;
 }
 

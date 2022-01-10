@@ -1,5 +1,6 @@
 
 source("countTableVisFunctions.R")
+
 options(bitmapType='cairo')
 
 library(heatmap3)
@@ -208,6 +209,7 @@ if(colorFileList != ""){
 
 #start work:
 countTableFileAll<-read.delim(countTableFileList,header=F,as.is=T,check.names=F)
+
 i<-1
 for (i in 1:nrow(countTableFileAll)) {
   countTableFile<-countTableFileAll[i,1]
@@ -216,13 +218,17 @@ for (i in 1:nrow(countTableFileAll)) {
     outputFilePrefix=countTableFile
   }else{
     bname=basename(countTableFile)
-    dpath=dirname(countTableFile)
-    dname=basename(dpath)
-    while(dname=="result"){
-      dpath=dirname(dpath)
+    if(output_include_folder_name){
+      dpath=dirname(countTableFile)
       dname=basename(dpath)
+      while(dname=="result"){
+        dpath=dirname(dpath)
+        dname=basename(dpath)
+      }
+      outputFilePrefix=paste0(outputDirectory, "/", dname, "." , bname)
+    }else{
+      outputFilePrefix=paste0(outputDirectory, "/", bname)
     }
-    outputFilePrefix=paste0(outputDirectory, "/", dname, "." , bname)
   }
   
   countTableTitle<-countTableFileAll[i,2]
@@ -334,7 +340,12 @@ for (i in 1:nrow(countTableFileAll)) {
     validCountNum<-filterCountTable(countNum,validSampleToGroup,minMedian=minMedian,minMedianInGroup=minMedianInGroup)
     
     #normlize by total reads or VSD
-    if (totalCountFile!="") { #normlize with total count *10^6
+    bNormalizeByCount=FALSE
+    if(totalCountFile != ""){
+      bNormalizeByCount=totalCountKey != "None"
+    }
+
+    if (bNormalizeByCount) { #normlize with total count *10^6
       totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
       totalCount<-unlist(totalCount[totalCountKey,])
       notValidSamples = colnames(validCountNum)[!(colnames(validCountNum) %in% names(totalCount))]
