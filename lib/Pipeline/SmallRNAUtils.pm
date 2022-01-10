@@ -139,13 +139,16 @@ sub initializeSmallRNADefaultOptions {
 
   initDefaultValue( $def, "top25cv_in_hca",     0 );
 
+  #"TotalReads" or "None"
+  initDefaultValue( $def, "normalize_by", "TotalReads");
+
   initDefaultValue( $def, "DE_fold_change",              1.5 );
   initDefaultValue( $def, "DE_min_median_read_top",      2 );
   initDefaultValue( $def, "DE_min_median_read_smallRNA", 5 );
   initDefaultValue( $def, "DE_pvalue",                   0.05 );
   initDefaultValue( $def, "DE_use_raw_pvalue",           1 );
   initDefaultValue( $def, "DE_detected_in_both_group",   0 );
-  initDefaultValue( $def, "DE_library_key",              "TotalReads" );
+  initDefaultValue( $def, "DE_library_key",              getValue($def, "normalize_by"));
   initDefaultValue( $def, "DE_cooksCutoff",              "FALSE" );
   initDefaultValue( $def, "use_pearson_in_hca",          0 );
 
@@ -364,7 +367,7 @@ sub addPositionVis {
       class                => "CQS::UniqueR",
       perform              => 1,
       target_dir           => $parentDir . "/$taskName",
-      rtemplate            => "smallRnaPositionVis.R",
+      rtemplate            => "countTableVisFunctions.R,smallRnaPositionVis.R",
       output_file_ext      => ".allPositionBar.png",
       parameterFile2_ref   => [ "bowtie1_genome_1mm_NTA_smallRNA_info", ".mapped.count\$" ],
       parameterSampleFile1 => $def->{tRNA_vis_group},
