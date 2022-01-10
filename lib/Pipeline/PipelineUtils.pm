@@ -363,8 +363,9 @@ sub addBamStat {
 sub getDEseq2TaskName {
   my ( $taskKey, $libraryKey, $def ) = @_;
   my $result = "deseq2_" . $taskKey;
-  if ( defined $libraryKey ) {
+  if ( defined $libraryKey && $libraryKey ne 'None' ) {
     $result = $result . "_" . $libraryKey;
+    $result =~ s/\s/_/g;
   }
   if ( defined $def->{DE_task_suffix} ) {
     $result = $result . $def->{DE_task_suffix};
