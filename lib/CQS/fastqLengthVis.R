@@ -1,3 +1,4 @@
+source("countTableVisFunctions.R")
 options(bitmapType='cairo')
 
 resultFile<-outFile
@@ -50,7 +51,7 @@ png(paste0(resultFile,".png"),width=width,height=height,res=300)
 
 p=ggplot(lengthAll, aes(x=Len, y=Count)) + 
   geom_bar(stat="identity", width=.5) + 
-  theme_classic() + 
+  theme_bw3() + 
   labs(x = "Read Length", 
        y = "Read Count")+
   theme(plot.title = textTitle,
@@ -58,7 +59,6 @@ p=ggplot(lengthAll, aes(x=Len, y=Count)) +
         axis.text = text20,
         axis.line = element_line(colour = "gray75", size=0.73, linetype = "solid"),
         axis.ticks = element_line(size=0.73),axis.ticks.length=unit(0.3,"cm"),
-        strip.background = element_blank(),
         strip.text = text20Bold,
         legend.text = text20Bold,
         legend.title = element_blank()) +
@@ -95,6 +95,7 @@ if (groupFileList!="") {
       png(paste0(resultFile,".group.png"),width=2000,height=1500,res=300)
     }  
   }
+  p<-p+theme_bw3()
   print(p)
   dev.off()
 }

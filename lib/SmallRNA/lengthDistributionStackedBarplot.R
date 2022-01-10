@@ -67,7 +67,7 @@ for(sample in unique(fastq_length$Sample)){
     geom_bar(data=fs, aes(x=Length,y=RPM, fill=Category),
              stat="identity", width=0.8, color=NA,size=0.73)+
     scale_fill_manual(values=allcolors)+
-    theme_classic() + 
+    theme_bw3() + 
     labs(x= "Read Length", 
          y="Total Reads Per Million",
          title=sample)+
@@ -99,7 +99,7 @@ g<-ggplot()+
   geom_bar(data=final, aes(x=Length,y=RPM, fill=Category),
            stat="identity", width=0.8, color=NA,size=0.73)+
   scale_fill_manual(values=allcolors)+
-  theme_classic() + 
+  theme_bw3() + 
   labs(x = "Read Length", 
        y = "Total Reads Per Million")+
   theme(plot.title = textTitle,
@@ -107,7 +107,6 @@ g<-ggplot()+
         axis.text = text20,
         axis.line = element_line(colour = "gray75", size=0.73, linetype = "solid"),
         axis.ticks = element_line(size=0.73),axis.ticks.length=unit(0.3,"cm"),
-        strip.background = element_blank(),
         strip.text = text20Bold,
         legend.text = text20Bold,
         legend.title = element_blank()) +
@@ -200,7 +199,8 @@ if(length(unique(groups$Group)) > 1){
     geom_line() +
     geom_point() +
     scale_color_manual(values=allcolors) +
-    facet_grid(Group~.) + theme_bw() + xlim(15,40) + theme(strip.background=element_blank())
+    facet_grid(Group~.) + theme_bw() + xlim(15,40) + 
+    theme_bw3()
   print(gga)
   dev.off()
 }

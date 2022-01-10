@@ -134,7 +134,7 @@ p<-ggplot(allPositionByGroup,aes(x=Position,y=Feature,size=GroupPercentage,colou
     scale_size_continuous(range = c(0.1,3))+
     scale_colour_gradient(low="indianred1",high="darkred")+
     xlim(xRange)+ 
-    theme_bw()+
+    theme_bw3()+
     theme(text = element_text(size=axisTextSize),axis.text = element_text(size=axisTextSize),
         axis.title = element_text(size=axisTextSize),
         strip.text.x = element_text(size=stripTextSize),
@@ -172,7 +172,7 @@ if (doSmallRNAGrouping==1 | doSmallRNAGrouping==3) {
 			scale_size_continuous(range = c(0.1,3))+
 			scale_colour_gradient(low="indianred1",high="darkred")+
 			xlim(xRange)+ 
-			theme_bw()+
+			theme_bw3()+
 			theme(text = element_text(size=axisTextSize),axis.text = element_text(size=axisTextSize),
 					axis.title = element_text(size=axisTextSize),
 					strip.text.x = element_text(size=stripTextSize),
@@ -203,7 +203,7 @@ maxPos<-max(allPositionByGroup$Position)
 png(paste0(outFile,".allPositionBar.png"),width=width,height=height,res=300)
 m <- ggplot(allPositionByGroup, aes(x = Position,y=GroupPositionCountFraction,fill=Feature)) +
     geom_bar(stat="identity") +
-    theme_bw()+
+    theme_bw3()+
     ylab("cumulative read fraction (read counts/total reads)")+
     theme(text = element_text(size=20))+theme(legend.text = element_text(size=16))+
     scale_fill_manual(values=colorRampPalette(brewer.pal(9, "Set1"))(featureNumber)) + 
@@ -228,7 +228,7 @@ width=max(groupCount*1000, 3000) + 3000
 png(paste0(outFile,".PositionBar.png"),width=width,height=height,res=300)
 m <- ggplot(allPositionByGroup, aes(x = Position,y=GroupPositionCountFraction)) +
 		geom_bar(stat="identity") +
-		theme_bw()+
+		theme_bw3()+
 		ylab("cumulative read fraction (read counts/total reads)")+
 		theme(text = element_text(size=20))+
 		theme(legend.text = element_text(size=16))+
