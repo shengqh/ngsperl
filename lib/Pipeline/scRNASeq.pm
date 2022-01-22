@@ -571,12 +571,13 @@ sub getScRNASeqConfig {
     }
   }
 
+  my $individual_qc_task = "individual_qc";
+  my $qc_filter_config_file = $target_dir . "/qc_filter_config.txt";
   if (defined $def->{files}){
     if($def->{perform_individual_qc}){
-      my $qc_individual_task = "qc_individual";
-      $config->{$qc_individual_task} = {
+      $config->{$individual_qc_task} = {
         class => "CQS::UniqueRmd",
-        target_dir => "${target_dir}/$qc_individual_task",
+        target_dir => "${target_dir}/$individual_qc_task",
         report_rmd_file => "../scRNA/individual_qc.Rmd",
         additional_rmd_files => "../scRNA/markerCode_filter.R",
         option => "",
@@ -596,10 +597,8 @@ sub getScRNASeqConfig {
           pca_dims              => getValue( $def, "pca_dims" ),
           markers_file     => getValue( $def, "markers_file" ),
         },
-        output_perSample_file => "parameterSampleFile1",
-        output_perSample_file_byName => 1,
-        output_perSample_file_ext => ".qc.rds",
-        output_to_same_folder => 1,
+        output_file_ext => "objectlist.Rdata",
+        output_no_name => 1,
         can_result_be_empty_file => 0,
         sh_direct   => 1,
         pbs => {
@@ -610,9 +609,24 @@ sub getScRNASeqConfig {
       };
 
       if (defined $def->{groups}){
-        $config->{$qc_individual_task}{parameterSampleFile3_ref} = "groups";
+        $config->{$individual_qc_task}{parameterSampleFile3_ref} = "groups";
       }
-      push( @$summary, $qc_individual_task );
+
+      if( ! -e $qc_filter_config_file){
+        open(my $qc, '>', $qc_filter_config_file) or die $!;
+        print $qc "sample\tnFeature_cutoff_min\tnFeature_cutoff_max\tnCount_cutoff\tmt_cutoff\tcluster_remove\n";
+        my $files = $def->{files};
+        for my $fname (sort keys %$files){
+          print $qc "$fname\t" . 
+                    getValue( $def, "nFeature_cutoff_min" ) . "\t" . 
+                    getValue( $def, "nFeature_cutoff_max" ) . "\t" . 
+                    getValue( $def, "nCount_cutoff" ) . "\t" .
+                    getValue( $def, "mt_cutoff" ) . "\t\n";
+        }
+        close($qc);
+      }
+      
+      push( @$summary, $individual_qc_task );
     }
 
     my @report_files = ();
@@ -979,6 +993,11 @@ sub getScRNASeqConfig {
             "mem"       => "10gb"
           },
         };
+        if($def->{perform_individual_qc}){
+          $config->{$seurat_rawdata}{parameterFile1_ref} = [$individual_qc_task, "objectlist.Rdata"];
+          $config->{$seurat_rawdata}{parameterFile2} = $qc_filter_config_file;
+          
+        }
         push( @$summary, $seurat_rawdata );
 
         push (@report_files, ($seurat_rawdata, "rawobj.rds"));

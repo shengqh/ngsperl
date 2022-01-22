@@ -1,4 +1,3 @@
-
 source("scRNA_func.r")
 
 library(data.table)
@@ -204,7 +203,34 @@ if(file.exists(parFile3)){
   print(p1)
   dev.off()
   
+  cat("Draw marker gene heatmap\n")
+  obj.markers <- FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
+  write.csv(obj.markers, paste0(outFile, ".markers.csv"))
+  obj@misc$markers<-obj.markers
+  
+  if('avg_log2FC' %in% colnames(obj.markers)){
+    top10 <- obj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_log2FC)
+  }else{
+    top10 <- obj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
+  }
+
+  if (nrow(top10)>200) {
+    genesize=5
+  } else {
+    if (nrow(top10)>100) {
+      genesize=6
+    }  else {
+      genesize=7
+    } 
+  }
+
+  Idents(obj)<-'seurat_cellactivity_clusters'
+  png(paste0(outFile, ".heatmap.png"), width=6600, height=6000, res=300)
+  print(DoHeatmap(obj, features = top10$gene,slot="data")+ theme(axis.text.y = element_text(size = genesize))) 
+  dev.off()
+  
   if(file.exists(myoptions$summary_layer_file)){
+    cat("Draw figure in summary layers\n")
     idmap<-split(id_tbl$summary_layer, id_tbl$seurat_clusters)
     obj$summary_layer = unlist(idmap[as.character(obj$seurat_clusters)])
     
