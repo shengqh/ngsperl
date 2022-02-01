@@ -612,6 +612,7 @@ sub addEncodeATACseq {
     },
   };
 
+  my $input_parameters_is_vector = {};
   if(defined $def->{replicates}){
     my $replicates = $def->{replicates};
     $config->{$task}{"source"} = $replicates;
@@ -645,9 +646,13 @@ sub addEncodeATACseq {
       };
       $config->{$task}{input_parameters}{"atac.fastqs_rep${pick_str}_R1_ref"} = [$fastq_1];
       $config->{$task}{input_parameters}{"atac.fastqs_rep${pick_str}_R2_ref"} = [$fastq_2];
+      $input_parameters_is_vector->{"atac.fastqs_rep${pick_str}_R1"} = 1;
+      $input_parameters_is_vector->{"atac.fastqs_rep${pick_str}_R2"} = 1;
 
       $pick_index = $pick_index + 1;
     }
+
+    $config->{$task}{input_parameters_is_vector} = $input_parameters_is_vector;
   }else{
     $config->{$task}{source_ref} = $files_ref;
     my $fastq_1 = "fastq_1";

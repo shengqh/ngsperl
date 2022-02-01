@@ -88,9 +88,8 @@ sub perform {
   my $input_list = get_option($config, $section, "input_list", {});
   die "$input_list should be hash" if is_not_hash($input_list);
 
-  #replace value with vector of value/file
-  my $input_sample_vector = get_option($config, $section, "input_sample_vector", {});
-  die "$input_sample_vector should be hash" if is_not_hash($input_sample_vector);
+  my $input_parameters_is_vector = get_option($config, $section, "input_parameters_is_vector", {});
+  die "$input_parameters_is_vector should be hash" if is_not_hash($input_parameters_is_vector);
 
   #replace value with single value/file
   my $input_single = get_option($config, $section, "input_single", {});
@@ -240,7 +239,11 @@ fi
       if (is_array($json_dic->{$input_key})){
         $json_dic->{$input_key} = $input_values;
       }else{
-        $json_dic->{$input_key} = $input_values->[0];
+        if($input_parameters_is_vector->{$input_key}){
+          $json_dic->{$input_key} = $input_values;
+        }else{
+          $json_dic->{$input_key} = $input_values->[0];
+        }
       }
     }
     
