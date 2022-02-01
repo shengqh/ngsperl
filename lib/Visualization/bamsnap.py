@@ -45,7 +45,12 @@ def bamsnap(logger, bed_file, bam_list_file, output_file, bamsnap_option_file, n
   bam_name_str = '-title ' + '"' + '" "'.join(bam_names) + '"'
   bam_file_str = '-bam ' + ' '.join([bam_file_map[n] for n in bam_names])
 
-  height = max(len(bam_names) * 300 + 1100, 2000)
+  if not "-width" in bamsnap_option:
+    bamsnap_option += " -width 2000"
+
+  if not "-height" in bamsnap_option:
+    height = max(len(bam_names) * 300 + 1100, 2000)
+    bamsnap_option += " -width %d" % height
 
   gene_option = "" if no_gene_track else "gene "
 
@@ -54,7 +59,7 @@ def bamsnap(logger, bed_file, bam_list_file, output_file, bamsnap_option_file, n
     locus = gene_locus_map[gene]
     logger.info("Drawing " + gene + " " + locus + " ...")
     pngfile = gene + ".png"
-    snapCommand = "bamsnap %s -draw coordinates bamplot %s -bamplot coverage -width 1000 -height %d -pos %s -out %s %s %s" % (bamsnap_option, gene_option, height, locus, pngfile, bam_name_str, bam_file_str)
+    snapCommand = "bamsnap %s -draw coordinates bamplot %s -bamplot coverage -pos %s -out %s %s %s" % (bamsnap_option, gene_option, locus, pngfile, bam_name_str, bam_file_str)
     print(snapCommand)
     subprocess.run(snapCommand, check=True, shell=True)
     gene_file_map[gene] = pngfile
