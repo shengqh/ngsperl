@@ -2315,6 +2315,10 @@ sub addBamsnap {
     $params = $def;
   }
 
+  my $gene_track = ($def->{bamsnap_option} =~ /no_gene_track/) ? "" : "gene";
+  my $width = getValue($def, "bamsnap_width", 2000);
+  my $height = getValue($def, "bamsnap_height", 3000);
+
   $config->{$task_name} = {
     class                 => "CQS::ProgramWrapper",
     perform               => 1,
@@ -2327,7 +2331,10 @@ sub addBamsnap {
     parameterSampleFile1_arg => "-b",
     parameterSampleFile1_ref => $bam_ref,
     parameterSampleFile2_arg => "-c",
-    parameterSampleFile2  => getValue($params, "bamsnap_raw_option", {}),
+    parameterSampleFile2  => getValue($params, "bamsnap_raw_option", {
+      "-width" => $width,
+      "-height" => $height
+    }),
     parameterFile1_arg    => "-i",
     $parameterFile1_key   => $bed_ref,
     output_to_same_folder => 1,
@@ -2359,6 +2366,8 @@ sub addBamsnapLocus {
   }
 
   my $gene_track = ($def->{bamsnap_option} =~ /no_gene_track/) ? "" : "gene";
+  my $width = getValue($def, "bamsnap_width", 2000);
+  my $height = getValue($def, "bamsnap_height", 3000);
 
   $config->{$task_name} = {
     class                 => "CQS::ProgramWrapperOneToOne",
@@ -2366,7 +2375,7 @@ sub addBamsnapLocus {
     target_dir            => "$target_dir/$task_name",
     docker_prefix         => "bamsnap_",
     #init_command          => "ln -s __FILE__ __NAME__.bam",
-    option                => $option . " -draw coordinates bamplot $gene_track -bamplot coverage -width 2000 -height 3000 -out __NAME__.png",
+    option                => $option . " -draw coordinates bamplot $gene_track -bamplot coverage -width $width -height $height -out __NAME__.png",
     interpretor           => "",
     check_program         => 0,
     program               => "bamsnap",
@@ -2375,9 +2384,9 @@ sub addBamsnapLocus {
     parameterSampleFile2_ref => $bam_ref,
     parameterSampleFile2_arg => "-bam",
     parameterSampleFile2_type => "array",
-    parameterSampleFile2_join_delimiter => " ",
+    parameterSampleFile2_join_delimiter => " \\\n",
     parameterSampleFile2_name_arg => "-title",
-    parameterSampleFile2_name_join_delimiter => '" "',
+    parameterSampleFile2_name_join_delimiter => '" ' . "\\\n" . '"',
     parameterSampleFile2_name_has_comma => 1,
     output_to_same_folder => 1,
     output_arg            => "-out",
@@ -2385,6 +2394,7 @@ sub addBamsnapLocus {
     output_file_prefix    => "",
     output_file_ext       => ".png",
     output_other_ext      => "",
+    use_tmp_folder        => 0,
     sh_direct             => 1,
     pbs                   => {
       "nodes"     => "1:ppn=1",
