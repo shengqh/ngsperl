@@ -1,4 +1,3 @@
-
 source("scRNA_func.r")
 
 library(dplyr)
@@ -74,17 +73,11 @@ names(seurat_colors)<-levels(seurat_clusters)
 
 finalList$seurat_colors<-seurat_colors
 
-assay=ifelse(by_sctransform, "SCT", "RNA")
-
-meanexp<-t(apply(GetAssayData(obj, assay=assay, slot="data"),1,function(x){tapply(x,obj$seurat_clusters,mean)}))
-#meanexp<-AverageExpression(obj, assays = assay, slot="scale.data", group.by="seurat_clusters" )[[1]]
-
 counts=GetAssayData(obj,assay="RNA",slot="counts")
 clusters=obj$seurat_clusters
 sumcounts=get_cluster_count(counts, clusters)
 
 write.csv(sumcounts, file=paste0(prefix, ".cluster.count.csv"))
-write.csv(meanexp, file=paste0(prefix, ".cluster.meanexp.csv"))
 
 clusters<-data.frame("cell" = c(1:length(obj$seurat_clusters)), "seurat_clusters"=as.numeric(as.character(obj$seurat_clusters)), stringsAsFactors = F)
 rownames(clusters)<-names(obj$seurat_clusters)
@@ -113,3 +106,10 @@ if(length(unique(obj$orig.ident)) > 1){
 finalList$obj<-obj
 finalListFile<-paste0(prefix, ".final.rds")
 saveRDS(finalList, file=finalListFile)
+
+#we don't want to exponentiated the reads in "data" slot before taking average, so we have to copy it to "counts" slot first.
+assay=ifelse(by_sctransform, "SCT", "RNA")
+dd<-GetAssayData(obj, assay=assay, slot="data")
+obj<-SetAssayData(obj, assay=assay, slot="counts", dd )
+meanexp<-AverageExpression(obj, assays = assay, slot="counts", group.by="seurat_clusters" )[[1]]
+write.csv(meanexp, file=paste0(prefix, ".cluster.meanexp.csv"))

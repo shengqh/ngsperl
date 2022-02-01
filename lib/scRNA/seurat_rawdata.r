@@ -1,3 +1,5 @@
+
+source("scRNA_func.r")
 library(Seurat)
 library(ggplot2)
 library(digest)
@@ -49,6 +51,31 @@ if (has_hto) {
   hto_str = paste0(hto_md5, collapse="_")
 }
 
+remove_cells<-list()
+if(file.exists(parFile1)){
+  load(parFile1)
+  
+  objs_config=read.table(parFile2, sep="\t", header=T, stringsAsFactors = F)
+  
+  if(is.null(names(object.list))){
+    names(object.list)<-objs_config$sample
+  }
+  
+  rowi=1
+  for(rowi in c(1:nrow(objs_config))){
+    sample_id = objs_config$sample[rowi]
+    sample_obj = object.list[[sample_id]]
+    cd<-FetchData(sample_obj, c("seurat_clusters"))
+    rm(sample_obj)
+    
+    crs<-objs_config$cluster_remove[rowi]
+    crslist<-unlist(strsplit(crs,','))
+    rcs<-rownames(cd)[as.character(cd$seurat_clusters) %in% crslist] 
+    
+    remove_cells[[sample_id]]=rcs
+  }
+}
+
 #read raw count dat
 filelist1<-read.table(parSampleFile1, header=F, stringsAsFactors = F)
 rawobjs = list()
@@ -66,6 +93,16 @@ for (fidx in c(1:nrow(filelist1))) {
   if (is.list(counts)){
     adt.counts<-counts$`Antibody Capture`
     counts<-counts$`Gene Expression` 
+  }
+  
+  if(fileTitle %in% names(remove_cells)){
+    rcs<-remove_cells[[fileTitle]]
+    if(length(rcs) > 0){
+      counts<-counts[,!(colnames(counts) %in% rcs)]
+      if(!is.null(adt.counts)){
+        adt.counts<-adt.counts[,!(colnames(adt.counts) %in% rcs)]
+      }
+    }
   }
 
   if (species=="Mm") {

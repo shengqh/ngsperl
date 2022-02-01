@@ -368,6 +368,7 @@ do_harmony<-function(objs, by_sctransform, npcs, batch_file) {
     obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
     VariableFeatures(obj) <- objs.features        
   }else{
+    assay="RNA"
     cat("merge samples ... \n")
     obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
     cat("NormalizeData ... \n")
@@ -377,7 +378,6 @@ do_harmony<-function(objs, by_sctransform, npcs, batch_file) {
     all.genes <- rownames(obj)  
     cat("ScaleData ... \n")
     obj <- ScaleData(obj, features = all.genes, verbose = FALSE)
-    assay='RNA'
   }
 
   cat("RunPCA ... \n")
