@@ -336,6 +336,10 @@ sub getRNASeqConfig {
     addPlotGene($config, $def, $summary, $target_dir, "annotation_genes_plot", $sizeFactorTask, [ $geneLocus, ".bed" ], $source_ref);
   }
 
+  if($def->{perform_bamsnap} && $def->{"bamsnap_locus"}){
+    addBamsnapLocus($config, $def, $summary, $target_dir, "bamsnap_locus", $source_ref);
+  }
+
   my $perform_count_table = $def->{perform_counting} || $def->{perform_count_table};
 
   if ($perform_count_table) {
