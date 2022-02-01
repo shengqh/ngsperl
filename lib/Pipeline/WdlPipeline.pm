@@ -579,9 +579,12 @@ sub addEncodeATACseq {
     $task = $pipeline_key;
   }
 
+  print("walltime = " . getValue($def, "encode_atac_walltime", "12"));
+
   $config->{$task} = {     
     "class" => "CQS::Wdl",
-    "option" => "--no-build-singularity",
+    #"option" => "--no-build-singularity",
+    "option" => "",
     "target_dir" => "${target_dir}/$task",
     "singularity_image_files_ref" => ["singularity_image_files"],
     "cromwell_jar" => $wdl->{"cromwell_jar"},
@@ -604,7 +607,7 @@ sub addEncodeATACseq {
     sh_direct   => 1,
     pbs=> {
       "nodes"     => "1:ppn=8",
-      "walltime"  => "12",
+      "walltime"  => getValue($def, "encode_atac_walltime", "12"),
       "mem"       => "40gb"
     },
   };
