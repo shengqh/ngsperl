@@ -823,20 +823,21 @@ sub getScRNASeqConfig {
 
         my $hto_bam_task = "hto_bam";
         $config->{$hto_bam_task} = {
-          class => "CQS::ProgramWrapperOneToOne",
+          class => "CQS::ProgramWrapperOneToManyFile",
           target_dir => "${target_dir}/hto_bam",
           interpretor => "python3",
           program => "../scRNA/split_samples.py",
           check_program => 1,
           option => "-o .",
-          source_arg => "-i",
-          source_ref => $hto_ref,
+          source_arg => "-s",
+          source_ref => ["HTO_samples"],
           parameterSampleFile2_arg => "-b",
           parameterSampleFile2_ref => ["bam_files"],
-          parameterSampleFile3_arg => "-s",
-          parameterSampleFile3_ref => ["HTO_samples"],
+          parameterSampleFile3_arg => "-i",
+          parameterSampleFile3_ref => $hto_ref,
           output_arg => "-o",
           output_file_prefix => "",
+          output_file_key => 0,
           output_file_ext => ".bam",
           output_to_same_folder => 1,
           can_result_be_empty_file => 0,
@@ -849,7 +850,7 @@ sub getScRNASeqConfig {
         };
         push( @$individual, $hto_bam_task );
 
-        addArcasHLA($config, $def, $individual, $target_dir, $project_name, $hto_bam_task, $hto_bam_task);        
+        addArcasHLA($config, $def, $individual, $target_dir, $project_name, $hto_bam_task . "_", $hto_bam_task);        
       }
 
       if(defined $def->{vdj_json_files}){
