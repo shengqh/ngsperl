@@ -2065,8 +2065,10 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
     }
 
     if(defined $cnvMap){
-      push( @report_files, $cnvMap->{snvTop10cnvOncoPlot}, ".freq0.001.snv.missense.oncoprint.top10.tsv.snv_cnv.txt.png" );
-      push( @report_names, "snv_cnv_oncoprint_top10_png" );
+      if(defined $cnvMap->{snvTop10cnvOncoPlot}){
+        push( @report_files, $cnvMap->{snvTop10cnvOncoPlot}, ".freq0.001.snv.missense.oncoprint.top10.tsv.snv_cnv.txt.png" );
+        push( @report_names, "snv_cnv_oncoprint_top10_png" );
+      }
     } 
 
     $config->{report} = {
