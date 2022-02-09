@@ -2480,9 +2480,11 @@ sub getSmallRNAConfig {
           push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.rRNA.count.PCA.png" );
           push( @report_names, "correlation_rrna_heatmap", "correlation_rrna_pca" );
 
-          push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.yRNA.count.heatmap.png" );
-          push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.yRNA.count.PCA.png" );
-          push( @report_names, "correlation_yrna_heatmap", "correlation_yrna_pca" );
+          if($def->{hasYRNA}){
+            push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.yRNA.count.heatmap.png" );
+            push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.yRNA.count.PCA.png" );
+            push( @report_names, "correlation_yrna_heatmap", "correlation_yrna_pca" );
+          }
 
           push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.snRNA.count.heatmap.png" );
           push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.snRNA.count.PCA.png" );
