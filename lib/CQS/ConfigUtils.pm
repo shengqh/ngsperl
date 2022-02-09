@@ -654,6 +654,9 @@ sub get_raw_file_list {
       my $values       = $refmap->{$index};
       my $targetConfig = $values->{config};
       my $section      = $values->{section};
+      if(not defined $section){
+        stop("ERROR: no section defined for index " . $index);
+      }
       my $pattern      = $values->{pattern};
 
       my $targetSection = get_config_section( $targetConfig, $section );
