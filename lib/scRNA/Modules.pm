@@ -29,13 +29,14 @@ sub addEnclone {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
     target_dir            => "$parentDir/$taskName",
-    init_command          => '
+    init_command          => '',
+    option                => "
 dn=`dirname __FILE__`
-',
-    option                => "TCR=\${dn} POUT=__NAME__.csv > __NAME__.log",
+
+enclone TCR=\${dn} POUT=__NAME__.csv > __NAME__.log",
     interpretor           => "",
     check_program         => 0,
-    program               => "enclone",
+    program               => "",
     source_ref            => $sourceRef,
     source_arg            => "TCR=",
     source_join_delimiter => " ",
@@ -43,6 +44,7 @@ dn=`dirname __FILE__`
     output_to_folder      => 1,
     output_arg            => ">",
     output_file_ext       => ".csv",
+    no_docker             => 1,
     sh_direct             => 1,
     pbs                   => {
       "nodes"     => "1:ppn=1",
@@ -124,21 +126,30 @@ sub addArcasHLA_extract {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
     target_dir            => "$target_dir/$extract_task",
-    init_command          => "ln -s __FILE__ __NAME__.bam 
-
-if [[ -s __FILE__.bai ]]; then
-  ln -s __FILE__.bai __NAME__.bam.bai
+    init_command          => "
+if [[ ! -s __NAME__.bam ]]; then
+  ln -s __FILE__ __NAME__.bam 
 fi
 
+if [[ ! -s __NAME__.bam.bai ]]; then
+  if [[ -s __FILE__.bai ]]; then
+    ln -s __FILE__.bai __NAME__.bam.bai
+  else
+    echo samtools index __NAME__.bam
+    samtools index __NAME__.bam
+  fi
+fi
 ",
-    option                => "extract -t 8 --log __NAME__.log $ispairend_option -v __NAME__.bam -o .
+    option                => "
+echo arcasHLA extract -t 8 --log __NAME__.log $ispairend_option -v __NAME__.bam -o .
+arcasHLA extract -t 8 --log __NAME__.log $ispairend_option -v __NAME__.bam -o .
 
 rm __NAME__.bam  
 rm __NAME__.bam.bai
 ",
     interpretor           => "",
     check_program         => 0,
-    program               => "arcasHLA",
+    program               => "",
     source_ref            => $source_ref,
     source_arg            => "-v",
     source_join_delimiter => "",
