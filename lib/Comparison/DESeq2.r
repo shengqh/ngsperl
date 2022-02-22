@@ -317,11 +317,13 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outp
 
 myEstimateSizeFactors<-function(dds){
   if(exists("librarySize")){
+    cat("Estimate size factor based on library size\n")
     curLibrarySize<-librarySize[colnames(dds)]
     #based on DESeq2 introduction
     curSizeFactor<- curLibrarySize / exp(mean(log(curLibrarySize)))
     sizeFactors(dds)<-curSizeFactor
   }else{
+    cat("Estimate size factor based on reads\n")
     sfres<-try(dds<-estimateSizeFactors(dds))
     if (class(sfres) == "try-error") {
       library(edgeR)
