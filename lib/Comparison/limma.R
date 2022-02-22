@@ -321,15 +321,18 @@ if (performNormlization) {
 ##################################
 library(ComplexHeatmap)
 
-factorLevelsN=apply(designTableOverall,2,function(x) length(unique(x)))
-factorInDesign=names(factorLevelsN)[factorLevelsN<=10] #removing sample factors in paired test. NOT visulize them because of too many leveles
+
 if (is.null(designTableOverall)) {
-  designTableForHeatmap <- makeDesignTable(rawDataTable, factorTable=factorTable,factorInDesign=factorInDesign,designTableOverall=designTableOverall)
+  designTableForHeatmap <- makeDesignTable(rawDataTable, factorTable=factorTable,factorInDesign=NULL,designTableOverall=designTableOverall)
 } else {
-  designTableForHeatmap=designTableOverall[,factorInDesign]
+  designTableForHeatmap=designTableOverall
 }
 if (all(designTableForHeatmap[,1]==1)) { #remove intercept if exists
   designTableForHeatmap=designTableForHeatmap[,-1,drop=FALSE]
+}
+if (ncol(designTableForHeatmap)>4) { #too many factors for annotation, only keep a few
+  temp=colSums(designTableForHeatmap)
+  designTableForHeatmap=designTableForHeatmap[,tail(order(temp),4)]
 }
 
 designTableForHeatmap <- as.data.frame(designTableForHeatmap)
@@ -381,13 +384,14 @@ for (ComparisonOne in unique(factorInComparisons[,3])) {
   prefix=paste0(ComparisonOne)
   
   factorInDesign=unique(factorInComparisons[which(factorInComparisons[,3]==ComparisonOne & factorInComparisons[,2]!="contrast"),1])
-  if (!is.null(factorTable)) {
+  if (!is.null(factorTable)) { #using factorTable to make designMatrix
+    factorTableInComparisonOne=factorTable[which(factorTable[,2] %in% factorInDesign),]
     if (!exists("noFactorSampleAsIntercept") || noFactorSampleAsIntercept==1) { #use samples without factor define as Intercept in design
       rawDataTableForDiffDetectionOne=rawDataTableForDiffDetection
-      designMatrix <- makeDesignTable(rawDataTableForDiffDetectionOne, factorTable,factorInDesign=factorInDesign)
+      designMatrix <- makeDesignTable(rawDataTableForDiffDetectionOne, factorTableInComparisonOne,factorInDesign=factorInDesign)
     } else { #remove samples without factor define
-      rawDataTableForDiffDetectionOne=rawDataTableForDiffDetection[,unique(factorTable[which(factorTable[,2] %in% factorInDesign),1])]
-      designMatrix <- makeDesignTable(rawDataTableForDiffDetectionOne, factorTable,factorInDesign=factorInDesign,addIntercept=0)
+      rawDataTableForDiffDetectionOne=rawDataTableForDiffDetection[,unique(factorTableInComparisonOne[,1])]
+      designMatrix <- makeDesignTable(rawDataTableForDiffDetectionOne, factorTableInComparisonOne,factorInDesign=factorInDesign,addIntercept=0)
     }
   } else { #Not using factorTable, using designTableOverall
     rawDataTableForDiffDetectionOne=rawDataTableForDiffDetection
