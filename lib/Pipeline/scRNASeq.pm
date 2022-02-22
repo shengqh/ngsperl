@@ -807,11 +807,11 @@ sub getScRNASeqConfig {
         $hto_sample_file = write_HTO_sample_file($def);
       }
 
-      my $perform_ArcasHLA = getValue($def, "perform_ArcasHLA", 0);
+      my $perform_arcasHLA = getValue($def, "perform_arcasHLA", 0);
 
-      if($perform_ArcasHLA){
+      if($perform_arcasHLA){
         if ( not defined $def->{bam_files}){
-          die "Define bam_files for perform_ArcasHLA";
+          die "Define bam_files for perform_arcasHLA";
         }
 
         if (not defined $def->{HTO_samples}) {
