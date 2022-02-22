@@ -3,6 +3,7 @@ package Pipeline::PipelineUtils;
 
 use strict;
 use warnings;
+use File::Basename;
 use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
@@ -409,7 +410,7 @@ sub getOutputFormat {
   $result = addOutputOption( $def, $result, "DE_outputTIFF",        0,                          "outputTIFF" );
   $result = addOutputOption( $def, $result, "DE_showVolcanoLegend", 1,                          "showVolcanoLegend" );
   $result = addOutputOption( $def, $result, "use_pearson_in_hca",   $def->{use_pearson_in_hca}, "usePearsonInHCA" );
-  $result = addOutputOption( $def, $result, "showLabelInPCA",       1 );
+  $result = addOutputOption( $def, $result, "show_label_PCA",       1, "showLabelInPCA" );
 
   return ($result);
 }
@@ -2403,6 +2404,44 @@ sub addBamsnapLocus {
     },
   };
   push( @$tasks, $task_name );
+
+  if (getValue($def, "bamsnap_coverage", 1)){
+    my $python_script = dirname(__FILE__) . "/../Visualization/gene_coverage.py";
+    my $coverage_task = "bamsnap_coverage";
+    my $width = getValue($def, "coverage_width", 3000);
+    my $height = getValue($def, "coverage_height", 1500);
+
+    $config->{$coverage_task} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "$target_dir/$coverage_task",
+      docker_prefix         => "",
+      #init_command          => "ln -s __FILE__ __NAME__.bam",
+      option                => "python3 $python_script -n __NAME__ --width $width --height $height",
+      interpretor           => "",
+      check_program         => 0,
+      program               => "",
+      source                => getValue($def, "bamsnap_locus"),
+      source_arg            => "-l",
+      parameterSampleFile2_ref => $bam_ref,
+      parameterSampleFile2_arg => "-b",
+      output_to_same_folder => 1,
+      output_arg            => "-o",
+      output_to_folder      => 1,
+      output_file_prefix    => "",
+      output_file_ext       => ".coverage.png",
+      output_other_ext      => "",
+      use_tmp_folder        => 0,
+      sh_direct             => 1,
+      pbs                   => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "40gb"
+      },
+    };
+    push( @$tasks, $coverage_task );
+  }
+
 }
 
 sub addPlotGene {
