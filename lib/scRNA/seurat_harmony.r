@@ -21,9 +21,6 @@ random.seed=20200107
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
-batch_for_integration<-ifelse(myoptions$batch_for_integration == "0", FALSE, TRUE)
-by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
-
 prefix<-outFile
 
 has_batch_file<-file.exists(parSampleFile2)
@@ -36,12 +33,9 @@ finalList<-preprocessing_rawobj(rawobj, myoptions, prefix)
 rawobj<-finalList$rawobj
 finalList<-finalList[names(finalList) != "rawobj"]
 
-objs<-SplitObject(object = rawobj, split.by = "sample")
-rm(rawobj)
-
-obj=do_harmony(objs, by_sctransform, npcs, parSampleFile2)
+obj=do_harmony(rawobj, npcs, parSampleFile2)
 reduction="harmony"
-rm(objs)
+rm(rawobj)
 
 for (reduct in c("pca", "harmony")){
   png(paste0(outFile, ".elbowplot.", reduct, ".png"), width=1500, height=1200, res=300)
