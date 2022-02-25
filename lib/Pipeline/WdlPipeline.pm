@@ -131,8 +131,8 @@ sub addPairedFastqToProcessedBam {
     output_other_ext => ".".$genomeForOutputExt.".bai",
     pbs=> {
       "nodes"     => "1:ppn=8",
-      "walltime"  => "24",
-      "mem"       => getValue($def, "PreProcessingForVariantDiscovery_GATK4.memory", "40gb")
+      "walltime"  => "72",
+      "mem"       => getValue($def, "PreProcessingForVariantDiscovery_GATK4.memory", "70gb")
     },
   };
 
@@ -579,9 +579,15 @@ sub addEncodeATACseq {
     $task = $pipeline_key;
   }
 
+  #for encode atac adapter is required.
+  my $adapter = getValue($def, "adapter");
+  #my $adapter = getValue($def, "perform_cutadapt", 0) ? getValue($def, "adapter", "") : "";
+  #print("adapter = " . $adapter . "\n");
+
   $config->{$task} = {     
     "class" => "CQS::Wdl",
-    "option" => "--no-build-singularity",
+    #"option" => "--no-build-singularity",
+    "option" => "",
     "target_dir" => "${target_dir}/$task",
     "singularity_image_files_ref" => ["singularity_image_files"],
     "cromwell_jar" => $wdl->{"cromwell_jar"},
@@ -594,7 +600,8 @@ sub addEncodeATACseq {
       "atac.description" => "SAMPLE_NAME",
       "atac.genome_tsv" => getValue($def, "encode_atacseq_genome_tsv"),
       "atac.paired_end" => is_paired_end($def) ? "true" : "false",
-      "atac.adapter" => getValue($def, "adapter", ""),
+      "atac.adapter" => $adapter,
+      "atac.singularity" => getValue($def, "atac.singularity"),
     },
     output_to_same_folder => 0,
     cromwell_finalOutputs => 0,
@@ -604,14 +611,17 @@ sub addEncodeATACseq {
     sh_direct   => 1,
     pbs=> {
       "nodes"     => "1:ppn=8",
-      "walltime"  => "12",
+      "walltime"  => getValue($def, "encode_atac_walltime", "12"),
       "mem"       => "40gb"
     },
   };
 
+  my $input_parameters_is_vector = {};
   if(defined $def->{replicates}){
     my $replicates = $def->{replicates};
     $config->{$task}{"source"} = $replicates;
+    $config->{$task}{"input_parameters"}{"atac.true_rep_only"} = getValue($def, "atac.true_rep_only", "true");
+
     my $max_len = 0;
     for my $values (values %$replicates){
       $max_len = max($max_len, scalar(@$values))
@@ -642,9 +652,13 @@ sub addEncodeATACseq {
       };
       $config->{$task}{input_parameters}{"atac.fastqs_rep${pick_str}_R1_ref"} = [$fastq_1];
       $config->{$task}{input_parameters}{"atac.fastqs_rep${pick_str}_R2_ref"} = [$fastq_2];
+      $input_parameters_is_vector->{"atac.fastqs_rep${pick_str}_R1"} = 1;
+      $input_parameters_is_vector->{"atac.fastqs_rep${pick_str}_R2"} = 1;
 
       $pick_index = $pick_index + 1;
     }
+
+    $config->{$task}{input_parameters_is_vector} = $input_parameters_is_vector;
   }else{
     $config->{$task}{source_ref} = $files_ref;
     my $fastq_1 = "fastq_1";

@@ -58,3 +58,8 @@ with pysam.Samfile(args.bam, "rb") as sam:
 
 for fout in sam_dict.values():
   fout.close()
+
+for fname in samples_dict.values():
+  new_file = os.path.join(args.output, fname + ".bam")
+  logger.info(f"indexing {new_file}")
+  pysam.index(new_file)

@@ -156,12 +156,12 @@ sub getSmallRNAConfig {
   my $normalize_by = getValue($def, "normalize_by");
 
   if ( $def->{correlation_rcode} !~ /totalCountKey/ ) {
-    my $correlation_totalCountKey = $normalize_by eq 'None' ? 'None':'Reads for Mapping';
+    my $correlation_totalCountKey = $normalize_by eq 'None' ? 'None':$normalize_by eq 'TotalReads'?'Reads for Mapping':$normalize_by;
     $def->{correlation_rcode} = $def->{correlation_rcode} . "totalCountKey='$correlation_totalCountKey';";
   }
 
   if ( $def->{correlation_rcode} !~ /minMedian/ ) {        #set filter parameters
-    $def->{correlation_rcode} = $def->{correlation_rcode} . "minMedian=1;minMedianInGroup=1;";
+    $def->{correlation_rcode} = $def->{correlation_rcode} . "minMedian=0;minMedianInGroup=1;";
   }
 
   #print Dumper($config);
@@ -1946,7 +1946,9 @@ sub getSmallRNAConfig {
     },
   };
 
-  #print(Dumper($config->{count_table_correlation}));
+  if($search_host_genome){
+    $config->{count_table_correlation}{parameterFile2_ref} = [ "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category.Table.csv" ];
+  }
 
   if ( defined $def->{groups}) {
     if(defined $def->{correlation_groups}){
@@ -1981,8 +1983,9 @@ sub getSmallRNAConfig {
       parameterSampleFile4  => {
         log_transform => getValue($def, "permanova_log_transform", 1)
       },
-      parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
-      rCode                     => "",
+      parameterFile2_ref        => $config->{count_table_correlation}{parameterFile2_ref},
+      parameterFile3_ref        => $config->{count_table_correlation}{parameterFile3_ref},
+      rCode                     => $config->{count_table_correlation}{rCode},
       sh_direct                 => 1,
       pbs                       => {
         "nodes"     => "1:ppn=1",
@@ -2480,9 +2483,11 @@ sub getSmallRNAConfig {
           push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.rRNA.count.PCA.png" );
           push( @report_names, "correlation_rrna_heatmap", "correlation_rrna_pca" );
 
-          push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.yRNA.count.heatmap.png" );
-          push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.yRNA.count.PCA.png" );
-          push( @report_names, "correlation_yrna_heatmap", "correlation_yrna_pca" );
+          if($def->{hasYRNA}){
+            push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.yRNA.count.heatmap.png" );
+            push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.yRNA.count.PCA.png" );
+            push( @report_names, "correlation_yrna_heatmap", "correlation_yrna_pca" );
+          }
 
           push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.snRNA.count.heatmap.png" );
           push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.snRNA.count.PCA.png" );
@@ -2574,6 +2579,10 @@ sub getSmallRNAConfig {
     if ( defined $config->{pairs} ) {
       if ( defined $config->{deseq2_host_genome_TotalReads_vis} ) {
         push( @report_files, "deseq2_host_genome_TotalReads_vis", ".DESeq2.Matrix.png" );
+        push( @report_names, "deseq2_host_vis" );
+      }
+      if ( defined $config->{deseq2_host_genome_FeatureReads_vis} ) {
+        push( @report_files, "deseq2_host_genome_FeatureReads_vis", ".DESeq2.Matrix.png" );
         push( @report_names, "deseq2_host_vis" );
       }
     }

@@ -347,6 +347,15 @@ for (i in 1:nrow(countTableFileAll)) {
 
     if (bNormalizeByCount) { #normlize with total count *10^6
       totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
+      if(!(totalCountKey %in% rownames(totalCount))){
+        if(!file.exists(parFile2)){
+          stop(paste0(totalCountKey, " not exists in file ", totalCountFile))
+        }
+        totalCount<-read.csv(parFile2,header=T,as.is=T,row.names=1,check.names=FALSE)
+        if(!(totalCountKey %in% rownames(totalCount))){
+          stop(paste0(totalCountKey, " not exists in file ", totalCountFile, " and ", parFile2))
+        }
+      }
       totalCount<-unlist(totalCount[totalCountKey,])
       notValidSamples = colnames(validCountNum)[!(colnames(validCountNum) %in% names(totalCount))]
       if (length(notValidSamples) > 0){
@@ -399,6 +408,8 @@ for (i in 1:nrow(countTableFileAll)) {
         gname = ifelse(title == "all", "Group", title)
         cnames=c(gname, colnames(conditionColors)[colnames(conditionColors) != gname])
         conditionColors<-conditionColors[,cnames,drop=F]
+        #colors<-unique(conditionColors[,"mouse"])
+        #names(colors)<-unique(groups)
       }
     }else{
       groups<-NA

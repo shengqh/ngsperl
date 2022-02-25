@@ -1,3 +1,4 @@
+
 options(bitmapType='cairo')
 
 resultFile<-outFile
@@ -19,9 +20,13 @@ library(cowplot)
 #resultFile<-"test"
 readCount<-function(fileName){
   count1<-read.delim(fileName,header=T,check.names=F)
-  count1<-count1[!duplicated(count1$Sample), ]
-  rownames(count1)<-count1$Sample
-  return(count1)
+  count2<-count1[!duplicated(count1[,c("Sample", "Reads")]), c("Sample", "Reads")]
+  if(any(duplicated(count2$Sample))){
+    count2<-aggregate(count1$Reads, by=list(Sample=count1$Sample), FUN=sum)
+    colnames(count2)<-c("Sample", "Reads")
+  }
+  rownames(count2)<-count2$Sample
+  return(count2)
 }
 
 count1<-readCount(countInFastQcPreTrim)

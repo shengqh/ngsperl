@@ -5,9 +5,8 @@ library(dplyr)
 if(! exists("inputFile")){
   args <- commandArgs(TRUE)
   if(length(args) == 0){
-    setwd("/scratch/weissvl/shengq2/20210624_human_wntpathway_rnaseq/genetable_tpm")
-    inputFile<-"/scratch/weissvl/shengq2/20210624_human_wntpathway_rnaseq/genetable/result/weiss_human_wnt.proteincoding.count"
-    outputPrefix<-'weiss_human_wnt.tpm.csv'
+    inputFile<-"/scratch/cqs/shengq2/justin_balko_projects/20220209_rnaseq_7312_mm10/genetable/result/P7312.count"
+    outputPrefix<-'/scratch/cqs/shengq2/justin_balko_projects/20220209_rnaseq_7312_mm10/genetable/result/P7312.tpm.csv'
   }else{
     inputFile<-args[1]
     outputPrefix<-args[2]
@@ -44,7 +43,7 @@ counts_to_tpm <- function(counts, featureLength) {
 }
 
 gene_to_symbol<-function(tpm, id_name_map, name_id_map){
-  dup_symbols=namemap[lapply(name_id_map, length)>1]
+  dup_symbols=name_id_map[lapply(name_id_map, length)>1]
 
   unique_ids=unlist(name_id_map[!(names(name_id_map) %in% names(dup_symbols))])
   unique_tpm=tpm[unique_ids,]

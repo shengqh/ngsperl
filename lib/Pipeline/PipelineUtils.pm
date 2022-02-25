@@ -3,6 +3,7 @@ package Pipeline::PipelineUtils;
 
 use strict;
 use warnings;
+use File::Basename;
 use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
@@ -190,8 +191,8 @@ sub addFastQC {
     sh_direct  => 0,
     pbs        => {
       "nodes"    => "1:ppn=" . $curThread,
-      "walltime" => "4",
-      "mem"      => "4gb"
+      "walltime" => "12",
+      "mem"      => "10gb"
     },
   };
 
@@ -409,7 +410,7 @@ sub getOutputFormat {
   $result = addOutputOption( $def, $result, "DE_outputTIFF",        0,                          "outputTIFF" );
   $result = addOutputOption( $def, $result, "DE_showVolcanoLegend", 1,                          "showVolcanoLegend" );
   $result = addOutputOption( $def, $result, "use_pearson_in_hca",   $def->{use_pearson_in_hca}, "usePearsonInHCA" );
-  $result = addOutputOption( $def, $result, "showLabelInPCA",       1 );
+  $result = addOutputOption( $def, $result, "show_label_PCA",       1, "showLabelInPCA" );
 
   return ($result);
 }
@@ -2315,6 +2316,10 @@ sub addBamsnap {
     $params = $def;
   }
 
+  my $gene_track = ($def->{bamsnap_option} =~ /no_gene_track/) ? "" : "gene";
+  my $width = getValue($def, "bamsnap_width", 2000);
+  my $height = getValue($def, "bamsnap_height", 3000);
+
   $config->{$task_name} = {
     class                 => "CQS::ProgramWrapper",
     perform               => 1,
@@ -2327,7 +2332,10 @@ sub addBamsnap {
     parameterSampleFile1_arg => "-b",
     parameterSampleFile1_ref => $bam_ref,
     parameterSampleFile2_arg => "-c",
-    parameterSampleFile2  => getValue($params, "bamsnap_raw_option", {}),
+    parameterSampleFile2  => getValue($params, "bamsnap_raw_option", {
+      "-width" => $width,
+      "-height" => $height
+    }),
     parameterFile1_arg    => "-i",
     $parameterFile1_key   => $bed_ref,
     output_to_same_folder => 1,
@@ -2359,6 +2367,8 @@ sub addBamsnapLocus {
   }
 
   my $gene_track = ($def->{bamsnap_option} =~ /no_gene_track/) ? "" : "gene";
+  my $width = getValue($def, "bamsnap_width", 2000);
+  my $height = getValue($def, "bamsnap_height", 3000);
 
   $config->{$task_name} = {
     class                 => "CQS::ProgramWrapperOneToOne",
@@ -2366,7 +2376,7 @@ sub addBamsnapLocus {
     target_dir            => "$target_dir/$task_name",
     docker_prefix         => "bamsnap_",
     #init_command          => "ln -s __FILE__ __NAME__.bam",
-    option                => $option . " -draw coordinates bamplot $gene_track -bamplot coverage -width 2000 -height 3000 -out __NAME__.png",
+    option                => $option . " -draw coordinates bamplot $gene_track -bamplot coverage -width $width -height $height -out __NAME__.png",
     interpretor           => "",
     check_program         => 0,
     program               => "bamsnap",
@@ -2375,9 +2385,9 @@ sub addBamsnapLocus {
     parameterSampleFile2_ref => $bam_ref,
     parameterSampleFile2_arg => "-bam",
     parameterSampleFile2_type => "array",
-    parameterSampleFile2_join_delimiter => " ",
+    parameterSampleFile2_join_delimiter => " \\\n",
     parameterSampleFile2_name_arg => "-title",
-    parameterSampleFile2_name_join_delimiter => '" "',
+    parameterSampleFile2_name_join_delimiter => '" ' . "\\\n" . '"',
     parameterSampleFile2_name_has_comma => 1,
     output_to_same_folder => 1,
     output_arg            => "-out",
@@ -2385,6 +2395,7 @@ sub addBamsnapLocus {
     output_file_prefix    => "",
     output_file_ext       => ".png",
     output_other_ext      => "",
+    use_tmp_folder        => 0,
     sh_direct             => 1,
     pbs                   => {
       "nodes"     => "1:ppn=1",
@@ -2393,6 +2404,44 @@ sub addBamsnapLocus {
     },
   };
   push( @$tasks, $task_name );
+
+  if (getValue($def, "bamsnap_coverage", 1)){
+    my $python_script = dirname(__FILE__) . "/../Visualization/gene_coverage.py";
+    my $coverage_task = "bamsnap_coverage";
+    my $width = getValue($def, "coverage_width", 3000);
+    my $height = getValue($def, "coverage_height", 1500);
+
+    $config->{$coverage_task} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "$target_dir/$coverage_task",
+      docker_prefix         => "",
+      #init_command          => "ln -s __FILE__ __NAME__.bam",
+      option                => "python3 $python_script -n __NAME__ --width $width --height $height",
+      interpretor           => "",
+      check_program         => 0,
+      program               => "",
+      source                => getValue($def, "bamsnap_locus"),
+      source_arg            => "-l",
+      parameterSampleFile2_ref => $bam_ref,
+      parameterSampleFile2_arg => "-b",
+      output_to_same_folder => 1,
+      output_arg            => "-o",
+      output_to_folder      => 1,
+      output_file_prefix    => "",
+      output_file_ext       => ".coverage.png",
+      output_other_ext      => "",
+      use_tmp_folder        => 0,
+      sh_direct             => 1,
+      pbs                   => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "40gb"
+      },
+    };
+    push( @$tasks, $coverage_task );
+  }
+
 }
 
 sub addPlotGene {

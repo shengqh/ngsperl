@@ -310,7 +310,7 @@ if [ -s $temp_file ]; then
   delete $temp_file
 fi
 
-\$status = 0
+status=0
 ";
           for my $sample_file (@sample_files) {
             print $pbs "
