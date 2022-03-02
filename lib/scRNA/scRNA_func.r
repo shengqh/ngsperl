@@ -352,43 +352,28 @@ draw_dimplot<-function(mt, filename, split.by) {
   return(g1)
 }
 
-do_harmony<-function(objs, by_sctransform, npcs, batch_file) {
-  if(by_sctransform){
-    cat("performing SCTransform ...\n")
-    #perform sctransform
-    objs<-lapply(objs, function(x){
-      #cat("SCTransform of ", x)
-      x <- SCTransform(x, verbose = FALSE)
-      return(x)
-    })  
-    assay="SCT"
-    cat("SelectIntegrationFeatures ... \n")
-    objs.features <- SelectIntegrationFeatures(object.list = objs, nfeatures = 3000)  
-    cat("merge samples ... \n")
-    obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
-    VariableFeatures(obj) <- objs.features        
-  }else{
-    assay="RNA"
-    cat("merge samples ... \n")
-    obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
-    cat("NormalizeData ... \n")
-    obj <- NormalizeData(obj, verbose = FALSE)
-    cat("FindVariableFeatures ... \n")
-    obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 3000, verbose = FALSE)
-    all.genes <- rownames(obj)  
-    cat("ScaleData ... \n")
-    obj <- ScaleData(obj, features = all.genes, verbose = FALSE)
-  }
+do_harmony<-function(obj, npcs, batch_file, assay="RNA", selection.method = "vst", nfeatures = 3000) {
+  pca_dims = 1:npcs
+
+  cat("NormalizeData ... \n")
+  obj <- NormalizeData(obj, verbose = FALSE)
+  
+  cat("FindVariableFeatures ... \n")
+  obj <- FindVariableFeatures(obj, selection.method = selection.method, nfeatures = nfeatures, verbose = FALSE)
+
+  cat("ScaleData ... \n")
+  all.genes <- rownames(obj)  
+  obj <- ScaleData(obj, features = all.genes, verbose = FALSE)
 
   cat("RunPCA ... \n")
   obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
 
   if(file.exists(batch_file)){
     cat("Setting batch ...\n")
-    poolmap = get_batch_samples(batch_file, unique(obj$orig.ident))
-    obj$batch <- unlist(poolmap[obj$orig.ident])
+    poolmap = get_batch_samples(batch_file, unique(obj$sample))
+    obj$batch <- unlist(poolmap[obj$sample])
   }else{
-    obj$batch <- obj$orig.ident
+    obj$batch <- obj$sample
   }
 
   cat("RunHarmony ... \n")
@@ -515,7 +500,7 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
   qcsummary$DiscardRate<-qcsummary$DiscardCell / qcsummary$RawCell
   write.csv(qcsummary, file=paste0(prefix, ".sample_cell.csv"), row.names=F)
   
-  g<-VlnPlot(object = rawobj, features = c("percent.mt", "nFeature_RNA", "nCount_RNA"))
+  g<-VlnPlot(object = rawobj, features = c("percent.mt", "nFeature_RNA", "nCount_RNA"), group.by="Sample")
   png(paste0(prefix, ".qc.4.png"), width=3600, height=1600, res=300)
   print(g)
   dev.off()
@@ -552,4 +537,35 @@ output_integraion_dimplot<-function(obj, outFile, has_batch_file){
   png(paste0(outFile, ".final.png"), width=width, height=height, res=300)
   print(p)
   dev.off()
+}
+
+read_bubble_genes<-function(bubble_file, allgenes){
+  library("readxl")
+    
+  genes <- read_xlsx(bubble_file, sheet = 1)
+  for(idx in c(2:nrow(genes))){
+    if(is.na(genes[idx,"Cell Type"])){
+      genes[idx,"Cell Type"]=genes[idx-1,"Cell Type"]
+    }
+  }
+
+  gene_names=genes$`Marker Gene`
+  gene_names[gene_names=="PECAM"] = "PECAM1"
+  gene_names[gene_names=="HGD1B"] = "HGD"
+  gene_names[gene_names=="EpCAM"] = "EPCAM"
+  gene_names[gene_names=="CD25"] = "IL2RA"
+  gene_names[gene_names=="ACTAA2"] = "ACTA2"
+  gene_names[gene_names=="MTND6"] = "MT-ND6"
+  gene_names[gene_names=="FOXJ!"] = "FOXJ1"
+
+  genes$`Marker Gene`<-gene_names
+
+  miss_genes=genes$`Marker Gene`[!(genes$`Marker Gene` %in% allgenes)]
+  writeLines(miss_genes, con="miss_gene.csv")
+
+  genes<-genes[genes$`Marker Gene` %in% allgenes,]
+  genes<-genes[order(genes[,1]),]
+  genes$`Cell Type`=factor(genes$`Cell Type`, levels=unique(genes$`Cell Type`))
+
+  return(genes)
 }

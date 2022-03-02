@@ -193,8 +193,8 @@ sub addFastQC {
     sh_direct  => 0,
     pbs        => {
       "nodes"    => "1:ppn=" . $curThread,
-      "walltime" => "4",
-      "mem"      => "4gb"
+      "walltime" => "12",
+      "mem"      => "10gb"
     },
   };
 

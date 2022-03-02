@@ -131,8 +131,8 @@ sub addPairedFastqToProcessedBam {
     output_other_ext => ".".$genomeForOutputExt.".bai",
     pbs=> {
       "nodes"     => "1:ppn=8",
-      "walltime"  => "24",
-      "mem"       => getValue($def, "PreProcessingForVariantDiscovery_GATK4.memory", "40gb")
+      "walltime"  => "72",
+      "mem"       => getValue($def, "PreProcessingForVariantDiscovery_GATK4.memory", "70gb")
     },
   };
 

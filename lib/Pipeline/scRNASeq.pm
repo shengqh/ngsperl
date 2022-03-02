@@ -556,6 +556,8 @@ sub getScRNASeqConfig {
   my $star_option     = $def->{star_option};
   my $count_table_ref = "files";
 
+  my $hto_file_names = $def->{hto_file_names};
+
   $config->{bam_files} = $def->{bam_files};
 
   my $perform_split_hto_samples = getValue($def, "perform_split_hto_samples", 0);
@@ -574,61 +576,6 @@ sub getScRNASeqConfig {
   my $individual_qc_task = "individual_qc";
   my $qc_filter_config_file = $target_dir . "/qc_filter_config.txt";
   if (defined $def->{files}){
-    if($def->{perform_individual_qc}){
-      $config->{$individual_qc_task} = {
-        class => "CQS::UniqueRmd",
-        target_dir => "${target_dir}/$individual_qc_task",
-        report_rmd_file => "../scRNA/individual_qc.Rmd",
-        additional_rmd_files => "../scRNA/markerCode_filter.R",
-        option => "",
-        parameterSampleFile1_ref => "files",
-        parameterSampleFile2 => {
-          species => getValue($def, "species"),
-          Mtpattern             => getValue( $def, "Mtpattern" ),
-          rRNApattern           => getValue( $def, "rRNApattern" ),
-          Remove_rRNA        => getValue( $def, "Remove_rRNA" ),
-          Remove_MtRNA        => getValue( $def, "Remove_MtRNA" ),
-          nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
-          nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
-          nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
-          mt_cutoff             => getValue( $def, "mt_cutoff" ),
-          species               => getValue( $def, "species" ),
-          resolution            => getValue( $def, "resolution" ),
-          pca_dims              => getValue( $def, "pca_dims" ),
-          markers_file     => getValue( $def, "markers_file" ),
-        },
-        output_file_ext => "objectlist.Rdata",
-        output_no_name => 1,
-        can_result_be_empty_file => 0,
-        sh_direct   => 1,
-        pbs => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      };
-
-      if (defined $def->{groups}){
-        $config->{$individual_qc_task}{parameterSampleFile3_ref} = "groups";
-      }
-
-      if( ! -e $qc_filter_config_file){
-        open(my $qc, '>', $qc_filter_config_file) or die $!;
-        print $qc "sample\tnFeature_cutoff_min\tnFeature_cutoff_max\tnCount_cutoff\tmt_cutoff\tcluster_remove\n";
-        my $files = $def->{files};
-        for my $fname (sort keys %$files){
-          print $qc "$fname\t" . 
-                    getValue( $def, "nFeature_cutoff_min" ) . "\t" . 
-                    getValue( $def, "nFeature_cutoff_max" ) . "\t" . 
-                    getValue( $def, "nCount_cutoff" ) . "\t" .
-                    getValue( $def, "mt_cutoff" ) . "\t\n";
-        }
-        close($qc);
-      }
-      
-      push( @$summary, $individual_qc_task );
-    }
-
     my @report_files = ();
     my @report_names = ();
     my $hto_task = undef;
@@ -637,7 +584,6 @@ sub getScRNASeqConfig {
     my $hto_summary_task = undef;
 
     my $files = $def->{files};
-    my $hto_file_names = $def->{hto_file_names};
     my $hto_file_ref = "files";
     if(defined $hto_file_names){
       my $hto_files = {};
@@ -904,6 +850,64 @@ sub getScRNASeqConfig {
           addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", "bam_files");        
         }
       }
+    }
+
+    if($def->{perform_individual_qc}){
+      $config->{$individual_qc_task} = {
+        class => "CQS::UniqueRmd",
+        target_dir => "${target_dir}/$individual_qc_task",
+        report_rmd_file => "../scRNA/individual_qc.Rmd",
+        additional_rmd_files => "../scRNA/markerCode_filter.R;../scRNA/scRNA_func.r",
+        option => "",
+        parameterSampleFile1_ref => "files",
+        parameterSampleFile2 => {
+          species => getValue($def, "species"),
+          Mtpattern             => getValue( $def, "Mtpattern" ),
+          rRNApattern           => getValue( $def, "rRNApattern" ),
+          Remove_rRNA        => getValue( $def, "Remove_rRNA" ),
+          Remove_MtRNA        => getValue( $def, "Remove_MtRNA" ),
+          nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
+          nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
+          nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
+          mt_cutoff             => getValue( $def, "mt_cutoff" ),
+          species               => getValue( $def, "species" ),
+          resolution            => getValue( $def, "resolution" ),
+          pca_dims              => getValue( $def, "pca_dims" ),
+          markers_file     => getValue( $def, "markers_file" ),
+          curated_markers_file     => getValue( $def, "curated_markers_file", "" ),
+          bubblemap_file => getValue( $def, "bubblemap_file", "" ),
+        },
+        output_file_ext => "objectlist.Rdata",
+        output_no_name => 1,
+        can_result_be_empty_file => 0,
+        sh_direct   => 1,
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+
+      if($perform_split_hto_samples){
+        $config->{$individual_qc_task}{parameterSampleFile3_ref} = $hto_ref;
+        $config->{$individual_qc_task}{parameterSampleFile2}{hto_sample_file} = $hto_sample_file;
+      }
+
+      if( ! -e $qc_filter_config_file){
+        open(my $qc, '>', $qc_filter_config_file) or die $!;
+        print $qc "sample\tnFeature_cutoff_min\tnFeature_cutoff_max\tnCount_cutoff\tmt_cutoff\tcluster_remove\n";
+        my $files = $def->{files};
+        for my $fname (sort keys %$files){
+          print $qc "$fname\t" . 
+                    getValue( $def, "nFeature_cutoff_min" ) . "\t" . 
+                    getValue( $def, "nFeature_cutoff_max" ) . "\t" . 
+                    getValue( $def, "nCount_cutoff" ) . "\t" .
+                    getValue( $def, "mt_cutoff" ) . "\t\n";
+        }
+        close($qc);
+      }
+      
+      push( @$summary, $individual_qc_task );
     }
 
     if ( getValue( $def, "perform_scRNABatchQC" ) ) {
