@@ -256,7 +256,7 @@ sub addArcasHLA {
     output_to_folder      => 1,
     output_arg            => "-o",
     output_file_prefix    => "",
-    output_file_ext       => ".genotype.txt",
+    output_file_ext       => ".genotypes.tsv",
     docker_prefix         => "arcashla_",
     sh_direct             => 1,
     pbs                   => {
