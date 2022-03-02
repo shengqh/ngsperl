@@ -17,7 +17,7 @@ def main():
   parser = argparse.ArgumentParser(description="Draw bam plot based on peak list.",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-  parser.add_argument('-l', '--locus', action='store', nargs='?', required=NOT_DEBUG, help="Input locus, for example chr17:82314868-82317602")
+  parser.add_argument('-l', '--locus', action='store', nargs='?', required=NOT_DEBUG, help="Input locus, for example chr17:82314868-82317602, or locus file with locus name")
   parser.add_argument('-n', '--name', action='store', nargs='?', required=NOT_DEBUG, help="Input locus name, for example CD7")
   parser.add_argument('-b', '--bam_list_file', action='store', nargs='?', required=NOT_DEBUG, help="Sample bam file list")
   parser.add_argument('--width', action='store', default=3000, type=int, nargs='?', required=NOT_DEBUG, help="Figure width in pixel")
@@ -38,7 +38,19 @@ def main():
   print(args)
 
   locusName=args.name
-  locusString=args.locus
+  locusString=None
+  if os.path.isfile(args.locus):
+    with open(args.locus, "rt") as fin:
+      for line in fin:
+        parts = line.split('\t')
+        if parts[4] == locusName:
+          locusString = parts[0] + ":" + parts[1] + "-" + parts[2]
+          break
+    if locusString == None:
+      raise Exception(f'No gene {locusName} found in file {args.locus}')
+  else:
+    locusString = args.locus    
+
   locusStart=int(locusString.split(':')[1].split('-')[0])
   bamlist=args.bam_list_file
   output_folder=args.output_folder
