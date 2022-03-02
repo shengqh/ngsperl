@@ -1545,6 +1545,29 @@ sub getScRNASeqConfig {
           },
         };
         push(@$summary, $clonotype_db);
+        
+        if(defined $celltype_task){
+          my $clonetype_cluster = $clonotype_db;
+          $clonetype_cluster =~ s/5_db/6_cluster/ig;
+          $clonetype_cluster =~ s/6_db/7_cluster/ig;
+          $config->{$clonetype_cluster} = {
+            class                      => "CQS::UniqueR",
+            perform                    => 1,
+            target_dir                 => $target_dir . "/" . $clonetype_cluster,
+            rtemplate                  => "../scRNA/clonotype_cluster.r",
+            output_to_result_directory => 1,
+            output_file_ext            => ".clonotype_cluster.csv",
+            parameterFile1_ref         => [ $clonotype_db ],
+            parameterFile2_ref         => [ $celltype_task, $celltype_cluster_file ],
+            sh_direct                  => 1,
+            pbs                        => {
+              "nodes"     => "1:ppn=1",
+              "walltime"  => "23",
+              "mem"       => "10gb"
+            },
+          };
+          push(@$summary, $clonetype_cluster);
+        }
       }
 
       if ( $def->{perform_marker_dotplot} ) {
