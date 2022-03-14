@@ -70,7 +70,7 @@ for (i in 1:nrow(deseq2ResultFile)) {
   folders<-strsplit(filePath,"\\/")[[1]]
   moduleFolder<-folders[which(folders=="result")-1]
   if(length(moduleFolder) > 1){#multiple result folders in path
-    moduleFolder=moduleFolder[-1]
+    moduleFolder=tail(moduleFolder, 1)
   }
   moduleName<-gsub("_deseq2$","",moduleFolder)
   moduleName<-gsub("^deseq2_","",moduleName)
