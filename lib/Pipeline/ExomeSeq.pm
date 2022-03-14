@@ -3,6 +3,7 @@ package Pipeline::ExomeSeq;
 
 use strict;
 use warnings;
+use File::Basename;
 use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
@@ -769,6 +770,7 @@ fi
   }
 
   if ($def->{perform_target_coverage}){
+    my $script = dirname(__FILE__) . "/../GATK4/fixCollectHsMetrics.py";
     my $target_coverage_task = $bam_input . "_target_coverage";
     my $bait_intervals = getValue($def, "bait_intervals_file");
     my $target_intervals = getValue($def, "target_intervals_file");
@@ -776,15 +778,25 @@ fi
       class                 => "CQS::ProgramWrapperOneToOne",
       perform               => 1,
       target_dir            => "${target_dir}/${target_coverage_task}",
-      option                => "--java-options \"-Xms__MEMORY__\" CollectHsMetrics \\
+      option                => "
+gatk --java-options \"-Xms__MEMORY__\" CollectHsMetrics \\
       --INPUT __FILE__ \\
-      --OUTPUT __OUTPUT__ \\
+      --OUTPUT __OUTPUT__.tmp \\
       --BAIT_INTERVALS ${bait_intervals} \\
       --TARGET_INTERVALS ${target_intervals}
-  ",
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch __NAME__.failed
+else
+  python3 $script -i __OUTPUT__.tmp -o __OUTPUT__
+fi
+rm __OUTPUT__.tmp
+
+",
       interpretor           => "",
       docker_prefix         => "gatk4_",
-      program               => "gatk",
+      program               => "",
       check_program         => 0,
       source_arg            => "",
       source_ref            => $bam_ref,
