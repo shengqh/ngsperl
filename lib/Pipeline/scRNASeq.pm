@@ -556,11 +556,15 @@ sub getScRNASeqConfig {
   my $star_option     = $def->{star_option};
   my $count_table_ref = "files";
 
-  my $hto_file_names = $def->{hto_file_names};
-
   $config->{bam_files} = $def->{bam_files};
 
   my $perform_split_hto_samples = getValue($def, "perform_split_hto_samples", 0);
+  if($perform_split_hto_samples){
+    my $hto_samples = getValue($def, "HTO_samples");
+    $def->{hto_file_names} = [sort keys %$hto_samples];
+  }
+  my $hto_file_names = $def->{hto_file_names};
+
   my $has_vdj_json_files = defined $def->{vdj_json_files};
 
   my $clonotype_4_convert;
