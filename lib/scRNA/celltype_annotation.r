@@ -1,3 +1,4 @@
+
 source("scRNA_func.r")
 
 library(data.table)
@@ -213,7 +214,7 @@ if(file.exists(parFile3)){
   }else{
     top10 <- obj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
   }
-
+  
   if (nrow(top10)>200) {
     genesize=5
   } else {
@@ -223,7 +224,7 @@ if(file.exists(parFile3)){
       genesize=7
     } 
   }
-
+  
   Idents(obj)<-'seurat_cellactivity_clusters'
   png(paste0(outFile, ".heatmap.png"), width=6600, height=6000, res=300)
   print(DoHeatmap(obj, features = top10$gene,slot="data")+ theme(axis.text.y = element_text(size = genesize))) 
@@ -251,38 +252,39 @@ if(file.exists(parFile3)){
     
     if(file.exists(parSampleFile2)){
       groups<-read.table(parSampleFile2, sep="\t", stringsAsFactors = F) 
-      sample_map<-split(groups$V2, groups$V1)
-      obj$group=unlist(sample_map[as.character(obj$orig.ident)])
-      
-      width=2000 * length(unique(groups$V2)) + 300
-      png(paste0(outFile, ".summary_layer.group.png"), width=width, height=2000, res=300)
-      p<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="summary_layer", split.by="group") + 
-        ggtitle("") +
-        scale_color_manual(values=summary_color)+
-        annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf)+
-        annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
-      print(p)
-      dev.off()
-      
-      width=3000 * length(unique(groups$V2)) + 300
-      png(paste0(outFile, ".celltype.group.label.png"), width=width, height=3000, res=300)
-      p<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters", split.by="group") + 
-        guides(colour = guide_legend(override.aes = list(size = 3), ncol=1)) +
-        ggtitle("") +
-        annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf)+
-        annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
-      print(p)
-      dev.off()
-      
-      png(paste0(outFile, ".celltype.group.nolabel.png"), width=width, height=3000, res=300)
-      p<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="seurat_cellactivity_clusters", split.by="group") + 
-        guides(colour = guide_legend(override.aes = list(size = 3), ncol=1)) +
-        ggtitle("") +
-        annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf)+
-        annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
-      print(p)
-      dev.off()
+      if(length(unique(groups$V2)) > 1){
+        sample_map<-split(groups$V2, groups$V1)
+        obj$group=unlist(sample_map[as.character(obj$orig.ident)])
+        
+        width=2000 * length(unique(groups$V2)) + 300
+        png(paste0(outFile, ".summary_layer.group.png"), width=width, height=2000, res=300)
+        p<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="summary_layer", split.by="group") + 
+          ggtitle("") +
+          scale_color_manual(values=summary_color)+
+          annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf)+
+          annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
+        print(p)
+        dev.off()
+        
+        width=3000 * length(unique(groups$V2)) + 300
+        png(paste0(outFile, ".celltype.group.label.png"), width=width, height=3000, res=300)
+        p<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters", split.by="group") + 
+          guides(colour = guide_legend(override.aes = list(size = 3), ncol=1)) +
+          ggtitle("") +
+          annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf)+
+          annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
+        print(p)
+        dev.off()
+        
+        png(paste0(outFile, ".celltype.group.nolabel.png"), width=width, height=3000, res=300)
+        p<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="seurat_cellactivity_clusters", split.by="group") + 
+          guides(colour = guide_legend(override.aes = list(size = 3), ncol=1)) +
+          ggtitle("") +
+          annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf)+
+          annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
+        print(p)
+        dev.off()
+      }
     }
   }
 }
-
