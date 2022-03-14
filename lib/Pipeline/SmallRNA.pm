@@ -1326,6 +1326,109 @@ sub getSmallRNAConfig {
     );
   }
 
+  if (getValue($def, "search_refseq_bacteria", 0)) {
+    my $refseq_bacteria_bowtie = "refseq_bacteria_bowtie";
+    $config->{"refseq_bacteria_bowtie_index"} = getValue($def, "refseq_bacteria_bowtie_index");
+    $config->{$refseq_bacteria_bowtie} = {
+      class => "CQS::ProgramWrapperOneToManyScatter",
+      target_dir => "$host_intermediate_dir/$refseq_bacteria_bowtie",
+      interpretor => "",
+      program => "",
+      check_program => 0,
+      option => "
+bowtie -a --best -m 10000 --strata -v 0 -p 8 -x __SCATTER__ __FILE__ __OUTPUT__.tmp
+
+rm -f __NAME_____SCATTERNAME__.failed
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch __NAME_____SCATTERNAME__.failed
+  rm __OUTPUT__.tmp
+else
+  cut -f1-4 __OUTPUT__.tmp > __OUTPUT__
+  gzip __OUTPUT__
+  rm __OUTPUT__.tmp
+fi
+",
+      source_arg => "-x",
+      source_ref => $identical_ref,
+      scatter_arg => "",
+      scatter_ref => "refseq_bacteria_bowtie_index",
+      output_arg => "",
+      output_file_prefix => ".txt",
+      output_file_ext => ".txt.gz",
+      output_to_same_folder => 0,
+      can_result_be_empty_file => 0,
+      use_tmp_folder => 0,
+      sh_direct   => 0,
+      pbs => {
+        "nodes"     => "1:ppn=" . getValue($def, "${refseq_bacteria_bowtie}_nodes", "8"),,
+        "walltime"  => getValue($def, "${refseq_bacteria_bowtie}_walltime", "4"),
+        "mem"       => getValue($def, "${refseq_bacteria_bowtie}_mem", "20gb"),
+      },
+    };
+
+    push( @$individual_ref, $refseq_bacteria_bowtie );
+
+    my $refseq_bacteria_bowtie_count = "refseq_bacteria_bowtie_count";
+    $config->{$refseq_bacteria_bowtie_count} = {
+      class => "CQS::ProgramWrapperManyToOneGather",
+      target_dir => "$host_intermediate_dir/$refseq_bacteria_bowtie_count",
+      interpretor => "python3",
+      program => "../SmallRNA/refseq_bowtie_count.py",
+      check_program => 1,
+      option => "",
+      source_arg => "-i",
+      source_ref => $identical_ref,
+      parameterSampleFile2_arg => "-c",
+      parameterSampleFile2_ref => $identical_count_ref,
+      sample_scatter_ref => $refseq_bacteria_bowtie,
+      scatter_ref => "refseq_bacteria_bowtie_index",
+      parameterFile1_arg => "-s",
+      parameterFile1 => getValue($def, "refseq_bacteria_species"),
+      output_arg => "-o",
+      output_file_prefix => ".txt.gz",
+      output_file_ext => ".txt.gz",
+      output_to_same_folder => 1,
+      can_result_be_empty_file => 0,
+      use_tmp_folder => 0,
+      sh_direct   => 0,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => getValue($def, "${refseq_bacteria_bowtie_count}_walltime", "2"),
+        "mem"       => getValue($def, "${refseq_bacteria_bowtie_count}_mem", "20gb"),
+      },
+    };
+
+    push( @$individual_ref, $refseq_bacteria_bowtie_count );
+
+    my $refseq_bacteria_table = "refseq_bacteria_table";
+    $config->{$refseq_bacteria_table} = {
+      class => "CQS::ProgramWrapper",
+      target_dir => "$nonhost_genome_dir/$refseq_bacteria_table",
+      interpretor => "python3",
+      program => "../SmallRNA/refseq_count_table.py",
+      check_program => 1,
+      option => "-o __NAME__",
+      source_arg => "-i",
+      source_ref => $refseq_bacteria_bowtie_count,
+      parameterFile1_arg => "-a",
+      parameterFile1 => getValue($def, "refseq_assembly_summary"),
+      parameterFile2_arg => "-t",
+      parameterFile2 => getValue($def, "refseq_taxonomy"),
+      output_arg => "-o",
+      output_file_ext => ".phylum.txt,.class.txt,.order.txt,.family.txt,.genus.txt,.species.txt",
+      sh_direct   => 0,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => getValue($def, "${refseq_bacteria_table}_walltime", "4"),
+        "mem"       => getValue($def, "${refseq_bacteria_table}_mem", "20gb"),
+      },
+    };
+
+    push( @$summary_ref, $refseq_bacteria_table );
+  }
+
   if ($search_refseq_genome) {
     my $refseq_genomes = ["bacteria", "viruses"];
     for my $refseq (@$refseq_genomes){
