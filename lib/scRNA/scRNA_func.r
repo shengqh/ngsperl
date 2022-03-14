@@ -500,7 +500,7 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
   qcsummary$DiscardRate<-qcsummary$DiscardCell / qcsummary$RawCell
   write.csv(qcsummary, file=paste0(prefix, ".sample_cell.csv"), row.names=F)
   
-  g<-VlnPlot(object = rawobj, features = c("percent.mt", "nFeature_RNA", "nCount_RNA"), group.by="Sample")
+  g<-VlnPlot(object = rawobj, features = c("percent.mt", "nFeature_RNA", "nCount_RNA"), group.by="sample")
   png(paste0(prefix, ".qc.4.png"), width=3600, height=1600, res=300)
   print(g)
   dev.off()
@@ -513,25 +513,34 @@ output_integraion_dimplot<-function(obj, outFile, has_batch_file){
 
   mt<-data.frame(UMAP_1=obj@reductions$umap@cell.embeddings[,1], 
                 UMAP_2=obj@reductions$umap@cell.embeddings[,2],
-                Sample=obj$sample)
+                Sample=obj$sample,
+                Ident=obj$orig.ident)
   if(has_batch_file){
-    mt$batch=obj$batch
+    if(!all(obj$sample == obj$batch)){
+      mt$batch=obj$batch
+    }else{
+      has_batch_file=FALSE
+    }
   }
-
-  cat("draw pictures ... ")
-  p<-draw_dimplot(mt, paste0(outFile, ".sample.png"), "Sample")
 
   nSplit = length(unique(mt[,"Sample"]))
   nWidth=ceiling(sqrt(nSplit))
   nHeight=ceiling(nSplit / nWidth)
-
   width=nWidth * 600 + 200
   height=nHeight*600
+  
+  cat("draw pictures ... ")
+  p<-draw_dimplot(mt, paste0(outFile, ".sample.png"), "Sample")
+  if(!all(mt$Sample == mt$Ident)){
+    p1<-draw_dimplot(mt, paste0(outFile, ".Ident.png"), "Ident")
+    p<-p+p1
+    width=width + nWidth * 600
+  }
 
   if(has_batch_file){
     p2<-draw_dimplot(mt, paste0(outFile, ".batch.png"), "batch")
     p<-p+p2
-    width=nWidth * 1200 + 200
+    width=width+nWidth * 600
   }
 
   png(paste0(outFile, ".final.png"), width=width, height=height, res=300)
