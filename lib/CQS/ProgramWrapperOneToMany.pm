@@ -100,16 +100,19 @@ sub perform {
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
-
-    if ($hasMultiple){
-      print $sh "\$MYCMD ./$pbs_name \n";
-    }
-
     my $log_desc = $cluster->get_log_description($log);
 
     my $sample_name_iteration = $iteration_zerobased ?  $sample_name . "_ITER_" . ($iteration -1) :  $sample_name . "_ITER_" . $iteration;
     my $final_file            = $expect_result->{$sample_name_iteration}[-1];
     my $pbs                   = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+
+    if ($hasMultiple){
+      print $sh "if [[ ! -s $final_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+
+";
+    }
 
     my $final_prefix = $sample_name . $output_file_prefix;
 
