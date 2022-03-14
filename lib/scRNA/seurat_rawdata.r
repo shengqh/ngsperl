@@ -1,5 +1,6 @@
 
 source("scRNA_func.r")
+
 library(Seurat)
 library(ggplot2)
 library(digest)
@@ -32,7 +33,7 @@ if (has_hto) {
     stop(paste0('hto_cell_file ', parSampleFile4, ' is not defined or not exists.'))
   }
   hto_cell_files = read.table(parSampleFile4, sep="\t", stringsAsFactors=FALSE, row.names=2)
-  sample = rownames(hto_cell_files)[1]
+  sample = rownames(hto_cell_files)[3]
   for (sample in rownames(hto_cell_files)){
     cell_file = hto_cell_files[sample, "V1"]
     cell_data = read.csv(cell_file, stringsAsFactors=FALSE, header=TRUE, check.names=F)
@@ -40,6 +41,10 @@ if (has_hto) {
     hto_md5[[sample]] = digest(cell_file, file=TRUE)
     cell_data$Sample = ""
     cur_samples = hto_samples[hto_samples$File == sample,]
+    if(!all(cur_samples$Tagname %in% cell_data$HTO)){
+      stop(paste0("failed, not all tag defined ", paste0(cur_samples$Tagname, collapse = "/") , " for sample ", sample,  " were found in HTO tags ", paste0(unique(cell_data$HTO), collapse = "/") ))
+    }
+    
     for (cidx in c(1:nrow(cur_samples))){
       tagname = cur_samples$Tagname[cidx]
       samplename = cur_samples$Sample[cidx]
@@ -64,33 +69,71 @@ if(file.exists(parFile1)){
   rowi=1
   for(rowi in c(1:nrow(objs_config))){
     sample_id = objs_config$sample[rowi]
-    sample_obj = object.list[[sample_id]]
-    cd<-FetchData(sample_obj, c("seurat_clusters"))
-    rm(sample_obj)
+
+    #cat(sample_id, "\n")
     
-    crs<-objs_config$cluster_remove[rowi]
-    crslist<-unlist(strsplit(crs,','))
-    rcs<-rownames(cd)[as.character(cd$seurat_clusters) %in% crslist] 
-    
-    remove_cells[[sample_id]]=rcs
+    if(sample_id %in% names(object.list)){
+      crs<-objs_config$cluster_remove[rowi]
+      if(!is.na(crs)){
+        sample_obj = object.list[[sample_id]]
+        cd<-sample_obj$meta
+  
+        crslist<-unlist(strsplit(crs,','))
+        rcs<-rownames(cd)[as.character(cd$seurat_clusters) %in% crslist] 
+        
+        remove_cells[[sample_id]]=rcs
+      }
+    }
   }
+}
+
+read_gzip_count_file<-function(files, sample, species){
+  all_counts<-NA
+  index = 1
+  for(file in files){
+    cat('reading ', file, "\n")
+    counts<-fread(file)
+    if (species=="Mm") {
+      counts$GENE<-toMouseGeneSymbol(counts$GENE)
+    }
+    if (species=="Hs") {
+      counts$GENE<-toupper(counts$GENE)
+    }
+    
+    counts<-counts[!duplicated(counts$GENE),]
+    colnames(counts)[2:ncol(counts)]<-paste0(sample, index, "_", colnames(counts)[2:ncol(counts)])
+    if(is.na(all_counts)){
+      all_counts<-counts
+    }else{
+      all_counts<-merge(all_counts, counts, by="GENE")
+    }
+    index = index + 1
+  }
+  all_counts<-data.frame(all_counts)
+  rownames(all_counts)<-all_counts$GENE
+  all_counts$GENE<-NULL
+  return(all_counts)
 }
 
 #read raw count dat
 filelist1<-read.table(parSampleFile1, header=F, stringsAsFactors = F)
 rawobjs = list()
-fidx=1
-for (fidx in c(1:nrow(filelist1))) {
-  fileName  = filelist1[fidx, 1]
-  fileTitle = filelist1[fidx, 2]
+fidx=3
+fileMap<-split(filelist1$V1, filelist1$V2)
+
+for(fileTitle in names(fileMap)) {
+  fileName  = fileMap[[fileTitle]]
+  cat(fileTitle, "\n")
   if(dir.exists(fileName)){
     counts = Read10X(fileName)
-  } else {
+  } else if (grepl('.h5$', fileName)) {
     counts = Read10X_h5(fileName)
+  } else if (grepl('.gz$', fileName)) {
+    counts = data.frame(read_gzip_count_file(fileName, fileTitle, species))
   }
   
   adt.counts<-NULL
-  if (is.list(counts)){
+  if (is.list(counts) & ("Gene Expression" %in% names(counts))){
     adt.counts<-counts$`Antibody Capture`
     counts<-counts$`Gene Expression` 
   }
