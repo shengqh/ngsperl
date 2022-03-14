@@ -79,7 +79,7 @@ sumcounts=get_cluster_count(counts, clusters)
 
 write.csv(sumcounts, file=paste0(prefix, ".cluster.count.csv"))
 
-clusters<-data.frame("cell" = c(1:length(obj$seurat_clusters)), "seurat_clusters"=as.numeric(as.character(obj$seurat_clusters)), stringsAsFactors = F)
+clusters<-data.frame("cell" = c(1:length(obj$seurat_clusters)), "seurat_clusters"=as.numeric(as.character(obj$seurat_clusters)), "orig.ident"=obj$orig.ident, stringsAsFactors = F)
 rownames(clusters)<-names(obj$seurat_clusters)
 write.csv(clusters, file=paste0(prefix, ".cluster.csv"))
 

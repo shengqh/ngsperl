@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser(description="CNV heatmap",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument('-i', '--input', action='store', nargs='?', help='Input combined CNV files', required=NotDEBUG)
-parser.add_argument('-o', '--output', action='store', nargs='?', help="Output file file", required=NotDEBUG)
+parser.add_argument('-o', '--output', action='store', nargs='?', help="Output file", required=NotDEBUG)
 
 args = parser.parse_args()
 

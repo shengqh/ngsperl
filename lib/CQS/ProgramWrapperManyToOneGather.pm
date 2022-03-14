@@ -1,9 +1,10 @@
 #!/usr/bin/perl
-package CQS::ProgramWrapperOneToMany;
+package CQS::ProgramWrapperManyToOneGather;
 
 use strict;
 use warnings;
 use File::Basename;
+use Data::Dumper;
 use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
@@ -36,14 +37,6 @@ sub perform {
   my $interpretor = get_option( $config, $section, "interpretor", "" );
   my $program     = get_program( $config, $section );
 
-  my $iteration_arg = get_option( $config, $section, "iteration_arg", "" );
-  my $iteration = int(get_option( $config, $section, "iteration" ));
-  my $iteration_zerobased = get_option( $config, $section, "iteration_zerobased", 0 );
-
-  if ($iteration_arg ne ""){
-    $option = $option . " " . $iteration_arg . " " . $iteration;
-  }
-
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
   my $output_file_prefix    = get_option( $config, $section, "output_file_prefix" );
   my $output_arg      = get_option( $config, $section, "output_arg" );
@@ -52,16 +45,15 @@ sub perform {
   my ( $parameterSampleFile2, $parameterSampleFile2arg, $parameterSampleFile2JoinDelimiter ) = get_parameter_sample_files( $config, $section, "parameterSampleFile2" );
   my ( $parameterSampleFile3, $parameterSampleFile3arg, $parameterSampleFile3JoinDelimiter ) = get_parameter_sample_files( $config, $section, "parameterSampleFile3" );
 
+  my $sample_scatters = get_raw_files( $config, $section, "sample_scatter" );
+  my $scatters = get_raw_files( $config, $section, "scatter" );
+
   $option = $option . " " . get_parameter_file_option($config, $section);
 
-  my $hasMultiple = scalar(keys %$parameterSampleFile1) > 1;
-  my $shfile;
+  my $shfile= $self->get_task_filename( $pbs_dir, $task_name );
   my $sh;
-  if ($hasMultiple){
-    $shfile = $self->get_task_filename( $pbs_dir, $task_name );
-    open( $sh, ">$shfile" ) or die "Cannot create $shfile";
-    print $sh get_run_command($sh_direct) . "\n";
-  }
+  open( $sh, ">$shfile" ) or die "Cannot create $shfile";
+  print $sh get_run_command($sh_direct) . "\n";
 
   my $bFound2 = 0;
   my $bFound3 = 0;
@@ -91,28 +83,54 @@ sub perform {
   }
 
   my $expect_result = $self->result( $config, $section );
+  #print(Dumper($expect_result));
 
   for my $sample_name ( sort keys %$parameterSampleFile1 ) {
-    my $curOption = $option;
+    my $cur_dir = $output_to_same_folder ? $result_dir : $result_dir . "/$sample_name";
+    if(! -e $cur_dir){
+      create_directory_or_die($cur_dir);
+    }
+    my $cur_scatter_file = $cur_dir . "/" . $sample_name . ".list";
+    open( my $list, '>', $cur_scatter_file ) or die "Cannot create $cur_scatter_file";
+    for my $scatter_name (sort keys %$scatters){
+      my $curname = $sample_name . "_" . $scatter_name;
+      my $subSampleFiles = $sample_scatters->{$curname};
+      my $refstr         = ref($subSampleFiles);
+      if ( $refstr eq 'HASH' ) {
+        foreach my $groupName ( sort keys %$subSampleFiles ) {
+          my $groupSampleNames = $subSampleFiles->{$groupName};
+          for my $groupSampleName (@$groupSampleNames) {
+            print $list "${groupSampleName}\t${groupName}\t${scatter_name}\n";
+          }
+        }
+      }
+      elsif ( $refstr eq 'ARRAY' ) {
+        foreach my $subSampleFile (@$subSampleFiles) {
+          print $list $subSampleFile . "\t$scatter_name\n";
+        }
+      }
+      else {
+        print $list $subSampleFiles . "\t$scatter_name\n";
+      }
+    }
+    close($list);
 
-    my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+    my $curOption = $option;
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
+
     my $log_desc = $cluster->get_log_description($log);
 
-    my $sample_name_iteration = $iteration_zerobased ?  $sample_name . "_ITER_" . ($iteration -1) :  $sample_name . "_ITER_" . $iteration;
-    my $final_file            = $expect_result->{$sample_name_iteration}[-1];
+    my $final_file            = $expect_result->{$sample_name}[-1];
     my $pbs                   = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-    if ($hasMultiple){
-      print $sh "if [[ ! -s $final_file ]]; then
+    print $sh "if [[ ! -s $final_file ]]; then
   \$MYCMD ./$pbs_name 
 fi
 
 ";
-    }
 
     my $final_prefix = $sample_name . $output_file_prefix;
 
@@ -126,13 +144,14 @@ fi
       $output_option = "";
     }
 
+    if ($curOption =~ /__NAME__/){
+      $curOption =~ s/__NAME__/$sample_name/g;
+    }
+
     if ($curOption =~ /__FILE__/){
-      my $param_option1 = get_program_param( $parameterSampleFile1, "", $parameterSampleFile1JoinDelimiter, $sample_name, $result_dir, 1 );
-      $curOption =~ s/__FILE__/$param_option1/g;
-    } elsif (option_contains_arg($curOption, $parameterSampleFile1arg)) {
+      $curOption =~ s/__FILE__/$cur_scatter_file/g;
     } else{
-      my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name, $result_dir, 1 );
-      $curOption = $curOption . " " . $param_option1;
+      $curOption = "$curOption $parameterSampleFile1arg $cur_scatter_file";
     }
 
     if ( not $bFound2 ) {
@@ -154,14 +173,12 @@ $interpretor $program $curOption $output_option
     $self->close_pbs( $pbs, $pbs_file );
   }
 
-  if ($hasMultiple){
-    close $sh;
-    if ( is_linux() ) {
-      chmod 0755, $shfile;
-    }
-
-    print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
+  close $sh;
+  if ( is_linux() ) {
+    chmod 0755, $shfile;
   }
+
+  print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
 }
 
 sub result {
@@ -169,37 +186,24 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
-  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
-  my $task_suffix = get_option( $config, $section, "suffix", "" );
-  $self->{_task_suffix} = $task_suffix;
-
-  my $iteration_zerobased = get_option( $config, $section, "iteration_zerobased", 0 );
-  my $iteration = int(get_option( $config, $section, "iteration" ));
-  my $max_length = int(get_option( $config, $section, "iteration_fill_length", length("$iteration")));
   my $samplename_in_result = get_option( $config, $section, "samplename_in_result", 1 );
 
   my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, "source" );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
   my $output_exts = get_output_ext_list( $config, $section );
 
-  my $iter_start = $iteration_zerobased ? 0: 1;
-  my $iter_end = $iteration_zerobased ? ($iteration - 1): $iteration;
   my $result = {};
   for my $sample_name ( sort keys %$source_files ) {
-    my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
-
-    for my $iter ($iter_start .. $iter_end){
-      my $key = $sample_name . "_ITER_" . left_pad($iter, $max_length);
-      my @result_files = ();
-      for my $ext (@$output_exts){
-        my $cur_ext = $ext;
-        $cur_ext =~ s/_ITER_/$iter/g;
-        my $final_file = $samplename_in_result ? $sample_name . $cur_ext : $cur_ext;
-        push( @result_files, "${cur_dir}/$final_file" );
-      }
-      $result->{$key} = filter_array( \@result_files, $pattern );
+    my $cur_dir = $output_to_same_folder ? $result_dir : $result_dir . "/$sample_name";
+    my $result_files = [];
+    foreach my $cur_ext (@$output_exts) {
+      my $final_file = $samplename_in_result ? $sample_name . $cur_ext : $cur_ext;
+      push( @$result_files, "${cur_dir}/$final_file" );
     }
+    $result->{$sample_name} = filter_array( $result_files, $pattern );      
   }
+
+  #print(Dumper($result));
   return $result;
 }
 
@@ -210,42 +214,22 @@ sub get_pbs_source {
   
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
   
-  my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, "source" );
-  
-  my $result = {};
-  
-  for my $sample_name ( sort keys %$source_files ) {
-    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
-    $result->{$pbs_file} = [$sample_name];
-  }
-  
-  return ($result);
-}
+  my ( $source_files, $source_file_arg, $source_file_join_delimiter ) = get_parameter_sample_files( $config, $section, "source" );
+  my ( $scatter, $scatter_arg, $scatter_JoinDelimiter ) = get_parameter_sample_files( $config, $section, "scatter" );
 
-#get result sample name and its depedent current pbs
-sub get_result_pbs {
-  my ( $self, $config, $section ) = @_;
-  
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
-  
-  my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, "source" );
-
-  my $iteration_zerobased = get_option( $config, $section, "iteration_zerobased", 0 );
-  my $iteration = int(get_option( $config, $section, "iteration" ));
-  my $max_length = int(get_option( $config, $section, "iteration_fill_length", length("$iteration")));
-  my $samplename_in_result = get_option( $config, $section, "samplename_in_result", 1 );
-
-  my $iter_start = $iteration_zerobased ? 0: 1;
-  my $iter_end = $iteration_zerobased ? ($iteration - 1): $iteration;
+  my $sample_scatters = get_raw_files( $config, $section, "sample_scatter" );
+  my $scatters = get_raw_files( $config, $section, "scatter" );
 
   my $result = {};
   
   for my $sample_name ( sort keys %$source_files ) {
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
-    for my $iter ($iter_start .. $iter_end){
-      my $key = $sample_name . "_ITER_" . left_pad($iter, $max_length);
-      $result->{$key} = $pbs_file;
+    my $dependents = [];
+    for my $scatter_name (sort keys %$scatter){
+      my $cur_name = $sample_name . "_" . $scatter_name;
+      push(@$dependents, $cur_name);
     }
+    $result->{$pbs_file} = $dependents;
   }
   
   return ($result);

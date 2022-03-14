@@ -331,6 +331,11 @@ sub getRNASeqConfig {
       addBamsnap($config, $def, $summary, $target_dir, $bamsnap_task, [$geneLocus, "bed"], $source_ref);
     }
 
+    if($def->{bamsnap_coverage}){
+      my $coverage_task = "annotation_genes_coverage";
+      addGeneCoverage($config, $def, $summary, $target_dir, $coverage_task, "annotation_genes", $source_ref, $geneLocus);
+    }
+
     my $sizeFactorTask = "size_factor";
     addSizeFactor($config, $def, $summary, $target_dir, $sizeFactorTask, $source_ref);
     addPlotGene($config, $def, $summary, $target_dir, "annotation_genes_plot", $sizeFactorTask, [ $geneLocus, ".bed" ], $source_ref);

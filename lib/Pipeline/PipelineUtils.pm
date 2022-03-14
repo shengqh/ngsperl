@@ -89,6 +89,8 @@ our %EXPORT_TAGS = (
     add_unique_r
     add_maf_filter
     add_bowtie_index
+    addLocusCoverage    
+    addGeneCoverage
     )
   ]
 );
@@ -827,13 +829,12 @@ sub addMultiQC {
     option        => getValue( $def, "multiqc_option", "" ),
     perform       => 1,
     target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "multiqc",
+    docker_prefix => "multiqc_",
     output_to_dir => getReportDir($def),
     source_ref    => $multiqc_depedents,
     root_dir      => $root_dir,
     sh_direct     => 1,
     pbs           => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
       "walltime"  => "2",
       "mem"       => "10gb"
@@ -2355,6 +2356,85 @@ sub addBamsnap {
   push( @$tasks, $task_name );
 }
 
+sub addGeneCoverage {
+  my ($config, $def, $tasks, $target_dir, $task_name, $gene_ref, $bam_ref, $locus_ref) = @_;
+
+  my $python_script = dirname(__FILE__) . "/../Visualization/gene_coverage.py";
+  my $width = getValue($def, "coverage_width", 3000);
+  my $height = getValue($def, "coverage_height", 1500);
+
+  $config->{$task_name} = {
+    class                 => "CQS::ProgramWrapperOneToOne",
+    perform               => 1,
+    target_dir            => "$target_dir/$task_name",
+    docker_prefix         => "",
+    #init_command          => "ln -s __FILE__ __NAME__.bam",
+    option                => "python3 $python_script -n __NAME__ --width $width --height $height",
+    interpretor           => "",
+    check_program         => 0,
+    program               => "",
+    source_ref            => $gene_ref,
+    source_arg            => "-n",
+    parameterSampleFile2_ref => $bam_ref,
+    parameterSampleFile2_arg => "-b",
+    parameterFile1_ref => $locus_ref,
+    parameterFile1_arg => "-l",
+    output_to_same_folder => 1,
+    output_arg            => "-o",
+    output_to_folder      => 1,
+    output_file_prefix    => "",
+    output_file_ext       => ".coverage.png",
+    output_other_ext      => "",
+    use_tmp_folder        => 0,
+    sh_direct             => 1,
+    pbs                   => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "40gb"
+    },
+  };
+  push( @$tasks, $task_name );
+}
+
+
+sub addLocusCoverage {
+  my ($config, $def, $tasks, $target_dir, $task_name, $locus_ref, $bam_ref) = @_;
+
+  my $python_script = dirname(__FILE__) . "/../Visualization/gene_coverage.py";
+  my $width = getValue($def, "coverage_width", 3000);
+  my $height = getValue($def, "coverage_height", 1500);
+
+  $config->{$task_name} = {
+    class                 => "CQS::ProgramWrapperOneToOne",
+    perform               => 1,
+    target_dir            => "$target_dir/$task_name",
+    docker_prefix         => "",
+    #init_command          => "ln -s __FILE__ __NAME__.bam",
+    option                => "python3 $python_script -n __NAME__ --width $width --height $height",
+    interpretor           => "",
+    check_program         => 0,
+    program               => "",
+    source_ref            => $locus_ref,
+    source_arg            => "-l",
+    parameterSampleFile2_ref => $bam_ref,
+    parameterSampleFile2_arg => "-b",
+    output_to_same_folder => 1,
+    output_arg            => "-o",
+    output_to_folder      => 1,
+    output_file_prefix    => "",
+    output_file_ext       => ".coverage.png",
+    output_other_ext      => "",
+    use_tmp_folder        => 0,
+    sh_direct             => 1,
+    pbs                   => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "40gb"
+    },
+  };
+  push( @$tasks, $task_name );
+}
+
 sub addBamsnapLocus {
   my ($config, $def, $tasks, $target_dir, $task_name, $bam_ref) = @_;
 
@@ -2406,42 +2486,10 @@ sub addBamsnapLocus {
   push( @$tasks, $task_name );
 
   if (getValue($def, "bamsnap_coverage", 1)){
-    my $python_script = dirname(__FILE__) . "/../Visualization/gene_coverage.py";
+    $config->{bamsnap_locus} = getValue($def, "bamsnap_locus");
     my $coverage_task = "bamsnap_coverage";
-    my $width = getValue($def, "coverage_width", 3000);
-    my $height = getValue($def, "coverage_height", 1500);
-
-    $config->{$coverage_task} = {
-      class                 => "CQS::ProgramWrapperOneToOne",
-      perform               => 1,
-      target_dir            => "$target_dir/$coverage_task",
-      docker_prefix         => "",
-      #init_command          => "ln -s __FILE__ __NAME__.bam",
-      option                => "python3 $python_script -n __NAME__ --width $width --height $height",
-      interpretor           => "",
-      check_program         => 0,
-      program               => "",
-      source                => getValue($def, "bamsnap_locus"),
-      source_arg            => "-l",
-      parameterSampleFile2_ref => $bam_ref,
-      parameterSampleFile2_arg => "-b",
-      output_to_same_folder => 1,
-      output_arg            => "-o",
-      output_to_folder      => 1,
-      output_file_prefix    => "",
-      output_file_ext       => ".coverage.png",
-      output_other_ext      => "",
-      use_tmp_folder        => 0,
-      sh_direct             => 1,
-      pbs                   => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "10",
-        "mem"       => "40gb"
-      },
-    };
-    push( @$tasks, $coverage_task );
+    addLocusCoverage($config, $def, $tasks, $target_dir, $coverage_task, "bamsnap_locus", $bam_ref);
   }
-
 }
 
 sub addPlotGene {

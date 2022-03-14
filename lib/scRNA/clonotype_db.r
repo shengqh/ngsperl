@@ -1,3 +1,4 @@
+
 ### TCR database search ###
 
 #load dbs
@@ -255,7 +256,7 @@ if (nrow(vdjdb_final) > 0) {
 }
 
 #merge with other sample and cell columns
-final <- merge(final, clon[,c(1,6:10)], by="clonotype_id")
+final <- merge(final, clon[,c(1,6:ncol(clon))], by="clonotype_id")
 
 final <- final[order(final$frequency, decreasing = T), ]
 final[is.na(final)] <- "-"
