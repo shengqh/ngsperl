@@ -829,13 +829,12 @@ sub addMultiQC {
     option        => getValue( $def, "multiqc_option", "" ),
     perform       => 1,
     target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "multiqc",
+    docker_prefix => "multiqc_",
     output_to_dir => getReportDir($def),
     source_ref    => $multiqc_depedents,
     root_dir      => $root_dir,
     sh_direct     => 1,
     pbs           => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
       "walltime"  => "2",
       "mem"       => "10gb"
