@@ -1,3 +1,4 @@
+library(harmony)
 
 file_not_empty<-function(filename){
   if(is.null(filename)){
@@ -73,22 +74,22 @@ get_selfdefinedCelltype <- function(file, finalLayer="layer3"){
   ref <- tidyr::separate(ref,col=colnames(ref),into = c("celltype","subtypeOf"),sep = ",")
   rownames(ref) <- ref$celltype
   celltype.ori <- sapply(tapply(marker.ori[,2],marker.ori[,1],list), function(x) strsplit(x,","))
-
+  
   celltype.tem <- as.data.frame(matrix(unlist(celltype.ori)))
   celltype.tem[,2] <- rep(names(celltype.ori),lengths(celltype.ori))
   celltype.tem <- tidyr::separate(celltype.tem,col=V2,into = c("celltype","subtypeOf"),sep = ",")
-
+  
   ct <- as.data.frame(matrix("Undefined",nrow = nrow(celltype.tem),ncol = length(unique(celltype.tem$subtypeOf))+2),stringsAsFactors=FALSE)
   ct[,1:2] <- celltype.tem[,1:2]
   for (i in 3:ncol(ct)){
     for (j in 1:nrow(ct)) {if(ct[j,i-1] %in% rownames(ref)){ct[j,i]<-ref[ct[j,i-1],2]}else{ct[j,i]<-ct[j,i-1]}}
   }
-
+  
   layer <- ncol(ct)
   if(! identical(ct[,ncol(ct)],ct[,ncol(ct)-1])){layer <- ncol(ct)}else{
     for (i in 1:ncol(ct)) {if(identical(ct[,i],ct[,i+1])){layer <- i;break}}
   }
-
+  
   celltype.trim <- ct[,1:layer]
   for (i in 1:nrow(celltype.trim)){
     tag <- which(celltype.trim[i,]==celltype.trim[i,ncol(celltype.trim)])
@@ -99,14 +100,14 @@ get_selfdefinedCelltype <- function(file, finalLayer="layer3"){
       celltype.trim[i,] <- c(celltype.trim[i,][1:2],pre,suf)
     }
   }
-
+  
   for (i in 1:ncol(celltype.trim)){if(i == 1){colnames(celltype.trim)[i]="gene"}else{colnames(celltype.trim)[i]=paste0("layer",(ncol(celltype.trim)+1-i),"")}}
-
+  
   ct.final <- celltype.trim
   for (i in 1:ncol(ct.final)){
     if(i >1){ct.final[,i]=celltype.trim[,ncol(celltype.trim)+2-i];colnames(ct.final)[i] <- colnames(celltype.trim)[ncol(celltype.trim)+2-i]}
   }
-
+  
   cellType<-tapply(ct.final$gene,ct.final[[finalLayer]],list)
   weight<-calc_weight(cellType)
   return(list(cellType=cellType, weight=weight))
@@ -133,7 +134,7 @@ read_cell_cluster_file<-function(fileName, sort_cluster_name="seurat_clusters", 
   }
   
   cluster_names=colnames(clusters)[grepl("_clusters", colnames(clusters))]
-
+  
   for(cluster_name in cluster_names){
     cf_levels=unique(clusters[,cluster_name])
     result[,cluster_name] = factor(result[,cluster_name], levels=cf_levels)
@@ -193,7 +194,7 @@ get_group_count=function(curobj, groupName="active.ident") {
 add_cluster<-function(object, new.cluster.name, new.cluster.ids){
   seurat_clusters<-object[["seurat_clusters"]]$seurat_clusters
   names(new.cluster.ids) <- levels(seurat_clusters)
-
+  
   new.cluster.values<-plyr::mapvalues(x = seurat_clusters, from = levels(seurat_clusters), to = new.cluster.ids)
   names(new.cluster.values)<-names(seurat_clusters)
   
@@ -204,7 +205,7 @@ add_cluster<-function(object, new.cluster.name, new.cluster.ids){
 add_celltype<-function(obj, celltype_df, celltype_column){
   new.cluster.ids<-split(celltype_df[,celltype_column], celltype$seurat_clusters)
   obj[[celltype_column]] = unlist(new.cluster.ids[as.character(obj$seurat_clusters)])
-
+  
   celltype_df$seurat_column = paste0(celltype_df$seurat_clusters, " : ", celltype_df[,celltype_column])
   new.cluster.ids<-split(celltype_df$seurat_column, celltype$seurat_clusters)
   obj[[paste0("seurat_", celltype_column)]] = unlist(new.cluster.ids[as.character(obj$seurat_clusters)])
@@ -247,10 +248,10 @@ run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, 
 ORA_celltype<-function(medianexp,cellType,weight){
   ORA_result<-matrix(NA, nrow=length(cellType),ncol=dim(medianexp)[2])
   CTA_result<-matrix(0,nrow=length(cellType),ncol=dim(medianexp)[2])
-
+  
   colnames(ORA_result)=colnames(medianexp)
   colnames(CTA_result)=colnames(medianexp)
-
+  
   exp_z<-scale(medianexp)
   genenames<-rownames(medianexp)   
   for (j in 1: dim(medianexp)[2]){
@@ -307,19 +308,19 @@ get_cta_combined<-function(obj, predicted){
     cl=x[1]
     predicted$ora[ct, cl]
   })
-
+  
   cluster_sample<-as.data.frame.matrix(table(obj$seurat_clusters, obj$orig.ident))
   cluster_sample<-cluster_sample[as.character(cta_table$Cluster),]
-
+  
   nc<-apply(cluster_sample, 2, function(x){
     tc=sum(x)
     perc<-x/tc
     return(round(perc*1000) / 10.0)
   })
   colnames(nc)<-paste0(colnames(nc), "_perc")
-
+  
   cta_combined<-cbind(cta_table, cluster_sample, nc)
-
+  
   return(cta_combined)
 }
 
@@ -341,7 +342,7 @@ draw_dimplot<-function(mt, filename, split.by) {
   nSplit = length(unique(mt[,split.by]))
   nWidth=ceiling(sqrt(nSplit))
   nHeight=ceiling(nSplit / nWidth)
-
+  
   png(filename, width=nWidth * 600 + 200, height=nHeight*600, res=300)
   g1<-ggplot(mt, aes(x=UMAP_1,y=UMAP_2)) +
     geom_bin2d(bins = 70) + 
@@ -354,28 +355,28 @@ draw_dimplot<-function(mt, filename, split.by) {
 
 do_harmony<-function(obj, npcs, batch_file, assay="RNA", selection.method = "vst", nfeatures = 3000) {
   pca_dims = 1:npcs
-
+  
   cat("NormalizeData ... \n")
   obj <- NormalizeData(obj, verbose = FALSE)
   
   cat("FindVariableFeatures ... \n")
   obj <- FindVariableFeatures(obj, selection.method = selection.method, nfeatures = nfeatures, verbose = FALSE)
-
+  
   cat("ScaleData ... \n")
   all.genes <- rownames(obj)  
   obj <- ScaleData(obj, features = all.genes, verbose = FALSE)
-
+  
   cat("RunPCA ... \n")
   obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
-
+  
   if(file.exists(batch_file)){
     cat("Setting batch ...\n")
     poolmap = get_batch_samples(batch_file, unique(obj$sample))
     obj$batch <- unlist(poolmap[obj$sample])
-  }else{
+  }else if(!("batch" %in% colnames(obj@meta.data))){
     obj$batch <- obj$sample
   }
-
+  
   cat("RunHarmony ... \n")
   obj <- RunHarmony(object = obj,
                     assay.use = assay,
@@ -405,18 +406,18 @@ sort_cell_type<-function(cts, sort_column){
 plot_violin<-function(obj, features=c("FKBP1A", "CD79A")){
   library(reshape2)
   library(Seurat)
-
+  
   glist=VlnPlot(all_obj, features=features, combine = F)
-
+  
   gdata<-glist[[1]]$data
   for(idx in c(2:length(glist))){
     cdata=glist[[idx]]$data
     gdata<-cbind(gdata, cdata[,1])
     colnames(gdata)[ncol(gdata)]=colnames(cdata)[1]
   }
-
+  
   mdata<-melt(gdata, id="ident")
-
+  
   ggplot(mdata, aes(ident, value)) + 
     geom_violin(aes(fill = ident), trim=TRUE, scale="width") + 
     geom_jitter(width=0.5,size=0.5) + 
@@ -510,30 +511,30 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
 }
 
 output_integraion_dimplot<-function(obj, outFile, has_batch_file){
-
+  
   mt<-data.frame(UMAP_1=obj@reductions$umap@cell.embeddings[,1], 
-                UMAP_2=obj@reductions$umap@cell.embeddings[,2],
-                Sample=obj$sample)
+                 UMAP_2=obj@reductions$umap@cell.embeddings[,2],
+                 Sample=obj$sample)
   if(has_batch_file){
     mt$batch=obj$batch
   }
-
+  
   cat("draw pictures ... ")
   p<-draw_dimplot(mt, paste0(outFile, ".sample.png"), "Sample")
-
+  
   nSplit = length(unique(mt[,"Sample"]))
   nWidth=ceiling(sqrt(nSplit))
   nHeight=ceiling(nSplit / nWidth)
-
+  
   width=nWidth * 600 + 200
   height=nHeight*600
-
+  
   if(has_batch_file){
     p2<-draw_dimplot(mt, paste0(outFile, ".batch.png"), "batch")
     p<-p+p2
     width=nWidth * 1200 + 200
   }
-
+  
   png(paste0(outFile, ".final.png"), width=width, height=height, res=300)
   print(p)
   dev.off()
@@ -541,14 +542,14 @@ output_integraion_dimplot<-function(obj, outFile, has_batch_file){
 
 read_bubble_genes<-function(bubble_file, allgenes){
   library("readxl")
-    
+  
   genes <- read_xlsx(bubble_file, sheet = 1)
   for(idx in c(2:nrow(genes))){
     if(is.na(genes[idx,"Cell Type"])){
       genes[idx,"Cell Type"]=genes[idx-1,"Cell Type"]
     }
   }
-
+  
   gene_names=genes$`Marker Gene`
   gene_names[gene_names=="PECAM"] = "PECAM1"
   gene_names[gene_names=="HGD1B"] = "HGD"
@@ -557,15 +558,15 @@ read_bubble_genes<-function(bubble_file, allgenes){
   gene_names[gene_names=="ACTAA2"] = "ACTA2"
   gene_names[gene_names=="MTND6"] = "MT-ND6"
   gene_names[gene_names=="FOXJ!"] = "FOXJ1"
-
+  
   genes$`Marker Gene`<-gene_names
-
+  
   miss_genes=genes$`Marker Gene`[!(genes$`Marker Gene` %in% allgenes)]
   writeLines(miss_genes, con="miss_gene.csv")
-
+  
   genes<-genes[genes$`Marker Gene` %in% allgenes,]
   genes<-genes[order(genes[,1]),]
   genes$`Cell Type`=factor(genes$`Cell Type`, levels=unique(genes$`Cell Type`))
-
+  
   return(genes)
 }
