@@ -33,11 +33,15 @@ checkFileExists(gene_location_file)
 
 useModel = modelLINEAR
 
-# perform local (cis) only
-#pvOutputThreshold_tra = 0;
+if(!is.na(output_trans_file)){
+  # perform both cis and trans
+  pvOutputThreshold_tra = pvalue
+}else{
+  # perform local (cis) only
+  pvOutputThreshold_tra = 0;
+  output_trans_file = ""
+}
 
-# perform both cis and trans
-pvOutputThreshold_tra = pvalue;
 pvOutputThreshold_cis = pvalue;
 
 # Error covariance matrix
