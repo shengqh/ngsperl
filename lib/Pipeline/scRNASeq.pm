@@ -565,12 +565,12 @@ sub getScRNASeqConfig {
   }
   my $hto_file_names = $def->{hto_file_names};
 
-  my $has_vdj_json_files = defined $def->{vdj_json_files};
+  my $perform_clonotype_analysis = getValue($def, "perform_clonotype_analysis", 0);
 
   my $clonotype_4_convert;
-  if (defined $def->{vdj_json_files}){
+  if ($perform_clonotype_analysis){
     if ((not defined $def->{files}) || (not $perform_split_hto_samples)) {
-      $config->{vdj_json_files} = $def->{vdj_json_files};
+      $config->{vdj_json_files} = getValue($def, "vdj_json_files");
       addClonotypeMerge($config, $def, $summary, $target_dir, "clonotype_1_merge", ["vdj_json_files", "all_contig_annotations.json"]);
       addEnclone($config, $def, $summary, "clonotype_2_enclone", $target_dir, ["clonotype_1_merge", ".json\$"] );
       $clonotype_4_convert = addEncloneToClonotype($config, $def, $summary, $target_dir, "clonotype_3_convert", "clonotype_2_enclone", ["clonotype_1_merge", ".cdr3\$"]);
@@ -803,13 +803,13 @@ sub getScRNASeqConfig {
         addArcasHLA($config, $def, $individual, $target_dir, $project_name, $hto_bam_task . "_", $hto_bam_task);        
       }
 
-      if(defined $def->{vdj_json_files}){
+      if($perform_clonotype_analysis){
         if (not defined $def->{HTO_samples}) {
           die "Define HTO_samples for split vdj json files";
         }
 
         $config->{HTO_samples} = $def->{HTO_samples};
-        $config->{vdj_json_files} = $def->{vdj_json_files};
+        $config->{vdj_json_files} = getValue($def, "vdj_json_files");
         $config->{"hto_clonotype_1_split"} = {
           class => "CQS::ProgramWrapperOneToManyFile",
           target_dir => "${target_dir}/hto_clonotype_1_split",
