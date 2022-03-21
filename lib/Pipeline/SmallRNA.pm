@@ -1661,10 +1661,11 @@ fi
       "nonhost_library_tRNA_vis",
       $data_visualization_dir,
       {
-        rtemplate          => "countTableVisFunctions.R,bacteriaTrnaMappingVis.R",
-        output_file        => ".tRNAMapping.Result",
+        rtemplate          => "countTableVisFunctions.R,../SmallRNA/bacteriaTrnaMappingVis2.R",
+        output_file        => ".tRNAMapping",
         output_file_ext    => ".Species12.csv;.tRNAType1.csv;.tRNAType2.csv",
         parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".count\$" ],
+        parameterFile2     => getValue($def, "trna_category_map"),
         rCode              => 'maxCategory=3;' . $R_font_size,
       }
     );
