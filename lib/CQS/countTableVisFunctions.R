@@ -486,10 +486,13 @@ makeColors<-function(n,colorNames="Set1") {
 	return(colors)
 }
 
-tableMaxCategory<-function(dat,maxCategory=NA) {
+tableMaxCategory<-function(dat,maxCategory=NA,viewCategory=15) {
 	if (!is.na(maxCategory) & nrow(dat)>maxCategory) {
 		temp<-apply(dat,2,function(x) rev(order(x))[1:maxCategory])
 		categoryKeptInd<-sort(unique(as.vector(temp)))
+		if(length(categoryKeptInd) > viewCategory){
+			categoryKeptInd<-categoryKeptInd[1:viewCategory]
+		}
 		datForFigure<-dat[categoryKeptInd,]
 		if (length(categoryKeptInd)<nrow(dat)) {
 			datForFigure<-rbind(datForFigure,Other=colSums(dat[-categoryKeptInd,,drop=FALSE]))
@@ -500,9 +503,9 @@ tableMaxCategory<-function(dat,maxCategory=NA) {
 	return(datForFigure)
 }
 
-tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",facet=NA,varName=if (is.na(facet)) c(fill,x,y) else c(facet,x,y),transformTable=TRUE,textSize=20,ylab=y,colorNames="Set1",barwidth=0.5) {
+tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",facet=NA,varName=if (is.na(facet)) c(fill,x,y) else c(facet,x,y),transformTable=TRUE,textSize=20,ylab=y,colorNames="Set1",barwidth=0.5,viewCategory=15) {
 	if (transformTable) {
-		datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory)
+		datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory,viewCategory=viewCategory)
 		
 #		datForFigure$Groups<-row.names(dat)
 		datForFigure<-reshape2::melt(as.matrix(datForFigure))
@@ -561,7 +564,7 @@ tableBarplotToFile<-function(dat,fileName,totalCountFile="",groupFileList="",out
 	width<-max(3000,75*ncol(dat))
 	height<-height
 	png(fileName,width=width,height=height,res=300)
-	p<-tableBarplot(dat,maxCategory=maxCategory,textSize=textSize,ylab=ylab,transformTable=transformTable,...)
+	p<-tableBarplot(dat,maxCategory=maxCategory,textSize=textSize,ylab=ylab,transformTable=transformTable,viewCategory=15,...)
 	print(p)
 	dev.off()
 	if (proportionBar) {
