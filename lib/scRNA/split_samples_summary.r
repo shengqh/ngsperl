@@ -33,7 +33,7 @@ g<-ggplot(mdat, aes(x=Sample, y=Cell, fill=Class, label=Cell)) +
 print(g)
 dev.off()
 
-hasNameMap = ! is.na(nameMapFile)
+hasNameMap = (!is.na(nameMapFile)) && (nameMapFile != "")
 if (hasNameMap) {
   df = read.table(nameMapFile, sep="\t", stringsAsFactor=F)
   namemap=split(df$V1, df$V2)
