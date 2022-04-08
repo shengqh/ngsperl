@@ -1,3 +1,4 @@
+
 source("scRNA_func.r")
 
 library(dplyr)
@@ -27,6 +28,12 @@ resolution=as.numeric(myoptions$resolution)
 by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
 reduction<-myoptions$reduction
 npcs<-as.numeric(myoptions$pca_dims)
+
+if(file.exists(parFile2)){
+  ot<-read.table(parFile2, sep="\t")
+  npcs<-as.numeric(ot$V2[1])
+}
+
 pca_dims<-1:npcs
 
 prefix<-outFile
