@@ -1,4 +1,5 @@
 library(harmony)
+library(cowplot)
 
 file_not_empty<-function(filename){
   if(is.null(filename)){
@@ -22,7 +23,7 @@ calc_weight<-function(cellType){
   return(weight)
 }
 
-read_cell_markers_file<-function(panglao5_file, species, remove_subtype_of="", HLA_panglao5_file=""){
+read_cell_markers_file<-function(panglao5_file, species, remove_subtype_of="", HLA_panglao5_file="", curated_markers_file=""){
   #preparing cell activity database
   marker<-data.frame(fread(panglao5_file))
   if(remove_subtype_of != ""){
@@ -63,6 +64,15 @@ read_cell_markers_file<-function(panglao5_file, species, remove_subtype_of="", H
   }
   cellType<-tapply(marker_species$official.gene.symbol,marker_species$cell.type,list)
   weight<-calc_weight(cellType)
+  
+  if(!is.null(curated_markers_file) && curated_markers_file != ""){
+    curated_markers_df<-read.table(curated_markers_file, sep="\t", header=F, stringsAsFactors=F)
+    curated_markers_celltype<-split(curated_markers_df$V2, curated_markers_df$V1)
+    for(cmct in names(curated_markers_celltype)){
+      cellType[[cmct]]=curated_markers_celltype[[cmct]]
+    }
+    weight=calc_weight(cellType)
+  } 
   return(list(cellType=cellType, weight=weight))
 }
 
@@ -362,12 +372,14 @@ do_harmony<-function(obj, npcs, batch_file, assay="RNA", selection.method = "vst
   cat("FindVariableFeatures ... \n")
   obj <- FindVariableFeatures(obj, selection.method = selection.method, nfeatures = nfeatures, verbose = FALSE)
   
+  var.genes <- VariableFeatures(subobj)
+
   cat("ScaleData ... \n")
   all.genes <- rownames(obj)  
   obj <- ScaleData(obj, features = all.genes, verbose = FALSE)
   
   cat("RunPCA ... \n")
-  obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
+  obj <- RunPCA(object = obj, assay=assay, features = var.genes, verbose=FALSE)
   
   if(file.exists(batch_file)){
     cat("Setting batch ...\n")
@@ -448,25 +460,25 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
   dev.off()
   
   mt<-data.frame(mt=rawobj$percent.mt, Sample=rawobj$orig.ident, nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
-  g1<-ggplot(mt, aes(x=mt,y=nCount) ) +
+  g1<-ggplot(mt, aes(y=mt,x=nCount) ) +
     geom_bin2d(bins = 70) + 
     scale_fill_continuous(type = "viridis") + 
-    geom_vline(xintercept = mt_cutoff, color="red")  + 
-    geom_hline(yintercept = log10(nCount_cutoff), color="red") +
-    xlab("Percentage of mitochondrial") + ylab("log10(number of read)") +
+    geom_hline(yintercept = mt_cutoff, color="red")  + 
+    geom_vline(xintercept = log10(nCount_cutoff), color="red") +
+    ylab("Percentage of mitochondrial") + xlab("log10(number of read)") +
     facet_wrap(~Sample) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
   
   png(paste0(prefix, ".qc.2.png"), width=3600, height=3000, res=300)
   print(g1)
   dev.off()
   
-  g1<-ggplot(mt, aes(x=mt,y=nFeature) ) +
+  g1<-ggplot(mt, aes(y=mt,x=nFeature) ) +
     geom_bin2d(bins = 70) + 
     scale_fill_continuous(type = "viridis") + 
-    geom_vline(xintercept = mt_cutoff, color="red")  + 
-    geom_hline(yintercept = log10(nFeature_cutoff_min), color="red") +
-    geom_hline(yintercept = log10(nFeature_cutoff_max), color="red") +
-    xlab("Percentage of mitochondrial") + ylab("log10(number of feature)") +
+    geom_hline(yintercept = mt_cutoff, color="red")  + 
+    geom_vline(xintercept = log10(nFeature_cutoff_min), color="red") +
+    geom_vline(xintercept = log10(nFeature_cutoff_max), color="red") +
+    ylab("Percentage of mitochondrial") + xlab("log10(number of feature)") +
     facet_wrap(~Sample) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
   png(paste0(prefix, ".qc.3.png"), width=3600, height=3000, res=300)
   print(g1)
@@ -510,7 +522,11 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
   return(finalList)
 }
 
-output_integraion_dimplot<-function(obj, outFile, has_batch_file){
+output_integration_dimplot<-function(obj, outFile, has_batch_file){
+  png(paste0(outFile, ".mt.png"), width=2500, height=2000, res=300)
+  g<-FeaturePlot(obj, features="percent.mt")
+  print(g)
+  dev.off()
   
   mt<-data.frame(UMAP_1=obj@reductions$umap@cell.embeddings[,1], 
                 UMAP_2=obj@reductions$umap@cell.embeddings[,2],
@@ -574,8 +590,106 @@ read_bubble_genes<-function(bubble_file, allgenes){
   writeLines(miss_genes, con="miss_gene.csv")
   
   genes<-genes[genes$`Marker Gene` %in% allgenes,]
-  genes<-genes[order(genes[,1]),]
   genes$`Cell Type`=factor(genes$`Cell Type`, levels=unique(genes$`Cell Type`))
   
   return(genes)
+}
+
+find_number_of_reduction<-function(obj, reduction="pca"){
+  pct <- obj[[reduction]]@stdev / sum(obj[[reduction]]@stdev) * 100
+  cumu <- cumsum(pct)
+  co1 <- which(cumu > 90 & pct < 5)[1]
+  co2 <- sort(which((pct[1:length(pct) - 1] - pct[2:length(pct)]) > 0.1), decreasing = T)[1] + 1
+  pcs <- min(co1, co2)
+  return(pcs)
+}
+
+get_seurat_average_expression<-function(SCLC, cluster_name){
+  dd=GetAssayData(SCLC,slot="data")
+  dobj=CreateSeuratObject(counts=dd)
+  dobj$seurat_clusters=SCLC[[cluster_name]]
+  result<-AverageExpression(dobj, slot="counts", group.by="seurat_clusters" )[[1]]
+  rm(dd)
+  rm(dobj)
+  return(result)
+}
+
+get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file){
+  allgenes=rownames(obj)
+  genes_df <- read_bubble_genes(bubblemap_file, allgenes)
+  gene_groups=split(genes_df$`Marker Gene`, genes_df$`Cell Type`)
+  
+  cell_type=obj@meta.data
+  cell_type$cell_type <- cell_type[,cur_celltype]
+
+  ct_levels<-c("B cells", "Plasma cells", "NK cells", "T cells", "Macrophages", "Dendritic cells", "Monocytes", "Mast cells", "Endothelial cells", "Fibroblasts", "Epithelial cells", "Basal cells", "Olfactory epithelial cells", "Ciliated cells")
+  ct<-cell_type[!duplicated(cell_type$cell_type),]
+  missed = ct$cell_type[!(ct$cell_type %in% ct_levels)]
+  if(length(missed) > 0){
+    ct_levels = c(ct_levels, missed)
+  }
+  ct_levels = ct_levels[ct_levels %in% ct$cell_type]
+  cell_type$cell_type<-factor(cell_type$cell_type, levels=ct_levels)
+  if(!is.na(cur_res)){
+    cell_type<-cell_type[order(cell_type$cell_type, cell_type[,cur_res]),]
+    cell_type$seurat_celltype_clusters=paste0(cell_type[,cur_res], " : ", cell_type$cell_type)
+    cell_type$seurat_celltype_clusters=factor(cell_type$seurat_celltype_clusters, levels=unique(cell_type$seurat_celltype_clusters))
+    group.by="seurat_celltype_clusters"
+  }else{
+    group.by="cell_type"
+  }
+  
+  cell_type<-cell_type[colnames(obj),]
+  obj@meta.data<-cell_type
+  
+  
+  genes=unique(unlist(gene_groups))
+  g<-DotPlot(obj, features=genes, assay=assay,group.by=group.by)
+  gdata<-g$data
+
+  data.plot<-NULL
+  gn=names(gene_groups)[1]
+  for(gn in names(gene_groups)){
+    gs=gene_groups[[gn]]
+    gdd<-gdata[gdata$features.plot %in% gs,]
+    if(nrow(gdd)== 0){
+      stop(gn)
+    }
+    gdd$feature.groups=gn
+    data.plot<-rbind(data.plot, gdd)
+  }
+  
+  data.plot$feature.groups=factor(data.plot$feature.groups, levels=names(gene_groups))
+  
+  color.by <- "avg.exp.scaled"
+  scale.func <- scale_radius
+  scale.min = NA
+  scale.max = NA
+  dot.scale = 6
+  cols = c("lightgrey", "blue")
+  
+  plot <- ggplot(data = data.plot, mapping = aes_string(x = "features.plot", y = "id")) + 
+    geom_point(mapping = aes_string(size = "pct.exp", color = color.by)) + 
+    scale.func(range = c(0, dot.scale), limits = c(scale.min, scale.max)) + 
+    theme(axis.title.x = element_blank(), axis.title.y = element_blank()) + guides(size = guide_legend(title = "Percent Expressed")) +
+    labs(x = "Features", y = "Identity") +
+    theme_cowplot() + 
+    facet_grid(facets = ~feature.groups, scales = "free_x", space = "free_x", switch = "y") + 
+    theme(panel.spacing = unit(x = 1,units = "lines"), strip.background = element_blank()) + 
+    scale_color_gradient(low = cols[1], high = cols[2])
+  
+  
+  g=plot + 
+    xlab("") + ylab("") + theme_bw() + theme(plot.title = element_text(hjust = 0.5), 
+                                             axis.text.x = element_text(angle = 90, hjust=1, vjust=0.5),
+                                             strip.background = element_blank(),
+                                             strip.text.x = element_text(angle=90, hjust=0, vjust=0.5))
+  return(g)
+}
+
+draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, prefix){
+  g<-get_bubble_plot(obj, cur_res, cur_celltype, bubble_map_file)
+  png(paste0(prefix, ".bubblemap.png"), width=5500, height=3000, res=300)
+  print(g)
+  dev.off()
 }
