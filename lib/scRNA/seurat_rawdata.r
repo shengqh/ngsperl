@@ -1,4 +1,3 @@
-
 source("scRNA_func.r")
 
 library(Seurat)
@@ -228,26 +227,39 @@ writeLines(rownames(rawobj), paste0(outFile, ".genes.txt"))
 
 saveRDS(rawobj, paste0(outFile, ".rawobj.rds"));
 
-png(file=paste0(outFile, ".qc.png"), width=3000, height=1200, res=300)
-p1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt")
-p2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
-p<-p1+p2+plot_layout(ncol=2)
-print(p)
-dev.off()
+draw_qc<-function(prefix, rawobj, ident_name) {
+  Idents(rawobj)<-ident_name
+  
+  png(file=paste0(prefix, ".qc.png"), width=3000, height=1200, res=300)
+  p1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt")
+  p2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+  p<-p1+p2+plot_layout(ncol=2)
+  print(p)
+  dev.off()
+  
+  mt<-data.frame(mt=rawobj$percent.mt, Sample=unlist(rawobj[[ident_name]]), nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
+  nsample=length(unique(mt$Sample))
+  nwidth=ceiling(sqrt(nsample))
+  nheight=ceiling(nsample/nwidth)
+  png(file=paste0(prefix, ".qc.individual.png"), width=min(20000, max(2000, 1000 * nwidth) + 300), height=min(20000, 2 * max(2000, 1000*nheight)), res=300)
+  p1<-ggplot(mt, aes(y=mt,x=nCount) ) +
+    geom_bin2d(bins = 70) + 
+    scale_fill_continuous(type = "viridis") + 
+    ylab("Percentage of mitochondrial") + xlab("log10(number of read)") +
+    facet_wrap(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+  p2<-ggplot(mt, aes(y=mt,x=nFeature) ) +
+    geom_bin2d(bins = 70) + 
+    scale_fill_continuous(type = "viridis") + 
+    ylab("Percentage of mitochondrial") + xlab("log10(number of feature)") +
+    facet_wrap(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+  p<-p1+p2+plot_layout(ncol=1)
+  print(p)
+  dev.off()
+}
 
-nsample=length(unique(rawobj$sample))
-mt<-data.frame(mt=rawobj$percent.mt, Sample=rawobj$sample, nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
-png(file=paste0(outFile, ".qc.individual.png"), width=3000, height=min(20000, 1200 * nsample), res=300)
-p1<-ggplot(mt, aes(x=mt,y=nCount) ) +
-  geom_bin2d(bins = 70) + 
-  scale_fill_continuous(type = "viridis") + 
-  xlab("Percentage of mitochondrial") + ylab("log10(number of read)") +
-  facet_grid(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-p2<-ggplot(mt, aes(x=mt,y=nFeature) ) +
-  geom_bin2d(bins = 70) + 
-  scale_fill_continuous(type = "viridis") + 
-  xlab("Percentage of mitochondrial") + ylab("log10(number of feature)") +
-  facet_grid(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-p<-p1+p2+plot_layout(ncol=2)
-print(p)
-dev.off()
+draw_qc(outFile, rawobj, "orig.ident")
+
+if(any(rawobj$orig.ident != rawobj$sample)){
+  draw_qc(paste0(outFile, ".sample"), rawobj, "sample")
+}
+
