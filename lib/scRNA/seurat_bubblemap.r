@@ -1,3 +1,4 @@
+
 source("scRNA_func.r")
 
 
@@ -39,7 +40,6 @@ miss_genes=genes$`Marker Gene`[!(genes$`Marker Gene` %in% allgenes)]
 writeLines(miss_genes, con="miss_gene.csv")
 
 genes<-genes[genes$`Marker Gene` %in% allgenes,]
-genes<-genes[order(genes[,1]),]
 genes$`Cell Type`=factor(genes$`Cell Type`, levels=unique(genes$`Cell Type`))
 
 gene_groups=split(genes$`Marker Gene`, genes$`Cell Type`)
@@ -49,7 +49,7 @@ cell_type$cell_type <- cell_type[,myoptions$celltype_name]
 cell_type$seurat_celltype_clusters<-cell_type[,myoptions$cluster_name]
 
 sheets=excel_sheets(parFile4)
-if(length(sheets) > 1){
+if(length(sheets) > 1 && myoptions$bubblemap_use_order == "1"){
   clusters<-read_xlsx(parFile4, sheet = 2)
   cluster_ids<-clusters$`Order of Clusters`
   cell_type$seurat_clusters<-factor(cell_type$seurat_clusters, levels=cluster_ids)
@@ -59,7 +59,7 @@ if(length(sheets) > 1){
   obj[[myoptions$cluster_name]]=cell_type[as.character(obj$seurat_clusters),"seurat_celltype_clusters"]
   group.by=myoptions$cluster_name
 }else{
-  ct_levels<-c("B cells", "Plasma cells", "NK cells", "T cells", "Macrophages", "Mast cells", "Endothelial cells", "Fibroblasts", "Epithelial cells", "Basal cells", "Olfactory epithelial cells", "Ciliated cells")
+  ct_levels<-c("B cells", "Plasma cells", "NK cells", "T cells", "Macrophages", "Dendritic cells", "Monocytes", "Mast cells", "Endothelial cells", "Fibroblasts", "Epithelial cells", "Basal cells", "Olfactory epithelial cells", "Ciliated cells")
   ct<-cell_type[!duplicated(cell_type$cell_type),]
   missed = ct$cell_type[!(ct$cell_type %in% ct_levels)]
   if(length(missed) > 0){
@@ -120,3 +120,4 @@ g=plot +
                               strip.text.x = element_text(angle=90, hjust=0, vjust=0.5))
 print(g)
 dev.off()
+
