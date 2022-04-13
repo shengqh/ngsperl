@@ -329,12 +329,20 @@ sub addMutect2Wdl {
     if( -e $pon ){
       $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon"} = $pon;
       $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon_idx"} = $pon_idx;
-    }elsif(defined $pon){
-      $config->{$mutect2_call}{"input_single"}{"Mutect2.pon_ref"} = $pon;
-      $config->{$mutect2_call}{"input_single"}{"Mutect2.pon_idx_ref"} = $pon_idx;
     }else{
-      $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon"} = "";
-      $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon_idx"} = "";
+      if(defined $pon){
+        if ((index($pon, '/') != -1) || (index($pon, '/') != -1)){
+          die "file not exists: " . $pon
+        }
+        if ((index($pon_idx, '/') != -1) || (index($pon_idx, '/') != -1)){
+          die "file not exists: " . $pon_idx
+        }
+        $config->{$mutect2_call}{"input_single"}{"Mutect2.pon_ref"} = $pon;
+        $config->{$mutect2_call}{"input_single"}{"Mutect2.pon_idx_ref"} = $pon_idx;
+      }else{
+        $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon"} = "";
+        $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon_idx"} = "";
+      }
     }
   }
 
