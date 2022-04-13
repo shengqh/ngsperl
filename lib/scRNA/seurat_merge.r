@@ -1,3 +1,4 @@
+source("scRNA_func.r")
 
 library(dplyr)
 library(Seurat)
@@ -19,6 +20,13 @@ myoptions<-split(options_table$V1, options_table$V2)
 
 by_sctransform<-ifelse(myoptions$by_sctransform == "1", TRUE, FALSE)
 sctransform_by_individual<-ifelse(myoptions$sctransform_by_individual == "1", TRUE, FALSE)
+regress_by_percent_mt<-ifelse(myoptions$regress_by_percent_mt == "1", TRUE, FALSE)
+
+if(regress_by_percent_mt){
+  vars.to.regress="percent.mt"
+}else{
+  vars.to.regress=NULL
+}
 
 prefix<-outFile
 
@@ -41,7 +49,8 @@ if(by_sctransform){
   
     #perform sctransform
     objs<-lapply(objs, function(x){
-      x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = "percent.mt", return.only.var.genes=FALSE, verbose = FALSE)
+      
+      x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=FALSE, verbose = FALSE)
       return(x)
     })  
     obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
@@ -49,7 +58,7 @@ if(by_sctransform){
   }else{
     obj=rawobj
     rm(rawobj)
-    obj<-SCTransform(obj, method = "glmGamPoi", vars.to.regress = "percent.mt", return.only.var.genes=FALSE, verbose = FALSE)
+    obj<-SCTransform(obj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=FALSE, verbose = FALSE)
   }
   assay="SCT"
 }else{
@@ -59,7 +68,7 @@ if(by_sctransform){
   rm(rawobj)
   obj<-NormalizeData(obj, verbose = FALSE)
   obj<-FindVariableFeatures(obj, selection.method = "vst", nfeatures = 2000, verbose = FALSE) 
-  obj<-ScaleData(obj,vars.to.regress = "percent.mt")
+  obj<-ScaleData(obj,vars.to.regress = vars.to.regress, features = rownames(obj))
   assay="RNA"
 }
 
