@@ -59,13 +59,14 @@ getCategory<-function(category, description){
 
 getCategory2<-function(category1, category2, description){
   return(paste0("```{r,echo=FALSE,results='asis', fig.show='hold', out.width='45%', fig.align = 'default'}\n",
+"has_category_file<-has_file(files,'", category1, "')\n",
 "check_and_include_graphics(get_file(files,'", category1, "'))\n",
 "check_and_include_graphics(get_file(files,'", category2, "'))\n",
 "```\n",
-"```{r,echo=FALSE,results='asis'}\n",
+"```{r,echo=FALSE,results='asis',eval=has_category_file}\n",
 "curFigRef<-figRef('", paste0(category1, category2), "', '",description, "')\n",
-"```\n",
-"<center>`r curFigRef`</center>\n"))
+"cat(paste0('<center>', curFigRef, '</center>'))\n",
+"```\n"))
 }
 
 categoryRmd<-function(dfCategory, fileName, header){
