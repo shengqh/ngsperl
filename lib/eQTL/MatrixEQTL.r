@@ -115,6 +115,12 @@ me = Matrix_eQTL_main(
   min.pv.by.genesnp = FALSE,
   noFDRsaveMemory = FALSE);
 
+saveRDS(me, paste0(output_cis_file, ".rds"))
+
+png(paste0(output_cis_file, ".qqplot.png"), width=2000, height=2000, res=300)
+plot(me, pch = 16, cex = 0.7);
+dev.off()
+
 if(sort_data_by_tcga == "1"){
   unlink(snp_file)
   unlink(exp_file)
