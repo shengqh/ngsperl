@@ -306,7 +306,7 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
     }
 
     if (dim(SCLC)[2]>50){
-      SCLC <- ScaleData(SCLC)
+      SCLC <- ScaleData(SCLC, vars.to.regress = c("percent.mt"))
       
       #find variable genes and store them in the var.genes
       SCLC <- RunPCA(SCLC, features = var.genes)
