@@ -14,7 +14,7 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
                   gseaCategories=c("h.all.v7.0.symbols.gmt"),
                   gseaReportTemplt="GSEAReport.Rmd",
                   makeReport=FALSE,
-                  chip
+                  gseaChip
 )
 {
   fileToName=c("h"="HallmarkGeneSets","c1"="PositionalGeneSets","c2"="CuratedGeneSets","c3"="MotifGeneSets","c4"="ComputationalGeneSets","c5"="GOGeneSets","c6"="OncogenicGeneSets","c7"="ImmunologicGeneSets")
@@ -29,6 +29,7 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
     unlink(gesaResultDir, recursive = TRUE)
   }
   
+  gseaCategory=gseaCategories[1]
   for (gseaCategory in gseaCategories) {
     gseaCategoryName=strsplit(gseaCategory,"\\.")[[1]][1]
     if (gseaCategoryName %in% names(fileToName)) {
@@ -40,12 +41,12 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
     }else{
       runCommand=paste0("java -Xmx8198m -cp ",gseaJar," xtools.gsea.GseaPreranked") 
     }
-    runCommand = paste0(runCommand, " -gmx ",gseaDb,"/",gseaCategory, " -rnk ",preRankedGeneFile," -rpt_label ",gseaCategoryName," -scoring_scheme weighted -make_sets true -nperm 1000 -plot_top_x 20 -set_max 500 -set_min 15 -mode Max_probe -norm meandiv -create_svgs false -include_only_symbols true -rnd_seed timestamp -out ", gesaResultDir)
+    runCommand = paste0(runCommand, " -gmx ",gseaDb,"/",gseaCategory, " -rnk ",preRankedGeneFile," -rpt_label ",gseaCategoryName," -scoring_scheme weighted -make_sets true -nperm 1000 -plot_top_x 20 -set_max 500 -set_min 15 -mode Abs_max_of_probes -zip_report false -norm meandiv -create_svgs false -include_only_symbols true -rnd_seed timestamp -out ", gesaResultDir)
     
-    if(!is.na(chip)){
-      runCommand=paste0(runCommand, " -collapse Collapse -chip ", chip)
+    if(!is.na(gseaChip)){
+      runCommand=paste0(runCommand, " -collapse Collapse -chip ", gseaChip)
     }else{
-      runCommand=paste0(runCommand, " -collapse false ")
+      runCommand=paste0(runCommand, " -collapse false")
     }
     print(runCommand)
     system(runCommand)
@@ -85,7 +86,7 @@ if(!exists("makeReport")){
 
 alldt<-NULL
 resultDir=getwd()
-
+i=1
 for (i in 1:nrow(preRankedGeneFileTable)) {
   preRankedGeneFile=preRankedGeneFileTable[i,1]
   
@@ -103,7 +104,7 @@ for (i in 1:nrow(preRankedGeneFileTable)) {
   
   compName=preRankedGeneFileTable[i,2]
 
-  dt<-runGSEA(preRankedGeneFile,resultDir=resultDir,makeReport=makeReport,gseaJar=gseaJar,gseaDb=gseaDb,gseaCategories=gseaCategories,chip=gseaChip)
+  dt<-runGSEA(preRankedGeneFile,resultDir=resultDir,makeReport=makeReport,gseaJar=gseaJar,gseaDb=gseaDb,gseaCategories=gseaCategories,gseaChip=gseaChip)
   dt$compName=compName
   alldt<-rbind(alldt, dt)
 }
