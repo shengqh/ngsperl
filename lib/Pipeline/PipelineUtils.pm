@@ -2776,6 +2776,7 @@ sub add_gsea {
     output_perSample_file      => "parameterSampleFile1",
     output_perSample_file_ext  => ".gsea.html;.gsea.csv;.gsea;",
     parameterSampleFile1_ref   => $rnk_file_ref,
+    no_docker                  => getValue($def, "gsea_no_docker", 0),
     sh_direct                  => 1,
     rCode                      => $rCode,
     pbs                        => {
