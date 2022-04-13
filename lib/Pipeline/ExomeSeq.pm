@@ -1457,10 +1457,13 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       my $is_tumor_only = not defined $normal_files;
       #print("is_tumor_only=" . $is_tumor_only . "\n");
 
+      my $is_pon_file = (index($pon, '/') != -1) || (index($pon, '/') != -1);
+
       if ($pon eq ""){
         my $mutect2call = addMutect2Wdl($config, $def, $individual, $target_dir, $mutect_prefix, $mutect2_option, 0, $is_tumor_only, $tumor_files, $normal_files, undef, undef);
         $mutect_ref = [ $mutect2call, '.vcf$' ];
-      }elsif(-e $pon){
+      }elsif($is_pon_file){
+        die "file not exists: $pon "if (! -e $pon);
         my $suffix = ($pon =~ /vcf.gz/) ? ".tbi" : ".idx";
         my $mutect2call = addMutect2Wdl($config, $def, $individual, $target_dir, $mutect_prefix, $mutect2_option, 0, $is_tumor_only, $tumor_files, $normal_files, $pon, $pon . $suffix);
         $mutect_ref = [ $mutect2call, '.vcf$' ];
