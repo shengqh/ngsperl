@@ -92,8 +92,12 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_seurat",      1 );
   initDefaultValue( $def, "Mtpattern",           "^MT-|^Mt-" );
   initDefaultValue( $def, "rRNApattern",         "^Rp[sl][[:digit:]]|^RP[SL][[:digit:]]" );
-  initDefaultValue( $def, "Remove_rRNA",         1 );
-  initDefaultValue( $def, "Remove_MtRNA",        0 );
+  initDefaultValue( $def, "hemoglobinPattern",   "^HB[^(P)]|^Hb[^(p)]" );
+  
+  initDefaultValue( $def, "Remove_rRNA",         0 );
+  initDefaultValue( $def, "Remove_MtRNA",        1 );
+  initDefaultValue( $def, "regress_by_percent_mt",   getValue($def, "Remove_MtRNA") ? 0 : 1 );
+  
   initDefaultValue( $def, "nFeature_cutoff_min", 200 );
   initDefaultValue( $def, "nFeature_cutoff_max", 10000 );
   initDefaultValue( $def, "nCount_cutoff",       500 );
@@ -991,6 +995,7 @@ sub getScRNASeqConfig {
           parameterSampleFile2     => {
             Mtpattern             => getValue( $def, "Mtpattern" ),
             rRNApattern           => getValue( $def, "rRNApattern" ),
+            hemoglobinPattern     => getValue( $def, "hemoglobinPattern" ),
             species               => getValue( $def, "species" ),
             pool_sample           => getValue( $def, "pool_sample" ),
             hto_sample_file       => $hto_sample_file,
@@ -1046,8 +1051,9 @@ sub getScRNASeqConfig {
           parameterSampleFile1     => {
             Mtpattern             => getValue( $def, "Mtpattern" ),
             rRNApattern           => getValue( $def, "rRNApattern" ),
-            Remove_rRNA        => getValue( $def, "Remove_rRNA" ),
-            Remove_MtRNA        => getValue( $def, "Remove_MtRNA" ),
+            Remove_rRNA           => getValue( $def, "Remove_rRNA" ),
+            Remove_MtRNA          => getValue( $def, "Remove_MtRNA" ),
+            regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
             nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
             nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
             nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
@@ -1154,21 +1160,46 @@ sub getScRNASeqConfig {
         push( @$summary, $gene_ratio_localization_map_task );
       }
 
-      if(getValue($def, "perform_multires_cluster_celltype", 0)){
-        my $multires_task = $seurat_task . "_multires_cluster_celltype";
-        $config->{$multires_task} = {
+
+      if(getValue($def, "perform_doublet_finder", 0)){
+        my $df_task = $seurat_task . "_doublet_finder";
+        $config->{$df_task} = {
           class                    => "CQS::UniqueR",
           perform                  => 1,
-          target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $multires_task,
-          rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_multires_cluster_celltype.r",
+          target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $df_task,
+          rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_doublet_finder.r",
           parameterFile1_ref => [$seurat_task, ".rds"],
           parameterSampleFile1     => {
-            Mtpattern             => getValue( $def, "Mtpattern" ),
-            rRNApattern           => getValue( $def, "rRNApattern" ),
-            Remove_rRNA        => getValue( $def, "Remove_rRNA" ),
-            Remove_MtRNA        => getValue( $def, "Remove_MtRNA" ),
             pca_dims              => getValue( $def, "pca_dims" ),
             by_sctransform        => getValue( $def, "by_sctransform" ),
+            reduction             => $reduction,
+            doublet_rates         => getValue( $def, "doublet_rates" ),
+            filtered_by_hto => $perform_split_hto_samples,
+          },
+          output_file_ext      => ".final.rds",
+          output_other_ext  => ".meta.csv",
+          sh_direct            => 1,
+          pbs                  => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$summary, $df_task );
+      }
+
+      if(getValue($def, "perform_multires_cluster_celltype", 0)){
+        my $scDynamic_task = $seurat_task . "_scDynamic";
+        $config->{$scDynamic_task} = {
+          class                    => "CQS::UniqueR",
+          perform                  => 1,
+          target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $scDynamic_task,
+          rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamic.r",
+          parameterFile1_ref => [$seurat_task, ".rds"],
+          parameterSampleFile1     => {
+            pca_dims              => getValue( $def, "pca_dims" ),
+            by_sctransform        => getValue( $def, "by_sctransform" ),
+            regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
             reduction             => $reduction,
             species               => getValue( $def, "species" ),
             db_markers_file       => getValue( $def, "markers_file" ),
@@ -1181,7 +1212,41 @@ sub getScRNASeqConfig {
             bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
             summary_layer_file => $def->{summary_layer_file},
           },
-          output_file_ext      => ".final.rds",
+          output_file_ext      => ".scDynamic.rds",
+          output_other_ext  => ".layer3_to_layer4.png",
+          sh_direct            => 1,
+          pbs                  => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$summary, $scDynamic_task );
+
+        my $subcluster_task = $scDynamic_task . "_subcluster";
+        $config->{$subcluster_task} = {
+          class                    => "CQS::UniqueR",
+          perform                  => 1,
+          target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $subcluster_task,
+          rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_celltype_subcluster.r",
+          parameterFile1_ref       => [$scDynamic_task, ".rds"],
+          parameterSampleFile1     => {
+            pca_dims              => getValue( $def, "pca_dims" ),
+            by_sctransform        => getValue( $def, "by_sctransform" ),
+            regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
+            reduction             => $reduction,
+            species               => getValue( $def, "species" ),
+            db_markers_file       => getValue( $def, "markers_file" ),
+            curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
+            annotate_tcell        => getValue( $def, "annotate_tcell", 0),
+            remove_subtype        => getValue( $def, "remove_subtype", ""),
+            HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
+            tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
+            bubblemap_file        => $def->{bubblemap_file},
+            bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
+            summary_layer_file => $def->{summary_layer_file},
+          },
+          output_file_ext      => ".subcluster.rds",
           output_other_ext  => ".umap.sample_cell.png",
           sh_direct            => 1,
           pbs                  => {
@@ -1190,7 +1255,7 @@ sub getScRNASeqConfig {
             "mem"       => "10gb"
           },
         };
-        push( @$summary, $multires_task );
+        push( @$summary, $subcluster_task );
       }
 
       if(getValue($def, "perform_multires", 0)){
@@ -1246,8 +1311,8 @@ sub getScRNASeqConfig {
             parameterSampleFile1     => {
               Mtpattern             => getValue( $def, "Mtpattern" ),
               rRNApattern           => getValue( $def, "rRNApattern" ),
-              Remove_rRNA        => getValue( $def, "Remove_rRNA" ),
-              Remove_MtRNA        => getValue( $def, "Remove_MtRNA" ),
+              Remove_rRNA           => getValue( $def, "Remove_rRNA" ),
+              Remove_MtRNA          => getValue( $def, "Remove_MtRNA" ),
               pca_dims              => getValue( $def, "pca_dims" ),
               by_sctransform        => getValue( $def, "by_sctransform" ),
               resolution            => getValue( $def, "multires_resolution" ),
