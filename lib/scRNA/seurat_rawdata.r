@@ -1,9 +1,11 @@
+
 source("scRNA_func.r")
 
 library(Seurat)
 library(ggplot2)
 library(digest)
 library(patchwork)
+library(sparseMatrixStats)
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
@@ -13,6 +15,8 @@ myoptions<-split(options_table$V1, options_table$V2)
 
 Mtpattern= myoptions$Mtpattern
 rRNApattern=myoptions$rRNApattern
+hemoglobinPattern=myoptions$hemoglobinPattern
+
 species=myoptions$species
 pool_sample<-ifelse(myoptions$pool_sample == "0", FALSE, TRUE)
 
@@ -154,7 +158,10 @@ for(fileTitle in names(fileMap)) {
     rownames(counts)<-toupper(rownames(counts))
   }
   sobj = CreateSeuratObject(counts = counts, project = fileTitle)
-  sobj[["percent.mt"]] <- PercentageFeatureSet(object = sobj, pattern = Mtpattern)
+  sobj<-PercentageFeatureSet(object=sobj, pattern=Mtpattern, col.name="percent.mt")
+  sobj<-PercentageFeatureSet(object=sobj, pattern=rRNApattern, col.name = "percent.ribo")
+  sobj<-PercentageFeatureSet(object=sobj, pattern=hemoglobinPattern, col.name="percent.hb")    
+
   if (!is.null(adt.counts)){
     mat<-as.matrix(adt.counts)
     rowsum<-apply(mat>0, 1, sum)
@@ -227,8 +234,26 @@ writeLines(rownames(rawobj), paste0(outFile, ".genes.txt"))
 
 saveRDS(rawobj, paste0(outFile, ".rawobj.rds"));
 
+png(paste0(outFile, ".top20.png"), width=3000, height=2000, res=300)
+par(mar = c(4, 8, 2, 1))
+C <- rawobj@assays$RNA@counts
+C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
+mc<-rowMedians(C)
+most_expressed <- order(mc, decreasing = T)[20:1]
+tm<-as.matrix(Matrix::t(C[most_expressed,]))
+boxplot(tm, cex = 0.1, las = 1, xlab = "% total count per cell",
+        col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
+dev.off()
+
 draw_qc<-function(prefix, rawobj, ident_name) {
   Idents(rawobj)<-ident_name
+  
+  feats <- c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.ribo", "percent.hb")
+
+  png(file=paste0(prefix, ".qc.violin.png"), width=6000, height=4000, res=300)
+  g<-VlnPlot(rawobj, features = feats, pt.size = 0.1, ncol = 3) + NoLegend()
+  print(g)
+  dev.off()
   
   png(file=paste0(prefix, ".qc.png"), width=3000, height=1200, res=300)
   p1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt")
