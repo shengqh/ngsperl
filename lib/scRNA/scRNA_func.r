@@ -524,9 +524,23 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
 
 output_integration_dimplot<-function(obj, outFile, has_batch_file){
   png(paste0(outFile, ".mt.png"), width=2500, height=2000, res=300)
-  g<-FeaturePlot(obj, features="percent.mt")
+  g<-FeaturePlot(obj, features="percent.mt") + ggtitle("Percentage of mitochondrial genes")
   print(g)
   dev.off()
+
+  if("percent.hb" %in% colnames(obj@meta.data)){
+    png(paste0(outFile, ".hb.png"), width=2500, height=2000, res=300)
+    g<-FeaturePlot(obj, features="percent.hb") + ggtitle("Percentage of hemoglobin genes")
+    print(g)
+    dev.off()  
+  }
+
+  if("percent.ribo" %in% colnames(obj@meta.data)){
+    png(paste0(outFile, ".ribo.png"), width=2500, height=2000, res=300)
+    g<-FeaturePlot(obj, features="percent.hb") + ggtitle("Percentage of ribosomal genes")
+    print(g)
+    dev.off()  
+  }
   
   mt<-data.frame(UMAP_1=obj@reductions$umap@cell.embeddings[,1], 
                 UMAP_2=obj@reductions$umap@cell.embeddings[,2],
