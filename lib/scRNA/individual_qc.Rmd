@@ -34,7 +34,7 @@ cat("\n\n## Files Parameters\n\n")
 #work directory to save or load objectlist, objectintegrated and integratedmarkers; the raw files are in workdir/raw
 
 
-option_table<-read.table("filelist2.txt", stringsAsFactors = F)
+option_table<-read.table("fileList2.txt", stringsAsFactors = F)
 myoptions<-split(option_table$V1, option_table$V2)
 myoptions$mt_cutoff=as.numeric(myoptions$mt_cutoff)
 myoptions$nCount_cutoff=as.numeric(myoptions$nCount_cutoff)
@@ -52,11 +52,11 @@ resolution=as.numeric(myoptions$resolution)
 species=myoptions$species # Hs or Mm
 
 #raw data file locations
-SampleInfos<-read.table("filelist1.txt", stringsAsFactors = F)
+SampleInfos<-read.table("fileList1.txt", stringsAsFactors = F)
 colnames(SampleInfos)<-c("countfile", "SampleId")
 
-if(file.exists('filelist3.txt')){
-  hto_samples<-read.table('filelist3.txt', stringsAsFactors = F)
+if(file.exists('fileList3.txt')){
+  hto_samples<-read.table('fileList3.txt', stringsAsFactors = F)
   hto_map=split(hto_samples$V1, hto_samples$V2)
   
   tag_tb<-read.table(myoptions$hto_sample_file, sep="\t", stringsAsFactors = F, header=T)
