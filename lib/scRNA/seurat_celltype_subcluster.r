@@ -96,9 +96,11 @@ for(pct in previous_celltypes){
   
   stopifnot(all(subobj[[previous_layer]] == pct))
   
-  cur_npcs=min(length(cells)-1, npcs)
+  pca_npcs<-min(round(length(cells)/2), 50)
+  
+  cur_npcs=min(pca_npcs, npcs)
   cur_pca_dims=1:cur_npcs
-
+  
   curprefix<-paste0(prefix, ".", previous_layer, "_", gsub(" ", "_", pct))
   
   if(by_harmony){
@@ -112,7 +114,7 @@ for(pct in previous_celltypes){
     DefaultAssay(subobj)<-"RNA"
     subobj[['SCT']]<-NULL
     subobj<-SCTransform(subobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, verbose = FALSE)
-    subobj<-RunPCA(subobj)
+    subobj<-RunPCA(subobj, npcs=pca_npcs)
     curreduction="pca"
   }else{
     cat(key, "normalization\n")
@@ -120,7 +122,7 @@ for(pct in previous_celltypes){
     subobj<-NormalizeData(subobj)
     subobj<-FindVariableFeatures(subobj)
     subobj<-ScaleData(subobj, vars.to.regress = vars.to.regress,features=rownames(subobj))
-    subobj<-RunPCA(subobj)
+    subobj<-RunPCA(subobj, npcs=pca_npcs)
     curreduction="pca"
   }
   cat(key, "FindClusters\n")
