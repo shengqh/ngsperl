@@ -141,8 +141,7 @@ for(pct in previous_celltypes){
   subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolutions, verbose=FALSE)
   
   cat(key, "Find best resolution\n")
-  cluster = clusters[4]
-  
+  cluster = clusters[1]
   lastCluster = clusters[1]
   for(cluster in clusters){
     cat("  ", cluster, "\n")
