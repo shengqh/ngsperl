@@ -50,6 +50,7 @@ if(regress_by_percent_mt){
 }
 
 bubblemap_file=myoptions$bubblemap_file
+has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
 
 if(file.exists(parFile2)){
   npcs<-read.table(parFile2, row.names=1)$V2[1]
@@ -66,7 +67,12 @@ prefix<-outFile
 if(!exists("obj")){
   obj=readRDS(parFile1)
   Idents(obj)<-previous_layer
-  obj<-ScaleData(obj,vars.to.regress = vars.to.regress, features = rownames(obj))
+}
+
+if(has_bubblemap){
+  allgenes<-rownames(obj)
+  genes_df <- read_bubble_genes(bubblemap_file, allgenes)
+  bubble_genes<-unique(genes_df$`Marker Gene`)
 }
 
 resolutions=seq(from = 0.1, to = 0.9, by = 0.1)
@@ -113,7 +119,7 @@ for(pct in previous_celltypes){
     cat(key, "sctransform\n")
     DefaultAssay(subobj)<-"RNA"
     subobj[['SCT']]<-NULL
-    subobj<-SCTransform(subobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, verbose = FALSE)
+    subobj<-SCTransform(subobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes = F, verbose = FALSE)
     subobj<-RunPCA(subobj, npcs=pca_npcs)
     curreduction="pca"
   }else{
@@ -121,7 +127,12 @@ for(pct in previous_celltypes){
     DefaultAssay(subobj)<-"RNA"
     subobj<-NormalizeData(subobj)
     subobj<-FindVariableFeatures(subobj)
-    subobj<-ScaleData(subobj, vars.to.regress = vars.to.regress,features=rownames(subobj))
+
+    var.genes<-VariableFeatures(subobj)
+    if(has_bubblemap){
+      var.genes<-unique(c(var.genes, bubble_genes))
+    }
+    subobj<-ScaleData(subobj, vars.to.regress = vars.to.regress, features = var.genes)
     subobj<-RunPCA(subobj, npcs=pca_npcs)
     curreduction="pca"
   }
