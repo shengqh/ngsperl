@@ -251,15 +251,22 @@ allmarkers<-unique(allmarkers)
 width<-max(3000, min(10000, length(unique(obj$seurat_clusters)) * 150 + 1000))
 height<-max(3000, min(20000, length(allmarkers) * 60 + 1000))
 
-png(paste0(prefix, ".top10.heatmap.png"), width=3000, height=3000, res=300)
+png(paste0(prefix, ".top10.heatmap.png"), width=width, height=height, res=300)
 g<-DoHeatmap(obj, features = allmarkers, group.by = seurat_cur_layer, angle = 90) + NoLegend()
 print(g)
 dev.off()
 
+g<-DimPlot(obj, group.by = "seurat_clusters", label=T) + ggtitle(paste0(pct, ": ", cur_layer))+
+      scale_color_discrete(labels = ct[,seurat_cur_layer])
 if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-  g<-get_bubble_plot(obj, "seurat_clusters", cur_layer, bubblemap_file)
-  png(paste0(prefix, ".bubbleplot.png"), width=4400, height=2000, res=300)
-  print(g)
-  dev.off()
+  g<-g+get_bubble_plot(obj, "seurat_clusters", cur_layer, bubblemap_file)
+  g<-g+plot_layout(ncol = 2, widths = c(3, 5))
+  width=8800
+}else{
+  width=3300
 }
+
+png(paste0(prefix, ".", cur_layer, ".png"), width=width, height=3000, res=300)
+print(g)
+dev.off()
 
