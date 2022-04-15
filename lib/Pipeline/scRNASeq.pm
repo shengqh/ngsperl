@@ -146,6 +146,7 @@ sub initializeScRNASeqDefaultOptions {
 
   initDefaultValue( $def, "perform_dynamic_resolution", 1 );
   initDefaultValue( $def, "perform_fix_resolution", 1 );
+  initDefaultValue( $def, "remove_subtype", "T cells,B cells,Fibroblasts,Neurons,Epithelial cells,Macrophages,Dendritic cells"),
   
   return $def;
 }
@@ -1219,7 +1220,7 @@ sub getScRNASeqConfig {
             summary_layer_file => $def->{summary_layer_file},
           },
           output_file_ext      => ".scDynamic.rds",
-          output_other_ext  => ".layer3_to_layer4.png",
+          output_other_ext  => ".layer0_to_layer1.png,.layer1_to_layer2.png,.layer2_to_layer3.png",
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
@@ -1250,7 +1251,8 @@ sub getScRNASeqConfig {
             tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
             bubblemap_file        => $def->{bubblemap_file},
             bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
-            summary_layer_file => $def->{summary_layer_file},
+            summary_layer_file    => $def->{summary_layer_file},
+            celltype_layer        => "layer3"
           },
           output_file_ext      => ".subcluster.rds",
           output_other_ext  => ".umap.sample_cell.png",

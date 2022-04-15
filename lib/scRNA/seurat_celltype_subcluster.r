@@ -39,7 +39,7 @@ regress_by_percent_mt<-ifelse(myoptions$regress_by_percent_mt == "1", TRUE, FALS
 
 min_markers<-20
 
-previous_layer<-"layer4"
+previous_layer<-myoptions$celltype_layer
 cur_layer="sub_cell_type"
 seurat_cur_layer=paste0("seurat_", cur_layer)
 
