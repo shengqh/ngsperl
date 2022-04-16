@@ -2,11 +2,8 @@
 source("scRNA_func.r")
 library(dplyr)
 library(Seurat)
-library(knitr)
-library(kableExtra)
 library(ggplot2)
 library(ggpubr)
-library(rmdformats)
 library(DT)
 library(data.table)
 library(digest)
@@ -51,6 +48,11 @@ pK_choose = pK[which(BCmetric %in% max(BCmetric))]
 
 nExp <- round(ncol(obj) * doublet_rates)  # expect 4% doublets
 obj <- doubletFinder_v3(obj, pN = 0.25, pK = pK_choose, nExp = nExp, PCs = 1:npcs)
+
+saveRDS(obj@meta.data, paste0(outFile, ".meta.txt"))
+options<-data.frame("name"=c("pN", "pK", "nExp", "npcs"),
+"value"=c(0.25, pK_choose, nExp, npcs))
+write.csv(options, paste0(outFile, ".options.csv"), row.names=F)
 
 #ggplot(bcmvn, aes(pK, BCmetric)) + geom_point()
 
