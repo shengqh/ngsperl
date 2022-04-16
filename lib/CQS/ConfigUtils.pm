@@ -3,6 +3,7 @@ package CQS::ConfigUtils;
 
 use strict;
 use warnings;
+use POSIX;
 use Carp qw<longmess>;
 use File::Basename;
 use File::Copy;
@@ -1655,7 +1656,7 @@ sub getMemoryPerThread {
   my $result = $memory_in_gb;
   $result =~ /(\d+)(\S+)/;
   my $memNum = $1;
-  $result = $memNum / $thread;
+  $result = floor($memNum / $thread);
   my $isMB = 0;
   if ($result < 1) {
     $result = floor($result * 1024);
