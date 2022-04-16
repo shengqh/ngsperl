@@ -266,17 +266,17 @@ g<-DoHeatmap(obj, features = allmarkers, group.by = seurat_cur_layer, angle = 90
 print(g)
 dev.off()
 
-g<-DimPlot(obj, group.by = "seurat_clusters", label=T) + ggtitle(paste0(pct, ": ", cur_layer))+
+g<-DimPlot(obj, group.by = "seurat_clusters", label=T) + ggtitle(cur_layer)+
       scale_color_discrete(labels = ct[,seurat_cur_layer])
 if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
   g<-g+get_bubble_plot(obj, "seurat_clusters", cur_layer, bubblemap_file)
-  g<-g+plot_layout(ncol = 2, widths = c(3, 5))
-  width=8800
+  g<-g+plot_layout(ncol = 2, widths = c(4, 6))
+  width=11000
 }else{
-  width=3300
+  width=4300
 }
 
-png(paste0(prefix, ".", cur_layer, ".png"), width=width, height=3000, res=300)
+png(paste0(prefix, ".", cur_layer, ".png"), width=width, height=4000, res=300)
 print(g)
 dev.off()
 
