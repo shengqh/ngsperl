@@ -348,6 +348,6 @@ obj<-layer_cluster_celltype(obj, "layer1", layer1map, "layer2", layer2map, npcs,
 
 obj<-layer_cluster_celltype(obj, "layer2", layer2map, "layer3", layer3map, npcs, resolutions, random.seed, by_sctransform, FALSE, prefix, TRUE, vars.to.regress)
 
-#obj<-layer_cluster_celltype(obj, "layer3", layer3map, "layer4", layer4map, npcs, resolutions, random.seed, by_sctransform, FALSE, prefix, TRUE, vars.to.regress)
+obj<-layer_cluster_celltype(obj, "layer3", layer3map, "layer4", layer4map, npcs, resolutions, random.seed, by_sctransform, FALSE, prefix, TRUE, vars.to.regress)
 
 saveRDS(obj, paste0(prefix, ".scDynamic.rds"))
