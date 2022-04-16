@@ -166,7 +166,7 @@ for(pct in previous_celltypes){
   if(has_one_cluster){
     cts<-subobj[[previous_layer]]
     cts$resolution<-0.1
-    cts$seurat_clusters<-cluster_index+1
+    cts$seurat_clusters<-cluster_index
     cts[,cur_layer] = cts[,previous_layer]
     cts[,seurat_cur_layer] = paste0(cts$seurat_clusters, ": ", cts[,cur_layer])
     cluster_index=cluster_index+1
