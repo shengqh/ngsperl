@@ -2070,7 +2070,7 @@ fi
 
   if($def->{perform_permanova}){
     my $log_transform = getValue($def, "permanova_log_transform", 1);
-    my $log_prefix = $log_transform ? ".log" : "";
+    my $log_prefix = $log_transform ? ".log2" : "";
 
     $config->{count_table_permanova} = {
       class                     => "CQS::UniqueR",
@@ -2078,8 +2078,8 @@ fi
       target_dir                => $data_visualization_dir . "/count_table_permanova",
       rtemplate                 => "../SmallRNA/permanova.r",
       output_file               => "",
-      output_file_ext           => "",
-      output_file_task_ext      => "$log_prefix.permanova.txt;$log_prefix.betadisper.txt;$log_prefix.PCoA.pdf",
+      output_file_ext           => "$log_prefix.PCoA.pdf",
+      output_file_task_ext      => "$log_prefix.permanova.txt;$log_prefix.betadisper.txt",
       parameterSampleFile1_ref  => \@table_for_correlation,
       parameterSampleFile2      => $config->{count_table_correlation}{parameterSampleFile2},
       parameterSampleFile2Order => $def->{groups_order},
