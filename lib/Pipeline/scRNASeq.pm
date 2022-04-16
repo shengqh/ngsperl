@@ -662,7 +662,7 @@ sub getScRNASeqConfig {
         },
         output_perSample_file => "parameterSampleFile1",
         output_perSample_file_byName => 1,
-        output_perSample_file_ext => ".HTO.class.dist.png;.HTO.csv;.HTO.umap.rds",
+        output_perSample_file_ext => ".HTO.umap.class.png;.HTO.csv;.HTO.data.csv",
         sh_direct   => 1,
         pbs => {
           "nodes"     => "1:ppn=1",
@@ -1011,7 +1011,7 @@ sub getScRNASeqConfig {
           pbs                  => {
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
-            "mem"       => "10gb"
+            "mem"       => "40gb"
           },
         };
         if($def->{perform_individual_qc}){
@@ -1075,7 +1075,7 @@ sub getScRNASeqConfig {
           pbs                  => {
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
-            "mem"       => "10gb"
+            "mem"       => "40gb"
           },
         };
         if ($def->{batch_for_integration}){
@@ -1186,7 +1186,7 @@ sub getScRNASeqConfig {
           pbs                  => {
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
-            "mem"       => "10gb"
+            "mem"       => "40gb"
           },
         };
         push( @$summary, $df_task );
@@ -1220,12 +1220,12 @@ sub getScRNASeqConfig {
             summary_layer_file => $def->{summary_layer_file},
           },
           output_file_ext      => ".scDynamic.rds",
-          output_other_ext  => ".layer0_to_layer1.png,.layer1_to_layer2.png,.layer2_to_layer3.png",
+          output_other_ext  => ".layer0_to_layer1.png,.layer1_to_layer2.png,.layer2_to_layer3.png,.layer3_to_layer4.png",
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
-            "mem"       => "10gb"
+            "mem"       => "40gb"
           },
         };
         push( @$summary, $scDynamic_task );
@@ -1252,7 +1252,7 @@ sub getScRNASeqConfig {
             bubblemap_file        => $def->{bubblemap_file},
             bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
             summary_layer_file    => $def->{summary_layer_file},
-            celltype_layer        => "layer3"
+            celltype_layer        => "layer4"
           },
           output_file_ext      => ".subcluster.rds",
           output_other_ext  => ".umap.sample_cell.png",
@@ -1260,7 +1260,7 @@ sub getScRNASeqConfig {
           pbs                  => {
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
-            "mem"       => "10gb"
+            "mem"       => "40gb"
           },
         };
         push( @$summary, $subcluster_task );
@@ -1302,7 +1302,7 @@ sub getScRNASeqConfig {
           pbs                  => {
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
-            "mem"       => "10gb"
+            "mem"       => "40gb"
           },
         };
         push( @$summary, $multires_task );
@@ -1341,7 +1341,7 @@ sub getScRNASeqConfig {
             pbs                  => {
               "nodes"     => "1:ppn=1",
               "walltime"  => "1",
-              "mem"       => "10gb"
+              "mem"       => "40gb"
             },
           };
           push( @$summary, $recluster_task );
@@ -1373,7 +1373,7 @@ sub getScRNASeqConfig {
           pbs                  => {
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
-            "mem"       => "10gb"
+            "mem"       => "40gb"
           },
         };
         push( @$summary, $cluster_task );
@@ -1396,7 +1396,7 @@ sub getScRNASeqConfig {
             pbs                  => {
               "nodes"     => "1:ppn=1",
               "walltime"  => "1",
-              "mem"       => "10gb"
+              "mem"       => "40gb"
             },
           };
           push( @$summary, $heatmap_task );
@@ -1433,7 +1433,7 @@ sub getScRNASeqConfig {
           pbs                  => {
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
-            "mem"       => "10gb"
+            "mem"       => "40gb"
           },
         };
 
