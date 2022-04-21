@@ -1,6 +1,5 @@
 source("scRNA_func.r")
 
-
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -43,6 +42,8 @@ if(regress_by_percent_mt){
 }else{
   vars.to.regress=NULL
 }
+
+essential_genes=read.table(parFile3, sep="\t" ,header=F)$V1
 
 bubblemap_file=myoptions$bubblemap_file
 has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
@@ -158,9 +159,8 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
       subobj<-FindVariableFeatures(subobj)
 
       var.genes<-VariableFeatures(subobj)
-      if(has_bubblemap){
-        var.genes<-unique(c(var.genes, bubble_genes))
-      }
+      var.genes<-unique(c(var.genes, essential_genes))
+
       subobj<-ScaleData(subobj, vars.to.regress = vars.to.regress, features = var.genes)
       subobj<-RunPCA(subobj, npcs=pca_npcs)
       curreduction="pca"
@@ -212,10 +212,10 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
     if(check_pre_layer){
       g3<-DimPlot(subobj, group.by = "pre_layer", label=T) + ggtitle(paste0(pct, ": ", previous_layer, ": post"))
       g<-g1+g3+g2
-      width=6400
+      width=6900
     }else{
       g<-g1+g2
-      width=4300
+      width=4600
     }
 
     #saveRDS(subobj, paste0(curprefix, "_", gsub(" ", "_", pct), ".rds"))

@@ -1302,8 +1302,12 @@ sub writeParameterSampleFile {
       if ( $refstr eq 'HASH' ) {
         foreach my $groupName ( sort keys %$subSampleFiles ) {
           my $groupSampleNames = $subSampleFiles->{$groupName};
-          for my $groupSampleName (@$groupSampleNames) {
-            print $list "${groupSampleName}\t${groupName}\t${sample_name}\n";
+          if (is_string($groupSampleNames)){
+            print $list "$groupSampleNames\t${groupName}\t${sample_name}\n";
+          }else{
+            for my $groupSampleName (@$groupSampleNames) {
+              print $list "${groupSampleName}\t${groupName}\t${sample_name}\n";
+            }
           }
         }
       }

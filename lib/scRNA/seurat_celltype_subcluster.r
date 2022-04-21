@@ -49,6 +49,8 @@ if(regress_by_percent_mt){
   vars.to.regress=NULL
 }
 
+essential_genes=read.table(parFile3, sep="\t" ,header=F)$V1
+
 bubblemap_file=myoptions$bubblemap_file
 has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
 
@@ -129,9 +131,8 @@ for(pct in previous_celltypes){
     subobj<-FindVariableFeatures(subobj)
 
     var.genes<-VariableFeatures(subobj)
-    if(has_bubblemap){
-      var.genes<-unique(c(var.genes, bubble_genes))
-    }
+    var.genes<-unique(c(var.genes, essential_genes))
+
     subobj<-ScaleData(subobj, vars.to.regress = vars.to.regress, features = var.genes)
     subobj<-RunPCA(subobj, npcs=pca_npcs)
     curreduction="pca"
@@ -256,6 +257,8 @@ obj<-AddMetaData(obj, allcts$seurat_clusters, col.name = "seurat_clusters")
 obj<-AddMetaData(obj, allcts[,cur_layer], col.name = cur_layer)
 obj<-AddMetaData(obj, factor(allcts[,seurat_cur_layer], levels=ct[,seurat_cur_layer]), col.name = seurat_cur_layer)
 
+write.csv(obj@meta.data, paste0(outFile, ".meta.csv"))
+
 allmarkers<-unique(allmarkers)
 
 width<-max(3000, min(10000, length(unique(obj$seurat_clusters)) * 150 + 1000))
@@ -276,7 +279,7 @@ if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
   width=4300
 }
 
-png(paste0(prefix, ".", cur_layer, ".png"), width=width, height=4000, res=300)
+png(paste0(prefix, ".umap.png"), width=width, height=4000, res=300)
 print(g)
 dev.off()
 
