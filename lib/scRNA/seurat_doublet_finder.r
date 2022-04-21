@@ -20,8 +20,12 @@ by_harmony<-reduction=="harmony"
 
 prefix<-outFile
 
-finalList=readRDS(parFile1)
-obj<-finalList$obj
+if(!exists("obj")){
+  obj=readRDS(parFile1)
+  if(is.list(obj)){
+    obj<-obj$obj
+  }
+}
 
 sweep.res <- paramSweep_v3(obj, PCs = 1:npcs, sct = by_sctransform)
 sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
