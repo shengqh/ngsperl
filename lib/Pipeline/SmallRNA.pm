@@ -1336,9 +1336,9 @@ sub getSmallRNAConfig {
       program => "",
       check_program => 0,
       option => "
-bowtie -a --best -m 10000 --strata -v 0 -p 8 -x __SCATTER__ __FILE__ __OUTPUT__.tmp
-
 rm -f __NAME_____SCATTERNAME__.failed
+
+bowtie -a --best -m 10000 --strata -v 0 -p 8 -x __SCATTER__ __FILE__ __OUTPUT__.tmp
 
 status=\$?
 if [[ \$status -ne 0 ]]; then
@@ -1359,7 +1359,7 @@ fi
       output_file_ext => ".txt.gz",
       output_to_same_folder => 0,
       can_result_be_empty_file => 0,
-      use_tmp_folder => 0,
+      use_tmp_folder => getValue($def, "use_tmp_folder", 0),
       sh_direct   => 0,
       pbs => {
         "nodes"     => "1:ppn=" . getValue($def, "${refseq_bacteria_bowtie}_nodes", "8"),,
@@ -1374,10 +1374,10 @@ fi
     $config->{$refseq_bacteria_bowtie_count} = {
       class => "CQS::ProgramWrapperManyToOneGather",
       target_dir => "$host_intermediate_dir/$refseq_bacteria_bowtie_count",
-      interpretor => "python3",
-      program => "../SmallRNA/refseq_bowtie_count.py",
-      check_program => 1,
-      option => "",
+      interpretor => "",
+      program => "spcount bowtie_count",
+      check_program => 0,
+      option => "--species_column " . getValue($def, "species_column", "species"),
       source_arg => "-i",
       source_ref => $identical_ref,
       parameterSampleFile2_arg => "-c",
@@ -1391,7 +1391,8 @@ fi
       output_file_ext => ".txt.gz",
       output_to_same_folder => 1,
       can_result_be_empty_file => 0,
-      use_tmp_folder => 0,
+      no_docker => 1,
+      use_tmp_folder => getValue($def, "use_tmp_folder", 0),
       sh_direct   => 0,
       pbs => {
         "nodes"     => "1:ppn=1",
@@ -1402,31 +1403,47 @@ fi
 
     push( @$individual_ref, $refseq_bacteria_bowtie_count );
 
+    my $categories = ["species", "genus", "family", "order", "class", "phylum" ];
+    my $file_exts = [];
+    for my $cat (@$categories){
+      push(@$file_exts, ".${cat}.query.count");
+      push(@$file_exts, ".${cat}.estimated.count");
+    }
+    my $file_ext_str = join(",", @$file_exts);
+
     my $refseq_bacteria_table = "refseq_bacteria_table";
     $config->{$refseq_bacteria_table} = {
       class => "CQS::ProgramWrapper",
       target_dir => "$nonhost_genome_dir/$refseq_bacteria_table",
-      interpretor => "python3",
-      program => "../SmallRNA/refseq_count_table.py",
-      check_program => 1,
-      option => "-o __NAME__",
+      interpretor => "",
+      program => "spcount count_table",
+      check_program => 0,
+      option => "-o __NAME__ --species_column " . getValue($def, "species_column", "species"),
       source_arg => "-i",
       source_ref => $refseq_bacteria_bowtie_count,
-      parameterFile1_arg => "-a",
-      parameterFile1 => getValue($def, "refseq_assembly_summary"),
-      parameterFile2_arg => "-t",
-      parameterFile2 => getValue($def, "refseq_taxonomy"),
+      parameterFile1_arg => "-s",
+      parameterFile1 => getValue($def, "refseq_bacteria_species"),
       output_arg => "-o",
-      output_file_ext => ".phylum.txt,.class.txt,.order.txt,.family.txt,.genus.txt,.species.txt",
-      sh_direct   => 0,
+      output_file_ext => $file_ext_str,
+      no_docker => 1,
+      sh_direct   => 1,
       pbs => {
         "nodes"     => "1:ppn=1",
-        "walltime"  => getValue($def, "${refseq_bacteria_table}_walltime", "4"),
-        "mem"       => getValue($def, "${refseq_bacteria_table}_mem", "20gb"),
+        "walltime"  => getValue($def, "${refseq_bacteria_table}_walltime", "24"),
+        "mem"       => getValue($def, "${refseq_bacteria_table}_mem", "40gb"),
       },
     };
 
-    push( @$summary_ref, $refseq_bacteria_table );
+    push( @$summary_ref, $refseq_bacteria_table );  
+
+    if ($do_comparison) {
+      for my $cat (@$categories){
+        addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_query", [ $refseq_bacteria_table, ".${cat}.query.count\$" ],
+          $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_estimated", [ $refseq_bacteria_table, ".${cat}.estimated.count\$" ],
+          $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      }
+    }
   }
 
   if ($search_refseq_genome) {
