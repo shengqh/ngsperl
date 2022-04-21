@@ -317,6 +317,43 @@ sub getRNASeqConfig {
     }
   }
 
+  if(getValue($def, "perform_dexseq", 0)){
+    my $dexseq_count = "dexseq_count";
+    $config->{$dexseq_count} = {
+      class        => "Count::DexseqCount",
+      perform      => 1,
+      target_dir   => $target_dir . "/" . getNextFolderIndex($def) . "$dexseq_count",
+      option       => "",
+      source_ref   => $source_ref,
+      gff_file     => getValue($def, "dexseq_gff"),
+      dexseq_count => getValue($def, "dexseq_count.py", "dexseq_count.py"),
+      sh_direct    => 0,
+      pbs          => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    };
+    push @$individual, "$dexseq_count";
+
+    my $dexseq_count_table = "dexseq_count_table";
+    $config->{$dexseq_count_table} = {
+      class         => "CQS::CQSDatatable",
+      perform       => 1,
+      target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "$dexseq_count_table",
+      option        => "-p ENS --noheader",
+      source_ref    => $dexseq_count,
+      name_map_file => $def->{name_map_file},
+      sh_direct     => 1,
+      pbs           => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "20gb"
+      },
+    };
+    push @$summary, "$dexseq_count_table";
+  }
+
   if(defined $def->{annotation_genes}){
     my $genes_str = $def->{annotation_genes};
     my @genes = split /[;, ]+/, $genes_str;
