@@ -1,3 +1,4 @@
+
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -52,9 +53,6 @@ essential_genes=read.table(parFile3, sep="\t" ,header=F)$V1
 bubblemap_file=myoptions$bubblemap_file
 has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
 
-if(file.exists(parFile2)){
-  npcs<-read.table(parFile2, row.names=1)$V2[1]
-}
 pca_dims<-1:npcs
 
 tiers<-read.table(myoptions$HLA_panglao5_file, sep="\t", header=T)
@@ -66,7 +64,11 @@ prefix<-outFile
 
 if(!exists("obj")){
   obj=readRDS(parFile1)
+  if(is.list(obj)){
+    obj<-obj$obj
+  }
   Idents(obj)<-previous_layer
+  obj@meta.data = readRDS(parFile2)
 }
 
 if(has_bubblemap){
