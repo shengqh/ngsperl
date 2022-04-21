@@ -1,5 +1,3 @@
-source("scRNA_func.r")
-
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -221,7 +219,7 @@ for(pct in previous_celltypes){
     g<-DimPlot(subobj, group.by = "seurat_clusters", label=T) + ggtitle(paste0(pct, ": res", cur_resolution) ) + scale_color_discrete(labels = ct[,seurat_cur_layer])
     if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
       layout <- "ABB"
-      g2<-get_bubble_plot(subobj, "seurat_clusters", cur_layer, bubblemap_file)
+      g2<-get_bubble_plot(subobj, "seurat_clusters", cur_layer, bubblemap_file, assay)
       g<-g+g2+plot_layout(design=layout)
       width=6300
     }else{
@@ -257,8 +255,6 @@ obj<-AddMetaData(obj, allcts$seurat_clusters, col.name = "seurat_clusters")
 obj<-AddMetaData(obj, allcts[,cur_layer], col.name = cur_layer)
 obj<-AddMetaData(obj, factor(allcts[,seurat_cur_layer], levels=ct[,seurat_cur_layer]), col.name = seurat_cur_layer)
 
-write.csv(obj@meta.data, paste0(outFile, ".meta.csv"))
-
 allmarkers<-unique(allmarkers)
 
 width<-max(3000, min(10000, length(unique(obj$seurat_clusters)) * 150 + 1000))
@@ -272,7 +268,7 @@ dev.off()
 g<-DimPlot(obj, group.by = "seurat_clusters", label=T) + ggtitle(cur_layer)+
       scale_color_discrete(labels = ct[,seurat_cur_layer])
 if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-  g<-g+get_bubble_plot(obj, "seurat_clusters", cur_layer, bubblemap_file)
+  g<-g+get_bubble_plot(obj, "seurat_clusters", cur_layer, bubblemap_file, assay)
   g<-g+plot_layout(ncol = 2, widths = c(4, 6))
   width=11000
 }else{
@@ -283,4 +279,5 @@ png(paste0(prefix, ".umap.png"), width=width, height=4000, res=300)
 print(g)
 dev.off()
 
-write.csv(obj@meta.data, paste0(prefix, ".meta.csv"))
+write.csv(obj@meta.data, paste0(outFile, ".meta.csv"))
+saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
