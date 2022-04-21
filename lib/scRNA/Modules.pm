@@ -324,14 +324,14 @@ sub addCHETAH {
 }
 
 sub addSignac {
-  my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $seurat_name, $tcell_only, $celltype, $reduction ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $seurat_ref, $tcell_only, $celltype, $reduction ) = @_;
 
   $config->{$task_name} = {
     class                => "CQS::UniqueR",
     perform              => 1,
     target_dir           => $target_dir . "/" . $task_name,
     rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SignacX.r",
-    parameterFile1_ref   => [ $seurat_name, ".final.rds" ],
+    parameterFile1_ref   => $seurat_ref,
     parameterSampleFile1 => {
       species             => getValue( $def, "species" ),
       prefix              => $project_name,
@@ -349,8 +349,12 @@ sub addSignac {
   };
 
   if($tcell_only){
-    $config->{$task_name}{parameterFile2_ref} = [ $celltype, ".cluster.csv" ];
-    $config->{$task_name}{parameterFile3_ref} = [ $celltype, ".celltype.csv" ];
+    if($celltype =~ /_dynamic_res/){
+      $config->{$task_name}{parameterFile2_ref} = [ $celltype, ".meta.csv" ];
+    }else{
+      $config->{$task_name}{parameterFile2_ref} = [ $celltype, ".cluster.csv" ];
+      $config->{$task_name}{parameterFile3_ref} = [ $celltype, ".celltype.csv" ];
+    }
   }
   push( @$tasks, $task_name );
 }
