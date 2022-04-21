@@ -1202,9 +1202,8 @@ sub getScRNASeqConfig {
         push( @$summary, $gene_ratio_localization_map_task );
       }
 
-
+      my $df_task = $seurat_task . "_doublet_finder";
       if(getValue($def, "perform_doublet_finder", 0)){
-        my $df_task = $seurat_task . "_doublet_finder";
         $config->{$df_task} = {
           class                    => "CQS::UniqueR",
           perform                  => 1,
@@ -1295,7 +1294,7 @@ sub getScRNASeqConfig {
             celltype_layer        => "layer4",
             output_layer          => "cell_type",
           },
-          output_file_ext      => ".meta.csv",
+          output_file_ext      => ".meta.rds,.meta.csv",
           output_other_ext  => ".umap.png",
           sh_direct            => 1,
           pbs                  => {
@@ -1309,6 +1308,35 @@ sub getScRNASeqConfig {
         if (getValue( $def, "perform_SignacX_tcell", 0 ) ) {
           my $signacX_name = $scDynamic_task . "_SignacX_tcell";
           addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, $scDynamic_task, 1, $subcluster_task, $reduction );
+        }
+
+        if(defined $df_task){
+          my $doublet_check_task = $subcluster_task . "_doublet";
+          $config->{$doublet_check_task} = {
+            class                    => "CQS::UniqueR",
+            perform                  => 1,
+            target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $doublet_check_task,
+            rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_doublet_check.r",
+            parameterFile1_ref       => [ $scDynamic_task, ".rds" ],
+            parameterFile2_ref       => [ $subcluster_task, ".meta.rds" ],
+            parameterFile3_ref       => [ $df_task, ".meta.csv" ],
+            parameterSampleFile1     => {
+              cluster_layer           => "seurat_clusters",
+              celltype_layer          => "cell_type",
+              cluster_celltype_layer  => "seurat_cell_type",
+              bubblemap_file        => $def->{bubblemap_file},
+              by_sctransform        => getValue( $def, "by_sctransform" ),
+            },
+            output_file_ext      => ".meta.csv",
+            output_other_ext  => ".umap.png",
+            sh_direct            => 1,
+            pbs                  => {
+              "nodes"     => "1:ppn=1",
+              "walltime"  => "12",
+              "mem"       => "40gb"
+            },
+          };
+          push( @$summary, $doublet_check_task );
         }
       }
 
