@@ -2486,9 +2486,9 @@ sub addBamsnapLocus {
   push( @$tasks, $task_name );
 
   if (getValue($def, "bamsnap_coverage", 1)){
-    $config->{bamsnap_locus} = getValue($def, "bamsnap_locus");
+    $config->{bamsnap_locus_list} = getValue($def, "bamsnap_locus");
     my $coverage_task = "bamsnap_coverage";
-    addLocusCoverage($config, $def, $tasks, $target_dir, $coverage_task, "bamsnap_locus", $bam_ref);
+    addLocusCoverage($config, $def, $tasks, $target_dir, $coverage_task, "bamsnap_locus_list", $bam_ref);
   }
 }
 
