@@ -1257,8 +1257,8 @@ sub getScRNASeqConfig {
             bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
             summary_layer_file => $def->{summary_layer_file},
           },
-          output_file_ext      => ".scDynamic.rds",
-          output_other_ext  => ".layer0_to_layer1.png,.layer1_to_layer2.png,.layer2_to_layer3.png,.layer3_to_layer4.png,.layer3_to_layer4.meta.csv",
+          output_file_ext      => ".scDynamic.meta.rds",
+          output_other_ext  => ".layer0_to_layer1.png,.layer1_to_layer2.png,.layer2_to_layer3.png,.layer3_to_layer4.png,.layer3_to_layer4.meta.csv,.scDynamic.meta.csv",
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
@@ -1274,7 +1274,8 @@ sub getScRNASeqConfig {
           perform                  => 1,
           target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $subcluster_task,
           rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_celltype_subcluster.r",
-          parameterFile1_ref       => [$scDynamic_task, ".rds"],
+          parameterFile1_ref => [$seurat_task, ".rds"],
+          parameterFile2_ref => [$scDynamic_task, ".meta.rds"],
           parameterFile3_ref => $essential_gene_task,
           parameterSampleFile1     => {
             pca_dims              => getValue( $def, "pca_dims" ),
@@ -1306,8 +1307,8 @@ sub getScRNASeqConfig {
         push( @$summary, $subcluster_task );
 
         if (getValue( $def, "perform_SignacX_tcell", 0 ) ) {
-          my $signacX_name = $scDynamic_task . "_SignacX_tcell";
-          addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, $scDynamic_task, 1, $subcluster_task, $reduction );
+          my $signacX_name = $subcluster_task . "_SignacX_tcell";
+          addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, $seurat_task, 1, $subcluster_task, $reduction );
         }
 
         if(defined $df_task){
@@ -1317,7 +1318,7 @@ sub getScRNASeqConfig {
             perform                  => 1,
             target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $doublet_check_task,
             rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_doublet_check.r",
-            parameterFile1_ref       => [ $scDynamic_task, ".rds" ],
+            parameterFile1_ref       => [ $seurat_task, ".rds" ],
             parameterFile2_ref       => [ $subcluster_task, ".meta.rds" ],
             parameterFile3_ref       => [ $df_task, ".meta.csv" ],
             parameterSampleFile1     => {

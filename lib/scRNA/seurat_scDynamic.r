@@ -350,4 +350,5 @@ obj<-layer_cluster_celltype(obj, "layer2", layer2map, "layer3", layer3map, npcs,
 
 obj<-layer_cluster_celltype(obj, "layer3", layer3map, "layer4", layer4map, npcs, resolutions, random.seed, by_sctransform, FALSE, prefix, TRUE, vars.to.regress)
 
-saveRDS(obj, paste0(prefix, ".scDynamic.rds"))
+saveRDS(obj@meta.data, paste0(prefix, ".scDynamic.meta.rds"))
+write.csv(obj@meta.data, paste0(prefix, ".scDynamic.meta.csv"))
