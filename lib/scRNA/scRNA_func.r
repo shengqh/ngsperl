@@ -523,24 +523,28 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
 }
 
 output_integration_dimplot<-function(obj, outFile, has_batch_file){
-  png(paste0(outFile, ".mt.png"), width=2500, height=2000, res=300)
   g<-FeaturePlot(obj, features="percent.mt") + ggtitle("Percentage of mitochondrial genes")
-  print(g)
-  dev.off()
-
+  width=2500
+  ncol=1
+  
   if("percent.hb" %in% colnames(obj@meta.data)){
-    png(paste0(outFile, ".hb.png"), width=2500, height=2000, res=300)
-    g<-FeaturePlot(obj, features="percent.hb") + ggtitle("Percentage of hemoglobin genes")
-    print(g)
-    dev.off()  
+    g2<-FeaturePlot(obj, features="percent.hb") + ggtitle("Percentage of hemoglobin genes")
+    g<-g+g2
+    width=width+2200
+    ncol=ncol+1
   }
 
   if("percent.ribo" %in% colnames(obj@meta.data)){
-    png(paste0(outFile, ".ribo.png"), width=2500, height=2000, res=300)
-    g<-FeaturePlot(obj, features="percent.hb") + ggtitle("Percentage of ribosomal genes")
-    print(g)
-    dev.off()  
+    g3<-FeaturePlot(obj, features="percent.hb") + ggtitle("Percentage of ribosomal genes")
+    g<-g+g3
+    width=width+2200
+    ncol=ncol+1
   }
+  g=g+plot_layout(ncol=ncol)
+
+  png(paste0(outFile, ".genes.png"), width=width, height=2000, res=300)
+  print(g)
+  dev.off()  
   
   mt<-data.frame(UMAP_1=obj@reductions$umap@cell.embeddings[,1], 
                 UMAP_2=obj@reductions$umap@cell.embeddings[,2],
@@ -579,7 +583,7 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file){
   dev.off()
 }
 
-read_bubble_genes<-function(bubble_file, allgenes){
+read_bubble_genes<-function(bubble_file, allgenes=NA){
   library("readxl")
   
   genes <- read_xlsx(bubble_file, sheet = 1)
@@ -603,7 +607,9 @@ read_bubble_genes<-function(bubble_file, allgenes){
   miss_genes=genes$`Marker Gene`[!(genes$`Marker Gene` %in% allgenes)]
   writeLines(miss_genes, con="miss_gene.csv")
   
-  genes<-genes[genes$`Marker Gene` %in% allgenes,]
+  if(!is.na(allgenes)){
+    genes<-genes[genes$`Marker Gene` %in% allgenes,]
+  }
   genes$`Cell Type`=factor(genes$`Cell Type`, levels=unique(genes$`Cell Type`))
   
   return(genes)
