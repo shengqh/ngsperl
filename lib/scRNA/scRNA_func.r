@@ -634,7 +634,7 @@ get_seurat_average_expression<-function(SCLC, cluster_name){
   return(result)
 }
 
-get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file){
+get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay){
   allgenes=rownames(obj)
   genes_df <- read_bubble_genes(bubblemap_file, allgenes)
   gene_groups=split(genes_df$`Marker Gene`, genes_df$`Cell Type`)
@@ -707,8 +707,8 @@ get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file){
   return(g)
 }
 
-draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, prefix){
-  g<-get_bubble_plot(obj, cur_res, cur_celltype, bubble_map_file)
+draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, assay, prefix){
+  g<-get_bubble_plot(obj, cur_res, cur_celltype, bubble_map_file, assay)
   png(paste0(prefix, ".bubblemap.png"), width=5500, height=3000, res=300)
   print(g)
   dev.off()
