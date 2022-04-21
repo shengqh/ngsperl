@@ -983,8 +983,8 @@ sub getScRNASeqConfig {
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
-            "mem"       => "10gb"
+            "walltime"  => "12",
+            "mem"       => "40gb"
           },
         };
         push( @$summary, $seurat_task );
@@ -1010,7 +1010,7 @@ sub getScRNASeqConfig {
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
+            "walltime"  => "12",
             "mem"       => "40gb"
           },
         };
@@ -1074,7 +1074,7 @@ sub getScRNASeqConfig {
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
+            "walltime"  => "12",
             "mem"       => "40gb"
           },
         };
@@ -1130,8 +1130,8 @@ sub getScRNASeqConfig {
           sh_direct          => 1,
           pbs                => {
             "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
-            "mem"       => "10gb"
+            "walltime"  => "12",
+            "mem"       => "40gb"
           },
         };
         push( @$summary, $gene_localization_map_task );
@@ -1157,8 +1157,8 @@ sub getScRNASeqConfig {
           sh_direct          => 1,
           pbs                => {
             "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
-            "mem"       => "10gb"
+            "walltime"  => "12",
+            "mem"       => "40gb"
           },
         };
         push( @$summary, $gene_ratio_localization_map_task );
@@ -1185,7 +1185,7 @@ sub getScRNASeqConfig {
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
+            "walltime"  => "12",
             "mem"       => "40gb"
           },
         };
@@ -1224,7 +1224,7 @@ sub getScRNASeqConfig {
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
+            "walltime"  => "12",
             "mem"       => "40gb"
           },
         };
@@ -1252,14 +1252,15 @@ sub getScRNASeqConfig {
             bubblemap_file        => $def->{bubblemap_file},
             bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
             summary_layer_file    => $def->{summary_layer_file},
-            celltype_layer        => "layer4"
+            celltype_layer        => "layer4",
+            output_layer          => "cell_type",
           },
-          output_file_ext      => ".subcluster.rds",
+          output_file_ext      => ".meta.csv",
           output_other_ext  => ".umap.sample_cell.png",
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
+            "walltime"  => "12",
             "mem"       => "40gb"
           },
         };
