@@ -232,7 +232,7 @@ AB
 CC
 "
       }
-      g4<-get_bubble_plot(subobj, NA, "layer", bubblemap_file)
+      g4<-get_bubble_plot(subobj, NA, "layer", bubblemap_file, assay)
       g<-g+g4+plot_layout(design=layout)
       height=4000
     }else{
@@ -325,7 +325,7 @@ layer_cluster_celltype<-function(obj, previous_layer, previous_layermap, cur_lay
   
   g<-DimPlot(obj, group.by = cur_layer, label=T)
   if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-    g2<-get_bubble_plot(obj, NA, cur_layer, bubblemap_file)
+    g2<-get_bubble_plot(obj, NA, cur_layer, bubblemap_file, assay)
     g<-g+g2+plot_layout(ncol = 2, widths = c(3, 5))
     width=6400
   }else{
