@@ -896,16 +896,19 @@ for(countfile_index in c(1:length(countfiles))){
     
     write.csv(diffResult, file=paste0(prefix, "_DESeq2_volcanoPlot.csv"))
     
-    if (useRawPvalue==1) {
-      p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
-        scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
-    } else {
-      p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
-        scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
+    if(useRawPvalue == 1){
+      yname=bquote(p~value)
+      yvar="pvalue"
+    }else{
+      yname=bquote(Adjusted~p~value)
+      yvar="padj"
     }
-    p<-p+geom_point(aes(size=log10BaseMean,colour=colour))+
+    xname=bquote(log[2]~Fold~Change)
+    p<-ggplot(diffResult,aes_string(x="log2FoldChange",y=yvar))+
+      scale_y_continuous(trans=reverselog_trans(10),name=yname) +
+      geom_point(aes(size=log10BaseMean,colour=colour))+
       scale_color_manual(values=changeColours,guide = FALSE)+
-      scale_x_continuous(name=bquote(log[2]~Fold~Change))+
+      scale_x_continuous(name=xname)+
       geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
       geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
       guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
@@ -922,6 +925,26 @@ for(countfile_index in c(1:length(countfiles))){
     
     filePrefix<-paste0(prefix,"_DESeq2_volcanoPlot")
     drawPlot(filePrefix, outputFormat, 10, 10, 3000, 3000, p, "Volcano")
+
+    if(require("EnhancedVolcano")){
+      if(!("Feature_gene_name" %in% colnames(diffResult))){
+        diffResult$Feature_gene_name=rownames(diffResult)
+      }
+
+      p<-EnhancedVolcano(diffResult,
+          lab = diffResult$Feature_gene_name,
+          x = 'log2FoldChange',
+          y = yvar,
+          title = comparisonTitle,
+          pCutoff = pvalue,
+          FCcutoff = log2(foldChange),
+          pointSize = 3.0,
+          labSize = 6.0,
+          colAlpha = 1,
+          subtitle = NULL) + ylab(yname)
+      filePrefix<-paste0(prefix,"_DESeq2_volcanoEnhanced")
+      drawPlot(filePrefix, outputFormat, 10, 10, 3000, 3000, p, "Volcano")
+    }
   }
   
   if(length(pairedspearman) > 0){
