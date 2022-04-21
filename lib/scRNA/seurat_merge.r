@@ -11,6 +11,7 @@ library(scales)
 library(stringr)
 library(glmGamPoi)
 require(data.table)
+library(patchwork)
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
@@ -27,6 +28,8 @@ if(regress_by_percent_mt){
 }else{
   vars.to.regress=NULL
 }
+
+essential_genes=read.table(parFile2, sep="\t" ,header=F)$V1
 
 prefix<-outFile
 
@@ -50,7 +53,7 @@ if(by_sctransform){
     #perform sctransform
     objs<-lapply(objs, function(x){
       
-      x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=FALSE, verbose = FALSE)
+      x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=TRUE, verbose = FALSE)
       return(x)
     })  
     obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
@@ -58,7 +61,7 @@ if(by_sctransform){
   }else{
     obj=rawobj
     rm(rawobj)
-    obj<-SCTransform(obj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=FALSE, verbose = FALSE)
+    obj<-SCTransform(obj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=TRUE, verbose = FALSE)
   }
   assay="SCT"
 }else{
@@ -68,7 +71,9 @@ if(by_sctransform){
   rm(rawobj)
   obj<-NormalizeData(obj, verbose = FALSE)
   obj<-FindVariableFeatures(obj, selection.method = "vst", nfeatures = 2000, verbose = FALSE) 
-  obj<-ScaleData(obj,vars.to.regress = vars.to.regress, features = rownames(obj))
+  vgenes<-VariableFeatures(obj, selection.method = "vst")
+  sgenes<-unique(c(essential_genes, vgenes))
+  obj<-ScaleData(obj,vars.to.regress = vars.to.regress, features = sgenes)
   assay="RNA"
 }
 
