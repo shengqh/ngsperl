@@ -28,7 +28,15 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
 
-  my $dexseqFile = get_param_file( $config->{$section}{dexseq_count}, "dexseq_count", 1 );
+  my $python3;
+  my $dexseqFile;
+  if($self->using_docker()){
+    $python3 = "";
+    $dexseqFile = get_option( $config, $section, "dexseq_count", "dexseq_count" );
+  }else{
+    $python3 = "python3";
+    $dexseqFile = get_param_file( $config->{$section}{dexseq_count}, "dexseq_count", 1 );
+  }
   my $gffFile    = get_param_file( $config->{$section}{gff_file},     "gff_file",     1 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
@@ -54,7 +62,7 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-    print $pbs "samtools view $bam_file | python3 $dexseqFile $gffFile -s no - $final_file";
+    print $pbs "$python3 $dexseqFile $gffFile -s no $bam_file $final_file";
 
     $self->close_pbs( $pbs, $pbs_file );
 
