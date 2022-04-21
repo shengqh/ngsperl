@@ -436,6 +436,7 @@ sub getConfig {
         controls   => $def->{"controls"},
         output_bigwig=>$macs2_output_bigwig,
         chr_size_file   => $chr_size_file,
+        can_result_be_empty_file => 1,
         sh_direct  => 0,
         pbs        => {
           "email"    => $email,
