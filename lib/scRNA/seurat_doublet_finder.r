@@ -1,19 +1,5 @@
 
-source("scRNA_func.r")
-library(dplyr)
 library(Seurat)
-library(ggplot2)
-library(ggpubr)
-library(DT)
-library(data.table)
-library(digest)
-library(heatmap3)
-library(cowplot)
-library(scales)
-library(stringr)
-library(htmltools)
-library(patchwork)
-library(glmGamPoi)
 library(DoubletFinder)
 
 options(future.globals.maxSize= 10779361280)
@@ -29,7 +15,7 @@ reduction<-myoptions$reduction
 npcs<-as.numeric(myoptions$pca_dims)
 doublet_rates<-as.numeric(myoptions$doublet_rates)
 
-assay=ifelse(myoptions$by_sctransform == "0", "RNA", "SCT")
+assay=ifelse(by_sctransform, "SCT", "RNA")
 by_harmony<-reduction=="harmony"
 
 prefix<-outFile
@@ -42,20 +28,25 @@ sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
 bcmvn <- find.pK(sweep.stats)
 bcmvn$pK=as.numeric(as.character(bcmvn$pK))
 
-pK=as.numeric(as.character(bcmvn$pK))
+pK=bcmvn$pK
 BCmetric=bcmvn$BCmetric
 pK_choose = pK[which(BCmetric %in% max(BCmetric))]
+pN=0.25
 
-nExp <- round(ncol(obj) * doublet_rates)  # expect 4% doublets
-obj <- doubletFinder_v3(obj, pN = 0.25, pK = pK_choose, nExp = nExp, PCs = 1:npcs)
+params_df<-data.frame("pN"=pN, "pK"=pK_choose, "doublet_rate"=c(1:10)*0.01)
+params_df$nExp = round(ncol(obj) * params_df$doublet_rate)
+params_df$label=paste0("DF.classification_", params_df$pN, "_", params_df$pK, "_", params_df$nExp)
+write.csv(params_df, paste0(outFile, ".options.csv"), row.names=F)
+
+doublet_rate=0.01
+for (doublet_rate in c(1:10) * 0.01){
+  cat("doublet_rate=", doublet_rate, "\n")
+  nExp <- round(ncol(obj) * doublet_rate)  # expect 4% doublets
+  obj <- doubletFinder_v3(obj, pN =pN, pK = pK_choose, nExp = nExp, PCs = 1:npcs)
+}
 
 write.csv(obj@meta.data, paste0(outFile, ".meta.csv"))
-options<-data.frame("name"=c("pN", "pK", "nExp", "npcs"),
-"value"=c(0.25, pK_choose, nExp, npcs))
-write.csv(options, paste0(outFile, ".options.csv"), row.names=F)
-
-#ggplot(bcmvn, aes(pK, BCmetric)) + geom_point()
-
+saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
 
 #https://nbisweden.github.io/workshop-scRNAseq/labs/compiled/seurat/seurat_01_qc.html
-
+  
