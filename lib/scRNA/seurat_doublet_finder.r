@@ -49,7 +49,7 @@ pK_choose = pK[which(BCmetric %in% max(BCmetric))]
 nExp <- round(ncol(obj) * doublet_rates)  # expect 4% doublets
 obj <- doubletFinder_v3(obj, pN = 0.25, pK = pK_choose, nExp = nExp, PCs = 1:npcs)
 
-saveRDS(obj@meta.data, paste0(outFile, ".meta.txt"))
+write.csv(obj@meta.data, paste0(outFile, ".meta.csv"))
 options<-data.frame("name"=c("pN", "pK", "nExp", "npcs"),
 "value"=c(0.25, pK_choose, nExp, npcs))
 write.csv(options, paste0(outFile, ".options.csv"), row.names=F)
