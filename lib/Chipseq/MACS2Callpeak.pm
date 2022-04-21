@@ -85,11 +85,22 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file, undef, 1 );
 
     print $pbs "   
+rm -f $sample_name.macs2.failed $sample_name.macs2.succeed 
+
 macs2 callpeak $option $treatment $control -n $sample_name
-cut -f1-6 ${sample_name}_peaks.${peak_name} > ${sample_name}_peaks.${peak_name}.bed
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch $sample_name.macs2.failed
+  rm -f ${sample_name}_peaks.${peak_name}
+else
+  touch $sample_name.macs2.succeed
+  cut -f1-6 ${sample_name}_peaks.${peak_name} > ${sample_name}_peaks.${peak_name}.bed
+fi
+
 ";
       if ($outputBigwig) {
     $chr_size_file = $config->{$section}{chr_size_file} or die "define ${section}::chr_size_file first to be used in output_bigwig";
