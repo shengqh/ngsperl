@@ -40,7 +40,7 @@ regress_by_percent_mt<-ifelse(myoptions$regress_by_percent_mt == "1", TRUE, FALS
 min_markers<-20
 
 previous_layer<-myoptions$celltype_layer
-cur_layer="sub_cell_type"
+cur_layer<-myoptions$output_layer
 seurat_cur_layer=paste0("seurat_", cur_layer)
 
 if(regress_by_percent_mt){
@@ -280,3 +280,4 @@ png(paste0(prefix, ".", cur_layer, ".png"), width=width, height=4000, res=300)
 print(g)
 dev.off()
 
+write.csv(obj@meta.data, paste0(prefix, ".meta.csv"))
