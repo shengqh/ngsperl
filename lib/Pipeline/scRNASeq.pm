@@ -21,7 +21,10 @@ use scRNA::Modules;
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(initializeScRNASeqDefaultOptions addEdgeRTask performScRNASeq performScRNASeqTask)] );
+our %EXPORT_TAGS = ( 'all' => [qw(initializeScRNASeqDefaultOptions 
+  addEdgeRTask 
+  performScRNASeq 
+  performScRNASeqTask)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -213,8 +216,8 @@ sub addMarkerGenes {
   push( @$summary, $markergenes_task );
 }
 
-sub addGeneTask {
-  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name ) = @_;
+sub get_marker_gene_dict {
+  my ( $def ) = @_;
 
   my $marker_genes = $def->{plot_marker_genes};
   if (not defined $marker_genes){
@@ -232,6 +235,14 @@ sub addGeneTask {
       file => $def->{pathway_genes_file}
     };
   }
+
+  return($marker_genes);
+}
+
+sub addGeneTask {
+  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name ) = @_;
+
+  my $marker_genes = get_marker_gene_dict($def);
 
   for my $key (sort keys %$marker_genes){
     my $file = $marker_genes->{$key}{file};
@@ -944,6 +955,32 @@ sub getScRNASeqConfig {
       push( @$summary, "scRNABatchQC" );
     }
 
+    my $essential_gene_task = "essential_genes";
+    $config->{$essential_gene_task} = {
+      class                    => "CQS::UniqueR",
+      perform                  => 1,
+      target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $essential_gene_task,
+      rtemplate                => "../scRNA/scRNA_func.r,../scRNA/essential_genes.r",
+      parameterSampleFile1     => {
+        species               => getValue( $def, "species" ),
+        db_markers_file       => getValue( $def, "markers_file" ),
+        curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
+        HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
+        remove_subtype        => getValue( $def, "remove_subtype", ""),
+        bubblemap_file        => $def->{bubblemap_file},
+      },
+      parameterSampleFile2    => get_marker_gene_dict($def),
+      rCode                    => "",
+      output_file_ext          => ".txt",
+      sh_direct                => 1,
+      pbs                      => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    };
+    push( @$summary, $essential_gene_task );
+
     my $seurat_task;
     if ( getValue( $def, "perform_seurat" ) ) {
       my $reduction = "pca";
@@ -1052,6 +1089,7 @@ sub getScRNASeqConfig {
           target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_task,
           rtemplate                => "../scRNA/scRNA_func.r,$preprocessing_rscript",
           parameterFile1_ref => [$seurat_rawdata, ".rawobj.rds"],
+          parameterFile2_ref => $essential_gene_task,
           parameterSampleFile1     => {
             Mtpattern             => getValue( $def, "Mtpattern" ),
             rRNApattern           => getValue( $def, "rRNApattern" ),
@@ -1203,6 +1241,7 @@ sub getScRNASeqConfig {
           target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $scDynamic_task,
           rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamic.r",
           parameterFile1_ref => [$seurat_task, ".rds"],
+          parameterFile3_ref => $essential_gene_task,
           parameterSampleFile1     => {
             pca_dims              => getValue( $def, "pca_dims" ),
             by_sctransform        => getValue( $def, "by_sctransform" ),
@@ -1220,7 +1259,7 @@ sub getScRNASeqConfig {
             summary_layer_file => $def->{summary_layer_file},
           },
           output_file_ext      => ".scDynamic.rds",
-          output_other_ext  => ".layer0_to_layer1.png,.layer1_to_layer2.png,.layer2_to_layer3.png,.layer3_to_layer4.png",
+          output_other_ext  => ".layer0_to_layer1.png,.layer1_to_layer2.png,.layer2_to_layer3.png,.layer3_to_layer4.png,.layer3_to_layer4.meta.csv",
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
@@ -1237,6 +1276,7 @@ sub getScRNASeqConfig {
           target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $subcluster_task,
           rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_celltype_subcluster.r",
           parameterFile1_ref       => [$scDynamic_task, ".rds"],
+          parameterFile3_ref => $essential_gene_task,
           parameterSampleFile1     => {
             pca_dims              => getValue( $def, "pca_dims" ),
             by_sctransform        => getValue( $def, "by_sctransform" ),
@@ -1254,8 +1294,8 @@ sub getScRNASeqConfig {
             summary_layer_file    => $def->{summary_layer_file},
             celltype_layer        => "layer4"
           },
-          output_file_ext      => ".subcluster.rds",
-          output_other_ext  => ".umap.sample_cell.png",
+          output_file_ext      => ".meta.csv",
+          output_other_ext  => ".umap.png",
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
@@ -1264,6 +1304,11 @@ sub getScRNASeqConfig {
           },
         };
         push( @$summary, $subcluster_task );
+
+        if (getValue( $def, "perform_SignacX_tcell", 0 ) ) {
+          my $signacX_name = $scDynamic_task . "_SignacX_tcell";
+          addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, $scDynamic_task, 1, $subcluster_task, $reduction );
+        }
       }
 
       if(getValue($def, "perform_multires", 0)){
@@ -1459,7 +1504,7 @@ sub getScRNASeqConfig {
 
         if (getValue( $def, "perform_SignacX_tcell", 0 ) ) {
           my $signacX_name = $celltype_task . "_SignacX_tcell";
-          addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, $cluster_task, 1, $celltype_task, $reduction );
+          addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, [$cluster_task, ".final.rds"], 1, $celltype_task, $reduction );
           push @report_files, ($signacX_name, ".SignacX.png");
           push @report_names, "signacx_tcell_png";
         }
@@ -1531,7 +1576,7 @@ sub getScRNASeqConfig {
         my $parameterSampleFile6_ref = undef;
         if (getValue( $def, "perform_SignacX", 0 ) ) {
           my $signacX_name = $cluster_task . "_SignacX";
-          addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, $cluster_task, 0 );
+          addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, [$cluster_task, ".final.rds"], 0 );
           push @report_files, ($signacX_name, ".SignacX.png");
           push @report_names, "signacx_png";
 
@@ -1563,7 +1608,7 @@ sub getScRNASeqConfig {
 
         if (getValue( $def, "perform_tcell_signac", 0 ) ) {
           my $tcell_signacX_name = $celltype_task . "_tcell_signac";
-          addSignac( $config, $def, $summary, $target_dir, $project_name, $tcell_signacX_name, $cluster_task, 1, $celltype_task );
+          addSignac( $config, $def, $summary, $target_dir, $project_name, $tcell_signacX_name, [$cluster_task, ".final.rds"], 1, $celltype_task );
           push @report_files, ($tcell_signacX_name, ".signac.png");
           push @report_names, "tcell_signac_png";
         }
