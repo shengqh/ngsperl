@@ -150,6 +150,7 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_dynamic_resolution", 1 );
   initDefaultValue( $def, "perform_fix_resolution", 1 );
   initDefaultValue( $def, "remove_subtype", "T cells,B cells,Fibroblasts,Neurons,Epithelial cells,Macrophages,Dendritic cells"),
+  initDefaultValue( $def, "best_resolution_min_markers", 20);
   
   return $def;
 }
@@ -1217,8 +1218,8 @@ sub getScRNASeqConfig {
             doublet_rates         => getValue( $def, "doublet_rates" ),
             filtered_by_hto => $perform_split_hto_samples,
           },
-          output_file_ext      => ".final.rds",
-          output_other_ext  => ".meta.csv",
+          output_file_ext      => ".meta.rds",
+          output_other_ext  => ".meta.csv,.options.csv",
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
@@ -1233,12 +1234,13 @@ sub getScRNASeqConfig {
       my $celltype_task = undef;
 
       if(getValue($def, "perform_dynamic_resolution")){
-        my $scDynamic_task = $seurat_task . "_dynamic_res";
+        my $dynamicMethod = getValue($def, "dynamic_byDE", 0)?"_DE":"";
+        my $scDynamic_task = $seurat_task . "_dynamic_res${dynamicMethod}";
         $config->{$scDynamic_task} = {
           class                    => "CQS::UniqueR",
           perform                  => 1,
           target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $scDynamic_task,
-          rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamic.r",
+          rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamic${dynamicMethod}.r",
           parameterFile1_ref => [$seurat_task, ".rds"],
           parameterFile3_ref => $essential_gene_task,
           parameterSampleFile1     => {
@@ -1256,7 +1258,9 @@ sub getScRNASeqConfig {
             bubblemap_file        => $def->{bubblemap_file},
             bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
             summary_layer_file => $def->{summary_layer_file},
+            best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
           },
+          parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
           output_file_ext      => ".scDynamic.meta.rds",
           output_other_ext  => ".layer0_to_layer1.png,.layer1_to_layer2.png,.layer2_to_layer3.png,.layer3_to_layer4.png,.layer3_to_layer4.meta.csv,.scDynamic.meta.csv",
           sh_direct            => 1,
@@ -1294,9 +1298,11 @@ sub getScRNASeqConfig {
             summary_layer_file    => $def->{summary_layer_file},
             celltype_layer        => "layer4",
             output_layer          => "cell_type",
+            best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
           },
-          output_file_ext      => ".meta.rds,.meta.csv",
-          output_other_ext  => ".umap.png",
+          parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
+          output_file_ext      => ".meta.rds",
+          output_other_ext  => ".umap.png,.meta.csv,.options.csv",
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
@@ -1308,7 +1314,7 @@ sub getScRNASeqConfig {
 
         if (getValue( $def, "perform_SignacX_tcell", 0 ) ) {
           my $signacX_name = $subcluster_task . "_SignacX_tcell";
-          addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, $seurat_task, 1, $subcluster_task, $reduction );
+          addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, $seurat_task, 1, $subcluster_task, $reduction, "cell_type" );
         }
 
         if(defined $df_task){
@@ -1317,10 +1323,11 @@ sub getScRNASeqConfig {
             class                    => "CQS::UniqueR",
             perform                  => 1,
             target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $doublet_check_task,
-            rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_doublet_check.r",
+            rtemplate                => "countTableVisFunctions.R,../scRNA/scRNA_func.r,../scRNA/seurat_doublet_check.r",
             parameterFile1_ref       => [ $seurat_task, ".rds" ],
             parameterFile2_ref       => [ $subcluster_task, ".meta.rds" ],
-            parameterFile3_ref       => [ $df_task, ".meta.csv" ],
+            parameterFile3_ref       => [ $df_task, ".meta.rds" ],
+            parameterFile4_ref       => [ $df_task, ".options.csv" ],
             parameterSampleFile1     => {
               cluster_layer           => "seurat_clusters",
               celltype_layer          => "cell_type",
