@@ -39,7 +39,7 @@ pN=0.25
 
 params_df<-data.frame("pN"=pN, "pK"=pK_choose, "doublet_rate"=c(1:10)*0.01)
 params_df$nExp = round(ncol(obj) * params_df$doublet_rate)
-params_df$label=paste0("DF.classification_", params_df$pN, "_", params_df$pK, "_", params_df$nExp)
+params_df$label=paste0("DF.classifications_", params_df$pN, "_", params_df$pK, "_", params_df$nExp)
 write.csv(params_df, paste0(outFile, ".options.csv"), row.names=F)
 
 doublet_rate=0.01
