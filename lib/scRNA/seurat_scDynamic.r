@@ -1,5 +1,3 @@
-source("scRNA_func.r")
-
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -60,8 +58,19 @@ cell_activity_database<-read_cell_markers_file(markerfile, species, remove_subty
 
 prefix<-outFile
 
-finalList=readRDS(parFile1)
-obj<-finalList$obj
+obj<-readRDS(parFile1)
+if(is.list(obj)){
+  obj<-obj$obj
+}
+
+if(parSampleFile2 != ""){
+  ignore_gene_files=read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)
+  cat("removing genes in", ignore_gene_files$V1, "\n")
+  ignore_genes=unlist(lapply(ignore_gene_files$V1, function(x){
+    readLines(x)
+  }))
+  obj<-obj[!(rownames(obj) %in% ignore_genes),]
+}
 
 if(has_bubblemap){
   allgenes<-rownames(obj)
