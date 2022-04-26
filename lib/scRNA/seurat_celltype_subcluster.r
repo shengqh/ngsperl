@@ -1,4 +1,3 @@
-
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -67,8 +66,16 @@ if(!exists("obj")){
   if(is.list(obj)){
     obj<-obj$obj
   }
-  Idents(obj)<-previous_layer
   obj@meta.data = readRDS(parFile2)
+  Idents(obj)<-previous_layer
+}
+
+if(parSampleFile2 != ""){
+  ignore_gene_files=read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)
+  ignore_genes=unlist(lapply(ignore_gene_files$V1, function(x){
+    readLines(x)
+  }))
+  obj<-obj[!(rownames(obj) %in% ignore_genes),]
 }
 
 if(has_bubblemap){
@@ -96,7 +103,7 @@ previous_celltypes<-names(tblct)
 allmarkers<-NULL
 allcts<-NULL
 cluster_index=0
-pct<-previous_celltypes[1]
+pct<-previous_celltypes[5]
 for(pct in previous_celltypes){
   key = paste0(previous_layer, ": ", pct, ":")
   cells<-rownames(meta)[meta[,previous_layer] == pct]
