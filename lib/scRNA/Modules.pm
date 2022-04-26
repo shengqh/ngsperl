@@ -324,7 +324,7 @@ sub addCHETAH {
 }
 
 sub addSignac {
-  my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $seurat_ref, $tcell_only, $celltype, $reduction ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $seurat_ref, $tcell_only, $celltype, $reduction, $celltype_layer ) = @_;
 
   $config->{$task_name} = {
     class                => "CQS::UniqueR",
@@ -338,6 +338,7 @@ sub addSignac {
       tcell_only          => $tcell_only,
       reduction           => $reduction,
       pca_dims            => getValue( $def, "pca_dims" ),
+      celltype_layer      => $celltype_layer
     },
     output_file_ext => ".SignacX.png;.SignacX.rds",
     sh_direct       => 1,
@@ -350,7 +351,7 @@ sub addSignac {
 
   if($tcell_only){
     if($celltype =~ /_dynamic_res/){
-      $config->{$task_name}{parameterFile2_ref} = [ $celltype, ".meta.csv" ];
+      $config->{$task_name}{parameterFile2_ref} = [ $celltype, ".meta.rds" ];
     }else{
       $config->{$task_name}{parameterFile2_ref} = [ $celltype, ".cluster.csv" ];
       $config->{$task_name}{parameterFile3_ref} = [ $celltype, ".celltype.csv" ];
