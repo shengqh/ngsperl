@@ -1,5 +1,3 @@
-source("scRNA_func.r")
-
 library(SignacX)
 library(Seurat)
 library(ggplot2)
@@ -14,8 +12,12 @@ pca_dims=1:as.numeric(myoptions$pca_dims)
 resolution=as.numeric(myoptions$resolution)
 reduction=myoptions$reduction
 
-finalList=readRDS(parFile1)
-obj=finalList$obj
+if(!exists('obj')){
+  obj=readRDS(parFile1)
+  if(is.list(obj)){
+    obj=obj$obj
+  }
+}
 
 if(DefaultAssay(obj) == "integrated"){
   if(nrow(obj@assays$integrated@counts) == 0){
@@ -29,7 +31,7 @@ if(DefaultAssay(obj) == "integrated"){
 
 if(tcell_only){
   cells_tbl = read.csv(parFile2, row.names=1)
-  cells=rownames(cells_tbl)[cells_tbl$cellactivity_clusters == "T cells"]
+  cells=rownames(cells_tbl)[cells_tbl[,myoptions$celltype_layer] == "T cells"]
   obj=subset(obj, cells=cells)
   obj<-FindNeighbors(object = obj, reduction=reduction, dims=pca_dims, verbose=FALSE)
 }
