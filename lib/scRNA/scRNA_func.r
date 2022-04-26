@@ -646,7 +646,7 @@ get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay){
   ct<-cell_type[!duplicated(cell_type$cell_type),]
   missed = ct$cell_type[!(ct$cell_type %in% ct_levels)]
   if(length(missed) > 0){
-    ct_levels = c(ct_levels, missed)
+    ct_levels = c(ct_levels, as.character(missed))
   }
   ct_levels = ct_levels[ct_levels %in% ct$cell_type]
   cell_type$cell_type<-factor(cell_type$cell_type, levels=ct_levels)
@@ -713,3 +713,27 @@ draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, assay, p
   print(g)
   dev.off()
 }
+
+find_best_resolution<-function(subobj, clusters, min.pct, logfc.threshold, min_markers) {  
+  cluster = clusters[1]
+  lastCluster = clusters[1]
+  for(cluster in clusters){
+    cat("  ", cluster, "\n")
+    Idents(subobj)<-cluster
+    if(length(unique(Idents(subobj))) == 1){
+      lastCluster = cluster
+      next
+    }
+    
+    markers=FindAllMarkers(subobj, only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+    markers=markers[markers$p_val_adj < 0.05,]
+    nmarkers=unlist(lapply(unique(Idents(subobj)), function(x){sum(markers$cluster==x)}))
+    if(all(nmarkers >= min_markers)){
+      lastCluster = cluster
+    }else{
+      break
+    }
+  }
+  return(lastCluster)
+}
+  
