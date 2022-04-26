@@ -1,52 +1,89 @@
 
 library(Seurat)
-library(DoubletFinder)
+library(ggplot2)
+library(ggpubr)
+library(cowplot)
+library(scales)
+library(stringr)
+library(htmltools)
+library(patchwork)
 
 options(future.globals.maxSize= 10779361280)
-random.seed=20200107
-min.pct=0.5
-logfc.threshold=0.6
 
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
-by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
-reduction<-myoptions$reduction
-npcs<-as.numeric(myoptions$pca_dims)
-doublet_rates<-as.numeric(myoptions$doublet_rates)
+bubblemap_file=myoptions$bubblemap_file
+has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
 
+by_sctransform<-ifelse(myoptions$by_sctransform == "1", TRUE, FALSE)
 assay=ifelse(by_sctransform, "SCT", "RNA")
-by_harmony<-reduction=="harmony"
 
 prefix<-outFile
 
-finalList=readRDS(parFile1)
-obj<-finalList$obj
-
-sweep.res <- paramSweep_v3(obj, PCs = 1:npcs, sct = by_sctransform)
-sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
-bcmvn <- find.pK(sweep.stats)
-bcmvn$pK=as.numeric(as.character(bcmvn$pK))
-
-pK=bcmvn$pK
-BCmetric=bcmvn$BCmetric
-pK_choose = pK[which(BCmetric %in% max(BCmetric))]
-pN=0.25
-
-params_df<-data.frame("pN"=pN, "pK"=pK_choose, "doublet_rate"=c(1:10)*0.01)
-params_df$nExp = round(ncol(obj) * params_df$doublet_rate)
-params_df$label=paste0("DF.classification_", params_df$pN, "_", params_df$pK, "_", params_df$nExp)
-write.csv(params_df, paste0(outFile, ".options.csv"), row.names=F)
-
-doublet_rate=0.01
-for (doublet_rate in c(1:10) * 0.01){
-  cat("doublet_rate=", doublet_rate, "\n")
-  nExp <- round(ncol(obj) * doublet_rate)  # expect 4% doublets
-  obj <- doubletFinder_v3(obj, pN =pN, pK = pK_choose, nExp = nExp, PCs = 1:npcs)
+if(!exists('obj')){
+  obj=readRDS(parFile1)
+  if(is.list(obj)){
+    obj<-obj$obj
+  }
+  meta1=readRDS(parFile2)
+  meta1$id=rownames(meta1)
+  meta2=readRDS(parFile3)
+  meta2$id=rownames(meta2)
+  meta=merge(meta1, meta2, by="id")
+  rownames(meta)<-meta$id
+  meta=meta[colnames(obj),]
+  obj@meta.data=meta
 }
 
-write.csv(obj@meta.data, paste0(outFile, ".meta.csv"))
-saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
+doublet_options=read.csv(parFile4)
 
-#https://nbisweden.github.io/workshop-scRNAseq/labs/compiled/seurat/seurat_01_qc.html
+all_dt=NULL
+idx=1
+for(idx in c(1:nrow(doublet_options))){
+  doublet_rate=doublet_options$doublet_rate[idx]
+  doublet_col=doublet_options$label[idx]
+
+  dt=as.data.frame.matrix(table(obj@meta.data[,myoptions$cluster_celltype_layer], obj@meta.data[,doublet_col]))
+  dt$Total<-dt$Doublet+dt$Singlet
+  dt$DoubletPerc=dt$Doublet / dt$Total
+  dt$DoubletRate=doublet_rate
+  dt$Cluster=rownames(dt)
+
+  all_dt<-rbind(all_dt, dt)
   
+  doublet_cells=colnames(obj)[obj@meta.data[,doublet_col]=="Doublet"]
+  
+  g1<-DimPlot(obj, group.by = myoptions$cluster_layer, label=T) + ggtitle(myoptions$celltype_layer)+
+    scale_color_discrete(labels = levels(obj@meta.data[,myoptions$cluster_celltype_layer]))
+  
+  g2<-DimPlot(obj, label=F, cells.highlight =doublet_cells) + 
+    ggtitle("DoubletFinder") + scale_color_discrete(type=c("gray", "red"), labels = c("Singlet", "Doublet"))
+  
+  if(has_bubblemap){
+    subobj=subset(obj, cells=doublet_cells)
+    layout <- "
+AABB
+CCCC
+"
+    g3<-get_bubble_plot(subobj, myoptions$cluster_layer, myoptions$celltype_layer, bubblemap_file, assay)
+    g<-g1+g2+g3+plot_layout(design=layout)
+    height=4000
+  }else{
+    g<-g1+g2+plot_layout(ncol=2)
+    height=2000
+  }
+  
+  png(paste0(outFile, ".DR", doublet_rate, ".umap.png"), width=4400, height=height, res=300)
+  print(g)
+  dev.off()
+}
+
+all_dt$Cluster<-factor(all_dt$Cluster, levels=levels(obj@meta.data[,myoptions$cluster_celltype_layer]))
+png(paste0(outFile, ".doublet_perc.png"), width=3000, height=3000, res=300)
+g<-ggplot(all_dt, aes(x=DoubletRate, y=DoubletPerc)) + geom_line()  + facet_wrap(~Cluster) + theme_bw3()
+print(g)
+dev.off()
+
+write.csv(all_dt, paste0(outFile, ".doublet_perc.csv"))
+
