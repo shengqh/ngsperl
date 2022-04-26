@@ -535,7 +535,7 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file){
   }
 
   if("percent.ribo" %in% colnames(obj@meta.data)){
-    g3<-FeaturePlot(obj, features="percent.hb") + ggtitle("Percentage of ribosomal genes")
+    g3<-FeaturePlot(obj, features="percent.ribo") + ggtitle("Percentage of ribosomal genes")
     g<-g+g3
     width=width+2200
     ncol=ncol+1
