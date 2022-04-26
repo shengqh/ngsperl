@@ -485,10 +485,10 @@ sub get_first_result_file {
         return $files[0];
       }
     }
-    die "section $refSectionName return nothing!";
+    die "section $refSectionName return nothing for pattern $pattern !";
   }
 
-  die "section $refSectionName return nothing!";
+  die "section $refSectionName return nothing for pattern $pattern !";
 }
 
 sub parse_param_file {
