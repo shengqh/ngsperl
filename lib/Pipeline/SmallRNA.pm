@@ -1408,8 +1408,9 @@ fi
     for my $cat (@$categories){
       push(@$file_exts, ".${cat}.query.count");
       push(@$file_exts, ".${cat}.estimated.count");
+      push(@$file_exts, ".${cat}.aggregated.count");
     }
-    my $file_ext_str = join(",", @$file_exts);
+    my $file_ext_str = join(",", @$file_exts) . ",.read.count";
 
     my $refseq_bacteria_table = "refseq_bacteria_table";
     $config->{$refseq_bacteria_table} = {
@@ -1442,7 +1443,11 @@ fi
           $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
         addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_estimated", [ $refseq_bacteria_table, ".${cat}.estimated.count\$" ],
           $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_aggregated", [ $refseq_bacteria_table, ".${cat}.aggregated.count\$" ],
+          $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       }
+      addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_read", [ $refseq_bacteria_table, ".read.count\$" ],
+        $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
     }
   }
 
