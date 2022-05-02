@@ -23,6 +23,22 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.06';
 
+sub getUniqueGroups {
+  my ($def) = @_;
+  my $result = "";
+  if (defined $def->{unique_groups}){
+    my $uni_groups = $def->{unique_groups};
+    my @uniqueGroups;
+    if (is_string($uni_groups)){
+      @uniqueGroups = split(/[,;]/, $uni_groups);
+    }else{
+      @uniqueGroups = @$uni_groups;
+    }
+    $result = "uniqueGroupNames=c('" . join("','", @uniqueGroups) . "');";
+  }
+  return($result);
+}
+
 sub getSmallRNAConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
@@ -2149,11 +2165,7 @@ fi
   push @$summary_ref, ("reads_in_tasks");
 
   if ( $search_host_genome && $search_nonhost_database ) {
-    my $cur_r_code = $R_font_size;
-    if (defined $def->{unique_groups}){
-      my @uniqueGroups = split(/[,;]/, $def->{unique_groups});
-      $cur_r_code = $cur_r_code . "uniqueGroupNames=c('" . join("','", @uniqueGroups) . "');";
-    }
+    my $cur_r_code = $R_font_size . " " . getUniqueGroups($def);
     $config->{reads_in_tasks_pie} = {
       class                => "CQS::UniqueR",
       suffix               => "_pie",
@@ -2199,11 +2211,7 @@ fi
     push @$summary_ref, ( "reads_in_tasks_pie", "reads_in_tasks_all" );
 
     if($perform_nonhost_genome_count){  
-      my $rCode = '';
-      if (defined $def->{host_microbial_vis_groups}){
-        my $visgroups = $def->{host_microbial_vis_groups};
-        $rCode = 'groupNames=c("' . join('", "', @$visgroups) . '"';
-      }
+      my $rCode = getUniqueGroups($def);
       $config->{host_microbial_vis} = {
         class                     => "CQS::UniqueR",
         perform                   => 1,
