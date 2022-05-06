@@ -31,7 +31,8 @@ remove_subtype<-myoptions$remove_subtype
 annotate_tcell<-ifelse(myoptions$annotate_tcell == "0", FALSE, TRUE)
 HLA_panglao5_file<-myoptions$HLA_panglao5_file
 tcell_markers_file<-myoptions$tcell_markers_file
-assay=ifelse(myoptions$by_sctransform == "0", "RNA", "SCT")
+assay=ifelse(by_sctransform, "SCT", "RNA")
+vis_slot=ifelse(by_sctransform, "data", "scale.data")
 by_harmony<-reduction=="harmony"
 regress_by_percent_mt<-ifelse(myoptions$regress_by_percent_mt == "1", TRUE, FALSE)
 
@@ -236,7 +237,7 @@ for(pct in previous_celltypes){
     height<-max(3000, min(10000, length(top10genes) * 60 + 1000))
     
     png(paste0(curprefix, ".top10.heatmap.png"), width=3000, height=3000, res=300)
-    g<-DoHeatmap(subobj, assay="RNA", features = top10genes, group.by = seurat_cur_layer, angle = 90) + NoLegend()
+    g<-DoHeatmap(subobj, assay="RNA", slot=vis_slot, features = top10genes, group.by = seurat_cur_layer, angle = 90) + NoLegend()
     print(g)
     dev.off()
   }
@@ -267,7 +268,7 @@ png(paste0(prefix, ".top10.heatmap.png"), width=width, height=height, res=300)
 print(g)
 dev.off()
 
-g<-DimPlot(obj, assay="RNA", group.by = "seurat_clusters", label=T) + ggtitle(cur_layer)+
+g<-DimPlot(obj, group.by = "seurat_clusters", label=T) + ggtitle(cur_layer)+
       scale_color_discrete(labels = ct[,seurat_cur_layer])
 if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
   g<-g+get_bubble_plot(obj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA")
