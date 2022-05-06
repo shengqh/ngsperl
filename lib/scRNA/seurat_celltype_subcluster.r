@@ -117,7 +117,7 @@ for(pct in previous_celltypes){
   DefaultAssay(subobj)<-"RNA"
   if(by_harmony){
     cat(key, "harmony\n")
-    subobj<-do_harmony(subobj, by_sctransform, regress_by_percent_mt, false, "", pca_dims)
+    subobj<-do_harmony(subobj, by_sctransform, regress_by_percent_mt, FALSE, "", pca_dims)
     curreduction="harmony"
   }else{
     if (by_sctransform) {
