@@ -1,6 +1,3 @@
-
-source("scRNA_func.r")
-
 library(Seurat)
 library(ggplot2)
 library(digest)
@@ -270,11 +267,13 @@ draw_qc<-function(prefix, rawobj, ident_name) {
   p1<-ggplot(mt, aes(y=mt,x=nCount) ) +
     geom_bin2d(bins = 70) + 
     scale_fill_continuous(type = "viridis") + 
+    scale_y_continuous(breaks = seq(0, 100, by = 10)) +
     ylab("Percentage of mitochondrial") + xlab("log10(number of read)") +
     facet_wrap(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
   p2<-ggplot(mt, aes(y=mt,x=nFeature) ) +
     geom_bin2d(bins = 70) + 
     scale_fill_continuous(type = "viridis") + 
+    scale_y_continuous(breaks = seq(0, 100, by = 10)) +
     ylab("Percentage of mitochondrial") + xlab("log10(number of feature)") +
     facet_wrap(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
   p<-p1+p2+plot_layout(ncol=1)
@@ -286,5 +285,18 @@ draw_qc(outFile, rawobj, "orig.ident")
 
 if(any(rawobj$orig.ident != rawobj$sample)){
   draw_qc(paste0(outFile, ".sample"), rawobj, "sample")
+}
+
+rRNA.genes <- grep(pattern = rRNApattern,  rownames(rawobj), value = TRUE)
+rawobj<-rawobj[!(rownames(rawobj) %in% rRNA.genes),]
+
+rawobj<-PercentageFeatureSet(object=rawobj, pattern=Mtpattern, col.name="percent.mt")
+rawobj<-PercentageFeatureSet(object=rawobj, pattern=rRNApattern, col.name = "percent.ribo")
+rawobj<-PercentageFeatureSet(object=rawobj, pattern=hemoglobinPattern, col.name="percent.hb")    
+
+draw_qc(paste0(outFile, ".no_ribo"), rawobj, "orig.ident")
+
+if(any(rawobj$orig.ident != rawobj$sample)){
+  draw_qc(paste0(outFile, ".no_ribo", ".sample"), rawobj, "sample")
 }
 
