@@ -1,7 +1,3 @@
-
-source("scRNA_func.r")
-
-
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -27,21 +23,23 @@ has_batch_file<-file.exists(parSampleFile2)
 npcs<-as.numeric(myoptions$pca_dims)
 pca_dims<-1:npcs
 
-rawobj<-readRDS(parFile1)
+obj<-readRDS(parFile1)
 
-finalList<-preprocessing_rawobj(rawobj, myoptions, prefix)
-rawobj<-finalList$rawobj
+finalList<-preprocessing_rawobj(obj, myoptions, prefix)
+obj<-finalList$rawobj
 finalList<-finalList[names(finalList) != "rawobj"]
 
-obj=do_harmony(rawobj, npcs, parSampleFile2)
+#essential_genes=read.table(parFile2, sep="\t" ,header=F)$V1
+
+by_sctransform<-ifelse(myoptions$by_sctransform == "1", TRUE, FALSE)
+regress_by_percent_mt<-ifelse(myoptions$regress_by_percent_mt == "1", TRUE, FALSE)
+
+obj<-do_harmony(obj, by_sctransform, regress_by_percent_mt, has_batch_file, parSampleFile2, pca_dims)
+
 reduction="harmony"
-rm(rawobj)
 
 for (reduct in c("pca", "harmony")){
-  png(paste0(outFile, ".elbowplot.", reduct, ".png"), width=1500, height=1200, res=300)
-  p<-ElbowPlot(obj, ndims = 20, reduction = reduct)
-  print(p)
-  dev.off()
+  output_ElbowPlot(obj, outFile, reduct)
 }
 
 cat("run_umap ... ")
@@ -52,4 +50,6 @@ finalList$obj<-obj
 finalListFile<-paste0(outFile, ".final.rds")
 saveRDS(finalList, file=finalListFile)
 
+#using RNA assay for visualization
+DefaultAssay(obj)<-"RNA"
 output_integration_dimplot(obj, outFile, has_batch_file)
