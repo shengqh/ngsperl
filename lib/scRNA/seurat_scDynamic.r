@@ -55,12 +55,16 @@ tiers<-read.table(myoptions$HLA_panglao5_file, sep="\t", header=T)
 
 remove_subtype_of=remove_subtype
 cell_activity_database<-read_cell_markers_file(markerfile, species, remove_subtype_of, HLA_panglao5_file, curated_markers_file=myoptions$curated_markers_file)
+cell_activity_database$cellType=cell_activity_database$cellType[names(cell_activity_database$cellType) %in% tiers$Celltype.name]
+tiers<-tiers[tiers$Celltype.name %in% names(cell_activity_database$cellType),]
 
 prefix<-outFile
 
-obj<-readRDS(parFile1)
-if(is.list(obj)){
-  obj<-obj$obj
+if(!exists('obj')){
+  obj<-readRDS(parFile1)
+  if(is.list(obj)){
+    obj<-obj$obj
+  }
 }
 
 if(parSampleFile2 != ""){
@@ -78,7 +82,24 @@ if(has_bubblemap){
   bubble_genes<-unique(genes_df$`Marker Gene`)
 }
 
-resolutions=seq(from = 0.1, to = 0.9, by = 0.1)
+if(myoptions$dynamic_by_one_resolution != ""){
+  resolutions=c(as.numeric(myoptions$dynamic_by_one_resolution))
+}else{
+  resolutions=seq(from = 0.1, to = 0.9, by = 0.1)
+}
+
+#find cell type equals in layer2/layer3/layer4, for example, the T cells after removing sub celltypes
+get_unique234_celltype<-function(tiers){
+  layer_name = "Layer2"
+  map<-split(tiers$Celltype.name, tiers[,layer_name])
+  unique_map = Filter(function(x)(length(x) == 1), map)
+  #unique_map2 = unique_map[Filter(function(x)(names(unique_map)[x] == unique_map[x][1]), c(1:length(unique_map)))]
+  result=unlist(unique_map)
+  names(result) = names(unique_map)
+  return(result)
+}
+
+unique_celltype<-get_unique234_celltype(tiers)
 
 layer1map<-split(tiers$Layer1, tiers$Celltype.name)
 layer2map<-split(tiers$Layer2, tiers$Celltype.name)
@@ -104,7 +125,7 @@ cbind_celltype<-function(subobj, data.norm, cluster, new.cluster.ids, cur_layerm
 }
 
 vote_celltype<-function(cts, assay){
-  cls<-cts[,grepl(paste0(assay, "_snn_res.+_ct$"), colnames(cts))]
+  cls<-cts[,grepl(paste0(assay, "_snn_res.+_ct$"), colnames(cts)), drop=F]
   
   votes<-apply(cls, 1, function(x){
     tb<-table(unlist(x))
@@ -138,6 +159,10 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
   for(pct in previous_celltypes){
     key = paste0(previous_layer, ": iter", iter, ": ", pct, ":")
     cells<-rownames(meta)[meta[,previous_layer] == pct]
+    if(length(cells) == 0){#no cell left for this cell type
+      next
+    }
+    
     subobj<-subset(obj, cells=cells)
     
     stopifnot(all(subobj[[previous_layer]] == pct))
@@ -146,40 +171,45 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
     
     cur_npcs=min(pca_npcs, npcs)
     cur_pca_dims=1:cur_npcs
-    
 
+    DefaultAssay(subobj)<-assay
+    
+    #for dynamic clustering, we will not redo normalization/sctranform
     if(by_harmony){
       cat(key, "harmony\n")
-      DefaultAssay(subobj)<-"RNA"
-      subobj[['harmony']]<-NULL
-      subobj<-do_harmony(subobj, cur_npcs, batch_file="")
+      #https://github.com/satijalab/seurat/issues/5289
+      #So we can either (1) re-do the complete workflow after subsetting including the re-integration with harmony or 
+      #(2) we can only re-run FindNeighbors and FindClusters. Is this correct? In our case, (2) worked better.
       curreduction="harmony"
     }else if (by_sctransform) {
-      cat(key, "sctransform\n")
-      DefaultAssay(subobj)<-"RNA"
-      subobj[['SCT']]<-NULL
-      subobj<-SCTransform(subobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes = F, verbose = FALSE)
+      #https://github.com/satijalab/seurat/issues/2812
+      #One thing to add. When you subset the clustering, Re-run PCA actually has more impacts than re-run SCTransform
+      cat(key, "sctransform/PCA\n")
+      #subobj[['SCT']]<-NULL
+      #subobj<-SCTransform(subobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes = F, verbose = FALSE)
       subobj<-RunPCA(subobj, npcs=pca_npcs)
       curreduction="pca"
     }else{
-      cat(key, "normalization\n")
-      DefaultAssay(subobj)<-"RNA"
-      subobj<-NormalizeData(subobj)
-      subobj<-FindVariableFeatures(subobj)
+      cat(key, "normalization/PCA\n")
+      # subobj<-NormalizeData(subobj)
+      # subobj<-FindVariableFeatures(subobj)
 
-      var.genes<-VariableFeatures(subobj)
-      var.genes<-unique(c(var.genes, essential_genes))
+      # var.genes<-VariableFeatures(subobj)
+      # var.genes<-unique(c(var.genes, essential_genes))
 
-      subobj<-ScaleData(subobj, vars.to.regress = vars.to.regress, features = var.genes)
+      # subobj<-ScaleData(subobj, vars.to.regress = vars.to.regress, features = var.genes)
       subobj<-RunPCA(subobj, npcs=pca_npcs)
       curreduction="pca"
     }
+    
     cat(key, "FindClusters\n")
     subobj<-FindNeighbors(object=subobj, reduction=curreduction, dims=cur_pca_dims, verbose=FALSE)
     subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolutions, verbose=FALSE)
     
-    cat(key, "RunUMAP\n")
-    subobj<-RunUMAP(object = subobj, reduction=curreduction, dims=cur_pca_dims, verbose = FALSE)
+    if(previous_layer != "layer0") {
+      cat(key, "RunUMAP\n")
+      subobj<-RunUMAP(object = subobj, reduction=curreduction, dims=cur_pca_dims, verbose = FALSE)
+    }
     
     cat(key, "Cell type annotation\n")
     pre_cts<-subobj[[previous_layer]]
@@ -214,7 +244,7 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
       subobj = AddMetaData(subobj, pre_cts$layer, "pre_layer")
     }
     
-    cls<-cur_cts[,grepl(paste0(assay, "_snn_res.+_ct$"), colnames(cur_cts))]
+    cls<-cur_cts[,grepl(paste0(assay, "_snn_res.+_ct$"), colnames(cur_cts)), drop=F]
     g1<-DimPlot(subobj, group.by = previous_layer, label=T) + ggtitle(paste0(pct, ": ", previous_layer, ": pre"))
     g2<-DimPlot(subobj, group.by = "layer", label=T) + ggtitle(paste0(pct, ": ", cur_layer))
 
@@ -241,7 +271,7 @@ AB
 CC
 "
       }
-      g4<-get_bubble_plot(subobj, NA, "layer", bubblemap_file, assay)
+      g4<-get_bubble_plot(subobj, NA, "layer", bubblemap_file, assay="RNA")
       g<-g+g4+plot_layout(design=layout)
       height=4000
     }else{
@@ -275,10 +305,16 @@ CC
         g<-g+gg
       }
     }
-    png(paste0(curprefix, "_", gsub(" ", "_", pct), ".detail.png"), width=7000, height=4800, res=300)
-    g<-g+plot_layout(ncol=3)
-    print(g)
-    dev.off()
+    if(length(resolutions) == 1){
+      png(paste0(curprefix, "_", gsub(" ", "_", pct), ".detail.png"), width=3300, height=3000, res=300)
+      print(g)
+      dev.off()
+    }else{
+      png(paste0(curprefix, "_", gsub(" ", "_", pct), ".detail.png"), width=7000, height=4800, res=300)
+      g<-g+plot_layout(ncol=3)
+      print(g)
+      dev.off()
+    }
 
     stopifnot(!any(rownames(cur_cts) %in% rownames(all_cur_cts)))
 
@@ -293,48 +329,64 @@ CC
   return(list("all_pre_cts"=all_pre_cts, "all_cur_cts"=all_cur_cts))
 }
 
-layer_cluster_celltype<-function(obj, previous_layer, previous_layermap, cur_layer, cur_layermap, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, check_pre_layer, vars.to.regress){
+layer_cluster_celltype<-function(obj, previous_layer, previous_layermap, cur_layer, cur_layermap, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, check_pre_layer, vars.to.regress, unique_celltype){
   meta<-obj@meta.data
   
   previous_celltypes<-unique(meta[[previous_layer]])
   
-  iter = 1
-  while(TRUE){
-    cat("Iteration ", iter, "\n")
-    
-    iter_meta_file = paste0(prefix, ".", previous_layer, ".iter", iter, ".csv")
-
-    lst<-iterate_celltype(obj, previous_celltypes, previous_layer, previous_layermap, cur_layer, cur_layermap, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, iter, check_pre_layer, vars.to.regress)
-    all_pre_cts<-lst$all_pre_cts
-    all_cur_cts<-lst$all_cur_cts
-    
-    stopifnot(all(rownames(all_cur_cts) %in% colnames(obj)))
-    obj@meta.data[rownames(all_cur_cts), cur_layer]=unlist(all_cur_cts[, "layer"])
-    
-    if(check_pre_layer){
-      stopifnot(all(rownames(all_pre_cts) %in% colnames(obj)))
-      pre_disagree<-all_pre_cts[all_pre_cts[, previous_layer] != all_pre_cts[,'layer'],,drop=F]
-      if(nrow(pre_disagree) > 0){
-        cat("Found unmatched cell type\n")
-        print(table(pre_disagree[,previous_layer], pre_disagree[,'layer']))
-        
-        obj@meta.data[rownames(pre_disagree), previous_layer] = unlist(pre_disagree$layer)
-        write.csv(obj@meta.data, iter_meta_file)
-        previous_celltypes = unique(c(unlist(pre_disagree[,previous_layer]), unlist(pre_disagree$layer)))
+  if(!is.null(unique_celltype)){
+    ucs<-previous_celltypes[previous_celltypes %in% names(unique_celltype)]
+    for(uc in ucs){
+      obj@meta.data[meta[, previous_layer] == uc, cur_layer]=unique_celltype[uc]
+    }
+    previous_celltypes=previous_celltypes[!(previous_celltypes %in% ucs)]
+  }
+  
+  if(length(previous_celltypes) > 0){
+    cat("cluster and annotate cell types:", paste0(previous_celltypes, ", "))
+    iter = 1
+    while(TRUE){
+      cat("Iteration ", iter, "\n")
+      previous_celltypes<-previous_celltypes[order(previous_celltypes)]
+      
+      iter_meta_file = paste0(prefix, ".", previous_layer, ".iter", iter, ".csv")
+      iter_meta_rds = paste0(prefix, ".", previous_layer, ".iter", iter, ".rds")
+      
+      lst<-iterate_celltype(obj, previous_celltypes, previous_layer, previous_layermap, cur_layer, cur_layermap, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, iter, check_pre_layer, vars.to.regress)
+      all_pre_cts<-lst$all_pre_cts
+      all_cur_cts<-lst$all_cur_cts
+      
+      stopifnot(all(rownames(all_cur_cts) %in% colnames(obj)))
+      obj@meta.data[rownames(all_cur_cts), cur_layer]=unlist(all_cur_cts[, "layer"])
+      
+      if(check_pre_layer){
+        stopifnot(all(rownames(all_pre_cts) %in% colnames(obj)))
+        pre_disagree<-all_pre_cts[all_pre_cts[, previous_layer] != all_pre_cts[,'layer'],,drop=F]
+        if(nrow(pre_disagree) > 0){
+          cat("Found unmatched cell type\n")
+          print(table(pre_disagree[,previous_layer], pre_disagree[,'layer']))
+          
+          obj@meta.data[rownames(pre_disagree), previous_layer] = unlist(pre_disagree$layer)
+          write.csv(obj@meta.data, iter_meta_file)
+          saveRDS(obj@meta.data, iter_meta_rds)
+          previous_celltypes = unique(c(unlist(pre_disagree[,previous_layer]), unlist(pre_disagree$layer)))
+        }else{
+          write.csv(obj@meta.data, iter_meta_file)
+          saveRDS(obj@meta.data, iter_meta_rds)
+          break
+        }
+        iter = iter + 1
       }else{
         write.csv(obj@meta.data, iter_meta_file)
+        saveRDS(obj@meta.data, iter_meta_rds)
         break
       }
-      iter = iter + 1
-    }else{
-      write.csv(obj@meta.data, iter_meta_file)
-      break
     }
   }
   
   g<-DimPlot(obj, group.by = cur_layer, label=T)
   if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-    g2<-get_bubble_plot(obj, NA, cur_layer, bubblemap_file, assay)
+    g2<-get_bubble_plot(obj, NA, cur_layer, bubblemap_file, assay="RNA")
     g<-g+g2+plot_layout(ncol = 2, widths = c(3, 5))
     width=6400
   }else{
@@ -345,19 +397,29 @@ layer_cluster_celltype<-function(obj, previous_layer, previous_layermap, cur_lay
   dev.off()
 
   write.csv(obj@meta.data, file=paste0(prefix, ".", previous_layer, "_to_", cur_layer, ".meta.csv"))
+  saveRDS(obj@meta.data, file=paste0(prefix, ".", previous_layer, "_to_", cur_layer, ".meta.rds"))
 
   write.csv(all_cur_cts, file=paste0(prefix, ".", previous_layer, "_to_", cur_layer, ".details.csv"))
   
   return(obj)
 }
 
-obj<-layer_cluster_celltype(obj, "layer0", NULL, "layer1", layer1map, npcs, resolutions, random.seed, by_sctransform, FALSE, prefix, FALSE, vars.to.regress)
+obj<-layer_cluster_celltype(obj, "layer0", NULL, "layer1", layer1map, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, FALSE, vars.to.regress, NULL)
 
-obj<-layer_cluster_celltype(obj, "layer1", layer1map, "layer2", layer2map, npcs, resolutions, random.seed, by_sctransform, FALSE, prefix, TRUE, vars.to.regress)
+obj<-layer_cluster_celltype(obj, "layer1", layer1map, "layer2", layer2map, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, TRUE, vars.to.regress, NULL)
 
-obj<-layer_cluster_celltype(obj, "layer2", layer2map, "layer3", layer3map, npcs, resolutions, random.seed, by_sctransform, FALSE, prefix, TRUE, vars.to.regress)
-
-obj<-layer_cluster_celltype(obj, "layer3", layer3map, "layer4", layer4map, npcs, resolutions, random.seed, by_sctransform, FALSE, prefix, TRUE, vars.to.regress)
+obj<-layer_cluster_celltype(obj, "layer2", layer2map, "layer3", layer3map, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, TRUE, vars.to.regress, NULL)
+#obj@meta.data=readRDS("iSGS_airway.layer2_to_layer3.meta.rds")
+obj<-layer_cluster_celltype(obj, "layer3", layer3map, "layer4", layer4map, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, TRUE, vars.to.regress, unique_celltype)
 
 saveRDS(obj@meta.data, paste0(prefix, ".scDynamic.meta.rds"))
 write.csv(obj@meta.data, paste0(prefix, ".scDynamic.meta.csv"))
+
+#using RNA assay for visualization
+DefaultAssay(obj)<-"RNA"
+for(layer in c("layer1", "layer2", "layer3", "layer4")){
+  g<-DimPlot(obj, group.by =layer, label=T)
+  png(paste0(outFile, ".", layer, ".png"), width=3300, height=3000, res=300)
+  print(g)
+  dev.off()
+}
