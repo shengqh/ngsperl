@@ -97,9 +97,10 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "rRNApattern",         "^Rp[sl][[:digit:]]|^RP[SL][[:digit:]]" );
   initDefaultValue( $def, "hemoglobinPattern",   "^HB[^(P)]|^Hb[^(p)]" );
   
-  initDefaultValue( $def, "Remove_rRNA",         0 );
+  initDefaultValue( $def, "Remove_rRNA",         1 );
   initDefaultValue( $def, "Remove_MtRNA",        1 );
   initDefaultValue( $def, "regress_by_percent_mt",   getValue($def, "Remove_MtRNA") ? 0 : 1 );
+  initDefaultValue( $def, "Remove_hemoglobin",   0 );
   
   initDefaultValue( $def, "nFeature_cutoff_min", 200 );
   initDefaultValue( $def, "nFeature_cutoff_max", 10000 );
@@ -111,7 +112,8 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "by_integration",        0 );
   initDefaultValue( $def, "by_sctransform",        0 );
 
-  my $pca_dims = $def->{by_sctransform}?30:20;
+  #my $pca_dims = $def->{by_sctransform}?30:20;
+  my $pca_dims = 50;
   initDefaultValue( $def, "pca_dims",            $pca_dims );
 
   initDefaultValue( $def, "pool_sample",           0 );
@@ -147,8 +149,8 @@ sub initializeScRNASeqDefaultOptions {
 
   initDefaultValue( $def, "perform_CHETAH", 0 );
 
-  initDefaultValue( $def, "perform_dynamic_resolution", 1 );
-  initDefaultValue( $def, "perform_fix_resolution", 1 );
+  initDefaultValue( $def, "perform_dynamic_cluster", 1 );
+  initDefaultValue( $def, "perform_fix_resolution", 0 );
   initDefaultValue( $def, "remove_subtype", "T cells,B cells,Fibroblasts,Neurons,Epithelial cells,Macrophages,Dendritic cells"),
   initDefaultValue( $def, "best_resolution_min_markers", 20);
   
@@ -1106,7 +1108,6 @@ sub getScRNASeqConfig {
             pca_dims              => getValue( $def, "pca_dims" ),
             by_integration        => $by_integration,
             by_sctransform        => getValue( $def, "by_sctransform" ),
-            sctransform_by_individual => getValue( $def, "sctransform_by_individual", 0 ),
             batch_for_integration => getValue( $def, "batch_for_integration" ),
           },
           output_file_ext      => ".final.rds,.qc.1.png,.qc.2.png,.qc.3.png,.qc.4.png,.sample_cell.csv,.final.png,.pca.txt",
@@ -1215,7 +1216,6 @@ sub getScRNASeqConfig {
             pca_dims              => getValue( $def, "pca_dims" ),
             by_sctransform        => getValue( $def, "by_sctransform" ),
             reduction             => $reduction,
-            doublet_rates         => getValue( $def, "doublet_rates" ),
             filtered_by_hto => $perform_split_hto_samples,
           },
           output_file_ext      => ".meta.rds",
@@ -1233,9 +1233,9 @@ sub getScRNASeqConfig {
       my $celltype_name = undef;
       my $celltype_task = undef;
 
-      if(getValue($def, "perform_dynamic_resolution")){
+      if(getValue($def, "perform_dynamic_cluster")){
         my $dynamicMethod = getValue($def, "dynamic_byDE", 0)?"_DE":"";
-        my $scDynamic_task = $seurat_task . "_dynamic_res${dynamicMethod}";
+        my $scDynamic_task = $seurat_task . "_dynamic${dynamicMethod}";
         $config->{$scDynamic_task} = {
           class                    => "CQS::UniqueR",
           perform                  => 1,
@@ -1259,6 +1259,7 @@ sub getScRNASeqConfig {
             bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
             summary_layer_file => $def->{summary_layer_file},
             best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
+            dynamic_by_one_resolution => getValue( $def, "dynamic_by_one_resolution", "" ),
           },
           parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
           output_file_ext      => ".scDynamic.meta.rds",
@@ -1270,6 +1271,9 @@ sub getScRNASeqConfig {
             "mem"       => "40gb"
           },
         };
+        if ($def->{batch_for_integration}){
+          $config->{$scDynamic_task}{parameterSampleFile3} = getValue($def, "batch_for_integration_groups");
+        }
         push( @$summary, $scDynamic_task );
 
         my $subcluster_task = $scDynamic_task . "_subcluster";
@@ -1312,10 +1316,11 @@ sub getScRNASeqConfig {
         };
         push( @$summary, $subcluster_task );
 
-        if (getValue( $def, "perform_SignacX_tcell", 0 ) ) {
-          my $signacX_name = $subcluster_task . "_SignacX_tcell";
-          addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, $seurat_task, 1, $subcluster_task, $reduction, "cell_type" );
+        if (getValue( $def, "perform_SignacX", 0 ) ) {
+          my $signacX_name = $subcluster_task . "_SignacX";
+          addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, $seurat_task, 0, $subcluster_task, $reduction, "cell_type", 1 );
         }
+
 
         if(defined $df_task){
           my $doublet_check_task = $subcluster_task . "_doublet";
@@ -1345,6 +1350,43 @@ sub getScRNASeqConfig {
             },
           };
           push( @$summary, $doublet_check_task );
+        }
+
+        if(getValue($def, "perform_dynamic_discard_cluster", 0)){
+          my $discard_task = $subcluster_task . "_discard";
+          $config->{$discard_task} = {
+            class                    => "CQS::UniqueR",
+            perform                  => 1,
+            target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $discard_task,
+            rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_discard_cluster.r",
+            parameterFile1_ref => [$seurat_task, ".rds"],
+            parameterFile2_ref => [$subcluster_task, ".meta.rds"],
+            parameterSampleFile1     => {
+              dynamic_discard_cluster => getValue( $def, "dynamic_discard_cluster" ),
+              by_sctransform        => getValue( $def, "by_sctransform" ),
+              reduction             => $reduction,
+              bubblemap_file        => $def->{bubblemap_file},
+              bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
+              cluster_layer           => "seurat_clusters",
+              celltype_layer          => "cell_type",
+              cluster_celltype_layer  => "seurat_cell_type",
+            },
+            output_file_ext      => ".meta.rds",
+            output_other_ext  => ".umap.png,.meta.csv,.options.csv",
+            sh_direct            => 1,
+            pbs                  => {
+              "nodes"     => "1:ppn=1",
+              "walltime"  => "12",
+              "mem"       => "40gb"
+            },
+          };
+          push( @$summary, $discard_task );
+          $subcluster_task = $discard_task;
+        }
+
+        if (getValue( $def, "perform_SignacX_tcell", 0 ) ) {
+          my $signacX_name = $subcluster_task . "_SignacX_tcell";
+          addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, $seurat_task, 1, $subcluster_task, $reduction, "cell_type", 1 );
         }
       }
 
