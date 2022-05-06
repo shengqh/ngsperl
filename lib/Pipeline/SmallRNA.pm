@@ -23,6 +23,22 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.06';
 
+sub getUniqueGroups {
+  my ($def) = @_;
+  my $result = "";
+  if (defined $def->{unique_groups}){
+    my $uni_groups = $def->{unique_groups};
+    my @uniqueGroups;
+    if (is_string($uni_groups)){
+      @uniqueGroups = split(/[,;]/, $uni_groups);
+    }else{
+      @uniqueGroups = @$uni_groups;
+    }
+    $result = "uniqueGroupNames=c('" . join("','", @uniqueGroups) . "');";
+  }
+  return($result);
+}
+
 sub getSmallRNAConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
@@ -1375,9 +1391,9 @@ fi
       class => "CQS::ProgramWrapperManyToOneGather",
       target_dir => "$host_intermediate_dir/$refseq_bacteria_bowtie_count",
       interpretor => "",
-      program => "spcount bowtie_count",
+      program => getValue($def, "spcount", "spcount"),
       check_program => 0,
-      option => "--species_column " . getValue($def, "species_column", "species"),
+      option => "bowtie_count --species_column " . getValue($def, "species_column", "species"),
       source_arg => "-i",
       source_ref => $identical_ref,
       parameterSampleFile2_arg => "-c",
@@ -1408,17 +1424,18 @@ fi
     for my $cat (@$categories){
       push(@$file_exts, ".${cat}.query.count");
       push(@$file_exts, ".${cat}.estimated.count");
+      push(@$file_exts, ".${cat}.aggregated.count");
     }
-    my $file_ext_str = join(",", @$file_exts);
+    my $file_ext_str = join(",", @$file_exts) . ",.read.count";
 
     my $refseq_bacteria_table = "refseq_bacteria_table";
     $config->{$refseq_bacteria_table} = {
       class => "CQS::ProgramWrapper",
       target_dir => "$nonhost_genome_dir/$refseq_bacteria_table",
       interpretor => "",
-      program => "spcount count_table",
+      program => getValue($def, "spcount", "spcount"),
       check_program => 0,
-      option => "-o __NAME__ --species_column " . getValue($def, "species_column", "species"),
+      option => "count_table -o __NAME__ --species_column " . getValue($def, "species_column", "species"),
       source_arg => "-i",
       source_ref => $refseq_bacteria_bowtie_count,
       parameterFile1_arg => "-s",
@@ -1442,7 +1459,11 @@ fi
           $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
         addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_estimated", [ $refseq_bacteria_table, ".${cat}.estimated.count\$" ],
           $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_aggregated", [ $refseq_bacteria_table, ".${cat}.aggregated.count\$" ],
+          $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       }
+      addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_read", [ $refseq_bacteria_table, ".read.count\$" ],
+        $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
     }
   }
 
@@ -2144,11 +2165,7 @@ fi
   push @$summary_ref, ("reads_in_tasks");
 
   if ( $search_host_genome && $search_nonhost_database ) {
-    my $cur_r_code = $R_font_size;
-    if (defined $def->{unique_groups}){
-      my @uniqueGroups = split(/[,;]/, $def->{unique_groups});
-      $cur_r_code = $cur_r_code . "uniqueGroupNames=c('" . join("','", @uniqueGroups) . "');";
-    }
+    my $cur_r_code = $R_font_size . " " . getUniqueGroups($def);
     $config->{reads_in_tasks_pie} = {
       class                => "CQS::UniqueR",
       suffix               => "_pie",
@@ -2194,11 +2211,7 @@ fi
     push @$summary_ref, ( "reads_in_tasks_pie", "reads_in_tasks_all" );
 
     if($perform_nonhost_genome_count){  
-      my $rCode = '';
-      if (defined $def->{host_microbial_vis_groups}){
-        my $visgroups = $def->{host_microbial_vis_groups};
-        $rCode = 'groupNames=c("' . join('", "', @$visgroups) . '"';
-      }
+      my $rCode = getUniqueGroups($def);
       $config->{host_microbial_vis} = {
         class                     => "CQS::UniqueR",
         perform                   => 1,

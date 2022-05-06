@@ -16,8 +16,8 @@ figData<-all[,c("Host", "Microbial", "Other")]
 hasGroup = parSampleFile1 != ""
 if(hasGroup){
   group<-read.delim(parSampleFile1, stringsAsFactors = F, header=F)
-  if (exists("groupNames")){
-    group<-group[group$V2 %in% groupNames,]
+  if (exists("uniqueGroupNames")){
+    group<-group[group$V2 %in% uniqueGroupNames,]
   }
   rownames(group)<-group$V1
   figData$Group<-group[rownames(figData), "V2"]
