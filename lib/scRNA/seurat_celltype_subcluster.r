@@ -62,11 +62,7 @@ cell_activity_database<-read_cell_markers_file(markerfile, species, remove_subty
 prefix<-outFile
 
 if(!exists("obj")){
-  obj=readRDS(parFile1)
-  if(is.list(obj)){
-    obj<-obj$obj
-  }
-  obj@meta.data = readRDS(parFile2)
+  obj<-read_object(parFile1, parFile2)
   Idents(obj)<-previous_layer
 }
 
@@ -118,37 +114,34 @@ for(pct in previous_celltypes){
   
   curprefix<-paste0(prefix, ".", previous_layer, "_", gsub(" ", "_", pct))
   
+  DefaultAssay(subobj)<-"RNA"
   if(by_harmony){
     cat(key, "harmony\n")
-    DefaultAssay(subobj)<-"RNA"
-    subobj[['harmony']]<-NULL
-    subobj<-do_harmony(subobj, cur_npcs, batch_file="")
+    subobj<-do_harmony(subobj, by_sctransform, regress_by_percent_mt, false, "", pca_dims)
     curreduction="harmony"
-  }else if (by_sctransform) {
+  }else{
+    if (by_sctransform) {
     cat(key, "sctransform\n")
-    DefaultAssay(subobj)<-"RNA"
-    subobj[['SCT']]<-NULL
-    subobj<-SCTransform(subobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes = F, verbose = FALSE)
-    subobj<-RunPCA(subobj, npcs=pca_npcs)
-    curreduction="pca"
+      #we need normalized data for visualization and cell type annotation
+      subobj<-NormalizeData(subobj, verbose = FALSE)
+      #now perform sctranform
+      subobj<-do_sctransform(subobj, vars.to.regress=vars.to.regress)
   }else{
     cat(key, "normalization\n")
-    DefaultAssay(subobj)<-"RNA"
-    subobj<-NormalizeData(subobj)
-    subobj<-FindVariableFeatures(subobj)
-
-    var.genes<-VariableFeatures(subobj)
-    var.genes<-unique(c(var.genes, essential_genes))
-
-    subobj<-ScaleData(subobj, vars.to.regress = vars.to.regress, features = var.genes)
+      subobj<-do_normalization(subobj, selection.method="vst", nfeatures=3000, vars.to.regress=vars.to.regress)
+    }
     subobj<-RunPCA(subobj, npcs=pca_npcs)
     curreduction="pca"
   }
+
   cat(key, "FindClusters\n")
   subobj<-FindNeighbors(object=subobj, reduction=curreduction, dims=cur_pca_dims, verbose=FALSE)
   subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolutions, verbose=FALSE)
   
   cat(key, "Find best resolution\n")
+  #using RNA assay for findBiomarkers
+  DefaultAssay(subobj)<-"RNA"
+
   cluster = clusters[1]
   lastCluster = clusters[1]
   for(cluster in clusters){
@@ -159,7 +152,7 @@ for(pct in previous_celltypes){
       next
     }
     
-    markers=FindAllMarkers(subobj, only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+    markers=FindAllMarkers(subobj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
     markers=markers[markers$p_val_adj < 0.05,]
     nmarkers=unlist(lapply(unique(Idents(subobj)), function(x){sum(markers$cluster==x)}))
     if(all(nmarkers >= min_markers)){
@@ -184,7 +177,7 @@ for(pct in previous_celltypes){
     top10genes<-unique(top10$gene)
     allmarkers<-c(allmarkers, top10genes)
   }else{
-    markers=FindAllMarkers(subobj, only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+    markers=FindAllMarkers(subobj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
     markers=markers[markers$p_val_adj < 0.05,]
     top10 <- markers %>% group_by(cluster) %>% top_n(n = 10, wt = .data[["avg_log2FC"]])
     top10genes<-unique(top10$gene)
@@ -223,12 +216,12 @@ for(pct in previous_celltypes){
     cluster_index<-max(cts$seurat_clusters)+1
     
     cat("RUNUMAP\n")
-    subobj<-RunUMAP(object = subobj, reduction=curreduction, dims=cur_pca_dims, verbose = FALSE)
+    subobj<-RunUMAP(object = subobj, assay=assay, reduction=curreduction, dims=cur_pca_dims, verbose = FALSE)
     
     g<-DimPlot(subobj, group.by = "seurat_clusters", label=T) + ggtitle(paste0(pct, ": res", cur_resolution) ) + scale_color_discrete(labels = ct[,seurat_cur_layer])
     if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
       layout <- "ABB"
-      g2<-get_bubble_plot(subobj, "seurat_clusters", cur_layer, bubblemap_file, assay)
+      g2<-get_bubble_plot(subobj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA")
       g<-g+g2+plot_layout(design=layout)
       width=6300
     }else{
@@ -243,7 +236,7 @@ for(pct in previous_celltypes){
     height<-max(3000, min(10000, length(top10genes) * 60 + 1000))
     
     png(paste0(curprefix, ".top10.heatmap.png"), width=3000, height=3000, res=300)
-    g<-DoHeatmap(subobj, features = top10genes, group.by = seurat_cur_layer, angle = 90) + NoLegend()
+    g<-DoHeatmap(subobj, assay="RNA", features = top10genes, group.by = seurat_cur_layer, angle = 90) + NoLegend()
     print(g)
     dev.off()
   }
@@ -269,15 +262,15 @@ allmarkers<-unique(allmarkers)
 width<-max(3000, min(10000, length(unique(obj$seurat_clusters)) * 150 + 1000))
 height<-max(3000, min(20000, length(allmarkers) * 60 + 1000))
 
+g<-DoHeatmap(obj, assay="RNA", features = allmarkers, group.by = seurat_cur_layer, angle = 90) + NoLegend()
 png(paste0(prefix, ".top10.heatmap.png"), width=width, height=height, res=300)
-g<-DoHeatmap(obj, features = allmarkers, group.by = seurat_cur_layer, angle = 90) + NoLegend()
 print(g)
 dev.off()
 
-g<-DimPlot(obj, group.by = "seurat_clusters", label=T) + ggtitle(cur_layer)+
+g<-DimPlot(obj, assay="RNA", group.by = "seurat_clusters", label=T) + ggtitle(cur_layer)+
       scale_color_discrete(labels = ct[,seurat_cur_layer])
 if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-  g<-g+get_bubble_plot(obj, "seurat_clusters", cur_layer, bubblemap_file, assay)
+  g<-g+get_bubble_plot(obj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA")
   g<-g+plot_layout(ncol = 2, widths = c(4, 6))
   width=11000
 }else{
