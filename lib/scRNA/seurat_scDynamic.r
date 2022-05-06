@@ -244,6 +244,9 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
       subobj = AddMetaData(subobj, pre_cts$layer, "pre_layer")
     }
     
+    #using RNA assay for visualization
+    DefaultAssay(subobj)<-"RNA"
+
     cls<-cur_cts[,grepl(paste0(assay, "_snn_res.+_ct$"), colnames(cur_cts)), drop=F]
     g1<-DimPlot(subobj, group.by = previous_layer, label=T) + ggtitle(paste0(pct, ": ", previous_layer, ": pre"))
     g2<-DimPlot(subobj, group.by = "layer", label=T) + ggtitle(paste0(pct, ": ", cur_layer))
@@ -271,7 +274,7 @@ AB
 CC
 "
       }
-      g4<-get_bubble_plot(subobj, NA, "layer", bubblemap_file, assay="RNA")
+      g4<-get_bubble_plot(subobj, NA, "layer", bubblemap_file, assay)
       g<-g+g4+plot_layout(design=layout)
       height=4000
     }else{
@@ -384,9 +387,12 @@ layer_cluster_celltype<-function(obj, previous_layer, previous_layermap, cur_lay
     }
   }
   
+  #using RNA assay for visualization
+  DefaultAssay(obj)<-"RNA"
+
   g<-DimPlot(obj, group.by = cur_layer, label=T)
   if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-    g2<-get_bubble_plot(obj, NA, cur_layer, bubblemap_file, assay="RNA")
+    g2<-get_bubble_plot(obj, NA, cur_layer, bubblemap_file, assay)
     g<-g+g2+plot_layout(ncol = 2, widths = c(3, 5))
     width=6400
   }else{
@@ -419,7 +425,33 @@ write.csv(obj@meta.data, paste0(prefix, ".scDynamic.meta.csv"))
 DefaultAssay(obj)<-"RNA"
 for(layer in c("layer1", "layer2", "layer3", "layer4")){
   g<-DimPlot(obj, group.by =layer, label=T)
-  png(paste0(outFile, ".", layer, ".png"), width=3300, height=3000, res=300)
+  png(paste0(outFile, ".", layer, ".final.png"), width=3300, height=3000, res=300)
   print(g)
   dev.off()
+}
+
+output_barplot<-function(obj, sample_key, cell_key, filename){
+  cts<-unlist(obj[[cell_key]])
+  ct<-table(cts)
+  ct<-ct[order(ct, decreasing = T)]
+  ct_levels=names(ct)
+  
+  samples<-unlist(obj[[sample_key]])
+  
+  tbl<-data.frame(table(samples, cts))
+  colnames(tbl)<-c("Sample", "Cell_type", "Cell_count")
+  tbl$Cell_type<-factor(tbl$Cell_type, levels=ct_levels)
+  
+  g1<-ggplot(tbl, aes(Cell_type, Cell_count)) + geom_bar(aes(fill=Sample), stat="identity") + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + xlab("")
+  g2<-ggplot(tbl, aes(Cell_type, Cell_count)) + geom_bar(aes(fill=Sample), position="fill", stat="identity") + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  g<-g1+g2+plot_layout(ncol=1)
+  png(filename, width=2000, height=3000, res=300)
+  print(g)
+  dev.off()
+}
+
+output_barplot(obj, "orig.ident", "layer4", paste0(outFile, ".ident_cluster.png"))
+
+if("batch" %in% colnames(obj@meta.data)){
+  output_barplot(obj, "batch", "layer4", paste0(outFile, ".batch_cluster.png"))
 }
