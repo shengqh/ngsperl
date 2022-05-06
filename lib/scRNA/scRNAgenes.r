@@ -9,7 +9,7 @@ genes<-unique(genes)
 
 obj<-finalList$obj
 
-assay=ifelse("SCT" %in% names(obj@assays), "SCT", "RNA")
+DefaultAssay(obj)<-"RNA"
 
 getCells<-function(curassay, assay_name, genes){
   inrawcount<-genes %in% rownames(curassay)
@@ -68,7 +68,7 @@ if(!dotPlotOnly){
     sample<-samples[1]
     for (sample in samples){
       sobj<-subset(obj, cells=colnames(obj)[obj$orig.ident==sample])
-      pgene<-FeaturePlot(object = sobj, features=gene)  + NoLegend() + ggtitle(sample) + theme(plot.title = element_text(hjust=0.5))
+      pgene<-MyFeaturePlot(object = sobj, features=gene)  + NoLegend() + ggtitle(sample) + theme(plot.title = element_text(hjust=0.5))
       lst[[sample]]=pgene
     }
     
@@ -84,14 +84,14 @@ pdf(file=paste0(outFile, ".dot.pdf"), width=max(length(genes) * 0.4, 10), height
 alltitle = ifelse(length(samples) == 1, "", "All samples")
 
 #png(filename=paste0(outFile, ".dot.png"), width=max(length(genes) * 100, 5000), height=2500, res=300)
-p<-DotPlot(obj, assay = assay, group.by="final_seurat_clusters", features=genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
+p<-DotPlot(obj, assay = "RNA", group.by="final_seurat_clusters", features=genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
   xlab("genes") + ggtitle(alltitle) + theme(plot.title = element_text(hjust = 0.5))
 print(p)
 
 if (length(samples) > 1) {
   for (sample in samples){
     sobj<-subset(obj, cells=colnames(obj)[obj$orig.ident==sample])
-    p<-DotPlot(sobj, assay = assay, group.by="final_seurat_clusters", features=genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
+    p<-DotPlot(sobj, assay = "RNA", group.by="final_seurat_clusters", features=genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
       xlab("genes") + ggtitle(paste0("Sample ", sample)) + theme(plot.title = element_text(hjust = 0.5))
     print(p)
   }

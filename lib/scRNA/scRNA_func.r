@@ -2,6 +2,14 @@ library(harmony)
 library(cowplot)
 library(Seurat)
 
+MyFeaturePlot<-function(object, assay="RNA", ...){
+  old_assay=DefaultAssay(object)
+  DefaultAssay(object)=assay
+  g=FeaturePlot(object=object, ...)
+  DefaultAssay(object)=old_assay
+  g
+}
+
 file_not_empty<-function(filename){
   if(is.null(filename)){
     return(FALSE)
@@ -154,15 +162,13 @@ read_cell_cluster_file<-function(fileName, sort_cluster_name="seurat_clusters", 
 }
 
 find_markers<-function(object, by_sctransform, ident.1, ident.2, min.pct = 0.5, logfc.threshold = 0.6){
-  assay=ifelse(by_sctransform, "SCT", "RNA")
-  markers=FindMarkers(object, assay=assay, ident.1=ident.1, ident.2=ident.2, only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+  markers=FindMarkers(object, assay="RNA", ident.1=ident.1, ident.2=ident.2, only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
   markers=markers[markers$p_val_adj < 0.01,]
   return(markers)
 }
 
 find_all_markers<-function(object, by_sctransform, min.pct = 0.5, logfc.threshold = 0.6){
-  assay=ifelse(by_sctransform, "SCT", "RNA")
-  markers=FindAllMarkers(object, assay=assay, only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+  markers=FindAllMarkers(object, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
   markers=markers[markers$p_val_adj < 0.01,]
   return(markers)
 }
@@ -247,11 +253,7 @@ run_cluster_only<-function(object, pca_dims, resolution, random.seed, reduction=
 
 run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, min.pct = 0.5, logfc.threshold = 0.6, reduction="pca"){
   object=run_cluster_only(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, min.pct, logfc.threshold, reduction)
-  if (by_sctransform) {
-    markers <- FindAllMarkers(object, only.pos = TRUE, min.pct = min.pct, logfc.threshold = logfc.threshold)
-  }else{
-    markers <- FindAllMarkers(object, features=var.genes, only.pos = TRUE, min.pct = min.pct, logfc.threshold = logfc.threshold)
-  }
+  markers <- FindAllMarkers(object, assay="RNA", only.pos = TRUE, min.pct = min.pct, logfc.threshold = logfc.threshold)
   markers <- markers[markers$p_val_adj < 0.01,]
   return(list(object=object, markers=markers))
 }
@@ -396,6 +398,55 @@ do_sctransform<-function(rawobj, vars.to.regress) {
   }else{
     obj<-SCTransform(rawobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=FALSE, verbose = FALSE)
   }
+  return(obj)
+}
+
+do_harmony<-function(obj, by_sctransform, regress_by_percent_mt, has_batch_file, batch_file, pca_dims){
+
+  by_sctransform<-ifelse(myoptions$by_sctransform == "1", TRUE, FALSE)
+  regress_by_percent_mt<-ifelse(myoptions$regress_by_percent_mt == "1", TRUE, FALSE)
+
+  if(regress_by_percent_mt){
+    vars.to.regress="percent.mt"
+  }else{
+    vars.to.regress=NULL
+  }
+
+  DefaultAssay(obj)<-"RNA"
+  if(by_sctransform){
+    cat("NormalizeData ... \n")
+    #we will need normalized data for visualization and cell type annotation
+    obj <- NormalizeData(obj, verbose = FALSE)
+
+    #now perform sctranform
+    obj<-do_sctransform(obj, vars.to.regress=vars.to.regress)
+    assay="SCT"
+  }else{
+    obj<-do_normalization(obj, selection.method="vst", nfeatures=3000, vars.to.regress=vars.to.regress)
+    assay="RNA"
+  }
+
+  DefaultAssay(obj)<-assay
+
+  cat("RunPCA ... \n")
+  obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
+
+  if(has_batch_file){
+    cat("Setting batch ...\n")
+    poolmap = get_batch_samples(batch_file, unique(obj$sample))
+    obj$batch <- unlist(poolmap[obj$sample])
+  }else if(!("batch" %in% colnames(obj@meta.data))){
+    obj$batch <- obj$sample
+  }
+
+  cat("RunHarmony ... \n")
+  obj <- RunHarmony(object = obj,
+                    assay.use = assay,
+                    reduction = "pca",
+                    dims.use = pca_dims,
+                    group.by.vars = "batch",
+                    do_pca=FALSE)
+
   return(obj)
 }
 
@@ -644,7 +695,7 @@ get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
   return(result)
 }
 
-get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay){
+get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA"){
   allgenes=rownames(obj)
   genes_df <- read_bubble_genes(bubblemap_file, allgenes)
   gene_groups=split(genes_df$`Marker Gene`, genes_df$`Cell Type`)
@@ -672,9 +723,8 @@ get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay){
   cell_type<-cell_type[colnames(obj),]
   obj@meta.data<-cell_type
   
-  
   genes=unique(unlist(gene_groups))
-  g<-DotPlot(obj, features=genes, assay=assay,group.by=group.by)
+  g<-DotPlot(obj, features=genes, assay=assay, group.by=group.by)
   gdata<-g$data
 
   data.plot<-NULL
@@ -717,8 +767,8 @@ get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay){
   return(g)
 }
 
-draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, assay, prefix){
-  g<-get_bubble_plot(obj, cur_res, cur_celltype, bubble_map_file, assay)
+draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, prefix){
+  g<-get_bubble_plot(obj, cur_res, cur_celltype, bubble_map_file)
   png(paste0(prefix, ".bubblemap.png"), width=5500, height=3000, res=300)
   print(g)
   dev.off()
@@ -735,7 +785,7 @@ find_best_resolution<-function(subobj, clusters, min.pct, logfc.threshold, min_m
       next
     }
     
-    markers=FindAllMarkers(subobj, only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+    markers=FindAllMarkers(subobj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
     markers=markers[markers$p_val_adj < 0.05,]
     nmarkers=unlist(lapply(unique(Idents(subobj)), function(x){sum(markers$cluster==x)}))
     if(all(nmarkers >= min_markers)){

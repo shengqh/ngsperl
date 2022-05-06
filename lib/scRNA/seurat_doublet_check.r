@@ -66,7 +66,7 @@ for(idx in c(1:nrow(doublet_options))){
 AABB
 CCCC
 "
-    g3<-get_bubble_plot(subobj, myoptions$cluster_layer, myoptions$celltype_layer, bubblemap_file, assay)
+    g3<-get_bubble_plot(subobj, myoptions$cluster_layer, myoptions$celltype_layer, bubblemap_file, assay="RNA")
     g<-g1+g2+g3+plot_layout(design=layout)
     height=4000
   }else{

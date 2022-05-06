@@ -101,7 +101,7 @@ for(cur_celltype in multi_cts){
   
   g1<-DimPlot(obj, group.by = cur_celltype, label=T) + guides(fill=guide_legend(ncol=1))
   g2<-DimPlot(obj, group.by = sname, label=T) + guides(color=guide_legend(ncol=1))
-  g3<-get_bubble_plot(obj, cur_res, cur_celltype, bubblemap_file, assay)
+  g3<-get_bubble_plot(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA")
   
   layout <- "
 AABB

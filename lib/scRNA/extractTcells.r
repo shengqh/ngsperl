@@ -7,7 +7,8 @@ geneFile<-parFile2
 
 obj<-finalList$obj
 
-assay=ifelse("SCT" %in% names(obj@assays), "SCT", "RNA")
+#dotplot will use RNA assay
+assay="RNA"
 
 celltypes<-read.table(geneFile, sep="\t", header=T, stringsAsFactors = F)
 celltypes$Gene<-gsub("\\s.+", "", celltypes$Gene)

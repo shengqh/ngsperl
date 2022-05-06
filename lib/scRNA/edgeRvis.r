@@ -81,18 +81,18 @@ for (prefix in rownames(edgeRres)){
           
           p1<-DimPlot(cell_obj, reduction = "umap", label=T, group.by="DisplayGroup") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5)) + xlim(xlim) + ylim(ylim)
           
-          p2<-FeaturePlot(object = cell_obj, features=as.character(siggene), order=T)
+          p2<-MyFeaturePlot(object = cell_obj, features=as.character(siggene), order=T)
         }else{
           p0<-ggplot(geneexp, aes(x="1", y=Gene, color=Group)) + geom_violin() + geom_jitter(width = 0.2) + facet_grid(~Sample) + theme_bw() + xlab("") + ylab("Gene Expression") + theme(strip.background=element_blank(), axis.text.x = element_blank())
           
           subcells<-colnames(cell_obj)[cell_obj$DisplayGroup == controlGroup]
           subobj<-subset(cell_obj, cells=subcells)
-          p2<-FeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Control: ", controlGroup))
+          p2<-MyFeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Control: ", controlGroup))
           p2<-suppressMessages(expr = p2 + xlim(xlim) + ylim(ylim) + fix.sc)
           
           subcells<-colnames(cell_obj)[cell_obj$DisplayGroup == sampleGroup]
           subobj<-subset(cell_obj, cells=subcells)
-          p1<-FeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Sample: ", sampleGroup))
+          p1<-MyFeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Sample: ", sampleGroup))
           p1<-suppressMessages(expr = p1  + xlim(xlim) + ylim(ylim) + fix.sc)
         }
         p<-ggarrange(p0,                                                 # First row with scatter plot
@@ -134,7 +134,7 @@ if(!bBetweenCluster){
     
     pdf(paste0(outFile, ".", comp, ".sigGenePerc.pdf"), width=14, height=7)
     p1<-DimPlot(obj, group.by = cluster_name, label=T) + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
-    p2<-FeaturePlot(obj, feature="sigRate", cols=c("lightgrey", "red")) + ggtitle("Percentage of DE genes in each cluster") + theme(plot.title = element_text(hjust=0.5))
+    p2<-MyFeaturePlot(obj, feature="sigRate", cols=c("lightgrey", "red")) + ggtitle("Percentage of DE genes in each cluster") + theme(plot.title = element_text(hjust=0.5))
     g<-ggarrange(p1, p2, ncol = 2, labels = c("A", "B"))
     print(g)
     dev.off()

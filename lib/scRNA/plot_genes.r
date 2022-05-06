@@ -7,7 +7,6 @@ library(patchwork)
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
-assay=ifelse(myoptions$by_sctransform == "0", "RNA", "SCT")
 celltype_name=myoptions$celltype_name
 cluster_name=myoptions$cluster_name
 samples=myoptions$samples
@@ -16,6 +15,8 @@ finalList<-readRDS(parFile1)
 geneFile<-parFile2
 
 obj<-finalList$obj
+
+DefaultAssay(obj)<-"RNA"
 
 celltypes<-read.table(geneFile, sep="\t", header=T, stringsAsFactors = F)
 celltypes$Gene<-gsub("\\s.+", "", celltypes$Gene)
@@ -55,10 +56,10 @@ for(ct in unique(celltypes$Celltype)){
   
   width=max(5000, nrow(subcelltypes) * 70)
   png(filename=paste0(outFile, ".", ct, ".png"), width=width, height=2500, res=300)
-  p<-DotPlot(obj, assay = assay, group.by="final_seurat_clusters", features=expressedGenes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
+  p<-DotPlot(obj, assay = "RNA", group.by="final_seurat_clusters", features=expressedGenes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
     xlab(paste0(ct, " expressed genes"))
   if(length(absentGenes) > 0){
-    e<-DotPlot(obj, assay = assay, group.by="final_seurat_clusters", features=absentGenes, cols = c("lightgrey", "blue"), dot.scale = 8) + RotatedAxis()+
+    e<-DotPlot(obj, assay = "RNA", group.by="final_seurat_clusters", features=absentGenes, cols = c("lightgrey", "blue"), dot.scale = 8) + RotatedAxis()+
       xlab(paste0(ct, " absent genes"))
     p2<-p+e
     print(p2)

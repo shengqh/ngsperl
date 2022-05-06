@@ -106,7 +106,7 @@ for(ct in names(cclist)){
       cur_display_markers=rownames(top10)
       dot_filename=paste0(ctPrefix, ".top10markers.dot.pdf")
       pdf(file=dot_filename, width=14, height=7)
-      g=DotPlot(obj, features=cur_display_markers, assay="SCT", group.by="seurat_cellactivity_clusters" ) + 
+      g=DotPlot(obj, features=cur_display_markers, assay="RNA", group.by="seurat_cellactivity_clusters" ) + 
         xlab("") + ylab("") + theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 90, hjust=1))
       print(g)
       dev.off()

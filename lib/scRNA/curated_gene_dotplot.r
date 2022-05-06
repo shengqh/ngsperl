@@ -11,7 +11,8 @@ library(reshape2)
 finalList<-readRDS(parFile1)
 obj<-finalList$obj
 
-assay=ifelse("SCT" %in% names(obj@assays), "SCT", "RNA")
+#all dotplot will use RNA assay
+assay="RNA"
 
 genes_df=read.table(parSampleFile1, sep="\t", stringsAsFactors=F)
 
@@ -40,7 +41,7 @@ if(hasGroup){
   groupnames=unique(obj$group)
 }
 
-drawDotPlot<-function(object, geneset_name, genes, assay, split.by=NA){
+drawDotPlot<-function(object, geneset_name, genes, assay="RNA", split.by=NA){
   p<-DotPlot(object, assay = assay, group.by="final_seurat_clusters", features=genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
     theme(plot.title = element_text(hjust = 0.5)) + xlab(gsub("_", " ", geneset_name)) + ylab("")
   cat(geneset_name, "sortName \n")

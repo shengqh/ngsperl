@@ -81,11 +81,8 @@ run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, 
   object <- FindNeighbors(object = object, dims=pca_dims, verbose=FALSE)
   object <- FindClusters(object=object, verbose=FALSE, random.seed=random.seed, resolution=resolution)
 
-  if (by_sctransform) {
-    markers <- FindAllMarkers(object, only.pos = TRUE, min.pct = min.pct, logfc.threshold = logfc.threshold)
-  }else{
-    markers <- FindAllMarkers(object, features=var.genes, only.pos = TRUE, min.pct = min.pct, logfc.threshold = logfc.threshold)
-  }
+  markers <- FindAllMarkers(object, assay="RNA", only.pos = TRUE, min.pct = min.pct, logfc.threshold = logfc.threshold)
+
   markers <- markers[markers$p_val_adj < 0.01,]
   return(list(object=object, markers=markers))
 #  return(list(object=object, markers=NULL))
@@ -809,11 +806,11 @@ cat("There are total ", ncol(obj), " cells, so each cluster was downsampled to "
 ```
 
 ```{r heatmap_samples, fig.height=max(10, length(top10$gene) / 10), fig.width=12, fig.cap=figRef("heatmap_cluster", "Marker genes in cluster")}
-g<-DoHeatmap(heatmap_obj, features = top10$gene, group.colors=seurat_colors, angle = 90) + NoLegend()
+g<-DoHeatmap(heatmap_obj, assay="RNA", features = top10$gene, group.colors=seurat_colors, angle = 90) + NoLegend()
 print(g)
 
 pdf(file=paste0(prefix, ".marker_cluster.heatmap.pdf"), width=12, height=max(10, length(top10$gene) / 10))
-g<-DoHeatmap(obj, features = top10$gene, group.colors=seurat_colors, angle = 90) + NoLegend()
+g<-DoHeatmap(obj, assay="RNA", features = top10$gene, group.colors=seurat_colors, angle = 90) + NoLegend()
 print(g)
 ```
 
@@ -866,12 +863,12 @@ print(g)
 ```
 
 ```{r gene_activity_heatmap, fig.width=12, fig.height=max(10, length(top10$gene) / 10), results="asis", fig.cap=figRef("cell_activity_heatmap", "Predicted cell type cluster heatmap")}
-g=DoHeatmap(heatmap_obj, features = top10$gene, group.by="seurat_cellactivity_clusters", group.colors=seurat_cellactivity_colors, angle=90) + NoLegend()
+g=DoHeatmap(heatmap_obj, assay="RNA", features = top10$gene, group.by="seurat_cellactivity_clusters", group.colors=seurat_cellactivity_colors, angle=90) + NoLegend()
 print(g)
 
 
 pdf(file=paste0(prefix, ".marker_celltype.heatmap.pdf"), width=12, height=max(10, length(top10$gene) / 10))
-g=DoHeatmap(obj, features = top10$gene, group.by="seurat_cellactivity_clusters", group.colors=seurat_cellactivity_colors, angle=90) + NoLegend()
+g=DoHeatmap(obj, assay="RNA", features = top10$gene, group.by="seurat_cellactivity_clusters", group.colors=seurat_cellactivity_colors, angle=90) + NoLegend()
 print(g)
 
 ```

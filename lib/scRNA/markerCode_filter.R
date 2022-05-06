@@ -71,7 +71,7 @@ PurpleAndYellow <- function(k = 50) {
 Doheatmap_cellmarker_cellType<-function(SCLC,top10,cellType,predict_celltype) {
   genemarker<-rev(top10$gene)
   orderind<-order(SCLC@active.ident)
-  data_m<-GetAssayData(SCLC,slot="data")
+  data_m<-GetAssayData(SCLC, assay="RNA",slot="data")
   geneind<-match(genemarker,rownames(data_m))
   data_h<-data_m[geneind,orderind]
   data_h_scale<-scale(t(as.matrix(data_h)))
@@ -364,7 +364,7 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
           print(DimPlot(SCLC, reduction = "umap",label=T,label.size=3, split.by = "sample"))
         }
         
-        SCLC.markers <- FindAllMarkers(SCLC, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
+        SCLC.markers <- FindAllMarkers(SCLC, assay="RNA", only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
         SCLC@misc$markers<-SCLC.markers
         
         if('avg_log2FC' %in% colnames(SCLC.markers)){
@@ -385,7 +385,7 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
         
         #print(DoHeatmap(SCLC, features = top10$gene)+ theme(axis.text.y = element_text(size = genesize)) )
         cat("\n\n### Fig.7 Marker genes expression in each cluster\n\n")
-        print(DoHeatmap(SCLC, features = top10$gene,slot="data")+ theme(axis.text.y = element_text(size = genesize))) 
+        print(DoHeatmap(SCLC, assay="RNA", features = top10$gene,slot="data")+ theme(axis.text.y = element_text(size = genesize))) 
         
         ###
         #SCLC@misc$Qcluster <- EvalCluster(SCLC)
@@ -407,12 +407,12 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
           
           cat("\n\n### Fig.8 Cell type marker genes expression in each cluster\n\n")
           
-          print(DoHeatmap(SCLC,features=ugenes,slot="data"))
+          print(DoHeatmap(SCLC, assay="RNA",features=ugenes,slot="data"))
           
           gene_groups=split(genes$`Marker Gene`, genes$`Cell Type`)
           
           genes=unique(unlist(gene_groups))
-          g<-DotPlot(SCLC, features=genes)
+          g<-DotPlot(SCLC, assay="RNA", features=genes)
           gdata<-g$data
           
           data.plot<-NULL

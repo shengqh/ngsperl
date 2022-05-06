@@ -9,7 +9,9 @@ library(ggplot2)
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
-assay=ifelse(myoptions$by_sctransform == "0", "RNA", "SCT")
+#assay=ifelse(myoptions$by_sctransform == "0", "RNA", "SCT")
+#use RNA assay for visualization
+assay="RNA"
 
 finalList<-readRDS(parFile1)
 obj=finalList$obj
@@ -76,7 +78,7 @@ if(length(sheets) > 1 && myoptions$bubblemap_use_order == "1"){
 }
 
 genes=unique(unlist(gene_groups))
-g<-DotPlot(obj, features=genes, assay=assay,group.by=group.by)
+g<-DotPlot(obj, features=genes, assay="RNA",group.by=group.by)
 gdata<-g$data
 
 data.plot<-NULL

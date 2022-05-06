@@ -156,7 +156,7 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
       cur_display_markers=rownames(display_markers)
       dot_filename=paste0(celltype_prefix, c, "_", ctc_filename, suffix, ".dot.png")
       png(file=dot_filename, width=3000, height=1600, res=300)
-      g=DotPlot(obj, features=cur_display_markers, assay=assay, group.by="seurat_cellactivity_clusters" ) + 
+      g=DotPlot(obj, assay="RNA", features=cur_display_markers, group.by="seurat_cellactivity_clusters" ) + 
         xlab("") + ylab("") + theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 90, hjust=1))
       print(g)
       dev.off()
@@ -213,5 +213,5 @@ height<-min(10000, length(top10genes) * 50 + 1000)
 max_wh<-max(width, height)
 
 png(paste0(outFile, ".top10.heatmap.png"), width=max_wh, height=max_wh, res=300)
-DoHeatmap(heatmap_obj, features = top10genes, group.by = "seurat_celltype", group.colors=seurat_colors, angle = 90) + NoLegend()
+DoHeatmap(heatmap_obj, assay="RNA", features = top10genes, group.by = "seurat_celltype", group.colors=seurat_colors, angle = 90) + NoLegend()
 dev.off()

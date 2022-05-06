@@ -205,7 +205,7 @@ if(file.exists(parFile3)){
   dev.off()
   
   cat("Draw marker gene heatmap\n")
-  obj.markers <- FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
+  obj.markers <- FindAllMarkers(obj, assay="RNA", only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
   write.csv(obj.markers, paste0(outFile, ".markers.csv"))
   obj@misc$markers<-obj.markers
   
@@ -227,7 +227,7 @@ if(file.exists(parFile3)){
   
   Idents(obj)<-'seurat_cellactivity_clusters'
   png(paste0(outFile, ".heatmap.png"), width=6600, height=6000, res=300)
-  print(DoHeatmap(obj, features = top10$gene,slot="data")+ theme(axis.text.y = element_text(size = genesize))) 
+  print(DoHeatmap(obj, assay="RNA", features = top10$gene,slot="data")+ theme(axis.text.y = element_text(size = genesize))) 
   dev.off()
   
   if(file.exists(myoptions$summary_layer_file)){
