@@ -13,7 +13,6 @@ myoptions<-split(options_table$V1, options_table$V2)
 by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
 reduction<-myoptions$reduction
 npcs<-as.numeric(myoptions$pca_dims)
-doublet_rates<-as.numeric(myoptions$doublet_rates)
 
 assay=ifelse(by_sctransform, "SCT", "RNA")
 by_harmony<-reduction=="harmony"
@@ -46,7 +45,7 @@ doublet_rate=0.01
 for (doublet_rate in c(1:10) * 0.01){
   cat("doublet_rate=", doublet_rate, "\n")
   nExp <- round(ncol(obj) * doublet_rate)  # expect 4% doublets
-  obj <- doubletFinder_v3(obj, pN =pN, pK = pK_choose, nExp = nExp, PCs = 1:npcs)
+  obj <- doubletFinder_v3(obj, pN =pN, pK = pK_choose, nExp = nExp, PCs = 1:npcs, sct=by_sctransform)
 }
 
 write.csv(obj@meta.data, paste0(outFile, ".meta.csv"))
