@@ -14,6 +14,9 @@ obj$group = unlist(groups[obj$orig.ident])
 
 ngroup=length(unique(groups_tbl$V2))
 
+#using RNA assay for visualization
+DefaultAssay(obj)<-"RNA"
+
 genes_tbl<-read.table(parSampleFile1, sep="\t", stringsAsFactors = F)
 gene=genes_tbl$V1[1]
 for (gene in genes_tbl$V1){
