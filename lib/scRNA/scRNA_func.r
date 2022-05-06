@@ -1,5 +1,6 @@
 library(harmony)
 library(cowplot)
+library(Seurat)
 
 file_not_empty<-function(filename){
   if(is.null(filename)){
@@ -363,39 +364,38 @@ draw_dimplot<-function(mt, filename, split.by) {
   return(g1)
 }
 
-do_harmony<-function(obj, npcs, batch_file, assay="RNA", selection.method = "vst", nfeatures = 3000) {
-  pca_dims = 1:npcs
-  
+do_normalization<-function(obj, selection.method, nfeatures, vars.to.regress) {
   cat("NormalizeData ... \n")
   obj <- NormalizeData(obj, verbose = FALSE)
   
   cat("FindVariableFeatures ... \n")
   obj <- FindVariableFeatures(obj, selection.method = selection.method, nfeatures = nfeatures, verbose = FALSE)
   
-  var.genes <- VariableFeatures(subobj)
-
   cat("ScaleData ... \n")
-  all.genes <- rownames(obj)  
-  obj <- ScaleData(obj, features = all.genes, verbose = FALSE)
-  
-  cat("RunPCA ... \n")
-  obj <- RunPCA(object = obj, assay=assay, features = var.genes, verbose=FALSE)
-  
-  if(file.exists(batch_file)){
-    cat("Setting batch ...\n")
-    poolmap = get_batch_samples(batch_file, unique(obj$sample))
-    obj$batch <- unlist(poolmap[obj$sample])
-  }else if(!("batch" %in% colnames(obj@meta.data))){
-    obj$batch <- obj$sample
+  obj <- ScaleData(obj, vars.to.regress=vars.to.regress, verbose = FALSE)
+
+  return(obj)
+}
+
+do_sctransform<-function(rawobj, vars.to.regress) {
+  cat("performing SCTransform ...\n")
+  nsamples=length(unique(rawobj$sample))
+  if(nsamples > 1){
+    cat("  split objects ...\n")
+    objs<-SplitObject(object = rawobj, split.by = "sample")
+    #perform sctransform
+    objs<-lapply(objs, function(x){
+      cat("  sctransform", unique(x$sample), "...\n")
+      x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=FALSE, verbose = FALSE)
+      return(x)
+    })  
+    cat("merge samples ... \n")
+    obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
+    #https://github.com/satijalab/seurat/issues/2814
+    VariableFeatures(obj[["SCT"]]) <- rownames(obj[["SCT"]]@scale.data)
+  }else{
+    obj<-SCTransform(rawobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=FALSE, verbose = FALSE)
   }
-  
-  cat("RunHarmony ... \n")
-  obj <- RunHarmony(object = obj,
-                    assay.use = assay,
-                    reduction = "pca",
-                    dims.use = pca_dims,
-                    group.by.vars = "batch",
-                    do_pca=FALSE)
   return(obj)
 }
 
@@ -443,6 +443,7 @@ plot_violin<-function(obj, features=c("FKBP1A", "CD79A")){
 preprocessing_rawobj<-function(rawobj, myoptions, prefix){
   Mtpattern= myoptions$Mtpattern
   rRNApattern=myoptions$rRNApattern
+
   Remove_rRNA<-ifelse(myoptions$Remove_rRNA == "0", FALSE, TRUE)
   Remove_MtRNA<-ifelse(myoptions$Remove_MtRNA == "0", FALSE, TRUE)
   
@@ -451,8 +452,25 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
   nCount_cutoff=as.numeric(myoptions$nCount_cutoff)
   mt_cutoff=as.numeric(myoptions$mt_cutoff)
   
-  plot1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt") + geom_hline(yintercept = mt_cutoff, color="black")  + geom_vline(xintercept = nCount_cutoff, color="black")
-  plot2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")  + geom_hline(yintercept = c( nFeature_cutoff_min, nFeature_cutoff_max), color="black")  + geom_vline(xintercept = nCount_cutoff, color="black") 
+  rawCells<-data.frame(table(rawobj$orig.ident))
+  
+  if(Remove_rRNA){
+    rRNA.genes <- grep(pattern = rRNApattern,  rownames(rawobj), value = TRUE)
+    rawobj<-rawobj[!(rownames(rawobj) %in% rRNA.genes),]
+  }
+
+  if(Remove_MtRNA){
+    Mt.genes<- grep (pattern= Mtpattern,rownames(rawobj), value=TRUE )
+    rawobj<-rawobj[!(rownames(rawobj) %in% Mt.genes),]
+  }
+  
+  plot1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt") + 
+    geom_hline(yintercept = mt_cutoff, color="black")  + 
+    geom_vline(xintercept = nCount_cutoff, color="black") +
+    scale_y_continuous(breaks = seq(0, 100, by = 10))
+  plot2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")  + 
+    geom_hline(yintercept = c( nFeature_cutoff_min, nFeature_cutoff_max), color="black")  + 
+    geom_vline(xintercept = nCount_cutoff, color="black") 
   p<-plot1+plot2
   
   png(paste0(prefix, ".qc.1.png"), width=3300, height=1500, res=300)
@@ -466,6 +484,7 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
     geom_hline(yintercept = mt_cutoff, color="red")  + 
     geom_vline(xintercept = log10(nCount_cutoff), color="red") +
     ylab("Percentage of mitochondrial") + xlab("log10(number of read)") +
+    scale_y_continuous(breaks = seq(0, 100, by = 10)) +
     facet_wrap(~Sample) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
   
   png(paste0(prefix, ".qc.2.png"), width=3600, height=3000, res=300)
@@ -479,33 +498,24 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
     geom_vline(xintercept = log10(nFeature_cutoff_min), color="red") +
     geom_vline(xintercept = log10(nFeature_cutoff_max), color="red") +
     ylab("Percentage of mitochondrial") + xlab("log10(number of feature)") +
+    scale_y_continuous(breaks = seq(0, 100, by = 10)) +
     facet_wrap(~Sample) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
   png(paste0(prefix, ".qc.3.png"), width=3600, height=3000, res=300)
   print(g1)
   dev.off()
-  
+
   finalList<-list()
   
   #filter cells
   finalList$filter<-list(nFeature_cutoff_min=nFeature_cutoff_min,
                          nFeature_cutoff_max=nFeature_cutoff_max,
                          mt_cutoff=mt_cutoff,
-                         nCount_cutoff=nCount_cutoff)
-  
-  rawCells<-data.frame(table(rawobj$orig.ident))
-  
-  rawobj<-subset(rawobj, subset = nFeature_RNA > nFeature_cutoff_min & nFeature_RNA<nFeature_cutoff_max & nCount_RNA > nCount_cutoff & percent.mt < mt_cutoff)
-  
-  if(Remove_rRNA){
-    rRNA.genes <- grep(pattern = rRNApattern,  rownames(rawobj), value = TRUE)
-    rawobj<-rawobj[!(rownames(rawobj) %in% rRNA.genes),]
-  }
-  
-  if(Remove_MtRNA){
-    Mt.genes<- grep (pattern= Mtpattern,rownames(rawobj), value=TRUE )
-    rawobj<-rawobj[!(rownames(rawobj) %in% Mt.genes),]
-  }
-  
+                         nCount_cutoff=nCount_cutoff,
+                         Remove_rRNA=Remove_rRNA,
+                         Remove_MtRNA=Remove_MtRNA)
+
+  rawobj<-subset(rawobj, subset = nFeature_RNA >= nFeature_cutoff_min & nFeature_RNA <= nFeature_cutoff_max & nCount_RNA >= nCount_cutoff & percent.mt <= mt_cutoff)
+
   filteredCells<-data.frame(table(rawobj$orig.ident))
   qcsummary<-merge(rawCells, filteredCells, by = "Var1")
   colnames(qcsummary)<-c("Sample", "RawCell", "ValidCell")
@@ -624,8 +634,8 @@ find_number_of_reduction<-function(obj, reduction="pca"){
   return(pcs)
 }
 
-get_seurat_average_expression<-function(SCLC, cluster_name){
-  dd=GetAssayData(SCLC,slot="data")
+get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
+  dd=GetAssayData(SCLC, assay=assay, slot="data")
   dobj=CreateSeuratObject(counts=dd)
   dobj$seurat_clusters=SCLC[[cluster_name]]
   result<-AverageExpression(dobj, slot="counts", group.by="seurat_clusters" )[[1]]
@@ -737,3 +747,23 @@ find_best_resolution<-function(subobj, clusters, min.pct, logfc.threshold, min_m
   return(lastCluster)
 }
   
+read_object<-function(obj_file, meta_rds){
+  obj=readRDS(obj_file)
+  if(is.list(obj)){
+    obj<-obj$obj
+  }
+  
+  meta.data=readRDS(meta_rds)
+  if(any(colnames(obj) != rownames(meta.data))){
+    obj=subset(obj, cells=rownames(meta.data))
+  }
+  obj@meta.data = meta.data
+  return(obj)
+}
+
+output_ElbowPlot<-function(obj, outFile, reduction){
+  p<-ElbowPlot(obj, ndims = 40, reduction = reduction)
+  png(paste0(outFile, ".elbowplot.", reduction, ".png"), width=1500, height=1200, res=300)
+  print(p)
+  dev.off()
+}
