@@ -140,7 +140,7 @@ for (i in 1:nrow(SampleInfos)) {
                      transpose=transpose, 
                      analysis_individual=analysis_individual,
                      Ensemblfile=Ensemblfile)
-  print(DoHeatmap(object, assay="RNA",features=knownmarkers,slot="data"))
+  print(DoHeatmap(object, assay="RNA",features=knownmarkers))
   object.list<-c(object.list,object)
 }
 

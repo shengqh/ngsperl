@@ -653,26 +653,30 @@ sub getScRNASeqConfig {
       $hto_file_ref = [ $preparation_task, ".hto.rds"];
 
       my $r_script = undef;
-      my $folder = undef;
       if ( getValue($def, "split_hto_samples_by_cutoff", 0) ) {
-        $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_cutoff_all.r";
-        $folder = "hto_samples_cutoff_all";
+        if(getValue($def, "use_cutoff_v2", 0)){
+          $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_cutoff_all_v2.r";
+          $hto_task = "hto_samples_cutoff_all_v2";
+        }else{
+          $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_cutoff_all.r";
+          $hto_task = "hto_samples_cutoff_all";
+        }
       } else {
         $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_seurat_all.r";
-        $folder = "hto_samples_HTODemux_all";
+        $hto_task = "hto_samples_HTODemux_all";
       }
 
-      #print("hto_file_ref=" . $hto_file_ref . "\n");
-      $hto_task = "hto_samples";
       $config->{$hto_task} = {
         class => "CQS::UniqueR",
-        target_dir => "${target_dir}/$folder",
+        target_dir => "${target_dir}/$hto_task",
         rtemplate => $r_script,
         option => "",
         parameterSampleFile1_ref => $hto_file_ref,
-        parameterSampleFile2 => $def->{split_hto_samples_cutoff_point},
+        #parameterSampleFile2 => $def->{split_hto_samples_cutoff_point},
         parameterSampleFile3 => {
           hto_ignore_exists => getValue($def, "hto_ignore_exists", 0),
+          umap_min_dist => getValue($def, "umap_min_dist", 0.3),
+          cutoff_file => getValue($def, "cutoff_file", "")
         },
         output_perSample_file => "parameterSampleFile1",
         output_perSample_file_byName => 1,
@@ -690,7 +694,7 @@ sub getScRNASeqConfig {
       $hto_summary_task = $hto_task . "_summary";
       $config->{$hto_summary_task} = {
         class => "CQS::UniqueR",
-        target_dir => "${target_dir}/${folder}_summary",
+        target_dir => "${target_dir}/${hto_summary_task}",
         rtemplate => "../scRNA/split_samples_summary.r",
         option => "",
         parameterSampleFile1_ref => $hto_ref,

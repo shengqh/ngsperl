@@ -1,4 +1,3 @@
-source("split_samples_utils.r")
 
 library(Seurat)
 
@@ -10,7 +9,9 @@ params$nFeature_cutoff_min=as.numeric(params$nFeature_cutoff_min)
 files_lines=read.table(parSampleFile1, sep="\t")
 files=split(files_lines$V1, files_lines$V2)
 
-cname="hto12"
+cutoff_tbl<-NULL
+
+cname=names(files)[1]
 for(cname in names(files)){
   cfiles=files[[cname]]
   if(length(cfiles) == 1){
@@ -77,16 +78,17 @@ for(cname in names(files)){
   
   tagnames=rownames(obj[["HTO"]])
   
+  cutoff_tbl<-rbind(cutoff_tbl, data.frame("cutoff"=0, "tagname"=tagnames, "filename"=cname))
+  
   n_col=ceiling(sqrt(length(tagnames)))
   n_row=ceiling(length(tagnames) / n_col)
 
-  width=max(1600, n_col * 700 + 200)
-  height=max(1400, n_row * 700)
+  width=max(3200, n_col * 3000 + 200)
+  height=max(3000, n_row * 3000)
   png(paste0(cname, ".tag.dist.png"), width=width, height=height, res=300)
   rplot(object=obj, assay="HTO", features = tagnames, identName="orig.ident", n_row=n_row)
   dev.off()
 
-  tagnames=rownames(obj[["HTO"]])
   if (length(tagnames) == 2) {
     png(paste0(cname, ".tag.point.png"), width=2000, height=1800, res=300)
     print(FeatureScatter(object = obj, feature1 = tagnames[1], feature2 = tagnames[2], cols = "black"))
@@ -100,3 +102,5 @@ for(cname in names(files)){
 
   saveRDS(htos, paste0(cname, ".hto.rds"))
 }
+
+write.table(cutoff_tbl, paste0(outFile, ".cutoff_template.txt"), row.names = F, col.names = F, sep="\t", quote=F)
