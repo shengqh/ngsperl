@@ -1,6 +1,3 @@
-
-source("countTableVisFunctions.R")
-
 options(bitmapType='cairo')
 
 library(heatmap3)
@@ -145,7 +142,7 @@ unByteCodeAssign(stats:::plotNode)
 # Now raise the interpreted code recursion limit (you may need to adjust this,
 #  decreasing if it uses to much memory, increasing if you get a recursion depth error ).
 options(expressions=5e4)
-drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat){
+drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat, width=3000, height=3000){
   genecount<-nrow(rldmatrix)
   if(genecount > 2){
     cat("saving PCA to ", filename, "\n")
@@ -182,7 +179,7 @@ drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outp
       if("PDF" == format){
         pdf(paste0(filename, ".pdf"), width=6, height=5)
       }else{
-        png(filename=paste0(filename, ".png"), width=3000, height=3000, res=300)
+        png(filename=paste0(filename, ".png"), width=width, height=height, res=300)
       }
       print(g)
       dev.off()
@@ -464,7 +461,7 @@ for (i in 1:nrow(countTableFileAll)) {
     
     #pca plot
     print(paste0("Drawing PCA for ", title, " samples."))
-    drawPCA(paste0(outputFilePrefix,curSuffix,".PCA"), countHT, showLabelInPCA, groups, colors, outputFormat)
+    drawPCA(paste0(outputFilePrefix,curSuffix,".PCA"), countHT, showLabelInPCA, groups, colors, outputFormat, width=1600, height=1500)
     
     #hca plot
     hcaOption<-getHeatmapOption(countHT)
@@ -472,7 +469,7 @@ for (i in 1:nrow(countTableFileAll)) {
       hcaOption$labRow<-NULL
     }
     
-    width=min(8000, max(2000, 50 * ncol(countHT)))
+    width=min(8000, max(1500, 50 * ncol(countHT)))
     if (ncol(countHT)>1 & nrow(countHT)>1) {
       print(paste0("Drawing heatmap for ", title, " samples."))
       if (hasMultipleGroup) {
@@ -495,7 +492,7 @@ for (i in 1:nrow(countTableFileAll)) {
         }
         
         if(hasMultipleGroup){
-          heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,legendfun=legendfun,ColSideColors=conditionColors,cexCol=hcaOption$cexCol)
+          heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,legendfun=legendfun,ColSideColors=conditionColors,cexCol=hcaOption$cexCol, ColSideLabs="")
         } else {
           heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,cexCol=hcaOption$cexCol)
         }
