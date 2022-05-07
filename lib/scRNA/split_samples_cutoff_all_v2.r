@@ -18,21 +18,6 @@ find_cutoff<-function(values){
   return(cutoff/100)
 }
 
-draw_cutoff<-function(prefix, values, cut_off){
-  png(paste0(prefix, ".cutoff.png"), width=2000, height=1600, res=300)
-  his<-hist(values,200,F,xlab="concentration",ylab="density", main=NULL,col="grey")
-  lines(density(values),lwd=1.5,col="blue")
-  abline(v=cut_off,lwd=1.5,col="red")
-
-  minb=min(his$breaks)
-  maxb=max(his$breaks)
-  x=minb + (maxb-minb) * 3 /4
-  
-  y=max(his$density)
-  legend(x=x, y=y, legend=c("density", "cutoff"), col=c("blue", "red"), lty=c(1,2))
-  dev.off()
-}
-
 files_lines=read.table(parSampleFile1, sep="\t")
 files=split(files_lines$V1, files_lines$V2)
 

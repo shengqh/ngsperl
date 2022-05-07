@@ -90,6 +90,8 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3){
     #adjust param for umap
     obj<-RunUMAP(obj, features=tagnames, slot="scale.data", min.dist=umap_min_dist)
 
+    saveRDS(obj, file=paste0(output_prefix, ".umap.rds"))
+
     umap<-FetchData(obj, c("UMAP_1", "UMAP_2"))
     scaled_data<-FetchData(obj, tagnames)
     colnames(scaled_data)<-paste0("Scaled_", tagnames)
@@ -154,3 +156,19 @@ lookup_cutoff<-function(cutoffs, fname, tagname){
   
   return(fc$V1[1])
 }
+
+draw_cutoff<-function(prefix, values, cut_off){
+  png(paste0(prefix, ".cutoff.png"), width=2000, height=1600, res=300)
+  his<-hist(values,200,F,xlab="concentration",ylab="density", main=NULL,col="grey")
+  lines(density(values),lwd=1.5,col="blue")
+  abline(v=cut_off,lwd=1.5,col="red")
+
+  minb=min(his$breaks)
+  maxb=max(his$breaks)
+  x=minb + (maxb-minb) * 3 /4
+  
+  y=max(his$density)
+  legend(x=x, y=y, legend=c("density", "cutoff"), col=c("blue", "red"), lty=c(1,2))
+  dev.off()
+}
+

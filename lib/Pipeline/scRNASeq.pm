@@ -680,7 +680,7 @@ sub getScRNASeqConfig {
         },
         output_perSample_file => "parameterSampleFile1",
         output_perSample_file_byName => 1,
-        output_perSample_file_ext => ".HTO.umap.class.png;.HTO.csv;.HTO.data.csv",
+        output_perSample_file_ext => ".HTO.umap.class.png;.HTO.csv;.HTO.data.csv;.HTO.umap.rds",
         sh_direct   => 1,
         pbs => {
           "nodes"     => "1:ppn=1",
@@ -767,6 +767,7 @@ sub getScRNASeqConfig {
           parameterSampleFile1_ref => $hto_souporcell_task,
           parameterSampleFile2_ref => $hto_ref,
           parameterSampleFile3_ref => [ $hto_task, ".umap.rds" ],
+          parameterSampleFile4     => $def->{ignore_souporcell_cluster},
           output_perSample_file => "parameterSampleFile1",
           output_perSample_file_byName => 1,
           output_perSample_file_ext => ".HTO.class.dist.png;.HTO.csv",
@@ -1326,7 +1327,7 @@ sub getScRNASeqConfig {
         }
 
 
-        if(defined $df_task){
+        if(defined $config->{$df_task}){
           my $doublet_check_task = $subcluster_task . "_doublet";
           $config->{$doublet_check_task} = {
             class                    => "CQS::UniqueR",
