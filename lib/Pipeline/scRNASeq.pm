@@ -1110,7 +1110,7 @@ sub getScRNASeqConfig {
             by_sctransform        => getValue( $def, "by_sctransform" ),
             batch_for_integration => getValue( $def, "batch_for_integration" ),
           },
-          output_file_ext      => ".final.rds,.qc.1.png,.qc.2.png,.qc.3.png,.qc.4.png,.sample_cell.csv,.final.png,.pca.txt",
+          output_file_ext      => ".final.rds,.qc.1.png,.qc.2.png,.qc.3.png,.qc.4.png,.sample_cell.csv,.final.png",
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
@@ -1263,7 +1263,7 @@ sub getScRNASeqConfig {
           },
           parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
           output_file_ext      => ".scDynamic.meta.rds",
-          output_other_ext  => ".layer0_to_layer1.png,.layer1_to_layer2.png,.layer2_to_layer3.png,.layer3_to_layer4.png,.layer3_to_layer4.meta.csv,.scDynamic.meta.csv",
+          output_other_ext  => ".layer0_to_layer1.png,.layer1_to_layer2.png,.layer2_to_layer3.png,.layer3_to_layer4.png",
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
@@ -1306,7 +1306,7 @@ sub getScRNASeqConfig {
           },
           parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
           output_file_ext      => ".meta.rds",
-          output_other_ext  => ".umap.png,.meta.csv,.options.csv",
+          output_other_ext  => ".umap.png",
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
@@ -1340,8 +1340,8 @@ sub getScRNASeqConfig {
               bubblemap_file        => $def->{bubblemap_file},
               by_sctransform        => getValue( $def, "by_sctransform" ),
             },
-            output_file_ext      => ".meta.csv",
-            output_other_ext  => ".umap.png",
+            output_file_ext      => ".doublet_perc.png",
+            output_other_ext  => "",
             sh_direct            => 1,
             pbs                  => {
               "nodes"     => "1:ppn=1",
