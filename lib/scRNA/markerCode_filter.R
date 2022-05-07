@@ -71,7 +71,7 @@ PurpleAndYellow <- function(k = 50) {
 Doheatmap_cellmarker_cellType<-function(SCLC,top10,cellType,predict_celltype) {
   genemarker<-rev(top10$gene)
   orderind<-order(SCLC@active.ident)
-  data_m<-GetAssayData(SCLC, assay="RNA",slot="data")
+  data_m<-GetAssayData(SCLC, assay="RNA")
   geneind<-match(genemarker,rownames(data_m))
   data_h<-data_m[geneind,orderind]
   data_h_scale<-scale(t(as.matrix(data_h)))
@@ -385,7 +385,7 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
         
         #print(DoHeatmap(SCLC, features = top10$gene)+ theme(axis.text.y = element_text(size = genesize)) )
         cat("\n\n### Fig.7 Marker genes expression in each cluster\n\n")
-        print(DoHeatmap(SCLC, assay="RNA", features = top10$gene,slot="data")+ theme(axis.text.y = element_text(size = genesize))) 
+        print(DoHeatmap(SCLC, assay="RNA", features = top10$gene)+ theme(axis.text.y = element_text(size = genesize))) 
         
         ###
         #SCLC@misc$Qcluster <- EvalCluster(SCLC)
@@ -407,7 +407,7 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
           
           cat("\n\n### Fig.8 Cell type marker genes expression in each cluster\n\n")
           
-          print(DoHeatmap(SCLC, assay="RNA",features=ugenes,slot="data"))
+          print(DoHeatmap(SCLC, assay="RNA",features=ugenes))
           
           gene_groups=split(genes$`Marker Gene`, genes$`Cell Type`)
           
