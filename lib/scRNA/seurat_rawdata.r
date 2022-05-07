@@ -242,49 +242,10 @@ boxplot(tm, cex = 0.1, las = 1, xlab = "% total count per cell",
         col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
 dev.off()
 
-draw_qc<-function(prefix, rawobj, ident_name) {
-  Idents(rawobj)<-ident_name
-  
-  feats <- c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.ribo", "percent.hb")
-
-  png(file=paste0(prefix, ".qc.violin.png"), width=6000, height=4000, res=300)
-  g<-VlnPlot(rawobj, features = feats, pt.size = 0.1, ncol = 3) + NoLegend()
-  print(g)
-  dev.off()
-  
-  png(file=paste0(prefix, ".qc.png"), width=3000, height=1200, res=300)
-  p1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt")
-  p2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
-  p<-p1+p2+plot_layout(ncol=2)
-  print(p)
-  dev.off()
-  
-  mt<-data.frame(mt=rawobj$percent.mt, Sample=unlist(rawobj[[ident_name]]), nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
-  nsample=length(unique(mt$Sample))
-  nwidth=ceiling(sqrt(nsample))
-  nheight=ceiling(nsample/nwidth)
-  png(file=paste0(prefix, ".qc.individual.png"), width=min(20000, max(2000, 1000 * nwidth) + 300), height=min(20000, 2 * max(2000, 1000*nheight)), res=300)
-  p1<-ggplot(mt, aes(y=mt,x=nCount) ) +
-    geom_bin2d(bins = 70) + 
-    scale_fill_continuous(type = "viridis") + 
-    scale_y_continuous(breaks = seq(0, 100, by = 10)) +
-    ylab("Percentage of mitochondrial") + xlab("log10(number of read)") +
-    facet_wrap(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-  p2<-ggplot(mt, aes(y=mt,x=nFeature) ) +
-    geom_bin2d(bins = 70) + 
-    scale_fill_continuous(type = "viridis") + 
-    scale_y_continuous(breaks = seq(0, 100, by = 10)) +
-    ylab("Percentage of mitochondrial") + xlab("log10(number of feature)") +
-    facet_wrap(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-  p<-p1+p2+plot_layout(ncol=1)
-  print(p)
-  dev.off()
-}
-
-draw_qc(outFile, rawobj, "orig.ident")
+draw_feature_qc(outFile, rawobj, "orig.ident")
 
 if(any(rawobj$orig.ident != rawobj$sample)){
-  draw_qc(paste0(outFile, ".sample"), rawobj, "sample")
+  draw_feature_qc(paste0(outFile, ".sample"), rawobj, "sample")
 }
 
 rRNA.genes <- grep(pattern = rRNApattern,  rownames(rawobj), value = TRUE)
@@ -294,9 +255,9 @@ rawobj<-PercentageFeatureSet(object=rawobj, pattern=Mtpattern, col.name="percent
 rawobj<-PercentageFeatureSet(object=rawobj, pattern=rRNApattern, col.name = "percent.ribo")
 rawobj<-PercentageFeatureSet(object=rawobj, pattern=hemoglobinPattern, col.name="percent.hb")    
 
-draw_qc(paste0(outFile, ".no_ribo"), rawobj, "orig.ident")
+draw_feature_qc(paste0(outFile, ".no_ribo"), rawobj, "orig.ident")
 
 if(any(rawobj$orig.ident != rawobj$sample)){
-  draw_qc(paste0(outFile, ".no_ribo", ".sample"), rawobj, "sample")
+  draw_feature_qc(paste0(outFile, ".no_ribo", ".sample"), rawobj, "sample")
 }
 

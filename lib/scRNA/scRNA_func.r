@@ -2,6 +2,9 @@ library(harmony)
 library(cowplot)
 library(Seurat)
 
+#https://github.com/satijalab/seurat/issues/1836
+#For visualization, using sctransform data is also fine.
+
 MyFeaturePlot<-function(object, assay="RNA", ...){
   old_assay=DefaultAssay(object)
   DefaultAssay(object)=assay
@@ -626,14 +629,18 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file){
   height=nHeight*600
   
   cat("draw pictures ... ")
+  draw_feature_qc(paste0(outFile, ".violin.sample"), obj, "sample")
+
   p<-draw_dimplot(mt, paste0(outFile, ".sample.png"), "Sample")
   if(!all(mt$Sample == mt$Ident)){
+    draw_feature_qc(paste0(outFile, ".violin.Ident"), obj, "orig.ident")
     p1<-draw_dimplot(mt, paste0(outFile, ".Ident.png"), "Ident")
     p<-p+p1
     width=width + nWidth * 600
   }
 
   if(has_batch_file){
+    draw_feature_qc(paste0(outFile, ".violin.batch"), obj, "batch")
     p2<-draw_dimplot(mt, paste0(outFile, ".batch.png"), "batch")
     p<-p+p2
     width=width+nWidth * 600
@@ -817,3 +824,43 @@ output_ElbowPlot<-function(obj, outFile, reduction){
   print(p)
   dev.off()
 }
+
+draw_feature_qc<-function(prefix, rawobj, ident_name) {
+  Idents(rawobj)<-ident_name
+  
+  feats <- c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.ribo", "percent.hb")
+
+  png(file=paste0(prefix, ".qc.violin.png"), width=6000, height=4000, res=300)
+  g<-VlnPlot(rawobj, features = feats, pt.size = 0.1, ncol = 3) + NoLegend()
+  print(g)
+  dev.off()
+  
+  png(file=paste0(prefix, ".qc.png"), width=3000, height=1200, res=300)
+  p1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt")
+  p2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+  p<-p1+p2+plot_layout(ncol=2)
+  print(p)
+  dev.off()
+  
+  mt<-data.frame(mt=rawobj$percent.mt, Sample=unlist(rawobj[[ident_name]]), nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
+  nsample=length(unique(mt$Sample))
+  nwidth=ceiling(sqrt(nsample))
+  nheight=ceiling(nsample/nwidth)
+  png(file=paste0(prefix, ".qc.individual.png"), width=min(20000, max(2000, 1000 * nwidth) + 300), height=min(20000, 2 * max(2000, 1000*nheight)), res=300)
+  p1<-ggplot(mt, aes(y=mt,x=nCount) ) +
+    geom_bin2d(bins = 70) + 
+    scale_fill_continuous(type = "viridis") + 
+    scale_y_continuous(breaks = seq(0, 100, by = 10)) +
+    ylab("Percentage of mitochondrial") + xlab("log10(number of read)") +
+    facet_wrap(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+  p2<-ggplot(mt, aes(y=mt,x=nFeature) ) +
+    geom_bin2d(bins = 70) + 
+    scale_fill_continuous(type = "viridis") + 
+    scale_y_continuous(breaks = seq(0, 100, by = 10)) +
+    ylab("Percentage of mitochondrial") + xlab("log10(number of feature)") +
+    facet_wrap(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+  p<-p1+p2+plot_layout(ncol=1)
+  print(p)
+  dev.off()
+}
+
