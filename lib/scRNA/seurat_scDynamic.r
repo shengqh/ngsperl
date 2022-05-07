@@ -168,6 +168,9 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
     stopifnot(all(subobj[[previous_layer]] == pct))
     
     pca_npcs<-min(round(length(cells)/2), 50)
+
+    k_n_neighbors<-min(pca_npcs, 20)
+    u_n_neighbors<-min(pca_npcs, 30)
     
     cur_npcs=min(pca_npcs, npcs)
     cur_pca_dims=1:cur_npcs
@@ -203,12 +206,12 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
     }
     
     cat(key, "FindClusters\n")
-    subobj<-FindNeighbors(object=subobj, reduction=curreduction, dims=cur_pca_dims, verbose=FALSE)
+    subobj<-FindNeighbors(object=subobj, reduction=curreduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
     subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolutions, verbose=FALSE)
     
     if(previous_layer != "layer0") {
       cat(key, "RunUMAP\n")
-      subobj<-RunUMAP(object = subobj, reduction=curreduction, dims=cur_pca_dims, verbose = FALSE)
+      subobj<-RunUMAP(object = subobj, reduction=curreduction, n.neighbors=k_n_neighbors, dims=cur_pca_dims, verbose = FALSE)
     }
     
     cat(key, "Cell type annotation\n")
