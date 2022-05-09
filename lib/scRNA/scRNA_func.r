@@ -369,20 +369,32 @@ draw_dimplot<-function(mt, filename, split.by) {
   return(g1)
 }
 
-do_normalization<-function(obj, selection.method, nfeatures, vars.to.regress) {
+do_normalization<-function(obj, selection.method, nfeatures, vars.to.regress, scale.all=FALSE, essential_genes=NULL) {
+  DefaultAssay(obj)<-"RNA"
+
   cat("NormalizeData ... \n")
   obj <- NormalizeData(obj, verbose = FALSE)
   
   cat("FindVariableFeatures ... \n")
   obj <- FindVariableFeatures(obj, selection.method = selection.method, nfeatures = nfeatures, verbose = FALSE)
   
-  cat("ScaleData ... \n")
-  obj <- ScaleData(obj, vars.to.regress=vars.to.regress, verbose = FALSE)
+  if(scale.all){
+    features = rownames(obj@assays$RNA@data)
+  }else{
+    features=VariableFeatures(obj)
+    if (!is.null(essential_genes)){
+      features = unique(c(features, essential_genes))
+    }
+  }
+  cat("Scale", length(features), "genes ...\n")
+  obj <- ScaleData(obj, vars.to.regress=vars.to.regress, features=features, verbose = FALSE)
+
+  stopifnot(dim(obj@assays$RNA@scale.data)[1] > 0)
 
   return(obj)
 }
 
-do_sctransform<-function(rawobj, vars.to.regress) {
+do_sctransform<-function(rawobj, vars.to.regress, return.only.var.genes=FALSE) {
   cat("performing SCTransform ...\n")
   nsamples=length(unique(rawobj$sample))
   if(nsamples > 1){
@@ -391,7 +403,7 @@ do_sctransform<-function(rawobj, vars.to.regress) {
     #perform sctransform
     objs<-lapply(objs, function(x){
       cat("  sctransform", unique(x$sample), "...\n")
-      x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=FALSE, verbose = FALSE)
+      x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE)
       return(x)
     })  
     cat("merge samples ... \n")
@@ -399,35 +411,24 @@ do_sctransform<-function(rawobj, vars.to.regress) {
     #https://github.com/satijalab/seurat/issues/2814
     VariableFeatures(obj[["SCT"]]) <- rownames(obj[["SCT"]]@scale.data)
   }else{
-    obj<-SCTransform(rawobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=FALSE, verbose = FALSE)
+    obj<-SCTransform(rawobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE)
   }
   return(obj)
 }
 
-do_harmony<-function(obj, by_sctransform, regress_by_percent_mt, has_batch_file, batch_file, pca_dims){
-
-  by_sctransform<-ifelse(myoptions$by_sctransform == "1", TRUE, FALSE)
-  regress_by_percent_mt<-ifelse(myoptions$regress_by_percent_mt == "1", TRUE, FALSE)
-
-  if(regress_by_percent_mt){
-    vars.to.regress="percent.mt"
-  }else{
-    vars.to.regress=NULL
-  }
-
-  DefaultAssay(obj)<-"RNA"
+do_harmony<-function(obj, by_sctransform, vars.to.regress, has_batch_file, batch_file, pca_dims, essential_genes=NULL){
   if(by_sctransform){
-    cat("NormalizeData ... \n")
-    #we will need normalized data for visualization and cell type annotation
-    obj <- NormalizeData(obj, verbose = FALSE)
-
     #now perform sctranform
     obj<-do_sctransform(obj, vars.to.regress=vars.to.regress)
     assay="SCT"
   }else{
-    obj<-do_normalization(obj, selection.method="vst", nfeatures=3000, vars.to.regress=vars.to.regress)
     assay="RNA"
   }
+
+  #no matter if we will use sctransform, we need normalized RNA assay for visualization and cell type annotation
+  #data slot for featureplot, dotplot, cell type annotation and scale.data slot for heatmap
+  #we need to do sctransform first, then do RNA assay normalization and scale, otherwise, after sctransform, the scale.data slot will be discarded.
+  obj<-do_normalization(obj, selection.method="vst", nfeatures=3000, vars.to.regress=vars.to.regress, scale.all=FALSE, essential_genes=essential_genes)
 
   DefaultAssay(obj)<-assay
 
@@ -862,5 +863,14 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
   p<-p1+p2+plot_layout(ncol=1)
   print(p)
   dev.off()
+}
+
+myScaleData<-function(object, features, assay, ...){
+  scaled.genes<-rownames(object[[assay]]@scale.data)
+  if(!all(features %in% scaled.genes)){
+    new.genes<-unique(features, scaled.genes)
+    object=ScaleData(object, features=new.genes, assay=assay, ... )
+  }
+  return(object)
 }
 

@@ -48,7 +48,7 @@ for(idx in c(1:length(cluster_request))) {
   #     if(c1 == c2){
   #       next
   #     }
-  #     c1c2_markers = FindMarkers(subobj, ident.1 = c1, ident.2=c2, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+  #     c1c2_markers = FindMarkers(subobj, assay="RNA", ident.1 = c1, ident.2=c2, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
   #     sig_c1c2 = ifelse(rownames(c1markers) %in% rownames(c1c2_markers), 1, 0)
   #     c1markers$sig_count = c1markers$sig_count + sig_c1c2
   #   }
