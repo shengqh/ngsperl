@@ -112,8 +112,8 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "by_integration",        0 );
   initDefaultValue( $def, "by_sctransform",        0 );
 
-  #my $pca_dims = $def->{by_sctransform}?30:20;
-  my $pca_dims = 50;
+  my $pca_dims = $def->{by_sctransform}?30:20;
+  #my $pca_dims = 50;
   initDefaultValue( $def, "pca_dims",            $pca_dims );
 
   initDefaultValue( $def, "pool_sample",           0 );
@@ -151,7 +151,8 @@ sub initializeScRNASeqDefaultOptions {
 
   initDefaultValue( $def, "perform_dynamic_cluster", 1 );
   initDefaultValue( $def, "perform_fix_resolution", 0 );
-  initDefaultValue( $def, "remove_subtype", "T cells,B cells,Fibroblasts,Neurons,Epithelial cells,Macrophages,Dendritic cells"),
+  #initDefaultValue( $def, "remove_subtype", "T cells,B cells,Fibroblasts,Neurons,Epithelial cells,Macrophages,Dendritic cells"),
+  initDefaultValue( $def, "remove_subtype", ""),
   initDefaultValue( $def, "best_resolution_min_markers", 20);
   
   return $def;
@@ -1281,45 +1282,90 @@ sub getScRNASeqConfig {
         }
         push( @$summary, $scDynamic_task );
 
-        my $subcluster_task = $scDynamic_task . "_subcluster";
-        $config->{$subcluster_task} = {
-          class                    => "CQS::UniqueR",
-          perform                  => 1,
-          target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $subcluster_task,
-          rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_celltype_subcluster.r",
-          parameterFile1_ref => [$seurat_task, ".rds"],
-          parameterFile2_ref => [$scDynamic_task, ".meta.rds"],
-          parameterFile3_ref => $essential_gene_task,
-          parameterSampleFile1     => {
-            pca_dims              => getValue( $def, "pca_dims" ),
-            by_sctransform        => getValue( $def, "by_sctransform" ),
-            regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
-            reduction             => $reduction,
-            species               => getValue( $def, "species" ),
-            db_markers_file       => getValue( $def, "markers_file" ),
-            curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
-            annotate_tcell        => getValue( $def, "annotate_tcell", 0),
-            remove_subtype        => getValue( $def, "remove_subtype", ""),
-            HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
-            tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
-            bubblemap_file        => $def->{bubblemap_file},
-            bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
-            summary_layer_file    => $def->{summary_layer_file},
-            celltype_layer        => "layer4",
-            output_layer          => "cell_type",
-            best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
-          },
-          parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
-          output_file_ext      => ".meta.rds",
-          output_other_ext  => ".umap.png",
-          sh_direct            => 1,
-          pbs                  => {
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "12",
-            "mem"       => "40gb"
-          },
-        };
-        push( @$summary, $subcluster_task );
+        my $subcluster_task;
+        if(getValue($def, "perform_subcluster_v2", 1)){
+          $subcluster_task = $scDynamic_task . "_subcluster.v2";
+          $config->{$subcluster_task} = {
+            class                    => "CQS::UniqueR",
+            perform                  => 1,
+            target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $subcluster_task,
+            rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_celltype_subcluster.v2.r",
+            parameterFile1_ref => [$seurat_task, ".rds"],
+            parameterFile2_ref => [$scDynamic_task, ".meta.rds"],
+            parameterFile3_ref => $essential_gene_task,
+            parameterSampleFile1     => {
+              pca_dims              => getValue( $def, "pca_dims" ),
+              by_sctransform        => getValue( $def, "by_sctransform" ),
+              regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
+              reduction             => $reduction,
+              species               => getValue( $def, "species" ),
+              db_markers_file       => getValue( $def, "markers_file" ),
+              curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
+              annotate_tcell        => getValue( $def, "annotate_tcell", 0),
+              #remove_subtype        => getValue( $def, "remove_subtype", ""),
+              remove_subtype        => "",
+              HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
+              tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
+              bubblemap_file        => $def->{bubblemap_file},
+              bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
+              summary_layer_file    => $def->{summary_layer_file},
+              celltype_layer        => "layer4",
+              output_layer          => "cell_type",
+              best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
+            },
+            parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
+            output_file_ext      => ".meta.rds",
+            output_other_ext  => ".umap.png",
+            sh_direct            => 1,
+            pbs                  => {
+              "nodes"     => "1:ppn=1",
+              "walltime"  => "12",
+              "mem"       => "40gb"
+            },
+          };
+          push( @$summary, $subcluster_task );
+        }else{
+          $subcluster_task = $scDynamic_task . "_subcluster.v1";
+          $config->{$subcluster_task} = {
+            class                    => "CQS::UniqueR",
+            perform                  => 1,
+            target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $subcluster_task,
+            rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_celltype_subcluster.r",
+            parameterFile1_ref => [$seurat_task, ".rds"],
+            parameterFile2_ref => [$scDynamic_task, ".meta.rds"],
+            parameterFile3_ref => $essential_gene_task,
+            parameterSampleFile1     => {
+              pca_dims              => getValue( $def, "pca_dims" ),
+              by_sctransform        => getValue( $def, "by_sctransform" ),
+              regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
+              reduction             => $reduction,
+              species               => getValue( $def, "species" ),
+              db_markers_file       => getValue( $def, "markers_file" ),
+              curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
+              annotate_tcell        => getValue( $def, "annotate_tcell", 0),
+              #remove_subtype        => getValue( $def, "remove_subtype", ""),
+              remove_subtype        => "",
+              HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
+              tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
+              bubblemap_file        => $def->{bubblemap_file},
+              bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
+              summary_layer_file    => $def->{summary_layer_file},
+              celltype_layer        => "layer4",
+              output_layer          => "cell_type",
+              best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
+            },
+            parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
+            output_file_ext      => ".meta.rds",
+            output_other_ext  => ".umap.png",
+            sh_direct            => 1,
+            pbs                  => {
+              "nodes"     => "1:ppn=1",
+              "walltime"  => "12",
+              "mem"       => "40gb"
+            },
+          };
+          push( @$summary, $subcluster_task );
+        }
 
         if (getValue( $def, "perform_SignacX", 0 ) ) {
           my $signacX_name = $subcluster_task . "_SignacX";
