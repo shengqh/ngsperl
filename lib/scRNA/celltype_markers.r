@@ -212,6 +212,8 @@ height<-min(10000, length(top10genes) * 50 + 1000)
 
 max_wh<-max(width, height)
 
+heatmap_obj<-myScaleData(heatmap_obj, top10$gene, "RNA")
+
 png(paste0(outFile, ".top10.heatmap.png"), width=max_wh, height=max_wh, res=300)
 DoHeatmap(heatmap_obj, assay="RNA", features = top10genes, group.by = "seurat_celltype", group.colors=seurat_colors, angle = 90) + NoLegend()
 dev.off()

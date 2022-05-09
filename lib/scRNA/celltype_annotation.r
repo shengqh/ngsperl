@@ -225,6 +225,8 @@ if(file.exists(parFile3)){
     } 
   }
   
+  obj<-myScaleData(obj, top10$gene, "RNA")
+
   Idents(obj)<-'seurat_cellactivity_clusters'
   png(paste0(outFile, ".heatmap.png"), width=6600, height=6000, res=300)
   print(DoHeatmap(obj, assay="RNA", features = top10$gene,slot="data")+ theme(axis.text.y = element_text(size = genesize))) 
