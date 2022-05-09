@@ -77,7 +77,7 @@ if(has_bubblemap){
   bubble_genes<-unique(genes_df$`Marker Gene`)
 }
 
-resolutions=c(seq(from = 0.01, to = 0.09, by = 0.02), seq(from = 0.1, to = 0.5, by = 0.1))
+resolutions=c(seq(from = 0.01, to = 0.09, by = 0.01), seq(from = 0.1, to = 0.5, by = 0.1))
 
 layer4map<-split(tiers$Layer4, tiers$Celltype.name)
 
