@@ -1452,11 +1452,13 @@ fi
     };
 
     push( @$summary_ref, $refseq_bacteria_table );  
+    push @table_for_correlation, ( $refseq_bacteria_table, ".estimated.count\$" );
+    push @table_for_correlation, ( $refseq_bacteria_table, ".aggregated.count\$" );
 
     if ($do_comparison) {
       for my $cat (@$categories){
-        addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_query", [ $refseq_bacteria_table, ".${cat}.query.count\$" ],
-          $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        # addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_query", [ $refseq_bacteria_table, ".${cat}.query.count\$" ],
+        #   $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
         addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_estimated", [ $refseq_bacteria_table, ".${cat}.estimated.count\$" ],
           $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
         addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_aggregated", [ $refseq_bacteria_table, ".${cat}.aggregated.count\$" ],
