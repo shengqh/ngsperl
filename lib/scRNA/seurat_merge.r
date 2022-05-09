@@ -47,15 +47,17 @@ finalList<-finalList[names(finalList) != "rawobj"]
 DefaultAssay(obj)<-"RNA"
 
 if(by_sctransform){
-  #we need normalized data for visualization and cell type annotation
-  obj<-NormalizeData(obj, verbose = FALSE)
-  #then do sctransform
-  obj<-do_sctransform(obj, vars.to.regress=vars.to.regress)
+  obj<-do_sctransform(obj, vars.to.regress=vars.to.regress, return.only.var.genes=FALSE)
   assay="SCT"
 }else{
-  obj<-do_normalization(obj, selection.method="vst", nfeatures=3000, vars.to.regress=vars.to.regress)
   assay="RNA"
 }
+
+#no matter if we will use sctransform, we need normalized RNA assay for visualization and cell type annotation
+#data slot for featureplot, dotplot, cell type annotation and scale.data slot for heatmap
+obj<-do_normalization(obj, selection.method="vst", nfeatures=3000, vars.to.regress=vars.to.regress, scale.all=FALSE, essential_genes=essential_genes)
+
+DefaultAssay(obj)<-assay
 
 cat("RunPCA ... \n")
 obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
@@ -74,6 +76,4 @@ obj <- RunUMAP(object = obj, dims=pca_dims, verbose = FALSE)
 finalList$obj<-obj
 saveRDS(finalList, file=finalListFile)
 
-#using RNA assay for visualization
-DefaultAssay(obj)<-"RNA"
 output_integration_dimplot(obj, outFile, FALSE)
