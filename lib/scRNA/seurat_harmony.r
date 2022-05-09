@@ -29,12 +29,18 @@ finalList<-preprocessing_rawobj(obj, myoptions, prefix)
 obj<-finalList$rawobj
 finalList<-finalList[names(finalList) != "rawobj"]
 
-#essential_genes=read.table(parFile2, sep="\t" ,header=F)$V1
+essential_genes=read.table(parFile2, sep="\t" ,header=F)$V1
 
 by_sctransform<-ifelse(myoptions$by_sctransform == "1", TRUE, FALSE)
 regress_by_percent_mt<-ifelse(myoptions$regress_by_percent_mt == "1", TRUE, FALSE)
 
-obj<-do_harmony(obj, by_sctransform, regress_by_percent_mt, has_batch_file, parSampleFile2, pca_dims)
+if(regress_by_percent_mt){
+  vars.to.regress="percent.mt"
+}else{
+  vars.to.regress=NULL
+}
+
+obj<-do_harmony(obj, by_sctransform, vars.to.regress, has_batch_file, parSampleFile2, pca_dims, essential_genes=essential_genes)
 
 reduction="harmony"
 
@@ -50,6 +56,4 @@ finalList$obj<-obj
 finalListFile<-paste0(outFile, ".final.rds")
 saveRDS(finalList, file=finalListFile)
 
-#using RNA assay for visualization
-DefaultAssay(obj)<-"RNA"
 output_integration_dimplot(obj, outFile, has_batch_file)
