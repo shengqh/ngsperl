@@ -805,17 +805,19 @@ find_best_resolution<-function(subobj, clusters, min.pct, logfc.threshold, min_m
   return(lastCluster)
 }
   
-read_object<-function(obj_file, meta_rds){
+read_object<-function(obj_file, meta_rds=NULL){
   obj=readRDS(obj_file)
   if(is.list(obj)){
     obj<-obj$obj
   }
   
-  meta.data=readRDS(meta_rds)
-  if(any(colnames(obj) != rownames(meta.data))){
-    obj=subset(obj, cells=rownames(meta.data))
+  if(!is.null(meta_rds)){
+    meta.data=readRDS(meta_rds)
+    if(any(colnames(obj) != rownames(meta.data))){
+      obj=subset(obj, cells=rownames(meta.data))
+    }
+    obj@meta.data = meta.data
   }
-  obj@meta.data = meta.data
   return(obj)
 }
 
@@ -872,5 +874,25 @@ myScaleData<-function(object, features, assay, ...){
     object=ScaleData(object, features=new.genes, assay=assay, ... )
   }
   return(object)
+}
+
+get_top10_markers<-function(markers){
+  markers=markers[markers$p_val_adj < 0.05,]
+  top10 <- markers %>% group_by(cluster) %>% top_n(n = 10, wt = .data[["avg_log2FC"]])
+  return(top10)
+}
+
+factorize_layer<-function(obj, layer){
+  ldata<-unlist(obj[[layer]])
+  lt=table(ldata)
+  lt<-lt[order(lt, decreasing=T)]
+  levels=names(lt)
+  obj[[layer]]=factor(ldata, levels=levels)
+  return(obj)
+}
+    
+unfactorize_layer<-function(obj, layer){
+  obj[[layer]]=as.character(unlist(obj[[layer]]))
+  return(obj)
 }
 
