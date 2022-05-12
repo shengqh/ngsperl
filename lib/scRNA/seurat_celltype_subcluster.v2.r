@@ -9,6 +9,7 @@ library(stringr)
 library(htmltools)
 library(patchwork)
 library(data.table)
+library(testit)
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
@@ -71,6 +72,14 @@ if(parSampleFile2 != ""){
   obj<-obj[!(rownames(obj) %in% ignore_genes),]
 }
 
+bHasSignacX<-FALSE
+if(parFile4 != ""){
+  signacX<-readRDS(parFile4)
+  assert(rownames(signacX) == rownames(obj@meta.data))
+  obj<-AddMetaData(obj, signacX$signacx_CellStates, col.name = "signacx_CellStates")
+  bHasSignacX<-TRUE
+}
+
 if(has_bubblemap){
   allgenes<-rownames(obj)
   genes_df <- read_bubble_genes(bubblemap_file, allgenes)
@@ -97,6 +106,7 @@ previous_celltypes<-names(tblct)
 
 DefaultAssay(obj)<-assay
 
+filelist<-NULL
 allmarkers<-NULL
 allcts<-NULL
 cluster_index=0
@@ -106,12 +116,24 @@ for(pct in previous_celltypes){
   cells<-rownames(meta)[meta[,previous_layer] == pct]
   subobj<-subset(obj, cells=cells)
   
+  if(bHasSignacX){
+    sx<-table(subobj$signacx_CellStates)
+    sx<-sx[sx>5]
+    sxnames<-names(sx)
+    sxnames<-sxnames[sxnames != "Unclassified"]
+    sxobj<-subset(subobj, signacx_CellStates %in% sxnames)
+    sxobj$signacx_CellStates<-as.character(sxobj$signacx_CellStates)
+    gsx<-DimPlot(sxobj, reduction="umap", group.by = "signacx_CellStates", label=F) + ggtitle(paste0(pct, ": signacx"))
+  }
+
   stopifnot(all(subobj[[previous_layer]] == pct))
   
   pca_npcs<-min(round(length(cells)/2), 50)
-  
   cur_npcs=min(pca_npcs, npcs)
   cur_pca_dims=1:cur_npcs
+
+  k_n_neighbors<-min(cur_npcs, 20)
+  u_n_neighbors<-min(cur_npcs, 30)
   
   curprefix<-paste0(prefix, ".", previous_layer, "_", gsub(" ", "_", pct))
   
@@ -131,23 +153,51 @@ for(pct in previous_celltypes){
       cat(key, "normalization\n")
       subobj<-do_normalization(subobj, selection.method="vst", nfeatures=3000, vars.to.regress=vars.to.regress, scale.all=FALSE, essential_genes=essential_genes)
     }
-    subobj<-RunPCA(subobj, npcs=pca_npcs)
+    cat(key, "RunPCA\n")
+    subobj<-RunPCA(subobj, npcs=cur_npcs)
     curreduction="pca"
   }
 
+  DefaultAssay(subobj)<-assay
+
   cat(key, "FindClusters\n")
-  subobj<-FindNeighbors(object=subobj, reduction=curreduction, dims=cur_pca_dims, verbose=FALSE)
+  subobj<-FindNeighbors(object=subobj, reduction=curreduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
   subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolutions, verbose=FALSE)
+  
+  umap_names<-c()
+  nn=10
+  for(nn in c(30,20,10)){
+    min_dist=0.05
+    for (min_dist in c(0.3, 0.1, 0.05)){
+      umap_name = paste0("umap_nn", nn, "_dist", min_dist)
+      cat(umap_name, "\n")
+      umap_names<-c(umap_names, umap_name)
+      umap_key = paste0("UMAPnn", nn, "dist", min_dist * 100, "_")
+      subobj<-RunUMAP(object = subobj, reduction=curreduction, reduction.key=umap_key, reduction.name=umap_name, n.neighbors=nn, min.dist=min_dist, dims=cur_pca_dims, verbose = FALSE)
+    }
+  }
 
-  cat(key, "RUNUMAP\n")
-  subobj<-RunUMAP(object = subobj, assay=assay, reduction=curreduction, dims=cur_pca_dims, verbose = FALSE)
-
+  g<-NULL
+  for(umap_name in umap_names){  
+    cat(umap_name, "\n")
+    cg<-DimPlot(subobj, reduction = umap_name, group.by="orig.ident") + ggtitle(umap_name)
+    if(is.null(g)){
+      g<-cg
+    }else{
+      g<-g+cg
+    }
+  }
+  g<-g+plot_layout(ncol=3)
+  png(paste0(curprefix, ".iumap.png"), width=6600, height=6000, res=300)
+  print(g)
+  dev.off()
+  
   cat(key, "Find marker genes\n")
-  cluster = clusters[1]
+  cluster = clusters[5]
   markers_map = list()
   for(cluster in clusters){
     cat("  ", cluster, "\n")
-
+    
     Idents(subobj)<-cluster
     if(length(unique(Idents(subobj))) == 1){#only 1 cluster
       cat("    only one cluster, pass\n")
@@ -156,12 +206,18 @@ for(pct in previous_celltypes){
     
     cluster_prefix = paste0(curprefix, ".", clusters_prefix[cluster])
     cur_resolution=gsub(".+_snn_res.", "", cluster)
-
+    
     markers=FindAllMarkers(subobj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
     markers=markers[markers$p_val_adj < 0.05,]
-
-    write.csv(markers, paste0(cluster_prefix, ".markers.csv"))
-
+    
+    if(nrow(markers) == 0){
+      cat("    only DE gene, pass\n")
+      next
+    }
+    
+    markers_file=paste0(cluster_prefix, ".markers.csv")
+    write.csv(markers, markers_file)
+    
     top10 <- markers %>% group_by(cluster) %>% top_n(n = 10, wt = .data[["avg_log2FC"]])
     top10genes<-unique(top10$gene)
     
@@ -172,12 +228,12 @@ for(pct in previous_celltypes){
     
     seurat_cur_layer<-"seurat_celltype"
     cur_layer="cur_layer"
-
+    
     oldcluster<-unlist(subobj[[cluster]][[1]])
     newct<-layer_ids[oldcluster]
     cts<-data.frame("seurat_clusters"=oldcluster, cur_layer=newct)
     cts[,seurat_cur_layer] = paste0(cts$seurat_clusters, ": ", cts[,cur_layer])
-
+    
     ct<-cts[,c("seurat_clusters", seurat_cur_layer)]
     ct<-unique(ct)
     ct<-ct[order(ct$seurat_clusters),]
@@ -186,17 +242,40 @@ for(pct in previous_celltypes){
     subobj<-AddMetaData(subobj, cts[,cur_layer], col.name = cur_layer)
     subobj<-AddMetaData(subobj, factor(cts[,seurat_cur_layer], levels=ct[,seurat_cur_layer]), col.name = seurat_cur_layer)
     
-    g<-DimPlot(subobj, group.by = "seurat_clusters", label=T) + ggtitle(paste0(pct, ": res", cur_resolution) ) + scale_color_discrete(labels = ct[,seurat_cur_layer])
-    if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-      layout <- "ABB"
-      g2<-get_bubble_plot(subobj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA")
-      g<-g+g2+plot_layout(design=layout)
-      width=6300
+    meta_rds = paste0(cluster_prefix, ".meta.rds")
+    saveRDS(subobj@meta.data, meta_rds)
+    
+    g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
+    g1<-DimPlot(subobj, reduction="umap", group.by = "seurat_clusters", label=T) + ggtitle(paste0(pct, ": old umap: res", cur_resolution)) + scale_color_discrete(labels = ct[,seurat_cur_layer])
+    if(bHasSignacX){
+      g2<-DimPlot(subobj, reduction="umap", group.by = "signacx_CellStates", label=F) + ggtitle(paste0(pct, ": signacx"))
     }else{
-      width=2300
+      g2<-gsx
+    }
+    g<-g0+g1+g2
+    for(umap_name in umap_names){
+      gu<-DimPlot(subobj, reduction=umap_name, group.by = "seurat_clusters", label=T) + ggtitle(paste0(pct, ": ", umap_name, ": res", cur_resolution)) + scale_color_discrete(labels = ct[,seurat_cur_layer])
+      g<-g+gu
+    }
+    width=6600
+    if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
+      layout <- "ADEF
+  BGHL
+  CMNQ
+  RRRR"
+      gb<-get_bubble_plot(subobj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA") + theme(text = element_text(size=20))
+      g<-g+gb+plot_layout(design=layout)
+      height=6000
+    }else{
+      layout <- "ADEF
+  BGHL
+  CMNQ"
+      g<-g+plot_layout(design=layout)
+      height=4500
     }
     
-    png(paste0(cluster_prefix, ".umap.png"), width=width, height=2000, res=300)
+    umap_file = paste0(cluster_prefix, ".umap.png")
+    png(umap_file, width=width, height=height, res=300)
     print(g)
     dev.off()
     
@@ -205,8 +284,15 @@ for(pct in previous_celltypes){
     
     subobj<-myScaleData(subobj, top10genes, "RNA")
     g<-DoHeatmap(subobj, assay="RNA", features = top10genes, group.by = seurat_cur_layer, angle = 90) + NoLegend()
-    png(paste0(cluster_prefix, ".top10.heatmap.png"), width=3000, height=3000, res=300)
+    
+    heatmap_file = paste0(cluster_prefix, ".top10.heatmap.png")
+    png(heatmap_file, width=3000, height=3000, res=300)
     print(g)
     dev.off()
+    
+    cur_df = data.frame("file"=paste0(getwd(), "/", c(markers_file, meta_rds, umap_file, heatmap_file)), "type"=c("markers", "meta", "umap", "heatmap"), "resolution"=cur_resolution, "celltype"=pct)
+    filelist<-rbind(filelist, cur_df)
   }
 }
+
+write.csv(filelist, paste0(outFile, ".files.csv"))
