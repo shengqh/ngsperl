@@ -874,3 +874,15 @@ myScaleData<-function(object, features, assay, ...){
   return(object)
 }
 
+get_groups_dot<-function(subobj, group1, group2){
+  ct<-table(unlist(subobj[[group1]]))
+  ct_names<-paste0(names(ct), " (", ct, ")")
+  names(ct_names)<-names(ct)
+  tbl<-table(unlist(subobj[[group1]]), unlist(subobj[[group2]]))
+  mtbl<-reshape2::melt(tbl)
+  colnames(mtbl)<-c(group1, group2, "Cell")
+  mtbl[,group1]<-as.character(mtbl[,group1])
+  mtbl[,group1]<-factor(ct_names[mtbl[,group1]], levels=ct_names)
+  g<-ggplot(mtbl, aes_string(group1, "Cell", fill=group2)) + geom_bar(position="fill", stat="identity") + theme_bw() + coord_flip() + xlab("") + ylab("")
+  return(g)
+}
