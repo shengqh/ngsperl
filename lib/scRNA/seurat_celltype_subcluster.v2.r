@@ -106,6 +106,9 @@ previous_celltypes<-names(tblct)
 
 DefaultAssay(obj)<-assay
 
+g00<-DimPlot(obj, group.by=previous_layer, label=T)
+g01<-DimPlot(obj, group.by="orig.ident", label=T)
+
 filelist<-NULL
 allmarkers<-NULL
 allcts<-NULL
@@ -116,16 +119,6 @@ for(pct in previous_celltypes){
   cells<-rownames(meta)[meta[,previous_layer] == pct]
   subobj<-subset(obj, cells=cells)
   
-  if(bHasSignacX){
-    sx<-table(subobj$signacx_CellStates)
-    sx<-sx[sx>5]
-    sxnames<-names(sx)
-    sxnames<-sxnames[sxnames != "Unclassified"]
-    sxobj<-subset(subobj, signacx_CellStates %in% sxnames)
-    sxobj$signacx_CellStates<-as.character(sxobj$signacx_CellStates)
-    gsx<-DimPlot(sxobj, reduction="umap", group.by = "signacx_CellStates", label=F) + ggtitle(paste0(pct, ": signacx"))
-  }
-
   stopifnot(all(subobj[[previous_layer]] == pct))
   
   pca_npcs<-min(round(length(cells)/2), 50)
@@ -164,33 +157,36 @@ for(pct in previous_celltypes){
   subobj<-FindNeighbors(object=subobj, reduction=curreduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
   subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolutions, verbose=FALSE)
   
+  
+  g11<-DimPlot(subobj, reduction="umap", group.by = "orig.ident", label=F)
+  
+  cat(key, "RunUMAP\n")
   umap_names<-c()
-  nn=10
-  for(nn in c(30,20,10)){
-    min_dist=0.05
-    for (min_dist in c(0.3, 0.1, 0.05)){
-      umap_name = paste0("umap_nn", nn, "_dist", min_dist)
-      cat(umap_name, "\n")
-      umap_names<-c(umap_names, umap_name)
-      umap_key = paste0("UMAPnn", nn, "dist", min_dist * 100, "_")
-      subobj<-RunUMAP(object = subobj, reduction=curreduction, reduction.key=umap_key, reduction.name=umap_name, n.neighbors=nn, min.dist=min_dist, dims=cur_pca_dims, verbose = FALSE)
-    }
-  }
-
-  g<-NULL
-  for(umap_name in umap_names){  
+  ops<-data.frame("nn"=c(30,20,10), "min.dist"=c(0.3,0.1,0.05))
+  for(idx in c(1:nrow(ops))){
+    nn=ops[idx, 'nn']
+    min.dist=ops[idx, 'min.dist']
+    umap_name = paste0("umap_nn", nn, "_dist", min.dist)
     cat(umap_name, "\n")
-    cg<-DimPlot(subobj, reduction = umap_name, group.by="orig.ident") + ggtitle(umap_name)
-    if(is.null(g)){
-      g<-cg
-    }else{
-      g<-g+cg
-    }
+    umap_names<-c(umap_names, umap_name)
+    umap_key = paste0("UMAPnn", nn, "dist", min.dist * 100, "_")
+    subobj<-RunUMAP(object = subobj, reduction=curreduction, reduction.key=umap_key, reduction.name=umap_name, n.neighbors=nn, min.dist=min.dist, dims=cur_pca_dims, verbose = FALSE)
   }
-  g<-g+plot_layout(ncol=3)
-  png(paste0(curprefix, ".iumap.png"), width=6600, height=6000, res=300)
-  print(g)
-  dev.off()
+# 
+#   g<-NULL
+#   for(umap_name in umap_names){  
+#     cat(umap_name, "\n")
+#     cg<-DimPlot(subobj, reduction = umap_name, group.by="orig.ident") + ggtitle(umap_name)
+#     if(is.null(g)){
+#       g<-cg
+#     }else{
+#       g<-g+cg
+#     }
+#   }
+#   g<-g+plot_layout(ncol=3)
+#   png(paste0(curprefix, ".iumap.png"), width=6600, height=6000, res=300)
+#   print(g)
+#   dev.off()
   
   cat(key, "Find marker genes\n")
   cluster = clusters[5]
@@ -245,34 +241,71 @@ for(pct in previous_celltypes){
     meta_rds = paste0(cluster_prefix, ".meta.rds")
     saveRDS(subobj@meta.data, meta_rds)
     
+    if(bHasSignacX){
+      sx<-table(subobj$signacx_CellStates)
+      sx<-sx[sx>5]
+      sxnames<-names(sx)
+      sxnames<-sxnames[sxnames != "Unclassified"]
+      sxobj<-subset(subobj, signacx_CellStates %in% sxnames)
+      sxobj$signacx_CellStates<-as.character(sxobj$signacx_CellStates)
+    }
+
     g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
     g1<-DimPlot(subobj, reduction="umap", group.by = "seurat_clusters", label=T) + ggtitle(paste0(pct, ": old umap: res", cur_resolution)) + scale_color_discrete(labels = ct[,seurat_cur_layer])
     if(bHasSignacX){
-      g2<-DimPlot(subobj, reduction="umap", group.by = "signacx_CellStates", label=F) + ggtitle(paste0(pct, ": signacx"))
+      g2<-DimPlot(sxobj, reduction="umap", group.by = "signacx_CellStates", label=F) + ggtitle(paste0(pct, ": signacx"))
     }else{
-      g2<-gsx
+      g2<-DimPlot(subobj, reduction="umap", group.by = "orig.ident", label=F) + ggtitle(paste0(pct, ": sample"))
     }
-    g<-g0+g1+g2
+    g<-g00+g0+g1+g2
     for(umap_name in umap_names){
-      gu<-DimPlot(subobj, reduction=umap_name, group.by = "seurat_clusters", label=T) + ggtitle(paste0(pct, ": ", umap_name, ": res", cur_resolution)) + scale_color_discrete(labels = ct[,seurat_cur_layer])
+      gu<-DimPlot(subobj, reduction=umap_name, group.by = "seurat_clusters", label=T) + ggtitle(paste0(umap_name, ": res", cur_resolution)) + scale_color_discrete(labels = ct[,seurat_cur_layer])
       g<-g+gu
     }
-    width=6600
-    if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-      layout <- "ADEF
-  BGHL
-  CMNQ
-  RRRR"
-      gb<-get_bubble_plot(subobj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA") + theme(text = element_text(size=20))
-      g<-g+gb+plot_layout(design=layout)
-      height=6000
-    }else{
-      layout <- "ADEF
-  BGHL
-  CMNQ"
-      g<-g+plot_layout(design=layout)
-      height=4500
+    if(bHasSignacX){
+      for(umap_name in umap_names){
+        gu<-DimPlot(sxobj, reduction=umap_name, group.by = "signacx_CellStates", label=F) + ggtitle(paste0(umap_name, ": signacX"))
+        g<-g+gu
+      }
     }
+    g<-g+ get_groups_dot(subobj, "seurat_clusters", "orig.ident")
+    if(bHasSignacX){
+      g<-g+get_groups_dot(sxobj, "seurat_clusters", "signacx_CellStates") +
+            get_groups_dot(sxobj, "signacx_CellStates", "orig.ident")
+    }
+
+    if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
+      gb<-get_bubble_plot(subobj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA") + theme(text = element_text(size=20))
+      g<-g+gb
+      if(bHasSignacX){
+        layout="AACEFG
+BBDHLM
+NNOOPP
+QQQQQQ"
+        width=8000
+        height=4500
+      }else{
+        layout="ABCD
+EFGH
+GGGG"
+        width=6400
+        height=4500
+      }
+    }else{
+      if(bHasSignacX){
+        layout="AACEFG
+BBDHLM
+NNOOPP"
+        width=8000
+        height=3000
+      }else{
+        layout="ABCD
+EFGH"
+        widdh=5100
+        height=3000
+      }
+    }
+    g<-g+plot_layout(design=layout)
     
     umap_file = paste0(cluster_prefix, ".umap.png")
     png(umap_file, width=width, height=height, res=300)
