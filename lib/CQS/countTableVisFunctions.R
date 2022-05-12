@@ -219,7 +219,6 @@ myEstimateSizeFactors<-function(dds){
   return(dds)
 }
 
-library("VennDiagram")
 venn.diagram1<-function (x, count=NULL,filename, height = 3000, width = 3000, resolution = 500, 
 		units = "px", compression = "lzw", na = "stop", main = NULL, 
 		sub = NULL, main.pos = c(0.5, 1.05), main.fontface = "plain", 
@@ -230,6 +229,7 @@ venn.diagram1<-function (x, count=NULL,filename, height = 3000, width = 3000, re
 		fill=NA,
 		...) 
 {
+	library("VennDiagram")
 	if (is.null(count)) {
 		countFun<-function(x) length(x)
 	} else {
