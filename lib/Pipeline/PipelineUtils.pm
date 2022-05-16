@@ -91,6 +91,7 @@ our %EXPORT_TAGS = (
     add_bowtie_index
     addLocusCoverage    
     addGeneCoverage
+    get_next_index
     )
   ]
 );
@@ -158,6 +159,18 @@ sub getNextIndex {
   $def->{$key} = $index + 1;
 
   return $result;
+}
+
+sub get_next_index {
+  my ($def, $key) = @_;
+  if (not defined $def->{$key}){
+    $def->{$key} = 1;
+  }else{
+    $def->{$key} = $def->{$key} + 1;
+  }
+  #print("current_index = " . $def->{$key} . "\n");
+  my $res = sprintf("_%02d", $def->{$key});
+  return($res);
 }
 
 sub getNextFolderIndex {
