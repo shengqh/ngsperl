@@ -17,6 +17,7 @@ ngroup=length(unique(groups_tbl$V2))
 #using RNA assay for visualization
 DefaultAssay(obj)<-"RNA"
 
+filelist=NULL
 genes_tbl<-read.table(parSampleFile1, sep="\t", stringsAsFactors = F)
 gene=genes_tbl$V1[1]
 for (gene in genes_tbl$V1){
@@ -27,7 +28,9 @@ for (gene in genes_tbl$V1){
   gdata1<-subset(gdata, gdata$Gene == 0)
   gdata2<-subset(gdata, gdata$Gene > 0)
   
-  png(filename=paste0(outFile, gene, ".feature_plot.png"), width= ngroup * 2000, height=2000, res=300)
+  pngfile = paste0(outFile, ".", gene, ".png")
+  filelist=rbind(filelist, data.frame("file"=paste0(getwd(), "/", pngfile), "gene"=gene))
+  png(filename=pngfile, width= ngroup * 2000, height=2000, res=300)
   g<-ggplot(gdata, aes(UMAP_1, UMAP_2)) + 
     geom_point(data=gdata1, aes(col=Gene)) + 
     geom_point(data=gdata2, aes(col=Gene)) + 
@@ -41,3 +44,5 @@ for (gene in genes_tbl$V1){
   print(g)
   dev.off()
 }
+
+write.csv(filelist, paste0(outFile, ".figure.files.csv"), row.names=F)
