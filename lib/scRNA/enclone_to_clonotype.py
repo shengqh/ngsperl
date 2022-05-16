@@ -95,7 +95,7 @@ def convert(enclone_file, chain_file, output_file, logger):
   total_cells = sum(row['n'] for row in rows)
   with open(output_file, "wt") as fout:
     clono_index = 0
-    fout.write("clonotype_id,frequency,proportion,cdr3s_aa,cdr3s_nt,%s,cells\n" % ",".join(samples))
+    fout.write("clonotype_id,frequency,proportion,cdr3s_aa,cdr3s_nt,%s,TRBV,TRBJ,cells\n" % ",".join(samples))
     for row in rows:
       clono_index += 1
       sample_map = clone_sample_cell_map[clono_index]
@@ -103,6 +103,8 @@ def convert(enclone_file, chain_file, output_file, logger):
       aa2 = row['cdr3_aa2']
       dna1 = row['cdr3_dna1']
       dna2 = row['cdr3_dna2']
+      trbv=row['v_name1']
+      trbj=row['j_name1']
       aas = []
       dnas = []
       if aa1 != "":
@@ -120,13 +122,15 @@ def convert(enclone_file, chain_file, output_file, logger):
       cell_counts = []
       for sample in samples:
         cell_counts.append(str(sample_map[sample]) if sample in sample_map else "0")
-      fout.write("clonotype%d,%s,%s,%s,%s,%s,%s\n" % (
+      fout.write("clonotype%d,%s,%s,%s,%s,%s,%s,%s,%s\n" % (
         clono_index, 
         row['n'], 
         row['n']*1.0/total_cells, 
         ";".join(aas), 
         ";".join(dnas), 
         ",".join(cell_counts),
+        trbv,
+        trbj,
         barcodes
         ))
 
