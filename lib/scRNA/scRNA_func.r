@@ -703,7 +703,7 @@ get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
   return(result)
 }
 
-get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA"){
+get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE){
   allgenes=rownames(obj)
   genes_df <- read_bubble_genes(bubblemap_file, allgenes)
   gene_groups=split(genes_df$`Marker Gene`, genes_df$`Cell Type`)
@@ -720,7 +720,11 @@ get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA
   ct_levels = ct_levels[ct_levels %in% ct$cell_type]
   cell_type$cell_type<-factor(cell_type$cell_type, levels=ct_levels)
   if(!is.na(cur_res)){
-    cell_type<-cell_type[order(cell_type$cell_type, cell_type[,cur_res]),]
+    if(orderby_cluster){
+      cell_type<-cell_type[order(cell_type[,cur_res]),]
+    }else{
+      cell_type<-cell_type[order(cell_type$cell_type, cell_type[,cur_res]),]
+    }
     cell_type$seurat_celltype_clusters=paste0(cell_type[,cur_res], " : ", cell_type$cell_type)
     cell_type$seurat_celltype_clusters=factor(cell_type$seurat_celltype_clusters, levels=unique(cell_type$seurat_celltype_clusters))
     group.by="seurat_celltype_clusters"
