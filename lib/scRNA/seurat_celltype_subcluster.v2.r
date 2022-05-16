@@ -76,7 +76,18 @@ bHasSignacX<-FALSE
 if(parFile4 != ""){
   signacX<-readRDS(parFile4)
   assert(rownames(signacX) == rownames(obj@meta.data))
-  obj<-AddMetaData(obj, signacX$signacx_CellStates, col.name = "signacx_CellStates")
+
+  ct_map=c('T.CD4.memory'='T.CD4', 
+    'T.CD4.naive'='T.CD4', 
+    'T.CD8.cm'='T.CD8',
+    'T.CD8.em'='T.CD8',
+    'T.CD8.naive'='T.CD8')
+  signacX$signacx_CellStates_slim<-as.character(signacX$signacx_CellStates)
+  for(ct_name in names(ct_map)){
+    signacX$signacx_CellStates_slim[signacX$signacx_CellStates_slim==ct_name]=ct_map[ct_name]
+  }
+
+  obj<-AddMetaData(obj, signacX$signacx_CellStates_slim, col.name = "signacx_CellStates")
   bHasSignacX<-TRUE
 }
 
@@ -99,7 +110,7 @@ names(clusters_prefix) = clusters
 
 celltypes<-unlist(meta[[previous_layer]])
 tblct<-table(celltypes)
-tblct<-tblct[order(tblct, decreasing = T)]
+tblct<-tblct[order(tblct, decreasing = F)]
 
 previous_celltypes<-names(tblct)
 #previous_celltypes<-c("B cells")
@@ -165,6 +176,7 @@ for(pct in previous_celltypes){
   ops<-data.frame("nn"=c(30,20,10), "min.dist"=c(0.3,0.1,0.05))
   for(idx in c(1:nrow(ops))){
     nn=ops[idx, 'nn']
+    nn<-min(nn, u_n_neighbors)
     min.dist=ops[idx, 'min.dist']
     umap_name = paste0("umap_nn", nn, "_dist", min.dist)
     cat(umap_name, "\n")
@@ -257,71 +269,75 @@ for(pct in previous_celltypes){
     }else{
       g2<-DimPlot(subobj, reduction="umap", group.by = "orig.ident", label=F) + ggtitle(paste0(pct, ": sample"))
     }
-    g<-g00+g0+g1+g2
+    g<-g0+g1+g2+get_groups_dot(subobj, "seurat_clusters", "orig.ident")
     for(umap_name in umap_names){
-      gu<-DimPlot(subobj, reduction=umap_name, group.by = "seurat_clusters", label=T) + ggtitle(paste0(umap_name, ": res", cur_resolution)) + scale_color_discrete(labels = ct[,seurat_cur_layer])
+      gu<-DimPlot(subobj, reduction=umap_name, group.by = "seurat_clusters", label=T) + ggtitle(paste0("res", cur_resolution, ": ", umap_name)) + scale_color_discrete(labels = ct[,seurat_cur_layer])
       g<-g+gu
     }
     if(bHasSignacX){
+      g<-g+get_groups_dot(sxobj, "seurat_clusters", "signacx_CellStates")
       for(umap_name in umap_names){
         gu<-DimPlot(sxobj, reduction=umap_name, group.by = "signacx_CellStates", label=F) + ggtitle(paste0(umap_name, ": signacX"))
         g<-g+gu
       }
-    }
-    g<-g+ get_groups_dot(subobj, "seurat_clusters", "orig.ident")
-    if(bHasSignacX){
-      g<-g+get_groups_dot(sxobj, "seurat_clusters", "signacx_CellStates") +
-            get_groups_dot(sxobj, "signacx_CellStates", "orig.ident")
+      g<-g+get_groups_dot(sxobj, "signacx_CellStates", "orig.ident")
     }
 
+    width=8000
     if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
       gb<-get_bubble_plot(subobj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA") + theme(text = element_text(size=20))
       g<-g+gb
       if(bHasSignacX){
-        layout="AACEFG
-BBDHLM
-NNOOPP
-QQQQQQ"
-        width=8000
-        height=4500
+        layout="ABCD
+EFGH
+IJKL
+MMMM"
+        height=6000
       }else{
         layout="ABCD
 EFGH
 GGGG"
-        width=6400
         height=4500
       }
     }else{
       if(bHasSignacX){
-        layout="AACEFG
-BBDHLM
-NNOOPP"
-        width=8000
-        height=3000
+        layout="ABCD
+EFGH
+IJKL"
+        height=4500
       }else{
         layout="ABCD
 EFGH"
-        widdh=5100
         height=3000
       }
     }
-    g<-g+plot_layout(design=layout)
+    gu<-g+plot_layout(design=layout)
     
     umap_file = paste0(cluster_prefix, ".umap.png")
     png(umap_file, width=width, height=height, res=300)
-    print(g)
+    print(gu)
     dev.off()
     
     width<-max(3000, min(10000, length(unique(subobj$seurat_clusters)) * 150 + 1000))
     height<-max(3000, min(10000, length(top10genes) * 60 + 1000))
     
     subobj<-myScaleData(subobj, top10genes, "RNA")
-    g<-DoHeatmap(subobj, assay="RNA", features = top10genes, group.by = seurat_cur_layer, angle = 90) + NoLegend()
+    gh<-DoHeatmap(subobj, assay="RNA", features = top10genes, group.by = seurat_cur_layer, angle = 90) + NoLegend()
     
     heatmap_file = paste0(cluster_prefix, ".top10.heatmap.png")
     png(heatmap_file, width=3000, height=3000, res=300)
-    print(g)
+    print(gh)
     dev.off()
+
+#     layout="NNABCD
+# NNEFGH
+# NNIJKL
+# NNMMMM"
+#     gg<-g+gh+plot_layout(design=layout)
+#     umap_file = paste0(cluster_prefix, ".umap.png")
+#     png(umap_file, width=width+height, height=height, res=300)
+#     print(gg)
+#     dev.off()
     
     cur_df = data.frame("file"=paste0(getwd(), "/", c(markers_file, meta_rds, umap_file, heatmap_file)), "type"=c("markers", "meta", "umap", "heatmap"), "resolution"=cur_resolution, "celltype"=pct)
     filelist<-rbind(filelist, cur_df)
