@@ -74,7 +74,7 @@ CCCC
     height=2000
   }
   
-  png(paste0(outFile, ".DR", doublet_rate, ".umap.png"), width=4400, height=height, res=300)
+  png(paste0(outFile, ".DR", sprintf(doublet_rate, fmt="%#.2f"), ".umap.png"), width=4400, height=height, res=300)
   print(g)
   dev.off()
 }
