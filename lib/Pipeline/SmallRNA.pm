@@ -1440,6 +1440,8 @@ fi
       source_ref => $refseq_bacteria_bowtie_count,
       parameterFile1_arg => "-s",
       parameterFile1 => getValue($def, "refseq_bacteria_species"),
+      parameterFile2_arg => "-t",
+      parameterFile2 => getValue($def, "refseq_taxonomy"),
       output_arg => "-o",
       output_file_ext => $file_ext_str,
       no_docker => 1,
