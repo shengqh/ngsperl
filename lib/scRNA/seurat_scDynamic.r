@@ -76,6 +76,13 @@ if(parSampleFile2 != ""){
   obj<-obj[!(rownames(obj) %in% ignore_genes),]
 }
 
+if(parSampleFile3 != ""){
+  umap_min_dist = read.table(parSampleFile3, sep="\t")
+  umap_min_dist_map = unlist(split(umap_min_dist$V1, umap_min_dist$V2))
+}else{
+  umap_min_dist_map = c("layer0" = 0.3,"layer1" = 0.3,"layer2" = 0.3,"layer3" = 0.3,"layer4" = 0.3)
+}
+
 if(has_bubblemap){
   allgenes<-rownames(obj)
   genes_df <- read_bubble_genes(bubblemap_file, allgenes)
@@ -144,7 +151,7 @@ cur_layermap=layer3map
 previous_celltypes<-unique(obj@meta.data[[previous_layer]])
 iter=1
 
-iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_layermap, cur_layer, cur_layermap, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, iter, check_pre_layer, vars.to.regress){
+iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_layermap, cur_layer, cur_layermap, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, iter, check_pre_layer, vars.to.regress, umap_min_dist_map){
   meta = obj@meta.data
   curprefix = paste0(prefix, ".", previous_layer, ".iter", iter)
   
@@ -168,12 +175,11 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
     stopifnot(all(subobj[[previous_layer]] == pct))
     
     pca_npcs<-min(round(length(cells)/2), 50)
-
-    k_n_neighbors<-min(pca_npcs, 20)
-    u_n_neighbors<-min(pca_npcs, 30)
-    
     cur_npcs=min(pca_npcs, npcs)
     cur_pca_dims=1:cur_npcs
+
+    k_n_neighbors<-min(cur_npcs, 20)
+    u_n_neighbors<-min(cur_npcs, 30)
 
     DefaultAssay(subobj)<-assay
     
@@ -190,7 +196,7 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
       cat(key, "sctransform/PCA\n")
       #subobj[['SCT']]<-NULL
       #subobj<-SCTransform(subobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes = F, verbose = FALSE)
-      subobj<-RunPCA(subobj, npcs=pca_npcs)
+      subobj<-RunPCA(subobj, npcs=cur_npcs)
       curreduction="pca"
     }else{
       cat(key, "normalization/PCA\n")
@@ -211,7 +217,8 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
     
     if(previous_layer != "layer0") {
       cat(key, "RunUMAP\n")
-      subobj<-RunUMAP(object = subobj, reduction=curreduction, n.neighbors=k_n_neighbors, dims=cur_pca_dims, verbose = FALSE)
+      cur_min_dist = umap_min_dist_map[previous_layer]
+      subobj<-RunUMAP(object = subobj, min_dist = cur_min_dist, reduction=curreduction, n.neighbors=u_n_neighbors, dims=cur_pca_dims, verbose = FALSE)
     }
     
     cat(key, "Cell type annotation\n")
@@ -335,7 +342,7 @@ CC
   return(list("all_pre_cts"=all_pre_cts, "all_cur_cts"=all_cur_cts))
 }
 
-layer_cluster_celltype<-function(obj, previous_layer, previous_layermap, cur_layer, cur_layermap, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, check_pre_layer, vars.to.regress, unique_celltype){
+layer_cluster_celltype<-function(obj, previous_layer, previous_layermap, cur_layer, cur_layermap, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, check_pre_layer, vars.to.regress, unique_celltype, umap_min_dist_map){
   meta<-obj@meta.data
   
   previous_celltypes<-unique(meta[[previous_layer]])
@@ -358,7 +365,7 @@ layer_cluster_celltype<-function(obj, previous_layer, previous_layermap, cur_lay
       iter_meta_file = paste0(prefix, ".", previous_layer, ".iter", iter, ".csv")
       iter_meta_rds = paste0(prefix, ".", previous_layer, ".iter", iter, ".rds")
       
-      lst<-iterate_celltype(obj, previous_celltypes, previous_layer, previous_layermap, cur_layer, cur_layermap, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, iter, check_pre_layer, vars.to.regress)
+      lst<-iterate_celltype(obj, previous_celltypes, previous_layer, previous_layermap, cur_layer, cur_layermap, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, iter, check_pre_layer, vars.to.regress, umap_min_dist_map)
       all_pre_cts<-lst$all_pre_cts
       all_cur_cts<-lst$all_cur_cts
       
@@ -394,6 +401,11 @@ layer_cluster_celltype<-function(obj, previous_layer, previous_layermap, cur_lay
   DefaultAssay(obj)<-"RNA"
 
   g<-DimPlot(obj, group.by = cur_layer, label=T)
+
+  png(paste0(prefix, ".", cur_layer, ".final.png"), width=3300, height=3000, res=300)
+  print(g)
+  dev.off()
+
   if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
     g2<-get_bubble_plot(obj, NA, cur_layer, bubblemap_file, assay)
     g<-g+g2+plot_layout(ncol = 2, widths = c(3, 5))
@@ -413,25 +425,36 @@ layer_cluster_celltype<-function(obj, previous_layer, previous_layermap, cur_lay
   return(obj)
 }
 
-obj<-layer_cluster_celltype(obj, "layer0", NULL, "layer1", layer1map, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, FALSE, vars.to.regress, NULL)
+obj<-layer_cluster_celltype(obj, "layer0", NULL, "layer1", layer1map, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, FALSE, vars.to.regress, NULL, umap_min_dist_map)
 
-obj<-layer_cluster_celltype(obj, "layer1", layer1map, "layer2", layer2map, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, TRUE, vars.to.regress, NULL)
+obj<-layer_cluster_celltype(obj, "layer1", layer1map, "layer2", layer2map, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, TRUE, vars.to.regress, NULL, umap_min_dist_map)
 
-obj<-layer_cluster_celltype(obj, "layer2", layer2map, "layer3", layer3map, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, TRUE, vars.to.regress, NULL)
+obj<-layer_cluster_celltype(obj, "layer2", layer2map, "layer3", layer3map, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, TRUE, vars.to.regress, NULL, umap_min_dist_map)
 #obj@meta.data=readRDS("iSGS_airway.layer2_to_layer3.meta.rds")
-obj<-layer_cluster_celltype(obj, "layer3", layer3map, "layer4", layer4map, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, TRUE, vars.to.regress, unique_celltype)
+obj<-layer_cluster_celltype(obj, "layer3", layer3map, "layer4", layer4map, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, TRUE, vars.to.regress, unique_celltype, umap_min_dist_map)
+
+celltypes<-unique(obj$layer4)
+celltypes<-celltypes[order(celltypes)]
+ctdf<-data.frame("celltype"=celltypes, "resolution"=0.01)
+write.table(ctdf, paste0(prefix, ".scDynamic.celltype_res.txt"), row.names=F, sep="\t", quote=F)
+
+obj<-factorize_layer(obj, "layer4")
+Idents(obj)<-"layer4"
 
 saveRDS(obj@meta.data, paste0(prefix, ".scDynamic.meta.rds"))
 write.csv(obj@meta.data, paste0(prefix, ".scDynamic.meta.csv"))
 
-#using RNA assay for visualization
-DefaultAssay(obj)<-"RNA"
-for(layer in c("layer1", "layer2", "layer3", "layer4")){
-  g<-DimPlot(obj, group.by =layer, label=T)
-  png(paste0(outFile, ".", layer, ".final.png"), width=3300, height=3000, res=300)
-  print(g)
-  dev.off()
-}
+#find markers for all cell types
+all_markers=FindAllMarkers(obj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+all_top10<-get_top10_markers(all_markers)
+
+width<-max(3000, min(10000, length(unique(Idents(obj))) * 150 + 1000))
+height<-max(3000, min(10000, length(all_top10) * 60 + 1000))
+
+obj<-myScaleData(obj, all_top10, "RNA")
+png(paste0(outFile, ".layer4.heatmap.png"), width=width, height=height, res=300)
+DoHeatmap(obj, assay="RNA", group.by="layer4", features=all_top10$gene)
+dev.off()
 
 output_barplot<-function(obj, sample_key, cell_key, filename){
   cts<-unlist(obj[[cell_key]])
