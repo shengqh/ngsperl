@@ -14,6 +14,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(addEnclone
   addArcasHLA 
   addScMRMA 
   addCHETAH
+  addSignac_only
   addSignac
   addCellRangerCount 
   addCellRangerVdj)] );
@@ -320,6 +321,35 @@ sub addCHETAH {
       "mem"       => "10gb"
     },
   };
+  push( @$tasks, $task_name );
+}
+
+sub addSignac_only {
+  my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $seurat_ref, $reduction ) = @_;
+
+  $config->{$task_name} = {
+    class                => "CQS::UniqueR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . $task_name,
+    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SignacX_only.r",
+    parameterFile1_ref   => $seurat_ref,
+    parameterSampleFile1 => {
+      species             => getValue( $def, "species" ),
+      prefix              => $project_name,
+      reduction           => $reduction,
+      pca_dims            => getValue( $def, "pca_dims" ),
+      bubblemap_file        => $def->{bubblemap_file},
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+    },
+    output_file_ext => ".SignacX.png;.SignacX.rds;.meta.rds",
+    sh_direct       => 1,
+    pbs             => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+
   push( @$tasks, $task_name );
 }
 
