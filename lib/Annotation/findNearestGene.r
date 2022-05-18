@@ -1,16 +1,28 @@
+
 options(bitmapType='cairo')
 
+library(testit)
 library(ChIPpeakAnno)
-genes <- toGRanges(parFile1, format="BED", skip=1)
+genes <- read.table(parFile1, sep="\t", header=F)
+dup<-genes[duplicated(genes$V4),]
+dup$V4<-paste0(dup$V4,":",dup$V2)
+genes[rownames(dup), "V4"] = dup$V4
+
+assert(length(duplicated(genes$V4)) == 0)
+ 
+colnames(genes)<-c("seqnames", "start", "end", "name")
+gene2<-toGRanges(genes)
+
 files<-read.table(parSampleFile1, sep="\t", header=F)
 
 res=NULL
+i=1
 for (i in c(1:nrow(files))){
   file = files[i,1]
   name = files[i,2]
 
   macsOutput <- toGRanges(file, format="BED", skip=1)
-  annotated <- annotatePeakInBatch(macsOutput, AnnotationData=genes)
+  annotated <- annotatePeakInBatch(macsOutput, AnnotationData=gene2)
   
   df<-mcols(annotated)
   df$seqnames<-seqnames(annotated)
