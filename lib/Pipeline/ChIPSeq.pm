@@ -453,6 +453,14 @@ sub getConfig {
 
     my $peak_count_task = add_peak_count($config, $def, $summary, $target_dir, $peakCallerTask . "_count", $peakCallerTask);
 
+    # if(getValue($def, "perform_annotateNearestGene", 0)){
+    #   annotateNearestGene($config, $def, $summary, $target_dir,  [$peakCallerTask, ".bed"]);
+    # }
+
+    if(getValue($def, "perform_annovar", 0)){
+      addAnnovar( $config, $def, $summary, $target_dir, $peakCallerTask, ".bed", undef, undef, undef );
+    }
+
     if (getValue($def, "perform_activeGene", 0)) {
       $config->{"activeGene"} = {
         class => "CQS::ProgramWrapperOneToOne",
