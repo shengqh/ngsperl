@@ -5,9 +5,7 @@ library(ggplot2)
 library(ggpubr)
 library(scales)
 
-finalList<-readRDS(parFile1)
-
-obj<-finalList$obj
+obj<-read_object(parFile1)
 
 groups_tbl<-read.table(parSampleFile2, sep="\t", stringsAsFactors = F)
 groups=split(groups_tbl$V2, groups_tbl$V1)
