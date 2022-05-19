@@ -458,7 +458,7 @@ sub getConfig {
     # }
 
     if(getValue($def, "perform_annovar", 0)){
-      addAnnovar( $config, $def, $summary, $target_dir, $peakCallerTask, ".bed", undef, undef, undef );
+      addAnnovar( $config, $def, $summary, $target_dir, $peakCallerTask, ".bed", undef, undef, undef, 1, 0, 1 );
     }
 
     if (getValue($def, "perform_activeGene", 0)) {

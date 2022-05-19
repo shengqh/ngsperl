@@ -1048,7 +1048,7 @@ sub getIndexName{
 }
 
 sub addAnnovar {
-  my ( $config, $def, $summary, $target_dir, $source_name, $source_pattern, $prefix, $indexDic, $indexKey ) = @_;
+  my ( $config, $def, $summary, $target_dir, $source_name, $source_pattern, $prefix, $indexDic, $indexKey, $clean_folder, $perform_splicing, $output_to_same_folder ) = @_;
   if (not defined $prefix){
     $prefix = $source_name;
   }
@@ -1072,6 +1072,9 @@ sub addAnnovar {
     annovar_db => getValue( $def, "annovar_db" ),
     buildver   => getValue( $def, "annovar_buildver" ),
     docker_prefix => "annovar_",
+    clean_folder => $clean_folder,
+    perform_splicing => $perform_splicing,
+    output_to_same_folder => $output_to_same_folder,
     sh_direct  => 1,
     isBed => $isBed,
     isvcf      => $isBed?0:1,
