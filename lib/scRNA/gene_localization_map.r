@@ -1,12 +1,9 @@
-source("scRNA_func.r")
 
 library(Seurat)
 library(ggplot2)
 library(ggpubr)
 
-finalList<-readRDS(parFile1)
-
-obj<-finalList$obj
+obj<-read_object(parFile1)
 
 groups_tbl<-read.table(parSampleFile2, sep="\t", stringsAsFactors = F)
 groups=split(groups_tbl$V2, groups_tbl$V1)
@@ -19,6 +16,14 @@ DefaultAssay(obj)<-"RNA"
 
 filelist=NULL
 genes_tbl<-read.table(parSampleFile1, sep="\t", stringsAsFactors = F)
+genes<-genes_tbl$V1
+genes<-gsub('\\s+','',genes)
+miss_genes<-genes[!(genes %in% rownames(obj))]
+
+if(len(miss_genes) > 0){
+  stop(paste0("There is missing genes:", paste0(miss_genes, ",")))
+}
+  
 gene=genes_tbl$V1[1]
 for (gene in genes_tbl$V1){
   gdata<-FetchData(object = obj, gene)
