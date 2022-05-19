@@ -1053,7 +1053,15 @@ sub addAnnovar {
     $prefix = $source_name;
   }
 
-  my $annovar_name = getIndexName($prefix, "_annovar", $indexDic, $indexKey);
+  my $annovar_name;
+  if(defined $indexDic){
+    $annovar_name = getIndexName($prefix, "_annovar", $indexDic, $indexKey);
+  }else{
+    $annovar_name = $prefix . "_annovar";
+  }
+
+  my $isBed = $source_pattern =~ /.bed$/;
+
   my $source_ref = ( defined($source_pattern) and ( $source_pattern ne "" ) ) ? [ $source_name, $source_pattern ] : $source_name;
   $config->{$annovar_name} = {
     class      => "Annotation::Annovar",
@@ -1063,8 +1071,10 @@ sub addAnnovar {
     option     => getValue( $def, "annovar_param" ),
     annovar_db => getValue( $def, "annovar_db" ),
     buildver   => getValue( $def, "annovar_buildver" ),
+    docker_prefix => "annovar_",
     sh_direct  => 1,
-    isvcf      => 1,
+    isBed => $isBed,
+    isvcf      => $isBed?0:1,
     pbs        => {
       "nodes"    => "1:ppn=1",
       "walltime" => "10",
