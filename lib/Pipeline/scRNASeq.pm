@@ -1147,73 +1147,7 @@ sub getScRNASeqConfig {
           "sample_cell_csv"));
       }
 
-      if(getValue($def, "perform_localization_genes_plot", 0)){
-        my $gene_localization_map_task  = $seurat_task . "_gene_localization_map";
-
-        my $all_genes=[];
-        if(defined $def->{localization_genes} && $def->{localization_genes} ne ""){
-          $all_genes = $def->{localization_genes};
-        }
-
-        if(defined $def->{localization_genes_file}){
-          die "FILE_NOT_FOUND: localization_genes_file " . $def->{localization_genes_file} if (! -e $def->{localization_genes_file});
-          my @genes_in_file = read_file($def->{localization_genes_file}, chomp => 1);
-          for my $gene (@genes_in_file){
-            push(@$all_genes, $gene);
-          }
-        }
-
-        die "No localization_genes or localization_genes_file defined." if(scalar(@$all_genes) == 0);
-
-        my $genes = {
-          $def->{task_name} => $all_genes,
-        };
-        #print(Dumper($genes));
-        $config->{$gene_localization_map_task} = {
-          class              => "CQS::UniqueR",
-          perform            => 1,
-          target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $gene_localization_map_task,
-          rtemplate          => "../scRNA/scRNA_func.r;../scRNA/gene_localization_map.r",
-          source             => $genes,
-          parameterFile1_ref => [ $seurat_task, ".final.rds" ],
-          parameterSampleFile1 => $genes,
-          parameterSampleFile2 => $def->{groups},
-          output_file_ext    => ".figure.files.csv",
-          sh_direct          => 1,
-          pbs                => {
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "12",
-            "mem"       => "40gb"
-          },
-        };
-        push( @$summary, $gene_localization_map_task );
-      }
-
-      if(getValue($def, "perform_localization_gene_ratio_plot", 0)){
-        my $gene_ratio_localization_map_task  = $seurat_task . "_gene_ratio_localization_map";
-        my $genes = {
-          $def->{task_name} => getValue($def, "localization_gene_ratio"),
-        };
-        #print(Dumper($genes));
-        $config->{$gene_ratio_localization_map_task} = {
-          class              => "CQS::UniqueR",
-          perform            => 1,
-          target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $gene_ratio_localization_map_task,
-          rtemplate          => "../scRNA/scRNA_func.r;../scRNA/gene_ratio_localization_map.r",
-          source             => $genes,
-          parameterFile1_ref => [ $seurat_task, ".final.rds" ],
-          parameterSampleFile1 => $genes,
-          parameterSampleFile2 => $def->{groups},
-          output_file_ext    => ".figure.files.csv",
-          sh_direct          => 1,
-          pbs                => {
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "12",
-            "mem"       => "40gb"
-          },
-        };
-        push( @$summary, $gene_ratio_localization_map_task );
-      }
+      my $localization_ref = [ $seurat_task, ".final.rds" ];
 
       my $df_task = $seurat_task . "_doublet_finder";
       if(getValue($def, "perform_doublet_finder", 0)){
@@ -1374,7 +1308,7 @@ sub getScRNASeqConfig {
               parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
               parameterSampleFile3 => $def->{"celltype_subclusters"},
               output_file_ext      => ".meta.rds",
-              output_other_ext  => ".umap.png",
+              output_other_ext  => ".obj.rds,.umap.png",
               sh_direct            => 1,
               pbs                  => {
                 "nodes"     => "1:ppn=1",
@@ -1385,6 +1319,8 @@ sub getScRNASeqConfig {
             push( @$summary, $choose_task );
             $subcluster_task = $choose_task;
             $can_check_doublet=1;
+
+            $localization_ref = [ $choose_task, ".obj.rds" ];
           }
         }else{
           $subcluster_task = $seurat_task . get_next_index($def, $dynamicKey) . "_subcluster.v1";
@@ -1503,6 +1439,75 @@ sub getScRNASeqConfig {
         #   addSignac( $config, $def, $summary, $target_dir, $project_name, $signacX_name, $seurat_task, 1, $subcluster_task, $reduction, "cell_type", 1 );
         # }
       }
+
+      if(getValue($def, "perform_localization_genes_plot", 0)){
+        my $gene_localization_map_task  = $localization_ref->[0] . "_gene_localization_map";
+
+        my $all_genes=[];
+        if(defined $def->{localization_genes} && $def->{localization_genes} ne ""){
+          $all_genes = $def->{localization_genes};
+        }
+
+        if(defined $def->{localization_genes_file}){
+          die "FILE_NOT_FOUND: localization_genes_file " . $def->{localization_genes_file} if (! -e $def->{localization_genes_file});
+          my @genes_in_file = read_file($def->{localization_genes_file}, chomp => 1);
+          for my $gene (@genes_in_file){
+            push(@$all_genes, $gene);
+          }
+        }
+
+        die "No localization_genes or localization_genes_file defined." if(scalar(@$all_genes) == 0);
+
+        my $genes = {
+          $def->{task_name} => $all_genes,
+        };
+        #print(Dumper($genes));
+        $config->{$gene_localization_map_task} = {
+          class              => "CQS::UniqueR",
+          perform            => 1,
+          target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $gene_localization_map_task,
+          rtemplate          => "../scRNA/scRNA_func.r;../scRNA/gene_localization_map.r",
+          source             => $genes,
+          parameterFile1_ref => $localization_ref,
+          parameterSampleFile1 => $genes,
+          parameterSampleFile2 => $def->{groups},
+          output_file_ext    => ".figure.files.csv",
+          sh_direct          => 1,
+          pbs                => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "12",
+            "mem"       => "40gb"
+          },
+        };
+        push( @$summary, $gene_localization_map_task );
+      }
+
+      if(getValue($def, "perform_localization_gene_ratio_plot", 0)){
+        my $gene_ratio_localization_map_task  = $seurat_task . "_gene_ratio_localization_map";
+        my $genes = {
+          $def->{task_name} => getValue($def, "localization_gene_ratio"),
+        };
+        #print(Dumper($genes));
+        $config->{$gene_ratio_localization_map_task} = {
+          class              => "CQS::UniqueR",
+          perform            => 1,
+          target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $gene_ratio_localization_map_task,
+          rtemplate          => "../scRNA/scRNA_func.r;../scRNA/gene_ratio_localization_map.r",
+          source             => $genes,
+          parameterFile1_ref => [ $seurat_task, ".final.rds" ],
+          parameterSampleFile1 => $genes,
+          parameterSampleFile2 => $def->{groups},
+          output_file_ext    => ".figure.files.csv",
+          sh_direct          => 1,
+          pbs                => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "12",
+            "mem"       => "40gb"
+          },
+        };
+        push( @$summary, $gene_ratio_localization_map_task );
+      }
+
 
       if(getValue($def, "perform_multires", 0)){
         my $multires_task = $seurat_task . "_multires";
