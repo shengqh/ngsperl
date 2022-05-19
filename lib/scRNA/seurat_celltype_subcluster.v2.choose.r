@@ -124,8 +124,8 @@ if(!all(res_files$celltype %in% best_res_tbl$V3)){
 #remove cell type first
 remove_cts<-best_res_tbl$V3[best_res_tbl$V2=="resolution" & best_res_tbl$V1 == "0"]
 if(length(remove_cts) > 0){
-  obj<-subset(obj, !(unlist(obj[[cur_layer]]) %in% remove_cts))
-  obj<-factorize_layer(obj, cur_layer)
+  cells<-colnames(obj)[!(unlist(obj[[cur_layer]]) %in% remove_cts)]
+  obj<-subset(obj, cells=cells)
 }
 
 #find markers for cell types
@@ -136,6 +136,7 @@ ct_top10_map<-split(ct_top10$gene, ct_top10$cluster)
 layer4map<-split(tiers$Layer4, tiers$Celltype.name)
 
 meta = obj@meta.data
+
 curprefix = prefix
 
 celltypes<-unlist(meta[[previous_layer]])
@@ -149,7 +150,7 @@ DefaultAssay(obj)<-assay
 
 allmarkers<-NULL
 cluster_index=0
-pct<-previous_celltypes[5]
+pct<-previous_celltypes[1]
 for(pct in previous_celltypes){
   cat(pct, "\n")
   cells<-rownames(meta)[meta[,previous_layer] == pct]
