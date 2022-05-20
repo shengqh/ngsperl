@@ -11,19 +11,12 @@ options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors =
 myoptions<-split(options_table$V1, options_table$V2)
 
 by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
-reduction<-myoptions$reduction
 npcs<-as.numeric(myoptions$pca_dims)
-
-assay=ifelse(by_sctransform, "SCT", "RNA")
-by_harmony<-reduction=="harmony"
 
 prefix<-outFile
 
 if(!exists("obj")){
-  obj=readRDS(parFile1)
-  if(is.list(obj)){
-    obj<-obj$obj
-  }
+  obj=read_object(parFile1, parFile2)
 }
 
 sweep.res <- paramSweep_v3(obj, PCs = 1:npcs, sct = by_sctransform)
