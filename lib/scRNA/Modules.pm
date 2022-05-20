@@ -8,7 +8,9 @@ use CQS::ConfigUtils;
 
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(addEnclone 
+our %EXPORT_TAGS = ( 'all' => [qw(
+  get_marker_gene_dict
+  addEnclone 
   addClonotypeMerge 
   addEncloneToClonotype 
   addArcasHLA 
@@ -17,11 +19,40 @@ our %EXPORT_TAGS = ( 'all' => [qw(addEnclone
   addSignac_only
   addSignac
   addCellRangerCount 
-  addCellRangerVdj)] );
+  addCellRangerVdj
+  addDoubletFinder
+  addAntibody
+  addMarkerGenes
+  addGeneTask
+  addEdgeRTask
+  addComparison)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
+
+sub get_marker_gene_dict {
+  my ( $def ) = @_;
+
+  my $marker_genes = $def->{plot_marker_genes};
+  if (not defined $marker_genes){
+    $marker_genes = {};
+  }
+  
+  if ( defined $def->{marker_genes_file} ) {
+    $marker_genes->{"marker"} = {
+      file => $def->{marker_genes_file}
+    };
+  }
+  
+  if (defined $def->{pathway_genes_file}){
+    $marker_genes->{"pathway"} = {
+      file => $def->{pathway_genes_file}
+    };
+  }
+
+  return($marker_genes);
+}
 
 sub addEnclone {
   my ( $config, $def, $tasks, $taskName, $parentDir, $sourceRef ) = @_;
@@ -488,6 +519,356 @@ fi
   };
 
   push(@$tasks, $task_name);
+}
+
+sub addDoubletFinder {
+  my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref, $meta_ref ) = @_;
+  $config->{$task_name} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $task_name,
+    rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_doublet_finder.r",
+    parameterFile1_ref       => $object_ref,
+    parameterFile2_ref       => $meta_ref,
+    parameterSampleFile1     => {
+      pca_dims              => getValue( $def, "pca_dims" ),
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+    },
+    output_file_ext      => ".meta.rds",
+    output_other_ext  => ".meta.csv,.options.csv",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "40gb"
+    },
+  };
+  push( @$tasks, $task_name );
+}
+
+sub addAntibody {
+  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name ) = @_;
+
+  my $pattern = getValue( $def, "antibody_pattern" );
+
+  my $taskname = $celltype_task . "_antibody_vis";
+  $config->{$taskname} = {
+    class              => "CQS::UniqueR",
+    perform            => 1,
+    target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $taskname,
+    rtemplate          => "../scRNA/scRNAantibody.r",
+    parameterFile1_ref => [ $cluster_task, ".final.rds" ],
+    parameterFile3_ref => [ $celltype_task, $celltype_cluster_file ],
+    output_file_ext    => ".cluster.csv",
+    rCode              => "celltype_name='$celltype_name'; cluster_name='$cluster_name'; antibody_pattern='$pattern'; ",
+    sh_direct          => 1,
+    pbs                => {
+      "email"     => $def->{email},
+      "emailType" => $def->{emailType},
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$summary, $taskname );
+}
+
+sub addMarkerGenes {
+  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $marker_name, $marker_file, $samples ) = @_;
+
+  my $markergenes_task = $celltype_task . "_" . $marker_name;
+  $config->{$markergenes_task} = {
+    class              => "CQS::UniqueR",
+    perform            => 1,
+    target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $markergenes_task,
+    rtemplate          => "../scRNA/scRNA_func.r;../scRNA/plot_genes.r",
+    parameterFile1_ref => [ $cluster_task, ".final.rds" ],
+    parameterFile2     => $marker_file,
+    parameterFile3_ref => [ $celltype_task, $celltype_cluster_file ],
+    output_file_ext    => ".cluster.csv",
+    parameterSampleFile1 => {
+      celltype_name => $celltype_name,
+      cluster_name => $cluster_name,
+      by_sctransform => getValue($def, "by_sctransform"),
+      samples => $samples
+    },
+    sh_direct          => 1,
+    pbs                => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  
+  push( @$summary, $markergenes_task );
+}
+
+sub addGeneTask {
+  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name ) = @_;
+
+  my $marker_genes = get_marker_gene_dict($def);
+
+  for my $key (sort keys %$marker_genes){
+    my $file = $marker_genes->{$key}{file};
+    my $samples = $marker_genes->{$key}{samples};
+
+    addMarkerGenes($config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, "genes_" . $key, $file, $samples);
+  }
+
+  if ( defined $def->{genes} ) {
+    my $dotPlotOnly = getValue($def, "genesDotPlotOnly", "0");
+    my $genes = $def->{genes};
+    $genes =~ s/\n/;/g;
+    $genes =~ s/\s/;/g;
+    $genes =~ s/;;/;/g;
+    my $genes_task = $cluster_task . "_genes";
+    $config->{$genes_task} = {
+      class              => "CQS::UniqueR",
+      perform            => 1,
+      target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $genes_task,
+      rtemplate          => "../scRNA/scRNAgenes.r",
+      parameterFile1_ref => [ $cluster_task, ".final.rds" ],
+      parameterFile3_ref => [ $celltype_task, $celltype_cluster_file ],
+      output_file_ext    => ".cluster.csv",
+      rCode              => "genes='" . $genes . "'; celltype_name='$celltype_name'; cluster_name='$cluster_name'; dotPlotOnly=$dotPlotOnly;",
+      sh_direct          => 1,
+      pbs                => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    };
+    push( @$summary, $genes_task );
+  }
+}
+
+sub addEdgeRTask {
+  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell ) = @_;
+  my $rCodeDic = {
+    "pvalue" => getValue( $def, "DE_pvalue" ),
+    "useRawPvalue" => getValue( $def, "DE_use_raw_pvalue" ),
+    "foldChange" => getValue( $def, "DE_fold_change" ),
+    "bBetweenCluster" => $bBetweenCluster,
+    "DE_by_cell" => $DE_by_cell,
+  };
+
+  my $edgeRtaskname  = $celltype_task . "_edgeR";
+  my $groups         = undef;
+  my $pairs          = undef;
+  my $curClusterName = undef;
+  my $curClusterDisplayName = undef;
+
+  if ($bBetweenCluster) {
+    $edgeRtaskname  = $edgeRtaskname . "_betweenCluster_byCell";
+    $curClusterName = getValue( $def, "DE_cluster_name" );
+    $curClusterDisplayName = getValue( $def, "DE_cluster_display_name", $curClusterName );
+    $rCodeDic->{"filter_minTPM"} = getValue( $def, "DE_by_cell_filter_minTPM" );
+    $rCodeDic->{"filter_cellPercentage"}=getValue( $def, "DE_by_cell_filter_cellPercentage" );
+    $groups = getValue( $def, "DE_cluster_groups", {} );
+    $pairs  = getValue( $def, "DE_cluster_pairs" );
+  }
+  else {
+    if ($DE_by_celltype) {
+      $curClusterName = $celltype_name;
+      $edgeRtaskname  = $edgeRtaskname . "_inCelltype";
+    }
+    else {
+      $curClusterName = $cluster_name;
+      $edgeRtaskname  = $edgeRtaskname . "_inCluster";
+    }
+
+    if ($DE_by_cell) {
+      $rCodeDic->{"filter_minTPM"}=getValue( $def, "DE_by_cell_filter_minTPM" );
+      $rCodeDic->{"filter_cellPercentage"}=getValue( $def, "DE_by_cell_filter_cellPercentage" );
+      $edgeRtaskname = $edgeRtaskname . "_byCell";
+    }
+    else {
+      $rCodeDic->{"filter_minTPM"}=getValue( $def, "DE_by_sample_filter_minTPM" );
+      $rCodeDic->{"filter_samplePercentage"}=getValue( $def, "DE_by_sample_filter_cellPercentage" );
+      $edgeRtaskname = $edgeRtaskname . "_bySample";
+    }
+
+    $groups = getValue( $def, "groups" );
+    $pairs  = getValue( $def, "pairs" );
+  }
+  $rCodeDic->{"cluster_name"} = $curClusterName;
+
+  $config->{$edgeRtaskname} = {
+    class                => "CQS::UniqueR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $edgeRtaskname,
+    rtemplate            => "../scRNA/edgeR.r",
+    parameterFile1_ref   => [ $cluster_task, ".final.rds" ],
+    parameterFile2_ref   => [ $celltype_task, $celltype_cluster_file ],
+    parameterSampleFile1 => $groups,
+    parameterSampleFile2 => $pairs,
+    parameterSampleFile3 => $rCodeDic,
+    output_file_ext      => ".edgeR.files.csv",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$summary, $edgeRtaskname );
+
+  my $vistaskname = $edgeRtaskname . "_vis";
+  $config->{$vistaskname} = {
+    class              => "CQS::UniqueR",
+    perform            => 1,
+    target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $vistaskname,
+    rtemplate          => "../scRNA/edgeRvis.r",
+    parameterFile1_ref => [ $cluster_task, ".final.rds" ],
+    parameterFile2_ref => [$edgeRtaskname],
+    parameterFile3_ref => [ $celltype_task, $celltype_cluster_file ],
+    output_file_ext    => ".edgeRvis.files.csv",
+    rCode              => "cluster_name='" . $curClusterName . "';bBetweenCluster=" . $bBetweenCluster,
+    sh_direct          => 1,
+    pbs                => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$summary, $vistaskname );
+
+  if($bBetweenCluster) {
+    my $vistaskname2 = $edgeRtaskname . "_dotplot";
+    $config->{$vistaskname2} = {
+      class              => "CQS::UniqueR",
+      perform            => 1,
+      target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $vistaskname2,
+      rtemplate          => "../scRNA/scRNA_func.r;../scRNA/edgeRdotplot.r",
+      parameterFile1_ref => [ $cluster_task, ".final.rds" ],
+      parameterFile2_ref => [$edgeRtaskname],
+      parameterFile3_ref => [ $celltype_task, $celltype_cluster_file ],
+      parameterSampleFile1 => {
+        cluster_name => getValue( $def, "DE_clusters_name", $curClusterName ),
+        display_cluster_name => getValue( $def, "DE_clusters_display_name", $curClusterDisplayName ),
+        gene_number => getValue( $def, "DE_dotplot_gene_number", 20 ),
+      },
+      output_file_ext    => ".edgeRvis2.files.csv",
+      rCode              => "",
+      sh_direct          => 1,
+      pbs                => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    };
+    push( @$summary, $vistaskname2 );
+  }
+
+  if ( getValue( $def, "perform_webgestalt" ) ) {
+    my $webgestaltTaskName = $edgeRtaskname . "_WebGestalt";
+    $config->{$webgestaltTaskName} = {
+      class              => "CQS::UniqueR",
+      perform            => 1,
+      target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $webgestaltTaskName,
+      rtemplate          => "../Annotation/WebGestaltReportFunctions.r;../Annotation/WebGestaltR_all.r",
+      parameterFile1_ref => [$edgeRtaskname],
+      parameterSampleFile1 => {
+        organism         => getValue( $def, "webgestalt_organism" ),
+        interestGeneType => $def->{interestGeneType},
+        referenceSet     => $def->{referenceSet},
+      },
+      output_file_ext    => ".WebGestaltR.files.csv",
+      rCode              => "",
+      sh_direct          => 1,
+      pbs                => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    };
+    push @$summary, "$webgestaltTaskName";
+
+    my $linkTaskName = $webgestaltTaskName . "_link_edgeR";
+    $config->{$linkTaskName} = {
+      class                      => "CQS::UniqueR",
+      perform                    => 1,
+      target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $linkTaskName,
+      rtemplate                  => "../Annotation/WebGestaltReportFunctions.r;../Annotation/WebGestaltDeseq2_all.r",
+      rReportTemplate            => "../Annotation/WebGestaltDeseq2.rmd",
+      output_to_result_directory => 1,
+      parameterFile1_ref   => [ $webgestaltTaskName ],
+      parameterFile2_ref   => [ $edgeRtaskname ],
+      output_file_ext    => ".link.files.csv",
+      sh_direct                  => 1,
+      rCode                      => "",
+      pbs                        => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "23",
+        "mem"       => "10gb"
+      },
+    };
+    push( @$summary, $linkTaskName );
+  }
+
+  if ( getValue( $def, "perform_gsea" ) ) {
+    my $gsea_jar        = $def->{gsea_jar}        or die "Define gsea_jar at definition first";
+    my $gsea_db         = $def->{gsea_db}         or die "Define gsea_db at definition first";
+    my $gsea_categories = $def->{gsea_categories} or die "Define gsea_categories at definition first";
+    my $gsea_makeReport = getValue($def, "gsea_makeReport", 0);
+
+    my $gseaTaskName = $edgeRtaskname . "_GSEA";
+
+    #my $gseaCategories = "'h.all.v6.1.symbols.gmt','c2.all.v6.1.symbols.gmt','c5.all.v6.1.symbols.gmt','c6.all.v6.1.symbols.gmt','c7.all.v6.1.symbols.gmt'";
+    $config->{$gseaTaskName} = {
+      class                      => "CQS::UniqueR",
+      perform                    => 1,
+      target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
+      docker_prefix              => "gsea_",
+      rtemplate                  => "GSEAPerform.R",
+      rReportTemplate            => "GSEAReport.Rmd",
+      output_to_result_directory => 1,
+      output_file_ext            => ".gsea.files.csv",
+      parameterFile1_ref         => [ $edgeRtaskname, ".edgeR.files.csv\$" ],
+      sh_direct                  => 1,
+      rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=" . $gsea_makeReport . ";",
+      pbs                        => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "23",
+        "mem"       => "10gb"
+      },
+    };
+    push( @$summary, $gseaTaskName );
+  }
+  
+  return ($edgeRtaskname);
+}
+
+sub addComparison {
+  my ($config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name) = @_;
+  my $perform_comparison = getValue( $def, "perform_comparison", 0 );
+  if(getValue( $def, "perform_edgeR" )){
+    $perform_comparison = 1;
+  }
+  my $DE_by_sample = getValue( $def, "DE_by_sample" );
+  my $DE_by_cell = getValue( $def, "DE_by_cell" );
+
+  my @deByOptions = ();
+  if ( getValue( $def, "DE_by_celltype" ) ) {
+    push( @deByOptions, "DE_by_celltype" );
+  }
+  if ( getValue( $def, "DE_by_cluster" ) ) {
+    push( @deByOptions, "DE_by_cluster" );
+  }
+
+  print("perform_comparison=" . $perform_comparison , "\n");
+  print("DE_by_sample=" . $DE_by_sample , "\n");
+  
+  if ( $perform_comparison ) {
+    if ( defined $def->{"DE_cluster_pairs"} ) {
+      addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, 0, $DE_by_cell );
+    }
+
+    for my $deByOption (@deByOptions) {
+      my $DE_by_celltype = $deByOption eq "DE_by_celltype";
+      addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell );
+    }
+  }
 }
 
 1;
