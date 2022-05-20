@@ -1,6 +1,7 @@
 library(harmony)
 library(cowplot)
 library(Seurat)
+library(tools)
 
 #https://github.com/satijalab/seurat/issues/1836
 #For visualization, using sctransform data is also fine.
@@ -809,18 +810,31 @@ find_best_resolution<-function(subobj, clusters, min.pct, logfc.threshold, min_m
   return(lastCluster)
 }
   
-read_object<-function(obj_file, meta_rds=NULL){
+read_object<-function(obj_file, meta_rds=NULL, columns=NULL){
   obj=readRDS(obj_file)
   if(is.list(obj)){
     obj<-obj$obj
   }
   
   if(!is.null(meta_rds)){
-    meta.data=readRDS(meta_rds)
-    if(any(colnames(obj) != rownames(meta.data))){
-      obj=subset(obj, cells=rownames(meta.data))
+    if(file_ext(meta_rds) == "rds"){
+      meta.data=readRDS(meta_rds)
+      if(any(colnames(obj) != rownames(meta.data))){
+        obj=subset(obj, cells=rownames(meta.data))
+      }
+      if(all(colnames(obj@meta.data) %in% colnames(meta.data))){
+        obj@meta.data = meta.data
+        return(obj)
+      }
+    }else{
+      meta.data=read.csv(meta_rds, stringsAsFactors = F, row.names=1)
     }
-    obj@meta.data = meta.data
+    if(is.null(columns)){
+      columns = colnames(meta.data)
+    }
+    for(column in columns){
+      obj=AddMetaData(obj, meta.data[,column], col.name=column)
+    }
   }
   return(obj)
 }

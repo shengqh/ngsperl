@@ -1,3 +1,4 @@
+source("scRNA_func.r")
 
 library(edgeR)
 library(ggplot2)
@@ -5,15 +6,17 @@ library(ggpubr)
 library(Seurat)
 library(R.utils)
 
-finalList<-readRDS(parFile1)
-obj<-finalList$obj
+options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+bBetweenCluster<-ifelse(myoptions$bBetweenCluster == "0", FALSE, TRUE)
+cluster_name=myoptions$cluster_name
+
+obj<-read_object(parFile1, parFile3, cluster_name)
+clusterDf<-obj@meta.data
 
 edgeRres<-read.csv(parFile2, stringsAsFactors = F, row.names=1)
 edgeRfolder<-dirname(parFile2)
 rownames(edgeRres)<-edgeRres$prefix
-
-clusterDf<-read.csv(parFile3, stringsAsFactors = F, row.names=1)
-obj[[cluster_name]]<-clusterDf[names(obj$orig.ident), cluster_name]
 
 df<-data.frame(c1=obj$seurat_clusters, c2=obj[[cluster_name]])
 df<-unique(df)
