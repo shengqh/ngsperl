@@ -262,7 +262,7 @@ saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
 
 allmarkers<-unique(allmarkers)
 obj<-myScaleData(obj, allmarkers, "RNA")
-saveRDS(obj, paste0(outFile, ".obj.rds"))
+saveRDS(obj, paste0(outFile, ".final.rds"))
 
 nclusters<-length(unique(obj$seurat_clusters))
 
