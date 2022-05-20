@@ -113,12 +113,12 @@ if(!("type" %in% colnames(res_files))){
 
 if(!all(best_res_tbl$V3 %in% res_files$celltype)){
   defined_ct<-unique(best_res_tbl$V3[!(best_res_tbl$V3 %in% res_files$celltype)])
-  stop(paste0("those cell types were defined at celltype_subclusters but not exists:", paste0(defined_ct, sep=",")))
+  stop(paste0("those cell types were defined at celltype_subclusters_table but not exists:", paste0(defined_ct, sep=",")))
 }
 
 if(!all(res_files$celltype %in% best_res_tbl$V3)){
   miss_ct<-unique(res_files$celltype[!(res_files$celltype %in% best_res_tbl$V3)])
-  stop(paste0("those cell types were not defined at celltype_subclusters :", paste0(miss_ct, collapse=",")))
+  stop(paste0("those cell types were not defined at celltype_subclusters_table :", paste0(miss_ct, collapse=",")))
 }
 
 #remove cell type first
