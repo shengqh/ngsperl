@@ -125,8 +125,18 @@ sub perform {
       if ($is_restricted_data){
         print $pbs "
 ln -s $sample_file ${sample_name}.sra 
+rm -f $sample_name.failed
+
 fastq-dump --split-e --gzip --origfmt --helicos ${sample_name}.sra
-rm ${sample_name}.sra
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch $sample_name.failed
+  rm -f $final_file
+else
+  touch $sample_name.succeed
+fi
+rm -f ${sample_name}.sra
 ";
       } else {
         print $pbs "
@@ -186,13 +196,26 @@ echo dump $sample_name
 
       my @sample_files = split( '\s+', $sample_file );
       if ( scalar(@sample_files) == 1 ) {
-        print $pbs "fastq-dump --split-e --gzip --origfmt --helicos $sample_file \n";
+        print $pbs "
+rm -f $sample_name.failed
+
+fastq-dump --split-e --gzip --origfmt --helicos $sample_file 
+        
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch $sample_name.failed
+  rm -f ${sample_file}_1.fastq.gz ${sample_file}_2.fastq.gz ${sample_file}.fastq.gz
+else
+  touch $sample_name.succeed
+";
         if($ispaired){
-          print $pbs "mv ${sample_file}_1.fastq.gz ${sample_name}_1.fastq.gz \n";
-          print $pbs "mv ${sample_file}_2.fastq.gz ${sample_name}_2.fastq.gz \n";
+          print $pbs "  mv ${sample_file}_1.fastq.gz ${sample_name}_1.fastq.gz \n";
+          print $pbs "  mv ${sample_file}_2.fastq.gz ${sample_name}_2.fastq.gz \n";
         }else{
-          print $pbs "mv ${sample_file}.fastq.gz ${sample_name}.fastq.gz \n";
+          print $pbs "  mv ${sample_file}.fastq.gz ${sample_name}.fastq.gz \n";
         }
+        print $pbs "fi
+";
       }
       else {
         print $pbs "if [[ -s ${sample_name}.fastq ]]; then\n  rm ${sample_name}.fastq \nfi \n";
