@@ -5,6 +5,7 @@ use strict;
 use warnings;
 require Exporter;
 use CQS::ConfigUtils;
+use Pipeline::PipelineUtils;
 
 our @ISA = qw(Exporter);
 
@@ -25,7 +26,9 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   addMarkerGenes
   addGeneTask
   addEdgeRTask
-  addComparison)] );
+  addComparison
+  addDynamicCluster
+  addSubClusterV2)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -650,6 +653,7 @@ sub addEdgeRTask {
     "foldChange" => getValue( $def, "DE_fold_change" ),
     "bBetweenCluster" => $bBetweenCluster,
     "DE_by_cell" => $DE_by_cell,
+    "covariance_file" => $def->{covariance_file}
   };
 
   my $edgeRtaskname  = $celltype_task . "_edgeR";
@@ -697,7 +701,7 @@ sub addEdgeRTask {
     class                => "CQS::UniqueR",
     perform              => 1,
     target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $edgeRtaskname,
-    rtemplate            => "../scRNA/edgeR.r",
+    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/edgeR.r",
     parameterFile1_ref   => [ $cluster_task, ".final.rds" ],
     parameterFile2_ref   => [ $celltype_task, $celltype_cluster_file ],
     parameterSampleFile1 => $groups,
@@ -718,12 +722,15 @@ sub addEdgeRTask {
     class              => "CQS::UniqueR",
     perform            => 1,
     target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $vistaskname,
-    rtemplate          => "../scRNA/edgeRvis.r",
+    rtemplate          => "../scRNA/scRNA_func.r,../scRNA/edgeRvis.r",
     parameterFile1_ref => [ $cluster_task, ".final.rds" ],
     parameterFile2_ref => [$edgeRtaskname],
     parameterFile3_ref => [ $celltype_task, $celltype_cluster_file ],
     output_file_ext    => ".edgeRvis.files.csv",
-    rCode              => "cluster_name='" . $curClusterName . "';bBetweenCluster=" . $bBetweenCluster,
+    parameterSampleFile1 => {
+      "cluster_name" => $curClusterName,
+      "bBetweenCluster" => $bBetweenCluster,
+    },
     sh_direct          => 1,
     pbs                => {
       "nodes"     => "1:ppn=1",
@@ -869,6 +876,97 @@ sub addComparison {
       addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell );
     }
   }
+}
+
+sub addDynamicCluster {
+  my ($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction) = @_;
+
+  $config->{$scDynamic_task} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $scDynamic_task,
+    rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamic.r",
+    parameterFile1_ref => [$seurat_task, ".rds"],
+    parameterFile3_ref => $essential_gene_task,
+    parameterSampleFile1     => {
+      pca_dims              => getValue( $def, "pca_dims" ),
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+      regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
+      reduction             => $reduction,
+      species               => getValue( $def, "species" ),
+      db_markers_file       => getValue( $def, "markers_file" ),
+      curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
+      annotate_tcell        => getValue( $def, "annotate_tcell", 0),
+      remove_subtype        => getValue( $def, "remove_subtype", ""),
+      HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
+      tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
+      bubblemap_file        => $def->{bubblemap_file},
+      bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
+      summary_layer_file => $def->{summary_layer_file},
+      best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
+      dynamic_by_one_resolution => getValue( $def, "dynamic_by_one_resolution", "" ),
+    },
+    parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
+    parameterSampleFile3 => $def->{"dynamic_layer_umap_min_dist"},
+    output_file_ext      => ".scDynamic.meta.rds",
+    output_other_ext  => ".layer0_to_layer1.png,.layer1_to_layer2.png,.layer2_to_layer3.png,.layer3_to_layer4.png",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "40gb"
+    },
+  };
+  if ($def->{batch_for_integration}){
+    $config->{$scDynamic_task}{parameterSampleFile3} = getValue($def, "batch_for_integration_groups");
+  }
+  push( @$summary, $scDynamic_task );
+}
+
+sub addSubClusterV2 {
+  my ($config, $def, $summary, $target_dir, $subcluster_task, $seurat_task, $scDynamic_task, $essential_gene_task, $reduction, $signacX_name) = @_;
+
+  $config->{$subcluster_task} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $subcluster_task,
+    rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_celltype_subcluster.v2.r",
+    parameterFile1_ref => [$seurat_task, ".rds"],
+    parameterFile2_ref => [$scDynamic_task, ".meta.rds"],
+    parameterFile3_ref => $essential_gene_task,
+    parameterSampleFile1     => {
+      pca_dims              => getValue( $def, "pca_dims" ),
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+      regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
+      reduction             => $reduction,
+      species               => getValue( $def, "species" ),
+      db_markers_file       => getValue( $def, "markers_file" ),
+      curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
+      annotate_tcell        => getValue( $def, "annotate_tcell", 0),
+      remove_subtype        => getValue( $def, "remove_subtype", ""),
+      HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
+      tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
+      bubblemap_file        => $def->{bubblemap_file},
+      bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
+      summary_layer_file    => $def->{summary_layer_file},
+      celltype_layer        => "layer4",
+      output_layer          => "cell_type",
+      best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
+    },
+    parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
+    output_file_ext      => ".files.csv",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "40gb"
+    },
+  };
+  if(defined $config->{$signacX_name}){
+    $config->{$subcluster_task}{parameterFile4_ref} = [ $signacX_name, ".meta.rds" ];
+  }
+
+  push( @$summary, $subcluster_task );
 }
 
 1;
