@@ -1,3 +1,4 @@
+source("scRNA_func.r")
 
 library(edgeR)
 library(ggplot2)
@@ -14,19 +15,19 @@ sumcount<-function(ct_count, names, sample_df){
   return(rescount)
 }
 
-finalList<-readRDS(parFile1)
-obj<-finalList$obj
+options_table<-read.table(parSampleFile3, sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+bBetweenCluster<-ifelse(myoptions$bBetweenCluster == "0", FALSE, TRUE)
+filter_cellPercentage<-as.numeric(myoptions$filter_cellPercentage)
+filter_minTPM<-as.numeric(myoptions$filter_minTPM)
+pvalue<-as.numeric(myoptions$pvalue)
+foldChange<-as.numeric(myoptions$foldChange)
+useRawPvalue<-ifelse(myoptions$useRawPvalue == "0", FALSE, TRUE)
+cluster_name=myoptions$cluster_name
 
-clusterDf<-read.csv(parFile2, stringsAsFactors = F, row.names=1)
-if(!(cluster_name %in% colnames(obj@meta.data))){
-  if(all(names(obj$orig.ident) %in% rownames(clusterDf))){
-    obj[[cluster_name]]<-clusterDf[names(obj$orig.ident), cluster_name]
-  }else{
-    obj[[cluster_name]]<-clusterDf[obj$seurat_clusters, cluster_name]
-  }
-}
+obj<-read_object(parFile1, parFile2, cluster_name)
 
-meta<-obj@meta.data
+clusterDf<-obj@meta.data
 
 comparisons<-read.table(parSampleFile2, stringsAsFactors = F)
 if(ncol(comparisons) == 3){
@@ -60,6 +61,18 @@ for (comp in comparisonNames){
     sample_names<-as.numeric(comp_options$sample_clusters)
     sampleGroup<-ifelse("sample_name" %in% names(comp_options), comp_options$sample_name, paste("Cluster", paste(sample_names, collapse = "_"), sep="_"))
   }
+  
+  if("covariances" %in% names(comp_options)){
+    covariances_tbl<-read.table(myoptions$covariance_file, sep="\t", stringsAsFactors = F, header=T)
+    assert(all(comp_options$covariances %in% colnames(covariances_tbl)))
+    for(col_name in comp_options$covariances){
+      colmap = unlist(split(covariances_tbl[,col_name], covariances_tbl$Sample))
+      obj<-AddMetaData(obj, colmap[obj$orig.ident], col.name = col_name )
+    }
+    covariances=comp_options$covariances
+  }else{
+    covariances=NULL
+  }
 
   if(bBetweenCluster){
     prefix<-comp
@@ -90,9 +103,9 @@ for (comp in comparisonNames){
     sample_files=unique(meta[sample_cells, "orig.ident"])
     
     if(!all(control_files %in% sample_files)){
-      sampleInGroup = 0
+      sampleInGroup = FALSE
     }else{
-      sampleInGroup = 1
+      sampleInGroup = TRUE
     }
     
     all_cells<-c(control_cells, sample_cells)
@@ -104,8 +117,8 @@ for (comp in comparisonNames){
     de_obj<-subset(obj, cells=all_cells)
     de_obj$Group<-c(rep("control", length(control_cells)), rep("sample", length(sample_cells)))
     de_obj$DisplayGroup<-c(rep(controlGroup, length(control_cells)), rep(sampleGroup, length(sample_cells)))
-    
     designdata<-data.frame("Group"=de_obj$Group, "Cell"=colnames(de_obj), "Sample"=de_obj$orig.ident, "DisplayGroup"=de_obj$DisplayGroup)
+    
     designfile<-paste0(prefix, ".design")
     write.csv(designdata, file=designfile, row.names=F, quote=F)
     
@@ -159,10 +172,17 @@ for (comp in comparisonNames){
       de_obj$DisplayGroup<-c(rep(controlGroup, length(control_cells)), rep(sampleGroup, length(sample_cells)))
       
       designdata<-data.frame("Group"=de_obj$Group, "Cell"=colnames(de_obj), "Sample"=de_obj$orig.ident, "DisplayGroup"=de_obj$DisplayGroup)
+      if(!is.null(covariances)){
+        for(cov_name in covariances){
+          designdata[,cov_name] = unlist(de_obj@meta.data[,cov_name])
+        }
+      }
+      assert(all(covariances %in% colnames(designdata)))
+
       designfile<-paste0(prefix, ".design")
       write.csv(designdata, file=designfile, row.names=F, quote=F)
       
-      curdf<-data.frame(prefix=prefix, cellType=ct, comparison=comp, sampleInGroup=0, design=designfile, stringsAsFactors = F)
+      curdf<-data.frame(prefix=prefix, cellType=ct, comparison=comp, sampleInGroup=FALSE, design=designfile, stringsAsFactors = F)
       if (is.null(designMatrix)){
         designMatrix = curdf
       }else{
@@ -208,14 +228,19 @@ for(idx in c(1:nrow(designMatrix))){
   
   cells<-cells[keep_rows,]
   cdr <- scale(colMeans(cells > 0))
+  designdata$cdr = unlist(cdr)
   
+  variables = c("cdr")
   if(sampleInGroup){
-    samples<-designdata$Sample
-    design <- model.matrix(~ cdr + samples + groups)
-  }else{
-    design <- model.matrix(~ cdr + groups)
+    variables = c(variables, "Sample")
   }
-  
+  if(!is.null(covariances)){
+    variables = c(variables, covariances)
+  }
+  variables = c(variables, "Group")
+  formula_str = paste0("~ ", paste0(variables, collapse = " + "))
+  design <- model.matrix(as.formula(formula_str), designdata)
+
   rownames(design)<-colnames(cells)
   write.csv(design, file=paste0(prefix, ".design_matrix.csv"), quote=F)
   
