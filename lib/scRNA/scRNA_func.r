@@ -926,3 +926,18 @@ get_groups_dot<-function(subobj, group1, group2){
   g<-ggplot(mtbl, aes_string(group1, "Cell", fill=group2)) + geom_bar(position="fill", stat="identity") + theme_bw() + coord_flip() + xlab("") + ylab("")
   return(g)
 }
+
+RunMultipleUMAP<-function(subobj, ops=data.frame("nn"=c(30,20,10), "min.dist"=c(0.3,0.1,0.05), curreduction="PCA", cur_pca_dims=c(1:30)){
+  umap_names<-c()
+  for(idx in c(1:nrow(ops))){
+    nn=ops[idx, 'nn']
+    nn<-min(nn, u_n_neighbors)
+    min.dist=ops[idx, 'min.dist']
+    umap_name = paste0("umap_nn", nn, "_dist", min.dist)
+    cat(umap_name, "\n")
+    umap_names<-c(umap_names, umap_name)
+    umap_key = paste0("UMAPnn", nn, "dist", min.dist * 100, "_")
+    subobj<-RunUMAP(object = subobj, reduction=curreduction, reduction.key=umap_key, reduction.name=umap_name, n.neighbors=nn, min.dist=min.dist, dims=cur_pca_dims, verbose = FALSE)
+  }
+  return(list(obj=subobj, umap_names=umap_names))
+}

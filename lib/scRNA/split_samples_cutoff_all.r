@@ -73,6 +73,8 @@ files=split(files_lines$V1, files_lines$V2)
 params_lines=read.table(parSampleFile3, sep="\t")
 params=split(params_lines$V1, params_lines$V2)
 params$hto_ignore_exists=ifelse(params$hto_ignore_exists=="0", FALSE, TRUE)
+umap_min_dist=as.numeric(params$umap_min_dist)
+umap_num_neighbors=as.numeric(params$umap_num_neighbors)
 
 if(file.exists(params$cutoff_file)){
   cutoffs=read.table(params$cutoff_file, sep="\t")
@@ -159,5 +161,5 @@ for(idx in c(1:length(files))){
 
   saveRDS(obj, file=paste0(output_prefix, ".umap.rds"))
   
-  output_post_classification(obj, output_prefix)
+  output_post_classification(obj, output_prefix, umap_min_dist=umap_min_dist, umap_num_neighbors=umap_num_neighbors)
 }

@@ -50,7 +50,7 @@ read_hto<-function(rdsfile, output_prefix) {
   return(obj)
 }
 
-output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3){
+output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap_num_neighbors=30){
   tagnames=rownames(obj[["HTO"]])
   
   hto_names=unique(obj$HTO_classification)
@@ -88,7 +88,7 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3){
 
     #https://jlmelville.github.io/uwot/abparams.html
     #adjust param for umap
-    obj<-RunUMAP(obj, features=tagnames, slot="scale.data", min.dist=umap_min_dist)
+    obj<-RunUMAP(obj, features=tagnames, slot="scale.data", min.dist=umap_min_dist, n.neighbors=umap_num_neighbors)
 
     saveRDS(obj, file=paste0(output_prefix, ".umap.rds"))
 

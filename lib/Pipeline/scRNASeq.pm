@@ -285,8 +285,9 @@ sub getScRNASeqConfig {
         #parameterSampleFile2 => $def->{split_hto_samples_cutoff_point},
         parameterSampleFile3 => {
           hto_ignore_exists => getValue($def, "hto_ignore_exists", 0),
-          umap_min_dist => getValue($def, "umap_min_dist", 0.3),
-          cutoff_file => getValue($def, "cutoff_file", "")
+          cutoff_file => getValue($def, "cutoff_file", ""),
+          umap_min_dist => getValue($def, "hto_umap_min_dist", 0.3),
+          umap_num_neighbors => getValue($def, "hto_umap_num_neighbors", 30),
         },
         output_perSample_file => "parameterSampleFile1",
         output_perSample_file_byName => 1,

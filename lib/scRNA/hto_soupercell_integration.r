@@ -1,13 +1,29 @@
 
+
 library(Seurat)
 library(patchwork)
 library(ggplot2)
+library(dplyr)
+library(tidyr)
 
 souporcell_tb<-read.table(parSampleFile1, sep="\t", row.names=2)
 cutoff_tb<-read.table(parSampleFile2, sep="\t", row.names=2)
 umap_rds_tb<-read.table(parSampleFile3, sep="\t", row.names=2)
 
-sample_name=rownames(souporcell_tb)[2]
+get_max_row<-function(x){
+  x<-x[order(x, decreasing = T)]
+  if(names(x)[1] == "Doublet"){
+    dperc = x[1] / sum(x)
+    if (dperc >= 0.8){
+      return("Doublet")
+    }
+    return(names(x)[2])
+  }else{
+    return(names(x)[1])
+  }
+}
+
+sample_name=rownames(souporcell_tb)[3]
 for (sample_name in rownames(souporcell_tb)){
   s1<-read.csv(cutoff_tb[sample_name, "V1"], row.names=1)
   s2<-read.table(souporcell_tb[sample_name, "V1"], row.names=1, header=T)
@@ -15,24 +31,31 @@ for (sample_name in rownames(souporcell_tb)){
   
   s <- merge(s1, s2, by=0, all.x=TRUE)
   
-  single<-s[s$HTO.global == "Singlet",]
-  single<-single[single$status == "singlet",]
+  #single<-s[s$HTO.global == "Singlet",]
+  #single<-single[single$status == "singlet",]
+  single<-s[s$status == "singlet",]
   tb<-table(single$HTO, single$assignment)
   
   write.csv(tb, paste0(sample_name, ".HTO_soupor_singlet.csv"))
   
-  maxrow<-unlist(rownames(tb)[apply(tb,2,which.max)])
-  
-  cmap<-split(maxrow, colnames(tb))
+  tb2<-as.data.frame.matrix(tb)
+  tb2$id = rownames(tb2)
+  top2<-tb2 %>%
+    gather(column, value, -id) %>%
+    group_by(column) %>%
+    top_n(2)
 
+  cmap<-unlist(apply(tb,2,get_max_row))
+  names(cmap) = colnames(tb)
+  
   final<-unlist(apply(s, 1, function(x){
     #print(x['HTO.global'])
     if (x['HTO.global'] == 'Singlet'){
       return(x['HTO'])
     }
-    if(x['HTO.global'] == 'Negative'){
-      return(x['HTO'])
-    }
+    # if(x['HTO.global'] == 'Negative'){
+    #   return(x['HTO'])
+    # }
     if(x['status'] == 'doublet'){
       return(x['HTO'])
     }
@@ -89,6 +112,8 @@ for (sample_name in rownames(souporcell_tb)){
   s<-s[colnames(obj),]
   rownames(s)<-s$Row.names
 
+  cmap<-cmap[!(cmap %in% c("Doublet", "Negative"))]
+  
   tags<-unlist(cmap)
   tags<-tags[order(tags)]
   tags<-gsub("-",".",tags)
@@ -194,3 +219,4 @@ for (sample_name in rownames(souporcell_tb)){
     dev.off()
   }
 }
+
