@@ -1,3 +1,5 @@
+
+source("scRNA_func.r")
 library(Seurat)
 library(ggplot2)
 library(digest)
@@ -33,12 +35,17 @@ if (has_hto) {
     stop(paste0('hto_cell_file ', parSampleFile4, ' is not defined or not exists.'))
   }
   hto_cell_files = read.table(parSampleFile4, sep="\t", stringsAsFactors=FALSE, row.names=2)
-  sample = rownames(hto_cell_files)[3]
+  sample = rownames(hto_cell_files)[1]
   for (sample in rownames(hto_cell_files)){
     cell_file = hto_cell_files[sample, "V1"]
-    cell_data = read.csv(cell_file, stringsAsFactors=FALSE, header=TRUE, check.names=F)
-    colnames(cell_data)[1]<-"cell"
-    hto_md5[[sample]] = digest(cell_file, file=TRUE)
+    if(file_ext(cell_file) == ".csv"){
+      cell_data = read.csv(cell_file, stringsAsFactors=FALSE, header=TRUE, check.names=F)
+      colnames(cell_data)[1]<-"cell"
+    }else{
+      cell_data = readRDS(cell_file)
+      cell_data$cell<-rownames(cell_data)
+      cell_data$HTO<-cell_data$final
+    }
     cell_data$Sample = ""
     cur_samples = hto_samples[hto_samples$File == sample,]
     if(!all(cur_samples$Tagname %in% cell_data$HTO)){
