@@ -381,7 +381,7 @@ sub getScRNASeqConfig {
           parameterSampleFile4     => $def->{ignore_souporcell_cluster},
           output_perSample_file => "parameterSampleFile1",
           output_perSample_file_byName => 1,
-          output_perSample_file_ext => ".HTO.class.dist.png;.HTO.csv",
+          output_perSample_file_ext => ".HTO.png;.meta.rds",
           sh_direct   => 1,
           pbs => {
             "nodes"     => "1:ppn=1",
@@ -391,7 +391,7 @@ sub getScRNASeqConfig {
         };
         push( @$summary, $hto_integration_task );
 
-        $hto_ref = [ $hto_integration_task, ".HTO.csv" ];
+        $hto_ref = [ $hto_integration_task, ".meta.rds" ];
       }
 
       if(defined $def->{HTO_samples}){
