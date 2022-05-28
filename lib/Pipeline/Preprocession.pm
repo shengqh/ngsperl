@@ -413,8 +413,9 @@ sub getPreprocessionConfig {
   }
 
   if ( $def->{sra_to_fastq} ) {
+    my $class = getValue($def, "sra_to_fastq_wget", 0)? "SRA::Wget" :"SRA::FastqDump";
     $config->{sra2fastq} = {
-      class      => "SRA::FastqDump",
+      class      => $class,
       perform    => 1,
       is_paired_end   => $is_pairend,
       target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "sra2fastq",
