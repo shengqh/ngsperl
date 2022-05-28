@@ -157,7 +157,6 @@ if [[ -s ${filterFile}.bai && ! -s ${finalFile}.bai ]]; then
   echo RemoveUnpaired=`date` 
   samtools sort -n $filterFile | samtools fixmate -O bam - -| samtools view $option -b | samtools sort -T $sample_name -o $finalFile 
   samtools index $finalFile 
-  samtools idxstats $finalFile > ${finalFile}.chromosome.count
 fi
 ";
       $rmlist = $rmlist . " $filterFile ${filterFile}.bai";
@@ -166,6 +165,7 @@ fi
     print $pbs "
 if [[ -s ${finalFile}.bai && ! -s ${finalFile}.stat ]]; then
   echo Stat=`date`
+  samtools idxstats $finalFile > ${finalFile}.chromosome.count
   samtools flagstat $finalFile > ${finalFile}.stat
 fi
 ";
