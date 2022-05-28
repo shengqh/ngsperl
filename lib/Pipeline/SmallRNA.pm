@@ -1426,7 +1426,7 @@ fi
       push(@$file_exts, ".${cat}.estimated.count");
       push(@$file_exts, ".${cat}.aggregated.count");
     }
-    my $file_ext_str = join(",", @$file_exts) . ",.read.count";
+    my $file_ext_str = ".read.count," . join(",", @$file_exts);
 
     my $refseq_bacteria_table = "refseq_bacteria_table";
     $config->{$refseq_bacteria_table} = {
@@ -1449,7 +1449,7 @@ fi
       pbs => {
         "nodes"     => "1:ppn=1",
         "walltime"  => getValue($def, "${refseq_bacteria_table}_walltime", "24"),
-        "mem"       => getValue($def, "${refseq_bacteria_table}_mem", "40gb"),
+        "mem"       => getValue($def, "${refseq_bacteria_table}_mem", "100gb"),
       },
     };
 
@@ -2700,6 +2700,32 @@ fi
           push( @report_files, "count_table_correlation",           "rRNA_pm_${task_name}.count.Group.heatmap.png" );
           push( @report_files, "count_table_correlation",           "rRNA_pm_${task_name}.count.Group.Correlation.Cluster.png" );
           push( @report_names, "correlation_rrnalib_group_heatmap", "correlation_rrnalib_corr_cluster" );
+        }
+      }
+
+      if ( defined $config->{refseq_bacteria_table} ) {
+        my $levels = [ 'species', 'genus', 'family', 'order', 'class', 'phylum'];
+
+        for my $level (@$levels){
+          push( @report_files, "count_table_correlation",     "${task_name}.${level}.aggregated.count.heatmap.png" );
+          push( @report_files, "count_table_correlation",     "${task_name}.${level}.aggregated.count.PCA.png" );
+          push( @report_names, "correlation_refseq_bacteria_${level}_agg_heatmap", "correlation_refseq_bacteria_${level}_agg_pca" );
+
+          if ($hasGroupHeatmap) {
+            push( @report_files, "count_table_correlation",           "${task_name}.${level}.aggregated.count.Group.heatmap.png" );
+            push( @report_files, "count_table_correlation",           "${task_name}.${level}.aggregated.count.Group.Correlation.Cluster.png" );
+            push( @report_names, "correlation_refseq_bacteria_${level}_agg_group_heatmap", "correlation_refseq_bacteria_${level}_agg_corr_cluster" );
+          }
+
+          push( @report_files, "count_table_correlation",     "${task_name}.${level}.estimated.count.heatmap.png" );
+          push( @report_files, "count_table_correlation",     "${task_name}.${level}.estimated.count.PCA.png" );
+          push( @report_names, "correlation_refseq_bacteria_${level}_est_heatmap", "correlation_refseq_bacteria_${level}_est_pca" );
+
+          if ($hasGroupHeatmap) {
+            push( @report_files, "count_table_correlation",           "${task_name}.${level}.estimated.count.Group.heatmap.png" );
+            push( @report_files, "count_table_correlation",           "${task_name}.${level}.estimated.count.Group.Correlation.Cluster.png" );
+            push( @report_names, "correlation_refseq_bacteria_${level}_est_group_heatmap", "correlation_refseq_bacteria_${level}_est_corr_cluster" );
+          }
         }
       }
     }
