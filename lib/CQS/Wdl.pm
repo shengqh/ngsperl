@@ -346,7 +346,7 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+    my $cur_dir = $output_to_same_folder ? $result_dir : $result_dir . "/$sample_name";
     my $final_dir = $cromwell_finalOutputs ? $cur_dir . "/cromwell_finalOutputs" : $cur_dir;
 
     my $sample_file = $raw_files{$sample_name}[0];
