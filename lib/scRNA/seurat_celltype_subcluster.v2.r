@@ -1,3 +1,5 @@
+
+source("scRNA_func.r")
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -10,6 +12,7 @@ library(htmltools)
 library(patchwork)
 library(data.table)
 library(testit)
+library(stringr)
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
@@ -124,7 +127,7 @@ filelist<-NULL
 allmarkers<-NULL
 allcts<-NULL
 cluster_index=0
-pct<-previous_celltypes[1]
+pct<-previous_celltypes[2]
 for(pct in previous_celltypes){
   key = paste0(previous_layer, ": ", pct, ":")
   cells<-rownames(meta)[meta[,previous_layer] == pct]
@@ -201,7 +204,7 @@ for(pct in previous_celltypes){
 #   dev.off()
   
   cat(key, "Find marker genes\n")
-  cluster = clusters[5]
+  cluster = clusters[1]
   markers_map = list()
   for(cluster in clusters){
     cat("  ", cluster, "\n")
@@ -241,40 +244,48 @@ for(pct in previous_celltypes){
     newct<-layer_ids[oldcluster]
     cts<-data.frame("seurat_clusters"=oldcluster, cur_layer=newct)
     cts[,seurat_cur_layer] = paste0(cts$seurat_clusters, ": ", cts[,cur_layer])
-    
-    ct<-cts[,c("seurat_clusters", seurat_cur_layer)]
+    new_layer_ids<-word(cts[,seurat_cur_layer], 1,4, sep=" ")
+    new_layer_ids[is.na(new_layer_ids)]=cts[is.na(new_layer_ids),seurat_cur_layer]
+    cts$display_layer = new_layer_ids
+
+    ct<-cts[,c("seurat_clusters", seurat_cur_layer, "display_layer")]
     ct<-unique(ct)
     ct<-ct[order(ct$seurat_clusters),]
     
     subobj<-AddMetaData(subobj, cts$seurat_clusters, col.name = "seurat_clusters")
     subobj<-AddMetaData(subobj, cts[,cur_layer], col.name = cur_layer)
     subobj<-AddMetaData(subobj, factor(cts[,seurat_cur_layer], levels=ct[,seurat_cur_layer]), col.name = seurat_cur_layer)
+    subobj<-AddMetaData(subobj, factor(cts$display_layer, levels=ct$display_layer), col.name = "display_layer")
     
     meta_rds = paste0(cluster_prefix, ".meta.rds")
     saveRDS(subobj@meta.data, meta_rds)
     
+    bHasCurrentSignacX<-FALSE
     if(bHasSignacX){
       sx<-table(subobj$signacx_CellStates)
       sx<-sx[sx>5]
       sxnames<-names(sx)
       sxnames<-sxnames[sxnames != "Unclassified"]
-      sxobj<-subset(subobj, signacx_CellStates %in% sxnames)
-      sxobj$signacx_CellStates<-as.character(sxobj$signacx_CellStates)
+      if(length(sxnames)>0){
+        sxobj<-subset(subobj, signacx_CellStates %in% sxnames)
+        sxobj$signacx_CellStates<-as.character(sxobj$signacx_CellStates)
+        bHasCurrentSignacX<-TRUE
+      }
     }
 
     g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
-    g1<-DimPlot(subobj, reduction="umap", group.by = "seurat_clusters", label=T) + ggtitle(paste0(pct, ": old umap: res", cur_resolution)) + scale_color_discrete(labels = ct[,seurat_cur_layer])
-    if(bHasSignacX){
+    g1<-DimPlot(subobj, reduction="umap", group.by = "seurat_clusters", label=T) + ggtitle(paste0(pct, ": old umap: res", cur_resolution)) + scale_color_discrete(labels = ct$display_layer)
+    if(bHasCurrentSignacX){
       g2<-DimPlot(sxobj, reduction="umap", group.by = "signacx_CellStates", label=F) + ggtitle(paste0(pct, ": signacx"))
     }else{
       g2<-DimPlot(subobj, reduction="umap", group.by = "orig.ident", label=F) + ggtitle(paste0(pct, ": sample"))
     }
     g<-g0+g1+g2+get_groups_dot(subobj, "seurat_clusters", "orig.ident")
     for(umap_name in umap_names){
-      gu<-DimPlot(subobj, reduction=umap_name, group.by = "seurat_clusters", label=T) + ggtitle(paste0("res", cur_resolution, ": ", umap_name)) + scale_color_discrete(labels = ct[,seurat_cur_layer])
+      gu<-DimPlot(subobj, reduction=umap_name, group.by = "seurat_clusters", label=T) + ggtitle(paste0("res", cur_resolution, ": ", umap_name)) + scale_color_discrete(labels = ct$display_layer)
       g<-g+gu
     }
-    if(bHasSignacX){
+    if(bHasCurrentSignacX){
       g<-g+get_groups_dot(sxobj, "seurat_clusters", "signacx_CellStates")
       for(umap_name in umap_names){
         gu<-DimPlot(sxobj, reduction=umap_name, group.by = "signacx_CellStates", label=F) + ggtitle(paste0(umap_name, ": signacX"))
@@ -283,11 +294,11 @@ for(pct in previous_celltypes){
       g<-g+get_groups_dot(sxobj, "signacx_CellStates", "orig.ident")
     }
 
-    width=8000
+    width=10000
     if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
       gb<-get_bubble_plot(subobj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA") + theme(text = element_text(size=20))
       g<-g+gb
-      if(bHasSignacX){
+      if(bHasCurrentSignacX){
         layout="ABCD
 EFGH
 IJKL
@@ -295,12 +306,12 @@ MMMM"
         height=6000
       }else{
         layout="ABCD
-EFGH
-GGGG"
+EFGI
+HHHH"
         height=4500
       }
     }else{
-      if(bHasSignacX){
+      if(bHasCurrentSignacX){
         layout="ABCD
 EFGH
 IJKL"
