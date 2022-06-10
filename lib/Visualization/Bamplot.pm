@@ -34,15 +34,14 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
 
   my $bam_files = get_raw_files( $config, $section );
-  my $singlepdf       = get_option( $config, $section, "is_single_pdf" ) ? "-s" : "";
   my $draw_individual = get_option( $config, $section, "is_draw_individual" );
   my $rainbow_color   = get_option( $config, $section, "is_rainbow_color" );
   my $default_color   = get_option( $config, $section, "default_color", "0,0,0" );
   my $gff_file = parse_param_file( $config, $section, "gff_file", 1 );
 
-  my $draw_by_r        = get_option( $config, $section, "draw_by_r",        0 );
-  my $draw_by_r_width  = get_option( $config, $section, "draw_by_r_width",  10 );
-  my $draw_by_r_height = get_option( $config, $section, "draw_by_r_height", 10 );
+  my $draw_by_r        = get_option( $config, $section, "draw_by_r",        1 );
+  my $draw_by_r_width  = get_option( $config, $section, "draw_by_r_width",  0 );
+  my $draw_by_r_height = get_option( $config, $section, "draw_by_r_height", 0 );
 
   if ($option !~ /-y/){
     $option = $option . " -y uniform";
@@ -61,8 +60,6 @@ sub perform {
     my @bamnames = keys %$bam_files;
     $groups = { $task_name => \@bamnames };
   }
-
-  my $rscript = dirname(__FILE__) . "/bamplot.r";
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
@@ -108,13 +105,13 @@ fi
 
         my $colorStr = $rainbow_color ? "" : "--color $bamColor";
 
-        my $final_file = "${bamName}_plots.pdf";
+        my $final_file = "${bamName}.pdf";
         print $pbs "
 if [ ! -s $final_file ]; then
   if [ ! -s $curgff ]; then
     cp $gff_file $curgff
   fi
-  bamplot $option -v -b \"$bamFile\" -n \"$bamName\" -i $curgff $colorStr -o .
+  bamPlot_turbo $option -b \"$bamFile\" -n \"$bamName\" -i $curgff $colorStr -o .
 fi
 ";
       }
@@ -126,21 +123,22 @@ fi
       my $curbam_fileStr = join( ',', @curbam_files );
       my $colorStr = $rainbow_color ? "" : "--color " . join( ':', @bam_colors );
 
-      my $final_file  = "${name}_plots.pdf";
+      my $final_file  = "${name}.pdf";
       print $pbs "
 if [ ! -s $final_file ]; then
   if [ ! -s $curgff ]; then
     cp $gff_file $curgff
   fi
-  bamplot $option -v -b \"$curbam_fileStr\" -n \"$curbam_nameStr\" -i $curgff $colorStr -o .
+  bamPlot_turbo $option -b \"$curbam_fileStr\" -n \"$curbam_nameStr\" -i $curgff $colorStr -o .
 fi
 ";
 
       if ($draw_by_r) {
+        my $rscript = dirname(__FILE__) . "/bamPlot_turbo.R";
         my $summaryfile = "${name}/${name}_summary.txt";
         print $pbs "
 if [ -s $summaryfile ]; then
-  R --vanilla -f $rscript --args $summaryfile $draw_by_r_width $draw_by_r_height
+  R --vanilla -f $rscript --args $summaryfile $final_file UNIFORM MULTIPLE MULTIPLE_PAGE $draw_by_r_width $draw_by_r_height
 fi
 ";
       }
@@ -175,11 +173,11 @@ sub result {
     if ($draw_individual) {
       my @curbam_names = @{ $groups->{$name} };
       for my $bamName (@curbam_names) {
-        push( @result_files, "${result_dir}/${bamName}_plots.pdf" );
+        push( @result_files, "${result_dir}/${bamName}.pdf" );
       }
     }
     else {
-      push( @result_files, "${result_dir}/${name}_plots.pdf" );
+      push( @result_files, "${result_dir}/${name}.pdf" );
     }
   }
   $result->{$task_name} = filter_array( \@result_files, $pattern );
