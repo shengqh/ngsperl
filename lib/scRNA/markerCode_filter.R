@@ -223,15 +223,17 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
     tag_map=split(hto_tag$Sample, hto_tag$Tagname)
     hto$sample<-unlist(tag_map[hto$HTO])
     counts<-counts[, colnames(counts) %in% rownames(hto)]
-    samples<-hto[colnames(counts), "sample"]
-  }else{
-    samples=rep(sampleid, ncol(counts))
   }
 
   cat("\n\n# Sample", sampleid,": Quality Check and Analysis\n\n")
   cat("\n\n## ", sampleid,": Quality Check\n\n")
 
   SCLC <- CreateSeuratObject(counts = counts, min.cells = 5, min.features = 10, project=sampleid)
+  if(has_hto){
+    samples<-hto[colnames(SCLC), "sample"]
+  }else{
+    samples=sampleid
+  }
   SCLC$sample=samples
   rm(counts)
 
