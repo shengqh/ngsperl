@@ -1490,8 +1490,6 @@ fi
         output_to_same_folder => 1,
         sh_direct          => 0,
         pbs                => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=8",
           "walltime"  => "4",
           "mem"       => "20gb"
@@ -1518,8 +1516,6 @@ fi
         output_to_same_folder => 1,
         sh_direct          => 1,
         pbs                => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "4",
           "mem"       => "10gb"
@@ -1603,7 +1599,6 @@ fi
           source2_ref => [ "identical", ".dupcount\$" ],
           sh_direct   => 1,
           pbs         => {
-            "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
             "walltime" => "2",
             "mem"      => "20gb"
@@ -1627,10 +1622,9 @@ fi
         parameterSampleFile1_ref => $nonhost_genome_count_xml,
         output_arg         => "-o",
         output_file_ext    => ".nonhost_genome.tsv",
+        can_result_be_empty_file => 1,
         sh_direct          => 1,
         pbs                => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "1",
           "mem"       => "10gb"
@@ -1650,10 +1644,9 @@ fi
         parameterSampleFile1_ref => $microbial_genome_count_xml,
         output_arg         => "-o",
         output_file_ext    => ".microbial.tsv",
+        can_result_be_empty_file => 1,
         sh_direct          => 1,
         pbs                => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "1",
           "mem"       => "10gb"
