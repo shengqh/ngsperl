@@ -25,7 +25,15 @@ output:
 library(kableExtra)
 library(tidyverse)
 
-knitr::opts_chunk$set(fig.width=8, fig.height=6, out.width="80%")
+knitr::opts_chunk$set(
+  tidy = TRUE,
+  tidy.opts = list(width.cutoff = 120),
+  message = FALSE,
+  warning = FALSE,
+  fig.width=8, 
+  fig.height=6, 
+  out.width="80%"
+)
 
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
 rownames(files)<-files$V2
