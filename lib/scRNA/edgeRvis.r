@@ -23,8 +23,10 @@ df<-unique(df)
 df<-df[order(df$c1),]
 obj[[cluster_name]]<-factor(unlist(obj[[cluster_name]]), levels=unique(df[,cluster_name]))
 
+all_sigout<-NULL
+
 result<-NULL
-prefix<-rownames(edgeRres)[2]
+prefix<-rownames(edgeRres)[3]
 for (prefix in rownames(edgeRres)){
   cat("Processing ", prefix, "\n")
   comparison<-edgeRres[prefix, "comparison"]
@@ -42,7 +44,10 @@ for (prefix in rownames(edgeRres)){
       
       sigoutFile<-paste0(edgeRfolder, "/", edgeRres[prefix, "sigFile"])
       sigout<-read.csv(sigoutFile, header=T, stringsAsFactors = F, row.names=1)
+      sigout$comparison=prefix
       
+      all_sigout<-rbind(all_sigout, sigout)
+
       designFile<-paste0(edgeRfolder, "/", edgeRres[prefix, "designFile"])
       design<-read.csv(designFile, stringsAsFactors = F, header=T)
       
@@ -90,13 +95,13 @@ for (prefix in rownames(edgeRres)){
           
           subcells<-colnames(cell_obj)[cell_obj$DisplayGroup == controlGroup]
           subobj<-subset(cell_obj, cells=subcells)
-          p2<-MyFeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Control: ", controlGroup))
-          p2<-suppressMessages(expr = p2 + xlim(xlim) + ylim(ylim) + fix.sc)
+          p1<-MyFeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Control: ", controlGroup))
+          p1<-suppressMessages(expr = p1 + xlim(xlim) + ylim(ylim) + fix.sc)
           
           subcells<-colnames(cell_obj)[cell_obj$DisplayGroup == sampleGroup]
           subobj<-subset(cell_obj, cells=subcells)
-          p1<-MyFeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Sample: ", sampleGroup))
-          p1<-suppressMessages(expr = p1  + xlim(xlim) + ylim(ylim) + fix.sc)
+          p2<-MyFeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Sample: ", sampleGroup))
+          p2<-suppressMessages(expr = p2  + xlim(xlim) + ylim(ylim) + fix.sc)
         }
         p<-ggarrange(p0,                                                 # First row with scatter plot
                      ggarrange(p1, p2, ncol = 2, labels = c("B", "C")), # Second row with box and dot plots
@@ -129,11 +134,12 @@ if(!bBetweenCluster){
   allcoords<-data.frame(obj@reductions$umap@cell.embeddings)
   allcoords$Cluster=obj[[cluster_name]]
   
+  comp=unique(result$comparison)[1]
   for (comp in unique(result$comparison)) {
     compRes = result[result$comparison == comp,]
-    rownames(compRes)=compRes$cluster
+    rateMap=unlist(split(compRes$sigRate, compRes$cluster))
     
-    obj$sigRate=compRes[unlist(obj[[cluster_name]]), "sigRate"]
+    obj$sigRate=rateMap[as.character(unlist(obj[[cluster_name]]))]
     
     pdf(paste0(outFile, ".", comp, ".sigGenePerc.pdf"), width=14, height=7)
     p1<-DimPlot(obj, group.by = cluster_name, label=T) + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
@@ -144,3 +150,4 @@ if(!bBetweenCluster){
   }
 }
 
+write.csv(all_sigout, file=paste0(outFile, ".allsigout.csv"), quote=F)
