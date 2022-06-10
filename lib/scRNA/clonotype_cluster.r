@@ -1,10 +1,17 @@
 
+library("tools")
+
 clonos<-read.csv(parFile1, stringsAsFactors=F)
 clonos<-clonos[order(clonos$frequency, decreasing=T),]
 clono_cells<-unique(clonos[,c("clonotype_id", "cells")])
 
-ct<-read.csv(parFile2, row.names=1)
-ct$ident_celltype<-paste0(ct$orig.ident, ":", ct$seurat_cluster, ":", ct$cellactivity_clusters)
+if(file_ext(parFile2) == "rds"){
+  ct<-readRDS(parFile2)
+  ct$ident_celltype<-paste0(ct$orig.ident, ":", ct$seurat_cluster, ":", ct$cell_type)
+}else{
+  ct<-read.csv(parFile2, row.names=1)
+  ct$ident_celltype<-paste0(ct$orig.ident, ":", ct$seurat_cluster, ":", ct$cellactivity_clusters)
+}
 
 clon_ic<-apply(clono_cells, 1, function(x){
   clonotype_id=x[['clonotype_id']]
