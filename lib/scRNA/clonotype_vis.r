@@ -1,11 +1,20 @@
+
+source("scRNA_func.r")
 library(Seurat)
 library(ggplot2)
 library(ggpubr)
 
-finalList<-readRDS(parFile1)
-obj<-finalList$obj
+obj<-read_object(parFile1)
 
-cell_df<-read_cell_cluster_file(parFile2)
+if(parFile2 != ""){
+  cell_df<-read_cell_cluster_file(parFile2)
+}else{
+  cell_df=obj@meta.data
+}
+
+if("seurat_cell_type" %in% colnames(cell_df)){
+  cell_df$seurat_cellactivity_clusters = cell_df$seurat_cell_type
+}
 
 clonotypes<-read.csv(parFile3)
 clonotypes<-clonotypes[c(1:min(10, nrow(clonotypes))),,drop=F]
@@ -21,7 +30,7 @@ valid_cell_df<-subset(cell_df, cell_df$seurat_clusters %in% clono_clusters)
 valid_obj=subset(obj, cells=rownames(valid_cell_df))
 rm(obj)
 
-valid_obj[["final_seurat_clusters"]]=valid_cell_df$seurat_cellactivity_clusters
+valid_obj$final_seurat_clusters=valid_cell_df$seurat_cellactivity_clusters
 
 gcell<-DimPlot(valid_obj, group.by="final_seurat_clusters", reduction = "umap", label=T) + theme(legend.position = "none") + ggtitle("")
 
