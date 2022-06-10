@@ -241,6 +241,8 @@ sub initializeSmallRNADefaultOptions {
   }
   $def->{correlation_rcode} = $str;
 
+  initDefaultValue( $def, "perform_permanova", 1 );
+
   return $def;
 }
 
