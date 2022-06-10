@@ -28,7 +28,10 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   addEdgeRTask
   addComparison
   addDynamicCluster
-  addSubClusterV2)] );
+  addSubClusterV2
+  addClonotypeVis
+  addClonotypeDB
+  addClonotypeCluster)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -968,5 +971,74 @@ sub addSubClusterV2 {
 
   push( @$summary, $subcluster_task );
 }
+
+
+sub addClonotypeVis {
+  my ( $config, $def, $tasks, $target_dir, $taskname, $object_ref, $cell_type_ref, $clonotype_convert ) = @_;
+
+  $config->{$taskname} = {
+    class                      => "CQS::UniqueR",
+    perform                    => 1,
+    target_dir                 => $target_dir . "/" . $taskname,
+    rtemplate                  => "../scRNA/scRNA_func.r;../scRNA/clonotype_vis.r",
+    output_to_result_directory => 1,
+    output_file_ext            => ".clonotype_vis.csv",
+    parameterFile1_ref         => $object_ref,
+    parameterFile2_ref         => $cell_type_ref,
+    parameterFile3_ref         => $clonotype_convert,
+    sh_direct                  => 1,
+    pbs                        => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "23",
+      "mem"       => "10gb"
+    },
+  };
+  push(@$tasks, $taskname);
+}
+
+sub addClonotypeDB {
+  my ( $config, $def, $tasks, $target_dir, $taskname, $clonotype_convert ) = @_;
+  $config->{$taskname} = {
+    class                      => "CQS::UniqueR",
+    perform                    => 1,
+    target_dir                 => $target_dir . "/" . $taskname,
+    rtemplate                  => "../scRNA/clonotype_db.r",
+    output_to_result_directory => 1,
+    output_file_ext            => ".clonotype_db.csv",
+    parameterFile1_ref         => [ $clonotype_convert ],
+    parameterFile2         => getValue($def, "clonotype_McPAS_TCR"),
+    parameterFile3         => getValue($def, "clonotype_TBAdb"),
+    parameterFile4         => getValue($def, "clonotype_vdjdb"),
+    sh_direct                  => 1,
+    pbs                        => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "23",
+      "mem"       => "10gb"
+    },
+  };
+  push(@$tasks, $taskname);
+}
+
+sub addClonotypeCluster {
+  my ( $config, $def, $tasks, $target_dir, $taskname, $clonotype_db, $celltype_ref ) = @_;
+  $config->{$taskname} = {
+    class                      => "CQS::UniqueR",
+    perform                    => 1,
+    target_dir                 => $target_dir . "/" . $taskname,
+    rtemplate                  => "../scRNA/clonotype_cluster.r",
+    output_to_result_directory => 1,
+    output_file_ext            => ".clonotype_cluster.csv",
+    parameterFile1_ref         => [ $clonotype_db ],
+    parameterFile2_ref         => $celltype_ref,
+    sh_direct                  => 1,
+    pbs                        => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "23",
+      "mem"       => "10gb"
+    },
+  };
+  push(@$tasks, $taskname);
+}
+
 
 1;
