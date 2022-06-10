@@ -23,6 +23,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_br";
+  $self->{_docker_prefix} = "report_";
   bless $self, $class;
   return $self;
 }
