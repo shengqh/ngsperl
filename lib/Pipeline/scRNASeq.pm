@@ -497,6 +497,12 @@ sub getScRNASeqConfig {
       }
     }
 
+    my $clonotype_db = undef;
+    if(defined $clonotype_4_convert) {
+      $clonotype_db = $clonotype_4_convert . "_db";
+      addClonotypeDB($config, $def, $summary, $target_dir, $clonotype_db, $clonotype_4_convert);
+    }
+
     if($def->{perform_individual_qc}){
       $config->{$individual_qc_task} = {
         class => "CQS::UniqueRmd",
@@ -824,6 +830,34 @@ sub getScRNASeqConfig {
             addComparison($config, $def, $summary, $target_dir, $choose_task, $choose_task, "", "cell_type", "seurat_cell_type");
 
             $localization_ref = [ $choose_task, ".final.rds" ];
+
+            if(defined $def->{groups}){
+              my $group_umap_task = $seurat_task . get_next_index($def, $dynamicKey) . "_group_umap";
+              $config->{$group_umap_task} = {
+                class                    => "CQS::UniqueR",
+                perform                  => 1,
+                target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $group_umap_task,
+                rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_group_umap.r",
+                parameterFile1_ref => [$choose_task, ".final.rds"],
+                parameterSampleFile1     => $def->{groups},
+                output_file_ext      => ".all.label.umap.png",
+                sh_direct            => 1,
+                pbs                  => {
+                  "nodes"     => "1:ppn=1",
+                  "walltime"  => "12",
+                  "mem"       => "40gb"
+                },
+              };
+              push( @$summary, $group_umap_task );
+            }
+
+            if(defined $clonotype_4_convert){
+              addClonotypeVis($config, $def, $summary, $target_dir, $clonotype_4_convert . "_vis", [$choose_task, ".final.rds"], undef, $clonotype_4_convert);
+            }
+
+            if(defined $clonotype_db){
+              addClonotypeCluster($config, $def, $summary, $target_dir, $clonotype_db . "_cluster", $clonotype_db, [$choose_task, ".meta.rds"]);
+            }
           }
         }else{
           $subcluster_task = $seurat_task . get_next_index($def, $dynamicKey) . "_subcluster.v1";
@@ -1370,51 +1404,8 @@ sub getScRNASeqConfig {
         }
 
         if(defined $clonotype_4_convert){
-          my $clonotype_vis = $clonotype_4_convert;
-          $clonotype_vis =~ s/3_convert/4_vis/ig;
-          $clonotype_vis =~ s/4_convert/5_vis/ig;
-          $config->{$clonotype_vis} = {
-            class                      => "CQS::UniqueR",
-            perform                    => 1,
-            target_dir                 => $target_dir . "/" . $clonotype_vis,
-            rtemplate                  => "../scRNA/scRNA_func.r;../scRNA/clonotype_vis.r",
-            output_to_result_directory => 1,
-            output_file_ext            => ".clonotype_vis.csv",
-            parameterFile1_ref         => [ $cluster_task, ".final.rds" ],
-            parameterFile2_ref         => [ $celltype_task, $celltype_cluster_file ],
-            parameterFile3_ref         => [ $clonotype_4_convert ],
-            sh_direct                  => 1,
-            pbs                        => {
-              "nodes"     => "1:ppn=1",
-              "walltime"  => "23",
-              "mem"       => "10gb"
-            },
-          };
-          push(@$summary, $clonotype_vis);
+          addClonotypeVis($config, $def, $summary, $target_dir, $clonotype_4_convert . "_vis", [ $cluster_task, ".final.rds" ], [ $celltype_task, $celltype_cluster_file ], $clonotype_4_convert);
 
-          my $clonotype_db = $clonotype_4_convert;
-          $clonotype_db =~ s/3_convert/5_db/ig;
-          $clonotype_db =~ s/4_convert/6_db/ig;
-          $config->{$clonotype_db} = {
-            class                      => "CQS::UniqueR",
-            perform                    => 1,
-            target_dir                 => $target_dir . "/" . $clonotype_db,
-            rtemplate                  => "../scRNA/clonotype_db.r",
-            output_to_result_directory => 1,
-            output_file_ext            => ".clonotype_db.csv",
-            parameterFile1_ref         => [ $clonotype_4_convert ],
-            parameterFile2         => getValue($def, "clonotype_McPAS_TCR"),
-            parameterFile3         => getValue($def, "clonotype_TBAdb"),
-            parameterFile4         => getValue($def, "clonotype_vdjdb"),
-            sh_direct                  => 1,
-            pbs                        => {
-              "nodes"     => "1:ppn=1",
-              "walltime"  => "23",
-              "mem"       => "10gb"
-            },
-          };
-          push(@$summary, $clonotype_db);
-          
           if(defined $celltype_task){
             my $clonetype_cluster = $clonotype_db;
             $clonetype_cluster =~ s/5_db/6_cluster/ig;
