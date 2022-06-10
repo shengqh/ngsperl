@@ -4,12 +4,6 @@
 
 #if you run the script at windows using gsea-cli.bat, remember to remove "start" from gsea-cli.bat
 
-###############################################################################
-# Author: Shilin Zhao, Quanhu Sheng
-###############################################################################
-
-#if you run the script at windows using gsea-cli.bat, remember to remove "start" from gsea-cli.bat
-
 runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb="/scratch/cqs_share/references/gsea/v7.0",
                   gseaCategories=c("h.all.v7.0.symbols.gmt"),
                   gseaReportTemplt="GSEAReport.Rmd",
