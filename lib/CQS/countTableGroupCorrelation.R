@@ -19,9 +19,18 @@ if(exists("parSampleFile4")){
 
   draw_all_groups_in_HCA<-is_one(myoptions$draw_all_groups_in_HCA)
   draw_umap<-is_one(myoptions$draw_umap)
+  heatmap_cexCol = myoptions$heatmap_cexCol
+  if(!is.na(heatmap_cexCol)){
+    if(heatmap_cexCol == ""){
+      heatmap_cexCol<-NA
+    }else{
+      heatmap_cexCol<-as.numeric(heatmap_cexCol)
+    }
+  }
 }else{
   draw_all_groups_in_HCA<-FALSE
   draw_umap<-FALSE
+  heatmap_cexCol<-NA
 }
 
 countTableFileList<-parSampleFile1
@@ -467,6 +476,9 @@ for (i in 1:nrow(countTableFileAll)) {
     hcaOption<-getHeatmapOption(countHT)
     if(!is.na(hasRowNames) & hasRowNames){
       hcaOption$labRow<-NULL
+    }
+    if(!is.na(heatmap_cexCol)){
+      hcaOption$cexCol<-heatmap_cexCol
     }
     
     width=min(8000, max(1500, 50 * ncol(countHT)))
