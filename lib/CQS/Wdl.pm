@@ -252,6 +252,17 @@ fi
     for my $key (@keys){
       if ($json_dic->{$key} eq ""){
         delete($json_dic->{$key});
+        next;
+      }
+
+      if(is_array($json_dic->{$key})){
+        my $jarray = $json_dic->{$key};
+        if (scalar(@$jarray) == 0){
+          delete($json_dic->{$key});
+          next;
+        }
+
+        print(@$jarray);
       }
     }
     #print("After deletion: " . Dumper($json_dic));
