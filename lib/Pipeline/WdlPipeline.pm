@@ -591,6 +591,7 @@ sub addEncodeATACseq {
   my $adapter = getValue($def, "adapter");
   #my $adapter = getValue($def, "perform_cutadapt", 0) ? getValue($def, "adapter", "") : "";
   #print("adapter = " . $adapter . "\n");
+  my $is_paired_end = is_paired_end($def);
 
   $config->{$task} = {     
     "class" => "CQS::Wdl",
@@ -607,7 +608,7 @@ sub addEncodeATACseq {
       "atac.title" => "SAMPLE_NAME",
       "atac.description" => "SAMPLE_NAME",
       "atac.genome_tsv" => getValue($def, "encode_atacseq_genome_tsv"),
-      "atac.paired_end" => is_paired_end($def) ? "true" : "false",
+      "atac.paired_end" => $is_paired_end ? "true" : "false",
       "atac.adapter" => $adapter,
       "atac.singularity" => getValue($def, "atac.singularity"),
     },
@@ -651,17 +652,19 @@ sub addEncodeATACseq {
         "source_ref" => [$group_i],
         "sample_index" => 0, 
       };
-      
-      my $fastq_2 = "fastq_${pick_str}_2";
-      $config->{$fastq_2} = {     
-        "class" => "CQS::FilePickTask",
-        "source_ref" => [$group_i],
-        "sample_index" => 1, 
-      };
       $config->{$task}{input_parameters}{"atac.fastqs_rep${pick_str}_R1_ref"} = [$fastq_1];
-      $config->{$task}{input_parameters}{"atac.fastqs_rep${pick_str}_R2_ref"} = [$fastq_2];
       $input_parameters_is_vector->{"atac.fastqs_rep${pick_str}_R1"} = 1;
-      $input_parameters_is_vector->{"atac.fastqs_rep${pick_str}_R2"} = 1;
+      
+      if($is_paired_end){
+        my $fastq_2 = "fastq_${pick_str}_2";
+        $config->{$fastq_2} = {     
+          "class" => "CQS::FilePickTask",
+          "source_ref" => [$group_i],
+          "sample_index" => 1, 
+        };
+        $config->{$task}{input_parameters}{"atac.fastqs_rep${pick_str}_R2_ref"} = [$fastq_2];
+        $input_parameters_is_vector->{"atac.fastqs_rep${pick_str}_R2"} = 1;
+      }
 
       $pick_index = $pick_index + 1;
     }
