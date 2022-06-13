@@ -431,6 +431,7 @@ sub getRNASeqConfig {
       parameterSampleFile4 => {
         "draw_all_groups_in_HCA" => getValue($def, "draw_all_groups_in_HCA", 0),
         "draw_umap" => getValue($def, "draw_umap", 0),
+        "heatmap_cexCol" => $def->{heatmap_cexCol},
       },
       rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
       output_file     => "parameterSampleFile1",
@@ -1190,7 +1191,7 @@ fi
         push( @report_names, "deseq2_volcano_plot" );
       }
       else {
-        push( @report_files, $deseq2taskname, "_DESeq2_volcanoPlot.png" );
+        push( @report_files, $deseq2taskname, "_DESeq2_volcanoEnhanced.png" );
         push( @report_names, "deseq2_volcano_plot" );
       }
       for my $key ( keys %$pairs ) {
