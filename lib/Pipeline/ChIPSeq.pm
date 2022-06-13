@@ -461,8 +461,29 @@ sub getConfig {
     #   annotateNearestGene($config, $def, $summary, $target_dir,  [$peakCallerTask, ".bed"]);
     # }
 
-    if(getValue($def, "perform_annovar", 0)){
-      addAnnovar( $config, $def, $summary, $target_dir, $peakCallerTask, ".bed", undef, undef, undef, 1, 0, 1 );
+    if(getValue($def, "perform_annovar", 1)){
+      my $annovar_task = addAnnovar( $config, $def, $summary, $target_dir, $peakCallerTask, ".bed", undef, undef, undef, 1, 0, 1 );
+
+      if(0){
+        my $annovar_vis_task = $annovar_task . "_vis";
+        $config->{$annovar_vis_task} = {
+          class                    => "CQS::UniqueR",
+          perform                  => 1,
+          rCode                    => "",
+          target_dir               => "${target_dir}/" . getNextFolderIndex($def) . $annovar_vis_task,
+          option                   => "",
+          parameterSampleFile1_ref => $annovar_task,
+          rtemplate                => "../Visualization/peakAnnovarVis.r",
+          output_file              => "",
+          output_file_ext          => ".png",
+          pbs                      => {
+            "nodes"    => "1:ppn=1",
+            "walltime" => "1",
+            "mem"      => "10gb"
+          },
+        };
+        push(@$summary, $annovar_vis_task);
+      }
     }
 
     if (getValue($def, "perform_activeGene", 0)) {
