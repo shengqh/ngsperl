@@ -202,7 +202,7 @@ sub getScRNASeqConfig {
 
   my $perform_clonotype_analysis = getValue($def, "perform_clonotype_analysis", 0);
 
-  my $clonotype_4_convert;
+  my $clonotype_4_convert = undef;
   if ($perform_clonotype_analysis){
     if ((not defined $def->{files}) || (not $perform_split_hto_samples)) {
       $config->{vdj_json_files} = getValue($def, "vdj_json_files");
@@ -212,6 +212,7 @@ sub getScRNASeqConfig {
     }
   }
 
+  my $hla_merge = undef;
   my $individual_qc_task = "individual_qc";
   my $qc_filter_config_file = $target_dir . "/qc_filter_config.txt";
   if (defined $def->{files}){
@@ -441,7 +442,7 @@ sub getScRNASeqConfig {
         };
         push( @$individual, $hto_bam_task );
 
-        addArcasHLA($config, $def, $individual, $target_dir, $project_name, $hto_bam_task . "_", $hto_bam_task);        
+        $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, $hto_bam_task . "_", $hto_bam_task);        
       }
 
       if($perform_clonotype_analysis){
@@ -490,9 +491,9 @@ sub getScRNASeqConfig {
         getValue($def, "bam_files");
         if (defined $def->{singleend_bam_files}){
           $config->{singleend_bam_files} = $def->{singleend_bam_files};
-          addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", "bam_files", "singleend_bam_files");        
+          $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", "bam_files", "singleend_bam_files");        
         }else{
-          addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", "bam_files");        
+          $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", "bam_files");        
         }
       }
     }
@@ -501,6 +502,28 @@ sub getScRNASeqConfig {
     if(defined $clonotype_4_convert) {
       $clonotype_db = $clonotype_4_convert . "_db";
       addClonotypeDB($config, $def, $summary, $target_dir, $clonotype_db, $clonotype_4_convert);
+
+      if( getValue($def, "perform_gliph2", 0) ) {
+        my $gliph2_task = (defined $hla_merge) ? "tcr_gliph2" : "tcr_hla_gliph2";
+        $config->{$gliph2_task} = {
+          class                => "CQS::UniqueR",
+          perform              => 1,
+          target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $gliph2_task,
+          rtemplate            => "../scRNA/gliph2.r",
+          parameterFile1_ref   => $clonotype_4_convert,
+          output_file_ext      => ".txt",
+          sh_direct            => 1,
+          pbs                  => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "12",
+            "mem"       => "40gb"
+          },
+        };
+        if( defined $hla_merge ) {
+          $config->{$gliph2_task}{parameterFile2_ref} = $hla_merge; 
+        }
+        push( @$summary, $gliph2_task );
+      }
     }
 
     if($def->{perform_individual_qc}){
