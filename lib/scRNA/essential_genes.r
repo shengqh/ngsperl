@@ -1,5 +1,20 @@
+rm(list=ls()) 
+outFile='AG3669'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3=''
+parFile1=''
+parFile2=''
+parFile3=''
+
+
+setwd('C:/projects/data/h_gelbard_lab/projects/20220609_scRNA_3669_sct/essential_genes/result')
+
+
+### Parameter setting end ###
 
 source("scRNA_func.r")
+
 
 library(Seurat)
 library(ggplot2)

@@ -113,6 +113,9 @@ sub perform {
   }
   
   print $rf "\nsetwd('$result_dir')\n\n";
+  
+  my $setting_line = "### Parameter setting end ###";
+  print $rf "\n$setting_line\n\n";
 
   my $rtemplates = get_option( $config, $section, "rtemplate" );
   my @rtemplates = split( ",|;", $rtemplates );
@@ -148,19 +151,29 @@ sub perform {
       }
     }
     
+    my @valid_lines = ();
+    
     open( my $rt, "<$rtemplate" ) or die $!;
     while ( my $row = <$rt> ) {
       chomp($row);
       $row =~ s/\r//g;
+      if($row eq $setting_line){
+        @valid_lines = ();
+        next;
+      }
+
       if($copy_template && ($row =~/^source/)){
         if(defined $ignore_lines->{$row}){
           next;
         }
       }
 
-      print $rf "$row\n";
+      push(@valid_lines, $row);
     }
-    close($rt);
+    for my $row (@valid_lines){
+      print $rf "$row\n";
+      close($rt);
+    }
   }
   close($rf);
 
