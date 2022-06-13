@@ -305,6 +305,7 @@ sub addArcasHLA {
   };
 
   push (@$tasks, $merge_task);
+  return($merge_task);
 }
 
 sub addScMRMA {
