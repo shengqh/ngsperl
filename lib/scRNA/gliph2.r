@@ -1,65 +1,45 @@
-outFile="scRNA_5126"
-parSampleFile1<-"fileList1.txt"
+rm(list=ls()) 
+outFile='AG3669'
+parSampleFile1='fileList1.txt'
+parSampleFile2=''
+parSampleFile3=''
+parFile1='/data/cqs/softwares/ngsperl/lib/Pipeline/../scRNA/gliph2_config.txt'
+parFile2='/data/h_gelbard_lab/projects/20220508_scRNA_3669/tcr_hla_data/result/AG3669.tcr.CD4.txt'
+parFile3='/data/h_gelbard_lab/projects/20220508_scRNA_3669/tcr_hla_data/result/AG3669.tcr.CD8.txt'
+parFile4='/data/h_gelbard_lab/projects/20220508_scRNA_3669/tcr_hla_data/result/AG3669.hla.txt'
+
+
+setwd('/data/h_gelbard_lab/projects/20220508_scRNA_3669/tcr_hla_data_gliph2/result')
+
+### Parameter setting end ###
 
 library(data.table)
+library(reshape2)
 
-project_name <- "s5126"
-hla_file <- "/data/h_gelbard_lab/projects/20201228_scRNA_5126/hto_bam_arcasHLA_3_merge/result/scRNA_5126.genotypes.tsv"
+project_name <- outFile
 
-#load HLA
-hla <- fread(hla_file, data.table=F)
+config=read.table(parFile1, sep="=", stringsAsFactors = F, header=F)
+rownames(config)<-config$V1
 
-#Modify subject name
-hla$subject <- gsub("_.*", "", hla$subject)
+ref_files = read.table(parSampleFile1, sep="\t", stringsAsFactors = F, header=F)
 
-write.table(hla, paste(date, project_name, "HLA_gliph2.txt", sep="_"), row.names=F, col.names =F, quote=F, sep = "\t")
+tcr_files=list("CD4"=parFile2, "CD8"=parFile3)
 
-library(data.table)
-library(reshape)
+tcr="CD4"
+for(tcr in names(tcr_files)){
+  tcr_file=tcr_files[tcr]
+  tcr_ref = ref_files[ref_files$V3==tcr,]
+  tcr_ref_map = unlist(split(tcr_ref$V1, tcr_ref$V2))
+  config["out_prefix","V2"] = paste0(project_name, ".", tcr)
+  config["cdr3_file","V2"] = tcr_file
+  config["hla_file","V2"] = ifelse(exists("parFile4"), parFile4, "")
+  config["refer_file","V2"] = tcr_ref_map['refer_file']
+  config["v_usage_freq_file","V2"] = tcr_ref_map['v_usage_freq_file']
+  config["cdr3_length_freq_file","V2"] = tcr_ref_map['cdr3_length_freq_file']
+  config_file = paste0(project_name, ".", tcr, ".config.txt")
+  write.table(config, config_file, sep="=", col.names = F, row.names=F, quote=F)
 
-date <- gsub("-", "", Sys.Date())
-project_name <- "s5126"
-samples <- c("CTRL_KC", "CTRL_TC", "CTRL_TM", "CTRL_VR", "Pep2_KC", "Pep2_TC", "Pep2_TM", "Pep2_VR")
-tcr_file <- "/data/h_gelbard_lab/projects/20201228_scRNA_5126/hto_clonotype_4_convert/result/clonotypes.csv"
-
-#load TCR
-clonotypes <- fread(tcr_file, data.table=F)
-
-#Split CD3
-clon_list <- strsplit(clonotypes$cdr3s_aa, ";")
-clon_df <- data.frame()
-for (i in 1:length(clon_list)){
-  clons <- clon_list[[i]]
-  if(length(clons) == 2 && grepl("TRA:", clons)){
-    clon_df[i,1] <- clons[grep("TRA:", clons)]
-    clon_df[i,2] <- clons[grep("TRB:", clons)]
-  } else if(length(clons) == 1 && grepl("TRA:", clons)){
-    clon_df[i,1] <- clons[grep("TRA:", clons)]
-    clon_df[i,2] <- "NA"
-  } else if (length(clons) == 1 && grepl("TRB:", clons)){
-    clon_df[i,1] <- "NA"
-    clon_df[i,2] <- clons[grep("TRB:", clons)]
-  } else {
-    clon_df[i,1] <- "NA"
-    clon_df[i,2] <- "NA"
-  }
+  cmd=paste0("irtools -c ", config_file)
+  cat(cmd, "\n")
+  system(cmd)
 }
-
-#Data frame
-gliph2 <- data.frame(clon_df[,2], clonotypes[, c("TRBV","TRBJ")], clon_df[,1], clonotypes[c(samples)])
-colnames(gliph2)[c(1, 4)] <- c("CDR3b", "CDR3a") 
-
-#Melt
-gliph2.2 <- melt(gliph2, id = c("CDR3b", "TRBV", "TRBJ", "CDR3a"), 
-                 measured = samples)
-colnames(gliph2.2)[5:6] <- c("subject", "count") 
-gliph2.2[,"subject"] <- gsub("_", ":", gliph2.2[,"subject"])
-
-#Clean
-gliph2.2 <- gliph2.2[-c(which(gliph2.2[,"CDR3b"] == "NA")), ]
-gliph2.2[,"CDR3b"] <- gsub("TRB:", "", gliph2.2[,"CDR3b"])
-gliph2.2[,"CDR3a"] <- gsub("TRA:", "", gliph2.2[,"CDR3a"])
-gliph2.2 <- gliph2.2[-which(gliph2.2$count == 0), ]
-
-write.table(gliph2.2, paste(date, project_name, "TCR_gliph2.txt", sep= "_"), row.names=F, col.names =F, quote=F, sep = "\t")
-

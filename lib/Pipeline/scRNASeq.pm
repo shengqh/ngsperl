@@ -499,31 +499,13 @@ sub getScRNASeqConfig {
     }
 
     my $clonotype_db = undef;
+
+    #die "clonotype_4_convert=$clonotype_4_convert";
+    #die "hla_merge=$hla_merge";
+
     if(defined $clonotype_4_convert) {
       $clonotype_db = $clonotype_4_convert . "_db";
       addClonotypeDB($config, $def, $summary, $target_dir, $clonotype_db, $clonotype_4_convert);
-
-      if( getValue($def, "perform_gliph2", 0) ) {
-        my $gliph2_task = (defined $hla_merge) ? "tcr_gliph2" : "tcr_hla_gliph2";
-        $config->{$gliph2_task} = {
-          class                => "CQS::UniqueR",
-          perform              => 1,
-          target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $gliph2_task,
-          rtemplate            => "../scRNA/gliph2.r",
-          parameterFile1_ref   => $clonotype_4_convert,
-          output_file_ext      => ".txt",
-          sh_direct            => 1,
-          pbs                  => {
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "12",
-            "mem"       => "40gb"
-          },
-        };
-        if( defined $hla_merge ) {
-          $config->{$gliph2_task}{parameterFile2_ref} = $hla_merge; 
-        }
-        push( @$summary, $gliph2_task );
-      }
     }
 
     if($def->{perform_individual_qc}){
@@ -849,6 +831,64 @@ sub getScRNASeqConfig {
             push( @$summary, $choose_task );
             $subcluster_task = $choose_task;
             $can_check_doublet=1;
+
+            if(defined $clonotype_4_convert) {
+              if( getValue($def, "perform_gliph2", 0) ) {
+                my $prepare_task = (defined $hla_merge) ? "tcr_hla_data" : "tcr_data";
+                #die "gliph2_task=$gliph2_task";
+                $config->{$prepare_task} = {
+                  class                => "CQS::UniqueR",
+                  perform              => 1,
+                  target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $prepare_task,
+                  rtemplate            => "../scRNA/gliph2_prepare.r",
+                  parameterFile1_ref   => [ $choose_task, ".meta.rds"],
+                  parameterFile2_ref   => $clonotype_4_convert,
+                  parameterSampleFile1 => getValue($def, "gliph2_config"),
+                  parameterSampleFile2 => {
+                    gliph2_hla_condition => getValue($def, "gliph2_hla_condition"),
+                  },
+                  output_file_ext      => ".tcr.CD4.txt,.tcr.CD8.txt",
+                  output_other_ext     => "",
+                  sh_direct            => 1,
+                  pbs                  => {
+                    "nodes"     => "1:ppn=1",
+                    "walltime"  => "12",
+                    "mem"       => "40gb"
+                  },
+                };
+                if( defined $hla_merge ) {
+                  $config->{$prepare_task}{parameterFile3_ref} = $hla_merge; 
+                  $config->{$prepare_task}{output_other_ext} = ".hla.txt"; 
+                }
+                push( @$summary, $prepare_task );
+
+                my $gliph2_config_file = dirname(__FILE__) . "/../scRNA/gliph2_config.txt";
+                #die($gliph2_config_file);
+
+                my $gliph2_task = $prepare_task . "_gliph2";
+                $config->{$gliph2_task} = {
+                  class                => "CQS::UniqueR",
+                  perform              => 1,
+                  target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $gliph2_task,
+                  rtemplate            => "../scRNA/gliph2.r",
+                  parameterFile1       => getValue($def, "gliph2_config_file", $gliph2_config_file),
+                  parameterFile2_ref   => [ $prepare_task, '.tcr.CD4.txt'],
+                  parameterFile3_ref   => [ $prepare_task, '.tcr.CD8.txt'],
+                  parameterSampleFile1 => getValue($def, "gliph2_reference"),
+                  output_file_ext      => "_HLA.txt",
+                  sh_direct            => 1,
+                  pbs                  => {
+                    "nodes"     => "1:ppn=1",
+                    "walltime"  => "12",
+                    "mem"       => "40gb"
+                  },
+                };
+                if( defined $hla_merge ) {
+                  $config->{$gliph2_task}{parameterFile4_ref} = [$prepare_task, '.hla.txt'], 
+                }
+                push( @$summary, $gliph2_task );
+              }
+            }
 
             addComparison($config, $def, $summary, $target_dir, $choose_task, $choose_task, "", "cell_type", "seurat_cell_type");
 

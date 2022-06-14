@@ -112,7 +112,7 @@ sub perform {
     print $rf $rCode . "\n";
   }
   
-  print $rf "\nsetwd('$result_dir')\n\n";
+  print $rf "\nsetwd('$result_dir')\n";
   
   my $setting_line = "### Parameter setting end ###";
   print $rf "\n$setting_line\n\n";
@@ -170,7 +170,16 @@ sub perform {
 
       push(@valid_lines, $row);
     }
+
+    my $first = 1;
     for my $row (@valid_lines){
+      if ($row eq ""){
+        if ($first){
+          next
+        }
+      }else{
+        $first = 0;
+      }
       print $rf "$row\n";
       close($rt);
     }
