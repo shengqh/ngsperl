@@ -1468,7 +1468,6 @@ fi
     for my $gname (sort keys %$groups){
       push(@file_exts, ".${gname}.html");
     }
-    my $file_ext_str = join(",", @file_exts);
 
     my $refseq_bacteria_krona = "refseq_bacteria_krona";
     $config->{$refseq_bacteria_krona} = {
@@ -1485,7 +1484,7 @@ fi
       parameterFile2_arg => "-t",
       parameterFile2     => getValue($def, "krona_taxonomy_folder"),
       output_arg => "-o",
-      output_file_ext => $file_ext_str,
+      output_file_ext => join(",", @file_exts),
       #no_docker => 1,
       sh_direct   => 1,
       pbs => {
