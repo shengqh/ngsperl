@@ -1,3 +1,19 @@
+rm(list=ls()) 
+outFile='AK6383'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3='fileList3.txt'
+parFile1='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge/result/AK6383.final.rds'
+parFile2='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_01_dynamic/result/AK6383.scDynamic.meta.rds'
+parFile3='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/essential_genes/result/AK6383.txt'
+parFile4='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_02_subcluster.v2/result/AK6383.files.csv'
+
+
+setwd('C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_03_choose_res/result')
+
+### Parameter setting end ###
+
+source("scRNA_func.r")
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -122,7 +138,7 @@ if(!all(res_files$celltype %in% best_res_tbl$V3)){
 }
 
 #remove cell type first
-remove_cts<-best_res_tbl$V3[best_res_tbl$V2=="resolution" & best_res_tbl$V1 == "0"]
+remove_cts<-best_res_tbl$V3[best_res_tbl$V2=="resolution" & best_res_tbl$V1 == "-1"]
 if(length(remove_cts) > 0){
   cells<-colnames(obj)[!(unlist(obj[[cur_layer]]) %in% remove_cts)]
   obj<-subset(obj, cells=cells)
@@ -140,7 +156,7 @@ meta = obj@meta.data
 curprefix = prefix
 
 celltypes<-unlist(meta[[previous_layer]])
-tblct<-table(celltypes)
+tblct<-table(as.character(celltypes))
 tblct<-tblct[order(tblct, decreasing = T)]
 
 previous_celltypes<-names(tblct)
@@ -158,19 +174,16 @@ for(pct in previous_celltypes){
   if(nrow(best_res_row) > 0){
     best_res=as.numeric(subset(best_res_row, V2 == "resolution")$V1)
   }else{
-    best_res=0.01
+    best_res=0
   }
-  
-  if(best_res == 0){
-    next
-  }
-  
+
   pct_res_files<-subset(res_files, celltype == pct)
-  if((nrow(pct_res_files) == 0) | (!best_res %in% pct_res_files$resolution)){
+  
+  if((best_res == 0) | (nrow(pct_res_files) == 0) | (!best_res %in% pct_res_files$resolution)){
     #no corresponding files, which means only one sub cluster
     cat("  only one subcluster\n")
     meta[cells, seurat_clusters] = cluster_index
-    meta[cells, resolution_col] = 0.01
+    meta[cells, resolution_col] = 0
     cluster_index = cluster_index + 1
 
     allmarkers=c(allmarkers, unlist(ct_top10_map[pct]))
@@ -218,18 +231,25 @@ for(pct in previous_celltypes){
     merge_tbl=ct_tbl[ct_tbl$V1 %in% cur_meta$seurat_clusters_str,,drop=F]
     if(nrow(merge_tbl) > 0){
       max_index = max(cur_meta$seurat_clusters) + 1
+      
+      mname=unique(merge_tbl$V2)[1]
       for (mname in unique(merge_tbl$V2)){
         mcts=merge_tbl$V1[merge_tbl$V2==mname]
         cur_meta[cur_meta$seurat_clusters_str %in% mcts, "cur_layer"] = mname
-        cur_meta[cur_meta$seurat_clusters_str %in% mcts, "seurat_clusters"] = max_index
-        max_index = max_index + 1
+        if (mname == "DELETE"){
+          cur_meta[cur_meta$seurat_clusters_str %in% mcts, "seurat_clusters"] = -10000
+        }else{
+          cur_meta[cur_meta$seurat_clusters_str %in% mcts, "seurat_clusters"] = max_index
+          max_index = max_index + 1
+        }
       }
       
-      ctbl<-table(cur_meta$seurat_clusters)
+      valid_clusters=cur_meta$seurat_clusters >= 0
+      ctbl<-table(cur_meta$seurat_clusters[valid_clusters])
       ctbl<-ctbl[order(ctbl, decreasing = T)]
       newnames=c(0:(length(ctbl)-1))
       names(newnames)<-names(ctbl)
-      cur_meta$seurat_clusters = newnames[as.character(cur_meta$seurat_clusters)]
+      cur_meta$seurat_clusters[valid_clusters] = newnames[as.character(cur_meta$seurat_clusters[valid_clusters])]
     }
   }
 
@@ -246,6 +266,10 @@ for(pct in previous_celltypes){
   allmarkers=c(allmarkers, cur_top19$gene)
 }
 
+obj@meta.data<-meta
+obj<-subset(obj, seurat_clusters >= 0)
+
+meta = obj@meta.data
 meta[,seurat_cur_layer] = paste0(meta$seurat_clusters, ": ", meta[,cur_layer])
 ct<-meta[!duplicated(meta$seurat_cluster),]
 ct<-ct[order(ct$seurat_cluster),]
@@ -254,8 +278,6 @@ meta[,cur_layer] =factor(meta[,cur_layer], levels=unique(ct[,cur_layer]))
 meta[,seurat_cur_layer] =factor(meta[,seurat_cur_layer], levels=ct[,seurat_cur_layer])
 
 obj@meta.data<-meta
-
-obj<-subset(obj, seurat_clusters != -1)
 
 write.csv(obj@meta.data, paste0(outFile, ".meta.csv"))
 saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
