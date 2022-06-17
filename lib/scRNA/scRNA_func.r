@@ -816,7 +816,7 @@ read_object<-function(obj_file, meta_rds=NULL, columns=NULL){
     obj<-obj$obj
   }
   
-  if(!is.null(meta_rds)){
+  if(!is.null(meta_rds) & (meta_rds != "")){
     if(file_ext(meta_rds) == "rds"){
       meta.data=readRDS(meta_rds)
       if(any(colnames(obj) != rownames(meta.data))){
