@@ -447,13 +447,14 @@ write.csv(obj@meta.data, paste0(prefix, ".scDynamic.meta.csv"))
 #find markers for all cell types
 all_markers=FindAllMarkers(obj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
 all_top10<-get_top10_markers(all_markers)
+all_top10<-unique(all_top10$gene)
 
 width<-max(3000, min(10000, length(unique(Idents(obj))) * 150 + 1000))
 height<-max(3000, min(10000, length(all_top10) * 60 + 1000))
 
 obj<-myScaleData(obj, all_top10, "RNA")
 png(paste0(outFile, ".layer4.heatmap.png"), width=width, height=height, res=300)
-DoHeatmap(obj, assay="RNA", group.by="layer4", features=all_top10$gene)
+DoHeatmap(obj, assay="RNA", group.by="layer4", features=all_top10)
 dev.off()
 
 output_barplot<-function(obj, sample_key, cell_key, filename){
