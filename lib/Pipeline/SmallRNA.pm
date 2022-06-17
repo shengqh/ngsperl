@@ -1407,7 +1407,7 @@ fi
       output_file_ext => ".txt.gz",
       output_to_same_folder => 1,
       can_result_be_empty_file => 0,
-      no_docker => 1,
+      #no_docker => 1,
       use_tmp_folder => getValue($def, "use_tmp_folder", 0),
       sh_direct   => 0,
       pbs => {
@@ -1426,7 +1426,7 @@ fi
       push(@$file_exts, ".${cat}.estimated.count");
       push(@$file_exts, ".${cat}.aggregated.count");
     }
-    my $file_ext_str = ".read.count," . join(",", @$file_exts);
+    my $file_ext_str = ".read.count,.tree.count," . join(",", @$file_exts);
 
     my $refseq_bacteria_table = "refseq_bacteria_table";
     $config->{$refseq_bacteria_table} = {
@@ -1444,7 +1444,7 @@ fi
       parameterFile2 => getValue($def, "refseq_taxonomy"),
       output_arg => "-o",
       output_file_ext => $file_ext_str,
-      no_docker => 1,
+      #no_docker => 1,
       sh_direct   => 1,
       pbs => {
         "nodes"     => "1:ppn=1",
@@ -1456,6 +1456,44 @@ fi
     push( @$summary_ref, $refseq_bacteria_table );  
     push @table_for_correlation, ( $refseq_bacteria_table, ".estimated.count\$" );
     push @table_for_correlation, ( $refseq_bacteria_table, ".aggregated.count\$" );
+
+    my @file_exts = ();
+
+    my $task_name = $def->{task_name};
+    my $files = $def->{files};
+    my $groups = $def->{groups};
+    for my $sample (sort keys %$files){
+      push(@file_exts, ".${sample}.html");
+    }
+    for my $gname (sort keys %$groups){
+      push(@file_exts, ".${gname}.html");
+    }
+
+    my $refseq_bacteria_krona = "refseq_bacteria_krona";
+    $config->{$refseq_bacteria_krona} = {
+      class => "CQS::ProgramWrapper",
+      target_dir => "$data_visualization_dir/$refseq_bacteria_krona",
+      interpretor => "",
+      program => getValue($def, "spcount", "spcount"),
+      check_program => 0,
+      option => "krona -o __NAME__ ",
+      parameterSampleFile1_arg => "-g",
+      parameterSampleFile1 => $groups,
+      parameterFile1_arg => "-i",
+      parameterFile1_ref => [$refseq_bacteria_table, ".tree.count"],
+      parameterFile2_arg => "-t",
+      parameterFile2     => getValue($def, "krona_taxonomy_folder"),
+      output_arg => "-o",
+      output_file_ext => join(",", @file_exts),
+      #no_docker => 1,
+      sh_direct   => 1,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => getValue($def, "${refseq_bacteria_krona}_walltime", "10"),
+        "mem"       => getValue($def, "${refseq_bacteria_krona}_mem", "20gb"),
+      },
+    };
+    push( @$summary_ref, $refseq_bacteria_krona );  
 
     if ($do_comparison) {
       for my $cat (@$categories){
