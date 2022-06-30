@@ -186,6 +186,65 @@ get_seurat_average_expression<-function(SCLC){
   return(result)
 }
 
+#https://github.com/yihui/knitr/issues/1494
+# Based on code from http://michaeljw.com/blog/post/subchunkify/
+#' Generate a sub-chunk to be interpreted by knitr.  The enclosing chunk
+#' must have "results='asis'"
+#'
+#' @param g The output to chunkify (only tested with figures to date)
+#' @param ... Additional named arguments to the chunk
+#' @return NULL
+#' @details The chunk is automatically output to the console.  There is
+#'   no need to print/cat its result.
+#' @export
+subchunkify <- local({
+  chunk_count <- 0
+  function(g, ...) {
+    chunk_count <<- chunk_count + 1
+    g_deparsed <-
+      paste0(deparse(
+        function() {print(g)}
+      ),
+      collapse = '')
+    args <- list(...)
+    args <-
+      lapply(names(args),
+             FUN=function(nm, arglist) {
+               current <- arglist[[nm]]
+               if (length(current) > 1) {
+                 stop("Only scalars are supported by subchunkify")
+               } else if (is.character(current) | is.factor(current)) {
+                 current <- as.character(current)
+                 ret <- paste0('"', gsub('"', '\"', current, fixed=TRUE), '"')
+               } else if (is.numeric(current) | is.logical(current)) {
+                 ret <- as.character(current)
+               } else {
+                 stop("Unhandled class in subchunkify argument handling")
+               }
+               paste0(nm, "=", ret)
+             },
+             arglist=args)
+    args <- paste0(unlist(args), collapse=", ")
+    chunk_header <-
+      paste(
+        paste0("{r sub_chunk_", chunk_count),
+        if (nchar(args) > 0) {
+          paste(",", args)
+        } else {
+          NULL
+        },
+        ", echo=FALSE}")
+    
+    sub_chunk <- paste0(
+      "\n```",chunk_header, "\n",
+      "(", 
+      g_deparsed
+      , ")()\n",
+      "```\n")
+    cat(knitr::knit(text = knitr::knit_expand(text = sub_chunk), quiet = TRUE))
+  }
+})
+
 preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remove_Mt_rRNA=FALSE,celltype_predictmethod="cta",transpose=FALSE, Ensemblfile=NULL, hto_map=list(),tag_tb=NULL,bubble_file=NULL) {
   countfile<-SampleInfo$countfile
   sampleid=SampleInfo$SampleId
@@ -248,12 +307,16 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
   }else{
     g1<-VlnPlot(SCLC, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
   }
-  print(g1)
+
+  subchunkify(g1, fig.height=7, fig.width=15)
+  #print(g1)
 
   plot1 <- FeatureScatter(SCLC, feature1 = "nCount_RNA", feature2 = "percent.mt")+NoLegend()
   plot2 <- FeatureScatter(SCLC, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")+NoLegend()
   cat("\n\n### ", "Fig.2 The scatterplot between mtRNA/nGene and nUMI \n\n")
-  print(plot1+plot2)
+  p<-plot1+plot2
+  subchunkify(p, fig.height=7, fig.width=14)
+  #print(plot1+plot2)
   
   mt<-data.frame(mt=SCLC$percent.mt, Sample=SCLC$sample, nFeature=log10(SCLC$nFeature_RNA), nCount=log10(SCLC$nCount_RNA))
   plot3<-ggplot(mt, aes(x=nCount,y=mt) ) +
@@ -281,14 +344,19 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
   
   cat("\n\n### ", "Fig.3  nUMI distribution\n\n")
   if(has_hto){
-    print(plot3)
-    print(plot4)
+    subchunkify(plot3, fig.height=7, fig.width=15)
+    subchunkify(plot4, fig.height=7, fig.width=15)
+    #print(plot3)
+    #print(plot4)
   }else{
-    print(plot3+plot4)
+    p<-plot3+plot4
+    subchunkify(p, fig.height=7, fig.width=14)
   }
-  plot(sort(SCLC@meta.data$nCount_RNA,decreasing = T),ylab="UMI counts",lty=2,pch=16,log="xy")
-  abline(h=1000)
-  abline(h=500)
+
+
+  # plot(sort(SCLC@meta.data$nCount_RNA,decreasing = T),ylab="UMI counts",lty=2,pch=16,log="xy")
+  # abline(h=1000)
+  # abline(h=500)
   
   info=list()
   if (min(SCLC[["percent.mt"]]) < Cutoff$mt_cutoff) {  
@@ -326,7 +394,7 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
       }else{
         g1<-FeaturePlot(SCLC, features=c("percent.mt","nFeature_RNA","nCount_RNA","PC_1"),label=T)
       }
-      print(g1)
+      subchunkify(g1, fig.height=15, fig.width=15)
       
       plot1<-ggplot(data=data.frame(cluster=SCLC@active.ident,nUMI=SCLC@meta.data$nCount_RNA),aes(x=cluster,y=nUMI))+geom_boxplot()+scale_y_log10()    + theme_bw()
       plot2<-ggplot(data=data.frame(cluster=SCLC@active.ident,ngene=SCLC@meta.data$nFeature_RNA),aes(x=cluster,y=ngene))+geom_boxplot()+scale_y_log10() + theme_bw()
@@ -340,7 +408,8 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
       plot6<-DimPlot(SCLC, reduction = "umap",label=T,label.size=4)
       
       cat("\n\n### ", "Fig.5 Boxplot of nUMI,nGene, mtRNA and nCells distribution and PCA, UMAP results\n\n") 
-      print(CombinePlots(plots = list(plot1, plot2, plot3,plot4,plot5,plot6),rel_heights=c(1,1)))
+      p<-plot1+plot2+plot3+plot4+plot5+plot6+plot_layout(ncol = 3)
+      subchunkify(p, fig.height=10, fig.width=15)
       
       if (Cutoff$cluster_remove!=""){
         removeIdent<-(unlist((strsplit(Cutoff$cluster_remove,",")))) 
@@ -361,9 +430,12 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
         names(new.cluster.ids) <- levels(SCLC)
         SCLC <- RenameIdents(SCLC, new.cluster.ids)
         cat("\n\n### ", "Fig.6 UMAP result\n\n")
-        print(DimPlot(SCLC, reduction = "umap",label=T,label.size=6))
+        g<-DimPlot(SCLC, reduction = "umap",label=T,label.size=6)
+        subchunkify(g, fig.height=15, fig.width=15)
+
         if(has_hto){
-          print(DimPlot(SCLC, reduction = "umap",label=T,label.size=3, split.by = "sample"))
+          g<-DimPlot(SCLC, reduction = "umap",label=T,label.size=3, split.by = "sample")
+          subchunkify(g, fig.height=15, fig.width=15)
         }
         
         SCLC.markers <- FindAllMarkers(SCLC, assay="RNA", only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
@@ -387,21 +459,22 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
         
         #print(DoHeatmap(SCLC, features = top10$gene)+ theme(axis.text.y = element_text(size = genesize)) )
         cat("\n\n### Fig.7 Marker genes expression in each cluster\n\n")
-        print(DoHeatmap(SCLC, assay="RNA", features = top10$gene)+ theme(axis.text.y = element_text(size = genesize))) 
+        g<-DoHeatmap(SCLC, assay="RNA", features = top10$gene)+ theme(axis.text.y = element_text(size = genesize))
+        subchunkify(g, fig.height=15, fig.width=15)
         
-        ###
-        #SCLC@misc$Qcluster <- EvalCluster(SCLC)
-        #ViewQcluster(SCLC)
-        #cat("\n\n")
-        #print(kable(SCLC@misc$Qcluster))
-        #cat("\n\n")
+        ##
+        # SCLC@misc$Qcluster <- EvalCluster(SCLC)
+        # ViewQcluster(SCLC)
+        # cat("\n\n")
+        # print(kable(SCLC@misc$Qcluster))
+        # cat("\n\n")
         
-        #Doheatmap_cellmarker_cellType(SCLC,top10,cellType,predict_celltype)
-        def.par <- par(no.readonly = TRUE) 
+        # Doheatmap_cellmarker_cellType(SCLC,top10,cellType,predict_celltype)
+        # def.par <- par(no.readonly = TRUE) 
         #   layout(matrix(c(1,2), 1, 2, byrow = TRUE))
         #   Plot_predictcelltype(predict_celltype,method="cta")
         #   Plot_predictcelltype(predict_celltype,method="ora")
-        par(def.par)
+        # par(def.par)
         
         if(!is.null(bubble_file) & file.exists(bubble_file)){
           genes<-read_bubble_genes(bubble_file, rownames(SCLC))
@@ -409,7 +482,8 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
           
           cat("\n\n### Fig.8 Cell type marker genes expression in each cluster\n\n")
           
-          print(DoHeatmap(SCLC, assay="RNA",features=ugenes))
+          g<-DoHeatmap(SCLC, assay="RNA",features=ugenes)
+          subchunkify(g, fig.height=15, fig.width=15)
           
           gene_groups=split(genes$`Marker Gene`, genes$`Cell Type`)
           
@@ -455,7 +529,8 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
                                                      strip.background = element_blank(),
                                                      strip.text.x = element_text(angle=90, hjust=0, vjust=0.5))
           cat("\n\n### Fig.9 Cell type marker genes bubble plot\n\n")
-          print(g)
+          subchunkify(g, fig.height=10, fig.width=15)
+          cat("<br><br>\n\n\n")
         }
       }
     }
