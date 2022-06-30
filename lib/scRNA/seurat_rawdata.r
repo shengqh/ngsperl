@@ -1,3 +1,17 @@
+rm(list=ls()) 
+outFile='AK6383'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3=''
+parSampleFile4='fileList4.txt'
+parFile1=''
+parFile2=''
+parFile3=''
+
+
+setwd('/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_rawdata/result')
+
+### Parameter setting end ###
 
 source("scRNA_func.r")
 library(Seurat)
@@ -236,7 +250,7 @@ rm(rawobjs)
 
 writeLines(rownames(rawobj), paste0(outFile, ".genes.txt"))
 
-saveRDS(rawobj, paste0(outFile, ".rawobj.rds"));
+saveRDS(rawobj, paste0(outFile, ".rawobj.rds"))
 
 png(paste0(outFile, ".top20.png"), width=3000, height=2000, res=300)
 par(mar = c(4, 8, 2, 1))
