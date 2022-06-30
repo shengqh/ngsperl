@@ -245,9 +245,23 @@ subchunkify <- local({
   }
 })
 
-preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remove_Mt_rRNA=FALSE,celltype_predictmethod="cta",transpose=FALSE, Ensemblfile=NULL, hto_map=list(),tag_tb=NULL,bubble_file=NULL) {
+myScaleData<-function(object, features, assay, ...){
+  scaled.genes<-rownames(object[[assay]]@scale.data)
+  if(!all(features %in% scaled.genes)){
+    new.genes<-unique(features, scaled.genes)
+    object=ScaleData(object, features=new.genes, assay=assay, ... )
+  }
+  return(object)
+}
+
+preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remove_Mt_rRNA=FALSE,celltype_predictmethod="cta",transpose=FALSE, Ensemblfile=NULL, hto_map=list(),tag_tb=NULL,bubble_file="") {
   countfile<-SampleInfo$countfile
   sampleid=SampleInfo$SampleId
+  
+  has_bubble_file<-!is.null(bubble_file)
+  if(has_bubble_file){
+    has_bubble_file=file.exists(bubble_file)
+  }
   
   library(patchwork)
   
@@ -286,6 +300,8 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
 
   cat("\n\n# Sample", sampleid,": Quality Check and Analysis\n\n")
   cat("\n\n## ", sampleid,": Quality Check\n\n")
+  
+  counts<-counts[,sample(ncol(counts), 2000)]
 
   SCLC <- CreateSeuratObject(counts = counts, min.cells = 5, min.features = 10, project=sampleid)
   if(has_hto){
@@ -447,19 +463,22 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
           top10 <- SCLC.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
         }
         #cat("\n\n### ", "Fig.7 Marker genes scaled expression in each cluster\n\n")
-        if (nrow(top10)>200) {
+        top10gene<-unique(top10$gene)
+        if (length(top10gene)>200) {
           genesize=5
         } else {
-          if (nrow(top10)>100) {
+          if (length(top10gene)>100) {
             genesize=6
           }  else {
             genesize=7
           } 
         }
         
+        SCLC<-myScaleData(SCLC, top10gene, "RNA")
+        
         #print(DoHeatmap(SCLC, features = top10$gene)+ theme(axis.text.y = element_text(size = genesize)) )
         cat("\n\n### Fig.7 Marker genes expression in each cluster\n\n")
-        g<-DoHeatmap(SCLC, assay="RNA", features = top10$gene)+ theme(axis.text.y = element_text(size = genesize))
+        g<-DoHeatmap(SCLC, assay="RNA", features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
         subchunkify(g, fig.height=15, fig.width=15)
         
         ##
@@ -476,7 +495,7 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
         #   Plot_predictcelltype(predict_celltype,method="ora")
         # par(def.par)
         
-        if(!is.null(bubble_file) & file.exists(bubble_file)){
+        if(has_bubble_file){
           genes<-read_bubble_genes(bubble_file, rownames(SCLC))
           ugenes<-unique(genes$`Marker Gene`)
           

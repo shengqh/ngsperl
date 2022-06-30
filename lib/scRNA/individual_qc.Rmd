@@ -34,7 +34,7 @@ cat("\n\n## Files Parameters\n\n")
 #work directory to save or load objectlist, objectintegrated and integratedmarkers; the raw files are in workdir/raw
 
 
-option_table<-read.table("fileList2.txt", stringsAsFactors = F)
+option_table<-read.table("fileList2.txt", sep="\t", stringsAsFactors = F)
 myoptions<-split(option_table$V1, option_table$V2)
 myoptions$mt_cutoff=as.numeric(myoptions$mt_cutoff)
 myoptions$nCount_cutoff=as.numeric(myoptions$nCount_cutoff)
@@ -149,6 +149,8 @@ i=1
 for (i in 1:nrow(SampleInfos)) {
   SampleInfo<-SampleInfos[i,]
   Cutoff<-Cutoffs[i,]
+  bubble_file=myoptions$bubblemap_file
+  Ensemblfile=NULL
   info<-preprocess(SampleInfo,
                      Cutoff,
                      Mtpattern,
@@ -158,7 +160,8 @@ for (i in 1:nrow(SampleInfos)) {
                      transpose=transpose,
                      hto_map=hto_map,
                      tag_tb=tag_tb,
-                     bubble_file=myoptions$bubblemap_file)
+                     Ensemblfile=Ensemblfile,
+                     bubble_file=bubble_file)
   
   object.list<-c(object.list, info)
 }
