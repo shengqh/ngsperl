@@ -1,5 +1,5 @@
 ---
-title: "singlecell_multiple_analysis"
+title: "QC and cell type identification in each sample"
 author: Qi Liu, Quanhu Sheng
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
@@ -142,8 +142,6 @@ if(species=="Mm") {
 ```
 
 ```{r,fig.width=15, fig.height=15,results="asis"}
-
-cat("\n\n# QC and cell type identification in each sample\n")
 
 object.list<-list()
 
