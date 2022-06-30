@@ -36,7 +36,7 @@ my_dimplot<-function(object, group.by, label, labels=NULL, title=NULL, scale_col
 
 for(label in c(TRUE, FALSE)){
   label_str=ifelse(label, ".label", ".nolabel")
-  png(paste0("AG3669", ".all", label_str, ".umap.png"), width=2300, height=2000, res=300)
+  png(paste0("AG3669", ".all", label_str, ".umap.png"), width=3300, height=2000, res=300)
   g<-my_dimplot(object=obj, group.by="seurat_clusters", title = "AG3669", label=label, labels=levels(obj$seurat_cell_type))
   print(g)
   dev.off()
