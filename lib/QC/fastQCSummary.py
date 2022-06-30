@@ -94,6 +94,7 @@ with open(args.input, "r") as flistin:
         section.data[sampleName] = {}      
 
     with open(datafile, "r") as fdata:
+      logger.info(f"reading {datafile} ...")
       bInOver = False
       bInAdapter = False
       for sline in fdata:
