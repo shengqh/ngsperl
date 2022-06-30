@@ -162,7 +162,7 @@ sub initializeScRNASeqDefaultOptions {
   #initDefaultValue( $def, "remove_subtype", "T cells,Fibroblasts,Neurons,Macrophages,Dendritic cells"),
   initDefaultValue( $def, "remove_subtype", "T cells,B cells,Fibroblasts,Neurons,Epithelial cells,Endothelial cells,Macrophages,Dendritic cells"),
   initDefaultValue( $def, "best_resolution_min_markers", 20);
-  
+
   return $def;
 }
 
@@ -509,13 +509,20 @@ sub getScRNASeqConfig {
     }
 
     if($def->{perform_individual_qc}){
+      my $qc_files_ref;
+      if(defined $def->{qc_files}){
+        $qc_files_ref = "qc_files";
+        $config->{qc_files} = $def->{qc_files};
+      }else{
+        $qc_files_ref = "files";
+      }
       $config->{$individual_qc_task} = {
         class => "CQS::UniqueRmd",
         target_dir => "${target_dir}/$individual_qc_task",
         report_rmd_file => "../scRNA/individual_qc.Rmd",
         additional_rmd_files => "../scRNA/markerCode_filter.R;../scRNA/scRNA_func.r",
         option => "",
-        parameterSampleFile1_ref => "files",
+        parameterSampleFile1_ref => $qc_files_ref,
         parameterSampleFile2 => {
           species => getValue($def, "species"),
           Mtpattern             => getValue( $def, "Mtpattern" ),
