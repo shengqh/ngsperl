@@ -1,3 +1,19 @@
+rm(list=ls()) 
+outFile=''
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3=''
+parSampleFile4='fileList4.txt'
+parFile1=''
+parFile2=''
+parFile3=''
+outputPdf<-TRUE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-TRUE;useGreenRedColorInHCA<-FALSE;top25cvInHCA<-FALSE;
+
+setwd('/scratch/cqs/justin_balko_projects/20220209_rnaseq_7312_mm10/genetable/result')
+
+### Parameter setting end ###
+
+source("countTableVisFunctions.R")
 options(bitmapType='cairo')
 
 library(heatmap3)
@@ -414,8 +430,8 @@ for (i in 1:nrow(countTableFileAll)) {
         gname = ifelse(title == "all", "Group", title)
         cnames=c(gname, colnames(conditionColors)[colnames(conditionColors) != gname])
         conditionColors<-conditionColors[,cnames,drop=F]
-        #colors<-unique(conditionColors[,"mouse"])
-        #names(colors)<-unique(groups)
+        colors<-unique(conditionColors[,title])
+        names(colors)<-unique(groups)
       }
     }else{
       groups<-NA
@@ -504,7 +520,8 @@ for (i in 1:nrow(countTableFileAll)) {
         }
         
         if(hasMultipleGroup){
-          heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,legendfun=legendfun,ColSideColors=conditionColors,cexCol=hcaOption$cexCol, ColSideLabs="")
+          curColSideColors<-conditionColors[,title]
+          heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,legendfun=legendfun,ColSideColors=curColSideColors,cexCol=hcaOption$cexCol, ColSideLabs="")
         } else {
           heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,cexCol=hcaOption$cexCol)
         }
